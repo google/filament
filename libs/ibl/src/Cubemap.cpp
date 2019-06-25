@@ -169,7 +169,7 @@ void Cubemap::makeSeamless() {
     corners(Face::NY);
 }
 
-Cubemap::Texel Cubemap::filterAt(const Image& image, double x, double y) {
+Cubemap::Texel Cubemap::filterAt(const Image& image, float x, float y) {
     const size_t x0 = size_t(x);
     const size_t y0 = size_t(y);
     // we allow ourselves to read past the width/height of the Image because the data is valid
@@ -186,6 +186,18 @@ Cubemap::Texel Cubemap::filterAt(const Image& image, double x, double y) {
     const Texel& c2 = sampleAt(image.getPixelRef(x0, y1));
     const Texel& c3 = sampleAt(image.getPixelRef(x1, y1));
     return (one_minus_u*one_minus_v)*c0 + (u*one_minus_v)*c1 + (one_minus_u*v)*c2 + (u*v)*c3;
+}
+
+Cubemap::Texel Cubemap::filterAtCenter(const Image& image, size_t x0, size_t y0) {
+    // we allow ourselves to read past the width/height of the Image because the data is valid
+    // and contain the "seamless" data.
+    size_t x1 = x0 + 1;
+    size_t y1 = y0 + 1;
+    const Texel& c0 = sampleAt(image.getPixelRef(x0, y0));
+    const Texel& c1 = sampleAt(image.getPixelRef(x1, y0));
+    const Texel& c2 = sampleAt(image.getPixelRef(x0, y1));
+    const Texel& c3 = sampleAt(image.getPixelRef(x1, y1));
+    return (c0 + c1 + c2 + c3) * 0.25f;
 }
 
 Cubemap::Texel Cubemap::trilinearFilterAt(const Cubemap& l0, const Cubemap& l1, double lerp,

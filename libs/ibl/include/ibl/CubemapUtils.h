@@ -55,6 +55,14 @@ public:
             ReduceProc<STATE> reduce = [](STATE&) {},
             const STATE& prototype = STATE());
 
+    //! process the cubemap
+    template<typename STATE>
+    static void processSingleThreaded(Cubemap& cm,
+            utils::JobSystem& js,
+            ScanlineProc<STATE> proc,
+            ReduceProc<STATE> reduce = [](STATE&) {},
+            const STATE& prototype = STATE());
+
     //! Converts equirectangular Image to a Cubemap
     static void equirectangularToCubemap(utils::JobSystem& js, Cubemap& dst, const Image& src);
 

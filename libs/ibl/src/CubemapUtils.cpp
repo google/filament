@@ -229,13 +229,13 @@ void CubemapUtils::crossToCubemap(JobSystem& js, Cubemap& dst, const Image& src)
 
 void CubemapUtils::downsampleCubemapLevelBoxFilter(JobSystem& js, Cubemap& dst, const Cubemap& src) {
     size_t scale = src.getDimensions() / dst.getDimensions();
-    process<EmptyState>(dst, js,
+    processSingleThreaded<EmptyState>(dst, js,
             [&](EmptyState&, size_t y, Cubemap::Face f, Cubemap::Texel* data, size_t dim) {
-        const Image& image(src.getImageForFace(f));
-        for (size_t x=0 ; x<dim ; ++x, ++data) {
-            Cubemap::writeAt(data, Cubemap::filterAt(image, x*scale+0.5, y*scale+0.5));
-        }
-    });
+                const Image& image(src.getImageForFace(f));
+                for (size_t x = 0; x < dim; ++x, ++data) {
+                    Cubemap::writeAt(data, Cubemap::filterAtCenter(image, x * scale, y * scale));
+                }
+            });
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -311,7 +311,7 @@ Cubemap CubemapUtils::create(Image& image, size_t dim, bool horizontal) {
 }
 
 void CubemapUtils::mirrorCubemap(JobSystem& js, Cubemap& dst, const Cubemap& src) {
-    process<EmptyState>(dst, js,
+    processSingleThreaded<EmptyState>(dst, js,
             [&](EmptyState&, size_t y, Cubemap::Face f, Cubemap::Texel* data, size_t dim) {
         for (size_t x=0 ; x<dim ; ++x, ++data) {
             const double3 N(dst.getDirectionFor(f, x, y));

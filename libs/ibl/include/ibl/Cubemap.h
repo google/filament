@@ -99,7 +99,8 @@ public:
     inline Texel filterAt(const filament::math::double3& direction) const;
 
     //! samples an image at the given location in pixel using bilinear filtering
-    static Texel filterAt(const Image& image, double x, double y);
+    static Texel filterAt(const Image& image, float x, float y);
+    static Texel filterAtCenter(const Image& image, size_t x, size_t y);
 
     //! samples two cubemaps in a given direction and lerps the result by a given lerp factor
     static Texel trilinearFilterAt(const Cubemap& c0, const Cubemap& c1, double lerp,
