@@ -134,8 +134,9 @@ public class Material {
         }
     }
 
-    private Material(long nativeMaterial, long nativeDefaultInstance) {
+    Material(long nativeMaterial) {
         mNativeObject = nativeMaterial;
+        long nativeDefaultInstance = nGetDefaultInstance(nativeMaterial);
         mDefaultInstance = new MaterialInstance(this, nativeDefaultInstance);
     }
 
@@ -154,8 +155,7 @@ public class Material {
         public Material build(@NonNull Engine engine) {
             long nativeMaterial = nBuilderBuild(engine.getNativeObject(), mBuffer, mSize);
             if (nativeMaterial == 0) throw new IllegalStateException("Couldn't create Material");
-            long nativeDefaultInstance = nGetDefaultInstance(nativeMaterial);
-            return new Material(nativeMaterial, nativeDefaultInstance);
+            return new Material(nativeMaterial);
         }
     }
 

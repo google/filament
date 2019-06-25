@@ -21,8 +21,9 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Size;
 
 public class MaterialInstance {
-    private final Material mMaterial;
+    private Material mMaterial;
     private long mNativeObject;
+    private long mNativeMaterial;
 
     public enum BooleanElement {
         BOOL,
@@ -52,8 +53,16 @@ public class MaterialInstance {
         mNativeObject = nativeMaterialInstance;
     }
 
+    MaterialInstance(long nativeMaterial, long nativeMaterialInstance) {
+        mNativeMaterial = nativeMaterial;
+        mNativeObject = nativeMaterialInstance;
+    }
+
     @NonNull
     public Material getMaterial() {
+        if (mMaterial == null) {
+            mMaterial = new Material(mNativeMaterial);
+        }
         return mMaterial;
     }
 
