@@ -282,6 +282,14 @@ public class RenderableManager {
         nSetMaterialInstanceAt(mNativeObject, i, primitiveIndex, materialInstance.getNativeObject());
     }
 
+    // creates a MaterialInstance Java wrapper object for a particular material instance
+    public @NonNull MaterialInstance getMaterialInstanceAt(@EntityInstance int i,
+            @IntRange(from = 0) int primitiveIndex) {
+        long nativeMatInstance = nGetMaterialInstanceAt(mNativeObject, i, primitiveIndex);
+        long nativeMaterial = nGetMaterialAt(mNativeObject, i, primitiveIndex);
+        return new MaterialInstance(nativeMaterial, nativeMatInstance);
+    }
+
     // set/change the geometry (vertex/index buffers) of a given primitive
     public void setGeometryAt(@EntityInstance int i, @IntRange(from = 0) int primitiveIndex,
             @NonNull PrimitiveType type, @NonNull VertexBuffer vertices,
@@ -356,6 +364,8 @@ public class RenderableManager {
     private static native void nGetAxisAlignedBoundingBox(long nativeRenderableManager, int i, float[] center, float[] halfExtent);
     private static native int nGetPrimitiveCount(long nativeRenderableManager, int i);
     private static native void nSetMaterialInstanceAt(long nativeRenderableManager, int i, int primitiveIndex, long nativeMaterialInstance);
+    private static native long nGetMaterialInstanceAt(long nativeRenderableManager, int i, int primitiveIndex);
+    private static native long nGetMaterialAt(long nativeRenderableManager, int i, int primitiveIndex);
     private static native void nSetGeometryAt(long nativeRenderableManager, int i, int primitiveIndex, int primitiveType, long nativeVertexBuffer, long nativeIndexBuffer, int offset, int count);
     private static native void nSetGeometryAt(long nativeRenderableManager, int i, int primitiveIndex, int primitiveType, int offset, int count);
     private static native void nSetBlendOrderAt(long nativeRenderableManager, int i, int primitiveIndex, int blendOrder);

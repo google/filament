@@ -299,6 +299,21 @@ Java_com_google_android_filament_RenderableManager_nSetMaterialInstanceAt(JNIEnv
             materialInstance);
 }
 
+extern "C" JNIEXPORT long JNICALL
+Java_com_google_android_filament_RenderableManager_nGetMaterialInstanceAt(JNIEnv*, jclass,
+        jlong nativeRenderableManager, jint i, jint primitiveIndex) {
+    RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
+    return (long) rm->getMaterialInstanceAt((RenderableManager::Instance) i, (size_t) primitiveIndex);
+}
+
+extern "C" JNIEXPORT long JNICALL
+Java_com_google_android_filament_RenderableManager_nGetMaterialAt(JNIEnv*, jclass,
+        jlong nativeRenderableManager, jint i, jint primitiveIndex) {
+    RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
+    MaterialInstance *mi = rm->getMaterialInstanceAt((RenderableManager::Instance) i, (size_t) primitiveIndex);
+    return (long) mi->getMaterial();
+}
+
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_RenderableManager_nSetGeometryAt__JIIIJJII(JNIEnv*,
         jclass, jlong nativeRenderableManager, jint i, jint primitiveIndex, jint primitiveType,
