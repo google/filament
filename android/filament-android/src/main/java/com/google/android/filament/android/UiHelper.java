@@ -58,7 +58,7 @@ import com.google.android.filament.SwapChain;
  *         mUiHelper = new UiHelper(UiHelper.ContextErrorPolicy.DONT_CHECK);
  *
  *         // Attach the SurfaceView to the helper, you could do the same with a TextureView
- *         mUiHelper.attachTo(surfaceView)
+ *         mUiHelper.attachTo(mSurfaceView);
  *
  *         // Set a rendering callback that we will use to invoke Filament
  *         mUiHelper.setRenderCallback(new UiHelper.RendererCallback() {
@@ -95,15 +95,15 @@ import com.google.android.filament.SwapChain;
  *     }
  *
  *     public void onDestroy() {
- *        super.onDestroy()
+ *         super.onDestroy();
  *         // Always detach the surface before destroying the engine
- *         mUiHelper.detach()
+ *         mUiHelper.detach();
  *
  *         // This ensures that all the commands we've sent to Filament have
  *         // been processed before we attempt to destroy anything
  *         Fence.waitAndDestroy(mEngine.createFence(Fence.Type.SOFT), Fence.Mode.FLUSH);
  *
- *         mEngine.destroy()
+ *         mEngine.destroy();
  *     }
  *
  *     // This is an example of a render function. You will most likely invoke this from
@@ -113,8 +113,8 @@ import com.google.android.filament.SwapChain;
  *             // If beginFrame() returns false you should skip the frame
  *             // This means you are sending frames too quickly to the GPU
  *             if (mRenderer.beginFrame(swapChain)) {
- *                 mRenderer.render(mView)
- *                 mRenderer.endFrame()
+ *                 mRenderer.render(mView);
+ *                 mRenderer.endFrame();
  *             }
  *         }
  *     }
