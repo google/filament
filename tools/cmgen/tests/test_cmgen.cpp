@@ -112,7 +112,7 @@ static void processEnvMap(string inputPath, string resultPath, string goldenPath
 }
 
 static void compareSh(const string& content, const string& regex,
-        const float3& match, float epsilon = 1e-7f) {
+        const float3& match, float epsilon = 1e-5f) {
     std::smatch smatch;
     if (std::regex_search(content, smatch, std::regex(regex))) {
         float3 sh(std::stof(smatch[1]), std::stof(smatch[2]), std::stof(smatch[3]));
