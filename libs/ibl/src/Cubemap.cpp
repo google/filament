@@ -52,7 +52,7 @@ Cubemap::Address Cubemap::getAddressFor(const float3& r) {
     const float ry = std::abs(r.y);
     const float rz = std::abs(r.z);
     if (rx >= ry && rx >= rz) {
-        ma = rx;
+        ma = 1.0f / rx;
         if (r.x >= 0) {
             addr.face = Face::PX;
             sc = -r.z;
@@ -63,7 +63,7 @@ Cubemap::Address Cubemap::getAddressFor(const float3& r) {
             tc = -r.y;
         }
     } else if (ry >= rx && ry >= rz) {
-        ma = ry;
+        ma = 1.0f / ry;
         if (r.y >= 0) {
             addr.face = Face::PY;
             sc =  r.x;
@@ -74,7 +74,7 @@ Cubemap::Address Cubemap::getAddressFor(const float3& r) {
             tc = -r.z;
         }
     } else {
-        ma = rz;
+        ma = 1.0f / rz;
         if (r.z >= 0) {
             addr.face = Face::PZ;
             sc =  r.x;
@@ -86,8 +86,8 @@ Cubemap::Address Cubemap::getAddressFor(const float3& r) {
         }
     }
     // ma is guaranteed to be >= sc and tc
-    addr.s = (sc / ma + 1) * 0.5f;
-    addr.t = (tc / ma + 1) * 0.5f;
+    addr.s = (sc * ma + 1.0f) * 0.5f;
+    addr.t = (tc * ma + 1.0f) * 0.5f;
     return addr;
 }
 
@@ -205,15 +205,13 @@ Cubemap::Texel Cubemap::trilinearFilterAt(const Cubemap& l0, const Cubemap& l1, 
 {
     Cubemap::Address addr(getAddressFor(L));
     const Image& i0 = l0.getImageForFace(addr.face);
+    const Image& i1 = l1.getImageForFace(addr.face);
     float x0 = std::min(addr.s * l0.mDimensions, l0.mUpperBound);
     float y0 = std::min(addr.t * l0.mDimensions, l0.mUpperBound);
-    float3 c0(filterAt(i0, x0, y0));
-    if (&l0 != &l1) {
-        const Image& i1 = l1.getImageForFace(addr.face);
-        float x1 = std::min(addr.s * l1.mDimensions, l1.mUpperBound);
-        float y1 = std::min(addr.t * l1.mDimensions, l1.mUpperBound);
-        c0 += lerp * (filterAt(i1, x1, y1) - c0);
-    }
+    float x1 = std::min(addr.s * l1.mDimensions, l1.mUpperBound);
+    float y1 = std::min(addr.t * l1.mDimensions, l1.mUpperBound);
+    float3 c0 = filterAt(i0, x0, y0);
+    c0 += lerp * (filterAt(i1, x1, y1) - c0);
     return c0;
 }
 

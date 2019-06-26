@@ -84,7 +84,7 @@ public:
     inline Image& getImageForFace(Face face);
 
     //! computes the center of a pixel at coordinate x, y
-    inline filament::math::float2 center(size_t x, size_t y) const;
+    static inline filament::math::float2 center(size_t x, size_t y);
 
     //! computes a direction vector from a face and a location of the center of pixel in an Image
     inline filament::math::float3 getDirectionFor(Face face, size_t x, size_t y) const;
@@ -153,7 +153,7 @@ inline Image& Cubemap::getImageForFace(Face face) {
     return mFaces[int(face)];
 }
 
-inline filament::math::float2 Cubemap::center(size_t x, size_t y) const {
+inline filament::math::float2 Cubemap::center(size_t x, size_t y) {
     return { x + 0.5f, y + 0.5f };
 }
 
