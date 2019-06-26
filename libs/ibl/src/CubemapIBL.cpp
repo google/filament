@@ -298,7 +298,7 @@ void CubemapIBL::roughnessFilter(JobSystem& js, Cubemap& dst, const std::vector<
     std::atomic_uint progress = {0};
 
     if (linearRoughness == 0) {
-        CubemapUtils::process<CubemapUtils::EmptyState>(dst, js, [&]
+        auto scanline = [&]
                 (CubemapUtils::EmptyState&, size_t y, Cubemap::Face f, Cubemap::Texel* data, size_t dim) {
                     if (UTILS_UNLIKELY(updater)) {
                         size_t p = progress.fetch_add(1, std::memory_order_relaxed) + 1;
@@ -311,10 +311,16 @@ void CubemapIBL::roughnessFilter(JobSystem& js, Cubemap& dst, const std::vector<
                         // FIXME: we should pick the proper LOD here and do trilinear filtering
                         Cubemap::writeAt(data, cm.sampleAt(N));
                     }
-                });
+        };
+        // at least 256 pixel cubemap before we use multithreading -- the overhead of launching
+        // jobs is too large compared to the work above.
+        if (dst.getDimensions() <= 256) {
+            CubemapUtils::processSingleThreaded<CubemapUtils::EmptyState>(dst, js, std::ref(scanline));
+        } else {
+            CubemapUtils::process<CubemapUtils::EmptyState>(dst, js, std::ref(scanline));
+        }
         return;
     }
-
 
     // be careful w/ the size of this structure, the smaller the better
     struct CacheEntry {
@@ -391,15 +397,12 @@ void CubemapIBL::roughnessFilter(JobSystem& js, Cubemap& dst, const std::vector<
         return lhs.brdf_NoL < rhs.brdf_NoL;
     });
 
-    CubemapUtils::process<CubemapUtils::EmptyState>(dst, js,
-            [&](CubemapUtils::EmptyState&, size_t y,
-                    Cubemap::Face f, Cubemap::Texel* data, size_t dim) {
-
+    auto scanline = [&](CubemapUtils::EmptyState&, size_t y,
+            Cubemap::Face f, Cubemap::Texel* data, size_t dim) {
         if (UTILS_UNLIKELY(updater)) {
             size_t p = progress.fetch_add(1, std::memory_order_relaxed) + 1;
             updater(0, (float)p / (dim * 6));
         }
-
         mat3 R;
         const size_t numSamples = cache.size();
         for (size_t x = 0; x < dim; ++x, ++data) {
@@ -423,7 +426,15 @@ void CubemapIBL::roughnessFilter(JobSystem& js, Cubemap& dst, const std::vector<
             }
             Cubemap::writeAt(data, Cubemap::Texel(Li));
         }
-    });
+    };
+
+    // don't use the jobsystem unless we have enough work per scanline -- or the overhead of
+    // launching jobs will prevail.
+    if (dst.getDimensions() * maxNumSamples <= 256) {
+        CubemapUtils::processSingleThreaded<CubemapUtils::EmptyState>(dst, js, std::ref(scanline));
+    } else {
+        CubemapUtils::process<CubemapUtils::EmptyState>(dst, js, std::ref(scanline));
+    }
 }
 
 /*
