@@ -300,13 +300,13 @@ void CubemapIBL::roughnessFilter(JobSystem& js, Cubemap& dst, const std::vector<
     if (linearRoughness == 0) {
         CubemapUtils::process<CubemapUtils::EmptyState>(dst, js, [&]
                 (CubemapUtils::EmptyState&, size_t y, Cubemap::Face f, Cubemap::Texel* data, size_t dim) {
-                    if (updater) {
+                    if (UTILS_UNLIKELY(updater)) {
                         size_t p = progress.fetch_add(1, std::memory_order_relaxed) + 1;
                         updater(0, (float)p / (dim * 6));
                     }
                     const Cubemap& cm = levels[0];
                     for (size_t x = 0; x < dim; ++x, ++data) {
-                        const float2 p(dst.center(x, y));
+                        const float2 p(Cubemap::center(x, y));
                         const float3 N(dst.getDirectionFor(f, p.x, p.y) * mirror);
                         // FIXME: we should pick the proper LOD here and do trilinear filtering
                         Cubemap::writeAt(data, cm.sampleAt(N));
@@ -356,9 +356,9 @@ void CubemapIBL::roughnessFilter(JobSystem& js, Cubemap& dst, const std::vector<
 #else
         const float NoV = 1;
         const float NoH = H.z;
-        const float NoH2 = H.z*H.z;
-        const float NoL = 2*NoH2 - 1;
-        const float3 L(2*NoH*H.x, 2*NoH*H.y, NoL);
+        const float NoH2 = H.z * H.z;
+        const float NoL = 2 * NoH2 - 1;
+        const float3 L(2 * NoH * H.x, 2 * NoH * H.y, NoL);
 #endif
 
         if (NoL > 0) {
@@ -382,12 +382,12 @@ void CubemapIBL::roughnessFilter(JobSystem& js, Cubemap& dst, const std::vector<
         }
     }
 
-    std::for_each(cache.begin(), cache.end(), [weight](CacheEntry& entry){
-        entry.brdf_NoL /= weight;
-    });
+    for (auto& entry : cache) {
+        entry.brdf_NoL *= 1.0f / weight;
+    }
 
     // we can sample the cubemap in any order, sort by the weight, it could improve fp precision
-    std::sort(cache.begin(), cache.end(), [](CacheEntry const& lhs, CacheEntry const& rhs){
+    std::sort(cache.begin(), cache.end(), [](CacheEntry const& lhs, CacheEntry const& rhs) {
         return lhs.brdf_NoL < rhs.brdf_NoL;
     });
 
@@ -395,7 +395,7 @@ void CubemapIBL::roughnessFilter(JobSystem& js, Cubemap& dst, const std::vector<
             [&](CubemapUtils::EmptyState&, size_t y,
                     Cubemap::Face f, Cubemap::Texel* data, size_t dim) {
 
-        if (updater) {
+        if (UTILS_UNLIKELY(updater)) {
             size_t p = progress.fetch_add(1, std::memory_order_relaxed) + 1;
             updater(0, (float)p / (dim * 6));
         }
@@ -403,7 +403,7 @@ void CubemapIBL::roughnessFilter(JobSystem& js, Cubemap& dst, const std::vector<
         mat3 R;
         const size_t numSamples = cache.size();
         for (size_t x = 0; x < dim; ++x, ++data) {
-            const float2 p(dst.center(x, y));
+            const float2 p(Cubemap::center(x, y));
             const float3 N(dst.getDirectionFor(f, p.x, p.y) * mirror);
 
             // center the cone around the normal (handle case of normal close to up)
@@ -571,7 +571,7 @@ void CubemapIBL::diffuseIrradiance(JobSystem& js, Cubemap& dst, const std::vecto
         mat3 R;
         const size_t numSamples = cache.size();
         for (size_t x = 0; x < dim; ++x, ++data) {
-            const float2 p(dst.center(x, y));
+            const float2 p(Cubemap::center(x, y));
             const float3 N(dst.getDirectionFor(f, p.x, p.y));
 
             // center the cone around the normal (handle case of normal close to up)
@@ -924,7 +924,7 @@ void CubemapIBL::brdf(utils::JobSystem& js, Cubemap& dst, float linearRoughness)
             [ & ](CubemapUtils::EmptyState&, size_t y,
                     Cubemap::Face f, Cubemap::Texel* data, size_t dim) {
                 for (size_t x=0 ; x<dim ; ++x, ++data) {
-                    const float2 p(dst.center(x, y));
+                    const float2 p(Cubemap::center(x, y));
                     const float3 H(dst.getDirectionFor(f, p.x, p.y));
                     const float3 N = { 0, 0, 1 };
                     const float3 V = N;

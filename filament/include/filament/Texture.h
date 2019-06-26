@@ -390,7 +390,8 @@ public:
      *
      * The reflections cubemap's dimension must be a power-of-two.
      *
-     * @warning This operation is computationally intensive, especially with large environments.
+     * @warning This operation is computationally intensive, especially with large environments and
+     *          is currently synchronous. Expect about 1ms for a 16x16 cubemap.
      *
      * @param engine        Reference to the filament::Engine to associate this IndirectLight with.
      * @param buffer        Client-side buffer containing the images to set.
