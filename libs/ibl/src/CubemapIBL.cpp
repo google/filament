@@ -286,7 +286,7 @@ static double UTILS_UNUSED VisibilityAshikhmin(double NoV, double NoL, double /*
  */
 
 void CubemapIBL::roughnessFilter(JobSystem& js, Cubemap& dst, const std::vector<Cubemap>& levels,
-        double linearRoughness, size_t maxNumSamples, CubemapIBL::Progress updater)
+        double linearRoughness, size_t maxNumSamples, double3 mirror, CubemapIBL::Progress updater)
 {
     const float numSamples = maxNumSamples;
     const float inumSamples = 1.0f / numSamples;
@@ -307,7 +307,7 @@ void CubemapIBL::roughnessFilter(JobSystem& js, Cubemap& dst, const std::vector<
                     const Cubemap& cm = levels[0];
                     for (size_t x = 0; x < dim; ++x, ++data) {
                         const double2 p(dst.center(x, y));
-                        const double3 N(dst.getDirectionFor(f, p.x, p.y));
+                        const double3 N(dst.getDirectionFor(f, p.x, p.y) * mirror);
                         // FIXME: we should pick the proper LOD here and do trilinear filtering
                         Cubemap::writeAt(data, cm.sampleAt(N));
                     }
@@ -404,7 +404,7 @@ void CubemapIBL::roughnessFilter(JobSystem& js, Cubemap& dst, const std::vector<
         const size_t numSamples = cache.size();
         for (size_t x = 0; x < dim; ++x, ++data) {
             const double2 p(dst.center(x, y));
-            const double3 N(dst.getDirectionFor(f, p.x, p.y));
+            const double3 N(dst.getDirectionFor(f, p.x, p.y) * mirror);
 
             // center the cone around the normal (handle case of normal close to up)
             const double3 up = std::abs(N.z) < 0.999 ? double3(0, 0, 1) : double3(1, 0, 0);

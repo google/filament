@@ -17,6 +17,7 @@
 #ifndef IBL_CUBEMAPIBL_H
 #define IBL_CUBEMAPIBL_H
 
+#include <math/vec3.h>
 
 #include <functional>
 #include <vector>
@@ -52,7 +53,7 @@ public:
      */
     static void roughnessFilter(utils::JobSystem& js, Cubemap& dst,
             const std::vector<Cubemap>& levels, double linearRoughness,
-            size_t maxNumSamples = 1024,Progress updater = {});
+            size_t maxNumSamples, math::double3 mirror, Progress updater = {});
 
     //! Computes the "DFG" term of the "split-sum" approximation and stores it in a 2D image
     static void DFG(utils::JobSystem& js, Image& dst, bool multiscatter, bool cloth);

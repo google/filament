@@ -633,7 +633,7 @@ int main(int argc, char* argv[]) {
             const size_t dim = g_output_size ? g_output_size : cm.getDimensions();
             Image image;
             Cubemap blurred = CubemapUtils::create(image, dim);
-            CubemapIBL::roughnessFilter(js, blurred, levels, linear_roughness, g_num_samples,
+            CubemapIBL::roughnessFilter(js, blurred, levels, linear_roughness, g_num_samples, double3{1,1,1},
                     [&updater, quiet = g_quiet](size_t index, float v) {
                         if (!quiet) {
                             updater.update(index, v);
@@ -880,7 +880,7 @@ void iblRoughnessPrefilter(utils::JobSystem& js, const utils::Path& iname,
         if (!g_quiet) {
             updater.start();
         }
-        CubemapIBL::roughnessFilter(js, dst, levels, linear_roughness, numSamples,
+        CubemapIBL::roughnessFilter(js, dst, levels, linear_roughness, numSamples, double3{1,1,1},
                 [&updater, quiet = g_quiet](size_t index, float v) {
             if (!quiet) {
                 updater.update(index, v);
