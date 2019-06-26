@@ -14,6 +14,7 @@ A new header is inserted each time a *tag* is created.
 - Added support for `RGB_11_11_10`
 - Removed support for `RGBM` (**warning:** source compatibility breakage)
 - IBL cubemap can now be of any size
+- `Texture::generatePrefilterMipmap` can be used for runtime generation of a reflection cubemap
 
 ## sceneform-1.9pr3
 
