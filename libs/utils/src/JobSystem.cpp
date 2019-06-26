@@ -384,6 +384,8 @@ void JobSystem::release(JobSystem::Job*& job) noexcept {
 void JobSystem::run(JobSystem::Job*& job, uint32_t flags) noexcept {
 #if HEAVY_SYSTRACE
     SYSTRACE_CALL();
+#else
+    SYSTRACE_CONTEXT();
 #endif
 
     ThreadState& state(getState());
@@ -395,14 +397,14 @@ void JobSystem::run(JobSystem::Job*& job, uint32_t flags) noexcept {
 
     put(state.workQueue, job);
 
-    SYSTRACE_CONTEXT();
     SYSTRACE_VALUE32("JobSystem::activeJobs", activeJobs + 1);
 
     // wake-up a thread if needed...
     if (!(flags & DONT_SIGNAL)) {
-        // wake-up a queue
+        // wake-up multiple queues because there could be multiple jobs queued
+        // especially if DONT_SIGNAL was used
         { std::lock_guard<Mutex> lock(mLooperLock); }
-        mLooperCondition.notify_one();
+        mLooperCondition.notify_all();
     }
 
     // after run() returns, the job is virtually invalid (it'll die on its own)

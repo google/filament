@@ -19,6 +19,7 @@
 
 #include <ibl/CubemapUtils.h>
 
+#include <utils/compiler.h>
 #include <utils/JobSystem.h>
 
 namespace filament {
@@ -42,34 +43,40 @@ void CubemapUtils::process(
 
     JobSystem::Job* parent = js.createJob();
     for (size_t faceIndex = 0; faceIndex < 6; faceIndex++) {
-        const Cubemap::Face f = (Cubemap::Face)faceIndex;
-        JobSystem::Job* face = jobs::createJob(js, parent,
-                [faceIndex, &states, f, &cm, &dim, &proc]
-                        (utils::JobSystem& js, utils::JobSystem::Job* parent) {
-                    STATE& s = states[faceIndex];
-                    Image& image(cm.getImageForFace(f));
 
-                    auto parallelJobTask = [&image, &proc, &s, dim, f](size_t y0, size_t c) {
-                        for (size_t y = y0; y < y0 + c; y++) {
-                            Cubemap::Texel* data =
-                                    static_cast<Cubemap::Texel*>(image.getPixelRef(0, y));
-                            proc(s, y, f, data, dim);
-                        }
-                    };
+        auto perFaceJob = [faceIndex, &states, &cm, dim, &proc]
+                (utils::JobSystem& js, utils::JobSystem::Job* parent) {
+            STATE& s = states[faceIndex];
+            Image& image(cm.getImageForFace((Cubemap::Face)faceIndex));
 
-                    if (std::is_same<STATE, CubemapUtils::EmptyState>::value) {
-                        auto job = jobs::parallel_for(js, parent, 0, uint32_t(dim),
-                                std::ref(parallelJobTask), jobs::CountSplitter<64, 8>());
+            // here we must limit how much we capture so we can use this closure
+            // by value.
+            auto parallelJobTask = [&s, &image, &proc, dim = uint16_t(dim),
+                                    faceIndex = uint8_t(faceIndex)](size_t y0, size_t c) {
+                for (size_t y = y0; y < y0 + c; y++) {
+                    Cubemap::Texel* data =
+                            static_cast<Cubemap::Texel*>(image.getPixelRef(0, y));
+                    proc(s, y, (Cubemap::Face)faceIndex, data, dim);
+                }
+            };
 
-                        // we need to wait here because parallelJobTask is passed by reference
-                        js.runAndWait(job);
-                    } else {
-                        // if we have a per-thread STATE, we can't parallel_for()
-                        parallelJobTask(0, dim);
-                    }
-                }, std::ref(js), parent);
-        js.run(face);
+            constexpr bool isStateLess = std::is_same<STATE, CubemapUtils::EmptyState>::value;
+            if (UTILS_LIKELY(isStateLess)) {
+                // create the job, copying it by value
+                auto job = jobs::parallel_for(js, parent, 0, uint32_t(dim),
+                        parallelJobTask, jobs::CountSplitter<64, 8>());
+                // not need to signal here, since we're just scheduling work
+                js.run(job, JobSystem::DONT_SIGNAL);
+            } else {
+                // if we have a per-thread STATE, we can't parallel_for()
+                parallelJobTask(0, dim);
+            }
+        };
+
+        // not need to signal here, since we're just scheduling work
+        js.run(jobs::createJob(js, parent, perFaceJob, std::ref(js), parent), JobSystem::DONT_SIGNAL);
     }
+
     // wait for all our threads to finish
     js.runAndWait(parent);
 

@@ -332,8 +332,8 @@ void CubemapUtils::generateUVGrid(JobSystem& js, Cubemap& cml, size_t gridFreque
     const float uvGridHDRIntensity = 5.0f;
     size_t gridSizeX = cml.getDimensions() / gridFrequencyX;
     size_t gridSizeY = cml.getDimensions() / gridFrequencyY;
-    CubemapUtils::process<CubemapUtils::EmptyState>(cml, js,
-            [ & ](CubemapUtils::EmptyState&,
+    CubemapUtils::process<EmptyState>(cml, js,
+            [ & ](EmptyState&,
                     size_t y, Cubemap::Face f, Cubemap::Texel* data, size_t dim) {
                 for (size_t x = 0; x < dim; ++x, ++data) {
                     bool grid = bool(((x / gridSizeX) ^ (y / gridSizeY)) & 1);

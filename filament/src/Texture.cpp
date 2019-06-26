@@ -477,7 +477,7 @@ void FTexture::generatePrefilterMipmap(FEngine& engine,
     for (ssize_t i = baseExp; i >= 0; --i) {
         const size_t dim = 1U << i;
         const size_t level = baseExp - i;
-        const float lod = saturate(level / (numLevels - 1.0));
+        const float lod = saturate(level / (numLevels - 1.0f));
         const float linearRoughness = lod * lod;
 
         Image image;
