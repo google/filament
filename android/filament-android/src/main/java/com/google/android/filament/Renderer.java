@@ -65,7 +65,7 @@ public class Renderer {
                 flags);
     }
 
-    /** @deprecated */
+    @Deprecated
     public void mirrorFrame(
             @NonNull SwapChain dstSwapChain, @NonNull Viewport dstViewport,
             @NonNull Viewport srcViewport, int flags) {
