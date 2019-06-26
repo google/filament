@@ -39,10 +39,10 @@ namespace ibl {
 /*
  * returns n! / d!
  */
-static double factorial(size_t n, size_t d = 1) {
+static float factorial(size_t n, size_t d = 1) {
    d = std::max(size_t(1), d);
    n = std::max(size_t(1), n);
-   double r = 1.0;
+   float r = 1.0;
    if (n == d) {
        // intentionally left blank
    } else if (n > d) {
@@ -53,7 +53,7 @@ static double factorial(size_t n, size_t d = 1) {
        for ( ; d>n ; d--) {
            r *= d;
        }
-       r = 1.0 / r;
+       r = 1.0f / r;
    }
    return r;
 }
@@ -64,14 +64,14 @@ static double factorial(size_t n, size_t d = 1) {
  * SH scaling factors:
  *  returns sqrt((2*l + 1) / 4*pi) * sqrt( (l-|m|)! / (l+|m|)! )
  */
-double CubemapSH::Kml(ssize_t m, size_t l) {
+float CubemapSH::Kml(ssize_t m, size_t l) {
     m = std::abs(m);
-    const double K = (2*l + 1) * factorial(size_t(l-m), size_t(l+m));
+    const float K = (2*l + 1) * factorial(size_t(l-m), size_t(l+m));
     return std::sqrt(K) * (M_2_SQRTPI * 0.25);
 }
 
 // < cos(theta) > SH coefficients pre-multiplied by 1 / K(0,l)
-double CubemapSH::computeTruncatedCosSh(size_t l) {
+float CubemapSH::computeTruncatedCosSh(size_t l) {
     if (l == 0) {
         return M_PI;
     } else if (l == 1) {
@@ -80,8 +80,8 @@ double CubemapSH::computeTruncatedCosSh(size_t l) {
         return 0;
     }
     const size_t l_2 = l / 2;
-    double A0 = ((l_2 & 1) ? 1.0 : -1.0) / ((l + 2) * (l - 1));
-    double A1 = factorial(l, l_2) / (factorial(l_2) * (1 << l));
+    float A0 = ((l_2 & 1) ? 1.0f : -1.0f) / ((l + 2) * (l - 1));
+    float A1 = factorial(l, l_2) / (factorial(l_2) * (1 << l));
     return 2 * M_PI * A0 * A1;
 }
 
@@ -92,17 +92,17 @@ double CubemapSH::computeTruncatedCosSh(size_t l) {
  *  m = 0, P(0,l)
  */
 void CubemapSH::computeShBasis(
-        double* UTILS_RESTRICT SHb,
+        float* UTILS_RESTRICT SHb,
         size_t numBands,
-        const double3& s)
+        const float3& s)
 {
 #if 0
     // Reference implementation
-    double phi = atan2(s.x, s.y);
+    float phi = atan2(s.x, s.y);
     for (size_t l = 0; l < numBands; l++) {
         SHb[SHindex(0, l)] = Legendre(l, 0, s.z);
         for (size_t m = 1; m <= l; m++) {
-            double p = Legendre(l, m, s.z);
+            float p = Legendre(l, m, s.z);
             SHb[SHindex(-m, l)] = std::sin(m * phi) * p;
             SHb[SHindex( m, l)] = std::cos(m * phi) * p;
         }
@@ -130,20 +130,20 @@ void CubemapSH::computeShBasis(
     // s = (x, y, z) = (sin(theta)*cos(phi), sin(theta)*sin(phi), cos(theta))
 
     // handle m=0 separately, since it produces only one coefficient
-    double Pml_2 = 0;
-    double Pml_1 = 1;
+    float Pml_2 = 0;
+    float Pml_1 = 1;
     SHb[0] =  Pml_1;
     for (size_t l=1; l<numBands; l++) {
-        double Pml = ((2*l-1.0)*Pml_1*s.z - (l-1.0)*Pml_2) / l;
+        float Pml = ((2*l-1.0f)*Pml_1*s.z - (l-1.0f)*Pml_2) / l;
         Pml_2 = Pml_1;
         Pml_1 = Pml;
         SHb[SHindex(0, l)] = Pml;
     }
-    double Pmm = 1;
+    float Pmm = 1;
     for (size_t m=1 ; m<numBands ; m++) {
-        Pmm = (1.0 - 2*m) * Pmm;      // See [1], divide by sqrt(1 - s.z*s.z);
+        Pmm = (1.0f - 2*m) * Pmm;      // See [1], divide by sqrt(1 - s.z*s.z);
         Pml_2 = Pmm;
-        Pml_1 = (2*m + 1.0)*Pmm*s.z;
+        Pml_1 = (2*m + 1.0f)*Pmm*s.z;
         // l == m
         SHb[SHindex(-m, m)] = Pml_2;
         SHb[SHindex( m, m)] = Pml_2;
@@ -152,7 +152,7 @@ void CubemapSH::computeShBasis(
             SHb[SHindex(-m, m+1)] = Pml_1;
             SHb[SHindex( m, m+1)] = Pml_1;
             for (size_t l=m+2 ; l<numBands ; l++) {
-                double Pml = ((2*l - 1.0)*Pml_1*s.z - (l + m - 1.0)*Pml_2) / (l-m);
+                float Pml = ((2*l - 1.0f)*Pml_1*s.z - (l + m - 1.0f)*Pml_2) / (l-m);
                 Pml_2 = Pml_1;
                 Pml_1 = Pml;
                 SHb[SHindex(-m, l)] = Pml;
@@ -173,47 +173,47 @@ void CubemapSH::computeShBasis(
     // Note that (d.x, d.y) == (cos(phi), sin(phi)) * sin(theta), so the
     // code below actually evaluates:
     //      (cos((m*phi), sin(m*phi)) * sin(theta)^|m|
-    double Cm = s.x;
-    double Sm = s.y;
+    float Cm = s.x;
+    float Sm = s.y;
     for (size_t m = 1; m <= numBands; m++) {
         for (size_t l = m; l < numBands; l++) {
             SHb[SHindex(-m, l)] *= Sm;
             SHb[SHindex( m, l)] *= Cm;
         }
-        double Cm1 = Cm * s.x - Sm * s.y;
-        double Sm1 = Sm * s.x + Cm * s.y;
+        float Cm1 = Cm * s.x - Sm * s.y;
+        float Sm1 = Sm * s.x + Cm * s.y;
         Cm = Cm1;
         Sm = Sm1;
     }
 }
 
-std::unique_ptr<double3[]> CubemapSH::computeSH(JobSystem& js, const Cubemap& cm, size_t numBands, bool irradiance) {
+std::unique_ptr<float3[]> CubemapSH::computeSH(JobSystem& js, const Cubemap& cm, size_t numBands, bool irradiance) {
 
     const size_t numCoefs = numBands*numBands;
-    std::unique_ptr<double3[]> SH(new double3[numCoefs]{});
+    std::unique_ptr<float3[]> SH(new float3[numCoefs]{});
 
     struct State {
         State() = default;
         explicit State(size_t numCoefs) : numCoefs(numCoefs) { }
 
         State& operator=(State const & rhs) {
-            SH.reset(new double3[rhs.numCoefs]{}); // NOLINT(modernize-make-unique)
-            SHb.reset(new double[rhs.numCoefs]{}); // NOLINT(modernize-make-unique)
+            SH.reset(new float3[rhs.numCoefs]{}); // NOLINT(modernize-make-unique)
+            SHb.reset(new float[rhs.numCoefs]{}); // NOLINT(modernize-make-unique)
             return *this;
         }
         size_t numCoefs = 0;
-        std::unique_ptr<double3[]> SH;
-        std::unique_ptr<double[]> SHb;
+        std::unique_ptr<float3[]> SH;
+        std::unique_ptr<float[]> SHb;
     } prototype(numCoefs);
 
     CubemapUtils::process<State>(const_cast<Cubemap&>(cm), js,
             [&](State& state, size_t y, Cubemap::Face f, Cubemap::Texel const* data, size_t dim) {
         for (size_t x=0 ; x<dim ; ++x, ++data) {
 
-            double3 s(cm.getDirectionFor(f, x, y));
+            float3 s(cm.getDirectionFor(f, x, y));
 
             // sample a color
-            double3 color(Cubemap::sampleAt(data));
+            float3 color(Cubemap::sampleAt(data));
 
             // take solid angle into account
             color *= CubemapUtils::solidAngle(dim, x, y);
@@ -234,8 +234,8 @@ std::unique_ptr<double3[]> CubemapSH::computeSH(JobSystem& js, const Cubemap& cm
 
     // precompute the scaling factor K
     for (size_t l = 0; l < numBands; l++) {
-        const double truncatedCosSh = irradiance ? (computeTruncatedCosSh(size_t(l)) * M_1_PI) : 1;
-        double K = Kml(0, l);
+        const float truncatedCosSh = irradiance ? (computeTruncatedCosSh(size_t(l)) * M_1_PI) : 1;
+        float K = Kml(0, l);
         SH[SHindex(0, l)] *= K * truncatedCosSh;
         for (size_t m = 1; m <= l; m++) {
             K = M_SQRT2 * Kml(m, l);
@@ -248,10 +248,10 @@ std::unique_ptr<double3[]> CubemapSH::computeSH(JobSystem& js, const Cubemap& cm
 }
 
 void CubemapSH::renderSH(JobSystem& js, Cubemap& cm,
-        const std::unique_ptr<double3[]>& sh, size_t numBands)
+        const std::unique_ptr<float3[]>& sh, size_t numBands)
 {
     const size_t numCoefs = numBands*numBands;
-    std::vector<double> K(numCoefs);
+    std::vector<float> K(numCoefs);
     // precompute the scaling factor K
     for (size_t l=0 ; l<numBands ; l++) {
         K[SHindex(0, l)] = Kml(0, l);
@@ -264,11 +264,11 @@ void CubemapSH::renderSH(JobSystem& js, Cubemap& cm,
     CubemapUtils::process<CubemapUtils::EmptyState>(cm, js,
             [&](CubemapUtils::EmptyState&, size_t y,
                     Cubemap::Face f, Cubemap::Texel* data, size_t dim) {
-       std::vector<double> SHb(numCoefs);
+       std::vector<float> SHb(numCoefs);
         for (size_t x=0 ; x<dim ; ++x, ++data) {
-            double3 s(cm.getDirectionFor(f, x, y));
+            float3 s(cm.getDirectionFor(f, x, y));
             computeShBasis(SHb.data(), numBands, s);
-            double3 c = 0;
+            float3 c = 0;
             for (size_t i=0 ; i<numCoefs ; i++) {
                 c += sh[i] * (K[i] * SHb[i]);
             }
@@ -282,16 +282,16 @@ void CubemapSH::renderSH(JobSystem& js, Cubemap& cm,
  * truncated cos(theta) (i.e.: saturate(s.z)), pre-scaled by the reconstruction
  * factors.
  */
-std::unique_ptr<double3[]> CubemapSH::computeIrradianceSH3Bands(JobSystem& js, const Cubemap& cm) {
+std::unique_ptr<float3[]> CubemapSH::computeIrradianceSH3Bands(JobSystem& js, const Cubemap& cm) {
 
     const size_t numCoefs = 9;
 
-    std::unique_ptr<double3[]> SH(new double3[numCoefs]{});
-    std::unique_ptr<double[]> A(new double[numCoefs]{});
+    std::unique_ptr<float3[]> SH(new float3[numCoefs]{});
+    std::unique_ptr<float[]> A(new float[numCoefs]{});
 
-    const double c0 = computeTruncatedCosSh(0);
-    const double c1 = computeTruncatedCosSh(1);
-    const double c2 = computeTruncatedCosSh(2);
+    const float c0 = computeTruncatedCosSh(0);
+    const float c1 = computeTruncatedCosSh(1);
+    const float c2 = computeTruncatedCosSh(2);
     A[0] = (M_1_PI * M_1_PI / 4)       * c0;
     A[1] = (M_1_PI * M_1_PI / 4) * 3   * c1;
     A[2] = (M_1_PI * M_1_PI / 4) * 3   * c1;
@@ -303,17 +303,17 @@ std::unique_ptr<double3[]> CubemapSH::computeIrradianceSH3Bands(JobSystem& js, c
     A[8] = (M_1_PI * M_1_PI /16) * 15  * c2;
 
     struct State {
-        double3 SH[9] = { };
+        float3 SH[9] = { };
     };
 
     CubemapUtils::process<State>(const_cast<Cubemap&>(cm), js,
             [&](State& state, size_t y, Cubemap::Face f, Cubemap::Texel const* data, size_t dim) {
         for (size_t x=0 ; x<dim ; ++x, ++data) {
 
-            double3 s(cm.getDirectionFor(f, x, y));
+            float3 s(cm.getDirectionFor(f, x, y));
 
             // sample a color
-            double3 color(Cubemap::sampleAt(data));
+            float3 color(Cubemap::sampleAt(data));
 
             // take solid angle into account
             color *= CubemapUtils::solidAngle(dim, x, y);
@@ -339,12 +339,12 @@ std::unique_ptr<double3[]> CubemapSH::computeIrradianceSH3Bands(JobSystem& js, c
 }
 
 void CubemapSH::renderPreScaledSH3Bands(JobSystem& js,
-        Cubemap& cm, const std::unique_ptr<filament::math::double3[]>& sh) {
+        Cubemap& cm, const std::unique_ptr<filament::math::float3[]>& sh) {
     CubemapUtils::process<CubemapUtils::EmptyState>(cm, js,
             [&](CubemapUtils::EmptyState&, size_t y, Cubemap::Face f, Cubemap::Texel* data, size_t dim) {
         for (size_t x=0 ; x<dim ; ++x, ++data) {
-            double3 s(cm.getDirectionFor(f, x, y));
-            double3 c = 0;
+            float3 s(cm.getDirectionFor(f, x, y));
+            float3 c = 0;
             c += sh[0];
             c += sh[1] * s.y;
             c += sh[2] * s.z;
@@ -363,25 +363,25 @@ void CubemapSH::renderPreScaledSH3Bands(JobSystem& js,
 // Only used for debugging
 // -----------------------------------------------------------------------------------------------
 
-double UTILS_UNUSED CubemapSH::Legendre(ssize_t l, ssize_t m, double x) {
+float UTILS_UNUSED CubemapSH::Legendre(ssize_t l, ssize_t m, float x) {
     // evaluate an Associated Legendre Polynomial P(l,m,x) at x
-    double pmm = 1.0;
+    float pmm = 1.0;
     if (m > 0) {
-        double somx2 = sqrt((1.0 - x) * (1.0 + x));
-        double fact = 1.0;
+        float somx2 = sqrt((1.0f - x) * (1.0f + x));
+        float fact = 1.0f;
         for (int i = 1; i <= m; i++) {
             pmm *= (-fact) * somx2;
-            fact += 2.0;
+            fact += 2.0f;
         }
     }
     if (l == m)
         return pmm;
-    double pmmp1 = x * (2.0 * m + 1.0) * pmm;
+    float pmmp1 = x * (2.0f * m + 1.0f) * pmm;
     if (l == m + 1)
         return pmmp1;
-    double pll = 0.0;
+    float pll = 0.0;
     for (ssize_t ll = m + 2; ll <= l; ++ll) {
-        pll = ((2.0 * ll - 1.0) * x * pmmp1 - (ll + m - 1.0) * pmm) / (ll - m);
+        pll = ((2.0f * ll - 1.0f) * x * pmmp1 - (ll + m - 1.0f) * pmm) / (ll - m);
         pmm = pmmp1;
         pmmp1 = pll;
     }
@@ -389,7 +389,7 @@ double UTILS_UNUSED CubemapSH::Legendre(ssize_t l, ssize_t m, double x) {
 }
 
 // Only used for debugging
-double UTILS_UNUSED CubemapSH::TSH(int l, int m, const double3& d) {
+float UTILS_UNUSED CubemapSH::TSH(int l, int m, const float3& d) {
     if (l==0 && m==0) {
         return 1 / (2*sqrt(M_PI));
     } else if (l==1 && m==-1) {
@@ -415,7 +415,7 @@ double UTILS_UNUSED CubemapSH::TSH(int l, int m, const double3& d) {
 void UTILS_UNUSED CubemapSH::printShBase(std::ostream& out, int l, int m) {
     if (l<3 && std::abs(m) <= l) {
         const char* d = nullptr;
-        double c = 0;
+        float c = 0;
         if (l==0 && m==0) {
             c = M_2_SQRTPI * 0.25;
             d = "               ";

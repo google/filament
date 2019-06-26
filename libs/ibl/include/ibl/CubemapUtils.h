@@ -91,7 +91,7 @@ public:
     static void mirrorCubemap(utils::JobSystem& js, Cubemap& dst, const Cubemap& src);
 
     //! computes the solid angle of a pixel of a face of a cubemap
-    static double solidAngle(size_t dim, size_t u, size_t v);
+    static float solidAngle(size_t dim, size_t u, size_t v);
 
     //! generates a UV grid in the cubemap -- useful for debugging.
     static void generateUVGrid(utils::JobSystem& js, Cubemap& cml, size_t gridFrequencyX, size_t gridFrequencyY);

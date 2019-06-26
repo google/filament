@@ -42,26 +42,26 @@ public:
     /**
      * Spherical Harmonics decomposition of the given cubemap
      */
-    static std::unique_ptr<filament::math::double3[]> computeSH(utils::JobSystem& js, const Cubemap& cm, size_t numBands,
+    static std::unique_ptr<filament::math::float3[]> computeSH(utils::JobSystem& js, const Cubemap& cm, size_t numBands,
             bool irradiance);
 
     /**
      * Render given spherical harmonics into a cubemap
      */
     static void renderSH(utils::JobSystem& js, Cubemap& cm,
-            const std::unique_ptr<filament::math::double3[]>& sh, size_t numBands);
+            const std::unique_ptr<filament::math::float3[]>& sh, size_t numBands);
 
     /**
      * Compute spherical harmonics of the irradiance of the given cubemap.
      * The SH basis are pre-scaled for easier rendering
      */
-    static std::unique_ptr<filament::math::double3[]> computeIrradianceSH3Bands(utils::JobSystem& js, const Cubemap& cm);
+    static std::unique_ptr<filament::math::float3[]> computeIrradianceSH3Bands(utils::JobSystem& js, const Cubemap& cm);
 
     /**
      * Render pre-scaled irrandiance SH
      */
     static void renderPreScaledSH3Bands(utils::JobSystem& js, Cubemap& cm,
-            const std::unique_ptr<filament::math::double3[]>& sh);
+            const std::unique_ptr<filament::math::float3[]>& sh);
 
     static size_t getShIndex(ssize_t m, size_t l) {
         return SHindex(m, l);
@@ -73,17 +73,17 @@ private:
     }
 
     static void computeShBasis(
-            double* SHb,
+            float* SHb,
             size_t numBands,
-            const filament::math::double3& s);
+            const filament::math::float3& s);
 
-    static double Kml(ssize_t m, size_t l);
+    static float Kml(ssize_t m, size_t l);
 
-    static double computeTruncatedCosSh(size_t l);
+    static float computeTruncatedCosSh(size_t l);
 
     // debugging only...
-    static double Legendre(ssize_t l, ssize_t m, double x);
-    static double TSH(int l, int m, const filament::math::double3& d);
+    static float Legendre(ssize_t l, ssize_t m, float x);
+    static float TSH(int l, int m, const filament::math::float3& d);
     static void printShBase(std::ostream& out, int l, int m);
 };
 

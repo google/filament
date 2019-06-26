@@ -66,7 +66,7 @@ static image::ImageEncoder::Format g_format = image::ImageEncoder::Format::PNG;
 static OutputType g_type = OutputType::FACES;
 static std::string g_compression;
 static bool g_extract_faces = false;
-static double g_extract_blur = 0.0;
+static float g_extract_blur = 0.0;
 static utils::Path g_extract_dir;
 
 static size_t g_output_size = 0;
@@ -80,7 +80,7 @@ static bool g_sh_shader = false;
 static bool g_sh_irradiance = false;
 static ShFile g_sh_file = ShFile::SH_NONE;
 static utils::Path g_sh_filename;
-static std::unique_ptr<filament::math::double3[]> g_coefficients;
+static std::unique_ptr<filament::math::float3[]> g_coefficients;
 
 static bool g_is_mipmap = false;
 static utils::Path g_is_mipmap_dir;
@@ -119,9 +119,9 @@ static void iblLutDfg(utils::JobSystem& js, const utils::Path& filename, size_t 
         bool cloth);
 static void extractCubemapFaces(utils::JobSystem& js, const utils::Path& iname, const Cubemap& cm,
         const utils::Path& dir);
-static void outputSh(std::ostream& out, const std::unique_ptr<filament::math::double3[]>& sh, size_t numBands);
+static void outputSh(std::ostream& out, const std::unique_ptr<filament::math::float3[]>& sh, size_t numBands);
 static void UTILS_UNUSED outputSpectrum(std::ostream& out,
-        const std::unique_ptr<filament::math::double3[]>& sh, size_t numBands);
+        const std::unique_ptr<filament::math::float3[]>& sh, size_t numBands);
 static void saveImage(const std::string& path, ImageEncoder::Format format, const Image& image,
         const std::string& compression);
 static LinearImage toLinearImage(const Image& image);
@@ -559,7 +559,7 @@ int main(int argc, char* argv[]) {
         } else if (sscanf(name.c_str(), "v%u", &p) == 1) { // NOLINT
             CubemapUtils::generateUVGrid(js, cml, 1, p);
         } else if (sscanf(name.c_str(), "brdf%u", &p) == 1) { // NOLINT
-            double linear_roughness = sq(p / std::log2(dim));
+            float linear_roughness = sq(p / std::log2(dim));
             CubemapIBL::brdf(js, cml, linear_roughness);
         } else {
             CubemapUtils::generateUVGrid(js, cml, 1, 1);
@@ -629,11 +629,11 @@ int main(int argc, char* argv[]) {
                 std::cout << "Blurring..." << std::endl;
                 updater.start();
             }
-            const double linear_roughness = g_extract_blur * g_extract_blur;
+            const float linear_roughness = g_extract_blur * g_extract_blur;
             const size_t dim = g_output_size ? g_output_size : cm.getDimensions();
             Image image;
             Cubemap blurred = CubemapUtils::create(image, dim);
-            CubemapIBL::roughnessFilter(js, blurred, levels, linear_roughness, g_num_samples, double3{1,1,1},
+            CubemapIBL::roughnessFilter(js, blurred, levels, linear_roughness, g_num_samples, float3{1,1,1},
                     [&updater, quiet = g_quiet](size_t index, float v) {
                         if (!quiet) {
                             updater.update(index, v);
@@ -673,7 +673,7 @@ void generateMipmaps(utils::JobSystem& js, std::vector<Cubemap>& levels,
 }
 
 void sphericalHarmonics(utils::JobSystem& js, const utils::Path& iname, const Cubemap& inputCubemap) {
-    std::unique_ptr<filament::math::double3[]> sh;
+    std::unique_ptr<filament::math::float3[]> sh;
     if (g_sh_shader) {
         sh = CubemapSH::computeIrradianceSH3Bands(js, inputCubemap);
     } else {
@@ -739,7 +739,7 @@ void sphericalHarmonics(utils::JobSystem& js, const utils::Path& iname, const Cu
 }
 
 void outputSh(std::ostream& out,
-        const std::unique_ptr<filament::math::double3[]>& sh, size_t numBands) {
+        const std::unique_ptr<filament::math::float3[]>& sh, size_t numBands) {
     for (ssize_t l = 0; l < numBands; l++) {
         for (ssize_t m = -l; m <= l; m++) {
             size_t i = CubemapSH::getShIndex(m, (size_t) l);
@@ -761,11 +761,11 @@ void outputSh(std::ostream& out,
 }
 
 void UTILS_UNUSED outputSpectrum(std::ostream& out,
-        const std::unique_ptr<filament::math::double3[]>& sh, size_t numBands) {
+        const std::unique_ptr<filament::math::float3[]>& sh, size_t numBands) {
     // We assume a symetrical function (i.e. m!=0 terms are zero)
     for (ssize_t l = 0; l < numBands; l++) {
         size_t i = CubemapSH::getShIndex(0, (size_t) l);
-        double L = dot(sh[i], double3{ 0.2126, 0.7152, 0.0722 });
+        float L = dot(sh[i], float3{ 0.2126, 0.7152, 0.0722 });
         out << std::fixed << std::setprecision(15) << std::setw(18) << sq(L) << std::endl;
     }
 }
@@ -862,10 +862,10 @@ void iblRoughnessPrefilter(utils::JobSystem& js, const utils::Path& iname,
             }
         }
 
-        const double lod = saturate(level / (numLevels - 1.0));
+        const float lod = saturate(level / (numLevels - 1.0f));
         // map the lod to a linear_roughness,  here we're using ^2, but other mappings are possible.
         // ==> lod = sqrt(linear_roughness)
-        const double linear_roughness = lod * lod;
+        const float linear_roughness = lod * lod;
         if (!g_quiet) {
             std::cout << "Level " << level <<
                     std::setprecision(3)
@@ -880,7 +880,7 @@ void iblRoughnessPrefilter(utils::JobSystem& js, const utils::Path& iname,
         if (!g_quiet) {
             updater.start();
         }
-        CubemapIBL::roughnessFilter(js, dst, levels, linear_roughness, numSamples, double3{1,1,1},
+        CubemapIBL::roughnessFilter(js, dst, levels, linear_roughness, numSamples, float3{1,1,1},
                 [&updater, quiet = g_quiet](size_t index, float v) {
             if (!quiet) {
                 updater.update(index, v);

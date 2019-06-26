@@ -41,7 +41,7 @@ inline bool isPOT(size_t x) {
     return !(x & (x - 1));
 }
 
-inline filament::math::double2 hammersley(uint32_t i, float iN) {
+inline filament::math::float2 hammersley(uint32_t i, float iN) {
     constexpr float tof = 0.5f / 0x80000000U;
     uint32_t bits = i;
     bits = (bits << 16u) | (bits >> 16u);

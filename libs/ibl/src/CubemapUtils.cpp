@@ -56,14 +56,14 @@ void CubemapUtils::clamp(Image& src) {
 void CubemapUtils::equirectangularToCubemap(JobSystem& js, Cubemap& dst, const Image& src) {
     const size_t width = src.getWidth();
     const size_t height = src.getHeight();
-    const double r = width * 0.5 * M_1_PI;
+    const float r = width * 0.5 * M_1_PI;
 
-    auto toRectilinear = [width, height](double3 s) -> double2 {
-        double xf = std::atan2(s.x, s.z) * M_1_PI;   // range [-1.0, 1.0]
-        double yf = std::asin(s.y) * (2 * M_1_PI);   // range [-1.0, 1.0]
-        xf = (xf + 1.0) * 0.5 * (width  - 1);        // range [0, width [
-        yf = (1.0 - yf) * 0.5 * (height - 1);        // range [0, height[
-        return double2(xf, yf);
+    auto toRectilinear = [width, height](float3 s) -> float2 {
+        float xf = std::atan2(s.x, s.z) * M_1_PI;   // range [-1.0, 1.0]
+        float yf = std::asin(s.y) * (2 * M_1_PI);   // range [-1.0, 1.0]
+        xf = (xf + 1.0f) * 0.5f * (width  - 1);        // range [0, width [
+        yf = (1.0f - yf) * 0.5f * (height - 1);        // range [0, height[
+        return float2(xf, yf);
     };
 
     process<EmptyState>(dst, js,
@@ -78,24 +78,24 @@ void CubemapUtils::equirectangularToCubemap(JobSystem& js, Cubemap& dst, const I
             // (in pixels) in the equirectangular -- we take the bounding box of the
             // projection of the cubemap texel's corners.
 
-            auto pos0 = toRectilinear(dst.getDirectionFor(f, x + 0.0, y + 0.0)); // make sure to use the double version
-            auto pos1 = toRectilinear(dst.getDirectionFor(f, x + 1.0, y + 0.0)); // make sure to use the double version
-            auto pos2 = toRectilinear(dst.getDirectionFor(f, x + 0.0, y + 1.0)); // make sure to use the double version
-            auto pos3 = toRectilinear(dst.getDirectionFor(f, x + 1.0, y + 1.0)); // make sure to use the double version
-            const double minx = std::min(pos0.x, std::min(pos1.x, std::min(pos2.x, pos3.x)));
-            const double maxx = std::max(pos0.x, std::max(pos1.x, std::max(pos2.x, pos3.x)));
-            const double miny = std::min(pos0.y, std::min(pos1.y, std::min(pos2.y, pos3.y)));
-            const double maxy = std::max(pos0.y, std::max(pos1.y, std::max(pos2.y, pos3.y)));
-            const double dx = std::max(1.0, maxx - minx);
-            const double dy = std::max(1.0, maxy - miny);
+            auto pos0 = toRectilinear(dst.getDirectionFor(f, x + 0.0f, y + 0.0f)); // make sure to use the float version
+            auto pos1 = toRectilinear(dst.getDirectionFor(f, x + 1.0f, y + 0.0f)); // make sure to use the float version
+            auto pos2 = toRectilinear(dst.getDirectionFor(f, x + 0.0f, y + 1.0f)); // make sure to use the float version
+            auto pos3 = toRectilinear(dst.getDirectionFor(f, x + 1.0f, y + 1.0f)); // make sure to use the float version
+            const float minx = std::min(pos0.x, std::min(pos1.x, std::min(pos2.x, pos3.x)));
+            const float maxx = std::max(pos0.x, std::max(pos1.x, std::max(pos2.x, pos3.x)));
+            const float miny = std::min(pos0.y, std::min(pos1.y, std::min(pos2.y, pos3.y)));
+            const float maxy = std::max(pos0.y, std::max(pos1.y, std::max(pos2.y, pos3.y)));
+            const float dx = std::max(1.0f, maxx - minx);
+            const float dy = std::max(1.0f, maxy - miny);
             const size_t numSamples = size_t(dx * dy);
 
             const float iNumSamples = 1.0f / numSamples;
             float3 c = 0;
             for (size_t sample = 0; sample < numSamples; sample++) {
                 // Generate numSamples in our destination pixels and map them to input pixels
-                const double2 h = hammersley(uint32_t(sample), iNumSamples);
-                const double3 s(dst.getDirectionFor(f, x + h.x, y + h.y));
+                const float2 h = hammersley(uint32_t(sample), iNumSamples);
+                const float3 s(dst.getDirectionFor(f, x + h.x, y + h.y));
                 auto pos = toRectilinear(s);
 
                 // we can't use filterAt() here because it reads past the width/height
@@ -113,26 +113,26 @@ void CubemapUtils::equirectangularToCubemap(JobSystem& js, Cubemap& dst, const I
 }
 
 void CubemapUtils::cubemapToEquirectangular(JobSystem& js, Image& dst, const Cubemap& src) {
-    const double w = dst.getWidth();
-    const double h = dst.getHeight();
+    const float w = dst.getWidth();
+    const float h = dst.getHeight();
     auto parallelJobTask = [&](size_t j0, size_t count) {
         for (size_t j = j0; j < j0 + count; j++) {
             for (size_t i = 0; i < w; i++) {
                 float3 c = 0;
                 const size_t numSamples = 64; // TODO: how to chose numsamples
                 for (size_t sample = 0; sample < numSamples; sample++) {
-                    const double2 u = hammersley(uint32_t(sample), 1.0f / numSamples);
-                    double x = 2.0 * (i + u.x) / w - 1.0;
-                    double y = 1.0 - 2.0 * (j + u.y) / h;
-                    double theta = x * M_PI;
-                    double phi = y * M_PI * 0.5;
-                    double3 s = {
+                    const float2 u = hammersley(uint32_t(sample), 1.0f / numSamples);
+                    float x = 2.0f * (i + u.x) / w - 1.0f;
+                    float y = 1.0f - 2.0f * (j + u.y) / h;
+                    float theta = x * M_PI;
+                    float phi = y * M_PI * 0.5;
+                    float3 s = {
                             std::cos(phi) * std::sin(theta),
                             std::sin(phi),
                             std::cos(phi) * std::cos(theta) };
                     c += src.filterAt(s);
                 }
-                Cubemap::writeAt(dst.getPixelRef(i, j), c * (1.0 / numSamples));
+                Cubemap::writeAt(dst.getPixelRef(i, j), c * (1.0f / numSamples));
             }
         }
     };
@@ -143,30 +143,30 @@ void CubemapUtils::cubemapToEquirectangular(JobSystem& js, Image& dst, const Cub
 }
 
 void CubemapUtils::cubemapToOctahedron(JobSystem& js, Image& dst, const Cubemap& src) {
-    const double w = dst.getWidth();
-    const double h = dst.getHeight();
+    const float w = dst.getWidth();
+    const float h = dst.getHeight();
     auto parallelJobTask = [&](size_t j0, size_t count) {
         for (size_t j = j0; j < j0 + count; j++) {
             for (size_t i = 0; i < w; i++) {
                 float3 c = 0;
                 const size_t numSamples = 64; // TODO: how to chose numsamples
                 for (size_t sample = 0; sample < numSamples; sample++) {
-                    const double2 u = hammersley(uint32_t(sample), 1.0f / numSamples);
-                    double x = 2.0 * (i + u.x) / w - 1.0;
-                    double z = 2.0 * (j + u.y) / h - 1.0;
-                    double y;
-                    if (std::abs(z) > (1.0 - std::abs(x))) {
-                        double u = x < 0 ? std::abs(z) - 1 : 1 - std::abs(z);
-                        double v = z < 0 ? std::abs(x) - 1 : 1 - std::abs(x);
+                    const float2 u = hammersley(uint32_t(sample), 1.0f / numSamples);
+                    float x = 2.0f * (i + u.x) / w - 1.0f;
+                    float z = 2.0f * (j + u.y) / h - 1.0f;
+                    float y;
+                    if (std::abs(z) > (1.0f - std::abs(x))) {
+                        float u = x < 0 ? std::abs(z) - 1 : 1 - std::abs(z);
+                        float v = z < 0 ? std::abs(x) - 1 : 1 - std::abs(x);
                         x = u;
                         z = v;
-                        y = (std::abs(x) + std::abs(z)) - 1.0;
+                        y = (std::abs(x) + std::abs(z)) - 1.0f;
                     } else {
-                        y = 1.0 - (std::abs(x) + std::abs(z));
+                        y = 1.0f - (std::abs(x) + std::abs(z));
                     }
                     c += src.filterAt({x, y, z});
                 }
-                Cubemap::writeAt(dst.getPixelRef(i, j), c * (1.0 / numSamples));
+                Cubemap::writeAt(dst.getPixelRef(i, j), c * (1.0f / numSamples));
             }
         }
     };
@@ -217,7 +217,7 @@ void CubemapUtils::crossToCubemap(JobSystem& js, Cubemap& dst, const Image& src)
                     size_t sampleCount = std::max(size_t(1), dim / dimension);
                     sampleCount = std::min(size_t(256), sampleCount * sampleCount);
                     for (size_t i = 0; i < sampleCount; i++) {
-                        const double2 h = hammersley(uint32_t(i), 1.0f / sampleCount);
+                        const float2 h = hammersley(uint32_t(i), 1.0f / sampleCount);
                         size_t u = dx + size_t((x + h.x) * dim / dimension);
                         size_t v = dy + size_t((y + h.y) * dim / dimension);
                         Cubemap::writeAt(data, Cubemap::sampleAt(src.getPixelRef(u, v)));
@@ -314,8 +314,8 @@ void CubemapUtils::mirrorCubemap(JobSystem& js, Cubemap& dst, const Cubemap& src
     processSingleThreaded<EmptyState>(dst, js,
             [&](EmptyState&, size_t y, Cubemap::Face f, Cubemap::Texel* data, size_t dim) {
         for (size_t x=0 ; x<dim ; ++x, ++data) {
-            const double3 N(dst.getDirectionFor(f, x, y));
-            Cubemap::writeAt(data, src.sampleAt(double3{ -N.x, N.y, N.z }));
+            const float3 N(dst.getDirectionFor(f, x, y));
+            Cubemap::writeAt(data, src.sampleAt(float3{ -N.x, N.y, N.z }));
         }
     });
 }
@@ -360,19 +360,19 @@ void CubemapUtils::generateUVGrid(JobSystem& js, Cubemap& cml, size_t gridFreque
  * The quadrant (-1,1)-(x,y) is projected onto the unit sphere
  *
  */
-static inline double sphereQuadrantArea(double x, double y) {
+static inline float sphereQuadrantArea(float x, float y) {
     return std::atan2(x*y, std::sqrt(x*x + y*y + 1));
 }
 
-double CubemapUtils::solidAngle(size_t dim, size_t u, size_t v) {
-    const double iDim = 1.0f / dim;
-    double s = ((u + 0.5) * 2*iDim) - 1;
-    double t = ((v + 0.5) * 2*iDim) - 1;
-    const double x0 = s - iDim;
-    const double y0 = t - iDim;
-    const double x1 = s + iDim;
-    const double y1 = t + iDim;
-    double solidAngle = sphereQuadrantArea(x0, y0) -
+float CubemapUtils::solidAngle(size_t dim, size_t u, size_t v) {
+    const float iDim = 1.0f / dim;
+    float s = ((u + 0.5f) * 2 * iDim) - 1;
+    float t = ((v + 0.5f) * 2 * iDim) - 1;
+    const float x0 = s - iDim;
+    const float y0 = t - iDim;
+    const float x1 = s + iDim;
+    const float y1 = t + iDim;
+    float solidAngle = sphereQuadrantArea(x0, y0) -
                         sphereQuadrantArea(x0, y1) -
                         sphereQuadrantArea(x1, y0) +
                         sphereQuadrantArea(x1, y1);
