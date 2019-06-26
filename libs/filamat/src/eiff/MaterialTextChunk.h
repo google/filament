@@ -46,7 +46,7 @@ private:
     std::vector<ShaderAttribute> mDuplicateMap;
 
     const std::vector<TextEntry> mEntries;
-    const LineDictionary mDictionary;
+    const LineDictionary& mDictionary;
 };
 
 } // namespace filamat

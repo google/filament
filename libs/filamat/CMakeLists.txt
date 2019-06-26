@@ -41,6 +41,7 @@ set(COMMON_SRCS
         src/shaders/ShaderGenerator.cpp
         src/Enums.cpp
         src/MaterialBuilder.cpp
+        src/MaterialVariants.cpp
         src/PostprocessMaterialBuilder.cpp)
 
 # Sources and headers for filamat

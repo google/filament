@@ -19,6 +19,8 @@
 
 #include <private/filament/Variant.h>
 
+#include <backend/DriverEnums.h>
+
 #include <vector>
 
 namespace filamat {
@@ -32,29 +34,7 @@ struct Variant {
     Stage stage;
 };
 
-std::vector<Variant> determineVariants(uint8_t variantFilter, bool isLit,
-        bool shadowMultiplier) {
-    std::vector<Variant> variants;
-    uint8_t variantMask = ~variantFilter;
-    for (uint8_t k = 0; k < filament::VARIANT_COUNT; k++) {
-        if (filament::Variant::isReserved(k)) {
-            continue;
-        }
-
-        // Remove variants for unlit materials
-        uint8_t v = filament::Variant::filterVariant(
-                k & variantMask, isLit || shadowMultiplier);
-
-        if (filament::Variant::filterVariantVertex(v) == k) {
-            variants.emplace_back(k, filament::backend::ShaderType::VERTEX);
-        }
-
-        if (filament::Variant::filterVariantFragment(v) == k) {
-            variants.emplace_back(k, filament::backend::ShaderType::FRAGMENT);
-        }
-    }
-    return variants;
-}
+std::vector<Variant> determineVariants(uint8_t variantFilter, bool isLit, bool shadowMultiplier);
 
 } // namespace filamat
 
