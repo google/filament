@@ -462,13 +462,7 @@ void FTexture::generatePrefilterMipmap(FEngine& engine,
     images.push_back(std::move(temp));
     levels.push_back(std::move(cml));
 
-    if (options->mirror) {
-        Image mirrorImage;
-        Cubemap cubemap(CubemapUtils::create(mirrorImage, size));
-        CubemapUtils::mirrorCubemap(js, cubemap, levels[0]);
-        std::swap(levels[0], cubemap);
-        std::swap(images[0], mirrorImage);
-    }
+    const double3 mirror = options->mirror ? double3{ -1, 1, 1 } : double3{ 1, 1, 1 };
 
     // make the cubemap seamless
     levels[0].makeSeamless();
@@ -488,7 +482,7 @@ void FTexture::generatePrefilterMipmap(FEngine& engine,
 
         Image image;
         Cubemap dst = CubemapUtils::create(image, dim);
-        CubemapIBL::roughnessFilter(js, dst, levels, linearRoughness, numSamples);
+        CubemapIBL::roughnessFilter(js, dst, levels, linearRoughness, numSamples, mirror);
 
         Texture::PixelBufferDescriptor pbd(image.getData(), image.getSize(),
                 Texture::PixelBufferDescriptor::PixelDataFormat::RGB,
