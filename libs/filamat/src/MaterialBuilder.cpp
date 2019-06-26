@@ -581,8 +581,10 @@ bool MaterialBuilder::generateShaders(const std::vector<Variant>& variants, Chun
 
     // Emit GLSL chunks (TextDictionaryReader and MaterialTextChunk).
     if (!glslEntries.empty()) {
-        container.addChild<filamat::DictionaryTextChunk>(glslDictionary, ChunkType::DictionaryGlsl);
-        container.addChild<MaterialTextChunk>(std::move(glslEntries), glslDictionary, ChunkType::MaterialGlsl);
+        const auto& dictionaryChunk = container.addChild<filamat::DictionaryTextChunk>(
+                std::move(glslDictionary), ChunkType::DictionaryGlsl);
+        container.addChild<MaterialTextChunk>(std::move(glslEntries),
+                dictionaryChunk.getDictionary(), ChunkType::MaterialGlsl);
     }
 
     // Emit SPIRV chunks (SpirvDictionaryReader and MaterialSpirvChunk).
@@ -594,8 +596,10 @@ bool MaterialBuilder::generateShaders(const std::vector<Variant>& variants, Chun
 
     // Emit Metal chunks (MetalDictionaryReader and MaterialMetalChunk).
     if (!metalEntries.empty()) {
-        container.addChild<filamat::DictionaryTextChunk>(metalDictionary, ChunkType::DictionaryMetal);
-        container.addChild<MaterialTextChunk>(std::move(metalEntries), metalDictionary, ChunkType::MaterialMetal);
+        const auto& dictionaryChunk = container.addChild<filamat::DictionaryTextChunk>(
+                std::move(metalDictionary), ChunkType::DictionaryMetal);
+        container.addChild<MaterialTextChunk>(std::move(metalEntries),
+                dictionaryChunk.getDictionary(), ChunkType::MaterialMetal);
     }
 #endif
 
@@ -636,8 +640,7 @@ Package MaterialBuilder::build() noexcept {
     bool success = generateShaders(variants, container, info);
 
     // Flatten all chunks in the container into a Package.
-    size_t packageSize = container.getSize();
-    Package package(packageSize);
+    Package package(container.getSize());
     Flattener f(package);
     container.flatten(f);
     package.setValid(success);

@@ -49,7 +49,7 @@ private:
 
     std::unordered_map<std::string, size_t> mLineIndices;
     std::vector<std::string> mStrings;
-    size_t mStorageSize;
+    size_t mStorageSize = 0;
 };
 
 } // namespace filamat
