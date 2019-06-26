@@ -36,31 +36,31 @@ using namespace utils;
 namespace filament {
 namespace ibl {
 
-static double pow5(double x) {
+static float pow5(float x) {
     return (x*x)*(x*x)*x;
 }
 
-static double3 hemisphereImportanceSampleDggx(double2 u, double a) { // pdf = D(a) * cosTheta
-    const double phi = 2 * M_PI * u.x;
+static float3 hemisphereImportanceSampleDggx(float2 u, float a) { // pdf = D(a) * cosTheta
+    const float phi = 2 * M_PI * u.x;
     // NOTE: (aa-1) == (a-1)(a+1) produces better fp accuracy
-    const double cosTheta2 = (1 - u.y) / (1 + (a + 1) * ((a - 1) * u.y));
-    const double cosTheta = std::sqrt(cosTheta2);
-    const double sinTheta = std::sqrt(1 - cosTheta2);
+    const float cosTheta2 = (1 - u.y) / (1 + (a + 1) * ((a - 1) * u.y));
+    const float cosTheta = std::sqrt(cosTheta2);
+    const float sinTheta = std::sqrt(1 - cosTheta2);
     return { sinTheta * std::cos(phi), sinTheta * std::sin(phi), cosTheta };
 }
 
-static double3 UTILS_UNUSED hemisphereCosSample(double2 u) {  // pdf = cosTheta / M_PI;
-    const double phi = 2 * M_PI * u.x;
-    const double cosTheta2 = 1 - u.y;
-    const double cosTheta = std::sqrt(cosTheta2);
-    const double sinTheta = std::sqrt(1 - cosTheta2);
+static float3 UTILS_UNUSED hemisphereCosSample(float2 u) {  // pdf = cosTheta / M_PI;
+    const float phi = 2 * M_PI * u.x;
+    const float cosTheta2 = 1 - u.y;
+    const float cosTheta = std::sqrt(cosTheta2);
+    const float sinTheta = std::sqrt(1 - cosTheta2);
     return { sinTheta * std::cos(phi), sinTheta * std::sin(phi), cosTheta };
 }
 
-static double3 UTILS_UNUSED hemisphereUniformSample(double2 u) { // pdf = 1.0 / (2.0 * M_PI);
-    const double phi = 2 * M_PI * u.x;
-    const double cosTheta = 1 - u.y;
-    const double sinTheta = std::sqrt(1 - cosTheta * cosTheta);
+static float3 UTILS_UNUSED hemisphereUniformSample(float2 u) { // pdf = 1.0 / (2.0 * M_PI);
+    const float phi = 2 * M_PI * u.x;
+    const float cosTheta = 1 - u.y;
+    const float sinTheta = std::sqrt(1 - cosTheta * cosTheta);
     return { sinTheta * std::cos(phi), sinTheta * std::sin(phi), cosTheta };
 }
 
@@ -121,55 +121,55 @@ static double3 UTILS_UNUSED hemisphereUniformSample(double2 u) { // pdf = 1.0 / 
  *  |                                            |
  *  +--------------------------------------------+
  */
-static double3 UTILS_UNUSED hemisphereImportanceSampleDCharlie(double2 u, double a) { // pdf = DistributionCharlie() * cosTheta
-    const double phi = 2 * M_PI * u.x;
+static float3 UTILS_UNUSED hemisphereImportanceSampleDCharlie(float2 u, float a) { // pdf = DistributionCharlie() * cosTheta
+    const float phi = 2 * M_PI * u.x;
 
-    const double sinTheta = std::pow(u.y, a / (2 * a + 1));
-    const double cosTheta = std::sqrt(1 - sinTheta * sinTheta);
+    const float sinTheta = std::pow(u.y, a / (2 * a + 1));
+    const float cosTheta = std::sqrt(1 - sinTheta * sinTheta);
 
     return { sinTheta * std::cos(phi), sinTheta * std::sin(phi), cosTheta };
 }
 
-static double DistributionGGX(double NoH, double linearRoughness) {
+static float DistributionGGX(float NoH, float linearRoughness) {
     // NOTE: (aa-1) == (a-1)(a+1) produces better fp accuracy
-    double a = linearRoughness;
-    double f = (a - 1) * ((a + 1) * (NoH * NoH)) + 1.0;
+    float a = linearRoughness;
+    float f = (a - 1) * ((a + 1) * (NoH * NoH)) + 1;
     return (a * a) / (M_PI * f * f);
 }
 
-static double UTILS_UNUSED DistributionAshikhmin(double NoH, double linearRoughness) {
-    double a = linearRoughness;
-    double a2 = a * a;
-    double cos2h = NoH * NoH;
-    double sin2h = 1 - cos2h;
-    double sin4h = sin2h * sin2h;
+static float UTILS_UNUSED DistributionAshikhmin(float NoH, float linearRoughness) {
+    float a = linearRoughness;
+    float a2 = a * a;
+    float cos2h = NoH * NoH;
+    float sin2h = 1 - cos2h;
+    float sin4h = sin2h * sin2h;
     return 1 / (M_PI * (1 + 4 * a2)) * (sin4h + 4 * std::exp(-cos2h / (a2 * sin2h)));
 }
 
-static double UTILS_UNUSED DistributionCharlie(double NoH, double linearRoughness) {
+static float UTILS_UNUSED DistributionCharlie(float NoH, float linearRoughness) {
     // Estevez and Kulla 2017, "Production Friendly Microfacet Sheen BRDF"
-    double a = linearRoughness;
-    double invAlpha = 1 / a;
-    double cos2h = NoH * NoH;
-    double sin2h = 1 - cos2h;
-    return (2 + invAlpha) * std::pow(sin2h, invAlpha * 0.5) / (2 * M_PI);
+    float a = linearRoughness;
+    float invAlpha = 1 / a;
+    float cos2h = NoH * NoH;
+    float sin2h = 1 - cos2h;
+    return (2 + invAlpha) * std::pow(sin2h, invAlpha * 0.5f) / (2 * M_PI);
 }
 
-static double Fresnel(double f0, double f90, double LoH) {
-    const double Fc = pow5(1 - LoH);
+static float Fresnel(float f0, float f90, float LoH) {
+    const float Fc = pow5(1 - LoH);
     return f0 * (1 - Fc) + f90 * Fc;
 }
 
-static double Visibility(double NoV, double NoL, double a) {
+static float Visibility(float NoV, float NoL, float a) {
     // Heitz 2014, "Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs"
     // Height-correlated GGX
-    const double a2 = a * a;
-    const double GGXL = NoV * std::sqrt((NoL - NoL * a2) * NoL + a2);
-    const double GGXV = NoL * std::sqrt((NoV - NoV * a2) * NoV + a2);
-    return 0.5 / (GGXV + GGXL);
+    const float a2 = a * a;
+    const float GGXL = NoV * std::sqrt((NoL - NoL * a2) * NoL + a2);
+    const float GGXV = NoL * std::sqrt((NoV - NoV * a2) * NoV + a2);
+    return 0.5f / (GGXV + GGXL);
 }
 
-static double UTILS_UNUSED VisibilityAshikhmin(double NoV, double NoL, double /*a*/) {
+static float UTILS_UNUSED VisibilityAshikhmin(float NoV, float NoL, float /*a*/) {
     // Neubelt and Pettineo 2013, "Crafting a Next-gen Material Pipeline for The Order: 1886"
     return 1 / (4 * (NoL + NoV - NoL * NoV));
 }
@@ -286,7 +286,7 @@ static double UTILS_UNUSED VisibilityAshikhmin(double NoV, double NoL, double /*
  */
 
 void CubemapIBL::roughnessFilter(JobSystem& js, Cubemap& dst, const std::vector<Cubemap>& levels,
-        double linearRoughness, size_t maxNumSamples, double3 mirror, CubemapIBL::Progress updater)
+        float linearRoughness, size_t maxNumSamples, float3 mirror, CubemapIBL::Progress updater)
 {
     const float numSamples = maxNumSamples;
     const float inumSamples = 1.0f / numSamples;
@@ -306,8 +306,8 @@ void CubemapIBL::roughnessFilter(JobSystem& js, Cubemap& dst, const std::vector<
                     }
                     const Cubemap& cm = levels[0];
                     for (size_t x = 0; x < dim; ++x, ++data) {
-                        const double2 p(dst.center(x, y));
-                        const double3 N(dst.getDirectionFor(f, p.x, p.y) * mirror);
+                        const float2 p(dst.center(x, y));
+                        const float3 N(dst.getDirectionFor(f, p.x, p.y) * mirror);
                         // FIXME: we should pick the proper LOD here and do trilinear filtering
                         Cubemap::writeAt(data, cm.sampleAt(N));
                     }
@@ -318,7 +318,7 @@ void CubemapIBL::roughnessFilter(JobSystem& js, Cubemap& dst, const std::vector<
 
     // be careful w/ the size of this structure, the smaller the better
     struct CacheEntry {
-        double3 L;
+        float3 L;
         float brdf_NoL;
         float lerp;
         uint8_t l0;
@@ -329,7 +329,7 @@ void CubemapIBL::roughnessFilter(JobSystem& js, Cubemap& dst, const std::vector<
     cache.reserve(maxNumSamples);
 
     // precompute everything that only depends on the sample #
-    double weight = 0;
+    float weight = 0;
     // index of the sample to use
     // our goal is to use maxNumSamples for which NoL is > 0
     // to achieve this, we might have to try more samples than
@@ -337,37 +337,37 @@ void CubemapIBL::roughnessFilter(JobSystem& js, Cubemap& dst, const std::vector<
     for (size_t sampleIndex = 0 ; sampleIndex < maxNumSamples; sampleIndex++) {
 
         // get Hammersley distribution for the half-sphere
-        const double2 u = hammersley(uint32_t(sampleIndex), inumSamples);
+        const float2 u = hammersley(uint32_t(sampleIndex), inumSamples);
 
         // Importance sampling GGX - Trowbridge-Reitz
-        const double3 H = hemisphereImportanceSampleDggx(u, linearRoughness);
+        const float3 H = hemisphereImportanceSampleDggx(u, linearRoughness);
 
 #if 0
         // This produces the same result that the code below using the the non-simplified
         // equation. This let's us see that N == V and that L = -reflect(V, H)
         // Keep this for reference.
-        const double3 N = {0, 0, 1};
-        const double3 V = N;
-        const double3 L = 2 * dot(H, V) * H - V;
-        const double NoL = dot(N, L);
-        const double NoH = dot(N, H);
-        const double NoH2 = NoH * NoH;
-        const double NoV = dot(N, V);
+        const float3 N = {0, 0, 1};
+        const float3 V = N;
+        const float3 L = 2 * dot(H, V) * H - V;
+        const float NoL = dot(N, L);
+        const float NoH = dot(N, H);
+        const float NoH2 = NoH * NoH;
+        const float NoV = dot(N, V);
 #else
-        const double NoV = 1;
-        const double NoH = H.z;
-        const double NoH2 = H.z*H.z;
-        const double NoL = 2*NoH2 - 1;
-        const double3 L(2*NoH*H.x, 2*NoH*H.y, NoL);
+        const float NoV = 1;
+        const float NoH = H.z;
+        const float NoH2 = H.z*H.z;
+        const float NoL = 2*NoH2 - 1;
+        const float3 L(2*NoH*H.x, 2*NoH*H.y, NoL);
 #endif
 
         if (NoL > 0) {
-            const double pdf = DistributionGGX(NoH, linearRoughness) / 4;
+            const float pdf = DistributionGGX(NoH, linearRoughness) / 4;
 
             // K is a LOD bias that allows a bit of overlapping between samples
             constexpr float K = 4;
-            const double omegaS = 1 / (numSamples * pdf);
-            const double l = float(log4(omegaS) - log4(omegaP) + log4(K));
+            const float omegaS = 1 / (numSamples * pdf);
+            const float l = float(log4(omegaS) - log4(omegaP) + log4(K));
             const float mipLevel = clamp(float(l), 0.0f, maxLevelf);
 
             const float brdf_NoL = float(NoL);
@@ -403,11 +403,11 @@ void CubemapIBL::roughnessFilter(JobSystem& js, Cubemap& dst, const std::vector<
         mat3 R;
         const size_t numSamples = cache.size();
         for (size_t x = 0; x < dim; ++x, ++data) {
-            const double2 p(dst.center(x, y));
-            const double3 N(dst.getDirectionFor(f, p.x, p.y) * mirror);
+            const float2 p(dst.center(x, y));
+            const float3 N(dst.getDirectionFor(f, p.x, p.y) * mirror);
 
             // center the cone around the normal (handle case of normal close to up)
-            const double3 up = std::abs(N.z) < 0.999 ? double3(0, 0, 1) : double3(1, 0, 0);
+            const float3 up = std::abs(N.z) < 0.999 ? float3(0, 0, 1) : float3(1, 0, 0);
             R[0] = normalize(cross(up, N));
             R[1] = cross(N, R[0]);
             R[2] = N;
@@ -415,7 +415,7 @@ void CubemapIBL::roughnessFilter(JobSystem& js, Cubemap& dst, const std::vector<
             float3 Li = 0;
             for (size_t sample = 0; sample < numSamples; sample++) {
                 const CacheEntry& e = cache[sample];
-                const double3 L(R * e.L);
+                const float3 L(R * e.L);
                 const Cubemap& cmBase = levels[e.l0];
                 const Cubemap& next = levels[e.l1];
                 const float3 c0 = Cubemap::trilinearFilterAt(cmBase, next, e.lerp, L);
@@ -526,7 +526,7 @@ void CubemapIBL::diffuseIrradiance(JobSystem& js, Cubemap& dst, const std::vecto
     std::atomic_uint progress = {0};
 
     struct CacheEntry {
-        double3 L;
+        float3 L;
         float lerp;
         uint8_t l0;
         uint8_t l1;
@@ -538,17 +538,17 @@ void CubemapIBL::diffuseIrradiance(JobSystem& js, Cubemap& dst, const std::vecto
     // precompute everything that only depends on the sample #
     for (size_t sampleIndex = 0, sample = 0 ; sampleIndex < maxNumSamples; sampleIndex++) {
         // get Hammersley distribution for the half-sphere
-        const double2 u = hammersley(uint32_t(sampleIndex), inumSamples);
-        const double3 L = hemisphereCosSample(u);
-        const double3 N = { 0, 0, 1 };
-        const double NoL = dot(N, L);
+        const float2 u = hammersley(uint32_t(sampleIndex), inumSamples);
+        const float3 L = hemisphereCosSample(u);
+        const float3 N = { 0, 0, 1 };
+        const float NoL = dot(N, L);
 
         if (NoL > 0) {
-            double pdf = NoL * M_1_PI;
+            float pdf = NoL * M_1_PI;
 
             constexpr float K = 4;
-            const double omegaS = 1.0 / (numSamples * pdf);
-            const double l = float(log4(omegaS) - log4(omegaP) + log4(K));
+            const float omegaS = 1.0f / (numSamples * pdf);
+            const float l = float(log4(omegaS) - log4(omegaP) + log4(K));
             const float mipLevel = clamp(float(l), 0.0f, maxLevelf);
 
             uint8_t l0 = uint8_t(mipLevel);
@@ -571,11 +571,11 @@ void CubemapIBL::diffuseIrradiance(JobSystem& js, Cubemap& dst, const std::vecto
         mat3 R;
         const size_t numSamples = cache.size();
         for (size_t x = 0; x < dim; ++x, ++data) {
-            const double2 p(dst.center(x, y));
-            const double3 N(dst.getDirectionFor(f, p.x, p.y));
+            const float2 p(dst.center(x, y));
+            const float3 N(dst.getDirectionFor(f, p.x, p.y));
 
             // center the cone around the normal (handle case of normal close to up)
-            const double3 up = std::abs(N.z) < 0.999 ? double3(0, 0, 1) : double3(1, 0, 0);
+            const float3 up = std::abs(N.z) < 0.999 ? float3(0, 0, 1) : float3(1, 0, 0);
             R[0] = normalize(cross(up, N));
             R[1] = cross(N, R[0]);
             R[2] = N;
@@ -583,7 +583,7 @@ void CubemapIBL::diffuseIrradiance(JobSystem& js, Cubemap& dst, const std::vecto
             float3 Li = 0;
             for (size_t sample = 0; sample < numSamples; sample++) {
                 const CacheEntry& e = cache[sample];
-                const double3 L(R * e.L);
+                const float3 L(R * e.L);
                 const Cubemap& cmBase = levels[e.l0];
                 const Cubemap& next = levels[e.l1];
                 const float3 c0 = Cubemap::trilinearFilterAt(cmBase, next, e.lerp, L);
@@ -595,25 +595,25 @@ void CubemapIBL::diffuseIrradiance(JobSystem& js, Cubemap& dst, const std::vecto
 }
 
 // Not importance-sampled
-static double2 UTILS_UNUSED DFV_NoIS(double NoV, double roughness, size_t numSamples) {
-    double2 r = 0;
-    const double linearRoughness = roughness * roughness;
-    const double3 V(std::sqrt(1 - NoV * NoV), 0, NoV);
+static float2 UTILS_UNUSED DFV_NoIS(float NoV, float roughness, size_t numSamples) {
+    float2 r = 0;
+    const float linearRoughness = roughness * roughness;
+    const float3 V(std::sqrt(1 - NoV * NoV), 0, NoV);
     for (size_t i = 0; i < numSamples; i++) {
-        const double2 u = hammersley(uint32_t(i), 1.0f / numSamples);
-        const double3 H = hemisphereCosSample(u);
-        const double3 L = 2 * dot(V, H) * H - V;
-        const double VoH = saturate(dot(V, H));
-        const double NoL = saturate(L.z);
-        const double NoH = saturate(H.z);
+        const float2 u = hammersley(uint32_t(i), 1.0f / numSamples);
+        const float3 H = hemisphereCosSample(u);
+        const float3 L = 2 * dot(V, H) * H - V;
+        const float VoH = saturate(dot(V, H));
+        const float NoL = saturate(L.z);
+        const float NoH = saturate(H.z);
         if (NoL > 0) {
             // Note: remember VoH == LoH  (H is half vector)
-            const double J = 1.0 / (4.0 * VoH);
-            const double pdf = NoH / M_PI;
-            const double d = DistributionGGX(NoH, linearRoughness) * NoL / (pdf * J);
-            const double Fc = pow5(1 - VoH);
-            const double v = Visibility(NoV, NoL, linearRoughness);
-            r.x += d * v * (1.0 - Fc);
+            const float J = 1.0f / (4.0f * VoH);
+            const float pdf = NoH / M_PI;
+            const float d = DistributionGGX(NoH, linearRoughness) * NoL / (pdf * J);
+            const float Fc = pow5(1 - VoH);
+            const float v = Visibility(NoV, NoL, linearRoughness);
+            r.x += d * v * (1.0f - Fc);
             r.y += d * v * Fc;
         }
     }
@@ -706,16 +706,16 @@ static double2 UTILS_UNUSED DFV_NoIS(double NoV, double roughness, size_t numSam
  *
  */
 
-static double2 DFV(double NoV, double linearRoughness, size_t numSamples) {
-    double2 r = 0;
-    const double3 V(std::sqrt(1 - NoV * NoV), 0, NoV);
+static float2 DFV(float NoV, float linearRoughness, size_t numSamples) {
+    float2 r = 0;
+    const float3 V(std::sqrt(1 - NoV * NoV), 0, NoV);
     for (size_t i = 0; i < numSamples; i++) {
-        const double2 u = hammersley(uint32_t(i), 1.0f / numSamples);
-        const double3 H = hemisphereImportanceSampleDggx(u, linearRoughness);
-        const double3 L = 2 * dot(V, H) * H - V;
-        const double VoH = saturate(dot(V, H));
-        const double NoL = saturate(L.z);
-        const double NoH = saturate(H.z);
+        const float2 u = hammersley(uint32_t(i), 1.0f / numSamples);
+        const float3 H = hemisphereImportanceSampleDggx(u, linearRoughness);
+        const float3 L = 2 * dot(V, H) * H - V;
+        const float VoH = saturate(dot(V, H));
+        const float NoL = saturate(L.z);
+        const float NoH = saturate(H.z);
         if (NoL > 0) {
             /*
              * Fc = (1 - V•H)^5
@@ -739,28 +739,28 @@ static double2 DFV(double NoV, double linearRoughness, size_t numSamples) {
              *   Er() = f0 * DFV.x + f90 * DFV.y
              *
              */
-            const double v = Visibility(NoV, NoL, linearRoughness) * NoL * (VoH / NoH);
-            const double Fc = pow5(1 - VoH);
-            r.x += v * (1.0 - Fc);
+            const float v = Visibility(NoV, NoL, linearRoughness) * NoL * (VoH / NoH);
+            const float Fc = pow5(1 - VoH);
+            r.x += v * (1.0f - Fc);
             r.y += v * Fc;
         }
     }
     return r * (4.0 / numSamples);
 }
 
-static double2 DFV_Multiscatter(double NoV, double linearRoughness, size_t numSamples) {
-    double2 r = 0;
-    const double3 V(std::sqrt(1 - NoV * NoV), 0, NoV);
+static float2 DFV_Multiscatter(float NoV, float linearRoughness, size_t numSamples) {
+    float2 r = 0;
+    const float3 V(std::sqrt(1 - NoV * NoV), 0, NoV);
     for (size_t i = 0; i < numSamples; i++) {
-        const double2 u = hammersley(uint32_t(i), 1.0f / numSamples);
-        const double3 H = hemisphereImportanceSampleDggx(u, linearRoughness);
-        const double3 L = 2 * dot(V, H) * H - V;
-        const double VoH = saturate(dot(V, H));
-        const double NoL = saturate(L.z);
-        const double NoH = saturate(H.z);
+        const float2 u = hammersley(uint32_t(i), 1.0f / numSamples);
+        const float3 H = hemisphereImportanceSampleDggx(u, linearRoughness);
+        const float3 L = 2 * dot(V, H) * H - V;
+        const float VoH = saturate(dot(V, H));
+        const float NoL = saturate(L.z);
+        const float NoH = saturate(H.z);
         if (NoL > 0) {
-            const double v = Visibility(NoV, NoL, linearRoughness) * NoL * (VoH / NoH);
-            const double Fc = pow5(1 - VoH);
+            const float v = Visibility(NoV, NoL, linearRoughness) * NoL * (VoH / NoH);
+            const float Fc = pow5(1 - VoH);
             /*
              * Assuming f90 = 1
              *   Fc = (1 - V•H)^5
@@ -793,24 +793,24 @@ static double2 DFV_Multiscatter(double NoV, double linearRoughness, size_t numSa
     return r * (4.0 / numSamples);
 }
 
-static double DFV_Charlie_Uniform(double NoV, double linearRoughness, size_t numSamples) {
-    double r = 0.0;
-    const double3 V(std::sqrt(1 - NoV * NoV), 0, NoV);
+static float DFV_Charlie_Uniform(float NoV, float linearRoughness, size_t numSamples) {
+    float r = 0.0;
+    const float3 V(std::sqrt(1 - NoV * NoV), 0, NoV);
     for (size_t i = 0; i < numSamples; i++) {
-        const double2 u = hammersley(uint32_t(i), 1.0f / numSamples);
-        const double3 H = hemisphereUniformSample(u);
-        const double3 L = 2 * dot(V, H) * H - V;
-        const double VoH = saturate(dot(V, H));
-        const double NoL = saturate(L.z);
-        const double NoH = saturate(H.z);
+        const float2 u = hammersley(uint32_t(i), 1.0f / numSamples);
+        const float3 H = hemisphereUniformSample(u);
+        const float3 L = 2 * dot(V, H) * H - V;
+        const float VoH = saturate(dot(V, H));
+        const float NoL = saturate(L.z);
+        const float NoH = saturate(H.z);
         if (NoL > 0) {
-            const double v = VisibilityAshikhmin(NoV, NoL, linearRoughness);
-            const double d = DistributionCharlie(NoH, linearRoughness);
+            const float v = VisibilityAshikhmin(NoV, NoL, linearRoughness);
+            const float d = DistributionCharlie(NoH, linearRoughness);
             r += v * d * NoL * VoH; // VoH comes from the Jacobian, 1/(4*VoH)
         }
     }
     // uniform sampling, the PDF is 1/2pi, 4 comes from the Jacobian
-    return r * (4.0 * 2.0 * M_PI / numSamples);
+    return r * (4.0f * 2.0f * M_PI / numSamples);
 }
 
 /*
@@ -898,20 +898,20 @@ static double DFV_Charlie_Uniform(double NoV, double linearRoughness, size_t num
  *  +---------------------------------------+
  *
  */
-static double UTILS_UNUSED DFV_Charlie_IS(double NoV, double linearRoughness, size_t numSamples) {
-    double r = 0.0;
-    const double3 V(std::sqrt(1 - NoV * NoV), 0, NoV);
+static float UTILS_UNUSED DFV_Charlie_IS(float NoV, float linearRoughness, size_t numSamples) {
+    float r = 0.0;
+    const float3 V(std::sqrt(1 - NoV * NoV), 0, NoV);
     for (size_t i = 0; i < numSamples; i++) {
-        const double2 u = hammersley(uint32_t(i), 1.0f / numSamples);
-        const double3 H = hemisphereImportanceSampleDCharlie(u, linearRoughness);
-        const double3 L = 2 * dot(V, H) * H - V;
-        const double VoH = saturate(dot(V, H));
-        const double NoL = saturate(L.z);
-        const double NoH = saturate(H.z);
+        const float2 u = hammersley(uint32_t(i), 1.0f / numSamples);
+        const float3 H = hemisphereImportanceSampleDCharlie(u, linearRoughness);
+        const float3 L = 2 * dot(V, H) * H - V;
+        const float VoH = saturate(dot(V, H));
+        const float NoL = saturate(L.z);
+        const float NoH = saturate(H.z);
         if (NoL > 0) {
-            const double J = 1.0 / (4.0 * VoH);
-            const double pdf = NoH; // D has been removed as it cancels out in the previous equation
-            const double v = VisibilityAshikhmin(NoV, NoL, linearRoughness);
+            const float J = 1.0f / (4.0f * VoH);
+            const float pdf = NoH; // D has been removed as it cancels out in the previous equation
+            const float v = VisibilityAshikhmin(NoV, NoL, linearRoughness);
 
             r += v * NoL / (pdf * J);
         }
@@ -919,25 +919,25 @@ static double UTILS_UNUSED DFV_Charlie_IS(double NoV, double linearRoughness, si
     return r / numSamples;
 }
 
-void CubemapIBL::brdf(utils::JobSystem& js, Cubemap& dst, double linearRoughness) {
+void CubemapIBL::brdf(utils::JobSystem& js, Cubemap& dst, float linearRoughness) {
     CubemapUtils::process<CubemapUtils::EmptyState>(dst, js,
             [ & ](CubemapUtils::EmptyState&, size_t y,
                     Cubemap::Face f, Cubemap::Texel* data, size_t dim) {
                 for (size_t x=0 ; x<dim ; ++x, ++data) {
-                    const double2 p(dst.center(x, y));
-                    const double3 H(dst.getDirectionFor(f, p.x, p.y));
-                    const double3 N = { 0, 0, 1 };
-                    const double3 V = N;
-                    const double3 L = 2 * dot(H, V) * H - V;
-                    const double NoL = dot(N, L);
-                    const double NoH = dot(N, H);
-                    const double NoV = dot(N, V);
-                    const double LoH = dot(L, H);
+                    const float2 p(dst.center(x, y));
+                    const float3 H(dst.getDirectionFor(f, p.x, p.y));
+                    const float3 N = { 0, 0, 1 };
+                    const float3 V = N;
+                    const float3 L = 2 * dot(H, V) * H - V;
+                    const float NoL = dot(N, L);
+                    const float NoH = dot(N, H);
+                    const float NoV = dot(N, V);
+                    const float LoH = dot(L, H);
                     float brdf_NoL = 0;
                     if (NoL > 0 && LoH > 0) {
-                        const double D = DistributionGGX(NoH, linearRoughness);
-                        const double F = Fresnel(0.04, 1.0, LoH);
-                        const double V = Visibility(NoV, NoL, linearRoughness);
+                        const float D = DistributionGGX(NoH, linearRoughness);
+                        const float F = Fresnel(0.04f, 1.0f, LoH);
+                        const float V = Visibility(NoV, NoL, linearRoughness);
                         brdf_NoL = float(D * F * V * NoL);
                     }
                     Cubemap::writeAt(data, Cubemap::Texel{ brdf_NoL });
@@ -956,14 +956,14 @@ void CubemapIBL::DFG(JobSystem& js, Image& dst, bool multiscatter, bool cloth) {
                     Cubemap::Texel* UTILS_RESTRICT data =
                             static_cast<Cubemap::Texel*>(dst.getPixelRef(0, y));
 
-                    const double coord = saturate((height - y + 0.5) / height);
+                    const float coord = saturate((height - y + 0.5f) / height);
                     // map the coordinate in the texture to a linear_roughness,
                     // here we're using ^2, but other mappings are possible.
                     // ==> coord = sqrt(linear_roughness)
-                    const double linear_roughness = coord * coord;
+                    const float linear_roughness = coord * coord;
                     for (size_t x = 0; x < height; x++, data++) {
-                        // const double NoV = double(x) / (width-1);
-                        const double NoV = saturate((x + 0.5) / width);
+                        // const float NoV = float(x) / (width-1);
+                        const float NoV = saturate((x + 0.5f) / width);
                         float3 r = { dfvFunction(NoV, linear_roughness, 1024), 0 };
                         if (cloth) {
                             r.b = float(DFV_Charlie_Uniform(NoV, linear_roughness, 4096));

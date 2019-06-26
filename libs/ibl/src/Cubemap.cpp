@@ -34,7 +34,7 @@ size_t Cubemap::getDimensions() const {
 
 void Cubemap::resetDimensions(size_t dim) {
     mDimensions = dim;
-    mScale = 2.0 / dim;
+    mScale = 2.0f / dim;
     mUpperBound = std::nextafter(mDimensions, 0);
     for (auto& mFace : mFaces) {
         mFace.reset();
@@ -45,12 +45,12 @@ void Cubemap::setImageForFace(Face face, const Image& image) {
     mFaces[size_t(face)].set(image);
 }
 
-Cubemap::Address Cubemap::getAddressFor(const double3& r) {
+Cubemap::Address Cubemap::getAddressFor(const float3& r) {
     Cubemap::Address addr;
-    double sc, tc, ma;
-    const double rx = std::abs(r.x);
-    const double ry = std::abs(r.y);
-    const double rz = std::abs(r.z);
+    float sc, tc, ma;
+    const float rx = std::abs(r.x);
+    const float ry = std::abs(r.y);
+    const float rz = std::abs(r.z);
     if (rx >= ry && rx >= rz) {
         ma = rx;
         if (r.x >= 0) {
@@ -200,18 +200,18 @@ Cubemap::Texel Cubemap::filterAtCenter(const Image& image, size_t x0, size_t y0)
     return (c0 + c1 + c2 + c3) * 0.25f;
 }
 
-Cubemap::Texel Cubemap::trilinearFilterAt(const Cubemap& l0, const Cubemap& l1, double lerp,
-        const double3& L)
+Cubemap::Texel Cubemap::trilinearFilterAt(const Cubemap& l0, const Cubemap& l1, float lerp,
+        const float3& L)
 {
     Cubemap::Address addr(getAddressFor(L));
     const Image& i0 = l0.getImageForFace(addr.face);
-    double x0 = std::min(addr.s * l0.mDimensions, l0.mUpperBound);
-    double y0 = std::min(addr.t * l0.mDimensions, l0.mUpperBound);
+    float x0 = std::min(addr.s * l0.mDimensions, l0.mUpperBound);
+    float y0 = std::min(addr.t * l0.mDimensions, l0.mUpperBound);
     float3 c0(filterAt(i0, x0, y0));
     if (&l0 != &l1) {
         const Image& i1 = l1.getImageForFace(addr.face);
-        double x1 = std::min(addr.s * l1.mDimensions, l1.mUpperBound);
-        double y1 = std::min(addr.t * l1.mDimensions, l1.mUpperBound);
+        float x1 = std::min(addr.s * l1.mDimensions, l1.mUpperBound);
+        float y1 = std::min(addr.t * l1.mDimensions, l1.mUpperBound);
         c0 += lerp * (filterAt(i1, x1, y1) - c0);
     }
     return c0;

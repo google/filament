@@ -52,8 +52,8 @@ public:
      * @param updater           a callback for the caller to track progress
      */
     static void roughnessFilter(utils::JobSystem& js, Cubemap& dst,
-            const std::vector<Cubemap>& levels, double linearRoughness,
-            size_t maxNumSamples, math::double3 mirror, Progress updater = {});
+            const std::vector<Cubemap>& levels, float linearRoughness,
+            size_t maxNumSamples, math::float3 mirror, Progress updater = {});
 
     //! Computes the "DFG" term of the "split-sum" approximation and stores it in a 2D image
     static void DFG(utils::JobSystem& js, Image& dst, bool multiscatter, bool cloth);
@@ -74,7 +74,7 @@ public:
             size_t maxNumSamples = 1024, Progress updater = {});
 
     // for debugging. ignore.
-    static void brdf(utils::JobSystem& js, Cubemap& dst, double linearRoughness);
+    static void brdf(utils::JobSystem& js, Cubemap& dst, float linearRoughness);
 };
 
 } // namespace ibl

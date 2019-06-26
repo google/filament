@@ -462,7 +462,7 @@ void FTexture::generatePrefilterMipmap(FEngine& engine,
     images.push_back(std::move(temp));
     levels.push_back(std::move(cml));
 
-    const double3 mirror = options->mirror ? double3{ -1, 1, 1 } : double3{ 1, 1, 1 };
+    const float3 mirror = options->mirror ? float3{ -1, 1, 1 } : float3{ 1, 1, 1 };
 
     // make the cubemap seamless
     levels[0].makeSeamless();
