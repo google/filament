@@ -30,7 +30,7 @@ static void showCursor() {
     std::cout << "\033[?25h" << std::flush;
 }
 
-static void showCursorFromSignal(int signal) {
+static void showCursorFromSignal(int) {
     showCursor();
     raise(SIGINT);
 }
@@ -49,25 +49,44 @@ static inline void printProgress(float v, size_t width) {
     std::cout << "\u25C0" << std::flush;
 }
 
+void ProgressUpdater::printUpdates() {
+    std::vector<Update> updates;
+
+    std::unique_lock<std::mutex> lock(mMutex);
+    std::swap(updates, mUpdates);
+    lock.unlock();
+
+    printUpdates(updates);
+}
+
+void ProgressUpdater::printUpdates(const std::vector<Update>& updates) {
+    for (const auto update : updates) {
+        mProgress[update.index] = std::max(mProgress[update.index], update.value);
+    }
+
+    moveCursorUp(mNumBars);
+    printProgressBars();
+}
+
 void ProgressUpdater::start() {
-    auto thread_main = [this]() -> int {
+    auto threadMain = [this]() -> int {
         bool exitRequested = false;
         while (!exitRequested) {
-            std::unique_lock<std::mutex> lock(m_mutex);
-            while (!mExitRequested && m_jobQueue.isEmpty()) {
-                m_condition.wait(lock);
+            std::unique_lock<std::mutex> lock(mMutex);
+            while (!mExitRequested && mUpdates.empty()) {
+                mCondition.wait(lock);
             }
             exitRequested = mExitRequested;
             lock.unlock();
             if (!exitRequested) {
-                m_jobQueue.runAllJobs();
+                printUpdates();
             }
         };
-        m_jobQueue.runAllJobs();
+        printUpdates();
         return 0;
     };
 
-    m_thread = std::thread(thread_main);
+    mThread = std::thread(threadMain);
 
     initProgressValues();
     printProgressBars();
@@ -76,27 +95,24 @@ void ProgressUpdater::start() {
 }
 
 void ProgressUpdater::stop() {
-    std::unique_lock<std::mutex> lock(m_mutex);
+    std::unique_lock<std::mutex> lock(mMutex);
     mExitRequested = true;
     lock.unlock();
-    m_condition.notify_all();
-    m_thread.join();
+    mCondition.notify_all();
+    mThread.join();
     showCursor();
 }
 
 void ProgressUpdater::update(size_t progressBarIndex, float value) {
-    if (progressBarIndex >= m_numBars)
+    if (progressBarIndex >= mNumBars) {
         return;
+    }
 
     value = std::max(0.0f, std::min(value, 1.0f));
-    std::unique_lock<std::mutex> lock(m_mutex);
-    m_jobQueue.push([value, progressBarIndex, this]() {
-        m_progress[progressBarIndex] = value;
-        moveCursorUp(m_numBars);
-        printProgressBars();
-    });
+    std::unique_lock<std::mutex> lock(mMutex);
+    mUpdates.push_back({ progressBarIndex, value });
     lock.unlock();
-    m_condition.notify_one();
+    mCondition.notify_one();
 }
 
 void ProgressUpdater::update(size_t progressBarIndex, size_t value, size_t max) {
@@ -105,13 +121,13 @@ void ProgressUpdater::update(size_t progressBarIndex, size_t value, size_t max) 
 }
 
 void ProgressUpdater::initProgressValues() {
-    m_progress.resize(m_numBars);
-    std::fill(m_progress.begin(), m_progress.end(), 0.0f);
+    mProgress.resize(mNumBars);
+    std::fill(mProgress.begin(), mProgress.end(), 0.0f);
 }
 
 void ProgressUpdater::printProgressBars() {
-    for (size_t i = 0; i < m_numBars; i++) {
-        printProgress(m_progress[i], 32);
+    for (size_t i = 0; i < mNumBars; i++) {
+        printProgress(mProgress[i], 32);
         std::cout << std::endl;
     }
 }
