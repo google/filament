@@ -2,7 +2,6 @@
 
 :: Install build dependencies
 call %~dp0ci-common.bat
-echo Validating build dependencies
 if errorlevel 1 exit /b %errorlevel%
 
 :: Put Visual Studio tools on the PATH
