@@ -28,9 +28,9 @@ namespace filamat {
 class MaterialTextChunk final : public Chunk {
 public:
     MaterialTextChunk(const std::vector<TextEntry>&& entries, const LineDictionary& dictionary,
-            ChunkType type) : Chunk(type), mDictionary(dictionary), mEntries(entries) {
+            ChunkType type) : Chunk(type), mEntries(entries), mDictionary(dictionary) {
     }
-    ~MaterialTextChunk() = default;
+    ~MaterialTextChunk() override = default;
 
 private:
     void flatten(Flattener& f) override;

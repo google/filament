@@ -38,7 +38,7 @@ public:
     }
 
     constexpr bool isEmpty() const noexcept {
-        return mStrings.size() == 0;
+        return mStrings.empty();
     }
 
     const std::string& getString(size_t index) const noexcept;

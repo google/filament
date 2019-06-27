@@ -197,9 +197,10 @@ filament::math::mat4f fitIntoUnitCube(const filament::Aabb& bounds) {
 SimpleViewer::SimpleViewer(filament::Engine* engine, filament::Scene* scene, filament::View* view,
         uint32_t flags, int sidebarWidth) :
         mEngine(engine), mScene(scene), mView(view),
-        mNames(new utils::NameComponentManager(utils::EntityManager::get())),
         mSunlight(utils::EntityManager::get().create()),
-        mFlags(flags), mSidebarWidth(sidebarWidth) {
+        mNames(new utils::NameComponentManager(utils::EntityManager::get())),
+        mSidebarWidth(sidebarWidth),
+        mFlags(flags) {
     using namespace filament;
     LightManager::Builder(LightManager::Type::SUN)
         .color(Color::toLinear<ACCURATE>({0.98, 0.92, 0.89}))

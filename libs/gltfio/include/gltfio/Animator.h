@@ -56,7 +56,7 @@ public:
     const char* getAnimationName(size_t animationIndex) const;
 
 private:
-    friend class details::FFilamentAsset;
+    friend struct details::FFilamentAsset;
     Animator(FilamentAsset* asset);
     ~Animator();
     AnimatorImpl* mImpl;

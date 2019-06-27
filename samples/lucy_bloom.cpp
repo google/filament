@@ -411,4 +411,6 @@ int main(int argc, char** argv) {
             FilamentApp::PreRenderCallback(),
             FilamentApp::PostRenderCallback(),
             WINDOW_WIDTH, WINDOW_HEIGHT);
+
+    return 0;
 }

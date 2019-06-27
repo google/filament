@@ -718,7 +718,7 @@ int main(int argc, char** argv) {
             saveIniFile(app);
         }
 
-        app.viewer->setUiCallback([&app, scene] () {
+        app.viewer->setUiCallback([&app] () {
             const ImU32 disabledColor = ImColor(ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
             const ImU32 hoveredColor = ImColor(ImGui::GetStyle().Colors[ImGuiCol_ButtonHovered]);
             const ImU32 enabledColor = ImColor(0.5f, 0.5f, 0.0f);

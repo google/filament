@@ -50,9 +50,9 @@ public:
     };
 
     enum class TargetApi : uint8_t {
-        OPENGL      = 0x01,
-        VULKAN      = 0x02,
-        METAL       = 0x04,
+        OPENGL      = 0x01u,
+        VULKAN      = 0x02u,
+        METAL       = 0x04u,
         ALL         = OPENGL | VULKAN | METAL
     };
 

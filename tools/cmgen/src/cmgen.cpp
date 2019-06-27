@@ -1174,7 +1174,7 @@ static void exportKtxFaces(KtxBundle& container, uint32_t miplevel, const Cubema
             case 3: face = Cubemap::Face::NY; break;
             case 4: face = Cubemap::Face::PZ; break;
             case 5: face = Cubemap::Face::NZ; break;
-            default: break;
+            default: face = Cubemap::Face::PX; break; // make linters happy
         }
         LinearImage image = toLinearImage(cm.getImageForFace(face));
 

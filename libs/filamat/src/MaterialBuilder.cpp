@@ -56,8 +56,8 @@ std::atomic<int> MaterialBuilderBase::materialBuilderClients(0);
 
 inline void assertSingleTargetApi(MaterialBuilderBase::TargetApi api) {
     // Assert that a single bit is set.
-    uint8_t bits = (uint8_t) api;
-    assert(bits && !(bits & bits - 1));
+    UTILS_UNUSED uint8_t bits = (uint8_t) api;
+    assert(bits && !(bits & bits - 1u));
 }
 
 void MaterialBuilderBase::prepare() {
@@ -397,7 +397,7 @@ bool MaterialBuilder::findProperties() noexcept {
     std::fill_n(allProperties, MATERIAL_PROPERTIES_COUNT, true);
 
     // Use the first permutation to generate the shader code.
-    assert(mCodeGenPermutations.size() > 0);
+    assert(!mCodeGenPermutations.empty());
     CodeGenParams params = mCodeGenPermutations[0];
     std::string shaderCodeAllProperties = peek(ShaderType::FRAGMENT, params, allProperties);
 
@@ -420,10 +420,10 @@ bool MaterialBuilder::runSemanticAnalysis() noexcept {
     GLSLTools glslTools;
 
     // Use the first permutation to generate the shader code.
-    assert(mCodeGenPermutations.size() > 0);
+    assert(!mCodeGenPermutations.empty());
     CodeGenParams params = mCodeGenPermutations[0];
 
-    ShaderModel model;
+    ShaderModel model = ShaderModel::UNKNOWN;
     std::string shaderCode = peek(ShaderType::VERTEX, params, mProperties);
     bool result = glslTools.analyzeVertexShader(shaderCode, model, mTargetApi);
     if (!result) return false;
@@ -566,7 +566,7 @@ bool MaterialBuilder::generateShaders(const std::vector<Variant>& variants, Chun
                 spirvEntries.push_back(spirvEntry);
             }
             if (targetApi == TargetApi::METAL) {
-                assert(spirv.size() > 0);
+                assert(!spirv.empty());
                 assert(msl.length() > 0);
                 metalEntry.stage = v.stage;
                 metalEntry.shader = msl;

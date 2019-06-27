@@ -67,7 +67,7 @@ static string readFile(const Path& inputPath) {
 
     // Copy the file content into the string
     s.assign((std::istreambuf_iterator<char>(t)), std::istreambuf_iterator<char>());
-    return std::move(s);
+    return s;
 }
 
 // This spawns cmgen, telling it to process the environment map located at "inputPath".
