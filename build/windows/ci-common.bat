@@ -21,4 +21,5 @@ if defined KOKORO_BUILD_ID (
     refreshenv
 )
 
+echo Exiting ci-common
 exit /b 0
