@@ -2,16 +2,13 @@
 
 :: Install build dependencies
 if defined KOKORO_BUILD_ID (
-    choco install cmake -y
+    choco install cmake.install --installargs '"ADD_CMAKE_TO_PATH=User"' -y
     choco install llvm --version 8.0.0 -y
 
     :: Refresh PATH after installing packages
     :: Do ***NOT*** use refreshenv, it exits the current script
     call RefreshEnv.cmd
 )
-
-:: Apparently the CMake install does not update PATH
-setx PATH "%PATH%;C:\Program Files\CMake\"
 
 echo "%PATH%"
 
