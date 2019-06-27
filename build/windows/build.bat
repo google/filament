@@ -10,7 +10,7 @@ if defined KOKORO_BUILD_ID (
     call RefreshEnv.cmd
 
     :: Apparently the CMake install does not update PATH
-    set PATH=%PATH%;C:\Program Files\CMake\
+    :: set PATH=%PATH%;C:\Program Files\CMake\
 
     echo %PATH%
 )
