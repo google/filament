@@ -1,7 +1,15 @@
 @echo on
 
 :: Install build dependencies
-call %~dp0ci-common.bat
+if defined KOKORO_BUILD_ID (
+    echo Installing CMake
+    choco install cmake -y
+    refreshenv
+
+    echo Installing LLVM
+    choco install llvm --version 8.0.0 -y
+    refreshenv
+)
 if errorlevel 1 exit /b %errorlevel%
 
 :: Put Visual Studio tools on the PATH
