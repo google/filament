@@ -116,7 +116,7 @@ TEST(JobSystem, WorkStealingDequeue_PopSteal) {
     steal_thread3.join();
     pop_thread.join();
 
-    EXPECT_TRUE(queue.isEmpty());
+    EXPECT_TRUE(queue.getCount() == 0);
 }
 
 TEST(JobSystem, WorkStealingDequeue_PushPopSteal) {
@@ -185,7 +185,7 @@ TEST(JobSystem, WorkStealingDequeue_PushPopSteal) {
     push_pop_thread.join();
 
     EXPECT_EQ(pop+steal0+steal1+steal2+steal3, size);
-    EXPECT_TRUE(queue.isEmpty());
+    EXPECT_TRUE(queue.getCount() == 0);
 }
 
 

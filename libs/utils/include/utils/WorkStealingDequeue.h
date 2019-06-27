@@ -22,6 +22,18 @@
 
 namespace utils {
 
+/*
+ * A templatized, lockless, fixed-size work-stealing dequeue
+ *
+ *
+ *     top                          bottom
+ *      v                             v
+ *      |----|----|----|----|----|----|
+ *    steal()                      push(), pop()
+ *  any thread                     main thread
+ *
+ *
+ */
 template <typename TYPE, size_t COUNT>
 class WorkStealingDequeue {
     static_assert(!(COUNT & (COUNT - 1)), "COUNT must be a power of two");
@@ -30,7 +42,10 @@ class WorkStealingDequeue {
     std::atomic<int32_t> mBottom = { 0 };   // written only in pop(), read in push(), steal()
     TYPE mItems[COUNT];
 
+    // NOTE: it's not safe to return a reference because getItemAt() can be called
+    // concurrently and the caller could std::move() the item unsafely.
     TYPE getItemAt(int32_t index) noexcept { return mItems[index & MASK]; }
+
     void setItemAt(int32_t index, TYPE item) noexcept { mItems[index & MASK] = item; }
 
 public:
@@ -42,12 +57,6 @@ public:
 
     size_t getSize() const noexcept { return COUNT; }
 
-    bool isEmpty() const noexcept {
-        uint32_t bottom = (uint32_t)mBottom.load(std::memory_order_relaxed);
-        uint32_t top = (uint32_t)mTop.load(std::memory_order_seq_cst);
-        return top >= bottom;
-    }
-
     // for debugging only...
     int32_t getCount() const noexcept {
         int32_t bottom = mBottom.load(std::memory_order_relaxed);
@@ -56,73 +65,107 @@ public:
     }
 };
 
-
+/*
+ * Adds an item at the BOTTOM of the queue.
+ *
+ * Must be called from the main thread.
+ */
 template <typename TYPE, size_t COUNT>
 void WorkStealingDequeue<TYPE, COUNT>::push(TYPE item) noexcept {
-
-    // mBottom is only written in pop() which cannot be concurrent with push(),
-    // however, it is read in steal() so we need basic atomicity.
+    // std::memory_order_relaxed is sufficient because this load doesn't acquire anything from
+    // another thread. mBottom is only written in pop() which cannot be concurrent with push()
     int32_t bottom = mBottom.load(std::memory_order_relaxed);
     setItemAt(bottom, item);
 
-    // memory accesses cannot be reordered after mBottom write, which notifies the
-    // availability of an extra item.
+    // std::memory_order_release is used because we release the item we just pushed to other
+    // threads which are calling steal().
     mBottom.store(bottom + 1, std::memory_order_release);
 }
 
+/*
+ * Removes an item from the BOTTOM of the queue.
+ *
+ * Must be called from the main thread.
+ */
 template <typename TYPE, size_t COUNT>
 TYPE WorkStealingDequeue<TYPE, COUNT>::pop() noexcept {
-    // mBottom is only written in push(), which cannot be concurrent with pop(),
-    // however, it is read in steal(), so we need basic atomicity.
-    //   i.e.: bottom = mBottom--;
-    int32_t bottom = mBottom.fetch_sub(1, std::memory_order_relaxed) - 1;
+    // std::memory_order_seq_cst is needed to guarantee ordering in steal()
+    // Note however that this is not a typical acquire/release operation:
+    //  - not acquire because mBottom is only written in push() which is not concurrent
+    //  - not release because we're not publishing anything to steal() here
+    //
+    // QUESTION: does this prevent mTop load below to be reordered before the "store" part of
+    //           fetch_sub()? Hopefully it does. If not we'd need a full memory barrier.
+    //
+    int32_t bottom = mBottom.fetch_sub(1, std::memory_order_seq_cst) - 1;
 
-    // we need a full memory barrier here; mBottom must be written and visible to
-    // other threads before we read mTop.
+    // std::memory_order_seq_cst is needed to guarantee ordering in steal()
+    // Note however that this is not a typical acquire operation
+    //  (i.e. other thread's writes of mTop don't publish data)
     int32_t top = mTop.load(std::memory_order_seq_cst);
 
     if (top < bottom) {
-        // Queue isn't empty and it's not the last item, just return it.
+        // Queue isn't empty and it's not the last item, just return it, this is the common case.
         return getItemAt(bottom);
     }
 
     TYPE item{};
     if (top == bottom) {
-        // We took the last item in the queue
+        // we just took the last item
         item = getItemAt(bottom);
 
-        // Items can be added only in push() which isn't concurrent to us, however we could
-        // be racing with a steal() -- pretend to steal from ourselves to resolve this
-        // potential conflict.
+        // Because we know we took the last item, we could be racing with steal() -- the last
+        // item being both at the top and bottom of the queue.
+        // We resolve this potential race by also stealing that item from ourselves.
         if (mTop.compare_exchange_strong(top, top + 1,
                 std::memory_order_seq_cst,
                 std::memory_order_relaxed)) {
-            // success: mTop was equal to top, mTop now equals top+1
-            // We successfully poped an item, adjust top to make the queue canonically empty.
+            // success: we stole our last item from ourself, meaning that a concurrent steal()
+            //          would have failed.
+            // mTop now equals top + 1, we adjust top to make the queue empty.
             top++;
         } else {
             // failure: mTop was not equal to top, which means the item was stolen under our feet.
-            // top now equals to mTop. Simply discard the item we just poped.
+            // top now equals to mTop. Simply discard the item we just popped.
             // The queue is now empty.
             item = TYPE();
         }
+    } else {
+        // We could be here if the item was stolen just before we read mTop, we'll adjust
+        // mBottom below.
+        assert(top - bottom == 1);
     }
 
-    // no concurrent writes to mBottom possible
+    // std::memory_order_relaxed used because we're not publishing any data.
+    // no concurrent writes to mBottom possible, it's always safe to write mBottom.
     mBottom.store(top, std::memory_order_relaxed);
     return item;
 }
 
+/*
+ * Steals an item from the TOP of another thread's queue.
+ *
+ * This can be called concurrently with steal(), push() or pop()
+ *
+ * steal() never fails, either there is an item and it atomically takes it, or there isn't and
+ * it returns an empty item.
+ */
 template <typename TYPE, size_t COUNT>
 TYPE WorkStealingDequeue<TYPE, COUNT>::steal() noexcept {
-    do {
-        // mTop must be read before mBottom
+    while (true) {
+        /*
+         * Note: A Key component of this algorithm is that mTop is read before mBottom here
+         * (and observed as such in other threads)
+         */
+
+        // std::memory_order_seq_cst is needed to guarantee ordering in pop()
+        // Note however that this is not a typical acquire operation
+        //  (i.e. other thread's writes of mTop don't publish data)
         int32_t top = mTop.load(std::memory_order_seq_cst);
 
-        // mBottom is written concurrently to the read below in pop() or push(), so
-        // we need basic atomicity. Also makes sure that writes made in push()
-        // (prior to mBottom update) are visible.
-        int32_t bottom = mBottom.load(std::memory_order_acquire);
+        // std::memory_order_acquire is needed because we're acquiring items published in push().
+        // std::memory_order_seq_cst is needed to guarantee ordering in pop()
+        int32_t bottom = mBottom.load(std::memory_order_seq_cst);
 
         if (top >= bottom) {
             // queue is empty
@@ -134,12 +177,12 @@ TYPE WorkStealingDequeue<TYPE, COUNT>::steal() noexcept {
         if (mTop.compare_exchange_strong(top, top + 1,
                 std::memory_order_seq_cst,
                 std::memory_order_relaxed)) {
-            // success: we stole a job, just return it.
+            // success: we stole an item, just return it.
             return item;
         }
         // failure: the item we just tried to steal was pop()'ed under our feet,
-        // simply discard it; nothing to do.
-    } while (true);
+        // simply discard it; nothing to do -- it's okay to try again.
+    }
 }
 
 
