@@ -44,9 +44,9 @@ namespace gl {
 
 // This mutex protect g_library_refcount below.
 static std::mutex g_library_mutex;
-static uint32_t g_library_refcount = 0;
 
 #ifdef __APPLE__
+static uint32_t g_library_refcount = 0;
 
 // Function pointer types for CGL functions
 typedef CGLError (*CGL_CHOOSE_PIXEL_FORMAT_PROC)(const CGLPixelFormatAttribute*, CGLPixelFormatObj*, GLint*);
@@ -269,6 +269,8 @@ struct GLXLocalContext {
     GLXContext context;
     GLXPbuffer buffer;
 };
+
+static uint32_t g_library_refcount = 0;
 
 bool loadLibraries() {
     std::lock_guard<std::mutex> lock(g_library_mutex);

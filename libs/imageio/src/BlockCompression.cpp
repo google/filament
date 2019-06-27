@@ -18,6 +18,7 @@
 
 #include <image/ImageOps.h>
 
+#include <algorithm>
 #include <cmath>
 #include <thread>
 

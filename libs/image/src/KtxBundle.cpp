@@ -321,7 +321,6 @@ bool KtxBundle::allocateBlob(KtxBlobIndex index, uint32_t size) {
         return false;
     }
     uint32_t flatIndex = flatten(this, index);
-    uint32_t blobSize = mBlobs->sizes[flatIndex];
     mBlobs->resize(flatIndex, size);
     return true;
 }

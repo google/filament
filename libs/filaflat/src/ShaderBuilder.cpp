@@ -43,8 +43,7 @@ void ShaderBuilder::announce(size_t size) {
 }
 
 void ShaderBuilder::append(const char* data, size_t size) noexcept {
-    size_t available = mCapacity - mCursor;
-    assert(size <= available);
+    assert(size <= (mCapacity - mCursor));
     memcpy(mShader + mCursor, data, size);
     mCursor += size;
 }

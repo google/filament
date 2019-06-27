@@ -280,8 +280,8 @@ PNGEncoder* PNGEncoder::create(std::ostream& stream, PixelFormat format) {
 }
 
 PNGEncoder::PNGEncoder(std::ostream& stream, PixelFormat format)
-    : mStream(stream), mStreamStartPos(stream.tellp()), mFormat(format),
-      mPNG(png_create_write_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr)) {
+    : mPNG(png_create_write_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr)),
+      mStream(stream), mStreamStartPos(stream.tellp()), mFormat(format) {
 }
 
 PNGEncoder::~PNGEncoder() {
@@ -738,7 +738,7 @@ EXREncoder* EXREncoder::create(std::ostream& stream, const std::string& compress
 EXREncoder::EXREncoder(std::ostream& stream, const std::string& compression,
                        const std::string& destName)
         : mStream(stream), mStreamStartPos(stream.tellp()),
-          mCompression(compression), mDestName(destName) {
+          mDestName(destName), mCompression(compression) {
 }
 
 static int toEXRCompression(const std::string& c) {

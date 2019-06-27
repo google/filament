@@ -360,7 +360,6 @@ void CubemapIBL::roughnessFilter(JobSystem& js, Cubemap& dst, const std::vector<
         const float NoH2 = NoH * NoH;
         const float NoV = dot(N, V);
 #else
-        const float NoV = 1;
         const float NoH = H.z;
         const float NoH2 = H.z * H.z;
         const float NoL = 2 * NoH2 - 1;
@@ -547,7 +546,7 @@ void CubemapIBL::diffuseIrradiance(JobSystem& js, Cubemap& dst, const std::vecto
     cache.reserve(maxNumSamples);
 
     // precompute everything that only depends on the sample #
-    for (size_t sampleIndex = 0, sample = 0 ; sampleIndex < maxNumSamples; sampleIndex++) {
+    for (size_t sampleIndex = 0; sampleIndex < maxNumSamples; sampleIndex++) {
         // get Hammersley distribution for the half-sphere
         const float2 u = hammersley(uint32_t(sampleIndex), inumSamples);
         const float3 L = hemisphereCosSample(u);

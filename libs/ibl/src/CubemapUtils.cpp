@@ -56,7 +56,6 @@ void CubemapUtils::clamp(Image& src) {
 void CubemapUtils::equirectangularToCubemap(JobSystem& js, Cubemap& dst, const Image& src) {
     const size_t width = src.getWidth();
     const size_t height = src.getHeight();
-    const float r = width * 0.5 * M_1_PI;
 
     auto toRectilinear = [width, height](float3 s) -> float2 {
         float xf = std::atan2(s.x, s.z) * M_1_PI;   // range [-1.0, 1.0]

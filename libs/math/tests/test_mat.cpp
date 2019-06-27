@@ -32,7 +32,6 @@ protected:
 };
 
 TEST_F(MatTest, Basics) {
-    mat4 m0;
     EXPECT_EQ(sizeof(mat4), sizeof(double)*16);
 }
 
@@ -72,8 +71,6 @@ TEST_F(MatTest, Constructors) {
     EXPECT_EQ(m1, m2);
     EXPECT_EQ(m2, m3);
     EXPECT_EQ(m3, m1);
-
-    mat4 m4(double4(1), double4(2), double4(3), double4(4));
 }
 
 TEST_F(MatTest, ArithmeticOps) {
@@ -169,7 +166,6 @@ protected:
 };
 
 TEST_F(Mat3Test, Basics) {
-    mat3 m0;
     EXPECT_EQ(sizeof(mat3), sizeof(double)*9);
 }
 
@@ -276,7 +272,6 @@ protected:
 };
 
 TEST_F(Mat2Test, Basics) {
-    mat2 m0;
     EXPECT_EQ(sizeof(mat2), sizeof(double)*4);
 }
 
@@ -622,7 +617,6 @@ TYPED_TEST(MatTestT, EulerZYX_33) {
 TYPED_TEST(MatTestT, ToQuaternionPostTranslation) {
 
     typedef filament::math::details::TMat44<TypeParam> M44T;
-    typedef filament::math::details::TVec4<TypeParam> V4T;
     typedef filament::math::details::TVec3<TypeParam> V3T;
     typedef filament::math::details::TQuaternion<TypeParam> QuatT;
 

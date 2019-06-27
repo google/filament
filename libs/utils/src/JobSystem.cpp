@@ -306,7 +306,6 @@ void JobSystem::finish(Job* job) noexcept {
     bool notify = false;
 
     // terminate this job and notify its parent
-    auto& jobPool = mJobPool;
     Job* const storage = mJobStorageBase;
     do {
         // std::memory_order_release here is needed to synchronize with JobSystem::wait()
