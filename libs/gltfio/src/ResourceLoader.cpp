@@ -95,8 +95,8 @@ private:
 
 using namespace details;
 
-ResourceLoader::ResourceLoader(const ResourceConfiguration& config) : mConfig(config),
-        mPool(new AssetPool), pImpl(new Impl) {}
+ResourceLoader::ResourceLoader(const ResourceConfiguration& config) :
+        mPool(new AssetPool), mConfig(config), pImpl(new Impl) {}
 
 ResourceLoader::~ResourceLoader() {
     mPool->onLoaderDestroyed();

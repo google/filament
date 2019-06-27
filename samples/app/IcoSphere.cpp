@@ -36,7 +36,7 @@ const IcoSphere::TriangleList IcoSphere::sTriangles = {
 };
 
 IcoSphere::IcoSphere(size_t subdivisions) {
-    mMesh = std::move(make_icosphere(subdivisions));
+    mMesh = make_icosphere(subdivisions);
 }
 
 IcoSphere::Index IcoSphere::vertex_for_edge(
