@@ -8,12 +8,12 @@ if defined KOKORO_BUILD_ID (
     :: Refresh PATH after installing packages
     :: Do ***NOT*** use refreshenv, it exits the current script
     call RefreshEnv.cmd
-
-    :: Apparently the CMake install does not update PATH
-    :: setx PATH "%PATH%;C:\Program Files\CMake\"
-
-    echo "%PATH%"
 )
+
+:: Apparently the CMake install does not update PATH
+setx PATH "%PATH%;C:\Program Files\CMake\"
+
+echo "%PATH%"
 
 :: Put Visual Studio tools on the PATH
 call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" amd64
