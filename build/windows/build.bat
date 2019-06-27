@@ -1,14 +1,18 @@
-@echo on
+@echo off
 
 :: Install build dependencies
 if defined KOKORO_BUILD_ID (
-    echo Installing CMake
     choco install cmake -y
+    choco install llvm --version 8.0.0 -y
+
+    :: Refresh PATH after installing packages
+    :: Do ***NOT*** use refreshenv, it exits the current script
     call RefreshEnv.cmd
 
-    echo Installing LLVM
-    choco install llvm --version 8.0.0 -y
-    call RefreshEnv.cmd
+    :: Apparently the CMake install does not update PATH
+    set PATH=%PATH%;C:\Program Files\CMake\
+
+    echo %PATH%
 )
 
 :: Put Visual Studio tools on the PATH
