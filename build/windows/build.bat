@@ -4,13 +4,12 @@
 if defined KOKORO_BUILD_ID (
     echo Installing CMake
     choco install cmake -y
-    refreshenv
+    call RefreshEnv.cmd
 
     echo Installing LLVM
     choco install llvm --version 8.0.0 -y
-    refreshenv
+    call RefreshEnv.cmd
 )
-if errorlevel 1 exit /b %errorlevel%
 
 :: Put Visual Studio tools on the PATH
 call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" amd64
