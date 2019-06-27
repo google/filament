@@ -1,4 +1,4 @@
-@echo off
+@echo on
 
 :: Install build dependencies
 if defined KOKORO_BUILD_ID (
@@ -10,9 +10,9 @@ if defined KOKORO_BUILD_ID (
     call RefreshEnv.cmd
 
     :: Apparently the CMake install does not update PATH
-    :: set PATH=%PATH%;C:\Program Files\CMake\
+    :: setx PATH "%PATH%;C:\Program Files\CMake\"
 
-    echo %PATH%
+    echo "%PATH%"
 )
 
 :: Put Visual Studio tools on the PATH
