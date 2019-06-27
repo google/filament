@@ -4,9 +4,12 @@ if defined KOKORO_BUILD_ID (
     refreshenv
 
     echo Installing LLVM
-    choco install llvm --version 6.0.1 -y
+    choco install llvm --version 8.0.8 -y
     refreshenv
+
+    echo Exiting ci-common
+    exit /b 0
 )
 
-echo Exiting ci-common
 exit /b 0
+

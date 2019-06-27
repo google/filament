@@ -1,4 +1,4 @@
-@echo off
+@echo on
 
 :: Install build dependencies
 call %~dp0ci-common.bat
