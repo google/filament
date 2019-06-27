@@ -3,7 +3,7 @@
 :: Install build dependencies
 if defined KOKORO_BUILD_ID (
     choco install cmake.install --installargs '"ADD_CMAKE_TO_PATH=User"' -y
-    choco install llvm --version 8.0.0 -y
+    choco install llvm --version 7.0.1 -y
 
     :: Refresh PATH after installing packages
     :: Do ***NOT*** use refreshenv, it exits the current script
