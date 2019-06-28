@@ -92,8 +92,6 @@ Java_com_google_android_filament_IndirectLight_nRotation(JNIEnv *, jclass, jlong
     builder->rotation(filament::math::mat3f{v0, v1, v2, v3, v4, v5, v6, v7, v8});
 }
 
-
-
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_IndirectLight_nSetIntensity(JNIEnv*, jclass,
         jlong nativeIndirectLight, jfloat intensity) {
@@ -109,9 +107,19 @@ Java_com_google_android_filament_IndirectLight_nGetIntensity(JNIEnv*, jclass,
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_IndirectLight_nSetRotation(JNIEnv *env, jclass type,
-        jlong nativeIndirectLight, jfloat v0, jfloat v1, jfloat v2, jfloat v3, jfloat v4, jfloat v5,
-        jfloat v6, jfloat v7, jfloat v8) {
+Java_com_google_android_filament_IndirectLight_nSetRotation(JNIEnv*, jclass,
+        jlong nativeIndirectLight, jfloat v0, jfloat v1, jfloat v2,
+        jfloat v3, jfloat v4, jfloat v5, jfloat v6, jfloat v7, jfloat v8) {
     IndirectLight *indirectLight = (IndirectLight *) nativeIndirectLight;
     indirectLight->setRotation(filament::math::mat3f{v0, v1, v2, v3, v4, v5, v6, v7, v8});
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_IndirectLight_nGetRotation(JNIEnv* env, jclass,
+        jlong nativeIndirectLight, jfloatArray outRotation_) {
+    IndirectLight *indirectLight = (IndirectLight *) nativeIndirectLight;
+    jfloat *outRotation = env->GetFloatArrayElements(outRotation_, NULL);
+    *reinterpret_cast<filament::math::mat3f*>(outRotation) = indirectLight->getRotation();
+    env->ReleaseFloatArrayElements(outRotation_, outRotation, 0);
+
 }

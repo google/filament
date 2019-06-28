@@ -57,9 +57,7 @@ public class TransformManager {
 
     public void setTransform(@EntityInstance int i,
             @NonNull @Size(min = 16) float[] localTransform) {
-        if (localTransform.length < 16) {
-            throw new ArrayIndexOutOfBoundsException("Array length must be at least 16");
-        }
+        Asserts.assertMat4fIn(localTransform);
         nSetTransform(mNativeObject, i, localTransform);
     }
 
@@ -67,7 +65,7 @@ public class TransformManager {
     @Size(min = 16)
     public float[] getTransform(@EntityInstance int i,
             @Nullable @Size(min = 16) float[] outLocalTransform) {
-        outLocalTransform = assertMat4f(outLocalTransform);
+        outLocalTransform = Asserts.assertMat4f(outLocalTransform);
         nGetTransform(mNativeObject, i, outLocalTransform);
         return outLocalTransform;
     }
@@ -76,7 +74,7 @@ public class TransformManager {
     @Size(min = 16)
     public float[] getWorldTransform(@EntityInstance int i,
             @Nullable @Size(min = 16) float[] outWorldTransform) {
-        outWorldTransform = assertMat4f(outWorldTransform);
+        outWorldTransform = Asserts.assertMat4f(outWorldTransform);
         nGetWorldTransform(mNativeObject, i, outWorldTransform);
         return outWorldTransform;
     }
@@ -87,15 +85,6 @@ public class TransformManager {
 
     public void commitLocalTransformTransaction() {
         nCommitLocalTransformTransaction(mNativeObject);
-    }
-
-    @NonNull @Size(min = 16)
-    private static float[] assertMat4f(@Nullable float[] out) {
-        if (out == null) out = new float[16];
-        else if (out.length < 16) {
-            throw new ArrayIndexOutOfBoundsException("Array length must be at least 16");
-        }
-        return out;
     }
 
     private static native boolean nHasComponent(long nativeTransformManager, int entity);

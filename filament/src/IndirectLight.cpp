@@ -184,4 +184,9 @@ void IndirectLight::setRotation(mat3f const& rotation) noexcept {
     upcast(this)->setRotation(rotation);
 }
 
+const math::mat3f& IndirectLight::getRotation() const noexcept {
+    return upcast(this)->getRotation();
+}
+
+
 } // namespace filament
