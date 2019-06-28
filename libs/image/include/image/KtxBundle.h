@@ -17,6 +17,8 @@
 #ifndef IMAGE_KTXBUNDLE_H
 #define IMAGE_KTXBUNDLE_H
 
+#include <math/vec3.h>
+
 #include <cstdint>
 #include <memory>
 
@@ -100,6 +102,14 @@ public:
      */
     const char* getMetadata(const char* key, size_t* valueSize = nullptr) const;
     void setMetadata(const char* key, const char* value);
+
+    /**
+     * Parses the key="sh" metadata and returns 3 bands of data.
+     *
+     * Assumes 3 bands for a total of 9 coefficients.
+     * Returns true if successful.
+     */
+    bool getSphericalHarmonics(filament::math::float3* result);
 
     /**
      * Gets the number of miplevels (this is never zero).

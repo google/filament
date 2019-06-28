@@ -286,6 +286,23 @@ void KtxBundle::setMetadata(const char* key, const char* value) {
     mMetadata->keyvals.insert({key, value});
 }
 
+bool KtxBundle::getSphericalHarmonics(filament::math::float3* result) {
+    char const* src = getMetadata("sh");
+    if (!src) {
+        return false;
+    }
+    float* flat = &result->x;
+    for (int i = 0; i < 9; i++) {
+        char* next;
+        *flat++ = std::strtof(src, &next);
+        if (next == src) {
+            return false;
+        }
+        src = next;
+    }
+    return true;
+}
+
 bool KtxBundle::getBlob(KtxBlobIndex index, uint8_t** data, uint32_t* size) const {
     if (index.mipLevel >= mNumMipLevels || index.arrayIndex >= mArrayLength ||
             index.cubeFace >= mNumCubeFaces) {

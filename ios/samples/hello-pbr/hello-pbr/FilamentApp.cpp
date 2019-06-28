@@ -46,7 +46,7 @@ void FilamentApp::initialize() {
     image::KtxBundle* iblBundle = new image::KtxBundle(RESOURCES_VENETIAN_CROSSROADS_IBL_DATA,
             RESOURCES_VENETIAN_CROSSROADS_IBL_SIZE);
     filament::math::float3 harmonics[9];
-    parseSphereHarmonics(iblBundle->getMetadata("sh"), harmonics);
+    iblBundle->getSphericalHarmonics(harmonics);
     app.iblTexture = image::KtxUtility::createTexture(engine, iblBundle, false, true);
 
     image::KtxBundle* skyboxBundle = new image::KtxBundle(RESOURCES_VENETIAN_CROSSROADS_SKYBOX_DATA,
@@ -127,19 +127,4 @@ FilamentApp::~FilamentApp() {
     engine->destroy(camera);
     engine->destroy(swapChain);
     engine->destroy(&engine);
-}
-
-void FilamentApp::parseSphereHarmonics(const char* str, filament::math::float3 harmonics[9]) {
-    std::istringstream iss(str);
-    std::string read;
-    for (int i = 0; i < 9; i++) {
-        filament::math::float3 harmonic;
-        iss >> read;
-        harmonic.x = std::stof(read);
-        iss >> read;
-        harmonic.y = std::stof(read);
-        iss >> read;
-        harmonic.z = std::stof(read);
-        harmonics[i] = std::move(harmonic);
-    }
 }
