@@ -219,7 +219,7 @@ public class Camera {
      */
     public void setCustomProjection(@NonNull @Size(min = 16) double inMatrix[],
             double near, double far) {
-        assertMat4dIn(inMatrix);
+        Asserts.assertMat4dIn(inMatrix);
         nSetCustomProjection(getNativeObject(), inMatrix, near, far);
     }
 
@@ -228,7 +228,7 @@ public class Camera {
      * @param in
      */
     public void setModelMatrix(@NonNull @Size(min = 16) float in[]) {
-        assertMat4fIn(in);
+        Asserts.assertMat4fIn(in);
         nSetModelMatrix(getNativeObject(), in);
     }
 
@@ -273,7 +273,7 @@ public class Camera {
      */
     @NonNull @Size(min = 16)
     public double[] getProjectionMatrix(@Nullable @Size(min = 16) double out[]) {
-        out = assertMat4d(out);
+        out = Asserts.assertMat4d(out);
         nGetProjectionMatrix(getNativeObject(), out);
         return out;
     }
@@ -287,7 +287,7 @@ public class Camera {
      */
     @NonNull @Size(min = 16)
     public float[] getModelMatrix(@Nullable @Size(min = 16) float out[]) {
-        out = assertMat4f(out);
+        out = Asserts.assertMat4f(out);
         nGetModelMatrix(getNativeObject(), out);
         return out;
     }
@@ -301,7 +301,7 @@ public class Camera {
      */
     @NonNull @Size(min = 16)
     public float[] getViewMatrix(@Nullable @Size(min = 16) float out[]) {
-        out = assertMat4f(out);
+        out = Asserts.assertMat4f(out);
         nGetViewMatrix(getNativeObject(), out);
         return out;
     }
@@ -314,7 +314,7 @@ public class Camera {
      */
     @NonNull @Size(min = 3)
     public float[] getPosition(@Nullable @Size(min = 3) float out[]) {
-        out = assertFloat3(out);
+        out = Asserts.assertFloat3(out);
         nGetPosition(getNativeObject(), out);
         return out;
     }
@@ -328,7 +328,7 @@ public class Camera {
      */
     @NonNull @Size(min = 3)
     public float[] getLeftVector(@Nullable @Size(min = 3) float out[]) {
-        out = assertFloat3(out);
+        out = Asserts.assertFloat3(out);
         nGetLeftVector(getNativeObject(), out);
         return out;
     }
@@ -342,7 +342,7 @@ public class Camera {
      */
     @NonNull @Size(min = 3)
     public float[] getUpVector(@Nullable @Size(min = 3) float out[]) {
-        out = assertFloat3(out);
+        out = Asserts.assertFloat3(out);
         nGetUpVector(getNativeObject(), out);
         return out;
     }
@@ -356,7 +356,7 @@ public class Camera {
      */
     @NonNull @Size(min = 3)
     public float[] getForwardVector(@Nullable @Size(min = 3) float out[]) {
-        out = assertFloat3(out);
+        out = Asserts.assertFloat3(out);
         nGetForwardVector(getNativeObject(), out);
         return out;
     }
@@ -404,45 +404,6 @@ public class Camera {
 
     void clearNativeObject() {
         mNativeObject = 0;
-    }
-
-    @NonNull @Size(min = 16)
-    private static double[] assertMat4d(@Nullable double[] out) {
-        if (out == null) out = new double[16];
-        else if (out.length < 16) {
-            throw new ArrayIndexOutOfBoundsException("Array length must be at least 16");
-        }
-        return out;
-    }
-
-    @NonNull @Size(min = 16)
-    private static float[] assertMat4f(@Nullable float[] out) {
-        if (out == null) out = new float[16];
-        else if (out.length < 16) {
-            throw new ArrayIndexOutOfBoundsException("Array length must be at least 16");
-        }
-        return out;
-    }
-
-    private static void assertMat4dIn(@NonNull @Size(min = 16) double[] in) {
-        if (in.length < 16) {
-            throw new ArrayIndexOutOfBoundsException("Array length must be at least 16");
-        }
-    }
-
-    private static void assertMat4fIn(@NonNull @Size(min = 16) float[] in) {
-        if (in.length < 16) {
-            throw new ArrayIndexOutOfBoundsException("Array length must be at least 16");
-        }
-    }
-
-    @NonNull @Size(min = 3)
-    private static float[] assertFloat3(@Nullable float[] out) {
-        if (out == null) out = new float[3];
-        else if (out.length < 3) {
-            throw new ArrayIndexOutOfBoundsException("Array length must be at least 3");
-        }
-        return out;
     }
 
     private static native void nSetProjection(long nativeCamera, int projection, double left, double right, double bottom, double top, double near, double far);

@@ -187,7 +187,7 @@ public class LightManager {
 
     @NonNull
     public float[] getPosition(@EntityInstance int i, @Nullable @Size(min = 3) float[] out) {
-        out = assertFloat3(out);
+        out = Asserts.assertFloat3(out);
         nGetPosition(mNativeObject, i, out);
         return out;
     }
@@ -198,7 +198,7 @@ public class LightManager {
 
     @NonNull
     public float[] getDirection(@EntityInstance int i, @Nullable @Size(min = 3) float[] out) {
-        out = assertFloat3(out);
+        out = Asserts.assertFloat3(out);
         nGetDirection(mNativeObject, i, out);
         return out;
     }
@@ -209,7 +209,7 @@ public class LightManager {
 
     @NonNull
     public float[] getColor(@EntityInstance int i, @Nullable @Size(min = 3) float[] out) {
-        out = assertFloat3(out);
+        out = Asserts.assertFloat3(out);
         nGetColor(mNativeObject, i, out);
         return out;
     }
@@ -260,15 +260,6 @@ public class LightManager {
 
     public float getSunHaloFalloff(@EntityInstance int i) {
         return nGetSunHaloFalloff(mNativeObject, i);
-    }
-
-    @NonNull @Size(min = 3)
-    private static float[] assertFloat3(@Nullable float[] out) {
-        if (out == null) out = new float[3];
-        else if (out.length < 3) {
-            throw new ArrayIndexOutOfBoundsException("Array length must be at least 3");
-        }
-        return out;
     }
 
     private static native boolean nHasComponent(long nativeLightManager, int entity);

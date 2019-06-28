@@ -18,6 +18,7 @@ package com.google.android.filament;
 
 import android.support.annotation.IntRange;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.annotation.Size;
 
 public class IndirectLight {
@@ -133,10 +134,18 @@ public class IndirectLight {
     }
 
     public void setRotation(@NonNull @Size(min = 9) float[] rotation) {
+        Asserts.assertMat3fIn(rotation);
         nSetRotation(getNativeObject(),
                 rotation[0], rotation[1], rotation[2],
                 rotation[3], rotation[4], rotation[5],
                 rotation[6], rotation[7], rotation[8]);
+    }
+
+    @NonNull @Size(min = 9)
+    public float[] getRotation(@Nullable @Size(min = 9) float[] rotation) {
+        rotation = Asserts.assertMat3f(rotation);
+        nGetRotation(getNativeObject(), rotation);
+        return rotation;
     }
 
     long getNativeObject() {
@@ -164,4 +173,5 @@ public class IndirectLight {
     private static native void nSetIntensity(long nativeIndirectLight, float intensity);
     private static native float nGetIntensity(long nativeIndirectLight);
     private static native void nSetRotation(long nativeIndirectLight, float v0, float v1, float v2, float v3, float v4, float v5, float v6, float v7, float v8);
+    private static native void nGetRotation(long nativeIndirectLight, float[] outRotation);
 }
