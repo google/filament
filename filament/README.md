@@ -28,9 +28,10 @@ Filament is distributed as a set of static libraries you must link against:
 - `filaflat`, Support library for Filament
 - `filament`, Main Filament library
 - `backend`, Filament render backend library
+- `ibl`, Image-based lighting support library
 - `utils`, Support library for Filament
 - `geometry`, Geometry helper library for Filament
-- `smol-v`, SPIR-V compression library
+- `smol-v`, SPIR-V compression library, used only with Vulkan support
 
 To use Filament from Java you must use the following two libraries instead:
 - `filament-java.jar`, Contains Filament's Java classes

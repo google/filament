@@ -43,12 +43,22 @@ Here are a few sample materials rendered with Filament:
 ![Damaged Helmet](docs/images/samples/model_damaged_helmet.jpg)
 ![Helmet](docs/images/samples/model_helmet.jpg)
 ![Brushed copper](docs/images/samples/brushed_copper_2.jpg)
-![Chess set](docs/images/samples/chess1.jpg)
 ![Material 1](docs/images/samples/material_01.jpg)
 ![Material 2](docs/images/samples/material_02.jpg)
-![Material 3](docs/images/samples/material_03.jpg)
 ![Material 6](docs/images/samples/material_06.jpg)
 ![Material 8](docs/images/samples/material_08.jpg)
+
+## Applications
+
+Here are a few screenshots of applications that use Filament in production:
+
+### Google Maps AR Navigation
+
+![Google Maps AR Navigation](docs/images/samples/app_gmm_ar_nav.jpg)
+
+### Google Search 3D/AR Viewer on Android
+
+![Google Search 3D/AR Viewer on Android](docs/images/samples/app_google_3d_viewer.jpg)
 
 ## Features
 
