@@ -99,7 +99,7 @@ void FilamentApp::setupIbl() {
     image::KtxBundle* iblBundle = new image::KtxBundle(RESOURCES_VENETIAN_CROSSROADS_IBL_DATA,
                                                        RESOURCES_VENETIAN_CROSSROADS_IBL_SIZE);
     float3 harmonics[9];
-    parseSphereHarmonics(iblBundle->getMetadata("sh"), harmonics);
+    iblBundle->getSphericalHarmonics(harmonics);
     app.iblTexture = image::KtxUtility::createTexture(engine, iblBundle, false, true);
 
     app.indirectLight = IndirectLight::Builder()
@@ -152,19 +152,4 @@ void FilamentApp::setupView() {
 void FilamentApp::setupCameraFeedTriangle() {
     app.cameraFeedTriangle = new FullScreenTriangle(engine);
     scene->addEntity(app.cameraFeedTriangle->getEntity());
-}
-
-void FilamentApp::parseSphereHarmonics(const char* str, float3 harmonics[9]) {
-    std::istringstream iss(str);
-    std::string read;
-    for (int i = 0; i < 9; i++) {
-        float3 harmonic;
-        iss >> read;
-        harmonic.x = std::stof(read);
-        iss >> read;
-        harmonic.y = std::stof(read);
-        iss >> read;
-        harmonic.z = std::stof(read);
-        harmonics[i] = std::move(harmonic);
-    }
 }

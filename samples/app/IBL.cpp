@@ -17,7 +17,6 @@
 #include "IBL.h"
 
 #include <fstream>
-#include <sstream>
 #include <string>
 
 #include <filament/Engine.h>
@@ -81,9 +80,8 @@ bool IBL::loadFromKtx(const std::string& prefix) {
     mSkyboxTexture = KtxUtility::createTexture(&mEngine, skyKtx, false);
     mTexture = KtxUtility::createTexture(&mEngine, iblKtx, false);
 
-    std::istringstream shstring(iblKtx->getMetadata("sh"));
-    for (float3& band : mBands) {
-        shstring >> band.x >> band.y >> band.z;
+    if (!iblKtx->getSphericalHarmonics(mBands)) {
+        return false;
     }
 
     mIndirectLight = IndirectLight::Builder()

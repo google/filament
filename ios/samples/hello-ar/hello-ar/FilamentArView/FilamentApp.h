@@ -60,8 +60,6 @@ private:
     void setupView();
     void setupCameraFeedTriangle();
 
-    static void parseSphereHarmonics(const char* str, float3 harmonics[9]);
-
     void* nativeLayer = nullptr;
     uint32_t width, height;
 

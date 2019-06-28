@@ -60,8 +60,6 @@ private:
     void setupMesh();
     void setupView();
 
-    static void parseSphereHarmonics(const char* str, float3 harmonics[9]);
-
     void* nativeLayer = nullptr;
     uint32_t width, height;
     const utils::Path resourcePath;

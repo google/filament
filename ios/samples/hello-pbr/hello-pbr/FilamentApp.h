@@ -48,8 +48,6 @@ private:
 
     void updateRotation();
 
-    static void parseSphereHarmonics(const char* str, filament::math::float3 harmonics[9]);
-
     void* nativeLayer = nullptr;
     uint32_t width, height;
 
