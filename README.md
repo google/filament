@@ -96,7 +96,7 @@ Here are a few screenshots of applications that use Filament in production:
 - ACES-like tone-mapping
 - Temporal dithering
 - FXAA, MSAA and specular anti-aliasing
-- Dynamic resolution (on Android)
+- Dynamic resolution (on Android and iOS)
 
 ### Future
 
