@@ -38,6 +38,8 @@ static void BM_JobSystem(benchmark::State& state) {
         }
     }
     state.SetItemsProcessed((int64_t)state.iterations());
+
+    js.emancipate();
 }
 
 static void BM_JobSystemAsChildren4k(benchmark::State& state) {
@@ -55,6 +57,8 @@ static void BM_JobSystemAsChildren4k(benchmark::State& state) {
         }
     }
     state.SetItemsProcessed((int64_t)state.iterations() * 4096);
+
+    js.emancipate();
 }
 
 static void BM_JobSystemParallelFor(benchmark::State& state) {
@@ -70,6 +74,8 @@ static void BM_JobSystemParallelFor(benchmark::State& state) {
         }
     }
     state.SetItemsProcessed((int64_t)state.iterations() * 4096);
+
+    js.emancipate();
 }
 
 
