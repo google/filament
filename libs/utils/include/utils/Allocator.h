@@ -280,7 +280,7 @@ private:
         // This should be a regular (non-atomic) pointer, but this causes TSAN to complain
         // about a data-race that exists but is benin. We always use this atomic<> in
         // relaxed mode.
-        // The data race TSAN complains about is when a pop() is interrupted buy a
+        // The data race TSAN complains about is when a pop() is interrupted by a
         // pop() + push() just after mHead->next is read -- it appears as though it is written
         // without synchronization (by the push), however in that case, the pop's CAS will fail
         // and things will auto-correct.
