@@ -38,15 +38,21 @@ template <typename TYPE, size_t COUNT>
 class WorkStealingDequeue {
     static_assert(!(COUNT & (COUNT - 1)), "COUNT must be a power of two");
     static constexpr size_t MASK = COUNT - 1;
-    std::atomic<int32_t> mTop = { 0 };      // written/read in pop()/steal()
-    std::atomic<int32_t> mBottom = { 0 };   // written only in pop(), read in push(), steal()
+
+    // mTop and mBottom must be signed integers. We use 64-bits atomics so we don't have
+    // to worry about wrapping around.
+    using index_t = int64_t;
+
+    std::atomic<index_t> mTop    = { 0 };   // written/read in pop()/steal()
+    std::atomic<index_t> mBottom = { 0 };   // written only in pop(), read in push(), steal()
+
     TYPE mItems[COUNT];
 
     // NOTE: it's not safe to return a reference because getItemAt() can be called
     // concurrently and the caller could std::move() the item unsafely.
-    TYPE getItemAt(int32_t index) noexcept { return mItems[index & MASK]; }
+    TYPE getItemAt(index_t index) noexcept { return mItems[index & MASK]; }
 
-    void setItemAt(int32_t index, TYPE item) noexcept { mItems[index & MASK] = item; }
+    void setItemAt(index_t index, TYPE item) noexcept { mItems[index & MASK] = item; }
 
 public:
     using value_type = TYPE;
@@ -58,9 +64,9 @@ public:
     size_t getSize() const noexcept { return COUNT; }
 
     // for debugging only...
-    int32_t getCount() const noexcept {
-        int32_t bottom = mBottom.load(std::memory_order_relaxed);
-        int32_t top = mTop.load(std::memory_order_relaxed);
+    size_t getCount() const noexcept {
+        index_t bottom = mBottom.load(std::memory_order_relaxed);
+        index_t top = mTop.load(std::memory_order_relaxed);
         return bottom - top;
     }
 };
@@ -74,7 +80,7 @@ template <typename TYPE, size_t COUNT>
 void WorkStealingDequeue<TYPE, COUNT>::push(TYPE item) noexcept {
     // std::memory_order_relaxed is sufficient because this load doesn't acquire anything from
     // another thread. mBottom is only written in pop() which cannot be concurrent with push()
-    int32_t bottom = mBottom.load(std::memory_order_relaxed);
+    index_t bottom = mBottom.load(std::memory_order_relaxed);
     setItemAt(bottom, item);
 
     // std::memory_order_release is used because we release the item we just pushed to other
@@ -97,12 +103,15 @@ TYPE WorkStealingDequeue<TYPE, COUNT>::pop() noexcept {
     // QUESTION: does this prevent mTop load below to be reordered before the "store" part of
     //           fetch_sub()? Hopefully it does. If not we'd need a full memory barrier.
     //
-    int32_t bottom = mBottom.fetch_sub(1, std::memory_order_seq_cst) - 1;
+    index_t bottom = mBottom.fetch_sub(1, std::memory_order_seq_cst) - 1;
+
+    // bottom could be -1 if we tried to pop() from an empty queue. This will be corrected below.
+    assert( bottom >= -1 );
 
     // std::memory_order_seq_cst is needed to guarantee ordering in steal()
     // Note however that this is not a typical acquire operation
     //  (i.e. other thread's writes of mTop don't publish data)
-    int32_t top = mTop.load(std::memory_order_seq_cst);
+    index_t top = mTop.load(std::memory_order_seq_cst);
 
     if (top < bottom) {
         // Queue isn't empty and it's not the last item, just return it, this is the common case.
@@ -161,11 +170,11 @@ TYPE WorkStealingDequeue<TYPE, COUNT>::steal() noexcept {
         // std::memory_order_seq_cst is needed to guarantee ordering in pop()
         // Note however that this is not a typical acquire operation
         //  (i.e. other thread's writes of mTop don't publish data)
-        int32_t top = mTop.load(std::memory_order_seq_cst);
+        index_t top = mTop.load(std::memory_order_seq_cst);
 
         // std::memory_order_acquire is needed because we're acquiring items published in push().
         // std::memory_order_seq_cst is needed to guarantee ordering in pop()
-        int32_t bottom = mBottom.load(std::memory_order_seq_cst);
+        index_t bottom = mBottom.load(std::memory_order_seq_cst);
 
         if (top >= bottom) {
             // queue is empty
