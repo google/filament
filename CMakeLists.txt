@@ -27,6 +27,10 @@ if (UNIX AND NOT APPLE AND NOT ANDROID AND NOT WEBGL)
     set(LINUX TRUE)
 endif()
 
+if (ANDROID OR WEBGL OR IOS)
+    set(IS_MOBILE_TARGET TRUE)
+endif()
+
 if (WIN32)
     # Link statically against c/c++ lib to avoid missing redistriburable such as
     # "VCRUNTIME140.dll not found. Try reinstalling the app.", but give users
@@ -275,6 +279,36 @@ if (NOT WEBGL)
 else()
     option(FILAMENT_BUILD_FILAMAT "Build filamat and JNI buildings" OFF)
 endif()
+
+# ==================================================================================================
+# Material compilation flags
+# ==================================================================================================
+
+# Target system.
+if (IS_MOBILE_TARGET)
+    set(MATC_TARGET mobile)
+else()
+    set(MATC_TARGET desktop)
+endif()
+
+set(MATC_API_FLAGS )
+
+# TODO: Add a flag to build Filament without support for OpenGL.
+set(MATC_API_FLAGS ${MATC_API_FLAGS} -a opengl)
+
+if (FILAMENT_SUPPORTS_VULKAN)
+    set(MATC_API_FLAGS ${MATC_API_FLAGS} -a vulkan)
+endif()
+if (FILAMENT_SUPPORTS_METAL)
+    set(MATC_API_FLAGS ${MATC_API_FLAGS} -a metal)
+endif()
+
+# Only optimize materials in Release mode (so error message lines match the source code)
+if (NOT CMAKE_BUILD_TYPE MATCHES Release)
+    set(MATC_OPT_FLAGS -g)
+endif()
+
+set(MATC_BASE_FLAGS ${MATC_API_FLAGS} -p ${MATC_TARGET} ${MATC_OPT_FLAGS})
 
 # ==================================================================================================
 # Distribution
