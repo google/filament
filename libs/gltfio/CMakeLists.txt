@@ -40,15 +40,6 @@ set(RESOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
 if (CMAKE_CROSSCOMPILING)
     include(${IMPORT_EXECUTABLES})
-    set(MATC_TARGET mobile)
-    set(MATC_FLAGS -a opengl)
-else()
-    set(MATC_TARGET desktop)
-    set(MATC_FLAGS -a all)
-endif()
-
-if (NOT CMAKE_BUILD_TYPE MATCHES Release)
-    set(MATC_FLAGS -g ${MATC_FLAGS})
 endif()
 
 function(generate_mat SHADINGMODEL BLENDING)
@@ -74,8 +65,7 @@ foreach (input_path ${MATERIAL_SRCS})
     set(output_path "${RESOURCE_DIR}/${basename}.filamat")
     add_custom_command(
             OUTPUT ${output_path}
-            COMMAND matc ${MATC_FLAGS} -p ${MATC_TARGET} -m material
-                    -o ${output_path} ${input_path}
+            COMMAND matc ${MATC_BASE_FLAGS} -m material -o ${output_path} ${input_path}
             MAIN_DEPENDENCY ${input_path}
             DEPENDS matc
             COMMENT "Compiling material ${mat_src} to ${output_path}"
