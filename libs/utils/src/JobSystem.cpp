@@ -428,7 +428,7 @@ void JobSystem::waitAndRelease(Job*& job) noexcept {
             // test if job has completed first, to possibly avoid taking the lock
             if (!hasJobCompleted(job)) {
                 std::unique_lock<Mutex> lock(mWaiterLock);
-                while (!hasJobCompleted(job) && !exitRequested()) {
+                if (!hasJobCompleted(job) && !exitRequested()) {
                     mWaiterCondition.wait(lock);
                 }
             }
