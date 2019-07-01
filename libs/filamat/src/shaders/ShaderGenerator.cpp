@@ -369,7 +369,7 @@ void ShaderGenerator::fixupExternalSamplers(filament::backend::ShaderModel sm,
     }
 }
 
-const std::string ShaderPostProcessGenerator::createPostProcessVertexProgram(
+const std::string ShaderPostProcessGenerator::createPostProcessVertexProgramOld(
         filament::backend::ShaderModel sm, MaterialBuilder::TargetApi targetApi,
         MaterialBuilder::TargetLanguage targetLanguage, filament::PostProcessStage variant,
         uint8_t firstSampler) noexcept {
@@ -387,12 +387,12 @@ const std::string ShaderPostProcessGenerator::createPostProcessVertexProgram(
             firstSampler, SibGenerator::getPostProcessSib());
 
     cg.generateCommon(vs, ShaderType::VERTEX);
-    cg.generatePostProcessMain(vs, ShaderType::VERTEX, variant);
+    cg.generatePostProcessMainOld(vs, ShaderType::VERTEX, variant);
     cg.generateEpilog(vs);
     return vs.c_str();
 }
 
-const std::string ShaderPostProcessGenerator::createPostProcessFragmentProgram(
+const std::string ShaderPostProcessGenerator::createPostProcessFragmentProgramOld(
         filament::backend::ShaderModel sm, MaterialBuilder::TargetApi targetApi,
         MaterialBuilder::TargetLanguage targetLanguage, filament::PostProcessStage variant,
         uint8_t firstSampler) noexcept {
@@ -409,7 +409,7 @@ const std::string ShaderPostProcessGenerator::createPostProcessFragmentProgram(
             firstSampler, SibGenerator::getPostProcessSib());
 
     cg.generateCommon(fs, ShaderType::FRAGMENT);
-    cg.generatePostProcessMain(fs, ShaderType::FRAGMENT, variant);
+    cg.generatePostProcessMainOld(fs, ShaderType::FRAGMENT, variant);
     cg.generateEpilog(fs);
     return fs.c_str();
 }

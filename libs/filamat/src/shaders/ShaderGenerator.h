@@ -74,10 +74,10 @@ private:
 };
 
 struct ShaderPostProcessGenerator {
-    static const std::string createPostProcessVertexProgram(filament::backend::ShaderModel sm,
+    static const std::string createPostProcessVertexProgramOld(filament::backend::ShaderModel sm,
             MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
             filament::PostProcessStage variant, uint8_t firstSampler) noexcept;
-    static const std::string createPostProcessFragmentProgram(filament::backend::ShaderModel sm,
+    static const std::string createPostProcessFragmentProgramOld(filament::backend::ShaderModel sm,
             MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
             filament::PostProcessStage variant, uint8_t firstSampler) noexcept;
     static void generatePostProcessStageDefines(utils::io::sstream& vs, CodeGenerator const& cg,
