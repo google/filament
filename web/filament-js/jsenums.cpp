@@ -17,8 +17,9 @@
 #include <filament/Camera.h>
 #include <filament/Color.h>
 #include <filament/IndexBuffer.h>
-#include <filament/RenderableManager.h>
 #include <filament/LightManager.h>
+#include <filament/RenderableManager.h>
+#include <filament/RenderTarget.h>
 #include <filament/Texture.h>
 #include <filament/VertexBuffer.h>
 #include <filament/View.h>
@@ -227,7 +228,22 @@ enum_<Texture::InternalFormat>("Texture$InternalFormat") // aka backend::Texture
 enum_<Texture::Usage>("Texture$Usage") // aka backend::TextureUsage
     .value("DEFAULT", Texture::Usage::DEFAULT)
     .value("COLOR_ATTACHMENT", Texture::Usage::COLOR_ATTACHMENT)
-    .value("DEPTH_ATTACHMENT", Texture::Usage::DEPTH_ATTACHMENT);
+    .value("DEPTH_ATTACHMENT", Texture::Usage::DEPTH_ATTACHMENT)
+    .value("STENCIL_ATTACHMENT", Texture::Usage::STENCIL_ATTACHMENT)
+    .value("UPLOADABLE", Texture::Usage::UPLOADABLE)
+    .value("SAMPLEABLE", Texture::Usage::SAMPLEABLE);
+
+enum_<Texture::CubemapFace>("Texture$CubemapFace") // aka backend::TextureCubemapFace
+    .value("POSITIVE_X", Texture::CubemapFace::POSITIVE_X)
+    .value("NEGATIVE_X", Texture::CubemapFace::NEGATIVE_X)
+    .value("POSITIVE_Y", Texture::CubemapFace::POSITIVE_Y)
+    .value("NEGATIVE_Y", Texture::CubemapFace::NEGATIVE_Y)
+    .value("POSITIVE_Z", Texture::CubemapFace::POSITIVE_Z)
+    .value("NEGATIVE_Z", Texture::CubemapFace::NEGATIVE_Z);
+
+enum_<RenderTarget::AttachmentPoint>("RenderTarget$AttachmentPoint")
+    .value("COLOR", RenderTarget::AttachmentPoint::COLOR)
+    .value("DEPTH", RenderTarget::AttachmentPoint::DEPTH);
 
 enum_<backend::PixelDataFormat>("PixelDataFormat")
     .value("R", backend::PixelDataFormat::R)

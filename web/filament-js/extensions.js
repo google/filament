@@ -177,6 +177,7 @@ Filament.loadClassExtensions = function() {
             return result;
         };
 
+    Filament.RenderTarget$Builder.prototype.build =
     Filament.VertexBuffer$Builder.prototype.build =
     Filament.IndexBuffer$Builder.prototype.build =
     Filament.Texture$Builder.prototype.build =
