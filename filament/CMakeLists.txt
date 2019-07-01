@@ -142,9 +142,6 @@ list(APPEND SRCS ${RESGEN_SOURCE})
 # ==================================================================================================
 # Configuration
 # ==================================================================================================
-if (ANDROID OR WEBGL OR IOS)
-    set(IS_MOBILE_TARGET TRUE)
-endif()
 
 # Size of the DFG lookup table
 if (NOT DFG_LUT_SIZE)
@@ -174,25 +171,6 @@ endif()
 set(MATERIAL_BINS)
 file(MAKE_DIRECTORY ${MATERIAL_DIR})
 
-# Target system.
-if (IS_MOBILE_TARGET)
-    set(MATC_TARGET mobile)
-else()
-    set(MATC_TARGET desktop)
-endif()
-
-# Generate shader code for all platforms when Vulkan or Metal is supported.
-if (FILAMENT_SUPPORTS_VULKAN OR FILAMENT_SUPPORTS_METAL)
-    set(MATC_BASE_FLAGS -a all)
-else()
-    set(MATC_BASE_FLAGS -a opengl)
-endif()
-
-# Only optimize materials in Release mode (so error message lines match the source code)
-if (NOT CMAKE_BUILD_TYPE MATCHES Release)
-    set(MATC_OPT_FLAGS -g)
-endif()
-
 foreach (mat_src ${MATERIAL_SRCS})
     get_filename_component(localname "${mat_src}" NAME_WE)
     get_filename_component(fullname "${mat_src}" ABSOLUTE)
@@ -200,8 +178,7 @@ foreach (mat_src ${MATERIAL_SRCS})
 
     add_custom_command(
             OUTPUT ${output_path}
-            COMMAND matc ${MATC_BASE_FLAGS} ${MATC_OPT_FLAGS} -p ${MATC_TARGET} -m material
-                    -o ${output_path} ${fullname}
+            COMMAND matc ${MATC_BASE_FLAGS} -m material -o ${output_path} ${fullname}
             DEPENDS ${fullname} matc
             COMMENT "Compiling material ${mat_src} to ${output_path}"
     )
@@ -211,8 +188,7 @@ endforeach()
 set(output_path "${MATERIAL_DIR}/postprocess.filamat")
 add_custom_command(
         OUTPUT ${output_path}
-        COMMAND matc ${MATC_BASE_FLAGS} ${MATC_OPT_FLAGS} -p ${MATC_TARGET} -m postprocess
-                -o ${output_path}
+        COMMAND matc ${MATC_BASE_FLAGS} -m postprocess -o ${output_path}
         DEPENDS matc
         COMMENT "Compiling post-process material ${output_path}"
 )

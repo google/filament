@@ -32,27 +32,13 @@ set(MATERIAL_BINS)
 set(GENERATION_ROOT ${CMAKE_CURRENT_BINARY_DIR})
 file(MAKE_DIRECTORY "${GENERATION_ROOT}/generated/material/")
 
-# Target system.
-if (ANDROID OR WEBGL)
-    set(MATC_TARGET mobile)
-else()
-    set(MATC_TARGET desktop)
-endif()
-
-# Optimize materials for performance in Release mode.
-set(MATC_FLAGS -a all)
-if (NOT CMAKE_BUILD_TYPE MATCHES Release)
-    set(MATC_FLAGS ${MATC_FLAGS} -g)
-endif()
-
 foreach (mat_src ${MATERIAL_SRCS})
     get_filename_component(localname "${mat_src}" NAME_WE)
     get_filename_component(fullname "${mat_src}" ABSOLUTE)
     set(output_path "${GENERATION_ROOT}/generated/material/${localname}.inc")
     add_custom_command(
             OUTPUT ${output_path}
-            COMMAND matc ${MATC_FLAGS} -p ${MATC_TARGET} -m material -f header
-                    -o ${output_path} ${fullname}
+            COMMAND matc ${MATC_BASE_FLAGS} -m material -f header -o ${output_path} ${fullname}
             DEPENDS ${mat_src} matc
             COMMENT "Compiling material ${mat_src} to ${output_path}"
     )
