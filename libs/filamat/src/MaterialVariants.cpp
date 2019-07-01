@@ -46,6 +46,8 @@ std::vector<Variant> determineSurfaceVariants(uint8_t variantFilter, bool isLit,
 
 std::vector<Variant> determinePostProcessVariants() {
     std::vector<Variant> variants;
+    // TODO: add a way to filter out post-process variants (e.g., the transparent variant if only
+    // opaque is needed)
     for (size_t k = 0; k < filament::POST_PROCESS_VARIANT_COUNT; k++) {
         variants.emplace_back(k, filament::backend::ShaderType::VERTEX);
         variants.emplace_back(k, filament::backend::ShaderType::FRAGMENT);
