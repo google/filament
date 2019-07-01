@@ -43,6 +43,7 @@
 #include <filament/MaterialInstance.h>
 #include <filament/RenderableManager.h>
 #include <filament/Renderer.h>
+#include <filament/RenderTarget.h>
 #include <filament/Scene.h>
 #include <filament/Skybox.h>
 #include <filament/SwapChain.h>
@@ -110,6 +111,7 @@ namespace emscripten {
         BIND(MaterialInstance)
         BIND(RenderableManager)
         BIND(Renderer)
+        BIND(RenderTarget)
         BIND(Scene)
         BIND(Skybox)
         BIND(SwapChain)
@@ -127,15 +129,16 @@ namespace {
 
 // For convenience, declare terse private aliases to nested types. This lets us avoid extremely
 // verbose binding declarations.
-using RenderBuilder = RenderableManager::Builder;
-using VertexBuilder = VertexBuffer::Builder;
-using IndexBuilder = IndexBuffer::Builder;
-using MatBuilder = Material::Builder;
-using TexBuilder = Texture::Builder;
-using LightBuilder = LightManager::Builder;
 using IblBuilder = IndirectLight::Builder;
+using IndexBuilder = IndexBuffer::Builder;
+using LightBuilder = LightManager::Builder;
+using MatBuilder = Material::Builder;
+using RenderableBuilder = RenderableManager::Builder;
+using RenderTargetBuilder = RenderTarget::Builder;
 using SkyBuilder = Skybox::Builder;
 using SurfaceBuilder = SurfaceOrientation::Builder;
+using TexBuilder = Texture::Builder;
+using VertexBuilder = VertexBuffer::Builder;
 
 // We avoid directly exposing backend::BufferDescriptor because embind does not support move
 // semantics and void* doesn't make sense to JavaScript anyway. This little wrapper class is exposed
@@ -265,6 +268,10 @@ value_array<KtxBlobIndex>("KtxBlobIndex")
 value_object<Box>("Box")
     .field("center", &Box::center)
     .field("halfExtent", &Box::halfExtent);
+
+value_object<filament::Aabb>("Aabb")
+    .field("min", &filament::Aabb::min)
+    .field("max", &filament::Aabb::max);
 
 // In JavaScript, a flat contiguous representation is best for matrices (see gl-matrix) so we
 // need to define a small wrapper here.
@@ -402,6 +409,11 @@ class_<Engine>("Engine")
     .function("destroyMaterialInstance", (void (*)(Engine*, MaterialInstance*)) []
             (Engine* engine, MaterialInstance* mi) { engine->destroy(mi); },
             allow_raw_pointers())
+    /// destroyRenderTarget ::method::
+    /// rt ::argument:: the [RenderTarget] to destroy
+    .function("destroyRenderTarget", (void (*)(Engine*, RenderTarget*)) []
+            (Engine* engine, RenderTarget* rt) { engine->destroy(rt); },
+            allow_raw_pointers())
     /// destroySkybox ::method::
     /// skybox ::argument:: the [Skybox] to destroy
     .function("destroySkybox", (void (*)(Engine*, Skybox*)) []
@@ -452,7 +464,10 @@ class_<View>("View")
     .function("setDepthPrepass", &View::setDepthPrepass)
     .function("setPostProcessingEnabled", &View::setPostProcessingEnabled)
     .function("setAntiAliasing", &View::setAntiAliasing)
-    .function("getAntiAliasing", &View::getAntiAliasing);
+    .function("getAntiAliasing", &View::getAntiAliasing)
+    .function("setRenderTarget", EMBIND_LAMBDA(void, (View* self, RenderTarget* renderTarget), {
+        self->setRenderTarget(renderTarget);
+    }), allow_raw_pointers());
 
 /// Scene ::core class:: Flat container of renderables and lights.
 /// See also the [Engine] methods `createScene` and `destroyScene`.
@@ -550,41 +565,70 @@ class_<Camera>("Camera")
         return flatmat4 { filament::math::mat4f(Camera::inverseProjection(m.m)) };
     }, allow_raw_pointers());
 
-class_<RenderBuilder>("RenderableManager$Builder")
-    .BUILDER_FUNCTION("geometry", RenderBuilder, (RenderBuilder* builder,
+class_<RenderTargetBuilder>("RenderTarget$Builder")
+    .BUILDER_FUNCTION("texture", RenderTargetBuilder, (RenderTargetBuilder* builder,
+            RenderTarget::AttachmentPoint attachment, Texture* tex), {
+        return &builder->texture(attachment, tex); })
+
+    .BUILDER_FUNCTION("mipLevel", RenderTargetBuilder, (RenderTargetBuilder* builder,
+            RenderTarget::AttachmentPoint attachment, uint8_t level), {
+        return &builder->mipLevel(attachment, level); })
+
+    .BUILDER_FUNCTION("face", RenderTargetBuilder, (RenderTargetBuilder* builder,
+            RenderTarget::AttachmentPoint attachment, Texture::CubemapFace face), {
+        return &builder->face(attachment, face); })
+
+    .BUILDER_FUNCTION("layer", RenderTargetBuilder, (RenderTargetBuilder* builder,
+            RenderTarget::AttachmentPoint attachment, uint32_t layer), {
+        return &builder->layer(attachment, layer); })
+
+    .function("_build", EMBIND_LAMBDA(RenderTarget*, (RenderTargetBuilder* builder, Engine* engine), {
+        return builder->build(*engine);
+    }), allow_raw_pointers());
+
+class_<RenderTarget>("RenderTarget")
+    .class_function("Builder", (RenderTargetBuilder (*)()) [] () {
+        return RenderTarget::Builder();
+    })
+    .function("getMipLevel", &RenderTarget::getMipLevel)
+    .function("getFace", &RenderTarget::getFace)
+    .function("getLayer", &RenderTarget::getLayer);
+
+class_<RenderableBuilder>("RenderableManager$Builder")
+    .BUILDER_FUNCTION("geometry", RenderableBuilder, (RenderableBuilder* builder,
             size_t index,
             RenderableManager::PrimitiveType type,
             VertexBuffer* vertices,
             IndexBuffer* indices), {
         return &builder->geometry(index, type, vertices, indices); })
 
-    .BUILDER_FUNCTION("material", RenderBuilder, (RenderBuilder* builder,
+    .BUILDER_FUNCTION("material", RenderableBuilder, (RenderableBuilder* builder,
             size_t index, MaterialInstance* mi), {
         return &builder->material(index, mi); })
 
-    .BUILDER_FUNCTION("boundingBox", RenderBuilder, (RenderBuilder* builder, Box box), {
+    .BUILDER_FUNCTION("boundingBox", RenderableBuilder, (RenderableBuilder* builder, Box box), {
         return &builder->boundingBox(box); })
 
-    .BUILDER_FUNCTION("layerMask", RenderBuilder, (RenderBuilder* builder, uint8_t select,
+    .BUILDER_FUNCTION("layerMask", RenderableBuilder, (RenderableBuilder* builder, uint8_t select,
             uint8_t values), {
         return &builder->layerMask(select, values); })
 
-    .BUILDER_FUNCTION("priority", RenderBuilder, (RenderBuilder* builder, uint8_t value), {
+    .BUILDER_FUNCTION("priority", RenderableBuilder, (RenderableBuilder* builder, uint8_t value), {
         return &builder->priority(value); })
 
-    .BUILDER_FUNCTION("culling", RenderBuilder, (RenderBuilder* builder, bool enable), {
+    .BUILDER_FUNCTION("culling", RenderableBuilder, (RenderableBuilder* builder, bool enable), {
         return &builder->culling(enable); })
 
-    .BUILDER_FUNCTION("castShadows", RenderBuilder, (RenderBuilder* builder, bool enable), {
+    .BUILDER_FUNCTION("castShadows", RenderableBuilder, (RenderableBuilder* builder, bool enable), {
         return &builder->castShadows(enable); })
 
-    .BUILDER_FUNCTION("receiveShadows", RenderBuilder, (RenderBuilder* builder, bool enable), {
+    .BUILDER_FUNCTION("receiveShadows", RenderableBuilder, (RenderableBuilder* builder, bool enable), {
         return &builder->receiveShadows(enable); })
 
-    .BUILDER_FUNCTION("skinning", RenderBuilder, (RenderBuilder* builder, size_t boneCount), {
+    .BUILDER_FUNCTION("skinning", RenderableBuilder, (RenderableBuilder* builder, size_t boneCount), {
         return &builder->skinning(boneCount); })
 
-    .BUILDER_FUNCTION("skinningBones", RenderBuilder, (RenderBuilder* builder,
+    .BUILDER_FUNCTION("skinningBones", RenderableBuilder, (RenderableBuilder* builder,
             emscripten::val transforms), {
         auto nbones = transforms["length"].as<size_t>();
         std::vector<RenderableManager::Bone> bones(nbones);
@@ -594,7 +638,7 @@ class_<RenderBuilder>("RenderableManager$Builder")
         return &builder->skinning(bones.size(), bones.data());
     })
 
-    .BUILDER_FUNCTION("skinningMatrices", RenderBuilder, (RenderBuilder* builder,
+    .BUILDER_FUNCTION("skinningMatrices", RenderableBuilder, (RenderableBuilder* builder,
             emscripten::val transforms), {
         auto nbones = transforms["length"].as<size_t>();
         std::vector<filament::math::mat4f> matrices(nbones);
@@ -604,11 +648,11 @@ class_<RenderBuilder>("RenderableManager$Builder")
         return &builder->skinning(matrices.size(), matrices.data());
     })
 
-    .BUILDER_FUNCTION("blendOrder", RenderBuilder,
-            (RenderBuilder* builder, size_t index, uint16_t order), {
+    .BUILDER_FUNCTION("blendOrder", RenderableBuilder,
+            (RenderableBuilder* builder, size_t index, uint16_t order), {
         return &builder->blendOrder(index, order); })
 
-    .function("_build", EMBIND_LAMBDA(int, (RenderBuilder* builder,
+    .function("_build", EMBIND_LAMBDA(int, (RenderableBuilder* builder,
             Engine* engine, utils::Entity entity), {
         return (int) builder->build(*engine, entity);
     }), allow_raw_pointers());
@@ -622,7 +666,9 @@ class_<RenderableManager>("RenderableManager")
     /// ::retval:: a renderable component
     .function("getInstance", &RenderableManager::getInstance)
 
-    .class_function("Builder", (RenderBuilder (*)(int)) [] (int n) { return RenderBuilder(n); })
+    .class_function("Builder", (RenderableBuilder (*)(int)) [] (int n) {
+        return RenderableBuilder(n);
+    })
 
     .function("destroy", &RenderableManager::destroy)
     .function("setAxisAlignedBoundingBox", &RenderableManager::setAxisAlignedBoundingBox)
@@ -1303,7 +1349,12 @@ class_<AssetLoader>("gltfio$AssetLoader")
 
 class_<ResourceLoader>("gltfio$ResourceLoader")
     .constructor(EMBIND_LAMBDA(ResourceLoader*, (Engine* engine), {
-        return new ResourceLoader({ engine, utils::Path(), true, true });
+        return new ResourceLoader({
+            .engine = engine,
+            .gltfPath = utils::Path(),
+            .normalizeSkinningWeights = true,
+            .recomputeBoundingBoxes = true
+        });
     }), allow_raw_pointers())
 
     .function("addResourceData", EMBIND_LAMBDA(void, (ResourceLoader* self, std::string url,
