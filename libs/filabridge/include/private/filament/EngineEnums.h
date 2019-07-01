@@ -30,6 +30,12 @@ enum class PostProcessStage : uint8_t {
     ANTI_ALIASING_TRANSLUCENT,     // Anti-aliasing stage
 };
 
+static constexpr size_t POST_PROCESS_VARIANT_COUNT = 2;
+enum class PostProcessVariant : uint8_t {
+    OPAQUE,
+    TRANSLUCENT
+};
+
 // Binding points for uniform buffers and sampler buffers.
 // Effectively, these are just names.
 namespace BindingPoints {
