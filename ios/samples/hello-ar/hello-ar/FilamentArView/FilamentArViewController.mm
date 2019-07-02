@@ -150,7 +150,9 @@
             const auto& geometry = planeAnchor.geometry;
             app->updatePlaneGeometry(FilamentApp::FilamentArPlaneGeometry {
                 .transform = FILAMENT_MAT4F_FROM_SIMD(planeAnchor.transform),
-                .vertices = (float3*) geometry.vertices,
+                // geometry.vertices is an array of simd_float3's, but they're padded to be the
+                // same length as a float4.
+                .vertices = (float4*) geometry.vertices,
                 .indices = (uint16_t*) geometry.triangleIndices,
                 .vertexCount = geometry.vertexCount,
                 .indexCount = geometry.triangleCount * 3

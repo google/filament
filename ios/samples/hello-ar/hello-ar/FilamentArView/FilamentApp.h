@@ -53,7 +53,7 @@ public:
 
     struct FilamentArPlaneGeometry {
         mat4f transform;
-        float3* vertices;
+        float4* vertices;
         uint16_t* indices;
         size_t vertexCount;
         size_t indexCount;
@@ -96,6 +96,7 @@ private:
         VertexBuffer* planeVertices = nullptr;
         IndexBuffer* planeIndices = nullptr;
         Entity planeGeometry;
+        Material* shadowPlane = nullptr;
     } app;
 
 };

@@ -20,6 +20,7 @@
 #include <filament/TransformManager.h>
 
 #include <filameshio/MeshReader.h>
+#include <geometry/SurfaceOrientation.h>
 #include <image/KtxUtility.h>
 
 #include <sstream>
@@ -87,10 +88,30 @@ void FilamentApp::updatePlaneGeometry(const FilamentArPlaneGeometry& geometry) {
         engine->destroy(app.planeIndices);
     }
 
+    if (!app.shadowPlane) {
+        app.shadowPlane = Material::Builder()
+            .package(RESOURCES_SHADOW_PLANE_DATA, RESOURCES_SHADOW_PLANE_SIZE)
+            .build(*engine);
+    }
+
+    float3* normals = new float3[geometry.vertexCount];
+    for (size_t i = 0; i < geometry.vertexCount; i++) {
+        normals[i] = { 0, 1, 0 };
+    }
+    const auto& surfaceOrientation = geometry::SurfaceOrientation::Builder()
+        .vertexCount(geometry.vertexCount)
+        .normals(normals)
+        .build();
+    delete [] normals;
+    quatf* tangentQuats = new quatf[geometry.vertexCount];
+    surfaceOrientation.getQuats(tangentQuats, geometry.vertexCount);
+
     app.planeVertices = VertexBuffer::Builder()
         .vertexCount((uint32_t) geometry.vertexCount)
-        .bufferCount(1)
+        .bufferCount(2)
+    // The position buffer only has x y and z coordinates, but has the same padding as a float4.
     .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT3, 0, sizeof(float4))
+    .attribute(VertexAttribute::TANGENTS, 1, VertexBuffer::AttributeType::FLOAT4, 0, sizeof(quatf))
     .build(*engine);
 
     app.planeIndices = IndexBuffer::Builder()
@@ -98,9 +119,13 @@ void FilamentApp::updatePlaneGeometry(const FilamentArPlaneGeometry& geometry) {
         .bufferType(IndexBuffer::IndexType::USHORT)
         .build(*engine);
 
-    VertexBuffer::BufferDescriptor vertexBuffer(geometry.vertices, geometry.vertexCount * sizeof(float4));
+    VertexBuffer::BufferDescriptor positionBuffer(geometry.vertices, geometry.vertexCount * sizeof(float4));
+    VertexBuffer::BufferDescriptor tangentbuffer(tangentQuats, geometry.vertexCount * sizeof(quatf), [](void* buffer, size_t size, void* user) {
+        delete [] (quatf*)buffer;
+    });
     IndexBuffer::BufferDescriptor indexBuffer(geometry.indices, geometry.indexCount * sizeof(uint16_t));
-    app.planeVertices->setBufferAt(*engine, 0, std::move(vertexBuffer));
+    app.planeVertices->setBufferAt(*engine, 0, std::move(positionBuffer));
+    app.planeVertices->setBufferAt(*engine, 1, std::move(tangentbuffer));
     app.planeIndices->setBuffer(*engine, std::move(indexBuffer));
 
     Box aabb = RenderableManager::computeAABB((float4*) geometry.vertices, (uint16_t*) geometry.indices, geometry.vertexCount);
@@ -108,9 +133,13 @@ void FilamentApp::updatePlaneGeometry(const FilamentArPlaneGeometry& geometry) {
     RenderableManager::Builder(1)
         .boundingBox(aabb)
         .receiveShadows(true)
-        .material(0, engine->getDefaultMaterial()->getDefaultInstance())
+        .material(0, app.shadowPlane->getDefaultInstance())
         .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, app.planeVertices, app.planeIndices, 0, geometry.indexCount)
         .build(*engine, app.planeGeometry);
+
+    // Allow the ground plane to receive shadows.
+    auto& rcm = engine->getRenderableManager();
+    rcm.setReceiveShadows(rcm.getInstance(app.planeGeometry), true);
 
     tcm.create(app.planeGeometry);
     auto i = tcm.getInstance(app.planeGeometry);
@@ -127,6 +156,8 @@ FilamentApp::~FilamentApp() {
     engine->destroy(app.indirectLight);
     engine->destroy(app.iblTexture);
     engine->destroy(app.renderable);
+    engine->destroy(app.sun);
+    engine->destroy(app.shadowPlane);
 
     engine->destroy(renderer);
     engine->destroy(scene);
@@ -181,6 +212,10 @@ void FilamentApp::setupMesh() {
 
     app.renderable = mesh.renderable;
     scene->addEntity(app.renderable);
+
+    // Allow the mesh to cast shadows onto the shadow plane.
+    auto& rcm = engine->getRenderableManager();
+    rcm.setCastShadows(rcm.getInstance(app.renderable), true);
 
     // Position the mesh 2 units down the Z axis.
     auto& tcm = engine->getTransformManager();
