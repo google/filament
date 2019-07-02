@@ -84,7 +84,7 @@ Copy your platform's Makefile below into a `Makefile` inside the same directory.
 ### Linux
 
 ```
-FILAMENT_LIBS=-lfilament -lbackend -lbluegl -lbluevk -lfilabridge -lfilaflat -lutils -lgeometry -lsmol-v
+FILAMENT_LIBS=-lfilament -lbackend -lbluegl -lbluevk -lfilabridge -lfilaflat -lutils -lgeometry -lsmol-v -libl
 CC=clang++
 
 main: main.o
@@ -102,7 +102,7 @@ clean:
 ### macOS
 
 ```
-FILAMENT_LIBS=-lfilament -lbackend -lbluegl -lbluevk -lfilabridge -lfilaflat -lutils -lgeometry -lsmol-v
+FILAMENT_LIBS=-lfilament -lbackend -lbluegl -lbluevk -lfilabridge -lfilaflat -lutils -lgeometry -lsmol-v -libl
 FRAMEWORKS=-framework Cocoa -framework Metal -framework CoreVideo
 CC=clang++
 
@@ -131,7 +131,7 @@ used to change the run-time library version.
 ```
 FILAMENT_LIBS=lib/x86_64/mt/filament.lib lib/x86_64/mt/backend.lib lib/x86_64/mt/bluegl.lib \
               lib/x86_64/mt/filabridge.lib lib/x86_64/mt/filaflat.lib lib/x86_64/mt/utils.lib \
-              lib/x86_64/mt/geometry.lib lib/x86_64/mt/smol-v.lib
+              lib/x86_64/mt/geometry.lib lib/x86_64/mt/smol-v.lib lib/x86_64/mt/ibl.lib
 CC=clang-cl.exe
 
 main.exe: main.obj
