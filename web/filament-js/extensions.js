@@ -254,7 +254,8 @@ Filament.loadClassExtensions = function() {
             }
         }
         const resourceLoader = new Filament.gltfio$ResourceLoader(engine);
-        Filament.fetch(Array.from(urlset), function() {
+
+        const onComplete = function() {
             const finalize = function() {
                 resourceLoader.loadResources(asset);
 
@@ -265,14 +266,20 @@ Filament.loadClassExtensions = function() {
                         resourceLoader.delete();
                     });
                 });
-
             };
             if (onDone) {
                 onDone(finalize);
             } else {
                 finalize();
             }
-        }, function(name) {
+        };
+
+        if (urlset.size == 0) {
+            onComplete();
+            return;
+        }
+
+        Filament.fetch(Array.from(urlset), onComplete, function(name) {
             var buffer = getBufferDescriptor(name);
             resourceLoader.addResourceData(name, buffer);
             buffer.delete();
