@@ -49,6 +49,10 @@ public:
         pulse(1);
     }
 
+    void notify_n(size_t n) noexcept {
+        if (n > 0) pulse(n);
+    }
+
     void wait(std::unique_lock<Mutex>& lock) noexcept {
         wait_until(lock.mutex(), false, nullptr);
     }
