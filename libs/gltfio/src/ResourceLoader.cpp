@@ -537,6 +537,16 @@ void ResourceLoader::updateBoundingBoxes(details::FFilamentAsset* asset) const {
     auto& rm = mConfig.engine->getRenderableManager();
     auto& tm = mConfig.engine->getTransformManager();
 
+    // The purpose of the root node is to give the client a place for custom transforms.
+    // Since it is not part of the source model, it should be ignored when computing the
+    // bounding box.
+    TransformManager::Instance root = tm.getInstance(asset->getRoot());
+    std::vector<Entity> modelRoots(tm.getChildCount(root));
+    tm.getChildren(root, modelRoots.data(), modelRoots.size());
+    for (auto e : modelRoots) {
+        tm.setParent(tm.getInstance(e), 0);
+    }
+
     auto computeBoundingBox = [&](const cgltf_primitive& prim) {
         Aabb aabb;
         for (cgltf_size slot = 0; slot < prim.attributes_count; slot++) {
@@ -588,6 +598,11 @@ void ResourceLoader::updateBoundingBoxes(details::FFilamentAsset* asset) const {
             assetBounds.max = max(assetBounds.max, maxpt);
         }
     }
+
+    for (auto e : modelRoots) {
+        tm.setParent(tm.getInstance(e), root);
+    }
+
     asset->mBoundingBox = assetBounds;
 }
 
