@@ -217,6 +217,7 @@
 					"-lutils",
 					"-lsmol-v",
 					"-lgeometry",
+					"-libl",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.hello-triangle";
 				SDKROOT = iphoneos;
@@ -312,6 +313,7 @@
 					"-lutils",
 					"-lsmol-v",
 					"-lgeometry",
+					"-libl",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.hello-triangle";
 				SDKROOT = iphoneos;
@@ -348,6 +350,7 @@
 					"-lutils",
 					"-lsmol-v",
 					"-lgeometry",
+					"-libl",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.hello-triangle";
 				SDKROOT = iphoneos;
@@ -486,6 +489,7 @@
 					"-lutils",
 					"-lsmol-v",
 					"-lgeometry",
+					"-libl",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.hello-triangle";
 				SDKROOT = iphoneos;

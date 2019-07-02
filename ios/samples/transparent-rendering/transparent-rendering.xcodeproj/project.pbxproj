@@ -368,6 +368,7 @@
 					"-lutils",
 					"-lsmol-v",
 					"-lgeometry",
+					"-libl",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.transparent-rendering";
 				SDKROOT = iphoneos;
@@ -404,6 +405,7 @@
 					"-lutils",
 					"-lsmol-v",
 					"-lgeometry",
+					"-libl",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.transparent-rendering";
 				SDKROOT = iphoneos;
@@ -440,6 +442,7 @@
 					"-lutils",
 					"-lsmol-v",
 					"-lgeometry",
+					"-libl",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.transparent-rendering";
 				SDKROOT = iphoneos;
@@ -476,6 +479,7 @@
 					"-lutils",
 					"-lsmol-v",
 					"-lgeometry",
+					"-libl",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.transparent-rendering";
 				SDKROOT = iphoneos;
