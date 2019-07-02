@@ -119,22 +119,28 @@ void FilamentApp::updatePlaneGeometry(const FilamentArPlaneGeometry& geometry) {
         .bufferType(IndexBuffer::IndexType::USHORT)
         .build(*engine);
 
-    VertexBuffer::BufferDescriptor positionBuffer(geometry.vertices, geometry.vertexCount * sizeof(float4));
-    VertexBuffer::BufferDescriptor tangentbuffer(tangentQuats, geometry.vertexCount * sizeof(quatf), [](void* buffer, size_t size, void* user) {
+    VertexBuffer::BufferDescriptor positionBuffer(geometry.vertices,
+            geometry.vertexCount * sizeof(float4));
+    VertexBuffer::BufferDescriptor tangentbuffer(tangentQuats,
+            geometry.vertexCount * sizeof(quatf),
+            [](void* buffer, size_t size, void* user) {
         delete [] (quatf*)buffer;
     });
-    IndexBuffer::BufferDescriptor indexBuffer(geometry.indices, geometry.indexCount * sizeof(uint16_t));
+    IndexBuffer::BufferDescriptor indexBuffer(geometry.indices,
+            geometry.indexCount * sizeof(uint16_t));
     app.planeVertices->setBufferAt(*engine, 0, std::move(positionBuffer));
     app.planeVertices->setBufferAt(*engine, 1, std::move(tangentbuffer));
     app.planeIndices->setBuffer(*engine, std::move(indexBuffer));
 
-    Box aabb = RenderableManager::computeAABB((float4*) geometry.vertices, (uint16_t*) geometry.indices, geometry.vertexCount);
+    Box aabb = RenderableManager::computeAABB((float4*) geometry.vertices,
+            (uint16_t*) geometry.indices, geometry.vertexCount);
     EntityManager::get().create(1, &app.planeGeometry);
     RenderableManager::Builder(1)
         .boundingBox(aabb)
         .receiveShadows(true)
         .material(0, app.shadowPlane->getDefaultInstance())
-        .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, app.planeVertices, app.planeIndices, 0, geometry.indexCount)
+        .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, app.planeVertices,
+                app.planeIndices, 0, geometry.indexCount)
         .build(*engine, app.planeGeometry);
 
     // Allow the ground plane to receive shadows.
