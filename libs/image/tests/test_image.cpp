@@ -427,6 +427,62 @@ TEST_F(ImageTest, Ktx) { // NOLINT
     }
 }
 
+TEST_F(ImageTest, getSphericalHarmonics) {
+    KtxBundle ktx(2, 1, true);
+
+    const char* sphereHarmonics = R"(0.199599 0.197587 0.208682
+    0.0894955 0.126985 0.187462
+    0.0921711 0.102497 0.105308
+    -0.0322833 -0.053886 -0.0661181
+    -0.0734081 -0.0808731 -0.0788446
+    0.0620748 0.0851526 0.100914
+    0.00763482 0.00564362 -0.000848833
+    -0.102654 -0.102815 -0.0930881
+    -0.022778 -0.0281883 -0.0377256
+    )";
+
+    ktx.setMetadata("sh", sphereHarmonics);
+
+    float3 harmonics[9];
+    ktx.getSphericalHarmonics(harmonics);
+
+    ASSERT_FLOAT_EQ(harmonics[0].x, 0.199599);
+    ASSERT_FLOAT_EQ(harmonics[0].y, 0.197587);
+    ASSERT_FLOAT_EQ(harmonics[0].z, 0.208682);
+
+    ASSERT_FLOAT_EQ(harmonics[1].x, 0.0894955);
+    ASSERT_FLOAT_EQ(harmonics[1].y, 0.126985);
+    ASSERT_FLOAT_EQ(harmonics[1].z, 0.187462);
+
+    ASSERT_FLOAT_EQ(harmonics[2].x, 0.0921711);
+    ASSERT_FLOAT_EQ(harmonics[2].y, 0.102497);
+    ASSERT_FLOAT_EQ(harmonics[2].z, 0.105308);
+
+    ASSERT_FLOAT_EQ(harmonics[3].x, -0.0322833);
+    ASSERT_FLOAT_EQ(harmonics[3].y, -0.053886);
+    ASSERT_FLOAT_EQ(harmonics[3].z, -0.0661181);
+
+    ASSERT_FLOAT_EQ(harmonics[4].x, -0.0734081);
+    ASSERT_FLOAT_EQ(harmonics[4].y, -0.0808731);
+    ASSERT_FLOAT_EQ(harmonics[4].z, -0.0788446);
+
+    ASSERT_FLOAT_EQ(harmonics[5].x, 0.0620748);
+    ASSERT_FLOAT_EQ(harmonics[5].y, 0.0851526);
+    ASSERT_FLOAT_EQ(harmonics[5].z, 0.100914);
+
+    ASSERT_FLOAT_EQ(harmonics[6].x, 0.00763482);
+    ASSERT_FLOAT_EQ(harmonics[6].y, 0.00564362);
+    ASSERT_FLOAT_EQ(harmonics[6].z, -0.000848833);
+
+    ASSERT_FLOAT_EQ(harmonics[7].x, -0.102654);
+    ASSERT_FLOAT_EQ(harmonics[7].y, -0.102815);
+    ASSERT_FLOAT_EQ(harmonics[7].z, -0.0930881);
+
+    ASSERT_FLOAT_EQ(harmonics[8].x, -0.022778);
+    ASSERT_FLOAT_EQ(harmonics[8].y, -0.0281883);
+    ASSERT_FLOAT_EQ(harmonics[8].z, -0.0377256);
+}
+
 static void printUsage(const char* name) {
     string exec_name(utils::Path(name).getName());
     string usage(
