@@ -20,7 +20,7 @@ targetTemplates:
         settings:
             base:
                 OTHER_LDFLAGS: ["-lfilament", "-lbackend", "-lfilaflat",
-                                "-lfilabridge", "-lutils", "-lsmol-v", "-lgeometry"]
+                                "-lfilabridge", "-lutils", "-lsmol-v", "-lgeometry", "-libl"]
                 ENABLE_BITCODE: NO
             configs:
                 debug:
