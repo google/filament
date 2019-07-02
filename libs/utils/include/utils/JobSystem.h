@@ -303,7 +303,6 @@ public:
     };
 
     static void setThreadPriority(Priority priority) noexcept;
-    static void setThreadAffinity(uint32_t mask) noexcept;
     static void setThreadAffinityById(size_t id) noexcept;
 
     size_t getParallelSplitCount() const noexcept {
@@ -350,9 +349,11 @@ private:
 
     void requestExit() noexcept;
     bool exitRequested() const noexcept;
+    bool hasActiveJobs() const noexcept;
 
     void loop(ThreadState* state) noexcept;
     bool execute(JobSystem::ThreadState& state) noexcept;
+    Job* steal(JobSystem::ThreadState& state) noexcept;
     void finish(Job* job) noexcept;
 
     void put(WorkQueue& workQueue, Job* job) noexcept {
@@ -373,12 +374,14 @@ private:
         return !index ? nullptr : &mJobStorageBase[index - 1];
     }
 
-    // these have thread contention, keep them together
-    utils::Mutex mLooperLock;
-    utils::Condition mLooperCondition;
+    template <typename Mutex>
+    void wait(std::unique_lock<Mutex>& lock) noexcept;
+    void wake() noexcept;
 
+    // these have thread contention, keep them together
     utils::Mutex mWaiterLock;
     utils::Condition mWaiterCondition;
+    uint32_t mWaiterCount = 0;
 
     std::atomic<uint32_t> mActiveJobs = { 0 };
     utils::Arena<utils::ThreadSafeObjectPoolAllocator<Job>, LockingPolicy::NoLock> mJobPool;
