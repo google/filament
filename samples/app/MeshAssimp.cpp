@@ -305,7 +305,7 @@ MeshAssimp::~MeshAssimp() {
 template<typename T>
 struct State {
     std::vector<T> state;
-    explicit State(std::vector<T>&& state) : state(state) { }
+    explicit State(std::vector<T>&& state) : state(std::move(state)) { }
     static void free(void* buffer, size_t size, void* user) {
         auto* const that = static_cast<State<T>*>(user);
         delete that;
