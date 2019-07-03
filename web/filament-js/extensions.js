@@ -219,6 +219,9 @@ Filament.loadClassExtensions = function() {
     };
 
     Filament.gltfio$AssetLoader.prototype.createAssetFromJson = function(buffer) {
+        if ('string' == typeof buffer && buffer.endsWith('.glb')) {
+            console.error('Please use createAssetFromBinary for glb files.');
+        }
         buffer = getBufferDescriptor(buffer);
         const result = this._createAssetFromJson(buffer);
         buffer.delete();
@@ -226,6 +229,9 @@ Filament.loadClassExtensions = function() {
     };
 
     Filament.gltfio$AssetLoader.prototype.createAssetFromBinary = function(buffer) {
+        if ('string' == typeof buffer && buffer.endsWith('.gltf')) {
+            console.error('Please use createAssetFromJson for gltf files.');
+        }
         buffer = getBufferDescriptor(buffer);
         const result = this._createAssetFromBinary(buffer);
         buffer.delete();
