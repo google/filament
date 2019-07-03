@@ -240,6 +240,13 @@ export class IndirectLight {
     public setIntensity(intensity: number);
 }
 
+export class IcoSphere {
+    constructor(nsubdivs: number);
+    vertices: Float32Array;
+    tangents: Uint16Array;
+    triangles: Uint16Array;
+}
+
 export class Scene {
     public addEntity(entity: Entity);
     public getLightCount(): number;

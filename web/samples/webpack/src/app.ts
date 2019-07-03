@@ -15,8 +15,10 @@
  */
 
 import * as Filament from "filament";
+import * as glm from "gl-matrix";
 
 Filament.init([], () => {
+    window["vec3"] = glm.vec3;
     window["app"] = new App(document.getElementsByTagName('canvas')[0]);
 });
 
