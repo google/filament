@@ -292,7 +292,7 @@ bool KtxBundle::getSphericalHarmonics(filament::math::float3* result) {
         return false;
     }
     float* flat = &result->x;
-    // 9 bands of 3 coefficients
+    // 3 bands, 9 RGB coefficients for a total of 27 floats.
     for (int i = 0; i < 9 * 3; i++) {
         char* next;
         *flat++ = std::strtof(src, &next);

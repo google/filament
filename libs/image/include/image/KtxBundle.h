@@ -106,7 +106,7 @@ public:
     /**
      * Parses the key="sh" metadata and returns 3 bands of data.
      *
-     * Assumes 9 bands for a total of 27 coefficients.
+     * Assumes 3 bands for a total of 9 RGB coefficients.
      * Returns true if successful.
      */
     bool getSphericalHarmonics(filament::math::float3* result);
