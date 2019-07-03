@@ -374,7 +374,6 @@ private:
         return !index ? nullptr : &mJobStorageBase[index - 1];
     }
 
-    template <typename Mutex>
     void wait(std::unique_lock<Mutex>& lock) noexcept;
     void wake() noexcept;
 
@@ -468,20 +467,20 @@ struct ParallelForJobData {
 
         // We first split about the number of threads we have, and only then we split the rest
         // in a single thread (but execute the final cut in new jobs, see parallel() below),
-        // this way we save a lot of copies of JobData.
+        // this way we save a lot of copies of JobData and miss-predicted branches
         if (splits == js.getParallelSplitCount()) {
             parallel(js, parent);
             return;
         }
 
+        // this branch is often miss-predicted (it both sides happen 50% of the calls)
         if (splitter.split(splits, count)) {
             const size_type lc = count / 2;
             JobData ld(start, lc, splits + uint8_t(1), functor, splitter);
             JobSystem::Job* l = js.createJob<JobData, &JobData::parallelWithJobs>(parent, std::move(ld));
-
             if (UTILS_UNLIKELY(l == nullptr)) {
                 // couldn't create a job, just pretend we're done splitting
-                goto done;
+                goto execute;
             }
 
             // start the left side before attempting the right side, so we parallelize in case
@@ -491,56 +490,62 @@ struct ParallelForJobData {
             const size_type rc = count - lc;
             JobData rd(start + lc, rc, splits + uint8_t(1), functor, splitter);
             JobSystem::Job* r = js.createJob<JobData, &JobData::parallelWithJobs>(parent, std::move(rd));
-
             if (UTILS_UNLIKELY(r == nullptr)) {
                 // couldn't allocate right side job, execute it right now
-                functor(start + lc, rc);
-                return;
+                start += lc;
+                count = rc;
+                goto execute;
             }
 
             // All good, execute the right side, but don't signal it,
             // so it's more likely to be executed next on the same thread
             js.run(r, JobSystem::DONT_SIGNAL);
         } else {
-            done:
+execute:
             // we're done splitting, do the real work here!
             functor(start, count);
         }
     }
 
+private:
     void parallel(JobSystem& js, JobSystem::Job* parent) noexcept {
-        // here we split the data ona single thread, and launch jobs once we're completely
-        // done splitting
-        if (splitter.split(splits, count)) {
-            auto lc = count / 2;
-            auto rc = count - lc;
-            auto rd = start + lc;
-            auto s  = ++splits;
 
-            // left-side
-            count = lc;
-            parallel(js, parent);
-
-            // note: in practice the compiler is able to optimize out the call to parallel() below
-            // right-side
-            start = rd;
-            count = rc;
-            splits = s;
-            parallel(js, parent);
-        } else {
-            // only capture what we need
-            auto job = js.createJob(parent,
-                    [f = functor, s = start, c = count](JobSystem&, JobSystem::Job*) {
-                // we're done splitting, do the real work here!
-                f(s, c);
-            });
-            if (UTILS_LIKELY(job)) {
-                js.run(job);
-            } else {
-                // oops, no more job available
-                functor(start, count);
-            }
+        // figure out how many splits we need
+        size_type c = count;
+        uint8_t   s = splits;
+        while (splitter.split(s, c)) {
+            c /= 2u;
+            ++s;
         }
+
+        // then linearly create all jobs with number of elements required by the splitter
+        JobSystem::Job* job = nullptr;
+        size_type curr = start;
+        size_type end = start + count;
+        while (curr + c < end) {
+            job = js.createJob(parent, [f = functor, curr, c](JobSystem&, JobSystem::Job*) {
+                f(curr, c);
+            });
+            if (UTILS_UNLIKELY(!job)) {
+                goto error; // oops, no more job available
+            }
+            js.run(job, JobSystem::DONT_SIGNAL);
+            curr += c;
+        }
+
+        // and create the finishing job, which is guaranteed to have more elements that required
+        job = js.createJob(parent,
+                [f = functor, curr, c = end - curr](JobSystem&, JobSystem::Job*) {
+            f(curr, c);
+        });
+        if (UTILS_UNLIKELY(!job)) {
+            goto error; // oops, no more job available
+        }
+        js.run(job);
+        return;
+
+    error:
+        functor(curr, end - curr);
     }
 
     size_type start;            // 4
