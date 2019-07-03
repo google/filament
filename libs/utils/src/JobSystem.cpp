@@ -21,7 +21,6 @@
 // when SYSTRACE_TAG_JOBSYSTEM is used, enables even heavier systraces
 #define HEAVY_SYSTRACE  0
 
-
 #include <utils/JobSystem.h>
 
 #include <cmath>
@@ -53,6 +52,16 @@
 #    include <unistd.h>
 #    include <sys/syscall.h>
 #    define gettid() syscall(SYS_gettid)
+#endif
+
+#if HEAVY_SYSTRACE
+#   define HEAVY_SYSTRACE_CALL()            SYSTRACE_CALL()
+#   define HEAVY_SYSTRACE_NAME(name)        SYSTRACE_NAME(name)
+#   define HEAVY_SYSTRACE_VALUE32(name, v)  SYSTRACE_VALUE32(name, v)
+#else
+#   define HEAVY_SYSTRACE_CALL()
+#   define HEAVY_SYSTRACE_NAME(name)
+#   define HEAVY_SYSTRACE_VALUE32(name, v)
 #endif
 
 namespace utils {
@@ -202,7 +211,6 @@ inline bool JobSystem::hasJobCompleted(JobSystem::Job const* job) noexcept {
     return job->runningJobCount.load(std::memory_order_relaxed) <= 0;
 }
 
-template <typename Mutex>
 void JobSystem::wait(std::unique_lock<Mutex>& lock) noexcept {
     ++mWaiterCount;
     mWaiterCondition.wait(lock);
@@ -210,9 +218,10 @@ void JobSystem::wait(std::unique_lock<Mutex>& lock) noexcept {
 }
 
 void JobSystem::wake() noexcept {
-    mWaiterLock.lock();
+    Mutex& lock = mWaiterLock;
+    lock.lock();
     const uint32_t waiterCount = mWaiterCount;
-    mWaiterLock.unlock();
+    lock.unlock();
     mWaiterCondition.notify_n(waiterCount);
 }
 
@@ -245,7 +254,7 @@ inline JobSystem::ThreadState* JobSystem::getStateToStealFrom(JobSystem::ThreadS
 }
 
 JobSystem::Job* JobSystem::steal(JobSystem::ThreadState& state) noexcept {
-    SYSTRACE_CALL();
+    HEAVY_SYSTRACE_CALL();
     Job* job = nullptr;
     do {
         ThreadState* const stateToStealFrom = getStateToStealFrom(state);
@@ -257,7 +266,7 @@ JobSystem::Job* JobSystem::steal(JobSystem::ThreadState& state) noexcept {
 }
 
 bool JobSystem::execute(JobSystem::ThreadState& state) noexcept {
-    SYSTRACE_CALL();
+    HEAVY_SYSTRACE_CALL();
 
     Job* job = pop(state.workQueue);
     if (UTILS_UNLIKELY(job == nullptr)) {
@@ -269,10 +278,10 @@ bool JobSystem::execute(JobSystem::ThreadState& state) noexcept {
         UTILS_UNUSED_IN_RELEASE
         uint32_t activeJobs = mActiveJobs.fetch_sub(1, std::memory_order_relaxed);
         assert(activeJobs); // whoops, we were already at 0
-        SYSTRACE_VALUE32("JobSystem::activeJobs", activeJobs - 1);
+        HEAVY_SYSTRACE_VALUE32("JobSystem::activeJobs", activeJobs - 1);
 
         if (UTILS_LIKELY(job->function)) {
-            SYSTRACE_NAME("job->function");
+            HEAVY_SYSTRACE_NAME("job->function");
             job->function(job->storage, *this, job);
         }
         finish(job);
@@ -305,7 +314,7 @@ void JobSystem::loop(ThreadState* state) noexcept {
 
 UTILS_NOINLINE
 void JobSystem::finish(Job* job) noexcept {
-    SYSTRACE_CALL();
+    HEAVY_SYSTRACE_CALL();
 
     bool notify = false;
 
@@ -378,11 +387,7 @@ void JobSystem::release(JobSystem::Job*& job) noexcept {
 }
 
 void JobSystem::run(JobSystem::Job*& job, uint32_t flags) noexcept {
-#if HEAVY_SYSTRACE
-    SYSTRACE_CALL();
-#else
-    SYSTRACE_CONTEXT();
-#endif
+    HEAVY_SYSTRACE_CALL();
 
     ThreadState& state(getState());
 
@@ -393,7 +398,7 @@ void JobSystem::run(JobSystem::Job*& job, uint32_t flags) noexcept {
 
     put(state.workQueue, job);
 
-    SYSTRACE_VALUE32("JobSystem::activeJobs", activeJobs + 1);
+    HEAVY_SYSTRACE_VALUE32("JobSystem::activeJobs", activeJobs + 1);
 
     // wake-up a thread if needed...
     if (!(flags & DONT_SIGNAL)) {
