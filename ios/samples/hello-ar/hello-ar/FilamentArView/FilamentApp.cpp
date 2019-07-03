@@ -94,20 +94,31 @@ void FilamentApp::updatePlaneGeometry(const FilamentArPlaneGeometry& geometry) {
             .build(*engine);
     }
 
-    float3* normals = new float3[geometry.vertexCount];
-    for (size_t i = 0; i < geometry.vertexCount; i++) {
-        normals[i] = { 0, 1, 0 };
-    }
-    const auto& surfaceOrientation = geometry::SurfaceOrientation::Builder()
-        .vertexCount(geometry.vertexCount)
+    const size_t vertexCount = geometry.vertexCount;
+    const size_t indexCount = geometry.indexCount;
+
+    // Generate a surface tangent quaternion for each vertex. Since every vertex has the same
+    // upwards-facing normal, we only need to generate a single quaternion, which can be copied.
+    quatf* quats = new quatf[vertexCount];
+    static float3 normals[1] = { float3(0, 1, 0) };
+    geometry::SurfaceOrientation::Builder()
+        .vertexCount(1)
         .normals(normals)
-        .build();
-    delete [] normals;
-    quatf* tangentQuats = new quatf[geometry.vertexCount];
-    surfaceOrientation.getQuats(tangentQuats, geometry.vertexCount);
+        .build()
+        .getQuats(quats, 1);
+    for (int i = 1; i < vertexCount; i++) {
+        quats[i] = quats[0];
+    }
+
+    // Copy the position and index buffers. The buffers provided to us by ARKit aren't guaranteed to
+    // persist indefinitely.
+    float4* verts = (float4*) new uint8_t[vertexCount * sizeof(float4)];
+    uint16_t* indices = (uint16_t*) new uint8_t[indexCount * sizeof(uint16_t)];
+    std::copy(geometry.vertices, geometry.vertices + vertexCount, verts);
+    std::copy(geometry.indices, geometry.indices + indexCount, indices);
 
     app.planeVertices = VertexBuffer::Builder()
-        .vertexCount((uint32_t) geometry.vertexCount)
+        .vertexCount((uint32_t) vertexCount)
         .bufferCount(2)
     // The position buffer only has x y and z coordinates, but has the same padding as a float4.
     .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT3, 0, sizeof(float4))
@@ -119,15 +130,13 @@ void FilamentApp::updatePlaneGeometry(const FilamentArPlaneGeometry& geometry) {
         .bufferType(IndexBuffer::IndexType::USHORT)
         .build(*engine);
 
-    VertexBuffer::BufferDescriptor positionBuffer(geometry.vertices,
-            geometry.vertexCount * sizeof(float4));
-    VertexBuffer::BufferDescriptor tangentbuffer(tangentQuats,
-            geometry.vertexCount * sizeof(quatf),
-            [](void* buffer, size_t size, void* user) {
-        delete [] (quatf*)buffer;
-    });
-    IndexBuffer::BufferDescriptor indexBuffer(geometry.indices,
-            geometry.indexCount * sizeof(uint16_t));
+    const auto deleter = [](void* buffer, size_t size, void* user) {
+        delete (uint8_t*) buffer;
+    };
+
+    VertexBuffer::BufferDescriptor positionBuffer(verts, vertexCount * sizeof(float4), deleter);
+    VertexBuffer::BufferDescriptor tangentbuffer(quats, vertexCount * sizeof(quatf), deleter);
+    IndexBuffer::BufferDescriptor indexBuffer(indices, indexCount * sizeof(uint16_t), deleter);
     app.planeVertices->setBufferAt(*engine, 0, std::move(positionBuffer));
     app.planeVertices->setBufferAt(*engine, 1, std::move(tangentbuffer));
     app.planeIndices->setBuffer(*engine, std::move(indexBuffer));
