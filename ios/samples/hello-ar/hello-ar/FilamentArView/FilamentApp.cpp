@@ -20,6 +20,7 @@
 #include <filament/TransformManager.h>
 
 #include <filameshio/MeshReader.h>
+#include <geometry/SurfaceOrientation.h>
 #include <image/KtxUtility.h>
 
 #include <sstream>
@@ -69,6 +70,99 @@ void FilamentApp::setObjectTransform(const mat4f& transform) {
     meshTransform = transform;
 }
 
+void FilamentApp::updatePlaneGeometry(const FilamentArPlaneGeometry& geometry) {
+    auto& tcm = engine->getTransformManager();
+
+    if (!app.planeGeometry.isNull()) {
+        scene->remove(app.planeGeometry);
+        engine->destroy(app.planeGeometry);
+        tcm.destroy(app.planeGeometry);
+        EntityManager::get().destroy(1, &app.planeGeometry);
+    }
+
+    if (app.planeVertices) {
+        engine->destroy(app.planeVertices);
+    }
+
+    if (app.planeIndices) {
+        engine->destroy(app.planeIndices);
+    }
+
+    if (!app.shadowPlane) {
+        app.shadowPlane = Material::Builder()
+            .package(RESOURCES_SHADOW_PLANE_DATA, RESOURCES_SHADOW_PLANE_SIZE)
+            .build(*engine);
+    }
+
+    const size_t vertexCount = geometry.vertexCount;
+    const size_t indexCount = geometry.indexCount;
+
+    // Generate a surface tangent quaternion for each vertex. Since every vertex has the same
+    // upwards-facing normal, we only need to generate a single quaternion, which can be copied.
+    quatf* quats = new quatf[vertexCount];
+    static float3 normals[1] = { float3(0, 1, 0) };
+    geometry::SurfaceOrientation::Builder()
+        .vertexCount(1)
+        .normals(normals)
+        .build()
+        .getQuats(quats, 1);
+    for (int i = 1; i < vertexCount; i++) {
+        quats[i] = quats[0];
+    }
+
+    // Copy the position and index buffers. The buffers provided to us by ARKit aren't guaranteed to
+    // persist indefinitely.
+    float4* verts = (float4*) new uint8_t[vertexCount * sizeof(float4)];
+    uint16_t* indices = (uint16_t*) new uint8_t[indexCount * sizeof(uint16_t)];
+    std::copy(geometry.vertices, geometry.vertices + vertexCount, verts);
+    std::copy(geometry.indices, geometry.indices + indexCount, indices);
+
+    app.planeVertices = VertexBuffer::Builder()
+        .vertexCount((uint32_t) vertexCount)
+        .bufferCount(2)
+    // The position buffer only has x y and z coordinates, but has the same padding as a float4.
+    .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT3, 0, sizeof(float4))
+    .attribute(VertexAttribute::TANGENTS, 1, VertexBuffer::AttributeType::FLOAT4, 0, sizeof(quatf))
+    .build(*engine);
+
+    app.planeIndices = IndexBuffer::Builder()
+        .indexCount((uint32_t) geometry.indexCount)
+        .bufferType(IndexBuffer::IndexType::USHORT)
+        .build(*engine);
+
+    const auto deleter = [](void* buffer, size_t size, void* user) {
+        delete (uint8_t*) buffer;
+    };
+
+    VertexBuffer::BufferDescriptor positionBuffer(verts, vertexCount * sizeof(float4), deleter);
+    VertexBuffer::BufferDescriptor tangentbuffer(quats, vertexCount * sizeof(quatf), deleter);
+    IndexBuffer::BufferDescriptor indexBuffer(indices, indexCount * sizeof(uint16_t), deleter);
+    app.planeVertices->setBufferAt(*engine, 0, std::move(positionBuffer));
+    app.planeVertices->setBufferAt(*engine, 1, std::move(tangentbuffer));
+    app.planeIndices->setBuffer(*engine, std::move(indexBuffer));
+
+    Box aabb = RenderableManager::computeAABB((float4*) geometry.vertices,
+            (uint16_t*) geometry.indices, geometry.vertexCount);
+    EntityManager::get().create(1, &app.planeGeometry);
+    RenderableManager::Builder(1)
+        .boundingBox(aabb)
+        .receiveShadows(true)
+        .material(0, app.shadowPlane->getDefaultInstance())
+        .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, app.planeVertices,
+                app.planeIndices, 0, geometry.indexCount)
+        .build(*engine, app.planeGeometry);
+
+    // Allow the ground plane to receive shadows.
+    auto& rcm = engine->getRenderableManager();
+    rcm.setReceiveShadows(rcm.getInstance(app.planeGeometry), true);
+
+    tcm.create(app.planeGeometry);
+    auto i = tcm.getInstance(app.planeGeometry);
+    tcm.setTransform(i, geometry.transform);
+
+    scene->addEntity(app.planeGeometry);
+}
+
 FilamentApp::~FilamentApp() {
     delete app.cameraFeedTriangle;
 
@@ -77,6 +171,8 @@ FilamentApp::~FilamentApp() {
     engine->destroy(app.indirectLight);
     engine->destroy(app.iblTexture);
     engine->destroy(app.renderable);
+    engine->destroy(app.sun);
+    engine->destroy(app.shadowPlane);
 
     engine->destroy(renderer);
     engine->destroy(scene);
@@ -131,6 +227,10 @@ void FilamentApp::setupMesh() {
 
     app.renderable = mesh.renderable;
     scene->addEntity(app.renderable);
+
+    // Allow the mesh to cast shadows onto the shadow plane.
+    auto& rcm = engine->getRenderableManager();
+    rcm.setCastShadows(rcm.getInstance(app.renderable), true);
 
     // Position the mesh 2 units down the Z axis.
     auto& tcm = engine->getTransformManager();

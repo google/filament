@@ -8,7 +8,8 @@ set -e
 # 1. The cube mesh
 # 2. The Filament material definition
 # 3. The Filament camera feed material definition
-# 4. The IBL image
+# 4. The Filament shadow plane material definition
+# 5. The IBL image
 # These will be compiled into the final binary via the resgen tool.
 
 filamesh_path="../../../out/release/filament/bin/filamesh"
@@ -43,14 +44,20 @@ mkdir -p "${PROJECT_DIR}/generated/"
     "${PROJECT_DIR}/../../../assets/models/cube/cube.obj" \
     "${PROJECT_DIR}/generated/cube.filamesh"
 
-# The matc tool compiles the clear_coat.mat and camera_feed.mat materials into a Filament material
-# BLOB.
+# The matc tool compiles the clear_coat.mat, shadow_plane.mat, and camera_feed.mat materials into
+# Filament material BLOBs.
 
 "${matc_path}" \
     --api all \
     --platform mobile \
     -o "${PROJECT_DIR}/generated/clear_coat.filamat" \
     "${PROJECT_DIR}/Materials/clear_coat.mat"
+
+"${matc_path}" \
+    --api all \
+    --platform mobile \
+    -o "${PROJECT_DIR}/generated/shadow_plane.filamat" \
+    "${PROJECT_DIR}/Materials/shadow_plane.mat"
 
 "${matc_path}" \
     --api all \
@@ -64,6 +71,7 @@ mkdir -p "${PROJECT_DIR}/generated/"
     --deploy="${PROJECT_DIR}/generated" \
     "${PROJECT_DIR}/generated/cube.filamesh" \
     "${PROJECT_DIR}/generated/clear_coat.filamat" \
+    "${PROJECT_DIR}/generated/shadow_plane.filamat" \
     "${PROJECT_DIR}/generated/camera_feed.filamat" \
     "${PROJECT_DIR}/../../../samples/envs/venetian_crossroads/venetian_crossroads_ibl.ktx"
 
