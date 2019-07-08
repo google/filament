@@ -1022,18 +1022,17 @@ void OpenGLDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
 
     GLTexture* t = construct<GLTexture>(th, target, levels, samples, w, h, depth, format, usage);
     if (UTILS_LIKELY(usage & TextureUsage::SAMPLEABLE)) {
-        glGenTextures(1, &t->gl.id);
 
         // below we're using the a = foo(b = C) pattern, this is on purpose, to make sure
         // we don't forget to update targetIndex, and that we do it with the correct value.
         // We DO NOT update targetIndex at function exit to take advantage of the fact that
         // getIndexForTextureTarget() is constexpr -- so all of this disappears at compile time.
 
-        if (UTILS_UNLIKELY(t->target == SamplerType::SAMPLER_EXTERNAL &&
-                           ext.OES_EGL_image_external_essl3)) {
-            t->gl.targetIndex = (uint8_t)
-                    getIndexForTextureTarget(t->gl.target = GL_TEXTURE_EXTERNAL_OES);
+        if (UTILS_UNLIKELY(t->target == SamplerType::SAMPLER_EXTERNAL)) {
+            mPlatform.createExternalImageTexture(t);
         } else {
+            glGenTextures(1, &t->gl.id);
+
             t->gl.internalFormat = getInternalFormat(format);
             assert(t->gl.internalFormat);
 
@@ -1510,7 +1509,9 @@ void OpenGLDriver::destroyTexture(Handle<HwTexture> th) {
 
     if (th) {
         GLTexture* t = handle_cast<GLTexture*>(th);
-        if (UTILS_LIKELY(t->usage & TextureUsage::SAMPLEABLE)) {
+        if (UTILS_UNLIKELY(t->target == SamplerType::SAMPLER_EXTERNAL)) {
+            mPlatform.destroyExternalImage(t);
+        } else if (UTILS_LIKELY(t->usage & TextureUsage::SAMPLEABLE)) {
             unbindTexture(t->gl.target, t->gl.id);
             if (UTILS_UNLIKELY(t->hwStream)) {
                 detachStream(t);
@@ -2092,16 +2093,21 @@ void OpenGLDriver::setCompressedTextureData(GLTexture* t,
 }
 
 void OpenGLDriver::setupExternalImage(void* image) {
+    mPlatform.retainExternalImage(image);
 }
 
 void OpenGLDriver::cancelExternalImage(void* image) {
+    mPlatform.releaseExternalImage(image);
 }
 
 void OpenGLDriver::setExternalImage(Handle<HwTexture> th, void* image) {
+    GLTexture* t = handle_cast<GLTexture*>(th);
+
+    mPlatform.setExternalImage(image, t);
+
+    // TODO: move this logic to PlatformEGL.
     if (ext.OES_EGL_image_external_essl3) {
         DEBUG_MARKER()
-
-        GLTexture* t = handle_cast<GLTexture*>(th);
 
         assert(t->target == SamplerType::SAMPLER_EXTERNAL);
         assert(t->gl.target == GL_TEXTURE_EXTERNAL_OES);
