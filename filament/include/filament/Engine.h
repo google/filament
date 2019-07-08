@@ -95,10 +95,10 @@ class TransformManager;
  *     }
  * } while (!quit);
  *
- * engine->destroy(&view);
- * engine->destroy(&scene);
- * engine->destroy(&renderer);
- * engine->destroy(&swapChain);
+ * engine->destroy(view);
+ * engine->destroy(scene);
+ * engine->destroy(renderer);
+ * engine->destroy(swapChain);
  * Engine::destroy(&engine); // clears engine*
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  *
@@ -212,6 +212,33 @@ public:
      * This method is thread-safe.
      */
     static void destroy(Engine** engine);
+
+    /**
+     * Destroy the Engine instance and all associated resources.
+     *
+     * Engine.destroy() should be called last and after all other resources have been destroyed,
+     * it ensures all filament resources are freed.
+     *
+     * Destroy performs the following tasks:
+     * 1. Destroy all internal software and hardware resources.
+     * 2. Free all user allocated resources that are not already destroyed and logs a warning.
+     *    This indicates a "leak" in the user's code.
+     * 3. Terminate the rendering engine's thread.
+     *
+     * @param engine A pointer to the filament.Engine to be destroyed.
+     *
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     * #include <filament/Engine.h>
+     * using namespace filament;
+     *
+     * Engine* engine = Engine::create();
+     * Engine::destroy(engine);
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     *
+     * \remark
+     * This method is thread-safe.
+     */
+    static void destroy(Engine* engine);
 
     RenderableManager& getRenderableManager() noexcept;
 

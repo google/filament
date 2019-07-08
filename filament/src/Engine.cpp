@@ -804,6 +804,10 @@ Engine* Engine::create(Backend backend, Platform* platform, void* sharedGLContex
     return handle;
 }
 
+void Engine::destroy(Engine* engine) {
+    destroy(&engine);
+}
+
 void Engine::destroy(Engine** engine) {
     if (engine) {
         std::unique_ptr<FEngine> filamentEngine;
