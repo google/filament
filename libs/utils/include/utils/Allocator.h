@@ -21,6 +21,7 @@
 #include <utils/compiler.h>
 #include <utils/memalign.h>
 #include <utils/Mutex.h>
+#include <utils/SpinLock.h>
 
 #include <atomic>
 #include <mutex>
@@ -430,49 +431,7 @@ struct NoLock {
     void unlock() noexcept { }
 };
 
-class SpinLock {
-    std::atomic_flag mLock = ATOMIC_FLAG_INIT;
-
-public:
-    void lock() noexcept {
-        UTILS_PREFETCHW(&mLock);
-#ifdef __ARM_ACLE
-        // we signal an event on this CPU, so that the first yield() will be a no-op,
-        // and falls through the test_and_set(). This is more efficient than a while { }
-        // construct.
-        UTILS_SIGNAL_EVENT();
-        do {
-            yield();
-        } while (mLock.test_and_set(std::memory_order_acquire));
-#else
-        goto start;
-        do {
-            yield();
-start: ;
-        } while (mLock.test_and_set(std::memory_order_acquire));
-#endif
-    }
-
-    void unlock() noexcept {
-        mLock.clear(std::memory_order_release);
-#ifdef __ARM_ARCH_7A__
-        // on ARMv7a SEL is needed
-        UTILS_SIGNAL_EVENT();
-        // as well as a memory barrier is needed
-        __dsb(0xA);     // ISHST = 0xA (b1010)
-#else
-        // on ARMv8 we could avoid the call to SE, but we'de need to write the
-        // test_and_set() above by hand, so the WFE only happens without a STRX first.
-        UTILS_BROADCAST_EVENT();
-#endif
-    }
-
-private:
-    inline void yield() noexcept {
-        // on x86 call pause instruction, on ARM call WFE
-        UTILS_WAIT_FOR_EVENT();
-    }
-};
+using SpinLock = utils::SpinLock;
 
 using Mutex = utils::Mutex;
 
