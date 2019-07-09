@@ -29,7 +29,8 @@ set(DIST_ARCH x86_64)
 
 # toolchain
 string(TOLOWER ${CMAKE_HOST_SYSTEM_NAME} HOST_NAME_L)
-set(TOOLCHAIN $ENV{ANDROID_HOME}/ndk-bundle/toolchains/llvm/prebuilt/${HOST_NAME_L}-x86_64/)
+file(TO_CMAKE_PATH $ENV{ANDROID_HOME} ANDROID_HOME_UNIX)
+set(TOOLCHAIN ${ANDROID_HOME_UNIX}/ndk-bundle/toolchains/llvm/prebuilt/${HOST_NAME_L}-x86_64/)
 
 # specify the cross compiler
 set(COMPILER_SUFFIX)
