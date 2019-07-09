@@ -260,6 +260,13 @@ Filament._createTextureFromKtx = function(ktxdata, engine, options) {
 Filament._createIblFromKtx = function(ktxdata, engine, options) {
     options = options || {};
     const iblktx = options['ktx'] = new Filament.KtxBundle(ktxdata);
+
+    const format = iblktx.info().glInternalFormat;
+    if (format != this.ctx.R11F_G11F_B10F && format != this.ctx.RGB16F && format != this.ctx.RGB32F) {
+        console.warning('IBL texture format is 0x' + internalFormat.toString(16) +
+            ' which is not an expected floating-point format. Please use cmgen to generate IBL.');
+    }
+
     const ibltex = Filament._createTextureFromKtx(ktxdata, engine, options);
     const shstring = iblktx.getMetadata("sh");
     const shfloats = shstring.split(/\s/, 9 * 3).map(parseFloat);
