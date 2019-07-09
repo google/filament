@@ -386,6 +386,10 @@ void JobSystem::release(JobSystem::Job*& job) noexcept {
     job = nullptr;
 }
 
+void JobSystem::signal() noexcept {
+    wake();
+}
+
 void JobSystem::run(JobSystem::Job*& job, uint32_t flags) noexcept {
     HEAVY_SYSTRACE_CALL();
 
