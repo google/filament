@@ -527,7 +527,7 @@ private:
         size_type const end = first + count;
         size_type curr = first;
 
-        while (curr + c < end) {
+        while (curr + 2u * c < end) {
             // this creates jobs from the end of the buffer because the WorkStealingDequeue
             // is a LIFO, this could help streaming to the d-cache.
             const size_type pos = end - (curr - first) - c;
