@@ -257,6 +257,8 @@ public:
         run(p);
     }
 
+    void signal() noexcept;
+
     /*
      * Add job to this thread's execution queue and and keep a reference to it.
      * Current thread must be owned by JobSystem's thread pool. See adopt().
@@ -520,32 +522,29 @@ private:
 
         // then linearly create all jobs with number of elements required by the splitter
         JobSystem::Job* job = nullptr;
-        size_type curr = start;
-        size_type end = start + count;
+        auto& func = functor;
+        size_type const first = start;
+        size_type const end = first + count;
+        size_type curr = first;
+
         while (curr + c < end) {
-            job = js.createJob(parent, [f = functor, curr, c](JobSystem&, JobSystem::Job*) {
-                f(curr, c);
+            // this creates jobs from the end of the buffer because the WorkStealingDequeue
+            // is a LIFO, this could help streaming to the d-cache.
+            const size_type pos = end - (curr - first) - c;
+            job = js.createJob(parent, [func, pos, c](JobSystem&, JobSystem::Job*) {
+                func(pos, c);
             });
             if (UTILS_UNLIKELY(!job)) {
-                goto error; // oops, no more job available
+                goto finish; // oops, no more job available
             }
             js.run(job, JobSystem::DONT_SIGNAL);
             curr += c;
         }
-
-        // and create the finishing job, which is guaranteed to have more elements that required
-        job = js.createJob(parent,
-                [f = functor, curr, c = end - curr](JobSystem&, JobSystem::Job*) {
-            f(curr, c);
-        });
-        if (UTILS_UNLIKELY(!job)) {
-            goto error; // oops, no more job available
-        }
-        js.run(job);
-        return;
-
-    error:
-        functor(curr, end - curr);
+    finish:
+        assert(end >= curr);
+        assert(end - curr >= c);
+        js.signal();
+        functor(start, end - curr);
     }
 
     size_type start;            // 4
