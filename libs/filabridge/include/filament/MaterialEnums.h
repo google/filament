@@ -115,7 +115,14 @@ enum VertexAttribute : uint8_t {
     UV1             = 4, //!< texture coordinates (float2)
     BONE_INDICES    = 5, //!< indices of 4 bones, as unsigned integers (uvec4)
     BONE_WEIGHTS    = 6, //!< weights of the 4 bones (normalized float4)
-    CUSTOM0         = 7, //!< the first custom attribute (this is always last in the enum)
+    CUSTOM0         = 7,
+    CUSTOM1         = 8,
+    CUSTOM2         = 9,
+    CUSTOM3         = 10,
+    CUSTOM4         = 11,
+    CUSTOM5         = 12,
+    CUSTOM6         = 13,
+    CUSTOM7         = 14,
     // this is limited by driver::MAX_VERTEX_ATTRIBUTE_COUNT
 };
 
