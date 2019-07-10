@@ -189,6 +189,13 @@ io::sstream& CodeGenerator::generateShaderInputs(io::sstream& out, ShaderType ty
     bool hasBoneWeights = attributes.test(VertexAttribute::BONE_WEIGHTS);
     generateDefine(out, "HAS_ATTRIBUTE_BONE_WEIGHTS", hasBoneWeights);
 
+    for (int i = 0; i < MAX_CUSTOM_ATTRIBUTES; i++) {
+        bool hasCustom = attributes.test(VertexAttribute::CUSTOM0 + i);
+        if (hasCustom) {
+            generateIndexedDefine(out, "HAS_ATTRIBUTE_CUSTOM", i, 1);
+        }
+    }
+
     if (type == ShaderType::VERTEX) {
         out << "\n";
         generateDefine(out, "LOCATION_POSITION", uint32_t(VertexAttribute::POSITION));
@@ -209,6 +216,13 @@ io::sstream& CodeGenerator::generateShaderInputs(io::sstream& out, ShaderType ty
         }
         if (hasBoneWeights) {
             generateDefine(out, "LOCATION_BONE_WEIGHTS", uint32_t(VertexAttribute::BONE_WEIGHTS));
+        }
+
+        for (int i = 0; i < MAX_CUSTOM_ATTRIBUTES; i++) {
+            if (attributes.test(VertexAttribute::CUSTOM0 + i)) {
+                generateIndexedDefine(out, "LOCATION_CUSTOM", i,
+                        uint32_t(VertexAttribute::CUSTOM0) + i);
+            }
         }
 
         out << SHADERS_INPUTS_VS_DATA;
@@ -393,6 +407,12 @@ io::sstream& CodeGenerator::generateFunction(io::sstream& out, const char* retur
     out << "\n" << returnType << " " << name << "()";
     out << " {\n" << body;
     out << "\n}\n";
+    return out;
+}
+
+io::sstream& CodeGenerator::generateIndexedDefine(io::sstream& out, const char* name,
+        uint32_t index, uint32_t value) const {
+    out << "#define " << name << index << " " << value << "\n";
     return out;
 }
 

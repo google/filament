@@ -586,6 +586,7 @@ export enum VertexAttribute {
     UV1,
     BONE_INDICES,
     BONE_WEIGHTS,
+    CUSTOM0,
 }
 
 export enum VertexBuffer$AttributeType {
