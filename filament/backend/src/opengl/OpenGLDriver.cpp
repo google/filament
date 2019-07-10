@@ -227,6 +227,12 @@ OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform) noexcept
     disable(GL_DITHER);
     enable(GL_DEPTH_TEST);
 
+    // With desktop GL, the application must enable point size to allow vertex shaders to set it,
+    // but with OpenGL ES, this is always on and there is no enable flag.
+#if GL41_HEADERS
+    enable(GL_PROGRAM_POINT_SIZE);
+#endif
+
     // TODO: Don't enable scissor when it is not necessary. This optimization could be done here in
     // the driver by simply deferring the enable until the scissor rect is smaller than the window.
     enable(GL_SCISSOR_TEST);
