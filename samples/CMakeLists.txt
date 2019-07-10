@@ -32,6 +32,7 @@ add_mesh("assets/models/monkey/monkey.obj" "suzanne.filamesh")
 set(MATERIAL_SRCS
         materials/bakedColor.mat
         materials/bakedTexture.mat
+        materials/pointSprites.mat
         materials/aoPreview.mat
         materials/aiDefaultMat.mat
         materials/aiDefaultTrans.mat
@@ -248,6 +249,7 @@ if (NOT ANDROID)
     add_assimp_demo(material_sandbox)
     add_assimp_demo(sample_full_pbr)
 
+    add_filamesh_demo(point_sprites)
     add_filamesh_demo(sample_cloth)
     add_filamesh_demo(sample_normal_map)
     add_filamesh_demo(suzanne)
