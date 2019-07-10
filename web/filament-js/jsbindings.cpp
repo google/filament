@@ -649,6 +649,9 @@ class_<RenderableBuilder>("RenderableManager$Builder")
         return &builder->skinning(matrices.size(), matrices.data());
     })
 
+    .BUILDER_FUNCTION("morphing", RenderableBuilder, (RenderableBuilder* builder, bool enable), {
+        return &builder->morphing(enable); })
+
     .BUILDER_FUNCTION("blendOrder", RenderableBuilder,
             (RenderableBuilder* builder, size_t index, uint16_t order), {
         return &builder->blendOrder(index, order); })
@@ -691,13 +694,19 @@ class_<RenderableManager>("RenderableManager")
     }), allow_raw_pointers())
 
     .function("setBonesFromMatrices", EMBIND_LAMBDA(void, (RenderableManager* self,
-        RenderableManager::Instance instance, emscripten::val transforms, size_t offset), {
+            RenderableManager::Instance instance, emscripten::val transforms, size_t offset), {
         auto nbones = transforms["length"].as<size_t>();
         std::vector<filament::math::mat4f> bones(nbones);
         for (size_t i = 0; i < nbones; i++) {
             bones[i] = transforms[i].as<flatmat4>().m;
         }
         self->setBones(instance, bones.data(), bones.size(), offset);
+    }), allow_raw_pointers())
+
+    // NOTE: this cannot take a float4 due to a binding issue.
+    .function("setMorphWeights", EMBIND_LAMBDA(void, (RenderableManager* self,
+            RenderableManager::Instance instance, float x, float y, float z, float w), {
+        self->setMorphWeights(instance, {x, y, z, w});
     }), allow_raw_pointers())
 
     .function("getAxisAlignedBoundingBox", &RenderableManager::getAxisAlignedBoundingBox)

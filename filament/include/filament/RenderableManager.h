@@ -31,6 +31,7 @@
 
 #include <math/mat4.h>
 #include <math/vec3.h>
+#include <math/vec4.h>
 
 #include <type_traits>
 
@@ -86,6 +87,7 @@ public:
         Builder& skinning(size_t boneCount) noexcept; // 0 by default, 255 max
         Builder& skinning(size_t boneCount, Bone const* bones) noexcept;
         Builder& skinning(size_t boneCount, math::mat4f const* transforms) noexcept;
+        Builder& morphing(bool enable) noexcept; // false by default
 
         // Sets an ordering index for blended primitives that all live at the same Z value.
         Builder& blendOrder(size_t index, uint16_t order) noexcept; // 0 by default
@@ -146,6 +148,7 @@ public:
     void setBones(Instance instance, Bone const* transforms, size_t boneCount = 1, size_t offset = 0) noexcept;
     void setBones(Instance instance, math::mat4f const* transforms, size_t boneCount = 1, size_t offset = 0) noexcept;
 
+    void setMorphWeights(Instance instance, math::float4 const& weights) noexcept;
 
     // getters...
     const Box& getAxisAlignedBoundingBox(Instance instance) const noexcept;

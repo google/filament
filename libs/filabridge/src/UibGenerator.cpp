@@ -75,7 +75,7 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             .add("userTime",                1, UniformInterfaceBlock::Type::FLOAT4)
             // ibl max mip level
             .add("iblMaxMipLevel",          1, UniformInterfaceBlock::Type::FLOAT2)
-            .add("padding10",               1, UniformInterfaceBlock::Type::FLOAT2)
+            .add("padding0",                1, UniformInterfaceBlock::Type::FLOAT2)
             // bring size to 1 KiB
             .add("padding1",                16, UniformInterfaceBlock::Type::FLOAT4)
             .build();
@@ -87,6 +87,10 @@ UniformInterfaceBlock const& UibGenerator::getPerRenderableUib() noexcept {
             .name("ObjectUniforms")
             .add("worldFromModelMatrix",       1, UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
             .add("worldFromModelNormalMatrix", 1, UniformInterfaceBlock::Type::MAT3, Precision::HIGH)
+            .add("morphWeights", 1, UniformInterfaceBlock::Type::FLOAT4, Precision::HIGH)
+            .add("skinningEnabled", 1, UniformInterfaceBlock::Type::INT)
+            .add("morphingEnabled", 1, UniformInterfaceBlock::Type::INT)
+            .add("padding0", 1, UniformInterfaceBlock::Type::FLOAT2)
             .build();
     return uib;
 }

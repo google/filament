@@ -92,7 +92,11 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
 // PerRenderableUib must have an alignment of 256 to be compatible with all versions of GLES.
 struct alignas(256) PerRenderableUib {
     filament::math::mat4f worldFromModelMatrix;
-    filament::math::mat3f worldFromModelNormalMatrix;
+    filament::math::mat3f worldFromModelNormalMatrix; // this gets expanded to 48 bytes during the copy to the UBO
+    alignas(16) filament::math::float4 morphWeights;
+    uint32_t skinningEnabled; // 0=disabled, 1=enabled, ignored unless variant & SKINNING_OR_MORPHING
+    uint32_t morphingEnabled; // 0=disabled, 1=enabled, ignored unless variant & SKINNING_OR_MORPHING
+    filament::math::float2 padding0;
 };
 
 struct LightsUib {

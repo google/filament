@@ -3,6 +3,7 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
+- Added support for vertex morphing.
 - Introduced custom attributes, accessible from the vertex shader.
 - Added Java / Kotlin bindings for KtxLoader.
 - Added JavaScript / Typescript bindings for the new `RenderTarget` class.

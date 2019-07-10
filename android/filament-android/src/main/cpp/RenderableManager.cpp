@@ -182,6 +182,12 @@ Java_com_google_android_filament_RenderableManager_nBuilderSkinningBones(JNIEnv*
     return 0;
 }
 
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_RenderableManager_nBuilderMorphing(JNIEnv*, jclass,
+        jlong nativeBuilder, jboolean enabled) {
+    RenderableManager::Builder *builder = (RenderableManager::Builder *) nativeBuilder;
+    builder->morphing(enabled);
+}
 
 
 extern "C" JNIEXPORT jint JNICALL
@@ -216,6 +222,16 @@ Java_com_google_android_filament_RenderableManager_nSetBonesAsQuaternions(JNIEnv
     rm->setBones((RenderableManager::Instance)i,
             static_cast<RenderableManager::Bone const *>(data), (size_t)boneCount, (size_t)offset);
     return 0;
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_RenderableManager_nSetMorphWeights(JNIEnv* env, jclass,
+        jlong nativeRenderableManager, jint instance, jfloatArray weights) {
+    RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
+    jfloat* vec = env->GetFloatArrayElements(weights, NULL);
+    math::float4 floatvec(vec[0], vec[1], vec[2], vec[3]);
+    env->ReleaseFloatArrayElements(weights, vec, JNI_ABORT);
+    rm->setMorphWeights((RenderableManager::Instance)instance, floatvec);
 }
 
 extern "C" JNIEXPORT void JNICALL

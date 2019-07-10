@@ -102,7 +102,7 @@ static uint8_t parseVariantFilter(const std::string& arg) {
         } else if (item == "shadowReceiver") {
             variantFilter |= filament::Variant::SHADOW_RECEIVER;
         } else if (item == "skinning") {
-            variantFilter |= filament::Variant::SKINNING;
+            variantFilter |= filament::Variant::SKINNING_OR_MORPHING;
         }
     }
     return variantFilter;

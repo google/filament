@@ -366,7 +366,7 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
         cmdColor.primitive.index = (uint16_t)i;
         cmdColor.primitive.perRenderableBones = soaBonesUbh[i];
         materialVariant.setShadowReceiver(soaVisibility[i].receiveShadows & hasShadowing);
-        materialVariant.setSkinning(soaVisibility[i].skinning);
+        materialVariant.setSkinning(soaVisibility[i].skinning || soaVisibility[i].morphing);
 
         // we're assuming we're always doing the depth (either way, it's correct)
         // this will generate front to back rendering
@@ -375,7 +375,7 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
         cmdDepth.key |= makeField(distanceBits, DISTANCE_BITS_MASK, DISTANCE_BITS_SHIFT);
         cmdDepth.primitive.index = (uint16_t)i;
         cmdDepth.primitive.perRenderableBones = soaBonesUbh[i];
-        cmdDepth.primitive.materialVariant.setSkinning(soaVisibility[i].skinning);
+        cmdDepth.primitive.materialVariant.setSkinning(soaVisibility[i].skinning || soaVisibility[i].morphing);
 
         const bool shadowCaster = soaVisibility[i].castShadows & hasShadowing;
         const bool writeDepthForShadowCasters = depthContainsShadowCasters & shadowCaster;

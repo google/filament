@@ -335,7 +335,7 @@ backend::Handle<backend::HwProgram> FMaterial::getSurfaceProgramSlow(uint8_t var
         .setUniformBlock(BindingPoints::PER_RENDERABLE, UibGenerator::getPerRenderableUib().getName())
         .setUniformBlock(BindingPoints::PER_MATERIAL_INSTANCE, mUniformInterfaceBlock.getName());
 
-    if (Variant(variantKey).hasSkinning()) {
+    if (Variant(variantKey).hasSkinningOrMorphing()) {
         pb.setUniformBlock(BindingPoints::PER_RENDERABLE_BONES,
                 UibGenerator::getPerRenderableBonesUib().getName());
     }

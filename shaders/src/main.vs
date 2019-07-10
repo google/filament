@@ -11,9 +11,26 @@ void main() {
         // We encode the orthonormal basis as a quaternion to save space in the attributes
         toTangentFrame(mesh_tangents, material.worldNormal, vertex_worldTangent);
 
-        #if defined(HAS_SKINNING)
-            skinNormal(material.worldNormal, mesh_bone_indices, mesh_bone_weights);
-            skinNormal(vertex_worldTangent, mesh_bone_indices, mesh_bone_weights);
+        #if defined(HAS_SKINNING_OR_MORPHING)
+
+            if (objectUniforms.morphingEnabled == 1) {
+                vec3 normal0, normal1, normal2, normal3;
+                toTangentFrame(mesh_custom4, normal0);
+                toTangentFrame(mesh_custom5, normal1);
+                toTangentFrame(mesh_custom6, normal2);
+                toTangentFrame(mesh_custom7, normal3);
+                material.worldNormal += objectUniforms.morphWeights.x * normal0;
+                material.worldNormal += objectUniforms.morphWeights.y * normal1;
+                material.worldNormal += objectUniforms.morphWeights.z * normal2;
+                material.worldNormal += objectUniforms.morphWeights.w * normal3;
+                material.worldNormal = normalize(material.worldNormal);
+            }
+
+            if (objectUniforms.skinningEnabled == 1) {
+                skinNormal(material.worldNormal, mesh_bone_indices, mesh_bone_weights);
+                skinNormal(vertex_worldTangent, mesh_bone_indices, mesh_bone_weights);
+            }
+
         #endif
 
         // We don't need to normalize here, even if there's a scale in the matrix
@@ -31,7 +48,7 @@ void main() {
         // Without anisotropy or normal mapping we only need the normal vector
         toTangentFrame(mesh_tangents, material.worldNormal);
         material.worldNormal = objectUniforms.worldFromModelNormalMatrix * material.worldNormal;
-        #if defined(HAS_SKINNING)
+        #if defined(HAS_SKINNING_OR_MORPHING)
             skinNormal(material.worldNormal, mesh_bone_indices, mesh_bone_weights);
         #endif
     #endif // MATERIAL_HAS_ANISOTROPY || MATERIAL_HAS_NORMAL
@@ -77,7 +94,7 @@ void main() {
 
 #if defined(VERTEX_DOMAIN_DEVICE)
     // The other vertex domains are handled in initMaterialVertex()->computeWorldPosition()
-    gl_Position = getSkinnedPosition();
+    gl_Position = getPosition();
 #else
     gl_Position = getClipFromWorldMatrix() * getWorldPosition(material);
 #endif
