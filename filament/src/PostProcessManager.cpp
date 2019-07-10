@@ -142,11 +142,6 @@ void PostProcessManager::setSource(uint32_t viewportWidth, uint32_t viewportHeig
     ub.setUniform(offsetof(PostProcessingUib, time), fraction);
     ub.setUniform(offsetof(PostProcessingUib, uvScale), uvScale);
 
-    // The shader may need to know the offset between the top of the texture and the top
-    // of the rectangle that it actually needs to sample from.
-    const float yOffset = textureHeight - viewportHeight;
-    ub.setUniform(offsetof(PostProcessingUib, yOffset), yOffset);
-
     driver.updateSamplerGroup(mPostProcessSbh, std::move(group));
     driver.loadUniformBuffer(mPostProcessUbh, ub.toBufferDescriptor(driver));
 }
