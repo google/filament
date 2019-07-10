@@ -33,6 +33,7 @@ namespace math {
 // -------------------------------------------------------------------------------------
 namespace details {
 
+// Define PI here for compatibility with MSVC.
 static constexpr double PI = 3.14159265358979323846;
 
 template<typename T>
