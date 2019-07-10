@@ -101,6 +101,7 @@ public:
         BONES_UBH,              //  4 bones uniform buffer handle
         WORLD_AABB_CENTER,      // 12 world-space bounding box center of the renderable
         VISIBLE_MASK,           //  1 each bit represents a visibility in a pass
+        MORPH_WEIGHTS,          //  4 floats for morphing
 
         // These are not needed anymore after culling
         LAYERS,                 //  1 layers
@@ -112,16 +113,17 @@ public:
     };
 
     using RenderableSoa = utils::StructureOfArrays<
-            utils::EntityInstance<RenderableManager>,
-            math::mat4f,
-            FRenderableManager::Visibility,
-            backend::Handle<backend::HwUniformBuffer>,
-            math::float3,
-            Culler::result_type,
-            uint8_t,
-            math::float3,
-            utils::Slice<FRenderPrimitive>,
-            uint32_t
+            utils::EntityInstance<RenderableManager>,   // RENDERABLE_INSTANCE
+            math::mat4f,                                // WORLD_TRANSFORM
+            FRenderableManager::Visibility,             // VISIBILITY_STATE
+            backend::Handle<backend::HwUniformBuffer>,  // BONES_UBH
+            math::float3,                               // WORLD_AABB_CENTER
+            Culler::result_type,                        // VISIBLE_MASK
+            math::float4,                               // MORPH_WEIGHTS
+            uint8_t,                                    // LAYERS
+            math::float3,                               // WORLD_AABB_EXTENT
+            utils::Slice<FRenderPrimitive>,             // PRIMITIVES
+            uint32_t                                    // SUMMED_PRIMITIVE_COUNT
     >;
 
     RenderableSoa const& getRenderableData() const noexcept { return mRenderableData; }

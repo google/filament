@@ -4,7 +4,7 @@ void materialVertex(inout MaterialVertexInputs m) { }
 
 void main() {
 #if defined(VERTEX_DOMAIN_DEVICE)
-    gl_Position = getSkinnedPosition();
+    gl_Position = getPosition();
 #else
     MaterialVertexInputs material;
     initMaterialVertex(material);

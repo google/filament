@@ -20,7 +20,7 @@ mat3 getWorldFromModelNormalMatrix() {
 // Attributes access
 //------------------------------------------------------------------------------
 
-#if defined(HAS_SKINNING)
+#if defined(HAS_SKINNING_OR_MORPHING)
 vec3 mulBoneNormal(vec3 n, uint i) {
     vec4 q  = bonesUniforms.bones[i + 0u];
     vec3 is = bonesUniforms.bones[i + 3u].xyz;
@@ -33,7 +33,7 @@ vec3 mulBoneNormal(vec3 n, uint i) {
     return n;
 }
 
-vec3 mulBoneVertice(vec3 v, uint i) {
+vec3 mulBoneVertex(vec3 v, uint i) {
     vec4 q = bonesUniforms.bones[i + 0u];
     vec3 t = bonesUniforms.bones[i + 1u].xyz;
     vec3 s = bonesUniforms.bones[i + 2u].xyz;
@@ -56,23 +56,32 @@ void skinNormal(inout vec3 n, const uvec4 ids, const vec4 weights) {
 }
 
 void skinPosition(inout vec3 p, const uvec4 ids, const vec4 weights) {
-    p =   mulBoneVertice(p, ids.x * 4u) * weights.x
-        + mulBoneVertice(p, ids.y * 4u) * weights.y
-        + mulBoneVertice(p, ids.z * 4u) * weights.z
-        + mulBoneVertice(p, ids.w * 4u) * weights.w;
+    p =   mulBoneVertex(p, ids.x * 4u) * weights.x
+        + mulBoneVertex(p, ids.y * 4u) * weights.y
+        + mulBoneVertex(p, ids.z * 4u) * weights.z
+        + mulBoneVertex(p, ids.w * 4u) * weights.w;
 }
 #endif
 
 /** @public-api */
 vec4 getPosition() {
-    return mesh_position;
-}
+    vec4 pos = mesh_position;
 
-vec4 getSkinnedPosition() {
-    vec4 pos = getPosition();
-#if defined(HAS_SKINNING)
-    skinPosition(pos.xyz, mesh_bone_indices, mesh_bone_weights);
+#if defined(HAS_SKINNING_OR_MORPHING)
+
+    if (objectUniforms.morphingEnabled == 1) {
+        pos += objectUniforms.morphWeights.x * mesh_custom0;
+        pos += objectUniforms.morphWeights.y * mesh_custom1;
+        pos += objectUniforms.morphWeights.z * mesh_custom2;
+        pos += objectUniforms.morphWeights.w * mesh_custom3;
+    }
+
+    if (objectUniforms.skinningEnabled == 1) {
+        skinPosition(pos.xyz, mesh_bone_indices, mesh_bone_weights);
+    }
+
 #endif
+
     return pos;
 }
 
@@ -116,17 +125,17 @@ vec4 getCustom7() { return mesh_custom7; }
 vec4 computeWorldPosition() {
 #if defined(VERTEX_DOMAIN_OBJECT)
     mat4 transform = getWorldFromModelMatrix();
-    vec3 position = getSkinnedPosition().xyz;
+    vec3 position = getPosition().xyz;
     return mulMat4x4Float3(transform, position);
 #elif defined(VERTEX_DOMAIN_WORLD)
-    return vec4(getSkinnedPosition().xyz, 1.0);
+    return vec4(getPosition().xyz, 1.0);
 #elif defined(VERTEX_DOMAIN_VIEW)
     mat4 transform = getWorldFromViewMatrix();
-    vec3 position = getSkinnedPosition().xyz;
+    vec3 position = getPosition().xyz;
     return mulMat4x4Float3(transform, position);
 #else
     mat4 transform = getWorldFromViewMatrix() * getViewFromClipMatrix();
-    vec3 position = getSkinnedPosition().xyz;
+    vec3 position = getPosition().xyz;
     return mulMat4x4Float3(transform, position);
 #endif
 }

@@ -45,12 +45,14 @@ struct RenderableManager::BuilderDetails {
     bool mCulling : 1;
     bool mCastShadows : 1;
     bool mReceiveShadows : 1;
+    bool mMorphingEnabled : 1;
     size_t mSkinningBoneCount = 0;
     Bone const* mUserBones = nullptr;
     mat4f const* mUserBoneMatrices = nullptr;
 
     explicit BuilderDetails(size_t count)
-            : mEntries(count), mCulling(true), mCastShadows(false), mReceiveShadows(true) {
+            : mEntries(count), mCulling(true), mCastShadows(false), mReceiveShadows(true),
+              mMorphingEnabled(false) {
     }
     // this is only needed for the explicit instantiation below
     BuilderDetails() = default;
@@ -149,6 +151,11 @@ RenderableManager::Builder& RenderableManager::Builder::skinning(
         size_t boneCount, mat4f const* transforms) noexcept {
     mImpl->mSkinningBoneCount = boneCount;
     mImpl->mUserBoneMatrices = transforms;
+    return *this;
+}
+
+RenderableManager::Builder& RenderableManager::Builder::morphing(bool enable) noexcept {
+    mImpl->mMorphingEnabled = enable;
     return *this;
 }
 
@@ -274,9 +281,11 @@ void FRenderableManager::create(
         setReceiveShadows(ci, builder->mReceiveShadows);
         setCulling(ci, builder->mCulling);
         setSkinning(ci, false);
+        setMorphing(ci, builder->mMorphingEnabled);
+        setMorphWeights(ci, {0, 0, 0, 0});
 
         const size_t count = builder->mSkinningBoneCount;
-        if (UTILS_UNLIKELY(count)) {
+        if (UTILS_UNLIKELY(count > 0 || builder->mMorphingEnabled)) {
             std::unique_ptr<Bones>& bones = manager[ci].bones;
             // Note that we are sizing the bones UBO according to CONFIG_MAX_BONE_COUNT rather than
             // mSkinningBoneCount. According to the OpenGL ES 3.2 specification in 7.6.3 Uniform
@@ -298,7 +307,7 @@ void FRenderableManager::create(
             });
             assert(bones);
             if (bones) {
-                setSkinning(ci, true);
+                setSkinning(ci, count > 0);
                 if (builder->mUserBones) {
                     setBones(ci, builder->mUserBones, count);
                 } else if (builder->mUserBoneMatrices) {
@@ -491,6 +500,12 @@ void FRenderableManager::setBones(Instance ci,
     }
 }
 
+void FRenderableManager::setMorphWeights(Instance ci, const float4& weights) noexcept {
+    if (ci) {
+        mManager[ci].morphWeights = weights;
+    }
+}
+
 void FRenderableManager::makeBone(PerRenderableUibBone* UTILS_RESTRICT out, mat4f const& t) noexcept {
     mat4f m(t);
 
@@ -610,6 +625,10 @@ void RenderableManager::setBones(Instance instance,
 void RenderableManager::setBones(Instance instance,
         mat4f const* transforms, size_t boneCount, size_t offset) noexcept {
     upcast(this)->setBones(instance, transforms, boneCount, offset);
+}
+
+void RenderableManager::setMorphWeights(Instance instance, float4 const& weights) noexcept {
+    upcast(this)->setMorphWeights(instance, weights);
 }
 
 } // namespace filament

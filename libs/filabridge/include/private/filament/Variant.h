@@ -52,11 +52,11 @@ namespace filament {
         static constexpr uint8_t DIRECTIONAL_LIGHTING   = 0x01; // directional light present, per frame/world position
         static constexpr uint8_t DYNAMIC_LIGHTING       = 0x02; // point, spot or area present, per frame/world position
         static constexpr uint8_t SHADOW_RECEIVER        = 0x04; // receives shadows, per renderable
-        static constexpr uint8_t SKINNING               = 0x08; // GPU skinning
+        static constexpr uint8_t SKINNING_OR_MORPHING   = 0x08; // GPU skinning and/or morphing
 
         static constexpr uint8_t VERTEX_MASK = DIRECTIONAL_LIGHTING |
                                                SHADOW_RECEIVER |
-                                               SKINNING;
+                                               SKINNING_OR_MORPHING;
 
         static constexpr uint8_t FRAGMENT_MASK = DIRECTIONAL_LIGHTING |
                                                  DYNAMIC_LIGHTING |
@@ -71,17 +71,17 @@ namespace filament {
         static constexpr uint8_t DEPTH_VARIANT = SHADOW_RECEIVER;
 
         // this mask filters out the lighting variants
-        static constexpr uint8_t UNLIT_MASK    = SKINNING;
+        static constexpr uint8_t UNLIT_MASK    = SKINNING_OR_MORPHING;
 
         static_assert((VERTEX_MASK | FRAGMENT_MASK) == VARIANT_COUNT - 1,
                 "inconsistency between vertex/fragment masks and variant count");
 
-        inline bool hasSkinning() const noexcept { return key & SKINNING; }
+        inline bool hasSkinningOrMorphing() const noexcept { return key & SKINNING_OR_MORPHING; }
         inline bool hasDirectionalLighting() const noexcept { return key & DIRECTIONAL_LIGHTING; }
         inline bool hasDynamicLighting() const noexcept { return key & DYNAMIC_LIGHTING; }
         inline bool hasShadowReceiver() const noexcept { return key & SHADOW_RECEIVER; }
 
-        inline void setSkinning(bool v) noexcept { set(v, SKINNING); }
+        inline void setSkinning(bool v) noexcept { set(v, SKINNING_OR_MORPHING); }
         inline void setDirectionalLighting(bool v) noexcept { set(v, DIRECTIONAL_LIGHTING); }
         inline void setDynamicLighting(bool v) noexcept { set(v, DYNAMIC_LIGHTING); }
         inline void setShadowReceiver(bool v) noexcept { set(v, SHADOW_RECEIVER); }

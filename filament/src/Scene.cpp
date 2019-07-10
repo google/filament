@@ -124,6 +124,7 @@ void FScene::prepare(const mat4f& worldOriginTransform) {
                     rcm.getBonesUbh(ri),
                     worldAABB.center,
                     0,
+                    rcm.getMorphWeights(ri),
                     rcm.getLayerMask(ri),
                     worldAABB.halfExtent,
                     {}, {});
@@ -196,6 +197,15 @@ void FScene::updateUBOs(utils::Range<uint32_t> visibleRenderables, backend::Hand
 
         UniformBuffer::setUniform(buffer,
                 offset + offsetof(PerRenderableUib, worldFromModelNormalMatrix), m);
+
+        UniformBuffer::setUniform(buffer, offset + offsetof(PerRenderableUib, skinningEnabled),
+                sceneData.elementAt<VISIBILITY_STATE>(i).skinning);
+
+        UniformBuffer::setUniform(buffer, offset + offsetof(PerRenderableUib, morphingEnabled),
+                sceneData.elementAt<VISIBILITY_STATE>(i).morphing);
+
+        UniformBuffer::setUniform(buffer,
+                offset + offsetof(PerRenderableUib, morphWeights), sceneData.elementAt<MORPH_WEIGHTS>(i));
     }
 
     // TODO: handle static objects separately

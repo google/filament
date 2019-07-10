@@ -167,14 +167,22 @@ const std::string ShaderGenerator::createVertexProgram(filament::backend::Shader
     cg.generateDefine(vs, "HAS_DIRECTIONAL_LIGHTING", litVariants && variant.hasDirectionalLighting());
     cg.generateDefine(vs, "HAS_SHADOWING", litVariants && variant.hasShadowReceiver());
     cg.generateDefine(vs, "HAS_SHADOW_MULTIPLIER", material.hasShadowMultiplier);
-    cg.generateDefine(vs, "HAS_SKINNING", variant.hasSkinning());
+    cg.generateDefine(vs, "HAS_SKINNING_OR_MORPHING", variant.hasSkinningOrMorphing());
     cg.generateDefine(vs, getShadingDefine(material.shading), true);
     generateMaterialDefines(vs, cg, mProperties);
 
     AttributeBitset attributes = material.requiredAttributes;
-    if (variant.hasSkinning()) {
+    if (variant.hasSkinningOrMorphing()) {
         attributes.set(VertexAttribute::BONE_INDICES);
         attributes.set(VertexAttribute::BONE_WEIGHTS);
+        attributes.set(VertexAttribute::MORPH_POSITION_0);
+        attributes.set(VertexAttribute::MORPH_POSITION_1);
+        attributes.set(VertexAttribute::MORPH_POSITION_2);
+        attributes.set(VertexAttribute::MORPH_POSITION_3);
+        attributes.set(VertexAttribute::MORPH_TANGENTS_0);
+        attributes.set(VertexAttribute::MORPH_TANGENTS_1);
+        attributes.set(VertexAttribute::MORPH_TANGENTS_2);
+        attributes.set(VertexAttribute::MORPH_TANGENTS_3);
     }
     cg.generateShaderInputs(vs, ShaderType::VERTEX, attributes, interpolation);
 
@@ -192,7 +200,7 @@ const std::string ShaderGenerator::createVertexProgram(filament::backend::Shader
             BindingPoints::PER_VIEW, UibGenerator::getPerViewUib());
     cg.generateUniforms(vs, ShaderType::VERTEX,
             BindingPoints::PER_RENDERABLE, UibGenerator::getPerRenderableUib());
-    if (variant.hasSkinning()) {
+    if (variant.hasSkinningOrMorphing()) {
         cg.generateUniforms(vs, ShaderType::VERTEX,
                 BindingPoints::PER_RENDERABLE_BONES,
                 UibGenerator::getPerRenderableBonesUib());

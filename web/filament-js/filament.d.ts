@@ -120,6 +120,7 @@ export class RenderableManager$Builder {
     public skinning(boneCount: number): RenderableManager$Builder;
     public skinningBones(transforms: RenderableManager$Bone[]): RenderableManager$Builder;
     public skinningMatrices(transforms: mat4[]): RenderableManager$Builder;
+    public morphing(enable: boolean): RenderableManager$Builder;
     public blendOrder(index: number, order: number): RenderableManager$Builder;
     public build(engine: Engine, entity: Entity): void;
 }
@@ -166,6 +167,8 @@ export class RenderableManager {
             offset: number): void
     public setBonesFromMatrices(instance: RenderableManager$Instance, transforms: mat4[],
             offset: number): void
+    public setMorphWeights(instance: RenderableManager$Instance, a: number, b: number, c: number,
+            d: number);
     public getAxisAlignedBoundingBox(instance: RenderableManager$Instance): Box;
     public getPrimitiveCount(instance: RenderableManager$Instance): number;
     public setMaterialInstanceAt(instance: RenderableManager$Instance,
@@ -579,21 +582,29 @@ export enum RenderTarget$AttachmentPoint {
 }
 
 export enum VertexAttribute {
-    POSITION,
-    TANGENTS,
-    COLOR,
-    UV0,
-    UV1,
-    BONE_INDICES,
-    BONE_WEIGHTS,
-    CUSTOM0,
-    CUSTOM1,
-    CUSTOM2,
-    CUSTOM3,
-    CUSTOM4,
-    CUSTOM5,
-    CUSTOM6,
-    CUSTOM7,
+    POSITION = 0,
+    TANGENTS = 1,
+    COLOR = 2,
+    UV0 = 3,
+    UV1 = 4,
+    BONE_INDICES = 5,
+    BONE_WEIGHTS = 6,
+    CUSTOM0 = 7,
+    CUSTOM1 = 8,
+    CUSTOM2 = 9,
+    CUSTOM3 = 10,
+    CUSTOM4 = 11,
+    CUSTOM5 = 12,
+    CUSTOM6 = 13,
+    CUSTOM7 = 14,
+    MORPH_POSITION_0 = CUSTOM0,
+    MORPH_POSITION_1 = CUSTOM1,
+    MORPH_POSITION_2 = CUSTOM2,
+    MORPH_POSITION_3 = CUSTOM3,
+    MORPH_TANGENTS_0 = CUSTOM4,
+    MORPH_TANGENTS_1 = CUSTOM5,
+    MORPH_TANGENTS_2 = CUSTOM6,
+    MORPH_TANGENTS_3 = CUSTOM7,
 }
 
 export enum VertexBuffer$AttributeType {
