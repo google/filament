@@ -108,6 +108,8 @@ public:
     utils::io::sstream& generateDefine(utils::io::sstream& out, const char* name, float value) const;
     utils::io::sstream& generateDefine(utils::io::sstream& out, const char* name, uint32_t value) const;
     utils::io::sstream& generateDefine(utils::io::sstream& out, const char* name, const char* string) const;
+    utils::io::sstream& generateIndexedDefine(utils::io::sstream& out, const char* name,
+            uint32_t index, uint32_t value) const;
 
     utils::io::sstream& generateGetters(utils::io::sstream& out, ShaderType type) const;
     utils::io::sstream& generateParameters(utils::io::sstream& out, ShaderType type) const;

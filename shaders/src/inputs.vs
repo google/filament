@@ -24,6 +24,38 @@ layout(location = LOCATION_BONE_INDICES) in uvec4 mesh_bone_indices;
 layout(location = LOCATION_BONE_WEIGHTS) in vec4 mesh_bone_weights;
 #endif
 
+#if defined(HAS_ATTRIBUTE_CUSTOM0)
+layout(location = LOCATION_CUSTOM0) in vec4 mesh_custom0;
+#endif
+
+#if defined(HAS_ATTRIBUTE_CUSTOM1)
+layout(location = LOCATION_CUSTOM1) in vec4 mesh_custom1;
+#endif
+
+#if defined(HAS_ATTRIBUTE_CUSTOM2)
+layout(location = LOCATION_CUSTOM2) in vec4 mesh_custom2;
+#endif
+
+#if defined(HAS_ATTRIBUTE_CUSTOM3)
+layout(location = LOCATION_CUSTOM3) in vec4 mesh_custom3;
+#endif
+
+#if defined(HAS_ATTRIBUTE_CUSTOM4)
+layout(location = LOCATION_CUSTOM4) in vec4 mesh_custom4;
+#endif
+
+#if defined(HAS_ATTRIBUTE_CUSTOM5)
+layout(location = LOCATION_CUSTOM5) in vec4 mesh_custom5;
+#endif
+
+#if defined(HAS_ATTRIBUTE_CUSTOM6)
+layout(location = LOCATION_CUSTOM6) in vec4 mesh_custom6;
+#endif
+
+#if defined(HAS_ATTRIBUTE_CUSTOM7)
+layout(location = LOCATION_CUSTOM7) in vec4 mesh_custom7;
+#endif
+
 LAYOUT_LOCATION(4) out highp vec3 vertex_worldPosition;
 #if defined(HAS_ATTRIBUTE_TANGENTS)
 LAYOUT_LOCATION(5) SHADING_INTERPOLATION out mediump vec3 vertex_worldNormal;

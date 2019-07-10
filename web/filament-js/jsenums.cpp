@@ -49,7 +49,8 @@ enum_<VertexAttribute>("VertexAttribute")
     .value("UV0", UV0)
     .value("UV1", UV1)
     .value("BONE_INDICES", BONE_INDICES)
-    .value("BONE_WEIGHTS", BONE_WEIGHTS);
+    .value("BONE_WEIGHTS", BONE_WEIGHTS)
+    .value("CUSTOM0", CUSTOM0);
 
 enum_<VertexBuffer::AttributeType>("VertexBuffer$AttributeType")
     .value("BYTE", VertexBuffer::AttributeType::BYTE)
