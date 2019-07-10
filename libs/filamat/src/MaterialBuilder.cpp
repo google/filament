@@ -423,13 +423,16 @@ bool MaterialBuilder::runSemanticAnalysis() noexcept {
     assert(!mCodeGenPermutations.empty());
     CodeGenParams params = mCodeGenPermutations[0];
 
-    ShaderModel model = ShaderModel::UNKNOWN;
+    TargetApi targetApi = params.targetApi;
+    assertSingleTargetApi(targetApi);
+    ShaderModel model = static_cast<ShaderModel>(params.shaderModel);
+
     std::string shaderCode = peek(ShaderType::VERTEX, params, mProperties);
-    bool result = glslTools.analyzeVertexShader(shaderCode, model, mTargetApi);
+    bool result = glslTools.analyzeVertexShader(shaderCode, model, targetApi);
     if (!result) return false;
 
     shaderCode = peek(ShaderType::FRAGMENT, params, mProperties);
-    result = glslTools.analyzeFragmentShader(shaderCode, model, mTargetApi);
+    result = glslTools.analyzeFragmentShader(shaderCode, model, targetApi);
     return result;
 #else
     return true;
