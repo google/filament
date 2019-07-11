@@ -78,6 +78,8 @@ static size_t g_sh_compute = 0;
 static bool g_sh_output = false;
 static bool g_sh_shader = false;
 static bool g_sh_irradiance = false;
+static float g_sh_window = 0.0f;
+static bool g_noclamp = false;
 static ShFile g_sh_file = ShFile::SH_NONE;
 static utils::Path g_sh_filename;
 static std::unique_ptr<filament::math::float3[]> g_coefficients;
@@ -207,6 +209,10 @@ static void printUsage(char* name) {
             "       SH output format. The filename extension determines the output format\n\n"
             "   --sh-irradiance, -i\n"
             "       Irradiance SH coefficients\n\n"
+            "   --sh-window=cutoff, -w cutoff\n"
+            "       SH windowing to reduce ringing\n\n"
+            "   --noclamp\n"
+            "       Don't clamp environment before processing\n\n"
             "   --debug, -d\n"
             "       Generate extra data for debugging\n\n"
     );
@@ -224,7 +230,7 @@ static void license() {
 }
 
 static int handleCommandLineArgments(int argc, char* argv[]) {
-    static constexpr const char* OPTSTR = "hqidt:f:c:s:x:";
+    static constexpr const char* OPTSTR = "hqidt:f:c:s:x:w:";
     static const struct option OPTIONS[] = {
             { "help",                       no_argument, nullptr, 'h' },
             { "license",                    no_argument, nullptr, 'l' },
@@ -239,6 +245,8 @@ static int handleCommandLineArgments(int argc, char* argv[]) {
             { "sh-output",            required_argument, nullptr, 'o' },
             { "sh-irradiance",              no_argument, nullptr, 'i' },
             { "sh-shader",                  no_argument, nullptr, 'b' },
+            { "sh-window",            required_argument, nullptr, 'w' },
+            { "noclamp",                    no_argument, nullptr, 'K' },
             { "ibl-is-mipmap",        required_argument, nullptr, 'y' },
             { "ibl-ld",               required_argument, nullptr, 'p' },
             { "ibl-irradiance",       required_argument, nullptr, 'P' },
@@ -351,6 +359,12 @@ static int handleCommandLineArgments(int argc, char* argv[]) {
                 if (g_sh_filename.getExtension() == "txt") {
                     g_sh_file = ShFile::SH_TEXT;
                 }
+                break;
+            case 'w':
+                g_sh_window = std::stof(arg);
+                break;
+            case 'K':
+                g_noclamp = true;
                 break;
             case 'i':
                 g_sh_compute = 1;
@@ -507,7 +521,9 @@ int main(int argc, char* argv[]) {
         Image inputImage(width, height);
         memcpy(inputImage.getData(), linputImage.getPixelRef(), height * inputImage.getBytesPerRow());
 
-        CubemapUtils::clamp(inputImage);
+        if (!g_noclamp) {
+            CubemapUtils::clamp(inputImage);
+        }
 
         if ((isPOT(width) && (width * 3 == height * 4)) ||
             (isPOT(height) && (height * 3 == width * 4))) {
@@ -676,9 +692,16 @@ void sphericalHarmonics(utils::JobSystem& js, const utils::Path& iname, const Cu
     std::unique_ptr<filament::math::float3[]> sh;
     if (g_sh_shader) {
         sh = CubemapSH::computeSH(js, inputCubemap, 3, true);
-        CubemapSH::preprocessSHForShader(sh);
     } else {
         sh = CubemapSH::computeSH(js, inputCubemap, g_sh_compute, g_sh_irradiance);
+    }
+
+    if (g_sh_window) {
+        CubemapSH::windowSH(sh, g_sh_compute, g_sh_window);
+    }
+
+    if (g_sh_shader) {
+        CubemapSH::preprocessSHForShader(sh);
     }
 
     if (!g_quiet && g_sh_output) {

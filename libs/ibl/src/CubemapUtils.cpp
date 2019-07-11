@@ -36,11 +36,15 @@ namespace ibl {
 
 void CubemapUtils::clamp(Image& src) {
     // We clamp all values to 256 which correspond to the maximum value (before
-    // gamma compression) that we can store.
+    // gamma compression) that we can store in RGBM.
     // This clamping is necessary because:
     // - our importance-sampling (when calculating the pre-filtered mipmaps)
     //   behaves badly with with very strong high-frequencies.
     // - SH can't encode such environments with a small number of bands.
+    //
+    // HOWEVER this causes high dynamic range images to loose a lot of energy.
+    // See https://github.com/google/filament/issues/1387
+    //
     const size_t width = src.getWidth();
     const size_t height = src.getHeight();
     for (size_t y=0 ; y<height ; ++y) {
