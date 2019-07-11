@@ -18,6 +18,7 @@ set(SHADERS
         src/common_lighting.fs
         src/common_material.fs
         src/common_math.fs
+        src/common_post_process.fs
         src/common_shading.fs
         src/common_types.fs
         src/conversion_functions.fs
@@ -36,6 +37,8 @@ set(SHADERS
         src/main.vs
         src/material_inputs.fs
         src/material_inputs.vs
+        src/post_process.fs
+        src/post_process.vs
         src/post_process_old.fs
         src/post_process_old.vs
         src/shading_lit.fs

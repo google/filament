@@ -452,5 +452,65 @@ void ShaderPostProcessGenerator::generatePostProcessStageDefines(utils::io::sstr
     }
 }
 
+const std::string ShaderPostProcessGenerator::createPostProcessVertexProgram(
+        filament::backend::ShaderModel sm, MaterialBuilder::TargetApi targetApi,
+        MaterialBuilder::TargetLanguage targetLanguage, MaterialInfo const& material,
+        const filament::SamplerBindingMap& samplerBindingMap,
+        utils::CString const& postProcessCode) noexcept {
+    const CodeGenerator cg(sm, targetApi, targetLanguage);
+    utils::io::sstream vs;
+    cg.generateProlog(vs, ShaderType::VERTEX, false);
+    cg.generateDefine(vs, "LOCATION_POSITION", uint32_t(VertexAttribute::POSITION));
+
+    cg.generateUniforms(vs, ShaderType::VERTEX,
+            BindingPoints::PER_VIEW, UibGenerator::getPerViewUib());
+    cg.generateUniforms(vs, ShaderType::VERTEX,
+            BindingPoints::POST_PROCESS, UibGenerator::getPostProcessingUib());
+    cg.generateUniforms(vs, ShaderType::VERTEX,
+            BindingPoints::PER_MATERIAL_INSTANCE, material.uib);
+
+    cg.generateSamplers(vs,
+            material.samplerBindings.getBlockOffset(BindingPoints::PER_MATERIAL_INSTANCE),
+            material.sib);
+
+    cg.generateCommon(vs, ShaderType::VERTEX);
+    cg.generateCommonGetters(vs);
+    cg.generatePostProcessMain(vs, ShaderType::VERTEX);
+    cg.generateEpilog(vs);
+    return vs.c_str();
+}
+
+const std::string ShaderPostProcessGenerator::createPostProcessFragmentProgram(
+        filament::backend::ShaderModel sm, MaterialBuilder::TargetApi targetApi,
+        MaterialBuilder::TargetLanguage targetLanguage, MaterialInfo const& material,
+        const filament::SamplerBindingMap& samplerBindingMap,
+        utils::CString const& postProcessCode) noexcept {
+    const CodeGenerator cg(sm, targetApi, targetLanguage);
+    utils::io::sstream fs;
+    cg.generateProlog(fs, ShaderType::FRAGMENT, false);
+
+    cg.generateUniforms(fs, ShaderType::FRAGMENT,
+            BindingPoints::PER_VIEW, UibGenerator::getPerViewUib());
+    cg.generateUniforms(fs, ShaderType::FRAGMENT,
+            BindingPoints::POST_PROCESS, UibGenerator::getPostProcessingUib());
+    cg.generateUniforms(fs, ShaderType::FRAGMENT,
+            BindingPoints::PER_MATERIAL_INSTANCE, material.uib);
+
+    cg.generateSamplers(fs,
+            material.samplerBindings.getBlockOffset(BindingPoints::PER_MATERIAL_INSTANCE),
+            material.sib);
+
+    cg.generateCommon(fs, ShaderType::FRAGMENT);
+    cg.generateCommonGetters(fs);
+    cg.generateCommonPostProcess(fs, ShaderType::FRAGMENT);
+
+    // TODO: set the correct line offset.
+    appendShader(fs, postProcessCode, 0);
+
+    cg.generatePostProcessMain(fs, ShaderType::FRAGMENT);
+    cg.generateEpilog(fs);
+    return fs.c_str();
+}
+
 
 } // namespace filament

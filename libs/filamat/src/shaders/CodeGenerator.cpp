@@ -150,6 +150,15 @@ io::sstream& CodeGenerator::generatePostProcessMainOld(io::sstream& out,
     return out;
 }
 
+io::sstream& CodeGenerator::generatePostProcessMain(io::sstream& out, ShaderType type) const {
+    if (type == ShaderType::VERTEX) {
+        out << SHADERS_POST_PROCESS_VS_DATA;
+    } else if (type == ShaderType::FRAGMENT) {
+        out << SHADERS_POST_PROCESS_FS_DATA;
+    }
+    return out;
+}
+
 io::sstream& CodeGenerator::generateVariable(io::sstream& out, ShaderType type,
         const CString& name, size_t index) const {
 
@@ -441,6 +450,18 @@ io::sstream& CodeGenerator::generateCommonMaterial(io::sstream& out, ShaderType 
     } else if (type == ShaderType::FRAGMENT) {
         out << SHADERS_MATERIAL_INPUTS_FS_DATA;
     }
+    return out;
+}
+
+io::sstream& CodeGenerator::generateCommonPostProcess(io::sstream& out, ShaderType type) const {
+    if (type == ShaderType::FRAGMENT) {
+        out << SHADERS_COMMON_POST_PROCESS_FS_DATA;
+    }
+    return out;
+}
+
+utils::io::sstream& CodeGenerator::generateCommonGetters(utils::io::sstream& out) const {
+    out << SHADERS_COMMON_GETTERS_FS_DATA;
     return out;
 }
 
