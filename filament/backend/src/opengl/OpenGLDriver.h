@@ -609,7 +609,9 @@ constexpr size_t OpenGLDriver::getIndexForCap(GLenum cap) noexcept {
 #ifdef GL_ARB_seamless_cube_map
         case GL_TEXTURE_CUBE_MAP_SEAMLESS:      index = 11; break;
 #endif
+#if GL41_HEADERS
         case GL_PROGRAM_POINT_SIZE:             index = 12; break;
+#endif
         default: index = 13; break; // should never happen
     }
     assert(index < 13 && index < state.enables.caps.size());
