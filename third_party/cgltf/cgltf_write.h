@@ -1,7 +1,7 @@
 /**
  * cgltf_write - a single-file glTF 2.0 writer written in C99.
  *
- * Version: 1.0
+ * Version: 1.2
  *
  * Website: https://github.com/jkuhlmann/cgltf
  *
@@ -14,12 +14,15 @@
  * function definitions.
  *
  * Reference:
- * `cgltf_write_file` writes JSON to the given file path. Buffer files and external images are not
- * written out.
+ * `cgltf_result cgltf_write_file(const cgltf_options* options, const char*
+ * path, const cgltf_data* data)` writes JSON to the given file path. Buffer
+ * files and external images are not written out. `data` is not deallocated.
  *
- * `cgltf_write` writes JSON into the given memory buffer. Returns the number of bytes written to
- * "buffer", including a null terminator. If buffer is null, returns the number of bytes that would
- * have been written.
+ * `cgltf_size cgltf_write(const cgltf_options* options, char* buffer,
+ * cgltf_size size, const cgltf_data* data)` writes JSON into the given memory
+ * buffer. Returns the number of bytes written to `buffer`, including a null
+ * terminator. If buffer is null, returns the number of bytes that would have
+ * been written. `data` is not deallocated.
  */
 #ifndef CGLTF_WRITE_H_INCLUDED__
 #define CGLTF_WRITE_H_INCLUDED__
@@ -293,6 +296,27 @@ static int cgltf_dim_from_type(cgltf_type type)
 	}
 }
 
+static const char* cgltf_str_from_camera_type(cgltf_camera_type camera_type)
+{
+	switch (camera_type)
+	{
+		case cgltf_camera_type_perspective: return "perspective";
+		case cgltf_camera_type_orthographic: return "orthographic";
+		default: return NULL;
+	}
+}
+
+static const char* cgltf_str_from_light_type(cgltf_light_type light_type)
+{
+	switch (light_type)
+	{
+		case cgltf_light_type_directional: return "directional";
+		case cgltf_light_type_point: return "point";
+		case cgltf_light_type_spot: return "spot";
+		default: return NULL;
+	}
+}
+
 static void cgltf_write_texture_transform(cgltf_write_context* context, const cgltf_texture_transform* transform)
 {
 	cgltf_write_line(context, "\"extensions\": {");
@@ -334,7 +358,21 @@ static void cgltf_write_primitive(cgltf_write_context* context, const cgltf_prim
 	}
 	cgltf_write_line(context, "}");
 
-	// TODO: prim->targets
+	if (prim->targets_count)
+	{
+		cgltf_write_line(context, "\"targets\": [");
+		for (cgltf_size i = 0; i < prim->targets_count; ++i)
+		{
+			cgltf_write_line(context, "{");
+			for (cgltf_size j = 0; j < prim->targets[i].attributes_count; ++j)
+			{
+				const cgltf_attribute* attr = prim->targets[i].attributes + j;
+				CGLTF_WRITE_IDXPROP(attr->name, attr->data, context->data->accessors);
+			}
+			cgltf_write_line(context, "}");
+		}
+		cgltf_write_line(context, "]");
+	}
 }
 
 static void cgltf_write_mesh(cgltf_write_context* context, const cgltf_mesh* mesh)
@@ -351,7 +389,10 @@ static void cgltf_write_mesh(cgltf_write_context* context, const cgltf_mesh* mes
 	}
 	cgltf_write_line(context, "]");
 
-	// TODO: mesh->weights
+	if (mesh->weights_count > 0)
+	{
+		cgltf_write_floatarrayprop(context, "weights", mesh->weights, mesh->weights_count);
+	}
 
 	cgltf_write_line(context, "}");
 }
@@ -600,7 +641,27 @@ static void cgltf_write_node(cgltf_write_context* context, const cgltf_node* nod
 	{
 		CGLTF_WRITE_IDXPROP("skin", node->skin, context->data->skins);
 	}
-	// TODO: weights, light, camera
+
+	if (node->light)
+	{
+		context->extension_flags |= CGLTF_EXTENSION_FLAG_LIGHTS_PUNCTUAL;
+		cgltf_write_line(context, "\"extensions\": {");
+		cgltf_write_line(context, "\"KHR_lights_punctual\": {");
+		CGLTF_WRITE_IDXPROP("light", node->light, context->data->lights);
+		cgltf_write_line(context, "}");
+		cgltf_write_line(context, "}");
+	}
+
+	if (node->weights_count > 0)
+	{
+		cgltf_write_floatarrayprop(context, "weights", node->weights, node->weights_count);
+	}
+
+	if (node->camera)
+	{
+		CGLTF_WRITE_IDXPROP("camera", node->camera, context->data->cameras);
+	}
+
 	cgltf_write_line(context, "}");
 }
 
@@ -630,8 +691,77 @@ static void cgltf_write_accessor(cgltf_write_context* context, const cgltf_acces
 	{
 		cgltf_write_floatarrayprop(context, "max", accessor->max, dim);
 	}
+	if (accessor->is_sparse)
+	{
+		cgltf_write_line(context, "\"sparse\": {");
+		cgltf_write_intprop(context, "count", accessor->sparse.count, 0);
+		cgltf_write_line(context, "\"indices\": {");
+		cgltf_write_intprop(context, "byteOffset", accessor->sparse.indices_byte_offset, 0);
+		CGLTF_WRITE_IDXPROP("bufferView", accessor->sparse.indices_buffer_view, context->data->buffer_views);
+		cgltf_write_intprop(context, "componentType", cgltf_int_from_component_type(accessor->sparse.indices_component_type), 0);
+		cgltf_write_line(context, "}");
+		cgltf_write_line(context, "\"values\": {");
+		cgltf_write_intprop(context, "byteOffset", accessor->sparse.values_byte_offset, 0);
+		CGLTF_WRITE_IDXPROP("bufferView", accessor->sparse.values_buffer_view, context->data->buffer_views);
+		cgltf_write_line(context, "}");
+		cgltf_write_line(context, "}");
+	}
 	cgltf_write_line(context, "}");
-	// TODO: accessor->sparse
+}
+
+static void cgltf_write_camera(cgltf_write_context* context, const cgltf_camera* camera)
+{
+	cgltf_write_line(context, "{");
+	cgltf_write_strprop(context, "type", cgltf_str_from_camera_type(camera->type));
+	if (camera->name)
+	{
+		cgltf_write_strprop(context, "name", camera->name);
+	}
+
+	if (camera->type == cgltf_camera_type_orthographic)
+	{
+		cgltf_write_line(context, "\"orthographic\": {");
+		cgltf_write_floatprop(context, "xmag", camera->orthographic.xmag, -1.0f);
+		cgltf_write_floatprop(context, "ymag", camera->orthographic.ymag, -1.0f);
+		cgltf_write_floatprop(context, "zfar", camera->orthographic.zfar, -1.0f);
+		cgltf_write_floatprop(context, "znear", camera->orthographic.znear, -1.0f);
+		cgltf_write_line(context, "}");
+	}
+	else if (camera->type == cgltf_camera_type_perspective)
+	{
+		cgltf_write_line(context, "\"perspective\": {");
+		cgltf_write_floatprop(context, "aspectRatio", camera->perspective.aspect_ratio, -1.0f);
+		cgltf_write_floatprop(context, "yfov", camera->perspective.yfov, -1.0f);
+		cgltf_write_floatprop(context, "zfar", camera->perspective.zfar, -1.0f);
+		cgltf_write_floatprop(context, "znear", camera->perspective.znear, -1.0f);
+		cgltf_write_line(context, "}");
+	}
+	cgltf_write_line(context, "}");
+}
+
+static void cgltf_write_light(cgltf_write_context* context, const cgltf_light* light)
+{
+	cgltf_write_line(context, "{");
+	cgltf_write_strprop(context, "type", cgltf_str_from_light_type(light->type));
+	if (light->name)
+	{
+		cgltf_write_strprop(context, "name", light->name);
+	}
+	if (cgltf_check_floatarray(light->color, 3, 1.0f))
+	{
+		cgltf_write_floatarrayprop(context, "light", light->color, 3);
+	}
+	cgltf_write_floatprop(context, "intensity", light->intensity, 1.0f);
+	cgltf_write_floatprop(context, "range", light->range, 0.0f);
+
+	if (light->type == cgltf_light_type_spot)
+	{
+		cgltf_write_line(context, "\"spot\": {");
+		cgltf_write_floatprop(context, "innerConeAngle", light->spot_inner_cone_angle, 0.0f);
+		cgltf_write_floatprop(context, "outerConeAngle", light->spot_outer_cone_angle, 3.14159265358979323846f/4.0f);
+		cgltf_write_line(context, "}");
+	}
+	cgltf_write_line(context, "}");
 }
 
 cgltf_result cgltf_write_file(const cgltf_options* options, const char* path, const cgltf_data* data)
@@ -799,7 +929,31 @@ cgltf_size cgltf_write(const cgltf_options* options, char* buffer, cgltf_size si
 		cgltf_write_line(context, "]");
 	}
 
-	// TODO: cameras
+	if (data->cameras_count > 0)
+	{
+		cgltf_write_line(context, "\"cameras\": [");
+		for (cgltf_size i = 0; i < data->cameras_count; ++i)
+		{
+			cgltf_write_camera(context, data->cameras + i);
+		}
+		cgltf_write_line(context, "]");
+	}
+
+	if (data->lights_count > 0)
+	{
+		cgltf_write_line(context, "\"extensions\": {");
+
+		cgltf_write_line(context, "\"KHR_lights_punctual\": {");
+		cgltf_write_line(context, "\"lights\": [");
+		for (cgltf_size i = 0; i < data->lights_count; ++i)
+		{
+			cgltf_write_light(context, data->lights + i);
+		}
+		cgltf_write_line(context, "]");
+		cgltf_write_line(context, "}");
+
+		cgltf_write_line(context, "}");
+	}
 
 	if (context->extension_flags != 0) {
 		cgltf_write_line(context, "\"extensionsUsed\": [");

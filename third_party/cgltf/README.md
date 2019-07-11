@@ -1,9 +1,9 @@
 # cgltf
-**Single-file/stb-style C glTF loader**
+**Single-file/stb-style C glTF loader and writer**
 
 [![Build Status](https://travis-ci.org/jkuhlmann/cgltf.svg?branch=master)](https://travis-ci.org/jkuhlmann/cgltf)
 
-## Usage
+## Usage: Loading
 Loading from file:
 ```c
 #include "cgltf.h"
@@ -40,7 +40,47 @@ For buffer data, you can alternatively call `cgltf_load_buffers`, which will use
 
 **For more in-depth documentation and a description of the public interface refer to the top of the `cgltf.h` file.**
 
-## Support
+## Usage: Writing
+When writing glTF data, you need a valid `cgltf_data` structure that represents a valid glTF document. You can construct such a structure yourself or load it using the loader functions described above. The writer functions do not deallocate any memory. So, you either have to do it manually or call `cgltf_free()` if you got the data by loading it from a glTF document.
+
+Writing to file:
+```c
+#include "cgltf_write.h"
+
+cgltf_options options = {0};
+cgltf_data* data = /* TODO must be valid data */;
+cgltf_result result = cgltf_write_file(&options, "out.gltf", data);
+if (result != cgltf_result_success)
+{
+	/* TODO handle error */
+}
+```
+
+Writing to memory:
+```c
+#include "cgltf_write.h"
+cgltf_options options = {0};
+cgltf_data* data = /* TODO must be valid data */;
+
+cgltf_size size = cgltf_write(&options, NULL, 0, data);
+
+char* buf = malloc(size);
+
+cgltf_size written = cgltf_write(&options, buf, size, data);
+if (written != size)
+{
+	/* TODO handle error */
+}
+```
+
+Note that cgltf does not write the contents of extra files such as buffers or images. You'll need to write this data yourself.
+
+Writing does not yet support "extras" data.
+
+**For more in-depth documentation and a description of the public interface refer to the top of the `cgltf_write.h` file.**
+
+
+## Features
 cgltf supports core glTF 2.0:
 - glb (binary files) and gltf (JSON files)
 - meshes (including accessors, buffer views, buffers)
@@ -50,6 +90,7 @@ cgltf supports core glTF 2.0:
 - animations
 - cameras
 - morph targets
+- extras data
 
 cgltf also supports some glTF extensions:
 - KHR_lights_punctual
@@ -57,7 +98,7 @@ cgltf also supports some glTF extensions:
 - KHR_materials_unlit
 - KHR_texture_transform
 
-cgltf does **not** yet support unlisted extensions or `extra` data.
+cgltf does **not** yet support unlisted extensions.
 
 ## Building
 The easiest approach is to integrate the `cgltf.h` header file into your project. If you are unfamiliar with single-file C libraries (also known as stb-style libraries), this is how it goes:
@@ -66,8 +107,11 @@ The easiest approach is to integrate the `cgltf.h` header file into your project
 1. Have exactly one source file that defines `CGLTF_IMPLEMENTATION` before including `cgltf.h`.
 1. Use the cgltf functions as described above.
 
+Support for writing can be found in a separate file called `cgltf_write.h` (which includes `cgltf.h`). Building it works analogously using the `CGLTF_WRITE_IMPLEMENTATION` define.
+
 ## Contributing
 Everyone is welcome to contribute to the library. If you find any problems, you can submit them using [GitHub's issue system](https://github.com/jkuhlmann/cgltf/issues). If you want to contribute code, you should fork the project and then send a pull request.
+
 
 ## Dependencies
 None.
