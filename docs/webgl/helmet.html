@@ -23,9 +23,8 @@ canvas     { position: absolute; width: 100%; height: 100%; }
 <script src="https://unpkg.com/gltumble"></script>
 <script>
 
-const ibl_suffix = Filament.getSupportedFormatSuffix('etc s3tc');
 const env = 'syferfontein_18d_clear_2k';
-const ibl_url = `${env}/${env}_ibl${ibl_suffix}.ktx`;
+const ibl_url = `${env}/${env}_ibl.ktx`;
 const sky_url = `${env}/${env}_skybox.ktx`;
 const mesh_url = 'helmet.gltf';
 
@@ -48,7 +47,6 @@ class App {
             .color([0.98, 0.92, 0.89])
             .intensity(100000.0)
             .direction([0.6, -1.0, -0.8])
-            .castShadows(false) // TODO: re-enable shadows after Chrome 74
             .sunAngularRadius(1.9)
             .sunHaloSize(10.0)
             .sunHaloFalloff(80.0)
