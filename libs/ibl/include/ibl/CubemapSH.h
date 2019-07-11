@@ -52,6 +52,8 @@ public:
     static void renderSH(utils::JobSystem& js, Cubemap& cm,
             const std::unique_ptr<filament::math::float3[]>& sh, size_t numBands);
 
+    static void windowSH(std::unique_ptr<filament::math::float3[]>& sh, size_t numBands, float cutoff);
+
     /**
      * Compute spherical harmonics of the irradiance of the given cubemap.
      * The SH basis are pre-scaled for easier rendering by the shader. The resulting coefficients
@@ -76,8 +78,7 @@ private:
         return l * (l + 1) + m;
     }
 
-    static void computeShBasis(float* SHb, size_t numBands,
-            const filament::math::float3& s);
+    static void computeShBasis(float* SHb, size_t numBands, const filament::math::float3& s);
 
     static float Kml(ssize_t m, size_t l);
 
@@ -85,7 +86,9 @@ private:
 
     static constexpr float computeTruncatedCosSh(size_t l);
 
-    // debugging only...
+    static float sincWindow(size_t l, float w);
+
+        // debugging only...
     static float Legendre(ssize_t l, ssize_t m, float x);
     static float TSH(int l, int m, const filament::math::float3& d);
     static void printShBase(std::ostream& out, int l, int m);
