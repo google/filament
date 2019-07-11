@@ -200,6 +200,48 @@ void CubemapSH::computeShBasis(
     }
 }
 
+/*
+ * SH from environment with high dynamic range (or high frequencies -- high dynamic range creates
+ * high frequencies) exhibit "ringing" and negative values when reconstructed.
+ * To mitigate this, we need to low-pass the input image -- or equivalently window the SH by
+ * coefficient that tapper towards zero with the band.
+ *
+ * We use ideas and techniques from
+ *    Stupid Spherical Harmonics (SH)
+ *    Deringing Spherical Harmonics
+ * by Peter-Pike Sloan
+ *
+ */
+float CubemapSH::sincWindow(size_t l, float w) {
+    if (l == 0) {
+        return 1.0f;
+    } else if (l >= w) {
+        return 0.0f;
+    }
+
+    // we use a sinc window scaled to the desired window size in bands units
+    // a sinc window only has zonal harmonics
+    float x = (float(M_PI) * l) / w;
+    x = std::sin(x) / x;
+
+    // The convolution of a SH function f and a ZH function h is just the product of both
+    // scaled by 1 / K(0,l) -- the window coefficients include this scale factor.
+
+    // Taking the window to power N is equivalent to applying the filter N times
+    return std::pow(x, 4);
+}
+
+void CubemapSH::windowSH(std::unique_ptr<float3[]>& sh, size_t numBands, float cutoff) {
+    for (ssize_t l = 0; l < numBands; l++) {
+        float w = sincWindow(l, cutoff);
+        sh[SHindex(0, l)] *= w;
+        for (size_t m = 1; m <= l; m++) {
+            sh[SHindex(-m, l)] *= w;
+            sh[SHindex( m, l)] *= w;
+        }
+    }
+}
+
 std::unique_ptr<float3[]> CubemapSH::computeSH(JobSystem& js, const Cubemap& cm, size_t numBands, bool irradiance) {
 
     const size_t numCoefs = numBands * numBands;
