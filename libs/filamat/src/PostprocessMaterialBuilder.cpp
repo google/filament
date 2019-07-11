@@ -107,7 +107,7 @@ Package PostprocessMaterialBuilder::build() {
             metalEntry.variant = k;
 
             // Vertex Shader
-            std::string vs = ShaderPostProcessGenerator::createPostProcessVertexProgram(
+            std::string vs = ShaderPostProcessGenerator::createPostProcessVertexProgramOld(
                     shaderModel, targetApi, targetLanguage,
                     filament::PostProcessStage(k), firstSampler);
 
@@ -150,7 +150,7 @@ Package PostprocessMaterialBuilder::build() {
 #endif
 
             // Fragment Shader
-            std::string fs = ShaderPostProcessGenerator::createPostProcessFragmentProgram(
+            std::string fs = ShaderPostProcessGenerator::createPostProcessFragmentProgramOld(
                     shaderModel, targetApi, targetLanguage,
                     filament::PostProcessStage(k), firstSampler);
 

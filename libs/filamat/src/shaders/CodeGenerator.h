@@ -67,7 +67,7 @@ public:
 
     // generate the shader's main()
     utils::io::sstream& generateShaderMain(utils::io::sstream& out, ShaderType type) const;
-    utils::io::sstream& generatePostProcessMain(utils::io::sstream& out, ShaderType type,
+    utils::io::sstream& generatePostProcessMainOld(utils::io::sstream& out, ShaderType type,
             filament::PostProcessStage variant) const;
 
     // generate the shader's code for the lit shading model

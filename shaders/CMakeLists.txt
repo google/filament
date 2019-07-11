@@ -36,8 +36,8 @@ set(SHADERS
         src/main.vs
         src/material_inputs.fs
         src/material_inputs.vs
-        src/post_process.fs
-        src/post_process.vs
+        src/post_process_old.fs
+        src/post_process_old.vs
         src/shading_lit.fs
         src/shading_model_cloth.fs
         src/shading_model_standard.fs
