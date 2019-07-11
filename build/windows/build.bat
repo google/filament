@@ -27,9 +27,7 @@ cmake --version
 
 cd github\filament
 
-:: If this is a continuous or release build, build all Filament static library
-:: variants (/MD, /MDd, /MT, /MTd)
-if "%KOKORO_JOB_TYPE%" == "CONTINUOUS_INTEGRATION" (set FILAMENT_BUILD_ALL_VARIANTS=1)
+:: If this is a release build, build all Filament static library variants (/MD, /MDd, /MT, /MTd)
 if "%KOKORO_JOB_TYPE%" == "RELEASE" (set FILAMENT_BUILD_ALL_VARIANTS=1)
 
 if "%FILAMENT_BUILD_ALL_VARIANTS%" == "1" (
