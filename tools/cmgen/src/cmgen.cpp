@@ -82,7 +82,7 @@ static float g_sh_window = 0.0f;
 static bool g_noclamp = false;
 static ShFile g_sh_file = ShFile::SH_NONE;
 static utils::Path g_sh_filename;
-static std::unique_ptr<filament::math::float3[]> g_coefficients;
+static std::unique_ptr<filament::math::float3[]> g_sh_coefficients;
 
 static bool g_is_mipmap = false;
 static utils::Path g_is_mipmap_dir;
@@ -696,7 +696,7 @@ void sphericalHarmonics(utils::JobSystem& js, const utils::Path& iname, const Cu
         sh = CubemapSH::computeSH(js, inputCubemap, g_sh_compute, g_sh_irradiance);
     }
 
-    if (g_sh_window) {
+    if (g_sh_window > 0) {
         CubemapSH::windowSH(sh, g_sh_compute, g_sh_window);
     }
 
@@ -749,7 +749,8 @@ void sphericalHarmonics(utils::JobSystem& js, const utils::Path& iname, const Cu
             }
 
             { // save a file with the "other one" (irradiance or radiance)
-                sh = CubemapSH::computeSH(js, inputCubemap, g_sh_compute, !g_sh_irradiance);
+                std::unique_ptr<filament::math::float3[]> sh
+                    = CubemapSH::computeSH(js, inputCubemap, g_sh_compute, !g_sh_irradiance);
                 CubemapSH::renderSH(js, cm, sh, g_sh_compute);
                 std::string basename = iname.getNameWithoutExtension();
                 utils::Path filePath =
@@ -759,7 +760,7 @@ void sphericalHarmonics(utils::JobSystem& js, const utils::Path& iname, const Cu
         }
     }
     // Stash the computed coefficients in case we need to use them at a later stage (e.g. KTX gen)
-    g_coefficients = std::move(sh);
+    g_sh_coefficients = std::move(sh);
 }
 
 void outputSh(std::ostream& out,
@@ -956,11 +957,11 @@ void iblRoughnessPrefilter(utils::JobSystem& js, const utils::Path& iname,
     }
 
     if (g_type == OutputType::KTX) {
-        if (g_coefficients) {
+        if (g_sh_coefficients) {
             std::ostringstream sstr;
             for (ssize_t l = 0; l < g_sh_compute; l++) {
                 for (ssize_t m = -l; m <= l; m++) {
-                    auto v = g_coefficients[CubemapSH::getShIndex(m, (size_t) l)];
+                    auto v = g_sh_coefficients[CubemapSH::getShIndex(m, (size_t) l)];
                     sstr << v.r << " " << v.g << " " << v.b << "\n";
                 }
             }
