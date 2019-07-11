@@ -41,9 +41,10 @@ class CubemapSH {
 public:
     /**
      * Spherical Harmonics decomposition of the given cubemap
+     * Optionally calculates irradiance by convolving with truncated cos.
      */
-    static std::unique_ptr<filament::math::float3[]> computeSH(utils::JobSystem& js, const Cubemap& cm, size_t numBands,
-            bool irradiance);
+    static std::unique_ptr<filament::math::float3[]> computeSH(
+            utils::JobSystem& js, const Cubemap& cm, size_t numBands, bool irradiance);
 
     /**
      * Render given spherical harmonics into a cubemap
@@ -53,9 +54,12 @@ public:
 
     /**
      * Compute spherical harmonics of the irradiance of the given cubemap.
-     * The SH basis are pre-scaled for easier rendering
+     * The SH basis are pre-scaled for easier rendering by the shader. The resulting coefficients
+     * are not spherical harmonics (as they're scalled by various factors). In particular they
+     * cannot be rendered with renderSH() above. Instead use renderPreScaledSH3Bands() which
+     * is exactly the code ran by our shader.
      */
-    static std::unique_ptr<filament::math::float3[]> computeIrradianceSH3Bands(utils::JobSystem& js, const Cubemap& cm);
+    static void preprocessSHForShader(std::unique_ptr<filament::math::float3[]>& sh);
 
     /**
      * Render pre-scaled irrandiance SH
@@ -63,23 +67,23 @@ public:
     static void renderPreScaledSH3Bands(utils::JobSystem& js, Cubemap& cm,
             const std::unique_ptr<filament::math::float3[]>& sh);
 
-    static size_t getShIndex(ssize_t m, size_t l) {
+    static constexpr size_t getShIndex(ssize_t m, size_t l) {
         return SHindex(m, l);
     }
 
 private:
-    static inline size_t SHindex(ssize_t m, size_t l) {
+    static inline constexpr size_t SHindex(ssize_t m, size_t l) {
         return l * (l + 1) + m;
     }
 
-    static void computeShBasis(
-            float* SHb,
-            size_t numBands,
+    static void computeShBasis(float* SHb, size_t numBands,
             const filament::math::float3& s);
 
     static float Kml(ssize_t m, size_t l);
 
-    static float computeTruncatedCosSh(size_t l);
+    static std::vector<float> Ki(size_t numBands);
+
+    static constexpr float computeTruncatedCosSh(size_t l);
 
     // debugging only...
     static float Legendre(ssize_t l, ssize_t m, float x);
