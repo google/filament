@@ -6,6 +6,7 @@ A new header is inserted each time a *tag* is created.
 - Introduced custom attributes, accessible from the vertex shader.
 - Added Java / Kotlin bindings for KtxLoader.
 - Added JavaScript / Typescript bindings for the new `RenderTarget` class.
+- Added base path to glTF loadResources method for JavaScript.
 
 ## sceneform-1.9pr4
 
