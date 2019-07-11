@@ -662,7 +662,7 @@ void generateMipmaps(utils::JobSystem& js, std::vector<Cubemap>& levels,
     size_t dim = base.getDimensions();
     size_t mipLevel = 0;
     while (dim > 1) {
-        dim >>= 1;
+        dim >>= 1u;
         Cubemap dst = CubemapUtils::create(temp, dim);
         const Cubemap& src(levels[mipLevel++]);
         CubemapUtils::downsampleCubemapLevelBoxFilter(js, dst, src);
@@ -675,7 +675,8 @@ void generateMipmaps(utils::JobSystem& js, std::vector<Cubemap>& levels,
 void sphericalHarmonics(utils::JobSystem& js, const utils::Path& iname, const Cubemap& inputCubemap) {
     std::unique_ptr<filament::math::float3[]> sh;
     if (g_sh_shader) {
-        sh = CubemapSH::computeIrradianceSH3Bands(js, inputCubemap);
+        sh = CubemapSH::computeSH(js, inputCubemap, 3, true);
+        CubemapSH::preprocessSHForShader(sh);
     } else {
         sh = CubemapSH::computeSH(js, inputCubemap, g_sh_compute, g_sh_irradiance);
     }

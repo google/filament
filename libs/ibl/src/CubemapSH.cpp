@@ -39,7 +39,7 @@ namespace ibl {
 /*
  * returns n! / d!
  */
-static float factorial(size_t n, size_t d = 1) {
+static constexpr float factorial(size_t n, size_t d = 1) {
    d = std::max(size_t(1), d);
    n = std::max(size_t(1), n);
    float r = 1.0;
@@ -65,22 +65,35 @@ static float factorial(size_t n, size_t d = 1) {
  *  returns sqrt((2*l + 1) / 4*pi) * sqrt( (l-|m|)! / (l+|m|)! )
  */
 float CubemapSH::Kml(ssize_t m, size_t l) {
-    m = std::abs(m);
-    const float K = (2*l + 1) * factorial(size_t(l-m), size_t(l+m));
+    m = m < 0 ? -m : m;  // abs() is not constexpr
+    const float K = (2 * l + 1) * factorial(size_t(l - m), size_t(l + m));
     return std::sqrt(K) * (M_2_SQRTPI * 0.25);
 }
 
+std::vector<float> CubemapSH::Ki(size_t numBands) {
+    const size_t numCoefs = numBands * numBands;
+    std::vector<float> K(numCoefs);
+    for (size_t l = 0; l < numBands; l++) {
+        K[SHindex(0, l)] = Kml(0, l);
+        for (size_t m = 1; m <= l; m++) {
+            K[SHindex(m, l)] =
+            K[SHindex(-m, l)] = M_SQRT2 * Kml(m, l);
+        }
+    }
+    return K;
+}
+
 // < cos(theta) > SH coefficients pre-multiplied by 1 / K(0,l)
-float CubemapSH::computeTruncatedCosSh(size_t l) {
+constexpr float CubemapSH::computeTruncatedCosSh(size_t l) {
     if (l == 0) {
         return M_PI;
     } else if (l == 1) {
         return 2 * M_PI / 3;
-    } else if (l & 1) {
+    } else if (l & 1u) {
         return 0;
     }
     const size_t l_2 = l / 2;
-    float A0 = ((l_2 & 1) ? 1.0f : -1.0f) / ((l + 2) * (l - 1));
+    float A0 = ((l_2 & 1u) ? 1.0f : -1.0f) / ((l + 2) * (l - 1));
     float A1 = factorial(l, l_2) / (factorial(l_2) * (1 << l));
     return 2 * M_PI * A0 * A1;
 }
@@ -189,7 +202,7 @@ void CubemapSH::computeShBasis(
 
 std::unique_ptr<float3[]> CubemapSH::computeSH(JobSystem& js, const Cubemap& cm, size_t numBands, bool irradiance) {
 
-    const size_t numCoefs = numBands*numBands;
+    const size_t numCoefs = numBands * numBands;
     std::unique_ptr<float3[]> SH(new float3[numCoefs]{});
 
     struct State {
@@ -233,48 +246,48 @@ std::unique_ptr<float3[]> CubemapSH::computeSH(JobSystem& js, const Cubemap& cm,
     }, prototype);
 
     // precompute the scaling factor K
-    for (size_t l = 0; l < numBands; l++) {
-        const float truncatedCosSh = irradiance ? (computeTruncatedCosSh(size_t(l)) * M_1_PI) : 1;
-        float K = Kml(0, l);
-        SH[SHindex(0, l)] *= K * truncatedCosSh;
-        for (size_t m = 1; m <= l; m++) {
-            K = M_SQRT2 * Kml(m, l);
-            SH[SHindex(-m, l)] *= K * truncatedCosSh;
-            SH[SHindex( m, l)] *= K * truncatedCosSh;
+    std::vector<float> K = Ki(numBands);
+
+    // apply truncated cos (irradiance)
+    if (irradiance) {
+        for (size_t l = 0; l < numBands; l++) {
+            const float truncatedCosSh = computeTruncatedCosSh(size_t(l));
+            K[SHindex(0, l)] *= truncatedCosSh;
+            for (size_t m = 1; m <= l; m++) {
+                K[SHindex(-m, l)] *= truncatedCosSh;
+                K[SHindex( m, l)] *= truncatedCosSh;
+            }
         }
     }
 
+    // apply all the scale factors
+    for (size_t i = 0; i < numCoefs; i++) {
+        SH[i] *= K[i];
+    }
     return SH;
 }
 
 void CubemapSH::renderSH(JobSystem& js, Cubemap& cm,
-        const std::unique_ptr<float3[]>& sh, size_t numBands)
-{
-    const size_t numCoefs = numBands*numBands;
-    std::vector<float> K(numCoefs);
+        const std::unique_ptr<float3[]>& sh, size_t numBands) {
+    const size_t numCoefs = numBands * numBands;
+
     // precompute the scaling factor K
-    for (size_t l=0 ; l<numBands ; l++) {
-        K[SHindex(0, l)] = Kml(0, l);
-        for (size_t m=1 ; m<=l ; m++) {
-            K[SHindex( m, l)] =
-            K[SHindex(-m, l)] = M_SQRT2 * Kml(m, l);
-        }
-    }
+    const std::vector<float> K = Ki(numBands);
 
     CubemapUtils::process<CubemapUtils::EmptyState>(cm, js,
             [&](CubemapUtils::EmptyState&, size_t y,
                     Cubemap::Face f, Cubemap::Texel* data, size_t dim) {
-       std::vector<float> SHb(numCoefs);
-        for (size_t x=0 ; x<dim ; ++x, ++data) {
-            float3 s(cm.getDirectionFor(f, x, y));
-            computeShBasis(SHb.data(), numBands, s);
-            float3 c = 0;
-            for (size_t i=0 ; i<numCoefs ; i++) {
-                c += sh[i] * (K[i] * SHb[i]);
-            }
-            Cubemap::writeAt(data, Cubemap::Texel(c));
-        }
-    });
+                std::vector<float> SHb(numCoefs);
+                for (size_t x = 0; x < dim; ++x, ++data) {
+                    float3 s(cm.getDirectionFor(f, x, y));
+                    computeShBasis(SHb.data(), numBands, s);
+                    float3 c = 0;
+                    for (size_t i = 0; i < numCoefs; i++) {
+                        c += sh[i] * (K[i] * SHb[i]);
+                    }
+                    Cubemap::writeAt(data, Cubemap::Texel(c));
+                }
+            });
 }
 
 /*
@@ -282,81 +295,69 @@ void CubemapSH::renderSH(JobSystem& js, Cubemap& cm,
  * truncated cos(theta) (i.e.: saturate(s.z)), pre-scaled by the reconstruction
  * factors.
  */
-std::unique_ptr<float3[]> CubemapSH::computeIrradianceSH3Bands(JobSystem& js, const Cubemap& cm) {
+void CubemapSH::preprocessSHForShader(std::unique_ptr<filament::math::float3[]>& SH) {
+    constexpr size_t numBands = 3;
+    constexpr size_t numCoefs = numBands * numBands;
 
-    const size_t numCoefs = 9;
+    // Coefficient for the polynomial form of the SH functions -- these were taken from
+    // "Stupid Spherical Harmonics (SH)" by Peter-Pike Sloan
+    // They simply come for expanding the computation of each SH function.
+    //
+    // To render spherical harmonics we can use the polynomial form, like this:
+    //          c += sh[0] * A[0];
+    //          c += sh[1] * A[1] * s.y;
+    //          c += sh[2] * A[2] * s.z;
+    //          c += sh[3] * A[3] * s.x;
+    //          c += sh[4] * A[4] * s.y * s.x;
+    //          c += sh[5] * A[5] * s.y * s.z;
+    //          c += sh[6] * A[6] * (3 * s.z * s.z - 1);
+    //          c += sh[7] * A[7] * s.z * s.x;
+    //          c += sh[8] * A[8] * (s.x * s.x - s.y * s.y);
+    //
+    // To save math in the shader, we pre-multiply our SH coefficient by the A[i] factors.
+    // Additionally, we include the lambertian diffuse BRDF 1/pi.
 
-    std::unique_ptr<float3[]> SH(new float3[numCoefs]{});
-    std::unique_ptr<float[]> A(new float[numCoefs]{});
-
-    const float c0 = computeTruncatedCosSh(0);
-    const float c1 = computeTruncatedCosSh(1);
-    const float c2 = computeTruncatedCosSh(2);
-    A[0] = (M_1_PI * M_1_PI / 4)       * c0;
-    A[1] = (M_1_PI * M_1_PI / 4) * 3   * c1;
-    A[2] = (M_1_PI * M_1_PI / 4) * 3   * c1;
-    A[3] = (M_1_PI * M_1_PI / 4) * 3   * c1;
-    A[4] = (M_1_PI * M_1_PI / 4) * 15  * c2;
-    A[5] = (M_1_PI * M_1_PI / 4) * 15  * c2;
-    A[6] = (M_1_PI * M_1_PI /16) * 5   * c2;
-    A[7] = (M_1_PI * M_1_PI / 4) * 15  * c2;
-    A[8] = (M_1_PI * M_1_PI /16) * 15  * c2;
-
-    struct State {
-        float3 SH[9] = { };
+    constexpr float M_SQRT_PI = 1.7724538509f;
+    constexpr float M_SQRT_3  = 1.7320508076f;
+    constexpr float M_SQRT_5  = 2.2360679775f;
+    constexpr float M_SQRT_15 = 3.8729833462f;
+    constexpr float A[numCoefs] = {
+                  1.0f / (2.0f * M_SQRT_PI),    // 0  0
+            -M_SQRT_3  / (2.0f * M_SQRT_PI),    // 1 -1
+             M_SQRT_3  / (2.0f * M_SQRT_PI),    // 1  0
+            -M_SQRT_3  / (2.0f * M_SQRT_PI),    // 1  1
+             M_SQRT_15 / (2.0f * M_SQRT_PI),    // 2 -2
+            -M_SQRT_15 / (2.0f * M_SQRT_PI),    // 3 -1
+             M_SQRT_5  / (4.0f * M_SQRT_PI),    // 3  0
+            -M_SQRT_15 / (2.0f * M_SQRT_PI),    // 3  1
+             M_SQRT_15 / (4.0f * M_SQRT_PI)     // 3  2
     };
 
-    CubemapUtils::process<State>(const_cast<Cubemap&>(cm), js,
-            [&](State& state, size_t y, Cubemap::Face f, Cubemap::Texel const* data, size_t dim) {
-        for (size_t x=0 ; x<dim ; ++x, ++data) {
-
-            float3 s(cm.getDirectionFor(f, x, y));
-
-            // sample a color
-            float3 color(Cubemap::sampleAt(data));
-
-            // take solid angle into account
-            color *= CubemapUtils::solidAngle(dim, x, y);
-
-            state.SH[0] += color * A[0];
-            state.SH[1] += color * A[1] * s.y;
-            state.SH[2] += color * A[2] * s.z;
-            state.SH[3] += color * A[3] * s.x;
-            state.SH[4] += color * A[4] * s.y * s.x;
-            state.SH[5] += color * A[5] * s.y * s.z;
-            state.SH[6] += color * A[6] * (3 * s.z * s.z - 1);
-            state.SH[7] += color * A[7] * s.z * s.x;
-            state.SH[8] += color * A[8] * (s.x * s.x - s.y * s.y);
-        }
-    },
-    [&](State& state) {
-        for (size_t i=0 ; i<numCoefs ; i++) {
-            SH[i] += state.SH[i];
-        }
-    });
-
-    return SH;
+    for (size_t i = 0; i < numCoefs; i++) {
+        SH[i] *= A[i] * M_1_PI;
+    }
 }
 
 void CubemapSH::renderPreScaledSH3Bands(JobSystem& js,
         Cubemap& cm, const std::unique_ptr<filament::math::float3[]>& sh) {
     CubemapUtils::process<CubemapUtils::EmptyState>(cm, js,
-            [&](CubemapUtils::EmptyState&, size_t y, Cubemap::Face f, Cubemap::Texel* data, size_t dim) {
-        for (size_t x=0 ; x<dim ; ++x, ++data) {
-            float3 s(cm.getDirectionFor(f, x, y));
-            float3 c = 0;
-            c += sh[0];
-            c += sh[1] * s.y;
-            c += sh[2] * s.z;
-            c += sh[3] * s.x;
-            c += sh[4] * s.y * s.x;
-            c += sh[5] * s.y * s.z;
-            c += sh[6] * (3 * s.z * s.z - 1);
-            c += sh[7] * s.z * s.x;
-            c += sh[8] * (s.x * s.x - s.y * s.y);
-            Cubemap::writeAt(data, Cubemap::Texel(c));
-        }
-    });
+            [&](CubemapUtils::EmptyState&, size_t y, Cubemap::Face f, Cubemap::Texel* data,
+                    size_t dim) {
+                for (size_t x = 0; x < dim; ++x, ++data) {
+                    float3 s(cm.getDirectionFor(f, x, y));
+                    float3 c = 0;
+                    c += sh[0];
+                    c += sh[1] * s.y;
+                    c += sh[2] * s.z;
+                    c += sh[3] * s.x;
+                    c += sh[4] * s.y * s.x;
+                    c += sh[5] * s.y * s.z;
+                    c += sh[6] * (3 * s.z * s.z - 1);
+                    c += sh[7] * s.z * s.x;
+                    c += sh[8] * (s.x * s.x - s.y * s.y);
+                    Cubemap::writeAt(data, Cubemap::Texel(c));
+                }
+            });
 }
 
 // -----------------------------------------------------------------------------------------------
