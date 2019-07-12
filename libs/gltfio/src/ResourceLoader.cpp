@@ -108,7 +108,8 @@ static void importSkinningData(Skin& dstSkin, const cgltf_skin& srcSkin) {
     dstSkin.inverseBindMatrices.resize(srcSkin.joints_count);
     if (srcMatrices) {
         auto dstMatrices = (uint8_t*) dstSkin.inverseBindMatrices.data();
-        auto srcBuffer = srcMatrices->buffer_view->buffer->data;
+        uint8_t* bytes = (uint8_t*) srcMatrices->buffer_view->buffer->data;
+        auto srcBuffer = (void*) (bytes + srcMatrices->offset + srcMatrices->buffer_view->offset);
         memcpy(dstMatrices, srcBuffer, srcSkin.joints_count * sizeof(mat4f));
     }
 }
