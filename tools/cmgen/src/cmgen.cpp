@@ -745,6 +745,7 @@ void sphericalHarmonics(utils::JobSystem& js, const utils::Path& iname, const Cu
                 std::string basename = iname.getNameWithoutExtension();
                 utils::Path filePath =
                         outputDir + (basename + "_sh" + (g_sh_irradiance ? "_i" : "_r") + ".hdr");
+                CubemapUtils::highlight(image);
                 saveImage(filePath, ImageEncoder::Format::HDR, image, "");
             }
 
@@ -755,6 +756,7 @@ void sphericalHarmonics(utils::JobSystem& js, const utils::Path& iname, const Cu
                 std::string basename = iname.getNameWithoutExtension();
                 utils::Path filePath =
                         outputDir + (basename + "_sh" + (!g_sh_irradiance ? "_i" : "_r") + ".hdr");
+                CubemapUtils::highlight(image);
                 saveImage(filePath, ImageEncoder::Format::HDR, image, "");
             }
         }

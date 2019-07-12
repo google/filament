@@ -57,6 +57,19 @@ void CubemapUtils::clamp(Image& src) {
     }
 }
 
+void CubemapUtils::highlight(Image& src) {
+    const size_t width = src.getWidth();
+    const size_t height = src.getHeight();
+    for (size_t y=0 ; y<height ; ++y) {
+        for (size_t x = 0; x < width; ++x) {
+            float3& c = *static_cast<float3*>(src.getPixelRef(x, y));
+            if (min(c) < 0.0f) {
+                c = { 1, 0, 1 };
+            }
+        }
+    }
+}
+
 void CubemapUtils::equirectangularToCubemap(JobSystem& js, Cubemap& dst, const Image& src) {
     const size_t width = src.getWidth();
     const size_t height = src.getHeight();

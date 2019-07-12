@@ -78,6 +78,8 @@ public:
     //! clamps image to acceptable range
     static void clamp(Image& src);
 
+    static void highlight(Image& src);
+
     //! Downsamples a cubemap by helf in x and y using a box filter
     static void downsampleCubemapLevelBoxFilter(utils::JobSystem& js, Cubemap& dst, const Cubemap& src);
 
