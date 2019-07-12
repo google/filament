@@ -20,6 +20,8 @@
 
 #include <details/Texture.h> // for FTexture::getFormatSize
 
+#include "private/backend/BackendUtils.h"
+
 #include <utils/Panic.h>
 #include <utils/trap.h>
 
@@ -303,7 +305,7 @@ MetalTexture::MetalTexture(MetalContext& context, backend::SamplerType target, u
     const TextureFormat reshapedFormat = reshaper.getReshapedFormat();
     const MTLPixelFormat pixelFormat = decidePixelFormat(context.device, reshapedFormat);
 
-    bytesPerPixel = static_cast<uint8_t>(details::FTexture::getFormatSize(reshapedFormat));
+    bytesPerPixel = static_cast<uint8_t>(getFormatSize(reshapedFormat));
 
     ASSERT_POSTCONDITION(pixelFormat != MTLPixelFormatInvalid, "Pixel format not supported.");
 
