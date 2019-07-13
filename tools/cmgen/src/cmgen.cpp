@@ -78,8 +78,8 @@ static size_t g_sh_compute = 0;
 static bool g_sh_output = false;
 static bool g_sh_shader = false;
 static bool g_sh_irradiance = false;
-static float g_sh_window = 0.0f;
-static bool g_noclamp = false;
+static float g_sh_window = 0.0f; // <0 none, 0=auto, or cutoff
+static bool g_noclamp = true;
 static ShFile g_sh_file = ShFile::SH_NONE;
 static utils::Path g_sh_filename;
 static std::unique_ptr<filament::math::float3[]> g_sh_coefficients;
@@ -209,10 +209,10 @@ static void printUsage(char* name) {
             "       SH output format. The filename extension determines the output format\n\n"
             "   --sh-irradiance, -i\n"
             "       Irradiance SH coefficients\n\n"
-            "   --sh-window=cutoff, -w cutoff\n"
+            "   --sh-window=cutoff|no|auto (default), -w cutoff|no|auto (default)\n"
             "       SH windowing to reduce ringing\n\n"
-            "   --noclamp\n"
-            "       Don't clamp environment before processing\n\n"
+            "   --clamp\n"
+            "       Clamp environment before processing\n\n"
             "   --debug, -d\n"
             "       Generate extra data for debugging\n\n"
     );
@@ -246,7 +246,7 @@ static int handleCommandLineArgments(int argc, char* argv[]) {
             { "sh-irradiance",              no_argument, nullptr, 'i' },
             { "sh-shader",                  no_argument, nullptr, 'b' },
             { "sh-window",            required_argument, nullptr, 'w' },
-            { "noclamp",                    no_argument, nullptr, 'K' },
+            { "clamp",                      no_argument, nullptr, 'K' },
             { "ibl-is-mipmap",        required_argument, nullptr, 'y' },
             { "ibl-ld",               required_argument, nullptr, 'p' },
             { "ibl-irradiance",       required_argument, nullptr, 'P' },
@@ -361,10 +361,12 @@ static int handleCommandLineArgments(int argc, char* argv[]) {
                 }
                 break;
             case 'w':
-                g_sh_window = std::stof(arg);
+                if (arg == "auto") { g_sh_window = 0.0f; }
+                else if (arg == "no") { g_sh_window = -1.0f; }
+                else { g_sh_window = std::stof(arg); }
                 break;
             case 'K':
-                g_noclamp = true;
+                g_noclamp = false;
                 break;
             case 'i':
                 g_sh_compute = 1;
@@ -696,7 +698,7 @@ void sphericalHarmonics(utils::JobSystem& js, const utils::Path& iname, const Cu
         sh = CubemapSH::computeSH(js, inputCubemap, g_sh_compute, g_sh_irradiance);
     }
 
-    if (g_sh_window > 0) {
+    if (g_sh_window >= 0) {
         CubemapSH::windowSH(sh, g_sh_compute, g_sh_window);
     }
 
