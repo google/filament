@@ -386,6 +386,10 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
 }
 
 bool MaterialBuilder::findProperties() noexcept {
+    if (mMaterialDomain != MaterialDomain::SURFACE) {
+        return true;
+    }
+
 #ifndef FILAMAT_LITE
     using namespace filament::backend;
     GLSLTools glslTools;
@@ -428,11 +432,11 @@ bool MaterialBuilder::runSemanticAnalysis() noexcept {
     ShaderModel model = static_cast<ShaderModel>(params.shaderModel);
 
     std::string shaderCode = peek(ShaderType::VERTEX, params, mProperties);
-    bool result = glslTools.analyzeVertexShader(shaderCode, model, targetApi);
+    bool result = glslTools.analyzeVertexShader(shaderCode, model, mMaterialDomain, targetApi);
     if (!result) return false;
 
     shaderCode = peek(ShaderType::FRAGMENT, params, mProperties);
-    result = glslTools.analyzeFragmentShader(shaderCode, model, targetApi);
+    result = glslTools.analyzeFragmentShader(shaderCode, model, mMaterialDomain, targetApi);
     return result;
 #else
     return true;
@@ -642,7 +646,9 @@ Package MaterialBuilder::build() noexcept {
     }
 
     // Generate all shaders and write the shader chunks.
-    auto variants = determineSurfaceVariants(mVariantFilter, isLit(), mShadowMultiplier);
+    const auto variants = mMaterialDomain == MaterialDomain::SURFACE ?
+        determineSurfaceVariants(mVariantFilter, isLit(), mShadowMultiplier) :
+        determinePostProcessVariants();
     bool success = generateShaders(variants, container, info);
 
     // Flatten all chunks in the container into a Package.
