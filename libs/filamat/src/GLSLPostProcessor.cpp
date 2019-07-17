@@ -136,6 +136,30 @@ void SpvToMsl(const SpirvBlob* spirv, std::string* outMsl) {
     mslCompiler.set_msl_options(CompilerMSL::Options {
         .msl_version = CompilerMSL::Options::make_msl_version(1, 1)
     });
+
+    auto executionModel = mslCompiler.get_execution_model();
+
+    auto duplicateResourceBinding = [executionModel, &mslCompiler](const auto& resource) {
+        auto set = mslCompiler.get_decoration(resource.id, spv::DecorationDescriptorSet);
+        auto binding = mslCompiler.get_decoration(resource.id, spv::DecorationBinding);
+        MSLResourceBinding newBinding;
+        newBinding.stage = executionModel;
+        newBinding.desc_set = set;
+        newBinding.binding = binding;
+        newBinding.msl_texture = binding;
+        newBinding.msl_sampler = binding;
+        newBinding.msl_buffer = binding;
+        mslCompiler.add_msl_resource_binding(newBinding);
+    };
+
+    auto resources = mslCompiler.get_shader_resources();
+    for (const auto& resource : resources.sampled_images) {
+        duplicateResourceBinding(resource);
+    }
+    for (const auto& resource : resources.uniform_buffers) {
+        duplicateResourceBinding(resource);
+    }
+
     *outMsl = mslCompiler.compile();
 }
 
