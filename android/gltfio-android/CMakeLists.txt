@@ -42,6 +42,14 @@ add_library(gltfio_resources SHARED IMPORTED)
 set_target_properties(gltfio_resources PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libgltfio_resources.a)
 
+add_library(bluevk SHARED IMPORTED)
+set_target_properties(bluevk PROPERTIES IMPORTED_LOCATION
+        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libbluevk.a)
+
+add_library(smol-v SHARED IMPORTED)
+set_target_properties(smol-v PROPERTIES IMPORTED_LOCATION
+        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libsmol-v.a)
+
 include_directories(${FILAMENT_DIR}/include
         ..
         ../../libs/utils/include)
@@ -87,3 +95,7 @@ target_link_libraries(gltfio-jni
         m
         log
 )
+
+if (FILAMENT_SUPPORTS_VULKAN)
+    target_link_libraries(gltfio-jni bluevk smol-v)
+endif()
