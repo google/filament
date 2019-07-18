@@ -34,6 +34,15 @@ namespace math {
 namespace details {
 // -------------------------------------------------------------------------------------
 
+template<typename U>
+inline constexpr U min(U a, U b) noexcept {
+    return a < b ? a : b;
+}
+template<typename U>
+inline constexpr U max(U a, U b) noexcept {
+    return a > b ? a : b;
+}
+
 /*
  * No user serviceable parts here.
  *
@@ -56,15 +65,16 @@ public:
      * element type.
      */
     template<typename OTHER>
-    constexpr VECTOR<T>& operator +=(const VECTOR<OTHER>& v) {
+    constexpr VECTOR<T>& operator+=(const VECTOR<OTHER>& v) {
         VECTOR<T>& lhs = static_cast<VECTOR<T>&>(*this);
         for (size_t i = 0; i < lhs.size(); i++) {
             lhs[i] += v[i];
         }
         return lhs;
     }
+
     template<typename OTHER>
-    constexpr VECTOR<T>& operator -=(const VECTOR<OTHER>& v) {
+    constexpr VECTOR<T>& operator-=(const VECTOR<OTHER>& v) {
         VECTOR<T>& lhs = static_cast<VECTOR<T>&>(*this);
         for (size_t i = 0; i < lhs.size(); i++) {
             lhs[i] -= v[i];
@@ -77,14 +87,15 @@ public:
      * like "vector *= scalar" by letting the compiler implicitly convert a scalar
      * to a vector (assuming the BASE<T> allows it).
      */
-    constexpr VECTOR<T>& operator +=(const VECTOR<T>& v) {
+    constexpr VECTOR<T>& operator+=(const VECTOR<T>& v) {
         VECTOR<T>& lhs = static_cast<VECTOR<T>&>(*this);
         for (size_t i = 0; i < lhs.size(); i++) {
             lhs[i] += v[i];
         }
         return lhs;
     }
-    constexpr VECTOR<T>& operator -=(const VECTOR<T>& v) {
+
+    constexpr VECTOR<T>& operator-=(const VECTOR<T>& v) {
         VECTOR<T>& lhs = static_cast<VECTOR<T>&>(*this);
         for (size_t i = 0; i < lhs.size(); i++) {
             lhs[i] -= v[i];
@@ -137,15 +148,16 @@ public:
      * element type.
      */
     template<typename OTHER>
-    constexpr VECTOR<T>& operator *=(const VECTOR<OTHER>& v) {
+    constexpr VECTOR<T>& operator*=(const VECTOR<OTHER>& v) {
         VECTOR<T>& lhs = static_cast<VECTOR<T>&>(*this);
         for (size_t i = 0; i < lhs.size(); i++) {
             lhs[i] *= v[i];
         }
         return lhs;
     }
+
     template<typename OTHER>
-    constexpr VECTOR<T>& operator /=(const VECTOR<OTHER>& v) {
+    constexpr VECTOR<T>& operator/=(const VECTOR<OTHER>& v) {
         VECTOR<T>& lhs = static_cast<VECTOR<T>&>(*this);
         for (size_t i = 0; i < lhs.size(); i++) {
             lhs[i] /= v[i];
@@ -158,14 +170,15 @@ public:
      * like "vector *= scalar" by letting the compiler implicitly convert a scalar
      * to a vector (assuming the BASE<T> allows it).
      */
-    constexpr VECTOR<T>& operator *=(const VECTOR<T>& v) {
+    constexpr VECTOR<T>& operator*=(const VECTOR<T>& v) {
         VECTOR<T>& lhs = static_cast<VECTOR<T>&>(*this);
         for (size_t i = 0; i < lhs.size(); i++) {
             lhs[i] *= v[i];
         }
         return lhs;
     }
-    constexpr VECTOR<T>& operator /=(const VECTOR<T>& v) {
+
+    constexpr VECTOR<T>& operator/=(const VECTOR<T>& v) {
         VECTOR<T>& lhs = static_cast<VECTOR<T>&>(*this);
         for (size_t i = 0; i < lhs.size(); i++) {
             lhs[i] /= v[i];
@@ -185,12 +198,13 @@ public:
      * but of a different element type.
      */
     template<typename RT>
-    friend inline constexpr VECTOR<T> MATH_PURE operator *(VECTOR<T> lv, const VECTOR<RT>& rv) {
+    friend inline constexpr VECTOR<T> MATH_PURE operator*(VECTOR<T> lv, const VECTOR<RT>& rv) {
         // don't pass lv by reference because we need a copy anyways
         return lv *= rv;
     }
+
     template<typename RT>
-    friend inline constexpr VECTOR<T> MATH_PURE operator /(VECTOR<T> lv, const VECTOR<RT>& rv) {
+    friend inline constexpr VECTOR<T> MATH_PURE operator/(VECTOR<T> lv, const VECTOR<RT>& rv) {
         // don't pass lv by reference because we need a copy anyways
         return lv /= rv;
     }
@@ -201,11 +215,12 @@ public:
      * letting the compiler implicitly convert a scalar to a vector (assuming
      * the BASE<T> allows it).
      */
-    friend inline constexpr VECTOR<T> MATH_PURE operator *(VECTOR<T> lv, const VECTOR<T>& rv) {
+    friend inline constexpr VECTOR<T> MATH_PURE operator*(VECTOR<T> lv, const VECTOR<T>& rv) {
         // don't pass lv by reference because we need a copy anyways
         return lv *= rv;
     }
-    friend inline constexpr VECTOR<T> MATH_PURE operator /(VECTOR<T> lv, const VECTOR<T>& rv) {
+
+    friend inline constexpr VECTOR<T> MATH_PURE operator/(VECTOR<T> lv, const VECTOR<T>& rv) {
         // don't pass lv by reference because we need a copy anyways
         return lv /= rv;
     }
@@ -223,8 +238,8 @@ public:
 template<template<typename T> class VECTOR, typename T>
 class TVecUnaryOperators {
 public:
-    VECTOR<T> operator -() const {
-        VECTOR<T> r;
+    constexpr VECTOR<T> operator -() const {
+        VECTOR<T> r{};
         VECTOR<T> const& rv(static_cast<VECTOR<T> const&>(*this));
         for (size_t i = 0; i < r.size(); i++) {
             r[i] = -rv[i];
@@ -252,26 +267,28 @@ public:
      * (the first one, BASE<T> being known).
      */
     template<typename RT>
-    friend inline
-    bool MATH_PURE operator ==(const VECTOR<T>& lv, const VECTOR<RT>& rv) {
+    friend inline constexpr
+    bool MATH_PURE operator==(const VECTOR<T>& lv, const VECTOR<RT>& rv) {
         // w/ inlining we end-up with many branches that will pollute the BPU cache
         MATH_NOUNROLL
-        for (size_t i = 0; i < lv.size(); i++)
-            if (lv[i] != rv[i])
+        for (size_t i = 0; i < lv.size(); i++) {
+            if (lv[i] != rv[i]) {
                 return false;
+            }
+        }
         return true;
     }
 
     template<typename RT>
-    friend inline
-    bool MATH_PURE operator !=(const VECTOR<T>& lv, const VECTOR<RT>& rv) {
-        return !operator ==(lv, rv);
+    friend inline constexpr
+    bool MATH_PURE operator!=(const VECTOR<T>& lv, const VECTOR<RT>& rv) {
+        return !operator==(lv, rv);
     }
 
     template<typename RT>
-    friend inline
+    friend inline constexpr
     VECTOR<bool> MATH_PURE equal(const VECTOR<T>& lv, const VECTOR<RT>& rv) {
-        VECTOR<bool> r;
+        VECTOR<bool> r{};
         for (size_t i = 0; i < lv.size(); i++) {
             r[i] = lv[i] == rv[i];
         }
@@ -279,9 +296,9 @@ public:
     }
 
     template<typename RT>
-    friend inline
+    friend inline constexpr
     VECTOR<bool> MATH_PURE notEqual(const VECTOR<T>& lv, const VECTOR<RT>& rv) {
-        VECTOR<bool> r;
+        VECTOR<bool> r{};
         for (size_t i = 0; i < lv.size(); i++) {
             r[i] = lv[i] != rv[i];
         }
@@ -289,9 +306,9 @@ public:
     }
 
     template<typename RT>
-    friend inline
+    friend inline constexpr
     VECTOR<bool> MATH_PURE lessThan(const VECTOR<T>& lv, const VECTOR<RT>& rv) {
-        VECTOR<bool> r;
+        VECTOR<bool> r{};
         for (size_t i = 0; i < lv.size(); i++) {
             r[i] = lv[i] < rv[i];
         }
@@ -299,9 +316,9 @@ public:
     }
 
     template<typename RT>
-    friend inline
+    friend inline constexpr
     VECTOR<bool> MATH_PURE lessThanEqual(const VECTOR<T>& lv, const VECTOR<RT>& rv) {
-        VECTOR<bool> r;
+        VECTOR<bool> r{};
         for (size_t i = 0; i < lv.size(); i++) {
             r[i] = lv[i] <= rv[i];
         }
@@ -309,7 +326,7 @@ public:
     }
 
     template<typename RT>
-    friend inline
+    friend inline constexpr
     VECTOR<bool> MATH_PURE greaterThan(const VECTOR<T>& lv, const VECTOR<RT>& rv) {
         VECTOR<bool> r;
         for (size_t i = 0; i < lv.size(); i++) {
@@ -321,7 +338,7 @@ public:
     template<typename RT>
     friend inline
     VECTOR<bool> MATH_PURE greaterThanEqual(const VECTOR<T>& lv, const VECTOR<RT>& rv) {
-        VECTOR<bool> r;
+        VECTOR<bool> r{};
         for (size_t i = 0; i < lv.size(); i++) {
             r[i] = lv[i] >= rv[i];
         }
@@ -381,7 +398,7 @@ public:
         return length2(rv - lv);
     }
 
-    friend inline constexpr VECTOR<T> MATH_PURE normalize(const VECTOR<T>& lv) {
+    friend inline VECTOR<T> MATH_PURE normalize(const VECTOR<T>& lv) {
         return lv * (T(1) / length(lv));
     }
 
@@ -389,107 +406,106 @@ public:
         return T(1) / v;
     }
 
-    friend inline VECTOR<T> MATH_PURE abs(VECTOR<T> v) {
-        for (size_t i=0 ; i<v.size() ; i++) {
-            v[i] = std::abs(v[i]);
+    friend inline constexpr VECTOR<T> MATH_PURE abs(VECTOR<T> v) {
+        for (size_t i = 0; i < v.size(); i++) {
+            v[i] = v[i] < 0 ? -v[i] : v[i];
         }
         return v;
     }
 
     friend inline VECTOR<T> MATH_PURE floor(VECTOR<T> v) {
-        for (size_t i=0 ; i<v.size() ; i++) {
+        for (size_t i = 0; i < v.size(); i++) {
             v[i] = std::floor(v[i]);
         }
         return v;
     }
 
     friend inline VECTOR<T> MATH_PURE ceil(VECTOR<T> v) {
-        for (size_t i=0 ; i<v.size() ; i++) {
+        for (size_t i = 0; i < v.size(); i++) {
             v[i] = std::ceil(v[i]);
         }
         return v;
     }
 
     friend inline VECTOR<T> MATH_PURE round(VECTOR<T> v) {
-        for (size_t i=0 ; i<v.size() ; i++) {
+        for (size_t i = 0; i < v.size(); i++) {
             v[i] = std::round(v[i]);
         }
         return v;
     }
 
     friend inline VECTOR<T> MATH_PURE inversesqrt(VECTOR<T> v) {
-        for (size_t i=0 ; i<v.size() ; i++) {
+        for (size_t i = 0; i < v.size(); i++) {
             v[i] = T(1) / std::sqrt(v[i]);
         }
         return v;
     }
 
     friend inline VECTOR<T> MATH_PURE sqrt(VECTOR<T> v) {
-        for (size_t i=0 ; i<v.size() ; i++) {
+        for (size_t i = 0; i < v.size(); i++) {
             v[i] = std::sqrt(v[i]);
         }
         return v;
     }
 
     friend inline VECTOR<T> MATH_PURE pow(VECTOR<T> v, T p) {
-        for (size_t i=0 ; i<v.size() ; i++) {
+        for (size_t i = 0; i < v.size(); i++) {
             v[i] = std::pow(v[i], p);
         }
         return v;
     }
 
-    friend inline VECTOR<T> MATH_PURE saturate(const VECTOR<T>& lv) {
+    friend inline constexpr VECTOR<T> MATH_PURE saturate(const VECTOR<T>& lv) {
         return clamp(lv, T(0), T(1));
     }
 
-    friend inline VECTOR<T> MATH_PURE clamp(VECTOR<T> v, T min, T max) {
-        for (size_t i=0 ; i< v.size() ; i++) {
-            v[i] = std::min(max, std::max(min, v[i]));
+    friend inline constexpr VECTOR<T> MATH_PURE clamp(VECTOR<T> v, T min, T max) {
+        for (size_t i = 0; i < v.size(); i++) {
+            v[i] = details::min(max, details::max(min, v[i]));
         }
         return v;
     }
 
-    friend inline VECTOR<T> MATH_PURE clamp(VECTOR<T> v, VECTOR<T> min, VECTOR<T> max) {
+    friend inline constexpr VECTOR<T> MATH_PURE clamp(VECTOR<T> v, VECTOR<T> min, VECTOR<T> max) {
         for (size_t i=0 ; i< v.size() ; i++) {
-            v[i] = std::min(max[i], std::max(min[i], v[i]));
+            v[i] = details::min(max[i], details::max(min[i], v[i]));
         }
         return v;
     }
 
-    friend inline VECTOR<T> MATH_PURE fma(const VECTOR<T>& lv, const VECTOR<T>& rv, VECTOR<T> a) {
-        for (size_t i=0 ; i<lv.size() ; i++) {
-            //a[i] = std::fma(lv[i], rv[i], a[i]);
+    friend inline constexpr VECTOR<T> MATH_PURE fma(const VECTOR<T>& lv, const VECTOR<T>& rv, VECTOR<T> a) {
+        for (size_t i = 0; i < lv.size(); i++) {
             a[i] += (lv[i] * rv[i]);
         }
         return a;
     }
 
-    friend inline VECTOR<T> MATH_PURE min(const VECTOR<T>& u, VECTOR<T> v) {
-        for (size_t i=0 ; i<v.size() ; i++) {
-            v[i] = std::min(u[i], v[i]);
+    friend inline constexpr VECTOR<T> MATH_PURE min(const VECTOR<T>& u, VECTOR<T> v) {
+        for (size_t i = 0; i < v.size(); i++) {
+            v[i] = details::min(u[i], v[i]);
         }
         return v;
     }
 
-    friend inline VECTOR<T> MATH_PURE max(const VECTOR<T>& u, VECTOR<T> v) {
-        for (size_t i=0 ; i<v.size() ; i++) {
-            v[i] = std::max(u[i], v[i]);
+    friend inline constexpr VECTOR<T> MATH_PURE max(const VECTOR<T>& u, VECTOR<T> v) {
+        for (size_t i = 0; i < v.size(); i++) {
+            v[i] = details::max(u[i], v[i]);
         }
         return v;
     }
 
-    friend inline T MATH_PURE max(const VECTOR<T>& v) {
+    friend inline constexpr T MATH_PURE max(const VECTOR<T>& v) {
         T r(std::numeric_limits<T>::lowest());
-        for (size_t i=0 ; i<v.size() ; i++) {
-            r = std::max(r, v[i]);
+        for (size_t i = 0; i < v.size(); i++) {
+            r = max(r, v[i]);
         }
         return r;
     }
 
-    friend inline T MATH_PURE min(const VECTOR<T>& v) {
+    friend inline constexpr T MATH_PURE min(const VECTOR<T>& v) {
         T r(std::numeric_limits<T>::max());
         for (size_t i=0 ; i<v.size() ; i++) {
-            r = std::min(r, v[i]);
+            r = min(r, v[i]);
         }
         return r;
     }
@@ -501,14 +517,14 @@ public:
         return v;
     }
 
-    friend inline bool MATH_PURE any(const VECTOR<T>& v) {
+    friend inline constexpr bool MATH_PURE any(const VECTOR<T>& v) {
         for (size_t i = 0; i < v.size(); i++) {
             if (v[i] != T(0)) return true;
         }
         return false;
     }
 
-    friend inline bool MATH_PURE all(const VECTOR<T>& v) {
+    friend inline constexpr bool MATH_PURE all(const VECTOR<T>& v) {
         bool result = true;
         for (size_t i = 0; i < v.size(); i++) {
             result &= (v[i] != T(0));
