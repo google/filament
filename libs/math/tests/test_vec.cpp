@@ -26,6 +26,59 @@ class VecTest : public testing::Test {
 protected:
 };
 
+TEST_F(VecTest, Constexpr) {
+    constexpr float a = M_PI;
+    constexpr float2 A2 = a;
+    constexpr float2 B2 = { a, a };
+    constexpr float2 C2 = A2;
+    constexpr float3 D2 = cross(A2, C2);
+
+    constexpr float3 A3 = a;
+    constexpr float3 B3 = { a, a, a };
+    constexpr float3 C3 = A3;
+    constexpr float3 D3 = { A2, a };
+    constexpr float3 E3 = cross(A3, D3);
+
+    constexpr float4 A4 = a;
+    constexpr float4 B4 = { a, a, a, a };
+    constexpr float4 C4 = A4;
+    constexpr float4 D4 = { A2, a, a };
+    constexpr float4 E4 = { A2, B2 };
+
+    constexpr float4 AN4 = abs(A4);
+    constexpr float4 BN4 = abs(B4);
+    constexpr float4 CN4 = abs(C4);
+    constexpr float4 DN4 = abs(D4);
+    constexpr float4 EN4 = abs(E4);
+
+    constexpr float4 AS4 = saturate(A4);
+    constexpr float4 BS4 = saturate(B4);
+    constexpr float4 CS4 = saturate(C4);
+    constexpr float4 DS4 = saturate(D4);
+    constexpr float4 ES4 = saturate(E4);
+
+    constexpr float d0 = dot(A4, A4);
+    constexpr float d1 = dot(B4, A4);
+    constexpr float d2 = dot(C4, A4);
+    constexpr float d4 = dot(D4, A4);
+
+    constexpr float4 S0 = A4 + B4;
+    constexpr float4 S1 = C4 - D4;
+    constexpr float4 S2 = A4 * a;
+    constexpr float4 S3 = A4 * A4;
+    constexpr float4 S4 = A4 / a;
+    constexpr float4 S5 = A4 / A4;
+
+    constexpr float4 S6 = -E4;
+
+    constexpr bool b0 = A4 == B4;
+    constexpr bool b1 = A4 != B4;
+
+    constexpr bool4 b2 = equal(A4, B4);
+    constexpr bool b3 = any(A4);
+    constexpr bool b4 = all(A4);
+}
+
 TEST_F(VecTest, Basics) {
     double4 v4;
     double3& v3(v4.xyz);

@@ -63,18 +63,18 @@ inline constexpr double  trace(double v) { return v; }
  * Matrix inversion
  */
 template<typename MATRIX>
-MATRIX MATH_PURE gaussJordanInverse(const MATRIX& src) {
+constexpr MATRIX MATH_PURE gaussJordanInverse(const MATRIX& src) {
     typedef typename MATRIX::value_type T;
-    static constexpr unsigned int N = MATRIX::NUM_ROWS;
+    constexpr unsigned int N = MATRIX::NUM_ROWS;
     MATRIX tmp(src);
     MATRIX inverted(1);
 
     for (size_t i = 0; i < N; ++i) {
         // look for largest element in i'th column
         size_t swap = i;
-        T t = std::abs(tmp[i][i]);
+        T t = tmp[i][i] < 0 ? -tmp[i][i] : tmp[i][i];
         for (size_t j = i + 1; j < N; ++j) {
-            const T t2 = std::abs(tmp[j][i]);
+            const T t2 = tmp[j][i] < 0 ? -tmp[j][i] : tmp[j][i];
             if (t2 > t) {
                 swap = j;
                 t = t2;
@@ -112,7 +112,7 @@ MATRIX MATH_PURE gaussJordanInverse(const MATRIX& src) {
 //------------------------------------------------------------------------------
 // 2x2 matrix inverse is easy.
 template <typename MATRIX>
-MATRIX MATH_PURE fastInverse2(const MATRIX& x) {
+constexpr MATRIX MATH_PURE fastInverse2(const MATRIX& x) {
     typedef typename MATRIX::value_type T;
 
     // Assuming the input matrix is:
@@ -125,7 +125,7 @@ MATRIX MATH_PURE fastInverse2(const MATRIX& x) {
     //
     // Importantly, our matrices are column-major!
 
-    MATRIX inverted(MATRIX::NO_INIT);
+    MATRIX inverted{};
 
     const T a = x[0][0];
     const T c = x[0][1];
@@ -146,7 +146,7 @@ MATRIX MATH_PURE fastInverse2(const MATRIX& x) {
 // matrix inversion:
 // http://en.wikipedia.org/wiki/Invertible_matrix#Inversion_of_3.C3.973_matrices
 template <typename MATRIX>
-MATRIX MATH_PURE fastInverse3(const MATRIX& x) {
+constexpr MATRIX MATH_PURE fastInverse3(const MATRIX& x) {
     typedef typename MATRIX::value_type T;
 
     // Assuming the input matrix is:
@@ -173,7 +173,7 @@ MATRIX MATH_PURE fastInverse3(const MATRIX& x) {
     //
     // Importantly, our matrices are column-major!
 
-    MATRIX inverted(MATRIX::NO_INIT);
+    MATRIX inverted{};
 
     const T a = x[0][0];
     const T b = x[1][0];
@@ -225,7 +225,7 @@ inline constexpr MATRIX MATH_PURE inverse(const MATRIX& matrix) {
 }
 
 template<typename MATRIX_R, typename MATRIX_A, typename MATRIX_B>
-MATRIX_R MATH_PURE multiply(const MATRIX_A& lhs, const MATRIX_B& rhs) {
+constexpr MATRIX_R MATH_PURE multiply(const MATRIX_A& lhs, const MATRIX_B& rhs) {
     // pre-requisite:
     //  lhs : D columns, R rows
     //  rhs : C columns, D rows
@@ -238,7 +238,7 @@ MATRIX_R MATH_PURE multiply(const MATRIX_A& lhs, const MATRIX_B& rhs) {
     static_assert(MATRIX_R::NUM_ROWS == MATRIX_A::NUM_ROWS,
             "invalid dimension of matrix multiply result.");
 
-    MATRIX_R res(MATRIX_R::NO_INIT);
+    MATRIX_R res{};
     for (size_t col = 0; col < MATRIX_R::NUM_COLS; ++col) {
         res[col] = lhs * rhs[col];
     }
@@ -247,10 +247,10 @@ MATRIX_R MATH_PURE multiply(const MATRIX_A& lhs, const MATRIX_B& rhs) {
 
 // transpose. this handles matrices of matrices
 template <typename MATRIX>
-MATRIX MATH_PURE transpose(const MATRIX& m) {
+constexpr MATRIX MATH_PURE transpose(const MATRIX& m) {
     // for now we only handle square matrix transpose
     static_assert(MATRIX::NUM_COLS == MATRIX::NUM_ROWS, "transpose only supports square matrices");
-    MATRIX result(MATRIX::NO_INIT);
+    MATRIX result{};
     for (size_t col = 0; col < MATRIX::NUM_COLS; ++col) {
         for (size_t row = 0; row < MATRIX::NUM_ROWS; ++row) {
             result[col][row] = transpose(m[row][col]);
@@ -261,7 +261,7 @@ MATRIX MATH_PURE transpose(const MATRIX& m) {
 
 // trace. this handles matrices of matrices
 template <typename MATRIX>
-typename MATRIX::value_type MATH_PURE trace(const MATRIX& m) {
+constexpr typename MATRIX::value_type MATH_PURE trace(const MATRIX& m) {
     static_assert(MATRIX::NUM_COLS == MATRIX::NUM_ROWS, "trace only defined for square matrices");
     typename MATRIX::value_type result(0);
     for (size_t col = 0; col < MATRIX::NUM_COLS; ++col) {
@@ -272,9 +272,9 @@ typename MATRIX::value_type MATH_PURE trace(const MATRIX& m) {
 
 // diag. this handles matrices of matrices
 template <typename MATRIX>
-typename MATRIX::col_type MATH_PURE diag(const MATRIX& m) {
+constexpr typename MATRIX::col_type MATH_PURE diag(const MATRIX& m) {
     static_assert(MATRIX::NUM_COLS == MATRIX::NUM_ROWS, "diag only defined for square matrices");
-    typename MATRIX::col_type result;
+    typename MATRIX::col_type result{};
     for (size_t col = 0; col < MATRIX::NUM_COLS; ++col) {
         result[col] = m[col][col];
     }
@@ -342,7 +342,7 @@ template <template<typename T> class BASE, typename T>
 class TMatProductOperators {
 public:
     // multiply by a scalar
-    BASE<T>& operator *= (T v) {
+    constexpr BASE<T>& operator *= (T v) {
         BASE<T>& lhs(static_cast< BASE<T>& >(*this));
         for (size_t col = 0; col < BASE<T>::NUM_COLS; ++col) {
             lhs[col] *= v;
@@ -352,14 +352,14 @@ public:
 
     //  matrix *= matrix
     template<typename U>
-    const BASE<T>& operator *= (const BASE<U>& rhs) {
+    constexpr BASE<T>& operator *= (const BASE<U>& rhs) {
         BASE<T>& lhs(static_cast< BASE<T>& >(*this));
         lhs = matrix::multiply<BASE<T> >(lhs, rhs);
         return lhs;
     }
 
     // divide by a scalar
-    BASE<T>& operator /= (T v) {
+    constexpr BASE<T>& operator /= (T v) {
         BASE<T>& lhs(static_cast< BASE<T>& >(*this));
         for (size_t col = 0; col < BASE<T>::NUM_COLS; ++col) {
             lhs[col] /= v;
@@ -369,7 +369,7 @@ public:
 
     // matrix * matrix, result is a matrix of the same type than the lhs matrix
     template<typename U>
-    friend BASE<T> MATH_PURE operator *(const BASE<T>& lhs, const BASE<U>& rhs) {
+    friend inline constexpr BASE<T> MATH_PURE operator *(const BASE<T>& lhs, const BASE<U>& rhs) {
         return matrix::multiply<BASE<T> >(lhs, rhs);
     }
 };
@@ -399,7 +399,7 @@ public:
      * is instantiated, at which point they're only templated on the 2nd parameter
      * (the first one, BASE<T> being known).
      */
-    friend inline BASE<T> MATH_PURE inverse(const BASE<T>& matrix) {
+    friend inline constexpr BASE<T> MATH_PURE inverse(const BASE<T>& matrix) {
         return matrix::inverse(matrix);
     }
     friend inline constexpr BASE<T> MATH_PURE transpose(const BASE<T>& m) {
@@ -455,20 +455,20 @@ public:
         BASE<T> r;
         T c = std::cos(radian);
         T s = std::sin(radian);
-        if (about.x == 1 && about.y == 0 && about.z == 0) {
+        if (about[0] == 1 && about[1] == 0 && about[2] == 0) {
             r[1][1] = c;   r[2][2] = c;
             r[1][2] = s;   r[2][1] = -s;
-        } else if (about.x == 0 && about.y == 1 && about.z == 0) {
+        } else if (about[0] == 0 && about[1] == 1 && about[2] == 0) {
             r[0][0] = c;   r[2][2] = c;
             r[2][0] = s;   r[0][2] = -s;
-        } else if (about.x == 0 && about.y == 0 && about.z == 1) {
+        } else if (about[0] == 0 && about[1] == 0 && about[2] == 1) {
             r[0][0] = c;   r[1][1] = c;
             r[0][1] = s;   r[1][0] = -s;
         } else {
             VEC nabout = normalize(about);
-            typename VEC::value_type x = nabout.x;
-            typename VEC::value_type y = nabout.y;
-            typename VEC::value_type z = nabout.z;
+            typename VEC::value_type x = nabout[0];
+            typename VEC::value_type y = nabout[1];
+            typename VEC::value_type z = nabout[2];
             T nc = 1 - c;
             T xy = x * y;
             T yz = y * z;

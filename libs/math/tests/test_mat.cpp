@@ -31,6 +31,78 @@ class MatTest : public testing::Test {
 protected:
 };
 
+TEST_F(MatTest, ConstexprMat2) {
+    constexpr float a = M_PI;
+    constexpr mat2f M;
+    constexpr mat2f M0(a);
+    constexpr mat2f M1(float2{a, a});
+    constexpr mat2f M2(1,2,3,4);
+    constexpr mat2f M3(M2);
+    constexpr mat2f M4(float2{1,2}, float2{3,4});
+    constexpr float2 f0 = M0 * float2{1,2};
+    constexpr float2 f1 = float2{1,2} * M1;
+    constexpr mat2f M5 = M2 * 2;
+    constexpr mat2f M7 = 2 * M2;
+    constexpr float2 f3 = diag(M0);
+    constexpr mat2f M8 = transpose(M0);
+    constexpr mat2f M9 = inverse(M0);
+    constexpr mat2f M10 = M8 * M9;
+    constexpr float s0 = trace(M0);
+}
+
+TEST_F(MatTest, ConstexprMat3) {
+    constexpr float a = M_PI;
+    constexpr mat3f M;
+    constexpr mat3f M0(a);
+    constexpr mat3f M1(float3{a, a, a});
+    constexpr mat3f M2(1,2,3,4,5,6,7,8,9);
+    constexpr mat3f M3(M2);
+    constexpr mat3f M4(float3{1,2,3}, float3{4,5,6}, float3{7,8,9});
+    constexpr float3 f0 = M0 * float3{1,2,3};
+    constexpr float3 f1 = float3{1,2,3} * M1;
+    constexpr mat3f M5 = M2 * 2;
+    constexpr mat3f M7 = 2 * M2;
+    constexpr float3 f3 = diag(M0);
+    constexpr mat3f M8 = transpose(M0);
+    constexpr mat3f M9 = inverse(M0);
+    constexpr mat3f M10 = M8 * M9;
+    constexpr float s0 = trace(M0);
+    constexpr quatf q;
+    constexpr mat3f M11{q};
+}
+
+TEST_F(MatTest, ConstexprMat4) {
+    constexpr float a = M_PI;
+    constexpr mat4f M;
+    constexpr mat4f M0(a);
+    constexpr mat4f M1(float4{a, a, a, a});
+    constexpr mat4f M2(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16);
+    constexpr mat4f M3(M2);
+    constexpr mat4f M4(float4{1,2,3,4}, float4{5,6,7,8}, float4{9,10,11,12}, float4{13,14,15,16});
+    constexpr float4 f0 = M0 * float4{1,2,3,4};
+    constexpr float4 f1 = float4{1,2,3,4} * M1;
+    constexpr mat4f M5 = M2 * 2;
+    constexpr mat4f M7 = 2 * M2;
+    constexpr float4 f3 = diag(M0);
+    constexpr mat4f M8 = transpose(M0);
+    constexpr mat4f M9 = inverse(M0);
+    constexpr mat4f M10 = M8 * M9;
+    constexpr float s0 = trace(M0);
+    constexpr quatf q;
+    constexpr mat4f M11{q};
+    constexpr mat4f M13{mat3f{}};
+    constexpr mat4f M14{mat3f{}, float3{}};
+    constexpr mat4f M15{mat3f{}, float4{}};
+    constexpr mat4f O = mat4f::ortho(0, 1, 0, 1, -1, 1);
+    constexpr mat4f F = mat4f::frustum(0, 1, 0, 1, -1, 1);
+    constexpr float4 f4 = mat4f::project(F, float4{1,2,3,1});
+    constexpr float3 f5 = mat4f::project(F, float3{1,2,3});
+    constexpr mat3f U = M11.upperLeft();
+    constexpr mat4f T = mat4f::translation(f5);
+    constexpr mat4f S = mat4f::scaling(f5);
+    constexpr mat4f V = mat4f::scaling(s0);
+}
+
 TEST_F(MatTest, Basics) {
     EXPECT_EQ(sizeof(mat4), sizeof(double)*16);
 }
