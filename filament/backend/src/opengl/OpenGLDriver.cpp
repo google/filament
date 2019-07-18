@@ -761,10 +761,10 @@ default_case:
 //    GLRenderTarget            : 56        few
 // -- less than 64 bytes
 
-//    GLVertexBuffer            : 80        moderate
+//    GLVertexBuffer            : 208       moderate
 //    GLStream                  : 120       few
 //    GLUniformBuffer           : 128       many
-// -- less than 128 bytes
+// -- less than or equal to 208 bytes
 
 
 OpenGLDriver::HandleAllocator::HandleAllocator(const utils::HeapArea& area)
@@ -818,7 +818,7 @@ template<typename D, typename B, typename ... ARGS>
 typename std::enable_if<std::is_base_of<B, D>::value, D>::type*
 OpenGLDriver::construct(Handle<B> const& handle, ARGS&& ... args) noexcept {
     assert(handle);
-    static_assert(sizeof(D) <= 128, "Handle<> too large");
+    static_assert(sizeof(D) <= 208, "Handle<> too large");
     D* addr = handle_cast<D *>(const_cast<Handle<B>&>(handle));
     new(addr) D(std::forward<ARGS>(args)...);
 #if !defined(NDEBUG) && UTILS_HAS_RTTI

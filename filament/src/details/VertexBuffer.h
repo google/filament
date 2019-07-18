@@ -62,7 +62,7 @@ private:
     };
 
     backend::Handle<backend::HwVertexBuffer> mHandle;
-    std::array<AttributeData, backend::MAX_ATTRIBUTE_BUFFER_COUNT> mAttributes;
+    std::array<AttributeData, backend::MAX_VERTEX_ATTRIBUTE_COUNT> mAttributes;
     AttributeBitset mDeclaredAttributes;
     uint32_t mVertexCount = 0;
     uint8_t mBufferCount = 0;

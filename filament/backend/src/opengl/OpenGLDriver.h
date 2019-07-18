@@ -63,7 +63,7 @@ public:
     struct GLVertexBuffer : public backend::HwVertexBuffer {
         using HwVertexBuffer::HwVertexBuffer;
         struct {
-            std::array<GLuint, backend::MAX_ATTRIBUTE_BUFFER_COUNT> buffers;  // 4*6 bytes
+            std::array<GLuint, backend::MAX_VERTEX_ATTRIBUTE_COUNT> buffers;  // 4 * MAX_VERTEX_ATTRIBUTE_COUNT bytes
         } gl;
     };
 
@@ -212,7 +212,7 @@ private:
     class HandleAllocator {
         utils::PoolAllocator< 16, 16>   mPool0;
         utils::PoolAllocator< 64, 32>   mPool1;
-        utils::PoolAllocator<128, 32>   mPool2;
+        utils::PoolAllocator<208, 32>   mPool2;
     public:
         static constexpr size_t MIN_ALIGNMENT_SHIFT = 4;
         explicit HandleAllocator(const utils::HeapArea& area);

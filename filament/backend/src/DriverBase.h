@@ -50,11 +50,11 @@ struct HwBase {
 };
 
 struct HwVertexBuffer : public HwBase {
-    AttributeArray attributes;            // 8*8
+    AttributeArray attributes;            // 8 * MAX_VERTEX_ATTRIBUTE_COUNT
     uint32_t vertexCount;                 //   4
     uint8_t bufferCount;                  //   1
     uint8_t attributeCount;               //   1
-    uint8_t padding[2]{};                 //   2 -> 56 bytes
+    uint8_t padding[2]{};                 //   2 -> total struct is 136 bytes
 
     HwVertexBuffer(uint8_t bufferCount, uint8_t attributeCount, uint32_t elementCount,
             AttributeArray const& attributes) noexcept
