@@ -243,13 +243,17 @@ inline JobSystem::ThreadState* JobSystem::getStateToStealFrom(JobSystem::ThreadS
     uint16_t const threadCount = mThreadCount + adopted;
 
     JobSystem::ThreadState* stateToStealFrom = nullptr;
-    do {
-        // this is biased, but frankly, we don't care. it's fast.
-        uint16_t index = uint16_t(state.rndGen() % threadCount);
-        assert(index < threadStates.size());
-        stateToStealFrom = &threadStates[index];
-        // don't steal from our own queue
-    } while (stateToStealFrom == &state);
+
+    // don't try to steal from someone else if we're the only thread (infinite loop)
+    if (threadCount >= 2) {
+        do {
+            // this is biased, but frankly, we don't care. it's fast.
+            uint16_t index = uint16_t(state.rndGen() % threadCount);
+            assert(index < threadStates.size());
+            stateToStealFrom = &threadStates[index];
+            // don't steal from our own queue
+        } while (stateToStealFrom == &state);
+    }
     return stateToStealFrom;
 }
 
@@ -258,7 +262,9 @@ JobSystem::Job* JobSystem::steal(JobSystem::ThreadState& state) noexcept {
     Job* job = nullptr;
     do {
         ThreadState* const stateToStealFrom = getStateToStealFrom(state);
-        job = steal(stateToStealFrom->workQueue);
+        if (UTILS_LIKELY(stateToStealFrom)) {
+            job = steal(stateToStealFrom->workQueue);
+        }
         // nullptr -> nothing to steal in that queue either, if there are active jobs,
         // continue to try stealing one.
     } while (!job && hasActiveJobs());
