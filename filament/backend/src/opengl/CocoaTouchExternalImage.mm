@@ -59,49 +59,60 @@ void main() {
 }
 )SHADER";
 
-CocoaTouchExternalImage::CocoaTouchExternalImage(const CVOpenGLESTextureCacheRef textureCache)
-        noexcept : mTextureCache(textureCache) {
-
-    glGenSamplers(1, &mSampler);
-    glSamplerParameteri(mSampler, GL_TEXTURE_MIN_FILTER,   GL_NEAREST);
-    glSamplerParameteri(mSampler, GL_TEXTURE_MAG_FILTER,   GL_NEAREST);
-    glSamplerParameteri(mSampler, GL_TEXTURE_WRAP_S,       GL_CLAMP_TO_EDGE);
-    glSamplerParameteri(mSampler, GL_TEXTURE_WRAP_T,       GL_CLAMP_TO_EDGE);
-    glSamplerParameteri(mSampler, GL_TEXTURE_WRAP_R,       GL_CLAMP_TO_EDGE);
+CocoaTouchExternalImage::SharedGl::SharedGl() noexcept {
+    glGenSamplers(1, &sampler);
+    glSamplerParameteri(sampler, GL_TEXTURE_MIN_FILTER,   GL_NEAREST);
+    glSamplerParameteri(sampler, GL_TEXTURE_MAG_FILTER,   GL_NEAREST);
+    glSamplerParameteri(sampler, GL_TEXTURE_WRAP_S,       GL_CLAMP_TO_EDGE);
+    glSamplerParameteri(sampler, GL_TEXTURE_WRAP_T,       GL_CLAMP_TO_EDGE);
+    glSamplerParameteri(sampler, GL_TEXTURE_WRAP_R,       GL_CLAMP_TO_EDGE);
 
     GLint status;
 
-    mVertexShader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(mVertexShader, 1, &s_vertexES, nullptr);
-    glCompileShader(mVertexShader);
-    glGetShaderiv(mVertexShader, GL_COMPILE_STATUS, &status);
+    vertexShader = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(vertexShader, 1, &s_vertexES, nullptr);
+    glCompileShader(vertexShader);
+    glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &status);
     assert(status == GL_TRUE);
 
-    mFragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(mFragmentShader, 1, &s_fragmentES, nullptr);
-    glCompileShader(mFragmentShader);
-    glGetShaderiv(mFragmentShader, GL_COMPILE_STATUS, &status);
+    fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(fragmentShader, 1, &s_fragmentES, nullptr);
+    glCompileShader(fragmentShader);
+    glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &status);
     assert(status == GL_TRUE);
 
-    mProgram = glCreateProgram();
-    glAttachShader(mProgram, mVertexShader);
-    glAttachShader(mProgram, mFragmentShader);
-    glLinkProgram(mProgram);
-    glGetProgramiv(mProgram, GL_LINK_STATUS, &status);
+    program = glCreateProgram();
+    glAttachShader(program, vertexShader);
+    glAttachShader(program, fragmentShader);
+    glLinkProgram(program);
+    glGetProgramiv(program, GL_LINK_STATUS, &status);
     assert(status == GL_TRUE);
 
     // Save current program state.
     GLint currentProgram;
     glGetIntegerv(GL_CURRENT_PROGRAM, &currentProgram);
 
-    glUseProgram(mProgram);
-    GLint luminanceLoc = glGetUniformLocation(mProgram, "samplerLuminance");
-    GLint colorLoc = glGetUniformLocation(mProgram, "samplerColor");
+    glUseProgram(program);
+    GLint luminanceLoc = glGetUniformLocation(program, "samplerLuminance");
+    GLint colorLoc = glGetUniformLocation(program, "samplerColor");
     glUniform1i(luminanceLoc, 0);
     glUniform1i(colorLoc, 1);
 
     // Restore state.
     glUseProgram(currentProgram);
+}
+
+CocoaTouchExternalImage::SharedGl::~SharedGl() noexcept {
+    glDeleteSamplers(1, &sampler);
+    glDetachShader(program, vertexShader);
+    glDetachShader(program, fragmentShader);
+    glDeleteShader(vertexShader);
+    glDeleteShader(fragmentShader);
+    glDeleteProgram(program);
+}
+
+CocoaTouchExternalImage::CocoaTouchExternalImage(const CVOpenGLESTextureCacheRef textureCache,
+        const SharedGl& sharedGl) noexcept : mSharedGl(sharedGl), mTextureCache(textureCache) {
 
     glGenFramebuffers(1, &mFBO);
 
@@ -110,12 +121,6 @@ CocoaTouchExternalImage::CocoaTouchExternalImage(const CVOpenGLESTextureCacheRef
 
 CocoaTouchExternalImage::~CocoaTouchExternalImage() noexcept {
     release();
-    glDeleteSamplers(1, &mSampler);
-    glDetachShader(mProgram, mVertexShader);
-    glDetachShader(mProgram, mFragmentShader);
-    glDeleteShader(mVertexShader);
-    glDeleteShader(mFragmentShader);
-    glDeleteProgram(mProgram);
     glDeleteFramebuffers(1, &mFBO);
 }
 
@@ -239,8 +244,8 @@ GLuint CocoaTouchExternalImage::encodeColorConversionPass(GLuint yPlaneTexture,
     CHECK_GL_ERROR(utils::slog.e)
 
     // source textures
-    glBindSampler(0, mSampler);
-    glBindSampler(1, mSampler);
+    glBindSampler(0, mSharedGl.sampler);
+    glBindSampler(1, mSharedGl.sampler);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, yPlaneTexture);
     glActiveTexture(GL_TEXTURE1);
@@ -261,7 +266,7 @@ GLuint CocoaTouchExternalImage::encodeColorConversionPass(GLuint yPlaneTexture,
 
     // draw
     glViewport(0, 0, width, height);
-    glUseProgram(mProgram);
+    glUseProgram(mSharedGl.program);
     glDrawArrays(GL_TRIANGLES, 0, 3);
 
     CHECK_GL_ERROR(utils::slog.e)

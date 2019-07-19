@@ -46,6 +46,7 @@ struct PlatformCocoaTouchGLImpl {
     GLuint mDefaultColorbuffer = 0;
     GLuint mDefaultDepthbuffer = 0;
     CVOpenGLESTextureCacheRef mTextureCache = nullptr;
+    CocoaTouchExternalImage::SharedGl* mExternalImageSharedGl = nullptr;
 };
 
 PlatformCocoaTouchGL::PlatformCocoaTouchGL()
@@ -88,12 +89,15 @@ Driver* PlatformCocoaTouchGL::createDriver(void* const sharedGLContext) noexcept
             pImpl->mGLContext, nullptr, &pImpl->mTextureCache);
     assert(success == kCVReturnSuccess);
 
+    pImpl->mExternalImageSharedGl = new CocoaTouchExternalImage::SharedGl();
+
     return OpenGLDriverFactory::create(this, sharedGLContext);
 }
 
 void PlatformCocoaTouchGL::terminate() noexcept {
     CFRelease(pImpl->mTextureCache);
     [pImpl->mGLContext release];
+    delete pImpl->mExternalImageSharedGl;
 }
 
 Platform::SwapChain* PlatformCocoaTouchGL::createSwapChain(void* nativewindow, uint64_t& flags) noexcept {
@@ -184,7 +188,8 @@ void PlatformCocoaTouchGL::releaseExternalImage(void* externalImage) noexcept {
 void PlatformCocoaTouchGL::createExternalImageTexture(void* texture) noexcept {
     auto* driverTexture = (OpenGLDriver::GLTexture*) texture;
 
-    driverTexture->platformPImpl = new CocoaTouchExternalImage(pImpl->mTextureCache);
+    driverTexture->platformPImpl = new CocoaTouchExternalImage(pImpl->mTextureCache,
+            *pImpl->mExternalImageSharedGl);
 }
 
 void PlatformCocoaTouchGL::destroyExternalImage(void* texture) noexcept {

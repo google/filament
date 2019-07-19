@@ -15,6 +15,7 @@
  */
 
 #ifndef FILAMENT_DRIVER_OPENGL_COCOA_TOUCH_EXTERNAL_IMAGE
+#define FILAMENT_DRIVER_OPENGL_COCOA_TOUCH_EXTERNAL_IMAGE
 
 #include "gl_headers.h"
 
@@ -25,7 +26,25 @@ namespace filament {
 class CocoaTouchExternalImage final {
 public:
 
-    CocoaTouchExternalImage(const CVOpenGLESTextureCacheRef textureCache) noexcept;
+    /**
+     * GL objects that can be shared across multiple instances of CocoaTouchExternalImage.
+     */
+    class SharedGl {
+    public:
+        SharedGl() noexcept;
+        ~SharedGl() noexcept;
+
+        SharedGl(const SharedGl&) = delete;
+        SharedGl& operator=(const SharedGl&) = delete;
+
+        GLuint program = 0;
+        GLuint sampler = 0;
+        GLuint fragmentShader = 0;
+        GLuint vertexShader = 0;
+    };
+
+    CocoaTouchExternalImage(const CVOpenGLESTextureCacheRef textureCache,
+            const SharedGl& sharedGl) noexcept;
     ~CocoaTouchExternalImage() noexcept;
 
     /**
@@ -64,11 +83,8 @@ private:
         GLint sampler[2] = { 0 };
     } mState;
 
-    GLuint mSampler = 0;
     GLuint mFBO = 0;
-    GLuint mFragmentShader = 0;
-    GLuint mVertexShader = 0;
-    GLuint mProgram = 0;
+    const SharedGl& mSharedGl;
 
     bool mEncodedToRgb = false;
     GLuint mRgbTexture = 0;
