@@ -66,6 +66,7 @@ public:
     void destroyExternalTextureStorage(ExternalTexture* ets) noexcept final;
 
     void createExternalImageTexture(void* texture) noexcept final;
+    void destroyExternalImage(void* texture) noexcept final;
 
     int getOSVersion() const noexcept final;
 

@@ -503,6 +503,11 @@ void PlatformEGL::createExternalImageTexture(void* texture) noexcept {
     }
 }
 
+void PlatformEGL::destroyExternalImage(void* texture) noexcept {
+    auto* t = (OpenGLDriver::GLTexture*) texture;
+    glDeleteTextures(1, &t->gl.id);
+}
+
 // This must called when the library is loaded. We need this to get a reference to the global VM
 void JNI_OnLoad(JavaVM* vm, void* reserved) {
     ::filament::VirtualMachineEnv::JNI_OnLoad(vm);

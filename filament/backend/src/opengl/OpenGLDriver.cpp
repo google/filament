@@ -1509,9 +1509,7 @@ void OpenGLDriver::destroyTexture(Handle<HwTexture> th) {
 
     if (th) {
         GLTexture* t = handle_cast<GLTexture*>(th);
-        if (UTILS_UNLIKELY(t->target == SamplerType::SAMPLER_EXTERNAL)) {
-            mPlatform.destroyExternalImage(t);
-        } else if (UTILS_LIKELY(t->usage & TextureUsage::SAMPLEABLE)) {
+        if (UTILS_LIKELY(t->usage & TextureUsage::SAMPLEABLE)) {
             unbindTexture(t->gl.target, t->gl.id);
             if (UTILS_UNLIKELY(t->hwStream)) {
                 detachStream(t);
@@ -1519,7 +1517,11 @@ void OpenGLDriver::destroyTexture(Handle<HwTexture> th) {
             if (t->gl.rb) {
                 glDeleteRenderbuffers(1, &t->gl.rb);
             }
-            glDeleteTextures(1, &t->gl.id);
+            if (UTILS_UNLIKELY(t->target == SamplerType::SAMPLER_EXTERNAL)) {
+                mPlatform.destroyExternalImage(t);
+            } else {
+                glDeleteTextures(1, &t->gl.id);
+            }
         } else {
             assert(t->gl.target == GL_RENDERBUFFER);
             assert(t->gl.rb == 0);
