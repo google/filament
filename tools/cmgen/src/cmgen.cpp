@@ -94,6 +94,7 @@ static bool g_dfg_multiscatter = false;
 static bool g_dfg_cloth = false;
 
 static bool g_ibl_irradiance = false;
+static bool g_ibl_no_prefilter = false;
 static utils::Path g_ibl_irradiance_dir;
 
 static bool g_deploy = false;
@@ -109,8 +110,9 @@ static void generateMipmaps(utils::JobSystem& js, std::vector<Cubemap>& levels,
         std::vector<Image>& images);
 static void sphericalHarmonics(utils::JobSystem& js, const utils::Path& iname,
         const Cubemap& inputCubemap);
-static void iblRoughnessPrefilter(utils::JobSystem& js, const utils::Path& iname,
-        const std::vector<Cubemap>& levels, const utils::Path& dir);
+static void iblRoughnessPrefilter(
+        utils::JobSystem& js, const utils::Path& iname, const std::vector<Cubemap>& levels,
+        bool prefilter, const utils::Path& dir);
 static void iblDiffuseIrradiance(utils::JobSystem& js, const utils::Path& iname,
         const std::vector<Cubemap>& levels, const utils::Path& dir);
 static void iblMipmapPrefilter(utils::JobSystem& js, const utils::Path& iname,
@@ -183,6 +185,8 @@ static void printUsage(char* name) {
             "       Extract faces of the cubemap into <dir>\n\n"
             "   --extract-blur=roughness\n"
             "       Blurs the cubemap before saving the faces using the roughness blur\n\n"
+            "   --clamp\n"
+            "       Clamp environment before processing\n\n"
             "   --no-mirror\n"
             "       Skip mirroring of generated cubemaps (for assets with mirroring already backed in)\n\n"
             "   --ibl-samples=numSamples\n"
@@ -203,6 +207,8 @@ static void printUsage(char* name) {
             "       Generate mipmap for pre-filtered importance sampling\n\n"
             "   --ibl-irradiance=dir\n"
             "       Diffuse irradiance into <dir>\n\n"
+            "   --ibl-no-prefilter\n"
+            "       Use importance sampling instead of prefiltered importance sampling\n\n"
             "   --sh=bands\n"
             "       SH decomposition of input cubemap\n\n"
             "   --sh-output=filename.[exr|hdr|psd|rgbm|rgb32f|png|dds|txt]\n"
@@ -211,8 +217,6 @@ static void printUsage(char* name) {
             "       Irradiance SH coefficients\n\n"
             "   --sh-window=cutoff|no|auto (default), -w cutoff|no|auto (default)\n"
             "       SH windowing to reduce ringing\n\n"
-            "   --clamp\n"
-            "       Clamp environment before processing\n\n"
             "   --debug, -d\n"
             "       Generate extra data for debugging\n\n"
     );
@@ -253,6 +257,7 @@ static int handleCommandLineArgments(int argc, char* argv[]) {
             { "ibl-dfg",              required_argument, nullptr, 'a' },
             { "ibl-dfg-multiscatter",       no_argument, nullptr, 'u' },
             { "ibl-dfg-cloth",              no_argument, nullptr, 'C' },
+            { "ibl-no-prefilter",           no_argument, nullptr, 'n' },
             { "ibl-samples",          required_argument, nullptr, 'k' },
             { "deploy",               required_argument, nullptr, 'x' },
             { "no-mirror",                  no_argument, nullptr, 'm' },
@@ -400,6 +405,9 @@ static int handleCommandLineArgments(int argc, char* argv[]) {
             case 'P':
                 g_ibl_irradiance = true;
                 g_ibl_irradiance_dir = arg;
+                break;
+            case 'n':
+                g_ibl_no_prefilter = true;
                 break;
             case 'a':
                 g_dfg = true;
@@ -629,7 +637,7 @@ int main(int argc, char* argv[]) {
         if (!g_quiet) {
             std::cout << "IBL prefiltering..." << std::endl;
         }
-        iblRoughnessPrefilter(js, iname, levels, g_prefilter_dir);
+        iblRoughnessPrefilter(js, iname, levels, !g_ibl_no_prefilter, g_prefilter_dir);
     }
 
     if (g_ibl_irradiance) {
@@ -651,7 +659,8 @@ int main(int argc, char* argv[]) {
             const size_t dim = g_output_size ? g_output_size : cm.getDimensions();
             Image image;
             Cubemap blurred = CubemapUtils::create(image, dim);
-            CubemapIBL::roughnessFilter(js, blurred, levels, linear_roughness, g_num_samples, float3{1,1,1},
+            CubemapIBL::roughnessFilter(js, blurred, levels, linear_roughness, g_num_samples,
+                    float3{ 1, 1, 1 }, !g_ibl_no_prefilter,
                     [&updater, quiet = g_quiet](size_t index, float v) {
                         if (!quiet) {
                             updater.update(index, v);
@@ -848,8 +857,9 @@ void iblMipmapPrefilter(utils::JobSystem& js, const utils::Path& iname,
     }
 }
 
-void iblRoughnessPrefilter(utils::JobSystem& js, const utils::Path& iname,
-        const std::vector<Cubemap>& levels, const utils::Path& dir) {
+void iblRoughnessPrefilter(
+        utils::JobSystem& js, const utils::Path& iname, const std::vector<Cubemap>& levels,
+        bool prefilter, const utils::Path& dir) {
     utils::Path outputDir(dir.getAbsolutePath() + iname.getNameWithoutExtension());
     if (!outputDir.exists()) {
         outputDir.mkdirRecursive();
@@ -909,12 +919,13 @@ void iblRoughnessPrefilter(utils::JobSystem& js, const utils::Path& iname,
         if (!g_quiet) {
             updater.start();
         }
-        CubemapIBL::roughnessFilter(js, dst, levels, linear_roughness, numSamples, float3{1,1,1},
+        CubemapIBL::roughnessFilter(js, dst, levels, linear_roughness, numSamples,
+                float3{ 1, 1, 1 }, prefilter,
                 [&updater, quiet = g_quiet](size_t index, float v) {
-            if (!quiet) {
-                updater.update(index, v);
-            }
-        });
+                    if (!quiet) {
+                        updater.update(index, v);
+                    }
+                });
         if (!g_quiet) {
             updater.stop();
         }

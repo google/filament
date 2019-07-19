@@ -482,7 +482,7 @@ void FTexture::generatePrefilterMipmap(FEngine& engine,
 
         Image image;
         Cubemap dst = CubemapUtils::create(image, dim);
-        CubemapIBL::roughnessFilter(js, dst, levels, linearRoughness, numSamples, mirror);
+        CubemapIBL::roughnessFilter(js, dst, levels, linearRoughness, numSamples, mirror, true);
 
         Texture::PixelBufferDescriptor pbd(image.getData(), image.getSize(),
                 Texture::PixelBufferDescriptor::PixelDataFormat::RGB,
