@@ -105,30 +105,34 @@ void JobSystem::setThreadAffinityById(size_t id) noexcept {
 #endif
 }
 
-JobSystem::JobSystem(size_t threadCount, size_t adoptableThreadsCount) noexcept
+JobSystem::JobSystem(const size_t userThreadCount, const size_t adoptableThreadsCount) noexcept
     : mJobPool("JobSystem Job pool", MAX_JOB_COUNT * sizeof(Job)),
       mJobStorageBase(static_cast<Job *>(mJobPool.getAllocator().getCurrent()))
 {
     SYSTRACE_ENABLE();
 
-    if (threadCount == 0) {
+    int threadPoolCount = userThreadCount;
+    if (threadPoolCount == 0) {
         // default value, system dependant
-        size_t hwThreads = std::thread::hardware_concurrency();
+        int hwThreads = std::thread::hardware_concurrency();
         if (UTILS_HAS_HYPER_THREADING) {
             // For now we avoid using HT, this simplifies profiling.
             // TODO: figure-out what to do with Hyper-threading
-            threadCount = hwThreads / 2 - 1;
-        } else {
-            threadCount = hwThreads - 1;
+            // since we assumed HT, always round-up to an even number of cores (to play it safe)
+            hwThreads = (hwThreads + 1) / 2;
         }
+        // make sure we have at least one h/w thread (could be an assert instead)
+        hwThreads = std::max(0, hwThreads);
+        // one of the thread will be the user thread
+        threadPoolCount = hwThreads - 1;
     }
-    threadCount = std::min(size_t(UTILS_HAS_THREADING ? 32 : 0), threadCount);
+    threadPoolCount = std::min(UTILS_HAS_THREADING ? 32 : 0, threadPoolCount);
 
-    mThreadStates = aligned_vector<ThreadState>(threadCount + adoptableThreadsCount);
-    mThreadCount = uint16_t(threadCount);
-    mParallelSplitCount = (uint8_t)std::ceil((std::log2f(threadCount + adoptableThreadsCount)));
+    mThreadStates = aligned_vector<ThreadState>(threadPoolCount + adoptableThreadsCount);
+    mThreadCount = uint16_t(threadPoolCount);
+    mParallelSplitCount = (uint8_t)std::ceil((std::log2f(threadPoolCount + adoptableThreadsCount)));
 
-    // this is pitty these are not compile-time checks (C++17 supports it apparently)
+    // this is a pity these are not compile-time checks (C++17 supports it apparently)
     assert(mExitRequested.is_lock_free());
     assert(Job().runningJobCount.is_lock_free());
 
