@@ -285,8 +285,10 @@ static float UTILS_UNUSED VisibilityAshikhmin(float NoV, float NoL, float /*a*/)
  *
  */
 
-void CubemapIBL::roughnessFilter(JobSystem& js, Cubemap& dst, const std::vector<Cubemap>& levels,
-        float linearRoughness, size_t maxNumSamples, float3 mirror, CubemapIBL::Progress updater)
+void CubemapIBL::roughnessFilter(
+        utils::JobSystem& js, Cubemap& dst, const std::vector<Cubemap>& levels,
+        float linearRoughness, size_t maxNumSamples, math::float3 mirror, bool prefilter,
+        Progress updater)
 {
     const float numSamples = maxNumSamples;
     const float inumSamples = 1.0f / numSamples;
@@ -373,7 +375,7 @@ void CubemapIBL::roughnessFilter(JobSystem& js, Cubemap& dst, const std::vector<
             constexpr float K = 4;
             const float omegaS = 1 / (numSamples * pdf);
             const float l = float(log4(omegaS) - log4(omegaP) + log4(K));
-            const float mipLevel = clamp(float(l), 0.0f, maxLevelf);
+            const float mipLevel = prefilter ? clamp(float(l), 0.0f, maxLevelf) : 0.0f;
 
             const float brdf_NoL = float(NoL);
 

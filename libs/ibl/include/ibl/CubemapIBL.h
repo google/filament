@@ -51,9 +51,10 @@ public:
      * @param maxNumSamples     number of samples for importance sampling
      * @param updater           a callback for the caller to track progress
      */
-    static void roughnessFilter(utils::JobSystem& js, Cubemap& dst,
-            const std::vector<Cubemap>& levels, float linearRoughness,
-            size_t maxNumSamples, math::float3 mirror, Progress updater = {});
+    static void roughnessFilter(
+            utils::JobSystem& js, Cubemap& dst, const std::vector<Cubemap>& levels,
+            float linearRoughness, size_t maxNumSamples, math::float3 mirror, bool prefilter,
+            Progress updater = {});
 
     //! Computes the "DFG" term of the "split-sum" approximation and stores it in a 2D image
     static void DFG(utils::JobSystem& js, Image& dst, bool multiscatter, bool cloth);
