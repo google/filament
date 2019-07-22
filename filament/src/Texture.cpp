@@ -28,6 +28,8 @@
 
 #include <utils/Panic.h>
 
+using namespace utils;
+
 namespace filament {
 
 using namespace details;
@@ -361,8 +363,9 @@ void FTexture::generatePrefilterMipmap(FEngine& engine,
 
     /* validate input data */
 
-    if (!ASSERT_PRECONDITION_NON_FATAL(buffer.format == PixelDataFormat::RGB,
-            "input data format must be RGB")) {
+    if (!ASSERT_PRECONDITION_NON_FATAL(buffer.format == PixelDataFormat::RGB ||
+                                       buffer.format == PixelDataFormat::RGBA,
+            "input data format must be RGB or RGBA")) {
         return;
     }
 
@@ -390,10 +393,10 @@ void FTexture::generatePrefilterMipmap(FEngine& engine,
     PrefilterOptions defaultOptions;
     options = options ? options : &defaultOptions;
 
-    utils::JobSystem& js = engine.getJobSystem();
+    JobSystem& js = engine.getJobSystem();
     FEngine::DriverApi& driver = engine.getDriverApi();
 
-    auto generateMipmaps = [](utils::JobSystem& js,
+    auto generateMipmaps = [](JobSystem& js,
             std::vector<Cubemap>& levels, std::vector<Image>& images) {
         Image temp;
         const Cubemap& base(levels[0]);
@@ -415,6 +418,33 @@ void FTexture::generatePrefilterMipmap(FEngine& engine,
      * Create a Cubemap data structure
      */
 
+    size_t bytesPerPixel = 0;
+
+    switch (buffer.format) {
+        case PixelDataFormat::RGB:
+            bytesPerPixel = 3;
+            break;
+        case PixelDataFormat::RGBA:
+            bytesPerPixel = 4;
+            break;
+        default:
+            // this cannot happen due to the checks above
+            break;
+    }
+
+    switch (buffer.type) { // NOLINT
+        case PixelDataType::FLOAT:
+            bytesPerPixel *= 4;
+            break;
+        case PixelDataType::HALF:
+            bytesPerPixel *= 2;
+            break;
+        default:
+            // this cannot happen due to the checks above
+            break;
+    }
+    assert(bytesPerPixel);
+
     Image temp;
     Cubemap cml = CubemapUtils::create(temp, size);
     for (size_t j = 0; j < 6; j++) {
@@ -423,20 +453,24 @@ void FTexture::generatePrefilterMipmap(FEngine& engine,
         for (size_t y = 0; y < size; y++) {
             Cubemap::Texel* out = (Cubemap::Texel*)image.getPixelRef(0, y);
             if (buffer.type == PixelDataType::FLOAT) {
-                float3 const* src = reinterpret_cast<float3 const*>(
-                                            static_cast<char const*>(buffer.buffer) + faceOffsets[j]) + y * stride;
-                for (size_t x = 0; x < size; x++, out++, src++) {
+                float3 const* src = pointermath::add((float3 const*)buffer.buffer, faceOffsets[j]);
+                src = pointermath::add(src, y * stride * bytesPerPixel);
+                for (size_t x = 0; x < size; x++, out++) {
                     Cubemap::writeAt(out, *src);
+                    src = pointermath::add(src, bytesPerPixel);
                 }
             } else if (buffer.type == PixelDataType::HALF) {
-                half3 const* src = reinterpret_cast<half3 const*>(
-                                           static_cast<char const*>(buffer.buffer) + faceOffsets[j]) + y * stride;
-                for (size_t x = 0; x < size; x++, out++, src++) {
+                half3 const* src = pointermath::add((half3 const*)buffer.buffer, faceOffsets[j]);
+                src = pointermath::add(src, y * stride * bytesPerPixel);
+                for (size_t x = 0; x < size; x++, out++) {
                     Cubemap::writeAt(out, *src);
+                    src = pointermath::add(src, bytesPerPixel);
                 }
             } else if (buffer.type == PixelDataType::UINT_10F_11F_11F_REV) {
+                // this doesn't depend on buffer.format
                 uint32_t const* src = reinterpret_cast<uint32_t const*>(
-                                              static_cast<char const*>(buffer.buffer) + faceOffsets[j]) + y * stride;
+                                              static_cast<char const*>(buffer.buffer)
+                                              + faceOffsets[j]) + y * stride;
                 for (size_t x = 0; x < size; x++, out++, src++) {
                     using fp10 = math::fp<0, 5, 5>;
                     using fp11 = math::fp<0, 5, 6>;
@@ -471,7 +505,7 @@ void FTexture::generatePrefilterMipmap(FEngine& engine,
     generateMipmaps(js, levels, images);
 
     // Finally generate each pre-filtered mipmap level
-    const size_t baseExp = utils::ctz(size);
+    const size_t baseExp = ctz(size);
     size_t numSamples = options->sampleCount;
     const size_t numLevels = baseExp + 1;
     for (ssize_t i = baseExp; i >= 0; --i) {
