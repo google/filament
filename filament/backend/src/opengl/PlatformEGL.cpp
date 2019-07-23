@@ -16,6 +16,8 @@
 
 #include "PlatformEGL.h"
 
+#include "OpenGLDriver.h"
+
 #include <jni.h>
 
 #include <assert.h>
@@ -147,6 +149,8 @@ Driver* PlatformEGL::createDriver(void* sharedContext) noexcept {
     importGLESExtensionsEntryPoints();
 
     auto extensions = split(eglQueryString(mEGLDisplay, EGL_EXTENSIONS));
+
+    ext.OES_EGL_image_external_essl3 = extensions.has("GL_OES_EGL_image_external_essl3");
 
     eglCreateSyncKHR = (PFNEGLCREATESYNCKHRPROC) eglGetProcAddress("eglCreateSyncKHR");
     eglDestroySyncKHR = (PFNEGLDESTROYSYNCKHRPROC) eglGetProcAddress("eglDestroySyncKHR");
@@ -488,6 +492,20 @@ void PlatformEGL::destroyExternalTextureStorage(
 
 int PlatformEGL::getOSVersion() const noexcept {
     return mOSVersion;
+}
+
+void PlatformEGL::createExternalImageTexture(void* texture) noexcept {
+    auto* t = (OpenGLDriver::GLTexture*) texture;
+    glGenTextures(1, &t->gl.id);
+    if (ext.OES_EGL_image_external_essl3) {
+        t->gl.targetIndex = (uint8_t)
+                OpenGLDriver::getIndexForTextureTarget(t->gl.target = GL_TEXTURE_EXTERNAL_OES);
+    }
+}
+
+void PlatformEGL::destroyExternalImage(void* texture) noexcept {
+    auto* t = (OpenGLDriver::GLTexture*) texture;
+    glDeleteTextures(1, &t->gl.id);
 }
 
 // This must called when the library is loaded. We need this to get a reference to the global VM

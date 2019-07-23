@@ -16,11 +16,13 @@
 
 #include "PlatformCocoaTouchGL.h"
 
+#define GLES_SILENCE_DEPRECATION
 #include <OpenGLES/EAGL.h>
 #include <OpenGLES/ES3/gl.h>
 #include <OpenGLES/ES3/glext.h>
 
 #include <UIKit/UIKit.h>
+#include <CoreVideo/CoreVideo.h>
 
 #include "DriverBase.h"
 
@@ -29,6 +31,9 @@
 #include <utils/Panic.h>
 
 #include "OpenGLDriverFactory.h"
+
+#include "OpenGLDriver.h"
+#include "CocoaTouchExternalImage.h"
 
 namespace filament {
 
@@ -40,6 +45,8 @@ struct PlatformCocoaTouchGLImpl {
     GLuint mDefaultFramebuffer = 0;
     GLuint mDefaultColorbuffer = 0;
     GLuint mDefaultDepthbuffer = 0;
+    CVOpenGLESTextureCacheRef mTextureCache = nullptr;
+    CocoaTouchExternalImage::SharedGl* mExternalImageSharedGl = nullptr;
 };
 
 PlatformCocoaTouchGL::PlatformCocoaTouchGL()
@@ -78,11 +85,19 @@ Driver* PlatformCocoaTouchGL::createDriver(void* const sharedGLContext) noexcept
     pImpl->mDefaultColorbuffer = renderbuffer[0];
     pImpl->mDefaultDepthbuffer = renderbuffer[1];
 
+    CVReturn success = CVOpenGLESTextureCacheCreate(kCFAllocatorDefault, nullptr,
+            pImpl->mGLContext, nullptr, &pImpl->mTextureCache);
+    assert(success == kCVReturnSuccess);
+
+    pImpl->mExternalImageSharedGl = new CocoaTouchExternalImage::SharedGl();
+
     return OpenGLDriverFactory::create(this, sharedGLContext);
 }
 
 void PlatformCocoaTouchGL::terminate() noexcept {
+    CFRelease(pImpl->mTextureCache);
     [pImpl->mGLContext release];
+    delete pImpl->mExternalImageSharedGl;
 }
 
 Platform::SwapChain* PlatformCocoaTouchGL::createSwapChain(void* nativewindow, uint64_t& flags) noexcept {
@@ -134,6 +149,53 @@ void PlatformCocoaTouchGL::makeCurrent(SwapChain* drawSwapChain, SwapChain* read
 void PlatformCocoaTouchGL::commit(Platform::SwapChain* swapChain) noexcept {
     glBindRenderbuffer(GL_RENDERBUFFER, pImpl->mDefaultColorbuffer);
     [pImpl->mGLContext presentRenderbuffer:GL_RENDERBUFFER];
+
+    // This needs to be done periodically.
+    CVOpenGLESTextureCacheFlush(pImpl->mTextureCache, 0);
+}
+
+bool PlatformCocoaTouchGL::setExternalImage(void* externalImage, void* texture) noexcept {
+    CVPixelBufferRef cvPixelBuffer = (CVPixelBufferRef) externalImage;
+    auto* driverTexture = (OpenGLDriver::GLTexture*) texture;
+
+    CocoaTouchExternalImage* cocoaExternalImage = (CocoaTouchExternalImage*) driverTexture->platformPImpl;
+
+    if (!cocoaExternalImage->set(cvPixelBuffer)) {
+        return false;
+    }
+
+    driverTexture->gl.id = cocoaExternalImage->getGlTexture();
+    driverTexture->gl.internalFormat = cocoaExternalImage->getInternalFormat();
+    driverTexture->gl.target = cocoaExternalImage->getTarget();
+    driverTexture->gl.baseLevel = 0;
+    driverTexture->gl.maxLevel = 0;
+
+    return true;
+}
+
+void PlatformCocoaTouchGL::retainExternalImage(void* externalImage) noexcept {
+    // Take ownership of the passed in buffer. It will be released the next time
+    // setExternalImage is called, or when the texture is destroyed.
+    CVPixelBufferRef pixelBuffer = (CVPixelBufferRef) externalImage;
+    CVPixelBufferRetain(pixelBuffer);
+}
+
+void PlatformCocoaTouchGL::releaseExternalImage(void* externalImage) noexcept {
+    CVPixelBufferRef pixelBuffer = (CVPixelBufferRef) externalImage;
+    CVPixelBufferRelease(pixelBuffer);
+}
+
+void PlatformCocoaTouchGL::createExternalImageTexture(void* texture) noexcept {
+    auto* driverTexture = (OpenGLDriver::GLTexture*) texture;
+
+    driverTexture->platformPImpl = new CocoaTouchExternalImage(pImpl->mTextureCache,
+            *pImpl->mExternalImageSharedGl);
+}
+
+void PlatformCocoaTouchGL::destroyExternalImage(void* texture) noexcept {
+    auto* driverTexture = (OpenGLDriver::GLTexture*) texture;
+    auto* p = (CocoaTouchExternalImage*) driverTexture->platformPImpl;
+    delete p;
 }
 
 } // namespace filament

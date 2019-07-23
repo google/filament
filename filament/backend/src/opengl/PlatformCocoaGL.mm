@@ -27,7 +27,6 @@
 #include <OpenGL/OpenGL.h>
 #include <Cocoa/Cocoa.h>
 
-
 namespace filament {
 
 using namespace backend;

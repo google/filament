@@ -84,6 +84,25 @@ public:
             uint32_t w, uint32_t h, TextureFormat format) noexcept = 0;
 
     virtual void destroyExternalTextureStorage(ExternalTexture* ets) noexcept = 0;
+
+    // called to bind the platform-specific externalImage to a texture
+    // texture points to a OpenGLDriver::GLTexture
+    virtual bool setExternalImage(void* externalImage, void* texture) noexcept {
+        return false;
+    }
+
+    // called on the application thread to allow Filament to take ownership of the image
+    virtual void retainExternalImage(void* externalImage) noexcept {}
+
+    // called to release ownership of the image
+    virtual void releaseExternalImage(void* externalImage) noexcept {}
+
+    // called once when a new SAMPLER_EXTERNAL texture is created.
+    virtual void createExternalImageTexture(void* texture) noexcept {}
+
+    // called once before a SAMPLER_EXTERNAL texture is destroyed.
+    virtual void destroyExternalImage(void* texture) noexcept {}
+
 };
 
 } // namespace backend

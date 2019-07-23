@@ -115,6 +115,8 @@ public:
             int8_t maxLevel = -1;
             uint8_t targetIndex = 0;    // optimization: index corresponding to target
         } gl;
+
+        void* platformPImpl = nullptr;
     };
 
     class DebugMarker {
@@ -183,6 +185,8 @@ public:
 
     OpenGLDriver(OpenGLDriver const&) = delete;
     OpenGLDriver& operator=(OpenGLDriver const&) = delete;
+
+    constexpr static inline size_t getIndexForTextureTarget(GLuint target) noexcept;
 
 private:
     backend::ShaderModel getShaderModel() const noexcept final;
@@ -323,7 +327,6 @@ private:
 
     constexpr inline size_t getIndexForCap(GLenum cap) noexcept;
     constexpr static inline size_t getIndexForBufferTarget(GLenum target) noexcept;
-    constexpr static inline size_t getIndexForTextureTarget(GLuint target) noexcept;
 
     inline void pixelStore(GLenum, GLint) noexcept;
     inline void activeTexture(GLuint unit) noexcept;
