@@ -307,6 +307,14 @@ const char* toString(VertexAttribute attribute) {
         case VertexAttribute::UV1: return "uv1";
         case VertexAttribute::BONE_INDICES: return "bone indices";
         case VertexAttribute::BONE_WEIGHTS: return "bone weights";
+        case VertexAttribute::CUSTOM0: return "custom0";
+        case VertexAttribute::CUSTOM1: return "custom1";
+        case VertexAttribute::CUSTOM2: return "custom2";
+        case VertexAttribute::CUSTOM3: return "custom3";
+        case VertexAttribute::CUSTOM4: return "custom4";
+        case VertexAttribute::CUSTOM5: return "custom5";
+        case VertexAttribute::CUSTOM6: return "custom6";
+        case VertexAttribute::CUSTOM7: return "custom7";
     }
     return "--";
 }

@@ -386,6 +386,10 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
 }
 
 bool MaterialBuilder::findProperties() noexcept {
+    if (mMaterialDomain != MaterialDomain::SURFACE) {
+        return true;
+    }
+
 #ifndef FILAMAT_LITE
     using namespace filament::backend;
     GLSLTools glslTools;
@@ -423,13 +427,16 @@ bool MaterialBuilder::runSemanticAnalysis() noexcept {
     assert(!mCodeGenPermutations.empty());
     CodeGenParams params = mCodeGenPermutations[0];
 
-    ShaderModel model = ShaderModel::UNKNOWN;
+    TargetApi targetApi = params.targetApi;
+    assertSingleTargetApi(targetApi);
+    ShaderModel model = static_cast<ShaderModel>(params.shaderModel);
+
     std::string shaderCode = peek(ShaderType::VERTEX, params, mProperties);
-    bool result = glslTools.analyzeVertexShader(shaderCode, model, mTargetApi);
+    bool result = glslTools.analyzeVertexShader(shaderCode, model, mMaterialDomain, targetApi);
     if (!result) return false;
 
     shaderCode = peek(ShaderType::FRAGMENT, params, mProperties);
-    result = glslTools.analyzeFragmentShader(shaderCode, model, mTargetApi);
+    result = glslTools.analyzeFragmentShader(shaderCode, model, mMaterialDomain, targetApi);
     return result;
 #else
     return true;
@@ -490,8 +497,8 @@ bool MaterialBuilder::generateShaders(const std::vector<Variant>& variants, Chun
     std::vector<uint32_t> spirv;
     std::string msl;
 
-    ShaderGenerator sg(mProperties, mVariables,
-            mMaterialCode, mMaterialLineOffset, mMaterialVertexCode, mMaterialVertexLineOffset);
+    ShaderGenerator sg(mProperties, mVariables, mMaterialCode, mMaterialLineOffset,
+            mMaterialVertexCode, mMaterialVertexLineOffset, mMaterialDomain);
 
     bool emptyVertexCode = mMaterialVertexCode.empty();
     bool customDepth = sg.hasCustomDepthShader() ||
@@ -639,7 +646,9 @@ Package MaterialBuilder::build() noexcept {
     }
 
     // Generate all shaders and write the shader chunks.
-    auto variants = determineSurfaceVariants(mVariantFilter, isLit(), mShadowMultiplier);
+    const auto variants = mMaterialDomain == MaterialDomain::SURFACE ?
+        determineSurfaceVariants(mVariantFilter, isLit(), mShadowMultiplier) :
+        determinePostProcessVariants();
     bool success = generateShaders(variants, container, info);
 
     // Flatten all chunks in the container into a Package.
@@ -654,8 +663,8 @@ Package MaterialBuilder::build() noexcept {
 const std::string MaterialBuilder::peek(filament::backend::ShaderType type,
         const CodeGenParams& params, const PropertyList& properties) noexcept {
 
-    ShaderGenerator sg(properties, mVariables,
-            mMaterialCode, mMaterialLineOffset, mMaterialVertexCode, mMaterialVertexLineOffset);
+    ShaderGenerator sg(properties, mVariables, mMaterialCode, mMaterialLineOffset,
+            mMaterialVertexCode, mMaterialVertexLineOffset, mMaterialDomain);
 
     MaterialInfo info;
     prepareToBuild(info);

@@ -19,6 +19,8 @@ canvas { touch-action: none; width: 100%; height: 100%; }
 const iblfile = 'venetian_crossroads_2k/venetian_crossroads_2k_ibl.ktx';
 const skyfile = 'venetian_crossroads_2k/venetian_crossroads_2k_skybox.ktx';
 
+let ready = true;
+
 Filament.init([
     'parquet.filamat',
     'shader_ball.filamesh',

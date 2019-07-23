@@ -69,6 +69,18 @@ static void generateVertexDomain(const CodeGenerator& cg, utils::io::sstream& vs
     }
 }
 
+static void generatePostProcessMaterialVariantDefines(const CodeGenerator& cg,
+        utils::io::sstream& shader, PostProcessVariant variant) noexcept {
+    switch (variant) {
+        case PostProcessVariant::OPAQUE:
+            cg.generateDefine(shader, "POST_PROCESS_OPAQUE", 1u);
+            break;
+        case PostProcessVariant::TRANSLUCENT:
+            cg.generateDefine(shader, "POST_PROCESS_OPAQUE", 0u);
+            break;
+    }
+}
+
 static size_t countLines(const char* s) noexcept {
     size_t lines = 0;
     size_t i = 0;
@@ -106,8 +118,8 @@ ShaderGenerator::ShaderGenerator(
         MaterialBuilder::PropertyList const& properties,
         MaterialBuilder::VariableList const& variables,
         utils::CString const& materialCode, size_t lineOffset,
-        utils::CString const& materialVertexCode, size_t vertexLineOffset) noexcept {
-
+        utils::CString const& materialVertexCode, size_t vertexLineOffset,
+        MaterialBuilder::MaterialDomain materialDomain) noexcept {
     std::copy(std::begin(properties), std::end(properties), std::begin(mProperties));
     std::copy(std::begin(variables), std::end(variables), std::begin(mVariables));
 
@@ -115,10 +127,16 @@ ShaderGenerator::ShaderGenerator(
     mMaterialVertexCode = materialVertexCode;
     mMaterialLineOffset = lineOffset;
     mMaterialVertexLineOffset = vertexLineOffset;
+    mMaterialDomain = materialDomain;
 
     if (mMaterialCode.empty()) {
-        mMaterialCode =
-                utils::CString("void material(inout MaterialInputs m) {\n    prepareMaterial(m);\n}\n");
+        if (mMaterialDomain == MaterialBuilder::MaterialDomain::SURFACE) {
+            mMaterialCode =
+                    utils::CString("void material(inout MaterialInputs m) {\n    prepareMaterial(m);\n}\n");
+        } else if (mMaterialDomain == MaterialBuilder::MaterialDomain::POST_PROCESS) {
+            mMaterialCode =
+                    utils::CString("void postProcess(inout PostProcessInputs p) {\n}\n");
+        }
     }
     if (mMaterialVertexCode.empty()) {
         mMaterialVertexCode =
@@ -130,6 +148,11 @@ const std::string ShaderGenerator::createVertexProgram(filament::backend::Shader
         MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
         MaterialInfo const& material, uint8_t variantKey, filament::Interpolation interpolation,
         filament::VertexDomain vertexDomain) const noexcept {
+    if (mMaterialDomain == MaterialBuilder::MaterialDomain::POST_PROCESS) {
+        return ShaderPostProcessGenerator::createPostProcessVertexProgram(shaderModel, targetApi,
+                targetLanguage, material, variantKey, material.samplerBindings, mMaterialVertexCode);
+    }
+
     utils::io::sstream vs;
 
     const CodeGenerator cg(shaderModel, targetApi, targetLanguage);
@@ -228,6 +251,10 @@ const std::string ShaderGenerator::createFragmentProgram(filament::backend::Shad
         MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
         MaterialInfo const& material, uint8_t variantKey,
         filament::Interpolation interpolation) const noexcept {
+    if (mMaterialDomain == MaterialBuilder::MaterialDomain::POST_PROCESS) {
+        return ShaderPostProcessGenerator::createPostProcessFragmentProgram(shaderModel,
+                targetApi, targetLanguage, material, variantKey, material.samplerBindings, mMaterialCode);
+    }
 
     const CodeGenerator cg(shaderModel, targetApi, targetLanguage);
     const bool lit = material.isLit;
@@ -369,7 +396,7 @@ void ShaderGenerator::fixupExternalSamplers(filament::backend::ShaderModel sm,
     }
 }
 
-const std::string ShaderPostProcessGenerator::createPostProcessVertexProgram(
+const std::string ShaderPostProcessGenerator::createPostProcessVertexProgramOld(
         filament::backend::ShaderModel sm, MaterialBuilder::TargetApi targetApi,
         MaterialBuilder::TargetLanguage targetLanguage, filament::PostProcessStage variant,
         uint8_t firstSampler) noexcept {
@@ -387,12 +414,12 @@ const std::string ShaderPostProcessGenerator::createPostProcessVertexProgram(
             firstSampler, SibGenerator::getPostProcessSib());
 
     cg.generateCommon(vs, ShaderType::VERTEX);
-    cg.generatePostProcessMain(vs, ShaderType::VERTEX, variant);
+    cg.generatePostProcessMainOld(vs, ShaderType::VERTEX, variant);
     cg.generateEpilog(vs);
     return vs.c_str();
 }
 
-const std::string ShaderPostProcessGenerator::createPostProcessFragmentProgram(
+const std::string ShaderPostProcessGenerator::createPostProcessFragmentProgramOld(
         filament::backend::ShaderModel sm, MaterialBuilder::TargetApi targetApi,
         MaterialBuilder::TargetLanguage targetLanguage, filament::PostProcessStage variant,
         uint8_t firstSampler) noexcept {
@@ -409,7 +436,7 @@ const std::string ShaderPostProcessGenerator::createPostProcessFragmentProgram(
             firstSampler, SibGenerator::getPostProcessSib());
 
     cg.generateCommon(fs, ShaderType::FRAGMENT);
-    cg.generatePostProcessMain(fs, ShaderType::FRAGMENT, variant);
+    cg.generatePostProcessMainOld(fs, ShaderType::FRAGMENT, variant);
     cg.generateEpilog(fs);
     return fs.c_str();
 }
@@ -450,6 +477,68 @@ void ShaderPostProcessGenerator::generatePostProcessStageDefines(utils::io::sstr
             cg.generateDefine(vs, "POST_PROCESS_OPAQUE",        0u);
             break;
     }
+}
+
+const std::string ShaderPostProcessGenerator::createPostProcessVertexProgram(
+        filament::backend::ShaderModel sm, MaterialBuilder::TargetApi targetApi,
+        MaterialBuilder::TargetLanguage targetLanguage, MaterialInfo const& material,
+        uint8_t variant, const filament::SamplerBindingMap& samplerBindingMap,
+        utils::CString const& postProcessCode) noexcept {
+    const CodeGenerator cg(sm, targetApi, targetLanguage);
+    utils::io::sstream vs;
+    cg.generateProlog(vs, ShaderType::VERTEX, false);
+    cg.generateDefine(vs, "LOCATION_POSITION", uint32_t(VertexAttribute::POSITION));
+    generatePostProcessMaterialVariantDefines(cg, vs, PostProcessVariant(variant));
+
+    cg.generateUniforms(vs, ShaderType::VERTEX,
+            BindingPoints::PER_VIEW, UibGenerator::getPerViewUib());
+    cg.generateUniforms(vs, ShaderType::VERTEX,
+            BindingPoints::POST_PROCESS, UibGenerator::getPostProcessingUib());
+    cg.generateUniforms(vs, ShaderType::VERTEX,
+            BindingPoints::PER_MATERIAL_INSTANCE, material.uib);
+
+    cg.generateSamplers(vs,
+            material.samplerBindings.getBlockOffset(BindingPoints::PER_MATERIAL_INSTANCE),
+            material.sib);
+
+    cg.generateCommon(vs, ShaderType::VERTEX);
+    cg.generateCommonGetters(vs);
+    cg.generatePostProcessMain(vs, ShaderType::VERTEX);
+    cg.generateEpilog(vs);
+    return vs.c_str();
+}
+
+const std::string ShaderPostProcessGenerator::createPostProcessFragmentProgram(
+        filament::backend::ShaderModel sm, MaterialBuilder::TargetApi targetApi,
+        MaterialBuilder::TargetLanguage targetLanguage, MaterialInfo const& material,
+        uint8_t variant, const filament::SamplerBindingMap& samplerBindingMap,
+        utils::CString const& postProcessCode) noexcept {
+    const CodeGenerator cg(sm, targetApi, targetLanguage);
+    utils::io::sstream fs;
+    cg.generateProlog(fs, ShaderType::FRAGMENT, false);
+    generatePostProcessMaterialVariantDefines(cg, fs, PostProcessVariant(variant));
+
+    cg.generateUniforms(fs, ShaderType::FRAGMENT,
+            BindingPoints::PER_VIEW, UibGenerator::getPerViewUib());
+    cg.generateUniforms(fs, ShaderType::FRAGMENT,
+            BindingPoints::POST_PROCESS, UibGenerator::getPostProcessingUib());
+    cg.generateUniforms(fs, ShaderType::FRAGMENT,
+            BindingPoints::PER_MATERIAL_INSTANCE, material.uib);
+
+    cg.generateSamplers(fs,
+            material.samplerBindings.getBlockOffset(BindingPoints::PER_MATERIAL_INSTANCE),
+            material.sib);
+
+    cg.generateCommon(fs, ShaderType::FRAGMENT);
+    cg.generateCommonGetters(fs);
+    cg.generateCommonPostProcess(fs, ShaderType::FRAGMENT);
+
+    // TODO: set the correct line offset.
+    appendShader(fs, postProcessCode, 0);
+
+    cg.generatePostProcessMain(fs, ShaderType::FRAGMENT);
+    cg.generateEpilog(fs);
+    return fs.c_str();
 }
 
 

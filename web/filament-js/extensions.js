@@ -249,14 +249,26 @@ Filament.loadClassExtensions = function() {
     //
     // "Finalization" refers to decoding texture data, converting the format of the
     // vertex data if needed, and potentially computing tangents.
-    Filament.gltfio$FilamentAsset.prototype.loadResources = function(onDone, onFetched) {
+    //
+    // Takes an optional base path for resolving the URI strings in the glTF file, which is
+    // typically the path to the parent glTF file. The given base path cannot itself be a relative
+    // URL, but clients can do the following to resolve a relative URL:
+    //    const basePath = '' + new URL(myRelativeUrl, document.location);
+    // If the given base path is null, document.location is used as the base.
+    Filament.gltfio$FilamentAsset.prototype.loadResources = function(onDone, onFetched, basePath) {
         const asset = this;
         const engine = this.getEngine();
-        const urlkeys = this.getResourceUrls();
+        const names = this.getResourceUrls();
         const urlset = new Set();
-        for (var i = 0; i < urlkeys.size(); i++) {
-            const url = urlkeys.get(i);
-            if (url) {
+        const urlToName = {};
+
+        basePath = basePath || document.location;
+
+        for (var i = 0; i < names.size(); i++) {
+            const name = names.get(i);
+            if (name) {
+                const url = '' + new URL(name, basePath);
+                urlToName[url] = name;
                 urlset.add(url);
             }
         }
@@ -286,8 +298,9 @@ Filament.loadClassExtensions = function() {
             return;
         }
 
-        Filament.fetch(Array.from(urlset), onComplete, function(name) {
-            var buffer = getBufferDescriptor(name);
+        Filament.fetch(Array.from(urlset), onComplete, function(url) {
+            const buffer = getBufferDescriptor(url);
+            const name = urlToName[url];
             resourceLoader.addResourceData(name, buffer);
             buffer.delete();
             if (onFetched) {

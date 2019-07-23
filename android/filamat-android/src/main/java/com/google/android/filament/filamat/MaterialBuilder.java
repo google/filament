@@ -98,7 +98,15 @@ public class MaterialBuilder {
         UV0,                    // texture coordinates (float2)
         UV1,                    // texture coordinates (float2)
         BONE_INDICES,           // indices of 4 bones (uvec4)
-        BONE_WEIGHTS            // weights of the 4 bones (normalized float4)
+        BONE_WEIGHTS,           // weights of the 4 bones (normalized float4)
+        CUSTOM0,
+        CUSTOM1,
+        CUSTOM2,
+        CUSTOM3,
+        CUSTOM4,
+        CUSTOM5,
+        CUSTOM6,
+        CUSTOM7
     }
 
     public enum BlendingMode {

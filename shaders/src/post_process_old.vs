@@ -1,9 +1,15 @@
+
 LAYOUT_LOCATION(LOCATION_POSITION) in vec4 position;
 
 LAYOUT_LOCATION(0) out vec2 vertex_uv;
 
 void main() {
     vertex_uv = (position.xy * 0.5 + 0.5) * frameUniforms.resolution.xy;
+
+#if POST_PROCESS_ANTI_ALIASING
+    // texel to uv, accounting for the texture actual size
+    vertex_uv *= frameUniforms.resolution.zw * postProcessUniforms.uvScale;
+#endif
 
     gl_Position = position;
 

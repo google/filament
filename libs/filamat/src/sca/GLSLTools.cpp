@@ -52,6 +52,7 @@ GLSLangCleaner::~GLSLangCleaner() {
 }
 
 bool GLSLTools::analyzeFragmentShader(const std::string& shaderCode, ShaderModel model,
+        MaterialBuilder::MaterialDomain materialDomain,
         MaterialBuilder::TargetApi targetApi) const noexcept {
 
     // Parse to check syntax and semantic.
@@ -59,6 +60,17 @@ bool GLSLTools::analyzeFragmentShader(const std::string& shaderCode, ShaderModel
 
     TShader tShader(EShLanguage::EShLangFragment);
     tShader.setStrings(&shaderCString, 1);
+
+    auto getMaterialFunctionName = [](MaterialBuilder::MaterialDomain domain) {
+        switch(domain) {
+            case MaterialBuilder::MaterialDomain::SURFACE:
+                return "material";
+
+            case MaterialBuilder::MaterialDomain::POST_PROCESS:
+                return "postProcess";
+        }
+    };
+    const char* materialFunctionName = getMaterialFunctionName(materialDomain);
 
     GLSLangCleaner cleaner;
     int version = glslangVersionFromShaderModel(model);
@@ -72,11 +84,17 @@ bool GLSLTools::analyzeFragmentShader(const std::string& shaderCode, ShaderModel
 
     TIntermNode* root = tShader.getIntermediate()->getTreeRoot();
     // Check there is a material function definition in this shader.
-    TIntermNode* materialFctNode = ASTUtils::getFunctionByNameOnly("material", *root);
+    TIntermNode* materialFctNode = ASTUtils::getFunctionByNameOnly(materialFunctionName, *root);
     if (materialFctNode == nullptr) {
         utils::slog.e << "ERROR: Invalid fragment shader:" << utils::io::endl;
-        utils::slog.e << "ERROR: Unable to find material() function" << utils::io::endl;
+        utils::slog.e << "ERROR: Unable to find " << materialFunctionName << "() function" << utils::io::endl;
         return false;
+    }
+
+    // If this is a post-process material, at this point we've successfully met all the
+    // requirements.
+    if (materialDomain == MaterialBuilder::MaterialDomain::POST_PROCESS) {
+        return true;
     }
 
     // Check there is a prepareMaterial function defintion in this shader.
@@ -101,7 +119,13 @@ bool GLSLTools::analyzeFragmentShader(const std::string& shaderCode, ShaderModel
 }
 
 bool GLSLTools::analyzeVertexShader(const std::string& shaderCode, ShaderModel model,
+        MaterialBuilder::MaterialDomain materialDomain,
         MaterialBuilder::TargetApi targetApi) const noexcept {
+
+    // TODO: After implementing post-process vertex shaders, properly analyze them here.
+    if (materialDomain == MaterialBuilder::MaterialDomain::POST_PROCESS) {
+        return true;
+    }
 
     // Parse to check syntax and semantic.
     const char* shaderCString = shaderCode.c_str();

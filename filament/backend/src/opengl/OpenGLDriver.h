@@ -63,7 +63,7 @@ public:
     struct GLVertexBuffer : public backend::HwVertexBuffer {
         using HwVertexBuffer::HwVertexBuffer;
         struct {
-            std::array<GLuint, backend::MAX_ATTRIBUTE_BUFFER_COUNT> buffers;  // 4*6 bytes
+            std::array<GLuint, backend::MAX_VERTEX_ATTRIBUTE_COUNT> buffers;  // 4 * MAX_VERTEX_ATTRIBUTE_COUNT bytes
         } gl;
     };
 
@@ -216,7 +216,7 @@ private:
     class HandleAllocator {
         utils::PoolAllocator< 16, 16>   mPool0;
         utils::PoolAllocator< 64, 32>   mPool1;
-        utils::PoolAllocator<128, 32>   mPool2;
+        utils::PoolAllocator<208, 32>   mPool2;
     public:
         static constexpr size_t MIN_ALIGNMENT_SHIFT = 4;
         explicit HandleAllocator(const utils::HeapArea& area);
@@ -612,9 +612,12 @@ constexpr size_t OpenGLDriver::getIndexForCap(GLenum cap) noexcept {
 #ifdef GL_ARB_seamless_cube_map
         case GL_TEXTURE_CUBE_MAP_SEAMLESS:      index = 11; break;
 #endif
-        default: index = 12; break; // should never happen
+#if GL41_HEADERS
+        case GL_PROGRAM_POINT_SIZE:             index = 12; break;
+#endif
+        default: index = 13; break; // should never happen
     }
-    assert(index < 12 && index < state.enables.caps.size());
+    assert(index < 13 && index < state.enables.caps.size());
     return index;
 }
 

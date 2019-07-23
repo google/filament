@@ -74,19 +74,19 @@ public:
 
     // handles implicit conversion to a tvec4. must not be explicit.
     template<typename A>
-    constexpr TVec2(A v) : x(v), y(v) { }
+    constexpr TVec2(A v) : v{ T(v), T(v) } {}
 
     template<typename A, typename B>
-    constexpr TVec2(A x, B y) : x(x), y(y) { }
+    constexpr TVec2(A x, B y) : v{ T(x), T(y) } {}
 
     template<typename A>
-    constexpr TVec2(const TVec2<A>& v) : x(v.x), y(v.y) { }
+    constexpr TVec2(const TVec2<A>& v) : v{ T(v[0]), T(v[1]) } {}
 
     // cross product works only on vectors of size 2 or 3
-    template <typename RT>
+    template<typename RT>
     friend inline
     constexpr value_type cross(const TVec2& u, const TVec2<RT>& v) {
-        return value_type(u.x*v.y - u.y*v.x);
+        return value_type(u[0] * v[1] - u[1] * v[0]);
     }
 };
 

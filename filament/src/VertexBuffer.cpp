@@ -37,7 +37,7 @@ using namespace backend;
 using namespace filament::math;
 
 struct VertexBuffer::BuilderDetails {
-    FVertexBuffer::AttributeData mAttributes[MAX_ATTRIBUTE_BUFFER_COUNT];
+    FVertexBuffer::AttributeData mAttributes[MAX_VERTEX_ATTRIBUTE_COUNT];
     AttributeBitset mDeclaredAttributes;
     uint32_t mVertexCount = 0;
     uint8_t mBufferCount = 0;
@@ -76,8 +76,8 @@ VertexBuffer::Builder& VertexBuffer::Builder::attribute(VertexAttribute attribut
         byteStride = (uint8_t)attributeSize;
     }
 
-    if (size_t(attribute) < MAX_ATTRIBUTE_BUFFER_COUNT &&
-        size_t(bufferIndex) < MAX_ATTRIBUTE_BUFFER_COUNT) {
+    if (size_t(attribute) < MAX_VERTEX_ATTRIBUTE_COUNT &&
+        size_t(bufferIndex) < MAX_VERTEX_ATTRIBUTE_COUNT) {
 
 #ifndef NDEBUG
         if (byteOffset & 0x3) {
@@ -105,7 +105,7 @@ VertexBuffer::Builder& VertexBuffer::Builder::attribute(VertexAttribute attribut
 
 VertexBuffer::Builder& VertexBuffer::Builder::normalized(VertexAttribute attribute,
         bool normalized) noexcept {
-    if (size_t(attribute) < MAX_ATTRIBUTE_BUFFER_COUNT) {
+    if (size_t(attribute) < MAX_VERTEX_ATTRIBUTE_COUNT) {
         FVertexBuffer::AttributeData& entry = mImpl->mAttributes[attribute];
         if (normalized) {
             entry.flags |= Attribute::FLAG_NORMALIZED;
@@ -124,8 +124,8 @@ VertexBuffer* VertexBuffer::Builder::build(Engine& engine) {
     if (!ASSERT_PRECONDITION_NON_FATAL(mImpl->mBufferCount > 0, "bufferCount cannot be 0")) {
         return nullptr;
     }
-    if (!ASSERT_PRECONDITION_NON_FATAL(mImpl->mBufferCount <= MAX_ATTRIBUTE_BUFFER_COUNT,
-            "bufferCount cannot be more than %d", MAX_ATTRIBUTE_BUFFER_COUNT)) {
+    if (!ASSERT_PRECONDITION_NON_FATAL(mImpl->mBufferCount <= MAX_VERTEX_ATTRIBUTE_COUNT,
+            "bufferCount cannot be more than %d", MAX_VERTEX_ATTRIBUTE_COUNT)) {
         return nullptr;
     }
 
@@ -145,7 +145,7 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const VertexBuffer::Builder& build
 
     AttributeArray attributeArray;
 
-    static_assert(attributeArray.size() == MAX_ATTRIBUTE_BUFFER_COUNT,
+    static_assert(attributeArray.size() == MAX_VERTEX_ATTRIBUTE_COUNT,
             "Attribute and Builder::Attribute arrays must match");
 
     static_assert(sizeof(Attribute) == sizeof(AttributeData),

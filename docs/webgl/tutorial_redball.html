@@ -206,8 +206,8 @@ Filament.LightManager.Builder(LightType.DIRECTIONAL)
 parameters because Filament will automatically draw a disk into the skybox.</p>
 <p>Next we need to create an <code>IndirectLight</code> object from the KTX IBL. One way of doing this is the
 following (don't type this out, there's an easier way).</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #008000; font-weight: bold">const</span> format <span style="color: #666666">=</span> Filament.PixelDataFormat.RGBM;
-<span style="color: #008000; font-weight: bold">const</span> datatype <span style="color: #666666">=</span> Filament.PixelDataType.UBYTE;
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #008000; font-weight: bold">const</span> format <span style="color: #666666">=</span> Filament.PixelDataFormat.RGB;
+<span style="color: #008000; font-weight: bold">const</span> datatype <span style="color: #666666">=</span> Filament.PixelDataType.UINT_10F_11F_11F_REV;
 
 <span style="color: #408080; font-style: italic">// Create a Texture object for the mipmapped cubemap.</span>
 <span style="color: #008000; font-weight: bold">const</span> ibl_package <span style="color: #666666">=</span> Filament.Buffer(Filament.assets[ibl_url]);
@@ -219,7 +219,6 @@ following (don't type this out, there's an easier way).</p>
   .levels(iblktx.getNumMipLevels())
   .sampler(Filament.Texture$Sampler.SAMPLER_CUBEMAP)
   .format(Filament.Texture$InternalFormat.RGBA8)
-  .rgbm(<span style="color: #008000; font-weight: bold">true</span>)
   .build(engine);
 
 <span style="color: #008000; font-weight: bold">for</span> (<span style="color: #008000; font-weight: bold">let</span> level <span style="color: #666666">=</span> <span style="color: #666666">0</span>; level <span style="color: #666666">&lt;</span> iblktx.getNumMipLevels(); <span style="color: #666666">++</span>level) {
@@ -261,7 +260,6 @@ Here's one way to create a texture for the skybox:</p>
   .levels(<span style="color: #666666">1</span>)
   .sampler(Filament.Texture$Sampler.SAMPLER_CUBEMAP)
   .format(Filament.Texture$InternalFormat.RGBA8)
-  .rgbm(<span style="color: #008000; font-weight: bold">true</span>)
   .build(engine);
 
 <span style="color: #008000; font-weight: bold">const</span> uint8array <span style="color: #666666">=</span> skyktx.getCubeBlob(<span style="color: #666666">0</span>).getBytes();

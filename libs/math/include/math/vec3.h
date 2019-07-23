@@ -87,25 +87,24 @@ public:
 
     // handles implicit conversion to a tvec4. must not be explicit.
     template<typename A>
-    constexpr TVec3(A v) : x(v), y(v), z(v) { }
+    constexpr TVec3(A v) : v{ T(v), T(v), T(v) } {}
 
     template<typename A, typename B, typename C>
-    constexpr TVec3(A x, B y, C z) : x(x), y(y), z(z) { }
+    constexpr TVec3(A x, B y, C z) : v{ T(x), T(y), T(z) } {}
 
     template<typename A, typename B>
-    constexpr TVec3(const TVec2<A>& v, B z) : x(v.x), y(v.y), z(z) { }
+    constexpr TVec3(const TVec2<A>& v, B z) : v{ T(v[0]), T(v[1]), T(z) } {}
 
     template<typename A>
-    constexpr TVec3(const TVec3<A>& v) : x(v.x), y(v.y), z(v.z) { }
+    constexpr TVec3(const TVec3<A>& v) : v{ T(v[0]), T(v[1]), T(v[2]) } {}
 
     // cross product works only on vectors of size 3
     template <typename RT>
-    friend inline
-    constexpr TVec3 cross(const TVec3& u, const TVec3<RT>& v) {
+    friend inline constexpr TVec3 cross(const TVec3& u, const TVec3<RT>& v) {
         return TVec3(
-                u.y*v.z - u.z*v.y,
-                u.z*v.x - u.x*v.z,
-                u.x*v.y - u.y*v.x);
+                u[1] * v[2] - u[2] * v[1],
+                u[2] * v[0] - u[0] * v[2],
+                u[0] * v[1] - u[1] * v[0]);
     }
 };
 

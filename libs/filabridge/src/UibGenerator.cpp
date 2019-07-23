@@ -104,7 +104,6 @@ UniformInterfaceBlock const& UibGenerator::getPostProcessingUib() noexcept {
             .name("PostProcessUniforms")
             .add("uvScale",   1, UniformInterfaceBlock::Type::FLOAT2)
             .add("time",      1, UniformInterfaceBlock::Type::FLOAT)
-            .add("yOffset",   1, UniformInterfaceBlock::Type::FLOAT)
             .add("dithering", 1, UniformInterfaceBlock::Type::INT)
             .build();
     return uib;

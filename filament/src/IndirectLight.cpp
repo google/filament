@@ -73,15 +73,15 @@ IndirectLight::Builder& IndirectLight::Builder::radiance(uint8_t bands, float3 c
     if (bands >= 1) {
         irradiance[0] = sh[0] * 0.282095f;
         if (bands >= 2) {
-            irradiance[1] = sh[1] * 0.325735f;
-            irradiance[2] = sh[2] * 0.325735f;
-            irradiance[3] = sh[3] * 0.325735f;
+            irradiance[1] = sh[1] * -0.325735f;
+            irradiance[2] = sh[2] *  0.325735f;
+            irradiance[3] = sh[3] * -0.325735f;
             if (bands >= 3) {
-                irradiance[4] = sh[4] * 0.045523f;
-                irradiance[5] = sh[5] * 0.091046f;
-                irradiance[6] = sh[6] * 0.157696f;
-                irradiance[7] = sh[7] * 0.091046f;
-                irradiance[8] = sh[8] * 0.045523f;
+                irradiance[4] = sh[4] *  0.273137f;
+                irradiance[5] = sh[5] * -0.273137f;
+                irradiance[6] = sh[6] *  0.078848f;
+                irradiance[7] = sh[7] * -0.273137f;
+                irradiance[8] = sh[8] *  0.136569f;
             }
         }
     }

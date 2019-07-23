@@ -114,7 +114,7 @@ public:
  *
  * minimum (denormal) value: 2^-24 = 5.96e-8
  * minimum (normal) value:   2^-14 = 6.10e-5
- * maximum value:            2-2^-10 = 65504
+ * maximum value:            (2 - 2^-10) * 2^15 = 65504
  *
  * Integers between 0 and 2048 can be represented exactly
  */

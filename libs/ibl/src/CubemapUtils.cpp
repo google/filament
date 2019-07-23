@@ -35,20 +35,37 @@ namespace filament {
 namespace ibl {
 
 void CubemapUtils::clamp(Image& src) {
-    // We clamp all values to 256 which correspond to the maximum value (before
-    // gamma compression) that we can store.
-    // This clamping is necessary because:
-    // - our importance-sampling (when calculating the pre-filtered mipmaps)
-    //   behaves badly with with very strong high-frequencies.
-    // - SH can't encode such environments with a small number of bands.
+    // See: http://graphicrants.blogspot.com/2013/12/tone-mapping.html
+    // By Brian Karis
+    auto compress = [](float3 color, float linear, float compressed) {
+        float luma = dot(color, float3{ 0.2126, 0.7152, 0.0722 }); // REC 709
+        return luma <= linear ? color :
+               (color / luma) * ((linear * linear - compressed * luma)
+                                 / (2 * linear - compressed - luma));
+    };
     const size_t width = src.getWidth();
     const size_t height = src.getHeight();
-    for (size_t y=0 ; y<height ; ++y) {
+    for (size_t y = 0; y < height; ++y) {
         for (size_t x = 0; x < width; ++x) {
             float3& c = *static_cast<float3*>(src.getPixelRef(x, y));
-            c.x = std::min(c.x, 256.0f);
-            c.y = std::min(c.y, 256.0f);
-            c.z = std::min(c.z, 256.0f);
+            // these values are chosen arbitrarily and seem to produce good result with
+            // 4096 samples
+            c = compress(c, 4096.0f, 16384.0f);
+        }
+    }
+}
+
+void CubemapUtils::highlight(Image& src) {
+    const size_t width = src.getWidth();
+    const size_t height = src.getHeight();
+    for (size_t y = 0; y < height; ++y) {
+        for (size_t x = 0; x < width; ++x) {
+            float3& c = *static_cast<float3*>(src.getPixelRef(x, y));
+            if (min(c) < 0.0f) {
+                c = { 0, 0, 1 };
+            } else if (max(c) > 64512.0f) { // maximum encodable by 10-bits float (RGB_11_11_10)
+                c = { 1, 0, 0 };
+            }
         }
     }
 }

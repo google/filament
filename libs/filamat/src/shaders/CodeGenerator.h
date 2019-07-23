@@ -64,11 +64,13 @@ public:
     // generate common functions for the given shader
     utils::io::sstream& generateCommon(utils::io::sstream& out, ShaderType type) const;
     utils::io::sstream& generateCommonMaterial(utils::io::sstream& out, ShaderType type) const;
+    utils::io::sstream& generateCommonPostProcess(utils::io::sstream& out, ShaderType type) const;
 
     // generate the shader's main()
     utils::io::sstream& generateShaderMain(utils::io::sstream& out, ShaderType type) const;
-    utils::io::sstream& generatePostProcessMain(utils::io::sstream& out, ShaderType type,
+    utils::io::sstream& generatePostProcessMainOld(utils::io::sstream& out, ShaderType type,
             filament::PostProcessStage variant) const;
+    utils::io::sstream& generatePostProcessMain(utils::io::sstream& out, ShaderType type) const;
 
     // generate the shader's code for the lit shading model
     utils::io::sstream& generateShaderLit(utils::io::sstream& out, ShaderType type,
@@ -108,7 +110,10 @@ public:
     utils::io::sstream& generateDefine(utils::io::sstream& out, const char* name, float value) const;
     utils::io::sstream& generateDefine(utils::io::sstream& out, const char* name, uint32_t value) const;
     utils::io::sstream& generateDefine(utils::io::sstream& out, const char* name, const char* string) const;
+    utils::io::sstream& generateIndexedDefine(utils::io::sstream& out, const char* name,
+            uint32_t index, uint32_t value) const;
 
+    utils::io::sstream& generateCommonGetters(utils::io::sstream& out) const;
     utils::io::sstream& generateGetters(utils::io::sstream& out, ShaderType type) const;
     utils::io::sstream& generateParameters(utils::io::sstream& out, ShaderType type) const;
 

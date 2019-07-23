@@ -128,10 +128,10 @@ io::sstream& CodeGenerator::generateShaderMain(io::sstream& out, ShaderType type
     return out;
 }
 
-io::sstream& CodeGenerator::generatePostProcessMain(io::sstream& out,
+io::sstream& CodeGenerator::generatePostProcessMainOld(io::sstream& out,
         ShaderType type, filament::PostProcessStage variant) const {
     if (type == ShaderType::VERTEX) {
-        out << SHADERS_POST_PROCESS_VS_DATA;
+        out << SHADERS_POST_PROCESS_OLD_VS_DATA;
     } else if (type == ShaderType::FRAGMENT) {
         switch (variant) {
             case PostProcessStage::TONE_MAPPING_OPAQUE:
@@ -145,6 +145,15 @@ io::sstream& CodeGenerator::generatePostProcessMain(io::sstream& out,
                 out << SHADERS_FXAA_FS_DATA;
                 break;
         }
+        out << SHADERS_POST_PROCESS_OLD_FS_DATA;
+    }
+    return out;
+}
+
+io::sstream& CodeGenerator::generatePostProcessMain(io::sstream& out, ShaderType type) const {
+    if (type == ShaderType::VERTEX) {
+        out << SHADERS_POST_PROCESS_VS_DATA;
+    } else if (type == ShaderType::FRAGMENT) {
         out << SHADERS_POST_PROCESS_FS_DATA;
     }
     return out;
@@ -189,6 +198,13 @@ io::sstream& CodeGenerator::generateShaderInputs(io::sstream& out, ShaderType ty
     bool hasBoneWeights = attributes.test(VertexAttribute::BONE_WEIGHTS);
     generateDefine(out, "HAS_ATTRIBUTE_BONE_WEIGHTS", hasBoneWeights);
 
+    for (int i = 0; i < MAX_CUSTOM_ATTRIBUTES; i++) {
+        bool hasCustom = attributes.test(VertexAttribute::CUSTOM0 + i);
+        if (hasCustom) {
+            generateIndexedDefine(out, "HAS_ATTRIBUTE_CUSTOM", i, 1);
+        }
+    }
+
     if (type == ShaderType::VERTEX) {
         out << "\n";
         generateDefine(out, "LOCATION_POSITION", uint32_t(VertexAttribute::POSITION));
@@ -209,6 +225,13 @@ io::sstream& CodeGenerator::generateShaderInputs(io::sstream& out, ShaderType ty
         }
         if (hasBoneWeights) {
             generateDefine(out, "LOCATION_BONE_WEIGHTS", uint32_t(VertexAttribute::BONE_WEIGHTS));
+        }
+
+        for (int i = 0; i < MAX_CUSTOM_ATTRIBUTES; i++) {
+            if (attributes.test(VertexAttribute::CUSTOM0 + i)) {
+                generateIndexedDefine(out, "LOCATION_CUSTOM", i,
+                        uint32_t(VertexAttribute::CUSTOM0) + i);
+            }
         }
 
         out << SHADERS_INPUTS_VS_DATA;
@@ -396,6 +419,12 @@ io::sstream& CodeGenerator::generateFunction(io::sstream& out, const char* retur
     return out;
 }
 
+io::sstream& CodeGenerator::generateIndexedDefine(io::sstream& out, const char* name,
+        uint32_t index, uint32_t value) const {
+    out << "#define " << name << index << " " << value << "\n";
+    return out;
+}
+
 io::sstream& CodeGenerator::generateMaterialProperty(io::sstream& out,
         MaterialBuilder::Property property, bool isSet) const {
     if (isSet) {
@@ -421,6 +450,18 @@ io::sstream& CodeGenerator::generateCommonMaterial(io::sstream& out, ShaderType 
     } else if (type == ShaderType::FRAGMENT) {
         out << SHADERS_MATERIAL_INPUTS_FS_DATA;
     }
+    return out;
+}
+
+io::sstream& CodeGenerator::generateCommonPostProcess(io::sstream& out, ShaderType type) const {
+    if (type == ShaderType::FRAGMENT) {
+        out << SHADERS_COMMON_POST_PROCESS_FS_DATA;
+    }
+    return out;
+}
+
+utils::io::sstream& CodeGenerator::generateCommonGetters(utils::io::sstream& out) const {
+    out << SHADERS_COMMON_GETTERS_FS_DATA;
     return out;
 }
 

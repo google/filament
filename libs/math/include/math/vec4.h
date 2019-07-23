@@ -86,19 +86,22 @@ public:
 
     // handles implicit conversion to a tvec4. must not be explicit.
     template<typename A>
-    constexpr TVec4(A v) : x(v), y(v), z(v), w(v) { }
+    constexpr TVec4(A v) : v{ T(v), T(v), T(v), T(v) } {}
 
     template<typename A, typename B, typename C, typename D>
-    constexpr TVec4(A x, B y, C z, D w) : x(x), y(y), z(z), w(w) { }
+    constexpr TVec4(A x, B y, C z, D w) : v{ T(x), T(y), T(z), T(w) } {}
 
     template<typename A, typename B, typename C>
-    constexpr TVec4(const TVec2<A>& v, B z, C w) : x(v.x), y(v.y), z(z), w(w) { }
+    constexpr TVec4(const TVec2<A>& v, B z, C w) : v{ T(v[0]), T(v[1]), T(z), T(w) } {}
 
     template<typename A, typename B>
-    constexpr TVec4(const TVec3<A>& v, B w) : x(v.x), y(v.y), z(v.z), w(w) { }
+    constexpr TVec4(const TVec2<A>& v, const TVec2<B>& w) : v{ T(v[0]), T(v[1]), T(w[0]), T(w[1]) } {}
+
+    template<typename A, typename B>
+    constexpr TVec4(const TVec3<A>& v, B w) : v{ T(v[0]), T(v[1]), T(v[2]), T(w) } {}
 
     template<typename A>
-    constexpr TVec4(const TVec4<A>& v) : x(v.x), y(v.y), z(v.z), w(v.w) { }
+    constexpr TVec4(const TVec4<A>& v) : v{ T(v[0]), T(v[1]), T(v[2]), T(v[3]) } {}
 };
 
 }  // namespace details

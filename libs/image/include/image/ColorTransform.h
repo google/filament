@@ -34,9 +34,11 @@ template <typename T>
 uint32_t linearToRGB_10_11_11_REV(const T& linear) {
     using fp11 = filament::math::fp<0, 5, 6>;
     using fp10 = filament::math::fp<0, 5, 5>;
-    fp11 r = fp11::fromf(linear[0]);
-    fp11 g = fp11::fromf(linear[1]);
-    fp10 b = fp10::fromf(linear[2]);
+    // the max value for a RGB_11_11_10 is {65024, 65024, 64512} :  (2 - 2^-M) * 2^(E-1)
+    // we clamp to the min of that
+    fp11 r = fp11::fromf(std::min(64512.0f, linear[0]));
+    fp11 g = fp11::fromf(std::min(64512.0f, linear[1]));
+    fp10 b = fp10::fromf(std::min(64512.0f, linear[2]));
     uint32_t ir = r.bits & 0x7FF;
     uint32_t ig = g.bits & 0x7FF;
     uint32_t ib = b.bits & 0x3FF;

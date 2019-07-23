@@ -252,12 +252,21 @@ static bool processVariables(MaterialBuilder& builder, const JsonishValue& value
 }
 
 static bool processRequires(MaterialBuilder& builder, const JsonishValue& value) {
-    static const std::unordered_map<std::string, filament::VertexAttribute> strToEnum {
-        { "color", filament::VertexAttribute::COLOR },
-        { "position", filament::VertexAttribute::POSITION },
-        { "tangents", filament::VertexAttribute::TANGENTS },
-        { "uv0", filament::VertexAttribute::UV0 },
-        { "uv1", filament::VertexAttribute::UV1 },
+    using Attribute = filament::VertexAttribute;
+    static const std::unordered_map<std::string, Attribute> strToEnum {
+        { "color", Attribute::COLOR },
+        { "position", Attribute::POSITION },
+        { "tangents", Attribute::TANGENTS },
+        { "uv0", Attribute::UV0 },
+        { "uv1", Attribute::UV1 },
+        { "custom0", Attribute::CUSTOM0 },
+        { "custom1", Attribute(Attribute::CUSTOM0 + 1) },
+        { "custom2", Attribute(Attribute::CUSTOM0 + 2) },
+        { "custom3", Attribute(Attribute::CUSTOM0 + 3) },
+        { "custom4", Attribute(Attribute::CUSTOM0 + 4) },
+        { "custom5", Attribute(Attribute::CUSTOM0 + 5) },
+        { "custom6", Attribute(Attribute::CUSTOM0 + 6) },
+        { "custom7", Attribute(Attribute::CUSTOM0 + 7) },
     };
     for (auto v : value.toJsonArray()->getElements()) {
         if (v->getType() != JsonishValue::Type::STRING) {
