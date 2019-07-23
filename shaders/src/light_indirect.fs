@@ -259,7 +259,7 @@ vec3 isEvaluateIBL(const PixelParams pixel, vec3 n, vec3 v, float NoV) {
             vec3 L = decodeDataForIBL(texture(light_iblSpecular, l, mipLevel));
 
             float D = distribution(roughness, NoH, h);
-            float V = visibility(roughness, NoV, NoL, LoH);
+            float V = visibility(roughness, NoV, NoL);
             vec3  F = fresnel(pixel.f0, LoH);
             vec3 Fr = F * (D * V * NoL * ipdf * invNumSamples);
 

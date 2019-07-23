@@ -162,7 +162,7 @@ float distribution(float roughness, float NoH, const vec3 h) {
 #endif
 }
 
-float visibility(float roughness, float NoV, float NoL, float LoH) {
+float visibility(float roughness, float NoV, float NoL) {
 #if BRDF_SPECULAR_V == SPECULAR_V_SMITH_GGX
     return V_SmithGGXCorrelated(roughness, NoV, NoL);
 #elif BRDF_SPECULAR_V == SPECULAR_V_SMITH_GGX_FAST
