@@ -890,7 +890,7 @@ int main(int argc, char* argv[]) {
     } else {
         std::cerr << "Could not open the source material " << src << std::endl;
         return 1;
-    };
+    }
 
     return 0;
 }
