@@ -13,7 +13,7 @@ struct SSBO
 
 // Implementation of the signed GLSL findMSB() function
 template<typename T>
-T findSMSB(T x)
+T spvFindSMSB(T x)
 {
     T v = select(x, T(-1) - x, x < T(0));
     return select(clz(T(0)) - (clz(v) + T(1)), T(-1), v == T(0));
@@ -21,7 +21,7 @@ T findSMSB(T x)
 
 // Implementation of the unsigned GLSL findMSB() function
 template<typename T>
-T findUMSB(T x)
+T spvFindUMSB(T x)
 {
     return select(clz(T(0)) - (clz(x) + T(1)), T(-1), x == T(0));
 }
@@ -45,10 +45,10 @@ kernel void main0(device SSBO& _4 [[buffer(0)]])
     _4.uints = uint4(sign(_19));
     _4.ints = sign(int4(_20));
     _4.uints = uint4(sign(int4(_20)));
-    _4.ints = findSMSB(int4(_20));
-    _4.uints = uint4(findSMSB(int4(_20)));
-    _4.ints = int4(findUMSB(uint4(_19)));
-    _4.uints = findUMSB(uint4(_19));
+    _4.ints = spvFindSMSB(int4(_20));
+    _4.uints = uint4(spvFindSMSB(int4(_20)));
+    _4.ints = int4(spvFindUMSB(uint4(_19)));
+    _4.uints = spvFindUMSB(uint4(_19));
     _4.ints = min(_19, _19);
     _4.uints = uint4(min(_19, int4(_20)));
     _4.ints = min(int4(_20), int4(_20));

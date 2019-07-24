@@ -16,13 +16,12 @@ layout(binding = 1, std430) buffer outputData
 
 void main()
 {
-    float _25 = _12.inputDataArray[gl_LocalInvocationID.x];
-    bool _31 = _25 > 0.0;
+    bool _31 = _12.inputDataArray[gl_LocalInvocationID.x] > 0.0;
     uvec4 _37 = uvec4(unpackUint2x32(ballotARB(_31)), 0u, 0u);
     uint _44 = mbcntAMD(packUint2x32(uvec2(_37.xy)));
     if (_31)
     {
-        _74.outputDataArray[_44] = _25;
+        _74.outputDataArray[_44] = _12.inputDataArray[gl_LocalInvocationID.x];
     }
 }
 

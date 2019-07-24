@@ -13,7 +13,7 @@ struct main0_in
     float3 vUV [[user(locn0)]];
 };
 
-fragment main0_out main0(main0_in in [[stage_in]], depth2d<float> uSampler [[texture(0)]], depth2d<float> uTex [[texture(1)]], sampler uSamplerSmplr [[sampler(0)]], sampler uSamp [[sampler(2)]])
+fragment main0_out main0(main0_in in [[stage_in]], depth2d<float> uTex [[texture(0)]], depth2d<float> uSampler [[texture(1)]], sampler uSamp [[sampler(0)]], sampler uSamplerSmplr [[sampler(1)]])
 {
     main0_out out = {};
     out.FragColor = uSampler.sample_compare(uSamplerSmplr, in.vUV.xy, in.vUV.z);

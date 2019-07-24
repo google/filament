@@ -19,7 +19,7 @@ struct main0_in
     float inLodBias [[user(locn6)]];
 };
 
-fragment main0_out main0(main0_in in [[stage_in]], texturecube<float> samplerColor [[texture(1)]], sampler samplerColorSmplr [[sampler(1)]])
+fragment main0_out main0(main0_in in [[stage_in]], texturecube<float> samplerColor [[texture(0)]], sampler samplerColorSmplr [[sampler(0)]])
 {
     main0_out out = {};
     float4x4 inInvModelView = {};

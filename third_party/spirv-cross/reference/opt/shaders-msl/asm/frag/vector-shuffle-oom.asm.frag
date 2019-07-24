@@ -95,7 +95,7 @@ struct main0_out
     float4 m_5 [[color(0)]];
 };
 
-fragment main0_out main0(constant _6& _7 [[buffer(0)]], constant _18& _19 [[buffer(1)]], constant _10& _11 [[buffer(2)]], texture2d<float> _14 [[texture(4)]], texture2d<float> _12 [[texture(13)]], texture2d<float> _8 [[texture(14)]], sampler _15 [[sampler(3)]], sampler _13 [[sampler(5)]], sampler _9 [[sampler(6)]], float4 gl_FragCoord [[position]])
+fragment main0_out main0(constant _6& _7 [[buffer(0)]], constant _10& _11 [[buffer(1)]], constant _18& _19 [[buffer(2)]], texture2d<float> _8 [[texture(0)]], texture2d<float> _12 [[texture(1)]], texture2d<float> _14 [[texture(2)]], sampler _9 [[sampler(0)]], sampler _13 [[sampler(1)]], sampler _15 [[sampler(2)]], float4 gl_FragCoord [[position]])
 {
     main0_out out = {};
     float2 _82 = gl_FragCoord.xy * _19._m23.xy;
@@ -115,7 +115,6 @@ fragment main0_out main0(constant _6& _7 [[buffer(0)]], constant _18& _19 [[buff
     {
         _129 = _109;
     }
-    float3 _130 = _129 * 0.5;
     float2 _144 = fast::clamp(_82 + (float2(-1.0) * _7._m0.xy), _95, _96);
     float3 _156 = float3(_11._m5) * fast::clamp(_8.sample(_9, _144, level(0.0)).w * _7._m1, 0.0, 1.0);
     float4 _160 = _12.sample(_13, _144, level(0.0));
@@ -129,7 +128,6 @@ fragment main0_out main0(constant _6& _7 [[buffer(0)]], constant _18& _19 [[buff
     {
         _176 = _156;
     }
-    float3 _177 = _176 * 0.5;
     float2 _191 = fast::clamp(_82 + (float2(0.0, -1.0) * _7._m0.xy), _95, _96);
     float3 _203 = float3(_11._m5) * fast::clamp(_8.sample(_9, _191, level(0.0)).w * _7._m1, 0.0, 1.0);
     float4 _207 = _12.sample(_13, _191, level(0.0));
@@ -143,7 +141,6 @@ fragment main0_out main0(constant _6& _7 [[buffer(0)]], constant _18& _19 [[buff
     {
         _223 = _203;
     }
-    float3 _224 = _223 * 0.75;
     float2 _238 = fast::clamp(_82 + (float2(1.0, -1.0) * _7._m0.xy), _95, _96);
     float3 _250 = float3(_11._m5) * fast::clamp(_8.sample(_9, _238, level(0.0)).w * _7._m1, 0.0, 1.0);
     float4 _254 = _12.sample(_13, _238, level(0.0));
@@ -157,7 +154,6 @@ fragment main0_out main0(constant _6& _7 [[buffer(0)]], constant _18& _19 [[buff
     {
         _270 = _250;
     }
-    float3 _271 = _270 * 0.5;
     float2 _285 = fast::clamp(_82 + (float2(-2.0, 0.0) * _7._m0.xy), _95, _96);
     float3 _297 = float3(_11._m5) * fast::clamp(_8.sample(_9, _285, level(0.0)).w * _7._m1, 0.0, 1.0);
     float4 _301 = _12.sample(_13, _285, level(0.0));
@@ -171,7 +167,6 @@ fragment main0_out main0(constant _6& _7 [[buffer(0)]], constant _18& _19 [[buff
     {
         _317 = _297;
     }
-    float3 _318 = _317 * 0.5;
     float2 _332 = fast::clamp(_82 + (float2(-1.0, 0.0) * _7._m0.xy), _95, _96);
     float3 _344 = float3(_11._m5) * fast::clamp(_8.sample(_9, _332, level(0.0)).w * _7._m1, 0.0, 1.0);
     float4 _348 = _12.sample(_13, _332, level(0.0));
@@ -185,7 +180,6 @@ fragment main0_out main0(constant _6& _7 [[buffer(0)]], constant _18& _19 [[buff
     {
         _364 = _344;
     }
-    float3 _365 = _364 * 0.75;
     float2 _379 = fast::clamp(_82, _95, _96);
     float3 _391 = float3(_11._m5) * fast::clamp(_8.sample(_9, _379, level(0.0)).w * _7._m1, 0.0, 1.0);
     float4 _395 = _12.sample(_13, _379, level(0.0));
@@ -199,7 +193,6 @@ fragment main0_out main0(constant _6& _7 [[buffer(0)]], constant _18& _19 [[buff
     {
         _411 = _391;
     }
-    float3 _412 = _411 * 1.0;
     float2 _426 = fast::clamp(_82 + (float2(1.0, 0.0) * _7._m0.xy), _95, _96);
     float3 _438 = float3(_11._m5) * fast::clamp(_8.sample(_9, _426, level(0.0)).w * _7._m1, 0.0, 1.0);
     float4 _442 = _12.sample(_13, _426, level(0.0));
@@ -213,7 +206,6 @@ fragment main0_out main0(constant _6& _7 [[buffer(0)]], constant _18& _19 [[buff
     {
         _458 = _438;
     }
-    float3 _459 = _458 * 0.75;
     float2 _473 = fast::clamp(_82 + (float2(2.0, 0.0) * _7._m0.xy), _95, _96);
     float3 _485 = float3(_11._m5) * fast::clamp(_8.sample(_9, _473, level(0.0)).w * _7._m1, 0.0, 1.0);
     float4 _489 = _12.sample(_13, _473, level(0.0));
@@ -227,7 +219,6 @@ fragment main0_out main0(constant _6& _7 [[buffer(0)]], constant _18& _19 [[buff
     {
         _505 = _485;
     }
-    float3 _506 = _505 * 0.5;
     float2 _520 = fast::clamp(_82 + (float2(-1.0, 1.0) * _7._m0.xy), _95, _96);
     float3 _532 = float3(_11._m5) * fast::clamp(_8.sample(_9, _520, level(0.0)).w * _7._m1, 0.0, 1.0);
     float4 _536 = _12.sample(_13, _520, level(0.0));
@@ -241,7 +232,6 @@ fragment main0_out main0(constant _6& _7 [[buffer(0)]], constant _18& _19 [[buff
     {
         _552 = _532;
     }
-    float3 _553 = _552 * 0.5;
     float2 _567 = fast::clamp(_82 + (float2(0.0, 1.0) * _7._m0.xy), _95, _96);
     float3 _579 = float3(_11._m5) * fast::clamp(_8.sample(_9, _567, level(0.0)).w * _7._m1, 0.0, 1.0);
     float4 _583 = _12.sample(_13, _567, level(0.0));
@@ -255,7 +245,6 @@ fragment main0_out main0(constant _6& _7 [[buffer(0)]], constant _18& _19 [[buff
     {
         _599 = _579;
     }
-    float3 _600 = _599 * 0.75;
     float2 _614 = fast::clamp(_82 + _7._m0.xy, _95, _96);
     float3 _626 = float3(_11._m5) * fast::clamp(_8.sample(_9, _614, level(0.0)).w * _7._m1, 0.0, 1.0);
     float4 _630 = _12.sample(_13, _614, level(0.0));
@@ -269,7 +258,6 @@ fragment main0_out main0(constant _6& _7 [[buffer(0)]], constant _18& _19 [[buff
     {
         _646 = _626;
     }
-    float3 _647 = _646 * 0.5;
     float2 _661 = fast::clamp(_82 + (float2(0.0, 2.0) * _7._m0.xy), _95, _96);
     float3 _673 = float3(_11._m5) * fast::clamp(_8.sample(_9, _661, level(0.0)).w * _7._m1, 0.0, 1.0);
     float4 _677 = _12.sample(_13, _661, level(0.0));
@@ -283,7 +271,7 @@ fragment main0_out main0(constant _6& _7 [[buffer(0)]], constant _18& _19 [[buff
     {
         _693 = _673;
     }
-    float3 _702 = ((((((((((((_130.xyz + _177).xyz + _224).xyz + _271).xyz + _318).xyz + _365).xyz + _412).xyz + _459).xyz + _506).xyz + _553).xyz + _600).xyz + _647).xyz + (_693 * 0.5)).xyz * float3(0.125);
+    float3 _702 = (((((((((((((_129 * 0.5).xyz + (_176 * 0.5)).xyz + (_223 * 0.75)).xyz + (_270 * 0.5)).xyz + (_317 * 0.5)).xyz + (_364 * 0.75)).xyz + (_411 * 1.0)).xyz + (_458 * 0.75)).xyz + (_505 * 0.5)).xyz + (_552 * 0.5)).xyz + (_599 * 0.75)).xyz + (_646 * 0.5)).xyz + (_693 * 0.5)).xyz * float3(0.125);
     _28 _704 = _74;
     _704._m0 = float4(_702.x, _702.y, _702.z, float4(0.0).w);
     _28 _705 = _704;

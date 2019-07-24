@@ -447,6 +447,11 @@ public:
 		}
 	}
 
+	void insert(T *itr, const T &value)
+	{
+		insert(itr, &value, &value + 1);
+	}
+
 	T *erase(T *itr)
 	{
 		std::move(itr + 1, this->end(), itr);

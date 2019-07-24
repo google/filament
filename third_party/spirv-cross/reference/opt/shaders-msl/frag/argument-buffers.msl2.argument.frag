@@ -30,24 +30,24 @@ struct UBOs
 
 struct spvDescriptorSetBuffer0
 {
-    texture2d<float> uTexture [[id(2)]];
-    sampler uTextureSmplr [[id(3)]];
-    constant UBO* m_90 [[id(5)]];
-    array<texture2d<float>, 2> uTextures [[id(6)]];
-    array<sampler, 2> uTexturesSmplr [[id(8)]];
+    texture2d<float> uTexture [[id(0)]];
+    sampler uTextureSmplr [[id(1)]];
+    array<texture2d<float>, 2> uTextures [[id(2)]];
+    array<sampler, 2> uTexturesSmplr [[id(4)]];
+    constant UBO* m_90 [[id(6)]];
 };
 
 struct spvDescriptorSetBuffer1
 {
-    array<texture2d<float>, 4> uTexture2 [[id(3)]];
-    device SSBO* m_60 [[id(7)]];
-    const device SSBOs* ssbos [[id(8)]][2];
-    array<sampler, 2> uSampler [[id(10)]];
+    array<texture2d<float>, 4> uTexture2 [[id(0)]];
+    array<sampler, 2> uSampler [[id(4)]];
+    device SSBO* m_60 [[id(6)]];
+    const device SSBOs* ssbos [[id(7)]][2];
 };
 
 struct spvDescriptorSetBuffer2
 {
-    constant UBOs* ubos [[id(4)]][4];
+    constant UBOs* ubos [[id(0)]][4];
 };
 
 struct main0_out

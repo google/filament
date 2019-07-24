@@ -1,0 +1,21 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct SSBO
+{
+    float a;
+    float b;
+    float c;
+    float d;
+    float e;
+};
+
+kernel void main0(device SSBO& _9 [[buffer(0)]])
+{
+    _9.c = abs(_9.a - _9.b);
+    _9.d = abs(_9.a);
+    _9.e = sign(_9.a);
+}
+

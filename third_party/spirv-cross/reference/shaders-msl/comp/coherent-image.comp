@@ -8,7 +8,7 @@ struct SSBO
     int4 value;
 };
 
-kernel void main0(device SSBO& _10 [[buffer(1)]], texture2d<int> uImage [[texture(3)]])
+kernel void main0(volatile device SSBO& _10 [[buffer(0)]], texture2d<int> uImage [[texture(0)]])
 {
     _10.value = uImage.read(uint2(int2(10)));
 }

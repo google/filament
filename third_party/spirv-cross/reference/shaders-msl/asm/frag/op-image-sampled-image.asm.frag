@@ -13,7 +13,7 @@ struct main0_out
     float4 o0 [[color(0)]];
 };
 
-fragment main0_out main0(constant push_cb& _19 [[buffer(0)]], texture2d<float> t0 [[texture(2)]], sampler dummy_sampler [[sampler(4)]])
+fragment main0_out main0(constant push_cb& _19 [[buffer(0)]], texture2d<float> t0 [[texture(0)]], sampler dummy_sampler [[sampler(0)]])
 {
     main0_out out = {};
     float4 r0;

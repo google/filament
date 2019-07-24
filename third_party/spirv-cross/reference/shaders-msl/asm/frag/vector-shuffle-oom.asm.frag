@@ -125,7 +125,7 @@ struct main0_out
     float4 m_5 [[color(0)]];
 };
 
-fragment main0_out main0(constant _6& _7 [[buffer(0)]], constant _18& _19 [[buffer(1)]], constant _10& _11 [[buffer(2)]], texture2d<float> _14 [[texture(4)]], texture2d<float> _12 [[texture(13)]], texture2d<float> _8 [[texture(14)]], sampler _15 [[sampler(3)]], sampler _13 [[sampler(5)]], sampler _9 [[sampler(6)]], float4 gl_FragCoord [[position]])
+fragment main0_out main0(constant _6& _7 [[buffer(0)]], constant _10& _11 [[buffer(1)]], constant _18& _19 [[buffer(2)]], texture2d<float> _8 [[texture(0)]], texture2d<float> _12 [[texture(1)]], texture2d<float> _14 [[texture(2)]], sampler _9 [[sampler(0)]], sampler _13 [[sampler(1)]], sampler _15 [[sampler(2)]], float4 gl_FragCoord [[position]])
 {
     main0_out out = {};
     _28 _77 = _74;
@@ -144,8 +144,7 @@ fragment main0_out main0(constant _6& _7 [[buffer(0)]], constant _18& _19 [[buff
     {
         _129 = _109;
     }
-    float3 _130 = _129 * 0.5;
-    float3 _133 = float4(0.0).xyz + _130;
+    float3 _133 = float4(0.0).xyz + (_129 * 0.5);
     float4 _134 = float4(_133.x, _133.y, _133.z, float4(0.0).w);
     _28 _135 = _77;
     _135._m0 = _134;
@@ -161,8 +160,7 @@ fragment main0_out main0(constant _6& _7 [[buffer(0)]], constant _18& _19 [[buff
     {
         _176 = _156;
     }
-    float3 _177 = _176 * 0.5;
-    float3 _180 = _134.xyz + _177;
+    float3 _180 = _134.xyz + (_176 * 0.5);
     float4 _181 = float4(_180.x, _180.y, _180.z, _134.w);
     _28 _182 = _135;
     _182._m0 = _181;
@@ -178,8 +176,7 @@ fragment main0_out main0(constant _6& _7 [[buffer(0)]], constant _18& _19 [[buff
     {
         _223 = _203;
     }
-    float3 _224 = _223 * 0.75;
-    float3 _227 = _181.xyz + _224;
+    float3 _227 = _181.xyz + (_223 * 0.75);
     float4 _228 = float4(_227.x, _227.y, _227.z, _181.w);
     _28 _229 = _182;
     _229._m0 = _228;
@@ -195,8 +192,7 @@ fragment main0_out main0(constant _6& _7 [[buffer(0)]], constant _18& _19 [[buff
     {
         _270 = _250;
     }
-    float3 _271 = _270 * 0.5;
-    float3 _274 = _228.xyz + _271;
+    float3 _274 = _228.xyz + (_270 * 0.5);
     float4 _275 = float4(_274.x, _274.y, _274.z, _228.w);
     _28 _276 = _229;
     _276._m0 = _275;
@@ -212,8 +208,7 @@ fragment main0_out main0(constant _6& _7 [[buffer(0)]], constant _18& _19 [[buff
     {
         _317 = _297;
     }
-    float3 _318 = _317 * 0.5;
-    float3 _321 = _275.xyz + _318;
+    float3 _321 = _275.xyz + (_317 * 0.5);
     float4 _322 = float4(_321.x, _321.y, _321.z, _275.w);
     _28 _323 = _276;
     _323._m0 = _322;
@@ -229,8 +224,7 @@ fragment main0_out main0(constant _6& _7 [[buffer(0)]], constant _18& _19 [[buff
     {
         _364 = _344;
     }
-    float3 _365 = _364 * 0.75;
-    float3 _368 = _322.xyz + _365;
+    float3 _368 = _322.xyz + (_364 * 0.75);
     float4 _369 = float4(_368.x, _368.y, _368.z, _322.w);
     _28 _370 = _323;
     _370._m0 = _369;
@@ -246,8 +240,7 @@ fragment main0_out main0(constant _6& _7 [[buffer(0)]], constant _18& _19 [[buff
     {
         _411 = _391;
     }
-    float3 _412 = _411 * 1.0;
-    float3 _415 = _369.xyz + _412;
+    float3 _415 = _369.xyz + (_411 * 1.0);
     float4 _416 = float4(_415.x, _415.y, _415.z, _369.w);
     _28 _417 = _370;
     _417._m0 = _416;
@@ -263,8 +256,7 @@ fragment main0_out main0(constant _6& _7 [[buffer(0)]], constant _18& _19 [[buff
     {
         _458 = _438;
     }
-    float3 _459 = _458 * 0.75;
-    float3 _462 = _416.xyz + _459;
+    float3 _462 = _416.xyz + (_458 * 0.75);
     float4 _463 = float4(_462.x, _462.y, _462.z, _416.w);
     _28 _464 = _417;
     _464._m0 = _463;
@@ -280,8 +272,7 @@ fragment main0_out main0(constant _6& _7 [[buffer(0)]], constant _18& _19 [[buff
     {
         _505 = _485;
     }
-    float3 _506 = _505 * 0.5;
-    float3 _509 = _463.xyz + _506;
+    float3 _509 = _463.xyz + (_505 * 0.5);
     float4 _510 = float4(_509.x, _509.y, _509.z, _463.w);
     _28 _511 = _464;
     _511._m0 = _510;
@@ -297,8 +288,7 @@ fragment main0_out main0(constant _6& _7 [[buffer(0)]], constant _18& _19 [[buff
     {
         _552 = _532;
     }
-    float3 _553 = _552 * 0.5;
-    float3 _556 = _510.xyz + _553;
+    float3 _556 = _510.xyz + (_552 * 0.5);
     float4 _557 = float4(_556.x, _556.y, _556.z, _510.w);
     _28 _558 = _511;
     _558._m0 = _557;
@@ -314,8 +304,7 @@ fragment main0_out main0(constant _6& _7 [[buffer(0)]], constant _18& _19 [[buff
     {
         _599 = _579;
     }
-    float3 _600 = _599 * 0.75;
-    float3 _603 = _557.xyz + _600;
+    float3 _603 = _557.xyz + (_599 * 0.75);
     float4 _604 = float4(_603.x, _603.y, _603.z, _557.w);
     _28 _605 = _558;
     _605._m0 = _604;
@@ -331,8 +320,7 @@ fragment main0_out main0(constant _6& _7 [[buffer(0)]], constant _18& _19 [[buff
     {
         _646 = _626;
     }
-    float3 _647 = _646 * 0.5;
-    float3 _650 = _604.xyz + _647;
+    float3 _650 = _604.xyz + (_646 * 0.5);
     float4 _651 = float4(_650.x, _650.y, _650.z, _604.w);
     _28 _652 = _605;
     _652._m0 = _651;

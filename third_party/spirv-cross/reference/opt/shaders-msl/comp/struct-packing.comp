@@ -3,12 +3,11 @@
 
 using namespace metal;
 
-typedef float3x2 packed_float2x3;
-
 struct S0
 {
     float2 a[1];
     float b;
+    char _m0_final_padding[4];
 };
 
 struct S1
@@ -21,6 +20,7 @@ struct S2
 {
     float3 a[1];
     float b;
+    char _m0_final_padding[12];
 };
 
 struct S3
@@ -45,6 +45,7 @@ struct Content
     S3 m3;
     float m4;
     S4 m3s[8];
+    char _m0_final_padding[8];
 };
 
 struct SSBO1
@@ -58,10 +59,8 @@ struct SSBO1
     float3x2 m3;
     float2x2 m4;
     float2x2 m5[9];
-    packed_float2x3 m6[4][2];
-    char _m10_pad[8];
-    float3x2 m7;
-    char _m11_pad[8];
+    float3x2 m6[4][2];
+    float2x3 m7;
     float array[1];
 };
 
@@ -69,6 +68,7 @@ struct S0_1
 {
     float4 a[1];
     float b;
+    char _m0_final_padding[12];
 };
 
 struct S1_1
@@ -81,6 +81,7 @@ struct S2_1
 {
     float3 a[1];
     float b;
+    char _m0_final_padding[12];
 };
 
 struct S3_1
@@ -92,6 +93,7 @@ struct S3_1
 struct S4_1
 {
     float2 c;
+    char _m0_final_padding[8];
 };
 
 struct Content_1
@@ -104,8 +106,8 @@ struct Content_1
     S2_1 m2;
     S3_1 m3;
     float m4;
-    char _m8_pad[12];
-    /* FIXME: A padded struct is needed here. If you see this message, file a bug! */ S4_1 m3s[8];
+    char _m8_pad[8];
+    S4_1 m3s[8];
 };
 
 struct SSBO0
@@ -116,7 +118,7 @@ struct SSBO0
     float4 array[1];
 };
 
-kernel void main0(device SSBO0& ssbo_140 [[buffer(0)]], device SSBO1& ssbo_430 [[buffer(1)]])
+kernel void main0(device SSBO1& ssbo_430 [[buffer(0)]], device SSBO0& ssbo_140 [[buffer(1)]])
 {
     Content_1 _60 = ssbo_140.content;
     ssbo_430.content.m0s[0].a[0] = _60.m0s[0].a[0].xy;

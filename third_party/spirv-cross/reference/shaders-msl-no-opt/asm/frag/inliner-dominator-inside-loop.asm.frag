@@ -101,7 +101,7 @@ struct main0_in
     float IN_studIndex [[user(locn8)]];
 };
 
-fragment main0_out main0(main0_in in [[stage_in]], constant CB0& _19 [[buffer(0)]], texture2d<float> StudsMapTexture [[texture(0)]], texture2d<float> ShadowMapTexture [[texture(1)]], texturecube<float> EnvironmentMapTexture [[texture(2)]], texture2d<float> DiffuseMapTexture [[texture(3)]], texture2d<float> NormalMapTexture [[texture(4)]], texture2d<float> SpecularMapTexture [[texture(5)]], texture3d<float> LightMapTexture [[texture(6)]], texture2d<float> NormalDetailMapTexture [[texture(8)]], sampler StudsMapSampler [[sampler(0)]], sampler ShadowMapSampler [[sampler(1)]], sampler EnvironmentMapSampler [[sampler(2)]], sampler DiffuseMapSampler [[sampler(3)]], sampler NormalMapSampler [[sampler(4)]], sampler SpecularMapSampler [[sampler(5)]], sampler LightMapSampler [[sampler(6)]], sampler NormalDetailMapSampler [[sampler(8)]], float4 gl_FragCoord [[position]])
+fragment main0_out main0(main0_in in [[stage_in]], constant CB0& _19 [[buffer(0)]], texture3d<float> LightMapTexture [[texture(0)]], texture2d<float> ShadowMapTexture [[texture(1)]], texturecube<float> EnvironmentMapTexture [[texture(2)]], texture2d<float> DiffuseMapTexture [[texture(3)]], texture2d<float> NormalMapTexture [[texture(4)]], texture2d<float> NormalDetailMapTexture [[texture(5)]], texture2d<float> StudsMapTexture [[texture(6)]], texture2d<float> SpecularMapTexture [[texture(7)]], sampler LightMapSampler [[sampler(0)]], sampler ShadowMapSampler [[sampler(1)]], sampler EnvironmentMapSampler [[sampler(2)]], sampler DiffuseMapSampler [[sampler(3)]], sampler NormalMapSampler [[sampler(4)]], sampler NormalDetailMapSampler [[sampler(5)]], sampler StudsMapSampler [[sampler(6)]], sampler SpecularMapSampler [[sampler(7)]], float4 gl_FragCoord [[position]])
 {
     main0_out out = {};
     VertexOutput _128 = _121;
@@ -154,7 +154,6 @@ fragment main0_out main0(main0_in in [[stage_in]], constant CB0& _19 [[buffer(0)
         _193 = _192;
         break;
     } while (false);
-    float4 _194 = _193 * 1.0;
     float4 _220;
     do
     {
@@ -180,7 +179,7 @@ fragment main0_out main0(main0_in in [[stage_in]], constant CB0& _19 [[buffer(0)
     float3 _253 = float3(_252.x, _252.y, _232.z);
     float2 _255 = _253.xy * _165;
     float3 _256 = float3(_255.x, _255.y, _253.z);
-    float3 _271 = ((in.IN_Color.xyz * _194.xyz) * (1.0 + (_256.x * 0.300000011920928955078125))) * (StudsMapTexture.sample(StudsMapSampler, _156.UvStuds).x * 2.0);
+    float3 _271 = ((in.IN_Color.xyz * (_193 * 1.0).xyz) * (1.0 + (_256.x * 0.300000011920928955078125))) * (StudsMapTexture.sample(StudsMapSampler, _156.UvStuds).x * 2.0);
     float4 _298;
     do
     {

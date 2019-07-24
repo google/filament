@@ -23,7 +23,7 @@ struct main0_in
     float4 m_17 [[attribute(0)]];
 };
 
-vertex void main0(main0_in in [[stage_in]], constant _40& _42 [[buffer(0)]], device _35& _37 [[buffer(1)]])
+vertex void main0(main0_in in [[stage_in]], device _35& _37 [[buffer(0)]], constant _40& _42 [[buffer(1)]])
 {
     main0_out out = {};
     out.gl_Position = in.m_17;

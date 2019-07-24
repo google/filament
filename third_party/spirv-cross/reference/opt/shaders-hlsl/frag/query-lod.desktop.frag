@@ -17,7 +17,8 @@ struct SPIRV_Cross_Output
 void frag_main()
 {
     float _19_tmp = uSampler.CalculateLevelOfDetail(_uSampler_sampler, vTexCoord);
-    FragColor = float2(_19_tmp, _19_tmp).xyxy;
+    float2 _19 = _19_tmp.xx;
+    FragColor = _19.xyxy;
 }
 
 SPIRV_Cross_Output main(SPIRV_Cross_Input stage_input)

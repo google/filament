@@ -14,7 +14,7 @@ struct main0_in
     int vIndex [[user(locn1)]];
 };
 
-fragment main0_out main0(main0_in in [[stage_in]], array<texture2d<float>, 4> uSampler [[texture(0)]], array<texture2d<float>, 4> uTextures [[texture(8)]], array<sampler, 4> uSamplerSmplr [[sampler(0)]], array<sampler, 4> uSamplers [[sampler(4)]])
+fragment main0_out main0(main0_in in [[stage_in]], array<texture2d<float>, 4> uSampler [[texture(0)]], array<texture2d<float>, 4> uTextures [[texture(4)]], array<sampler, 4> uSamplerSmplr [[sampler(0)]], array<sampler, 4> uSamplers [[sampler(4)]])
 {
     main0_out out = {};
     out.FragColor = float4(0.0);

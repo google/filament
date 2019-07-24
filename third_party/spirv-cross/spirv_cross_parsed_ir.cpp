@@ -72,7 +72,8 @@ ParsedIR &ParsedIR::operator=(ParsedIR &&other) SPIRV_CROSS_NOEXCEPT
 
 		default_entry_point = other.default_entry_point;
 		source = other.source;
-		loop_iteration_depth = other.loop_iteration_depth;
+		loop_iteration_depth_hard = other.loop_iteration_depth_hard;
+		loop_iteration_depth_soft = other.loop_iteration_depth_soft;
 	}
 	return *this;
 }
@@ -100,7 +101,8 @@ ParsedIR &ParsedIR::operator=(const ParsedIR &other)
 		entry_points = other.entry_points;
 		default_entry_point = other.default_entry_point;
 		source = other.source;
-		loop_iteration_depth = other.loop_iteration_depth;
+		loop_iteration_depth_hard = other.loop_iteration_depth_hard;
+		loop_iteration_depth_soft = other.loop_iteration_depth_soft;
 		addressing_model = other.addressing_model;
 		memory_model = other.memory_model;
 
@@ -694,8 +696,15 @@ void ParsedIR::reset_all_of_type(Types type)
 
 void ParsedIR::add_typed_id(Types type, uint32_t id)
 {
-	if (loop_iteration_depth)
+	if (loop_iteration_depth_hard != 0)
 		SPIRV_CROSS_THROW("Cannot add typed ID while looping over it.");
+
+	if (loop_iteration_depth_soft != 0)
+	{
+		if (!ids[id].empty())
+			SPIRV_CROSS_THROW("Cannot override IDs when loop is soft locked.");
+		return;
+	}
 
 	if (ids[id].empty() || ids[id].get_type() != type)
 	{
@@ -747,6 +756,43 @@ Meta *ParsedIR::find_meta(uint32_t id)
 		return &itr->second;
 	else
 		return nullptr;
+}
+
+ParsedIR::LoopLock ParsedIR::create_loop_hard_lock() const
+{
+	return ParsedIR::LoopLock(&loop_iteration_depth_hard);
+}
+
+ParsedIR::LoopLock ParsedIR::create_loop_soft_lock() const
+{
+	return ParsedIR::LoopLock(&loop_iteration_depth_soft);
+}
+
+ParsedIR::LoopLock::~LoopLock()
+{
+	if (lock)
+		(*lock)--;
+}
+
+ParsedIR::LoopLock::LoopLock(uint32_t *lock_)
+    : lock(lock_)
+{
+	if (lock)
+		(*lock)++;
+}
+
+ParsedIR::LoopLock::LoopLock(LoopLock &&other) SPIRV_CROSS_NOEXCEPT
+{
+	*this = move(other);
+}
+
+ParsedIR::LoopLock &ParsedIR::LoopLock::operator=(LoopLock &&other) SPIRV_CROSS_NOEXCEPT
+{
+	if (lock)
+		(*lock)--;
+	lock = other.lock;
+	other.lock = nullptr;
+	return *this;
 }
 
 } // namespace SPIRV_CROSS_NAMESPACE

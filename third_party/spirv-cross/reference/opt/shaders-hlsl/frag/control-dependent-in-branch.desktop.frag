@@ -28,6 +28,7 @@ void frag_main()
     float4 _47 = ddy_fine(vInput);
     float4 _50 = fwidth(vInput);
     float _56_tmp = uSampler.CalculateLevelOfDetail(_uSampler_sampler, vInput.zw);
+    float2 _56 = _56_tmp.xx;
     if (vInput.y > 10.0f)
     {
         FragColor += _23;
@@ -40,7 +41,7 @@ void frag_main()
         FragColor += _44;
         FragColor += _47;
         FragColor += _50;
-        FragColor += float2(_56_tmp, _56_tmp).xyxy;
+        FragColor += _56.xyxy;
     }
 }
 

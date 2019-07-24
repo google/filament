@@ -1,0 +1,63 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct M0
+{
+    long v;
+    long2 b[2];
+    ulong c;
+    ulong d[5];
+};
+
+struct SSBO0_Type
+{
+    long4 a;
+    M0 m0;
+};
+
+struct SSBO1_Type
+{
+    ulong4 b;
+    M0 m0;
+};
+
+struct SSBO2_Type
+{
+    long a[4];
+    long2 b[4];
+};
+
+struct SSBO3_Type
+{
+    long a[4];
+    long2 b[4];
+};
+
+struct SSBO
+{
+    int s32;
+    uint u32;
+};
+
+kernel void main0(device SSBO& _96 [[buffer(0)]])
+{
+    SSBO0_Type ssbo_0;
+    ssbo_0.a += long4(10l, 20l, 30l, 40l);
+    SSBO1_Type ssbo_1;
+    ssbo_1.b += ulong4(999999999999999999ul, 8888888888888888ul, 77777777777777777ul, 6666666666666666ul);
+    ssbo_0.a += long4(20l);
+    ssbo_0.a = abs(ssbo_0.a + long4(ssbo_1.b));
+    ssbo_0.a += long4(1l);
+    ssbo_1.b += ulong4(long4(1l));
+    ssbo_0.a -= long4(1l);
+    ssbo_1.b -= ulong4(long4(1l));
+    SSBO2_Type ssbo_2;
+    ssbo_2.a[0] += 1l;
+    SSBO3_Type ssbo_3;
+    ssbo_3.a[0] += 2l;
+    _96.s32 = int(uint(((ulong(ssbo_0.a.x) + ssbo_1.b.y) + ulong(ssbo_2.a[1])) + ulong(ssbo_3.a[2])));
+    _96.u32 = uint(((ulong(ssbo_0.a.y) + ssbo_1.b.z) + ulong(ssbo_2.a[0])) + ulong(ssbo_3.a[1]));
+}
+

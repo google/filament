@@ -20,7 +20,7 @@ float sample_color_from_function(thread const texture2d<float> uT, thread const 
     return uT.sample(uS, float2(0.5)).x;
 }
 
-fragment main0_out main0(depth2d<float> uDepth [[texture(0)]], texture2d<float> uColor [[texture(1)]], sampler uSampler [[sampler(2)]], sampler uSamplerShadow [[sampler(3)]])
+fragment main0_out main0(depth2d<float> uDepth [[texture(0)]], texture2d<float> uColor [[texture(1)]], sampler uSamplerShadow [[sampler(0)]], sampler uSampler [[sampler(1)]])
 {
     main0_out out = {};
     out.FragColor = sample_depth_from_function(uDepth, uSamplerShadow) + sample_color_from_function(uColor, uSampler);

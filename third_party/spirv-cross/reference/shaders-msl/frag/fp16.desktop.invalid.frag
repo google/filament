@@ -119,8 +119,7 @@ void test_builtins(thread half4& v4, thread half3& v3, thread half& v1)
     res = max(v4, v4);
     res = clamp(v4, v4, v4);
     res = mix(v4, v4, v4);
-    bool4 _243 = v4 < v4;
-    res = half4(_243.x ? v4.x : v4.x, _243.y ? v4.y : v4.y, _243.z ? v4.z : v4.z, _243.w ? v4.w : v4.w);
+    res = select(v4, v4, v4 < v4);
     res = step(v4, v4);
     res = smoothstep(v4, v4, v4);
     bool4 btmp = isnan(v4);

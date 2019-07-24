@@ -48,10 +48,12 @@ void main()
                 }
                 else
                 {
-                    _227++;
+                    uint _204 = _227 + uint(1);
+                    _227 = _204;
                     continue;
                 }
-                _227++;
+                uint _204 = _227 + uint(1);
+                _227 = _204;
                 continue;
             }
             else

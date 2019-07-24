@@ -28,7 +28,8 @@ void frag_main()
     float4 d7 = ddy_fine(vInput);
     float4 d8 = fwidth(vInput);
     float _56_tmp = uSampler.CalculateLevelOfDetail(_uSampler_sampler, vInput.zw);
-    float2 lod = float2(_56_tmp, _56_tmp);
+    float2 _56 = _56_tmp.xx;
+    float2 lod = _56;
     if (vInput.y > 10.0f)
     {
         FragColor += t;

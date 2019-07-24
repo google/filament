@@ -47,7 +47,7 @@ float3 sample_height_displacement(thread const float2& uv, thread const float2& 
     return mix(uHeightmapDisplacement.sample(uHeightmapDisplacementSmplr, (uv + (off * 0.5)), level(lod.x)).xyz, uHeightmapDisplacement.sample(uHeightmapDisplacementSmplr, (uv + (off * 1.0)), level(lod.x + 1.0)).xyz, float3(lod.y));
 }
 
-[[ patch(quad, 0) ]] vertex main0_out main0(main0_patchIn patchIn [[stage_in]], constant UBO& v_31 [[buffer(1)]], texture2d<float> uHeightmapDisplacement [[texture(0)]], sampler uHeightmapDisplacementSmplr [[sampler(0)]], float2 gl_TessCoord [[position_in_patch]])
+[[ patch(quad, 0) ]] vertex main0_out main0(main0_patchIn patchIn [[stage_in]], constant UBO& v_31 [[buffer(0)]], texture2d<float> uHeightmapDisplacement [[texture(0)]], sampler uHeightmapDisplacementSmplr [[sampler(0)]], float2 gl_TessCoord [[position_in_patch]])
 {
     main0_out out = {};
     float2 tess_coord = float3(gl_TessCoord, 0).xy;

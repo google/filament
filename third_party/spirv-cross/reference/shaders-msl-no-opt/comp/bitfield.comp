@@ -7,14 +7,14 @@ using namespace metal;
 
 // Implementation of the GLSL findLSB() function
 template<typename T>
-T findLSB(T x)
+T spvFindLSB(T x)
 {
     return select(ctz(x), T(-1), x == T(0));
 }
 
 // Implementation of the signed GLSL findMSB() function
 template<typename T>
-T findSMSB(T x)
+T spvFindSMSB(T x)
 {
     T v = select(x, T(-1) - x, x < T(0));
     return select(clz(T(0)) - (clz(v) + T(1)), T(-1), v == T(0));
@@ -22,7 +22,7 @@ T findSMSB(T x)
 
 // Implementation of the unsigned GLSL findMSB() function
 template<typename T>
-T findUMSB(T x)
+T spvFindUMSB(T x)
 {
     return select(clz(T(0)) - (clz(x) + T(1)), T(-1), x == T(0));
 }
@@ -39,9 +39,9 @@ kernel void main0()
     s = reverse_bits(s);
     int v0 = popcount(u);
     int v1 = popcount(s);
-    int v2 = int(findUMSB(u));
-    int v3 = findSMSB(s);
-    int v4 = findLSB(u);
-    int v5 = findLSB(s);
+    int v2 = int(spvFindUMSB(u));
+    int v3 = spvFindSMSB(s);
+    int v4 = int(spvFindLSB(u));
+    int v5 = spvFindLSB(s);
 }
 

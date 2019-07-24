@@ -223,6 +223,7 @@ protected:
 
 	SPIRBlock *current_emitting_block = nullptr;
 	SPIRBlock *current_emitting_switch = nullptr;
+	bool current_emitting_switch_fallthrough = false;
 
 	virtual void emit_instruction(const Instruction &instr);
 	void emit_block_instructions(SPIRBlock &block);
@@ -248,6 +249,7 @@ protected:
 	virtual std::string builtin_to_glsl(spv::BuiltIn builtin, spv::StorageClass storage);
 	virtual void emit_struct_member(const SPIRType &type, uint32_t member_type_id, uint32_t index,
 	                                const std::string &qualifier = "", uint32_t base_offset = 0);
+	virtual void emit_struct_padding_target(const SPIRType &type);
 	virtual std::string image_type_glsl(const SPIRType &type, uint32_t id = 0);
 	std::string constant_expression(const SPIRConstant &c);
 	std::string constant_op_expression(const SPIRConstantOp &cop);
@@ -257,16 +259,17 @@ protected:
 	virtual std::string to_func_call_arg(uint32_t id);
 	virtual std::string to_function_name(uint32_t img, const SPIRType &imgtype, bool is_fetch, bool is_gather,
 	                                     bool is_proj, bool has_array_offsets, bool has_offset, bool has_grad,
-	                                     bool has_dref, uint32_t lod);
+	                                     bool has_dref, uint32_t lod, uint32_t minlod);
 	virtual std::string to_function_args(uint32_t img, const SPIRType &imgtype, bool is_fetch, bool is_gather,
 	                                     bool is_proj, uint32_t coord, uint32_t coord_components, uint32_t dref,
 	                                     uint32_t grad_x, uint32_t grad_y, uint32_t lod, uint32_t coffset,
 	                                     uint32_t offset, uint32_t bias, uint32_t comp, uint32_t sample,
-	                                     bool *p_forward);
+	                                     uint32_t minlod, bool *p_forward);
 	virtual void emit_buffer_block(const SPIRVariable &type);
 	virtual void emit_push_constant_block(const SPIRVariable &var);
 	virtual void emit_uniform(const SPIRVariable &var);
-	virtual std::string unpack_expression_type(std::string expr_str, const SPIRType &type, uint32_t packed_type_id);
+	virtual std::string unpack_expression_type(std::string expr_str, const SPIRType &type, uint32_t physical_type_id,
+	                                           bool packed_type, bool row_major);
 
 	StringStream<> buffer;
 
@@ -346,8 +349,10 @@ protected:
 
 	virtual bool is_non_native_row_major_matrix(uint32_t id);
 	virtual bool member_is_non_native_row_major_matrix(const SPIRType &type, uint32_t index);
-	bool member_is_packed_type(const SPIRType &type, uint32_t index) const;
-	virtual std::string convert_row_major_matrix(std::string exp_str, const SPIRType &exp_type, bool is_packed);
+	bool member_is_remapped_physical_type(const SPIRType &type, uint32_t index) const;
+	bool member_is_packed_physical_type(const SPIRType &type, uint32_t index) const;
+	virtual std::string convert_row_major_matrix(std::string exp_str, const SPIRType &exp_type,
+	                                             uint32_t physical_type_id, bool is_packed);
 
 	std::unordered_set<std::string> local_variable_names;
 	std::unordered_set<std::string> resource_names;
@@ -368,6 +373,7 @@ protected:
 	struct BackendVariations
 	{
 		std::string discard_literal = "discard";
+		std::string demote_literal = "demote";
 		std::string null_pointer_literal = "";
 		bool float_literal_suffix = false;
 		bool double_literal_suffix = true;
@@ -382,6 +388,7 @@ protected:
 		const char *int16_t_literal_suffix = "s";
 		const char *uint16_t_literal_suffix = "us";
 		const char *nonuniform_qualifier = "nonuniformEXT";
+		const char *boolean_mix_function = "mix";
 		bool swizzle_is_function = false;
 		bool shared_is_implied = false;
 		bool unsized_array_supported = true;
@@ -392,7 +399,6 @@ protected:
 		bool can_declare_arrays_inline = true;
 		bool native_row_major_matrix = true;
 		bool use_constructor_splatting = true;
-		bool boolean_mix_support = true;
 		bool allow_precision_qualifiers = false;
 		bool can_swizzle_scalar = false;
 		bool force_gl_in_out_block = false;
@@ -403,6 +409,8 @@ protected:
 		bool array_is_value_type = true;
 		bool comparison_image_samples_scalar = false;
 		bool native_pointers = false;
+		bool support_small_type_sampling_result = false;
+		bool support_case_fallthrough = true;
 	} backend;
 
 	void emit_struct(SPIRType &type);
@@ -431,9 +439,11 @@ protected:
 	bool flush_phi_required(uint32_t from, uint32_t to);
 	void flush_variable_declaration(uint32_t id);
 	void flush_undeclared_variables(SPIRBlock &block);
+	void emit_variable_temporary_copies(const SPIRVariable &var);
 
 	bool should_dereference(uint32_t id);
-	bool should_forward(uint32_t id);
+	bool should_forward(uint32_t id) const;
+	bool should_suppress_usage_tracking(uint32_t id) const;
 	void emit_mix_op(uint32_t result_type, uint32_t id, uint32_t left, uint32_t right, uint32_t lerp);
 	void emit_nminmax_op(uint32_t result_type, uint32_t id, uint32_t op0, uint32_t op1, GLSLstd450 op);
 	bool to_trivial_mix_op(const SPIRType &type, std::string &op, uint32_t left, uint32_t right, uint32_t lerp);
@@ -464,7 +474,8 @@ protected:
 	                                  uint32_t false_value);
 
 	void emit_unary_op(uint32_t result_type, uint32_t result_id, uint32_t op0, const char *op);
-	bool expression_is_forwarded(uint32_t id);
+	bool expression_is_forwarded(uint32_t id) const;
+	bool expression_suppresses_usage_tracking(uint32_t id) const;
 	SPIRExpression &emit_op(uint32_t result_type, uint32_t result_id, const std::string &rhs, bool forward_rhs,
 	                        bool suppress_usage_tracking = false);
 
@@ -498,8 +509,11 @@ protected:
 	SPIRExpression &emit_uninitialized_temporary_expression(uint32_t type, uint32_t id);
 	void append_global_func_args(const SPIRFunction &func, uint32_t index, SmallVector<std::string> &arglist);
 	std::string to_expression(uint32_t id, bool register_expression_read = true);
+	std::string to_composite_constructor_expression(uint32_t id);
+	std::string to_rerolled_array_expression(const std::string &expr, const SPIRType &type);
 	std::string to_enclosed_expression(uint32_t id, bool register_expression_read = true);
 	std::string to_unpacked_expression(uint32_t id, bool register_expression_read = true);
+	std::string to_unpacked_row_major_matrix_expression(uint32_t id);
 	std::string to_enclosed_unpacked_expression(uint32_t id, bool register_expression_read = true);
 	std::string to_dereferenced_expression(uint32_t id, bool register_expression_read = true);
 	std::string to_pointer_expression(uint32_t id, bool register_expression_read = true);
@@ -667,6 +681,8 @@ protected:
 
 	void fixup_type_alias();
 	void reorder_type_alias();
+
+	void propagate_nonuniform_qualifier(uint32_t id);
 
 private:
 	void init();

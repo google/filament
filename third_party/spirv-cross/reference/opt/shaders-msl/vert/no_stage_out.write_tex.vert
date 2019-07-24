@@ -13,7 +13,7 @@ struct main0_in
     float4 m_17 [[attribute(0)]];
 };
 
-vertex void main0(main0_in in [[stage_in]], texture1d<uint> _37 [[texture(0)]], texture1d<uint, access::write> _34 [[texture(1)]])
+vertex void main0(main0_in in [[stage_in]], texture1d<uint, access::write> _34 [[texture(0)]], texture1d<uint> _37 [[texture(1)]])
 {
     main0_out out = {};
     out.gl_Position = in.m_17;

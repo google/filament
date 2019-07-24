@@ -127,6 +127,7 @@ private:
 	uint32_t visit_count = 0;
 
 	bool is_back_edge(uint32_t to) const;
+	bool has_visited_forward_edge(uint32_t to) const;
 };
 
 class DominatorBuilder

@@ -95,11 +95,13 @@ kernel void main0(const device SSBO& _24 [[buffer(0)]], device SSBO2& _177 [[buf
     {
         if (l == 5)
         {
-            l++;
+            int _172 = l;
+            l = _172 + 1;
             continue;
         }
         idat += float4(1.0);
-        l++;
+        int _172 = l;
+        l = _172 + 1;
         continue;
     }
     _177.out_data[ident] = idat;

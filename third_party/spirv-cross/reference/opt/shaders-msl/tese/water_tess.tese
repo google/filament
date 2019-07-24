@@ -26,7 +26,7 @@ struct main0_patchIn
     float4 vPatchLods [[attribute(1)]];
 };
 
-[[ patch(quad, 0) ]] vertex main0_out main0(main0_patchIn patchIn [[stage_in]], constant UBO& _31 [[buffer(1)]], texture2d<float> uHeightmapDisplacement [[texture(0)]], sampler uHeightmapDisplacementSmplr [[sampler(0)]], float2 gl_TessCoord [[position_in_patch]])
+[[ patch(quad, 0) ]] vertex main0_out main0(main0_patchIn patchIn [[stage_in]], constant UBO& _31 [[buffer(0)]], texture2d<float> uHeightmapDisplacement [[texture(0)]], sampler uHeightmapDisplacementSmplr [[sampler(0)]], float2 gl_TessCoord [[position_in_patch]])
 {
     main0_out out = {};
     float2 _201 = patchIn.vOutPatchPosBase + (float3(gl_TessCoord, 0).xy * _31.uPatchSize);

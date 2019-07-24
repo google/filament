@@ -1,0 +1,31 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct foo
+{
+    uint a;
+    uint b;
+    int c;
+    int d;
+};
+
+kernel void main0(device foo& _4 [[buffer(0)]])
+{
+    _4.a = clz(_4.a);
+    _4.a = ctz(_4.a);
+    _4.a = absdiff(_4.c, _4.d);
+    _4.a = absdiff(_4.a, _4.b);
+    _4.c = addsat(_4.c, _4.d);
+    _4.a = addsat(_4.a, _4.b);
+    _4.c = hadd(_4.c, _4.d);
+    _4.a = hadd(_4.a, _4.b);
+    _4.c = rhadd(_4.c, _4.d);
+    _4.a = rhadd(_4.a, _4.b);
+    _4.c = subsat(_4.c, _4.d);
+    _4.a = subsat(_4.a, _4.b);
+    _4.c = int(short(_4.c)) * int(short(_4.d));
+    _4.a = uint(ushort(_4.a)) * uint(ushort(_4.b));
+}
+

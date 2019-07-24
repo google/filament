@@ -17,6 +17,7 @@
 #include "spirv_cross.hpp"
 #include "GLSL.std.450.h"
 #include "spirv_cfg.hpp"
+#include "spirv_common.hpp"
 #include "spirv_parser.hpp"
 #include <algorithm>
 #include <cstring>
@@ -176,7 +177,7 @@ string Compiler::to_name(uint32_t id, bool allow_alias) const
 		{
 			// If the alias master has been specially packed, we will have emitted a clean variant as well,
 			// so skip the name aliasing here.
-			if (!has_extended_decoration(type.type_alias, SPIRVCrossDecorationPacked))
+			if (!has_extended_decoration(type.type_alias, SPIRVCrossDecorationBufferBlockRepacked))
 				return to_name(type.type_alias);
 		}
 	}
@@ -1123,28 +1124,8 @@ void Compiler::set_decoration(uint32_t id, Decoration decoration, uint32_t argum
 void Compiler::set_extended_decoration(uint32_t id, ExtendedDecorations decoration, uint32_t value)
 {
 	auto &dec = ir.meta[id].decoration;
-	switch (decoration)
-	{
-	case SPIRVCrossDecorationPacked:
-		dec.extended.packed = true;
-		break;
-
-	case SPIRVCrossDecorationPackedType:
-		dec.extended.packed_type = value;
-		break;
-
-	case SPIRVCrossDecorationInterfaceMemberIndex:
-		dec.extended.ib_member_index = value;
-		break;
-
-	case SPIRVCrossDecorationInterfaceOrigID:
-		dec.extended.ib_orig_id = value;
-		break;
-
-	case SPIRVCrossDecorationArgumentBufferID:
-		dec.extended.argument_buffer_id = value;
-		break;
-	}
+	dec.extended.flags.set(decoration);
+	dec.extended.values[decoration] = value;
 }
 
 void Compiler::set_extended_member_decoration(uint32_t type, uint32_t index, ExtendedDecorations decoration,
@@ -1152,28 +1133,21 @@ void Compiler::set_extended_member_decoration(uint32_t type, uint32_t index, Ext
 {
 	ir.meta[type].members.resize(max(ir.meta[type].members.size(), size_t(index) + 1));
 	auto &dec = ir.meta[type].members[index];
+	dec.extended.flags.set(decoration);
+	dec.extended.values[decoration] = value;
+}
 
+static uint32_t get_default_extended_decoration(ExtendedDecorations decoration)
+{
 	switch (decoration)
 	{
-	case SPIRVCrossDecorationPacked:
-		dec.extended.packed = true;
-		break;
-
-	case SPIRVCrossDecorationPackedType:
-		dec.extended.packed_type = value;
-		break;
-
+	case SPIRVCrossDecorationResourceIndexPrimary:
+	case SPIRVCrossDecorationResourceIndexSecondary:
 	case SPIRVCrossDecorationInterfaceMemberIndex:
-		dec.extended.ib_member_index = value;
-		break;
+		return ~(0u);
 
-	case SPIRVCrossDecorationInterfaceOrigID:
-		dec.extended.ib_orig_id = value;
-		break;
-
-	case SPIRVCrossDecorationArgumentBufferID:
-		dec.extended.argument_buffer_id = value;
-		break;
+	default:
+		return 0;
 	}
 }
 
@@ -1184,25 +1158,11 @@ uint32_t Compiler::get_extended_decoration(uint32_t id, ExtendedDecorations deco
 		return 0;
 
 	auto &dec = m->decoration;
-	switch (decoration)
-	{
-	case SPIRVCrossDecorationPacked:
-		return uint32_t(dec.extended.packed);
 
-	case SPIRVCrossDecorationPackedType:
-		return dec.extended.packed_type;
+	if (!dec.extended.flags.get(decoration))
+		return get_default_extended_decoration(decoration);
 
-	case SPIRVCrossDecorationInterfaceMemberIndex:
-		return dec.extended.ib_member_index;
-
-	case SPIRVCrossDecorationInterfaceOrigID:
-		return dec.extended.ib_orig_id;
-
-	case SPIRVCrossDecorationArgumentBufferID:
-		return dec.extended.argument_buffer_id;
-	}
-
-	return 0;
+	return dec.extended.values[decoration];
 }
 
 uint32_t Compiler::get_extended_member_decoration(uint32_t type, uint32_t index, ExtendedDecorations decoration) const
@@ -1215,25 +1175,9 @@ uint32_t Compiler::get_extended_member_decoration(uint32_t type, uint32_t index,
 		return 0;
 
 	auto &dec = m->members[index];
-	switch (decoration)
-	{
-	case SPIRVCrossDecorationPacked:
-		return uint32_t(dec.extended.packed);
-
-	case SPIRVCrossDecorationPackedType:
-		return dec.extended.packed_type;
-
-	case SPIRVCrossDecorationInterfaceMemberIndex:
-		return dec.extended.ib_member_index;
-
-	case SPIRVCrossDecorationInterfaceOrigID:
-		return dec.extended.ib_orig_id;
-
-	case SPIRVCrossDecorationArgumentBufferID:
-		return dec.extended.argument_buffer_id;
-	}
-
-	return 0;
+	if (!dec.extended.flags.get(decoration))
+		return get_default_extended_decoration(decoration);
+	return dec.extended.values[decoration];
 }
 
 bool Compiler::has_extended_decoration(uint32_t id, ExtendedDecorations decoration) const
@@ -1243,25 +1187,7 @@ bool Compiler::has_extended_decoration(uint32_t id, ExtendedDecorations decorati
 		return false;
 
 	auto &dec = m->decoration;
-	switch (decoration)
-	{
-	case SPIRVCrossDecorationPacked:
-		return dec.extended.packed;
-
-	case SPIRVCrossDecorationPackedType:
-		return dec.extended.packed_type != 0;
-
-	case SPIRVCrossDecorationInterfaceMemberIndex:
-		return dec.extended.ib_member_index != uint32_t(-1);
-
-	case SPIRVCrossDecorationInterfaceOrigID:
-		return dec.extended.ib_orig_id != 0;
-
-	case SPIRVCrossDecorationArgumentBufferID:
-		return dec.extended.argument_buffer_id != 0;
-	}
-
-	return false;
+	return dec.extended.flags.get(decoration);
 }
 
 bool Compiler::has_extended_member_decoration(uint32_t type, uint32_t index, ExtendedDecorations decoration) const
@@ -1274,81 +1200,22 @@ bool Compiler::has_extended_member_decoration(uint32_t type, uint32_t index, Ext
 		return false;
 
 	auto &dec = m->members[index];
-	switch (decoration)
-	{
-	case SPIRVCrossDecorationPacked:
-		return dec.extended.packed;
-
-	case SPIRVCrossDecorationPackedType:
-		return dec.extended.packed_type != 0;
-
-	case SPIRVCrossDecorationInterfaceMemberIndex:
-		return dec.extended.ib_member_index != uint32_t(-1);
-
-	case SPIRVCrossDecorationInterfaceOrigID:
-		return dec.extended.ib_orig_id != 0;
-
-	case SPIRVCrossDecorationArgumentBufferID:
-		return dec.extended.argument_buffer_id != uint32_t(-1);
-	}
-
-	return false;
+	return dec.extended.flags.get(decoration);
 }
 
 void Compiler::unset_extended_decoration(uint32_t id, ExtendedDecorations decoration)
 {
 	auto &dec = ir.meta[id].decoration;
-	switch (decoration)
-	{
-	case SPIRVCrossDecorationPacked:
-		dec.extended.packed = false;
-		break;
-
-	case SPIRVCrossDecorationPackedType:
-		dec.extended.packed_type = 0;
-		break;
-
-	case SPIRVCrossDecorationInterfaceMemberIndex:
-		dec.extended.ib_member_index = ~(0u);
-		break;
-
-	case SPIRVCrossDecorationInterfaceOrigID:
-		dec.extended.ib_orig_id = 0;
-		break;
-
-	case SPIRVCrossDecorationArgumentBufferID:
-		dec.extended.argument_buffer_id = 0;
-		break;
-	}
+	dec.extended.flags.clear(decoration);
+	dec.extended.values[decoration] = 0;
 }
 
 void Compiler::unset_extended_member_decoration(uint32_t type, uint32_t index, ExtendedDecorations decoration)
 {
 	ir.meta[type].members.resize(max(ir.meta[type].members.size(), size_t(index) + 1));
 	auto &dec = ir.meta[type].members[index];
-
-	switch (decoration)
-	{
-	case SPIRVCrossDecorationPacked:
-		dec.extended.packed = false;
-		break;
-
-	case SPIRVCrossDecorationPackedType:
-		dec.extended.packed_type = 0;
-		break;
-
-	case SPIRVCrossDecorationInterfaceMemberIndex:
-		dec.extended.ib_member_index = ~(0u);
-		break;
-
-	case SPIRVCrossDecorationInterfaceOrigID:
-		dec.extended.ib_orig_id = 0;
-		break;
-
-	case SPIRVCrossDecorationArgumentBufferID:
-		dec.extended.argument_buffer_id = 0;
-		break;
-	}
+	dec.extended.flags.clear(decoration);
+	dec.extended.values[decoration] = 0;
 }
 
 StorageClass Compiler::get_storage_class(uint32_t id) const
@@ -1598,6 +1465,11 @@ bool Compiler::execution_is_branchless(const SPIRBlock &from, const SPIRBlock &t
 		else
 			return false;
 	}
+}
+
+bool Compiler::execution_is_direct_branch(const SPIRBlock &from, const SPIRBlock &to) const
+{
+	return from.terminator == SPIRBlock::Direct && from.merge == SPIRBlock::MergeNone && from.next_block == to.self;
 }
 
 SPIRBlock::ContinueBlockType Compiler::continue_block_type(const SPIRBlock &block) const
@@ -3045,6 +2917,7 @@ bool Compiler::AnalyzeVariableScopeAccessHandler::handle(spv::Op op, const uint3
 
 	case OpArrayLength:
 	case OpLine:
+	case OpNoLine:
 		// Uses literals, but cannot be a phi variable or temporary, so ignore.
 		break;
 
@@ -4232,6 +4105,7 @@ bool Compiler::instruction_to_result_type(uint32_t &result_type, uint32_t &resul
 	case OpGroupCommitReadPipe:
 	case OpGroupCommitWritePipe:
 	case OpLine:
+	case OpNoLine:
 		return false;
 
 	default:

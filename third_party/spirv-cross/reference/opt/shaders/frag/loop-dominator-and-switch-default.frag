@@ -33,26 +33,15 @@ void main()
             }
             default:
             {
-                mediump int _84;
                 vec4 _88;
                 _88 = _82;
-                _84 = 0;
-                mediump int _50;
-                for (;;)
+                for (mediump int _84 = 0; _84 < _18; )
                 {
-                    _50 = _84 + 1;
-                    if (_84 < _18)
-                    {
-                        vec4 _72 = _88;
-                        _72.y = _88.y + 0.5;
-                        _88 = _72;
-                        _84 = _50;
-                        continue;
-                    }
-                    else
-                    {
-                        break;
-                    }
+                    vec4 _72 = _88;
+                    _72.y = _88.y + 0.5;
+                    _88 = _72;
+                    _84++;
+                    continue;
                 }
                 _89 = _88;
                 continue;
