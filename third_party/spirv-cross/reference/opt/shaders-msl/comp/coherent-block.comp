@@ -8,7 +8,7 @@ struct SSBO
     float4 value;
 };
 
-kernel void main0(device SSBO& _10 [[buffer(1)]])
+kernel void main0(volatile device SSBO& _10 [[buffer(0)]])
 {
     _10.value = float4(20.0);
 }

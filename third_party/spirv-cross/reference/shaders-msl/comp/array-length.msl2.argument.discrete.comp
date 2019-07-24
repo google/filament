@@ -29,14 +29,14 @@ struct SSBO3
 
 struct spvDescriptorSetBuffer0
 {
-    constant uint* spvBufferSizeConstants [[id(0)]];
-    device SSBO* v_16 [[id(1)]];
+    device SSBO* v_16 [[id(0)]];
+    constant uint* spvBufferSizeConstants [[id(1)]];
 };
 
 struct spvDescriptorSetBuffer1
 {
-    constant uint* spvBufferSizeConstants [[id(1)]];
-    device SSBO1* ssbos [[id(2)]][2];
+    device SSBO1* ssbos [[id(0)]][2];
+    constant uint* spvBufferSizeConstants [[id(2)]];
 };
 
 uint get_size(device SSBO& v_16, constant uint& v_16BufferSize, device SSBO1* constant (&ssbos)[2], constant uint* ssbosBufferSize, device SSBO2& v_38, constant uint& v_38BufferSize, device SSBO3* (&ssbos2)[2], constant uint* ssbos2BufferSize)
@@ -48,7 +48,7 @@ uint get_size(device SSBO& v_16, constant uint& v_16BufferSize, device SSBO1* co
     return len;
 }
 
-kernel void main0(constant spvDescriptorSetBuffer0& spvDescriptorSet0 [[buffer(0)]], constant spvDescriptorSetBuffer1& spvDescriptorSet1 [[buffer(1)]], constant uint* spvBufferSizeConstants [[buffer(25)]], device SSBO3* ssbos2_0 [[buffer(2)]], device SSBO3* ssbos2_1 [[buffer(3)]], device SSBO2& v_38 [[buffer(5)]])
+kernel void main0(constant spvDescriptorSetBuffer0& spvDescriptorSet0 [[buffer(0)]], constant spvDescriptorSetBuffer1& spvDescriptorSet1 [[buffer(1)]], constant uint* spvBufferSizeConstants [[buffer(25)]], device SSBO2& v_38 [[buffer(2)]], device SSBO3* ssbos2_0 [[buffer(3)]], device SSBO3* ssbos2_1 [[buffer(4)]])
 {
     device SSBO3* ssbos2[] =
     {
@@ -56,10 +56,10 @@ kernel void main0(constant spvDescriptorSetBuffer0& spvDescriptorSet0 [[buffer(0
         ssbos2_1,
     };
 
-    constant uint& spvDescriptorSet0_v_16BufferSize = spvDescriptorSet0.spvBufferSizeConstants[1];
-    constant uint* spvDescriptorSet1_ssbosBufferSize = &spvDescriptorSet1.spvBufferSizeConstants[2];
-    constant uint& v_38BufferSize = spvBufferSizeConstants[5];
-    constant uint* ssbos2BufferSize = &spvBufferSizeConstants[2];
+    constant uint& spvDescriptorSet0_v_16BufferSize = spvDescriptorSet0.spvBufferSizeConstants[0];
+    constant uint* spvDescriptorSet1_ssbosBufferSize = &spvDescriptorSet1.spvBufferSizeConstants[0];
+    constant uint& v_38BufferSize = spvBufferSizeConstants[2];
+    constant uint* ssbos2BufferSize = &spvBufferSizeConstants[3];
     (*spvDescriptorSet0.v_16).size = get_size((*spvDescriptorSet0.v_16), spvDescriptorSet0_v_16BufferSize, spvDescriptorSet1.ssbos, spvDescriptorSet1_ssbosBufferSize, v_38, v_38BufferSize, ssbos2, ssbos2BufferSize);
 }
 

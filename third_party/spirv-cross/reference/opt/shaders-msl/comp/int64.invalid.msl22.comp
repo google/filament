@@ -1,0 +1,24 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct SSBO
+{
+    int s32;
+    uint u32;
+};
+
+constant long _162 = {};
+
+kernel void main0(device SSBO& _96 [[buffer(0)]])
+{
+    long4 _137;
+    ulong4 _141;
+    _137 = abs((_137 + long4(30l, 40l, 50l, 60l)) + long4(_141 + ulong4(999999999999999999ul, 8888888888888888ul, 77777777777777777ul, 6666666666666666ul)));
+    _141 += ulong4(long4(999999999999999999l, 8888888888888888l, 77777777777777777l, 6666666666666666l));
+    ulong _109 = ulong(_162);
+    _96.s32 = int(uint(((ulong(_137.x) + _141.y) + _109) + _109));
+    _96.u32 = uint(((ulong(_137.y) + _141.z) + ulong(_162 + 1l)) + _109);
+}
+

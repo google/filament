@@ -33,7 +33,7 @@ extern "C" {
 /* Bumped if ABI or API breaks backwards compatibility. */
 #define SPVC_C_API_VERSION_MAJOR 0
 /* Bumped if APIs or enumerations are added in a backwards compatible way. */
-#define SPVC_C_API_VERSION_MINOR 13
+#define SPVC_C_API_VERSION_MINOR 16
 /* Bumped if internal implementation details change. */
 #define SPVC_C_API_VERSION_PATCH 0
 
@@ -303,6 +303,7 @@ SPVC_PUBLIC_API void spvc_msl_resource_binding_init(spvc_msl_resource_binding *b
 #define SPVC_MSL_PUSH_CONSTANT_BINDING (0)
 #define SPVC_MSL_SWIZZLE_BUFFER_BINDING (~(1u))
 #define SPVC_MSL_BUFFER_SIZE_BUFFER_BINDING (~(2u))
+#define SPVC_MSL_ARGUMENT_BUFFER_BINDING (~(3u))
 
 /* Obsolete. Sticks around for backwards compatibility. */
 #define SPVC_MSL_AUX_BUFFER_STRUCT_VERSION 1
@@ -551,6 +552,9 @@ SPVC_PUBLIC_API spvc_result spvc_compiler_msl_remap_constexpr_sampler(spvc_compi
 SPVC_PUBLIC_API spvc_result spvc_compiler_msl_remap_constexpr_sampler_by_binding(spvc_compiler compiler, unsigned desc_set, unsigned binding, const spvc_msl_constexpr_sampler *sampler);
 SPVC_PUBLIC_API spvc_result spvc_compiler_msl_set_fragment_output_components(spvc_compiler compiler, unsigned location, unsigned components);
 
+SPVC_PUBLIC_API unsigned spvc_compiler_msl_get_automatic_resource_binding(spvc_compiler compiler, spvc_variable_id id);
+SPVC_PUBLIC_API unsigned spvc_compiler_msl_get_automatic_resource_binding_secondary(spvc_compiler compiler, spvc_variable_id id);
+
 /*
  * Reflect resources.
  * Maps almost 1:1 to C++ API.
@@ -656,6 +660,7 @@ SPVC_PUBLIC_API SpvAccessQualifier spvc_type_get_image_access_qualifier(spvc_typ
 SPVC_PUBLIC_API spvc_result spvc_compiler_get_declared_struct_size(spvc_compiler compiler, spvc_type struct_type, size_t *size);
 SPVC_PUBLIC_API spvc_result spvc_compiler_get_declared_struct_size_runtime_array(spvc_compiler compiler,
                                                                                  spvc_type struct_type, size_t array_size, size_t *size);
+SPVC_PUBLIC_API spvc_result spvc_compiler_get_declared_struct_member_size(spvc_compiler compiler, spvc_type type, unsigned index, size_t *size);
 
 SPVC_PUBLIC_API spvc_result spvc_compiler_type_struct_member_offset(spvc_compiler compiler,
                                                                     spvc_type type, unsigned index, unsigned *offset);

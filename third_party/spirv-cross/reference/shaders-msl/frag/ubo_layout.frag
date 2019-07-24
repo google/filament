@@ -31,7 +31,7 @@ struct main0_out
 fragment main0_out main0(constant UBO1& ubo1 [[buffer(0)]], constant UBO2& ubo0 [[buffer(1)]])
 {
     main0_out out = {};
-    out.FragColor = transpose(ubo1.foo.foo)[0] + ubo0.foo.foo[0];
+    out.FragColor = float4(ubo1.foo.foo[0][0], ubo1.foo.foo[1][0], ubo1.foo.foo[2][0], ubo1.foo.foo[3][0]) + ubo0.foo.foo[0];
     return out;
 }
 

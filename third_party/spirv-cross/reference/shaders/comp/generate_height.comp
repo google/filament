@@ -27,7 +27,6 @@ uvec2 workaround_mix(uvec2 a, uvec2 b, bvec2 sel)
     {
         _86 = a.x;
     }
-    uint _94 = _86;
     uint _97;
     if (sel.y)
     {
@@ -37,7 +36,7 @@ uvec2 workaround_mix(uvec2 a, uvec2 b, bvec2 sel)
     {
         _97 = a.y;
     }
-    return uvec2(_94, _97);
+    return uvec2(_86, _97);
 }
 
 vec2 alias(vec2 i, vec2 N)

@@ -26,7 +26,7 @@ kernel void main0(const device SSBO& _23 [[buffer(0)]], device SSBO2& _45 [[buff
     float4 _29 = _23.in_data[gl_GlobalInvocationID.x];
     if (dot(_29, float4(1.0, 5.0, 6.0, 2.0)) > 8.19999980926513671875)
     {
-        uint _52 = atomic_fetch_add_explicit((volatile device atomic_uint*)&_48.counter, 1u, memory_order_relaxed);
+        uint _52 = atomic_fetch_add_explicit((device atomic_uint*)&_48.counter, 1u, memory_order_relaxed);
         _45.out_data[_52] = _29;
     }
 }

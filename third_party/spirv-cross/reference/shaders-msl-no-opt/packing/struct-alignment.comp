@@ -1,0 +1,25 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct Foo
+{
+    packed_float3 a;
+    float b;
+};
+
+struct SSBO
+{
+    float2 a;
+    float b;
+    char _m2_pad[4];
+    Foo foo;
+};
+
+kernel void main0(device SSBO& _12 [[buffer(0)]])
+{
+    _12.a.x = 10.0;
+    _12.b = 20.0;
+}
+

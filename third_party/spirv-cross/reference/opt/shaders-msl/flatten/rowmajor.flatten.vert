@@ -7,7 +7,7 @@ struct UBO
 {
     float4x4 uMVPR;
     float4x4 uMVPC;
-    float2x4 uMVP;
+    float4x4 uMVP;
 };
 
 struct main0_out

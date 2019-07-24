@@ -16,7 +16,7 @@ uint2 spvTexelBufferCoord(uint tc)
     return uint2(tc % 4096, tc / 4096);
 }
 
-kernel void main0(constant cb5_struct& cb0_5 [[buffer(1)]], texture2d<uint, access::write> u0 [[texture(0)]], uint3 gl_LocalInvocationID [[thread_position_in_threadgroup]])
+kernel void main0(constant cb5_struct& cb0_5 [[buffer(0)]], texture2d<uint, access::write> u0 [[texture(0)]], uint3 gl_LocalInvocationID [[thread_position_in_threadgroup]])
 {
     uint _44 = as_type<uint>(as_type<float>(int(gl_LocalInvocationID.x) << 4)) >> 2u;
     uint4 _51 = as_type<uint4>(cb0_5._m0[uint(as_type<int>(as_type<float>(int(gl_LocalInvocationID.x)))) + 1u]);

@@ -28,20 +28,20 @@ void doWork(device storage_block* (&storage)[2], constant constant_block* (&cons
     storage[1]->quux = images[2].read(uint2(int2(constants[1]->bar))).xy;
 }
 
-vertex void main0(constant constant_block* constants_0 [[buffer(4)]], constant constant_block* constants_1 [[buffer(5)]], constant constant_block* constants_2 [[buffer(6)]], constant constant_block* constants_3 [[buffer(7)]], device storage_block* storage_0 [[buffer(8)]], device storage_block* storage_1 [[buffer(9)]], array<texture2d<int>, 3> images [[texture(0)]])
+vertex void main0(device storage_block* storage_0 [[buffer(0)]], device storage_block* storage_1 [[buffer(1)]], constant constant_block* constants_0 [[buffer(2)]], constant constant_block* constants_1 [[buffer(3)]], constant constant_block* constants_2 [[buffer(4)]], constant constant_block* constants_3 [[buffer(5)]], array<texture2d<int>, 3> images [[texture(0)]])
 {
+    device storage_block* storage[] =
+    {
+        storage_0,
+        storage_1,
+    };
+
     constant constant_block* constants[] =
     {
         constants_0,
         constants_1,
         constants_2,
         constants_3,
-    };
-
-    device storage_block* storage[] =
-    {
-        storage_0,
-        storage_1,
     };
 
     doWork(storage, constants, images);

@@ -45,14 +45,14 @@ T degrees(T r)
 
 // Implementation of the GLSL findLSB() function
 template<typename T>
-T findLSB(T x)
+T spvFindLSB(T x)
 {
     return select(ctz(x), T(-1), x == T(0));
 }
 
 // Implementation of the signed GLSL findMSB() function
 template<typename T>
-T findSMSB(T x)
+T spvFindSMSB(T x)
 {
     T v = select(x, T(-1) - x, x < T(0));
     return select(clz(T(0)) - (clz(v) + T(1)), T(-1), v == T(0));
@@ -112,8 +112,8 @@ vertex main0_out main0(main0_in in [[stage_in]], constant UBO& _18 [[buffer(0)]]
     out.vNormal = in.aNormal;
     out.vRotDeg = degrees(_18.rotRad);
     out.vRotRad = radians(_18.rotDeg);
-    out.vLSB = findLSB(_18.bits);
-    out.vMSB = findSMSB(_18.bits);
+    out.vLSB = spvFindLSB(_18.bits);
+    out.vMSB = spvFindSMSB(_18.bits);
     return out;
 }
 

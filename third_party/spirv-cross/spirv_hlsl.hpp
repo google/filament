@@ -167,6 +167,8 @@ private:
 	void replace_illegal_names() override;
 
 	Options hlsl_options;
+
+	// TODO: Refactor this to be more similar to MSL, maybe have some common system in place?
 	bool requires_op_fmod = false;
 	bool requires_fp16_packing = false;
 	bool requires_explicit_fp16_packing = false;
@@ -179,6 +181,9 @@ private:
 	bool requires_inverse_2x2 = false;
 	bool requires_inverse_3x3 = false;
 	bool requires_inverse_4x4 = false;
+	bool requires_scalar_reflect = false;
+	bool requires_scalar_refract = false;
+	bool requires_scalar_faceforward = false;
 	uint64_t required_textureSizeVariants = 0;
 	void require_texture_query_variant(const SPIRType &type);
 

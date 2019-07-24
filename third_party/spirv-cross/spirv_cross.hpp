@@ -117,15 +117,6 @@ struct EntryPoint
 	spv::ExecutionModel execution_model;
 };
 
-enum ExtendedDecorations
-{
-	SPIRVCrossDecorationPacked,
-	SPIRVCrossDecorationPackedType,
-	SPIRVCrossDecorationInterfaceMemberIndex,
-	SPIRVCrossDecorationInterfaceOrigID,
-	SPIRVCrossDecorationArgumentBufferID
-};
-
 class Compiler
 {
 public:
@@ -255,7 +246,7 @@ public:
 	size_t get_declared_struct_size_runtime_array(const SPIRType &struct_type, size_t array_size) const;
 
 	// Returns the effective size of a buffer block struct member.
-	virtual size_t get_declared_struct_member_size(const SPIRType &struct_type, uint32_t index) const;
+	size_t get_declared_struct_member_size(const SPIRType &struct_type, uint32_t index) const;
 
 	// Returns a set of all global variables which are statically accessed
 	// by the control flow graph from the current entry point.
@@ -669,6 +660,7 @@ protected:
 	bool block_is_outside_flow_control_from_block(const SPIRBlock &from, const SPIRBlock &to);
 
 	bool execution_is_branchless(const SPIRBlock &from, const SPIRBlock &to) const;
+	bool execution_is_direct_branch(const SPIRBlock &from, const SPIRBlock &to) const;
 	bool execution_is_noop(const SPIRBlock &from, const SPIRBlock &to) const;
 	SPIRBlock::ContinueBlockType continue_block_type(const SPIRBlock &continue_block) const;
 
@@ -822,6 +814,7 @@ protected:
 
 	std::unordered_set<uint32_t> forced_temporaries;
 	std::unordered_set<uint32_t> forwarded_temporaries;
+	std::unordered_set<uint32_t> suppressed_usage_tracking;
 	std::unordered_set<uint32_t> hoisted_temporaries;
 
 	Bitset active_input_builtins;

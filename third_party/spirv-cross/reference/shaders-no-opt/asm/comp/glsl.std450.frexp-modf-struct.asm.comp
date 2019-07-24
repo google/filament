@@ -1,0 +1,33 @@
+#version 450
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+struct _8
+{
+    float _m0;
+    float _m1;
+};
+
+struct _15
+{
+    float _m0;
+    int _m1;
+};
+
+layout(binding = 0, std430) buffer _3_4
+{
+    float _m0;
+    int _m1;
+} _4;
+
+void main()
+{
+    _8 _23;
+    _23._m0 = modf(20.0, _23._m1);
+    _15 _24;
+    _24._m0 = frexp(40.0, _24._m1);
+    _4._m0 = _23._m0;
+    _4._m0 = _23._m1;
+    _4._m0 = _24._m0;
+    _4._m1 = _24._m1;
+}
+

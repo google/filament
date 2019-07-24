@@ -1,0 +1,20 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct Foo
+{
+    packed_float3 a;
+};
+
+struct SSBOScalar
+{
+    Foo v[1];
+};
+
+kernel void main0(device SSBOScalar& buffer_scalar [[buffer(0)]])
+{
+    buffer_scalar.v[1].a[1u] = 1.0;
+}
+

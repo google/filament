@@ -37,7 +37,7 @@ threadgroup int* select_tgsm(constant bar& cb, threadgroup int (&tgsm)[128])
     return (cb.d != 0) ? &tgsm[0u] : nullptr;
 }
 
-kernel void main0(device foo& buf [[buffer(0)]], constant bar& cb [[buffer(3)]], device baz& buf2 [[buffer(4)]])
+kernel void main0(device foo& buf [[buffer(0)]], constant bar& cb [[buffer(1)]], device baz& buf2 [[buffer(2)]])
 {
     threadgroup int tgsm[128];
     device int* sbuf = select_buffer(buf, buf2, cb);

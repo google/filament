@@ -103,7 +103,7 @@ if (CMAKE_COMPILER_IS_GNUCXX OR (${CMAKE_CXX_COMPILER_ID} MATCHES "Clang"))
 		set(spirv-cross-link-flags "${spirv-cross-link-flags} -fsanitize=thread")
 	endif()
 elseif (MSVC)
-	set(spirv-compiler-options ${spirv-compiler-options} /wd4267)
+	set(spirv-compiler-options ${spirv-compiler-options} /wd4267 /wd4996)
 endif()
 
 macro(extract_headers out_abs file_list)
@@ -287,7 +287,7 @@ if (SPIRV_CROSS_STATIC)
 endif()
 
 set(spirv-cross-abi-major 0)
-set(spirv-cross-abi-minor 13)
+set(spirv-cross-abi-minor 16)
 set(spirv-cross-abi-patch 0)
 
 if (SPIRV_CROSS_SHARED)
@@ -457,6 +457,10 @@ if (SPIRV_CROSS_CLI)
 				target_link_libraries(spirv-cross-msl-constexpr-test spirv-cross-c)
 				set_target_properties(spirv-cross-msl-constexpr-test PROPERTIES LINK_FLAGS "${spirv-cross-link-flags}")
 
+				add_executable(spirv-cross-msl-resource-binding-test tests-other/msl_resource_bindings.cpp)
+				target_link_libraries(spirv-cross-msl-resource-binding-test spirv-cross-c)
+				set_target_properties(spirv-cross-msl-resource-binding-test PROPERTIES LINK_FLAGS "${spirv-cross-link-flags}")
+
 				if (CMAKE_COMPILER_IS_GNUCXX OR (${CMAKE_CXX_COMPILER_ID} MATCHES "Clang"))
 					target_compile_options(spirv-cross-c-api-test PRIVATE -std=c89 -Wall -Wextra)
 				endif()
@@ -469,6 +473,8 @@ if (SPIRV_CROSS_CLI)
 						COMMAND $<TARGET_FILE:spirv-cross-small-vector-test>)
 				add_test(NAME spirv-cross-msl-constexpr-test
 						COMMAND $<TARGET_FILE:spirv-cross-msl-constexpr-test> ${CMAKE_CURRENT_SOURCE_DIR}/tests-other/msl_constexpr_test.spv)
+				add_test(NAME spirv-cross-msl-resource-binding-test
+						COMMAND $<TARGET_FILE:spirv-cross-msl-resource-binding-test> ${CMAKE_CURRENT_SOURCE_DIR}/tests-other/msl_resource_binding.spv)
 				add_test(NAME spirv-cross-test
 						COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_shaders.py --parallel
 						${spirv-cross-externals}

@@ -86,7 +86,7 @@ void compute_uint8(device SSBO& ssbo, thread int4& vColor, constant Push& regist
     FragColorUint = uint4(tmp);
 }
 
-fragment main0_out main0(main0_in in [[stage_in]], constant Push& registers [[buffer(0)]], constant UBO& ubo [[buffer(1)]], device SSBO& ssbo [[buffer(2)]])
+fragment main0_out main0(main0_in in [[stage_in]], device SSBO& ssbo [[buffer(0)]], constant Push& registers [[buffer(1)]], constant UBO& ubo [[buffer(2)]])
 {
     main0_out out = {};
     packing_int8(ssbo);

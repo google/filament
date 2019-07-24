@@ -111,7 +111,6 @@ void main()
     {
         _129 = _109;
     }
-    vec3 _130 = _129 * 0.5;
     vec2 _144 = clamp(_82 + (vec2(-1.0) * _7._m0.xy), _95, _96);
     vec3 _156 = _11._m5 * clamp(textureLod(SPIRV_Cross_Combined, _144, 0.0).w * _7._m1, 0.0, 1.0);
     vec4 _160 = textureLod(SPIRV_Cross_Combined_1, _144, 0.0);
@@ -125,7 +124,6 @@ void main()
     {
         _176 = _156;
     }
-    vec3 _177 = _176 * 0.5;
     vec2 _191 = clamp(_82 + (vec2(0.0, -1.0) * _7._m0.xy), _95, _96);
     vec3 _203 = _11._m5 * clamp(textureLod(SPIRV_Cross_Combined, _191, 0.0).w * _7._m1, 0.0, 1.0);
     vec4 _207 = textureLod(SPIRV_Cross_Combined_1, _191, 0.0);
@@ -139,7 +137,6 @@ void main()
     {
         _223 = _203;
     }
-    vec3 _224 = _223 * 0.75;
     vec2 _238 = clamp(_82 + (vec2(1.0, -1.0) * _7._m0.xy), _95, _96);
     vec3 _250 = _11._m5 * clamp(textureLod(SPIRV_Cross_Combined, _238, 0.0).w * _7._m1, 0.0, 1.0);
     vec4 _254 = textureLod(SPIRV_Cross_Combined_1, _238, 0.0);
@@ -153,7 +150,6 @@ void main()
     {
         _270 = _250;
     }
-    vec3 _271 = _270 * 0.5;
     vec2 _285 = clamp(_82 + (vec2(-2.0, 0.0) * _7._m0.xy), _95, _96);
     vec3 _297 = _11._m5 * clamp(textureLod(SPIRV_Cross_Combined, _285, 0.0).w * _7._m1, 0.0, 1.0);
     vec4 _301 = textureLod(SPIRV_Cross_Combined_1, _285, 0.0);
@@ -167,7 +163,6 @@ void main()
     {
         _317 = _297;
     }
-    vec3 _318 = _317 * 0.5;
     vec2 _332 = clamp(_82 + (vec2(-1.0, 0.0) * _7._m0.xy), _95, _96);
     vec3 _344 = _11._m5 * clamp(textureLod(SPIRV_Cross_Combined, _332, 0.0).w * _7._m1, 0.0, 1.0);
     vec4 _348 = textureLod(SPIRV_Cross_Combined_1, _332, 0.0);
@@ -181,7 +176,6 @@ void main()
     {
         _364 = _344;
     }
-    vec3 _365 = _364 * 0.75;
     vec2 _379 = clamp(_82, _95, _96);
     vec3 _391 = _11._m5 * clamp(textureLod(SPIRV_Cross_Combined, _379, 0.0).w * _7._m1, 0.0, 1.0);
     vec4 _395 = textureLod(SPIRV_Cross_Combined_1, _379, 0.0);
@@ -195,7 +189,6 @@ void main()
     {
         _411 = _391;
     }
-    vec3 _412 = _411 * 1.0;
     vec2 _426 = clamp(_82 + (vec2(1.0, 0.0) * _7._m0.xy), _95, _96);
     vec3 _438 = _11._m5 * clamp(textureLod(SPIRV_Cross_Combined, _426, 0.0).w * _7._m1, 0.0, 1.0);
     vec4 _442 = textureLod(SPIRV_Cross_Combined_1, _426, 0.0);
@@ -209,7 +202,6 @@ void main()
     {
         _458 = _438;
     }
-    vec3 _459 = _458 * 0.75;
     vec2 _473 = clamp(_82 + (vec2(2.0, 0.0) * _7._m0.xy), _95, _96);
     vec3 _485 = _11._m5 * clamp(textureLod(SPIRV_Cross_Combined, _473, 0.0).w * _7._m1, 0.0, 1.0);
     vec4 _489 = textureLod(SPIRV_Cross_Combined_1, _473, 0.0);
@@ -223,7 +215,6 @@ void main()
     {
         _505 = _485;
     }
-    vec3 _506 = _505 * 0.5;
     vec2 _520 = clamp(_82 + (vec2(-1.0, 1.0) * _7._m0.xy), _95, _96);
     vec3 _532 = _11._m5 * clamp(textureLod(SPIRV_Cross_Combined, _520, 0.0).w * _7._m1, 0.0, 1.0);
     vec4 _536 = textureLod(SPIRV_Cross_Combined_1, _520, 0.0);
@@ -237,7 +228,6 @@ void main()
     {
         _552 = _532;
     }
-    vec3 _553 = _552 * 0.5;
     vec2 _567 = clamp(_82 + (vec2(0.0, 1.0) * _7._m0.xy), _95, _96);
     vec3 _579 = _11._m5 * clamp(textureLod(SPIRV_Cross_Combined, _567, 0.0).w * _7._m1, 0.0, 1.0);
     vec4 _583 = textureLod(SPIRV_Cross_Combined_1, _567, 0.0);
@@ -251,7 +241,6 @@ void main()
     {
         _599 = _579;
     }
-    vec3 _600 = _599 * 0.75;
     vec2 _614 = clamp(_82 + _7._m0.xy, _95, _96);
     vec3 _626 = _11._m5 * clamp(textureLod(SPIRV_Cross_Combined, _614, 0.0).w * _7._m1, 0.0, 1.0);
     vec4 _630 = textureLod(SPIRV_Cross_Combined_1, _614, 0.0);
@@ -265,7 +254,6 @@ void main()
     {
         _646 = _626;
     }
-    vec3 _647 = _646 * 0.5;
     vec2 _661 = clamp(_82 + (vec2(0.0, 2.0) * _7._m0.xy), _95, _96);
     vec3 _673 = _11._m5 * clamp(textureLod(SPIRV_Cross_Combined, _661, 0.0).w * _7._m1, 0.0, 1.0);
     vec4 _677 = textureLod(SPIRV_Cross_Combined_1, _661, 0.0);
@@ -279,7 +267,7 @@ void main()
     {
         _693 = _673;
     }
-    vec3 _702 = ((((((((((((_130.xyz + _177).xyz + _224).xyz + _271).xyz + _318).xyz + _365).xyz + _412).xyz + _459).xyz + _506).xyz + _553).xyz + _600).xyz + _647).xyz + (_693 * 0.5)).xyz * vec3(0.125);
+    vec3 _702 = (((((((((((((_129 * 0.5).xyz + (_176 * 0.5)).xyz + (_223 * 0.75)).xyz + (_270 * 0.5)).xyz + (_317 * 0.5)).xyz + (_364 * 0.75)).xyz + (_411 * 1.0)).xyz + (_458 * 0.75)).xyz + (_505 * 0.5)).xyz + (_552 * 0.5)).xyz + (_599 * 0.75)).xyz + (_646 * 0.5)).xyz + (_693 * 0.5)).xyz * vec3(0.125);
     _28 _704 = _74;
     _704._m0 = vec4(_702.x, _702.y, _702.z, vec4(0.0).w);
     _28 _705 = _704;

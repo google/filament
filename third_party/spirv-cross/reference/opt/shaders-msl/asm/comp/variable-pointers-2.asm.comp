@@ -23,14 +23,29 @@ kernel void main0(device foo& buf [[buffer(0)]], constant bar& cb [[buffer(1)]],
     device foo* _45 = _71;
     thread uint3* _77 = _70 ? &gl_GlobalInvocationID : &gl_LocalInvocationID;
     thread uint3* _73 = _77;
-    for (device int* _52 = &_71->a[0u], * _55 = &buf.a[0u]; (*_52) != (*_55); )
+    device int* _52;
+    device int* _55;
+    _52 = &_71->a[0u];
+    _55 = &buf.a[0u];
+    int _57;
+    int _58;
+    for (;;)
     {
-        int _66 = ((*_52) + (*_55)) + int((*_77).x);
-        *_52 = _66;
-        *_55 = _66;
-        _52 = &_52[1u];
-        _55 = &_55[1u];
-        continue;
+        _57 = *_52;
+        _58 = *_55;
+        if (_57 != _58)
+        {
+            int _66 = (_57 + _58) + int((*_77).x);
+            *_52 = _66;
+            *_55 = _66;
+            _52 = &_52[1u];
+            _55 = &_55[1u];
+            continue;
+        }
+        else
+        {
+            break;
+        }
     }
 }
 

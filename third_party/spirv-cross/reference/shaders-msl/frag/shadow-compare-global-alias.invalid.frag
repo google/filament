@@ -35,7 +35,7 @@ float Samp4(thread const depth2d<float> uS, thread const sampler uSSmplr, thread
     return uS.sample_compare(uSSmplr, vUV.xy, vUV.z);
 }
 
-fragment main0_out main0(main0_in in [[stage_in]], depth2d<float> uSampler [[texture(0)]], depth2d<float> uTex [[texture(1)]], sampler uSamplerSmplr [[sampler(0)]], sampler uSamp [[sampler(2)]])
+fragment main0_out main0(main0_in in [[stage_in]], depth2d<float> uTex [[texture(0)]], depth2d<float> uSampler [[texture(1)]], sampler uSamp [[sampler(0)]], sampler uSamplerSmplr [[sampler(1)]])
 {
     main0_out out = {};
     out.FragColor = uSampler.sample_compare(uSamplerSmplr, in.vUV.xy, in.vUV.z);

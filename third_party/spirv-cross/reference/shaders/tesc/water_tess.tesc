@@ -26,9 +26,7 @@ bool frustum_cull(vec2 p0)
     float radius = 0.5 * length(bb_max - bb_min);
     vec3 f0 = vec3(dot(_41.uFrustum[0], vec4(center, 1.0)), dot(_41.uFrustum[1], vec4(center, 1.0)), dot(_41.uFrustum[2], vec4(center, 1.0)));
     vec3 f1 = vec3(dot(_41.uFrustum[3], vec4(center, 1.0)), dot(_41.uFrustum[4], vec4(center, 1.0)), dot(_41.uFrustum[5], vec4(center, 1.0)));
-    vec3 _199 = f0;
-    float _200 = radius;
-    bool _205 = any(lessThanEqual(_199, vec3(-_200)));
+    bool _205 = any(lessThanEqual(f0, vec3(-radius)));
     bool _215;
     if (!_205)
     {

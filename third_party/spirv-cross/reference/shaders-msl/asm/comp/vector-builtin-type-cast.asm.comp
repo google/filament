@@ -10,7 +10,7 @@ struct cb1_struct
 
 constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(16u, 16u, 1u);
 
-kernel void main0(constant cb1_struct& cb0_1 [[buffer(0)]], texture2d<float, access::write> u0 [[texture(1)]], uint3 gl_LocalInvocationID [[thread_position_in_threadgroup]])
+kernel void main0(constant cb1_struct& cb0_1 [[buffer(0)]], texture2d<float, access::write> u0 [[texture(0)]], uint3 gl_LocalInvocationID [[thread_position_in_threadgroup]])
 {
     int2 r0 = int2(int2(u0.get_width(), u0.get_height()) >> int2(uint2(4u)));
     for (int i = 0; i < r0.y; i++)

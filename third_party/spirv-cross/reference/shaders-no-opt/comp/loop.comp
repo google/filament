@@ -93,11 +93,13 @@ void main()
     {
         if (l == 5)
         {
-            l++;
+            int _172 = l;
+            l = _172 + 1;
             continue;
         }
         idat += vec4(1.0);
-        l++;
+        int _172 = l;
+        l = _172 + 1;
         continue;
     }
     _177.out_data[ident] = idat;

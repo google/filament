@@ -67,7 +67,6 @@ vec2 warp_position()
     {
         _110 = 0u;
     }
-    uint _116 = _110;
     uint _120;
     if (uPosition.y < 32u)
     {
@@ -77,7 +76,7 @@ vec2 warp_position()
     {
         _120 = 0u;
     }
-    uvec2 rounding = uvec2(_116, _120);
+    uvec2 rounding = uvec2(_110, _120);
     vec4 lower_upper_snapped = vec4((uPosition + rounding).xyxy & (~mask).xxyy);
     return mix(lower_upper_snapped.xy, lower_upper_snapped.zw, vec2(fract_lod));
 }

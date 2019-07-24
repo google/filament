@@ -845,7 +845,7 @@ spvc_result spvc_compiler_msl_add_vertex_attribute(spvc_compiler compiler, const
 	attr.msl_stride = va->msl_stride;
 	attr.format = static_cast<MSLVertexFormat>(va->format);
 	attr.builtin = static_cast<spv::BuiltIn>(va->builtin);
-	attr.per_instance = va->per_instance;
+	attr.per_instance = va->per_instance != 0;
 	msl.add_msl_vertex_attribute(attr);
 	return SPVC_SUCCESS;
 #else
@@ -949,12 +949,12 @@ static void spvc_convert_msl_sampler(MSLConstexprSampler &samp, const spvc_msl_c
 	samp.r_address = static_cast<MSLSamplerAddress>(sampler->r_address);
 	samp.lod_clamp_min = sampler->lod_clamp_min;
 	samp.lod_clamp_max = sampler->lod_clamp_max;
-	samp.lod_clamp_enable = sampler->lod_clamp_enable;
+	samp.lod_clamp_enable = sampler->lod_clamp_enable != 0;
 	samp.min_filter = static_cast<MSLSamplerFilter>(sampler->min_filter);
 	samp.mag_filter = static_cast<MSLSamplerFilter>(sampler->mag_filter);
 	samp.mip_filter = static_cast<MSLSamplerMipFilter>(sampler->mip_filter);
-	samp.compare_enable = sampler->compare_enable;
-	samp.anisotropy_enable = sampler->anisotropy_enable;
+	samp.compare_enable = sampler->compare_enable != 0;
+	samp.anisotropy_enable = sampler->anisotropy_enable != 0;
 	samp.max_anisotropy = sampler->max_anisotropy;
 	samp.compare_func = static_cast<MSLSamplerCompareFunc>(sampler->compare_func);
 	samp.coord = static_cast<MSLSamplerCoord>(sampler->coord);
@@ -1028,6 +1028,42 @@ spvc_result spvc_compiler_msl_set_fragment_output_components(spvc_compiler compi
 	(void)components;
 	compiler->context->report_error("MSL function used on a non-MSL backend.");
 	return SPVC_ERROR_INVALID_ARGUMENT;
+#endif
+}
+
+unsigned spvc_compiler_msl_get_automatic_resource_binding(spvc_compiler compiler, spvc_variable_id id)
+{
+#if SPIRV_CROSS_C_API_MSL
+	if (compiler->backend != SPVC_BACKEND_MSL)
+	{
+		compiler->context->report_error("MSL function used on a non-MSL backend.");
+		return uint32_t(-1);
+	}
+
+	auto &msl = *static_cast<CompilerMSL *>(compiler->compiler.get());
+	return msl.get_automatic_msl_resource_binding(id);
+#else
+	(void)id;
+	compiler->context->report_error("MSL function used on a non-MSL backend.");
+	return uint32_t(-1);
+#endif
+}
+
+unsigned spvc_compiler_msl_get_automatic_resource_binding_secondary(spvc_compiler compiler, spvc_variable_id id)
+{
+#if SPIRV_CROSS_C_API_MSL
+	if (compiler->backend != SPVC_BACKEND_MSL)
+	{
+		compiler->context->report_error("MSL function used on a non-MSL backend.");
+		return uint32_t(-1);
+	}
+
+	auto &msl = *static_cast<CompilerMSL *>(compiler->compiler.get());
+	return msl.get_automatic_msl_resource_binding_secondary(id);
+#else
+	(void)id;
+	compiler->context->report_error("MSL function used on a non-MSL backend.");
+	return uint32_t(-1);
 #endif
 }
 
@@ -1582,6 +1618,16 @@ spvc_result spvc_compiler_get_declared_struct_size_runtime_array(spvc_compiler c
 	{
 		*size = compiler->compiler->get_declared_struct_size_runtime_array(*static_cast<const SPIRType *>(struct_type),
 		                                                                   array_size);
+	}
+	SPVC_END_SAFE_SCOPE(compiler->context, SPVC_ERROR_INVALID_ARGUMENT)
+	return SPVC_SUCCESS;
+}
+
+spvc_result spvc_compiler_get_declared_struct_member_size(spvc_compiler compiler, spvc_type struct_type, unsigned index, size_t *size)
+{
+	SPVC_BEGIN_SAFE_SCOPE
+	{
+		*size = compiler->compiler->get_declared_struct_member_size(*static_cast<const SPIRType *>(struct_type), index);
 	}
 	SPVC_END_SAFE_SCOPE(compiler->context, SPVC_ERROR_INVALID_ARGUMENT)
 	return SPVC_SUCCESS;
