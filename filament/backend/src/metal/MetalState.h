@@ -42,6 +42,14 @@ static constexpr uint32_t SAMPLER_GROUP_COUNT = Program::UNIFORM_BINDING_COUNT;
 static constexpr uint32_t SAMPLER_BINDING_COUNT = backend::MAX_SAMPLER_COUNT;
 static constexpr uint32_t VERTEX_BUFFER_START = Program::UNIFORM_BINDING_COUNT;
 
+// The "zero" buffer is a small buffer for missing attributes that resides in the vertex slot
+// immediately following any user-provided vertex buffers.
+static constexpr uint32_t ZERO_VERTEX_BUFFER = MAX_VERTEX_ATTRIBUTE_COUNT;
+
+// The total number of vertex buffers "slots" that the Metal backend can bind.
+// + 1 to account for the zero buffer.
+static constexpr uint32_t VERTEX_BUFFER_COUNT = MAX_VERTEX_ATTRIBUTE_COUNT + 1;
+
 // Forward declarations necessary here, definitions at end of file.
 inline bool operator==(const MTLViewport& lhs, const MTLViewport& rhs);
 inline bool operator!=(const MTLViewport& lhs, const MTLViewport& rhs);
@@ -57,10 +65,11 @@ struct VertexDescription {
         uint32_t offset;            // 4 bytes
     };
     struct Layout {
-        uint32_t stride;            // 4 bytes
+        MTLVertexStepFunction step; // 8 bytes
+        uint64_t stride;            // 8 bytes
     };
     Attribute attributes[MAX_VERTEX_ATTRIBUTE_COUNT] = {};      // 256 bytes
-    Layout layouts[MAX_VERTEX_ATTRIBUTE_COUNT] = {};            //  64 bytes
+    Layout layouts[VERTEX_BUFFER_COUNT] = {};                   // 272 bytes
 
     bool operator==(const VertexDescription& rhs) const noexcept {
         bool result = true;
@@ -84,7 +93,7 @@ struct VertexDescription {
 
 // This assert checks that the struct is the size we expect without any "hidden" padding bytes
 // inserted by the compiler.
-static_assert(sizeof(VertexDescription) == 256 + 64, "VertexDescription unexpected size.");
+static_assert(sizeof(VertexDescription) == 256 + 272, "VertexDescription unexpected size.");
 
 struct BlendState {
     MTLBlendOperation alphaBlendOperation = MTLBlendOperationAdd;       // 8 bytes
@@ -214,7 +223,7 @@ private:
 struct PipelineState {
     id<MTLFunction> vertexFunction = nil;                               // 8 bytes
     id<MTLFunction> fragmentFunction = nil;                             // 8 bytes
-    VertexDescription vertexDescription;                                // 320 bytes
+    VertexDescription vertexDescription;                                // 528 bytes
     MTLPixelFormat colorAttachmentPixelFormat = MTLPixelFormatInvalid;  // 8 bytes
     MTLPixelFormat depthAttachmentPixelFormat = MTLPixelFormatInvalid;  // 8 bytes
     NSUInteger sampleCount = 1;                                         // 8 bytes
@@ -239,7 +248,7 @@ struct PipelineState {
 
 // This assert checks that the struct is the size we expect without any "hidden" padding bytes
 // inserted by the compiler.
-static_assert(sizeof(PipelineState) == 416, "PipelineState unexpected size.");
+static_assert(sizeof(PipelineState) == 624, "PipelineState unexpected size.");
 
 struct PipelineStateCreator {
     id<MTLRenderPipelineState> operator()(id<MTLDevice> device, const PipelineState& state)

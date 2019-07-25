@@ -190,6 +190,17 @@ void MetalRenderPrimitive::setBuffers(MetalVertexBuffer* vertexBuffer, MetalInde
     uint32_t bufferIndex = 0;
     for (uint32_t attributeIndex = 0; attributeIndex < attributeCount; attributeIndex++) {
         if (!(enabledAttributes & (1U << attributeIndex))) {
+            // If the attribute is not enabled, bind it to the zero buffer. It's a Metal error for a
+            // shader to read from missing vertex attributes.
+            vertexDescription.attributes[attributeIndex] = {
+                    .format = MTLVertexFormatChar4,
+                    .buffer = ZERO_VERTEX_BUFFER,
+                    .offset = 0
+            };
+            vertexDescription.layouts[ZERO_VERTEX_BUFFER] = {
+                    .step = MTLVertexStepFunctionConstant,
+                    .stride = 4
+            };
             continue;
         }
         const auto& attribute = vertexBuffer->attributes[attributeIndex];
@@ -204,6 +215,7 @@ void MetalRenderPrimitive::setBuffers(MetalVertexBuffer* vertexBuffer, MetalInde
                 .offset = 0
         };
         vertexDescription.layouts[bufferIndex] = {
+                .step = MTLVertexStepFunctionPerVertex,
                 .stride = attribute.stride
         };
 
