@@ -276,7 +276,7 @@ install(DIRECTORY ${PUBLIC_HDR_DIR}/backend DESTINATION include)
 # ==================================================================================================
 # Test
 # ==================================================================================================
-if (APPLE AND NOT IOS)
+if (APPLE)
     add_library(backend_test STATIC
         test/BackendTest.cpp
         test/ShaderGenerator.cpp
@@ -292,6 +292,32 @@ if (APPLE AND NOT IOS)
         SPIRV
         spirv-cross-glsl)
 
+    set(BACKEND_TEST_DEPS
+            OGLCompiler
+            OSDependent
+            SPIRV
+            SPIRV-Tools
+            SPIRV-Tools-opt
+            backend_test
+            filabridge
+            getopt
+            gtest
+            glslang
+            spirv-cross-core
+            spirv-cross-glsl
+            spirv-cross-msl
+            )
+
+    set(BACKEND_TEST_COMBINED_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/libbackendtest_combined.a")
+    combine_static_libs(backend_test "${BACKEND_TEST_COMBINED_OUTPUT}" "${BACKEND_TEST_DEPS}")
+
+    set(BACKEND_TEST_LIB_NAME ${CMAKE_STATIC_LIBRARY_PREFIX}backend_test${CMAKE_STATIC_LIBRARY_SUFFIX})
+
+    install(FILES "${BACKEND_TEST_COMBINED_OUTPUT}" DESTINATION lib/${DIST_DIR} RENAME ${BACKEND_TEST_LIB_NAME})
+    install(FILES test/PlatformRunner.h DESTINATION include/backend_test)
+endif()
+
+if (APPLE AND NOT IOS)
     add_executable(backend_test_mac test/mac_runner.mm)
     target_link_libraries(backend_test_mac PRIVATE "-framework Metal -framework AppKit -framework QuartzCore")
     # Because each test case is a separate file, the -force_load flag is necessary to prevent the
