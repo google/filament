@@ -44,11 +44,14 @@ id<MTLRenderPipelineState> PipelineStateCreator::operator()(id<MTLDevice> device
         }
     }
 
-    for (uint32_t i = 0; i < MAX_VERTEX_ATTRIBUTE_COUNT; i++) {
+    for (uint32_t i = 0; i < VERTEX_BUFFER_COUNT; i++) {
         if (vertexDescription.layouts[i].stride > 0) {
             const auto& layout = vertexDescription.layouts[i];
             vertex.layouts[VERTEX_BUFFER_START + i].stride = layout.stride;
-            vertex.layouts[VERTEX_BUFFER_START + i].stepFunction = MTLVertexStepFunctionPerVertex;
+            vertex.layouts[VERTEX_BUFFER_START + i].stepFunction = layout.step;
+            if (layout.step == MTLVertexStepFunctionConstant) {
+                vertex.layouts[VERTEX_BUFFER_START + i].stepRate = 0;
+            }
         }
     }
 
