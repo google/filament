@@ -34,6 +34,8 @@
 using namespace filament::math;
 using namespace std::complex_literals;
 
+static float g_incidenceAngle = 81.7f;
+
 static void printUsage(const char* name) {
     std::string execName(utils::Path(name).getName());
     std::string usage(
@@ -62,10 +64,11 @@ static void license() {
 }
 
 static int handleArguments(int argc, char* argv[]) {
-    static constexpr const char* OPTSTR = "hlg:s:v:";
+    static constexpr const char* OPTSTR = "hla:";
     static const struct option OPTIONS[] = {
             { "help",         no_argument, nullptr, 'h' },
             { "license",      no_argument, nullptr, 'l' },
+            { "angle",  required_argument, nullptr, 'a' },
             { nullptr, 0, nullptr, 0 }  // termination of the option list
     };
 
@@ -82,6 +85,9 @@ static int handleArguments(int argc, char* argv[]) {
             case 'l':
                 license();
                 exit(0);
+            case 'a':
+                g_incidenceAngle = std::stof(arg);
+                break;
         }
     }
 
@@ -721,10 +727,31 @@ static std::complex<float> findSample(const std::vector<Sample>& samples, float 
     return {n, k};
 }
 
-// Fresnel equation for complex IORs
+// Fresnel equation for complex IORs at normal incidence
 static float fresnel(const std::complex<float>& sample) {
     return (((sample - (1.0f + 0if)) * (std::conj(sample) - (1.0f + 0if))) /
             ((sample + (1.0f + 0if)) * (std::conj(sample) + (1.0f + 0if)))).real();
+}
+
+// Fresnel equation for complex IORs at a specified angle
+static float fresnel(const std::complex<float>& sample, float cosTheta) {
+    float cosTheta2 = cosTheta * cosTheta;
+    float sinTheta2 = 1.0f - cosTheta2;
+    float eta2 = sample.real() * sample.real();
+    float etak2 = sample.imag() * sample.imag();
+
+    float t0 = eta2 - etak2 - sinTheta2;
+    float a2plusb2 = sqrt(t0 * t0 + 4 * eta2 * etak2);
+    float t1 = a2plusb2 + cosTheta2;
+    float a = std::sqrt(0.5f * (a2plusb2 + t0));
+    float t2 = 2 * a * cosTheta;
+    float Rs = (t1 - t2) / (t1 + t2);
+
+    float t3 = cosTheta2 * a2plusb2 + sinTheta2 * sinTheta2;
+    float t4 = t2 * sinTheta2;
+    float Rp = Rs * (t3 - t4) / (t3 + t4);
+
+    return 0.5f * (Rp + Rs);
 }
 
 static float3 linear_to_sRGB(float3 linear) noexcept {
@@ -746,9 +773,19 @@ static float3 XYZ_to_sRGB(const float3& v) {
     return XYZ_sRGB * v;
 }
 
-static float3 computeColor(const std::vector<Sample>& samples) {
-    float3 xyz{0.0f};
+struct Reflectance {
+    float3 f0{0.0f};
+    float3 f82{0.0f};
+};
+
+static Reflectance computeColor(const std::vector<Sample>& samples) {
+    Reflectance xyz;
+
     float y = 0.0f;
+
+    // We default to 81.7° but this can be specified by the user, so we use the
+    // notation theta82/f81 in the code
+    float cosTheta82 = std::cos(g_incidenceAngle * M_PI / 180.0f);
 
     // We need to evaluate the Fresnel equation at each spectral sample of
     // complex IOR over the visible spectrum. For each spectral sample, we
@@ -767,25 +804,34 @@ static float3 computeColor(const std::vector<Sample>& samples) {
 
         // Find most appropriate CIE XYZ sample for the wavelength
         auto sample = findSample(samples, w);
+
         // Compute Fresnel reflectance at normal incidence
         float f0 = fresnel(sample);
+
+        // Compute Fresnel reflectance at the peak angle for the Lazanyi error term
+        float f82 = fresnel(sample, cosTheta82);
 
         // We need to multiply by the spectral power distribution of the illuminant
         float d65 = illuminantD65(w);
 
-        xyz += f0 * CIE_XYZ[i] * d65;
+        xyz.f0  += f0  * CIE_XYZ[i] * d65;
+        xyz.f82 += f82 * CIE_XYZ[i] * d65;
+
         y += CIE_XYZ[i].y * d65;
     }
 
-    xyz /= y;
+    xyz.f0  /= y;
+    xyz.f82 /= y;
 
-    float3 linear = XYZ_to_sRGB(xyz);
+    xyz.f0  = XYZ_to_sRGB(xyz.f0);
+    xyz.f82 = XYZ_to_sRGB(xyz.f82);
 
     // Rescale values that are outside of the sRGB gamut (gold for instance)
     // We should provide an option to compute f0 in wide gamut color spaces
-    if (any(greaterThan(linear, float3{1.0f}))) linear *= 1.0f / max(linear);
+    if (any(greaterThan(xyz.f0,  float3{1.0f}))) xyz.f0  *= 1.0f / max(xyz.f0);
+    if (any(greaterThan(xyz.f82, float3{1.0f}))) xyz.f82 *= 1.0f / max(xyz.f82);
 
-    return linear;
+    return xyz;
 }
 
 static bool parseSpectralData(std::ifstream& in, std::vector<Sample>& samples) {
@@ -834,30 +880,33 @@ static bool parseSpectralData(std::ifstream& in, std::vector<Sample>& samples) {
 void printColor(const float3& linear) {
     float3 sRGB = linear_to_sRGB(saturate(linear));
 
-    std::cout << std::setw(8) << "linear: ";
+    std::cout << std::setfill(' ') << std::setw(12) << "linear: ";
     std::cout << std::fixed << std::setprecision(3) << linear.r << ", ";
     std::cout << std::fixed << std::setprecision(3) << linear.g << ", ";
     std::cout << std::fixed << std::setprecision(3) << linear.b;
     std::cout << std::endl;
 
-    std::cout << std::setfill(' ') << std::setw(8) << "sRGB: ";
+    std::cout << std::setfill(' ') << std::setw(12) << "sRGB: ";
     std::cout << std::fixed << std::setprecision(3) << sRGB.r << ", ";
     std::cout << std::fixed << std::setprecision(3) << sRGB.g << ", ";
     std::cout << std::fixed << std::setprecision(3) << sRGB.b;
     std::cout << std::endl;
 
-    std::cout << std::setfill(' ') << std::setw(8) << "sRGB: ";
+    std::cout << std::setfill(' ') << std::setw(12) << "sRGB: ";
     std::cout << std::setprecision(3) << int(sRGB.r * 255.99f) << ", ";
     std::cout << std::setprecision(3) << int(sRGB.g * 255.99f) << ", ";
     std::cout << std::setprecision(3) << int(sRGB.b * 255.99f);
     std::cout << std::endl;
 
-    std::cout << std::setfill(' ') << std::setw(8) << "hex: ";
+    std::cout << std::setfill(' ') << std::setw(12) << "hex: ";
     std::cout << "#";
     std::cout << std::hex << std::setfill('0') << std::setw(2) << int(sRGB.r * 255.99f);
     std::cout << std::hex << std::setfill('0') << std::setw(2) << int(sRGB.g * 255.99f);
     std::cout << std::hex << std::setfill('0') << std::setw(2) << int(sRGB.b * 255.99f);
     std::cout << std::endl;
+
+    // Reset decimal numbers
+    std::cout << std::dec;
 }
 
 int main(int argc, char* argv[]) {
@@ -883,10 +932,19 @@ int main(int argc, char* argv[]) {
             return 1;
         }
 
-        std::cout << src.getNameWithoutExtension() << std::endl;
+        Reflectance reflectance = computeColor(samples);
 
-        float3 linear = computeColor(samples);
-        printColor(linear);
+        std::cout << "Material: " << src.getNameWithoutExtension() << std::endl;
+        std::cout << std::endl;
+
+        std::cout << "Reflectance at 0.0° (f0):" << std::endl;
+        printColor(reflectance.f0);
+
+        std::cout << std::endl;
+
+        std::cout << "Reflectance at " <<
+                std::fixed << std::setprecision(1) << g_incidenceAngle << "°:" << std::endl;
+        printColor(reflectance.f82);
     } else {
         std::cerr << "Could not open the source material " << src << std::endl;
         return 1;
