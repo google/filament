@@ -32,8 +32,8 @@ enum class PostProcessStage : uint8_t {
 
 static constexpr size_t POST_PROCESS_VARIANT_COUNT = 2;
 enum class PostProcessVariant : uint8_t {
-    OPAQUE                                    = 0,
-    TRANSLUCENT                               = 1
+    OPAQUE,
+    TRANSLUCENT
 };
 
 // Binding points for uniform buffers and sampler buffers.
