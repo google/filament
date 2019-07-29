@@ -126,7 +126,7 @@ static void addSamplerGroup(Program& pb, uint8_t bindingPoint, SamplerInterfaceB
                     SamplerInterfaceBlock::getUniformName(sib.getName().c_str(),
                             list[i].name.c_str()));
             uint8_t binding;
-            bool ok = map.getSamplerBinding(bindingPoint, (uint8_t)i, &binding);
+            UTILS_UNUSED bool ok = map.getSamplerBinding(bindingPoint, (uint8_t)i, &binding);
             assert(ok);
             samplers[i] = { std::move(uniformName), binding };
         }

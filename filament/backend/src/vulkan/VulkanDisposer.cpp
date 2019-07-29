@@ -36,6 +36,9 @@ void VulkanDisposer::removeReference(Key resource) noexcept {
     }
 }
 void VulkanDisposer::acquire(Key resource, Set& resources) noexcept {
+    if (resource == nullptr) {
+        return;
+    }
     auto iter = resources.find(resource);
     if (iter == resources.end()) {
         resources.insert(resource);
