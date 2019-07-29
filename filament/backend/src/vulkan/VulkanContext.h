@@ -42,6 +42,7 @@ namespace backend {
 constexpr VkAllocationCallbacks* VKALLOC = nullptr;
 
 struct VulkanSurfaceContext;
+struct VulkanTexture;
 
 // This wrapper exists so that we can use shared_ptr to implement shared ownership for low-level
 // Vulkan fences.
@@ -95,6 +96,7 @@ struct VulkanAttachment {
     VkImage image;
     VkImageView view;
     VkDeviceMemory memory;
+    VulkanTexture* offscreen = nullptr;
 };
 
 // The SwapContext is the set of objects that gets "swapped" at each beginFrame().

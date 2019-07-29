@@ -87,19 +87,6 @@ VulkanProgram::~VulkanProgram() {
     vkDestroyShaderModule(context.device, bundle.fragment, VKALLOC);
 }
 
-VulkanRenderTarget::~VulkanRenderTarget() {
-    if (!mSharedColorImage) {
-        vkDestroyImageView(mContext.device, mColor.view, VKALLOC);
-        vkDestroyImage(mContext.device, mColor.image, VKALLOC);
-        vkFreeMemory(mContext.device, mColor.memory, VKALLOC);
-    }
-    if (!mSharedDepthImage) {
-        vkDestroyImageView(mContext.device, mDepth.view, VKALLOC);
-        vkDestroyImage(mContext.device, mDepth.image, VKALLOC);
-        vkFreeMemory(mContext.device, mDepth.memory, VKALLOC);
-    }
-}
-
 void VulkanRenderTarget::transformClientRectToPlatform(VkRect2D* bounds) const {
     // For the backbuffer, there are corner cases where the platform's surface resolution does not
     // match what Filament expects, so we need to make an appropriate transformation (e.g. create a
@@ -158,14 +145,21 @@ VulkanAttachment VulkanRenderTarget::getDepth() const {
     return mOffscreen ? mDepth : VulkanAttachment {};
 }
 
-void VulkanRenderTarget::setColorImage(VulkanAttachment c) {
-    assert(mOffscreen);
-    mColor = c;
+static VulkanAttachment createOffscreenAttachment(VulkanTexture* tex) {
+    if (!tex) {
+        return {};
+    }
+    return { tex->vkformat, tex->textureImage, tex->imageView, tex->textureImageMemory, tex };
 }
 
-void VulkanRenderTarget::setDepthImage(VulkanAttachment d) {
+void VulkanRenderTarget::setColorImage(VulkanTexture* color) {
     assert(mOffscreen);
-    mDepth = d;
+    mColor = createOffscreenAttachment(color);
+}
+
+void VulkanRenderTarget::setDepthImage(VulkanTexture* depth) {
+    assert(mOffscreen);
+    mDepth = createOffscreenAttachment(depth);
 }
 
 VulkanVertexBuffer::VulkanVertexBuffer(VulkanContext& context, VulkanStagePool& stagePool,

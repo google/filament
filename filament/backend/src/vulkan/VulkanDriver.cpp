@@ -397,19 +397,11 @@ void VulkanDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
             width, height, color.level);
     if (color.handle) {
         auto colorTexture = handle_cast<VulkanTexture>(mHandleMap, color.handle);
-        renderTarget->setColorImage({
-            .image = colorTexture->textureImage,
-            .view = colorTexture->imageView,
-            .format = colorTexture->vkformat
-        });
+        renderTarget->setColorImage(colorTexture);
     }
     if (depth.handle) {
         auto depthTexture = handle_cast<VulkanTexture>(mHandleMap, depth.handle);
-        renderTarget->setDepthImage({
-            .image = depthTexture->textureImage,
-            .view = depthTexture->imageView,
-            .format = depthTexture->vkformat
-        });
+        renderTarget->setDepthImage(depthTexture);
     }
     mDisposer.createDisposable(renderTarget, [this, rth] () {
         destruct_handle<VulkanRenderTarget>(mHandleMap, rth);
@@ -678,13 +670,15 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     const VkExtent2D extent = rt->getExtent();
     assert(extent.width > 0 && extent.height > 0);
 
-    mDisposer.acquire(rt, mContext.currentCommands->resources);
-
     const auto color = rt->getColor();
     const auto depth = rt->getDepth();
     const bool hasColor = color.format != VK_FORMAT_UNDEFINED;
     const bool hasDepth = depth.format != VK_FORMAT_UNDEFINED;
     const bool depthOnly = hasDepth && !hasColor;
+
+    mDisposer.acquire(rt, mContext.currentCommands->resources);
+    mDisposer.acquire(color.offscreen, mContext.currentCommands->resources);
+    mDisposer.acquire(depth.offscreen, mContext.currentCommands->resources);
 
     VkImageLayout finalLayout;
     if (!rt->isOffscreen()) {
