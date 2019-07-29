@@ -198,11 +198,14 @@ void FScene::updateUBOs(utils::Range<uint32_t> visibleRenderables, backend::Hand
         UniformBuffer::setUniform(buffer,
                 offset + offsetof(PerRenderableUib, worldFromModelNormalMatrix), m);
 
+        // Note that we cast bools to uint32. Booleans are byte-sized in C++, but we need to
+        // initialize all 32 bits in the UBO field.
+
         UniformBuffer::setUniform(buffer, offset + offsetof(PerRenderableUib, skinningEnabled),
-                sceneData.elementAt<VISIBILITY_STATE>(i).skinning);
+                uint32_t(sceneData.elementAt<VISIBILITY_STATE>(i).skinning));
 
         UniformBuffer::setUniform(buffer, offset + offsetof(PerRenderableUib, morphingEnabled),
-                sceneData.elementAt<VISIBILITY_STATE>(i).morphing);
+                uint32_t(sceneData.elementAt<VISIBILITY_STATE>(i).morphing));
 
         UniformBuffer::setUniform(buffer,
                 offset + offsetof(PerRenderableUib, morphWeights), sceneData.elementAt<MORPH_WEIGHTS>(i));
