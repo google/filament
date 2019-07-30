@@ -1466,7 +1466,7 @@ Listing [glslPunctualLight] demonstrates how to implement physically based punct
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 float getSquareFalloffAttenuation(vec3 posToLight, float lightInvRadius) {
     float distanceSquare = dot(posToLight, posToLight);
-    float factor = distanceSquare * lightInvRadius * lightInvRadius;
+    float factor = distanceSquare * lightInvRadius;
     float smoothFactor = max(1.0 - factor * factor, 0.0);
     return (smoothFactor * smoothFactor) / max(distanceSquare, 1e-4);
 }
