@@ -111,15 +111,8 @@ if (NOT WEBGL AND NOT ANDROID AND NOT IOS)
     # ==================================================================================================
     # Link the core library with additional dependencies to create the "full" library
     # ==================================================================================================
-    add_library(${TARGET} STATIC ${PUBLIC_HDRS}
-        src/MaterialGenerator.cpp
-        src/AssetPipeline.cpp)
-    target_link_libraries(${TARGET} PUBLIC
-        filamat
-        xatlas
-        meshoptimizer
-        gltfio_core
-        rays)
+    add_library(${TARGET} STATIC ${PUBLIC_HDRS} src/MaterialGenerator.cpp)
+    target_link_libraries(${TARGET} PUBLIC filamat gltfio_core)
     target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 
     # ==================================================================================================
@@ -146,3 +139,11 @@ else()
     install(DIRECTORY ${PUBLIC_HDR_DIR}/gltfio DESTINATION include)
 
 endif()
+
+# ==================================================================================================
+# Create the glTF pipeline library (used by gltf_baker)
+# ==================================================================================================
+
+add_library(gltfio_pipeline STATIC ${PUBLIC_HDRS} src/AssetPipeline.cpp)
+target_link_libraries(gltfio_pipeline PUBLIC xatlas meshoptimizer gltfio rays)
+target_include_directories(gltfio_pipeline PUBLIC ${PUBLIC_HDR_DIR})
