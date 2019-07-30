@@ -119,8 +119,9 @@ LC_UNAME=`echo ${UNAME} | tr '[:upper:]' '[:lower:]'`
 function build_clean {
     echo "Cleaning build directories..."
     rm -Rf out
-    rm -Rf android/filament-android/build
-    rm -Rf android/filament-android/.externalNativeBuild
+    rm -Rf android/filament-android/build android/filament-android/.externalNativeBuild
+    rm -Rf android/filamat-android/build android/filamat-android/.externalNativeBuild
+    rm -Rf android/gltfio-android/build android/gltfio-android/.externalNativeBuild
 }
 
 function build_desktop_target {
