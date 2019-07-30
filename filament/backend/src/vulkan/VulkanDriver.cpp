@@ -575,6 +575,10 @@ FenceStatus VulkanDriver::wait(Handle<HwFence> fh, uint64_t timeout) {
 bool VulkanDriver::isTextureFormatSupported(TextureFormat format) {
     assert(mContext.physicalDevice);
     VkFormat vkformat = getVkFormat(format);
+    // We automatically use an alternative format when the client requests DEPTH24.
+    if (format == TextureFormat::DEPTH24) {
+        vkformat = mContext.depthFormat;
+    }
     if (vkformat == VK_FORMAT_UNDEFINED) {
         return false;
     }
@@ -586,6 +590,10 @@ bool VulkanDriver::isTextureFormatSupported(TextureFormat format) {
 bool VulkanDriver::isRenderTargetFormatSupported(TextureFormat format) {
     assert(mContext.physicalDevice);
     VkFormat vkformat = getVkFormat(format);
+    // We automatically use an alternative format when the client requests DEPTH24.
+    if (format == TextureFormat::DEPTH24) {
+        vkformat = mContext.depthFormat;
+    }
     if (vkformat == VK_FORMAT_UNDEFINED) {
         return false;
     }
