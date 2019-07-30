@@ -31,8 +31,6 @@ struct AnimatorImpl;
  * according to glTF skin definitions.
  *
  * For a usage example, see the comment block for AssetLoader.
- *
- * TODO: add support for morphing.
  */
 class Animator {
 public:

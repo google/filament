@@ -80,6 +80,7 @@ set_target_properties(gltfio-jni PROPERTIES LINK_DEPENDS
 
 # The ordering in the following list is important because CMake does not have dependency information.
 target_link_libraries(gltfio-jni
+        android
         gltfio
         gltfio_resources
         filament
