@@ -87,6 +87,67 @@ VulkanProgram::~VulkanProgram() {
     vkDestroyShaderModule(context.device, bundle.fragment, VKALLOC);
 }
 
+static VulkanAttachment createOffscreenAttachment(VulkanTexture* tex) {
+    if (!tex) {
+        return {};
+    }
+    return { tex->vkformat, tex->textureImage, tex->imageView, tex->textureImageMemory, tex };
+}
+
+VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context, uint32_t w, uint32_t h,
+        uint32_t miplevel, VulkanTexture* color, VulkanTexture* depth) : HwRenderTarget(w, h),
+        mContext(context), mOffscreen(true), mColorLevel(miplevel) {
+    mColor = createOffscreenAttachment(color);
+    mDepth = createOffscreenAttachment(depth);
+
+    // We cannot use the VkImageView that's in the texture because we need to select a single level.
+    if (color) {
+        VkImageViewCreateInfo viewInfo = {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+            .image = mColor.image,
+            .format = mColor.format,
+            .subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .subresourceRange.baseMipLevel = miplevel,
+            .subresourceRange.levelCount = 1
+        };
+        if (color->target == SamplerType::SAMPLER_CUBEMAP) {
+            viewInfo.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
+            viewInfo.subresourceRange.layerCount = 6;
+        } else {
+            viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+            viewInfo.subresourceRange.layerCount = 1;
+        }
+        vkCreateImageView(context.device, &viewInfo, VKALLOC, &mColor.view);
+    }
+    if (depth) {
+        VkImageViewCreateInfo viewInfo = {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+            .image = mDepth.image,
+            .format = mDepth.format,
+            .subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
+            .subresourceRange.baseMipLevel = miplevel,
+            .subresourceRange.levelCount = 1
+        };
+        if (depth->target == SamplerType::SAMPLER_CUBEMAP) {
+            viewInfo.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
+            viewInfo.subresourceRange.layerCount = 6;
+        } else {
+            viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+            viewInfo.subresourceRange.layerCount = 1;
+        }
+        vkCreateImageView(context.device, &viewInfo, VKALLOC, &mDepth.view);
+    }
+}
+
+VulkanRenderTarget::~VulkanRenderTarget() {
+    if (mColor.view) {
+        vkDestroyImageView(mContext.device, mColor.view, VKALLOC);
+    }
+    if (mDepth.view) {
+        vkDestroyImageView(mContext.device, mDepth.view, VKALLOC);
+    }
+}
+
 void VulkanRenderTarget::transformClientRectToPlatform(VkRect2D* bounds) const {
     // For the backbuffer, there are corner cases where the platform's surface resolution does not
     // match what Filament expects, so we need to make an appropriate transformation (e.g. create a
@@ -143,23 +204,6 @@ VulkanAttachment VulkanRenderTarget::getColor() const {
 
 VulkanAttachment VulkanRenderTarget::getDepth() const {
     return mOffscreen ? mDepth : VulkanAttachment {};
-}
-
-static VulkanAttachment createOffscreenAttachment(VulkanTexture* tex) {
-    if (!tex) {
-        return {};
-    }
-    return { tex->vkformat, tex->textureImage, tex->imageView, tex->textureImageMemory, tex };
-}
-
-void VulkanRenderTarget::setColorImage(VulkanTexture* color) {
-    assert(mOffscreen);
-    mColor = createOffscreenAttachment(color);
-}
-
-void VulkanRenderTarget::setDepthImage(VulkanTexture* depth) {
-    assert(mOffscreen);
-    mDepth = createOffscreenAttachment(depth);
 }
 
 VulkanVertexBuffer::VulkanVertexBuffer(VulkanContext& context, VulkanStagePool& stagePool,
@@ -288,7 +332,7 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
         utils::slog.d << "vkCreateImage: "
             << "result = " << error << ", "
             << "extent = " << w << "x" << h << "x"<< depth << ", "
-            << "mipLevels = " << levels << ", "
+            << "mipLevels = " << int(levels) << ", "
             << "format = " << vkformat << utils::io::endl;
     }
     ASSERT_POSTCONDITION(!error, "Unable to create image.");
@@ -323,7 +367,7 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
         viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
         viewInfo.subresourceRange.layerCount = 1;
     }
-    if (usage == TextureUsage::DEPTH_ATTACHMENT) {
+    if (usage & TextureUsage::DEPTH_ATTACHMENT) {
         viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
     }
     error = vkCreateImageView(context.device, &viewInfo, VKALLOC, &imageView);

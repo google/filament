@@ -393,16 +393,10 @@ void VulkanDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         TargetBufferFlags targets, uint32_t width, uint32_t height, uint8_t samples,
         TargetBufferInfo color, TargetBufferInfo depth,
         TargetBufferInfo stencil) {
+    auto colorTexture = color.handle ? handle_cast<VulkanTexture>(mHandleMap, color.handle) : nullptr;
+    auto depthTexture = depth.handle ? handle_cast<VulkanTexture>(mHandleMap, depth.handle) : nullptr;
     auto renderTarget = construct_handle<VulkanRenderTarget>(mHandleMap, rth, mContext,
-            width, height, color.level);
-    if (color.handle) {
-        auto colorTexture = handle_cast<VulkanTexture>(mHandleMap, color.handle);
-        renderTarget->setColorImage(colorTexture);
-    }
-    if (depth.handle) {
-        auto depthTexture = handle_cast<VulkanTexture>(mHandleMap, depth.handle);
-        renderTarget->setDepthImage(depthTexture);
-    }
+            width, height, color.level, colorTexture, depthTexture);
     mDisposer.createDisposable(renderTarget, [this, rth] () {
         destruct_handle<VulkanRenderTarget>(mHandleMap, rth);
     });
