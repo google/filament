@@ -2251,11 +2251,18 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     setViewport(params.viewport.left, params.viewport.bottom,
             params.viewport.width, params.viewport.height);
 
-    setScissor(params.viewport.left, params.viewport.bottom,
-            params.viewport.width, params.viewport.height);
+    // Use scissor test if not told to ignore, and if the viewport doesn't cover the whole target.
+    const bool respectScissor = !(clearFlags & RenderPassFlags::IGNORE_SCISSOR) &&
+                                (params.viewport.left != 0 ||
+                                    params.viewport.bottom != 0 ||
+                                    params.viewport.width != rt->width ||
+                                    params.viewport.height != rt->height);
+    if (respectScissor) {
+        setScissor(params.viewport.left, params.viewport.bottom,
+                params.viewport.width, params.viewport.height);
+    }
 
     if (clearFlags & TargetBufferFlags::ALL) {
-        const bool respectScissor = !(clearFlags & RenderPassFlags::IGNORE_SCISSOR);
         const bool clearColor = clearFlags & TargetBufferFlags::COLOR;
         const bool clearDepth = clearFlags & TargetBufferFlags::DEPTH;
         const bool clearStencil = clearFlags & TargetBufferFlags::STENCIL;
