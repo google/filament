@@ -9,7 +9,8 @@
 #define DITHERING_TRIANGLE_NOISE       3
 #define DITHERING_TRIANGLE_NOISE_RGB   4
 
-#ifdef TARGET_MOBILE
+// Workaround Adreno bug #1096 by using VLACHOS for Vulkan.
+#if defined(TARGET_MOBILE) && !defined(TARGET_VULKAN_ENVIRONMENT)
     #define DITHERING_OPERATOR         DITHERING_INTERLEAVED_NOISE
 #else
     #define DITHERING_OPERATOR         DITHERING_VLACHOS

@@ -48,7 +48,6 @@ class Animator;
  * Clients must use ResourceLoader to create Texture objects, compute tangent quaternions, and
  * upload data into vertex buffers and index buffers.
  *
- * TODO: This supports skinning but not morphing.
  * TODO: Only the default glTF scene is loaded, other glTF scenes are ignored.
  * TODO: Cameras, extras, and extensions are ignored.
  */
@@ -149,6 +148,9 @@ struct BufferBinding {
     bool generateTrivialIndices; // the resource loader must generate indices like: 0, 1, 2, ...
     bool generateDummyData;      // the resource loader should generate a sequence of 1.0 values
     bool generateTangents;       // the resource loader should generate tangents
+
+    bool isMorphTarget;
+    uint8_t morphTargetIndex;
 };
 
 /** Describes a binding from a Texture to a MaterialInstance. */

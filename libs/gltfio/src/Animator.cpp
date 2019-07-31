@@ -56,7 +56,7 @@ struct Sampler {
 struct Channel {
     const Sampler* sourceData;
     utils::Entity targetEntity;
-    enum { TRANSLATION, ROTATION, SCALE } transformType;
+    enum { TRANSLATION, ROTATION, SCALE, WEIGHTS } transformType;
 };
 
 struct Animation {
@@ -87,6 +87,12 @@ static void createSampler(const cgltf_animation_sampler& src, Sampler& dst) {
     // Convert source data to float.
     const cgltf_accessor* valuesAccessor = src.output;
     switch (valuesAccessor->type) {
+        case cgltf_type_scalar:
+            dst.values.resize(valuesAccessor->count);
+            for (cgltf_size i = 0; i < valuesAccessor->count; ++i) {
+                cgltf_accessor_read_float(src.output, i, &dst.values[i], 1);
+            }
+            break;
         case cgltf_type_vec3:
             dst.values.resize(valuesAccessor->count * 3);
             for (cgltf_size i = 0; i < valuesAccessor->count; ++i) {
@@ -128,8 +134,10 @@ static void setTransformType(const cgltf_animation_channel& src, Channel& dst) {
         case cgltf_animation_path_type_scale:
             dst.transformType = Channel::SCALE;
             break;
-        case cgltf_animation_path_type_invalid:
         case cgltf_animation_path_type_weights:
+            dst.transformType = Channel::WEIGHTS;
+            break;
+        case cgltf_animation_path_type_invalid:
             slog.e << "Unsupported channel path." << io::endl;
             break;
     }
@@ -191,6 +199,7 @@ size_t Animator::getAnimationCount() const {
 void Animator::applyAnimation(size_t animationIndex, float time) const {
     const Animation& anim = mImpl->animations[animationIndex];
     TransformManager* transformManager = mImpl->transformManager;
+    RenderableManager* renderableManager = mImpl->renderableManager;
     time = fmod(time, anim.duration);
     for (const auto& channel : anim.channels) {
         const Sampler* sampler = channel.sourceData;
@@ -243,6 +252,7 @@ void Animator::applyAnimation(size_t animationIndex, float time) const {
         }
 
         switch (channel.transformType) {
+
             case Channel::SCALE: {
                 const float3* srcVec3 = (const float3*) sampler->values.data();
                 if (sampler->interpolation == Sampler::CUBIC) {
@@ -256,6 +266,7 @@ void Animator::applyAnimation(size_t animationIndex, float time) const {
                 }
                 break;
             }
+
             case Channel::TRANSLATION: {
                 const float3* srcVec3 = (const float3*) sampler->values.data();
                 if (sampler->interpolation == Sampler::CUBIC) {
@@ -269,6 +280,7 @@ void Animator::applyAnimation(size_t animationIndex, float time) const {
                 }
                 break;
             }
+
             case Channel::ROTATION: {
                 const quatf* srcQuat = (const quatf*) sampler->values.data();
                 if (sampler->interpolation == Sampler::CUBIC) {
@@ -281,6 +293,32 @@ void Animator::applyAnimation(size_t animationIndex, float time) const {
                     rotation = slerp(srcQuat[prevIndex], srcQuat[nextIndex], t);
                 }
                 break;
+            }
+
+            // We honor the first four components of the weights array, and skip over the
+            // others. The number of weight targets in the glTF file is basically a stride value
+            // in terms of floats.
+            case Channel::WEIGHTS: {
+                const int weightsPerTarget = sampler->values.size() / times.size();
+                float4 weights(0, 0, 0, 0);
+                const float* srcFloat = (const float*) sampler->values.data();
+                for (int component = 0; component < std::min(4, weightsPerTarget); ++component) {
+                    if (sampler->interpolation != Sampler::CUBIC) {
+                        float previous = srcFloat[prevIndex * weightsPerTarget];
+                        float current = srcFloat[nextIndex * weightsPerTarget];
+                        weights[component] = (1 - t) * previous + t * current;
+                    } else {
+                        float vert0 = srcFloat[prevIndex * weightsPerTarget * 3 + 1];
+                        float tang0 = srcFloat[prevIndex * weightsPerTarget * 3 + 2];
+                        float tang1 = srcFloat[nextIndex * weightsPerTarget * 3];
+                        float vert1 = srcFloat[nextIndex * weightsPerTarget * 3 + 1];
+                        weights[component] = cubicSpline(vert0, tang0, vert1, tang1, t);
+                    }
+                    ++srcFloat;
+                }
+                auto renderable = renderableManager->getInstance(channel.targetEntity);
+                renderableManager->setMorphWeights(renderable, weights);
+                continue;
             }
         }
 
