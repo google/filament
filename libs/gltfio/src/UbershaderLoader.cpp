@@ -64,14 +64,14 @@ UbershaderLoader::UbershaderLoader(Engine* engine) : mEngine(engine) {
     mMaterials[i++] = mLitMaskedMaterial = Material::Builder()
         .package(GLTFRESOURCES_LIT_MASKED_DATA, GLTFRESOURCES_LIT_MASKED_SIZE).build(*engine);
     mMaterials[i++] = mLitTransparentMaterial = Material::Builder()
-        .package(GLTFRESOURCES_LIT_TRANSPARENT_DATA, GLTFRESOURCES_LIT_TRANSPARENT_SIZE)
+        .package(GLTFRESOURCES_LIT_FADE_DATA, GLTFRESOURCES_LIT_FADE_SIZE)
         .build(*engine);
     mMaterials[i++] = mUnlitOpaqueMaterial = Material::Builder()
         .package(GLTFRESOURCES_UNLIT_OPAQUE_DATA, GLTFRESOURCES_UNLIT_OPAQUE_SIZE).build(*engine);
     mMaterials[i++] = mUnlitMaskedMaterial = Material::Builder()
         .package(GLTFRESOURCES_UNLIT_MASKED_DATA, GLTFRESOURCES_UNLIT_MASKED_SIZE).build(*engine);
     mMaterials[i++] = mUnlitTransparentMaterial = Material::Builder()
-        .package(GLTFRESOURCES_UNLIT_TRANSPARENT_DATA, GLTFRESOURCES_UNLIT_TRANSPARENT_SIZE)
+        .package(GLTFRESOURCES_UNLIT_FADE_DATA, GLTFRESOURCES_UNLIT_FADE_SIZE)
         .build(*engine);
 
     #ifdef EMSCRIPTEN
