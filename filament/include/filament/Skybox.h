@@ -117,7 +117,7 @@ public:
          *
          * @return This Builder, for chaining calls.
          *
-         * @See IndirectLight::Builder::intensity
+         * @see IndirectLight::Builder::intensity
          */
         Builder& intensity(float envIntensity) noexcept;
 

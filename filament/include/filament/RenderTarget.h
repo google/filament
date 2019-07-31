@@ -88,7 +88,8 @@ public:
         /**
          * Sets the cubemap face for a given attachment point.
          *
-         * @param face The associated cubemap face, POSITIVE_X by default.
+         * @param attachment The attachment point.
+         * @param face The associated cubemap face.
          * @return A reference to this Builder for chaining calls.
          */
         Builder& face(AttachmentPoint attachment, CubemapFace face) noexcept;
@@ -96,7 +97,8 @@ public:
         /**
          * Sets the layer for a given attachment point (for 3D textures).
          *
-         * @param attachment The associated cubemap face, POSITIVE_X by default.
+         * @param attachment The attachment point.
+         * @param layer The associated cubemap layer.
          * @return A reference to this Builder for chaining calls.
          */
         Builder& layer(AttachmentPoint attachment, uint32_t layer) noexcept;

@@ -397,6 +397,7 @@ public:
      * @param buffer        Client-side buffer containing the images to set.
      * @param faceOffsets   Offsets in bytes into \p buffer for all six images. The offsets
      *                      are specified in the following order: +x, -x, +y, -y, +z, -z
+     * @param options       Optional parameter to controlling user-specified quality and options.
      *
      * @exception utils::PreConditionPanic if the source data constraints are not respected.
      *
