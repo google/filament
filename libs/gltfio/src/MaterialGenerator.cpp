@@ -298,7 +298,7 @@ static Material* createMaterial(Engine* engine, const MaterialKey& config, const
             builder.blending(MaterialBuilder::BlendingMode::MASKED);
             break;
         case AlphaMode::BLEND:
-            builder.blending(MaterialBuilder::BlendingMode::TRANSPARENT);
+            builder.blending(MaterialBuilder::BlendingMode::FADE);
             builder.depthWrite(true);
     }
 
