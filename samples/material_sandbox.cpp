@@ -261,6 +261,12 @@ static void setup(Engine* engine, View*, Scene* scene) {
         tcm.setTransform(tcm.getInstance(planeRenderable),
                 filament::math::mat4f::translation(float3{ 0, -1, -4 }));
     }
+
+    auto* ibl = FilamentApp::get().getIBL();
+    if (ibl) {
+        auto& params = g_params;
+        params.lightDirection = ibl->getIndirectLight()->getDirectionEstimate();
+    }
 }
 
 static void gui(filament::Engine* engine, filament::View*) {
@@ -331,7 +337,7 @@ static void gui(filament::Engine* engine, filament::View*) {
             ImGui::SliderFloat("haloFalloff", &params.sunHaloFalloff, 0.0f, 2048.0f);
             ImGui::SliderFloat("ibl", &params.iblIntensity, 0.0f, 50000.0f);
             ImGui::SliderAngle("ibl rotation", &params.iblRotation);
-            ImGuiExt::DirectionWidget("direction", &params.lightDirection.x);
+            ImGuiExt::DirectionWidget("direction", params.lightDirection.v);
             ImGui::Indent();
             if (ImGui::CollapsingHeader("SSAO")) {
                 DebugRegistry& debug = engine->getDebugRegistry();
@@ -403,6 +409,13 @@ static void gui(filament::Engine* engine, filament::View*) {
         params.hasDirectionalLight = false;
     }
 
+    auto* ibl = FilamentApp::get().getIBL();
+    if (ibl) {
+        ibl->getIndirectLight()->setIntensity(params.iblIntensity);
+        ibl->getIndirectLight()->setRotation(
+                mat3f::rotation(params.iblRotation, float3{ 0, 1, 0 }));
+    }
+
     auto& lcm = engine->getLightManager();
     auto lightInstance = lcm.getInstance(params.light);
     lcm.setColor(lightInstance, params.lightColor);
@@ -419,13 +432,6 @@ static void gui(filament::Engine* engine, filament::View*) {
     options.polygonOffsetConstant = params.polygonOffsetConstant;
     options.polygonOffsetSlope = params.polygonOffsetSlope;
     lcm.setShadowOptions(lightInstance, options);
-
-    auto* ibl = FilamentApp::get().getIBL();
-    if (ibl) {
-        ibl->getIndirectLight()->setIntensity(params.iblIntensity);
-        ibl->getIndirectLight()->setRotation(
-                mat3f::rotation(params.iblRotation, float3{ 0, 1, 0 }));
-    }
 }
 
 static void preRender(filament::Engine*, filament::View* view, filament::Scene*, filament::Renderer*) {

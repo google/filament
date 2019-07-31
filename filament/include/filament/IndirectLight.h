@@ -279,6 +279,11 @@ public:
      * Returns the rigid-body transformation applied to the IBL.
      */
     const math::mat3f& getRotation() const noexcept;
+
+    /**
+     * Returns an estimation of the indirect light's direction
+     */
+    math::float3 getDirectionEstimate() const noexcept;
 };
 
 } // namespace filament
