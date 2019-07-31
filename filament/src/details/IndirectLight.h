@@ -49,6 +49,7 @@ public:
     void setRotation(math::mat3f const& rotation) noexcept { mRotation = rotation; }
     const math::mat3f& getRotation() const noexcept { return mRotation; }
     size_t getMaxMipLevel() const noexcept { return mMaxMipLevel; }
+    math::float3 getDirectionEstimate() const noexcept;
 
 private:
     backend::Handle<backend::HwTexture> mReflectionsMapHandle;

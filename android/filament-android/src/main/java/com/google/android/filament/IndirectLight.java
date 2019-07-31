@@ -151,6 +151,13 @@ public class IndirectLight {
         return rotation;
     }
 
+    @NonNull @Size(min = 3)
+    public float[] getDirectionEstimate(@Nullable @Size(min = 3) float[] direction) {
+        direction = Asserts.assertFloat3(direction);
+        nGetDirectionEstimate(getNativeObject(), direction);
+        return direction;
+    }
+
     long getNativeObject() {
         if (mNativeObject == 0) {
             throw new IllegalStateException("Calling method on destroyed IndirectLight");
@@ -177,4 +184,5 @@ public class IndirectLight {
     private static native float nGetIntensity(long nativeIndirectLight);
     private static native void nSetRotation(long nativeIndirectLight, float v0, float v1, float v2, float v3, float v4, float v5, float v6, float v7, float v8);
     private static native void nGetRotation(long nativeIndirectLight, float[] outRotation);
+    private static native void nGetDirectionEstimate(long nativeIndirectLight, float[] outDirection);
 }

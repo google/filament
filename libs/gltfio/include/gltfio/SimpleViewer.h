@@ -129,6 +129,8 @@ public:
     void setIBLIntensity(float brightness) { mIblIntensity = brightness; }
 
 private:
+    void updateIndirectLight();
+
     // Immutable properties set from the constructor.
     filament::Engine* const mEngine;
     filament::Scene* const mScene;
@@ -251,6 +253,14 @@ void SimpleViewer::removeAsset() {
 void SimpleViewer::setIndirectLight(filament::IndirectLight* ibl) {
     using namespace filament::math;
     mIndirectLight = ibl;
+    if (ibl) {
+        mSunlightDirection = ibl->getDirectionEstimate();
+        updateIndirectLight();
+    }
+}
+
+void SimpleViewer::updateIndirectLight() {
+    using namespace filament::math;
     if (mIndirectLight) {
         mIndirectLight->setIntensity(mIblIntensity);
         mIndirectLight->setRotation(mat3f::rotation(mIblRotation, float3{ 0, 1, 0 }));
@@ -383,7 +393,7 @@ void SimpleViewer::updateUserInterface() {
         ImGui::SliderFloat("IBL intensity", &mIblIntensity, 0.0f, 100000.0f);
         ImGui::SliderAngle("IBL rotation", &mIblRotation);
         ImGui::SliderFloat("Sun intensity", &mSunlightIntensity, 50000.0, 150000.0f);
-        ImGuiExt::DirectionWidget("Sun direction", &mSunlightDirection.x);
+        ImGuiExt::DirectionWidget("Sun direction", mSunlightDirection.v);
         ImGui::Checkbox("Enable sunlight", &mEnableSunlight);
     }
 
@@ -420,7 +430,7 @@ void SimpleViewer::updateUserInterface() {
     mSidebarWidth = ImGui::GetWindowWidth();
     ImGui::End();
 
-    setIndirectLight(mIndirectLight);
+    updateIndirectLight();
 }
 
 } // namespace gltfio

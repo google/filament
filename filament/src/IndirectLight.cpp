@@ -166,6 +166,17 @@ void FIndirectLight::terminate(FEngine& engine) {
     }
 }
 
+math::float3 FIndirectLight::getDirectionEstimate() const noexcept {
+    auto const& f = mIrradianceCoefs;
+    // The linear direction is found as normalize(-sh[3], -sh[1], sh[2]), but the coefficients
+    // we store are already pre-normalized, so the negative sign disapears.
+    float3 r = normalize(float3{ f[3].r, f[1].r, f[2].r });
+    float3 g = normalize(float3{ f[3].g, f[1].g, f[2].g });
+    float3 b = normalize(float3{ f[3].b, f[1].b, f[2].b });
+    // We're assuming there is a single white light.
+    return -(r * 0.2126f + g * 0.7152f + b * 0.0722f);
+}
+
 } // namespace details
 
 // ------------------------------------------------------------------------------------------------
@@ -186,6 +197,10 @@ void IndirectLight::setRotation(mat3f const& rotation) noexcept {
 
 const math::mat3f& IndirectLight::getRotation() const noexcept {
     return upcast(this)->getRotation();
+}
+
+math::float3 IndirectLight::getDirectionEstimate() const noexcept {
+    return upcast(this)->getDirectionEstimate();
 }
 
 
