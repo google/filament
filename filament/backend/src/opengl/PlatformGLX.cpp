@@ -46,6 +46,31 @@ struct GLXFunctions {
     PFNGLXCREATEPBUFFERPROC createPbuffer;
     PFNGLXDESTROYPBUFFERPROC destroyPbuffer;
     PFNGLXMAKECONTEXTCURRENTPROC setCurrentContext;
+
+    /* 
+       When creating a shared GL context, we query the used
+       GLX_FBCONFIG_ID to make sure our display framebuffer
+       attributes match; otherwise making our context current
+       results in a BadMatch
+       https://gist.github.com/roxlu/c282d642c353ce96ef19b6359c741bcb
+    */
+    PFNGLXQUERYCONTEXTPROC queryContext;
+
+    /* 
+       When creating a shared GL context, we select the matching
+       GLXFBConfig that is used by the shared GL context. `getFBConfigs`
+       will return all the available GLXFBConfigs.
+    */
+    PFNGLXGETFBCONFIGSPROC getFbConfigs;
+
+    /*
+      When creating a shared GL contect, we iterate over the
+      available GLXFBConfigs that are returned by `getFBConfigs`,
+      we use `getFbConfigAttrib` to find the matching
+      `GLX_FBCONFIG_ID`.
+    */
+    PFNGLXGETFBCONFIGATTRIBPROC getFbConfigAttrib;
+
     GLX_DESTROY_CONTEXT destroyContext;
     GLX_SWAP_BUFFERS swapBuffers;
     void* library;
@@ -85,6 +110,12 @@ static bool loadLibraries() {
     g_glx.swapBuffers = (GLX_SWAP_BUFFERS)
             getProcAddress((const GLubyte*) "glXSwapBuffers");
 
+    g_glx.queryContext = (PFNGLXQUERYCONTEXTPROC)
+            getProcAddress((const GLubyte*) "glXQueryContext");
+    g_glx.getFbConfigs = (PFNGLXGETFBCONFIGSPROC)
+            getProcAddress((const GLubyte*) "glXGetFBConfigs");
+    g_glx.getFbConfigAttrib = (PFNGLXGETFBCONFIGATTRIBPROC)
+            getProcAddress((const GLubyte*) "glXGetFBConfigAttrib");    
 
     g_x11.library = dlopen(LIBRARY_X11, RTLD_LOCAL | RTLD_NOW);
     if (!g_x11.library) {
@@ -105,36 +136,84 @@ Driver* PlatformGLX::createDriver(void* const sharedGLContext) noexcept {
     loadLibraries();
     // Get the display device
     mGLXDisplay = g_x11.openDisplay(NULL);
-    if (!mGLXDisplay) {
-        printf("Failed to open X display\n");
+    if (mGLXDisplay == nullptr) {
+        utils::slog.e << "Failed to open X display. (exiting)." << utils::io::endl;
         exit(1);
     }
 
-    // Create a context
-    static int attribs[] = { GLX_DOUBLEBUFFER, True, None };
+    if (sharedGLContext != nullptr) {
+      
+        int r = -1;
+        int usedFbId = -1;
+        GLXContext sharedCtx = (GLXContext)((void*)sharedGLContext);
+      
+        r = g_glx.queryContext(mGLXDisplay, sharedCtx, GLX_FBCONFIG_ID, &usedFbId);
+        if (r != 0) {
+            utils::slog.e << "Failed to get GLX_FBCONFIG_ID from shared GL context." << utils::io::endl;
+            return nullptr;
+        }
+    
+        int numConfigs = 0;
+        GLXFBConfig* fbConfigs = g_glx.getFbConfigs(mGLXDisplay, 0, &numConfigs);
+        
+        if (fbConfigs == nullptr) {
+            utils::slog.e << "Failed to get the available GLXFBConfigs." << utils::io::endl;
+            return nullptr;
+        }
 
-    int config_count = 0;
-    mGLXConfig = g_glx.chooseFbConfig(mGLXDisplay, DefaultScreen(mGLXDisplay),
-            attribs, &config_count);
-    if (mGLXConfig == nullptr || config_count == 0) {
-        return nullptr;
+        int fbId = 0;
+        int fbIndex = -1;
+    
+        for (int i = 0; i < numConfigs; ++i) {
+        
+            r = g_glx.getFbConfigAttrib(mGLXDisplay, fbConfigs[i], GLX_FBCONFIG_ID, &fbId);
+            if (r != 0) {
+                utils::slog.e << "Failed to get GLX_FBCONFIG_ID for entry " << i << "." << utils::io::endl;
+                continue;
+            }
+        
+            if (fbId == usedFbId) {
+                fbIndex = i;
+                break;
+            }
+        }
+
+        if (fbIndex < 0) {
+            utils::slog.e << "Failed to find an `GLXFBConfig` with the requested ID." << utils::io::endl;
+            return nullptr;
+        }
+      
+        mGLXConfig = fbConfigs + fbIndex;
+    }
+    else {
+
+        // Create a context
+        static int attribs[] = { GLX_DOUBLEBUFFER, True, None };
+
+        int configCount = 0;
+        mGLXConfig = g_glx.chooseFbConfig(mGLXDisplay, DefaultScreen(mGLXDisplay),
+                                          attribs, &configCount);
+        if (mGLXConfig == nullptr || configCount == 0) {
+            return nullptr;
+        }
     }
 
     PFNGLXCREATECONTEXTATTRIBSARBPROC glXCreateContextAttribs = (PFNGLXCREATECONTEXTATTRIBSARBPROC)
             getProcAddress((GLubyte*) "glXCreateContextAttribsARB");
 
-    if (glXCreateContextAttribs == NULL) {
-        utils::slog.i << "Unable to retrieve function pointer" << utils::io::endl;
+    if (glXCreateContextAttribs == nullptr) {
+        utils::slog.i << "Unable to retrieve function pointer for `glXCreateContextAttribs()`." << utils::io::endl;
         return nullptr;
     }
 
-    int context_attribs[] = {
+    int contextAttribs[] = {
             GLX_CONTEXT_MAJOR_VERSION_ARB, 4,
             GLX_CONTEXT_MINOR_VERSION_ARB, 1,
             GL_NONE
     };
+    
     mGLXContext = g_glx.createContext(mGLXDisplay, mGLXConfig[0],
-            (GLXContext) sharedGLContext, True, context_attribs);
+            (GLXContext) sharedGLContext, True, contextAttribs);
 
     int pbufferAttribs[] = {
             GLX_PBUFFER_WIDTH,  1,
