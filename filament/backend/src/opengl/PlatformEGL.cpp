@@ -288,7 +288,7 @@ Driver* PlatformEGL::createDriver(void* sharedContext) noexcept {
         goto error;
     }
 
-    initailizeGlExtensions();
+    initializeGlExtensions();
 
     // success!!
     return OpenGLDriverFactory::create(this, sharedContext);
@@ -508,7 +508,7 @@ void PlatformEGL::destroyExternalImage(void* texture) noexcept {
     glDeleteTextures(1, &t->gl.id);
 }
 
-void PlatformEGL::initailizeGlExtensions() noexcept {
+void PlatformEGL::initializeGlExtensions() noexcept {
     unordered_string_set glExtensions;
     GLint n;
     glGetIntegerv(GL_NUM_EXTENSIONS, &n);
