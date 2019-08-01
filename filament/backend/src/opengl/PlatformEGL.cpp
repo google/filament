@@ -150,8 +150,6 @@ Driver* PlatformEGL::createDriver(void* sharedContext) noexcept {
 
     auto extensions = split(eglQueryString(mEGLDisplay, EGL_EXTENSIONS));
 
-    ext.OES_EGL_image_external_essl3 = extensions.has("GL_OES_EGL_image_external_essl3");
-
     eglCreateSyncKHR = (PFNEGLCREATESYNCKHRPROC) eglGetProcAddress("eglCreateSyncKHR");
     eglDestroySyncKHR = (PFNEGLDESTROYSYNCKHRPROC) eglGetProcAddress("eglDestroySyncKHR");
     eglClientWaitSyncKHR = (PFNEGLCLIENTWAITSYNCKHRPROC) eglGetProcAddress("eglClientWaitSyncKHR");
@@ -289,6 +287,8 @@ Driver* PlatformEGL::createDriver(void* sharedContext) noexcept {
         logEglError("eglMakeCurrent");
         goto error;
     }
+
+    initailizeGlExtensions();
 
     // success!!
     return OpenGLDriverFactory::create(this, sharedContext);
@@ -506,6 +506,17 @@ void PlatformEGL::createExternalImageTexture(void* texture) noexcept {
 void PlatformEGL::destroyExternalImage(void* texture) noexcept {
     auto* t = (OpenGLDriver::GLTexture*) texture;
     glDeleteTextures(1, &t->gl.id);
+}
+
+void PlatformEGL::initailizeGlExtensions() noexcept {
+    unordered_string_set glExtensions;
+    GLint n;
+    glGetIntegerv(GL_NUM_EXTENSIONS, &n);
+    for (GLint i = 0; i < n; ++i) {
+        const char * const extension = (const char*)glGetStringi(GL_EXTENSIONS, (GLuint)i);
+        glExtensions.insert(extension);
+    }
+    ext.OES_EGL_image_external_essl3 = glExtensions.has("GL_OES_EGL_image_external_essl3");
 }
 
 // This must called when the library is loaded. We need this to get a reference to the global VM

@@ -72,6 +72,7 @@ public:
 
 private:
     EGLBoolean makeCurrent(EGLSurface drawSurface, EGLSurface readSurface) noexcept;
+    void initailizeGlExtensions() noexcept;
 
     EGLDisplay mEGLDisplay = EGL_NO_DISPLAY;
     EGLContext mEGLContext = EGL_NO_CONTEXT;
