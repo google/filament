@@ -31,7 +31,7 @@ fragment {
             float cosAngle = dot(direction, frameUniforms.lightDirection);
             float x = (cosAngle - frameUniforms.sun.x) * frameUniforms.sun.z;
             float gradient = pow(1.0 - saturate(x), frameUniforms.sun.w);
-            sky = mix(sky, sun, gradient);
+            sky = sky + gradient * sun;
         }
         material.baseColor = vec4(sky, 1.0);
     }
