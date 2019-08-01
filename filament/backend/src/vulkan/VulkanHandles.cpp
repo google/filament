@@ -94,9 +94,10 @@ static VulkanAttachment createOffscreenAttachment(VulkanTexture* tex) {
     return { tex->vkformat, tex->textureImage, tex->imageView, tex->textureImageMemory, tex };
 }
 
-VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context, uint32_t w, uint32_t h,
-        uint32_t miplevel, VulkanTexture* color, VulkanTexture* depth) : HwRenderTarget(w, h),
-        mContext(context), mOffscreen(true), mColorLevel(miplevel) {
+VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context, uint32_t width, uint32_t height,
+        uint32_t colorLevel, VulkanTexture* color, uint32_t depthLevel, VulkanTexture* depth) :
+        HwRenderTarget(width, height), mContext(context), mOffscreen(true), mColorLevel(colorLevel),
+        mDepthLevel(depthLevel) {
     mColor = createOffscreenAttachment(color);
     mDepth = createOffscreenAttachment(depth);
 
@@ -107,7 +108,7 @@ VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context, uint32_t w, uint3
             .image = mColor.image,
             .format = mColor.format,
             .subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-            .subresourceRange.baseMipLevel = miplevel,
+            .subresourceRange.baseMipLevel = colorLevel,
             .subresourceRange.levelCount = 1
         };
         if (color->target == SamplerType::SAMPLER_CUBEMAP) {
@@ -125,7 +126,7 @@ VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context, uint32_t w, uint3
             .image = mDepth.image,
             .format = mDepth.format,
             .subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
-            .subresourceRange.baseMipLevel = miplevel,
+            .subresourceRange.baseMipLevel = depthLevel,
             .subresourceRange.levelCount = 1
         };
         if (depth->target == SamplerType::SAMPLER_CUBEMAP) {
@@ -331,6 +332,7 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
     if (error) {
         utils::slog.d << "vkCreateImage: "
             << "result = " << error << ", "
+            << "handle = " << utils::io::hex << textureImage << utils::io::dec << ", "
             << "extent = " << w << "x" << h << "x"<< depth << ", "
             << "mipLevels = " << int(levels) << ", "
             << "format = " << vkformat << utils::io::endl;
