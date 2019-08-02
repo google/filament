@@ -150,6 +150,7 @@ private:
     float mIblIntensity = 30000.0f;
     float mIblRotation = 0.0f;
     float mSunlightIntensity = 100000.0f;
+    filament::math::float3 mSunlightColor = filament::Color::toLinear<filament::ACCURATE>({ 0.98, 0.92, 0.89});
     filament::math::float3 mSunlightDirection = {0.6, -1.0, -0.8};
     bool mEnableWireframe = false;
     bool mEnableSunlight = true;
@@ -205,7 +206,7 @@ SimpleViewer::SimpleViewer(filament::Engine* engine, filament::Scene* scene, fil
         mFlags(flags) {
     using namespace filament;
     LightManager::Builder(LightManager::Type::SUN)
-        .color(Color::toLinear<ACCURATE>({0.98, 0.92, 0.89}))
+        .color(mSunlightColor)
         .intensity(mSunlightIntensity)
         .direction(normalize(mSunlightDirection))
         .castShadows(true)
@@ -254,7 +255,11 @@ void SimpleViewer::setIndirectLight(filament::IndirectLight* ibl) {
     using namespace filament::math;
     mIndirectLight = ibl;
     if (ibl) {
-        mSunlightDirection = ibl->getDirectionEstimate();
+        float3 d = ibl->getDirectionEstimate();
+        float4 c = ibl->getColorEstimate(d);
+        mSunlightDirection = d;
+        mSunlightColor = c.rgb;
+        mSunlightIntensity = c[3] * ibl->getIntensity();
         updateIndirectLight();
     }
 }
@@ -402,6 +407,7 @@ void SimpleViewer::updateUserInterface() {
         auto sun = lm.getInstance(mSunlight);
         lm.setIntensity(sun, mSunlightIntensity);
         lm.setDirection(sun, normalize(mSunlightDirection));
+        lm.setColor(sun, mSunlightColor);
     } else {
         mScene->remove(mSunlight);
     }
