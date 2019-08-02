@@ -132,3 +132,13 @@ Java_com_google_android_filament_IndirectLight_nGetDirectionEstimate(JNIEnv* env
     *reinterpret_cast<filament::math::float3*>(outDirection) = indirectLight->getDirectionEstimate();
     env->ReleaseFloatArrayElements(outDirection_, outDirection, 0);
 }
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_IndirectLight_nGetColorEstimate(JNIEnv* env, jclass,
+        jlong nativeIndirectLight, jfloatArray outColor_, float x, float y, float z) {
+    IndirectLight *indirectLight = (IndirectLight *) nativeIndirectLight;
+    jfloat *outColor = env->GetFloatArrayElements(outColor_, NULL);
+    *reinterpret_cast<filament::math::float4*>(outColor) =
+            indirectLight->getColorEstimate(math::float3{x, y, z});
+    env->ReleaseFloatArrayElements(outColor_, outColor, 0);
+}

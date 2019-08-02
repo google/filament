@@ -281,9 +281,42 @@ public:
     const math::mat3f& getRotation() const noexcept;
 
     /**
-     * Returns an estimation of the indirect light's direction
+     * Helper to estimate the direction of the dominant light in the environment.
+     *
+     * This assumes that there is only a single dominant light (such as teh sun in outdoors
+     * environments), if it's not the case the direction returned will be an average of the
+     * various lights based on their intensity.
+     *
+     * If there are no clear dominant light, as is often the case with low dynamic range (LDR)
+     * environments, this method may return a wrong or unexpected direction.
+     *
+     * The dominant light direction can be used to set a directional light's direction,
+     * for instance to produce shadows that match the environment.
+     *
+     * @return A unit vector representing the direction of the dominant light
+     *
+     * @see LightManager::Builder::direction()
+     * @see getColorEstimate()
      */
     math::float3 getDirectionEstimate() const noexcept;
+
+    /**
+     * Helper to estimate the color and relative intensity of the environment in a given direction.
+     *
+     * This can be used to set the color and intensity of a directional light. In this case
+     * make sure to multiply this relative intensity by the the intensity of this indirect light.
+     *
+     * @param direction a unit vector representing the direction of the light to estimate the
+     *                  color of. Typically this the value returned by getDirectionEstimate().
+     *
+     * @return A vector of 4 floats where the first 3 components represent the linear color and
+     *         the 4th component represents the intensity of the dominant light
+     *
+     * @see LightManager::Builder::color()
+     * @see LightManager::Builder::intensity()
+     * @see getDirectionEstimate, getIntensity, setIntensity
+     */
+    math::float4 getColorEstimate(math::float3 direction) const noexcept;
 };
 
 } // namespace filament

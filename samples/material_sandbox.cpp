@@ -265,7 +265,11 @@ static void setup(Engine* engine, View*, Scene* scene) {
     auto* ibl = FilamentApp::get().getIBL();
     if (ibl) {
         auto& params = g_params;
-        params.lightDirection = ibl->getIndirectLight()->getDirectionEstimate();
+        IndirectLight* const pIndirectLight = ibl->getIndirectLight();
+        params.lightDirection = pIndirectLight->getDirectionEstimate();
+        float4 c = pIndirectLight->getColorEstimate(params.lightDirection);
+        params.lightIntensity = c.w * pIndirectLight->getIntensity();
+        params.lightColor = c.rgb;
     }
 }
 

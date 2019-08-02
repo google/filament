@@ -25,6 +25,9 @@
 
 #include <backend/DriverEnums.h>
 #include <filament/IndirectLight.h>
+#include <utils/Log.h>
+
+#include <math/scalar.h>
 
 #define IBL_INTEGRATION_PREFILTERED_CUBEMAP         0
 #define IBL_INTEGRATION_IMPORTANCE_SAMPLING         1
@@ -169,12 +172,55 @@ void FIndirectLight::terminate(FEngine& engine) {
 math::float3 FIndirectLight::getDirectionEstimate() const noexcept {
     auto const& f = mIrradianceCoefs;
     // The linear direction is found as normalize(-sh[3], -sh[1], sh[2]), but the coefficients
-    // we store are already pre-normalized, so the negative sign disapears.
-    float3 r = normalize(float3{ f[3].r, f[1].r, f[2].r });
-    float3 g = normalize(float3{ f[3].g, f[1].g, f[2].g });
-    float3 b = normalize(float3{ f[3].b, f[1].b, f[2].b });
+    // we store are already pre-normalized, so the negative sign disappears.
+    // Note: we normalize the directions only after blending, this matches code used elsewhere --
+    // the length of the vector is somewhat related to the intensity in that direction.
+    float3 r = float3{ f[3].r, f[1].r, f[2].r };
+    float3 g = float3{ f[3].g, f[1].g, f[2].g };
+    float3 b = float3{ f[3].b, f[1].b, f[2].b };
     // We're assuming there is a single white light.
-    return -(r * 0.2126f + g * 0.7152f + b * 0.0722f);
+    return -normalize(r * 0.2126f + g * 0.7152f + b * 0.0722f);
+}
+
+float4 FIndirectLight::getColorEstimate(float3 direction) const noexcept {
+    // See: https://www.gamasutra.com/view/news/129689/Indepth_Extracting_dominant_light_from_Spherical_Harmonics.php
+
+    // first get the direction
+    const float3 s = -direction;
+
+    // The light intensity on one channel is given by: dot(Ld, Le) / dot(Ld, Ld)
+
+    // our pre-convolved, pre-scaled SH coefficients for the environment
+    auto const& Le = mIrradianceCoefs;
+
+    // SH coefficients of the directional light pre-scaled by 1/A[i]
+    // (we pre-scale by 1/A[i] to undo Le's pre-scaling by A[i]
+    const float Ld[9] = {
+            1.0f,
+            s.y, s.z, s.x,
+            s.y * s.x, s.y * s.z, (3 * s.z * s.z - 1), s.z * s.x, (s.x * s.x - s.y * s.y)
+    };
+
+    // dot(Ld, Le) -- notice that this is equivalent to "sampling" the sphere in the light
+    // direction; this is the exact same code used in the shader for SH reconstruction.
+    float3 LdDotLe = Ld[0] * Le[0]
+                   + Ld[1] * Le[1] + Ld[2] * Le[2] + Ld[3] * Le[3]
+                   + Ld[4] * Le[4] + Ld[5] * Le[5] + Ld[6] * Le[6] + Ld[7] * Le[7] + Ld[8] * Le[8];
+
+    // The scale factor below is explained in the gamasutra article above, however it seems
+    // to cause the intensity of the light to be too low.
+    //      constexpr float c = (16.0f * M_PI / 17.0f);
+    //      constexpr float LdSquared = (9.0f / (4.0f * M_PI)) * c * c;
+    //      LdDotLe *= c / LdSquared; // Note the final coefficient is 17/36
+
+    // We multiply by PI because our SH coefficients contain the 1/PI lambertian BRDF.
+    LdDotLe *= M_PI;
+
+    // Make sure we don't have negative intensities
+    LdDotLe = max(LdDotLe, float3{0});
+
+    const float intensity = max(LdDotLe);
+    return { LdDotLe / intensity, intensity };
 }
 
 } // namespace details
@@ -203,5 +249,8 @@ math::float3 IndirectLight::getDirectionEstimate() const noexcept {
     return upcast(this)->getDirectionEstimate();
 }
 
+math::float4 IndirectLight::getColorEstimate(math::float3 direction) const noexcept {
+    return upcast(this)->getColorEstimate(direction);
+}
 
 } // namespace filament
