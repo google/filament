@@ -68,6 +68,10 @@ public:
 
     size_t getChildren(Instance i, utils::Entity* children, size_t count) const noexcept;
 
+    children_iterator getChildrenBegin(Instance parent) const noexcept;
+
+    children_iterator getChildrenEnd(Instance parent) const noexcept;
+
     void openLocalTransformTransaction() noexcept;
 
     void commitLocalTransformTransaction() noexcept;
@@ -99,6 +103,7 @@ private:
     void swapNode(Instance i, Instance j) noexcept;
     static void transformChildren(Sim& manager, Instance firstChild) noexcept;
 
+    friend class TransformManager::children_iterator;
 
     enum {
         LOCAL,          // local transform (relative to parent), world if no parent

@@ -144,6 +144,19 @@ TEST(FilamentTest, TransformManager) {
     EXPECT_EQ(tcm.getWorldTransform(newParent), mat4f{ float4{ 8 }});
     EXPECT_EQ(tcm.getTransform(child), mat4f{ float4{ 1 }});
     EXPECT_EQ(tcm.getWorldTransform(child), mat4f{ float4{ 8 }});
+
+    // check children iterators
+    size_t c = 0;
+    auto first = tcm.getChildrenBegin(newParent);
+    auto last = tcm.getChildrenEnd(newParent);
+    while (first != last) {
+        ++first;
+        c++;
+    }
+
+    EXPECT_EQ(tcm.getChildrenEnd(parent)++, tcm.getChildrenEnd(parent));
+    EXPECT_EQ(tcm.getChildrenBegin(parent), tcm.getChildrenEnd(parent));
+    EXPECT_EQ(c, tcm.getChildCount(newParent));
 }
 
 TEST(FilamentTest, UniformInterfaceBlock) {
