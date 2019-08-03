@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include <filament/TransformManager.h>
+
 #include "components/TransformManager.h"
 
 using namespace utils;
@@ -89,6 +91,15 @@ size_t FTransformManager::getChildren(Instance i, utils::Entity* children,
         ci = mManager[ci].next;
     }
     return numWritten;
+}
+
+TransformManager::children_iterator FTransformManager::getChildrenBegin(
+        Instance parent) const noexcept {
+    return { *this, mManager[parent].firstChild };
+}
+
+TransformManager::children_iterator FTransformManager::getChildrenEnd(Instance) const noexcept {
+    return { *this, 0 };
 }
 
 void FTransformManager::destroy(Entity e) noexcept {
@@ -375,12 +386,17 @@ void FTransformManager::gc(utils::EntityManager& em) noexcept {
 
 } // namespace details
 
+using namespace details;
+
+TransformManager::children_iterator& TransformManager::children_iterator::operator++() {
+    FTransformManager const& that = upcast(mManager);
+    mInstance = that.mManager[mInstance].next;
+    return *this;
+}
 
 // ------------------------------------------------------------------------------------------------
 // Trampoline calling into private implementation
 // ------------------------------------------------------------------------------------------------
-
-using namespace details;
 
 void TransformManager::create(Entity entity, Instance parent, const mat4f& worldTransform) {
     upcast(this)->create(entity, parent, worldTransform);
@@ -433,6 +449,16 @@ void TransformManager::openLocalTransformTransaction() noexcept {
 
 void TransformManager::commitLocalTransformTransaction() noexcept {
     upcast(this)->commitLocalTransformTransaction();
+}
+
+TransformManager::children_iterator TransformManager::getChildrenBegin(
+        TransformManager::Instance parent) const noexcept {
+    return upcast(this)->getChildrenBegin(parent);
+}
+
+TransformManager::children_iterator TransformManager::getChildrenEnd(
+        TransformManager::Instance parent) const noexcept {
+    return upcast(this)->getChildrenEnd(parent);
 }
 
 } // namespace filament
