@@ -283,7 +283,7 @@ public:
     /**
      * Helper to estimate the direction of the dominant light in the environment.
      *
-     * This assumes that there is only a single dominant light (such as teh sun in outdoors
+     * This assumes that there is only a single dominant light (such as the sun in outdoors
      * environments), if it's not the case the direction returned will be an average of the
      * various lights based on their intensity.
      *
