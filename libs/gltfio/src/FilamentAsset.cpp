@@ -67,6 +67,10 @@ filament::Aabb FilamentAsset::getBoundingBox() const noexcept {
     return upcast(this)->getBoundingBox();
 }
 
+const char* FilamentAsset::getName(utils::Entity entity) const noexcept {
+    return upcast(this)->getName(entity);
+}
+
 Animator* FilamentAsset::getAnimator() noexcept {
     return upcast(this)->getAnimator();
 }

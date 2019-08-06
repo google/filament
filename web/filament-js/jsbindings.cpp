@@ -69,6 +69,7 @@
 #include <math/mat4.h>
 
 #include <utils/EntityManager.h>
+#include <utils/NameComponentManager.h>
 #include <utils/Log.h>
 
 #include <emscripten.h>
@@ -875,7 +876,10 @@ class_<Material>("Material")
     .function("getDefaultInstance",
             select_overload<MaterialInstance*(void)>(&Material::getDefaultInstance),
             allow_raw_pointers())
-    .function("createInstance", &Material::createInstance, allow_raw_pointers());
+    .function("createInstance", &Material::createInstance, allow_raw_pointers())
+    .function("getName", EMBIND_LAMBDA(std::string, (Material* self), {
+        return std::string(self->getName());
+    }), allow_raw_pointers());
 
 class_<MaterialInstance>("MaterialInstance")
     .function("setFloatParameter", EMBIND_LAMBDA(void,
@@ -1322,6 +1326,9 @@ class_<FilamentAsset>("gltfio$FilamentAsset")
     }), allow_raw_pointers())
 
     .function("getBoundingBox", &FilamentAsset::getBoundingBox)
+    .function("getName", EMBIND_LAMBDA(std::string, (FilamentAsset* self, utils::Entity entity), {
+        return std::string(self->getName(entity));
+    }), allow_raw_pointers())
     .function("getAnimator", &FilamentAsset::getAnimator, allow_raw_pointers())
     .function("getWireframe", &FilamentAsset::getWireframe)
     .function("getEngine", &FilamentAsset::getEngine, allow_raw_pointers())
@@ -1342,7 +1349,7 @@ class_<UbershaderLoader>("gltfio$UbershaderLoader")
 class_<AssetLoader>("gltfio$AssetLoader")
 
     .constructor(EMBIND_LAMBDA(AssetLoader*, (Engine* engine, UbershaderLoader materials), {
-        utils::NameComponentManager* names = nullptr;
+        auto names = new utils::NameComponentManager(utils::EntityManager::get());
         return AssetLoader::create({ engine, materials.provider, names });
     }), allow_raw_pointers())
 

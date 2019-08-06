@@ -34,7 +34,6 @@
 #include <gltfio/FilamentAsset.h>
 
 #include <utils/Entity.h>
-#include <utils/NameComponentManager.h>
 
 #include <math/vec3.h>
 
@@ -75,10 +74,9 @@ public:
      * passing it in.
      *
      * @param asset The asset to view.
-     * @param names Optional name manager used to add glTF mesh names to nodes.
      * @param scale Adds a transform to the root to fit the asset into a unit cube at the origin.
      */
-    void setAsset(FilamentAsset* asset, utils::NameComponentManager* names, bool scale);
+    void setAsset(FilamentAsset* asset, bool scale);
 
     /**
      * Removes the current asset from the viewer.
@@ -139,7 +137,6 @@ private:
 
     // Properties that can be changed from the application.
     FilamentAsset* mAsset = nullptr;
-    utils::NameComponentManager* mNames = nullptr;
     Animator* mAnimator = nullptr;
     filament::IndirectLight* mIndirectLight = nullptr;
     std::function<void()> mCustomUI;
@@ -201,7 +198,6 @@ SimpleViewer::SimpleViewer(filament::Engine* engine, filament::Scene* scene, fil
         uint32_t flags, int sidebarWidth) :
         mEngine(engine), mScene(scene), mView(view),
         mSunlight(utils::EntityManager::get().create()),
-        mNames(new utils::NameComponentManager(utils::EntityManager::get())),
         mSidebarWidth(sidebarWidth),
         mFlags(flags) {
     using namespace filament;
@@ -223,12 +219,11 @@ SimpleViewer::~SimpleViewer() {
     mEngine->destroy(mSunlight);
 }
 
-void SimpleViewer::setAsset(FilamentAsset* asset, utils::NameComponentManager* names, bool scale) {
+void SimpleViewer::setAsset(FilamentAsset* asset, bool scale) {
     using namespace filament::math;
     removeAsset();
     mAsset = asset;
     mAnimator = asset->getAnimator();
-    mNames = names;
     if (scale) {
         auto& tcm = mEngine->getTransformManager();
         auto root = tcm.getInstance(mAsset->getRoot());
@@ -248,7 +243,6 @@ void SimpleViewer::removeAsset() {
     }
     mAsset = nullptr;
     mAnimator = nullptr;
-    mNames = nullptr;
 }
 
 void SimpleViewer::setIndirectLight(filament::IndirectLight* ibl) {
@@ -327,11 +321,8 @@ void SimpleViewer::updateUserInterface() {
         auto rinstance = rm.getInstance(entity);
         intptr_t treeNodeId = 1 + entity.getId();
 
-        const char* label = rinstance ? "Mesh" : "Node";
-        auto nameInstance = mNames->getInstance(entity);
-        if (nameInstance) {
-            label = mNames->getName(nameInstance);
-        }
+        const char* name = mAsset->getName(entity);
+        const char* label = name ? name : (rinstance ? "Mesh" : "Node");
 
         ImGuiTreeNodeFlags flags = rinstance ? 0 : ImGuiTreeNodeFlags_DefaultOpen;
         std::vector<utils::Entity> children(tm.getChildCount(tinstance));
