@@ -48,6 +48,10 @@ public class FilamentAsset {
         return new Box(box[0], box[1], box[2], box[3], box[4], box[5]);
     }
 
+    public String getName(@Entity int entity) {
+        return nGetName(getNativeObject(), entity);
+    }
+
     void clearNativeObject() {
         mNativeObject = 0;
     }
@@ -56,4 +60,5 @@ public class FilamentAsset {
     private static native int nGetEntityCount(long nativeAsset);
     private static native void nGetEntities(long nativeAsset, int[] result);
     private static native void nGetBoundingBox(long nativeAsset, float[] box);
+    private static native String nGetName(long nativeAsset, int entity);
 }

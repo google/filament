@@ -329,7 +329,7 @@ static void updateViewerMesh(BakerApp& app) {
         app.viewerAsset->getAnimator();
 
         // Remove old renderables and add new renderables to the scene.
-        app.viewer->setAsset(app.viewerAsset, app.names, !app.viewerActualSize);
+        app.viewer->setAsset(app.viewerAsset, !app.viewerActualSize);
 
         // Destory old Filament entities.
         app.loader->destroyAsset(previousViewerAsset);
