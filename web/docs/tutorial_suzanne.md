@@ -52,28 +52,17 @@ In a production setting, you'd want to invoke these commands with a script or bu
 
 ## Bake environment map
 
-Much like the [previous tutorial] we need to use Filament's `cmgen` tool to produce cubemap files,
-but this time we'll create compressed variants.
+Much like the [previous tutorial] we need to use Filament's `cmgen` tool to produce cubemap files.
 
-Download [syferfontein_18d_clear_2k.hdr], then invoke the following commands in your terminal.
+Download [venetian_crossroads_2k.hdr], then invoke the following commands in your terminal.
 
 ```bash
-# Create S3TC variant of the IBL, then rename it to have a _s3tc suffix.
-cmgen -x . --format=ktx --size=256 --extract-blur=0.1 --compression=s3tc_rgba_dxt5 \
-    syferfontein_18d_clear_2k.hdr
-cd syfer* ; mv syfer*_ibl.ktx syferfontein_18d_clear_2k_ibl_s3tc.ktx ; cd -
+cmgen -x . --format=ktx --size=64 --extract-blur=0.1 venetian_crossroads_2k.hdr
+cd venetian* ; mv venetian*_ibl.ktx venetian_crossroads_2k_skybox_tiny.ktx ; cd -
 
-# Create ETC variant of the IBL, then rename it to have a _s3tc suffix.
-cmgen -x . --format=ktx --size=256 --extract-blur=0.1 --compression=etc_rgba8_rgba_40 \
-    syferfontein_18d_clear_2k.hdr
-cd syfer* ; mv syfer*_ibl.ktx syferfontein_18d_clear_2k_ibl_etc.ktx ; cd -
-
-# Create small uncompressed Skybox variant, then rename it to have a _tiny suffix.
-cmgen -x . --format=ktx --size=64 --extract-blur=0.1 syferfontein_18d_clear_2k.hdr
-cd syfer* ; mv syfer*_ibl.ktx syferfontein_18d_clear_2k_skybox_tiny.ktx ; cd -
-
-# Create full-size uncompressed Skybox and IBL
-cmgen -x . --format=ktx --size=256 --extract-blur=0.1 syferfontein_18d_clear_2k.hdr
+cmgen -x . --format=ktx --size=256 --extract-blur=0.1 venetian_crossroads_2k.hdr
+cmgen -x . --format=ktx --size=256 --extract-blur=0.1 venetian_crossroads_2k.hdr
+cmgen -x . --format=ktx --size=256 --extract-blur=0.1 venetian_crossroads_2k.hdr
 ```
 
 ## Define textured material
@@ -187,9 +176,9 @@ class App {
 }
 ```
 
-Our app will use 10 downloaded assets, but it only requires 4 of them to be present for `App`
-construction. We'll download the other 6 assets after construction. By using a progressive loading
-strategy, we can reduce the perceived load time.
+Our app will only require a subset of assets to be present for `App` construction. We'll download
+the other assets after construction. By using a progressive loading strategy, we can reduce the
+perceived load time.
 
 Next we need to supply the URLs for various assets. This is actually a bit tricky, because different
 clients have different capabilities for compressed textures.
@@ -200,18 +189,16 @@ To help you download only the texture assets that you need, Filament provides a
 performs an intersection of the *desired* set with the *supported* set, then returns an appropriate
 string -- which might be empty.
 
-In our case, we know that our web server will have `etc` and `s3tc` variants for the IBL, `astc` and
-`s3tc` variants for albedo, and `etc` variants for the other textures. The uncompressed variants
-(empty string) are always available as a last resort. Go ahead and replace the **declare asset
-URLs** comment with the following snippet.
+In our case, we know that our web server will have `astc` and `s3tc` variants for albedo, and `etc`
+variants for the other textures. The uncompressed variants (empty string) are always available as a
+last resort. Go ahead and replace the **declare asset URLs** comment with the following snippet.
 
 ```js {fragment="declare asset URLs"}
-const ibl_suffix = Filament.getSupportedFormatSuffix('etc s3tc');
 const albedo_suffix = Filament.getSupportedFormatSuffix('astc s3tc');
 const texture_suffix = Filament.getSupportedFormatSuffix('etc');
 
-const environ = 'syferfontein_18d_clear_2k'
-const ibl_url = `${environ}/${environ}_ibl${ibl_suffix}.ktx`;
+const environ = 'venetian_crossroads_2k'
+const ibl_url = `${environ}/${environ}_ibl.ktx`;
 const sky_small_url = `${environ}/${environ}_skybox_tiny.ktx`;
 const sky_large_url = `${environ}/${environ}_skybox.ktx`;
 const albedo_url = `albedo${albedo_suffix}.ktx`;
@@ -308,5 +295,5 @@ That's it, we now have a fast-loading interactive demo. The complete JavaScript 
 [this OBJ file]: https://github.com/google/filament/blob/master/assets/models/monkey/monkey.obj
 [monkey folder]: https://github.com/google/filament/blob/master/assets/models/monkey
 
-[syferfontein_18d_clear_2k.hdr]:
-//github.com/google/filament/blob/master/third_party/environments/syferfontein_18d_clear_2k.hdr
+[venetian_crossroads_2k.hdr]:
+//github.com/google/filament/blob/master/third_party/environments/venetian_crossroads_2k.hdr
