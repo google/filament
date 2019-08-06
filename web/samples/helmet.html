@@ -46,7 +46,7 @@ class App {
         Filament.LightManager.Builder(LightType.SUN)
             .color([0.98, 0.92, 0.89])
             .intensity(100000.0)
-            .direction([0.6, -1.0, -0.8])
+            .direction([0.6, -0.4, -0.8])
             .sunAngularRadius(1.9)
             .castShadows(true)
             .sunHaloSize(10.0)
@@ -56,7 +56,7 @@ class App {
 
         const indirectLight = this.ibl = engine.createIblFromKtx(ibl_url);
         this.scene.setIndirectLight(indirectLight);
-        indirectLight.setIntensity(100000);
+        indirectLight.setIntensity(20000);
 
         const skybox = engine.createSkyFromKtx(sky_url);
         this.scene.setSkybox(skybox);
@@ -73,10 +73,24 @@ class App {
         const onDone = (finalize) => {
             messages.innerText += 'Finalizing...\n'
             setTimeout(() => {
+
+                // Decode the textures using stb.
                 finalize();
                 loader.delete();
+
+                // Enable shadows on every renderable.
                 const entities = asset.getEntities();
+                const rm = engine.getRenderableManager();
+                for (let i = 0; i < entities.size(); i++) {
+                    const instance = rm.getInstance(entities.get(i));
+                    rm.setCastShadows(instance, true);
+                    instance.delete();
+                }
+
+                // Add renderables to the scene.
                 scene.addEntities(entities);
+
+                // Hide the HUD.
                 messages.remove();
             }, 1);
         };
