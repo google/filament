@@ -946,7 +946,12 @@ class_<IndirectLight>("IndirectLight")
     .function("getIntensity", &IndirectLight::getIntensity)
     .function("setRotation", EMBIND_LAMBDA(void, (IndirectLight* self, flatmat3 value), {
         return self->setRotation(value.m);
-    }), allow_raw_pointers());
+    }), allow_raw_pointers())
+    .function("getRotation", EMBIND_LAMBDA(flatmat3, (IndirectLight* self), {
+        return flatmat3 { self->getRotation() };
+    }), allow_raw_pointers())
+    .function("getDirectionEstimate", &IndirectLight::getDirectionEstimate)
+    .function("getColorEstimate", &IndirectLight::getColorEstimate);
 
 class_<IblBuilder>("IndirectLight$Builder")
     .function("_build", EMBIND_LAMBDA(IndirectLight*, (IblBuilder* builder, Engine* engine), {
