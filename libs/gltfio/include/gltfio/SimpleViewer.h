@@ -126,6 +126,11 @@ public:
     void enableSSAO(bool b) { mEnableSsao = b; }
     void setIBLIntensity(float brightness) { mIblIntensity = brightness; }
 
+    /**
+     * Examines the current IBL and updates the sunlight intensity accordingly.
+     */
+    void adjustSunlightIntensity();
+
 private:
     void updateIndirectLight();
 
@@ -144,9 +149,9 @@ private:
     // Properties that can be changed from the UI.
     int mCurrentAnimation = 1;
     bool mResetAnimation = true;
-    float mIblIntensity = 30000.0f;
+    float mIblIntensity = 15000.0f;
     float mIblRotation = 0.0f;
-    float mSunlightIntensity = 100000.0f;
+    float mSunlightIntensity = 70000.0f;
     filament::math::float3 mSunlightColor = filament::Color::toLinear<filament::ACCURATE>({ 0.98, 0.92, 0.89});
     filament::math::float3 mSunlightDirection = {0.6, -1.0, -0.8};
     bool mEnableWireframe = false;
@@ -249,11 +254,7 @@ void SimpleViewer::setIndirectLight(filament::IndirectLight* ibl) {
     using namespace filament::math;
     mIndirectLight = ibl;
     if (ibl) {
-        float3 d = ibl->getDirectionEstimate();
-        float4 c = ibl->getColorEstimate(d);
-        mSunlightDirection = d;
-        mSunlightColor = c.rgb;
-        mSunlightIntensity = c[3] * ibl->getIntensity();
+        mSunlightDirection = ibl->getDirectionEstimate();
         updateIndirectLight();
     }
 }
@@ -263,6 +264,14 @@ void SimpleViewer::updateIndirectLight() {
     if (mIndirectLight) {
         mIndirectLight->setIntensity(mIblIntensity);
         mIndirectLight->setRotation(mat3f::rotation(mIblRotation, float3{ 0, 1, 0 }));
+    }
+}
+
+void SimpleViewer::adjustSunlightIntensity() {
+    if (mIndirectLight) {
+        filament::math::float4 color = mIndirectLight->getColorEstimate(mSunlightDirection);
+        mSunlightColor = color.rgb;
+        mSunlightIntensity = color[3] * mIndirectLight->getIntensity();
     }
 }
 
@@ -391,6 +400,9 @@ void SimpleViewer::updateUserInterface() {
         ImGui::SliderFloat("Sun intensity", &mSunlightIntensity, 50000.0, 150000.0f);
         ImGuiExt::DirectionWidget("Sun direction", mSunlightDirection.v);
         ImGui::Checkbox("Enable sunlight", &mEnableSunlight);
+        if (ImGui::Button("Auto-adjust sunlight intensity")) {
+            adjustSunlightIntensity();
+        }
     }
 
     if (mEnableSunlight) {

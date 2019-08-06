@@ -52,7 +52,7 @@ struct App {
     Texture* ao;
 };
 
-static const char* IBL_FOLDER = "envs/venetian_crossroads";
+static const char* IBL_FOLDER = "venetian_crossroads_2k";
 
 static Texture* loadNormalMap(Engine* engine, const uint8_t* normals, size_t nbytes) {
     int w, h, n;
@@ -107,7 +107,7 @@ int main(int argc, char** argv) {
         app.materialInstance->setParameter("roughness", app.roughness, sampler);
 
         auto ibl = FilamentApp::get().getIBL()->getIndirectLight();
-        ibl->setIntensity(100000);
+        ibl->setIntensity(15000);
         ibl->setRotation(mat3f::rotation(0.5f, float3{ 0, 1, 0 }));
 
         // Add geometry into the scene.

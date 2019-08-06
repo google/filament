@@ -46,17 +46,16 @@ class App {
         this.scene.setIndirectLight(indirectLight);
 
         const iblDirection = indirectLight.getDirectionEstimate();
-        const iblColor = indirectLight.getColorEstimate(iblDirection);
 
-        indirectLight.setIntensity(30000);
+        indirectLight.setIntensity(10000);
 
         const skybox = engine.createSkyFromKtx(sky_url);
         this.scene.setSkybox(skybox);
 
         const sunlight = Filament.EntityManager.get().create();
         Filament.LightManager.Builder(LightType.SUN)
-            .color(iblColor.slice(0, 3))
-            .intensity(iblColor[3])
+            .color([0.98, 0.92, 0.89])
+            .intensity(70000.0)
             .direction(iblDirection)
             .sunAngularRadius(1.9)
             .castShadows(true)
