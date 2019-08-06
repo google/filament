@@ -54,7 +54,7 @@ struct App {
     bool actualSize = false;
 };
 
-static const char* DEFAULT_IBL = "envs/venetian_crossroads";
+static const char* DEFAULT_IBL = "venetian_crossroads_2k";
 
 static void printUsage(char* name) {
     std::string exec_name(Path(name).getName());
