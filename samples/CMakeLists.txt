@@ -94,6 +94,29 @@ add_custom_command(OUTPUT ${DUMMY_SRC} COMMAND echo "//" > ${DUMMY_SRC})
 add_library(common-resources ${DUMMY_SRC} ${RESGEN_SOURCE})
 
 # ==================================================================================================
+# Invoke cmgen to build KTX files for the default IBL and skybox
+# ==================================================================================================
+
+set(CMGEN_ARGS -x . --format=ktx --size=256 --extract-blur=0.1)
+
+function(add_envmap SOURCE TARGET)
+    set(source_envmap "${ROOT_DIR}/${SOURCE}")
+
+    set(target_skybox   "${PROJECT_BINARY_DIR}/${TARGET}/${TARGET}_skybox.ktx")
+    set(target_envmap   "${PROJECT_BINARY_DIR}/${TARGET}/${TARGET}_ibl.ktx")
+
+    set(target_envmaps ${target_envmaps} ${target_skybox} PARENT_SCOPE)
+    set(target_envmaps ${target_envmaps} ${target_envmap} PARENT_SCOPE)
+
+    add_custom_command(OUTPUT ${target_skybox} ${target_envmap}
+        COMMAND cmgen ${CMGEN_ARGS} ${source_envmap}
+        MAIN_DEPENDENCY ${source_envmap}
+        DEPENDS cmgen)
+endfunction()
+
+add_envmap("third_party/environments/venetian_crossroads_2k.hdr" "venetian_crossroads_2k")
+
+# ==================================================================================================
 # Build suzanne resources
 # ==================================================================================================
 
@@ -315,7 +338,6 @@ endif()
 #    /assets/fonts     copied from REPO/assets
 #    /assets/models    copied from REPO/assets
 #    /textures         copied from REPO/third_party
-#    /envs             copied from REPO/samples/envs
 #
 # ==================================================================================================
 
@@ -329,6 +351,5 @@ file(COPY ../assets DESTINATION ${PROJECT_BINARY_DIR}
 add_custom_target(assets ALL DEPENDS assets)
 add_dependencies(filament assets)
 
-file(COPY ../samples/envs DESTINATION ${PROJECT_BINARY_DIR})
-add_custom_target(envs ALL DEPENDS envs)
+add_custom_target(envs DEPENDS ${target_envmaps})
 add_dependencies(filament envs)
