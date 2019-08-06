@@ -84,14 +84,14 @@ void App::setupFilament() {
 }
 
 void App::setupIbl() {
-    image::KtxBundle* iblBundle = new image::KtxBundle(RESOURCES_VENETIAN_CROSSROADS_IBL_DATA,
-                                                       RESOURCES_VENETIAN_CROSSROADS_IBL_SIZE);
+    image::KtxBundle* iblBundle = new image::KtxBundle(RESOURCES_VENETIAN_CROSSROADS_2K_IBL_DATA,
+                                                       RESOURCES_VENETIAN_CROSSROADS_2K_IBL_SIZE);
     float3 harmonics[9];
     iblBundle->getSphericalHarmonics(harmonics);
     app.iblTexture = image::KtxUtility::createTexture(engine, iblBundle, false);
 
-    image::KtxBundle* skyboxBundle = new image::KtxBundle(RESOURCES_VENETIAN_CROSSROADS_SKYBOX_DATA,
-                                                          RESOURCES_VENETIAN_CROSSROADS_SKYBOX_SIZE);
+    image::KtxBundle* skyboxBundle = new image::KtxBundle(RESOURCES_VENETIAN_CROSSROADS_2K_SKYBOX_DATA,
+                                                          RESOURCES_VENETIAN_CROSSROADS_2K_SKYBOX_SIZE);
     app.skyboxTexture = image::KtxUtility::createTexture(engine, skyboxBundle, false);
 
     app.skybox = Skybox::Builder()

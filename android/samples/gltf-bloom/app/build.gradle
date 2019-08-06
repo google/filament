@@ -17,20 +17,18 @@ task copyMesh(type: Copy) {
     into file("src/main/assets/models")
 }
 
-task copySky(type: Copy) {
-    from file("../../../../samples/envs/venetian_crossroads/venetian_crossroads_ibl.ktx")
-    into file("src/main/assets/envs")
-}
+generateIbl {
+    group 'Filament'
+    description 'Generate IBL'
 
-task copyIbl(type: Copy) {
-    from file("../../../../samples/envs/venetian_crossroads/venetian_crossroads_skybox.ktx")
-    into file("src/main/assets/envs")
+    cmgenArgs = "--format=ktx --size=256 --extract-blur=0.1 --deploy=src/main/assets/envs"
+    inputFile = file("../../../../third_party/environments/venetian_crossroads_2k.hdr")
+    outputDir = file("src/main/assets/envs")
 }
 
 preBuild.dependsOn compileMaterials
 preBuild.dependsOn copyMesh
-preBuild.dependsOn copySky
-preBuild.dependsOn copyIbl
+preBuild.dependsOn generateIbl
 
 clean.doFirst {
     delete "src/main/assets"

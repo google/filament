@@ -116,6 +116,7 @@ class MaterialCompiler extends DefaultTask {
 // This task handles incremental builds
 class IblGenerator extends DefaultTask {
     File cmgenPath
+    String cmgenArgs = null;
 
     @SuppressWarnings("GroovyUnusedDeclaration")
     @InputFile
@@ -155,9 +156,13 @@ class IblGenerator extends DefaultTask {
 
             project.exec {
                 standardOutput out
+                if (!cmgenArgs) {
+                    cmgenArgs = '--format=rgb32f --extract-blur=0.08 --extract=${outputDir.absolutePath}'
+                }
+                cmgenArgs = cmgenArgs + " " + file
                 errorOutput err
                 executable "${cmgenPath}"
-                args('--format=rgb32f', '--extract-blur=0.08', "--extract=${outputDir.absolutePath}", file)
+                args(cmgenArgs.split())
             }
         }
 
