@@ -37,6 +37,7 @@
 #include "private/backend/DriverApi.h"
 
 #include <private/filament/EngineEnums.h>
+#include <private/filament/UniformInterfaceBlock.h>
 
 #include <filament/Engine.h>
 #include <filament/VertexBuffer.h>
@@ -45,9 +46,8 @@
 #include <filament/MaterialEnums.h>
 #include <filament/Texture.h>
 #include <filament/Skybox.h>
-#include <filament/Stream.h>
 
-#include <private/filament/UniformInterfaceBlock.h>
+#include <filament/Stream.h>
 
 #include <filaflat/ShaderBuilder.h>
 
@@ -65,13 +65,14 @@ namespace filament {
 class Renderer;
 class MaterialParser;
 
-
 namespace backend {
-
 class Driver;
 class Program;
+} // namespace driver
 
-} // namespac driver
+namespace fg {
+class ResourceAllocator;
+} // namespace fg
 
 
 namespace details {
@@ -195,6 +196,11 @@ public:
         return mBackend;
     }
 
+    fg::ResourceAllocator& getResourceAllocator() noexcept {
+        assert(mResourceAllocator);
+        return *mResourceAllocator;
+    }
+
     void* streamAlloc(size_t size, size_t alignment) noexcept;
 
     utils::JobSystem& getJobSystem() noexcept { return mJobSystem; }
@@ -305,6 +311,7 @@ private:
     FTransformManager mTransformManager;
     FLightManager mLightManager;
     FCameraManager mCameraManager;
+    fg::ResourceAllocator* mResourceAllocator = nullptr;
 
     ResourceList<FRenderer> mRenderers{ "Renderer" };
     ResourceList<FView> mViews{ "View" };

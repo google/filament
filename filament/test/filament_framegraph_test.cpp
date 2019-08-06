@@ -18,6 +18,7 @@
 
 #include "fg/FrameGraph.h"
 #include "fg/FrameGraphPassResources.h"
+#include "fg/ResourceAllocator.h"
 
 #include <backend/Platform.h>
 
@@ -33,7 +34,8 @@ static CommandStream driverApi(*platform->createDriver(nullptr), buffer);
 
 TEST(FrameGraphTest, SimpleRenderPass) {
 
-    FrameGraph fg;
+    fg::ResourceAllocator resourceAllocator(driverApi);
+    FrameGraph fg(resourceAllocator);
 
     bool renderPassExecuted = false;
 
@@ -71,7 +73,8 @@ TEST(FrameGraphTest, SimpleRenderPass) {
 
 TEST(FrameGraphTest, SimpleRenderPass2) {
 
-    FrameGraph fg;
+    fg::ResourceAllocator resourceAllocator(driverApi);
+    FrameGraph fg(resourceAllocator);
 
     bool renderPassExecuted = false;
 
@@ -119,7 +122,8 @@ TEST(FrameGraphTest, SimpleRenderPass2) {
 
 TEST(FrameGraphTest, ScenarioDepthPrePass) {
 
-    FrameGraph fg;
+    fg::ResourceAllocator resourceAllocator(driverApi);
+    FrameGraph fg(resourceAllocator);
 
     bool depthPrepassExecuted = false;
     bool colorPassExecuted = false;
@@ -197,7 +201,8 @@ TEST(FrameGraphTest, ScenarioDepthPrePass) {
 
 TEST(FrameGraphTest, SimplePassCulling) {
 
-    FrameGraph fg;
+    fg::ResourceAllocator resourceAllocator(driverApi);
+    FrameGraph fg(resourceAllocator);
 
     bool renderPassExecuted = false;
     bool postProcessPassExecuted = false;
@@ -284,7 +289,8 @@ TEST(FrameGraphTest, SimplePassCulling) {
 
 TEST(FrameGraphTest, RenderTargetLifetime) {
 
-    FrameGraph fg;
+    fg::ResourceAllocator resourceAllocator(driverApi);
+    FrameGraph fg(resourceAllocator);
 
     bool renderPassExecuted1 = false;
     bool renderPassExecuted2 = false;
@@ -330,7 +336,7 @@ TEST(FrameGraphTest, RenderTargetLifetime) {
                 renderPassExecuted2 = true;
                 auto const& rt = resources.getRenderTarget(data.output);
                 EXPECT_TRUE(rt.target);
-                EXPECT_EQ(0x40|0x80, rt.params.flags.clear);
+                EXPECT_EQ(0x40u|0x80u, rt.params.flags.clear);
                 EXPECT_EQ(rt1.getId(), rt.target.getId()); // FIXME: this test is always true the NoopDriver
                 EXPECT_EQ(TargetBufferFlags::DEPTH_AND_STENCIL, rt.params.flags.discardStart);
                 EXPECT_EQ(TargetBufferFlags::DEPTH_AND_STENCIL, rt.params.flags.discardEnd);
