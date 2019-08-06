@@ -80,6 +80,9 @@ public:
     /** Gets the bounding box computed from the supplied min / max values in glTF accessors. */
     filament::Aabb getBoundingBox() const noexcept;
 
+    /** Gets the NameComponentManager label for the given entity, if it exists. */
+    const char* getName(utils::Entity) const noexcept;
+
     /**
      * Lazily creates the animation engine or returns it from the cache.
      * The animator is owned by the asset and should not be manually deleted.

@@ -202,6 +202,8 @@ export class Renderer {
 
 export class Material {
     public createInstance(): MaterialInstance;
+    public getDefaultInstance(): MaterialInstance;
+    public getName(): string;
 }
 
 export class Frustum {
