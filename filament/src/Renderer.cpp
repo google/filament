@@ -31,6 +31,7 @@
 
 #include "fg/FrameGraph.h"
 #include "fg/FrameGraphResource.h"
+#include "fg/ResourceAllocator.h"
 
 
 #include <utils/Panic.h>
@@ -228,7 +229,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
      * Frame graph
      */
 
-    FrameGraph fg;
+    FrameGraph fg(engine.getResourceAllocator());
 
     const TextureFormat hdrFormat = getHdrFormat(view);
 

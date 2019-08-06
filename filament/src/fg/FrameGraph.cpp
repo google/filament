@@ -18,6 +18,7 @@
 
 #include "FrameGraphPassResources.h"
 #include "FrameGraphResource.h"
+#include "ResourceAllocator.h"
 
 #include "private/backend/CommandStream.h"
 
@@ -49,8 +50,8 @@ struct Alias { //4
 struct VirtualResource {
     VirtualResource() noexcept = default;
     VirtualResource(VirtualResource const&) = default;
-    virtual void create(FrameGraph& fg, DriverApi& driver) noexcept = 0;
-    virtual void destroy(FrameGraph& fg, DriverApi& driver) noexcept = 0;
+    virtual void create(FrameGraph& fg) noexcept = 0;
+    virtual void destroy(FrameGraph& fg) noexcept = 0;
     virtual ~VirtualResource();
 
     // computed during compile()
@@ -72,8 +73,8 @@ struct Resource final : public VirtualResource { // 72
     ~Resource() noexcept override;
 
     // concrete resource -- set when the resource is created
-    void create(FrameGraph& fg, DriverApi& driver) noexcept override;
-    void destroy(FrameGraph& fg, DriverApi& driver) noexcept override;
+    void create(FrameGraph& fg) noexcept override;
+    void destroy(FrameGraph& fg) noexcept override;
 
     // constants
     const char* const name;
@@ -149,7 +150,7 @@ struct RenderTargetResource final : public VirtualResource {  // 104
     // updated during execute with the current pass' discard flags
     FrameGraphPassResources::RenderTargetInfo targetInfo;
 
-    void create(FrameGraph& fg, DriverApi& driver) noexcept override {
+    void create(FrameGraph& fg) noexcept override {
         if (!imported) {
             if (attachments) {
                 FrameGraph::Vector<ResourceNode> const& resourceNodes = fg.mResourceNodes;
@@ -168,16 +169,16 @@ struct RenderTargetResource final : public VirtualResource {  // 104
                 }
 
                 // create the concrete rendertarget
-                targetInfo.target = driver.createRenderTarget(attachments,
+                targetInfo.target = fg.getResourceAllocator().createRenderTarget(attachments,
                         width, height, desc.samples, infos[0], infos[1], {});
             }
         }
     }
 
-    void destroy(FrameGraph&, DriverApi& driver) noexcept override {
+    void destroy(FrameGraph& fg) noexcept override {
         if (!imported) {
             if (targetInfo.target) {
-                driver.destroyRenderTarget(targetInfo.target);
+                fg.getResourceAllocator().destroyRenderTarget(targetInfo.target);
                 targetInfo.target.clear();
             }
         }
@@ -405,7 +406,7 @@ Resource::~Resource() noexcept {
     }
 }
 
-void Resource::create(FrameGraph&, DriverApi& driver) noexcept {
+void Resource::create(FrameGraph& fg) noexcept {
     // some sanity check
     if (!imported) {
         assert(usage);
@@ -416,17 +417,16 @@ void Resource::create(FrameGraph&, DriverApi& driver) noexcept {
             effectiveUsage |= TextureUsage::SAMPLEABLE;
             samples = 1; // sampleable textures can't be multi-sampled
         }
-        // FIXME: set the proper sampler count
-        texture = driver.createTexture(desc.type, desc.levels, desc.format, samples,
-                desc.width, desc.height, desc.depth, effectiveUsage);
+        texture = fg.getResourceAllocator().createTexture(desc.type, desc.levels, desc.format,
+                samples, desc.width, desc.height, desc.depth, effectiveUsage);
     }
 }
 
-void Resource::destroy(FrameGraph&, DriverApi& driver) noexcept {
+void Resource::destroy(FrameGraph& fg) noexcept {
     // we don't own the handles of imported resources
     if (!imported) {
         if (texture) {
-            driver.destroyTexture(texture);
+            fg.getResourceAllocator().destroyTexture(texture);
             texture.clear(); // needed because of noop driver
         }
     }
@@ -639,8 +639,9 @@ FrameGraphResource::Descriptor const& FrameGraphPassResources::getDescriptor(
 
 // ------------------------------------------------------------------------------------------------
 
-FrameGraph::FrameGraph()
-        : mArena("FrameGraph Arena", 32768), // TODO: the Area will eventually come from outside
+FrameGraph::FrameGraph(fg::ResourceAllocator& resourceAllocator)
+        : mResourceAllocator(resourceAllocator),
+          mArena("FrameGraph Arena", 32768), // TODO: the Area will eventually come from outside
           mPassNodes(mArena),
           mResourceNodes(mArena),
           mRenderTargets(mArena),
@@ -1074,7 +1075,7 @@ void FrameGraph::executeInternal(PassNode const& node, DriverApi& driver) noexce
     assert(node.base);
     // create concrete resources and rendertargets
     for (VirtualResource* resource : node.devirtualize) {
-        resource->create(*this, driver);
+        resource->create(*this);
     }
 
     // execute the pass
@@ -1083,7 +1084,7 @@ void FrameGraph::executeInternal(PassNode const& node, DriverApi& driver) noexce
 
     // destroy concrete resources
     for (VirtualResource* resource : node.destroy) {
-        resource->destroy(*this, driver);
+        resource->destroy(*this);
     }
 }
 

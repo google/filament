@@ -45,6 +45,7 @@ set(SRCS
         src/components/RenderableManager.cpp
         src/components/TransformManager.cpp
         src/fg/FrameGraph.cpp
+        src/fg/ResourceAllocator.cpp
         src/Box.cpp
         src/Camera.cpp
         src/Color.cpp
@@ -90,6 +91,7 @@ set(PRIVATE_HDRS
         src/fg/FrameGraphPass.h
         src/fg/FrameGraphPassResources.h
         src/fg/FrameGraphResource.h
+        src/fg/ResourceAllocator.h
         src/details/Allocators.h
         src/details/Camera.h
         src/details/Culler.h
