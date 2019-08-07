@@ -31,14 +31,14 @@ namespace math {
 
 namespace details {
 
-template <typename T>
+template<typename T>
 class MATH_EMPTY_BASES TVec2 :
-                public TVecProductOperators<TVec2, T>,
-                public TVecAddOperators<TVec2, T>,
-                public TVecUnaryOperators<TVec2, T>,
-                public TVecComparisonOperators<TVec2, T>,
-                public TVecFunctions<TVec2, T>,
-                public TVecDebug<TVec2, T> {
+        public TVecProductOperators<TVec2, T>,
+        public TVecAddOperators<TVec2, T>,
+        public TVecUnaryOperators<TVec2, T>,
+        public TVecComparisonOperators<TVec2, T>,
+        public TVecFunctions<TVec2, T>,
+        public TVecDebug<TVec2, T> {
 public:
     typedef T value_type;
     typedef T& reference;
@@ -94,7 +94,7 @@ public:
 
 // ----------------------------------------------------------------------------------------
 
-template <typename T, typename = typename std::enable_if<std::is_arithmetic<T>::value >::type>
+template<typename T, typename = typename std::enable_if<std::is_arithmetic<T>::value>::type>
 using vec2 = details::TVec2<T>;
 
 using double2 = vec2<double>;
