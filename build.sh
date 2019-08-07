@@ -641,7 +641,6 @@ while getopts ":hacfijmp:tuvslw" opt; do
         a)
             ISSUE_ARCHIVES=true
             INSTALL_COMMAND=install
-            JS_DOCS_OPTION="-DGENERATE_JS_DOCS=ON"
             ;;
         c)
             ISSUE_CLEAN=true
