@@ -364,8 +364,6 @@ static void gui(filament::Engine* engine, filament::View*) {
 
         if (ImGui::CollapsingHeader("Debug")) {
             DebugRegistry& debug = engine->getDebugRegistry();
-            ImGui::Checkbox("Camera at origin",
-                    debug.getPropertyAddress<bool>("d.view.camera_at_origin"));
             ImGui::Checkbox("Stable Shadow Map", &params.stableShadowMap);
             ImGui::Checkbox("Light Far uses shadow casters",
                     debug.getPropertyAddress<bool>("d.shadowmap.far_uses_shadowcasters"));

@@ -66,10 +66,6 @@ FView::FView(FEngine& engine)
       mDirectionalShadowMap(engine) {
     DriverApi& driver = engine.getDriverApi();
 
-    FDebugRegistry& debugRegistry = engine.getDebugRegistry();
-    debugRegistry.registerProperty("d.view.camera_at_origin",
-            &engine.debug.view.camera_at_origin);
-
     // set-up samplers
     mFroxelizer.getRecordBuffer().setSampler(PerViewSib::RECORDS, mPerViewSb);
     mFroxelizer.getFroxelBuffer().setSampler(PerViewSib::FROXELS, mPerViewSb);
@@ -430,13 +426,11 @@ void FView::prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& are
      */
     FCamera const* const camera = mViewingCamera ? mViewingCamera : mCullingCamera;
 
-    if (engine.debug.view.camera_at_origin) {
-        // this moves the camera to the origin, effectively doing all shader computations in
-        // view-space, which improves floating point precision in the shader by staying around
-        // zero, where fp precision is highest. This also ensures that when the camera is placed
-        // very far from the origin, objects are still rendered and lit properly.
-        worldOriginScene[3].xyz -= camera->getPosition();
-    }
+    // this moves the camera to the origin, effectively doing all shader computations in
+    // view-space, which improves floating point precision in the shader by staying around
+    // zero, where fp precision is highest. This also ensures that when the camera is placed
+    // very far from the origin, objects are still rendered and lit properly.
+    worldOriginScene[3].xyz -= camera->getPosition();
 
     // Note: for debugging (i.e. visualize what the camera / objects are doing, using
     // the viewing camera), we can set worldOriginCamera to identity when mViewingCamera
@@ -463,8 +457,7 @@ void FView::prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& are
             // world-space position of the API-level camera
             .worldOffset        = camera->getPosition(),
             // world origin transform, use only for debugging
-            .worldOrigin        = worldOriginCamera,
-            .isCameraAtOrigin   = engine.debug.view.camera_at_origin
+            .worldOrigin        = worldOriginCamera
     };
     mCullingFrustum = FCamera::getFrustum(
             mCullingCamera->getCullingProjectionMatrix(),
@@ -631,7 +624,6 @@ void FView::prepareCamera(const CameraInfo& camera, const filament::Viewport& vi
     u.setUniform(offsetof(PerViewUib, resolution), float4{ w, h, 1.0f / w, 1.0f / h });
     u.setUniform(offsetof(PerViewUib, origin), float2{ viewport.left, viewport.bottom });
     u.setUniform(offsetof(PerViewUib, worldOffset), camera.worldOffset);
-    u.setUniform(offsetof(PerViewUib, isCameraAtOrigin), camera.isCameraAtOrigin ? 1.0f : 0.0f);
 }
 
 void FView::prepareSSAO(Handle<HwTexture> ssao) const noexcept {

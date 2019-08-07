@@ -168,7 +168,6 @@ struct CameraInfo {
 
     // for debugging:
     math::mat4f worldOrigin; // this is already applied to model and view
-    bool isCameraAtOrigin;
 };
 
 FILAMENT_UPCAST(Camera)

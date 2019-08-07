@@ -33,8 +33,7 @@ highp mat3 getWorldTangentFrame() {
 
 /** @public-api */
 highp vec3 getWorldPosition() {
-    // TODO: simplify, force camera to be at origin
-    return shading_position + frameUniforms.worldOffset * frameUniforms.isCameraAtOrigin;
+    return shading_position + frameUniforms.worldOffset;
 }
 
 /** @public-api */
