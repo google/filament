@@ -90,6 +90,7 @@ ISSUE_DESKTOP_BUILD=true
 ISSUE_WEBGL_BUILD=false
 
 ISSUE_ARCHIVES=false
+BUILD_JS_DOCS=false
 
 ISSUE_CMAKE_ALWAYS=false
 
@@ -204,18 +205,17 @@ function build_webgl_with_target {
     fi
 
     if [[ -d "web/filament-js" ]]; then
+
+        if [[ "$BUILD_JS_DOCS" == "true" ]]; then
+            echo "Generating JavaScript documentation..."
+            local DOCS_FOLDER="web/docs"
+            local DOCS_SCRIPT="../../web/docs/build.py"
+            python3 ${DOCS_SCRIPT} --disable-demo \
+                --output-folder ${DOCS_FOLDER} \
+                --build-folder ${PWD}
+        fi
+
         if [[ "$ISSUE_ARCHIVES" == "true" ]]; then
-
-            which -s python3
-            if [[ $? == 0 ]]; then
-                echo "Generating JavaScript documentation..."
-                local DOCS_FOLDER="web/docs"
-                local DOCS_SCRIPT="../../web/docs/build.py"
-                python3 ${DOCS_SCRIPT} --disable-demo \
-                    --output-folder ${DOCS_FOLDER} \
-                    --build-folder ${PWD}
-            fi
-
             echo "Generating out/filament-${lc_target}-web.tgz..."
             # The web archive has the following subfolders:
             # dist...core WASM module and accompanying JS file.
