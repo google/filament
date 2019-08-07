@@ -1395,7 +1395,7 @@ struct MaterialVertexInputs {
     float2 uv0;           // if the uv0 attribute is required
     float2 uv1;           // if the uv1 attribute is required
     float3 worldNormal;   // only if the shading model is not unlit
-    float4 worldPosition; // always available
+    float4 worldPosition; // always available (see note below about world-space)
     // variable* names are replaced with actual names
     float4 variable0;     // if 1 or more variables is defined
     float4 variable1;     // if 2 or more variables is defined
@@ -1403,6 +1403,11 @@ struct MaterialVertexInputs {
     float4 variable3;     // if 4 or more variables is defined
 };
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+!!! TIP: worldPosition
+    To achieve good precision, the `worldPosition` coordinate in the vertex shader is shifted by the
+    camera position. To retrieve the position in API-level worldspace, users should add this
+    position to `getWorldCameraPosition()`.
 
 !!! TIP: UV attributes
     By default the vertex shader of a material will flip the Y coordinate of the UV attributes
