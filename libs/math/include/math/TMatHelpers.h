@@ -239,14 +239,11 @@ public:
 };
 
 template<typename T, size_t O>
-constexpr inline T minor(Matrix<T, O> src, size_t row, size_t col);
-
-template<typename T, size_t O>
 struct Determinant {
     static constexpr T determinant(Matrix<T, O> in) {
         T det = {};
         for (size_t i = 0; i < O; i++) {
-            T m = minor<T, O>(in, 0, i);
+            T m = Determinant<T, O - 1>::determinant(Matrix<T, O>::submatrix(in, 0, i));
             T factor = (i % 2 == 1) ? T(-1) : T(1);
             det += factor * in[0][i] * m;
         }
@@ -266,11 +263,6 @@ struct Determinant<T, 1> {
     static constexpr T determinant(Matrix<T, 1> in) { return in[0][0]; }
 };
 
-template<typename T, size_t O>
-constexpr inline T minor(Matrix<T, O> src, size_t row, size_t col) {
-    return Determinant<T, O - 1>::determinant(Matrix<T, O>::submatrix(src, row, col));
-}
-
 template<typename MATRIX>
 constexpr MATRIX MATH_PURE cofactor(const MATRIX& m) {
     typedef typename MATRIX::value_type T;
@@ -288,7 +280,8 @@ constexpr MATRIX MATH_PURE cofactor(const MATRIX& m) {
     for (size_t i = 0; i < order; i++) {
         for (size_t j = 0; j < order; j++) {
             T factor = ((i + j) % 2 == 1) ? T(-1) : T(1);
-            out[i][j] = minor<T, order>(in, i, j) * factor;
+            out[i][j] = Determinant<T, order - 1>::determinant(
+                    Matrix<T, order>::submatrix(in, i, j)) * factor;
         }
     }
     return out;

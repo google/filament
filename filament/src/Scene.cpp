@@ -69,7 +69,7 @@ void FScene::prepare(const mat4f& worldOriginTransform) {
 
     size_t renderableDataCapacity = entities.size();
     // we need the capacity to be multiple of 16 for SIMD loops
-    renderableDataCapacity = (renderableDataCapacity + 0xF) & ~0xF;
+    renderableDataCapacity = (renderableDataCapacity + 0xFu) & ~0xFu;
     // we need 1 extra entry at the end for the summed primitive count
     renderableDataCapacity = renderableDataCapacity + 1;
 
@@ -82,7 +82,7 @@ void FScene::prepare(const mat4f& worldOriginTransform) {
     // dominating directional light, even if there are no entities.
     size_t lightDataCapacity = std::max<size_t>(1, entities.size());
     // we need the capacity to be multiple of 16 for SIMD loops
-    lightDataCapacity = (lightDataCapacity + 0xF) & ~0xF;
+    lightDataCapacity = (lightDataCapacity + 0xFu) & ~0xFu;
 
     lightData.clear();
     if (lightData.capacity() < lightDataCapacity) {
@@ -137,8 +137,8 @@ void FScene::prepare(const mat4f& worldOriginTransform) {
                 if (lcm.getIntensity(li) >= maxIntensity) {
                     maxIntensity = lcm.getIntensity(li);
                     float3 d = lcm.getLocalDirection(li);
-                    // using the inverse-transpose handles non-uniform scaling
-                    d = normalize(transpose(inverse(worldTransform.upperLeft())) * d);
+                    // using mat3f::getTransformForNormals handles non-uniform scaling
+                    d = normalize(mat3f::getTransformForNormals(worldTransform.upperLeft()) * d);
                     lightData.elementAt<FScene::POSITION_RADIUS>(0) = float4{ 0, 0, 0, std::numeric_limits<float>::infinity() };
                     lightData.elementAt<FScene::DIRECTION>(0)       = d;
                     lightData.elementAt<FScene::LIGHT_INSTANCE>(0)  = li;
@@ -148,8 +148,8 @@ void FScene::prepare(const mat4f& worldOriginTransform) {
                 float3 d = 0;
                 if (!lcm.isPointLight(li) || lcm.isIESLight(li)) {
                     d = lcm.getLocalDirection(li);
-                    // using the inverse-transpose handles non-uniform scaling
-                    d = normalize(transpose(inverse(worldTransform.upperLeft())) * d);
+                    // using mat3f::getTransformForNormals handles non-uniform scaling
+                    d = normalize(mat3f::getTransformForNormals(worldTransform.upperLeft()) * d);
                 }
                 lightData.push_back_unsafe(
                         float4{ p.xyz, lcm.getRadius(li) }, d, li, {}, {});
@@ -160,7 +160,7 @@ void FScene::prepare(const mat4f& worldOriginTransform) {
     // some elements past the end of the array will be accessed by SIMD code, we need to make
     // sure the data is valid enough as not to produce errors such as divide-by-zero
     // (e.g. in computeLightRanges())
-    for (size_t i = lightData.size(), e = (lightData.size() + 3) & ~3; i < e; i++) {
+    for (size_t i = lightData.size(), e = (lightData.size() + 3u) & ~3u; i < e; i++) {
         new(lightData.data<POSITION_RADIUS>() + i) float4{ 0, 0, 0, 1 };
     }
 }
@@ -181,7 +181,7 @@ void FScene::updateUBOs(utils::Range<uint32_t> visibleRenderables, backend::Hand
                 offset + offsetof(PerRenderableUib, worldFromModelMatrix),
                 model);
 
-        // Using the inverse-transpose handles non-uniform scaling, but DOESN'T guarantee that
+        // Using mat3f::getTransformForNormals handles non-uniform scaling, but DOESN'T guarantee that
         // the transformed normals will have unit-length, therefore they need to be normalized
         // in the shader (that's already the case anyways, since normalization is needed after
         // interpolation).
@@ -192,7 +192,7 @@ void FScene::updateUBOs(utils::Range<uint32_t> visibleRenderables, backend::Hand
         //
         // Note: if the model matrix is known to be a rigid-transform, we could just use it directly.
 
-        mat3f m = transpose(inverse(model.upperLeft()));
+        mat3f m = mat3f::getTransformForNormals(model.upperLeft());
         m *= mat3f(1.0f / std::sqrt(max(float3{length2(m[0]), length2(m[1]), length2(m[2])})));
 
         UniformBuffer::setUniform(buffer,
