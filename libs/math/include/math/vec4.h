@@ -29,13 +29,14 @@ namespace math {
 
 namespace details {
 
-template <typename T>
-class MATH_EMPTY_BASES TVec4 :  public TVecProductOperators<TVec4, T>,
-                public TVecAddOperators<TVec4, T>,
-                public TVecUnaryOperators<TVec4, T>,
-                public TVecComparisonOperators<TVec4, T>,
-                public TVecFunctions<TVec4, T>,
-                public TVecDebug<TVec4, T> {
+template<typename T>
+class MATH_EMPTY_BASES TVec4 :
+        public TVecProductOperators<TVec4, T>,
+        public TVecAddOperators<TVec4, T>,
+        public TVecUnaryOperators<TVec4, T>,
+        public TVecComparisonOperators<TVec4, T>,
+        public TVecFunctions<TVec4, T>,
+        public TVecDebug<TVec4, T> {
 public:
     typedef T value_type;
     typedef T& reference;
@@ -92,13 +93,14 @@ public:
     constexpr TVec4(A x, B y, C z, D w) : v{ T(x), T(y), T(z), T(w) } {}
 
     template<typename A, typename B, typename C>
-    constexpr TVec4(const TVec2<A>& v, B z, C w) : v{ T(v[0]), T(v[1]), T(z), T(w) } {}
+    constexpr TVec4(const TVec2 <A>& v, B z, C w) : v{ T(v[0]), T(v[1]), T(z), T(w) } {}
 
     template<typename A, typename B>
-    constexpr TVec4(const TVec2<A>& v, const TVec2<B>& w) : v{ T(v[0]), T(v[1]), T(w[0]), T(w[1]) } {}
+    constexpr TVec4(const TVec2 <A>& v, const TVec2 <B>& w) : v{
+            T(v[0]), T(v[1]), T(w[0]), T(w[1]) } {}
 
     template<typename A, typename B>
-    constexpr TVec4(const TVec3<A>& v, B w) : v{ T(v[0]), T(v[1]), T(v[2]), T(w) } {}
+    constexpr TVec4(const TVec3 <A>& v, B w) : v{ T(v[0]), T(v[1]), T(v[2]), T(w) } {}
 
     template<typename A>
     constexpr TVec4(const TVec4<A>& v) : v{ T(v[0]), T(v[1]), T(v[2]), T(v[3]) } {}
@@ -108,7 +110,7 @@ public:
 
 // ----------------------------------------------------------------------------------------
 
-template <typename T, typename = typename std::enable_if<std::is_arithmetic<T>::value >::type>
+template<typename T, typename = typename std::enable_if<std::is_arithmetic<T>::value>::type>
 using vec4 = details::TVec4<T>;
 
 using double4 = vec4<double>;

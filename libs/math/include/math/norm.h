@@ -31,7 +31,7 @@ inline uint16_t packUnorm16(float v) noexcept {
 }
 
 inline ushort4 packUnorm16(float4 v) noexcept {
-    return ushort4{packUnorm16(v.x), packUnorm16(v.y), packUnorm16(v.z), packUnorm16(v.w)};
+    return ushort4{ packUnorm16(v.x), packUnorm16(v.y), packUnorm16(v.z), packUnorm16(v.w) };
 }
 
 inline int16_t packSnorm16(float v) noexcept {
@@ -39,11 +39,11 @@ inline int16_t packSnorm16(float v) noexcept {
 }
 
 inline short2 packSnorm16(float2 v) noexcept {
-    return short2{packSnorm16(v.x), packSnorm16(v.y)};
+    return short2{ packSnorm16(v.x), packSnorm16(v.y) };
 }
 
 inline short4 packSnorm16(float4 v) noexcept {
-    return short4{packSnorm16(v.x), packSnorm16(v.y), packSnorm16(v.z), packSnorm16(v.w)};
+    return short4{ packSnorm16(v.x), packSnorm16(v.y), packSnorm16(v.z), packSnorm16(v.w) };
 }
 
 inline float unpackUnorm16(uint16_t v) noexcept {
@@ -51,7 +51,7 @@ inline float unpackUnorm16(uint16_t v) noexcept {
 }
 
 inline float4 unpackUnorm16(ushort4 v) noexcept {
-    return float4{unpackUnorm16(v.x), unpackUnorm16(v.y), unpackUnorm16(v.z), unpackUnorm16(v.w)};
+    return float4{ unpackUnorm16(v.x), unpackUnorm16(v.y), unpackUnorm16(v.z), unpackUnorm16(v.w) };
 }
 
 inline float unpackSnorm16(int16_t v) noexcept {
@@ -59,7 +59,7 @@ inline float unpackSnorm16(int16_t v) noexcept {
 }
 
 inline float4 unpackSnorm16(short4 v) noexcept {
-    return float4{unpackSnorm16(v.x), unpackSnorm16(v.y), unpackSnorm16(v.z), unpackSnorm16(v.w)};
+    return float4{ unpackSnorm16(v.x), unpackSnorm16(v.y), unpackSnorm16(v.z), unpackSnorm16(v.w) };
 }
 
 inline uint8_t packUnorm8(float v) noexcept {
@@ -67,7 +67,7 @@ inline uint8_t packUnorm8(float v) noexcept {
 }
 
 inline ubyte4 packUnorm8(float4 v) noexcept {
-    return ubyte4{packUnorm8(v.x), packUnorm8(v.y), packUnorm8(v.z), packUnorm8(v.w)};
+    return ubyte4{ packUnorm8(v.x), packUnorm8(v.y), packUnorm8(v.z), packUnorm8(v.w) };
 }
 
 inline int8_t packSnorm8(float v) noexcept {
@@ -75,7 +75,7 @@ inline int8_t packSnorm8(float v) noexcept {
 }
 
 inline byte4 packSnorm8(float4 v) noexcept {
-    return byte4{packSnorm8(v.x), packSnorm8(v.y), packSnorm8(v.z), packSnorm8(v.w)};
+    return byte4{ packSnorm8(v.x), packSnorm8(v.y), packSnorm8(v.z), packSnorm8(v.w) };
 }
 
 inline float unpackUnorm8(uint8_t v) noexcept {
@@ -83,7 +83,7 @@ inline float unpackUnorm8(uint8_t v) noexcept {
 }
 
 inline float4 unpackUnorm8(ubyte4 v) noexcept {
-    return float4{unpackUnorm8(v.x), unpackUnorm8(v.y), unpackUnorm8(v.z), unpackUnorm8(v.w)};
+    return float4{ unpackUnorm8(v.x), unpackUnorm8(v.y), unpackUnorm8(v.z), unpackUnorm8(v.w) };
 }
 
 inline float unpackSnorm8(int8_t v) noexcept {
@@ -91,7 +91,7 @@ inline float unpackSnorm8(int8_t v) noexcept {
 }
 
 inline float4 unpackSnorm8(byte4 v) noexcept {
-    return float4{unpackSnorm8(v.x), unpackSnorm8(v.y), unpackSnorm8(v.z), unpackSnorm8(v.w)};
+    return float4{ unpackSnorm8(v.x), unpackSnorm8(v.y), unpackSnorm8(v.z), unpackSnorm8(v.w) };
 }
 
 } // namespace math

@@ -38,6 +38,7 @@ template<typename U>
 inline constexpr U min(U a, U b) noexcept {
     return a < b ? a : b;
 }
+
 template<typename U>
 inline constexpr U max(U a, U b) noexcept {
     return a > b ? a : b;
@@ -58,7 +59,7 @@ inline constexpr U max(U a, U b) noexcept {
  * get all the functionality here.
  */
 
-template <template<typename T> class VECTOR, typename T>
+template<template<typename T> class VECTOR, typename T>
 class TVecAddOperators {
 public:
     /* compound assignment from a another vector of the same size but different
@@ -115,12 +116,13 @@ public:
      * but of a different element type.
      */
     template<typename RT>
-    friend inline constexpr VECTOR<T> MATH_PURE operator +(VECTOR<T> lv, const VECTOR<RT>& rv) {
+    friend inline constexpr VECTOR<T> MATH_PURE operator+(VECTOR<T> lv, const VECTOR<RT>& rv) {
         // don't pass lv by reference because we need a copy anyways
         return lv += rv;
     }
+
     template<typename RT>
-    friend inline constexpr VECTOR<T> MATH_PURE operator -(VECTOR<T> lv, const VECTOR<RT>& rv) {
+    friend inline constexpr VECTOR<T> MATH_PURE operator-(VECTOR<T> lv, const VECTOR<RT>& rv) {
         // don't pass lv by reference because we need a copy anyways
         return lv -= rv;
     }
@@ -131,11 +133,12 @@ public:
      * letting the compiler implicitly convert a scalar to a vector (assuming
      * the BASE<T> allows it).
      */
-    friend inline constexpr VECTOR<T> MATH_PURE operator +(VECTOR<T> lv, const VECTOR<T>& rv) {
+    friend inline constexpr VECTOR<T> MATH_PURE operator+(VECTOR<T> lv, const VECTOR<T>& rv) {
         // don't pass lv by reference because we need a copy anyways
         return lv += rv;
     }
-    friend inline constexpr VECTOR<T> MATH_PURE operator -(VECTOR<T> lv, const VECTOR<T>& rv) {
+
+    friend inline constexpr VECTOR<T> MATH_PURE operator-(VECTOR<T> lv, const VECTOR<T>& rv) {
         // don't pass lv by reference because we need a copy anyways
         return lv -= rv;
     }
@@ -238,7 +241,7 @@ public:
 template<template<typename T> class VECTOR, typename T>
 class TVecUnaryOperators {
 public:
-    constexpr VECTOR<T> operator -() const {
+    constexpr VECTOR<T> operator-() const {
         VECTOR<T> r{};
         VECTOR<T> const& rv(static_cast<VECTOR<T> const&>(*this));
         for (size_t i = 0; i < r.size(); i++) {
@@ -467,13 +470,14 @@ public:
     }
 
     friend inline constexpr VECTOR<T> MATH_PURE clamp(VECTOR<T> v, VECTOR<T> min, VECTOR<T> max) {
-        for (size_t i=0 ; i< v.size() ; i++) {
+        for (size_t i = 0; i < v.size(); i++) {
             v[i] = details::min(max[i], details::max(min[i], v[i]));
         }
         return v;
     }
 
-    friend inline constexpr VECTOR<T> MATH_PURE fma(const VECTOR<T>& lv, const VECTOR<T>& rv, VECTOR<T> a) {
+    friend inline constexpr VECTOR<T> MATH_PURE fma(const VECTOR<T>& lv, const VECTOR<T>& rv,
+            VECTOR<T> a) {
         for (size_t i = 0; i < lv.size(); i++) {
             a[i] += (lv[i] * rv[i]);
         }
@@ -504,7 +508,7 @@ public:
 
     friend inline constexpr T MATH_PURE min(const VECTOR<T>& v) {
         T r(std::numeric_limits<T>::max());
-        for (size_t i=0 ; i<v.size() ; i++) {
+        for (size_t i = 0; i < v.size(); i++) {
             r = min(r, v[i]);
         }
         return r;
