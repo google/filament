@@ -26,7 +26,12 @@ void computeShadingParams() {
 #endif
 
     shading_position = vertex_worldPosition;
-    shading_view = normalize(frameUniforms.cameraPosition - shading_position);
+    // TODO: simplify, force camera to be at origin
+    if (frameUniforms.isCameraAtOrigin > 0.0) {
+        shading_view = -normalize(shading_position);
+    } else {
+        shading_view = normalize(frameUniforms.worldOffset - shading_position);
+    }
 }
 
 /**

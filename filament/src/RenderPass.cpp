@@ -93,7 +93,7 @@ RenderPass::Command const* RenderPass::appendSortedCommands(CommandTypeFlags con
     Command* const curr = commands.grow(growBy);
 
     // we extract camera position/forward outside of the loop, because these are not cheap.
-    const float3 cameraPosition(camera.getPosition());
+    const float3 cameraPosition(camera.getAdjustedPosition());
     const float3 cameraForwardVector(camera.getForwardVector());
     auto work = [commandTypeFlags, curr, &soa, renderFlags, cameraPosition, cameraForwardVector]
             (uint32_t startIndex, uint32_t indexCount) {

@@ -460,8 +460,11 @@ void FView::prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& are
             .zf                 = camera->getCullingFar(),
             // exposure
             .ev100              = Exposure::ev100(*camera),
+            // world-space position of the API-level camera
+            .worldOffset        = camera->getPosition(),
             // world origin transform, use only for debugging
-            .worldOrigin        = worldOriginCamera
+            .worldOrigin        = worldOriginCamera,
+            .isCameraAtOrigin   = engine.debug.view.camera_at_origin
     };
     mCullingFrustum = FCamera::getFrustum(
             mCullingCamera->getCullingProjectionMatrix(),
@@ -627,8 +630,8 @@ void FView::prepareCamera(const CameraInfo& camera, const filament::Viewport& vi
     const float h = viewport.height;
     u.setUniform(offsetof(PerViewUib, resolution), float4{ w, h, 1.0f / w, 1.0f / h });
     u.setUniform(offsetof(PerViewUib, origin), float2{ viewport.left, viewport.bottom });
-
-    u.setUniform(offsetof(PerViewUib, cameraPosition), float3{camera.getPosition()});
+    u.setUniform(offsetof(PerViewUib, worldOffset), camera.worldOffset);
+    u.setUniform(offsetof(PerViewUib, isCameraAtOrigin), camera.isCameraAtOrigin ? 1.0f : 0.0f);
 }
 
 void FView::prepareSSAO(Handle<HwTexture> ssao) const noexcept {
