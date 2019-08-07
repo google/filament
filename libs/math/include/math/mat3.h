@@ -260,6 +260,18 @@ public:
     }
 
     /**
+     * Returns a matrix suitable for transforming normals
+     *
+     * @param m the transform applied to vertices
+     * @return a matrix to apply to normals
+     *
+     * @warning normals transformed by this matrix must be normalized
+     */
+    static constexpr TMat33 getTransformForNormals(const TMat33& m) noexcept {
+        return matrix::cof(m);
+    }
+
+    /**
      * Packs the tangent frame represented by the specified matrix into a quaternion.
      * Reflection is preserved by encoding it as the sign of the w component in the
      * resulting quaternion. Since -0 cannot always be represented on the GPU, this
