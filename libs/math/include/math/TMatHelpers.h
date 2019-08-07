@@ -108,7 +108,6 @@ constexpr MATRIX MATH_PURE gaussJordanInverse(const MATRIX& src) {
     return inverted;
 }
 
-
 //------------------------------------------------------------------------------
 // 2x2 matrix inverse is easy.
 template <typename MATRIX>
@@ -139,7 +138,6 @@ constexpr MATRIX MATH_PURE fastInverse2(const MATRIX& x) {
     inverted[1][1] =  a / det;
     return inverted;
 }
-
 
 //------------------------------------------------------------------------------
 // From the Wikipedia article on matrix inversion's section on fast 3x3
@@ -209,6 +207,195 @@ constexpr MATRIX MATH_PURE fastInverse3(const MATRIX& x) {
     return inverted;
 }
 
+
+//------------------------------------------------------------------------------
+// Determinant and cofactor
+
+// this is just a dummy matrix helper
+template<typename T, size_t ORDER>
+class Matrix {
+    T m[ORDER][ORDER];
+public:
+    constexpr auto operator[](size_t i) const noexcept { return m[i]; }
+    constexpr auto& operator[](size_t i) noexcept { return m[i]; }
+
+    static constexpr Matrix<T, ORDER - 1> submatrix(Matrix in, size_t row, size_t col) noexcept {
+        size_t colCount = 0, rowCount = 0;
+        Matrix<T, ORDER - 1> dest{};
+        for (size_t i = 0; i < ORDER; i++) {
+            if (i != row) {
+                colCount = 0;
+                for (size_t j = 0; j < ORDER; j++) {
+                    if (j != col) {
+                        dest[rowCount][colCount] = in[i][j];
+                        colCount++;
+                    }
+                }
+                rowCount++;
+            }
+        }
+        return dest;
+    }
+};
+
+template<typename T, size_t O>
+constexpr inline T minor(Matrix<T, O> src, size_t row, size_t col);
+
+template<typename T, size_t O>
+struct Determinant {
+    static constexpr T determinant(Matrix<T, O> in) {
+        T det = {};
+        for (size_t i = 0; i < O; i++) {
+            T m = minor<T, O>(in, 0, i);
+            T factor = (i % 2 == 1) ? T(-1) : T(1);
+            det += factor * in[0][i] * m;
+        }
+        return det;
+    }
+};
+
+template<typename T>
+struct Determinant<T, 2> {
+    static constexpr T determinant(Matrix<T, 2> in) {
+        return in[0][0] * in[1][1] - in[0][1] * in[1][0];
+    }
+};
+
+template<typename T>
+struct Determinant<T, 1> {
+    static constexpr T determinant(Matrix<T, 1> in) { return in[0][0]; }
+};
+
+template<typename T, size_t O>
+constexpr inline T minor(Matrix<T, O> src, size_t row, size_t col) {
+    return Determinant<T, O - 1>::determinant(Matrix<T, O>::submatrix(src, row, col));
+}
+
+template<typename MATRIX>
+constexpr MATRIX MATH_PURE cofactor(const MATRIX& m) {
+    typedef typename MATRIX::value_type T;
+
+    MATRIX out;
+    constexpr size_t order = MATRIX::NUM_COLS;
+
+    Matrix<T, order> in{};
+    for (size_t i = 0; i < order; i++) {
+        for (size_t j = 0; j < order; j++) {
+            in[i][j] = m[i][j];
+        }
+    }
+
+    for (size_t i = 0; i < order; i++) {
+        for (size_t j = 0; j < order; j++) {
+            T factor = ((i + j) % 2 == 1) ? T(-1) : T(1);
+            out[i][j] = minor<T, order>(in, i, j) * factor;
+        }
+    }
+    return out;
+}
+
+template <typename MATRIX>
+constexpr MATRIX MATH_PURE fastCofactor2(const MATRIX& m) {
+    typedef typename MATRIX::value_type T;
+
+    // Assuming the input matrix is:
+    // | a b |
+    // | c d |
+    //
+    // The cofactor are
+    // | d -c |
+    // | -b a |
+    //
+    // Importantly, our matrices are column-major!
+
+    MATRIX cof{};
+
+    const T a = m[0][0];
+    const T c = m[0][1];
+    const T b = m[1][0];
+    const T d = m[1][1];
+
+    cof[0][0] = d;
+    cof[0][1] = -b;
+    cof[1][0] = -c;
+    cof[1][1] = a;
+    return cof;
+}
+
+template <typename MATRIX>
+constexpr MATRIX MATH_PURE fastCofactor3(const MATRIX& m) {
+    typedef typename MATRIX::value_type T;
+
+    // Assuming the input matrix is:
+    // | a b c |
+    // | d e f |
+    // | g h i |
+    //
+    // The cofactor are
+    // | A B C |
+    // | D E F |
+    // | G H I |
+
+    // Where:
+    // A = (ei - fh), B = (fg - di), C = (dh - eg)
+    // D = (ch - bi), E = (ai - cg), F = (bg - ah)
+    // G = (bf - ce), H = (cd - af), I = (ae - bd)
+
+    // Importantly, our matrices are column-major!
+
+    MATRIX cof{};
+
+    const T a = m[0][0];
+    const T b = m[1][0];
+    const T c = m[2][0];
+    const T d = m[0][1];
+    const T e = m[1][1];
+    const T f = m[2][1];
+    const T g = m[0][2];
+    const T h = m[1][2];
+    const T i = m[2][2];
+
+    cof[0][0] = e * i - f * h;  // A
+    cof[0][1] = c * h - b * i;  // D
+    cof[0][2] = b * f - c * e;  // G
+    cof[1][0] = f * g - d * i;  // B
+    cof[1][1] = a * i - c * g;  // E
+    cof[1][2] = c * d - a * f;  // H
+    cof[2][0] = d * h - e * g;  // C
+    cof[2][1] = b * g - a * h;  // F
+    cof[2][2] = a * e - b * d;  // I
+
+    return cof;
+}
+
+
+/**
+ * Cofactor function which switches on the matrix size.
+ */
+template <typename MATRIX>
+inline constexpr MATRIX MATH_PURE cof(const MATRIX& matrix) {
+    static_assert(MATRIX::NUM_ROWS == MATRIX::NUM_COLS, "only square matrices");
+    return (MATRIX::NUM_ROWS == 2) ? fastCofactor2<MATRIX>(matrix) :
+           ((MATRIX::NUM_ROWS == 3) ? fastCofactor3<MATRIX>(matrix) :
+            cofactor<MATRIX>(matrix));
+}
+
+/**
+ * Determinant of a matrix
+ */
+template <typename MATRIX>
+inline constexpr typename MATRIX::value_type MATH_PURE det(const MATRIX& matrix) {
+    typedef typename MATRIX::value_type T;
+    static_assert(MATRIX::NUM_ROWS == MATRIX::NUM_COLS, "only square matrices");
+    constexpr unsigned int N = MATRIX::NUM_ROWS;
+    Matrix<T, N> in{};
+    for (size_t i = 0; i < N; i++) {
+        for (size_t j = 0; j < N; j++) {
+            in[i][j] = matrix[i][j];
+        }
+    }
+    return Determinant<typename MATRIX::value_type, MATRIX::NUM_COLS>::determinant(in);
+}
 
 /**
  * Inversion function which switches on the matrix size.
@@ -372,6 +559,16 @@ public:
     friend inline constexpr BASE<T> MATH_PURE operator *(const BASE<T>& lhs, const BASE<U>& rhs) {
         return matrix::multiply<BASE<T> >(lhs, rhs);
     }
+
+    friend inline constexpr BASE<T> MATH_PURE operator*(BASE<T> lv, T rv) {
+        // don't pass lv by reference because we need a copy anyways
+        return lv *= rv;
+    }
+
+    friend inline constexpr BASE<T> MATH_PURE operator/(BASE<T> lv, T rv) {
+        // don't pass lv by reference because we need a copy anyways
+        return lv /= rv;
+    }
 };
 
 /*
@@ -402,11 +599,17 @@ public:
     friend inline constexpr BASE<T> MATH_PURE inverse(const BASE<T>& matrix) {
         return matrix::inverse(matrix);
     }
+    friend inline constexpr BASE<T> MATH_PURE cof(const BASE<T>& matrix) {
+        return matrix::cof(matrix);
+    }
     friend inline constexpr BASE<T> MATH_PURE transpose(const BASE<T>& m) {
         return matrix::transpose(m);
     }
     friend inline constexpr T MATH_PURE trace(const BASE<T>& m) {
         return matrix::trace(m);
+    }
+    friend inline constexpr T MATH_PURE det(const BASE<T>& m) {
+        return matrix::det(m);
     }
 };
 
