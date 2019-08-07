@@ -39,7 +39,7 @@ vec4 getResolution() {
 
 /** @public-api */
 vec3 getWorldCameraPosition() {
-    return frameUniforms.worldOffset;
+    return frameUniforms.cameraPosition;
 }
 
 /** @public-api */

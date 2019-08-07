@@ -26,6 +26,10 @@ void computeShadingParams() {
 #endif
 
     shading_position = vertex_worldPosition;
+
+    // For precision purposes, the camera position implied by the view matrix is always at the
+    // origin, even though the user-level camera can be anywhere. To obtain the shading view vector,
+    // we compute (camera_position_at_origin - shading_position).
     shading_view = -normalize(shading_position);
 }
 

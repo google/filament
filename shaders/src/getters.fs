@@ -33,7 +33,7 @@ highp mat3 getWorldTangentFrame() {
 
 /** @public-api */
 highp vec3 getWorldPosition() {
-    return shading_position + frameUniforms.worldOffset;
+    return shading_position + frameUniforms.cameraPosition;
 }
 
 /** @public-api */

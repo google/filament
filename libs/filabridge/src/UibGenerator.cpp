@@ -46,7 +46,8 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             .add("lightFromWorldMatrix",    1, UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
             // view
             .add("resolution",              1, UniformInterfaceBlock::Type::FLOAT4, Precision::HIGH)
-            .add("worldOffset",             1, UniformInterfaceBlock::Type::FLOAT3, Precision::HIGH)
+            // camera
+            .add("cameraPosition",          1, UniformInterfaceBlock::Type::FLOAT3, Precision::HIGH)
             // time
             .add("time",                    1, UniformInterfaceBlock::Type::FLOAT, Precision::HIGH)
             // directional light
