@@ -162,6 +162,7 @@ struct CameraInfo {
     float zn;
     float zf;
     float ev100 = 0.0f;
+    math::float3 worldOffset;
     math::float3 const& getPosition() const noexcept { return model[3].xyz; }
     math::float3 getForwardVector() const noexcept { return normalize(-model[2].xyz); }
 

@@ -43,6 +43,11 @@ vec3 getWorldCameraPosition() {
 }
 
 /** @public-api */
+highp vec3 getWorldOffset() {
+    return frameUniforms.worldOffset;
+}
+
+/** @public-api */
 float getTime() {
     return frameUniforms.time;
 }
