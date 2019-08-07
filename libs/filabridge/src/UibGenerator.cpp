@@ -76,8 +76,11 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             // ibl max mip level
             .add("iblMaxMipLevel",          1, UniformInterfaceBlock::Type::FLOAT2)
             .add("padding0",                1, UniformInterfaceBlock::Type::FLOAT2)
+            // view
+            .add("worldOffset",             1, UniformInterfaceBlock::Type::FLOAT3)
             // bring size to 1 KiB
-            .add("padding1",                16, UniformInterfaceBlock::Type::FLOAT4)
+            .add("padding1",                1, UniformInterfaceBlock::Type::FLOAT)
+            .add("padding2",                15, UniformInterfaceBlock::Type::FLOAT4)
             .build();
     return uib;
 }
