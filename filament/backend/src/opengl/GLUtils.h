@@ -29,6 +29,9 @@ namespace GLUtils {
 
 void checkGLError(utils::io::ostream& out, const char* function, size_t line) noexcept;
 void checkFramebufferStatus(utils::io::ostream& out, const char* function, size_t line) noexcept;
+#ifdef _MSC_VER
+    #define __PRETTY_FUNCTION__ __FUNCSIG__
+#endif
 
 #ifdef NDEBUG
 #define CHECK_GL_ERROR(out)

@@ -181,9 +181,9 @@ inline LinearColor Color::toLinear(RgbType type, math::float3 color) {
 inline LinearColorA Color::toLinear(RgbaType type, math::float4 color) {
     switch (type) {
         case RgbaType::sRGB:
-            return Color::toLinear<ACCURATE>(color) * math::float4{color.a, color.a, color.a, 1};
+            return Color::toLinear<ACCURATE>(color) * math::float4{color.a, color.a, color.a, 1.0f};
         case RgbaType::LINEAR:
-            return color * math::float4{color.a, color.a, color.a, 1};
+            return color * math::float4{color.a, color.a, color.a, 1.0f};
         case RgbaType::PREMULTIPLIED_sRGB:
             return Color::toLinear<ACCURATE>(color);
         case RgbaType::PREMULTIPLIED_LINEAR:
