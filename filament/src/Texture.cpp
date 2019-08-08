@@ -192,19 +192,18 @@ static bool isColorRenderable(FEngine& engine, Texture::InternalFormat format) {
 }
 
 void FTexture::generateMipmaps(FEngine& engine) const noexcept {
-    // The OpenGL spec for GenerateMipmap stipulates that it returns INVALID_OPERATION unless
-    // the sized internal format is both color-renderable and texture-filterable.
-    if (!ASSERT_POSTCONDITION_NON_FATAL(isColorRenderable(engine, mFormat),
-            "Texture format must be color renderable")) {
+    const bool formatMipmappable = engine.getDriverApi().isTextureFormatMipmappable(mFormat);
+    if (!ASSERT_POSTCONDITION_NON_FATAL(formatMipmappable, "Texture format is not mipmappable.")) {
         return;
     }
+
     if (mLevelCount == 1 || (mWidth == 1 && mHeight == 1)) {
         return;
     }
 
     if (engine.getDriverApi().canGenerateMipmaps()) {
-         engine.getDriverApi().generateMipmaps(mHandle);
-         return;
+        engine.getDriverApi().generateMipmaps(mHandle);
+        return;
     }
 
     auto generateMipsForLayer = [this, &engine](uint16_t layer) {

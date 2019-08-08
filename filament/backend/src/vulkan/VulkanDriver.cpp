@@ -581,6 +581,19 @@ bool VulkanDriver::isTextureFormatSupported(TextureFormat format) {
     return info.optimalTilingFeatures != 0;
 }
 
+bool VulkanDriver::isTextureFormatMipmappable(backend::TextureFormat format) {
+    switch (format) {
+        case TextureFormat::DEPTH16:
+        case TextureFormat::DEPTH24:
+        case TextureFormat::DEPTH32F:
+        case TextureFormat::DEPTH24_STENCIL8:
+        case TextureFormat::DEPTH32F_STENCIL8:
+            return false;
+        default:
+            return isRenderTargetFormatSupported(format);
+    }
+}
+
 bool VulkanDriver::isRenderTargetFormatSupported(TextureFormat format) {
     assert(mContext.physicalDevice);
     VkFormat vkformat = getVkFormat(format);
