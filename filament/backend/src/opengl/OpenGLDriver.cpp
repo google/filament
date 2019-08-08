@@ -1673,6 +1673,21 @@ bool OpenGLDriver::isTextureFormatSupported(TextureFormat format) {
     return getInternalFormat(format) != 0;
 }
 
+bool OpenGLDriver::isTextureFormatMipmappable(TextureFormat format) {
+    // The OpenGL spec for GenerateMipmap stipulates that it returns INVALID_OPERATION unless
+    // the sized internal format is both color-renderable and texture-filterable.
+    switch (format) {
+        case TextureFormat::DEPTH16:
+        case TextureFormat::DEPTH24:
+        case TextureFormat::DEPTH32F:
+        case TextureFormat::DEPTH24_STENCIL8:
+        case TextureFormat::DEPTH32F_STENCIL8:
+            return false;
+        default:
+            return isRenderTargetFormatSupported(format);
+    }
+}
+
 bool OpenGLDriver::isRenderTargetFormatSupported(TextureFormat format) {
     // Supported formats per http://docs.gl/es3/glRenderbufferStorage, note that desktop OpenGL may
     // support more formats, but it requires querying GL_INTERNALFORMAT_SUPPORTED which is not

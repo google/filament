@@ -311,6 +311,8 @@ DECL_DRIVER_API_SYNCHRONOUS_2(backend::FenceStatus, wait, backend::FenceHandle, 
 
 DECL_DRIVER_API_SYNCHRONOUS_1(bool, isTextureFormatSupported, backend::TextureFormat, format)
 
+DECL_DRIVER_API_SYNCHRONOUS_1(bool, isTextureFormatMipmappable, backend::TextureFormat, format)
+
 DECL_DRIVER_API_SYNCHRONOUS_1(bool, isRenderTargetFormatSupported, backend::TextureFormat, format)
 
 DECL_DRIVER_API_SYNCHRONOUS_0(bool, isFrameTimeSupported)
