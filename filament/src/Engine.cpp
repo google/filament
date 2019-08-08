@@ -255,6 +255,7 @@ void FEngine::shutdown() {
      */
 
     mPostProcessManager.terminate(driver);  // free-up post-process manager resources
+    mResourceAllocator->terminate();
     mDFG->terminate();                      // free-up the DFG
     mRenderableManager.terminate();         // free-up all renderables
     mLightManager.terminate();              // free-up all lights
@@ -338,6 +339,8 @@ void FEngine::prepare() {
 }
 
 void FEngine::gc() {
+    // Note: this runs in a Job
+
     JobSystem& js = mJobSystem;
     auto parent = js.createJob();
     auto em = std::ref(mEntityManager);
