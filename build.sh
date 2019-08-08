@@ -225,7 +225,10 @@ function build_webgl_with_target {
                     filament-js/filament.js
             tar -rvf ../../filament-${lc_target}-web.tar -s /^filament-js/dist/ \
                     filament-js/filament.wasm
-            tar -rvf ../../filament-${lc_target}-web.tar docs
+            stat docs
+            if [[ $? == 0 ]]; then
+                tar -rvf ../../filament-${lc_target}-web.tar docs
+            fi
             cd -
             gzip -c ../filament-${lc_target}-web.tar > ../filament-${lc_target}-web.tgz
             rm ../filament-${lc_target}-web.tar
