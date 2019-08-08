@@ -49,7 +49,7 @@ public:
     using SamplerGroupInfo = std::array<std::vector<Sampler>, SAMPLER_BINDING_COUNT>;
     using UniformBlockInfo = std::array<utils::CString, UNIFORM_BINDING_COUNT>;
 
-    Program() noexcept = default;
+    Program() noexcept;
     Program(const Program& rhs) = delete;
     Program& operator=(const Program& rhs) = delete;
     Program(Program&& rhs) noexcept;
