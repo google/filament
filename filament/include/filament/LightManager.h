@@ -262,6 +262,11 @@ public:
          */
         Builder& castShadows(bool enable) noexcept;
 
+        /**
+         * Sets the shadow-map options for this light.
+         *
+         * @return This Builder, for chaining calls.
+         */
         Builder& shadowOptions(const ShadowOptions& options) noexcept;
 
         /**
@@ -674,6 +679,22 @@ public:
      * @param options  A ShadowOption structure
      */
     void setShadowOptions(Instance i, ShadowOptions const& options) noexcept;
+
+    /**
+     * Whether this Light casts shadows (disabled by default)
+     *
+     * @param shadowCaster Enables or disables casting shadows from this Light.
+     *
+     * @warning
+     * - Only a Type.DIRECTIONAL or Type.SUN light can cast shadows
+     */
+    void setShadowCaster(Instance i, bool shadowCaster) noexcept;
+
+    /**
+     * returns whether this light casts shadows.
+     * @param i     Instance of the component obtained from getInstance().
+     */
+    bool isShadowCaster(Instance i) const noexcept;
 };
 
 } // namespace filament

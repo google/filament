@@ -276,7 +276,7 @@ void FLightManager::setFalloff(Instance i, float falloff) noexcept {
     if (i && !isDirectionalLight(i)) {
         float sqFalloff = falloff * falloff;
         SpotParams& spotParams = manager[i].spotParams;
-        manager[i].squaredFallOffInv = sqFalloff ? (1 / sqFalloff) : 0;
+        manager[i].squaredFallOffInv = sqFalloff > 0.0f ? (1 / sqFalloff) : 0;
         spotParams.radius = falloff;
     }
 }
@@ -314,26 +314,31 @@ void FLightManager::setSpotLightCone(Instance i, float inner, float outer) noexc
 }
 
 void FLightManager::setSunAngularRadius(Instance i, float angularRadius) noexcept {
-    auto& manager = mManager;
     if (i && isSunLight(i)) {
         angularRadius = clamp(angularRadius, 0.25f, 20.0f);
-        manager[i].sunAngularRadius = angularRadius * float(M_PI / 180.0);
+        mManager[i].sunAngularRadius = angularRadius * float(M_PI / 180.0);
     }
 }
 
 void FLightManager::setSunHaloSize(Instance i, float haloSize) noexcept {
-    auto& manager = mManager;
     if (i && isSunLight(i)) {
-        manager[i].sunHaloSize = haloSize;
+        mManager[i].sunHaloSize = haloSize;
     }
 }
 
 void FLightManager::setSunHaloFalloff(Instance i, float haloFalloff) noexcept {
-    auto& manager = mManager;
     if (i && isSunLight(i)) {
-        manager[i].sunHaloFalloff = haloFalloff;
+        mManager[i].sunHaloFalloff = haloFalloff;
     }
 }
+
+void FLightManager::setShadowCaster(Instance i, bool shadowCaster) noexcept {
+    if (i) {
+        LightType& lightType = mManager[i].lightType;
+        lightType.shadowCaster = shadowCaster;
+    }
+}
+
 
 } // namespace details
 
@@ -435,6 +440,14 @@ const LightManager::ShadowOptions& LightManager::getShadowOptions(Instance i) co
 
 void LightManager::setShadowOptions(Instance i, ShadowOptions const& options) noexcept {
     upcast(this)->setShadowOptions(i, options);
+}
+
+bool LightManager::isShadowCaster(Instance i) const noexcept {
+    return upcast(this)->isShadowCaster(i);
+}
+
+void LightManager::setShadowCaster(Instance i, bool castShadows) noexcept {
+    upcast(this)->setShadowCaster(i, castShadows);
 }
 
 } // namespace filament

@@ -87,6 +87,7 @@ public:
     UTILS_NOINLINE void setSpotLightCone(Instance i, float inner, float outer) noexcept;
     UTILS_NOINLINE void setIntensity(Instance i, float intensity) noexcept;
     UTILS_NOINLINE void setFalloff(Instance i, float radius) noexcept;
+    UTILS_NOINLINE void setShadowCaster(Instance i, bool shadowCaster) noexcept;
     UTILS_NOINLINE void setSunAngularRadius(Instance i, float angularRadius) noexcept;
     UTILS_NOINLINE void setSunHaloSize(Instance i, float haloSize) noexcept;
     UTILS_NOINLINE void setSunHaloFalloff(Instance i, float haloFalloff) noexcept;

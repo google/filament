@@ -151,6 +151,7 @@ private:
     filament::math::float3 mSunlightDirection = {0.6, -1.0, -0.8};
     bool mEnableWireframe = false;
     bool mEnableSunlight = true;
+    bool mEnableShadows = true;
     bool mEnableDithering = true;
     bool mEnablePrepass = true;
     bool mEnableFxaa = true;
@@ -391,6 +392,7 @@ void SimpleViewer::updateUserInterface() {
         ImGui::SliderFloat("Sun intensity", &mSunlightIntensity, 50000.0, 150000.0f);
         ImGuiExt::DirectionWidget("Sun direction", mSunlightDirection.v);
         ImGui::Checkbox("Enable sunlight", &mEnableSunlight);
+        ImGui::Checkbox("Enable shadows", &mEnableShadows);
     }
 
     if (mEnableSunlight) {
@@ -399,6 +401,7 @@ void SimpleViewer::updateUserInterface() {
         lm.setIntensity(sun, mSunlightIntensity);
         lm.setDirection(sun, normalize(mSunlightDirection));
         lm.setColor(sun, mSunlightColor);
+        lm.setShadowCaster(sun, mEnableShadows);
     } else {
         mScene->remove(mSunlight);
     }
