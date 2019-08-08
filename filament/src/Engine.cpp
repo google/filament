@@ -16,6 +16,8 @@
 
 #include "details/Engine.h"
 
+#include "MaterialParser.h"
+
 #include "details/DFG.h"
 #include "details/VertexBuffer.h"
 #include "details/Fence.h"
@@ -32,14 +34,14 @@
 #include "details/Texture.h"
 #include "details/View.h"
 
+#include "fg/ResourceAllocator.h"
+
 #include "private/backend/Program.h"
 
 #include <private/filament/SibGenerator.h>
 
 #include <filament/Exposure.h>
 #include <filament/MaterialEnums.h>
-
-#include <MaterialParser.h>
 
 #include <filaflat/ShaderBuilder.h>
 
@@ -158,6 +160,8 @@ void FEngine::init() {
     mCommandStream = CommandStream(*mDriver, mCommandBufferQueue.getCircularBuffer());
     DriverApi& driverApi = getDriverApi();
 
+    mResourceAllocator = new fg::ResourceAllocator(driverApi);
+
     // Parse all post process shaders now, but create them lazily
     mPostProcessParser = std::make_unique<MaterialParser>(mBackend,
             MATERIALS_POSTPROCESS_DATA, MATERIALS_POSTPROCESS_SIZE);
@@ -228,6 +232,7 @@ void FEngine::init() {
 
 FEngine::~FEngine() noexcept {
     ASSERT_DESTRUCTOR(mTerminated, "Engine destroyed but not terminated!");
+    delete mResourceAllocator;
     delete mDriver;
     if (mOwnPlatform) {
         DefaultPlatform::destroy((DefaultPlatform**)&mPlatform);

@@ -54,6 +54,7 @@ struct RenderTarget;
 struct RenderTargetResource;
 struct PassNode;
 struct Alias;
+class ResourceAllocator;
 } // namespace fg
 
 class FrameGraphPassResources;
@@ -128,7 +129,7 @@ public:
         fg::PassNode& mPass;
     };
 
-    FrameGraph();
+    explicit FrameGraph(fg::ResourceAllocator& resourceAllocator);
     FrameGraph(FrameGraph const&) = delete;
     FrameGraph& operator = (FrameGraph const&) = delete;
     ~FrameGraph();
@@ -213,6 +214,7 @@ private:
     friend struct fg::PassNode;
     friend struct fg::RenderTarget;
     friend struct fg::RenderTargetResource;
+    friend struct fg::Resource;
 
     template <typename T>
     struct Deleter {
@@ -249,7 +251,11 @@ private:
 
     void executeInternal(fg::PassNode const& node, backend::DriverApi& driver) noexcept;
 
+    fg::ResourceAllocator& getResourceAllocator() noexcept { return mResourceAllocator; }
+
     void reset() noexcept;
+
+    fg::ResourceAllocator& mResourceAllocator;
 
     details::LinearAllocatorArena mArena;
     Vector<fg::PassNode> mPassNodes;                    // list of frame graph passes

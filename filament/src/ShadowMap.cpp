@@ -72,7 +72,8 @@ void ShadowMap::fillWithDebugPattern(backend::DriverApi& driverApi) const noexce
     size_t size = dim * dim;
     uint8_t* ptr = (uint8_t*)malloc(size);
     driverApi.update2DImage(mShadowMapHandle, 0, 0, 0, dim, dim, {
-        ptr, size, PixelDataFormat::DEPTH_COMPONENT, PixelDataType::UBYTE, (BufferDescriptor::Callback)&free
+        ptr, size, PixelDataFormat::DEPTH_COMPONENT, PixelDataType::UBYTE,
+        [] (void* buffer, size_t, void*) { free(buffer); }
     });
     for (size_t y = 0; y < dim; ++y) {
         for (size_t x = 0; x < dim; ++x) {

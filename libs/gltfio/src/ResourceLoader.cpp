@@ -287,7 +287,7 @@ bool ResourceLoader::createTextures(details::FFilamentAsset* asset) const {
                 size_t(w * h * 4),
                 Texture::Format::RGBA,
                 Texture::Type::UBYTE,
-                (Texture::PixelBufferDescriptor::Callback) &free);
+                [] (void* buffer, size_t, void*) { free(buffer); });
 
         tex->setImage(*mConfig.engine, 0, std::move(pbd));
         tex->generateMipmaps(*mConfig.engine);

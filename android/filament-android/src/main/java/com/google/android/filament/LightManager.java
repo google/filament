@@ -262,6 +262,14 @@ public class LightManager {
         return nGetSunHaloFalloff(mNativeObject, i);
     }
 
+    public void setShadowCaster(@EntityInstance int i, boolean shadowCaster) {
+        nSetShadowCaster(mNativeObject, i, shadowCaster);
+    }
+
+    public boolean isShadowCaster(@EntityInstance int i) {
+        return nIsShadowCaster(mNativeObject, i);
+    }
+
     private static native boolean nHasComponent(long nativeLightManager, int entity);
     private static native int nGetInstance(long nativeLightManager, int entity);
     private static native void nDestroy(long nativeLightManager, int entity);
@@ -283,7 +291,6 @@ public class LightManager {
     private static native void nBuilderHaloSize(long nativeBuilder, float haloSize);
     private static native void nBuilderHaloFalloff(long nativeBuilder, float haloFalloff);
 
-
     private static native int nGetType(long nativeLightManager, int i);
     private static native void nSetPosition(long nativeLightManager, int i, float x, float y, float z);
     private static native void nGetPosition(long nativeLightManager, int i, float[] out);
@@ -303,4 +310,6 @@ public class LightManager {
     private static native float nGetSunHaloSize(long nativeLightManager, int i);
     private static native void nSetSunHaloFalloff(long nativeLightManager, int i, float haloFalloff);
     private static native float nGetSunHaloFalloff(long nativeLightManager, int i);
+    private static native void nSetShadowCaster(long nativeLightManager, int i, boolean shadowCaster);
+    private static native boolean nIsShadowCaster(long nativeLightManager, int i);
 }

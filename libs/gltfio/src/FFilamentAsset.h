@@ -32,6 +32,7 @@
 #include <math/mat4.h>
 
 #include <utils/Entity.h>
+#include <utils/NameComponentManager.h>
 
 #include <cgltf.h>
 
@@ -55,7 +56,8 @@ struct Skin {
 };
 
 struct FFilamentAsset : public FilamentAsset {
-    FFilamentAsset(filament::Engine* engine) : mEngine(engine) {}
+    FFilamentAsset(filament::Engine* engine, utils::NameComponentManager* names) :
+            mEngine(engine), mNameManager(names) {}
 
     ~FFilamentAsset() {
         releaseSourceData();
@@ -123,6 +125,14 @@ struct FFilamentAsset : public FilamentAsset {
         return mBoundingBox;
     }
 
+    const char* getName(utils::Entity entity) const noexcept {
+        if (mNameManager == nullptr) {
+            return nullptr;
+        }
+        auto nameInstance = mNameManager->getInstance(entity);
+        return nameInstance ? mNameManager->getName(nameInstance) : nullptr;
+    }
+
     Animator* getAnimator() noexcept {
         if (!mAnimator) {
             mAnimator = new Animator(this);
@@ -171,6 +181,7 @@ struct FFilamentAsset : public FilamentAsset {
     }
 
     filament::Engine* mEngine;
+    utils::NameComponentManager* mNameManager;
     std::vector<uint8_t> mGlbData;
     std::vector<utils::Entity> mEntities;
     std::vector<filament::MaterialInstance*> mMaterialInstances;

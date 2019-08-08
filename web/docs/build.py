@@ -514,7 +514,7 @@ if __name__ == "__main__":
     copy_built_file('web/samples/ao*.ktx')
     copy_built_file('web/samples/albedo*.ktx')
     copy_built_file('web/samples/pillars_2k/pillars_2k_*.ktx', 'pillars_2k')
-    copy_built_file('web/samples/syferfontein_18d_clear_2k/syferfontein_18d_clear_2k_*.ktx', 'syferfontein_18d_clear_2k')
+    copy_built_file('web/samples/venetian_crossroads/venetian_crossroads*.ktx', 'venetian_crossroads')
     build_filamat('triangle')
     build_filamat('plastic')
     build_filamat('textured')

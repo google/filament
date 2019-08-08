@@ -205,7 +205,7 @@ int main(int argc, char** argv) {
         app.asset->releaseSourceData();
 
         // Add the renderables to the scene.
-        app.viewer->setAsset(app.asset, app.names, !app.actualSize);
+        app.viewer->setAsset(app.asset, !app.actualSize);
 
         auto ibl = FilamentApp::get().getIBL();
         if (ibl) {

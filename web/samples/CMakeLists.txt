@@ -150,7 +150,6 @@ function(add_envmap SOURCE TARGET)
         DEPENDS cmgen)
 endfunction()
 
-add_envmap("third_party/environments/syferfontein_18d_clear_2k.hdr" "syferfontein_18d_clear_2k")
 add_envmap("third_party/environments/venetian_crossroads_2k.hdr" "venetian_crossroads_2k")
 add_envmap("third_party/environments/pillars_2k.hdr" "pillars_2k")
 

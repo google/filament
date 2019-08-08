@@ -312,6 +312,7 @@ MetalTexture::MetalTexture(MetalContext& context, backend::SamplerType target, u
         descriptor.usage = getMetalTextureUsage(usage);
         descriptor.storageMode = getMetalStorageMode(usage);
         texture = [context.device newTextureWithDescriptor:descriptor];
+        ASSERT_POSTCONDITION(texture != nil, "Could not create Metal texture. Out of memory?");
     } else if (target == backend::SamplerType::SAMPLER_CUBEMAP) {
         ASSERT_POSTCONDITION(!multisampled, "Multisampled cubemap faces not supported.");
         ASSERT_POSTCONDITION(width == height, "Cubemap faces must be square.");
@@ -322,6 +323,7 @@ MetalTexture::MetalTexture(MetalContext& context, backend::SamplerType target, u
         descriptor.usage = getMetalTextureUsage(usage);
         descriptor.storageMode = getMetalStorageMode(usage);
         texture = [context.device newTextureWithDescriptor:descriptor];
+        ASSERT_POSTCONDITION(texture != nil, "Could not create Metal texture. Out of memory?");
     } else if (target == backend::SamplerType::SAMPLER_EXTERNAL) {
         // If we're using external textures (CVPixelBufferRefs), we don't need to make any texture
         // allocations.

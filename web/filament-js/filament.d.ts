@@ -202,6 +202,8 @@ export class Renderer {
 
 export class Material {
     public createInstance(): MaterialInstance;
+    public getDefaultInstance(): MaterialInstance;
+    public getName(): string;
 }
 
 export class Frustum {
@@ -241,6 +243,11 @@ export class Camera {
 
 export class IndirectLight {
     public setIntensity(intensity: number);
+    public getIntensity(): number;
+    public setRotation(value: mat3);
+    public getRotation(): mat3;
+    public getDirectionEstimate(): float3;
+    public getColorEstimate(direction: float3): float4;
 }
 
 export class IcoSphere {
@@ -574,6 +581,15 @@ export enum Texture$Usage {
     DEFAULT,
     COLOR_ATTACHMENT,
     DEPTH_ATTACHMENT,
+}
+
+export enum Texture$CubemapFace {
+    POSITIVE_X,
+    NEGATIVE_X,
+    POSITIVE_Y,
+    NEGATIVE_Y,
+    POSITIVE_Z,
+    NEGATIVE_Z,
 }
 
 export enum RenderTarget$AttachmentPoint {

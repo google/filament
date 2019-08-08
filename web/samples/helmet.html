@@ -23,7 +23,7 @@ canvas     { position: absolute; width: 100%; height: 100%; }
 <script src="https://unpkg.com/gltumble"></script>
 <script>
 
-const env = 'syferfontein_18d_clear_2k';
+const env = 'venetian_crossroads_2k';
 const ibl_url = `${env}/${env}_ibl.ktx`;
 const sky_url = `${env}/${env}_skybox.ktx`;
 const mesh_url = 'helmet.gltf';
@@ -42,24 +42,28 @@ class App {
         const scene = this.scene = engine.createScene();
         this.trackball = new Trackball(canvas, {startSpin: 0.035});
 
+        const indirectLight = this.ibl = engine.createIblFromKtx(ibl_url);
+        this.scene.setIndirectLight(indirectLight);
+
+        const iblDirection = indirectLight.getDirectionEstimate();
+        const iblColor = indirectLight.getColorEstimate(iblDirection);
+
+        indirectLight.setIntensity(30000);
+
+        const skybox = engine.createSkyFromKtx(sky_url);
+        this.scene.setSkybox(skybox);
+
         const sunlight = Filament.EntityManager.get().create();
         Filament.LightManager.Builder(LightType.SUN)
-            .color([0.98, 0.92, 0.89])
-            .intensity(100000.0)
-            .direction([0.6, -1.0, -0.8])
+            .color(iblColor.slice(0, 3))
+            .intensity(iblColor[3])
+            .direction(iblDirection)
             .sunAngularRadius(1.9)
             .castShadows(true)
             .sunHaloSize(10.0)
             .sunHaloFalloff(80.0)
             .build(engine, sunlight);
         this.scene.addEntity(sunlight);
-
-        const indirectLight = this.ibl = engine.createIblFromKtx(ibl_url);
-        this.scene.setIndirectLight(indirectLight);
-        indirectLight.setIntensity(100000);
-
-        const skybox = engine.createSkyFromKtx(sky_url);
-        this.scene.setSkybox(skybox);
 
         const loader = engine.createAssetLoader();
         const asset = this.asset = loader.createAssetFromJson(mesh_url);
@@ -73,10 +77,24 @@ class App {
         const onDone = (finalize) => {
             messages.innerText += 'Finalizing...\n'
             setTimeout(() => {
+
+                // Decode the textures using stb.
                 finalize();
                 loader.delete();
+
+                // Enable shadows on every renderable.
                 const entities = asset.getEntities();
+                const rm = engine.getRenderableManager();
+                for (let i = 0; i < entities.size(); i++) {
+                    const instance = rm.getInstance(entities.get(i));
+                    rm.setCastShadows(instance, true);
+                    instance.delete();
+                }
+
+                // Add renderables to the scene.
                 scene.addEntities(entities);
+
+                // Hide the HUD.
                 messages.remove();
             }, 1);
         };

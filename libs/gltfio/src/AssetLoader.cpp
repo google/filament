@@ -203,7 +203,7 @@ void FAssetLoader::createAsset(const cgltf_data* srcAsset) {
         }
     }
 
-    mResult = new FFilamentAsset(mEngine);
+    mResult = new FFilamentAsset(mEngine, mNameManager);
     mResult->mSourceAsset = srcAsset;
     mResult->acquireSourceAsset();
 
