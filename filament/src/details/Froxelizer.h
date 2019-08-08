@@ -145,11 +145,11 @@ public:
 
     struct FroxelEntry {
         union {
-            uint32_t u32;
+            uint32_t u32 = 0;
             struct {
-                uint16_t offset = 0;
+                uint16_t offset;
                 union {
-                    uint8_t count[2] = { 0, 0 };
+                    uint8_t count[2];
                     struct {
                         uint8_t pointLightCount;
                         uint8_t spotLightCount;
