@@ -133,11 +133,9 @@ function(add_envmap SOURCE TARGET)
 
     set(target_skyboxes ${target_skyboxes} ${target_skybox} ${target_skybox_tiny} PARENT_SCOPE)
 
-    set(target_envmaps ${target_envmaps}
-            ${target_envmap} ${target_envmap_etc} ${target_envmap_s3tc} PARENT_SCOPE)
+    set(target_envmaps ${target_envmaps} ${target_envmap} PARENT_SCOPE)
 
-    add_custom_command(OUTPUT ${target_skybox} ${target_skybox_tiny}
-                ${target_envmap} ${target_envmap_etc} ${target_envmap_s3tc}
+    add_custom_command(OUTPUT ${target_skybox} ${target_skybox_tiny} ${target_envmap}
 
         # Create a low-resolution skybox, then rename it.
         COMMAND cmgen ${CMGEN_ARGS_TINY} ${source_envmap}

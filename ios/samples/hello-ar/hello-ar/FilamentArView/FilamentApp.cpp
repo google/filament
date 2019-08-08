@@ -196,8 +196,8 @@ void FilamentApp::setupFilament() {
 }
 
 void FilamentApp::setupIbl() {
-    image::KtxBundle* iblBundle = new image::KtxBundle(RESOURCES_VENETIAN_CROSSROADS_IBL_DATA,
-                                                       RESOURCES_VENETIAN_CROSSROADS_IBL_SIZE);
+    image::KtxBundle* iblBundle = new image::KtxBundle(RESOURCES_VENETIAN_CROSSROADS_2K_IBL_DATA,
+                                                       RESOURCES_VENETIAN_CROSSROADS_2K_IBL_SIZE);
     float3 harmonics[9];
     iblBundle->getSphericalHarmonics(harmonics);
     app.iblTexture = image::KtxUtility::createTexture(engine, iblBundle, false);
