@@ -27,6 +27,12 @@ if [[ ! -e "${cmgen_path}" ]]; then
   exit 1
 fi
 
+# cmgen consumes an HDR environment map and generates two mipmapped KTX files (IBL and skybox)
+"${cmgen_path}" \
+    --deploy="${PROJECT_DIR}/generated" \
+    --format=ktx --size=256 --extract-blur=0.1 \
+    "${PROJECT_DIR}/../../../third_party/environments/venetian_crossroads_2k.hdr"
+
 # The resgen tool generates an assembly file, resources.apple.S that gets compiled and linked
 # into the final binary. It contains all the resources consumed by the app.
 "${resgen_path}" \
