@@ -141,8 +141,6 @@ static void printUsage(const char* name) {
             "    MATINFO [options] <material file>\n"
             "\n"
             "Options:\n"
-            "   --analyze-spirv=[index], -a\n"
-            "       Print annotated GLSL for the nth shader (0 is the first Vulkan shader)\n\n"
             "   --help, -h\n"
             "       Print this message\n\n"
             "   --print-glsl=[index], -g\n"
@@ -157,6 +155,8 @@ static void printUsage(const char* name) {
             "       Dump binary SPIRV for the nth Vulkan shader to 'out.spv'\n\n"
             "   --license\n"
             "       Print copyright and license information\n\n"
+            "   --analyze-spirv=[index], -a\n"
+            "       Print annotated GLSL for the nth shader (0 is the first Vulkan shader)\n\n"
     );
 
     const std::string from("MATINFO");
@@ -918,7 +918,6 @@ static void analyzeSpirv(const std::vector<uint32_t>& spirv, const char* disasse
     const regex globalDecoratorPattern("OpDecorate (\\%[A-Za-z_0-9]+) RelaxedPrecision");
     const regex typeDefinitionPattern("(\\%[A-Za-z_0-9]+) = OpType[A-Z][a-z]+");
     const regex memberDecoratorPattern("OpMemberDecorate (\\%[A-Za-z_0-9]+) ([0-9]+) RelaxedPrecision");
-    const regex structDefinitionPattern("(\\%[A-Za-z_0-9]+) = OpTypeStruct");
     const regex lineDirectivePattern("OpLine (\\%[A-Za-z_0-9]+) ([0-9]+)");
     const regex binaryFunctionPattern("(\\%[A-Za-z_0-9]+).*(\\%[A-Za-z_0-9]+)");
     const regex operandPattern("(\\%[A-Za-z_0-9]+)");
