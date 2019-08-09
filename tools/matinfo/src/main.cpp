@@ -36,6 +36,10 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <map>
+#include <regex>
+#include <set>
+#include <sstream>
 
 using namespace filaflat;
 using namespace filamat;
@@ -118,6 +122,7 @@ struct Config {
     bool printMetal = false;
     bool transpile = false;
     bool binary = false;
+    bool analyze = false;
     uint64_t shaderIndex;
 };
 
@@ -132,24 +137,26 @@ static void printUsage(const char* name) {
     std::string execName(utils::Path(name).getName());
     std::string usage(
             "MATINFO prints information about material files compiled with matc\n"
-                    "Usage:\n"
-                    "    MATINFO [options] <material file>\n"
-                    "\n"
-                    "Options:\n"
-                    "   --help, -h\n"
-                    "       Print this message\n\n"
-                    "   --print-glsl=[index], -g\n"
-                    "       Print GLSL for the nth shader (0 is the first OpenGL shader)\n\n"
-                    "   --print-spirv=[index], -s\n"
-                    "       Print disasm for the nth shader (0 is the first Vulkan shader)\n\n"
-                    "   --print-metal=[index], -m\n"
-                    "       Print Metal Shading Language for the nth shader (0 is the first Metal shader)\n\n"
-                    "   --print-vkglsl=[index], -v\n"
-                    "       Print the nth Vulkan shader transpiled into GLSL\n\n"
-                    "   --dump-binary=[index], -b\n"
-                    "       Dump binary SPIRV for the nth Vulkan shader to 'out.spv'\n\n"
-                    "   --license\n"
-                    "       Print copyright and license information\n\n"
+            "Usage:\n"
+            "    MATINFO [options] <material file>\n"
+            "\n"
+            "Options:\n"
+            "   --analyze-spirv=[index], -a\n"
+            "       Print annotated GLSL for the nth shader (0 is the first Vulkan shader)\n\n"
+            "   --help, -h\n"
+            "       Print this message\n\n"
+            "   --print-glsl=[index], -g\n"
+            "       Print GLSL for the nth shader (0 is the first OpenGL shader)\n\n"
+            "   --print-spirv=[index], -s\n"
+            "       Print disasm for the nth shader (0 is the first Vulkan shader)\n\n"
+            "   --print-metal=[index], -m\n"
+            "       Print Metal Shading Language for the nth shader (0 is the first Metal shader)\n\n"
+            "   --print-vkglsl=[index], -v\n"
+            "       Print the nth Vulkan shader transpiled into GLSL\n\n"
+            "   --dump-binary=[index], -b\n"
+            "       Dump binary SPIRV for the nth Vulkan shader to 'out.spv'\n\n"
+            "   --license\n"
+            "       Print copyright and license information\n\n"
     );
 
     const std::string from("MATINFO");
@@ -168,13 +175,14 @@ static void license() {
 static int handleArguments(int argc, char* argv[], Config* config) {
     static constexpr const char* OPTSTR = "hlg:s:v:b:";
     static const struct option OPTIONS[] = {
-            { "help",         no_argument,       0, 'h' },
-            { "license",      no_argument,       0, 'l' },
-            { "print-glsl",   required_argument, 0, 'g' },
-            { "print-spirv",  required_argument, 0, 's' },
-            { "print-vkglsl", required_argument, 0, 'v' },
-            { "print-metal",  required_argument, 0, 'm' },
-            { "dump-binary",  required_argument, 0, 'b' },
+            { "help",          no_argument,       0, 'h' },
+            { "license",       no_argument,       0, 'l' },
+            { "analyze-spirv", required_argument, 0, 'a' },
+            { "print-glsl",    required_argument, 0, 'g' },
+            { "print-spirv",   required_argument, 0, 's' },
+            { "print-vkglsl",  required_argument, 0, 'v' },
+            { "print-metal",   required_argument, 0, 'm' },
+            { "dump-binary",   required_argument, 0, 'b' },
             { 0, 0, 0, 0 }  // termination of the option list
     };
 
@@ -203,6 +211,11 @@ static int handleArguments(int argc, char* argv[], Config* config) {
                 config->printSPIRV = true;
                 config->shaderIndex = static_cast<uint64_t>(std::stoi(arg));
                 config->transpile = true;
+                break;
+            case 'a':
+                config->printSPIRV = true;
+                config->shaderIndex = static_cast<uint64_t>(std::stoi(arg));
+                config->analyze = true;
                 break;
             case 'b':
                 config->printSPIRV = true;
@@ -852,11 +865,10 @@ static bool printMaterialInfo(const ChunkContainer& container) {
     return true;
 }
 
+// Consumes SPIRV binary and produces a GLSL-ES string.
 static void transpileSpirv(const std::vector<uint32_t>& spirv) {
     using namespace spirv_cross;
 
-    // We assume that users of the tool are interested in reading GLSL-ES, since our primary
-    // target platform is Android.
     CompilerGLSL::Options emitOptions;
     emitOptions.es = true;
     emitOptions.vulkan_semantics = true;
@@ -866,15 +878,169 @@ static void transpileSpirv(const std::vector<uint32_t>& spirv) {
     std::cout << glslCompiler.compile();
 }
 
-static void disassembleSpirv(const std::vector<uint32_t>& spirv) {
+// Consumes SPIRV binary and produces an ordered map from "line number" to "GLSL string" where
+// the line number is determined by line directives, and the GLSL string is one or more lines of
+// transpiled GLSL-ES.
+static std::map<int, std::string> transpileSpirvToLines(const std::vector<uint32_t>& spirv) {
+    using namespace spirv_cross;
+
+    CompilerGLSL::Options emitOptions;
+    emitOptions.es = true;
+    emitOptions.vulkan_semantics = true;
+    emitOptions.emit_line_directives = true;
+
+    CompilerGLSL glslCompiler(move(spirv));
+    glslCompiler.set_common_options(emitOptions);
+    std::string transpiled = glslCompiler.compile();
+
+    std::map<int, std::string> result;
+    const std::regex lineDirectivePattern("\\#line ([0-9]+)");
+
+    std::istringstream ss(glslCompiler.compile());
+    std::string glslCodeline;
+    int currentLineNumber = -1;
+    while (std::getline(ss, glslCodeline, '\n')) {
+        std::smatch matchResult;
+        if (std::regex_search(glslCodeline, matchResult, lineDirectivePattern)) {
+            currentLineNumber = stoi(matchResult[1].str());
+        } else {
+            result[currentLineNumber] += glslCodeline + "\n";
+        }
+    }
+
+    return result;
+}
+
+static void analyzeSpirv(const std::vector<uint32_t>& spirv, const char* disassembly) {
+    using namespace std;
+
+    const map<int, string> glsl = transpileSpirvToLines(spirv);
+    const regex globalDecoratorPattern("OpDecorate (\\%[A-Za-z_0-9]+) RelaxedPrecision");
+    const regex typeDefinitionPattern("(\\%[A-Za-z_0-9]+) = OpType[A-Z][a-z]+");
+    const regex memberDecoratorPattern("OpMemberDecorate (\\%[A-Za-z_0-9]+) ([0-9]+) RelaxedPrecision");
+    const regex structDefinitionPattern("(\\%[A-Za-z_0-9]+) = OpTypeStruct");
+    const regex lineDirectivePattern("OpLine (\\%[A-Za-z_0-9]+) ([0-9]+)");
+    const regex binaryFunctionPattern("(\\%[A-Za-z_0-9]+).*(\\%[A-Za-z_0-9]+)");
+    const regex operandPattern("(\\%[A-Za-z_0-9]+)");
+    const regex operatorPattern("Op[A-Z][A-Za-z]+");
+    const set<string> ignoredOperators = { "OpStore", "OpLoad", "OpAccessChain" };
+
+    string spirvInstruction;
+    smatch matchResult;
+
+    // In the first pass, collect types and variables that are decorated as "relaxed".
+    //
+    // NOTE: We also collect struct members but do not use them in any analysis (yet).
+    // In SPIR-V, struct fields are accessed through pointers, so we would need to:
+    //
+    // 1) Create a map of all OpConstant values (integers only, %int and %uint)
+    // 2) Parse all "OpAccessChain" instructions and dereference their OpConstant arguments
+    // 3) Follow through to the downstream OpStore / OpLoad
+    //
+    // Regarding struct field precision, the SPIR-V specification says:
+    //
+    //   When applied to a variable or structure member, all loads and stores from the decorated
+    //   object may be treated as though they were decorated with RelaxedPrecision. Loads may also
+    //   be decorated with RelaxedPrecision, in which case they are treated as operating at
+    //   relaxed precision.
+
+    set<string> relaxedPrecisionVariables;
+    set<string> typeIds;
+    {
+        istringstream ss(disassembly);
+        while (getline(ss, spirvInstruction, '\n')) {
+            if (regex_search(spirvInstruction, matchResult, typeDefinitionPattern)) {
+                typeIds.insert(matchResult[1].str());
+            } else if (regex_search(spirvInstruction, matchResult, globalDecoratorPattern)) {
+                relaxedPrecisionVariables.insert(matchResult[1].str());
+            } else if (regex_search(spirvInstruction, matchResult, memberDecoratorPattern)) {
+                string member = matchResult[1].str() + "." + matchResult[2].str();
+                relaxedPrecisionVariables.insert(member);
+            }
+        }
+    }
+
+    // In the second pass, track line numbers and detect potential mixed precision.
+
+    map<int, string> mixedPrecisionInfo;
+    {
+        istringstream ss(disassembly);
+        int currentLineNumber = -1;
+        while (getline(ss, spirvInstruction, '\n')) {
+            if (regex_search(spirvInstruction, matchResult, lineDirectivePattern)) {
+                currentLineNumber = stoi(matchResult[2].str());
+            } else if (regex_search(spirvInstruction, matchResult, binaryFunctionPattern)) {
+
+                // Trim out the leftmost whitespace.
+                const string trimmed = regex_replace(spirvInstruction, regex("^\\s+"), string(""));
+
+                // Ignore certain operators.
+                regex_search(trimmed, matchResult, operatorPattern);
+                if (ignoredOperators.count(matchResult[0]) || currentLineNumber == -1) {
+                    continue;
+                }
+
+                // Check for mixed precision.
+                bool mixed = false;
+                int relaxed = -1;
+                string remaining = trimmed;
+                string info = trimmed + "; relaxed = ";
+                while (regex_search(remaining, matchResult, operandPattern)) {
+                    const string arg = matchResult[1].str();
+                    if (typeIds.count(arg) == 0) {
+                        if (relaxedPrecisionVariables.count(arg) > 0) {
+                            mixed = relaxed == 0 ? true : mixed;
+                            relaxed = 1;
+                            info += arg + " ";
+                        } else {
+                            mixed = relaxed == 1 ? true : mixed;
+                            relaxed = 0;
+                        }
+                    }
+                    remaining = matchResult.suffix();
+                }
+                if (mixed) {
+                    mixedPrecisionInfo[currentLineNumber] = info;
+                }
+            }
+        }
+    }
+
+    // Finally, dump out the annotated GLSL.
+
+    for (auto keyValue : glsl) {
+        const int lineNumber = keyValue.first;
+        istringstream ss(keyValue.second);
+        string glslCodeline;
+        bool firstLine = true;
+        while (getline(ss, glslCodeline, '\n')) {
+            cout << glslCodeline;
+            if (firstLine) {
+                if (mixedPrecisionInfo.count(lineNumber)) {
+                    string info = mixedPrecisionInfo.at(lineNumber);
+                    cout << " // POTENTIAL MIXED PRECISION " + info;
+                }
+                firstLine = false;
+            }
+            cout << endl;
+        }
+    }
+}
+
+static void disassembleSpirv(const std::vector<uint32_t>& spirv, bool analyze) {
     // If desired feel free to locally replace this with the glslang disassembler (spv::Disassemble)
     // but please do not submit. We prefer to use the syntax that the standalone "spirv-dis" tool
     // uses, which lets us easily generate test cases for the spirv-cross project.
     auto context = spvContextCreate(SPV_ENV_UNIVERSAL_1_1);
     spv_text text = nullptr;
-    const uint32_t options = SPV_BINARY_TO_TEXT_OPTION_INDENT;
+    const uint32_t options = SPV_BINARY_TO_TEXT_OPTION_INDENT |
+            SPV_BINARY_TO_TEXT_OPTION_FRIENDLY_NAMES;
     spvBinaryToText(context, spirv.data(), spirv.size(), options, &text, nullptr);
-    std::cout << text->str << std::endl;
+    if (analyze) {
+        analyzeSpirv(spirv, text->str);
+    } else {
+        std::cout << text->str << std::endl;
+    }
     spvTextDestroy(text);
     spvContextDestroy(context);
 }
@@ -950,7 +1116,7 @@ static bool parseChunks(Config config, void* data, size_t size) {
             } else if (config.binary) {
                 dumpSpirvBinary(spirv, "out.spv");
             } else {
-                disassembleSpirv(spirv);
+                disassembleSpirv(spirv, config.analyze);
             }
 
             return true;
