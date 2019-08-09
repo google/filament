@@ -90,14 +90,14 @@ private:
 
         friend size_t hash_value(TextureKey const& k) {
             size_t seed = 0;
-            utils::hash::hash_combine(seed, k.target);
-            utils::hash::hash_combine(seed, k.levels);
-            utils::hash::hash_combine(seed, k.format);
-            utils::hash::hash_combine(seed, k.samples);
-            utils::hash::hash_combine(seed, k.width);
-            utils::hash::hash_combine(seed, k.height);
-            utils::hash::hash_combine(seed, k.depth);
-            utils::hash::hash_combine(seed, k.usage);
+            utils::hash::combine_fast(seed, k.target);
+            utils::hash::combine_fast(seed, k.levels);
+            utils::hash::combine_fast(seed, k.format);
+            utils::hash::combine_fast(seed, k.samples);
+            utils::hash::combine_fast(seed, k.width);
+            utils::hash::combine_fast(seed, k.height);
+            utils::hash::combine_fast(seed, k.depth);
+            utils::hash::combine_fast(seed, k.usage);
             return seed;
         }
     };
