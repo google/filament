@@ -31,6 +31,39 @@ using namespace details;
 
 namespace fg {
 
+// ------------------------------------------------------------------------------------------------
+
+template<typename K, typename V, typename H>
+UTILS_NOINLINE
+typename ResourceAllocator::AssociativeContainer<K, V, H>::iterator
+ResourceAllocator::AssociativeContainer<K, V, H>::erase(iterator it) {
+    return mContainer.erase(it);
+}
+
+template<typename K, typename V, typename H>
+typename ResourceAllocator::AssociativeContainer<K, V, H>::const_iterator
+ResourceAllocator::AssociativeContainer<K, V, H>::find(key_type const& key) const {
+    return const_cast<AssociativeContainer*>(this)->find(key);
+}
+
+template<typename K, typename V, typename H>
+UTILS_NOINLINE
+typename ResourceAllocator::AssociativeContainer<K, V, H>::iterator
+ResourceAllocator::AssociativeContainer<K, V, H>::find(key_type const& key) {
+    return std::find_if(mContainer.begin(), mContainer.end(), [&key](auto const& v) {
+        return v.first == key;
+    });
+}
+
+template<typename K, typename V, typename H>
+template<typename... ARGS>
+UTILS_NOINLINE
+void ResourceAllocator::AssociativeContainer<K, V, H>::emplace(ARGS&& ... args) {
+    mContainer.emplace_back(std::forward<ARGS>(args)...);
+}
+
+// ------------------------------------------------------------------------------------------------
+
 size_t ResourceAllocator::TextureKey::getSize() const noexcept {
     size_t pixelCount = width * height * depth;
     size_t size = pixelCount * FTexture::getFormatSize(format);
@@ -148,10 +181,12 @@ void ResourceAllocator::gc() noexcept {
         }
     }
 
+    //if (mAge % 60 == 0) dump();
     // TODO: maybe purge LRU entries if we have more than a certain number
     // TODO: maybe purge LRU entries if the size of the cache is too large
 }
 
+UTILS_NOINLINE
 void ResourceAllocator::dump() const noexcept {
     slog.d << "# entries=" << mTextureCache.size() << ", sz=" << mCacheSize / float(1u << 20u)
            << " MiB" << io::endl;
