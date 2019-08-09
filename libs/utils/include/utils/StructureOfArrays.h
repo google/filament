@@ -166,7 +166,12 @@ public:
     template<typename CVQualifiedSOAPointer>
     class Iterator {
         friend class StructureOfArraysBase;
-        CVQualifiedSOAPointer UTILS_RESTRICT soa;
+        CVQualifiedSOAPointer 
+#ifndef _MSC_VER
+            // MSVC allows __restrict only for pointers and chokes here
+			UTILS_RESTRICT 
+#endif
+			soa;
         size_t index;
 
         Iterator(CVQualifiedSOAPointer soa, size_t index) : soa(soa), index(index) {}

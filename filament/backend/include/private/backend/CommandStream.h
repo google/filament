@@ -205,7 +205,11 @@ public:
 
 // ------------------------------------------------------------------------------------------------
 
-#ifdef NDEBUG
+#if defined(_MSC_VER)
+    // official syntax is "#define identifier( params, ... )" and MSVC chokes on "params..."
+    // see: https://en.cppreference.com/w/cpp/preprocessor/replace
+    #define DEBUG_COMMAND(methodName, params, ...)
+#elif defined(NDEBUG)
     #define DEBUG_COMMAND(methodName, params...)
 #else
     // For now, simply pass the method name down as a string and throw away the parameters.

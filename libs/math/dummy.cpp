@@ -15,6 +15,8 @@
  */
 
 // Empty symbol used to suppress warnings on Darwin
-__attribute__((visibility("hidden")))
+#if __has_attribute(visibility) 
+    __attribute__((visibility("hidden")))
+#endif
 void e() {
 }

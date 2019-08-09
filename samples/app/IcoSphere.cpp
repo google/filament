@@ -46,7 +46,7 @@ IcoSphere::Index IcoSphere::vertex_for_edge(
         std::swap(key.first, key.second);
     }
 
-    auto inserted = lookup.insert({ key, vertices.size() });
+    auto inserted = lookup.insert({ key, (Lookup::mapped_type)vertices.size() });
     if (inserted.second) {
         auto edge0 = vertices[first];
         auto edge1 = vertices[second];
