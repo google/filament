@@ -417,8 +417,8 @@ void Resource::create(FrameGraph& fg) noexcept {
             effectiveUsage |= TextureUsage::SAMPLEABLE;
             samples = 1; // sampleable textures can't be multi-sampled
         }
-        texture = fg.getResourceAllocator().createTexture(desc.type, desc.levels, desc.format,
-                samples, desc.width, desc.height, desc.depth, effectiveUsage);
+        texture = fg.getResourceAllocator().createTexture(name, desc.type, desc.levels,
+                desc.format, samples, desc.width, desc.height, desc.depth, effectiveUsage);
     }
 }
 
