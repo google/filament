@@ -34,6 +34,9 @@ void checkFramebufferStatus(utils::io::ostream& out, const char* function, size_
 #define CHECK_GL_ERROR(out)
 #define CHECK_GL_FRAMEBUFFER_STATUS(out)
 #else
+#ifdef _MSC_VER
+    #define __PRETTY_FUNCTION__ __FUNCSIG__
+#endif
 #define CHECK_GL_ERROR(out) { GLUtils::checkGLError(out, __PRETTY_FUNCTION__, __LINE__); }
 #define CHECK_GL_FRAMEBUFFER_STATUS(out) { GLUtils::checkFramebufferStatus(out, __PRETTY_FUNCTION__, __LINE__); }
 #endif
