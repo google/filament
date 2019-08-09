@@ -250,12 +250,14 @@ MetalProgram::MetalProgram(id<MTLDevice> device, const Program& program) noexcep
                                                         error:&error];
         [objcSource release];
         [options release];
-        if (error) {
-            auto description =
-                    [error.localizedDescription cStringUsingEncoding:NSUTF8StringEncoding];
-            utils::slog.w << description << utils::io::endl;
+        if (library == nil) {
+            if (error) {
+                auto description =
+                        [error.localizedDescription cStringUsingEncoding:NSUTF8StringEncoding];
+                utils::slog.w << description << utils::io::endl;
+            }
+            ASSERT_POSTCONDITION(false, "Unable to compile Metal shading library.");
         }
-        ASSERT_POSTCONDITION(library != nil, "Unable to compile Metal shading library.");
 
         *shaderFunctions[i] = [library newFunctionWithName:@"main0"];
 
