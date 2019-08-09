@@ -261,10 +261,10 @@ class MainActivity : Activity() {
                 .put(Vertex(-1.0f,  1.0f, -1.0f, tfNX))
                 .put(Vertex(-1.0f, -1.0f, -1.0f, tfNX))
                 // Face -Y
-                .put(Vertex(-1.0f, -1.0f, -1.0f, tfNY))
                 .put(Vertex(-1.0f, -1.0f,  1.0f, tfNY))
-                .put(Vertex( 1.0f, -1.0f,  1.0f, tfNY))
+                .put(Vertex(-1.0f, -1.0f, -1.0f, tfNY))
                 .put(Vertex( 1.0f, -1.0f, -1.0f, tfNY))
+                .put(Vertex( 1.0f, -1.0f,  1.0f, tfNY))
                 // Face +Y
                 .put(Vertex(-1.0f,  1.0f, -1.0f, tfPY))
                 .put(Vertex(-1.0f,  1.0f,  1.0f, tfPY))

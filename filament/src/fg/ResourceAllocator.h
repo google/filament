@@ -25,10 +25,9 @@
 
 #include <utils/Hash.h>
 
-#include <unordered_map>
+#include <vector>
 
 #include <stdint.h>
-#include <tsl/robin_map.h>
 
 namespace filament {
 namespace fg {
@@ -124,11 +123,36 @@ private:
         }
     };
 
-    void dump() const noexcept;
+    inline void dump() const noexcept;
+
+    template<typename Key, typename Value, typename Hasher = Hasher<Key>>
+    class AssociativeContainer {
+        // We use a std::vector instead of a std::multimap because we don't expect many items
+        // in the cache and std::multimap generates tons of code. Even with more items, we
+        // could improve this trivially by using a sorted std::vector.
+        using Container = std::vector<std::pair<Key, Value>>;
+        Container mContainer;
+    public:
+        using iterator = typename Container::iterator;
+        using const_iterator = typename Container::const_iterator;
+        using key_type = typename Container::value_type::first_type;
+        using value_type = typename Container::value_type::second_type;
+
+        size_t size() const { return mContainer.size(); }
+        iterator begin() { return mContainer.begin(); }
+        const_iterator begin() const { return mContainer.begin(); }
+        iterator end() { return mContainer.end(); }
+        const_iterator end() const  { return mContainer.end(); }
+        iterator erase(iterator it);
+        const_iterator find(key_type const& key) const;
+        iterator find(key_type const& key);
+        template<typename ... ARGS>
+        void emplace(ARGS&&... args);
+    };
 
     backend::DriverApi& mBackend;
-    std::unordered_multimap<TextureKey, TextureCachePayload, Hasher<TextureKey>> mTextureCache;
-    std::unordered_multimap<backend::TextureHandle, TextureKey, Hasher<backend::TextureHandle>> mInUseTextures;
+    AssociativeContainer<TextureKey, TextureCachePayload> mTextureCache;
+    AssociativeContainer<backend::TextureHandle, TextureKey> mInUseTextures;
     size_t mAge = 0;
     uint32_t mCacheSize = 0;
     const bool mEnabled = true;
