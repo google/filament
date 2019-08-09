@@ -69,6 +69,8 @@ TEST(FrameGraphTest, SimpleRenderPass) {
     fg.execute(driverApi);
 
     EXPECT_TRUE(renderPassExecuted);
+
+    resourceAllocator.terminate();
 }
 
 TEST(FrameGraphTest, SimpleRenderPass2) {
@@ -118,6 +120,8 @@ TEST(FrameGraphTest, SimpleRenderPass2) {
     fg.execute(driverApi);
 
     EXPECT_TRUE(renderPassExecuted);
+
+    resourceAllocator.terminate();
 }
 
 TEST(FrameGraphTest, ScenarioDepthPrePass) {
@@ -197,6 +201,8 @@ TEST(FrameGraphTest, ScenarioDepthPrePass) {
 
     EXPECT_TRUE(depthPrepassExecuted);
     EXPECT_TRUE(colorPassExecuted);
+
+    resourceAllocator.terminate();
 }
 
 TEST(FrameGraphTest, SimplePassCulling) {
@@ -285,6 +291,8 @@ TEST(FrameGraphTest, SimplePassCulling) {
     EXPECT_TRUE(renderPassExecuted);
     EXPECT_TRUE(postProcessPassExecuted);
     EXPECT_FALSE(culledPassExecuted);
+
+    resourceAllocator.terminate();
 }
 
 TEST(FrameGraphTest, RenderTargetLifetime) {
@@ -349,4 +357,6 @@ TEST(FrameGraphTest, RenderTargetLifetime) {
 
     EXPECT_TRUE(renderPassExecuted1);
     EXPECT_TRUE(renderPassExecuted2);
+
+    resourceAllocator.terminate();
 }
