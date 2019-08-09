@@ -475,8 +475,8 @@ private:
         } pack;
 
         struct {
-            vec4gli scissor = 0;
-            vec4gli viewport = 0;
+            vec4gli scissor { 0 };
+            vec4gli viewport { 0 };
         } window;
 
         struct {

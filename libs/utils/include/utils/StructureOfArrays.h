@@ -166,7 +166,7 @@ public:
     template<typename CVQualifiedSOAPointer>
     class Iterator {
         friend class StructureOfArraysBase;
-        CVQualifiedSOAPointer UTILS_RESTRICT soa;
+        CVQualifiedSOAPointer soa; // don't use restrict, can have aliases if multiple iterators are created
         size_t index;
 
         Iterator(CVQualifiedSOAPointer soa, size_t index) : soa(soa), index(index) {}

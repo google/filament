@@ -205,12 +205,12 @@ public:
 
 // ------------------------------------------------------------------------------------------------
 
-#ifdef NDEBUG
-    #define DEBUG_COMMAND(methodName, params...)
+#if defined(NDEBUG)
+    #define DEBUG_COMMAND(methodName, ...)
 #else
     // For now, simply pass the method name down as a string and throw away the parameters.
     // This is good enough for certain debugging needs and we can improve this later.
-    #define DEBUG_COMMAND(methodName, params...) mDriver->debugCommand(#methodName)
+    #define DEBUG_COMMAND(methodName, ...) mDriver->debugCommand(#methodName)
 #endif
 
 class CommandStream {

@@ -677,7 +677,7 @@ void FilamentApp::Window::configureCamerasForWindow() {
 FilamentApp::CView::CView(Renderer& renderer, std::string name)
         : engine(*renderer.getEngine()), mName(name) {
     view = engine.createView();
-    view->setClearColor({ 0 });
+    view->setClearColor(LinearColorA{ 0 });
     view->setName(name.c_str());
 }
 

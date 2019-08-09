@@ -764,7 +764,7 @@ static float2 DFV(float NoV, float linearRoughness, size_t numSamples) {
             r.y += v * Fc;
         }
     }
-    return r * (4.0 / numSamples);
+    return r * (4.0f / numSamples);
 }
 
 static float2 DFV_Multiscatter(float NoV, float linearRoughness, size_t numSamples) {
@@ -809,7 +809,7 @@ static float2 DFV_Multiscatter(float NoV, float linearRoughness, size_t numSampl
             r.y += v;
         }
     }
-    return r * (4.0 / numSamples);
+    return r * (4.0f / numSamples);
 }
 
 static float UTILS_UNUSED DFV_LazanyiTerm(float NoV, float linearRoughness, size_t numSamples) {
