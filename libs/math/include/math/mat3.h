@@ -86,8 +86,8 @@ public:
     typedef T& reference;
     typedef T const& const_reference;
     typedef size_t size_type;
-    typedef TVec3 <T> col_type;
-    typedef TVec3 <T> row_type;
+    typedef TVec3<T> col_type;
+    typedef TVec3<T> row_type;
 
     static constexpr size_t COL_SIZE = col_type::SIZE;  // size of a column (i.e.: number of rows)
     static constexpr size_t ROW_SIZE = row_type::SIZE;  // size of a row (i.e.: number of columns)
@@ -179,7 +179,7 @@ public:
      *      \f$
      */
     template<typename U>
-    constexpr explicit TMat33(const TVec3 <U>& v);
+    constexpr explicit TMat33(const TVec3<U>& v);
 
     /**
      * construct from another matrix of the same size
@@ -199,7 +199,7 @@ public:
      *      \f$
      */
     template<typename A, typename B, typename C>
-    constexpr TMat33(const TVec3 <A>& v0, const TVec3 <B>& v1, const TVec3 <C>& v2);
+    constexpr TMat33(const TVec3<A>& v0, const TVec3<B>& v1, const TVec3<C>& v2);
 
     /** construct from 9 elements in column-major form.
      *
@@ -245,7 +245,7 @@ public:
      * construct from a quaternion
      */
     template<typename U>
-    constexpr explicit TMat33(const TQuaternion <U>& q);
+    constexpr explicit TMat33(const TQuaternion<U>& q);
 
     /**
      * orthogonalize only works on matrices of size 3x3
@@ -260,6 +260,18 @@ public:
     }
 
     /**
+     * Returns a matrix suitable for transforming normals
+     *
+     * @param m the transform applied to vertices
+     * @return a matrix to apply to normals
+     *
+     * @warning normals transformed by this matrix must be normalized
+     */
+    static constexpr TMat33 getTransformForNormals(const TMat33& m) noexcept {
+        return matrix::cof(m);
+    }
+
+    /**
      * Packs the tangent frame represented by the specified matrix into a quaternion.
      * Reflection is preserved by encoding it as the sign of the w component in the
      * resulting quaternion. Since -0 cannot always be represented on the GPU, this
@@ -268,24 +280,24 @@ public:
      * to 2 bytes, making the resulting quaternion suitable for storage into an SNORM16
      * vector.
      */
-    static constexpr TQuaternion <T> packTangentFrame(const TMat33& m,
-            size_t storageSize = sizeof(int16_t));
+    static constexpr TQuaternion<T> packTangentFrame(
+            const TMat33& m, size_t storageSize = sizeof(int16_t));
 
     template<typename A>
-    static constexpr TMat33 translation(const TVec3 <A>& t) {
+    static constexpr TMat33 translation(const TVec3<A>& t) {
         TMat33 r;
         r[2] = t;
         return r;
     }
 
     template<typename A>
-    static constexpr TMat33 scaling(const TVec3 <A>& s) {
+    static constexpr TMat33 scaling(const TVec3<A>& s) {
         return TMat33{ s };
     }
 
     template<typename A>
     static constexpr TMat33 scaling(A s) {
-        return TMat33{ TVec3 < T > { s }};
+        return TMat33{ TVec3<T>{ s }};
     }
 };
 
@@ -315,7 +327,7 @@ constexpr TMat33<T>::TMat33(U v)
 
 template<typename T>
 template<typename U>
-constexpr TMat33<T>::TMat33(const TVec3 <U>& v)
+constexpr TMat33<T>::TMat33(const TVec3<U>& v)
         : m_value{
         col_type(v[0], 0, 0),
         col_type(0, v[1], 0),
@@ -350,13 +362,13 @@ constexpr TMat33<T>::TMat33(const TMat33<U>& rhs) {
 // Construct from 3 column vectors.
 template<typename T>
 template<typename A, typename B, typename C>
-constexpr TMat33<T>::TMat33(const TVec3 <A>& v0, const TVec3 <B>& v1, const TVec3 <C>& v2)
+constexpr TMat33<T>::TMat33(const TVec3<A>& v0, const TVec3<B>& v1, const TVec3<C>& v2)
         : m_value{ v0, v1, v2 } {
 }
 
 template<typename T>
 template<typename U>
-constexpr TMat33<T>::TMat33(const TQuaternion <U>& q) : m_value{} {
+constexpr TMat33<T>::TMat33(const TQuaternion<U>& q) : m_value{} {
     const U n = q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w;
     const U s = n > 0 ? 2 / n : 0;
     const U x = s * q.x;
@@ -391,7 +403,7 @@ constexpr TMat33<T>::TMat33(const TQuaternion <U>& q) : m_value{} {
 // matrix * column-vector, result is a vector of the same type than the input vector
 template<typename T, typename U>
 constexpr typename TMat33<U>::col_type MATH_PURE operator*(const TMat33<T>& lhs,
-        const TVec3 <U>& rhs) {
+        const TVec3<U>& rhs) {
     // Result is initialized to zero.
     typename TMat33<U>::col_type result{};
     for (size_t col = 0; col < TMat33<T>::NUM_COLS; ++col) {
@@ -402,7 +414,7 @@ constexpr typename TMat33<U>::col_type MATH_PURE operator*(const TMat33<T>& lhs,
 
 // row-vector * matrix, result is a vector of the same type than the input vector
 template<typename T, typename U>
-constexpr typename TMat33<U>::row_type MATH_PURE operator*(const TVec3 <U>& lhs,
+constexpr typename TMat33<U>::row_type MATH_PURE operator*(const TVec3<U>& lhs,
         const TMat33<T>& rhs) {
     typename TMat33<U>::row_type result{};
     for (size_t col = 0; col < TMat33<T>::NUM_COLS; ++col) {
@@ -427,8 +439,8 @@ operator*(U lhs, const TMat33<T>& rhs) {
 
 //------------------------------------------------------------------------------
 template<typename T>
-constexpr TQuaternion <T> TMat33<T>::packTangentFrame(const TMat33<T>& m, size_t storageSize) {
-    TQuaternion <T> q = TMat33<T>{ m[0], cross(m[2], m[0]), m[2] }.toQuaternion();
+constexpr TQuaternion<T> TMat33<T>::packTangentFrame(const TMat33<T>& m, size_t storageSize) {
+    TQuaternion<T> q = TMat33<T>{ m[0], cross(m[2], m[0]), m[2] }.toQuaternion();
     q = positive(normalize(q));
 
     // Ensure w is never 0.0

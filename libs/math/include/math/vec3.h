@@ -29,14 +29,14 @@ namespace math {
 
 namespace details {
 
-template <typename T>
+template<typename T>
 class MATH_EMPTY_BASES TVec3 :
-                public TVecProductOperators<TVec3, T>,
-                public TVecAddOperators<TVec3, T>,
-                public TVecUnaryOperators<TVec3, T>,
-                public TVecComparisonOperators<TVec3, T>,
-                public TVecFunctions<TVec3, T>,
-                public TVecDebug<TVec3, T> {
+        public TVecProductOperators<TVec3, T>,
+        public TVecAddOperators<TVec3, T>,
+        public TVecUnaryOperators<TVec3, T>,
+        public TVecComparisonOperators<TVec3, T>,
+        public TVecFunctions<TVec3, T>,
+        public TVecDebug<TVec3, T> {
 public:
     typedef T value_type;
     typedef T& reference;
@@ -99,7 +99,7 @@ public:
     constexpr TVec3(const TVec3<A>& v) : v{ T(v[0]), T(v[1]), T(v[2]) } {}
 
     // cross product works only on vectors of size 3
-    template <typename RT>
+    template<typename RT>
     friend inline constexpr TVec3 cross(const TVec3& u, const TVec3<RT>& v) {
         return TVec3(
                 u[1] * v[2] - u[2] * v[1],
@@ -112,7 +112,7 @@ public:
 
 // ----------------------------------------------------------------------------------------
 
-template <typename T, typename = typename std::enable_if<std::is_arithmetic<T>::value >::type>
+template<typename T, typename = typename std::enable_if<std::is_arithmetic<T>::value>::type>
 using vec3 = details::TVec3<T>;
 
 using double3 = vec3<double>;
