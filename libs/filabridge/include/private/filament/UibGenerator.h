@@ -54,7 +54,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
 
     filament::math::float4 resolution; // viewport width, height, 1/width, 1/height
 
-    filament::math::float3 cameraPosition;
+    filament::math::float3 cameraPosition; // this is (0,0,0) when camera_at_origin is enabled
     float time; // time in seconds, with a 1 second period
 
     filament::math::float4 lightColorIntensity; // directional light
@@ -84,8 +84,11 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     filament::math::float2 iblMaxMipLevel; // maxlevel, float(1<<maxlevel)
     filament::math::float2 padding0;
 
+    filament::math::float3 worldOffset; // this is (0,0,0) when camera_at_origin is disabled
+    float padding1;
+
     // bring PerViewUib to 1 KiB
-    filament::math::float4 padding1[16];
+    filament::math::float4 padding2[15];
 };
 
 

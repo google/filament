@@ -460,6 +460,8 @@ void FView::prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& are
             .zf                 = camera->getCullingFar(),
             // exposure
             .ev100              = Exposure::ev100(*camera),
+            // world offset to allow users to determine the API-level camera position
+            .worldOffset        = camera->getPosition(),
             // world origin transform, use only for debugging
             .worldOrigin        = worldOriginCamera
     };
@@ -629,6 +631,7 @@ void FView::prepareCamera(const CameraInfo& camera, const filament::Viewport& vi
     u.setUniform(offsetof(PerViewUib, origin), float2{ viewport.left, viewport.bottom });
 
     u.setUniform(offsetof(PerViewUib, cameraPosition), float3{camera.getPosition()});
+    u.setUniform(offsetof(PerViewUib, worldOffset), camera.worldOffset);
 }
 
 void FView::prepareSSAO(Handle<HwTexture> ssao) const noexcept {
