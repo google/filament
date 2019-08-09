@@ -205,16 +205,12 @@ public:
 
 // ------------------------------------------------------------------------------------------------
 
-#if defined(_MSC_VER)
-    // official syntax is "#define identifier( params, ... )" and MSVC chokes on "params..."
-    // see: https://en.cppreference.com/w/cpp/preprocessor/replace
+#if defined(NDEBUG)
     #define DEBUG_COMMAND(methodName, params, ...)
-#elif defined(NDEBUG)
-    #define DEBUG_COMMAND(methodName, params...)
 #else
     // For now, simply pass the method name down as a string and throw away the parameters.
     // This is good enough for certain debugging needs and we can improve this later.
-    #define DEBUG_COMMAND(methodName, params...) mDriver->debugCommand(#methodName)
+    #define DEBUG_COMMAND(methodName, params, ...) mDriver->debugCommand(#methodName)
 #endif
 
 class CommandStream {
