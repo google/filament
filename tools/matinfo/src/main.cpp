@@ -1003,6 +1003,10 @@ static void analyzeSpirv(const std::vector<uint32_t>& spirv, const char* disasse
                 }
             }
         }
+        if (currentLineNumber == -1) {
+            cerr << "No #line directives found, did you use a debug version of matc?" << endl;
+            return;
+        }
     }
 
     // Finally, dump out the annotated GLSL.
