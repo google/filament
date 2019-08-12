@@ -30,13 +30,6 @@ public class IndexBuffer {
         mNativeObject = nativeIndexBuffer;
     }
 
-    long getNativeObject() {
-        if (mNativeObject == 0) {
-            throw new IllegalStateException("Calling method on destroyed IndexBuffer");
-        }
-        return mNativeObject;
-    }
-
     public static class Builder {
         @SuppressWarnings({"FieldCanBeLocal", "UnusedDeclaration"})
         // Keep to finalize native resources
@@ -119,6 +112,13 @@ public class IndexBuffer {
         if (result < 0) {
             throw new BufferOverflowException();
         }
+    }
+
+    public long getNativeObject() {
+        if (mNativeObject == 0) {
+            throw new IllegalStateException("Calling method on destroyed IndexBuffer");
+        }
+        return mNativeObject;
     }
 
     void clearNativeObject() {

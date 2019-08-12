@@ -33,7 +33,7 @@ public class RenderTarget {
         mTextures[1] = builder.mTextures[1];
     }
 
-    long getNativeObject() {
+    public long getNativeObject() {
         if (mNativeObject == 0) {
             throw new IllegalStateException("Calling method on destroyed RenderTarget");
         }
