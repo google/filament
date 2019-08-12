@@ -19,6 +19,14 @@
 #include <Wingdi.h>
 
 #include "OpenGLDriverFactory.h"
+
+#ifdef _MSC_VER
+    // this variable is checked in BlueGL.h (included from "gl_headers.h" right after this), 
+    // and prevents duplicate definition of OpenGL apis when building this file. 
+    // However, GL_GLEXT_PROTOTYPES need to be defined in BlueGL.h when included from other files.
+    #define FILAMENT_PLATFORM_WGL
+#endif
+
 #include "gl_headers.h"
 
 #include "Windows.h"

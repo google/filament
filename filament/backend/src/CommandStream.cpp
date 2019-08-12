@@ -98,25 +98,6 @@ void CommandStream::queueCommand(std::function<void()> command) {
     new(allocateCommand(CustomCommand::align(sizeof(CustomCommand)))) CustomCommand(std::move(command));
 }
 
-template<typename... ARGS>
-template<void (Driver::*METHOD)(ARGS...)>
-template<std::size_t... I>
-void CommandType<void (Driver::*)(ARGS...)>::Command<METHOD>::log(std::index_sequence<I...>) noexcept  {
-#if DEBUG_COMMAND_STREAM
-    static_assert(UTILS_HAS_RTTI, "DEBUG_COMMAND_STREAM can only be used with RTTI");
-    std::string command = utils::CallStack::demangleTypeName(typeid(Command).name()).c_str();
-    slog.d << extractMethodName(command) << " : size=" << sizeof(Command) << "\n\t";
-    printParameterPack(slog.d, std::get<I>(mArgs)...);
-    slog.d << io::endl;
-#endif
-}
-
-template<typename... ARGS>
-template<void (Driver::*METHOD)(ARGS...)>
-void CommandType<void (Driver::*)(ARGS...)>::Command<METHOD>::log() noexcept  {
-    log(std::make_index_sequence<std::tuple_size<SavedParameters>::value>{});
-}
-
 /*
  * When DEBUG_COMMAND_STREAM is activated, we need to explicitly instantiate the log() method
  * (this is because we don't want it in the header file)

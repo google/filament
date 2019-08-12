@@ -145,8 +145,20 @@ struct CommandType<void (Driver::*)(ARGS...)> {
         using SavedParameters = std::tuple<typename std::decay<ARGS>::type...>;
         SavedParameters mArgs;
 
-        void log() noexcept;
-        template<std::size_t... I> void log(std::index_sequence<I...>) noexcept;
+        // these two log() template functions should be defined inline in this class 
+        // definition, otherwise when building with msvc they are undefined. Alternatively they 
+        // should be defined in a file which calls them, not CommandStream.cpp.
+        void log() noexcept { log(std::make_index_sequence<std::tuple_size<SavedParameters>::value>{}); }
+
+        template<std::size_t... I> void log(std::index_sequence<I...>) noexcept {
+#if DEBUG_COMMAND_STREAM
+            static_assert(UTILS_HAS_RTTI, "DEBUG_COMMAND_STREAM can only be used with RTTI");
+            std::string command = utils::CallStack::demangleTypeName(typeid(Command).name()).c_str();
+            slog.d << extractMethodName(command) << " : size=" << sizeof(Command) << "\n\t";
+            printParameterPack(slog.d, std::get<I>(mArgs)...);
+            slog.d << io::endl;
+#endif
+        }
 
     public:
         template<typename M, typename D>
