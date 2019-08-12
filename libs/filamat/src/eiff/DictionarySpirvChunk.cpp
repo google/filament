@@ -34,7 +34,11 @@ void DictionarySpirvChunk::flatten(Flattener& f) {
         const std::string& spirv = mDictionary.getBlob(i);
 
         smolv::ByteArray compressed;
+#ifdef NDEBUG
         const uint32_t flags = smolv::kEncodeFlagStripDebugInfo;
+#else
+        const uint32_t flags = 0;
+#endif
         if (!smolv::Encode(spirv.data(), spirv.size(), compressed, flags)) {
             utils::slog.e << "Error with SPIRV compression" << utils::io::endl;
         }

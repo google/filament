@@ -218,7 +218,12 @@ bool GLSLPostProcessor::process(const std::string& inputShader,
     switch (mOptimization) {
         case MaterialBuilder::Optimization::NONE:
             if (mSpirvOutput) {
-                GlslangToSpv(*program.getIntermediate(mShLang), *mSpirvOutput);
+                SpvOptions options;
+#ifndef NDEBUG
+                options.generateDebugInfo = true;
+                options.disableOptimizer = true;
+#endif
+                GlslangToSpv(*program.getIntermediate(mShLang), *mSpirvOutput, &options);
                 if (mMslOutput) {
                     SpvToMsl(mSpirvOutput, mMslOutput);
                 }
