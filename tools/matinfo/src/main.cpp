@@ -960,14 +960,17 @@ static void analyzeSpirv(const std::vector<uint32_t>& spirv, const char* disasse
     }
 
     // In the second pass, track line numbers and detect potential mixed precision.
+    // The line directive are not necessarily in order (!) so we also track their ordering.
 
     map<int, string> mixedPrecisionInfo;
+    vector<int> lineNumbers = {-1};
     {
         istringstream ss(disassembly);
         int currentLineNumber = -1;
         while (getline(ss, spirvInstruction, '\n')) {
             if (regex_search(spirvInstruction, matchResult, lineDirectivePattern)) {
                 currentLineNumber = stoi(matchResult[2].str());
+                lineNumbers.push_back(currentLineNumber);
             } else if (regex_search(spirvInstruction, matchResult, binaryFunctionPattern)) {
 
                 // Trim out the leftmost whitespace.
@@ -1011,9 +1014,11 @@ static void analyzeSpirv(const std::vector<uint32_t>& spirv, const char* disasse
 
     // Finally, dump out the annotated GLSL.
 
-    for (auto keyValue : glsl) {
-        const int lineNumber = keyValue.first;
-        istringstream ss(keyValue.second);
+    for (int lineNumber : lineNumbers) {
+        if (!glsl.count(lineNumber)) {
+            continue;
+        }
+        istringstream ss(glsl.at(lineNumber));
         string glslCodeline;
         bool firstLine = true;
         while (getline(ss, glslCodeline, '\n')) {
