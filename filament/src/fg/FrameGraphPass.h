@@ -21,9 +21,6 @@
 
 #include <utils/Allocator.h>
 
-#include <limits>
-#include <utility>
-
 #include <stdint.h>
 
 namespace filament {
