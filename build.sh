@@ -320,18 +320,18 @@ function ensure_android_build {
         ndk_type=1
         local ndk_version=`sed -En -e "s/^Pkg.Revision *= *([0-9a-f]+).+/\1/p" ${ndk_properties}`
         if [[ ${ndk_version} < ${ANDROID_NDK_VERSION} ]]; then
-            echo "Error: Android NDK version ${ANDROID_NDK_VERSION} or higher must be installed, exiting"
+            echo "Error: Android NDK version ${ANDROID_NDK_VERSION} or higher must be installed, found exiting"
             exit 1
         fi
-    fi
-
-    local ndk_side_by_side="$ANDROID_HOME/ndk/"
-    if [[ -d $ndk_side_by_side ]]; then
-        ndk_type=2
-        local ndk_version=`ls ${ndk_side_by_side} | sort -V | tail -n 1`
-        if [[ ${ndk_version} < ${ANDROID_NDK_VERSION} ]]; then
-            echo "Error: Android NDK version ${ANDROID_NDK_VERSION} or higher must be installed, exiting"
-            exit 1
+    else
+        local ndk_side_by_side="$ANDROID_HOME/ndk/"
+        if [[ -d $ndk_side_by_side ]]; then
+            ndk_type=2
+            local ndk_version=`ls ${ndk_side_by_side} | sort -V | tail -n 1`
+            if [[ ${ndk_version} < ${ANDROID_NDK_VERSION} ]]; then
+                echo "Error: Android NDK version ${ANDROID_NDK_VERSION} or higher must be installed, exiting"
+                exit 1
+            fi
         fi
     fi
 
