@@ -97,7 +97,7 @@ add_library(common-resources ${DUMMY_SRC} ${RESGEN_SOURCE})
 # Invoke cmgen to build KTX files for the default IBL and skybox
 # ==================================================================================================
 
-set(CMGEN_ARGS -x . --format=ktx --size=256 --extract-blur=0.1)
+set(CMGEN_ARGS --quiet -x . --format=ktx --size=256 --extract-blur=0.1)
 
 function(add_envmap SOURCE TARGET)
     set(source_envmap "${ROOT_DIR}/${SOURCE}")
