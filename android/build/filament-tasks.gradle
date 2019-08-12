@@ -157,7 +157,7 @@ class IblGenerator extends DefaultTask {
             project.exec {
                 standardOutput out
                 if (!cmgenArgs) {
-                    cmgenArgs = '--format=rgb32f --extract-blur=0.08 --extract=${outputDir.absolutePath}'
+                    cmgenArgs = '--format=rgb32f --extract-blur=0.08 --extract=' + outputDir.absolutePath
                 }
                 cmgenArgs = cmgenArgs + " " + file
                 errorOutput err
