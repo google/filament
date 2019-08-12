@@ -356,6 +356,8 @@ MeshReader::Mesh MeshReader::loadMeshFromBuffer(filament::Engine* engine,
         builder.geometry(i, RenderableManager::PrimitiveType::TRIANGLES,
                             mesh.vertexBuffer, mesh.indexBuffer, parts[i].offset,
                             parts[i].minIndex, parts[i].maxIndex, parts[i].indexCount);
+    }
+    for (size_t i = 0; i < materialCount; i++) {
         const utils::CString materialName(partsMaterial[i].c_str(), partsMaterial[i].size());
         const auto mat = materials.getMaterialInstance(materialName);
         if (mat == nullptr) {
