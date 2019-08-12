@@ -36,7 +36,7 @@ public class SwapChain {
         return mSurface;
     }
 
-    long getNativeObject() {
+    public long getNativeObject() {
         if (mNativeObject == 0) {
             throw new IllegalStateException("Calling method on destroyed SwapChain");
         }

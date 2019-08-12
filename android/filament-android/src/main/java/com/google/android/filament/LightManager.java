@@ -270,6 +270,10 @@ public class LightManager {
         return nIsShadowCaster(mNativeObject, i);
     }
 
+    public long getNativeObject() {
+        return mNativeObject;
+    }
+
     private static native boolean nHasComponent(long nativeLightManager, int entity);
     private static native int nGetInstance(long nativeLightManager, int entity);
     private static native void nDestroy(long nativeLightManager, int entity);

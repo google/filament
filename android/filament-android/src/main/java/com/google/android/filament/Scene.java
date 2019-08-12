@@ -75,7 +75,7 @@ public class Scene {
         return nGetLightCount(getNativeObject());
     }
 
-    long getNativeObject() {
+    public long getNativeObject() {
         if (mNativeObject == 0) {
             throw new IllegalStateException("Calling method on destroyed Scene");
         }
