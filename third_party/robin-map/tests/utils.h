@@ -35,6 +35,14 @@
 #include <utility>
 
 
+template<typename T>
+class identity_hash {
+public:    
+    std::size_t operator()(const T& value) const {
+        return static_cast<std::size_t>(value);
+    }
+};
+
 template<unsigned int MOD>
 class mod_hash {
 public:   
@@ -148,7 +156,7 @@ public:
         }
     }
     
-    std::string value() const {
+    const std::string& value() const {
         return *m_value;
     }
     

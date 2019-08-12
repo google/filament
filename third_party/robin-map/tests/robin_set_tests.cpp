@@ -99,23 +99,46 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_insert, HSet, test_types) {
 }
 
 BOOST_AUTO_TEST_CASE(test_compare) {
-    const tsl::robin_set<std::string> set1_1 = {"a", "e", "d", "c", "b"};
-    const tsl::robin_set<std::string> set1_2 = {"e", "c", "b", "a", "d"};
-    const tsl::robin_set<std::string> set2_1 = {"e", "c", "b", "a", "d", "f"};
-    const tsl::robin_set<std::string> set3_1 = {"e", "c", "b", "a"};
+    const tsl::robin_set<std::string> set1 = {"a", "e", "d", "c", "b"};
+    const tsl::robin_set<std::string> set1_copy = {"e", "c", "b", "a", "d"};
+    const tsl::robin_set<std::string> set2 = {"e", "c", "b", "a", "d", "f"};
+    const tsl::robin_set<std::string> set3 = {"e", "c", "b", "a"};
+    const tsl::robin_set<std::string> set4 = {"a", "e", "d", "c", "z"};
     
-    BOOST_CHECK(set1_1 == set1_2);
-    BOOST_CHECK(set1_2 == set1_1);
+    BOOST_CHECK(set1 == set1_copy);
+    BOOST_CHECK(set1_copy == set1);
     
-    BOOST_CHECK(set1_1 != set2_1);
-    BOOST_CHECK(set2_1 != set1_1);
+    BOOST_CHECK(set1 != set2);
+    BOOST_CHECK(set2 != set1);
     
-    BOOST_CHECK(set1_1 != set3_1);
-    BOOST_CHECK(set3_1 != set1_1);
+    BOOST_CHECK(set1 != set3);
+    BOOST_CHECK(set3 != set1);
     
-    BOOST_CHECK(set2_1 != set3_1);
-    BOOST_CHECK(set3_1 != set2_1);
+    BOOST_CHECK(set1 != set4);
+    BOOST_CHECK(set4 != set1);
+    
+    BOOST_CHECK(set2 != set3);
+    BOOST_CHECK(set3 != set2);
+    
+    BOOST_CHECK(set2 != set4);
+    BOOST_CHECK(set4 != set2);
+    
+    BOOST_CHECK(set3 != set4);
+    BOOST_CHECK(set4 != set3);
 }
 
+BOOST_AUTO_TEST_CASE(test_insert_pointer) {
+    // Test added mainly to be sure that the code compiles with MSVC due to a bug in the compiler.
+    // See robin_hash::insert_value_impl for details.
+    std::string value;
+    std::string* value_ptr = &value;
+
+    tsl::robin_set<std::string*> set;
+    set.insert(value_ptr);
+    set.emplace(value_ptr);
+
+    BOOST_CHECK_EQUAL(set.size(), 1);
+    BOOST_CHECK_EQUAL(**set.begin(), value);
+}
 
 BOOST_AUTO_TEST_SUITE_END()

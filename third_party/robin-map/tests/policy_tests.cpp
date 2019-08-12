@@ -49,15 +49,22 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_policy, Policy, test_types) {
     std::size_t bucket_count = 0;
     Policy policy(bucket_count);
     
+    BOOST_CHECK_EQUAL(policy.bucket_for_hash(0), 0);
+    BOOST_CHECK_EQUAL(bucket_count, 0);
+    
     try {
         while(true) {
+            const std::size_t previous_bucket_count = bucket_count;
+            
             bucket_count = policy.next_bucket_count();
             policy = Policy(bucket_count);
+            
+            BOOST_CHECK_EQUAL(policy.bucket_for_hash(0), 0);
+            BOOST_CHECK(bucket_count > previous_bucket_count);
         }
     }
     catch(const std::length_error& ) {
         exception_thrown = true;
-        BOOST_CHECK_EQUAL(bucket_count, policy.max_bucket_count());
     }
     
     BOOST_CHECK(exception_thrown);

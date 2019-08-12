@@ -35,26 +35,35 @@
 #include <ratio>
 #include <stdexcept>
 
-#ifdef __EXCEPTIONS
-#   define THROW(_e, _m) throw _e(_m)
+
+#ifdef TSL_DEBUG
+#    define tsl_rh_assert(expr) assert(expr)
 #else
-#   include <stdio.h>
-#   ifndef NDEBUG
-#       define THROW(_e, _m) do { fprintf(stderr, _m); std::terminate(); } while(0)
-#   else
-#       define THROW(_e, _m) std::terminate()
-#   endif
+#    define tsl_rh_assert(expr) (static_cast<void>(0))
 #endif
 
-#ifndef __has_builtin
-#define __has_builtin(x) 0
+
+/**
+ * If exceptions are enabled, throw the exception passed in parameter, otherwise call std::terminate.
+ */
+#if (defined(__cpp_exceptions) || defined(__EXCEPTIONS) || (defined (_MSC_VER) && defined (_CPPUNWIND))) && !defined(TSL_NO_EXCEPTIONS)
+#    define TSL_RH_THROW_OR_TERMINATE(ex, msg) throw ex(msg)
+#else
+#    ifdef NDEBUG
+#        define TSL_RH_THROW_OR_TERMINATE(ex, msg) std::terminate()
+#    else
+#        include <cstdio>
+#        define TSL_RH_THROW_OR_TERMINATE(ex, msg) do { std::fprintf(stderr, msg); std::terminate(); } while(0)
+#    endif
 #endif
 
-#if __has_builtin(__builtin_expect)
-#   define TSL_LIKELY( exp )    (__builtin_expect( !!(exp), true ))
+
+#if defined(__GNUC__) || defined(__clang__)
+#    define TSL_RH_LIKELY(exp) (__builtin_expect(!!(exp), true))
 #else
-#   define TSL_LIKELY( exp )    (exp)
+#    define TSL_RH_LIKELY(exp) (exp)
 #endif
+
 
 namespace tsl {
 namespace rh {
@@ -71,33 +80,38 @@ public:
     /**
      * Called on the hash table creation and on rehash. The number of buckets for the table is passed in parameter.
      * This number is a minimum, the policy may update this value with a higher value if needed (but not lower).
+     *
+     * If 0 is given, min_bucket_count_in_out must still be 0 after the policy creation and
+     * bucket_for_hash must always return 0 in this case.
      */
-    power_of_two_growth_policy(std::size_t& min_bucket_count_in_out) {
+    explicit power_of_two_growth_policy(std::size_t& min_bucket_count_in_out) {
         if(min_bucket_count_in_out > max_bucket_count()) {
-            THROW(std::length_error, "The hash table exceeds its maxmimum size.");
+            TSL_RH_THROW_OR_TERMINATE(std::length_error, "The hash table exceeds its maxmimum size.");
         }
         
-        static_assert(MIN_BUCKETS_SIZE > 0, "MIN_BUCKETS_SIZE must be > 0.");
-        const std::size_t min_bucket_count = MIN_BUCKETS_SIZE;
-        
-        min_bucket_count_in_out = std::max(min_bucket_count, min_bucket_count_in_out);
-        min_bucket_count_in_out = round_up_to_power_of_two(min_bucket_count_in_out);
-        m_mask = min_bucket_count_in_out - 1;
+        if(min_bucket_count_in_out > 0) {
+            min_bucket_count_in_out = round_up_to_power_of_two(min_bucket_count_in_out);
+            m_mask = min_bucket_count_in_out - 1;
+        }
+        else {
+            m_mask = 0;
+        }
     }
     
     /**
-     * Return the bucket [0, bucket_count()) to which the hash belongs.
+     * Return the bucket [0, bucket_count()) to which the hash belongs. 
+     * If bucket_count() is 0, it must always return 0.
      */
     std::size_t bucket_for_hash(std::size_t hash) const noexcept {
         return hash & m_mask;
     }
     
     /**
-     * Return the bucket count to use when the bucket array grows on rehash.
+     * Return the number of buckets that should be used on next growth.
      */
     std::size_t next_bucket_count() const {
         if((m_mask + 1) > max_bucket_count() / GrowthFactor) {
-            THROW(std::length_error, "The hash table exceeds its maxmimum size.");
+            TSL_RH_THROW_OR_TERMINATE(std::length_error, "The hash table exceeds its maxmimum size.");
         }
         
         return (m_mask + 1) * GrowthFactor;
@@ -109,6 +123,14 @@ public:
     std::size_t max_bucket_count() const {
         // Largest power of two.
         return (std::numeric_limits<std::size_t>::max() / 2) + 1;
+    }
+    
+    /**
+     * Reset the growth policy as if it was created with a bucket count of 0.
+     * After a clear, the policy must always return 0 when bucket_for_hash is called.
+     */
+    void clear() noexcept {
+        m_mask = 0;
     }
     
 private:
@@ -134,7 +156,6 @@ private:
     }
     
 protected:
-    static const std::size_t MIN_BUCKETS_SIZE = 2;
     static_assert(is_power_of_two(GrowthFactor) && GrowthFactor >= 2, "GrowthFactor must be a power of two >= 2.");
     
     std::size_t m_mask;
@@ -143,35 +164,36 @@ protected:
 
 /**
  * Grow the hash table by GrowthFactor::num / GrowthFactor::den and use a modulo to map a hash
- * to a bucket. Slower but it can be usefull if you want a slower growth.
+ * to a bucket. Slower but it can be useful if you want a slower growth.
  */
 template<class GrowthFactor = std::ratio<3, 2>>
 class mod_growth_policy {
 public:
-    mod_growth_policy(std::size_t& min_bucket_count_in_out) {
+    explicit mod_growth_policy(std::size_t& min_bucket_count_in_out) {
         if(min_bucket_count_in_out > max_bucket_count()) {
-            THROW(std::length_error, "The hash table exceeds its maxmimum size.");
+            TSL_RH_THROW_OR_TERMINATE(std::length_error, "The hash table exceeds its maxmimum size.");
         }
         
-        static_assert(MIN_BUCKETS_SIZE > 0, "MIN_BUCKETS_SIZE must be > 0.");
-        const std::size_t min_bucket_count = MIN_BUCKETS_SIZE;
-        
-        min_bucket_count_in_out = std::max(min_bucket_count, min_bucket_count_in_out);
-        m_bucket_count = min_bucket_count_in_out;
+        if(min_bucket_count_in_out > 0) {
+            m_mod = min_bucket_count_in_out;
+        }
+        else {
+            m_mod = 1;
+        }
     }
     
     std::size_t bucket_for_hash(std::size_t hash) const noexcept {
-        return hash % m_bucket_count;
+        return hash % m_mod;
     }
     
     std::size_t next_bucket_count() const {
-        if(m_bucket_count == max_bucket_count()) {
-            THROW(std::length_error, "The hash table exceeds its maxmimum size.");
+        if(m_mod == max_bucket_count()) {
+            TSL_RH_THROW_OR_TERMINATE(std::length_error, "The hash table exceeds its maxmimum size.");
         }
         
-        const double next_bucket_count = std::ceil(double(m_bucket_count) * REHASH_SIZE_MULTIPLICATION_FACTOR);
+        const double next_bucket_count = std::ceil(double(m_mod) * REHASH_SIZE_MULTIPLICATION_FACTOR);
         if(!std::isnormal(next_bucket_count)) {
-            THROW(std::length_error, "The hash table exceeds its maxmimum size.");
+            TSL_RH_THROW_OR_TERMINATE(std::length_error, "The hash table exceeds its maxmimum size.");
         }
         
         if(next_bucket_count > double(max_bucket_count())) {
@@ -186,8 +208,11 @@ public:
         return MAX_BUCKET_COUNT;
     }
     
+    void clear() noexcept {
+        m_mod = 1;
+    }
+    
 private:
-    static const std::size_t MIN_BUCKETS_SIZE = 2;
     static constexpr double REHASH_SIZE_MULTIPLICATION_FACTOR = 1.0 * GrowthFactor::num / GrowthFactor::den;
     static const std::size_t MAX_BUCKET_COUNT = 
             std::size_t(double(
@@ -196,18 +221,18 @@ private:
             
     static_assert(REHASH_SIZE_MULTIPLICATION_FACTOR >= 1.1, "Growth factor should be >= 1.1.");
     
-    std::size_t m_bucket_count;
+    std::size_t m_mod;
 };
 
 
 
 namespace detail {
 
-static constexpr const std::array<std::size_t, 39> PRIMES = {{
-    5ul, 17ul, 29ul, 37ul, 53ul, 67ul, 79ul, 97ul, 131ul, 193ul, 257ul, 389ul, 521ul, 769ul, 1031ul, 1543ul, 2053ul, 
-    3079ul, 6151ul, 12289ul, 24593ul, 49157ul, 98317ul, 196613ul, 393241ul, 786433ul, 1572869ul, 3145739ul, 
-    6291469ul, 12582917ul, 25165843ul, 50331653ul, 100663319ul, 201326611ul, 402653189ul, 805306457ul, 
-    1610612741ul, 3221225473ul, 4294967291ul
+static constexpr const std::array<std::size_t, 40> PRIMES = {{
+    1ul, 5ul, 17ul, 29ul, 37ul, 53ul, 67ul, 79ul, 97ul, 131ul, 193ul, 257ul, 389ul, 521ul, 769ul, 1031ul, 
+    1543ul, 2053ul, 3079ul, 6151ul, 12289ul, 24593ul, 49157ul, 98317ul, 196613ul, 393241ul, 786433ul, 
+    1572869ul, 3145739ul, 6291469ul, 12582917ul, 25165843ul, 50331653ul, 100663319ul, 201326611ul, 
+    402653189ul, 805306457ul, 1610612741ul, 3221225473ul, 4294967291ul
 }};
 
 template<unsigned int IPrime>
@@ -215,11 +240,11 @@ static constexpr std::size_t mod(std::size_t hash) { return hash % PRIMES[IPrime
 
 // MOD_PRIME[iprime](hash) returns hash % PRIMES[iprime]. This table allows for faster modulo as the
 // compiler can optimize the modulo code better with a constant known at the compilation.
-static constexpr const std::array<std::size_t(*)(std::size_t), 39> MOD_PRIME = {{ 
+static constexpr const std::array<std::size_t(*)(std::size_t), 40> MOD_PRIME = {{ 
     &mod<0>, &mod<1>, &mod<2>, &mod<3>, &mod<4>, &mod<5>, &mod<6>, &mod<7>, &mod<8>, &mod<9>, &mod<10>, 
     &mod<11>, &mod<12>, &mod<13>, &mod<14>, &mod<15>, &mod<16>, &mod<17>, &mod<18>, &mod<19>, &mod<20>, 
     &mod<21>, &mod<22>, &mod<23>, &mod<24>, &mod<25>, &mod<26>, &mod<27>, &mod<28>, &mod<29>, &mod<30>, 
-    &mod<31>, &mod<32>, &mod<33>, &mod<34>, &mod<35>, &mod<36>, &mod<37> , &mod<38>
+    &mod<31>, &mod<32>, &mod<33>, &mod<34>, &mod<35>, &mod<36>, &mod<37> , &mod<38>, &mod<39>
 }};
 
 }
@@ -250,15 +275,20 @@ static constexpr const std::array<std::size_t(*)(std::size_t), 39> MOD_PRIME = {
  */
 class prime_growth_policy {
 public:
-    prime_growth_policy(std::size_t& min_bucket_count_in_out) {
+    explicit prime_growth_policy(std::size_t& min_bucket_count_in_out) {
         auto it_prime = std::lower_bound(detail::PRIMES.begin(), 
                                          detail::PRIMES.end(), min_bucket_count_in_out);
         if(it_prime == detail::PRIMES.end()) {
-            THROW(std::length_error, "The hash table exceeds its maxmimum size.");
+            TSL_RH_THROW_OR_TERMINATE(std::length_error, "The hash table exceeds its maxmimum size.");
         }
         
         m_iprime = static_cast<unsigned int>(std::distance(detail::PRIMES.begin(), it_prime));
-        min_bucket_count_in_out = *it_prime;
+        if(min_bucket_count_in_out > 0) {
+            min_bucket_count_in_out = *it_prime;
+        }
+        else {
+            min_bucket_count_in_out = 0;
+        }
     }
     
     std::size_t bucket_for_hash(std::size_t hash) const noexcept {
@@ -267,7 +297,7 @@ public:
     
     std::size_t next_bucket_count() const {
         if(m_iprime + 1 >= detail::PRIMES.size()) {
-            THROW(std::length_error, "The hash table exceeds its maxmimum size.");
+            TSL_RH_THROW_OR_TERMINATE(std::length_error, "The hash table exceeds its maxmimum size.");
         }
         
         return detail::PRIMES[m_iprime + 1];
@@ -275,6 +305,10 @@ public:
     
     std::size_t max_bucket_count() const {
         return detail::PRIMES.back();
+    }
+    
+    void clear() noexcept {
+        m_iprime = 0;
     }
     
 private:

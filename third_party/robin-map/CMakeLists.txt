@@ -1,26 +1,78 @@
-cmake_minimum_required(VERSION 2.8.12)
-project(test_robin_map)
-enable_testing()
-
-find_package(Boost 1.54.0 REQUIRED COMPONENTS unit_test_framework) 
+cmake_minimum_required(VERSION 3.1)
+include(GNUInstallDirs)
 
 
-set(TEST_EXECUTABLE "test_robin_map")
+project(tsl-robin-map VERSION 0.6.1)
 
-add_executable("${TEST_EXECUTABLE}" "tests/main.cpp" 
-                                    "tests/custom_allocator_tests.cpp"
-                                    "tests/policy_tests.cpp"
-                                    "tests/robin_map_tests.cpp" 
-                                    "tests/robin_set_tests.cpp")
-                                    
-target_include_directories("${TEST_EXECUTABLE}" PRIVATE "${Boost_INCLUDE_DIRS}" ".") 
-target_link_libraries("${TEST_EXECUTABLE}" ${Boost_LIBRARIES})
+add_library(robin_map INTERFACE)
+# Use tsl::robin_map as target, more consistent with other libraries conventions (Boost, Qt, ...)
+add_library(tsl::robin_map ALIAS robin_map)
 
-if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-    target_compile_options("${TEST_EXECUTABLE}" PRIVATE -std=c++11 -Werror -Wall -Wextra -Wold-style-cast -O3 -DTSL_DEBUG)
-elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-    target_compile_options("${TEST_EXECUTABLE}" PRIVATE /WX /W3 /DTSL_DEBUG)
+target_include_directories(robin_map INTERFACE
+                           "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+                           "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>")
+
+list(APPEND headers "${CMAKE_CURRENT_SOURCE_DIR}/include/tsl/robin_growth_policy.h"
+                    "${CMAKE_CURRENT_SOURCE_DIR}/include/tsl/robin_hash.h"
+                    "${CMAKE_CURRENT_SOURCE_DIR}/include/tsl/robin_map.h"
+                    "${CMAKE_CURRENT_SOURCE_DIR}/include/tsl/robin_set.h")
+target_sources(robin_map INTERFACE "$<BUILD_INTERFACE:${headers}>")
+
+if(MSVC)
+    target_sources(robin_map INTERFACE
+                   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/tsl-robin-map.natvis>"
+                   "$<INSTALL_INTERFACE:${CMAKE_INSTALL_DATAROOTDIR}/tsl-robin-map.natvis>")
 endif()
 
 
-add_test(NAME "all_tests" COMMAND "${TEST_EXECUTABLE}")
+
+
+# Installation (only compatible with CMake version >= 3.3)
+if(${CMAKE_VERSION} VERSION_GREATER "3.2")
+    include(CMakePackageConfigHelpers)
+
+    ## Install include directory and potential natvis file
+    install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/tsl"
+            DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+
+    if(MSVC)
+        install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/tsl-robin-map.natvis"
+                DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}")
+    endif()
+
+
+
+    ## Create and install tsl-robin-mapConfig.cmake
+    configure_package_config_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/tsl-robin-mapConfig.cmake.in"
+                                  "${CMAKE_CURRENT_BINARY_DIR}/tsl-robin-mapConfig.cmake"
+                                  INSTALL_DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/cmake/tsl-robin-map")
+
+    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/tsl-robin-mapConfig.cmake"
+            DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/cmake/tsl-robin-map")
+
+
+
+    ## Create and install tsl-robin-mapTargets.cmake
+    install(TARGETS robin_map
+            EXPORT tsl-robin-mapTargets)
+
+    install(EXPORT tsl-robin-mapTargets
+            NAMESPACE tsl::
+            DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/cmake/tsl-robin-map")
+
+
+
+    ## Create and install tsl-robin-mapConfigVersion.cmake
+    # tsl-robin-map is header-only and does not depend on the architecture.
+    # Remove CMAKE_SIZEOF_VOID_P from tsl-robin-mapConfigVersion.cmake so that a
+    # tsl-robin-mapConfig.cmake generated for a 64 bit target can be used for 32 bit
+    # targets and vice versa.
+    set(CMAKE_SIZEOF_VOID_P_BACKUP ${CMAKE_SIZEOF_VOID_P})
+    unset(CMAKE_SIZEOF_VOID_P)
+    write_basic_package_version_file("${CMAKE_CURRENT_BINARY_DIR}/tsl-robin-mapConfigVersion.cmake"
+                                     COMPATIBILITY SameMajorVersion)
+    set(CMAKE_SIZEOF_VOID_P ${CMAKE_SIZEOF_VOID_P_BACKUP})
+
+    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/tsl-robin-mapConfigVersion.cmake"
+            DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/cmake/tsl-robin-map")
+endif()

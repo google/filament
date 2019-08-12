@@ -64,6 +64,10 @@ namespace tsl {
  * Other growth policies are available and you may define your own growth policy, 
  * check `tsl::rh::power_of_two_growth_policy` for the interface.
  * 
+ * `Key` must be swappable.
+ * 
+ * `Key` must be copy and/or move constructible.
+ * 
  * If the destructor of `Key` throws an exception, the behaviour of the class is undefined.
  * 
  * Iterators invalidation:
@@ -124,7 +128,7 @@ public:
                        const Hash& hash = Hash(),
                        const KeyEqual& equal = KeyEqual(),
                        const Allocator& alloc = Allocator()): 
-                    m_ht(bucket_count, hash, equal, alloc, ht::DEFAULT_MAX_LOAD_FACTOR)
+                    m_ht(bucket_count, hash, equal, alloc)
     {
     }
     
@@ -240,11 +244,11 @@ public:
     }
     
     iterator insert(const_iterator hint, const value_type& value) { 
-        return m_ht.insert(hint, value); 
+        return m_ht.insert_hint(hint, value); 
     }
     
     iterator insert(const_iterator hint, value_type&& value) { 
-        return m_ht.insert(hint, std::move(value)); 
+        return m_ht.insert_hint(hint, std::move(value)); 
     }
     
     template<class InputIt>
@@ -466,7 +470,19 @@ public:
      *  Hash policy 
      */
     float load_factor() const { return m_ht.load_factor(); }
+    
+    float min_load_factor() const { return m_ht.min_load_factor(); }
     float max_load_factor() const { return m_ht.max_load_factor(); }
+    
+    /**
+     * Set the `min_load_factor` to `ml`. When the `load_factor` of the set goes
+     * below `min_load_factor` after some erase operations, the set will be
+     * shrunk when an insertion occurs. The erase method itself never shrinks
+     * the set.
+     * 
+     * The default value of `min_load_factor` is 0.0f, the set never shrinks by default.
+     */
+    void min_load_factor(float ml) { m_ht.min_load_factor(ml); }
     void max_load_factor(float ml) { m_ht.max_load_factor(ml); }
     
     void rehash(size_type count) { m_ht.rehash(count); }

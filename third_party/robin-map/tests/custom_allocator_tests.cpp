@@ -75,7 +75,7 @@ public:
     pointer allocate(size_type n, const void* /*hint*/ = 0) {
         nb_custom_allocs++;
         
-        pointer ptr = static_cast<pointer>(malloc(n * sizeof(T)));
+        pointer ptr = static_cast<pointer>(std::malloc(n * sizeof(T)));
         if(ptr == nullptr) {
             throw std::bad_alloc();
         }
@@ -84,7 +84,7 @@ public:
     }
 
     void deallocate(T* p, size_type /*n*/) {
-        free(p);
+        std::free(p);
     }
     
     size_type max_size() const noexcept {
@@ -128,19 +128,19 @@ bool operator!=(const custom_allocator<T>&, const custom_allocator<U>&) {
 BOOST_AUTO_TEST_SUITE(test_custom_allocator)
 
 BOOST_AUTO_TEST_CASE(test_custom_allocator_1) {
-//         nb_global_new = 0;
-        nb_custom_allocs = 0;
-        
-        tsl::robin_map<int, int, std::hash<int>, std::equal_to<int>, 
-                       custom_allocator<std::pair<int, int>>> map;
-        
-        const int nb_elements = 10000;
-        for(int i = 0; i < nb_elements; i++) {
-            map.insert({i, i*2});
-        }
-        
-        BOOST_CHECK_NE(nb_custom_allocs, 0);
-//         BOOST_CHECK_EQUAL(nb_global_new, 0);
+//    nb_global_new = 0;
+    nb_custom_allocs = 0;
+    
+    tsl::robin_map<int, int, std::hash<int>, std::equal_to<int>, 
+                    custom_allocator<std::pair<int, int>>> map;
+    
+    const int nb_elements = 1000;
+    for(int i = 0; i < nb_elements; i++) {
+        map.insert({i, i*2});
+    }
+    
+    BOOST_CHECK_NE(nb_custom_allocs, 0);
+//    BOOST_CHECK_EQUAL(nb_global_new, 0);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
