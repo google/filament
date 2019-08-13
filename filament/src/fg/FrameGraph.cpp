@@ -73,7 +73,10 @@ FrameGraphResource::Descriptor const& FrameGraph::Builder::getDescriptor(FrameGr
 
 bool FrameGraph::Builder::isAttachment(FrameGraphResource resource) const noexcept {
     ResourceNode& node = mFrameGraph.getResource(resource);
-    return node.renderTargetIndex != ResourceNode::UNINITIALIZED;
+    return node.resource->usage & (
+            TextureUsage::COLOR_ATTACHMENT |
+            TextureUsage::DEPTH_ATTACHMENT |
+            TextureUsage::STENCIL_ATTACHMENT);
 }
 
 FrameGraphRenderTarget::Descriptor const&
@@ -121,7 +124,7 @@ void FrameGraph::Builder::createRenderTarget(const char* name,
         if (attachmentInfo.isValid()) {
             ResourceNode& node = fg.getResource(attachmentInfo.getHandle());
 
-            // figure out the attachment flags (could this be done later?)
+            // figure out the attachment flags
             uint8_t usage = node.resource->usage;
             usage |= usages[i];
             node.resource->usage = TextureUsage(usage);
@@ -503,8 +506,8 @@ FrameGraph& FrameGraph::compile() noexcept {
             for (PassNode& pass : passNodes) {
                 // passes that were reading from "from node", now read from "to node" as well
                 for (FrameGraphResource handle : pass.reads) {
-                    if (handle.index == alias.from.index) {
-                        sratch.push_back(alias.to.index);
+                    if (handle == alias.from) {
+                        sratch.push_back(alias.to);
                     }
                 }
                 pass.reads.insert(pass.reads.end(), sratch.begin(), sratch.end());
@@ -513,7 +516,7 @@ FrameGraph& FrameGraph::compile() noexcept {
                 // Passes that were writing to "from node", no longer do
                 pass.writes.erase(
                         std::remove_if(pass.writes.begin(), pass.writes.end(),
-                                [&alias](auto handle) { return handle.index == alias.from.index; }),
+                                [&alias](auto handle) { return handle == alias.from; }),
                         pass.writes.end());
             }
         }
@@ -747,7 +750,7 @@ void FrameGraph::export_graphviz(utils::io::ostream& out) {
         out << "\"R" << node.resource->id << "_" << +node.version << "\""
                "[label=\"" << node.resource->name << "\\n(version: " << +node.version << ")"
                "\\nid:" << node.resource->id <<
-               "\\nrefs:" << node.resource->refs << ", texture: " << node.resource->needsTexture <<
+               "\\nrefs:" << node.resource->refs << ", texture: " << bool(node.resource->usage & TextureUsage::SAMPLEABLE) <<
                "\", style=filled, fillcolor="
                << ((subresource->imported) ?
                     (node.resource->refs ? "palegreen" : "palegreen4") :
@@ -760,6 +763,7 @@ void FrameGraph::export_graphviz(utils::io::ostream& out) {
     for (auto const& node : frameGraphPasses) {
         out << "P" << node.id << " -> { ";
         for (auto const& writer : node.writes) {
+            out << "R" << registry[writer.index].resource->id << "_" << +registry[writer.index].version << " ";
             out << "R" << registry[writer.index].resource->id << "_" << +registry[writer.index].version << " ";
         }
         out << "} [color=red2]\n";

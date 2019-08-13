@@ -49,7 +49,7 @@ class FrameGraphResource {
     friend struct fg::RenderTarget;
     friend struct fg::RenderTargetResource;
 
-    FrameGraphResource(uint16_t index) noexcept : index(index) {}
+    explicit FrameGraphResource(uint16_t index) noexcept : index(index) {}
 
     static constexpr uint16_t UNINITIALIZED = std::numeric_limits<uint16_t>::max();
     // index to the resource handle
