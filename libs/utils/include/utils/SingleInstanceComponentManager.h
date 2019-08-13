@@ -140,46 +140,46 @@ public:
 
     // return a pointer to the first element of the ElementIndex'th array
     template<size_t ElementIndex>
-    constexpr typename SoA::template TypeAt<ElementIndex>* begin() noexcept {
+    typename SoA::template TypeAt<ElementIndex>* begin() noexcept {
         return mData.template data<ElementIndex>() + 1;
     }
 
     template<size_t ElementIndex>
-    constexpr typename SoA::template TypeAt<ElementIndex> const* begin() const noexcept {
+    typename SoA::template TypeAt<ElementIndex> const* begin() const noexcept {
         return mData.template data<ElementIndex>() + 1;
     }
 
     // return a pointer to the past-the-end element of the ElementIndex'th array
     template<size_t ElementIndex>
-    constexpr typename SoA::template TypeAt<ElementIndex>* end() noexcept {
+    typename SoA::template TypeAt<ElementIndex>* end() noexcept {
         return begin<ElementIndex>() + getComponentCount();
     }
 
     template<size_t ElementIndex>
-    constexpr typename SoA::template TypeAt<ElementIndex> const* end() const noexcept {
+    typename SoA::template TypeAt<ElementIndex> const* end() const noexcept {
         return begin<ElementIndex>() + getComponentCount();
     }
 
     // return a Slice<>
     template<size_t ElementIndex>
-    constexpr Slice<typename SoA::template TypeAt<ElementIndex>> slice() noexcept {
+    Slice<typename SoA::template TypeAt<ElementIndex>> slice() noexcept {
         return { begin<ElementIndex>(), end<ElementIndex>() };
     }
 
     template<size_t ElementIndex>
-    constexpr Slice<const typename SoA::template TypeAt<ElementIndex>> slice() const noexcept {
+    Slice<const typename SoA::template TypeAt<ElementIndex>> slice() const noexcept {
         return { begin<ElementIndex>(), end<ElementIndex>() };
     }
 
     // return a reference to the index'th element of the ElementIndex'th array
     template<size_t ElementIndex>
-    constexpr typename SoA::template TypeAt<ElementIndex>& elementAt(Instance index) noexcept {
+    typename SoA::template TypeAt<ElementIndex>& elementAt(Instance index) noexcept {
         assert(index);
         return data<ElementIndex>()[index];
     }
 
     template<size_t ElementIndex>
-    constexpr typename SoA::template TypeAt<ElementIndex> const& elementAt(Instance index) const noexcept {
+    typename SoA::template TypeAt<ElementIndex> const& elementAt(Instance index) const noexcept {
         assert(index);
         return data<ElementIndex>()[index];
     }
@@ -187,14 +187,14 @@ public:
     // returns a pointer to the RAW ARRAY of components including the first dummy component
     // Use with caution.
     template<size_t ElementIndex>
-    constexpr typename SoA::template TypeAt<ElementIndex> const* raw_array() const noexcept {
+    typename SoA::template TypeAt<ElementIndex> const* raw_array() const noexcept {
         return data<ElementIndex>();
     }
 
     // We need our own version of Field because mData is private
     template<size_t E>
     struct Field : public SoA::template Field<E> {
-        constexpr Field(SingleInstanceComponentManager& soa, EntityInstanceBase::Type i) noexcept
+        Field(SingleInstanceComponentManager& soa, EntityInstanceBase::Type i) noexcept
                 : SoA::template Field<E>{ soa.mData, i } {
         }
         using SoA::template Field<E>::operator =;
@@ -202,12 +202,12 @@ public:
 
 protected:
     template<size_t ElementIndex>
-    constexpr typename SoA::template TypeAt<ElementIndex>* data() noexcept {
+    typename SoA::template TypeAt<ElementIndex>* data() noexcept {
         return mData.template data<ElementIndex>();
     }
 
     template<size_t ElementIndex>
-    constexpr typename SoA::template TypeAt<ElementIndex> const* data() const noexcept {
+    typename SoA::template TypeAt<ElementIndex> const* data() const noexcept {
         return mData.template data<ElementIndex>();
     }
 
