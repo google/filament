@@ -92,109 +92,109 @@ public:
     UTILS_NOINLINE void setSunHaloSize(Instance i, float haloSize) noexcept;
     UTILS_NOINLINE void setSunHaloFalloff(Instance i, float haloFalloff) noexcept;
 
-    constexpr LightType const& getLightType(Instance i) const noexcept {
+    LightType const& getLightType(Instance i) const noexcept {
         return mManager[i].lightType;
     }
 
-    constexpr Type getType(Instance i) const noexcept {
+    Type getType(Instance i) const noexcept {
         return getLightType(i).type;
     }
 
-    constexpr bool isShadowCaster(Instance i) const noexcept {
+    bool isShadowCaster(Instance i) const noexcept {
         return getLightType(i).shadowCaster;
     }
 
-    constexpr bool isLightCaster(Instance i) const noexcept {
+    bool isLightCaster(Instance i) const noexcept {
         return getLightType(i).lightCaster;
     }
 
-    constexpr bool isPointLight(Instance i) const noexcept { 
+    bool isPointLight(Instance i) const noexcept {
         return getType(i) == Type::POINT; 
     }
 
-    constexpr bool isSpotLight(Instance i) const noexcept {
+    bool isSpotLight(Instance i) const noexcept {
         Type type = getType(i);
         return type == Type::FOCUSED_SPOT || type == Type::SPOT;
     }
 
-    constexpr bool isDirectionalLight(Instance i) const noexcept {
+    bool isDirectionalLight(Instance i) const noexcept {
         Type type = getType(i);
         return type == Type::DIRECTIONAL || type == Type::SUN;
     }
 
-    constexpr bool isIESLight(Instance i) const noexcept {
+    bool isIESLight(Instance i) const noexcept {
         return false;   // TODO: change this when we support IES lights
     }
 
-    constexpr bool isSunLight(Instance i) const noexcept {
+    bool isSunLight(Instance i) const noexcept {
         return getType(i) == Type::SUN; 
     }
 
-    constexpr uint32_t getShadowMapSize(Instance i) const noexcept {
+    uint32_t getShadowMapSize(Instance i) const noexcept {
         return getShadowParams(i).options.mapSize;
     }
 
-    constexpr ShadowParams const& getShadowParams(Instance i) const noexcept {
+    ShadowParams const& getShadowParams(Instance i) const noexcept {
         return mManager[i].shadowParams;
     }
 
-    constexpr float getShadowConstantBias(Instance i) const noexcept {
+    float getShadowConstantBias(Instance i) const noexcept {
         return getShadowParams(i).options.constantBias;
     }
 
-    constexpr float getShadowNormalBias(Instance i) const noexcept {
+    float getShadowNormalBias(Instance i) const noexcept {
         return getShadowParams(i).options.normalBias;
     }
 
-    constexpr float getShadowFar(Instance i) const noexcept {
+    float getShadowFar(Instance i) const noexcept {
         return getShadowParams(i).options.shadowFar;
     }
 
-    constexpr const math::float3& getColor(Instance i) const noexcept {
+    const math::float3& getColor(Instance i) const noexcept {
         return mManager[i].color;
     }
 
-    constexpr float getIntensity(Instance i) const noexcept {
+    float getIntensity(Instance i) const noexcept {
         return mManager[i].intensity;
     }
 
-    constexpr float getSunAngularRadius(Instance i) const noexcept {
+    float getSunAngularRadius(Instance i) const noexcept {
         return mManager[i].sunAngularRadius;
     }
 
-    constexpr float getSunHaloSize(Instance i) const noexcept {
+    float getSunHaloSize(Instance i) const noexcept {
         return mManager[i].sunHaloSize;
     }
 
-    constexpr float getSunHaloFalloff(Instance i) const noexcept {
+    float getSunHaloFalloff(Instance i) const noexcept {
         return mManager[i].sunHaloFalloff;
     }
 
-    constexpr float getSquaredFalloffInv(Instance i) const noexcept {
+    float getSquaredFalloffInv(Instance i) const noexcept {
         return mManager[i].squaredFallOffInv;
     }
 
-    constexpr SpotParams const& getSpotParams(Instance i) const noexcept {
+    SpotParams const& getSpotParams(Instance i) const noexcept {
         return mManager[i].spotParams;
     }
 
-    constexpr float getCosOuterSquared(Instance i) const noexcept {
+    float getCosOuterSquared(Instance i) const noexcept {
         return getSpotParams(i).cosOuterSquared;
     }
 
-    constexpr float getSinInverse(Instance i) const noexcept {
+    float getSinInverse(Instance i) const noexcept {
         return getSpotParams(i).sinInverse;
     }
 
-    constexpr float getRadius(Instance i) const noexcept {
+    float getRadius(Instance i) const noexcept {
         return getSpotParams(i).radius;
     }
 
-    constexpr const math::float3& getLocalPosition(Instance i) const noexcept {
+    const math::float3& getLocalPosition(Instance i) const noexcept {
         return mManager[i].position;
     }
 
-    constexpr const math::float3& getLocalDirection(Instance i) const noexcept {
+    const math::float3& getLocalDirection(Instance i) const noexcept {
         return mManager[i].direction;
     }
 
@@ -244,7 +244,7 @@ private:
         struct Proxy {
             // all of this gets inlined
             UTILS_ALWAYS_INLINE
-            constexpr Proxy(Base& sim, utils::EntityInstanceBase::Type i) noexcept
+            Proxy(Base& sim, utils::EntityInstanceBase::Type i) noexcept
                     : lightType{ sim, i } { }
 
             union {
@@ -263,10 +263,10 @@ private:
             };
         };
 
-        UTILS_ALWAYS_INLINE constexpr Proxy operator[](Instance i) noexcept {
+        UTILS_ALWAYS_INLINE Proxy operator[](Instance i) noexcept {
             return { *this, i };
         }
-        UTILS_ALWAYS_INLINE constexpr const Proxy operator[](Instance i) const noexcept {
+        UTILS_ALWAYS_INLINE const Proxy operator[](Instance i) const noexcept {
             return { const_cast<Sim&>(*this), i };
         }
     };

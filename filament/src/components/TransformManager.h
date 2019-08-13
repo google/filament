@@ -132,7 +132,7 @@ private:
         struct Proxy {
             // all of this gets inlined
             UTILS_ALWAYS_INLINE
-            constexpr Proxy(Base& sim, utils::EntityInstanceBase::Type i) noexcept
+            Proxy(Base& sim, utils::EntityInstanceBase::Type i) noexcept
                     : local{ sim, i } { }
 
             union {
@@ -146,10 +146,10 @@ private:
             };
         };
 
-        UTILS_ALWAYS_INLINE constexpr Proxy operator[](Instance i) noexcept {
+        UTILS_ALWAYS_INLINE Proxy operator[](Instance i) noexcept {
             return { *this, i };
         }
-        UTILS_ALWAYS_INLINE constexpr const Proxy operator[](Instance i) const noexcept {
+        UTILS_ALWAYS_INLINE const Proxy operator[](Instance i) const noexcept {
             return { const_cast<Sim&>(*this), i };
         }
     };
