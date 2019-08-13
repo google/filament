@@ -155,12 +155,14 @@ class MainActivity : Activity() {
         // IndirectLight and SkyBox
         // ------------------------
 
-        readUncompressedAsset("envs/venetian_crossroads_ibl.ktx").let {
+        val ibl = "venetian_crossroads_2k";
+
+        readUncompressedAsset("envs/$ibl/${ibl}_ibl.ktx").let {
             primary.scene.indirectLight = KtxLoader.createIndirectLight(engine, it, KtxLoader.Options())
             primary.scene.indirectLight!!.intensity = 50_000.0f
         }
 
-        readUncompressedAsset("envs/venetian_crossroads_skybox.ktx").let {
+        readUncompressedAsset("envs/$ibl/${ibl}_skybox.ktx").let {
             primary.scene.skybox = KtxLoader.createSkybox(engine, it, KtxLoader.Options())
         }
 
