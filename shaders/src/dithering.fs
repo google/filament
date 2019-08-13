@@ -9,8 +9,7 @@
 #define DITHERING_TRIANGLE_NOISE       3
 #define DITHERING_TRIANGLE_NOISE_RGB   4
 
-// Workaround Adreno bug #1096 by using VLACHOS for Vulkan.
-#if defined(TARGET_MOBILE) && !defined(TARGET_VULKAN_ENVIRONMENT)
+#if defined(TARGET_MOBILE)
     #define DITHERING_OPERATOR         DITHERING_INTERLEAVED_NOISE
 #else
     #define DITHERING_OPERATOR         DITHERING_VLACHOS
@@ -41,7 +40,10 @@ float interleavedGradientNoise(const highp vec2 n) {
 
 vec4 Dither_InterleavedGradientNoise(vec4 rgba) {
     // Jimenez 2014, "Next Generation Post-Processing in Call of Duty"
-    float noise = interleavedGradientNoise(gl_FragCoord.xy + postProcessUniforms.time);
+
+    // The noise variable must be highp to workaround Adreno bug #1096.
+    highp float noise = interleavedGradientNoise(gl_FragCoord.xy + postProcessUniforms.time);
+
     // remap from [0..1[ to [-1..1[
     noise = (noise * 2.0) - 1.0;
     return vec4(rgba.rgb + noise / 255.0, rgba.a);
