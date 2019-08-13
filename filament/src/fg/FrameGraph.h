@@ -77,12 +77,12 @@ public:
         FrameGraphResource write(FrameGraphResource const& output);
 
         // create a render target in this pass. read/write must have been called as appropriate before this.
-        void useRenderTarget(const char* name,
+        void createRenderTarget(const char* name,
                 FrameGraphRenderTarget::Descriptor const& desc,
                 backend::TargetBufferFlags clearFlags = {}) noexcept;
 
         // helper for single color attachment with WRITE access
-        void useRenderTarget(FrameGraphResource& texture,
+        void createRenderTarget(FrameGraphResource& texture,
                 backend::TargetBufferFlags clearFlags = {}) noexcept;
 
         // Declare that this pass has side effects outside the framegraph (i.e. it can't be culled)
