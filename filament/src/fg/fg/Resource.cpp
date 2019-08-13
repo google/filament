@@ -44,13 +44,11 @@ void Resource::create(FrameGraph& fg) noexcept {
         assert(usage);
         // (it means it's only used as an attachment for a rendertarget)
         uint8_t samples = desc.samples;
-        auto effectiveUsage = usage;
-        if (needsTexture) {
-            effectiveUsage |= TextureUsage::SAMPLEABLE;
+        if (usage & TextureUsage::SAMPLEABLE) {
             samples = 1; // sampleable textures can't be multi-sampled
         }
         texture = fg.getResourceAllocator().createTexture(name, desc.type, desc.levels,
-                desc.format, samples, desc.width, desc.height, desc.depth, effectiveUsage);
+                desc.format, samples, desc.width, desc.height, desc.depth, usage);
     }
 }
 

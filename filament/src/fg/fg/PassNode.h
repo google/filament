@@ -56,7 +56,7 @@ struct PassNode { // 200
         ResourceNode const& node = fg.getResource(handle);
 
         if (!isRenderTarget) {
-            node.resource->needsTexture = true;
+            node.resource->usage |= backend::TextureUsage::SAMPLEABLE;
         }
 
         // don't allow multiple reads of the same resource -- it's just redundant.
