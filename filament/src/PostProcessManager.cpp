@@ -173,7 +173,7 @@ FrameGraphResource PostProcessManager::toneMapping(FrameGraph& fg, FrameGraphRes
                         .format = outFormat
                 };
                 data.output = builder.createTexture("tonemapping output", outputDesc);
-                builder.useRenderTarget(data.output);
+                builder.createRenderTarget(data.output);
             },
             [=](FrameGraphPassResources const& resources,
                     PostProcessToneMapping const& data, DriverApi& driver) {
@@ -229,7 +229,7 @@ FrameGraphResource PostProcessManager::fxaa(FrameGraph& fg,
                         .format = outFormat
                 };
                 data.output = builder.createTexture("fxaa output", outputDesc);
-                builder.useRenderTarget(data.output);
+                builder.createRenderTarget(data.output);
             },
             [=](FrameGraphPassResources const& resources,
                     PostProcessFXAA const& data, DriverApi& driver) {
@@ -270,7 +270,7 @@ FrameGraphResource PostProcessManager::resolve(
 
                 data.input = builder.read(input, true);
 
-                builder.useRenderTarget(builder.getName(data.input),
+                builder.createRenderTarget(builder.getName(data.input),
                         { .attachments.color = { data.input },
                           .samples = builder.getSamples(data.input)
                         });
@@ -281,7 +281,7 @@ FrameGraphResource PostProcessManager::resolve(
                         .format = inputDesc->format
                 };
                 data.output = builder.createTexture("resolve output", outputDesc);
-                builder.useRenderTarget(data.output);
+                builder.createRenderTarget(data.output);
             },
             [=](FrameGraphPassResources const& resources,
                     PostProcessResolve const& data, DriverApi& driver) {
@@ -309,7 +309,7 @@ FrameGraphResource PostProcessManager::dynamicScaling(FrameGraph& fg,
 
                 data.input = builder.read(input, true);
 
-                builder.useRenderTarget(builder.getName(data.input),
+                builder.createRenderTarget(builder.getName(data.input),
                         { .attachments.color = { data.input },
                           .samples = builder.getSamples(data.input)
                         });
@@ -320,7 +320,7 @@ FrameGraphResource PostProcessManager::dynamicScaling(FrameGraph& fg,
                         .format = outFormat
                 };
                 data.output = builder.createTexture("scale output", outputDesc);
-                builder.useRenderTarget(data.output);
+                builder.createRenderTarget(data.output);
             },
             [=](FrameGraphPassResources const& resources,
                     PostProcessScaling const& data, DriverApi& driver) {
@@ -389,7 +389,7 @@ FrameGraphResource PostProcessManager::ssao(FrameGraph& fg, RenderPass& pass,
                 data.ssao = builder.write(data.ssao);
                 data.depth = builder.read(data.depth, true);
 
-                builder.useRenderTarget("SSAO Target",
+                builder.createRenderTarget("SSAO Target",
                         { .attachments.color = { data.ssao },
                           .attachments.depth = { data.depth }
                         }, TargetBufferFlags::NONE);
@@ -473,7 +473,7 @@ FrameGraphResource PostProcessManager::depthPass(FrameGraph& fg, RenderPass& pas
 
                 data.depth = builder.write(builder.read(data.depth, true));
 
-                builder.useRenderTarget("SSAO Depth Target",
+                builder.createRenderTarget("SSAO Depth Target",
                         { .attachments.depth = data.depth },
                         TargetBufferFlags::DEPTH);
             },
@@ -501,12 +501,12 @@ FrameGraphResource PostProcessManager::mipmapPass(FrameGraph& fg,
                 const char* name = builder.getName(input);
 
                 data.in = builder.read(input, true);
-                builder.useRenderTarget(name, {
+                builder.createRenderTarget(name, {
                         .attachments.depth = { data.in, uint8_t(level) }
                 });
 
                 data.out = builder.write(data.in);
-                builder.useRenderTarget(name, {
+                builder.createRenderTarget(name, {
                         .attachments.depth = { data.out, uint8_t(level + 1) }
                 });
             },
@@ -563,7 +563,7 @@ FrameGraphResource PostProcessManager::blurPass(FrameGraph& fg, FrameGraphResour
                 // doesn't use SSAO.
                 depth = builder.read(depth, true);
                 data.blurred = builder.write(data.blurred);
-                builder.useRenderTarget("Blurred target",
+                builder.createRenderTarget("Blurred target",
                         { .attachments.color = { data.blurred },
                           .attachments.depth = { depth }
                         }, TargetBufferFlags::NONE);

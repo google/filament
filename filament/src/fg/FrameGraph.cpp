@@ -96,7 +96,7 @@ FrameGraphResource FrameGraph::Builder::createTexture(
     return mFrameGraph.createResourceNode(resource);
 }
 
-void FrameGraph::Builder::useRenderTarget(const char* name,
+void FrameGraph::Builder::createRenderTarget(const char* name,
         FrameGraphRenderTarget::Descriptor const& desc, TargetBufferFlags clearFlags) noexcept {
 
     // TODO: add support for cubemaps and arrays
@@ -132,10 +132,10 @@ void FrameGraph::Builder::useRenderTarget(const char* name,
     }
 }
 
-void FrameGraph::Builder::useRenderTarget(FrameGraphResource& texture,
+void FrameGraph::Builder::createRenderTarget(FrameGraphResource& texture,
         TargetBufferFlags clearFlags) noexcept {
     texture = this->write(texture);
-    useRenderTarget(getName(texture), {
+    createRenderTarget(getName(texture), {
             .attachments.color = texture,
             .samples = getSamples(texture)
     }, clearFlags);

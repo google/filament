@@ -49,7 +49,7 @@ TEST(FrameGraphTest, SimpleRenderPass) {
                         .format = TextureFormat::RGBA16F
                 };
                 data.output = builder.createTexture("color buffer", desc);
-                builder.useRenderTarget(data.output);
+                builder.createRenderTarget(data.output);
                 EXPECT_TRUE(fg.isValid(data.output));
             },
             [=, &renderPassExecuted](
@@ -96,7 +96,7 @@ TEST(FrameGraphTest, SimpleRenderPass2) {
 
                 data.outColor = builder.write(builder.read(data.outColor, true));
                 data.outDepth = builder.write(builder.read(data.outDepth, true));
-                builder.useRenderTarget("rt", {
+                builder.createRenderTarget("rt", {
                         .attachments.color = data.outColor,
                         .attachments.depth = data.outDepth
                 });
@@ -143,7 +143,7 @@ TEST(FrameGraphTest, ScenarioDepthPrePass) {
                 inputDesc.format = TextureFormat::DEPTH24;
                 data.outDepth = builder.createTexture("depth buffer", inputDesc);
                 data.outDepth = builder.write(builder.read(data.outDepth, true));
-                builder.useRenderTarget("rt depth", {
+                builder.createRenderTarget("rt depth", {
                         .attachments.depth = data.outDepth
                 });
                 EXPECT_TRUE(fg.isValid(data.outDepth));
@@ -175,7 +175,7 @@ TEST(FrameGraphTest, ScenarioDepthPrePass) {
 
                 data.outColor = builder.write(builder.read(data.outColor, true));
                 data.outDepth = builder.write(builder.read(data.outDepth, true));
-                builder.useRenderTarget("rt color+depth", {
+                builder.createRenderTarget("rt color+depth", {
                         .attachments.color = data.outColor,
                         .attachments.depth = data.outDepth
                 });
@@ -221,7 +221,7 @@ TEST(FrameGraphTest, SimplePassCulling) {
     auto& renderPass = fg.addPass<RenderPassData>("Render",
             [&](FrameGraph::Builder& builder, RenderPassData& data) {
                 data.output = builder.createTexture("renderTarget");
-                builder.useRenderTarget(data.output);
+                builder.createRenderTarget(data.output);
             },
             [=, &renderPassExecuted](
                     FrameGraphPassResources const& resources,
@@ -244,7 +244,7 @@ TEST(FrameGraphTest, SimplePassCulling) {
             [&](FrameGraph::Builder& builder, PostProcessPassData& data) {
                 data.input = builder.read(renderPass.getData().output);
                 data.output = builder.createTexture("postprocess-renderTarget");
-                builder.useRenderTarget(data.output);
+                builder.createRenderTarget(data.output);
             },
             [=, &postProcessPassExecuted](
                     FrameGraphPassResources const& resources,
@@ -267,7 +267,7 @@ TEST(FrameGraphTest, SimplePassCulling) {
             [&](FrameGraph::Builder& builder, CulledPassData& data) {
                 data.input = builder.read(renderPass.getData().output);
                 data.output = builder.createTexture("unused-rendertarget");
-                builder.useRenderTarget(data.output);
+                builder.createRenderTarget(data.output);
             },
             [=, &culledPassExecuted](
                     FrameGraphPassResources const& resources,
@@ -314,7 +314,7 @@ TEST(FrameGraphTest, RenderTargetLifetime) {
                         .format = TextureFormat::RGBA16F
                 };
                 data.output = builder.createTexture("color buffer", desc);
-                builder.useRenderTarget(data.output, (TargetBufferFlags)0x80);
+                builder.createRenderTarget(data.output, (TargetBufferFlags)0x80);
                 EXPECT_TRUE(fg.isValid(data.output));
             },
             [=, &rt1, &renderPassExecuted1](
@@ -332,7 +332,7 @@ TEST(FrameGraphTest, RenderTargetLifetime) {
     auto& renderPass2 = fg.addPass<RenderPassData>("Render2",
             [&](FrameGraph::Builder& builder, RenderPassData& data) {
                 data.output = builder.write(builder.read(renderPass1.getData().output, true));
-                builder.useRenderTarget("color", {
+                builder.createRenderTarget("color", {
                         .attachments.color = { data.output }
                 }, (TargetBufferFlags)0x40);
                 EXPECT_TRUE(fg.isValid(data.output));

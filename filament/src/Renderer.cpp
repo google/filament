@@ -306,7 +306,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                 }
 
                 data.color = builder.write(builder.read(data.color, true));
-                builder.useRenderTarget("Color Pass Target", {
+                builder.createRenderTarget("Color Pass Target", {
                         .samples = msaa,
                         .attachments.color = data.color,
                         .attachments.depth = data.depth
