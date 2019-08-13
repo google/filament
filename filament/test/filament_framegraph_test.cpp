@@ -49,7 +49,7 @@ TEST(FrameGraphTest, SimpleRenderPass) {
                         .format = TextureFormat::RGBA16F
                 };
                 data.output = builder.createTexture("color buffer", desc);
-                data.output = builder.useRenderTarget(data.output);
+                builder.useRenderTarget(data.output);
                 EXPECT_TRUE(fg.isValid(data.output));
             },
             [=, &renderPassExecuted](
@@ -92,13 +92,14 @@ TEST(FrameGraphTest, SimpleRenderPass2) {
                 data.outColor = builder.createTexture("color buffer", inputDesc);
                 inputDesc.format = TextureFormat::DEPTH24;
                 data.outDepth = builder.createTexture("depth buffer", inputDesc);
-                FrameGraphRenderTarget::Descriptor outputDesc{
+
+
+                data.outColor = builder.write(builder.read(data.outColor, true));
+                data.outDepth = builder.write(builder.read(data.outDepth, true));
+                builder.useRenderTarget("rt", {
                         .attachments.color = data.outColor,
                         .attachments.depth = data.outDepth
-                };
-                auto rt = builder.useRenderTarget("rt", outputDesc);
-                data.outColor = rt.textures[0];
-                data.outDepth = rt.textures[1];
+                });
 
                 EXPECT_TRUE(fg.isValid(data.outColor));
                 EXPECT_TRUE(fg.isValid(data.outDepth));
@@ -141,10 +142,10 @@ TEST(FrameGraphTest, ScenarioDepthPrePass) {
                 FrameGraphResource::Descriptor inputDesc{};
                 inputDesc.format = TextureFormat::DEPTH24;
                 data.outDepth = builder.createTexture("depth buffer", inputDesc);
-                FrameGraphRenderTarget::Descriptor outputDesc{
+                data.outDepth = builder.write(builder.read(data.outDepth, true));
+                builder.useRenderTarget("rt depth", {
                         .attachments.depth = data.outDepth
-                };
-                data.outDepth = builder.useRenderTarget("rt depth", outputDesc).textures[1];
+                });
                 EXPECT_TRUE(fg.isValid(data.outDepth));
             },
             [=, &depthPrepassExecuted](
@@ -172,13 +173,12 @@ TEST(FrameGraphTest, ScenarioDepthPrePass) {
                 // declare a read here, so a reference is added to the previous pass
                 data.outDepth = depthPrepass.getData().outDepth;
 
-                FrameGraphRenderTarget::Descriptor outputDesc{
+                data.outColor = builder.write(builder.read(data.outColor, true));
+                data.outDepth = builder.write(builder.read(data.outDepth, true));
+                builder.useRenderTarget("rt color+depth", {
                         .attachments.color = data.outColor,
                         .attachments.depth = data.outDepth
-                };
-                auto rt = builder.useRenderTarget("rt color+depth", outputDesc);
-                data.outColor = rt.textures[0];
-                data.outDepth = rt.textures[1];
+                });
 
                 EXPECT_FALSE(fg.isValid(depthPrepass.getData().outDepth));
                 EXPECT_TRUE(fg.isValid(data.outColor));
@@ -221,7 +221,7 @@ TEST(FrameGraphTest, SimplePassCulling) {
     auto& renderPass = fg.addPass<RenderPassData>("Render",
             [&](FrameGraph::Builder& builder, RenderPassData& data) {
                 data.output = builder.createTexture("renderTarget");
-                data.output = builder.useRenderTarget(data.output);
+                builder.useRenderTarget(data.output);
             },
             [=, &renderPassExecuted](
                     FrameGraphPassResources const& resources,
@@ -244,7 +244,7 @@ TEST(FrameGraphTest, SimplePassCulling) {
             [&](FrameGraph::Builder& builder, PostProcessPassData& data) {
                 data.input = builder.read(renderPass.getData().output);
                 data.output = builder.createTexture("postprocess-renderTarget");
-                data.output = builder.useRenderTarget(data.output);
+                builder.useRenderTarget(data.output);
             },
             [=, &postProcessPassExecuted](
                     FrameGraphPassResources const& resources,
@@ -267,7 +267,7 @@ TEST(FrameGraphTest, SimplePassCulling) {
             [&](FrameGraph::Builder& builder, CulledPassData& data) {
                 data.input = builder.read(renderPass.getData().output);
                 data.output = builder.createTexture("unused-rendertarget");
-                data.output = builder.useRenderTarget(data.output);
+                builder.useRenderTarget(data.output);
             },
             [=, &culledPassExecuted](
                     FrameGraphPassResources const& resources,
@@ -314,7 +314,7 @@ TEST(FrameGraphTest, RenderTargetLifetime) {
                         .format = TextureFormat::RGBA16F
                 };
                 data.output = builder.createTexture("color buffer", desc);
-                data.output = builder.useRenderTarget(data.output, (TargetBufferFlags)0x80);
+                builder.useRenderTarget(data.output, (TargetBufferFlags)0x80);
                 EXPECT_TRUE(fg.isValid(data.output));
             },
             [=, &rt1, &renderPassExecuted1](
@@ -331,10 +331,10 @@ TEST(FrameGraphTest, RenderTargetLifetime) {
 
     auto& renderPass2 = fg.addPass<RenderPassData>("Render2",
             [&](FrameGraph::Builder& builder, RenderPassData& data) {
-                data.output = builder.useRenderTarget("color", {
-                                .attachments.color = {
-                                        renderPass1.getData().output, FrameGraphRenderTarget::Attachments::READ_WRITE }},
-                        (TargetBufferFlags)0x40).color;
+                data.output = builder.write(builder.read(renderPass1.getData().output, true));
+                builder.useRenderTarget("color", {
+                        .attachments.color = { data.output }
+                }, (TargetBufferFlags)0x40);
                 EXPECT_TRUE(fg.isValid(data.output));
             },
             [=, &rt1, &renderPassExecuted2](
