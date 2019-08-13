@@ -1116,11 +1116,26 @@ private:
     void insert_value(std::size_t ibucket, distance_type dist_from_ideal_bucket, 
                       truncated_hash_type hash, Args&&... value_type_args) 
     {
-        insert_value(ibucket, dist_from_ideal_bucket, hash, value_type(std::forward<Args>(value_type_args)...));
+        value_type value(std::forward<Args>(value_type_args)...);
+        insert_value_impl(ibucket, dist_from_ideal_bucket, hash, value);
     }
 
+	// fix issue #6 (see https://github.com/Tessil/robin-map/commit/965dacd191502d310f053cc00551ea8fc2f6c7f0)
     void insert_value(std::size_t ibucket, distance_type dist_from_ideal_bucket, 
-                      truncated_hash_type hash, value_type&& value) 
+                      truncated_hash_type hash, value_type&& value)
+    {
+        insert_value_impl(ibucket, dist_from_ideal_bucket, hash, value);
+    }
+
+    /*
+     * We don't use `value_type&& value` as last argument due to a bug in MSVC when `value_type` is a pointer,
+     * The compiler is not able to see the difference between `std::string*` and `std::string*&&` resulting in 
+     * compile error.
+     * 
+     * The `value` will be in a moved state at the end of the function.
+     */
+    void insert_value_impl(std::size_t ibucket, distance_type dist_from_ideal_bucket,
+        truncated_hash_type hash, value_type& value)
     {
         m_buckets[ibucket].swap_with_value_in_bucket(dist_from_ideal_bucket, hash, value);
         ibucket = next_bucket(ibucket);
