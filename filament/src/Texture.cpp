@@ -178,19 +178,6 @@ void FTexture::setExternalStream(FEngine& engine, FStream* stream) noexcept {
     }
 }
 
-static bool isColorRenderable(FEngine& engine, Texture::InternalFormat format) {
-    switch (format) {
-        case Texture::InternalFormat::DEPTH16:
-        case Texture::InternalFormat::DEPTH24:
-        case Texture::InternalFormat::DEPTH32F:
-        case Texture::InternalFormat::DEPTH24_STENCIL8:
-        case Texture::InternalFormat::DEPTH32F_STENCIL8:
-            return false;
-        default:
-            return engine.getDriverApi().isRenderTargetFormatSupported(format);
-    }
-}
-
 void FTexture::generateMipmaps(FEngine& engine) const noexcept {
     const bool formatMipmappable = engine.getDriverApi().isTextureFormatMipmappable(mFormat);
     if (!ASSERT_POSTCONDITION_NON_FATAL(formatMipmappable, "Texture format is not mipmappable.")) {
