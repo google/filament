@@ -302,17 +302,15 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                             .format = TextureFormat::DEPTH24,
                             .samples = msaa
                     });
+                    data.depth = builder.write(builder.read(data.depth, true));
                 }
 
-                FrameGraphRenderTarget::Descriptor desc{
+                data.color = builder.write(builder.read(data.color, true));
+                builder.useRenderTarget("Color Pass Target", {
                         .samples = msaa,
                         .attachments.color = data.color,
                         .attachments.depth = data.depth
-                };
-
-                auto attachments = builder.useRenderTarget("Color Pass Target", desc, clearFlags);
-                data.color = attachments.color;
-                data.depth = attachments.depth;
+                }, clearFlags);
             },
             [&pass, &ppm, colorPassBegin, colorPassEnd, jobFroxelize, &js, &view]
                     (FrameGraphPassResources const& resources,

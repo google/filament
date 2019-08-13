@@ -65,6 +65,27 @@ const char* FrameGraph::Builder::getName(FrameGraphResource const& r) const noex
     return pResource ? pResource->name : "(invalid)";
 }
 
+FrameGraphResource::Descriptor const& FrameGraph::Builder::getDescriptor(FrameGraphResource const& r) {
+    FrameGraphResource::Descriptor const* desc = mFrameGraph.getDescriptor(r);
+    assert(desc);
+    return *desc;
+}
+
+bool FrameGraph::Builder::isAttachment(FrameGraphResource resource) const noexcept {
+    ResourceNode& node = mFrameGraph.getResource(resource);
+    return node.renderTargetIndex != ResourceNode::UNINITIALIZED;
+}
+
+FrameGraphRenderTarget::Descriptor const&
+FrameGraph::Builder::getRenderTargetDescriptor(FrameGraphResource attachment) const {
+    FrameGraph& fg = mFrameGraph;
+    ResourceNode& node = fg.getResource(attachment);
+    ASSERT_POSTCONDITION(node.renderTargetIndex != ResourceNode::UNINITIALIZED,
+            "Resource \"%s\" isn't a render target attachment", node.resource->name);
+    assert(node.renderTargetIndex < fg.mRenderTargets.size());
+    return fg.mRenderTargets[node.renderTargetIndex].desc;
+}
+
 uint8_t FrameGraph::Builder::getSamples(FrameGraphResource const& r) const noexcept {
     return isAttachment(r) ? getRenderTargetDescriptor(r).samples : 1;
 }
@@ -75,14 +96,13 @@ FrameGraphResource FrameGraph::Builder::createTexture(
     return mFrameGraph.createResourceNode(resource);
 }
 
-FrameGraph::Builder::Attachments FrameGraph::Builder::useRenderTarget(const char* name,
+void FrameGraph::Builder::useRenderTarget(const char* name,
         FrameGraphRenderTarget::Descriptor const& desc, TargetBufferFlags clearFlags) noexcept {
 
     // TODO: add support for cubemaps and arrays
 
     // TODO: enforce that we can't have a resource used in 2 rendertarget in the same pass
 
-    FrameGraphRenderTarget::AttachmentResult rt{};
     FrameGraph& fg = mFrameGraph;
 
     fg::RenderTarget& renderTarget = fg.createRenderTarget(name, desc);
@@ -99,48 +119,30 @@ FrameGraph::Builder::Attachments FrameGraph::Builder::useRenderTarget(const char
     for (size_t i = 0; i < desc.attachments.textures.size(); i++) {
         FrameGraphRenderTarget::Attachments::AttachmentInfo attachmentInfo = desc.attachments.textures[i];
         if (attachmentInfo.isValid()) {
-            FrameGraphResource attachment = attachmentInfo.getHandle();
-            if (attachmentInfo.getAccess() & FrameGraphRenderTarget::Attachments::READ) {
-                attachment = mPass.read(fg, attachment, true);
-            }
-            if (attachmentInfo.getAccess() & FrameGraphRenderTarget::Attachments::WRITE) {
-                attachment = mPass.write(fg, attachment);
-            }
-            ResourceNode& node = fg.getResource(attachment);
+            ResourceNode& node = fg.getResource(attachmentInfo.getHandle());
+
+            // figure out the attachment flags (could this be done later?)
             uint8_t usage = node.resource->usage;
             usage |= usages[i];
             node.resource->usage = TextureUsage(usage);
 
             // renderTargetIndex is used to retrieve the Descriptor
             node.renderTargetIndex = renderTarget.index;
-
-            rt.textures[i] = attachment;
         }
     }
-    return rt;
 }
 
-FrameGraphResource FrameGraph::Builder::useRenderTarget(FrameGraphResource texture,
+void FrameGraph::Builder::useRenderTarget(FrameGraphResource& texture,
         TargetBufferFlags clearFlags) noexcept {
-    FrameGraphRenderTarget::Descriptor desc{
-            .attachments.color = { texture, FrameGraphRenderTarget::Attachments::WRITE },
+    texture = this->write(texture);
+    useRenderTarget(getName(texture), {
+            .attachments.color = texture,
             .samples = getSamples(texture)
-    };
-    return useRenderTarget(getName(texture), desc, clearFlags).color;
-}
-
-FrameGraphResource::Descriptor const& FrameGraph::Builder::getDescriptor(FrameGraphResource const& r) {
-    FrameGraphResource::Descriptor const* desc = mFrameGraph.getDescriptor(r);
-    assert(desc);
-    return *desc;
+    }, clearFlags);
 }
 
 FrameGraphResource FrameGraph::Builder::read(FrameGraphResource const& input, bool doesntNeedTexture) {
     return mPass.read(mFrameGraph, input, doesntNeedTexture);
-}
-
-FrameGraphResource FrameGraph::Builder::read(FrameGraphResource const& input) {
-    return mPass.read(mFrameGraph, input);
 }
 
 FrameGraphResource FrameGraph::Builder::write(FrameGraphResource const& output) {
@@ -150,21 +152,6 @@ FrameGraphResource FrameGraph::Builder::write(FrameGraphResource const& output) 
 FrameGraph::Builder& FrameGraph::Builder::sideEffect() noexcept {
     mPass.hasSideEffect = true;
     return *this;
-}
-
-bool FrameGraph::Builder::isAttachment(FrameGraphResource resource) const noexcept {
-    ResourceNode& node = mFrameGraph.getResource(resource);
-    return node.renderTargetIndex != ResourceNode::UNINITIALIZED;
-}
-
-FrameGraphRenderTarget::Descriptor const&
-FrameGraph::Builder::getRenderTargetDescriptor(FrameGraphResource attachment) const {
-    FrameGraph& fg = mFrameGraph;
-    ResourceNode& node = fg.getResource(attachment);
-    ASSERT_POSTCONDITION(node.renderTargetIndex != ResourceNode::UNINITIALIZED,
-            "Resource \"%s\" isn't a render target attachment", node.resource->name);
-    assert(node.renderTargetIndex < fg.mRenderTargets.size());
-    return fg.mRenderTargets[node.renderTargetIndex].desc;
 }
 
 // ------------------------------------------------------------------------------------------------
