@@ -87,6 +87,10 @@ public class TransformManager {
         nCommitLocalTransformTransaction(mNativeObject);
     }
 
+    public long getNativeObject() {
+        return mNativeObject;
+    }
+
     private static native boolean nHasComponent(long nativeTransformManager, int entity);
     private static native int nGetInstance(long nativeTransformManager, int entity);
     private static native int nCreate(long nativeTransformManager, int entity);

@@ -69,7 +69,7 @@ public class EntityManager {
     }
 
     @UsedByReflection("AssetLoader.java")
-    long getNativeObject() {
+    public long getNativeObject() {
         return mNativeObject;
     }
 

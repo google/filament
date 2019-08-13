@@ -340,6 +340,10 @@ public class RenderableManager {
         return requiredAttributes;
     }
 
+    public long getNativeObject() {
+        return mNativeObject;
+    }
+
     private static native boolean nHasComponent(long nativeRenderableManager, int entity);
     private static native int nGetInstance(long nativeRenderableManager, int entity);
     private static native void nDestroy(long nativeRenderableManager, int entity);

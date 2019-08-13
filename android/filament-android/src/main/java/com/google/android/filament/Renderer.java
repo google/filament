@@ -104,7 +104,7 @@ public class Renderer {
         nResetUserTime(getNativeObject());
     }
 
-    long getNativeObject() {
+    public long getNativeObject() {
         if (mNativeObject == 0) {
             throw new IllegalStateException("Calling method on destroyed Renderer");
         }
