@@ -51,7 +51,10 @@ Package PostprocessMaterialBuilder::build() {
 
     // Create a postprocessor to optimize / compile to Spir-V if necessary.
 #ifndef FILAMAT_LITE
-    GLSLPostProcessor postProcessor(mOptimization, mPrintShaders);
+    uint32_t flags = 0;
+    flags |= mPrintShaders ? GLSLPostProcessor::PRINT_SHADERS : 0;
+    flags |= mGenerateDebugInfo ? GLSLPostProcessor::GENERATE_DEBUG_INFO : 0;
+    GLSLPostProcessor postProcessor(mOptimization, flags);
 #endif
 
     // Create chunk tree.
@@ -205,7 +208,8 @@ Package PostprocessMaterialBuilder::build() {
 #ifndef FILAMAT_LITE
     // Emit SPIRV chunks
     if (!spirvEntries.empty()) {
-        container.addChild<filamat::DictionarySpirvChunk>(std::move(spirvDictionary));
+        const bool stripInfo = !mGenerateDebugInfo;
+        container.addChild<filamat::DictionarySpirvChunk>(std::move(spirvDictionary), stripInfo);
         container.addChild<MaterialSpirvChunk>(std::move(spirvEntries));
     }
 

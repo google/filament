@@ -1,5 +1,5 @@
 material {
-    name : ubershader,
+    name : ubershader_${SHADINGMODEL}_${BLENDING},
     requires : [ uv0, uv1, color ],
     shadingModel : ${SHADINGMODEL},
     blending : ${BLENDING},

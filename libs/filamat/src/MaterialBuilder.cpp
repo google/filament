@@ -317,6 +317,11 @@ MaterialBuilder& MaterialBuilder::printShaders(bool printShaders) noexcept {
     return *this;
 }
 
+MaterialBuilder& MaterialBuilder::generateDebugInfo(bool generateDebugInfo) noexcept {
+    mGenerateDebugInfo = generateDebugInfo;
+    return *this;
+}
+
 MaterialBuilder& MaterialBuilder::variantFilter(uint8_t variantFilter) noexcept {
     mVariantFilter = variantFilter;
     return *this;
@@ -482,7 +487,10 @@ bool MaterialBuilder::generateShaders(const std::vector<Variant>& variants, Chun
         const MaterialInfo& info) const noexcept {
     // Create a postprocessor to optimize / compile to Spir-V if necessary.
 #ifndef FILAMAT_LITE
-    GLSLPostProcessor postProcessor(mOptimization, mPrintShaders);
+    uint32_t flags = 0;
+    flags |= mPrintShaders ? GLSLPostProcessor::PRINT_SHADERS : 0;
+    flags |= mGenerateDebugInfo ? GLSLPostProcessor::GENERATE_DEBUG_INFO : 0;
+    GLSLPostProcessor postProcessor(mOptimization, flags);
 #endif
 
     // Generate all shaders.
@@ -597,7 +605,8 @@ bool MaterialBuilder::generateShaders(const std::vector<Variant>& variants, Chun
     // Emit SPIRV chunks (SpirvDictionaryReader and MaterialSpirvChunk).
 #ifndef FILAMAT_LITE
     if (!spirvEntries.empty()) {
-        container.addChild<filamat::DictionarySpirvChunk>(std::move(spirvDictionary));
+        const bool stripInfo = !mGenerateDebugInfo;
+        container.addChild<filamat::DictionarySpirvChunk>(std::move(spirvDictionary), stripInfo);
         container.addChild<MaterialSpirvChunk>(std::move(spirvEntries));
     }
 
