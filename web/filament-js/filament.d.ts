@@ -70,6 +70,7 @@ export class TextureSampler {
 }
 
 export class MaterialInstance {
+    public setBoolParameter(name: string, value: boolean): void;
     public setFloatParameter(name: string, value: number): void;
     public setFloat2Parameter(name: string, value: float2): void;
     public setFloat3Parameter(name: string, value: float3): void;
