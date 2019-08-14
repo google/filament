@@ -35,6 +35,7 @@ if [[ "$KOKORO_BUILD_ID" ]]; then
     # This may or may not be needed...
     # sudo apt-key adv --keyserver apt.llvm.org --recv-keys 15CF4D18AF4F7421
     sudo apt-add-repository "deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-$CLANG_VERSION main"
+    wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
     sudo apt-get update -y
     sudo apt-get --assume-yes --force-yes install clang-$CLANG_VERSION
 
