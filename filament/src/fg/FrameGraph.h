@@ -48,7 +48,7 @@ class FEngine;
 } // namespace details
 
 namespace fg {
-struct Resource;
+struct TextureResource;
 struct ResourceNode;
 struct RenderTarget;
 struct RenderTargetResource;
@@ -204,7 +204,7 @@ private:
     friend struct fg::PassNode;
     friend struct fg::RenderTarget;
     friend struct fg::RenderTargetResource;
-    friend struct fg::Resource;
+    friend struct fg::TextureResource;
 
     template <typename T>
     struct Deleter {
@@ -221,7 +221,7 @@ private:
 
     fg::PassNode& createPass(const char* name, FrameGraphPassExecutor* base) noexcept;
 
-    fg::Resource* createResource(const char* name,
+    fg::TextureResource* createResource(const char* name,
             FrameGraphResource::Descriptor const& desc, bool imported) noexcept;
 
     fg::ResourceNode& getResource(FrameGraphResource r);
@@ -229,7 +229,7 @@ private:
     fg::RenderTarget& createRenderTarget(const char* name,
             FrameGraphRenderTarget::Descriptor const& desc) noexcept;
 
-    FrameGraphResource createResourceNode(fg::Resource* resource) noexcept;
+    FrameGraphResource createResourceNode(fg::TextureResource* resource) noexcept;
 
     enum class DiscardPhase { START, END };
     backend::TargetBufferFlags computeDiscardFlags(DiscardPhase phase,
@@ -252,7 +252,7 @@ private:
     Vector<fg::ResourceNode> mResourceNodes;            // list of resource nodes
     Vector<fg::RenderTarget> mRenderTargets;            // list of rendertarget
     Vector<fg::Alias> mAliases;                         // list of aliases
-    Vector<UniquePtr<fg::Resource>> mResourceRegistry;  // list of actual textures
+    Vector<UniquePtr<fg::TextureResource>> mResourceRegistry;  // list of actual textures
     Vector<UniquePtr<fg::RenderTargetResource>> mRenderTargetCache; // list of actual rendertargets
 
     uint16_t mId = 0;

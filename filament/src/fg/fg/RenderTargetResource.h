@@ -22,7 +22,7 @@
 
 #include "fg/FrameGraph.h"
 
-#include "Resource.h"
+#include "TextureResource.h"
 #include "fg/ResourceAllocator.h"
 #include "ResourceNode.h"
 #include "VirtualResource.h"

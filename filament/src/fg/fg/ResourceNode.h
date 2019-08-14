@@ -24,10 +24,10 @@ namespace filament {
 namespace fg {
 
 struct PassNode;
-struct Resource;
+struct TextureResource;
 
 struct ResourceNode { // 24
-    ResourceNode(Resource* resource, uint8_t version) noexcept
+    ResourceNode(TextureResource* resource, uint8_t version) noexcept
             : resource(resource), version(version) {}
 
     ResourceNode(ResourceNode const&) = delete;
@@ -35,7 +35,7 @@ struct ResourceNode { // 24
     ResourceNode& operator=(ResourceNode const&) = delete;
 
     // updated during compile()
-    Resource* resource;             // actual (aliased) resource data
+    TextureResource* resource;             // actual (aliased) resource data
     PassNode* writer = nullptr;     // writer to this node
     uint32_t readerCount = 0;       // # of passes reading from this resource
 

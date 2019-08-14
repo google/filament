@@ -84,7 +84,7 @@ struct RenderTarget { // 32
             for (size_t i = 0; i < desc.attachments.textures.size(); i++) {
                 FrameGraphRenderTarget::Attachments::AttachmentInfo attachment = desc.attachments.textures[i];
                 if (attachment.isValid()) {
-                    Resource const* const pResource = resourceNodes[attachment.getHandle().index].resource;
+                    TextureResource const* const pResource = resourceNodes[attachment.getHandle().index].resource;
                     assert(pResource);
 
                     attachments |= flags[i];

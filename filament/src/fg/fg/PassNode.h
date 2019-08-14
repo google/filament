@@ -18,7 +18,7 @@
 #define TNT_FILAMENT_FG_PASSNODE_H
 
 #include "fg/FrameGraph.h"
-#include "Resource.h"
+#include "TextureResource.h"
 #include "ResourceNode.h"
 #include "VirtualResource.h"
 
