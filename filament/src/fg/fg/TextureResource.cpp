@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "Resource.h"
+#include "TextureResource.h"
 
 #include "fg/FrameGraph.h"
 #include "fg/ResourceAllocator.h"
@@ -27,18 +27,18 @@ namespace fg {
 
 VirtualResource::~VirtualResource() = default;
 
-Resource::Resource(const char* name, uint16_t id,
+TextureResource::TextureResource(const char* name, uint16_t id,
         Type type, FrameGraphResource::Descriptor desc, bool imported) noexcept
         : name(name), id(id), type(type), imported(imported), desc(desc) {
 }
 
-Resource::~Resource() noexcept {
+TextureResource::~TextureResource() noexcept {
     if (!imported) {
         assert(!texture);
     }
 }
 
-void Resource::create(FrameGraph& fg) noexcept {
+void TextureResource::create(FrameGraph& fg) noexcept {
     // some sanity check
     if (!imported) {
         assert(usage);
@@ -52,7 +52,7 @@ void Resource::create(FrameGraph& fg) noexcept {
     }
 }
 
-void Resource::destroy(FrameGraph& fg) noexcept {
+void TextureResource::destroy(FrameGraph& fg) noexcept {
     // we don't own the handles of imported resources
     if (!imported) {
         if (texture) {

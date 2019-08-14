@@ -28,16 +28,16 @@
 namespace filament {
 namespace fg {
 
-struct Resource final : public VirtualResource { // 72
+struct TextureResource final : public VirtualResource { // 72
     enum Type {
         TEXTURE
     };
 
-    Resource(const char* name, uint16_t id,
+    TextureResource(const char* name, uint16_t id,
             Type type, FrameGraphResource::Descriptor desc, bool imported) noexcept;
-    Resource(Resource const&) = delete;
-    Resource& operator=(Resource const&) = delete;
-    ~Resource() noexcept override;
+    TextureResource(TextureResource const&) = delete;
+    TextureResource& operator=(TextureResource const&) = delete;
+    ~TextureResource() noexcept override;
 
     // concrete resource -- set when the resource is created
     void create(FrameGraph& fg) noexcept override;
