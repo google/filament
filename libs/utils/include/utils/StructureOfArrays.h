@@ -366,64 +366,64 @@ public:
 
     // return a pointer to the first element of the ElementIndex]th array
     template<size_t ElementIndex>
-    constexpr TypeAt<ElementIndex>* data() noexcept {
+    TypeAt<ElementIndex>* data() noexcept {
         return getArray<TypeAt<ElementIndex>>(ElementIndex);
     }
 
     template<size_t ElementIndex>
-    constexpr TypeAt<ElementIndex> const* data() const noexcept {
+    TypeAt<ElementIndex> const* data() const noexcept {
         return getArray<TypeAt<ElementIndex>>(ElementIndex);
     }
 
     template<size_t ElementIndex>
-    constexpr TypeAt<ElementIndex>* begin() noexcept {
+    TypeAt<ElementIndex>* begin() noexcept {
         return getArray<TypeAt<ElementIndex>>(ElementIndex);
     }
 
     template<size_t ElementIndex>
-    constexpr TypeAt<ElementIndex> const* begin() const noexcept {
+    TypeAt<ElementIndex> const* begin() const noexcept {
         return getArray<TypeAt<ElementIndex>>(ElementIndex);
     }
 
     template<size_t ElementIndex>
-    constexpr TypeAt<ElementIndex>* end() noexcept {
+    TypeAt<ElementIndex>* end() noexcept {
         return getArray<TypeAt<ElementIndex>>(ElementIndex) + size();
     }
 
     template<size_t ElementIndex>
-    constexpr TypeAt<ElementIndex> const* end() const noexcept {
+    TypeAt<ElementIndex> const* end() const noexcept {
         return getArray<TypeAt<ElementIndex>>(ElementIndex) + size();
     }
 
     template<size_t ElementIndex>
-    constexpr Slice<TypeAt<ElementIndex>> slice() noexcept {
+    Slice<TypeAt<ElementIndex>> slice() noexcept {
         return { begin<ElementIndex>(), end<ElementIndex>() };
     }
 
     template<size_t ElementIndex>
-    constexpr Slice<const TypeAt<ElementIndex>> slice() const noexcept {
+    Slice<const TypeAt<ElementIndex>> slice() const noexcept {
         return { begin<ElementIndex>(), end<ElementIndex>() };
     }
 
     // return a reference to the index'th element of the ElementIndex'th array
     template<size_t ElementIndex>
-    constexpr TypeAt<ElementIndex>& elementAt(size_t index) noexcept {
+    TypeAt<ElementIndex>& elementAt(size_t index) noexcept {
         return data<ElementIndex>()[index];
     }
 
     template<size_t ElementIndex>
-    constexpr TypeAt<ElementIndex> const& elementAt(size_t index) const noexcept {
+    TypeAt<ElementIndex> const& elementAt(size_t index) const noexcept {
         return data<ElementIndex>()[index];
     }
 
     // return a reference to the last element of the ElementIndex'th array
     template<size_t ElementIndex>
-    constexpr TypeAt<ElementIndex>& back() noexcept {
+    TypeAt<ElementIndex>& back() noexcept {
         return data<ElementIndex>()[size() - 1];
     }
 
     template<size_t ElementIndex>
-    constexpr TypeAt<ElementIndex> const& back() const noexcept {
+    TypeAt<ElementIndex> const& back() const noexcept {
         return data<ElementIndex>()[size() - 1];
     }
 
@@ -439,59 +439,59 @@ public:
         }
 
         // auto-conversion to the field's type
-        UTILS_ALWAYS_INLINE constexpr operator Type&() noexcept {
+        UTILS_ALWAYS_INLINE operator Type&() noexcept {
             return soa.elementAt<E>(i);
         }
-        UTILS_ALWAYS_INLINE constexpr operator Type const&() const noexcept {
+        UTILS_ALWAYS_INLINE operator Type const&() const noexcept {
             return soa.elementAt<E>(i);
         }
         // dereferencing the selected field
-        UTILS_ALWAYS_INLINE constexpr Type& operator ->() noexcept {
+        UTILS_ALWAYS_INLINE Type& operator ->() noexcept {
             return soa.elementAt<E>(i);
         }
-        UTILS_ALWAYS_INLINE constexpr Type const& operator ->() const noexcept {
+        UTILS_ALWAYS_INLINE Type const& operator ->() const noexcept {
             return soa.elementAt<E>(i);
         }
         // address-of the selected field
-        UTILS_ALWAYS_INLINE constexpr Type* operator &() noexcept {
+        UTILS_ALWAYS_INLINE Type* operator &() noexcept {
             return &soa.elementAt<E>(i);
         }
-        UTILS_ALWAYS_INLINE constexpr Type const* operator &() const noexcept {
+        UTILS_ALWAYS_INLINE Type const* operator &() const noexcept {
             return &soa.elementAt<E>(i);
         }
         // assignment to the field
-        UTILS_ALWAYS_INLINE constexpr Type const& operator = (Type const& other) noexcept {
+        UTILS_ALWAYS_INLINE Type const& operator = (Type const& other) noexcept {
             return (soa.elementAt<E>(i) = other);
         }
-        UTILS_ALWAYS_INLINE constexpr Type const& operator = (Type&& other) noexcept {
+        UTILS_ALWAYS_INLINE Type const& operator = (Type&& other) noexcept {
             return (soa.elementAt<E>(i) = other);
         }
         // comparisons
-        UTILS_ALWAYS_INLINE constexpr bool operator==(Type const& other) const {
+        UTILS_ALWAYS_INLINE bool operator==(Type const& other) const {
             return (soa.elementAt<E>(i) == other);
         }
-        UTILS_ALWAYS_INLINE constexpr bool operator!=(Type const& other) const {
+        UTILS_ALWAYS_INLINE bool operator!=(Type const& other) const {
             return (soa.elementAt<E>(i) != other);
         }
         // calling the field
         template <typename ... ARGS>
-        UTILS_ALWAYS_INLINE constexpr decltype(auto) operator()(ARGS&& ... args) noexcept {
+        UTILS_ALWAYS_INLINE decltype(auto) operator()(ARGS&& ... args) noexcept {
             return soa.elementAt<E>(i)(std::forward<ARGS>(args)...);
         }
         template <typename ... ARGS>
-        UTILS_ALWAYS_INLINE constexpr decltype(auto) operator()(ARGS&& ... args) const noexcept {
+        UTILS_ALWAYS_INLINE decltype(auto) operator()(ARGS&& ... args) const noexcept {
             return soa.elementAt<E>(i)(std::forward<ARGS>(args)...);
         }
     };
 
 private:
     template<typename T>
-    constexpr T const* getArray(size_t arrayIndex) const {
+    T const* getArray(size_t arrayIndex) const {
         return static_cast<T const*>(mArrayOffset[arrayIndex]);
     }
 
     template<typename T>
-    constexpr T* getArray(size_t arrayIndex) {
+    T* getArray(size_t arrayIndex) {
         return static_cast<T*>(mArrayOffset[arrayIndex]);
     }
 
@@ -509,12 +509,12 @@ private:
     }
 
     // this calculate the offset adjusted for all data alignment of a given array
-    static inline constexpr size_t getOffset(size_t index, size_t capacity) noexcept {
+    static inline size_t getOffset(size_t index, size_t capacity) noexcept {
         auto offsets = getOffsets(capacity);
         return offsets[index];
     }
 
-    static inline constexpr std::array<size_t, kArrayCount> getOffsets(size_t capacity) noexcept {
+    static inline std::array<size_t, kArrayCount> getOffsets(size_t capacity) noexcept {
         // compute the required size of each array
         const size_t sizes[] = { (sizeof(Elements) * capacity)... };
 
