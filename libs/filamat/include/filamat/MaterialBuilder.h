@@ -84,6 +84,7 @@ protected:
     TargetApi mTargetApi = (TargetApi) 0;
     Optimization mOptimization = Optimization::PERFORMANCE;
     bool mPrintShaders = false;
+    bool mGenerateDebugInfo = false;
     utils::bitset32 mShaderModels;
     struct CodeGenParams {
         int shaderModel;
@@ -306,6 +307,9 @@ public:
     // TODO: this is present here for matc's "--print" flag, but ideally does not belong inside
     // MaterialBuilder
     MaterialBuilder& printShaders(bool printShaders) noexcept;
+
+    // if true, will include debugging information in generated SPIRV
+    MaterialBuilder& generateDebugInfo(bool generateDebugInfo) noexcept;
 
     // specifies a list of variants that should be filtered out during code generation.
     MaterialBuilder& variantFilter(uint8_t variantFilter) noexcept;

@@ -272,6 +272,7 @@ bool MaterialCompiler::run(const Config& config) {
         .targetApi(config.getTargetApi())
         .optimization(config.getOptimizationLevel())
         .printShaders(config.printShaders())
+        .generateDebugInfo(config.isDebug())
         .variantFilter(config.getVariantFilter() | builder.getVariantFilter());
 
     // Write builder.build() to output.

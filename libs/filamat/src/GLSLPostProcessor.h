@@ -34,7 +34,13 @@ using SpirvBlob = std::vector<uint32_t>;
 
 class GLSLPostProcessor {
 public:
-    GLSLPostProcessor(MaterialBuilder::Optimization optimization, bool printShaders);
+
+    enum Flags : uint32_t {
+        PRINT_SHADERS = 1 << 0,
+        GENERATE_DEBUG_INFO = 1 << 1,
+    };
+
+    GLSLPostProcessor(MaterialBuilder::Optimization optimization, uint32_t flags);
 
     ~GLSLPostProcessor();
 
@@ -54,6 +60,7 @@ private:
 
     const MaterialBuilder::Optimization mOptimization;
     const bool mPrintShaders;
+    const bool mGenerateDebugInfo;
     std::string* mGlslOutput = nullptr;
     SpirvBlob* mSpirvOutput = nullptr;
     std::string* mMslOutput = nullptr;

@@ -921,8 +921,7 @@ static void analyzeSpirv(const std::vector<uint32_t>& spirv, const char* disasse
     const regex lineDirectivePattern("OpLine (\\%[A-Za-z_0-9]+) ([0-9]+)");
     const regex binaryFunctionPattern("(\\%[A-Za-z_0-9]+).*(\\%[A-Za-z_0-9]+)");
     const regex operandPattern("(\\%[A-Za-z_0-9]+)");
-    const regex operatorPattern("Op[A-Z][A-Za-z]+");
-    const set<string> ignoredOperators = { "OpStore", "OpLoad", "OpAccessChain" };
+    const regex sensitivePattern("OpComposite[A-Za-z]+");
 
     string spirvInstruction;
     smatch matchResult;
@@ -971,22 +970,16 @@ static void analyzeSpirv(const std::vector<uint32_t>& spirv, const char* disasse
             if (regex_search(spirvInstruction, matchResult, lineDirectivePattern)) {
                 currentLineNumber = stoi(matchResult[2].str());
                 lineNumbers.push_back(currentLineNumber);
-            } else if (regex_search(spirvInstruction, matchResult, binaryFunctionPattern)) {
+            } else {
 
                 // Trim out the leftmost whitespace.
                 const string trimmed = regex_replace(spirvInstruction, regex("^\\s+"), string(""));
-
-                // Ignore certain operators.
-                regex_search(trimmed, matchResult, operatorPattern);
-                if (ignoredOperators.count(matchResult[0]) || currentLineNumber == -1) {
-                    continue;
-                }
 
                 // Check for mixed precision.
                 bool mixed = false;
                 int relaxed = -1;
                 string remaining = trimmed;
-                string info = trimmed + "; relaxed = ";
+                string info;
                 while (regex_search(remaining, matchResult, operandPattern)) {
                     const string arg = matchResult[1].str();
                     if (typeIds.count(arg) == 0) {
@@ -1001,8 +994,11 @@ static void analyzeSpirv(const std::vector<uint32_t>& spirv, const char* disasse
                     }
                     remaining = matchResult.suffix();
                 }
-                if (mixed) {
-                    mixedPrecisionInfo[currentLineNumber] = info;
+                if (mixed && currentLineNumber > -1) {
+                    if (regex_search(trimmed, matchResult, sensitivePattern)) {
+                        info = "// " + trimmed + " ; relaxed = " + info + "\n";
+                        mixedPrecisionInfo[currentLineNumber] += info;
+                    }
                 }
             }
         }
@@ -1022,15 +1018,14 @@ static void analyzeSpirv(const std::vector<uint32_t>& spirv, const char* disasse
         string glslCodeline;
         bool firstLine = true;
         while (getline(ss, glslCodeline, '\n')) {
-            cout << glslCodeline;
+            cout << glslCodeline << endl;
             if (firstLine) {
                 if (mixedPrecisionInfo.count(lineNumber)) {
                     string info = mixedPrecisionInfo.at(lineNumber);
-                    cout << " // POTENTIAL MIXED PRECISION " + info;
+                    cout << "// POTENTIAL MIXED PRECISION\n" << info;
                 }
                 firstLine = false;
             }
-            cout << endl;
         }
     }
 }
