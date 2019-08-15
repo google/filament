@@ -18,7 +18,7 @@
 #define TNT_FILAMENT_FG_PASSNODE_H
 
 #include "fg/FrameGraph.h"
-#include "TextureResource.h"
+
 #include "ResourceNode.h"
 #include "VirtualResource.h"
 
@@ -53,10 +53,14 @@ struct PassNode { // 200
     }
 
     FrameGraphResource read(FrameGraph& fg, FrameGraphResource const& handle, bool isRenderTarget = false) {
-        ResourceNode const& node = fg.getResource(handle);
+        ResourceNode const& node = fg.getResourceNode(handle);
 
         if (!isRenderTarget) {
-            node.resource->usage |= backend::TextureUsage::SAMPLEABLE;
+#if UTILS_HAS_RTTI
+            assert(dynamic_cast<fg::ResourceEntry<FrameGraphTexture> *>(node.resource));
+#endif
+            auto pTextureResource = static_cast<fg::ResourceEntry<FrameGraphTexture> *>(node.resource);
+            pTextureResource->descriptor.usage |= backend::TextureUsage::SAMPLEABLE;
         }
 
         // don't allow multiple reads of the same resource -- it's just redundant.
@@ -79,7 +83,7 @@ struct PassNode { // 200
     }
 
     FrameGraphResource write(FrameGraph& fg, const FrameGraphResource& handle) {
-        ResourceNode const& node = fg.getResource(handle);
+        ResourceNode const& node = fg.getResourceNode(handle);
 
         // don't allow multiple writes of the same resource -- it's just redundant.
         auto pos = std::find_if(writes.begin(), writes.end(),

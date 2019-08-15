@@ -84,22 +84,27 @@ struct RenderTarget { // 32
             for (size_t i = 0; i < desc.attachments.textures.size(); i++) {
                 FrameGraphRenderTarget::Attachments::AttachmentInfo attachment = desc.attachments.textures[i];
                 if (attachment.isValid()) {
-                    TextureResource const* const pResource = resourceNodes[attachment.getHandle().index].resource;
+                    ResourceEntryBase const* const pResource = resourceNodes[attachment.getHandle().index].resource;
                     assert(pResource);
+
+#if UTILS_HAS_RTTI
+                    assert(dynamic_cast<fg::ResourceEntry<FrameGraphTexture> const *>(pResource));
+#endif
+                    auto pTextureResource = static_cast<fg::ResourceEntry<FrameGraphTexture> const *>(pResource);
 
                     attachments |= flags[i];
 
                     // figure out the min/max dimensions across all attachments
                     const size_t level = attachment.getLevel();
-                    const uint32_t w = details::FTexture::valueForLevel(level, pResource->desc.width);
-                    const uint32_t h = details::FTexture::valueForLevel(level, pResource->desc.height);
+                    const uint32_t w = details::FTexture::valueForLevel(level, pTextureResource->descriptor.width);
+                    const uint32_t h = details::FTexture::valueForLevel(level, pTextureResource->descriptor.height);
                     minWidth  = std::min(minWidth,  w);
                     maxWidth  = std::max(maxWidth,  w);
                     minHeight = std::min(minHeight, h);
                     maxHeight = std::max(maxHeight, h);
 
                     if (i == FrameGraphRenderTarget::Attachments::COLOR) {
-                        colorFormat = pResource->desc.format;
+                        colorFormat = pTextureResource->descriptor.format;
                     }
                 }
             }
