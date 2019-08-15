@@ -53,7 +53,6 @@ struct RenderTarget { // 32
     RenderTargetResource* cache = nullptr;
 
     void resolve(FrameGraph& fg) noexcept {
-        const auto& resourceNodes = fg.mResourceNodes;
         auto& renderTargetCache = fg.mRenderTargetCache;
 
         // find a matching rendertarget
@@ -84,27 +83,21 @@ struct RenderTarget { // 32
             for (size_t i = 0; i < desc.attachments.textures.size(); i++) {
                 FrameGraphRenderTarget::Attachments::AttachmentInfo attachment = desc.attachments.textures[i];
                 if (attachment.isValid()) {
-                    ResourceEntryBase const* const pResource = resourceNodes[attachment.getHandle().index].resource;
-                    assert(pResource);
-
-#if UTILS_HAS_RTTI
-                    assert(dynamic_cast<fg::ResourceEntry<FrameGraphTexture> const *>(pResource));
-#endif
-                    auto pTextureResource = static_cast<fg::ResourceEntry<FrameGraphTexture> const *>(pResource);
-
+                    fg::ResourceEntry<FrameGraphTexture>& entry =
+                            fg.getResourceEntryUnchecked(attachment.getHandle());
                     attachments |= flags[i];
 
                     // figure out the min/max dimensions across all attachments
                     const size_t level = attachment.getLevel();
-                    const uint32_t w = details::FTexture::valueForLevel(level, pTextureResource->descriptor.width);
-                    const uint32_t h = details::FTexture::valueForLevel(level, pTextureResource->descriptor.height);
+                    const uint32_t w = details::FTexture::valueForLevel(level, entry.descriptor.width);
+                    const uint32_t h = details::FTexture::valueForLevel(level, entry.descriptor.height);
                     minWidth  = std::min(minWidth,  w);
                     maxWidth  = std::max(maxWidth,  w);
                     minHeight = std::min(minHeight, h);
                     maxHeight = std::max(maxHeight, h);
 
                     if (i == FrameGraphRenderTarget::Attachments::COLOR) {
-                        colorFormat = pTextureResource->descriptor.format;
+                        colorFormat = entry.descriptor.format;
                     }
                 }
             }

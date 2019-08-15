@@ -48,21 +48,22 @@ public:
             backend::Handle<backend::HwTexture> depth,
             uint32_t textureWidth, uint32_t textureHeight) const noexcept;
 
-    FrameGraphResource toneMapping(FrameGraph& fg, FrameGraphResource input,
+    FrameGraphResourceId<FrameGraphTexture> toneMapping(FrameGraph& fg,
+            FrameGraphResourceId<FrameGraphTexture> input,
             backend::TextureFormat outFormat, bool dithering, bool translucent) noexcept;
 
-    FrameGraphResource fxaa(
-            FrameGraph& fg, FrameGraphResource input, backend::TextureFormat outFormat,
+    FrameGraphResourceId<FrameGraphTexture> fxaa(FrameGraph& fg,
+            FrameGraphResourceId<FrameGraphTexture> input, backend::TextureFormat outFormat,
             bool translucent) noexcept;
 
-    FrameGraphResource dynamicScaling(
-            FrameGraph& fg, FrameGraphResource input, backend::TextureFormat outFormat) noexcept;
+    FrameGraphResourceId<FrameGraphTexture> dynamicScaling(FrameGraph& fg,
+            FrameGraphResourceId<FrameGraphTexture> input, backend::TextureFormat outFormat) noexcept;
 
-    FrameGraphResource resolve(
-            FrameGraph& fg, FrameGraphResource input) noexcept;
+    FrameGraphResourceId<FrameGraphTexture> resolve(FrameGraph& fg,
+            FrameGraphResourceId<FrameGraphTexture> input) noexcept;
 
 
-    FrameGraphResource ssao(FrameGraph& fg, details::RenderPass& pass,
+    FrameGraphResourceId<FrameGraphTexture> ssao(FrameGraph& fg, details::RenderPass& pass,
             filament::Viewport const& svp,
             details::CameraInfo const& cameraInfo,
             View::AmbientOcclusionOptions const& options) noexcept;
@@ -74,13 +75,15 @@ public:
 private:
     details::FEngine& mEngine;
 
-    FrameGraphResource depthPass(FrameGraph& fg, details::RenderPass& pass,
+    FrameGraphResourceId<FrameGraphTexture> depthPass(FrameGraph& fg, details::RenderPass& pass,
             uint32_t width, uint32_t height, View::AmbientOcclusionOptions const& options) noexcept;
 
-    FrameGraphResource mipmapPass(FrameGraph& fg, FrameGraphResource input, size_t level) noexcept;
+    FrameGraphResourceId<FrameGraphTexture> mipmapPass(FrameGraph& fg,
+            FrameGraphResourceId<FrameGraphTexture> input, size_t level) noexcept;
 
-    FrameGraphResource blurPass(FrameGraph& fg,
-            FrameGraphResource input, FrameGraphResource depth, math::int2 axis) noexcept;
+    FrameGraphResourceId<FrameGraphTexture> blurPass(FrameGraph& fg,
+            FrameGraphResourceId<FrameGraphTexture> input,
+            FrameGraphResourceId<FrameGraphTexture> depth, math::int2 axis) noexcept;
 
     // we need only one of these
     mutable UniformBuffer mPostProcessUb;

@@ -37,6 +37,7 @@ struct RenderTargetResource;
 class FrameGraph;
 class FrameGraphPassResources;
 
+// ------------------------------------------------------------------------------------------------
 
 struct FrameGraphTexture {
     struct Descriptor {
@@ -56,21 +57,21 @@ struct FrameGraphTexture {
     backend::Handle<backend::HwTexture> texture;
 };
 
-
-
-/*
- * A FrameGraph resource.
- *
- * This is used to represent a virtual resource.
- */
+// ------------------------------------------------------------------------------------------------
+template<typename T>
+class FrameGraphResourceId;
 
 class FrameGraphResource {
+    template<typename T>
+    friend class FrameGraphResourceId;
     friend class FrameGraph;
     friend class FrameGraphPassResources;
     friend struct fg::PassNode;
     friend struct fg::RenderTarget;
     friend struct fg::RenderTargetResource;
 
+    // private ctor -- this cannot be constructed by users
+    FrameGraphResource() noexcept = default;
     explicit FrameGraphResource(uint16_t index) noexcept : index(index) {}
 
     static constexpr uint16_t UNINITIALIZED = std::numeric_limits<uint16_t>::max();
@@ -78,10 +79,6 @@ class FrameGraphResource {
     uint16_t index = UNINITIALIZED;
 
 public:
-    using Descriptor = FrameGraphTexture::Descriptor;   // FIXME: for source compatibility
-
-    FrameGraphResource() noexcept = default;
-
     bool isValid() const noexcept { return index != UNINITIALIZED; }
 
     bool operator < (const FrameGraphResource& rhs) const noexcept {
@@ -97,11 +94,18 @@ public:
     }
 };
 
-// TODO: all public-facing APIs shoud use FrameGraphResourceId<>
+/*
+ * A FrameGraph resource ID.
+ *
+ * This is used to represent a virtual resource.
+ */
+
 template<typename T>
 class FrameGraphResourceId : public FrameGraphResource {
 public:
     using FrameGraphResource::FrameGraphResource;
+    FrameGraphResourceId() noexcept = default;
+    explicit FrameGraphResourceId(FrameGraphResource r) : FrameGraphResource(r) { }
 };
 
 namespace FrameGraphRenderTarget {
@@ -109,24 +113,24 @@ namespace FrameGraphRenderTarget {
 struct Attachments {
     struct AttachmentInfo {
         // auto convert to FrameGraphResource (allows: handle = desc.attachments.color;)
-        operator FrameGraphResource() const noexcept { return mHandle; } // NOLINT
+        operator FrameGraphResourceId<FrameGraphTexture>() const noexcept { return mHandle; } // NOLINT
 
         AttachmentInfo() noexcept = default;
 
         // auto convert from FrameGraphResource (allows: desc.attachments.color = handle;)
-        AttachmentInfo(FrameGraphResource handle) noexcept : mHandle(handle) {} // NOLINT
+        AttachmentInfo(FrameGraphResourceId<FrameGraphTexture> handle) noexcept : mHandle(handle) {} // NOLINT
 
         // allows: desc.attachments.color = { handle, level };
-        AttachmentInfo(FrameGraphResource handle, uint8_t level) noexcept
+        AttachmentInfo(FrameGraphResourceId<FrameGraphTexture> handle, uint8_t level) noexcept
                 : mHandle(handle), mLevel(level) {}
 
         bool isValid() const noexcept { return mHandle.isValid(); }
 
-        FrameGraphResource getHandle() const noexcept { return mHandle; }
+        FrameGraphResourceId<FrameGraphTexture> getHandle() const noexcept { return mHandle; }
         uint8_t getLevel() const noexcept { return mLevel; }
 
     private:
-        FrameGraphResource mHandle{};
+        FrameGraphResourceId<FrameGraphTexture> mHandle{};
         uint8_t mLevel = 0;
     };
 
