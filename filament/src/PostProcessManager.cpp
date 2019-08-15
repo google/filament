@@ -148,15 +148,15 @@ void PostProcessManager::setSource(uint32_t viewportWidth, uint32_t viewportHeig
 
 // ------------------------------------------------------------------------------------------------
 
-FrameGraphResource PostProcessManager::toneMapping(FrameGraph& fg, FrameGraphResource input,
+FrameGraphResourceId<FrameGraphTexture> PostProcessManager::toneMapping(FrameGraph& fg, FrameGraphResourceId<FrameGraphTexture> input,
         backend::TextureFormat outFormat, bool dithering, bool translucent) noexcept {
 
     FEngine& engine = mEngine;
     backend::Handle<backend::HwRenderPrimitive> const& fullScreenRenderPrimitive = engine.getFullScreenRenderPrimitive();
 
     struct PostProcessToneMapping {
-        FrameGraphResource input;
-        FrameGraphResource output;
+        FrameGraphResourceId<FrameGraphTexture> input;
+        FrameGraphResourceId<FrameGraphTexture> output;
     };
     backend::Handle<backend::HwProgram> toneMappingProgram = engine.getPostProcessProgram(
             translucent ? PostProcessStage::TONE_MAPPING_TRANSLUCENT
@@ -164,15 +164,13 @@ FrameGraphResource PostProcessManager::toneMapping(FrameGraph& fg, FrameGraphRes
 
     auto& ppToneMapping = fg.addPass<PostProcessToneMapping>("tonemapping",
             [&](FrameGraph::Builder& builder, PostProcessToneMapping& data) {
-                auto const* inputDesc = fg.getDescriptor(input);
+                auto const& inputDesc = fg.getDescriptor(input);
                 data.input = builder.read(input);
-
-                FrameGraphResource::Descriptor outputDesc{
-                        .width = inputDesc->width,
-                        .height = inputDesc->height,
+                data.output = builder.createTexture("tonemapping output", {
+                        .width = inputDesc.width,
+                        .height = inputDesc.height,
                         .format = outFormat
-                };
-                data.output = builder.createTexture("tonemapping output", outputDesc);
+                });
                 builder.createRenderTarget(data.output);
             },
             [=](FrameGraphPassResources const& resources,
@@ -203,15 +201,16 @@ FrameGraphResource PostProcessManager::toneMapping(FrameGraph& fg, FrameGraphRes
     return ppToneMapping.getData().output;
 }
 
-FrameGraphResource PostProcessManager::fxaa(FrameGraph& fg,
-        FrameGraphResource input, backend::TextureFormat outFormat, bool translucent) noexcept {
+FrameGraphResourceId<FrameGraphTexture> PostProcessManager::fxaa(FrameGraph& fg,
+        FrameGraphResourceId<FrameGraphTexture> input,
+        backend::TextureFormat outFormat, bool translucent) noexcept {
 
     FEngine& engine = mEngine;
     backend::Handle<backend::HwRenderPrimitive> const& fullScreenRenderPrimitive = engine.getFullScreenRenderPrimitive();
 
     struct PostProcessFXAA {
-        FrameGraphResource input;
-        FrameGraphResource output;
+        FrameGraphResourceId<FrameGraphTexture> input;
+        FrameGraphResourceId<FrameGraphTexture> output;
     };
 
     backend::Handle<backend::HwProgram> antiAliasingProgram = engine.getPostProcessProgram(
@@ -220,15 +219,13 @@ FrameGraphResource PostProcessManager::fxaa(FrameGraph& fg,
 
     auto& ppFXAA = fg.addPass<PostProcessFXAA>("fxaa",
             [&](FrameGraph::Builder& builder, PostProcessFXAA& data) {
-                auto* inputDesc = fg.getDescriptor(input);
+                auto const& inputDesc = fg.getDescriptor(input);
                 data.input = builder.read(input);
-
-                FrameGraphResource::Descriptor outputDesc{
-                        .width = inputDesc->width,
-                        .height = inputDesc->height,
+                data.output = builder.createTexture("fxaa output", {
+                        .width = inputDesc.width,
+                        .height = inputDesc.height,
                         .format = outFormat
-                };
-                data.output = builder.createTexture("fxaa output", outputDesc);
+                });
                 builder.createRenderTarget(data.output);
             },
             [=](FrameGraphPassResources const& resources,
@@ -257,16 +254,16 @@ FrameGraphResource PostProcessManager::fxaa(FrameGraph& fg,
     return ppFXAA.getData().output;
 }
 
-FrameGraphResource PostProcessManager::resolve(
-        FrameGraph& fg, FrameGraphResource input) noexcept {
+FrameGraphResourceId<FrameGraphTexture> PostProcessManager::resolve(
+        FrameGraph& fg, FrameGraphResourceId<FrameGraphTexture> input) noexcept {
     struct PostProcessResolve {
-        FrameGraphResource input;
-        FrameGraphResource output;
+        FrameGraphResourceId<FrameGraphTexture> input;
+        FrameGraphResourceId<FrameGraphTexture> output;
     };
 
     auto& ppResolve = fg.addPass<PostProcessResolve>("resolve",
             [&](FrameGraph::Builder& builder, PostProcessResolve& data) {
-                auto* inputDesc = fg.getDescriptor(input);
+                auto const& inputDesc = fg.getDescriptor(input);
 
                 data.input = builder.read(input, true);
 
@@ -275,12 +272,11 @@ FrameGraphResource PostProcessManager::resolve(
                           .samples = builder.getSamples(data.input)
                         });
 
-                FrameGraphResource::Descriptor outputDesc{
-                        .width = inputDesc->width,
-                        .height = inputDesc->height,
-                        .format = inputDesc->format
-                };
-                data.output = builder.createTexture("resolve output", outputDesc);
+                data.output = builder.createTexture("resolve output", {
+                        .width = inputDesc.width,
+                        .height = inputDesc.height,
+                        .format = inputDesc.format
+                });
                 builder.createRenderTarget(data.output);
             },
             [=](FrameGraphPassResources const& resources,
@@ -295,17 +291,17 @@ FrameGraphResource PostProcessManager::resolve(
     return ppResolve.getData().output;
 }
 
-FrameGraphResource PostProcessManager::dynamicScaling(FrameGraph& fg,
-        FrameGraphResource input, backend::TextureFormat outFormat) noexcept {
+FrameGraphResourceId<FrameGraphTexture> PostProcessManager::dynamicScaling(FrameGraph& fg,
+        FrameGraphResourceId<FrameGraphTexture> input, backend::TextureFormat outFormat) noexcept {
 
     struct PostProcessScaling {
-        FrameGraphResource input;
-        FrameGraphResource output;
+        FrameGraphResourceId<FrameGraphTexture> input;
+        FrameGraphResourceId<FrameGraphTexture> output;
     };
 
     auto& ppScaling = fg.addPass<PostProcessScaling>("scaling",
             [&](FrameGraph::Builder& builder, PostProcessScaling& data) {
-                auto* inputDesc = fg.getDescriptor(input);
+                auto const& inputDesc = fg.getDescriptor(input);
 
                 data.input = builder.read(input, true);
 
@@ -314,12 +310,11 @@ FrameGraphResource PostProcessManager::dynamicScaling(FrameGraph& fg,
                           .samples = builder.getSamples(data.input)
                         });
 
-                FrameGraphResource::Descriptor outputDesc{
-                        .width = inputDesc->width,
-                        .height = inputDesc->height,
+                data.output = builder.createTexture("scale output", {
+                        .width = inputDesc.width,
+                        .height = inputDesc.height,
                         .format = outFormat
-                };
-                data.output = builder.createTexture("scale output", outputDesc);
+                });
                 builder.createRenderTarget(data.output);
             },
             [=](FrameGraphPassResources const& resources,
@@ -335,9 +330,9 @@ FrameGraphResource PostProcessManager::dynamicScaling(FrameGraph& fg,
 }
 
 
-FrameGraphResource PostProcessManager::ssao(FrameGraph& fg, RenderPass& pass,
-        filament::Viewport const& svp,
-        CameraInfo const& cameraInfo, View::AmbientOcclusionOptions const& options) noexcept {
+FrameGraphResourceId<FrameGraphTexture> PostProcessManager::ssao(FrameGraph& fg, RenderPass& pass,
+        filament::Viewport const& svp, CameraInfo const& cameraInfo,
+        View::AmbientOcclusionOptions const& options) noexcept {
 
     FEngine& engine = mEngine;
     Handle<HwRenderPrimitive> fullScreenRenderPrimitive = engine.getFullScreenRenderPrimitive();
@@ -346,14 +341,14 @@ FrameGraphResource PostProcessManager::ssao(FrameGraph& fg, RenderPass& pass,
      * SSAO depth pass -- automatically culled if not used
      */
 
-    FrameGraphResource depth = depthPass(fg, pass, svp.width, svp.height, options);
+    FrameGraphResourceId<FrameGraphTexture> depth = depthPass(fg, pass, svp.width, svp.height, options);
 
     /*
      * create depth mipmap chain
      */
 
     // The first mip already exists, so we process n-1 lods
-    const size_t levelCount = fg.getDescriptor(depth)->levels;
+    const size_t levelCount = fg.getDescriptor(depth).levels;
     for (size_t level = 0; level < levelCount - 1; level++) {
         depth = mipmapPass(fg, depth, level);
     }
@@ -363,8 +358,8 @@ FrameGraphResource PostProcessManager::ssao(FrameGraph& fg, RenderPass& pass,
      */
 
     struct SSAOPassData {
-        FrameGraphResource depth;
-        FrameGraphResource ssao;
+        FrameGraphResourceId<FrameGraphTexture> depth;
+        FrameGraphResourceId<FrameGraphTexture> ssao;
         View::AmbientOcclusionOptions options;
     };
 
@@ -429,7 +424,7 @@ FrameGraphResource PostProcessManager::ssao(FrameGraph& fg, RenderPass& pass,
                 driver.endRenderPass();
             });
 
-    FrameGraphResource ssao = SSAOPass.getData().ssao;
+    FrameGraphResourceId<FrameGraphTexture> ssao = SSAOPass.getData().ssao;
 
     /*
      * Final separable blur pass
@@ -443,13 +438,13 @@ FrameGraphResource PostProcessManager::ssao(FrameGraph& fg, RenderPass& pass,
     return ssao;
 }
 
-FrameGraphResource PostProcessManager::depthPass(FrameGraph& fg, RenderPass& pass,
+FrameGraphResourceId<FrameGraphTexture> PostProcessManager::depthPass(FrameGraph& fg, RenderPass& pass,
         uint32_t width, uint32_t height,
         View::AmbientOcclusionOptions const& options) noexcept {
 
     // SSAO depth pass -- automatically culled if not used
     struct DepthPassData {
-        FrameGraphResource depth;
+        FrameGraphResourceId<FrameGraphTexture> depth;
     };
 
     RenderPass::Command const* first = pass.getCommands().begin();
@@ -486,14 +481,14 @@ FrameGraphResource PostProcessManager::depthPass(FrameGraph& fg, RenderPass& pas
     return ssaoDepthPass.getData().depth;
 }
 
-FrameGraphResource PostProcessManager::mipmapPass(FrameGraph& fg,
-        FrameGraphResource input, size_t level) noexcept {
+FrameGraphResourceId<FrameGraphTexture> PostProcessManager::mipmapPass(FrameGraph& fg,
+        FrameGraphResourceId<FrameGraphTexture> input, size_t level) noexcept {
 
     Handle<HwRenderPrimitive> fullScreenRenderPrimitive = mEngine.getFullScreenRenderPrimitive();
 
     struct DepthMipData {
-        FrameGraphResource in;
-        FrameGraphResource out;
+        FrameGraphResourceId<FrameGraphTexture> in;
+        FrameGraphResourceId<FrameGraphTexture> out;
     };
 
     auto& depthMipmapPass = fg.addPass<DepthMipData>("Depth Mipmap Pass",
@@ -535,15 +530,16 @@ FrameGraphResource PostProcessManager::mipmapPass(FrameGraph& fg,
     return depthMipmapPass.getData().out;
 }
 
-FrameGraphResource PostProcessManager::blurPass(FrameGraph& fg, FrameGraphResource input,
-        FrameGraphResource depth, math::int2 axis) noexcept {
+FrameGraphResourceId<FrameGraphTexture> PostProcessManager::blurPass(FrameGraph& fg,
+        FrameGraphResourceId<FrameGraphTexture> input,
+        FrameGraphResourceId<FrameGraphTexture> depth, math::int2 axis) noexcept {
 
     Handle<HwRenderPrimitive> fullScreenRenderPrimitive = mEngine.getFullScreenRenderPrimitive();
 
     struct BlurPassData {
-        FrameGraphResource input;
-        FrameGraphResource depth;
-        FrameGraphResource blurred;
+        FrameGraphResourceId<FrameGraphTexture> input;
+        FrameGraphResourceId<FrameGraphTexture> depth;
+        FrameGraphResourceId<FrameGraphTexture> blurred;
     };
 
     auto& blurPass = fg.addPass<BlurPassData>("Separable Blur Pass",

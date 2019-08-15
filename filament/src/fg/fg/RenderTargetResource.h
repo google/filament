@@ -70,22 +70,16 @@ struct RenderTargetResource final : public VirtualResource {  // 104
     void create(FrameGraph& fg) noexcept override {
         if (!imported) {
             if (attachments) {
-                FrameGraph::Vector<ResourceNode> const& resourceNodes = fg.mResourceNodes;
-
                 // devirtualize our texture handles. By this point these handles have been
                 // remapped to their alias if any.
                 backend::TargetBufferInfo infos[FrameGraphRenderTarget::Attachments::COUNT];
                 for (size_t i = 0, c = desc.attachments.textures.size(); i < c; i++) {
-                    auto const& r = desc.attachments.textures[i];
-                    if (r.isValid()) {
-                        ResourceNode const& node = resourceNodes[r.getHandle().index];
-                        assert(node.resource);
-#if UTILS_HAS_RTTI
-                        assert(dynamic_cast<fg::ResourceEntry<FrameGraphTexture> *>(node.resource));
-#endif
-                        auto pTextureResource = static_cast<fg::ResourceEntry<FrameGraphTexture> *>(node.resource);
-                        infos[i].handle = pTextureResource->getResource().texture;
-                        infos[i].level = r.getLevel();
+                    auto const& attachmentInfo = desc.attachments.textures[i];
+                    if (attachmentInfo.isValid()) {
+                        fg::ResourceEntry<FrameGraphTexture> const& entry =
+                                fg.getResourceEntryUnchecked(attachmentInfo.getHandle());
+                        infos[i].handle = entry.getResource().texture;
+                        infos[i].level = attachmentInfo.getLevel();
                     }
                 }
 

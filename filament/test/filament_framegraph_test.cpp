@@ -40,12 +40,12 @@ TEST(FrameGraphTest, SimpleRenderPass) {
     bool renderPassExecuted = false;
 
     struct RenderPassData {
-        FrameGraphResource output;
+        FrameGraphResourceId<FrameGraphTexture> output;
     };
 
     auto& renderPass = fg.addPass<RenderPassData>("Render",
             [&](FrameGraph::Builder& builder, RenderPassData& data) {
-                FrameGraphResource::Descriptor desc{
+                FrameGraphTexture::Descriptor desc{
                         .format = TextureFormat::RGBA16F
                 };
                 data.output = builder.createTexture("color buffer", desc);
@@ -81,13 +81,13 @@ TEST(FrameGraphTest, SimpleRenderPass2) {
     bool renderPassExecuted = false;
 
     struct RenderPassData {
-        FrameGraphResource outColor;
-        FrameGraphResource outDepth;
+        FrameGraphResourceId<FrameGraphTexture> outColor;
+        FrameGraphResourceId<FrameGraphTexture> outDepth;
     };
 
     auto& renderPass = fg.addPass<RenderPassData>("Render",
             [&](FrameGraph::Builder& builder, RenderPassData& data) {
-                FrameGraphResource::Descriptor inputDesc{};
+                FrameGraphTexture::Descriptor inputDesc{};
                 inputDesc.format = TextureFormat::RGBA16F;
                 data.outColor = builder.createTexture("color buffer", inputDesc);
                 inputDesc.format = TextureFormat::DEPTH24;
@@ -134,12 +134,12 @@ TEST(FrameGraphTest, ScenarioDepthPrePass) {
     bool colorPassExecuted = false;
 
     struct DepthPrepassData {
-        FrameGraphResource outDepth;
+        FrameGraphResourceId<FrameGraphTexture> outDepth;
     };
 
     auto& depthPrepass = fg.addPass<DepthPrepassData>("depth prepass",
             [&](FrameGraph::Builder& builder, DepthPrepassData& data) {
-                FrameGraphResource::Descriptor inputDesc{};
+                FrameGraphTexture::Descriptor inputDesc{};
                 inputDesc.format = TextureFormat::DEPTH24;
                 data.outDepth = builder.createTexture("depth buffer", inputDesc);
                 data.outDepth = builder.write(builder.read(data.outDepth, true));
@@ -160,13 +160,13 @@ TEST(FrameGraphTest, ScenarioDepthPrePass) {
             });
 
     struct ColorPassData {
-        FrameGraphResource outColor;
-        FrameGraphResource outDepth;
+        FrameGraphResourceId<FrameGraphTexture> outColor;
+        FrameGraphResourceId<FrameGraphTexture> outDepth;
     };
 
     auto& colorPass = fg.addPass<ColorPassData>("color pass",
             [&](FrameGraph::Builder& builder, ColorPassData& data) {
-                FrameGraphResource::Descriptor inputDesc{};
+                FrameGraphTexture::Descriptor inputDesc{};
                 inputDesc.format = TextureFormat::RGBA16F;
                 data.outColor = builder.createTexture("color buffer", inputDesc);
 
@@ -215,7 +215,7 @@ TEST(FrameGraphTest, SimplePassCulling) {
     bool culledPassExecuted = false;
 
     struct RenderPassData {
-        FrameGraphResource output;
+        FrameGraphResourceId<FrameGraphTexture> output;
     };
 
     auto& renderPass = fg.addPass<RenderPassData>("Render",
@@ -236,8 +236,8 @@ TEST(FrameGraphTest, SimplePassCulling) {
 
 
     struct PostProcessPassData {
-        FrameGraphResource input;
-        FrameGraphResource output;
+        FrameGraphResourceId<FrameGraphTexture> input;
+        FrameGraphResourceId<FrameGraphTexture> output;
     };
 
     auto& postProcessPass = fg.addPass<PostProcessPassData>("PostProcess",
@@ -259,8 +259,8 @@ TEST(FrameGraphTest, SimplePassCulling) {
 
 
     struct CulledPassData {
-        FrameGraphResource input;
-        FrameGraphResource output;
+        FrameGraphResourceId<FrameGraphTexture> input;
+        FrameGraphResourceId<FrameGraphTexture> output;
     };
 
     auto& culledPass = fg.addPass<CulledPassData>("CulledPass",
@@ -305,12 +305,12 @@ TEST(FrameGraphTest, RenderTargetLifetime) {
     Handle<HwRenderTarget> rt1;
 
     struct RenderPassData {
-        FrameGraphResource output;
+        FrameGraphResourceId<FrameGraphTexture> output;
     };
 
     auto& renderPass1 = fg.addPass<RenderPassData>("Render1",
             [&](FrameGraph::Builder& builder, RenderPassData& data) {
-                FrameGraphResource::Descriptor desc{
+                FrameGraphTexture::Descriptor desc{
                         .format = TextureFormat::RGBA16F
                 };
                 data.output = builder.createTexture("color buffer", desc);

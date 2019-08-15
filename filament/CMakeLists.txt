@@ -45,6 +45,7 @@ set(SRCS
         src/components/RenderableManager.cpp
         src/components/TransformManager.cpp
         src/fg/FrameGraph.cpp
+        src/fg/FrameGraphResource.cpp
         src/fg/fg/ResourceEntry.cpp
         src/fg/ResourceAllocator.cpp
         src/Box.cpp

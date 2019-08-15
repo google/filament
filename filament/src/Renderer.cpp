@@ -240,7 +240,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     const bool colorPassNeedsDepthBuffer = hasPostProcess;
 
     const backend::Handle<backend::HwRenderTarget> viewRenderTarget = getRenderTarget(view);
-    FrameGraphResource output = fg.importResource("viewRenderTarget",
+    FrameGraphResourceId<FrameGraphTexture> output = fg.importResource("viewRenderTarget",
             { .viewport = vp }, viewRenderTarget, vp.width, vp.height,
             view.getDiscardedTargetBuffers());
 
@@ -267,7 +267,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         pass.appendSortedCommands(RenderPass::CommandTypeFlags::DEPTH);
     }
 
-    FrameGraphResource ssao = ppm.ssao(fg, pass, svp, cameraInfo, view.getAmbientOcclusionOptions());
+    FrameGraphResourceId<FrameGraphTexture> ssao = ppm.ssao(fg, pass, svp, cameraInfo, view.getAmbientOcclusionOptions());
 
     // --------------------------------------------------------------------------------------------
 
@@ -280,9 +280,9 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     TargetBufferFlags clearFlags = view.getClearFlags() & TargetBufferFlags::COLOR | TargetBufferFlags::DEPTH;
 
     struct ColorPassData {
-        FrameGraphResource color;
-        FrameGraphResource depth;
-        FrameGraphResource ssao;
+        FrameGraphResourceId<FrameGraphTexture> color;
+        FrameGraphResourceId<FrameGraphTexture> depth;
+        FrameGraphResourceId<FrameGraphTexture> ssao;
     };
 
     auto& colorPass = fg.addPass<ColorPassData>("Color Pass",
@@ -342,7 +342,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             });
 
     jobFroxelize = nullptr;
-    FrameGraphResource input = colorPass.getData().color;
+    FrameGraphResourceId<FrameGraphTexture> input = colorPass.getData().color;
 
     /*
      * Post Processing...

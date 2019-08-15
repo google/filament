@@ -18,9 +18,9 @@
 
 #include "FrameGraphPassResources.h"
 #include "FrameGraphResource.h"
+
 #include "fg/RenderTargetResource.h"
 #include "fg/ResourceNode.h"
-#include "fg/ResourceAllocator.h"
 #include "fg/RenderTarget.h"
 #include "fg/PassNode.h"
 #include "fg/VirtualResource.h"
@@ -43,26 +43,6 @@ using namespace details;
 
 // ------------------------------------------------------------------------------------------------
 
-void FrameGraphTexture::create(FrameGraph& fg, const char* name, FrameGraphTexture::Descriptor const& desc) noexcept {
-    assert(desc.usage);
-    // (it means it's only used as an attachment for a rendertarget)
-    uint8_t samples = desc.samples;
-    if (desc.usage & TextureUsage::SAMPLEABLE) {
-        samples = 1; // sampleable textures can't be multi-sampled
-    }
-    texture = fg.getResourceAllocator().createTexture(name, desc.type, desc.levels,
-            desc.format, samples, desc.width, desc.height, desc.depth, desc.usage);
-}
-
-void FrameGraphTexture::destroy(FrameGraph& fg) noexcept {
-    if (texture) {
-        fg.getResourceAllocator().destroyTexture(texture);
-        //texture.clear(); // needed because of noop driver
-    }
-}
-
-// ------------------------------------------------------------------------------------------------
-
 struct fg::Alias { //4
     FrameGraphResource from, to;
 };
@@ -78,40 +58,31 @@ const char* FrameGraph::Builder::getPassName() const noexcept {
 }
 
 const char* FrameGraph::Builder::getName(FrameGraphResource const& r) const noexcept {
-    ResourceNode& resourceNode = mFrameGraph.getResourceNode(r);
+    ResourceNode& resourceNode = mFrameGraph.getResourceNodeUnchecked(r);
     fg::ResourceEntryBase* pResource = resourceNode.resource;
     assert(pResource);
     return pResource ? pResource->name : "(invalid)";
 }
 
-bool FrameGraph::Builder::isAttachment(FrameGraphResource resource) const noexcept {
-    ResourceNode& node = mFrameGraph.getResourceNode(resource);
-    assert(node.resource);
-
-    // FIXME: Needs to take texture resource
-
-#if UTILS_HAS_RTTI
-    assert(dynamic_cast<fg::ResourceEntry<FrameGraphTexture> *>(node.resource));
-#endif
-    auto pTextureResource = static_cast<fg::ResourceEntry<FrameGraphTexture> *>(node.resource);
-
-    return pTextureResource->descriptor.usage & (
+bool FrameGraph::Builder::isAttachment(FrameGraphResourceId<FrameGraphTexture> r) const noexcept {
+    fg::ResourceEntry<FrameGraphTexture>& entry = mFrameGraph.getResourceEntryUnchecked(r);
+    return entry.descriptor.usage & (
             TextureUsage::COLOR_ATTACHMENT |
             TextureUsage::DEPTH_ATTACHMENT |
             TextureUsage::STENCIL_ATTACHMENT);
 }
 
 FrameGraphRenderTarget::Descriptor const&
-FrameGraph::Builder::getRenderTargetDescriptor(FrameGraphResource attachment) const {
+FrameGraph::Builder::getRenderTargetDescriptor(FrameGraphResourceId<FrameGraphTexture> attachment) const {
     FrameGraph& fg = mFrameGraph;
-    ResourceNode& node = fg.getResourceNode(attachment);
+    ResourceNode& node = fg.getResourceNodeUnchecked(attachment);
     ASSERT_POSTCONDITION(node.renderTargetIndex != ResourceNode::UNINITIALIZED,
             "Resource \"%s\" isn't a render target attachment", node.resource->name);
     assert(node.renderTargetIndex < fg.mRenderTargets.size());
     return fg.mRenderTargets[node.renderTargetIndex].desc;
 }
 
-uint8_t FrameGraph::Builder::getSamples(FrameGraphResource const& r) const noexcept {
+uint8_t FrameGraph::Builder::getSamples(FrameGraphResourceId<FrameGraphTexture> r) const noexcept {
     return isAttachment(r) ? getRenderTargetDescriptor(r).samples : 1;
 }
 
@@ -138,29 +109,19 @@ void FrameGraph::Builder::createRenderTarget(const char* name,
     for (size_t i = 0; i < desc.attachments.textures.size(); i++) {
         FrameGraphRenderTarget::Attachments::AttachmentInfo attachmentInfo = desc.attachments.textures[i];
         if (attachmentInfo.isValid()) {
-            ResourceNode& node = fg.getResourceNode(attachmentInfo.getHandle());
-
+            // FIXME: it would be nicer if we didn't have to know about the Texture resource type
             // figure out the attachment flags
-
-            // FIXME: we need to assume the type node.resource here. It would be nice if
-            //        we didn't need to know about the Texure resource type
-            //        this might be possible when we make rendertarget a first class
-            //        resource type.
-            //        Alternatively we could ask users to set the usage flags properly
-            //        instead of letting the frame graph figure it out.
-#if UTILS_HAS_RTTI
-            assert(dynamic_cast<fg::ResourceEntry<FrameGraphTexture> *>(node.resource));
-#endif
-            auto pTextureResource = static_cast<fg::ResourceEntry<FrameGraphTexture> *>(node.resource);
-            pTextureResource->descriptor.usage |= usages[i];
+            fg::ResourceEntry<FrameGraphTexture>& entry = fg.getResourceEntry(attachmentInfo.getHandle());
+            entry.descriptor.usage |= usages[i];
 
             // renderTargetIndex is used to retrieve the Descriptor
+            ResourceNode& node = fg.getResourceNode(attachmentInfo.getHandle());
             node.renderTargetIndex = renderTarget.index;
         }
     }
 }
 
-void FrameGraph::Builder::createRenderTarget(FrameGraphResource& texture,
+void FrameGraph::Builder::createRenderTarget(FrameGraphResourceId<FrameGraphTexture>& texture,
         TargetBufferFlags clearFlags) noexcept {
     texture = this->write(texture);
     createRenderTarget(getName(texture), {
@@ -169,11 +130,11 @@ void FrameGraph::Builder::createRenderTarget(FrameGraphResource& texture,
     }, clearFlags);
 }
 
-FrameGraphResource FrameGraph::Builder::read(FrameGraphResource const& input, bool doesntNeedTexture) {
+FrameGraphResource FrameGraph::Builder::read(FrameGraphResource input, bool doesntNeedTexture) {
     return mPass.read(mFrameGraph, input, doesntNeedTexture);
 }
 
-FrameGraphResource FrameGraph::Builder::write(FrameGraphResource const& output) {
+FrameGraphResource FrameGraph::Builder::write(FrameGraphResource output) {
     return mPass.write(mFrameGraph, output);
 }
 
@@ -242,7 +203,7 @@ FrameGraphPassResources::getRenderTarget(FrameGraphResource r, uint8_t level) co
     // check that this FrameGraphRenderTarget is indeed declared by this pass
     ASSERT_POSTCONDITION_NON_FATAL(info.target,
             "Pass \"%s\" doesn't declare a rendertarget using \"%s\" -- expect graphic corruptions",
-            mPass.name, fg.getResourceNode(r).resource->name);
+            mPass.name, fg.getResourceNodeUnchecked(r).resource->name);
     
 //    slog.d << mPass.name << ": resource = \"" << renderTarget.name << "\", flags = "
 //        << io::hex
@@ -357,6 +318,12 @@ fg::ResourceEntryBase& FrameGraph::getResourceEntryBase(FrameGraphResource r) no
     return *node.resource;
 }
 
+fg::ResourceEntryBase& FrameGraph::getResourceEntryBaseUnchecked(FrameGraphResource r) noexcept {
+    ResourceNode& node = getResourceNodeUnchecked(r);
+    assert(node.resource);
+    return *node.resource;
+}
+
 bool FrameGraph::equals(FrameGraphRenderTarget::Descriptor const& lhs,
         FrameGraphRenderTarget::Descriptor const& rhs) const noexcept {
     const Vector<ResourceNode>& resourceNodes = mResourceNodes;
@@ -390,7 +357,7 @@ bool FrameGraph::equals(FrameGraphRenderTarget::Descriptor const& lhs,
             }) && lhs.samples == rhs.samples;
 }
 
-FrameGraphResource FrameGraph::importResource(const char* name,
+FrameGraphResourceId<FrameGraphTexture> FrameGraph::importResource(const char* name,
         FrameGraphRenderTarget::Descriptor descriptor,
         backend::Handle<backend::HwRenderTarget> target, uint32_t width, uint32_t height,
         TargetBufferFlags discardStart, TargetBufferFlags discardEnd) {
@@ -403,7 +370,7 @@ FrameGraphResource FrameGraph::importResource(const char* name,
 
     // create the resource that will be returned to the user
     FrameGraphTexture::Descriptor desc{ .width = width, .height = height };
-    FrameGraphResource rt = import<FrameGraphTexture>(name, desc);
+    FrameGraphResourceId<FrameGraphTexture> rt = import<FrameGraphTexture>(name, desc);
     descriptor.attachments.textures[0] = rt;
 
     // Populate the cache with a RenderTargetResource
@@ -421,11 +388,11 @@ FrameGraphResource FrameGraph::importResource(const char* name,
     return rt;
 }
 
-FrameGraphResource FrameGraph::importResource(
+FrameGraphResourceId<FrameGraphTexture> FrameGraph::importResource(
         const char* name, FrameGraphTexture::Descriptor const& descriptor,
         backend::Handle<backend::HwTexture> color) {
 
-    FrameGraphResource r = import<FrameGraphTexture>(name, descriptor);
+    FrameGraphResourceId<FrameGraphTexture> r = import<FrameGraphTexture>(name, descriptor);
     // FIXME: we need to pass a constructed resource here, e.g. a FrameGraphTexture
     fg::ResourceNode& node = mResourceNodes[r.index];
     static_cast<ResourceEntry<FrameGraphTexture> *>(node.resource)->getResource().texture = color;
