@@ -370,7 +370,7 @@ FrameGraphResourceId<FrameGraphTexture> FrameGraph::importResource(const char* n
 
     // create the resource that will be returned to the user
     FrameGraphTexture::Descriptor desc{ .width = width, .height = height };
-    FrameGraphResourceId<FrameGraphTexture> rt = import<FrameGraphTexture>(name, desc);
+    FrameGraphResourceId<FrameGraphTexture> rt = import<FrameGraphTexture>(name, desc, {});
     descriptor.attachments.textures[0] = rt;
 
     // Populate the cache with a RenderTargetResource
@@ -386,17 +386,6 @@ FrameGraphResourceId<FrameGraphTexture> FrameGraph::importResource(const char* n
     // so that, resolve() will find us.
 
     return rt;
-}
-
-FrameGraphResourceId<FrameGraphTexture> FrameGraph::importResource(
-        const char* name, FrameGraphTexture::Descriptor const& descriptor,
-        backend::Handle<backend::HwTexture> color) {
-
-    FrameGraphResourceId<FrameGraphTexture> r = import<FrameGraphTexture>(name, descriptor);
-    // FIXME: we need to pass a constructed resource here, e.g. a FrameGraphTexture
-    fg::ResourceNode& node = mResourceNodes[r.index];
-    static_cast<ResourceEntry<FrameGraphTexture> *>(node.resource)->getResource().texture = color;
-    return r;
 }
 
 TargetBufferFlags FrameGraph::computeDiscardFlags(DiscardPhase phase,

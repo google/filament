@@ -19,8 +19,6 @@
 
 #include "VirtualResource.h"
 
-#include <type_traits>
-
 #include <stdint.h>
 
 namespace filament {
@@ -52,33 +50,34 @@ public:
 
 template<typename T>
 class ResourceEntry : public ResourceEntryBase {
-    using Storage = std::aligned_storage_t<sizeof(T), alignof(T)>;
-    Storage resource;
+    T resource{};
 
 public:
     using Descriptor = typename T::Descriptor;
     Descriptor descriptor;
 
-    explicit ResourceEntry(const char* name, Descriptor const& desc, uint16_t id, bool imported) noexcept
-        : ResourceEntryBase(name, id, imported), descriptor(desc) {
+    ResourceEntry(const char* name, Descriptor const& desc, uint16_t id) noexcept
+        : ResourceEntryBase(name, id, false), descriptor(desc) {
     }
 
-    T const& getResource() const noexcept { return reinterpret_cast<T const&>(resource); }
+    ResourceEntry(const char* name, Descriptor const& desc, const T& r, uint16_t id) noexcept
+            : ResourceEntryBase(name, id, true), resource(r), descriptor(desc) {
+    }
 
-    T& getResource() noexcept { return reinterpret_cast<T&>(resource); }
+    T const& getResource() const noexcept { return resource; }
+
+    T& getResource() noexcept { return resource; }
 
     void create(FrameGraph& fg) noexcept override {
-        T* r = new(&resource) T();
         if (!imported) {
-            r->create(fg, name, descriptor);
+            resource.create(fg, name, descriptor);
         }
     }
 
     void destroy(FrameGraph& fg) noexcept override {
         if (!imported) {
-            getResource().destroy(fg);
+            resource.destroy(fg);
         }
-        reinterpret_cast<T*>(&resource)->~T();
     }
 };
 
