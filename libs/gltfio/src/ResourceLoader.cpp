@@ -45,6 +45,8 @@ using namespace filament;
 using namespace filament::math;
 using namespace utils;
 
+static const auto FREE_CALLBACK = [](void* mem, size_t, void*) { free(mem); };
+
 namespace gltfio {
 
 struct ResourceLoader::Impl {
@@ -232,22 +234,19 @@ bool ResourceLoader::loadResources(FilamentAsset* asset) {
         } else if (bb.vertexBuffer) {
             uint32_t* dummyData = (uint32_t*) malloc(bb.size);
             memset(dummyData, 0xff, bb.size);
-            auto callback = (VertexBuffer::BufferDescriptor::Callback) free;
-            VertexBuffer::BufferDescriptor bd(dummyData, bb.size, callback);
+            VertexBuffer::BufferDescriptor bd(dummyData, bb.size, FREE_CALLBACK);
             bb.vertexBuffer->setBufferAt(*mConfig.engine, bb.bufferIndex, std::move(bd));
         } else if (bb.generateTrivialIndices) {
             uint32_t* data32 = (uint32_t*) malloc(bb.size);
             generateTrivialIndices(data32, bb.size / sizeof(uint32_t));
-            auto callback = (IndexBuffer::BufferDescriptor::Callback) free;
-            IndexBuffer::BufferDescriptor bd(data32, bb.size, callback);
+            IndexBuffer::BufferDescriptor bd(data32, bb.size, FREE_CALLBACK);
             bb.indexBuffer->setBuffer(*mConfig.engine, std::move(bd));
         } else if (bb.convertBytesToShorts) {
             const uint8_t* data8 = bb.offset + (const uint8_t*) *bb.data;
             size_t size16 = bb.size * 2;
             uint16_t* data16 = (uint16_t*) malloc(size16);
             convertBytesToShorts(data16, data8, bb.size);
-            auto callback = (IndexBuffer::BufferDescriptor::Callback) free;
-            IndexBuffer::BufferDescriptor bd(data16, size16, callback);
+            IndexBuffer::BufferDescriptor bd(data16, size16, FREE_CALLBACK);
             bb.indexBuffer->setBuffer(*mConfig.engine, std::move(bd));
         } else if (bb.indexBuffer) {
             const uint8_t* data8 = bb.offset + (const uint8_t*) *bb.data;
@@ -485,8 +484,7 @@ void ResourceLoader::computeTangents(FFilamentAsset* asset) const {
         helper.getQuats(quats, vertexCount);
 
         // Upload quaternions to the GPU.
-        auto callback = (VertexBuffer::BufferDescriptor::Callback) free;
-        VertexBuffer::BufferDescriptor bd(quats, vertexCount * sizeof(short4), callback);
+        VertexBuffer::BufferDescriptor bd(quats, vertexCount * sizeof(short4), FREE_CALLBACK);
         vb->setBufferAt(*mConfig.engine, slot, std::move(bd));
     };
 

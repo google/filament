@@ -28,13 +28,14 @@ namespace filamat {
 
 class DictionarySpirvChunk final : public Chunk {
 public:
-    explicit DictionarySpirvChunk(BlobDictionary&& dictionary);
+    explicit DictionarySpirvChunk(BlobDictionary&& dictionary, bool stripDebugInfo);
     ~DictionarySpirvChunk() = default;
 
 private:
     void flatten(Flattener& f) override;
 
     BlobDictionary mDictionary;
+    bool mStripDebugInfo;
 };
 
 } // namespace filamat

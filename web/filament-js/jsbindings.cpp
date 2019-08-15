@@ -882,6 +882,9 @@ class_<Material>("Material")
     }), allow_raw_pointers());
 
 class_<MaterialInstance>("MaterialInstance")
+    .function("setBoolParameter", EMBIND_LAMBDA(void,
+            (MaterialInstance* self, std::string name, bool value), {
+        self->setParameter(name.c_str(), value); }), allow_raw_pointers())
     .function("setFloatParameter", EMBIND_LAMBDA(void,
             (MaterialInstance* self, std::string name, float value), {
         self->setParameter(name.c_str(), value); }), allow_raw_pointers())
