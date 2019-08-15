@@ -398,9 +398,6 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity entity) {
     if (numMorphTargets > 0) {
         RenderableManager::Instance renderable = mRenderableManager.getInstance(entity);
         float4 weights(0, 0, 0, 0);
-        for (cgltf_size i = 0; i < std::min(cgltf_size(4), mesh->weights_count); ++i) {
-            weights[i] = mesh->weights[i];
-        }
         for (cgltf_size i = 0; i < std::min(cgltf_size(4), node->weights_count); ++i) {
             weights[i] = node->weights[i];
         }
