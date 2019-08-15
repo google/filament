@@ -125,9 +125,9 @@ void CommandType<void (Driver::*)(ARGS...)>::Command<METHOD>::log() noexcept  {
 #if DEBUG_COMMAND_STREAM
 #define DECL_DRIVER_API_SYNCHRONOUS(RetType, methodName, paramsDecl, params)
 #define DECL_DRIVER_API(methodName, paramsDecl, params) \
-    template void CommandType<decltype(&Driver::methodName)>::Command<&Driver::methodName>::log();
+    template void CommandType<decltype(&Driver::methodName)>::Command<&Driver::methodName>::log() noexcept;
 #define DECL_DRIVER_API_RETURN(RetType, methodName, paramsDecl, params) \
-    template void CommandType<decltype(&Driver::methodName##R)>::Command<&Driver::methodName##R>::log();
+    template void CommandType<decltype(&Driver::methodName##R)>::Command<&Driver::methodName##R>::log() noexcept;
 #include "private/backend/DriverAPI.inc"
 #endif
 
