@@ -18,12 +18,13 @@
 #define TNT_FILAMENT_FRAMEGRAPHRESOURCE_H
 
 #include <backend/DriverEnums.h>
+#include <backend/Handle.h>
 #include <filament/Viewport.h>
+
+#include <stdint.h>
 
 #include <array>
 #include <limits>
-
-#include <stdint.h>
 
 namespace filament {
 
@@ -35,6 +36,27 @@ struct RenderTargetResource;
 
 class FrameGraph;
 class FrameGraphPassResources;
+
+
+struct FrameGraphTexture {
+    struct Descriptor {
+        uint32_t width = 1;     // width of resource in pixel
+        uint32_t height = 1;    // height of resource in pixel
+        uint32_t depth = 1;     // # of images for 3D textures
+        uint8_t levels = 1;     // # of levels for textures
+        uint8_t samples = 1;
+        backend::SamplerType type = backend::SamplerType::SAMPLER_2D;     // texture target type
+        backend::TextureFormat format = backend::TextureFormat::RGBA8;    // resource internal format
+        backend::TextureUsage usage = (backend::TextureUsage)0; // don't need to set this one
+    };
+
+    void create(FrameGraph& fg, const char* name, Descriptor const& desc) noexcept;
+    void destroy(FrameGraph& fg) noexcept;
+
+    backend::Handle<backend::HwTexture> texture;
+};
+
+
 
 /*
  * A FrameGraph resource.
@@ -56,17 +78,9 @@ class FrameGraphResource {
     uint16_t index = UNINITIALIZED;
 
 public:
-    FrameGraphResource() noexcept = default;
+    using Descriptor = FrameGraphTexture::Descriptor;   // FIXME: for source compatibility
 
-    struct Descriptor {
-        uint32_t width = 1;     // width of resource in pixel
-        uint32_t height = 1;    // height of resource in pixel
-        uint32_t depth = 1;     // # of images for 3D textures
-        uint8_t levels = 1;     // # of levels for textures
-        uint8_t samples = 1;
-        backend::SamplerType type = backend::SamplerType::SAMPLER_2D;     // texture target type
-        backend::TextureFormat format = backend::TextureFormat::RGBA8;    // resource internal format
-    };
+    FrameGraphResource() noexcept = default;
 
     bool isValid() const noexcept { return index != UNINITIALIZED; }
 
@@ -83,6 +97,12 @@ public:
     }
 };
 
+// TODO: all public-facing APIs shoud use FrameGraphResourceId<>
+template<typename T>
+class FrameGraphResourceId : public FrameGraphResource {
+public:
+    using FrameGraphResource::FrameGraphResource;
+};
 
 namespace FrameGraphRenderTarget {
 

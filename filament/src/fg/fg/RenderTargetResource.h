@@ -22,7 +22,6 @@
 
 #include "fg/FrameGraph.h"
 
-#include "TextureResource.h"
 #include "fg/ResourceAllocator.h"
 #include "ResourceNode.h"
 #include "VirtualResource.h"
@@ -81,7 +80,11 @@ struct RenderTargetResource final : public VirtualResource {  // 104
                     if (r.isValid()) {
                         ResourceNode const& node = resourceNodes[r.getHandle().index];
                         assert(node.resource);
-                        infos[i].handle = node.resource->texture;
+#if UTILS_HAS_RTTI
+                        assert(dynamic_cast<fg::ResourceEntry<FrameGraphTexture> *>(node.resource));
+#endif
+                        auto pTextureResource = static_cast<fg::ResourceEntry<FrameGraphTexture> *>(node.resource);
+                        infos[i].handle = pTextureResource->getResource().texture;
                         infos[i].level = r.getLevel();
                     }
                 }

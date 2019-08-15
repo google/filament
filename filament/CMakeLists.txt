@@ -45,7 +45,7 @@ set(SRCS
         src/components/RenderableManager.cpp
         src/components/TransformManager.cpp
         src/fg/FrameGraph.cpp
-        src/fg/fg/TextureResource.cpp
+        src/fg/fg/ResourceEntry.cpp
         src/fg/ResourceAllocator.cpp
         src/Box.cpp
         src/Camera.cpp
@@ -94,7 +94,7 @@ set(PRIVATE_HDRS
         src/fg/FrameGraphResource.h
         src/fg/fg/PassNode.h
         src/fg/fg/RenderTarget.h
-        src/fg/fg/TextureResource.h
+        src/fg/fg/ResourceEntry.h
         src/fg/fg/ResourceNode.h
         src/fg/ResourceAllocator.h
         src/fg/fg/VirtualResource.h
