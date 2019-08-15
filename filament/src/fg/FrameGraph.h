@@ -194,11 +194,13 @@ public:
             backend::TargetBufferFlags discardStart = backend::TargetBufferFlags::NONE,
             backend::TargetBufferFlags discardEnd = backend::TargetBufferFlags::NONE);
 
-    // Import a read-only render target from outside the framegraph and returns a handle to it.
-    FrameGraphResourceId<FrameGraphTexture> importResource(
-            const char* name, FrameGraphTexture::Descriptor const& descriptor,
-            backend::Handle<backend::HwTexture> color);
 
+    template<typename T>
+    FrameGraphResourceId<T> import(const char* name,
+            typename T::Descriptor const& desc, const T& resource) noexcept {
+        fg::ResourceEntryBase* pBase = mArena.make<fg::ResourceEntry<T>>(name, desc, resource, mId++);
+        return FrameGraphResourceId<T>(create(pBase));
+    }
 
     // Moves the resource associated to the handle 'from' to the handle 'to'. After this call,
     // all handles referring to the resource 'to' are redirected to the resource 'from'
@@ -275,14 +277,7 @@ private:
 
     template<typename T>
     FrameGraphResourceId<T> create(const char* name, typename T::Descriptor const& desc) noexcept {
-        fg::ResourceEntryBase* pBase = mArena.make<fg::ResourceEntry<T>>(name, desc, mId++, false);
-        FrameGraphResourceId<T> r(create(pBase));
-        return r;
-    }
-
-    template<typename T>
-    FrameGraphResourceId<T> import(const char* name, typename T::Descriptor const& desc) noexcept {
-        fg::ResourceEntryBase* pBase = mArena.make<fg::ResourceEntry<T>>(name, desc, mId++, true);
+        fg::ResourceEntryBase* pBase = mArena.make<fg::ResourceEntry<T>>(name, desc, mId++);
         FrameGraphResourceId<T> r(create(pBase));
         return r;
     }
