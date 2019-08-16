@@ -30,7 +30,7 @@
 #include <backend/PixelBufferDescriptor.h>
 
 #include "fg/FrameGraph.h"
-#include "fg/FrameGraphResource.h"
+#include "fg/FrameGraphHandle.h"
 #include "fg/ResourceAllocator.h"
 
 
@@ -240,7 +240,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     const bool colorPassNeedsDepthBuffer = hasPostProcess;
 
     const backend::Handle<backend::HwRenderTarget> viewRenderTarget = getRenderTarget(view);
-    FrameGraphResourceId<FrameGraphTexture> output = fg.importResource("viewRenderTarget",
+    FrameGraphId<FrameGraphTexture> output = fg.importResource("viewRenderTarget",
             { .viewport = vp }, viewRenderTarget, vp.width, vp.height,
             view.getDiscardedTargetBuffers());
 
@@ -267,7 +267,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         pass.appendSortedCommands(RenderPass::CommandTypeFlags::DEPTH);
     }
 
-    FrameGraphResourceId<FrameGraphTexture> ssao = ppm.ssao(fg, pass, svp, cameraInfo, view.getAmbientOcclusionOptions());
+    FrameGraphId<FrameGraphTexture> ssao = ppm.ssao(fg, pass, svp, cameraInfo, view.getAmbientOcclusionOptions());
 
     // --------------------------------------------------------------------------------------------
 
@@ -280,9 +280,9 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     TargetBufferFlags clearFlags = view.getClearFlags() & TargetBufferFlags::COLOR | TargetBufferFlags::DEPTH;
 
     struct ColorPassData {
-        FrameGraphResourceId<FrameGraphTexture> color;
-        FrameGraphResourceId<FrameGraphTexture> depth;
-        FrameGraphResourceId<FrameGraphTexture> ssao;
+        FrameGraphId<FrameGraphTexture> color;
+        FrameGraphId<FrameGraphTexture> depth;
+        FrameGraphId<FrameGraphTexture> ssao;
     };
 
     auto& colorPass = fg.addPass<ColorPassData>("Color Pass",
@@ -342,7 +342,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             });
 
     jobFroxelize = nullptr;
-    FrameGraphResourceId<FrameGraphTexture> input = colorPass.getData().color;
+    FrameGraphId<FrameGraphTexture> input = colorPass.getData().color;
 
     /*
      * Post Processing...

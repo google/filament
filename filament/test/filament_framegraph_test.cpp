@@ -40,7 +40,7 @@ TEST(FrameGraphTest, SimpleRenderPass) {
     bool renderPassExecuted = false;
 
     struct RenderPassData {
-        FrameGraphResourceId<FrameGraphTexture> output;
+        FrameGraphId<FrameGraphTexture> output;
     };
 
     auto& renderPass = fg.addPass<RenderPassData>("Render",
@@ -81,8 +81,8 @@ TEST(FrameGraphTest, SimpleRenderPass2) {
     bool renderPassExecuted = false;
 
     struct RenderPassData {
-        FrameGraphResourceId<FrameGraphTexture> outColor;
-        FrameGraphResourceId<FrameGraphTexture> outDepth;
+        FrameGraphId<FrameGraphTexture> outColor;
+        FrameGraphId<FrameGraphTexture> outDepth;
     };
 
     auto& renderPass = fg.addPass<RenderPassData>("Render",
@@ -134,7 +134,7 @@ TEST(FrameGraphTest, ScenarioDepthPrePass) {
     bool colorPassExecuted = false;
 
     struct DepthPrepassData {
-        FrameGraphResourceId<FrameGraphTexture> outDepth;
+        FrameGraphId<FrameGraphTexture> outDepth;
     };
 
     auto& depthPrepass = fg.addPass<DepthPrepassData>("depth prepass",
@@ -160,8 +160,8 @@ TEST(FrameGraphTest, ScenarioDepthPrePass) {
             });
 
     struct ColorPassData {
-        FrameGraphResourceId<FrameGraphTexture> outColor;
-        FrameGraphResourceId<FrameGraphTexture> outDepth;
+        FrameGraphId<FrameGraphTexture> outColor;
+        FrameGraphId<FrameGraphTexture> outDepth;
     };
 
     auto& colorPass = fg.addPass<ColorPassData>("color pass",
@@ -215,7 +215,7 @@ TEST(FrameGraphTest, SimplePassCulling) {
     bool culledPassExecuted = false;
 
     struct RenderPassData {
-        FrameGraphResourceId<FrameGraphTexture> output;
+        FrameGraphId<FrameGraphTexture> output;
     };
 
     auto& renderPass = fg.addPass<RenderPassData>("Render",
@@ -236,8 +236,8 @@ TEST(FrameGraphTest, SimplePassCulling) {
 
 
     struct PostProcessPassData {
-        FrameGraphResourceId<FrameGraphTexture> input;
-        FrameGraphResourceId<FrameGraphTexture> output;
+        FrameGraphId<FrameGraphTexture> input;
+        FrameGraphId<FrameGraphTexture> output;
     };
 
     auto& postProcessPass = fg.addPass<PostProcessPassData>("PostProcess",
@@ -259,8 +259,8 @@ TEST(FrameGraphTest, SimplePassCulling) {
 
 
     struct CulledPassData {
-        FrameGraphResourceId<FrameGraphTexture> input;
-        FrameGraphResourceId<FrameGraphTexture> output;
+        FrameGraphId<FrameGraphTexture> input;
+        FrameGraphId<FrameGraphTexture> output;
     };
 
     auto& culledPass = fg.addPass<CulledPassData>("CulledPass",
@@ -305,7 +305,7 @@ TEST(FrameGraphTest, RenderTargetLifetime) {
     Handle<HwRenderTarget> rt1;
 
     struct RenderPassData {
-        FrameGraphResourceId<FrameGraphTexture> output;
+        FrameGraphId<FrameGraphTexture> output;
     };
 
     auto& renderPass1 = fg.addPass<RenderPassData>("Render1",

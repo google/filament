@@ -22,7 +22,7 @@
 #include "details/Texture.h"
 
 #include "fg/FrameGraph.h"
-#include "fg/FrameGraphResource.h"
+#include "fg/FrameGraphHandle.h"
 
 #include "RenderTargetResource.h"
 

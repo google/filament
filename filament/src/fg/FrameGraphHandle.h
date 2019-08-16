@@ -59,11 +59,11 @@ struct FrameGraphTexture {
 
 // ------------------------------------------------------------------------------------------------
 template<typename T>
-class FrameGraphResourceId;
+class FrameGraphId;
 
-class FrameGraphResource {
+class FrameGraphHandle {
     template<typename T>
-    friend class FrameGraphResourceId;
+    friend class FrameGraphId;
     friend class FrameGraph;
     friend class FrameGraphPassResources;
     friend struct fg::PassNode;
@@ -71,8 +71,8 @@ class FrameGraphResource {
     friend struct fg::RenderTargetResource;
 
     // private ctor -- this cannot be constructed by users
-    FrameGraphResource() noexcept = default;
-    explicit FrameGraphResource(uint16_t index) noexcept : index(index) {}
+    FrameGraphHandle() noexcept = default;
+    explicit FrameGraphHandle(uint16_t index) noexcept : index(index) {}
 
     static constexpr uint16_t UNINITIALIZED = std::numeric_limits<uint16_t>::max();
     // index to the resource handle
@@ -81,15 +81,15 @@ class FrameGraphResource {
 public:
     bool isValid() const noexcept { return index != UNINITIALIZED; }
 
-    bool operator < (const FrameGraphResource& rhs) const noexcept {
+    bool operator < (const FrameGraphHandle& rhs) const noexcept {
         return index < rhs.index;
     }
 
-    bool operator == (const FrameGraphResource& rhs) const noexcept {
+    bool operator == (const FrameGraphHandle& rhs) const noexcept {
         return (index == rhs.index);
     }
 
-    bool operator != (const FrameGraphResource& rhs) const noexcept {
+    bool operator != (const FrameGraphHandle& rhs) const noexcept {
         return !operator==(rhs);
     }
 };
@@ -101,36 +101,36 @@ public:
  */
 
 template<typename T>
-class FrameGraphResourceId : public FrameGraphResource {
+class FrameGraphId : public FrameGraphHandle {
 public:
-    using FrameGraphResource::FrameGraphResource;
-    FrameGraphResourceId() noexcept = default;
-    explicit FrameGraphResourceId(FrameGraphResource r) : FrameGraphResource(r) { }
+    using FrameGraphHandle::FrameGraphHandle;
+    FrameGraphId() noexcept = default;
+    explicit FrameGraphId(FrameGraphHandle r) : FrameGraphHandle(r) { }
 };
 
 namespace FrameGraphRenderTarget {
 
 struct Attachments {
     struct AttachmentInfo {
-        // auto convert to FrameGraphResource (allows: handle = desc.attachments.color;)
-        operator FrameGraphResourceId<FrameGraphTexture>() const noexcept { return mHandle; } // NOLINT
+        // auto convert to FrameGraphHandle (allows: handle = desc.attachments.color;)
+        operator FrameGraphId<FrameGraphTexture>() const noexcept { return mHandle; } // NOLINT
 
         AttachmentInfo() noexcept = default;
 
-        // auto convert from FrameGraphResource (allows: desc.attachments.color = handle;)
-        AttachmentInfo(FrameGraphResourceId<FrameGraphTexture> handle) noexcept : mHandle(handle) {} // NOLINT
+        // auto convert from FrameGraphHandle (allows: desc.attachments.color = handle;)
+        AttachmentInfo(FrameGraphId<FrameGraphTexture> handle) noexcept : mHandle(handle) {} // NOLINT
 
         // allows: desc.attachments.color = { handle, level };
-        AttachmentInfo(FrameGraphResourceId<FrameGraphTexture> handle, uint8_t level) noexcept
+        AttachmentInfo(FrameGraphId<FrameGraphTexture> handle, uint8_t level) noexcept
                 : mHandle(handle), mLevel(level) {}
 
         bool isValid() const noexcept { return mHandle.isValid(); }
 
-        FrameGraphResourceId<FrameGraphTexture> getHandle() const noexcept { return mHandle; }
+        FrameGraphId<FrameGraphTexture> getHandle() const noexcept { return mHandle; }
         uint8_t getLevel() const noexcept { return mLevel; }
 
     private:
-        FrameGraphResourceId<FrameGraphTexture> mHandle{};
+        FrameGraphId<FrameGraphTexture> mHandle{};
         uint8_t mLevel = 0;
     };
 

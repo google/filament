@@ -19,7 +19,7 @@
 
 
 #include "FrameGraphPass.h"
-#include "FrameGraphResource.h"
+#include "FrameGraphHandle.h"
 #include "FrameGraphPassResources.h"
 
 #include <fg/fg/ResourceEntry.h>
@@ -71,27 +71,27 @@ public:
         // Create virtual resource that can eventually turn into a concrete resource (typically
         // a GPU buffer).
         template<typename T>
-        FrameGraphResourceId<T> create(const char* name,
+        FrameGraphId<T> create(const char* name,
                 typename T::Descriptor const& desc = {}) noexcept {
             return mFrameGraph.create<T>(name, desc);
         }
 
         // Helper to create a Texture resource
-        FrameGraphResourceId<FrameGraphTexture> createTexture(const char* name,
+        FrameGraphId<FrameGraphTexture> createTexture(const char* name,
                 FrameGraphTexture::Descriptor const& desc = {}) noexcept {
             return create<FrameGraphTexture>(name, desc);
         }
 
         // Read from a resource (i.e. add a reference to that resource)
         template<typename T>
-        FrameGraphResourceId<T> read(FrameGraphResourceId<T> input, bool doesntNeedTexture = false) {
-            return FrameGraphResourceId<T>(read(FrameGraphResource(input), doesntNeedTexture));
+        FrameGraphId<T> read(FrameGraphId<T> input, bool doesntNeedTexture = false) {
+            return FrameGraphId<T>(read(FrameGraphHandle(input), doesntNeedTexture));
         }
 
         // Write to a resource (i.e. add a reference to that pass)
         template<typename T>
-        FrameGraphResourceId<T> write(FrameGraphResourceId<T> output) {
-            return FrameGraphResourceId<T>(write(FrameGraphResource(output)));
+        FrameGraphId<T> write(FrameGraphId<T> output) {
+            return FrameGraphId<T>(write(FrameGraphHandle(output)));
         }
 
         // create a render target in this pass.
@@ -101,7 +101,7 @@ public:
                 backend::TargetBufferFlags clearFlags = {}) noexcept;
 
         // helper for single color attachment with WRITE access
-        void createRenderTarget(FrameGraphResourceId<FrameGraphTexture>& texture,
+        void createRenderTarget(FrameGraphId<FrameGraphTexture>& texture,
                 backend::TargetBufferFlags clearFlags = {}) noexcept;
 
         // Declare that this pass has side effects outside the framegraph (i.e. it can't be culled)
@@ -114,31 +114,31 @@ public:
         const char* getPassName() const noexcept;
 
         // helper to get resource's name
-        const char* getName(FrameGraphResource const& r) const noexcept;
+        const char* getName(FrameGraphHandle const& r) const noexcept;
 
         // helper to get a resource's descriptor
         template<typename T>
-        typename T::Descriptor const& getDescriptor(FrameGraphResourceId<T> r) {
+        typename T::Descriptor const& getDescriptor(FrameGraphId<T> r) {
             return mFrameGraph.getDescriptor<T>(r);
         }
 
         // return a render target's attachment sample count. Returns 1 if the resource
         // is not an attachement to some rendertarget
-        uint8_t getSamples(FrameGraphResourceId<FrameGraphTexture> r) const noexcept;
+        uint8_t getSamples(FrameGraphId<FrameGraphTexture> r) const noexcept;
 
         // returns whether this texture resource is an attachment to some rendertarget
-        bool isAttachment(FrameGraphResourceId<FrameGraphTexture> r) const noexcept;
+        bool isAttachment(FrameGraphId<FrameGraphTexture> r) const noexcept;
 
         // returns the descriptor of the render target this attachment belongs to
         FrameGraphRenderTarget::Descriptor const& getRenderTargetDescriptor(
-                FrameGraphResourceId<FrameGraphTexture> attachment) const;
+                FrameGraphId<FrameGraphTexture> attachment) const;
 
     private:
         friend class FrameGraph;
         Builder(FrameGraph& fg, fg::PassNode& pass) noexcept;
         ~Builder() noexcept;
-        FrameGraphResource read(FrameGraphResource input, bool doesntNeedTexture);
-        FrameGraphResource write(FrameGraphResource output);
+        FrameGraphHandle read(FrameGraphHandle input, bool doesntNeedTexture);
+        FrameGraphHandle write(FrameGraphHandle output);
         FrameGraph& mFrameGraph;
         fg::PassNode& mPass;
     };
@@ -174,21 +174,21 @@ public:
     }
 
     // Adds a reference to 'input', preventing it from being culled.
-    void present(FrameGraphResource input);
+    void present(FrameGraphHandle input);
 
     // Returns whether the resource handle is valid. A resource handle becomes invalid after
     // it's used to declare a resource write (see Builder::write()).
-    bool isValid(FrameGraphResource r) const noexcept;
+    bool isValid(FrameGraphHandle r) const noexcept;
 
     // Return the Descriptor associated to this resource handle. The handle must be valid.
     template<typename T>
-    typename T::Descriptor const& getDescriptor(FrameGraphResourceId<T> r) {
+    typename T::Descriptor const& getDescriptor(FrameGraphId<T> r) {
         fg::ResourceEntry<T>& entry = getResourceEntryUnchecked(r);
         return entry.descriptor;
     }
 
     // Import a write-only render target from outside the framegraph and returns a handle to it.
-    FrameGraphResourceId<FrameGraphTexture> importResource(const char* name,
+    FrameGraphId<FrameGraphTexture> importResource(const char* name,
             FrameGraphRenderTarget::Descriptor descriptor,
             backend::Handle<backend::HwRenderTarget> target, uint32_t width, uint32_t height,
             backend::TargetBufferFlags discardStart = backend::TargetBufferFlags::NONE,
@@ -196,10 +196,10 @@ public:
 
 
     template<typename T>
-    FrameGraphResourceId<T> import(const char* name,
+    FrameGraphId<T> import(const char* name,
             typename T::Descriptor const& desc, const T& resource) noexcept {
         fg::ResourceEntryBase* pBase = mArena.make<fg::ResourceEntry<T>>(name, desc, resource, mId++);
-        return FrameGraphResourceId<T>(create(pBase));
+        return FrameGraphId<T>(create(pBase));
     }
 
     // Moves the resource associated to the handle 'from' to the handle 'to'. After this call,
@@ -209,8 +209,8 @@ public:
     // Return a new handle for the 'from' resource and makes the 'from' handle invalid (i.e. it's
     // similar to if we had written to the 'from' resource)
     template<typename T>
-    FrameGraphResourceId<T> moveResource(FrameGraphResourceId<T> from, FrameGraphResourceId<T> to) {
-        return FrameGraphResourceId<T>(moveResource(FrameGraphResource(from), FrameGraphResource(to)));
+    FrameGraphId<T> moveResource(FrameGraphId<T> from, FrameGraphId<T> to) {
+        return FrameGraphId<T>(moveResource(FrameGraphHandle(from), FrameGraphHandle(to)));
     }
 
     // allocates concrete resources and culls unreferenced passes
@@ -256,7 +256,7 @@ private:
     fg::RenderTarget& createRenderTarget(const char* name,
             FrameGraphRenderTarget::Descriptor const& desc) noexcept;
 
-    FrameGraphResource createResourceNode(fg::ResourceEntryBase* resource) noexcept;
+    FrameGraphHandle createResourceNode(fg::ResourceEntryBase* resource) noexcept;
 
     enum class DiscardPhase { START, END };
     backend::TargetBufferFlags computeDiscardFlags(DiscardPhase phase,
@@ -273,32 +273,32 @@ private:
     void reset() noexcept;
 
 
-    FrameGraphResource create(fg::ResourceEntryBase* pResourceEntry) noexcept;
+    FrameGraphHandle create(fg::ResourceEntryBase* pResourceEntry) noexcept;
 
     template<typename T>
-    FrameGraphResourceId<T> create(const char* name, typename T::Descriptor const& desc) noexcept {
+    FrameGraphId<T> create(const char* name, typename T::Descriptor const& desc) noexcept {
         fg::ResourceEntryBase* pBase = mArena.make<fg::ResourceEntry<T>>(name, desc, mId++);
-        FrameGraphResourceId<T> r(create(pBase));
+        FrameGraphId<T> r(create(pBase));
         return r;
     }
 
-    fg::ResourceNode& getResourceNode(FrameGraphResource r);
-    fg::ResourceNode& getResourceNodeUnchecked(FrameGraphResource r);
+    fg::ResourceNode& getResourceNode(FrameGraphHandle r);
+    fg::ResourceNode& getResourceNodeUnchecked(FrameGraphHandle r);
 
-    fg::ResourceEntryBase& getResourceEntryBase(FrameGraphResource r) noexcept;
-    fg::ResourceEntryBase& getResourceEntryBaseUnchecked(FrameGraphResource r) noexcept;
+    fg::ResourceEntryBase& getResourceEntryBase(FrameGraphHandle r) noexcept;
+    fg::ResourceEntryBase& getResourceEntryBaseUnchecked(FrameGraphHandle r) noexcept;
 
     template<typename T>
-    fg::ResourceEntry<T>& getResourceEntry(FrameGraphResourceId<T> r) noexcept {
+    fg::ResourceEntry<T>& getResourceEntry(FrameGraphId<T> r) noexcept {
         return static_cast<fg::ResourceEntry<T>&>(getResourceEntryBase(r));
     }
 
     template<typename T>
-    fg::ResourceEntry<T>& getResourceEntryUnchecked(FrameGraphResourceId<T> r) noexcept {
+    fg::ResourceEntry<T>& getResourceEntryUnchecked(FrameGraphId<T> r) noexcept {
         return static_cast<fg::ResourceEntry<T>&>(getResourceEntryBaseUnchecked(r));
     }
 
-    FrameGraphResource moveResource(FrameGraphResource from, FrameGraphResource to);
+    FrameGraphHandle moveResource(FrameGraphHandle from, FrameGraphHandle to);
 
     fg::ResourceAllocator& mResourceAllocator;
     details::LinearAllocatorArena mArena;
