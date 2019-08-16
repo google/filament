@@ -220,6 +220,10 @@ static Material* createMaterial(Engine* engine, const MaterialKey& config, const
             return nullptr;
     }
 
+#ifndef NDEBUG
+    builder.optimization(MaterialBuilder::Optimization::NONE);
+#endif
+
     static_assert(std::tuple_size<UvMap>::value == 8, "Badly sized uvset.");
     int numUvSets = getNumUvSets(uvmap);
     if (numUvSets > 0) {
