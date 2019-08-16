@@ -111,7 +111,12 @@ MetalUniformBuffer::MetalUniformBuffer(MetalContext& context, size_t size) : HwU
     if (size <= 4 * 1024) {   // 4K
         bufferPoolEntry = nullptr;
         cpuBuffer = malloc(size);
+        return;
     }
+    // To satisfy Metal, We need to preallocate a buffer in case Filament decides to draw before
+    // loading any data into it.
+    bufferPoolEntry = context.bufferPool->acquireBuffer(size);
+    bufferPoolEntryIsPreallocated = true;
 }
 
 MetalUniformBuffer::~MetalUniformBuffer() {
@@ -135,6 +140,15 @@ void MetalUniformBuffer::copyIntoBuffer(void* src, size_t size) {
     // Either copy into the Metal buffer or into our cpu buffer.
     if (cpuBuffer) {
         memcpy(cpuBuffer, src, size);
+        return;
+    }
+
+    // If this is the first time loading data into this uniform, a buffer will have been
+    // preallocated.  We don't need to acquire a new one in this case, as it's illegal for a shader
+    // to have read from this buffer prior to filling it with data.
+    if (bufferPoolEntryIsPreallocated) {
+        memcpy(static_cast<uint8_t*>(bufferPoolEntry->buffer.contents), src, size);
+        bufferPoolEntryIsPreallocated = false;
         return;
     }
 
