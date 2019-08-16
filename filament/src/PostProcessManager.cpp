@@ -148,15 +148,15 @@ void PostProcessManager::setSource(uint32_t viewportWidth, uint32_t viewportHeig
 
 // ------------------------------------------------------------------------------------------------
 
-FrameGraphResourceId<FrameGraphTexture> PostProcessManager::toneMapping(FrameGraph& fg, FrameGraphResourceId<FrameGraphTexture> input,
+FrameGraphId<FrameGraphTexture> PostProcessManager::toneMapping(FrameGraph& fg, FrameGraphId<FrameGraphTexture> input,
         backend::TextureFormat outFormat, bool dithering, bool translucent) noexcept {
 
     FEngine& engine = mEngine;
     backend::Handle<backend::HwRenderPrimitive> const& fullScreenRenderPrimitive = engine.getFullScreenRenderPrimitive();
 
     struct PostProcessToneMapping {
-        FrameGraphResourceId<FrameGraphTexture> input;
-        FrameGraphResourceId<FrameGraphTexture> output;
+        FrameGraphId<FrameGraphTexture> input;
+        FrameGraphId<FrameGraphTexture> output;
     };
     backend::Handle<backend::HwProgram> toneMappingProgram = engine.getPostProcessProgram(
             translucent ? PostProcessStage::TONE_MAPPING_TRANSLUCENT
@@ -201,16 +201,16 @@ FrameGraphResourceId<FrameGraphTexture> PostProcessManager::toneMapping(FrameGra
     return ppToneMapping.getData().output;
 }
 
-FrameGraphResourceId<FrameGraphTexture> PostProcessManager::fxaa(FrameGraph& fg,
-        FrameGraphResourceId<FrameGraphTexture> input,
+FrameGraphId<FrameGraphTexture> PostProcessManager::fxaa(FrameGraph& fg,
+        FrameGraphId<FrameGraphTexture> input,
         backend::TextureFormat outFormat, bool translucent) noexcept {
 
     FEngine& engine = mEngine;
     backend::Handle<backend::HwRenderPrimitive> const& fullScreenRenderPrimitive = engine.getFullScreenRenderPrimitive();
 
     struct PostProcessFXAA {
-        FrameGraphResourceId<FrameGraphTexture> input;
-        FrameGraphResourceId<FrameGraphTexture> output;
+        FrameGraphId<FrameGraphTexture> input;
+        FrameGraphId<FrameGraphTexture> output;
     };
 
     backend::Handle<backend::HwProgram> antiAliasingProgram = engine.getPostProcessProgram(
@@ -254,11 +254,11 @@ FrameGraphResourceId<FrameGraphTexture> PostProcessManager::fxaa(FrameGraph& fg,
     return ppFXAA.getData().output;
 }
 
-FrameGraphResourceId<FrameGraphTexture> PostProcessManager::resolve(
-        FrameGraph& fg, FrameGraphResourceId<FrameGraphTexture> input) noexcept {
+FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(
+        FrameGraph& fg, FrameGraphId<FrameGraphTexture> input) noexcept {
     struct PostProcessResolve {
-        FrameGraphResourceId<FrameGraphTexture> input;
-        FrameGraphResourceId<FrameGraphTexture> output;
+        FrameGraphId<FrameGraphTexture> input;
+        FrameGraphId<FrameGraphTexture> output;
     };
 
     auto& ppResolve = fg.addPass<PostProcessResolve>("resolve",
@@ -291,12 +291,12 @@ FrameGraphResourceId<FrameGraphTexture> PostProcessManager::resolve(
     return ppResolve.getData().output;
 }
 
-FrameGraphResourceId<FrameGraphTexture> PostProcessManager::dynamicScaling(FrameGraph& fg,
-        FrameGraphResourceId<FrameGraphTexture> input, backend::TextureFormat outFormat) noexcept {
+FrameGraphId<FrameGraphTexture> PostProcessManager::dynamicScaling(FrameGraph& fg,
+        FrameGraphId<FrameGraphTexture> input, backend::TextureFormat outFormat) noexcept {
 
     struct PostProcessScaling {
-        FrameGraphResourceId<FrameGraphTexture> input;
-        FrameGraphResourceId<FrameGraphTexture> output;
+        FrameGraphId<FrameGraphTexture> input;
+        FrameGraphId<FrameGraphTexture> output;
     };
 
     auto& ppScaling = fg.addPass<PostProcessScaling>("scaling",
@@ -330,7 +330,7 @@ FrameGraphResourceId<FrameGraphTexture> PostProcessManager::dynamicScaling(Frame
 }
 
 
-FrameGraphResourceId<FrameGraphTexture> PostProcessManager::ssao(FrameGraph& fg, RenderPass& pass,
+FrameGraphId<FrameGraphTexture> PostProcessManager::ssao(FrameGraph& fg, RenderPass& pass,
         filament::Viewport const& svp, CameraInfo const& cameraInfo,
         View::AmbientOcclusionOptions const& options) noexcept {
 
@@ -341,7 +341,7 @@ FrameGraphResourceId<FrameGraphTexture> PostProcessManager::ssao(FrameGraph& fg,
      * SSAO depth pass -- automatically culled if not used
      */
 
-    FrameGraphResourceId<FrameGraphTexture> depth = depthPass(fg, pass, svp.width, svp.height, options);
+    FrameGraphId<FrameGraphTexture> depth = depthPass(fg, pass, svp.width, svp.height, options);
 
     /*
      * create depth mipmap chain
@@ -358,8 +358,8 @@ FrameGraphResourceId<FrameGraphTexture> PostProcessManager::ssao(FrameGraph& fg,
      */
 
     struct SSAOPassData {
-        FrameGraphResourceId<FrameGraphTexture> depth;
-        FrameGraphResourceId<FrameGraphTexture> ssao;
+        FrameGraphId<FrameGraphTexture> depth;
+        FrameGraphId<FrameGraphTexture> ssao;
         View::AmbientOcclusionOptions options;
     };
 
@@ -424,7 +424,7 @@ FrameGraphResourceId<FrameGraphTexture> PostProcessManager::ssao(FrameGraph& fg,
                 driver.endRenderPass();
             });
 
-    FrameGraphResourceId<FrameGraphTexture> ssao = SSAOPass.getData().ssao;
+    FrameGraphId<FrameGraphTexture> ssao = SSAOPass.getData().ssao;
 
     /*
      * Final separable blur pass
@@ -438,13 +438,13 @@ FrameGraphResourceId<FrameGraphTexture> PostProcessManager::ssao(FrameGraph& fg,
     return ssao;
 }
 
-FrameGraphResourceId<FrameGraphTexture> PostProcessManager::depthPass(FrameGraph& fg, RenderPass& pass,
+FrameGraphId<FrameGraphTexture> PostProcessManager::depthPass(FrameGraph& fg, RenderPass& pass,
         uint32_t width, uint32_t height,
         View::AmbientOcclusionOptions const& options) noexcept {
 
     // SSAO depth pass -- automatically culled if not used
     struct DepthPassData {
-        FrameGraphResourceId<FrameGraphTexture> depth;
+        FrameGraphId<FrameGraphTexture> depth;
     };
 
     RenderPass::Command const* first = pass.getCommands().begin();
@@ -481,14 +481,14 @@ FrameGraphResourceId<FrameGraphTexture> PostProcessManager::depthPass(FrameGraph
     return ssaoDepthPass.getData().depth;
 }
 
-FrameGraphResourceId<FrameGraphTexture> PostProcessManager::mipmapPass(FrameGraph& fg,
-        FrameGraphResourceId<FrameGraphTexture> input, size_t level) noexcept {
+FrameGraphId<FrameGraphTexture> PostProcessManager::mipmapPass(FrameGraph& fg,
+        FrameGraphId<FrameGraphTexture> input, size_t level) noexcept {
 
     Handle<HwRenderPrimitive> fullScreenRenderPrimitive = mEngine.getFullScreenRenderPrimitive();
 
     struct DepthMipData {
-        FrameGraphResourceId<FrameGraphTexture> in;
-        FrameGraphResourceId<FrameGraphTexture> out;
+        FrameGraphId<FrameGraphTexture> in;
+        FrameGraphId<FrameGraphTexture> out;
     };
 
     auto& depthMipmapPass = fg.addPass<DepthMipData>("Depth Mipmap Pass",
@@ -530,16 +530,16 @@ FrameGraphResourceId<FrameGraphTexture> PostProcessManager::mipmapPass(FrameGrap
     return depthMipmapPass.getData().out;
 }
 
-FrameGraphResourceId<FrameGraphTexture> PostProcessManager::blurPass(FrameGraph& fg,
-        FrameGraphResourceId<FrameGraphTexture> input,
-        FrameGraphResourceId<FrameGraphTexture> depth, math::int2 axis) noexcept {
+FrameGraphId<FrameGraphTexture> PostProcessManager::blurPass(FrameGraph& fg,
+        FrameGraphId<FrameGraphTexture> input,
+        FrameGraphId<FrameGraphTexture> depth, math::int2 axis) noexcept {
 
     Handle<HwRenderPrimitive> fullScreenRenderPrimitive = mEngine.getFullScreenRenderPrimitive();
 
     struct BlurPassData {
-        FrameGraphResourceId<FrameGraphTexture> input;
-        FrameGraphResourceId<FrameGraphTexture> depth;
-        FrameGraphResourceId<FrameGraphTexture> blurred;
+        FrameGraphId<FrameGraphTexture> input;
+        FrameGraphId<FrameGraphTexture> depth;
+        FrameGraphId<FrameGraphTexture> blurred;
     };
 
     auto& blurPass = fg.addPass<BlurPassData>("Separable Blur Pass",

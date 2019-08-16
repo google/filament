@@ -52,7 +52,7 @@ struct PassNode { // 200
         renderTargets.push_back(&renderTarget);
     }
 
-    FrameGraphResource read(FrameGraph& fg, FrameGraphResource const& handle, bool isRenderTarget = false) {
+    FrameGraphHandle read(FrameGraph& fg, FrameGraphHandle const& handle, bool isRenderTarget = false) {
         ResourceNode const& node = fg.getResourceNode(handle);
 
         if (!isRenderTarget) {
@@ -65,29 +65,29 @@ struct PassNode { // 200
 
         // don't allow multiple reads of the same resource -- it's just redundant.
         auto pos = std::find_if(reads.begin(), reads.end(),
-                [&handle](FrameGraphResource cur) { return handle.index == cur.index; });
+                [&handle](FrameGraphHandle cur) { return handle.index == cur.index; });
         if (pos != reads.end()) {
             return *pos;
         }
 
         // just record that we're reading from this resource (at the given version)
-        FrameGraphResource r{ handle.index };
+        FrameGraphHandle r{ handle.index };
         reads.push_back(r);
         return r;
     }
 
-    bool isReadingFrom(FrameGraphResource resource) const noexcept {
+    bool isReadingFrom(FrameGraphHandle resource) const noexcept {
         auto pos = std::find_if(reads.begin(), reads.end(),
-                [resource](FrameGraphResource cur) { return resource.index == cur.index; });
+                [resource](FrameGraphHandle cur) { return resource.index == cur.index; });
         return (pos != reads.end());
     }
 
-    FrameGraphResource write(FrameGraph& fg, const FrameGraphResource& handle) {
+    FrameGraphHandle write(FrameGraph& fg, const FrameGraphHandle& handle) {
         ResourceNode const& node = fg.getResourceNode(handle);
 
         // don't allow multiple writes of the same resource -- it's just redundant.
         auto pos = std::find_if(writes.begin(), writes.end(),
-                [&handle](FrameGraphResource cur) { return handle.index == cur.index; });
+                [&handle](FrameGraphHandle cur) { return handle.index == cur.index; });
         if (pos != writes.end()) {
             return *pos;
         }
@@ -113,10 +113,10 @@ struct PassNode { // 200
             hasSideEffect = true;
         }
 
-        FrameGraphResource r = fg.createResourceNode(node.resource);
+        FrameGraphHandle r = fg.createResourceNode(node.resource);
 
         // record the write
-        //FrameGraphResource r{ resource->index, resource->version };
+        //FrameGraphHandle r{ resource->index, resource->version };
         writes.push_back(r);
         return r;
     }
@@ -127,8 +127,8 @@ struct PassNode { // 200
     FrameGraph::UniquePtr<FrameGraphPassExecutor> base; // type eraser for calling execute()
 
     // set by the builder
-    Vector<FrameGraphResource> reads;               // resources we're reading from
-    Vector<FrameGraphResource> writes;              // resources we're writing to
+    Vector<FrameGraphHandle> reads;               // resources we're reading from
+    Vector<FrameGraphHandle> writes;              // resources we're writing to
     Vector<fg::RenderTarget*> renderTargets;
 
     // computed during compile()

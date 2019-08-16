@@ -45,7 +45,7 @@ set(SRCS
         src/components/RenderableManager.cpp
         src/components/TransformManager.cpp
         src/fg/FrameGraph.cpp
-        src/fg/FrameGraphResource.cpp
+        src/fg/FrameGraphHandle.cpp
         src/fg/fg/ResourceEntry.cpp
         src/fg/ResourceAllocator.cpp
         src/Box.cpp
@@ -92,7 +92,7 @@ set(PRIVATE_HDRS
         src/fg/FrameGraph.h
         src/fg/FrameGraphPass.h
         src/fg/FrameGraphPassResources.h
-        src/fg/FrameGraphResource.h
+        src/fg/FrameGraphHandle.h
         src/fg/fg/PassNode.h
         src/fg/fg/RenderTarget.h
         src/fg/fg/ResourceEntry.h

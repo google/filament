@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "FrameGraphResource.h"
+#include "FrameGraphHandle.h"
 
 #include "FrameGraph.h"
 
