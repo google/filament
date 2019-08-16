@@ -49,7 +49,7 @@ class FrameGraphResource {
     friend struct fg::RenderTarget;
     friend struct fg::RenderTargetResource;
 
-    FrameGraphResource(uint16_t index) noexcept : index(index) {}
+    explicit FrameGraphResource(uint16_t index) noexcept : index(index) {}
 
     static constexpr uint16_t UNINITIALIZED = std::numeric_limits<uint16_t>::max();
     // index to the resource handle
@@ -87,36 +87,27 @@ public:
 namespace FrameGraphRenderTarget {
 
 struct Attachments {
-    enum Access : uint8_t {
-        READ = 0x1,
-        WRITE = 0x2,
-        READ_WRITE = READ | WRITE
-    };
     struct AttachmentInfo {
-        // auto convert from FrameGraphResource
-        AttachmentInfo(FrameGraphResource handle) noexcept : mHandle(handle) {} // NOLINT
-
-        // auto convert to FrameGraphResource
+        // auto convert to FrameGraphResource (allows: handle = desc.attachments.color;)
         operator FrameGraphResource() const noexcept { return mHandle; } // NOLINT
 
         AttachmentInfo() noexcept = default;
 
-        AttachmentInfo(FrameGraphResource handle, Access access) noexcept
-                : mHandle(handle), mAccess(access) {}
+        // auto convert from FrameGraphResource (allows: desc.attachments.color = handle;)
+        AttachmentInfo(FrameGraphResource handle) noexcept : mHandle(handle) {} // NOLINT
 
-        AttachmentInfo(FrameGraphResource handle, uint8_t level, Access access) noexcept
-                : mHandle(handle), mLevel(level), mAccess(access) {}
+        // allows: desc.attachments.color = { handle, level };
+        AttachmentInfo(FrameGraphResource handle, uint8_t level) noexcept
+                : mHandle(handle), mLevel(level) {}
 
         bool isValid() const noexcept { return mHandle.isValid(); }
 
         FrameGraphResource getHandle() const noexcept { return mHandle; }
         uint8_t getLevel() const noexcept { return mLevel; }
-        Access getAccess() const noexcept { return mAccess; }
 
     private:
         FrameGraphResource mHandle{};
         uint8_t mLevel = 0;
-        Access mAccess = Access::READ_WRITE;
     };
 
     enum { COLOR = 0, DEPTH = 1 };
@@ -134,18 +125,6 @@ struct Descriptor {
     Attachments attachments;
     Viewport viewport;
     uint8_t samples = 1;            // # of samples
-};
-
-struct AttachmentResult {
-    enum { COLOR = 0, DEPTH = 1 };
-    static constexpr size_t COUNT = 2;
-    union {
-        std::array<FrameGraphResource, COUNT> textures = {};
-        struct {
-            FrameGraphResource color;
-            FrameGraphResource depth;
-        };
-    };
 };
 
 } // namespace FrameGraphRenderTarget

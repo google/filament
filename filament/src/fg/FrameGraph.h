@@ -48,7 +48,7 @@ class FEngine;
 } // namespace details
 
 namespace fg {
-struct Resource;
+struct TextureResource;
 struct ResourceNode;
 struct RenderTarget;
 struct RenderTargetResource;
@@ -64,13 +64,8 @@ public:
 
     class Builder {
     public:
-        using Attachments = FrameGraphRenderTarget::AttachmentResult;
-
         Builder(Builder const&) = delete;
         Builder& operator=(Builder const&) = delete;
-
-        // Return the name of the pass being built
-        const char* getPassName() const noexcept;
 
         // Create a virtual resource that can eventually turn into a concrete texture or
         // render target
@@ -78,37 +73,36 @@ public:
                 FrameGraphResource::Descriptor const& desc = {}) noexcept;
 
         // Read from a resource (i.e. add a reference to that resource)
-        FrameGraphResource read(FrameGraphResource const& input);
+        FrameGraphResource read(FrameGraphResource const& input, bool doesntNeedTexture = false);
+        FrameGraphResource write(FrameGraphResource const& output);
 
-        FrameGraphResource::Descriptor const& getDescriptor(FrameGraphResource const& r);
-
-        // get resource's name
-        const char* getName(FrameGraphResource const& r) const noexcept;
-
-        // return resource's sample count
-        uint8_t getSamples(FrameGraphResource const& r) const noexcept;
-
-        /*
-         * Use this resource as a render target.
-         * This implies both reading and writing to the resource -- but unlike Builder::read()
-         * this doesn't allow reading with a texture sampler.
-         * Writing to a resource:
-         *   - adds a reference to the pass that's doing the writing
-         *   - makes its handle invalid.
-         *   - [imported resource only] adds a side-effect (see sideEffect() below
-         */
-
-        Attachments useRenderTarget(const char* name,
+        // create a render target in this pass. read/write must have been called as appropriate before this.
+        void createRenderTarget(const char* name,
                 FrameGraphRenderTarget::Descriptor const& desc,
                 backend::TargetBufferFlags clearFlags = {}) noexcept;
 
         // helper for single color attachment with WRITE access
-        FrameGraphResource useRenderTarget(FrameGraphResource texture,
+        void createRenderTarget(FrameGraphResource& texture,
                 backend::TargetBufferFlags clearFlags = {}) noexcept;
 
         // Declare that this pass has side effects outside the framegraph (i.e. it can't be culled)
         // Calling write() on an imported resource automatically adds a side-effect.
         Builder& sideEffect() noexcept;
+
+        // Helpers --------------------------------------------------------------------
+
+        // Return the name of the pass being built
+        const char* getPassName() const noexcept;
+
+        // helper to get a resource's descriptor
+        FrameGraphResource::Descriptor const& getDescriptor(FrameGraphResource const& r);
+
+        // helper to get resource's name
+        const char* getName(FrameGraphResource const& r) const noexcept;
+
+
+        // return resource's sample count
+        uint8_t getSamples(FrameGraphResource const& r) const noexcept;
 
         // returns whether this resource is an attachment to some rendertarget
         bool isAttachment(FrameGraphResource resource) const noexcept;
@@ -118,10 +112,6 @@ public:
                 FrameGraphResource attachment) const;
 
     private:
-        // this is private for now because we only have textures, and this is for regular buffers
-        FrameGraphResource write(FrameGraphResource const& output);
-        FrameGraphResource read(FrameGraphResource const& input, bool doesntNeedTexture);
-
         friend class FrameGraph;
         Builder(FrameGraph& fg, fg::PassNode& pass) noexcept;
         ~Builder() noexcept;
@@ -214,7 +204,7 @@ private:
     friend struct fg::PassNode;
     friend struct fg::RenderTarget;
     friend struct fg::RenderTargetResource;
-    friend struct fg::Resource;
+    friend struct fg::TextureResource;
 
     template <typename T>
     struct Deleter {
@@ -231,7 +221,7 @@ private:
 
     fg::PassNode& createPass(const char* name, FrameGraphPassExecutor* base) noexcept;
 
-    fg::Resource* createResource(const char* name,
+    fg::TextureResource* createResource(const char* name,
             FrameGraphResource::Descriptor const& desc, bool imported) noexcept;
 
     fg::ResourceNode& getResource(FrameGraphResource r);
@@ -239,7 +229,7 @@ private:
     fg::RenderTarget& createRenderTarget(const char* name,
             FrameGraphRenderTarget::Descriptor const& desc) noexcept;
 
-    FrameGraphResource createResourceNode(fg::Resource* resource) noexcept;
+    FrameGraphResource createResourceNode(fg::TextureResource* resource) noexcept;
 
     enum class DiscardPhase { START, END };
     backend::TargetBufferFlags computeDiscardFlags(DiscardPhase phase,
@@ -262,7 +252,7 @@ private:
     Vector<fg::ResourceNode> mResourceNodes;            // list of resource nodes
     Vector<fg::RenderTarget> mRenderTargets;            // list of rendertarget
     Vector<fg::Alias> mAliases;                         // list of aliases
-    Vector<UniquePtr<fg::Resource>> mResourceRegistry;  // list of actual textures
+    Vector<UniquePtr<fg::TextureResource>> mResourceRegistry;  // list of actual textures
     Vector<UniquePtr<fg::RenderTargetResource>> mRenderTargetCache; // list of actual rendertargets
 
     uint16_t mId = 0;
