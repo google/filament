@@ -111,7 +111,6 @@ MetalUniformBuffer::MetalUniformBuffer(MetalContext& context, size_t size) : HwU
     if (size <= 4 * 1024) {   // 4K
         bufferPoolEntry = nullptr;
         cpuBuffer = malloc(size);
-        return;
     }
 }
 
