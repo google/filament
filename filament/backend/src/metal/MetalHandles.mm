@@ -113,10 +113,6 @@ MetalUniformBuffer::MetalUniformBuffer(MetalContext& context, size_t size) : HwU
         cpuBuffer = malloc(size);
         return;
     }
-    // To satisfy Metal, We need to preallocate a buffer in case Filament decides to draw before
-    // loading any data into it.
-    bufferPoolEntry = context.bufferPool->acquireBuffer(size);
-    bufferPoolEntryIsPreallocated = true;
 }
 
 MetalUniformBuffer::~MetalUniformBuffer() {
@@ -143,15 +139,6 @@ void MetalUniformBuffer::copyIntoBuffer(void* src, size_t size) {
         return;
     }
 
-    // If this is the first time loading data into this uniform, a buffer will have been
-    // preallocated.  We don't need to acquire a new one in this case, as it's illegal for a shader
-    // to have read from this buffer prior to filling it with data.
-    if (bufferPoolEntryIsPreallocated) {
-        memcpy(static_cast<uint8_t*>(bufferPoolEntry->buffer.contents), src, size);
-        bufferPoolEntryIsPreallocated = false;
-        return;
-    }
-
     // We're about to acquire a new buffer to hold the new contents of the uniform. If we previously
     // had obtained a buffer we release it, decrementing its reference count, as this uniform no
     // longer needs it.
@@ -165,7 +152,15 @@ void MetalUniformBuffer::copyIntoBuffer(void* src, size_t size) {
 
 id<MTLBuffer> MetalUniformBuffer::getGpuBufferForDraw() {
     if (!bufferPoolEntry) {
-        return nil;
+        // If there's a CPU buffer, then we return nil here, as the CPU-side buffer will be bound
+        // separately.
+        if (cpuBuffer) {
+            return nil;
+        }
+
+        // If there isn't a CPU buffer, it means no data has been loaded into this uniform yet. To
+        // avoid an error, we'll allocate an empty buffer.
+        bufferPoolEntry = context.bufferPool->acquireBuffer(size);
     }
 
     // This uniform is being used in a draw call, so we retain it so it's not released back into the

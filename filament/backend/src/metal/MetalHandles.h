@@ -93,7 +93,6 @@ private:
     size_t size = 0;
     const MetalBufferPoolEntry* bufferPoolEntry = nullptr;
     void* cpuBuffer = nullptr;
-    bool bufferPoolEntryIsPreallocated = false;
     MetalContext& context;
 };
 
