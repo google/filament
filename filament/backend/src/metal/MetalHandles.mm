@@ -151,7 +151,15 @@ void MetalUniformBuffer::copyIntoBuffer(void* src, size_t size) {
 
 id<MTLBuffer> MetalUniformBuffer::getGpuBufferForDraw() {
     if (!bufferPoolEntry) {
-        return nil;
+        // If there's a CPU buffer, then we return nil here, as the CPU-side buffer will be bound
+        // separately.
+        if (cpuBuffer) {
+            return nil;
+        }
+
+        // If there isn't a CPU buffer, it means no data has been loaded into this uniform yet. To
+        // avoid an error, we'll allocate an empty buffer.
+        bufferPoolEntry = context.bufferPool->acquireBuffer(size);
     }
 
     // This uniform is being used in a draw call, so we retain it so it's not released back into the
