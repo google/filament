@@ -49,7 +49,9 @@ void main() {
         toTangentFrame(mesh_tangents, material.worldNormal);
         material.worldNormal = objectUniforms.worldFromModelNormalMatrix * material.worldNormal;
         #if defined(HAS_SKINNING_OR_MORPHING)
-            skinNormal(material.worldNormal, mesh_bone_indices, mesh_bone_weights);
+            if (objectUniforms.skinningEnabled == 1) {
+                skinNormal(material.worldNormal, mesh_bone_indices, mesh_bone_weights);
+            }
         #endif
     #endif // MATERIAL_HAS_ANISOTROPY || MATERIAL_HAS_NORMAL
 #endif // HAS_ATTRIBUTE_TANGENTS
