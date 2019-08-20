@@ -1,0 +1,497 @@
+version: '{build}'
+
+
+build:
+# no automatic build in script mode
+
+
+skip_commits:
+  # Builds just testing something on Travis CI don't need to be
+  # done on AppVeyor
+  message: /\[Travis\]/
+  # Dont build, if only documentation was changed
+  files:
+  - '**/*.md'
+
+environment:
+  enable_cxx: NO
+  enable_ssl_dynamic_loading: YES
+  enable_lua: NO
+  enable_lua_shared: NO
+  c_standard: auto
+  cxx_standard: auto
+  matrix:
+    # Use default values
+    - id: Default-x86
+      compiler: msvc-19-seh
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: NO
+      enable_ssl: YES
+      enable_websockets: NO
+      no_cgi: NO
+      no_caching: NO
+      enable_stats: NO
+      configuration: Release
+      platform: x86
+    - id: Default-x64
+      compiler: msvc-19-seh
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: NO
+      enable_ssl: YES
+      enable_websockets: NO
+      no_cgi: NO
+      no_caching: NO
+      enable_stats: NO
+      configuration: Release
+      platform: x64
+    # Use default values
+    - id: Full-x86
+      compiler: msvc-19-seh
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: YES
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
+      no_caching: NO
+      enable_stats: YES
+      configuration: Release
+      platform: x86
+    - id: Full-x64
+      compiler: msvc-19-seh
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: YES
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
+      no_caching: NO
+      enable_stats: YES
+      configuration: Release
+      platform: x64
+    # Debug builds
+    - id: Full-x86-Debug
+      compiler: msvc-19-seh
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: YES
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
+      no_caching: NO
+      enable_stats: YES
+      configuration: Debug
+      platform: x86
+    - id: Full-x64-Debug
+      compiler: msvc-19-seh
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: YES
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
+      no_caching: NO
+      enable_stats: YES
+      configuration: Debug
+      platform: x64
+    # Minimum settings
+    - id: Minimal-x86
+      compiler: msvc-19-seh
+      build_shared: NO
+      no_files: YES
+      enable_ipv6: NO
+      enable_ssl: NO
+      enable_websockets: NO
+      no_cgi: YES
+      no_caching: YES
+      enable_stats: NO
+      configuration: Release
+      platform: x86
+    - id: Minimal-x64
+      compiler: msvc-19-seh
+      build_shared: NO
+      no_files: YES
+      enable_ipv6: NO
+      enable_ssl: NO
+      enable_websockets: NO
+      no_cgi: YES
+      no_caching: YeS
+      enable_stats: NO
+      configuration: Release
+      platform: x64
+    # Test shared and debug build
+    - id: Shared-default-x86
+      compiler: msvc-19-seh
+      build_shared: YES
+      no_files: NO
+      enable_ipv6: NO
+      enable_ssl: YES
+      enable_websockets: NO
+      no_cgi: NO
+      no_caching: NO
+      enable_stats: NO
+      configuration: Release
+      platform: x86
+    - id: Shared-default-x64
+      compiler: msvc-19-seh
+      build_shared: YES
+      no_files: NO
+      enable_ipv6: NO
+      enable_ssl: YES
+      enable_websockets: NO
+      no_cgi: NO
+      no_caching: NO
+      enable_stats: NO
+      configuration: Release
+      platform: x64
+    # MinGW
+    - id: Full-GCC-x64
+      compiler: gcc-5.1.0-posix
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: YES
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
+      no_caching: NO
+      enable_stats: YES
+      configuration: Release
+      platform: x64
+    # Visual Studio 2010
+    - id: Full-VS2010-x86
+      compiler: msvc-16-seh
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: YES
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
+      no_caching: NO
+      enable_stats: YES
+      configuration: Release
+      platform: x86
+    # Visual Studio 2012
+    - id: Full-VS2012-x86
+      compiler: msvc-17-seh
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: YES
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
+      no_caching: NO
+      enable_stats: YES
+      configuration: Release
+      platform: x86
+    # Visual Studio 2013
+    - id: Full-VS2013-x86
+      compiler: msvc-18-seh
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: YES
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
+      no_caching: NO
+      enable_stats: YES
+      configuration: Release
+      platform: x86
+      image: Visual Studio 2013
+    - id: Full-VS2013-x64
+      compiler: msvc-18-seh
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: YES
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
+      no_caching: NO
+      enable_stats: YES
+      configuration: Release
+      platform: x64
+      image: Visual Studio 2013
+    # Visual Studio 2015 is default
+    # Visual Studio 2017 is not yet default
+    - id: Full-VS2017-x86
+      compiler: msvc-20-seh
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: YES
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
+      no_caching: NO
+      enable_stats: YES
+      configuration: Release
+      platform: x86
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+    - id: Full-VS2017-x64
+      compiler: msvc-20-seh
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: YES
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
+      no_caching: NO
+      enable_stats: YES
+      configuration: Release
+      platform: x64
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+    # Experimental Ubuntu
+    - id: Ubuntu1604-GCC-x64
+      compiler: gcc-5.1.0-posix
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: YES
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
+      no_caching: NO
+      enable_stats: YES
+      configuration: Release
+      platform: x64
+      image: Ubuntu1604
+    - id: Ubuntu1804-GCC-x64
+      compiler: gcc-5.1.0-posix
+      build_shared: NO
+      no_files: NO
+      enable_ipv6: YES
+      enable_ssl: YES
+      enable_websockets: YES
+      no_cgi: NO
+      no_caching: NO
+      enable_stats: YES
+      configuration: Release
+      platform: x64
+      image: Ubuntu1804
+    # Conan builds
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+      CONAN_VISUAL_VERSIONS: 12
+      PYTHON: "C:\\Python37"
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+      CONAN_VISUAL_VERSIONS: 14
+      PYTHON: "C:\\Python37"
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+      CONAN_VISUAL_VERSIONS: 15
+      PYTHON: "C:\\Python37"
+
+install:
+  # Derive some extra information
+  - set build_type=%configuration%
+  - for /f "tokens=1-3 delims=-" %%a in ("%compiler%") do (@set "compiler_name=%%a")
+  - for /f "tokens=1-3 delims=-" %%a in ("%compiler%") do (@set "compiler_version=%%b")
+  - for /f "tokens=1-3 delims=-" %%a in ("%compiler%") do (@set "compiler_threading=%%c")
+  - if "%platform%"=="x64" (set arch=x86_64)
+  - if "%platform%"=="x86" (set arch=i686)
+  # Download the specific version of MinGW
+  - if "%compiler_name%"=="gcc" (@set "mingw_output_folder=C:\mingw-builds")
+  - if "%compiler_name%"=="gcc" (
+      @for /f %%a in (
+        'call mingw.cmd
+          /version "%compiler_version%"
+          /arch "%arch%"
+          /threading "%compiler_threading%"
+          "%mingw_output_folder%"'
+      ) do @set "compiler_path=%%a"
+    )
+  - if "%compiler_name%"=="gcc" (@set "mingw_log_folder=%mingw_output_folder%\logs")
+  - if exist "%mingw_log_folder%" @for /f %%f in ('dir /b /oD /tc "%mingw_log_folder%"') do @set "mingw_log_file=%mingw_log_folder%\%%f"
+  - if exist "%mingw_log_file%" powershell Push-AppveyorArtifact "%mingw_log_file%" -FileName mingw-download.log
+  # Get OpenSSL
+  #
+  # OpenSSL should already be installed, according to
+  # - http://help.appveyor.com/discussions/questions/1132-openssl-installation-issues
+  # - https://github.com/appveyor/ci/issues/576
+  #
+  - cmd: set PATH=%PATH%;C:\OpenSSL-Win32;C:\OpenSSL-Win64
+  - dir C:\OpenSSL-Win32
+  - dir C:\OpenSSL-Win64
+  - path
+
+
+before_build:
+  # Remove sh.exe from the path otherwise CMake will complain:
+  # "sh.exe was found in your PATH, here: C:/Program Files/Git/usr/bin/sh.exe"
+  # and the MinGW build will not work (the Visual Studio build does not care).
+  # See http://help.appveyor.com/discussions/problems/3193-cmake-building-for-mingw-issue-with-git-shexe
+  # The entire directory containing sh.exe could be removed from the PATH environment:
+  # - set PATH=%PATH:C:\Program Files\Git\usr\bin;=%
+  # However, this will also remove all other programs in this directory from the PATH.
+  # In particular "patch" is still required.
+  # So, just rename sh.exe:
+  - ren "C:\Program Files\Git\usr\bin\sh.exe" _sh.exe
+  # Set up mingw commands
+  - if "%compiler_name%"=="gcc" (set "generator=MinGW Makefiles")
+  - if "%compiler_name%"=="gcc" (set "build=mingw32-make -j4")
+  - if "%compiler_name%"=="gcc" (set "test=mingw32-make test")
+  # MSVC specific commands
+  # Note: The minimum version officially supported for CivetWeb is VS2010. Older ones might work or not.
+  - if "%compiler_version%"=="14" (set "vs_version=8" & set "vs_year=2005")
+  - if "%compiler_version%"=="15" (set "vs_version=9" & set "vs_year=2008")
+  - if "%compiler_version%"=="16" (set "vs_version=10" & set "vs_year=2010")
+  - if "%compiler_version%"=="17" (set "vs_version=11" & set "vs_year=2012")
+  - if "%compiler_version%"=="18" (set "vs_version=12" & set "vs_year=2013")
+  - if "%compiler_version%"=="19" (set "vs_version=14" & set "vs_year=2015")
+  - if "%compiler_version%"=="20" (set "vs_version=15" & set "vs_year=2017")
+  - if "%compiler_name%"=="msvc" (set "generator=Visual Studio %vs_version% %vs_year%")
+  - if "%compiler_name%"=="msvc" (
+      if "%platform%"=="x64" (
+        set "generator=%generator% Win64"
+      )
+    )
+  - if %compiler_version% gtr 9 (set platform=%platform:x86=Win32%)
+  - if "%compiler_name%"=="msvc" (set "msbuild_opts=/clp:OnlyErrors;OnlyWarnings /nologo /m /v:m")
+  - if "%compiler_name%"=="msvc" (set "build=msbuild %msbuild_opts% /p:Configuration=%configuration% /p:Platform=%platform% civetweb.sln")
+  - if "%compiler_name%"=="msvc" (set "test=msbuild %msbuild_opts% RUN_TESTS.vcxproj")
+  # Add the compiler path if needed
+  - if not "%compiler_path%"=="" (set "PATH=%PATH%;%compiler_path%")
+  # git bash conflicts with MinGW makefiles
+  - if "%generator%"=="MinGW Makefiles" (set "PATH=%PATH:C:\Program Files (x86)\Git\bin=%")
+  # Useful locations
+  - set "source_path=%cd%"
+  - set "output_path=%source_path%\output"
+  - set "build_path=%output_path%\build"
+  - set "install_path=%output_path%\install"
+  - set "third_party_dir=C:\third-party"
+  # Check some settings of the build server
+  - ver
+  - cd
+  - dir
+  - ipconfig /all
+  # Generate the build scripts with CMake
+  - mkdir "%build_path%"
+  - cd "%build_path%"
+  - cmake --version
+  - appveyor AddMessage -Category Information "Generating '%generator%'"
+  - cmake
+    -G "%generator%"
+    -DCMAKE_BUILD_TYPE=%build_type%
+    -DBUILD_SHARED_LIBS=%build_shared%
+    -DCIVETWEB_SERVE_NO_FILES=%no_files%
+    "-DCIVETWEB_THIRD_PARTY_DIR=%third_party_dir:\=\\%"
+    -DCIVETWEB_ENABLE_THIRD_PARTY_OUTPUT=YES
+    -DCIVETWEB_ENABLE_SSL=%enable_ssl%
+    -DCIVETWEB_DISABLE_CGI=%no_cgi%
+    -DCIVETWEB_ENABLE_SSL_DYNAMIC_LOADING=%enable_ssl_dynamic_loading%
+    -DCIVETWEB_ENABLE_WEBSOCKETS=%enable_websockets%
+    -DCIVETWEB_ENABLE_CXX=%enable_cxx%
+    -DCIVETWEB_ENABLE_LUA=%enable_lua%
+    -DCIVETWEB_ENABLE_LUA_SHARED=%enable_lua_shared%
+    -DCIVETWEB_ENABLE_SERVER_STATS=%enable_stats%
+    -DCIVETWEB_DISABLE_CACHING=%no_caching%
+    -DCIVETWEB_C_STANDARD=%c_standard%
+    -DCIVETWEB_CXX_STANDARD=%cxx_standard%
+    "%source_path%"
+  - powershell Push-AppveyorArtifact CMakeCache.txt
+  - cd "%source_path%"
+
+build_script:
+  - cd
+  - cd "%build_path%"
+  - appveyor AddMessage -Category Information "Build command '%build%'"
+  - cmd /c "%build%"
+  - cd "%source_path%"
+
+test_script:
+  - cd "%build_path%"
+  - appveyor AddMessage -Category Information "Test command '%build%'"
+  - set CTEST_OUTPUT_ON_FAILURE=1
+  - cmd /c "%test%" & set "test_ret=%ERRORLEVEL%"
+  - echo "Test returned %test_ret%"
+  - dir "%source_path%\output\build\unittest\"
+  - echo "Show all test logs:"
+  - for /r %%i in ("%source_path%\output\build\unittest\test-*.log") do (
+      echo %%i
+      type %%i
+    )
+  - for /r %%i in ("%source_path%\output\build\unittest\test-*.xml") do (
+      echo %%i
+      type %%i
+    )
+  - cd "%source_path%"
+  - set "output_path=%source_path%\output"
+  - set "build_path=%output_path%\build"
+  - set "install_path=%output_path%\install"
+  - set "third_party_dir=C:\third-party"
+  - exit /B %ERRORLEVEL%
+  - echo "Test script DONE"
+
+after_test:
+  - echo "Current directory:"
+  - cd
+  - dir
+  - md dist
+  - if "%build_type%"=="Release" (cmake "-DCMAKE_INSTALL_PREFIX=%install_path%" -P "%build_path%/cmake_install.cmake")
+  - dir dist\
+  - echo "Output directory:"
+  - dir %output_path%
+  - echo "Build directory:"
+  - dir %build_path%
+  - if "%build_type%"=="Release" (echo "Install directory:")
+  - if "%build_type%"=="Release" (dir %install_path%)
+  - if "%build_type%"=="Release" (dir %install_path%\bin)
+  - if "%build_type%"=="Release" (dir %install_path%\include)
+  - if "%build_type%"=="Release" (dir %install_path%\lib)
+  - if "%build_type%"=="Release" (copy "%install_path%"\include dist\)
+  - if "%build_type%"=="Release" (copy "%install_path%"\bin\*.exe dist\)
+  - echo "Dist directory:"
+  - dir dist\
+
+
+cache:
+  - C:\mingw-builds -> mingw.cmd
+  - C:\third-party -> **\CMakeLists.txt
+  - C:\ssl
+
+artifacts:
+  - path: dist\*
+
+for:
+  -
+    matrix:
+      only:
+        - configuration: Release
+      fast_finish: false
+      allow_failures:
+        # Experimental Ubuntu
+        - id: Ubuntu1604-GCC-x64
+          compiler: gcc-5.1.0-posix
+          build_shared: NO
+          no_files: NO
+          enable_ipv6: YES
+          enable_ssl: YES
+          enable_websockets: YES
+          no_cgi: NO
+          no_caching: NO
+          enable_stats: YES
+          configuration: Release
+          platform: x64
+          image: Ubuntu1604
+        - id: Ubuntu1804-GCC-x64
+          compiler: gcc-5.1.0-posix
+          build_shared: NO
+          no_files: NO
+          enable_ipv6: YES
+          enable_ssl: YES
+          enable_websockets: YES
+          no_cgi: NO
+          no_caching: NO
+          enable_stats: YES
+          configuration: Release
+          platform: x64
+          image: Ubuntu1804
+
+  -
+    matrix:
+      only:
+        - PYTHON: "C:\\Python37"
+    skip_non_tags: true
+    install:
+      - set PATH=%PATH%;%PYTHON%/Scripts/
+      - pip.exe install conan conan_package_tools
+    build: false
+    test_script:
+      - python conan/build.py
