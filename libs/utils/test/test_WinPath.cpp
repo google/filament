@@ -173,6 +173,14 @@ TEST(WinPathTest, Concatenate) {
     // Unix-style separators work too
     r = root.concat("out/bin/foo/bar");
     EXPECT_EQ("C:\\Volumes\\Replicant\\blue\\out\\bin\\foo\\bar", r.getPath());
+
+    r = "";
+    r = r.concat("foo\\bar");
+    EXPECT_EQ("foo\\bar", r.getPath());
+
+    r = "";
+    r.concatToSelf("foo\\bar");
+    EXPECT_EQ("foo\\bar", r.getPath());
 }
 
 TEST(PathTest, GetParent) {
