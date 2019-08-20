@@ -1,0 +1,55 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+  <title>Test</title>
+  <script type='text/javascript' language="javascript">
+  <!--
+  var connection;
+  var keepAlive = false;
+
+  function webSockKeepAlive() {
+    if (keepAlive) {
+      connection.send('ping'); // Send the message 'ping' to the server
+      setTimeout("webSockKeepAlive()", 10000);
+    }
+  }
+
+  function load() {
+    connection = new WebSocket("ws://127.0.0.1/MyWebSock");
+
+    connection.onopen = function () {
+        var send = "init " + Math.round(Math.random()*4294967294+1);
+        console.log('Client: ' + send);
+        connection.send(send);
+        keepAlive = true;
+        webSockKeepAlive();
+      };
+
+    connection.onerror = function (error) {
+        keepAlive = false;
+        connection.close();
+        console.log('WebSocket error: ' + error);
+        alert("WebSocket error");
+      };
+
+    connection.onmessage = function (e) {
+        console.log('Server: ' + e.data);
+        if (e.data.substring(0,5) == "title") {window.document.title = e.data.substring(6);}
+        else if (e.data.substring(0,3) == "msg") {
+          var msgStr = document.getElementById('msg');
+          msgStr.innerHTML = msgStr.innerHTML + e.data.substring(4);
+        }        
+      };
+  }
+  //-->
+  </script>
+
+</head>
+<body onload="load()">
+  <input type="button" onclick="connection.send('msg A');" value="A"></button>
+  <input type="button" onclick="connection.send('msg B');" value="B"></button>
+  <input type="button" onclick="connection.send('msg C');" value="C"></button>
+  <input type="button" onclick="connection.send('msg D');" value="D"></button>
+  <b id="msg"></b>
+</body>
+</html>

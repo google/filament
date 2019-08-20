@@ -1,0 +1,164 @@
+#
+# Copyright (c) 2013 No Face Press, LLC
+# Copyright (c) 2014-2017 the Civetweb developers
+#
+# License http://opensource.org/licenses/mit-license.php MIT License
+#
+
+ifndef WITH_LUA
+  $(error WITH_LUA is not defined)
+endif
+
+# Lua Default version is 502
+WITH_LUA_VERSION ?= 502
+LUA_VERSION_KNOWN = 0
+
+# Select src and header according to the Lua version
+ifeq ($(WITH_LUA_VERSION), 501)
+  $(info Lua: Using version 5.1.5)
+  LUA_DIR = src/third_party/lua-5.1.5/src
+  LUA_SHARED_LIB_FLAG = -llua5.1
+  LUA_CFLAGS = -DLUA_VERSION_MAKEFILE=501
+  LUA_VERSION_KNOWN = 1
+endif
+ifeq ($(WITH_LUA_VERSION), 502)
+  $(info Lua: Using version 5.2.4)
+  LUA_DIR = src/third_party/lua-5.2.4/src
+  LUA_SHARED_LIB_FLAG = -llua5.2
+  LUA_CFLAGS = -DLUA_VERSION_MAKEFILE=502
+  LUA_VERSION_KNOWN = 1
+endif
+ifeq ($(WITH_LUA_VERSION), 503)
+  $(info Lua: Using version 5.3.5)
+  LUA_DIR = src/third_party/lua-5.3.5/src
+  LUA_SHARED_LIB_FLAG = -llua5.3
+  LUA_CFLAGS = -DLUA_COMPAT_5_2 -DLUA_VERSION_MAKEFILE=503
+  LUA_VERSION_KNOWN = 1
+endif
+ifeq ($(WITH_LUA_VERSION), 504)
+  $(info Lua: Using version 5.4.0-work1)
+  LUA_DIR = src/third_party/lua-5.4.0-work1/src
+  LUA_SHARED_LIB_FLAG = -llua5.4
+  LUA_CFLAGS = -DLUA_COMPAT_5_2 -DLUA_VERSION_MAKEFILE=504
+  LUA_VERSION_KNOWN = 1
+endif
+
+ifneq ($(LUA_VERSION_KNOWN), 1)
+  $(error Lua: Unknwon version - $(WITH_LUA_VERSION))
+endif
+
+
+# Add flags for all Lua versions
+LUA_CFLAGS += -I$(LUA_DIR) -DLUA_COMPAT_ALL -DUSE_LUA
+
+ifneq ($(TARGET_OS),WIN32)
+  LUA_CFLAGS += -DLUA_USE_POSIX -DLUA_USE_DLOPEN
+endif
+
+ifdef WITH_LUA_SHARED
+
+  LUA_SOURCE_FILES =
+
+  $(info Lua: using dynamic linking)
+
+else
+
+  LUA_SOURCE_FILES = lapi.c  \
+    lauxlib.c \
+    lbaselib.c  \
+    lcode.c  \
+    ldblib.c  \
+    ldebug.c  \
+    ldo.c  \
+    ldump.c \
+    lfunc.c  \
+    lgc.c  \
+    linit.c \
+    liolib.c  \
+    llex.c \
+    lmathlib.c \
+    lmem.c  \
+    loadlib.c  \
+    lobject.c  \
+    lopcodes.c \
+    loslib.c  \
+    lparser.c  \
+    lstate.c  \
+    lstring.c \
+    lstrlib.c  \
+    ltable.c  \
+    ltablib.c \
+    ltm.c  \
+    lundump.c \
+    lvm.c  \
+    lzio.c
+
+ifeq ($(WITH_LUA_VERSION), 502)
+    LUA_SOURCE_FILES += \
+    lbitlib.c  \
+    lcorolib.c  \
+    lctype.c
+endif
+ifeq ($(WITH_LUA_VERSION), 503)
+    LUA_SOURCE_FILES += \
+    lbitlib.c  \
+    lcorolib.c  \
+    lctype.c  \
+    lutf8lib.c
+endif
+ifeq ($(WITH_LUA_VERSION), 504)
+    LUA_SOURCE_FILES += \
+    lcorolib.c  \
+    lctype.c  \
+    lutf8lib.c
+endif
+
+  $(info Lua: using static library)
+
+endif
+
+LUA_SOURCES = $(addprefix $(LUA_DIR)/, $(LUA_SOURCE_FILES))
+LUA_OBJECTS = $(LUA_SOURCES:.c=.o)
+
+OBJECTS += $(LUA_OBJECTS)
+CFLAGS += $(LUA_CFLAGS)
+SOURCE_DIRS = $(LUA_DIR)
+BUILD_DIRS += $(BUILD_DIR)/$(LUA_DIR)
+
+
+ifneq ($(WITH_LUA_VERSION), 501)
+  SQLITE_DIR = src/third_party
+  SQLITE_SOURCE_FILES = sqlite3.c lsqlite3.c
+  SQLITE_SOURCES = $(addprefix $(SQLITE_DIR)/, $(SQLITE_SOURCE_FILES))
+  SQLITE_OBJECTS = $(SQLITE_SOURCES:.c=.o)
+  SQLITE_CFLAGS = -I$(SQLITE_DIR) -DTHREADSAFE=1 -DSQLITE_ENABLE_FTS3 -DSQLITE_ENABLE_FTS3_PARENTHESIS
+  OBJECTS += $(SQLITE_OBJECTS)
+  CFLAGS += $(SQLITE_CFLAGS)
+  CFLAGS += -DUSE_LUA_SQLITE3
+  #SOURCE_DIRS = $(SQLITE_DIR)
+endif
+
+
+LFS_DIR = src/third_party
+LFS_SOURCE_FILES = lfs.c
+LFS_SOURCES = $(addprefix $(LFS_DIR)/, $(LFS_SOURCE_FILES))
+LFS_OBJECTS = $(LFS_SOURCES:.c=.o)
+LFS_CFLAGS = -I$(LFS_DIR)
+OBJECTS += $(LFS_OBJECTS)
+CFLAGS += $(LFS_CFLAGS)
+CFLAGS += -DUSE_LUA_FILE_SYSTEM
+#SOURCE_DIRS = $(LFS_DIR)
+
+
+ifneq ($(WITH_LUA_VERSION), 501)
+  LXML_DIR = src/third_party
+  LXML_SOURCE_FILES = LuaXML_lib.c
+  LXML_SOURCES = $(addprefix $(LXML_DIR)/, $(LXML_SOURCE_FILES))
+  LXML_OBJECTS = $(LXML_SOURCES:.c=.o)
+  LXML_CFLAGS = -I$(LXML_DIR)
+  OBJECTS += $(LXML_OBJECTS)
+  CFLAGS += $(LXML_CFLAGS)
+  CFLAGS += -DUSE_LUA_LUAXML
+  #SOURCE_DIRS = $(LXML_DIR)
+endif
+
