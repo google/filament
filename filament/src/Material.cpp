@@ -110,7 +110,16 @@ Material* Material::Builder::build(Engine& engine) {
 
     mImpl->mMaterialParser = materialParser;
 
-    return upcast(engine).createMaterial(*this);
+    Material* result = upcast(engine).createMaterial(*this);
+
+#if FILAMENT_ENABLE_MATDBG
+    matdbg::DebugServer* server = upcast(engine).debug.server;
+    CString name;
+    materialParser->getName(&name);
+    server->addMaterial(name, mImpl->mPayload, mImpl->mSize, result);
+#endif
+
+    return result;
 }
 
 namespace details {

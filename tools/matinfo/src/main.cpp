@@ -18,6 +18,7 @@
 
 #include <utils/Path.h>
 
+#include <matdbg/DebugServer.h>
 #include <matdbg/ShaderExtractor.h>
 #include <matdbg/ShaderInfo.h>
 #include <matdbg/TextWriter.h>
@@ -25,6 +26,7 @@
 #include <spirv_glsl.hpp>
 #include <spirv-tools/libspirv.h>
 
+#include <chrono>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -32,12 +34,12 @@
 #include <regex>
 #include <set>
 #include <sstream>
+#include <thread>
+
+using namespace filament::matdbg;
 
 using filaflat::ChunkContainer;
 using filament::backend::Backend;
-using filament::matdbg::ShaderExtractor;
-using filament::matdbg::ShaderInfo;
-using filament::matdbg::TextWriter;
 using utils::Path;
 
 static const int alignment = 24;
@@ -50,6 +52,7 @@ struct Config {
     bool binary = false;
     bool analyze = false;
     uint64_t shaderIndex;
+    int serverPort = 0;
 };
 
 static void printUsage(const char* name) {
@@ -70,6 +73,8 @@ static void printUsage(const char* name) {
             "       Print Metal Shading Language for the nth shader (0 is the first Metal shader)\n\n"
             "   --print-vkglsl=[index], -v\n"
             "       Print the nth Vulkan shader transpiled into GLSL\n\n"
+            "   --web-server=[port], -w\n"
+            "       Serve a web page at the given port (e.g. 8080)\n\n"
             "   --dump-binary=[index], -b\n"
             "       Dump binary SPIRV for the nth Vulkan shader to 'out.spv'\n\n"
             "   --license\n"
@@ -92,7 +97,7 @@ static void license() {
 }
 
 static int handleArguments(int argc, char* argv[], Config* config) {
-    static constexpr const char* OPTSTR = "hlg:s:v:b:";
+    static constexpr const char* OPTSTR = "hla:g:s:v:b:m:b:w:";
     static const struct option OPTIONS[] = {
             { "help",          no_argument,       0, 'h' },
             { "license",       no_argument,       0, 'l' },
@@ -102,6 +107,7 @@ static int handleArguments(int argc, char* argv[], Config* config) {
             { "print-vkglsl",  required_argument, 0, 'v' },
             { "print-metal",   required_argument, 0, 'm' },
             { "dump-binary",   required_argument, 0, 'b' },
+            { "web-server",    required_argument, 0, 'w' },
             { 0, 0, 0, 0 }  // termination of the option list
     };
 
@@ -144,10 +150,25 @@ static int handleArguments(int argc, char* argv[], Config* config) {
             case 'm':
                 config->printMetal = true;
                 config->shaderIndex = static_cast<uint64_t>(std::stoi(arg));
+                break;
+            case 'w':
+                config->serverPort = 8080;
+                break;
         }
     }
 
     return optind;
+}
+
+template<typename T>
+static bool read(const filaflat::ChunkContainer& container, filamat::ChunkType type,
+        T* value) noexcept {
+    if (!container.hasChunk(type)) {
+        return false;
+    }
+
+    filaflat::Unflattener unflattener(container.getChunkStart(type), container.getChunkEnd(type));
+    return unflattener.read(value);
 }
 
 static std::ifstream::pos_type getFileSize(const char* filename) {
@@ -333,6 +354,24 @@ static bool parseChunks(Config config, void* data, size_t size) {
     if (!container.parse()) {
         return false;
     }
+
+    if (config.serverPort) {
+        // Spin up a web server on a secondary thread.
+        DebugServer server(STANDALONE, config.serverPort);
+
+        // Notify the server that we have a filamat file.
+        utils::CString name;
+        read(container, filamat::MaterialName, &name);
+        server.addMaterial(name, data, size);
+
+        // Keep listening until the user does Ctrl+C.
+        while (true) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        }
+
+        return true;
+    }
+
     if (config.printGLSL || config.printSPIRV || config.printMetal) {
         filaflat::ShaderBuilder builder;
         std::vector<ShaderInfo> info;
