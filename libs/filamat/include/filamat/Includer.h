@@ -43,17 +43,15 @@ public:
     // headerName is the name referenced within the quotes
     // includerName is the value that was given to IncludeResult.name for this source file.
     virtual IncludeResult* includeLocal(const utils::CString& headerName,
-            const utils::CString& includerName) {
-        return nullptr;
-    }
+            const utils::CString& includerName) = 0;
 
     // Called to free any memory allocated for the IncludeResult.
-    virtual void releaseInclude(IncludeResult* result) { }
+    virtual void releaseInclude(IncludeResult* result) = 0;
 
     virtual ~Includer() = default;
 
 };
 
-} // namespcae filamat
+} // namespace filamat
 
 #endif
