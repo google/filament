@@ -22,6 +22,7 @@
 namespace filamat {
 
 // Heavily influenced by glslang::TShader::Includer, but tailored for filamat / matc.
+// For an example, see tools/matc/src/matc/DirIncluder.h.
 class Includer {
 public:
 
@@ -31,13 +32,16 @@ public:
         utils::CString source;
 
         // The name of the include file. This gets passed as "includerName" for any includes inside
-        // of source.
+        // of source. This field isn't used by the include system; it's up to the includeLocal
+        // implementation to give meaning to this value and interpret it accordingly.
+        // In the case of DirIncluder, this is an empty string to represent the root include file,
+        // and a canonical path for subsequent included files.
         utils::CString name;
     };
 
     // Called when an #include "file.h" directive is found.
     // headerName is the name referenced within the quotes
-    // includerName is the name of the file with the #include directive
+    // includerName is the value that was given to IncludeResult.name for this source file.
     virtual IncludeResult* includeLocal(const utils::CString& headerName,
             const utils::CString& includerName) {
         return nullptr;
