@@ -30,9 +30,17 @@ cd github\filament
 :: If this is a release build, build all Filament static library variants (/MD, /MDd, /MT, /MTd)
 if "%KOKORO_JOB_TYPE%" == "RELEASE" (set FILAMENT_BUILD_ALL_VARIANTS=1)
 
+:: If this is a CI build, run all tests after building.
+if "%KOKORO_JOB_TYPE%" == "CONTINUOUS_INTEGRATION" (set FILAMENT_RUN_TESTS=1)
+
 if "%FILAMENT_BUILD_ALL_VARIANTS%" == "1" (
     echo KOKORO_JOB_TYPE is %KOKORO_JOB_TYPE%
     echo Building additional Filament static library variants.
+)
+
+if "%FILAMENT_RUN_TESTS%" == "1" (
+    echo KOKORO_JOB_TYPE is %KOKORO_JOB_TYPE%
+    echo Will run unit tests after building.
 )
 
 mkdir out\cmake-release
@@ -61,6 +69,12 @@ if "%FILAMENT_BUILD_ALL_VARIANTS%" == "1" (
     call %~dp0variants.bat
     if errorlevel 1 exit /b %errorlevel%
     cd cmake-release
+)
+
+if "%FILAMENT_RUN_TESTS%" == "1" (
+    :: Run unit tests
+    call %dp0tests.bat
+    if errorlevel 1 exit /b %errorlevel%
 )
 
 :: Create an archive

@@ -388,7 +388,7 @@ TEST_F(ImageTest, Ktx) { // NOLINT
         const auto fileSize = getFileSize(path.c_str());
         ASSERT_GT(fileSize, 0);
         vector<uint8_t> buffer(fileSize);
-        std::ifstream in(path, std::ifstream::in);
+        std::ifstream in(path, std::ifstream::in | std::ifstream::binary);
         ASSERT_TRUE(in.read((char*) buffer.data(), fileSize));
         KtxBundle deserialized(buffer.data(), buffer.size());
 
