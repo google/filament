@@ -14,6 +14,7 @@ A new header is inserted each time a *tag* is created.
 - Added JavaScript / Typescript bindings for the new `RenderTarget` class.
 - Added base path to glTF loadResources method for JavaScript.
 - Added support for iOS `CVPixelBuffer` external images with the OpenGL backend.
+- Added basic #include support in material files.
 
 ## sceneform-1.9pr4
 
