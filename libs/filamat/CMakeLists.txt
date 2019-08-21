@@ -27,7 +27,8 @@ set(COMMON_PRIVATE_HDRS
         src/eiff/MaterialTextChunk.h
         src/eiff/MaterialInterfaceBlockChunk.h
         src/eiff/ShaderEntry.h
-        src/eiff/SimpleFieldChunk.h)
+        src/eiff/SimpleFieldChunk.h
+        src/Includes.h)
 
 set(COMMON_SRCS
         src/eiff/Chunk.cpp
@@ -42,7 +43,8 @@ set(COMMON_SRCS
         src/Enums.cpp
         src/MaterialBuilder.cpp
         src/MaterialVariants.cpp
-        src/PostprocessMaterialBuilder.cpp)
+        src/PostprocessMaterialBuilder.cpp
+        src/Includes.cpp)
 
 # Sources and headers for filamat
 
@@ -179,7 +181,8 @@ install(TARGETS filamat_lite ARCHIVE DESTINATION lib/${DIST_DIR})
 project(test_filamat)
 set(TARGET test_filamat)
 set(SRCS
-        tests/test_filamat.cpp)
+        tests/test_filamat.cpp
+        tests/test_includes.cpp)
 
 add_executable(${TARGET} ${SRCS})
 

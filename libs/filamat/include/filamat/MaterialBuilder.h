@@ -27,6 +27,7 @@
 #include <backend/DriverEnums.h>
 #include <filament/MaterialEnums.h>
 
+#include <filamat/Includer.h>
 #include <filamat/Package.h>
 
 #include <utils/bitset.h>
@@ -209,6 +210,11 @@ public:
     //     must declare a function "void postProcess(inout PostProcessInputs postProcess)"
     MaterialBuilder& material(const char* code, size_t line = 0) noexcept;
 
+    // the Includer instance to use to resolve #include directives
+    // clients should subclass filamat::Includer and implement the includeLocal method
+    // the default is nullptr, which disallows all includes
+    MaterialBuilder& includer(Includer* includer) noexcept;
+
     // set the vertex code content of this material
     // for materials in the SURFACE domain:
     //     must declare a function "void materialVertex(inout MaterialVertexInputs material)"
@@ -381,10 +387,34 @@ private:
 
     utils::CString mMaterialName;
 
-    utils::CString mMaterialCode;
-    utils::CString mMaterialVertexCode;
-    size_t mMaterialLineOffset = 0;
-    size_t mMaterialVertexLineOffset = 0;
+    class ShaderCode {
+    public:
+        void setLineOffset(size_t offset) noexcept { mLineOffset = offset; }
+        void setUnresolved(const utils::CString& code) noexcept {
+            mIncludesResolved = false;
+            mCode = code;
+        }
+
+        // Resolve all the #include directives, returns true if successful.
+        bool resolveIncludes(Includer* includer) noexcept;
+
+        const utils::CString& getResolved() const noexcept {
+            assert(mIncludesResolved);
+            return mCode;
+        }
+
+        size_t getLineOffset() const noexcept { return mLineOffset; }
+
+    private:
+        utils::CString mCode;
+        size_t mLineOffset = 0;
+        bool mIncludesResolved = false;
+    };
+
+    ShaderCode mMaterialCode;
+    ShaderCode mMaterialVertexCode;
+
+    Includer* mIncluder = nullptr;
 
     PropertyList mProperties;
     ParameterList mParameters;
