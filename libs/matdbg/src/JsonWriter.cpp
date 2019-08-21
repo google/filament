@@ -25,6 +25,7 @@
 
 #include "CommonWriter.h"
 
+#include <iomanip>
 #include <sstream>
 
 using namespace filament;
@@ -84,11 +85,27 @@ static bool printParametersInfo(ostream& json, const ChunkContainer& container) 
 static void printShaderInfo(ostream& json, const std::vector<ShaderInfo>& info) {
     for (uint64_t i = 0; i < info.size(); ++i) {
         const auto& item = info[i];
+        string variantString = "";
+
+        // NOTE: the variant enum is private to Filament so unfortunately we need to decode the bits
+        // using magic constants. The 3-character nomenclature used here is consistent with the
+        // ASCII art seen in the Variant header file and allows the information to fit in a
+        // reasonable amount of space on the page. The HTML file has a legend.
+        if (item.variant) {
+            if (item.variant & 0x01)  variantString += "DIR|";
+            if (item.variant & 0x02)  variantString += "DYN|";
+            if (item.variant & 0x04)  variantString += "SRE|";
+            if (item.variant & 0x08)  variantString += "SKN|";
+            variantString = variantString.substr(0, variantString.length() - 1);
+        }
+
+        string ps = (item.pipelineStage == backend::ShaderType::VERTEX) ? "vertex  " : "fragment";
         json
             << "    {"
-            << "\"index\": " << i << ", "
+            << "\"index\": \"" << std::setw(2) << i << "\", "
             << "\"shaderModel\": \"" << toString(item.shaderModel) << "\", "
-            << "\"pipelineStage\": \"" << toString(item.pipelineStage) << "\", "
+            << "\"pipelineStage\": \"" << ps << "\", "
+            << "\"variantString\": \"" << variantString << "\", "
             << "\"variant\": \"" << std::hex << int(item.variant) << std::dec << "\" }"
             << ((i == info.size() - 1) ? "\n" : ",\n");
     }
@@ -132,7 +149,6 @@ static bool printMetalInfo(ostream& json, const ChunkContainer& container) {
 
 bool JsonWriter::writeMaterialInfo(const filaflat::ChunkContainer& container) {
     ostringstream json;
-    json << "{\n";
     if (!printMaterial(json, container)) {
         return false;
     }
@@ -153,7 +169,6 @@ bool JsonWriter::writeMaterialInfo(const filaflat::ChunkContainer& container) {
     // TODO
     json << "]\n";
 
-    json << "}\n";
     mJsonString = CString(json.str().c_str());
     return true;
 }

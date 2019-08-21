@@ -9,6 +9,7 @@ set(PUBLIC_HDR_DIR include)
 # ==================================================================================================
 
 set(PUBLIC_HDRS
+    include/matdbg/DebugServer.h
     include/matdbg/JsonWriter.h
     include/matdbg/ShaderExtractor.h
     include/matdbg/ShaderInfo.h
@@ -17,11 +18,41 @@ set(PUBLIC_HDRS
 
 set(SRCS
     src/CommonWriter.h
+    src/DebugServer.cpp
     src/JsonWriter.cpp
     src/ShaderExtractor.cpp
     src/ShaderInfo.cpp
     src/TextWriter.cpp
 )
+
+# ==================================================================================================
+# Resources
+# ==================================================================================================
+
+set(RESOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR})
+
+set(RESOURCE_BINS
+        ${CMAKE_CURRENT_SOURCE_DIR}/web/style.css
+        ${CMAKE_CURRENT_SOURCE_DIR}/web/script.js
+        ${CMAKE_CURRENT_SOURCE_DIR}/web/index.html
+)
+
+get_resgen_vars(${RESOURCE_DIR} matdbg_resources)
+
+add_custom_command(
+        OUTPUT ${RESGEN_OUTPUTS}
+        COMMAND resgen -t ${RESGEN_FLAGS} ${RESOURCE_BINS}
+        DEPENDS resgen ${RESOURCE_BINS}
+)
+
+if (DEFINED RESGEN_SOURCE_FLAGS)
+    set_source_files_properties(${RESGEN_SOURCE} PROPERTIES COMPILE_FLAGS ${RESGEN_SOURCE_FLAGS})
+endif()
+
+set(DUMMY_SRC "${RESOURCE_DIR}/dummy.c")
+add_custom_command(OUTPUT ${DUMMY_SRC} COMMAND echo "//" > ${DUMMY_SRC})
+
+add_library(matdbg_resources ${DUMMY_SRC} ${RESGEN_SOURCE})
 
 # ==================================================================================================
 # Include and target definitions
@@ -36,10 +67,12 @@ target_link_libraries(${TARGET} PUBLIC
         filaflat
         filabridge
         backend
+        civetweb
         utils
         SPIRV
         SPIRV-Tools
         spirv-cross-glsl
+        matdbg_resources
 )
 
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})

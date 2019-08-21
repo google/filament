@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Filament Debugger</title>
+    <meta charset="utf-8">
+    <link rel="icon" type="image/png" href="https://google.github.io/filament/favicon.png" />
+    <link href="https://fonts.googleapis.com/css?family=Lexend Deca" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="vbox viewport">
+
+        <header>matdbg</header>
+        <section class="main hbox space-between">
+          <nav>
+            <div id="material-list">
+            </div>
+            <div id="material-detail">
+            </div>
+          </nav>
+          <article id="shader-source">
+          </article>
+        </section>
+        <footer>&nbsp;</footer>
+
+    <template id="material-list-template">
+    <pre>
+{{#material}}<a href="#material" class="{{classes}}" data-matid="{{matid}}">{{matid}} {{name}}</a>
+{{/material}}
+    </pre>
+    </template>
+
+    <template id="material-detail-template">
+    <pre>
+name = {{ name }}
+version = {{ version }}
+
+DIR = DIRECTIONAL_LIGHTING
+DYN = DYNAMIC_LIGHTING
+SRE = SHADOW_RECEIVER
+SKN = SKINNING_OR_MORPHING
+
+<b>OpenGL shaders</b>
+{{#opengl}}
+<a href="#shader" class="{{classes}}" data-glindex="{{index}}">{{index}} {{shaderModel}} {{pipelineStage}} {{variantString}}</a>
+{{/opengl}}
+
+<b>Vulkan shaders</b>
+{{#vulkan}}
+<a href="#shader" class="{{classes}}" data-vkindex="{{index}}">{{index}} {{shaderModel}} {{pipelineStage}} {{variantString}}</a>
+{{/vulkan}}
+
+<b>Metal shaders</b>
+{{#metal}}
+<a href="#shader" class="{{classes}}" data-metalindex="{{index}}">{{index}} {{shaderModel}} {{pipelineStage}} {{variantString}}</a>
+{{/metal}}
+    </pre>
+    </template>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mustache.js/3.0.1/mustache.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.17.1/min/vs/loader.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

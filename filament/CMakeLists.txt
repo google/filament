@@ -260,6 +260,14 @@ target_link_libraries(${TARGET} PUBLIC filabridge)
 target_link_libraries(${TARGET} PUBLIC image_headers)
 target_link_libraries(${TARGET} PUBLIC ibl)
 
+# Link in matdbg for Desktop + Debug only since it pulls in filamat and a web server.
+if (CMAKE_BUILD_TYPE STREQUAL "Debug" AND NOT IOS AND NOT ANDROID AND NOT WEBGL)
+    target_link_libraries(${TARGET} PUBLIC matdbg)
+    add_definitions(-DFILAMENT_ENABLE_MATDBG=1)
+else()
+    add_definitions(-DFILAMENT_ENABLE_MATDBG=0)
+endif()
+
 # Android, iOS, and WebGL do not use bluegl.
 if(NOT IOS AND NOT ANDROID AND NOT WEBGL)
     target_link_libraries(${TARGET} PRIVATE bluegl)

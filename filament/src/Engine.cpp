@@ -160,6 +160,10 @@ void FEngine::init() {
     mCommandStream = CommandStream(*mDriver, mCommandBufferQueue.getCircularBuffer());
     DriverApi& driverApi = getDriverApi();
 
+#if FILAMENT_ENABLE_MATDBG
+    debug.server = new matdbg::DebugServer(matdbg::ENGINE);
+#endif
+
     mResourceAllocator = new fg::ResourceAllocator(driverApi);
 
     // Parse all post process shaders now, but create them lazily
