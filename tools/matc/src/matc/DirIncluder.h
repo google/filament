@@ -31,10 +31,10 @@ public:
         mIncludeDirectory = dir;
     }
 
-    virtual IncludeResult* includeLocal(const utils::CString& headerName,
-            const utils::CString& includerName) override;
+    IncludeResult* includeLocal(const utils::CString& headerName,
+            const utils::CString& includerName) final;
 
-    virtual void releaseInclude(IncludeResult* result) override;
+    void releaseInclude(IncludeResult* result) final;
 
 private:
     utils::Path mIncludeDirectory;

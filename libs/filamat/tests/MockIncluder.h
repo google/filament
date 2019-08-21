@@ -35,8 +35,8 @@ public:
         return *this;
     }
 
-    virtual IncludeResult* includeLocal(const utils::CString& headerName,
-            const utils::CString& includerName) override {
+    IncludeResult* includeLocal(const utils::CString& headerName,
+            const utils::CString& includerName) final {
         auto key = headerName.c_str();
         auto found = mIncludeMap.find(key);
 
@@ -60,7 +60,7 @@ public:
         return nullptr;
     }
 
-    virtual void releaseInclude(IncludeResult* result) override {
+    void releaseInclude(IncludeResult* result) final {
         delete result;
     }
 
