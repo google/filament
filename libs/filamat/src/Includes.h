@@ -19,7 +19,7 @@
 
 #include <utils/CString.h>
 
-#include <filamat/Includer.h>
+#include <filamat/IncludeCallback.h>
 
 #include <vector>
 

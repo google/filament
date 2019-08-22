@@ -17,7 +17,7 @@
 #ifndef TNT_DIRINCLUDER_H_
 #define TNT_DIRINCLUDER_H_
 
-#include <filamat/Includer.h>
+#include <filamat/IncludeCallback.h>
 
 #include <utils/Path.h>
 

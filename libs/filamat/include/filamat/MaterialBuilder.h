@@ -27,7 +27,7 @@
 #include <backend/DriverEnums.h>
 #include <filament/MaterialEnums.h>
 
-#include <filamat/Includer.h>
+#include <filamat/IncludeCallback.h>
 #include <filamat/Package.h>
 
 #include <utils/bitset.h>
