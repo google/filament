@@ -25,6 +25,8 @@
 
 #include "CommonWriter.h"
 
+#include <private/filament/Variant.h>
+
 #include <iomanip>
 #include <sstream>
 
@@ -87,15 +89,14 @@ static void printShaderInfo(ostream& json, const std::vector<ShaderInfo>& info) 
         const auto& item = info[i];
         string variantString = "";
 
-        // NOTE: the variant enum is private to Filament so unfortunately we need to decode the bits
-        // using magic constants. The 3-character nomenclature used here is consistent with the
-        // ASCII art seen in the Variant header file and allows the information to fit in a
-        // reasonable amount of space on the page. The HTML file has a legend.
+        // NOTE: The 3-character nomenclature used here is consistent with the ASCII art seen in the
+        // Variant header file and allows the information to fit in a reasonable amount of space on
+        // the page. The HTML file has a legend.
         if (item.variant) {
-            if (item.variant & 0x01)  variantString += "DIR|";
-            if (item.variant & 0x02)  variantString += "DYN|";
-            if (item.variant & 0x04)  variantString += "SRE|";
-            if (item.variant & 0x08)  variantString += "SKN|";
+            if (item.variant & filament::Variant::DIRECTIONAL_LIGHTING)  variantString += "DIR|";
+            if (item.variant & filament::Variant::DYNAMIC_LIGHTING)      variantString += "DYN|";
+            if (item.variant & filament::Variant::SHADOW_RECEIVER)       variantString += "SRE|";
+            if (item.variant & filament::Variant::SKINNING_OR_MORPHING)  variantString += "SKN|";
             variantString = variantString.substr(0, variantString.length() - 1);
         }
 
