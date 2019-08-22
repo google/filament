@@ -27,9 +27,9 @@ namespace filamat {
 
 // Recursively handle all the includes inside of source.
 // Returns true if all includes were handled successfully, false otherwise.
-// Includer may be null, in which case any #include directives found will result in a failure.
-bool resolveIncludes(const utils::CString& rootName, utils::CString& source, Includer* includer,
-        size_t depth = 0);
+// callback may be null, in which case any #include directives found will result in a failure.
+bool resolveIncludes(const utils::CString& rootName, utils::CString& source,
+        IncludeCallback callback, size_t depth = 0);
 
 struct FoundInclude {
     utils::CString name;

@@ -50,7 +50,7 @@ std::string shaderWithAllProperties(const std::string shaderCode,
     builder.platform(filamat::MaterialBuilder::Platform::MOBILE);
     builder.optimization(filamat::MaterialBuilder::Optimization::NONE);
     builder.shading(shadingModel);
-    builder.includer(&includer);
+    builder.includeCallback(includer);
 
     MaterialBuilder::PropertyList allProperties;
     std::fill_n(allProperties, MaterialBuilder::MATERIAL_PROPERTIES_COUNT, true);
@@ -554,7 +554,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerOutputFactor) {
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
-TEST_F(MaterialCompiler, StaticCodeAnalyzerWithinInclue) {
+TEST_F(MaterialCompiler, StaticCodeAnalyzerWithinInclude) {
     std::string userCode(R"(
         void material(inout MaterialInputs material) {
             prepareMaterial(material);

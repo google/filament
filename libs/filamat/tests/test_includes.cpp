@@ -106,7 +106,7 @@ TEST(IncludeParser, InvalidWithValidInclude) {
 TEST(IncludeResolver, NoIncludes) {
     utils::CString code("no includes");
     MockIncluder includer;
-    bool result = filamat::resolveIncludes(utils::CString(""), code, &includer);
+    bool result = filamat::resolveIncludes(utils::CString(""), code, includer);
     EXPECT_TRUE(result);
     EXPECT_STREQ("no includes", code.c_str());
 }
@@ -116,7 +116,7 @@ TEST(IncludeResolver, SingleInclude) {
     MockIncluder includer;
     includer
         .sourceForInclude("test.h", "include");
-    bool result = filamat::resolveIncludes(utils::CString(""), code, &includer);
+    bool result = filamat::resolveIncludes(utils::CString(""), code, includer);
     EXPECT_TRUE(result);
     EXPECT_STREQ("include", code.c_str());
 }
@@ -134,7 +134,7 @@ TEST(IncludeResolver, MultipleIncludes) {
         .sourceForInclude("two.h", "2")
         .sourceForInclude("three.h", "3");
 
-    bool result = filamat::resolveIncludes(utils::CString(""), code, &includer);
+    bool result = filamat::resolveIncludes(utils::CString(""), code, includer);
     EXPECT_TRUE(result);
     EXPECT_STREQ(utils::CString(R"(
         1
@@ -157,7 +157,7 @@ TEST(IncludeResolver, IncludeWithinInclude) {
         .expectIncludeIncludedBy("three.h", "two.h");
 
 
-    bool result = filamat::resolveIncludes(utils::CString(""), code, &includer);
+    bool result = filamat::resolveIncludes(utils::CString(""), code, includer);
     EXPECT_TRUE(result);
     EXPECT_STREQ(utils::CString(R"(
         1
@@ -177,7 +177,7 @@ TEST(IncludeResolver, Includers) {
         .sourceForInclude("three.h", "3")
         .expectIncludeIncludedBy("two.h", "dir/one.h");
 
-    bool result = filamat::resolveIncludes(utils::CString(""), code, &includer);
+    bool result = filamat::resolveIncludes(utils::CString(""), code, includer);
     EXPECT_TRUE(result);
     EXPECT_STREQ(utils::CString(R"(
         3
@@ -194,7 +194,7 @@ TEST(IncludeResolver, IncludeFailure) {
         includer
             .sourceForInclude("one.h", "#include \"two.h\"");
 
-        bool result = filamat::resolveIncludes(utils::CString(""), code, &includer);
+        bool result = filamat::resolveIncludes(utils::CString(""), code, includer);
         EXPECT_FALSE(result);
     }
     {
@@ -204,7 +204,7 @@ TEST(IncludeResolver, IncludeFailure) {
 
         MockIncluder includer;
 
-        bool result = filamat::resolveIncludes(utils::CString(""), code, &includer);
+        bool result = filamat::resolveIncludes(utils::CString(""), code, includer);
         EXPECT_FALSE(result);
     }
 }
@@ -219,7 +219,7 @@ TEST(IncludeResolver, Cycle) {
         .sourceForInclude("foo.h", "#include \"bar.h\"")
         .sourceForInclude("bar.h", "#include \"foo.h\"");
 
-    bool result = filamat::resolveIncludes(utils::CString(""), code, &includer);
+    bool result = filamat::resolveIncludes(utils::CString(""), code, includer);
     // Include cycles are disallowed. We should still terminate in finite time and report false.
     EXPECT_FALSE(result);
 }
@@ -267,7 +267,7 @@ TEST_F(MaterialBuilder, Include) {
             prepareMaterial(material);
         }
     )");
-    mBuilder.includer(&includer);
+    mBuilder.includeCallback(includer);
 
     filamat::Package result = mBuilder.build();
     EXPECT_TRUE(result.isValid());
@@ -288,7 +288,7 @@ TEST_F(MaterialBuilder, IncludeVertex) {
 
         }
     )");
-    mBuilder.includer(&includer);
+    mBuilder.includeCallback(includer);
 
     filamat::Package result = mBuilder.build();
     EXPECT_TRUE(result.isValid());
@@ -308,7 +308,7 @@ TEST_F(MaterialBuilder, IncludeWithinFunction) {
                 prepareMaterial(material);
         )");
 
-    mBuilder.includer(&includer);
+    mBuilder.includeCallback(includer);
 
     filamat::Package result = mBuilder.build();
     EXPECT_TRUE(result.isValid());
@@ -321,7 +321,7 @@ TEST_F(MaterialBuilder, IncludeFailure) {
     mBuilder.material(shaderCode.c_str());
 
     MockIncluder includer;
-    mBuilder.includer(&includer);
+    mBuilder.includeCallback(includer);
 
     filamat::Package result = mBuilder.build();
     EXPECT_FALSE(result.isValid());

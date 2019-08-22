@@ -22,9 +22,8 @@
 
 namespace matc {
 
-DirIncluder::IncludeResult* DirIncluder::includeLocal(const utils::CString& headerName,
-    const utils::CString& includerName) {
-
+bool DirIncluder::operator()(const utils::CString& headerName, const utils::CString& includerName,
+        filamat::IncludeResult& result) {
     auto getHeaderPath = [&includerName, &headerName, this]() {
         // If includer name is empty, then search from the root include directory.
         if (includerName.empty()) {
@@ -41,16 +40,14 @@ DirIncluder::IncludeResult* DirIncluder::includeLocal(const utils::CString& head
 
     if (!headerPath.isFile()) {
         utils::slog.e << "File " << headerPath << " does not exist." << utils::io::endl;
-        return nullptr;
+        return false;
     }
 
     std::ifstream stream(headerPath.getPath(), std::ios::binary);
     if (!stream) {
         utils::slog.e << "Unable to open " << headerPath << "." << utils::io::endl;
-        return nullptr;
+        return false;
     }
-
-    IncludeResult* result = new IncludeResult;
 
     std::string contents;
 
@@ -61,14 +58,10 @@ DirIncluder::IncludeResult* DirIncluder::includeLocal(const utils::CString& head
 
     stream.close();
 
-    result->source = utils::CString(contents.c_str());
-    result->name = utils::CString(headerPath.c_str());
+    result.source = utils::CString(contents.c_str());
+    result.name = utils::CString(headerPath.c_str());
 
-    return result;
-}
-
-void DirIncluder::releaseInclude(IncludeResult* result) {
-    delete result;
+    return true;
 }
 
 } // namespace matc

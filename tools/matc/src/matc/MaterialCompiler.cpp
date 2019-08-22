@@ -275,7 +275,7 @@ bool MaterialCompiler::run(const Config& config) {
     includer.setIncludeDirectory(materialFilePath.getParent());
 
     builder
-        .includer(&includer)
+        .includeCallback(includer)
         .platform(config.getPlatform())
         .targetApi(config.getTargetApi())
         .optimization(config.getOptimizationLevel())

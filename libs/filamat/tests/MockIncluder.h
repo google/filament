@@ -19,8 +19,8 @@
 #include <unordered_map>
 #include <string>
 
-// Includer used for test cases.
-class MockIncluder : public filamat::Includer {
+// Functor used for test cases.
+class MockIncluder {
 
 public:
 
@@ -35,13 +35,13 @@ public:
         return *this;
     }
 
-    IncludeResult* includeLocal(const utils::CString& headerName,
-            const utils::CString& includerName) final {
+    bool operator()(const utils::CString& headerName, const utils::CString& includerName,
+            filamat::IncludeResult& result) {
         auto key = headerName.c_str();
         auto found = mIncludeMap.find(key);
 
         if (found == mIncludeMap.end()) {
-            return nullptr;
+            return false;
         }
 
         auto include = found->second;
@@ -51,19 +51,13 @@ public:
         }
 
         if (!include.source.empty()) {
-            IncludeResult* result = new IncludeResult;
-            result->source = utils::CString(include.source.c_str());
-            result->name = headerName;
-            return result;
+            result.source = utils::CString(include.source.c_str());
+            result.name = headerName;
+            return true;
         }
 
-        return nullptr;
+        return false;
     }
-
-    void releaseInclude(IncludeResult* result) final {
-        delete result;
-    }
-
 
 private:
 

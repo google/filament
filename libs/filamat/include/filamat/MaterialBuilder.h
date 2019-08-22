@@ -210,10 +210,9 @@ public:
     //     must declare a function "void postProcess(inout PostProcessInputs postProcess)"
     MaterialBuilder& material(const char* code, size_t line = 0) noexcept;
 
-    // the Includer instance to use to resolve #include directives
-    // clients should subclass filamat::Includer and implement the includeLocal method
+    // the callback used for resolving #include directives
     // the default is nullptr, which disallows all includes
-    MaterialBuilder& includer(Includer* includer) noexcept;
+    MaterialBuilder& includeCallback(IncludeCallback callback) noexcept;
 
     // set the vertex code content of this material
     // for materials in the SURFACE domain:
@@ -396,7 +395,7 @@ private:
         }
 
         // Resolve all the #include directives, returns true if successful.
-        bool resolveIncludes(Includer* includer) noexcept;
+        bool resolveIncludes(IncludeCallback callback) noexcept;
 
         const utils::CString& getResolved() const noexcept {
             assert(mIncludesResolved);
@@ -414,7 +413,7 @@ private:
     ShaderCode mMaterialCode;
     ShaderCode mMaterialVertexCode;
 
-    Includer* mIncluder = nullptr;
+    IncludeCallback mIncludeCallback = nullptr;
 
     PropertyList mProperties;
     ParameterList mParameters;

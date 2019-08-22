@@ -26,8 +26,8 @@ static bool isWhitespace(char c) {
     return (c == ' ' || c == '\f' || c == '\n' || c == '\r' || c == '\t' || c == '\v');
 }
 
-bool resolveIncludes(const utils::CString& rootName, utils::CString& source, Includer* includer,
-        size_t depth) {
+bool resolveIncludes(const utils::CString& rootName, utils::CString& source,
+        IncludeCallback callback, size_t depth) {
     if (depth > 30) {
         // This is probably an include cycle. Stop here and report an error so we don't overflow.
         utils::slog.e << "Include depth > 30. Include cycle?" << utils::io::endl;
@@ -38,23 +38,22 @@ bool resolveIncludes(const utils::CString& rootName, utils::CString& source, Inc
     while (!includes.empty()) {
         const auto include = includes[0];
         // Ask the includer to resolve this include.
-        if (!includer) {
+        if (!callback) {
             return false;
         }
-        Includer::IncludeResult* result = includer->includeLocal(include.name, rootName);
-        if (!result) {
+        IncludeResult result;
+        if (!callback(include.name, rootName, result)) {
             utils::slog.e << "The included file \"" << include.name.c_str()
                           << "\" could not be found." << utils::io::endl;
             return false;
         }
 
         // Recursively resolve all of its includes.
-        if (!resolveIncludes(result->name, result->source, includer, depth + 1)) {
+        if (!resolveIncludes(result.name, result.source, callback, depth + 1)) {
             return false;
         }
 
-        source.replace(include.startPosition, include.length, result->source);
-        includer->releaseInclude(result);
+        source.replace(include.startPosition, include.length, result.source);
 
         includes = parseForIncludes(source);
     }

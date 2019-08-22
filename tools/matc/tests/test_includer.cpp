@@ -26,15 +26,15 @@ const utils::Path root = utils::Path(__FILE__).getParent();
 TEST(DirIncluder, IncludeNonexistent) {
     matc::DirIncluder includer;
     {
-        Includer::IncludeResult* result = includer.includeLocal(CString("nonexistent.h"), CString(""));
-        EXPECT_EQ(nullptr, result);
-        delete result;
+        IncludeResult _;
+        bool success = includer(CString("nonexistent.h"), CString(""), _);
+        EXPECT_FALSE(success);
     }
     {
         utils::CString includerFile((root + "Foo.h").getPath().c_str());
-        Includer::IncludeResult* result = includer.includeLocal(CString("nonexistent.h"), includerFile);
-        EXPECT_EQ(nullptr, result);
-        delete result;
+        IncludeResult _;
+        bool success = includer(CString("nonexistent.h"), includerFile, _);
+        EXPECT_FALSE(success);
     }
 }
 
@@ -42,15 +42,16 @@ TEST(DirIncluder, IncludeFile) {
     matc::DirIncluder includer;
     includer.setIncludeDirectory(root);
 
-    Includer::IncludeResult* result = includer.includeLocal(CString("Foo.h"), CString(""));
+    IncludeResult result;
+    bool success = includer(CString("Foo.h"), CString(""), result);
+
+    EXPECT_TRUE(success);
 
     // The result's source should be set to the contents of the includer file.
-    EXPECT_STREQ("// test include file", result->source.c_str());
+    EXPECT_STREQ("// test include file", result.source.c_str());
 
     // The result's name should be set to the full path to the header file.
-    EXPECT_STREQ((root + "Foo.h").c_str(), result->name.c_str());
-
-    delete result;
+    EXPECT_STREQ((root + "Foo.h").c_str(), result.name.c_str());
 }
 
 TEST(DirIncluder, IncludeFileFromIncluder) {
@@ -59,11 +60,10 @@ TEST(DirIncluder, IncludeFileFromIncluder) {
 
     utils::CString includerFile((root + "Dir/Baz.h").c_str());
 
-    Includer::IncludeResult* result = includer.includeLocal(CString("Bar.h"), includerFile);
+    IncludeResult result;
+    bool success = includer(CString("Bar.h"), includerFile, result);
 
-    EXPECT_STREQ("// Bar.h", result->source.c_str());
+    EXPECT_STREQ("// Bar.h", result.source.c_str());
 
-    EXPECT_STREQ((root + "Dir/Bar.h").c_str(), result->name.c_str());
-
-    delete result;
+    EXPECT_STREQ((root + "Dir/Bar.h").c_str(), result.name.c_str());
 }

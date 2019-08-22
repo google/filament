@@ -132,8 +132,8 @@ MaterialBuilder& MaterialBuilder::material(const char* code, size_t line) noexce
     return *this;
 }
 
-MaterialBuilder& MaterialBuilder::includer(Includer* includer) noexcept {
-    mIncluder = includer;
+MaterialBuilder& MaterialBuilder::includeCallback(IncludeCallback callback) noexcept {
+    mIncludeCallback = callback;
     return *this;
 }
 
@@ -474,9 +474,9 @@ bool MaterialBuilder::checkLiteRequirements() noexcept {
     return true;
 }
 
-bool MaterialBuilder::ShaderCode::resolveIncludes(Includer* includer) noexcept {
+bool MaterialBuilder::ShaderCode::resolveIncludes(IncludeCallback callback) noexcept {
     if (!mCode.empty()) {
-        if (!::filamat::resolveIncludes(utils::CString(""), mCode, includer)) {
+        if (!::filamat::resolveIncludes(utils::CString(""), mCode, callback)) {
             return false;
         }
     }
@@ -650,8 +650,8 @@ Package MaterialBuilder::build() noexcept {
     }
 
     // Resolve all the #include directives within user code.
-    if (!mMaterialCode.resolveIncludes(mIncluder) ||
-        !mMaterialVertexCode.resolveIncludes(mIncluder)) {
+    if (!mMaterialCode.resolveIncludes(mIncludeCallback) ||
+        !mMaterialVertexCode.resolveIncludes(mIncludeCallback)) {
         return Package::invalidPackage();
     }
 

@@ -23,18 +23,16 @@
 
 namespace matc {
 
-class DirIncluder : public filamat::Includer {
+// Functor callback handler used to resolve includes relative to a root include directory.
+class DirIncluder {
 public:
-
     void setIncludeDirectory(utils::Path dir) noexcept {
         assert(dir.isDirectory());
         mIncludeDirectory = dir;
     }
 
-    IncludeResult* includeLocal(const utils::CString& headerName,
-            const utils::CString& includerName) final;
-
-    void releaseInclude(IncludeResult* result) final;
+    bool operator()(const utils::CString& headerName, const utils::CString& includerName,
+            filamat::IncludeResult& result);
 
 private:
     utils::Path mIncludeDirectory;
