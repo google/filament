@@ -211,7 +211,7 @@ public:
     MaterialBuilder& material(const char* code, size_t line = 0) noexcept;
 
     // the callback used for resolving #include directives
-    // the default is nullptr, which disallows all includes
+    // the default is no callback, which disallows all includes
     MaterialBuilder& includeCallback(IncludeCallback callback) noexcept;
 
     // set the vertex code content of this material
