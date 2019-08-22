@@ -78,9 +78,6 @@ bool MetalExternalImage::isValid() const noexcept {
 }
 
 void MetalExternalImage::set(CVPixelBufferRef image) noexcept {
-    // This pool is necessary because set is called outside of a frame.
-    NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
-
     CVPixelBufferRelease(mImage);
     CVBufferRelease(mTexture);
     [mRgbTexture release];
@@ -92,6 +89,9 @@ void MetalExternalImage::set(CVPixelBufferRef image) noexcept {
     if (!image) {
         return;
     }
+
+    // This pool is necessary because set is called outside of a frame.
+    NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
 
     OSType formatType = CVPixelBufferGetPixelFormatType(image);
     ASSERT_POSTCONDITION(formatType == kCVPixelFormatType_32BGRA ||
