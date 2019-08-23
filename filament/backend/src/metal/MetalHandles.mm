@@ -18,8 +18,6 @@
 
 #include "MetalEnums.h"
 
-#include <details/Texture.h> // for FTexture::getFormatSize
-
 #include "private/backend/BackendUtils.h"
 
 #include <utils/Panic.h>
