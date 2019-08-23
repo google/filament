@@ -3,7 +3,8 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-- Add a live material debugger with a web-based interface.
+- Added a live material debugger with a web-based interface.
+- Added basic #include support in material files.
 
 ## v1.3.1
 

@@ -17,6 +17,9 @@
 #include <gtest/gtest.h>
 
 #include "sca/ASTHelpers.h"
+#include "shaders/ShaderGenerator.h"
+
+#include "MockIncluder.h"
 
 #include <filamat/Enums.h>
 
@@ -38,13 +41,22 @@ static ::testing::AssertionResult PropertyListsMatch(const MaterialBuilder::Prop
 
 std::string shaderWithAllProperties(const std::string shaderCode,
         filamat::MaterialBuilder::Shading shadingModel = filamat::MaterialBuilder::Shading::LIT) {
+    MockIncluder includer;
+    includer
+        .sourceForInclude("modify_normal.h", "material.normal = vec3(0.8);");
+
     filamat::MaterialBuilder builder;
     builder.material(shaderCode.c_str());
     builder.platform(filamat::MaterialBuilder::Platform::MOBILE);
+    builder.optimization(filamat::MaterialBuilder::Optimization::NONE);
     builder.shading(shadingModel);
+    builder.includeCallback(includer);
 
     MaterialBuilder::PropertyList allProperties;
     std::fill_n(allProperties, MaterialBuilder::MATERIAL_PROPERTIES_COUNT, true);
+
+    // We need to "build" the material to resolve any includes in user code.
+    builder.build();
 
     return builder.peek(ShaderType::FRAGMENT,
             {1, MaterialBuilder::TargetApi::OPENGL, MaterialBuilder::TargetLanguage::GLSL},
@@ -539,6 +551,24 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerOutputFactor) {
     glslTools.findProperties(shaderCode, properties);
     MaterialBuilder::PropertyList expected {false};
     expected[size_t(filamat::MaterialBuilder::Property::POST_LIGHTING_COLOR)] = true;
+    EXPECT_TRUE(PropertyListsMatch(expected, properties));
+}
+
+TEST_F(MaterialCompiler, StaticCodeAnalyzerWithinInclude) {
+    std::string userCode(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            #include "modify_normal.h"
+        }
+    )");
+
+    std::string shaderCode = shaderWithAllProperties(userCode);
+
+    GLSLTools glslTools;
+    MaterialBuilder::PropertyList properties {false};
+    glslTools.findProperties(shaderCode, properties);
+    MaterialBuilder::PropertyList expected {false};
+    expected[size_t(filamat::MaterialBuilder::Property::NORMAL)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
