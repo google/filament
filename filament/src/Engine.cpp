@@ -161,7 +161,10 @@ void FEngine::init() {
     DriverApi& driverApi = getDriverApi();
 
 #if FILAMENT_ENABLE_MATDBG
-    debug.server = new matdbg::DebugServer(matdbg::ENGINE);
+    // Disable the web server for regression tests that occur in hermetic environments.
+    if (mBackend != backend::Backend::NOOP) {
+        debug.server = new matdbg::DebugServer(matdbg::ENGINE);
+    }
 #endif
 
     mResourceAllocator = new fg::ResourceAllocator(driverApi);

@@ -387,7 +387,7 @@ public:
         struct {
             bool camera_at_origin = true;
         } view;
-         matdbg::DebugServer* server;
+         matdbg::DebugServer* server = nullptr;
     } debug;
 };
 

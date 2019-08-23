@@ -82,6 +82,7 @@ target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 # ==================================================================================================
 
 target_compile_options(${TARGET} PRIVATE -Wno-deprecated-register)
+target_compile_options(${TARGET} PRIVATE $<$<PLATFORM_ID:Linux>:-fPIC>)
 
 if (MSVC OR CLANG_CL)
     target_compile_options(${TARGET} PRIVATE $<$<CONFIG:Release>:/fp:fast>)
