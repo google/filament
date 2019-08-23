@@ -263,7 +263,7 @@ target_link_libraries(${TARGET} PUBLIC ibl)
 # Link in matdbg for Desktop + Debug only since it pulls in filamat and a web server.
 if (CMAKE_BUILD_TYPE STREQUAL "Debug" AND NOT IOS AND NOT ANDROID AND NOT WEBGL)
     target_link_libraries(${TARGET} PUBLIC matdbg)
-    add_definitions(-DFILAMENT_ENABLE_MATDBG=1)
+    add_definitions(-DFILAMENT_ENABLE_MATDBG=0) # TODO: fix the build
 else()
     add_definitions(-DFILAMENT_ENABLE_MATDBG=0)
 endif()
