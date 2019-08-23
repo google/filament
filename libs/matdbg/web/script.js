@@ -28,7 +28,7 @@ const gMaterialDatabase = {};
 let gSocket = null;
 let gEditor = null;
 let gCurrentMaterial = "00000000";
-let gCurrentShader = { glindex: -1, vkindex: -1, metalindex: -1 };
+let gCurrentShader = { matid: "00000000", glindex: -1, vkindex: -1, metalindex: -1 };
 let gCurrentSocketId = 0;
 
 require.config({ paths: { "vs": `${kMonacoBaseUrl}vs` }});
@@ -175,9 +175,10 @@ function updateClassList(array, indexProperty, selectedIndex) {
 
 function renderMaterialDetail() {
     const mat = gMaterialDatabase[gCurrentMaterial];
-    updateClassList(mat.opengl, "index", parseInt(gCurrentShader.glindex));
-    updateClassList(mat.vulkan, "index", parseInt(gCurrentShader.vkindex));
-    updateClassList(mat.metal, "index", parseInt(gCurrentShader.metalindex));
+    const ok = mat.matid === gCurrentShader.matid;
+    updateClassList(mat.opengl, "index", ok ? parseInt(gCurrentShader.glindex) : -1);
+    updateClassList(mat.vulkan, "index", ok ? parseInt(gCurrentShader.vkindex) : -1);
+    updateClassList(mat.metal, "index", ok ? parseInt(gCurrentShader.metalindex) : -1);
     materialDetail.innerHTML = Mustache.render(matDetailTemplate.innerHTML, mat);
 }
 
@@ -192,6 +193,7 @@ function selectShader(selection) {
         return;
     }
     gCurrentShader = selection;
+    gCurrentShader.matid = gCurrentMaterial;
     renderMaterialDetail();
     gEditor.setValue(text);
     shaderSource.style.visibility = "visible";
