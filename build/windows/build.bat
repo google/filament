@@ -76,7 +76,7 @@ if "%FILAMENT_BUILD_ALL_VARIANTS%" == "1" (
 
 if "%FILAMENT_RUN_TESTS%" == "1" (
     :: Run unit tests
-    call %dp0tests.bat
+    call %~dp0tests.bat
     if errorlevel 1 exit /b %errorlevel%
 )
 
