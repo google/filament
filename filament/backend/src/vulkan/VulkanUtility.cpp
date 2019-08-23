@@ -18,7 +18,7 @@
 
 #include <utils/Panic.h>
 
-#include <details/Texture.h> // for FTexture::getFormatSize
+#include "private/backend/BackendUtils.h"
 
 namespace filament {
 namespace backend {
@@ -228,7 +228,7 @@ VkFormat getVkFormat(TextureFormat format) {
 // See also FTexture::computeTextureDataSize, which takes a public-facing Texture format rather
 // than a driver-level Texture format, and can account for a specified byte alignment.
 uint32_t getBytesPerPixel(TextureFormat format) {
-    return (uint32_t) details::FTexture::getFormatSize(format);
+    return (uint32_t) getFormatSize(format);
 }
 
 VkCompareOp getCompareOp(SamplerCompareFunc func) {
