@@ -44,27 +44,25 @@ window.MonacoEnvironment = {
     }
 };
 
-document.querySelector("body").addEventListener("click", function(e) {
-    const anchor = e.target.closest("a");
+document.querySelector("body").addEventListener("click", (evt) => {
+    const anchor = evt.target.closest("a");
     if (!anchor) {
         return;
     }
-    e.preventDefault();
-    const cmd = anchor.hash.slice(1);
 
     // Handle selection of a material.
-    if (cmd == "material") {
+    if (anchor.classList.contains("material")) {
         selectMaterial(anchor.dataset.matid);
         return;
     }
 
     // Handle selection of a shader.
-    if (cmd == "shader") {
+    if (anchor.classList.contains("shader")) {
         selectShader(anchor.dataset);
         return;
     }
 
-}, false);
+});
 
 function fetchMaterial(matid) {
     fetch(`api/material?matid=${matid}`).then(function(response) {

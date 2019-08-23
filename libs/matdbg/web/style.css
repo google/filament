@@ -12,6 +12,7 @@ body {
 a, a:visited {
     text-decoration: none;
     color: #567;
+    cursor: pointer;
 }
 
 a:hover, a.active {
