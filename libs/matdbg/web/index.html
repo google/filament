@@ -24,7 +24,7 @@
 
     <template id="material-list-template">
     <pre>
-{{#material}}<a href="#material" class="{{classes}}" data-matid="{{matid}}">{{matid}} {{name}}</a>
+{{#material}}<a class="material {{classes}}" data-matid="{{matid}}">{{matid}} {{name}}</a>
 {{/material}}
     </pre>
     </template>
@@ -41,17 +41,17 @@ SKN = SKINNING_OR_MORPHING
 
 <b>OpenGL shaders</b>
 {{#opengl}}
-<a href="#shader" class="{{classes}}" data-glindex="{{index}}">{{index}} {{shaderModel}} {{pipelineStage}} {{variantString}}</a>
+<a class="shader {{classes}}" data-glindex="{{index}}">{{index}} {{shaderModel}} {{pipelineStage}} {{variantString}}</a>
 {{/opengl}}
 
 <b>Vulkan shaders</b>
 {{#vulkan}}
-<a href="#shader" class="{{classes}}" data-vkindex="{{index}}">{{index}} {{shaderModel}} {{pipelineStage}} {{variantString}}</a>
+<a class="shader {{classes}}" data-vkindex="{{index}}">{{index}} {{shaderModel}} {{pipelineStage}} {{variantString}}</a>
 {{/vulkan}}
 
 <b>Metal shaders</b>
 {{#metal}}
-<a href="#shader" class="{{classes}}" data-metalindex="{{index}}">{{index}} {{shaderModel}} {{pipelineStage}} {{variantString}}</a>
+<a class="shader {{classes}}" data-metalindex="{{index}}">{{index}} {{shaderModel}} {{pipelineStage}} {{variantString}}</a>
 {{/metal}}
     </pre>
     </template>
