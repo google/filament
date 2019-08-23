@@ -114,9 +114,11 @@ Material* Material::Builder::build(Engine& engine) {
 
 #if FILAMENT_ENABLE_MATDBG
     matdbg::DebugServer* server = upcast(engine).debug.server;
-    CString name;
-    materialParser->getName(&name);
-    server->addMaterial(name, mImpl->mPayload, mImpl->mSize, result);
+    if (server) {
+        CString name;
+        materialParser->getName(&name);
+        server->addMaterial(name, mImpl->mPayload, mImpl->mSize, result);
+    }
 #endif
 
     return result;
