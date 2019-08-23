@@ -33,6 +33,9 @@ if "%KOKORO_JOB_TYPE%" == "RELEASE" (set FILAMENT_BUILD_ALL_VARIANTS=1)
 :: If this is a CI build, run all tests after building.
 if "%KOKORO_JOB_TYPE%" == "CONTINUOUS_INTEGRATION" (set FILAMENT_RUN_TESTS=1)
 
+:: Just checking if tests work in presubmit, will remove before merging.
+if "%KOKORO_JOB_TYPE%" == "PRESUBMIT_GITHUB" (set FILAMENT_RUN_TESTS=1)
+
 if "%FILAMENT_BUILD_ALL_VARIANTS%" == "1" (
     echo KOKORO_JOB_TYPE is %KOKORO_JOB_TYPE%
     echo Building additional Filament static library variants.
