@@ -28,6 +28,23 @@ pre {
     flex-direction: column;
 }
 
+.scrollable {
+    position: relative;
+    overflow-y: scroll;
+}
+
+.scrollable > * {
+    position: absolute;
+}
+
+.squishy {
+    flex-grow: 1;
+}
+
+.stretchy {
+    flex-grow: 4;
+}
+
 .hbox {
     display: flex;
     flex-direction: row;
