@@ -14,7 +14,7 @@ def collect_files(path, type, exe):
         if os.path.isfile(file_path):
             if the_file.endswith(type):
                 num_tested = num_tested +1
-                print("### Testing: " + file_path)
+                print("### " + exe + " " + file_path)
                 result = 0
                 if platform == "win32":
                     result = os.system("build\\Debug\\{0} \"{1}\"".format(exe, file_path))
@@ -33,7 +33,9 @@ if __name__ == "__main__":
         os.makedirs("build/")
     os.chdir("build/")
     os.system("cmake ..")
-    os.system("cmake --build .")
+    if os.system("cmake --build .") != 0:
+        print("Unable to build.")
+        exit(1)
     os.chdir("..")
     if not os.path.exists("glTF-Sample-Models/"):
         os.system("git init glTF-Sample-Models")
@@ -49,6 +51,7 @@ if __name__ == "__main__":
     collect_files("glTF-Sample-Models/2.0/", ".gltf", "cgltf_test")
     collect_files("glTF-Sample-Models/2.0/", ".glb", "test_conversion")
     collect_files("glTF-Sample-Models/2.0/", ".gltf", "test_conversion")
+    collect_files("glTF-Sample-Models/2.0/", ".gltf", "test_write")
     print("Tested files: " + str(num_tested))
     print("Errors: " + str(num_errors))
 
