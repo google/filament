@@ -167,7 +167,20 @@ bool JsonWriter::writeMaterialInfo(const filaflat::ChunkContainer& container) {
     }
 
     json << "\"required_attributes\": [\n";
-    // TODO
+    uint32_t requiredAttributes;
+    if (read(container, MaterialRequiredAttributes, &requiredAttributes)) {
+        string comma;
+        AttributeBitset bitset;
+        bitset.setValue(requiredAttributes);
+        if (bitset.count() > 0) {
+            for (size_t i = 0; i < bitset.size(); i++) {
+                if (bitset.test(i)) {
+                    json << comma << "\"" << toString(static_cast<VertexAttribute>(i)) << "\"";
+                    comma = ",";
+                }
+            }
+        }
+    }
     json << "]\n";
 
     mJsonString = CString(json.str().c_str());
