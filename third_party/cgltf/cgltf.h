@@ -1,7 +1,7 @@
 /**
  * cgltf - a single-file glTF 2.0 parser written in C99.
  *
- * Version: 1.2
+ * Version: 1.3
  *
  * Website: https://github.com/jkuhlmann/cgltf
  *
@@ -423,7 +423,7 @@ typedef struct cgltf_light {
 	cgltf_float spot_outer_cone_angle;
 } cgltf_light;
 
-typedef struct cgltf_node {
+struct cgltf_node {
 	char* name;
 	cgltf_node* parent;
 	cgltf_node** children;
@@ -443,7 +443,7 @@ typedef struct cgltf_node {
 	cgltf_float scale[3];
 	cgltf_float matrix[16];
 	cgltf_extras extras;
-} cgltf_node;
+};
 
 typedef struct cgltf_scene {
 	char* name;
@@ -1512,9 +1512,9 @@ static cgltf_size cgltf_component_read_index(const void* in, cgltf_component_typ
 		case cgltf_component_type_r_8:
 			return *((const int8_t*) in);
 		case cgltf_component_type_r_8u:
-		case cgltf_component_type_invalid:
-		default:
 			return *((const uint8_t*) in);
+		default:
+			return 0;
 	}
 }
 
@@ -1529,18 +1529,17 @@ static cgltf_float cgltf_component_read_float(const void* in, cgltf_component_ty
 	{
 		switch (component_type)
 		{
-			case cgltf_component_type_r_32u:
-				return *((const uint32_t*) in) / (float) UINT_MAX;
+			// note: glTF spec doesn't currently define normalized conversions for 32-bit integers
 			case cgltf_component_type_r_16:
-				return *((const int16_t*) in) / (float) SHRT_MAX;
+				return *((const int16_t*) in) / (cgltf_float)32767;
 			case cgltf_component_type_r_16u:
-				return *((const uint16_t*) in) / (float) USHRT_MAX;
+				return *((const uint16_t*) in) / (cgltf_float)65535;
 			case cgltf_component_type_r_8:
-				return *((const int8_t*) in) / (float) SCHAR_MAX;
+				return *((const int8_t*) in) / (cgltf_float)127;
 			case cgltf_component_type_r_8u:
-			case cgltf_component_type_invalid:
+				return *((const uint8_t*) in) / (cgltf_float)255;
 			default:
-				return *((const uint8_t*) in) / (float) CHAR_MAX;
+				return 0;
 		}
 	}
 

@@ -1,3 +1,10 @@
+/* How to fuzz:
+
+clang main.c -O2 -g -fsanitize=address,fuzzer -o fuzz
+cp -r data temp
+./fuzz temp/ -dict=gltf.dict -jobs=12 -workers=12
+
+*/
 #define CGLTF_IMPLEMENTATION
 #include "../cgltf.h"
 

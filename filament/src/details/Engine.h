@@ -49,6 +49,16 @@
 
 #include <filament/Stream.h>
 
+#if FILAMENT_ENABLE_MATDBG
+#include <matdbg/DebugServer.h>
+#else
+namespace filament {
+namespace matdbg {
+class DebugServer;
+} // namespace matdbg
+} // namespace filament
+#endif
+
 #include <filaflat/ShaderBuilder.h>
 
 #include <utils/compiler.h>
@@ -377,6 +387,7 @@ public:
         struct {
             bool camera_at_origin = true;
         } view;
+         matdbg::DebugServer* server = nullptr;
     } debug;
 };
 

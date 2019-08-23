@@ -1690,7 +1690,7 @@ APIs listed in the <a href="#shaderpublicapis">Shader public APIs</a> section.
 <span class="line">    float2 uv0;           <span class="hljs-comment">// if the uv0 attribute is required</span></span>
 <span class="line">    float2 uv1;           <span class="hljs-comment">// if the uv1 attribute is required</span></span>
 <span class="line">    float3 worldNormal;   <span class="hljs-comment">// only if the shading model is not unlit</span></span>
-<span class="line">    float4 worldPosition; <span class="hljs-comment">// always available</span></span>
+<span class="line">    float4 worldPosition; <span class="hljs-comment">// always available (see note below about world-space)</span></span>
 <span class="line">    <span class="hljs-comment">// variable* names are replaced with actual names</span></span>
 <span class="line">    float4 variable0;     <span class="hljs-comment">// if 1 or more variables is defined</span></span>
 <span class="line">    float4 variable1;     <span class="hljs-comment">// if 2 or more variables is defined</span></span>
@@ -1699,6 +1699,16 @@ APIs listed in the <a href="#shaderpublicapis">Shader public APIs</a> section.
 <span class="line">};</span></code></pre><p>
 
 
+
+</p><div class="admonition tip"><div class="admonition-title"> worldPosition</div>
+
+<p></p><p>
+
+    To achieve good precision, the <code>worldPosition</code> coordinate in the vertex shader is shifted by the
+    camera position. To get the true world-space position, users can add this to
+    <code>getWorldOffset()</code>.</p></div>
+
+<p></p><p>
 
 </p><div class="admonition tip"><div class="admonition-title"> UV attributes</div>
 
@@ -1872,12 +1882,23 @@ type aliases:
 </p><div class="table"><table class="table"><tbody><tr><th style="text-align:left"> Name </th><th style="text-align:center"> Type </th><th style="text-align:left"> Description </th></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getResolution()</strong> </td><td style="text-align:center"> float4 </td><td style="text-align:left"> Resolution of the view in pixels: <code>width</code>, <code>height</code>, <code>1 / width</code>, <code>1 / height</code> </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getWorldCameraPosition()</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:left"> Position of the camera/eye in world space </td></tr>
+<tr><td style="text-align:left"> <strong class="asterisk">getWorldOffset()</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:left"> The shift required to obtain API-level world space </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getTime()</strong> </td><td style="text-align:center"> float </td><td style="text-align:left"> Current time in seconds, may be reset regularly to avoid precision loss </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getUserTime()</strong> </td><td style="text-align:center"> float4 </td><td style="text-align:left"> Current time in seconds: <code>time</code>, <code>(double)time - time</code>, <code>0</code>, <code>0</code> </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getUserTimeMode(float m)</strong> </td><td style="text-align:center"> float </td><td style="text-align:left"> Current time modulo m in seconds </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getExposure()</strong> </td><td style="text-align:center"> float </td><td style="text-align:left"> Photometric exposure of the camera </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getEV100()</strong> </td><td style="text-align:center"> float </td><td style="text-align:left"> <a href="https://en.wikipedia.org/wiki/Exposure_value">Exposure value at ISO 100</a> of the camera </td></tr>
 </tbody></table></div>
+
+<p></p><p>
+
+</p><div class="admonition tip"><div class="admonition-title"> world space</div>
+
+<p></p><p>
+
+    To achieve good precision, the &#x201C;world space&#x201D; in Filament&apos;s shading system does not necessarily
+    match the API-level world space. To obtain the position of the API-level camera, custom
+    materials can add <code>getWorldOffset()</code> to <code>getWorldCameraPosition()</code>.</p></div>
 
 <p></p>
 <a class="target" name="vertexonly">&#xA0;</a><a class="target" name="materialdefinitions/shaderpublicapis/vertexonly">&#xA0;</a><a class="target" name="toc4.5.5">&#xA0;</a><h3>Vertex only</h3>
@@ -1887,6 +1908,7 @@ type aliases:
 The following APIs are only available from the vertex block:
 </p><div class="table"><table class="table"><tbody><tr><th style="text-align:left"> Name </th><th style="text-align:center"> Type </th><th style="text-align:left"> Description </th></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getPosition()</strong> </td><td style="text-align:center"> float4 </td><td style="text-align:left"> Vertex position in the domain defined by the material (default: object/model space) </td></tr>
+<tr><td style="text-align:left"> <strong class="asterisk">getCustom0()</strong> to <strong class="asterisk">getCustom7()</strong> </td><td style="text-align:center"> float4 </td><td style="text-align:left"> Custom vertex attribute </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getWorldFromModelMatrix()</strong> </td><td style="text-align:center"> float4&#xD7;4 </td><td style="text-align:left"> Matrix that converts from model (object) space to world space </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getWorldFromModelNormalMatrix()</strong> </td><td style="text-align:center"> float3&#xD7;3 </td><td style="text-align:left"> Matrix that converts normals from model (object) space to world space </td></tr>
 </tbody></table></div>
@@ -1899,7 +1921,7 @@ The following APIs are only available from the vertex block:
 The following APIs are only available from the fragment block:
 </p><div class="table"><table class="table"><tbody><tr><th style="text-align:left"> Name </th><th style="text-align:center"> Type </th><th style="text-align:left"> Description </th></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getWorldTangentFrame()</strong> </td><td style="text-align:center"> float3&#xD7;3 </td><td style="text-align:left"> Matrix containing in each column the <code>tangent</code> (<code>frame[0]</code>), <code>bi-tangent</code> (<code>frame[1]</code>) and <code>normal</code> (<code>frame[2]</code>) of the vertex in world space. If the material does not compute a tangent space normal for bump mapping or if the shading is not anisotropic, only the <code>normal</code> is valid in this matrix. </td></tr>
-<tr><td style="text-align:left"> <strong class="asterisk">getWorldPosition()</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:left"> Position of the fragment in world space </td></tr>
+<tr><td style="text-align:left"> <strong class="asterisk">getWorldPosition()</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:left"> Position of the fragment in world space (see note below about world-space) </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getWorldViewVector()</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:left"> Normalized vector in world space from the fragment position to the eye </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getWorldNormalVector()</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:left"> Normalized normal in world space, after bump mapping (must be used after <code>prepareMaterial()</code>) </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getWorldGeometricNormalVector()</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:left"> Normalized normal in world space, before bump mapping (can be used before <code>prepareMaterial()</code>) </td></tr>
@@ -1913,6 +1935,15 @@ The following APIs are only available from the fragment block:
 <tr><td style="text-align:left"> <strong class="asterisk">inverseTonemapSRGB(float3)</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:left"> Applies the inverse tone mapping operator to the specified non-linear sRGB color and returns a linear sRGB color. This operation may be an approximation </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">luminance(float3)</strong> </td><td style="text-align:center"> float </td><td style="text-align:left"> Computes the luminance of the specified linear sRGB color </td></tr>
 </tbody></table></div>
+
+<p></p><p>
+
+</p><div class="admonition tip"><div class="admonition-title"> world space</div>
+
+<p></p><p>
+
+    To obtain API-level world space coordinates, custom materials should add <code>getWorldOffset()</code> to
+    <code>getWorldPosition()</code> (et al).</p></div>
 
 <p></p>
 <a class="target" name="compilingmaterials">&#xA0;</a><a class="target" name="compilingmaterials">&#xA0;</a><a class="target" name="toc5">&#xA0;</a><h1>Compiling materials</h1>
@@ -2036,7 +2067,7 @@ variants:
 </li>
 <li class="minus"><code>shadowReceiver</code>, used when an object can receive shadows
 </li>
-<li class="minus"><code>skinning</code>, used when an object is animated using GPU skinning</li></ul>
+<li class="minus"><code>skinning</code>, used when an object is animated using GPU skinning or vertex morphing</li></ul>
 
 <p></p><p>
 
