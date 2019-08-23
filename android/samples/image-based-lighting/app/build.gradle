@@ -24,7 +24,7 @@ generateIbl {
     group 'Filament'
     description 'Generate IBL'
 
-    inputFile = file("../../../../third_party/environments/flower_road_2k.hdr")
+    inputFile = file("../../../../third_party/environments/flower_road_no_sun_2k.hdr")
     outputDir = file("src/main/assets/envs")
 }
 

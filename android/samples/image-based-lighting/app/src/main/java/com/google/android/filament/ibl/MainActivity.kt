@@ -199,7 +199,7 @@ class MainActivity : Activity() {
     }
 
     private fun loadImageBasedLight() {
-        ibl = loadIbl(assets, "envs/flower_road_2k", engine)
+        ibl = loadIbl(assets, "envs/flower_road_no_sun_2k", engine)
         ibl.indirectLight.intensity = 40_000.0f
     }
 
