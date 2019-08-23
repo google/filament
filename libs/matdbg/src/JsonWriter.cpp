@@ -50,6 +50,23 @@ static std::string arraySizeToString(uint64_t size) {
     return "";
 }
 
+template<typename T, typename V>
+static void printChunk(ostream& json, const ChunkContainer& container, ChunkType type,
+        const char* title) {
+    T value;
+    if (read(container, type, reinterpret_cast<V*>(&value))) {
+        json << "\"" << title << "\": \"" << toString(value) << "\",\n";
+    }
+}
+
+static void printFloatChunk(ostream& json, const ChunkContainer& container, ChunkType type,
+        const char* title) {
+    float value;
+    if (read(container, type, &value)) {
+        json << "\"" << title << "\": " << setprecision(2) << value << ",\n";
+    }
+}
+
 static void printUint32Chunk(ostream& json, const ChunkContainer& container,
         filamat::ChunkType type, const char* title) {
     uint32_t value;
@@ -71,11 +88,25 @@ static bool printMaterial(ostream& json, const ChunkContainer& container) {
     printUint32Chunk(json, container, filamat::MaterialVersion, "version");
     printUint32Chunk(json, container, filamat::PostProcessVersion, "pp_version");
     json << "\"shading\": {\n";
-    // TODO
-    json << "},\n";
+    printChunk<Shading, uint8_t>(json, container, MaterialShading, "model");
+    printChunk<VertexDomain, uint8_t>(json, container, MaterialVertexDomain, "vertex_domain");
+    printChunk<Interpolation, uint8_t>(json, container, MaterialInterpolation, "interpolation");
+    printChunk<bool, bool>(json, container, MaterialShadowMultiplier, "shadow_multiply");
+    printChunk<bool, bool>(json, container, MaterialSpecularAntiAliasing, "specular_antialiasing");
+    printFloatChunk(json, container, MaterialSpecularAntiAliasingVariance, "variance");
+    printFloatChunk(json, container, MaterialSpecularAntiAliasingThreshold, "threshold");
+    printChunk<bool, bool>(json, container, MaterialClearCoatIorChange, "clear_coat_IOR_change");
+    json << "\"_\": 0 },\n";
     json << "\"raster\": {\n";
-    // TODO
-    json << "},\n";
+    printChunk<BlendingMode, uint8_t>(json, container, MaterialBlendingMode, "blending");
+    printFloatChunk(json, container, MaterialMaskThreshold, "mask_threshold");
+    printChunk<bool, bool>(json, container, MaterialColorWrite, "color_write");
+    printChunk<bool, bool>(json, container, MaterialDepthWrite, "depth_write");
+    printChunk<bool, bool>(json, container, MaterialDepthTest, "depth_test");
+    printChunk<bool, bool>(json, container, MaterialDoubleSided, "double_sided");
+    printChunk<CullingMode, uint8_t>(json, container, MaterialCullingMode, "culling");
+    printChunk<TransparencyMode, uint8_t>(json, container, MaterialTransparencyMode, "transparency");
+    json << "\"_\": 0 },\n";
     return true;
 }
 
