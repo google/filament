@@ -330,6 +330,14 @@ void MetalDriver::destroyTexture(Handle<HwTexture> th) {
     destruct_handle<MetalTexture>(mHandleMap, th);
 }
 
+long MetalDriver::getTextureInternal(Handle<HwTexture> th) {
+    if (th) {
+        //TODO
+    }
+
+    return 0;
+}
+
 void MetalDriver::destroyRenderTarget(Handle<HwRenderTarget> rth) {
     if (rth) {
         destruct_handle<MetalRenderTarget>(mHandleMap, rth);

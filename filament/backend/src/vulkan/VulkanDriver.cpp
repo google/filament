@@ -369,6 +369,14 @@ void VulkanDriver::destroyTexture(Handle<HwTexture> th) {
     }
 }
 
+long VulkanDriver::getTextureInternal(Handle<HwTexture> th) {
+    if (th) {
+        //TODO
+    }
+
+    return 0;
+}
+
 void VulkanDriver::createProgramR(Handle<HwProgram> ph, Program&& program) {
     auto vkprogram = construct_handle<VulkanProgram>(mHandleMap, ph, mContext, program);
     mDisposer.createDisposable(vkprogram, [this, ph] () {

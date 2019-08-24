@@ -291,6 +291,13 @@ DECL_DRIVER_API_1(destroySwapChain,       backend::SwapChainHandle, sch)
 DECL_DRIVER_API_1(destroyStream,          backend::StreamHandle, sh)
 
 /*
+ * Get Internal Impl
+ * -------------------------
+ */
+
+DECL_DRIVER_API_SYNCHRONOUS_1(long, getTextureInternal, backend::TextureHandle, th)
+
+/*
  * Synchronous APIs
  * ----------------
  */

@@ -1540,6 +1540,15 @@ void OpenGLDriver::destroyTexture(Handle<HwTexture> th) {
     }
 }
 
+long OpenGLDriver::getTextureInternal(Handle<HwTexture> th) {
+    if (th) {
+        GLTexture* t = handle_cast<GLTexture *>(th);
+        if (t)
+            return (long)(&t->gl.id);
+    }
+    return 0;
+}
+
 void OpenGLDriver::destroyRenderTarget(Handle<HwRenderTarget> rth) {
     DEBUG_MARKER()
 

@@ -52,6 +52,7 @@ public:
     Sampler getTarget() const noexcept { return mTarget; }
     InternalFormat getFormat() const noexcept { return mFormat; }
     Usage getUsage() const noexcept { return mUsage; }
+    long getTextureInternal(FEngine& engine) const noexcept;
 
     void setImage(FEngine& engine, size_t level,
             uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,

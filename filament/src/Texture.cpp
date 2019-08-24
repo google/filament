@@ -136,6 +136,11 @@ size_t FTexture::getDepth(size_t level) const noexcept {
     return valueForLevel(level, mDepth);
 }
 
+long FTexture::getTextureInternal(FEngine& engine) const noexcept {
+    FEngine::DriverApi& driver = engine.getDriverApi();
+    return driver.getTextureInternal(mHandle);
+}
+
 void FTexture::setImage(FEngine& engine,
         size_t level, uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
         Texture::PixelBufferDescriptor&& buffer) const noexcept {
@@ -477,6 +482,10 @@ Texture::Sampler Texture::getTarget() const noexcept {
 
 Texture::InternalFormat Texture::getFormat() const noexcept {
     return upcast(this)->getFormat();
+}
+
+long Texture::getTextureInternal(Engine& engine) const noexcept {
+    return upcast(this)->getTextureInternal(upcast(engine));
 }
 
 void Texture::setImage(Engine& engine, size_t level,

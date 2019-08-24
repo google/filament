@@ -240,6 +240,12 @@ public:
     InternalFormat getFormat() const noexcept;
 
     /**
+     * Return this texture Internal Implementation ( in OpenGL case, it returne address of gl texture id ).
+     * @return this texture Internal Implementation ( in OpenGL case, it returne address of gl texture id ).
+     */
+    long getTextureInternal(Engine& engine) const noexcept;
+
+    /**
      * Specify the image of a 2D texture for a level.
      *
      * @param engine    Engine this texture is associated to.
