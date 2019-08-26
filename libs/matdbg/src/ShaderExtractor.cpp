@@ -94,8 +94,7 @@ bool ShaderExtractor::getShader(ShaderModel shaderModel,
         return false;
     }
 
-    return mMaterialChunk.getShader(shader,
-            blobDictionary, (uint8_t)shaderModel, variant, stage);
+    return mMaterialChunk.getShader(shader, blobDictionary, (uint8_t)shaderModel, variant, stage);
 }
 
 CString ShaderExtractor::spirvToGLSL(const uint32_t* data, size_t wordCount) {
