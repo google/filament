@@ -823,6 +823,7 @@ typedef unsigned short int in_port_t;
 #include <sys/poll.h>
 #include <sys/socket.h>
 #include <sys/time.h>
+#include <sys/types.h>
 #include <sys/utsname.h>
 #include <sys/wait.h>
 #include <time.h>
