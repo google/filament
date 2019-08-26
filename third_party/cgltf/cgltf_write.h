@@ -1,7 +1,7 @@
 /**
  * cgltf_write - a single-file glTF 2.0 writer written in C99.
  *
- * Version: 1.2
+ * Version: 1.3
  *
  * Website: https://github.com/jkuhlmann/cgltf
  *
@@ -30,6 +30,7 @@
 #include "cgltf.h"
 
 #include <stddef.h>
+#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -437,15 +438,15 @@ static void cgltf_write_material(cgltf_write_context* context, const cgltf_mater
 
 	if (material->has_pbr_metallic_roughness)
 	{
-		const auto& params = material->pbr_metallic_roughness;
+		const cgltf_pbr_metallic_roughness* params = &material->pbr_metallic_roughness;
 		cgltf_write_line(context, "\"pbrMetallicRoughness\": {");
-		CGLTF_WRITE_TEXTURE_INFO("baseColorTexture", params.base_color_texture);
-		CGLTF_WRITE_TEXTURE_INFO("metallicRoughnessTexture", params.metallic_roughness_texture);
-		cgltf_write_floatprop(context, "metallicFactor", params.metallic_factor, 1.0f);
-		cgltf_write_floatprop(context, "roughnessFactor", params.roughness_factor, 1.0f);
-		if (cgltf_check_floatarray(params.base_color_factor, 4, 1.0f))
+		CGLTF_WRITE_TEXTURE_INFO("baseColorTexture", params->base_color_texture);
+		CGLTF_WRITE_TEXTURE_INFO("metallicRoughnessTexture", params->metallic_roughness_texture);
+		cgltf_write_floatprop(context, "metallicFactor", params->metallic_factor, 1.0f);
+		cgltf_write_floatprop(context, "roughnessFactor", params->roughness_factor, 1.0f);
+		if (cgltf_check_floatarray(params->base_color_factor, 4, 1.0f))
 		{
-			cgltf_write_floatarrayprop(context, "baseColorFactor", params.base_color_factor, 4);
+			cgltf_write_floatarrayprop(context, "baseColorFactor", params->base_color_factor, 4);
 		}
 		cgltf_write_line(context, "}");
 	}
@@ -455,19 +456,19 @@ static void cgltf_write_material(cgltf_write_context* context, const cgltf_mater
 		cgltf_write_line(context, "\"extensions\": {");
 		if (material->has_pbr_specular_glossiness)
 		{
-			const auto& params = material->pbr_specular_glossiness;
+			const cgltf_pbr_specular_glossiness* params = &material->pbr_specular_glossiness;
 			cgltf_write_line(context, "\"KHR_materials_pbrSpecularGlossiness\": {");
-			CGLTF_WRITE_TEXTURE_INFO("diffuseTexture", params.diffuse_texture);
-			CGLTF_WRITE_TEXTURE_INFO("specularGlossinessTexture", params.specular_glossiness_texture);
-			if (cgltf_check_floatarray(params.diffuse_factor, 4, 1.0f))
+			CGLTF_WRITE_TEXTURE_INFO("diffuseTexture", params->diffuse_texture);
+			CGLTF_WRITE_TEXTURE_INFO("specularGlossinessTexture", params->specular_glossiness_texture);
+			if (cgltf_check_floatarray(params->diffuse_factor, 4, 1.0f))
 			{
-				cgltf_write_floatarrayprop(context, "dffuseFactor", params.diffuse_factor, 4);
+				cgltf_write_floatarrayprop(context, "dffuseFactor", params->diffuse_factor, 4);
 			}
-			if (cgltf_check_floatarray(params.specular_factor, 3, 1.0f))
+			if (cgltf_check_floatarray(params->specular_factor, 3, 1.0f))
 			{
-				cgltf_write_floatarrayprop(context, "specularFactor", params.specular_factor, 3);
+				cgltf_write_floatarrayprop(context, "specularFactor", params->specular_factor, 3);
 			}
-			cgltf_write_floatprop(context, "glossinessFactor", params.glossiness_factor, 1.0f);
+			cgltf_write_floatprop(context, "glossinessFactor", params->glossiness_factor, 1.0f);
 			cgltf_write_line(context, "}");
 		}
 		if (material->unlit)

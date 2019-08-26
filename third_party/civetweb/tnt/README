@@ -1,0 +1,5 @@
+This is how third_party/civetweb was created:
+
+1. Downloaded from https://github.com/civetweb/civetweb/tree/3fadd57
+2. `rm -rf Qt VisualStudio ci conan zephyr ci distribution contrib test .git src/third_party`
+3. Replaced "throw" statements in CivetServer.cpp with abort().

@@ -98,11 +98,6 @@ TEST(sstream, Formatting) {
     }
     {
         sstream ss;
-        ss << (const void *) 0x12345678;
-        EXPECT_STREQ("0x12345678", ss.c_str());
-    }
-    {
-        sstream ss;
         ss << (const char *) "hello";
         EXPECT_STREQ("hello", ss.c_str());
     }

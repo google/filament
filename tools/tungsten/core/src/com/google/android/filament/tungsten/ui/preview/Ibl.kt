@@ -87,7 +87,7 @@ internal class Ibl(val engine: Engine, private val pathPrefix: String) {
         val faceOffsets = IntArray(6)
 
         val rawBuffers = cubemapFaces.map { face ->
-            val path = "$pathPrefix/$facePrefix$face.rgbm"
+            val path = "$pathPrefix/$facePrefix$face.rgb32f"
             val stream: InputStream = javaClass.classLoader.getResourceAsStream(path)
                     ?: throw RuntimeException("Could not get stream for cubemap face $path.")
 
@@ -121,15 +121,14 @@ internal class Ibl(val engine: Engine, private val pathPrefix: String) {
         buffer.position(0)
 
         val bufferDescriptor =
-                Texture.PixelBufferDescriptor(buffer, Texture.Format.RGBM, Texture.Type.UBYTE)
+                Texture.PixelBufferDescriptor(buffer, Texture.Format.RGB, Texture.Type.UBYTE)
 
         // If the texture hasn't been created yet, create it.
         val resultTexture = texture ?: Texture.Builder()
                 .width(size)
                 .height(size)
                 .levels(levels)
-                .format(Texture.InternalFormat.RGBA8)
-                .rgbm()
+                .format(Texture.InternalFormat.R11F_G11F_B10F)
                 .sampler(Texture.Sampler.SAMPLER_CUBEMAP)
                 .build(engine)
 

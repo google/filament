@@ -18,6 +18,7 @@ set(PUBLIC_HDRS
 )
 
 set(SRCS
+        src/BackendUtils.cpp
         src/CircularBuffer.cpp
         src/CommandBufferQueue.cpp
         src/CommandStream.cpp

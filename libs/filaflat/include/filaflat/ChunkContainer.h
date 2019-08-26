@@ -73,6 +73,10 @@ public:
         return mChunks.find(type) != mChunks.end();
     }
 
+    void const* getData() const { return mData; }
+
+    size_t getSize() const { return mSize; }
+
 private:
     bool parseChunk(Unflattener& unflattener);
 
