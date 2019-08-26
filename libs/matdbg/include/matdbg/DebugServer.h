@@ -17,7 +17,10 @@
 #ifndef MATDBG_DEBUGSERVER_H
 #define MATDBG_DEBUGSERVER_H
 
+#include <utils/compiler.h>
 #include <utils/CString.h>
+
+#include <backend/DriverEnums.h>
 
 #include <tsl/robin_map.h>
 
@@ -61,7 +64,7 @@ private:
 
     struct MaterialRecord {
         void* userdata;
-        uint8_t* package;
+        const uint8_t* package;
         size_t packageSize;
         utils::CString name;
         MaterialKey key;
@@ -69,7 +72,15 @@ private:
 
     const MaterialRecord* getRecord(const MaterialKey& key) const;
 
-    const ServerMode mServerMode;
+    /**
+     *  Replaces the entire content of a particular shader variant. The given shader index uses the
+     *  same ordering that the variants have within the package.
+     */
+    bool handleEditCommand(const MaterialKey& mat, backend::Backend api, int shaderIndex,
+            const char* newShaderContent, size_t newShaderLength);
+
+    UTILS_UNUSED const ServerMode mServerMode;
+
     CivetServer* mServer;
     tsl::robin_map<MaterialKey, MaterialRecord> mMaterialRecords;
     utils::CString mHtml;

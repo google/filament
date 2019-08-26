@@ -11,6 +11,7 @@ A new header is inserted each time a *tag* is created.
 - gltfio: Fixed a transforms issue with non-uniform scale.
 - webgl: Fixed an issue with JPEG textures.
 - Windows: fix link error in debug builds.
+- The web-based material inspector now allows editing GLSL code.
 
 ## v1.3.2
 

@@ -42,8 +42,6 @@ using filaflat::ChunkContainer;
 using filament::backend::Backend;
 using utils::Path;
 
-static const int alignment = 24;
-
 struct Config {
     bool printGLSL = false;
     bool printSPIRV = false;
