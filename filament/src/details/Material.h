@@ -31,6 +31,7 @@
 
 #include <utils/compiler.h>
 
+#include <atomic>
 
 namespace filament {
 
@@ -77,6 +78,11 @@ public:
     backend::Handle<backend::HwProgram> getSurfaceProgramSlow(uint8_t variantKey) const noexcept;
     backend::Handle<backend::HwProgram> getPostProcessProgramSlow(uint8_t variantKey) const noexcept;
     backend::Handle<backend::HwProgram> getProgram(uint8_t variantKey) const noexcept {
+#if FILAMENT_ENABLE_MATDBG
+        if (UTILS_UNLIKELY(mPendingEdits)) {
+            const_cast<FMaterial*>(this)->applyPendingEdits();
+        }
+#endif
         backend::Handle<backend::HwProgram> const entry = mCachedPrograms[variantKey];
         return UTILS_LIKELY(entry) ? entry : getProgramSlow(variantKey);
     }
@@ -122,6 +128,18 @@ public:
 
     uint32_t generateMaterialInstanceId() const noexcept { return mMaterialInstanceId++; }
 
+    void applyPendingEdits() noexcept;
+
+    void destroyPrograms(FEngine& engine);
+
+    // Callback handler for the debug server, potentially called from any thread. The userdata
+    // argument has the same value that was passed to DebugServer::addMaterial(), which should
+    // be an instance of the public-facing Material.
+    static void onEditCallback(void* userdata, const utils::CString& name, const void* packageData,
+            size_t packageSize);
+
+    static MaterialParser* createParser(backend::Backend backend, const void* data, size_t size);
+
 private:
     // try to order by frequency of use
     mutable std::array<backend::Handle<backend::HwProgram>, VARIANT_COUNT> mCachedPrograms;
@@ -160,6 +178,7 @@ private:
     const uint32_t mMaterialId;
     mutable uint32_t mMaterialInstanceId = 0;
     MaterialParser* mMaterialParser = nullptr;
+    std::atomic<MaterialParser*> mPendingEdits = {};
 };
 
 
