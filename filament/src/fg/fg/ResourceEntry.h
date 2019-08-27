@@ -38,7 +38,7 @@ public:
     // constants
     const char* const name;
     const uint16_t id;                      // for debugging and graphing
-    bool imported;
+    const bool imported;
 
     // updated by builder
     uint8_t version = 0;
