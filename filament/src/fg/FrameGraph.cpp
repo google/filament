@@ -109,7 +109,6 @@ void FrameGraph::Builder::createRenderTarget(const char* name,
     for (size_t i = 0; i < desc.attachments.textures.size(); i++) {
         FrameGraphRenderTarget::Attachments::AttachmentInfo attachmentInfo = desc.attachments.textures[i];
         if (attachmentInfo.isValid()) {
-            // FIXME: it would be nicer if we didn't have to know about the Texture resource type
             // figure out the attachment flags
             fg::ResourceEntry<FrameGraphTexture>& entry = fg.getResourceEntry(attachmentInfo.getHandle());
             entry.descriptor.usage |= usages[i];

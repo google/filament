@@ -43,29 +43,25 @@ public:
     // Return the name of the pass being executed
     const char* getPassName() const noexcept;
 
+    // get the resource for this handle
     template<typename T>
-    T const& get(FrameGraphHandle r) const noexcept {
-        fg::ResourceEntry<T> const& entry = getResourceEntry<T>(r);
-        return entry.getResource();
+    T const& get(FrameGraphId<T> handle) const noexcept {
+        return getResourceEntry(handle).getResource();
     }
 
-    backend::Handle<backend::HwTexture> getTexture(FrameGraphHandle r) const noexcept {
-        return get<FrameGraphTexture>(r).texture;
+    // get the descriptor of this resource
+    template<typename T>
+    typename T::Descriptor const& getDescriptor(FrameGraphId<T> handle) const {
+        // TODO: we should check that this FrameGraphHandle is indeed used by this pass
+        return getResourceEntry(handle).descriptor;
     }
 
+    // this is just a helper for FrameGraphTexture
+    backend::Handle<backend::HwTexture> getTexture(FrameGraphId<FrameGraphTexture> handle) const noexcept {
+        return get(handle).texture;
+    }
 
     RenderTargetInfo getRenderTarget(FrameGraphHandle r, uint8_t level = 0) const noexcept;
-
-
-    template<typename T>
-    typename T::Descriptor const& getDescriptor(FrameGraphHandle r) const {
-        // TODO: we should check that this FrameGraphHandle is indeed used by this pass
-        return getResourceEntry<T>(r).descriptor;
-    }
-
-    FrameGraphTexture::Descriptor const& getDescriptor(FrameGraphHandle r) const noexcept {
-        return getDescriptor<FrameGraphTexture>(r);
-    }
 
 private:
     friend class FrameGraph;
@@ -74,8 +70,8 @@ private:
     fg::ResourceEntryBase const& getResourceEntryBase(FrameGraphHandle r) const noexcept;
 
     template<typename T>
-    fg::ResourceEntry<T> const& getResourceEntry(FrameGraphHandle r) const noexcept {
-        return static_cast<fg::ResourceEntry<T> const&>(getResourceEntryBase(r));
+    fg::ResourceEntry<T> const& getResourceEntry(FrameGraphId<T> handle) const noexcept {
+        return static_cast<fg::ResourceEntry<T> const&>(getResourceEntryBase(handle));
     }
 
     FrameGraph& mFrameGraph;
