@@ -2745,6 +2745,14 @@ void OpenGLDriver::pushGroupMarker(char const* string,  size_t len) {
 #endif
 }
 
+void OpenGLDriver::startCapture(int) {
+
+}
+
+void OpenGLDriver::stopCapture(int) {
+
+}
+
 void OpenGLDriver::popGroupMarker(int) {
 #ifdef GL_EXT_debug_marker
     if (ext.EXT_debug_marker) {
