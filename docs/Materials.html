@@ -242,7 +242,7 @@ The type and range of each property is described in <a href="#table_standardprop
 <tr><td style="text-align:right"> <strong class="asterisk">roughness</strong> </td><td style="text-align:center"> float </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> &#xA0; </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">reflectance</strong> </td><td style="text-align:center"> float </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> Prefer values &gt; 0.35 </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">clearCoat</strong> </td><td style="text-align:center"> float </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> Should be 0 or 1 </td></tr>
-<tr><td style="text-align:right"> <strong class="asterisk">clearCoatRoughness</strong> </td><td style="text-align:center"> float </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> Remaps to [0..0.6] </td></tr>
+<tr><td style="text-align:right"> <strong class="asterisk">clearCoatRoughness</strong> </td><td style="text-align:center"> float </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> &#xA0; </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">anisotropy</strong> </td><td style="text-align:center"> float </td><td style="text-align:center"> [&#x2212;1..1] </td><td style="text-align:left"> Anisotropy is in the tangent direction when this value is positive </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">anisotropyDirection</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> Linear RGB, encodes a direction vector in tangent space </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">ambientOcclusion</strong> </td><td style="text-align:center"> float </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> &#xA0; </td></tr>
@@ -475,8 +475,7 @@ The effect of <code>clearCoat</code> on a rough metal is shown in <a href="#figu
 
 
 The <code>clearCoatRoughness</code> property is similar to the <code>roughness</code> property but applies only to the
-clear coat layer. In addition, since clear coat layers are never completely rough, the value between
-0 and 1 is remapped internally to an actual roughness of 0 to 0.6.
+clear coat layer.
 
 </p><p>
 

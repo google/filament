@@ -851,10 +851,10 @@ This corresponds to a Fresnel reflectance of 4% that we know is associated with 
 Because we must take into account the loss of energy caused by the addition of the clear coat layer, we can reformulate the BRDF from equation $\ref{brdf}$ thusly:
 
 $$\begin{equation}
-f(v,l)=\fDiffuse(n,l) (1 - F_c) + \fSpecular(n,l) (1 - F_c)^2 + f_c(n,l)
+f(v,l)=\fDiffuse(n,l) (1 - F_c) + \fSpecular(n,l) (1 - F_c) + f_c(n,l)
 \end{equation}$$
 
-Where $F_c$ is the Fresnel term of the clear coat BRDF and $f_c$ the clear coat BRDF. The multiplication by $(1 - F_c)^2$ of the specular component is to remain energy conservative as the light enters and exits the clear coat layer. The multiplication by $1 - F_c$ of the diffuse component is an attempt at energy conservation.
+Where $F_c$ is the Fresnel term of the clear coat BRDF and $f_c$ the clear coat BRDF 
 
 ### Clear coat parameterization
 
@@ -867,7 +867,7 @@ The clear coat material model encompasses all the parameters previously defined 
 **ClearCoatRoughness** | Perceived smoothness or roughness of the clear coat layer. Scalar between 0 and 1
 [Table [clearCoatParameters]: Clear coat model parameters]
 
-The clear coat roughness parameter is remapped and clamped in a similar way to the roughness parameter of the standard material. The main difference is that we want to lower the clear coat roughness range from [0..1] to the smaller [0..0.6] range. This remapping is arbitrary but matches the fact that clear coat layers are almost always glossy. The remapped value is squared to produce a perceptually linear roughness value.
+The clear coat roughness parameter is remapped and clamped in a similar way to the roughness parameter of the standard material.
 
 Figure [clearCoat] and figure [clearCoatRoughness] show how the clear coat parameters affect the appearance of a surface.
 
@@ -882,7 +882,7 @@ void BRDF(...) {
     // compute Fd and Fr from standard model
 
     // remapping and linearization of clear coat roughness
-    clearCoatPerceptualRoughness = mix(0.089, 0.6, clearCoatPerceptualRoughness);
+    clearCoatPerceptualRoughness = clamp(clearCoatPerceptualRoughness, 0.089, 1.0);
     clearCoatRoughness = clearCoatPerceptualRoughness * clearCoatPerceptualRoughness;
 
     // clear coat BRDF

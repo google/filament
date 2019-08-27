@@ -7,8 +7,6 @@
     #define MIN_ROUGHNESS            0.002025
 #endif
 
-#define MAX_CLEAR_COAT_PERCEPTUAL_ROUGHNESS 0.6
-
 #define MIN_N_DOT_V 1e-4
 
 float clampNoV(float NoV) {
