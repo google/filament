@@ -283,6 +283,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         FrameGraphId<FrameGraphTexture> color;
         FrameGraphId<FrameGraphTexture> depth;
         FrameGraphId<FrameGraphTexture> ssao;
+        FrameGraphRenderTargetHandle rt;
     };
 
     auto& colorPass = fg.addPass<ColorPassData>("Color Pass",
@@ -306,7 +307,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                 }
 
                 data.color = builder.write(builder.read(data.color, true));
-                builder.createRenderTarget("Color Pass Target", {
+                data.rt = builder.createRenderTarget("Color Pass Target", {
                         .samples = msaa,
                         .attachments.color = data.color,
                         .attachments.depth = data.depth
@@ -315,7 +316,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             [&pass, &ppm, colorPassBegin, colorPassEnd, jobFroxelize, &js, &view]
                     (FrameGraphPassResources const& resources,
                             ColorPassData const& data, DriverApi& driver) {
-                auto out = resources.getRenderTarget(data.color);
+                auto out = resources.getRenderTarget(data.rt);
                 Handle<HwTexture> ssao;
                 if (data.ssao.isValid()) {
                     ssao = resources.getTexture(data.ssao);

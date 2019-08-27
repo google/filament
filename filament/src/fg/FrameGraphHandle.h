@@ -108,6 +108,8 @@ public:
     explicit FrameGraphId(FrameGraphHandle r) : FrameGraphHandle(r) { }
 };
 
+using FrameGraphRenderTargetHandle = uint16_t;
+
 namespace FrameGraphRenderTarget {
 
 struct Attachments {
