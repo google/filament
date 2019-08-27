@@ -86,7 +86,7 @@ uint8_t FrameGraph::Builder::getSamples(FrameGraphId<FrameGraphTexture> r) const
     return isAttachment(r) ? getRenderTargetDescriptor(r).samples : 1;
 }
 
-void FrameGraph::Builder::createRenderTarget(const char* name,
+FrameGraphRenderTargetHandle FrameGraph::Builder::createRenderTarget(const char* name,
         FrameGraphRenderTarget::Descriptor const& desc, TargetBufferFlags clearFlags) noexcept {
 
     // TODO: add support for cubemaps and arrays
@@ -118,12 +118,13 @@ void FrameGraph::Builder::createRenderTarget(const char* name,
             node.renderTargetIndex = renderTarget.index;
         }
     }
+    return FrameGraphRenderTargetHandle(renderTarget.index);
 }
 
-void FrameGraph::Builder::createRenderTarget(FrameGraphId<FrameGraphTexture>& texture,
+FrameGraphRenderTargetHandle FrameGraph::Builder::createRenderTarget(FrameGraphId<FrameGraphTexture>& texture,
         TargetBufferFlags clearFlags) noexcept {
     texture = this->write(texture);
-    createRenderTarget(getName(texture), {
+    return createRenderTarget(getName(texture), {
             .attachments.color = texture,
             .samples = getSamples(texture)
     }, clearFlags);
@@ -168,28 +169,31 @@ fg::ResourceEntryBase const& FrameGraphPassResources::getResourceEntryBase(Frame
 }
 
 FrameGraphPassResources::RenderTargetInfo
-FrameGraphPassResources::getRenderTarget(FrameGraphHandle r, uint8_t level) const noexcept {
+FrameGraphPassResources::getRenderTarget(FrameGraphRenderTargetHandle handle, uint8_t level) const noexcept {
 
     FrameGraphPassResources::RenderTargetInfo info{};
     FrameGraph& fg = mFrameGraph;
-    auto const& resourceNodes = fg.mResourceNodes;
-    auto const& renderTargets = fg.mRenderTargets;
-    ResourceEntryBase const* const pResource = resourceNodes[r.index].resource;
 
-    // find a rendertarget in this pass that has this resource has attachment
+    fg::RenderTarget* const renderTarget = &fg.mRenderTargets[handle];
 
-    // TODO: for cubemaps/arrays, we'll need to be able to specify the face/index
-
-    for (auto i : mPass.renderTargets) {
-        fg::RenderTarget const* const renderTarget = &renderTargets[i];
-        auto const& desc = renderTarget->desc;
-        auto pos = std::find_if(
-                desc.attachments.textures.begin(),
-                desc.attachments.textures.end(),
-                [pResource, &resourceNodes, level](FrameGraphRenderTarget::Attachments::AttachmentInfo const& info) {
-                    return info.isValid() && resourceNodes[info.getHandle().index].resource == pResource && info.getLevel() == level;
-                });
-        if (pos != std::end(desc.attachments.textures)) {
+//    auto const& resourceNodes = fg.mResourceNodes;
+//    auto const& renderTargets = fg.mRenderTargets;
+//    ResourceEntryBase const* const pResource = resourceNodes[r.index].resource;
+//
+//    // find a rendertarget in this pass that has this resource has attachment
+//
+//    // TODO: for cubemaps/arrays, we'll need to be able to specify the face/index
+//
+//    for (auto i : mPass.renderTargets) {
+//        fg::RenderTarget const* const renderTarget = &renderTargets[i];
+//        auto const& desc = renderTarget->desc;
+//        auto pos = std::find_if(
+//                desc.attachments.textures.begin(),
+//                desc.attachments.textures.end(),
+//                [pResource, &resourceNodes, level](FrameGraphRenderTarget::Attachments::AttachmentInfo const& info) {
+//                    return info.isValid() && resourceNodes[info.getHandle().index].resource == pResource && info.getLevel() == level;
+//                });
+//        if (pos != std::end(desc.attachments.textures)) {
             assert(renderTarget->cache);
             info = renderTarget->cache->targetInfo;
             // overwrite discard flags with the per-rendertarget (per-pass) computed value
@@ -197,14 +201,14 @@ FrameGraphPassResources::getRenderTarget(FrameGraphHandle r, uint8_t level) cons
             info.params.flags.discardEnd   = renderTarget->targetFlags.discardEnd;
             info.params.flags.dependencies = renderTarget->targetFlags.dependencies;
             assert(info.target);
-            break;
-        }
-    }
+//            break;
+//        }
+//    }
     
     // check that this FrameGraphRenderTarget is indeed declared by this pass
     ASSERT_POSTCONDITION_NON_FATAL(info.target,
-            "Pass \"%s\" doesn't declare a rendertarget using \"%s\" -- expect graphic corruptions",
-            mPass.name, fg.getResourceNodeUnchecked(r).resource->name);
+            "Pass \"%s\" doesn't declare rendertarget \"%s\" -- expect graphic corruptions",
+            mPass.name, renderTarget->name);
     
 //    slog.d << mPass.name << ": resource = \"" << renderTarget.name << "\", flags = "
 //        << io::hex
