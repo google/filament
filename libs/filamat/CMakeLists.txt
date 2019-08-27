@@ -151,25 +151,8 @@ set(FILAMAT_DEPS
         spirv-cross-msl
         )
 
-# Loop through the dependent libraries and query their location on disk.
-set(FILAMAT_DEPS_FILES )
-foreach(DEPENDENCY ${FILAMAT_DEPS})
-    list(APPEND FILAMAT_DEPS_FILES "$<TARGET_FILE:${DEPENDENCY}>")
-endforeach()
-
-# Run the combine-static-libs script to bundle the libraries together.
 set(FILAMAT_COMBINED_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/libfilamat_combined.a")
-set(COMBINE_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/../../build/linux/combine-static-libs.sh")
-if (WIN32)
-    set(COMBINE_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/../../build/windows/combine-static-libs.bat")
-    set(CMAKE_AR "lib.exe")
-endif()
-add_custom_command(
-    TARGET filamat POST_BUILD
-    COMMAND "${COMBINE_SCRIPT}" "${CMAKE_AR}" "${FILAMAT_COMBINED_OUTPUT}" ${FILAMAT_DEPS_FILES}
-    COMMENT "Combining filamat dependencies into single shared library"
-    VERBATIM
-)
+combine_static_libs(filamat "${FILAMAT_COMBINED_OUTPUT}" "${FILAMAT_DEPS}")
 
 set(FILAMAT_LIB_NAME ${CMAKE_STATIC_LIBRARY_PREFIX}filamat${CMAKE_STATIC_LIBRARY_SUFFIX})
 install(FILES "${FILAMAT_COMBINED_OUTPUT}" DESTINATION lib/${DIST_DIR} RENAME ${FILAMAT_LIB_NAME})

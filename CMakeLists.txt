@@ -355,6 +355,28 @@ function(list_licenses OUTPUT MODULES)
     configure_file(${FILAMENT}/build/licenses.inc.in ${OUTPUT})
 endfunction(list_licenses)
 
+set(COMBINE_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/build/linux/combine-static-libs.sh")
+if (WIN32)
+    set(COMBINE_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/build/windows/combine-static-libs.bat")
+    set(CMAKE_AR "lib.exe")
+endif()
+
+# Add a custom command to TARGET that combines the static libraries in DEPS into a single archive.
+function(combine_static_libs TARGET OUTPUT DEPS)
+    # Loop through the dependent libraries and query their location on disk.
+    set(DEPS_FILES )
+    foreach(DEPENDENCY ${DEPS})
+        list(APPEND DEPS_FILES "$<TARGET_FILE:${DEPENDENCY}>")
+    endforeach()
+
+    add_custom_command(
+        TARGET ${TARGET} POST_BUILD
+        COMMAND "${COMBINE_SCRIPT}" "${CMAKE_AR}" "${OUTPUT}" ${DEPS_FILES}
+        COMMENT "Combining ${target} dependencies into single shared library"
+        VERBATIM
+    )
+endfunction()
+
 # ==================================================================================================
 # Configuration for CMAKE_CROSSCOMPILING.
 # ==================================================================================================
