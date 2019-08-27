@@ -170,6 +170,8 @@ void FEngine::init() {
         if (!debug.server->isReady()) {
             delete debug.server;
             debug.server = nullptr;
+        } else {
+            debug.server->setEditCallback(FMaterial::onEditCallback);
         }
     }
 #endif
