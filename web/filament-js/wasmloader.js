@@ -83,21 +83,6 @@ Filament.fetch = function(assets, onDone, onFetched) {
     var remainingAssets = assets.length;
     assets.forEach(function(name) {
         const lower = name.toLowerCase();
-        if (lower.endsWith('.jpeg') || lower.endsWith('.jpg')) {
-            var img = new Image();
-            img.src = name;
-            img.decoding = 'async';
-            img.onload = function() {
-                Filament.assets[name] = img;
-                if (onFetched) {
-                    onFetched(name);
-                }
-                if (--remainingAssets === 0 && onDone) {
-                    onDone();
-                }
-            };
-            return;
-        }
         fetch(name).then(function(response) {
             if (!response.ok) {
                 throw new Error(name);
