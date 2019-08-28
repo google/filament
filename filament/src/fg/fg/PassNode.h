@@ -49,7 +49,7 @@ struct PassNode { // 200
 
     // for Builder
     void declareRenderTarget(fg::RenderTarget& renderTarget) noexcept {
-        renderTargets.push_back(&renderTarget);
+        renderTargets.push_back(renderTarget.index);
     }
 
     FrameGraphHandle read(FrameGraph& fg, FrameGraphHandle const& handle, bool isRenderTarget = false) {
@@ -129,7 +129,7 @@ struct PassNode { // 200
     // set by the builder
     Vector<FrameGraphHandle> reads;               // resources we're reading from
     Vector<FrameGraphHandle> writes;              // resources we're writing to
-    Vector<fg::RenderTarget*> renderTargets;
+    Vector<uint16_t> renderTargets;
 
     // computed during compile()
     Vector<VirtualResource*> devirtualize;         // resources we need to create before executing
