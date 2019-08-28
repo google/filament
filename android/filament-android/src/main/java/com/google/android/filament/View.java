@@ -21,7 +21,7 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.annotation.Size;
 
-import static com.google.android.filament.Colors.*;
+import static com.google.android.filament.Colors.LinearColor;
 
 public class View {
     private long mNativeObject;

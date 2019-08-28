@@ -17,6 +17,7 @@
 package com.google.android.filament;
 
 import android.support.annotation.NonNull;
+
 import com.google.android.filament.proguard.UsedByNative;
 
 import java.nio.Buffer;
