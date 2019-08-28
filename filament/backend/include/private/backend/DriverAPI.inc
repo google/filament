@@ -449,6 +449,10 @@ DECL_DRIVER_API_2(pushGroupMarker,
 
 DECL_DRIVER_API_0(popGroupMarker)
 
+DECL_DRIVER_API_0(startCapture)
+
+DECL_DRIVER_API_0(stopCapture)
+
 
 /*
  * Read-back operations

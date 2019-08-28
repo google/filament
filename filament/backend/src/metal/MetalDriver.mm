@@ -710,6 +710,15 @@ void MetalDriver::popGroupMarker(int dummy) {
 
 }
 
+void MetalDriver::startCapture(int) {
+    [[MTLCaptureManager sharedCaptureManager] startCaptureWithDevice:mContext->device];
+}
+
+void MetalDriver::stopCapture(int) {
+    [[MTLCaptureManager sharedCaptureManager] stopCapture];
+}
+
+
 void MetalDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y, uint32_t width,
         uint32_t height, PixelBufferDescriptor&& data) {
 
