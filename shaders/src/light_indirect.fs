@@ -91,12 +91,7 @@ vec3 prefilteredRadiance(const vec3 r, float roughness, float offset) {
 }
 
 vec3 getSpecularDominantDirection(const vec3 n, const vec3 r, float roughness) {
-#if !defined(TARGET_MOBILE)
-    float s = 1.0 - roughness;
-    return mix(n, r, s * (sqrt(s) + roughness));
-#else
     return mix(r, n, roughness * roughness);
-#endif
 }
 
 vec3 specularDFG(const PixelParams pixel) {
