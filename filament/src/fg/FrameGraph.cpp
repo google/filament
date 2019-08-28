@@ -173,13 +173,15 @@ FrameGraphPassResources::getRenderTarget(FrameGraphHandle r, uint8_t level) cons
     FrameGraphPassResources::RenderTargetInfo info{};
     FrameGraph& fg = mFrameGraph;
     auto const& resourceNodes = fg.mResourceNodes;
+    auto const& renderTargets = fg.mRenderTargets;
     ResourceEntryBase const* const pResource = resourceNodes[r.index].resource;
 
     // find a rendertarget in this pass that has this resource has attachment
 
     // TODO: for cubemaps/arrays, we'll need to be able to specify the face/index
 
-    for (fg::RenderTarget const* renderTarget : mPass.renderTargets) {
+    for (auto i : mPass.renderTargets) {
+        fg::RenderTarget const* const renderTarget = &renderTargets[i];
         auto const& desc = renderTarget->desc;
         auto pos = std::find_if(
                 desc.attachments.textures.begin(),
@@ -440,6 +442,7 @@ TargetBufferFlags FrameGraph::computeDiscardFlags(DiscardPhase phase,
 
 FrameGraph& FrameGraph::compile() noexcept {
     Vector<fg::PassNode>& passNodes = mPassNodes;
+    Vector<fg::RenderTarget>& renderTargets = mRenderTargets;
     Vector<ResourceNode>& resourceNodes = mResourceNodes;
     Vector<UniquePtr<fg::ResourceEntryBase>>& resourceRegistry = mResourceEntries;
     Vector<UniquePtr<RenderTargetResource>>& renderTargetCache = mRenderTargetCache;
@@ -449,7 +452,6 @@ FrameGraph& FrameGraph::compile() noexcept {
      */
 
     if (!mAliases.empty()) {
-        Vector<fg::RenderTarget>& renderTargets = mRenderTargets;
         Vector<FrameGraphHandle> sratch(mArena); // keep out of loops to avoid reallocations
         for (fg::Alias const& alias : mAliases) {
             // disconnect all writes to "from"
@@ -568,8 +570,8 @@ FrameGraph& FrameGraph::compile() noexcept {
 
     // resolve render targets
     for (PassNode& pass : passNodes) {
-        for (fg::RenderTarget* pRenderTarget : pass.renderTargets) {
-            pRenderTarget->resolve(*this);
+        for (auto i : pass.renderTargets) {
+            renderTargets[i].resolve(*this);
         }
     }
 
@@ -598,8 +600,9 @@ FrameGraph& FrameGraph::compile() noexcept {
             // figure out which is the last pass to need this resource
             pResource->last = &pass;
         }
-        for (fg::RenderTarget* const pRenderTarget : pass.renderTargets) {
-            VirtualResource* const pResource = pRenderTarget->cache;
+        for (auto i : pass.renderTargets) {
+            fg::RenderTarget* const pRenderTarget = &renderTargets[i];
+            VirtualResource* const pResource = renderTargets[i].cache;
             // figure out which is the first pass to need this resource
             pResource->first = pResource->first ? pResource->first : &pass;
             // figure out which is the last pass to need this resource
