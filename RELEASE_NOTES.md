@@ -3,6 +3,11 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
+## Next release
+
+- Dielectrics now behave properly under a white furnace (energy preserving and conserving)
+- Clear coat roughness now remains in the 0..1 (previously remapped to the 0..0.6 range)
+
 ## v1.3.2
 
 - Added optional web server for real-time inspection of shader code.
