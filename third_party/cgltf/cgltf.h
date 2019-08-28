@@ -1441,17 +1441,17 @@ void cgltf_node_transform_local(const cgltf_node* node, cgltf_float* out_matrix)
 		float sz = node->scale[2];
 
 		lm[0] = (1 - 2 * qy*qy - 2 * qz*qz) * sx;
-		lm[1] = (2 * qx*qy + 2 * qz*qw) * sy;
-		lm[2] = (2 * qx*qz - 2 * qy*qw) * sz;
+		lm[1] = (2 * qx*qy + 2 * qz*qw) * sx;
+		lm[2] = (2 * qx*qz - 2 * qy*qw) * sx;
 		lm[3] = 0.f;
 
-		lm[4] = (2 * qx*qy - 2 * qz*qw) * sx;
+		lm[4] = (2 * qx*qy - 2 * qz*qw) * sy;
 		lm[5] = (1 - 2 * qx*qx - 2 * qz*qz) * sy;
-		lm[6] = (2 * qy*qz + 2 * qx*qw) * sz;
+		lm[6] = (2 * qy*qz + 2 * qx*qw) * sy;
 		lm[7] = 0.f;
 
-		lm[8] = (2 * qx*qz + 2 * qy*qw) * sx;
-		lm[9] = (2 * qy*qz - 2 * qx*qw) * sy;
+		lm[8] = (2 * qx*qz + 2 * qy*qw) * sz;
+		lm[9] = (2 * qy*qz - 2 * qx*qw) * sz;
 		lm[10] = (1 - 2 * qx*qx - 2 * qy*qy) * sz;
 		lm[11] = 0.f;
 
