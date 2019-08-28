@@ -51,7 +51,7 @@ public:
         SPECULAR_GLOSSINESS = 2,
     };
 
-    Material* mMaterials[9];
+    Material* mMaterials[18];
     Texture* mDummyTexture = nullptr;
 
     filament::Engine* mEngine;
@@ -61,18 +61,27 @@ public:
     .package(GLTFRESOURCES_ ## name ## _DATA, GLTFRESOURCES_ ## name ## _SIZE) \
     .build(*engine);
 
-#define MATINDEX(shading, alpha) (int(shading) + 3 * int(alpha))
+#define MATINDEX(shading, alpha, twosided) (int(shading) + 3 * int(alpha) + (twosided ? 9 : 0))
 
 UbershaderLoader::UbershaderLoader(Engine* engine) : mEngine(engine) {
-    mMaterials[MATINDEX(LIT, AlphaMode::OPAQUE)] = CREATE_MATERIAL(LIT_OPAQUE);
-    mMaterials[MATINDEX(LIT, AlphaMode::MASK)] = CREATE_MATERIAL(LIT_MASKED);
-    mMaterials[MATINDEX(LIT, AlphaMode::BLEND)] = CREATE_MATERIAL(LIT_FADE);
-    mMaterials[MATINDEX(UNLIT, AlphaMode::OPAQUE)] = CREATE_MATERIAL(UNLIT_OPAQUE);
-    mMaterials[MATINDEX(UNLIT, AlphaMode::MASK)] = CREATE_MATERIAL(UNLIT_MASKED);
-    mMaterials[MATINDEX(UNLIT, AlphaMode::BLEND)] = CREATE_MATERIAL(UNLIT_FADE);
-    mMaterials[MATINDEX(SPECULAR_GLOSSINESS, AlphaMode::OPAQUE)] = CREATE_MATERIAL(SPECULARGLOSSINESS_OPAQUE);
-    mMaterials[MATINDEX(SPECULAR_GLOSSINESS, AlphaMode::MASK)] = CREATE_MATERIAL(SPECULARGLOSSINESS_MASKED);
-    mMaterials[MATINDEX(SPECULAR_GLOSSINESS, AlphaMode::BLEND)] = CREATE_MATERIAL(SPECULARGLOSSINESS_FADE);
+    mMaterials[MATINDEX(LIT, AlphaMode::OPAQUE, false)] = CREATE_MATERIAL(LIT_OPAQUE_FALSE);
+    mMaterials[MATINDEX(LIT, AlphaMode::MASK, false)] = CREATE_MATERIAL(LIT_MASKED_FALSE);
+    mMaterials[MATINDEX(LIT, AlphaMode::BLEND, false)] = CREATE_MATERIAL(LIT_FADE_FALSE);
+    mMaterials[MATINDEX(UNLIT, AlphaMode::OPAQUE, false)] = CREATE_MATERIAL(UNLIT_OPAQUE_FALSE);
+    mMaterials[MATINDEX(UNLIT, AlphaMode::MASK, false)] = CREATE_MATERIAL(UNLIT_MASKED_FALSE);
+    mMaterials[MATINDEX(UNLIT, AlphaMode::BLEND, false)] = CREATE_MATERIAL(UNLIT_FADE_FALSE);
+    mMaterials[MATINDEX(SPECULAR_GLOSSINESS, AlphaMode::OPAQUE, false)] = CREATE_MATERIAL(SPECULARGLOSSINESS_OPAQUE_FALSE);
+    mMaterials[MATINDEX(SPECULAR_GLOSSINESS, AlphaMode::MASK, false)] = CREATE_MATERIAL(SPECULARGLOSSINESS_MASKED_FALSE);
+    mMaterials[MATINDEX(SPECULAR_GLOSSINESS, AlphaMode::BLEND, false)] = CREATE_MATERIAL(SPECULARGLOSSINESS_FADE_FALSE);
+    mMaterials[MATINDEX(LIT, AlphaMode::OPAQUE, true)] = CREATE_MATERIAL(LIT_OPAQUE_TRUE);
+    mMaterials[MATINDEX(LIT, AlphaMode::MASK, true)] = CREATE_MATERIAL(LIT_MASKED_TRUE);
+    mMaterials[MATINDEX(LIT, AlphaMode::BLEND, true)] = CREATE_MATERIAL(LIT_FADE_TRUE);
+    mMaterials[MATINDEX(UNLIT, AlphaMode::OPAQUE, true)] = CREATE_MATERIAL(UNLIT_OPAQUE_TRUE);
+    mMaterials[MATINDEX(UNLIT, AlphaMode::MASK, true)] = CREATE_MATERIAL(UNLIT_MASKED_TRUE);
+    mMaterials[MATINDEX(UNLIT, AlphaMode::BLEND, true)] = CREATE_MATERIAL(UNLIT_FADE_TRUE);
+    mMaterials[MATINDEX(SPECULAR_GLOSSINESS, AlphaMode::OPAQUE, true)] = CREATE_MATERIAL(SPECULARGLOSSINESS_OPAQUE_TRUE);
+    mMaterials[MATINDEX(SPECULAR_GLOSSINESS, AlphaMode::MASK, true)] = CREATE_MATERIAL(SPECULARGLOSSINESS_MASKED_TRUE);
+    mMaterials[MATINDEX(SPECULAR_GLOSSINESS, AlphaMode::BLEND, true)] = CREATE_MATERIAL(SPECULARGLOSSINESS_FADE_TRUE);
 
     #ifdef EMSCRIPTEN
     unsigned char texels[4] = {};
@@ -105,7 +114,7 @@ void UbershaderLoader::destroyMaterials() {
 Material* UbershaderLoader::getMaterial(const MaterialKey& config) const {
     const ShadingMode shading = config.unlit ? UNLIT :
             (config.useSpecularGlossiness ? SPECULAR_GLOSSINESS : LIT);
-    return mMaterials[MATINDEX(shading, config.alphaMode)];
+    return mMaterials[MATINDEX(shading, config.alphaMode, config.doubleSided)];
 }
 
 MaterialInstance* UbershaderLoader::createMaterialInstance(MaterialKey* config, UvMap* uvmap,
@@ -127,8 +136,6 @@ MaterialInstance* UbershaderLoader::createMaterialInstance(MaterialKey* config, 
             getUvIndex(config->metallicRoughnessUV, config->hasMetallicRoughnessTexture));
     mi->setParameter("aoIndex", getUvIndex(config->aoUV, config->hasOcclusionTexture));
     mi->setParameter("emissiveIndex", getUvIndex(config->emissiveUV, config->hasEmissiveTexture));
-
-    mi->setDoubleSided(config->doubleSided);
 
     mat3f identity;
     mi->setParameter("baseColorUvMatrix", identity);
