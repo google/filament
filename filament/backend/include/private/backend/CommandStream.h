@@ -99,7 +99,7 @@ public:
         // of return value -- it allows the compiler to perform the tail call optimization.
         intptr_t next;
         mExecute(driver, this, &next);
-        return reinterpret_cast<CommandBase*>(reinterpret_cast<char*>(this) + next);
+        return reinterpret_cast<CommandBase*>(reinterpret_cast<intptr_t>(this) + next);
     }
 
     inline ~CommandBase() noexcept = default;
