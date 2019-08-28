@@ -91,8 +91,8 @@ void getClearCoatPixelParams(const MaterialInputs material, inout PixelParams pi
 
     // Clamp the clear coat roughness to avoid divisions by 0
     float clearCoatPerceptualRoughness = material.clearCoatRoughness;
-    clearCoatPerceptualRoughness = mix(MIN_PERCEPTUAL_ROUGHNESS,
-            MAX_CLEAR_COAT_PERCEPTUAL_ROUGHNESS, clearCoatPerceptualRoughness);
+    clearCoatPerceptualRoughness =
+            clamp(clearCoatPerceptualRoughness, MIN_PERCEPTUAL_ROUGHNESS, 1.0);
 
 #if defined(GEOMETRIC_SPECULAR_AA)
     clearCoatPerceptualRoughness =
@@ -160,7 +160,7 @@ void getEnergyCompensationPixelParams(inout PixelParams pixel) {
     // Pre-filtered DFG term used for image-based lighting
     pixel.dfg = prefilteredDFG(pixel.perceptualRoughness, shading_NoV);
 
-#if defined(USE_MULTIPLE_SCATTERING_COMPENSATION) && !defined(SHADING_MODEL_CLOTH)
+#if !defined(SHADING_MODEL_CLOTH)
     // Energy compensation for multiple scattering in a microfacet model
     // See "Multiple-Scattering Microfacet BSDFs with the Smith Model"
     pixel.energyCompensation = 1.0 + pixel.f0 * (1.0 / pixel.dfg.y - 1.0);

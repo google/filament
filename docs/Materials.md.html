@@ -100,7 +100,7 @@ The type and range of each property is described in table [standardPropertiesTyp
 **roughness**           | float    |  [0..1]                  |
 **reflectance**         | float    |  [0..1]                  | Prefer values > 0.35
 **clearCoat**           | float    |  [0..1]                  | Should be 0 or 1
-**clearCoatRoughness**  | float    |  [0..1]                  | Remaps to [0..0.6]
+**clearCoatRoughness**  | float    |  [0..1]                  |
 **anisotropy**          | float    |  [-1..1]                 | Anisotropy is in the tangent direction when this value is positive
 **anisotropyDirection** | float3   |  [0..1]                  | Linear RGB, encodes a direction vector in tangent space
 **ambientOcclusion**    | float    |  [0..1]                  |
@@ -268,8 +268,7 @@ The effect of `clearCoat` on a rough metal is shown in figure [clearCoatProperty
 ### Clear coat roughness
 
 The `clearCoatRoughness` property is similar to the `roughness` property but applies only to the
-clear coat layer. In addition, since clear coat layers are never completely rough, the value between
-0 and 1 is remapped internally to an actual roughness of 0 to 0.6.
+clear coat layer.
 
 The effect of `clearCoatRoughness` on a rough metal is shown in figure [clearCoatRoughnessProperty]
 (click on the image to see a larger version).

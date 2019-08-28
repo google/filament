@@ -271,9 +271,6 @@ const std::string ShaderGenerator::createFragmentProgram(filament::backend::Shad
     utils::io::sstream fs;
     cg.generateProlog(fs, ShaderType::FRAGMENT, material.hasExternalSamplers);
 
-    // this should probably be a code generation option
-    cg.generateDefine(fs, "USE_MULTIPLE_SCATTERING_COMPENSATION", true);
-
     cg.generateDefine(fs, "GEOMETRIC_SPECULAR_AA", material.specularAntiAliasing && lit);
 
     cg.generateDefine(fs, "CLEAR_COAT_IOR_CHANGE", material.clearCoatIorChange);
