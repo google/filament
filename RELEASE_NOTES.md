@@ -7,6 +7,7 @@ A new header is inserted each time a *tag* is created.
 
 - Dielectrics now behave properly under a white furnace (energy preserving and conserving)
 - Clear coat roughness now remains in the 0..1 (previously remapped to the 0..0.6 range)
+- Fixed several issues with gltfio ubershader mode.
 
 ## v1.3.2
 

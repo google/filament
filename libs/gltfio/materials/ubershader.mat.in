@@ -4,7 +4,7 @@ material {
     shadingModel : ${SHADINGMODEL},
     blending : ${BLENDING},
     depthWrite : true,
-    doubleSided : false,
+    doubleSided : ${DOUBLESIDED},
     flipUV : false,
     parameters : [
 

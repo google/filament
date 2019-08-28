@@ -147,7 +147,7 @@ public:
 
     /**
      * Enables or disables double-sided lighting if the parent Material has double-sided capability,
-     * otherwise prints a warning.
+     * otherwise prints a warning. Does not affect backface culling.
      */
     void setDoubleSided(bool doubleSided) noexcept;
 };
