@@ -440,6 +440,7 @@ using Mutex = utils::Mutex;
 
 namespace TrackingPolicy {
 
+// default no-op tracker
 struct Untracked {
     Untracked() noexcept = default;
     Untracked(const char* name, size_t size) noexcept { }
@@ -449,30 +450,34 @@ struct Untracked {
     void onRewind(void* addr) noexcept { }
 };
 
-// This high watermark tracker works only with allocator that either implement
-// free(void*, size_t), or reset() / rewind()
-
+// This just track the max memory usage and logs it in the destructor
 struct HighWatermark {
     HighWatermark() noexcept = default;
-    HighWatermark(const char* name, size_t size) noexcept
-            : mName(name), mSize(uint32_t(size)) { }
+    HighWatermark(const char* name, size_t size) noexcept : mName(name), mSize(uint32_t(size)) { }
     ~HighWatermark() noexcept;
-    void onAlloc(void* p, size_t size, size_t alignment, size_t extra) noexcept {
-        if (!mBase) { mBase = p; }
-        mCurrent += uint32_t(size);
-        mHighWaterMark = mCurrent > mHighWaterMark ? mCurrent : mHighWaterMark;
-    }
+    void onAlloc(void* p, size_t size, size_t alignment, size_t extra) noexcept;
     void onFree(void* p, size_t size) noexcept { mCurrent -= uint32_t(size); }
     void onReset() noexcept {  mCurrent = 0; }
     void onRewind(void const* addr) noexcept { mCurrent = uint32_t(uintptr_t(addr) - uintptr_t(mBase)); }
-
-private:
+protected:
     const char* mName = nullptr;
     void* mBase = nullptr;
     uint32_t mSize = 0;
     uint32_t mCurrent = 0;
     uint32_t mHighWaterMark = 0;
 };
+
+// This just fills buffers with known values to help catch uninitialized access and use after free.
+// It also tracks the high water mark
+struct Debug : protected HighWatermark {
+    Debug() noexcept = default;
+    Debug(const char* name, size_t size) noexcept : HighWatermark(name, size) { }
+    void onAlloc(void* p, size_t size, size_t alignment, size_t extra) noexcept;
+    void onFree(void* p, size_t = 0) noexcept;
+    void onReset() noexcept;
+    void onRewind(void* addr) noexcept;
+};
+
 
 } // namespace TrackingPolicy
 

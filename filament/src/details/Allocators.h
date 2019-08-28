@@ -42,7 +42,7 @@ using HeapAllocatorArena = utils::Arena<
 using LinearAllocatorArena = utils::Arena<
         utils::LinearAllocator,
         utils::LockingPolicy::NoLock,
-        utils::TrackingPolicy::HighWatermark>;
+        utils::TrackingPolicy::Debug>;
 
 #else
 
