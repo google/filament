@@ -196,7 +196,7 @@ bool Froxelizer::prepare(
     assert(mFroxelShardedData.begin());
 
     // initialize buffers that need to be
-    memset(mLightRecords.data(),0, mLightRecords.sizeInBytes());
+    memset(mLightRecords.data(), 0, mLightRecords.sizeInBytes());
 
     return uniformsNeedUpdating;
 }

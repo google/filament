@@ -228,7 +228,7 @@ private:
 #ifndef NDEBUG
     using HandleArena = utils::Arena<HandleAllocator,
             utils::LockingPolicy::SpinLock,
-            utils::TrackingPolicy::HighWatermark>;
+            utils::TrackingPolicy::Debug>;
 #else
     using HandleArena = utils::Arena<HandleAllocator,
             utils::LockingPolicy::SpinLock>;
