@@ -10,6 +10,7 @@ A new header is inserted each time a *tag* is created.
 - gltfio: Fixed several limitations with ubershader mode.
 - gltfio: Fixed a transforms issue with non-uniform scale.
 - webgl: Fixed an issue with JPEG textures.
+- Windows: fix link error in debug builds.
 
 ## v1.3.2
 
