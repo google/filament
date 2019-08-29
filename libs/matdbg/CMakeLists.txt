@@ -89,3 +89,10 @@ if (MSVC OR CLANG_CL)
 else()
     target_compile_options(${TARGET} PRIVATE $<$<CONFIG:Release>:-ffast-math>)
 endif()
+
+# ==================================================================================================
+# Installation
+# ==================================================================================================
+
+install(TARGETS ${TARGET} ARCHIVE DESTINATION lib/${DIST_DIR})
+install(DIRECTORY ${PUBLIC_HDR_DIR}/matdbg DESTINATION include)
