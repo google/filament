@@ -31,13 +31,21 @@ public class VertexBuffer {
     }
 
     public enum VertexAttribute {
-        POSITION, // XYZ position (float3)
-        TANGENTS, // tangent, bitangent and normal, encoded as a quaternion (4 floats or half floats)
-        COLOR, // vertex color (float4)
-        UV0, // texture coordinates (float2)
-        UV1, // texture coordinates (float2)
+        POSITION,     // XYZ position (float3)
+        TANGENTS,     // tangent, bitangent and normal, encoded as a quaternion (4 floats or half floats)
+        COLOR,        // vertex color (float4)
+        UV0,          // texture coordinates (float2)
+        UV1,          // texture coordinates (float2)
         BONE_INDICES, // indices of 4 bones (uvec4)
-        BONE_WEIGHTS    // weights of the 4 bones (normalized float4)
+        BONE_WEIGHTS, // weights of the 4 bones (normalized float4)
+        CUSTOM0,      // custom or MORPH_POSITION_0
+        CUSTOM1,      // custom or MORPH_POSITION_1
+        CUSTOM2,      // custom or MORPH_POSITION_2
+        CUSTOM3,      // custom or MORPH_POSITION_3
+        CUSTOM4,      // custom or MORPH_TANGENTS_0
+        CUSTOM5,      // custom or MORPH_TANGENTS_1
+        CUSTOM6,      // custom or MORPH_TANGENTS_2
+        CUSTOM7       // custom or MORPH_TANGENTS_3
     }
 
     public enum AttributeType {
