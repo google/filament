@@ -122,16 +122,12 @@ public:
             return mFrameGraph.getDescriptor<T>(r);
         }
 
-        // return a render target's attachment sample count. Returns 1 if the resource
-        // is not an attachement to some rendertarget
-        uint8_t getSamples(FrameGraphId<FrameGraphTexture> r) const noexcept;
-
         // returns whether this texture resource is an attachment to some rendertarget
         bool isAttachment(FrameGraphId<FrameGraphTexture> r) const noexcept;
 
         // returns the descriptor of the render target this attachment belongs to
         FrameGraphRenderTarget::Descriptor const& getRenderTargetDescriptor(
-                FrameGraphId<FrameGraphTexture> attachment) const;
+                FrameGraphRenderTargetHandle handle) const;
 
     private:
         friend class FrameGraph;
@@ -263,8 +259,8 @@ private:
             fg::PassNode const* curr, fg::PassNode const* first,
             fg::RenderTarget const& renderTarget);
 
-    bool equals(FrameGraphRenderTarget::Descriptor const& lhs,
-            FrameGraphRenderTarget::Descriptor const& rhs) const noexcept;
+    bool equals(FrameGraphRenderTarget::Descriptor const& cacheEntry,
+            FrameGraphRenderTarget::Descriptor const& rt) const noexcept;
 
     void executeInternal(fg::PassNode const& node, backend::DriverApi& driver) noexcept;
 
