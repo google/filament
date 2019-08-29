@@ -345,11 +345,25 @@ DebugServer::DebugServer(ServerMode mode, int port) : mServerMode(mode) {
     mCss = CString((const char*) MATDBG_RESOURCES_STYLE_DATA, MATDBG_RESOURCES_STYLE_SIZE - 1);
     #endif
 
-    const char* kServerOptions[] = { "listening_ports", "8080", nullptr };
+    // By default the server spawns 50 threads so we override this to 2. This limits the server
+    // to having no more than 2 HTTP clients, which is perfectly fine for debugging purposes.
+    const char* kServerOptions[] = {
+        "listening_ports", "8080",
+        "num_threads", "2",
+        "error_log_file", "civetweb.txt",
+        nullptr
+    };
     std::string portString = std::to_string(port);
     kServerOptions[1] = portString.c_str();
 
     mServer = new CivetServer(kServerOptions);
+    if (!mServer->getContext()) {
+        delete mServer;
+        mServer = nullptr;
+        slog.e << "Unable to start DebugServer, see civetweb.txt for details." << io::endl;
+        return;
+    }
+
     mFileHandler = new FileRequestHandler(this);
     mRestHandler = new RestRequestHandler(this);
     mWebSocketHandler = new WebSocketHandler(this);
