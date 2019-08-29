@@ -177,7 +177,7 @@ Java_com_google_android_filament_Texture_nSetImage(JNIEnv* env, jclass, jlong na
             (Texture::Type) type, (size_t) stride, (size_t) alignment);
 
     AutoBuffer nioBuffer(env, storage, 0);
-    if (sizeInBytes > (remaining << nioBuffer.getShift())) {
+    if (sizeInBytes > (size_t(remaining) << nioBuffer.getShift())) {
         // BufferOverflowException
         return -1;
     }
@@ -199,8 +199,7 @@ extern "C" JNIEXPORT jint JNICALL
 Java_com_google_android_filament_Texture_nSetImageCompressed(JNIEnv *env, jclass,
         jlong nativeTexture, jlong nativeEngine, jint level, jint xoffset, jint yoffset,
         jint width, jint height, jobject storage,  jint remaining,
-        jint left, jint bottom, jint type, jint alignment,
-        jint compressedSizeInBytes, jint compressedFormat,
+        jint, jint, jint, jint, jint compressedSizeInBytes, jint compressedFormat,
         jobject handler, jobject runnable) {
     Texture *texture = (Texture *) nativeTexture;
     Engine *engine = (Engine *) nativeEngine;
@@ -208,7 +207,7 @@ Java_com_google_android_filament_Texture_nSetImageCompressed(JNIEnv *env, jclass
     size_t sizeInBytes = (size_t) compressedSizeInBytes;
 
     AutoBuffer nioBuffer(env, storage, 0);
-    if (sizeInBytes > (remaining << nioBuffer.getShift())) {
+    if (sizeInBytes > (size_t(remaining) << nioBuffer.getShift())) {
         // BufferOverflowException
         return -1;
     }
@@ -235,7 +234,7 @@ Java_com_google_android_filament_Texture_nSetImageCubemap(JNIEnv *env, jclass,
     Texture *texture = (Texture *) nativeTexture;
     Engine *engine = (Engine *) nativeEngine;
 
-    jint *faceOffsetsInBytes = env->GetIntArrayElements(faceOffsetsInBytes_, NULL);
+    jint *faceOffsetsInBytes = env->GetIntArrayElements(faceOffsetsInBytes_, nullptr);
     Texture::FaceOffsets faceOffsets;
     std::copy_n(faceOffsetsInBytes, 6, faceOffsets.offsets);
     env->ReleaseIntArrayElements(faceOffsetsInBytes_, faceOffsetsInBytes, JNI_ABORT);
@@ -244,7 +243,7 @@ Java_com_google_android_filament_Texture_nSetImageCubemap(JNIEnv *env, jclass,
             (Texture::Type) type, (size_t) stride, (size_t) alignment);
 
     AutoBuffer nioBuffer(env, storage, 0);
-    if (sizeInBytes > (remaining << nioBuffer.getShift())) {
+    if (sizeInBytes > (size_t(remaining) << nioBuffer.getShift())) {
         // BufferOverflowException
         return -1;
     }
@@ -271,7 +270,7 @@ Java_com_google_android_filament_Texture_nSetImageCubemapCompressed(JNIEnv *env,
     Texture *texture = (Texture *) nativeTexture;
     Engine *engine = (Engine *) nativeEngine;
 
-    jint *faceOffsetsInBytes = env->GetIntArrayElements(faceOffsetsInBytes_, NULL);
+    jint *faceOffsetsInBytes = env->GetIntArrayElements(faceOffsetsInBytes_, nullptr);
     Texture::FaceOffsets faceOffsets;
     std::copy_n(faceOffsetsInBytes, 6, faceOffsets.offsets);
     env->ReleaseIntArrayElements(faceOffsetsInBytes_, faceOffsetsInBytes, JNI_ABORT);
@@ -279,7 +278,7 @@ Java_com_google_android_filament_Texture_nSetImageCubemapCompressed(JNIEnv *env,
     size_t sizeInBytes = 6 * (size_t) compressedSizeInBytes;
 
     AutoBuffer nioBuffer(env, storage, 0);
-    if (sizeInBytes > (remaining << nioBuffer.getShift())) {
+    if (sizeInBytes > (size_t(remaining) << nioBuffer.getShift())) {
         // BufferOverflowException
         return -1;
     }
@@ -340,28 +339,29 @@ Java_com_google_android_filament_Texture_nGeneratePrefilterMipmap(JNIEnv *env, j
     Texture *texture = (Texture *) nativeTexture;
     Engine *engine = (Engine *) nativeEngine;
 
-    jint *faceOffsetsInBytes = env->GetIntArrayElements(faceOffsetsInBytes_, NULL);
+    jint *faceOffsetsInBytes = env->GetIntArrayElements(faceOffsetsInBytes_, nullptr);
     Texture::FaceOffsets faceOffsets;
     std::copy_n(faceOffsetsInBytes, 6, faceOffsets.offsets);
     env->ReleaseIntArrayElements(faceOffsetsInBytes_, faceOffsetsInBytes, JNI_ABORT);
 
     stride = stride ? stride : width;
     size_t sizeInBytes = 6 *
-                         Texture::computeTextureDataSize((Texture::Format) format, (Texture::Type) type,
-                                 (size_t) stride, (size_t) height, (size_t) alignment);
+            Texture::computeTextureDataSize((Texture::Format) format, (Texture::Type) type,
+                                            (size_t) stride, (size_t) height, (size_t) alignment);
 
     AutoBuffer nioBuffer(env, storage, 0);
-    if (sizeInBytes > (remaining << nioBuffer.getShift())) {
+    if (sizeInBytes > (size_t(remaining) << nioBuffer.getShift())) {
         // BufferOverflowException
         return -1;
     }
 
-    void *buffer = nioBuffer.getData();
-    auto *callback = JniBufferCallback::make(engine, env, handler, runnable, std::move(nioBuffer));
+    void* buffer = nioBuffer.getData();
+    auto* callback = JniBufferCallback::make(engine, env, handler, runnable, std::move(nioBuffer));
 
     Texture::PixelBufferDescriptor desc(buffer, sizeInBytes, (backend::PixelDataFormat) format,
-            (backend::PixelDataType) type, (uint8_t) alignment, (uint32_t)0, (uint32_t)0,
-            (uint32_t) stride, &JniBufferCallback::invoke, callback);
+            (backend::PixelDataType) type, (uint8_t) alignment,
+            (uint32_t) left, (uint32_t) top, (uint32_t) stride,
+            &JniBufferCallback::invoke, callback);
 
     Texture::PrefilterOptions options;
     options.sampleCount = sampleCount;
