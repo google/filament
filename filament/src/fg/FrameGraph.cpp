@@ -73,17 +73,10 @@ bool FrameGraph::Builder::isAttachment(FrameGraphId<FrameGraphTexture> r) const 
 }
 
 FrameGraphRenderTarget::Descriptor const&
-FrameGraph::Builder::getRenderTargetDescriptor(FrameGraphId<FrameGraphTexture> attachment) const {
+FrameGraph::Builder::getRenderTargetDescriptor(FrameGraphRenderTargetHandle handle) const {
     FrameGraph& fg = mFrameGraph;
-    ResourceNode& node = fg.getResourceNodeUnchecked(attachment);
-    ASSERT_POSTCONDITION(node.renderTargetIndex != ResourceNode::UNINITIALIZED,
-            "Resource \"%s\" isn't a render target attachment", node.resource->name);
-    assert(node.renderTargetIndex < fg.mRenderTargets.size());
-    return fg.mRenderTargets[node.renderTargetIndex].desc;
-}
-
-uint8_t FrameGraph::Builder::getSamples(FrameGraphId<FrameGraphTexture> r) const noexcept {
-    return isAttachment(r) ? getRenderTargetDescriptor(r).samples : 1;
+    assert(handle < fg.mRenderTargets.size());
+    return fg.mRenderTargets[handle].desc;
 }
 
 FrameGraphRenderTargetHandle FrameGraph::Builder::createRenderTarget(const char* name,
@@ -112,10 +105,6 @@ FrameGraphRenderTargetHandle FrameGraph::Builder::createRenderTarget(const char*
             // figure out the attachment flags
             fg::ResourceEntry<FrameGraphTexture>& entry = fg.getResourceEntry(attachmentInfo.getHandle());
             entry.descriptor.usage |= usages[i];
-
-            // renderTargetIndex is used to retrieve the Descriptor
-            ResourceNode& node = fg.getResourceNode(attachmentInfo.getHandle());
-            node.renderTargetIndex = renderTarget.index;
         }
     }
     return FrameGraphRenderTargetHandle(renderTarget.index);
@@ -125,8 +114,7 @@ FrameGraphRenderTargetHandle FrameGraph::Builder::createRenderTarget(FrameGraphI
         TargetBufferFlags clearFlags) noexcept {
     texture = this->write(texture);
     return createRenderTarget(getName(texture), {
-            .attachments.color = texture,
-            .samples = getSamples(texture)
+            .attachments.color = texture
     }, clearFlags);
 }
 
@@ -170,45 +158,24 @@ fg::ResourceEntryBase const& FrameGraphPassResources::getResourceEntryBase(Frame
 
 FrameGraphPassResources::RenderTargetInfo
 FrameGraphPassResources::getRenderTarget(FrameGraphRenderTargetHandle handle, uint8_t level) const noexcept {
-
     FrameGraphPassResources::RenderTargetInfo info{};
     FrameGraph& fg = mFrameGraph;
 
-    fg::RenderTarget* const renderTarget = &fg.mRenderTargets[handle];
+    fg::RenderTarget& renderTarget = fg.mRenderTargets[handle];
+    assert(renderTarget.cache);
 
-//    auto const& resourceNodes = fg.mResourceNodes;
-//    auto const& renderTargets = fg.mRenderTargets;
-//    ResourceEntryBase const* const pResource = resourceNodes[r.index].resource;
-//
-//    // find a rendertarget in this pass that has this resource has attachment
-//
-//    // TODO: for cubemaps/arrays, we'll need to be able to specify the face/index
-//
-//    for (auto i : mPass.renderTargets) {
-//        fg::RenderTarget const* const renderTarget = &renderTargets[i];
-//        auto const& desc = renderTarget->desc;
-//        auto pos = std::find_if(
-//                desc.attachments.textures.begin(),
-//                desc.attachments.textures.end(),
-//                [pResource, &resourceNodes, level](FrameGraphRenderTarget::Attachments::AttachmentInfo const& info) {
-//                    return info.isValid() && resourceNodes[info.getHandle().index].resource == pResource && info.getLevel() == level;
-//                });
-//        if (pos != std::end(desc.attachments.textures)) {
-            assert(renderTarget->cache);
-            info = renderTarget->cache->targetInfo;
-            // overwrite discard flags with the per-rendertarget (per-pass) computed value
-            info.params.flags.discardStart = renderTarget->targetFlags.discardStart;
-            info.params.flags.discardEnd   = renderTarget->targetFlags.discardEnd;
-            info.params.flags.dependencies = renderTarget->targetFlags.dependencies;
-            assert(info.target);
-//            break;
-//        }
-//    }
-    
+    info = renderTarget.cache->targetInfo;
+    assert(info.target);
+
+    // overwrite discard flags with the per-rendertarget (per-pass) computed value
+    info.params.flags.discardStart = renderTarget.targetFlags.discardStart;
+    info.params.flags.discardEnd   = renderTarget.targetFlags.discardEnd;
+    info.params.flags.dependencies = renderTarget.targetFlags.dependencies;
+
     // check that this FrameGraphRenderTarget is indeed declared by this pass
     ASSERT_POSTCONDITION_NON_FATAL(info.target,
             "Pass \"%s\" doesn't declare rendertarget \"%s\" -- expect graphic corruptions",
-            mPass.name, renderTarget->name);
+            mPass.name, renderTarget.name);
     
 //    slog.d << mPass.name << ": resource = \"" << renderTarget.name << "\", flags = "
 //        << io::hex
@@ -227,10 +194,8 @@ FrameGraph::FrameGraph(fg::ResourceAllocator& resourceAllocator)
           mResourceNodes(mArena),
           mRenderTargets(mArena),
           mAliases(mArena),
-//          mResourceRegistry(mArena),
           mResourceEntries(mArena),
-          mRenderTargetCache(mArena)
-          {
+          mRenderTargetCache(mArena) {
 //    slog.d << "PassNode: " << sizeof(PassNode) << io::endl;
 //    slog.d << "ResourceNode: " << sizeof(ResourceNode) << io::endl;
 //    slog.d << "Resource: " << sizeof(Resource) << io::endl;
@@ -329,12 +294,19 @@ fg::ResourceEntryBase& FrameGraph::getResourceEntryBaseUnchecked(FrameGraphHandl
     return *node.resource;
 }
 
-bool FrameGraph::equals(FrameGraphRenderTarget::Descriptor const& lhs,
-        FrameGraphRenderTarget::Descriptor const& rhs) const noexcept {
+bool FrameGraph::equals(FrameGraphRenderTarget::Descriptor const& cacheEntry,
+        FrameGraphRenderTarget::Descriptor const& rt) const noexcept {
     const Vector<ResourceNode>& resourceNodes = mResourceNodes;
+
+    // if the rendertarget we're looking up doesn't has the sample field set to 0, it means the
+    // user didn't specify it, and it's okay to match it to any sample count.
+    // Otherwise, sample count must match, with the caveat that 0 or 1 are treated the same.
+    const bool samplesMatch = (!rt.samples) ||
+            (std::max<uint8_t>(1u, cacheEntry.samples) == std::max<uint8_t>(1u, rt.samples));
+
     return std::equal(
-            lhs.attachments.textures.begin(), lhs.attachments.textures.end(),
-            rhs.attachments.textures.begin(), rhs.attachments.textures.end(),
+            cacheEntry.attachments.textures.begin(), cacheEntry.attachments.textures.end(),
+            rt.attachments.textures.begin(), rt.attachments.textures.end(),
             [&resourceNodes](
                     FrameGraphRenderTarget::Attachments::AttachmentInfo lhs,
                     FrameGraphRenderTarget::Attachments::AttachmentInfo rhs) {
@@ -359,7 +331,7 @@ bool FrameGraph::equals(FrameGraphRenderTarget::Descriptor const& lhs,
                     return true;
                 }
                 return false;
-            }) && lhs.samples == rhs.samples;
+            }) && samplesMatch;
 }
 
 FrameGraphId<FrameGraphTexture> FrameGraph::importResource(const char* name,

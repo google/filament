@@ -150,7 +150,7 @@ struct Attachments {
 struct Descriptor {
     Attachments attachments;
     Viewport viewport;
-    uint8_t samples = 1;            // # of samples
+    uint8_t samples = 0; // # of samples (0 = unset, default)
 };
 
 } // namespace FrameGraphRenderTarget

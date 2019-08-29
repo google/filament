@@ -39,10 +39,6 @@ struct ResourceNode { // 24
     PassNode* writer = nullptr;     // writer to this node
     uint32_t readerCount = 0;       // # of passes reading from this resource
 
-    // updated by builder
-    static constexpr uint16_t UNINITIALIZED = std::numeric_limits<uint16_t>::max();
-    uint16_t renderTargetIndex = UNINITIALIZED;      // used to retrieve the RT infos
-
     // constants
     const uint8_t version;          // version of the resource when the node was created
 };

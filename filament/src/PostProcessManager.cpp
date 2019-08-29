@@ -272,8 +272,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(
                 data.input = builder.read(input, true);
 
                 data.srt = builder.createRenderTarget(builder.getName(data.input),
-                        { .attachments.color = { data.input },
-                          .samples = builder.getSamples(data.input)
+                        { .attachments.color = { data.input }
                         });
 
                 data.output = builder.createTexture("resolve output", {
@@ -312,8 +311,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dynamicScaling(FrameGraph& f
                 data.input = builder.read(input, true);
 
                 data.srt = builder.createRenderTarget(builder.getName(data.input),
-                        { .attachments.color = { data.input },
-                          .samples = builder.getSamples(data.input)
+                        { .attachments.color = { data.input }
                         });
 
                 data.output = builder.createTexture("scale output", {

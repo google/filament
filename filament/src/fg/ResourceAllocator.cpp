@@ -102,7 +102,7 @@ RenderTargetHandle ResourceAllocator::createRenderTarget(
         uint8_t samples, TargetBufferInfo color, TargetBufferInfo depth,
         TargetBufferInfo stencil) noexcept {
     return mBackend.createRenderTarget(targetBufferFlags,
-            width, height, samples, color, depth, stencil);
+            width, height, samples ? samples : 1u, color, depth, stencil);
 }
 
 void ResourceAllocator::destroyRenderTarget(RenderTargetHandle h) noexcept {
