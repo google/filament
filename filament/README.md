@@ -123,7 +123,8 @@ clean:
 Note that the static libraries distributed for Windows include several
 variants: mt, md, mtd, mdd. These correspond to the [run-time library
 flags](https://docs.microsoft.com/en-us/cpp/build/reference/md-mt-ld-use-run-time-library?view=vs-2017)
-`/MT`, `/MD`, `/MTd`, and `/MDd`, respectively. Here we use the mt variant.
+`/MT`, `/MD`, `/MTd`, and `/MDd`, respectively. Here we use the mt variant. For the debug variants,
+be sure to also include `matdbg.lib` in `FILAMENT_LIBS`.
 
 When building Filament from source, the `USE_STATIC_CRT` CMake option can be
 used to change the run-time library version.
