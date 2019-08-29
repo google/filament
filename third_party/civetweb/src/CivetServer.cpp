@@ -290,8 +290,6 @@ CivetServer::CivetServer(const char **options,
 	}
 	callbacks.connection_close = closeHandler;
 	context = mg_start(&callbacks, this, options);
-	if (context == NULL)
-		abort();
 }
 
 CivetServer::CivetServer(std::vector<std::string> options,

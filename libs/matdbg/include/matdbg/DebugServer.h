@@ -54,6 +54,8 @@ public:
      */
     void setEditCallback(EditCallback callback) { mEditCallback = callback; }
 
+    bool isReady() const { return mServer; }
+
 private:
     using MaterialKey = uint32_t;
 
@@ -75,9 +77,9 @@ private:
     utils::CString mCss;
     EditCallback mEditCallback = nullptr;
 
-    class FileRequestHandler* mFileHandler;
-    class RestRequestHandler* mRestHandler;
-    class WebSocketHandler* mWebSocketHandler;
+    class FileRequestHandler* mFileHandler = nullptr;
+    class RestRequestHandler* mRestHandler = nullptr;
+    class WebSocketHandler* mWebSocketHandler = nullptr;
 
     friend class FileRequestHandler;
     friend class RestRequestHandler;
