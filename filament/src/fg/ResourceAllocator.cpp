@@ -97,7 +97,7 @@ void ResourceAllocator::terminate() noexcept {
     }
 }
 
-RenderTargetHandle ResourceAllocator::createRenderTarget(
+RenderTargetHandle ResourceAllocator::createRenderTarget(const char* name,
         TargetBufferFlags targetBufferFlags, uint32_t width, uint32_t height,
         uint8_t samples, TargetBufferInfo color, TargetBufferInfo depth,
         TargetBufferInfo stencil) noexcept {

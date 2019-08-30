@@ -352,8 +352,8 @@ FrameGraphId<FrameGraphTexture> FrameGraph::importResource(const char* name,
 
     // Populate the cache with a RenderTargetResource
     // create a cache entry
-    RenderTargetResource* pRenderTargetResource = mArena.make<RenderTargetResource>(descriptor, true,
-            TargetBufferFlags::COLOR, width, height, TextureFormat{});
+    RenderTargetResource* pRenderTargetResource = mArena.make<RenderTargetResource>(name,
+            descriptor, true,TargetBufferFlags::COLOR, width, height, TextureFormat{});
     pRenderTargetResource->targetInfo.target = target;
     pRenderTargetResource->discardStart = discardStart;
     pRenderTargetResource->discardEnd = discardEnd;

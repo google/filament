@@ -115,7 +115,7 @@ struct RenderTarget { // 32
 
                 // create the cache entry
                 RenderTargetResource* pRenderTargetResource =
-                        fg.mArena.make<RenderTargetResource>(desc, false,
+                        fg.mArena.make<RenderTargetResource>(name, desc, false,
                                 backend::TargetBufferFlags(attachments), width, height, colorFormat);
                 renderTargetCache.emplace_back(pRenderTargetResource, fg);
                 cache = pRenderTargetResource;
