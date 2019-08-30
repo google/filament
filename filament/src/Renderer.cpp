@@ -240,7 +240,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     const bool colorPassNeedsDepthBuffer = hasPostProcess;
 
     const backend::Handle<backend::HwRenderTarget> viewRenderTarget = getRenderTarget(view);
-    FrameGraphId<FrameGraphTexture> output = fg.importResource("viewRenderTarget",
+    FrameGraphRenderTargetHandle fgViewRenderTarget = fg.importRenderTarget("viewRenderTarget",
             { .viewport = vp }, viewRenderTarget, vp.width, vp.height,
             view.getDiscardedTargetBuffers());
 
@@ -386,7 +386,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     fg.present(input);
 
-    fg.moveResource(output, input);
+    fg.moveResource(fgViewRenderTarget, input);
 
     fg.compile();
     //fg.export_graphviz(slog.d);

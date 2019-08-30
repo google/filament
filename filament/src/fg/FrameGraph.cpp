@@ -294,6 +294,12 @@ fg::ResourceEntryBase& FrameGraph::getResourceEntryBaseUnchecked(FrameGraphHandl
     return *node.resource;
 }
 
+FrameGraphRenderTarget::Descriptor const& FrameGraph::getDescriptor(
+        FrameGraphRenderTargetHandle handle) const noexcept {
+    assert(handle < mRenderTargets.size());
+    return mRenderTargets[handle].desc;
+}
+
 bool FrameGraph::equals(FrameGraphRenderTarget::Descriptor const& cacheEntry,
         FrameGraphRenderTarget::Descriptor const& rt) const noexcept {
     const Vector<ResourceNode>& resourceNodes = mResourceNodes;
@@ -334,24 +340,26 @@ bool FrameGraph::equals(FrameGraphRenderTarget::Descriptor const& cacheEntry,
             }) && samplesMatch;
 }
 
-FrameGraphId<FrameGraphTexture> FrameGraph::importResource(const char* name,
+FrameGraphRenderTargetHandle FrameGraph::importRenderTarget(const char* name,
         FrameGraphRenderTarget::Descriptor descriptor,
         backend::Handle<backend::HwRenderTarget> target, uint32_t width, uint32_t height,
         TargetBufferFlags discardStart, TargetBufferFlags discardEnd) {
 
-    // TODO: for now we don't allow imported targets to specify textures
+    // Imported render target can't specify textures -- it's meaningless
     assert(std::all_of(
-            descriptor.attachments.textures.begin(),
-            descriptor.attachments.textures.end(),
+            descriptor.attachments.textures.begin(), descriptor.attachments.textures.end(),
             [](FrameGraphHandle t) { return !t.isValid(); }));
 
-    // create the resource that will be returned to the user
-    FrameGraphTexture::Descriptor desc{ .width = width, .height = height };
-    FrameGraphId<FrameGraphTexture> rt = import<FrameGraphTexture>(name, desc, {});
-    descriptor.attachments.textures[0] = rt;
+    // create a fake imported attachment for this render target,
+    // so we can do a moveResource() for instance.
+    FrameGraphTexture::Descriptor desc{
+            .width = width, .height = height, .usage = TextureUsage::COLOR_ATTACHMENT };
+    descriptor.attachments.color = import<FrameGraphTexture>(name, desc, {});
 
-    // Populate the cache with a RenderTargetResource
-    // create a cache entry
+    // create a fg::RenderTarget, so we can get an handle
+    fg::RenderTarget& renderTarget = createRenderTarget(name, descriptor);
+
+    // And pre-populate the cache with the concrete render target
     RenderTargetResource* pRenderTargetResource = mArena.make<RenderTargetResource>(name,
             descriptor, true,TargetBufferFlags::COLOR, width, height, TextureFormat{});
     pRenderTargetResource->targetInfo.target = target;
@@ -359,10 +367,7 @@ FrameGraphId<FrameGraphTexture> FrameGraph::importResource(const char* name,
     pRenderTargetResource->discardEnd = discardEnd;
     mRenderTargetCache.emplace_back(pRenderTargetResource, *this);
 
-    // NOTE: we don't even need to create a fg::RenderTarget, all is needed is a cache entry
-    // so that, resolve() will find us.
-
-    return rt;
+    return FrameGraphRenderTargetHandle(renderTarget.index);
 }
 
 TargetBufferFlags FrameGraph::computeDiscardFlags(DiscardPhase phase,

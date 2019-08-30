@@ -183,8 +183,13 @@ public:
         return entry.descriptor;
     }
 
+    // Return the FrameGraphRenderTarget Descriptor associated to this resource handle.
+    // The handle must be valid.
+    FrameGraphRenderTarget::Descriptor const& getDescriptor(
+            FrameGraphRenderTargetHandle handle) const noexcept;
+
     // Import a write-only render target from outside the framegraph and returns a handle to it.
-    FrameGraphId<FrameGraphTexture> importResource(const char* name,
+    FrameGraphRenderTargetHandle importRenderTarget(const char* name,
             FrameGraphRenderTarget::Descriptor descriptor,
             backend::Handle<backend::HwRenderTarget> target, uint32_t width, uint32_t height,
             backend::TargetBufferFlags discardStart = backend::TargetBufferFlags::NONE,
@@ -207,6 +212,12 @@ public:
     template<typename T>
     FrameGraphId<T> moveResource(FrameGraphId<T> from, FrameGraphId<T> to) {
         return FrameGraphId<T>(moveResource(FrameGraphHandle(from), FrameGraphHandle(to)));
+    }
+
+    // Helper for aliasing a render target's color attachment
+    template<typename T>
+    FrameGraphId<T> moveResource(FrameGraphRenderTargetHandle from, FrameGraphId<T> to) {
+        return moveResource(getDescriptor(from).attachments.color.getHandle(), to);
     }
 
     // allocates concrete resources and culls unreferenced passes
