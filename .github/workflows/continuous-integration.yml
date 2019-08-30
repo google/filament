@@ -1,0 +1,26 @@
+name: Continuous Integration
+
+on: [pull_request]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [macos-10.14, ubuntu-18.04]
+        include:
+          - os: macos-10.14
+            os_name: mac
+          - os: ubuntu-18.04
+            os_name: linux
+
+    steps:
+      - uses: actions/checkout@v1
+        with:
+          fetch-depth: 1
+      - name: Run build script
+        run: cd build/$WORKFLOW_OS && ./build.sh
+        env:
+          workflow_os: ${{ os_name }}
+          target: presubmit
