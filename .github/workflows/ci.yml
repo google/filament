@@ -1,0 +1,15 @@
+name: CI
+
+on: [pull_request]
+
+jobs:
+  build-mac:
+
+    runs-on: macOS-latest
+    
+    steps:
+    - uses: actions/checkout@v1
+    - name: Run build script
+      run: cd build/macOS && ./build.sh
+      env:
+        target: presubmit
