@@ -17,7 +17,6 @@ jobs:
       - name: Run build script
         run: |
           WORKFLOW_OS=`echo \`uname\` | sed "s/Darwin/mac/" | tr [:upper:] [:lower:]`
-          export TARGET
-          cd build/$WORKFLOW_OS && ./build.sh
+          cd build/$WORKFLOW_OS && ./build.sh ${TARGET}
         env:
           target: presubmit
