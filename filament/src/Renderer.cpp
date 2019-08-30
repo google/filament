@@ -295,13 +295,12 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                 }
 
                 data.color = builder.createTexture("Color Buffer",
-                        { .width = svp.width, .height = svp.height, .format = hdrFormat, .samples = msaa });
+                        { .width = svp.width, .height = svp.height, .format = hdrFormat });
 
                 if (colorPassNeedsDepthBuffer) {
                     data.depth = builder.createTexture("Depth Buffer", {
                             .width = svp.width, .height = svp.height,
-                            .format = TextureFormat::DEPTH24,
-                            .samples = msaa
+                            .format = TextureFormat::DEPTH24
                     });
                     data.depth = builder.write(builder.read(data.depth, true));
                 }
