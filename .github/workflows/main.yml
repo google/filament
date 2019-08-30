@@ -10,7 +10,7 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - name: Run build script
-      run: cd build/macOS && ./build.sh
+      run: cd build/mac && ./build.sh
       env:
         workflow_os: mac
         target: presubmit
