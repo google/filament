@@ -118,7 +118,7 @@ public:
 
         // helper to get a resource's descriptor
         template<typename T>
-        typename T::Descriptor const& getDescriptor(FrameGraphId<T> r) {
+        typename T::Descriptor& getDescriptor(FrameGraphId<T> r) {
             return mFrameGraph.getDescriptor<T>(r);
         }
 
@@ -126,8 +126,8 @@ public:
         bool isAttachment(FrameGraphId<FrameGraphTexture> r) const noexcept;
 
         // returns the descriptor of the render target this attachment belongs to
-        FrameGraphRenderTarget::Descriptor const& getRenderTargetDescriptor(
-                FrameGraphRenderTargetHandle handle) const;
+        FrameGraphRenderTarget::Descriptor& getRenderTargetDescriptor(
+                FrameGraphRenderTargetHandle handle);
 
     private:
         friend class FrameGraph;
@@ -178,7 +178,7 @@ public:
 
     // Return the Descriptor associated to this resource handle. The handle must be valid.
     template<typename T>
-    typename T::Descriptor const& getDescriptor(FrameGraphId<T> r) {
+    typename T::Descriptor& getDescriptor(FrameGraphId<T> r) {
         fg::ResourceEntry<T>& entry = getResourceEntryUnchecked(r);
         return entry.descriptor;
     }
