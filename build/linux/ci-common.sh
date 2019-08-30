@@ -2,6 +2,7 @@
 
 # version of clang we want to use
 CLANG_VERSION=7
+GITHUB_CLANG_VERSION=8
 # version of libcxx and libcxxabi we want to use
 CXX_VERSION=7.0.0
 # version of CMake to use instead of the default one
@@ -9,10 +10,17 @@ CMAKE_VERSION=3.13.4
 # version of ninja to use
 NINJA_VERSION=1.8.2
 
+# Steps for GitHub Workflows
+if [[ "$GITHUB_WORKFLOW" ]]]; then
+    sudo wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+    sudo apt-get install clang-$GITHUB_CLANG_VERSION libc++-$GITHUB_CLANG_VERSION-dev libc++abi-$GITHUB_CLANG_VERSION-dev
+    sudo apt-get install cmake
+fi
+
 # Steps specific to our CI environment
 # CI runs on Ubuntu 14.04, we need to install clang-7.0 and the
 # appropriate libc++ ourselves
-if [[ "$CONTINUOUS_INTEGRATION" ]]; then
+if [[ "$KOKORO_BUILD_ID" ]]; then
     sudo ln -s /usr/include/x86_64-linux-gnu/asm /usr/include/asm
 
     if [[ "$FILAMENT_ANDROID_CI_BUILD" ]]; then
