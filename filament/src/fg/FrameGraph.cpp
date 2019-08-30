@@ -81,32 +81,12 @@ FrameGraph::Builder::getRenderTargetDescriptor(FrameGraphRenderTargetHandle hand
 
 FrameGraphRenderTargetHandle FrameGraph::Builder::createRenderTarget(const char* name,
         FrameGraphRenderTarget::Descriptor const& desc, TargetBufferFlags clearFlags) noexcept {
-
     // TODO: add support for cubemaps and arrays
-
     // TODO: enforce that we can't have a resource used in 2 rendertarget in the same pass
-
     FrameGraph& fg = mFrameGraph;
-
     fg::RenderTarget& renderTarget = fg.createRenderTarget(name, desc);
     renderTarget.userClearFlags = clearFlags;
-
     mPass.declareRenderTarget(renderTarget);
-
-    // update the referenced textures usage flags
-    static constexpr TextureUsage usages[] = {
-            TextureUsage::COLOR_ATTACHMENT,
-            TextureUsage::DEPTH_ATTACHMENT,
-            TextureUsage::STENCIL_ATTACHMENT
-    };
-    for (size_t i = 0; i < desc.attachments.textures.size(); i++) {
-        FrameGraphRenderTarget::Attachments::AttachmentInfo attachmentInfo = desc.attachments.textures[i];
-        if (attachmentInfo.isValid()) {
-            // figure out the attachment flags
-            fg::ResourceEntry<FrameGraphTexture>& entry = fg.getResourceEntry(attachmentInfo.getHandle());
-            entry.descriptor.usage |= usages[i];
-        }
-    }
     return FrameGraphRenderTargetHandle(renderTarget.index);
 }
 
