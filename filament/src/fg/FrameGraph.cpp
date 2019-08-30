@@ -72,8 +72,8 @@ bool FrameGraph::Builder::isAttachment(FrameGraphId<FrameGraphTexture> r) const 
             TextureUsage::STENCIL_ATTACHMENT);
 }
 
-FrameGraphRenderTarget::Descriptor const&
-FrameGraph::Builder::getRenderTargetDescriptor(FrameGraphRenderTargetHandle handle) const {
+FrameGraphRenderTarget::Descriptor&
+FrameGraph::Builder::getRenderTargetDescriptor(FrameGraphRenderTargetHandle handle) {
     FrameGraph& fg = mFrameGraph;
     assert(handle < fg.mRenderTargets.size());
     return fg.mRenderTargets[handle].desc;
