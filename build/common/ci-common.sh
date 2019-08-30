@@ -7,7 +7,7 @@ if [[ "$KOKORO_BUILD_ID" ]]; then
 fi
 
 if [[ "GITHUB_WORKFLOW" ]]; then
-    echo "Running job $WORKFLOW_OS in workflow $GITHUB_WORKFLOW"
-    TARGET=$WORKFLOW_OS
+    echo "Running job $TARGET in workflow $GITHUB_WORKFLOW"
+    # $TARGET is set by the GitHub workflow
     CONTINUOUS_INTEGRATION=true
 fi
