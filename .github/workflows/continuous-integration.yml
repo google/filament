@@ -8,19 +8,15 @@ jobs:
 
     strategy:
       matrix:
-        os: [macos-10.14, ubuntu-18.04]
-        include:
-          - os: macos-10.14
-            os_name: mac
-          - os: ubuntu-18.04
-            os_name: linux
+        os: [macos-latest, ubuntu-latest]
 
     steps:
       - uses: actions/checkout@v1
         with:
           fetch-depth: 1
       - name: Run build script
-        run: cd build/$WORKFLOW_OS && ./build.sh
+        run: |
+          WORKFLOW_OS=`echo \`uname\` | sed "s/Darwin/mac/" | tr [:upper:] [:lower:]`
+          cd build/$WORKFLOW_OS && ./build.sh
         env:
-          workflow_os: ${{ os_name }}
           target: presubmit
