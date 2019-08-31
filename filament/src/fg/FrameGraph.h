@@ -84,9 +84,12 @@ public:
 
         // Read from a resource (i.e. add a reference to that resource)
         template<typename T>
-        FrameGraphId<T> read(FrameGraphId<T> input, bool doesntNeedTexture = false) {
-            return FrameGraphId<T>(read(FrameGraphHandle(input), doesntNeedTexture));
+        FrameGraphId<T> read(FrameGraphId<T> input) {
+            return FrameGraphId<T>(read(FrameGraphHandle(input)));
         }
+
+        // Sample from a texture resource (implies read())
+        FrameGraphId<FrameGraphTexture> sample(FrameGraphId<FrameGraphTexture> input);
 
         // Write to a resource (i.e. add a reference to that pass)
         template<typename T>
@@ -133,7 +136,7 @@ public:
         friend class FrameGraph;
         Builder(FrameGraph& fg, fg::PassNode& pass) noexcept;
         ~Builder() noexcept;
-        FrameGraphHandle read(FrameGraphHandle input, bool doesntNeedTexture);
+        FrameGraphHandle read(FrameGraphHandle input);
         FrameGraphHandle write(FrameGraphHandle output);
         FrameGraph& mFrameGraph;
         fg::PassNode& mPass;

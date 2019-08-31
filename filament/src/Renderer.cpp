@@ -291,7 +291,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             (FrameGraph::Builder& builder, ColorPassData& data) {
 
                 if (useSSAO) {
-                    data.ssao = builder.read(ssao);
+                    data.ssao = builder.sample(ssao);
                 }
 
                 data.color = builder.createTexture("Color Buffer",
@@ -302,10 +302,10 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                             .width = svp.width, .height = svp.height,
                             .format = TextureFormat::DEPTH24
                     });
-                    data.depth = builder.write(builder.read(data.depth, true));
+                    data.depth = builder.write(builder.read(data.depth));
                 }
 
-                data.color = builder.write(builder.read(data.color, true));
+                data.color = builder.write(builder.read(data.color));
                 data.rt = builder.createRenderTarget("Color Pass Target", {
                         .samples = msaa,
                         .attachments.color = data.color,
