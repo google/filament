@@ -96,8 +96,8 @@ TEST(FrameGraphTest, SimpleRenderPass2) {
                 data.outDepth = builder.createTexture("depth buffer", inputDesc);
 
 
-                data.outColor = builder.write(builder.read(data.outColor, true));
-                data.outDepth = builder.write(builder.read(data.outDepth, true));
+                data.outColor = builder.write(builder.read(data.outColor));
+                data.outDepth = builder.write(builder.read(data.outDepth));
                 data.rt = builder.createRenderTarget("rt", {
                         .attachments.color = data.outColor,
                         .attachments.depth = data.outDepth
@@ -145,7 +145,7 @@ TEST(FrameGraphTest, ScenarioDepthPrePass) {
                 FrameGraphTexture::Descriptor inputDesc{};
                 inputDesc.format = TextureFormat::DEPTH24;
                 data.outDepth = builder.createTexture("depth buffer", inputDesc);
-                data.outDepth = builder.write(builder.read(data.outDepth, true));
+                data.outDepth = builder.write(builder.read(data.outDepth));
                 data.rt = builder.createRenderTarget("rt depth", {
                         .attachments.depth = data.outDepth
                 });
@@ -177,8 +177,8 @@ TEST(FrameGraphTest, ScenarioDepthPrePass) {
                 // declare a read here, so a reference is added to the previous pass
                 data.outDepth = depthPrepass.getData().outDepth;
 
-                data.outColor = builder.write(builder.read(data.outColor, true));
-                data.outDepth = builder.write(builder.read(data.outDepth, true));
+                data.outColor = builder.write(builder.read(data.outColor));
+                data.outDepth = builder.write(builder.read(data.outDepth));
                 data.rt = builder.createRenderTarget("rt color+depth", {
                         .attachments.color = data.outColor,
                         .attachments.depth = data.outDepth
@@ -248,7 +248,7 @@ TEST(FrameGraphTest, SimplePassCulling) {
 
     auto& postProcessPass = fg.addPass<PostProcessPassData>("PostProcess",
             [&](FrameGraph::Builder& builder, PostProcessPassData& data) {
-                data.input = builder.read(renderPass.getData().output);
+                data.input = builder.sample(renderPass.getData().output);
                 data.output = builder.createTexture("postprocess-renderTarget");
                 data.rt = builder.createRenderTarget(data.output);
             },
@@ -272,7 +272,7 @@ TEST(FrameGraphTest, SimplePassCulling) {
 
     auto& culledPass = fg.addPass<CulledPassData>("CulledPass",
             [&](FrameGraph::Builder& builder, CulledPassData& data) {
-                data.input = builder.read(renderPass.getData().output);
+                data.input = builder.sample(renderPass.getData().output);
                 data.output = builder.createTexture("unused-rendertarget");
                 data.rt = builder.createRenderTarget(data.output);
             },
@@ -339,7 +339,7 @@ TEST(FrameGraphTest, RenderTargetLifetime) {
 
     auto& renderPass2 = fg.addPass<RenderPassData>("Render2",
             [&](FrameGraph::Builder& builder, RenderPassData& data) {
-                data.output = builder.write(builder.read(renderPass1.getData().output, true));
+                data.output = builder.write(builder.read(renderPass1.getData().output));
                 data.rt = builder.createRenderTarget("color", {
                         .attachments.color = { data.output }
                 }, (TargetBufferFlags)0x40);

@@ -52,28 +52,23 @@ struct PassNode { // 200
         renderTargets.push_back(renderTarget.index);
     }
 
-    FrameGraphHandle read(FrameGraph& fg, FrameGraphHandle const& handle, bool isRenderTarget = false) {
-        ResourceNode const& node = fg.getResourceNode(handle);
-
-        if (!isRenderTarget) {
-#if UTILS_HAS_RTTI
-            assert(dynamic_cast<fg::ResourceEntry<FrameGraphTexture> *>(node.resource));
-#endif
-            auto pTextureResource = static_cast<fg::ResourceEntry<FrameGraphTexture> *>(node.resource);
-            pTextureResource->descriptor.usage |= backend::TextureUsage::SAMPLEABLE;
-        }
-
+    FrameGraphHandle read(FrameGraph& fg, FrameGraphHandle handle) {
         // don't allow multiple reads of the same resource -- it's just redundant.
         auto pos = std::find_if(reads.begin(), reads.end(),
                 [&handle](FrameGraphHandle cur) { return handle.index == cur.index; });
         if (pos != reads.end()) {
             return *pos;
         }
-
         // just record that we're reading from this resource (at the given version)
-        FrameGraphHandle r{ handle.index };
-        reads.push_back(r);
-        return r;
+        reads.push_back(handle);
+        return handle;
+    }
+
+    FrameGraphId<FrameGraphTexture> sample(FrameGraph& fg, FrameGraphId<FrameGraphTexture> handle) {
+        auto& textureResource = fg.getResourceEntry(handle);
+        textureResource.descriptor.usage |= backend::TextureUsage::SAMPLEABLE;
+        read(fg, handle);
+        return handle;
     }
 
     bool isReadingFrom(FrameGraphHandle resource) const noexcept {

@@ -98,8 +98,12 @@ FrameGraphRenderTargetHandle FrameGraph::Builder::createRenderTarget(FrameGraphI
     }, clearFlags);
 }
 
-FrameGraphHandle FrameGraph::Builder::read(FrameGraphHandle input, bool doesntNeedTexture) {
-    return mPass.read(mFrameGraph, input, doesntNeedTexture);
+FrameGraphHandle FrameGraph::Builder::read(FrameGraphHandle input) {
+    return mPass.read(mFrameGraph, input);
+}
+
+FrameGraphId<FrameGraphTexture> FrameGraph::Builder::sample(FrameGraphId<FrameGraphTexture> input) {
+    return mPass.sample(mFrameGraph, input);
 }
 
 FrameGraphHandle FrameGraph::Builder::write(FrameGraphHandle output) {
@@ -215,7 +219,7 @@ FrameGraphHandle FrameGraph::moveResource(FrameGraphHandle from, FrameGraphHandl
 void FrameGraph::present(FrameGraphHandle input) {
     addPass<std::tuple<>>("Present",
             [&](Builder& builder, auto& data) {
-                builder.read(input, true);
+                builder.read(input);
                 builder.sideEffect();
             }, [](FrameGraphPassResources const& resources, auto const& data, DriverApi&) {});
 }

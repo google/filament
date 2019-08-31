@@ -166,7 +166,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::toneMapping(FrameGraph& fg, 
     auto& ppToneMapping = fg.addPass<PostProcessToneMapping>("tonemapping",
             [&](FrameGraph::Builder& builder, PostProcessToneMapping& data) {
                 auto const& inputDesc = fg.getDescriptor(input);
-                data.input = builder.read(input);
+                data.input = builder.sample(input);
                 data.output = builder.createTexture("tonemapping output", {
                         .width = inputDesc.width,
                         .height = inputDesc.height,
@@ -222,7 +222,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::fxaa(FrameGraph& fg,
     auto& ppFXAA = fg.addPass<PostProcessFXAA>("fxaa",
             [&](FrameGraph::Builder& builder, PostProcessFXAA& data) {
                 auto const& inputDesc = fg.getDescriptor(input);
-                data.input = builder.read(input);
+                data.input = builder.sample(input);
                 data.output = builder.createTexture("fxaa output", {
                         .width = inputDesc.width,
                         .height = inputDesc.height,
@@ -269,7 +269,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(
             [&](FrameGraph::Builder& builder, PostProcessResolve& data) {
                 auto const& inputDesc = fg.getDescriptor(input);
 
-                data.input = builder.read(input, true);
+                data.input = builder.read(input);
 
                 data.srt = builder.createRenderTarget(builder.getName(data.input),
                         { .attachments.color = { data.input }
@@ -308,8 +308,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dynamicScaling(FrameGraph& f
             [&](FrameGraph::Builder& builder, PostProcessScaling& data) {
                 auto const& inputDesc = fg.getDescriptor(input);
 
-                data.input = builder.read(input, true);
-
+                data.input = builder.read(input);
                 data.srt = builder.createRenderTarget(builder.getName(data.input),
                         { .attachments.color = { data.input }
                         });
@@ -374,7 +373,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssao(FrameGraph& fg, RenderP
                 data.options = options;
 
                 auto const& desc = builder.getDescriptor(depth);
-                data.depth = builder.read(depth);
+                data.depth = builder.sample(depth);
 
                 data.ssao = builder.createTexture("SSAO Buffer", {
                         .width = desc.width, .height = desc.height,
@@ -387,11 +386,11 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssao(FrameGraph& fg, RenderP
                 // pixels at infinity.
 
                 data.ssao = builder.write(data.ssao);
-                data.depth = builder.read(data.depth, true);
+                data.depth = builder.sample(data.depth);
 
                 data.rt = builder.createRenderTarget("SSAO Target",
                         { .attachments.color = { data.ssao },
-                          .attachments.depth = { data.depth }
+                                .attachments.depth = { data.depth }
                         }, TargetBufferFlags::NONE);
             },
             [=](FrameGraphPassResources const& resources,
@@ -472,7 +471,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::depthPass(FrameGraph& fg, Re
                         .levels = uint8_t(levelCount),
                         .format = TextureFormat::DEPTH24 });
 
-                data.depth = builder.write(builder.read(data.depth, true));
+                data.depth = builder.write(builder.read(data.depth));
 
                 data.rt = builder.createRenderTarget("SSAO Depth Target",
                         { .attachments.depth = data.depth },
@@ -503,7 +502,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::mipmapPass(FrameGraph& fg,
             [&](FrameGraph::Builder& builder, DepthMipData& data) {
                 const char* name = builder.getName(input);
 
-                data.in = builder.read(input);
+                data.in = builder.sample(input);
 
                 data.out = builder.write(data.in);
                 data.rt = builder.createRenderTarget(name, {
@@ -553,8 +552,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blurPass(FrameGraph& fg,
 
                 auto const& desc = builder.getDescriptor(input);
 
-                data.input = builder.read(input);
-                data.depth = builder.read(depth);
+                data.input = builder.sample(input);
+                data.depth = builder.sample(depth);
 
                 data.blurred = builder.createTexture("Blurred output", {
                         .width = desc.width, .height = desc.height, .format = desc.format });
@@ -563,11 +562,11 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blurPass(FrameGraph& fg,
                 // Note that we're not clearing the SAO buffer, which will leave skipped pixels
                 // in an undefined state -- this doesn't matter because the skybox material
                 // doesn't use SSAO.
-                depth = builder.read(depth, true);
+                depth = builder.read(depth);
                 data.blurred = builder.write(data.blurred);
                 data.rt = builder.createRenderTarget("Blurred target",
                         { .attachments.color = { data.blurred },
-                          .attachments.depth = { depth }
+                                .attachments.depth = { depth }
                         }, TargetBufferFlags::NONE);
             },
             [=](FrameGraphPassResources const& resources,
