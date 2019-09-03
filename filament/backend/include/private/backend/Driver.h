@@ -100,6 +100,7 @@ utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::Pixel
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::PixelDataType type);
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::Precision precision);
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::PrimitiveType type);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::TargetBufferFlags f);
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::RenderPassParams const& b);
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::SamplerCompareFunc func);
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::SamplerCompareMode mode);
