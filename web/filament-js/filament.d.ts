@@ -301,7 +301,7 @@ interface Filamesh {
 }
 
 export class Engine {
-    public static create(HTMLCanvasElement): Engine;
+    public static create(canvas: HTMLCanvasElement, contextOptions?: object): Engine;
     public createCamera(): Camera;
     public createIblFromKtx(url: string): IndirectLight;
     public createMaterial(url: string): Material;
