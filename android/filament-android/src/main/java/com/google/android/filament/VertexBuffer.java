@@ -38,6 +38,7 @@ public class VertexBuffer {
         UV1,          // texture coordinates (float2)
         BONE_INDICES, // indices of 4 bones (uvec4)
         BONE_WEIGHTS, // weights of the 4 bones (normalized float4)
+        UNUSED,       // reserved for future use
         CUSTOM0,      // custom or MORPH_POSITION_0
         CUSTOM1,      // custom or MORPH_POSITION_1
         CUSTOM2,      // custom or MORPH_POSITION_2
