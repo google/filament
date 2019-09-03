@@ -63,10 +63,10 @@ enum class Backend : uint8_t {
  * Bitmask for selecting render buffers
  */
 enum TargetBufferFlags : uint8_t {
-    NONE = 0x0,                 //!< No buffer selected.
-    COLOR = 0x1,                //!< Color buffer selected.
-    DEPTH = 0x2,                //!< Depth buffer selected.
-    STENCIL = 0x4,              //!< Stencil buffer selected.
+    NONE = 0x0u,                 //!< No buffer selected.
+    COLOR = 0x1u,                //!< Color buffer selected.
+    DEPTH = 0x2u,                //!< Depth buffer selected.
+    STENCIL = 0x4u,              //!< Stencil buffer selected.
     COLOR_AND_DEPTH = COLOR | DEPTH,
     COLOR_AND_STENCIL = COLOR | STENCIL,
     DEPTH_AND_STENCIL = DEPTH | STENCIL,
