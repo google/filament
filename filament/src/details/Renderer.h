@@ -121,7 +121,9 @@ private:
     size_t mCommandsHighWatermark = 0;
     uint32_t mFrameId = 0;
     FrameInfoManager mFrameInfoManager;
-    bool mIsRGB16FSupported : 1;
+    backend::TextureFormat mHdrTranslucent{};
+    backend::TextureFormat mHdrQualityMedium{};
+    backend::TextureFormat mHdrQualityHigh{};
     bool mIsRGB8Supported : 1;
     Epoch mUserEpoch;
     math::float4 mShaderUserTime{};
