@@ -61,7 +61,7 @@ public:
         return get(handle).texture;
     }
 
-    RenderTargetInfo getRenderTarget(FrameGraphHandle r, uint8_t level = 0) const noexcept;
+    RenderTargetInfo getRenderTarget(FrameGraphRenderTargetHandle handle, uint8_t level = 0) const noexcept;
 
 private:
     friend class FrameGraph;

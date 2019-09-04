@@ -39,7 +39,7 @@ public:
 
     void terminate() noexcept;
 
-    backend::RenderTargetHandle createRenderTarget(
+    backend::RenderTargetHandle createRenderTarget(const char* name,
             backend::TargetBufferFlags targetBufferFlags,
             uint32_t width,
             uint32_t height,

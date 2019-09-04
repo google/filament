@@ -301,7 +301,7 @@ interface Filamesh {
 }
 
 export class Engine {
-    public static create(HTMLCanvasElement): Engine;
+    public static create(canvas: HTMLCanvasElement, contextOptions?: object): Engine;
     public createCamera(): Camera;
     public createIblFromKtx(url: string): IndirectLight;
     public createMaterial(url: string): Material;
@@ -606,14 +606,15 @@ export enum VertexAttribute {
     UV1 = 4,
     BONE_INDICES = 5,
     BONE_WEIGHTS = 6,
-    CUSTOM0 = 7,
-    CUSTOM1 = 8,
-    CUSTOM2 = 9,
-    CUSTOM3 = 10,
-    CUSTOM4 = 11,
-    CUSTOM5 = 12,
-    CUSTOM6 = 13,
-    CUSTOM7 = 14,
+    UNUSED = 7,
+    CUSTOM0 = 8,
+    CUSTOM1 = 9,
+    CUSTOM2 = 10,
+    CUSTOM3 = 11,
+    CUSTOM4 = 12,
+    CUSTOM5 = 13,
+    CUSTOM6 = 14,
+    CUSTOM7 = 15,
     MORPH_POSITION_0 = CUSTOM0,
     MORPH_POSITION_1 = CUSTOM1,
     MORPH_POSITION_2 = CUSTOM2,

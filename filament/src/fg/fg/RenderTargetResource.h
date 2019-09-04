@@ -34,10 +34,10 @@ namespace fg {
 
 struct RenderTargetResource final : public VirtualResource {  // 104
 
-    RenderTargetResource(
+    RenderTargetResource(const char* name,
             FrameGraphRenderTarget::Descriptor const& desc, bool imported,
             backend::TargetBufferFlags targets, uint32_t width, uint32_t height, backend::TextureFormat format)
-            : desc(desc), imported(imported),
+            : desc(desc), imported(imported), name(name),
               attachments(targets), format(format), width(width), height(height) {
         targetInfo.params.viewport = desc.viewport;
         // if Descriptor was initialized with default values, set the viewport to width/height
@@ -55,6 +55,7 @@ struct RenderTargetResource final : public VirtualResource {  // 104
     // cache key
     const FrameGraphRenderTarget::Descriptor desc;
     const bool imported;
+    const char * const name;
 
     // render target creation info
     backend::TargetBufferFlags attachments;
@@ -84,8 +85,8 @@ struct RenderTargetResource final : public VirtualResource {  // 104
                 }
 
                 // create the concrete rendertarget
-                targetInfo.target = fg.getResourceAllocator().createRenderTarget(attachments,
-                        width, height, desc.samples, infos[0], infos[1], {});
+                targetInfo.target = fg.getResourceAllocator().createRenderTarget(name,
+                        attachments, width, height, desc.samples, infos[0], infos[1], {});
             }
         }
     }

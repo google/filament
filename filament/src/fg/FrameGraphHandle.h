@@ -45,7 +45,7 @@ struct FrameGraphTexture {
         uint32_t height = 1;    // height of resource in pixel
         uint32_t depth = 1;     // # of images for 3D textures
         uint8_t levels = 1;     // # of levels for textures
-        uint8_t samples = 1;
+        uint8_t samples = 0;    // 0=auto, 1=request not multisample, >1 only for NOT SAMPLEABLE
         backend::SamplerType type = backend::SamplerType::SAMPLER_2D;     // texture target type
         backend::TextureFormat format = backend::TextureFormat::RGBA8;    // resource internal format
         backend::TextureUsage usage = (backend::TextureUsage)0; // don't need to set this one
@@ -108,6 +108,8 @@ public:
     explicit FrameGraphId(FrameGraphHandle r) : FrameGraphHandle(r) { }
 };
 
+using FrameGraphRenderTargetHandle = uint16_t;
+
 namespace FrameGraphRenderTarget {
 
 struct Attachments {
@@ -148,7 +150,7 @@ struct Attachments {
 struct Descriptor {
     Attachments attachments;
     Viewport viewport;
-    uint8_t samples = 1;            // # of samples
+    uint8_t samples = 0; // # of samples (0 = unset, default)
 };
 
 } // namespace FrameGraphRenderTarget

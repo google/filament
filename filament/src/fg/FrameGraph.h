@@ -84,9 +84,12 @@ public:
 
         // Read from a resource (i.e. add a reference to that resource)
         template<typename T>
-        FrameGraphId<T> read(FrameGraphId<T> input, bool doesntNeedTexture = false) {
-            return FrameGraphId<T>(read(FrameGraphHandle(input), doesntNeedTexture));
+        FrameGraphId<T> read(FrameGraphId<T> input) {
+            return FrameGraphId<T>(read(FrameGraphHandle(input)));
         }
+
+        // Sample from a texture resource (implies read())
+        FrameGraphId<FrameGraphTexture> sample(FrameGraphId<FrameGraphTexture> input);
 
         // Write to a resource (i.e. add a reference to that pass)
         template<typename T>
@@ -96,12 +99,12 @@ public:
 
         // create a render target in this pass.
         // read/write must have been called as appropriate before this.
-        void createRenderTarget(const char* name,
+        FrameGraphRenderTargetHandle createRenderTarget(const char* name,
                 FrameGraphRenderTarget::Descriptor const& desc,
                 backend::TargetBufferFlags clearFlags = {}) noexcept;
 
         // helper for single color attachment with WRITE access
-        void createRenderTarget(FrameGraphId<FrameGraphTexture>& texture,
+        FrameGraphRenderTargetHandle createRenderTarget(FrameGraphId<FrameGraphTexture>& texture,
                 backend::TargetBufferFlags clearFlags = {}) noexcept;
 
         // Declare that this pass has side effects outside the framegraph (i.e. it can't be culled)
@@ -118,26 +121,22 @@ public:
 
         // helper to get a resource's descriptor
         template<typename T>
-        typename T::Descriptor const& getDescriptor(FrameGraphId<T> r) {
+        typename T::Descriptor& getDescriptor(FrameGraphId<T> r) {
             return mFrameGraph.getDescriptor<T>(r);
         }
-
-        // return a render target's attachment sample count. Returns 1 if the resource
-        // is not an attachement to some rendertarget
-        uint8_t getSamples(FrameGraphId<FrameGraphTexture> r) const noexcept;
 
         // returns whether this texture resource is an attachment to some rendertarget
         bool isAttachment(FrameGraphId<FrameGraphTexture> r) const noexcept;
 
         // returns the descriptor of the render target this attachment belongs to
-        FrameGraphRenderTarget::Descriptor const& getRenderTargetDescriptor(
-                FrameGraphId<FrameGraphTexture> attachment) const;
+        FrameGraphRenderTarget::Descriptor& getRenderTargetDescriptor(
+                FrameGraphRenderTargetHandle handle);
 
     private:
         friend class FrameGraph;
         Builder(FrameGraph& fg, fg::PassNode& pass) noexcept;
         ~Builder() noexcept;
-        FrameGraphHandle read(FrameGraphHandle input, bool doesntNeedTexture);
+        FrameGraphHandle read(FrameGraphHandle input);
         FrameGraphHandle write(FrameGraphHandle output);
         FrameGraph& mFrameGraph;
         fg::PassNode& mPass;
@@ -182,13 +181,18 @@ public:
 
     // Return the Descriptor associated to this resource handle. The handle must be valid.
     template<typename T>
-    typename T::Descriptor const& getDescriptor(FrameGraphId<T> r) {
+    typename T::Descriptor& getDescriptor(FrameGraphId<T> r) {
         fg::ResourceEntry<T>& entry = getResourceEntryUnchecked(r);
         return entry.descriptor;
     }
 
+    // Return the FrameGraphRenderTarget Descriptor associated to this resource handle.
+    // The handle must be valid.
+    FrameGraphRenderTarget::Descriptor const& getDescriptor(
+            FrameGraphRenderTargetHandle handle) const noexcept;
+
     // Import a write-only render target from outside the framegraph and returns a handle to it.
-    FrameGraphId<FrameGraphTexture> importResource(const char* name,
+    FrameGraphRenderTargetHandle importRenderTarget(const char* name,
             FrameGraphRenderTarget::Descriptor descriptor,
             backend::Handle<backend::HwRenderTarget> target, uint32_t width, uint32_t height,
             backend::TargetBufferFlags discardStart = backend::TargetBufferFlags::NONE,
@@ -211,6 +215,12 @@ public:
     template<typename T>
     FrameGraphId<T> moveResource(FrameGraphId<T> from, FrameGraphId<T> to) {
         return FrameGraphId<T>(moveResource(FrameGraphHandle(from), FrameGraphHandle(to)));
+    }
+
+    // Helper for aliasing a render target's color attachment
+    template<typename T>
+    FrameGraphId<T> moveResource(FrameGraphRenderTargetHandle from, FrameGraphId<T> to) {
+        return moveResource(getDescriptor(from).attachments.color.getHandle(), to);
     }
 
     // allocates concrete resources and culls unreferenced passes
@@ -263,8 +273,8 @@ private:
             fg::PassNode const* curr, fg::PassNode const* first,
             fg::RenderTarget const& renderTarget);
 
-    bool equals(FrameGraphRenderTarget::Descriptor const& lhs,
-            FrameGraphRenderTarget::Descriptor const& rhs) const noexcept;
+    bool equals(FrameGraphRenderTarget::Descriptor const& cacheEntry,
+            FrameGraphRenderTarget::Descriptor const& rt) const noexcept;
 
     void executeInternal(fg::PassNode const& node, backend::DriverApi& driver) noexcept;
 

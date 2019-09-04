@@ -5,11 +5,12 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release
 
-- Dielectrics now behave properly under a white furnace (energy preserving and conserving)
-- Clear coat roughness now remains in the 0..1 (previously remapped to the 0..0.6 range)
+- Dielectrics now behave properly under a white furnace (energy preserving and conserving).
+- Clear coat roughness now remains in the 0..1 (previously remapped to the 0..0.6 range).
 - gltfio: Fixed several limitations with ubershader mode.
 - gltfio: Fixed a transforms issue with non-uniform scale.
 - webgl: Fixed an issue with JPEG textures.
+- Windows: fix link error in debug builds.
 
 ## v1.3.2
 
