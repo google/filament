@@ -54,7 +54,6 @@ FRenderer::FRenderer(FEngine& engine) :
         mEngine(engine),
         mFrameSkipper(engine, 2),
         mFrameInfoManager(engine),
-        mIsRGB16FSupported(false),
         mIsRGB8Supported(false),
         mPerRenderPassArena(engine.getPerRenderPassAllocator())
 {
@@ -66,8 +65,36 @@ void FRenderer::init() noexcept {
     DriverApi& driver = mEngine.getDriverApi();
     mUserEpoch = mEngine.getEngineEpoch();
     mRenderTarget = driver.createDefaultRenderTarget();
-    mIsRGB16FSupported = driver.isRenderTargetFormatSupported(backend::TextureFormat::RGB16F);
-    mIsRGB8Supported = driver.isRenderTargetFormatSupported(backend::TextureFormat::RGB8);
+    mIsRGB8Supported = driver.isRenderTargetFormatSupported(TextureFormat::RGB8);
+
+    // our default HDR translucent format, fallback to LDR if not supported by the backend
+    mHdrTranslucent = TextureFormat::RGBA16F;
+    if (!driver.isRenderTargetFormatSupported(TextureFormat::RGBA16F)) {
+        // this will clip all HDR data, but we don't have a choice
+        mHdrTranslucent = TextureFormat::RGBA8;
+    }
+
+    // our default opaque low/medium quality HDR format, fallback to LDR if not supported
+    mHdrQualityMedium = TextureFormat::R11F_G11F_B10F;
+    if (!driver.isRenderTargetFormatSupported(mHdrQualityMedium)) {
+        // this will clip all HDR data, but we don't have a choice
+        mHdrQualityMedium = TextureFormat::RGB8;
+    }
+
+    // our default opqaue high quality HDR format, fallback to RGBA, then medium, then LDR
+    // if not supported
+    mHdrQualityHigh = TextureFormat::RGB16F;
+    if (!driver.isRenderTargetFormatSupported(mHdrQualityHigh)) {
+        mHdrQualityHigh = TextureFormat::RGBA16F;
+    }
+    if (!driver.isRenderTargetFormatSupported(mHdrQualityHigh)) {
+        mHdrQualityHigh = TextureFormat::R11F_G11F_B10F;
+    }
+    if (!driver.isRenderTargetFormatSupported(mHdrQualityHigh)) {
+        // this will clip all HDR data, but we don't have a choice
+        mHdrQualityHigh = TextureFormat::RGB8;
+    }
+
     if (UTILS_HAS_THREADING) {
         mFrameInfoManager.run();
     }
@@ -109,25 +136,26 @@ void FRenderer::resetUserTime() {
     mUserEpoch = std::chrono::steady_clock::now();
 }
 
-backend::TextureFormat FRenderer::getHdrFormat(const View& view) const noexcept {
+TextureFormat FRenderer::getHdrFormat(const View& view) const noexcept {
     const bool translucent = mSwapChain->isTransparent();
-    if (translucent) return backend::TextureFormat::RGBA16F;
-
+    if (translucent) {
+        return mHdrTranslucent;
+    }
     switch (view.getRenderQuality().hdrColorBuffer) {
         case View::QualityLevel::LOW:
         case View::QualityLevel::MEDIUM:
-            return backend::TextureFormat::R11F_G11F_B10F;
+            return mHdrQualityMedium;
         case View::QualityLevel::HIGH:
-        case View::QualityLevel::ULTRA:
-            return !mIsRGB16FSupported ? backend::TextureFormat::RGBA16F
-                                       : backend::TextureFormat::RGB16F;
+        case View::QualityLevel::ULTRA: {
+            return mHdrQualityHigh;
+        }
     }
 }
 
-backend::TextureFormat FRenderer::getLdrFormat() const noexcept {
+TextureFormat FRenderer::getLdrFormat() const noexcept {
     const bool translucent = mSwapChain->isTransparent();
-    return (translucent || !mIsRGB8Supported) ? backend::TextureFormat::RGBA8
-                                              : backend::TextureFormat::RGB8;
+    return (translucent || !mIsRGB8Supported) ? TextureFormat::RGBA8
+                                              : TextureFormat::RGB8;
 }
 
 void FRenderer::render(FView const* view) {
@@ -239,7 +267,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     //        so when skipping post-process (which draws directly into it), we can't rely on it.
     const bool colorPassNeedsDepthBuffer = hasPostProcess;
 
-    const backend::Handle<backend::HwRenderTarget> viewRenderTarget = getRenderTarget(view);
+    const Handle<HwRenderTarget> viewRenderTarget = getRenderTarget(view);
     FrameGraphRenderTargetHandle fgViewRenderTarget = fg.importRenderTarget("viewRenderTarget",
             { .viewport = vp }, viewRenderTarget, vp.width, vp.height,
             view.getDiscardedTargetBuffers());
@@ -550,7 +578,7 @@ void FRenderer::endFrame() {
 }
 
 void FRenderer::readPixels(uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
-        backend::PixelBufferDescriptor&& buffer) {
+        PixelBufferDescriptor&& buffer) {
 
     if (!ASSERT_POSTCONDITION_NON_FATAL(
             buffer.type != PixelDataType::COMPRESSED,
@@ -586,8 +614,8 @@ void FRenderer::readPixels(uint32_t xoffset, uint32_t yoffset, uint32_t width, u
     driver.readPixels(mRenderTarget, xoffset, yoffset, width, height, std::move(buffer));
 }
 
-backend::Handle<backend::HwRenderTarget> FRenderer::getRenderTarget(FView& view) const noexcept {
-    backend::Handle<backend::HwRenderTarget> viewRenderTarget = view.getRenderTarget();
+Handle<HwRenderTarget> FRenderer::getRenderTarget(FView& view) const noexcept {
+    Handle<HwRenderTarget> viewRenderTarget = view.getRenderTarget();
     return viewRenderTarget ? viewRenderTarget : mRenderTarget;
 }
 
@@ -637,7 +665,7 @@ void Renderer::copyFrame(SwapChain* dstSwapChain, filament::Viewport const& dstV
 }
 
 void Renderer::readPixels(uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
-        backend::PixelBufferDescriptor&& buffer) {
+        PixelBufferDescriptor&& buffer) {
     upcast(this)->readPixels(xoffset, yoffset, width, height, std::move(buffer));
 }
 

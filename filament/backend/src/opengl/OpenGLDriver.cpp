@@ -284,8 +284,14 @@ void OpenGLDriver::initExtensionsGLES(GLint major, GLint minor, ExtentionSet con
     ext.OES_EGL_image_external_essl3 = hasExtension(exts, "GL_OES_EGL_image_external_essl3");
     ext.EXT_debug_marker = hasExtension(exts, "GL_EXT_debug_marker");
     ext.EXT_color_buffer_half_float = hasExtension(exts, "GL_EXT_color_buffer_half_float");
+    ext.EXT_color_buffer_float = hasExtension(exts, "GL_EXT_color_buffer_float");
+    ext.APPLE_color_buffer_packed_float = hasExtension(exts, "GL_APPLE_color_buffer_packed_float");
     ext.texture_compression_s3tc = hasExtension(exts, "WEBGL_compressed_texture_s3tc");
     ext.EXT_multisampled_render_to_texture = hasExtension(exts, "GL_EXT_multisampled_render_to_texture");
+    // ES 3.2 implies EXT_color_buffer_float
+    if (major >= 3 && minor >= 2) {
+        ext.EXT_color_buffer_float = true;
+    }
 }
 
 void OpenGLDriver::initExtensionsGL(GLint major, GLint minor, ExtentionSet const& exts) {
@@ -295,6 +301,8 @@ void OpenGLDriver::initExtensionsGL(GLint major, GLint minor, ExtentionSet const
     ext.OES_EGL_image_external_essl3 = hasExtension(exts, "GL_OES_EGL_image_external_essl3");
     ext.EXT_debug_marker = hasExtension(exts, "GL_EXT_debug_marker");
     ext.EXT_color_buffer_half_float = true;  // Assumes core profile.
+    ext.EXT_color_buffer_float = true;  // Assumes core profile.
+    ext.APPLE_color_buffer_packed_float = true;  // Assumes core profile.
 }
 
 void OpenGLDriver::terminate() {
@@ -1732,18 +1740,25 @@ bool OpenGLDriver::isRenderTargetFormatSupported(TextureFormat format) {
             return GL41_HEADERS;
 
         // Half-float formats, requires extension.
-        case TextureFormat::RGB16F:
-            return ext.EXT_color_buffer_half_float;
-
-        // Float formats from GL_EXT_color_buffer_float, assumed supported.
         case TextureFormat::R16F:
         case TextureFormat::RG16F:
         case TextureFormat::RGBA16F:
+            return ext.EXT_color_buffer_float || ext.EXT_color_buffer_half_float;
+
+        // RGB32F and RGB16F are only supported with EXT_color_buffer_half_float
+        case TextureFormat::RGB16F:
+        case TextureFormat::RGB32F:
+            return ext.EXT_color_buffer_half_float;
+
+        // Float formats from GL_EXT_color_buffer_float
         case TextureFormat::R32F:
         case TextureFormat::RG32F:
         case TextureFormat::RGBA32F:
+            return ext.EXT_color_buffer_float;
+
+        // RGB_11_11_10 is only supported with some  specific extensions
         case TextureFormat::R11F_G11F_B10F:
-            return true;
+            return ext.EXT_color_buffer_float || ext.APPLE_color_buffer_packed_float;
 
         default:
             return false;
