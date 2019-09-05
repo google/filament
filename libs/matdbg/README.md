@@ -122,6 +122,16 @@ is equivalent to one of the items in the top-level array in `/api/materials`.
 
 ---
 
+`/api/active`
+
+Returns an object that maps from material ids to their active shader variants. Example:
+
+```json
+{"b38d4ad0": [1, 5] , "44ae2b62": [1, 2, 3] }
+```
+
+---
+
 `/api/shader?matid={id}&type=[glsl|spirv]&[glindex|vkindex|metalindex]={index}`
 
 Returns the entire shader code for the given variant. This is the only HTTP request that returns
@@ -136,8 +146,8 @@ used to create the SPIR-V is not available.
 ## WebSocket messages
 
 Unlike HTTP requests, WebSocket messages can be pushed at any time and can travel in either
-direction. In our homegrown protocol, every WebSocket message starts with a 4-character command
-followed by a space character. Command arguments are delimited with spaces.
+direction. In our homegrown protocol, every WebSocket message starts with a command that matches
+\[A-Z\_]+ followed by a space character. Command arguments are delimited with spaces.
 
 Currently we support only one command. It travels from client to server.
 

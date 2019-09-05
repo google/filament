@@ -355,7 +355,7 @@ static bool parseChunks(Config config, void* data, size_t size) {
 
     if (config.serverPort) {
         // Spin up a web server on a secondary thread.
-        DebugServer server(STANDALONE, config.serverPort);
+        DebugServer server(Backend::DEFAULT, config.serverPort);
 
         // Notify the server that we have a filamat file.
         utils::CString name;

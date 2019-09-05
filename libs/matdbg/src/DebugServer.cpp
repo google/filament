@@ -103,6 +103,7 @@ private:
 //    GET /api/materials
 //    GET /api/material?matid={id}
 //    GET /api/shader?matid={id}&type=[glsl|spirv]&[glindex|vkindex|metalindex]={index}
+//    GET /api/active
 //
 class RestRequestHandler : public CivetHandler {
 public:
@@ -116,6 +117,29 @@ public:
             slog.e << "DebugServer: 404 at " <<  line << ": " << request->query_string << io::endl;
             return false;
         };
+
+        if (uri == "/api/active") {
+            mServer->updateActiveVariants();
+            mg_printf(conn, kSuccessHeader.c_str(), "application/json");
+            mg_printf(conn, "{");
+            int index = 0;
+            for (const auto& pair : mServer->mMaterialRecords) {
+                const auto& record = pair.second;
+                ChunkContainer package(record.package, record.packageSize);
+                if (!package.parse()) {
+                    return error(__LINE__);
+                }
+                JsonWriter writer;
+                if (!writer.writeActiveInfo(package, mServer->mBackend, record.activeVariants)) {
+                    return error(__LINE__);
+                }
+                const bool last = (++index) == mServer->mMaterialRecords.size();
+                mg_printf(conn, "\"%8.8x\": %s %s", pair.first, writer.getJsonString(),
+                        last ? "" : ",");
+            }
+            mg_printf(conn, "}");
+            return true;
+        }
 
         if (uri == "/api/matids") {
             mg_printf(conn, kSuccessHeader.c_str(), "application/json");
@@ -323,7 +347,7 @@ public:
             return true;
         }
 
-        // Every WebSocket message is prefixed with a 4-character command followed by a space.
+        // Every WebSocket message is prefixed with a command name followed by a space.
         //
         // For now we simply use istringstream for parsing, so command arguments are delimited
         // with space characters.
@@ -341,19 +365,20 @@ public:
         const static StaticString kEditCmd = "EDIT ";
         const static size_t kEditCmdLength = kEditCmd.size();
 
-        if (strncmp(data, kEditCmd.c_str(), kEditCmdLength)) {
-            slog.e << "Bad WebSocket message." << io::endl;
-            return false;
+        if (0 == strncmp(data, kEditCmd.c_str(), kEditCmdLength)) {
+            std::istringstream str(data + kEditCmdLength);
+            uint32_t matid;
+            int api;
+            int shaderIndex;
+            str >> std::hex >> matid >> std::dec >> api >> shaderIndex;
+            const char* source = data + kEditCmdLength + str.tellg();
+            const size_t remaining = size - kEditCmdLength - str.tellg();
+            mServer->handleEditCommand(matid, backend::Backend(api), shaderIndex, source, remaining);
+            return true;
         }
-        std::istringstream str(data + kEditCmdLength);
-        uint32_t matid;
-        int api;
-        int shaderIndex;
-        str >> std::hex >> matid >> std::dec >> api >> shaderIndex;
-        const char* source = data + kEditCmdLength + str.tellg();
-        const size_t remaining = size - kEditCmdLength - str.tellg();
-        mServer->handleEditCommand(matid, backend::Backend(api), shaderIndex, source, remaining);
-        return true;
+
+        slog.e << "Bad WebSocket message." << io::endl;
+        return false;
     }
 
     void handleClose(CivetServer *server, const struct mg_connection *conn) override {
@@ -374,7 +399,7 @@ private:
     struct mg_connection* mConnection = nullptr;
 };
 
-DebugServer::DebugServer(ServerMode mode, int port) : mServerMode(mode) {
+DebugServer::DebugServer(Backend backend, int port) : mBackend(backend) {
     #if !SERVE_FROM_SOURCE_TREE
     mHtml = CString((const char*) MATDBG_RESOURCES_INDEX_DATA, MATDBG_RESOURCES_INDEX_SIZE - 1);
     mJavascript = CString((const char*) MATDBG_RESOURCES_SCRIPT_DATA, MATDBG_RESOURCES_SCRIPT_SIZE - 1);
@@ -446,6 +471,15 @@ const DebugServer::MaterialRecord* DebugServer::getRecord(const MaterialKey& key
     return iter == mMaterialRecords.end() ? nullptr : &iter->second;
 }
 
+void DebugServer::updateActiveVariants() {
+    if (mQueryCallback) {
+        for (auto& pair : mMaterialRecords) {
+            uint16_t& result = mMaterialRecords[pair.first].activeVariants;
+            mQueryCallback(pair.second.userdata, &result);
+        }
+    }
+}
+
 bool DebugServer::handleEditCommand(const MaterialKey& key, backend::Backend api, int shaderIndex,
             const char* source, size_t size) {
     const auto error = [](int line) {
@@ -462,10 +496,9 @@ bool DebugServer::handleEditCommand(const MaterialKey& key, backend::Backend api
         return error(__LINE__);
     }
 
-    const backend::Backend apiType = (backend::Backend) api;
     std::vector<ShaderInfo> infos;
     size_t shaderCount;
-    switch (apiType) {
+    switch (api) {
         case backend::Backend::OPENGL: {
             shaderCount = getShaderCount(package, ChunkType::MaterialGlsl);
             infos.resize(shaderCount);
@@ -499,7 +532,7 @@ bool DebugServer::handleEditCommand(const MaterialKey& key, backend::Backend api
     }
 
     const ShaderInfo info = infos[shaderIndex];
-    ShaderReplacer editor(apiType, package.getData(), package.getSize());
+    ShaderReplacer editor(api, package.getData(), package.getSize());
     if (!editor.replaceShaderSource(info.shaderModel, info.variant, info.pipelineStage, source, size)) {
         return error(__LINE__);
     }

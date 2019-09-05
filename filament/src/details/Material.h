@@ -132,11 +132,21 @@ public:
 
     void destroyPrograms(FEngine& engine);
 
-    // Callback handler for the debug server, potentially called from any thread. The userdata
-    // argument has the same value that was passed to DebugServer::addMaterial(), which should
-    // be an instance of the public-facing Material.
+    /**
+     * Callback handlers for the debug server, potentially called from any thread. The userdata
+     * argument has the same value that was passed to DebugServer::addMaterial(), which should
+     * be an instance of the public-facing Material.
+     * @{
+     */
+
+    /** Replaces the material package. */
     static void onEditCallback(void* userdata, const utils::CString& name, const void* packageData,
             size_t packageSize);
+
+    /** Queries the program cache to check which variants are resident. */
+    static void onQueryCallback(void* userdata, uint16_t* variants);
+
+    /** @}*/
 
     static MaterialParser* createParser(backend::Backend backend, const void* data, size_t size);
 
