@@ -17,7 +17,6 @@
 #ifndef MATDBG_DEBUGSERVER_H
 #define MATDBG_DEBUGSERVER_H
 
-#include <utils/compiler.h>
 #include <utils/CString.h>
 
 #include <backend/DriverEnums.h>
@@ -29,8 +28,6 @@ class CivetServer;
 namespace filament {
 namespace matdbg {
 
-enum ServerMode { ENGINE, STANDALONE };
-
 /**
  * Server-side material debugger.
  *
@@ -40,7 +37,7 @@ enum ServerMode { ENGINE, STANDALONE };
  */
 class DebugServer {
 public:
-    DebugServer(ServerMode mode, int port = 8080);
+    DebugServer(backend::Backend backend, int port);
     ~DebugServer();
 
     /**
@@ -50,12 +47,19 @@ public:
             void* userdata = nullptr);
 
     using EditCallback = void(*)(void* userdata, const utils::CString& name, const void*, size_t);
+    using QueryCallback = void(*)(void* userdata, uint16_t* variants);
 
     /**
      * Sets up a callback that allows the Filament engine to listen for shader edits. The callback
      * might be triggered from a secondary thread.
      */
     void setEditCallback(EditCallback callback) { mEditCallback = callback; }
+
+    /**
+     * Sets up a callback that can ask the Filament engine which shader variants are active. The
+     * callback might be triggered from a secondary thread.
+     */
+    void setQueryCallback(QueryCallback callback) { mQueryCallback = callback; }
 
     bool isReady() const { return mServer; }
 
@@ -68,9 +72,12 @@ private:
         size_t packageSize;
         utils::CString name;
         MaterialKey key;
+        uint16_t activeVariants;
     };
 
     const MaterialRecord* getRecord(const MaterialKey& key) const;
+
+    void updateActiveVariants();
 
     /**
      *  Replaces the entire content of a particular shader variant. The given shader index uses the
@@ -79,7 +86,7 @@ private:
     bool handleEditCommand(const MaterialKey& mat, backend::Backend api, int shaderIndex,
             const char* newShaderContent, size_t newShaderLength);
 
-    UTILS_UNUSED const ServerMode mServerMode;
+    const backend::Backend mBackend;
 
     CivetServer* mServer;
     tsl::robin_map<MaterialKey, MaterialRecord> mMaterialRecords;
@@ -87,6 +94,7 @@ private:
     utils::CString mJavascript;
     utils::CString mCss;
     EditCallback mEditCallback = nullptr;
+    QueryCallback mQueryCallback = nullptr;
 
     class FileRequestHandler* mFileHandler = nullptr;
     class RestRequestHandler* mRestHandler = nullptr;

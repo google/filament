@@ -40,9 +40,9 @@ using namespace utils;
 namespace filament {
 namespace matdbg {
 
-static std::string arraySizeToString(uint64_t size) {
+static string arraySizeToString(uint64_t size) {
     if (size > 1) {
-        std::string s = "[";
+        string s = "[";
         s += size;
         s += "]";
         return s;
@@ -115,7 +115,7 @@ static bool printParametersInfo(ostream& json, const ChunkContainer& container) 
     return true;
 }
 
-static void printShaderInfo(ostream& json, const std::vector<ShaderInfo>& info) {
+static void printShaderInfo(ostream& json, const vector<ShaderInfo>& info) {
     for (uint64_t i = 0; i < info.size(); ++i) {
         const auto& item = info[i];
         string variantString = "";
@@ -134,17 +134,17 @@ static void printShaderInfo(ostream& json, const std::vector<ShaderInfo>& info) 
         string ps = (item.pipelineStage == backend::ShaderType::VERTEX) ? "vertex  " : "fragment";
         json
             << "    {"
-            << "\"index\": \"" << std::setw(2) << i << "\", "
+            << "\"index\": \"" << setw(2) << i << "\", "
             << "\"shaderModel\": \"" << toString(item.shaderModel) << "\", "
             << "\"pipelineStage\": \"" << ps << "\", "
             << "\"variantString\": \"" << variantString << "\", "
-            << "\"variant\": \"" << std::hex << int(item.variant) << std::dec << "\" }"
+            << "\"variant\": \"" << hex << int(item.variant) << dec << "\" }"
             << ((i == info.size() - 1) ? "\n" : ",\n");
     }
 }
 
 static bool printGlslInfo(ostream& json, const ChunkContainer& container) {
-    std::vector<ShaderInfo> info;
+    vector<ShaderInfo> info;
     info.resize(getShaderCount(container, ChunkType::MaterialGlsl));
     if (!getGlShaderInfo(container, info.data())) {
         return false;
@@ -156,7 +156,7 @@ static bool printGlslInfo(ostream& json, const ChunkContainer& container) {
 }
 
 static bool printVkInfo(ostream& json, const ChunkContainer& container) {
-    std::vector<ShaderInfo> info;
+    vector<ShaderInfo> info;
     info.resize(getShaderCount(container, ChunkType::MaterialSpirv));
     if (!getVkShaderInfo(container, info.data())) {
         return false;
@@ -168,7 +168,7 @@ static bool printVkInfo(ostream& json, const ChunkContainer& container) {
 }
 
 static bool printMetalInfo(ostream& json, const ChunkContainer& container) {
-    std::vector<ShaderInfo> info;
+    vector<ShaderInfo> info;
     info.resize(getShaderCount(container, ChunkType::MaterialMetal));
     if (!getMetalShaderInfo(container, info.data())) {
         return false;
@@ -218,12 +218,94 @@ bool JsonWriter::writeMaterialInfo(const filaflat::ChunkContainer& container) {
     return true;
 }
 
+bool JsonWriter::writeActiveInfo(const filaflat::ChunkContainer& package,
+        Backend backend, uint16_t activeVariants) {
+    vector<ShaderInfo> shaders;
+    ostringstream json;
+    json << "[\"";
+    switch (backend) {
+        case Backend::OPENGL:
+            shaders.resize(getShaderCount(package, ChunkType::MaterialGlsl));
+            getGlShaderInfo(package, shaders.data());
+            json << "opengl";
+            break;
+        case Backend::VULKAN:
+            shaders.resize(getShaderCount(package, ChunkType::MaterialSpirv));
+            getVkShaderInfo(package, shaders.data());
+            json << "vulkan";
+            break;
+        case Backend::METAL:
+            shaders.resize(getShaderCount(package, ChunkType::MaterialMetal));
+            getMetalShaderInfo(package, shaders.data());
+            json << "metal";
+            break;
+        default:
+            return false;
+    }
+    json << "\"";
+    for (uint8_t variant = 0; variant < VARIANT_COUNT; variant++) {
+        if (activeVariants & (1 << variant)) {
+            int shaderIndex = 0;
+            for (const auto& info : shaders) {
+                if (info.variant == variant) {
+                    json << ", " << shaderIndex;
+                }
+                shaderIndex++;
+            }
+        }
+    }
+    json << "]";
+    mJsonString = CString(json.str().c_str());
+    return true;
+}
+
 const char* JsonWriter::getJsonString() const {
     return mJsonString.c_str();
 }
 
 size_t JsonWriter::getJsonSize() const {
     return mJsonString.size();
+}
+
+bool JsonWriter::writeActiveInfo(const filaflat::ChunkContainer& package,
+        Backend backend, uint16_t activeVariants) {
+    vector<ShaderInfo> shaders;
+    ostringstream json;
+    json << "[\"";
+    switch (backend) {
+        case Backend::OPENGL:
+            shaders.resize(getShaderCount(package, ChunkType::MaterialGlsl));
+            getGlShaderInfo(package, shaders.data());
+            json << "opengl";
+            break;
+        case Backend::VULKAN:
+            shaders.resize(getShaderCount(package, ChunkType::MaterialSpirv));
+            getVkShaderInfo(package, shaders.data());
+            json << "vulkan";
+            break;
+        case Backend::METAL:
+            shaders.resize(getShaderCount(package, ChunkType::MaterialMetal));
+            getMetalShaderInfo(package, shaders.data());
+            json << "metal";
+            break;
+        default:
+            return false;
+    }
+    json << "\"";
+    for (uint8_t variant = 0; variant < VARIANT_COUNT; variant++) {
+        if (activeVariants & (1 << variant)) {
+            int shaderIndex = 0;
+            for (const auto& info : shaders) {
+                if (info.variant == variant) {
+                    json << ", " << shaderIndex;
+                }
+                shaderIndex++;
+            }
+        }
+    }
+    json << "]";
+    mJsonString = CString(json.str().c_str());
+    return true;
 }
 
 } // namespace matdbg

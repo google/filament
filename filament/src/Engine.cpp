@@ -160,22 +160,6 @@ void FEngine::init() {
     mCommandStream = CommandStream(*mDriver, mCommandBufferQueue.getCircularBuffer());
     DriverApi& driverApi = getDriverApi();
 
-#if FILAMENT_ENABLE_MATDBG
-    // Disable the web server for regression tests that occur in hermetic environments.
-    if (mBackend != backend::Backend::NOOP) {
-        debug.server = new matdbg::DebugServer(matdbg::ENGINE, 8080);
-
-        // Sometimes the server can fail to spin up (e.g. if the above port is already in use).
-        // When this occurs, carry onward, developers can look at civetweb.txt for details.
-        if (!debug.server->isReady()) {
-            delete debug.server;
-            debug.server = nullptr;
-        } else {
-            debug.server->setEditCallback(FMaterial::onEditCallback);
-        }
-    }
-#endif
-
     mResourceAllocator = new fg::ResourceAllocator(driverApi);
 
     // Parse all post process shaders now, but create them lazily
@@ -415,6 +399,24 @@ int FEngine::loop() {
         }
         slog.d << io::endl;
     }
+
+#if FILAMENT_ENABLE_MATDBG
+    // Disable the web server for regression tests that occur in hermetic environments.
+    if (mBackend != backend::Backend::NOOP) {
+        debug.server = new matdbg::DebugServer(mBackend, 8080);
+
+        // Sometimes the server can fail to spin up (e.g. if the above port is already in use).
+        // When this occurs, carry onward, developers can look at civetweb.txt for details.
+        if (!debug.server->isReady()) {
+            delete debug.server;
+            debug.server = nullptr;
+        } else {
+            debug.server->setEditCallback(FMaterial::onEditCallback);
+            debug.server->setQueryCallback(FMaterial::onQueryCallback);
+        }
+    }
+#endif
+
     mDriver = platform->createDriver(mSharedGLContext);
     mDriverBarrier.latch();
     if (UTILS_UNLIKELY(!mDriver)) {
