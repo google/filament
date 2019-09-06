@@ -1745,9 +1745,8 @@ bool OpenGLDriver::isRenderTargetFormatSupported(TextureFormat format) {
         case TextureFormat::RGBA16F:
             return ext.EXT_color_buffer_float || ext.EXT_color_buffer_half_float;
 
-        // RGB32F and RGB16F are only supported with EXT_color_buffer_half_float
+        // RGB16F is only supported with EXT_color_buffer_half_float
         case TextureFormat::RGB16F:
-        case TextureFormat::RGB32F:
             return ext.EXT_color_buffer_half_float;
 
         // Float formats from GL_EXT_color_buffer_float
