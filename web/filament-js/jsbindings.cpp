@@ -1315,11 +1315,11 @@ class_<FilamentAsset>("gltfio$FilamentAsset")
         return std::vector<const MaterialInstance*>(ptr, ptr + self->getMaterialInstanceCount());
     }), allow_raw_pointers())
 
-    .function("getResourceUrls", EMBIND_LAMBDA(std::vector<std::string>, (FilamentAsset* self), {
+    .function("getResourceUris", EMBIND_LAMBDA(std::vector<std::string>, (FilamentAsset* self), {
         std::vector<std::string> retval;
-        auto urls = self->getResourceUrls();
-        for (size_t i = 0, len = self->getResourceUrlCount(); i < len; ++i) {
-            retval.push_back(urls[i]);
+        auto uris = self->getResourceUris();
+        for (size_t i = 0, len = self->getResourceUriCount(); i < len; ++i) {
+            retval.push_back(uris[i]);
         }
         return retval;
     }), allow_raw_pointers())

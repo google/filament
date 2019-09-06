@@ -77,9 +77,9 @@ public:
     size_t getTextureBindingCount() const noexcept;
     const TextureBinding* getTextureBindings() const noexcept;
 
-    /** Gets resource URLs for all externally-referenced buffers. */
-    size_t getResourceUrlCount() const noexcept;
-    const char* const* getResourceUrls() const noexcept;
+    /** Gets resource URIs for all externally-referenced buffers. */
+    size_t getResourceUriCount() const noexcept;
+    const char* const* getResourceUris() const noexcept;
 
     /** Gets the bounding box computed from the supplied min / max values in glTF accessors. */
     filament::Aabb getBoundingBox() const noexcept;
