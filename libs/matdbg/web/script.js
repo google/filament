@@ -131,14 +131,43 @@ function fetchMaterial(matid) {
     });
 }
 
+function queryActiveShaders() {
+    if (!gSocket) {
+        for (matid in gMaterialDatabase) {
+            const material = gMaterialDatabase[matid];
+            material.active = false;
+            for (const shader of material.opengl) shader.active = false;
+            for (const shader of material.vulkan) shader.active = false;
+            for (const shader of material.metal)  shader.active = false;
+        }
+        renderMaterialList();
+        renderMaterialDetail();
+        return;
+    }
+    fetch("api/active").then(function(response) {
+        return response.json();
+    }).then(function(activeMaterials) {
+        for (matid in gMaterialDatabase) {
+            const material = gMaterialDatabase[matid];
+            material.active = matid in activeMaterials;
+        }
+        for (matid in activeMaterials) {
+            const material = gMaterialDatabase[matid];
+            const activeBackend = activeMaterials[matid][0];
+            const activeShaders = activeMaterials[matid].slice(1);
+            for (const shader of material[activeBackend]) {
+                const index = parseInt(shader.index);
+                shader.active = activeShaders.indexOf(index) > -1;
+            }
+        }
+        renderMaterialList();
+        renderMaterialDetail();
+    });
+}
+
 function startSocket() {
     const url = new URL(document.URL)
     const ws = new WebSocket(`ws://${url.host}`);
-
-    const reconnect = () => {
-        gSocket = null;
-        setTimeout(() => startSocket(), 3000);
-    };
 
     // When a new server has come online, ask it what materials it has.
     ws.addEventListener("open", () => {
@@ -158,7 +187,8 @@ function startSocket() {
 
     ws.addEventListener("close", (e) => {
         footer.innerText = "no connection";
-        reconnect();
+        gSocket = null;
+        setTimeout(() => startSocket(), 3000);
     });
 
     ws.addEventListener("message", event => {
@@ -211,7 +241,10 @@ function renderMaterialList() {
     const materials = [];
     for (const matid in gMaterialDatabase) {
         const item = gMaterialDatabase[matid];
-        item.classes = matid === gCurrentMaterial ? "active" : "";
+        item.classes = matid === gCurrentMaterial ? "current " : "";
+        if (!item.active) {
+            item.classes += "inactive "
+        }
         materials.push(item);
     }
     materialList.innerHTML = Mustache.render(matListTemplate.innerHTML, { "material": materials } );
@@ -219,8 +252,11 @@ function renderMaterialList() {
 
 function updateClassList(array, indexProperty, selectedIndex) {
     for (let item of array) {
-        const active = parseInt(item[indexProperty]) === selectedIndex;
-        item.classes = active ? "active" : "";
+        const current = parseInt(item[indexProperty]) === selectedIndex;
+        item.classes = current ? "current " : "";
+        if (!item.active) {
+            item.classes += "inactive "
+        }
     }
 }
 
@@ -318,6 +354,7 @@ function init() {
     Mustache.parse(matListTemplate.innerHTML);
 
     startSocket();
+    setInterval(queryActiveShaders, 1000);
 }
 
 init();
