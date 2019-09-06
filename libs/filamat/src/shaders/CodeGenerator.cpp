@@ -453,15 +453,21 @@ io::sstream& CodeGenerator::generateCommonMaterial(io::sstream& out, ShaderType 
     return out;
 }
 
-io::sstream& CodeGenerator::generateCommonPostProcess(io::sstream& out, ShaderType type) const {
-    if (type == ShaderType::FRAGMENT) {
-        out << SHADERS_COMMON_POST_PROCESS_FS_DATA;
+io::sstream& CodeGenerator::generatePostProcessInputs(io::sstream& out, ShaderType type) const {
+    if (type == ShaderType::VERTEX) {
+        out << SHADERS_POST_PROCESS_INPUTS_VS_DATA;
+    } else if (type == ShaderType::FRAGMENT) {
+        out << SHADERS_POST_PROCESS_INPUTS_FS_DATA;
     }
     return out;
 }
 
-utils::io::sstream& CodeGenerator::generateCommonGetters(utils::io::sstream& out) const {
+utils::io::sstream& CodeGenerator::generatePostProcessGetters(utils::io::sstream& out,
+        ShaderType type) const {
     out << SHADERS_COMMON_GETTERS_FS_DATA;
+    if (type == ShaderType::VERTEX) {
+        out << SHADERS_POST_PROCESS_GETTERS_VS_DATA;
+    }
     return out;
 }
 
