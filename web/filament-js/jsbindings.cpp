@@ -1364,13 +1364,9 @@ class_<FilamentAsset>("gltfio$FilamentAsset")
 
     .function("getResourceUrls", EMBIND_LAMBDA(std::vector<std::string>, (FilamentAsset* self), {
         std::vector<std::string> retval;
-        const BufferBinding* bbinding = self->getBufferBindings();
-        for (size_t i = 0, len = self->getBufferBindingCount(); i < len; ++i, ++bbinding) {
-            retval.push_back(bbinding->uri);
-        }
-        const TextureBinding* tbinding = self->getTextureBindings();
-        for (size_t i = 0, len = self->getTextureBindingCount(); i < len; ++i, ++tbinding) {
-            retval.push_back(tbinding->uri);
+        auto urls = self->getResourceUrls();
+        for (size_t i = 0, len = self->getResourceUrlCount(); i < len; ++i) {
+            retval.push_back(urls[i]);
         }
         return retval;
     }), allow_raw_pointers())
