@@ -14,4 +14,4 @@ jobs:
         run: |
           cd build/ios && ./build.sh ${TARGET}
         env:
-          target: presubmit
+          TARGET: presubmit
