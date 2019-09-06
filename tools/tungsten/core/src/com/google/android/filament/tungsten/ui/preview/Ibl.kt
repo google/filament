@@ -121,7 +121,7 @@ internal class Ibl(val engine: Engine, private val pathPrefix: String) {
         buffer.position(0)
 
         val bufferDescriptor =
-                Texture.PixelBufferDescriptor(buffer, Texture.Format.RGB, Texture.Type.UBYTE)
+                Texture.PixelBufferDescriptor(buffer, Texture.Format.RGB, Texture.Type.UINT_10F_11F_11F_REV)
 
         // If the texture hasn't been created yet, create it.
         val resultTexture = texture ?: Texture.Builder()
