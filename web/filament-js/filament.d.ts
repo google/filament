@@ -144,7 +144,33 @@ export class LightManager$Builder {
 }
 
 export class LightManager {
+    public hasComponent(entity: Entity): boolean;
+    public getInstance(entity: Entity): LightManager$Instance;
     public static Builder(ltype: LightManager$Type): LightManager$Builder;
+    public getType(instance: LightManager$Instance): LightManager$Type;
+    public isDirectional(instance: LightManager$Instance): boolean;
+    public isPointLight(instance: LightManager$Instance): boolean;
+    public isSpotLight(instance: LightManager$Instance): boolean;
+    public setPosition(instance: LightManager$Instance, value: float3): void;
+    public getPosition(instance: LightManager$Instance): float3;
+    public setDirection(instance: LightManager$Instance, value: float3): void;
+    public getDirection(instance: LightManager$Instance): float3;
+    public setColor(instance: LightManager$Instance, value: float3): void;
+    public getColor(instance: LightManager$Instance): float3;
+    public setIntensity(instance: LightManager$Instance, intensity: number): void;
+    public setIntensityEnergy(instance: LightManager$Instance, watts: number, efficiency: number): void;
+    public getIntensity(instance: LightManager$Instance): number;
+    public setFalloff(instance: LightManager$Instance, radius: number): void;
+    public getFalloff(instance: LightManager$Instance: number);
+    public setSpotLightCone(instance: LightManager$Instance, inner: number, outer: number): void;
+    public setSunAngularRadius(instance: LightManager$Instance, angularRadius: number): void;
+    public getSunAngularRadius(instance: LightManager$Instance): number;
+    public setSunHaloSize(instance: LightManager$Instance, haloSize: number): void;
+    public getSunHaloSize(instance: LightManager$Instance): number;
+    public setSunHaloFalloff(instance: LightManager$Instance, haloFalloff: number): void;
+    public getSunHaloFalloff(instance: LightManager$Instance): number;
+    public setShadowCaster(instance: LightManager$Instance, shadowCaster: boolean): number;
+    public isShadowCaster(instance: LightManager$Instance): boolean;
 }
 
 export interface RenderableManager$Bone {

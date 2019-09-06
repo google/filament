@@ -821,8 +821,55 @@ class_<LightBuilder>("LightManager$Builder")
             (LightBuilder* builder, float value), { return &builder->sunHaloFalloff(value); });
 
 class_<LightManager>("LightManager")
+    .function("hasComponent", &LightManager::hasComponent)
+
+    /// getInstance ::method:: Gets an instance of the light component for an entity.
+    /// entity ::argument:: an [Entity]
+    /// ::retval:: a light source component
+    .function("getInstance", &LightManager::getInstance)
+
     .class_function("Builder", (LightBuilder (*)(LightManager::Type)) [] (LightManager::Type lt) {
-        return LightBuilder(lt); });
+        return LightBuilder(lt); })
+
+    .function("getType", &LightManager::getType)
+    .function("isDirectional", &LightManager::isDirectional)
+    .function("isPointLight", &LightManager::isPointLight)
+    .function("isSpotLight", &LightManager::isSpotLight)
+    .function("setPosition", &LightManager::setPosition)
+    .function("getPosition", &LightManager::getPosition)
+    .function("setDirection", &LightManager::setDirection)
+    .function("getDirection", &LightManager::getDirection)
+    .function("setColor", &LightManager::setColor)
+    .function("getColor", &LightManager::getColor)
+
+    .function("setIntensity", EMBIND_LAMBDA(void, (LightManager* self,
+            LightManager::Instance instance, float intensity), {
+        self->setIntensity(instance, intensity);
+    }), allow_raw_pointers())
+
+    .function("setIntensityEnergy", EMBIND_LAMBDA(void, (LightManager* self,
+            LightManager::Instance instance, float watts, float efficiency), {
+        self->setIntensity(instance, watts, efficiency);
+    }), allow_raw_pointers())
+
+    .function("getIntensity", &LightManager::getIntensity)
+    .function("setFalloff", &LightManager::setFalloff)
+    .function("getFalloff", &LightManager::getFalloff)
+    .function("setSpotLightCone", &LightManager::setSpotLightCone)
+    .function("setSunAngularRadius", &LightManager::setSunAngularRadius)
+    .function("getSunAngularRadius", &LightManager::getSunAngularRadius)
+    .function("setSunHaloSize", &LightManager::setSunHaloSize)
+    .function("getSunHaloSize", &LightManager::getSunHaloSize)
+    .function("setSunHaloFalloff", &LightManager::setSunHaloFalloff)
+    .function("getSunHaloFalloff", &LightManager::getSunHaloFalloff)
+    .function("setShadowCaster", &LightManager::setShadowCaster)
+    .function("isShadowCaster", &LightManager::isShadowCaster)
+    ;
+
+/// LightManager$Instance ::class:: Component instance returned by [LightManager]
+/// Be sure to call the instance's `delete` method when you're done with it.
+class_<LightManager::Instance>("LightManager$Instance");
+    /// delete ::method:: Frees an instance obtained via `getInstance`
 
 class_<VertexBuilder>("VertexBuffer$Builder")
     .function("_build", EMBIND_LAMBDA(VertexBuffer*, (VertexBuilder* builder, Engine* engine), {
