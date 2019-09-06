@@ -100,7 +100,8 @@ add_rawfile("third_party/models/FlightHelmet/FlightHelmet_occlusionRoughnessMeta
 add_rawfile("third_party/models/FlightHelmet/FlightHelmet_occlusionRoughnessMetallic3.png" "FlightHelmet_occlusionRoughnessMetallic3.png")
 add_rawfile("third_party/models/FlightHelmet/FlightHelmet_occlusionRoughnessMetallic4.png" "FlightHelmet_occlusionRoughnessMetallic4.png")
 add_rawfile("third_party/models/FlightHelmet/FlightHelmet.bin" "FlightHelmet.bin")
-add_rawfile("third_party/models/FlightHelmet/FlightHelmet.gltf" "helmet.gltf")
+add_rawfile("third_party/models/FlightHelmet/FlightHelmet.gltf" "FlightHelmet.gltf")
+
 
 # Convert OBJ files into filamesh files.
 function(add_mesh SOURCE TARGET)
