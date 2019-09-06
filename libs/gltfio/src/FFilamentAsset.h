@@ -121,11 +121,11 @@ struct FFilamentAsset : public FilamentAsset {
         return mTextureBindings.data();
     }
 
-    size_t getResourceUrlCount() const noexcept {
+    size_t getResourceUriCount() const noexcept {
         return mResourceUrls.size();
     }
 
-    const char* const* getResourceUrls() const noexcept {
+    const char* const* getResourceUris() const noexcept {
         return mResourceUrls.data();
     }
 

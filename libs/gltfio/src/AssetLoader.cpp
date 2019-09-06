@@ -247,8 +247,8 @@ void FAssetLoader::createAsset(const cgltf_data* srcAsset) {
         }
     }
 
-    // Find every unique resource URL and store a pointer to any of the cgltf-owned cstrings
-    // that match the URL. These strings get freed during releaseSourceData().
+    // Find every unique resource URI and store a pointer to any of the cgltf-owned cstrings
+    // that match the URI. These strings get freed during releaseSourceData().
     tsl::robin_map<std::string, const char*> resourceUris;
     auto addResourceUri = [&resourceUris](const char* uri) {
         if (uri) {
