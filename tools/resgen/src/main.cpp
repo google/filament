@@ -300,8 +300,8 @@ int main(int argc, char* argv[]) {
         // Write the xxd-style ASCII array, followed by a blank line.
         if (g_generateC) {
             xxdDefinitions
-                    << "int " << prname << "_OFFSET = " << offset << "\n"
-                    << "int " << prname << "_SIZE = " << content.size() << "\n";
+                    << "int " << prname << "_OFFSET = " << offset << ";\n"
+                    << "int " << prname << "_SIZE = " << content.size() << ";\n";
 
             xxdStream << "// " << rname << "\n";
             xxdStream << setfill('0') << hex;
