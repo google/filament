@@ -325,17 +325,17 @@ endif()
 # Functions
 # ==================================================================================================
 function(list_licenses OUTPUT MODULES)
-    file(WRITE ${OUTPUT} "R\"FILAMENT__(\n")
+    set(CONTENT)
     set(_MODULES ${MODULES} ${ARGN})
     foreach(module ${_MODULES})
         set(license_path "../../third_party/${module}/LICENSE")
         get_filename_component(fullname "${license_path}" ABSOLUTE)
-        file(APPEND ${OUTPUT} "License and copyrights for ${module}:\n\n")
+        string(APPEND CONTENT "License and copyrights for ${module}:\n\n")
         file(READ ${license_path} license)
-        file(APPEND ${OUTPUT} ${license})
-        file(APPEND ${OUTPUT} "\n\n")
+        string(APPEND CONTENT ${license})
+        string(APPEND CONTENT "\n\n")
     endforeach()
-    file(APPEND ${OUTPUT} ")FILAMENT__\"\n")
+    configure_file(${FILAMENT}/build/licenses.inc.in ${OUTPUT})
 endfunction(list_licenses)
 
 # ==================================================================================================
