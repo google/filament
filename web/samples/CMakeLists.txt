@@ -102,6 +102,9 @@ add_rawfile("third_party/models/FlightHelmet/FlightHelmet_occlusionRoughnessMeta
 add_rawfile("third_party/models/FlightHelmet/FlightHelmet.bin" "FlightHelmet.bin")
 add_rawfile("third_party/models/FlightHelmet/FlightHelmet.gltf" "FlightHelmet.gltf")
 
+add_rawfile("third_party/models/AnimatedTriangle/SimpleTriangle.bin" "SimpleTriangle.bin")
+add_rawfile("third_party/models/AnimatedTriangle/animation.bin" "animation.bin")
+add_rawfile("third_party/models/AnimatedTriangle/AnimatedTriangle.gltf" "AnimatedTriangle.gltf")
 
 # Convert OBJ files into filamesh files.
 function(add_mesh SOURCE TARGET)
@@ -178,6 +181,7 @@ add_custom_target(filamentjs_public DEPENDS ${SERVER_DIR}/filament.js ${SERVER_D
 # ==================================================================================================
 
 set(HTML_FILES
+    animation.html
     helmet.html
     leaks.html
     parquet.html

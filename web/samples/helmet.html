@@ -70,7 +70,7 @@ class App {
 
         const messages = document.getElementById('messages');
 
-        // Crudely indicate progress by printing the URL of each resource as it is loaded.
+        // Crudely indicate progress by printing the URI of each resource as it is loaded.
         // Note that we wait 1 ms after the last asset has downloaded, but before finalization.
         // This gives the browser time to display the latest status.
         const onFetched = (uri) => messages.innerText += `Downloaded ${uri}\n`;

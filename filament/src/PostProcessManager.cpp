@@ -46,6 +46,8 @@ PostProcessManager::PostProcessMaterial::PostProcessMaterial(FEngine& engine,
         uint8_t const* data, size_t size) noexcept {
     mMaterial = upcast(Material::Builder().package(data, size).build(engine));
     mMaterialInstance = mMaterial->getDefaultInstance();
+    // TODO: After all materials using this class have been converted to the post-process material
+    // domain, load both OPAQUE and TRANSPARENt variants here.
     mProgram = mMaterial->getProgram(0);
 }
 
@@ -89,6 +91,7 @@ void PostProcessManager::init() noexcept {
     mSSAO = PostProcessMaterial(mEngine, MATERIALS_SAO_DATA, MATERIALS_SAO_SIZE);
     mMipmapDepth = PostProcessMaterial(mEngine, MATERIALS_MIPMAPDEPTH_DATA, MATERIALS_MIPMAPDEPTH_SIZE);
     mBlur = PostProcessMaterial(mEngine, MATERIALS_BLUR_DATA, MATERIALS_BLUR_SIZE);
+    mTonemapping = PostProcessMaterial(mEngine, MATERIALS_TONEMAPPING_DATA, MATERIALS_TONEMAPPING_SIZE);
 
     // create sampler for post-process FBO
     DriverApi& driver = mEngine.getDriverApi();
@@ -159,9 +162,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::toneMapping(FrameGraph& fg, 
         FrameGraphId<FrameGraphTexture> output;
         FrameGraphRenderTargetHandle rt;
     };
-    backend::Handle<backend::HwProgram> toneMappingProgram = engine.getPostProcessProgram(
-            translucent ? PostProcessStage::TONE_MAPPING_TRANSLUCENT
-                        : PostProcessStage::TONE_MAPPING_OPAQUE);
 
     auto& ppToneMapping = fg.addPass<PostProcessToneMapping>("tonemapping",
             [&](FrameGraph::Builder& builder, PostProcessToneMapping& data) {
@@ -174,24 +174,28 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::toneMapping(FrameGraph& fg, 
                 });
                 data.rt = builder.createRenderTarget(data.output);
             },
-            [=](FrameGraphPassResources const& resources,
+            [=, engine = &engine](FrameGraphPassResources const& resources,
                     PostProcessToneMapping const& data, DriverApi& driver) {
-                PipelineState pipeline;
-                pipeline.rasterState.culling = RasterState::CullingMode::NONE;
-                pipeline.rasterState.colorWrite = true;
-                pipeline.rasterState.depthFunc = RasterState::DepthFunc::A;
-                pipeline.program = toneMappingProgram;
-
-                auto const& textureDesc = resources.getDescriptor(data.input);
                 auto const& color = resources.getTexture(data.input);
-                // TODO: the first parameters below are the *actual viewport* size
-                //       (as opposed to the size of the source texture). Currently we don't allow
-                //       the texture to be resized, so they match. We'll need something more
-                //       sophisticated in the future.
 
-                mPostProcessUb.setUniform(offsetof(PostProcessingUib, dithering), dithering);
-                setSource(textureDesc.width, textureDesc.height,
-                        color, {}, textureDesc.width, textureDesc.height);
+                FMaterialInstance* pInstance = mTonemapping.getMaterialInstance();
+                pInstance->setParameter("dithering", dithering);
+                SamplerParams params;
+                pInstance->setParameter("colorBuffer", color, params);
+
+                auto duration = engine->getEngineTime();
+                float fraction = (duration.count() % 1000000000) / 1000000000.0f;
+                mPostProcessUb.setUniform(offsetof(PostProcessingUib, time), fraction);
+
+                pInstance->commit(driver);
+                pInstance->use(driver);
+
+                PipelineState pipeline;
+                pipeline.rasterState = mTonemapping.getMaterial()->getRasterState();
+                const uint8_t variant = static_cast<uint8_t> (
+                            translucent ?
+                            PostProcessVariant::TRANSLUCENT : PostProcessVariant::OPAQUE );
+                pipeline.program = mTonemapping.getMaterial()->getProgram(variant);
 
                 auto const& target = resources.getRenderTarget(data.rt);
                 driver.beginRenderPass(target.target, target.params);

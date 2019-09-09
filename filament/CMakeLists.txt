@@ -142,6 +142,7 @@ set(MATERIAL_SRCS
         src/materials/skybox.mat
         src/materials/sao.mat
         src/materials/ssao.mat
+        src/materials/tonemapping.mat
 )
 
 # Embed the binary resource blob for materials.
