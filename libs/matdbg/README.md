@@ -12,7 +12,11 @@
 
 ## User Instructions
 
-Simply launch any app that links against a debug build of a Filament, and point your web browser to
+First set an environment variable as follows. In Windows, use `set` instead of `export`.
+
+    export FILAMENT_MATDBG_PORT=8080
+
+Next, launch any app that links against a debug build of a Filament and point your web browser to
 http://localhost:8080.
 
 After selecting a material and shader variant, you can view the GLSL, MSL, and SPIR-V code that was
@@ -167,8 +171,6 @@ they appear in the package, where each API (GL / VK / Metal) has its own list.
 
 ## Wish List
 
-- Allow disabling the server at run time when using a build that has FILAMENT_ENABLE_MATDBG.
-    - Maybe this can be an environment variable (extern char \*\*environ) that also controls the port number.
 - Allow SPIR-V edits.
 - Allow viewing GLSL transpiled from SPIR-V.
     - Also stop piggybacking on `type=glsl` for Metal Shading Language.

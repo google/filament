@@ -10,8 +10,9 @@ A new header is inserted each time a *tag* is created.
 - gltfio: Fixed several limitations with ubershader mode.
 - gltfio: Fixed a transforms issue with non-uniform scale.
 - webgl: Fixed an issue with JPEG textures.
-- Windows: fix link error in debug builds.
-- The web-based material inspector now allows editing GLSL and MSL code.
+- Windows: Fix link error in debug builds.
+- matdbg: Web server must now be enabled with an environment variable.
+- matdbg: Added support for editing GLSL and MSL code.
 
 ## v1.3.2
 

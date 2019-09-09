@@ -401,9 +401,10 @@ int FEngine::loop() {
     }
 
 #if FILAMENT_ENABLE_MATDBG
-    // Disable the web server for regression tests that occur in hermetic environments.
-    if (mBackend != backend::Backend::NOOP) {
-        debug.server = new matdbg::DebugServer(mBackend, 8080);
+    const char* portString = getenv("FILAMENT_MATDBG_PORT");
+    if (portString != nullptr) {
+        const int port = atoi(portString);
+        debug.server = new matdbg::DebugServer(mBackend, port);
 
         // Sometimes the server can fail to spin up (e.g. if the above port is already in use).
         // When this occurs, carry onward, developers can look at civetweb.txt for details.
