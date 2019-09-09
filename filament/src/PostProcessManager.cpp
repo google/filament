@@ -92,6 +92,7 @@ void PostProcessManager::init() noexcept {
     mMipmapDepth = PostProcessMaterial(mEngine, MATERIALS_MIPMAPDEPTH_DATA, MATERIALS_MIPMAPDEPTH_SIZE);
     mBlur = PostProcessMaterial(mEngine, MATERIALS_BLUR_DATA, MATERIALS_BLUR_SIZE);
     mTonemapping = PostProcessMaterial(mEngine, MATERIALS_TONEMAPPING_DATA, MATERIALS_TONEMAPPING_SIZE);
+    mFxaa = PostProcessMaterial(mEngine, MATERIALS_FXAA_DATA, MATERIALS_FXAA_SIZE);
 
     // create sampler for post-process FBO
     DriverApi& driver = mEngine.getDriverApi();
@@ -119,35 +120,7 @@ void PostProcessManager::terminate(backend::DriverApi& driver) noexcept {
     mMipmapDepth.terminate(mEngine);
     mBlur.terminate(mEngine);
     mTonemapping.terminate(mEngine);
-}
-
-void PostProcessManager::setSource(uint32_t viewportWidth, uint32_t viewportHeight,
-        backend::Handle<backend::HwTexture> color,
-        backend::Handle<backend::HwTexture> depth,
-        uint32_t textureWidth, uint32_t textureHeight) const noexcept {
-    FEngine& engine = mEngine;
-    DriverApi& driver = engine.getDriverApi();
-
-    // FXAA requires linear filtering. The post-processing stage however, doesn't
-    // use samplers.
-    backend::SamplerParams params;
-    params.filterMag = SamplerMagFilter::LINEAR;
-    params.filterMin = SamplerMinFilter::LINEAR;
-    SamplerGroup group(PostProcessSib::SAMPLER_COUNT);
-    group.setSampler(PostProcessSib::COLOR_BUFFER, color, params);
-    group.setSampler(PostProcessSib::DEPTH_BUFFER, depth, {});
-
-    auto duration = engine.getEngineTime();
-    float fraction = (duration.count() % 1000000000) / 1000000000.0f;
-
-    float2 uvScale = float2{ viewportWidth, viewportHeight } / float2{ textureWidth, textureHeight };
-
-    UniformBuffer& ub = mPostProcessUb;
-    ub.setUniform(offsetof(PostProcessingUib, time), fraction);
-    ub.setUniform(offsetof(PostProcessingUib, uvScale), uvScale);
-
-    driver.updateSamplerGroup(mPostProcessSbh, std::move(group));
-    driver.loadUniformBuffer(mPostProcessUbh, ub.toBufferDescriptor(driver));
+    mFxaa.terminate(mEngine);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -220,10 +193,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::fxaa(FrameGraph& fg,
         FrameGraphRenderTargetHandle rt;
     };
 
-    backend::Handle<backend::HwProgram> antiAliasingProgram = engine.getPostProcessProgram(
-            translucent ? PostProcessStage::ANTI_ALIASING_TRANSLUCENT
-                        : PostProcessStage::ANTI_ALIASING_OPAQUE);
-
     auto& ppFXAA = fg.addPass<PostProcessFXAA>("fxaa",
             [&](FrameGraph::Builder& builder, PostProcessFXAA& data) {
                 auto const& inputDesc = fg.getDescriptor(input);
@@ -235,22 +204,29 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::fxaa(FrameGraph& fg,
                 });
                 data.rt = builder.createRenderTarget(data.output);
             },
-            [=](FrameGraphPassResources const& resources,
+            [=, engine = &engine](FrameGraphPassResources const& resources,
                     PostProcessFXAA const& data, DriverApi& driver) {
-                PipelineState pipeline;
-                pipeline.rasterState.culling = RasterState::CullingMode::NONE;
-                pipeline.rasterState.colorWrite = true;
-                pipeline.rasterState.depthFunc = RasterState::DepthFunc::A;
-                pipeline.program = antiAliasingProgram;
-
-                auto const& textureDesc = resources.getDescriptor(data.input);
                 auto const& texture = resources.getTexture(data.input);
-                // TODO: the first parameters below are the *actual viewport* size
-                //       (as opposed to the size of the source texture). Currently we don't allow
-                //       the texture to be resized, so they match. We'll need something more
-                //       sophisticated in the future.
-                setSource(textureDesc.width, textureDesc.height,
-                        texture, {}, textureDesc.width, textureDesc.height);
+
+                FMaterialInstance* pInstance = mFxaa.getMaterialInstance();
+                SamplerParams params;
+                params.filterMag = SamplerMagFilter::LINEAR;
+                params.filterMin = SamplerMinFilter::LINEAR;
+                pInstance->setParameter("colorBuffer", texture, params);
+
+                auto duration = engine->getEngineTime();
+                float fraction = (duration.count() % 1000000000) / 1000000000.0f;
+                mPostProcessUb.setUniform(offsetof(PostProcessingUib, time), fraction);
+
+                pInstance->commit(driver);
+                pInstance->use(driver);
+
+                PipelineState pipeline;
+                pipeline.rasterState = mFxaa.getMaterial()->getRasterState();
+                const uint8_t variant = static_cast<uint8_t> (
+                            translucent ?
+                            PostProcessVariant::TRANSLUCENT : PostProcessVariant::OPAQUE );
+                pipeline.program = mFxaa.getMaterial()->getProgram(variant);
 
                 auto const& target = resources.getRenderTarget(data.rt);
                 driver.beginRenderPass(target.target, target.params);

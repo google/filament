@@ -116,7 +116,6 @@ struct PostProcessingUib {
     static const UniformInterfaceBlock& getUib() noexcept {
         return UibGenerator::getPostProcessingUib();
     }
-    filament::math::float2 uvScale;
     float time;             // time in seconds, with a 1 second period, used for dithering
     int dithering;          // type of dithering 0=none, 1=enabled
 };
