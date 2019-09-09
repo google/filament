@@ -222,12 +222,8 @@ int main(int argc, char* argv[]) {
         exit(1);
     }
 
-    // Open the header file for writing.
-    ofstream headerStream(headerPath.getPath());
-    if (!headerStream) {
-        cerr << "Unable to open " << headerPath << endl;
-        exit(1);
-    }
+    // Open the header file stream for writing.
+    ostringstream headerStream;
     headerStream << "#ifndef " << packagePrefix << "H_" << endl
             << "#define " << packagePrefix << "H_" << endl << endl
             << "#include <stdint.h>" << endl << endl
@@ -325,6 +321,29 @@ int main(int argc, char* argv[]) {
 
     headerStream << "}\n" << headerMacros.str();
     headerStream << "\n#endif\n";
+
+    // To optimize builds, avoid overwriting the header file if nothing has changed.
+    bool headerIsDirty = true;
+    ifstream headerInStream(headerPath.getPath(), std::ifstream::ate);
+    string headerContents = headerStream.str();
+    if (headerInStream) {
+        long fileSize = static_cast<long>(headerInStream.tellg());
+        if (fileSize == headerContents.size()) {
+            vector<char> previous(fileSize);
+            headerInStream.seekg(0);
+            headerInStream.read(previous.data(), fileSize);
+            headerIsDirty = 0 != memcmp(previous.data(), headerContents.c_str(), fileSize);
+        }
+    }
+
+    if (headerIsDirty) {
+        ofstream headerOutStream(headerPath.getPath());
+        if (!headerOutStream) {
+            cerr << "Unable to open " << headerPath << endl;
+            exit(1);
+        }
+        headerOutStream << headerContents;
+    }
 
     asmStream << asmstr << dataAsmStream.str() << endl;
     asmStream.close();
