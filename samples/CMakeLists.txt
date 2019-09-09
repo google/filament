@@ -126,7 +126,7 @@ function(add_ktxfiles SOURCE TARGET EXTRA_ARGS)
     set(TEXTURE_FILES ${TEXTURE_FILES} ${target_path} PARENT_SCOPE)
     add_custom_command(
         OUTPUT ${target_path}
-        COMMAND mipgen --strip-alpha ${EXTRA_ARGS} ${source_path} ${target_path}
+        COMMAND mipgen --quiet --strip-alpha ${EXTRA_ARGS} ${source_path} ${target_path}
         MAIN_DEPENDENCY ${source_path}
         DEPENDS mipgen)
 endfunction()
