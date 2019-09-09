@@ -261,9 +261,9 @@ void FAssetLoader::createAsset(const cgltf_data* srcAsset) {
     for (cgltf_size i = 0, len = srcAsset->images_count; i < len; ++i) {
         addResourceUri(srcAsset->images[i].uri);
     }
-    mResult->mResourceUrls.reserve(resourceUris.size());
+    mResult->mResourceUris.reserve(resourceUris.size());
     for (auto pair : resourceUris) {
-        mResult->mResourceUrls.push_back(pair.second);
+        mResult->mResourceUris.push_back(pair.second);
     }
 
     // We're done with the import, so free up transient bookkeeping resources.

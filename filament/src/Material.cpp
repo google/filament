@@ -441,8 +441,8 @@ void FMaterial::applyPendingEdits() noexcept {
 }
 
 /**
- *  Callback handlers for the debug server, potentially called from any thread. These methods are never
- * called during normal operation and exists for debugging purposes only.
+ * Callback handlers for the debug server, potentially called from any thread. These methods are
+ * never called during normal operation and exist for debugging purposes only.
  * 
  * @{
  */
