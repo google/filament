@@ -484,8 +484,7 @@ backend::Handle<backend::HwProgram> FEngine::createPostProcessProgram(MaterialPa
     pb      .diagnostics(CString("Post Process"))
             .withVertexShader(vShaderBuilder.data(), vShaderBuilder.size())
             .withFragmentShader(fShaderBuilder.data(), fShaderBuilder.size())
-            .setUniformBlock(BindingPoints::PER_VIEW, PerViewUib::getUib().getName())
-            .setUniformBlock(BindingPoints::POST_PROCESS, PostProcessingUib::getUib().getName());
+            .setUniformBlock(BindingPoints::PER_VIEW, PerViewUib::getUib().getName());
 
     auto addSamplerGroup = [&pb]
             (uint8_t bindingPoint, SamplerInterfaceBlock const& sib, SamplerBindingMap const& map) {

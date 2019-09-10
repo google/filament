@@ -29,9 +29,9 @@ vec4 resolve() {
 
 vec4 PostProcess_ToneMapping() {
     vec4 color = resolve();
-    if (postProcessUniforms.dithering > 0) {
-        color = dither(color);
-    }
+    // if (postProcessUniforms.dithering > 0) {
+        // color = dither(color);
+    // }
     return color;
 }
 #endif

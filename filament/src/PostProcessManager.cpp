@@ -85,8 +85,6 @@ PostProcessManager::PostProcessManager(FEngine& engine) noexcept : mEngine(engin
 }
 
 void PostProcessManager::init() noexcept {
-    mPostProcessUb = UniformBuffer(PostProcessingUib::getUib().getSize());
-
     // TODO: load materials lazily as to reduce start-up time and memory usage
     mSSAO = PostProcessMaterial(mEngine, MATERIALS_SAO_DATA, MATERIALS_SAO_SIZE);
     mMipmapDepth = PostProcessMaterial(mEngine, MATERIALS_MIPMAPDEPTH_DATA, MATERIALS_MIPMAPDEPTH_SIZE);
@@ -97,10 +95,7 @@ void PostProcessManager::init() noexcept {
     // create sampler for post-process FBO
     DriverApi& driver = mEngine.getDriverApi();
     mPostProcessSbh = driver.createSamplerGroup(PostProcessSib::SAMPLER_COUNT);
-    mPostProcessUbh = driver.createUniformBuffer(mPostProcessUb.getSize(),
-            backend::BufferUsage::DYNAMIC);
     driver.bindSamplers(BindingPoints::POST_PROCESS, mPostProcessSbh);
-    driver.bindUniformBuffer(BindingPoints::POST_PROCESS, mPostProcessUbh);
 
     mNoSSAOTexture = driver.createTexture(SamplerType::SAMPLER_2D, 1,
             TextureFormat::R8, 0, 1, 1, 1, TextureUsage::DEFAULT);
@@ -114,7 +109,6 @@ void PostProcessManager::init() noexcept {
 
 void PostProcessManager::terminate(backend::DriverApi& driver) noexcept {
     driver.destroySamplerGroup(mPostProcessSbh);
-    driver.destroyUniformBuffer(mPostProcessUbh);
     driver.destroyTexture(mNoSSAOTexture);
     mSSAO.terminate(mEngine);
     mMipmapDepth.terminate(mEngine);
@@ -148,7 +142,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::toneMapping(FrameGraph& fg, 
                 });
                 data.rt = builder.createRenderTarget(data.output);
             },
-            [=, &engine](FrameGraphPassResources const& resources,
+            [=](FrameGraphPassResources const& resources,
                     PostProcessToneMapping const& data, DriverApi& driver) {
                 auto const& color = resources.getTexture(data.input);
 
@@ -156,10 +150,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::toneMapping(FrameGraph& fg, 
                 pInstance->setParameter("dithering", dithering);
                 SamplerParams params;
                 pInstance->setParameter("colorBuffer", color, params);
-
-                auto duration = engine.getEngineTime();
-                float fraction = (duration.count() % 1000000000) / 1000000000.0f;
-                mPostProcessUb.setUniform(offsetof(PostProcessingUib, time), fraction);
 
                 pInstance->commit(driver);
 
@@ -204,7 +194,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::fxaa(FrameGraph& fg,
                 });
                 data.rt = builder.createRenderTarget(data.output);
             },
-            [=, &engine](FrameGraphPassResources const& resources,
+            [=](FrameGraphPassResources const& resources,
                     PostProcessFXAA const& data, DriverApi& driver) {
                 auto const& texture = resources.getTexture(data.input);
 
@@ -213,10 +203,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::fxaa(FrameGraph& fg,
                 params.filterMag = SamplerMagFilter::LINEAR;
                 params.filterMin = SamplerMinFilter::LINEAR;
                 pInstance->setParameter("colorBuffer", texture, params);
-
-                auto duration = engine.getEngineTime();
-                float fraction = (duration.count() % 1000000000) / 1000000000.0f;
-                mPostProcessUb.setUniform(offsetof(PostProcessingUib, time), fraction);
 
                 pInstance->commit(driver);
                 pInstance->use(driver);
