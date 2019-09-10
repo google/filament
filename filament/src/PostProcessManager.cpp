@@ -148,7 +148,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::toneMapping(FrameGraph& fg, 
                 });
                 data.rt = builder.createRenderTarget(data.output);
             },
-            [=, engine = &engine](FrameGraphPassResources const& resources,
+            [=, &engine](FrameGraphPassResources const& resources,
                     PostProcessToneMapping const& data, DriverApi& driver) {
                 auto const& color = resources.getTexture(data.input);
 
@@ -157,7 +157,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::toneMapping(FrameGraph& fg, 
                 SamplerParams params;
                 pInstance->setParameter("colorBuffer", color, params);
 
-                auto duration = engine->getEngineTime();
+                auto duration = engine.getEngineTime();
                 float fraction = (duration.count() % 1000000000) / 1000000000.0f;
                 mPostProcessUb.setUniform(offsetof(PostProcessingUib, time), fraction);
 
@@ -204,7 +204,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::fxaa(FrameGraph& fg,
                 });
                 data.rt = builder.createRenderTarget(data.output);
             },
-            [=, engine = &engine](FrameGraphPassResources const& resources,
+            [=, &engine](FrameGraphPassResources const& resources,
                     PostProcessFXAA const& data, DriverApi& driver) {
                 auto const& texture = resources.getTexture(data.input);
 
@@ -214,7 +214,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::fxaa(FrameGraph& fg,
                 params.filterMin = SamplerMinFilter::LINEAR;
                 pInstance->setParameter("colorBuffer", texture, params);
 
-                auto duration = engine->getEngineTime();
+                auto duration = engine.getEngineTime();
                 float fraction = (duration.count() % 1000000000) / 1000000000.0f;
                 mPostProcessUb.setUniform(offsetof(PostProcessingUib, time), fraction);
 
