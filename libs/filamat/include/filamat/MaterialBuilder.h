@@ -112,6 +112,20 @@ inline constexpr MaterialBuilderBase::TargetApi operator|=(MaterialBuilderBase::
     return lhs = (lhs | rhs);
 }
 
+// Utility function that looks at an Engine backend to determine TargetApi
+inline constexpr MaterialBuilderBase::TargetApi targetApiFromBackend(
+            filament::backend::Backend backend) noexcept {
+    using filament::backend::Backend;
+    using TargetApi = MaterialBuilderBase::TargetApi;
+    switch (backend) {
+        case Backend::DEFAULT: return TargetApi::ALL;
+        case Backend::OPENGL:  return TargetApi::OPENGL;
+        case Backend::VULKAN:  return TargetApi::VULKAN;
+        case Backend::METAL:   return TargetApi::METAL;
+        case Backend::NOOP:    return TargetApi::OPENGL;
+    }
+}
+
 inline constexpr bool operator&(MaterialBuilderBase::TargetApi lhs,
         MaterialBuilderBase::TargetApi rhs) noexcept {
     return bool(uint8_t(lhs) & uint8_t(rhs));
