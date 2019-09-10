@@ -94,8 +94,6 @@ static bool printMaterial(ostream& text, const ChunkContainer& container) {
         text << version << endl;
     }
 
-    printUint32Chunk(text, container, PostProcessVersion, "Post process version: ");
-
     CString name;
     if (read(container, MaterialName, &name)) {
         text << "    " << setw(alignment) << left << "Name: ";

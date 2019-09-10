@@ -118,21 +118,9 @@ bool MaterialParser::isShadingMaterial() const noexcept {
            cc.hasChunk(MaterialShaderModels);
 }
 
-bool MaterialParser::isPostProcessMaterial() const noexcept {
-    ChunkContainer const& cc = getChunkContainer();
-    return cc.hasChunk(PostProcessVersion) &&
-           ((cc.hasChunk(MaterialSpirv) && cc.hasChunk(DictionarySpirv)) ||
-            (cc.hasChunk(MaterialGlsl) && cc.hasChunk(DictionaryGlsl)) ||
-            (cc.hasChunk(MaterialMetal) && cc.hasChunk(DictionaryMetal)));
-}
-
 // Accessors
 bool MaterialParser::getMaterialVersion(uint32_t* value) const noexcept {
     return mImpl.getFromSimpleChunk(ChunkType::MaterialVersion, value);
-}
-
-bool MaterialParser::getPostProcessVersion(uint32_t* value) const noexcept {
-    return mImpl.getFromSimpleChunk(ChunkType::PostProcessVersion, value);
 }
 
 bool MaterialParser::getName(utils::CString* cstring) const noexcept {

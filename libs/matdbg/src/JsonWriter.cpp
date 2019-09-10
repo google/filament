@@ -86,7 +86,6 @@ static void printStringChunk(ostream& json, const ChunkContainer& container,
 static bool printMaterial(ostream& json, const ChunkContainer& container) {
     printStringChunk(json, container, filamat::MaterialName, "name");
     printUint32Chunk(json, container, filamat::MaterialVersion, "version");
-    printUint32Chunk(json, container, filamat::PostProcessVersion, "pp_version");
     json << "\"shading\": {\n";
     printChunk<Shading, uint8_t>(json, container, MaterialShading, "model");
     printChunk<VertexDomain, uint8_t>(json, container, MaterialVertexDomain, "vertex_domain");

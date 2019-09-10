@@ -74,8 +74,6 @@ enum UTILS_PUBLIC ChunkType : uint64_t {
     MaterialVertexDomain =charTo64bitNum("MAT_VEDO"),
     MaterialInterpolation= charTo64bitNum("MAT_INTR"),
 
-    PostProcessVersion = charTo64bitNum("POSP_VER"),
-
     DictionaryGlsl = charTo64bitNum("DIC_GLSL"),
     DictionarySpirv = charTo64bitNum("DIC_SPIR"),
     DictionaryMetal = charTo64bitNum("DIC_METL")

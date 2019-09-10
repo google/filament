@@ -75,12 +75,6 @@ bool ShaderExtractor::isShadingMaterial() const noexcept {
             cc.hasChunk(MaterialShaderModels) && cc.hasChunk(mMaterialTag);
 }
 
-bool ShaderExtractor::isPostProcessMaterial() const noexcept {
-    ChunkContainer const& cc = mChunkContainer;
-    return cc.hasChunk(PostProcessVersion)
-            && cc.hasChunk(mMaterialTag) && cc.hasChunk(mDictionaryTag);
-}
-
 bool ShaderExtractor::getShader(ShaderModel shaderModel,
         uint8_t variant, ShaderType stage, ShaderBuilder& shader) noexcept {
 
