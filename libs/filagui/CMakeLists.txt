@@ -54,7 +54,7 @@ endforeach()
 
 file(MAKE_DIRECTORY ${RESOURCE_DIR})
 
-get_resgen_vars(${RESOURCE_DIR} resources)
+get_resgen_vars(${RESOURCE_DIR} filagui_resources)
 
 add_custom_command(
         OUTPUT ${RESGEN_OUTPUTS}
