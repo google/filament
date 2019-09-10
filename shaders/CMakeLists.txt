@@ -41,8 +41,6 @@ set(SHADERS
         src/post_process_getters.vs
         src/post_process_inputs.fs
         src/post_process_inputs.vs
-        src/post_process_old.fs
-        src/post_process_old.vs
         src/shading_lit.fs
         src/shading_model_cloth.fs
         src/shading_model_standard.fs

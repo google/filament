@@ -86,17 +86,6 @@ private:
     size_t mMaterialVertexLineOffset;
 };
 
-struct ShaderPostProcessGenerator {
-    static const std::string createPostProcessVertexProgramOld(filament::backend::ShaderModel sm,
-            MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
-            filament::PostProcessStage variant, uint8_t firstSampler) noexcept;
-    static const std::string createPostProcessFragmentProgramOld(filament::backend::ShaderModel sm,
-            MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
-            filament::PostProcessStage variant, uint8_t firstSampler) noexcept;
-    static void generatePostProcessStageDefines(utils::io::sstream& vs, CodeGenerator const& cg,
-            filament::PostProcessStage variant) noexcept;
-};
-
 } // namespace filament
 
 #endif // TNT_FILAMENT_DETAILS_SHADERGENERATOR_H
