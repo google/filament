@@ -23,20 +23,18 @@ material {
     variables : [
         vertex
     ],
-    vertexDomain : device,
+    domain : postprocess,
     depthWrite : false,
     depthCulling : true,
-    shadingModel : unlit,
-    variantFilter : [ skinning, shadowReceiver ],
     culling: none
 }
 
 vertex {
-    void materialVertex(inout MaterialVertexInputs material) {
+    void postProcessVertex(inout PostProcessVertexInputs postProcess) {
         // far-plane in view space
         vec4 position = getPosition(); // clip-space
-        material.vertex.xy = (position.xy * 0.5 + 0.5);
-        material.vertex.zw = position.xy;
+        postProcess.vertex.xy = (position.xy * 0.5 + 0.5);
+        postProcess.vertex.zw = position.xy;
     }
 }
 
@@ -83,9 +81,7 @@ fragment {
         totalWeight += bilateral;
     }
 
-    void material(inout MaterialInputs material) {
-        prepareMaterial(material);
-
+    void postProcess(inout PostProcessInputs postProcess) {
         ivec2 uv = ivec2(variable_vertex.xy * materialParams.resolution.xy);
 
         float depth = texelFetch(materialParams_depth, uv, 0).r;
@@ -102,6 +98,6 @@ fragment {
             tap(sum, totalWeight, weight, depth, uv - offset);
         }
 
-        material.baseColor.r = sum * (1.0 / totalWeight);
+        postProcess.color.r = sum * (1.0 / totalWeight);
     }
 }
