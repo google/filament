@@ -118,6 +118,7 @@ void PostProcessManager::terminate(backend::DriverApi& driver) noexcept {
     mSSAO.terminate(mEngine);
     mMipmapDepth.terminate(mEngine);
     mBlur.terminate(mEngine);
+    mTonemapping.terminate(mEngine);
 }
 
 void PostProcessManager::setSource(uint32_t viewportWidth, uint32_t viewportHeight,
