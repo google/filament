@@ -19,6 +19,7 @@
 #ifndef TNT_FILAMENT_DRIVER_DRIVERENUMS_H
 #define TNT_FILAMENT_DRIVER_DRIVERENUMS_H
 
+#include <utils/BitmaskEnum.h>
 #include <utils/unwindows.h> // Because we define ERROR in the FenceStatus enum.
 
 #include <math/vec4.h>
@@ -29,7 +30,6 @@
 #include <stdint.h>
 
 namespace filament {
-
 /**
  * Types and enums used by filament's driver.
  *
@@ -62,7 +62,7 @@ enum class Backend : uint8_t {
 /**
  * Bitmask for selecting render buffers
  */
-enum TargetBufferFlags : uint8_t {
+enum class TargetBufferFlags : uint8_t {
     NONE = 0x0u,                 //!< No buffer selected.
     COLOR = 0x1u,                //!< Color buffer selected.
     DEPTH = 0x2u,                //!< Depth buffer selected.
@@ -72,29 +72,6 @@ enum TargetBufferFlags : uint8_t {
     DEPTH_AND_STENCIL = DEPTH | STENCIL,
     ALL = COLOR | DEPTH | STENCIL
 };
-
-// implement requirement of BitmaskType
-inline constexpr TargetBufferFlags operator~(TargetBufferFlags rhs) noexcept {
-    return TargetBufferFlags(~uint8_t(rhs) & uint8_t(TargetBufferFlags::ALL));
-}
-inline constexpr TargetBufferFlags operator|=(TargetBufferFlags& lhs, TargetBufferFlags rhs) noexcept {
-    return lhs = TargetBufferFlags(uint8_t(lhs) | uint8_t(rhs));
-}
-inline constexpr TargetBufferFlags operator&=(TargetBufferFlags& lhs, TargetBufferFlags rhs) noexcept {
-    return lhs = TargetBufferFlags(uint8_t(lhs) & uint8_t(rhs));
-}
-inline constexpr TargetBufferFlags operator^=(TargetBufferFlags& lhs, TargetBufferFlags rhs) noexcept {
-    return lhs = TargetBufferFlags(uint8_t(lhs) ^ uint8_t(rhs));
-}
-inline constexpr TargetBufferFlags operator|(TargetBufferFlags lhs, TargetBufferFlags rhs) noexcept {
-    return TargetBufferFlags(uint8_t(lhs) | uint8_t(rhs));
-}
-inline constexpr TargetBufferFlags operator&(TargetBufferFlags lhs, TargetBufferFlags rhs) noexcept {
-    return TargetBufferFlags(uint8_t(lhs) & uint8_t(rhs));
-}
-inline constexpr TargetBufferFlags operator^(TargetBufferFlags lhs, TargetBufferFlags rhs) noexcept {
-    return TargetBufferFlags(uint8_t(lhs) ^ uint8_t(rhs));
-}
 
 /**
  * Frequency at which a buffer is expected to be modified and used. This is used as an hint
@@ -478,7 +455,7 @@ enum class TextureFormat : uint16_t {
     SRGB8_ALPHA8_ASTC_12x12,
 };
 
-enum TextureUsage : uint8_t {
+enum class TextureUsage : uint8_t {
     COLOR_ATTACHMENT    = 0x1,
     DEPTH_ATTACHMENT    = 0x2,
     STENCIL_ATTACHMENT  = 0x4,
@@ -486,29 +463,6 @@ enum TextureUsage : uint8_t {
     SAMPLEABLE          = 0x10,
     DEFAULT = UPLOADABLE | SAMPLEABLE
 };
-
-// implement requirement of BitmaskType
-inline constexpr TextureUsage operator~(TextureUsage rhs) noexcept {
-    return TextureUsage(~uint8_t(rhs) & 0x1Fu);
-}
-inline constexpr TextureUsage operator|=(TextureUsage& lhs, TextureUsage rhs) noexcept {
-    return lhs = TextureUsage(uint8_t(lhs) | uint8_t(rhs));
-}
-inline constexpr TextureUsage operator&=(TextureUsage& lhs, TextureUsage rhs) noexcept {
-    return lhs = TextureUsage(uint8_t(lhs) & uint8_t(rhs));
-}
-inline constexpr TextureUsage operator^=(TextureUsage& lhs, TextureUsage rhs) noexcept {
-    return lhs = TextureUsage(uint8_t(lhs) ^ uint8_t(rhs));
-}
-inline constexpr TextureUsage operator|(TextureUsage lhs, TextureUsage rhs) noexcept {
-    return TextureUsage(uint8_t(lhs) | uint8_t(rhs));
-}
-inline constexpr TextureUsage operator&(TextureUsage lhs, TextureUsage rhs) noexcept {
-    return TextureUsage(uint8_t(lhs) & uint8_t(rhs));
-}
-inline constexpr TextureUsage operator^(TextureUsage lhs, TextureUsage rhs) noexcept {
-    return TextureUsage(uint8_t(lhs) ^ uint8_t(rhs));
-}
 
 //! returns whether this format a compressed format
 static constexpr bool isCompressedFormat(TextureFormat format) noexcept {
@@ -690,7 +644,7 @@ struct RasterState {
     using BlendEquation = filament::backend::BlendEquation;
     using BlendFunction = filament::backend::BlendFunction;
 
-    RasterState() noexcept { // NOLINT(cppcoreguidelines-pro-type-member-init)
+    RasterState() noexcept { // NOLINT
         static_assert(sizeof(RasterState) == sizeof(uint32_t),
                 "RasterState size not what was intended");
         culling = CullingMode::BACK;
@@ -748,5 +702,10 @@ struct RasterState {
 
 } // namespace backend
 } // namespace filament
+
+template<> struct utils::EnableBitMaskOperators<filament::backend::TargetBufferFlags>
+        : public std::true_type {};
+template<> struct utils::EnableBitMaskOperators<filament::backend::TextureUsage>
+        : public std::true_type {};
 
 #endif // TNT_FILAMENT_DRIVER_DRIVERENUMS_H

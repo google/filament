@@ -12,6 +12,7 @@ file(GLOB_RECURSE PUBLIC_HDRS ${PUBLIC_HDR_DIR}/${TARGET}/*.h)
 set(DIST_HDRS
         ${PUBLIC_HDR_DIR}/${TARGET}/algorithm.h
         ${PUBLIC_HDR_DIR}/${TARGET}/bitset.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/BitmaskEnum.h
         ${PUBLIC_HDR_DIR}/${TARGET}/compiler.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Entity.h
         ${PUBLIC_HDR_DIR}/${TARGET}/EntityInstance.h

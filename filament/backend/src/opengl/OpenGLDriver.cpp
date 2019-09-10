@@ -1318,14 +1318,15 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
     };
 #endif
 
-    if (targets & TargetBufferFlags::COLOR) {
+    if (any(targets & TargetBufferFlags::COLOR)) {
         // TODO: handle multiple color attachments
         assert(color.handle);
         rt->gl.color.texture = handle_cast<GLTexture*>(color.handle);
         rt->gl.color.level = color.level;
         assert(width == valueForLevel(color.level, rt->gl.color.texture->width) &&
                height == valueForLevel(color.level, rt->gl.color.texture->height));
-        if (rt->gl.color.texture->usage & TextureUsage::SAMPLEABLE) {
+
+        if (any(rt->gl.color.texture->usage & TextureUsage::SAMPLEABLE)) {
             framebufferTexture(color, rt, GL_COLOR_ATTACHMENT0);
         } else {
             framebufferRenderbuffer(rt->gl.color.texture, rt, GL_COLOR_ATTACHMENT0);
@@ -1348,7 +1349,7 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         rt->gl.depth.level = depth.level;
         assert(width == valueForLevel(depth.level, rt->gl.depth.texture->width) &&
                height == valueForLevel(depth.level, rt->gl.depth.texture->height));
-        if (rt->gl.depth.texture->usage & TextureUsage::SAMPLEABLE) {
+        if (any(rt->gl.depth.texture->usage & TextureUsage::SAMPLEABLE)) {
             // special case: depth & stencil requested, and both provided as the same texture
             specialCased = true;
             framebufferTexture(depth, rt, GL_DEPTH_STENCIL_ATTACHMENT);
@@ -1360,25 +1361,25 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
     }
 
     if (!specialCased) {
-        if (targets & TargetBufferFlags::DEPTH) {
+        if (any(targets & TargetBufferFlags::DEPTH)) {
             assert(depth.handle);
             rt->gl.depth.texture = handle_cast<GLTexture*>(depth.handle);
             rt->gl.depth.level = depth.level;
             assert(width == valueForLevel(depth.level, rt->gl.depth.texture->width) &&
                    height == valueForLevel(depth.level, rt->gl.depth.texture->height));
-            if (rt->gl.depth.texture->usage & TextureUsage::SAMPLEABLE) {
+            if (any(rt->gl.depth.texture->usage & TextureUsage::SAMPLEABLE)) {
                 framebufferTexture(depth, rt, GL_DEPTH_ATTACHMENT);
             } else {
                 framebufferRenderbuffer(rt->gl.depth.texture, rt, GL_DEPTH_ATTACHMENT);
             }
         }
-        if (targets & TargetBufferFlags::STENCIL) {
+        if (any(targets & TargetBufferFlags::STENCIL)) {
             assert(stencil.handle);
             rt->gl.stencil.texture = handle_cast<GLTexture*>(stencil.handle);
             rt->gl.stencil.level = stencil.level;
             assert(width == valueForLevel(stencil.level, rt->gl.stencil.texture->width) &&
                    height == valueForLevel(stencil.level, rt->gl.stencil.texture->height));
-            if (rt->gl.stencil.texture->usage & TextureUsage::SAMPLEABLE) {
+            if (any(rt->gl.stencil.texture->usage & TextureUsage::SAMPLEABLE)) {
                 framebufferTexture(stencil, rt, GL_STENCIL_ATTACHMENT);
             } else {
                 framebufferRenderbuffer(rt->gl.stencil.texture, rt, GL_STENCIL_ATTACHMENT);
@@ -2238,7 +2239,8 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
 
     mRenderPassTarget = rth;
     mRenderPassParams = params;
-    const uint8_t clearFlags = params.flags.clear;
+    const TargetBufferFlags clearFlags = TargetBufferFlags(params.flags.clear & ~RenderPassFlags::IGNORE_SCISSOR);
+    const uint8_t ignoreScissor = params.flags.clear & RenderPassFlags::IGNORE_SCISSOR;
     TargetBufferFlags discardFlags = params.flags.discardStart;
 
     GLRenderTarget* rt = handle_cast<GLRenderTarget*>(rth);
@@ -2249,7 +2251,7 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
         // ignore it on GL (rather than having to do a runtime check).
         if (GLES31_HEADERS) {
             if (!bugs.disable_invalidate_framebuffer) {
-                std::array<GLenum, 3> attachments; // NOLINT(cppcoreguidelines-pro-type-member-init)
+                std::array<GLenum, 3> attachments; // NOLINT
                 GLsizei attachmentCount = getAttachments(attachments, rt, discardFlags);
                 if (attachmentCount) {
                     glInvalidateFramebuffer(GL_FRAMEBUFFER, attachmentCount, attachments.data());
@@ -2266,8 +2268,7 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
         // everything must appear as though the multi-sample buffer was lost.
         if (ALLOW_REVERSE_MULTISAMPLE_RESOLVE) {
             // We only copy the non msaa buffers that were not discarded or cleared.
-            const TargetBufferFlags discarded = discardFlags |
-                    TargetBufferFlags(clearFlags & TargetBufferFlags::ALL);
+            const TargetBufferFlags discarded = discardFlags | (clearFlags & TargetBufferFlags::ALL);
             resolvePass(ResolveAction::LOAD, rt, discarded);
         } else {
             // However, for now filament specifies that a non multi-sample attachment to a
@@ -2281,7 +2282,7 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
             params.viewport.width, params.viewport.height);
 
     // Use scissor test if not told to ignore, and if the viewport doesn't cover the whole target.
-    const bool respectScissor = !(clearFlags & RenderPassFlags::IGNORE_SCISSOR) &&
+    const bool respectScissor = !(ignoreScissor & RenderPassFlags::IGNORE_SCISSOR) &&
                                 (params.viewport.left != 0 ||
                                     params.viewport.bottom != 0 ||
                                     params.viewport.width != rt->width ||
@@ -2291,10 +2292,10 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
                 params.viewport.width, params.viewport.height);
     }
 
-    if (clearFlags & TargetBufferFlags::ALL) {
-        const bool clearColor = clearFlags & TargetBufferFlags::COLOR;
-        const bool clearDepth = clearFlags & TargetBufferFlags::DEPTH;
-        const bool clearStencil = clearFlags & TargetBufferFlags::STENCIL;
+    if (any(clearFlags & TargetBufferFlags::ALL)) {
+        const bool clearColor   = any(clearFlags & TargetBufferFlags::COLOR);
+        const bool clearDepth   = any(clearFlags & TargetBufferFlags::DEPTH);
+        const bool clearStencil = any(clearFlags & TargetBufferFlags::STENCIL);
         if (respectScissor) {
             enable(GL_SCISSOR_TEST);
         } else {
@@ -2319,7 +2320,7 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     setClearColor(1, 0, 0, 1);
     bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
     disable(GL_SCISSOR_TEST);
-    glClear(getAttachmentBitfield(discardFlags & ~TargetBufferFlags(clearFlags)));
+    glClear(getAttachmentBitfield(discardFlags & ~clearFlags));
 #endif
 }
 
@@ -2408,17 +2409,17 @@ void OpenGLDriver::discardSubRenderTargetBuffers(Handle<HwRenderTarget> rth,
 }
 
 GLsizei OpenGLDriver::getAttachments(std::array<GLenum, 3>& attachments,
-        GLRenderTarget const* rt, uint8_t buffers) const noexcept {
+        GLRenderTarget const* rt, TargetBufferFlags buffers) const noexcept {
     GLsizei attachmentCount = 0;
     // the default framebuffer uses different constants!!!
     const bool defaultFramebuffer = (rt->gl.fbo == 0);
-    if (buffers & TargetBufferFlags::COLOR) {
+    if (any(buffers & TargetBufferFlags::COLOR)) {
         attachments[attachmentCount++] = defaultFramebuffer ? GL_COLOR : GL_COLOR_ATTACHMENT0;
     }
-    if (buffers & TargetBufferFlags::DEPTH) {
+    if (any(buffers & TargetBufferFlags::DEPTH)) {
         attachments[attachmentCount++] = defaultFramebuffer ? GL_DEPTH : GL_DEPTH_ATTACHMENT;
     }
-    if (buffers & TargetBufferFlags::STENCIL) {
+    if (any(buffers & TargetBufferFlags::STENCIL)) {
         attachments[attachmentCount++] = defaultFramebuffer ? GL_STENCIL : GL_STENCIL_ATTACHMENT;
     }
     return attachmentCount;
@@ -3016,7 +3017,7 @@ void OpenGLDriver::blit(TargetBufferFlags buffers,
 }
 
 void OpenGLDriver::updateTextureLodRange(GLTexture* texture, int8_t targetLevel) noexcept {
-    if (texture && (texture->usage & TextureUsage::SAMPLEABLE)) {
+    if (texture && any(texture->usage & TextureUsage::SAMPLEABLE)) {
         if (targetLevel < texture->gl.baseLevel || targetLevel > texture->gl.maxLevel) {
             bindTexture(MAX_TEXTURE_UNIT_COUNT - 1, texture);
             activeTexture(MAX_TEXTURE_UNIT_COUNT - 1);

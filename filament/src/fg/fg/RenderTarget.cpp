@@ -35,9 +35,9 @@ void RenderTarget::resolve(FrameGraph& fg) noexcept {
 
     if (pos != renderTargetCache.end()) {
         cache = pos->get();
-        cache->targetInfo.params.flags.clear |= userClearFlags;
+        cache->targetInfo.params.flags.clear |= (uint8_t)userClearFlags;
     } else {
-        uint8_t attachments = 0;
+        TargetBufferFlags attachments{};
         uint32_t width = 0;
         uint32_t height = 0;
         backend::TextureFormat colorFormat = {};
@@ -83,7 +83,7 @@ void RenderTarget::resolve(FrameGraph& fg) noexcept {
             }
         }
 
-        if (attachments) {
+        if (any(attachments)) {
             if (minWidth == maxWidth && minHeight == maxHeight) {
                 // All attachments' size match, we're good to go.
                 width = minWidth;
@@ -100,7 +100,7 @@ void RenderTarget::resolve(FrameGraph& fg) noexcept {
                             backend::TargetBufferFlags(attachments), width, height, colorFormat);
             renderTargetCache.emplace_back(pRenderTargetResource, fg);
             cache = pRenderTargetResource;
-            cache->targetInfo.params.flags.clear |= userClearFlags;
+            cache->targetInfo.params.flags.clear |= (uint8_t)userClearFlags;
         }
     }
 }

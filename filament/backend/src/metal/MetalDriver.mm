@@ -173,7 +173,7 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         if (color.handle) {
             auto colorTexture = handle_cast<MetalTexture>(mHandleMap, color.handle);
             return colorTexture->texture;
-        } else if (targetBufferFlags & TargetBufferFlags::COLOR) {
+        } else if (any(targetBufferFlags & TargetBufferFlags::COLOR)) {
             ASSERT_POSTCONDITION(false, "The COLOR flag was specified, but no color texture provided.");
         }
         return nil;
@@ -183,7 +183,7 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         if (depth.handle) {
             auto depthTexture = handle_cast<MetalTexture>(mHandleMap, depth.handle);
             return depthTexture->texture;
-        } else if (targetBufferFlags & TargetBufferFlags::DEPTH) {
+        } else if (any(targetBufferFlags & TargetBufferFlags::DEPTH)) {
             ASSERT_POSTCONDITION(false, "The DEPTH flag was specified, but no depth texture provided.");
         }
         return nil;
@@ -193,7 +193,8 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
             getColorTexture(), getDepthTexture(), color.level, depth.level);
 
     ASSERT_POSTCONDITION(
-            !stencil.handle && !(targetBufferFlags & TargetBufferFlags::STENCIL),
+            !stencil.handle &&
+            !(targetBufferFlags & TargetBufferFlags::STENCIL),
             "Stencil buffer not supported.");
 }
 
@@ -564,8 +565,8 @@ void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     MTLRenderPassDescriptor* descriptor = [MTLRenderPassDescriptor renderPassDescriptor];
 
     const auto discardFlags = params.flags.discardEnd;
-    const auto discardColor = (discardFlags & TargetBufferFlags::COLOR);
-    const auto discardDepth = (discardFlags & TargetBufferFlags::DEPTH);
+    const bool discardColor = any(discardFlags & TargetBufferFlags::COLOR);
+    const bool discardDepth = any(discardFlags & TargetBufferFlags::DEPTH);
 
     // Color
 
@@ -776,12 +777,12 @@ void MetalDriver::blit(TargetBufferFlags buffers,
     args.destination.level = dstLevel;
     args.destination.region = dstRegion;
 
-    if (buffers & TargetBufferFlags::COLOR) {
+    if (any(buffers & TargetBufferFlags::COLOR)) {
         args.source.color = srcTexture;
         args.destination.color = dstTexture;
     }
 
-    if (buffers & TargetBufferFlags::DEPTH) {
+    if (any(buffers & TargetBufferFlags::DEPTH)) {
         args.source.depth = srcTarget->getBlitDepthSource();
         args.destination.depth = dstTarget->getDepth();
     }
