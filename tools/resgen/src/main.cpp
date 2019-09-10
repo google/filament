@@ -73,24 +73,16 @@ Examples:
 
 static const char* APPLE_ASM_TEMPLATE = R"ASM(
     .global _{RESOURCES}PACKAGE
-    .global _{RESOURCES}PACKAGE_SIZE
     .section __TEXT,__const
 _{RESOURCES}PACKAGE:
     .incbin "{resources}.bin"
-1:
-_{RESOURCES}PACKAGE_SIZE:
-    .int 1b - _{RESOURCES}PACKAGE
 )ASM";
 
 static const char* ASM_TEMPLATE = R"ASM(
     .global {RESOURCES}PACKAGE
-    .global {RESOURCES}PACKAGE_SIZE
     .section .rodata
 {RESOURCES}PACKAGE:
     .incbin "{resources}.bin"
-1:
-{RESOURCES}PACKAGE_SIZE:
-    .int 1b - {RESOURCES}PACKAGE
 )ASM";
 
 static void printUsage(const char* name) {
@@ -228,8 +220,7 @@ int main(int argc, char* argv[]) {
             << "#define " << packagePrefix << "H_" << endl << endl
             << "#include <stdint.h>" << endl << endl
             << "extern \"C\" {" << endl
-            << "    extern const uint8_t " << package << "[];" << endl
-            << "    extern const int " << package << "_SIZE;" << endl;
+            << "    extern const uint8_t " << package << "[];" << endl;
 
     ostringstream headerMacros;
     ostringstream xxdDefinitions;
@@ -358,8 +349,7 @@ int main(int argc, char* argv[]) {
         << binPath;
 
     if (g_generateC) {
-        xxdStream << "};\n\nconst int " << package << "_SIZE = " << dec << offset << ";\n";
-        xxdStream << xxdDefinitions.str();
+        xxdStream << "};\n\n" << xxdDefinitions.str();
         cout << " " << xxdPath;
     }
 
