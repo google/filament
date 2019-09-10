@@ -385,7 +385,7 @@ private:
     }
 
     GLsizei getAttachments(std::array<GLenum, 3>& attachments,
-            GLRenderTarget const* rt, uint8_t buffers) const noexcept;
+            GLRenderTarget const* rt, backend::TargetBufferFlags buffers) const noexcept;
 
     static constexpr const size_t MAX_TEXTURE_UNIT_COUNT = 16;   // All mobile GPUs as of 2016
     static constexpr const size_t MAX_BUFFER_BINDINGS = 32;

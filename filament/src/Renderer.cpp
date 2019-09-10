@@ -305,13 +305,15 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     Command const* colorPassEnd = pass.appendSortedCommands(commandType);
 
     // We only honor the view's color buffer clear flags, depth/stencil are handled by the framefraph
-    TargetBufferFlags clearFlags = view.getClearFlags() & TargetBufferFlags::COLOR | TargetBufferFlags::DEPTH;
+    uint8_t viewClearFlags = view.getClearFlags() & (uint8_t)TargetBufferFlags::ALL;
+    TargetBufferFlags clearFlags = (TargetBufferFlags(viewClearFlags) & TargetBufferFlags::COLOR)
+                                   | TargetBufferFlags::DEPTH;
 
     struct ColorPassData {
         FrameGraphId<FrameGraphTexture> color;
         FrameGraphId<FrameGraphTexture> depth;
         FrameGraphId<FrameGraphTexture> ssao;
-        FrameGraphRenderTargetHandle rt;
+        FrameGraphRenderTargetHandle rt{};
     };
 
     auto& colorPass = fg.addPass<ColorPassData>("Color Pass",
@@ -443,15 +445,15 @@ void FRenderer::copyFrame(FSwapChain* dstSwapChain, filament::Viewport const& ds
     RenderPassParams params = {};
     // Clear color to black if the CLEAR flag is set.
     if (flags & CLEAR) {
-        params.flags.clear = TargetBufferFlags::COLOR;
         params.clearColor = {0.f, 0.f, 0.f, 1.f};
+        params.flags.clear = (uint8_t)TargetBufferFlags::COLOR;
+        params.flags.clear |= RenderPassFlags::IGNORE_SCISSOR;
         params.flags.discardStart = TargetBufferFlags::ALL;
         params.flags.discardEnd = TargetBufferFlags::NONE;
         params.viewport.left = 0;
         params.viewport.bottom = 0;
         params.viewport.width = std::numeric_limits<uint32_t>::max();
         params.viewport.height = std::numeric_limits<uint32_t>::max();
-        params.flags.clear |= RenderPassFlags::IGNORE_SCISSOR;
     }
     driver.beginRenderPass(mRenderTarget, params);
 

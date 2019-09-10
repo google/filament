@@ -70,7 +70,7 @@ struct RenderTargetResource final : public VirtualResource {  // 104
 
     void create(FrameGraph& fg) noexcept override {
         if (!imported) {
-            if (attachments) {
+            if (any(attachments)) {
                 // devirtualize our texture handles. By this point these handles have been
                 // remapped to their alias if any.
                 backend::TargetBufferInfo infos[FrameGraphRenderTarget::Attachments::COUNT];

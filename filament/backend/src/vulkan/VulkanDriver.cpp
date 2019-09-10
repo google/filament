@@ -709,8 +709,8 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth,
         .colorFormat = color.format,
         .depthFormat = depth.format,
         .flags.clear         = params.flags.clear,
-        .flags.discardStart  = params.flags.discardStart,
-        .flags.discardEnd    = params.flags.discardEnd,
+        .flags.discardStart  = (uint8_t)params.flags.discardStart,
+        .flags.discardEnd    = (uint8_t)params.flags.discardEnd,
         .flags.dependencies  = params.flags.dependencies
     });
     mBinder.bindRenderPass(renderPass);
