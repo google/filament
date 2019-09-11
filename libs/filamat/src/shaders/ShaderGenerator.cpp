@@ -418,10 +418,6 @@ const std::string ShaderPostProcessGenerator::createPostProcessVertexProgramOld(
 
     cg.generateUniforms(vs, ShaderType::VERTEX,
             BindingPoints::PER_VIEW, UibGenerator::getPerViewUib());
-    cg.generateUniforms(vs, ShaderType::VERTEX,
-            BindingPoints::POST_PROCESS, UibGenerator::getPostProcessingUib());
-    cg.generateSamplers(vs,
-            firstSampler, SibGenerator::getPostProcessSib());
 
     cg.generateCommon(vs, ShaderType::VERTEX);
     cg.generatePostProcessMainOld(vs, ShaderType::VERTEX, variant);
@@ -440,10 +436,6 @@ const std::string ShaderPostProcessGenerator::createPostProcessFragmentProgramOl
 
     cg.generateUniforms(fs, ShaderType::FRAGMENT,
             BindingPoints::PER_VIEW, UibGenerator::getPerViewUib());
-    cg.generateUniforms(fs, ShaderType::FRAGMENT,
-            BindingPoints::POST_PROCESS, UibGenerator::getPostProcessingUib());
-    cg.generateSamplers(fs,
-            firstSampler, SibGenerator::getPostProcessSib());
 
     cg.generateCommon(fs, ShaderType::FRAGMENT);
     cg.generatePostProcessMainOld(fs, ShaderType::FRAGMENT, variant);
@@ -513,8 +505,6 @@ const std::string ShaderGenerator::createPostProcessVertexProgram(
     cg.generateUniforms(vs, ShaderType::VERTEX,
             BindingPoints::PER_VIEW, UibGenerator::getPerViewUib());
     cg.generateUniforms(vs, ShaderType::VERTEX,
-            BindingPoints::POST_PROCESS, UibGenerator::getPostProcessingUib());
-    cg.generateUniforms(vs, ShaderType::VERTEX,
             BindingPoints::PER_MATERIAL_INSTANCE, material.uib);
 
     cg.generateSamplers(vs,
@@ -553,8 +543,6 @@ const std::string ShaderGenerator::createPostProcessFragmentProgram(
 
     cg.generateUniforms(fs, ShaderType::FRAGMENT,
             BindingPoints::PER_VIEW, UibGenerator::getPerViewUib());
-    cg.generateUniforms(fs, ShaderType::FRAGMENT,
-            BindingPoints::POST_PROCESS, UibGenerator::getPostProcessingUib());
     cg.generateUniforms(fs, ShaderType::FRAGMENT,
             BindingPoints::PER_MATERIAL_INSTANCE, material.uib);
 

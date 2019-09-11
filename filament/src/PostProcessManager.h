@@ -81,11 +81,6 @@ private:
             FrameGraphId<FrameGraphTexture> input,
             FrameGraphId<FrameGraphTexture> depth, math::int2 axis) noexcept;
 
-    // we need only one of these
-    mutable UniformBuffer mPostProcessUb;
-    backend::Handle<backend::HwSamplerGroup> mPostProcessSbh;
-    backend::Handle<backend::HwUniformBuffer> mPostProcessUbh;
-
     class PostProcessMaterial {
     public:
         PostProcessMaterial() noexcept = default;
