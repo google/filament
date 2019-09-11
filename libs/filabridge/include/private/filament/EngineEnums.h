@@ -43,7 +43,7 @@ namespace BindingPoints {
     constexpr uint8_t PER_RENDERABLE          = 1;    // uniforms/samplers updated per renderable
     constexpr uint8_t PER_RENDERABLE_BONES    = 2;    // bones data, per renderable
     constexpr uint8_t LIGHTS                  = 3;    // lights data array
-    constexpr uint8_t POST_PROCESS            = 4;    // deprecated
+    constexpr uint8_t POST_PROCESS_DEPRECATED = 4;    // deprecated
     constexpr uint8_t PER_MATERIAL_INSTANCE   = 5;    // uniforms/samplers updates per material
     constexpr uint8_t COUNT                   = 6;
     // These are limited by Program::UNIFORM_BINDING_COUNT (currently 6)

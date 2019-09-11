@@ -87,7 +87,7 @@ Package PostprocessMaterialBuilder::build() {
         filament::SamplerBindingMap samplerBindingMap;
         samplerBindingMap.populate();
         const uint8_t firstSampler =
-                samplerBindingMap.getBlockOffset(filament::BindingPoints::POST_PROCESS);
+                samplerBindingMap.getBlockOffset(filament::BindingPoints::POST_PROCESS_DEPRECATED);
 
         // Metal Shading Language is cross-compiled from Vulkan.
         const bool targetApiNeedsSpirv =
