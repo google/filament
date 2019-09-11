@@ -508,7 +508,12 @@ function build_ios_target {
             ../..
     fi
 
-    ${BUILD_COMMAND} install
+    ${BUILD_COMMAND}
+
+    if [[ "$INSTALL_COMMAND" ]]; then
+        echo "Installing ${lc_target} in out/${lc_target}/filament..."
+        ${BUILD_COMMAND} ${INSTALL_COMMAND}
+    fi
 
     if [[ -d "../ios-${lc_target}/filament" ]]; then
         if [[ "$ISSUE_ARCHIVES" == "true" ]]; then
