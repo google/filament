@@ -219,7 +219,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::fxaa(FrameGraph& fg,
                 mPostProcessUb.setUniform(offsetof(PostProcessingUib, time), fraction);
 
                 pInstance->commit(driver);
-                pInstance->use(driver);
 
                 PipelineState pipeline;
                 pipeline.rasterState = mFxaa.getMaterial()->getRasterState();
@@ -230,6 +229,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::fxaa(FrameGraph& fg,
 
                 auto const& target = resources.getRenderTarget(data.rt);
                 driver.beginRenderPass(target.target, target.params);
+                pInstance->use(driver);
                 driver.draw(pipeline, fullScreenRenderPrimitive);
                 driver.endRenderPass();
             });
