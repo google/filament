@@ -92,11 +92,7 @@ void PostProcessManager::init() noexcept {
     mTonemapping = PostProcessMaterial(mEngine, MATERIALS_TONEMAPPING_DATA, MATERIALS_TONEMAPPING_SIZE);
     mFxaa = PostProcessMaterial(mEngine, MATERIALS_FXAA_DATA, MATERIALS_FXAA_SIZE);
 
-    // create sampler for post-process FBO
     DriverApi& driver = mEngine.getDriverApi();
-    mPostProcessSbh = driver.createSamplerGroup(PostProcessSib::SAMPLER_COUNT);
-    driver.bindSamplers(BindingPoints::POST_PROCESS, mPostProcessSbh);
-
     mNoSSAOTexture = driver.createTexture(SamplerType::SAMPLER_2D, 1,
             TextureFormat::R8, 0, 1, 1, 1, TextureUsage::DEFAULT);
 
@@ -108,7 +104,6 @@ void PostProcessManager::init() noexcept {
 }
 
 void PostProcessManager::terminate(backend::DriverApi& driver) noexcept {
-    driver.destroySamplerGroup(mPostProcessSbh);
     driver.destroyTexture(mNoSSAOTexture);
     mSSAO.terminate(mEngine);
     mMipmapDepth.terminate(mEngine);

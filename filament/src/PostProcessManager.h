@@ -81,9 +81,6 @@ private:
             FrameGraphId<FrameGraphTexture> input,
             FrameGraphId<FrameGraphTexture> depth, math::int2 axis) noexcept;
 
-    // we need only one of these
-    backend::Handle<backend::HwSamplerGroup> mPostProcessSbh;
-
     class PostProcessMaterial {
     public:
         PostProcessMaterial() noexcept = default;

@@ -470,41 +470,11 @@ backend::Handle<backend::HwProgram> FEngine::createPostProcessProgram(MaterialPa
     parser.getShader(vShaderBuilder, shaderModel, (uint8_t)stage, ShaderType::VERTEX);
     parser.getShader(fShaderBuilder, shaderModel, (uint8_t)stage, ShaderType::FRAGMENT);
 
-    // For the post-process program, we don't care about per-material sampler bindings but we still
-    // need to populate a SamplerBindingMap and pass a weak reference to Program. Binding maps are
-    // normally owned by Material, but in this case we'll simply own a copy right here in static
-    // storage.
-    static const SamplerBindingMap* pBindings = [] {
-        static SamplerBindingMap bindings;
-        bindings.populate();
-        return &bindings;
-    }();
-
     Program pb;
     pb      .diagnostics(CString("Post Process"))
             .withVertexShader(vShaderBuilder.data(), vShaderBuilder.size())
             .withFragmentShader(fShaderBuilder.data(), fShaderBuilder.size())
             .setUniformBlock(BindingPoints::PER_VIEW, PerViewUib::getUib().getName());
-
-    auto addSamplerGroup = [&pb]
-            (uint8_t bindingPoint, SamplerInterfaceBlock const& sib, SamplerBindingMap const& map) {
-        const size_t samplerCount = sib.getSize();
-        if (samplerCount) {
-            std::vector<Program::Sampler> samplers(samplerCount);
-            auto const& list = sib.getSamplerInfoList();
-            for (size_t i = 0, c = samplerCount; i < c; ++i) {
-                CString uniformName(
-                        SamplerInterfaceBlock::getUniformName(sib.getName().c_str(),
-                                list[i].name.c_str()));
-                uint8_t binding;
-                map.getSamplerBinding(bindingPoint, (uint8_t)i, &binding);
-                samplers[i] = { std::move(uniformName), binding };
-            }
-            pb.setSamplerGroup(bindingPoint, samplers.data(), samplers.size());
-        }
-    };
-
-    addSamplerGroup(BindingPoints::POST_PROCESS, SibGenerator::getPostProcessSib(), *pBindings);
 
     auto program = const_cast<DriverApi&>(mCommandStream).createProgram(std::move(pb));
     assert(program);
