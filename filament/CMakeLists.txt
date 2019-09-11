@@ -135,6 +135,9 @@ set(PRIVATE_HDRS
         src/UniformBuffer.h
         src/upcast.h)
 
+# tonemapping.mat and fxaa.mat #include files inside the shaders/src directory. Since the
+# included files are part of libshaders, which matc depends on, they don't need to be
+# explicitly listed as dependencies.
 set(MATERIAL_SRCS
         src/materials/defaultMaterial.mat
         src/materials/blur.mat
@@ -143,6 +146,7 @@ set(MATERIAL_SRCS
         src/materials/sao.mat
         src/materials/ssao.mat
         src/materials/tonemapping.mat
+        src/materials/fxaa.mat
 )
 
 # Embed the binary resource blob for materials.

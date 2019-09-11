@@ -43,10 +43,6 @@ public:
 
     void init() noexcept;
     void terminate(backend::DriverApi& driver) noexcept;
-    void setSource(uint32_t viewportWidth, uint32_t viewportHeight,
-            backend::Handle<backend::HwTexture> color,
-            backend::Handle<backend::HwTexture> depth,
-            uint32_t textureWidth, uint32_t textureHeight) const noexcept;
 
     FrameGraphId<FrameGraphTexture> toneMapping(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input,
@@ -119,6 +115,7 @@ private:
     PostProcessMaterial mMipmapDepth;
     PostProcessMaterial mBlur;
     PostProcessMaterial mTonemapping;
+    PostProcessMaterial mFxaa;
 
     backend::Handle<backend::HwTexture> mNoSSAOTexture;
 };
