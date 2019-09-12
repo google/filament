@@ -49,7 +49,6 @@ public:
     MaterialParser& operator=(MaterialParser const& rhs) noexcept = delete;
 
     bool parse() noexcept;
-    bool isShadingMaterial() const noexcept;
 
     // Accessors
     bool getMaterialVersion(uint32_t* value) const noexcept;

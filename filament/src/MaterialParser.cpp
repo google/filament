@@ -108,16 +108,6 @@ bool MaterialParser::parse() noexcept {
     return true;
 }
 
-bool MaterialParser::isShadingMaterial() const noexcept {
-    ChunkContainer const& cc = getChunkContainer();
-    return cc.hasChunk(MaterialName) &&
-           cc.hasChunk(MaterialVersion) &&
-           cc.hasChunk(MaterialUib) &&
-           cc.hasChunk(MaterialSib) &&
-           (cc.hasChunk(MaterialGlsl) || cc.hasChunk(MaterialSpirv) || cc.hasChunk(MaterialMetal)) &&
-           cc.hasChunk(MaterialShaderModels);
-}
-
 // Accessors
 bool MaterialParser::getMaterialVersion(uint32_t* value) const noexcept {
     return mImpl.getFromSimpleChunk(ChunkType::MaterialVersion, value);

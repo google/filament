@@ -475,7 +475,7 @@ void FMaterial::onQueryCallback(void* userdata, uint16_t* pvariants) {
 MaterialParser* FMaterial::createParser(backend::Backend backend, const void* data, size_t size) {
     MaterialParser* materialParser = new MaterialParser(backend, data, size);
 
-    bool materialOK = materialParser->parse() && materialParser->isShadingMaterial();
+    bool materialOK = materialParser->parse();
     if (!ASSERT_POSTCONDITION_NON_FATAL(materialOK, "could not parse the material package")) {
         return nullptr;
     }

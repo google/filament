@@ -376,7 +376,7 @@ static bool parseChunks(Config config, void* data, size_t size) {
 
         if (config.printGLSL) {
             ShaderExtractor parser(Backend::OPENGL, data, size);
-            if (!parser.parse() || !parser.isShadingMaterial()) {
+            if (!parser.parse()) {
                 return false;
             }
 
@@ -402,7 +402,7 @@ static bool parseChunks(Config config, void* data, size_t size) {
 
         if (config.printSPIRV) {
             ShaderExtractor parser(Backend::VULKAN, data, size);
-            if (!parser.parse() || !parser.isShadingMaterial()) {
+            if (!parser.parse()) {
                 return false;
             }
 
@@ -438,7 +438,7 @@ static bool parseChunks(Config config, void* data, size_t size) {
 
         if (config.printMetal) {
             ShaderExtractor parser(Backend::METAL, data, size);
-            if (!parser.parse() || !parser.isShadingMaterial()) {
+            if (!parser.parse()) {
                 return false;
             }
 

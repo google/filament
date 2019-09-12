@@ -239,7 +239,7 @@ public:
             }
 
             ShaderExtractor extractor(Backend::OPENGL, result->package, result->packageSize);
-            if (!extractor.parse() || !extractor.isShadingMaterial()) {
+            if (!extractor.parse()) {
                 return error(__LINE__);
             }
 
@@ -254,7 +254,7 @@ public:
 
         if (vkindex[0]) {
             ShaderExtractor extractor(Backend::VULKAN, result->package, result->packageSize);
-            if (!extractor.parse() || !extractor.isShadingMaterial()) {
+            if (!extractor.parse()) {
                 return error(__LINE__);
             }
 
@@ -295,7 +295,7 @@ public:
 
         if (metalindex[0]) {
             ShaderExtractor extractor(Backend::METAL, result->package, result->packageSize);
-            if (!extractor.parse() || !extractor.isShadingMaterial()) {
+            if (!extractor.parse()) {
                 return error(__LINE__);
             }
 
