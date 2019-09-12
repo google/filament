@@ -181,8 +181,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::toneMapping(FrameGraph& fg, 
 
                 FMaterialInstance* pInstance = mTonemapping.getMaterialInstance();
                 pInstance->setParameter("dithering", dithering);
-                SamplerParams params;
-                pInstance->setParameter("colorBuffer", color, params);
+                pInstance->setParameter("colorBuffer", color, {});
 
                 auto duration = engine->getEngineTime();
                 float fraction = (duration.count() % 1000000000) / 1000000000.0f;
@@ -409,9 +408,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssao(FrameGraph& fg, RenderP
                         0.5f * cameraInfo.projection[0].x * desc.width,
                         0.5f * cameraInfo.projection[1].y * desc.height);
 
-                SamplerParams params;
                 FMaterialInstance* const pInstance = mSSAO.getMaterialInstance();
-                pInstance->setParameter("depth", depth, params);
+                pInstance->setParameter("depth", depth, {});
                 pInstance->setParameter("resolution",
                         float4{ desc.width, desc.height, 1.0f / desc.width, 1.0f / desc.height });
                 pInstance->setParameter("radius", data.options.radius);
@@ -520,9 +518,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::mipmapPass(FrameGraph& fg,
                 auto in = resources.getTexture(data.in);
                 auto out = resources.getRenderTarget(data.rt, level + 1u);
 
-                SamplerParams params;
                 FMaterialInstance* const pInstance = mMipmapDepth.getMaterialInstance();
-                pInstance->setParameter("depth", in, params);
+                pInstance->setParameter("depth", in, {});
                 pInstance->setParameter("level", uint32_t(level));
                 pInstance->commit(driver);
 
@@ -581,10 +578,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blurPass(FrameGraph& fg,
                 auto blurred = resources.getRenderTarget(data.rt);
                 auto const& desc = resources.getDescriptor(data.blurred);
 
-                SamplerParams params;
                 FMaterialInstance* const pInstance = mBlur.getMaterialInstance();
-                pInstance->setParameter("ssao", ssao, params);
-                pInstance->setParameter("depth", depth, params);
+                pInstance->setParameter("ssao", ssao, {});
+                pInstance->setParameter("depth", depth, {});
                 pInstance->setParameter("axis", axis);
                 pInstance->setParameter("resolution",
                         float4{ desc.width, desc.height, 1.0f / desc.width, 1.0f / desc.height });
