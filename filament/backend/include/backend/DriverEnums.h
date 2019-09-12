@@ -611,13 +611,7 @@ enum class SamplerCompareFunc : uint8_t {
     LE = 0, GE, L, G, E, NE, A, N
 };
 
-struct SamplerParams {
-    enum class no_init { };
-    static constexpr no_init NO_INIT = { };
-
-    constexpr SamplerParams() noexcept : u(0) { }
-    explicit SamplerParams(no_init) noexcept { }
-
+struct SamplerParams { // NOLINT
     union {
         struct {
             SamplerMagFilter filterMag      : 1;    // NEAREST
@@ -636,7 +630,7 @@ struct SamplerParams {
 
             uint8_t padding2                : 8;    // 0
         };
-        uint32_t u;
+        uint32_t u{};
     };
 private:
     friend inline bool operator < (SamplerParams lhs, SamplerParams rhs) {
