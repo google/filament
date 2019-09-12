@@ -80,7 +80,7 @@ void MaterialBuilderBase::prepare() {
             TargetLanguage::SPIRV : TargetLanguage::GLSL;
 
     // Select OpenGL as the default TargetApi if none was specified.
-    if (mTargetApi == (TargetApi) 0) {
+    if (none(mTargetApi)) {
         mTargetApi = TargetApi::OPENGL;
     }
 
@@ -90,13 +90,13 @@ void MaterialBuilderBase::prepare() {
         if (!mShaderModels.test(i)) {
             continue; // skip this shader model since it was not requested.
         }
-        if (mTargetApi & TargetApi::OPENGL) {
+        if (any(mTargetApi & TargetApi::OPENGL)) {
             mCodeGenPermutations.push_back({i, TargetApi::OPENGL, glTargetLanguage});
         }
-        if (mTargetApi & TargetApi::VULKAN) {
+        if (any(mTargetApi & TargetApi::VULKAN)) {
             mCodeGenPermutations.push_back({i, TargetApi::VULKAN, TargetLanguage::SPIRV});
         }
-        if (mTargetApi & TargetApi::METAL) {
+        if (any(mTargetApi & TargetApi::METAL)) {
             mCodeGenPermutations.push_back({i, TargetApi::METAL, TargetLanguage::SPIRV});
         }
     }
