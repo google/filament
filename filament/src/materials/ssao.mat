@@ -42,8 +42,7 @@ material {
     depthWrite : false,
     depthCulling : true,
     shadingModel : unlit,
-    variantFilter : [ skinning, shadowReceiver ],
-    culling: none
+    variantFilter : [ skinning, shadowReceiver ]
 }
 
 vertex {

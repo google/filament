@@ -13,7 +13,6 @@ material {
     ],
     depthWrite : false,
     depthCulling : false,
-    culling: none,
     domain: postprocess
 }
 

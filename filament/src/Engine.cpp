@@ -119,6 +119,8 @@ FEngine* FEngine::create(Backend backend, Platform* platform, void* sharedGLCont
 
 
 // these must be static because only a pointer is copied to the render stream
+// Note that these coordinates are specified in OpenGL clip space. Other backends can transform
+// these in the vertex shader as needed.
 static const half4 sFullScreenTriangleVertices[3] = {
         { -1.0_h, -1.0_h, 1.0_h, 1.0_h },
         {  3.0_h, -1.0_h, 1.0_h, 1.0_h },
