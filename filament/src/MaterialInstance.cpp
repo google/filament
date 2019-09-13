@@ -43,6 +43,11 @@ FMaterialInstance::FMaterialInstance() noexcept = default;
 
 FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material) {
     mMaterial = material;
+
+    // We inherit the resolved culling mode rather than the builder-set culling mode.
+    // This preserves the property whereby double-sidedness automatically disables culling.
+    mCulling = mMaterial->getRasterState().culling;
+
     mMaterialSortingKey = RenderPass::makeMaterialSortingKey(
             material->getId(), material->generateMaterialInstanceId());
 
@@ -153,6 +158,13 @@ void FMaterialInstance::setDoubleSided(bool doubleSided) noexcept {
         return;
     }
     setParameter("_doubleSided", doubleSided);
+    if (doubleSided) {
+        setCullingMode(CullingMode::NONE);
+    }
+}
+
+void FMaterialInstance::setCullingMode(CullingMode culling) noexcept {
+    mCulling = culling;
 }
 
 // explicit template instantiation of our supported types
@@ -289,6 +301,10 @@ void MaterialInstance::setSpecularAntiAliasingThreshold(float threshold) noexcep
 
 void MaterialInstance::setDoubleSided(bool doubleSided) noexcept {
     upcast(this)->setDoubleSided(doubleSided);
+}
+
+void MaterialInstance::setCullingMode(CullingMode culling) noexcept {
+    upcast(this)->setCullingMode(culling);
 }
 
 } // namespace filament

@@ -232,7 +232,8 @@ public:
     // set vertex domain for this material
     MaterialBuilder& vertexDomain(VertexDomain domain) noexcept;
 
-    // how triangles are culled (doesn't affect points or lines, back-face culling by default)
+    // how triangles are culled by default (doesn't affect points or lines, BACK by default)
+    // material instances can override this
     MaterialBuilder& culling(CullingMode culling) noexcept;
 
     // enable/disable color-buffer write (enabled by default)

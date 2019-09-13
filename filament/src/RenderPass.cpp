@@ -180,6 +180,7 @@ void RenderPass::recordDriverCommands(FEngine::DriverApi& driver, FScene& scene,
                 // this is always taken the first time
                 mi = info.mi;
                 pipeline.scissor = mi->getScissor();
+                pipeline.rasterState.culling = mi->getCullingMode();
                 *pPipelinePolygonOffset = mi->getPolygonOffset();
                 ma = mi->getMaterial();
                 mi->use(driver);
