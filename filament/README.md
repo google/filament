@@ -95,7 +95,7 @@ main: main.o
 	$(CC) -Llib/x86_64/ main.o $(FILAMENT_LIBS) -lpthread -lc++ -ldl -o main
 
 main.o: main.cpp
-	$(CC) -Iinclude/ -std=c++14 -pthread -c main.cpp
+	$(CC) -Iinclude/ -std=c++17 -pthread -c main.cpp
 
 clean:
 	rm -f main main.o
@@ -114,7 +114,7 @@ main: main.o
 	$(CC) -Llib/x86_64/ main.o $(FILAMENT_LIBS) $(FRAMEWORKS) -o main
 
 main.o: main.cpp
-	$(CC) -Iinclude/ -std=c++14 -c main.cpp
+	$(CC) -Iinclude/ -std=c++17 -c main.cpp
 
 clean:
 	rm -f main main.o

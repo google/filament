@@ -50,7 +50,7 @@ android {
                 arguments.add("-DANDROID_PLATFORM=android-19")
                 arguments.add("-DANDROID_STL=c++_static")
                 arguments.add("-DFILAMENT_DIST_DIR=${filament_path}".toString())
-                cppFlags.add("-std=c++14")
+                cppFlags.add("-std=c++17")
                 if (project.hasProperty('extra_cmake_args')) {
                     arguments.add(extra_cmake_args)
                 }
