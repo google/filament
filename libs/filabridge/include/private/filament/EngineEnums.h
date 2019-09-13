@@ -22,14 +22,6 @@
 
 namespace filament {
 
-static constexpr size_t POST_PROCESS_STAGES_COUNT = 4;
-enum class PostProcessStage : uint8_t {
-    TONE_MAPPING_OPAQUE,           // Tone mapping post-process
-    TONE_MAPPING_TRANSLUCENT,      // Tone mapping post-process
-    ANTI_ALIASING_OPAQUE,          // Anti-aliasing stage
-    ANTI_ALIASING_TRANSLUCENT,     // Anti-aliasing stage
-};
-
 static constexpr size_t POST_PROCESS_VARIANT_COUNT = 2;
 enum class PostProcessVariant : uint8_t {
     OPAQUE,

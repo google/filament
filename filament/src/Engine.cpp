@@ -162,19 +162,6 @@ void FEngine::init() {
 
     mResourceAllocator = new fg::ResourceAllocator(driverApi);
 
-    // Parse all post process shaders now, but create them lazily
-    mPostProcessParser = std::make_unique<MaterialParser>(mBackend,
-            MATERIALS_POSTPROCESS_DATA, MATERIALS_POSTPROCESS_SIZE);
-
-    UTILS_UNUSED_IN_RELEASE bool ppMaterialOk =
-            mPostProcessParser->parse() && mPostProcessParser->isPostProcessMaterial();
-    assert(ppMaterialOk);
-
-    uint32_t version;
-    mPostProcessParser->getPostProcessVersion(&version);
-    ASSERT_PRECONDITION(version == MATERIAL_VERSION, "Post-process material version mismatch. "
-            "Expected %d but received %d.", MATERIAL_VERSION, version);
-
     mFullScreenTriangleVb = upcast(VertexBuffer::Builder()
             .vertexCount(3)
             .bufferCount(1)
@@ -294,10 +281,6 @@ void FEngine::shutdown() {
         cleanupResourceList(item.second);
     }
     cleanupResourceList(mFences);
-
-    for (const auto& mPostProcessProgram : mPostProcessPrograms) {
-        driver.destroyProgram(mPostProcessProgram);
-    }
 
     // There might be commands added by the terminate() calls
     flushCommandBuffer(mCommandBufferQueue);
@@ -461,35 +444,6 @@ const FMaterial* FEngine::getSkyboxMaterial() const noexcept {
     }
     return material;
 }
-
-
-backend::Handle<backend::HwProgram> FEngine::createPostProcessProgram(MaterialParser& parser,
-        ShaderModel shaderModel, PostProcessStage stage) const noexcept {
-    ShaderBuilder& vShaderBuilder = getVertexShaderBuilder();
-    ShaderBuilder& fShaderBuilder = getFragmentShaderBuilder();
-    parser.getShader(vShaderBuilder, shaderModel, (uint8_t)stage, ShaderType::VERTEX);
-    parser.getShader(fShaderBuilder, shaderModel, (uint8_t)stage, ShaderType::FRAGMENT);
-
-    Program pb;
-    pb      .diagnostics(CString("Post Process"))
-            .withVertexShader(vShaderBuilder.data(), vShaderBuilder.size())
-            .withFragmentShader(fShaderBuilder.data(), fShaderBuilder.size())
-            .setUniformBlock(BindingPoints::PER_VIEW, PerViewUib::getUib().getName());
-
-    auto program = const_cast<DriverApi&>(mCommandStream).createProgram(std::move(pb));
-    assert(program);
-    return program;
-}
-
-backend::Handle<backend::HwProgram> FEngine::getPostProcessProgramSlow(PostProcessStage stage) const noexcept {
-    backend::Handle<backend::HwProgram>* const postProcessPrograms = mPostProcessPrograms;
-    if (!postProcessPrograms[(uint8_t)stage]) {
-        ShaderModel shaderModel = getDriver().getShaderModel();
-        postProcessPrograms[(uint8_t)stage] = createPostProcessProgram(*mPostProcessParser, shaderModel, stage);
-    }
-    return postProcessPrograms[(uint8_t)stage];
-}
-
 
 // -----------------------------------------------------------------------------------------------
 // Resource management

@@ -135,9 +135,6 @@ set(PRIVATE_HDRS
         src/UniformBuffer.h
         src/upcast.h)
 
-# tonemapping.mat and fxaa.mat #include files inside the shaders/src directory. Since the
-# included files are part of libshaders, which matc depends on, they don't need to be
-# explicitly listed as dependencies.
 set(MATERIAL_SRCS
         src/materials/defaultMaterial.mat
         src/materials/blur.mat
@@ -193,21 +190,28 @@ foreach (mat_src ${MATERIAL_SRCS})
 
     add_custom_command(
             OUTPUT ${output_path}
-            COMMAND matc ${MATC_BASE_FLAGS} -m material -o ${output_path} ${fullname}
+            COMMAND matc ${MATC_BASE_FLAGS} -o ${output_path} ${fullname}
             DEPENDS ${fullname} matc
             COMMENT "Compiling material ${mat_src} to ${output_path}"
     )
     list(APPEND MATERIAL_BINS ${output_path})
 endforeach()
 
-set(output_path "${MATERIAL_DIR}/postprocess.filamat")
+# tonemapping.mat and fxaa.mat have additional dependencies on included files
+
 add_custom_command(
-        OUTPUT ${output_path}
-        COMMAND matc ${MATC_BASE_FLAGS} -m postprocess -o ${output_path}
-        DEPENDS matc
-        COMMENT "Compiling post-process material ${output_path}"
+    OUTPUT "${MATERIAL_DIR}/tonemapping.filamat"
+    DEPENDS ../shaders/src/tone_mapping.fs
+    DEPENDS ../shaders/src/conversion_functions.fs
+    DEPENDS ../shaders/src/dithering.fs
+    APPEND
 )
-list(APPEND MATERIAL_BINS ${output_path})
+
+add_custom_command(
+    OUTPUT "${MATERIAL_DIR}/fxaa.filamat"
+    DEPENDS ../shaders/src/fxaa.fs
+    APPEND
+)
 
 add_custom_command(
         OUTPUT ${RESGEN_OUTPUTS}

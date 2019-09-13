@@ -41,7 +41,7 @@ foreach (mat_src ${MATERIAL_SRCS})
     set(output_path "${MATERIAL_DIR}/${localname}.filamat")
     add_custom_command(
             OUTPUT ${output_path}
-            COMMAND matc ${MATC_BASE_FLAGS} -m material -o ${output_path} ${fullname}
+            COMMAND matc ${MATC_BASE_FLAGS} -o ${output_path} ${fullname}
             DEPENDS ${mat_src} matc
             COMMENT "Compiling material ${mat_src} to ${output_path}"
     )

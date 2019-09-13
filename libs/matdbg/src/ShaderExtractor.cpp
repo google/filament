@@ -68,19 +68,6 @@ bool ShaderExtractor::parse() noexcept {
     return false;
 }
 
-bool ShaderExtractor::isShadingMaterial() const noexcept {
-    ChunkContainer const& cc = mChunkContainer;
-    return cc.hasChunk(MaterialName) && cc.hasChunk(MaterialVersion) &&
-            cc.hasChunk(MaterialUib) && cc.hasChunk(MaterialSib) &&
-            cc.hasChunk(MaterialShaderModels) && cc.hasChunk(mMaterialTag);
-}
-
-bool ShaderExtractor::isPostProcessMaterial() const noexcept {
-    ChunkContainer const& cc = mChunkContainer;
-    return cc.hasChunk(PostProcessVersion)
-            && cc.hasChunk(mMaterialTag) && cc.hasChunk(mDictionaryTag);
-}
-
 bool ShaderExtractor::getShader(ShaderModel shaderModel,
         uint8_t variant, ShaderType stage, ShaderBuilder& shader) noexcept {
 

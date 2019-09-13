@@ -128,28 +128,6 @@ io::sstream& CodeGenerator::generateShaderMain(io::sstream& out, ShaderType type
     return out;
 }
 
-io::sstream& CodeGenerator::generatePostProcessMainOld(io::sstream& out,
-        ShaderType type, filament::PostProcessStage variant) const {
-    if (type == ShaderType::VERTEX) {
-        out << SHADERS_POST_PROCESS_OLD_VS_DATA;
-    } else if (type == ShaderType::FRAGMENT) {
-        switch (variant) {
-            case PostProcessStage::TONE_MAPPING_OPAQUE:
-            case PostProcessStage::TONE_MAPPING_TRANSLUCENT:
-                out << SHADERS_TONE_MAPPING_FS_DATA;
-                out << SHADERS_CONVERSION_FUNCTIONS_FS_DATA;
-                out << SHADERS_DITHERING_FS_DATA;
-                break;
-            case PostProcessStage::ANTI_ALIASING_OPAQUE:
-            case PostProcessStage::ANTI_ALIASING_TRANSLUCENT:
-                out << SHADERS_FXAA_FS_DATA;
-                break;
-        }
-        out << SHADERS_POST_PROCESS_OLD_FS_DATA;
-    }
-    return out;
-}
-
 io::sstream& CodeGenerator::generatePostProcessMain(io::sstream& out, ShaderType type) const {
     if (type == ShaderType::VERTEX) {
         out << SHADERS_POST_PROCESS_VS_DATA;

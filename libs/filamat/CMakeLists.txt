@@ -15,8 +15,7 @@ set(PUBLIC_HDR_DIR include)
 set(HDRS
         include/filamat/Enums.h
         include/filamat/MaterialBuilder.h
-        include/filamat/Package.h
-        include/filamat/PostprocessMaterialBuilder.h)
+        include/filamat/Package.h)
 
 set(COMMON_PRIVATE_HDRS
         src/eiff/Chunk.h
@@ -43,7 +42,6 @@ set(COMMON_SRCS
         src/Enums.cpp
         src/MaterialBuilder.cpp
         src/MaterialVariants.cpp
-        src/PostprocessMaterialBuilder.cpp
         src/Includes.cpp)
 
 # Sources and headers for filamat
