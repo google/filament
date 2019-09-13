@@ -21,6 +21,8 @@
 #include <filament/Color.h>
 #include <filament/TextureSampler.h>
 
+#include <backend/DriverEnums.h>
+
 #include <utils/compiler.h>
 
 namespace filament {
@@ -32,6 +34,8 @@ class UniformInterfaceBlock;
 
 class UTILS_PUBLIC MaterialInstance : public FilamentAPI {
 public:
+    using CullingMode = filament::backend::CullingMode;
+
     /**
      * @return the Material associated with this instance
      */
@@ -147,9 +151,15 @@ public:
 
     /**
      * Enables or disables double-sided lighting if the parent Material has double-sided capability,
-     * otherwise prints a warning. Does not affect backface culling.
+     * otherwise prints a warning. If double-sided lighting is enabled, backface culling is
+     * automatically disabled.
      */
     void setDoubleSided(bool doubleSided) noexcept;
+
+    /**
+     * Overrides the default triangle culling state that was set on the material.
+     */
+    void setCullingMode(CullingMode culling) noexcept;
 };
 
 } // namespace filament

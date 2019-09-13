@@ -140,7 +140,7 @@ public:
     //! Returns the material domain of this material.
     MaterialDomain getMaterialDomain() const noexcept;
 
-    //! Returns the culling mode of this material.
+    //! Returns the default culling mode of this material.
     CullingMode getCullingMode() const noexcept;
 
     //! Returns the transparency mode of this material.
