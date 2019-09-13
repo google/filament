@@ -4,6 +4,7 @@ on: [pull_request]
 
 jobs:
   build:
+    name: presubmit/desktop
     runs-on: ${{ matrix.os }}
 
     strategy:

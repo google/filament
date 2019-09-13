@@ -4,6 +4,7 @@ on: [pull_request]
 
 jobs:
   build:
+    name: presubmit/iOS
     runs-on: macos-latest
 
     steps:
