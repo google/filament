@@ -290,13 +290,6 @@ DECL_DRIVER_API_N(setRenderPrimitiveRange,
         uint32_t, maxIndex,
         uint32_t, count)
 
-// Sets up a scissor rectangle that automatically gets clipped against the viewport.
-DECL_DRIVER_API_N(setViewportScissor,
-        int32_t, left,
-        int32_t, bottom,
-        uint32_t, width,
-        uint32_t, height)
-
 /*
  * Swap chain
  */

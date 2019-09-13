@@ -2490,16 +2490,15 @@ void OpenGLDriver::setRenderPrimitiveRange(Handle<HwRenderPrimitive> rph,
 }
 
 // Sets up a scissor rectangle that automatically gets clipped against the viewport.
-void OpenGLDriver::setViewportScissor(
-        int32_t left, int32_t bottom, uint32_t width, uint32_t height) {
+void OpenGLDriver::setViewportScissor(Viewport const& viewportScissor) noexcept {
     DEBUG_MARKER()
 
     // In OpenGL, all four scissor parameters are actually signed, so clamp to MAX_INT32.
     const int32_t maxval = std::numeric_limits<int32_t>::max();
-    left = std::min(left, maxval);
-    bottom = std::min(bottom, maxval);
-    width = std::min(width, uint32_t(maxval));
-    height = std::min(height, uint32_t(maxval));
+    int32_t left = std::min(viewportScissor.left, maxval);
+    int32_t bottom = std::min(viewportScissor.bottom, maxval);
+    uint32_t width = std::min(viewportScissor.width, uint32_t(maxval));
+    uint32_t height = std::min(viewportScissor.height, uint32_t(maxval));
     // Compute the intersection of the requested scissor rectangle with the current viewport.
     // Note that the viewport rectangle isn't necessarily equal to the bounds of the current
     // Filament View (e.g., when post-processing is enabled).
@@ -2515,6 +2514,7 @@ void OpenGLDriver::setViewportScissor(
     scissor.z = std::max(0, right - scissor.x);
     scissor.w = std::max(0, top - scissor.y);
     setScissor(scissor.x, scissor.y, scissor.z, scissor.w);
+    enable(GL_SCISSOR_TEST);
 }
 
 /*
@@ -3055,7 +3055,7 @@ void OpenGLDriver::draw(PipelineState state, Handle<HwRenderPrimitive> rph) {
 
     polygonOffset(state.polygonOffset.slope, state.polygonOffset.constant);
 
-    enable(GL_SCISSOR_TEST);
+    setViewportScissor(state.scissor);
 
     glDrawRangeElements(GLenum(rp->type), rp->minIndex, rp->maxIndex, rp->count,
             rp->gl.indicesType, reinterpret_cast<const void*>(rp->offset));

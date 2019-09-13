@@ -179,6 +179,7 @@ void RenderPass::recordDriverCommands(FEngine::DriverApi& driver, FScene& scene,
             if (UTILS_UNLIKELY(mi != info.mi)) {
                 // this is always taken the first time
                 mi = info.mi;
+                pipeline.scissor = mi->getScissor();
                 *pPipelinePolygonOffset = mi->getPolygonOffset();
                 ma = mi->getMaterial();
                 mi->use(driver);
