@@ -3,13 +3,13 @@ void main() {
     PostProcessVertexInputs inputs;
     initPostProcessMaterialVertex(inputs);
 
-    inputs.uv = position.xy * 0.5 + 0.5;
-    inputs.texelCoords = inputs.uv * frameUniforms.resolution.xy;
+    inputs.normalizedUV = position.xy * 0.5 + 0.5;
+    inputs.texelCoords = inputs.normalizedUV * frameUniforms.resolution.xy;
 
 // In Vulkan and Metal, texture coords are Y-down. In OpenGL, texture coords are Y-up.
 #if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
     inputs.texelCoords.y = frameUniforms.resolution.y - 1.0 - inputs.texelCoords.y;
-    inputs.uv.y = 1.0 - inputs.uv.y;
+    inputs.normalizedUV.y = 1.0 - inputs.normalizedUV.y;
 #endif
 
     gl_Position = getPosition();

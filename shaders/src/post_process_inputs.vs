@@ -4,10 +4,9 @@ LAYOUT_LOCATION(LOCATION_UVS) out vec2 vertex_uv;
 
 struct PostProcessVertexInputs {
 
-    // We provide normalized (uv) and non-normalized (texelCoords) texture coordinates to
-    // custom vertex shaders. By default the non-normalized coordinates are passed through
-    // to the fragment shader.
-    vec2 uv;
+    // We provide normalized and non-normalized texture coordinates to custom vertex shaders.
+    // By default the non-normalized coordinates are passed through to the fragment shader.
+    vec2 normalizedUV;
     vec2 texelCoords;
 
 #ifdef VARIABLE_CUSTOM0
