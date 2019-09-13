@@ -461,7 +461,7 @@ function ensure_ios_toolchain {
     echo "iOS toolchain file does not exist."
     echo "It will automatically be downloaded from http://opensource.apple.com."
 
-    if [[ "$GITHUB_WORKFLOW" ]]; then
+    if [[ "$CONTINUOUS_INTEGRATION" ]]; then
         REPLY=y
     else
         read -p "Continue? (y/n) " -n 1 -r
