@@ -1617,10 +1617,16 @@ The following APIs are only available from the fragment block:
 **inverseTonemap(float3)**          | float3   |  Applies the inverse tone mapping operator to the specified linear sRGB color and returns a linear sRGB color. This operation may be an approximation
 **inverseTonemapSRGB(float3)**      | float3   |  Applies the inverse tone mapping operator to the specified non-linear sRGB color and returns a linear sRGB color. This operation may be an approximation
 **luminance(float3)**               | float    |  Computes the luminance of the specified linear sRGB color
+**uvToRenderTargetUV(float2)**      | float2   |  Transforms a UV coordinate to allow sampling from a `RenderTarget` attachment
 
 !!! TIP: world space
     To obtain API-level world space coordinates, custom materials should add `getWorldOffset()` to
     `getWorldPosition()` (et al).
+
+!!! TIP: sampling from render targets
+    When sampling from a `filament::Texture` that is attached to a `filament::RenderTarget` for
+    materials in the surface domain, please use `uvToRenderTargetUV` to transform the texture
+    coordinate. This will flip the coordinate depending on which backend is being used.
 
 # Compiling materials
 

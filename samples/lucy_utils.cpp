@@ -83,7 +83,8 @@ Entity createQuad(Engine* engine, Texture* tex, ImageOp op, Texture* secondary) 
             .material(R"SHADER(
                 void material(inout MaterialInputs material) {
                     prepareMaterial(material);
-                    material.baseColor = texture(materialParams_color, getUV0());
+                    vec2 uv = uvToRenderTargetUV(getUV0());
+                    material.baseColor = texture(materialParams_color, uv);
                 }
             )SHADER")
             .require(VertexAttribute::UV0)
@@ -102,8 +103,9 @@ Entity createQuad(Engine* engine, Texture* tex, ImageOp op, Texture* secondary) 
             .material(R"SHADER(
                 void material(inout MaterialInputs material) {
                     prepareMaterial(material);
-                    vec4 primary = texture(materialParams_color, getUV0());
-                    vec4 blurred = texture(materialParams_secondary, getUV0());
+                    vec2 uv = uvToRenderTargetUV(getUV0());
+                    vec4 primary = texture(materialParams_color, uv);
+                    vec4 blurred = texture(materialParams_secondary, uv);
                     // HACK: this is a crude bloom effect
                     float L = max(0.0, max(blurred.r, max(blurred.g, blurred.b)) - 1.0);
                     material.baseColor = mix(primary, blurred, min(1.0, L));
@@ -177,10 +179,10 @@ Entity createQuad(Engine* engine, Texture* tex, ImageOp op, Texture* secondary) 
         std::string txt = R"SHADER(
             void material(inout MaterialInputs material) {
                 prepareMaterial(material);
-                float2 uv = gl_FragCoord.xy;
+                float2 uv = uvToRenderTargetUV(getUV0());
                 vec4 c = vec4(0);
                 for (int i = 0; i < SAMPLE_COUNT; i++) {
-                    float2 st = (uv + materialParams.weights[i].yz) * getResolution().zw;
+                    float2 st = uv + materialParams.weights[i].yz * getResolution().zw;
                     c += texture(materialParams_color, st) * materialParams.weights[i].x;
                 }
                 material.baseColor = c;
