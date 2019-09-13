@@ -30,6 +30,7 @@
 #include <filamat/IncludeCallback.h>
 #include <filamat/Package.h>
 
+#include <utils/BitmaskEnum.h>
 #include <utils/bitset.h>
 #include <utils/compiler.h>
 #include <utils/CString.h>
@@ -102,16 +103,6 @@ protected:
     static std::atomic<int> materialBuilderClients;
 };
 
-inline constexpr MaterialBuilderBase::TargetApi operator|(MaterialBuilderBase::TargetApi lhs,
-        MaterialBuilderBase::TargetApi rhs) noexcept {
-    return MaterialBuilderBase::TargetApi(uint8_t(lhs) | uint8_t(rhs));
-}
-
-inline constexpr MaterialBuilderBase::TargetApi operator|=(MaterialBuilderBase::TargetApi& lhs,
-        MaterialBuilderBase::TargetApi rhs) noexcept {
-    return lhs = (lhs | rhs);
-}
-
 // Utility function that looks at an Engine backend to determine TargetApi
 inline constexpr MaterialBuilderBase::TargetApi targetApiFromBackend(
             filament::backend::Backend backend) noexcept {
@@ -124,11 +115,6 @@ inline constexpr MaterialBuilderBase::TargetApi targetApiFromBackend(
         case Backend::METAL:   return TargetApi::METAL;
         case Backend::NOOP:    return TargetApi::OPENGL;
     }
-}
-
-inline constexpr bool operator&(MaterialBuilderBase::TargetApi lhs,
-        MaterialBuilderBase::TargetApi rhs) noexcept {
-    return bool(uint8_t(lhs) & uint8_t(rhs));
 }
 
 class UTILS_PUBLIC MaterialBuilder : public MaterialBuilderBase {
@@ -471,4 +457,8 @@ private:
 };
 
 } // namespace filamat
+
+template<> struct utils::EnableBitMaskOperators<filamat::MaterialBuilder::TargetApi>
+        : public std::true_type {};
+
 #endif
