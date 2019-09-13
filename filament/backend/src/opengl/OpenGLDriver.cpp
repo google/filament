@@ -1085,10 +1085,10 @@ void OpenGLDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
             textureStorage(t, w, h, depth);
         }
     } else {
-        assert(usage & (
+        assert(any(usage & (
                 TextureUsage::COLOR_ATTACHMENT |
                 TextureUsage::DEPTH_ATTACHMENT |
-                TextureUsage::STENCIL_ATTACHMENT));
+                TextureUsage::STENCIL_ATTACHMENT)));
         assert(levels == 1);
         assert(target == SamplerType::SAMPLER_2D);
         t->gl.internalFormat = getInternalFormat(format);
