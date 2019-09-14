@@ -11,7 +11,7 @@
 set -e
 set -x
 
-NDK_VERSION=ndk;20.0.5594570
+NDK_VERSION="ndk;20.0.5594570"
 
 UNAME=`echo $(uname)`
 LC_UNAME=`echo $UNAME | tr '[:upper:]' '[:lower:]'`
