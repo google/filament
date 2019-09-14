@@ -4,6 +4,7 @@ on: [pull_request]
 
 jobs:
   build:
+    name: build/iOS
     runs-on: macos-latest
 
     steps:
