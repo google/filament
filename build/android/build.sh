@@ -38,6 +38,8 @@ if [[ -d $ndk_side_by_side ]]; then
     if [[ ${ndk_version} -lt ${ANDROID_NDK_VERSION} ]]; then
         ${ANDROID_HOME}/tools/bin/sdkmanager "${NDK_VERSION}" > /dev/null
     fi
+else
+    ${ANDROID_HOME}/tools/bin/sdkmanager "${NDK_VERSION}" > /dev/null
 fi
 
 pushd `dirname $0`/../.. > /dev/null
