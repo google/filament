@@ -11,6 +11,8 @@
 set -e
 set -x
 
+NDK_VERSION=ndk;20.0.5594570
+
 UNAME=`echo $(uname)`
 LC_UNAME=`echo $UNAME | tr '[:upper:]' '[:lower:]'`
 
@@ -31,6 +33,13 @@ source `dirname $0`/../common/build-common.sh
 if [[ "$KOKORO_BUILD_ID" ]]; then
     yes | ${ANDROID_HOME}/tools/bin/sdkmanager --update >/dev/null && \
         yes | ${ANDROID_HOME}/tools/bin/sdkmanager --licenses >/dev/null
+fi
+
+if [[ "$GITHUB_WORKFLOW" ]]; then
+    if [[ "$FILAMENT_ANDROID_CI_BUILD" ]]; then
+        # Update NDK
+        yes | $ANDROID_HOME/tools/bin/sdkmanager "${NDK_VERSION}" > /dev/null
+    fi
 fi
 
 pushd `dirname $0`/../.. > /dev/null
