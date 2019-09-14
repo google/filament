@@ -33,20 +33,20 @@ source `dirname $0`/../common/build-common.sh
 if [[ "$GITHUB_WORKFLOW" ]]; then
     # Only update and install the NDK if necessary, as this can be slow
 
-    local ndk_type=0 # 0 = No SDK, 1 = ndk-bundle, 2 = ndk side-by-side
+    ndk_type=0 # 0 = No SDK, 1 = ndk-bundle, 2 = ndk side-by-side
 
-    local ndk_properties="${ANDROID_HOME}/ndk-bundle/source.properties"
+    ndk_properties="${ANDROID_HOME}/ndk-bundle/source.properties"
     if [[ -f $ndk_properties ]]; then
-        local ndk_version=`sed -En -e "s/^Pkg.Revision *= *([0-9a-f]+).+/\1/p" ${ndk_properties}`
+        ndk_version=`sed -En -e "s/^Pkg.Revision *= *([0-9a-f]+).+/\1/p" ${ndk_properties}`
         if [[ ${ndk_version} -ge ${ANDROID_NDK_VERSION} ]]; then
             ndk_type=1
         fi
     fi
 
     if [[ ${ndk_type} == 0 ]]; then
-        local ndk_side_by_side="${ANDROID_HOME}/ndk/"
+        ndk_side_by_side="${ANDROID_HOME}/ndk/"
         if [[ -d $ndk_side_by_side ]]; then
-            local ndk_version=`ls ${ndk_side_by_side} | sort -V | tail -n 1 | cut -f 1 -d "."`
+            ndk_version=`ls ${ndk_side_by_side} | sort -V | tail -n 1 | cut -f 1 -d "."`
             if [[ ${ndk_version} -ge ${ANDROID_NDK_VERSION} ]]; then
                 ndk_type=2
             fi
