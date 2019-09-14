@@ -73,7 +73,7 @@ function print_help {
 # Requirements
 CMAKE_MAJOR=3
 CMAKE_MINOR=10
-ANDROID_NDK_VERSION=19
+ANDROID_NDK_VERSION=20
 
 # Internal variables
 TARGET=release

@@ -12,6 +12,7 @@ set -e
 set -x
 
 NDK_VERSION="ndk;20.0.5594570"
+ANDROID_NDK_VERSION=20
 
 UNAME=`echo $(uname)`
 LC_UNAME=`echo $UNAME | tr '[:upper:]' '[:lower:]'`
