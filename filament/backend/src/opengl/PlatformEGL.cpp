@@ -35,8 +35,8 @@
 #include "android/ExternalStreamManagerAndroid.h"
 #include "android/VirtualMachineEnv.h"
 
+#include "OpenGLContext.h"
 #include "OpenGLDriverFactory.h"
-#include "gl_headers.h"
 
 #include <android/api-level.h>
 #include <sys/system_properties.h>
@@ -499,7 +499,7 @@ void PlatformEGL::createExternalImageTexture(void* texture) noexcept {
     glGenTextures(1, &t->gl.id);
     if (ext.OES_EGL_image_external_essl3) {
         t->gl.targetIndex = (uint8_t)
-                OpenGLDriver::getIndexForTextureTarget(t->gl.target = GL_TEXTURE_EXTERNAL_OES);
+                OpenGLContext::getIndexForTextureTarget(t->gl.target = GL_TEXTURE_EXTERNAL_OES);
     }
 }
 
