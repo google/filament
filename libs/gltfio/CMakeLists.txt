@@ -77,7 +77,7 @@ foreach (input_path ${MATERIAL_SRCS})
             COMMAND matc ${MATC_BASE_FLAGS} -o ${output_path} ${input_path}
             MAIN_DEPENDENCY ${input_path}
             DEPENDS matc
-            COMMENT "Compiling material ${mat_src} to ${output_path}"
+            COMMENT "Compiling material ${input_path} to ${output_path}"
     )
     list(APPEND RESOURCE_BINS ${output_path})
 endforeach()
