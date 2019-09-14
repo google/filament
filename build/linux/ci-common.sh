@@ -45,7 +45,6 @@ if [[ "$KOKORO_BUILD_ID" ]]; then
         # Update NDK
         yes | ${ANDROID_HOME}/tools/bin/sdkmanager --update >/dev/null
         yes | ${ANDROID_HOME}/tools/bin/sdkmanager --licenses >/dev/null
-        yes | ${ANDROID_HOME}/tools/bin/sdkmanager "ndk-bundle" > /dev/null
     fi
 
     # Install clang
