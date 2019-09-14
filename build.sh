@@ -317,20 +317,18 @@ function ensure_android_build {
 
     local ndk_properties="$ANDROID_HOME/ndk-bundle/source.properties"
     if [[ -f $ndk_properties ]]; then
-        ndk_type=1
         local ndk_version=`sed -En -e "s/^Pkg.Revision *= *([0-9a-f]+).+/\1/p" ${ndk_properties}`
-        if [[ ${ndk_version} < ${ANDROID_NDK_VERSION} ]]; then
-            ndk_type=0
+        if [[ ${ndk_version} -ge ${ANDROID_NDK_VERSION} ]]; then
+            ndk_type=1
         fi
     fi
 
     if [[ ${ndk_type} == 0 ]]; then
         local ndk_side_by_side="$ANDROID_HOME/ndk/"
         if [[ -d $ndk_side_by_side ]]; then
-            ndk_type=2
             local ndk_version=`ls ${ndk_side_by_side} | sort -V | tail -n 1`
-            if [[ ${ndk_version} < ${ANDROID_NDK_VERSION} ]]; then
-                ndk_type=0
+            if [[ ${ndk_version} -ge ${ANDROID_NDK_VERSION} ]]; then
+                ndk_type=2
             fi
         fi
     fi
