@@ -1,0 +1,18 @@
+name: Presubmit Android
+
+on: [pull_request]
+
+jobs:
+  build:
+    name: build/android
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v1
+        with:
+          fetch-depth: 1
+      - name: Run build script
+        run: |
+          cd build/android && ./build.sh ${TARGET}
+        env:
+          TARGET: presubmit
