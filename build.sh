@@ -326,7 +326,7 @@ function ensure_android_build {
     if [[ ${ndk_type} == 0 ]]; then
         local ndk_side_by_side="$ANDROID_HOME/ndk/"
         if [[ -d $ndk_side_by_side ]]; then
-            local ndk_version=`ls ${ndk_side_by_side} | sort -V | tail -n 1`
+            local ndk_version=`ls ${ndk_side_by_side} | sort -V | tail -n 1 | cut -f 1 -d "."`
             if [[ ${ndk_version} -ge ${ANDROID_NDK_VERSION} ]]; then
                 ndk_type=2
             fi
