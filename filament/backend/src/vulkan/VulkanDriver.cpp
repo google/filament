@@ -808,25 +808,6 @@ void VulkanDriver::setRenderPrimitiveRange(Handle<HwRenderPrimitive> rph,
     primitive.maxIndex = maxIndex > minIndex ? maxIndex : primitive.maxVertexCount - 1;
 }
 
-void VulkanDriver::setViewportScissor(
-        int32_t left, int32_t bottom, uint32_t width, uint32_t height) {
-    assert(mContext.currentCommands && mCurrentRenderTarget);
-    // Compute the intersection of the requested scissor rectangle with the current viewport.
-    int32_t x = std::max(left, (int32_t) mContext.viewport.x);
-    int32_t y = std::max(bottom, (int32_t) mContext.viewport.y);
-    int32_t right = std::min(left + (int32_t) width,
-            (int32_t) (mContext.viewport.x + mContext.viewport.width));
-    int32_t top = std::min(bottom + (int32_t) height,
-            (int32_t) (mContext.viewport.y + mContext.viewport.height));
-    VkRect2D scissor {
-        .extent = { (uint32_t) right - x, (uint32_t) top - y },
-        .offset = { std::max(0, x), std::max(0, y) }
-    };
-
-    mCurrentRenderTarget->transformClientRectToPlatform(&scissor);
-    vkCmdSetScissor(mContext.currentCommands->cmdbuffer, 0, 1, &scissor);
-}
-
 void VulkanDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> readSch) {
     ASSERT_PRECONDITION_NON_FATAL(drawSch == readSch,
                                   "Vulkan driver does not support distinct draw/read swap chains.");
@@ -1019,6 +1000,7 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
     Handle<HwProgram> programHandle = pipelineState.program;
     RasterState rasterState = pipelineState.rasterState;
     PolygonOffset depthOffset = pipelineState.polygonOffset;
+    const Viewport& viewportScissor = pipelineState.scissor;
 
     auto* program = handle_cast<VulkanProgram>(mHandleMap, programHandle);
     mDisposer.acquire(program, commands->resources);
@@ -1114,6 +1096,21 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
             });
         }
     }
+
+    // Set scissoring.
+    // Compute the intersection of the requested scissor rectangle with the current viewport.
+    const int32_t x = std::max(viewportScissor.left, (int32_t)mContext.viewport.x);
+    const int32_t y = std::max(viewportScissor.bottom, (int32_t)mContext.viewport.y);
+    const int32_t right = std::min(viewportScissor.left + (int32_t)viewportScissor.width,
+            (int32_t)(mContext.viewport.x + mContext.viewport.width));
+    const int32_t top = std::min(viewportScissor.bottom + (int32_t)viewportScissor.height,
+            (int32_t)(mContext.viewport.y + mContext.viewport.height));
+    VkRect2D scissor{
+            .extent = { (uint32_t)right - x, (uint32_t)top - y },
+            .offset = { std::max(0, x), std::max(0, y) }
+    };
+    rt->transformClientRectToPlatform(&scissor);
+    vkCmdSetScissor(cmdbuffer, 0, 1, &scissor);
 
     // Bind new descriptor sets if they need to change.
     VkDescriptorSet descriptors[2];

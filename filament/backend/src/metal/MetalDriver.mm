@@ -656,11 +656,6 @@ void MetalDriver::setRenderPrimitiveRange(Handle<HwRenderPrimitive> rph,
     primitive->maxIndex = maxIndex > minIndex ? maxIndex : primitive->maxVertexCount - 1;
 }
 
-void MetalDriver::setViewportScissor(int32_t left, int32_t bottom, uint32_t width,
-        uint32_t height) {
-
-}
-
 void MetalDriver::makeCurrent(Handle<HwSwapChain> schDraw, Handle<HwSwapChain> schRead) {
     ASSERT_PRECONDITION_NON_FATAL(schDraw == schRead,
                                   "Metal driver does not support distinct draw/read swap chains.");
@@ -848,6 +843,9 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
                                          slopeScale:ps.polygonOffset.slope
                                               clamp:0.0];
     }
+
+    // FIXME: implement take ps.scissor into account
+    //  must be intersected with viewport (see OpenGLDriver.cpp for implementation details)
 
     // Bind uniform buffers.
     id<MTLBuffer> uniformsToBind[Program::UNIFORM_BINDING_COUNT] = { nil };

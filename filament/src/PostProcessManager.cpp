@@ -147,12 +147,15 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::toneMapping(FrameGraph& fg, 
 
                 pInstance->commit(driver);
 
-                PipelineState pipeline;
-                pipeline.rasterState = mTonemapping.getMaterial()->getRasterState();
                 const uint8_t variant = static_cast<uint8_t> (
-                            translucent ?
-                            PostProcessVariant::TRANSLUCENT : PostProcessVariant::OPAQUE );
-                pipeline.program = mTonemapping.getMaterial()->getProgram(variant);
+                        translucent ?
+                        PostProcessVariant::TRANSLUCENT : PostProcessVariant::OPAQUE );
+
+                PipelineState pipeline{
+                        .program = mTonemapping.getMaterial()->getProgram(variant),
+                        .rasterState = mTonemapping.getMaterial()->getRasterState(),
+                        .scissor = pInstance->getScissor()
+                };
 
                 auto const& target = resources.getRenderTarget(data.rt);
                 driver.beginRenderPass(target.target, target.params);
@@ -200,12 +203,15 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::fxaa(FrameGraph& fg,
 
                 pInstance->commit(driver);
 
-                PipelineState pipeline;
-                pipeline.rasterState = mFxaa.getMaterial()->getRasterState();
                 const uint8_t variant = static_cast<uint8_t> (
-                            translucent ?
-                            PostProcessVariant::TRANSLUCENT : PostProcessVariant::OPAQUE );
-                pipeline.program = mFxaa.getMaterial()->getProgram(variant);
+                        translucent ?
+                        PostProcessVariant::TRANSLUCENT : PostProcessVariant::OPAQUE );
+
+                PipelineState pipeline{
+                        .program = mFxaa.getMaterial()->getProgram(variant),
+                        .rasterState = mFxaa.getMaterial()->getRasterState(),
+                        .scissor = pInstance->getScissor()
+                };
 
                 auto const& target = resources.getRenderTarget(data.rt);
                 driver.beginRenderPass(target.target, target.params);
@@ -381,6 +387,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssao(FrameGraph& fg, RenderP
                 pipeline.program = mSSAO.getProgram();
                 pipeline.rasterState = mSSAO.getMaterial()->getRasterState();
                 pipeline.rasterState.depthFunc = RasterState::DepthFunc::G;
+                pipeline.scissor = pInstance->getScissor();
 
                 driver.beginRenderPass(ssao.target, ssao.params);
                 pInstance->use(driver);
@@ -480,9 +487,11 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::mipmapPass(FrameGraph& fg,
                 pInstance->setParameter("level", uint32_t(level));
                 pInstance->commit(driver);
 
-                PipelineState pipeline;
-                pipeline.program = mMipmapDepth.getProgram();
-                pipeline.rasterState = mMipmapDepth.getMaterial()->getRasterState();
+                PipelineState pipeline{
+                    .program = mMipmapDepth.getProgram(),
+                    .rasterState = mMipmapDepth.getMaterial()->getRasterState(),
+                    .scissor = pInstance->getScissor()
+                };
 
                 driver.beginRenderPass(out.target, out.params);
                 pInstance->use(driver);
@@ -547,6 +556,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blurPass(FrameGraph& fg,
                 pipeline.program = mBlur.getProgram();
                 pipeline.rasterState = mBlur.getMaterial()->getRasterState();
                 pipeline.rasterState.depthFunc = RasterState::DepthFunc::G;
+                pipeline.scissor = pInstance->getScissor();
 
                 driver.beginRenderPass(blurred.target, blurred.params);
                 pInstance->use(driver);
