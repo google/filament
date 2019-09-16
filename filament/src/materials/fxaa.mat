@@ -9,7 +9,6 @@ material {
     ],
     depthWrite : false,
     depthCulling : false,
-    culling : none,
     domain : postprocess,
     variables : [
         vertex
@@ -19,9 +18,7 @@ material {
 vertex {
 
     void postProcessVertex(inout PostProcessVertexInputs postProcess) {
-        float4 position = getPosition();
-        postProcess.vertex.xy = (position.xy * 0.5 + 0.5) * frameUniforms.resolution.xy;
-        postProcess.vertex.xy *= frameUniforms.resolution.zw;
+        postProcess.vertex.xy = postProcess.normalizedUV;
     }
 
 }

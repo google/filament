@@ -192,7 +192,7 @@ To build Filament for Android you must also install the following:
 
 - Android Studio 3.5
 - Android SDK
-- Android NDK 19 or higher
+- Android NDK "side-by-side" 20 or higher
 
 ### Environment variables
 

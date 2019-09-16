@@ -40,16 +40,12 @@ material {
     ],
     domain : postprocess,
     depthWrite : false,
-    depthCulling : true,
-    culling: none
+    depthCulling : true
 }
 
 vertex {
     void postProcessVertex(inout PostProcessVertexInputs postProcess) {
-        // far-plane in view space
-        vec4 position = getPosition(); // clip-space
-        postProcess.vertex.xy = (position.xy * 0.5 + 0.5);
-        postProcess.vertex.zw = position.xy;
+        postProcess.vertex.xy = postProcess.normalizedUV;
     }
 }
 

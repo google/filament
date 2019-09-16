@@ -26,7 +26,7 @@ using namespace backend;
 
 void FrameGraphTexture::create(FrameGraph& fg, const char* name,
         FrameGraphTexture::Descriptor const& desc) noexcept {
-    assert(desc.usage);
+    assert(any(desc.usage));
     // (it means it's only used as an attachment for a rendertarget)
     uint8_t samples = desc.samples;
     if (any(desc.usage & TextureUsage::SAMPLEABLE)) {

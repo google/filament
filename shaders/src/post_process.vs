@@ -3,14 +3,21 @@ void main() {
     PostProcessVertexInputs inputs;
     initPostProcessMaterialVertex(inputs);
 
-    inputs.uv = (position.xy * 0.5 + 0.5) * frameUniforms.resolution.xy;
+    inputs.normalizedUV = position.xy * 0.5 + 0.5;
+    inputs.texelCoords = inputs.normalizedUV * frameUniforms.resolution.xy;
 
-    gl_Position = position;
+// In Vulkan and Metal, texture coords are Y-down. In OpenGL, texture coords are Y-up.
+#if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
+    inputs.texelCoords.y = frameUniforms.resolution.y - 1.0 - inputs.texelCoords.y;
+    inputs.normalizedUV.y = 1.0 - inputs.normalizedUV.y;
+#endif
+
+    gl_Position = getPosition();
 
     // Invoke user code
     postProcessVertex(inputs);
 
-    vertex_uv = inputs.uv;
+    vertex_uv = inputs.texelCoords;
 
     // Handle user-defined interpolated attributes
 #if defined(VARIABLE_CUSTOM0)
@@ -24,12 +31,5 @@ void main() {
 #endif
 #if defined(VARIABLE_CUSTOM3)
     VARIABLE_CUSTOM_AT3 = inputs.VARIABLE_CUSTOM3;
-#endif
-
-#if defined(TARGET_METAL_ENVIRONMENT)
-    // Metal texture space is vertically flipped that of OpenGL's, so flip the Y coords so we sample
-    // the frame correctly. Vulkan doesn't need this fix because its clip space is mirrored
-    // (the Y axis points down the screen).
-    gl_Position.y = -gl_Position.y;
 #endif
 }
