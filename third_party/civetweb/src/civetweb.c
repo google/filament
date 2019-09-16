@@ -9577,9 +9577,9 @@ send_file_data(struct mg_connection *conn,
 			offset = (int64_t)sf_offs;
 		}
 #endif
-		if ((offset > 0) && (fseeko(filep->access.fp, offset, SEEK_SET) != 0)) {
+		if ((offset > 0) && (fseek(filep->access.fp, offset, SEEK_SET) != 0)) {
 			mg_cry_internal(conn,
-			                "%s: fseeko() failed: %s",
+			                "%s: fseek() failed: %s",
 			                __func__,
 			                strerror(ERRNO));
 			mg_send_http_error(
@@ -11563,7 +11563,7 @@ put_file(struct mg_connection *conn, const char *path)
 	r1 = r2 = 0;
 	if ((range != NULL) && parse_range_header(range, &r1, &r2) > 0) {
 		conn->status_code = 206; /* Partial content */
-		fseeko(file.access.fp, r1, SEEK_SET);
+		fseek(file.access.fp, r1, SEEK_SET);
 	}
 
 	if (!forward_body_data(conn, file.access.fp, INVALID_SOCKET, NULL)) {
