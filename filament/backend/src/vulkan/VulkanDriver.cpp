@@ -1087,12 +1087,15 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
             VkSampler vksampler = mSamplerCache.getSampler(samplerParams);
             const auto* texture = handle_const_cast<VulkanTexture>(mHandleMap, boundSampler->t);
             mDisposer.acquire(texture, commands->resources);
+
+            VkImageLayout layout = any(texture->usage & TextureUsage::DEPTH_ATTACHMENT) ?
+                        VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL :
+                        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
             mBinder.bindSampler(bindingPoint, {
                 .sampler = vksampler,
                 .imageView = texture->imageView,
-                .imageLayout = samplerParams.depthStencil ?
-                        VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL :
-                        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+                .imageLayout = layout
             });
         }
     }
