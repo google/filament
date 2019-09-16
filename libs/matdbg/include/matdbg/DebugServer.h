@@ -19,14 +19,14 @@
 
 #include <utils/CString.h>
 
+#include <backend/DriverEnums.h>
+
 #include <tsl/robin_map.h>
 
 class CivetServer;
 
 namespace filament {
 namespace matdbg {
-
-enum ServerMode { ENGINE, STANDALONE };
 
 /**
  * Server-side material debugger.
@@ -37,7 +37,7 @@ enum ServerMode { ENGINE, STANDALONE };
  */
 class DebugServer {
 public:
-    DebugServer(ServerMode mode, int port = 8080);
+    DebugServer(backend::Backend backend, int port);
     ~DebugServer();
 
     /**
@@ -47,6 +47,7 @@ public:
             void* userdata = nullptr);
 
     using EditCallback = void(*)(void* userdata, const utils::CString& name, const void*, size_t);
+    using QueryCallback = void(*)(void* userdata, uint16_t* variants);
 
     /**
      * Sets up a callback that allows the Filament engine to listen for shader edits. The callback
@@ -54,30 +55,50 @@ public:
      */
     void setEditCallback(EditCallback callback) { mEditCallback = callback; }
 
+    /**
+     * Sets up a callback that can ask the Filament engine which shader variants are active. The
+     * callback might be triggered from a secondary thread.
+     */
+    void setQueryCallback(QueryCallback callback) { mQueryCallback = callback; }
+
+    bool isReady() const { return mServer; }
+
 private:
     using MaterialKey = uint32_t;
 
     struct MaterialRecord {
         void* userdata;
-        uint8_t* package;
+        const uint8_t* package;
         size_t packageSize;
         utils::CString name;
         MaterialKey key;
+        uint16_t activeVariants;
     };
 
     const MaterialRecord* getRecord(const MaterialKey& key) const;
 
-    const ServerMode mServerMode;
+    void updateActiveVariants();
+
+    /**
+     *  Replaces the entire content of a particular shader variant. The given shader index uses the
+     *  same ordering that the variants have within the package.
+     */
+    bool handleEditCommand(const MaterialKey& mat, backend::Backend api, int shaderIndex,
+            const char* newShaderContent, size_t newShaderLength);
+
+    const backend::Backend mBackend;
+
     CivetServer* mServer;
     tsl::robin_map<MaterialKey, MaterialRecord> mMaterialRecords;
     utils::CString mHtml;
     utils::CString mJavascript;
     utils::CString mCss;
     EditCallback mEditCallback = nullptr;
+    QueryCallback mQueryCallback = nullptr;
 
-    class FileRequestHandler* mFileHandler;
-    class RestRequestHandler* mRestHandler;
-    class WebSocketHandler* mWebSocketHandler;
+    class FileRequestHandler* mFileHandler = nullptr;
+    class RestRequestHandler* mRestHandler = nullptr;
+    class WebSocketHandler* mWebSocketHandler = nullptr;
 
     friend class FileRequestHandler;
     friend class RestRequestHandler;

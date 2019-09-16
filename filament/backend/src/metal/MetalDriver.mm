@@ -173,7 +173,7 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         if (color.handle) {
             auto colorTexture = handle_cast<MetalTexture>(mHandleMap, color.handle);
             return colorTexture->texture;
-        } else if (targetBufferFlags & TargetBufferFlags::COLOR) {
+        } else if (any(targetBufferFlags & TargetBufferFlags::COLOR)) {
             ASSERT_POSTCONDITION(false, "The COLOR flag was specified, but no color texture provided.");
         }
         return nil;
@@ -183,7 +183,7 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         if (depth.handle) {
             auto depthTexture = handle_cast<MetalTexture>(mHandleMap, depth.handle);
             return depthTexture->texture;
-        } else if (targetBufferFlags & TargetBufferFlags::DEPTH) {
+        } else if (any(targetBufferFlags & TargetBufferFlags::DEPTH)) {
             ASSERT_POSTCONDITION(false, "The DEPTH flag was specified, but no depth texture provided.");
         }
         return nil;
@@ -193,7 +193,8 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
             getColorTexture(), getDepthTexture(), color.level, depth.level);
 
     ASSERT_POSTCONDITION(
-            !stencil.handle && !(targetBufferFlags & TargetBufferFlags::STENCIL),
+            !stencil.handle &&
+            !(targetBufferFlags & TargetBufferFlags::STENCIL),
             "Stencil buffer not supported.");
 }
 
@@ -564,8 +565,8 @@ void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     MTLRenderPassDescriptor* descriptor = [MTLRenderPassDescriptor renderPassDescriptor];
 
     const auto discardFlags = params.flags.discardEnd;
-    const auto discardColor = (discardFlags & TargetBufferFlags::COLOR);
-    const auto discardDepth = (discardFlags & TargetBufferFlags::DEPTH);
+    const bool discardColor = any(discardFlags & TargetBufferFlags::COLOR);
+    const bool discardDepth = any(discardFlags & TargetBufferFlags::DEPTH);
 
     // Color
 
@@ -655,11 +656,6 @@ void MetalDriver::setRenderPrimitiveRange(Handle<HwRenderPrimitive> rph,
     primitive->maxIndex = maxIndex > minIndex ? maxIndex : primitive->maxVertexCount - 1;
 }
 
-void MetalDriver::setViewportScissor(int32_t left, int32_t bottom, uint32_t width,
-        uint32_t height) {
-
-}
-
 void MetalDriver::makeCurrent(Handle<HwSwapChain> schDraw, Handle<HwSwapChain> schRead) {
     ASSERT_PRECONDITION_NON_FATAL(schDraw == schRead,
                                   "Metal driver does not support distinct draw/read swap chains.");
@@ -709,6 +705,15 @@ void MetalDriver::pushGroupMarker(const char* string, size_t len) {
 void MetalDriver::popGroupMarker(int dummy) {
 
 }
+
+void MetalDriver::startCapture(int) {
+    [[MTLCaptureManager sharedCaptureManager] startCaptureWithDevice:mContext->device];
+}
+
+void MetalDriver::stopCapture(int) {
+    [[MTLCaptureManager sharedCaptureManager] stopCapture];
+}
+
 
 void MetalDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y, uint32_t width,
         uint32_t height, PixelBufferDescriptor&& data) {
@@ -767,12 +772,12 @@ void MetalDriver::blit(TargetBufferFlags buffers,
     args.destination.level = dstLevel;
     args.destination.region = dstRegion;
 
-    if (buffers & TargetBufferFlags::COLOR) {
+    if (any(buffers & TargetBufferFlags::COLOR)) {
         args.source.color = srcTexture;
         args.destination.color = dstTexture;
     }
 
-    if (buffers & TargetBufferFlags::DEPTH) {
+    if (any(buffers & TargetBufferFlags::DEPTH)) {
         args.source.depth = srcTarget->getBlitDepthSource();
         args.destination.depth = dstTarget->getDepth();
     }
@@ -838,6 +843,9 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
                                          slopeScale:ps.polygonOffset.slope
                                               clamp:0.0];
     }
+
+    // FIXME: implement take ps.scissor into account
+    //  must be intersected with viewport (see OpenGLDriver.cpp for implementation details)
 
     // Bind uniform buffers.
     id<MTLBuffer> uniformsToBind[Program::UNIFORM_BINDING_COUNT] = { nil };

@@ -309,21 +309,21 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
         imageInfo.arrayLayers = 6;
         imageInfo.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
     }
-    if (usage & TextureUsage::SAMPLEABLE) {
+    if (any(usage & TextureUsage::SAMPLEABLE)) {
         imageInfo.usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
     }
-    if (usage & TextureUsage::COLOR_ATTACHMENT) {
+    if (any(usage & TextureUsage::COLOR_ATTACHMENT)) {
         imageInfo.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
     }
-    if (usage & TextureUsage::STENCIL_ATTACHMENT) {
+    if (any(usage & TextureUsage::STENCIL_ATTACHMENT)) {
         imageInfo.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
     }
-    if (usage & TextureUsage::UPLOADABLE) {
+    if (any(usage & TextureUsage::UPLOADABLE)) {
         // Uploadable textures can be used as a blit source (e.g. for mipmap generation)
         // therefore we must set both the TRANSFER_DST and TRANSFER_SRC flags.
         imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
     }
-    if (usage & TextureUsage::DEPTH_ATTACHMENT) {
+    if (any(usage & TextureUsage::DEPTH_ATTACHMENT)) {
         imageInfo.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
     }
 
@@ -367,7 +367,7 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
         viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
         viewInfo.subresourceRange.layerCount = 1;
     }
-    if (usage & TextureUsage::DEPTH_ATTACHMENT) {
+    if (any(usage & TextureUsage::DEPTH_ATTACHMENT)) {
         viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
     }
     error = vkCreateImageView(context.device, &viewInfo, VKALLOC, &imageView);

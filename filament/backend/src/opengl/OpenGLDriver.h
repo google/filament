@@ -228,7 +228,7 @@ private:
 #ifndef NDEBUG
     using HandleArena = utils::Arena<HandleAllocator,
             utils::LockingPolicy::SpinLock,
-            utils::TrackingPolicy::HighWatermark>;
+            utils::TrackingPolicy::Debug>;
 #else
     using HandleArena = utils::Arena<HandleAllocator,
             utils::LockingPolicy::SpinLock>;
@@ -385,7 +385,7 @@ private:
     }
 
     GLsizei getAttachments(std::array<GLenum, 3>& attachments,
-            GLRenderTarget const* rt, uint8_t buffers) const noexcept;
+            GLRenderTarget const* rt, backend::TargetBufferFlags buffers) const noexcept;
 
     static constexpr const size_t MAX_TEXTURE_UNIT_COUNT = 16;   // All mobile GPUs as of 2016
     static constexpr const size_t MAX_BUFFER_BINDINGS = 32;
@@ -515,6 +515,8 @@ private:
             bool clearDepth, double depth,
             bool clearStencil, uint32_t stencil) noexcept;
 
+    void setViewportScissor(backend::Viewport const& viewportScissor) noexcept;
+
     // sampler buffer binding points (nullptr if not used)
     std::array<backend::HwSamplerGroup*, backend::Program::SAMPLER_BINDING_COUNT> mSamplerBindings;   // 8 pointers
 
@@ -542,6 +544,8 @@ private:
         bool OES_EGL_image_external_essl3 = false;
         bool EXT_debug_marker = false;
         bool EXT_color_buffer_half_float = false;
+        bool EXT_color_buffer_float = false;
+        bool APPLE_color_buffer_packed_float = false;
         bool EXT_multisampled_render_to_texture = false;
     } ext;
 

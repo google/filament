@@ -136,13 +136,14 @@ void ShadowMap::prepare(DriverApi& driver, SamplerGroup& sb) noexcept {
             TargetBufferFlags::DEPTH, dim, dim, 1,
             {}, { mShadowMapHandle }, {});
 
-    SamplerParams s;
-    s.filterMag = SamplerMagFilter::LINEAR;
-    s.filterMin = SamplerMinFilter::LINEAR;
-    s.compareFunc = SamplerCompareFunc::LE;
-    s.compareMode = SamplerCompareMode::COMPARE_TO_TEXTURE;
-    s.depthStencil = true;
-    sb.setSampler(PerViewSib::SHADOW_MAP, { mShadowMapHandle, s });
+    sb.setSampler(PerViewSib::SHADOW_MAP, {
+        mShadowMapHandle, {
+                    .filterMag = SamplerMagFilter::LINEAR,
+                    .filterMin = SamplerMinFilter::LINEAR,
+                    .compareFunc = SamplerCompareFunc::LE,
+                    .compareMode = SamplerCompareMode::COMPARE_TO_TEXTURE,
+                    .depthStencil = true
+            }});
 }
 
 void ShadowMap::render(DriverApi& driver, RenderPass& pass, FView& view) noexcept {
@@ -159,7 +160,7 @@ void ShadowMap::render(DriverApi& driver, RenderPass& pass, FView& view) noexcep
 
     // FIXME: in the future this will come from the framegraph
     RenderPassParams params = {};
-    params.flags.clear = TargetBufferFlags::DEPTH;
+    params.flags.clear = (uint8_t)TargetBufferFlags::DEPTH;
     params.flags.discardStart = TargetBufferFlags::DEPTH;
     params.flags.discardEnd = TargetBufferFlags::COLOR_AND_STENCIL;
     params.clearDepth = 1.0;

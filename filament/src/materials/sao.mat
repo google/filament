@@ -38,20 +38,14 @@ material {
     variables : [
          vertex
     ],
-    vertexDomain : device,
+    domain : postprocess,
     depthWrite : false,
-    depthCulling : true,
-    shadingModel : unlit,
-    variantFilter : [ skinning, shadowReceiver ],
-    culling: none
+    depthCulling : true
 }
 
 vertex {
-    void materialVertex(inout MaterialVertexInputs material) {
-        // far-plane in view space
-        vec4 position = getPosition(); // clip-space
-        material.vertex.xy = (position.xy * 0.5 + 0.5);
-        material.vertex.zw = position.xy;
+    void postProcessVertex(inout PostProcessVertexInputs postProcess) {
+        postProcess.vertex.xy = postProcess.normalizedUV;
     }
 }
 
@@ -241,9 +235,7 @@ fragment {
         return occlusion;
     }
 
-    void material(inout MaterialInputs material) {
-        prepareMaterial(material);
-
+    void postProcess(inout PostProcessInputs postProcess) {
         vec2 uv = variable_vertex.xy; // interpolated to pixel center
 
         highp float depth = sampleDepthLinear(uv);
@@ -268,6 +260,6 @@ fragment {
         // simulate user-controled ao^n with n[1, 2]
         ao = mix(ao, ao * ao, materialParams.power);
 
-        material.baseColor.r = ao;
+        postProcess.color.r = ao;
     }
 }

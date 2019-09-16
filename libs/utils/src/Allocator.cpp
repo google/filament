@@ -125,13 +125,49 @@ AtomicFreeList::AtomicFreeList(void* begin, void* end,
     mHead.store({ int32_t(head - mStorage), 0 });
 }
 
+// ------------------------------------------------------------------------------------------------
+
+void TrackingPolicy::HighWatermark::onAlloc(
+        void* p, size_t size, size_t alignment, size_t extra) noexcept {
+    if (!mBase) { mBase = p; }
+    mCurrent += uint32_t(size);
+    mHighWaterMark = mCurrent > mHighWaterMark ? mCurrent : mHighWaterMark;
+}
+
 TrackingPolicy::HighWatermark::~HighWatermark() noexcept {
-    size_t wm = mHighWaterMark;
-    size_t wmpct = wm / (mSize / 100);
-    if (wmpct > 80) {
-        slog.d << mName << " arena: High watermark "
-            << wm / 1024 << " KiB (" << wmpct << "%)" << io::endl;
+    if (mSize > 0) {
+        size_t wm = mHighWaterMark;
+        size_t wmpct = wm / (mSize / 100);
+        if (wmpct > 80) {
+            slog.d << mName << " arena: High watermark "
+                   << wm / 1024 << " KiB (" << wmpct << "%)" << io::endl;
+        }
     }
 }
+
+void TrackingPolicy::Debug::onAlloc(void* p, size_t size, size_t alignment, size_t extra) noexcept {
+    memset(p, 0xeb, size);
+    HighWatermark::onAlloc(p, size, alignment, extra);
+}
+
+void TrackingPolicy::Debug::onFree(void* p, size_t size) noexcept {
+    memset(p, 0xef, size);
+    HighWatermark::onFree(p, size);
+}
+
+void TrackingPolicy::Debug::onReset() noexcept {
+    if (mBase) {
+        memset(mBase, 0xec, mSize);
+    }
+    HighWatermark::onReset();
+}
+
+void TrackingPolicy::Debug::onRewind(void* addr) noexcept {
+    if (mBase) {
+        memset(addr, 0x55, uintptr_t(mBase) + mSize - uintptr_t(addr));
+    }
+    HighWatermark::onRewind(addr);
+}
+
 
 } // namespace utils

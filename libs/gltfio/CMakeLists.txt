@@ -42,22 +42,31 @@ if (CMAKE_CROSSCOMPILING)
     include(${IMPORT_EXECUTABLES})
 endif()
 
-function(generate_mat SHADINGMODEL BLENDING)
-    set(GENERATED_MAT "${RESOURCE_DIR}/${SHADINGMODEL}_${BLENDING}.mat")
+function(generate_mat SHADINGMODEL BLENDING DOUBLESIDED)
+    set(GENERATED_MAT "${RESOURCE_DIR}/${SHADINGMODEL}_${BLENDING}_${DOUBLESIDED}.mat")
     configure_file(materials/ubershader.mat.in ${GENERATED_MAT})
     set(MATERIAL_SRCS ${MATERIAL_SRCS} ${GENERATED_MAT} PARENT_SCOPE)
 endfunction()
 
 set(MATERIAL_SRCS)
-generate_mat(lit fade)
-generate_mat(lit opaque)
-generate_mat(lit masked)
-generate_mat(specularGlossiness fade)
-generate_mat(specularGlossiness opaque)
-generate_mat(specularGlossiness masked)
-generate_mat(unlit fade)
-generate_mat(unlit opaque)
-generate_mat(unlit masked)
+generate_mat(lit fade false)
+generate_mat(lit opaque false)
+generate_mat(lit masked false)
+generate_mat(specularGlossiness fade false)
+generate_mat(specularGlossiness opaque false)
+generate_mat(specularGlossiness masked false)
+generate_mat(unlit fade false)
+generate_mat(unlit opaque false)
+generate_mat(unlit masked false)
+generate_mat(lit fade true)
+generate_mat(lit opaque true)
+generate_mat(lit masked true)
+generate_mat(specularGlossiness fade true)
+generate_mat(specularGlossiness opaque true)
+generate_mat(specularGlossiness masked true)
+generate_mat(unlit fade true)
+generate_mat(unlit opaque true)
+generate_mat(unlit masked true)
 
 set(RESOURCE_BINS)
 foreach (input_path ${MATERIAL_SRCS})
@@ -65,10 +74,10 @@ foreach (input_path ${MATERIAL_SRCS})
     set(output_path "${RESOURCE_DIR}/${basename}.filamat")
     add_custom_command(
             OUTPUT ${output_path}
-            COMMAND matc ${MATC_BASE_FLAGS} -m material -o ${output_path} ${input_path}
+            COMMAND matc ${MATC_BASE_FLAGS} -o ${output_path} ${input_path}
             MAIN_DEPENDENCY ${input_path}
             DEPENDS matc
-            COMMENT "Compiling material ${mat_src} to ${output_path}"
+            COMMENT "Compiling material ${input_path} to ${output_path}"
     )
     list(APPEND RESOURCE_BINS ${output_path})
 endforeach()

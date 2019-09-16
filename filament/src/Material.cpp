@@ -73,20 +73,8 @@ Material::Builder& Material::Builder::package(const void* payload, size_t size) 
 }
 
 Material* Material::Builder::build(Engine& engine) {
-    MaterialParser* materialParser = new MaterialParser(
+    MaterialParser* materialParser = FMaterial::createParser(
             upcast(engine).getBackend(), mImpl->mPayload, mImpl->mSize);
-    bool materialOK = materialParser->parse() && materialParser->isShadingMaterial();
-    if (!ASSERT_POSTCONDITION_NON_FATAL(materialOK, "could not parse the material package")) {
-        return nullptr;
-    }
-
-    uint32_t version;
-    materialParser->getMaterialVersion(&version);
-    ASSERT_PRECONDITION(version == MATERIAL_VERSION, "Material version mismatch. Expected %d but "
-            "received %d.", MATERIAL_VERSION, version);
-
-    assert(upcast(engine).getBackend() != Backend::DEFAULT &&
-            "Default backend has not been resolved.");
 
     uint32_t v;
     materialParser->getShaderModels(&v);
@@ -290,20 +278,7 @@ FMaterial::~FMaterial() noexcept {
 }
 
 void FMaterial::terminate(FEngine& engine) {
-    DriverApi& driverApi = engine.getDriverApi();
-    auto& cachedPrograms = mCachedPrograms;
-    for (size_t i = 0, n = cachedPrograms.size(); i < n; ++i) {
-        if (!mIsDefaultMaterial) {
-            // The depth variants may be shared with the default material, in which case
-            // we should not free it now.
-            bool isSharedVariant = Variant(i).isDepthPass() && !mHasCustomDepthShader;
-            if (isSharedVariant) {
-                // we don't own this variant, skip.
-                continue;
-            }
-        }
-        driverApi.destroyProgram(cachedPrograms[i]);
-    }
+    destroyPrograms(engine);
     mDefaultInstance.terminate(engine);
 }
 
@@ -448,6 +423,88 @@ size_t FMaterial::getParameters(ParameterInfo* parameters, size_t count) const n
     }
 
     return count;
+}
+
+// Swaps in an edited version of the original package that was used to create the material. The
+// edited package was stashed in response to a debugger event. This is invoked only when the
+// Material Debugger is attached. The only editable features of a material package are the shader
+// source strings, so here we trigger a rebuild of the HwProgram objects.
+void FMaterial::applyPendingEdits() noexcept {
+    slog.d << "Applying edits to " << mName.c_str() << io::endl;
+    destroyPrograms(mEngine);
+    for (auto& program : mCachedPrograms) {
+        program.clear();
+    }
+    delete mMaterialParser;
+    mMaterialParser = mPendingEdits;
+    mPendingEdits = nullptr;
+}
+
+/**
+ * Callback handlers for the debug server, potentially called from any thread. These methods are
+ * never called during normal operation and exist for debugging purposes only.
+ * 
+ * @{
+ */
+
+void FMaterial::onEditCallback(void* userdata, const utils::CString& name, const void* packageData,
+        size_t packageSize) {
+    FMaterial* material = upcast((Material*) userdata);
+    FEngine& engine = material->mEngine;
+
+    // This is called on a web server thread so we defer clearing the program cache
+    // and swapping out the MaterialParser until the next getProgram call.
+    material->mPendingEdits = FMaterial::createParser(engine.getBackend(), packageData,
+            packageSize);
+}
+
+void FMaterial::onQueryCallback(void* userdata, uint16_t* pvariants) {
+    FMaterial* material = upcast((Material*) userdata);
+    uint16_t variants = 0;
+    auto& cachedPrograms = material->mCachedPrograms;
+    for (size_t i = 0, n = cachedPrograms.size(); i < n; ++i) {
+        if (cachedPrograms[i]) {
+            variants |= (1 << i);
+        }
+    }
+    *pvariants = variants;
+}
+
+ /** @}*/
+ 
+MaterialParser* FMaterial::createParser(backend::Backend backend, const void* data, size_t size) {
+    MaterialParser* materialParser = new MaterialParser(backend, data, size);
+
+    bool materialOK = materialParser->parse();
+    if (!ASSERT_POSTCONDITION_NON_FATAL(materialOK, "could not parse the material package")) {
+        return nullptr;
+    }
+
+    uint32_t version;
+    materialParser->getMaterialVersion(&version);
+    ASSERT_PRECONDITION(version == MATERIAL_VERSION, "Material version mismatch. Expected %d but "
+            "received %d.", MATERIAL_VERSION, version);
+
+    assert(backend != Backend::DEFAULT && "Default backend has not been resolved.");
+
+    return materialParser;
+}
+
+void FMaterial::destroyPrograms(FEngine& engine) {
+    DriverApi& driverApi = engine.getDriverApi();
+    auto& cachedPrograms = mCachedPrograms;
+    for (size_t i = 0, n = cachedPrograms.size(); i < n; ++i) {
+        if (!mIsDefaultMaterial) {
+            // The depth variants may be shared with the default material, in which case
+            // we should not free it now.
+            bool isSharedVariant = Variant(i).isDepthPass() && !mHasCustomDepthShader;
+            if (isSharedVariant) {
+                // we don't own this variant, skip.
+                continue;
+            }
+        }
+        driverApi.destroyProgram(cachedPrograms[i]);
+    }
 }
 
 } // namespace details

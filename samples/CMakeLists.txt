@@ -60,7 +60,7 @@ foreach (mat_src ${MATERIAL_SRCS})
     set(output_path "${MATERIAL_DIR}/${localname}.filamat")
     add_custom_command(
             OUTPUT ${output_path}
-            COMMAND matc ${MATC_BASE_FLAGS} -m material -o ${output_path} ${fullname}
+            COMMAND matc ${MATC_BASE_FLAGS} -o ${output_path} ${fullname}
             MAIN_DEPENDENCY ${mat_src}
             DEPENDS matc
             COMMENT "Compiling material ${mat_src} to ${output_path}"
@@ -126,7 +126,7 @@ function(add_ktxfiles SOURCE TARGET EXTRA_ARGS)
     set(TEXTURE_FILES ${TEXTURE_FILES} ${target_path} PARENT_SCOPE)
     add_custom_command(
         OUTPUT ${target_path}
-        COMMAND mipgen --strip-alpha ${EXTRA_ARGS} ${source_path} ${target_path}
+        COMMAND mipgen --quiet --strip-alpha ${EXTRA_ARGS} ${source_path} ${target_path}
         MAIN_DEPENDENCY ${source_path}
         DEPENDS mipgen)
 endfunction()

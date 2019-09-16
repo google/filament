@@ -44,9 +44,9 @@
 #include <thread>
 #include <utility>
 
-#include <assert.h>
+#include <cassert>
 #include <cstddef>
-#include <stdint.h>
+#include <cstdint>
 
 // Set to true to print every commands out on log.d. This requires RTTI and DEBUG
 #define DEBUG_COMMAND_STREAM false
@@ -99,7 +99,7 @@ public:
         // of return value -- it allows the compiler to perform the tail call optimization.
         intptr_t next;
         mExecute(driver, this, &next);
-        return reinterpret_cast<CommandBase*>(reinterpret_cast<char*>(this) + next);
+        return reinterpret_cast<CommandBase*>(reinterpret_cast<intptr_t>(this) + next);
     }
 
     inline ~CommandBase() noexcept = default;

@@ -150,11 +150,11 @@ OpenGLProgram::OpenGLProgram(OpenGLDriver* gl, const Program& programBuilder) no
         mIsValid = true;
     }
 
-    // failing to compile a program can't be fatal, because this will happen a lot in
+    // Failing to compile a program can't be fatal, because this will happen a lot in
     // the material tools. We need to have a better way to handle these errors and
-    // return to the editor.
+    // return to the editor. Also note the early "return" statements in this function.
     if (UTILS_UNLIKELY(!isValid())) {
-        PANIC_LOG("failed to compile glsl program");
+        PANIC_LOG("Failed to compile GLSL program.");
     }
 }
 

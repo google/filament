@@ -28,12 +28,12 @@
 namespace filament {
 namespace matdbg {
 
+// ShaderExtractor is a utility class for extracting shader source from a material package. It works
+// in a manner similar to ShaderReplacer.
 class ShaderExtractor {
 public:
     ShaderExtractor(backend::Backend backend, const void* data, size_t size);
     bool parse() noexcept;
-    bool isShadingMaterial() const noexcept;
-    bool isPostProcessMaterial() const noexcept;
     bool getShader(backend::ShaderModel shaderModel,
             uint8_t variant, backend::ShaderType stage, filaflat::ShaderBuilder& shader) noexcept;
 

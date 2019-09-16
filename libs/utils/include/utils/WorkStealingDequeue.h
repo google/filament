@@ -18,7 +18,9 @@
 #define TNT_UTILS_WORKSTEALINGDEQUEUE_H
 
 #include <atomic>
-#include <cstddef>
+
+#include <assert.h>
+#include <stddef.h>
 
 namespace utils {
 

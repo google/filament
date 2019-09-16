@@ -121,6 +121,14 @@ struct FFilamentAsset : public FilamentAsset {
         return mTextureBindings.data();
     }
 
+    size_t getResourceUriCount() const noexcept {
+        return mResourceUris.size();
+    }
+
+    const char* const* getResourceUris() const noexcept {
+        return mResourceUris.data();
+    }
+
     filament::Aabb getBoundingBox() const noexcept {
         return mBoundingBox;
     }
@@ -156,6 +164,8 @@ struct FFilamentAsset : public FilamentAsset {
         mBufferBindings.shrink_to_fit();
         mTextureBindings.clear();
         mTextureBindings.shrink_to_fit();
+        mResourceUris.clear();
+        mResourceUris.shrink_to_fit();
         mNodeMap.clear();
         mPrimMap.clear();
         releaseSourceAsset();
@@ -200,6 +210,7 @@ struct FFilamentAsset : public FilamentAsset {
      * Transient source data that can freed via releaseSourceData(). */
     std::vector<BufferBinding> mBufferBindings;
     std::vector<TextureBinding> mTextureBindings;
+    std::vector<const char*> mResourceUris;
     const cgltf_data* mSourceAsset = nullptr;
     tsl::robin_map<const cgltf_node*, utils::Entity> mNodeMap;
     tsl::robin_map<const cgltf_primitive*, filament::VertexBuffer*> mPrimMap;

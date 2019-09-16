@@ -29,13 +29,13 @@ namespace metal {
 
 static inline MTLTextureUsage getMetalTextureUsage(TextureUsage usage) {
     NSUInteger u = 0;
-    if (usage & TextureUsage::COLOR_ATTACHMENT) {
+    if (any(usage & TextureUsage::COLOR_ATTACHMENT)) {
         u |= MTLTextureUsageRenderTarget;
     }
-    if (usage & TextureUsage::DEPTH_ATTACHMENT) {
+    if (any(usage & TextureUsage::DEPTH_ATTACHMENT)) {
         u |= MTLTextureUsageRenderTarget;
     }
-    if (usage & TextureUsage::STENCIL_ATTACHMENT) {
+    if (any(usage & TextureUsage::STENCIL_ATTACHMENT)) {
         u |= MTLTextureUsageRenderTarget;
     }
 
@@ -46,7 +46,7 @@ static inline MTLTextureUsage getMetalTextureUsage(TextureUsage usage) {
 }
 
 static inline MTLStorageMode getMetalStorageMode(TextureUsage usage) {
-    if (usage & TextureUsage::UPLOADABLE) {
+    if (any(usage & TextureUsage::UPLOADABLE)) {
 #if defined(IOS)
         return MTLStorageModeShared;
 #else
@@ -481,9 +481,9 @@ MTLLoadAction MetalRenderTarget::getLoadAction(const RenderPassParams& params,
         TargetBufferFlags buffer) {
     const auto clearFlags = (TargetBufferFlags) params.flags.clear;
     const auto discardStartFlags = params.flags.discardStart;
-    if (clearFlags & buffer) {
+    if (any(clearFlags & buffer)) {
         return MTLLoadActionClear;
-    } else if (discardStartFlags & buffer) {
+    } else if (any(discardStartFlags & buffer)) {
         return MTLLoadActionDontCare;
     }
     return MTLLoadActionLoad;
@@ -492,14 +492,14 @@ MTLLoadAction MetalRenderTarget::getLoadAction(const RenderPassParams& params,
 MTLStoreAction MetalRenderTarget::getStoreAction(const RenderPassParams& params,
         TargetBufferFlags buffer) {
     const auto discardEndFlags = params.flags.discardEnd;
-    if (discardEndFlags & buffer) {
+    if (any(discardEndFlags & buffer)) {
         return MTLStoreActionDontCare;
     }
-    if (buffer & TargetBufferFlags::COLOR) {
+    if (any(buffer & TargetBufferFlags::COLOR)) {
         const bool shouldResolveColor = (multisampledColor && color);
         return shouldResolveColor ? MTLStoreActionMultisampleResolve : MTLStoreActionStore;
     }
-    if (buffer & TargetBufferFlags::DEPTH) {
+    if (any(buffer & TargetBufferFlags::DEPTH)) {
         const bool shouldResolveDepth = (multisampledDepth && depth);
         return shouldResolveDepth ? MTLStoreActionMultisampleResolve : MTLStoreActionStore;
     }

@@ -20,9 +20,6 @@ import android.support.annotation.IntRange;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
-import java.nio.Buffer;
-import java.nio.BufferOverflowException;
-
 public class RenderTarget {
     private long mNativeObject;
     private final Texture[] mTextures = new Texture[2];

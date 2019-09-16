@@ -3,8 +3,25 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-- Added a live material debugger with a web-based interface.
+## Next release
+
+- Dielectrics now behave properly under a white furnace (energy preserving and conserving).
+- Clear coat roughness now remains in the 0..1 (previously remapped to the 0..0.6 range).
+- gltfio: Fixed several limitations with ubershader mode.
+- gltfio: Fixed a transforms issue with non-uniform scale.
+- webgl: Fixed an issue with JPEG textures.
+- Windows: Fix link error in debug builds.
+- matdbg: Web server must now be enabled with an environment variable.
+- matdbg: Added support for editing GLSL and MSL code.
+
+## v1.3.2
+
+- Added optional web server for real-time inspection of shader code.
 - Added basic #include support in material files.
+- Fixed potential Metal memory leak.
+- Fixed intermittent memory overflow in wasm builds.
+- Fix bad normal mapping with skinning.
+- Java clients can now call getNativeObject().
 
 ## v1.3.1
 

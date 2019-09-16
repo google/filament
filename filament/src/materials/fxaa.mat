@@ -1,0 +1,72 @@
+material {
+    name : fxaa,
+    parameters : [
+        {
+            type : sampler2d,
+            name : colorBuffer,
+            precision : high
+        }
+    ],
+    depthWrite : false,
+    depthCulling : false,
+    domain : postprocess,
+    variables : [
+        vertex
+    ]
+}
+
+vertex {
+
+    void postProcessVertex(inout PostProcessVertexInputs postProcess) {
+        postProcess.vertex.xy = postProcess.normalizedUV;
+    }
+
+}
+
+fragment {
+
+#include "../../../shaders/src/fxaa.fs"
+
+    void postProcess(inout PostProcessInputs postProcess) {
+        // First, compute an exact upper bound for the area we need to sample from.
+        // The render target may be larger than the viewport that was used for scene
+        // rendering, so we cannot rely on the wrap mode alone.
+        highp vec2 fboSize = vec2(textureSize(materialParams_colorBuffer, 0));
+        highp vec2 invSize = 1.0 / fboSize;
+        highp vec2 halfTexel = 0.5 * invSize;
+        highp vec2 viewportSize = frameUniforms.resolution.xy;
+
+        // The clamp needs to be over-aggressive by a half-texel due to bilinear sampling.
+        highp vec2 excessSize = 0.5 + fboSize - viewportSize;
+        highp vec2 upperBound = 1.0 - excessSize * invSize;
+
+        // Next, compute the coordinates of the texel center and its bounding box.
+        // There is no need to clamp the min corner since the wrap mode will do
+        // it automatically.
+
+        // variable_vertex is already interpolated to pixel center by the GPU
+        highp vec2 texelCenter = min(variable_vertex.xy, upperBound);
+        highp vec2 texelMaxCorner = min(variable_vertex.xy + halfTexel, upperBound);
+        highp vec2 texelMinCorner = variable_vertex.xy - halfTexel;
+
+        vec4 color = fxaa(
+                texelCenter,
+                vec4(texelMinCorner, texelMaxCorner),
+                materialParams_colorBuffer,
+                invSize,             // FxaaFloat4 fxaaConsoleRcpFrameOpt,
+                2.0 * invSize,       // FxaaFloat4 fxaaConsoleRcpFrameOpt2,
+                8.0,                 // FxaaFloat fxaaConsoleEdgeSharpness,
+#if defined(G3D_FXAA_PATCHES) && G3D_FXAA_PATCHES == 1
+                0.08,                // FxaaFloat fxaaConsoleEdgeThreshold,
+#else
+                0.125,               // FxaaFloat fxaaConsoleEdgeThreshold,
+#endif
+                0.04                 // FxaaFloat fxaaConsoleEdgeThresholdMin
+        );
+#if POST_PROCESS_OPAQUE
+        color.a = 1.0;
+#endif
+        postProcess.color = color;
+    }
+
+}

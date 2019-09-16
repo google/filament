@@ -31,12 +31,6 @@ namespace matc {
 
 class Config {
 public:
-    enum class Mode {
-        MATERIAL,
-        DEPTH,
-        POSTPROCESS,
-    };
-
     enum class OutputFormat {
         BLOB,
         C_HEADER,
@@ -77,10 +71,6 @@ public:
 
     bool isDebug() const noexcept {
         return mDebug;
-    }
-
-    Mode getMode() const noexcept {
-        return mMode;
     }
 
     Platform getPlatform() const noexcept {
@@ -125,7 +115,6 @@ protected:
     bool mPrintShaders = false;
     Optimization mOptimizationLevel = Optimization::PERFORMANCE;
     Metadata mReflectionTarget = Metadata::NONE;
-    Mode mMode = Mode::MATERIAL;
     Platform mPlatform = Platform::ALL;
     OutputFormat mOutputFormat = OutputFormat::BLOB;
     TargetApi mTargetApi = (TargetApi) 0;

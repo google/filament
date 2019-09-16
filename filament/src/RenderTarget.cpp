@@ -25,6 +25,7 @@
 
 namespace filament {
 
+using namespace backend;
 using namespace details;
 
 struct RenderTarget::BuilderDetails {
@@ -97,18 +98,18 @@ FRenderTarget::HwHandle FRenderTarget::createHandle(FEngine& engine, const Build
     FEngine::DriverApi& driver = engine.getDriverApi();
     const Attachment& color = builder.mImpl->mAttachments[COLOR];
     const Attachment& depth = builder.mImpl->mAttachments[DEPTH];
-    const backend::TargetBufferFlags flags =
-            depth.texture ? backend::COLOR_AND_DEPTH : backend::COLOR;
+    const TargetBufferFlags flags =
+            depth.texture ? TargetBufferFlags::COLOR_AND_DEPTH : TargetBufferFlags::COLOR;
 
     // For now we do not support multisampled render targets in the public-facing API, but please
     // note that post-processing includes FXAA by default.
     const uint8_t samples = 1;
 
-    const backend::TargetBufferInfo cinfo(upcast(color.texture)->getHwHandle(),
+    const TargetBufferInfo cinfo(upcast(color.texture)->getHwHandle(),
             color.mipLevel, color.face);
 
-    const backend::TargetBufferInfo dinfo(
-            depth.texture ? upcast(depth.texture)->getHwHandle() : backend::TextureHandle(),
+    const TargetBufferInfo dinfo(
+            depth.texture ? upcast(depth.texture)->getHwHandle() : TextureHandle(),
             color.mipLevel, color.face);
 
     const uint32_t width = FTexture::valueForLevel(color.mipLevel, color.texture->getWidth());

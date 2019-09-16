@@ -17,7 +17,9 @@
 #ifndef TNT_FILAMENT_FRAMEGRAPHPASSRESOURCES_H
 #define TNT_FILAMENT_FRAMEGRAPHPASSRESOURCES_H
 
-#include "FrameGraphResource.h"
+#include "FrameGraphHandle.h"
+
+#include <fg/fg/ResourceEntry.h>
 
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
@@ -41,15 +43,37 @@ public:
     // Return the name of the pass being executed
     const char* getPassName() const noexcept;
 
-    backend::Handle<backend::HwTexture> getTexture(FrameGraphResource r) const noexcept;
+    // get the resource for this handle
+    template<typename T>
+    T const& get(FrameGraphId<T> handle) const noexcept {
+        return getResourceEntry(handle).getResource();
+    }
 
-    RenderTargetInfo getRenderTarget(FrameGraphResource r, uint8_t level = 0) const noexcept;
+    // get the descriptor of this resource
+    template<typename T>
+    typename T::Descriptor const& getDescriptor(FrameGraphId<T> handle) const {
+        // TODO: we should check that this FrameGraphHandle is indeed used by this pass
+        return getResourceEntry(handle).descriptor;
+    }
 
-    FrameGraphResource::Descriptor const& getDescriptor(FrameGraphResource r) const noexcept;
+    // this is just a helper for FrameGraphTexture
+    backend::Handle<backend::HwTexture> getTexture(FrameGraphId<FrameGraphTexture> handle) const noexcept {
+        return get(handle).texture;
+    }
+
+    RenderTargetInfo getRenderTarget(FrameGraphRenderTargetHandle handle, uint8_t level = 0) const noexcept;
 
 private:
     friend class FrameGraph;
     explicit FrameGraphPassResources(FrameGraph& fg, fg::PassNode const& pass) noexcept;
+
+    fg::ResourceEntryBase const& getResourceEntryBase(FrameGraphHandle r) const noexcept;
+
+    template<typename T>
+    fg::ResourceEntry<T> const& getResourceEntry(FrameGraphId<T> handle) const noexcept {
+        return static_cast<fg::ResourceEntry<T> const&>(getResourceEntryBase(handle));
+    }
+
     FrameGraph& mFrameGraph;
     fg::PassNode const& mPass;
 };

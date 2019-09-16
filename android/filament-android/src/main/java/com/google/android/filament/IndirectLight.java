@@ -16,12 +16,12 @@
 
 package com.google.android.filament;
 
-import com.google.android.filament.proguard.UsedByReflection;
-
 import android.support.annotation.IntRange;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.annotation.Size;
+
+import com.google.android.filament.proguard.UsedByReflection;
 
 public class IndirectLight {
     long mNativeObject;

@@ -119,6 +119,8 @@ FEngine* FEngine::create(Backend backend, Platform* platform, void* sharedGLCont
 
 
 // these must be static because only a pointer is copied to the render stream
+// Note that these coordinates are specified in OpenGL clip space. Other backends can transform
+// these in the vertex shader as needed.
 static const half4 sFullScreenTriangleVertices[3] = {
         { -1.0_h, -1.0_h, 1.0_h, 1.0_h },
         {  3.0_h, -1.0_h, 1.0_h, 1.0_h },
@@ -160,27 +162,7 @@ void FEngine::init() {
     mCommandStream = CommandStream(*mDriver, mCommandBufferQueue.getCircularBuffer());
     DriverApi& driverApi = getDriverApi();
 
-#if FILAMENT_ENABLE_MATDBG
-    // Disable the web server for regression tests that occur in hermetic environments.
-    if (mBackend != backend::Backend::NOOP) {
-        debug.server = new matdbg::DebugServer(matdbg::ENGINE);
-    }
-#endif
-
     mResourceAllocator = new fg::ResourceAllocator(driverApi);
-
-    // Parse all post process shaders now, but create them lazily
-    mPostProcessParser = std::make_unique<MaterialParser>(mBackend,
-            MATERIALS_POSTPROCESS_DATA, MATERIALS_POSTPROCESS_SIZE);
-
-    UTILS_UNUSED_IN_RELEASE bool ppMaterialOk =
-            mPostProcessParser->parse() && mPostProcessParser->isPostProcessMaterial();
-    assert(ppMaterialOk);
-
-    uint32_t version;
-    mPostProcessParser->getPostProcessVersion(&version);
-    ASSERT_PRECONDITION(version == MATERIAL_VERSION, "Post-process material version mismatch. "
-            "Expected %d but received %d.", MATERIAL_VERSION, version);
 
     mFullScreenTriangleVb = upcast(VertexBuffer::Builder()
             .vertexCount(3)
@@ -302,10 +284,6 @@ void FEngine::shutdown() {
     }
     cleanupResourceList(mFences);
 
-    for (const auto& mPostProcessProgram : mPostProcessPrograms) {
-        driver.destroyProgram(mPostProcessProgram);
-    }
-
     // There might be commands added by the terminate() calls
     flushCommandBuffer(mCommandBufferQueue);
     if (!UTILS_HAS_THREADING) {
@@ -406,6 +384,25 @@ int FEngine::loop() {
         }
         slog.d << io::endl;
     }
+
+#if FILAMENT_ENABLE_MATDBG
+    const char* portString = getenv("FILAMENT_MATDBG_PORT");
+    if (portString != nullptr) {
+        const int port = atoi(portString);
+        debug.server = new matdbg::DebugServer(mBackend, port);
+
+        // Sometimes the server can fail to spin up (e.g. if the above port is already in use).
+        // When this occurs, carry onward, developers can look at civetweb.txt for details.
+        if (!debug.server->isReady()) {
+            delete debug.server;
+            debug.server = nullptr;
+        } else {
+            debug.server->setEditCallback(FMaterial::onEditCallback);
+            debug.server->setQueryCallback(FMaterial::onQueryCallback);
+        }
+    }
+#endif
+
     mDriver = platform->createDriver(mSharedGLContext);
     mDriverBarrier.latch();
     if (UTILS_UNLIKELY(!mDriver)) {
@@ -449,66 +446,6 @@ const FMaterial* FEngine::getSkyboxMaterial() const noexcept {
     }
     return material;
 }
-
-
-backend::Handle<backend::HwProgram> FEngine::createPostProcessProgram(MaterialParser& parser,
-        ShaderModel shaderModel, PostProcessStage stage) const noexcept {
-    ShaderBuilder& vShaderBuilder = getVertexShaderBuilder();
-    ShaderBuilder& fShaderBuilder = getFragmentShaderBuilder();
-    parser.getShader(vShaderBuilder, shaderModel, (uint8_t)stage, ShaderType::VERTEX);
-    parser.getShader(fShaderBuilder, shaderModel, (uint8_t)stage, ShaderType::FRAGMENT);
-
-    // For the post-process program, we don't care about per-material sampler bindings but we still
-    // need to populate a SamplerBindingMap and pass a weak reference to Program. Binding maps are
-    // normally owned by Material, but in this case we'll simply own a copy right here in static
-    // storage.
-    static const SamplerBindingMap* pBindings = [] {
-        static SamplerBindingMap bindings;
-        bindings.populate();
-        return &bindings;
-    }();
-
-    Program pb;
-    pb      .diagnostics(CString("Post Process"))
-            .withVertexShader(vShaderBuilder.data(), vShaderBuilder.size())
-            .withFragmentShader(fShaderBuilder.data(), fShaderBuilder.size())
-            .setUniformBlock(BindingPoints::PER_VIEW, PerViewUib::getUib().getName())
-            .setUniformBlock(BindingPoints::POST_PROCESS, PostProcessingUib::getUib().getName());
-
-    auto addSamplerGroup = [&pb]
-            (uint8_t bindingPoint, SamplerInterfaceBlock const& sib, SamplerBindingMap const& map) {
-        const size_t samplerCount = sib.getSize();
-        if (samplerCount) {
-            std::vector<Program::Sampler> samplers(samplerCount);
-            auto const& list = sib.getSamplerInfoList();
-            for (size_t i = 0, c = samplerCount; i < c; ++i) {
-                CString uniformName(
-                        SamplerInterfaceBlock::getUniformName(sib.getName().c_str(),
-                                list[i].name.c_str()));
-                uint8_t binding;
-                map.getSamplerBinding(bindingPoint, (uint8_t)i, &binding);
-                samplers[i] = { std::move(uniformName), binding };
-            }
-            pb.setSamplerGroup(bindingPoint, samplers.data(), samplers.size());
-        }
-    };
-
-    addSamplerGroup(BindingPoints::POST_PROCESS, SibGenerator::getPostProcessSib(), *pBindings);
-
-    auto program = const_cast<DriverApi&>(mCommandStream).createProgram(std::move(pb));
-    assert(program);
-    return program;
-}
-
-backend::Handle<backend::HwProgram> FEngine::getPostProcessProgramSlow(PostProcessStage stage) const noexcept {
-    backend::Handle<backend::HwProgram>* const postProcessPrograms = mPostProcessPrograms;
-    if (!postProcessPrograms[(uint8_t)stage]) {
-        ShaderModel shaderModel = getDriver().getShaderModel();
-        postProcessPrograms[(uint8_t)stage] = createPostProcessProgram(*mPostProcessParser, shaderModel, stage);
-    }
-    return postProcessPrograms[(uint8_t)stage];
-}
-
 
 // -----------------------------------------------------------------------------------------------
 // Resource management

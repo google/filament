@@ -26,7 +26,7 @@ canvas     { position: absolute; width: 100%; height: 100%; }
 const env = 'venetian_crossroads_2k';
 const ibl_url = `${env}/${env}_ibl.ktx`;
 const sky_url = `${env}/${env}_skybox.ktx`;
-const mesh_url = 'helmet.gltf';
+const mesh_url = 'FlightHelmet.gltf';
 
 Filament.init([mesh_url, ibl_url, sky_url], () => {
     window.gltfio = Filament.gltfio;
@@ -70,7 +70,7 @@ class App {
 
         const messages = document.getElementById('messages');
 
-        // Crudely indicate progress by printing the URL of each resource as it is loaded.
+        // Crudely indicate progress by printing the URI of each resource as it is loaded.
         // Note that we wait 1 ms after the last asset has downloaded, but before finalization.
         // This gives the browser time to display the latest status.
         const onFetched = (uri) => messages.innerText += `Downloaded ${uri}\n`;

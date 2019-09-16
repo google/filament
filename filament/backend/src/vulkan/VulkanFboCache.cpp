@@ -108,7 +108,7 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
     VkAttachmentDescription colorAttachment {
         .format = config.colorFormat,
         .samples = VK_SAMPLE_COUNT_1_BIT,
-        .loadOp = (config.flags.clear & TargetBufferFlags::COLOR) ?
+        .loadOp = (config.flags.clear & (uint8_t)TargetBufferFlags::COLOR) ?
                 VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE,
         .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
         .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
@@ -118,7 +118,7 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
     VkAttachmentDescription depthAttachment {
         .format = config.depthFormat,
         .samples = VK_SAMPLE_COUNT_1_BIT,
-        .loadOp = (config.flags.clear & TargetBufferFlags::DEPTH) ?
+        .loadOp = (config.flags.clear & (uint8_t)TargetBufferFlags::DEPTH) ?
                 VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE,
         .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
         .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,

@@ -247,6 +247,25 @@ void FAssetLoader::createAsset(const cgltf_data* srcAsset) {
         }
     }
 
+    // Find every unique resource URI and store a pointer to any of the cgltf-owned cstrings
+    // that match the URI. These strings get freed during releaseSourceData().
+    tsl::robin_map<std::string, const char*> resourceUris;
+    auto addResourceUri = [&resourceUris](const char* uri) {
+        if (uri) {
+            resourceUris[uri] = uri;
+        }
+    };
+    for (cgltf_size i = 0, len = srcAsset->buffers_count; i < len; ++i) {
+        addResourceUri(srcAsset->buffers[i].uri);
+    }
+    for (cgltf_size i = 0, len = srcAsset->images_count; i < len; ++i) {
+        addResourceUri(srcAsset->images[i].uri);
+    }
+    mResult->mResourceUris.reserve(resourceUris.size());
+    for (auto pair : resourceUris) {
+        mResult->mResourceUris.push_back(pair.second);
+    }
+
     // We're done with the import, so free up transient bookkeeping resources.
     mMatInstanceCache.clear();
     mMeshCache.clear();

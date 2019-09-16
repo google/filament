@@ -22,7 +22,7 @@
 #include "details/Texture.h"
 
 #include "fg/FrameGraph.h"
-#include "fg/FrameGraphResource.h"
+#include "fg/FrameGraphHandle.h"
 
 #include "RenderTargetResource.h"
 
@@ -52,79 +52,7 @@ struct RenderTarget { // 32
     backend::RenderPassFlags targetFlags{};
     RenderTargetResource* cache = nullptr;
 
-    void resolve(FrameGraph& fg) noexcept {
-        const auto& resourceNodes = fg.mResourceNodes;
-        auto& renderTargetCache = fg.mRenderTargetCache;
-
-        // find a matching rendertarget
-        auto pos = std::find_if(renderTargetCache.begin(), renderTargetCache.end(),
-                [this, &fg](auto const& rt) {
-                    return fg.equals(rt->desc, desc);
-                });
-
-        if (pos != renderTargetCache.end()) {
-            cache = pos->get();
-            cache->targetInfo.params.flags.clear |= userClearFlags;
-        } else {
-            uint8_t attachments = 0;
-            uint32_t width = 0;
-            uint32_t height = 0;
-            backend::TextureFormat colorFormat = {};
-
-            static constexpr backend::TargetBufferFlags flags[] = {
-                    backend::TargetBufferFlags::COLOR,
-                    backend::TargetBufferFlags::DEPTH,
-                    backend::TargetBufferFlags::STENCIL };
-
-            uint32_t minWidth = std::numeric_limits<uint32_t>::max();
-            uint32_t maxWidth = 0;
-            uint32_t minHeight = std::numeric_limits<uint32_t>::max();
-            uint32_t maxHeight = 0;
-
-            for (size_t i = 0; i < desc.attachments.textures.size(); i++) {
-                FrameGraphRenderTarget::Attachments::AttachmentInfo attachment = desc.attachments.textures[i];
-                if (attachment.isValid()) {
-                    TextureResource const* const pResource = resourceNodes[attachment.getHandle().index].resource;
-                    assert(pResource);
-
-                    attachments |= flags[i];
-
-                    // figure out the min/max dimensions across all attachments
-                    const size_t level = attachment.getLevel();
-                    const uint32_t w = details::FTexture::valueForLevel(level, pResource->desc.width);
-                    const uint32_t h = details::FTexture::valueForLevel(level, pResource->desc.height);
-                    minWidth  = std::min(minWidth,  w);
-                    maxWidth  = std::max(maxWidth,  w);
-                    minHeight = std::min(minHeight, h);
-                    maxHeight = std::max(maxHeight, h);
-
-                    if (i == FrameGraphRenderTarget::Attachments::COLOR) {
-                        colorFormat = pResource->desc.format;
-                    }
-                }
-            }
-
-            if (attachments) {
-                if (minWidth == maxWidth && minHeight == maxHeight) {
-                    // All attachments' size match, we're good to go.
-                    width = minWidth;
-                    height = minHeight;
-                } else {
-                    // TODO: what should we do here? Is it a user-error?
-                    width = maxWidth;
-                    height = maxHeight;
-                }
-
-                // create the cache entry
-                RenderTargetResource* pRenderTargetResource =
-                        fg.mArena.make<RenderTargetResource>(desc, false,
-                                backend::TargetBufferFlags(attachments), width, height, colorFormat);
-                renderTargetCache.emplace_back(pRenderTargetResource, fg);
-                cache = pRenderTargetResource;
-                cache->targetInfo.params.flags.clear |= userClearFlags;
-            }
-        }
-    }
+    void resolve(FrameGraph& fg) noexcept;
 };
 
 } // namespace fg

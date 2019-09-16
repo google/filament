@@ -86,7 +86,6 @@ static void printStringChunk(ostream& json, const ChunkContainer& container,
 static bool printMaterial(ostream& json, const ChunkContainer& container) {
     printStringChunk(json, container, filamat::MaterialName, "name");
     printUint32Chunk(json, container, filamat::MaterialVersion, "version");
-    printUint32Chunk(json, container, filamat::PostProcessVersion, "pp_version");
     json << "\"shading\": {\n";
     printChunk<Shading, uint8_t>(json, container, MaterialShading, "model");
     printChunk<VertexDomain, uint8_t>(json, container, MaterialVertexDomain, "vertex_domain");
@@ -224,6 +223,47 @@ const char* JsonWriter::getJsonString() const {
 
 size_t JsonWriter::getJsonSize() const {
     return mJsonString.size();
+}
+
+bool JsonWriter::writeActiveInfo(const filaflat::ChunkContainer& package,
+        Backend backend, uint16_t activeVariants) {
+    vector<ShaderInfo> shaders;
+    ostringstream json;
+    json << "[\"";
+    switch (backend) {
+        case Backend::OPENGL:
+            shaders.resize(getShaderCount(package, ChunkType::MaterialGlsl));
+            getGlShaderInfo(package, shaders.data());
+            json << "opengl";
+            break;
+        case Backend::VULKAN:
+            shaders.resize(getShaderCount(package, ChunkType::MaterialSpirv));
+            getVkShaderInfo(package, shaders.data());
+            json << "vulkan";
+            break;
+        case Backend::METAL:
+            shaders.resize(getShaderCount(package, ChunkType::MaterialMetal));
+            getMetalShaderInfo(package, shaders.data());
+            json << "metal";
+            break;
+        default:
+            return false;
+    }
+    json << "\"";
+    for (uint8_t variant = 0; variant < VARIANT_COUNT; variant++) {
+        if (activeVariants & (1 << variant)) {
+            int shaderIndex = 0;
+            for (const auto& info : shaders) {
+                if (info.variant == variant) {
+                    json << ", " << shaderIndex;
+                }
+                shaderIndex++;
+            }
+        }
+    }
+    json << "]";
+    mJsonString = CString(json.str().c_str());
+    return true;
 }
 
 } // namespace matdbg

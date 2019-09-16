@@ -19,6 +19,7 @@ package com.google.android.filament;
 import android.support.annotation.IntRange;
 import android.support.annotation.NonNull;
 import android.support.annotation.Size;
+
 import com.google.android.filament.proguard.UsedByNative;
 
 import java.nio.Buffer;

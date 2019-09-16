@@ -24,6 +24,7 @@
 #include <spirv_glsl.hpp>
 #include <spirv-tools/libspirv.h>
 
+#include <matdbg/ShaderReplacer.h>
 #include <matdbg/ShaderExtractor.h>
 #include <matdbg/ShaderInfo.h>
 #include <matdbg/JsonWriter.h>
@@ -32,6 +33,7 @@
 
 #include <backend/DriverEnums.h>
 
+#include <sstream>
 #include <string>
 
 // If set to 0, this serves HTML from a resgen resource. Use 1 only during local development, which
@@ -101,6 +103,7 @@ private:
 //    GET /api/materials
 //    GET /api/material?matid={id}
 //    GET /api/shader?matid={id}&type=[glsl|spirv]&[glindex|vkindex|metalindex]={index}
+//    GET /api/active
 //
 class RestRequestHandler : public CivetHandler {
 public:
@@ -114,6 +117,29 @@ public:
             slog.e << "DebugServer: 404 at " <<  line << ": " << request->query_string << io::endl;
             return false;
         };
+
+        if (uri == "/api/active") {
+            mServer->updateActiveVariants();
+            mg_printf(conn, kSuccessHeader.c_str(), "application/json");
+            mg_printf(conn, "{");
+            int index = 0;
+            for (const auto& pair : mServer->mMaterialRecords) {
+                const auto& record = pair.second;
+                ChunkContainer package(record.package, record.packageSize);
+                if (!package.parse()) {
+                    return error(__LINE__);
+                }
+                JsonWriter writer;
+                if (!writer.writeActiveInfo(package, mServer->mBackend, record.activeVariants)) {
+                    return error(__LINE__);
+                }
+                const bool last = (++index) == mServer->mMaterialRecords.size();
+                mg_printf(conn, "\"%8.8x\": %s %s", pair.first, writer.getJsonString(),
+                        last ? "" : ",");
+            }
+            mg_printf(conn, "}");
+            return true;
+        }
 
         if (uri == "/api/matids") {
             mg_printf(conn, kSuccessHeader.c_str(), "application/json");
@@ -202,13 +228,6 @@ public:
         }
 
         if (glindex[0]) {
-            ShaderExtractor extractor(Backend::OPENGL, result->package, result->packageSize);
-            if (!extractor.parse() ||
-                    (!extractor.isShadingMaterial() && !extractor.isPostProcessMaterial())) {
-                return error(__LINE__);
-            }
-
-            filaflat::ShaderBuilder builder;
             std::vector<ShaderInfo> info(getShaderCount(package, ChunkType::MaterialGlsl));
             if (!getGlShaderInfo(package, info.data())) {
                 return error(__LINE__);
@@ -219,7 +238,13 @@ public:
                 return error(__LINE__);
             }
 
+            ShaderExtractor extractor(Backend::OPENGL, result->package, result->packageSize);
+            if (!extractor.parse()) {
+                return error(__LINE__);
+            }
+
             const auto& item = info[shaderIndex];
+            filaflat::ShaderBuilder builder;
             extractor.getShader(item.shaderModel, item.variant, item.pipelineStage, builder);
 
             mg_printf(conn, kSuccessHeader.c_str(), "application/txt");
@@ -229,8 +254,7 @@ public:
 
         if (vkindex[0]) {
             ShaderExtractor extractor(Backend::VULKAN, result->package, result->packageSize);
-            if (!extractor.parse() ||
-                    (!extractor.isShadingMaterial() && !extractor.isPostProcessMaterial())) {
+            if (!extractor.parse()) {
                 return error(__LINE__);
             }
 
@@ -271,8 +295,7 @@ public:
 
         if (metalindex[0]) {
             ShaderExtractor extractor(Backend::METAL, result->package, result->packageSize);
-            if (!extractor.parse() ||
-                    (!extractor.isShadingMaterial() && !extractor.isPostProcessMaterial())) {
+            if (!extractor.parse()) {
                 return error(__LINE__);
             }
 
@@ -316,8 +339,43 @@ public:
 
     bool handleData(CivetServer *server, struct mg_connection *conn, int bits, char *data,
             size_t size) override {
-        // TODO: trigger the "shader has been edited" callback via mServer->mEditHandler(...)
-        return true;
+        // TODO: Is there a better way to ignore the handshake message that occurs after startup?
+        if  (size < 8) {
+            return true;
+        }
+
+        // Every WebSocket message is prefixed with a command name followed by a space.
+        //
+        // For now we simply use istringstream for parsing, so command arguments are delimited
+        // with space characters.
+        //
+        // The "API index" matches the values of filament::backend::Backend (zero is invalid).
+        //
+        // The "shader index" is a zero-based index into the list of variants using the order that
+        // they appear in the package, where each API (GL / VK / Metal) has its own list.
+        //
+        // Commands:
+        //
+        //     EDIT [material id] [api index] [shader index] [entire shader source....]
+        //
+
+        const static StaticString kEditCmd = "EDIT ";
+        const static size_t kEditCmdLength = kEditCmd.size();
+
+        if (0 == strncmp(data, kEditCmd.c_str(), kEditCmdLength)) {
+            std::istringstream str(data + kEditCmdLength);
+            uint32_t matid;
+            int api;
+            int shaderIndex;
+            str >> std::hex >> matid >> std::dec >> api >> shaderIndex;
+            const char* source = data + kEditCmdLength + str.tellg();
+            const size_t remaining = size - kEditCmdLength - str.tellg();
+            mServer->handleEditCommand(matid, backend::Backend(api), shaderIndex, source, remaining);
+            return true;
+        }
+
+        slog.e << "Bad WebSocket message." << io::endl;
+        return false;
     }
 
     void handleClose(CivetServer *server, const struct mg_connection *conn) override {
@@ -338,18 +396,32 @@ private:
     struct mg_connection* mConnection = nullptr;
 };
 
-DebugServer::DebugServer(ServerMode mode, int port) : mServerMode(mode) {
+DebugServer::DebugServer(Backend backend, int port) : mBackend(backend) {
     #if !SERVE_FROM_SOURCE_TREE
     mHtml = CString((const char*) MATDBG_RESOURCES_INDEX_DATA, MATDBG_RESOURCES_INDEX_SIZE - 1);
     mJavascript = CString((const char*) MATDBG_RESOURCES_SCRIPT_DATA, MATDBG_RESOURCES_SCRIPT_SIZE - 1);
     mCss = CString((const char*) MATDBG_RESOURCES_STYLE_DATA, MATDBG_RESOURCES_STYLE_SIZE - 1);
     #endif
 
-    const char* kServerOptions[] = { "listening_ports", "8080", nullptr };
+    // By default the server spawns 50 threads so we override this to 2. This limits the server
+    // to having no more than 2 HTTP clients, which is perfectly fine for debugging purposes.
+    const char* kServerOptions[] = {
+        "listening_ports", "8080",
+        "num_threads", "2",
+        "error_log_file", "civetweb.txt",
+        nullptr
+    };
     std::string portString = std::to_string(port);
     kServerOptions[1] = portString.c_str();
 
     mServer = new CivetServer(kServerOptions);
+    if (!mServer->getContext()) {
+        delete mServer;
+        mServer = nullptr;
+        slog.e << "Unable to start DebugServer, see civetweb.txt for details." << io::endl;
+        return;
+    }
+
     mFileHandler = new FileRequestHandler(this);
     mRestHandler = new RestRequestHandler(this);
     mWebSocketHandler = new WebSocketHandler(this);
@@ -394,6 +466,84 @@ void DebugServer::addMaterial(const CString& name, const void* data, size_t size
 const DebugServer::MaterialRecord* DebugServer::getRecord(const MaterialKey& key) const {
     const auto& iter = mMaterialRecords.find(key);
     return iter == mMaterialRecords.end() ? nullptr : &iter->second;
+}
+
+void DebugServer::updateActiveVariants() {
+    if (mQueryCallback) {
+        for (auto& pair : mMaterialRecords) {
+            uint16_t& result = mMaterialRecords[pair.first].activeVariants;
+            mQueryCallback(pair.second.userdata, &result);
+        }
+    }
+}
+
+bool DebugServer::handleEditCommand(const MaterialKey& key, backend::Backend api, int shaderIndex,
+            const char* source, size_t size) {
+    const auto error = [](int line) {
+        slog.e << "DebugServer: Unable to apply shader edit at line " << line << io::endl;
+        return false;
+    };
+
+    if (mMaterialRecords.find(key) == mMaterialRecords.end()) {
+        return error(__LINE__);
+    }
+    MaterialRecord& material = mMaterialRecords[key];
+    filaflat::ChunkContainer package(material.package, material.packageSize);
+    if (!package.parse()) {
+        return error(__LINE__);
+    }
+
+    std::vector<ShaderInfo> infos;
+    size_t shaderCount;
+    switch (api) {
+        case backend::Backend::OPENGL: {
+            shaderCount = getShaderCount(package, ChunkType::MaterialGlsl);
+            infos.resize(shaderCount);
+            if (!getGlShaderInfo(package, infos.data())) {
+                return error(__LINE__);
+            }
+            break;
+        }
+        case backend::Backend::VULKAN: {
+            shaderCount = getShaderCount(package, ChunkType::MaterialSpirv);
+            infos.resize(shaderCount);
+            if (!getVkShaderInfo(package, infos.data())) {
+                return error(__LINE__);
+            }
+            break;
+        }
+        case backend::Backend::METAL: {
+            shaderCount = getShaderCount(package, ChunkType::MaterialMetal);
+            infos.resize(shaderCount);
+            if (!getMetalShaderInfo(package, infos.data())) {
+                return error(__LINE__);
+            }
+            break;
+        }
+        default:
+            error(__LINE__);
+    }
+
+    if (shaderIndex < 0 || shaderIndex >= shaderCount) {
+        return error(__LINE__);
+    }
+
+    const ShaderInfo info = infos[shaderIndex];
+    ShaderReplacer editor(api, package.getData(), package.getSize());
+    if (!editor.replaceShaderSource(info.shaderModel, info.variant, info.pipelineStage, source, size)) {
+        return error(__LINE__);
+    }
+
+    delete [] material.package;
+
+    material.package = editor.getEditedPackage();
+    material.packageSize = editor.getEditedSize();
+
+    if (mEditCallback) {
+        mEditCallback(material.userdata, material.name, material.package, material.packageSize);
+    }
+
+    return true;
 }
 
 } // namespace matdbg

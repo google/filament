@@ -11,6 +11,7 @@ set(PUBLIC_HDR_DIR include)
 set(PUBLIC_HDRS
     include/matdbg/DebugServer.h
     include/matdbg/JsonWriter.h
+    include/matdbg/ShaderReplacer.h
     include/matdbg/ShaderExtractor.h
     include/matdbg/ShaderInfo.h
     include/matdbg/TextWriter.h
@@ -20,6 +21,7 @@ set(SRCS
     src/CommonWriter.h
     src/DebugServer.cpp
     src/JsonWriter.cpp
+    src/ShaderReplacer.cpp
     src/ShaderExtractor.cpp
     src/ShaderInfo.cpp
     src/TextWriter.cpp
@@ -89,3 +91,10 @@ if (MSVC OR CLANG_CL)
 else()
     target_compile_options(${TARGET} PRIVATE $<$<CONFIG:Release>:-ffast-math>)
 endif()
+
+# ==================================================================================================
+# Installation
+# ==================================================================================================
+
+install(TARGETS ${TARGET} ARCHIVE DESTINATION lib/${DIST_DIR})
+install(DIRECTORY ${PUBLIC_HDR_DIR}/matdbg DESTINATION include)

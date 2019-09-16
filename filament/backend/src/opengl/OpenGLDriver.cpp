@@ -284,8 +284,14 @@ void OpenGLDriver::initExtensionsGLES(GLint major, GLint minor, ExtentionSet con
     ext.OES_EGL_image_external_essl3 = hasExtension(exts, "GL_OES_EGL_image_external_essl3");
     ext.EXT_debug_marker = hasExtension(exts, "GL_EXT_debug_marker");
     ext.EXT_color_buffer_half_float = hasExtension(exts, "GL_EXT_color_buffer_half_float");
+    ext.EXT_color_buffer_float = hasExtension(exts, "GL_EXT_color_buffer_float");
+    ext.APPLE_color_buffer_packed_float = hasExtension(exts, "GL_APPLE_color_buffer_packed_float");
     ext.texture_compression_s3tc = hasExtension(exts, "WEBGL_compressed_texture_s3tc");
     ext.EXT_multisampled_render_to_texture = hasExtension(exts, "GL_EXT_multisampled_render_to_texture");
+    // ES 3.2 implies EXT_color_buffer_float
+    if (major >= 3 && minor >= 2) {
+        ext.EXT_color_buffer_float = true;
+    }
 }
 
 void OpenGLDriver::initExtensionsGL(GLint major, GLint minor, ExtentionSet const& exts) {
@@ -295,6 +301,8 @@ void OpenGLDriver::initExtensionsGL(GLint major, GLint minor, ExtentionSet const
     ext.OES_EGL_image_external_essl3 = hasExtension(exts, "GL_OES_EGL_image_external_essl3");
     ext.EXT_debug_marker = hasExtension(exts, "GL_EXT_debug_marker");
     ext.EXT_color_buffer_half_float = true;  // Assumes core profile.
+    ext.EXT_color_buffer_float = true;  // Assumes core profile.
+    ext.APPLE_color_buffer_packed_float = true;  // Assumes core profile.
 }
 
 void OpenGLDriver::terminate() {
@@ -1077,10 +1085,10 @@ void OpenGLDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
             textureStorage(t, w, h, depth);
         }
     } else {
-        assert(usage & (
+        assert(any(usage & (
                 TextureUsage::COLOR_ATTACHMENT |
                 TextureUsage::DEPTH_ATTACHMENT |
-                TextureUsage::STENCIL_ATTACHMENT));
+                TextureUsage::STENCIL_ATTACHMENT)));
         assert(levels == 1);
         assert(target == SamplerType::SAMPLER_2D);
         t->gl.internalFormat = getInternalFormat(format);
@@ -1310,14 +1318,15 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
     };
 #endif
 
-    if (targets & TargetBufferFlags::COLOR) {
+    if (any(targets & TargetBufferFlags::COLOR)) {
         // TODO: handle multiple color attachments
         assert(color.handle);
         rt->gl.color.texture = handle_cast<GLTexture*>(color.handle);
         rt->gl.color.level = color.level;
         assert(width == valueForLevel(color.level, rt->gl.color.texture->width) &&
                height == valueForLevel(color.level, rt->gl.color.texture->height));
-        if (rt->gl.color.texture->usage & TextureUsage::SAMPLEABLE) {
+
+        if (any(rt->gl.color.texture->usage & TextureUsage::SAMPLEABLE)) {
             framebufferTexture(color, rt, GL_COLOR_ATTACHMENT0);
         } else {
             framebufferRenderbuffer(rt->gl.color.texture, rt, GL_COLOR_ATTACHMENT0);
@@ -1340,7 +1349,7 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         rt->gl.depth.level = depth.level;
         assert(width == valueForLevel(depth.level, rt->gl.depth.texture->width) &&
                height == valueForLevel(depth.level, rt->gl.depth.texture->height));
-        if (rt->gl.depth.texture->usage & TextureUsage::SAMPLEABLE) {
+        if (any(rt->gl.depth.texture->usage & TextureUsage::SAMPLEABLE)) {
             // special case: depth & stencil requested, and both provided as the same texture
             specialCased = true;
             framebufferTexture(depth, rt, GL_DEPTH_STENCIL_ATTACHMENT);
@@ -1352,25 +1361,25 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
     }
 
     if (!specialCased) {
-        if (targets & TargetBufferFlags::DEPTH) {
+        if (any(targets & TargetBufferFlags::DEPTH)) {
             assert(depth.handle);
             rt->gl.depth.texture = handle_cast<GLTexture*>(depth.handle);
             rt->gl.depth.level = depth.level;
             assert(width == valueForLevel(depth.level, rt->gl.depth.texture->width) &&
                    height == valueForLevel(depth.level, rt->gl.depth.texture->height));
-            if (rt->gl.depth.texture->usage & TextureUsage::SAMPLEABLE) {
+            if (any(rt->gl.depth.texture->usage & TextureUsage::SAMPLEABLE)) {
                 framebufferTexture(depth, rt, GL_DEPTH_ATTACHMENT);
             } else {
                 framebufferRenderbuffer(rt->gl.depth.texture, rt, GL_DEPTH_ATTACHMENT);
             }
         }
-        if (targets & TargetBufferFlags::STENCIL) {
+        if (any(targets & TargetBufferFlags::STENCIL)) {
             assert(stencil.handle);
             rt->gl.stencil.texture = handle_cast<GLTexture*>(stencil.handle);
             rt->gl.stencil.level = stencil.level;
             assert(width == valueForLevel(stencil.level, rt->gl.stencil.texture->width) &&
                    height == valueForLevel(stencil.level, rt->gl.stencil.texture->height));
-            if (rt->gl.stencil.texture->usage & TextureUsage::SAMPLEABLE) {
+            if (any(rt->gl.stencil.texture->usage & TextureUsage::SAMPLEABLE)) {
                 framebufferTexture(stencil, rt, GL_STENCIL_ATTACHMENT);
             } else {
                 framebufferRenderbuffer(rt->gl.stencil.texture, rt, GL_STENCIL_ATTACHMENT);
@@ -1732,18 +1741,24 @@ bool OpenGLDriver::isRenderTargetFormatSupported(TextureFormat format) {
             return GL41_HEADERS;
 
         // Half-float formats, requires extension.
-        case TextureFormat::RGB16F:
-            return ext.EXT_color_buffer_half_float;
-
-        // Float formats from GL_EXT_color_buffer_float, assumed supported.
         case TextureFormat::R16F:
         case TextureFormat::RG16F:
         case TextureFormat::RGBA16F:
+            return ext.EXT_color_buffer_float || ext.EXT_color_buffer_half_float;
+
+        // RGB16F is only supported with EXT_color_buffer_half_float
+        case TextureFormat::RGB16F:
+            return ext.EXT_color_buffer_half_float;
+
+        // Float formats from GL_EXT_color_buffer_float
         case TextureFormat::R32F:
         case TextureFormat::RG32F:
         case TextureFormat::RGBA32F:
+            return ext.EXT_color_buffer_float;
+
+        // RGB_11_11_10 is only supported with some  specific extensions
         case TextureFormat::R11F_G11F_B10F:
-            return true;
+            return ext.EXT_color_buffer_float || ext.APPLE_color_buffer_packed_float;
 
         default:
             return false;
@@ -2224,7 +2239,8 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
 
     mRenderPassTarget = rth;
     mRenderPassParams = params;
-    const uint8_t clearFlags = params.flags.clear;
+    const TargetBufferFlags clearFlags = TargetBufferFlags(params.flags.clear & ~RenderPassFlags::IGNORE_SCISSOR);
+    const uint8_t ignoreScissor = params.flags.clear & RenderPassFlags::IGNORE_SCISSOR;
     TargetBufferFlags discardFlags = params.flags.discardStart;
 
     GLRenderTarget* rt = handle_cast<GLRenderTarget*>(rth);
@@ -2235,7 +2251,7 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
         // ignore it on GL (rather than having to do a runtime check).
         if (GLES31_HEADERS) {
             if (!bugs.disable_invalidate_framebuffer) {
-                std::array<GLenum, 3> attachments; // NOLINT(cppcoreguidelines-pro-type-member-init)
+                std::array<GLenum, 3> attachments; // NOLINT
                 GLsizei attachmentCount = getAttachments(attachments, rt, discardFlags);
                 if (attachmentCount) {
                     glInvalidateFramebuffer(GL_FRAMEBUFFER, attachmentCount, attachments.data());
@@ -2252,8 +2268,7 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
         // everything must appear as though the multi-sample buffer was lost.
         if (ALLOW_REVERSE_MULTISAMPLE_RESOLVE) {
             // We only copy the non msaa buffers that were not discarded or cleared.
-            const TargetBufferFlags discarded = discardFlags |
-                    TargetBufferFlags(clearFlags & TargetBufferFlags::ALL);
+            const TargetBufferFlags discarded = discardFlags | (clearFlags & TargetBufferFlags::ALL);
             resolvePass(ResolveAction::LOAD, rt, discarded);
         } else {
             // However, for now filament specifies that a non multi-sample attachment to a
@@ -2267,7 +2282,7 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
             params.viewport.width, params.viewport.height);
 
     // Use scissor test if not told to ignore, and if the viewport doesn't cover the whole target.
-    const bool respectScissor = !(clearFlags & RenderPassFlags::IGNORE_SCISSOR) &&
+    const bool respectScissor = !(ignoreScissor & RenderPassFlags::IGNORE_SCISSOR) &&
                                 (params.viewport.left != 0 ||
                                     params.viewport.bottom != 0 ||
                                     params.viewport.width != rt->width ||
@@ -2277,10 +2292,10 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
                 params.viewport.width, params.viewport.height);
     }
 
-    if (clearFlags & TargetBufferFlags::ALL) {
-        const bool clearColor = clearFlags & TargetBufferFlags::COLOR;
-        const bool clearDepth = clearFlags & TargetBufferFlags::DEPTH;
-        const bool clearStencil = clearFlags & TargetBufferFlags::STENCIL;
+    if (any(clearFlags & TargetBufferFlags::ALL)) {
+        const bool clearColor   = any(clearFlags & TargetBufferFlags::COLOR);
+        const bool clearDepth   = any(clearFlags & TargetBufferFlags::DEPTH);
+        const bool clearStencil = any(clearFlags & TargetBufferFlags::STENCIL);
         if (respectScissor) {
             enable(GL_SCISSOR_TEST);
         } else {
@@ -2305,7 +2320,7 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     setClearColor(1, 0, 0, 1);
     bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
     disable(GL_SCISSOR_TEST);
-    glClear(getAttachmentBitfield(discardFlags & ~TargetBufferFlags(clearFlags)));
+    glClear(getAttachmentBitfield(discardFlags & ~clearFlags));
 #endif
 }
 
@@ -2394,17 +2409,17 @@ void OpenGLDriver::discardSubRenderTargetBuffers(Handle<HwRenderTarget> rth,
 }
 
 GLsizei OpenGLDriver::getAttachments(std::array<GLenum, 3>& attachments,
-        GLRenderTarget const* rt, uint8_t buffers) const noexcept {
+        GLRenderTarget const* rt, TargetBufferFlags buffers) const noexcept {
     GLsizei attachmentCount = 0;
     // the default framebuffer uses different constants!!!
     const bool defaultFramebuffer = (rt->gl.fbo == 0);
-    if (buffers & TargetBufferFlags::COLOR) {
+    if (any(buffers & TargetBufferFlags::COLOR)) {
         attachments[attachmentCount++] = defaultFramebuffer ? GL_COLOR : GL_COLOR_ATTACHMENT0;
     }
-    if (buffers & TargetBufferFlags::DEPTH) {
+    if (any(buffers & TargetBufferFlags::DEPTH)) {
         attachments[attachmentCount++] = defaultFramebuffer ? GL_DEPTH : GL_DEPTH_ATTACHMENT;
     }
-    if (buffers & TargetBufferFlags::STENCIL) {
+    if (any(buffers & TargetBufferFlags::STENCIL)) {
         attachments[attachmentCount++] = defaultFramebuffer ? GL_STENCIL : GL_STENCIL_ATTACHMENT;
     }
     return attachmentCount;
@@ -2475,16 +2490,15 @@ void OpenGLDriver::setRenderPrimitiveRange(Handle<HwRenderPrimitive> rph,
 }
 
 // Sets up a scissor rectangle that automatically gets clipped against the viewport.
-void OpenGLDriver::setViewportScissor(
-        int32_t left, int32_t bottom, uint32_t width, uint32_t height) {
+void OpenGLDriver::setViewportScissor(Viewport const& viewportScissor) noexcept {
     DEBUG_MARKER()
 
     // In OpenGL, all four scissor parameters are actually signed, so clamp to MAX_INT32.
     const int32_t maxval = std::numeric_limits<int32_t>::max();
-    left = std::min(left, maxval);
-    bottom = std::min(bottom, maxval);
-    width = std::min(width, uint32_t(maxval));
-    height = std::min(height, uint32_t(maxval));
+    int32_t left = std::min(viewportScissor.left, maxval);
+    int32_t bottom = std::min(viewportScissor.bottom, maxval);
+    uint32_t width = std::min(viewportScissor.width, uint32_t(maxval));
+    uint32_t height = std::min(viewportScissor.height, uint32_t(maxval));
     // Compute the intersection of the requested scissor rectangle with the current viewport.
     // Note that the viewport rectangle isn't necessarily equal to the bounds of the current
     // Filament View (e.g., when post-processing is enabled).
@@ -2500,6 +2514,7 @@ void OpenGLDriver::setViewportScissor(
     scissor.z = std::max(0, right - scissor.x);
     scissor.w = std::max(0, top - scissor.y);
     setScissor(scissor.x, scissor.y, scissor.z, scissor.w);
+    enable(GL_SCISSOR_TEST);
 }
 
 /*
@@ -2743,6 +2758,14 @@ void OpenGLDriver::pushGroupMarker(char const* string,  size_t len) {
         glPushGroupMarkerEXT(GLsizei(len ? len : strlen(string)), string);
     }
 #endif
+}
+
+void OpenGLDriver::startCapture(int) {
+
+}
+
+void OpenGLDriver::stopCapture(int) {
+
 }
 
 void OpenGLDriver::popGroupMarker(int) {
@@ -2994,7 +3017,7 @@ void OpenGLDriver::blit(TargetBufferFlags buffers,
 }
 
 void OpenGLDriver::updateTextureLodRange(GLTexture* texture, int8_t targetLevel) noexcept {
-    if (texture && (texture->usage & TextureUsage::SAMPLEABLE)) {
+    if (texture && any(texture->usage & TextureUsage::SAMPLEABLE)) {
         if (targetLevel < texture->gl.baseLevel || targetLevel > texture->gl.maxLevel) {
             bindTexture(MAX_TEXTURE_UNIT_COUNT - 1, texture);
             activeTexture(MAX_TEXTURE_UNIT_COUNT - 1);
@@ -3015,6 +3038,14 @@ void OpenGLDriver::draw(PipelineState state, Handle<HwRenderPrimitive> rph) {
     DEBUG_MARKER()
 
     OpenGLProgram* p = handle_cast<OpenGLProgram*>(state.program);
+
+    // If the material debugger is enabled, avoid fatal (or cascading) errors and that can occur
+    // during the draw call when the program is invalid. The shader compile error has already been
+    // dumped to the console at this point, so it's fine to simply return early.
+    if (FILAMENT_ENABLE_MATDBG && UTILS_UNLIKELY(!p->isValid())) {
+        return;
+    }
+
     useProgram(p);
 
     const GLRenderPrimitive* rp = handle_cast<const GLRenderPrimitive *>(rph);
@@ -3024,7 +3055,7 @@ void OpenGLDriver::draw(PipelineState state, Handle<HwRenderPrimitive> rph) {
 
     polygonOffset(state.polygonOffset.slope, state.polygonOffset.constant);
 
-    enable(GL_SCISSOR_TEST);
+    setViewportScissor(state.scissor);
 
     glDrawRangeElements(GLenum(rp->type), rp->minIndex, rp->maxIndex, rp->count,
             rp->gl.indicesType, reinterpret_cast<const void*>(rp->offset));

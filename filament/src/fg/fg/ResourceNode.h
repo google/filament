@@ -24,10 +24,10 @@ namespace filament {
 namespace fg {
 
 struct PassNode;
-struct TextureResource;
+class ResourceEntryBase;
 
 struct ResourceNode { // 24
-    ResourceNode(TextureResource* resource, uint8_t version) noexcept
+    ResourceNode(ResourceEntryBase* resource, uint8_t version) noexcept
             : resource(resource), version(version) {}
 
     ResourceNode(ResourceNode const&) = delete;
@@ -35,13 +35,9 @@ struct ResourceNode { // 24
     ResourceNode& operator=(ResourceNode const&) = delete;
 
     // updated during compile()
-    TextureResource* resource;             // actual (aliased) resource data
+    ResourceEntryBase* resource;    // actual (aliased) resource data
     PassNode* writer = nullptr;     // writer to this node
     uint32_t readerCount = 0;       // # of passes reading from this resource
-
-    // updated by builder
-    static constexpr uint16_t UNINITIALIZED = std::numeric_limits<uint16_t>::max();
-    uint16_t renderTargetIndex = UNINITIALIZED;      // used to retrieve the RT infos
 
     // constants
     const uint8_t version;          // version of the resource when the node was created

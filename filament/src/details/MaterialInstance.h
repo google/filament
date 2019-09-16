@@ -59,8 +59,6 @@ public:
         if (mSbHandle) {
             driver.bindSamplers(BindingPoints::PER_MATERIAL_INSTANCE, mSbHandle);
         }
-        driver.setViewportScissor(mScissorRect.left, mScissorRect.bottom,
-                mScissorRect.width, mScissorRect.height);
     }
 
     template <typename T>
@@ -95,6 +93,8 @@ public:
                 (uint32_t)std::numeric_limits<int32_t>::max()
         };
     }
+
+    backend::Viewport const& getScissor() const noexcept { return mScissorRect; }
 
     void setPolygonOffset(float scale, float constant) noexcept {
         mPolygonOffset = { scale, constant };

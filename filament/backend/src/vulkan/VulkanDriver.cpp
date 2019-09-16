@@ -709,8 +709,8 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth,
         .colorFormat = color.format,
         .depthFormat = depth.format,
         .flags.clear         = params.flags.clear,
-        .flags.discardStart  = params.flags.discardStart,
-        .flags.discardEnd    = params.flags.discardEnd,
+        .flags.discardStart  = (uint8_t)params.flags.discardStart,
+        .flags.discardEnd    = (uint8_t)params.flags.discardEnd,
         .flags.dependencies  = params.flags.dependencies
     });
     mBinder.bindRenderPass(renderPass);
@@ -806,25 +806,6 @@ void VulkanDriver::setRenderPrimitiveRange(Handle<HwRenderPrimitive> rph,
     primitive.count = count;
     primitive.minIndex = minIndex;
     primitive.maxIndex = maxIndex > minIndex ? maxIndex : primitive.maxVertexCount - 1;
-}
-
-void VulkanDriver::setViewportScissor(
-        int32_t left, int32_t bottom, uint32_t width, uint32_t height) {
-    assert(mContext.currentCommands && mCurrentRenderTarget);
-    // Compute the intersection of the requested scissor rectangle with the current viewport.
-    int32_t x = std::max(left, (int32_t) mContext.viewport.x);
-    int32_t y = std::max(bottom, (int32_t) mContext.viewport.y);
-    int32_t right = std::min(left + (int32_t) width,
-            (int32_t) (mContext.viewport.x + mContext.viewport.width));
-    int32_t top = std::min(bottom + (int32_t) height,
-            (int32_t) (mContext.viewport.y + mContext.viewport.height));
-    VkRect2D scissor {
-        .extent = { (uint32_t) right - x, (uint32_t) top - y },
-        .offset = { std::max(0, x), std::max(0, y) }
-    };
-
-    mCurrentRenderTarget->transformClientRectToPlatform(&scissor);
-    vkCmdSetScissor(mContext.currentCommands->cmdbuffer, 0, 1, &scissor);
 }
 
 void VulkanDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> readSch) {
@@ -927,6 +908,14 @@ void VulkanDriver::popGroupMarker(int) {
     }
 }
 
+void VulkanDriver::startCapture(int) {
+
+}
+
+void VulkanDriver::stopCapture(int) {
+
+}
+
 void VulkanDriver::readPixels(Handle<HwRenderTarget> src,
         uint32_t x, uint32_t y, uint32_t width, uint32_t height,
         PixelBufferDescriptor&& p) {
@@ -1011,6 +1000,7 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
     Handle<HwProgram> programHandle = pipelineState.program;
     RasterState rasterState = pipelineState.rasterState;
     PolygonOffset depthOffset = pipelineState.polygonOffset;
+    const Viewport& viewportScissor = pipelineState.scissor;
 
     auto* program = handle_cast<VulkanProgram>(mHandleMap, programHandle);
     mDisposer.acquire(program, commands->resources);
@@ -1106,6 +1096,21 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
             });
         }
     }
+
+    // Set scissoring.
+    // Compute the intersection of the requested scissor rectangle with the current viewport.
+    const int32_t x = std::max(viewportScissor.left, (int32_t)mContext.viewport.x);
+    const int32_t y = std::max(viewportScissor.bottom, (int32_t)mContext.viewport.y);
+    const int32_t right = std::min(viewportScissor.left + (int32_t)viewportScissor.width,
+            (int32_t)(mContext.viewport.x + mContext.viewport.width));
+    const int32_t top = std::min(viewportScissor.bottom + (int32_t)viewportScissor.height,
+            (int32_t)(mContext.viewport.y + mContext.viewport.height));
+    VkRect2D scissor{
+            .extent = { (uint32_t)right - x, (uint32_t)top - y },
+            .offset = { std::max(0, x), std::max(0, y) }
+    };
+    rt->transformClientRectToPlatform(&scissor);
+    vkCmdSetScissor(cmdbuffer, 0, 1, &scissor);
 
     // Bind new descriptor sets if they need to change.
     VkDescriptorSet descriptors[2];
