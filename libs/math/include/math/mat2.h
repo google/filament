@@ -362,14 +362,14 @@ operator*(const TVec2<U>& lhs, const TMat22<T>& rhs) {
 
 // matrix * scalar, result is a matrix of the same type than the input matrix
 template<typename T, typename U>
-constexpr typename std::enable_if<std::is_arithmetic<U>::value, TMat22<T>>::type MATH_PURE
+constexpr std::enable_if_t<std::is_arithmetic<U>::value, TMat22<T>> MATH_PURE
 operator*(TMat22<T> lhs, U rhs) {
     return lhs *= rhs;
 }
 
 // scalar * matrix, result is a matrix of the same type than the input matrix
 template<typename T, typename U>
-constexpr typename std::enable_if<std::is_arithmetic<U>::value, TMat22<T>>::type MATH_PURE
+constexpr std::enable_if_t<std::is_arithmetic<U>::value, TMat22<T>> MATH_PURE
 operator*(U lhs, const TMat22<T>& rhs) {
     return rhs * lhs;
 }
