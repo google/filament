@@ -50,19 +50,22 @@ if (WIN32)
         set(CRT_FLAGS_DEBUG "/MDd")
     endif()
 
-    # TODO: Figure out why pdb generation messes with incremental compilaton.
-    # IN RELEASE_WITH_DEBUG_INFO, generate debug info in .obj, no in pdb.
-    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} ${CRT_FLAGS_RELEASE} /Z7")
-    set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} ${CRT_FLAGS_RELEASE} /Z7")
+    if (NOT MSVC)
+        # TODO: Figure out why pdb generation messes with incremental compilaton.
+        # IN RELEASE_WITH_DEBUG_INFO, generate debug info in .obj, no in pdb.
+        set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} ${CRT_FLAGS_RELEASE} /Z7")
+        set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} ${CRT_FLAGS_RELEASE} /Z7")
+
+        # In DEBUG, avoid generating a PDB file which seems to mess with incremental compilation.
+        # Instead generate debug info directly inside obj files.
+        set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${CRT_FLAGS_DEBUG} /Z7")
+        set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${CRT_FLAGS_DEBUG} /Z7")
+    endif()
 
     # In RELEASE, also generate PDBs.
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${CRT_FLAGS_RELEASE} /Zi")
     set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${CRT_FLAGS_RELEASE} /Zi")
 
-    # In DEBUG, avoid generating a PDB file which seems to mess with incremental compilation.
-    # Instead generate debug info directly inside obj files.
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${CRT_FLAGS_DEBUG} /Z7")
-    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${CRT_FLAGS_DEBUG} /Z7")
 endif()
 
 # ==================================================================================================
@@ -113,7 +116,7 @@ if (CMAKE_C_COMPILER_ID MATCHES "Clang")
     if (CMAKE_C_COMPILER_VERSION VERSION_LESS MIN_CLANG_VERSION)
         message(FATAL_ERROR "Detected C compiler Clang ${CMAKE_C_COMPILER_VERSION} < ${MIN_CLANG_VERSION}")
     endif()
-else()
+elseif(NOT MSVC)
     message(FATAL_ERROR "Detected C compiler ${CMAKE_C_COMPILER_ID} is unsupported")
 endif()
 
@@ -121,7 +124,7 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS MIN_CLANG_VERSION)
         message(FATAL_ERROR "Detected CXX compiler Clang ${CMAKE_CXX_COMPILER_VERSION} < ${MIN_CLANG_VERSION}")
     endif()
-else()
+elseif(NOT MSVC)
     message(FATAL_ERROR "Detected CXX compiler ${CMAKE_CXX_COMPILER_ID} is unsupported")
 endif()
 
@@ -152,7 +155,12 @@ if (WIN32)
     set(CXX_STANDARD "/std:c++14")
 endif()
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_STANDARD} -fstrict-aliasing -Wno-unknown-pragmas -Wno-unused-function")
+if (MSVC)
+    set(CXX_STANDARD "/std:c++latest")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_STANDARD} /W0")
+else()
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_STANDARD} -fstrict-aliasing -Wno-unknown-pragmas -Wno-unused-function")
+endif()
 
 if (USE_EXTERNAL_GLES3)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_EXTERNAL_GLES3")
@@ -173,7 +181,7 @@ if (CYGWIN)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions -fno-rtti")
 endif()
 
-if (CLANG_CL)
+if (CLANG_CL OR MSVC)
     # Since the "secure" replacements that MSVC suggests are not portable, disable
     # the deprecation warnings. Also disable warnings about use of POSIX functions (i.e. "unlink").
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE")
@@ -189,7 +197,7 @@ endif()
 # ==================================================================================================
 # Release compiler flags
 # ==================================================================================================
-if (NOT CLANG_CL)
+if (NOT CLANG_CL AND NOT MSVC)
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fomit-frame-pointer -ffunction-sections -fdata-sections")
 endif()
 
@@ -207,7 +215,7 @@ endif()
 #  -fsanitize=address causes a crash with assimp, which we can't explain for now
 #set(EXTRA_SANITIZE_OPTIONS "-fsanitize=undefined -fsanitize=address")
 # clang-cl.exe on Windows does not support -fstack-protector.
-if (NOT CLANG_CL)
+if (NOT CLANG_CL AND NOT MSVC)
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fstack-protector")
 endif()
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${EXTRA_SANITIZE_OPTIONS}")
@@ -324,6 +332,25 @@ endif()
 # ==================================================================================================
 # Functions
 # ==================================================================================================
+if (MSVC)
+## The MSVC compiler has a limitation on litteral string length which is reached when all the 
+## licenses are concanated together into a large string... so split them into multiple strings.
+function(list_licenses OUTPUT MODULES)
+    file(WRITE ${OUTPUT} " R\"FILAMENT__(")
+    set(_MODULES ${MODULES} ${ARGN})
+    foreach(module ${_MODULES})
+        set(license_path "../../third_party/${module}/LICENSE")
+        get_filename_component(fullname "${license_path}" ABSOLUTE)
+        file(APPEND ${OUTPUT} ")FILAMENT__\", \nR\"FILAMENT__(License and copyrights for ${module}:\n\n)FILAMENT__\", \nR\"FILAMENT__(")
+        file(READ ${license_path} license_long)
+        string(REPLACE "\n" ")FILAMENT__\", \nR\"FILAMENT__(" license ${license_long})
+        file(APPEND ${OUTPUT} ${license})
+        file(APPEND ${OUTPUT} ")FILAMENT__\", \nR\"FILAMENT__(\n\n)FILAMENT__\", \"")
+    endforeach()
+    file(APPEND ${OUTPUT} "\"")
+    #file(APPEND ${OUTPUT} ")FILAMENT__\"\n")
+endfunction(list_licenses)
+else()
 function(list_licenses OUTPUT MODULES)
     set(CONTENT)
     set(_MODULES ${MODULES} ${ARGN})
@@ -337,7 +364,7 @@ function(list_licenses OUTPUT MODULES)
     endforeach()
     configure_file(${FILAMENT}/build/licenses.inc.in ${OUTPUT})
 endfunction(list_licenses)
-
+endif()
 # ==================================================================================================
 # Configuration for CMAKE_CROSSCOMPILING.
 # ==================================================================================================

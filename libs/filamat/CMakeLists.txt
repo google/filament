@@ -98,7 +98,7 @@ target_include_directories(${TARGET} PRIVATE ${spirv-tools_SOURCE_DIR}/include)
 # glslang libraries have circular dependencies. To make sure the proper object are part of the link
 # we need to force archive re-scan on new symbol dependencies via start/end-group.
 # Read more about this here https://eli.thegreenplace.net/2013/07/09/library-order-in-static-linking
-if (APPLE)
+if (APPLE OR MSVC)
     target_link_libraries(${TARGET} glslang SPIRV SPVRemapper SPIRV-Tools-opt spirv-cross-glsl)
 else()
     target_link_libraries(${TARGET}
@@ -124,6 +124,10 @@ target_compile_options(filamat_lite PRIVATE
 )
 
 target_compile_definitions(filamat_lite PRIVATE FILAMAT_LITE)
+
+if (MSVC)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W0 /Zc:__cplusplus")
+endif()
 
 # ==================================================================================================
 # Installation

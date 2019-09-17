@@ -233,9 +233,13 @@ list(APPEND APP_LIBS sample-app)
 # Compiler flags
 # ==================================================================================================
 
-set(COMPILER_FLAGS
-        -Wno-extern-c-compat
-        $<$<NOT:$<PLATFORM_ID:Linux>>:-Wno-address-of-packed-member>)
+if (MSVC)
+    set(COMPILER_FLAGS /W0 /Zc:__cplusplus)
+else()
+    set(COMPILER_FLAGS
+            -Wno-extern-c-compat
+            $<$<NOT:$<PLATFORM_ID:Linux>>:-Wno-address-of-packed-member>)
+endif()
 
 if (MSVC OR CLANG_CL)
     set(COMPILER_FLAGS ${COMPILER_FLAGS} $<$<CONFIG:Release>:/fp:fast>)
