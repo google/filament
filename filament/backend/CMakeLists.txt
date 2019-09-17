@@ -236,13 +236,13 @@ set(LINUX_COMPILER_FLAGS
 )
 
 if (NOT MSVC)
-set(FILAMENT_WARNINGS
-        -Wextra -Wno-unused-parameter
-        -Wextra-semi -Wnewline-eof -Wdeprecated -Wundef
-        -Wgnu-conditional-omitted-operand
-        -Wweak-vtables -Wnon-virtual-dtor -Wclass-varargs -Wimplicit-fallthrough
-        -Wover-aligned
-)
+    set(FILAMENT_WARNINGS
+            -Wextra -Wno-unused-parameter
+            -Wextra-semi -Wnewline-eof -Wdeprecated -Wundef
+            -Wgnu-conditional-omitted-operand
+            -Wweak-vtables -Wnon-virtual-dtor -Wclass-varargs -Wimplicit-fallthrough
+            -Wover-aligned
+    )
 else()
     set(FILAMENT_WARNINGS /W0)
 endif()
