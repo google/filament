@@ -40,15 +40,15 @@ public:
     }
 
     // Returns the total storage size, assuming that each blob is prefixed with a 64-bit size.
-    constexpr size_t getSize() const noexcept {
+    /* constexpr */ size_t getSize() const noexcept {
         return mStorageSize + 8 * getBlobCount();
     }
 
-    constexpr bool isEmpty() const noexcept {
+    /* constexpr */ bool isEmpty() const noexcept {
         return mBlobs.size() == 0;
     }
 
-    const std::string& getBlob(size_t index) const noexcept {
+    /* constexpr */ const std::string& getBlob(size_t index) const noexcept {
         assert(index < mBlobs.size());
         return mBlobs[index];
     }

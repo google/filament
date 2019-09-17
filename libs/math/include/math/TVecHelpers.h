@@ -104,6 +104,22 @@ public:
         return lhs;
     }
 
+    constexpr VECTOR<T>& operator+=(T s) {
+        VECTOR<T>& lhs = static_cast<VECTOR<T>&>(*this);
+        for (size_t i = 0; i < lhs.size(); i++) {
+            lhs[i] += s;
+        }
+        return lhs;
+    }
+
+    constexpr VECTOR<T>& operator-=(T s) {
+        VECTOR<T>& lhs = static_cast<VECTOR<T>&>(*this);
+        for (size_t i = 0; i < lhs.size(); i++) {
+            lhs[i] -= s;
+        }
+        return lhs;
+    }
+
     /*
      * NOTE: the functions below ARE NOT member methods. They are friend functions
      * with they definition inlined with their declaration. This makes these
@@ -141,6 +157,14 @@ public:
     friend inline constexpr VECTOR<T> MATH_PURE operator-(VECTOR<T> lv, const VECTOR<T>& rv) {
         // don't pass lv by reference because we need a copy anyways
         return lv -= rv;
+    }
+    friend inline constexpr VECTOR<T> MATH_PURE operator +(VECTOR<T> lv, T s) {
+        // don't pass lv by reference because we need a copy anyways
+        return lv += s;
+    }
+    friend inline constexpr VECTOR<T> MATH_PURE operator -(VECTOR<T> lv, T s) {
+        // don't pass lv by reference because we need a copy anyways
+        return lv -= s;
     }
 };
 
@@ -189,6 +213,22 @@ public:
         return lhs;
     }
 
+    constexpr VECTOR<T>& operator*=(T s) {
+        VECTOR<T>& lhs = static_cast<VECTOR<T>&>(*this);
+        for (size_t i = 0; i < lhs.size(); i++) {
+            lhs[i] *= s;
+        }
+        return lhs;
+    }
+
+    constexpr VECTOR<T>& operator/=(T s) {
+        VECTOR<T>& lhs = static_cast<VECTOR<T>&>(*this);
+        for (size_t i = 0; i < lhs.size(); i++) {
+            lhs[i] /= s;
+        }
+        return lhs;
+    }
+
     /*
      * NOTE: the functions below ARE NOT member methods. They are friend functions
      * with they definition inlined with their declaration. This makes these
@@ -226,6 +266,16 @@ public:
     friend inline constexpr VECTOR<T> MATH_PURE operator/(VECTOR<T> lv, const VECTOR<T>& rv) {
         // don't pass lv by reference because we need a copy anyways
         return lv /= rv;
+    }
+
+    friend inline constexpr VECTOR<T> MATH_PURE operator*(VECTOR<T> lv, T s) {
+        // don't pass lv by reference because we need a copy anyways
+        return lv *= s;
+    }
+
+    friend inline constexpr VECTOR<T> MATH_PURE operator/(VECTOR<T> lv, T s) {
+        // don't pass lv by reference because we need a copy anyways
+        return lv /= s;
     }
 };
 
@@ -402,7 +452,7 @@ public:
     }
 
     friend inline VECTOR<T> MATH_PURE normalize(const VECTOR<T>& lv) {
-        return lv * (T(1) / length(lv));
+        return lv * VECTOR<T>(T(1) / length(lv));
     }
 
     friend inline VECTOR<T> MATH_PURE rcp(VECTOR<T> v) {

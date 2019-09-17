@@ -84,10 +84,16 @@ public:
 
     // default constructor
     constexpr TVec4() = default;
+#if 0
+    constexpr TVec4(const TVec4&) = default;
+
+    template <typename... A> 
+    constexpr TVec4(A... as) : v{as...} {} 
+#endif
 
     // handles implicit conversion to a tvec4. must not be explicit.
     template<typename A>
-    constexpr TVec4(A v) : v{ T(v), T(v), T(v), T(v) } {}
+    constexpr explicit TVec4(A v) : v{ T(v), T(v), T(v), T(v) } {}
 
     template<typename A, typename B, typename C, typename D>
     constexpr TVec4(A x, B y, C z, D w) : v{ T(x), T(y), T(z), T(w) } {}

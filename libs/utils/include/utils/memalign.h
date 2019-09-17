@@ -99,6 +99,7 @@ public:
         aligned_free(p);
     }
 
+	#ifndef _MSC_VER
     // stateless allocators are always equal
     template<typename T, typename U>
     friend bool
@@ -111,6 +112,7 @@ public:
     operator!=(const STLAlignedAllocator<T>& rhs, const STLAlignedAllocator<U>& lhs) {
         return false;
     }
+	#endif
 };
 
 } // namespace utils

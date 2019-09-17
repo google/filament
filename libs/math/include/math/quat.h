@@ -98,7 +98,7 @@ public:
 
     // handles implicit conversion to a tvec4. must not be explicit.
     template<typename A>
-    constexpr TQuaternion(A w) : x(0), y(0), z(0), w(w) {
+    constexpr explicit TQuaternion(A w) : x(0), y(0), z(0), w(w) {
         static_assert(std::is_arithmetic<A>::value, "requires arithmetic type");
     }
 

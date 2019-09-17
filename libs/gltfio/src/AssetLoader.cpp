@@ -458,9 +458,9 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
             .indexCount(vertexCount)
             .bufferType(IndexBuffer::IndexType::UINT)
             .build(*mEngine);
-        mResult->mBufferBindings.emplace_back(BufferBinding {
-            .indexBuffer = indices,
+        mResult->mBufferBindings.emplace_back(BufferBinding{
             .size = uint32_t(vertexCount * sizeof(uint32_t)),
+            .indexBuffer = indices,
             .generateTrivialIndices = true
         });
     }
@@ -790,14 +790,14 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
         .doubleSided = (bool) inputMat->double_sided,
         .unlit = (bool) inputMat->unlit,
         .hasVertexColors = vertexColor,
-        .hasBaseColorTexture = baseColorTexture.texture,
-        .hasNormalTexture = inputMat->normal_texture.texture,
-        .hasOcclusionTexture = inputMat->occlusion_texture.texture,
-        .hasEmissiveTexture = inputMat->emissive_texture.texture,
+        .hasBaseColorTexture = !!baseColorTexture.texture,
+        .hasNormalTexture = !!inputMat->normal_texture.texture,
+        .hasOcclusionTexture = !!inputMat->occlusion_texture.texture,
+        .hasEmissiveTexture = !!inputMat->emissive_texture.texture,
         .useSpecularGlossiness = false,
         .alphaMode = AlphaMode::OPAQUE,
         .enableDiagnostics = mDiagnosticsEnabled,
-        .hasMetallicRoughnessTexture = metallicRoughnessTexture.texture,
+        .hasMetallicRoughnessTexture = !!metallicRoughnessTexture.texture,
         .metallicRoughnessUV = (uint8_t) metallicRoughnessTexture.texcoord,
         .baseColorUV = (uint8_t) baseColorTexture.texcoord,
         .emissiveUV = (uint8_t) inputMat->emissive_texture.texcoord,
