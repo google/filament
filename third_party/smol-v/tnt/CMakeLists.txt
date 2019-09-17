@@ -17,7 +17,7 @@ target_compile_options(${TARGET} PRIVATE
 )
 
 if (NOT MSVC)
-    target_compile_options(${TARGET} PRIVATE Wno-tautological-unsigned-enum-zero-compare)
+    target_compile_options(${TARGET} PRIVATE -Wno-tautological-unsigned-enum-zero-compare)
 endif()
 
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
