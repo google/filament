@@ -17,6 +17,7 @@
 #include "OpenGLBlitter.h"
 
 #include "GLUtils.h"
+#include "OpenGLContext.h"
 
 #include <utils/compiler.h>
 #include <utils/Log.h>
@@ -167,7 +168,7 @@ void OpenGLBlitter::State::save() noexcept {
     // we're using tmu 0 as the source texture
     glActiveTexture(GL_TEXTURE0 + tmu);
 
-    // save that depends on glActiveTexture
+    // save what depends on glActiveTexture
     glGetIntegerv(GL_SAMPLER_BINDING, &sampler);
     glGetIntegerv(GL_TEXTURE_BINDING_2D, &texture);
 

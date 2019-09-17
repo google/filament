@@ -19,7 +19,7 @@
 
 #include "private/backend/Driver.h"
 #include "DriverBase.h"
-#include "GLUtils.h"
+#include "OpenGLContext.h"
 
 #include <utils/compiler.h>
 #include <utils/Allocator.h>
@@ -92,12 +92,7 @@ public:
 
     struct GLRenderPrimitive : public backend::HwRenderPrimitive {
         using HwRenderPrimitive::HwRenderPrimitive;
-        struct {
-            GLuint vao = 0;
-            GLenum indicesType = GL_UNSIGNED_INT;
-            GLuint elementArray = 0;
-            utils::bitset32 vertexAttribArray;
-        } gl;
+        OpenGLContext::RenderPrimitive gl;
     };
 
     struct GLTexture : public backend::HwTexture {
@@ -181,14 +176,15 @@ public:
         } gl;
     };
 
-    void useProgram(GLuint program) noexcept;
-
     OpenGLDriver(OpenGLDriver const&) = delete;
     OpenGLDriver& operator=(OpenGLDriver const&) = delete;
 
-    constexpr static inline size_t getIndexForTextureTarget(GLuint target) noexcept;
 
 private:
+    OpenGLContext mContext;
+
+    OpenGLContext& getContext() noexcept { return mContext; }
+
     backend::ShaderModel getShaderModel() const noexcept final;
 
     /*
@@ -273,8 +269,6 @@ private:
         return handle_cast<Dp>(const_cast<backend::Handle<B>&>(handle));
     }
 
-    typedef math::details::TVec4<GLint> vec4gli;
-
     friend class OpenGLProgram;
 
     /* Extension management... */
@@ -282,13 +276,6 @@ private:
     using MustCastToRightType = void (*)();
     using GetProcAddressType = MustCastToRightType (*)(const char* name);
     GetProcAddressType getProcAddress = nullptr;
-
-    // this is chosen to minimize code size
-    using ExtentionSet = std::set<utils::StaticString>;
-    static bool hasExtension(ExtentionSet const& exts, utils::StaticString ext) noexcept;
-    void initExtensionsGLES(GLint major, GLint minor, ExtentionSet const& extensionsMap);
-    void initExtensionsGL(GLint major, GLint minor, ExtentionSet const& extensionsMap);
-
 
     /* Misc... */
 
@@ -325,46 +312,8 @@ private:
 
     /* State tracking GL wrappers... */
 
-    constexpr inline size_t getIndexForCap(GLenum cap) noexcept;
-    constexpr static inline size_t getIndexForBufferTarget(GLenum target) noexcept;
-
-    inline void pixelStore(GLenum, GLint) noexcept;
-    inline void activeTexture(GLuint unit) noexcept;
            void bindTexture(GLuint unit, GLTexture const* t) noexcept;
-           void bindTexture(GLuint unit, GLuint target, GLuint texId, size_t targetIndex) noexcept;
-
-    inline void unbindTexture(GLenum target, GLuint id) noexcept;
-    inline void bindSampler(GLuint unit, GLuint sampler) noexcept;
-    inline void unbindSampler(GLuint sampler) noexcept;
-
     inline void useProgram(OpenGLProgram* p) noexcept;
-
-    inline void bindBuffer(GLenum target, GLuint buffer) noexcept;
-    inline void bindBufferRange(GLenum target, GLuint index, GLuint buffer,
-            GLintptr offset, GLsizeiptr size) noexcept;
-
-    inline void bindFramebuffer(GLenum target, GLuint buffer) noexcept;
-
-    inline void bindVertexArray(GLRenderPrimitive const* vao) noexcept;
-    inline void enableVertexAttribArray(GLuint index) noexcept;
-    inline void disableVertexAttribArray(GLuint index) noexcept;
-    inline void enable(GLenum cap) noexcept;
-    inline void disable(GLenum cap) noexcept;
-    inline void frontFace(GLenum mode) noexcept;
-    inline void cullFace(GLenum mode) noexcept;
-    inline void blendEquation(GLenum modeRGB, GLenum modeA) noexcept;
-    inline void blendFunction(GLenum srcRGB, GLenum srcA, GLenum dstRGB, GLenum dstA) noexcept;
-    inline void colorMask(GLboolean flag) noexcept;
-    inline void depthMask(GLboolean flag) noexcept;
-    inline void depthFunc(GLenum func) noexcept;
-    inline void polygonOffset(GLfloat factor, GLfloat units) noexcept;
-
-    inline void setScissor(GLint left, GLint bottom, GLsizei width, GLsizei height) noexcept;
-    inline void setViewport(GLint left, GLint bottom, GLsizei width, GLsizei height) noexcept;
-
-    inline void setClearColor(GLfloat r, GLfloat g, GLfloat b, GLfloat a) noexcept;
-    inline void setClearDepth(GLfloat depth) noexcept;
-    inline void setClearStencil(GLint stencil) noexcept;
 
     enum class ResolveAction { LOAD, STORE };
     void resolvePass(ResolveAction action, GLRenderTarget const* rt,
@@ -387,113 +336,7 @@ private:
     GLsizei getAttachments(std::array<GLenum, 3>& attachments,
             GLRenderTarget const* rt, backend::TargetBufferFlags buffers) const noexcept;
 
-    static constexpr const size_t MAX_TEXTURE_UNIT_COUNT = 16;   // All mobile GPUs as of 2016
-    static constexpr const size_t MAX_BUFFER_BINDINGS = 32;
-
-    GLRenderPrimitive mDefaultVAO;
-
-    template <typename T, typename F>
-    inline void update_state(T& state, T const& expected, F functor, bool force = false) noexcept {
-        if (UTILS_UNLIKELY(force || state != expected)) {
-            state = expected;
-            functor();
-        }
-    }
-
-    // Try to keep the State structure sorted by data-access patterns
-    struct State {
-        GLuint draw_fbo = 0;
-        GLuint read_fbo = 0;
-
-        struct {
-            GLuint use = 0;
-        } program;
-
-        struct {
-            GLRenderPrimitive* p = nullptr;
-        } vao;
-
-        struct {
-            GLenum frontFace            = GL_CCW;
-            GLenum cullFace             = GL_BACK;
-            GLenum blendEquationRGB     = GL_FUNC_ADD;
-            GLenum blendEquationA       = GL_FUNC_ADD;
-            GLenum blendFunctionSrcRGB  = GL_ONE;
-            GLenum blendFunctionSrcA    = GL_ONE;
-            GLenum blendFunctionDstRGB  = GL_ZERO;
-            GLenum blendFunctionDstA    = GL_ZERO;
-            GLboolean colorMask         = GL_TRUE;
-            GLboolean depthMask         = GL_TRUE;
-            GLenum depthFunc            = GL_LESS;
-        } raster;
-
-        struct PolygonOffset {
-            GLfloat factor = 0;
-            GLfloat units = 0;
-            bool operator != (PolygonOffset const& rhs) noexcept {
-                return factor != rhs.factor || units != rhs.units;
-            }
-        } polygonOffset;
-
-        struct {
-            utils::bitset32 caps;
-        } enables;
-
-        struct {
-            struct {
-                struct {
-                    GLuint name = 0;
-                    GLintptr offset = 0;
-                    GLsizeiptr size = 0;
-                } buffers[MAX_BUFFER_BINDINGS];
-            } targets[2];   // there are only 2 indexed buffer target (uniform and transform feedback)
-            GLuint genericBinding[8] = { 0 };
-        } buffers;
-
-        struct {
-            GLuint active = 0;      // zero-based
-            struct {
-                GLuint sampler = 0;
-                struct {
-                    GLuint texture_id = 0;
-                } targets[5];
-            } units[MAX_TEXTURE_UNIT_COUNT];
-        } textures;
-
-        struct {
-            GLint row_length = 0;
-            GLint alignment = 4;
-            GLint skip_pixels = 0;
-            GLint skip_row = 0;
-        } unpack;
-
-        struct {
-            GLint row_length = 0;
-            GLint alignment = 4;
-            GLint skip_pixels = 0;
-            GLint skip_row = 0;
-        } pack;
-
-        struct {
-            vec4gli scissor { 0 };
-            vec4gli viewport { 0 };
-        } window;
-
-        struct {
-            math::float4 color = {};
-            GLfloat depth = 1.0f;
-            GLint stencil = 0;
-        } clears;
-
-    } state;
-
-    static constexpr const size_t TEXTURE_TARGET_COUNT =
-            sizeof(state.textures.units[0].targets) / sizeof(state.textures.units[0].targets[0]);
-
     backend::RasterState mRasterState;
-
-    GLfloat mMaxAnisotropy = 0.0f;
-    backend::ShaderModel mShaderModel;
 
     // state required to represent the current render pass
     backend::Handle<backend::HwRenderTarget> mRenderPassTarget;
@@ -523,56 +366,6 @@ private:
     mutable tsl::robin_map<uint32_t, GLuint> mSamplerMap;
     mutable std::vector<GLTexture*> mExternalStreams;
 
-    // glGet*() values
-    struct {
-        GLint max_renderbuffer_size = 0;
-        GLint max_uniform_block_size = 0;
-        GLint uniform_buffer_offset_alignment = 256;
-    } gets;
-
-    // features supported by this version of GL or GLES
-    struct {
-        bool multisample_texture = false;
-    } features;
-
-    // supported extensions detected at runtime
-    struct {
-        bool texture_compression_s3tc = false;
-        bool texture_compression_etc2 = false;
-        bool texture_filter_anisotropic = false;
-        bool QCOM_tiled_rendering = false;
-        bool OES_EGL_image_external_essl3 = false;
-        bool EXT_debug_marker = false;
-        bool EXT_color_buffer_half_float = false;
-        bool EXT_color_buffer_float = false;
-        bool APPLE_color_buffer_packed_float = false;
-        bool EXT_multisampled_render_to_texture = false;
-    } ext;
-
-    struct {
-        // Some drivers have issues with UBOs in the fragment shader when
-        // glFlush() is called between draw calls.
-        bool disable_glFlush = false;
-
-        // Some drivers seem to not store the GL_ELEMENT_ARRAY_BUFFER binding
-        // in the VAO state.
-        bool vao_doesnt_store_element_array_buffer_binding = false;
-
-        // On some drivers, glClear() cancels glInvalidateFrameBuffer() which results
-        // in extra GPU memory loads.
-        bool clears_hurt_performance = false;
-
-        // Some drivers have gl state issues when drawing from shared contexts
-        bool disable_shared_context_draws = false;
-
-        // Some drivers require the GL_TEXTURE_EXTERNAL_OES target to be bound when
-        // the texture image changes, even if it's already bound to that texture
-        bool texture_external_needs_rebind = false;
-
-        // Some web browsers seem to immediately clear the default framebuffer when calling
-        // glInvalidateFramebuffer with WebGL 2.0
-        bool disable_invalidate_framebuffer = false;
-    } bugs;
 
     void attachStream(GLTexture* t, GLStream* stream) noexcept;
     void detachStream(GLTexture* t) noexcept;
@@ -588,75 +381,6 @@ private:
 
 // ------------------------------------------------------------------------------------------------
 
-constexpr size_t OpenGLDriver::getIndexForTextureTarget(GLuint target) noexcept {
-    switch (target) {
-        case GL_TEXTURE_2D:             return 0;
-        case GL_TEXTURE_2D_ARRAY:       return 1;
-        case GL_TEXTURE_CUBE_MAP:       return 2;
-        case GL_TEXTURE_2D_MULTISAMPLE: return 3;
-        case GL_TEXTURE_EXTERNAL_OES:   return 4;
-        default:                        return 0;
-    }
-}
-
-constexpr size_t OpenGLDriver::getIndexForCap(GLenum cap) noexcept {
-    size_t index = 0;
-    switch (cap) {
-        case GL_BLEND:                          index =  0; break;
-        case GL_CULL_FACE:                      index =  1; break;
-        case GL_SCISSOR_TEST:                   index =  2; break;
-        case GL_DEPTH_TEST:                     index =  3; break;
-        case GL_STENCIL_TEST:                   index =  4; break;
-        case GL_DITHER:                         index =  5; break;
-        case GL_SAMPLE_ALPHA_TO_COVERAGE:       index =  6; break;
-        case GL_SAMPLE_COVERAGE:                index =  7; break;
-        case GL_POLYGON_OFFSET_FILL:            index =  8; break;
-        case GL_PRIMITIVE_RESTART_FIXED_INDEX:  index =  9; break;
-        case GL_RASTERIZER_DISCARD:             index = 10; break;
-#ifdef GL_ARB_seamless_cube_map
-        case GL_TEXTURE_CUBE_MAP_SEAMLESS:      index = 11; break;
-#endif
-#if GL41_HEADERS
-        case GL_PROGRAM_POINT_SIZE:             index = 12; break;
-#endif
-        default: index = 13; break; // should never happen
-    }
-    assert(index < 13 && index < state.enables.caps.size());
-    return index;
-}
-
-constexpr size_t OpenGLDriver::getIndexForBufferTarget(GLenum target) noexcept {
-    size_t index = 0;
-    switch (target) {
-        // The indexed buffers MUST be first in this list
-        case GL_UNIFORM_BUFFER:             index = 0; break;
-        case GL_TRANSFORM_FEEDBACK_BUFFER:  index = 1; break;
-
-        case GL_ARRAY_BUFFER:               index = 2; break;
-        case GL_COPY_READ_BUFFER:           index = 3; break;
-        case GL_COPY_WRITE_BUFFER:          index = 4; break;
-        case GL_ELEMENT_ARRAY_BUFFER:       index = 5; break;
-        case GL_PIXEL_PACK_BUFFER:          index = 6; break;
-        case GL_PIXEL_UNPACK_BUFFER:        index = 7; break;
-        default: index = 8; break; // should never happen
-    }
-    assert(index < sizeof(state.buffers.genericBinding)/sizeof(state.buffers.genericBinding[0])); // NOLINT(misc-redundant-expression)
-    return index;
-}
-
-void OpenGLDriver::activeTexture(GLuint unit) noexcept {
-    assert(unit < MAX_TEXTURE_UNIT_COUNT);
-    update_state(state.textures.active, unit, [&]() {
-        glActiveTexture(GL_TEXTURE0 + unit);
-    });
-}
-
-void OpenGLDriver::bindSampler(GLuint unit, GLuint sampler) noexcept {
-    assert(unit < MAX_TEXTURE_UNIT_COUNT);
-    update_state(state.textures.units[unit].sampler, sampler, [&]() {
-        glBindSampler(unit, sampler);
-    });
-}
 
 } // namespace filament
 

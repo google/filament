@@ -22,9 +22,11 @@
 
 namespace filament {
 
+class OpenGLContext;
+
 class OpenGLBlitter {
 public:
-    explicit OpenGLBlitter() noexcept {}
+    explicit OpenGLBlitter(OpenGLContext& context) noexcept : mContext(context) {}
 
     void init() noexcept;
     void terminate() noexcept;
@@ -52,6 +54,7 @@ public:
     };
 
 private:
+    UTILS_UNUSED OpenGLContext& mContext;
     GLuint mSampler{};
     GLuint mVertexShader{};
     GLuint mFragmentShader{};

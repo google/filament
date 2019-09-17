@@ -366,9 +366,9 @@ constexpr MATRIX MATH_PURE fastCofactor3(const MATRIX& m) {
 /**
  * Cofactor function which switches on the matrix size.
  */
-template<typename MATRIX>
+template<typename MATRIX,
+        typename = std::enable_if_t<MATRIX::NUM_ROWS == MATRIX::NUM_COLS, int>>
 inline constexpr MATRIX MATH_PURE cof(const MATRIX& matrix) {
-    static_assert(MATRIX::NUM_ROWS == MATRIX::NUM_COLS, "only square matrices");
     return (MATRIX::NUM_ROWS == 2) ? fastCofactor2<MATRIX>(matrix) :
            ((MATRIX::NUM_ROWS == 3) ? fastCofactor3<MATRIX>(matrix) :
             cofactor<MATRIX>(matrix));
@@ -377,10 +377,10 @@ inline constexpr MATRIX MATH_PURE cof(const MATRIX& matrix) {
 /**
  * Determinant of a matrix
  */
-template<typename MATRIX>
+template<typename MATRIX,
+        typename = std::enable_if_t<MATRIX::NUM_ROWS == MATRIX::NUM_COLS, int>>
 inline constexpr typename MATRIX::value_type MATH_PURE det(const MATRIX& matrix) {
     typedef typename MATRIX::value_type T;
-    static_assert(MATRIX::NUM_ROWS == MATRIX::NUM_COLS, "only square matrices");
     constexpr unsigned int N = MATRIX::NUM_ROWS;
     Matrix<T, N> in{};
     for (size_t i = 0; i < N; i++) {
@@ -397,28 +397,24 @@ inline constexpr typename MATRIX::value_type MATH_PURE det(const MATRIX& matrix)
  * undefined if it is not. It is the responsibility of the caller to
  * make sure the matrix is not singular.
  */
-template<typename MATRIX>
+template<typename MATRIX,
+        typename = std::enable_if_t<MATRIX::NUM_ROWS == MATRIX::NUM_COLS, int>>
 inline constexpr MATRIX MATH_PURE inverse(const MATRIX& matrix) {
-    static_assert(MATRIX::NUM_ROWS == MATRIX::NUM_COLS, "only square matrices can be inverted");
     return (MATRIX::NUM_ROWS == 2) ? fastInverse2<MATRIX>(matrix) :
            ((MATRIX::NUM_ROWS == 3) ? fastInverse3<MATRIX>(matrix) :
             gaussJordanInverse<MATRIX>(matrix));
 }
 
-template<typename MATRIX_R, typename MATRIX_A, typename MATRIX_B>
+template<typename MATRIX_R, typename MATRIX_A, typename MATRIX_B,
+        typename = std::enable_if_t<
+                MATRIX_A::NUM_COLS == MATRIX_B::NUM_ROWS &&
+                MATRIX_R::NUM_COLS == MATRIX_B::NUM_COLS &&
+                MATRIX_R::NUM_ROWS == MATRIX_A::NUM_ROWS, int>>
 constexpr MATRIX_R MATH_PURE multiply(const MATRIX_A& lhs, const MATRIX_B& rhs) {
     // pre-requisite:
     //  lhs : D columns, R rows
     //  rhs : C columns, D rows
     //  res : C columns, R rows
-
-    static_assert(MATRIX_A::NUM_COLS == MATRIX_B::NUM_ROWS,
-            "matrices can't be multiplied. invalid dimensions.");
-    static_assert(MATRIX_R::NUM_COLS == MATRIX_B::NUM_COLS,
-            "invalid dimension of matrix multiply result.");
-    static_assert(MATRIX_R::NUM_ROWS == MATRIX_A::NUM_ROWS,
-            "invalid dimension of matrix multiply result.");
-
     MATRIX_R res{};
     for (size_t col = 0; col < MATRIX_R::NUM_COLS; ++col) {
         res[col] = lhs * rhs[col];
@@ -427,10 +423,10 @@ constexpr MATRIX_R MATH_PURE multiply(const MATRIX_A& lhs, const MATRIX_B& rhs) 
 }
 
 // transpose. this handles matrices of matrices
-template<typename MATRIX>
+template<typename MATRIX,
+        typename = std::enable_if_t<MATRIX::NUM_ROWS == MATRIX::NUM_COLS, int>>
 constexpr MATRIX MATH_PURE transpose(const MATRIX& m) {
     // for now we only handle square matrix transpose
-    static_assert(MATRIX::NUM_COLS == MATRIX::NUM_ROWS, "transpose only supports square matrices");
     MATRIX result{};
     for (size_t col = 0; col < MATRIX::NUM_COLS; ++col) {
         for (size_t row = 0; row < MATRIX::NUM_ROWS; ++row) {
@@ -441,9 +437,9 @@ constexpr MATRIX MATH_PURE transpose(const MATRIX& m) {
 }
 
 // trace. this handles matrices of matrices
-template<typename MATRIX>
+template<typename MATRIX,
+        typename = std::enable_if_t<MATRIX::NUM_ROWS == MATRIX::NUM_COLS, int>>
 constexpr typename MATRIX::value_type MATH_PURE trace(const MATRIX& m) {
-    static_assert(MATRIX::NUM_COLS == MATRIX::NUM_ROWS, "trace only defined for square matrices");
     typename MATRIX::value_type result(0);
     for (size_t col = 0; col < MATRIX::NUM_COLS; ++col) {
         result += trace(m[col][col]);
@@ -452,9 +448,9 @@ constexpr typename MATRIX::value_type MATH_PURE trace(const MATRIX& m) {
 }
 
 // diag. this handles matrices of matrices
-template<typename MATRIX>
+template<typename MATRIX,
+        typename = std::enable_if_t<MATRIX::NUM_ROWS == MATRIX::NUM_COLS, int>>
 constexpr typename MATRIX::col_type MATH_PURE diag(const MATRIX& m) {
-    static_assert(MATRIX::NUM_COLS == MATRIX::NUM_ROWS, "diag only defined for square matrices");
     typename MATRIX::col_type result{};
     for (size_t col = 0; col < MATRIX::NUM_COLS; ++col) {
         result[col] = m[col][col];
@@ -651,7 +647,7 @@ public:
     }
 
     template<typename A, typename VEC,
-            typename = typename std::enable_if<std::is_arithmetic<A>::value>::type>
+            typename = std::enable_if_t<std::is_arithmetic<A>::value>>
     static BASE<T> rotation(A radian, const VEC& about) {
         BASE<T> r;
         T c = std::cos(radian);
@@ -699,9 +695,9 @@ public:
      */
     template<
             typename Y, typename P, typename R,
-            typename = typename std::enable_if<std::is_arithmetic<Y>::value>::type,
-            typename = typename std::enable_if<std::is_arithmetic<P>::value>::type,
-            typename = typename std::enable_if<std::is_arithmetic<R>::value>::type
+            typename = std::enable_if_t<std::is_arithmetic<Y>::value>,
+            typename = std::enable_if_t<std::is_arithmetic<P>::value>,
+            typename = std::enable_if_t<std::is_arithmetic<R>::value>
     >
     static BASE<T> eulerYXZ(Y yaw, P pitch, R roll) {
         return eulerZYX(roll, pitch, yaw);
@@ -718,9 +714,9 @@ public:
      */
     template<
             typename Y, typename P, typename R,
-            typename = typename std::enable_if<std::is_arithmetic<Y>::value>::type,
-            typename = typename std::enable_if<std::is_arithmetic<P>::value>::type,
-            typename = typename std::enable_if<std::is_arithmetic<R>::value>::type
+            typename = std::enable_if_t<std::is_arithmetic<Y>::value>,
+            typename = std::enable_if_t<std::is_arithmetic<P>::value>,
+            typename = std::enable_if_t<std::is_arithmetic<R>::value>
     >
     static BASE<T> eulerZYX(Y yaw, P pitch, R roll) {
         BASE<T> r;
