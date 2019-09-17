@@ -46,10 +46,10 @@ set(SRCS
 )
 
 if (NOT MSVC)
-add_definitions(
-    -Wno-implicit-function-declaration
-    -Wno-shift-negative-value
-)
+    add_definitions(
+        -Wno-implicit-function-declaration
+        -Wno-shift-negative-value
+    )
 endif()
 
 # we're building a library

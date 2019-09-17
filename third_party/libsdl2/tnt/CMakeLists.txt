@@ -148,16 +148,16 @@ add_library(${TARGET} SHARED ${SRCS})
 target_link_libraries(${TARGET} ${EXTRA_LIBS})
 
 if(NOT MSVC)
-target_compile_options(${TARGET}
-    PRIVATE -msse2
-    PRIVATE -msse
-    PRIVATE -mmmx
-    PRIVATE -Wno-unused-variable
-    PRIVATE -Wno-deprecated-declarations
-    PRIVATE -Wno-switch
-    PRIVATE -Wno-tautological-pointer-compare
-    PRIVATE -Wno-parentheses-equality
-)
+    target_compile_options(${TARGET}
+        PRIVATE -msse2
+        PRIVATE -msse
+        PRIVATE -mmmx
+        PRIVATE -Wno-unused-variable
+        PRIVATE -Wno-deprecated-declarations
+        PRIVATE -Wno-switch
+        PRIVATE -Wno-tautological-pointer-compare
+        PRIVATE -Wno-parentheses-equality
+    )
 endif()
 
 # specify where the public headers of this library are
