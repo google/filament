@@ -27,11 +27,11 @@ target_link_libraries(${TARGET} PRIVATE getopt filameshio meshoptimizer)
 if(NOT MSVC)
     target_compile_options(${TARGET} PRIVATE -Wno-deprecated-register)
 
-if (NOT LINUX)
-    target_compile_options(${TARGET} PRIVATE
-            -Wno-address-of-packed-member
-    )
-endif()
+    if (NOT LINUX)
+        target_compile_options(${TARGET} PRIVATE
+                -Wno-address-of-packed-member
+        )
+    endif()
 endif()
 
 # =================================================================================================
