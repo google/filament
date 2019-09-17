@@ -96,19 +96,22 @@ void FScene::prepare(const mat4f& worldOriginTransform) {
     float maxIntensity = 0.0f;
 
     for (Entity e : entities) {
-        if (!em.isAlive(e))
+        if (!em.isAlive(e)) {
             continue;
+        }
 
         // getInstance() always returns null if the entity is the Null entity
         // so we don't need to check for that, but we need to check it's alive
         auto ri = rcm.getInstance(e);
         auto li = lcm.getInstance(e);
-        if (!ri & !li)
+        if (!ri & !li) {
             continue;
+        }
 
         // get the world transform
         auto ti = tcm.getInstance(e);
         const mat4f worldTransform = worldOriginTransform * tcm.getWorldTransform(ti);
+        const bool reversedWindingOrder = det(worldTransform.upperLeft()) < 0;
 
         // don't even draw this object if it doesn't have a transform (which shouldn't happen
         // because one is always created when creating a Renderable component).
@@ -118,16 +121,19 @@ void FScene::prepare(const mat4f& worldOriginTransform) {
 
             // we know there is enough space in the array
             sceneData.push_back_unsafe(
-                    ri,
-                    worldTransform,
-                    rcm.getVisibility(ri),
-                    rcm.getBonesUbh(ri),
-                    worldAABB.center,
-                    0,
-                    rcm.getMorphWeights(ri),
-                    rcm.getLayerMask(ri),
-                    worldAABB.halfExtent,
-                    {}, {});
+                    ri,                       // RENDERABLE_INSTANCE
+                    worldTransform,           // WORLD_TRANSFORM
+                    reversedWindingOrder,     // REVERSED_WINDING_ORDER
+                    rcm.getVisibility(ri),    // VISIBILITY_STATE
+                    rcm.getBonesUbh(ri),      // BONES_UBH
+                    worldAABB.center,         // WORLD_AABB_CENTER
+                    0,                        // VISIBLE_MASK
+                    rcm.getMorphWeights(ri),  // MORPH_WEIGHTS
+                    rcm.getLayerMask(ri),     // LAYERS
+                    worldAABB.halfExtent,     // WORLD_AABB_EXTENT
+                    {},                       // PRIMITIVES
+                    0                         // SUMMED_PRIMITIVE_COUNT
+            );
         }
 
         if (li) {
@@ -139,7 +145,8 @@ void FScene::prepare(const mat4f& worldOriginTransform) {
                     float3 d = lcm.getLocalDirection(li);
                     // using mat3f::getTransformForNormals handles non-uniform scaling
                     d = normalize(mat3f::getTransformForNormals(worldTransform.upperLeft()) * d);
-                    lightData.elementAt<FScene::POSITION_RADIUS>(0) = float4{ 0, 0, 0, std::numeric_limits<float>::infinity() };
+                    lightData.elementAt<FScene::POSITION_RADIUS>(0) =
+                            float4{ 0, 0, 0, std::numeric_limits<float>::infinity() };
                     lightData.elementAt<FScene::DIRECTION>(0)       = d;
                     lightData.elementAt<FScene::LIGHT_INSTANCE>(0)  = li;
                 }
