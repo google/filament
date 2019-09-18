@@ -13,8 +13,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v1
-        with:
-          fetch-depth: 1
       - name: Run build script
         run: |
           WORKFLOW_OS=`echo \`uname\` | sed "s/Darwin/mac/" | tr [:upper:] [:lower:]`
@@ -28,8 +26,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v1
-        with:
-          fetch-depth: 1
       - name: Run build script
         run: |
           cd build/android && ./build.sh ${TARGET}
@@ -42,8 +38,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v1
-        with:
-          fetch-depth: 1
       - name: Run build script
         run: |
           cd build/ios && ./build.sh ${TARGET}
@@ -56,8 +50,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v1
-        with:
-          fetch-depth: 1
       - name: Run build script
         run: |
           cd build/web && ./build.sh ${TARGET}
