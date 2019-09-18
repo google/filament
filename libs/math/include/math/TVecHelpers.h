@@ -14,19 +14,18 @@
  * limitations under the License.
  */
 
-
 #ifndef MATH_TVECHELPERS_H_
 #define MATH_TVECHELPERS_H_
 
-#include <math.h>
-#include <stdint.h>
-#include <sys/types.h>
+#include <math/compiler.h>
 
 #include <cmath>            // for std:: namespace
 #include <functional>       // for appl() and map()
 #include <iostream>         // for operator<<
 
-#include <math/compiler.h>
+#include <math.h>
+#include <stdint.h>
+#include <sys/types.h>
 
 namespace filament {
 namespace math {
@@ -107,6 +106,7 @@ public:
         return operator-=(VECTOR<U>(v));
     }
 
+private:
     /*
      * NOTE: the functions below ARE NOT member methods. They are friend functions
      * with they definition inlined with their declaration. This makes these
@@ -178,6 +178,7 @@ public:
         return operator/=(VECTOR<U>(v));
     }
 
+private:
     /*
      * NOTE: the functions below ARE NOT member methods. They are friend functions
      * with they definition inlined with their declaration. This makes these
@@ -249,7 +250,7 @@ public:
  */
 template<template<typename T> class VECTOR, typename T>
 class TVecComparisonOperators {
-public:
+private:
     /*
      * NOTE: the functions below ARE NOT member methods. They are friend functions
      * with they definition inlined with their declaration. This makes these
@@ -346,7 +347,7 @@ public:
  */
 template<template<typename T> class VECTOR, typename T>
 class TVecFunctions {
-public:
+private:
     /*
      * NOTE: the functions below ARE NOT member methods. They are friend functions
      * with they definition inlined with their declaration. This makes these
@@ -546,7 +547,7 @@ public:
  */
 template<template<typename T> class VECTOR, typename T>
 class TVecDebug {
-public:
+private:
     /*
      * NOTE: the functions below ARE NOT member methods. They are friend functions
      * with they definition inlined with their declaration. This makes these

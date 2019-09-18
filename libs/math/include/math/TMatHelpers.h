@@ -17,21 +17,18 @@
 #ifndef MATH_TMATHELPERS_H_
 #define MATH_TMATHELPERS_H_
 
-#include <math.h>
-#include <stdint.h>
-#include <sys/types.h>
-
-#include <algorithm>
-#include <cmath>
-#include <exception>
-#include <iomanip>
-#include <iostream>
-#include <stdexcept>
-#include <string>
-
 #include <math/compiler.h>
 #include <math/quat.h>
 #include <math/TVecHelpers.h>
+
+#include <algorithm>        // for std::swap
+#include <cmath>            // for std:: namespace
+#include <iostream>         // for operator<<
+#include <iomanip>          // for std::setw
+
+#include <math.h>
+#include <stdint.h>
+#include <sys/types.h>
 
 namespace filament {
 namespace math {
@@ -528,11 +525,20 @@ TQuaternion<typename MATRIX::value_type> extractQuat(const MATRIX& mat) {
  * get all the functionality here.
  */
 
-template<template<typename T> class BASE, typename T>
+template<template<typename> class BASE, typename T,
+        template<typename> class VEC>
 class TMatProductOperators {
 public:
-    // multiply by a scalar
+    //  matrix *= matrix
     template<typename U>
+    constexpr BASE<T>& operator*=(const BASE<U>& rhs) {
+        BASE<T>& lhs(static_cast< BASE<T>& >(*this));
+        lhs = matrix::multiply<BASE<T> >(lhs, rhs);
+        return lhs;
+    }
+
+    // matrix *= scalar
+    template<typename U, typename = enable_if_arithmetic_t<U>>
     constexpr BASE<T>& operator*=(U v) {
         BASE<T>& lhs(static_cast< BASE<T>& >(*this));
         for (size_t col = 0; col < BASE<T>::NUM_COLS; ++col) {
@@ -541,26 +547,9 @@ public:
         return lhs;
     }
 
-    friend inline constexpr BASE<T> MATH_PURE operator*(BASE<T> lv, T rv) {
-        // don't pass lv by reference because we need a copy anyways
-        return lv *= rv;
-    }
-
-    //  multiply by a matrix
-    template<typename U>
-    constexpr BASE<T>& operator*=(const BASE<U>& rhs) {
-        BASE<T>& lhs(static_cast< BASE<T>& >(*this));
-        lhs = matrix::multiply<BASE<T> >(lhs, rhs);
-        return lhs;
-    }
-
-    template<typename U>
-    friend inline constexpr BASE<T> MATH_PURE operator*(const BASE<T>& lhs, const BASE<U>& rhs) {
-        return matrix::multiply<BASE<T> >(lhs, rhs);
-    }
-
-    // divide by a scalar
-    constexpr BASE<T>& operator/=(T v) {
+    // matrix /= scalar
+    template<typename U, typename = enable_if_arithmetic_t<U>>
+    constexpr BASE<T>& operator/=(U v) {
         BASE<T>& lhs(static_cast< BASE<T>& >(*this));
         for (size_t col = 0; col < BASE<T>::NUM_COLS; ++col) {
             lhs[col] /= v;
@@ -568,9 +557,67 @@ public:
         return lhs;
     }
 
-    friend inline constexpr BASE<T> MATH_PURE operator/(BASE<T> lv, T rv) {
-        // don't pass lv by reference because we need a copy anyways
-        return lv /= rv;
+private:
+    /*
+     * NOTE: the functions below ARE NOT member methods. They are friend functions
+     * with they definition inlined with their declaration. This makes these
+     * template functions available to the compiler when (and only when) this class
+     * is instantiated, at which point they're only templated on the 2nd parameter
+     * (the first one, BASE<T> being known).
+     */
+
+    //  matrix * matrix
+    template<typename U>
+    friend inline constexpr BASE<arithmetic_result_t<T, U>> MATH_PURE
+    operator*(const BASE<T>& lhs, const BASE<U>& rhs) {
+        return matrix::multiply<BASE<arithmetic_result_t<T, U>>>(lhs, rhs);
+    }
+
+    // matrix * vector
+    template<typename U>
+    friend inline constexpr typename BASE<arithmetic_result_t<T, U>>::col_type MATH_PURE
+    operator*(const BASE<T>& lhs, const VEC<U>& rhs) {
+        typename BASE<arithmetic_result_t<T, U>>::col_type result{};
+        for (size_t col = 0; col < BASE<T>::NUM_COLS; ++col) {
+            result += lhs[col] * rhs[col];
+        }
+        return result;
+    }
+
+    // row-vector * matrix
+    template<typename U>
+    friend inline constexpr typename BASE<arithmetic_result_t<T, U>>::row_type MATH_PURE
+    operator*(const VEC<U>& lhs, const BASE<T>& rhs) {
+        typename BASE<arithmetic_result_t<T, U>>::row_type result{};
+        for (size_t col = 0; col < BASE<T>::NUM_COLS; ++col) {
+            result[col] = dot(lhs, rhs[col]);
+        }
+        return result;
+    }
+
+    // matrix * scalar
+    template<typename U, typename = enable_if_arithmetic_t<U>>
+    friend inline constexpr BASE<arithmetic_result_t<T, U>> MATH_PURE
+    operator*(const BASE<T>& lhs, U rhs) {
+        BASE<arithmetic_result_t<T, U>> result{ lhs };
+        result *= rhs;
+        return result;
+    }
+
+    // scalar * matrix
+    template<typename U, typename = enable_if_arithmetic_t<U>>
+    friend inline constexpr BASE<arithmetic_result_t<T, U>> MATH_PURE
+    operator*(U rhs, const BASE<T>& lhs) {
+        return lhs * rhs;
+    }
+
+    // matrix / scalar
+    template<typename U, typename = enable_if_arithmetic_t<U>>
+    friend inline constexpr BASE<arithmetic_result_t<T, U>> MATH_PURE
+    operator/(const BASE<T>& lhs, U rhs) {
+        BASE<arithmetic_result_t<T, U>> result{ lhs };
+        result /= rhs;
+        return result;
     }
 };
 
@@ -590,8 +637,7 @@ public:
 
 template<template<typename U> class BASE, typename T>
 class TMatSquareFunctions {
-public:
-
+private:
     /*
      * NOTE: the functions below ARE NOT member methods. They are friend functions
      * with they definition inlined with their declaration. This makes these
@@ -643,7 +689,8 @@ public:
         return static_cast<BASE<T>&>(*this)[col][row];
     }
 
-    friend inline BASE<T> MATH_PURE abs(BASE<T> m) {
+private:
+    constexpr friend inline BASE<T> MATH_PURE abs(BASE<T> m) {
         for (size_t col = 0; col < BASE<T>::NUM_COLS; ++col) {
             m[col] = abs(m[col]);
         }
@@ -759,7 +806,7 @@ public:
 
 template<template<typename T> class BASE, typename T>
 class TMatDebug {
-public:
+private:
     friend std::ostream& operator<<(std::ostream& stream, const BASE<T>& m) {
         for (size_t row = 0; row < BASE<T>::NUM_ROWS; ++row) {
             if (row != 0) {
