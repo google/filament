@@ -1794,8 +1794,8 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
 
     mRenderPassTarget = rth;
     mRenderPassParams = params;
-    const auto clearFlags = TargetBufferFlags(params.flags.clear & ~RenderPassFlags::IGNORE_SCISSOR);
-    const uint8_t ignoreScissor = params.flags.clear & RenderPassFlags::IGNORE_SCISSOR;
+    const TargetBufferFlags clearFlags = params.flags.clear;
+    const bool ignoreScissor = params.flags.ignoreScissor;
     TargetBufferFlags discardFlags = params.flags.discardStart;
 
     GLRenderTarget* rt = handle_cast<GLRenderTarget*>(rth);
@@ -1823,7 +1823,7 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
         // everything must appear as though the multi-sample buffer was lost.
         if (ALLOW_REVERSE_MULTISAMPLE_RESOLVE) {
             // We only copy the non msaa buffers that were not discarded or cleared.
-            const TargetBufferFlags discarded = discardFlags | (clearFlags & TargetBufferFlags::ALL);
+            const TargetBufferFlags discarded = discardFlags | clearFlags;
             resolvePass(ResolveAction::LOAD, rt, discarded);
         } else {
             // However, for now filament specifies that a non multi-sample attachment to a
@@ -1837,7 +1837,7 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
             params.viewport.width, params.viewport.height);
 
     // Use scissor test if not told to ignore, and if the viewport doesn't cover the whole target.
-    const bool respectScissor = !(ignoreScissor & RenderPassFlags::IGNORE_SCISSOR) &&
+    const bool respectScissor = !ignoreScissor &&
                                 (params.viewport.left != 0 ||
                                     params.viewport.bottom != 0 ||
                                     params.viewport.width != rt->width ||

@@ -98,20 +98,14 @@ struct Viewport {
 };
 
 struct RenderPassFlags {
-    uint8_t clear;
+    TargetBufferFlags clear;
     TargetBufferFlags discardStart;
     TargetBufferFlags discardEnd;
-    uint8_t dependencies;
-
-    static constexpr uint8_t DEPENDENCY_BY_REGION = 1; // see "framebuffer-local" in Vulkan spec.
-
-    // Extra RenderPass-only flags stashed in the "clear" field.
-    static const uint8_t IGNORE_SCISSOR = 0x10;
+    bool ignoreScissor;
 };
 
 struct RenderPassParams {
-    // RenderPass flags are 4 bytes.  The first three are buffer selections composed from
-    // TargetBufferFlags. The last byte is an optional dependency hint (used only for Vulkan).
+    // RenderPass flags (4 bytes)
     RenderPassFlags flags{};
 
     // Viewport (16 bytes)
