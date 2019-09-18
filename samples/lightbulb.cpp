@@ -337,7 +337,7 @@ static void setup(Engine* engine, View* view, Scene* scene) {
                     .falloff(20.0f)
                     .build(*engine, g_lights.back());
 
-            tcm.create(g_lights.back(), parent, {});
+            tcm.create(g_lights.back(), parent);
 
             scene->addEntity(g_lights.back());
         }
