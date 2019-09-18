@@ -178,6 +178,10 @@ public class MaterialInstance {
         nSetDoubleSided(getNativeObject(), doubleSided);
     }
 
+    public void setCullingMode(Material.CullingMode mode) {
+        nSetCullingMode(getNativeObject(), mode.ordinal());
+    }
+
     public long getNativeObject() {
         if (mNativeObject == 0) {
             throw new IllegalStateException("Calling method on destroyed MaterialInstance");
@@ -247,4 +251,6 @@ public class MaterialInstance {
             float threshold);
 
     private static native void nSetDoubleSided(long nativeMaterialInstance, boolean doubleSided);
+
+    private static native void nSetCullingMode(long nativeMaterialInstance, long mode);
 }

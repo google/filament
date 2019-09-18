@@ -345,4 +345,10 @@ enum_<backend::SamplerMagFilter>("MagFilter")
     .value("NEAREST", backend::SamplerMagFilter::NEAREST)
     .value("LINEAR", backend::SamplerMagFilter::LINEAR);
 
+enum_<backend::CullingMode>("CullingMode")
+    .value("NONE", backend::CullingMode::NONE)
+    .value("FRONT", backend::CullingMode::FRONT)
+    .value("BACK", backend::CullingMode::BACK)
+    .value("FRONT_AND_BACK", backend::CullingMode::FRONT_AND_BACK);
+
 }
