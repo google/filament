@@ -935,9 +935,9 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
                                           withRange:bufferRange];
 
     // Bind the zero buffer, used for missing vertex attributes.
-    static const char bytes[4] = { 0 };
+    static const char bytes[16] = { 0 };
     [mContext->currentCommandEncoder setVertexBytes:bytes
-                                             length:4
+                                             length:16
                                             atIndex:(VERTEX_BUFFER_START + ZERO_VERTEX_BUFFER)];
 
     MetalIndexBuffer* indexBuffer = primitive->indexBuffer;
