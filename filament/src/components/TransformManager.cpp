@@ -138,6 +138,18 @@ void FTransformManager::setTransform(Instance ci, const mat4f& model) noexcept {
         auto& manager = mManager;
         // store our local transform
         manager[ci].local = model;
+        manager[ci].localTranslationLo = {};
+        updateNodeTransform(ci);
+    }
+}
+
+void FTransformManager::setTransform(Instance ci, const mat4& model) noexcept {
+    validateNode(ci);
+    if (ci) {
+        auto& manager = mManager;
+        // store our local transform + accurate translation information
+        manager[ci].local = mat4f(model);
+        manager[ci].localTranslationLo = float3{ model[3].xyz - float3{ model[3].xyz }};
         updateNodeTransform(ci);
     }
 }
@@ -154,10 +166,9 @@ void FTransformManager::updateNodeTransform(Instance i) noexcept {
     // find our parent's world transform, if any
     // note: by using the raw_array() we don't need to check that parent is valid.
     Instance parent = manager[i].parent;
-    mat4f const& pt = manager.raw_array<WORLD>()[parent];
-
-    // compute our world transform
-    manager[i].world = pt * static_cast<mat4f const&>(manager[i].local);
+    computeWorldTransform(manager[i].world, manager[i].worldTranslationLo,
+            manager[parent].world, manager[i].local,
+            manager[parent].worldTranslationLo, manager[i].localTranslationLo);
 
     // update our children's world transforms
     Instance child = manager[i].firstChild;
@@ -179,7 +190,6 @@ void FTransformManager::commitLocalTransformTransaction() noexcept {
         auto& soa = manager.getSoA();
         soa.ensureCapacity(soa.size() + 1);
 
-        mat4f const* const UTILS_RESTRICT world = manager.raw_array<WORLD>();
         for (Instance i = manager.begin(), e = manager.end(); i != e; ++i) {
             // Ensure that children are always sorted after their parent.
             while (UTILS_UNLIKELY(Instance(manager[i].parent) > i)) {
@@ -187,7 +197,10 @@ void FTransformManager::commitLocalTransformTransaction() noexcept {
             }
             Instance parent = manager[i].parent;
             assert(parent < i);
-            manager[i].world = world[parent] * static_cast<mat4f const&>(manager[i].local);
+
+            computeWorldTransform(manager[i].world, manager[i].worldTranslationLo,
+                    manager[parent].world, manager[i].local,
+                    manager[parent].worldTranslationLo, manager[i].localTranslationLo);
         }
     }
 }
@@ -311,24 +324,55 @@ void FTransformManager::updateNode(Instance i) noexcept {
     validateNode(next);
 }
 
-void FTransformManager::transformChildren(Sim& manager, Instance ci) noexcept {
-    while (ci) {
+void FTransformManager::transformChildren(Sim& manager, Instance i) noexcept {
+    while (i) {
         // update child's world transform
-        Instance parent = manager[ci].parent;
-        mat4f const& pt = manager[parent].world;
-        mat4f const& local = manager[ci].local;
-        manager[ci].world = pt * local;
+        Instance parent = manager[i].parent;
+        computeWorldTransform(manager[i].world, manager[i].worldTranslationLo,
+                manager[parent].world, manager[i].local,
+                manager[parent].worldTranslationLo, manager[i].localTranslationLo);
 
         // assume we don't have a deep hierarchy
-        Instance child = manager[ci].firstChild;
+        Instance child = manager[i].firstChild;
         if (UTILS_UNLIKELY(child)) {
             transformChildren(manager, child);
         }
 
         // process our next child
-        ci = manager[ci].next;
+        i = manager[i].next;
     }
 }
+
+void FTransformManager::computeWorldTransform(
+        math::mat4f& outWorld, math::float3& outWorldTranslationLo,
+        mat4f const& pt, math::mat4f const& local,
+        float3 ptTranslationLo, math::float3 localTranslationLo) {
+
+    if (!mAccurateTranslations) {
+        outWorld = pt * local;
+        return;
+    }
+
+    // this version takes the extra precision of the translation into account,
+    // we assume that the last row of local is [0 0 0 x].
+    // Only the last column of the result needs special treatment -- unfortunately this requires
+    // converting 'pt' to a mat4 (double)
+
+    outWorld[0] = pt * local[0];
+    outWorld[1] = pt * local[1];
+    outWorld[2] = pt * local[2];
+
+    const mat4 ptd{
+            pt[0], pt[1], pt[2],
+            double4{ pt[3].xyz + ptTranslationLo, pt[3].w }};
+
+    const double4 worldTranslation =
+            ptd * double4{ local[3].xyz + localTranslationLo, local[3].w };
+
+    outWorld[3] = worldTranslation;
+    outWorldTranslationLo = worldTranslation.xyz - float3{ worldTranslation.xyz };
+}
+
 
 void FTransformManager::validateNode(Instance i) noexcept {
 #ifndef NDEBUG
