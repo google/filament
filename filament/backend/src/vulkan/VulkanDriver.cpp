@@ -673,9 +673,7 @@ void VulkanDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh,
     *sb->sb = samplerGroup;
 }
 
-void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth,
-        const RenderPassParams& params) {
-
+void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassParams& params) {
     assert(mContext.currentCommands);
     assert(mContext.currentSurface);
     VulkanSurfaceContext& surface = *mContext.currentSurface;
@@ -694,13 +692,19 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     mDisposer.acquire(color.offscreen, mContext.currentCommands->resources);
     mDisposer.acquire(depth.offscreen, mContext.currentCommands->resources);
 
-    // TODO: do not make assumptions about the future use of this attachment, instead get a flag
-    // via RenderPassParams and use that to determine which layout to transition to at the end.
     VkImageLayout finalColorLayout;
     VkImageLayout finalDepthLayout;
+
     if (rt->isOffscreen()) {
-        finalColorLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+        // If we're discarding the contents of the color buffer after the render pass, it's safe to
+        // assume that we will not be sampling from it.
+        finalColorLayout = any(params.flags.discardEnd & TargetBufferFlags::COLOR) ?
+                VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL :
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
         finalDepthLayout = VK_IMAGE_LAYOUT_GENERAL;
+
     } else {
         finalColorLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
         finalDepthLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
@@ -711,10 +715,9 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth,
         .finalDepthLayout = finalDepthLayout,
         .colorFormat = color.format,
         .depthFormat = depth.format,
-        .flags.clear         = params.flags.clear,
-        .flags.discardStart  = (uint8_t)params.flags.discardStart,
-        .flags.discardEnd    = (uint8_t)params.flags.discardEnd,
-        .flags.dependencies  = params.flags.dependencies
+        .flags.clear = params.flags.clear,
+        .flags.discardStart = params.flags.discardStart,
+        .flags.discardEnd = params.flags.discardEnd
     });
     mBinder.bindRenderPass(renderPass);
 
