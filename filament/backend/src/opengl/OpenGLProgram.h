@@ -17,20 +17,20 @@
 #ifndef TNT_FILAMENT_DRIVER_OPENGLPROGRAM_H
 #define TNT_FILAMENT_DRIVER_OPENGLPROGRAM_H
 
-#include <stddef.h>
-#include <stdint.h>
-
-#include <vector>
-
-#include <utils/compiler.h>
-#include <utils/Log.h>
-
 #include "DriverBase.h"
-#include "gl_headers.h"
 #include "OpenGLDriver.h"
 
 #include "private/backend/Driver.h"
 #include "private/backend/Program.h"
+
+#include <utils/compiler.h>
+#include <utils/Log.h>
+
+#include <vector>
+
+#include <stddef.h>
+#include <stdint.h>
+
 
 namespace filament {
 
@@ -68,7 +68,7 @@ public:
     static void logCompilationError(utils::io::ostream& out, GLuint shaderId, char const* source) noexcept;
 
 private:
-    static constexpr uint8_t TEXTURE_UNIT_COUNT = OpenGLDriver::MAX_TEXTURE_UNIT_COUNT;
+    static constexpr uint8_t TEXTURE_UNIT_COUNT = OpenGLContext::MAX_TEXTURE_UNIT_COUNT;
     static constexpr uint8_t VERTEX_SHADER_BIT   = uint8_t(1) << size_t(backend::Program::Shader::VERTEX);
     static constexpr uint8_t FRAGMENT_SHADER_BIT = uint8_t(1) << size_t(backend::Program::Shader::FRAGMENT);
 

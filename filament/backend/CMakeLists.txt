@@ -60,6 +60,8 @@ if (NOT USE_EXTERNAL_GLES3)
             src/opengl/GLUtils.h
             src/opengl/OpenGLBlitter.cpp
             src/opengl/OpenGLBlitter.h
+            src/opengl/OpenGLContext.cpp
+            src/opengl/OpenGLContext.h
             src/opengl/OpenGLDriver.cpp
             src/opengl/OpenGLDriver.h
             src/opengl/OpenGLDriverFactory.h

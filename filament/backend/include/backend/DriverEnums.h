@@ -576,8 +576,7 @@ struct SamplerParams { // NOLINT
             SamplerWrapMode wrapR           : 2;    // CLAMP_TO_EDGE
             uint8_t anisotropyLog2          : 3;    // 0
             SamplerCompareMode compareMode  : 1;    // NONE
-            bool depthStencil               : 1;    // false
-            uint8_t padding0                : 1;    // 0
+            uint8_t padding0                : 2;    // 0
 
             SamplerCompareFunc compareFunc  : 3;    // LE
             uint8_t padding1                : 5;    // 0

@@ -24,7 +24,8 @@ namespace backend {
 bool VulkanFboCache::RenderPassEq::operator()(const RenderPassKey& k1,
         const RenderPassKey& k2) const {
     return
-            k1.finalLayout == k2.finalLayout &&
+            k1.finalColorLayout == k2.finalColorLayout &&
+            k1.finalDepthLayout == k2.finalDepthLayout &&
             k1.colorFormat == k2.colorFormat &&
             k1.depthFormat == k2.depthFormat &&
             k1.flags.value == k2.flags.value;
@@ -83,19 +84,18 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
     }
     const bool hasColor = config.colorFormat != VK_FORMAT_UNDEFINED;
     const bool hasDepth = config.depthFormat != VK_FORMAT_UNDEFINED;
-    const bool depthOnly = hasDepth && !hasColor;
 
     // The subpass specifies the layout to transition to at the START of the render pass.
     uint32_t numAttachments = 0;
     VkAttachmentReference colorAttachmentRef = {};
     if (hasColor) {
-      colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-      colorAttachmentRef.attachment = numAttachments++;
+        colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        colorAttachmentRef.attachment = numAttachments++;
     }
     VkAttachmentReference depthAttachmentRef = {};
     if (hasDepth) {
-      depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-      depthAttachmentRef.attachment = numAttachments++;
+        depthAttachmentRef.layout = VK_IMAGE_LAYOUT_GENERAL;
+        depthAttachmentRef.attachment = numAttachments++;
     }
     VkSubpassDescription subpass {
         .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -104,7 +104,7 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
         .pDepthStencilAttachment = hasDepth ? &depthAttachmentRef : nullptr
     };
 
-  // The attachment description specifies the layout to transition to at the END of the render pass.
+    // The attachment description specifies the layout to transition to at the END of the render pass.
     VkAttachmentDescription colorAttachment {
         .format = config.colorFormat,
         .samples = VK_SAMPLE_COUNT_1_BIT,
@@ -113,7 +113,7 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
         .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
         .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
         .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-        .finalLayout = config.finalLayout
+        .finalLayout = config.finalColorLayout
     };
     VkAttachmentDescription depthAttachment {
         .format = config.depthFormat,
@@ -123,8 +123,7 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
         .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
         .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
         .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-        .finalLayout = depthOnly ? config.finalLayout :
-                VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+        .finalLayout = config.finalDepthLayout
     };
 
     // We define dependencies only when the framebuffer local hint is applied.

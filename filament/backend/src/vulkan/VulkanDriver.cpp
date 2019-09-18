@@ -396,7 +396,7 @@ void VulkanDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
     auto colorTexture = color.handle ? handle_cast<VulkanTexture>(mHandleMap, color.handle) : nullptr;
     auto depthTexture = depth.handle ? handle_cast<VulkanTexture>(mHandleMap, depth.handle) : nullptr;
     auto renderTarget = construct_handle<VulkanRenderTarget>(mHandleMap, rth, mContext,
-            width, height, color.level, colorTexture, depthTexture);
+            width, height, color.level, colorTexture, depth.level, depthTexture);
     mDisposer.createDisposable(renderTarget, [this, rth] () {
         destruct_handle<VulkanRenderTarget>(mHandleMap, rth);
     });
@@ -689,23 +689,26 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     const auto depth = rt->getDepth();
     const bool hasColor = color.format != VK_FORMAT_UNDEFINED;
     const bool hasDepth = depth.format != VK_FORMAT_UNDEFINED;
-    const bool depthOnly = hasDepth && !hasColor;
 
     mDisposer.acquire(rt, mContext.currentCommands->resources);
     mDisposer.acquire(color.offscreen, mContext.currentCommands->resources);
     mDisposer.acquire(depth.offscreen, mContext.currentCommands->resources);
 
-    VkImageLayout finalLayout;
-    if (!rt->isOffscreen()) {
-        finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-    } else if (depthOnly) {
-        finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+    // TODO: do not make assumptions about the future use of this attachment, instead get a flag
+    // via RenderPassParams and use that to determine which layout to transition to at the end.
+    VkImageLayout finalColorLayout;
+    VkImageLayout finalDepthLayout;
+    if (rt->isOffscreen()) {
+        finalColorLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        finalDepthLayout = VK_IMAGE_LAYOUT_GENERAL;
     } else {
-        finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        finalColorLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        finalDepthLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
     }
 
     VkRenderPass renderPass = mFramebufferCache.getRenderPass({
-        .finalLayout = finalLayout,
+        .finalColorLayout = finalColorLayout,
+        .finalDepthLayout = finalDepthLayout,
         .colorFormat = color.format,
         .depthFormat = depth.format,
         .flags.clear         = params.flags.clear,
@@ -718,10 +721,10 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     VulkanFboCache::FboKey fbo { .renderPass = renderPass };
     int numAttachments = 0;
     if (hasColor) {
-      fbo.attachments[numAttachments++] = color.view;
+        fbo.attachments[numAttachments++] = color.view;
     }
     if (hasDepth) {
-      fbo.attachments[numAttachments++] = depth.view;
+        fbo.attachments[numAttachments++] = depth.view;
     }
 
     VkRenderPassBeginInfo renderPassInfo {
@@ -948,6 +951,9 @@ void VulkanDriver::blit(TargetBufferFlags buffers,
             "Destination format is not blittable")) {
         return;
     }
+    if (any(buffers & TargetBufferFlags::DEPTH)) {
+        utils::slog.w << "Depth blits are not yet supported." << utils::io::endl;
+    }
 #endif
 
     const int32_t srcRight = srcRect.left + srcRect.width;
@@ -1087,12 +1093,21 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
             VkSampler vksampler = mSamplerCache.getSampler(samplerParams);
             const auto* texture = handle_const_cast<VulkanTexture>(mHandleMap, boundSampler->t);
             mDisposer.acquire(texture, commands->resources);
+
+            // Check that we do not sample from the current color attachment. It's fine to sample
+            // from the current depth attachment when depth writes are disabled, which is useful in
+            // some SSAO implementations.
+            ASSERT_POSTCONDITION_NON_FATAL(
+                    mCurrentRenderTarget->getColor().image != texture->textureImage,
+                    "Attempting to sample color from the current render target");
+
+            VkImageLayout layout = any(texture->usage & TextureUsage::DEPTH_ATTACHMENT) ?
+                        VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
             mBinder.bindSampler(bindingPoint, {
                 .sampler = vksampler,
                 .imageView = texture->imageView,
-                .imageLayout = samplerParams.depthStencil ?
-                        VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL :
-                        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+                .imageLayout = layout
             });
         }
     }

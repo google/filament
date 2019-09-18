@@ -94,7 +94,7 @@ public:
 
 // ----------------------------------------------------------------------------------------
 
-template<typename T, typename = typename std::enable_if<std::is_arithmetic<T>::value>::type>
+template<typename T, typename = std::enable_if_t<std::is_arithmetic<T>::value>>
 using vec2 = details::TVec2<T>;
 
 using double2 = vec2<double>;

@@ -141,8 +141,7 @@ void ShadowMap::prepare(DriverApi& driver, SamplerGroup& sb) noexcept {
                     .filterMag = SamplerMagFilter::LINEAR,
                     .filterMin = SamplerMinFilter::LINEAR,
                     .compareFunc = SamplerCompareFunc::LE,
-                    .compareMode = SamplerCompareMode::COMPARE_TO_TEXTURE,
-                    .depthStencil = true
+                    .compareMode = SamplerCompareMode::COMPARE_TO_TEXTURE
             }});
 }
 

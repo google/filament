@@ -588,14 +588,14 @@ constexpr typename TMat44<U>::row_type MATH_PURE operator*(const TVec4<U>& lhs,
 
 // matrix * scalar, result is a matrix of the same type than the input matrix
 template<typename T, typename U>
-constexpr typename std::enable_if<std::is_arithmetic<U>::value, TMat44<T>>::type MATH_PURE
+constexpr std::enable_if_t<std::is_arithmetic<U>::value, TMat44<T>> MATH_PURE
 operator*(TMat44<T> lhs, U rhs) {
     return lhs *= rhs;
 }
 
 // scalar * matrix, result is a matrix of the same type than the input matrix
 template<typename T, typename U>
-constexpr typename std::enable_if<std::is_arithmetic<U>::value, TMat44<T>>::type MATH_PURE
+constexpr std::enable_if_t<std::is_arithmetic<U>::value, TMat44<T>> MATH_PURE
 operator*(U lhs, const TMat44<T>& rhs) {
     return rhs * lhs;
 }
