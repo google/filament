@@ -389,7 +389,11 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssao(FrameGraph& fg, RenderP
                 pipeline.rasterState.depthFunc = RasterState::DepthFunc::G;
                 pipeline.scissor = pInstance->getScissor();
 
-                driver.beginRenderPass(ssao.target, ssao.params);
+                // SSAO samples from the current depth target so needs the generalized usage flag.
+                RenderPassParams params = ssao.params;
+                params.flags.generalStart = TargetBufferFlags::DEPTH;
+
+                driver.beginRenderPass(ssao.target, params);
                 pInstance->use(driver);
                 driver.draw(pipeline, fullScreenRenderPrimitive);
                 driver.endRenderPass();
@@ -493,7 +497,10 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::mipmapPass(FrameGraph& fg,
                     .scissor = pInstance->getScissor()
                 };
 
-                driver.beginRenderPass(out.target, out.params);
+                RenderPassParams params = out.params;
+                params.flags.generalStart = TargetBufferFlags::DEPTH;
+
+                driver.beginRenderPass(out.target, params);
                 pInstance->use(driver);
                 driver.draw(pipeline, fullScreenRenderPrimitive);
                 driver.endRenderPass();
@@ -558,7 +565,10 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blurPass(FrameGraph& fg,
                 pipeline.rasterState.depthFunc = RasterState::DepthFunc::G;
                 pipeline.scissor = pInstance->getScissor();
 
-                driver.beginRenderPass(blurred.target, blurred.params);
+                RenderPassParams params = blurred.params;
+                params.flags.generalStart = TargetBufferFlags::DEPTH;
+
+                driver.beginRenderPass(blurred.target, params);
                 pInstance->use(driver);
                 driver.draw(pipeline, fullScreenRenderPrimitive);
                 driver.endRenderPass();

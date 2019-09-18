@@ -1794,7 +1794,7 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
 
     mRenderPassTarget = rth;
     mRenderPassParams = params;
-    const TargetBufferFlags clearFlags = params.flags.clear;
+    const TargetBufferFlags clearFlags = params.flags.clearStart;
     const bool ignoreScissor = params.flags.ignoreScissor;
     TargetBufferFlags discardFlags = params.flags.discardStart;
 

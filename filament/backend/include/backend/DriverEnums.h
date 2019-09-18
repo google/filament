@@ -98,10 +98,21 @@ struct Viewport {
 };
 
 struct RenderPassFlags {
-    TargetBufferFlags clear;
+    // Clear the given buffer(s) at the start of the pass.
+    TargetBufferFlags clearStart;
+
+    // Discard the given buffer(s) at the start of the pass.
     TargetBufferFlags discardStart;
+
+    // Discard the given buffer(s) at the end of the pass.
+    // If the buffer is not discarded, it becomes sampleable.
     TargetBufferFlags discardEnd;
-    bool ignoreScissor;
+
+    // Mark the attachment for "generalized" use, which allows it to be sampled from. Normally this
+    // is not legal, but in some cases it makes sense; e.g. when creating miplevels.
+    TargetBufferFlags generalStart : 7;
+
+    bool ignoreScissor : 1;
 };
 
 struct RenderPassParams {

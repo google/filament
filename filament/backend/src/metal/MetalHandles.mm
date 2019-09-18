@@ -487,7 +487,7 @@ id<MTLTexture> MetalRenderTarget::getBlitDepthSource() {
 
 MTLLoadAction MetalRenderTarget::getLoadAction(const RenderPassParams& params,
         TargetBufferFlags buffer) {
-    const auto clearFlags = (TargetBufferFlags) params.flags.clear;
+    const auto clearFlags = params.flags.clearStart;
     const auto discardStartFlags = params.flags.discardStart;
     if (any(clearFlags & buffer)) {
         return MTLLoadActionClear;

@@ -38,8 +38,10 @@ public:
     // a VkRenderPass. It is hashed and used as a lookup key. Portions of this are extracted
     // from backend::RenderPassParams.
     struct alignas(8) RenderPassKey {
-        VkImageLayout finalColorLayout;  // 4 bytes
-        VkImageLayout finalDepthLayout;  // 4 bytes
+        VkImageLayout startColorLayout; // 4 bytes
+        VkImageLayout startDepthLayout; // 4 bytes
+        VkImageLayout finalColorLayout; // 4 bytes
+        VkImageLayout finalDepthLayout; // 4 bytes
         VkFormat colorFormat; // 4 bytes
         VkFormat depthFormat; // 4 bytes
         union {
@@ -58,7 +60,7 @@ public:
         uint32_t timestamp;
     };
     static_assert(sizeof(VkFormat) == 4, "VkFormat has unexpected size.");
-    static_assert(sizeof(RenderPassKey) == 24, "RenderPassKey has unexpected size.");
+    static_assert(sizeof(RenderPassKey) == 32, "RenderPassKey has unexpected size.");
     using RenderPassHash = utils::hash::MurmurHashFn<RenderPassKey>;
     struct RenderPassEq {
         bool operator()(const RenderPassKey& k1, const RenderPassKey& k2) const;

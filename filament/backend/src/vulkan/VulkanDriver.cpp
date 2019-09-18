@@ -697,25 +697,40 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
 
     if (rt->isOffscreen()) {
 
-        // If we're discarding the contents of the color buffer after the render pass, it's safe to
+        // If we're discarding the contents of an attachment after the render pass, it's safe to
         // assume that we will not be sampling from it.
+
         finalColorLayout = any(params.flags.discardEnd & TargetBufferFlags::COLOR) ?
                 VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL :
                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-        finalDepthLayout = VK_IMAGE_LAYOUT_GENERAL;
+        finalDepthLayout = any(params.flags.discardEnd & TargetBufferFlags::DEPTH) ?
+                VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL :
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
     } else {
         finalColorLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
         finalDepthLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
     }
 
+    VkImageLayout startColorLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    VkImageLayout startDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+    if (any(params.flags.generalStart & TargetBufferFlags::COLOR)) {
+        startColorLayout = VK_IMAGE_LAYOUT_GENERAL;
+    }
+    if (any(params.flags.generalStart & TargetBufferFlags::DEPTH)) {
+        startDepthLayout = VK_IMAGE_LAYOUT_GENERAL;
+    }
+
     VkRenderPass renderPass = mFramebufferCache.getRenderPass({
+        .startColorLayout = startColorLayout,
+        .startDepthLayout = startDepthLayout,
         .finalColorLayout = finalColorLayout,
         .finalDepthLayout = finalDepthLayout,
         .colorFormat = color.format,
         .depthFormat = depth.format,
-        .flags.clear = params.flags.clear,
+        .flags.clear = params.flags.clearStart,
         .flags.discardStart = params.flags.discardStart,
         .flags.discardEnd = params.flags.discardEnd
     });
@@ -1097,15 +1112,18 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
             const auto* texture = handle_const_cast<VulkanTexture>(mHandleMap, boundSampler->t);
             mDisposer.acquire(texture, commands->resources);
 
-            // Check that we do not sample from the current color attachment. It's fine to sample
-            // from the current depth attachment when depth writes are disabled, which is useful in
-            // some SSAO implementations.
-            ASSERT_POSTCONDITION_NON_FATAL(
-                    mCurrentRenderTarget->getColor().image != texture->textureImage,
-                    "Attempting to sample color from the current render target");
+            // If the shader has a sampler that points to the current render target, we need to use
+            // GENERAL image layout. Note that this is legal in certain situations, e.g. when
+            // creating miplevels.
+            bool generalizedUsage;
+            if (any(texture->usage & TextureUsage::DEPTH_ATTACHMENT)) {
+                generalizedUsage = mCurrentRenderTarget->getDepth().image == texture->textureImage;
+            } else {
+                generalizedUsage = mCurrentRenderTarget->getColor().image == texture->textureImage;
+            }
 
-            VkImageLayout layout = any(texture->usage & TextureUsage::DEPTH_ATTACHMENT) ?
-                        VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            const VkImageLayout layout = generalizedUsage ? VK_IMAGE_LAYOUT_GENERAL :
+                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
             mBinder.bindSampler(bindingPoint, {
                 .sampler = vksampler,

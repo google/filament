@@ -585,7 +585,7 @@ FrameGraph& FrameGraph::compile() noexcept {
                     DiscardPhase::END, &pass + 1, last, *pRenderTarget);
 
             pRenderTarget->targetFlags = {
-                    .clear = {},  // this is eventually set by the user
+                    .clearStart = {},  // this is eventually set by the user
                     .discardStart = discardStart,
                     .discardEnd = discardEnd
             };

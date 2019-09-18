@@ -24,6 +24,8 @@ namespace backend {
 bool VulkanFboCache::RenderPassEq::operator()(const RenderPassKey& k1,
         const RenderPassKey& k2) const {
     return
+            k1.startColorLayout == k2.startColorLayout &&
+            k1.startDepthLayout == k2.startDepthLayout &&
             k1.finalColorLayout == k2.finalColorLayout &&
             k1.finalDepthLayout == k2.finalDepthLayout &&
             k1.colorFormat == k2.colorFormat &&
@@ -89,12 +91,12 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
     uint32_t numAttachments = 0;
     VkAttachmentReference colorAttachmentRef = {};
     if (hasColor) {
-        colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        colorAttachmentRef.layout = config.startColorLayout;
         colorAttachmentRef.attachment = numAttachments++;
     }
     VkAttachmentReference depthAttachmentRef = {};
     if (hasDepth) {
-        depthAttachmentRef.layout = VK_IMAGE_LAYOUT_GENERAL;
+        depthAttachmentRef.layout = config.startDepthLayout;
         depthAttachmentRef.attachment = numAttachments++;
     }
     VkSubpassDescription subpass {
