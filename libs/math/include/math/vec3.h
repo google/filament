@@ -86,16 +86,17 @@ public:
     constexpr TVec3() = default;
 
     // handles implicit conversion to a tvec4. must not be explicit.
-    template<typename A>
+    template<typename A, typename = enable_if_arithmetic_t<A>>
     constexpr TVec3(A v) : v{ T(v), T(v), T(v) } {}
 
-    template<typename A, typename B, typename C>
+    template<typename A, typename B, typename C,
+            typename = enable_if_arithmetic_t<A, B, C>>
     constexpr TVec3(A x, B y, C z) : v{ T(x), T(y), T(z) } {}
 
-    template<typename A, typename B>
+    template<typename A, typename B, typename = enable_if_arithmetic_t<A, B>>
     constexpr TVec3(const TVec2<A>& v, B z) : v{ T(v[0]), T(v[1]), T(z) } {}
 
-    template<typename A>
+    template<typename A, typename = enable_if_arithmetic_t<A>>
     constexpr TVec3(const TVec3<A>& v) : v{ T(v[0]), T(v[1]), T(v[2]) } {}
 
     // cross product works only on vectors of size 3
@@ -113,7 +114,7 @@ public:
 
 // ----------------------------------------------------------------------------------------
 
-template<typename T, typename = std::enable_if_t<std::is_arithmetic<T>::value>>
+template<typename T, typename = details::enable_if_arithmetic_t<T>>
 using vec3 = details::TVec3<T>;
 
 using double3 = vec3<double>;

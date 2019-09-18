@@ -532,7 +532,8 @@ template<template<typename T> class BASE, typename T>
 class TMatProductOperators {
 public:
     // multiply by a scalar
-    constexpr BASE<T>& operator*=(T v) {
+    template<typename U>
+    constexpr BASE<T>& operator*=(U v) {
         BASE<T>& lhs(static_cast< BASE<T>& >(*this));
         for (size_t col = 0; col < BASE<T>::NUM_COLS; ++col) {
             lhs[col] *= v;
@@ -540,12 +541,22 @@ public:
         return lhs;
     }
 
-    //  matrix *= matrix
+    friend inline constexpr BASE<T> MATH_PURE operator*(BASE<T> lv, T rv) {
+        // don't pass lv by reference because we need a copy anyways
+        return lv *= rv;
+    }
+
+    //  multiply by a matrix
     template<typename U>
     constexpr BASE<T>& operator*=(const BASE<U>& rhs) {
         BASE<T>& lhs(static_cast< BASE<T>& >(*this));
         lhs = matrix::multiply<BASE<T> >(lhs, rhs);
         return lhs;
+    }
+
+    template<typename U>
+    friend inline constexpr BASE<T> MATH_PURE operator*(const BASE<T>& lhs, const BASE<U>& rhs) {
+        return matrix::multiply<BASE<T> >(lhs, rhs);
     }
 
     // divide by a scalar
@@ -555,17 +566,6 @@ public:
             lhs[col] /= v;
         }
         return lhs;
-    }
-
-    // matrix * matrix, result is a matrix of the same type than the lhs matrix
-    template<typename U>
-    friend inline constexpr BASE<T> MATH_PURE operator*(const BASE<T>& lhs, const BASE<U>& rhs) {
-        return matrix::multiply<BASE<T> >(lhs, rhs);
-    }
-
-    friend inline constexpr BASE<T> MATH_PURE operator*(BASE<T> lv, T rv) {
-        // don't pass lv by reference because we need a copy anyways
-        return lv *= rv;
     }
 
     friend inline constexpr BASE<T> MATH_PURE operator/(BASE<T> lv, T rv) {
@@ -659,8 +659,7 @@ public:
         static_assert(BASE<T>::NUM_ROWS == 3 || BASE<T>::NUM_ROWS == 4, "3x3 or 4x4 matrices only");
     }
 
-    template<typename A, typename VEC,
-            typename = std::enable_if_t<std::is_arithmetic<A>::value>>
+    template<typename A, typename VEC, typename = enable_if_arithmetic_t<A>>
     static BASE<T> rotation(A radian, const VEC& about) {
         BASE<T> r;
         T c = std::cos(radian);
@@ -706,12 +705,7 @@ public:
      * @param pitch about X axis
      * @param roll about Z axis
      */
-    template<
-            typename Y, typename P, typename R,
-            typename = std::enable_if_t<std::is_arithmetic<Y>::value>,
-            typename = std::enable_if_t<std::is_arithmetic<P>::value>,
-            typename = std::enable_if_t<std::is_arithmetic<R>::value>
-    >
+    template<typename Y, typename P, typename R, typename = enable_if_arithmetic_t<Y, P, R>>
     static BASE<T> eulerYXZ(Y yaw, P pitch, R roll) {
         return eulerZYX(roll, pitch, yaw);
     }
@@ -725,12 +719,7 @@ public:
      * The euler angles are applied in ZYX order. i.e: a vector is first rotated
      * about X (roll) then Y (pitch) and then Z (yaw).
      */
-    template<
-            typename Y, typename P, typename R,
-            typename = std::enable_if_t<std::is_arithmetic<Y>::value>,
-            typename = std::enable_if_t<std::is_arithmetic<P>::value>,
-            typename = std::enable_if_t<std::is_arithmetic<R>::value>
-    >
+    template<typename Y, typename P, typename R, typename = enable_if_arithmetic_t<Y, P, R>>
     static BASE<T> eulerZYX(Y yaw, P pitch, R roll) {
         BASE<T> r;
         T cy = std::cos(yaw);

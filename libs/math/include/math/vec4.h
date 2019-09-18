@@ -86,23 +86,25 @@ public:
     constexpr TVec4() = default;
 
     // handles implicit conversion to a tvec4. must not be explicit.
-    template<typename A>
+    template<typename A, typename = enable_if_arithmetic_t<A>>
     constexpr TVec4(A v) : v{ T(v), T(v), T(v), T(v) } {}
 
-    template<typename A, typename B, typename C, typename D>
+    template<typename A, typename B, typename C, typename D,
+            typename = enable_if_arithmetic_t<A, B, C, D>>
     constexpr TVec4(A x, B y, C z, D w) : v{ T(x), T(y), T(z), T(w) } {}
 
-    template<typename A, typename B, typename C>
-    constexpr TVec4(const TVec2 <A>& v, B z, C w) : v{ T(v[0]), T(v[1]), T(z), T(w) } {}
+    template<typename A, typename B, typename C,
+            typename = enable_if_arithmetic_t<A, B, C>>
+    constexpr TVec4(const TVec2<A>& v, B z, C w) : v{ T(v[0]), T(v[1]), T(z), T(w) } {}
 
-    template<typename A, typename B>
-    constexpr TVec4(const TVec2 <A>& v, const TVec2 <B>& w) : v{
+    template<typename A, typename B, typename = enable_if_arithmetic_t<A, B>>
+    constexpr TVec4(const TVec2<A>& v, const TVec2<B>& w) : v{
             T(v[0]), T(v[1]), T(w[0]), T(w[1]) } {}
 
-    template<typename A, typename B>
-    constexpr TVec4(const TVec3 <A>& v, B w) : v{ T(v[0]), T(v[1]), T(v[2]), T(w) } {}
+    template<typename A, typename B, typename = enable_if_arithmetic_t<A, B>>
+    constexpr TVec4(const TVec3<A>& v, B w) : v{ T(v[0]), T(v[1]), T(v[2]), T(w) } {}
 
-    template<typename A>
+    template<typename A, typename = enable_if_arithmetic_t<A>>
     constexpr TVec4(const TVec4<A>& v) : v{ T(v[0]), T(v[1]), T(v[2]), T(v[3]) } {}
 };
 
@@ -110,7 +112,7 @@ public:
 
 // ----------------------------------------------------------------------------------------
 
-template<typename T, typename = std::enable_if_t<std::is_arithmetic<T>::value>>
+template<typename T, typename = details::enable_if_arithmetic_t<T>>
 using vec4 = details::TVec4<T>;
 
 using double4 = vec4<double>;

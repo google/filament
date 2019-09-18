@@ -97,8 +97,7 @@ public:
     constexpr TQuaternion() : x(0), y(0), z(0), w(0) {}
 
     // handles implicit conversion to a tvec4. must not be explicit.
-    template<typename A,
-            typename = std::enable_if_t<std::is_arithmetic<A>::value, int>>
+    template<typename A, typename = enable_if_arithmetic_t<T>>
     constexpr TQuaternion(A w) : x(0), y(0), z(0), w(w) {
     }
 
