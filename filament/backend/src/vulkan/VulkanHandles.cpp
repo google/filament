@@ -583,20 +583,40 @@ void VulkanRenderPrimitive::setBuffers(VulkanVertexBuffer* vertexBuffer,
     memset(varray.attributes, 0, sizeof(varray.attributes));
     memset(varray.buffers, 0, sizeof(varray.buffers));
 
+    // Position should always be present.
+    assert(enabledAttributes & 1);
+
     // For each enabled attribute, append to each of the above lists. Note that a single VkBuffer
     // handle might be appended more than once, which is perfectly fine.
     uint32_t bufferIndex = 0;
     for (uint32_t attribIndex = 0; attribIndex < nattrs; attribIndex++) {
+        Attribute attrib = vertexBuffer->attributes[attribIndex];
+        VkFormat vkformat = getVkFormat(attrib.type, attrib.flags & Attribute::FLAG_NORMALIZED);
+
+        // We re-use the positions buffer as a dummy buffer for any disabled attribute that might
+        // be consumed by the shader.
+        VkBuffer vkbuffer = 0;
         if (!(enabledAttributes & (1U << attribIndex))) {
-            continue;
+
+            // TODO: all vertex attributes are floats, except for mesh_bone_indices, which are
+            // unsigned integers. Ideally the Vulkan backend would not need to know about this.
+            const uint32_t kBoneIndicesLocation = 5; // VertexAttribute::BONE_INDICES
+            vkformat = attribIndex == kBoneIndicesLocation ? VK_FORMAT_R8G8B8A8_UINT : vkformat;
+
+            // TODO: avoid using dummy buffers by adding the concept of frozen renderables.
+            if (UTILS_LIKELY(enabledAttributes & 1)) {
+                attrib = vertexBuffer->attributes[0];
+            } else {
+                continue;
+            }
         }
-        const Attribute& attrib = vertexBuffer->attributes[attribIndex];
+
         buffers.push_back(vertexBuffer->buffers[attrib.buffer]->getGpuBuffer());
         offsets.push_back(attrib.offset);
         varray.attributes[bufferIndex] = {
             .location = attribIndex, // matches the GLSL layout specifier
             .binding = bufferIndex,  // matches the position within vkCmdBindVertexBuffers
-            .format = getVkFormat(attrib.type, attrib.flags & Attribute::FLAG_NORMALIZED),
+            .format = vkformat,
             .offset = 0
         };
         varray.buffers[bufferIndex] = {
