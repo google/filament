@@ -257,7 +257,7 @@ private:
             math::float3 cameraForward) noexcept;
 
     static void setupColorCommand(Command& cmdDraw, bool hasDepthPass,
-            FMaterialInstance const* mi) noexcept;
+            FMaterialInstance const* const mi, bool inverseFrontFaces) noexcept;
 
     void recordDriverCommands(FEngine::DriverApi& driver, FScene& scene,
             const Command* first, const Command* last) const noexcept;

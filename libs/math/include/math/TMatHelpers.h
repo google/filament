@@ -253,6 +253,19 @@ struct Determinant {
 };
 
 template<typename T>
+struct Determinant<T, 3> {
+    static constexpr T determinant(Matrix<T, 3> in) {
+        return
+            in[0][0] * in[1][1] * in[2][2] +
+            in[1][0] * in[2][1] * in[0][2] +
+            in[2][0] * in[0][1] * in[1][2] -
+            in[2][0] * in[1][1] * in[0][2] -
+            in[1][0] * in[0][1] * in[2][2] -
+            in[0][0] * in[2][1] * in[1][2];
+    }
+};
+
+template<typename T>
 struct Determinant<T, 2> {
     static constexpr T determinant(Matrix<T, 2> in) {
         return in[0][0] * in[1][1] - in[0][1] * in[1][0];
