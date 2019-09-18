@@ -53,6 +53,8 @@ public:
 
     explicit operator bool() const noexcept { return !isNull(); }
 
+    void clear() noexcept  { mIdentity = 0; }
+
 private:
     friend class EntityManager;
     friend class EntityManagerImpl;
