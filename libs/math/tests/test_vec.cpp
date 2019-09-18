@@ -31,6 +31,8 @@ TEST_F(VecTest, Constexpr) {
     constexpr float2 A2 = a;
     constexpr float2 B2 = { a, a };
     constexpr float2 C2 = A2;
+    constexpr float2 E2 = A2 + 0.5f;
+    constexpr float2 F2 = A2 + 0.5 - 1.0 + (1 + A2);
     constexpr float3 D2 = cross(A2, C2);
 
     constexpr float3 A3 = a;
@@ -64,7 +66,8 @@ TEST_F(VecTest, Constexpr) {
 
     constexpr float4 S0 = A4 + B4;
     constexpr float4 S1 = C4 - D4;
-    constexpr float4 S2 = A4 * a;
+    constexpr float4 S2 = (a * A4) + (A4 * a);
+    constexpr float4 S7 = (a / A4) + (A4 / a);
     constexpr float4 S3 = A4 * A4;
     constexpr float4 S4 = A4 / a;
     constexpr float4 S5 = A4 / A4;

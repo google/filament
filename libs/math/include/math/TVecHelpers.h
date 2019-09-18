@@ -79,8 +79,8 @@ public:
     /* compound assignment from a another vector of the same size but different
      * element type.
      */
-    template<typename OTHER>
-    constexpr VECTOR<T>& operator+=(const VECTOR<OTHER>& v) {
+    template<typename U>
+    constexpr VECTOR<T>& operator+=(const VECTOR<U>& v) {
         VECTOR<T>& lhs = static_cast<VECTOR<T>&>(*this);
         for (size_t i = 0; i < lhs.size(); i++) {
             lhs[i] += v[i];
@@ -88,8 +88,13 @@ public:
         return lhs;
     }
 
-    template<typename OTHER>
-    constexpr VECTOR<T>& operator-=(const VECTOR<OTHER>& v) {
+    template<typename U, typename = enable_if_arithmetic_t<U>>
+    constexpr VECTOR<T>& operator+=(U v) {
+        return operator+=(VECTOR<U>(v));
+    }
+
+    template<typename U>
+    constexpr VECTOR<T>& operator-=(const VECTOR<U>& v) {
         VECTOR<T>& lhs = static_cast<VECTOR<T>&>(*this);
         for (size_t i = 0; i < lhs.size(); i++) {
             lhs[i] -= v[i];
@@ -97,25 +102,9 @@ public:
         return lhs;
     }
 
-    /* compound assignment from a another vector of the same type.
-     * These operators can be used for implicit conversion and  handle operations
-     * like "vector *= scalar" by letting the compiler implicitly convert a scalar
-     * to a vector (assuming the BASE<T> allows it).
-     */
-    constexpr VECTOR<T>& operator+=(const VECTOR<T>& v) {
-        VECTOR<T>& lhs = static_cast<VECTOR<T>&>(*this);
-        for (size_t i = 0; i < lhs.size(); i++) {
-            lhs[i] += v[i];
-        }
-        return lhs;
-    }
-
-    constexpr VECTOR<T>& operator-=(const VECTOR<T>& v) {
-        VECTOR<T>& lhs = static_cast<VECTOR<T>&>(*this);
-        for (size_t i = 0; i < lhs.size(); i++) {
-            lhs[i] -= v[i];
-        }
-        return lhs;
+    template<typename U, typename = enable_if_arithmetic_t<U>>
+    constexpr VECTOR<T>& operator-=(U v) {
+        return operator-=(VECTOR<U>(v));
     }
 
     /*
@@ -126,15 +115,18 @@ public:
      * (the first one, BASE<T> being known).
      */
 
-    /* The operators below handle operation between vectors of the same size
-     * but of a different element type.
-     */
     template<typename U>
     friend inline constexpr
     VECTOR<arithmetic_result_t<T, U>> MATH_PURE operator+(const VECTOR<T>& lv, const VECTOR<U>& rv) {
         VECTOR<arithmetic_result_t<T, U>> res(lv);
         res += rv;
         return res;
+    }
+
+    template<typename U, typename = enable_if_arithmetic_t<U>>
+    friend inline constexpr
+    VECTOR<arithmetic_result_t<T, U>> MATH_PURE operator+(const VECTOR<T>& lv, U rv) {
+        return lv + VECTOR<U>(rv);
     }
 
     template<typename U>
@@ -145,20 +137,10 @@ public:
         return res;
     }
 
-    /* The operators below (which are not templates once this class is instanced,
-     * i.e.: BASE<T> is known) can be used for implicit conversion on both sides.
-     * These handle operations like "vector + scalar" and "scalar + vector" by
-     * letting the compiler implicitly convert a scalar to a vector (assuming
-     * the BASE<T> allows it).
-     */
-    friend inline constexpr VECTOR<T> MATH_PURE operator+(VECTOR<T> lv, const VECTOR<T>& rv) {
-        // don't pass lv by reference because we need a copy anyways
-        return lv += rv;
-    }
-
-    friend inline constexpr VECTOR<T> MATH_PURE operator-(VECTOR<T> lv, const VECTOR<T>& rv) {
-        // don't pass lv by reference because we need a copy anyways
-        return lv -= rv;
+    template<typename U, typename = enable_if_arithmetic_t<U>>
+    friend inline constexpr
+    VECTOR<arithmetic_result_t<T, U>> MATH_PURE operator-(const VECTOR<T>& lv, U rv) {
+        return lv - VECTOR<U>(rv);
     }
 };
 
@@ -168,8 +150,8 @@ public:
     /* compound assignment from a another vector of the same size but different
      * element type.
      */
-    template<typename OTHER>
-    constexpr VECTOR<T>& operator*=(const VECTOR<OTHER>& v) {
+    template<typename U>
+    constexpr VECTOR<T>& operator*=(const VECTOR<U>& v) {
         VECTOR<T>& lhs = static_cast<VECTOR<T>&>(*this);
         for (size_t i = 0; i < lhs.size(); i++) {
             lhs[i] *= v[i];
@@ -177,8 +159,13 @@ public:
         return lhs;
     }
 
-    template<typename OTHER>
-    constexpr VECTOR<T>& operator/=(const VECTOR<OTHER>& v) {
+    template<typename U, typename = enable_if_arithmetic_t<U>>
+    constexpr VECTOR<T>& operator*=(U v) {
+        return operator*=(VECTOR<U>(v));
+    }
+
+    template<typename U>
+    constexpr VECTOR<T>& operator/=(const VECTOR<U>& v) {
         VECTOR<T>& lhs = static_cast<VECTOR<T>&>(*this);
         for (size_t i = 0; i < lhs.size(); i++) {
             lhs[i] /= v[i];
@@ -186,25 +173,9 @@ public:
         return lhs;
     }
 
-    /* compound assignment from a another vector of the same type.
-     * These operators can be used for implicit conversion and  handle operations
-     * like "vector *= scalar" by letting the compiler implicitly convert a scalar
-     * to a vector (assuming the BASE<T> allows it).
-     */
-    constexpr VECTOR<T>& operator*=(const VECTOR<T>& v) {
-        VECTOR<T>& lhs = static_cast<VECTOR<T>&>(*this);
-        for (size_t i = 0; i < lhs.size(); i++) {
-            lhs[i] *= v[i];
-        }
-        return lhs;
-    }
-
-    constexpr VECTOR<T>& operator/=(const VECTOR<T>& v) {
-        VECTOR<T>& lhs = static_cast<VECTOR<T>&>(*this);
-        for (size_t i = 0; i < lhs.size(); i++) {
-            lhs[i] /= v[i];
-        }
-        return lhs;
+    template<typename U, typename = enable_if_arithmetic_t<U>>
+    constexpr VECTOR<T>& operator/=(U v) {
+        return operator/=(VECTOR<U>(v));
     }
 
     /*
@@ -215,9 +186,6 @@ public:
      * (the first one, BASE<T> being known).
      */
 
-    /* The operators below handle operation between vectors of the same size
-     * but of a different element type.
-     */
     template<typename U>
     friend inline constexpr
     VECTOR<arithmetic_result_t<T, U>> MATH_PURE operator*(const VECTOR<T>& lv, const VECTOR<U>& rv) {
@@ -226,28 +194,26 @@ public:
         return res;
     }
 
+    template<typename U, typename = enable_if_arithmetic_t<U>>
+    friend inline constexpr
+    VECTOR<arithmetic_result_t<T, U>> MATH_PURE operator*(const VECTOR<T>& lv, U rv) {
+        VECTOR<arithmetic_result_t<T, U>> res(lv);
+        return res * VECTOR<U>(rv);
+    }
+
     template<typename U>
     friend inline constexpr
     VECTOR<arithmetic_result_t<T, U>> MATH_PURE operator/(const VECTOR<T>& lv, const VECTOR<U>& rv) {
-        arithmetic_result_t<T, U> res(lv);
+        VECTOR<arithmetic_result_t<T, U>> res(lv);
         res /= rv;
         return res;
     }
 
-    /* The operators below (which are not templates once this class is instanced,
-     * i.e.: BASE<T> is known) can be used for implicit conversion on both sides.
-     * These handle operations like "vector * scalar" and "scalar * vector" by
-     * letting the compiler implicitly convert a scalar to a vector (assuming
-     * the BASE<T> allows it).
-     */
-    friend inline constexpr VECTOR<T> MATH_PURE operator*(VECTOR<T> lv, const VECTOR<T>& rv) {
-        // don't pass lv by reference because we need a copy anyways
-        return lv *= rv;
-    }
-
-    friend inline constexpr VECTOR<T> MATH_PURE operator/(VECTOR<T> lv, const VECTOR<T>& rv) {
-        // don't pass lv by reference because we need a copy anyways
-        return lv /= rv;
+    template<typename U, typename = enable_if_arithmetic_t<U>>
+    friend inline constexpr
+    VECTOR<arithmetic_result_t<T, U>> MATH_PURE operator/(const VECTOR<T>& lv, U rv) {
+        VECTOR<arithmetic_result_t<T, U>> res(lv);
+        return res / VECTOR<U>(rv);
     }
 };
 
