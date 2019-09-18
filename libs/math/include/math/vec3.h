@@ -99,12 +99,13 @@ public:
     constexpr TVec3(const TVec3<A>& v) : v{ T(v[0]), T(v[1]), T(v[2]) } {}
 
     // cross product works only on vectors of size 3
-    template<typename RT>
-    friend inline constexpr TVec3 cross(const TVec3& u, const TVec3<RT>& v) {
-        return TVec3(
+    template<typename U>
+    friend inline constexpr
+    TVec3<arithmetic_result_t<T, U>> cross(const TVec3& u, const TVec3<U>& v) {
+        return {
                 u[1] * v[2] - u[2] * v[1],
                 u[2] * v[0] - u[0] * v[2],
-                u[0] * v[1] - u[1] * v[0]);
+                u[0] * v[1] - u[1] * v[0] };
     }
 };
 
