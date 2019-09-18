@@ -563,8 +563,8 @@ void FView::prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& are
      * Update driver state
      */
 
-    const uint64_t oneSecondReminder = engine.getEngineTime().count() % 1000000000;
-    const float fraction = float(double(oneSecondReminder) / 1000000000.0);
+    const uint64_t oneSecondRemainder = engine.getEngineTime().count() % 1000000000;
+    const float fraction = float(double(oneSecondRemainder) / 1000000000.0);
     mPerViewUb.setUniform(offsetof(PerViewUib, time), fraction);
     mPerViewUb.setUniform(offsetof(PerViewUib, userTime), userTime);
 
