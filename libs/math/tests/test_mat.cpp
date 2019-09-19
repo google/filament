@@ -46,9 +46,12 @@ TEST_F(MatTest, ConstexprMat2) {
     constexpr float2 f3 = diag(M0);
     constexpr mat2f M8 = transpose(M0);
     constexpr mat2f M9 = inverse(M0);
+    constexpr mat2f M12 = abs(M0);
     constexpr mat2f M11 = details::matrix::cof(M0);
     constexpr mat2f M10 = M8 * M9;
     constexpr float s0 = trace(M0);
+    constexpr float f4 = M[0][0];
+    constexpr float f5 = M(0, 0);
 }
 
 TEST_F(MatTest, ConstexprMat3) {

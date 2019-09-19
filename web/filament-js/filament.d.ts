@@ -81,6 +81,7 @@ export class MaterialInstance {
     public setPolygonOffset(scale: number, constant: number): void;
     public setMaskThreshold(threshold: number): void;
     public setDoubleSided(doubleSided: boolean): void;
+    public setCullingMode(mode: CullingMode): void;
 }
 
 export class EntityManager {
@@ -451,6 +452,13 @@ export enum MinFilter {
     LINEAR_MIPMAP_NEAREST,
     NEAREST_MIPMAP_LINEAR,
     LINEAR_MIPMAP_LINEAR,
+}
+
+export enum CullingMode {
+    NONE,
+    FRONT,
+    BACK,
+    FRONT_AND_BACK,
 }
 
 export enum PixelDataFormat {

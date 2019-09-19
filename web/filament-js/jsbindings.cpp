@@ -955,7 +955,8 @@ class_<MaterialInstance>("MaterialInstance")
         self->setParameter(name.c_str(), type, value); }), allow_raw_pointers())
     .function("setPolygonOffset", &MaterialInstance::setPolygonOffset)
     .function("setMaskThreshold", &MaterialInstance::setMaskThreshold)
-    .function("setDoubleSided", &MaterialInstance::setDoubleSided);
+    .function("setDoubleSided", &MaterialInstance::setDoubleSided)
+    .function("setCullingMode", &MaterialInstance::setCullingMode);
 
 class_<TextureSampler>("TextureSampler")
     .constructor<backend::SamplerMinFilter, backend::SamplerMagFilter, backend::SamplerWrapMode>();

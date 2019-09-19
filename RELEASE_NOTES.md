@@ -6,6 +6,7 @@ A new header is inserted each time a *tag* is created.
 ## Next release
 
 - Backface culling can now be toggled on material instances.
+- Face direction is now reversed when transforms have negative scale.
 - Dielectrics now behave properly under a white furnace (energy preserving and conserving).
 - Clear coat roughness now remains in the 0..1 (previously remapped to the 0..0.6 range).
 - gltfio: Fixed several limitations with ubershader mode.

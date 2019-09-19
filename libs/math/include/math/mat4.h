@@ -83,7 +83,7 @@ class MATH_EMPTY_BASES TMat44 :
         public TVecUnaryOperators<TMat44, T>,
         public TVecComparisonOperators<TMat44, T>,
         public TVecAddOperators<TMat44, T>,
-        public TMatProductOperators<TMat44, T>,
+        public TMatProductOperators<TMat44, T, TVec4>,
         public TMatSquareFunctions<TMat44, T>,
         public TMatTransform<TMat44, T>,
         public TMatHelpers<TMat44, T>,
@@ -547,57 +547,12 @@ TMat44<T> TMat44<T>::lookAt(const TVec3<A>& eye, const TVec3<B>& center,
 // Arithmetic operators outside of class
 // ----------------------------------------------------------------------------------------
 
-/* We use non-friend functions here to prevent the compiler from using
- * implicit conversions, for instance of a scalar to a vector. The result would
- * not be what the caller expects.
- *
- * Also note that the order of the arguments in the inner loop is important since
- * it determines the output type (only relevant when T != U).
- */
-
-// matrix * column-vector, result is a vector of the same type than the input vector
-template<typename T, typename U>
-constexpr typename TMat44<T>::col_type MATH_PURE operator*(const TMat44<T>& lhs,
-        const TVec4<U>& rhs) {
-    // Result is initialized to zero.
-    typename TMat44<T>::col_type result{};
-    for (size_t col = 0; col < TMat44<T>::NUM_COLS; ++col) {
-        result += lhs[col] * T(rhs[col]);
-    }
-    return result;
-}
 
 // mat44 * vec3, result is vec3( mat44 * {vec3, 1} )
 template<typename T, typename U>
 constexpr typename TMat44<T>::col_type MATH_PURE operator*(const TMat44<T>& lhs,
         const TVec3<U>& rhs) {
     return lhs * TVec4<U>{ rhs, 1 };
-}
-
-
-// row-vector * matrix, result is a vector of the same type than the input vector
-template<typename T, typename U>
-constexpr typename TMat44<U>::row_type MATH_PURE operator*(const TVec4<U>& lhs,
-        const TMat44<T>& rhs) {
-    typename TMat44<U>::row_type result{};
-    for (size_t col = 0; col < TMat44<T>::NUM_COLS; ++col) {
-        result[col] = dot(lhs, rhs[col]);
-    }
-    return result;
-}
-
-// matrix * scalar, result is a matrix of the same type than the input matrix
-template<typename T, typename U>
-constexpr std::enable_if_t<std::is_arithmetic<U>::value, TMat44<T>> MATH_PURE
-operator*(TMat44<T> lhs, U rhs) {
-    return lhs *= rhs;
-}
-
-// scalar * matrix, result is a matrix of the same type than the input matrix
-template<typename T, typename U>
-constexpr std::enable_if_t<std::is_arithmetic<U>::value, TMat44<T>> MATH_PURE
-operator*(U lhs, const TMat44<T>& rhs) {
-    return rhs * lhs;
 }
 
 // ----------------------------------------------------------------------------------------
