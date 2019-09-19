@@ -205,7 +205,9 @@ set(APP_SRCS
         app/FilamentApp.cpp
         app/IBL.cpp
         app/IcoSphere.cpp
-        app/Sphere.cpp)
+        app/Sphere.cpp
+        app/Image.cpp
+        )
 
 if (APPLE)
     list(APPEND APP_SRCS app/NativeWindowHelperCocoa.mm)
