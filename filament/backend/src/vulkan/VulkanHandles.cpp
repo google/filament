@@ -595,7 +595,6 @@ void VulkanRenderPrimitive::setBuffers(VulkanVertexBuffer* vertexBuffer,
 
         // We re-use the positions buffer as a dummy buffer for any disabled attribute that might
         // be consumed by the shader.
-        VkBuffer vkbuffer = 0;
         if (!(enabledAttributes & (1U << attribIndex))) {
 
             // TODO: all vertex attributes are floats, except for mesh_bone_indices, which are
