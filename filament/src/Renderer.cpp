@@ -446,8 +446,8 @@ void FRenderer::copyFrame(FSwapChain* dstSwapChain, filament::Viewport const& ds
     // Clear color to black if the CLEAR flag is set.
     if (flags & CLEAR) {
         params.clearColor = {0.f, 0.f, 0.f, 1.f};
-        params.flags.clear = (uint8_t)TargetBufferFlags::COLOR;
-        params.flags.clear |= RenderPassFlags::IGNORE_SCISSOR;
+        params.flags.clear = TargetBufferFlags::COLOR;
+        params.flags.ignoreScissor = true;
         params.flags.discardStart = TargetBufferFlags::ALL;
         params.flags.discardEnd = TargetBufferFlags::NONE;
         params.viewport.left = 0;

@@ -159,14 +159,14 @@ void ShadowMap::render(DriverApi& driver, RenderPass& pass, FView& view) noexcep
 
     // FIXME: in the future this will come from the framegraph
     RenderPassParams params = {};
-    params.flags.clear = (uint8_t)TargetBufferFlags::DEPTH;
+    params.flags.clear = TargetBufferFlags::DEPTH;
     params.flags.discardStart = TargetBufferFlags::DEPTH;
     params.flags.discardEnd = TargetBufferFlags::COLOR_AND_STENCIL;
     params.clearDepth = 1.0;
     params.viewport = viewport;
     // disable scissor for clearing so the whole surface, but set the viewport to the
     // the inset-by-1 rectangle.
-    params.flags.clear |= RenderPassFlags::IGNORE_SCISSOR;
+    params.flags.ignoreScissor = true;
 
     FCamera const& camera = getCamera();
     details::CameraInfo cameraInfo = {

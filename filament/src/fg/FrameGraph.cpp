@@ -154,7 +154,6 @@ FrameGraphPassResources::getRenderTarget(FrameGraphRenderTargetHandle handle, ui
     // overwrite discard flags with the per-rendertarget (per-pass) computed value
     info.params.flags.discardStart = renderTarget.targetFlags.discardStart;
     info.params.flags.discardEnd   = renderTarget.targetFlags.discardEnd;
-    info.params.flags.dependencies = renderTarget.targetFlags.dependencies;
 
     // check that this FrameGraphRenderTarget is indeed declared by this pass
     ASSERT_POSTCONDITION_NON_FATAL(info.target,
@@ -588,8 +587,7 @@ FrameGraph& FrameGraph::compile() noexcept {
             pRenderTarget->targetFlags = {
                     .clear = {},  // this is eventually set by the user
                     .discardStart = discardStart,
-                    .discardEnd = discardEnd,
-                    .dependencies = {}
+                    .discardEnd = discardEnd
             };
         }
     }
