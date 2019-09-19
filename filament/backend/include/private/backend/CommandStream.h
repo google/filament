@@ -153,10 +153,10 @@ struct CommandType<void (Driver::*)(ARGS...)> {
         static inline void execute(M&& method, D&& driver, CommandBase* base, intptr_t* next) noexcept {
             Command* self = static_cast<Command*>(base);
             *next = align(sizeof(Command));
-            if (DEBUG_COMMAND_STREAM) {
+#if DEBUG_COMMAND_STREAM
                 // must call this before invoking the method
                 self->log();
-            }
+#endif
             apply(std::forward<M>(method), std::forward<D>(driver), self->mArgs);
             self->~Command();
         }
