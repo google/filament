@@ -68,7 +68,7 @@ class MATH_EMPTY_BASES TMat22 :
         public TVecUnaryOperators<TMat22, T>,
         public TVecComparisonOperators<TMat22, T>,
         public TVecAddOperators<TMat22, T>,
-        public TMatProductOperators<TMat22, T>,
+        public TMatProductOperators<TMat22, T, TVec2>,
         public TMatSquareFunctions<TMat22, T>,
         public TMatHelpers<TMat22, T>,
         public TMatDebug<TMat22, T> {
@@ -323,55 +323,6 @@ template<typename T>
 template<typename A, typename B>
 constexpr TMat22<T>::TMat22(const TVec2<A>& v0, const TVec2<B>& v1)
         : m_value{ v0, v1 } {
-}
-
-// ----------------------------------------------------------------------------------------
-// Arithmetic operators outside of class
-// ----------------------------------------------------------------------------------------
-
-/* We use non-friend functions here to prevent the compiler from using
- * implicit conversions, for instance of a scalar to a vector. The result would
- * not be what the caller expects.
- *
- * Also note that the order of the arguments in the inner loop is important since
- * it determines the output type (only relevant when T != U).
- */
-
-// matrix * column-vector, result is a vector of the same type than the input vector
-template<typename T, typename U>
-constexpr typename TMat22<U>::col_type MATH_PURE
-operator*(const TMat22<T>& lhs, const TVec2<U>& rhs) {
-    // Result is initialized to zero.
-    typename TMat22<U>::col_type result{};
-    for (size_t col = 0; col < TMat22<T>::NUM_COLS; ++col) {
-        result += lhs[col] * rhs[col];
-    }
-    return result;
-}
-
-// row-vector * matrix, result is a vector of the same type than the input vector
-template<typename T, typename U>
-constexpr typename TMat22<U>::row_type MATH_PURE
-operator*(const TVec2<U>& lhs, const TMat22<T>& rhs) {
-    typename TMat22<U>::row_type result{};
-    for (size_t col = 0; col < TMat22<T>::NUM_COLS; ++col) {
-        result[col] = dot(lhs, rhs[col]);
-    }
-    return result;
-}
-
-// matrix * scalar, result is a matrix of the same type than the input matrix
-template<typename T, typename U>
-constexpr std::enable_if_t<std::is_arithmetic<U>::value, TMat22<T>> MATH_PURE
-operator*(TMat22<T> lhs, U rhs) {
-    return lhs *= rhs;
-}
-
-// scalar * matrix, result is a matrix of the same type than the input matrix
-template<typename T, typename U>
-constexpr std::enable_if_t<std::is_arithmetic<U>::value, TMat22<T>> MATH_PURE
-operator*(U lhs, const TMat22<T>& rhs) {
-    return rhs * lhs;
 }
 
 // ----------------------------------------------------------------------------------------
