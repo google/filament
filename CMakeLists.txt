@@ -334,7 +334,7 @@ endif()
 # ==================================================================================================
 if (MSVC)
     ## The MSVC compiler has a limitation on literal string length which is reached when all the 
-    ## licenses are concanated together into a large string... so split them into multiple strings.
+    ## licenses are concatenated together into a large string... so split them into multiple strings.
     function(list_licenses OUTPUT MODULES)
         file(WRITE ${OUTPUT} " R\"FILAMENT__(")
         set(_MODULES ${MODULES} ${ARGN})
