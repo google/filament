@@ -5,8 +5,10 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.12.1 (currently main branch)
 
-- engine: `double` precision model (and view) matrix on `Camera`. This is only an
-  API change, internal precision is still `float` [⚠️ **API Change**].
+- engine: `double` precision translation support in TransformManager. Disabled by default. 
+  Augment model (and view) matrix on `Camera` to accept double precision matrices. When enabled,
+  double precision translations allow filament to handle a very large world space.
+  [**New API**].
 
 ## v1.12.0
 

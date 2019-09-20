@@ -111,8 +111,7 @@ void FScene::prepare(const mat4& worldOriginTransform, bool shadowReceiversAreCa
         // get the world transform
         auto ti = tcm.getInstance(e);
         // this is where we go from double to float for our transforms
-        // (in the future, getWorldTransform() will have a double version)
-        const mat4f worldTransform{ worldOriginTransform * tcm.getWorldTransform(ti) };
+        const mat4f worldTransform{ worldOriginTransform * tcm.getWorldTransformAccurate(ti) };
         const bool reversedWindingOrder = det(worldTransform.upperLeft()) < 0;
 
         // don't even draw this object if it doesn't have a transform (which shouldn't happen

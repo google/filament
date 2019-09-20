@@ -1046,6 +1046,10 @@ TransformManager& Engine::getTransformManager() noexcept {
     return upcast(this)->getTransformManager();
 }
 
+void Engine::enableAccurateTranslations() noexcept  {
+    getTransformManager().setAccurateTranslationsEnabled(true);
+}
+
 void* Engine::streamAlloc(size_t size, size_t alignment) noexcept {
     return upcast(this)->streamAlloc(size, alignment);
 }
