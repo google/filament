@@ -605,7 +605,7 @@ void OpenGLDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
 
     auto& gl = mContext;
     GLTexture* t = construct<GLTexture>(th, target, levels, samples, w, h, depth, format, usage);
-    if (UTILS_LIKELY(usage & TextureUsage::SAMPLEABLE)) {
+    if (UTILS_LIKELY(!!(usage & TextureUsage::SAMPLEABLE))) {
 
         // below we're using the a = foo(b = C) pattern, this is on purpose, to make sure
         // we don't forget to update targetIndex, and that we do it with the correct value.
@@ -1065,7 +1065,7 @@ void OpenGLDriver::destroyTexture(Handle<HwTexture> th) {
     if (th) {
         auto& gl = mContext;
         GLTexture* t = handle_cast<GLTexture*>(th);
-        if (UTILS_LIKELY(t->usage & TextureUsage::SAMPLEABLE)) {
+        if (UTILS_LIKELY(!!(t->usage & TextureUsage::SAMPLEABLE))) {
             gl.unbindTexture(t->gl.target, t->gl.id);
             if (UTILS_UNLIKELY(t->hwStream)) {
                 detachStream(t);

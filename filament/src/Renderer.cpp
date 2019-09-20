@@ -337,9 +337,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
                 data.color = builder.write(builder.read(data.color));
                 data.rt = builder.createRenderTarget("Color Pass Target", {
+                        .attachments = { data.color, data.depth },
                         .samples = msaa,
-                        .attachments.color = data.color,
-                        .attachments.depth = data.depth
                 }, clearFlags);
             },
             [&pass, &ppm, colorPassBegin, colorPassEnd, jobFroxelize, &js, &view]

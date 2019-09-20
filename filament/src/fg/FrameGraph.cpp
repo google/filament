@@ -93,9 +93,9 @@ FrameGraphRenderTargetHandle FrameGraph::Builder::createRenderTarget(const char*
 FrameGraphRenderTargetHandle FrameGraph::Builder::createRenderTarget(FrameGraphId<FrameGraphTexture>& texture,
         TargetBufferFlags clearFlags) noexcept {
     texture = this->write(texture);
-    return createRenderTarget(getName(texture), {
-            .attachments.color = texture
-    }, clearFlags);
+    FrameGraphRenderTarget::Descriptor desc;
+    desc.attachments.color = texture;
+    return createRenderTarget(getName(texture), desc, clearFlags);
 }
 
 FrameGraphHandle FrameGraph::Builder::read(FrameGraphHandle input) {

@@ -237,9 +237,10 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(
                 auto const& inputDesc = fg.getDescriptor(input);
 
                 data.input = builder.read(input);
-
+                FrameGraphRenderTarget::Descriptor d;
+                d.attachments.color = { data.input };
                 data.srt = builder.createRenderTarget(builder.getName(data.input),
-                        { .attachments.color = { data.input }
+                        { .attachments = d
                         });
 
                 data.output = builder.createTexture("resolve output", {
@@ -276,8 +277,10 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dynamicScaling(FrameGraph& f
                 auto const& inputDesc = fg.getDescriptor(input);
 
                 data.input = builder.read(input);
+                FrameGraphRenderTarget::Descriptor d;
+                d.attachments.color = { data.input };
                 data.srt = builder.createRenderTarget(builder.getName(data.input),
-                        { .attachments.color = { data.input }
+                        { .attachments = d
                         });
 
                 data.output = builder.createTexture("scale output", {
@@ -356,8 +359,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssao(FrameGraph& fg, RenderP
                 data.depth = builder.sample(data.depth);
 
                 data.rt = builder.createRenderTarget("SSAO Target",
-                        { .attachments.color = { data.ssao },
-                                .attachments.depth = { data.depth }
+                        { .attachments = { data.ssao, data.depth }
                         }, TargetBufferFlags::NONE);
             },
             [=](FrameGraphPassResources const& resources,
@@ -440,9 +442,12 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::depthPass(FrameGraph& fg, Re
 
                 data.depth = builder.write(builder.read(data.depth));
 
+                // nested designated initializers not in C++ standard: https://tinyurl.com/y6krwocx
+                FrameGraphRenderTarget::Descriptor d;
+                d.attachments.depth = data.depth;
                 data.rt = builder.createRenderTarget("SSAO Depth Target",
-                        { .attachments.depth = data.depth },
-                        TargetBufferFlags::DEPTH);
+                                                     d,
+                                                     TargetBufferFlags::DEPTH);
             },
             [=, &pass](FrameGraphPassResources const& resources,
                     DepthPassData const& data, DriverApi& driver) {
@@ -472,9 +477,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::mipmapPass(FrameGraph& fg,
                 data.in = builder.sample(input);
 
                 data.out = builder.write(data.in);
-                data.rt = builder.createRenderTarget(name, {
-                        .attachments.depth = { data.out, uint8_t(level + 1) }
-                });
+                FrameGraphRenderTarget::Descriptor d;
+                d.attachments.depth = { data.out, uint8_t(level + 1) };
+                data.rt = builder.createRenderTarget(name, d);
             },
             [=](FrameGraphPassResources const& resources,
                     DepthMipData const& data, DriverApi& driver) {
@@ -533,8 +538,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blurPass(FrameGraph& fg,
                 depth = builder.read(depth);
                 data.blurred = builder.write(data.blurred);
                 data.rt = builder.createRenderTarget("Blurred target",
-                        { .attachments.color = { data.blurred },
-                                .attachments.depth = { depth }
+                        { .attachments = { data.blurred, depth }
                         }, TargetBufferFlags::NONE);
             },
             [=](FrameGraphPassResources const& resources,
