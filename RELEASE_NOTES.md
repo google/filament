@@ -5,6 +5,9 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.12.1 (currently main branch)
 
+- engine: `double` precision model (and view) matrix on `Camera`. This is only an
+  API change, internal precision is still `float` [⚠️ **API Change**].
+
 ## v1.12.0
 
 - engine: Option to automatically compute bent normals from SSAO & apply to specular AO

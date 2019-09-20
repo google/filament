@@ -453,7 +453,7 @@ void ShadowMap::computeShadowCameraDirectional(
         // The model matrix below is in fact inverted to get the view matrix and passed to the
         // shader as 'viewFromWorldMatrix', and is used in the VSM case to compute the depth metric.
         // (see depth_main.fs). Note that in the case of VSM, 'b' below is identity.
-        mCamera->setModelMatrix(FCamera::rigidTransformInverse(Mv * b));
+        mCamera->setModelMatrix(mat4{ FCamera::rigidTransformInverse(Mv * b) });
         mCamera->setCustomProjection(mat4(F * W * L * Mp), znear, zfar);
 
         // for the debug camera, we need to undo the world origin
@@ -508,7 +508,7 @@ void ShadowMap::computeShadowCameraSpot(math::float3 const& position, math::floa
     // The model matrix below is in fact inverted to get the view matrix and passed to the
     // shader as 'viewFromWorldMatrix', and is used in the VSM case to compute the depth metric.
     // (see depth_main.fs). Note that in the case of VSM, 'b' below is identity.
-    mCamera->setModelMatrix(FCamera::rigidTransformInverse(Mv * b));
+    mCamera->setModelMatrix(mat4{ FCamera::rigidTransformInverse(Mv * b) });
     mCamera->setCustomProjection(mat4(Mp), nearPlane, farPlane);
 
     // for the debug camera, we need to undo the world origin
