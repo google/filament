@@ -154,9 +154,9 @@ Java_com_google_android_filament_Engine_nDestroyScene(JNIEnv*, jclass,
 
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_Engine_nCreateFence(JNIEnv*, jclass,
-        jlong nativeEngine, jint fenceType) {
+        jlong nativeEngine) {
     Engine* engine = (Engine*) nativeEngine;
-    return (jlong) engine->createFence((Fence::Type) fenceType);
+    return (jlong) engine->createFence();
 }
 
 extern "C" JNIEXPORT void JNICALL
