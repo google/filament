@@ -34,6 +34,7 @@
 namespace utils {
 
 class Profiler {
+public:
     enum {
         INSTRUCTIONS    = 0,   // must be zero
         CPU_CYCLES      = 1,
@@ -47,9 +48,7 @@ class Profiler {
         // Must be last one
         EVENT_COUNT
     };
-
-public:
-
+	
     enum {
         EV_CPU_CYCLES = 1u << CPU_CYCLES,
         EV_L1D_REFS   = 1u << DCACHE_REFS,

@@ -42,6 +42,12 @@
 #   define UTILS_PACKED
 #endif
 
+#if __has_attribute(noreturn)
+#    define UTILS_NORETURN __attribute__((noreturn))
+#else
+#    define UTILS_NORETURN
+#endif
+
 #if __has_attribute(visibility)
 #    ifndef TNT_DEV
 #        define UTILS_PRIVATE __attribute__((visibility("hidden")))
@@ -129,7 +135,9 @@
 #    define UTILS_RESTRICT
 #endif
 
-#if __has_feature(cxx_thread_local)
+#if defined(_MSC_VER) && _MSC_VER >= 1900
+#       define UTILS_HAS_FEATURE_CXX_THREAD_LOCAL 1
+#elif __has_feature(cxx_thread_local)
 #   ifdef ANDROID
 #       // Android NDK lies about supporting cxx_thread_local
 #       define UTILS_HAS_FEATURE_CXX_THREAD_LOCAL 0
@@ -140,7 +148,7 @@
 #   define UTILS_HAS_FEATURE_CXX_THREAD_LOCAL 0
 #endif
 
-#if __has_feature(cxx_rtti)
+#if __has_feature(cxx_rtti) || defined(_CPPRTTI)
 #   define UTILS_HAS_RTTI 1
 #else
 #   define UTILS_HAS_RTTI 0

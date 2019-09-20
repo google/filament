@@ -324,7 +324,7 @@ public:
      * @see setMode()
      */
     static void panic(char const* function, char const* file, int line, const char* format, ...)
-        __attribute__((noreturn));
+        UTILS_NORETURN;
 
     /**
      * Depending on the mode set, either throws an exception of type T with the given reason plus
@@ -339,7 +339,7 @@ public:
      * @see setMode()
      */
     static inline void panic(char const* function, char const* file, int line, const std::string& s)
-        __attribute__((noreturn)) {
+        UTILS_NORETURN {
         panic(function, file, line, s.c_str());
     }
 
@@ -427,6 +427,10 @@ class ArithmeticPanic : public TPanic<ArithmeticPanic> {
 #else
 #   define PANIC_FILE(F) ""
 #endif
+
+#if _MSC_VER
+#define __PRETTY_FUNCTION__ __FUNCSIG__
+#endif 
 
 /**
  * PANIC_PRECONDITION is a macro that reports a PreconditionPannic
