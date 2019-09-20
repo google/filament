@@ -172,8 +172,8 @@ void ShadowMap::render(DriverApi& driver, RenderPass& pass, FView& view) noexcep
     details::CameraInfo cameraInfo = {
             .projection         = mat4f{ camera.getProjectionMatrix() },
             .cullingProjection  = mat4f{ camera.getCullingProjectionMatrix() },
-            .model              = camera.getModelMatrix(),
-            .view               = camera.getViewMatrix(),
+            .model              = mat4f{ camera.getModelMatrix() },
+            .view               = mat4f{ camera.getViewMatrix() },
             .zn                 = camera.getNear(),
             .zf                 = camera.getCullingFar(),
     };

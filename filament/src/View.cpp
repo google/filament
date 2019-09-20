@@ -416,13 +416,13 @@ void FView::prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& are
      * The "world origin" could also be useful for other things, like keeping the origin
      * close to the camera position to improve fp precision in the shader for large scenes.
      */
-    mat4f worldOriginScene;
+    mat4 worldOriginScene;
     FIndirectLight const* const ibl = scene->getIndirectLight();
     if (ibl) {
         // the IBL transformation must be a rigid transform
         mat3f rotation{ scene->getIndirectLight()->getRotation() };
         // for a rigid-body transform, the inverse is the transpose
-        worldOriginScene = mat4f{ transpose(rotation) };
+        worldOriginScene = mat4{ transpose(rotation) };
     }
 
     /*
@@ -443,7 +443,7 @@ void FView::prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& are
     // is set: e.g.
     //      worldOriginCamera = mViewingCamera ? mat4f{} : worldOriginScene
 
-    const mat4f worldOriginCamera = worldOriginScene;
+    const mat4 worldOriginCamera = worldOriginScene;
     const mat4f model{ worldOriginCamera * camera->getModelMatrix() };
     mViewingCameraInfo = CameraInfo{
             // projection with infinite z-far
@@ -463,7 +463,7 @@ void FView::prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& are
             // world offset to allow users to determine the API-level camera position
             .worldOffset        = camera->getPosition(),
             // world origin transform, use only for debugging
-            .worldOrigin        = worldOriginCamera
+            .worldOrigin        = (mat4f)worldOriginCamera
     };
     mCullingFrustum = FCamera::getFrustum(
             mCullingCamera->getCullingProjectionMatrix(),

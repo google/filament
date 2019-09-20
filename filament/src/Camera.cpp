@@ -162,21 +162,23 @@ void UTILS_NOINLINE FCamera::setProjection(Camera::Projection projection,
     mFar = float(far);
 }
 
-void UTILS_NOINLINE FCamera::setModelMatrix(const mat4f& modelMatrix) noexcept {
+void UTILS_NOINLINE FCamera::setModelMatrix(const mat4& modelMatrix) noexcept {
     FTransformManager& transformManager = mEngine.getTransformManager();
     transformManager.setTransform(transformManager.getInstance(mEntity), modelMatrix);
 }
 
 void FCamera::lookAt(const float3& eye, const float3& center, const float3& up) noexcept {
-    setModelMatrix(mat4f::lookAt(eye, center, up));
+    FTransformManager& transformManager = mEngine.getTransformManager();
+    transformManager.setTransform(transformManager.getInstance(mEntity),
+            mat4f::lookAt(eye, center, up));
 }
 
-mat4f const& FCamera::getModelMatrix() const noexcept {
+mat4 FCamera::getModelMatrix() const noexcept {
     FTransformManager const& transformManager = mEngine.getTransformManager();
-    return transformManager.getWorldTransform(transformManager.getInstance(mEntity));
+    return transformManager.getWorldTransformAccurate(transformManager.getInstance(mEntity));
 }
 
-mat4f UTILS_NOINLINE FCamera::getViewMatrix() const noexcept {
+mat4 UTILS_NOINLINE FCamera::getViewMatrix() const noexcept {
     return FCamera::getViewMatrix(getModelMatrix());
 }
 
@@ -231,11 +233,16 @@ math::details::TMat44<T> inverseProjection(const math::details::TMat44<T>& p) no
 
 
 UTILS_NOINLINE
+mat4 FCamera::getViewMatrix(mat4 const& model) noexcept {
+    return FCamera::rigidTransformInverse(model);
+}
+
+UTILS_NOINLINE
 mat4f FCamera::getViewMatrix(mat4f const& model) noexcept {
     return FCamera::rigidTransformInverse(model);
 }
 
-Frustum FCamera::getFrustum(mat4 const& projection, mat4f const& viewMatrix) noexcept {
+Frustum FCamera::getFrustum(mat4 const& projection, mat4 const& viewMatrix) noexcept {
     return Frustum(mat4f{ projection * viewMatrix });
 }
 
@@ -289,7 +296,7 @@ float Camera::getCullingFar() const noexcept {
     return upcast(this)->getCullingFar();
 }
 
-void Camera::setModelMatrix(const mat4f& modelMatrix) noexcept {
+void Camera::setModelMatrix(const mat4& modelMatrix) noexcept {
     upcast(this)->setModelMatrix(modelMatrix);
 }
 
@@ -297,11 +304,11 @@ void Camera::lookAt(const float3& eye, const float3& center, float3 const& up) n
     upcast(this)->lookAt(eye, center, up);
 }
 
-mat4f Camera::getModelMatrix() const noexcept {
+mat4 Camera::getModelMatrix() const noexcept {
     return upcast(this)->getModelMatrix();
 }
 
-mat4f Camera::getViewMatrix() const noexcept {
+mat4 Camera::getViewMatrix() const noexcept {
     return upcast(this)->getViewMatrix();
 }
 
