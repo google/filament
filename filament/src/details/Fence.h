@@ -37,6 +37,12 @@ class FEngine;
 
 class FFence : public Fence {
 public:
+    // Type of the Fence being created
+    enum class Type : uint8_t {
+        SOFT,
+        HARD
+    };
+
     FFence(FEngine& engine, Type type);
 
     void terminate(FEngine& engine) noexcept;

@@ -28,6 +28,7 @@
 #include "details/Allocators.h"
 #include "details/Camera.h"
 #include "details/DebugRegistry.h"
+#include "details/Fence.h"
 #include "details/RenderTarget.h"
 #include "details/ResourceList.h"
 #include "details/Skybox.h"
@@ -234,7 +235,7 @@ public:
 
     FScene* createScene() noexcept;
     FView* createView() noexcept;
-    FFence* createFence(Fence::Type type = Fence::Type::SOFT) noexcept;
+    FFence* createFence(FFence::Type type) noexcept;
     FSwapChain* createSwapChain(void* nativeWindow, uint64_t flags) noexcept;
 
     FCamera* createCamera(utils::Entity entity) noexcept;

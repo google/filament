@@ -310,11 +310,9 @@ public:
     /**
      * Creates a Fence.
      *
-     * @param type Type of Fence to create
-     *
      * @return A pointer to the newly created Fence or nullptr if it couldn't be created.
      */
-    Fence* createFence(Fence::Type type = Fence::Type::SOFT) noexcept;
+    Fence* createFence() noexcept;
 
     void destroy(const VertexBuffer* p);        //!< Destroys an VertexBuffer object.
     void destroy(const Fence* p);               //!< Destroys a Fence object.
