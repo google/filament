@@ -249,7 +249,7 @@ public:
      *
      * @warning \p view must be a rigid transform
      */
-    void setModelMatrix(const math::mat4f& view) noexcept;
+    void setModelMatrix(const math::mat4& view) noexcept;
 
     /** Sets the camera's view matrix
      *
@@ -282,10 +282,10 @@ public:
      * @return The camera's pose in world space as a rigid transform. Parent transforms, if any,
      * are taken into account.
      */
-    math::mat4f getModelMatrix() const noexcept;
+    math::mat4 getModelMatrix() const noexcept;
 
     //! Returns the camera's view matrix (inverse of the model matrix)
-    math::mat4f getViewMatrix() const noexcept;
+    math::mat4 getViewMatrix() const noexcept;
 
     //! Returns the camera's position in world space
     math::float3 getPosition() const noexcept;

@@ -83,7 +83,7 @@ public:
     ~FScene() noexcept;
     void terminate(FEngine& engine);
 
-    void prepare(const math::mat4f& worldOriginTransform);
+    void prepare(const math::mat4& worldOriginTransform);
     void prepareDynamicLights(const CameraInfo& camera, ArenaScope& arena, backend::Handle<backend::HwUniformBuffer> lightUbh) noexcept;
 
 

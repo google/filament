@@ -366,13 +366,13 @@ void FView::prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& are
      * The "world origin" could also be useful for other things, like keeping the origin
      * close to the camera position to improve fp precision in the shader for large scenes.
      */
-    mat4f worldOriginScene;
+    mat4 worldOriginScene;
     FIndirectLight const* const ibl = scene->getIndirectLight();
     if (ibl) {
         // the IBL transformation must be a rigid transform
         mat3f rotation{ scene->getIndirectLight()->getRotation() };
         // for a rigid-body transform, the inverse is the transpose
-        worldOriginScene = mat4f{ transpose(rotation) };
+        worldOriginScene = mat4{ transpose(rotation) };
     }
 
     /*

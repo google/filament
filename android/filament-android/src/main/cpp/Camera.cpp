@@ -80,7 +80,7 @@ Java_com_google_android_filament_Camera_nSetModelMatrix(JNIEnv *env, jclass,
         jlong nativeCamera, jfloatArray in_) {
     Camera* camera = (Camera *) nativeCamera;
     jfloat *in = env->GetFloatArrayElements(in_, NULL);
-    camera->setModelMatrix(*reinterpret_cast<const filament::math::mat4f*>(in));
+    camera->setModelMatrix((math::mat4)*reinterpret_cast<const filament::math::mat4f*>(in));
     env->ReleaseFloatArrayElements(in_, in, JNI_ABORT);
 }
 
@@ -99,7 +99,7 @@ Java_com_google_android_filament_Camera_nGetModelMatrix(JNIEnv *env, jclass,
         jlong nativeCamera, jfloatArray out_) {
     Camera *camera = (Camera *) nativeCamera;
     jfloat *out = env->GetFloatArrayElements(out_, NULL);
-    const filament::math::mat4f& m = camera->getModelMatrix();
+    const filament::math::mat4f& m = (math::mat4f)camera->getModelMatrix();
     std::copy_n(&m[0][0], 16, out);
     env->ReleaseFloatArrayElements(out_, out, 0);
 }
@@ -109,7 +109,7 @@ Java_com_google_android_filament_Camera_nGetViewMatrix(JNIEnv *env, jclass, jlon
         jfloatArray out_) {
     Camera *camera = (Camera *) nativeCamera;
     jfloat *out = env->GetFloatArrayElements(out_, NULL);
-    const filament::math::mat4f& m = camera->getViewMatrix();
+    const filament::math::mat4f& m = (math::mat4f)camera->getViewMatrix();
     std::copy_n(&m[0][0], 16, out);
     env->ReleaseFloatArrayElements(out_, out, 0);
 }
