@@ -3,7 +3,7 @@
 imgui.ini
 cmake-*
 ImportExecutables-*.cmake
-out
+out*
 dist
 dist-*
 toolchains
