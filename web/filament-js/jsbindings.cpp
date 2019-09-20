@@ -782,11 +782,11 @@ class_<Camera>("Camera")
     }), allow_raw_pointers())
 
     .function("getModelMatrix", EMBIND_LAMBDA(flatmat4, (Camera* self), {
-        return flatmat4 { self->getModelMatrix() };
+        return flatmat4 { (filament::math::mat4f)self->getModelMatrix() };
     }), allow_raw_pointers())
 
     .function("getViewMatrix", EMBIND_LAMBDA(flatmat4, (Camera* self), {
-        return flatmat4 { self->getViewMatrix() };
+        return flatmat4 { (filament::math::mat4f)self->getViewMatrix() };
     }), allow_raw_pointers())
 
     .function("getPosition", &Camera::getPosition)

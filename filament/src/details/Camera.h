@@ -89,16 +89,17 @@ public:
     float getCullingFar() const noexcept { return mFar; }
 
     // sets the camera's view matrix (must be a rigid transform)
+    void setModelMatrix(const math::mat4& modelMatrix) noexcept;
     void setModelMatrix(const math::mat4f& modelMatrix) noexcept;
 
     // sets the camera's view matrix
     void lookAt(const math::float3& eye, const math::float3& center, const math::float3& up = { 0, 1, 0 })  noexcept;
 
     // returns the view matrix
-    math::mat4f const& getModelMatrix() const noexcept;
+    math::mat4 getModelMatrix() const noexcept;
 
     // returns the inverse of the view matrix
-    math::mat4f getViewMatrix() const noexcept;
+    math::mat4 getViewMatrix() const noexcept;
 
     template <typename T>
     static math::details::TMat44<T> rigidTransformInverse(math::details::TMat44<T> const& v) noexcept {
@@ -111,7 +112,7 @@ public:
         return math::details::TMat44<T>(rt, -t);
     }
 
-    math::float3 const& getPosition() const noexcept {
+    math::double3 const& getPosition() const noexcept {
         return getModelMatrix()[3].xyz;
     }
 
@@ -182,8 +183,8 @@ public:
         return mEntity;
     }
 
-    static math::mat4f getViewMatrix(math::mat4f const& model) noexcept;
-    static Frustum getFrustum(math::mat4 const& projection, math::mat4f const& viewMatrix) noexcept;
+    static math::mat4 getViewMatrix(math::mat4 const& model) noexcept;
+    static Frustum getFrustum(math::mat4 const& projection, math::mat4 const& viewMatrix) noexcept;
 
 private:
     FEngine& mEngine;
@@ -206,7 +207,7 @@ private:
 struct CameraInfo {
     CameraInfo() noexcept = default;
     explicit CameraInfo(FCamera const& camera) noexcept;
-    CameraInfo(FCamera const& camera, const math::mat4f& worldOriginCamera) noexcept;
+    CameraInfo(FCamera const& camera, const math::mat4& worldOriginCamera) noexcept;
 
     math::mat4f projection;         // projection matrix for drawing (infinite zfar)
     math::mat4f cullingProjection;  // projection matrix for culling
