@@ -198,21 +198,18 @@ void UTILS_NOINLINE FCamera::setModelMatrix(const mat4f& modelMatrix) noexcept {
 
 void UTILS_NOINLINE FCamera::setModelMatrix(const mat4& modelMatrix) noexcept {
     FTransformManager& transformManager = mEngine.getTransformManager();
-    // TODO: eventually setTransform() will accept mat4 directly
-    transformManager.setTransform(transformManager.getInstance(mEntity), mat4f(modelMatrix));
+    transformManager.setTransform(transformManager.getInstance(mEntity), modelMatrix);
 }
 
 void FCamera::lookAt(const float3& eye, const float3& center, const float3& up) noexcept {
     FTransformManager& transformManager = mEngine.getTransformManager();
-    // TODO: eventually setTransform() will accept mat4
     transformManager.setTransform(transformManager.getInstance(mEntity),
-            mat4f::lookAt(eye, center, up));
+            mat4::lookAt(eye, center, up));
 }
 
 mat4 FCamera::getModelMatrix() const noexcept {
     FTransformManager const& transformManager = mEngine.getTransformManager();
-    // TODO: eventually getWorldTransform() will return mat4 directly
-    return (mat4)transformManager.getWorldTransform(transformManager.getInstance(mEntity));
+    return transformManager.getWorldTransformAccurate(transformManager.getInstance(mEntity));
 }
 
 mat4 UTILS_NOINLINE FCamera::getViewMatrix() const noexcept {
