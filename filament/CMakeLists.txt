@@ -327,7 +327,7 @@ set(LINUX_COMPILER_FLAGS
         -fPIC
 )
 
-if (MSVC)
+if (MSVC_NATIVE)
     set(FILAMENT_WARNINGS -W0)
 else()
     set(FILAMENT_WARNINGS

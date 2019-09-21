@@ -235,7 +235,7 @@ set(LINUX_COMPILER_FLAGS
         -fPIC
 )
 
-if (NOT MSVC)
+if (NOT MSVC_NATIVE)
     set(FILAMENT_WARNINGS
             -Wextra -Wno-unused-parameter
             -Wextra-semi -Wnewline-eof -Wdeprecated -Wundef
