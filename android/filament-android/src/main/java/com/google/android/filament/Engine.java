@@ -199,8 +199,8 @@ public class Engine {
     // Fence
 
     @NonNull
-    public Fence createFence(@NonNull Fence.Type type) {
-        long nativeFence = nCreateFence(getNativeObject(), type.ordinal());
+    public Fence createFence() {
+        long nativeFence = nCreateFence(getNativeObject());
         if (nativeFence == 0) throw new IllegalStateException("Couldn't create Fence");
         return new Fence(nativeFence);
     }
@@ -274,7 +274,7 @@ public class Engine {
     }
 
     public void flushAndWait() {
-        Fence.waitAndDestroy(createFence(Fence.Type.HARD), Fence.Mode.FLUSH);
+        Fence.waitAndDestroy(createFence(), Fence.Mode.FLUSH);
     }
 
     @UsedByReflection("TextureHelper.java")
@@ -304,7 +304,7 @@ public class Engine {
     private static native void nDestroyCamera(long nativeEngine, long nativeCamera);
     private static native long nCreateScene(long nativeEngine);
     private static native void nDestroyScene(long nativeEngine, long nativeScene);
-    private static native long nCreateFence(long nativeEngine, int fenceType);
+    private static native long nCreateFence(long nativeEngine);
     private static native void nDestroyFence(long nativeEngine, long nativeFence);
     private static native void nDestroyStream(long nativeEngine, long nativeStream);
     private static native void nDestroyIndexBuffer(long nativeEngine, long nativeIndexBuffer);

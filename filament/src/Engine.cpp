@@ -536,7 +536,7 @@ FView* FEngine::createView() noexcept {
     return p;
 }
 
-FFence* FEngine::createFence(Fence::Type type) noexcept {
+FFence* FEngine::createFence(FFence::Type type) noexcept {
     FFence* p = mHeapAllocator.make<FFence>(*this, type);
     if (p) {
         mFences.insert(p);
@@ -817,8 +817,8 @@ void Engine::destroyCameraComponent(utils::Entity entity) noexcept {
     upcast(this)->destroyCameraComponent(entity);
 }
 
-Fence* Engine::createFence(Fence::Type type) noexcept {
-    return upcast(this)->createFence(type);
+Fence* Engine::createFence() noexcept {
+    return upcast(this)->createFence(FFence::Type::SOFT);
 }
 
 SwapChain* Engine::createSwapChain(void* nativeWindow, uint64_t flags) noexcept {

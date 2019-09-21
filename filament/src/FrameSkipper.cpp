@@ -51,7 +51,7 @@ bool FrameSkipper::beginFrame() noexcept {
 }
 
 void FrameSkipper::endFrame() noexcept {
-    mDelayedFences[mLast] = mEngine.createFence(Fence::Type::HARD);
+    mDelayedFences[mLast] = mEngine.createFence(FFence::Type::HARD);
 }
 
 
