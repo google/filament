@@ -71,7 +71,7 @@ endif()
 # ==================================================================================================
 
 find_package(embree 3.0 QUIET PATHS /usr/lib64/cmake)
-if (embree_FOUND AND NOT ANDROID)
+if (embree_FOUND AND NOT ANDROID AND NOT IOS)
     message("Found embree in ${embree_DIR}")
     set(MKLDNN_THREADING "TBB")
     include(third_party/OpenImageDenoise/cmake/resource.cmake)
@@ -488,10 +488,11 @@ if (NOT ANDROID AND NOT WEBGL AND NOT IOS)
     add_subdirectory(${TOOLS}/roughness-prefilter)
     add_subdirectory(${TOOLS}/skygen)
     add_subdirectory(${TOOLS}/specular-color)
-endif()
 
-if (DENOISE_LIBRARY)
-    add_subdirectory(${EXTERNAL}/OpenImageDenoise/tnt)
+    if (DENOISE_LIBRARY)
+        add_subdirectory(${EXTERNAL}/OpenImageDenoise/tnt)
+    endif()
+
 endif()
 
 # Generate exported executables for cross-compiled builds (Android, WebGL, and iOS)
