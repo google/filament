@@ -235,9 +235,7 @@ list(APPEND APP_LIBS sample-app)
 # Compiler flags
 # ==================================================================================================
 
-if (MSVC)
-    set(COMPILER_FLAGS /W0 /Zc:__cplusplus)
-else()
+if (NOT MSVC_NATIVE)
     set(COMPILER_FLAGS
             -Wno-extern-c-compat
             $<$<NOT:$<PLATFORM_ID:Linux>>:-Wno-address-of-packed-member>)
