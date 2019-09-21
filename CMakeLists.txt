@@ -50,7 +50,7 @@ if (WIN32)
         set(CRT_FLAGS_DEBUG "/MDd")
     endif()
 
-    if (NOT MSVC)
+    if (CMAKE_C_COMPILER_ID MATCHES "Clang")
         # TODO: Figure out why pdb generation messes with incremental compilaton.
         # IN RELEASE_WITH_DEBUG_INFO, generate debug info in .obj, no in pdb.
         set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} ${CRT_FLAGS_RELEASE} /Z7")
@@ -116,7 +116,7 @@ if (CMAKE_C_COMPILER_ID MATCHES "Clang")
     if (CMAKE_C_COMPILER_VERSION VERSION_LESS MIN_CLANG_VERSION)
         message(FATAL_ERROR "Detected C compiler Clang ${CMAKE_C_COMPILER_VERSION} < ${MIN_CLANG_VERSION}")
     endif()
-elseif(NOT MSVC)
+elseif (NOT MSVC)
     message(FATAL_ERROR "Detected C compiler ${CMAKE_C_COMPILER_ID} is unsupported")
 endif()
 
@@ -124,13 +124,17 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS MIN_CLANG_VERSION)
         message(FATAL_ERROR "Detected CXX compiler Clang ${CMAKE_CXX_COMPILER_VERSION} < ${MIN_CLANG_VERSION}")
     endif()
-elseif(NOT MSVC)
+elseif (NOT MSVC)
     message(FATAL_ERROR "Detected CXX compiler ${CMAKE_CXX_COMPILER_ID} is unsupported")
 endif()
 
 # Detect use of the clang-cl.exe frontend, which does not support all of clangs normal options
-if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" AND "${CMAKE_CXX_SIMULATE_ID}" STREQUAL "MSVC")
-    set(CLANG_CL true)
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+    if ("${CMAKE_CXX_SIMULATE_ID}" STREQUAL "MSVC")
+        set(CLANG_CL true)
+    endif()
+elseif (MSVC)
+    set(MSVC_NATIVE true)
 endif()
 
 # ==================================================================================================
@@ -155,9 +159,9 @@ if (WIN32)
     set(CXX_STANDARD "/std:c++14")
 endif()
 
-if (MSVC)
+if (MSVC_NATIVE)
     set(CXX_STANDARD "/std:c++latest")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_STANDARD} /W0")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_STANDARD} /W0 /Zc:__cplusplus")
 else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_STANDARD} -fstrict-aliasing -Wno-unknown-pragmas -Wno-unused-function")
 endif()
@@ -332,7 +336,7 @@ endif()
 # ==================================================================================================
 # Functions
 # ==================================================================================================
-if (MSVC)
+if (MSVC_NATIVE)
     ## The MSVC compiler has a limitation on literal string length which is reached when all the 
     ## licenses are concatenated together into a large string... so split them into multiple strings.
     function(list_licenses OUTPUT MODULES)
