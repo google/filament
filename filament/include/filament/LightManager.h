@@ -683,6 +683,7 @@ public:
     /**
      * Whether this Light casts shadows (disabled by default)
      *
+     * @param i     Instance of the component obtained from getInstance().
      * @param shadowCaster Enables or disables casting shadows from this Light.
      *
      * @warning
