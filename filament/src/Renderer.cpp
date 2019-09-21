@@ -123,7 +123,7 @@ void FRenderer::terminate(FEngine& engine) {
     // that all pending commands have been executed (as they could reference data in this
     // instance, e.g. Fences, Callbacks, etc...)
     if (UTILS_HAS_THREADING) {
-        Fence::waitAndDestroy(engine.createFence());
+        Fence::waitAndDestroy(engine.createFence(FFence::Type::SOFT));
         mFrameInfoManager.terminate();
     } else {
         // In single threaded mode, allow recently-created objects (e.g. no-op fences in Skipper)

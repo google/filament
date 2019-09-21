@@ -38,7 +38,7 @@ endif()
 # ==================================================================================================
 # Compiler flags
 # ==================================================================================================
-if(NOT MSVC)
+if (NOT MSVC_NATIVE)
     target_compile_options(${TARGET} PRIVATE -Wno-deprecated-register)
 endif()
 
