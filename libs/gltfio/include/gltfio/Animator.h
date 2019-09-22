@@ -26,35 +26,53 @@ namespace details { struct FFilamentAsset; }
 struct AnimatorImpl;
 
 /**
- * Animator can be used for two things: (1) updating matrices in Transform components
- * according to glTF animation definitions and (2) updating bone matrices in Renderable components
- * according to glTF skin definitions.
+ * \class Animator Animator.h gltfio/Animator.h
+ * \brief Updates matrices according to glTF \c animation and \c skin definitions.
  *
- * For a usage example, see the comment block for AssetLoader.
+ * Animator can be used for two things:
+ * - Updating matrices in filament::TransformManager components according to glTF \c animation definitions.
+ * - Updating bone matrices in filament::RenderableManager components according to glTF \c skin definitions.
+ *
+ * For a usage example, see the documentation for AssetLoader.
  */
 class Animator {
 public:
     /**
-     * Uses TransformManager to apply rotation, translation, and scale to entities that have
-     * been targeted by the given animation definition.
+     * Applies rotation, translation, and scale to entities that have been targeted by the given
+     * animation definition. Uses filament::TransformManager.
+     *
+     * @param animationIndex Zero-based index for the \c animation of interest.
+     * @param time Elapsed time of interest in seconds.
      */
     void applyAnimation(size_t animationIndex, float time) const;
 
     /**
-     * Uses TransformManager to compute root-to-node transforms for all bone nodes, then passes
-     * the results into RenderableManager::setBones.
+     * Computes root-to-node transforms for all bone nodes, then passes
+     * the results into filament::RenderableManager::setBones.
+     * Uses filament::TransformManager and filament::RenderableManager.
      *
-     * Note that this operation is actually independent of animation, but the Animator seems
-     * like a reasonable place for a utility like this.
+     * NOTE: this operation is independent of \c animation.
      */
     void updateBoneMatrices();
 
+    /** Returns the number of \c animation definitions in the glTF asset. */
     size_t getAnimationCount() const;
+
+    /** Returns the duration of the specified glTF \c animation in seconds. */
     float getAnimationDuration(size_t animationIndex) const;
+
+    /**
+     * Returns a weak reference to the string name of the specified \c animation, or an
+     * empty string if none was specified.
+     */
     const char* getAnimationName(size_t animationIndex) const;
 
 private:
+
+    /*! \cond PRIVATE */
     friend struct details::FFilamentAsset;
+    /*! \endcond */
+
     Animator(FilamentAsset* asset);
     ~Animator();
     AnimatorImpl* mImpl;
