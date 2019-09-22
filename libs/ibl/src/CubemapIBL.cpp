@@ -621,7 +621,7 @@ static float2 UTILS_UNUSED DFV_NoIS(float NoV, float roughness, size_t numSample
     for (size_t i = 0; i < numSamples; i++) {
         const float2 u = hammersley(uint32_t(i), 1.0f / numSamples);
         const float3 H = hemisphereCosSample(u);
-        const float3 L = 2 * dot(V, H) * H - V;
+        const float3 L = float3(2) * dot(V, H) * H - V;
         const float VoH = saturate(dot(V, H));
         const float NoL = saturate(L.z);
         const float NoH = saturate(H.z);
@@ -731,7 +731,7 @@ static float2 DFV(float NoV, float linearRoughness, size_t numSamples) {
     for (size_t i = 0; i < numSamples; i++) {
         const float2 u = hammersley(uint32_t(i), 1.0f / numSamples);
         const float3 H = hemisphereImportanceSampleDggx(u, linearRoughness);
-        const float3 L = 2 * dot(V, H) * H - V;
+        const float3 L = float3(2) * dot(V, H) * H - V;
         const float VoH = saturate(dot(V, H));
         const float NoL = saturate(L.z);
         const float NoH = saturate(H.z);
@@ -773,7 +773,7 @@ static float2 DFV_Multiscatter(float NoV, float linearRoughness, size_t numSampl
     for (size_t i = 0; i < numSamples; i++) {
         const float2 u = hammersley(uint32_t(i), 1.0f / numSamples);
         const float3 H = hemisphereImportanceSampleDggx(u, linearRoughness);
-        const float3 L = 2 * dot(V, H) * H - V;
+        const float3 L = float3(2) * dot(V, H) * H - V;
         const float VoH = saturate(dot(V, H));
         const float NoL = saturate(L.z);
         const float NoH = saturate(H.z);
@@ -820,7 +820,7 @@ static float UTILS_UNUSED DFV_LazanyiTerm(float NoV, float linearRoughness, size
     for (size_t i = 0; i < numSamples; i++) {
         const float2 u = hammersley(uint32_t(i), 1.0f / numSamples);
         const float3 H = hemisphereImportanceSampleDggx(u, linearRoughness);
-        const float3 L = 2 * dot(V, H) * H - V;
+        const float3 L = float3(2) * dot(V, H) * H - V;
         const float VoH = saturate(dot(V, H));
         const float NoL = saturate(L.z);
         const float NoH = saturate(H.z);
@@ -839,7 +839,7 @@ static float DFV_Charlie_Uniform(float NoV, float linearRoughness, size_t numSam
     for (size_t i = 0; i < numSamples; i++) {
         const float2 u = hammersley(uint32_t(i), 1.0f / numSamples);
         const float3 H = hemisphereUniformSample(u);
-        const float3 L = 2 * dot(V, H) * H - V;
+        const float3 L = float3(2) * dot(V, H) * H - V;
         const float VoH = saturate(dot(V, H));
         const float NoL = saturate(L.z);
         const float NoH = saturate(H.z);
@@ -944,7 +944,7 @@ static float UTILS_UNUSED DFV_Charlie_IS(float NoV, float linearRoughness, size_
     for (size_t i = 0; i < numSamples; i++) {
         const float2 u = hammersley(uint32_t(i), 1.0f / numSamples);
         const float3 H = hemisphereImportanceSampleDCharlie(u, linearRoughness);
-        const float3 L = 2 * dot(V, H) * H - V;
+        const float3 L = float3(2) * dot(V, H) * H - V;
         const float VoH = saturate(dot(V, H));
         const float NoL = saturate(L.z);
         const float NoH = saturate(H.z);
@@ -968,7 +968,7 @@ void CubemapIBL::brdf(utils::JobSystem& js, Cubemap& dst, float linearRoughness)
                     const float3 H(dst.getDirectionFor(f, p.x, p.y));
                     const float3 N = { 0, 0, 1 };
                     const float3 V = N;
-                    const float3 L = 2 * dot(H, V) * H - V;
+                    const float3 L = float3(2) * dot(H, V) * H - V;
                     const float NoL = dot(N, L);
                     const float NoH = dot(N, H);
                     const float NoV = dot(N, V);

@@ -285,9 +285,9 @@ CubemapSH::float5 CubemapSH::rotateShericalHarmonicBand2(float5 const& band2, ma
     const float5 ROverK[5] = {
             project(M[0]),                  // M * N0
             project(M[2]),                  // M * N1
-            project(n * (M[0] + M[1])),     // M * N2
-            project(n * (M[0] + M[2])),     // M * N3
-            project(n * (M[1] + M[2]))      // M * N4
+            project(float3(n) * (M[0] + M[1])),     // M * N2
+            project(float3(n) * (M[0] + M[2])),     // M * N3
+            project(float3(n) * (M[1] + M[2]))      // M * N4
     };
 
     // notice how "k" disappears

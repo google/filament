@@ -85,7 +85,7 @@ public:
     // default constructor
     constexpr TVec3() = default;
 
-    // handles implicit conversion to a tvec4. must not be explicit.
+    // handles implicit conversion to a tvec3. must not be explicit.
     template<typename A, typename = enable_if_arithmetic_t<A>>
     constexpr TVec3(A v) : v{ T(v), T(v), T(v) } {}
 
