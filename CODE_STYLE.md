@@ -50,6 +50,7 @@ private:
 - all *source* files must reside under the `src` folder
 - tests reside under the `test` folder
 - public headers of a `foo` library must live in a folder named `foo`
+- namespaces should be lowercase, and all new namespaces should be nested under in `filament`
 
 ```
 libfoo.so

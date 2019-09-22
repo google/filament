@@ -24,7 +24,7 @@ namespace filament {
 
 using namespace details;
 
-namespace Exposure {
+namespace exposure {
 
 float ev100(const Camera& c) noexcept {
     const FCamera& camera = upcast(c);
@@ -201,5 +201,5 @@ float illuminance(float ev100) noexcept {
     return 2.5f * std::pow(2.0f, ev100);
 }
 
-} // namespace Exposure
+} // namespace exposure
 } // namespace filament

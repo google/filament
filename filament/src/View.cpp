@@ -333,7 +333,7 @@ void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaSc
 
     // Exposure
     const float ev100 = camera.ev100;
-    const float exposure = Exposure::exposure(ev100);
+    const float exposure = exposure::exposure(ev100);
     u.setUniform(offsetof(PerViewUib, exposure), exposure);
     u.setUniform(offsetof(PerViewUib, ev100), ev100);
 
@@ -459,7 +459,7 @@ void FView::prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& are
             // far plane
             .zf                 = camera->getCullingFar(),
             // exposure
-            .ev100              = Exposure::ev100(*camera),
+            .ev100              = exposure::ev100(*camera),
             // world offset to allow users to determine the API-level camera position
             .worldOffset        = camera->getPosition(),
             // world origin transform, use only for debugging

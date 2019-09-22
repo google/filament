@@ -29,7 +29,7 @@ class Camera;
  * A series of utilities to compute exposure, exposure value at ISO 100 (EV100),
  * luminance and illuminance using a physically-based camera model.
  */
-namespace Exposure {
+namespace exposure {
 
 /**
  * Returns the exposure value (EV at ISO 100) of the specified camera.

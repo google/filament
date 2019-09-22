@@ -316,7 +316,7 @@ public:
      * With the default parameters, the scene must contain at least one Light of intensity
      * similar to the sun (e.g.: a 100,000 lux directional light).
      *
-     * @see Light, Exposure
+     * @see Light, exposure
      */
     void setExposure(float aperture, float shutterSpeed, float sensitivity) noexcept;
 
