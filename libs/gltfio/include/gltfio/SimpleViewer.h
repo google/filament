@@ -40,10 +40,13 @@
 namespace gltfio {
 
 /**
- * SimpleViewer manages the state for a simple glTF viewer with imgui controls and a tree view.
+ * \class SimpleViewer SimpleViewer.h gltfio/SimpleViewer.h
+ * \brief Manages the state for a simple glTF viewer with imgui controls and a tree view.
  *
- * If you don't want ImGui controls, there is no need to use this class, just use AssetLoader
- * instead. This is a utility that can be used across multiple platforms, including web.
+ * This is a utility that can be used across multiple platforms, including web.
+ *
+ * \note If you don't need ImGui controls, there is no need to use this class, just use AssetLoader
+ * instead.
  */
 class SimpleViewer {
 public:
@@ -87,7 +90,6 @@ public:
 
     /**
      * Sets or changes the current scene's IBL to allow the UI manipulate it.
-     * NOTE: this could be removed if we add a getter method to Scene.
      */
     void setIndirectLight(filament::IndirectLight* ibl);
 
@@ -117,13 +119,53 @@ public:
      */
     void setUiCallback(std::function<void()> callback) { mCustomUI = callback; }
 
+    /**
+     * Draws the bounding box of each renderable.
+     * Defaults to false.
+     */
     void enableWireframe(bool b) { mEnableWireframe = b; }
+
+    /**
+     * Enables a built-in light source (useful for creating shadows).
+     * Defaults to true.
+     */
     void enableSunlight(bool b) { mEnableSunlight = b; }
+
+    /**
+     * Enables dithering on the view.
+     * Defaults to true.
+     */
     void enableDithering(bool b) { mEnableDithering = b; }
+
+    /**
+     * Enables depth prepass on the view.
+     * Defaults to true.
+     */
     void enablePrepass(bool b) { mEnablePrepass = b; }
+
+    /**
+     * Enables FXAA antialiasing in the post-process pipeline.
+     * Defaults to true.
+     */
     void enableFxaa(bool b) { mEnableFxaa = b; }
+
+    /**
+     * Enables hardware-based MSAA antialiasing.
+     * Defaults to true.
+     */
     void enableMsaa(bool b) { mEnableMsaa = b; }
+
+    /**
+     * Enables screen-space ambient occlusion in the post-process pipeline.
+     * Defaults to true.
+     */
     void enableSSAO(bool b) { mEnableSsao = b; }
+
+    /**
+     * Adjusts the intensity of the IBL.
+     * See also filament::IndirectLight::setIntensity().
+     * Defaults to 30000.0.
+     */
     void setIBLIntensity(float brightness) { mIblIntensity = brightness; }
 
 private:
