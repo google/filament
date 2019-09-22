@@ -47,11 +47,11 @@ void FilamentApp::initialize() {
             RESOURCES_VENETIAN_CROSSROADS_2K_IBL_SIZE);
     filament::math::float3 harmonics[9];
     iblBundle->getSphericalHarmonics(harmonics);
-    app.iblTexture = image::KtxUtility::createTexture(engine, iblBundle, false);
+    app.iblTexture = image::ktx::createTexture(engine, iblBundle, false);
 
     image::KtxBundle* skyboxBundle = new image::KtxBundle(RESOURCES_VENETIAN_CROSSROADS_2K_SKYBOX_DATA,
             RESOURCES_VENETIAN_CROSSROADS_2K_SKYBOX_SIZE);
-    app.skyboxTexture = image::KtxUtility::createTexture(engine, skyboxBundle, false);
+    app.skyboxTexture = image::ktx::createTexture(engine, skyboxBundle, false);
 
     app.skybox = Skybox::Builder()
         .environment(app.skyboxTexture)

@@ -70,8 +70,8 @@ bool IBL::loadFromKtx(const std::string& prefix) {
     KtxBundle* iblKtx = createKtx(iblPath);
     KtxBundle* skyKtx = createKtx(skyPath);
 
-    mSkyboxTexture = KtxUtility::createTexture(&mEngine, skyKtx, false);
-    mTexture = KtxUtility::createTexture(&mEngine, iblKtx, false);
+    mSkyboxTexture = ktx::createTexture(&mEngine, skyKtx, false);
+    mTexture = ktx::createTexture(&mEngine, iblKtx, false);
 
     if (!iblKtx->getSphericalHarmonics(mBands)) {
         return false;

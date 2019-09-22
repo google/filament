@@ -25,12 +25,12 @@
 namespace image {
 
 /**
- * KtxUtility allows clients to create Filament textures from KtxBundle objects.
+ * Allows clients to create Filament textures from KtxBundle objects.
  *
  * Note that libimage does not have a dependency on libfilament, so for simplicity this is a
  * header-only library with inlined functions.
  */
-namespace KtxUtility {
+namespace ktx {
 
     using Texture = filament::Texture;
     using Engine = filament::Engine;
@@ -300,7 +300,7 @@ namespace KtxUtility {
         return toCompressedFilamentEnum<TextureFormat>(info.glInternalFormat);
     }
 
-} // namespace KtxUtility
+} // namespace ktx
 
 } // namespace image
 
