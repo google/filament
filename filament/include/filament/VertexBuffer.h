@@ -196,9 +196,6 @@ public:
      * Convenience function that consumes normal vectors (and, optionally, tangent vectors) and
      * produces quaternions that can be passed into a TANGENTS buffer.
      *
-     * We may deprecate this method in the future. See also filament::geometry::SurfaceOrientation,
-     * which has additional capabilities.
-     *
      * The given output buffer must be preallocated with at least quatCount * outStride bytes.
      *
      * Normals are required but tangents are optional, in which case this function tries to generate
@@ -209,6 +206,8 @@ public:
      * basis.
      *
      * @param ctx An initialized QuatTangentContext structure.
+     *
+     * @deprecated use filament::geometry::SurfaceOrientation instead
      */
     static void populateTangentQuaternions(const QuatTangentContext& ctx);
 };
