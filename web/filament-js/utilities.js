@@ -254,7 +254,7 @@ Filament._createTextureFromKtx = function(ktxdata, engine, options) {
     options = options || {};
     const ktx = options['ktx'] || new Filament.KtxBundle(ktxdata);
     const srgb = !!options['srgb'];
-    return Filament.KtxUtility$createTexture(engine, ktx, srgb);
+    return Filament.ktx$createTexture(engine, ktx, srgb);
 };
 
 Filament._createIblFromKtx = function(ktxdata, engine, options) {
