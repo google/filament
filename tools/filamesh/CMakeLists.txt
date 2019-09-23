@@ -24,14 +24,14 @@ target_link_libraries(${TARGET} PRIVATE getopt filameshio meshoptimizer)
 # ==================================================================================================
 # Compile options and optimizations
 # ==================================================================================================
-target_compile_options(${TARGET} PRIVATE
-        -Wno-deprecated-register
-)
+if(NOT MSVC)
+    target_compile_options(${TARGET} PRIVATE -Wno-deprecated-register)
 
-if (NOT LINUX)
-    target_compile_options(${TARGET} PRIVATE
-            -Wno-address-of-packed-member
-    )
+    if (NOT LINUX)
+        target_compile_options(${TARGET} PRIVATE
+                -Wno-address-of-packed-member
+        )
+    endif()
 endif()
 
 # =================================================================================================

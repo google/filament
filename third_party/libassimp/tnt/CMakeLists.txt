@@ -310,26 +310,30 @@ include_directories(${SRC_DIR}/code/BoostWorkaround)
 # we're building a library
 add_library(${TARGET} STATIC ${PRIVATE_HDRS} ${PUBLIC_HDRS} ${SRCS})
 
-target_compile_options(${TARGET}
-    PRIVATE -Wno-strict-aliasing
-    PRIVATE -Wno-sign-compare
-    PRIVATE -Wno-unused-const-variable
-    PRIVATE -Wno-unused-private-field
-    PRIVATE -Wno-unused-variable
-    PRIVATE -Wno-deprecated-declarations
-    PRIVATE -Wno-parentheses
-    PRIVATE -Wno-uninitialized
-    PRIVATE -Wno-strict-overflow
-    PRIVATE -Wno-deprecated-register
-    PRIVATE -Wno-tautological-undefined-compare
-    PRIVATE -Wno-incompatible-pointer-types
-    PRIVATE -Wno-tautological-compare
-    PRIVATE -Wno-undefined-var-template
-)
+if(NOT MSVC)
+    target_compile_options(${TARGET}
+        PRIVATE -Wno-strict-aliasing
+        PRIVATE -Wno-sign-compare
+        PRIVATE -Wno-unused-const-variable
+        PRIVATE -Wno-unused-private-field
+        PRIVATE -Wno-unused-variable
+        PRIVATE -Wno-deprecated-declarations
+        PRIVATE -Wno-parentheses
+        PRIVATE -Wno-uninitialized
+        PRIVATE -Wno-strict-overflow
+        PRIVATE -Wno-deprecated-register
+        PRIVATE -Wno-tautological-undefined-compare
+        PRIVATE -Wno-incompatible-pointer-types
+        PRIVATE -Wno-tautological-compare
+        PRIVATE -Wno-undefined-var-template
+    )
+else()
+    target_compile_options(${TARGET} PRIVATE /bigobj)
+endif()
 
 if (NOT WIN32)
     target_compile_options(${TARGET} PRIVATE -Wno-address-of-packed-member)
-else()
+elseif(NOT MSVC)
     # Making this option public because the warnings occurs in public headers of libassimp
     target_compile_options(${TARGET} PUBLIC -Wno-pragma-pack)
     # RapidJSON disables warnings in-code that clang-cl doesnt know about

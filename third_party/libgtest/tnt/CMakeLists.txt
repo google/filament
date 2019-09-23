@@ -13,6 +13,12 @@ set(SRCS
     ${SRC_DIR}/gtest-all.cc
 )
 
+if (MSVC)
+  # The /Zc:__cplusplus compiler option enables the __cplusplus preprocessor macro to 
+  # report an updated value for recent C++ language standards support. By default, 
+  # Visual Studio always returns the value "199711L" for the __cplusplus preprocessor macro.
+  add_definitions(/Zc:__cplusplus)
+endif()
 
 include_directories(
     ${PUBLIC_HDR_DIR}

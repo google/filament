@@ -12,3 +12,5 @@ filament/docs/html/**
 gltf_baker.ini
 *tmp*.png
 civetweb.txt
+/out*
+/TAGS

@@ -36,7 +36,9 @@ set(SOURCES
     ${SRCDIR}/softfloat.h
 )
 
-add_definitions(-Wno-tautological-compare)
+if (NOT MSVC)
+    add_definitions(-Wno-tautological-compare)
+endif()
 
 add_library(${TARGET} STATIC ${SOURCES})
 

@@ -19,9 +19,11 @@ foreach(item ${BENCHMARK_MAIN})
   list(REMOVE_ITEM SOURCE_FILES "${item}")
 endforeach()
 
-add_definitions(
-        -Wno-deprecated-declarations
-)
+if (NOT MSVC)
+  add_definitions(
+          -Wno-deprecated-declarations
+  )
+endif()
 
 include_directories(
         ${PUBLIC_HDR_DIR}
