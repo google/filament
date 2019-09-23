@@ -1108,7 +1108,7 @@ class_<KtxBundle>("KtxBundle")
     /// Returns "undefined" if no valid Filament enumerant exists.
     .function("getInternalFormat",
             EMBIND_LAMBDA(Texture::InternalFormat, (KtxBundle* self, bool srgb), {
-        auto result = KtxUtility::toTextureFormat(self->info());
+        auto result = ktx::toTextureFormat(self->info());
         if (srgb) {
             if (result == Texture::InternalFormat::RGB8) {
                 result = Texture::InternalFormat::SRGB8;
@@ -1125,7 +1125,7 @@ class_<KtxBundle>("KtxBundle")
     /// Returns "undefined" if no valid Filament enumerant exists.
     .function("getPixelDataFormat",
             EMBIND_LAMBDA(backend::PixelDataFormat, (KtxBundle* self), {
-        return KtxUtility::toPixelDataFormat(self->getInfo());
+        return ktx::toPixelDataFormat(self->getInfo());
     }), allow_raw_pointers())
 
     /// getPixelDataType ::method::
@@ -1133,7 +1133,7 @@ class_<KtxBundle>("KtxBundle")
     /// Returns "undefined" if no valid Filament enumerant exists.
     .function("getPixelDataType",
             EMBIND_LAMBDA(backend::PixelDataType, (KtxBundle* self), {
-        return KtxUtility::toPixelDataType(self->getInfo());
+        return ktx::toPixelDataType(self->getInfo());
     }), allow_raw_pointers())
 
     /// getCompressedPixelDataType ::method::
@@ -1141,14 +1141,14 @@ class_<KtxBundle>("KtxBundle")
     /// Returns "undefined" if no valid Filament enumerant exists.
     .function("getCompressedPixelDataType",
             EMBIND_LAMBDA(backend::CompressedPixelDataType, (KtxBundle* self), {
-        return KtxUtility::toCompressedPixelDataType(self->getInfo());
+        return ktx::toCompressedPixelDataType(self->getInfo());
     }), allow_raw_pointers())
 
     /// isCompressed ::method::
     /// Per spec, compressed textures in KTX always have their glFormat field set to 0.
     /// ::retval:: boolean
     .function("isCompressed", EMBIND_LAMBDA(bool, (KtxBundle* self), {
-        return KtxUtility::isCompressed(self->getInfo());
+        return ktx::isCompressed(self->getInfo());
     }), allow_raw_pointers())
 
     .function("isCubemap", &KtxBundle::isCubemap)
@@ -1177,9 +1177,9 @@ class_<KtxBundle>("KtxBundle")
         return std::string(self->getMetadata(key.c_str()));
     }), allow_raw_pointers());
 
-function("KtxUtility$createTexture", EMBIND_LAMBDA(Texture*,
+function("ktx$createTexture", EMBIND_LAMBDA(Texture*,
         (Engine* engine, const KtxBundle& ktx, bool srgb), {
-    return KtxUtility::createTexture(engine, ktx, srgb, nullptr, nullptr);
+    return ktx::createTexture(engine, ktx, srgb, nullptr, nullptr);
 }), allow_raw_pointers());
 
 /// KtxInfo ::class:: Property accessor for KTX header.

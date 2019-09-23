@@ -34,7 +34,7 @@ Java_com_google_android_filament_gltfio_KtxLoader_nCreateTexture(JNIEnv* env, jc
     Engine* engine = (Engine*) nativeEngine;
     AutoBuffer buffer(env, javaBuffer, remaining);
     KtxBundle* bundle = new KtxBundle((const uint8_t*) buffer.getData(), buffer.getSize());
-    return (jlong) KtxUtility::createTexture(engine, *bundle, srgb, [](void* userdata) {
+    return (jlong) ktx::createTexture(engine, *bundle, srgb, [](void* userdata) {
         KtxBundle* bundle = (KtxBundle*) userdata;
         delete bundle;
     }, bundle);
@@ -46,7 +46,7 @@ Java_com_google_android_filament_gltfio_KtxLoader_nCreateIndirectLight(JNIEnv* e
     Engine* engine = (Engine*) nativeEngine;
     AutoBuffer buffer(env, javaBuffer, remaining);
     KtxBundle* bundle = new KtxBundle((const uint8_t*) buffer.getData(), buffer.getSize());
-    Texture* cubemap = KtxUtility::createTexture(engine, *bundle, srgb,  [](void* userdata) {
+    Texture* cubemap = ktx::createTexture(engine, *bundle, srgb,  [](void* userdata) {
         KtxBundle* bundle = (KtxBundle*) userdata;
         delete bundle;
     }, bundle);
@@ -69,7 +69,7 @@ Java_com_google_android_filament_gltfio_KtxLoader_nCreateSkybox(JNIEnv* env, jcl
     Engine* engine = (Engine*) nativeEngine;
     AutoBuffer buffer(env, javaBuffer, remaining);
     KtxBundle* bundle = new KtxBundle((const uint8_t*) buffer.getData(), buffer.getSize());
-    Texture* cubemap = KtxUtility::createTexture(engine, *bundle, srgb,  [](void* userdata) {
+    Texture* cubemap = ktx::createTexture(engine, *bundle, srgb,  [](void* userdata) {
         KtxBundle* bundle = (KtxBundle*) userdata;
         delete bundle;
     }, bundle);
