@@ -66,7 +66,7 @@ static float3 tonemapACES(const float3& x) {
     const float c = 2.43;
     const float d = 0.59;
     const float e = 0.14;
-    return (x * (a * x + b)) / (x * (c * x + d) + e);
+    return (x * (float3(a) * x + b)) / (x * (float3(c) * x + d) + e);
 }
 
 static inline float3 XYZ_to_sRGB(float3 const& v) {

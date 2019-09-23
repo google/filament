@@ -577,7 +577,7 @@ struct SamplerParams { // NOLINT
 
             uint8_t padding2                : 8;    // 0
         };
-        uint32_t u{};
+        uint32_t u;
     };
 private:
     friend inline bool operator < (SamplerParams lhs, SamplerParams rhs) {

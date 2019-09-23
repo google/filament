@@ -262,7 +262,7 @@ void Animator::applyAnimation(size_t animationIndex, float time) const {
                     float3 vert1 = srcVec3[nextIndex * 3 + 1];
                     scale = cubicSpline(vert0, tang0, vert1, tang1, t);
                 } else {
-                    scale = ((1 - t) * srcVec3[prevIndex]) + (t * srcVec3[nextIndex]);
+                    scale = (float3(1 - t) * srcVec3[prevIndex]) + (float3(t) * srcVec3[nextIndex]);
                 }
                 break;
             }

@@ -46,21 +46,21 @@ UniformInterfaceBlock::Builder::name(utils::StaticString const& interfaceBlockNa
 UniformInterfaceBlock::Builder& UniformInterfaceBlock::Builder::add(
         utils::CString const& uniformName, size_t size, UniformInterfaceBlock::Type type,
         UniformInterfaceBlock::Precision precision) {
-    mEntries.emplace_back(uniformName, size, type, precision);
+    mEntries.emplace_back(uniformName, (uint32_t)size, type, precision);
     return *this;
 }
 
 UniformInterfaceBlock::Builder& UniformInterfaceBlock::Builder::add(
         utils::CString&& uniformName, size_t size, UniformInterfaceBlock::Type type,
         UniformInterfaceBlock::Precision precision) {
-    mEntries.emplace_back(std::move(uniformName), size, type, precision);
+    mEntries.emplace_back(std::move(uniformName), (uint32_t)size, type, precision);
     return *this;
 }
 
 UniformInterfaceBlock::Builder& UniformInterfaceBlock::Builder::add(
         utils::StaticString const& uniformName, size_t size, UniformInterfaceBlock::Type type,
         UniformInterfaceBlock::Precision precision) {
-    mEntries.emplace_back(uniformName, size, type, precision);
+    mEntries.emplace_back(uniformName, (uint32_t)size, type, precision);
     return *this;
 }
 

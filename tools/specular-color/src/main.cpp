@@ -700,7 +700,7 @@ static float illuminantD65(float w) {
     auto i0 = size_t((w - CIE_D65_START) / CIE_D65_INTERVAL);
     uint2 indexBounds{i0, std::min(i0 + 1, CIE_D65_END)};
 
-    float2 wavelengthBounds = CIE_D65_START + float2{indexBounds} * CIE_D65_INTERVAL;
+    float2 wavelengthBounds = float2(CIE_D65_START) + float2{indexBounds} * float2(CIE_D65_INTERVAL);
     float t = (w - wavelengthBounds.x) / (wavelengthBounds.y - wavelengthBounds.x);
     return lerp(CIE_D65[indexBounds.x], CIE_D65[indexBounds.y], t);
 }

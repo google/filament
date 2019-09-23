@@ -71,7 +71,7 @@ void CameraManipulator::track(const double2& delta) {
     double s =  mult_s * delta.x;
     double t =  mult_t * delta.y;
 
-    mTranslation += (s * d_s) + (t * d_t);
+    mTranslation += (double3(s) * d_s) + (double3(t) * d_t);
     updateCameraTransform();
 }
 
@@ -87,7 +87,7 @@ void CameraManipulator::dolly(double delta, double dolly_speed) {
     double dolly_by = 1.0 - std::exp(-dolly_speed * t);
 
     dolly_by *= mCenterOfInterest;
-    double3 new_eye = eye + (dolly_by * v);
+    double3 new_eye = eye + (double3(dolly_by) * v);
 
     mTranslation = new_eye;
     v = new_eye - view;
