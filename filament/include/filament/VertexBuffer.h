@@ -207,7 +207,9 @@ public:
      *
      * @param ctx An initialized QuatTangentContext structure.
      *
-     * @deprecated use filament::geometry::SurfaceOrientation instead
+     * @deprecated Instead please use filament::geometry::SurfaceOrientation from libgeometry, it
+     * has additional capabilities and a daisy-chain API. Be sure to explicitly link libgeometry
+     * since its dependency might be removed in future versions of libfilament.
      */
     static void populateTangentQuaternions(const QuatTangentContext& ctx);
 };
