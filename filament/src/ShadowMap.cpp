@@ -138,7 +138,8 @@ void ShadowMap::prepare(DriverApi& driver, SamplerGroup& sb) noexcept {
 
 	SamplerGroup::Sampler sampler {
         mShadowMapHandle,
-        { .filterMag = SamplerMagFilter::LINEAR,
+        { 
+            .filterMag = SamplerMagFilter::LINEAR,
             .filterMin = SamplerMinFilter::LINEAR,
             .compareMode = SamplerCompareMode::COMPARE_TO_TEXTURE,
             .compareFunc = SamplerCompareFunc::LE
