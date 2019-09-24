@@ -27,6 +27,8 @@
 namespace filament {
 namespace backend {
 
+//! \privatesection
+
 struct PipelineState {
     Handle<HwProgram> program;
     RasterState rasterState;
