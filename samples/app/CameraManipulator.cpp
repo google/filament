@@ -71,7 +71,7 @@ void CameraManipulator::track(const double2& delta) {
     double s =  mult_s * delta.x;
     double t =  mult_t * delta.y;
 
-    mTranslation += (double3(s) * d_s) + (double3(t) * d_t);
+    mTranslation += (d_s * s) + (d_t * t);
     updateCameraTransform();
 }
 
