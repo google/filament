@@ -34,7 +34,7 @@ T cubicSpline(const T& vert0, const T& tang0, const T& vert1, const T& tang1, fl
     T m0 = tang0;
     T p1 = vert1;
     T m1 = tang1;
-    return s0 * p0 + s1 * m0 * t + s2 * p1 + s3 * m1 * t;
+    return p0 * s0 + m0 * s1 * t + p1 * s2 + m1 * s3 * t;
 }
 
 inline void decomposeMatrix(const filament::math::mat4f& mat, filament::math::float3* translation,
