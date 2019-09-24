@@ -85,11 +85,11 @@ static void usage(char* name) {
 static void license() {
     static const char *license[] = {
         #include "licenses/licenses.inc"
-        , nullptr
+        nullptr
     };
 
     const char **p = &license[0];
-    while (p)
+    while (*p)
         std::cout << *p++ << std::endl;
 }
 

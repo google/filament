@@ -336,22 +336,22 @@ endif()
 # ==================================================================================================
 # Functions
 # ==================================================================================================
-## The MSVC compiler has a limitation on literal string length which is reached when all the 
+## The MSVC compiler has a limitation on literal string length which is reached when all the
 ## licenses are concatenated together into a large string... so split them into multiple strings.
 function(list_licenses OUTPUT MODULES)
+    set(STR_OPENER "R\"FILAMENT__(")
+    set(STR_CLOSER ")FILAMENT__\"")
     set(CONTENT)
     set(_MODULES ${MODULES} ${ARGN})
-    string(APPEND CONTENT " R\"FILAMENT__(")
     foreach(module ${_MODULES})
         set(license_path "../../third_party/${module}/LICENSE")
         get_filename_component(fullname "${license_path}" ABSOLUTE)
-        string(APPEND CONTENT ")FILAMENT__\", \nR\"FILAMENT__(License and copyrights for ${module}:\n\n)FILAMENT__\", \nR\"FILAMENT__(")
+        string(APPEND CONTENT "${STR_OPENER}License and copyrights for ${module}:\n${STR_CLOSER},\n")
         file(READ ${license_path} license_long)
-        string(REPLACE "\n" ")FILAMENT__\", \nR\"FILAMENT__(" license ${license_long})
-        string(APPEND CONTENT ${license})
+        string(REPLACE "\n" "${STR_CLOSER},\n${STR_OPENER}" license ${license_long})
+        string(APPEND CONTENT ${STR_OPENER}${license}\n${STR_CLOSER},)
         string(APPEND CONTENT "\n\n")
     endforeach()
-    string(APPEND CONTENT "\"")
     configure_file(${FILAMENT}/build/licenses.inc.in ${OUTPUT})
 endfunction(list_licenses)
 

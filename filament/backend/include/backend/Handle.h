@@ -41,6 +41,8 @@ struct HwStream;
  * A type handle to a h/w resource
  */
 
+//! \privatesection
+
 class HandleBase {
 public:
     using HandleId = uint32_t;
