@@ -228,9 +228,14 @@ static void printUsage(char* name) {
 }
 
 static void license() {
-    std::cout <<
-    #include "licenses/licenses.inc"
-    ;
+    static const char *license[] = {
+        #include "licenses/licenses.inc"
+        nullptr
+    };
+
+    const char **p = &license[0];
+    while (*p)
+        std::cout << *p++ << std::endl;
 }
 
 static int handleCommandLineArgments(int argc, char* argv[]) {
