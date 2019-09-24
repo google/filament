@@ -336,39 +336,25 @@ endif()
 # ==================================================================================================
 # Functions
 # ==================================================================================================
-if (MSVC_NATIVE)
-    ## The MSVC compiler has a limitation on literal string length which is reached when all the 
-    ## licenses are concatenated together into a large string... so split them into multiple strings.
-    function(list_licenses OUTPUT MODULES)
-        file(WRITE ${OUTPUT} " R\"FILAMENT__(")
-        set(_MODULES ${MODULES} ${ARGN})
-        foreach(module ${_MODULES})
-            set(license_path "../../third_party/${module}/LICENSE")
-            get_filename_component(fullname "${license_path}" ABSOLUTE)
-            file(APPEND ${OUTPUT} ")FILAMENT__\", \nR\"FILAMENT__(License and copyrights for ${module}:\n\n)FILAMENT__\", \nR\"FILAMENT__(")
-            file(READ ${license_path} license_long)
-            string(REPLACE "\n" ")FILAMENT__\", \nR\"FILAMENT__(" license ${license_long})
-            file(APPEND ${OUTPUT} ${license})
-            file(APPEND ${OUTPUT} ")FILAMENT__\", \nR\"FILAMENT__(\n\n)FILAMENT__\", \"")
-        endforeach()
-        file(APPEND ${OUTPUT} "\"")
-        #file(APPEND ${OUTPUT} ")FILAMENT__\"\n")
-    endfunction(list_licenses)
-else()
-    function(list_licenses OUTPUT MODULES)
-        set(CONTENT)
-        set(_MODULES ${MODULES} ${ARGN})
-        foreach(module ${_MODULES})
-            set(license_path "../../third_party/${module}/LICENSE")
-            get_filename_component(fullname "${license_path}" ABSOLUTE)
-            string(APPEND CONTENT "License and copyrights for ${module}:\n\n")
-            file(READ ${license_path} license)
-            string(APPEND CONTENT ${license})
-            string(APPEND CONTENT "\n\n")
-        endforeach()
-        configure_file(${FILAMENT}/build/licenses.inc.in ${OUTPUT})
-    endfunction(list_licenses)
-endif()
+## The MSVC compiler has a limitation on literal string length which is reached when all the
+## licenses are concatenated together into a large string... so split them into multiple strings.
+function(list_licenses OUTPUT MODULES)
+    set(STR_OPENER "R\"FILAMENT__(")
+    set(STR_CLOSER ")FILAMENT__\"")
+    set(CONTENT)
+    set(_MODULES ${MODULES} ${ARGN})
+    foreach(module ${_MODULES})
+        set(license_path "../../third_party/${module}/LICENSE")
+        get_filename_component(fullname "${license_path}" ABSOLUTE)
+        string(APPEND CONTENT "${STR_OPENER}License and copyrights for ${module}:\n${STR_CLOSER},\n")
+        file(READ ${license_path} license_long)
+        string(REPLACE "\n" "${STR_CLOSER},\n${STR_OPENER}" license ${license_long})
+        string(APPEND CONTENT ${STR_OPENER}${license}\n${STR_CLOSER},)
+        string(APPEND CONTENT "\n\n")
+    endforeach()
+    configure_file(${FILAMENT}/build/licenses.inc.in ${OUTPUT})
+endfunction(list_licenses)
+
 # ==================================================================================================
 # Configuration for CMAKE_CROSSCOMPILING.
 # ==================================================================================================
