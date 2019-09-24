@@ -216,7 +216,6 @@ private:
         VECTOR<arithmetic_result_t<T, U>> res(lv);
         return res / VECTOR<U>(rv);
     }
-
 };
 
 /*
