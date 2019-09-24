@@ -180,7 +180,7 @@ public:
      * @param aspect       aspect ratio \f$ \frac{width}{height} \f$. \p aspect > 0.
      * @param near         distance in world units from the camera to the near plane. \p near > 0.
      * @param far          distance in world units from the camera to the far plane. \p far > \p near.
-     * @param direction    direction of the \p fov parameter.
+     * @param direction    direction of the \p fovInDegrees parameter.
      *
      * @see Fov.
      */
