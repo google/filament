@@ -428,10 +428,6 @@ class ArithmeticPanic : public TPanic<ArithmeticPanic> {
 #   define PANIC_FILE(F) ""
 #endif
 
-#if _MSC_VER
-#define __PRETTY_FUNCTION__ __FUNCSIG__
-#endif 
-
 /**
  * PANIC_PRECONDITION is a macro that reports a PreconditionPannic
  * @param format printf-style string describing the error in more details

@@ -200,4 +200,10 @@ typedef SSIZE_T ssize_t;
     #define IMPORTSYMB
 #endif
 
+#if _MSC_VER && !defined(__PRETTY_FUNCTION__)
+#    define __PRETTY_FUNCTION__ __FUNCSIG__
+#endif 
+
+
+
 #endif // TNT_UTILS_COMPILER_H
