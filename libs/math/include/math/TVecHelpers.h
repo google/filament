@@ -178,22 +178,6 @@ public:
         return operator/=(VECTOR<U>(v));
     }
 
-    constexpr VECTOR<T>& operator*=(T s) {
-        VECTOR<T>& lhs = static_cast<VECTOR<T>&>(*this);
-        for (size_t i = 0; i < lhs.size(); i++) {
-            lhs[i] *= s;
-        }
-        return lhs;
-    }
-
-    constexpr VECTOR<T>& operator/=(T s) {
-        VECTOR<T>& lhs = static_cast<VECTOR<T>&>(*this);
-        for (size_t i = 0; i < lhs.size(); i++) {
-            lhs[i] /= s;
-        }
-        return lhs;
-    }
-
 private:
     /*
      * NOTE: the functions below ARE NOT member methods. They are friend functions
@@ -233,15 +217,6 @@ private:
         return res / VECTOR<U>(rv);
     }
 
-    friend inline constexpr VECTOR<T> MATH_PURE operator*(VECTOR<T> lv, T s) {
-        // don't pass lv by reference because we need a copy anyways
-        return lv *= s;
-    }
-
-    friend inline constexpr VECTOR<T> MATH_PURE operator/(VECTOR<T> lv, T s) {
-        // don't pass lv by reference because we need a copy anyways
-        return lv /= s;
-    }
 };
 
 /*
