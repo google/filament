@@ -106,21 +106,6 @@ public:
         return operator-=(VECTOR<U>(v));
     }
 
-    constexpr VECTOR<T>& operator+=(T s) {
-        VECTOR<T>& lhs = static_cast<VECTOR<T>&>(*this);
-        for (size_t i = 0; i < lhs.size(); i++) {
-            lhs[i] += s;
-        }
-        return lhs;
-    }
-
-    constexpr VECTOR<T>& operator-=(T s) {
-        VECTOR<T>& lhs = static_cast<VECTOR<T>&>(*this);
-        for (size_t i = 0; i < lhs.size(); i++) {
-            lhs[i] -= s;
-        }
-        return lhs;
-    }
 
 private:
     /*
