@@ -784,7 +784,7 @@ void ShadowMap::snapLightFrustum(float2& s, float2& o,
 
     // This snaps the shadow map bounds to texels.
     // The 2.0 comes from Mv having a NDC in the range -1,1 (so a range of 2).
-    const float2 r = float2(2.0f) * shadowMapResolution;
+    const float2 r = shadowMapResolution * 2.0f;
     o -= fmod(o, r);
 
     // This offsets the texture coordinates so it has a fixed offset w.r.t the world
