@@ -106,7 +106,6 @@ public:
         return operator-=(VECTOR<U>(v));
     }
 
-
 private:
     /*
      * NOTE: the functions below ARE NOT member methods. They are friend functions
@@ -142,14 +141,6 @@ private:
     friend inline constexpr
     VECTOR<arithmetic_result_t<T, U>> MATH_PURE operator-(const VECTOR<T>& lv, U rv) {
         return lv - VECTOR<U>(rv);
-    }
-    friend inline constexpr VECTOR<T> MATH_PURE operator +(VECTOR<T> lv, T s) {
-        // don't pass lv by reference because we need a copy anyways
-        return lv += s;
-    }
-    friend inline constexpr VECTOR<T> MATH_PURE operator -(VECTOR<T> lv, T s) {
-        // don't pass lv by reference because we need a copy anyways
-        return lv -= s;
     }
 };
 
