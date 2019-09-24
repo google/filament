@@ -245,9 +245,9 @@ float4 FIndirectLight::getColorEstimate(float3 direction) const noexcept {
 
     // dot(Ld, Le) -- notice that this is equivalent to "sampling" the sphere in the light
     // direction; this is the exact same code used in the shader for SH reconstruction.
-    float3 LdDotLe = float3(Ld[0]) * Le[0]
-                   + float3(Ld[1]) * Le[1] + float3(Ld[2]) * Le[2] + float3(Ld[3]) * Le[3]
-                   + float3(Ld[4]) * Le[4] + float3(Ld[5]) * Le[5] + float3(Ld[6]) * Le[6] + float3(Ld[7]) * Le[7] + float3(Ld[8]) * Le[8];
+    float3 LdDotLe =  Le[0] * Ld[0]
+                   + Le[1] * Ld[1] + Le[2] * Ld[2] + Le[3] * Ld[3] 
+                   + Le[4] * Ld[4] + Le[5] * Ld[5] + Le[6] * Ld[6] + Le[7] * Ld[7] + Le[8] *Ld[8];
 
     // The scale factor below is explained in the gamasutra article above, however it seems
     // to cause the intensity of the light to be too low.
