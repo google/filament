@@ -87,7 +87,7 @@ void CameraManipulator::dolly(double delta, double dolly_speed) {
     double dolly_by = 1.0 - std::exp(-dolly_speed * t);
 
     dolly_by *= mCenterOfInterest;
-    double3 new_eye = eye + (double3(dolly_by) * v);
+    double3 new_eye = eye + (v * dolly_by);
 
     mTranslation = new_eye;
     v = new_eye - view;
