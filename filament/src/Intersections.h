@@ -67,7 +67,7 @@ inline bool sphereConeIntersectionFast(
         math::float3 const& coneAxis,
         float coneSinInverse,
         float coneCosSquared) noexcept {
-    const math::float3 u = conePosition - coneAxis * sphere.w * coneSinInverse;
+    const math::float3 u = conePosition - coneAxis * (sphere.w * coneSinInverse);
     math::float3 d = sphere.xyz - u;
     float e = dot(coneAxis, d);
     float dd = dot(d, d);
