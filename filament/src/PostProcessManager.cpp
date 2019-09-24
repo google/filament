@@ -237,9 +237,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(
                 auto const& inputDesc = fg.getDescriptor(input);
 
                 data.input = builder.read(input);
-                FrameGraphRenderTarget::Descriptor d;
-                d.attachments.color = { data.input };
-                data.srt = builder.createRenderTarget(builder.getName(data.input), d);
+                data.srt = builder.createRenderTarget(builder.getName(data.input),
+                           { .attachments = {data.input, {}}});
 
                 data.output = builder.createTexture("resolve output", {
                         .width = inputDesc.width,
