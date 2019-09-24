@@ -59,20 +59,22 @@
  * Convenience macros. These are PRIVATE, don't use.
  */
 
+#define EXPAND(x) x
+
 #define PAIR_ARGS_0(M, ...)
 #define PAIR_ARGS_1(M, X, Y, ...) M(X, Y)
-#define PAIR_ARGS_2(M, X, Y, ...) M(X, Y), PAIR_ARGS_1(M, __VA_ARGS__)
-#define PAIR_ARGS_3(M, X, Y, ...) M(X, Y), PAIR_ARGS_2(M, __VA_ARGS__)
-#define PAIR_ARGS_4(M, X, Y, ...) M(X, Y), PAIR_ARGS_3(M, __VA_ARGS__)
-#define PAIR_ARGS_5(M, X, Y, ...) M(X, Y), PAIR_ARGS_4(M, __VA_ARGS__)
-#define PAIR_ARGS_6(M, X, Y, ...) M(X, Y), PAIR_ARGS_5(M, __VA_ARGS__)
-#define PAIR_ARGS_7(M, X, Y, ...) M(X, Y), PAIR_ARGS_6(M, __VA_ARGS__)
-#define PAIR_ARGS_8(M, X, Y, ...) M(X, Y), PAIR_ARGS_7(M, __VA_ARGS__)
+#define PAIR_ARGS_2(M, X, Y, ...) M(X, Y), EXPAND(PAIR_ARGS_1(M, __VA_ARGS__))
+#define PAIR_ARGS_3(M, X, Y, ...) M(X, Y), EXPAND(PAIR_ARGS_2(M, __VA_ARGS__))
+#define PAIR_ARGS_4(M, X, Y, ...) M(X, Y), EXPAND(PAIR_ARGS_3(M, __VA_ARGS__))
+#define PAIR_ARGS_5(M, X, Y, ...) M(X, Y), EXPAND(PAIR_ARGS_4(M, __VA_ARGS__))
+#define PAIR_ARGS_6(M, X, Y, ...) M(X, Y), EXPAND(PAIR_ARGS_5(M, __VA_ARGS__))
+#define PAIR_ARGS_7(M, X, Y, ...) M(X, Y), EXPAND(PAIR_ARGS_6(M, __VA_ARGS__))
+#define PAIR_ARGS_8(M, X, Y, ...) M(X, Y), EXPAND(PAIR_ARGS_7(M, __VA_ARGS__))
 
 #define PAIR_ARGS_N__(_0, E1, _1, E2, _2, E3, _3, E4, _4, E5, _5, E6, _6, E7, _7, E8, _8, X, ...) PAIR_ARGS_##X
 
 #define PAIR_ARGS_N(M, ...) \
-    PAIR_ARGS_N__(0, ##__VA_ARGS__, 8, E, 7, E, 6, E, 5, E, 4, E, 3, E, 2, E, 1, E, 0)(M, __VA_ARGS__)
+    EXPAND(EXPAND(PAIR_ARGS_N__(0, ##__VA_ARGS__, 8, E, 7, E, 6, E, 5, E, 4, E, 3, E, 2, E, 1, E, 0))(M, __VA_ARGS__))
 
 #define ARG(T, P) T P
 
@@ -87,8 +89,13 @@
 #define DECL_DRIVER_API_SYNCHRONOUS_N(R, N, ...) \
     DECL_DRIVER_API_SYNCHRONOUS(R, N, PAIR_ARGS_N(ARG, ##__VA_ARGS__), PAIR_ARGS_N(PARAM, ##__VA_ARGS__))
 
-/* we can't handle empty lists because we don't have __VA_OPT__() in C++14 and the ## hack
- * only works for omitted arguments, not empty lists */
+// on some compilers the ##__VA_ARGS__ hack is not supported, so we can't handle 0-parameter APIs
+// with DECL_DRIVER_API_SYNCHRONOUS_N
+#define DECL_DRIVER_API_SYNCHRONOUS_0(R, N) \
+    DECL_DRIVER_API_SYNCHRONOUS(R, N,,)
+
+// we can't handle empty lists because we don't have __VA_OPT__() in C++14 and the ## hack
+// only works for omitted arguments, not empty lists
 #define PARAM_1( P, ...) P
 #define ARG_1( T, P, ...) T P
 #define DECL_DRIVER_API_0(N)      DECL_DRIVER_API(N, ARG_1(int, dummy=0), PARAM_1(dummy))
@@ -197,7 +204,7 @@ DECL_DRIVER_API_N(destroyStream,          backend::StreamHandle, sh)
  * ----------------
  */
 
-DECL_DRIVER_API_SYNCHRONOUS_N(void, terminate)
+DECL_DRIVER_API_SYNCHRONOUS_0(void, terminate)
 DECL_DRIVER_API_SYNCHRONOUS_N(backend::StreamHandle, createStream, void*, stream)
 DECL_DRIVER_API_SYNCHRONOUS_N(void, setStreamDimensions, backend::StreamHandle, stream, uint32_t, width, uint32_t, height)
 DECL_DRIVER_API_SYNCHRONOUS_N(int64_t, getStreamTimestamp, backend::StreamHandle, stream)
@@ -207,8 +214,8 @@ DECL_DRIVER_API_SYNCHRONOUS_N(backend::FenceStatus, wait, backend::FenceHandle, 
 DECL_DRIVER_API_SYNCHRONOUS_N(bool, isTextureFormatSupported, backend::TextureFormat, format)
 DECL_DRIVER_API_SYNCHRONOUS_N(bool, isTextureFormatMipmappable, backend::TextureFormat, format)
 DECL_DRIVER_API_SYNCHRONOUS_N(bool, isRenderTargetFormatSupported, backend::TextureFormat, format)
-DECL_DRIVER_API_SYNCHRONOUS_N(bool, isFrameTimeSupported)
-DECL_DRIVER_API_SYNCHRONOUS_N(bool, canGenerateMipmaps)
+DECL_DRIVER_API_SYNCHRONOUS_0(bool, isFrameTimeSupported)
+DECL_DRIVER_API_SYNCHRONOUS_0(bool, canGenerateMipmaps)
 DECL_DRIVER_API_SYNCHRONOUS_N(void, setupExternalImage, void*, image)
 DECL_DRIVER_API_SYNCHRONOUS_N(void, cancelExternalImage, void*, image)
 
@@ -376,6 +383,8 @@ DECL_DRIVER_API_N(draw,
 
 #pragma clang diagnostic pop
 
+#undef EXPAND
+
 #undef PARAM_1
 #undef ARG_1
 #undef DECL_DRIVER_API_0
@@ -386,6 +395,7 @@ DECL_DRIVER_API_N(draw,
 #undef DECL_DRIVER_API_N
 #undef DECL_DRIVER_API_R_N
 #undef DECL_DRIVER_API_SYNCHRONOUS_N
+#undef DECL_DRIVER_API_SYNCHRONOUS_0
 
 #undef DECL_DRIVER_API
 #undef DECL_DRIVER_API_SYNCHRONOUS
