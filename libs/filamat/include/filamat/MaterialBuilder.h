@@ -213,29 +213,19 @@ public:
     using SamplerPrecision = filament::backend::Precision;
     using CullingMode = filament::backend::CullingMode;
 
-    /**
-     * Set the name of this material.
-     */
+    //! Set the name of this material.
     MaterialBuilder& name(const char* name) noexcept;
 
-    /**
-     * Set the shading model.
-     */
+    //! Set the shading model.
     MaterialBuilder& shading(Shading shading) noexcept;
 
-    /**
-     * Set the interpolation mode.
-     */
+    //! Set the interpolation mode.
     MaterialBuilder& interpolation(Interpolation interpolation) noexcept;
 
-    /**
-     * Add a parameter (i.e., a uniform) to this material.
-     */
+    //! Add a parameter (i.e., a uniform) to this material.
     MaterialBuilder& parameter(UniformType type, const char* name) noexcept;
 
-    /**
-     * Add a parameter array to this material.
-     */
+    //! Add a parameter array to this material.
     MaterialBuilder& parameter(UniformType type, size_t size, const char* name) noexcept;
 
     /**
@@ -254,9 +244,7 @@ public:
     /// @copydoc parameter(SamplerType, SamplerFormat, SamplerPrecision, const char*)
     MaterialBuilder& parameter(SamplerType samplerType, const char* name) noexcept;
 
-    /**
-     * Custom variables (all float4).
-     */
+    //! Custom variables (all float4).
     MaterialBuilder& variable(Variable v, const char* name) noexcept;
 
     /**
@@ -266,9 +254,7 @@ public:
      */
     MaterialBuilder& require(filament::VertexAttribute attribute) noexcept;
 
-    /**
-     * Specify the domain that this material will operate in.
-     */
+    //! Specify the domain that this material will operate in.
     MaterialBuilder& materialDomain(MaterialDomain materialDomain) noexcept;
 
     /**
@@ -329,9 +315,7 @@ public:
      */
     MaterialBuilder& materialVertex(const char* code, size_t line = 0) noexcept;
 
-    /**
-     * Set the blending mode for this material.
-     */
+    //! Set the blending mode for this material.
     MaterialBuilder& blending(BlendingMode blending) noexcept;
 
     /**
@@ -341,9 +325,7 @@ public:
      */
     MaterialBuilder& postLightingBlending(BlendingMode blending) noexcept;
 
-    /**
-     * Set the vertex domain for this material.
-     */
+    //! Set the vertex domain for this material.
     MaterialBuilder& vertexDomain(VertexDomain domain) noexcept;
 
     /**
@@ -352,19 +334,13 @@ public:
      */
     MaterialBuilder& culling(CullingMode culling) noexcept;
 
-    /**
-     * Enable / disable color-buffer write (enabled by default).
-     */
+    //! Enable / disable color-buffer write (enabled by default).
     MaterialBuilder& colorWrite(bool enable) noexcept;
 
-    /**
-     * Enable / disable depth-buffer write (enabled by default for opaque, disabled for others).
-     */
+    //! Enable / disable depth-buffer write (enabled by default for opaque, disabled for others).
     MaterialBuilder& depthWrite(bool enable) noexcept;
 
-    /**
-     * Enable / disable depth based culling (enabled by default).
-     */
+    //! Enable / disable depth based culling (enabled by default).
     MaterialBuilder& depthCulling(bool enable) noexcept;
 
     /**
@@ -382,9 +358,7 @@ public:
      */
     MaterialBuilder& maskThreshold(float threshold) noexcept;
 
-    /**
-     * The material output is multiplied by the shadowing factor (UNLIT model only).
-     */
+    //! The material output is multiplied by the shadowing factor (UNLIT model only).
     MaterialBuilder& shadowMultiplier(bool shadowMultiplier) noexcept;
 
     /**
@@ -424,24 +398,16 @@ public:
      */
     MaterialBuilder& clearCoatIorChange(bool clearCoatIorChange) noexcept;
 
-    /**
-     * Enable / disable flipping of the Y coordinate of UV attributes, enabled by default.
-     */
+    //! Enable / disable flipping of the Y coordinate of UV attributes, enabled by default.
     MaterialBuilder& flipUV(bool flipUV) noexcept;
 
-    /**
-     * Enable / disable multi-bounce ambient occlusion, disabled by default on mobile.
-     */
+    //! Enable / disable multi-bounce ambient occlusion, disabled by default on mobile.
     MaterialBuilder& multiBounceAmbientOcclusion(bool multiBounceAO) noexcept;
 
-    /**
-     * Enable / disable specular ambient occlusion, disabled by default on mobile.
-     */
+    //! Enable / disable specular ambient occlusion, disabled by default on mobile.
     MaterialBuilder& specularAmbientOcclusion(bool specularAO) noexcept;
 
-    /**
-     * Specifies how transparent objects should be rendered (default is DEFAULT).
-     */
+    //! Specifies how transparent objects should be rendered (default is DEFAULT).
     MaterialBuilder& transparencyMode(TransparencyMode mode) noexcept;
 
     /**
@@ -467,24 +433,16 @@ public:
 
     // TODO: this is present here for matc's "--print" flag, but ideally does not belong inside
     // MaterialBuilder.
-    /**
-     * If true, will output the generated GLSL shader code to stdout.
-     */
+    //! If true, will output the generated GLSL shader code to stdout.
     MaterialBuilder& printShaders(bool printShaders) noexcept;
 
-    /**
-     * If true, will include debugging information in generated SPIRV.
-     */
+    //! If true, will include debugging information in generated SPIRV.
     MaterialBuilder& generateDebugInfo(bool generateDebugInfo) noexcept;
 
-    /**
-     * Specifies a list of variants that should be filtered out during code generation.
-     */
+    //! Specifies a list of variants that should be filtered out during code generation.
     MaterialBuilder& variantFilter(uint8_t variantFilter) noexcept;
 
-    /**
-     * Build the material.
-     */
+    //! Build the material.
     Package build() noexcept;
 
 public:
