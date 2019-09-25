@@ -58,9 +58,7 @@ public class MaterialInstance {
         mNativeObject = nativeMaterialInstance;
     }
 
-    /**
-     * @return the {@link Material} associated with this instance
-     */
+    /** @return the {@link Material} associated with this instance */
     @NonNull
     public Material getMaterial() {
         if (mMaterial == null) {
@@ -344,9 +342,7 @@ public class MaterialInstance {
         nSetScissor(getNativeObject(), left, bottom, width, height);
     }
 
-    /**
-     * Returns the scissor rectangle to its default setting, which encompasses the View.
-     */
+    /** Returns the scissor rectangle to its default setting, which encompasses the View. */
     public void unsetScissor() {
         nUnsetScissor(getNativeObject());
     }
@@ -407,9 +403,7 @@ public class MaterialInstance {
         nSetDoubleSided(getNativeObject(), doubleSided);
     }
 
-    /**
-     * Overrides the default triangle culling state that was set on the material.
-     */
+    /** Overrides the default triangle culling state that was set on the material. */
     public void setCullingMode(Material.CullingMode mode) {
         nSetCullingMode(getNativeObject(), mode.ordinal());
     }

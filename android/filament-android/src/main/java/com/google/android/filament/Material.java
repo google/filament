@@ -40,58 +40,36 @@ public class Material {
 
     private Set<VertexBuffer.VertexAttribute> mRequiredAttributes;
 
-    /**
-     * Supported shading models
-     */
+    /** Supported shading models */
     public enum Shading {
-        /**
-         * No lighting applied, emissive possible
-         */
+        /** No lighting applied, emissive possible */
         UNLIT,
 
-        /**
-         * Default, standard lighting
-         */
+        /** Default, standard lighting */
         LIT,
 
-        /**
-         * Subsurface lighting model
-         */
+        /** Subsurface lighting model */
         SUBSURFACE,
 
-        /**
-         * Cloth lighting model
-         */
+        /** Cloth lighting model */
         CLOTH,
 
-        /**
-         * Legacy lighting model
-         */
+        /** Legacy lighting model */
         SPECULAR_GLOSSINESS
     }
 
-    /**
-     * Attribute interpolation types in the fragment shader
-     */
+    /** Attribute interpolation types in the fragment shader */
     public enum Interpolation {
-        /**
-         * Default, smooth interpolation
-         */
+        /** Default, smooth interpolation */
         SMOOTH,
 
-        /**
-         * Flat interpolation
-         */
+        /** Flat interpolation */
         FLAT
     }
 
-    /**
-     * Supported blending modes
-     */
+    /** Supported blending modes */
     public enum BlendingMode {
-        /**
-         * Material is opaque.
-         */
+        /** Material is opaque. */
         OPAQUE,
 
         /**
@@ -100,14 +78,10 @@ public class Material {
          */
         TRANSPARENT,
 
-        /**
-         * Material is additive (e.g.: hologram).
-         */
+        /** Material is additive (e.g.: hologram). */
         ADD,
 
-        /**
-         * Material is masked (i.e. alpha tested).
-         */
+        /** Material is masked (i.e. alpha tested). */
         MASKED,
 
         /**
@@ -116,64 +90,40 @@ public class Material {
          */
         FADE,
 
-        /**
-         * Material darkens what's behind it.
-         */
+        /** Material darkens what's behind it. */
         MULTIPLY,
 
-        /**
-         * Material brightens what's behind it.
-         */
+        /** Material brightens what's behind it. */
         SCREEN,
     }
 
-    /**
-     * Supported types of vertex domains
-     */
+    /** Supported types of vertex domains */
     public enum VertexDomain {
-        /**
-         * Vertices are in object space, default.
-         */
+        /** Vertices are in object space, default. */
         OBJECT,
 
-        /**
-         * Vertices are in world space.
-         */
+        /** Vertices are in world space. */
         WORLD,
 
-        /**
-         * Vertices are in view space.
-         */
+        /** Vertices are in view space. */
         VIEW,
 
-        /**
-         * Vertices are in normalized device space.
-         */
+        /** Vertices are in normalized device space. */
         DEVICE
     }
 
-    /**
-     * Face culling Mode
-     */
+    /** Face culling Mode */
     public enum CullingMode {
-        /**
-         * No culling. Front and back faces are visible.
-         */
+        /** No culling. Front and back faces are visible. */
         NONE,
 
-        /**
-         * Front face culling. Only back faces are visible.
-         */
+        /** Front face culling. Only back faces are visible. */
         FRONT,
 
-        /**
-         * Back face culling. Only front faces are visible.
-         */
+        /** Back face culling. Only front faces are visible. */
         BACK,
 
-        /**
-         * Front and back culling. Geometry is not visible.
-         */
+        /** Front and back culling. Geometry is not visible. */
         FRONT_AND_BACK
     }
 
@@ -295,87 +245,63 @@ public class Material {
         return new MaterialInstance(this, nativeInstance);
     }
 
-    /**
-     * Returns the material's default instance.
-     */
+    /** Returns the material's default instance. */
     @NonNull
     public MaterialInstance getDefaultInstance() {
         return mDefaultInstance;
     }
 
-    /**
-     * Returns the name of this material. The material name is used for debugging purposes.
-     */
+    /** Returns the name of this material. The material name is used for debugging purposes. */
     public String getName() {
         return nGetName(getNativeObject());
     }
 
-    /**
-     * Returns the shading model of this material.
-     */
+    /** Returns the shading model of this material. */
     public Shading getShading() {
         return Shading.values()[nGetShading(getNativeObject())];
     }
 
-    /**
-     * Returns the interpolation mode of this material. This affects how variables are interpolated.
-     */
+    /** Returns the interpolation mode of this material. This affects how variables are interpolated. */
     public Interpolation getInterpolation() {
         return Interpolation.values()[nGetInterpolation(getNativeObject())];
     }
 
-    /**
-     * Returns the blending mode of this material.
-     */
+    /** Returns the blending mode of this material. */
     public BlendingMode getBlendingMode() {
         return BlendingMode.values()[nGetBlendingMode(getNativeObject())];
     }
 
-    /**
-     * Returns the vertex domain of this material.
-     */
+    /** Returns the vertex domain of this material. */
     public VertexDomain getVertexDomain() {
         return VertexDomain.values()[nGetVertexDomain(getNativeObject())];
     }
 
-    /**
-     * Returns the default culling mode of this material.
-     */
+    /** Returns the default culling mode of this material. */
     public CullingMode getCullingMode() {
         return CullingMode.values()[nGetCullingMode(getNativeObject())];
     }
 
-    /**
-     * Indicates whether this material will write to the color buffer.
-     */
+    /** Indicates whether this material will write to the color buffer. */
     public boolean isColorWriteEnabled() {
         return nIsColorWriteEnabled(getNativeObject());
     }
 
-    /**
-     * Indicates whether this material will write to the depth buffer.
-     */
+    /** Indicates whether this material will write to the depth buffer. */
     public boolean isDepthWriteEnabled() {
         return nIsDepthWriteEnabled(getNativeObject());
     }
 
-    /**
-     * Indicates whether this material will use depth testing.
-     */
+    /** Indicates whether this material will use depth testing. */
     public boolean isDepthCullingEnabled() {
         return nIsDepthCullingEnabled(getNativeObject());
     }
 
-    /**
-     * Indicates whether this material is double-sided.
-     */
+    /** Indicates whether this material is double-sided. */
     public boolean isDoubleSided() {
         return nIsDoubleSided(getNativeObject());
     }
 
-    /**
-     * Returns the alpha mask threshold used when the blending mode is set to masked.
-     */
+    /** Returns the alpha mask threshold used when the blending mode is set to masked. */
     public float getMaskThreshold() {
         return nGetMaskThreshold(getNativeObject());
     }
@@ -387,16 +313,12 @@ public class Material {
         return nGetSpecularAntiAliasingVariance(getNativeObject());
     }
 
-    /**
-     * Returns the clamping threshold for specular-antialiasing. This value is between 0 and 1.
-     */
+    /** Returns the clamping threshold for specular-antialiasing. This value is between 0 and 1. */
     public float getSpecularAntiAliasingThreshold() {
         return nGetSpecularAntiAliasingThreshold(getNativeObject());
     }
 
-    /**
-     * Returns a set of {@link VertexBuffer.VertexAttribute}s that are required by this material.
-     */
+    /** Returns a set of {@link VertexBuffer.VertexAttribute}s that are required by this material. */
     public Set<VertexBuffer.VertexAttribute> getRequiredAttributes() {
         if (mRequiredAttributes == null) {
             int bitSet = nGetRequiredAttributes(getNativeObject());
