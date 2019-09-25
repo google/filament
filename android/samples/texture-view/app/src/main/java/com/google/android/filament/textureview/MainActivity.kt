@@ -258,7 +258,7 @@ class MainActivity : Activity() {
 
         // This ensures that all the commands we've sent to Filament have
         // been processed before we attempt to destroy anything
-        Fence.waitAndDestroy(engine.createFence(Fence.Type.SOFT), Fence.Mode.FLUSH)
+        engine.flushAndWait()
 
         // Cleanup all resources
         engine.destroyEntity(renderable)
