@@ -1,6 +1,3 @@
-#if defined(_MSC_VER)
-    #include "./DriverAPI.inc.msvc"
-#else
 /*
  * Copyright (C) 2015 The Android Open Source Project
  *
@@ -417,4 +414,3 @@ DECL_DRIVER_API_N(draw,
 
 // No include guard!!!
 
-#endif
