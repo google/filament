@@ -21,6 +21,22 @@ import android.support.annotation.NonNull;
 import com.google.android.filament.Box;
 import com.google.android.filament.Entity;
 
+/**
+ * Owns a bundle of Filament objects that have been created by AssetLoader.
+ *
+ * For usage instructions, see the documentation for AssetLoader.
+ *
+ * This class owns a hierarchy of entities that have been loaded from a glTF asset. Every entity has
+ * a TransformManager component, and some entities also have a NameComponentManager and/or
+ * RenderableManager components.
+ *
+ * In addition to the aforementioned entities, an asset has strong ownership over a list of
+ * VertexBuffer, IndexBuffer, MaterialInstance, Texture, and, optionally, a simple animation engine
+ * (Animator).
+ *
+ * Clients can ResourceLoader to create Texture objects, compute tangent quaternions, and upload
+ * data into vertex buffers and index buffers.
+ */
 public class FilamentAsset {
     private long mNativeObject;
 
@@ -32,22 +48,29 @@ public class FilamentAsset {
         return mNativeObject;
     }
 
+    /** Gets the transform root for the asset, which has no matching glTF node. */
     public @Entity int getRoot() {
         return nGetRoot(mNativeObject);
     }
 
+    /**
+     * Gets the list of entities, one for each glTF node. All of these have a Transform component.
+     * Some of the returned entities may also have a Renderable component.
+     */
     public @Entity int[] getEntities() {
         int[] result = new int[nGetEntityCount(mNativeObject)];
         nGetEntities(mNativeObject, result);
         return result;
     }
 
+    /** Gets the bounding box computed from the supplied min / max values in glTF accessors. */
     public @NonNull Box getBoundingBox() {
         float[] box = new float[6];
         nGetBoundingBox(mNativeObject, box);
         return new Box(box[0], box[1], box[2], box[3], box[4], box[5]);
     }
 
+    /** Gets the NameComponentManager label for the given entity, if it exists. */
     public String getName(@Entity int entity) {
         return nGetName(getNativeObject(), entity);
     }

@@ -25,6 +25,11 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.Buffer;
 
+/**
+ * Uploads vertex buffers and textures to the GPU and computes tangents.
+ *
+ * For a usage example, see the documentation for AssetLoader.
+ */
 public class ResourceLoader {
     private final long mNativeObject;
 
@@ -39,21 +44,52 @@ public class ResourceLoader {
         }
     }
 
+    /**
+     * Constructs a resource loader tied to the given Filament engine.
+     *
+     * @param engine the engine that gets passed to all builder methods
+     * @throws IllegalAccessException
+     * @throws InvocationTargetException
+     */
     public ResourceLoader(@NonNull Engine engine) throws IllegalAccessException, InvocationTargetException {
         long nativeEngine = (long) sEngineGetNativeObject.invoke(engine);
         mNativeObject = nCreateResourceLoader(nativeEngine);
     }
 
+    /** Frees all memory associated with the native resource loader. */
     public void destroy() {
         nDestroyResourceLoader(mNativeObject);
     }
 
+    /**
+     * Feeds the binary content of an external resource into the loader's URI cache.
+     *
+     * ResourceLoader does not know how to download external resources on its own (for example,
+     * external resources might come from a filesystem, a database, or the internet) so this method
+     * allows clients to download external resources and push them into the loader.
+     *
+     * When loading GLB files (as opposed to JSON-based glTF files), clients typically do not need
+     * to call this method.
+     *
+     * @param uri the string path that matches an image URI or buffer URI in the glTF
+     * @param buffer the binary blob corresponding to the given URI
+     * @return self (for daisy chaining)
+     */
     @NonNull
-    public ResourceLoader addResourceData(@NonNull String url, @NonNull Buffer buffer) {
-        nAddResourceData(mNativeObject, url, buffer, buffer.remaining());
+    public ResourceLoader addResourceData(@NonNull String uri, @NonNull Buffer buffer) {
+        nAddResourceData(mNativeObject, uri, buffer, buffer.remaining());
         return this;
     }
 
+    /**
+     * Iterates through all external buffers and images and creates corresponding Filament objects
+     * (vertex buffers, textures, etc), which become owned by the asset.
+     *
+     * This is the main entry point for ResourceLoader, and only needs to be called once.
+     *
+     * @param asset the Filament asset that contains URI-based resources
+     * @return self (for daisy chaining)
+     */
     @NonNull
     public ResourceLoader loadResources(@NonNull FilamentAsset asset) {
         nLoadResources(mNativeObject, asset.getNativeObject());
