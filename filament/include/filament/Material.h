@@ -138,6 +138,7 @@ public:
     VertexDomain getVertexDomain() const noexcept;
 
     //! Returns the material domain of this material.
+    //! The material domain determines how the material is used.
     MaterialDomain getMaterialDomain() const noexcept;
 
     //! Returns the default culling mode of this material.
