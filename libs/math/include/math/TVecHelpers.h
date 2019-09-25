@@ -129,6 +129,12 @@ private:
         return lv + VECTOR<U>(rv);
     }
 
+    template<typename U, typename = enable_if_arithmetic_t<U>>
+    friend inline constexpr
+    VECTOR<arithmetic_result_t<T, U>> MATH_PURE operator+(U lv, const VECTOR<T>& rv) {
+        return VECTOR<U>(lv) + rv;
+    }
+
     template<typename U>
     friend inline constexpr
     VECTOR<arithmetic_result_t<T, U>> MATH_PURE operator-(const VECTOR<T>& lv, const VECTOR<U>& rv) {
@@ -141,6 +147,12 @@ private:
     friend inline constexpr
     VECTOR<arithmetic_result_t<T, U>> MATH_PURE operator-(const VECTOR<T>& lv, U rv) {
         return lv - VECTOR<U>(rv);
+    }
+
+    template<typename U, typename = enable_if_arithmetic_t<U>>
+    friend inline constexpr
+    VECTOR<arithmetic_result_t<T, U>> MATH_PURE operator-(U lv, const VECTOR<T>& rv) {
+        return VECTOR<U>(lv) - rv;
     }
 };
 
@@ -198,8 +210,13 @@ private:
     template<typename U, typename = enable_if_arithmetic_t<U>>
     friend inline constexpr
     VECTOR<arithmetic_result_t<T, U>> MATH_PURE operator*(const VECTOR<T>& lv, U rv) {
-        VECTOR<arithmetic_result_t<T, U>> res(lv);
-        return res * VECTOR<U>(rv);
+        return lv * VECTOR<U>(rv);
+    }
+
+    template<typename U, typename = enable_if_arithmetic_t<U>>
+    friend inline constexpr
+    VECTOR<arithmetic_result_t<T, U>> MATH_PURE operator*(U lv, const VECTOR<T>& rv) {
+        return VECTOR<U>(lv) * rv;
     }
 
     template<typename U>
@@ -213,8 +230,13 @@ private:
     template<typename U, typename = enable_if_arithmetic_t<U>>
     friend inline constexpr
     VECTOR<arithmetic_result_t<T, U>> MATH_PURE operator/(const VECTOR<T>& lv, U rv) {
-        VECTOR<arithmetic_result_t<T, U>> res(lv);
-        return res / VECTOR<U>(rv);
+        return lv / VECTOR<U>(rv);
+    }
+
+    template<typename U, typename = enable_if_arithmetic_t<U>>
+    friend inline constexpr
+    VECTOR<arithmetic_result_t<T, U>> MATH_PURE operator/(U lv, const VECTOR<T>& rv) {
+        return VECTOR<U>(lv) / rv;
     }
 };
 
