@@ -15,5 +15,12 @@ source `dirname $0`/../common/ci-common.sh
 source `dirname $0`/ci-common.sh
 source `dirname $0`/../common/build-common.sh
 
+# debug
+echo "Contents of /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.14.sdk:"
+ls -la /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.14.sdk
+
+echo "Contents of /Applications/Xcode_10.3.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.14.sdk:"
+ls -la /Applications/Xcode_10.3.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.14.sdk
+
 pushd `dirname $0`/../.. > /dev/null
 ./build.sh -c $RUN_TESTS $GENERATE_ARCHIVES $BUILD_DEBUG $BUILD_RELEASE
