@@ -29,8 +29,8 @@ import java.nio.Buffer;
 /**
  * Utilities for consuming KTX files and producing Filament textures, IBLs, and sky boxes.
  *
- * KTX is a simple container format that makes it easy to bundle miplevels and cubemap faces
- * into a single file.
+ * <p>KTX is a simple container format that makes it easy to bundle miplevels and cubemap faces
+ * into a single file.</p>
  */
 public class KtxLoader {
 
@@ -39,7 +39,7 @@ public class KtxLoader {
     }
 
     /**
-     * Consumes the content of a KTX file and produces a Filament Texture object.
+     * Consumes the content of a KTX file and produces a {@link Texture} object.
      *
      * @param engine Gets passed to the builder.
      * @param buffer The content of the KTX File.
@@ -58,7 +58,7 @@ public class KtxLoader {
     }
 
     /**
-     * Consumes the content of a KTX file and produces a Filament IndirectLight object.
+     * Consumes the content of a KTX file and produces an {@link IndirectLight} object.
      *
      * @param engine Gets passed to the builder.
      * @param buffer The content of the KTX File.
@@ -77,7 +77,7 @@ public class KtxLoader {
     }
 
     /**
-     * Consumes the content of a KTX file and produces a Filament Skybox object.
+     * Consumes the content of a KTX file and produces a {@link Skybox} object.
      *
      * @param engine Gets passed to the builder.
      * @param buffer The content of the KTX File.

@@ -23,8 +23,8 @@ import java.lang.reflect.Method;
 /**
  * Loads pre-generated ubershader materials that fulfill glTF requirements.
  *
- * This class is leveraged by AssetLoader to create Filament materials, applications
- * do not need to call methods on it.
+ * <p>This class is used by {@link AssetLoader} to create Filament materials.
+ * Client applications do not need to call methods on it.</p>
  */
 public class MaterialProvider {
     private long mNativeObject;
@@ -41,7 +41,7 @@ public class MaterialProvider {
     }
 
     /**
-     * Constructs an ubershader loader using the supplied Filament Engine.
+     * Constructs an ubershader loader using the supplied {@link Engine}.
      *
      * @param engine the engine used to create materials
      */
@@ -54,7 +54,9 @@ public class MaterialProvider {
         }
     }
 
-    /** Frees memory associated with the native material provider. */
+    /**
+     * Frees memory associated with the native material provider.
+     * */
     public void destroy() {
         nDestroyMaterialProvider(mNativeObject);
         mNativeObject = 0;

@@ -22,20 +22,25 @@ import com.google.android.filament.Box;
 import com.google.android.filament.Entity;
 
 /**
- * Owns a bundle of Filament objects that have been created by AssetLoader.
+ * Owns a bundle of Filament objects that have been created by <code>AssetLoader</code>.
  *
- * For usage instructions, see the documentation for AssetLoader.
+ * <p>For usage instructions, see the documentation for {@link AssetLoader}.</p>
  *
- * This class owns a hierarchy of entities that have been loaded from a glTF asset. Every entity has
- * a TransformManager component, and some entities also have a NameComponentManager and/or
- * RenderableManager components.
+ * <p>This class owns a hierarchy of entities that have been loaded from a glTF asset. Every entity has
+ * a <code>TransformManager</code> component, and some entities also have
+ * <code>NameComponentManager</code> and/or <code>RenderableManager</code> components.</p>
  *
- * In addition to the aforementioned entities, an asset has strong ownership over a list of
- * VertexBuffer, IndexBuffer, MaterialInstance, Texture, and, optionally, a simple animation engine
- * (Animator).
+ * <p>In addition to the aforementioned entities, an asset has strong ownership over a list of
+ * <code>VertexBuffer</code>, <code>IndexBuffer</code>, <code>MaterialInstance</code>, and
+ * <code>Texture</code>.</p>
  *
- * Clients can ResourceLoader to create Texture objects, compute tangent quaternions, and upload
- * data into vertex buffers and index buffers.
+ * <p>Clients can use {@link ResourceLoader} to create textures, compute tangent quaternions, and
+ * upload data into vertex buffers and index buffers.</p>
+ *
+ * <p>TODO: <code>Animator</code> is not yet exposed to Java / Kotlin clients.</p>
+ *
+ * @see ResourceLoader
+ * @see AssetLoader
  */
 public class FilamentAsset {
     private long mNativeObject;
@@ -48,14 +53,18 @@ public class FilamentAsset {
         return mNativeObject;
     }
 
-    /** Gets the transform root for the asset, which has no matching glTF node. */
+    /**
+     * Gets the transform root for the asset, which has no matching glTF node.
+     */
     public @Entity int getRoot() {
         return nGetRoot(mNativeObject);
     }
 
     /**
-     * Gets the list of entities, one for each glTF node. All of these have a Transform component.
-     * Some of the returned entities may also have a Renderable component.
+     * Gets the list of entities, one for each glTF node.
+     *
+     * <p>All of these have a transform component. Some of the returned entities may also have a
+     * renderable component.</p>
      */
     public @Entity int[] getEntities() {
         int[] result = new int[nGetEntityCount(mNativeObject)];
@@ -63,14 +72,18 @@ public class FilamentAsset {
         return result;
     }
 
-    /** Gets the bounding box computed from the supplied min / max values in glTF accessors. */
+    /**
+     * Gets the bounding box computed from the supplied min / max values in glTF accessors.
+     */
     public @NonNull Box getBoundingBox() {
         float[] box = new float[6];
         nGetBoundingBox(mNativeObject, box);
         return new Box(box[0], box[1], box[2], box[3], box[4], box[5]);
     }
 
-    /** Gets the NameComponentManager label for the given entity, if it exists. */
+    /**
+     * Gets the <code>NameComponentManager<?code> label for the given entity, if it exists.
+     */
     public String getName(@Entity int entity) {
         return nGetName(getNativeObject(), entity);
     }
