@@ -1494,7 +1494,7 @@ and sorting issues are minimized or eliminated</div></div></center>
 </p></dd><dt>Description</dt><dd><p>      Enables two-sided rendering and its capability to be toggled at run time. When set to <code>true</code>,
       <code>culling</code> is automatically set to <code>none</code>; if the triangle is back-facing, the triangle&apos;s
       normal is flipped to become front-facing. When explicitly set to <code>false</code>, this allows the
-      lighting aspect of double-sidedness to be toggled at run time.
+      double-sidedness to be toggled at run time.
 
 </p></dd></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
 <span class="line">    doubleSided : true</span>
@@ -1933,6 +1933,7 @@ The following APIs are only available from the fragment block:
 <tr><td style="text-align:left"> <strong class="asterisk">inverseTonemap(float3)</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:left"> Applies the inverse tone mapping operator to the specified linear sRGB color and returns a linear sRGB color. This operation may be an approximation </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">inverseTonemapSRGB(float3)</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:left"> Applies the inverse tone mapping operator to the specified non-linear sRGB color and returns a linear sRGB color. This operation may be an approximation </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">luminance(float3)</strong> </td><td style="text-align:center"> float </td><td style="text-align:left"> Computes the luminance of the specified linear sRGB color </td></tr>
+<tr><td style="text-align:left"> <strong class="asterisk">uvToRenderTargetUV(float2)</strong> </td><td style="text-align:center"> float2 </td><td style="text-align:left"> Transforms a UV coordinate to allow sampling from a <code>RenderTarget</code> attachment </td></tr>
 </tbody></table></div>
 
 <p></p><p>
@@ -1943,6 +1944,16 @@ The following APIs are only available from the fragment block:
 
     To obtain API-level world space coordinates, custom materials should add <code>getWorldOffset()</code> to
     <code>getWorldPosition()</code> (et al).</p></div>
+
+<p></p><p>
+
+</p><div class="admonition tip"><div class="admonition-title"> sampling from render targets</div>
+
+<p></p><p>
+
+    When sampling from a <code>filament::Texture</code> that is attached to a <code>filament::RenderTarget</code> for
+    materials in the surface domain, please use <code>uvToRenderTargetUV</code> to transform the texture
+    coordinate. This will flip the coordinate depending on which backend is being used.</p></div>
 
 <p></p>
 <a class="target" name="compilingmaterials">&#xA0;</a><a class="target" name="compilingmaterials">&#xA0;</a><a class="target" name="toc5">&#xA0;</a><h1>Compiling materials</h1>

@@ -3376,10 +3376,12 @@ See an example below:
 
 <a href="#listing_iblevaluation">Listing&#xA0;27</a> presents a GLSL implementation to evaluate the IBL, using the various textures described in the previous sections. 
 
-</p><pre class="listing tilde"><code><span class="line"><span class="hljs-type">vec3</span> ibl(<span class="hljs-type">vec3</span> n, <span class="hljs-type">vec3</span> v, <span class="hljs-type">vec3</span> diffuseColor, <span class="hljs-type">vec3</span> f0, <span class="hljs-type">vec3</span> f90, <span class="hljs-type">float</span> perceptualRoughness) {</span>
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-type">vec3</span> ibl(<span class="hljs-type">vec3</span> n, <span class="hljs-type">vec3</span> v, <span class="hljs-type">vec3</span> diffuseColor, <span class="hljs-type">vec3</span> f0, <span class="hljs-type">vec3</span> f90,</span>
+<span class="line">        <span class="hljs-type">float</span> perceptualRoughness) {</span>
 <span class="line">    <span class="hljs-type">vec3</span> r = <span class="hljs-built_in">reflect</span>(n);</span>
 <span class="line">    <span class="hljs-type">vec3</span> Ld = <span class="hljs-built_in">textureCube</span>(irradianceEnvMap, r) * diffuseColor;</span>
-<span class="line">    <span class="hljs-type">vec3</span> Lld = <span class="hljs-built_in">textureCube</span>(prefilteredEnvMap, r, computeLODFromRoughness(perceptualRoughness));</span>
+<span class="line">    <span class="hljs-type">float</span> lod = computeLODFromRoughness(perceptualRoughness);</span>
+<span class="line">    <span class="hljs-type">vec3</span> Lld = <span class="hljs-built_in">textureCube</span>(prefilteredEnvMap, r, lod);</span>
 <span class="line">    <span class="hljs-type">vec2</span> Ldfg = <span class="hljs-built_in">textureLod</span>(dfgLut, <span class="hljs-type">vec2</span>(<span class="hljs-built_in">dot</span>(n, v), perceptualRoughness), <span class="hljs-number">0.0</span>).xy;</span>
 <span class="line">    <span class="hljs-type">vec3</span> Lr =  (f0 * Ldfg.x + f90 * Ldfg.y) * Lld;</span>
 <span class="line">    <span class="hljs-keyword">return</span> Ld + Lr;</span>
@@ -3403,20 +3405,6 @@ irradiance cubemap and the analytical approximation of the \(DFG\) LUT, as shown
 <span class="line">        + sphericalHarmonics[<span class="hljs-number">6</span>] * (<span class="hljs-number">3.0</span> * n.z * n.z - <span class="hljs-number">1.0</span>)</span>
 <span class="line">        + sphericalHarmonics[<span class="hljs-number">7</span>] * (n.z * n.x)</span>
 <span class="line">        + sphericalHarmonics[<span class="hljs-number">8</span>] * (n.x * n.x - n.y * n.y);</span>
-<span class="line">}</span>
-<span class="line"></span>
-<span class="line"><span class="hljs-comment">// <span class="hljs-doctag">NOTE:</span> this approximation is not valid if the energy compensation term</span></span>
-<span class="line"><span class="hljs-comment">// for multiscattering is applied. We use the DFG LUT solution to implement</span></span>
-<span class="line"><span class="hljs-comment">// multiscattering</span></span>
-<span class="line"><span class="hljs-type">vec2</span> prefilteredDFG(<span class="hljs-type">float</span> NoV, <span class="hljs-type">float</span> perceptualRoughness) {</span>
-<span class="line">    <span class="hljs-comment">// Karis&apos; approximation based on Lazarov&apos;s</span></span>
-<span class="line">    <span class="hljs-keyword">const</span> <span class="hljs-type">vec4</span> c0 = <span class="hljs-type">vec4</span>(<span class="hljs-number">-1.0</span>, <span class="hljs-number">-0.0275</span>, <span class="hljs-number">-0.572</span>,  <span class="hljs-number">0.022</span>);</span>
-<span class="line">    <span class="hljs-keyword">const</span> <span class="hljs-type">vec4</span> c1 = <span class="hljs-type">vec4</span>( <span class="hljs-number">1.0</span>,  <span class="hljs-number">0.0425</span>,  <span class="hljs-number">1.040</span>, <span class="hljs-number">-0.040</span>);</span>
-<span class="line">    <span class="hljs-type">vec4</span> r = roughness * c0 + c1;</span>
-<span class="line">    <span class="hljs-type">float</span> a004 = <span class="hljs-built_in">min</span>(r.x * r.x, <span class="hljs-built_in">exp2</span>(<span class="hljs-number">-9.28</span> * NoV)) * r.x + r.y;</span>
-<span class="line">    <span class="hljs-keyword">return</span> <span class="hljs-type">vec2</span>(<span class="hljs-number">-1.04</span>, <span class="hljs-number">1.04</span>) * a004 + r.zw;</span>
-<span class="line">    <span class="hljs-comment">// Zioma&apos;s approximation based on Karis</span></span>
-<span class="line">    <span class="hljs-comment">// return vec2(1.0, pow(1.0 - max(perceptualRoughness, NoV), 3.0));</span></span>
 <span class="line">}</span>
 <span class="line"></span>
 <span class="line"><span class="hljs-comment">// <span class="hljs-doctag">NOTE:</span> this is the DFG LUT implementation of the function above</span></span>
