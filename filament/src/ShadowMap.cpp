@@ -477,7 +477,7 @@ void ShadowMap::computeShadowCameraDirectional(
         assert(lsLightFrustumBounds.min.y < lsLightFrustumBounds.max.y);
 
         // compute focus scale and offset
-        float2 s = float2(2.0f) / float2(lsLightFrustumBounds.max.xy - lsLightFrustumBounds.min.xy);
+        float2 s = 2.0f / float2(lsLightFrustumBounds.max.xy - lsLightFrustumBounds.min.xy);
         float2 o =   -s * float2(lsLightFrustumBounds.max.xy + lsLightFrustumBounds.min.xy) * 0.5f;
 
         if (params.options.stable) {
@@ -724,7 +724,7 @@ void ShadowMap::intersectWithShadowCasters(Aabb& UTILS_RESTRICT lightFrustum,
         mat4f const& lightView, Aabb const& wsShadowCastersVolume) noexcept {
 
     // construct the Focus transform (scale + offset)
-    const float2 s = float2(2.0f) / float2(lightFrustum.max.xy - lightFrustum.min.xy);
+    const float2 s = 2.0f / float2(lightFrustum.max.xy - lightFrustum.min.xy);
     const float2 o =   -s * float2(lightFrustum.max.xy + lightFrustum.min.xy) * 0.5f;
     const mat4f F(mat4f::row_major_init {
             s.x,   0,  0, o.x,
@@ -784,7 +784,7 @@ void ShadowMap::snapLightFrustum(float2& s, float2& o,
 
     // This snaps the shadow map bounds to texels.
     // The 2.0 comes from Mv having a NDC in the range -1,1 (so a range of 2).
-    const float2 r = shadowMapResolution * 2.0f;
+    const float2 r = 2.0f * shadowMapResolution;
     o -= fmod(o, r);
 
     // This offsets the texture coordinates so it has a fixed offset w.r.t the world

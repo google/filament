@@ -258,7 +258,7 @@ static void setup(LucyApp& app, Engine* engine, View* finalView, Scene* finalSce
     finalView->setCamera(app.finalCamera);
 };
 
-static float3 reflect(float3 i, float3 n) { return i - float3(2.0f) * dot(n, i) * n; };
+static float3 reflect(float3 i, float3 n) { return i - 2.0f * dot(n, i) * n; };
 
 static void animate(LucyApp& app, Engine* engine, View* finalView, double now) {
     // Rotate the embedded mesh. (use now = -0.5 for a nice screenshot)
@@ -287,7 +287,7 @@ static void animate(LucyApp& app, Engine* engine, View* finalView, double now) {
     const float planeD = -1;
     const float3 planeN = {0, 1, 0};
     const float t = dot(planeN * planeD - eye, planeN) / dot(gaze, planeN);
-    target = eye + float3(t) * gaze;
+    target = eye + t * gaze;
 
     // Set up the primary camera.
     const float3 up = cross(gaze, float3 {-1, 0, 0});
@@ -296,7 +296,7 @@ static void animate(LucyApp& app, Engine* engine, View* finalView, double now) {
     // Find the location of the reflected camera.
     const float eyedist = length(target - eye);
     const float3 newgaze = reflect(gaze, planeN);
-    const float3 neweye = target - float3(eyedist) * newgaze;
+    const float3 neweye = target - eyedist * newgaze;
     const float3 newup = cross(newgaze, float3 {-1, 0, 0});
     app.reflection.camera->lookAt(neweye, neweye + newgaze, newup);
 };

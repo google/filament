@@ -262,7 +262,7 @@ void Animator::applyAnimation(size_t animationIndex, float time) const {
                     float3 vert1 = srcVec3[nextIndex * 3 + 1];
                     scale = cubicSpline(vert0, tang0, vert1, tang1, t);
                 } else {
-                    scale = (srcVec3[prevIndex]) * (1 - t) + (srcVec3[nextIndex] * t);
+                    scale = ((1 - t) * srcVec3[prevIndex]) + (t * srcVec3[nextIndex]);
                 }
                 break;
             }
@@ -276,7 +276,7 @@ void Animator::applyAnimation(size_t animationIndex, float time) const {
                     float3 vert1 = srcVec3[nextIndex * 3 + 1];
                     translation = cubicSpline(vert0, tang0, vert1, tang1, t);
                 } else {
-                    translation = (srcVec3[prevIndex] * (1 - t)) + (srcVec3[nextIndex] * t);
+                    translation = ((1 - t) * srcVec3[prevIndex]) + (t * srcVec3[nextIndex]);
                 }
                 break;
             }
