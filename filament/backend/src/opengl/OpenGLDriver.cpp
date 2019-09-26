@@ -35,6 +35,10 @@
 // we don't want to rely on it.
 #define ALLOW_REVERSE_MULTISAMPLE_RESOLVE false
 
+// We can only support this feature on OpenGL ES 3.1+
+// Support is currently disabled as we don't need it
+#define TEXTURE_2D_MULTISAMPLE_SUPPORTED false
+
 #if defined(__EMSCRIPTEN__)
 #define HAS_MAPBUFFERS 0
 #else
@@ -66,11 +70,6 @@ Driver* OpenGLDriverFactory::create(
 }
 
 } // namespace backend
-
-namespace gl {
-// defined in PlatformEGL.cpp
-extern PFNGLTEXSTORAGE2DMULTISAMPLEPROC glTexStorage2DMultiSample;
-}
 
 using namespace backend;
 using namespace GLUtils;
@@ -577,22 +576,26 @@ void OpenGLDriver::textureStorage(OpenGLDriver::GLTexture* t,
             break;
         }
         case GL_TEXTURE_2D_MULTISAMPLE:
-            // NOTE: if there is a mix of texture and renderbuffers, "fixed_sample_locations" must be true
-            // NOTE: what's the benefit of setting "fixed_sample_locations" to false?
+            if (TEXTURE_2D_MULTISAMPLE_SUPPORTED) {
+                // NOTE: if there is a mix of texture and renderbuffers, "fixed_sample_locations" must be true
+                // NOTE: what's the benefit of setting "fixed_sample_locations" to false?
 #if GLES31_HEADERS
-            // only supported from GL 4.3 and GLES 3.1
-            // since we compile against API 19 which doesn't contain GLES 3.1 symbols,
-            // we must use a function pointer
-            gl::glTexStorage2DMultiSample(t->gl.target, t->samples, t->gl.internalFormat,
-                    GLsizei(width), GLsizei(height), GL_TRUE);
+                // only supported from GL 4.3 and GLES 3.1
+                // since we compile against API 19 which doesn't contain GLES 3.1 symbols,
+                // we must use a function pointer
+                glTexStorage2DMultisample(t->gl.target, t->samples, t->gl.internalFormat,
+                        GLsizei(width), GLsizei(height), GL_TRUE);
 #elif GL41_HEADERS
-            // only supported in GL (never in GLES)
-            // TODO: use glTexStorage2DMultisample() on GL 4.3 and above
-            glTexImage2DMultisample(t->gl.target, t->samples, t->gl.internalFormat,
-                    GLsizei(width), GLsizei(height), GL_TRUE);
+                // only supported in GL (never in GLES)
+                // TODO: use glTexStorage2DMultisample() on GL 4.3 and above
+                glTexImage2DMultisample(t->gl.target, t->samples, t->gl.internalFormat,
+                        GLsizei(width), GLsizei(height), GL_TRUE);
 #else
 #   error "GL/GLES header version not supported"
 #endif
+            } else {
+                PANIC_LOG("GL_TEXTURE_2D_MULTISAMPLE is not supported");
+            }
             break;
         default: // cannot happen
             break;

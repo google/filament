@@ -70,11 +70,6 @@ UTILS_PRIVATE PFNEGLGETFRAMETIMESTAMPSANDROIDPROC eglGetFrameTimestampsANDROID =
 }
 using namespace glext;
 
-namespace gl {
-UTILS_PRIVATE PFNGLTEXSTORAGE2DMULTISAMPLEPROC glTexStorage2DMultiSample = {};
-}
-using namespace gl;
-
 using EGLStream = Platform::Stream;
 
 // ---------------------------------------------------------------------------------------------
@@ -154,9 +149,6 @@ Driver* PlatformEGL::createDriver(void* sharedContext) noexcept {
     }
 
     importGLESExtensionsEntryPoints();
-
-    glTexStorage2DMultiSample = (PFNGLTEXSTORAGE2DMULTISAMPLEPROC)
-            eglGetProcAddress("glTexStorage2DMultiSample");
 
     auto extensions = split(eglQueryString(mEGLDisplay, EGL_EXTENSIONS));
 
