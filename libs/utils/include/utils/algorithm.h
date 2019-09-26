@@ -258,9 +258,7 @@ RandomAccessIterator partition_point(
 template <class To, class From>
 typename std::enable_if_t<
     (sizeof(To) == sizeof(From)) &&
-    std::is_trivially_copyable<From>::value &&
-    std::is_trivial<To>::value,
-    // this implementation requires that To is trivially default constructible
+    std::is_trivially_copyable<From>::value,
     To>
 // constexpr support needs compiler magic
 bit_cast(const From &src) noexcept {
