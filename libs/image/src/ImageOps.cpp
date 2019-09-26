@@ -127,7 +127,7 @@ LinearImage applyScaleOffset(const LinearImage& image,
     auto src = (VecT const*) image.getPixelRef();
     auto dst = (VecT*) result.getPixelRef();
     for (uint32_t n = 0, end = width * height; n < end; ++n) {
-        dst[n] = src[n] * scale + VecT{offset};
+        dst[n] = scale * src[n] + VecT{offset};
     }
     return result;
 }

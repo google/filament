@@ -110,7 +110,7 @@ public:
 
     // initialize from a double4
     template<typename A>
-    constexpr TQuaternion(const TVec4<A>& v) : x(v.x), y(v.y), z(v.z), w(v.w) {}
+    constexpr explicit TQuaternion(const TVec4<A>& v) : x(v.x), y(v.y), z(v.z), w(v.w) {}
 
     // initialize from a quaternion of a different type
     template<typename A>
