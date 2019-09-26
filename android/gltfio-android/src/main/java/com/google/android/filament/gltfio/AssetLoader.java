@@ -30,13 +30,13 @@ import java.lang.reflect.Method;
 import java.nio.Buffer;
 
 /**
- * Consumes a blob of glTF 2.0 content (either JSON or GLB) and produces {@link FilamentAsset} objects,
- * which are bundles of Filament entities, material instances, textures, vertex buffers, and index
- * buffers.
+ * Consumes a blob of glTF 2.0 content (either JSON or GLB) and produces {@link FilamentAsset}
+ * objects, which are bundles of Filament entities, material instances, textures, vertex buffers,
+ * and index buffers.
  *
- * AssetLoader does not fetch external buffer data or create textures on its own. Clients can use
- * the provided {@link ResourceLoader} class for this, which obtains the URI list from the asset. This is
- * demonstrated in the Kotlin snippet below.
+ * <p>AssetLoader does not fetch external buffer data or create textures on its own. Clients can use
+ * the provided {@link ResourceLoader} class for this, which obtains the URI list from the asset.
+ * This is demonstrated in the Kotlin snippet below.</p>
  *
  * <pre>
  *
@@ -64,6 +64,8 @@ import java.nio.Buffer;
  * }
  * </pre>
  *
+ * @see FilamentAsset
+ * @see ResourceLoader
  */
 public class AssetLoader {
     private long mNativeObject;
@@ -154,7 +156,8 @@ public class AssetLoader {
         asset.clearNativeObject();
     }
 
-    private static native long nCreateAssetLoader(long nativeEngine, long nativeGenerator, long nativeEntities);
+    private static native long nCreateAssetLoader(long nativeEngine, long nativeGenerator,
+            long nativeEntities);
     private static native void nDestroyAssetLoader(long nativeLoader);
     private static native long nCreateAssetFromBinary(long nativeLoader, Buffer buffer, int remaining);
     private static native void nEnableDiagnostics(long nativeLoader, boolean enable);

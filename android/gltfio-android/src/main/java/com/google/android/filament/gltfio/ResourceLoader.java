@@ -28,7 +28,10 @@ import java.nio.Buffer;
 /**
  * Uploads vertex buffers and textures to the GPU and computes tangents.
  *
- * For a usage example, see the documentation for AssetLoader.
+ * <p>For a usage example, see the documentation for {@link AssetLoader}.</p>
+ *
+ * @see AssetLoader
+ * @see FilamentAsset
  */
 public class ResourceLoader {
     private final long mNativeObject;
@@ -56,7 +59,9 @@ public class ResourceLoader {
         mNativeObject = nCreateResourceLoader(nativeEngine);
     }
 
-    /** Frees all memory associated with the native resource loader. */
+    /**
+     * Frees all memory associated with the native resource loader.
+     */
     public void destroy() {
         nDestroyResourceLoader(mNativeObject);
     }
@@ -64,12 +69,12 @@ public class ResourceLoader {
     /**
      * Feeds the binary content of an external resource into the loader's URI cache.
      *
-     * ResourceLoader does not know how to download external resources on its own (for example,
-     * external resources might come from a filesystem, a database, or the internet) so this method
-     * allows clients to download external resources and push them into the loader.
+     * <p><code>ResourceLoader</code> does not know how to download external resources on its own
+     * (for example, external resources might come from a filesystem, a database, or the internet)
+     * so this method allows clients to download external resources and push them to the loader.</p>
      *
-     * When loading GLB files (as opposed to JSON-based glTF files), clients typically do not need
-     * to call this method.
+     * <p>When loading GLB files (as opposed to JSON-based glTF files), clients typically do not
+     * need to call this method.</p>
      *
      * @param uri the string path that matches an image URI or buffer URI in the glTF
      * @param buffer the binary blob corresponding to the given URI
@@ -85,7 +90,8 @@ public class ResourceLoader {
      * Iterates through all external buffers and images and creates corresponding Filament objects
      * (vertex buffers, textures, etc), which become owned by the asset.
      *
-     * This is the main entry point for ResourceLoader, and only needs to be called once.
+     * <p>This is the main entry point for <code>ResourceLoader</code>, and only needs to be called
+     * once.</p>
      *
      * @param asset the Filament asset that contains URI-based resources
      * @return self (for daisy chaining)
