@@ -41,9 +41,11 @@
 #include <android/api-level.h>
 #include <sys/system_properties.h>
 
-// We require filament to be built with a API 21 toolchain, before that, OpenGLES 3.0 didn't exist
-#if __ANDROID_API__ < 21
-#   error "__ANDROID_API__ must be at least 21"
+// We require filament to be built with a API 19 toolchain, before that, OpenGLES 3.0 didn't exist
+// Actually, OpenGL ES 3.0 was added to API 18, but API 19 is the better target and
+// the minimum for Jetpack at the time of this comment.
+#if __ANDROID_API__ < 19
+#   error "__ANDROID_API__ must be at least 19"
 #endif
 
 using namespace utils;
@@ -67,6 +69,11 @@ UTILS_PRIVATE PFNEGLGETFRAMETIMESTAMPSUPPORTEDANDROIDPROC eglGetFrameTimestampSu
 UTILS_PRIVATE PFNEGLGETFRAMETIMESTAMPSANDROIDPROC eglGetFrameTimestampsANDROID = {};
 }
 using namespace glext;
+
+namespace gl {
+UTILS_PRIVATE PFNGLTEXSTORAGE2DMULTISAMPLEPROC glTexStorage2DMultiSample = {};
+}
+using namespace gl;
 
 using EGLStream = Platform::Stream;
 
@@ -147,6 +154,9 @@ Driver* PlatformEGL::createDriver(void* sharedContext) noexcept {
     }
 
     importGLESExtensionsEntryPoints();
+
+    glTexStorage2DMultiSample = (PFNGLTEXSTORAGE2DMULTISAMPLEPROC)
+            eglGetProcAddress("glTexStorage2DMultiSample");
 
     auto extensions = split(eglQueryString(mEGLDisplay, EGL_EXTENSIONS));
 

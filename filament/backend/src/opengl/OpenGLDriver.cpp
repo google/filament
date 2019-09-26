@@ -65,7 +65,12 @@ Driver* OpenGLDriverFactory::create(
     return OpenGLDriver::create(platform, sharedGLContext);
 }
 
-} // namesapce backend
+} // namespace backend
+
+namespace gl {
+// defined in PlatformEGL.cpp
+extern PFNGLTEXSTORAGE2DMULTISAMPLEPROC glTexStorage2DMultiSample;
+}
 
 using namespace backend;
 using namespace GLUtils;
@@ -93,7 +98,6 @@ Driver* OpenGLDriver::create(
             if (UTILS_UNLIKELY(!(major >= 3 && minor >= 0))) {
                 PANIC_LOG("OpenGL ES 3.0 minimum needed (current %d.%d)", major, minor);
                 goto cleanup;
-
             }
         } else if (GL41_HEADERS) {
             // we require GL 4.1 headers and minimum version
@@ -577,7 +581,9 @@ void OpenGLDriver::textureStorage(OpenGLDriver::GLTexture* t,
             // NOTE: what's the benefit of setting "fixed_sample_locations" to false?
 #if GLES31_HEADERS
             // only supported from GL 4.3 and GLES 3.1
-            glTexStorage2DMultisample(t->gl.target, t->samples, t->gl.internalFormat,
+            // since we compile against API 19 which doesn't contain GLES 3.1 symbols,
+            // we must use a function pointer
+            gl::glTexStorage2DMultiSample(t->gl.target, t->samples, t->gl.internalFormat,
                     GLsizei(width), GLsizei(height), GL_TRUE);
 #elif GL41_HEADERS
             // only supported in GL (never in GLES)
