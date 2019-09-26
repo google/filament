@@ -323,7 +323,7 @@ public:
      * Destroys a Material object
      * @param p the material object to destroy
      * @attention All MaterialInstance of the specified material must be destroyed before
-     *            destroying a Material.
+     *            destroying it.
      * @exception utils::PreConditionPanic is thrown if some MaterialInstances remain.
      * no-op if exceptions are disabled and some MaterialInstances remain.
      */
