@@ -481,7 +481,7 @@ public class Camera {
      * @see Exposure
      * @see #setExposure(float, float, float)
      */
-    void setExposure(float exposure) noexcept {
+    public void setExposure(float exposure) {
         setExposure(1.0f, 1.2f, 100.0f * (1.0f / exposure));
     }
 
