@@ -161,13 +161,13 @@ public:
         Builder& material(size_t index, MaterialInstance const* materialInstance) noexcept;
 
         /**
-         * The axis aligned bounding box of the renderable.
+         * The axis-aligned bounding box of the renderable.
          *
          * This is an object-space AABB used for frustum culling. For skinning and morphing, this
          * should encompass all possible vertex positions. It is mandatory unless culling is
          * disabled for the renderable.
          *
-         * See also computeAABB().
+         * \see computeAABB()
          */
         Builder& boundingBox(const Box& axisAlignedBoundingBox) noexcept;
 
@@ -197,7 +197,7 @@ public:
          * avoid using a separate View for the HUD. Note that priority is completely orthogonal to
          * Builder::layerMask, which merely controls visibility.
          *
-         * See also Builder::blendOrder().
+         * \see Builder::blendOrder()
          *
          * The priority is clamped to the range [0..7], defaults to 4; 7 is lowest priority
          * (rendered last).
@@ -303,45 +303,51 @@ public:
     /**
      * Changes the bounding box used for frustum culling.
      *
-     * See also Builder::boundingBox() and RenderableManager::getAxisAlignedBoundingBox().
+     * \see Builder::boundingBox()
+     * \see RenderableManager::getAxisAlignedBoundingBox()
      */
     void setAxisAlignedBoundingBox(Instance instance, const Box& aabb) noexcept;
 
     /**
      * Changes the visibility bits.
      *
-     * See also Builder::layerMask() and View::setVisibleLayers().
+     * \see Builder::layerMask()
+     * \see View::setVisibleLayers().
      */
     void setLayerMask(Instance instance, uint8_t select, uint8_t values) noexcept;
 
     /**
      * Changes the coarse-level draw ordering.
      *
-     * See also Builder::priority().
+     * \see Builder::priority().
      */
     void setPriority(Instance instance, uint8_t priority) noexcept;
 
     /**
      * Changes whether or not the renderable casts shadows.
      *
-     * See also Builder::castShadows().
+     * \see Builder::castShadows()
      */
     void setCastShadows(Instance instance, bool enable) noexcept;
 
     /**
      * Changes whether or not the renderable can receive shadows.
      *
-     * See also Builder::receiveShadows().
+     * \see Builder::receiveShadows()
      */
     void setReceiveShadows(Instance instance, bool enable) noexcept;
 
     /**
-     * Checks if the renderable can cast shadows. See also Builder::castShadows().
+     * Checks if the renderable can cast shadows.
+     *
+     * \see Builder::castShadows().
      */
     bool isShadowCaster(Instance instance) const noexcept;
 
     /**
-     * Checks if the renderable can receive shadows. See also Builder::receiveShadows().
+     * Checks if the renderable can receive shadows.
+     *
+     * \see Builder::receiveShadows().
      */
     bool isShadowReceiver(Instance instance) const noexcept;
 
@@ -365,7 +371,8 @@ public:
     /**
      * Gets the bounding box used for frustum culling.
      *
-     * See also Builder::boundingBox() and RenderableManager::setAxisAlignedBoundingBox().
+     * \see Builder::boundingBox()
+     * \see RenderableManager::setAxisAlignedBoundingBox()
      */
     const Box& getAxisAlignedBoundingBox(Instance instance) const noexcept;
 
@@ -377,7 +384,7 @@ public:
     /**
      * Changes the material instance binding for the given primitive.
      *
-     * See also Builder::material().
+     * \see Builder::material()
      */
     void setMaterialInstanceAt(Instance instance,
             size_t primitiveIndex, MaterialInstance const* materialInstance) noexcept;
@@ -390,7 +397,7 @@ public:
     /**
      * Changes the geometry for the given primitive.
      *
-     * See also Builder::geometry().
+     * \see Builder::geometry()
      */
     void setGeometryAt(Instance instance, size_t primitiveIndex,
             PrimitiveType type, VertexBuffer* vertices, IndexBuffer* indices,
@@ -399,7 +406,7 @@ public:
     /**
      * Changes the active range of indices or topology for the given primitive.
      *
-     * See also Builder::geometry().
+     * \see Builder::geometry()
      */
     void setGeometryAt(Instance instance, size_t primitiveIndex,
             PrimitiveType type, size_t offset, size_t count) noexcept;
@@ -407,7 +414,7 @@ public:
     /**
      * Changes the ordering index for blended primitives that all live at the same Z value.
      *
-     * See also Builder::blendOrder().
+     * \see Builder::blendOrder()
      *
      * @param instance the renderable of interest
      * @param primitiveIndex the primitive of interest
