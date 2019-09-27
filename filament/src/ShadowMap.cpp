@@ -142,7 +142,7 @@ void ShadowMap::prepare(DriverApi& driver, SamplerGroup& sb) noexcept {
     params.compareMode = SamplerCompareMode::COMPARE_TO_TEXTURE;
     params.compareFunc = SamplerCompareFunc::LE;
 
-	SamplerGroup::Sampler sampler { mShadowMapHandle, params };
+    SamplerGroup::Sampler sampler { mShadowMapHandle, params };
 
     sb.setSampler(PerViewSib::SHADOW_MAP, sampler);
 }
