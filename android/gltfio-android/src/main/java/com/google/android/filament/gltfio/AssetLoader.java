@@ -29,6 +29,44 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.nio.Buffer;
 
+/**
+ * Consumes a blob of glTF 2.0 content (either JSON or GLB) and produces {@link FilamentAsset}
+ * objects, which are bundles of Filament entities, material instances, textures, vertex buffers,
+ * and index buffers.
+ *
+ * <p>AssetLoader does not fetch external buffer data or create textures on its own. Clients can use
+ * the provided {@link ResourceLoader} class for this, which obtains the URI list from the asset.
+ * This is demonstrated in the Kotlin snippet below.</p>
+ *
+ * <pre>
+ *
+ * companion object {
+ *     init {
+ *        Filament.init()
+ *        AssetLoader.init()
+ *    }
+ * }
+ *
+ * override fun onCreate(savedInstanceState: Bundle?) {
+ *
+ *     ...
+ *
+ *     assetLoader = AssetLoader(engine, MaterialProvider(engine), EntityManager.get())
+ *
+ *     filamentAsset = assets.open("models/lucy.glb").use { input ->
+ *         val bytes = ByteArray(input.available())
+ *         input.read(bytes)
+ *         assetLoader.createAssetFromBinary(ByteBuffer.wrap(bytes))!!
+ *     }
+ *
+ *     ResourceLoader(engine).loadResources(filamentAsset).destroy()
+ *     scene.addEntities(filamentAsset.entities)
+ * }
+ * </pre>
+ *
+ * @see FilamentAsset
+ * @see ResourceLoader
+ */
 public class AssetLoader {
     private long mNativeObject;
 
@@ -38,6 +76,9 @@ public class AssetLoader {
     static Constructor<IndirectLight> sIndirectLightConstructor;
     static Constructor<Skybox> sSkyboxConstructor;
 
+    /**
+     * Initializes the gltfio JNI layer. Must be called before using any gltfio functionality.
+     */
     public static void init() {
         System.loadLibrary("gltfio-jni");
         try {
@@ -60,6 +101,14 @@ public class AssetLoader {
         }
     }
 
+    /**
+     * Constructs an <code>AssetLoader </code>that can be used to create and destroy instances of
+     * {@link FilamentAsset}.
+     *
+     * @param engine the engine that the loader should pass to builder objects
+     * @param generator specifies if materials should be generated or loaded from a pre-built set
+     * @param entities the EntityManager that should be used to create entities
+     */
     public AssetLoader(@NonNull Engine engine, @NonNull MaterialProvider generator,
             @NonNull EntityManager entities) {
         try {
@@ -75,27 +124,40 @@ public class AssetLoader {
         }
     }
 
+    /**
+     * Frees all memory consumed by the native <code>AssetLoader</code> and its material cache.
+     */
     public void destroy() {
         nDestroyAssetLoader(mNativeObject);
         mNativeObject = 0;
     }
 
+    /**
+     * Creates a {@link FilamentAsset} from the contents of a GLB file.
+     */
     @Nullable
     public FilamentAsset createAssetFromBinary(@NonNull Buffer buffer) {
         long nativeAsset = nCreateAssetFromBinary(mNativeObject, buffer, buffer.remaining());
         return new FilamentAsset(nativeAsset);
     }
 
+    /**
+     * Allows clients to enable diagnostic shading on newly-loaded assets.
+     */
     public void enableDiagnostics(boolean enable) {
         nEnableDiagnostics(mNativeObject, enable);
     }
 
+    /**
+     * Frees all memory associated with the given {@link FilamentAsset}.
+     */
     public void destroyAsset(@Nullable FilamentAsset asset) {
         nDestroyAsset(mNativeObject, asset.getNativeObject());
         asset.clearNativeObject();
     }
 
-    private static native long nCreateAssetLoader(long nativeEngine, long nativeGenerator, long nativeEntities);
+    private static native long nCreateAssetLoader(long nativeEngine, long nativeGenerator,
+            long nativeEntities);
     private static native void nDestroyAssetLoader(long nativeLoader);
     private static native long nCreateAssetFromBinary(long nativeLoader, Buffer buffer, int remaining);
     private static native void nEnableDiagnostics(long nativeLoader, boolean enable);

@@ -436,14 +436,18 @@ public class Camera {
     }
 
     /**
-     * Sets this camera's exposure (default is 16, 1/125s, 100 ISO).
-     * <p>
+     * Sets this camera's exposure (default is f/16, 1/125s, 100 ISO)
+     *
      * The exposure ultimately controls the scene's brightness, just like with a real camera.
      * The default values provide adequate exposure for a camera placed outdoors on a sunny day
      * with the sun at the zenith.
      *
+     * With the default parameters, the scene must contain at least one Light of intensity
+     * similar to the sun (e.g.: a 100,000 lux directional light) and/or an indirect light
+     * of appropriate intensity (30,000).
+     *
      * @param aperture      Aperture in f-stops, clamped between 0.5 and 64.
-     *                      A lower <code>aperture</code> value increases the exposure, leading to
+     *                      A lower aperture value increases the exposure, leading to
      *                      a brighter scene. Realistic values are between 0.95 and 32.
      *
      * @param shutterSpeed  Shutter speed in seconds, clamped between 1/25,000 and 60.
@@ -451,35 +455,52 @@ public class Camera {
      *                      between 1/8000 and 30.
      *
      * @param sensitivity   Sensitivity in ISO, clamped between 10 and 204,800.
-     *                      A higher <code>sensitivity</code> increases the exposure.
-     *                      Realistic values are between 50 and 25600.
-     *
-     * <p>
-     * With the default parameters, the scene must contain at least one light of intensity
-     * similar to the sun (e.g.: a 100,000 lux directional light).
+     *                      A higher sensitivity increases the exposure. Realistic values are
+     *                      between 50 and 25600.
      *
      * @see LightManager
+     * @see Exposure
+     * @see #setExposure(float)
      */
     public void setExposure(float aperture, float shutterSpeed, float sensitivity) {
         nSetExposure(getNativeObject(), aperture, shutterSpeed, sensitivity);
     }
 
     /**
-     * @return aperture in f-stops
+     * Sets this camera's exposure directly. Calling this method will set the aperture
+     * to 1.0, the shutter speed to 1.2 and the sensitivity will be computed to match
+     * the requested exposure (for a desired exposure of 1.0, the sensitivity will be
+     * set to 100 ISO).
+     *
+     * This method is useful when trying to match the lighting of other engines or tools.
+     * Many engines/tools use unit-less light intensities, which can be matched by setting
+     * the exposure manually. This can be typically achieved by setting the exposure to
+     * 1.0.
+     *
+     * @see Light
+     * @see Exposure
+     * @see #setExposure(float, float, float)
+     */
+    public void setExposure(float exposure) {
+        setExposure(1.0f, 1.2f, 100.0f * (1.0f / exposure));
+    }
+
+    /**
+     * @return Aperture in f-stops
      */
     public float getAperture() {
         return nGetAperture(getNativeObject());
     }
 
     /**
-     * @return shutter speed in seconds
+     * @return Shutter speed in seconds
      */
     public float getShutterSpeed() {
         return nGetShutterSpeed(getNativeObject());
     }
 
     /**
-     * @return sensitivity in ISO
+     * @return Sensitivity in ISO
      */
     public float getSensitivity() {
         return nGetSensitivity(getNativeObject());

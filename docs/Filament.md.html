@@ -2186,10 +2186,12 @@ Figure [iblVisualized] shows how indirect lighting interacts with dielectrics an
 Listing [iblEvaluation] presents a GLSL implementation to evaluate the IBL, using the various textures described in the previous sections. 
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-vec3 ibl(vec3 n, vec3 v, vec3 diffuseColor, vec3 f0, vec3 f90, float perceptualRoughness) {
+vec3 ibl(vec3 n, vec3 v, vec3 diffuseColor, vec3 f0, vec3 f90,
+        float perceptualRoughness) {
     vec3 r = reflect(n);
     vec3 Ld = textureCube(irradianceEnvMap, r) * diffuseColor;
-    vec3 Lld = textureCube(prefilteredEnvMap, r, computeLODFromRoughness(perceptualRoughness));
+    float lod = computeLODFromRoughness(perceptualRoughness);
+    vec3 Lld = textureCube(prefilteredEnvMap, r, lod);
     vec2 Ldfg = textureLod(dfgLut, vec2(dot(n, v), perceptualRoughness), 0.0).xy;
     vec3 Lr =  (f0 * Ldfg.x + f90 * Ldfg.y) * Lld;
     return Ld + Lr;
@@ -2214,20 +2216,6 @@ vec3 irradianceSH(vec3 n) {
         + sphericalHarmonics[6] * (3.0 * n.z * n.z - 1.0)
         + sphericalHarmonics[7] * (n.z * n.x)
         + sphericalHarmonics[8] * (n.x * n.x - n.y * n.y);
-}
-
-// NOTE: this approximation is not valid if the energy compensation term
-// for multiscattering is applied. We use the DFG LUT solution to implement
-// multiscattering
-vec2 prefilteredDFG(float NoV, float perceptualRoughness) {
-    // Karis' approximation based on Lazarov's
-    const vec4 c0 = vec4(-1.0, -0.0275, -0.572,  0.022);
-    const vec4 c1 = vec4( 1.0,  0.0425,  1.040, -0.040);
-    vec4 r = roughness * c0 + c1;
-    float a004 = min(r.x * r.x, exp2(-9.28 * NoV)) * r.x + r.y;
-    return vec2(-1.04, 1.04) * a004 + r.zw;
-    // Zioma's approximation based on Karis
-    // return vec2(1.0, pow(1.0 - max(perceptualRoughness, NoV), 3.0));
 }
 
 // NOTE: this is the DFG LUT implementation of the function above

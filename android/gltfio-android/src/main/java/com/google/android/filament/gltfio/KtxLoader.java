@@ -26,12 +26,26 @@ import com.google.android.filament.Texture;
 
 import java.nio.Buffer;
 
+/**
+ * Utilities for consuming KTX files and producing Filament textures, IBLs, and sky boxes.
+ *
+ * <p>KTX is a simple container format that makes it easy to bundle miplevels and cubemap faces
+ * into a single file.</p>
+ */
 public class KtxLoader {
 
     public static class Options {
         public boolean srgb;
     }
 
+    /**
+     * Consumes the content of a KTX file and produces a {@link Texture} object.
+     *
+     * @param engine Gets passed to the builder.
+     * @param buffer The content of the KTX File.
+     * @param options Loader options.
+     * @return The resulting Filament texture, or null on failure.
+     */
     @Nullable
     public static Texture createTexture(@NonNull Engine engine, @NonNull Buffer buffer, @NonNull Options options) {
         try {
@@ -43,6 +57,14 @@ public class KtxLoader {
         }
     }
 
+    /**
+     * Consumes the content of a KTX file and produces an {@link IndirectLight} object.
+     *
+     * @param engine Gets passed to the builder.
+     * @param buffer The content of the KTX File.
+     * @param options Loader options.
+     * @return The resulting Filament texture, or null on failure.
+     */
     @Nullable
     public static IndirectLight createIndirectLight(@NonNull Engine engine, @NonNull Buffer buffer, @NonNull Options options) {
         try {
@@ -54,6 +76,14 @@ public class KtxLoader {
         }
     }
 
+    /**
+     * Consumes the content of a KTX file and produces a {@link Skybox} object.
+     *
+     * @param engine Gets passed to the builder.
+     * @param buffer The content of the KTX File.
+     * @param options Loader options.
+     * @return The resulting Filament texture, or null on failure.
+     */
     @Nullable
     public static Skybox createSkybox(@NonNull Engine engine, @NonNull Buffer buffer, @NonNull Options options) {
         try {

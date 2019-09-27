@@ -272,3 +272,43 @@ target_link_libraries(${TARGET} PRIVATE
 set(INSTALL_TYPE ARCHIVE)
 install(TARGETS ${TARGET} ${INSTALL_TYPE} DESTINATION lib/${DIST_DIR})
 install(DIRECTORY ${PUBLIC_HDR_DIR}/backend DESTINATION include)
+
+# ==================================================================================================
+# Test
+# ==================================================================================================
+if (APPLE AND NOT IOS)
+    add_library(backend_test STATIC
+        test/BackendTest.cpp
+        test/ShaderGenerator.cpp
+        test/TrianglePrimitive.cpp
+        test/Arguments.cpp
+        test/test_MissingRequiredAttributes.cpp)
+
+    target_link_libraries(backend_test PRIVATE
+        backend
+        filabridge
+        getopt
+        gtest
+        SPIRV
+        spirv-cross-glsl)
+
+    add_executable(backend_test_mac test/mac_runner.mm)
+    target_link_libraries(backend_test_mac PRIVATE "-framework Metal -framework AppKit -framework QuartzCore")
+    # Because each test case is a separate file, the -force_load flag is necessary to prevent the
+    # linker from removing "unused" symbols.
+    target_link_libraries(backend_test_mac PRIVATE -force_load backend_test)
+endif()
+
+if (APPLE AND NOT Vulkan_LIBRARY)
+    message(STATUS "No Vulkan SDK was found, using prebuilt MoltenVK.")
+    set(MOLTENVK_DIR "../../third_party/moltenvk")
+    configure_file(
+            ${MOLTENVK_DIR}/libvulkan.1.dylib
+            ${PROJECT_BINARY_DIR}/libvulkan.1.dylib COPYONLY)
+    configure_file(
+            ${MOLTENVK_DIR}/MoltenVK_icd.json
+            ${PROJECT_BINARY_DIR}/MoltenVK_icd.json COPYONLY)
+    configure_file(
+            ${MOLTENVK_DIR}/libMoltenVK.dylib
+            ${PROJECT_BINARY_DIR}/libMoltenVK.dylib COPYONLY)
+endif()

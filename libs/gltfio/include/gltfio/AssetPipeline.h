@@ -28,9 +28,13 @@
 namespace gltfio {
 
 /**
- * AssetPipeline offers access to glTF processing facilities, independent of the Filament renderer.
+ * \struct AssetPipeline AssetPipeline.h gltfio/AssetPipeline.h
+ * \brief Offers access to glTF processing facilities, independent of the Filament renderer.
  *
  * This is the place for things like atlasing, baking, and optimization of glTF scenes.
+ *
+ * \warning AssetPipeline is not required for simple glTF loading and is not included in
+ * \c libgltfio_core.
  *
  * One instance of AssetPipeline is a context object that makes it simple to manage memory for all
  * involved resources. When the pipeline dies, all its associated asset data are freed, and all
