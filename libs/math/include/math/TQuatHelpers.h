@@ -233,7 +233,7 @@ public:
     friend inline
     QUATERNION<T> MATH_PURE log(const QUATERNION<T>& q) {
         const T nq(norm(q));
-        return QUATERNION<T>((std::acos(q.w / nq) / norm(q.xyz)) * q.xyz, log(nq));
+        return QUATERNION<T>((std::acos(q.w / nq) / norm(q.xyz)) * q.xyz, std::log(nq));
     }
 
     friend inline

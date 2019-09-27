@@ -57,6 +57,12 @@
 #   define MATH_UNLIKELY( exp )  (exp)
 #endif
 
+#if __has_attribute(unused)
+#   define MATH_UNUSED __attribute__((unused))
+#else
+#   define MATH_UNUSED
+#endif
+
 #if __has_attribute(pure)
 #   define MATH_PURE __attribute__((pure))
 #else
@@ -84,6 +90,7 @@
 #   define MATH_CONSTEXPR_INIT {}
 #   define MATH_DEFAULT_CTOR {}
 #   define MATH_DEFAULT_CTOR_CONSTEXPR constexpr
+#   define CONSTEXPR_IF_NOT_MSVC
 
 #else // _MSC_VER
 
@@ -98,5 +105,6 @@
 #   define MATH_CONSTEXPR_INIT
 #   define MATH_DEFAULT_CTOR = default;
 #   define MATH_DEFAULT_CTOR_CONSTEXPR
+#   define CONSTEXPR_IF_NOT_MSVC constexpr
 
 #endif // _MSC_VER

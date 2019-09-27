@@ -41,8 +41,8 @@ TEST_F(MatTest, ConstexprMat2) {
     constexpr mat2f M4(float2{1,2}, float2{3,4});
     constexpr float2 f0 = M0 * float2{1,2};
     constexpr float2 f1 = float2{1,2} * M1;
-    constexpr mat2f M5 = M2 * 2;
-    constexpr mat2f M7 = 2 * M2;
+    CONSTEXPR_IF_NOT_MSVC mat2f M5 = M2 * 2;
+    CONSTEXPR_IF_NOT_MSVC mat2f M7 = 2 * M2;
     constexpr float2 f3 = diag(M0);
     constexpr mat2f M8 = transpose(M0);
     constexpr mat2f M9 = inverse(M0);
@@ -64,8 +64,8 @@ TEST_F(MatTest, ConstexprMat3) {
     constexpr mat3f M4(float3{1,2,3}, float3{4,5,6}, float3{7,8,9});
     constexpr float3 f0 = M0 * float3{1,2,3};
     constexpr float3 f1 = float3{1,2,3} * M1;
-    constexpr mat3f M5 = M2 * 2;
-    constexpr mat3f M7 = 2 * M2;
+    CONSTEXPR_IF_NOT_MSVC mat3f M5 = M2 * 2;
+    CONSTEXPR_IF_NOT_MSVC mat3f M7 = 2 * M2;
     constexpr float3 f3 = diag(M0);
     constexpr mat3f M8 = transpose(M0);
     constexpr mat3f M9 = inverse(M0);
@@ -86,8 +86,8 @@ TEST_F(MatTest, ConstexprMat4) {
     constexpr mat4f M4(float4{1,2,3,4}, float4{5,6,7,8}, float4{9,10,11,12}, float4{13,14,15,16});
     constexpr float4 f0 = M0 * float4{1,2,3,4};
     constexpr float4 f1 = float4{1,2,3,4} * M1;
-    constexpr mat4f M5 = M2 * 2;
-    constexpr mat4f M7 = 2 * M2;
+    CONSTEXPR_IF_NOT_MSVC mat4f M5 = M2 * 2;
+    CONSTEXPR_IF_NOT_MSVC mat4f M7 = 2 * M2;
     constexpr float4 f3 = diag(M0);
     constexpr mat4f M8 = transpose(M0);
     constexpr mat4f M9 = inverse(M0);
