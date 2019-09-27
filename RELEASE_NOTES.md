@@ -6,6 +6,9 @@ A new header is inserted each time a *tag* is created.
 ## Next release
 
 - Minimum API level on Android is now API 19 instead of API 21.
+- Added missing API documentation.
+- Improved existing API documentation.
+- Added `Camera::setExposure(float)` to directly control the camera's exposure.
 - Backface culling can now be toggled on material instances.
 - Face direction is now reversed when transforms have negative scale.
 - Dielectrics now behave properly under a white furnace (energy preserving and conserving).

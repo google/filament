@@ -47,7 +47,7 @@ public:
     static constexpr size_t SIZE = 2;
 
     union {
-        T v[SIZE];
+        T v[SIZE] MATH_CONSTEXPR_INIT;
         struct { T x, y; };
         struct { T s, t; };
         struct { T r, g; };
@@ -70,7 +70,7 @@ public:
     // constructors
 
     // default constructor
-    constexpr TVec2() = default;
+    MATH_DEFAULT_CTOR_CONSTEXPR TVec2() MATH_DEFAULT_CTOR
 
     // handles implicit conversion to a tvec4. must not be explicit.
     template<typename A, typename = enable_if_arithmetic_t<A>>
