@@ -581,8 +581,6 @@ void OpenGLDriver::textureStorage(OpenGLDriver::GLTexture* t,
                 // NOTE: what's the benefit of setting "fixed_sample_locations" to false?
 #if GLES31_HEADERS
                 // only supported from GL 4.3 and GLES 3.1
-                // since we compile against API 19 which doesn't contain GLES 3.1 symbols,
-                // we must use a function pointer
                 glTexStorage2DMultisample(t->gl.target, t->samples, t->gl.internalFormat,
                         GLsizei(width), GLsizei(height), GL_TRUE);
 #elif GL41_HEADERS
