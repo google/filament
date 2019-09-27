@@ -90,7 +90,7 @@
 #   define MATH_CONSTEXPR_INIT {}
 #   define MATH_DEFAULT_CTOR {}
 #   define MATH_DEFAULT_CTOR_CONSTEXPR constexpr
-#   define CONSTEXPR_IF_NOT_MSVC
+#   define CONSTEXPR_IF_NOT_MSVC // when declared constexpr, msvc fails with "failure was caused by cast of object of dynamic type"
 
 #else // _MSC_VER
 
