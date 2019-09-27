@@ -98,7 +98,7 @@ public:
 
     // handles implicit conversion to a tvec4. must not be explicit.
     template<typename A, typename = enable_if_arithmetic_t<T>>
-    constexpr explicit TQuaternion(A w) : x(0), y(0), z(0), w(w) {}
+    constexpr TQuaternion(A w) : x(0), y(0), z(0), w(w) {}
 
     // initialize from 4 values to w + xi + yj + zk
     template<typename A, typename B, typename C, typename D>
@@ -114,7 +114,7 @@ public:
 
     // initialize from a quaternion of a different type
     template<typename A>
-    constexpr TQuaternion(const TQuaternion<A>& v) : x(v.x), y(v.y), z(v.z), w(v.w) {}
+    constexpr explicit TQuaternion(const TQuaternion<A>& v) : x(v.x), y(v.y), z(v.z), w(v.w) {}
 
     // conjugate operator
     constexpr TQuaternion operator~() const {
