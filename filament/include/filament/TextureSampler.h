@@ -197,7 +197,7 @@ public:
     backend::SamplerParams getSamplerParams() const noexcept  { return mSamplerParams; }
 
 private:
-    backend::SamplerParams mSamplerParams;
+    backend::SamplerParams mSamplerParams{};
 };
 
 } // namespace filament

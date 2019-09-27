@@ -196,10 +196,10 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::fxaa(FrameGraph& fg,
                 auto const& texture = resources.getTexture(data.input);
 
                 FMaterialInstance* pInstance = mFxaa.getMaterialInstance();
-                SamplerParams params;
-                params.filterMag = SamplerMagFilter::LINEAR;
-                params.filterMin = SamplerMinFilter::LINEAR;
-                pInstance->setParameter("colorBuffer", texture, params);
+                pInstance->setParameter("colorBuffer", texture, {
+                        .filterMag = SamplerMagFilter::LINEAR,
+                        .filterMin = SamplerMinFilter::LINEAR
+                });
 
                 pInstance->commit(driver);
 
