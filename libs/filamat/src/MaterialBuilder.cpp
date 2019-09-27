@@ -417,7 +417,7 @@ bool MaterialBuilder::findProperties(filament::backend::ShaderType type,
 #endif
 }
 
-bool MaterialBuilder::findProperties() noexcept {
+bool MaterialBuilder::findAllProperties() noexcept {
     if (mMaterialDomain != MaterialDomain::SURFACE) {
         return true;
     }
@@ -677,7 +677,7 @@ Package MaterialBuilder::build() noexcept {
     // Run checks, in order.
     // The call to findProperties populates mProperties and must come before runSemanticAnalysis.
     if (!checkLiteRequirements() ||
-        !findProperties() ||
+        !findAllProperties() ||
         !runSemanticAnalysis()) {
         // Return an empty package to signal a failure to build the material.
         return Package::invalidPackage();

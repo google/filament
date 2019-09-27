@@ -497,9 +497,12 @@ public:
 private:
     void prepareToBuild(MaterialInfo& info) noexcept;
 
-    // Return true if:
-    // The shader is syntactically and semantically valid
-    bool findProperties() noexcept;
+    // Return true if the shader is syntactically and semantically valid.
+    // This method finds all the properties defined in the fragment and
+    // vertex shaders of the material.
+    bool findAllProperties() noexcept;
+    // Multiple calls to findProperties accumulate the property sets across fragment
+    // and vertex shaders in mProperties.
     bool findProperties(filament::backend::ShaderType type,
             MaterialBuilder::PropertyList& p) noexcept;
     bool runSemanticAnalysis() noexcept;
