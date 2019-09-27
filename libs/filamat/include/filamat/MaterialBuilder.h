@@ -175,7 +175,7 @@ public:
         // when adding more variables, make sure to update MATERIAL_VARIABLES_COUNT
     };
 
-    static constexpr size_t MATERIAL_PROPERTIES_COUNT = 19;
+    static constexpr size_t MATERIAL_PROPERTIES_COUNT = 20;
     enum class Property : uint8_t {
         BASE_COLOR,              // float4, all shading models
         ROUGHNESS,               // float,  lit shading models only
@@ -196,6 +196,7 @@ public:
         EMISSIVE,                // float4, all shading models
         NORMAL,                  // float3, all shading models only, except unlit
         POST_LIGHTING_COLOR,     // float4, all shading models
+        CLIP_SPACE_TRANSFORM,    // mat4,   vertex shader only
         // when adding new Properties, make sure to update MATERIAL_PROPERTIES_COUNT
     };
 
@@ -499,6 +500,8 @@ private:
     // Return true if:
     // The shader is syntactically and semantically valid
     bool findProperties() noexcept;
+    bool findProperties(filament::backend::ShaderType type,
+            MaterialBuilder::PropertyList& p) noexcept;
     bool runSemanticAnalysis() noexcept;
 
     bool checkLiteRequirements() noexcept;

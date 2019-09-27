@@ -23,6 +23,7 @@
 #include <string>
 
 #include <filamat/MaterialBuilder.h>
+
 #include <ShaderLang.h>
 
 class TIntermNode;
@@ -135,7 +136,9 @@ public:
     using ShaderModel = filament::backend::ShaderModel;
     // Use static code analysis on the fragment shader AST to guess properties used in user provided
     // glgl code. Populate properties accordingly.
-    bool findProperties(const std::string& shaderCode,
+    bool findProperties(
+            filament::backend::ShaderType type,
+            const std::string& shaderCode,
             MaterialBuilder::PropertyList& properties,
             MaterialBuilder::TargetApi targetApi = MaterialBuilder::TargetApi::OPENGL,
             ShaderModel model = ShaderModel::GL_CORE_41) const noexcept;
