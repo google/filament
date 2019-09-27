@@ -141,11 +141,11 @@ constexpr inline GLenum getComponentType(backend::ElementType type) noexcept {
         case ElementType::FLOAT3:
         case ElementType::FLOAT4:
             return GL_FLOAT;
-        case ElementType::HALF:
-        case ElementType::HALF2:
-        case ElementType::HALF3:
-        case ElementType::HALF4:
-            return GL_HALF_FLOAT;
+//        case ElementType::HALF:
+//        case ElementType::HALF2:
+//        case ElementType::HALF3:
+//        case ElementType::HALF4:
+//            return GL_HALF_FLOAT;
     }
 }
 
@@ -214,8 +214,9 @@ constexpr inline GLenum getBlendFunctionMode(backend::BlendFunction mode) noexce
 }
 
 constexpr inline GLenum getTextureCompareMode(backend::SamplerCompareMode mode) noexcept {
-    return mode == backend::SamplerCompareMode::NONE ?
-           GL_NONE : GL_COMPARE_REF_TO_TEXTURE;
+//    return mode == backend::SamplerCompareMode::NONE ?
+//           GL_NONE : GL_COMPARE_REF_TO_TEXTURE;
+    return GL_NONE;
 }
 
 constexpr inline GLenum getTextureCompareFunc(backend::SamplerCompareFunc func) noexcept {
@@ -239,17 +240,17 @@ constexpr inline GLenum getDepthFunc(backend::SamplerCompareFunc func) noexcept 
 constexpr inline GLenum getFormat(backend::PixelDataFormat format) noexcept {
     using PixelDataFormat = backend::PixelDataFormat;
     switch (format) {
-        case PixelDataFormat::R:                return GL_RED;
-        case PixelDataFormat::R_INTEGER:        return GL_RED_INTEGER;
-        case PixelDataFormat::RG:               return GL_RG;
-        case PixelDataFormat::RG_INTEGER:       return GL_RG_INTEGER;
+//        case PixelDataFormat::R:                return GL_RED;
+//        case PixelDataFormat::R_INTEGER:        return GL_RED_INTEGER;
+//        case PixelDataFormat::RG:               return GL_RG;
+//        case PixelDataFormat::RG_INTEGER:       return GL_RG_INTEGER;
         case PixelDataFormat::RGB:              return GL_RGB;
-        case PixelDataFormat::RGB_INTEGER:      return GL_RGB_INTEGER;
+//        case PixelDataFormat::RGB_INTEGER:      return GL_RGB_INTEGER;
         case PixelDataFormat::RGBA:             return GL_RGBA;
-        case PixelDataFormat::RGBA_INTEGER:     return GL_RGBA_INTEGER;
+//        case PixelDataFormat::RGBA_INTEGER:     return GL_RGBA_INTEGER;
         case PixelDataFormat::UNUSED:           return GL_RGBA; // should never happen (used to be rgbm)
         case PixelDataFormat::DEPTH_COMPONENT:  return GL_DEPTH_COMPONENT;
-        case PixelDataFormat::DEPTH_STENCIL:    return GL_DEPTH_STENCIL;
+//        case PixelDataFormat::DEPTH_STENCIL:    return GL_DEPTH_STENCIL;
         case PixelDataFormat::ALPHA:            return GL_ALPHA;
     }
 }
@@ -263,9 +264,9 @@ constexpr inline GLenum getType(backend::PixelDataType type) noexcept {
         case PixelDataType::SHORT:              return GL_SHORT;
         case PixelDataType::UINT:               return GL_UNSIGNED_INT;
         case PixelDataType::INT:                return GL_INT;
-        case PixelDataType::HALF:               return GL_HALF_FLOAT;
+//        case PixelDataType::HALF:               return GL_HALF_FLOAT;
         case PixelDataType::FLOAT:              return GL_FLOAT;
-        case PixelDataType::UINT_10F_11F_11F_REV:  return GL_UNSIGNED_INT_10F_11F_11F_REV;
+//        case PixelDataType::UINT_10F_11F_11F_REV:  return GL_UNSIGNED_INT_10F_11F_11F_REV;
         case PixelDataType::COMPRESSED:         return 0; // should never happen
     }
 }
@@ -277,74 +278,74 @@ constexpr /* inline */ GLenum getInternalFormat(backend::TextureFormat format) n
     using TextureFormat = backend::TextureFormat;
     switch (format) {
         // 8-bits per element
-        case TextureFormat::R8:                return GL_R8;
+//        case TextureFormat::R8:                return GL_R8;
         case TextureFormat::R8_SNORM:          return GL_R8_SNORM;
-        case TextureFormat::R8UI:              return GL_R8UI;
-        case TextureFormat::R8I:               return GL_R8I;
+//        case TextureFormat::R8UI:              return GL_R8UI;
+//        case TextureFormat::R8I:               return GL_R8I;
         case TextureFormat::STENCIL8:          return GL_STENCIL_INDEX8;
 
         // 16-bits per element
-        case TextureFormat::R16F:              return GL_R16F;
-        case TextureFormat::R16UI:             return GL_R16UI;
-        case TextureFormat::R16I:              return GL_R16I;
-        case TextureFormat::RG8:               return GL_RG8;
+//        case TextureFormat::R16F:              return GL_R16F;
+//        case TextureFormat::R16UI:             return GL_R16UI;
+//        case TextureFormat::R16I:              return GL_R16I;
+//        case TextureFormat::RG8:               return GL_RG8;
         case TextureFormat::RG8_SNORM:         return GL_RG8_SNORM;
-        case TextureFormat::RG8UI:             return GL_RG8UI;
-        case TextureFormat::RG8I:              return GL_RG8I;
+//        case TextureFormat::RG8UI:             return GL_RG8UI;
+//        case TextureFormat::RG8I:              return GL_RG8I;
         case TextureFormat::RGB565:            return GL_RGB565;
         case TextureFormat::RGB5_A1:           return GL_RGB5_A1;
         case TextureFormat::RGBA4:             return GL_RGBA4;
         case TextureFormat::DEPTH16:           return GL_DEPTH_COMPONENT16;
 
         // 24-bits per element
-        case TextureFormat::RGB8:              return GL_RGB8;
-        case TextureFormat::SRGB8:             return GL_SRGB8;
-        case TextureFormat::RGB8_SNORM:        return GL_RGB8_SNORM;
-        case TextureFormat::RGB8UI:            return GL_RGB8UI;
-        case TextureFormat::RGB8I:             return GL_RGB8I;
-        case TextureFormat::DEPTH24:           return GL_DEPTH_COMPONENT24;
+//        case TextureFormat::RGB8:              return GL_RGB8;
+//        case TextureFormat::SRGB8:             return GL_SRGB8;
+//        case TextureFormat::RGB8_SNORM:        return GL_RGB8_SNORM;
+//        case TextureFormat::RGB8UI:            return GL_RGB8UI;
+//        case TextureFormat::RGB8I:             return GL_RGB8I;
+//        case TextureFormat::DEPTH24:           return GL_DEPTH_COMPONENT24;
 
         // 32-bits per element
-        case TextureFormat::R32F:              return GL_R32F;
-        case TextureFormat::R32UI:             return GL_R32UI;
-        case TextureFormat::R32I:              return GL_R32I;
-        case TextureFormat::RG16F:             return GL_RG16F;
-        case TextureFormat::RG16UI:            return GL_RG16UI;
-        case TextureFormat::RG16I:             return GL_RG16I;
-        case TextureFormat::R11F_G11F_B10F:    return GL_R11F_G11F_B10F;
-        case TextureFormat::RGB9_E5:           return GL_RGB9_E5;
-        case TextureFormat::RGBA8:             return GL_RGBA8;
-        case TextureFormat::SRGB8_A8:          return GL_SRGB8_ALPHA8;
+//        case TextureFormat::R32F:              return GL_R32F;
+//        case TextureFormat::R32UI:             return GL_R32UI;
+//        case TextureFormat::R32I:              return GL_R32I;
+//        case TextureFormat::RG16F:             return GL_RG16F;
+//        case TextureFormat::RG16UI:            return GL_RG16UI;
+//        case TextureFormat::RG16I:             return GL_RG16I;
+//        case TextureFormat::R11F_G11F_B10F:    return GL_R11F_G11F_B10F;
+//        case TextureFormat::RGB9_E5:           return GL_RGB9_E5;
+//        case TextureFormat::RGBA8:             return GL_RGBA8;
+//        case TextureFormat::SRGB8_A8:          return GL_SRGB8_ALPHA8;
         case TextureFormat::RGBA8_SNORM:       return GL_RGBA8_SNORM;
-        case TextureFormat::RGB10_A2:          return GL_RGB10_A2;
-        case TextureFormat::RGBA8UI:           return GL_RGBA8UI;
-        case TextureFormat::RGBA8I:            return GL_RGBA8I;
-        case TextureFormat::DEPTH32F:          return GL_DEPTH_COMPONENT32F;
-        case TextureFormat::DEPTH24_STENCIL8:  return GL_DEPTH24_STENCIL8;
-        case TextureFormat::DEPTH32F_STENCIL8: return GL_DEPTH32F_STENCIL8;
+//        case TextureFormat::RGB10_A2:          return GL_RGB10_A2;
+//        case TextureFormat::RGBA8UI:           return GL_RGBA8UI;
+//        case TextureFormat::RGBA8I:            return GL_RGBA8I;
+//        case TextureFormat::DEPTH32F:          return GL_DEPTH_COMPONENT32F;
+//        case TextureFormat::DEPTH24_STENCIL8:  return GL_DEPTH24_STENCIL8;
+//        case TextureFormat::DEPTH32F_STENCIL8: return GL_DEPTH32F_STENCIL8;
 
-        // 48-bits per element
-        case TextureFormat::RGB16F:            return GL_RGB16F;
-        case TextureFormat::RGB16UI:           return GL_RGB16UI;
-        case TextureFormat::RGB16I:            return GL_RGB16I;
-
-        // 64-bits per element
-        case TextureFormat::RG32F:             return GL_RG32F;
-        case TextureFormat::RG32UI:            return GL_RG32UI;
-        case TextureFormat::RG32I:             return GL_RG32I;
-        case TextureFormat::RGBA16F:           return GL_RGBA16F;
-        case TextureFormat::RGBA16UI:          return GL_RGBA16UI;
-        case TextureFormat::RGBA16I:           return GL_RGBA16I;
-
-        // 96-bits per element
-        case TextureFormat::RGB32F:            return GL_RGB32F;
-        case TextureFormat::RGB32UI:           return GL_RGB32UI;
-        case TextureFormat::RGB32I:            return GL_RGB32I;
-
-        // 128-bits per element
-        case TextureFormat::RGBA32F:           return GL_RGBA32F;
-        case TextureFormat::RGBA32UI:          return GL_RGBA32UI;
-        case TextureFormat::RGBA32I:           return GL_RGBA32I;
+//        // 48-bits per element
+//        case TextureFormat::RGB16F:            return GL_RGB16F;
+//        case TextureFormat::RGB16UI:           return GL_RGB16UI;
+//        case TextureFormat::RGB16I:            return GL_RGB16I;
+//
+//        // 64-bits per element
+//        case TextureFormat::RG32F:             return GL_RG32F;
+//        case TextureFormat::RG32UI:            return GL_RG32UI;
+//        case TextureFormat::RG32I:             return GL_RG32I;
+//        case TextureFormat::RGBA16F:           return GL_RGBA16F;
+//        case TextureFormat::RGBA16UI:          return GL_RGBA16UI;
+//        case TextureFormat::RGBA16I:           return GL_RGBA16I;
+//
+//        // 96-bits per element
+//        case TextureFormat::RGB32F:            return GL_RGB32F;
+//        case TextureFormat::RGB32UI:           return GL_RGB32UI;
+//        case TextureFormat::RGB32I:            return GL_RGB32I;
+//
+//        // 128-bits per element
+//        case TextureFormat::RGBA32F:           return GL_RGBA32F;
+//        case TextureFormat::RGBA32UI:          return GL_RGBA32UI;
+//        case TextureFormat::RGBA32I:           return GL_RGBA32I;
 
         // compressed formats
 #if defined(GL_ES_VERSION_3_0) || defined(GL_VERSION_4_3) || defined(GL_ARB_ES3_compatibility)

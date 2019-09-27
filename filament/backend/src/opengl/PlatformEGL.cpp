@@ -511,10 +511,10 @@ void PlatformEGL::destroyExternalImage(void* texture) noexcept {
 void PlatformEGL::initializeGlExtensions() noexcept {
     unordered_string_set glExtensions;
     GLint n;
-    glGetIntegerv(GL_NUM_EXTENSIONS, &n);
+//    glGetIntegerv(GL_NUM_EXTENSIONS, &n);
     for (GLint i = 0; i < n; ++i) {
-        const char * const extension = (const char*)glGetStringi(GL_EXTENSIONS, (GLuint)i);
-        glExtensions.insert(extension);
+//        const char * const extension = (const char*)glGetStringi(GL_EXTENSIONS, (GLuint)i);
+//        glExtensions.insert(extension);
     }
     ext.OES_EGL_image_external_essl3 = glExtensions.has("GL_OES_EGL_image_external_essl3");
 }

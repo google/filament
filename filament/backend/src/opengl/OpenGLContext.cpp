@@ -45,11 +45,11 @@ OpenGLContext::OpenGLContext() noexcept {
 
     // OpenGL (ES) version
     GLint major = 0, minor = 0;
-    glGetIntegerv(GL_MAJOR_VERSION, &major);
-    glGetIntegerv(GL_MINOR_VERSION, &minor);
+//    glGetIntegerv(GL_MAJOR_VERSION, &major);
+//    glGetIntegerv(GL_MINOR_VERSION, &minor);
     glGetIntegerv(GL_MAX_RENDERBUFFER_SIZE, &gets.max_renderbuffer_size);
-    glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &gets.max_uniform_block_size);
-    glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &gets.uniform_buffer_offset_alignment);
+//    glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &gets.max_uniform_block_size);
+//    glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &gets.uniform_buffer_offset_alignment);
 
 #ifndef NDEBUG
     slog.i
@@ -79,14 +79,14 @@ OpenGLContext::OpenGLContext() noexcept {
 
     // Figure out if we have the extension we need
     GLint n;
-    glGetIntegerv(GL_NUM_EXTENSIONS, &n);
+//    glGetIntegerv(GL_NUM_EXTENSIONS, &n);
     ExtentionSet exts;
     for (GLint i = 0; i < n; i++) {
-        const char * const extension = (const char*)glGetStringi(GL_EXTENSIONS, (GLuint)i);
-        exts.insert(StaticString::make(extension, strlen(extension)));
-        if (DEBUG_PRINT_EXTENSIONS) {
-            slog.d << extension << io::endl;
-        }
+//        const char * const extension = (const char*)glGetStringi(GL_EXTENSIONS, (GLuint)i);
+//        exts.insert(StaticString::make(extension, strlen(extension)));
+//        if (DEBUG_PRINT_EXTENSIONS) {
+//            slog.d << extension << io::endl;
+//        }
     }
 
     ShaderModel shaderModel = ShaderModel::UNKNOWN;
@@ -198,31 +198,31 @@ void OpenGLContext::bindBuffer(GLenum target, GLuint buffer) noexcept {
 void OpenGLContext::pixelStore(GLenum pname, GLint param) noexcept {
     GLint* pcur = nullptr;
     switch (pname) {
-        case GL_PACK_ROW_LENGTH:
-            pcur = &state.pack.row_length;
-            break;
-        case GL_PACK_SKIP_ROWS:
-            pcur = &state.pack.skip_row;
-            break;
-        case GL_PACK_SKIP_PIXELS:
-            pcur = &state.pack.skip_pixels;
-            break;
+//        case GL_PACK_ROW_LENGTH:
+//            pcur = &state.pack.row_length;
+//            break;
+//        case GL_PACK_SKIP_ROWS:
+//            pcur = &state.pack.skip_row;
+//            break;
+//        case GL_PACK_SKIP_PIXELS:
+//            pcur = &state.pack.skip_pixels;
+//            break;
         case GL_PACK_ALIGNMENT:
             pcur = &state.pack.alignment;
             break;
 
-        case GL_UNPACK_ROW_LENGTH:
-            pcur = &state.unpack.row_length;
-            break;
+//        case GL_UNPACK_ROW_LENGTH:
+//            pcur = &state.unpack.row_length;
+//            break;
         case GL_UNPACK_ALIGNMENT:
             pcur = &state.unpack.alignment;
             break;
-        case GL_UNPACK_SKIP_PIXELS:
-            pcur = &state.unpack.skip_pixels;
-            break;
-        case GL_UNPACK_SKIP_ROWS:
-            pcur = &state.unpack.skip_row;
-            break;
+//        case GL_UNPACK_SKIP_PIXELS:
+//            pcur = &state.unpack.skip_pixels;
+//            break;
+//        case GL_UNPACK_SKIP_ROWS:
+//            pcur = &state.unpack.skip_row;
+//            break;
         default:
             goto default_case;
     }
@@ -267,24 +267,24 @@ void OpenGLContext::deleteBuffers(GLsizei n, const GLuint* buffers, GLenum targe
             genericBuffer = 0;
         }
     }
-    if (target == GL_UNIFORM_BUFFER || target == GL_TRANSFORM_FEEDBACK_BUFFER) {
-        auto& indexedBuffer = state.buffers.targets[targetIndex];
-        #pragma nounroll // clang generates >1 KiB of code!!
-        for (GLsizei i = 0; i < n; ++i) {
-            #pragma nounroll
-            for (auto& buffer : indexedBuffer.buffers) {
-                if (buffer.name == buffers[i]) {
-                    buffer.name = 0;
-                    buffer.offset = 0;
-                    buffer.size = 0;
-                }
-            }
-        }
-    }
+//    if (target == GL_UNIFORM_BUFFER || target == GL_TRANSFORM_FEEDBACK_BUFFER) {
+//        auto& indexedBuffer = state.buffers.targets[targetIndex];
+//        #pragma nounroll // clang generates >1 KiB of code!!
+//        for (GLsizei i = 0; i < n; ++i) {
+//            #pragma nounroll
+//            for (auto& buffer : indexedBuffer.buffers) {
+//                if (buffer.name == buffers[i]) {
+//                    buffer.name = 0;
+//                    buffer.offset = 0;
+//                    buffer.size = 0;
+//                }
+//            }
+//        }
+//    }
 }
 
 void OpenGLContext::deleteVextexArrays(GLsizei n, const GLuint* arrays) noexcept {
-    glDeleteVertexArrays(1, arrays);
+//    glDeleteVertexArrays(1, arrays);
     // binding of a bound VAO is reset to 0
     for (GLsizei i = 0; i < n; ++i) {
         if (state.vao.p->vao == arrays[i]) {

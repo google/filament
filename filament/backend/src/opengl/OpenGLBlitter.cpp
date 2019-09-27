@@ -65,12 +65,12 @@ void main() {
 )SHADER";
 
 void OpenGLBlitter::init() noexcept {
-    glGenSamplers(1, &mSampler);
-    glSamplerParameteri(mSampler, GL_TEXTURE_MIN_FILTER,   GL_NEAREST);
-    glSamplerParameteri(mSampler, GL_TEXTURE_MAG_FILTER,   GL_NEAREST);
-    glSamplerParameteri(mSampler, GL_TEXTURE_WRAP_S,       GL_CLAMP_TO_EDGE);
-    glSamplerParameteri(mSampler, GL_TEXTURE_WRAP_T,       GL_CLAMP_TO_EDGE);
-    glSamplerParameteri(mSampler, GL_TEXTURE_WRAP_R,       GL_CLAMP_TO_EDGE);
+//    glGenSamplers(1, &mSampler);
+//    glSamplerParameteri(mSampler, GL_TEXTURE_MIN_FILTER,   GL_NEAREST);
+//    glSamplerParameteri(mSampler, GL_TEXTURE_MAG_FILTER,   GL_NEAREST);
+//    glSamplerParameteri(mSampler, GL_TEXTURE_WRAP_S,       GL_CLAMP_TO_EDGE);
+//    glSamplerParameteri(mSampler, GL_TEXTURE_WRAP_T,       GL_CLAMP_TO_EDGE);
+//    glSamplerParameteri(mSampler, GL_TEXTURE_WRAP_R,       GL_CLAMP_TO_EDGE);
 
     GLint status;
     char const* vsource[2] = { s_vertexES, s_vertexGL };
@@ -107,7 +107,7 @@ void OpenGLBlitter::init() noexcept {
 }
 
 void OpenGLBlitter::terminate() noexcept {
-    glDeleteSamplers(1, &mSampler);
+//    glDeleteSamplers(1, &mSampler);
     glDetachShader(mProgram, mVertexShader);
     glDetachShader(mProgram, mFragmentShader);
     glDeleteShader(mVertexShader);
@@ -125,7 +125,7 @@ void OpenGLBlitter::blit(GLuint srcTextureExternal, GLuint dstTexture2d, GLuint 
     GLuint tmu = 0;
 
     // source texture
-    glBindSampler(tmu, mSampler);
+//    glBindSampler(tmu, mSampler);
     glBindTexture(GL_TEXTURE_EXTERNAL_OES, srcTextureExternal);
     CHECK_GL_ERROR(utils::slog.e)
 
@@ -152,7 +152,7 @@ void OpenGLBlitter::State::save() noexcept {
     mHasState = true;
     // TODO: technically we should also save glVertexAttribPointer
     GLuint tmu = 0;
-    glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &framebuffer);
+//    glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &framebuffer);
     glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING, &array);
     glGetIntegerv(GL_CURRENT_PROGRAM, &program);
     glGetIntegerv(GL_VIEWPORT, viewport);
@@ -169,7 +169,7 @@ void OpenGLBlitter::State::save() noexcept {
     glActiveTexture(GL_TEXTURE0 + tmu);
 
     // save what depends on glActiveTexture
-    glGetIntegerv(GL_SAMPLER_BINDING, &sampler);
+//    glGetIntegerv(GL_SAMPLER_BINDING, &sampler);
     glGetIntegerv(GL_TEXTURE_BINDING_2D, &texture);
 
     /*
@@ -209,7 +209,7 @@ void OpenGLBlitter::State::restore() noexcept {
     }
 
     glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(texture));
-    glBindSampler(tmu, static_cast<GLuint>(sampler));
+//    glBindSampler(tmu, static_cast<GLuint>(sampler));
     glActiveTexture(static_cast<GLenum>(activeTexture));
     CHECK_GL_ERROR(utils::slog.e)
 }

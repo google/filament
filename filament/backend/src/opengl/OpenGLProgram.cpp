@@ -100,10 +100,10 @@ OpenGLProgram::OpenGLProgram(OpenGLDriver* gl, const Program& programBuilder) no
         for (GLuint binding = 0, n = uniformBlockInfo.size(); binding < n; binding++) {
             auto const& name = uniformBlockInfo[binding];
             if (!name.empty()) {
-                GLint index = glGetUniformBlockIndex(program, name.c_str());
-                if (index >= 0) {
-                    glUniformBlockBinding(program, GLuint(index), binding);
-                }
+//                GLint index = glGetUniformBlockIndex(program, name.c_str());
+//                if (index >= 0) {
+//                    glUniformBlockBinding(program, GLuint(index), binding);
+//                }
                 CHECK_GL_ERROR(utils::slog.e)
             }
         }
@@ -204,8 +204,8 @@ void OpenGLProgram::updateSamplers(OpenGLDriver* gl) noexcept {
 
             const GLTexture* const UTILS_RESTRICT t = gl->handle_cast<const GLTexture*>(th);
             if (UTILS_UNLIKELY(t->gl.fence)) {
-                glWaitSync(t->gl.fence, 0, GL_TIMEOUT_IGNORED);
-                glDeleteSync(t->gl.fence);
+//                glWaitSync(t->gl.fence, 0, GL_TIMEOUT_IGNORED);
+//                glDeleteSync(t->gl.fence);
                 t->gl.fence = nullptr;
             }
 

@@ -19,7 +19,7 @@
 
 #if defined(ANDROID) || defined(USE_EXTERNAL_GLES3) || defined(__EMSCRIPTEN__)
 
-    #include <GLES3/gl31.h>
+    #include <GLES2/gl2.h>
     #include <GLES2/gl2ext.h>
 
     /* The Android NDK doesn't exposes extensions, fake it with eglGetProcAddress */
@@ -84,7 +84,7 @@
 
 #include "NullGLES.h"
 
-#if (!defined(GL_ES_VERSION_3_1) && !defined(GL_VERSION_4_1))
+#if (!defined(GL_ES_VERSION_2_0) && !defined(GL_VERSION_4_1))
 #error "Minimum header version must be OpenGL ES 3.1 or OpenGL 4.1"
 #endif
 

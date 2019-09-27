@@ -288,8 +288,8 @@ constexpr size_t OpenGLContext::getIndexForCap(GLenum cap) noexcept { //NOLINT
         case GL_SAMPLE_ALPHA_TO_COVERAGE:       index =  6; break;
         case GL_SAMPLE_COVERAGE:                index =  7; break;
         case GL_POLYGON_OFFSET_FILL:            index =  8; break;
-        case GL_PRIMITIVE_RESTART_FIXED_INDEX:  index =  9; break;
-        case GL_RASTERIZER_DISCARD:             index = 10; break;
+//        case GL_PRIMITIVE_RESTART_FIXED_INDEX:  index =  9; break;
+//        case GL_RASTERIZER_DISCARD:             index = 10; break;
 #ifdef GL_ARB_seamless_cube_map
             case GL_TEXTURE_CUBE_MAP_SEAMLESS:      index = 11; break;
 #endif
@@ -306,15 +306,15 @@ constexpr size_t OpenGLContext::getIndexForBufferTarget(GLenum target) noexcept 
     size_t index = 0;
     switch (target) {
         // The indexed buffers MUST be first in this list
-        case GL_UNIFORM_BUFFER:             index = 0; break;
-        case GL_TRANSFORM_FEEDBACK_BUFFER:  index = 1; break;
+//        case GL_UNIFORM_BUFFER:             index = 0; break;
+//        case GL_TRANSFORM_FEEDBACK_BUFFER:  index = 1; break;
 
         case GL_ARRAY_BUFFER:               index = 2; break;
-        case GL_COPY_READ_BUFFER:           index = 3; break;
-        case GL_COPY_WRITE_BUFFER:          index = 4; break;
+//        case GL_COPY_READ_BUFFER:           index = 3; break;
+//        case GL_COPY_WRITE_BUFFER:          index = 4; break;
         case GL_ELEMENT_ARRAY_BUFFER:       index = 5; break;
-        case GL_PIXEL_PACK_BUFFER:          index = 6; break;
-        case GL_PIXEL_UNPACK_BUFFER:        index = 7; break;
+//        case GL_PIXEL_PACK_BUFFER:          index = 6; break;
+//        case GL_PIXEL_UNPACK_BUFFER:        index = 7; break;
         default: index = 8; break; // should never happen
     }
     assert(index < sizeof(state.buffers.genericBinding)/sizeof(state.buffers.genericBinding[0])); // NOLINT(misc-redundant-expression)
@@ -332,9 +332,9 @@ void OpenGLContext::activeTexture(GLuint unit) noexcept {
 
 void OpenGLContext::bindSampler(GLuint unit, GLuint sampler) noexcept {
     assert(unit < MAX_TEXTURE_UNIT_COUNT);
-    update_state(state.textures.units[unit].sampler, sampler, [&]() {
-        glBindSampler(unit, sampler);
-    });
+//    update_state(state.textures.units[unit].sampler, sampler, [&]() {
+//        glBindSampler(unit, sampler);
+//    });
 }
 
 void OpenGLContext::setScissor(GLint left, GLint bottom, GLsizei width, GLsizei height) noexcept {
@@ -373,7 +373,7 @@ void OpenGLContext::setClearStencil(GLint stencil) noexcept {
 void OpenGLContext::bindVertexArray(RenderPrimitive const* p) noexcept {
     RenderPrimitive* vao = p ? const_cast<RenderPrimitive *>(p) : &mDefaultVAO;
     update_state(state.vao.p, vao, [&]() {
-        glBindVertexArray(vao->vao);
+//        glBindVertexArray(vao->vao);
         // update GL_ELEMENT_ARRAY_BUFFER, which is updated by glBindVertexArray
         size_t targetIndex = getIndexForBufferTarget(GL_ELEMENT_ARRAY_BUFFER);
         state.buffers.genericBinding[targetIndex] = vao->elementArray;
@@ -398,7 +398,7 @@ void OpenGLContext::bindBufferRange(GLenum target, GLuint index, GLuint buffer,
         state.buffers.targets[targetIndex].buffers[index].offset = offset;
         state.buffers.targets[targetIndex].buffers[index].size = size;
         state.buffers.genericBinding[targetIndex] = buffer;
-        glBindBufferRange(target, index, buffer, offset, size);
+//        glBindBufferRange(target, index, buffer, offset, size);
     }
 }
 
@@ -410,18 +410,18 @@ void OpenGLContext::bindFramebuffer(GLenum target, GLuint buffer) noexcept {
                 glBindFramebuffer(target, buffer);
             }
             break;
-        case GL_DRAW_FRAMEBUFFER:
-            if (state.draw_fbo != buffer) {
-                state.draw_fbo = buffer;
-                glBindFramebuffer(target, buffer);
-            }
-            break;
-        case GL_READ_FRAMEBUFFER:
-            if (state.read_fbo != buffer) {
-                state.read_fbo = buffer;
-                glBindFramebuffer(target, buffer);
-            }
-            break;
+//        case GL_DRAW_FRAMEBUFFER:
+//            if (state.draw_fbo != buffer) {
+//                state.draw_fbo = buffer;
+//                glBindFramebuffer(target, buffer);
+//            }
+//            break;
+//        case GL_READ_FRAMEBUFFER:
+//            if (state.read_fbo != buffer) {
+//                state.read_fbo = buffer;
+//                glBindFramebuffer(target, buffer);
+//            }
+//            break;
         default:
             break;
     }
