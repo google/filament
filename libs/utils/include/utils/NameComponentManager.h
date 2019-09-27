@@ -59,11 +59,13 @@ private:
  *
  * Usage example:
  *
- *      auto names = new NameComponentManager(EntityManager::get());
- *      names->addComponent(myEntity);
- *      names->setName(names->getInstance(myEntity), "Jeanne d'Arc");
- *      ...
- *      printf("%s\n", names->getName(names->getInstance(myEntity));
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * auto names = new NameComponentManager(EntityManager::get());
+ * names->addComponent(myEntity);
+ * names->setName(names->getInstance(myEntity), "Jeanne d'Arc");
+ * ...
+ * printf("%s\n", names->getName(names->getInstance(myEntity));
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  */
 class NameComponentManager : public SingleInstanceComponentManager<details::SafeString> {
 public:
