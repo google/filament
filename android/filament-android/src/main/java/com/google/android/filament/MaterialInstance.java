@@ -371,6 +371,10 @@ public class MaterialInstance {
      * Overrides the minimum alpha value a fragment must have to not be discarded when the blend
      * mode is MASKED. Defaults to 0.4 if it has not been set in the parent Material. The specified
      * value should be between 0 and 1 and will be clamped if necessary.
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/blendingandtransparency:maskthreshold">
+     * Blending and transparency: maskThreshold</a>
      */
     public void setMaskThreshold(float threshold) {
         nSetMaskThreshold(getNativeObject(), threshold);
@@ -380,6 +384,10 @@ public class MaterialInstance {
      * Sets the screen space variance of the filter kernel used when applying specular
      * anti-aliasing. The default value is set to 0.15. The specified value should be between
      * 0 and 1 and will be clamped if necessary.
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/anti-aliasing:specularantialiasingvariance">
+     * Anti-aliasing: specularAntiAliasingVariance</a>
      */
     public void setSpecularAntiAliasingVariance(float variance) {
         nSetSpecularAntiAliasingVariance(getNativeObject(), variance);
@@ -389,6 +397,10 @@ public class MaterialInstance {
      * Sets the clamping threshold used to suppress estimation errors when applying specular
      * anti-aliasing. The default value is set to 0.2. The specified value should be between 0
      * and 1 and will be clamped if necessary.
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/anti-aliasing:specularantialiasingthreshold">
+     * Anti-aliasing: specularAntiAliasingThreshold</a>
      */
     public void setSpecularAntiAliasingThreshold(float threshold) {
         nSetSpecularAntiAliasingThreshold(getNativeObject(), threshold);
@@ -398,12 +410,22 @@ public class MaterialInstance {
      * Enables or disables double-sided lighting if the parent Material has double-sided capability,
      * otherwise prints a warning. If double-sided lighting is enabled, backface culling is
      * automatically disabled.
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/rasterization:doublesided">
+     * Rasterization: doubleSided</a>
      */
     public void setDoubleSided(boolean doubleSided) {
         nSetDoubleSided(getNativeObject(), doubleSided);
     }
 
-    /** Overrides the default triangle culling state that was set on the material. */
+    /**
+     * Overrides the default triangle culling state that was set on the material.
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/rasterization:culling">
+     * Rasterization: culling</a>
+     */
     public void setCullingMode(Material.CullingMode mode) {
         nSetCullingMode(getNativeObject(), mode.ordinal());
     }

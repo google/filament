@@ -33,6 +33,8 @@ import java.util.Set;
  * A Filament Material defines the visual appearance of an object. Materials function as a
  * templates from which {@link MaterialInstance}s can be spawned. Use {@link Builder} to construct
  * a Material object.
+ *
+ * @see <a href="https://google.github.io/filament/Materials.html">Filament Materials Guide</a>
  */
 public class Material {
     private long mNativeObject;
@@ -42,23 +44,59 @@ public class Material {
 
     /** Supported shading models */
     public enum Shading {
-        /** No lighting applied, emissive possible */
+        /**
+         * No lighting applied, emissive possible
+         *
+         * @see
+         * <a href="https://google.github.io/filament/Materials.html#materialmodels/unlitmodel">
+         * Unlit model</a>
+         */
         UNLIT,
 
-        /** Default, standard lighting */
+        /**
+         * Default, standard lighting
+         *
+         * @see
+         * <a href="https://google.github.io/filament/Materials.html#materialmodels/litmodel">
+         * Lit model</a>
+         */
         LIT,
 
-        /** Subsurface lighting model */
+        /**
+         * Subsurface lighting model
+         *
+         * @see
+         * <a href="https://google.github.io/filament/Materials.html#materialmodels/subsurfacemodel">
+         * Subsurface model</a>
+         */
         SUBSURFACE,
 
-        /** Cloth lighting model */
+        /**
+         * Cloth lighting model
+         *
+         * @see
+         * <a href="https://google.github.io/filament/Materials.html#materialmodels/clothmodel">
+         * Cloth model</a>
+         */
         CLOTH,
 
-        /** Legacy lighting model */
+        /**
+         * Legacy lighting model
+         *
+         * @see
+         * <a href="https://google.github.io/filament/Materials.html#materialmodels/specularglossiness">
+         * Specular glossiness</a>
+         */
         SPECULAR_GLOSSINESS
     }
 
-    /** Attribute interpolation types in the fragment shader */
+    /**
+     * Attribute interpolation types in the fragment shader
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/vertexandattributes:interpolation">
+     * Vertex and attributes: interpolation</a>
+     */
     public enum Interpolation {
         /** Default, smooth interpolation */
         SMOOTH,
@@ -67,7 +105,13 @@ public class Material {
         FLAT
     }
 
-    /** Supported blending modes */
+    /**
+     * Supported blending modes
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/blendingandtransparency:blending">
+     * Blending and transparency: blending</a>
+     */
     public enum BlendingMode {
         /** Material is opaque. */
         OPAQUE,
@@ -97,7 +141,13 @@ public class Material {
         SCREEN,
     }
 
-    /** Supported types of vertex domains */
+    /**
+     * Supported types of vertex domains
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/vertexandattributes:vertexdomain">
+     * Vertex and attributes: vertexDomain</a>
+     */
     public enum VertexDomain {
         /** Vertices are in object space, default. */
         OBJECT,
@@ -112,7 +162,13 @@ public class Material {
         DEVICE
     }
 
-    /** Face culling Mode */
+    /**
+     * Face culling Mode
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/rasterization:culling">
+     * Rasterization: culling</a>
+     */
     public enum CullingMode {
         /** No culling. Front and back faces are visible. */
         NONE,
@@ -251,74 +307,157 @@ public class Material {
         return mDefaultInstance;
     }
 
-    /** Returns the name of this material. The material name is used for debugging purposes. */
+    /**
+     * Returns the name of this material. The material name is used for debugging purposes.
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/general:name">
+     * General: name</a>
+     */
     public String getName() {
         return nGetName(getNativeObject());
     }
 
-    /** Returns the shading model of this material. */
+    /**
+     * Returns the shading model of this material.
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialmodels">
+     * Material Models</a>
+     */
     public Shading getShading() {
         return Shading.values()[nGetShading(getNativeObject())];
     }
 
-    /** Returns the interpolation mode of this material. This affects how variables are interpolated. */
+    /**
+     * Returns the interpolation mode of this material. This affects how variables are interpolated.
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/vertexandattributes:interpolation">
+     * Vertex and attributes: interpolation</a>
+     */
     public Interpolation getInterpolation() {
         return Interpolation.values()[nGetInterpolation(getNativeObject())];
     }
 
-    /** Returns the blending mode of this material. */
+    /**
+     * Returns the blending mode of this material.
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/blendingandtransparency:blending">
+     * Blending and transparency: blending</a>
+     */
     public BlendingMode getBlendingMode() {
         return BlendingMode.values()[nGetBlendingMode(getNativeObject())];
     }
 
-    /** Returns the vertex domain of this material. */
+    /**
+     * Returns the vertex domain of this material.
+     *
+     * @se
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/vertexandattributes:vertexdomain">
+     * Vertex and attributes: vertexDomain</a>
+     * @return
+     */
     public VertexDomain getVertexDomain() {
         return VertexDomain.values()[nGetVertexDomain(getNativeObject())];
     }
 
-    /** Returns the default culling mode of this material. */
+    /**
+     * Returns the default culling mode of this material.
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/rasterization:culling">
+     * Rasterization: culling</a>
+     */
     public CullingMode getCullingMode() {
         return CullingMode.values()[nGetCullingMode(getNativeObject())];
     }
 
-    /** Indicates whether this material will write to the color buffer. */
+    /**
+     * Indicates whether this material will write to the color buffer.
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/rasterization:colorwrite">
+     * Rasterization: colorWrite</a>
+     */
     public boolean isColorWriteEnabled() {
         return nIsColorWriteEnabled(getNativeObject());
     }
 
-    /** Indicates whether this material will write to the depth buffer. */
+    /**
+     * Indicates whether this material will write to the depth buffer.
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/rasterization:depthwrite">
+     * Rasterization: depthWrite</a>
+     */
     public boolean isDepthWriteEnabled() {
         return nIsDepthWriteEnabled(getNativeObject());
     }
 
-    /** Indicates whether this material will use depth testing. */
+    /**
+     * Indicates whether this material will use depth testing.
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/rasterization:depthculling">
+     * Rasterization: depthCulling</a>
+     */
     public boolean isDepthCullingEnabled() {
         return nIsDepthCullingEnabled(getNativeObject());
     }
 
-    /** Indicates whether this material is double-sided. */
+    /**
+     * Indicates whether this material is double-sided.
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/rasterization:doublesided">
+     * Rasterization: doubleSided</a>
+     */
     public boolean isDoubleSided() {
         return nIsDoubleSided(getNativeObject());
     }
 
-    /** Returns the alpha mask threshold used when the blending mode is set to masked. */
+    /**
+     * Returns the alpha mask threshold used when the blending mode is set to masked.
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/blendingandtransparency:maskthreshold">
+     * Blending and transparency: maskThreshold</a>
+     */
     public float getMaskThreshold() {
         return nGetMaskThreshold(getNativeObject());
     }
 
     /**
      * Returns the screen-space variance for specular-antialiasing. This value is between 0 and 1.
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/anti-aliasing:specularantialiasingvariance">
+     * Anti-aliasing: specularAntiAliasingVariance</a>
      */
     public float getSpecularAntiAliasingVariance() {
         return nGetSpecularAntiAliasingVariance(getNativeObject());
     }
 
-    /** Returns the clamping threshold for specular-antialiasing. This value is between 0 and 1. */
+    /**
+     * Returns the clamping threshold for specular-antialiasing. This value is between 0 and 1.
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/anti-aliasing:specularantialiasingthreshold">
+     * Anti-aliasing: specularAntiAliasingThreshold</a>
+     */
     public float getSpecularAntiAliasingThreshold() {
         return nGetSpecularAntiAliasingThreshold(getNativeObject());
     }
 
-    /** Returns a set of {@link VertexBuffer.VertexAttribute}s that are required by this material. */
+    /**
+     * Returns a set of {@link VertexBuffer.VertexAttribute}s that are required by this material.
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/vertexandattributes:requires">
+     * Vertex and attributes: requires</a>
+     */
     public Set<VertexBuffer.VertexAttribute> getRequiredAttributes() {
         if (mRequiredAttributes == null) {
             int bitSet = nGetRequiredAttributes(getNativeObject());
@@ -337,6 +476,10 @@ public class Material {
     /**
      * Returns a bit set representing the set of {@link VertexBuffer.VertexAttribute}s that are
      * required by this material. Use {@link #getRequiredAttributes()} to get these as a Set object.
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/vertexandattributes:requires">
+     * Vertex and attributes: requires</a>
      */
     int getRequiredAttributesAsInt() {
         return nGetRequiredAttributes(getNativeObject());
@@ -345,6 +488,10 @@ public class Material {
     /**
      * Returns the number of parameters declared by this material.
      * The returned value can be 0.
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/general:parameters">
+     * General: parameters</a>
      */
     public int getParameterCount() {
         return nGetParameterCount(getNativeObject());
@@ -353,6 +500,10 @@ public class Material {
     /**
      * Returns a list of Parameter objects representing this material's parameters.
      * The list may be empty if the material has no declared parameters.
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/general:parameters">
+     * General: parameters</a>
      */
     public List<Parameter> getParameters() {
         int count = getParameterCount();
@@ -363,6 +514,10 @@ public class Material {
 
     /**
      * Indicates whether a parameter of the given name exists on this material.
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/general:parameters">
+     * General: parameters</a>
      */
     public boolean hasParameter(@NonNull String name) {
         return nHasParameter(getNativeObject(), name);
