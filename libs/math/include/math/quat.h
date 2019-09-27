@@ -114,7 +114,7 @@ public:
 
     // initialize from a quaternion of a different type
     template<typename A>
-    constexpr explicit TQuaternion(const TQuaternion<A>& v) : x(v.x), y(v.y), z(v.z), w(v.w) {}
+    constexpr TQuaternion(const TQuaternion<A>& v) : x(v.x), y(v.y), z(v.z), w(v.w) {}
 
     // conjugate operator
     constexpr TQuaternion operator~() const {
