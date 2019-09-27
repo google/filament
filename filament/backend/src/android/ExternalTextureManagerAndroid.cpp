@@ -17,6 +17,7 @@
 
 #include "ExternalTextureManagerAndroid.h"
 
+#include <utils/api_level.h>
 #include <utils/compiler.h>
 #include <utils/Log.h>
 
@@ -29,7 +30,7 @@ using namespace backend;
 
 template <typename T>
 static void loadSymbol(T*& pfn, const char *symbol) noexcept {
-    //pfn = (T*)dlsym(RTLD_DEFAULT, symbol);
+    pfn = (T*)dlsym(RTLD_DEFAULT, symbol);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -94,8 +95,11 @@ ExternalTextureManagerAndroid::ExternalTextureManagerAndroid() noexcept
     // if we compile for API 26 (Oreo) and above, we're guaranteed to have AHardwareBuffer
     // in all other cases, we need to get them at runtime.
 #ifndef PLATFORM_HAS_HARDWAREBUFFER
-    loadSymbol(AHardwareBuffer_allocate, "AHardwareBuffer_allocate");
-    loadSymbol(AHardwareBuffer_release, "AHardwareBuffer_release");
+    // the following dlsym() calls don't work on API 19
+    if (api_level() >= 21) {
+        loadSymbol(AHardwareBuffer_allocate, "AHardwareBuffer_allocate");
+        loadSymbol(AHardwareBuffer_release, "AHardwareBuffer_release");
+    }
 #endif
 }
 
