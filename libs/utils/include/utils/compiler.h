@@ -200,7 +200,7 @@ typedef SSIZE_T ssize_t;
     #define IMPORTSYMB
 #endif
 
-#if _MSC_VER && !defined(__PRETTY_FUNCTION__)
+#if defined(_MSC_VER) && !defined(__PRETTY_FUNCTION__)
 #    define __PRETTY_FUNCTION__ __FUNCSIG__
 #endif 
 
