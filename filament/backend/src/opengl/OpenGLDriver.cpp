@@ -80,7 +80,8 @@ Driver* OpenGLDriver::create(
     assert(platform);
     OpenGLPlatform* const ec = platform;
 
-    { // here we check we're on a supported version of GL before initializing the driver
+    {
+        // here we check we're on a supported version of GL before initializing the driver
         GLint major = 0, minor = 0;
         glGetIntegerv(GL_MAJOR_VERSION, &major);
         glGetIntegerv(GL_MINOR_VERSION, &minor);

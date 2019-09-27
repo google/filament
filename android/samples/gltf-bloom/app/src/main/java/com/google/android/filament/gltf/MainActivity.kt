@@ -426,6 +426,11 @@ class MainActivity : Activity() {
 
     override fun onDestroy() {
         super.onDestroy()
+
+        // Stop the animation and any pending frame
+        choreographer.removeFrameCallback(frameScheduler)
+        animator.cancel();
+
         // Always detach the surface before destroying the engine
         uiHelper.detach()
 

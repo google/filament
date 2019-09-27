@@ -98,6 +98,14 @@ static void logEglError(const char* name) noexcept {
     slog.e << name << " failed with " << err << io::endl;
 }
 
+static void clearGlError() noexcept {
+    // clear GL error that may have been set by previous calls
+    GLenum error = glGetError();
+    if (error != GL_NO_ERROR) {
+        slog.w << "Ignoring pending GL error " << io::hex << error << io::endl;
+    }
+}
+
 class unordered_string_set : public std::unordered_set<std::string> {
 public:
     bool has(const char* str) {
@@ -253,7 +261,6 @@ Driver* PlatformEGL::createDriver(void* sharedContext) noexcept {
       }
     }
 
-
     if (!extensions.has("EGL_KHR_no_config_context")) {
         // if we have the EGL_KHR_no_config_context, we don't need to worry about the config
         // when creating the context, otherwise, we must always pick a transparent config.
@@ -291,6 +298,9 @@ Driver* PlatformEGL::createDriver(void* sharedContext) noexcept {
     }
 
     initializeGlExtensions();
+
+    // this is needed with older emulators/API levels on Android
+    clearGlError();
 
     // success!!
     return OpenGLDriverFactory::create(this, sharedContext);
@@ -515,7 +525,7 @@ void PlatformEGL::initializeGlExtensions() noexcept {
     GLint n;
     glGetIntegerv(GL_NUM_EXTENSIONS, &n);
     for (GLint i = 0; i < n; ++i) {
-        const char * const extension = (const char*)glGetStringi(GL_EXTENSIONS, (GLuint)i);
+        const char * const extension = (const char*) glGetStringi(GL_EXTENSIONS, (GLuint)i);
         glExtensions.insert(extension);
     }
     ext.OES_EGL_image_external_essl3 = glExtensions.has("GL_OES_EGL_image_external_essl3");

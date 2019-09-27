@@ -31,7 +31,7 @@ using EGLStream = Platform::Stream;
 
 template <typename T>
 static void loadSymbol(T*& pfn, const char *symbol) noexcept {
-    pfn = (T*)dlsym(RTLD_DEFAULT, symbol);
+    //pfn = (T*)dlsym(RTLD_DEFAULT, symbol);
 }
 
 ExternalStreamManagerAndroid& ExternalStreamManagerAndroid::get() noexcept {

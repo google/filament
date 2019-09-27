@@ -62,7 +62,7 @@ final class AndroidPlatform extends Platform {
     @Override
     long getSharedContextNativeHandle(Object sharedContext) {
         if (Build.VERSION.SDK_INT >= 21) {
-            return ((EGLContext) sharedContext).getNativeHandle();
+            return AndroidPlatform21.getSharedContextNativeHandle(sharedContext);
         } else {
             try {
                 //noinspection JavaReflectionMemberAccess

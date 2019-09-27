@@ -44,6 +44,7 @@
 #   include <linux/ashmem.h>
 #   include <android/api-level.h>
 #   include <android/sharedmem.h>
+#   include <sys/system_properties.h>
 #endif
 
 namespace utils {
@@ -85,13 +86,19 @@ static int __ashmem_open() {
 }
 
 int ashmem_create_region(const char *name, size_t size) {
+    // Fetch the API level to avoid dlsym() on API 19
+    char sdkVersion[PROP_VALUE_MAX];
+    __system_property_get("ro.build.version.sdk", sdkVersion);
+    int apiLevel = atoi(sdkVersion);
 
-    // dynamically check if we have "ASharedMemory_create" (should be the case since 26 (Oreo))
-    using TASharedMemory_create = int(*)(const char *name, size_t size);
-    TASharedMemory_create pfnASharedMemory_create =
-            (TASharedMemory_create)dlsym(RTLD_DEFAULT, "ASharedMemory_create");
-    if (pfnASharedMemory_create) {
-        return pfnASharedMemory_create(name, size);
+    if (apiLevel >= 26) {
+        // dynamically check if we have "ASharedMemory_create" (should be the case since 26 (Oreo))
+        using TASharedMemory_create = int(*)(const char *name, size_t size);
+        TASharedMemory_create pfnASharedMemory_create =
+                (TASharedMemory_create)dlsym(RTLD_DEFAULT, "ASharedMemory_create");
+        if (pfnASharedMemory_create) {
+            return pfnASharedMemory_create(name, size);
+        }
     }
 
     int ret, save_errno;

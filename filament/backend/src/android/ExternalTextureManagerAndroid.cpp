@@ -29,7 +29,7 @@ using namespace backend;
 
 template <typename T>
 static void loadSymbol(T*& pfn, const char *symbol) noexcept {
-    pfn = (T*)dlsym(RTLD_DEFAULT, symbol);
+    //pfn = (T*)dlsym(RTLD_DEFAULT, symbol);
 }
 
 // ------------------------------------------------------------------------------------------------
