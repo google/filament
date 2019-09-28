@@ -334,24 +334,25 @@ static FunctionParameter::Qualifier glslangQualifier2FunctionParameter(TStorageQ
         default: return FunctionParameter::Qualifier::IN;
     }
 }
+
 void getFunctionParameters(TIntermAggregate* func, std::vector<FunctionParameter>& output) noexcept {
     if (func == nullptr) {
         return;
     }
 
-    // Does it have
-    if (func->getSequence().size() < 2) {
+    // Does it have a list of params
+    // The second aggregate is the list of instructions, but the function may be empty
+    if (func->getSequence().size() < 1) {
         return;
     }
 
-    // A function aggregate has a sequence of two aggregate childs:
-    // Index 0 is a list of the params (IntermSymbol).
-    // Index 1 is a list of instructions.
-    for(TIntermNode* parameterNode : func->getSequence().at(0)->getAsAggregate()->getSequence ()) {
+    // A function aggregate has a sequence of two aggregate children:
+    // Index 0 is a list of params (IntermSymbol).
+    for(TIntermNode* parameterNode : func->getSequence().at(0)->getAsAggregate()->getSequence()) {
         TIntermSymbol* parameter = parameterNode->getAsSymbolNode();
         FunctionParameter p = {
                 parameter->getName().c_str(),
-                parameter->getType() .getCompleteString().c_str(),
+                parameter->getType().getCompleteString().c_str(),
                 glslangQualifier2FunctionParameter(parameter->getType().getQualifier().storage)
         };
         output.push_back(p);

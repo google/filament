@@ -101,6 +101,10 @@ void main() {
     gl_Position = getClipFromWorldMatrix() * getWorldPosition(material);
 #endif
 
+#ifdef MATERIAL_HAS_CLIP_SPACE_TRANSFORM
+    gl_Position = getClipSpaceTransform(material) * gl_Position;
+#endif
+
 #if defined(TARGET_VULKAN_ENVIRONMENT)
     // In Vulkan, clip-space Z is [0,w] rather than [-w,+w] and Y is flipped.
     gl_Position.y = -gl_Position.y;
