@@ -121,8 +121,11 @@ function build_clean {
     echo "Cleaning build directories..."
     rm -Rf out
     rm -Rf android/filament-android/build android/filament-android/.externalNativeBuild
+    rm -Rf android/filament-android/build android/filament-android/.cxx
     rm -Rf android/filamat-android/build android/filamat-android/.externalNativeBuild
+    rm -Rf android/filamat-android/build android/filamat-android/.cxx
     rm -Rf android/gltfio-android/build android/gltfio-android/.externalNativeBuild
+    rm -Rf android/gltfio-android/build android/gltfio-android/.cxx
 }
 
 function build_desktop_target {

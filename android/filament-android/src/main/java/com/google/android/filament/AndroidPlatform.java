@@ -19,8 +19,10 @@ package com.google.android.filament;
 import android.graphics.SurfaceTexture;
 import android.opengl.EGL14;
 import android.opengl.EGLContext;
+import android.os.Build;
 import android.util.Log;
 import android.view.Surface;
+import java.lang.reflect.Method;
 
 final class AndroidPlatform extends Platform {
     private static final String LOG_TAG = "Filament";
@@ -59,6 +61,20 @@ final class AndroidPlatform extends Platform {
 
     @Override
     long getSharedContextNativeHandle(Object sharedContext) {
-        return ((EGLContext) sharedContext).getNativeHandle();
+        if (Build.VERSION.SDK_INT >= 21) {
+            return AndroidPlatform21.getSharedContextNativeHandle(sharedContext);
+        } else {
+            try {
+                //noinspection JavaReflectionMemberAccess
+                Method method = EGLContext.class.getDeclaredMethod("getHandle");
+                Integer handle = (Integer) method.invoke(sharedContext);
+                //noinspection ConstantConditions
+                return handle.longValue();
+            } catch (Exception e) {
+                Log.d(LOG_TAG, "Could not access shared context's native handle", e);
+            }
+            // Should not happen
+            return 0;
+        }
     }
 }
