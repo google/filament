@@ -164,13 +164,16 @@ void GLSLTools::shutdown() {
     FinalizeProcess();
 }
 
-bool GLSLTools::findProperties(const std::string& shaderCode,
+bool GLSLTools::findProperties(
+        filament::backend::ShaderType type,
+        const std::string& shaderCode,
         MaterialBuilder::PropertyList& properties,
         MaterialBuilder::TargetApi targetApi,
         ShaderModel model) const noexcept {
     const char* shaderCString = shaderCode.c_str();
 
-    TShader tShader(EShLanguage::EShLangFragment);
+    TShader tShader(type == FRAGMENT ?
+            EShLanguage::EShLangFragment : EShLanguage::EShLangVertex);
     tShader.setStrings(&shaderCString, 1);
 
     GLSLangCleaner cleaner;
@@ -187,7 +190,10 @@ bool GLSLTools::findProperties(const std::string& shaderCode,
 
     TIntermNode* rootNode = tShader.getIntermediate()->getTreeRoot();
 
-    TIntermAggregate* functionMaterialDef = ASTUtils::getFunctionByNameOnly("material", *rootNode);
+    std::string mainFunction(type == FRAGMENT ?
+            "material" : "materialVertex");
+
+    TIntermAggregate* functionMaterialDef = ASTUtils::getFunctionByNameOnly(mainFunction, *rootNode);
     std::string materialFullyQualifiedName = functionMaterialDef->getName().c_str();
     return findPropertyWritesOperations(materialFullyQualifiedName, 0, rootNode, properties);
 }
@@ -212,6 +218,11 @@ bool GLSLTools::findPropertyWritesOperations(const std::string& functionName, si
         return false;
     }
 
+    // The function has no instructions, it cannot write properties, let's skip all the work
+    if (functionMaterialDef->getSequence().size() < 2) {
+        return true;
+    }
+
     // Make sure the parameter is either out or inout. Othwerise (const or in), there is no point
     // tracing its usage.
     FunctionParameter::Qualifier qualifier = functionMaterialParameters.at(parameterIdx).qualifier;
@@ -229,8 +240,7 @@ bool GLSLTools::findPropertyWritesOperations(const std::string& functionName, si
 
     // Iterate over symbols to see if the parameter we are interested in what written.
     std::string parameterName = functionMaterialParameters.at(parameterIdx).name;
-    for(Symbol symbol: symbols) {
-
+    for (Symbol symbol: symbols) {
         // This is not the symbol we are interested in.
         if (symbol.getName() != parameterName) {
             continue;

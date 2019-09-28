@@ -397,36 +397,51 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     info.specularAOSet = mSpecularAOSet;
 }
 
-bool MaterialBuilder::findProperties() noexcept {
+bool MaterialBuilder::findProperties(filament::backend::ShaderType type,
+        MaterialBuilder::PropertyList& allProperties) noexcept {
+#ifndef FILAMAT_LITE
+    // Use the first permutation to generate the shader code.
+    assert(!mCodeGenPermutations.empty());
+    CodeGenParams params = mCodeGenPermutations[0];
+
+    GLSLTools glslTools;
+    std::string shaderCodeAllProperties = peek(type, params, allProperties);
+    // Populate mProperties with the properties set in the shader.
+    if (!glslTools.findProperties(type, shaderCodeAllProperties, mProperties, params.targetApi,
+            ShaderModel(params.shaderModel))) {
+        return false;
+    }
+    return true;
+#else
+    return false;
+#endif
+}
+
+bool MaterialBuilder::findAllProperties() noexcept {
     if (mMaterialDomain != MaterialDomain::SURFACE) {
         return true;
     }
 
-#ifndef FILAMAT_LITE
     using namespace filament::backend;
-    GLSLTools glslTools;
 
+#ifndef FILAMAT_LITE
     // Some fields in MaterialInputs only exist if the property is set (e.g: normal, subsurface
     // for cloth shading model). Give our shader all properties. This will enable us to parse and
     // static code analyse the AST.
     MaterialBuilder::PropertyList allProperties;
     std::fill_n(allProperties, MATERIAL_PROPERTIES_COUNT, true);
 
-    // Use the first permutation to generate the shader code.
-    assert(!mCodeGenPermutations.empty());
-    CodeGenParams params = mCodeGenPermutations[0];
-    std::string shaderCodeAllProperties = peek(ShaderType::FRAGMENT, params, allProperties);
-
-    // Populate mProperties with the properties set in the shader.
-    if (!glslTools.findProperties(shaderCodeAllProperties, mProperties, params.targetApi,
-                ShaderModel(params.shaderModel))) {
-        return false;
-    }
+    findProperties(ShaderType::FRAGMENT, allProperties);
+    findProperties(ShaderType::VERTEX, allProperties);
 
     return true;
 #else
     GLSLToolsLite glslTools;
-    return glslTools.findProperties(mMaterialCode.getResolved(), mProperties);
+    if (glslTools.findProperties(ShaderType::FRAGMENT, mMaterialCode.getResolved(), mProperties)) {
+        return glslTools.findProperties(
+                ShaderType::VERTEX, mMaterialVertexCode.getResolved(), mProperties);
+    }
+    return false;
 #endif
 }
 
@@ -662,7 +677,7 @@ Package MaterialBuilder::build() noexcept {
     // Run checks, in order.
     // The call to findProperties populates mProperties and must come before runSemanticAnalysis.
     if (!checkLiteRequirements() ||
-        !findProperties() ||
+        !findAllProperties() ||
         !runSemanticAnalysis()) {
         // Return an empty package to signal a failure to build the material.
         return Package::invalidPackage();

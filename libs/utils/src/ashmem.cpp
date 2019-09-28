@@ -15,6 +15,7 @@
  */
 
 #include <utils/ashmem.h>
+#include <utils/api_level.h>
 
 #include <errno.h>
 #include <assert.h>
@@ -85,13 +86,15 @@ static int __ashmem_open() {
 }
 
 int ashmem_create_region(const char *name, size_t size) {
-
-    // dynamically check if we have "ASharedMemory_create" (should be the case since 26 (Oreo))
-    using TASharedMemory_create = int(*)(const char *name, size_t size);
-    TASharedMemory_create pfnASharedMemory_create =
-            (TASharedMemory_create)dlsym(RTLD_DEFAULT, "ASharedMemory_create");
-    if (pfnASharedMemory_create) {
-        return pfnASharedMemory_create(name, size);
+    // Fetch the API level to avoid dlsym() on API 19
+    if (api_level() >= 26) {
+        // dynamically check if we have "ASharedMemory_create" (should be the case since 26 (Oreo))
+        using TASharedMemory_create = int(*)(const char *name, size_t size);
+        TASharedMemory_create pfnASharedMemory_create =
+                (TASharedMemory_create)dlsym(RTLD_DEFAULT, "ASharedMemory_create");
+        if (pfnASharedMemory_create) {
+            return pfnASharedMemory_create(name, size);
+        }
     }
 
     int ret, save_errno;

@@ -79,19 +79,20 @@ private fun internalFormat(type: TextureType) = when (type) {
 }
 
 // Not required when SKIP_BITMAP_COPY is true
-private fun format(bitmap: Bitmap) = when (bitmap.config) {
-    Bitmap.Config.ALPHA_8   -> Texture.Format.ALPHA
-    Bitmap.Config.RGB_565   -> Texture.Format.RGB
-    Bitmap.Config.ARGB_8888 -> Texture.Format.RGBA
-    Bitmap.Config.RGBA_F16  -> Texture.Format.RGBA
+// Use String representation for compatibility across API levels
+private fun format(bitmap: Bitmap) = when (bitmap.config.name) {
+    "ALPHA_8"   -> Texture.Format.ALPHA
+    "RGB_565"   -> Texture.Format.RGB
+    "ARGB_8888" -> Texture.Format.RGBA
+    "RGBA_F16"  -> Texture.Format.RGBA
     else -> throw IllegalArgumentException("Unknown bitmap configuration")
 }
 
 // Not required when SKIP_BITMAP_COPY is true
-private fun type(bitmap: Bitmap) = when (bitmap.config) {
-    Bitmap.Config.ALPHA_8   -> Texture.Type.UBYTE
-    Bitmap.Config.RGB_565   -> Texture.Type.UBYTE
-    Bitmap.Config.ARGB_8888 -> Texture.Type.UBYTE
-    Bitmap.Config.RGBA_F16  -> Texture.Type.HALF
+private fun type(bitmap: Bitmap) = when (bitmap.config.name) {
+    "ALPHA_8"   -> Texture.Type.UBYTE
+    "RGB_565"   -> Texture.Type.UBYTE
+    "ARGB_8888" -> Texture.Type.UBYTE
+    "RGBA_F16"  -> Texture.Type.HALF
     else -> throw IllegalArgumentException("Unsupported bitmap configuration")
 }

@@ -35,6 +35,10 @@
 // we don't want to rely on it.
 #define ALLOW_REVERSE_MULTISAMPLE_RESOLVE false
 
+// We can only support this feature on OpenGL ES 3.1+
+// Support is currently disabled as we don't need it
+#define TEXTURE_2D_MULTISAMPLE_SUPPORTED false
+
 #if defined(__EMSCRIPTEN__)
 #define HAS_MAPBUFFERS 0
 #else
@@ -65,7 +69,7 @@ Driver* OpenGLDriverFactory::create(
     return OpenGLDriver::create(platform, sharedGLContext);
 }
 
-} // namesapce backend
+} // namespace backend
 
 using namespace backend;
 using namespace GLUtils;
@@ -76,7 +80,8 @@ Driver* OpenGLDriver::create(
     assert(platform);
     OpenGLPlatform* const ec = platform;
 
-    { // here we check we're on a supported version of GL before initializing the driver
+    {
+        // here we check we're on a supported version of GL before initializing the driver
         GLint major = 0, minor = 0;
         glGetIntegerv(GL_MAJOR_VERSION, &major);
         glGetIntegerv(GL_MINOR_VERSION, &minor);
@@ -93,7 +98,6 @@ Driver* OpenGLDriver::create(
             if (UTILS_UNLIKELY(!(major >= 3 && minor >= 0))) {
                 PANIC_LOG("OpenGL ES 3.0 minimum needed (current %d.%d)", major, minor);
                 goto cleanup;
-
             }
         } else if (GL41_HEADERS) {
             // we require GL 4.1 headers and minimum version
@@ -573,20 +577,24 @@ void OpenGLDriver::textureStorage(OpenGLDriver::GLTexture* t,
             break;
         }
         case GL_TEXTURE_2D_MULTISAMPLE:
-            // NOTE: if there is a mix of texture and renderbuffers, "fixed_sample_locations" must be true
-            // NOTE: what's the benefit of setting "fixed_sample_locations" to false?
+            if (TEXTURE_2D_MULTISAMPLE_SUPPORTED) {
+                // NOTE: if there is a mix of texture and renderbuffers, "fixed_sample_locations" must be true
+                // NOTE: what's the benefit of setting "fixed_sample_locations" to false?
 #if GLES31_HEADERS
-            // only supported from GL 4.3 and GLES 3.1
-            glTexStorage2DMultisample(t->gl.target, t->samples, t->gl.internalFormat,
-                    GLsizei(width), GLsizei(height), GL_TRUE);
+                // only supported from GL 4.3 and GLES 3.1
+                glTexStorage2DMultisample(t->gl.target, t->samples, t->gl.internalFormat,
+                        GLsizei(width), GLsizei(height), GL_TRUE);
 #elif GL41_HEADERS
-            // only supported in GL (never in GLES)
-            // TODO: use glTexStorage2DMultisample() on GL 4.3 and above
-            glTexImage2DMultisample(t->gl.target, t->samples, t->gl.internalFormat,
-                    GLsizei(width), GLsizei(height), GL_TRUE);
+                // only supported in GL (never in GLES)
+                // TODO: use glTexStorage2DMultisample() on GL 4.3 and above
+                glTexImage2DMultisample(t->gl.target, t->samples, t->gl.internalFormat,
+                        GLsizei(width), GLsizei(height), GL_TRUE);
 #else
 #   error "GL/GLES header version not supported"
 #endif
+            } else {
+                PANIC_LOG("GL_TEXTURE_2D_MULTISAMPLE is not supported");
+            }
             break;
         default: // cannot happen
             break;
