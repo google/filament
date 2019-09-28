@@ -49,29 +49,80 @@ private:
 } // namespace details
 
 
+/**
+ * \class NameComponentManager NameComponentManager.h utils/NameComponentManager.h
+ * \brief Allows clients to associate string labels with entities.
+ *
+ * To access the name of an existing entity, clients should first use NameComponentManager to get a
+ * temporary handle called an \em instance. Please note that instances are ephemeral; clients should
+ * store entities, not instances.
+ *
+ * Usage example:
+ *
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * auto names = new NameComponentManager(EntityManager::get());
+ * names->addComponent(myEntity);
+ * names->setName(names->getInstance(myEntity), "Jeanne d'Arc");
+ * ...
+ * printf("%s\n", names->getName(names->getInstance(myEntity));
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ */
 class NameComponentManager : public SingleInstanceComponentManager<details::SafeString> {
 public:
     using Instance = EntityInstance<NameComponentManager>;
 
+    /**
+     * Creates a new name manager associated with the given entity manager.
+     *
+     * Note that multiple string labels could be associated with each entity simply by
+     * creating multiple instances of NameComponentManager.
+     */
     explicit NameComponentManager(EntityManager& em);
     ~NameComponentManager();
 
+    /**
+     * Checks if the given entity already has a name component.
+     */
     using SingleInstanceComponentManager::hasComponent;
 
+    /**
+     * Gets a temporary handle that can be used to access the name.
+     *
+     * @return Non-zero handle if the entity has a name component, 0 otherwise.
+     */
     Instance getInstance(Entity e) const noexcept {
         return Instance(SingleInstanceComponentManager::getInstance(e));
     }
 
+    /*! \cond PRIVATE */
     // these are implemented in SingleInstanceComponentManager<>, but we need to
     // reimplement them in each manager, to ensure they are generated in an implementation file
     // for backward binary compatibility reasons.
     size_t getComponentCount() const noexcept;
     Entity const* getEntities() const noexcept;
-    void addComponent(Entity e);
-    void removeComponent(Entity e);
     void gc(const EntityManager& em, size_t ratio = 4) noexcept;
+    /*! \endcond */
 
+    /**
+     * Adds a name component to the given entity if it doesn't already exist.
+     */
+    void addComponent(Entity e);
+
+    /**
+     * Removes the name component to the given entity if it exists.
+     */
+    void removeComponent(Entity e);
+
+    /**
+     * Stores a copy of the given string and associates it with the given instance.
+     */
     void setName(Instance instance, const char* name) noexcept;
+
+    /**
+     * Retrieves the string associated with the given instance, or nullptr if none exists.
+     *
+     * @return pointer to the copy that was made during setName()
+     */
     const char* getName(Instance instance) const noexcept;
 };
 

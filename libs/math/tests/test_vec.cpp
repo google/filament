@@ -28,6 +28,7 @@ protected:
 
 TEST_F(VecTest, Constexpr) {
     constexpr float a = M_PI;
+    constexpr float2 Z2{};
     constexpr float2 A2 = a;
     constexpr float2 B2 = { a, a };
     constexpr float2 C2 = A2;
@@ -35,12 +36,14 @@ TEST_F(VecTest, Constexpr) {
     constexpr float2 F2 = A2 + 0.5 - 1.0 + (1 + A2);
     constexpr float3 D2 = cross(A2, C2);
 
+    constexpr float3 Z3{};
     constexpr float3 A3 = a;
     constexpr float3 B3 = { a, a, a };
     constexpr float3 C3 = A3;
     constexpr float3 D3 = { A2, a };
     constexpr float3 E3 = cross(A3, D3);
 
+    constexpr float4 Z4{};
     constexpr float4 A4 = a;
     constexpr float4 B4 = { a, a, a, a };
     constexpr float4 C4 = A4;
