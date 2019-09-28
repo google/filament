@@ -37,7 +37,7 @@ public:
 
     struct Sampler {
         Handle<HwTexture> t;
-        SamplerParams s;
+        SamplerParams s{};
     };
 
     SamplerGroup() noexcept { } // NOLINT
