@@ -263,6 +263,7 @@ export class Camera {
     public getForwardVector(): float3;
     public getFrustum(): Frustum;
     public setExposure(aperture: number, shutterSpeed: number, sensitivity: number): void;
+    public setExposureDirect(exposure: number): void;
     public getAperture(): number;
     public getShutterSpeed(): number;
     public getSensitivity(): number;
