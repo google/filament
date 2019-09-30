@@ -140,8 +140,8 @@ void ShadowMap::prepare(DriverApi& driver, SamplerGroup& sb) noexcept {
         mShadowMapHandle, {
                     .filterMag = SamplerMagFilter::LINEAR,
                     .filterMin = SamplerMinFilter::LINEAR,
-                    .compareFunc = SamplerCompareFunc::LE,
-                    .compareMode = SamplerCompareMode::COMPARE_TO_TEXTURE
+                    .compareMode = SamplerCompareMode::COMPARE_TO_TEXTURE,
+                    .compareFunc = SamplerCompareFunc::LE
             }});
 }
 
@@ -214,8 +214,8 @@ void ShadowMap::update(
 
     FLightManager::ShadowParams params = lcm.getShadowParams(li);
     mPolygonOffset = {
-            .constant = params.options.polygonOffsetConstant,
-            .slope = params.options.polygonOffsetSlope
+            .slope = params.options.polygonOffsetSlope,
+            .constant = params.options.polygonOffsetConstant
     };
     mat4f projection(camera.cullingProjection);
     if (params.options.shadowFar > 0.0f) {
@@ -236,10 +236,10 @@ void ShadowMap::update(
             .projection = projection,
             .model = camera.model,
             .view = camera.view,
+            .worldOrigin = camera.worldOrigin,
             .zn = camera.zn,
             .zf = camera.zf,
-            .frustum = Frustum(projection * camera.view),
-            .worldOrigin = camera.worldOrigin
+            .frustum = Frustum(projection * camera.view)
     };
 
     // debugging...

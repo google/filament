@@ -99,6 +99,7 @@ public:
         aligned_free(p);
     }
 
+#if !defined(_MSC_VER) || _ITERATOR_DEBUG_LEVEL == 0 // msvc std::vector debug iterator code seems to somehow redefine these operators
     // stateless allocators are always equal
     template<typename T, typename U>
     friend bool
@@ -111,6 +112,7 @@ public:
     operator!=(const STLAlignedAllocator<T>& rhs, const STLAlignedAllocator<U>& lhs) {
         return false;
     }
+#endif
 };
 
 } // namespace utils

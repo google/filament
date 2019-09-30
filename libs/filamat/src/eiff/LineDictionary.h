@@ -37,7 +37,7 @@ public:
         return mStorageSize;
     }
 
-    constexpr bool isEmpty() const noexcept {
+    bool isEmpty() const noexcept {
         return mStrings.empty();
     }
 

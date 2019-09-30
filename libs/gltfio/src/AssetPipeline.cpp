@@ -1546,10 +1546,10 @@ const cgltf_data* Pipeline::replaceOcclusion(const cgltf_data* sourceAsset, cons
         resultMaterial = sourceMaterial;
         if (!resultMaterial.unlit) {
             resultMaterial.occlusion_texture = {
-                .has_transform = false,
-                .scale = 1.0f,
                 .texture = &newTexture,
-                .texcoord = gltfio::AssetPipeline::BAKED_UV_ATTRIB_INDEX
+                .texcoord = gltfio::AssetPipeline::BAKED_UV_ATTRIB_INDEX,
+                .scale = 1.0f,
+                .has_transform = false
             };
         }
         auto& t0 = resultMaterial.pbr_metallic_roughness.base_color_texture.texture;

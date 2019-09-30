@@ -85,7 +85,7 @@ public:
     // default constructor
     MATH_DEFAULT_CTOR_CONSTEXPR TVec3() MATH_DEFAULT_CTOR
 
-    // handles implicit conversion to a tvec4. must not be explicit.
+    // handles implicit conversion to a tvec3. must not be explicit.
     template<typename A, typename = enable_if_arithmetic_t<A>>
     constexpr TVec3(A v) : v{ T(v), T(v), T(v) } {}
 

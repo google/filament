@@ -221,7 +221,7 @@ TEST_F(QuatTest, ArithmeticOps) {
 TEST_F(QuatTest, ArithmeticFunc) {
     quat q(1, 2, 3, 4);
     quat qc(conj(q));
-    __attribute__((unused)) quat qi(inverse(q));
+    MATH_UNUSED quat qi(inverse(q));
     quat qn(normalize(q));
 
     EXPECT_EQ(qc.x, -2);

@@ -32,6 +32,7 @@
 
 #include <utils/JobSystem.h>
 #include <utils/Path.h>
+#include <utils/algorithm.h>
 
 #include <math/scalar.h>
 #include <math/vec4.h>
@@ -875,7 +876,7 @@ void iblRoughnessPrefilter(
     // This is useful for debugging.
     const bool DEBUG_FULL_RESOLUTION = false;
 
-    const size_t baseExp = __builtin_ctz(g_output_size ? g_output_size : IBL_DEFAULT_SIZE);
+    const size_t baseExp = utils::ctz(g_output_size ? g_output_size : IBL_DEFAULT_SIZE);
     size_t numSamples = g_num_samples;
     const size_t numLevels = baseExp + 1;
 
@@ -1004,7 +1005,7 @@ void iblDiffuseIrradiance(utils::JobSystem& js, const utils::Path& iname,
         outputDir.mkdirRecursive();
     }
 
-    const size_t baseExp = __builtin_ctz(g_output_size ? g_output_size : IBL_DEFAULT_SIZE);
+    const size_t baseExp = utils::ctz(g_output_size ? g_output_size : IBL_DEFAULT_SIZE);
     size_t numSamples = g_num_samples;
     const size_t dim = 1U << baseExp;
     Image image;

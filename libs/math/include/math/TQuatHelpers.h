@@ -233,7 +233,7 @@ public:
     friend inline
     QUATERNION<T> MATH_PURE log(const QUATERNION<T>& q) {
         const T nq(norm(q));
-        return QUATERNION<T>((std::acos(q.w / nq) / norm(q.xyz)) * q.xyz, log(nq));
+        return QUATERNION<T>((std::acos(q.w / nq) / norm(q.xyz)) * q.xyz, std::log(nq));
     }
 
     friend inline
@@ -253,7 +253,7 @@ public:
         if ((T(1) - d) < value_eps) {
             return normalize(lerp(p, q, t));
         }
-        const T npq = sqrt(dot(p, p) * dot(q, q));  // ||p|| * ||q||
+        const T npq = std::sqrt(dot(p, p) * dot(q, q));  // ||p|| * ||q||
         const T a = std::acos(d / npq);
         const T a0 = a * (1 - t);
         const T a1 = a * t;
