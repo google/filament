@@ -3,9 +3,12 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## Next release
+## v1.4.0
 
+- API Breakage: Simplified public-facing Fence API.
 - Minimum API level on Android is now API 19 instead of API 21.
+- Filament can now be built with msvc 2019.
+- Added the ability to modify clip space coordinates in the vertex shader.
 - Added missing API documentation.
 - Improved existing API documentation.
 - Added `Camera::setExposure(float)` to directly control the camera's exposure.
