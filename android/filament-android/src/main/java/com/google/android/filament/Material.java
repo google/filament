@@ -290,7 +290,7 @@ public class Material {
 
     /**
      * Creates a new instance of this material. Material instances should be freed using
-     * {@link com.google.android.filament.Engine#destroyMaterialInstance(MaterialInstance)}.
+     * {@link Engine#destroyMaterialInstance(MaterialInstance)}.
      *
      * @return the new instance
      */
