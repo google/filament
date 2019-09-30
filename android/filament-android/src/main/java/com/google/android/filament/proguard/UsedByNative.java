@@ -26,16 +26,14 @@ import java.lang.annotation.Target;
  *
  * Note that adding this annotation to a method is not enough to guarantee that
  * it is kept - either its class must be referenced elsewhere in the program, or
- * the class must be annotated with this as well.
+ * the class must be annotated with this as well. Usage example:
+ * <pre>
  *
- * Usage example:<br />
- *  {@code
- *  @UsedByNative("NativeCrashHandler.cpp")
-    public static void reportCrash(int signal, int code, int address) {
-        ...
-    }
-    }
-
+ * &commat;UsedByNative("NativeCrashHandler.cpp")
+ * public static void reportCrash(int signal, int code, int address) {
+ *     ...
+ * }
+ * </pre>
  */
 @Target({
     ElementType.METHOD,
