@@ -26,6 +26,13 @@ public class Viewport {
         this.height = height;
     }
 
+    public copyFrom(Viewport vp) {
+        this.left = vp.left;
+        this.bottom = vp.bottom;
+        this.width = vp.width;
+        this.height = vp.height;
+    }
+
     // left coordinate in pixels
     public int left;
 

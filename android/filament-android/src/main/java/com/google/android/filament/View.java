@@ -35,7 +35,7 @@ public class View {
     private AmbientOcclusionOptions mAmbientOcclusionOptions;
     private RenderTarget mRenderTarget;
 
-    public static class DynamicResolutionOptions {
+    public static final class DynamicResolutionOptions {
         public boolean enabled = false;
         public boolean homogeneousScaling = false;
         public float targetFrameTimeMilli = 1000.0f / 60.0f;
@@ -46,7 +46,7 @@ public class View {
         public int history = 9;
     }
 
-    public static class AmbientOcclusionOptions {
+    public static final class AmbientOcclusionOptions {
         public float radius = 0.3f;
         public float bias = 0.005f;
         public float power = 0.0f;
@@ -60,7 +60,7 @@ public class View {
         ULTRA
     }
 
-    public static class RenderQuality {
+    public static final class RenderQuality {
         public QualityLevel hdrColorBuffer = QualityLevel.HIGH;
     }
 
@@ -131,7 +131,7 @@ public class View {
     }
 
     public void setViewport(@NonNull Viewport viewport) {
-        mViewport = viewport;
+        mViewport.copyFrom(viewport);
         nSetViewport(getNativeObject(),
                 mViewport.left, mViewport.bottom, mViewport.width, mViewport.height);
     }
