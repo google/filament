@@ -79,7 +79,7 @@ public:
     backend::Handle<backend::HwProgram> getPostProcessProgramSlow(uint8_t variantKey) const noexcept;
     backend::Handle<backend::HwProgram> getProgram(uint8_t variantKey) const noexcept {
 #if FILAMENT_ENABLE_MATDBG
-        if (UTILS_UNLIKELY(mPendingEdits)) {
+        if (UTILS_UNLIKELY(mPendingEdits.load())) {
             const_cast<FMaterial*>(this)->applyPendingEdits();
         }
 #endif
