@@ -49,7 +49,7 @@ class Scene;
  *  - Some rendering parameters
  *
  * \note
- * View instances are heavy objects that internally cache a lot of date needed for Rendering.
+ * View instances are heavy objects that internally cache a lot of data needed for rendering.
  * It is not advised for an application to use many View objects.
  *
  * For example, in a game, a View could be used for the main scene and another one for the
@@ -57,7 +57,7 @@ class Scene;
  * a View is akin to a rendering pass).
  *
  *
- * @see Renderer, Scene, Camera
+ * @see Renderer, Scene, Camera, RenderTarget
  */
 class UTILS_PUBLIC View : public FilamentAPI {
 public:
@@ -69,8 +69,8 @@ public:
      * rendering is faster than the target frame rate.
      *
      * This structure can be used to specify the minimum scale factor used when
-     * lowering the resolution of a View and the maximum scale factor used when
-     * increasing the resolution for higher quality rendering. By scale factors
+     * lowering the resolution of a View, and the maximum scale factor used when
+     * increasing the resolution for higher quality rendering. The scale factors
      * can be controlled on each X and Y axis independently. By default, all scale
      * factors are set to 1.0.
      *
@@ -124,20 +124,21 @@ public:
     };
 
     /**
-     * Structure used to set the quality of the rendering of a View. This structure
-     * offers separate quality settings for different parts of the rendering pipeline:
+     * Structure used to set the precision of the color buffer and related quality settings.
      *
-     * hdrColorBuffer: sets the quality of the HDR color buffer. A quality of HIGH or ULTRA means
-     *              using an RGB16F or RGBA16F color buffer. This means colors in the LDR
-     *              range (0..1) have a 10 bit precision. A quality of LOW or MEDIUM means
-     *              using an R11G11B10F opaque color buffer or an RGBA16F transparent color
-     *              buffer. With R11G11B10F colors in the LDR range have a precision of either
-     *              6 bits (red and green channels) or 5 bits (blue channel).
-     *
-     * @see setRenderQuality, getAntiAliasing
+     * @see setRenderQuality, getRenderQuality
      */
     struct RenderQuality {
-        QualityLevel hdrColorBuffer = QualityLevel::HIGH; //!< quality of the color buffer
+        /**
+         * Sets the quality of the HDR color buffer.
+         *
+         * A quality of HIGH or ULTRA means using an RGB16F or RGBA16F color buffer. This means
+         * colors in the LDR range (0..1) have a 10 bit precision. A quality of LOW or MEDIUM means
+         * using an R11G11B10F opaque color buffer or an RGBA16F transparent color buffer. With
+         * R11G11B10F colors in the LDR range have a precision of either 6 bits (red and green
+         * channels) or 5 bits (blue channel).
+         */
+        QualityLevel hdrColorBuffer = QualityLevel::HIGH;
     };
 
     /**
@@ -199,7 +200,7 @@ public:
     void setAmbientOcclusion(AmbientOcclusion ambientOcclusion) noexcept;
 
     /**
-     * Query the type of ambient occlusion active for this View.
+     * Queries the type of ambient occlusion active for this View.
      *
      * @return ambient occlusion type.
      */
@@ -284,7 +285,7 @@ public:
     }
 
     /**
-     * Set this View's Camera.
+     * Sets this View's Camera.
      *
      * @param camera    Associate the specified Camera to this View. A Camera can be associated to
      *                  several View instances.\n
@@ -314,7 +315,7 @@ public:
     }
 
     /**
-     * Set this View Viewport.
+     * Sets the rectangular region to render to.
      *
      * The viewport specifies where the content of the View (i.e. the Scene) is rendered in
      * the render target. The Render target is automatically clipped to the Viewport.
@@ -325,13 +326,15 @@ public:
     void setViewport(Viewport const& viewport) noexcept;
 
     /**
-     * Returns this View's viewport.
+     * Returns the rectangular region that gets rendered to.
      * @return A constant reference to View's viewport.
      */
     Viewport const& getViewport() const noexcept;
 
     /**
      * Sets the color used to clear the Viewport when rendering this View.
+     * Defaults to black.
+     *
      * @param clearColor The color to use to clear the Viewport.
      * @see setClearTargets
      */
@@ -344,7 +347,7 @@ public:
     LinearColorA const& getClearColor() const noexcept;
 
     /**
-     * Set which targets to clear (default: true, true, false)
+     * Sets which targets to clear (default: true, true, false)
      * @param color     Clear the color buffer. The color buffer is cleared with the color set in
      *                  setClearColor().
      * @param depth     Clear the depth buffer. The depth buffer is cleared with an implementation
@@ -362,13 +365,13 @@ public:
     void setClearTargets(bool color, bool depth, bool stencil) noexcept;
 
     /**
-     * Set which layers are visible.
+     * Sets which layers are visible.
      *
      * Renderable objects can have one or several layers associated to them. Layers are
      * represented with an 8-bits bitmask, where each bit corresponds to a layer.
      * @see RenderableManager::setLayerMask().
      *
-     * This call sets which of those layers are visible, Renderable in invisible layers won't be
+     * This call sets which of those layers are visible. Renderables in invisible layers won't be
      * rendered.
      *
      * @param select    a bitmask specifying which layer to set or clear using \p values.
@@ -381,13 +384,13 @@ public:
     void setVisibleLayers(uint8_t select, uint8_t values) noexcept;
 
     /**
-     * Enable or disable shadow mapping. Enabled by default.
+     * Enables or disables shadow mapping. Enabled by default.
      *
      * @param enabled true enables shadow mapping, false disables it.
      *
-     * @see Light::Builder::castShadows(),
-     *      Renderable::Builder::receiveShadows(),
-     *      Renderable::Builder::castShadows(),
+     * @see LightManager::Builder::castShadows(),
+     *      RenderableManager::Builder::receiveShadows(),
+     *      RenderableManager::Builder::castShadows(),
      */
     void setShadowsEnabled(bool enabled) noexcept;
 
@@ -403,18 +406,17 @@ public:
     void setRenderTarget(RenderTarget* renderTarget,
             TargetBufferFlags discard = TargetBufferFlags::ALL) noexcept;
 
-    /**
-     * Specifies which buffers can be discarded before rendering.
-     *
-     * For performance reasons, the default is to discard all buffers, which is generally
-     * correct when rendering a single view.
-     *
-     * However, when rendering a View on top of another one on the same render target,
-     * it is necessary to indicate that the color buffer cannot be discarded.
-     *
-     * @param discard Buffers that need to be discarded before rendering.
-     */
+    //! @deprecated Please use the other overload and pass nullptr for the renderTarget.
     void setRenderTarget(TargetBufferFlags discard = TargetBufferFlags::ALL) noexcept;
+
+    /**
+     * Gets the offscreen render target associated with this view.
+     *
+     * Returns nullptr if the render target is the swap chain (which is default).
+     *
+     * @see setRenderTarget
+     */
+    RenderTarget* getRenderTarget() noexcept;
 
     /**
      * Sets how many samples are to be used for MSAA in the post-process stage.
@@ -539,7 +541,7 @@ public:
     void setDynamicLightingOptions(float zLightNear, float zLightFar) noexcept;
 
     /**
-     * Enable or disable post processing. Enabled by default.
+     * Enables or disables post processing. Enabled by default.
      *
      * Post-processing includes:
      *  - Tone-mapping & gamma encoding
