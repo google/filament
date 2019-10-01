@@ -866,6 +866,10 @@ void View::setRenderTarget(TargetBufferFlags discard) noexcept {
     upcast(this)->setRenderTarget(discard);
 }
 
+RenderTarget* View::getRenderTarget() const noexcept {
+    return upcast(this)->getRenderTarget();
+}
+
 void View::setSampleCount(uint8_t count) noexcept {
     upcast(this)->setSampleCount(count);
 }
@@ -932,6 +936,10 @@ bool View::isFrontFaceWindingInverted() const noexcept {
 
 void View::setDepthPrepass(View::DepthPrepass prepass) noexcept {
     upcast(this)->setDepthPrepass(prepass);
+}
+
+View::DepthPrepass View::getDepthPrepass() const noexcept {
+    return upcast(this)->getDepthPrepass();
 }
 
 void View::setDynamicLightingOptions(float zLightNear, float zLightFar) noexcept {

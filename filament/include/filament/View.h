@@ -162,7 +162,7 @@ public:
 
     /**
      * List of available post-processing anti-aliasing techniques.
-     * @see setAntiAliasing, getAntiAliasing
+     * @see setAntiAliasing, getAntiAliasing, setSampleCount
      */
     enum class AntiAliasing : uint8_t {
         NONE = 0,   //!< no anti aliasing performed as part of post-processing
@@ -228,7 +228,7 @@ public:
      *
      * When the depth pre-pass is enabled, the renderer will first draw all objects in the
      * depth buffer from front to back, and then draw the objects again but sorted to minimize
-     * state changes. With the depth pre-pass disabled, objects are draw only once, but it may
+     * state changes. With the depth pre-pass disabled, objects are drawn only once, but it may
      * result in more state changes or more overdraw.
      *
      * The best strategy may depend on the scene and/or GPU.
@@ -238,6 +238,13 @@ public:
      *                  DepthPrepass::ENABLE enables the depth pre-pass.
      */
     void setDepthPrepass(DepthPrepass prepass) noexcept;
+
+    /**
+     * Checks if this view is rendered with a depth-only prepass.
+     *
+     * @return the value set by setDepthPass().
+     */
+    DepthPrepass getDepthPrepass() const noexcept;
 
     /**
      * Sets the View's name. Only useful for debugging.
@@ -416,7 +423,7 @@ public:
      *
      * @see setRenderTarget
      */
-    RenderTarget* getRenderTarget() noexcept;
+    RenderTarget* getRenderTarget() const noexcept;
 
     /**
      * Sets how many samples are to be used for MSAA in the post-process stage.
@@ -436,7 +443,7 @@ public:
     void setSampleCount(uint8_t count = 1) noexcept;
 
     /**
-     * Returns the sample count set by setSampleCount(). Effective sample could be different.
+     * Returns the sample count set by setSampleCount(). Effective sample count could be different.
      * A value of 0 or 1 means MSAA is disabled.
      *
      * @return value set by setSampleCount().
