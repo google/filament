@@ -247,14 +247,15 @@ public:
     friend inline
     QUATERNION<T> MATH_PURE slerp(const QUATERNION<T>& p, const QUATERNION<T>& q, T t) {
         // could also be computed as: pow(q * inverse(p), t) * p;
-        const T d = std::abs(dot(p, q));
+        const T d = dot(p, q);
+        const T absd = std::abs(d);
         static constexpr T value_eps = T(10) * std::numeric_limits<T>::epsilon();
         // Prevent blowing up when slerping between two quaternions that are very near each other.
-        if ((T(1) - d) < value_eps) {
+        if ((T(1) - absd) < value_eps) {
             return normalize(lerp(p, q, t));
         }
         const T npq = std::sqrt(dot(p, p) * dot(q, q));  // ||p|| * ||q||
-        const T a = std::acos(d / npq);
+        const T a = std::acos(absd / npq);
         const T a0 = a * (1 - t);
         const T a1 = a * t;
         const T sina = sin(a);
