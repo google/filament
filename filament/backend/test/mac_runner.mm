@@ -67,7 +67,11 @@ test::NativeView getNativeView() {
     [window makeKeyAndOrderFront:window];
 
     NSView* view = window.contentView;
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     [view setWantsBestResolutionOpenGLSurface:YES];
+#pragma clang diagnostic pop
 
     [view setWantsLayer:YES];
 
