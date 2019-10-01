@@ -134,8 +134,24 @@ public:
         friend class details::FSkybox;
     };
 
+    /**
+     * Sets bits in a visibility mask. By default, this is 0x1.
+     *
+     * This provides a simple mechanism for hiding or showing this Skybox in a Scene.
+     *
+     * @see View::setVisibleLayers().
+     *
+     * For example, to set bit 1 and reset bits 0 and 2 while leaving all other bits unaffected,
+     * call: `setLayerMask(7, 2)`.
+     *
+     * @param select the set of bits to affect
+     * @param values the replacement values for the affected bits
+     */
     void setLayerMask(uint8_t select, uint8_t values) noexcept;
 
+    /**
+     * @return the visibility mask bits
+     */
     uint8_t getLayerMask() const noexcept;
 
     /**
