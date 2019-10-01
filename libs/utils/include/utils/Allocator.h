@@ -721,13 +721,13 @@ public:
     // these should be out-of-class friends, but this doesn't seem to work with some compilers
     // which complain about multiple definition each time a STLAllocator<> is instantiated.
     template <typename U, typename A>
-    bool operator==(const STLAllocator<U, A>& lhs) noexcept {
-        return std::addressof(mArena) == std::addressof(lhs.mArena);
+    bool operator==(const STLAllocator<U, A>& rhs) const noexcept {
+        return std::addressof(mArena) == std::addressof(rhs.mArena);
     }
 
     template <typename U, typename A>
-    bool operator!=(const STLAllocator<U, A>& lhs) noexcept {
-        return !operator==(lhs);
+    bool operator!=(const STLAllocator<U, A>& rhs) const noexcept {
+        return !operator==(rhs);
     }
 
 private:
