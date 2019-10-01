@@ -4,9 +4,9 @@ project(gtest)
 set(OUR_DIR ${CMAKE_CURRENT_SOURCE_DIR}/..)
 
 set(TARGET              gtest)
-set(SRC_DIR             ${OUR_DIR}/src)
-set(PUBLIC_HDR_DIR      ${OUR_DIR}/include)
-set(PRIVATE_HDR_DIR     ${OUR_DIR})
+set(SRC_DIR             ${OUR_DIR}/googletest/src)
+set(PUBLIC_HDR_DIR      ${OUR_DIR}/googletest/include)
+set(PRIVATE_HDR_DIR     ${OUR_DIR}/googletest)
 
 # sources dependencies
 set(SRCS
@@ -14,8 +14,8 @@ set(SRCS
 )
 
 if (MSVC)
-  # The /Zc:__cplusplus compiler option enables the __cplusplus preprocessor macro to 
-  # report an updated value for recent C++ language standards support. By default, 
+  # The /Zc:__cplusplus compiler option enables the __cplusplus preprocessor macro to
+  # report an updated value for recent C++ language standards support. By default,
   # Visual Studio always returns the value "199711L" for the __cplusplus preprocessor macro.
   add_definitions(/Zc:__cplusplus)
 endif()
