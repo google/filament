@@ -276,6 +276,8 @@ install(DIRECTORY ${PUBLIC_HDR_DIR}/backend DESTINATION include)
 # ==================================================================================================
 # Test
 # ==================================================================================================
+option(INSTALL_BACKEND_TEST "Install the backend test library so it can be consumed on iOS" OFF)
+
 if (APPLE)
     add_library(backend_test STATIC
         test/BackendTest.cpp
@@ -313,8 +315,10 @@ if (APPLE)
 
     set(BACKEND_TEST_LIB_NAME ${CMAKE_STATIC_LIBRARY_PREFIX}backend_test${CMAKE_STATIC_LIBRARY_SUFFIX})
 
-    install(FILES "${BACKEND_TEST_COMBINED_OUTPUT}" DESTINATION lib/${DIST_DIR} RENAME ${BACKEND_TEST_LIB_NAME})
-    install(FILES test/PlatformRunner.h DESTINATION include/backend_test)
+    if (INSTALL_BACKEND_TEST)
+        install(FILES "${BACKEND_TEST_COMBINED_OUTPUT}" DESTINATION lib/${DIST_DIR} RENAME ${BACKEND_TEST_LIB_NAME})
+        install(FILES test/PlatformRunner.h DESTINATION include/backend_test)
+    endif()
 endif()
 
 if (APPLE AND NOT IOS)
