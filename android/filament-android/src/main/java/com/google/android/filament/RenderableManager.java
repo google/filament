@@ -19,6 +19,7 @@ package com.google.android.filament;
 import android.support.annotation.IntRange;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.annotation.Size;
 
 import java.nio.Buffer;
 import java.nio.BufferOverflowException;
@@ -231,7 +232,7 @@ public class RenderableManager {
         }
     }
 
-    public void setMorphWeights(@EntityInstance int i, float[] weights) {
+    public void setMorphWeights(@EntityInstance int i, @NonNull @Size(min = 4) float[] weights) {
         nSetMorphWeights(mNativeObject, i, weights);
     }
 
