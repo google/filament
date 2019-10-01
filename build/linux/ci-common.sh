@@ -30,7 +30,7 @@ cd ..
 if [[ "$GITHUB_WORKFLOW" ]]; then
     sudo wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
     sudo apt-get install clang-$GITHUB_CLANG_VERSION libc++-$GITHUB_CLANG_VERSION-dev libc++abi-$GITHUB_CLANG_VERSION-dev
-    sudo apt-get install mesa-common-dev
+    sudo apt-get install mesa-common-dev libxi-dev
 
     sudo update-alternatives --install /usr/bin/cc cc /usr/bin/clang-${GITHUB_CLANG_VERSION} 100
     sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++-${GITHUB_CLANG_VERSION} 100
