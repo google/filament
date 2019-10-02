@@ -265,6 +265,13 @@ TEST_F(QuatTest, ArithmeticFunc) {
     EXPECT_DOUBLE_EQ(qr.y, qs.y);
     EXPECT_DOUBLE_EQ(qr.z, qs.z);
     EXPECT_DOUBLE_EQ(qr.w, qs.w);
+
+    // Ensure that we're taking the shortest path.
+    qa = {-0.707, 0, 0, 0.707};
+    qb = {1, 0, 0, 0};
+    qs = slerp(qa, qb, 0.5);
+    EXPECT_NEAR(qs[3], -0.92, 0.1);
+    EXPECT_NEAR(qs[2], +0.38, 0.1);
 }
 
 TEST_F(QuatTest, MultiplicationExhaustive) {

@@ -459,7 +459,6 @@ public class Camera {
      *                      between 50 and 25600.
      *
      * @see LightManager
-     * @see Exposure
      * @see #setExposure(float)
      */
     public void setExposure(float aperture, float shutterSpeed, float sensitivity) {
@@ -477,8 +476,7 @@ public class Camera {
      * the exposure manually. This can be typically achieved by setting the exposure to
      * 1.0.
      *
-     * @see Light
-     * @see Exposure
+     * @see LightManager
      * @see #setExposure(float, float, float)
      */
     public void setExposure(float exposure) {

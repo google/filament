@@ -439,7 +439,7 @@ public:
 
 typedef ::testing::Types<float,double> TestMatrixValueTypes;
 
-TYPED_TEST_CASE(MatTestT, TestMatrixValueTypes);
+TYPED_TEST_SUITE(MatTestT, TestMatrixValueTypes);
 
 #define TEST_MATRIX_INVERSE(MATRIX, EPSILON)                                \
 {                                                                           \
