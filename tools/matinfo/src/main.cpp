@@ -519,7 +519,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    std::ifstream in(src.c_str(), std::ifstream::in);
+    std::ifstream in(src.c_str(), std::ifstream::in | std::ios::binary);
     if (in.is_open()) {
         if (src.getExtension() == "inc") {
             return parseTextBlob(config, in) ? 0 : 1;
