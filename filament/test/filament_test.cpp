@@ -489,9 +489,9 @@ TEST(FilamentTest, FroxelData) {
     Froxel f = froxelData.getFroxelAt(0,0,0);
 
     // 45-deg plane, with normal pointing outward to the left
-    EXPECT_FLOAT_EQ(-M_SQRT2/2, f.planes[Froxel::LEFT].x);
+    EXPECT_FLOAT_EQ(-F_SQRT2/2, f.planes[Froxel::LEFT].x);
     EXPECT_FLOAT_EQ(         0, f.planes[Froxel::LEFT].y);
-    EXPECT_FLOAT_EQ( M_SQRT2/2, f.planes[Froxel::LEFT].z);
+    EXPECT_FLOAT_EQ( F_SQRT2/2, f.planes[Froxel::LEFT].z);
 
     // the right side of froxel 1 is near 45-deg plane pointing outward to the right
     EXPECT_TRUE(f.planes[Froxel::RIGHT].x > 0);
@@ -500,9 +500,9 @@ TEST(FilamentTest, FroxelData) {
 
     // right side of last horizontal froxel is 45-deg plane pointing outward to the right
     Froxel g = froxelData.getFroxelAt(froxelData.getFroxelCountX()-1,0,0);
-    EXPECT_FLOAT_EQ(M_SQRT2/2, g.planes[Froxel::RIGHT].x);
+    EXPECT_FLOAT_EQ(F_SQRT2/2, g.planes[Froxel::RIGHT].x);
     EXPECT_FLOAT_EQ(        0, g.planes[Froxel::RIGHT].y);
-    EXPECT_FLOAT_EQ(M_SQRT2/2, g.planes[Froxel::RIGHT].z);
+    EXPECT_FLOAT_EQ(F_SQRT2/2, g.planes[Froxel::RIGHT].z);
 
     // first froxel near plane facing us
     EXPECT_FLOAT_EQ(        0, f.planes[Froxel::NEAR].x);
@@ -677,21 +677,21 @@ TEST(FilamentTest, Bones) {
     Test::check(mat4f::scaling(float3{ 4, -2, 3 }));
     Test::check(mat4f::scaling(float3{ 4, 2, -3 }));
 
-    Test::check(mat4f::rotation(M_PI_2, float3{ 0, 0, 1 }));
-    Test::check(mat4f::rotation(M_PI_2, float3{ 0, 1, 0 }));
-    Test::check(mat4f::rotation(M_PI_2, float3{ 1, 0, 0 }));
-    Test::check(mat4f::rotation(M_PI_2, float3{ 0, 1, 1 }));
-    Test::check(mat4f::rotation(M_PI_2, float3{ 1, 0, 1 }));
-    Test::check(mat4f::rotation(M_PI_2, float3{ 1, 1, 0 }));
-    Test::check(mat4f::rotation(-M_PI_2, float3{ 0, 0, 1 }));
-    Test::check(mat4f::rotation(-M_PI_2, float3{ 0, 1, 0 }));
-    Test::check(mat4f::rotation(-M_PI_2, float3{ 1, 0, 0 }));
-    Test::check(mat4f::rotation(-M_PI_2, float3{ 0, 1, 1 }));
-    Test::check(mat4f::rotation(-M_PI_2, float3{ 1, 0, 1 }));
-    Test::check(mat4f::rotation(-M_PI_2, float3{ 1, 1, 0 }));
+    Test::check(mat4f::rotation(F_PI_2, float3{ 0, 0, 1 }));
+    Test::check(mat4f::rotation(F_PI_2, float3{ 0, 1, 0 }));
+    Test::check(mat4f::rotation(F_PI_2, float3{ 1, 0, 0 }));
+    Test::check(mat4f::rotation(F_PI_2, float3{ 0, 1, 1 }));
+    Test::check(mat4f::rotation(F_PI_2, float3{ 1, 0, 1 }));
+    Test::check(mat4f::rotation(F_PI_2, float3{ 1, 1, 0 }));
+    Test::check(mat4f::rotation(-F_PI_2, float3{ 0, 0, 1 }));
+    Test::check(mat4f::rotation(-F_PI_2, float3{ 0, 1, 0 }));
+    Test::check(mat4f::rotation(-F_PI_2, float3{ 1, 0, 0 }));
+    Test::check(mat4f::rotation(-F_PI_2, float3{ 0, 1, 1 }));
+    Test::check(mat4f::rotation(-F_PI_2, float3{ 1, 0, 1 }));
+    Test::check(mat4f::rotation(-F_PI_2, float3{ 1, 1, 0 }));
 
     mat4f m = mat4f::translation(float3{ 1, 2, 3 }) *
-                                                    mat4f::rotation(-M_PI_2, float3{ 1, 1, 0 }) *
+                                                    mat4f::rotation(-F_PI_2, float3{ 1, 1, 0 }) *
                                                     mat4f::scaling(float3{ -2, 3, 0.04 });
 
     Test::check(m);

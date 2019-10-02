@@ -46,7 +46,7 @@ FCamera::FCamera(FEngine& engine, Entity e)
 void UTILS_NOINLINE FCamera::setProjection(double fov, double aspect, double near, double far,
         Camera::Fov direction) noexcept {
     double w, h;
-    double s = std::tan(fov * (M_PI / 360.0)) * near;
+    double s = std::tan(fov * (F_PI / 360.0)) * near;
     if (direction == Fov::VERTICAL) {
         w = s * aspect;
         h = s;

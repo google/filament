@@ -24,6 +24,7 @@
 #include <math/mat4.h>
 #include <math/mat3.h>
 #include <math/quat.h>
+#include <math/scalar.h>
 
 using namespace filament::math;
 
@@ -32,7 +33,7 @@ protected:
 };
 
 TEST_F(MatTest, ConstexprMat2) {
-    constexpr float a = M_PI;
+    constexpr float a = F_PI;
     constexpr mat2f M;
     constexpr mat2f M0(a);
     constexpr mat2f M1(float2{a, a});
@@ -55,7 +56,7 @@ TEST_F(MatTest, ConstexprMat2) {
 }
 
 TEST_F(MatTest, ConstexprMat3) {
-    constexpr float a = M_PI;
+    constexpr float a = F_PI;
     constexpr mat3f M;
     constexpr mat3f M0(a);
     constexpr mat3f M1(float3{a, a, a});
@@ -77,7 +78,7 @@ TEST_F(MatTest, ConstexprMat3) {
 }
 
 TEST_F(MatTest, ConstexprMat4) {
-    constexpr float a = M_PI;
+    constexpr float a = F_PI;
     constexpr mat4f M;
     constexpr mat4f M0(a);
     constexpr mat4f M1(float4{a, a, a, a});
@@ -662,7 +663,7 @@ TYPED_TEST(MatTestT, EulerZYX_44) {
     typedef filament::math::details::TMat44<TypeParam> M44T;
 
     std::default_random_engine generator(82828); // NOLINT
-    std::uniform_real_distribution<TypeParam> distribution(-6.0 * 2.0*M_PI, 6.0 * 2.0*M_PI);
+    std::uniform_real_distribution<TypeParam> distribution(-6.0 * 2.0*F_PI, 6.0 * 2.0*F_PI);
     auto rand_gen = std::bind(distribution, generator);
 
     for (size_t i = 0; i < 100; ++i) {
@@ -681,7 +682,7 @@ TYPED_TEST(MatTestT, EulerZYX_33) {
     typedef filament::math::details::TMat33<TypeParam> M33T;
 
     std::default_random_engine generator(112233); // NOLINT
-    std::uniform_real_distribution<TypeParam> distribution(-6.0 * 2.0*M_PI, 6.0 * 2.0*M_PI);
+    std::uniform_real_distribution<TypeParam> distribution(-6.0 * 2.0*F_PI, 6.0 * 2.0*F_PI);
     auto rand_gen = std::bind(distribution, generator);
 
     for (size_t i = 0; i < 100; ++i) {
@@ -702,7 +703,7 @@ TYPED_TEST(MatTestT, ToQuaternionPostTranslation) {
     typedef filament::math::details::TQuaternion<TypeParam> QuatT;
 
     std::default_random_engine generator(112233); // NOLINT
-    std::uniform_real_distribution<TypeParam> distribution(-6.0 * 2.0*M_PI, 6.0 * 2.0*M_PI);
+    std::uniform_real_distribution<TypeParam> distribution(-6.0 * 2.0*F_PI, 6.0 * 2.0*F_PI);
     auto rand_gen = std::bind(distribution, generator);
 
     for (size_t i = 0; i < 100; ++i) {

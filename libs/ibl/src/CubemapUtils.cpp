@@ -75,8 +75,8 @@ void CubemapUtils::equirectangularToCubemap(JobSystem& js, Cubemap& dst, const I
     const size_t height = src.getHeight();
 
     auto toRectilinear = [width, height](float3 s) -> float2 {
-        float xf = std::atan2(s.x, s.z) * M_1_PI;   // range [-1.0, 1.0]
-        float yf = std::asin(s.y) * (2 * M_1_PI);   // range [-1.0, 1.0]
+        float xf = std::atan2(s.x, s.z) * F_1_PI;   // range [-1.0, 1.0]
+        float yf = std::asin(s.y) * (2 * F_1_PI);   // range [-1.0, 1.0]
         xf = (xf + 1.0f) * 0.5f * (width  - 1);        // range [0, width [
         yf = (1.0f - yf) * 0.5f * (height - 1);        // range [0, height[
         return float2(xf, yf);
@@ -140,8 +140,8 @@ void CubemapUtils::cubemapToEquirectangular(JobSystem& js, Image& dst, const Cub
                     const float2 u = hammersley(uint32_t(sample), 1.0f / numSamples);
                     float x = 2.0f * (i + u.x) / w - 1.0f;
                     float y = 1.0f - 2.0f * (j + u.y) / h;
-                    float theta = x * M_PI;
-                    float phi = y * M_PI * 0.5;
+                    float theta = x * F_PI;
+                    float phi = y * F_PI * 0.5;
                     float3 s = {
                             std::cos(phi) * std::sin(theta),
                             std::sin(phi),

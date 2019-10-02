@@ -24,6 +24,7 @@
 #include <math/mat4.h>
 #include <math/vec4.h>
 #include <math/vec3.h>
+#include <math/scalar.h>
 
 using namespace filament::math;
 
@@ -235,7 +236,7 @@ TEST_F(QuatTest, ArithmeticFunc) {
     EXPECT_DOUBLE_EQ(1, length(qn));
     EXPECT_DOUBLE_EQ(1, dot(qn, qn));
 
-    quat qr = quat::fromAxisAngle(double3(0, 0, 1), M_PI / 2);
+    quat qr = quat::fromAxisAngle(double3(0, 0, 1), F_PI / 2);
     EXPECT_EQ(mat4(qr).toQuaternion(), qr);
     EXPECT_EQ(1_i, mat4(1_i).toQuaternion());
     EXPECT_EQ(1_j, mat4(1_j).toQuaternion());
@@ -252,9 +253,9 @@ TEST_F(QuatTest, ArithmeticFunc) {
     EXPECT_NEAR(qq.w, q2.w, 1e-15);
 
     quat qa = quat::fromAxisAngle(double3(0, 0, 1), 0);
-    quat qb = quat::fromAxisAngle(double3(0, 0, 1), M_PI / 2);
+    quat qb = quat::fromAxisAngle(double3(0, 0, 1), F_PI / 2);
     quat qs = slerp(qa, qb, 0.5);
-    qr = quat::fromAxisAngle(double3(0, 0, 1), M_PI / 4);
+    qr = quat::fromAxisAngle(double3(0, 0, 1), F_PI / 4);
     EXPECT_DOUBLE_EQ(qr.x, qs.x);
     EXPECT_DOUBLE_EQ(qr.y, qs.y);
     EXPECT_DOUBLE_EQ(qr.z, qs.z);

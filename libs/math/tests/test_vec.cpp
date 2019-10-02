@@ -19,6 +19,7 @@
 #include <gtest/gtest.h>
 
 #include <math/vec4.h>
+#include <math/scalar.h>
 
 using namespace filament::math;
 
@@ -27,7 +28,7 @@ protected:
 };
 
 TEST_F(VecTest, Constexpr) {
-    constexpr float a = M_PI;
+    constexpr float a = F_PI;
     constexpr float2 Z2{};
     constexpr float2 A2 = a;
     constexpr float2 B2 = { a, a };
