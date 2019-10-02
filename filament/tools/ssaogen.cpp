@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include <math/scalar.h>
 #include <math/vec3.h>
 
 #include <random>
@@ -21,13 +22,11 @@
 
 using namespace filament::math;
 
-
 static float lerp(float a, float b, float f) {
     return a + f * (b - a);
 }
 
 int main(int argc, char** argv) {
-
     std::uniform_real_distribution<float> random(0.0, 1.0);
     std::default_random_engine generator;
 
@@ -44,11 +43,11 @@ int main(int argc, char** argv) {
         };
         d = normalize(d);
         d = d * r * lerp(0.1f, 1.0f, s * s);
-        if (!(i & 1)) {
+        if (!(i & 1u)) {
             std::cout << "    ";
         }
         std::cout << " vec3(" << d.x << ", " << d.y << ", " << d.z << "),";
-        if (i & 1) {
+        if (i & 1u) {
             std::cout << std::endl;
         }
     }
@@ -65,11 +64,11 @@ int main(int argc, char** argv) {
                 random(generator) * 2 - 1,
         };
         d = normalize(d);
-        if ((i & 0x1) == 0) {
+        if ((i & 0x1u) == 0) {
             std::cout << "    ";
         }
         std::cout << " vec3(" << d.x << ", " << d.y << ", " << d.z << "),";
-        if ((i & 0x1) == 0x1) {
+        if ((i & 0x1u) == 0x1) {
             std::cout << std::endl;
         }
     }
@@ -105,9 +104,9 @@ int main(int argc, char** argv) {
      * Unfortunately, because angle depends on radius^2, it's not possible to separate phi and i,
      * as the final expression is:
      *
-     *   g(phi) = phi^2   * 2.0 * M_PI * kSpiralTurns * K
-     *          + phi     * 2.0 * M_PI * (1.0 + kSpiralTurns * K)
-     *          + i * phi * 4.0 * M_PI * kSpiralTurns * K;   // K is a constant
+     *   g(phi) = phi^2   * 2.0 * F_PI * kSpiralTurns * K
+     *          + phi     * 2.0 * F_PI * (1.0 + kSpiralTurns * K)
+     *          + i * phi * 4.0 * F_PI * kSpiralTurns * K;   // K is a constant
      *
      * g(phi) has a term in "i * phi" which links both expressions.
      *
@@ -122,12 +121,12 @@ int main(int argc, char** argv) {
     const float dalpha = 1.0f / (spiralSampleCount - 0.5f);
     for (size_t i = 0; i < spiralSampleCount; i++) {
         float radius = (i + 0.5f) * dalpha;
-        float angle = radius * radius * (2 * M_PI * kSpiralTurns);
-        if ((i & 0x1) == 0) {
+        float angle = float(radius * radius * (2 * F_PI * kSpiralTurns));
+        if ((i & 0x1u) == 0) {
             std::cout << "    ";
         }
         std::cout << " vec3(" << std::cos(angle) << ", " << std::sin(angle) << ", " << radius << "),";
-        if ((i & 0x1) == 0x1) {
+        if ((i & 0x1u) == 0x1) {
             std::cout << std::endl;
         }
     }
@@ -140,15 +139,15 @@ int main(int argc, char** argv) {
     for (size_t i = 0; i < trigNoiseSampleCount; i++) {
         float phi = random(generator);
         float dr = phi * dalpha;
-        float dphi =    2.0 * M_PI * kSpiralTurns * phi * phi * dalpha * dalpha
-                + phi * 2.0 * M_PI * (1.0 + kSpiralTurns * dalpha * dalpha)
-                + phi * 4.0 * M_PI * kSpiralTurns * dalpha * dalpha;
+        float dphi = float(2.0 * F_PI * kSpiralTurns * phi * phi * dalpha * dalpha
+                   + phi * 2.0 * F_PI * (1.0 + kSpiralTurns * dalpha * dalpha)
+                   + phi * 4.0 * F_PI * kSpiralTurns * dalpha * dalpha);
         float3 d = { std::cos(dphi), std::sin(dphi), dr };
-        if ((i & 0x1) == 0) {
+        if ((i & 0x1u) == 0) {
             std::cout << "    ";
         }
         std::cout << " vec3(" << d.x << ", " << d.y << ", " << d.z << "),";
-        if ((i & 0x1) == 0x1) {
+        if ((i & 0x1u) == 0x1) {
             std::cout << std::endl;
         }
     }
@@ -171,15 +170,15 @@ int main(int argc, char** argv) {
         // Cut-off frequency definition:
         //      fc = 1.1774 / (2pi * q)       (half power frequency or 0.707 amplitude)
 
-        float q = (gaussianWidth + 1) / 6.0;  // ~1.667 for 9 taps
-        float g = (1.0 / (std::sqrt(2.0 * M_PI) * q)) * std::exp(-(x * x) / (2.0 * q * q));
+        float q = (gaussianWidth + 1.0f) / 6.0f;  // ~1.667 for 9 taps
+        float g = (1.0 / (std::sqrt(2.0 * F_PI) * q)) * std::exp(-(x * x) / (2.0 * q * q));
         weightSum += g * (i == 0 ? 1.0f : 2.0f);
 
-        if ((i & 0x7) == 0) {
+        if ((i & 0x7u) == 0) {
             std::cout << "    ";
         }
         std::cout << g << ", ";
-        if ((i & 0x7) == 0x7) {
+        if ((i & 0x7u) == 0x7) {
             std::cout << std::endl;
         }
     }

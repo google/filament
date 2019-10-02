@@ -18,9 +18,11 @@
 #define TNT_MATH_FAST_H
 
 #include <cmath>
-#include <stdint.h>
+#include <cstdint>
 #include <type_traits>
+
 #include <math/compiler.h>
+#include <math/scalar.h>
 
 #ifdef __ARM_NEON
 #include <arm_neon.h>
@@ -35,7 +37,7 @@ namespace fast {
 // x between -pi and pi
 template<typename T, typename = std::enable_if_t<std::is_floating_point<T>::value>>
 constexpr T MATH_PURE cos(T x) noexcept {
-    x *= T(M_1_PI / 2);
+    x *= T(F_1_PI / 2);
     x -= T(0.25) + std::floor(x + T(0.25));
     x *= T(16.0) * std::abs(x) - T(8.0);
     x += T(0.225) * x * (std::abs(x) - T(1.0));
@@ -47,7 +49,7 @@ constexpr T MATH_PURE cos(T x) noexcept {
 // x between -pi and pi
 template<typename T, typename = std::enable_if_t<std::is_floating_point<T>::value>>
 constexpr T MATH_PURE sin(T x) noexcept {
-    return filament::math::fast::cos<T>(x - T(M_PI_2));
+    return filament::math::fast::cos<T>(x - T(F_PI_2));
 }
 
 constexpr inline float MATH_PURE ilog2(float x) noexcept {

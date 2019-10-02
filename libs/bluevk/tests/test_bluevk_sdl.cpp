@@ -27,7 +27,12 @@
 #include "SDL_vulkan.h"
 
 #include <bluevk/BlueVK.h>
+
 #include <utils/Log.h>
+
+#include <math/scalar.h>
+
+using namespace filament::math;
 
 struct VulkanDriver {
     VkInstance instance;
@@ -720,8 +725,8 @@ static SDL_bool render() {
     }
     currentTime = (double) SDL_GetPerformanceCounter() / SDL_GetPerformanceFrequency();
     clearColor.float32[0] = (float)(0.5 + 0.5 * SDL_sin(SPEED * currentTime));
-    clearColor.float32[1] = (float)(0.5 + 0.5 * SDL_sin(SPEED * currentTime + M_PI * 2 / 3));
-    clearColor.float32[2] = (float)(0.5 + 0.5 * SDL_sin(SPEED * currentTime + M_PI * 4 / 3));
+    clearColor.float32[1] = (float)(0.5 + 0.5 * SDL_sin(SPEED * currentTime + F_PI * 2 / 3));
+    clearColor.float32[2] = (float)(0.5 + 0.5 * SDL_sin(SPEED * currentTime + F_PI * 4 / 3));
     clearColor.float32[3] = 1;
     rerecordCommandBuffer(frameIndex, &clearColor);
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;

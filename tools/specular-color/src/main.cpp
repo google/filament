@@ -790,7 +790,7 @@ static Reflectance computeColor(const std::vector<Sample>& samples) {
 
     // We default to 81.7° but this can be specified by the user, so we use the
     // notation theta82/f81 in the code
-    float cosTheta82 = std::cos(g_incidenceAngle * M_PI / 180.0f);
+    float cosTheta82 = std::cos(g_incidenceAngle * F_PI / 180.0f);
 
     // We need to evaluate the Fresnel equation at each spectral sample of
     // complex IOR over the visible spectrum. For each spectral sample, we
@@ -805,7 +805,7 @@ static Reflectance computeColor(const std::vector<Sample>& samples) {
     // yields a linear sRGB color.
     for (size_t i = 0; i < CIE_XYZ_COUNT; i++) {
         // Current wavelength
-        float w = CIE_XYZ_START + i;
+        float w = float(CIE_XYZ_START + i);
 
         // Find most appropriate CIE XYZ sample for the wavelength
         auto sample = findSample(samples, w);

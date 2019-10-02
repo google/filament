@@ -70,7 +70,7 @@ static constexpr float factorial(size_t n, size_t d = 1) {
 float CubemapSH::Kml(ssize_t m, size_t l) {
     m = m < 0 ? -m : m;  // abs() is not constexpr
     const float K = (2 * l + 1) * factorial(size_t(l - m), size_t(l + m));
-    return std::sqrt(K) * (M_2_SQRTPI * 0.25);
+    return std::sqrt(K) * (F_2_SQRTPI * 0.25);
 }
 
 std::vector<float> CubemapSH::Ki(size_t numBands) {
@@ -80,7 +80,7 @@ std::vector<float> CubemapSH::Ki(size_t numBands) {
         K[SHindex(0, l)] = Kml(0, l);
         for (size_t m = 1; m <= l; m++) {
             K[SHindex(m, l)] =
-            K[SHindex(-m, l)] = M_SQRT2 * Kml(m, l);
+            K[SHindex(-m, l)] = F_SQRT2 * Kml(m, l);
         }
     }
     return K;
@@ -89,16 +89,16 @@ std::vector<float> CubemapSH::Ki(size_t numBands) {
 // < cos(theta) > SH coefficients pre-multiplied by 1 / K(0,l)
 constexpr float CubemapSH::computeTruncatedCosSh(size_t l) {
     if (l == 0) {
-        return M_PI;
+        return F_PI;
     } else if (l == 1) {
-        return 2 * M_PI / 3;
+        return 2 * F_PI / 3;
     } else if (l & 1u) {
         return 0;
     }
     const size_t l_2 = l / 2;
     float A0 = ((l_2 & 1u) ? 1.0f : -1.0f) / ((l + 2) * (l - 1));
     float A1 = factorial(l, l_2) / (factorial(l_2) * (1 << l));
-    return 2 * M_PI * A0 * A1;
+    return 2 * F_PI * A0 * A1;
 }
 
 /*
@@ -244,7 +244,7 @@ float3 CubemapSH::rotateShericalHarmonicBand1(float3 band1, mat3f const& M) {
 
 CubemapSH::float5 CubemapSH::rotateShericalHarmonicBand2(float5 const& band2, mat3f const& M) {
     constexpr float M_SQRT_3  = 1.7320508076f;
-    constexpr float n = M_SQRT1_2;
+    constexpr float n = F_SQRT1_2;
 
     //  Below we precompute (with help of Mathematica):
     //    constexpr float3 N0{ 1, 0, 0 };
@@ -319,7 +319,7 @@ float CubemapSH::sincWindow(size_t l, float w) {
 
     // we use a sinc window scaled to the desired window size in bands units
     // a sinc window only has zonal harmonics
-    float x = (float(M_PI) * l) / w;
+    float x = (float(F_PI) * l) / w;
     x = std::sin(x) / x;
 
     // The convolution of a SH function f and a ZH function h is just the product of both
@@ -437,7 +437,7 @@ void CubemapSH::windowSH(std::unique_ptr<float3[]>& sh, size_t numBands, float c
             };
 
             float dz;
-            float z = -M_SQRT1_2;   // we start guessing at the min of |m|=1 function
+            float z = -F_SQRT1_2;   // we start guessing at the min of |m|=1 function
             do {
                 minimum = func(z); // evaluate our function
                 dz = increment(z); // refine our guess by this amount
@@ -650,7 +650,7 @@ void CubemapSH::preprocessSHForShader(std::unique_ptr<filament::math::float3[]>&
     };
 
     for (size_t i = 0; i < numCoefs; i++) {
-        SH[i] *= A[i] * M_1_PI;
+        SH[i] *= A[i] * F_1_PI;
     }
 }
 
@@ -710,23 +710,23 @@ float UTILS_UNUSED CubemapSH::Legendre(ssize_t l, ssize_t m, float x) {
 // Only used for debugging
 float UTILS_UNUSED CubemapSH::TSH(int l, int m, const float3& d) {
     if (l==0 && m==0) {
-        return 1 / (2*sqrt(M_PI));
+        return 1 / (2*sqrt(F_PI));
     } else if (l==1 && m==-1) {
-        return -(sqrt(3)*d.y)/(2*sqrt(M_PI));
+        return -(sqrt(3)*d.y)/(2*sqrt(F_PI));
     } else if (l==1 && m==0) {
-        return  (sqrt(3)*d.z)/(2*sqrt(M_PI));
+        return  (sqrt(3)*d.z)/(2*sqrt(F_PI));
     } else if (l==1 && m==1) {
-        return -(sqrt(3)*d.x)/(2*sqrt(M_PI));
+        return -(sqrt(3)*d.x)/(2*sqrt(F_PI));
     } else if (l==2 && m==-2) {
-        return (sqrt(15)*d.y*d.x)/(2*sqrt(M_PI));
+        return (sqrt(15)*d.y*d.x)/(2*sqrt(F_PI));
     } else if (l==2 && m==-1) {
-        return -(sqrt(15)*d.y*d.z)/(2*sqrt(M_PI));
+        return -(sqrt(15)*d.y*d.z)/(2*sqrt(F_PI));
     } else if (l==2 && m==0) {
-        return (sqrt(5)*(3*d.z*d.z-1))/(4*sqrt(M_PI));
+        return (sqrt(5)*(3*d.z*d.z-1))/(4*sqrt(F_PI));
     } else if (l==2 && m==1) {
-        return -(sqrt(15)*d.z*d.x)/(2*sqrt(M_PI));
+        return -(sqrt(15)*d.z*d.x)/(2*sqrt(F_PI));
     } else if (l==2 && m==2) {
-        return (sqrt(15)*(d.x*d.x - d.y*d.y))/(4*sqrt(M_PI));
+        return (sqrt(15)*(d.x*d.x - d.y*d.y))/(4*sqrt(F_PI));
     }
     return 0;
 }
@@ -736,31 +736,31 @@ void UTILS_UNUSED CubemapSH::printShBase(std::ostream& out, int l, int m) {
         const char* d = nullptr;
         float c = 0;
         if (l==0 && m==0) {
-            c = M_2_SQRTPI * 0.25;
+            c = F_2_SQRTPI * 0.25;
             d = "               ";
         } else if (l==1 && m==-1) {
-            c = -M_2_SQRTPI * sqrt(3) * 0.25;
+            c = -F_2_SQRTPI * sqrt(3) * 0.25;
             d = " * y;          ";
         } else if (l==1 && m==0) {
-            c = M_2_SQRTPI * sqrt(3) * 0.25;
+            c = F_2_SQRTPI * sqrt(3) * 0.25;
             d = " * z;          ";
         } else if (l==1 && m==1) {
-            c = -M_2_SQRTPI * sqrt(3) * 0.25;
+            c = -F_2_SQRTPI * sqrt(3) * 0.25;
             d = " * x;          ";
         } else if (l==2 && m==-2) {
-            c = M_2_SQRTPI * sqrt(15) * 0.25;
+            c = F_2_SQRTPI * sqrt(15) * 0.25;
             d = " * y*x;        ";
         } else if (l==2 && m==-1) {
-            c = -M_2_SQRTPI * sqrt(15) * 0.25;
+            c = -F_2_SQRTPI * sqrt(15) * 0.25;
             d = " * y*z;        ";
         } else if (l==2 && m==0) {
-            c =  M_2_SQRTPI * sqrt(5) * 0.125;
+            c =  F_2_SQRTPI * sqrt(5) * 0.125;
             d = " * (3*z*z -1); ";
         } else if (l==2 && m==1) {
-            c = -M_2_SQRTPI * sqrt(15) * 0.25;
+            c = -F_2_SQRTPI * sqrt(15) * 0.25;
             d = " * z*x;        ";
         } else if (l==2 && m==2) {
-            c = M_2_SQRTPI * sqrt(15) * 0.125;
+            c = F_2_SQRTPI * sqrt(15) * 0.125;
             d = " * (x*x - y*y);";
         }
         out << "SHb[" << SHindex(m, size_t(l)) << "] = ";

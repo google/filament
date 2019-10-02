@@ -21,11 +21,10 @@
 
 #include "FilamentAPI-impl.h"
 
-#include <utils/Panic.h>
-
 #include <backend/DriverEnums.h>
 #include <filament/IndirectLight.h>
-#include <utils/Log.h>
+
+#include <utils/Panic.h>
 
 #include <math/scalar.h>
 
@@ -90,21 +89,21 @@ IndirectLight::Builder& IndirectLight::Builder::radiance(uint8_t bands, float3 c
     // To save math in the shader, we pre-multiply our SH coefficient by the A[i] factors.
     // Additionally, we include the lambertian diffuse BRDF 1/pi and truncated cos.
 
-    constexpr float M_SQRT_PI = 1.7724538509f;
-    constexpr float M_SQRT_3  = 1.7320508076f;
-    constexpr float M_SQRT_5  = 2.2360679775f;
-    constexpr float M_SQRT_15 = 3.8729833462f;
-    constexpr float C[] = { M_PI, 2.0943951f, 0.785398f }; // <cos>
+    constexpr float F_SQRT_PI = 1.7724538509f;
+    constexpr float F_SQRT_3  = 1.7320508076f;
+    constexpr float F_SQRT_5  = 2.2360679775f;
+    constexpr float F_SQRT_15 = 3.8729833462f;
+    constexpr float C[] = { F_PI, 2.0943951f, 0.785398f }; // <cos>
     constexpr float A[] = {
-                  1.0f / (2.0f * M_SQRT_PI) * C[0] * M_1_PI,    // 0  0
-            -M_SQRT_3  / (2.0f * M_SQRT_PI) * C[1] * M_1_PI,    // 1 -1
-             M_SQRT_3  / (2.0f * M_SQRT_PI) * C[1] * M_1_PI,    // 1  0
-            -M_SQRT_3  / (2.0f * M_SQRT_PI) * C[1] * M_1_PI,    // 1  1
-             M_SQRT_15 / (2.0f * M_SQRT_PI) * C[2] * M_1_PI,    // 2 -2
-            -M_SQRT_15 / (2.0f * M_SQRT_PI) * C[2] * M_1_PI,    // 3 -1
-             M_SQRT_5  / (4.0f * M_SQRT_PI) * C[2] * M_1_PI,    // 3  0
-            -M_SQRT_15 / (2.0f * M_SQRT_PI) * C[2] * M_1_PI,    // 3  1
-             M_SQRT_15 / (4.0f * M_SQRT_PI) * C[2] * M_1_PI     // 3  2
+                  1.0f / (2.0f * F_SQRT_PI) * C[0] * F_1_PI,    // 0  0
+            -F_SQRT_3  / (2.0f * F_SQRT_PI) * C[1] * F_1_PI,    // 1 -1
+             F_SQRT_3  / (2.0f * F_SQRT_PI) * C[1] * F_1_PI,    // 1  0
+            -F_SQRT_3  / (2.0f * F_SQRT_PI) * C[1] * F_1_PI,    // 1  1
+             F_SQRT_15 / (2.0f * F_SQRT_PI) * C[2] * F_1_PI,    // 2 -2
+            -F_SQRT_15 / (2.0f * F_SQRT_PI) * C[2] * F_1_PI,    // 3 -1
+             F_SQRT_5  / (4.0f * F_SQRT_PI) * C[2] * F_1_PI,    // 3  0
+            -F_SQRT_15 / (2.0f * F_SQRT_PI) * C[2] * F_1_PI,    // 3  1
+             F_SQRT_15 / (4.0f * F_SQRT_PI) * C[2] * F_1_PI     // 3  2
     };
 
     // this is a way to "document" the actual value of these coefficients and at the same
@@ -251,12 +250,12 @@ float4 FIndirectLight::getColorEstimate(float3 direction) const noexcept {
 
     // The scale factor below is explained in the gamasutra article above, however it seems
     // to cause the intensity of the light to be too low.
-    //      constexpr float c = (16.0f * M_PI / 17.0f);
-    //      constexpr float LdSquared = (9.0f / (4.0f * M_PI)) * c * c;
+    //      constexpr float c = (16.0f * F_PI / 17.0f);
+    //      constexpr float LdSquared = (9.0f / (4.0f * F_PI)) * c * c;
     //      LdDotLe *= c / LdSquared; // Note the final coefficient is 17/36
 
     // We multiply by PI because our SH coefficients contain the 1/PI lambertian BRDF.
-    LdDotLe *= M_PI;
+    LdDotLe *= F_PI;
 
     // Make sure we don't have negative intensities
     LdDotLe = max(LdDotLe, float3{0});

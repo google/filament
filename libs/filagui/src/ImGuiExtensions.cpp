@@ -252,8 +252,8 @@ void ArrowWidget::createArrow() {
 
     float x0, x1, y0, y1, z0, z1, a0, a1, nx, nn;
     for (int i = 0; i < SUBDIV; ++i) {
-        a0 = 2.0f*float(M_PI)*(float(i)) / SUBDIV;
-        a1 = 2.0f*float(M_PI)*(float(i + 1)) / SUBDIV;
+        a0 = 2.0f*float(F_PI)*(float(i)) / SUBDIV;
+        a1 = 2.0f*float(F_PI)*(float(i + 1)) / SUBDIV;
         x0 = ARROW_BGN;
         x1 = ARROW_END - CONE_LENGTH;
         y0 = cosf(a0);
