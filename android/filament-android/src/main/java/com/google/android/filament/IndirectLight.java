@@ -311,10 +311,9 @@ public class IndirectLight {
         /**
          * Creates the IndirectLight object and returns a pointer to it.
          *
-         * @param engine Reference to the filament::Engine to associate this IndirectLight with.
+         * @param engine The {@link Engine} to associate this <code>IndirectLight</code> with.
          *
-         * @return pointer to the newly created object or nullptr if exceptions are disabled and
-         *         an error occurred.
+         * @return A newly created <code>IndirectLight</code>
          *
          * @exception IllegalStateException if a parameter to a builder function was invalid.
          */
