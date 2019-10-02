@@ -616,7 +616,7 @@ void FRenderer::readPixels(uint32_t xoffset, uint32_t yoffset, uint32_t width, u
 }
 
 Handle<HwRenderTarget> FRenderer::getRenderTarget(FView& view) const noexcept {
-    Handle<HwRenderTarget> viewRenderTarget = view.getRenderTarget();
+    Handle<HwRenderTarget> viewRenderTarget = view.getRenderTargetHandle();
     return viewRenderTarget ? viewRenderTarget : mRenderTarget;
 }
 
