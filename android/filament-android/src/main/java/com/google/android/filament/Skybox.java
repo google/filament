@@ -56,7 +56,7 @@ public class Skybox {
 
 
     /**
-     * Use {@link #Builder} to construct a <code>Skybox</code> object instance.
+     * Use <code>Builder</code> to construct a <code>Skybox</code> object instance.
      */
     public static class Builder {
         @SuppressWarnings({"FieldCanBeLocal", "UnusedDeclaration"}) // Keep to finalize native resources
@@ -64,7 +64,7 @@ public class Skybox {
         private final long mNativeBuilder;
 
         /**
-         * Use {@link #Builder} to construct a <code>Skybox</code> object instance.
+         * Use <code>Builder</code> to construct a <code>Skybox</code> object instance.
          */
         public Builder() {
             mNativeBuilder = nCreateBuilder();

@@ -754,7 +754,7 @@ public class Texture {
      * @exception BufferOverflowException if the specified parameters would result in reading
      * outside of <code>buffer</code>.
      *
-     * @see Builder#sampler(Sampler)
+     * @see Builder#sampler
      * @see PixelBufferDescriptor
      */
     public void setImage(@NonNull Engine engine,
@@ -787,7 +787,7 @@ public class Texture {
      * @exception BufferOverflowException if the specified parameters would result in reading
      * outside of <code>buffer</code>.
      *
-     * @see Builder#sampler(Sampler)
+     * @see Builder#sampler
      * @see PixelBufferDescriptor
      */
     public void setImage(@NonNull Engine engine,
@@ -840,7 +840,7 @@ public class Texture {
      * @exception BufferOverflowException if the specified parameters would result in reading
      * outside of <code>buffer</code>.
      *
-     * @see Builder#sampler(Sampler)
+     * @see Builder#sampler
      * @see PixelBufferDescriptor
      */
     public void setImage(@NonNull Engine engine, @IntRange(from = 0) int level,
@@ -888,7 +888,7 @@ public class Texture {
      *                          <li><code>kCVPixelFormatType_420YpCbCr8BiPlanarFullRange</code></li>
      *                   </ul></p>
      *
-     * @see Builder#sampler(Sampler)
+     * @see Builder#sampler
      */
     public void setExternalImage(@NonNull Engine engine, long eglImage) {
         nSetExternalImage(getNativeObject(), engine.getNativeObject(), eglImage);
@@ -916,7 +916,7 @@ public class Texture {
      *                                  {@link Sampler#SAMPLER_EXTERNAL SAMPLER_EXTERNAL}
      *
      * @see Stream
-     * @see Builder#sampler(Sampler)
+     * @see Builder#sampler
      *
      */
     public void setExternalStream(@NonNull Engine engine, @NonNull Stream stream) {
