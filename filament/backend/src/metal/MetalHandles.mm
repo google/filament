@@ -198,12 +198,8 @@ void MetalRenderPrimitive::setBuffers(MetalVertexBuffer* vertexBuffer, MetalInde
     uint32_t bufferIndex = 0;
     for (uint32_t attributeIndex = 0; attributeIndex < attributeCount; attributeIndex++) {
         if (!(enabledAttributes & (1U << attributeIndex))) {
-            // TODO: all vertex attributes are vec4 (vector of floats), except for
-            // mesh_bone_indices, which is a uvec4 (vector of unsigned integers).
-            // We must use the correct format, but ideally the Metal driver should not need to know
-            // this.
-            const auto boneIndicesLocation = 5; // VertexAttribute::BONE_INDICES
-            const MTLVertexFormat format = attributeIndex == boneIndicesLocation ?
+            const uint8_t flags = vertexBuffer->attributes[attributeIndex].flags;
+            const MTLVertexFormat format = (flags & Attribute::FLAG_INTEGER_TARGET) ?
                     MTLVertexFormatUInt4 : MTLVertexFormatFloat4;
 
             // If the attribute is not enabled, bind it to the zero buffer. It's a Metal error for a

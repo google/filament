@@ -597,12 +597,9 @@ void VulkanRenderPrimitive::setBuffers(VulkanVertexBuffer* vertexBuffer,
         // be consumed by the shader.
         if (!(enabledAttributes & (1U << attribIndex))) {
 
-            // TODO: all vertex attributes are floats, except for mesh_bone_indices, which are
-            // unsigned integers. Ideally the Vulkan backend would not need to know about this.
-            const uint32_t kBoneIndicesLocation = 5; // VertexAttribute::BONE_INDICES
-            vkformat = attribIndex == kBoneIndicesLocation ? VK_FORMAT_R8G8B8A8_UINT : vkformat;
+            const bool isInteger = attrib.flags & Attribute::FLAG_INTEGER_TARGET;
+            vkformat = isInteger ? VK_FORMAT_R8G8B8A8_UINT : vkformat;
 
-            // TODO: avoid using dummy buffers by adding the concept of frozen renderables.
             if (UTILS_LIKELY(enabledAttributes & 1)) {
                 attrib = vertexBuffer->attributes[0];
             } else {
