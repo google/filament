@@ -69,13 +69,13 @@ public:
     inline constexpr size_type size() const { return SIZE; }
 
     // array access
-    inline constexpr T const& operator[](size_t i) const {
+    inline constexpr T const& operator[](size_t i) const noexcept {
         // only possible in C++0x14 with constexpr
         assert(i < SIZE);
         return v[i];
     }
 
-    inline constexpr T& operator[](size_t i) {
+    inline constexpr T& operator[](size_t i) noexcept {
         assert(i < SIZE);
         return v[i];
     }
@@ -83,26 +83,26 @@ public:
     // constructors
 
     // default constructor
-    MATH_DEFAULT_CTOR_CONSTEXPR TVec3() MATH_DEFAULT_CTOR
+    MATH_DEFAULT_CTOR_CONSTEXPR TVec3() noexcept MATH_DEFAULT_CTOR
 
     // handles implicit conversion to a tvec3. must not be explicit.
     template<typename A, typename = enable_if_arithmetic_t<A>>
-    constexpr TVec3(A v) : v{ T(v), T(v), T(v) } {}
+    constexpr TVec3(A v) noexcept : v{ T(v), T(v), T(v) } {}
 
     template<typename A, typename B, typename C,
             typename = enable_if_arithmetic_t<A, B, C>>
-    constexpr TVec3(A x, B y, C z) : v{ T(x), T(y), T(z) } {}
+    constexpr TVec3(A x, B y, C z) noexcept : v{ T(x), T(y), T(z) } {}
 
     template<typename A, typename B, typename = enable_if_arithmetic_t<A, B>>
-    constexpr TVec3(const TVec2<A>& v, B z) : v{ T(v[0]), T(v[1]), T(z) } {}
+    constexpr TVec3(const TVec2<A>& v, B z) noexcept : v{ T(v[0]), T(v[1]), T(z) } {}
 
     template<typename A, typename = enable_if_arithmetic_t<A>>
-    constexpr TVec3(const TVec3<A>& v) : v{ T(v[0]), T(v[1]), T(v[2]) } {}
+    constexpr TVec3(const TVec3<A>& v) noexcept : v{ T(v[0]), T(v[1]), T(v[2]) } {}
 
     // cross product works only on vectors of size 3
     template<typename U>
     friend inline constexpr
-    TVec3<arithmetic_result_t<T, U>> cross(const TVec3& u, const TVec3<U>& v) {
+    TVec3<arithmetic_result_t<T, U>> cross(const TVec3& u, const TVec3<U>& v) noexcept {
         return {
                 u[1] * v[2] - u[2] * v[1],
                 u[2] * v[0] - u[0] * v[2],

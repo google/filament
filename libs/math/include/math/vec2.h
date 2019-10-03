@@ -56,13 +56,13 @@ public:
     inline constexpr size_type size() const { return SIZE; }
 
     // array access
-    inline constexpr T const& operator[](size_t i) const {
+    inline constexpr T const& operator[](size_t i) const noexcept {
         // only possible in C++0x14 with constexpr
         assert(i < SIZE);
         return v[i];
     }
 
-    inline constexpr T& operator[](size_t i) {
+    inline constexpr T& operator[](size_t i) noexcept {
         assert(i < SIZE);
         return v[i];
     }
@@ -74,18 +74,18 @@ public:
 
     // handles implicit conversion to a tvec4. must not be explicit.
     template<typename A, typename = enable_if_arithmetic_t<A>>
-    constexpr TVec2(A v) : v{ T(v), T(v) } {}
+    constexpr TVec2(A v) noexcept : v{ T(v), T(v) } {}
 
     template<typename A, typename B, typename = enable_if_arithmetic_t<A, B>>
-    constexpr TVec2(A x, B y) : v{ T(x), T(y) } {}
+    constexpr TVec2(A x, B y) noexcept : v{ T(x), T(y) } {}
 
     template<typename A, typename = enable_if_arithmetic_t<A>>
-    constexpr TVec2(const TVec2<A>& v) : v{ T(v[0]), T(v[1]) } {}
+    constexpr TVec2(const TVec2<A>& v) noexcept : v{ T(v[0]), T(v[1]) } {}
 
     // cross product works only on vectors of size 2 or 3
     template<typename U>
     friend inline constexpr
-    arithmetic_result_t<T, U> cross(const TVec2& u, const TVec2<U>& v) {
+    arithmetic_result_t<T, U> cross(const TVec2& u, const TVec2<U>& v) noexcept {
         return u[0] * v[1] - u[1] * v[0];
     }
 };

@@ -69,13 +69,13 @@ public:
     inline constexpr size_type size() const { return SIZE; }
 
     // array access
-    inline constexpr T const& operator[](size_t i) const {
+    inline constexpr T const& operator[](size_t i) const noexcept {
         // only possible in C++0x14 with constexpr
         assert(i < SIZE);
         return v[i];
     }
 
-    inline constexpr T& operator[](size_t i) {
+    inline constexpr T& operator[](size_t i) noexcept {
         assert(i < SIZE);
         return v[i];
     }
@@ -83,29 +83,29 @@ public:
     // constructors
 
     // default constructor
-    MATH_DEFAULT_CTOR_CONSTEXPR TVec4() MATH_DEFAULT_CTOR
+    MATH_DEFAULT_CTOR_CONSTEXPR TVec4() noexcept MATH_DEFAULT_CTOR
 
     // handles implicit conversion to a tvec4. must not be explicit.
     template<typename A, typename = enable_if_arithmetic_t<A>>
-    constexpr TVec4(A v) : v{ T(v), T(v), T(v), T(v) } {}
+    constexpr TVec4(A v) noexcept : v{ T(v), T(v), T(v), T(v) } {}
 
     template<typename A, typename B, typename C, typename D,
             typename = enable_if_arithmetic_t<A, B, C, D>>
-    constexpr TVec4(A x, B y, C z, D w) : v{ T(x), T(y), T(z), T(w) } {}
+    constexpr TVec4(A x, B y, C z, D w) noexcept : v{ T(x), T(y), T(z), T(w) } {}
 
     template<typename A, typename B, typename C,
             typename = enable_if_arithmetic_t<A, B, C>>
-    constexpr TVec4(const TVec2<A>& v, B z, C w) : v{ T(v[0]), T(v[1]), T(z), T(w) } {}
+    constexpr TVec4(const TVec2<A>& v, B z, C w) noexcept : v{ T(v[0]), T(v[1]), T(z), T(w) } {}
 
     template<typename A, typename B, typename = enable_if_arithmetic_t<A, B>>
-    constexpr TVec4(const TVec2<A>& v, const TVec2<B>& w) : v{
+    constexpr TVec4(const TVec2<A>& v, const TVec2<B>& w) noexcept : v{
             T(v[0]), T(v[1]), T(w[0]), T(w[1]) } {}
 
     template<typename A, typename B, typename = enable_if_arithmetic_t<A, B>>
-    constexpr TVec4(const TVec3<A>& v, B w) : v{ T(v[0]), T(v[1]), T(v[2]), T(w) } {}
+    constexpr TVec4(const TVec3<A>& v, B w) noexcept : v{ T(v[0]), T(v[1]), T(v[2]), T(w) } {}
 
     template<typename A, typename = enable_if_arithmetic_t<A>>
-    constexpr TVec4(const TVec4<A>& v) : v{ T(v[0]), T(v[1]), T(v[2]), T(v[3]) } {}
+    constexpr TVec4(const TVec4<A>& v) noexcept : v{ T(v[0]), T(v[1]), T(v[2]), T(v[3]) } {}
 };
 
 }  // namespace details

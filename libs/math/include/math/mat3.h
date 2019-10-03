@@ -113,13 +113,13 @@ private:
 
 public:
     // array access
-    inline constexpr col_type const& operator[](size_t column) const {
+    inline constexpr col_type const& operator[](size_t column) const noexcept {
         // only possible in C++0x14 with constexpr
         assert(column < NUM_COLS);
         return m_value[column];
     }
 
-    inline constexpr col_type& operator[](size_t column) {
+    inline constexpr col_type& operator[](size_t column) noexcept {
         assert(column < NUM_COLS);
         return m_value[column];
     }
@@ -131,7 +131,7 @@ public:
     /**
      * leaves object uninitialized. use with caution.
      */
-    constexpr explicit TMat33(no_init) {}
+    constexpr explicit TMat33(no_init) noexcept {}
 
 
     /**
@@ -147,7 +147,7 @@ public:
      *      \right)
      *      \f$
      */
-    constexpr TMat33();
+    constexpr TMat33() noexcept;
 
     /**
      * initialize to Identity*scalar.
@@ -163,7 +163,7 @@ public:
      *      \f$
      */
     template<typename U>
-    constexpr explicit TMat33(U v);
+    constexpr explicit TMat33(U v) noexcept;
 
     /**
      * sets the diagonal to a vector.
@@ -179,13 +179,13 @@ public:
      *      \f$
      */
     template<typename U>
-    constexpr explicit TMat33(const TVec3<U>& v);
+    constexpr explicit TMat33(const TVec3<U>& v) noexcept;
 
     /**
      * construct from another matrix of the same size
      */
     template<typename U>
-    constexpr explicit TMat33(const TMat33<U>& rhs);
+    constexpr explicit TMat33(const TMat33<U>& rhs) noexcept;
 
     /**
      * construct from 3 column vectors.
@@ -199,7 +199,7 @@ public:
      *      \f$
      */
     template<typename A, typename B, typename C>
-    constexpr TMat33(const TVec3<A>& v0, const TVec3<B>& v1, const TVec3<C>& v2);
+    constexpr TMat33(const TVec3<A>& v0, const TVec3<B>& v1, const TVec3<C>& v2) noexcept;
 
     /** construct from 9 elements in column-major form.
      *
@@ -219,7 +219,7 @@ public:
             typename G, typename H, typename I>
     constexpr explicit TMat33(A m00, B m01, C m02,
             D m10, E m11, F m12,
-            G m20, H m21, I m22);
+            G m20, H m21, I m22) noexcept;
 
 
     struct row_major_init {
@@ -239,19 +239,19 @@ public:
         TMat33 m;
     };
 
-    constexpr explicit TMat33(row_major_init c) : TMat33(std::move(c.m)) {}
+    constexpr explicit TMat33(row_major_init c) noexcept : TMat33(std::move(c.m)) {}
 
     /**
      * construct from a quaternion
      */
     template<typename U>
-    constexpr explicit TMat33(const TQuaternion<U>& q);
+    constexpr explicit TMat33(const TQuaternion<U>& q) noexcept;
 
     /**
      * orthogonalize only works on matrices of size 3x3
      */
     friend inline
-    constexpr TMat33 orthogonalize(const TMat33& m) {
+    constexpr TMat33 orthogonalize(const TMat33& m) noexcept {
         TMat33 ret(TMat33::NO_INIT);
         ret[0] = normalize(m[0]);
         ret[2] = normalize(cross(ret[0], m[1]));
@@ -281,22 +281,22 @@ public:
      * vector.
      */
     static constexpr TQuaternion<T> packTangentFrame(
-            const TMat33& m, size_t storageSize = sizeof(int16_t));
+            const TMat33& m, size_t storageSize = sizeof(int16_t)) noexcept;
 
     template<typename A>
-    static constexpr TMat33 translation(const TVec3<A>& t) {
+    static constexpr TMat33 translation(const TVec3<A>& t) noexcept {
         TMat33 r;
         r[2] = t;
         return r;
     }
 
     template<typename A>
-    static constexpr TMat33 scaling(const TVec3<A>& s) {
+    static constexpr TMat33 scaling(const TVec3<A>& s) noexcept {
         return TMat33{ s };
     }
 
     template<typename A>
-    static constexpr TMat33 scaling(A s) {
+    static constexpr TMat33 scaling(A s) noexcept {
         return TMat33{ TVec3<T>{ s }};
     }
 };
@@ -309,7 +309,7 @@ public:
 // operations.
 
 template<typename T>
-constexpr TMat33<T>::TMat33()
+constexpr TMat33<T>::TMat33() noexcept
         : m_value{
         col_type(1, 0, 0),
         col_type(0, 1, 0),
@@ -318,7 +318,7 @@ constexpr TMat33<T>::TMat33()
 
 template<typename T>
 template<typename U>
-constexpr TMat33<T>::TMat33(U v)
+constexpr TMat33<T>::TMat33(U v) noexcept
         : m_value{
         col_type(v, 0, 0),
         col_type(0, v, 0),
@@ -327,7 +327,7 @@ constexpr TMat33<T>::TMat33(U v)
 
 template<typename T>
 template<typename U>
-constexpr TMat33<T>::TMat33(const TVec3<U>& v)
+constexpr TMat33<T>::TMat33(const TVec3<U>& v) noexcept
         : m_value{
         col_type(v[0], 0, 0),
         col_type(0, v[1], 0),
@@ -344,7 +344,7 @@ template<
         typename G, typename H, typename I>
 constexpr TMat33<T>::TMat33(A m00, B m01, C m02,
         D m10, E m11, F m12,
-        G m20, H m21, I m22)
+        G m20, H m21, I m22) noexcept
         : m_value{
         col_type(m00, m01, m02),
         col_type(m10, m11, m12),
@@ -353,7 +353,7 @@ constexpr TMat33<T>::TMat33(A m00, B m01, C m02,
 
 template<typename T>
 template<typename U>
-constexpr TMat33<T>::TMat33(const TMat33<U>& rhs) {
+constexpr TMat33<T>::TMat33(const TMat33<U>& rhs) noexcept {
     for (size_t col = 0; col < NUM_COLS; ++col) {
         m_value[col] = col_type(rhs[col]);
     }
@@ -362,13 +362,13 @@ constexpr TMat33<T>::TMat33(const TMat33<U>& rhs) {
 // Construct from 3 column vectors.
 template<typename T>
 template<typename A, typename B, typename C>
-constexpr TMat33<T>::TMat33(const TVec3<A>& v0, const TVec3<B>& v1, const TVec3<C>& v2)
+constexpr TMat33<T>::TMat33(const TVec3<A>& v0, const TVec3<B>& v1, const TVec3<C>& v2) noexcept
         : m_value{ v0, v1, v2 } {
 }
 
 template<typename T>
 template<typename U>
-constexpr TMat33<T>::TMat33(const TQuaternion<U>& q) : m_value{} {
+constexpr TMat33<T>::TMat33(const TQuaternion<U>& q) noexcept : m_value{} {
     const U n = q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w;
     const U s = n > 0 ? 2 / n : 0;
     const U x = s * q.x;
@@ -390,7 +390,7 @@ constexpr TMat33<T>::TMat33(const TQuaternion<U>& q) : m_value{} {
 
 //------------------------------------------------------------------------------
 template<typename T>
-constexpr TQuaternion<T> TMat33<T>::packTangentFrame(const TMat33<T>& m, size_t storageSize) {
+constexpr TQuaternion<T> TMat33<T>::packTangentFrame(const TMat33<T>& m, size_t storageSize) noexcept {
     TQuaternion<T> q = TMat33<T>{ m[0], cross(m[2], m[0]), m[2] }.toQuaternion();
     q = positive(normalize(q));
 
@@ -418,7 +418,7 @@ constexpr TQuaternion<T> TMat33<T>::packTangentFrame(const TMat33<T>& m, size_t 
  * BASE<T>::col_type is not accessible from there (???)
  */
 template<typename T>
-constexpr typename TMat33<T>::col_type MATH_PURE diag(const TMat33<T>& m) {
+constexpr typename TMat33<T>::col_type MATH_PURE diag(const TMat33<T>& m) noexcept {
     return matrix::diag(m);
 }
 
