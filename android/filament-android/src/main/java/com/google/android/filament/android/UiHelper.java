@@ -99,10 +99,6 @@ import com.google.android.filament.SwapChain;
  *         // Always detach the surface before destroying the engine
  *         mUiHelper.detach();
  *
- *         // This ensures that all the commands we've sent to Filament have
- *         // been processed before we attempt to destroy anything
- *         Fence.waitAndDestroy(mEngine.createFence(Fence.Type.SOFT), Fence.Mode.FLUSH);
- *
  *         mEngine.destroy();
  *     }
  *

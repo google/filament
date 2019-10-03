@@ -259,6 +259,8 @@ public:
     void destroy(const FView* p);
     void destroy(utils::Entity e);
 
+    void flushAndWait();
+
     // flush the current buffer
     void flush();
 

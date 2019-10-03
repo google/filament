@@ -105,7 +105,6 @@ int main(int argc, char** argv) {
     };
 
     auto cleanup = [&app](Engine* engine, View*, Scene*) {
-        Fence::waitAndDestroy(engine->createFence());
         engine->destroy(app.plane.renderable);
         engine->destroy(app.plane.mat);
         engine->destroy(app.plane.vb);
