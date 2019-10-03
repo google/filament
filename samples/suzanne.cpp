@@ -125,7 +125,6 @@ int main(int argc, char** argv) {
     };
 
     auto cleanup = [&app](Engine* engine, View*, Scene*) {
-        Fence::waitAndDestroy(engine->createFence());
         engine->destroy(app.materialInstance);
         engine->destroy(app.mesh.renderable);
         engine->destroy(app.material);

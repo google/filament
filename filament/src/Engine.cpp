@@ -347,6 +347,10 @@ void FEngine::flush() {
     flushCommandBuffer(mCommandBufferQueue);
 }
 
+void FEngine::flushAndWait() {
+    FFence::waitAndDestroy(FEngine::createFence(FFence::Type::SOFT), FFence::Mode::FLUSH);
+}
+
 // -----------------------------------------------------------------------------------------------
 // Render thread / command queue
 // -----------------------------------------------------------------------------------------------
@@ -883,6 +887,10 @@ void Engine::destroy(const SwapChain* p) {
 
 void Engine::destroy(Entity e) {
     upcast(this)->destroy(e);
+}
+
+void Engine::flushAndWait() {
+    upcast(this)->flushAndWait();
 }
 
 RenderableManager& Engine::getRenderableManager() noexcept {

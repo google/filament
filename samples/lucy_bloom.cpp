@@ -368,7 +368,6 @@ static void cleanup(LucyApp& app, Engine* engine) {
 
     engine->destroy(app.finalCamera);
 
-    Fence::waitAndDestroy(engine->createFence());
     app.loader->destroyAsset(app.asset);
     app.materials->destroyMaterials();
     delete app.materials;

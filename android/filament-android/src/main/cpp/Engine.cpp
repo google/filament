@@ -252,6 +252,13 @@ Java_com_google_android_filament_Engine_nDestroyEntity(JNIEnv*, jclass,
     engine->destroy(entity);
 }
 
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_Engine_nFlushAndWait(JNIEnv *env, jclass clazz,
+        jlong nativeEngine) {
+    Engine* engine = (Engine*) nativeEngine;
+    engine->flushAndWait();
+}
+
 // Managers...
 
 extern "C" JNIEXPORT jlong JNICALL

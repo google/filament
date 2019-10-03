@@ -434,10 +434,6 @@ class MainActivity : Activity() {
         // Always detach the surface before destroying the engine
         uiHelper.detach()
 
-        // This ensures that all the commands we've sent to Filament have
-        // been processed before we attempt to destroy anything
-        engine.flushAndWait()
-
         assetLoader.destroyAsset(filamentAsset)
         assetLoader.destroy()
 

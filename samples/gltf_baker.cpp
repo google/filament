@@ -936,8 +936,6 @@ int main(int argc, char** argv) {
         AssetLoader::destroy(&app.loader);
         std::cout << "Destroying NameComponentManager..." << std::endl;
         delete app.names;
-
-        Fence::waitAndDestroy(engine->createFence());
     };
 
     auto animate = [&app](Engine* engine, View* view, double now) {

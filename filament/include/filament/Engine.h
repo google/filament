@@ -340,6 +340,18 @@ public:
     void destroy(utils::Entity e);              //!< Destroys all filament-known components from this entity
 
     /**
+     * Kicks the hardware thread (e.g. the OpenGL, Vulkan or Metal thread) and blocks until
+     * all commands to this point are executed. Note that this doesn't guarantee that the
+     * hardware is actually finished.
+     *
+     * <p>This is typically used right after destroying the <code>SwapChain</code>,
+     * in cases where a guarantee about the <code>SwapChain</code> destruction is needed in a
+     * timely fashion, such as when responding to Android's
+     * <code>android.view.SurfaceHolder.Callback.surfaceDestroyed</code></p>
+     */
+    void flushAndWait();
+
+    /**
      * Returns the default Material.
      *
      * The default material is 80% white and uses the Material.Shading.LIT shading.

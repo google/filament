@@ -582,9 +582,14 @@ public class Engine {
      * Kicks the hardware thread (e.g.: the OpenGL, Vulkan or Metal thread) and blocks until
      * all commands to this point are executed. Note that this doesn't guarantee that the
      * hardware is actually finished.
+     *
+     * <p>This is typically used right after destroying the <code>SwapChain</code>,
+     * in cases where a guarantee about the SwapChain destruction is needed in a timely fashion,
+     * such as when responding to Android's
+     * {@link  android.view.SurfaceHolder.Callback#surfaceDestroyed surfaceDestroyed}.</p>
      */
     public void flushAndWait() {
-        Fence.waitAndDestroy(createFence(), Fence.Mode.FLUSH);
+        nFlushAndWait(getNativeObject());
     }
 
     @UsedByReflection("TextureHelper.java")
@@ -626,6 +631,7 @@ public class Engine {
     private static native void nDestroyTexture(long nativeEngine, long nativeTexture);
     private static native void nDestroyRenderTarget(long nativeEngine, long nativeTarget);
     private static native void nDestroyEntity(long nativeEngine, int entity);
+    private static native void nFlushAndWait(long nativeEngine);
     private static native long nGetTransformManager(long nativeEngine);
     private static native long nGetLightManager(long nativeEngine);
     private static native long nGetRenderableManager(long nativeEngine);
