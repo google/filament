@@ -209,7 +209,7 @@ class MainActivity : Activity() {
             }
         }
 
-        // Punctual Light Sources
+        // Light Sources
         // ----------------------
 
         light = EntityManager.get().create()
@@ -236,10 +236,10 @@ class MainActivity : Activity() {
 
             tm.setTransform(tm.getInstance(filamentAsset.root),
                     floatArrayOf(
-                            cos(v),  0.0f,  -sin(v), 0.0f,
-                            0.0f,        1.0f,  0.0f,        0.0f,
-                            sin(v),  0.0f,  cos(v),  0.0f,
-                            0.0f,        -1.7f, 0.0f,        1.0f
+                            cos(v),  0.0f, -sin(v), 0.0f,
+                            0.0f,    1.0f,  0.0f,   0.0f,
+                            sin(v),  0.0f,  cos(v), 0.0f,
+                            0.0f,   -1.7f,  0.0f,   1.0f
                     ))
 
         }
