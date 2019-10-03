@@ -217,8 +217,7 @@ void Animator::applyAnimation(size_t animationIndex, float time) const {
         TimeValues::const_iterator prevIter;
         TimeValues::const_iterator nextIter;
         if (iter == times.end()) {
-            prevIter = --times.end();
-            nextIter = times.begin();
+            continue;
         } else if (iter == times.begin()) {
             prevIter = nextIter = iter;
         } else {
