@@ -94,7 +94,6 @@ FEngine* FEngine::create(Backend backend, Platform* platform, void* sharedGLCont
             instance->mOwnPlatform = true;
         }
         instance->mDriver = platform->createDriver(sharedGLContext);
-        instance->execute();
     } else {
         // start the driver thread
         instance->mDriverThread = std::thread(&FEngine::loop, instance);
