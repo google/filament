@@ -94,29 +94,50 @@ FEngine* FEngine::create(Backend backend, Platform* platform, void* sharedGLCont
             instance->mOwnPlatform = true;
         }
         instance->mDriver = platform->createDriver(sharedGLContext);
-        instance->init();
         instance->execute();
-        return instance;
+    } else {
+        // start the driver thread
+        instance->mDriverThread = std::thread(&FEngine::loop, instance);
+
+        // wait for the driver to be ready
+        instance->mDriverBarrier.await();
+
+        if (UTILS_UNLIKELY(!instance->mDriver)) {
+            // something went horribly wrong during driver initialization
+            instance->mDriverThread.join();
+            return nullptr;
+        }
     }
 
-    // start the driver thread
-    instance->mDriverThread = std::thread(&FEngine::loop, instance);
-
-    // wait for the driver to be ready
-    instance->mDriverBarrier.await();
-
-    if (UTILS_UNLIKELY(!instance->mDriver)) {
-        // something went horribly wrong during driver initialization
-        instance->mDriverThread.join();
-        return nullptr;
+    // Add this Engine to the list of active Engines
+    { // scope for the lock
+        std::unique_ptr<FEngine> engine(instance);
+        std::lock_guard<std::mutex> guard(sEnginesLock);
+        Engine* handle = engine.get();
+        sEngines[handle] = std::move(engine);
     }
 
     // now we can initialize the largest part of the engine
     instance->init();
 
+    if (!UTILS_HAS_THREADING) {
+        instance->execute();
+    }
+
     return instance;
 }
 
+void FEngine::assertValid(Engine const& engine) {
+    bool valid;
+    { // scope for the lock
+        std::lock_guard<std::mutex> guard(sEnginesLock);
+        auto const& engines = sEngines;
+        auto const& pos = engines.find(&engine);
+        valid = pos != engines.end();
+    }
+    ASSERT_POSTCONDITION(valid,
+            "Using an Engine instance (@ %p) after it's been destroyed", &engine);
+}
 
 // these must be static because only a pointer is copied to the render stream
 // Note that these coordinates are specified in OpenGL clip space. Other backends can transform
@@ -748,16 +769,7 @@ bool FEngine::execute() {
 using namespace details;
 
 Engine* Engine::create(Backend backend, Platform* platform, void* sharedGLContext) {
-    std::unique_ptr<FEngine> engine(FEngine::create(backend, platform, sharedGLContext));
-    if (UTILS_UNLIKELY(!engine)) {
-        // something went wrong during the driver or engine initialization
-        return nullptr;
-    }
-
-    std::lock_guard<std::mutex> guard(sEnginesLock);
-    Engine* handle = engine.get();
-    sEngines[handle] = std::move(engine);
-    return handle;
+    return FEngine::create(backend, platform, sharedGLContext);
 }
 
 void Engine::destroy(Engine* engine) {
