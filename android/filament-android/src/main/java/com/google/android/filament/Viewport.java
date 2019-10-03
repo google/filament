@@ -18,6 +18,16 @@ package com.google.android.filament;
 
 import android.support.annotation.IntRange;
 
+/**
+ * Specifies a rectangular region within a render target in terms of pixel coordinates.
+ *
+ * <p>
+ * The rectangle spans from <code>(left,bottom)</code> to <code>(left+width-1, top+height-1)</code>,
+ * inclusive. Width and height must be non-negative.
+ * </p>
+ *
+ * @see View#setViewport
+ */
 public class Viewport {
     public Viewport(int left, int bottom, @IntRange(from = 0) int width, @IntRange(from = 0) int height) {
         this.left = left;

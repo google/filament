@@ -89,7 +89,7 @@ public class IndirectLight {
     }
 
     /**
-     * Use {@link #Builder} to construct an <code>IndirectLight</code> object instance.
+     * Use <code>Builder</code> to construct an <code>IndirectLight</code> object instance.
      */
     public static class Builder {
         @SuppressWarnings({"FieldCanBeLocal", "UnusedDeclaration"}) // Keep to finalize native resources
@@ -97,7 +97,7 @@ public class IndirectLight {
         private final long mNativeBuilder;
 
         /**
-         * Use {@link #Builder} to construct an <code>IndirectLight</code> object instance.
+         * Use <code>Builder</code> to construct an <code>IndirectLight</code> object instance.
          */
         public Builder() {
             mNativeBuilder = nCreateBuilder();
