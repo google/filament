@@ -20,6 +20,16 @@ import android.support.annotation.IntRange;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
+/**
+ * An offscreen render target that can be associated with a {@link View} and contains
+ * weak references to a set of attached {@link Texture} objects.
+ *
+ * <p>
+ * Clients are responsible for the lifetime of all associated <code>Texture</code> attachments.
+ * </p>
+ *
+ * @see View
+ */
 public class RenderTarget {
     private long mNativeObject;
     private final Texture[] mTextures = new Texture[2];
@@ -37,11 +47,17 @@ public class RenderTarget {
         return mNativeObject;
     }
 
+    /**
+     * An attachment point is a slot that can be assigned to a {@link Texture}.
+     */
     public enum AttachmentPoint {
         COLOR,
         DEPTH,
     }
 
+    /**
+     * Constructs <code>RenderTarget</code> objects using a builder pattern.
+     */
     public static class Builder {
         @SuppressWarnings({"FieldCanBeLocal", "UnusedDeclaration"})
         private final BuilderFinalizer mFinalizer;
@@ -53,6 +69,15 @@ public class RenderTarget {
             mFinalizer = new BuilderFinalizer(mNativeBuilder);
         }
 
+        /**
+         * Sets a texture to a given attachment point.
+         *
+         * <p>All RenderTargets must have a non-null <code>COLOR</code> attachment.</p>
+         *
+         * @param attachment The attachment point of the texture.
+         * @param texture The associated texture object.
+         * @return A reference to this Builder for chaining calls.
+         */
         @NonNull
         public Builder texture(@NonNull AttachmentPoint attachment, @Nullable Texture texture) {
             mTextures[attachment.ordinal()] = texture;
@@ -60,24 +85,51 @@ public class RenderTarget {
             return this;
         }
 
+        /**
+         * Sets the mipmap level for a given attachment point.
+         *
+         * @param attachment The attachment point of the texture.
+         * @param level The associated mipmap level, 0 by default.
+         * @return A reference to this Builder for chaining calls.
+         */
         @NonNull
         public Builder mipLevel(@NonNull AttachmentPoint attachment, @IntRange(from = 0) int level) {
             nBuilderMipLevel(mNativeBuilder, attachment.ordinal(), level);
             return this;
         }
 
+        /**
+         * Sets the cubemap face for a given attachment point.
+         *
+         * @param attachment The attachment point.
+         * @param face The associated cubemap face.
+         * @return A reference to this Builder for chaining calls.
+         */
         @NonNull
         public Builder face(@NonNull AttachmentPoint attachment, Texture.CubemapFace face) {
             nBuilderFace(mNativeBuilder, attachment.ordinal(), face.ordinal());
             return this;
         }
 
+        /**
+         * Sets the layer for a given attachment point (for 3D textures).
+         *
+         * @param attachment The attachment point.
+         * @param layer The associated cubemap layer.
+         * @return A reference to this Builder for chaining calls.
+         */
         @NonNull
         public Builder layer(@NonNull AttachmentPoint attachment, @IntRange(from = 0) int layer) {
             nBuilderLayer(mNativeBuilder, attachment.ordinal(), layer);
             return this;
         }
 
+        /**
+         * Creates the RenderTarget object and returns a pointer to it.
+         *
+         * @return pointer to the newly created object or nullptr if exceptions are disabled and
+         *         an error occurred.
+         */
         @NonNull
         public RenderTarget build(@NonNull Engine engine) {
             long nativeRenderTarget = nBuilderBuild(mNativeBuilder, engine.getNativeObject());
@@ -105,20 +157,45 @@ public class RenderTarget {
         }
     }
 
+    /**
+     * Gets the texture set on the given attachment point.
+     *
+     * @param attachment Attachment point
+     * @return A Texture object or nullptr if no texture is set for this attachment point
+     */
     @Nullable
     public Texture getTexture(@NonNull AttachmentPoint attachment) {
         return mTextures[attachment.ordinal()];
     }
 
+    /**
+     * Returns the mipmap level set on the given attachment point.
+     *
+     * @param attachment Attachment point
+     * @return the mipmap level set on the given attachment point
+     */
     @IntRange(from = 0)
     public int getMipLevel(@NonNull AttachmentPoint attachment) {
         return nGetMipLevel(getNativeObject(), attachment.ordinal());
     }
 
+    /**
+     * Returns the face of a cubemap set on the given attachment point.
+     *
+     * @param attachment Attachment point
+     * @return A cubemap face identifier. This is only relevant if the attachment's texture is
+     * a cubemap.
+     */
     public Texture.CubemapFace getFace(AttachmentPoint attachment) {
         return Texture.CubemapFace.values()[nGetFace(getNativeObject(), attachment.ordinal())];
     }
 
+    /**
+     * Returns the texture-layer set on the given attachment point.
+     *
+     * @param attachment Attachment point
+     * @return A texture layer. This is only relevant if the attachment's texture is a 3D texture.
+     */
     @IntRange(from = 0)
     public int getLayer(@NonNull AttachmentPoint attachment) {
         return nGetLayer(getNativeObject(), attachment.ordinal());
