@@ -470,11 +470,11 @@ Handle<HwStream> OpenGLDriver::createStreamFromTextureIdS() noexcept {
 
 void OpenGLDriver::createVertexBufferR(
         Handle<HwVertexBuffer> vbh,
-    uint8_t bufferCount,
-    uint8_t attributeCount,
-    uint32_t elementCount,
-    AttributeArray attributes,
-    BufferUsage usage) {
+        uint8_t bufferCount,
+        uint8_t attributeCount,
+        uint32_t elementCount,
+        AttributeArray attributes,
+        BufferUsage usage) {
     DEBUG_MARKER()
 
     auto& gl = mContext;
@@ -2032,6 +2032,15 @@ void OpenGLDriver::setRenderPrimitiveBuffer(Handle<HwRenderPrimitive> rph,
 
                 gl.enableVertexAttribArray(GLuint(i));
             } else {
+
+                // In some OpenGL implementations, we must supply a properly-typed placeholder for
+                // every integer input that is declared in the vertex shader.
+                if (UTILS_UNLIKELY(eb->attributes[i].flags & Attribute::FLAG_INTEGER_TARGET)) {
+                    glVertexAttribI4ui(GLuint(i), 0, 0, 0, 0);
+                } else {
+                    glVertexAttrib4f(GLuint(i), 0, 0, 0, 0);
+                }
+
                 gl.disableVertexAttribArray(GLuint(i));
             }
         }

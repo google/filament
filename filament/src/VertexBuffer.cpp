@@ -43,10 +43,6 @@ struct VertexBuffer::BuilderDetails {
     uint8_t mBufferCount = 0;
 };
 
-static bool hasIntegerTarget(VertexAttribute attribute) {
-    return attribute == BONE_INDICES;
-}
-
 using BuilderType = VertexBuffer;
 BuilderType::Builder::Builder() noexcept = default;
 BuilderType::Builder::~Builder() noexcept = default;
@@ -95,9 +91,6 @@ VertexBuffer::Builder& VertexBuffer::Builder::attribute(VertexAttribute attribut
         entry.offset = byteOffset;
         entry.stride = byteStride;
         entry.type = attributeType;
-        if (hasIntegerTarget(attribute)) {
-            entry.flags |= Attribute::FLAG_INTEGER_TARGET;
-        }
         mImpl->mDeclaredAttributes.set(attribute);
     }
     return *this;
@@ -139,6 +132,10 @@ namespace details {
 FVertexBuffer::FVertexBuffer(FEngine& engine, const VertexBuffer::Builder& builder)
         : mVertexCount(builder->mVertexCount), mBufferCount(builder->mBufferCount) {
     std::copy(std::begin(builder->mAttributes), std::end(builder->mAttributes), mAttributes.begin());
+
+    // Backends do not (and should not) know the semantics of each vertex attribute, but they
+    // need to know whether the vertex shader consumes them as integers or as floats.
+    mAttributes[BONE_INDICES].flags |= Attribute::FLAG_INTEGER_TARGET;
 
     mDeclaredAttributes = builder->mDeclaredAttributes;
     uint8_t attributeCount = (uint8_t) mDeclaredAttributes.count();
