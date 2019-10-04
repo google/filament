@@ -131,6 +131,9 @@ spv_operand_pattern_t spvAlternatePatternFollowingImmediate(
 // Is the operand an ID?
 bool spvIsIdType(spv_operand_type_t type);
 
+// Is the operand an input ID?
+bool spvIsInIdType(spv_operand_type_t type);
+
 // Takes the opcode of an instruction and returns
 // a function object that will return true if the index
 // of the operand can be forward declared. This function will

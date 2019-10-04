@@ -21,6 +21,7 @@
 #include "gmock/gmock.h"
 #include "source/latest_version_opencl_std_header.h"
 #include "source/table.h"
+#include "source/util/string_utils.h"
 #include "test/test_fixture.h"
 #include "test/unit_spirv.h"
 
@@ -39,7 +40,7 @@ namespace {
 
 using ::spvtest::Concatenate;
 using ::spvtest::MakeInstruction;
-using ::spvtest::MakeVector;
+using utils::MakeVector;
 using ::spvtest::ScopedContext;
 using ::testing::_;
 using ::testing::AnyOf;
@@ -197,6 +198,8 @@ ParsedInstruction MakeParsedInt32TypeInstruction(uint32_t result_id) {
 
 class BinaryParseTest : public spvtest::TextToBinaryTestBase<::testing::Test> {
  protected:
+  ~BinaryParseTest() { spvDiagnosticDestroy(diagnostic_); }
+
   void Parse(const SpirvVector& words, spv_result_t expected_result,
              bool flip_words = false) {
     SpirvVector flipped_words(words);
@@ -267,52 +270,48 @@ TEST_F(BinaryParseTest, NullDiagnosticsIsOkForBadParse) {
 TEST_F(BinaryParseTest, NullConsumerNullDiagnosticsForBadParse) {
   auto words = CompileSuccessfully("");
 
-  auto ctx = spvContextCreate(SPV_ENV_UNIVERSAL_1_1);
-  SetContextMessageConsumer(ctx, nullptr);
+  auto ctx = spvtools::Context(SPV_ENV_UNIVERSAL_1_1);
+  ctx.SetMessageConsumer(nullptr);
 
   words.push_back(0xffffffff);  // Certainly invalid instruction header.
   EXPECT_HEADER(1).WillOnce(Return(SPV_SUCCESS));
   EXPECT_CALL(client_, Instruction(_)).Times(0);  // No instruction callback.
   EXPECT_EQ(SPV_ERROR_INVALID_BINARY,
-            spvBinaryParse(ctx, &client_, words.data(), words.size(),
+            spvBinaryParse(ctx.CContext(), &client_, words.data(), words.size(),
                            invoke_header, invoke_instruction, nullptr));
-
-  spvContextDestroy(ctx);
 }
 
 TEST_F(BinaryParseTest, SpecifyConsumerNullDiagnosticsForGoodParse) {
   const auto words = CompileSuccessfully("");
 
-  auto ctx = spvContextCreate(SPV_ENV_UNIVERSAL_1_1);
+  auto ctx = spvtools::Context(SPV_ENV_UNIVERSAL_1_1);
   int invocation = 0;
-  SetContextMessageConsumer(
-      ctx, [&invocation](spv_message_level_t, const char*,
-                         const spv_position_t&, const char*) { ++invocation; });
+  ctx.SetMessageConsumer([&invocation](spv_message_level_t, const char*,
+                                       const spv_position_t&,
+                                       const char*) { ++invocation; });
 
   EXPECT_HEADER(1).WillOnce(Return(SPV_SUCCESS));
   EXPECT_CALL(client_, Instruction(_)).Times(0);  // No instruction callback.
   EXPECT_EQ(SPV_SUCCESS,
-            spvBinaryParse(ctx, &client_, words.data(), words.size(),
+            spvBinaryParse(ctx.CContext(), &client_, words.data(), words.size(),
                            invoke_header, invoke_instruction, nullptr));
   EXPECT_EQ(0, invocation);
-
-  spvContextDestroy(ctx);
 }
 
 TEST_F(BinaryParseTest, SpecifyConsumerNullDiagnosticsForBadParse) {
   auto words = CompileSuccessfully("");
 
-  auto ctx = spvContextCreate(SPV_ENV_UNIVERSAL_1_1);
+  auto ctx = spvtools::Context(SPV_ENV_UNIVERSAL_1_1);
   int invocation = 0;
-  SetContextMessageConsumer(
-      ctx, [&invocation](spv_message_level_t level, const char* source,
-                         const spv_position_t& position, const char* message) {
+  ctx.SetMessageConsumer(
+      [&invocation](spv_message_level_t level, const char* source,
+                    const spv_position_t& position, const char* message) {
         ++invocation;
         EXPECT_EQ(SPV_MSG_ERROR, level);
         EXPECT_STREQ("input", source);
         EXPECT_EQ(0u, position.line);
         EXPECT_EQ(0u, position.column);
-        EXPECT_EQ(5u, position.index);
+        EXPECT_EQ(1u, position.index);
         EXPECT_STREQ("Invalid opcode: 65535", message);
       });
 
@@ -320,52 +319,46 @@ TEST_F(BinaryParseTest, SpecifyConsumerNullDiagnosticsForBadParse) {
   EXPECT_HEADER(1).WillOnce(Return(SPV_SUCCESS));
   EXPECT_CALL(client_, Instruction(_)).Times(0);  // No instruction callback.
   EXPECT_EQ(SPV_ERROR_INVALID_BINARY,
-            spvBinaryParse(ctx, &client_, words.data(), words.size(),
+            spvBinaryParse(ctx.CContext(), &client_, words.data(), words.size(),
                            invoke_header, invoke_instruction, nullptr));
   EXPECT_EQ(1, invocation);
-
-  spvContextDestroy(ctx);
 }
 
 TEST_F(BinaryParseTest, SpecifyConsumerSpecifyDiagnosticsForGoodParse) {
   const auto words = CompileSuccessfully("");
 
-  auto ctx = spvContextCreate(SPV_ENV_UNIVERSAL_1_1);
+  auto ctx = spvtools::Context(SPV_ENV_UNIVERSAL_1_1);
   int invocation = 0;
-  SetContextMessageConsumer(
-      ctx, [&invocation](spv_message_level_t, const char*,
-                         const spv_position_t&, const char*) { ++invocation; });
+  ctx.SetMessageConsumer([&invocation](spv_message_level_t, const char*,
+                                       const spv_position_t&,
+                                       const char*) { ++invocation; });
 
   EXPECT_HEADER(1).WillOnce(Return(SPV_SUCCESS));
   EXPECT_CALL(client_, Instruction(_)).Times(0);  // No instruction callback.
   EXPECT_EQ(SPV_SUCCESS,
-            spvBinaryParse(ctx, &client_, words.data(), words.size(),
+            spvBinaryParse(ctx.CContext(), &client_, words.data(), words.size(),
                            invoke_header, invoke_instruction, &diagnostic_));
   EXPECT_EQ(0, invocation);
   EXPECT_EQ(nullptr, diagnostic_);
-
-  spvContextDestroy(ctx);
 }
 
 TEST_F(BinaryParseTest, SpecifyConsumerSpecifyDiagnosticsForBadParse) {
   auto words = CompileSuccessfully("");
 
-  auto ctx = spvContextCreate(SPV_ENV_UNIVERSAL_1_1);
+  auto ctx = spvtools::Context(SPV_ENV_UNIVERSAL_1_1);
   int invocation = 0;
-  SetContextMessageConsumer(
-      ctx, [&invocation](spv_message_level_t, const char*,
-                         const spv_position_t&, const char*) { ++invocation; });
+  ctx.SetMessageConsumer([&invocation](spv_message_level_t, const char*,
+                                       const spv_position_t&,
+                                       const char*) { ++invocation; });
 
   words.push_back(0xffffffff);  // Certainly invalid instruction header.
   EXPECT_HEADER(1).WillOnce(Return(SPV_SUCCESS));
   EXPECT_CALL(client_, Instruction(_)).Times(0);  // No instruction callback.
   EXPECT_EQ(SPV_ERROR_INVALID_BINARY,
-            spvBinaryParse(ctx, &client_, words.data(), words.size(),
+            spvBinaryParse(ctx.CContext(), &client_, words.data(), words.size(),
                            invoke_header, invoke_instruction, &diagnostic_));
   EXPECT_EQ(0, invocation);
   EXPECT_STREQ("Invalid opcode: 65535", diagnostic_->error);
-
-  spvContextDestroy(ctx);
 }
 
 TEST_F(BinaryParseTest,
@@ -569,7 +562,7 @@ TEST_P(BinaryParseWordsAndCountDiagnosticTest, WordAndCountCases) {
   EXPECT_THAT(diagnostic->error, Eq(GetParam().expected_diagnostic));
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     BinaryParseDiagnostic, BinaryParseWordsAndCountDiagnosticTest,
     ::testing::ValuesIn(std::vector<WordsAndCountDiagnosticCase>{
         {nullptr, 0, "Missing module."},
@@ -583,7 +576,7 @@ INSTANTIATE_TEST_CASE_P(
          "Module has incomplete header: only 3 words instead of 5"},
         {kHeaderForBound1, 4,
          "Module has incomplete header: only 4 words instead of 5"},
-    }), );
+    }));
 
 // A binary parser diagnostic test case where a vector of words is
 // provided.  We'll use this to express cases that can't be created
@@ -606,7 +599,7 @@ TEST_P(BinaryParseWordVectorDiagnosticTest, WordVectorCases) {
   EXPECT_THAT(diagnostic->error, Eq(GetParam().expected_diagnostic));
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     BinaryParseDiagnostic, BinaryParseWordVectorDiagnosticTest,
     ::testing::ValuesIn(std::vector<WordVectorDiagnosticCase>{
         {Concatenate({ExpectedHeaderForBound(1), {spvOpcodeMake(0, SpvOpNop)}}),
@@ -824,7 +817,7 @@ INSTANTIATE_TEST_CASE_P(
              MakeInstruction(SpvOpConstant, {1, 2, 42}),
          }),
          "Type Id 1 is not a scalar numeric type"},
-    }), );
+    }));
 
 // A binary parser diagnostic case generated from an assembly text input.
 struct AssemblyDiagnosticCase {
@@ -844,7 +837,7 @@ TEST_P(BinaryParseAssemblyDiagnosticTest, AssemblyCases) {
   EXPECT_THAT(diagnostic->error, Eq(GetParam().expected_diagnostic));
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     BinaryParseDiagnostic, BinaryParseAssemblyDiagnosticTest,
     ::testing::ValuesIn(std::vector<AssemblyDiagnosticCase>{
         {"%1 = OpConstant !0 42", "Error: Type Id is 0"},
@@ -890,11 +883,11 @@ INSTANTIATE_TEST_CASE_P(
          "Invalid function control operand: 31 has invalid mask component 16"},
         {"OpLoopMerge %1 %2 !1027",
          "Invalid loop control operand: 1027 has invalid mask component 1024"},
-        {"%2 = OpImageFetch %1 %image %coord !511",
-         "Invalid image operand: 511 has invalid mask component 256"},
+        {"%2 = OpImageFetch %1 %image %coord !32770",
+         "Invalid image operand: 32770 has invalid mask component 32768"},
         {"OpSelectionMerge %1 !7",
          "Invalid selection control operand: 7 has invalid mask component 4"},
-    }), );
+    }));
 
 }  // namespace
 }  // namespace spvtools

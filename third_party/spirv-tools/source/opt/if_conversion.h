@@ -32,7 +32,8 @@ class IfConversion : public Pass {
   IRContext::Analysis GetPreservedAnalyses() override {
     return IRContext::kAnalysisDefUse | IRContext::kAnalysisDominatorAnalysis |
            IRContext::kAnalysisInstrToBlockMapping | IRContext::kAnalysisCFG |
-           IRContext::kAnalysisNameMap;
+           IRContext::kAnalysisNameMap | IRContext::kAnalysisConstants |
+           IRContext::kAnalysisTypes;
   }
 
  private:

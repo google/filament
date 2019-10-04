@@ -52,7 +52,8 @@ class ScalarReplacementPass : public Pass {
     return IRContext::kAnalysisDefUse |
            IRContext::kAnalysisInstrToBlockMapping |
            IRContext::kAnalysisDecorations | IRContext::kAnalysisCombinators |
-           IRContext::kAnalysisCFG | IRContext::kAnalysisNameMap;
+           IRContext::kAnalysisCFG | IRContext::kAnalysisNameMap |
+           IRContext::kAnalysisConstants | IRContext::kAnalysisTypes;
   }
 
  private:
@@ -116,9 +117,12 @@ class ScalarReplacementPass : public Pass {
   // for element of the composite type. Uses of |inst| are updated as
   // appropriate. If the replacement variables are themselves scalarizable, they
   // get added to |worklist| for further processing. If any replacement
-  // variable ends up with no uses it is erased. Returns false if any
-  // subsequent access chain is out of bounds.
-  bool ReplaceVariable(Instruction* inst, std::queue<Instruction*>* worklist);
+  // variable ends up with no uses it is erased. Returns
+  //  - Status::SuccessWithoutChange if the variable could not be replaced.
+  //  - Status::SuccessWithChange if it made replacements.
+  //  - Status::Failure if it couldn't create replacement variables.
+  Pass::Status ReplaceVariable(Instruction* inst,
+                               std::queue<Instruction*>* worklist);
 
   // Returns the underlying storage type for |inst|.
   //
@@ -139,35 +143,34 @@ class ScalarReplacementPass : public Pass {
   bool CheckStore(const Instruction* inst, uint32_t index) const;
 
   // Creates a variable of type |typeId| from the |index|'th element of
-  // |varInst|. The new variable is added to |replacements|.
+  // |varInst|. The new variable is added to |replacements|.  If the variable
+  // could not be created, then |nullptr| is appended to |replacements|.
   void CreateVariable(uint32_t typeId, Instruction* varInst, uint32_t index,
                       std::vector<Instruction*>* replacements);
 
   // Populates |replacements| with a new OpVariable for each element of |inst|.
+  // Returns true if the replacement variables were successfully created.
   //
   // |inst| must be an OpVariable of a composite type. New variables are
   // initialized the same as the corresponding index in |inst|. |replacements|
   // will contain a variable for each element of the composite with matching
   // indexes (i.e. the 0'th element of |inst| is the 0'th entry of
   // |replacements|).
-  void CreateReplacementVariables(Instruction* inst,
+  bool CreateReplacementVariables(Instruction* inst,
                                   std::vector<Instruction*>* replacements);
 
-  // Returns the value of an OpConstant of integer type.
-  //
-  // |constant| must use two or fewer words to generate the value.
-  size_t GetConstantInteger(const Instruction* constant) const;
-
-  // Returns the integer literal for |op|.
-  size_t GetIntegerLiteral(const Operand& op) const;
-
   // Returns the array length for |arrayInst|.
-  size_t GetArrayLength(const Instruction* arrayInst) const;
+  uint64_t GetArrayLength(const Instruction* arrayInst) const;
 
   // Returns the number of elements in |type|.
   //
   // |type| must be a vector or matrix type.
-  size_t GetNumElements(const Instruction* type) const;
+  uint64_t GetNumElements(const Instruction* type) const;
+
+  // Returns true if |id| is a specialization constant.
+  //
+  // |id| must be registered definition.
+  bool IsSpecConstant(uint32_t id) const;
 
   // Returns an id for a pointer to |id|.
   uint32_t GetOrCreatePointerType(uint32_t id);
@@ -185,32 +188,33 @@ class ScalarReplacementPass : public Pass {
   // Generates a load for each replacement variable and then creates a new
   // composite by combining all of the loads.
   //
-  // |load| must be a load.
-  void ReplaceWholeLoad(Instruction* load,
+  // |load| must be a load.  Returns true if successful.
+  bool ReplaceWholeLoad(Instruction* load,
                         const std::vector<Instruction*>& replacements);
 
   // Replaces the store to the entire composite.
   //
   // Generates a composite extract and store for each element in the scalarized
-  // variable from the original store data input.
-  void ReplaceWholeStore(Instruction* store,
+  // variable from the original store data input.  Returns true if successful.
+  bool ReplaceWholeStore(Instruction* store,
                          const std::vector<Instruction*>& replacements);
 
   // Replaces an access chain to the composite variable with either a direct use
   // of the appropriate replacement variable or another access chain with the
-  // replacement variable as the base and one fewer indexes. Returns false if
-  // the chain has an out of bounds access.
+  // replacement variable as the base and one fewer indexes. Returns true if
+  // successful.
   bool ReplaceAccessChain(Instruction* chain,
                           const std::vector<Instruction*>& replacements);
 
   // Returns a set containing the which components of the result of |inst| are
   // potentially used.  If the return value is |nullptr|, then every components
   // is possibly used.
-  std::unique_ptr<std::unordered_set<uint64_t>> GetUsedComponents(
+  std::unique_ptr<std::unordered_set<int64_t>> GetUsedComponents(
       Instruction* inst);
 
   // Returns an instruction defining a null constant with type |type_id|.  If
   // one already exists, it is returned.  Otherwise a new one is created.
+  // Returns |nullptr| if the new constant could not be created.
   Instruction* CreateNullConstant(uint32_t type_id);
 
   // Maps storage type to a pointer type enclosing that type.
@@ -219,10 +223,16 @@ class ScalarReplacementPass : public Pass {
   // Maps type id to OpConstantNull for that type.
   std::unordered_map<uint32_t, uint32_t> type_to_null_;
 
+  // Returns the number of elements in the variable |var_inst|.
+  uint64_t GetMaxLegalIndex(const Instruction* var_inst) const;
+
+  // Returns true if |length| is larger than limit on the size of the variable
+  // that we will be willing to split.
+  bool IsLargerThanSizeLimit(uint64_t length) const;
+
   // Limit on the number of members in an object that will be replaced.
   // 0 means there is no limit.
   uint32_t max_num_elements_;
-  bool IsLargerThanSizeLimit(size_t length) const;
   char name_[55];
 };
 

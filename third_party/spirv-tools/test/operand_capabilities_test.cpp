@@ -91,7 +91,7 @@ TEST_P(EnumCapabilityTest, Sample) {
   }
 
 // See SPIR-V Section 3.3 Execution Model
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     ExecutionModel, EnumCapabilityTest,
     Combine(Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
             ValuesIn(std::vector<EnumCapabilityCase>{
@@ -104,30 +104,30 @@ INSTANTIATE_TEST_CASE_P(
                 CASE1(EXECUTION_MODEL, ExecutionModelFragment, Shader),
                 CASE1(EXECUTION_MODEL, ExecutionModelGLCompute, Shader),
                 CASE1(EXECUTION_MODEL, ExecutionModelKernel, Kernel),
-            })), );
+            })));
 
 // See SPIR-V Section 3.4 Addressing Model
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     AddressingModel, EnumCapabilityTest,
     Combine(Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
             ValuesIn(std::vector<EnumCapabilityCase>{
                 CASE0(ADDRESSING_MODEL, AddressingModelLogical),
                 CASE1(ADDRESSING_MODEL, AddressingModelPhysical32, Addresses),
                 CASE1(ADDRESSING_MODEL, AddressingModelPhysical64, Addresses),
-            })), );
+            })));
 
 // See SPIR-V Section 3.5 Memory Model
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     MemoryModel, EnumCapabilityTest,
     Combine(Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
             ValuesIn(std::vector<EnumCapabilityCase>{
                 CASE1(MEMORY_MODEL, MemoryModelSimple, Shader),
                 CASE1(MEMORY_MODEL, MemoryModelGLSL450, Shader),
                 CASE1(MEMORY_MODEL, MemoryModelOpenCL, Kernel),
-            })), );
+            })));
 
 // See SPIR-V Section 3.6 Execution Mode
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     ExecutionMode, EnumCapabilityTest,
     Combine(
         Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
@@ -161,16 +161,17 @@ INSTANTIATE_TEST_CASE_P(
                   Geometry),
             CASE1(EXECUTION_MODE, ExecutionModeQuads, Tessellation),
             CASE1(EXECUTION_MODE, ExecutionModeIsolines, Tessellation),
-            CASE2(EXECUTION_MODE, ExecutionModeOutputVertices, Geometry,
-                  Tessellation),
-            CASE1(EXECUTION_MODE, ExecutionModeOutputPoints, Geometry),
+            CASE3(EXECUTION_MODE, ExecutionModeOutputVertices, Geometry,
+                  Tessellation, MeshShadingNV),
+            CASE2(EXECUTION_MODE, ExecutionModeOutputPoints, Geometry,
+                  MeshShadingNV),
             CASE1(EXECUTION_MODE, ExecutionModeOutputLineStrip, Geometry),
             CASE1(EXECUTION_MODE, ExecutionModeOutputTriangleStrip, Geometry),
             CASE1(EXECUTION_MODE, ExecutionModeVecTypeHint, Kernel),
             CASE1(EXECUTION_MODE, ExecutionModeContractionOff, Kernel),
-        })), );
+        })));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     ExecutionModeV11, EnumCapabilityTest,
     Combine(Values(SPV_ENV_UNIVERSAL_1_1),
             ValuesIn(std::vector<EnumCapabilityCase>{
@@ -179,10 +180,10 @@ INSTANTIATE_TEST_CASE_P(
                 CASE1(EXECUTION_MODE, ExecutionModeSubgroupSize,
                       SubgroupDispatch),
                 CASE1(EXECUTION_MODE, ExecutionModeSubgroupsPerWorkgroup,
-                      SubgroupDispatch)})), );
+                      SubgroupDispatch)})));
 
 // See SPIR-V Section 3.7 Storage Class
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     StorageClass, EnumCapabilityTest,
     Combine(Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
             ValuesIn(std::vector<EnumCapabilityCase>{
@@ -198,24 +199,24 @@ INSTANTIATE_TEST_CASE_P(
                 CASE1(STORAGE_CLASS, StorageClassPushConstant, Shader),
                 CASE1(STORAGE_CLASS, StorageClassAtomicCounter, AtomicStorage),
                 CASE0(STORAGE_CLASS, StorageClassImage),
-            })), );
+            })));
 
 // See SPIR-V Section 3.8 Dim
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     Dim, EnumCapabilityTest,
     Combine(Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
             ValuesIn(std::vector<EnumCapabilityCase>{
-                CASE1(DIMENSIONALITY, Dim1D, Sampled1D),
-                CASE0(DIMENSIONALITY, Dim2D),
+                CASE2(DIMENSIONALITY, Dim1D, Sampled1D, Image1D),
+                CASE3(DIMENSIONALITY, Dim2D, Kernel, Shader, ImageMSArray),
                 CASE0(DIMENSIONALITY, Dim3D),
-                CASE1(DIMENSIONALITY, DimCube, Shader),
-                CASE1(DIMENSIONALITY, DimRect, SampledRect),
-                CASE1(DIMENSIONALITY, DimBuffer, SampledBuffer),
+                CASE2(DIMENSIONALITY, DimCube, Shader, ImageCubeArray),
+                CASE2(DIMENSIONALITY, DimRect, SampledRect, ImageRect),
+                CASE2(DIMENSIONALITY, DimBuffer, SampledBuffer, ImageBuffer),
                 CASE1(DIMENSIONALITY, DimSubpassData, InputAttachment),
-            })), );
+            })));
 
 // See SPIR-V Section 3.9 Sampler Addressing Mode
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     SamplerAddressingMode, EnumCapabilityTest,
     Combine(
         Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
@@ -227,19 +228,19 @@ INSTANTIATE_TEST_CASE_P(
             CASE1(SAMPLER_ADDRESSING_MODE, SamplerAddressingModeRepeat, Kernel),
             CASE1(SAMPLER_ADDRESSING_MODE, SamplerAddressingModeRepeatMirrored,
                   Kernel),
-        })), );
+        })));
 
 // See SPIR-V Section 3.10 Sampler Filter Mode
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     SamplerFilterMode, EnumCapabilityTest,
     Combine(Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
             ValuesIn(std::vector<EnumCapabilityCase>{
                 CASE1(SAMPLER_FILTER_MODE, SamplerFilterModeNearest, Kernel),
                 CASE1(SAMPLER_FILTER_MODE, SamplerFilterModeLinear, Kernel),
-            })), );
+            })));
 
 // See SPIR-V Section 3.11 Image Format
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     ImageFormat, EnumCapabilityTest,
     Combine(Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
             ValuesIn(std::vector<EnumCapabilityCase>{
@@ -285,10 +286,10 @@ INSTANTIATE_TEST_CASE_P(
         CASE1(SAMPLER_IMAGE_FORMAT, ImageFormatR16ui, StorageImageExtendedFormats),
         CASE1(SAMPLER_IMAGE_FORMAT, ImageFormatR8ui, StorageImageExtendedFormats),
                 // clang-format on
-            })), );
+            })));
 
 // See SPIR-V Section 3.12 Image Channel Order
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     ImageChannelOrder, EnumCapabilityTest,
     Combine(Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
             ValuesIn(std::vector<EnumCapabilityCase>{
@@ -313,10 +314,10 @@ INSTANTIATE_TEST_CASE_P(
                 CASE1(IMAGE_CHANNEL_ORDER, ImageChannelOrdersRGBA, Kernel),
                 CASE1(IMAGE_CHANNEL_ORDER, ImageChannelOrdersBGRA, Kernel),
                 CASE1(IMAGE_CHANNEL_ORDER, ImageChannelOrderABGR, Kernel),
-            })), );
+            })));
 
 // See SPIR-V Section 3.13 Image Channel Data Type
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     ImageChannelDataType, EnumCapabilityTest,
     Combine(Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
             ValuesIn(std::vector<EnumCapabilityCase>{
@@ -339,10 +340,10 @@ INSTANTIATE_TEST_CASE_P(
                 CASE1(IMAGE_CHANNEL_DATA_TYPE, ImageChannelDataTypeUnormInt24, Kernel),
                 CASE1(IMAGE_CHANNEL_DATA_TYPE, ImageChannelDataTypeUnormInt101010_2, Kernel),
                 // clang-format on
-            })), );
+            })));
 
 // See SPIR-V Section 3.14 Image Operands
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     ImageOperands, EnumCapabilityTest,
     Combine(Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
             ValuesIn(std::vector<EnumCapabilityCase>{
@@ -357,10 +358,10 @@ INSTANTIATE_TEST_CASE_P(
                 CASE0(OPTIONAL_IMAGE, ImageOperandsSampleMask),
                 CASE1(OPTIONAL_IMAGE, ImageOperandsMinLodMask, MinLod),
                 // clang-format on
-            })), );
+            })));
 
 // See SPIR-V Section 3.15 FP Fast Math Mode
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     FPFastMathMode, EnumCapabilityTest,
     Combine(Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
             ValuesIn(std::vector<EnumCapabilityCase>{
@@ -370,29 +371,29 @@ INSTANTIATE_TEST_CASE_P(
                 CASE1(FP_FAST_MATH_MODE, FPFastMathModeNSZMask, Kernel),
                 CASE1(FP_FAST_MATH_MODE, FPFastMathModeAllowRecipMask, Kernel),
                 CASE1(FP_FAST_MATH_MODE, FPFastMathModeFastMask, Kernel),
-            })), );
+            })));
 
 // See SPIR-V Section 3.17 Linkage Type
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     LinkageType, EnumCapabilityTest,
     Combine(Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
             ValuesIn(std::vector<EnumCapabilityCase>{
                 CASE1(LINKAGE_TYPE, LinkageTypeExport, Linkage),
                 CASE1(LINKAGE_TYPE, LinkageTypeImport, Linkage),
-            })), );
+            })));
 
 // See SPIR-V Section 3.18 Access Qualifier
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     AccessQualifier, EnumCapabilityTest,
     Combine(Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
             ValuesIn(std::vector<EnumCapabilityCase>{
                 CASE1(ACCESS_QUALIFIER, AccessQualifierReadOnly, Kernel),
                 CASE1(ACCESS_QUALIFIER, AccessQualifierWriteOnly, Kernel),
                 CASE1(ACCESS_QUALIFIER, AccessQualifierReadWrite, Kernel),
-            })), );
+            })));
 
 // See SPIR-V Section 3.19 Function Parameter Attribute
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     FunctionParameterAttribute, EnumCapabilityTest,
     Combine(Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
             ValuesIn(std::vector<EnumCapabilityCase>{
@@ -406,10 +407,10 @@ INSTANTIATE_TEST_CASE_P(
                 CASE1(FUNCTION_PARAMETER_ATTRIBUTE, FunctionParameterAttributeNoWrite, Kernel),
                 CASE1(FUNCTION_PARAMETER_ATTRIBUTE, FunctionParameterAttributeNoReadWrite, Kernel),
                 // clang-format on
-            })), );
+            })));
 
 // See SPIR-V Section 3.20 Decoration
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     Decoration, EnumCapabilityTest,
     Combine(Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
             ValuesIn(std::vector<EnumCapabilityCase>{
@@ -459,25 +460,25 @@ INSTANTIATE_TEST_CASE_P(
                 CASE1(DECORATION, DecorationInputAttachmentIndex,
                       InputAttachment),
                 CASE1(DECORATION, DecorationAlignment, Kernel),
-            })), );
+            })));
 
 #if 0
 // SpecId has different requirements in v1.0 and v1.1:
-INSTANTIATE_TEST_CASE_P(DecorationSpecIdV10, EnumCapabilityTest,
+INSTANTIATE_TEST_SUITE_P(DecorationSpecIdV10, EnumCapabilityTest,
                         Combine(Values(SPV_ENV_UNIVERSAL_1_0),
                                 ValuesIn(std::vector<EnumCapabilityCase>{CASE1(
-                                    DECORATION, DecorationSpecId, Shader)})), );
+                                    DECORATION, DecorationSpecId, Shader)})));
 #endif
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     DecorationV11, EnumCapabilityTest,
     Combine(Values(SPV_ENV_UNIVERSAL_1_1),
             ValuesIn(std::vector<EnumCapabilityCase>{
                 CASE2(DECORATION, DecorationSpecId, Shader, Kernel),
-                CASE1(DECORATION, DecorationMaxByteOffset, Addresses)})), );
+                CASE1(DECORATION, DecorationMaxByteOffset, Addresses)})));
 
 // See SPIR-V Section 3.21 BuiltIn
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     BuiltIn, EnumCapabilityTest,
     Combine(
         Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
@@ -490,10 +491,11 @@ INSTANTIATE_TEST_CASE_P(
             CASE1(BUILT_IN, BuiltInCullDistance, CullDistance),  // Bug 1407, 15234
             CASE1(BUILT_IN, BuiltInVertexId, Shader),
             CASE1(BUILT_IN, BuiltInInstanceId, Shader),
-            CASE2(BUILT_IN, BuiltInPrimitiveId, Geometry, Tessellation),
+            CASE3(BUILT_IN, BuiltInPrimitiveId, Geometry, Tessellation,
+                  RayTracingNV),
             CASE2(BUILT_IN, BuiltInInvocationId, Geometry, Tessellation),
-            CASE1(BUILT_IN, BuiltInLayer, Geometry),
-            CASE1(BUILT_IN, BuiltInViewportIndex, MultiViewport),  // Bug 15234
+            CASE2(BUILT_IN, BuiltInLayer, Geometry, ShaderViewportIndexLayerEXT),
+            CASE2(BUILT_IN, BuiltInViewportIndex, MultiViewport, ShaderViewportIndexLayerEXT),  // Bug 15234
             CASE1(BUILT_IN, BuiltInTessLevelOuter, Tessellation),
             CASE1(BUILT_IN, BuiltInTessLevelInner, Tessellation),
             CASE1(BUILT_IN, BuiltInTessCoord, Tessellation),
@@ -528,38 +530,50 @@ INSTANTIATE_TEST_CASE_P(
             CASE1(BUILT_IN, BuiltInVertexIndex, Shader),
             CASE1(BUILT_IN, BuiltInInstanceIndex, Shader),
             // clang-format on
-        })), );
+        })));
+
+INSTANTIATE_TEST_SUITE_P(
+    BuiltInV1_5, EnumCapabilityTest,
+    Combine(
+        Values(SPV_ENV_UNIVERSAL_1_5),
+        ValuesIn(std::vector<EnumCapabilityCase>{
+            // SPIR-V 1.5 adds new capabilities to enable these two builtins.
+            CASE3(BUILT_IN, BuiltInLayer, Geometry, ShaderLayer,
+                  ShaderViewportIndexLayerEXT),
+            CASE3(BUILT_IN, BuiltInViewportIndex, MultiViewport,
+                  ShaderViewportIndex, ShaderViewportIndexLayerEXT),
+        })));
 
 // See SPIR-V Section 3.22 Selection Control
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     SelectionControl, EnumCapabilityTest,
     Combine(Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
             ValuesIn(std::vector<EnumCapabilityCase>{
                 CASE0(SELECTION_CONTROL, SelectionControlMaskNone),
                 CASE0(SELECTION_CONTROL, SelectionControlFlattenMask),
                 CASE0(SELECTION_CONTROL, SelectionControlDontFlattenMask),
-            })), );
+            })));
 
 // See SPIR-V Section 3.23 Loop Control
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     LoopControl, EnumCapabilityTest,
     Combine(Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
             ValuesIn(std::vector<EnumCapabilityCase>{
                 CASE0(LOOP_CONTROL, LoopControlMaskNone),
                 CASE0(LOOP_CONTROL, LoopControlUnrollMask),
                 CASE0(LOOP_CONTROL, LoopControlDontUnrollMask),
-            })), );
+            })));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     LoopControlV11, EnumCapabilityTest,
     Combine(Values(SPV_ENV_UNIVERSAL_1_1),
             ValuesIn(std::vector<EnumCapabilityCase>{
                 CASE0(LOOP_CONTROL, LoopControlDependencyInfiniteMask),
                 CASE0(LOOP_CONTROL, LoopControlDependencyLengthMask),
-            })), );
+            })));
 
 // See SPIR-V Section 3.24 Function Control
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     FunctionControl, EnumCapabilityTest,
     Combine(Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
             ValuesIn(std::vector<EnumCapabilityCase>{
@@ -568,10 +582,10 @@ INSTANTIATE_TEST_CASE_P(
                 CASE0(FUNCTION_CONTROL, FunctionControlDontInlineMask),
                 CASE0(FUNCTION_CONTROL, FunctionControlPureMask),
                 CASE0(FUNCTION_CONTROL, FunctionControlConstMask),
-            })), );
+            })));
 
 // See SPIR-V Section 3.25 Memory Semantics <id>
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     MemorySemantics, EnumCapabilityTest,
     Combine(
         Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
@@ -590,10 +604,10 @@ INSTANTIATE_TEST_CASE_P(
             CASE1(MEMORY_SEMANTICS_ID, MemorySemanticsAtomicCounterMemoryMask,
                   AtomicStorage),  // Bug 15234
             CASE0(MEMORY_SEMANTICS_ID, MemorySemanticsImageMemoryMask),
-        })), );
+        })));
 
 // See SPIR-V Section 3.26 Memory Access
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     MemoryAccess, EnumCapabilityTest,
     Combine(Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
             ValuesIn(std::vector<EnumCapabilityCase>{
@@ -601,22 +615,24 @@ INSTANTIATE_TEST_CASE_P(
                 CASE0(OPTIONAL_MEMORY_ACCESS, MemoryAccessVolatileMask),
                 CASE0(OPTIONAL_MEMORY_ACCESS, MemoryAccessAlignedMask),
                 CASE0(OPTIONAL_MEMORY_ACCESS, MemoryAccessNontemporalMask),
-            })), );
+            })));
 
 // See SPIR-V Section 3.27 Scope <id>
-INSTANTIATE_TEST_CASE_P(Scope, EnumCapabilityTest,
-                        Combine(Values(SPV_ENV_UNIVERSAL_1_0,
-                                       SPV_ENV_UNIVERSAL_1_1),
-                                ValuesIn(std::vector<EnumCapabilityCase>{
-                                    CASE0(SCOPE_ID, ScopeCrossDevice),
-                                    CASE0(SCOPE_ID, ScopeDevice),
-                                    CASE0(SCOPE_ID, ScopeWorkgroup),
-                                    CASE0(SCOPE_ID, ScopeSubgroup),
-                                    CASE0(SCOPE_ID, ScopeInvocation),
-                                })), );
+INSTANTIATE_TEST_SUITE_P(
+    Scope, EnumCapabilityTest,
+    Combine(Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1,
+                   SPV_ENV_UNIVERSAL_1_2, SPV_ENV_UNIVERSAL_1_3),
+            ValuesIn(std::vector<EnumCapabilityCase>{
+                CASE0(SCOPE_ID, ScopeCrossDevice),
+                CASE0(SCOPE_ID, ScopeDevice),
+                CASE0(SCOPE_ID, ScopeWorkgroup),
+                CASE0(SCOPE_ID, ScopeSubgroup),
+                CASE0(SCOPE_ID, ScopeInvocation),
+                CASE1(SCOPE_ID, ScopeQueueFamilyKHR, VulkanMemoryModelKHR),
+            })));
 
 // See SPIR-V Section 3.28 Group Operation
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     GroupOperation, EnumCapabilityTest,
     Combine(Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
             ValuesIn(std::vector<EnumCapabilityCase>{
@@ -626,10 +642,10 @@ INSTANTIATE_TEST_CASE_P(
                       GroupNonUniformArithmetic, GroupNonUniformBallot),
                 CASE3(GROUP_OPERATION, GroupOperationExclusiveScan, Kernel,
                       GroupNonUniformArithmetic, GroupNonUniformBallot),
-            })), );
+            })));
 
 // See SPIR-V Section 3.29 Kernel Enqueue Flags
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     KernelEnqueueFlags, EnumCapabilityTest,
     Combine(Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
             ValuesIn(std::vector<EnumCapabilityCase>{
@@ -637,20 +653,20 @@ INSTANTIATE_TEST_CASE_P(
                 CASE1(KERNEL_ENQ_FLAGS, KernelEnqueueFlagsWaitKernel, Kernel),
                 CASE1(KERNEL_ENQ_FLAGS, KernelEnqueueFlagsWaitWorkGroup,
                       Kernel),
-            })), );
+            })));
 
 // See SPIR-V Section 3.30 Kernel Profiling Info
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     KernelProfilingInfo, EnumCapabilityTest,
     Combine(Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
             ValuesIn(std::vector<EnumCapabilityCase>{
                 CASE0(KERNEL_PROFILING_INFO, KernelProfilingInfoMaskNone),
                 CASE1(KERNEL_PROFILING_INFO, KernelProfilingInfoCmdExecTimeMask,
                       Kernel),
-            })), );
+            })));
 
 // See SPIR-V Section 3.31 Capability
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     CapabilityDependsOn, EnumCapabilityTest,
     Combine(
         Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
@@ -713,16 +729,16 @@ INSTANTIATE_TEST_CASE_P(
             CASE1(CAPABILITY, CapabilityStorageImageWriteWithoutFormat, Shader),
             CASE1(CAPABILITY, CapabilityMultiViewport, Geometry),
             // clang-format on
-        })), );
+        })));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     CapabilityDependsOnV11, EnumCapabilityTest,
     Combine(Values(SPV_ENV_UNIVERSAL_1_1),
             ValuesIn(std::vector<EnumCapabilityCase>{
                 CASE1(CAPABILITY, CapabilitySubgroupDispatch, DeviceEnqueue),
                 CASE1(CAPABILITY, CapabilityNamedBarrier, Kernel),
                 CASE1(CAPABILITY, CapabilityPipeStorage, Pipes),
-            })), );
+            })));
 
 #undef CASE0
 #undef CASE1

@@ -197,7 +197,7 @@ TEST_P(EliminateDeadConstantTest, Custom) {
       assembly_with_dead_const, expected, /*  skip_nop = */ true);
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     ScalarTypeConstants, EliminateDeadConstantTest,
     ::testing::ValuesIn(std::vector<EliminateDeadConstantTestCase>({
         // clang-format off
@@ -265,7 +265,7 @@ INSTANTIATE_TEST_CASE_P(
         // clang-format on
     })));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     VectorTypeConstants, EliminateDeadConstantTest,
     ::testing::ValuesIn(std::vector<EliminateDeadConstantTestCase>({
         // clang-format off
@@ -358,7 +358,7 @@ INSTANTIATE_TEST_CASE_P(
         // clang-format on
     })));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     StructTypeConstants, EliminateDeadConstantTest,
     ::testing::ValuesIn(std::vector<EliminateDeadConstantTestCase>({
         // clang-format off
@@ -485,7 +485,7 @@ INSTANTIATE_TEST_CASE_P(
         // clang-format on
     })));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     ScalarTypeSpecConstants, EliminateDeadConstantTest,
     ::testing::ValuesIn(std::vector<EliminateDeadConstantTestCase>({
         // clang-format off
@@ -522,7 +522,7 @@ INSTANTIATE_TEST_CASE_P(
         // clang-format on
     })));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     VectorTypeSpecConstants, EliminateDeadConstantTest,
     ::testing::ValuesIn(std::vector<EliminateDeadConstantTestCase>({
         // clang-format off
@@ -617,7 +617,7 @@ INSTANTIATE_TEST_CASE_P(
         // clang-format on
     })));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     SpecConstantOp, EliminateDeadConstantTest,
     ::testing::ValuesIn(std::vector<EliminateDeadConstantTestCase>({
         // clang-format off
@@ -768,7 +768,7 @@ INSTANTIATE_TEST_CASE_P(
         // clang-format on
     })));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     LongDefUseChain, EliminateDeadConstantTest,
     ::testing::ValuesIn(std::vector<EliminateDeadConstantTestCase>({
         // clang-format off

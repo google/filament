@@ -14,7 +14,7 @@
 
 if(NOT ${SPIRV_SKIP_TESTS})
   if(${PYTHONINTERP_FOUND})
-    add_test(NAME spirv_opt_tests
+    add_test(NAME spirv_opt_cli_tools_tests
       COMMAND ${PYTHON_EXECUTABLE}
       ${CMAKE_CURRENT_SOURCE_DIR}/../spirv_test_framework.py
       $<TARGET_FILE:spirv-opt> $<TARGET_FILE:spirv-as> $<TARGET_FILE:spirv-dis>

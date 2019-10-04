@@ -16,6 +16,7 @@
 
 #include <assert.h>
 #include <string.h>
+
 #include <algorithm>
 
 #include "source/macro.h"
@@ -50,6 +51,7 @@ spv_result_t spvOperandTableNameLookup(spv_target_env env,
   if (!table) return SPV_ERROR_INVALID_TABLE;
   if (!name || !pEntry) return SPV_ERROR_INVALID_POINTER;
 
+  const auto version = spvVersionForTargetEnv(env);
   for (uint64_t typeIndex = 0; typeIndex < table->count; ++typeIndex) {
     const auto& group = table->types[typeIndex];
     if (type != group.type) continue;
@@ -64,7 +66,7 @@ spv_result_t spvOperandTableNameLookup(spv_target_env env,
       // Note that the second rule assumes the extension enabling this operand
       // is indeed requested in the SPIR-V code; checking that should be
       // validator's work.
-      if ((spvVersionForTargetEnv(env) >= entry.minVersion ||
+      if (((version >= entry.minVersion && version <= entry.lastVersion) ||
            entry.numExtensions > 0u || entry.numCapabilities > 0u) &&
           nameLength == strlen(entry.name) &&
           !strncmp(entry.name, name, nameLength)) {
@@ -85,7 +87,7 @@ spv_result_t spvOperandTableValueLookup(spv_target_env env,
   if (!table) return SPV_ERROR_INVALID_TABLE;
   if (!pEntry) return SPV_ERROR_INVALID_POINTER;
 
-  spv_operand_desc_t needle = {"", value, 0, nullptr, 0, nullptr, {}, ~0u};
+  spv_operand_desc_t needle = {"", value, 0, nullptr, 0, nullptr, {}, ~0u, ~0u};
 
   auto comp = [](const spv_operand_desc_t& lhs, const spv_operand_desc_t& rhs) {
     return lhs.value < rhs.value;
@@ -108,6 +110,7 @@ spv_result_t spvOperandTableValueLookup(spv_target_env env,
     // requirements.
     // Assumes the underlying table is already sorted ascendingly according to
     // opcode value.
+    const auto version = spvVersionForTargetEnv(env);
     for (auto it = std::lower_bound(beg, end, needle, comp);
          it != end && it->value == value; ++it) {
       // We consider the current operand as available as long as
@@ -119,7 +122,7 @@ spv_result_t spvOperandTableValueLookup(spv_target_env env,
       // Note that the second rule assumes the extension enabling this operand
       // is indeed requested in the SPIR-V code; checking that should be
       // validator's work.
-      if (spvVersionForTargetEnv(env) >= it->minVersion ||
+      if ((version >= it->minVersion && version <= it->lastVersion) ||
           it->numExtensions > 0u || it->numCapabilities > 0u) {
         *pEntry = it;
         return SPV_SUCCESS;
@@ -411,6 +414,21 @@ bool spvIsIdType(spv_operand_type_t type) {
   }
 }
 
+bool spvIsInIdType(spv_operand_type_t type) {
+  if (!spvIsIdType(type)) {
+    // If it is not an ID it cannot be an input ID.
+    return false;
+  }
+  switch (type) {
+    // Blacklist non-input IDs.
+    case SPV_OPERAND_TYPE_TYPE_ID:
+    case SPV_OPERAND_TYPE_RESULT_ID:
+      return false;
+    default:
+      return true;
+  }
+}
+
 std::function<bool(unsigned)> spvOperandCanBeForwardDeclaredFunction(
     SpvOp opcode) {
   std::function<bool(unsigned index)> out;
@@ -465,6 +483,9 @@ std::function<bool(unsigned)> spvOperandCanBeForwardDeclaredFunction(
       break;
     case SpvOpTypeForwardPointer:
       out = [](unsigned index) { return index == 0; };
+      break;
+    case SpvOpTypeArray:
+      out = [](unsigned index) { return index == 1; };
       break;
     default:
       out = [](unsigned) { return false; };

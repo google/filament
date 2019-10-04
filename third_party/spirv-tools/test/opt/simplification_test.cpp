@@ -25,7 +25,6 @@ namespace {
 
 using SimplificationTest = PassTest<::testing::Test>;
 
-#ifdef SPIRV_EFFCEE
 TEST_F(SimplificationTest, StraightLineTest) {
   // Testing that folding rules are combined in simple straight line code.
   const std::string text = R"(OpCapability Shader
@@ -203,7 +202,128 @@ TEST_F(SimplificationTest, ThroughLoops) {
   SinglePassRunAndMatch<SimplificationPass>(text, false);
 }
 
-#endif
+TEST_F(SimplificationTest, CopyObjectWithDecorations1) {
+  // Don't simplify OpCopyObject if the result id has a decoration that the
+  // operand does not.
+  const std::string text = R"(OpCapability Shader
+OpCapability ShaderNonUniform
+%1 = OpExtInstImport "GLSL.std.450"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %2 "main"
+OpExecutionMode %2 OriginUpperLeft
+OpSource GLSL 430
+OpSourceExtension "GL_GOOGLE_cpp_style_line_directive"
+OpSourceExtension "GL_GOOGLE_include_directive"
+OpDecorate %3 NonUniform
+%void = OpTypeVoid
+%5 = OpTypeFunction %void
+%int = OpTypeInt 32 1
+%2 = OpFunction %void None %5
+%7 = OpLabel
+%8 = OpUndef %int
+%3 = OpCopyObject %int %8
+%9 = OpIAdd %int %3 %3
+OpReturn
+OpFunctionEnd
+)";
+
+  SinglePassRunAndCheck<SimplificationPass>(text, text, false);
+}
+
+TEST_F(SimplificationTest, CopyObjectWithDecorations2) {
+  // Simplify OpCopyObject if the result id is a subset of the decorations of
+  // the operand.
+  const std::string before = R"(OpCapability Shader
+OpCapability ShaderNonUniform
+%1 = OpExtInstImport "GLSL.std.450"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %2 "main"
+OpExecutionMode %2 OriginUpperLeft
+OpSource GLSL 430
+OpSourceExtension "GL_GOOGLE_cpp_style_line_directive"
+OpSourceExtension "GL_GOOGLE_include_directive"
+OpDecorate %3 NonUniform
+%void = OpTypeVoid
+%5 = OpTypeFunction %void
+%int = OpTypeInt 32 1
+%2 = OpFunction %void None %5
+%7 = OpLabel
+%3 = OpUndef %int
+%8 = OpCopyObject %int %3
+%9 = OpIAdd %int %8 %8
+OpReturn
+OpFunctionEnd
+)";
+
+  const std::string after = R"(OpCapability Shader
+OpCapability ShaderNonUniform
+%1 = OpExtInstImport "GLSL.std.450"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %2 "main"
+OpExecutionMode %2 OriginUpperLeft
+OpSource GLSL 430
+OpSourceExtension "GL_GOOGLE_cpp_style_line_directive"
+OpSourceExtension "GL_GOOGLE_include_directive"
+OpDecorate %3 NonUniform
+%void = OpTypeVoid
+%5 = OpTypeFunction %void
+%int = OpTypeInt 32 1
+%2 = OpFunction %void None %5
+%7 = OpLabel
+%3 = OpUndef %int
+%9 = OpIAdd %int %3 %3
+OpReturn
+OpFunctionEnd
+)";
+
+  SinglePassRunAndCheck<SimplificationPass>(before, after, false);
+}
+
+TEST_F(SimplificationTest, DontMoveDecorations) {
+  const std::string spirv = R"(
+; CHECK-NOT: RelaxedPrecision
+; CHECK: [[sub:%\w+]] = OpFSub
+; CHECK: OpStore {{.*}} [[sub]]
+OpCapability Shader
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 1 1 1
+OpDecorate %add RelaxedPrecision
+OpDecorate %block Block
+OpMemberDecorate %block 0 Offset 0
+OpMemberDecorate %block 1 Offset 4
+OpDecorate %in DescriptorSet 0
+OpDecorate %in Binding 0
+OpDecorate %out DescriptorSet 0
+OpDecorate %out Binding 1
+%void = OpTypeVoid
+%float = OpTypeFloat 32
+%void_fn = OpTypeFunction %void
+%block = OpTypeStruct %float %float
+%ptr_ssbo_block = OpTypePointer StorageBuffer %block
+%in = OpVariable %ptr_ssbo_block StorageBuffer
+%out = OpVariable %ptr_ssbo_block StorageBuffer
+%ptr_ssbo_float = OpTypePointer StorageBuffer %float
+%int = OpTypeInt 32 0
+%int_0 = OpConstant %int 0
+%int_1 = OpConstant %int 1
+%float_0 = OpConstant %float 0
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+%in_gep_0 = OpAccessChain %ptr_ssbo_float %in %int_0
+%in_gep_1 = OpAccessChain %ptr_ssbo_float %in %int_1
+%load_0 = OpLoad %float %in_gep_0
+%load_1 = OpLoad %float %in_gep_1
+%sub = OpFSub %float %load_0 %load_1
+%add = OpFAdd %float %float_0 %sub
+%out_gep_0 = OpAccessChain %ptr_ssbo_float %out %int_0
+OpStore %out_gep_0 %add
+OpReturn
+OpFunctionEnd
+)";
+
+  SinglePassRunAndMatch<SimplificationPass>(spirv, true);
+}
 
 }  // namespace
 }  // namespace opt

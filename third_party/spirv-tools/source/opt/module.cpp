@@ -19,10 +19,23 @@
 #include <ostream>
 
 #include "source/operand.h"
+#include "source/opt/ir_context.h"
 #include "source/opt/reflect.h"
 
 namespace spvtools {
 namespace opt {
+
+uint32_t Module::TakeNextIdBound() {
+  if (context()) {
+    if (id_bound() >= context()->max_id_bound()) {
+      return 0;
+    }
+  } else if (id_bound() >= kDefaultMaxIdBound) {
+    return 0;
+  }
+
+  return header_.bound++;
+}
 
 std::vector<Instruction*> Module::GetTypes() {
   std::vector<Instruction*> type_insts;
@@ -107,6 +120,9 @@ void Module::ForEachInst(const std::function<void(const Instruction*)>& f,
   for (auto& i : functions_) {
     static_cast<const Function*>(i.get())->ForEachInst(f,
                                                        run_on_debug_line_insts);
+  }
+  if (run_on_debug_line_insts) {
+    for (auto& i : trailing_dbg_line_info_) DELEGATE(i);
   }
 #undef DELEGATE
 }

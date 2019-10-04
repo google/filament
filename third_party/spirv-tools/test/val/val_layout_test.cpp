@@ -120,7 +120,7 @@ const std::vector<std::string>& getInstructions() {
 static const int kRangeEnd = 1000;
 pred_type All = Range<0, kRangeEnd>();
 
-INSTANTIATE_TEST_CASE_P(InstructionsOrder,
+INSTANTIATE_TEST_SUITE_P(InstructionsOrder,
     ValidateLayout,
     ::testing::Combine(::testing::Range((int)0, (int)getInstructions().size()),
     // Note: Because of ID dependencies between instructions, some instructions
@@ -160,7 +160,7 @@ INSTANTIATE_TEST_CASE_P(InstructionsOrder,
                     , std::make_tuple(std::string("%fLabel   = OpLabel")       , Equals<39>             , All)
                     , std::make_tuple(std::string("OpNop")                     , Equals<40>             , Range<40,kRangeEnd>())
                     , std::make_tuple(std::string("OpReturn ; %func2 return")  , Equals<41>             , All)
-    )),);
+    )));
 // clang-format on
 
 // Creates a new vector which removes the string if the substr is found in the
@@ -181,7 +181,7 @@ std::vector<std::string> GenerateCode(std::string substr, int order) {
 }
 
 // This test will check the logical layout of a binary by removing each
-// instruction in the pair of the INSTANTIATE_TEST_CASE_P call and moving it in
+// instruction in the pair of the INSTANTIATE_TEST_SUITE_P call and moving it in
 // the SPIRV source formed by combining the vector "instructions".
 TEST_P(ValidateLayout, Layout) {
   int order;
@@ -481,6 +481,7 @@ TEST_F(ValidateEntryPoint, FunctionIsTargetOfEntryPointAndFunctionCallBad) {
            OpCapability Shader
            OpMemoryModel Logical GLSL450
            OpEntryPoint Fragment %foo "foo"
+           OpExecutionMode %foo OriginUpperLeft
 %voidt   = OpTypeVoid
 %funct   = OpTypeFunction %voidt
 %foo     = OpFunction %voidt None %funct
@@ -645,6 +646,57 @@ TEST_F(ValidateLayout, ModuleProcessedInvalidInBasicBlock) {
   EXPECT_THAT(
       getDiagnosticString(),
       HasSubstr("ModuleProcessed cannot appear in a function declaration"));
+}
+
+TEST_F(ValidateLayout, WebGPUCallerBeforeCalleeBad) {
+  char str[] = R"(
+           OpCapability Shader
+           OpCapability VulkanMemoryModelKHR
+           OpExtension "SPV_KHR_vulkan_memory_model"
+           OpMemoryModel Logical VulkanKHR
+           OpEntryPoint GLCompute %main "main"
+%void    = OpTypeVoid
+%voidfn  = OpTypeFunction %void
+%main    = OpFunction %void None %voidfn
+%1       = OpLabel
+%2       = OpFunctionCall %void %callee
+           OpReturn
+           OpFunctionEnd
+%callee  = OpFunction %void None %voidfn
+%3       = OpLabel
+           OpReturn
+           OpFunctionEnd
+)";
+
+  CompileSuccessfully(str, SPV_ENV_WEBGPU_0);
+  ASSERT_EQ(SPV_ERROR_INVALID_LAYOUT, ValidateInstructions(SPV_ENV_WEBGPU_0));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("For WebGPU, functions need to be defined before being "
+                        "called.\n  %5 = OpFunctionCall %void %6\n"));
+}
+
+TEST_F(ValidateLayout, WebGPUCalleeBeforeCallerGood) {
+  char str[] = R"(
+           OpCapability Shader
+           OpCapability VulkanMemoryModelKHR
+           OpExtension "SPV_KHR_vulkan_memory_model"
+           OpMemoryModel Logical VulkanKHR
+           OpEntryPoint GLCompute %main "main"
+%void    = OpTypeVoid
+%voidfn  = OpTypeFunction %void
+%callee  = OpFunction %void None %voidfn
+%3       = OpLabel
+           OpReturn
+           OpFunctionEnd
+%main    = OpFunction %void None %voidfn
+%1       = OpLabel
+%2       = OpFunctionCall %void %callee
+           OpReturn
+           OpFunctionEnd
+)";
+
+  CompileSuccessfully(str, SPV_ENV_WEBGPU_0);
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_WEBGPU_0));
 }
 
 // TODO(umar): Test optional instructions

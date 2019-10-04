@@ -21,135 +21,34 @@
 #include "source/spirv_target_env.h"
 #include "source/util/bitutils.h"
 #include "source/val/instruction.h"
+#include "source/val/validate_memory_semantics.h"
+#include "source/val/validate_scopes.h"
 #include "source/val/validation_state.h"
+
+namespace {
+
+bool IsStorageClassAllowedByUniversalRules(uint32_t storage_class) {
+  switch (storage_class) {
+    case SpvStorageClassUniform:
+    case SpvStorageClassStorageBuffer:
+    case SpvStorageClassWorkgroup:
+    case SpvStorageClassCrossWorkgroup:
+    case SpvStorageClassGeneric:
+    case SpvStorageClassAtomicCounter:
+    case SpvStorageClassImage:
+    case SpvStorageClassFunction:
+    case SpvStorageClassPhysicalStorageBufferEXT:
+      return true;
+      break;
+    default:
+      return false;
+  }
+}
+
+}  // namespace
 
 namespace spvtools {
 namespace val {
-
-// Validates Memory Scope operand.
-spv_result_t ValidateMemoryScope(ValidationState_t& _, const Instruction* inst,
-                                 uint32_t id) {
-  const SpvOp opcode = inst->opcode();
-  bool is_int32 = false, is_const_int32 = false;
-  uint32_t value = 0;
-  std::tie(is_int32, is_const_int32, value) = _.EvalInt32IfConst(id);
-
-  if (!is_int32) {
-    return _.diag(SPV_ERROR_INVALID_DATA, inst)
-           << spvOpcodeString(opcode) << ": expected Scope to be 32-bit int";
-  }
-
-  if (!is_const_int32) {
-    return SPV_SUCCESS;
-  }
-
-#if 0
-  // TODO(atgoo@github.com): this check fails Vulkan CTS, reenable once fixed.
-  if (spvIsVulkanEnv(_.context()->target_env)) {
-    if (value != SpvScopeDevice && value != SpvScopeWorkgroup &&
-        value != SpvScopeInvocation) {
-      return _.diag(SPV_ERROR_INVALID_DATA, inst)
-             << spvOpcodeString(opcode)
-             << ": in Vulkan environment memory scope is limited to Device, "
-                "Workgroup and Invocation";
-    }
-  }
-#endif
-
-  // TODO(atgoo@github.com) Add checks for OpenCL and OpenGL environments.
-
-  return SPV_SUCCESS;
-}
-
-// Validates a Memory Semantics operand.
-spv_result_t ValidateMemorySemantics(ValidationState_t& _,
-                                     const Instruction* inst,
-                                     uint32_t operand_index) {
-  const SpvOp opcode = inst->opcode();
-  bool is_int32 = false, is_const_int32 = false;
-  uint32_t flags = 0;
-  auto memory_semantics_id = inst->GetOperandAs<const uint32_t>(operand_index);
-  std::tie(is_int32, is_const_int32, flags) =
-      _.EvalInt32IfConst(memory_semantics_id);
-
-  if (!is_int32) {
-    return _.diag(SPV_ERROR_INVALID_DATA, inst)
-           << spvOpcodeString(opcode)
-           << ": expected Memory Semantics to be 32-bit int";
-  }
-
-  if (!is_const_int32) {
-    return SPV_SUCCESS;
-  }
-
-  if (spvtools::utils::CountSetBits(
-          flags &
-          (SpvMemorySemanticsAcquireMask | SpvMemorySemanticsReleaseMask |
-           SpvMemorySemanticsAcquireReleaseMask |
-           SpvMemorySemanticsSequentiallyConsistentMask)) > 1) {
-    return _.diag(SPV_ERROR_INVALID_DATA, inst)
-           << spvOpcodeString(opcode)
-           << ": no more than one of the following Memory Semantics bits can "
-              "be set at the same time: Acquire, Release, AcquireRelease or "
-              "SequentiallyConsistent";
-  }
-
-  if (flags & SpvMemorySemanticsUniformMemoryMask &&
-      !_.HasCapability(SpvCapabilityShader)) {
-    return _.diag(SPV_ERROR_INVALID_DATA, inst)
-           << spvOpcodeString(opcode)
-           << ": Memory Semantics UniformMemory requires capability Shader";
-  }
-
-  if (flags & SpvMemorySemanticsAtomicCounterMemoryMask &&
-      !_.HasCapability(SpvCapabilityAtomicStorage)) {
-    return _.diag(SPV_ERROR_INVALID_DATA, inst)
-           << spvOpcodeString(opcode)
-           << ": Memory Semantics UniformMemory requires capability "
-              "AtomicStorage";
-  }
-
-  if (opcode == SpvOpAtomicFlagClear &&
-      (flags & SpvMemorySemanticsAcquireMask ||
-       flags & SpvMemorySemanticsAcquireReleaseMask)) {
-    return _.diag(SPV_ERROR_INVALID_DATA, inst)
-           << "Memory Semantics Acquire and AcquireRelease cannot be used with "
-           << spvOpcodeString(opcode);
-  }
-
-  if (opcode == SpvOpAtomicCompareExchange && operand_index == 5 &&
-      (flags & SpvMemorySemanticsReleaseMask ||
-       flags & SpvMemorySemanticsAcquireReleaseMask)) {
-    return _.diag(SPV_ERROR_INVALID_DATA, inst)
-           << spvOpcodeString(opcode)
-           << ": Memory Semantics Release and AcquireRelease cannot be used "
-              "for operand Unequal";
-  }
-
-  if (spvIsVulkanEnv(_.context()->target_env)) {
-    if (opcode == SpvOpAtomicLoad &&
-        (flags & SpvMemorySemanticsReleaseMask ||
-         flags & SpvMemorySemanticsAcquireReleaseMask ||
-         flags & SpvMemorySemanticsSequentiallyConsistentMask)) {
-      return _.diag(SPV_ERROR_INVALID_DATA, inst)
-             << "Vulkan spec disallows OpAtomicLoad with Memory Semantics "
-                "Release, AcquireRelease and SequentiallyConsistent";
-    }
-
-    if (opcode == SpvOpAtomicStore &&
-        (flags & SpvMemorySemanticsAcquireMask ||
-         flags & SpvMemorySemanticsAcquireReleaseMask ||
-         flags & SpvMemorySemanticsSequentiallyConsistentMask)) {
-      return _.diag(SPV_ERROR_INVALID_DATA, inst)
-             << "Vulkan spec disallows OpAtomicStore with Memory Semantics "
-                "Acquire, AcquireRelease and SequentiallyConsistent";
-    }
-  }
-
-  // TODO(atgoo@github.com) Add checks for OpenCL and OpenGL environments.
-
-  return SPV_SUCCESS;
-}
 
 // Validates correctness of atomic instructions.
 spv_result_t AtomicsPass(ValidationState_t& _, const Instruction* inst) {
@@ -200,10 +99,33 @@ spv_result_t AtomicsPass(ValidationState_t& _, const Instruction* inst) {
         }
         if (spvIsVulkanEnv(_.context()->target_env) &&
             _.GetBitWidth(result_type) != 32) {
-          return _.diag(SPV_ERROR_INVALID_DATA, inst)
-                 << spvOpcodeString(opcode)
-                 << ": according to the Vulkan spec atomic Result Type needs "
-                    "to be a 32-bit int scalar type";
+          switch (opcode) {
+            case SpvOpAtomicSMin:
+            case SpvOpAtomicUMin:
+            case SpvOpAtomicSMax:
+            case SpvOpAtomicUMax:
+            case SpvOpAtomicAnd:
+            case SpvOpAtomicOr:
+            case SpvOpAtomicXor:
+            case SpvOpAtomicIAdd:
+            case SpvOpAtomicLoad:
+            case SpvOpAtomicStore:
+            case SpvOpAtomicExchange:
+            case SpvOpAtomicCompareExchange: {
+              if (_.GetBitWidth(result_type) == 64 &&
+                  !_.HasCapability(SpvCapabilityInt64Atomics))
+                return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                       << spvOpcodeString(opcode)
+                       << ": 64-bit atomics require the Int64Atomics "
+                          "capability";
+            } break;
+            default:
+              return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                     << spvOpcodeString(opcode)
+                     << ": according to the Vulkan spec atomic Result Type "
+                        "needs "
+                        "to be a 32-bit int scalar type";
+          }
         }
       }
 
@@ -219,21 +141,42 @@ spv_result_t AtomicsPass(ValidationState_t& _, const Instruction* inst) {
                << ": expected Pointer to be of type OpTypePointer";
       }
 
-      switch (storage_class) {
-        case SpvStorageClassUniform:
-        case SpvStorageClassWorkgroup:
-        case SpvStorageClassCrossWorkgroup:
-        case SpvStorageClassGeneric:
-        case SpvStorageClassAtomicCounter:
-        case SpvStorageClassImage:
-        case SpvStorageClassStorageBuffer:
-          break;
-        default:
+      // Validate storage class against universal rules
+      if (!IsStorageClassAllowedByUniversalRules(storage_class)) {
+        return _.diag(SPV_ERROR_INVALID_DATA, inst)
+               << spvOpcodeString(opcode)
+               << ": storage class forbidden by universal validation rules.";
+      }
+
+      // Then Shader rules
+      if (_.HasCapability(SpvCapabilityShader)) {
+        if (storage_class == SpvStorageClassFunction) {
           return _.diag(SPV_ERROR_INVALID_DATA, inst)
                  << spvOpcodeString(opcode)
-                 << ": expected Pointer Storage Class to be Uniform, "
-                    "Workgroup, CrossWorkgroup, Generic, AtomicCounter, Image "
-                    "or StorageBuffer";
+                 << ": Function storage class forbidden when the Shader "
+                    "capability is declared.";
+        }
+      }
+
+      // And finally OpenCL environment rules
+      if (spvIsOpenCLEnv(_.context()->target_env)) {
+        if ((storage_class != SpvStorageClassFunction) &&
+            (storage_class != SpvStorageClassWorkgroup) &&
+            (storage_class != SpvStorageClassCrossWorkgroup) &&
+            (storage_class != SpvStorageClassGeneric)) {
+          return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                 << spvOpcodeString(opcode)
+                 << ": storage class must be Function, Workgroup, "
+                    "CrossWorkGroup or Generic in the OpenCL environment.";
+        }
+
+        if (_.context()->target_env == SPV_ENV_OPENCL_1_2) {
+          if (storage_class == SpvStorageClassGeneric) {
+            return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                   << "Storage class cannot be Generic in OpenCL 1.2 "
+                      "environment";
+          }
+        }
       }
 
       if (opcode == SpvOpAtomicFlagTestAndSet ||
@@ -264,13 +207,37 @@ spv_result_t AtomicsPass(ValidationState_t& _, const Instruction* inst) {
         return error;
       }
 
-      if (auto error = ValidateMemorySemantics(_, inst, operand_index++))
+      const auto equal_semantics_index = operand_index++;
+      if (auto error = ValidateMemorySemantics(_, inst, equal_semantics_index))
         return error;
 
       if (opcode == SpvOpAtomicCompareExchange ||
           opcode == SpvOpAtomicCompareExchangeWeak) {
-        if (auto error = ValidateMemorySemantics(_, inst, operand_index++))
+        const auto unequal_semantics_index = operand_index++;
+        if (auto error =
+                ValidateMemorySemantics(_, inst, unequal_semantics_index))
           return error;
+
+        // Volatile bits must match for equal and unequal semantics. Previous
+        // checks guarantee they are 32-bit constants, but we need to recheck
+        // whether they are evaluatable constants.
+        bool is_int32 = false;
+        bool is_equal_const = false;
+        bool is_unequal_const = false;
+        uint32_t equal_value = 0;
+        uint32_t unequal_value = 0;
+        std::tie(is_int32, is_equal_const, equal_value) = _.EvalInt32IfConst(
+            inst->GetOperandAs<uint32_t>(equal_semantics_index));
+        std::tie(is_int32, is_unequal_const, unequal_value) =
+            _.EvalInt32IfConst(
+                inst->GetOperandAs<uint32_t>(unequal_semantics_index));
+        if (is_equal_const && is_unequal_const &&
+            ((equal_value & SpvMemorySemanticsVolatileMask) ^
+             (unequal_value & SpvMemorySemanticsVolatileMask))) {
+          return _.diag(SPV_ERROR_INVALID_ID, inst)
+                 << "Volatile mask setting must match for Equal and Unequal "
+                    "memory semantics";
+        }
       }
 
       if (opcode == SpvOpAtomicStore) {
@@ -278,9 +245,8 @@ spv_result_t AtomicsPass(ValidationState_t& _, const Instruction* inst) {
         if (value_type != data_type) {
           return _.diag(SPV_ERROR_INVALID_DATA, inst)
                  << spvOpcodeString(opcode)
-                 << ": expected Value type and the type pointed to by Pointer "
-                    "to"
-                 << " be the same";
+                 << ": expected Value type and the type pointed to by "
+                    "Pointer to be the same";
         }
       } else if (opcode != SpvOpAtomicLoad && opcode != SpvOpAtomicIIncrement &&
                  opcode != SpvOpAtomicIDecrement &&

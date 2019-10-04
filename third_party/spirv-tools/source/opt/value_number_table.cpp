@@ -78,8 +78,12 @@ uint32_t ValueNumberTable::AssignValueNumber(Instruction* inst) {
     return value;
   }
 
+  analysis::DecorationManager* dec_mgr = context()->get_decoration_mgr();
+
   // When we copy an object, the value numbers should be the same.
-  if (inst->opcode() == SpvOpCopyObject) {
+  if (inst->opcode() == SpvOpCopyObject &&
+      dec_mgr->HaveTheSameDecorations(inst->result_id(),
+                                      inst->GetSingleWordInOperand(0))) {
     value = GetValueNumber(inst->GetSingleWordInOperand(0));
     if (value != 0) {
       id_to_value_[inst->result_id()] = value;
@@ -89,7 +93,9 @@ uint32_t ValueNumberTable::AssignValueNumber(Instruction* inst) {
 
   // Phi nodes are a type of copy.  If all of the inputs have the same value
   // number, then we can assign the result of the phi the same value number.
-  if (inst->opcode() == SpvOpPhi) {
+  if (inst->opcode() == SpvOpPhi &&
+      dec_mgr->HaveTheSameDecorations(inst->result_id(),
+                                      inst->GetSingleWordInOperand(0))) {
     value = GetValueNumber(inst->GetSingleWordInOperand(0));
     if (value != 0) {
       for (uint32_t op = 2; op < inst->NumInOperands(); op += 2) {

@@ -107,7 +107,7 @@ TEST(CInterface, DefaultConsumerNullDiagnosticForInvalidValidating) {
 }
 
 TEST(CInterface, SpecifyConsumerNullDiagnosticForAssembling) {
-  const char input_text[] = "%1 = OpName\n";
+  const char input_text[] = "     OpName\n";
 
   auto context = spvContextCreate(SPV_ENV_UNIVERSAL_1_1);
   int invocation = 0;
@@ -150,7 +150,7 @@ TEST(CInterface, SpecifyConsumerNullDiagnosticForDisassembling) {
         EXPECT_STREQ("input", source);
         EXPECT_EQ(0u, position.line);
         EXPECT_EQ(0u, position.column);
-        EXPECT_EQ(5u, position.index);
+        EXPECT_EQ(1u, position.index);
         EXPECT_STREQ("Invalid opcode: 65535", message);
       });
 
@@ -213,7 +213,7 @@ TEST(CInterface, SpecifyConsumerNullDiagnosticForValidating) {
 // When having both a consumer and an diagnostic object, the diagnostic object
 // should take priority.
 TEST(CInterface, SpecifyConsumerSpecifyDiagnosticForAssembling) {
-  const char input_text[] = "%1 = OpName";
+  const char input_text[] = "     OpName";
 
   auto context = spvContextCreate(SPV_ENV_UNIVERSAL_1_1);
   int invocation = 0;

@@ -26,8 +26,6 @@ namespace {
 
 using CCPTest = PassTest<::testing::Test>;
 
-// TODO(dneto): Add Effcee as required dependency, and make this unconditional.
-#ifdef SPIRV_EFFCEE
 TEST_F(CCPTest, PropagateThroughPhis) {
   const std::string spv_asm = R"(
                OpCapability Shader
@@ -572,10 +570,10 @@ TEST_F(CCPTest, SkipSpecConstantInstrucitons) {
          %10 = OpSpecConstantFalse %bool
        %main = OpFunction %void None %4
          %11 = OpLabel
-         %12 = OpBranchConditional %10 %l1 %l2
-         %l1 = OpLabel
+               OpBranchConditional %10 %L1 %L2
+         %L1 = OpLabel
                OpReturn
-         %l2 = OpLabel
+         %L2 = OpLabel
                OpReturn
                OpFunctionEnd
   )";
@@ -589,6 +587,7 @@ TEST_F(CCPTest, UpdateSubsequentPhisToVarying) {
 OpCapability Shader
 OpMemoryModel Logical GLSL450
 OpEntryPoint Fragment %func "func" %in
+OpExecutionMode %func OriginUpperLeft
 %void = OpTypeVoid
 %bool = OpTypeBool
 %int = OpTypeInt 32 1
@@ -743,6 +742,7 @@ TEST_F(CCPTest, NullBranchCondition) {
 OpCapability Shader
 OpMemoryModel Logical GLSL450
 OpEntryPoint Fragment %func "func"
+OpExecutionMode %func OriginUpperLeft
 %void = OpTypeVoid
 %bool = OpTypeBool
 %int = OpTypeInt 32 1
@@ -774,6 +774,7 @@ TEST_F(CCPTest, UndefBranchCondition) {
 OpCapability Shader
 OpMemoryModel Logical GLSL450
 OpEntryPoint Fragment %func "func"
+OpExecutionMode %func OriginUpperLeft
 %void = OpTypeVoid
 %bool = OpTypeBool
 %int = OpTypeInt 32 1
@@ -805,6 +806,7 @@ TEST_F(CCPTest, NullSwitchCondition) {
 OpCapability Shader
 OpMemoryModel Logical GLSL450
 OpEntryPoint Fragment %func "func"
+OpExecutionMode %func OriginUpperLeft
 %void = OpTypeVoid
 %int = OpTypeInt 32 1
 %null = OpConstantNull %int
@@ -835,6 +837,7 @@ TEST_F(CCPTest, UndefSwitchCondition) {
 OpCapability Shader
 OpMemoryModel Logical GLSL450
 OpEntryPoint Fragment %func "func"
+OpExecutionMode %func OriginUpperLeft
 %void = OpTypeVoid
 %int = OpTypeInt 32 1
 %undef = OpUndef %int
@@ -865,6 +868,7 @@ TEST_F(CCPTest, CompositeConstructOfGlobalValue) {
 OpCapability Shader
 OpMemoryModel Logical GLSL450
 OpEntryPoint Fragment %func "func" %in
+OpExecutionMode %func OriginUpperLeft
 %void = OpTypeVoid
 %int = OpTypeInt 32 1
 %bool = OpTypeBool
@@ -891,7 +895,35 @@ OpFunctionEnd
 
   SinglePassRunAndMatch<CCPPass>(text, true);
 }
-#endif
+
+TEST_F(CCPTest, FoldWithDecoration) {
+  const std::string text = R"(
+; CHECK: OpCapability
+; CHECK-NOT: OpDecorate
+; CHECK: OpFunctionEnd
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %2 "main"
+               OpExecutionMode %2 OriginUpperLeft
+               OpSource ESSL 310
+               OpDecorate %3 RelaxedPrecision
+       %void = OpTypeVoid
+          %5 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %v3float = OpTypeVector %float 3
+    %float_0 = OpConstant %float 0
+    %v4float = OpTypeVector %float 4
+         %10 = OpConstantComposite %v4float %float_0 %float_0 %float_0 %float_0
+          %2 = OpFunction %void None %5
+         %11 = OpLabel
+          %3 = OpVectorShuffle %v3float %10 %10 0 1 2
+               OpReturn
+               OpFunctionEnd
+)";
+
+  SinglePassRunAndMatch<CCPPass>(text, true);
+}
 
 }  // namespace
 }  // namespace opt

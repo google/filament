@@ -47,7 +47,8 @@ class CopyPropagateArrays : public MemPass {
     return IRContext::kAnalysisDefUse | IRContext::kAnalysisCFG |
            IRContext::kAnalysisInstrToBlockMapping |
            IRContext::kAnalysisLoopAnalysis | IRContext::kAnalysisDecorations |
-           IRContext::kAnalysisDominatorAnalysis | IRContext::kAnalysisNameMap;
+           IRContext::kAnalysisDominatorAnalysis | IRContext::kAnalysisNameMap |
+           IRContext::kAnalysisConstants | IRContext::kAnalysisTypes;
   }
 
  private:
@@ -98,18 +99,21 @@ class CopyPropagateArrays : public MemPass {
 
     // Returns the type id of the pointer type that can be used to point to this
     // memory object.
-    uint32_t GetPointerTypeId() const {
+    uint32_t GetPointerTypeId(const CopyPropagateArrays* pass) const {
+      analysis::DefUseManager* def_use_mgr =
+          GetVariable()->context()->get_def_use_mgr();
       analysis::TypeManager* type_mgr =
           GetVariable()->context()->get_type_mgr();
-      const analysis::Pointer* pointer_type =
-          type_mgr->GetType(GetVariable()->type_id())->AsPointer();
-      const analysis::Type* var_type = pointer_type->pointee_type();
-      const analysis::Type* member_type =
-          type_mgr->GetMemberType(var_type, GetAccessIds());
-      uint32_t member_type_id = type_mgr->GetId(member_type);
-      assert(member_type != 0);
+
+      Instruction* var_pointer_inst =
+          def_use_mgr->GetDef(GetVariable()->type_id());
+
+      uint32_t member_type_id = pass->GetMemberTypeId(
+          var_pointer_inst->GetSingleWordInOperand(1), GetAccessIds());
+
       uint32_t member_pointer_type_id = type_mgr->FindPointerToType(
-          member_type_id, pointer_type->storage_class());
+          member_type_id, static_cast<SpvStorageClass>(
+                              var_pointer_inst->GetSingleWordInOperand(0)));
       return member_pointer_type_id;
     }
 
@@ -213,16 +217,16 @@ class CopyPropagateArrays : public MemPass {
   // |original_ptr_inst| to |type_id| and still have valid code.
   bool CanUpdateUses(Instruction* original_ptr_inst, uint32_t type_id);
 
-  // Returns the id whose value is the same as |object_to_copy| except its type
-  // is |new_type_id|.  Any instructions need to generate this value will be
-  // inserted before |insertion_position|.
-  uint32_t GenerateCopy(Instruction* object_to_copy, uint32_t new_type_id,
-                        Instruction* insertion_position);
-
   // Returns a store to |var_inst| that writes to the entire variable, and is
   // the only store that does so.  Note it does not look through OpAccessChain
   // instruction, so partial stores are not considered.
   Instruction* FindStoreInstruction(const Instruction* var_inst) const;
+
+  // Return the type id of the member of the type |id| access using
+  // |access_chain|. The elements of |access_chain| are to be interpreted the
+  // same way the indexes are used in an |OpCompositeExtract| instruction.
+  uint32_t GetMemberTypeId(uint32_t id,
+                           const std::vector<uint32_t>& access_chain) const;
 };
 
 }  // namespace opt

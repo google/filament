@@ -91,6 +91,7 @@ TEST_F(CFGCleanupTest, RemoveDecorations) {
                   %1 = OpExtInstImport "GLSL.std.450"
                        OpMemoryModel Logical GLSL450
                        OpEntryPoint Fragment %main "main"
+                       OpExecutionMode %main OriginUpperLeft
                        OpName %main "main"
                        OpName %x "x"
                        OpName %dead "dead"
@@ -123,6 +124,7 @@ TEST_F(CFGCleanupTest, RemoveDecorations) {
 %1 = OpExtInstImport "GLSL.std.450"
 OpMemoryModel Logical GLSL450
 OpEntryPoint Fragment %main "main"
+OpExecutionMode %main OriginUpperLeft
 OpName %main "main"
 OpName %x "x"
 OpDecorate %x RelaxedPrecision
@@ -153,6 +155,7 @@ TEST_F(CFGCleanupTest, UpdatePhis) {
           %1 = OpExtInstImport "GLSL.std.450"
                OpMemoryModel Logical GLSL450
                OpEntryPoint Fragment %main "main" %y %outparm
+               OpExecutionMode %main OriginUpperLeft
                OpName %main "main"
                OpName %y "y"
                OpName %outparm "outparm"
@@ -194,6 +197,7 @@ TEST_F(CFGCleanupTest, UpdatePhis) {
 %1 = OpExtInstImport "GLSL.std.450"
 OpMemoryModel Logical GLSL450
 OpEntryPoint Fragment %main "main" %y %outparm
+OpExecutionMode %main OriginUpperLeft
 OpName %main "main"
 OpName %y "y"
 OpName %outparm "outparm"
@@ -272,6 +276,7 @@ TEST_F(CFGCleanupTest, RemovePhiArgsFromFarBlocks) {
           %1 = OpExtInstImport "GLSL.std.450"
                OpMemoryModel Logical GLSL450
                OpEntryPoint Fragment %main "main" %y %outparm
+               OpExecutionMode %main OriginUpperLeft
                OpName %main "main"
                OpName %y "y"
                OpName %outparm "outparm"
@@ -319,6 +324,7 @@ TEST_F(CFGCleanupTest, RemovePhiArgsFromFarBlocks) {
 %1 = OpExtInstImport "GLSL.std.450"
 OpMemoryModel Logical GLSL450
 OpEntryPoint Fragment %main "main" %y %outparm
+OpExecutionMode %main OriginUpperLeft
 OpName %main "main"
 OpName %y "y"
 OpName %outparm "outparm"
@@ -370,6 +376,7 @@ TEST_F(CFGCleanupTest, RemovePhiConstantArgs) {
           %1 = OpExtInstImport "GLSL.std.450"
                OpMemoryModel Logical GLSL450
                OpEntryPoint Fragment %main "main" %y %outparm
+               OpExecutionMode %main OriginUpperLeft
                OpName %main "main"
                OpName %y "y"
                OpName %outparm "outparm"
@@ -410,6 +417,7 @@ TEST_F(CFGCleanupTest, RemovePhiConstantArgs) {
 %1 = OpExtInstImport "GLSL.std.450"
 OpMemoryModel Logical GLSL450
 OpEntryPoint Fragment %main "main" %y %outparm
+OpExecutionMode %main OriginUpperLeft
 OpName %main "main"
 OpName %y "y"
 OpName %outparm "outparm"

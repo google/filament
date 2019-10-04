@@ -29,7 +29,6 @@ using ::testing::HasSubstr;
 using ::testing::MatchesRegex;
 using LocalRedundancyEliminationTest = PassTest<::testing::Test>;
 
-#ifdef SPIRV_EFFCEE
 // Remove an instruction when it was already computed.
 TEST_F(LocalRedundancyEliminationTest, RemoveRedundantAdd) {
   const std::string text = R"(
@@ -154,7 +153,6 @@ TEST_F(LocalRedundancyEliminationTest, KeepInstructionsInDifferentBlocks) {
   )";
   SinglePassRunAndMatch<LocalRedundancyEliminationPass>(text, false);
 }
-#endif
 
 }  // namespace
 }  // namespace opt

@@ -155,11 +155,6 @@ bool Instruction::IsReadOnlyLoad() const {
 }
 
 Instruction* Instruction::GetBaseAddress() const {
-  assert((IsLoad() || opcode() == SpvOpStore || opcode() == SpvOpAccessChain ||
-          opcode() == SpvOpInBoundsAccessChain || opcode() == SpvOpCopyObject ||
-          opcode() == SpvOpImageTexelPointer) &&
-         "GetBaseAddress should only be called on instructions that take a "
-         "pointer or image.");
   uint32_t base = GetSingleWordInOperand(kLoadBaseIndex);
   Instruction* base_inst = context()->get_def_use_mgr()->GetDef(base);
   bool done = false;
@@ -180,22 +175,6 @@ Instruction* Instruction::GetBaseAddress() const {
         done = true;
         break;
     }
-  }
-
-  switch (opcode()) {
-    case SpvOpLoad:
-    case SpvOpStore:
-    case SpvOpAccessChain:
-    case SpvOpInBoundsAccessChain:
-    case SpvOpCopyObject:
-      // A load or store through a pointer.
-      assert(base_inst->IsValidBasePointer() &&
-             "We cannot have a base pointer come from this load");
-      break;
-    default:
-      // A load or store of an image.
-      assert(base_inst->IsValidBaseImage() && "We are expecting an image.");
-      break;
   }
   return base_inst;
 }
@@ -393,6 +372,11 @@ uint32_t Instruction::GetTypeComponent(uint32_t element) const {
   return subtype;
 }
 
+Instruction* Instruction::InsertBefore(std::unique_ptr<Instruction>&& i) {
+  i.get()->InsertBefore(this);
+  return i.release();
+}
+
 Instruction* Instruction::InsertBefore(
     std::vector<std::unique_ptr<Instruction>>&& list) {
   Instruction* first_node = list.front().get();
@@ -401,11 +385,6 @@ Instruction* Instruction::InsertBefore(
   }
   list.clear();
   return first_node;
-}
-
-Instruction* Instruction::InsertBefore(std::unique_ptr<Instruction>&& i) {
-  i.get()->InsertBefore(this);
-  return i.release();
 }
 
 bool Instruction::IsValidBasePointer() const {
@@ -490,7 +469,7 @@ bool Instruction::IsOpaqueType() const {
 
 bool Instruction::IsFoldable() const {
   return IsFoldableByFoldScalar() ||
-         context()->get_instruction_folder().HasConstFoldingRule(opcode());
+         context()->get_instruction_folder().HasConstFoldingRule(this);
 }
 
 bool Instruction::IsFoldableByFoldScalar() const {
@@ -504,13 +483,23 @@ bool Instruction::IsFoldableByFoldScalar() const {
 
 bool Instruction::IsFloatingPointFoldingAllowed() const {
   // TODO: Add the rules for kernels.  For now it will be pessimistic.
-  if (!context_->get_feature_mgr()->HasCapability(SpvCapabilityShader)) {
+  // For now, do not support capabilities introduced by SPV_KHR_float_controls.
+  if (!context_->get_feature_mgr()->HasCapability(SpvCapabilityShader) ||
+      context_->get_feature_mgr()->HasCapability(SpvCapabilityDenormPreserve) ||
+      context_->get_feature_mgr()->HasCapability(
+          SpvCapabilityDenormFlushToZero) ||
+      context_->get_feature_mgr()->HasCapability(
+          SpvCapabilitySignedZeroInfNanPreserve) ||
+      context_->get_feature_mgr()->HasCapability(
+          SpvCapabilityRoundingModeRTZ) ||
+      context_->get_feature_mgr()->HasCapability(
+          SpvCapabilityRoundingModeRTE)) {
     return false;
   }
 
   bool is_nocontract = false;
   context_->get_decoration_mgr()->WhileEachDecoration(
-      opcode_, SpvDecorationNoContraction,
+      result_id(), SpvDecorationNoContraction,
       [&is_nocontract](const Instruction&) {
         is_nocontract = true;
         return false;
@@ -538,6 +527,10 @@ std::string Instruction::PrettyPrint(uint32_t options) const {
 std::ostream& operator<<(std::ostream& str, const Instruction& inst) {
   str << inst.PrettyPrint();
   return str;
+}
+
+void Instruction::Dump() const {
+  std::cerr << "Instruction #" << unique_id() << "\n" << *this << "\n";
 }
 
 bool Instruction::IsOpcodeCodeMotionSafe() const {

@@ -54,11 +54,9 @@ class FoldSpecConstantOpAndCompositePass : public Pass {
   // it.
   bool ProcessOpSpecConstantOp(Module::inst_iterator* pos);
 
-  // Try to fold the OpSpecConstantOp CompositeExtract instruction pointed by
-  // the given instruction iterator to a normal constant defining instruction.
-  // Returns the pointer to the new constant defining instruction if succeeded.
-  // Otherwise returns nullptr.
-  Instruction* DoCompositeExtract(Module::inst_iterator* inst_iter_ptr);
+  // Returns the result of folding the OpSpecConstantOp instruction
+  // |inst_iter_ptr| using the instruction folder.
+  Instruction* FoldWithInstructionFolder(Module::inst_iterator* inst_iter_ptr);
 
   // Try to fold the OpSpecConstantOp VectorShuffle instruction pointed by the
   // given instruction iterator to a normal constant defining instruction.

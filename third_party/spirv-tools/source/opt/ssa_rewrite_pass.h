@@ -46,9 +46,9 @@ class SSARewriter {
   // entry point for the SSA rewrite algorithm.  SSA-target variables are
   // locally defined variables that meet the criteria set by IsSSATargetVar.
   //
-  // It returns true if function |fp| was modified.  Otherwise, it returns
-  // false.
-  bool RewriteFunctionIntoSSA(Function* fp);
+  // Returns whether the function was modified or not, and whether or not the
+  // rewrite was successful.
+  Pass::Status RewriteFunctionIntoSSA(Function* fp);
 
  private:
   class PhiCandidate {
@@ -128,8 +128,8 @@ class SSARewriter {
 
   // Generates all the SSA rewriting decisions for basic block |bb|.  This
   // populates the Phi candidate table (|phi_candidate_|) and the load
-  // replacement table (|load_replacement_).
-  void GenerateSSAReplacements(BasicBlock* bb);
+  // replacement table (|load_replacement_).  Returns true if successful.
+  bool GenerateSSAReplacements(BasicBlock* bb);
 
   // Seals block |bb|.  Sealing a basic block means |bb| and all its
   // predecessors of |bb| have been scanned for loads/stores.
@@ -188,6 +188,9 @@ class SSARewriter {
   // value |val_id|.
   void WriteVariable(uint32_t var_id, BasicBlock* bb, uint32_t val_id) {
     defs_at_block_[bb][var_id] = val_id;
+    if (auto* pc = GetPhiCandidate(val_id)) {
+      pc->AddUser(bb->id());
+    }
   }
 
   // Processes the store operation |inst| in basic block |bb|. This extracts
@@ -199,8 +202,8 @@ class SSARewriter {
   // Processes the load operation |inst| in basic block |bb|. This extracts
   // the variable ID being stored into, determines whether the variable is an
   // SSA-target variable, and, if it is, it reads its reaching definition by
-  // calling |GetReachingDef|.
-  void ProcessLoad(Instruction* inst, BasicBlock* bb);
+  // calling |GetReachingDef|.  Returns true if successful.
+  bool ProcessLoad(Instruction* inst, BasicBlock* bb);
 
   // Reads the current definition for variable |var_id| in basic block |bb|.
   // If |var_id| is not defined in block |bb| it walks up the predecessors of

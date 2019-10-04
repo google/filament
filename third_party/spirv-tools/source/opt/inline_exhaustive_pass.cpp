@@ -21,7 +21,7 @@
 namespace spvtools {
 namespace opt {
 
-bool InlineExhaustivePass::InlineExhaustive(Function* func) {
+Pass::Status InlineExhaustivePass::InlineExhaustive(Function* func) {
   bool modified = false;
   // Using block iterators here because of block erasures and insertions.
   for (auto bi = func->begin(); bi != func->end(); ++bi) {
@@ -30,7 +30,9 @@ bool InlineExhaustivePass::InlineExhaustive(Function* func) {
         // Inline call.
         std::vector<std::unique_ptr<BasicBlock>> newBlocks;
         std::vector<std::unique_ptr<Instruction>> newVars;
-        GenInlineCode(&newBlocks, &newVars, ii, bi);
+        if (!GenInlineCode(&newBlocks, &newVars, ii, bi)) {
+          return Status::Failure;
+        }
         // If call block is replaced with more than one block, point
         // succeeding phis at new last block.
         if (newBlocks.size() > 1) UpdateSucceedingPhis(newBlocks);
@@ -58,14 +60,18 @@ bool InlineExhaustivePass::InlineExhaustive(Function* func) {
       }
     }
   }
-  return modified;
+  return (modified ? Status::SuccessWithChange : Status::SuccessWithoutChange);
 }
 
 Pass::Status InlineExhaustivePass::ProcessImpl() {
+  Status status = Status::SuccessWithoutChange;
   // Attempt exhaustive inlining on each entry point function in module
-  ProcessFunction pfn = [this](Function* fp) { return InlineExhaustive(fp); };
-  bool modified = ProcessEntryPointCallTree(pfn, get_module());
-  return modified ? Status::SuccessWithChange : Status::SuccessWithoutChange;
+  ProcessFunction pfn = [&status, this](Function* fp) {
+    status = CombineStatus(status, InlineExhaustive(fp));
+    return false;
+  };
+  context()->ProcessEntryPointCallTree(pfn);
+  return status;
 }
 
 InlineExhaustivePass::InlineExhaustivePass() = default;

@@ -25,7 +25,6 @@ namespace {
 
 using IfConversionTest = PassTest<::testing::Test>;
 
-#ifdef SPIRV_EFFCEE
 TEST_F(IfConversionTest, TestSimpleIfThenElse) {
   const std::string text = R"(
 ; CHECK: OpSelectionMerge [[merge:%\w+]]
@@ -302,7 +301,6 @@ TEST_F(IfConversionTest, CodeMotionMultipleInstructions) {
 
   SinglePassRunAndMatch<IfConversion>(text, true);
 }
-#endif  // SPIRV_EFFCEE
 
 TEST_F(IfConversionTest, NoCommonDominator) {
   const std::string text = R"(OpCapability Shader
@@ -466,6 +464,45 @@ OpReturn
 OpFunctionEnd
 )";
 
+  SinglePassRunAndCheck<IfConversion>(text, text, true, true);
+}
+
+TEST_F(IfConversionTest, InvalidCommonDominator) {
+  const std::string text = R"(OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+%void = OpTypeVoid
+%float = OpTypeFloat 32
+%float_0 = OpConstant %float 0
+%float_1 = OpConstant %float 1
+%bool = OpTypeBool
+%true = OpConstantTrue %bool
+%1 = OpTypeFunction %void
+%2 = OpFunction %void None %1
+%3 = OpLabel
+OpBranch %4
+%4 = OpLabel
+OpLoopMerge %5 %6 None
+OpBranch %7
+%7 = OpLabel
+OpSelectionMerge %8 None
+OpBranchConditional %true %8 %9
+%9 = OpLabel
+OpSelectionMerge %10 None
+OpBranchConditional %true %10 %5
+%10 = OpLabel
+OpBranch %8
+%8 = OpLabel
+OpBranch %6
+%6 = OpLabel
+OpBranchConditional %true %4 %5
+%5 = OpLabel
+%11 = OpPhi %float %float_0 %6 %float_1 %9
+OpReturn
+OpFunctionEnd
+)";
+
+  SetAssembleOptions(SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
   SinglePassRunAndCheck<IfConversion>(text, text, true, true);
 }
 

@@ -455,6 +455,34 @@ TEST_F(ValueTableTest, CopyObject) {
   EXPECT_EQ(vtable.GetValueNumber(inst1), vtable.GetValueNumber(inst2));
 }
 
+TEST_F(ValueTableTest, CopyObjectWitDecoration) {
+  const std::string text = R"(
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %2 "main"
+               OpExecutionMode %2 OriginUpperLeft
+               OpSource GLSL 430
+               OpDecorate %3 NonUniformEXT
+          %4 = OpTypeVoid
+          %5 = OpTypeFunction %4
+          %6 = OpTypeFloat 32
+          %7 = OpTypePointer Function %6
+          %2 = OpFunction %4 None %5
+          %8 = OpLabel
+          %9 = OpVariable %7 Function
+         %10 = OpLoad %6 %9
+          %3 = OpCopyObject %6 %10
+               OpReturn
+               OpFunctionEnd
+  )";
+  auto context = BuildModule(SPV_ENV_UNIVERSAL_1_2, nullptr, text);
+  ValueNumberTable vtable(context.get());
+  Instruction* inst1 = context->get_def_use_mgr()->GetDef(10);
+  Instruction* inst2 = context->get_def_use_mgr()->GetDef(3);
+  EXPECT_NE(vtable.GetValueNumber(inst1), vtable.GetValueNumber(inst2));
+}
+
 // Test that a phi where the operands have the same value assigned that value
 // to the result of the phi.
 TEST_F(ValueTableTest, PhiTest1) {
@@ -493,6 +521,45 @@ TEST_F(ValueTableTest, PhiTest1) {
   Instruction* phi = context->get_def_use_mgr()->GetDef(16);
   EXPECT_EQ(vtable.GetValueNumber(inst1), vtable.GetValueNumber(inst2));
   EXPECT_EQ(vtable.GetValueNumber(inst1), vtable.GetValueNumber(phi));
+}
+
+TEST_F(ValueTableTest, PhiTest1WithDecoration) {
+  const std::string text = R"(
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %2 "main"
+               OpExecutionMode %2 OriginUpperLeft
+               OpSource GLSL 430
+               OpDecorate %3 NonUniformEXT
+          %4 = OpTypeVoid
+          %5 = OpTypeFunction %5
+          %6 = OpTypeFloat 32
+          %7 = OpTypePointer Uniform %6
+          %8 = OpTypeBool
+          %9 = OpConstantTrue %8
+          %10 = OpVariable %7 Uniform
+          %2 = OpFunction %4 None %5
+         %11 = OpLabel
+               OpBranchConditional %9 %12 %13
+         %12 = OpLabel
+         %14 = OpLoad %6 %10
+               OpBranch %15
+         %13 = OpLabel
+         %16 = OpLoad %6 %10
+               OpBranch %15
+         %15 = OpLabel
+         %3 = OpPhi %6 %14 %12 %16 %13
+               OpReturn
+               OpFunctionEnd
+  )";
+  auto context = BuildModule(SPV_ENV_UNIVERSAL_1_2, nullptr, text);
+  ValueNumberTable vtable(context.get());
+  Instruction* inst1 = context->get_def_use_mgr()->GetDef(14);
+  Instruction* inst2 = context->get_def_use_mgr()->GetDef(16);
+  Instruction* phi = context->get_def_use_mgr()->GetDef(3);
+  EXPECT_EQ(vtable.GetValueNumber(inst1), vtable.GetValueNumber(inst2));
+  EXPECT_NE(vtable.GetValueNumber(inst1), vtable.GetValueNumber(phi));
 }
 
 // When the values for the inputs to a phi do not match, then the phi should

@@ -154,10 +154,11 @@ const SpecConstantOpcodeEntry kOpSpecConstantOpcodes[] = {
     CASE(InBoundsAccessChain),
     CASE(PtrAccessChain),
     CASE(InBoundsPtrAccessChain),
+    CASE(CooperativeMatrixLengthNV)
 };
 
-// The 59 is determined by counting the opcodes listed in the spec.
-static_assert(59 == sizeof(kOpSpecConstantOpcodes)/sizeof(kOpSpecConstantOpcodes[0]),
+// The 60 is determined by counting the opcodes listed in the spec.
+static_assert(60 == sizeof(kOpSpecConstantOpcodes)/sizeof(kOpSpecConstantOpcodes[0]),
               "OpSpecConstantOp opcode table is incomplete");
 #undef CASE
 // clang-format on

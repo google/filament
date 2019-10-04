@@ -86,6 +86,12 @@ spv_result_t Function::RegisterLoopMerge(uint32_t merge_id,
   continue_construct.set_corresponding_constructs({&loop_construct});
   loop_construct.set_corresponding_constructs({&continue_construct});
   merge_block_header_[&merge_block] = current_block_;
+  if (continue_target_headers_.find(&continue_target_block) ==
+      continue_target_headers_.end()) {
+    continue_target_headers_[&continue_target_block] = {current_block_};
+  } else {
+    continue_target_headers_[&continue_target_block].push_back(current_block_);
+  }
 
   return SPV_SUCCESS;
 }
@@ -311,13 +317,10 @@ int Function::GetBlockDepth(BasicBlock* bb) {
   if (!bb_dom || bb == bb_dom) {
     // This block has no dominator, so it's at depth 0.
     block_depth_[bb] = 0;
-  } else if (bb->is_type(kBlockTypeMerge)) {
-    // If this is a merge block, its depth is equal to the block before
-    // branching.
-    BasicBlock* header = merge_block_header_[bb];
-    assert(header);
-    block_depth_[bb] = GetBlockDepth(header);
   } else if (bb->is_type(kBlockTypeContinue)) {
+    // This rule must precede the rule for merge blocks in order to set up
+    // depths correctly. If a block is both a merge and continue then the merge
+    // is nested within the continue's loop (or the graph is incorrect).
     // The depth of the continue block entry point is 1 + loop header depth.
     Construct* continue_construct =
         entry_block_to_construct_[std::make_pair(bb, ConstructType::kContinue)];
@@ -335,6 +338,12 @@ int Function::GetBlockDepth(BasicBlock* bb) {
     } else {
       block_depth_[bb] = 1 + GetBlockDepth(loop_header);
     }
+  } else if (bb->is_type(kBlockTypeMerge)) {
+    // If this is a merge block, its depth is equal to the block before
+    // branching.
+    BasicBlock* header = merge_block_header_[bb];
+    assert(header);
+    block_depth_[bb] = GetBlockDepth(header);
   } else if (bb_dom->is_type(kBlockTypeHeader) ||
              bb_dom->is_type(kBlockTypeLoop)) {
     // The dominator of the given block is a header block. So, the nesting
@@ -368,6 +377,30 @@ bool Function::IsCompatibleWithExecutionModel(SpvExecutionModel model,
   for (const auto& is_compatible : execution_model_limitations_) {
     std::string message;
     if (!is_compatible(model, &message)) {
+      if (!reason) return false;
+      return_value = false;
+      if (!message.empty()) {
+        ss_reason << message << "\n";
+      }
+    }
+  }
+
+  if (!return_value && reason) {
+    *reason = ss_reason.str();
+  }
+
+  return return_value;
+}
+
+bool Function::CheckLimitations(const ValidationState_t& _,
+                                const Function* entry_point,
+                                std::string* reason) const {
+  bool return_value = true;
+  std::stringstream ss_reason;
+
+  for (const auto& is_compatible : limitations_) {
+    std::string message;
+    if (!is_compatible(_, entry_point, &message)) {
       if (!reason) return false;
       return_value = false;
       if (!message.empty()) {

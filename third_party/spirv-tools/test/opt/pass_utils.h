@@ -21,8 +21,24 @@
 #include <string>
 #include <vector>
 
+#include "gtest/gtest.h"
+#include "include/spirv-tools/libspirv.h"
+#include "include/spirv-tools/libspirv.hpp"
+
 namespace spvtools {
 namespace opt {
+
+struct Message {
+  spv_message_level_t level;
+  const char* source_file;
+  uint32_t line_number;
+  uint32_t column_number;
+  const char* message;
+};
+
+// Return a message consumer that can be used to check that the message produced
+// are the messages in |expexted_messages|, and in the same order.
+MessageConsumer GetTestMessageConsumer(std::vector<Message>& expected_messages);
 
 // In-place substring replacement. Finds the |find_str| in the |process_str|
 // and replaces the found substring with |replace_str|. Returns true if at

@@ -1,0 +1,25 @@
+{
+  "name": "sva",
+  "version": "0.1.0",
+  "description": "SPIR-V Assembler",
+  "main": "index.js",
+  "author": "dan sinclair <dsinclair@google.com>",
+  "license": "Apache-2.0",
+  "private": true,
+  "scripts": {
+    "sva": "node -r esm bin/sva.js",
+    "lint": "eslint --fix --ext .js .",
+    "test": "mocha --require esm src/**/*_test.js",
+    "watch": "mocha --require esm --watch --watch-extension js \"src/**/*_test.js\"",
+    "serve": "serve",
+    "bundle": "rollup -c"
+  },
+  "devDependencies": {
+    "chai": "^4.2.0",
+    "eslint": "^6.3.0",
+    "esm": "^3.2.25",
+    "mocha": "^6.2.0",
+    "rollup": "^1.21.4",
+    "serve": "^11.1.0"
+  }
+}

@@ -273,7 +273,6 @@ OpFunctionEnd
                                         true);
 }
 
-#ifdef SPIRV_EFFCEE
 TEST_F(BlockMergeTest, PhiInSuccessorOfMergedBlock) {
   const std::string text = R"(
 ; CHECK: OpSelectionMerge [[merge:%\w+]] None
@@ -287,6 +286,7 @@ TEST_F(BlockMergeTest, PhiInSuccessorOfMergedBlock) {
 OpCapability Shader
 OpMemoryModel Logical GLSL450
 OpEntryPoint Fragment %func "func"
+OpExecutionMode %func OriginUpperLeft
 %void = OpTypeVoid
 %bool = OpTypeBool
 %true = OpConstantTrue %bool
@@ -324,6 +324,7 @@ TEST_F(BlockMergeTest, UpdateMergeInstruction) {
 OpCapability Shader
 OpMemoryModel Logical GLSL450
 OpEntryPoint Fragment %func "func"
+OpExecutionMode %func OriginUpperLeft
 %void = OpTypeVoid
 %bool = OpTypeBool
 %true = OpConstantTrue %bool
@@ -358,6 +359,7 @@ TEST_F(BlockMergeTest, TwoMergeBlocksCannotBeMerged) {
 OpCapability Shader
 OpMemoryModel Logical GLSL450
 OpEntryPoint Fragment %func "func"
+OpExecutionMode %func OriginUpperLeft
 %void = OpTypeVoid
 %bool = OpTypeBool
 %true = OpConstantTrue %bool
@@ -398,6 +400,7 @@ TEST_F(BlockMergeTest, MergeContinue) {
 OpCapability Shader
 OpMemoryModel Logical GLSL450
 OpEntryPoint Fragment %func "func"
+OpExecutionMode %func OriginUpperLeft
 %void = OpTypeVoid
 %bool = OpTypeBool
 %true = OpConstantTrue %bool
@@ -431,6 +434,7 @@ TEST_F(BlockMergeTest, TwoHeadersCannotBeMerged) {
 OpCapability Shader
 OpMemoryModel Logical GLSL450
 OpEntryPoint Fragment %func "func"
+OpExecutionMode %func OriginUpperLeft
 %void = OpTypeVoid
 %bool = OpTypeBool
 %true = OpConstantTrue %bool
@@ -479,6 +483,8 @@ TEST_F(BlockMergeTest, RemoveStructuredDeclaration) {
 ; CHECK-NOT: OpLoopMerge
 ; CHECK: OpReturn
 ; CHECK: [[continue:%\w+]] = OpLabel
+; CHECK-NEXT: OpBranch [[block:%\w+]]
+; CHECK: [[block]] = OpLabel
 ; CHECK-NEXT: OpBranch [[header]]
 OpCapability Shader
 %1 = OpExtInstImport "GLSL.std.450"
@@ -532,6 +538,7 @@ TEST_F(BlockMergeTest, DontMergeKill) {
 OpCapability Shader
 OpMemoryModel Logical GLSL450
 OpEntryPoint Fragment %func "func"
+OpExecutionMode %func OriginUpperLeft
 %void = OpTypeVoid
 %bool = OpTypeBool
 %functy = OpTypeFunction %void
@@ -564,6 +571,7 @@ TEST_F(BlockMergeTest, DontMergeUnreachable) {
 OpCapability Shader
 OpMemoryModel Logical GLSL450
 OpEntryPoint Fragment %func "func"
+OpExecutionMode %func OriginUpperLeft
 %void = OpTypeVoid
 %bool = OpTypeBool
 %functy = OpTypeFunction %void
@@ -582,7 +590,7 @@ OpUnreachable
 OpFunctionEnd
 )";
 
-  SinglePassRunAndMatch<BlockMergePass>(text, true);
+  SinglePassRunAndMatch<BlockMergePass>(text, false);
 }
 
 TEST_F(BlockMergeTest, DontMergeReturn) {
@@ -596,6 +604,7 @@ TEST_F(BlockMergeTest, DontMergeReturn) {
 OpCapability Shader
 OpMemoryModel Logical GLSL450
 OpEntryPoint Fragment %func "func"
+OpExecutionMode %func OriginUpperLeft
 %void = OpTypeVoid
 %bool = OpTypeBool
 %functy = OpTypeFunction %void
@@ -628,6 +637,7 @@ TEST_F(BlockMergeTest, DontMergeSwitch) {
 OpCapability Shader
 OpMemoryModel Logical GLSL450
 OpEntryPoint Fragment %func "func"
+OpExecutionMode %func OriginUpperLeft
 %void = OpTypeVoid
 %bool = OpTypeBool
 %int = OpTypeInt 32 1
@@ -664,6 +674,7 @@ TEST_F(BlockMergeTest, DontMergeReturnValue) {
 OpCapability Shader
 OpMemoryModel Logical GLSL450
 OpEntryPoint Fragment %func "func"
+OpExecutionMode %func OriginUpperLeft
 %void = OpTypeVoid
 %bool = OpTypeBool
 %functy = OpTypeFunction %void
@@ -691,7 +702,226 @@ OpFunctionEnd
 
   SinglePassRunAndMatch<BlockMergePass>(text, true);
 }
-#endif  // SPIRV_EFFCEE
+
+TEST_F(BlockMergeTest, MergeHeaders) {
+  // Merge two headers when the second is the merge block of the first.
+  const std::string text = R"(
+; CHECK: OpFunction
+; CHECK-NEXT: OpLabel
+; CHECK-NEXT: OpBranch [[header:%\w+]]
+; CHECK-NEXT: [[header]] = OpLabel
+; CHECK-NEXT: OpSelectionMerge [[merge:%\w+]]
+; CHECK: [[merge]] = OpLabel
+; CHEKC: OpReturn
+OpCapability Shader
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %func "func"
+OpExecutionMode %func OriginUpperLeft
+%void = OpTypeVoid
+%bool = OpTypeBool
+%functy = OpTypeFunction %void
+%otherfuncty = OpTypeFunction %bool
+%true = OpConstantTrue %bool
+%func = OpFunction %void None %functy
+%1 = OpLabel
+OpBranch %5
+%5 = OpLabel
+OpLoopMerge %8 %7 None
+OpBranch %8
+%7 = OpLabel
+OpBranch %5
+%8 = OpLabel
+OpSelectionMerge %m None
+OpBranchConditional %true %a %m
+%a = OpLabel
+OpBranch %m
+%m = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  SinglePassRunAndMatch<BlockMergePass>(text, true);
+}
+
+TEST_F(BlockMergeTest, OpPhiInSuccessor) {
+  // Checks that when merging blocks A and B, the OpPhi at the start of B is
+  // removed and uses of its definition are replaced appropriately.
+  const std::string prefix =
+      R"(OpCapability Shader
+%1 = OpExtInstImport "GLSL.std.450"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %main "main"
+OpExecutionMode %main OriginUpperLeft
+OpSource ESSL 310
+OpName %main "main"
+OpName %x "x"
+OpName %y "y"
+%void = OpTypeVoid
+%6 = OpTypeFunction %void
+%int = OpTypeInt 32 1
+%_ptr_Function_int = OpTypePointer Function %int
+%int_1 = OpConstant %int 1
+%main = OpFunction %void None %6
+%10 = OpLabel
+%x = OpVariable %_ptr_Function_int Function
+%y = OpVariable %_ptr_Function_int Function
+OpStore %x %int_1
+%11 = OpLoad %int %x
+)";
+
+  const std::string suffix_before =
+      R"(OpBranch %12
+%12 = OpLabel
+%13 = OpPhi %int %11 %10
+OpStore %y %13
+OpReturn
+OpFunctionEnd
+)";
+
+  const std::string suffix_after =
+      R"(OpStore %y %11
+OpReturn
+OpFunctionEnd
+)";
+  SinglePassRunAndCheck<BlockMergePass>(prefix + suffix_before,
+                                        prefix + suffix_after, true, true);
+}
+
+TEST_F(BlockMergeTest, MultipleOpPhisInSuccessor) {
+  // Checks that when merging blocks A and B, the OpPhis at the start of B are
+  // removed and uses of their definitions are replaced appropriately.
+  const std::string prefix =
+      R"(OpCapability Shader
+%1 = OpExtInstImport "GLSL.std.450"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %main "main"
+OpExecutionMode %main OriginUpperLeft
+OpSource ESSL 310
+OpName %main "main"
+OpName %S "S"
+OpMemberName %S 0 "x"
+OpMemberName %S 1 "f"
+OpName %s "s"
+OpName %g "g"
+OpName %y "y"
+OpName %t "t"
+OpName %z "z"
+%void = OpTypeVoid
+%10 = OpTypeFunction %void
+%int = OpTypeInt 32 1
+%float = OpTypeFloat 32
+%S = OpTypeStruct %int %float
+%_ptr_Function_S = OpTypePointer Function %S
+%int_1 = OpConstant %int 1
+%float_2 = OpConstant %float 2
+%16 = OpConstantComposite %S %int_1 %float_2
+%_ptr_Function_float = OpTypePointer Function %float
+%_ptr_Function_int = OpTypePointer Function %int
+%int_3 = OpConstant %int 3
+%int_0 = OpConstant %int 0
+%main = OpFunction %void None %10
+%21 = OpLabel
+%s = OpVariable %_ptr_Function_S Function
+%g = OpVariable %_ptr_Function_float Function
+%y = OpVariable %_ptr_Function_int Function
+%t = OpVariable %_ptr_Function_S Function
+%z = OpVariable %_ptr_Function_float Function
+OpStore %s %16
+OpStore %g %float_2
+OpStore %y %int_3
+%22 = OpLoad %S %s
+OpStore %t %22
+%23 = OpAccessChain %_ptr_Function_float %s %int_1
+%24 = OpLoad %float %23
+%25 = OpLoad %float %g
+)";
+
+  const std::string suffix_before =
+      R"(OpBranch %26
+%26 = OpLabel
+%27 = OpPhi %float %24 %21
+%28 = OpPhi %float %25 %21
+%29 = OpFAdd %float %27 %28
+%30 = OpAccessChain %_ptr_Function_int %s %int_0
+%31 = OpLoad %int %30
+OpBranch %32
+%32 = OpLabel
+%33 = OpPhi %float %29 %26
+%34 = OpPhi %int %31 %26
+%35 = OpConvertSToF %float %34
+OpBranch %36
+%36 = OpLabel
+%37 = OpPhi %float %35 %32
+%38 = OpFSub %float %33 %37
+%39 = OpLoad %int %y
+OpBranch %40
+%40 = OpLabel
+%41 = OpPhi %float %38 %36
+%42 = OpPhi %int %39 %36
+%43 = OpConvertSToF %float %42
+%44 = OpFAdd %float %41 %43
+OpStore %z %44
+OpReturn
+OpFunctionEnd
+)";
+
+  const std::string suffix_after =
+      R"(%29 = OpFAdd %float %24 %25
+%30 = OpAccessChain %_ptr_Function_int %s %int_0
+%31 = OpLoad %int %30
+%35 = OpConvertSToF %float %31
+%38 = OpFSub %float %29 %35
+%39 = OpLoad %int %y
+%43 = OpConvertSToF %float %39
+%44 = OpFAdd %float %38 %43
+OpStore %z %44
+OpReturn
+OpFunctionEnd
+)";
+  SinglePassRunAndCheck<BlockMergePass>(prefix + suffix_before,
+                                        prefix + suffix_after, true, true);
+}
+
+TEST_F(BlockMergeTest, UnreachableLoop) {
+  const std::string spirv = R"(OpCapability Shader
+%1 = OpExtInstImport "GLSL.std.450"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %main "main"
+OpExecutionMode %main OriginUpperLeft
+OpSource ESSL 310
+OpName %main "main"
+%void = OpTypeVoid
+%4 = OpTypeFunction %void
+%int = OpTypeInt 32 1
+%_ptr_Function_int = OpTypePointer Function %int
+%bool = OpTypeBool
+%false = OpConstantFalse %bool
+%main = OpFunction %void None %4
+%9 = OpLabel
+OpBranch %10
+%11 = OpLabel
+OpLoopMerge %12 %13 None
+OpBranchConditional %false %13 %14
+%13 = OpLabel
+OpSelectionMerge %15 None
+OpBranchConditional %false %16 %17
+%16 = OpLabel
+OpBranch %15
+%17 = OpLabel
+OpBranch %15
+%15 = OpLabel
+OpBranch %11
+%14 = OpLabel
+OpReturn
+%12 = OpLabel
+OpBranch %10
+%10 = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  SinglePassRunAndCheck<BlockMergePass>(spirv, spirv, true, true);
+}
 
 // TODO(greg-lunarg): Add tests to verify handling of these cases:
 //

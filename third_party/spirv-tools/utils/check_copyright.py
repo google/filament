@@ -16,7 +16,6 @@
 current directory.  Optionally insert them.  When inserting, replaces
 an MIT or Khronos free use license with Apache 2.
 """
-from __future__ import print_function
 
 import argparse
 import fileinput
@@ -31,10 +30,11 @@ AUTHORS = ['The Khronos Group Inc.',
            'LunarG Inc.',
            'Google Inc.',
            'Google LLC',
-           'Pierre Moreau']
-CURRENT_YEAR='2018'
+           'Pierre Moreau',
+           'Samsung Inc']
+CURRENT_YEAR='2019'
 
-YEARS = '(2014-2016|2015-2016|2016|2016-2017|2017|2018)'
+YEARS = '(2014-2016|2015-2016|2016|2016-2017|2017|2018|2019)'
 COPYRIGHT_RE = re.compile(
         'Copyright \(c\) {} ({})'.format(YEARS, '|'.join(AUTHORS)))
 

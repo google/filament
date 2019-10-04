@@ -34,7 +34,7 @@ def empty_main_assembly():
 
 
 @inside_spirv_testsuite('SpirvOptBase')
-class TestAssemblyFileAsOnlyParameter(expect.ValidObjectFile1_3):
+class TestAssemblyFileAsOnlyParameter(expect.ValidObjectFile1_5):
   """Tests that spirv-opt accepts a SPIR-V object file."""
 
   shader = placeholder.FileSPIRVShader(empty_main_assembly(), '.spvasm')
@@ -52,14 +52,14 @@ class TestHelpFlag(expect.ReturnCodeIsZero, expect.StdoutMatch):
 
 
 @inside_spirv_testsuite('SpirvOptFlags')
-class TestValidPassFlags(expect.ValidObjectFile1_3,
+class TestValidPassFlags(expect.ValidObjectFile1_5,
                          expect.ExecutedListOfPasses):
   """Tests that spirv-opt accepts all valid optimization flags."""
 
   flags = [
-      '--ccp', '--cfg-cleanup', '--combine-access-chains', '--compact-ids',
+      '--wrap-opkill', '--ccp', '--cfg-cleanup', '--combine-access-chains', '--compact-ids',
       '--convert-local-access-chains', '--copy-propagate-arrays',
-      '--eliminate-common-uniform', '--eliminate-dead-branches',
+      '--eliminate-dead-branches',
       '--eliminate-dead-code-aggressive', '--eliminate-dead-const',
       '--eliminate-dead-functions', '--eliminate-dead-inserts',
       '--eliminate-dead-variables', '--eliminate-insert-extract',
@@ -76,13 +76,13 @@ class TestValidPassFlags(expect.ValidObjectFile1_3,
       '--unify-const'
   ]
   expected_passes = [
+      'wrap-opkill',
       'ccp',
       'cfg-cleanup',
       'combine-access-chains',
       'compact-ids',
       'convert-local-access-chains',
       'copy-propagate-arrays',
-      'eliminate-common-uniform',
       'eliminate-dead-branches',
       'eliminate-dead-code-aggressive',
       'eliminate-dead-const',
@@ -91,7 +91,7 @@ class TestValidPassFlags(expect.ValidObjectFile1_3,
       'eliminate-dead-variables',
       # --eliminate-insert-extract runs the simplify-instructions pass.
       'simplify-instructions',
-      'eliminate-local-multi-store',
+      'ssa-rewrite',
       'eliminate-local-single-block',
       'eliminate-local-single-store',
       'flatten-decorations',
@@ -129,12 +129,14 @@ class TestValidPassFlags(expect.ValidObjectFile1_3,
 
 
 @inside_spirv_testsuite('SpirvOptFlags')
-class TestPerformanceOptimizationPasses(expect.ValidObjectFile1_3,
+class TestPerformanceOptimizationPasses(expect.ValidObjectFile1_5,
                                         expect.ExecutedListOfPasses):
   """Tests that spirv-opt schedules all the passes triggered by -O."""
 
   flags = ['-O']
   expected_passes = [
+      'wrap-opkill',
+      'eliminate-dead-branches',
       'merge-return',
       'inline-entry-points-exhaustive',
       'eliminate-dead-code-aggressive',
@@ -147,7 +149,7 @@ class TestPerformanceOptimizationPasses(expect.ValidObjectFile1_3,
       'eliminate-local-single-block',
       'eliminate-local-single-store',
       'eliminate-dead-code-aggressive',
-      'eliminate-local-multi-store',
+      'ssa-rewrite',
       'eliminate-dead-code-aggressive',
       'ccp',
       'eliminate-dead-code-aggressive',
@@ -175,12 +177,14 @@ class TestPerformanceOptimizationPasses(expect.ValidObjectFile1_3,
 
 
 @inside_spirv_testsuite('SpirvOptFlags')
-class TestSizeOptimizationPasses(expect.ValidObjectFile1_3,
+class TestSizeOptimizationPasses(expect.ValidObjectFile1_5,
                                  expect.ExecutedListOfPasses):
   """Tests that spirv-opt schedules all the passes triggered by -Os."""
 
   flags = ['-Os']
   expected_passes = [
+      'wrap-opkill',
+      'eliminate-dead-branches',
       'merge-return',
       'inline-entry-points-exhaustive',
       'eliminate-dead-code-aggressive',
@@ -192,7 +196,7 @@ class TestSizeOptimizationPasses(expect.ValidObjectFile1_3,
       'eliminate-dead-code-aggressive',
       'simplify-instructions',
       'eliminate-dead-inserts',
-      'eliminate-local-multi-store',
+      'ssa-rewrite',
       'eliminate-dead-code-aggressive',
       'ccp',
       'eliminate-dead-code-aggressive',
@@ -213,18 +217,20 @@ class TestSizeOptimizationPasses(expect.ValidObjectFile1_3,
 
 
 @inside_spirv_testsuite('SpirvOptFlags')
-class TestLegalizationPasses(expect.ValidObjectFile1_3,
+class TestLegalizationPasses(expect.ValidObjectFile1_5,
                              expect.ExecutedListOfPasses):
   """Tests that spirv-opt schedules all the passes triggered by --legalize-hlsl.
   """
 
   flags = ['--legalize-hlsl']
   expected_passes = [
+      'wrap-opkill',
       'eliminate-dead-branches',
       'merge-return',
       'inline-entry-points-exhaustive',
       'eliminate-dead-functions',
       'private-to-local',
+      'fix-storage-class',
       'eliminate-local-single-block',
       'eliminate-local-single-store',
       'eliminate-dead-code-aggressive',
@@ -232,9 +238,10 @@ class TestLegalizationPasses(expect.ValidObjectFile1_3,
       'eliminate-local-single-block',
       'eliminate-local-single-store',
       'eliminate-dead-code-aggressive',
-      'eliminate-local-multi-store',
+      'ssa-rewrite',
       'eliminate-dead-code-aggressive',
       'ccp',
+      'loop-unroll',
       'eliminate-dead-branches',
       'simplify-instructions',
       'eliminate-dead-code-aggressive',
@@ -255,7 +262,7 @@ class TestScalarReplacementArgsNegative(expect.ErrorMessageSubstr):
   """Tests invalid arguments to --scalar-replacement."""
 
   spirv_args = ['--scalar-replacement=-10']
-  expected_error_substr = 'must have no arguments or a positive integer argument'
+  expected_error_substr = 'must have no arguments or a non-negative integer argument'
 
 
 @inside_spirv_testsuite('SpirvOptFlags')
@@ -263,7 +270,7 @@ class TestScalarReplacementArgsInvalidNumber(expect.ErrorMessageSubstr):
   """Tests invalid arguments to --scalar-replacement."""
 
   spirv_args = ['--scalar-replacement=a10f']
-  expected_error_substr = 'must have no arguments or a positive integer argument'
+  expected_error_substr = 'must have no arguments or a non-negative integer argument'
 
 
 @inside_spirv_testsuite('SpirvOptFlags')
@@ -328,3 +335,45 @@ class TestLoopPeelingThresholdArgsInvalidNumber(expect.ErrorMessageSubstr):
 
   spirv_args = ['--loop-peeling-threshold=a10f']
   expected_error_substr = 'must have a positive integer argument'
+
+@inside_spirv_testsuite('SpirvOptFlags')
+class TestWebGPUToVulkanThenVulkanToWebGPUIsInvalid(expect.ReturnCodeIsNonZero, expect.ErrorMessageSubstr):
+  """Tests Vulkan->WebGPU flag cannot be used after WebGPU->Vulkan flag."""
+
+  spirv_args = ['--webgpu-to-vulkan', '--vulkan-to-webgpu']
+  expected_error_substr = 'Cannot use both'
+
+@inside_spirv_testsuite('SpirvOptFlags')
+class TestVulkanToWebGPUThenWebGPUToVulkanIsInvalid(expect.ReturnCodeIsNonZero, expect.ErrorMessageSubstr):
+  """Tests WebGPU->Vulkan flag cannot be used after Vulkan->WebGPU flag."""
+
+  spirv_args = ['--vulkan-to-webgpu', '--webgpu-to-vulkan']
+  expected_error_substr = 'Cannot use both'
+
+@inside_spirv_testsuite('SpirvOptFlags')
+class TestTargetEnvThenVulkanToWebGPUIsInvalid(expect.ReturnCodeIsNonZero, expect.ErrorMessageSubstr):
+  """Tests Vulkan->WebGPU flag cannot be used after target env flag."""
+
+  spirv_args = ['--target-env=opengl4.0', '--vulkan-to-webgpu']
+  expected_error_substr = 'defines the target environment'
+
+@inside_spirv_testsuite('SpirvOptFlags')
+class TestVulkanToWebGPUThenTargetEnvIsInvalid(expect.ReturnCodeIsNonZero, expect.ErrorMessageSubstr):
+  """Tests target env flag cannot be used after Vulkan->WebGPU flag."""
+
+  spirv_args = ['--vulkan-to-webgpu', '--target-env=opengl4.0']
+  expected_error_substr = 'defines the target environment'
+
+@inside_spirv_testsuite('SpirvOptFlags')
+class TestTargetEnvThenWebGPUToVulkanIsInvalid(expect.ReturnCodeIsNonZero, expect.ErrorMessageSubstr):
+  """Tests WebGPU->Vulkan flag cannot be used after target env flag."""
+
+  spirv_args = ['--target-env=opengl4.0', '--webgpu-to-vulkan']
+  expected_error_substr = 'defines the target environment'
+
+@inside_spirv_testsuite('SpirvOptFlags')
+class TestWebGPUToVulkanThenTargetEnvIsInvalid(expect.ReturnCodeIsNonZero, expect.ErrorMessageSubstr):
+  """Tests target env flag cannot be used after WebGPU->Vulkan flag."""
+
+  spirv_args = ['--webgpu-to-vulkan', '--target-env=opengl4.0']
+  expected_error_substr = 'defines the target environment'

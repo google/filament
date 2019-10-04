@@ -67,7 +67,7 @@ Pass::Status LocalSingleStoreElimPass::ProcessImpl() {
   ProcessFunction pfn = [this](Function* fp) {
     return LocalSingleStoreElim(fp);
   };
-  bool modified = ProcessEntryPointCallTree(pfn, get_module());
+  bool modified = context()->ProcessEntryPointCallTree(pfn);
   return modified ? Status::SuccessWithChange : Status::SuccessWithoutChange;
 }
 
@@ -98,8 +98,7 @@ void LocalSingleStoreElimPass::InitExtensionWhiteList() {
       "SPV_NV_geometry_shader_passthrough",
       "SPV_AMD_texture_gather_bias_lod",
       "SPV_KHR_storage_buffer_storage_class",
-      // SPV_KHR_variable_pointers
-      //   Currently do not support extended pointer expressions
+      "SPV_KHR_variable_pointers",
       "SPV_AMD_gpu_shader_int16",
       "SPV_KHR_post_depth_coverage",
       "SPV_KHR_shader_atomic_counter_ops",
@@ -113,6 +112,14 @@ void LocalSingleStoreElimPass::InitExtensionWhiteList() {
       "SPV_GOOGLE_hlsl_functionality1",
       "SPV_NV_shader_subgroup_partitioned",
       "SPV_EXT_descriptor_indexing",
+      "SPV_NV_fragment_shader_barycentric",
+      "SPV_NV_compute_shader_derivatives",
+      "SPV_NV_shader_image_footprint",
+      "SPV_NV_shading_rate",
+      "SPV_NV_mesh_shader",
+      "SPV_NV_ray_tracing",
+      "SPV_EXT_fragment_invocation_density",
+      "SPV_EXT_physical_storage_buffer",
   });
 }
 bool LocalSingleStoreElimPass::ProcessVariable(Instruction* var_inst) {

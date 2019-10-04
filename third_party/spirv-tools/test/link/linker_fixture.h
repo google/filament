@@ -19,6 +19,8 @@
 #include <string>
 #include <vector>
 
+#include "effcee/effcee.h"
+#include "re2/re2.h"
 #include "source/spirv_constant.h"
 #include "spirv-tools/linker.hpp"
 #include "test/unit_spirv.h"
@@ -78,6 +80,101 @@ class LinkerTest : public ::testing::Test {
         return SPV_ERROR_INVALID_TEXT;
 
     return spvtools::Link(context_, binaries, linked_binary, options);
+  }
+
+  // Assembles and links a vector of SPIR-V bodies based on the |templateBody|.
+  // Template arguments to be replaced are written as {a,b,...}.
+  // SPV_ERROR_INVALID_TEXT is returned if the assembling failed for any of the
+  // resulting bodies (or errors in the template), and SPV_ERROR_INVALID_POINTER
+  // if |linked_binary| is a null pointer.
+  spv_result_t ExpandAndLink(
+      const std::string& templateBody, spvtest::Binary* linked_binary,
+      spvtools::LinkerOptions options = spvtools::LinkerOptions()) {
+    if (!linked_binary) return SPV_ERROR_INVALID_POINTER;
+
+    // Find out how many template arguments there are, we assume they all have
+    // the same number. We'll error later if they don't.
+    re2::StringPiece temp(templateBody);
+    re2::StringPiece x;
+    int cnt = 0;
+    if (!RE2::FindAndConsume(&temp, "{")) return SPV_ERROR_INVALID_TEXT;
+    while (RE2::FindAndConsume(&temp, "([,}])", &x) && x[0] == ',') cnt++;
+    cnt++;
+    if (cnt <= 1) return SPV_ERROR_INVALID_TEXT;
+
+    // Construct a regex for a single common strip and template expansion.
+    std::string regex("([^{]*){");
+    for (int i = 0; i < cnt; i++) regex += (i > 0) ? ",([^,]*)" : "([^,]*)";
+    regex += "}";
+    RE2 pattern(regex);
+
+    // Prepare the RE2::Args for processing.
+    re2::StringPiece common;
+    std::vector<re2::StringPiece> variants(cnt);
+    std::vector<RE2::Arg> args(cnt + 1);
+    args[0] = RE2::Arg(&common);
+    std::vector<RE2::Arg*> pargs(cnt + 1);
+    pargs[0] = &args[0];
+    for (int i = 0; i < cnt; i++) {
+      args[i + 1] = RE2::Arg(&variants[i]);
+      pargs[i + 1] = &args[i + 1];
+    }
+
+    // Reset and construct the bodies bit by bit.
+    std::vector<std::string> bodies(cnt);
+    re2::StringPiece temp2(templateBody);
+    while (RE2::ConsumeN(&temp2, pattern, pargs.data(), cnt + 1)) {
+      for (int i = 0; i < cnt; i++) {
+        bodies[i].append(common.begin(), common.end());
+        bodies[i].append(variants[i].begin(), variants[i].end());
+      }
+    }
+    RE2::Consume(&temp2, "([^{]*)", &common);
+    for (int i = 0; i < cnt; i++)
+      bodies[i].append(common.begin(), common.end());
+
+    // Run through the assemble and link stages of the process.
+    return AssembleAndLink(bodies, linked_binary, options);
+  }
+
+  // Expand the |templateBody| and link the results as with ExpandAndLink,
+  // then disassemble and test that the result matches the |expected|.
+  void ExpandAndCheck(
+      const std::string& templateBody, const std::string& expected,
+      const spvtools::LinkerOptions options = spvtools::LinkerOptions()) {
+    spvtest::Binary linked_binary;
+    spv_result_t res = ExpandAndLink(templateBody, &linked_binary, options);
+    EXPECT_EQ(SPV_SUCCESS, res) << GetErrorMessage() << "\nExpanded from:\n"
+                                << templateBody;
+    if (res == SPV_SUCCESS) {
+      std::string result;
+      EXPECT_TRUE(
+          tools_.Disassemble(linked_binary, &result, disassemble_options_))
+          << GetErrorMessage();
+      EXPECT_EQ(expected, result);
+    }
+  }
+
+  // An alternative to ExpandAndCheck, which uses the |templateBody| as the
+  // match pattern for the disassembled linked result.
+  void ExpandAndMatch(
+      const std::string& templateBody,
+      const spvtools::LinkerOptions options = spvtools::LinkerOptions()) {
+    spvtest::Binary linked_binary;
+    spv_result_t res = ExpandAndLink(templateBody, &linked_binary, options);
+    EXPECT_EQ(SPV_SUCCESS, res) << GetErrorMessage() << "\nExpanded from:\n"
+                                << templateBody;
+    if (res == SPV_SUCCESS) {
+      std::string result;
+      EXPECT_TRUE(
+          tools_.Disassemble(linked_binary, &result, disassemble_options_))
+          << GetErrorMessage();
+      auto match_res = effcee::Match(result, templateBody);
+      EXPECT_EQ(effcee::Result::Status::Ok, match_res.status())
+          << match_res.message() << "\nExpanded from:\n"
+          << templateBody << "\nChecking result:\n"
+          << result;
+    }
   }
 
   // Links the given SPIR-V binaries together; SPV_ERROR_INVALID_POINTER is

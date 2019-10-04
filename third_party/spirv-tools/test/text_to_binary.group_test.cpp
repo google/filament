@@ -44,12 +44,12 @@ TEST_P(GroupOperationTest, AnyGroupOperation) {
 
 // clang-format off
 #define CASE(NAME) { SpvGroupOperation##NAME, #NAME}
-INSTANTIATE_TEST_CASE_P(TextToBinaryGroupOperation, GroupOperationTest,
+INSTANTIATE_TEST_SUITE_P(TextToBinaryGroupOperation, GroupOperationTest,
                         ::testing::ValuesIn(std::vector<EnumCase<SpvGroupOperation>>{
                             CASE(Reduce),
                             CASE(InclusiveScan),
                             CASE(ExclusiveScan),
-                        }),);
+                        }));
 #undef CASE
 // clang-format on
 

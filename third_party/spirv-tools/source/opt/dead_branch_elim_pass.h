@@ -44,7 +44,9 @@ class DeadBranchElimPass : public MemPass {
   Status Process() override;
 
   IRContext::Analysis GetPreservedAnalyses() override {
-    return IRContext::kAnalysisDefUse | IRContext::kAnalysisInstrToBlockMapping;
+    return IRContext::kAnalysisDefUse |
+           IRContext::kAnalysisInstrToBlockMapping |
+           IRContext::kAnalysisConstants | IRContext::kAnalysisTypes;
   }
 
  private:
@@ -132,15 +134,39 @@ class DeadBranchElimPass : public MemPass {
   void FixBlockOrder();
 
   // Return the first branch instruction that is a conditional branch to
-  // |merge_block_id|. Returns |nullptr| if not such branch exists. If there are
+  // |merge_block_id|. Returns |nullptr| if no such branch exists. If there are
   // multiple such branches, the first one is the one that would be executed
   // first when running the code.  That is, the one that dominates all of the
   // others.
   //
   // |start_block_id| must be a block whose innermost containing merge construct
   // has |merge_block_id| as the merge block.
+  //
+  // |loop_merge_id| and |loop_continue_id| are the merge and continue block ids
+  // of the innermost loop containing |start_block_id|.
   Instruction* FindFirstExitFromSelectionMerge(uint32_t start_block_id,
-                                               uint32_t merge_block_id);
+                                               uint32_t merge_block_id,
+                                               uint32_t loop_merge_id,
+                                               uint32_t loop_continue_id,
+                                               uint32_t switch_merge_id);
+
+  // Adds to |blocks_with_back_edges| all of the blocks on the path from the
+  // basic block |cont_id| to |header_id| and |merge_id|.  The intention is that
+  // |cond_id| is a the continue target of a loop, |header_id| is the header of
+  // the loop, and |merge_id| is the merge block of the loop.
+  void AddBlocksWithBackEdge(
+      uint32_t cont_id, uint32_t header_id, uint32_t merge_id,
+      std::unordered_set<BasicBlock*>* blocks_with_back_edges);
+
+  // Returns true if there is a brach to the merge node of the selection
+  // construct |switch_header_id| that is inside a nested selection construct.
+  bool SwitchHasNestedBreak(uint32_t switch_header_id);
+
+  // Replaces the terminator of |block| with a branch to |live_lab_id|.  The
+  // merge instruction is deleted or moved as needed to maintain structured
+  // control flow.  Assumes that the StructuredCFGAnalysis is valid for the
+  // constructs containing |block|.
+  void SimplifyBranch(BasicBlock* block, uint32_t live_lab_id);
 };
 
 }  // namespace opt
