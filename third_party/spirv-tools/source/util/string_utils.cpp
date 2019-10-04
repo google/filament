@@ -37,5 +37,22 @@ std::string CardinalToOrdinal(size_t cardinal) {
   return ToString(cardinal) + suffix;
 }
 
+std::pair<std::string, std::string> SplitFlagArgs(const std::string& flag) {
+  if (flag.size() < 2) return make_pair(flag, std::string());
+
+  // Detect the last dash before the pass name. Since we have to
+  // handle single dash options (-O and -Os), count up to two dashes.
+  size_t dash_ix = 0;
+  if (flag[0] == '-' && flag[1] == '-')
+    dash_ix = 2;
+  else if (flag[0] == '-')
+    dash_ix = 1;
+
+  size_t ix = flag.find('=');
+  return (ix != std::string::npos)
+             ? make_pair(flag.substr(dash_ix, ix - 2), flag.substr(ix + 1))
+             : make_pair(flag.substr(dash_ix), std::string());
+}
+
 }  // namespace utils
 }  // namespace spvtools

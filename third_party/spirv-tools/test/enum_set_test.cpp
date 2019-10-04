@@ -267,24 +267,24 @@ TEST_P(CapabilitySetForEachTest, OperatorEqualsSelfAssign) {
   EXPECT_THAT(ElementsIn(assigned), Eq(GetParam().expected));
 }
 
-INSTANTIATE_TEST_CASE_P(Samples, CapabilitySetForEachTest,
-                        ValuesIn(std::vector<ForEachCase>{
-                            {{}, {}},
-                            {{SpvCapabilityMatrix}, {SpvCapabilityMatrix}},
-                            {{SpvCapabilityKernel, SpvCapabilityShader},
-                             {SpvCapabilityShader, SpvCapabilityKernel}},
-                            {{static_cast<SpvCapability>(999)},
-                             {static_cast<SpvCapability>(999)}},
-                            {{static_cast<SpvCapability>(0x7fffffff)},
-                             {static_cast<SpvCapability>(0x7fffffff)}},
-                            // Mixture and out of order
-                            {{static_cast<SpvCapability>(0x7fffffff),
-                              static_cast<SpvCapability>(100),
-                              SpvCapabilityShader, SpvCapabilityMatrix},
-                             {SpvCapabilityMatrix, SpvCapabilityShader,
-                              static_cast<SpvCapability>(100),
-                              static_cast<SpvCapability>(0x7fffffff)}},
-                        }), );
+INSTANTIATE_TEST_SUITE_P(Samples, CapabilitySetForEachTest,
+                         ValuesIn(std::vector<ForEachCase>{
+                             {{}, {}},
+                             {{SpvCapabilityMatrix}, {SpvCapabilityMatrix}},
+                             {{SpvCapabilityKernel, SpvCapabilityShader},
+                              {SpvCapabilityShader, SpvCapabilityKernel}},
+                             {{static_cast<SpvCapability>(999)},
+                              {static_cast<SpvCapability>(999)}},
+                             {{static_cast<SpvCapability>(0x7fffffff)},
+                              {static_cast<SpvCapability>(0x7fffffff)}},
+                             // Mixture and out of order
+                             {{static_cast<SpvCapability>(0x7fffffff),
+                               static_cast<SpvCapability>(100),
+                               SpvCapabilityShader, SpvCapabilityMatrix},
+                              {SpvCapabilityMatrix, SpvCapabilityShader,
+                               static_cast<SpvCapability>(100),
+                               static_cast<SpvCapability>(0x7fffffff)}},
+                         }));
 
 }  // namespace
 }  // namespace spvtools

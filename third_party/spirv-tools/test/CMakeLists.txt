@@ -30,12 +30,16 @@ endif()
 
 function(add_spvtools_unittest)
   if (NOT "${SPIRV_SKIP_TESTS}" AND TARGET gmock_main)
-    set(one_value_args TARGET)
+    set(one_value_args TARGET PCH_FILE)
     set(multi_value_args SRCS LIBS ENVIRONMENT)
     cmake_parse_arguments(
       ARG "" "${one_value_args}" "${multi_value_args}" ${ARGN})
     set(target test_${ARG_TARGET})
-    add_executable(${target} ${ARG_SRCS})
+    set(SRC_COPY ${ARG_SRCS})
+    if (DEFINED ARG_PCH_FILE)
+      spvtools_pch(SRC_COPY ${ARG_PCH_FILE})
+    endif()
+    add_executable(${target} ${SRC_COPY})
     spvtools_default_compile_options(${target})
     if(${COMPILER_IS_LIKE_GNU})
       target_compile_options(${target} PRIVATE -Wno-undef)
@@ -93,6 +97,7 @@ set(TEST_SOURCES
   binary_to_text_test.cpp
   binary_to_text.literal_test.cpp
   comment_test.cpp
+  diagnostic_test.cpp
   enum_string_mapping_test.cpp
   enum_set_test.cpp
   ext_inst.debuginfo_test.cpp
@@ -103,6 +108,7 @@ set(TEST_SOURCES
   hex_float_test.cpp
   immediate_int_test.cpp
   libspirv_macros_test.cpp
+  log_test.cpp
   named_id_test.cpp
   name_mapper_test.cpp
   opcode_make_test.cpp
@@ -112,7 +118,10 @@ set(TEST_SOURCES
   operand_capabilities_test.cpp
   operand_test.cpp
   operand_pattern_test.cpp
+  parse_number_test.cpp
+  preserve_numeric_ids_test.cpp
   software_version_test.cpp
+  string_utils_test.cpp
   target_env_test.cpp
   text_advance_test.cpp
   text_destroy_test.cpp
@@ -120,6 +129,7 @@ set(TEST_SOURCES
   text_start_new_inst_test.cpp
   text_to_binary.annotation_test.cpp
   text_to_binary.barrier_test.cpp
+  text_to_binary.composite_test.cpp
   text_to_binary.constant_test.cpp
   text_to_binary.control_flow_test.cpp
   text_to_binary_test.cpp
@@ -142,14 +152,11 @@ set(TEST_SOURCES
   unit_spirv.cpp
 )
 
+spvtools_pch(TEST_SOURCES pch_test)
+
 add_spvtools_unittest(
   TARGET spirv_unit_tests
   SRCS ${TEST_SOURCES}
-  LIBS ${SPIRV_TOOLS})
-
-add_spvtools_unittest(
-  TARGET diagnostic
-  SRCS diagnostic_test.cpp
   LIBS ${SPIRV_TOOLS})
 
 add_spvtools_unittest(
@@ -168,16 +175,6 @@ add_spvtools_unittest(
   SRCS cpp_interface_test.cpp
   LIBS SPIRV-Tools-opt)
 
-add_spvtools_unittest(
-  TARGET parse_number
-  SRCS parse_number_test.cpp
-  LIBS ${SPIRV_TOOLS})
-
-add_spvtools_unittest(
-  TARGET string_utils
-  SRCS string_utils_test.cpp
-  LIBS ${SPIRV_TOOLS})
-
 if (${SPIRV_TIMER_ENABLED})
 add_spvtools_unittest(
   TARGET timer
@@ -185,42 +182,11 @@ add_spvtools_unittest(
   LIBS ${SPIRV_TOOLS})
 endif()
 
-add_spvtools_unittest(
-  TARGET log
-  SRCS log_test.cpp
-  LIBS ${SPIRV_TOOLS})
 
-add_spvtools_unittest(
-  TARGET preserve_numeric_ids
-  SRCS preserve_numeric_ids_test.cpp
-  LIBS ${SPIRV_TOOLS})
-
-add_spvtools_unittest(
-  TARGET bit_stream
-  SRCS bit_stream.cpp
-      ${CMAKE_CURRENT_SOURCE_DIR}/../source/comp/bit_stream.cpp
-      ${CMAKE_CURRENT_SOURCE_DIR}/../source/comp/bit_stream.h
-  LIBS ${SPIRV_TOOLS})
-
-add_spvtools_unittest(
-  TARGET huffman_codec
-  SRCS huffman_codec.cpp
-      ${CMAKE_CURRENT_SOURCE_DIR}/../source/comp/bit_stream.cpp
-      ${CMAKE_CURRENT_SOURCE_DIR}/../source/comp/bit_stream.h
-      ${CMAKE_CURRENT_SOURCE_DIR}/../source/comp/huffman_codec.h
-  LIBS ${SPIRV_TOOLS})
-
-add_spvtools_unittest(
-  TARGET move_to_front
-  SRCS move_to_front_test.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../source/comp/move_to_front.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/../source/comp/move_to_front.cpp
-  LIBS ${SPIRV_TOOLS})
-
-add_subdirectory(comp)
 add_subdirectory(link)
 add_subdirectory(opt)
-add_subdirectory(stats)
+add_subdirectory(reduce)
+add_subdirectory(fuzz)
 add_subdirectory(tools)
 add_subdirectory(util)
 add_subdirectory(val)

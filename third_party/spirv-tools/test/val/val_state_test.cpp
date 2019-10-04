@@ -41,7 +41,7 @@ class ValidationStateTest : public testing::Test {
   ValidationStateTest()
       : context_(spvContextCreate(SPV_ENV_UNIVERSAL_1_0)),
         options_(spvValidatorOptionsCreate()),
-        state_(context_, options_, kFakeBinary, 0) {}
+        state_(context_, options_, kFakeBinary, 0, 1) {}
 
   ~ValidationStateTest() {
     spvContextDestroy(context_);

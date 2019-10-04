@@ -138,8 +138,8 @@ OpReturn
 OpFunctionEnd
 )";
 
-  SinglePassRunAndCheck<LocalMultiStoreElimPass>(predefs + before,
-                                                 predefs + after, true, true);
+  SinglePassRunAndCheck<SSARewritePass>(predefs + before, predefs + after, true,
+                                        true);
 }
 
 TEST_F(LocalSSAElimTest, NestedForLoop) {
@@ -280,8 +280,8 @@ OpReturn
 OpFunctionEnd
 )";
 
-  SinglePassRunAndCheck<LocalMultiStoreElimPass>(predefs + before,
-                                                 predefs + after, true, true);
+  SinglePassRunAndCheck<SSARewritePass>(predefs + before, predefs + after, true,
+                                        true);
 }
 
 TEST_F(LocalSSAElimTest, ForLoopWithContinue) {
@@ -426,9 +426,9 @@ OpReturn
 OpFunctionEnd
 )";
 
-  SinglePassRunAndCheck<LocalMultiStoreElimPass>(
-      predefs + names + predefs2 + before, predefs + names + predefs2 + after,
-      true, true);
+  SinglePassRunAndCheck<SSARewritePass>(predefs + names + predefs2 + before,
+                                        predefs + names + predefs2 + after,
+                                        true, true);
 }
 
 TEST_F(LocalSSAElimTest, ForLoopWithBreak) {
@@ -567,8 +567,8 @@ OpReturn
 OpFunctionEnd
 )";
 
-  SinglePassRunAndCheck<LocalMultiStoreElimPass>(predefs + before,
-                                                 predefs + after, true, true);
+  SinglePassRunAndCheck<SSARewritePass>(predefs + before, predefs + after, true,
+                                        true);
 }
 
 TEST_F(LocalSSAElimTest, SwapProblem) {
@@ -704,8 +704,8 @@ OpReturn
 OpFunctionEnd
 )";
 
-  SinglePassRunAndCheck<LocalMultiStoreElimPass>(predefs + before,
-                                                 predefs + after, true, true);
+  SinglePassRunAndCheck<SSARewritePass>(predefs + before, predefs + after, true,
+                                        true);
 }
 
 TEST_F(LocalSSAElimTest, LostCopyProblem) {
@@ -848,8 +848,8 @@ OpReturn
 OpFunctionEnd
 )";
 
-  SinglePassRunAndCheck<LocalMultiStoreElimPass>(predefs + before,
-                                                 predefs + after, true, true);
+  SinglePassRunAndCheck<SSARewritePass>(predefs + before, predefs + after, true,
+                                        true);
 }
 
 TEST_F(LocalSSAElimTest, IfThenElse) {
@@ -948,8 +948,8 @@ OpReturn
 OpFunctionEnd
 )";
 
-  SinglePassRunAndCheck<LocalMultiStoreElimPass>(predefs + before,
-                                                 predefs + after, true, true);
+  SinglePassRunAndCheck<SSARewritePass>(predefs + before, predefs + after, true,
+                                        true);
 }
 
 TEST_F(LocalSSAElimTest, IfThen) {
@@ -1037,8 +1037,8 @@ OpReturn
 OpFunctionEnd
 )";
 
-  SinglePassRunAndCheck<LocalMultiStoreElimPass>(predefs + before,
-                                                 predefs + after, true, true);
+  SinglePassRunAndCheck<SSARewritePass>(predefs + before, predefs + after, true,
+                                        true);
 }
 
 TEST_F(LocalSSAElimTest, Switch) {
@@ -1168,8 +1168,8 @@ OpReturn
 OpFunctionEnd
 )";
 
-  SinglePassRunAndCheck<LocalMultiStoreElimPass>(predefs + before,
-                                                 predefs + after, true, true);
+  SinglePassRunAndCheck<SSARewritePass>(predefs + before, predefs + after, true,
+                                        true);
 }
 
 TEST_F(LocalSSAElimTest, SwitchWithFallThrough) {
@@ -1300,8 +1300,8 @@ OpReturn
 OpFunctionEnd
 )";
 
-  SinglePassRunAndCheck<LocalMultiStoreElimPass>(predefs + before,
-                                                 predefs + after, true, true);
+  SinglePassRunAndCheck<SSARewritePass>(predefs + before, predefs + after, true,
+                                        true);
 }
 
 TEST_F(LocalSSAElimTest, DontPatchPhiInLoopHeaderThatIsNotAVar) {
@@ -1331,7 +1331,7 @@ OpReturn
 OpFunctionEnd
 )";
 
-  SinglePassRunAndCheck<LocalMultiStoreElimPass>(before, before, true, true);
+  SinglePassRunAndCheck<SSARewritePass>(before, before, true, true);
 }
 
 TEST_F(LocalSSAElimTest, OptInitializedVariableLikeStore) {
@@ -1428,8 +1428,8 @@ OpReturn
 OpFunctionEnd
 )";
 
-  SinglePassRunAndCheck<LocalMultiStoreElimPass>(
-      predefs + func_before, predefs + func_after, true, true);
+  SinglePassRunAndCheck<SSARewritePass>(predefs + func_before,
+                                        predefs + func_after, true, true);
 }
 
 TEST_F(LocalSSAElimTest, PointerVariable) {
@@ -1528,8 +1528,10 @@ OpReturn
 OpFunctionEnd
 )";
 
+  // Relax logical pointers to allow pointer allocations.
   SetAssembleOptions(SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
-  SinglePassRunAndCheck<LocalMultiStoreElimPass>(before, after, true, true);
+  ValidatorOptions()->relax_logical_pointer = true;
+  SinglePassRunAndCheck<SSARewritePass>(before, after, true, true);
 }
 
 TEST_F(LocalSSAElimTest, VerifyInstToBlockMap) {
@@ -1618,14 +1620,12 @@ OpFunctionEnd
   // Force the instruction to block mapping to get built.
   context->get_instr_block(27u);
 
-  auto pass = MakeUnique<LocalMultiStoreElimPass>();
+  auto pass = MakeUnique<SSARewritePass>();
   pass->SetMessageConsumer(nullptr);
   const auto status = pass->Run(context.get());
   EXPECT_TRUE(status == Pass::Status::SuccessWithChange);
 }
 
-// TODO(dneto): Add Effcee as required dependency, and make this unconditional.
-#ifdef SPIRV_EFFCEE
 TEST_F(LocalSSAElimTest, CompositeExtractProblem) {
   const std::string spv_asm = R"(
                OpCapability Tessellation
@@ -1664,6 +1664,7 @@ TEST_F(LocalSSAElimTest, CompositeExtractProblem) {
 %_ptr_Function__struct_11 = OpTypePointer Function %_struct_11
           %2 = OpFunction %void None %4
          %33 = OpLabel
+         %66 = OpVariable %_ptr_Function__arr__struct_11_uint_3 Function
          %34 = OpLoad %_arr_v4float_uint_3 %16
          %35 = OpLoad %_arr_v4float_uint_3 %17
          %36 = OpLoad %_arr_v4float_uint_3 %18
@@ -1696,7 +1697,6 @@ TEST_F(LocalSSAElimTest, CompositeExtractProblem) {
          %63 = OpCompositeExtract %v2float %40 2
          %64 = OpCompositeConstruct %_struct_11 %57 %58 %59 %60 %61 %62 %63
          %65 = OpCompositeConstruct %_arr__struct_11_uint_3 %48 %56 %64
-         %66 = OpVariable %_ptr_Function__arr__struct_11_uint_3 Function
          %67 = OpLoad %uint %20
 
 ; CHECK OpStore {{%\d+}} [[store_source:%\d+]]
@@ -1758,7 +1758,269 @@ TEST_F(LocalSSAElimTest, DecoratedVariable) {
 
   SinglePassRunAndMatch<SSARewritePass>(spv_asm, true);
 }
-#endif
+
+// Test that the RelaxedPrecision decoration on the variable to added to the
+// result of the OpPhi instruction.
+TEST_F(LocalSSAElimTest, MultipleEdges) {
+  const std::string spv_asm = R"(
+  ; CHECK: OpSelectionMerge
+  ; CHECK: [[header_bb:%\w+]] = OpLabel
+  ; CHECK-NOT: OpLabel
+  ; CHECK: OpSwitch {{%\w+}} {{%\w+}} 76 [[bb1:%\w+]] 17 [[bb2:%\w+]]
+  ; CHECK-SAME: 4 [[bb2]]
+  ; CHECK: [[bb2]] = OpLabel
+  ; CHECK-NEXT: OpPhi [[type:%\w+]] [[val:%\w+]] [[header_bb]] %int_0 [[bb1]]
+          OpCapability Shader
+     %1 = OpExtInstImport "GLSL.std.450"
+          OpMemoryModel Logical GLSL450
+          OpEntryPoint Fragment %4 "main"
+          OpExecutionMode %4 OriginUpperLeft
+          OpSource ESSL 310
+  %void = OpTypeVoid
+     %3 = OpTypeFunction %void
+   %int = OpTypeInt 32 1
+  %_ptr_Function_int = OpTypePointer Function %int
+  %int_0 = OpConstant %int 0
+  %bool = OpTypeBool
+  %true = OpConstantTrue %bool
+  %false = OpConstantFalse %bool
+  %int_1 = OpConstant %int 1
+     %4 = OpFunction %void None %3
+     %5 = OpLabel
+     %8 = OpVariable %_ptr_Function_int Function
+          OpBranch %10
+    %10 = OpLabel
+          OpLoopMerge %12 %13 None
+          OpBranch %14
+    %14 = OpLabel
+          OpBranchConditional %true %11 %12
+    %11 = OpLabel
+          OpSelectionMerge %19 None
+          OpBranchConditional %false %18 %19
+    %18 = OpLabel
+          OpSelectionMerge %22 None
+          OpSwitch %int_0 %22 76 %20 17 %21 4 %21
+    %20 = OpLabel
+    %23 = OpLoad %int %8
+          OpStore %8 %int_0
+          OpBranch %21
+    %21 = OpLabel
+          OpBranch %22
+    %22 = OpLabel
+          OpBranch %19
+    %19 = OpLabel
+          OpBranch %13
+    %13 = OpLabel
+          OpBranch %10
+    %12 = OpLabel
+          OpReturn
+          OpFunctionEnd
+  )";
+
+  SinglePassRunAndMatch<SSARewritePass>(spv_asm, true);
+}
+
+TEST_F(LocalSSAElimTest, VariablePointerTest1) {
+  // Check that the load of the first variable is still used and that the load
+  // of the third variable is propagated.  The first load has to remain because
+  // of the store to the variable pointer.
+  const std::string text = R"(
+; CHECK: [[v1:%\w+]] = OpVariable
+; CHECK: [[v2:%\w+]] = OpVariable
+; CHECK: [[v3:%\w+]] = OpVariable
+; CHECK: [[ld1:%\w+]] = OpLoad %int [[v1]]
+; CHECK: OpIAdd %int [[ld1]] %int_0
+               OpCapability Shader
+               OpCapability VariablePointers
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %2 "main"
+               OpExecutionMode %2 LocalSize 1 1 1
+               OpSource GLSL 450
+               OpMemberDecorate %_struct_3 0 Offset 0
+               OpMemberDecorate %_struct_3 1 Offset 4
+       %void = OpTypeVoid
+          %5 = OpTypeFunction %void
+        %int = OpTypeInt 32 1
+       %bool = OpTypeBool
+  %_struct_3 = OpTypeStruct %int %int
+%_ptr_Function__struct_3 = OpTypePointer Function %_struct_3
+%_ptr_Function_int = OpTypePointer Function %int
+       %true = OpConstantTrue %bool
+      %int_0 = OpConstant %int 0
+      %int_1 = OpConstant %int 1
+         %13 = OpConstantNull %_struct_3
+          %2 = OpFunction %void None %5
+         %14 = OpLabel
+         %15 = OpVariable %_ptr_Function_int Function
+         %16 = OpVariable %_ptr_Function_int Function
+         %17 = OpVariable %_ptr_Function_int Function
+               OpStore %15 %int_1
+               OpStore %17 %int_0
+               OpSelectionMerge %18 None
+               OpBranchConditional %true %19 %20
+         %19 = OpLabel
+               OpBranch %18
+         %20 = OpLabel
+               OpBranch %18
+         %18 = OpLabel
+         %21 = OpPhi %_ptr_Function_int %15 %19 %16 %20
+               OpStore %21 %int_0
+         %22 = OpLoad %int %15
+         %23 = OpLoad %int %17
+         %24 = OpIAdd %int %22 %23
+               OpReturn
+               OpFunctionEnd
+  )";
+  SinglePassRunAndMatch<SSARewritePass>(text, false);
+}
+
+TEST_F(LocalSSAElimTest, VariablePointerTest2) {
+  // Check that the load of the first variable is still used and that the load
+  // of the third variable is propagated.  The first load has to remain because
+  // of the store to the variable pointer.
+  const std::string text = R"(
+; CHECK: [[v1:%\w+]] = OpVariable
+; CHECK: [[v2:%\w+]] = OpVariable
+; CHECK: [[v3:%\w+]] = OpVariable
+; CHECK: [[ld1:%\w+]] = OpLoad %int [[v1]]
+; CHECK: OpIAdd %int [[ld1]] %int_0
+               OpCapability Shader
+               OpCapability VariablePointers
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %2 "main"
+               OpExecutionMode %2 LocalSize 1 1 1
+               OpSource GLSL 450
+               OpMemberDecorate %_struct_3 0 Offset 0
+               OpMemberDecorate %_struct_3 1 Offset 4
+       %void = OpTypeVoid
+          %5 = OpTypeFunction %void
+        %int = OpTypeInt 32 1
+       %bool = OpTypeBool
+  %_struct_3 = OpTypeStruct %int %int
+%_ptr_Function__struct_3 = OpTypePointer Function %_struct_3
+%_ptr_Function_int = OpTypePointer Function %int
+       %true = OpConstantTrue %bool
+      %int_0 = OpConstant %int 0
+      %int_1 = OpConstant %int 1
+         %13 = OpConstantNull %_struct_3
+          %2 = OpFunction %void None %5
+         %14 = OpLabel
+         %15 = OpVariable %_ptr_Function_int Function
+         %16 = OpVariable %_ptr_Function_int Function
+         %17 = OpVariable %_ptr_Function_int Function
+               OpStore %15 %int_1
+               OpStore %17 %int_0
+               OpSelectionMerge %18 None
+               OpBranchConditional %true %19 %20
+         %19 = OpLabel
+               OpBranch %18
+         %20 = OpLabel
+               OpBranch %18
+         %18 = OpLabel
+         %21 = OpPhi %_ptr_Function_int %15 %19 %16 %20
+               OpStore %21 %int_0
+         %22 = OpLoad %int %15
+         %23 = OpLoad %int %17
+         %24 = OpIAdd %int %22 %23
+               OpReturn
+               OpFunctionEnd
+  )";
+  SinglePassRunAndMatch<SSARewritePass>(text, false);
+}
+
+TEST_F(LocalSSAElimTest, ChainedTrivialPhis) {
+  // Check that the copy object get the undef value implicitly assigned in the
+  // entry block.
+  const std::string text = R"(
+; CHECK: [[undef:%\w+]] = OpUndef %v4float
+; CHECK: OpCopyObject %v4float [[undef]]
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %2 "main"
+               OpExecutionMode %2 LocalSize 1 18 6
+               OpSource ESSL 310
+       %void = OpTypeVoid
+          %4 = OpTypeFunction %void
+       %bool = OpTypeBool
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_ptr_Function_v4float = OpTypePointer Function %v4float
+          %2 = OpFunction %void None %4
+          %9 = OpLabel
+         %10 = OpVariable %_ptr_Function_v4float Function
+               OpBranch %11
+         %11 = OpLabel
+               OpLoopMerge %12 %13 None
+               OpBranch %14
+         %14 = OpLabel
+         %15 = OpUndef %bool
+               OpBranchConditional %15 %16 %12
+         %16 = OpLabel
+         %17 = OpUndef %bool
+               OpSelectionMerge %18 None
+               OpBranchConditional %17 %19 %18
+         %19 = OpLabel
+         %20 = OpUndef %bool
+               OpLoopMerge %21 %22 None
+               OpBranchConditional %20 %23 %21
+         %23 = OpLabel
+         %24 = OpLoad %v4float %10
+         %25 = OpCopyObject %v4float %24
+         %26 = OpUndef %bool
+               OpBranch %22
+         %22 = OpLabel
+               OpBranch %19
+         %21 = OpLabel
+               OpBranch %12
+         %18 = OpLabel
+               OpBranch %13
+         %13 = OpLabel
+               OpBranch %11
+         %12 = OpLabel
+         %27 = OpLoad %v4float %10
+               OpReturn
+               OpFunctionEnd
+  )";
+  SinglePassRunAndMatch<SSARewritePass>(text, false);
+}
+
+TEST_F(LocalSSAElimTest, Overflowtest1) {
+  // Check that the copy object get the undef value implicitly assigned in the
+  // entry block.
+  const std::string text = R"(
+OpCapability Geometry
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %4 "P2Mai" %12 %17
+OpExecutionMode %4 OriginUpperLeft
+%2 = OpTypeVoid
+%3 = OpTypeFunction %2
+%6 = OpTypeFloat 32
+%7 = OpTypeVector %6 4
+%11 = OpTypePointer Input %7
+%16 = OpTypePointer Output %7
+%23 = OpTypePointer Function %7
+%12 = OpVariable %11 Input
+%17 = OpVariable %16 Output
+%4 = OpFunction %2 None %3
+%2177 = OpLabel
+%4194302 = OpVariable %23 Function
+%4194301 = OpLoad %7 %4194302
+OpStore %17 %4194301
+OpReturn
+OpFunctionEnd
+  )";
+
+  SetAssembleOptions(SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+
+  std::vector<Message> messages = {
+      {SPV_MSG_ERROR, "", 0, 0, "ID overflow. Try running compact-ids."}};
+  SetMessageConsumer(GetTestMessageConsumer(messages));
+  auto result = SinglePassRunToBinary<SSARewritePass>(text, true);
+  EXPECT_EQ(Pass::Status::Failure, std::get<1>(result));
+}
 
 // TODO(greg-lunarg): Add tests to verify handling of these cases:
 //

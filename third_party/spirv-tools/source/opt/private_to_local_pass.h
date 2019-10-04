@@ -35,13 +35,14 @@ class PrivateToLocalPass : public Pass {
            IRContext::kAnalysisInstrToBlockMapping |
            IRContext::kAnalysisDecorations | IRContext::kAnalysisCombinators |
            IRContext::kAnalysisCFG | IRContext::kAnalysisDominatorAnalysis |
-           IRContext::kAnalysisNameMap;
+           IRContext::kAnalysisNameMap | IRContext::kAnalysisConstants |
+           IRContext::kAnalysisTypes;
   }
 
  private:
   // Moves |variable| from the private storage class to the function storage
-  // class of |function|.
-  void MoveVariable(Instruction* variable, Function* function);
+  // class of |function|.  Returns false if the variable could not be moved.
+  bool MoveVariable(Instruction* variable, Function* function);
 
   // |inst| is an instruction declaring a varible.  If that variable is
   // referenced in a single function and all of uses are valid as defined by
@@ -57,13 +58,13 @@ class PrivateToLocalPass : public Pass {
   // Given the result id of a pointer type, |old_type_id|, this function
   // returns the id of a the same pointer type except the storage class has
   // been changed to function.  If the type does not already exist, it will be
-  // created.
+  // created.  Returns 0 if the new type could not be found or generated.
   uint32_t GetNewType(uint32_t old_type_id);
 
   // Updates |inst|, and any instruction dependent on |inst|, to reflect the
   // change of the base pointer now pointing to the function storage class.
-  void UpdateUse(Instruction* inst);
-  void UpdateUses(uint32_t id);
+  bool UpdateUse(Instruction* inst);
+  bool UpdateUses(uint32_t id);
 };
 
 }  // namespace opt

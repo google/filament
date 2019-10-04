@@ -30,7 +30,6 @@ namespace {
 
 using Workaround1209Test = PassTest<::testing::Test>;
 
-#ifdef SPIRV_EFFCEE
 TEST_F(Workaround1209Test, RemoveOpUnreachableInLoop) {
   const std::string text = R"(
                OpCapability Shader
@@ -418,7 +417,6 @@ TEST_F(Workaround1209Test, LeaveUnreachableNotInLoop) {
 
   SinglePassRunAndMatch<Workaround1209>(text, false);
 }
-#endif
 
 }  // namespace
 }  // namespace opt

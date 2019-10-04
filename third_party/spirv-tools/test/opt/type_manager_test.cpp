@@ -17,6 +17,7 @@
 #include <utility>
 #include <vector>
 
+#include "effcee/effcee.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "source/opt/build_module.h"
@@ -24,16 +25,10 @@
 #include "source/opt/type_manager.h"
 #include "spirv-tools/libspirv.hpp"
 
-#ifdef SPIRV_EFFCEE
-#include "effcee/effcee.h"
-#endif
-
 namespace spvtools {
 namespace opt {
 namespace analysis {
 namespace {
-
-#ifdef SPIRV_EFFCEE
 
 bool Validate(const std::vector<uint32_t>& bin) {
   spv_target_env target_env = SPV_ENV_UNIVERSAL_1_2;
@@ -65,8 +60,6 @@ void Match(const std::string& original, IRContext* context,
       << match_result.message() << "\nChecking result:\n"
       << assembly;
 }
-
-#endif
 
 std::vector<std::unique_ptr<Type>> GenerateAllTypes() {
   // Types in this test case are only equal to themselves, nothing else.
@@ -124,10 +117,10 @@ std::vector<std::unique_ptr<Type>> GenerateAllTypes() {
   types.emplace_back(new SampledImage(image2));
 
   // Array
-  types.emplace_back(new Array(f32, 100));
-  types.emplace_back(new Array(f32, 42));
+  types.emplace_back(new Array(f32, Array::LengthInfo{100, {0, 100u}}));
+  types.emplace_back(new Array(f32, Array::LengthInfo{42, {0, 42u}}));
   auto* a42f32 = types.back().get();
-  types.emplace_back(new Array(u64, 24));
+  types.emplace_back(new Array(u64, Array::LengthInfo{24, {0, 24u}}));
 
   // RuntimeArray
   types.emplace_back(new RuntimeArray(v3f32));
@@ -163,7 +156,7 @@ std::vector<std::unique_ptr<Type>> GenerateAllTypes() {
   types.emplace_back(new ReserveId());
   types.emplace_back(new Queue());
 
-  // Pipe, Forward Pointer, PipeStorage, NamedBarrier
+  // Pipe, Forward Pointer, PipeStorage, NamedBarrier, AccelerationStructureNV
   types.emplace_back(new Pipe(SpvAccessQualifierReadWrite));
   types.emplace_back(new Pipe(SpvAccessQualifierReadOnly));
   types.emplace_back(new ForwardPointer(1, SpvStorageClassInput));
@@ -171,13 +164,15 @@ std::vector<std::unique_ptr<Type>> GenerateAllTypes() {
   types.emplace_back(new ForwardPointer(2, SpvStorageClassUniform));
   types.emplace_back(new PipeStorage());
   types.emplace_back(new NamedBarrier());
+  types.emplace_back(new AccelerationStructureNV());
 
   return types;
 }
 
 TEST(TypeManager, TypeStrings) {
   const std::string text = R"(
-    OpTypeForwardPointer !20 !2 ; id for %p is 20, Uniform is 2
+    OpDecorate %spec_const_with_id SpecId 99
+    OpTypeForwardPointer %p Uniform
     %void    = OpTypeVoid
     %bool    = OpTypeBool
     %u32     = OpTypeInt 32 0
@@ -206,47 +201,69 @@ TEST(TypeManager, TypeStrings) {
     %pipe    = OpTypePipe ReadOnly
     %ps      = OpTypePipeStorage
     %nb      = OpTypeNamedBarrier
+    %rtacc   = OpTypeAccelerationStructureNV
+    ; Set up other kinds of OpTypeArray
+    %s64     = OpTypeInt 64 1
+    ; ID 32
+    %spec_const_without_id = OpSpecConstant %s32 44
+    %spec_const_with_id = OpSpecConstant %s32 42 ;; This is ID 1
+    %long_constant = OpConstant %s64 5000000000
+    %spec_const_op = OpSpecConstantOp %s32 IAdd %id4 %id4
+    ; ID 35
+    %arr_spec_const_without_id = OpTypeArray %s32 %spec_const_without_id
+    %arr_spec_const_with_id = OpTypeArray %s32 %spec_const_with_id
+    %arr_long_constant = OpTypeArray %s32 %long_constant
+    %arr_spec_const_op = OpTypeArray %s32 %spec_const_op
   )";
 
   std::vector<std::pair<uint32_t, std::string>> type_id_strs = {
-      {1, "void"},
-      {2, "bool"},
-      {3, "uint32"},
-      // Id 4 is used by the constant.
-      {5, "sint32"},
-      {6, "float64"},
-      {7, "<uint32, 3>"},
-      {8, "<<uint32, 3>, 3>"},
-      {9, "image(sint32, 3, 0, 1, 1, 0, 3, 2)"},
-      {10, "image(sint32, 3, 0, 1, 1, 0, 3, 0)"},
-      {11, "sampler"},
-      {12, "sampled_image(image(sint32, 3, 0, 1, 1, 0, 3, 2))"},
-      {13, "sampled_image(image(sint32, 3, 0, 1, 1, 0, 3, 0))"},
-      {14, "[uint32, id(4)]"},
-      {15, "[float64]"},
-      {16, "{uint32}"},
-      {17, "{float64, sint32, <uint32, 3>}"},
-      {18, "opaque('')"},
-      {19, "opaque('opaque')"},
-      {20, "{uint32}*"},
-      {21, "(uint32, uint32) -> void"},
-      {22, "event"},
-      {23, "device_event"},
-      {24, "reserve_id"},
-      {25, "queue"},
-      {26, "pipe(0)"},
-      {27, "pipe_storage"},
-      {28, "named_barrier"},
+      {3, "void"},
+      {4, "bool"},
+      {5, "uint32"},
+      // Id 6 is used by the constant.
+      {7, "sint32"},
+      {8, "float64"},
+      {9, "<uint32, 3>"},
+      {10, "<<uint32, 3>, 3>"},
+      {11, "image(sint32, 3, 0, 1, 1, 0, 3, 2)"},
+      {12, "image(sint32, 3, 0, 1, 1, 0, 3, 0)"},
+      {13, "sampler"},
+      {14, "sampled_image(image(sint32, 3, 0, 1, 1, 0, 3, 2))"},
+      {15, "sampled_image(image(sint32, 3, 0, 1, 1, 0, 3, 0))"},
+      {16, "[uint32, id(6), words(0,4)]"},
+      {17, "[float64]"},
+      {18, "{uint32}"},
+      {19, "{float64, sint32, <uint32, 3>}"},
+      {20, "opaque('')"},
+      {21, "opaque('opaque')"},
+      {2, "{uint32} 2*"},  // Include storage class number
+      {22, "(uint32, uint32) -> void"},
+      {23, "event"},
+      {24, "device_event"},
+      {25, "reserve_id"},
+      {26, "queue"},
+      {27, "pipe(0)"},
+      {28, "pipe_storage"},
+      {29, "named_barrier"},
+      {30, "accelerationStructureNV"},
+      {31, "sint64"},
+      {35, "[sint32, id(32), words(0,44)]"},
+      {36, "[sint32, id(1), words(1,99,42)]"},
+      {37, "[sint32, id(33), words(0,705032704,1)]"},
+      {38, "[sint32, id(34), words(2,34)]"},
   };
 
   std::unique_ptr<IRContext> context =
       BuildModule(SPV_ENV_UNIVERSAL_1_1, nullptr, text);
+  ASSERT_NE(nullptr, context.get());  // It assembled
   TypeManager manager(nullptr, context.get());
 
   EXPECT_EQ(type_id_strs.size(), manager.NumTypes());
 
   for (const auto& p : type_id_strs) {
-    EXPECT_EQ(p.second, manager.GetType(p.first)->str());
+    ASSERT_NE(nullptr, manager.GetType(p.first));
+    EXPECT_EQ(p.second, manager.GetType(p.first)->str())
+        << " id is " << p.first;
     EXPECT_EQ(p.first, manager.GetId(manager.GetType(p.first)));
   }
 }
@@ -939,7 +956,6 @@ OpMemoryModel Logical GLSL450
   EXPECT_EQ(nullptr, context->get_type_mgr()->GetType(id));
 }
 
-#ifdef SPIRV_EFFCEE
 TEST(TypeManager, GetTypeInstructionInt) {
   const std::string text = R"(
 ; CHECK: OpTypeInt 32 0
@@ -1043,6 +1059,7 @@ TEST(TypeManager, GetTypeInstructionAllTypes) {
 ; CHECK: OpTypeForwardPointer [[uniform_ptr]] Uniform
 ; CHECK: OpTypePipeStorage
 ; CHECK: OpTypeNamedBarrier
+; CHECK: OpTypeAccelerationStructureNV
 OpCapability Shader
 OpCapability Int64
 OpCapability Linkage
@@ -1145,7 +1162,6 @@ OpMemoryModel Logical GLSL450
   context->get_type_mgr()->FindPointerToType(2, SpvStorageClassFunction);
   Match(text, context.get());
 }
-#endif  // SPIRV_EFFCEE
 
 }  // namespace
 }  // namespace analysis

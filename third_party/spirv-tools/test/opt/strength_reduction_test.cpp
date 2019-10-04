@@ -65,7 +65,6 @@ TEST_F(StrengthReductionBasicTest, BasicReplaceMulBy8) {
 }
 
 // TODO(dneto): Add Effcee as required dependency, and make this unconditional.
-#ifdef SPIRV_EFFCEE
 // Test to make sure we replace 16*5
 // Also demonstrate use of Effcee matching.
 TEST_F(StrengthReductionBasicTest, BasicReplaceMulBy16) {
@@ -102,7 +101,6 @@ TEST_F(StrengthReductionBasicTest, BasicReplaceMulBy16) {
 
   SinglePassRunAndMatch<StrengthReductionPass>(text, false);
 }
-#endif
 
 // Test to make sure we replace a multiple of 32 and 4.
 TEST_F(StrengthReductionBasicTest, BasicTwoPowersOf2) {

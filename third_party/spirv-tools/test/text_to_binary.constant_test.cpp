@@ -47,7 +47,7 @@ TEST_P(SamplerAddressingModeTest, AnySamplerAddressingMode) {
 
 // clang-format off
 #define CASE(NAME) { SpvSamplerAddressingMode##NAME, #NAME }
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TextToBinarySamplerAddressingMode, SamplerAddressingModeTest,
     ::testing::ValuesIn(std::vector<EnumCase<SpvSamplerAddressingMode>>{
         CASE(None),
@@ -55,7 +55,7 @@ INSTANTIATE_TEST_CASE_P(
         CASE(Clamp),
         CASE(Repeat),
         CASE(RepeatMirrored),
-    }),);
+    }));
 #undef CASE
 // clang-format on
 
@@ -79,12 +79,12 @@ TEST_P(SamplerFilterModeTest, AnySamplerFilterMode) {
 
 // clang-format off
 #define CASE(NAME) { SpvSamplerFilterMode##NAME, #NAME}
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TextToBinarySamplerFilterMode, SamplerFilterModeTest,
     ::testing::ValuesIn(std::vector<EnumCase<SpvSamplerFilterMode>>{
         CASE(Nearest),
         CASE(Linear),
-    }),);
+    }));
 #undef CASE
 // clang-format on
 
@@ -114,7 +114,7 @@ TEST_P(OpConstantValidTest, ValidTypes) {
 }
 
 // clang-format off
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TextToBinaryOpConstantValid, OpConstantValidTest,
     ::testing::ValuesIn(std::vector<ConstantTestCase>{
       // Check 16 bits
@@ -232,7 +232,7 @@ INSTANTIATE_TEST_CASE_P(
       {"OpTypeInt 64 1", "0x7fffffff",
         Concatenate({MakeInstruction(SpvOpTypeInt, {1, 64, 1}),
          MakeInstruction(SpvOpConstant, {1, 2, 0x7fffffffu, 0})})},
-    }),);
+    }));
 // clang-format on
 
 // A test case for checking OpConstant with invalid literals with a leading
@@ -255,7 +255,7 @@ TEST_P(OpConstantInvalidLeadingMinusTest, InvalidCase) {
 }
 
 // clang-format off
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TextToBinaryOpConstantInvalidLeadingMinus, OpConstantInvalidLeadingMinusTest,
     ::testing::ValuesIn(std::vector<InvalidLeadingMinusCase>{
       {"OpTypeInt 16 0", "-0"},
@@ -267,7 +267,7 @@ INSTANTIATE_TEST_CASE_P(
       {"OpTypeInt 64 0", "-0"},
       {"OpTypeInt 64 0", "-0x0"},
       {"OpTypeInt 64 0", "-1"},
-    }),);
+    }));
 // clang-format on
 
 // A test case for invalid floating point literals.
@@ -293,7 +293,7 @@ TEST_P(OpConstantInvalidFloatConstant, Samples) {
 }
 
 // clang-format off
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TextToBinaryInvalidFloatConstant, OpConstantInvalidFloatConstant,
     ::testing::ValuesIn(std::vector<InvalidFloatConstantCase>{
         {16, "abc"},
@@ -323,12 +323,11 @@ INSTANTIATE_TEST_CASE_P(
         {64, "++1"},
         {32, "1e400"}, // Overflow is an error for 64-bit floats.
         {32, "-1e400"},
-    }),);
+    }));
 // clang-format on
 
 using OpConstantInvalidTypeTest =
     spvtest::TextToBinaryTestBase<::testing::TestWithParam<std::string>>;
-
 TEST_P(OpConstantInvalidTypeTest, InvalidTypes) {
   const std::string input = "%1 = " + GetParam() +
                             "\n"
@@ -339,7 +338,7 @@ TEST_P(OpConstantInvalidTypeTest, InvalidTypes) {
 }
 
 // clang-format off
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TextToBinaryOpConstantInvalidValidType, OpConstantInvalidTypeTest,
     ::testing::ValuesIn(std::vector<std::string>{
       {"OpTypeVoid",
@@ -360,11 +359,14 @@ INSTANTIATE_TEST_CASE_P(
        "OpTypeReserveId",
        "OpTypeQueue",
        "OpTypePipe ReadOnly",
-       "OpTypeForwardPointer %a UniformConstant",
-        // At least one thing that isn't a type at all
+
+       // Skip OpTypeForwardPointer doesn't even produce a result ID.
+       // The assembler errors out if we try to check it in this scenario.
+
+       // Try at least one thing that isn't a type at all
        "OpNot %a %b"
       },
-    }),);
+    }));
 // clang-format on
 
 using OpSpecConstantValidTest =
@@ -381,7 +383,7 @@ TEST_P(OpSpecConstantValidTest, ValidTypes) {
 }
 
 // clang-format off
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TextToBinaryOpSpecConstantValid, OpSpecConstantValidTest,
     ::testing::ValuesIn(std::vector<ConstantTestCase>{
       // Check 16 bits
@@ -433,7 +435,7 @@ INSTANTIATE_TEST_CASE_P(
       {"OpTypeInt 64 1", "-42",
         Concatenate({MakeInstruction(SpvOpTypeInt, {1, 64, 1}),
          MakeInstruction(SpvOpSpecConstant, {1, 2, uint32_t(-42), uint32_t(-1)})})},
-    }),);
+    }));
 // clang-format on
 
 using OpSpecConstantInvalidTypeTest =
@@ -449,7 +451,7 @@ TEST_P(OpSpecConstantInvalidTypeTest, InvalidTypes) {
 }
 
 // clang-format off
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TextToBinaryOpSpecConstantInvalidValidType, OpSpecConstantInvalidTypeTest,
     ::testing::ValuesIn(std::vector<std::string>{
       {"OpTypeVoid",
@@ -470,18 +472,20 @@ INSTANTIATE_TEST_CASE_P(
        "OpTypeReserveId",
        "OpTypeQueue",
        "OpTypePipe ReadOnly",
-       "OpTypeForwardPointer %a UniformConstant",
-        // At least one thing that isn't a type at all
+
+       // Skip testing OpTypeForwardPointer because it doesn't even produce a result ID.
+
+       // Try at least one thing that isn't a type at all
        "OpNot %a %b"
       },
-    }),);
+    }));
 // clang-format on
 
 const int64_t kMaxUnsigned48Bit = (int64_t(1) << 48) - 1;
 const int64_t kMaxSigned48Bit = (int64_t(1) << 47) - 1;
 const int64_t kMinSigned48Bit = -kMaxSigned48Bit - 1;
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     OpConstantRoundTrip, RoundTripTest,
     ::testing::ValuesIn(std::vector<std::string>{
         // 16 bit
@@ -522,9 +526,9 @@ INSTANTIATE_TEST_CASE_P(
         "%1 = OpTypeFloat 64\n%2 = OpConstant %1 0\n",
         "%1 = OpTypeFloat 64\n%2 = OpConstant %1 1.79767e+308\n",
         "%1 = OpTypeFloat 64\n%2 = OpConstant %1 -1.79767e+308\n",
-    }), );
+    }));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     OpConstantHalfRoundTrip, RoundTripTest,
     ::testing::ValuesIn(std::vector<std::string>{
         "%1 = OpTypeFloat 16\n%2 = OpConstant %1 -0x0p+0\n",
@@ -557,11 +561,11 @@ INSTANTIATE_TEST_CASE_P(
         "%1 = OpTypeFloat 16\n%2 = OpConstant %1 -0x1.ffp+16\n",   // -nan
         "%1 = OpTypeFloat 16\n%2 = OpConstant %1 -0x1.ffcp+16\n",  // -nan
         "%1 = OpTypeFloat 16\n%2 = OpConstant %1 -0x1.004p+16\n",  // -nan
-    }), );
+    }));
 
 // clang-format off
 // (Clang-format really wants to break up these strings across lines.
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     OpConstantRoundTripNonFinite, RoundTripTest,
     ::testing::ValuesIn(std::vector<std::string>{
   "%1 = OpTypeFloat 32\n%2 = OpConstant %1 -0x1p+128\n",         // -inf
@@ -588,10 +592,10 @@ INSTANTIATE_TEST_CASE_P(
   "%1 = OpTypeFloat 64\n%2 = OpConstant %1 0x1.0000000000001p+1024\n",   // -nan
   "%1 = OpTypeFloat 64\n%2 = OpConstant %1 0x1.00003p+1024\n",           // -nan
   "%1 = OpTypeFloat 64\n%2 = OpConstant %1 0x1.fffffffffffffp+1024\n",   // -nan
-    }),);
+    }));
 // clang-format on
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     OpSpecConstantRoundTrip, RoundTripTest,
     ::testing::ValuesIn(std::vector<std::string>{
         // 16 bit
@@ -632,7 +636,7 @@ INSTANTIATE_TEST_CASE_P(
         "%1 = OpTypeFloat 64\n%2 = OpSpecConstant %1 0\n",
         "%1 = OpTypeFloat 64\n%2 = OpSpecConstant %1 1.79767e+308\n",
         "%1 = OpTypeFloat 64\n%2 = OpSpecConstant %1 -1.79767e+308\n",
-    }), );
+    }));
 
 // Test OpSpecConstantOp
 
@@ -662,7 +666,7 @@ TEST_P(OpSpecConstantOpTestWithIds, Assembly) {
 #define CASE4(NAME) { SpvOp##NAME, #NAME, {3, 4, 5, 6} }
 #define CASE5(NAME) { SpvOp##NAME, #NAME, {3, 4, 5, 6, 7} }
 #define CASE6(NAME) { SpvOp##NAME, #NAME, {3, 4, 5, 6, 7, 8} }
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TextToBinaryOpSpecConstantOp, OpSpecConstantOpTestWithIds,
     ::testing::ValuesIn(std::vector<EnumCase<SpvOp>>{
         // Conversion
@@ -738,7 +742,7 @@ INSTANTIATE_TEST_CASE_P(
         CASE2(InBoundsPtrAccessChain),
         CASE3(InBoundsPtrAccessChain),
         CASE6(InBoundsPtrAccessChain),
-    }),);
+    }));
 #undef CASE1
 #undef CASE2
 #undef CASE3
@@ -768,7 +772,7 @@ TEST_P(OpSpecConstantOpTestWithTwoIdsThenLiteralNumbers, Assembly) {
 }
 
 #define CASE(NAME) SpvOp##NAME, #NAME
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TextToBinaryOpSpecConstantOp,
     OpSpecConstantOpTestWithTwoIdsThenLiteralNumbers,
     ::testing::ValuesIn(std::vector<EnumCase<SpvOp>>{
@@ -783,7 +787,7 @@ INSTANTIATE_TEST_CASE_P(
         // composite, and then literal indices.
         {CASE(CompositeInsert), {0}},
         {CASE(CompositeInsert), {4, 3, 99, 1}},
-    }), );
+    }));
 
 using OpSpecConstantOpTestWithOneIdThenLiteralNumbers =
     spvtest::TextToBinaryTestBase<::testing::TestWithParam<EnumCase<SpvOp>>>;
@@ -806,7 +810,7 @@ TEST_P(OpSpecConstantOpTestWithOneIdThenLiteralNumbers, Assembly) {
 }
 
 #define CASE(NAME) SpvOp##NAME, #NAME
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TextToBinaryOpSpecConstantOp,
     OpSpecConstantOpTestWithOneIdThenLiteralNumbers,
     ::testing::ValuesIn(std::vector<EnumCase<SpvOp>>{
@@ -814,7 +818,7 @@ INSTANTIATE_TEST_CASE_P(
         // indices.  Let's only test a few.
         {CASE(CompositeExtract), {0}},
         {CASE(CompositeExtract), {0, 99, 42, 16, 17, 12, 19}},
-    }), );
+    }));
 
 // TODO(dneto): OpConstantTrue
 // TODO(dneto): OpConstantFalse

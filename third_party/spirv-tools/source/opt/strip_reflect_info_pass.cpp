@@ -39,6 +39,14 @@ Pass::Status StripReflectInfoPass::Process() {
         }
         break;
 
+      case SpvOpMemberDecorateStringGOOGLE:
+        if (inst.GetSingleWordInOperand(2) == SpvDecorationHlslSemanticGOOGLE) {
+          to_remove.push_back(&inst);
+        } else {
+          other_uses_for_decorate_string = true;
+        }
+        break;
+
       case SpvOpDecorateId:
         if (inst.GetSingleWordInOperand(1) ==
             SpvDecorationHlslCounterBufferGOOGLE) {

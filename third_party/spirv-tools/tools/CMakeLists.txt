@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-add_subdirectory(lesspipe)
+if (NOT ${SPIRV_SKIP_EXECUTABLES})
+ add_subdirectory(lesspipe)
+endif()
 add_subdirectory(emacs)
 
 # Add a SPIR-V Tools command line tool. Signature:
@@ -42,14 +44,10 @@ if (NOT ${SPIRV_SKIP_EXECUTABLES})
   add_spvtools_tool(TARGET spirv-dis SRCS dis/dis.cpp LIBS ${SPIRV_TOOLS})
   add_spvtools_tool(TARGET spirv-val SRCS val/val.cpp util/cli_consumer.cpp LIBS ${SPIRV_TOOLS})
   add_spvtools_tool(TARGET spirv-opt SRCS opt/opt.cpp util/cli_consumer.cpp LIBS SPIRV-Tools-opt ${SPIRV_TOOLS})
+  if (NOT DEFINED IOS_PLATFORM) # iOS does not allow std::system calls which spirv-reduce requires
+    add_spvtools_tool(TARGET spirv-reduce SRCS reduce/reduce.cpp util/cli_consumer.cpp LIBS SPIRV-Tools-reduce ${SPIRV_TOOLS})
+  endif()
   add_spvtools_tool(TARGET spirv-link SRCS link/linker.cpp LIBS SPIRV-Tools-link ${SPIRV_TOOLS})
-  add_spvtools_tool(TARGET spirv-stats
-	            SRCS stats/stats.cpp
-		               stats/stats_analyzer.cpp
-                   stats/stats_analyzer.h
-                   stats/spirv_stats.cpp
-                   stats/spirv_stats.h
-		    LIBS ${SPIRV_TOOLS})
   add_spvtools_tool(TARGET spirv-cfg
                     SRCS cfg/cfg.cpp
                          cfg/bin_to_dot.h
@@ -57,22 +55,16 @@ if (NOT ${SPIRV_SKIP_EXECUTABLES})
                     LIBS ${SPIRV_TOOLS})
   target_include_directories(spirv-cfg PRIVATE ${spirv-tools_SOURCE_DIR}
                                                ${SPIRV_HEADER_INCLUDE_DIR})
-  target_include_directories(spirv-stats PRIVATE ${spirv-tools_SOURCE_DIR}
-                                                 ${SPIRV_HEADER_INCLUDE_DIR})
-
-  set(SPIRV_INSTALL_TARGETS spirv-as spirv-dis spirv-val spirv-opt spirv-stats
+  set(SPIRV_INSTALL_TARGETS spirv-as spirv-dis spirv-val spirv-opt
                             spirv-cfg spirv-link)
+  if(NOT DEFINED IOS_PLATFORM)
+    set(SPIRV_INSTALL_TARGETS ${SPIRV_INSTALL_TARGETS} spirv-reduce)
+  endif()
 
-  if(SPIRV_BUILD_COMPRESSION)
-    add_spvtools_tool(TARGET spirv-markv
-                      SRCS comp/markv.cpp
-                           comp/markv_model_factory.cpp
-                           comp/markv_model_shader.cpp
-	              LIBS SPIRV-Tools-comp SPIRV-Tools-opt ${SPIRV_TOOLS})
-    target_include_directories(spirv-markv PRIVATE ${spirv-tools_SOURCE_DIR}
-                                                   ${SPIRV_HEADER_INCLUDE_DIR})
-    set(SPIRV_INSTALL_TARGETS ${SPIRV_INSTALL_TARGETS} spirv-markv)
-  endif(SPIRV_BUILD_COMPRESSION)
+  if(SPIRV_BUILD_FUZZER)
+    add_spvtools_tool(TARGET spirv-fuzz SRCS fuzz/fuzz.cpp util/cli_consumer.cpp LIBS SPIRV-Tools-fuzz ${SPIRV_TOOLS})
+    set(SPIRV_INSTALL_TARGETS ${SPIRV_INSTALL_TARGETS} spirv-fuzz)
+  endif(SPIRV_BUILD_FUZZER)
 
   if(ENABLE_SPIRV_TOOLS_INSTALL)
     install(TARGETS ${SPIRV_INSTALL_TARGETS}

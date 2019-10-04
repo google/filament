@@ -97,6 +97,7 @@ spv_result_t spvOpcodeTableNameLookup(spv_target_env env,
   // preferable but the table requires sorting on the Opcode name, but it's
   // static const initialized and matches the order of the spec.
   const size_t nameLength = strlen(name);
+  const auto version = spvVersionForTargetEnv(env);
   for (uint64_t opcodeIndex = 0; opcodeIndex < table->count; ++opcodeIndex) {
     const spv_opcode_desc_t& entry = table->entries[opcodeIndex];
     // We considers the current opcode as available as long as
@@ -107,7 +108,7 @@ spv_result_t spvOpcodeTableNameLookup(spv_target_env env,
     // Note that the second rule assumes the extension enabling this instruction
     // is indeed requested in the SPIR-V code; checking that should be
     // validator's work.
-    if ((spvVersionForTargetEnv(env) >= entry.minVersion ||
+    if (((version >= entry.minVersion && version <= entry.lastVersion) ||
          entry.numExtensions > 0u || entry.numCapabilities > 0u) &&
         nameLength == strlen(entry.name) &&
         !strncmp(name, entry.name, nameLength)) {
@@ -130,8 +131,8 @@ spv_result_t spvOpcodeTableValueLookup(spv_target_env env,
   const auto beg = table->entries;
   const auto end = table->entries + table->count;
 
-  spv_opcode_desc_t needle = {"",    opcode, 0, nullptr, 0,  {},
-                              false, false,  0, nullptr, ~0u};
+  spv_opcode_desc_t needle = {"",    opcode, 0, nullptr, 0,   {},
+                              false, false,  0, nullptr, ~0u, ~0u};
 
   auto comp = [](const spv_opcode_desc_t& lhs, const spv_opcode_desc_t& rhs) {
     return lhs.opcode < rhs.opcode;
@@ -142,6 +143,7 @@ spv_result_t spvOpcodeTableValueLookup(spv_target_env env,
   // which means they can have different minimal version requirements.
   // Assumes the underlying table is already sorted ascendingly according to
   // opcode value.
+  const auto version = spvVersionForTargetEnv(env);
   for (auto it = std::lower_bound(beg, end, needle, comp);
        it != end && it->opcode == opcode; ++it) {
     // We considers the current opcode as available as long as
@@ -152,7 +154,7 @@ spv_result_t spvOpcodeTableValueLookup(spv_target_env env,
     // Note that the second rule assumes the extension enabling this instruction
     // is indeed requested in the SPIR-V code; checking that should be
     // validator's work.
-    if (spvVersionForTargetEnv(env) >= it->minVersion ||
+    if ((version >= it->minVersion && version <= it->lastVersion) ||
         it->numExtensions > 0u || it->numCapabilities > 0u) {
       *pEntry = it;
       return SPV_SUCCESS;
@@ -182,8 +184,8 @@ void spvInstructionCopy(const uint32_t* words, const SpvOp opcode,
 const char* spvOpcodeString(const SpvOp opcode) {
   const auto beg = kOpcodeTableEntries;
   const auto end = kOpcodeTableEntries + ARRAY_SIZE(kOpcodeTableEntries);
-  spv_opcode_desc_t needle = {"",    opcode, 0, nullptr, 0,  {},
-                              false, false,  0, nullptr, ~0u};
+  spv_opcode_desc_t needle = {"",    opcode, 0, nullptr, 0,   {},
+                              false, false,  0, nullptr, ~0u, ~0u};
   auto comp = [](const spv_opcode_desc_t& lhs, const spv_opcode_desc_t& rhs) {
     return lhs.opcode < rhs.opcode;
   };
@@ -260,6 +262,7 @@ int32_t spvOpcodeIsComposite(const SpvOp opcode) {
     case SpvOpTypeMatrix:
     case SpvOpTypeArray:
     case SpvOpTypeStruct:
+    case SpvOpTypeCooperativeMatrixNV:
       return true;
     default:
       return false;
@@ -324,6 +327,8 @@ int32_t spvOpcodeGeneratesType(SpvOp op) {
     case SpvOpTypePipe:
     case SpvOpTypePipeStorage:
     case SpvOpTypeNamedBarrier:
+    case SpvOpTypeAccelerationStructureNV:
+    case SpvOpTypeCooperativeMatrixNV:
       return true;
     default:
       // In particular, OpTypeForwardPointer does not generate a type,
@@ -390,10 +395,9 @@ bool spvOpcodeIsBranch(SpvOp opcode) {
   }
 }
 
-bool spvOpcodeIsAtomicOp(const SpvOp opcode) {
+bool spvOpcodeIsAtomicWithLoad(const SpvOp opcode) {
   switch (opcode) {
     case SpvOpAtomicLoad:
-    case SpvOpAtomicStore:
     case SpvOpAtomicExchange:
     case SpvOpAtomicCompareExchange:
     case SpvOpAtomicCompareExchangeWeak:
@@ -409,11 +413,15 @@ bool spvOpcodeIsAtomicOp(const SpvOp opcode) {
     case SpvOpAtomicOr:
     case SpvOpAtomicXor:
     case SpvOpAtomicFlagTestAndSet:
-    case SpvOpAtomicFlagClear:
       return true;
     default:
       return false;
   }
+}
+
+bool spvOpcodeIsAtomicOp(const SpvOp opcode) {
+  return (spvOpcodeIsAtomicWithLoad(opcode) || opcode == SpvOpAtomicStore ||
+          opcode == SpvOpAtomicFlagClear);
 }
 
 bool spvOpcodeIsReturn(SpvOp opcode) {
@@ -581,5 +589,53 @@ bool spvOpcodeIsScalarizable(SpvOp opcode) {
       return true;
     default:
       return false;
+  }
+}
+
+bool spvOpcodeIsDebug(SpvOp opcode) {
+  switch (opcode) {
+    case SpvOpName:
+    case SpvOpMemberName:
+    case SpvOpSource:
+    case SpvOpSourceContinued:
+    case SpvOpSourceExtension:
+    case SpvOpString:
+    case SpvOpLine:
+    case SpvOpNoLine:
+      return true;
+    default:
+      return false;
+  }
+}
+
+std::vector<uint32_t> spvOpcodeMemorySemanticsOperandIndices(SpvOp opcode) {
+  switch (opcode) {
+    case SpvOpMemoryBarrier:
+      return {1};
+    case SpvOpAtomicStore:
+    case SpvOpControlBarrier:
+    case SpvOpAtomicFlagClear:
+    case SpvOpMemoryNamedBarrier:
+      return {2};
+    case SpvOpAtomicLoad:
+    case SpvOpAtomicExchange:
+    case SpvOpAtomicIIncrement:
+    case SpvOpAtomicIDecrement:
+    case SpvOpAtomicIAdd:
+    case SpvOpAtomicISub:
+    case SpvOpAtomicSMin:
+    case SpvOpAtomicUMin:
+    case SpvOpAtomicSMax:
+    case SpvOpAtomicUMax:
+    case SpvOpAtomicAnd:
+    case SpvOpAtomicOr:
+    case SpvOpAtomicXor:
+    case SpvOpAtomicFlagTestAndSet:
+      return {4};
+    case SpvOpAtomicCompareExchange:
+    case SpvOpAtomicCompareExchangeWeak:
+      return {4, 5};
+    default:
+      return {};
   }
 }

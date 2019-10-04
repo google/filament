@@ -132,7 +132,7 @@ class Loop {
   void SetPreHeaderBlock(BasicBlock* preheader);
 
   // Returns the loop pre-header, if there is no suitable preheader it will be
-  // created.
+  // created.  Returns |nullptr| if it fails to create the preheader.
   BasicBlock* GetOrCreatePreHeaderBlock();
 
   // Returns true if this loop contains any nested loops.
@@ -499,8 +499,8 @@ class LoopDescriptor {
 
   // Mark the loop |loop_to_add| as needing to be added when the user calls
   // PostModificationCleanup. |parent| may be null.
-  inline void AddLoop(Loop* loop_to_add, Loop* parent) {
-    loops_to_add_.emplace_back(std::make_pair(parent, loop_to_add));
+  inline void AddLoop(std::unique_ptr<Loop>&& loop_to_add, Loop* parent) {
+    loops_to_add_.emplace_back(std::make_pair(parent, std::move(loop_to_add)));
   }
 
   // Checks all loops in |this| and will create pre-headers for all loops
@@ -537,7 +537,9 @@ class LoopDescriptor {
   // TODO(dneto): This should be a vector of unique_ptr.  But VisualStudio 2013
   // is unable to compile it.
   using LoopContainerType = std::vector<Loop*>;
-  using LoopsToAddContainerType = std::vector<std::pair<Loop*, Loop*>>;
+
+  using LoopsToAddContainerType =
+      std::vector<std::pair<Loop*, std::unique_ptr<Loop>>>;
 
   // Creates loop descriptors for the function |f|.
   void PopulateList(IRContext* context, const Function* f);

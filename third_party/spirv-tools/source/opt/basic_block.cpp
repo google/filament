@@ -35,9 +35,18 @@ const uint32_t kSelectionMergeMergeBlockIdInIdx = 0;
 BasicBlock* BasicBlock::Clone(IRContext* context) const {
   BasicBlock* clone = new BasicBlock(
       std::unique_ptr<Instruction>(GetLabelInst()->Clone(context)));
-  for (const auto& inst : insts_)
+  for (const auto& inst : insts_) {
     // Use the incoming context
     clone->AddInstruction(std::unique_ptr<Instruction>(inst.Clone(context)));
+  }
+
+  if (context->AreAnalysesValid(
+          IRContext::Analysis::kAnalysisInstrToBlockMapping)) {
+    for (auto& inst : *clone) {
+      context->set_instr_block(&inst, clone);
+    }
+  }
+
   return clone;
 }
 
@@ -99,21 +108,29 @@ void BasicBlock::KillAllInsts(bool killLabel) {
 
 void BasicBlock::ForEachSuccessorLabel(
     const std::function<void(const uint32_t)>& f) const {
+  WhileEachSuccessorLabel([f](const uint32_t l) {
+    f(l);
+    return true;
+  });
+}
+
+bool BasicBlock::WhileEachSuccessorLabel(
+    const std::function<bool(const uint32_t)>& f) const {
   const auto br = &insts_.back();
   switch (br->opcode()) {
-    case SpvOpBranch: {
-      f(br->GetOperand(0).words[0]);
-    } break;
+    case SpvOpBranch:
+      return f(br->GetOperand(0).words[0]);
     case SpvOpBranchConditional:
     case SpvOpSwitch: {
       bool is_first = true;
-      br->ForEachInId([&is_first, &f](const uint32_t* idp) {
-        if (!is_first) f(*idp);
+      return br->WhileEachInId([&is_first, &f](const uint32_t* idp) {
+        if (!is_first) return f(*idp);
         is_first = false;
+        return true;
       });
-    } break;
+    }
     default:
-      break;
+      return true;
   }
 }
 
@@ -175,6 +192,12 @@ uint32_t BasicBlock::MergeBlockIdIfAny() const {
   return mbid;
 }
 
+uint32_t BasicBlock::MergeBlockId() const {
+  uint32_t mbid = MergeBlockIdIfAny();
+  assert(mbid && "Expected block to have a corresponding merge block");
+  return mbid;
+}
+
 uint32_t BasicBlock::ContinueBlockIdIfAny() const {
   auto merge_ii = cend();
   --merge_ii;
@@ -188,9 +211,19 @@ uint32_t BasicBlock::ContinueBlockIdIfAny() const {
   return cbid;
 }
 
+uint32_t BasicBlock::ContinueBlockId() const {
+  uint32_t cbid = ContinueBlockIdIfAny();
+  assert(cbid && "Expected block to have a corresponding continue target");
+  return cbid;
+}
+
 std::ostream& operator<<(std::ostream& str, const BasicBlock& block) {
   str << block.PrettyPrint();
   return str;
+}
+
+void BasicBlock::Dump() const {
+  std::cerr << "Basic block #" << id() << "\n" << *this << "\n ";
 }
 
 std::string BasicBlock::PrettyPrint(uint32_t options) const {
@@ -208,8 +241,11 @@ BasicBlock* BasicBlock::SplitBasicBlock(IRContext* context, uint32_t label_id,
                                         iterator iter) {
   assert(!insts_.empty());
 
-  BasicBlock* new_block = new BasicBlock(MakeUnique<Instruction>(
-      context, SpvOpLabel, 0, label_id, std::initializer_list<Operand>{}));
+  std::unique_ptr<BasicBlock> new_block_temp =
+      MakeUnique<BasicBlock>(MakeUnique<Instruction>(
+          context, SpvOpLabel, 0, label_id, std::initializer_list<Operand>{}));
+  BasicBlock* new_block = new_block_temp.get();
+  function_->InsertBasicBlockAfter(std::move(new_block_temp), this);
 
   new_block->insts_.Splice(new_block->end(), &insts_, iter, end());
   new_block->SetParent(GetParent());

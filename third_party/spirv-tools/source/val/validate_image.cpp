@@ -23,6 +23,7 @@
 #include "source/spirv_target_env.h"
 #include "source/util/bitutils.h"
 #include "source/val/instruction.h"
+#include "source/val/validate_scopes.h"
 #include "source/val/validation_state.h"
 
 namespace spvtools {
@@ -55,6 +56,15 @@ bool CheckAllImageOperandsHandled() {
     case SpvImageOperandsConstOffsetsMask:
     case SpvImageOperandsSampleMask:
     case SpvImageOperandsMinLodMask:
+
+    // TODO(dneto): Support image operands related to the Vulkan memory model.
+    // https://gitlab.khronos.org/spirv/spirv-tools/issues/32
+    case SpvImageOperandsMakeTexelAvailableKHRMask:
+    case SpvImageOperandsMakeTexelVisibleKHRMask:
+    case SpvImageOperandsNonPrivateTexelKHRMask:
+    case SpvImageOperandsVolatileTexelKHRMask:
+    case SpvImageOperandsSignExtendMask:
+    case SpvImageOperandsZeroExtendMask:
       return true;
   }
   return false;
@@ -210,7 +220,14 @@ spv_result_t ValidateImageOperands(ValidationState_t& _,
   const SpvOp opcode = inst->opcode();
   const size_t num_words = inst->words().size();
 
-  size_t expected_num_image_operand_words = spvtools::utils::CountSetBits(mask);
+  // NonPrivate, Volatile, SignExtend, ZeroExtend take no operand words.
+  const uint32_t mask_bits_having_operands =
+      mask & ~uint32_t(SpvImageOperandsNonPrivateTexelKHRMask |
+                       SpvImageOperandsVolatileTexelKHRMask |
+                       SpvImageOperandsSignExtendMask |
+                       SpvImageOperandsZeroExtendMask);
+  size_t expected_num_image_operand_words =
+      spvtools::utils::CountSetBits(mask_bits_having_operands);
   if (mask & SpvImageOperandsGradMask) {
     // Grad uses two words.
     ++expected_num_image_operand_words;
@@ -486,6 +503,74 @@ spv_result_t ValidateImageOperands(ValidationState_t& _,
     }
   }
 
+  if (mask & SpvImageOperandsMakeTexelAvailableKHRMask) {
+    // Checked elsewhere: capability and memory model are correct.
+    if (opcode != SpvOpImageWrite) {
+      return _.diag(SPV_ERROR_INVALID_DATA, inst)
+             << "Image Operand MakeTexelAvailableKHR can only be used with Op"
+             << spvOpcodeString(SpvOpImageWrite) << ": Op"
+             << spvOpcodeString(opcode);
+    }
+
+    if (!(mask & SpvImageOperandsNonPrivateTexelKHRMask)) {
+      return _.diag(SPV_ERROR_INVALID_DATA, inst)
+             << "Image Operand MakeTexelAvailableKHR requires "
+                "NonPrivateTexelKHR is also specified: Op"
+             << spvOpcodeString(opcode);
+    }
+
+    const auto available_scope = inst->word(word_index++);
+    if (auto error = ValidateMemoryScope(_, inst, available_scope))
+      return error;
+  }
+
+  if (mask & SpvImageOperandsMakeTexelVisibleKHRMask) {
+    // Checked elsewhere: capability and memory model are correct.
+    if (opcode != SpvOpImageRead && opcode != SpvOpImageSparseRead) {
+      return _.diag(SPV_ERROR_INVALID_DATA, inst)
+             << "Image Operand MakeTexelVisibleKHR can only be used with Op"
+             << spvOpcodeString(SpvOpImageRead) << " or Op"
+             << spvOpcodeString(SpvOpImageSparseRead) << ": Op"
+             << spvOpcodeString(opcode);
+    }
+
+    if (!(mask & SpvImageOperandsNonPrivateTexelKHRMask)) {
+      return _.diag(SPV_ERROR_INVALID_DATA, inst)
+             << "Image Operand MakeTexelVisibleKHR requires NonPrivateTexelKHR "
+                "is also specified: Op"
+             << spvOpcodeString(opcode);
+    }
+
+    const auto visible_scope = inst->word(word_index++);
+    if (auto error = ValidateMemoryScope(_, inst, visible_scope)) return error;
+  }
+
+  if (mask & SpvImageOperandsSignExtendMask) {
+    // Checked elsewhere: SPIR-V 1.4 version or later.
+
+    // "The texel value is converted to the target value via sign extension.
+    // Only valid when the texel type is a scalar or vector of integer type."
+    //
+    // We don't have enough information to know what the texel type is.
+    // In OpenCL, knowledge is deferred until runtime: the image SampledType is
+    // void, and the Format is Unknown.
+    // In Vulkan, the texel type is only known in all cases by the pipeline
+    // setup.
+  }
+
+  if (mask & SpvImageOperandsZeroExtendMask) {
+    // Checked elsewhere: SPIR-V 1.4 version or later.
+
+    // "The texel value is converted to the target value via zero extension.
+    // Only valid when the texel type is a scalar or vector of integer type."
+    //
+    // We don't have enough information to know what the texel type is.
+    // In OpenCL, knowledge is deferred until runtime: the image SampledType is
+    // void, and the Format is Unknown.
+    // In Vulkan, the texel type is only known in all cases by the pipeline
+    // setup.
+  }
+
   return SPV_SUCCESS;
 }
 
@@ -633,6 +718,11 @@ spv_result_t ValidateTypeImage(ValidationState_t& _, const Instruction* inst) {
              << "Expected Sampled Type to be a 32-bit int or float "
                 "scalar type for Vulkan environment";
     }
+  } else if (spvIsOpenCLEnv(_.context()->target_env)) {
+    if (!_.IsVoidType(info.sampled_type)) {
+      return _.diag(SPV_ERROR_INVALID_DATA, inst)
+             << "Sampled Type must be OpTypeVoid in the OpenCL environment.";
+    }
   } else {
     const SpvOp sampled_type_opcode = _.GetIdOpcode(info.sampled_type);
     if (sampled_type_opcode != SpvOpTypeVoid &&
@@ -656,14 +746,37 @@ spv_result_t ValidateTypeImage(ValidationState_t& _, const Instruction* inst) {
            << "Invalid Arrayed " << info.arrayed << " (must be 0 or 1)";
   }
 
+  if (spvIsOpenCLEnv(_.context()->target_env)) {
+    if ((info.arrayed == 1) && (info.dim != SpvDim1D) &&
+        (info.dim != SpvDim2D)) {
+      return _.diag(SPV_ERROR_INVALID_DATA, inst)
+             << "In the OpenCL environment, Arrayed may only be set to 1 "
+             << "when Dim is either 1D or 2D.";
+    }
+  }
+
   if (info.multisampled > 1) {
     return _.diag(SPV_ERROR_INVALID_DATA, inst)
            << "Invalid MS " << info.multisampled << " (must be 0 or 1)";
   }
 
+  if (spvIsOpenCLEnv(_.context()->target_env)) {
+    if (info.multisampled != 0) {
+      return _.diag(SPV_ERROR_INVALID_DATA, inst)
+             << "MS must be 0 in the OpenCL environement.";
+    }
+  }
+
   if (info.sampled > 2) {
     return _.diag(SPV_ERROR_INVALID_DATA, inst)
            << "Invalid Sampled " << info.sampled << " (must be 0, 1 or 2)";
+  }
+
+  if (spvIsOpenCLEnv(_.context()->target_env)) {
+    if (info.sampled != 0) {
+      return _.diag(SPV_ERROR_INVALID_DATA, inst)
+             << "Sampled must be 0 in the OpenCL environment.";
+    }
   }
 
   if (info.dim == SpvDimSubpassData) {
@@ -678,7 +791,15 @@ spv_result_t ValidateTypeImage(ValidationState_t& _, const Instruction* inst) {
     }
   }
 
-  // Format and Access Qualifier are checked elsewhere.
+  // Format and Access Qualifier are also checked elsewhere.
+
+  if (spvIsOpenCLEnv(_.context()->target_env)) {
+    if (info.access_qualifier == SpvAccessQualifierMax) {
+      return _.diag(SPV_ERROR_INVALID_DATA, inst)
+             << "In the OpenCL environment, the optional Access Qualifier"
+             << " must be present.";
+    }
+  }
 
   return SPV_SUCCESS;
 }
@@ -691,6 +812,33 @@ spv_result_t ValidateTypeSampledImage(ValidationState_t& _,
            << "Expected Image to be of type OpTypeImage";
   }
   return SPV_SUCCESS;
+}
+
+bool IsAllowedSampledImageOperand(SpvOp opcode) {
+  switch (opcode) {
+    case SpvOpSampledImage:
+    case SpvOpImageSampleImplicitLod:
+    case SpvOpImageSampleExplicitLod:
+    case SpvOpImageSampleDrefImplicitLod:
+    case SpvOpImageSampleDrefExplicitLod:
+    case SpvOpImageSampleProjImplicitLod:
+    case SpvOpImageSampleProjExplicitLod:
+    case SpvOpImageSampleProjDrefImplicitLod:
+    case SpvOpImageSampleProjDrefExplicitLod:
+    case SpvOpImageGather:
+    case SpvOpImageDrefGather:
+    case SpvOpImage:
+    case SpvOpImageQueryLod:
+    case SpvOpImageSparseSampleImplicitLod:
+    case SpvOpImageSparseSampleExplicitLod:
+    case SpvOpImageSparseSampleDrefImplicitLod:
+    case SpvOpImageSparseSampleDrefExplicitLod:
+    case SpvOpImageSparseGather:
+    case SpvOpImageSparseDrefGather:
+      return true;
+    default:
+      return false;
+  }
 }
 
 spv_result_t ValidateSampledImage(ValidationState_t& _,
@@ -736,6 +884,158 @@ spv_result_t ValidateSampledImage(ValidationState_t& _,
   if (_.GetIdOpcode(_.GetOperandTypeId(inst, 3)) != SpvOpTypeSampler) {
     return _.diag(SPV_ERROR_INVALID_DATA, inst)
            << "Expected Sampler to be of type OpTypeSampler";
+  }
+
+  // We need to validate 2 things:
+  // * All OpSampledImage instructions must be in the same block in which their
+  // Result <id> are consumed.
+  // * Result <id> from OpSampledImage instructions must not appear as operands
+  // to OpPhi instructions or OpSelect instructions, or any instructions other
+  // than the image lookup and query instructions specified to take an operand
+  // whose type is OpTypeSampledImage.
+  std::vector<Instruction*> consumers = _.getSampledImageConsumers(inst->id());
+  if (!consumers.empty()) {
+    for (auto consumer_instr : consumers) {
+      const auto consumer_opcode = consumer_instr->opcode();
+      if (consumer_instr->block() != inst->block()) {
+        return _.diag(SPV_ERROR_INVALID_ID, inst)
+               << "All OpSampledImage instructions must be in the same block "
+                  "in "
+                  "which their Result <id> are consumed. OpSampledImage Result "
+                  "Type <id> '"
+               << _.getIdName(inst->id())
+               << "' has a consumer in a different basic "
+                  "block. The consumer instruction <id> is '"
+               << _.getIdName(consumer_instr->id()) << "'.";
+      }
+
+      if (consumer_opcode == SpvOpPhi || consumer_opcode == SpvOpSelect) {
+        return _.diag(SPV_ERROR_INVALID_ID, inst)
+               << "Result <id> from OpSampledImage instruction must not appear "
+                  "as "
+                  "operands of Op"
+               << spvOpcodeString(static_cast<SpvOp>(consumer_opcode)) << "."
+               << " Found result <id> '" << _.getIdName(inst->id())
+               << "' as an operand of <id> '"
+               << _.getIdName(consumer_instr->id()) << "'.";
+      }
+
+      if (!IsAllowedSampledImageOperand(consumer_opcode)) {
+        return _.diag(SPV_ERROR_INVALID_ID, inst)
+               << "Result <id> from OpSampledImage instruction must not appear "
+                  "as operand for Op"
+               << spvOpcodeString(static_cast<SpvOp>(consumer_opcode))
+               << ", since it is not specificed as taking an "
+               << "OpTypeSampledImage."
+               << " Found result <id> '" << _.getIdName(inst->id())
+               << "' as an operand of <id> '"
+               << _.getIdName(consumer_instr->id()) << "'.";
+      }
+    }
+  }
+  return SPV_SUCCESS;
+}
+
+spv_result_t ValidateImageTexelPointer(ValidationState_t& _,
+                                       const Instruction* inst) {
+  const auto result_type = _.FindDef(inst->type_id());
+  if (result_type->opcode() != SpvOpTypePointer) {
+    return _.diag(SPV_ERROR_INVALID_DATA, inst)
+           << "Expected Result Type to be OpTypePointer";
+  }
+
+  const auto storage_class = result_type->GetOperandAs<uint32_t>(1);
+  if (storage_class != SpvStorageClassImage) {
+    return _.diag(SPV_ERROR_INVALID_DATA, inst)
+           << "Expected Result Type to be OpTypePointer whose Storage Class "
+              "operand is Image";
+  }
+
+  const auto ptr_type = result_type->GetOperandAs<uint32_t>(2);
+  const auto ptr_opcode = _.GetIdOpcode(ptr_type);
+  if (ptr_opcode != SpvOpTypeInt && ptr_opcode != SpvOpTypeFloat &&
+      ptr_opcode != SpvOpTypeVoid) {
+    return _.diag(SPV_ERROR_INVALID_DATA, inst)
+           << "Expected Result Type to be OpTypePointer whose Type operand "
+              "must be a scalar numerical type or OpTypeVoid";
+  }
+
+  const auto image_ptr = _.FindDef(_.GetOperandTypeId(inst, 2));
+  if (!image_ptr || image_ptr->opcode() != SpvOpTypePointer) {
+    return _.diag(SPV_ERROR_INVALID_DATA, inst)
+           << "Expected Image to be OpTypePointer";
+  }
+
+  const auto image_type = image_ptr->GetOperandAs<uint32_t>(2);
+  if (_.GetIdOpcode(image_type) != SpvOpTypeImage) {
+    return _.diag(SPV_ERROR_INVALID_DATA, inst)
+           << "Expected Image to be OpTypePointer with Type OpTypeImage";
+  }
+
+  ImageTypeInfo info;
+  if (!GetImageTypeInfo(_, image_type, &info)) {
+    return _.diag(SPV_ERROR_INVALID_DATA, inst)
+           << "Corrupt image type definition";
+  }
+
+  if (info.sampled_type != ptr_type) {
+    return _.diag(SPV_ERROR_INVALID_DATA, inst)
+           << "Expected Image 'Sampled Type' to be the same as the Type "
+              "pointed to by Result Type";
+  }
+
+  if (info.dim == SpvDimSubpassData) {
+    return _.diag(SPV_ERROR_INVALID_DATA, inst)
+           << "Image Dim SubpassData cannot be used with OpImageTexelPointer";
+  }
+
+  const uint32_t coord_type = _.GetOperandTypeId(inst, 3);
+  if (!coord_type || !_.IsIntScalarOrVectorType(coord_type)) {
+    return _.diag(SPV_ERROR_INVALID_DATA, inst)
+           << "Expected Coordinate to be integer scalar or vector";
+  }
+
+  uint32_t expected_coord_size = 0;
+  if (info.arrayed == 0) {
+    expected_coord_size = GetPlaneCoordSize(info);
+  } else if (info.arrayed == 1) {
+    switch (info.dim) {
+      case SpvDim1D:
+        expected_coord_size = 2;
+        break;
+      case SpvDimCube:
+      case SpvDim2D:
+        expected_coord_size = 3;
+        break;
+      default:
+        return _.diag(SPV_ERROR_INVALID_DATA, inst)
+               << "Expected Image 'Dim' must be one of 1D, 2D, or Cube when "
+                  "Arrayed is 1";
+        break;
+    }
+  }
+
+  const uint32_t actual_coord_size = _.GetDimension(coord_type);
+  if (expected_coord_size != actual_coord_size) {
+    return _.diag(SPV_ERROR_INVALID_DATA, inst)
+           << "Expected Coordinate to have " << expected_coord_size
+           << " components, but given " << actual_coord_size;
+  }
+
+  const uint32_t sample_type = _.GetOperandTypeId(inst, 4);
+  if (!sample_type || !_.IsIntScalarType(sample_type)) {
+    return _.diag(SPV_ERROR_INVALID_DATA, inst)
+           << "Expected Sample to be integer scalar";
+  }
+
+  if (info.multisampled == 0) {
+    uint64_t ms = 0;
+    if (!_.GetConstantValUint64(inst->GetOperandAs<uint32_t>(4), &ms) ||
+        ms != 0) {
+      return _.diag(SPV_ERROR_INVALID_DATA, inst)
+             << "Expected Sample for Image with MS 0 to be a valid <id> for "
+                "the value 0";
+    }
   }
   return SPV_SUCCESS;
 }
@@ -814,6 +1114,17 @@ spv_result_t ValidateImageLod(ValidationState_t& _, const Instruction* inst) {
   }
 
   const uint32_t mask = inst->word(5);
+
+  if (spvIsOpenCLEnv(_.context()->target_env)) {
+    if (opcode == SpvOpImageSampleExplicitLod) {
+      if (mask & SpvImageOperandsConstOffsetMask) {
+        return _.diag(SPV_ERROR_INVALID_DATA, inst)
+               << "ConstOffset image operand not allowed "
+               << "in the OpenCL environment.";
+      }
+    }
+  }
+
   if (spv_result_t result =
           ValidateImageOperands(_, inst, info, mask, /* word_index = */ 6))
     return result;
@@ -1128,16 +1439,27 @@ spv_result_t ValidateImageRead(ValidationState_t& _, const Instruction* inst) {
            << " components, but given only " << actual_coord_size;
   }
 
-  if (info.format == SpvImageFormatUnknown && info.dim != SpvDimSubpassData &&
-      !_.HasCapability(SpvCapabilityStorageImageReadWithoutFormat)) {
-    return _.diag(SPV_ERROR_INVALID_DATA, inst)
-           << "Capability StorageImageReadWithoutFormat is required to "
-           << "read storage image";
+  if (spvIsVulkanEnv(_.context()->target_env)) {
+    if (info.format == SpvImageFormatUnknown && info.dim != SpvDimSubpassData &&
+        !_.HasCapability(SpvCapabilityStorageImageReadWithoutFormat)) {
+      return _.diag(SPV_ERROR_INVALID_DATA, inst)
+             << "Capability StorageImageReadWithoutFormat is required to "
+             << "read storage image";
+    }
   }
 
   if (inst->words().size() <= 5) return SPV_SUCCESS;
 
   const uint32_t mask = inst->word(5);
+
+  if (spvIsOpenCLEnv(_.context()->target_env)) {
+    if (mask & SpvImageOperandsConstOffsetMask) {
+      return _.diag(SPV_ERROR_INVALID_DATA, inst)
+             << "ConstOffset image operand not allowed "
+             << "in the OpenCL environment.";
+    }
+  }
+
   if (spv_result_t result =
           ValidateImageOperands(_, inst, info, mask, /* word_index = */ 6))
     return result;
@@ -1205,15 +1527,25 @@ spv_result_t ValidateImageWrite(ValidationState_t& _, const Instruction* inst) {
     }
   }
 
-  if (info.format == SpvImageFormatUnknown && info.dim != SpvDimSubpassData &&
-      !_.HasCapability(SpvCapabilityStorageImageWriteWithoutFormat)) {
-    return _.diag(SPV_ERROR_INVALID_DATA, inst)
-           << "Capability StorageImageWriteWithoutFormat is required to "
-              "write "
-           << "to storage image";
+  if (spvIsVulkanEnv(_.context()->target_env)) {
+    if (info.format == SpvImageFormatUnknown && info.dim != SpvDimSubpassData &&
+        !_.HasCapability(SpvCapabilityStorageImageWriteWithoutFormat)) {
+      return _.diag(SPV_ERROR_INVALID_DATA, inst)
+             << "Capability StorageImageWriteWithoutFormat is required to "
+                "write "
+             << "to storage image";
+    }
   }
 
-  if (inst->words().size() <= 4) return SPV_SUCCESS;
+  if (inst->words().size() <= 4) {
+    return SPV_SUCCESS;
+  } else {
+    if (spvIsOpenCLEnv(_.context()->target_env)) {
+      return _.diag(SPV_ERROR_INVALID_DATA, inst)
+             << "Optional Image Operands are not allowed in the OpenCL "
+             << "environment.";
+    }
+  }
 
   const uint32_t mask = inst->word(4);
   if (spv_result_t result =
@@ -1317,57 +1649,45 @@ spv_result_t ValidateImageQuerySize(ValidationState_t& _,
            << "Expected Image to be of type OpTypeImage";
   }
 
-#if 0
-  // TODO(atgoo@github.com) The spec doesn't whitelist all Dims supported by
-  // GLSL. Need to verify if there is an error and reenable.
   ImageTypeInfo info;
   if (!GetImageTypeInfo(_, image_type, &info)) {
     return _.diag(SPV_ERROR_INVALID_DATA, inst)
-        << "Corrupt image type definition";
+           << "Corrupt image type definition";
   }
 
   uint32_t expected_num_components = info.arrayed;
   switch (info.dim) {
+    case SpvDim1D:
     case SpvDimBuffer:
       expected_num_components += 1;
       break;
     case SpvDim2D:
-      if (info.multisampled != 1 && info.sampled != 0 &&
-          info.sampled != 2) {
-        return _.diag(SPV_ERROR_INVALID_DATA, inst)
-            << "Expected either 'MS'=1 or 'Sampled'=0 or 'Sampled'=2 "
-            << "for 2D dim";
-      }
+    case SpvDimCube:
     case SpvDimRect:
       expected_num_components += 2;
       break;
     case SpvDim3D:
       expected_num_components += 3;
-      if (info.sampled != 0 &&
-          info.sampled != 2) {
-        return _.diag(SPV_ERROR_INVALID_DATA, inst)
-            << "Expected either 'Sampled'=0 or 'Sampled'=2 "
-            << "for 3D dim";
-      }
       break;
     default:
       return _.diag(SPV_ERROR_INVALID_DATA, inst)
-          << "Image 'Dim' must be Buffer, 2D, 3D or Rect";
+             << "Image 'Dim' must be 1D, Buffer, 2D, Cube, 3D or Rect";
   }
 
-
-  if (info.multisampled != 0) {
-    return _.diag(SPV_ERROR_INVALID_DATA, inst)
-        << "Image 'MS' must be 0";
+  if (info.dim == SpvDim1D || info.dim == SpvDim2D || info.dim == SpvDim3D ||
+      info.dim == SpvDimCube) {
+    if (info.multisampled != 1 && info.sampled != 0 && info.sampled != 2) {
+      return _.diag(SPV_ERROR_INVALID_DATA, inst)
+             << "Image must have either 'MS'=1 or 'Sampled'=0 or 'Sampled'=2";
+    }
   }
 
   uint32_t result_num_components = _.GetDimension(result_type);
   if (result_num_components != expected_num_components) {
     return _.diag(SPV_ERROR_INVALID_DATA, inst)
-        << "Result Type has " << result_num_components << " components, "
-        << "but " << expected_num_components << " expected";
+           << "Result Type has " << result_num_components << " components, "
+           << "but " << expected_num_components << " expected";
   }
-#endif
 
   return SPV_SUCCESS;
 }
@@ -1390,8 +1710,39 @@ spv_result_t ValidateImageQueryLod(ValidationState_t& _,
                                    const Instruction* inst) {
   _.function(inst->function()->id())
       ->RegisterExecutionModelLimitation(
-          SpvExecutionModelFragment,
-          "OpImageQueryLod requires Fragment execution model");
+          [&](SpvExecutionModel model, std::string* message) {
+            if (model != SpvExecutionModelFragment &&
+                model != SpvExecutionModelGLCompute) {
+              if (message) {
+                *message = std::string(
+                    "OpImageQueryLod requires Fragment or GLCompute execution "
+                    "model");
+              }
+              return false;
+            }
+            return true;
+          });
+  _.function(inst->function()->id())
+      ->RegisterLimitation([](const ValidationState_t& state,
+                              const Function* entry_point,
+                              std::string* message) {
+        const auto* models = state.GetExecutionModels(entry_point->id());
+        const auto* modes = state.GetExecutionModes(entry_point->id());
+        if (models->find(SpvExecutionModelGLCompute) != models->end() &&
+            modes->find(SpvExecutionModeDerivativeGroupLinearNV) ==
+                modes->end() &&
+            modes->find(SpvExecutionModeDerivativeGroupQuadsNV) ==
+                modes->end()) {
+          if (message) {
+            *message = std::string(
+                "OpImageQueryLod requires DerivativeGroupQuadsNV "
+                "or DerivativeGroupLinearNV execution mode for GLCompute "
+                "execution model");
+          }
+          return false;
+        }
+        return true;
+      });
 
   const uint32_t result_type = inst->type_id();
   if (!_.IsFloatVectorType(result_type)) {
@@ -1515,9 +1866,44 @@ spv_result_t ImagePass(ValidationState_t& _, const Instruction* inst) {
   const SpvOp opcode = inst->opcode();
   if (IsImplicitLod(opcode)) {
     _.function(inst->function()->id())
-        ->RegisterExecutionModelLimitation(
-            SpvExecutionModelFragment,
-            "ImplicitLod instructions require Fragment execution model");
+        ->RegisterExecutionModelLimitation([opcode](SpvExecutionModel model,
+                                                    std::string* message) {
+          if (model != SpvExecutionModelFragment &&
+              model != SpvExecutionModelGLCompute) {
+            if (message) {
+              *message =
+                  std::string(
+                      "ImplicitLod instructions require Fragment or GLCompute "
+                      "execution model: ") +
+                  spvOpcodeString(opcode);
+            }
+            return false;
+          }
+          return true;
+        });
+    _.function(inst->function()->id())
+        ->RegisterLimitation([opcode](const ValidationState_t& state,
+                                      const Function* entry_point,
+                                      std::string* message) {
+          const auto* models = state.GetExecutionModels(entry_point->id());
+          const auto* modes = state.GetExecutionModes(entry_point->id());
+          if (models->find(SpvExecutionModelGLCompute) != models->end() &&
+              modes->find(SpvExecutionModeDerivativeGroupLinearNV) ==
+                  modes->end() &&
+              modes->find(SpvExecutionModeDerivativeGroupQuadsNV) ==
+                  modes->end()) {
+            if (message) {
+              *message =
+                  std::string(
+                      "ImplicitLod instructions require DerivativeGroupQuadsNV "
+                      "or DerivativeGroupLinearNV execution mode for GLCompute "
+                      "execution model: ") +
+                  spvOpcodeString(opcode);
+            }
+            return false;
+          }
+          return true;
+        });
   }
 
   switch (opcode) {
@@ -1527,6 +1913,8 @@ spv_result_t ImagePass(ValidationState_t& _, const Instruction* inst) {
       return ValidateTypeSampledImage(_, inst);
     case SpvOpSampledImage:
       return ValidateSampledImage(_, inst);
+    case SpvOpImageTexelPointer:
+      return ValidateImageTexelPointer(_, inst);
 
     case SpvOpImageSampleImplicitLod:
     case SpvOpImageSampleExplicitLod:

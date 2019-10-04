@@ -22,6 +22,7 @@
 #include "source/opt/decoration_manager.h"
 #include "source/opt/ir_context.h"
 #include "source/spirv_constant.h"
+#include "source/util/string_utils.h"
 #include "test/unit_spirv.h"
 
 namespace spvtools {
@@ -29,7 +30,7 @@ namespace opt {
 namespace analysis {
 namespace {
 
-using spvtest::MakeVector;
+using utils::MakeVector;
 
 class DecorationManagerTest : public ::testing::Test {
  public:
@@ -422,6 +423,7 @@ OpGroupDecorate %2 %1 %3
 OpCapability Linkage
 OpMemoryModel Logical GLSL450
 OpDecorate %1 Constant
+%2 = OpDecorationGroup
 %4 = OpTypeInt 32 0
 %1 = OpVariable %4 Uniform
 %3 = OpVariable %4 Uniform
@@ -708,8 +710,8 @@ OpDecorate %1 Aliased
   EXPECT_THAT(GetErrorMessage(), "");
 
   std::string expected_decorations =
-      R"(OpDecorateStringGOOGLE %5 HlslSemanticGOOGLE "blah"
-OpDecorateId %5 HlslCounterBufferGOOGLE %2
+      R"(OpDecorateString %5 UserSemantic "blah"
+OpDecorateId %5 CounterBuffer %2
 OpDecorate %5 Aliased
 )";
   EXPECT_THAT(ToText(decorations), expected_decorations);
@@ -719,11 +721,11 @@ OpCapability Linkage
 OpExtension "SPV_GOOGLE_hlsl_functionality1"
 OpExtension "SPV_GOOGLE_decorate_string"
 OpMemoryModel Logical GLSL450
-OpDecorateStringGOOGLE %1 HlslSemanticGOOGLE "blah"
-OpDecorateId %1 HlslCounterBufferGOOGLE %2
+OpDecorateString %1 UserSemantic "blah"
+OpDecorateId %1 CounterBuffer %2
 OpDecorate %1 Aliased
-OpDecorateStringGOOGLE %5 HlslSemanticGOOGLE "blah"
-OpDecorateId %5 HlslCounterBufferGOOGLE %2
+OpDecorateString %5 UserSemantic "blah"
+OpDecorateId %5 CounterBuffer %2
 OpDecorate %5 Aliased
 %3 = OpTypeInt 32 0
 %4 = OpTypePointer Uniform %3
@@ -1276,6 +1278,232 @@ OpDecorateStringGOOGLE %2 HlslSemanticGOOGLE "hello"
   EXPECT_FALSE(decoManager->HaveTheSameDecorations(1u, 2u));
 }
 
+TEST_F(DecorationManagerTest, SubSetTestOpDecorate1) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+OpDecorate %1 Restrict
+OpDecorate %2 Constant
+OpDecorate %2 Restrict
+OpDecorate %1 Constant
+%u32    = OpTypeInt 32 0
+%1      = OpVariable %u32 Uniform
+%2      = OpVariable %u32 Uniform
+)";
+  DecorationManager* decoManager = GetDecorationManager(spirv);
+  EXPECT_THAT(GetErrorMessage(), "");
+  EXPECT_TRUE(decoManager->HaveSubsetOfDecorations(1u, 2u));
+}
+
+TEST_F(DecorationManagerTest, SubSetTestOpDecorate2) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+OpDecorate %1 Restrict
+OpDecorate %2 Constant
+OpDecorate %2 Restrict
+%u32    = OpTypeInt 32 0
+%1      = OpVariable %u32 Uniform
+%2      = OpVariable %u32 Uniform
+)";
+  DecorationManager* decoManager = GetDecorationManager(spirv);
+  EXPECT_THAT(GetErrorMessage(), "");
+  EXPECT_TRUE(decoManager->HaveSubsetOfDecorations(1u, 2u));
+}
+
+TEST_F(DecorationManagerTest, SubSetTestOpDecorate3) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+OpDecorate %1 Constant
+OpDecorate %2 Constant
+OpDecorate %2 Restrict
+%u32    = OpTypeInt 32 0
+%1      = OpVariable %u32 Uniform
+%2      = OpVariable %u32 Uniform
+)";
+  DecorationManager* decoManager = GetDecorationManager(spirv);
+  EXPECT_THAT(GetErrorMessage(), "");
+  EXPECT_TRUE(decoManager->HaveSubsetOfDecorations(1u, 2u));
+}
+
+TEST_F(DecorationManagerTest, SubSetTestOpDecorate4) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+OpDecorate %1 Restrict
+OpDecorate %2 Constant
+OpDecorate %2 Restrict
+OpDecorate %1 Constant
+%u32    = OpTypeInt 32 0
+%1      = OpVariable %u32 Uniform
+%2      = OpVariable %u32 Uniform
+)";
+  DecorationManager* decoManager = GetDecorationManager(spirv);
+  EXPECT_THAT(GetErrorMessage(), "");
+  EXPECT_TRUE(decoManager->HaveSubsetOfDecorations(2u, 1u));
+}
+
+TEST_F(DecorationManagerTest, SubSetTestOpDecorate5) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+OpDecorate %1 Restrict
+OpDecorate %2 Constant
+OpDecorate %2 Restrict
+%u32    = OpTypeInt 32 0
+%1      = OpVariable %u32 Uniform
+%2      = OpVariable %u32 Uniform
+)";
+  DecorationManager* decoManager = GetDecorationManager(spirv);
+  EXPECT_THAT(GetErrorMessage(), "");
+  EXPECT_FALSE(decoManager->HaveSubsetOfDecorations(2u, 1u));
+}
+
+TEST_F(DecorationManagerTest, SubSetTestOpDecorate6) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+OpDecorate %1 Constant
+OpDecorate %2 Constant
+OpDecorate %2 Restrict
+%u32    = OpTypeInt 32 0
+%1      = OpVariable %u32 Uniform
+%2      = OpVariable %u32 Uniform
+)";
+  DecorationManager* decoManager = GetDecorationManager(spirv);
+  EXPECT_THAT(GetErrorMessage(), "");
+  EXPECT_FALSE(decoManager->HaveSubsetOfDecorations(2u, 1u));
+}
+
+TEST_F(DecorationManagerTest, SubSetTestOpDecorate7) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+OpDecorate %1 Constant
+OpDecorate %2 Constant
+OpDecorate %2 Restrict
+OpDecorate %1 Invariant
+%u32    = OpTypeInt 32 0
+%1      = OpVariable %u32 Uniform
+%2      = OpVariable %u32 Uniform
+)";
+  DecorationManager* decoManager = GetDecorationManager(spirv);
+  EXPECT_THAT(GetErrorMessage(), "");
+  EXPECT_FALSE(decoManager->HaveSubsetOfDecorations(2u, 1u));
+  EXPECT_FALSE(decoManager->HaveSubsetOfDecorations(1u, 2u));
+}
+
+TEST_F(DecorationManagerTest, SubSetTestOpMemberDecorate1) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+OpMemberDecorate %1 0 Offset 0
+OpMemberDecorate %1 0 Offset 4
+OpMemberDecorate %2 0 Offset 0
+OpMemberDecorate %2 0 Offset 4
+%u32    = OpTypeInt 32 0
+%1      = OpTypeStruct %u32 %u32 %u32
+%2      = OpTypeStruct %u32 %u32 %u32
+)";
+  DecorationManager* decoManager = GetDecorationManager(spirv);
+  EXPECT_THAT(GetErrorMessage(), "");
+  EXPECT_TRUE(decoManager->HaveSubsetOfDecorations(1u, 2u));
+  EXPECT_TRUE(decoManager->HaveSubsetOfDecorations(2u, 1u));
+}
+
+TEST_F(DecorationManagerTest, SubSetTestOpMemberDecorate2) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+OpMemberDecorate %1 0 Offset 0
+OpMemberDecorate %2 0 Offset 0
+OpMemberDecorate %2 0 Offset 4
+%u32    = OpTypeInt 32 0
+%1      = OpTypeStruct %u32 %u32 %u32
+%2      = OpTypeStruct %u32 %u32 %u32
+)";
+  DecorationManager* decoManager = GetDecorationManager(spirv);
+  EXPECT_THAT(GetErrorMessage(), "");
+  EXPECT_TRUE(decoManager->HaveSubsetOfDecorations(1u, 2u));
+  EXPECT_FALSE(decoManager->HaveSubsetOfDecorations(2u, 1u));
+}
+
+TEST_F(DecorationManagerTest, SubSetTestOpDecorateId1) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+OpDecorateId %1 AlignmentId %2
+%u32    = OpTypeInt 32 0
+%1      = OpVariable %u32 Uniform
+%3      = OpVariable %u32 Uniform
+%2      = OpSpecConstant %u32 0
+)";
+  DecorationManager* decoManager = GetDecorationManager(spirv);
+  EXPECT_THAT(GetErrorMessage(), "");
+  EXPECT_FALSE(decoManager->HaveSubsetOfDecorations(1u, 3u));
+  EXPECT_TRUE(decoManager->HaveSubsetOfDecorations(3u, 1u));
+}
+
+TEST_F(DecorationManagerTest, SubSetTestOpDecorateId2) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+OpDecorateId %1 AlignmentId %2
+OpDecorateId %3 AlignmentId %4
+%u32    = OpTypeInt 32 0
+%1      = OpVariable %u32 Uniform
+%3      = OpVariable %u32 Uniform
+%2      = OpSpecConstant %u32 0
+%4      = OpSpecConstant %u32 1
+)";
+  DecorationManager* decoManager = GetDecorationManager(spirv);
+  EXPECT_THAT(GetErrorMessage(), "");
+  EXPECT_FALSE(decoManager->HaveSubsetOfDecorations(1u, 3u));
+  EXPECT_FALSE(decoManager->HaveSubsetOfDecorations(3u, 1u));
+}
+
+TEST_F(DecorationManagerTest, SubSetTestOpDecorateString1) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability Linkage
+OpExtension "SPV_GOOGLE_hlsl_functionality1"
+OpExtension "SPV_GOOGLE_decorate_string"
+OpMemoryModel Logical GLSL450
+OpDecorateString %1 HlslSemanticGOOGLE "hello"
+OpDecorateString %2 HlslSemanticGOOGLE "world"
+)";
+  DecorationManager* decoManager = GetDecorationManager(spirv);
+  EXPECT_THAT(GetErrorMessage(), "");
+  EXPECT_FALSE(decoManager->HaveSubsetOfDecorations(1u, 2u));
+  EXPECT_FALSE(decoManager->HaveSubsetOfDecorations(2u, 1u));
+}
+
+TEST_F(DecorationManagerTest, SubSetTestOpDecorateString2) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability Linkage
+OpExtension "SPV_GOOGLE_hlsl_functionality1"
+OpExtension "SPV_GOOGLE_decorate_string"
+OpMemoryModel Logical GLSL450
+OpDecorateString %1 HlslSemanticGOOGLE "hello"
+)";
+  DecorationManager* decoManager = GetDecorationManager(spirv);
+  EXPECT_THAT(GetErrorMessage(), "");
+  EXPECT_FALSE(decoManager->HaveSubsetOfDecorations(1u, 2u));
+  EXPECT_TRUE(decoManager->HaveSubsetOfDecorations(2u, 1u));
+}
 }  // namespace
 }  // namespace analysis
 }  // namespace opt

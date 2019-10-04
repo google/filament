@@ -158,6 +158,52 @@ OpFunctionEnd
   SinglePassRunAndCheck<LICMPass>(before_hoist, after_hoist, true);
 }
 
+TEST_F(PassClassTest, PreHeaderIsAlsoHeader) {
+  // Move OpSLessThan out of the inner loop.  The preheader for the inner loop
+  // is the header of the outer loop.  The loop merge should not be separated
+  // from the branch in that block.
+  const std::string text = R"(
+  ; CHECK: OpFunction
+  ; CHECK-NEXT: OpLabel
+  ; CHECK-NEXT: OpBranch [[header:%\w+]]
+  ; CHECK: [[header]] = OpLabel
+  ; CHECK-NEXT: OpSLessThan %bool %int_1 %int_1
+  ; CHECK-NEXT: OpLoopMerge
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %2 "main"
+               OpExecutionMode %2 OriginUpperLeft
+               OpSource ESSL 310
+       %void = OpTypeVoid
+          %4 = OpTypeFunction %void
+        %int = OpTypeInt 32 1
+      %int_1 = OpConstant %int 1
+       %bool = OpTypeBool
+          %2 = OpFunction %void None %4
+         %18 = OpLabel
+               OpBranch %21
+         %21 = OpLabel
+               OpLoopMerge %22 %23 None
+               OpBranch %24
+         %24 = OpLabel
+         %25 = OpSLessThan %bool %int_1 %int_1
+               OpLoopMerge %26 %27 None
+               OpBranchConditional %25 %27 %26
+         %27 = OpLabel
+               OpBranch %24
+         %26 = OpLabel
+               OpBranch %22
+         %23 = OpLabel
+               OpBranch %21
+         %22 = OpLabel
+               OpReturn
+               OpFunctionEnd
+  )";
+
+  SinglePassRunAndMatch<LICMPass>(text, true);
+}
+
 }  // namespace
 }  // namespace opt
 }  // namespace spvtools

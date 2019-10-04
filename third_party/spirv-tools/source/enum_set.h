@@ -69,6 +69,26 @@ class EnumSet {
     return *this;
   }
 
+  friend bool operator==(const EnumSet& a, const EnumSet& b) {
+    if (a.mask_ != b.mask_) {
+      return false;
+    }
+
+    if (a.overflow_ == nullptr && b.overflow_ == nullptr) {
+      return true;
+    }
+
+    if (a.overflow_ == nullptr || b.overflow_ == nullptr) {
+      return false;
+    }
+
+    return *a.overflow_ == *b.overflow_;
+  }
+
+  friend bool operator!=(const EnumSet& a, const EnumSet& b) {
+    return !(a == b);
+  }
+
   // Adds the given enum value to the set.  This has no effect if the
   // enum value is already in the set.
   void Add(EnumType c) { AddWord(ToWord(c)); }

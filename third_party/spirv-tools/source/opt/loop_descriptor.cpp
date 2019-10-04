@@ -914,6 +914,7 @@ bool LoopDescriptor::CreatePreHeaderBlocksIfMissing() {
   for (auto& loop : *this) {
     if (!loop.GetPreHeaderBlock()) {
       modified = true;
+      // TODO(1841): Handle failure to create pre-header.
       loop.GetOrCreatePreHeaderBlock();
     }
   }
@@ -936,22 +937,23 @@ void LoopDescriptor::PostModificationCleanup() {
 
   for (Loop* loop : loops_to_remove_) {
     loops_.erase(std::find(loops_.begin(), loops_.end(), loop));
+    delete loop;
   }
 
   for (auto& pair : loops_to_add_) {
     Loop* parent = pair.first;
-    Loop* loop = pair.second;
+    std::unique_ptr<Loop> loop = std::move(pair.second);
 
     if (parent) {
       loop->SetParent(nullptr);
-      parent->AddNestedLoop(loop);
+      parent->AddNestedLoop(loop.get());
 
       for (uint32_t block_id : loop->GetBlocks()) {
         parent->AddBasicBlock(block_id);
       }
     }
 
-    loops_.emplace_back(loop);
+    loops_.emplace_back(loop.release());
   }
 
   loops_to_add_.clear();

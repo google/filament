@@ -60,7 +60,7 @@ Options:
       argv0, argv0);
 }
 
-static const auto kDefaultEnvironment = SPV_ENV_UNIVERSAL_1_3;
+static const auto kDefaultEnvironment = SPV_ENV_UNIVERSAL_1_5;
 
 int main(int argc, char** argv) {
   const char* inFile = nullptr;

@@ -61,6 +61,8 @@ class TextToBinaryTestBase : public T {
   // compilation success. Returns the compiled code.
   SpirvVector CompileSuccessfully(const std::string& txt,
                                   spv_target_env env = SPV_ENV_UNIVERSAL_1_0) {
+    DestroyBinary();
+    DestroyDiagnostic();
     spv_result_t status =
         spvTextToBinary(ScopedContext(env).context, txt.c_str(), txt.size(),
                         &binary, &diagnostic);
@@ -79,6 +81,8 @@ class TextToBinaryTestBase : public T {
   // Returns the error message(s).
   std::string CompileFailure(const std::string& txt,
                              spv_target_env env = SPV_ENV_UNIVERSAL_1_0) {
+    DestroyBinary();
+    DestroyDiagnostic();
     EXPECT_NE(SPV_SUCCESS,
               spvTextToBinary(ScopedContext(env).context, txt.c_str(),
                               txt.size(), &binary, &diagnostic))
@@ -94,6 +98,7 @@ class TextToBinaryTestBase : public T {
       uint32_t disassemble_options = SPV_BINARY_TO_TEXT_OPTION_NONE,
       spv_target_env env = SPV_ENV_UNIVERSAL_1_0) {
     DestroyBinary();
+    DestroyDiagnostic();
     ScopedContext context(env);
     disassemble_options |= SPV_BINARY_TO_TEXT_OPTION_NO_HEADER;
     spv_result_t error = spvTextToBinary(context.context, txt.c_str(),
@@ -126,6 +131,8 @@ class TextToBinaryTestBase : public T {
   // Returns the error message.
   std::string EncodeSuccessfullyDecodeFailed(
       const std::string& txt, const SpirvVector& words_to_append) {
+    DestroyBinary();
+    DestroyDiagnostic();
     SpirvVector code =
         spvtest::Concatenate({CompileSuccessfully(txt), words_to_append});
 
@@ -167,6 +174,12 @@ class TextToBinaryTestBase : public T {
   void DestroyBinary() {
     spvBinaryDestroy(binary);
     binary = nullptr;
+  }
+
+  // Destroys the diagnostic, if it exists.
+  void DestroyDiagnostic() {
+    spvDiagnosticDestroy(diagnostic);
+    diagnostic = nullptr;
   }
 
   spv_diagnostic diagnostic;

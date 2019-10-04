@@ -22,12 +22,33 @@ Pass::Status StripDebugInfoPass::Process() {
   bool modified = !context()->debugs1().empty() ||
                   !context()->debugs2().empty() ||
                   !context()->debugs3().empty();
-  context()->debug_clear();
+
+  std::vector<Instruction*> to_kill;
+  for (auto& dbg : context()->debugs1()) to_kill.push_back(&dbg);
+  for (auto& dbg : context()->debugs2()) to_kill.push_back(&dbg);
+  for (auto& dbg : context()->debugs3()) to_kill.push_back(&dbg);
+
+  // OpName must come first, since they may refer to other debug instructions.
+  // If they are after the instructions that refer to, then they will be killed
+  // when that instruction is killed, which will lead to a double kill.
+  std::sort(to_kill.begin(), to_kill.end(),
+            [](Instruction* lhs, Instruction* rhs) -> bool {
+              if (lhs->opcode() == SpvOpName && rhs->opcode() != SpvOpName)
+                return true;
+              return false;
+            });
+
+  for (auto* inst : to_kill) context()->KillInst(inst);
 
   context()->module()->ForEachInst([&modified](Instruction* inst) {
     modified |= !inst->dbg_line_insts().empty();
     inst->dbg_line_insts().clear();
   });
+
+  if (!get_module()->trailing_dbg_line_info().empty()) {
+    modified = true;
+    get_module()->trailing_dbg_line_info().clear();
+  }
 
   return modified ? Status::SuccessWithChange : Status::SuccessWithoutChange;
 }

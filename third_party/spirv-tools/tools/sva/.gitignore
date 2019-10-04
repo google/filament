@@ -1,0 +1,6 @@
+.DS_Store
+node_modules
+third_party/spirv-headers
+o.sva
+build
+yarn-error.log

@@ -21,6 +21,16 @@
 #include "source/opt/mem_pass.h"
 #include "source/opt/reflect.h"
 
+namespace {
+
+static const int kSpvDecorateTargetIdInIdx = 0;
+static const int kSpvDecorateDecorationInIdx = 1;
+static const int kSpvDecorateBuiltinInIdx = 2;
+static const int kEntryPointInterfaceInIdx = 3;
+static const int kEntryPointFunctionIdInIdx = 1;
+
+}  // anonymous namespace
+
 namespace spvtools {
 namespace opt {
 
@@ -43,6 +53,9 @@ void IRContext::BuildInvalidAnalyses(IRContext::Analysis set) {
   if (set & kAnalysisLoopAnalysis) {
     ResetLoopAnalysis();
   }
+  if (set & kAnalysisBuiltinVarId) {
+    ResetBuiltinAnalysis();
+  }
   if (set & kAnalysisNameMap) {
     BuildIdToNameMap();
   }
@@ -55,6 +68,18 @@ void IRContext::BuildInvalidAnalyses(IRContext::Analysis set) {
   if (set & kAnalysisValueNumberTable) {
     BuildValueNumberTable();
   }
+  if (set & kAnalysisStructuredCFG) {
+    BuildStructuredCFGAnalysis();
+  }
+  if (set & kAnalysisIdToFuncMapping) {
+    BuildIdToFuncMapping();
+  }
+  if (set & kAnalysisConstants) {
+    BuildConstantManager();
+  }
+  if (set & kAnalysisTypes) {
+    BuildTypeManager();
+  }
 }
 
 void IRContext::InvalidateAnalysesExceptFor(
@@ -64,6 +89,11 @@ void IRContext::InvalidateAnalysesExceptFor(
 }
 
 void IRContext::InvalidateAnalyses(IRContext::Analysis analyses_to_invalidate) {
+  // The ConstantManager contains Type pointers. If the TypeManager goes
+  // away, the ConstantManager has to go away.
+  if (analyses_to_invalidate & kAnalysisTypes) {
+    analyses_to_invalidate |= kAnalysisConstants;
+  }
   if (analyses_to_invalidate & kAnalysisDefUse) {
     def_use_mgr_.reset(nullptr);
   }
@@ -75,6 +105,9 @@ void IRContext::InvalidateAnalyses(IRContext::Analysis analyses_to_invalidate) {
   }
   if (analyses_to_invalidate & kAnalysisCombinators) {
     combinator_ops_.clear();
+  }
+  if (analyses_to_invalidate & kAnalysisBuiltinVarId) {
+    builtin_var_id_map_.clear();
   }
   if (analyses_to_invalidate & kAnalysisCFG) {
     cfg_.reset(nullptr);
@@ -88,6 +121,18 @@ void IRContext::InvalidateAnalyses(IRContext::Analysis analyses_to_invalidate) {
   }
   if (analyses_to_invalidate & kAnalysisValueNumberTable) {
     vn_table_.reset(nullptr);
+  }
+  if (analyses_to_invalidate & kAnalysisStructuredCFG) {
+    struct_cfg_analysis_.reset(nullptr);
+  }
+  if (analyses_to_invalidate & kAnalysisIdToFuncMapping) {
+    id_to_func_.clear();
+  }
+  if (analyses_to_invalidate & kAnalysisConstants) {
+    constant_mgr_.reset(nullptr);
+  }
+  if (analyses_to_invalidate & kAnalysisTypes) {
+    type_mgr_.reset(nullptr);
   }
 
   valid_analyses_ = Analysis(valid_analyses_ & ~analyses_to_invalidate);
@@ -107,20 +152,23 @@ Instruction* IRContext::KillInst(Instruction* inst) {
     instr_to_block_.erase(inst);
   }
   if (AreAnalysesValid(kAnalysisDecorations)) {
-    if (inst->result_id() != 0) {
-      decoration_mgr_->RemoveDecorationsFrom(inst->result_id());
-    }
     if (inst->IsDecoration()) {
       decoration_mgr_->RemoveDecoration(inst);
     }
   }
-
   if (type_mgr_ && IsTypeInst(inst->opcode())) {
     type_mgr_->RemoveId(inst->result_id());
   }
-
   if (constant_mgr_ && IsConstantInst(inst->opcode())) {
     constant_mgr_->RemoveId(inst->result_id());
+  }
+  if (inst->opcode() == SpvOpCapability || inst->opcode() == SpvOpExtension) {
+    // We reset the feature manager, instead of updating it, because it is just
+    // as much work.  We would have to remove all capabilities implied by this
+    // capability that are not also implied by the remaining OpCapability
+    // instructions. We could update extensions, but we will see if it is
+    // needed.
+    ResetFeatureManager();
   }
 
   RemoveFromIdToName(inst);
@@ -148,6 +196,13 @@ bool IRContext::KillDef(uint32_t id) {
 }
 
 bool IRContext::ReplaceAllUsesWith(uint32_t before, uint32_t after) {
+  return ReplaceAllUsesWithPredicate(
+      before, after, [](Instruction*, uint32_t) { return true; });
+}
+
+bool IRContext::ReplaceAllUsesWithPredicate(
+    uint32_t before, uint32_t after,
+    const std::function<bool(Instruction*, uint32_t)>& predicate) {
   if (before == after) return false;
 
   // Ensure that |after| has been registered as def.
@@ -156,8 +211,10 @@ bool IRContext::ReplaceAllUsesWith(uint32_t before, uint32_t after) {
 
   std::vector<std::pair<Instruction*, uint32_t>> uses_to_update;
   get_def_use_mgr()->ForEachUse(
-      before, [&uses_to_update](Instruction* user, uint32_t index) {
-        uses_to_update.emplace_back(user, index);
+      before, [&predicate, &uses_to_update](Instruction* user, uint32_t index) {
+        if (predicate(user, index)) {
+          uses_to_update.emplace_back(user, index);
+        }
       });
 
   Instruction* prev = nullptr;
@@ -201,7 +258,6 @@ bool IRContext::IsConsistent() {
 #ifndef SPIRV_CHECK_CONTEXT
   return true;
 #endif
-
   if (AreAnalysesValid(kAnalysisDefUse)) {
     analysis::DefUseManager new_def_use(module());
     if (*get_def_use_mgr() != new_def_use) {
@@ -227,6 +283,23 @@ bool IRContext::IsConsistent() {
     return false;
   }
 
+  if (AreAnalysesValid(kAnalysisDecorations)) {
+    analysis::DecorationManager* dec_mgr = get_decoration_mgr();
+    analysis::DecorationManager current(module());
+
+    if (*dec_mgr != current) {
+      return false;
+    }
+  }
+
+  if (feature_mgr_ != nullptr) {
+    FeatureManager current(grammar_);
+    current.Analyze(module());
+
+    if (current != *feature_mgr_) {
+      return false;
+    }
+  }
   return true;
 }
 
@@ -258,12 +331,8 @@ void IRContext::AnalyzeUses(Instruction* inst) {
 }
 
 void IRContext::KillNamesAndDecorates(uint32_t id) {
-  std::vector<Instruction*> decorations =
-      get_decoration_mgr()->GetDecorationsFor(id, true);
-
-  for (Instruction* inst : decorations) {
-    KillInst(inst);
-  }
+  analysis::DecorationManager* dec_mgr = get_decoration_mgr();
+  dec_mgr->RemoveDecorationsFrom(id);
 
   std::vector<Instruction*> name_to_kill;
   for (auto name : GetNames(id)) {
@@ -299,6 +368,7 @@ void IRContext::AddCombinatorsForCapability(uint32_t capability) {
                                SpvOpTypeImage,
                                SpvOpTypeSampler,
                                SpvOpTypeSampledImage,
+                               SpvOpTypeAccelerationStructureNV,
                                SpvOpTypeArray,
                                SpvOpTypeRuntimeArray,
                                SpvOpTypeStruct,
@@ -572,6 +642,215 @@ LoopDescriptor* IRContext::GetLoopDescriptor(const Function* f) {
   }
 
   return &it->second;
+}
+
+uint32_t IRContext::FindBuiltinInputVar(uint32_t builtin) {
+  for (auto& a : module_->annotations()) {
+    if (a.opcode() != SpvOpDecorate) continue;
+    if (a.GetSingleWordInOperand(kSpvDecorateDecorationInIdx) !=
+        SpvDecorationBuiltIn)
+      continue;
+    if (a.GetSingleWordInOperand(kSpvDecorateBuiltinInIdx) != builtin) continue;
+    uint32_t target_id = a.GetSingleWordInOperand(kSpvDecorateTargetIdInIdx);
+    Instruction* b_var = get_def_use_mgr()->GetDef(target_id);
+    if (b_var->opcode() != SpvOpVariable) continue;
+    if (b_var->GetSingleWordInOperand(0) != SpvStorageClassInput) continue;
+    return target_id;
+  }
+  return 0;
+}
+
+void IRContext::AddVarToEntryPoints(uint32_t var_id) {
+  uint32_t ocnt = 0;
+  for (auto& e : module()->entry_points()) {
+    bool found = false;
+    e.ForEachInOperand([&ocnt, &found, &var_id](const uint32_t* idp) {
+      if (ocnt >= kEntryPointInterfaceInIdx) {
+        if (*idp == var_id) found = true;
+      }
+      ++ocnt;
+    });
+    if (!found) {
+      e.AddOperand({SPV_OPERAND_TYPE_ID, {var_id}});
+      get_def_use_mgr()->AnalyzeInstDefUse(&e);
+    }
+  }
+}
+
+uint32_t IRContext::GetBuiltinInputVarId(uint32_t builtin) {
+  if (!AreAnalysesValid(kAnalysisBuiltinVarId)) ResetBuiltinAnalysis();
+  // If cached, return it.
+  std::unordered_map<uint32_t, uint32_t>::iterator it =
+      builtin_var_id_map_.find(builtin);
+  if (it != builtin_var_id_map_.end()) return it->second;
+  // Look for one in shader
+  uint32_t var_id = FindBuiltinInputVar(builtin);
+  if (var_id == 0) {
+    // If not found, create it
+    // TODO(greg-lunarg): Add support for all builtins
+    analysis::TypeManager* type_mgr = get_type_mgr();
+    analysis::Type* reg_type;
+    switch (builtin) {
+      case SpvBuiltInFragCoord: {
+        analysis::Float float_ty(32);
+        analysis::Type* reg_float_ty = type_mgr->GetRegisteredType(&float_ty);
+        analysis::Vector v4float_ty(reg_float_ty, 4);
+        reg_type = type_mgr->GetRegisteredType(&v4float_ty);
+        break;
+      }
+      case SpvBuiltInVertexIndex:
+      case SpvBuiltInInstanceIndex:
+      case SpvBuiltInPrimitiveId:
+      case SpvBuiltInInvocationId:
+      case SpvBuiltInSubgroupLocalInvocationId: {
+        analysis::Integer uint_ty(32, false);
+        reg_type = type_mgr->GetRegisteredType(&uint_ty);
+        break;
+      }
+      case SpvBuiltInGlobalInvocationId:
+      case SpvBuiltInLaunchIdNV: {
+        analysis::Integer uint_ty(32, false);
+        analysis::Type* reg_uint_ty = type_mgr->GetRegisteredType(&uint_ty);
+        analysis::Vector v3uint_ty(reg_uint_ty, 3);
+        reg_type = type_mgr->GetRegisteredType(&v3uint_ty);
+        break;
+      }
+      case SpvBuiltInTessCoord: {
+        analysis::Float float_ty(32);
+        analysis::Type* reg_float_ty = type_mgr->GetRegisteredType(&float_ty);
+        analysis::Vector v3float_ty(reg_float_ty, 3);
+        reg_type = type_mgr->GetRegisteredType(&v3float_ty);
+        break;
+      }
+      case SpvBuiltInSubgroupLtMask: {
+        analysis::Integer uint_ty(32, false);
+        analysis::Type* reg_uint_ty = type_mgr->GetRegisteredType(&uint_ty);
+        analysis::Vector v4uint_ty(reg_uint_ty, 4);
+        reg_type = type_mgr->GetRegisteredType(&v4uint_ty);
+        break;
+      }
+      default: {
+        assert(false && "unhandled builtin");
+        return 0;
+      }
+    }
+    uint32_t type_id = type_mgr->GetTypeInstruction(reg_type);
+    uint32_t varTyPtrId =
+        type_mgr->FindPointerToType(type_id, SpvStorageClassInput);
+    // TODO(1841): Handle id overflow.
+    var_id = TakeNextId();
+    std::unique_ptr<Instruction> newVarOp(
+        new Instruction(this, SpvOpVariable, varTyPtrId, var_id,
+                        {{spv_operand_type_t::SPV_OPERAND_TYPE_LITERAL_INTEGER,
+                          {SpvStorageClassInput}}}));
+    get_def_use_mgr()->AnalyzeInstDefUse(&*newVarOp);
+    module()->AddGlobalValue(std::move(newVarOp));
+    get_decoration_mgr()->AddDecorationVal(var_id, SpvDecorationBuiltIn,
+                                           builtin);
+    AddVarToEntryPoints(var_id);
+  }
+  builtin_var_id_map_[builtin] = var_id;
+  return var_id;
+}
+
+void IRContext::AddCalls(const Function* func, std::queue<uint32_t>* todo) {
+  for (auto bi = func->begin(); bi != func->end(); ++bi)
+    for (auto ii = bi->begin(); ii != bi->end(); ++ii)
+      if (ii->opcode() == SpvOpFunctionCall)
+        todo->push(ii->GetSingleWordInOperand(0));
+}
+
+bool IRContext::ProcessEntryPointCallTree(ProcessFunction& pfn) {
+  // Collect all of the entry points as the roots.
+  std::queue<uint32_t> roots;
+  for (auto& e : module()->entry_points()) {
+    roots.push(e.GetSingleWordInOperand(kEntryPointFunctionIdInIdx));
+  }
+  return ProcessCallTreeFromRoots(pfn, &roots);
+}
+
+bool IRContext::ProcessReachableCallTree(ProcessFunction& pfn) {
+  std::queue<uint32_t> roots;
+
+  // Add all entry points since they can be reached from outside the module.
+  for (auto& e : module()->entry_points())
+    roots.push(e.GetSingleWordInOperand(kEntryPointFunctionIdInIdx));
+
+  // Add all exported functions since they can be reached from outside the
+  // module.
+  for (auto& a : annotations()) {
+    // TODO: Handle group decorations as well.  Currently not generate by any
+    // front-end, but could be coming.
+    if (a.opcode() == SpvOp::SpvOpDecorate) {
+      if (a.GetSingleWordOperand(1) ==
+          SpvDecoration::SpvDecorationLinkageAttributes) {
+        uint32_t lastOperand = a.NumOperands() - 1;
+        if (a.GetSingleWordOperand(lastOperand) ==
+            SpvLinkageType::SpvLinkageTypeExport) {
+          uint32_t id = a.GetSingleWordOperand(0);
+          if (GetFunction(id)) {
+            roots.push(id);
+          }
+        }
+      }
+    }
+  }
+
+  return ProcessCallTreeFromRoots(pfn, &roots);
+}
+
+bool IRContext::ProcessCallTreeFromRoots(ProcessFunction& pfn,
+                                         std::queue<uint32_t>* roots) {
+  // Process call tree
+  bool modified = false;
+  std::unordered_set<uint32_t> done;
+
+  while (!roots->empty()) {
+    const uint32_t fi = roots->front();
+    roots->pop();
+    if (done.insert(fi).second) {
+      Function* fn = GetFunction(fi);
+      modified = pfn(fn) || modified;
+      AddCalls(fn, roots);
+    }
+  }
+  return modified;
+}
+
+void IRContext::EmitErrorMessage(std::string message, Instruction* inst) {
+  if (!consumer()) {
+    return;
+  }
+
+  Instruction* line_inst = inst;
+  while (line_inst != nullptr) {  // Stop at the beginning of the basic block.
+    if (!line_inst->dbg_line_insts().empty()) {
+      line_inst = &line_inst->dbg_line_insts().back();
+      if (line_inst->opcode() == SpvOpNoLine) {
+        line_inst = nullptr;
+      }
+      break;
+    }
+    line_inst = line_inst->PreviousNode();
+  }
+
+  uint32_t line_number = 0;
+  uint32_t col_number = 0;
+  char* source = nullptr;
+  if (line_inst != nullptr) {
+    Instruction* file_name =
+        get_def_use_mgr()->GetDef(line_inst->GetSingleWordInOperand(0));
+    source = reinterpret_cast<char*>(&file_name->GetInOperand(0).words[0]);
+
+    // Get the line number and column number.
+    line_number = line_inst->GetSingleWordInOperand(1);
+    col_number = line_inst->GetSingleWordInOperand(2);
+  }
+
+  message +=
+      "\n  " + inst->PrettyPrint(SPV_BINARY_TO_TEXT_OPTION_FRIENDLY_NAMES);
+  consumer()(SPV_MSG_ERROR, source, {line_number, col_number, 0},
+             message.c_str());
 }
 
 // Gets the dominator analysis for function |f|.

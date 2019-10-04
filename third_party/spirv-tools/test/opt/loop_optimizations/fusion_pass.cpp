@@ -14,20 +14,15 @@
 
 #include <string>
 
+#include "effcee/effcee.h"
 #include "gmock/gmock.h"
 #include "test/opt/pass_fixture.h"
-
-#ifdef SPIRV_EFFCEE
-#include "effcee/effcee.h"
-#endif
 
 namespace spvtools {
 namespace opt {
 namespace {
 
 using FusionPassTest = PassTest<::testing::Test>;
-
-#ifdef SPIRV_EFFCEE
 
 /*
 Generated from the following GLSL + --eliminate-local-multi-store
@@ -716,8 +711,6 @@ TEST_F(FusionPassTest, TooManyRegisters) {
 
   SinglePassRunAndMatch<LoopFusionPass>(text, true, 5);
 }
-
-#endif
 
 }  // namespace
 }  // namespace opt

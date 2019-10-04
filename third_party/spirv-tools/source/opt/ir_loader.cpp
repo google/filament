@@ -116,8 +116,10 @@ bool IrLoader::AddInstruction(const spv_parsed_instruction_t* inst) {
                  opcode == SpvOpUndef) {
         module_->AddGlobalValue(std::move(spv_inst));
       } else {
-        SPIRV_UNIMPLEMENTED(consumer_,
-                            "unhandled inst type outside function definition");
+        Errorf(consumer_, src, loc,
+               "Unhandled inst type (opcode: %d) found outside function definition.",
+               opcode);
+        return false;
       }
     } else {
       if (block_ == nullptr) {  // Inside function but outside blocks
@@ -157,6 +159,9 @@ void IrLoader::EndModule() {
   for (auto& function : *module_) {
     for (auto& bb : function) bb.SetParent(&function);
   }
+
+  // Copy any trailing Op*Line instruction into the module
+  module_->SetTrailingDbgLineInfo(std::move(dbg_line_info_));
 }
 
 }  // namespace opt

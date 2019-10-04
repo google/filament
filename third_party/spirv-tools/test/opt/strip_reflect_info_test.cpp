@@ -64,6 +64,27 @@ OpMemoryModel Logical Simple
   SinglePassRunAndCheck<StripReflectInfoPass>(before, after, false);
 }
 
+TEST_F(StripLineReflectInfoTest, StripHlslSemanticOnMember) {
+  // This is a non-sensical example, but exercises the instructions.
+  std::string before = R"(OpCapability Shader
+OpCapability Linkage
+OpExtension "SPV_GOOGLE_decorate_string"
+OpExtension "SPV_GOOGLE_hlsl_functionality1"
+OpMemoryModel Logical Simple
+OpMemberDecorateStringGOOGLE %struct 0 HlslSemanticGOOGLE "foobar"
+%float = OpTypeFloat 32
+%_struct_3 = OpTypeStruct %float
+)";
+  std::string after = R"(OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical Simple
+%float = OpTypeFloat 32
+%_struct_3 = OpTypeStruct %float
+)";
+
+  SinglePassRunAndCheck<StripReflectInfoPass>(before, after, false);
+}
+
 }  // namespace
 }  // namespace opt
 }  // namespace spvtools

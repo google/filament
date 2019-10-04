@@ -18,15 +18,20 @@ as superclass and providing the expected_* variables required by the check_*()
 methods in the mixin classes.
 """
 import difflib
+import functools
 import os
 import re
 import subprocess
+import traceback
 from spirv_test_framework import SpirvTest
+from builtins import bytes
 
+DEFAULT_SPIRV_VERSION = 0x010000
 
 def convert_to_unix_line_endings(source):
   """Converts all line endings in source to be unix line endings."""
-  return source.replace('\r\n', '\n').replace('\r', '\n')
+  result = source.replace('\r\n', '\n').replace('\r', '\n')
+  return result
 
 
 def substitute_file_extension(filename, extension):
@@ -71,6 +76,15 @@ class ReturnCodeIsZero(SpirvTest):
     if status.returncode:
       return False, 'Non-zero return code: {ret}\n'.format(
           ret=status.returncode)
+    return True, ''
+
+
+class ReturnCodeIsNonZero(SpirvTest):
+  """Mixin class for checking that the return code is not zero."""
+
+  def check_return_code_is_nonzero(self, status):
+    if not status.returncode:
+      return False, 'return code is 0'
     return True, ''
 
 
@@ -133,7 +147,7 @@ class CorrectBinaryLengthAndPreamble(SpirvTest):
       word = binary[index * 4:(index + 1) * 4]
       if little_endian:
         word = reversed(word)
-      return reduce(lambda w, b: (w << 8) | ord(b), word, 0)
+      return functools.reduce(lambda w, b: (w << 8) | b, word, 0)
 
     def check_endianness(binary):
       """Checks the endianness of the given SPIR-V binary.
@@ -169,7 +183,7 @@ class CorrectBinaryLengthAndPreamble(SpirvTest):
     # profile
 
     if version != spv_version and version != 0:
-      return False, 'Incorrect SPV binary: wrong version number'
+      return False, 'Incorrect SPV binary: wrong version number: ' + hex(version) + ' expected ' + hex(spv_version)
     # Shaderc-over-Glslang (0x000d....) or
     # SPIRV-Tools (0x0007....) generator number
     if read_word(preamble, 2, little_endian) != 0x000d0007 and \
@@ -185,7 +199,9 @@ class CorrectBinaryLengthAndPreamble(SpirvTest):
 class CorrectObjectFilePreamble(CorrectBinaryLengthAndPreamble):
   """Provides methods for verifying preamble for a SPV object file."""
 
-  def verify_object_file_preamble(self, filename, spv_version=0x10000):
+  def verify_object_file_preamble(self,
+                                  filename,
+                                  spv_version=DEFAULT_SPIRV_VERSION):
     """Checks that the given SPIR-V binary file has correct preamble."""
 
     success, message = verify_file_non_empty(filename)
@@ -249,6 +265,21 @@ class ValidObjectFile1_3(ReturnCodeIsZero, CorrectObjectFilePreamble):
       object_filename = get_object_filename(input_filename)
       success, message = self.verify_object_file_preamble(
           os.path.join(status.directory, object_filename), 0x10300)
+      if not success:
+        return False, message
+    return True, ''
+
+
+class ValidObjectFile1_5(ReturnCodeIsZero, CorrectObjectFilePreamble):
+  """Mixin class for checking that every input file generates a valid SPIR-V 1.5
+    object file following the object file naming rule, and there is no output on
+    stdout/stderr."""
+
+  def check_object_file_preamble(self, status):
+    for input_filename in status.input_filenames:
+      object_filename = get_object_filename(input_filename)
+      success, message = self.verify_object_file_preamble(
+          os.path.join(status.directory, object_filename), 0x10500)
       if not success:
         return False, message
     return True, ''
@@ -479,7 +510,7 @@ class ErrorMessageSubstr(SpirvTest):
     if not status.stderr:
       return False, 'Expected error message, but no output on stderr'
     if self.expected_error_substr not in convert_to_unix_line_endings(
-        status.stderr):
+        status.stderr.decode('utf8')):
       return False, ('Incorrect stderr output:\n{act}\n'
                      'Expected substring not found in stderr:\n{exp}'.format(
                          act=status.stderr, exp=self.expected_error_substr))
@@ -499,7 +530,7 @@ class WarningMessage(SpirvTest):
                      ' command execution')
     if not status.stderr:
       return False, 'Expected warning message, but no output on stderr'
-    if self.expected_warning != convert_to_unix_line_endings(status.stderr):
+    if self.expected_warning != convert_to_unix_line_endings(status.stderr.decode('utf8')):
       return False, ('Incorrect stderr output:\n{act}\n'
                      'Expected:\n{exp}'.format(
                          act=status.stderr, exp=self.expected_warning))
@@ -559,16 +590,16 @@ class StdoutMatch(SpirvTest):
       if not status.stdout:
         return False, 'Expected something on stdout'
     elif type(self.expected_stdout) == str:
-      if self.expected_stdout != convert_to_unix_line_endings(status.stdout):
+      if self.expected_stdout != convert_to_unix_line_endings(status.stdout.decode('utf8')):
         return False, ('Incorrect stdout output:\n{ac}\n'
                        'Expected:\n{ex}'.format(
                            ac=status.stdout, ex=self.expected_stdout))
     else:
-      if not self.expected_stdout.search(
-          convert_to_unix_line_endings(status.stdout)):
+      converted = convert_to_unix_line_endings(status.stdout.decode('utf8'))
+      if not self.expected_stdout.search(converted):
         return False, ('Incorrect stdout output:\n{ac}\n'
                        'Expected to match regex:\n{ex}'.format(
-                           ac=status.stdout, ex=self.expected_stdout.pattern))
+                           ac=status.stdout.decode('utf8'), ex=self.expected_stdout.pattern))
     return True, ''
 
 
@@ -593,13 +624,13 @@ class StderrMatch(SpirvTest):
       if not status.stderr:
         return False, 'Expected something on stderr'
     elif type(self.expected_stderr) == str:
-      if self.expected_stderr != convert_to_unix_line_endings(status.stderr):
+      if self.expected_stderr != convert_to_unix_line_endings(status.stderr.decode('utf8')):
         return False, ('Incorrect stderr output:\n{ac}\n'
                        'Expected:\n{ex}'.format(
                            ac=status.stderr, ex=self.expected_stderr))
     else:
       if not self.expected_stderr.search(
-          convert_to_unix_line_endings(status.stderr)):
+          convert_to_unix_line_endings(status.stderr.decode('utf8'))):
         return False, ('Incorrect stderr output:\n{ac}\n'
                        'Expected to match regex:\n{ex}'.format(
                            ac=status.stderr, ex=self.expected_stderr.pattern))
@@ -664,7 +695,7 @@ class ExecutedListOfPasses(SpirvTest):
     # Collect all the output lines containing a pass name.
     pass_names = []
     pass_name_re = re.compile(r'.*IR before pass (?P<pass_name>[\S]+)')
-    for line in status.stderr.splitlines():
+    for line in status.stderr.decode('utf8').splitlines():
       match = pass_name_re.match(line)
       if match:
         pass_names.append(match.group('pass_name'))

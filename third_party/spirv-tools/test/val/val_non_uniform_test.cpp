@@ -49,14 +49,19 @@ OpCapability GroupNonUniformQuad
   ss << capabilities_and_extensions;
   ss << "OpMemoryModel Logical GLSL450\n";
   ss << "OpEntryPoint " << execution_model << " %main \"main\"\n";
+  if (execution_model == "GLCompute") {
+    ss << "OpExecutionMode %main LocalSize 1 1 1\n";
+  }
 
   ss << R"(
 %void = OpTypeVoid
 %func = OpTypeFunction %void
 %bool = OpTypeBool
 %u32 = OpTypeInt 32 0
+%int = OpTypeInt 32 1
 %float = OpTypeFloat 32
 %u32vec4 = OpTypeVector %u32 4
+%u32vec3 = OpTypeVector %u32 3
 
 %true = OpConstantTrue %bool
 %false = OpConstantFalse %bool
@@ -66,6 +71,7 @@ OpCapability GroupNonUniformQuad
 %float_0 = OpConstant %float 0
 
 %u32vec4_null = OpConstantComposite %u32vec4 %u32_0 %u32_0 %u32_0 %u32_0
+%u32vec3_null = OpConstantComposite %u32vec3 %u32_0 %u32_0 %u32_0
 
 %cross_device = OpConstant %u32 0
 %device = OpConstant %u32 1
@@ -94,8 +100,8 @@ OpFunctionEnd)";
 SpvScope scopes[] = {SpvScopeCrossDevice, SpvScopeDevice, SpvScopeWorkgroup,
                      SpvScopeSubgroup, SpvScopeInvocation};
 
-using GroupNonUniformScope = spvtest::ValidateBase<
-    std::tuple<std::string, std::string, SpvScope, std::string>>;
+using GroupNonUniform = spvtest::ValidateBase<
+    std::tuple<std::string, std::string, SpvScope, std::string, std::string>>;
 
 std::string ConvertScope(SpvScope scope) {
   switch (scope) {
@@ -114,11 +120,12 @@ std::string ConvertScope(SpvScope scope) {
   }
 }
 
-TEST_P(GroupNonUniformScope, Vulkan1p1) {
+TEST_P(GroupNonUniform, Vulkan1p1) {
   std::string opcode = std::get<0>(GetParam());
   std::string type = std::get<1>(GetParam());
   SpvScope execution_scope = std::get<2>(GetParam());
   std::string args = std::get<3>(GetParam());
+  std::string error = std::get<4>(GetParam());
 
   std::ostringstream sstr;
   sstr << "%result = " << opcode << " ";
@@ -128,22 +135,28 @@ TEST_P(GroupNonUniformScope, Vulkan1p1) {
 
   CompileSuccessfully(GenerateShaderCode(sstr.str()), SPV_ENV_VULKAN_1_1);
   spv_result_t result = ValidateInstructions(SPV_ENV_VULKAN_1_1);
-  if (execution_scope == SpvScopeSubgroup) {
-    EXPECT_EQ(SPV_SUCCESS, result);
+  if (error == "") {
+    if (execution_scope == SpvScopeSubgroup) {
+      EXPECT_EQ(SPV_SUCCESS, result);
+    } else {
+      EXPECT_EQ(SPV_ERROR_INVALID_DATA, result);
+      EXPECT_THAT(
+          getDiagnosticString(),
+          HasSubstr(
+              "in Vulkan environment Execution scope is limited to Subgroup"));
+    }
   } else {
     EXPECT_EQ(SPV_ERROR_INVALID_DATA, result);
-    EXPECT_THAT(
-        getDiagnosticString(),
-        HasSubstr(
-            "in Vulkan environment Execution scope is limited to Subgroup"));
+    EXPECT_THAT(getDiagnosticString(), HasSubstr(error));
   }
 }
 
-TEST_P(GroupNonUniformScope, Spirv1p3) {
+TEST_P(GroupNonUniform, Spirv1p3) {
   std::string opcode = std::get<0>(GetParam());
   std::string type = std::get<1>(GetParam());
   SpvScope execution_scope = std::get<2>(GetParam());
   std::string args = std::get<3>(GetParam());
+  std::string error = std::get<4>(GetParam());
 
   std::ostringstream sstr;
   sstr << "%result = " << opcode << " ";
@@ -153,99 +166,127 @@ TEST_P(GroupNonUniformScope, Spirv1p3) {
 
   CompileSuccessfully(GenerateShaderCode(sstr.str()), SPV_ENV_UNIVERSAL_1_3);
   spv_result_t result = ValidateInstructions(SPV_ENV_UNIVERSAL_1_3);
-  if (execution_scope == SpvScopeSubgroup ||
-      execution_scope == SpvScopeWorkgroup) {
-    EXPECT_EQ(SPV_SUCCESS, result);
+  if (error == "") {
+    if (execution_scope == SpvScopeSubgroup ||
+        execution_scope == SpvScopeWorkgroup) {
+      EXPECT_EQ(SPV_SUCCESS, result);
+    } else {
+      EXPECT_EQ(SPV_ERROR_INVALID_DATA, result);
+      EXPECT_THAT(
+          getDiagnosticString(),
+          HasSubstr("Execution scope is limited to Subgroup or Workgroup"));
+    }
   } else {
     EXPECT_EQ(SPV_ERROR_INVALID_DATA, result);
-    EXPECT_THAT(
-        getDiagnosticString(),
-        HasSubstr("Execution scope is limited to Subgroup or Workgroup"));
+    EXPECT_THAT(getDiagnosticString(), HasSubstr(error));
   }
 }
 
-INSTANTIATE_TEST_CASE_P(GroupNonUniformElect, GroupNonUniformScope,
-                        Combine(Values("OpGroupNonUniformElect"),
-                                Values("%bool"), ValuesIn(scopes), Values("")));
+INSTANTIATE_TEST_SUITE_P(GroupNonUniformElect, GroupNonUniform,
+                         Combine(Values("OpGroupNonUniformElect"),
+                                 Values("%bool"), ValuesIn(scopes), Values(""),
+                                 Values("")));
 
-INSTANTIATE_TEST_CASE_P(GroupNonUniformVote, GroupNonUniformScope,
-                        Combine(Values("OpGroupNonUniformAll",
-                                       "OpGroupNonUniformAny",
-                                       "OpGroupNonUniformAllEqual"),
-                                Values("%bool"), ValuesIn(scopes),
-                                Values("%true")));
+INSTANTIATE_TEST_SUITE_P(GroupNonUniformVote, GroupNonUniform,
+                         Combine(Values("OpGroupNonUniformAll",
+                                        "OpGroupNonUniformAny",
+                                        "OpGroupNonUniformAllEqual"),
+                                 Values("%bool"), ValuesIn(scopes),
+                                 Values("%true"), Values("")));
 
-INSTANTIATE_TEST_CASE_P(GroupNonUniformBroadcast, GroupNonUniformScope,
-                        Combine(Values("OpGroupNonUniformBroadcast"),
-                                Values("%bool"), ValuesIn(scopes),
-                                Values("%true %u32_0")));
+INSTANTIATE_TEST_SUITE_P(GroupNonUniformBroadcast, GroupNonUniform,
+                         Combine(Values("OpGroupNonUniformBroadcast"),
+                                 Values("%bool"), ValuesIn(scopes),
+                                 Values("%true %u32_0"), Values("")));
 
-INSTANTIATE_TEST_CASE_P(GroupNonUniformBroadcastFirst, GroupNonUniformScope,
-                        Combine(Values("OpGroupNonUniformBroadcastFirst"),
-                                Values("%bool"), ValuesIn(scopes),
-                                Values("%true")));
+INSTANTIATE_TEST_SUITE_P(GroupNonUniformBroadcastFirst, GroupNonUniform,
+                         Combine(Values("OpGroupNonUniformBroadcastFirst"),
+                                 Values("%bool"), ValuesIn(scopes),
+                                 Values("%true"), Values("")));
 
-INSTANTIATE_TEST_CASE_P(GroupNonUniformBallot, GroupNonUniformScope,
-                        Combine(Values("OpGroupNonUniformBallot"),
-                                Values("%u32vec4"), ValuesIn(scopes),
-                                Values("%true")));
+INSTANTIATE_TEST_SUITE_P(GroupNonUniformBallot, GroupNonUniform,
+                         Combine(Values("OpGroupNonUniformBallot"),
+                                 Values("%u32vec4"), ValuesIn(scopes),
+                                 Values("%true"), Values("")));
 
-INSTANTIATE_TEST_CASE_P(GroupNonUniformInverseBallot, GroupNonUniformScope,
-                        Combine(Values("OpGroupNonUniformInverseBallot"),
-                                Values("%bool"), ValuesIn(scopes),
-                                Values("%u32vec4_null")));
+INSTANTIATE_TEST_SUITE_P(GroupNonUniformInverseBallot, GroupNonUniform,
+                         Combine(Values("OpGroupNonUniformInverseBallot"),
+                                 Values("%bool"), ValuesIn(scopes),
+                                 Values("%u32vec4_null"), Values("")));
 
-INSTANTIATE_TEST_CASE_P(GroupNonUniformBallotBitExtract, GroupNonUniformScope,
-                        Combine(Values("OpGroupNonUniformBallotBitExtract"),
-                                Values("%bool"), ValuesIn(scopes),
-                                Values("%u32vec4_null %u32_0")));
+INSTANTIATE_TEST_SUITE_P(GroupNonUniformBallotBitExtract, GroupNonUniform,
+                         Combine(Values("OpGroupNonUniformBallotBitExtract"),
+                                 Values("%bool"), ValuesIn(scopes),
+                                 Values("%u32vec4_null %u32_0"), Values("")));
 
-INSTANTIATE_TEST_CASE_P(GroupNonUniformBallotBitCount, GroupNonUniformScope,
-                        Combine(Values("OpGroupNonUniformBallotBitCount"),
-                                Values("%u32"), ValuesIn(scopes),
-                                Values("Reduce %u32vec4_null")));
+INSTANTIATE_TEST_SUITE_P(GroupNonUniformBallotBitCount, GroupNonUniform,
+                         Combine(Values("OpGroupNonUniformBallotBitCount"),
+                                 Values("%u32"), ValuesIn(scopes),
+                                 Values("Reduce %u32vec4_null"), Values("")));
 
-INSTANTIATE_TEST_CASE_P(GroupNonUniformBallotFind, GroupNonUniformScope,
-                        Combine(Values("OpGroupNonUniformBallotFindLSB",
-                                       "OpGroupNonUniformBallotFindMSB"),
-                                Values("%u32"), ValuesIn(scopes),
-                                Values("%u32vec4_null")));
+INSTANTIATE_TEST_SUITE_P(GroupNonUniformBallotFind, GroupNonUniform,
+                         Combine(Values("OpGroupNonUniformBallotFindLSB",
+                                        "OpGroupNonUniformBallotFindMSB"),
+                                 Values("%u32"), ValuesIn(scopes),
+                                 Values("%u32vec4_null"), Values("")));
 
-INSTANTIATE_TEST_CASE_P(GroupNonUniformShuffle, GroupNonUniformScope,
-                        Combine(Values("OpGroupNonUniformShuffle",
-                                       "OpGroupNonUniformShuffleXor",
-                                       "OpGroupNonUniformShuffleUp",
-                                       "OpGroupNonUniformShuffleDown"),
-                                Values("%u32"), ValuesIn(scopes),
-                                Values("%u32_0 %u32_0")));
+INSTANTIATE_TEST_SUITE_P(GroupNonUniformShuffle, GroupNonUniform,
+                         Combine(Values("OpGroupNonUniformShuffle",
+                                        "OpGroupNonUniformShuffleXor",
+                                        "OpGroupNonUniformShuffleUp",
+                                        "OpGroupNonUniformShuffleDown"),
+                                 Values("%u32"), ValuesIn(scopes),
+                                 Values("%u32_0 %u32_0"), Values("")));
 
-INSTANTIATE_TEST_CASE_P(
-    GroupNonUniformIntegerArithmetic, GroupNonUniformScope,
+INSTANTIATE_TEST_SUITE_P(
+    GroupNonUniformIntegerArithmetic, GroupNonUniform,
     Combine(Values("OpGroupNonUniformIAdd", "OpGroupNonUniformIMul",
                    "OpGroupNonUniformSMin", "OpGroupNonUniformUMin",
                    "OpGroupNonUniformSMax", "OpGroupNonUniformUMax",
                    "OpGroupNonUniformBitwiseAnd", "OpGroupNonUniformBitwiseOr",
                    "OpGroupNonUniformBitwiseXor"),
-            Values("%u32"), ValuesIn(scopes), Values("Reduce %u32_0")));
+            Values("%u32"), ValuesIn(scopes), Values("Reduce %u32_0"),
+            Values("")));
 
-INSTANTIATE_TEST_CASE_P(
-    GroupNonUniformFloatArithmetic, GroupNonUniformScope,
+INSTANTIATE_TEST_SUITE_P(
+    GroupNonUniformFloatArithmetic, GroupNonUniform,
     Combine(Values("OpGroupNonUniformFAdd", "OpGroupNonUniformFMul",
                    "OpGroupNonUniformFMin", "OpGroupNonUniformFMax"),
-            Values("%float"), ValuesIn(scopes), Values("Reduce %float_0")));
+            Values("%float"), ValuesIn(scopes), Values("Reduce %float_0"),
+            Values("")));
 
-INSTANTIATE_TEST_CASE_P(GroupNonUniformLogicalArithmetic, GroupNonUniformScope,
-                        Combine(Values("OpGroupNonUniformLogicalAnd",
-                                       "OpGroupNonUniformLogicalOr",
-                                       "OpGroupNonUniformLogicalXor"),
-                                Values("%bool"), ValuesIn(scopes),
-                                Values("Reduce %true")));
+INSTANTIATE_TEST_SUITE_P(GroupNonUniformLogicalArithmetic, GroupNonUniform,
+                         Combine(Values("OpGroupNonUniformLogicalAnd",
+                                        "OpGroupNonUniformLogicalOr",
+                                        "OpGroupNonUniformLogicalXor"),
+                                 Values("%bool"), ValuesIn(scopes),
+                                 Values("Reduce %true"), Values("")));
 
-INSTANTIATE_TEST_CASE_P(GroupNonUniformQuad, GroupNonUniformScope,
-                        Combine(Values("OpGroupNonUniformQuadBroadcast",
-                                       "OpGroupNonUniformQuadSwap"),
-                                Values("%u32"), ValuesIn(scopes),
-                                Values("%u32_0 %u32_0")));
+INSTANTIATE_TEST_SUITE_P(GroupNonUniformQuad, GroupNonUniform,
+                         Combine(Values("OpGroupNonUniformQuadBroadcast",
+                                        "OpGroupNonUniformQuadSwap"),
+                                 Values("%u32"), ValuesIn(scopes),
+                                 Values("%u32_0 %u32_0"), Values("")));
+
+INSTANTIATE_TEST_SUITE_P(GroupNonUniformBallotBitCountScope, GroupNonUniform,
+                         Combine(Values("OpGroupNonUniformBallotBitCount"),
+                                 Values("%u32"), ValuesIn(scopes),
+                                 Values("Reduce %u32vec4_null"), Values("")));
+
+INSTANTIATE_TEST_SUITE_P(
+    GroupNonUniformBallotBitCountBadResultType, GroupNonUniform,
+    Combine(
+        Values("OpGroupNonUniformBallotBitCount"), Values("%float", "%int"),
+        Values(SpvScopeSubgroup), Values("Reduce %u32vec4_null"),
+        Values("Expected Result Type to be an unsigned integer type scalar.")));
+
+INSTANTIATE_TEST_SUITE_P(GroupNonUniformBallotBitCountBadValue, GroupNonUniform,
+                         Combine(Values("OpGroupNonUniformBallotBitCount"),
+                                 Values("%u32"), Values(SpvScopeSubgroup),
+                                 Values("Reduce %u32vec3_null", "Reduce %u32_0",
+                                        "Reduce %float_0"),
+                                 Values("Expected Value to be a vector of four "
+                                        "components of integer type scalar")));
 
 }  // namespace
 }  // namespace val

@@ -672,7 +672,7 @@ class HexFloat {
 
     // If we are Nan or Inf we should pass that through.
     if (is_inf) {
-      other.set_value(BitwiseCast<typename other_T::underlying_type>(
+      other.set_value(typename other_T::underlying_type(
           static_cast<typename other_T::uint_type>(
               (negate ? other_T::sign_mask : 0) | other_T::exponent_mask)));
       return;
@@ -687,7 +687,7 @@ class HexFloat {
       // We are some sort of Nan. We try to keep the bit-pattern of the Nan
       // as close as possible. If we had to shift off bits so we are 0, then we
       // just set the last bit.
-      other.set_value(BitwiseCast<typename other_T::underlying_type>(
+      other.set_value(typename other_T::underlying_type(
           static_cast<typename other_T::uint_type>(
               (negate ? other_T::sign_mask : 0) | other_T::exponent_mask |
               (shifted_significand == 0 ? 0x1 : shifted_significand))));

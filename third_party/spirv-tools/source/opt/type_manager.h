@@ -101,7 +101,8 @@ class TypeManager {
   std::pair<Type*, std::unique_ptr<Pointer>> GetTypeAndPointerType(
       uint32_t id, SpvStorageClass sc) const;
 
-  // Returns an id for a declaration representing |type|.
+  // Returns an id for a declaration representing |type|.  Returns 0 if the type
+  // does not exists, and could not be generated.
   //
   // If |type| is registered, then the registered id is returned. Otherwise,
   // this function recursively adds type and annotation instructions as
@@ -109,7 +110,8 @@ class TypeManager {
   uint32_t GetTypeInstruction(const Type* type);
 
   // Find pointer to type and storage in module, return its resultId.  If it is
-  // not found, a new type is created, and its id is returned.
+  // not found, a new type is created, and its id is returned.  Returns 0 if the
+  // type could not be created.
   uint32_t FindPointerToType(uint32_t type_id, SpvStorageClass storage_class);
 
   // Registers |id| to |type|.
@@ -118,6 +120,7 @@ class TypeManager {
   // unchanged.
   void RegisterType(uint32_t id, const Type& type);
 
+  // Return the registered type object that is the same as |type|.
   Type* GetRegisteredType(const Type* type);
 
   // Removes knowledge of |id| from the manager.
@@ -135,6 +138,61 @@ class TypeManager {
   // index, you can use 0 in that position.  All elements have the same type.
   const Type* GetMemberType(const Type* parent_type,
                             const std::vector<uint32_t>& access_chain);
+
+  Type* GetUIntType() {
+    Integer int_type(32, false);
+    return GetRegisteredType(&int_type);
+  }
+
+  uint32_t GetUIntTypeId() { return GetTypeInstruction(GetUIntType()); }
+
+  Type* GetSIntType() {
+    Integer int_type(32, true);
+    return GetRegisteredType(&int_type);
+  }
+
+  uint32_t GetSIntTypeId() { return GetTypeInstruction(GetSIntType()); }
+
+  Type* GetFloatType() {
+    Float float_type(32);
+    return GetRegisteredType(&float_type);
+  }
+
+  uint32_t GetFloatTypeId() { return GetTypeInstruction(GetFloatType()); }
+
+  Type* GetUIntVectorType(uint32_t size) {
+    Vector vec_type(GetUIntType(), size);
+    return GetRegisteredType(&vec_type);
+  }
+
+  uint32_t GetUIntVectorTypeId(uint32_t size) {
+    return GetTypeInstruction(GetUIntVectorType(size));
+  }
+
+  Type* GetSIntVectorType(uint32_t size) {
+    Vector vec_type(GetSIntType(), size);
+    return GetRegisteredType(&vec_type);
+  }
+
+  uint32_t GetSIntVectorTypeId(uint32_t size) {
+    return GetTypeInstruction(GetSIntVectorType(size));
+  }
+
+  Type* GetFloatVectorType(uint32_t size) {
+    Vector vec_type(GetFloatType(), size);
+    return GetRegisteredType(&vec_type);
+  }
+
+  uint32_t GetFloatVectorTypeId(uint32_t size) {
+    return GetTypeInstruction(GetFloatVectorType(size));
+  }
+
+  Type* GetBoolType() {
+    Bool bool_type;
+    return GetRegisteredType(&bool_type);
+  }
+
+  uint32_t GetBoolTypeId() { return GetTypeInstruction(GetBoolType()); }
 
  private:
   using TypeToIdMap = std::unordered_map<const Type*, uint32_t, HashTypePointer,
@@ -209,6 +267,8 @@ class TypeManager {
 
   IdToTypeMap id_to_incomplete_type_;  // Maps ids to their type representations
                                        // for incomplete types.
+
+  std::unordered_map<uint32_t, const Instruction*> id_to_constant_inst_;
 };
 
 }  // namespace analysis

@@ -42,7 +42,7 @@ TEST_P(OpcodeTableCapabilitiesTest, TableEntryMatchesExpectedCapabilities) {
       ElementsIn(CapabilitySet(entry->numCapabilities, entry->capabilities)));
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TableRowTest, OpcodeTableCapabilitiesTest,
     // Spot-check a few opcodes.
     ::testing::Values(
@@ -72,7 +72,7 @@ INSTANTIATE_TEST_CASE_P(
                                    CapabilitySet{SpvCapabilityNamedBarrier}},
         ExpectedOpCodeCapabilities{
             SpvOpGetKernelMaxNumSubgroups,
-            CapabilitySet{SpvCapabilitySubgroupDispatch}}), );
+            CapabilitySet{SpvCapabilitySubgroupDispatch}}));
 
 }  // namespace
 }  // namespace spvtools

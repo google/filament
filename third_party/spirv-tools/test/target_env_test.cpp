@@ -45,8 +45,8 @@ TEST_P(TargetEnvTest, ValidSpirvVersion) {
   ASSERT_THAT(spirv_version, AnyOf(0x10000, 0x10100, 0x10200, 0x10300));
 }
 
-INSTANTIATE_TEST_CASE_P(AllTargetEnvs, TargetEnvTest,
-                        ValuesIn(spvtest::AllTargetEnvironments()));
+INSTANTIATE_TEST_SUITE_P(AllTargetEnvs, TargetEnvTest,
+                         ValuesIn(spvtest::AllTargetEnvironments()));
 
 TEST(GetContextTest, InvalidTargetEnvProducesNull) {
   // Use a value beyond the last valid enum value.
@@ -70,7 +70,7 @@ TEST_P(TargetParseTest, InvalidTargetEnvProducesNull) {
   EXPECT_THAT(env, Eq(GetParam().env));
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TargetParsing, TargetParseTest,
     ValuesIn(std::vector<ParseCase>{
         {"spv1.0", true, SPV_ENV_UNIVERSAL_1_0},

@@ -36,12 +36,6 @@ class RemoveDuplicatesPass : public Pass {
   const char* name() const override { return "remove-duplicates"; }
   Status Process() override;
 
-  // TODO(pierremoreau): Move this function somewhere else (e.g. pass.h or
-  // within the type manager)
-  // Returns whether two types are equal, and have the same decorations.
-  static bool AreTypesEqual(const Instruction& inst1, const Instruction& inst2,
-                            IRContext* context);
-
  private:
   // Remove duplicate capabilities from the module
   //

@@ -16,6 +16,7 @@
 
 #include "source/opt/pass.h"
 
+#include "source/opt/ir_builder.h"
 #include "source/opt/iterator.h"
 
 namespace spvtools {
@@ -23,84 +24,11 @@ namespace opt {
 
 namespace {
 
-const uint32_t kEntryPointFunctionIdInIdx = 1;
 const uint32_t kTypePointerTypeIdInIdx = 1;
 
 }  // namespace
 
 Pass::Pass() : consumer_(nullptr), context_(nullptr), already_run_(false) {}
-
-void Pass::AddCalls(Function* func, std::queue<uint32_t>* todo) {
-  for (auto bi = func->begin(); bi != func->end(); ++bi)
-    for (auto ii = bi->begin(); ii != bi->end(); ++ii)
-      if (ii->opcode() == SpvOpFunctionCall)
-        todo->push(ii->GetSingleWordInOperand(0));
-}
-
-bool Pass::ProcessEntryPointCallTree(ProcessFunction& pfn, Module* module) {
-  // Map from function's result id to function
-  std::unordered_map<uint32_t, Function*> id2function;
-  for (auto& fn : *module) id2function[fn.result_id()] = &fn;
-
-  // Collect all of the entry points as the roots.
-  std::queue<uint32_t> roots;
-  for (auto& e : module->entry_points())
-    roots.push(e.GetSingleWordInOperand(kEntryPointFunctionIdInIdx));
-  return ProcessCallTreeFromRoots(pfn, id2function, &roots);
-}
-
-bool Pass::ProcessReachableCallTree(ProcessFunction& pfn,
-                                    IRContext* irContext) {
-  // Map from function's result id to function
-  std::unordered_map<uint32_t, Function*> id2function;
-  for (auto& fn : *irContext->module()) id2function[fn.result_id()] = &fn;
-
-  std::queue<uint32_t> roots;
-
-  // Add all entry points since they can be reached from outside the module.
-  for (auto& e : irContext->module()->entry_points())
-    roots.push(e.GetSingleWordInOperand(kEntryPointFunctionIdInIdx));
-
-  // Add all exported functions since they can be reached from outside the
-  // module.
-  for (auto& a : irContext->annotations()) {
-    // TODO: Handle group decorations as well.  Currently not generate by any
-    // front-end, but could be coming.
-    if (a.opcode() == SpvOp::SpvOpDecorate) {
-      if (a.GetSingleWordOperand(1) ==
-          SpvDecoration::SpvDecorationLinkageAttributes) {
-        uint32_t lastOperand = a.NumOperands() - 1;
-        if (a.GetSingleWordOperand(lastOperand) ==
-            SpvLinkageType::SpvLinkageTypeExport) {
-          uint32_t id = a.GetSingleWordOperand(0);
-          if (id2function.count(id) != 0) roots.push(id);
-        }
-      }
-    }
-  }
-
-  return ProcessCallTreeFromRoots(pfn, id2function, &roots);
-}
-
-bool Pass::ProcessCallTreeFromRoots(
-    ProcessFunction& pfn,
-    const std::unordered_map<uint32_t, Function*>& id2function,
-    std::queue<uint32_t>* roots) {
-  // Process call tree
-  bool modified = false;
-  std::unordered_set<uint32_t> done;
-
-  while (!roots->empty()) {
-    const uint32_t fi = roots->front();
-    roots->pop();
-    if (done.insert(fi).second) {
-      Function* fn = id2function.at(fi);
-      modified = pfn(fn) || modified;
-      AddCalls(fn, roots);
-    }
-  }
-  return modified;
-}
 
 Pass::Status Pass::Run(IRContext* ctx) {
   if (already_run_) {
@@ -115,7 +43,8 @@ Pass::Status Pass::Run(IRContext* ctx) {
   if (status == Status::SuccessWithChange) {
     ctx->InvalidateAnalysesExceptFor(GetPreservedAnalyses());
   }
-  assert(ctx->IsConsistent());
+  assert((status == Status::Failure || ctx->IsConsistent()) &&
+         "An analysis in the context is out of date.");
   return status;
 }
 
@@ -123,6 +52,103 @@ uint32_t Pass::GetPointeeTypeId(const Instruction* ptrInst) const {
   const uint32_t ptrTypeId = ptrInst->type_id();
   const Instruction* ptrTypeInst = get_def_use_mgr()->GetDef(ptrTypeId);
   return ptrTypeInst->GetSingleWordInOperand(kTypePointerTypeIdInIdx);
+}
+
+Instruction* Pass::GetBaseType(uint32_t ty_id) {
+  Instruction* ty_inst = get_def_use_mgr()->GetDef(ty_id);
+  if (ty_inst->opcode() == SpvOpTypeMatrix) {
+    uint32_t vty_id = ty_inst->GetSingleWordInOperand(0);
+    ty_inst = get_def_use_mgr()->GetDef(vty_id);
+  }
+  if (ty_inst->opcode() == SpvOpTypeVector) {
+    uint32_t cty_id = ty_inst->GetSingleWordInOperand(0);
+    ty_inst = get_def_use_mgr()->GetDef(cty_id);
+  }
+  return ty_inst;
+}
+
+bool Pass::IsFloat(uint32_t ty_id, uint32_t width) {
+  Instruction* ty_inst = GetBaseType(ty_id);
+  if (ty_inst->opcode() != SpvOpTypeFloat) return false;
+  return ty_inst->GetSingleWordInOperand(0) == width;
+}
+
+uint32_t Pass::GetNullId(uint32_t type_id) {
+  if (IsFloat(type_id, 16)) context()->AddCapability(SpvCapabilityFloat16);
+  analysis::TypeManager* type_mgr = context()->get_type_mgr();
+  analysis::ConstantManager* const_mgr = context()->get_constant_mgr();
+  const analysis::Type* type = type_mgr->GetType(type_id);
+  const analysis::Constant* null_const = const_mgr->GetConstant(type, {});
+  Instruction* null_inst =
+      const_mgr->GetDefiningInstruction(null_const, type_id);
+  return null_inst->result_id();
+}
+
+uint32_t Pass::GenerateCopy(Instruction* object_to_copy, uint32_t new_type_id,
+                            Instruction* insertion_position) {
+  analysis::TypeManager* type_mgr = context()->get_type_mgr();
+  analysis::ConstantManager* const_mgr = context()->get_constant_mgr();
+
+  uint32_t original_type_id = object_to_copy->type_id();
+  if (original_type_id == new_type_id) {
+    return object_to_copy->result_id();
+  }
+
+  InstructionBuilder ir_builder(
+      context(), insertion_position,
+      IRContext::kAnalysisInstrToBlockMapping | IRContext::kAnalysisDefUse);
+
+  analysis::Type* original_type = type_mgr->GetType(original_type_id);
+  analysis::Type* new_type = type_mgr->GetType(new_type_id);
+
+  if (const analysis::Array* original_array_type = original_type->AsArray()) {
+    uint32_t original_element_type_id =
+        type_mgr->GetId(original_array_type->element_type());
+
+    analysis::Array* new_array_type = new_type->AsArray();
+    assert(new_array_type != nullptr && "Can't copy an array to a non-array.");
+    uint32_t new_element_type_id =
+        type_mgr->GetId(new_array_type->element_type());
+
+    std::vector<uint32_t> element_ids;
+    const analysis::Constant* length_const =
+        const_mgr->FindDeclaredConstant(original_array_type->LengthId());
+    assert(length_const->AsIntConstant());
+    uint32_t array_length = length_const->AsIntConstant()->GetU32();
+    for (uint32_t i = 0; i < array_length; i++) {
+      Instruction* extract = ir_builder.AddCompositeExtract(
+          original_element_type_id, object_to_copy->result_id(), {i});
+      element_ids.push_back(
+          GenerateCopy(extract, new_element_type_id, insertion_position));
+    }
+
+    return ir_builder.AddCompositeConstruct(new_type_id, element_ids)
+        ->result_id();
+  } else if (const analysis::Struct* original_struct_type =
+                 original_type->AsStruct()) {
+    analysis::Struct* new_struct_type = new_type->AsStruct();
+
+    const std::vector<const analysis::Type*>& original_types =
+        original_struct_type->element_types();
+    const std::vector<const analysis::Type*>& new_types =
+        new_struct_type->element_types();
+    std::vector<uint32_t> element_ids;
+    for (uint32_t i = 0; i < original_types.size(); i++) {
+      Instruction* extract = ir_builder.AddCompositeExtract(
+          type_mgr->GetId(original_types[i]), object_to_copy->result_id(), {i});
+      element_ids.push_back(GenerateCopy(extract, type_mgr->GetId(new_types[i]),
+                                         insertion_position));
+    }
+    return ir_builder.AddCompositeConstruct(new_type_id, element_ids)
+        ->result_id();
+  } else {
+    // If we do not have an aggregate type, then we have a problem.  Either we
+    // found multiple instances of the same type, or we are copying to an
+    // incompatible type.  Either way the code is illegal.
+    assert(false &&
+           "Don't know how to copy this type.  Code is likely illegal.");
+  }
+  return 0;
 }
 
 }  // namespace opt

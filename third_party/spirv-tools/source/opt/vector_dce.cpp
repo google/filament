@@ -66,7 +66,8 @@ void VectorDCE::FindLiveComponents(Function* function,
 
     switch (current_inst->opcode()) {
       case SpvOpCompositeExtract:
-        MarkExtractUseAsLive(current_inst, live_components, &work_list);
+        MarkExtractUseAsLive(current_inst, current_item.components,
+                             live_components, &work_list);
         break;
       case SpvOpCompositeInsert:
         MarkInsertUsesAsLive(current_item, live_components, &work_list);
@@ -92,6 +93,7 @@ void VectorDCE::FindLiveComponents(Function* function,
 }
 
 void VectorDCE::MarkExtractUseAsLive(const Instruction* current_inst,
+                                     const utils::BitVector& live_elements,
                                      LiveComponentMap* live_components,
                                      std::vector<WorkListItem>* work_list) {
   analysis::DefUseManager* def_use_mgr = context()->get_def_use_mgr();
@@ -102,7 +104,11 @@ void VectorDCE::MarkExtractUseAsLive(const Instruction* current_inst,
   if (HasVectorOrScalarResult(operand_inst)) {
     WorkListItem new_item;
     new_item.instruction = operand_inst;
-    new_item.components.Set(current_inst->GetSingleWordInOperand(1));
+    if (current_inst->NumInOperands() < 2) {
+      new_item.components = live_elements;
+    } else {
+      new_item.components.Set(current_inst->GetSingleWordInOperand(1));
+    }
     AddItemToWorkListIfNeeded(new_item, live_components, work_list);
   }
 }
@@ -113,30 +119,44 @@ void VectorDCE::MarkInsertUsesAsLive(
     std::vector<VectorDCE::WorkListItem>* work_list) {
   analysis::DefUseManager* def_use_mgr = context()->get_def_use_mgr();
 
-  uint32_t insert_position =
-      current_item.instruction->GetSingleWordInOperand(2);
+  if (current_item.instruction->NumInOperands() > 2) {
+    uint32_t insert_position =
+        current_item.instruction->GetSingleWordInOperand(2);
 
-  // Add the elements of the composite object that are used.
-  uint32_t operand_id =
-      current_item.instruction->GetSingleWordInOperand(kInsertCompositeIdInIdx);
-  Instruction* operand_inst = def_use_mgr->GetDef(operand_id);
+    // Add the elements of the composite object that are used.
+    uint32_t operand_id = current_item.instruction->GetSingleWordInOperand(
+        kInsertCompositeIdInIdx);
+    Instruction* operand_inst = def_use_mgr->GetDef(operand_id);
 
-  WorkListItem new_item;
-  new_item.instruction = operand_inst;
-  new_item.components = current_item.components;
-  new_item.components.Clear(insert_position);
+    WorkListItem new_item;
+    new_item.instruction = operand_inst;
+    new_item.components = current_item.components;
+    new_item.components.Clear(insert_position);
 
-  AddItemToWorkListIfNeeded(new_item, live_components, work_list);
+    AddItemToWorkListIfNeeded(new_item, live_components, work_list);
 
-  // Add the element being inserted if it is used.
-  if (current_item.components.Get(insert_position)) {
-    uint32_t obj_operand_id =
+    // Add the element being inserted if it is used.
+    if (current_item.components.Get(insert_position)) {
+      uint32_t obj_operand_id =
+          current_item.instruction->GetSingleWordInOperand(
+              kInsertObjectIdInIdx);
+      Instruction* obj_operand_inst = def_use_mgr->GetDef(obj_operand_id);
+      WorkListItem new_item_for_obj;
+      new_item_for_obj.instruction = obj_operand_inst;
+      new_item_for_obj.components.Set(0);
+      AddItemToWorkListIfNeeded(new_item_for_obj, live_components, work_list);
+    }
+  } else {
+    // If there are no indices, then this is a copy of the object being
+    // inserted.
+    uint32_t object_id =
         current_item.instruction->GetSingleWordInOperand(kInsertObjectIdInIdx);
-    Instruction* obj_operand_inst = def_use_mgr->GetDef(obj_operand_id);
-    WorkListItem new_item_for_obj;
-    new_item_for_obj.instruction = obj_operand_inst;
-    new_item_for_obj.components.Set(0);
-    AddItemToWorkListIfNeeded(new_item_for_obj, live_components, work_list);
+    Instruction* object_inst = def_use_mgr->GetDef(object_id);
+
+    WorkListItem new_item;
+    new_item.instruction = object_inst;
+    new_item.components = current_item.components;
+    AddItemToWorkListIfNeeded(new_item, live_components, work_list);
   }
 }
 
@@ -323,14 +343,23 @@ bool VectorDCE::RewriteInstructions(
 bool VectorDCE::RewriteInsertInstruction(
     Instruction* current_inst, const utils::BitVector& live_components) {
   // If the value being inserted is not live, then we can skip the insert.
-  bool modified = false;
+
+  if (current_inst->NumInOperands() == 2) {
+    // If there are no indices, then this is the same as a copy.
+    context()->KillNamesAndDecorates(current_inst->result_id());
+    uint32_t object_id =
+        current_inst->GetSingleWordInOperand(kInsertObjectIdInIdx);
+    context()->ReplaceAllUsesWith(current_inst->result_id(), object_id);
+    return true;
+  }
+
   uint32_t insert_index = current_inst->GetSingleWordInOperand(2);
   if (!live_components.Get(insert_index)) {
-    modified = true;
     context()->KillNamesAndDecorates(current_inst->result_id());
     uint32_t composite_id =
         current_inst->GetSingleWordInOperand(kInsertCompositeIdInIdx);
     context()->ReplaceAllUsesWith(current_inst->result_id(), composite_id);
+    return true;
   }
 
   // If the values already in the composite are not used, then replace it with
@@ -342,9 +371,10 @@ bool VectorDCE::RewriteInsertInstruction(
     uint32_t undef_id = Type2Undef(current_inst->type_id());
     current_inst->SetInOperand(kInsertCompositeIdInIdx, {undef_id});
     context()->AnalyzeUses(current_inst);
+    return true;
   }
 
-  return modified;
+  return false;
 }
 
 void VectorDCE::AddItemToWorkListIfNeeded(

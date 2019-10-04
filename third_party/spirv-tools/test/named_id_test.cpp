@@ -65,7 +65,7 @@ TEST_P(IdValidityTest, IdTypes) {
   }
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     ValidAndInvalidIds, IdValidityTest,
     ::testing::ValuesIn(std::vector<IdCheckCase>(
         {{"%1", true},          {"%2abc", true},   {"%3Def", true},
@@ -81,7 +81,7 @@ INSTANTIATE_TEST_CASE_P(
          {"%foo_@_bar", false}, {"%", false},
 
          {"5", false},          {"32", false},     {"foo", false},
-         {"a%bar", false}})), );
+         {"a%bar", false}})));
 
 }  // namespace
 }  // namespace spvtools

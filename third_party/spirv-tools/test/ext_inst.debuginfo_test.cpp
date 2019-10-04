@@ -17,6 +17,7 @@
 
 #include "DebugInfo.h"
 #include "gmock/gmock.h"
+#include "source/util/string_utils.h"
 #include "test/test_fixture.h"
 #include "test/unit_spirv.h"
 
@@ -31,7 +32,7 @@ namespace {
 
 using spvtest::Concatenate;
 using spvtest::MakeInstruction;
-using spvtest::MakeVector;
+using utils::MakeVector;
 using testing::Eq;
 
 struct InstructionCase {
@@ -368,30 +369,30 @@ TEST_P(ExtInstDebugInfoRoundTripTest, ParameterizedExtInst) {
   }
 
 // DebugInfo 4.1 Absent Debugging Information
-INSTANTIATE_TEST_CASE_P(DebugInfoDebugInfoNone, ExtInstDebugInfoRoundTripTest,
-                        ::testing::ValuesIn(std::vector<InstructionCase>({
-                            CASE_0(InfoNone),  // enum value 0
-                        })), );
+INSTANTIATE_TEST_SUITE_P(DebugInfoDebugInfoNone, ExtInstDebugInfoRoundTripTest,
+                         ::testing::ValuesIn(std::vector<InstructionCase>({
+                             CASE_0(InfoNone),  // enum value 0
+                         })));
 
 // DebugInfo 4.2 Compilation Unit
-INSTANTIATE_TEST_CASE_P(DebugInfoDebugCompilationUnit,
-                        ExtInstDebugInfoRoundTripTest,
-                        ::testing::ValuesIn(std::vector<InstructionCase>({
-                            CASE_ILL(CompilationUnit, 100, 42),
-                        })), );
+INSTANTIATE_TEST_SUITE_P(DebugInfoDebugCompilationUnit,
+                         ExtInstDebugInfoRoundTripTest,
+                         ::testing::ValuesIn(std::vector<InstructionCase>({
+                             CASE_ILL(CompilationUnit, 100, 42),
+                         })));
 
 // DebugInfo 4.3 Type instructions
-INSTANTIATE_TEST_CASE_P(DebugInfoDebugTypeBasic, ExtInstDebugInfoRoundTripTest,
-                        ::testing::ValuesIn(std::vector<InstructionCase>({
-                            CASE_IIE(TypeBasic, Unspecified),
-                            CASE_IIE(TypeBasic, Address),
-                            CASE_IIE(TypeBasic, Boolean),
-                            CASE_IIE(TypeBasic, Float),
-                            CASE_IIE(TypeBasic, Signed),
-                            CASE_IIE(TypeBasic, SignedChar),
-                            CASE_IIE(TypeBasic, Unsigned),
-                            CASE_IIE(TypeBasic, UnsignedChar),
-                        })), );
+INSTANTIATE_TEST_SUITE_P(DebugInfoDebugTypeBasic, ExtInstDebugInfoRoundTripTest,
+                         ::testing::ValuesIn(std::vector<InstructionCase>({
+                             CASE_IIE(TypeBasic, Unspecified),
+                             CASE_IIE(TypeBasic, Address),
+                             CASE_IIE(TypeBasic, Boolean),
+                             CASE_IIE(TypeBasic, Float),
+                             CASE_IIE(TypeBasic, Signed),
+                             CASE_IIE(TypeBasic, SignedChar),
+                             CASE_IIE(TypeBasic, Unsigned),
+                             CASE_IIE(TypeBasic, UnsignedChar),
+                         })));
 
 // The FlagIsPublic is value is (1 << 0) | (1 << 2) which is the same
 // as the bitwise-OR of FlagIsProtected and FlagIsPrivate.
@@ -417,7 +418,7 @@ TEST_F(ExtInstDebugInfoRoundTripTestExplicit, FlagIsPublic) {
   EXPECT_THAT(EncodeAndDecodeSuccessfully(input), Eq(expected)) << input;
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     DebugInfoDebugTypePointer, ExtInstDebugInfoRoundTripTest,
     ::testing::ValuesIn(std::vector<InstructionCase>({
 
@@ -463,49 +464,50 @@ INSTANTIATE_TEST_CASE_P(
                 uint32_t(DebugInfoFlagIndirectVariable) |
                 uint32_t(DebugInfoFlagIsOptimized)),
 
-    })), );
+    })));
 
-INSTANTIATE_TEST_CASE_P(DebugInfoDebugTypeQualifier,
-                        ExtInstDebugInfoRoundTripTest,
-                        ::testing::ValuesIn(std::vector<InstructionCase>({
-                            CASE_IE(TypeQualifier, ConstType),
-                            CASE_IE(TypeQualifier, VolatileType),
-                            CASE_IE(TypeQualifier, RestrictType),
-                        })), );
+INSTANTIATE_TEST_SUITE_P(DebugInfoDebugTypeQualifier,
+                         ExtInstDebugInfoRoundTripTest,
+                         ::testing::ValuesIn(std::vector<InstructionCase>({
+                             CASE_IE(TypeQualifier, ConstType),
+                             CASE_IE(TypeQualifier, VolatileType),
+                             CASE_IE(TypeQualifier, RestrictType),
+                         })));
 
-INSTANTIATE_TEST_CASE_P(DebugInfoDebugTypeArray, ExtInstDebugInfoRoundTripTest,
-                        ::testing::ValuesIn(std::vector<InstructionCase>({
-                            CASE_II(TypeArray),
-                            CASE_III(TypeArray),
-                            CASE_IIII(TypeArray),
-                            CASE_IIIII(TypeArray),
-                        })), );
+INSTANTIATE_TEST_SUITE_P(DebugInfoDebugTypeArray, ExtInstDebugInfoRoundTripTest,
+                         ::testing::ValuesIn(std::vector<InstructionCase>({
+                             CASE_II(TypeArray),
+                             CASE_III(TypeArray),
+                             CASE_IIII(TypeArray),
+                             CASE_IIIII(TypeArray),
+                         })));
 
-INSTANTIATE_TEST_CASE_P(DebugInfoDebugTypeVector, ExtInstDebugInfoRoundTripTest,
-                        ::testing::ValuesIn(std::vector<InstructionCase>({
-                            CASE_IL(TypeVector, 2),
-                            CASE_IL(TypeVector, 3),
-                            CASE_IL(TypeVector, 4),
-                            CASE_IL(TypeVector, 16),
-                        })), );
+INSTANTIATE_TEST_SUITE_P(DebugInfoDebugTypeVector,
+                         ExtInstDebugInfoRoundTripTest,
+                         ::testing::ValuesIn(std::vector<InstructionCase>({
+                             CASE_IL(TypeVector, 2),
+                             CASE_IL(TypeVector, 3),
+                             CASE_IL(TypeVector, 4),
+                             CASE_IL(TypeVector, 16),
+                         })));
 
-INSTANTIATE_TEST_CASE_P(DebugInfoDebugTypedef, ExtInstDebugInfoRoundTripTest,
-                        ::testing::ValuesIn(std::vector<InstructionCase>({
-                            CASE_IIILLI(Typedef, 12, 13),
-                            CASE_IIILLI(Typedef, 14, 99),
-                        })), );
+INSTANTIATE_TEST_SUITE_P(DebugInfoDebugTypedef, ExtInstDebugInfoRoundTripTest,
+                         ::testing::ValuesIn(std::vector<InstructionCase>({
+                             CASE_IIILLI(Typedef, 12, 13),
+                             CASE_IIILLI(Typedef, 14, 99),
+                         })));
 
-INSTANTIATE_TEST_CASE_P(DebugInfoDebugTypeFunction,
-                        ExtInstDebugInfoRoundTripTest,
-                        ::testing::ValuesIn(std::vector<InstructionCase>({
-                            CASE_I(TypeFunction),
-                            CASE_II(TypeFunction),
-                            CASE_III(TypeFunction),
-                            CASE_IIII(TypeFunction),
-                            CASE_IIIII(TypeFunction),
-                        })), );
+INSTANTIATE_TEST_SUITE_P(DebugInfoDebugTypeFunction,
+                         ExtInstDebugInfoRoundTripTest,
+                         ::testing::ValuesIn(std::vector<InstructionCase>({
+                             CASE_I(TypeFunction),
+                             CASE_II(TypeFunction),
+                             CASE_III(TypeFunction),
+                             CASE_IIII(TypeFunction),
+                             CASE_IIIII(TypeFunction),
+                         })));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     DebugInfoDebugTypeEnum, ExtInstDebugInfoRoundTripTest,
     ::testing::ValuesIn(std::vector<InstructionCase>({
         CASE_IIILLIIFII(
@@ -518,9 +520,9 @@ INSTANTIATE_TEST_CASE_P(
                           uint32_t(DebugInfoFlagStaticMember)),
         CASE_IIILLIIFIIIIII(TypeEnum, 99, 1, "FlagStaticMember",
                             uint32_t(DebugInfoFlagStaticMember)),
-    })), );
+    })));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     DebugInfoDebugTypeComposite, ExtInstDebugInfoRoundTripTest,
     ::testing::ValuesIn(std::vector<InstructionCase>({
         CASE_IEILLIIF(
@@ -545,22 +547,22 @@ INSTANTIATE_TEST_CASE_P(
                          uint32_t(DebugInfoFlagIsPrivate)),
         CASE_IEILLIIFIIII(TypeComposite, Class, 9, 10, "FlagIsPrivate",
                           uint32_t(DebugInfoFlagIsPrivate)),
-    })), );
+    })));
 
-INSTANTIATE_TEST_CASE_P(DebugInfoDebugTypeMember, ExtInstDebugInfoRoundTripTest,
-                        ::testing::ValuesIn(std::vector<InstructionCase>({
-                            CASE_IIILLIIIF(TypeMember, 12, 13, "FlagIsPrivate",
-                                           uint32_t(DebugInfoFlagIsPrivate)),
-                            CASE_IIILLIIIF(TypeMember, 99, 100,
-                                           "FlagIsPrivate|FlagFwdDecl",
-                                           uint32_t(DebugInfoFlagIsPrivate) |
-                                               uint32_t(DebugInfoFlagFwdDecl)),
-                            // Add the optional Id argument.
-                            CASE_IIILLIIIFI(TypeMember, 12, 13, "FlagIsPrivate",
-                                            uint32_t(DebugInfoFlagIsPrivate)),
-                        })), );
+INSTANTIATE_TEST_SUITE_P(
+    DebugInfoDebugTypeMember, ExtInstDebugInfoRoundTripTest,
+    ::testing::ValuesIn(std::vector<InstructionCase>({
+        CASE_IIILLIIIF(TypeMember, 12, 13, "FlagIsPrivate",
+                       uint32_t(DebugInfoFlagIsPrivate)),
+        CASE_IIILLIIIF(TypeMember, 99, 100, "FlagIsPrivate|FlagFwdDecl",
+                       uint32_t(DebugInfoFlagIsPrivate) |
+                           uint32_t(DebugInfoFlagFwdDecl)),
+        // Add the optional Id argument.
+        CASE_IIILLIIIFI(TypeMember, 12, 13, "FlagIsPrivate",
+                        uint32_t(DebugInfoFlagIsPrivate)),
+    })));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     DebugInfoDebugTypeInheritance, ExtInstDebugInfoRoundTripTest,
     ::testing::ValuesIn(std::vector<InstructionCase>({
         CASE_IIIIF(TypeInheritance, "FlagIsPrivate",
@@ -568,53 +570,53 @@ INSTANTIATE_TEST_CASE_P(
         CASE_IIIIF(TypeInheritance, "FlagIsPrivate|FlagFwdDecl",
                    uint32_t(DebugInfoFlagIsPrivate) |
                        uint32_t(DebugInfoFlagFwdDecl)),
-    })), );
+    })));
 
-INSTANTIATE_TEST_CASE_P(DebugInfoDebugTypePtrToMember,
-                        ExtInstDebugInfoRoundTripTest,
-                        ::testing::ValuesIn(std::vector<InstructionCase>({
-                            CASE_II(TypePtrToMember),
-                        })), );
+INSTANTIATE_TEST_SUITE_P(DebugInfoDebugTypePtrToMember,
+                         ExtInstDebugInfoRoundTripTest,
+                         ::testing::ValuesIn(std::vector<InstructionCase>({
+                             CASE_II(TypePtrToMember),
+                         })));
 
 // DebugInfo 4.4 Templates
 
-INSTANTIATE_TEST_CASE_P(DebugInfoDebugTypeTemplate,
-                        ExtInstDebugInfoRoundTripTest,
-                        ::testing::ValuesIn(std::vector<InstructionCase>({
-                            CASE_II(TypeTemplate),
-                            CASE_III(TypeTemplate),
-                            CASE_IIII(TypeTemplate),
-                            CASE_IIIII(TypeTemplate),
-                        })), );
+INSTANTIATE_TEST_SUITE_P(DebugInfoDebugTypeTemplate,
+                         ExtInstDebugInfoRoundTripTest,
+                         ::testing::ValuesIn(std::vector<InstructionCase>({
+                             CASE_II(TypeTemplate),
+                             CASE_III(TypeTemplate),
+                             CASE_IIII(TypeTemplate),
+                             CASE_IIIII(TypeTemplate),
+                         })));
 
-INSTANTIATE_TEST_CASE_P(DebugInfoDebugTypeTemplateParameter,
-                        ExtInstDebugInfoRoundTripTest,
-                        ::testing::ValuesIn(std::vector<InstructionCase>({
-                            CASE_IIIILL(TypeTemplateParameter, 1, 2),
-                            CASE_IIIILL(TypeTemplateParameter, 99, 102),
-                            CASE_IIIILL(TypeTemplateParameter, 10, 7),
-                        })), );
+INSTANTIATE_TEST_SUITE_P(DebugInfoDebugTypeTemplateParameter,
+                         ExtInstDebugInfoRoundTripTest,
+                         ::testing::ValuesIn(std::vector<InstructionCase>({
+                             CASE_IIIILL(TypeTemplateParameter, 1, 2),
+                             CASE_IIIILL(TypeTemplateParameter, 99, 102),
+                             CASE_IIIILL(TypeTemplateParameter, 10, 7),
+                         })));
 
-INSTANTIATE_TEST_CASE_P(DebugInfoDebugTypeTemplateTemplateParameter,
-                        ExtInstDebugInfoRoundTripTest,
-                        ::testing::ValuesIn(std::vector<InstructionCase>({
-                            CASE_IIILL(TypeTemplateTemplateParameter, 1, 2),
-                            CASE_IIILL(TypeTemplateTemplateParameter, 99, 102),
-                            CASE_IIILL(TypeTemplateTemplateParameter, 10, 7),
-                        })), );
+INSTANTIATE_TEST_SUITE_P(DebugInfoDebugTypeTemplateTemplateParameter,
+                         ExtInstDebugInfoRoundTripTest,
+                         ::testing::ValuesIn(std::vector<InstructionCase>({
+                             CASE_IIILL(TypeTemplateTemplateParameter, 1, 2),
+                             CASE_IIILL(TypeTemplateTemplateParameter, 99, 102),
+                             CASE_IIILL(TypeTemplateTemplateParameter, 10, 7),
+                         })));
 
-INSTANTIATE_TEST_CASE_P(DebugInfoDebugTypeTemplateParameterPack,
-                        ExtInstDebugInfoRoundTripTest,
-                        ::testing::ValuesIn(std::vector<InstructionCase>({
-                            CASE_IILLI(TypeTemplateParameterPack, 1, 2),
-                            CASE_IILLII(TypeTemplateParameterPack, 99, 102),
-                            CASE_IILLIII(TypeTemplateParameterPack, 10, 7),
-                            CASE_IILLIIII(TypeTemplateParameterPack, 10, 7),
-                        })), );
+INSTANTIATE_TEST_SUITE_P(DebugInfoDebugTypeTemplateParameterPack,
+                         ExtInstDebugInfoRoundTripTest,
+                         ::testing::ValuesIn(std::vector<InstructionCase>({
+                             CASE_IILLI(TypeTemplateParameterPack, 1, 2),
+                             CASE_IILLII(TypeTemplateParameterPack, 99, 102),
+                             CASE_IILLIII(TypeTemplateParameterPack, 10, 7),
+                             CASE_IILLIIII(TypeTemplateParameterPack, 10, 7),
+                         })));
 
 // DebugInfo 4.5 Global Variables
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     DebugInfoDebugGlobalVariable, ExtInstDebugInfoRoundTripTest,
     ::testing::ValuesIn(std::vector<InstructionCase>({
         CASE_IIILLIIIF(GlobalVariable, 1, 2, "FlagIsOptimized",
@@ -625,20 +627,20 @@ INSTANTIATE_TEST_CASE_P(
                         uint32_t(DebugInfoFlagIsOptimized)),
         CASE_IIILLIIIFI(GlobalVariable, 42, 43, "FlagIsOptimized",
                         uint32_t(DebugInfoFlagIsOptimized)),
-    })), );
+    })));
 
 // DebugInfo 4.6 Functions
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     DebugInfoDebugFunctionDeclaration, ExtInstDebugInfoRoundTripTest,
     ::testing::ValuesIn(std::vector<InstructionCase>({
         CASE_IIILLIIF(FunctionDeclaration, 1, 2, "FlagIsOptimized",
                       uint32_t(DebugInfoFlagIsOptimized)),
         CASE_IIILLIIF(FunctionDeclaration, 42, 43, "FlagFwdDecl",
                       uint32_t(DebugInfoFlagFwdDecl)),
-    })), );
+    })));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     DebugInfoDebugFunction, ExtInstDebugInfoRoundTripTest,
     ::testing::ValuesIn(std::vector<InstructionCase>({
         CASE_IIILLIIFLI(Function, 1, 2, "FlagIsOptimized",
@@ -650,65 +652,65 @@ INSTANTIATE_TEST_CASE_P(
                          uint32_t(DebugInfoFlagIsOptimized), 3),
         CASE_IIILLIIFLII(Function, 42, 43, "FlagFwdDecl",
                          uint32_t(DebugInfoFlagFwdDecl), 44),
-    })), );
+    })));
 
 // DebugInfo 4.7 Local Information
 
-INSTANTIATE_TEST_CASE_P(DebugInfoDebugLexicalBlock,
-                        ExtInstDebugInfoRoundTripTest,
-                        ::testing::ValuesIn(std::vector<InstructionCase>({
-                            CASE_ILLII(LexicalBlock, 1, 2),
-                            CASE_ILLII(LexicalBlock, 42, 43),
-                        })), );
+INSTANTIATE_TEST_SUITE_P(DebugInfoDebugLexicalBlock,
+                         ExtInstDebugInfoRoundTripTest,
+                         ::testing::ValuesIn(std::vector<InstructionCase>({
+                             CASE_ILLII(LexicalBlock, 1, 2),
+                             CASE_ILLII(LexicalBlock, 42, 43),
+                         })));
 
-INSTANTIATE_TEST_CASE_P(DebugInfoDebugLexicalBlockDiscriminator,
-                        ExtInstDebugInfoRoundTripTest,
-                        ::testing::ValuesIn(std::vector<InstructionCase>({
-                            CASE_ILI(LexicalBlockDiscriminator, 1),
-                            CASE_ILI(LexicalBlockDiscriminator, 42),
-                        })), );
+INSTANTIATE_TEST_SUITE_P(DebugInfoDebugLexicalBlockDiscriminator,
+                         ExtInstDebugInfoRoundTripTest,
+                         ::testing::ValuesIn(std::vector<InstructionCase>({
+                             CASE_ILI(LexicalBlockDiscriminator, 1),
+                             CASE_ILI(LexicalBlockDiscriminator, 42),
+                         })));
 
-INSTANTIATE_TEST_CASE_P(DebugInfoDebugScope, ExtInstDebugInfoRoundTripTest,
-                        ::testing::ValuesIn(std::vector<InstructionCase>({
-                            CASE_I(Scope),
-                            CASE_II(Scope),
-                        })), );
+INSTANTIATE_TEST_SUITE_P(DebugInfoDebugScope, ExtInstDebugInfoRoundTripTest,
+                         ::testing::ValuesIn(std::vector<InstructionCase>({
+                             CASE_I(Scope),
+                             CASE_II(Scope),
+                         })));
 
-INSTANTIATE_TEST_CASE_P(DebugInfoDebugNoScope, ExtInstDebugInfoRoundTripTest,
-                        ::testing::ValuesIn(std::vector<InstructionCase>({
-                            CASE_0(NoScope),
-                        })), );
+INSTANTIATE_TEST_SUITE_P(DebugInfoDebugNoScope, ExtInstDebugInfoRoundTripTest,
+                         ::testing::ValuesIn(std::vector<InstructionCase>({
+                             CASE_0(NoScope),
+                         })));
 
-INSTANTIATE_TEST_CASE_P(DebugInfoDebugInlinedAt, ExtInstDebugInfoRoundTripTest,
-                        ::testing::ValuesIn(std::vector<InstructionCase>({
-                            CASE_LII(InlinedAt, 1),
-                            CASE_LII(InlinedAt, 42),
-                        })), );
+INSTANTIATE_TEST_SUITE_P(DebugInfoDebugInlinedAt, ExtInstDebugInfoRoundTripTest,
+                         ::testing::ValuesIn(std::vector<InstructionCase>({
+                             CASE_LII(InlinedAt, 1),
+                             CASE_LII(InlinedAt, 42),
+                         })));
 
 // DebugInfo 4.8 Local Variables
 
-INSTANTIATE_TEST_CASE_P(DebugInfoDebugLocalVariable,
-                        ExtInstDebugInfoRoundTripTest,
-                        ::testing::ValuesIn(std::vector<InstructionCase>({
-                            CASE_IIILLI(LocalVariable, 1, 2),
-                            CASE_IIILLI(LocalVariable, 42, 43),
-                            CASE_IIILLIL(LocalVariable, 1, 2, 3),
-                            CASE_IIILLIL(LocalVariable, 42, 43, 44),
-                        })), );
+INSTANTIATE_TEST_SUITE_P(DebugInfoDebugLocalVariable,
+                         ExtInstDebugInfoRoundTripTest,
+                         ::testing::ValuesIn(std::vector<InstructionCase>({
+                             CASE_IIILLI(LocalVariable, 1, 2),
+                             CASE_IIILLI(LocalVariable, 42, 43),
+                             CASE_IIILLIL(LocalVariable, 1, 2, 3),
+                             CASE_IIILLIL(LocalVariable, 42, 43, 44),
+                         })));
 
-INSTANTIATE_TEST_CASE_P(DebugInfoDebugInlinedVariable,
-                        ExtInstDebugInfoRoundTripTest,
-                        ::testing::ValuesIn(std::vector<InstructionCase>({
-                            CASE_II(InlinedVariable),
-                        })), );
+INSTANTIATE_TEST_SUITE_P(DebugInfoDebugInlinedVariable,
+                         ExtInstDebugInfoRoundTripTest,
+                         ::testing::ValuesIn(std::vector<InstructionCase>({
+                             CASE_II(InlinedVariable),
+                         })));
 
-INSTANTIATE_TEST_CASE_P(DebugInfoDebugDebugDeclare,
-                        ExtInstDebugInfoRoundTripTest,
-                        ::testing::ValuesIn(std::vector<InstructionCase>({
-                            CASE_III(Declare),
-                        })), );
+INSTANTIATE_TEST_SUITE_P(DebugInfoDebugDebugDeclare,
+                         ExtInstDebugInfoRoundTripTest,
+                         ::testing::ValuesIn(std::vector<InstructionCase>({
+                             CASE_III(Declare),
+                         })));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     DebugInfoDebugDebugValue, ExtInstDebugInfoRoundTripTest,
     ::testing::ValuesIn(std::vector<InstructionCase>({
         CASE_III(Value),
@@ -717,53 +719,54 @@ INSTANTIATE_TEST_CASE_P(
         CASE_IIIIII(Value),
         // Test up to 4 id parameters. We can always try more.
         CASE_IIIIIII(Value),
-    })), );
+    })));
 
-INSTANTIATE_TEST_CASE_P(DebugInfoDebugDebugOperation,
-                        ExtInstDebugInfoRoundTripTest,
-                        ::testing::ValuesIn(std::vector<InstructionCase>({
-                            CASE_E(Operation, Deref),
-                            CASE_E(Operation, Plus),
-                            CASE_E(Operation, Minus),
-                            CASE_EL(Operation, PlusUconst, 1),
-                            CASE_EL(Operation, PlusUconst, 42),
-                            CASE_ELL(Operation, BitPiece, 1, 2),
-                            CASE_ELL(Operation, BitPiece, 4, 5),
-                            CASE_E(Operation, Swap),
-                            CASE_E(Operation, Xderef),
-                            CASE_E(Operation, StackValue),
-                            CASE_EL(Operation, Constu, 1),
-                            CASE_EL(Operation, Constu, 42),
-                        })), );
+INSTANTIATE_TEST_SUITE_P(DebugInfoDebugDebugOperation,
+                         ExtInstDebugInfoRoundTripTest,
+                         ::testing::ValuesIn(std::vector<InstructionCase>({
+                             CASE_E(Operation, Deref),
+                             CASE_E(Operation, Plus),
+                             CASE_E(Operation, Minus),
+                             CASE_EL(Operation, PlusUconst, 1),
+                             CASE_EL(Operation, PlusUconst, 42),
+                             CASE_ELL(Operation, BitPiece, 1, 2),
+                             CASE_ELL(Operation, BitPiece, 4, 5),
+                             CASE_E(Operation, Swap),
+                             CASE_E(Operation, Xderef),
+                             CASE_E(Operation, StackValue),
+                             CASE_EL(Operation, Constu, 1),
+                             CASE_EL(Operation, Constu, 42),
+                         })));
 
-INSTANTIATE_TEST_CASE_P(DebugInfoDebugDebugExpression,
-                        ExtInstDebugInfoRoundTripTest,
-                        ::testing::ValuesIn(std::vector<InstructionCase>({
-                            CASE_0(Expression),
-                            CASE_I(Expression),
-                            CASE_II(Expression),
-                            CASE_III(Expression),
-                            CASE_IIII(Expression),
-                            CASE_IIIII(Expression),
-                            CASE_IIIIII(Expression),
-                            CASE_IIIIIII(Expression),
-                        })), );
+INSTANTIATE_TEST_SUITE_P(DebugInfoDebugDebugExpression,
+                         ExtInstDebugInfoRoundTripTest,
+                         ::testing::ValuesIn(std::vector<InstructionCase>({
+                             CASE_0(Expression),
+                             CASE_I(Expression),
+                             CASE_II(Expression),
+                             CASE_III(Expression),
+                             CASE_IIII(Expression),
+                             CASE_IIIII(Expression),
+                             CASE_IIIIII(Expression),
+                             CASE_IIIIIII(Expression),
+                         })));
 
 // DebugInfo 4.9 Macros
 
-INSTANTIATE_TEST_CASE_P(DebugInfoDebugMacroDef, ExtInstDebugInfoRoundTripTest,
-                        ::testing::ValuesIn(std::vector<InstructionCase>({
-                            CASE_ILI(MacroDef, 1),
-                            CASE_ILI(MacroDef, 42),
-                            CASE_ILII(MacroDef, 1),
-                            CASE_ILII(MacroDef, 42),
-                        })), );
+INSTANTIATE_TEST_SUITE_P(DebugInfoDebugMacroDef, ExtInstDebugInfoRoundTripTest,
+                         ::testing::ValuesIn(std::vector<InstructionCase>({
+                             CASE_ILI(MacroDef, 1),
+                             CASE_ILI(MacroDef, 42),
+                             CASE_ILII(MacroDef, 1),
+                             CASE_ILII(MacroDef, 42),
+                         })));
 
-INSTANTIATE_TEST_CASE_P(DebugInfoDebugMacroUndef, ExtInstDebugInfoRoundTripTest,
-                        ::testing::ValuesIn(std::vector<InstructionCase>({
-                            CASE_ILI(MacroUndef, 1),
-                            CASE_ILI(MacroUndef, 42),
-                        })), );
+INSTANTIATE_TEST_SUITE_P(DebugInfoDebugMacroUndef,
+                         ExtInstDebugInfoRoundTripTest,
+                         ::testing::ValuesIn(std::vector<InstructionCase>({
+                             CASE_ILI(MacroUndef, 1),
+                             CASE_ILI(MacroUndef, 42),
+                         })));
 
 #undef CASE_0
 #undef CASE_ILL

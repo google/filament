@@ -59,12 +59,20 @@ std::pair<Type*, std::unique_ptr<Pointer>> TypeManager::GetTypeAndPointerType(
 
 uint32_t TypeManager::GetId(const Type* type) const {
   auto iter = type_to_id_.find(type);
-  if (iter != type_to_id_.end()) return (*iter).second;
+  if (iter != type_to_id_.end()) {
+    return (*iter).second;
+  }
   return 0;
 }
 
 void TypeManager::AnalyzeTypes(const Module& module) {
-  // First pass through the types.  Any types that reference a forward pointer
+  // First pass through the constants, as some will be needed when traversing
+  // the types in the next pass.
+  for (const auto* inst : module.GetConstants()) {
+    id_to_constant_inst_[inst->result_id()] = inst;
+  }
+
+  // Then pass through the types.  Any types that reference a forward pointer
   // (directly or indirectly) are incomplete, and are added to incomplete types.
   for (const auto* inst : module.GetTypes()) {
     RecordIfTypeDefinition(*inst);
@@ -152,7 +160,7 @@ void TypeManager::AnalyzeTypes(const Module& module) {
 
 #ifndef NDEBUG
   // Check if the type pool contains two types that are the same.  This
-  // is an indication that the hashing and comparision are wrong.  It
+  // is an indication that the hashing and comparison are wrong.  It
   // will cause a problem if the type pool gets resized and everything
   // is rehashed.
   for (auto& i : type_pool_) {
@@ -203,7 +211,12 @@ uint32_t TypeManager::GetTypeInstruction(const Type* type) {
   if (id != 0) return id;
 
   std::unique_ptr<Instruction> typeInst;
+  // TODO(1841): Handle id overflow.
   id = context()->TakeNextId();
+  if (id == 0) {
+    return 0;
+  }
+
   RegisterType(id, *type);
   switch (type->kind()) {
 #define DefineParameterlessCase(kind)                                     \
@@ -220,6 +233,7 @@ uint32_t TypeManager::GetTypeInstruction(const Type* type) {
     DefineParameterlessCase(Queue);
     DefineParameterlessCase(PipeStorage);
     DefineParameterlessCase(NamedBarrier);
+    DefineParameterlessCase(AccelerationStructureNV);
 #undef DefineParameterlessCase
     case Type::kInteger:
       typeInst = MakeUnique<Instruction>(
@@ -237,6 +251,9 @@ uint32_t TypeManager::GetTypeInstruction(const Type* type) {
       break;
     case Type::kVector: {
       uint32_t subtype = GetTypeInstruction(type->AsVector()->element_type());
+      if (subtype == 0) {
+        return 0;
+      }
       typeInst =
           MakeUnique<Instruction>(context(), SpvOpTypeVector, 0, id,
                                   std::initializer_list<Operand>{
@@ -247,6 +264,9 @@ uint32_t TypeManager::GetTypeInstruction(const Type* type) {
     }
     case Type::kMatrix: {
       uint32_t subtype = GetTypeInstruction(type->AsMatrix()->element_type());
+      if (subtype == 0) {
+        return 0;
+      }
       typeInst =
           MakeUnique<Instruction>(context(), SpvOpTypeMatrix, 0, id,
                                   std::initializer_list<Operand>{
@@ -258,6 +278,9 @@ uint32_t TypeManager::GetTypeInstruction(const Type* type) {
     case Type::kImage: {
       const Image* image = type->AsImage();
       uint32_t subtype = GetTypeInstruction(image->sampled_type());
+      if (subtype == 0) {
+        return 0;
+      }
       typeInst = MakeUnique<Instruction>(
           context(), SpvOpTypeImage, 0, id,
           std::initializer_list<Operand>{
@@ -279,6 +302,9 @@ uint32_t TypeManager::GetTypeInstruction(const Type* type) {
     case Type::kSampledImage: {
       uint32_t subtype =
           GetTypeInstruction(type->AsSampledImage()->image_type());
+      if (subtype == 0) {
+        return 0;
+      }
       typeInst = MakeUnique<Instruction>(
           context(), SpvOpTypeSampledImage, 0, id,
           std::initializer_list<Operand>{{SPV_OPERAND_TYPE_ID, {subtype}}});
@@ -286,6 +312,9 @@ uint32_t TypeManager::GetTypeInstruction(const Type* type) {
     }
     case Type::kArray: {
       uint32_t subtype = GetTypeInstruction(type->AsArray()->element_type());
+      if (subtype == 0) {
+        return 0;
+      }
       typeInst = MakeUnique<Instruction>(
           context(), SpvOpTypeArray, 0, id,
           std::initializer_list<Operand>{
@@ -296,6 +325,9 @@ uint32_t TypeManager::GetTypeInstruction(const Type* type) {
     case Type::kRuntimeArray: {
       uint32_t subtype =
           GetTypeInstruction(type->AsRuntimeArray()->element_type());
+      if (subtype == 0) {
+        return 0;
+      }
       typeInst = MakeUnique<Instruction>(
           context(), SpvOpTypeRuntimeArray, 0, id,
           std::initializer_list<Operand>{{SPV_OPERAND_TYPE_ID, {subtype}}});
@@ -305,7 +337,11 @@ uint32_t TypeManager::GetTypeInstruction(const Type* type) {
       std::vector<Operand> ops;
       const Struct* structTy = type->AsStruct();
       for (auto ty : structTy->element_types()) {
-        ops.push_back(Operand(SPV_OPERAND_TYPE_ID, {GetTypeInstruction(ty)}));
+        uint32_t member_type_id = GetTypeInstruction(ty);
+        if (member_type_id == 0) {
+          return 0;
+        }
+        ops.push_back(Operand(SPV_OPERAND_TYPE_ID, {member_type_id}));
       }
       typeInst =
           MakeUnique<Instruction>(context(), SpvOpTypeStruct, 0, id, ops);
@@ -327,6 +363,9 @@ uint32_t TypeManager::GetTypeInstruction(const Type* type) {
     case Type::kPointer: {
       const Pointer* pointer = type->AsPointer();
       uint32_t subtype = GetTypeInstruction(pointer->pointee_type());
+      if (subtype == 0) {
+        return 0;
+      }
       typeInst = MakeUnique<Instruction>(
           context(), SpvOpTypePointer, 0, id,
           std::initializer_list<Operand>{
@@ -338,10 +377,17 @@ uint32_t TypeManager::GetTypeInstruction(const Type* type) {
     case Type::kFunction: {
       std::vector<Operand> ops;
       const Function* function = type->AsFunction();
-      ops.push_back(Operand(SPV_OPERAND_TYPE_ID,
-                            {GetTypeInstruction(function->return_type())}));
+      uint32_t return_type_id = GetTypeInstruction(function->return_type());
+      if (return_type_id == 0) {
+        return 0;
+      }
+      ops.push_back(Operand(SPV_OPERAND_TYPE_ID, {return_type_id}));
       for (auto ty : function->param_types()) {
-        ops.push_back(Operand(SPV_OPERAND_TYPE_ID, {GetTypeInstruction(ty)}));
+        uint32_t paramater_type_id = GetTypeInstruction(ty);
+        if (paramater_type_id == 0) {
+          return 0;
+        }
+        ops.push_back(Operand(SPV_OPERAND_TYPE_ID, {paramater_type_id}));
       }
       typeInst =
           MakeUnique<Instruction>(context(), SpvOpTypeFunction, 0, id, ops);
@@ -395,6 +441,7 @@ uint32_t TypeManager::FindPointerToType(uint32_t type_id,
   }
 
   // Must create the pointer type.
+  // TODO(1841): Handle id overflow.
   uint32_t resultId = context()->TakeNextId();
   std::unique_ptr<Instruction> type_inst(
       new Instruction(context(), SpvOpTypePointer, 0, resultId,
@@ -465,6 +512,7 @@ Type* TypeManager::RebuildType(const Type& type) {
     DefineNoSubtypeCase(Pipe);
     DefineNoSubtypeCase(PipeStorage);
     DefineNoSubtypeCase(NamedBarrier);
+    DefineNoSubtypeCase(AccelerationStructureNV);
 #undef DefineNoSubtypeCase
     case Type::kVector: {
       const Vector* vec_ty = type.AsVector();
@@ -498,9 +546,8 @@ Type* TypeManager::RebuildType(const Type& type) {
     }
     case Type::kArray: {
       const Array* array_ty = type.AsArray();
-      const Type* ele_ty = array_ty->element_type();
       rebuilt_ty =
-          MakeUnique<Array>(RebuildType(*ele_ty), array_ty->LengthId());
+          MakeUnique<Array>(array_ty->element_type(), array_ty->length_info());
       break;
     }
     case Type::kRuntimeArray: {
@@ -583,6 +630,9 @@ void TypeManager::RegisterType(uint32_t id, const Type& type) {
 
 Type* TypeManager::GetRegisteredType(const Type* type) {
   uint32_t id = GetTypeInstruction(type);
+  if (id == 0) {
+    return nullptr;
+  }
   return GetType(id);
 }
 
@@ -630,15 +680,56 @@ Type* TypeManager::RecordIfTypeDefinition(const Instruction& inst) {
     case SpvOpTypeSampledImage:
       type = new SampledImage(GetType(inst.GetSingleWordInOperand(0)));
       break;
-    case SpvOpTypeArray:
-      type = new Array(GetType(inst.GetSingleWordInOperand(0)),
-                       inst.GetSingleWordInOperand(1));
+    case SpvOpTypeArray: {
+      const uint32_t length_id = inst.GetSingleWordInOperand(1);
+      const Instruction* length_constant_inst = id_to_constant_inst_[length_id];
+      assert(length_constant_inst);
+
+      // How will we distinguish one length value from another?
+      // Determine extra words required to distinguish this array length
+      // from another.
+      std::vector<uint32_t> extra_words{Array::LengthInfo::kDefiningId};
+      // If it is a specialised constant, retrieve its SpecId.
+      // Only OpSpecConstant has a SpecId.
+      uint32_t spec_id = 0u;
+      bool has_spec_id = false;
+      if (length_constant_inst->opcode() == SpvOpSpecConstant) {
+        context()->get_decoration_mgr()->ForEachDecoration(
+            length_id, SpvDecorationSpecId,
+            [&spec_id, &has_spec_id](const Instruction& decoration) {
+              assert(decoration.opcode() == SpvOpDecorate);
+              spec_id = decoration.GetSingleWordOperand(2u);
+              has_spec_id = true;
+            });
+      }
+      const auto opcode = length_constant_inst->opcode();
+      if (has_spec_id) {
+        extra_words.push_back(spec_id);
+      }
+      if ((opcode == SpvOpConstant) || (opcode == SpvOpSpecConstant)) {
+        // Always include the literal constant words.  In the spec constant
+        // case, the constant might not be overridden, so it's still
+        // significant.
+        extra_words.insert(extra_words.end(),
+                           length_constant_inst->GetOperand(2).words.begin(),
+                           length_constant_inst->GetOperand(2).words.end());
+        extra_words[0] = has_spec_id ? Array::LengthInfo::kConstantWithSpecId
+                                     : Array::LengthInfo::kConstant;
+      } else {
+        assert(extra_words[0] == Array::LengthInfo::kDefiningId);
+        extra_words.push_back(length_id);
+      }
+      assert(extra_words.size() >= 2);
+      Array::LengthInfo length_info{length_id, extra_words};
+
+      type = new Array(GetType(inst.GetSingleWordInOperand(0)), length_info);
+
       if (id_to_incomplete_type_.count(inst.GetSingleWordInOperand(0))) {
         incomplete_types_.emplace_back(inst.result_id(), type);
         id_to_incomplete_type_[inst.result_id()] = type;
         return type;
       }
-      break;
+    } break;
     case SpvOpTypeRuntimeArray:
       type = new RuntimeArray(GetType(inst.GetSingleWordInOperand(0)));
       if (id_to_incomplete_type_.count(inst.GetSingleWordInOperand(0))) {
@@ -737,6 +828,9 @@ Type* TypeManager::RecordIfTypeDefinition(const Instruction& inst) {
       break;
     case SpvOpTypeNamedBarrier:
       type = new NamedBarrier();
+      break;
+    case SpvOpTypeAccelerationStructureNV:
+      type = new AccelerationStructureNV();
       break;
     default:
       SPIRV_UNIMPLEMENTED(consumer_, "unhandled type");

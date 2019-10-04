@@ -29,10 +29,16 @@ using ::testing::HasSubstr;
 
 using ValidationStateTest = spvtest::ValidateBase<bool>;
 
-const char header[] =
+const char kHeader[] =
     " OpCapability Shader"
     " OpCapability Linkage"
     " OpMemoryModel Logical GLSL450 ";
+
+const char kVulkanMemoryHeader[] =
+    " OpCapability Shader"
+    " OpCapability VulkanMemoryModelKHR"
+    " OpExtension \"SPV_KHR_vulkan_memory_model\""
+    " OpMemoryModel Logical VulkanKHR ";
 
 const char kVoidFVoid[] =
     " %void   = OpTypeVoid"
@@ -42,9 +48,81 @@ const char kVoidFVoid[] =
     "           OpReturn"
     "           OpFunctionEnd ";
 
+// k*RecursiveBody examples originally from test/opt/function_test.cpp
+const char* kNonRecursiveBody = R"(
+OpEntryPoint Fragment %1 "main"
+OpExecutionMode %1 OriginUpperLeft
+%void = OpTypeVoid
+%4 = OpTypeFunction %void
+%float = OpTypeFloat 32
+%_struct_6 = OpTypeStruct %float %float
+%null = OpConstantNull %_struct_6
+%7 = OpTypeFunction %_struct_6
+%12 = OpFunction %_struct_6 None %7
+%13 = OpLabel
+OpReturnValue %null
+OpFunctionEnd
+%9 = OpFunction %_struct_6 None %7
+%10 = OpLabel
+%11 = OpFunctionCall %_struct_6 %12
+OpReturnValue %null
+OpFunctionEnd
+%1 = OpFunction %void Pure|Const %4
+%8 = OpLabel
+%2 = OpFunctionCall %_struct_6 %9
+OpKill
+OpFunctionEnd
+)";
+
+const char* kDirectlyRecursiveBody = R"(
+OpEntryPoint Fragment %1 "main"
+OpExecutionMode %1 OriginUpperLeft
+%void = OpTypeVoid
+%4 = OpTypeFunction %void
+%float = OpTypeFloat 32
+%_struct_6 = OpTypeStruct %float %float
+%7 = OpTypeFunction %_struct_6
+%9 = OpFunction %_struct_6 None %7
+%10 = OpLabel
+%11 = OpFunctionCall %_struct_6 %9
+OpKill
+OpFunctionEnd
+%1 = OpFunction %void Pure|Const %4
+%8 = OpLabel
+%2 = OpFunctionCall %_struct_6 %9
+OpReturn
+OpFunctionEnd
+)";
+
+const char* kIndirectlyRecursiveBody = R"(
+OpEntryPoint Fragment %1 "main"
+OpExecutionMode %1 OriginUpperLeft
+%void = OpTypeVoid
+%4 = OpTypeFunction %void
+%float = OpTypeFloat 32
+%_struct_6 = OpTypeStruct %float %float
+%null = OpConstantNull %_struct_6
+%7 = OpTypeFunction %_struct_6
+%9 = OpFunction %_struct_6 None %7
+%10 = OpLabel
+%11 = OpFunctionCall %_struct_6 %12
+OpReturnValue %null
+OpFunctionEnd
+%12 = OpFunction %_struct_6 None %7
+%13 = OpLabel
+%14 = OpFunctionCall %_struct_6 %9
+OpReturnValue %null
+OpFunctionEnd
+%1 = OpFunction %void Pure|Const %4
+%8 = OpLabel
+%2 = OpFunctionCall %_struct_6 %9
+OpKill
+OpFunctionEnd
+)";
+
 // Tests that the instruction count in ValidationState is correct.
 TEST_F(ValidationStateTest, CheckNumInstructions) {
-  std::string spirv = std::string(header) + "%int = OpTypeInt 32 0";
+  std::string spirv = std::string(kHeader) + "%int = OpTypeInt 32 0";
   CompileSuccessfully(spirv);
   EXPECT_EQ(SPV_SUCCESS, ValidateAndRetrieveValidationState());
   EXPECT_EQ(size_t(4), vstate_->ordered_instructions().size());
@@ -52,7 +130,7 @@ TEST_F(ValidationStateTest, CheckNumInstructions) {
 
 // Tests that the number of global variables in ValidationState is correct.
 TEST_F(ValidationStateTest, CheckNumGlobalVars) {
-  std::string spirv = std::string(header) + R"(
+  std::string spirv = std::string(kHeader) + R"(
      %int = OpTypeInt 32 0
 %_ptr_int = OpTypePointer Input %int
    %var_1 = OpVariable %_ptr_int Input
@@ -65,7 +143,7 @@ TEST_F(ValidationStateTest, CheckNumGlobalVars) {
 
 // Tests that the number of local variables in ValidationState is correct.
 TEST_F(ValidationStateTest, CheckNumLocalVars) {
-  std::string spirv = std::string(header) + R"(
+  std::string spirv = std::string(kHeader) + R"(
  %int      = OpTypeInt 32 0
  %_ptr_int = OpTypePointer Function %int
  %voidt    = OpTypeVoid
@@ -85,7 +163,7 @@ TEST_F(ValidationStateTest, CheckNumLocalVars) {
 
 // Tests that the "id bound" in ValidationState is correct.
 TEST_F(ValidationStateTest, CheckIdBound) {
-  std::string spirv = std::string(header) + R"(
+  std::string spirv = std::string(kHeader) + R"(
  %int      = OpTypeInt 32 0
  %voidt    = OpTypeVoid
   )";
@@ -96,7 +174,7 @@ TEST_F(ValidationStateTest, CheckIdBound) {
 
 // Tests that the entry_points in ValidationState is correct.
 TEST_F(ValidationStateTest, CheckEntryPoints) {
-  std::string spirv = std::string(header) +
+  std::string spirv = std::string(kHeader) +
                       " OpEntryPoint Vertex %func \"shader\"" +
                       std::string(kVoidFVoid);
   CompileSuccessfully(spirv);
@@ -152,6 +230,130 @@ TEST_F(ValidationStateTest, CheckAccessChainIndexesLimitOption) {
   spvValidatorOptionsSetUniversalLimit(
       options_, spv_validator_limit_max_access_chain_indexes, 100u);
   EXPECT_EQ(100u, options_->universal_limits_.max_access_chain_indexes);
+}
+
+TEST_F(ValidationStateTest, CheckNonRecursiveBodyGood) {
+  std::string spirv = std::string(kHeader) + kNonRecursiveBody;
+  CompileSuccessfully(spirv);
+  EXPECT_EQ(SPV_SUCCESS, ValidateAndRetrieveValidationState());
+}
+
+TEST_F(ValidationStateTest, CheckVulkanNonRecursiveBodyGood) {
+  std::string spirv = std::string(kVulkanMemoryHeader) + kNonRecursiveBody;
+  CompileSuccessfully(spirv, SPV_ENV_VULKAN_1_1);
+  EXPECT_EQ(SPV_SUCCESS,
+            ValidateAndRetrieveValidationState(SPV_ENV_VULKAN_1_1));
+}
+
+TEST_F(ValidationStateTest, CheckWebGPUNonRecursiveBodyGood) {
+  std::string spirv = std::string(kVulkanMemoryHeader) + kNonRecursiveBody;
+  CompileSuccessfully(spirv, SPV_ENV_WEBGPU_0);
+  EXPECT_EQ(SPV_SUCCESS, ValidateAndRetrieveValidationState(SPV_ENV_WEBGPU_0));
+}
+
+TEST_F(ValidationStateTest, CheckDirectlyRecursiveBodyGood) {
+  std::string spirv = std::string(kHeader) + kDirectlyRecursiveBody;
+  CompileSuccessfully(spirv);
+  EXPECT_EQ(SPV_SUCCESS, ValidateAndRetrieveValidationState());
+}
+
+TEST_F(ValidationStateTest, CheckVulkanDirectlyRecursiveBodyBad) {
+  std::string spirv = std::string(kVulkanMemoryHeader) + kDirectlyRecursiveBody;
+  CompileSuccessfully(spirv, SPV_ENV_VULKAN_1_1);
+  EXPECT_EQ(SPV_ERROR_INVALID_BINARY,
+            ValidateAndRetrieveValidationState(SPV_ENV_VULKAN_1_1));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Entry points may not have a call graph with cycles.\n "
+                        " %1 = OpFunction %void Pure|Const %3\n"));
+}
+
+TEST_F(ValidationStateTest, CheckWebGPUDirectlyRecursiveBodyBad) {
+  std::string spirv = std::string(kVulkanMemoryHeader) + kDirectlyRecursiveBody;
+  CompileSuccessfully(spirv, SPV_ENV_WEBGPU_0);
+  EXPECT_EQ(SPV_ERROR_INVALID_BINARY,
+            ValidateAndRetrieveValidationState(SPV_ENV_WEBGPU_0));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Entry points may not have a call graph with cycles.\n "
+                        " %1 = OpFunction %void Pure|Const %3\n"));
+}
+
+TEST_F(ValidationStateTest, CheckIndirectlyRecursiveBodyGood) {
+  std::string spirv = std::string(kHeader) + kIndirectlyRecursiveBody;
+  CompileSuccessfully(spirv);
+  EXPECT_EQ(SPV_SUCCESS, ValidateAndRetrieveValidationState());
+}
+
+TEST_F(ValidationStateTest, CheckVulkanIndirectlyRecursiveBodyBad) {
+  std::string spirv =
+      std::string(kVulkanMemoryHeader) + kIndirectlyRecursiveBody;
+  CompileSuccessfully(spirv, SPV_ENV_VULKAN_1_1);
+  EXPECT_EQ(SPV_ERROR_INVALID_BINARY,
+            ValidateAndRetrieveValidationState(SPV_ENV_VULKAN_1_1));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Entry points may not have a call graph with cycles.\n "
+                        " %1 = OpFunction %void Pure|Const %3\n"));
+}
+
+// Indirectly recursive functions are caught by the function definition layout
+// rules, because they cause a situation where there are 2 functions that have
+// to be before each other, and layout is checked earlier.
+TEST_F(ValidationStateTest, CheckWebGPUIndirectlyRecursiveBodyBad) {
+  std::string spirv =
+      std::string(kVulkanMemoryHeader) + kIndirectlyRecursiveBody;
+  CompileSuccessfully(spirv, SPV_ENV_WEBGPU_0);
+  EXPECT_EQ(SPV_ERROR_INVALID_LAYOUT,
+            ValidateAndRetrieveValidationState(SPV_ENV_WEBGPU_0));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("For WebGPU, functions need to be defined before being "
+                        "called.\n  %10 = OpFunctionCall %_struct_5 %11\n"));
+}
+
+TEST_F(ValidationStateTest,
+       CheckWebGPUDuplicateEntryNamesDifferentFunctionsBad) {
+  std::string spirv = std::string(kVulkanMemoryHeader) + R"(
+OpEntryPoint Fragment %func_1 "main"
+OpEntryPoint Vertex %func_2 "main"
+OpExecutionMode %func_1 OriginUpperLeft
+%void    = OpTypeVoid
+%void_f  = OpTypeFunction %void
+%func_1  = OpFunction %void None %void_f
+%label_1 = OpLabel
+           OpReturn
+           OpFunctionEnd
+%func_2  = OpFunction %void None %void_f
+%label_2 = OpLabel
+           OpReturn
+           OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_WEBGPU_0);
+  EXPECT_EQ(SPV_ERROR_INVALID_BINARY,
+            ValidateAndRetrieveValidationState(SPV_ENV_WEBGPU_0));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("Entry point name \"main\" is not unique, which is not allow "
+                "in WebGPU env.\n  %1 = OpFunction %void None %4\n"));
+}
+
+TEST_F(ValidationStateTest, CheckWebGPUDuplicateEntryNamesSameFunctionBad) {
+  std::string spirv = std::string(kVulkanMemoryHeader) + R"(
+OpEntryPoint GLCompute %func_1 "main"
+OpEntryPoint Vertex %func_1 "main"
+%void    = OpTypeVoid
+%void_f  = OpTypeFunction %void
+%func_1  = OpFunction %void None %void_f
+%label_1 = OpLabel
+           OpReturn
+           OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_WEBGPU_0);
+  EXPECT_EQ(SPV_ERROR_INVALID_BINARY,
+            ValidateAndRetrieveValidationState(SPV_ENV_WEBGPU_0));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("Entry point name \"main\" is not unique, which is not allow "
+                "in WebGPU env.\n  %1 = OpFunction %void None %3\n"));
 }
 
 }  // namespace

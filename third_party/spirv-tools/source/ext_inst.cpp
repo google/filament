@@ -14,7 +14,6 @@
 
 #include "source/ext_inst.h"
 
-#include <cassert>
 #include <cstring>
 
 // DebugInfo extended instruction set.
@@ -31,6 +30,7 @@
 #include "glsl.std.450.insts.inc"
 #include "opencl.std.insts.inc"
 
+#include "spirv-tools/libspirv.h"
 #include "spv-amd-gcn-shader.insts.inc"
 #include "spv-amd-shader-ballot.insts.inc"
 #include "spv-amd-shader-explicit-vertex-parameter.insts.inc"
@@ -81,11 +81,13 @@ spv_result_t spvExtInstTableGet(spv_ext_inst_table* pExtInstTable,
     case SPV_ENV_OPENGL_4_5:
     case SPV_ENV_UNIVERSAL_1_3:
     case SPV_ENV_VULKAN_1_1:
+    case SPV_ENV_VULKAN_1_1_SPIRV_1_4:
     case SPV_ENV_WEBGPU_0:
+    case SPV_ENV_UNIVERSAL_1_4:
+    case SPV_ENV_UNIVERSAL_1_5:
       *pExtInstTable = &kTable_1_0;
       return SPV_SUCCESS;
     default:
-      assert(0 && "Unknown spv_target_env in spvExtInstTableGet()");
       return SPV_ERROR_INVALID_TABLE;
   }
 }

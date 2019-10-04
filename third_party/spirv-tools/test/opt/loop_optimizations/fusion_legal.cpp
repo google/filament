@@ -18,14 +18,11 @@
 #include <string>
 #include <vector>
 
+#include "effcee/effcee.h"
 #include "gmock/gmock.h"
 #include "source/opt/loop_descriptor.h"
 #include "source/opt/loop_fusion.h"
 #include "test/opt/pass_fixture.h"
-
-#ifdef SPIRV_EFFCEE
-#include "effcee/effcee.h"
-#endif
 
 namespace spvtools {
 namespace opt {
@@ -52,7 +49,6 @@ void Match(const std::string& checks, IRContext* context) {
   std::vector<uint32_t> bin;
   context->module()->ToBinary(&bin, true);
   EXPECT_TRUE(Validate(bin));
-#ifdef SPIRV_EFFCEE
   std::string assembly;
   SpirvTools tools(SPV_ENV_UNIVERSAL_1_2);
   EXPECT_TRUE(
@@ -63,9 +59,6 @@ void Match(const std::string& checks, IRContext* context) {
   EXPECT_EQ(effcee::Result::Status::Ok, match_result.status())
       << match_result.message() << "\nChecking result:\n"
       << assembly;
-#else  // ! SPIRV_EFFCEE
-  (void)checks;
-#endif
 }
 
 /*
@@ -3184,7 +3177,7 @@ TEST_F(FusionLegalTest, OuterloopWithBreakContinueInInner) {
          %21 = OpLabel
          %29 = OpSMod %6 %96 %28
          %30 = OpIEqual %17 %29 %9
-               OpSelectionMerge %32 None
+               OpSelectionMerge %23 None
                OpBranchConditional %30 %31 %48
          %31 = OpLabel
          %44 = OpAccessChain %7 %41 %91 %96
@@ -3231,7 +3224,7 @@ TEST_F(FusionLegalTest, OuterloopWithBreakContinueInInner) {
          %72 = OpSMod %6 %93 %28
          %73 = OpIEqual %17 %72 %9
                OpSelectionMerge %75 None
-               OpBranchConditional %73 %74 %85
+               OpBranchConditional %73 %74 %66
          %74 = OpLabel
          %81 = OpAccessChain %7 %38 %92 %93
          %82 = OpLoad %6 %81
@@ -3239,8 +3232,6 @@ TEST_F(FusionLegalTest, OuterloopWithBreakContinueInInner) {
          %84 = OpAccessChain %7 %76 %92 %93
                OpStore %84 %83
                OpBranch %75
-         %85 = OpLabel
-               OpBranch %66
          %75 = OpLabel
                OpBranch %67
          %67 = OpLabel

@@ -23,6 +23,7 @@
 
 namespace spvtools {
 namespace val {
+class ValidationState_t;
 
 /// Functor for ordering BasicBlocks. BasicBlock pointers must not be null.
 struct less_than_id {
@@ -108,6 +109,24 @@ class Construct {
   // be called before the exit block is set and dominators have been
   // calculated.
   ConstructBlockSet blocks(Function* function) const;
+
+  // Returns true if |dest| is structured exit from the construct. Structured
+  // exits depend on the construct type.
+  // Selection:
+  //  * branch to the associated merge
+  //  * branch to the merge or continue of the innermost loop containing the
+  //  selection
+  //  * branch to the merge block of the innermost switch containing the
+  //  selection
+  //  Loop:
+  //  * branch to the associated merge or continue
+  // Continue:
+  //  * back-edge to the associated loop header
+  //  * branch to the associated loop merge
+  //
+  // Note: the validator does not generate case constructs. Switches are
+  // checked separately from other constructs.
+  bool IsStructuredExit(ValidationState_t& _, BasicBlock* dest) const;
 
  private:
   /// The type of the construct

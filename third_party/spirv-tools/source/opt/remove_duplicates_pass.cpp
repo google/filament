@@ -96,35 +96,67 @@ bool RemoveDuplicatesPass::RemoveDuplicateTypes() const {
     return modified;
   }
 
+  analysis::TypeManager type_manager(context()->consumer(), context());
+
   std::vector<Instruction*> visited_types;
+  std::vector<analysis::ForwardPointer> visited_forward_pointers;
   std::vector<Instruction*> to_delete;
   for (auto* i = &*context()->types_values_begin(); i; i = i->NextNode()) {
+    const bool is_i_forward_pointer = i->opcode() == SpvOpTypeForwardPointer;
+
     // We only care about types.
-    if (!spvOpcodeGeneratesType((i->opcode())) &&
-        i->opcode() != SpvOpTypeForwardPointer) {
+    if (!spvOpcodeGeneratesType(i->opcode()) && !is_i_forward_pointer) {
       continue;
     }
 
-    // Is the current type equal to one of the types we have aready visited?
-    SpvId id_to_keep = 0u;
-    // TODO(dneto0): Use a trie to avoid quadratic behaviour? Extract the
-    // ResultIdTrie from unify_const_pass.cpp for this.
-    for (auto j : visited_types) {
-      if (AreTypesEqual(*i, *j, context())) {
-        id_to_keep = j->result_id();
-        break;
+    if (!is_i_forward_pointer) {
+      // Is the current type equal to one of the types we have already visited?
+      SpvId id_to_keep = 0u;
+      analysis::Type* i_type = type_manager.GetType(i->result_id());
+      assert(i_type);
+      // TODO(dneto0): Use a trie to avoid quadratic behaviour? Extract the
+      // ResultIdTrie from unify_const_pass.cpp for this.
+      for (auto j : visited_types) {
+        analysis::Type* j_type = type_manager.GetType(j->result_id());
+        assert(j_type);
+        if (*i_type == *j_type) {
+          id_to_keep = j->result_id();
+          break;
+        }
       }
-    }
 
-    if (id_to_keep == 0u) {
-      // This is a never seen before type, keep it around.
-      visited_types.emplace_back(i);
+      if (id_to_keep == 0u) {
+        // This is a never seen before type, keep it around.
+        visited_types.emplace_back(i);
+      } else {
+        // The same type has already been seen before, remove this one.
+        context()->KillNamesAndDecorates(i->result_id());
+        context()->ReplaceAllUsesWith(i->result_id(), id_to_keep);
+        modified = true;
+        to_delete.emplace_back(i);
+      }
     } else {
-      // The same type has already been seen before, remove this one.
-      context()->KillNamesAndDecorates(i->result_id());
-      context()->ReplaceAllUsesWith(i->result_id(), id_to_keep);
-      modified = true;
-      to_delete.emplace_back(i);
+      analysis::ForwardPointer i_type(
+          i->GetSingleWordInOperand(0u),
+          (SpvStorageClass)i->GetSingleWordInOperand(1u));
+      i_type.SetTargetPointer(
+          type_manager.GetType(i_type.target_id())->AsPointer());
+
+      // TODO(dneto0): Use a trie to avoid quadratic behaviour? Extract the
+      // ResultIdTrie from unify_const_pass.cpp for this.
+      const bool found_a_match =
+          std::find(std::begin(visited_forward_pointers),
+                    std::end(visited_forward_pointers),
+                    i_type) != std::end(visited_forward_pointers);
+
+      if (!found_a_match) {
+        // This is a never seen before type, keep it around.
+        visited_forward_pointers.emplace_back(i_type);
+      } else {
+        // The same type has already been seen before, remove this one.
+        modified = true;
+        to_delete.emplace_back(i);
+      }
     }
   }
 
@@ -151,8 +183,8 @@ bool RemoveDuplicatesPass::RemoveDuplicateDecorations() const {
 
   analysis::DecorationManager decoration_manager(context()->module());
   for (auto* i = &*context()->annotation_begin(); i;) {
-    // Is the current decoration equal to one of the decorations we have aready
-    // visited?
+    // Is the current decoration equal to one of the decorations we have
+    // already visited?
     bool already_visited = false;
     // TODO(dneto0): Use a trie to avoid quadratic behaviour? Extract the
     // ResultIdTrie from unify_const_pass.cpp for this.
@@ -175,21 +207,6 @@ bool RemoveDuplicatesPass::RemoveDuplicateDecorations() const {
   }
 
   return modified;
-}
-
-bool RemoveDuplicatesPass::AreTypesEqual(const Instruction& inst1,
-                                         const Instruction& inst2,
-                                         IRContext* context) {
-  if (inst1.opcode() != inst2.opcode()) return false;
-  if (!IsTypeInst(inst1.opcode())) return false;
-
-  const analysis::Type* type1 =
-      context->get_type_mgr()->GetType(inst1.result_id());
-  const analysis::Type* type2 =
-      context->get_type_mgr()->GetType(inst2.result_id());
-  if (type1 && type2 && *type1 == *type2) return true;
-
-  return false;
 }
 
 }  // namespace opt

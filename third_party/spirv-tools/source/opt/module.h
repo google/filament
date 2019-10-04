@@ -53,14 +53,22 @@ class Module {
   // Sets the header to the given |header|.
   void SetHeader(const ModuleHeader& header) { header_ = header; }
 
-  // Sets the Id bound.
-  void SetIdBound(uint32_t bound) { header_.bound = bound; }
+  // Sets the Id bound.  The Id bound cannot be set to 0.
+  void SetIdBound(uint32_t bound) {
+    assert(bound != 0);
+    header_.bound = bound;
+  }
 
   // Returns the Id bound.
   uint32_t IdBound() { return header_.bound; }
 
   // Returns the current Id bound and increases it to the next available value.
-  uint32_t TakeNextIdBound() { return header_.bound++; }
+  // If the id bound has already reached its maximum value, then 0 is returned.
+  // The maximum value for the id bound is obtained from the context.  If there
+  // is none, then the minimum that limit can be according to the spir-v
+  // specification.
+  // TODO(1841): Update the uses to check for a 0 return value.
+  uint32_t TakeNextIdBound();
 
   // Appends a capability instruction to this module.
   inline void AddCapability(std::unique_ptr<Instruction> c);
@@ -125,6 +133,8 @@ class Module {
 
   inline uint32_t version() const { return header_.version; }
 
+  inline void set_version(uint32_t v) { header_.version = v; }
+
   // Iterators for capabilities instructions contained in this module.
   inline inst_iterator capability_begin();
   inline inst_iterator capability_end();
@@ -182,22 +192,6 @@ class Module {
   inline IteratorRange<inst_iterator> execution_modes();
   inline IteratorRange<const_inst_iterator> execution_modes() const;
 
-  // Clears all debug instructions (excluding OpLine & OpNoLine).
-  void debug_clear() {
-    debug1_clear();
-    debug2_clear();
-    debug3_clear();
-  }
-
-  // Clears all debug 1 instructions (excluding OpLine & OpNoLine).
-  void debug1_clear() { debugs1_.clear(); }
-
-  // Clears all debug 2 instructions (excluding OpLine & OpNoLine).
-  void debug2_clear() { debugs2_.clear(); }
-
-  // Clears all debug 3 instructions (excluding OpLine & OpNoLine).
-  void debug3_clear() { debugs3_.clear(); }
-
   // Iterators for annotation instructions contained in this module.
   inline inst_iterator annotation_begin();
   inline inst_iterator annotation_end();
@@ -251,6 +245,19 @@ class Module {
   // Gets the associated context for this module
   IRContext* context() const { return context_; }
 
+  // Sets the trailing debug line info to |dbg_line_info|.
+  void SetTrailingDbgLineInfo(std::vector<Instruction>&& dbg_line_info) {
+    trailing_dbg_line_info_ = std::move(dbg_line_info);
+  }
+
+  std::vector<Instruction>& trailing_dbg_line_info() {
+    return trailing_dbg_line_info_;
+  }
+
+  const std::vector<Instruction>& trailing_dbg_line_info() const {
+    return trailing_dbg_line_info_;
+  }
+
  private:
   ModuleHeader header_;  // Module header
 
@@ -271,6 +278,10 @@ class Module {
   // Type declarations, constants, and global variable declarations.
   InstructionList types_values_;
   std::vector<std::unique_ptr<Function>> functions_;
+
+  // If the module ends with Op*Line instruction, they will not be attached to
+  // any instruction.  We record them here, so they will not be lost.
+  std::vector<Instruction> trailing_dbg_line_info_;
 };
 
 // Pretty-prints |module| to |str|. Returns |str|.

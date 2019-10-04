@@ -12,10 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import("//build_overrides/spirv_tools.gni")
-
-import("//testing/test.gni")
 import("//build_overrides/build.gni")
+import("//build_overrides/spirv_tools.gni")
+if (build_with_chromium) {
+  import("//testing/test.gni")
+}
 
 spirv_headers = spirv_tools_spirv_headers_dir
 
@@ -273,22 +274,41 @@ foreach(table, spvtools_vendor_tables) {
   }
 }
 
-config("spvtools_config") {
+config("spvtools_public_config") {
+  include_dirs = [ "include" ]
+}
+
+config("spvtools_internal_config") {
   include_dirs = [
     ".",
-    "include",
     "$target_gen_dir",
     "${spirv_headers}/include",
   ]
 
+  configs = [ ":spvtools_public_config" ]
+
   if (is_clang) {
-    cflags = [ "-Wno-implicit-fallthrough" ]
+    cflags = [
+      "-Wno-implicit-fallthrough",
+      "-Wno-newline-eof",
+    ]
   }
+}
+
+source_set("spvtools_headers") {
+  sources = [
+    "include/spirv-tools/instrument.hpp",
+    "include/spirv-tools/libspirv.h",
+    "include/spirv-tools/libspirv.hpp",
+    "include/spirv-tools/linker.hpp",
+    "include/spirv-tools/optimizer.hpp",
+  ]
+
+  public_configs = [ ":spvtools_public_config" ]
 }
 
 static_library("spvtools") {
   deps = [
-    ":spvtools_core_enums_unified1",
     ":spvtools_core_tables_unified1",
     ":spvtools_generators_inc",
     ":spvtools_glsl_tables_glsl1-0",
@@ -330,6 +350,8 @@ static_library("spvtools") {
     "source/spirv_definition.h",
     "source/spirv_endian.cpp",
     "source/spirv_endian.h",
+    "source/spirv_optimizer_options.cpp",
+    "source/spirv_optimizer_options.h",
     "source/spirv_target_env.cpp",
     "source/spirv_target_env.h",
     "source/spirv_validator_options.cpp",
@@ -356,9 +378,16 @@ static_library("spvtools") {
     "source/util/timer.h",
   ]
 
-  public_configs = [ ":spvtools_config" ]
-  configs -= [ "//build/config/compiler:chromium_code" ]
-  configs += [ "//build/config/compiler:no_chromium_code" ]
+  public_deps = [
+    ":spvtools_core_enums_unified1",
+    ":spvtools_headers",
+  ]
+
+  if (build_with_chromium) {
+    configs -= [ "//build/config/compiler:chromium_code" ]
+    configs += [ "//build/config/compiler:no_chromium_code" ]
+  }
+  configs += [ ":spvtools_internal_config" ]
 }
 
 static_library("spvtools_val") {
@@ -381,12 +410,11 @@ static_library("spvtools_val") {
     "source/val/validate_composites.cpp",
     "source/val/validate_constants.cpp",
     "source/val/validate_conversion.cpp",
-    "source/val/validate_datarules.cpp",
     "source/val/validate_debug.cpp",
     "source/val/validate_decorations.cpp",
     "source/val/validate_derivatives.cpp",
     "source/val/validate_execution_limitations.cpp",
-    "source/val/validate_ext_inst.cpp",
+    "source/val/validate_extensions.cpp",
     "source/val/validate_function.cpp",
     "source/val/validate_id.cpp",
     "source/val/validate_image.cpp",
@@ -396,9 +424,13 @@ static_library("spvtools_val") {
     "source/val/validate_literals.cpp",
     "source/val/validate_logicals.cpp",
     "source/val/validate_memory.cpp",
+    "source/val/validate_memory_semantics.cpp",
+    "source/val/validate_misc.cpp",
     "source/val/validate_mode_setting.cpp",
     "source/val/validate_non_uniform.cpp",
     "source/val/validate_primitives.cpp",
+    "source/val/validate_scopes.cpp",
+    "source/val/validate_small_type_uses.cpp",
     "source/val/validate_type.cpp",
     "source/val/validation_state.cpp",
   ]
@@ -406,20 +438,29 @@ static_library("spvtools_val") {
   deps = [
     ":spvtools",
   ]
+  public_deps = [
+    ":spvtools_headers",
+  ]
 
-  public_configs = [ ":spvtools_config" ]
-  configs -= [ "//build/config/compiler:chromium_code" ]
-  configs += [ "//build/config/compiler:no_chromium_code" ]
+  if (build_with_chromium) {
+    configs -= [ "//build/config/compiler:chromium_code" ]
+    configs += [ "//build/config/compiler:no_chromium_code" ]
+  }
+  configs += [ ":spvtools_internal_config" ]
 }
 
 static_library("spvtools_opt") {
   sources = [
     "source/opt/aggressive_dead_code_elim_pass.cpp",
     "source/opt/aggressive_dead_code_elim_pass.h",
+    "source/opt/amd_ext_to_khr.cpp",
+    "source/opt/amd_ext_to_khr.h",
     "source/opt/basic_block.cpp",
     "source/opt/basic_block.h",
     "source/opt/block_merge_pass.cpp",
     "source/opt/block_merge_pass.h",
+    "source/opt/block_merge_util.cpp",
+    "source/opt/block_merge_util.h",
     "source/opt/build_module.cpp",
     "source/opt/build_module.h",
     "source/opt/ccp_pass.cpp",
@@ -428,10 +469,10 @@ static_library("spvtools_opt") {
     "source/opt/cfg.h",
     "source/opt/cfg_cleanup_pass.cpp",
     "source/opt/cfg_cleanup_pass.h",
+    "source/opt/code_sink.cpp",
+    "source/opt/code_sink.h",
     "source/opt/combine_access_chains.cpp",
     "source/opt/combine_access_chains.h",
-    "source/opt/common_uniform_elim_pass.cpp",
-    "source/opt/common_uniform_elim_pass.h",
     "source/opt/compact_ids_pass.cpp",
     "source/opt/compact_ids_pass.h",
     "source/opt/composite.cpp",
@@ -440,6 +481,8 @@ static_library("spvtools_opt") {
     "source/opt/const_folding_rules.h",
     "source/opt/constants.cpp",
     "source/opt/constants.h",
+    "source/opt/convert_to_half_pass.cpp",
+    "source/opt/convert_to_half_pass.h",
     "source/opt/copy_prop_arrays.cpp",
     "source/opt/copy_prop_arrays.h",
     "source/opt/dead_branch_elim_pass.cpp",
@@ -448,10 +491,14 @@ static_library("spvtools_opt") {
     "source/opt/dead_insert_elim_pass.h",
     "source/opt/dead_variable_elimination.cpp",
     "source/opt/dead_variable_elimination.h",
+    "source/opt/decompose_initialized_variables_pass.cpp",
+    "source/opt/decompose_initialized_variables_pass.h",
     "source/opt/decoration_manager.cpp",
     "source/opt/decoration_manager.h",
     "source/opt/def_use_manager.cpp",
     "source/opt/def_use_manager.h",
+    "source/opt/desc_sroa.cpp",
+    "source/opt/desc_sroa.h",
     "source/opt/dominator_analysis.cpp",
     "source/opt/dominator_analysis.h",
     "source/opt/dominator_tree.cpp",
@@ -460,8 +507,14 @@ static_library("spvtools_opt") {
     "source/opt/eliminate_dead_constant_pass.h",
     "source/opt/eliminate_dead_functions_pass.cpp",
     "source/opt/eliminate_dead_functions_pass.h",
+    "source/opt/eliminate_dead_functions_util.cpp",
+    "source/opt/eliminate_dead_functions_util.h",
+    "source/opt/eliminate_dead_members_pass.cpp",
+    "source/opt/eliminate_dead_members_pass.h",
     "source/opt/feature_manager.cpp",
     "source/opt/feature_manager.h",
+    "source/opt/fix_storage_class.cpp",
+    "source/opt/fix_storage_class.h",
     "source/opt/flatten_decoration_pass.cpp",
     "source/opt/flatten_decoration_pass.h",
     "source/opt/fold.cpp",
@@ -474,6 +527,10 @@ static_library("spvtools_opt") {
     "source/opt/freeze_spec_constant_value_pass.h",
     "source/opt/function.cpp",
     "source/opt/function.h",
+    "source/opt/generate_webgpu_initializers_pass.cpp",
+    "source/opt/generate_webgpu_initializers_pass.h",
+    "source/opt/graphics_robust_access_pass.cpp",
+    "source/opt/graphics_robust_access_pass.h",
     "source/opt/if_conversion.cpp",
     "source/opt/if_conversion.h",
     "source/opt/inline_exhaustive_pass.cpp",
@@ -482,16 +539,24 @@ static_library("spvtools_opt") {
     "source/opt/inline_opaque_pass.h",
     "source/opt/inline_pass.cpp",
     "source/opt/inline_pass.h",
+    "source/opt/inst_bindless_check_pass.cpp",
+    "source/opt/inst_bindless_check_pass.h",
+    "source/opt/inst_buff_addr_check_pass.cpp",
+    "source/opt/inst_buff_addr_check_pass.h",
     "source/opt/instruction.cpp",
     "source/opt/instruction.h",
     "source/opt/instruction_list.cpp",
     "source/opt/instruction_list.h",
+    "source/opt/instrument_pass.cpp",
+    "source/opt/instrument_pass.h",
     "source/opt/ir_builder.h",
     "source/opt/ir_context.cpp",
     "source/opt/ir_context.h",
     "source/opt/ir_loader.cpp",
     "source/opt/ir_loader.h",
     "source/opt/iterator.h",
+    "source/opt/legalize_vector_shuffle_pass.cpp",
+    "source/opt/legalize_vector_shuffle_pass.h",
     "source/opt/licm_pass.cpp",
     "source/opt/licm_pass.h",
     "source/opt/local_access_chain_convert_pass.cpp",
@@ -502,8 +567,6 @@ static_library("spvtools_opt") {
     "source/opt/local_single_block_elim_pass.h",
     "source/opt/local_single_store_elim_pass.cpp",
     "source/opt/local_single_store_elim_pass.h",
-    "source/opt/local_ssa_elim_pass.cpp",
-    "source/opt/local_ssa_elim_pass.h",
     "source/opt/log.h",
     "source/opt/loop_dependence.cpp",
     "source/opt/loop_dependence.h",
@@ -539,6 +602,8 @@ static_library("spvtools_opt") {
     "source/opt/passes.h",
     "source/opt/private_to_local_pass.cpp",
     "source/opt/private_to_local_pass.h",
+    "source/opt/process_lines_pass.cpp",
+    "source/opt/process_lines_pass.h",
     "source/opt/propagator.cpp",
     "source/opt/propagator.h",
     "source/opt/reduce_load_size.cpp",
@@ -548,6 +613,8 @@ static_library("spvtools_opt") {
     "source/opt/reflect.h",
     "source/opt/register_pressure.cpp",
     "source/opt/register_pressure.h",
+    "source/opt/relax_float_ops_pass.cpp",
+    "source/opt/relax_float_ops_pass.h",
     "source/opt/remove_duplicates_pass.cpp",
     "source/opt/remove_duplicates_pass.h",
     "source/opt/replace_invalid_opc.cpp",
@@ -562,14 +629,20 @@ static_library("spvtools_opt") {
     "source/opt/set_spec_constant_default_value_pass.h",
     "source/opt/simplification_pass.cpp",
     "source/opt/simplification_pass.h",
+    "source/opt/split_invalid_unreachable_pass.cpp",
+    "source/opt/split_invalid_unreachable_pass.h",
     "source/opt/ssa_rewrite_pass.cpp",
     "source/opt/ssa_rewrite_pass.h",
     "source/opt/strength_reduction_pass.cpp",
     "source/opt/strength_reduction_pass.h",
+    "source/opt/strip_atomic_counter_memory_pass.cpp",
+    "source/opt/strip_atomic_counter_memory_pass.h",
     "source/opt/strip_debug_info_pass.cpp",
     "source/opt/strip_debug_info_pass.h",
     "source/opt/strip_reflect_info_pass.cpp",
     "source/opt/strip_reflect_info_pass.h",
+    "source/opt/struct_cfg_analysis.cpp",
+    "source/opt/struct_cfg_analysis.h",
     "source/opt/tree_iterator.h",
     "source/opt/type_manager.cpp",
     "source/opt/type_manager.h",
@@ -577,161 +650,216 @@ static_library("spvtools_opt") {
     "source/opt/types.h",
     "source/opt/unify_const_pass.cpp",
     "source/opt/unify_const_pass.h",
+    "source/opt/upgrade_memory_model.cpp",
+    "source/opt/upgrade_memory_model.h",
     "source/opt/value_number_table.cpp",
     "source/opt/value_number_table.h",
     "source/opt/vector_dce.cpp",
     "source/opt/vector_dce.h",
     "source/opt/workaround1209.cpp",
     "source/opt/workaround1209.h",
+    "source/opt/wrap_opkill.cpp",
+    "source/opt/wrap_opkill.h",
   ]
+
   deps = [
     ":spvtools",
+    ":spvtools_vendor_tables_spv-amd-shader-ballot",
+  ]
+  public_deps = [
+    ":spvtools_headers",
   ]
 
-  public_configs = [ ":spvtools_config" ]
-  configs -= [ "//build/config/compiler:chromium_code" ]
-  configs += [ "//build/config/compiler:no_chromium_code" ]
+  if (build_with_chromium) {
+    configs -= [ "//build/config/compiler:chromium_code" ]
+    configs += [ "//build/config/compiler:no_chromium_code" ]
+  }
+  configs += [ ":spvtools_internal_config" ]
 }
 
-group("SPIRV-Tools") {
+static_library("spvtools_link") {
+  sources = [
+    "source/link/linker.cpp",
+  ]
   deps = [
     ":spvtools",
     ":spvtools_opt",
     ":spvtools_val",
   ]
-}
-
-if (!build_with_chromium) {
-  googletest_dir = spirv_tools_googletest_dir
-
-  config("gtest_config") {
-    include_dirs = [
-      "${googletest_dir}/googletest",
-      "${googletest_dir}/googletest/include",
-    ]
-  }
-
-  static_library("gtest") {
-    testonly = true
-    sources = [
-      "${googletest_dir}/googletest/src/gtest-all.cc",
-    ]
-    public_configs = [ ":gtest_config" ]
-  }
-
-  config("gmock_config") {
-    include_dirs = [
-      "${googletest_dir}/googlemock",
-      "${googletest_dir}/googlemock/include",
-      "${googletest_dir}/googletest/include",
-    ]
-    if (is_clang) {
-      # TODO: Can remove this if/when the issue is fixed.
-      # https://github.com/google/googletest/issues/533
-      cflags = [ "-Wno-inconsistent-missing-override" ]
-    }
-  }
-
-  static_library("gmock") {
-    testonly = true
-    sources = [
-      "${googletest_dir}/googlemock/src/gmock-all.cc",
-    ]
-    public_configs = [ ":gmock_config" ]
-  }
-}
-
-config("spvtools_test_config") {
-  if (is_clang) {
-    cflags = [ "-Wno-self-assign" ]
-  }
-}
-
-test("spvtools_test") {
-  sources = [
-    "test/assembly_context_test.cpp",
-    "test/assembly_format_test.cpp",
-    "test/binary_destroy_test.cpp",
-    "test/binary_endianness_test.cpp",
-    "test/binary_header_get_test.cpp",
-    "test/binary_parse_test.cpp",
-    "test/binary_strnlen_s_test.cpp",
-    "test/binary_to_text.literal_test.cpp",
-    "test/binary_to_text_test.cpp",
-    "test/comment_test.cpp",
-    "test/enum_set_test.cpp",
-    "test/enum_string_mapping_test.cpp",
-    "test/ext_inst.debuginfo_test.cpp",
-    "test/ext_inst.glsl_test.cpp",
-    "test/ext_inst.opencl_test.cpp",
-    "test/fix_word_test.cpp",
-    "test/generator_magic_number_test.cpp",
-    "test/hex_float_test.cpp",
-    "test/immediate_int_test.cpp",
-    "test/libspirv_macros_test.cpp",
-    "test/name_mapper_test.cpp",
-    "test/named_id_test.cpp",
-    "test/opcode_make_test.cpp",
-    "test/opcode_require_capabilities_test.cpp",
-    "test/opcode_split_test.cpp",
-    "test/opcode_table_get_test.cpp",
-    "test/operand_capabilities_test.cpp",
-    "test/operand_pattern_test.cpp",
-    "test/operand_test.cpp",
-    "test/target_env_test.cpp",
-    "test/test_fixture.h",
-    "test/text_advance_test.cpp",
-    "test/text_destroy_test.cpp",
-    "test/text_literal_test.cpp",
-    "test/text_start_new_inst_test.cpp",
-    "test/text_to_binary.annotation_test.cpp",
-    "test/text_to_binary.barrier_test.cpp",
-    "test/text_to_binary.constant_test.cpp",
-    "test/text_to_binary.control_flow_test.cpp",
-    "test/text_to_binary.debug_test.cpp",
-    "test/text_to_binary.device_side_enqueue_test.cpp",
-    "test/text_to_binary.extension_test.cpp",
-    "test/text_to_binary.function_test.cpp",
-    "test/text_to_binary.group_test.cpp",
-    "test/text_to_binary.image_test.cpp",
-    "test/text_to_binary.literal_test.cpp",
-    "test/text_to_binary.memory_test.cpp",
-    "test/text_to_binary.misc_test.cpp",
-    "test/text_to_binary.mode_setting_test.cpp",
-    "test/text_to_binary.pipe_storage_test.cpp",
-    "test/text_to_binary.reserved_sampling_test.cpp",
-    "test/text_to_binary.subgroup_dispatch_test.cpp",
-    "test/text_to_binary.type_declaration_test.cpp",
-    "test/text_to_binary_test.cpp",
-    "test/text_word_get_test.cpp",
-    "test/unit_spirv.cpp",
-    "test/unit_spirv.h",
+  public_deps = [
+    ":spvtools_headers",
   ]
+  if (build_with_chromium) {
+    configs -= [ "//build/config/compiler:chromium_code" ]
+    configs += [ "//build/config/compiler:no_chromium_code" ]
+  }
+  configs += [ ":spvtools_internal_config" ]
+}
 
+static_library("spvtools_reduce") {
+  sources = [
+    "source/reduce/change_operand_reduction_opportunity.cpp",
+    "source/reduce/change_operand_reduction_opportunity.h",
+    "source/reduce/change_operand_to_undef_reduction_opportunity.cpp",
+    "source/reduce/change_operand_to_undef_reduction_opportunity.h",
+    "source/reduce/conditional_branch_to_simple_conditional_branch_opportunity_finder.cpp",
+    "source/reduce/conditional_branch_to_simple_conditional_branch_opportunity_finder.h",
+    "source/reduce/conditional_branch_to_simple_conditional_branch_reduction_opportunity.cpp",
+    "source/reduce/conditional_branch_to_simple_conditional_branch_reduction_opportunity.h",
+    "source/reduce/merge_blocks_reduction_opportunity.cpp",
+    "source/reduce/merge_blocks_reduction_opportunity.h",
+    "source/reduce/merge_blocks_reduction_opportunity_finder.cpp",
+    "source/reduce/merge_blocks_reduction_opportunity_finder.h",
+    "source/reduce/operand_to_const_reduction_opportunity_finder.cpp",
+    "source/reduce/operand_to_const_reduction_opportunity_finder.h",
+    "source/reduce/operand_to_dominating_id_reduction_opportunity_finder.cpp",
+    "source/reduce/operand_to_dominating_id_reduction_opportunity_finder.h",
+    "source/reduce/operand_to_undef_reduction_opportunity_finder.cpp",
+    "source/reduce/operand_to_undef_reduction_opportunity_finder.h",
+    "source/reduce/reducer.cpp",
+    "source/reduce/reducer.h",
+    "source/reduce/reduction_opportunity.cpp",
+    "source/reduce/reduction_opportunity.h",
+    "source/reduce/reduction_pass.cpp",
+    "source/reduce/reduction_pass.h",
+    "source/reduce/reduction_util.cpp",
+    "source/reduce/reduction_util.h",
+    "source/reduce/remove_block_reduction_opportunity.cpp",
+    "source/reduce/remove_block_reduction_opportunity.h",
+    "source/reduce/remove_block_reduction_opportunity_finder.cpp",
+    "source/reduce/remove_block_reduction_opportunity_finder.h",
+    "source/reduce/remove_function_reduction_opportunity.cpp",
+    "source/reduce/remove_function_reduction_opportunity.h",
+    "source/reduce/remove_function_reduction_opportunity_finder.cpp",
+    "source/reduce/remove_function_reduction_opportunity_finder.h",
+    "source/reduce/remove_instruction_reduction_opportunity.cpp",
+    "source/reduce/remove_instruction_reduction_opportunity.h",
+    "source/reduce/remove_opname_instruction_reduction_opportunity_finder.cpp",
+    "source/reduce/remove_opname_instruction_reduction_opportunity_finder.h",
+    "source/reduce/remove_relaxed_precision_decoration_opportunity_finder.cpp",
+    "source/reduce/remove_relaxed_precision_decoration_opportunity_finder.h",
+    "source/reduce/remove_selection_reduction_opportunity.cpp",
+    "source/reduce/remove_selection_reduction_opportunity.h",
+    "source/reduce/remove_selection_reduction_opportunity_finder.cpp",
+    "source/reduce/remove_selection_reduction_opportunity_finder.h",
+    "source/reduce/remove_unreferenced_instruction_reduction_opportunity_finder.cpp",
+    "source/reduce/remove_unreferenced_instruction_reduction_opportunity_finder.h",
+    "source/reduce/simple_conditional_branch_to_branch_opportunity_finder.cpp",
+    "source/reduce/simple_conditional_branch_to_branch_opportunity_finder.h",
+    "source/reduce/simple_conditional_branch_to_branch_reduction_opportunity.cpp",
+    "source/reduce/simple_conditional_branch_to_branch_reduction_opportunity.h",
+    "source/reduce/structured_loop_to_selection_reduction_opportunity.cpp",
+    "source/reduce/structured_loop_to_selection_reduction_opportunity.h",
+    "source/reduce/structured_loop_to_selection_reduction_opportunity_finder.cpp",
+    "source/reduce/structured_loop_to_selection_reduction_opportunity_finder.h",
+    "source/spirv_reducer_options.cpp",
+    "source/spirv_reducer_options.h",
+  ]
   deps = [
     ":spvtools",
-    ":spvtools_language_header_unified1",
+    ":spvtools_opt",
+  ]
+  public_deps = [
+    ":spvtools_headers",
+  ]
+  if (build_with_chromium) {
+    configs -= [ "//build/config/compiler:chromium_code" ]
+    configs += [ "//build/config/compiler:no_chromium_code" ]
+  }
+  configs += [ ":spvtools_internal_config" ]
+}
+
+group("SPIRV-Tools") {
+  public_deps = [
+    ":spvtools",
+    ":spvtools_link",
+    ":spvtools_opt",
+    ":spvtools_reduce",
     ":spvtools_val",
   ]
+}
 
-  if (build_with_chromium) {
-    deps += [
+# The tests are scoped to Chromium to avoid needing to write gtest integration.
+# See Chromium's third_party/googletest/BUILD.gn for a complete integration.
+if (build_with_chromium) {
+  test("spvtools_test") {
+    sources = [
+      "test/assembly_context_test.cpp",
+      "test/assembly_format_test.cpp",
+      "test/binary_destroy_test.cpp",
+      "test/binary_endianness_test.cpp",
+      "test/binary_header_get_test.cpp",
+      "test/binary_parse_test.cpp",
+      "test/binary_strnlen_s_test.cpp",
+      "test/binary_to_text.literal_test.cpp",
+      "test/binary_to_text_test.cpp",
+      "test/comment_test.cpp",
+      "test/enum_set_test.cpp",
+      "test/enum_string_mapping_test.cpp",
+      "test/ext_inst.debuginfo_test.cpp",
+      "test/ext_inst.glsl_test.cpp",
+      "test/ext_inst.opencl_test.cpp",
+      "test/fix_word_test.cpp",
+      "test/generator_magic_number_test.cpp",
+      "test/hex_float_test.cpp",
+      "test/immediate_int_test.cpp",
+      "test/libspirv_macros_test.cpp",
+      "test/name_mapper_test.cpp",
+      "test/named_id_test.cpp",
+      "test/opcode_make_test.cpp",
+      "test/opcode_require_capabilities_test.cpp",
+      "test/opcode_split_test.cpp",
+      "test/opcode_table_get_test.cpp",
+      "test/operand_capabilities_test.cpp",
+      "test/operand_pattern_test.cpp",
+      "test/operand_test.cpp",
+      "test/target_env_test.cpp",
+      "test/test_fixture.h",
+      "test/text_advance_test.cpp",
+      "test/text_destroy_test.cpp",
+      "test/text_literal_test.cpp",
+      "test/text_start_new_inst_test.cpp",
+      "test/text_to_binary.annotation_test.cpp",
+      "test/text_to_binary.barrier_test.cpp",
+      "test/text_to_binary.constant_test.cpp",
+      "test/text_to_binary.control_flow_test.cpp",
+      "test/text_to_binary.debug_test.cpp",
+      "test/text_to_binary.device_side_enqueue_test.cpp",
+      "test/text_to_binary.extension_test.cpp",
+      "test/text_to_binary.function_test.cpp",
+      "test/text_to_binary.group_test.cpp",
+      "test/text_to_binary.image_test.cpp",
+      "test/text_to_binary.literal_test.cpp",
+      "test/text_to_binary.memory_test.cpp",
+      "test/text_to_binary.misc_test.cpp",
+      "test/text_to_binary.mode_setting_test.cpp",
+      "test/text_to_binary.pipe_storage_test.cpp",
+      "test/text_to_binary.reserved_sampling_test.cpp",
+      "test/text_to_binary.subgroup_dispatch_test.cpp",
+      "test/text_to_binary.type_declaration_test.cpp",
+      "test/text_to_binary_test.cpp",
+      "test/text_word_get_test.cpp",
+      "test/unit_spirv.cpp",
+      "test/unit_spirv.h",
+    ]
+
+    deps = [
+      ":spvtools",
+      ":spvtools_language_header_unified1",
+      ":spvtools_val",
       "//testing/gmock",
       "//testing/gtest",
       "//testing/gtest:gtest_main",
+      "//third_party/googletest:gmock",
+      "//third_party/googletest:gtest",
     ]
-  } else {
-    deps += [
-      ":gmock",
-      ":gtest",
-    ]
-    sources += [ "${googletest_dir}/googletest/src/gtest_main.cc" ]
-  }
 
-  configs += [
-    ":spvtools_config",
-    ":spvtools_test_config",
-  ]
+    if (is_clang) {
+      cflags_cc = [ "-Wno-self-assign" ]
+    }
+
+    configs += [ ":spvtools_internal_config" ]
+  }
 }
 
 if (spirv_tools_standalone) {
@@ -743,14 +871,130 @@ if (spirv_tools_standalone) {
   }
 }
 
-executable("spirv-as") {
+source_set("spvtools_util_cli_consumer") {
+  sources = [
+    "tools/util/cli_consumer.cpp",
+    "tools/util/cli_consumer.h",
+  ]
+  deps = [ ":spvtools_headers" ]
+  configs += [ ":spvtools_internal_config" ]
+}
+
+source_set("spvtools_software_version") {
   sources = [
     "source/software_version.cpp",
+  ]
+  deps = [
+    ":spvtools_build_version",
+    ":spvtools_headers",
+  ]
+  configs += [ ":spvtools_internal_config" ]
+}
+
+executable("spirv-as") {
+  sources = [
     "tools/as/as.cpp",
   ]
   deps = [
     ":spvtools",
-    ":spvtools_build_version",
+    ":spvtools_software_version",
   ]
-  configs += [ ":spvtools_config" ]
+  configs += [ ":spvtools_internal_config" ]
+}
+
+executable("spirv-dis") {
+  sources = [
+    "tools/dis/dis.cpp",
+  ]
+  deps = [
+    ":spvtools",
+    ":spvtools_software_version",
+  ]
+  configs += [ ":spvtools_internal_config" ]
+}
+
+executable("spirv-val") {
+  sources = [
+    "tools/val/val.cpp",
+  ]
+  deps = [
+    ":spvtools",
+    ":spvtools_software_version",
+    ":spvtools_util_cli_consumer",
+    ":spvtools_val",
+  ]
+  configs += [ ":spvtools_internal_config" ]
+}
+
+executable("spirv-cfg") {
+  sources = [
+    "tools/cfg/bin_to_dot.cpp",
+    "tools/cfg/bin_to_dot.h",
+    "tools/cfg/cfg.cpp",
+  ]
+  deps = [
+    ":spvtools",
+    ":spvtools_software_version",
+  ]
+  configs += [ ":spvtools_internal_config" ]
+}
+
+executable("spirv-opt") {
+  sources = [
+    "tools/opt/opt.cpp",
+  ]
+  deps = [
+    ":spvtools",
+    ":spvtools_opt",
+    ":spvtools_software_version",
+    ":spvtools_util_cli_consumer",
+    ":spvtools_val",
+  ]
+  configs += [ ":spvtools_internal_config" ]
+}
+
+executable("spirv-link") {
+  sources = [
+    "tools/link/linker.cpp",
+  ]
+  deps = [
+    ":spvtools",
+    ":spvtools_link",
+    ":spvtools_opt",
+    ":spvtools_software_version",
+    ":spvtools_val",
+  ]
+  configs += [ ":spvtools_internal_config" ]
+}
+
+if (!is_ios) {
+  # iOS does not allow std::system calls which spirv-reduce requires
+  executable("spirv-reduce") {
+    sources = [
+      "tools/reduce/reduce.cpp",
+    ]
+    deps = [
+      ":spvtools",
+      ":spvtools_opt",
+      ":spvtools_reduce",
+      ":spvtools_software_version",
+      ":spvtools_util_cli_consumer",
+      ":spvtools_val",
+    ]
+    configs += [ ":spvtools_internal_config" ]
+  }
+}
+
+group("all_spirv_tools") {
+  deps = [
+    ":spirv-as",
+    ":spirv-cfg",
+    ":spirv-dis",
+    ":spirv-link",
+    ":spirv-opt",
+    ":spirv-val",
+  ]
+  if (!is_ios) {
+    deps += [ ":spirv-reduce" ]
+  }
 }

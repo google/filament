@@ -271,6 +271,7 @@ bool CCPPass::ReplaceValues() {
     uint32_t id = it.first;
     uint32_t cst_id = it.second;
     if (!IsVaryingValue(cst_id) && id != cst_id) {
+      context()->KillNamesAndDecorates(id);
       retval |= context()->ReplaceAllUsesWith(id, cst_id);
     }
   }
@@ -319,7 +320,7 @@ Pass::Status CCPPass::Process() {
 
   // Process all entry point functions.
   ProcessFunction pfn = [this](Function* fp) { return PropagateConstants(fp); };
-  bool modified = ProcessReachableCallTree(pfn, context());
+  bool modified = context()->ProcessReachableCallTree(pfn);
   return modified ? Pass::Status::SuccessWithChange
                   : Pass::Status::SuccessWithoutChange;
 }

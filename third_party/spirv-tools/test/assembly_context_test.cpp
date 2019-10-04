@@ -17,6 +17,7 @@
 
 #include "gmock/gmock.h"
 #include "source/instruction.h"
+#include "source/util/string_utils.h"
 #include "test/unit_spirv.h"
 
 namespace spvtools {
@@ -40,13 +41,12 @@ TEST_P(EncodeStringTest, Sample) {
   ASSERT_EQ(SPV_SUCCESS,
             context.binaryEncodeString(GetParam().str.c_str(), &inst));
   // We already trust MakeVector
-  EXPECT_THAT(inst.words,
-              Eq(Concatenate({GetParam().initial_contents,
-                              spvtest::MakeVector(GetParam().str)})));
+  EXPECT_THAT(inst.words, Eq(Concatenate({GetParam().initial_contents,
+                                          utils::MakeVector(GetParam().str)})));
 }
 
 // clang-format off
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     BinaryEncodeString, EncodeStringTest,
     ::testing::ValuesIn(std::vector<EncodeStringCase>{
       // Use cases that exercise at least one to two words,
@@ -70,7 +70,7 @@ INSTANTIATE_TEST_CASE_P(
       // A very long string, encoded after an initial word.
       // SPIR-V limits strings to 65535 characters.
       {std::string(65535, 'a'), {1}},
-    }),);
+    }));
 // clang-format on
 
 }  // namespace
