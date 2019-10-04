@@ -532,7 +532,7 @@ mat4f ShadowMap::applyLISPSM(math::mat4f& Wp,
         float3 const& dir) {
 
     const float LoV = dot(camera.getForwardVector(), dir);
-    const float sinLV = std::sqrt(1.0f - LoV * LoV);
+    const float sinLV = std::sqrt(std::max(0.0f, 1.0f - LoV * LoV));
 
     // Virtual near plane -- the default is 1m, can be changed by the user.
     // The virtual near plane prevents too much resolution to be wasted in the area near the eye
@@ -561,7 +561,8 @@ mat4f ShadowMap::applyLISPSM(math::mat4f& Wp,
 
     mat4f W;
     // see nopt1 below for an explanation about this test
-    if (3.0f * (dzn / (zf - zn)) < 2.0f) {
+    // sinLV is positive since it comes from a square-root
+    if (sinLV > 0 && 3.0f * (dzn / (zf - zn)) < 2.0f) {
         // nopt is the optimal near plane distance of Wp (i.e. distance from P).
 
         // virtual near and far planes
