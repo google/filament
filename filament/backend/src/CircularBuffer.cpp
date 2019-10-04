@@ -105,7 +105,7 @@ void* CircularBuffer::alloc(size_t size) noexcept {
         data = mmap(nullptr, size * 2 + BLOCK_SIZE, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 
         ASSERT_POSTCONDITION(data,
-                "couldn't allocate %u KiB of memory for the command buffer",
+                "couldn't allocate %u KiB of virtual address space for the command buffer",
                 (size * 2 / 1024));
 
         slog.d << "WARNING: Using soft CircularBuffer (" << (size * 2 / 1024) << " KiB)"
