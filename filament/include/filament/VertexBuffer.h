@@ -42,14 +42,14 @@ class Engine;
  * The geometry of the Renderable itself is defined by a set of vertex attributes such as
  * position, color, normals, tangents, etc...
  *
- * There is no need to have a 1-to-1 mapping between attributes and buffer. i.e. a buffer can
- * hold the data of several attributes -- attributes are then referred as being "interleaved".
+ * There is no need to have a 1-to-1 mapping between attributes and buffer. A buffer can hold the
+ * data of several attributes -- attributes are then referred as being "interleaved".
  *
  * The buffers themselves are GPU resources, therefore mutating their data can be relatively slow.
  * For this reason, it is best to separate the constant data from the dynamic data into multiple
  * buffers.
  *
- * It is possible, and even encouraged, to use a single vertex buffer for several Renderable.
+ * It is possible, and even encouraged, to use a single vertex buffer for several Renderables.
  *
  * @see IndexBuffer, RenderableManager
  */
@@ -163,7 +163,7 @@ public:
      * @param buffer A BufferDescriptor representing the data used to initialize the buffer at
      *               index \p bufferIndex. BufferDescriptor points to raw, untyped data that will
      *               be copied as-is into the buffer.
-     * @param byteOffset Offset in *byte* into the buffer at index \p bufferIndex of this vertex
+     * @param byteOffset Offset in *bytes* into the buffer at index \p bufferIndex of this vertex
      *                   buffer set.
      */
     void setBufferAt(Engine& engine, uint8_t bufferIndex, BufferDescriptor&& buffer,
