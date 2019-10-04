@@ -58,7 +58,16 @@
  * `cgltf_node_transform_world` calls `cgltf_node_transform_local` on every ancestor in order
  * to compute the root-to-node transformation.
  *
- * `cgltf_accessor_read_float` reads a certain element from an accessor and converts it to
+ * `cgltf_accessor_unpack_floats` reads in the data from an accessor, applies sparse data (if any),
+ * and converts them to floating point. Assumes that `cgltf_load_buffers` has already been called.
+ * By passing null for the output pointer, users can find out how many floats are required in the
+ * output buffer.
+ *
+ * `cgltf_accessor_num_components` is a tiny utility that tells you the dimensionality of
+ * a certain accessor type. This can be used before `cgltf_accessor_unpack_floats` to help allocate
+ * the necessary amount of memory.
+ *
+ * `cgltf_accessor_read_float` reads a certain element from a non-sparse accessor and converts it to
  * floating point, assuming that `cgltf_load_buffers` has already been called. The passed-in element
  * size is the number of floats in the output buffer, which should be in the range [1, 16]. Returns
  * false if the passed-in element_size is too small, or if the accessor is sparse.
@@ -67,7 +76,7 @@
  * and only works with single-component data types.
  *
  * `cgltf_result cgltf_copy_extras_json(const cgltf_data*, const cgltf_extras*,
- * char* dest, cgltf_size* dest_size)` allows to retrieve the "extras" data that
+ * char* dest, cgltf_size* dest_size)` allows users to retrieve the "extras" data that
  * can be attached to many glTF objects (which can be arbitrary JSON data). The
  * `cgltf_extras` struct stores the offsets of the start and end of the extras JSON data
  * as it appears in the complete glTF JSON data. This function copies the extras data
@@ -267,7 +276,7 @@ typedef struct cgltf_attribute
 	cgltf_accessor* data;
 } cgltf_attribute;
 
-typedef struct cgltf_image 
+typedef struct cgltf_image
 {
 	char* name;
 	char* uri;
@@ -302,7 +311,7 @@ typedef struct cgltf_texture_transform
 } cgltf_texture_transform;
 
 typedef struct cgltf_texture_view
-{	
+{
 	cgltf_texture* texture;
 	cgltf_int texcoord;
 	cgltf_float scale; /* equivalent to strength for occlusion_texture */
@@ -571,8 +580,7 @@ cgltf_result cgltf_load_buffers(
 
 cgltf_result cgltf_load_buffer_base64(const cgltf_options* options, cgltf_size size, const char* base64, void** out_data);
 
-cgltf_result cgltf_validate(
-		cgltf_data* data);
+cgltf_result cgltf_validate(cgltf_data* data);
 
 void cgltf_free(cgltf_data* data);
 
@@ -581,6 +589,10 @@ void cgltf_node_transform_world(const cgltf_node* node, cgltf_float* out_matrix)
 
 cgltf_bool cgltf_accessor_read_float(const cgltf_accessor* accessor, cgltf_size index, cgltf_float* out, cgltf_size element_size);
 cgltf_size cgltf_accessor_read_index(const cgltf_accessor* accessor, cgltf_size index);
+
+cgltf_size cgltf_num_components(cgltf_type type);
+
+cgltf_size cgltf_accessor_unpack_floats(const cgltf_accessor* accessor, cgltf_float* out, cgltf_size float_count);
 
 cgltf_result cgltf_copy_extras_json(const cgltf_data* data, const cgltf_extras* extras, char* dest, cgltf_size* dest_size);
 
@@ -1546,7 +1558,6 @@ static cgltf_float cgltf_component_read_float(const void* in, cgltf_component_ty
 	return (cgltf_float)cgltf_component_read_index(in, component_type);
 }
 
-static cgltf_size cgltf_num_components(cgltf_type type);
 static cgltf_size cgltf_component_size(cgltf_component_type component_type);
 
 static cgltf_bool cgltf_element_read_float(const uint8_t* element, cgltf_type type, cgltf_component_type component_type, cgltf_bool normalized, cgltf_float* out, cgltf_size element_size)
@@ -1605,18 +1616,65 @@ static cgltf_bool cgltf_element_read_float(const uint8_t* element, cgltf_type ty
 	return 1;
 }
 
-
 cgltf_bool cgltf_accessor_read_float(const cgltf_accessor* accessor, cgltf_size index, cgltf_float* out, cgltf_size element_size)
 {
-	if (accessor->is_sparse || accessor->buffer_view == NULL)
+	if (accessor->is_sparse)
 	{
 		return 0;
 	}
-
+	if (accessor->buffer_view == NULL)
+	{
+		for (cgltf_size index = 0; index < element_size; index++) {
+			out[index] = 0;
+		}
+		return 1;
+	}
 	cgltf_size offset = accessor->offset + accessor->buffer_view->offset;
 	const uint8_t* element = (const uint8_t*) accessor->buffer_view->buffer->data;
 	element += offset + accessor->stride * index;
 	return cgltf_element_read_float(element, accessor->type, accessor->component_type, accessor->normalized, out, element_size);
+}
+
+cgltf_size cgltf_accessor_unpack_floats(const cgltf_accessor* accessor, cgltf_float* out, cgltf_size float_count)
+{
+	cgltf_size floats_per_element = cgltf_num_components(accessor->type);
+	cgltf_size available_floats = accessor->count * floats_per_element;
+	if (out == NULL)
+	{
+		return available_floats;
+	}
+
+	float_count = available_floats < float_count ? available_floats : float_count;
+	cgltf_size element_count = float_count / floats_per_element;
+
+	// First pass: convert each element in the base accessor.
+	cgltf_float* dest = out;
+	cgltf_accessor dense = *accessor;
+	dense.is_sparse = 0;
+	for (cgltf_size index = 0; index < element_count; index++, dest += floats_per_element)
+	{
+		cgltf_accessor_read_float(&dense, index, dest, floats_per_element);
+	}
+
+	// Second pass: write out each element in the sparse accessor.
+	if (accessor->is_sparse)
+	{
+		const cgltf_accessor_sparse* sparse = &dense.sparse;
+		const uint8_t* index_data = (const uint8_t*) sparse->indices_buffer_view->buffer->data;
+		index_data += sparse->indices_byte_offset + sparse->indices_buffer_view->offset;
+		cgltf_size index_stride = cgltf_component_size(sparse->indices_component_type);
+		const uint8_t* reader_head = (const uint8_t*) sparse->values_buffer_view->buffer->data;
+		reader_head += sparse->values_byte_offset + sparse->values_buffer_view->offset;
+		for (cgltf_size reader_index = 0; reader_index < sparse->count; reader_index++, index_data += index_stride)
+		{
+			size_t writer_index = cgltf_component_read_index(index_data, sparse->indices_component_type);
+			float* writer_head = out + writer_index * floats_per_element;
+			cgltf_element_read_float(reader_head, dense.type, dense.component_type, dense.normalized, writer_head, floats_per_element);
+			reader_head += dense.stride;
+		}
+	}
+
+	return element_count * floats_per_element;
 }
 
 cgltf_size cgltf_accessor_read_index(const cgltf_accessor* accessor, cgltf_size index)
@@ -3947,7 +4005,7 @@ static int cgltf_parse_json_asset(cgltf_options* options, jsmntok_t const* token
 	return i;
 }
 
-static cgltf_size cgltf_num_components(cgltf_type type) {
+cgltf_size cgltf_num_components(cgltf_type type) {
 	switch (type)
 	{
 	case cgltf_type_vec2:
