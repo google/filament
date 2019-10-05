@@ -227,6 +227,8 @@ bool ResourceLoader::loadResources(FilamentAsset* asset) {
         auto bb = bindings[i];
         if (bb.vertexBuffer && bb.generateTangents) {
             needsTangents = true;
+        } else if (bb.vertexBuffer && bb.sparseAccessor) {
+            needsSparseData = true;
         } else if (bb.vertexBuffer && !bb.generateDummyData) {
             const uint8_t* data8 = bb.offset + (const uint8_t*) *bb.data;
             mPool->addPendingUpload();
@@ -255,15 +257,6 @@ bool ResourceLoader::loadResources(FilamentAsset* asset) {
             IndexBuffer::BufferDescriptor bd(data8, bb.size, AssetPool::onLoadedResource, mPool);
             bb.indexBuffer->setBuffer(*mConfig.engine, std::move(bd));
         }
-        if (bb.sparseAccessor) {
-            needsSparseData = true;
-        }
-    }
-
-    // Since sparse accessors are easy to punt gracefully, we can emit a warning instead of
-    // aborting. We fall back to simply using the base data without applying the sparse updates.
-    if (needsSparseData) {
-        slog.w << "Sparse accessors are not yet supported." << io::endl;
     }
 
     // Copy over the inverse bind matrices to allow users to destroy the source asset.
@@ -271,7 +264,13 @@ bool ResourceLoader::loadResources(FilamentAsset* asset) {
         importSkinningData(fasset->mSkins[i], gltf->skins[i]);
     }
 
-    // Compute surface orientation quaternions if necessary.
+    // Apply sparse data modifications to base arrays, then upload the result.
+    if (needsSparseData) {
+        applySparseData(fasset);
+    }
+
+    // Compute surface orientation quaternions if necessary. This is similar to sparse data in that
+    // we need to generate the contents of a GPU buffer by processing one or more CPU buffer(s).
     if (needsTangents) {
         computeTangents(fasset);
     }
@@ -367,6 +366,41 @@ bool ResourceLoader::createTextures(details::FFilamentAsset* asset) const {
     return true;
 }
 
+void ResourceLoader::applySparseData(FFilamentAsset* asset) const {
+    auto uploadSparseData = [&](const cgltf_accessor* accessor, VertexBuffer* vb, uint8_t slot) {
+        cgltf_size numFloats = accessor->count * cgltf_num_components(accessor->type);
+        cgltf_size numBytes = sizeof(float) * numFloats;
+        float* generated = (float*) malloc(numBytes);
+        cgltf_accessor_unpack_floats(accessor, generated, numFloats);
+        VertexBuffer::BufferDescriptor bd(generated, numBytes, FREE_CALLBACK);
+        vb->setBufferAt(*mConfig.engine, slot, std::move(bd));
+    };
+
+    // Collect all vertex attribute slots that need to be populated.
+    const BufferBinding* bindings = asset->getBufferBindings();
+    tsl::robin_map<VertexBuffer*, uint8_t> sparseBuffers;
+    for (size_t i = 0, n = asset->getBufferBindingCount(); i < n; ++i) {
+        auto bb = bindings[i];
+        if (bb.vertexBuffer && bb.sparseAccessor) {
+            sparseBuffers[bb.vertexBuffer] = bb.bufferIndex;
+        }
+    }
+
+    // Go through all cgltf accessors and apply sparse data if requested.
+    for (cgltf_size index = 0; index < asset->mSourceAsset->accessors_count; index++) {
+        const cgltf_accessor* accessor = asset->mSourceAsset->accessors + index;
+        auto iter = asset->mAccessorMap.find(accessor);
+        if (iter != asset->mAccessorMap.end()) {
+            for (VertexBuffer* vb : iter->second) {
+                auto iter = sparseBuffers.find(vb);
+                if (iter != sparseBuffers.end()) {
+                    uploadSparseData(accessor, vb, iter->second);
+                }
+            }
+        }
+    }
+}
+
 void ResourceLoader::computeTangents(FFilamentAsset* asset) const {
     // Declare vectors of normals and tangents, which we'll extract & convert from the source.
     std::vector<float3> fp32Normals;
@@ -421,9 +455,7 @@ void ResourceLoader::computeTangents(FFilamentAsset* asset) const {
         assert(normalsInfo->count == vertexCount);
         assert(normalsInfo->type == cgltf_type_vec3);
         fp32Normals.resize(vertexCount);
-        for (cgltf_size i = 0; i < vertexCount; ++i) {
-            cgltf_accessor_read_float(normalsInfo, i, &fp32Normals[i].x, 3);
-        }
+        cgltf_accessor_unpack_floats(normalsInfo, &fp32Normals[0].x, vertexCount * 3);
         sob.normals(fp32Normals.data());
 
         // Convert tangents into packed floats.
@@ -434,9 +466,7 @@ void ResourceLoader::computeTangents(FFilamentAsset* asset) const {
                 return;
             }
             fp32Tangents.resize(vertexCount);
-            for (cgltf_size i = 0; i < vertexCount; ++i) {
-                cgltf_accessor_read_float(tangentsInfo, i, &fp32Tangents[i].x, 4);
-            }
+            cgltf_accessor_unpack_floats(tangentsInfo, &fp32Tangents[0].x, vertexCount * 4);
             sob.tangents(fp32Tangents.data());
         }
 
@@ -447,9 +477,7 @@ void ResourceLoader::computeTangents(FFilamentAsset* asset) const {
                 return;
             }
             fp32Positions.resize(vertexCount);
-            for (cgltf_size i = 0; i < vertexCount; ++i) {
-                cgltf_accessor_read_float(positionsInfo, i, &fp32Positions[i].x, 3);
-            }
+            cgltf_accessor_unpack_floats(positionsInfo, &fp32Positions[0].x, vertexCount * 3);
             sob.positions(fp32Positions.data());
         }
 
@@ -483,9 +511,7 @@ void ResourceLoader::computeTangents(FFilamentAsset* asset) const {
                 return;
             }
             fp32TexCoords.resize(vertexCount);
-            for (cgltf_size i = 0; i < vertexCount; ++i) {
-                cgltf_accessor_read_float(texcoordsInfo, i, &fp32TexCoords[i].x, 2);
-            }
+            cgltf_accessor_unpack_floats(texcoordsInfo, &fp32TexCoords[0].x, vertexCount * 2);
             sob.uvs(fp32TexCoords.data());
         }
 
@@ -586,11 +612,13 @@ void ResourceLoader::updateBoundingBoxes(details::FFilamentAsset* asset) const {
         Aabb aabb;
         for (cgltf_size slot = 0; slot < prim.attributes_count; slot++) {
             const cgltf_attribute& attr = prim.attributes[slot];
-            if (attr.type == cgltf_attribute_type_position) {
-                const cgltf_accessor* accessor = attr.data;
-                float3 pt;
-                for (cgltf_size i = 0, n = accessor->count; i < n; ++i) {
-                    cgltf_accessor_read_float(accessor, i, &pt.x, 3);
+            const cgltf_accessor* accessor = attr.data;
+            const size_t dim = cgltf_num_components(accessor->type);
+            if (attr.type == cgltf_attribute_type_position && dim >= 3) {
+                std::vector<float> unpacked(accessor->count * dim);
+                cgltf_accessor_unpack_floats(accessor, unpacked.data(), unpacked.size());
+                for (cgltf_size i = 0, j = 0, n = accessor->count; i < n; ++i, j += dim) {
+                    float3 pt(unpacked[j + 0], unpacked[j + 1], unpacked[j + 2]);
                     aabb.min = min(aabb.min, pt);
                     aabb.max = max(aabb.max, pt);
                 }

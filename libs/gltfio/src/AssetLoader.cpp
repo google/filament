@@ -639,6 +639,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
         const cgltf_attribute& inputAttribute = inPrim->attributes[aindex];
         const cgltf_accessor* inputAccessor = inputAttribute.data;
         const cgltf_buffer_view* bv = inputAccessor->buffer_view;
+        mResult->mAccessorMap[inputAccessor].push_back(vertices);
         if (inputAttribute.type == cgltf_attribute_type_tangent ||
                 (inputAttribute.type == cgltf_attribute_type_texcoord &&
                 uvmap[inputAttribute.index] == UNUSED)) {
