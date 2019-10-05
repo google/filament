@@ -96,6 +96,7 @@ public:
 
 private:
     bool createTextures(details::FFilamentAsset* asset) const;
+    void applySparseData(details::FFilamentAsset* asset) const;
     void computeTangents(details::FFilamentAsset* asset) const;
     void normalizeSkinningWeights(details::FFilamentAsset* asset) const;
     void updateBoundingBoxes(details::FFilamentAsset* asset) const;
