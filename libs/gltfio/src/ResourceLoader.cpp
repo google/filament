@@ -222,6 +222,7 @@ bool ResourceLoader::loadResources(FilamentAsset* asset) {
     // Upload data to the GPU.
     const BufferBinding* bindings = asset->getBufferBindings();
     bool needsTangents = false;
+    bool needsSparseData = false;
     for (size_t i = 0, n = asset->getBufferBindingCount(); i < n; ++i) {
         auto bb = bindings[i];
         if (bb.vertexBuffer && bb.generateTangents) {
@@ -254,6 +255,15 @@ bool ResourceLoader::loadResources(FilamentAsset* asset) {
             IndexBuffer::BufferDescriptor bd(data8, bb.size, AssetPool::onLoadedResource, mPool);
             bb.indexBuffer->setBuffer(*mConfig.engine, std::move(bd));
         }
+        if (bb.sparseAccessor) {
+            needsSparseData = true;
+        }
+    }
+
+    // Since sparse accessors are easy to punt gracefully, we can emit a warning instead of
+    // aborting. We fall back to simply using the base data without applying the sparse updates.
+    if (needsSparseData) {
+        slog.w << "Sparse accessors are not yet supported." << io::endl;
     }
 
     // Copy over the inverse bind matrices to allow users to destroy the source asset.

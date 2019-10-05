@@ -535,11 +535,6 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
             return false;
         }
 
-        if (inputAccessor->is_sparse) {
-            slog.e << "Sparse accessors not yet supported in " << name << io::endl;
-            return false;
-        }
-
         // The cgltf library provides a stride value for all accessors, even though they do not
         // exist in the glTF file. It is computed from the type and the stride of the buffer view.
         // As a convenience, cgltf also replaces zero (default) stride with the actual stride.
@@ -582,11 +577,6 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
             VertexBuffer::AttributeType atype;
             if (!getElementType(inputAccessor->type, inputAccessor->component_type, &atype)) {
                 slog.e << "Unsupported accessor type in " << name << io::endl;
-                return false;
-            }
-
-            if (inputAccessor->is_sparse) {
-                slog.e << "Sparse accessors not yet supported in " << name << io::endl;
                 return false;
             }
 
@@ -665,6 +655,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
                 .generateTrivialIndices = false,
                 .generateDummyData = false,
                 .generateTangents = true,
+                .sparseAccessor = (bool) inputAccessor->is_sparse,
             });
             continue;
         }
@@ -680,7 +671,8 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
             .convertBytesToShorts = false,
             .generateTrivialIndices = false,
             .generateDummyData = false,
-            .generateTangents = false
+            .generateTangents = false,
+            .sparseAccessor = (bool) inputAccessor->is_sparse,
         });
     }
 
@@ -701,6 +693,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
                     .generateTrivialIndices = false,
                     .generateDummyData = false,
                     .generateTangents = true,
+                    .sparseAccessor = (bool) inputAccessor->is_sparse,
                     .isMorphTarget = true,
                     .morphTargetIndex = (uint8_t) targetIndex,
                 });
@@ -724,6 +717,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
                 .generateTrivialIndices = false,
                 .generateDummyData = false,
                 .generateTangents = false,
+                .sparseAccessor = (bool) inputAccessor->is_sparse,
             });
         }
     }

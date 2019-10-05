@@ -178,6 +178,7 @@ struct BufferBinding {
     bool generateTrivialIndices; // the resource loader must generate indices like: 0, 1, 2, ...
     bool generateDummyData;      // the resource loader should generate a sequence of 1.0 values
     bool generateTangents;       // the resource loader should generate tangents
+    bool sparseAccessor;         // the resource loader should apply a sparse data set
 
     bool isMorphTarget;
     uint8_t morphTargetIndex;
