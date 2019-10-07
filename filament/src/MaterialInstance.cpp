@@ -69,6 +69,11 @@ FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material)
 // This version is used to initialize the default material instance
 void FMaterialInstance::initDefaultInstance(FEngine& engine, FMaterial const* material) {
     mMaterial = material;
+
+    // We inherit the resolved culling mode rather than the builder-set culling mode.
+    // This preserves the property whereby double-sidedness automatically disables culling.
+    mCulling = mMaterial->getRasterState().culling;
+
     mMaterialSortingKey = RenderPass::makeMaterialSortingKey(
             material->getId(), material->generateMaterialInstanceId());
 
