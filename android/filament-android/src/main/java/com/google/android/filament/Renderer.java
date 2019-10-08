@@ -275,6 +275,8 @@ public class Renderer {
      *                  not supported, this operation may fail silently. Use a DEBUG build
      *                  to get some logs about the failure.</p>
      *
+     * @exception BufferOverflowException if the specified parameters would result in reading
+     * outside of <code>buffer</code>.
      */
     public void readPixels(
             @IntRange(from = 0) int xoffset, @IntRange(from = 0) int yoffset,
