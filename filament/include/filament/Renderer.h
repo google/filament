@@ -282,7 +282,7 @@ public:
      * All calls to render() must happen *after* beginFrame().
      *
      * @see
-     * endFrame(), PresentCallable, FrameFinishedCallback
+     * endFrame(), backend::PresentCallable, backend::FrameFinishedCallback
      */
     bool beginFrame(SwapChain* swapChain, backend::FrameFinishedCallback callback = nullptr,
             void* user = nullptr);
