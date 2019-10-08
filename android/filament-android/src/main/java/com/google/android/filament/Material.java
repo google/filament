@@ -29,45 +29,157 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * A Filament Material defines the visual appearance of an object. Materials function as a
+ * templates from which {@link MaterialInstance}s can be spawned. Use {@link Builder} to construct
+ * a Material object.
+ *
+ * @see <a href="https://google.github.io/filament/Materials.html">Filament Materials Guide</a>
+ */
 public class Material {
     private long mNativeObject;
     private final MaterialInstance mDefaultInstance;
 
     private Set<VertexBuffer.VertexAttribute> mRequiredAttributes;
 
+    /** Supported shading models */
     public enum Shading {
+        /**
+         * No lighting applied, emissive possible
+         *
+         * @see
+         * <a href="https://google.github.io/filament/Materials.html#materialmodels/unlitmodel">
+         * Unlit model</a>
+         */
         UNLIT,
+
+        /**
+         * Default, standard lighting
+         *
+         * @see
+         * <a href="https://google.github.io/filament/Materials.html#materialmodels/litmodel">
+         * Lit model</a>
+         */
         LIT,
+
+        /**
+         * Subsurface lighting model
+         *
+         * @see
+         * <a href="https://google.github.io/filament/Materials.html#materialmodels/subsurfacemodel">
+         * Subsurface model</a>
+         */
         SUBSURFACE,
+
+        /**
+         * Cloth lighting model
+         *
+         * @see
+         * <a href="https://google.github.io/filament/Materials.html#materialmodels/clothmodel">
+         * Cloth model</a>
+         */
         CLOTH,
+
+        /**
+         * Legacy lighting model
+         *
+         * @see
+         * <a href="https://google.github.io/filament/Materials.html#materialmodels/specularglossiness">
+         * Specular glossiness</a>
+         */
         SPECULAR_GLOSSINESS
     }
 
+    /**
+     * Attribute interpolation types in the fragment shader
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/vertexandattributes:interpolation">
+     * Vertex and attributes: interpolation</a>
+     */
     public enum Interpolation {
+        /** Default, smooth interpolation */
         SMOOTH,
+
+        /** Flat interpolation */
         FLAT
     }
 
+    /**
+     * Supported blending modes
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/blendingandtransparency:blending">
+     * Blending and transparency: blending</a>
+     */
     public enum BlendingMode {
+        /** Material is opaque. */
         OPAQUE,
+
+        /**
+         * Material is transparent and color is alpha-pre-multiplied.
+         * Affects diffuse lighting only.
+         */
         TRANSPARENT,
+
+        /** Material is additive (e.g.: hologram). */
         ADD,
-        MODULATE,
+
+        /** Material is masked (i.e. alpha tested). */
         MASKED,
-        FADE
+
+        /**
+         * Material is transparent and color is alpha-pre-multiplied.
+         * Affects specular lighting.
+         */
+        FADE,
+
+        /** Material darkens what's behind it. */
+        MULTIPLY,
+
+        /** Material brightens what's behind it. */
+        SCREEN,
     }
 
+    /**
+     * Supported types of vertex domains
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/vertexandattributes:vertexdomain">
+     * Vertex and attributes: vertexDomain</a>
+     */
     public enum VertexDomain {
+        /** Vertices are in object space, default. */
         OBJECT,
+
+        /** Vertices are in world space. */
         WORLD,
+
+        /** Vertices are in view space. */
         VIEW,
+
+        /** Vertices are in normalized device space. */
         DEVICE
     }
 
+    /**
+     * Face culling Mode
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/rasterization:culling">
+     * Rasterization: culling</a>
+     */
     public enum CullingMode {
+        /** No culling. Front and back faces are visible. */
         NONE,
+
+        /** Front face culling. Only back faces are visible. */
         FRONT,
+
+        /** Back face culling. Only front faces are visible. */
         BACK,
+
+        /** Front and back culling. Geometry is not visible. */
         FRONT_AND_BACK
     }
 
@@ -145,6 +257,13 @@ public class Material {
         private Buffer mBuffer;
         private int mSize;
 
+        /**
+         * Specifies the material data. The material data is a binary blob produced by
+         * libfilamat or by matc.
+         *
+         * @param buffer  buffer containing material data
+         * @param size    size of the material data in bytes
+         */
         @NonNull
         public Builder payload(@NonNull Buffer buffer, @IntRange(from = 0) int size) {
             mBuffer = buffer;
@@ -152,6 +271,15 @@ public class Material {
             return this;
         }
 
+        /**
+         * Creates and returns the Material object.
+         *
+         * @param engine reference to the Engine instance to associate this Material with
+         *
+         * @return the newly created object
+         *
+         * @exception IllegalStateException if the material could not be created
+         */
         @NonNull
         public Material build(@NonNull Engine engine) {
             long nativeMaterial = nBuilderBuild(engine.getNativeObject(), mBuffer, mSize);
@@ -160,6 +288,12 @@ public class Material {
         }
     }
 
+    /**
+     * Creates a new instance of this material. Material instances should be freed using
+     * {@link Engine#destroyMaterialInstance(MaterialInstance)}.
+     *
+     * @return the new instance
+     */
     @NonNull
     public MaterialInstance createInstance() {
         long nativeInstance = nCreateInstance(getNativeObject());
@@ -167,63 +301,163 @@ public class Material {
         return new MaterialInstance(this, nativeInstance);
     }
 
+    /** Returns the material's default instance. */
     @NonNull
     public MaterialInstance getDefaultInstance() {
         return mDefaultInstance;
     }
 
+    /**
+     * Returns the name of this material. The material name is used for debugging purposes.
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/general:name">
+     * General: name</a>
+     */
     public String getName() {
         return nGetName(getNativeObject());
     }
 
+    /**
+     * Returns the shading model of this material.
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialmodels">
+     * Material Models</a>
+     */
     public Shading getShading() {
         return Shading.values()[nGetShading(getNativeObject())];
     }
 
+    /**
+     * Returns the interpolation mode of this material. This affects how variables are interpolated.
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/vertexandattributes:interpolation">
+     * Vertex and attributes: interpolation</a>
+     */
     public Interpolation getInterpolation() {
         return Interpolation.values()[nGetInterpolation(getNativeObject())];
     }
 
+    /**
+     * Returns the blending mode of this material.
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/blendingandtransparency:blending">
+     * Blending and transparency: blending</a>
+     */
     public BlendingMode getBlendingMode() {
         return BlendingMode.values()[nGetBlendingMode(getNativeObject())];
     }
 
+    /**
+     * Returns the vertex domain of this material.
+     *
+     * @se
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/vertexandattributes:vertexdomain">
+     * Vertex and attributes: vertexDomain</a>
+     * @return
+     */
     public VertexDomain getVertexDomain() {
         return VertexDomain.values()[nGetVertexDomain(getNativeObject())];
     }
 
+    /**
+     * Returns the default culling mode of this material.
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/rasterization:culling">
+     * Rasterization: culling</a>
+     */
     public CullingMode getCullingMode() {
         return CullingMode.values()[nGetCullingMode(getNativeObject())];
     }
 
+    /**
+     * Indicates whether this material will write to the color buffer.
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/rasterization:colorwrite">
+     * Rasterization: colorWrite</a>
+     */
     public boolean isColorWriteEnabled() {
         return nIsColorWriteEnabled(getNativeObject());
     }
 
+    /**
+     * Indicates whether this material will write to the depth buffer.
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/rasterization:depthwrite">
+     * Rasterization: depthWrite</a>
+     */
     public boolean isDepthWriteEnabled() {
         return nIsDepthWriteEnabled(getNativeObject());
     }
 
+    /**
+     * Indicates whether this material will use depth testing.
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/rasterization:depthculling">
+     * Rasterization: depthCulling</a>
+     */
     public boolean isDepthCullingEnabled() {
         return nIsDepthCullingEnabled(getNativeObject());
     }
 
+    /**
+     * Indicates whether this material is double-sided.
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/rasterization:doublesided">
+     * Rasterization: doubleSided</a>
+     */
     public boolean isDoubleSided() {
         return nIsDoubleSided(getNativeObject());
     }
 
+    /**
+     * Returns the alpha mask threshold used when the blending mode is set to masked.
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/blendingandtransparency:maskthreshold">
+     * Blending and transparency: maskThreshold</a>
+     */
     public float getMaskThreshold() {
         return nGetMaskThreshold(getNativeObject());
     }
 
+    /**
+     * Returns the screen-space variance for specular-antialiasing. This value is between 0 and 1.
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/anti-aliasing:specularantialiasingvariance">
+     * Anti-aliasing: specularAntiAliasingVariance</a>
+     */
     public float getSpecularAntiAliasingVariance() {
         return nGetSpecularAntiAliasingVariance(getNativeObject());
     }
 
+    /**
+     * Returns the clamping threshold for specular-antialiasing. This value is between 0 and 1.
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/anti-aliasing:specularantialiasingthreshold">
+     * Anti-aliasing: specularAntiAliasingThreshold</a>
+     */
     public float getSpecularAntiAliasingThreshold() {
         return nGetSpecularAntiAliasingThreshold(getNativeObject());
     }
 
+    /**
+     * Returns a set of {@link VertexBuffer.VertexAttribute}s that are required by this material.
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/vertexandattributes:requires">
+     * Vertex and attributes: requires</a>
+     */
     public Set<VertexBuffer.VertexAttribute> getRequiredAttributes() {
         if (mRequiredAttributes == null) {
             int bitSet = nGetRequiredAttributes(getNativeObject());
@@ -239,14 +473,38 @@ public class Material {
         return mRequiredAttributes;
     }
 
+    /**
+     * Returns a bit set representing the set of {@link VertexBuffer.VertexAttribute}s that are
+     * required by this material. Use {@link #getRequiredAttributes()} to get these as a Set object.
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/vertexandattributes:requires">
+     * Vertex and attributes: requires</a>
+     */
     int getRequiredAttributesAsInt() {
         return nGetRequiredAttributes(getNativeObject());
     }
 
+    /**
+     * Returns the number of parameters declared by this material.
+     * The returned value can be 0.
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/general:parameters">
+     * General: parameters</a>
+     */
     public int getParameterCount() {
         return nGetParameterCount(getNativeObject());
     }
 
+    /**
+     * Returns a list of Parameter objects representing this material's parameters.
+     * The list may be empty if the material has no declared parameters.
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/general:parameters">
+     * General: parameters</a>
+     */
     public List<Parameter> getParameters() {
         int count = getParameterCount();
         List<Parameter> parameters = new ArrayList<>(count);
@@ -254,86 +512,308 @@ public class Material {
         return parameters;
     }
 
+    /**
+     * Indicates whether a parameter of the given name exists on this material.
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/general:parameters">
+     * General: parameters</a>
+     */
     public boolean hasParameter(@NonNull String name) {
         return nHasParameter(getNativeObject(), name);
     }
 
+    /**
+     * Sets the value of a bool parameter on this material's default instance.
+     *
+     * @param name the name of the material parameter
+     * @param x    the value of the material parameter
+     *
+     * @see Material#getDefaultInstance()
+     */
     public void setDefaultParameter(@NonNull String name, boolean x) {
         mDefaultInstance.setParameter(name, x);
     }
 
+    /**
+     * Sets the value of a float parameter on this material's default instance.
+     *
+     * @param name the name of the material parameter
+     * @param x    the value of the material parameter
+     *
+     * @see Material#getDefaultInstance()
+     */
     public void setDefaultParameter(@NonNull String name, float x) {
         mDefaultInstance.setParameter(name, x);
     }
 
+    /**
+     * Sets the value of an int parameter on this material's default instance.
+     *
+     * @param name the name of the material parameter
+     * @param x    the value of the material parameter
+     *
+     * @see Material#getDefaultInstance()
+     */
     public void setDefaultParameter(@NonNull String name, int x) {
         mDefaultInstance.setParameter(name, x);
     }
 
+    /**
+     * Sets the value of a bool2 parameter on this material's default instance.
+     *
+     * @param name the name of the material parameter
+     * @param x    the value of the first component
+     * @param y    the value of the second component
+     *
+     * @see Material#getDefaultInstance()
+     */
     public void setDefaultParameter(@NonNull String name, boolean x, boolean y) {
         mDefaultInstance.setParameter(name, x, y);
     }
 
+    /**
+     * Sets the value of a float2 parameter on this material's default instance.
+     *
+     * @param name the name of the material parameter
+     * @param x    the value of the first component
+     * @param y    the value of the second component
+     *
+     * @see Material#getDefaultInstance()
+     */
     public void setDefaultParameter(@NonNull String name, float x, float y) {
         mDefaultInstance.setParameter(name, x, y);
     }
 
+    /**
+     * Sets the value of an int2 parameter on this material's default instance.
+     *
+     * @param name the name of the material parameter
+     * @param x    the value of the first component
+     * @param y    the value of the second component
+     *
+     * @see Material#getDefaultInstance()
+     */
     public void setDefaultParameter(@NonNull String name, int x, int y) {
         mDefaultInstance.setParameter(name, x, y);
     }
 
+    /**
+     * Sets the value of a bool3 parameter on this material's default instance.
+     *
+     * @param name the name of the material parameter
+     * @param x    the value of the first component
+     * @param y    the value of the second component
+     * @param z    the value of the third component
+     *
+     * @see Material#getDefaultInstance()
+     */
     public void setDefaultParameter(@NonNull String name, boolean x, boolean y, boolean z) {
         mDefaultInstance.setParameter(name, x, y, z);
     }
 
+    /**
+     * Sets the value of a float3 parameter on this material's default instance.
+     *
+     * @param name the name of the material parameter
+     * @param x    the value of the first component
+     * @param y    the value of the second component
+     * @param z    the value of the third component
+     *
+     * @see Material#getDefaultInstance()
+     */
     public void setDefaultParameter(@NonNull String name, float x, float y, float z) {
         mDefaultInstance.setParameter(name, x, y, z);
     }
 
+    /**
+     * Sets the value of a int3 parameter on this material's default instance.
+     *
+     * @param name the name of the material parameter
+     * @param x    the value of the first component
+     * @param y    the value of the second component
+     * @param z    the value of the third component
+     *
+     * @see Material#getDefaultInstance()
+     */
     public void setDefaultParameter(@NonNull String name, int x, int y, int z) {
         mDefaultInstance.setParameter(name, x, y, z);
     }
 
+    /**
+     * Sets the value of a bool4 parameter on this material's default instance.
+     *
+     * @param name the name of the material parameter
+     * @param x    the value of the first component
+     * @param y    the value of the second component
+     * @param z    the value of the third component
+     * @param w    the value of the fourth component
+     *
+     * @see Material#getDefaultInstance()
+     */
     public void setDefaultParameter(@NonNull String name, boolean x, boolean y, boolean z, boolean w) {
         mDefaultInstance.setParameter(name, x, y, z, w);
     }
 
+    /**
+     * Sets the value of a float4 parameter on this material's default instance.
+     *
+     * @param name the name of the material parameter
+     * @param x    the value of the first component
+     * @param y    the value of the second component
+     * @param z    the value of the third component
+     * @param w    the value of the fourth component
+     *
+     * @see Material#getDefaultInstance()
+     */
     public void setDefaultParameter(@NonNull String name, float x, float y, float z, float w) {
         mDefaultInstance.setParameter(name, x, y, z, w);
     }
 
+    /**
+     * Sets the value of a int4 parameter on this material's default instance.
+     *
+     * @param name the name of the material parameter
+     * @param x    the value of the first component
+     * @param y    the value of the second component
+     * @param z    the value of the third component
+     * @param w    the value of the fourth component
+     *
+     * @see Material#getDefaultInstance()
+     */
     public void setDefaultParameter(@NonNull String name, int x, int y, int z, int w) {
         mDefaultInstance.setParameter(name, x, y, z, w);
     }
 
+    /**
+     * Set a bool parameter array by name.
+     *
+     * @param name   name of the parameter array as defined by this Material
+     * @param type   the number of components for each individual parameter
+     * @param v      array of values to set to the named parameter array
+     * @param offset the number of elements to skip
+     * @param count  the number of elements in the parameter array to set
+     *
+     * <p>For example, to set a parameter array of 4 bool4s:
+     * <pre>{@code
+     *     boolean[] a = new boolean[4 * 4];
+     *     material.setDefaultParameter("param", MaterialInstance.BooleanElement.BOOL4, a, 0, 4);
+     * }</pre>
+     * To only set the last 3 elements, specify an offset of 1 and a count of 3:
+     * <pre>{@code
+     *     boolean[] a = new boolean[4 * 3];
+     *     material.setDefaultParameter("param", MaterialInstance.BooleanElement.BOOL4, a, 1, 3);
+     * }</pre>
+     * </p>
+     *
+     * @see Material#getDefaultInstance()
+     */
     public void setDefaultParameter(@NonNull String name,
             @NonNull MaterialInstance.BooleanElement type, @NonNull @Size(min = 1) boolean[] v,
             @IntRange(from = 0) int offset, @IntRange(from = 1) int count) {
         mDefaultInstance.setParameter(name, type, v, offset, count);
     }
 
+    /**
+     * Set an int parameter array by name.
+     *
+     * @param name   name of the parameter array as defined by this Material
+     * @param type   the number of components for each individual parameter
+     * @param v      array of values to set to the named parameter array
+     * @param offset the number of elements to skip
+     * @param count  the number of elements in the parameter array to set
+     *
+     * <p>For example, to set a parameter array of 4 int4s:
+     * <pre>{@code
+     *     int[] a = new int[4 * 4];
+     *     material.setDefaultParameter("param", MaterialInstance.IntElement.INT4, a, 0, 4);
+     * }</pre>
+     * To only set the last 3 elements, specify an offset of 1 and a count of 3:
+     * <pre>{@code
+     *     int[] a = new int[4 * 3];
+     *     material.setDefaultParameter("param", MaterialInstance.IntElement.INT4, a, 1, 3);
+     * }</pre>
+     * </p>
+     *
+     * @see Material#getDefaultInstance()
+     */
     public void setDefaultParameter(@NonNull String name,
             @NonNull MaterialInstance.IntElement type, @NonNull @Size(min = 1) int[] v,
             @IntRange(from = 0) int offset, @IntRange(from = 1) int count) {
         mDefaultInstance.setParameter(name, type, v, offset, count);
     }
 
+    /**
+     * Set a float parameter array by name.
+     *
+     * @param name   name of the parameter array as defined by this Material
+     * @param type   the number of components for each individual parameter
+     * @param v      array of values to set to the named parameter array
+     * @param offset the number of elements to skip
+     * @param count  the number of elements in the parameter array to set
+     *
+     * <p>For example, to set a parameter array of 4 float4s:
+     * <pre>{@code
+     *     float[] a = new float[4 * 4];
+     *     material.setDefaultParameter("param", MaterialInstance.FloatElement.FLOAT4, a, 0, 4);
+     * }</pre>
+     * To only set the last 3 elements, specify an offset of 1 and a count of 3:
+     * <pre>{@code
+     *     float[] a = new float[4 * 3];
+     *     material.setDefaultParameter("param", MaterialInstance.FloatElement.FLOAT4, a, 1, 3);
+     * }</pre>
+     * </p>
+     *
+     * @see Material#getDefaultInstance()
+     */
     public void setDefaultParameter(@NonNull String name,
             @NonNull MaterialInstance.FloatElement type, @NonNull @Size(min = 1) float[] v,
             @IntRange(from = 0) int offset, @IntRange(from = 1) int count) {
         mDefaultInstance.setParameter(name, type, v, offset, count);
     }
 
+    /**
+     * Sets the color of the given parameter on this material's default instance.
+     *
+     * @param name the name of the material color parameter
+     * @param type whether the color is specified in the linear or sRGB space
+     * @param r    red component
+     * @param g    green component
+     * @param b    blue component
+     *
+     * @see Material#getDefaultInstance()
+     */
     public void setDefaultParameter(@NonNull String name, @NonNull Colors.RgbType type,
             float r, float g, float b) {
         mDefaultInstance.setParameter(name, type, r, g, b);
     }
 
+    /**
+     * Sets the color of the given parameter on this material's default instance.
+     *
+     * @param name the name of the material color parameter
+     * @param type whether the color is specified in the linear or sRGB space
+     * @param r    red component
+     * @param g    green component
+     * @param b    blue component
+     * @param a    alpha component
+     *
+     * @see Material#getDefaultInstance()
+     */
     public void setDefaultParameter(@NonNull String name, @NonNull Colors.RgbaType type,
             float r, float g, float b, float a) {
         mDefaultInstance.setParameter(name, type, r, g, b, a);
     }
 
+    /**
+     * Sets a texture and sampler parameter on this material's default instance.
+     *
+     * @param name The name of the material texture parameter
+     * @param texture The texture to set as parameter
+     * @param sampler The sampler to be used with this texture
+     *
+     * @see Material#getDefaultInstance()
+     */
     public void setDefaultParameter(@NonNull String name,
             @NonNull Texture texture, @NonNull TextureSampler sampler) {
         mDefaultInstance.setParameter(name, texture, sampler);
