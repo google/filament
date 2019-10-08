@@ -15,7 +15,8 @@ rm -rf SPIRV-Tools-master master.zip
 
 ### Make Filament-specific changes
 
-Make sure to preserve all the changes marked with the following in `spirv-tools/CMakeLists.txt`:
+Make sure to preserve all the changes marked with the following in `spirv-tools/CMakeLists.txt` and
+`spirv-toools/source/opt/CMakeLists.txt`:
 
 `# Filament specific changes`
 

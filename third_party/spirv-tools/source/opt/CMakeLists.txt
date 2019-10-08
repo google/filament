@@ -222,7 +222,9 @@ set(SPIRV_TOOLS_OPT_SOURCES
   wrap_opkill.cpp
 )
 
-if(MSVC)
+# Filament specific changes
+if(MSVC AND NOT "${CMAKE_CXX_SIMULATE_ID}" STREQUAL "MSVC")
+# End Filament specific changes
   # Enable parallel builds across four cores for this lib
   add_definitions(/MP4)
 endif()
