@@ -102,7 +102,7 @@ TEST_F(BackendTest, MissingRequiredAttributes) {
         getDriverApi().startCapture(0);
 
         getDriverApi().makeCurrent(swapChain, swapChain);
-        getDriverApi().beginFrame(0, 0);
+        getDriverApi().beginFrame(0, 0, nullptr, nullptr);
 
         // Render a triangle.
         getDriverApi().beginRenderPass(defaultRenderTarget, params);

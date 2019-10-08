@@ -30,6 +30,7 @@ set(SRCS
         src/Program.cpp
         src/SamplerGroup.cpp
         src/TextureReshaper.cpp
+        src/Callable.cpp
 )
 
 set(PRIVATE_HDRS

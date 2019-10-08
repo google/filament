@@ -475,7 +475,8 @@ void FRenderer::copyFrame(FSwapChain* dstSwapChain, filament::Viewport const& ds
     mSwapChain->makeCurrent(driver);
 }
 
-bool FRenderer::beginFrame(FSwapChain* swapChain) {
+bool FRenderer::beginFrame(FSwapChain* swapChain, backend::FrameFinishedCallback callback,
+        void* user) {
     SYSTRACE_CALL();
 
     assert(swapChain);
@@ -498,7 +499,7 @@ bool FRenderer::beginFrame(FSwapChain* swapChain) {
     swapChain->makeCurrent(driver);
 
     int64_t monotonic_clock_ns (std::chrono::steady_clock::now().time_since_epoch().count());
-    driver.beginFrame(monotonic_clock_ns, mFrameId);
+    driver.beginFrame(monotonic_clock_ns, mFrameId, callback, user);
 
     // This need to occur after the backend beginFrame() because some backends need to start
     // a command buffer before creating a fence.
@@ -656,8 +657,9 @@ void Renderer::render(View const* view) {
     upcast(this)->render(upcast(view));
 }
 
-bool Renderer::beginFrame(SwapChain* swapChain) {
-    return upcast(this)->beginFrame(upcast(swapChain));
+bool Renderer::beginFrame(SwapChain* swapChain, backend::FrameFinishedCallback callback,
+        void* user) {
+    return upcast(this)->beginFrame(upcast(swapChain), callback, user);
 }
 
 void Renderer::copyFrame(SwapChain* dstSwapChain, filament::Viewport const& dstViewport,

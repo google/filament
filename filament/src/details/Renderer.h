@@ -33,6 +33,7 @@
 
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
+#include <backend/PresentCallable.h>
 
 #include <utils/compiler.h>
 #include <utils/Allocator.h>
@@ -74,7 +75,7 @@ public:
     void copyFrame(FSwapChain* dstSwapChain, Viewport const& dstViewport,
             Viewport const& srcViewport, CopyFrameFlag flags);
 
-    bool beginFrame(FSwapChain* swapChain);
+    bool beginFrame(FSwapChain* swapChain, backend::FrameFinishedCallback callback, void* user);
     void endFrame();
 
     void resetUserTime();

@@ -110,7 +110,9 @@
 
 DECL_DRIVER_API_N(beginFrame,
         int64_t, monotonic_clock_ns,
-        uint32_t, frameId)
+        uint32_t, frameId,
+        backend::FrameFinishedCallback, callback,
+        void*, user)
 
 DECL_DRIVER_API_N(setPresentationTime,
         int64_t, monotonic_clock_ns)

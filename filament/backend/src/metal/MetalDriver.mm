@@ -89,13 +89,19 @@ void MetalDriver::debugCommand(const char *methodName) {
 }
 #endif
 
-void MetalDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId) {
+void MetalDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId,
+        backend::FrameFinishedCallback callback, void* user) {
     mContext->framePool = [[NSAutoreleasePool alloc] init];
 
     id<MTLCommandBuffer> commandBuffer = acquireCommandBuffer(mContext);
     [commandBuffer addCompletedHandler:^(id <MTLCommandBuffer> buffer) {
         mContext->resourceTracker.clearResources(buffer);
     }];
+
+    // If a callback was specified, then the client is responsible for presenting the frame.
+    mContext->clientPresent = callback != nullptr;
+    mContext->frameFinishedCallback = callback;
+    mContext->frameFinishedUserData = user;
 }
 
 void MetalDriver::setPresentationTime(int64_t monotonic_clock_ns) {
@@ -114,6 +120,12 @@ void MetalDriver::endFrame(uint32_t frameId) {
     // Release resources created during frame execution- like commandBuffer and currentDrawable.
     [mContext->framePool drain];
     mContext->bufferPool->gc();
+
+    if (!mContext->clientPresent) {
+        // If we're responsible for presenting the frame, then by this point we've already done so
+        // and it's safe to release the drawable.
+        [mContext->currentDrawable release];
+    }
 
     CVMetalTextureCacheFlush(mContext->textureCache, 0);
 }
@@ -664,8 +676,9 @@ void MetalDriver::makeCurrent(Handle<HwSwapChain> schDraw, Handle<HwSwapChain> s
 }
 
 void MetalDriver::commit(Handle<HwSwapChain> sch) {
-    if (mContext->currentDrawable != nil) {
+    if (mContext->currentDrawable != nil && !mContext->clientPresent) {
         [mContext->currentCommandBuffer presentDrawable:mContext->currentDrawable];
+        [mContext->currentDrawable release];
     }
     [mContext->currentCommandBuffer commit];
     mContext->currentCommandBuffer = nil;
