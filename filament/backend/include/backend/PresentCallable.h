@@ -54,6 +54,9 @@ namespace backend {
  * }
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  *
+ * @remark Only Filament's Metal backend supports PresentCallables and frame callbacks. Other
+ * backends ignore the callback (which will never be called) and proceed normally.
+ *
  * @remark The backend::FrameFinishedCallback is called on an arbitrary thread.
  *
  * Applications *must* call each PresentCallable they receive. Each PresentCallable represents a

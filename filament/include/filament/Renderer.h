@@ -264,7 +264,8 @@ public:
      * Typically, Filament is responsible for scheduling the frame's presentation to the SwapChain.
      * If a backend::FrameFinishedCallback is provided, however, the application bares the
      * responsibility of scheduling a frame for presentation by calling the backend::PresentCallable
-     * passed to the callback function.
+     * passed to the callback function. Currently this functionality is only supported by the Metal
+     * backend.
      *
      * @param swapChain A pointer to the SwapChain instance to use.
      * @param callback  A callback function that will be called when the backend has finished

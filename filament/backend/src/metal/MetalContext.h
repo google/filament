@@ -53,7 +53,7 @@ struct MetalContext {
     id<MTLCommandBuffer> currentCommandBuffer = nullptr;
     id<MTLRenderCommandEncoder> currentCommandEncoder = nullptr;
 
-    // This flag is set to true iff a FrameFinishedCallback is passed to beginFrame().
+    // This flag is set to true if and only if a FrameFinishedCallback is passed to beginFrame().
     // If false, the Metal backend automatically calls presentDrawable when the frame is commited.
     // If true, the Metal backend will not automatically present the frame. Instead, clients bear
     // the responsibility of presenting the frame by calling the PresentCallable object.

@@ -19,6 +19,7 @@ set(PUBLIC_HDRS
 
 set(SRCS
         src/BackendUtils.cpp
+        src/Callable.cpp
         src/CircularBuffer.cpp
         src/CommandBufferQueue.cpp
         src/CommandStream.cpp
@@ -30,7 +31,6 @@ set(SRCS
         src/Program.cpp
         src/SamplerGroup.cpp
         src/TextureReshaper.cpp
-        src/Callable.cpp
 )
 
 set(PRIVATE_HDRS
