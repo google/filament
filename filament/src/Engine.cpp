@@ -376,6 +376,9 @@ void FEngine::flushAndWait() {
 // -----------------------------------------------------------------------------------------------
 
 int FEngine::loop() {
+
+    error
+
     // we don't own the external context at that point, set it to null
     Platform* platform = mPlatform;
     mPlatform = nullptr;
