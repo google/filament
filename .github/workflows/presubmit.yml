@@ -12,7 +12,15 @@ jobs:
         os: [macos-latest, ubuntu-latest]
 
     steps:
-      - uses: actions/checkout@v1
+      - name: Checkout Filament
+        run: |
+          git version
+          git init $GITHUB_WORKSPACE
+          cd $GITHUB_WORKSPACE
+          git remote add origin https://github.com/google/filament
+          git config gc.auto 0
+          git fetch --tags --prune --progress --no-recurse-submodules origin +${GITHUB_REF}:${GITHUB_REF/refs\//refs\/remote\/}
+          git checkout --progress --force ${GITHUB_REF/refs\//refs\/remote\/}
       - name: Run build script
         run: |
           WORKFLOW_OS=`echo \`uname\` | sed "s/Darwin/mac/" | tr [:upper:] [:lower:]`
@@ -25,7 +33,15 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      - uses: actions/checkout@v1
+      - name: Checkout Filament
+        run: |
+          git version
+          git init $GITHUB_WORKSPACE
+          cd $GITHUB_WORKSPACE
+          git remote add origin https://github.com/google/filament
+          git config gc.auto 0
+          git fetch --tags --prune --progress --no-recurse-submodules origin +${GITHUB_REF}:${GITHUB_REF/refs\//refs\/remote\/}
+          git checkout --progress --force ${GITHUB_REF/refs\//refs\/remote\/}
       - name: Run build script
         run: |
           cd build/android && ./build.sh ${TARGET}
@@ -37,7 +53,15 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      - uses: actions/checkout@v1
+      - name: Checkout Filament
+        run: |
+          git version
+          git init $GITHUB_WORKSPACE
+          cd $GITHUB_WORKSPACE
+          git remote add origin https://github.com/google/filament
+          git config gc.auto 0
+          git fetch --tags --prune --progress --no-recurse-submodules origin +${GITHUB_REF}:${GITHUB_REF/refs\//refs\/remote\/}
+          git checkout --progress --force ${GITHUB_REF/refs\//refs\/remote\/}
       - name: Run build script
         run: |
           cd build/ios && ./build.sh ${TARGET}
@@ -49,7 +73,15 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      - uses: actions/checkout@v1
+      - name: Checkout Filament
+        run: |
+          git version
+          git init $GITHUB_WORKSPACE
+          cd $GITHUB_WORKSPACE
+          git remote add origin https://github.com/google/filament
+          git config gc.auto 0
+          git fetch --tags --prune --progress --no-recurse-submodules origin +${GITHUB_REF}:${GITHUB_REF/refs\//refs\/remote\/}
+          git checkout --progress --force ${GITHUB_REF/refs\//refs\/remote\/}
       - name: Run build script
         run: |
           cd build/web && ./build.sh ${TARGET}
