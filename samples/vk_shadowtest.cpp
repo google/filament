@@ -74,7 +74,7 @@ int main(int argc, char** argv) {
 
         // Add geometry into the scene.
         app.meshes = new MeshAssimp(*engine);
-        app.meshes->addFromFile(FilamentApp::getRootPath() + MODEL_FILE, app.materials);
+        app.meshes->addFromFile(FilamentApp::getRootAssetsPath() + MODEL_FILE, app.materials);
         auto ti = tcm.getInstance(app.meshes->getRenderables()[0]);
         app.transform = mat4f{ mat3f(1), float3(0, 0, -4) } * tcm.getWorldTransform(ti);
         for (auto renderable : app.meshes->getRenderables()) {
