@@ -37,6 +37,10 @@ To use Filament from Java you must use the following two libraries instead:
 - `filament-java.jar`, Contains Filament's Java classes
 - `filament-jni`, Filament's JNI bindings
 
+To link against debug builds of Filament, you must also link against:
+
+- `matdbg`, Support library that adds an interactive web-based debugger to Filament
+
 To use the Vulkan backend on macOS you must also make the following libraries available at runtime:
 - `MoltenVK_icd.json`
 - `libMoltenVK.dylib`
