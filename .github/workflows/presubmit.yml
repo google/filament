@@ -9,7 +9,7 @@ jobs:
 
     strategy:
       matrix:
-        os: [macos-latest, ubuntu-latest, windows-latest]
+        os: [macos-latest, ubuntu-latest]
 
     steps:
       - name: Checkout Filament
@@ -22,23 +22,29 @@ jobs:
           git fetch --tags --prune --progress --no-recurse-submodules origin +${GITHUB_REF}:${GITHUB_REF/refs\//refs\/remote\/}
           git checkout --progress --force ${GITHUB_REF/refs\//refs\/remote\/}
       - name: Run build script
-        if: matrix.os == 'macos-latest'
         run: |
-          cd build/mac && ./build.sh ${TARGET}
+          WORKFLOW_OS=`echo \`uname\` | sed "s/Darwin/mac/" | tr [:upper:] [:lower:]`
+          cd build/$WORKFLOW_OS && ./build.sh ${TARGET}
         env:
           TARGET: presubmit
-      - name: Run build script
-        if: matrix.os == 'ubuntu-latest'
+
+  build-windows:
+    name: build-windows
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Filament
         run: |
-          cd build/linux && ./build.sh ${TARGET}
-        env:
-          TARGET: presubmit
-      - name: Run build script
-        if: matrix.os == 'windows-latest'
-        run: |
-          cd build/windows && ./build.sh ${TARGET}
-        env:
-          TARGET: presubmit
+          git version
+          git init $GITHUB_WORKSPACE
+          cd $GITHUB_WORKSPACE
+          git remote add origin https://github.com/google/filament
+          git config gc.auto 0
+          git fetch --tags --prune --progress --no-recurse-submodules origin +%GITHUB_REF%:%GITHUB_REF:refs/=refs/remote/%
+          git checkout --progress --force %GITHUB_REF:refs/=refs/remote/%
+        - name: Run build script
+          run: |
+            cd build\windows && build-github.bat
 
   build-android:
     name: build-android
