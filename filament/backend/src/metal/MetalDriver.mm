@@ -99,7 +99,6 @@ void MetalDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId,
     }];
 
     // If a callback was specified, then the client is responsible for presenting the frame.
-    mContext->clientPresent = callback != nullptr;
     mContext->frameFinishedCallback = callback;
     mContext->frameFinishedUserData = user;
 }
@@ -121,7 +120,7 @@ void MetalDriver::endFrame(uint32_t frameId) {
     [mContext->framePool drain];
     mContext->bufferPool->gc();
 
-    if (!mContext->clientPresent) {
+    if (!mContext->frameFinishedCallback) {
         // If we're responsible for presenting the frame, then by this point we've already done so
         // and it's safe to release the drawable.
         [mContext->currentDrawable release];
@@ -676,7 +675,7 @@ void MetalDriver::makeCurrent(Handle<HwSwapChain> schDraw, Handle<HwSwapChain> s
 }
 
 void MetalDriver::commit(Handle<HwSwapChain> sch) {
-    if (mContext->currentDrawable != nil && !mContext->clientPresent) {
+    if (mContext->currentDrawable != nil && !mContext->frameFinishedCallback) {
         [mContext->currentCommandBuffer presentDrawable:mContext->currentDrawable];
         [mContext->currentDrawable release];
     }

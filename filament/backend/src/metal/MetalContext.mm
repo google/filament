@@ -37,7 +37,7 @@ id<CAMetalDrawable> acquireDrawable(MetalContext* context) {
         // 2. in the presentDrawable function, when the client calls the PresentCallable
         context->currentDrawable = [[context->currentSurface->layer nextDrawable] retain];
 
-        if (context->clientPresent) {
+        if (context->frameFinishedCallback) {
             id<CAMetalDrawable> drawable = context->currentDrawable;
             backend::FrameFinishedCallback callback = context->frameFinishedCallback;
             void* userData = context->frameFinishedUserData;
