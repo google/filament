@@ -79,7 +79,7 @@ int main(int argc, char** argv) {
 #else
     config.backend = Engine::Backend::VULKAN;
 #endif
-    config.iblDirectory = FilamentApp::getRootPath() + IBL_FOLDER;
+    config.iblDirectory = FilamentApp::getRootAssetsPath() + IBL_FOLDER;
 
     App app;
     auto setup = [config, &app](Engine* engine, View* view, Scene* scene) {
