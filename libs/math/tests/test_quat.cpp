@@ -299,3 +299,14 @@ TEST_F(QuatTest, MultiplicationExhaustive) {
         ASSERT_FLOAT_EQ(ab.w, ab_other.w);
     }
 }
+
+TEST_F(QuatTest, NaN) {
+    quatf qa = {.5, .5, .5, .5};
+    quatf qb = {0.49995, 0.49998, 0.49998, 0.49995};
+    quatf qs = slerp(qa, qb, 0.034934);
+
+    EXPECT_NEAR(qs[0], 0.5, 0.1);
+    EXPECT_NEAR(qs[1], 0.5, 0.1);
+    EXPECT_NEAR(qs[2], 0.5, 0.1);
+    EXPECT_NEAR(qs[3], 0.5, 0.1);
+}
