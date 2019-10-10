@@ -193,12 +193,12 @@ int main(int argc, char** argv) {
 
     auto loadResources = [&app] (utils::Path filename) {
         // Load external textures and buffers.
-        gltfio::ResourceLoader({
-            .engine = app.engine,
-            .gltfPath = filename.getAbsolutePath(),
-            .normalizeSkinningWeights = true,
-            .recomputeBoundingBoxes = false
-        }).loadResources(app.asset);
+        ResourceConfiguration configuration;
+        configuration.engine = app.engine;
+        configuration.gltfPath = filename.getAbsolutePath();
+        configuration.normalizeSkinningWeights = true;
+        configuration.recomputeBoundingBoxes = false;
+        gltfio::ResourceLoader(configuration).loadResources(app.asset);
 
         // Load animation data then free the source hierarchy.
         app.asset->getAnimator();
