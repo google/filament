@@ -21,11 +21,17 @@
 namespace filament {
 namespace backend {
 
+PresentCallable::PresentCallable(PresentFn fn, void* user) noexcept
+    : mPresentFn(fn), mUser(user) {
+    assert(fn != nullptr);
+}
+
 void PresentCallable::operator()() noexcept {
-    ASSERT_PRECONDITION(!mCalled, "This PresentCallable was already called. " \
+    ASSERT_PRECONDITION(mPresentFn, "This PresentCallable was already called. " \
             "PresentCallables should be called exactly once.");
     mPresentFn(mUser);
-    mCalled = true;
+    // Set mPresentFn to nullptr to denote that the callable has been called.
+    mPresentFn = nullptr;
 }
 
 } // namespace backend

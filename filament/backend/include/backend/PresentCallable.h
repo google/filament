@@ -70,9 +70,7 @@ public:
 
     using PresentFn = void(*)(void* user);
 
-    PresentCallable(PresentFn fn, void* user) noexcept
-        : mPresentFn(fn), mUser(user) { }
-
+    PresentCallable(PresentFn fn, void* user) noexcept;
     ~PresentCallable() noexcept = default;
     PresentCallable(const PresentCallable& rhs) = default;
     PresentCallable& operator=(const PresentCallable& rhs) = default;
@@ -84,7 +82,6 @@ private:
 
     PresentFn mPresentFn;
     void* mUser = nullptr;
-    bool mCalled = false;
 
 };
 
