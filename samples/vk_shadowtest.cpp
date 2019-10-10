@@ -58,7 +58,7 @@ static GroundPlane createGroundPlane(Engine* engine);
 
 static const Config config {
     .title = "shadowtest",
-    .iblDirectory = FilamentApp::getRootPath() + IBL_FOLDER,
+    .iblDirectory = FilamentApp::getRootAssetsPath() + IBL_FOLDER,
     .scale = 1,
     .splitView = false,
     .backend = Backend::VULKAN,
