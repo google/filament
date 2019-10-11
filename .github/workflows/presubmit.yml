@@ -44,7 +44,7 @@ jobs:
           git checkout --progress --force %GITHUB_REF:refs/=refs/remote/%
       - name: Run build script
         run: |
-          cd build\windows && build-github.bat
+          build\windows\build-github.bat
 
   build-android:
     name: build-android
