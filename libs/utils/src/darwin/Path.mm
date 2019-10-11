@@ -42,6 +42,11 @@ Path Path::getCurrentExecutable() {
     return result;
 }
 
+Path Path::getTemporaryDirectory() {
+    NSString* tempDir = NSTemporaryDirectory();
+    return Path([tempDir cStringUsingEncoding:NSUTF8StringEncoding]);
+}
+
 std::vector<Path> Path::listContents() const {
     // Return an empty vector if the path doesn't exist or is not a directory
     if (!isDirectory() || !exists()) {
@@ -71,4 +76,3 @@ std::vector<Path> Path::listContents() const {
 }
 
 } // namespace utils
-

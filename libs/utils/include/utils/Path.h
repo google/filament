@@ -240,6 +240,11 @@ public:
     static Path getCurrentExecutable();
 
     /**
+     * @return a path representing a directory where temporary files can be stored
+     */
+    static Path getTemporaryDirectory();
+
+    /**
      * Creates a directory denoted by the given path.
      * This is not recursive and doesn't create intermediate directories.
      *
