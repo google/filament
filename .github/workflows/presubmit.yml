@@ -42,9 +42,9 @@ jobs:
           git config gc.auto 0
           git fetch --tags --prune --progress --no-recurse-submodules origin +%GITHUB_REF%:%GITHUB_REF:refs/=refs/remote/%
           git checkout --progress --force %GITHUB_REF:refs/=refs/remote/%
-        - name: Run build script
-          run: |
-            cd build\windows && build-github.bat
+      - name: Run build script
+        run: |
+          cd build\windows && build-github.bat
 
   build-android:
     name: build-android
