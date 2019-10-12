@@ -48,30 +48,21 @@ namespace details {
 
 namespace matrix {
 
-inline constexpr int     transpose(int v)    { return v; }
-inline constexpr float   transpose(float v)  { return v; }
-inline constexpr double  transpose(double v) { return v; }
-
-inline constexpr int     trace(int v)    { return v; }
-inline constexpr float   trace(float v)  { return v; }
-inline constexpr double  trace(double v) { return v; }
-
 /*
  * Matrix inversion
  */
 template<typename MATRIX>
-constexpr MATRIX MATH_PURE gaussJordanInverse(const MATRIX& src) {
+constexpr MATRIX MATH_PURE gaussJordanInverse(MATRIX src) {
     typedef typename MATRIX::value_type T;
     constexpr unsigned int N = MATRIX::NUM_ROWS;
-    MATRIX tmp(src);
-    MATRIX inverted(1);
+    MATRIX inverted;
 
     for (size_t i = 0; i < N; ++i) {
         // look for largest element in i'th column
         size_t swap = i;
-        T t = tmp[i][i] < 0 ? -tmp[i][i] : tmp[i][i];
+        T t = src[i][i] < 0 ? -src[i][i] : src[i][i];
         for (size_t j = i + 1; j < N; ++j) {
-            const T t2 = tmp[j][i] < 0 ? -tmp[j][i] : tmp[j][i];
+            const T t2 = src[j][i] < 0 ? -src[j][i] : src[j][i];
             if (t2 > t) {
                 swap = j;
                 t = t2;
@@ -80,22 +71,22 @@ constexpr MATRIX MATH_PURE gaussJordanInverse(const MATRIX& src) {
 
         if (swap != i) {
             // swap columns.
-            std::swap(tmp[i], tmp[swap]);
+            std::swap(src[i], src[swap]);
             std::swap(inverted[i], inverted[swap]);
         }
 
-        const T denom(tmp[i][i]);
+        const T denom(src[i][i]);
         for (size_t k = 0; k < N; ++k) {
-            tmp[i][k] /= denom;
+            src[i][k] /= denom;
             inverted[i][k] /= denom;
         }
 
         // Factor out the lower triangle
         for (size_t j = 0; j < N; ++j) {
             if (j != i) {
-                const T t = tmp[j][i];
+                const T t = src[j][i];
                 for (size_t k = 0; k < N; ++k) {
-                    tmp[j][k] -= tmp[i][k] * t;
+                    src[j][k] -= src[i][k] * t;
                     inverted[j][k] -= inverted[i][k] * t;
                 }
             }
@@ -420,7 +411,7 @@ template<typename MATRIX_R, typename MATRIX_A, typename MATRIX_B,
                 MATRIX_A::NUM_COLS == MATRIX_B::NUM_ROWS &&
                 MATRIX_R::NUM_COLS == MATRIX_B::NUM_COLS &&
                 MATRIX_R::NUM_ROWS == MATRIX_A::NUM_ROWS, int>>
-constexpr MATRIX_R MATH_PURE multiply(const MATRIX_A& lhs, const MATRIX_B& rhs) {
+constexpr MATRIX_R MATH_PURE multiply(MATRIX_A lhs, MATRIX_B rhs) {
     // pre-requisite:
     //  lhs : D columns, R rows
     //  rhs : C columns, D rows
@@ -432,35 +423,32 @@ constexpr MATRIX_R MATH_PURE multiply(const MATRIX_A& lhs, const MATRIX_B& rhs) 
     return res;
 }
 
-// transpose. this handles matrices of matrices
 template<typename MATRIX,
         typename = std::enable_if_t<MATRIX::NUM_ROWS == MATRIX::NUM_COLS, int>>
-constexpr MATRIX MATH_PURE transpose(const MATRIX& m) {
+inline constexpr MATRIX MATH_PURE transpose(MATRIX m) {
     // for now we only handle square matrix transpose
     MATRIX result{};
     for (size_t col = 0; col < MATRIX::NUM_COLS; ++col) {
         for (size_t row = 0; row < MATRIX::NUM_ROWS; ++row) {
-            result[col][row] = transpose(m[row][col]);
+            result[col][row] = m[row][col];
         }
     }
     return result;
 }
 
-// trace. this handles matrices of matrices
 template<typename MATRIX,
         typename = std::enable_if_t<MATRIX::NUM_ROWS == MATRIX::NUM_COLS, int>>
-constexpr typename MATRIX::value_type MATH_PURE trace(const MATRIX& m) {
-    typename MATRIX::value_type result(0);
+inline constexpr typename MATRIX::value_type MATH_PURE trace(MATRIX m) {
+    typename MATRIX::value_type result{};
     for (size_t col = 0; col < MATRIX::NUM_COLS; ++col) {
-        result += trace(m[col][col]);
+        result += m[col][col];
     }
     return result;
 }
 
-// diag. this handles matrices of matrices
 template<typename MATRIX,
         typename = std::enable_if_t<MATRIX::NUM_ROWS == MATRIX::NUM_COLS, int>>
-constexpr typename MATRIX::col_type MATH_PURE diag(const MATRIX& m) {
+inline constexpr typename MATRIX::col_type MATH_PURE diag(MATRIX m) {
     typename MATRIX::col_type result{};
     for (size_t col = 0; col < MATRIX::NUM_COLS; ++col) {
         result[col] = m[col][col];
@@ -533,7 +521,7 @@ public:
     template<typename U>
     constexpr BASE<T>& operator*=(const BASE<U>& rhs) {
         BASE<T>& lhs(static_cast< BASE<T>& >(*this));
-        lhs = matrix::multiply<BASE<T> >(lhs, rhs);
+        lhs = matrix::multiply<BASE<T>>(lhs, rhs);
         return lhs;
     }
 
@@ -569,7 +557,7 @@ private:
     //  matrix * matrix
     template<typename U>
     friend inline constexpr BASE<arithmetic_result_t<T, U>> MATH_PURE
-    operator*(const BASE<T>& lhs, const BASE<U>& rhs) {
+    operator*(BASE<T> lhs, BASE<U> rhs) {
         return matrix::multiply<BASE<arithmetic_result_t<T, U>>>(lhs, rhs);
     }
 
@@ -596,11 +584,13 @@ private:
     }
 
     // matrix * scalar
-    template<typename U, typename = enable_if_arithmetic_t<U>>
-    friend inline constexpr BASE<arithmetic_result_t<T, U>> MATH_PURE
+    template<typename U, typename = enable_if_arithmetic_t <U>>
+    friend inline constexpr BASE<arithmetic_result_t < T, U>> MATH_PURE
     operator*(const BASE<T>& lhs, U rhs) {
-        BASE<arithmetic_result_t<T, U>> result{ lhs };
-        result *= rhs;
+        BASE<arithmetic_result_t<T, U>> result{};
+        for (size_t col = 0; col < BASE<T>::NUM_COLS; ++col) {
+            result[col] = lhs[col] * rhs;
+        }
         return result;
     }
 
@@ -615,8 +605,10 @@ private:
     template<typename U, typename = enable_if_arithmetic_t<U>>
     friend inline constexpr BASE<arithmetic_result_t<T, U>> MATH_PURE
     operator/(const BASE<T>& lhs, U rhs) {
-        BASE<arithmetic_result_t<T, U>> result{ lhs };
-        result /= rhs;
+        BASE<arithmetic_result_t<T, U>> result{};
+        for (size_t col = 0; col < BASE<T>::NUM_COLS; ++col) {
+            result[col] = lhs[col] / rhs;
+        }
         return result;
     }
 };
@@ -653,11 +645,11 @@ private:
         return matrix::cof(matrix);
     }
 
-    friend inline constexpr BASE<T> MATH_PURE transpose(const BASE<T>& m) {
+    friend inline constexpr BASE<T> MATH_PURE transpose(BASE<T> m) {
         return matrix::transpose(m);
     }
 
-    friend inline constexpr T MATH_PURE trace(const BASE<T>& m) {
+    friend inline constexpr T MATH_PURE trace(BASE<T> m) {
         return matrix::trace(m);
     }
 
@@ -707,7 +699,7 @@ public:
     }
 
     template<typename A, typename VEC, typename = enable_if_arithmetic_t<A>>
-    static BASE<T> rotation(A radian, const VEC& about) {
+    static BASE<T> rotation(A radian, VEC about) {
         BASE<T> r;
         T c = std::cos(radian);
         T s = std::sin(radian);
