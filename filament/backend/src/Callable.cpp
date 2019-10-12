@@ -26,10 +26,10 @@ PresentCallable::PresentCallable(PresentFn fn, void* user) noexcept
     assert(fn != nullptr);
 }
 
-void PresentCallable::operator()() noexcept {
+void PresentCallable::operator()(bool presentFrame) noexcept {
     ASSERT_PRECONDITION(mPresentFn, "This PresentCallable was already called. " \
             "PresentCallables should be called exactly once.");
-    mPresentFn(mUser);
+    mPresentFn(presentFrame, mUser);
     // Set mPresentFn to nullptr to denote that the callable has been called.
     mPresentFn = nullptr;
 }

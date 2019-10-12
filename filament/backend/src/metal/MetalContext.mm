@@ -24,9 +24,11 @@ namespace filament {
 namespace backend {
 namespace metal {
 
-void presentDrawable(void* user) {
+void presentDrawable(bool presentFrame, void* user) {
     id<CAMetalDrawable> drawable = (id<CAMetalDrawable>) user;
-    [drawable present];
+    if (presentFrame) {
+        [drawable present];
+    }
     [drawable release];
 }
 

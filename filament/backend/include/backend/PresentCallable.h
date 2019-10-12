@@ -61,22 +61,28 @@ namespace backend {
  *
  * Applications *must* call each PresentCallable they receive. Each PresentCallable represents a
  * frame that is waiting to be presented. If an application fails to call a PresentCallable, a
- * memory leak could occur.
+ * memory leak could occur. To "cancel" the presentation of a frame, pass false to the
+ * PresentCallable, which will cancel the presentation of the frame and release associated memory.
  *
  * @see Renderer, SwapChain, Renderer.beginFrame
  */
 class UTILS_PUBLIC PresentCallable {
 public:
 
-    using PresentFn = void(*)(void* user);
+    using PresentFn = void(*)(bool presentFrame, void* user);
 
     PresentCallable(PresentFn fn, void* user) noexcept;
     ~PresentCallable() noexcept = default;
     PresentCallable(const PresentCallable& rhs) = default;
     PresentCallable& operator=(const PresentCallable& rhs) = default;
 
-    //! Call this PresentCallable, scheduling the associated frame for presentation.
-    void operator()() noexcept;
+    /**
+     * Call this PresentCallable, scheduling the associated frame for presentation. Pass false for
+     * presentFrame to effectively "cancel" the presentation of the frame.
+     *
+     * @param presentFrame if false, will not present the frame but releases associated memory
+     */
+    void operator()(bool presentFrame = true) noexcept;
 
 private:
 
