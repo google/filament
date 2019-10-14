@@ -557,10 +557,11 @@ void VulkanBinder::createLayoutsAndDescriptors() noexcept {
     VkDescriptorPoolSize poolSizes[2] = {};
     VkDescriptorPoolCreateInfo poolInfo {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-        .poolSizeCount = 2,
-        .pPoolSizes = &poolSizes[0],
+        .pNext = nullptr,
+        .flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
         .maxSets = MAX_NUM_DESCRIPTORS,
-        .flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT
+        .poolSizeCount = 2,
+        .pPoolSizes = &poolSizes[0]
     };
     poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     poolSizes[0].descriptorCount = poolInfo.maxSets * UBUFFER_BINDING_COUNT;
