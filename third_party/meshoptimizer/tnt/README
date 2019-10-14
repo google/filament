@@ -15,6 +15,10 @@ Also added this to the CMakeLists.txt:
         target_compile_options(meshoptimizer PRIVATE -mssse3)
     endif()
 
+And commented-out the following:
+
+    # option(BUILD_DEMO "Build demo" OFF)
+
 To update the library, you can do this:
 
     curl -L -O https://github.com/zeux/meshoptimizer/archive/master.zip

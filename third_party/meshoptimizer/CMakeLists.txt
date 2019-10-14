@@ -1,7 +1,7 @@
 project(meshoptimizer)
 cmake_minimum_required(VERSION 3.10)
 
-option(BUILD_DEMO "Build demo" OFF)
+# option(BUILD_DEMO "Build demo" OFF)
 
 set(SOURCES
     src/meshoptimizer.h
