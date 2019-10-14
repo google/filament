@@ -184,11 +184,6 @@ private:
         VkPipeline handle;
         uint32_t timestamp;
         bool bound;
-        // move-only (disallow copy) to allow keeping a pointer to the "current" value in the map.
-        PipelineVal(PipelineVal const&) = delete;
-        PipelineVal& operator=(PipelineVal const&) = delete;
-        PipelineVal(PipelineVal &&) = default;
-        PipelineVal& operator=(PipelineVal &&) = default;
     };
 
     // The descriptor key is a POD that represents all currently bound states that go into the
@@ -215,11 +210,6 @@ private:
         VkDescriptorSet handles[2];
         uint32_t timestamp;
         bool bound;
-        // move-only (disallow copy) to allow keeping a pointer to the "current" value in the map.
-        DescriptorVal(DescriptorVal const&) = delete;
-        DescriptorVal& operator=(DescriptorVal const&) = delete;
-        DescriptorVal(DescriptorVal &&) = default;
-        DescriptorVal& operator=(DescriptorVal &&) = default;
     };
 
     void createLayoutsAndDescriptors() noexcept;
