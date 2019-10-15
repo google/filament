@@ -79,6 +79,10 @@ bool GLSLToolsLite::findProperties(
         filament::backend::ShaderType type,
         const utils::CString& material,
         MaterialBuilder::PropertyList& properties) const noexcept {
+    if (material.empty()) {
+        return true;
+    }
+
     const std::string shaderCode = stripComments(material.c_str());
 
     size_t start = 0, end = 0;

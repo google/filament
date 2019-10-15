@@ -73,6 +73,13 @@ android {
         }
     }
 
+    // The filamat library has two variants: full and lite. Here we default to the "full" variant.
+    // Replace "full" with "lite" to use the filamat-lite variant, which has a smaller binary size
+    // but comes with certain restrictions. See "Filamat Lite" in libs/filamat/README.md.
+    defaultConfig {
+        missingDimensionStrategy 'functionality', 'full'
+    }
+
     // We use the .filamat extension for materials compiled with matc
     // Telling aapt to not compress them allows to load them efficiently
     aaptOptions {
