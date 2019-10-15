@@ -40,6 +40,12 @@ Path Path::getCurrentExecutable() {
     return result;
 }
 
+Path Path::getTemporaryDirectory() {
+    TCHAR lpTempPathBuffer[MAX_PATH];
+    DWORD dwRetVal = GetTempPath(MAX_PATH, lpTempPathBuffer);
+    return Path(lpTempPathBuffer);
+}
+
 std::vector<Path> Path::listContents() const {
     // Return an empty vector if the path doesn't exist or is not a directory
     if (!isDirectory() || !exists()) {

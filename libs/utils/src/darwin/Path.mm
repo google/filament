@@ -16,9 +16,14 @@
 
 #include <utils/Path.h>
 
+#include <vector>
+
 #include <dirent.h>
-#include <unistd.h>
 #include <sys/stat.h>
+
+#include <mach-o/dyld.h>
+
+#include <Foundation/Foundation.h>
 
 namespace utils {
 
@@ -31,10 +36,8 @@ Path Path::getCurrentExecutable() {
     char exec_buf[2048];
     Path result;
 
-    uint32_t buffer_size = sizeof(exec_buf)-1;
-    ssize_t sz = readlink("/proc/self/exe", exec_buf, buffer_size);
-    if (sz > 0) {
-        exec_buf[sz] = 0;
+    uint32_t buffer_size = sizeof(exec_buf);
+    if (_NSGetExecutablePath(exec_buf, &buffer_size) == 0) {
         result.setPath(exec_buf);
     }
 
@@ -42,7 +45,8 @@ Path Path::getCurrentExecutable() {
 }
 
 Path Path::getTemporaryDirectory() {
-    return Path("/tmp/");
+    NSString* tempDir = NSTemporaryDirectory();
+    return Path([tempDir cStringUsingEncoding:NSUTF8StringEncoding]);
 }
 
 std::vector<Path> Path::listContents() const {
@@ -72,4 +76,5 @@ std::vector<Path> Path::listContents() const {
     closedir(dir);
     return directory_contents;
 }
+
 } // namespace utils

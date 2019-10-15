@@ -21,6 +21,8 @@
 #include <assert.h>
 #include <stdio.h>
 
+#include <utils/Path.h>
+
 #if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
 #   include <fcntl.h>
 #   include <stdlib.h>
@@ -133,7 +135,8 @@ error:
 
 int ashmem_create_region(const char*, size_t size) {
     char template_path[512];
-    snprintf(template_path, sizeof(template_path), "/tmp/filament-ashmem-%d-XXXXXXXXX", getpid());
+    snprintf(template_path, sizeof(template_path), "%s/filament-ashmem-%d-XXXXXXXXX",
+            Path::getTemporaryDirectory().c_str(), getpid());
     int fd = mkstemp(template_path);
     if (fd == -1) return -1;
     unlink(template_path);
@@ -147,8 +150,8 @@ int ashmem_create_region(const char*, size_t size) {
 #else
 int ashmem_create_region(const char*, size_t size) {
     char template_path[512];
-    snprintf(template_path, sizeof(template_path), "/tmp/filament-ashmem-%lu-XXXXXXXXX", 
-            GetCurrentProcessId());
+    snprintf(template_path, sizeof(template_path), "%s/filament-ashmem-%lu-XXXXXXXXX",
+            Path::getTemporaryDirectory().c_str(), GetCurrentProcessId());
     const char* tmpPath = _mktemp(template_path);
     int fd = _open(tmpPath, _O_BINARY);
     if (fd == -1) return -1;

@@ -51,7 +51,7 @@ if (LINUX OR ANDROID)
     list(APPEND SRCS src/linux/Path.cpp)
 endif()
 if (APPLE)
-    list(APPEND SRCS src/darwin/Path.cpp)
+    list(APPEND SRCS src/darwin/Path.mm)
 endif()
 
 # ==================================================================================================
