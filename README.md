@@ -347,9 +347,9 @@ Install the following components:
 
 - [Visual Studio 2019](https://www.visualstudio.com/downloads)
 - [Python 3.7](https://www.python.org/ftp/python/3.7.0/python-3.7.0.exe)
-- [CMake 3.14 or later](https://github.com/Kitware/CMake/releases/download/v3.13.4/cmake-3.13.4-win64-x64.msi)
+- [CMake 3.14 or later](https://github.com/Kitware/CMake/releases/download/v3.14.7/cmake-3.14.7-win64-x64.msi)
 
-Open an appropriate Native Tools terminal for Visual Studio for x64, for example the `Developer Command Prompt for VS2019`.
+Open the `x64 Native Tools Command Prompt for VS 2019`.
 
 Create a working directory, and run cmake in it:
 
@@ -363,7 +363,7 @@ Then, you should be able to load the generated solution file `TNT.sln` in Visual
 
 Run it from the `out` directory with:
 ```
-> samples/Debug/material_sandbox.exe ../assets/models/monkey/monkey.obj
+> samples\Debug\material_sandbox.exe ..\assets\models\monkey\monkey.obj
 ```
 
 #### Building on Windows with the Clang compiler
