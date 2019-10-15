@@ -212,6 +212,10 @@ class MainActivity : Activity() {
                         "    material.clearCoat = 1.0;\n" +
                         "}\n")
 
+                // Turn off shader code optimization so this sample is compatible with the "lite"
+                // variant of the filamat library.
+                .optimization(MaterialBuilder.Optimization.NONE)
+
                 .build()
 
         if (matPackage.isValid) {
