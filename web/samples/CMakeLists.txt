@@ -63,7 +63,7 @@ function(add_rawfile SOURCE TARGET)
     set(target_textures ${target_textures} ${target_path} PARENT_SCOPE)
     add_custom_command(
         OUTPUT ${target_path}
-        COMMAND cmake -E copy ${source_path} ${target_path}
+        COMMAND ${CMAKE_COMMAND} -E copy ${source_path} ${target_path}
         MAIN_DEPENDENCY ${source_path})
 endfunction()
 
@@ -167,12 +167,12 @@ add_custom_target(sample_assets DEPENDS
 add_custom_command(
     OUTPUT ${SERVER_DIR}/filament.js
     DEPENDS filament-js
-    COMMAND cmake -E copy ${PROJECT_BINARY_DIR}/../filament-js/filament.js ${SERVER_DIR})
+    COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_BINARY_DIR}/../filament-js/filament.js ${SERVER_DIR})
 
 add_custom_command(
     OUTPUT ${SERVER_DIR}/filament.wasm
     DEPENDS filament-js
-    COMMAND cmake -E copy ${PROJECT_BINARY_DIR}/../filament-js/filament.wasm ${SERVER_DIR})
+    COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_BINARY_DIR}/../filament-js/filament.wasm ${SERVER_DIR})
 
 add_custom_target(filamentjs_public DEPENDS ${SERVER_DIR}/filament.js ${SERVER_DIR}/filament.wasm)
 
@@ -193,7 +193,7 @@ set(DEMO_ASSETS)
 foreach (NAME ${HTML_FILES})
     add_custom_command(
         OUTPUT ${SERVER_DIR}/${NAME}
-        COMMAND cmake -E copy ${CMAKE_CURRENT_SOURCE_DIR}/${NAME} ${SERVER_DIR}
+        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/${NAME} ${SERVER_DIR}
         MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/${NAME})
     list(APPEND DEMO_ASSETS ${SERVER_DIR}/${NAME})
 endforeach()
@@ -202,14 +202,14 @@ set(TEXTURE_FILES floor_ao_roughness_metallic.png floor_basecolor.png floor_norm
 foreach (NAME ${TEXTURE_FILES})
     add_custom_command(
         OUTPUT ${SERVER_DIR}/${NAME}
-        COMMAND cmake -E copy ${CMAKE_CURRENT_SOURCE_DIR}/textures/${NAME} ${SERVER_DIR}
+        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/textures/${NAME} ${SERVER_DIR}
         MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/textures/${NAME})
     list(APPEND DEMO_ASSETS ${SERVER_DIR}/${NAME})
 endforeach()
 
 add_custom_command(
     OUTPUT ${SERVER_DIR}/gl-matrix-min.js
-    COMMAND cmake -E copy ${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/gl-matrix/gl-matrix-min.js ${SERVER_DIR}/gl-matrix-min.js
+    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/gl-matrix/gl-matrix-min.js ${SERVER_DIR}/gl-matrix-min.js
     MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/gl-matrix/gl-matrix-min.js)
 list(APPEND DEMO_ASSETS ${SERVER_DIR}/gl-matrix-min.js)
 
