@@ -23,6 +23,8 @@
 
 #include <mach-o/dyld.h>
 
+#include <Foundation/Foundation.h>
+
 namespace utils {
 
 bool Path::mkdir() const {
