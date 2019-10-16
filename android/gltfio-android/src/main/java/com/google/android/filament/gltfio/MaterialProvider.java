@@ -29,29 +29,14 @@ import java.lang.reflect.Method;
 public class MaterialProvider {
     private long mNativeObject;
 
-    private static Method sEngineGetNativeObject;
-
-    static {
-        try {
-            sEngineGetNativeObject = Engine.class.getDeclaredMethod("getNativeObject");
-            sEngineGetNativeObject.setAccessible(true);
-        } catch (NoSuchMethodException e) {
-            // Cannot happen
-        }
-    }
-
     /**
      * Constructs an ubershader loader using the supplied {@link Engine}.
      *
      * @param engine the engine used to create materials
      */
     public MaterialProvider(Engine engine) {
-        try {
-            long nativeEngine = (long) sEngineGetNativeObject.invoke(engine);
-            mNativeObject = nCreateMaterialProvider(nativeEngine);
-        } catch (Exception e) {
-            // Ignored
-        }
+        long nativeEngine = engine.getNativeObject();
+        mNativeObject = nCreateMaterialProvider(nativeEngine);
     }
 
     /**

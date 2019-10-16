@@ -21,12 +21,7 @@ import android.support.annotation.Nullable;
 
 import com.google.android.filament.Engine;
 import com.google.android.filament.EntityManager;
-import com.google.android.filament.IndirectLight;
-import com.google.android.filament.Skybox;
-import com.google.android.filament.Texture;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Method;
 import java.nio.Buffer;
 
 /**
@@ -70,35 +65,11 @@ import java.nio.Buffer;
 public class AssetLoader {
     private long mNativeObject;
 
-    static Method sEngineGetNativeObject;
-    static Method sEntityManagerGetNativeObject;
-    static Constructor<Texture> sTextureConstructor;
-    static Constructor<IndirectLight> sIndirectLightConstructor;
-    static Constructor<Skybox> sSkyboxConstructor;
-
     /**
      * Initializes the gltfio JNI layer. Must be called before using any gltfio functionality.
      */
     public static void init() {
         System.loadLibrary("gltfio-jni");
-        try {
-            sEngineGetNativeObject = Engine.class.getDeclaredMethod("getNativeObject");
-            sEngineGetNativeObject.setAccessible(true);
-
-            sEntityManagerGetNativeObject = EntityManager.class.getDeclaredMethod("getNativeObject");
-            sEntityManagerGetNativeObject.setAccessible(true);
-
-            sTextureConstructor = Texture.class.getDeclaredConstructor(long.class);
-            sTextureConstructor.setAccessible(true);
-
-            sIndirectLightConstructor = IndirectLight.class.getDeclaredConstructor(long.class);
-            sIndirectLightConstructor.setAccessible(true);
-
-            sSkyboxConstructor = Skybox.class.getDeclaredConstructor(long.class);
-            sSkyboxConstructor.setAccessible(true);
-        } catch (NoSuchMethodException e) {
-            // Cannot happen
-        }
     }
 
     /**
@@ -111,14 +82,12 @@ public class AssetLoader {
      */
     public AssetLoader(@NonNull Engine engine, @NonNull MaterialProvider generator,
             @NonNull EntityManager entities) {
-        try {
-            long nativeEngine = (long) sEngineGetNativeObject.invoke(engine);
-            long nativeMaterials = generator.getNativeObject();
-            long nativeEntities = (long) sEntityManagerGetNativeObject.invoke(entities);
-            mNativeObject = nCreateAssetLoader(nativeEngine, nativeMaterials, nativeEntities);
-        } catch (Exception e) {
-            // Ignored
-        }
+
+        long nativeEngine = engine.getNativeObject();
+        long nativeMaterials = generator.getNativeObject();
+        long nativeEntities = entities.getNativeObject();
+        mNativeObject = nCreateAssetLoader(nativeEngine, nativeMaterials, nativeEntities);
+
         if (mNativeObject == 0) {
             throw new IllegalStateException("Unable to parse glTF asset.");
         }

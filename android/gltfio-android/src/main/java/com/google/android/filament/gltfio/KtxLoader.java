@@ -24,6 +24,8 @@ import com.google.android.filament.IndirectLight;
 import com.google.android.filament.Skybox;
 import com.google.android.filament.Texture;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
 import java.nio.Buffer;
 
 /**
@@ -33,6 +35,24 @@ import java.nio.Buffer;
  * into a single file.</p>
  */
 public class KtxLoader {
+    private static Constructor<Texture> sTextureConstructor;
+    private static Constructor<IndirectLight> sIndirectLightConstructor;
+    private static Constructor<Skybox> sSkyboxConstructor;
+
+    static {
+        try {
+            sTextureConstructor = Texture.class.getDeclaredConstructor(long.class);
+            sTextureConstructor.setAccessible(true);
+
+            sIndirectLightConstructor = IndirectLight.class.getDeclaredConstructor(long.class);
+            sIndirectLightConstructor.setAccessible(true);
+
+            sSkyboxConstructor = Skybox.class.getDeclaredConstructor(long.class);
+            sSkyboxConstructor.setAccessible(true);
+        } catch (NoSuchMethodException e) {
+            // Cannot happen
+        }
+    }
 
     public static class Options {
         public boolean srgb;
@@ -49,9 +69,9 @@ public class KtxLoader {
     @Nullable
     public static Texture createTexture(@NonNull Engine engine, @NonNull Buffer buffer, @NonNull Options options) {
         try {
-            long nativeEngine = (long) AssetLoader.sEngineGetNativeObject.invoke(engine);
+            long nativeEngine = engine.getNativeObject();
             long nativeTexture = nCreateTexture(nativeEngine, buffer, buffer.remaining(), options.srgb);
-            return AssetLoader.sTextureConstructor.newInstance(nativeTexture);
+            return sTextureConstructor.newInstance(nativeTexture);
         } catch (Exception e) {
             return null;
         }
@@ -68,9 +88,9 @@ public class KtxLoader {
     @Nullable
     public static IndirectLight createIndirectLight(@NonNull Engine engine, @NonNull Buffer buffer, @NonNull Options options) {
         try {
-            long nativeEngine = (long) AssetLoader.sEngineGetNativeObject.invoke(engine);
+            long nativeEngine = engine.getNativeObject();
             long nativeIndirectLight = nCreateIndirectLight(nativeEngine, buffer, buffer.remaining(), options.srgb);
-            return AssetLoader.sIndirectLightConstructor.newInstance(nativeIndirectLight);
+            return sIndirectLightConstructor.newInstance(nativeIndirectLight);
         } catch (Exception e) {
             return null;
         }
@@ -87,9 +107,9 @@ public class KtxLoader {
     @Nullable
     public static Skybox createSkybox(@NonNull Engine engine, @NonNull Buffer buffer, @NonNull Options options) {
         try {
-            long nativeEngine = (long) AssetLoader.sEngineGetNativeObject.invoke(engine);
+            long nativeEngine = engine.getNativeObject();
             long nativeSkybox = nCreateSkybox(nativeEngine, buffer, buffer.remaining(), options.srgb);
-            return AssetLoader.sSkyboxConstructor.newInstance(nativeSkybox);
+            return sSkyboxConstructor.newInstance(nativeSkybox);
         } catch (Exception e) {
             return null;
         }
