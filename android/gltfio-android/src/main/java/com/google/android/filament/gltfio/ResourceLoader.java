@@ -36,17 +36,6 @@ import java.nio.Buffer;
 public class ResourceLoader {
     private final long mNativeObject;
 
-    private static Method sEngineGetNativeObject;
-
-    static {
-        try {
-            sEngineGetNativeObject = Engine.class.getDeclaredMethod("getNativeObject");
-            sEngineGetNativeObject.setAccessible(true);
-        } catch (NoSuchMethodException e) {
-            // Cannot happen
-        }
-    }
-
     /**
      * Constructs a resource loader tied to the given Filament engine.
      *
@@ -54,8 +43,8 @@ public class ResourceLoader {
      * @throws IllegalAccessException
      * @throws InvocationTargetException
      */
-    public ResourceLoader(@NonNull Engine engine) throws IllegalAccessException, InvocationTargetException {
-        long nativeEngine = (long) sEngineGetNativeObject.invoke(engine);
+    public ResourceLoader(@NonNull Engine engine) {
+        long nativeEngine = engine.getNativeObject();
         mNativeObject = nCreateResourceLoader(nativeEngine);
     }
 
