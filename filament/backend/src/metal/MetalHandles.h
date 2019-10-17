@@ -67,7 +67,7 @@ public:
     MetalUniformBuffer(MetalContext& context, size_t size);
     ~MetalUniformBuffer();
 
-    size_t getSize() const { return size; }
+    size_t getSize() const { return uniformSize; }
 
     /**
      * Update the uniform with data inside src. Potentially allocates a new buffer allocation to
@@ -90,7 +90,7 @@ public:
     void* getCpuBuffer() const;
 
 private:
-    size_t size = 0;
+    size_t uniformSize = 0;
     const MetalBufferPoolEntry* bufferPoolEntry = nullptr;
     void* cpuBuffer = nullptr;
     MetalContext& context;

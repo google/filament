@@ -551,11 +551,11 @@ bool MetalDriver::canGenerateMipmaps() {
 
 void MetalDriver::loadUniformBuffer(Handle<HwUniformBuffer> ubh,
         BufferDescriptor&& data) {
-   if (data.size <= 0) {
+    if (data.size <= 0) {
        return;
-   }
+    }
 
-   auto buffer = handle_cast<MetalUniformBuffer>(mHandleMap, ubh);
+    auto buffer = handle_cast<MetalUniformBuffer>(mHandleMap, ubh);
 
     buffer->copyIntoBuffer(data.buffer, data.size);
     scheduleDestroy(std::move(data));

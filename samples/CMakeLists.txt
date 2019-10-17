@@ -137,7 +137,7 @@ function(add_pngfile SOURCE TARGET)
     set(TEXTURE_FILES ${TEXTURE_FILES} ${target_path} PARENT_SCOPE)
     add_custom_command(
         OUTPUT ${target_path}
-        COMMAND cmake -E copy ${source_path} ${target_path}
+        COMMAND ${CMAKE_COMMAND} -E copy ${source_path} ${target_path}
         MAIN_DEPENDENCY ${source_path})
 endfunction()
 
@@ -226,6 +226,16 @@ include_directories(app)
 
 add_library(sample-app ${APP_SRCS})
 target_include_directories(sample-app PUBLIC app)
+
+# Multi-configuration generators, like Visual Studio or Xcode, place executable binaries in a
+# sub-directory named after the configuration, like "Debug" or "Release".
+# For these generators, in order to find assets, we must "walk" up an additional directory.
+get_property(_isMultiConfig GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+if (_isMultiConfig)
+    target_compile_definitions(sample-app PRIVATE RELATIVE_ASSET_PATH="..")
+else()
+    target_compile_definitions(sample-app PRIVATE RELATIVE_ASSET_PATH=".")
+endif()
 
 target_link_libraries(sample-app PRIVATE ${APP_LIBS})
 

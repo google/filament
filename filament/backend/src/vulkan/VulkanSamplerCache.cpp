@@ -106,18 +106,18 @@ VkSampler VulkanSamplerCache::getSampler(backend::SamplerParams params) noexcept
         .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
         .magFilter = getFilter(params.filterMag),
         .minFilter = getFilter(params.filterMin),
+        .mipmapMode = getMipmapMode(params.filterMin),
         .addressModeU = getWrapMode(params.wrapS),
         .addressModeV = getWrapMode(params.wrapT),
         .addressModeW = getWrapMode(params.wrapR),
         .anisotropyEnable = params.anisotropyLog2 == 0 ? 0u : 1u,
         .maxAnisotropy = (float)(1u << params.anisotropyLog2),
-        .borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK,
-        .unnormalizedCoordinates = VK_FALSE,
         .compareEnable = getCompareEnable(params.compareMode),
         .compareOp = getCompareOp(params.compareFunc),
-        .mipmapMode = getMipmapMode(params.filterMin),
         .minLod = 0.0f,
         .maxLod = getMaxLod(params.filterMin),
+        .borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK,
+        .unnormalizedCoordinates = VK_FALSE
     };
     VkSampler sampler;
     VkResult error = vkCreateSampler(mContext.device, &samplerInfo, VKALLOC, &sampler);

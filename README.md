@@ -341,6 +341,33 @@ See [ios/samples/README.md](./ios/samples/README.md) for more information.
 
 ### Windows
 
+#### Building on Windows with the Visual Studio 2019 compiler
+
+Install the following components:
+
+- [Visual Studio 2019](https://www.visualstudio.com/downloads)
+- [Python 3.7](https://www.python.org/ftp/python/3.7.0/python-3.7.0.exe)
+- [CMake 3.14 or later](https://github.com/Kitware/CMake/releases/download/v3.14.7/cmake-3.14.7-win64-x64.msi)
+
+Open the `x64 Native Tools Command Prompt for VS 2019`.
+
+Create a working directory, and run cmake in it:
+
+```
+> mkdir out
+> cd out
+> cmake ..
+```
+
+Then, you should be able to load the generated solution file `TNT.sln` in Visual Studio and build the `material_sandbox` project.
+
+Run it from the `out` directory with:
+```
+> samples\Debug\material_sandbox.exe ..\assets\models\monkey\monkey.obj
+```
+
+#### Building on Windows with the Clang compiler
+
 The following instructions have been tested on a machine running Windows 10. They should take you
 from a machine with only the operating system to a machine able to build and run Filament.
 

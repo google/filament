@@ -668,7 +668,7 @@ int main(int argc, char** argv) {
     strncpy(app.exportOptions.bentNormalsPath, "bentNormals.png", PATH_SIZE);
 
     app.config.title = "gltf_baker";
-    app.config.iblDirectory = FilamentApp::getRootPath() + DEFAULT_IBL;
+    app.config.iblDirectory = FilamentApp::getRootAssetsPath() + DEFAULT_IBL;
 
     utils::Path filename;
     int option_index = handleCommandLineArguments(argc, argv, &app);

@@ -52,6 +52,12 @@ Demonstrates how to load glTF models and render to an offscreen buffer:
 
 ![glTF Bloom](../../docs/images/samples/sample_gltf_bloom.jpg)
 
+### `hello-camera`
+
+Demonstrates how to use `Stream` with Android's Camera2 API:
+
+![Hello Camera](../../docs/images/samples/sample_hello_camera.jpg)
+
 ## Prerequisites
 
 Before you start, make sure to read [Filament's README](../../README.md). You need to be able to

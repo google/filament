@@ -589,8 +589,6 @@ void OpenGLDriver::textureStorage(OpenGLDriver::GLTexture* t,
                 // TODO: use glTexStorage2DMultisample() on GL 4.3 and above
                 glTexImage2DMultisample(t->gl.target, t->samples, t->gl.internalFormat,
                         GLsizei(width), GLsizei(height), GL_TRUE);
-#else
-#   error "GL/GLES header version not supported"
 #endif
             } else {
                 PANIC_LOG("GL_TEXTURE_2D_MULTISAMPLE is not supported");

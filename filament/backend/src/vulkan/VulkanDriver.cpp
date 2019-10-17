@@ -716,9 +716,11 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
         .finalDepthLayout = finalDepthLayout,
         .colorFormat = color.format,
         .depthFormat = depth.format,
-        .flags.clear = params.flags.clear,
-        .flags.discardStart = params.flags.discardStart,
-        .flags.discardEnd = params.flags.discardEnd
+        .flags = {
+            .clear = params.flags.clear,
+            .discardStart = params.flags.discardStart,
+            .discardEnd = params.flags.discardEnd
+        }
     });
     mBinder.bindRenderPass(renderPass);
 
@@ -735,10 +737,10 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
         .renderPass = renderPass,
         .framebuffer = mFramebufferCache.getFramebuffer(fbo, extent.width, extent.height),
-        .renderArea.offset.x = params.viewport.left,
-        .renderArea.offset.y = params.viewport.bottom,
-        .renderArea.extent.width = params.viewport.width,
-        .renderArea.extent.height = params.viewport.height,
+        .renderArea = {
+            .offset = {params.viewport.left, params.viewport.bottom},
+            .extent = {params.viewport.width, params.viewport.height}
+        }
     };
 
     rt->transformClientRectToPlatform(&renderPassInfo.renderArea);
@@ -769,8 +771,8 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
             .maxDepth = 1.0f
     };
     VkRect2D scissor {
-            .extent = { (uint32_t) viewport.width, (uint32_t) viewport.height },
-            .offset = { std::max(0, (int32_t) viewport.x), std::max(0, (int32_t) viewport.y) }
+            .offset = { std::max(0, (int32_t) viewport.x), std::max(0, (int32_t) viewport.y) },
+            .extent = { (uint32_t) viewport.width, (uint32_t) viewport.height }
     };
 
     mCurrentRenderTarget->transformClientRectToPlatform(&scissor);
@@ -1125,8 +1127,8 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
     const int32_t top = std::min(viewportScissor.bottom + (int32_t)viewportScissor.height,
             (int32_t)(mContext.viewport.y + mContext.viewport.height));
     VkRect2D scissor{
-            .extent = { (uint32_t)right - x, (uint32_t)top - y },
-            .offset = { std::max(0, x), std::max(0, y) }
+            .offset = { std::max(0, x), std::max(0, y) },
+            .extent = { (uint32_t)right - x, (uint32_t)top - y }
     };
     rt->transformClientRectToPlatform(&scissor);
     vkCmdSetScissor(cmdbuffer, 0, 1, &scissor);

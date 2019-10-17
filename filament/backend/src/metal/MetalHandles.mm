@@ -104,7 +104,7 @@ MetalIndexBuffer::~MetalIndexBuffer() {
 }
 
 MetalUniformBuffer::MetalUniformBuffer(MetalContext& context, size_t size) : HwUniformBuffer(),
-        size(size), context(context) {
+        uniformSize(size), context(context) {
     ASSERT_PRECONDITION(size > 0, "Cannot create Metal uniform with size %d.", size);
     // If the buffer is less than 4K in size, we don't use an explicit buffer and instead use
     // immediate command encoder methods like setVertexBytes:length:atIndex:.
@@ -129,8 +129,8 @@ void MetalUniformBuffer::copyIntoBuffer(void* src, size_t size) {
     if (size <= 0) {
         return;
     }
-    ASSERT_PRECONDITION(size <= this->size, "Attempting to copy %d bytes into a uniform of size %d",
-            size, this->size);
+    ASSERT_PRECONDITION(size <= this->uniformSize, "Attempting to copy %d bytes into a uniform of size %d",
+            size, this->uniformSize);
 
     // Either copy into the Metal buffer or into our cpu buffer.
     if (cpuBuffer) {
@@ -145,7 +145,7 @@ void MetalUniformBuffer::copyIntoBuffer(void* src, size_t size) {
         context.bufferPool->releaseBuffer(bufferPoolEntry);
     }
 
-    bufferPoolEntry = context.bufferPool->acquireBuffer(size);
+    bufferPoolEntry = context.bufferPool->acquireBuffer(this->uniformSize);
     memcpy(static_cast<uint8_t*>(bufferPoolEntry->buffer.contents), src, size);
 }
 
@@ -159,7 +159,7 @@ id<MTLBuffer> MetalUniformBuffer::getGpuBufferForDraw() {
 
         // If there isn't a CPU buffer, it means no data has been loaded into this uniform yet. To
         // avoid an error, we'll allocate an empty buffer.
-        bufferPoolEntry = context.bufferPool->acquireBuffer(size);
+        bufferPoolEntry = context.bufferPool->acquireBuffer(this->uniformSize);
     }
 
     // This uniform is being used in a draw call, so we retain it so it's not released back into the
