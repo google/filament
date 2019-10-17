@@ -759,6 +759,25 @@ bool FEngine::execute() {
     return true;
 }
 
+void FEngine::destroy(FEngine* engine) {
+    if (engine) {
+        std::unique_ptr<FEngine> filamentEngine;
+
+        std::unique_lock<std::mutex> guard(sEnginesLock);
+        auto const& pos = sEngines.find(engine);
+        if (pos != sEngines.end()) {
+            std::swap(filamentEngine, pos->second);
+            sEngines.erase(pos);
+        }
+        guard.unlock();
+
+        // Make sure to call into shutdown() without the lock held
+        if (filamentEngine) {
+            filamentEngine->shutdown();
+        }
+    }
+}
+
 } // namespace details
 
 // ------------------------------------------------------------------------------------------------
@@ -772,27 +791,14 @@ Engine* Engine::create(Backend backend, Platform* platform, void* sharedGLContex
 }
 
 void Engine::destroy(Engine* engine) {
-    destroy(&engine);
+    FEngine::destroy(upcast(engine));
 }
 
-void Engine::destroy(Engine** engine) {
-    if (engine) {
-        std::unique_ptr<FEngine> filamentEngine;
-
-        std::unique_lock<std::mutex> guard(sEnginesLock);
-        auto const& pos = sEngines.find(*engine);
-        if (pos != sEngines.end()) {
-            std::swap(filamentEngine, pos->second);
-            sEngines.erase(pos);
-        }
-        guard.unlock();
-
-        // Make sure to call into shutdown() without the lock held
-        if (filamentEngine) {
-            filamentEngine->shutdown();
-            // clear the user's handle
-            *engine = nullptr;
-        }
+void Engine::destroy(Engine** pEngine) {
+    if (pEngine) {
+        Engine* engine = *pEngine;
+        FEngine::destroy(upcast(engine));
+        *pEngine = nullptr;
     }
 }
 
