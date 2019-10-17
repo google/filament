@@ -20,8 +20,6 @@
 
 #include "details/Engine.h"
 
-#include <filament/LightManager.h>
-
 #include <math/fast.h>
 #include <math/scalar.h>
 

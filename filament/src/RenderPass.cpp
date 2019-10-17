@@ -16,7 +16,6 @@
 
 #include "RenderPass.h"
 
-#include "details/Culler.h"
 #include "details/Material.h"
 #include "details/MaterialInstance.h"
 #include "details/RenderPrimitive.h"
