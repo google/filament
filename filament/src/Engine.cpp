@@ -36,27 +36,17 @@
 
 #include "fg/ResourceAllocator.h"
 
-#include "private/backend/Program.h"
 
 #include <private/filament/SibGenerator.h>
 
-#include <filament/Exposure.h>
 #include <filament/MaterialEnums.h>
 
-#include <filaflat/ShaderBuilder.h>
-
 #include <utils/compiler.h>
-#include <utils/CString.h>
 #include <utils/Log.h>
 #include <utils/Panic.h>
 #include <utils/Systrace.h>
 
-#include <math/fast.h>
-#include <math/scalar.h>
-
-#include <functional>
-
-#include <stdio.h>
+#include <memory>
 
 #include "generated/resources/materials.h"
 
@@ -236,7 +226,7 @@ void FEngine::init() {
 
     mPostProcessManager.init();
     mLightManager.init(*this);
-    mDFG.reset(new DFG(*this));
+    mDFG = std::make_unique<DFG>(*this);
 }
 
 FEngine::~FEngine() noexcept {

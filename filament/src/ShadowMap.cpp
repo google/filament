@@ -19,7 +19,6 @@
 #include "components/LightManager.h"
 
 #include "details/Engine.h"
-#include "details/ShadowMap.h"
 #include "details/Scene.h"
 #include "details/View.h"
 

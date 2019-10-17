@@ -22,8 +22,6 @@
 
 #include <geometry/SurfaceOrientation.h>
 
-#include <math/mat3.h>
-#include <math/norm.h>
 #include <math/quat.h>
 #include <math/vec3.h>
 #include <math/vec4.h>
@@ -76,11 +74,11 @@ VertexBuffer::Builder& VertexBuffer::Builder::attribute(VertexAttribute attribut
         size_t(bufferIndex) < MAX_VERTEX_ATTRIBUTE_COUNT) {
 
 #ifndef NDEBUG
-        if (byteOffset & 0x3) {
+        if (byteOffset & 0x3u) {
             utils::slog.d << "[performance] VertexBuffer::Builder::attribute() "
                              "byteOffset not multiple of 4" << utils::io::endl;
         }
-        if (byteStride & 0x3) {
+        if (byteStride & 0x3u) {
             utils::slog.d << "[performance] VertexBuffer::Builder::attribute() "
                              "byteStride not multiple of 4" << utils::io::endl;
         }

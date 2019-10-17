@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-#include <filament/TransformManager.h>
-
 #include "components/TransformManager.h"
 
 using namespace utils;
