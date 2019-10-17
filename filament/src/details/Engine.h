@@ -132,6 +132,8 @@ public:
     static FEngine* create(Backend backend = Backend::DEFAULT,
             Platform* platform = nullptr, void* sharedGLContext = nullptr);
 
+    static void destroy(FEngine* engine);
+
     static void assertValid(Engine const& engine);
 
     ~FEngine() noexcept;
@@ -215,8 +217,6 @@ public:
         return clock::now() - getEngineEpoch();
     }
 
-    void shutdown();
-
     template <typename T>
     T* create(ResourceList<T>& list, typename T::Builder const& builder) noexcept;
 
@@ -286,6 +286,7 @@ public:
 private:
     FEngine(Backend backend, Platform* platform, void* sharedGLContext);
     void init();
+    void shutdown();
 
     int loop();
     void flushCommandBuffer(backend::CommandBufferQueue& commandBufferQueue);

@@ -568,8 +568,8 @@ TEST(FilamentTest, FroxelData) {
     }
 
     froxelData.terminate(engine->getDriverApi());
-    engine->shutdown();
-    delete engine;
+
+    Engine::destroy((Engine **)&engine);
 }
 
 TEST(FilamentTest, Bones) {
