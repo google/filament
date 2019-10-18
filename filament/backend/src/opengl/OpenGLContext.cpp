@@ -138,6 +138,23 @@ OpenGLContext::OpenGLContext() noexcept {
     glHint(GL_FRAGMENT_SHADER_DERIVATIVE_HINT, GL_NICEST);
 #endif
 
+#if !defined(NDEBUG) && defined(GL_KHR_debug)
+    if (ext.KHR_debug) {
+        auto cb = [](GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length,
+                const GLchar* message, const void *userParam) {
+            slog.e << "KHR_debug: " << message << io::endl;
+        };
+#if defined(ANDROID) || defined(USE_EXTERNAL_GLES3) || defined(__EMSCRIPTEN__)
+        glEnable(GL_DEBUG_OUTPUT_KHR);
+        glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS_KHR);
+        glext::glDebugMessageCallbackKHR(cb, nullptr);
+#elif defined(GL_VERSION_4_3)
+        glEnable(GL_DEBUG_OUTPUT);
+        glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+        glDebugMessageCallback(cb, nullptr);
+#endif
+    }
+#endif
 }
 
 UTILS_NOINLINE
@@ -157,6 +174,7 @@ void OpenGLContext::initExtensionsGLES(GLint major, GLint minor, ExtentionSet co
     ext.APPLE_color_buffer_packed_float = hasExtension(exts, "GL_APPLE_color_buffer_packed_float");
     ext.texture_compression_s3tc = hasExtension(exts, "WEBGL_compressed_texture_s3tc");
     ext.EXT_multisampled_render_to_texture = hasExtension(exts, "GL_EXT_multisampled_render_to_texture");
+    ext.KHR_debug = hasExtension(exts, "GL_KHR_debug");
     // ES 3.2 implies EXT_color_buffer_float
     if (major >= 3 && minor >= 2) {
         ext.EXT_color_buffer_float = true;
@@ -172,6 +190,7 @@ void OpenGLContext::initExtensionsGL(GLint major, GLint minor, ExtentionSet cons
     ext.EXT_color_buffer_half_float = true;  // Assumes core profile.
     ext.EXT_color_buffer_float = true;  // Assumes core profile.
     ext.APPLE_color_buffer_packed_float = true;  // Assumes core profile.
+    ext.KHR_debug = major >= 4 && minor >= 3;
 }
 
 void OpenGLContext::bindBuffer(GLenum target, GLuint buffer) noexcept {
