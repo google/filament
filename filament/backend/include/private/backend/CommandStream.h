@@ -25,6 +25,7 @@
 #include <backend/Handle.h>
 #include <backend/PipelineState.h>
 #include <backend/PixelBufferDescriptor.h>
+#include <backend/PresentCallable.h>
 #include <backend/TargetBufferInfo.h>
 
 #include "private/backend/DriverApi.h"

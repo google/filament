@@ -235,7 +235,8 @@ void VulkanDriver::terminate() {
     mContext.instance = nullptr;
 }
 
-void VulkanDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId) {
+void VulkanDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId,
+        backend::FrameFinishedCallback, void*) {
     // We allow multiple beginFrame / endFrame pairs before commit(), so gracefully return early
     // if the swap chain has already been acquired.
     if (mContext.currentCommands) {

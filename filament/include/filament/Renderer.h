@@ -24,6 +24,8 @@
 
 #include <utils/compiler.h>
 
+#include <backend/PresentCallable.h>
+
 #include <stdint.h>
 
 namespace filament {
@@ -259,8 +261,17 @@ public:
      * beginFrame() attempts to detect this situation and returns false in that case, indicating
      * to the caller to skip the current frame.
      *
+     * Typically, Filament is responsible for scheduling the frame's presentation to the SwapChain.
+     * If a backend::FrameFinishedCallback is provided, however, the application bares the
+     * responsibility of scheduling a frame for presentation by calling the backend::PresentCallable
+     * passed to the callback function. Currently this functionality is only supported by the Metal
+     * backend.
+     *
      * @param swapChain A pointer to the SwapChain instance to use.
-     * 
+     * @param callback  A callback function that will be called when the backend has finished
+     *                  processing the frame.
+     * @param user      User data to be passed to the callback function.
+     *
      * @return
      *      *false* the current frame must be skipped,
      *      *true* the current frame can be drawn.
@@ -272,9 +283,10 @@ public:
      * All calls to render() must happen *after* beginFrame().
      *
      * @see
-     * endFrame()
+     * endFrame(), backend::PresentCallable, backend::FrameFinishedCallback
      */
-    bool beginFrame(SwapChain* swapChain);
+    bool beginFrame(SwapChain* swapChain, backend::FrameFinishedCallback callback = nullptr,
+            void* user = nullptr);
 
     /**
      * Finishes the current frame and schedules it for display.

@@ -24,9 +24,32 @@ namespace filament {
 namespace backend {
 namespace metal {
 
+void presentDrawable(bool presentFrame, void* user) {
+    id<CAMetalDrawable> drawable = (id<CAMetalDrawable>) user;
+    if (presentFrame) {
+        [drawable present];
+    }
+    [drawable release];
+}
+
 id<CAMetalDrawable> acquireDrawable(MetalContext* context) {
     if (!context->currentDrawable) {
-        context->currentDrawable = [context->currentSurface->layer nextDrawable];
+        // The drawable is retained here and will be released either:
+        // 1. in MetalDriver::commit
+        // 2. in the presentDrawable function, when the client calls the PresentCallable
+        context->currentDrawable = [[context->currentSurface->layer nextDrawable] retain];
+
+        if (context->frameFinishedCallback) {
+            id<CAMetalDrawable> drawable = context->currentDrawable;
+            backend::FrameFinishedCallback callback = context->frameFinishedCallback;
+            void* userData = context->frameFinishedUserData;
+            [context->currentCommandBuffer addScheduledHandler:^(id<MTLCommandBuffer> cb) {
+                PresentCallable callable(presentDrawable, (void*) drawable);
+                dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+                    callback(callable, userData);
+                });
+            }];
+        }
     }
     ASSERT_POSTCONDITION(context->currentDrawable != nil, "Could not obtain drawable.");
     return context->currentDrawable;
