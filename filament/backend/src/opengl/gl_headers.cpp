@@ -38,6 +38,10 @@ PFNGLPOPGROUPMARKEREXTPROC glPopGroupMarkerEXT;
 PFNGLRENDERBUFFERSTORAGEMULTISAMPLEEXTPROC glRenderbufferStorageMultisampleEXT;
 PFNGLFRAMEBUFFERTEXTURE2DMULTISAMPLEEXTPROC glFramebufferTexture2DMultisampleEXT;
 #endif
+#ifdef GL_KHR_debug
+PFNGLDEBUGMESSAGECALLBACKKHRPROC glDebugMessageCallbackKHR;
+PFNGLGETDEBUGMESSAGELOGKHRPROC glGetDebugMessageLogKHR;
+#endif
 
 static std::once_flag sGlExtInitialized;
 
@@ -79,6 +83,14 @@ void importGLESExtensionsEntryPoints() {
         glRenderbufferStorageMultisampleEXT =
                 (PFNGLRENDERBUFFERSTORAGEMULTISAMPLEEXTPROC)eglGetProcAddress(
                         "glRenderbufferStorageMultisampleEXT");
+#endif
+#ifdef GL_KHR_debug
+        glDebugMessageCallbackKHR =
+                (PFNGLDEBUGMESSAGECALLBACKKHRPROC)eglGetProcAddress(
+                        "glDebugMessageCallbackKHR");
+        glGetDebugMessageLogKHR =
+                (PFNGLGETDEBUGMESSAGELOGKHRPROC)eglGetProcAddress(
+                        "glGetDebugMessageLogKHR");
 #endif
     });
 }
