@@ -70,7 +70,6 @@ public:
 
     // array access
     inline constexpr T const& operator[](size_t i) const noexcept {
-        // only possible in C++0x14 with constexpr
         assert(i < SIZE);
         return v[i];
     }
