@@ -17,7 +17,7 @@ A new header is inserted each time a *tag* is created.
 - filamat: fixed crash when using the "lite" version of the library.
 - matinfo: Fix a crash with on Windows.
 - gltfio: fixed an animation loop bug.
-- gltfio: do not abort for sparse data, warn instead.
+- gltfio: added support for sparse accessors.
 - Add JS binding to unary `Camera::setExposure`.
 
 ## v1.4.0
