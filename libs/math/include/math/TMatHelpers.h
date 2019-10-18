@@ -656,6 +656,12 @@ private:
     friend inline constexpr T MATH_PURE det(const BASE<T>& m) {
         return matrix::det(m);
     }
+
+    // unclear why we have to use 'auto' here. 'typename BASE<T>::col_type' produces
+    // error: no type named 'col_type' in 'filament::math::details::TMat44<float>'
+    friend inline constexpr auto MATH_PURE diag(const BASE<T>& m) {
+        return matrix::diag(m);
+    }
 };
 
 template<template<typename U> class BASE, typename T>

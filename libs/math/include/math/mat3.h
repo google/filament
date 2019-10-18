@@ -114,7 +114,6 @@ private:
 public:
     // array access
     inline constexpr col_type const& operator[](size_t column) const noexcept {
-        // only possible in C++0x14 with constexpr
         assert(column < NUM_COLS);
         return m_value[column];
     }
@@ -410,16 +409,6 @@ constexpr TQuaternion<T> TMat33<T>::packTangentFrame(const TMat33<T>& m, size_t 
     }
 
     return q;
-}
-
-// ----------------------------------------------------------------------------------------
-
-/* FIXME: this should go into TMatSquareFunctions<> but for some reason
- * BASE<T>::col_type is not accessible from there (???)
- */
-template<typename T>
-constexpr typename TMat33<T>::col_type MATH_PURE diag(const TMat33<T>& m) noexcept {
-    return matrix::diag(m);
 }
 
 }  // namespace details
