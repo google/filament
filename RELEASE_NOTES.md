@@ -3,6 +3,23 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
+## v1.4.1
+
+- Added missing API documentation.
+- Fixed crash for sandboxed macOS apps using Filament.
+- Fixed an issue that limited the camera near plane to ~1mm.
+- Added Android sample for Camera Stream.
+- Fixed an Xcode assertion when rendering skinned meshes using the Metal backend.
+- Added support for Core Animation / Metal frame synchronization with Metal backend.
+- Fixed an issue with culling in `MaterialInstance`.
+- Fix additional compatibility issues with MSVC, including the Vulkan backend.
+- matdbg: fixed missing symbol issue when linking against debug builds.
+- filamat: fixed crash when using the "lite" version of the library.
+- matinfo: Fix a crash with on Windows.
+- gltfio: fixed an animation loop bug.
+- gltfio: do not abort for sparse data, warn instead.
+- Add JS binding to unary `Camera::setExposure`.
+
 ## v1.4.0
 
 - API Breakage: Simplified public-facing Fence API.
