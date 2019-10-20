@@ -28,11 +28,6 @@ else()
 	target_compile_options(meshoptimizer PRIVATE -Wall -Wextra -Werror)
 endif()
 
-if(CLANG_CL)
-    # Clang for Windows needs an additional flag for SSSE3 instructions.
-    target_compile_options(meshoptimizer PRIVATE -mssse3)
-endif()
-
 if(BUILD_DEMO)
     add_executable(demo demo/main.cpp demo/miniz.cpp demo/objparser.cpp)
     target_link_libraries(demo meshoptimizer)
