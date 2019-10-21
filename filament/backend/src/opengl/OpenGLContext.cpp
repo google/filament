@@ -142,17 +142,29 @@ OpenGLContext::OpenGLContext() noexcept {
     if (ext.KHR_debug) {
         auto cb = [](GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length,
                 const GLchar* message, const void *userParam) {
-            slog.e << "KHR_debug: " << message << io::endl;
+            io::LogStream* stream;
+            switch (severity) {
+                case GL_DEBUG_SEVERITY_HIGH: stream = &slog.e; break;
+                case GL_DEBUG_SEVERITY_MEDIUM: stream = &slog.w; break;
+                case GL_DEBUG_SEVERITY_LOW: stream = &slog.d; break;
+                case GL_DEBUG_SEVERITY_NOTIFICATION: stream = &slog.i; break;
+            }
+            io::LogStream& out = *stream;
+            out << "KHR_debug ";
+            switch (type) {
+                case GL_DEBUG_TYPE_ERROR: out << "ERROR"; break;
+                case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR: out << "DEPRECATED_BEHAVIOR"; break;
+                case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR: out << "UNDEFINED_BEHAVIOR"; break;
+                case GL_DEBUG_TYPE_PORTABILITY: out << "PORTABILITY"; break;
+                case GL_DEBUG_TYPE_PERFORMANCE: out << "PERFORMANCE"; break;
+                case GL_DEBUG_TYPE_OTHER: out << "OTHER"; break;
+                case GL_DEBUG_TYPE_MARKER: out << "MARKER"; break;
+            }
+            out << ": " << message << io::endl;
         };
-#if defined(ANDROID) || defined(USE_EXTERNAL_GLES3) || defined(__EMSCRIPTEN__)
-        glEnable(GL_DEBUG_OUTPUT_KHR);
-        glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS_KHR);
-        glext::glDebugMessageCallbackKHR(cb, nullptr);
-#elif defined(GL_VERSION_4_3)
         glEnable(GL_DEBUG_OUTPUT);
         glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
         glDebugMessageCallback(cb, nullptr);
-#endif
     }
 #endif
 }
