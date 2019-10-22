@@ -32,7 +32,7 @@ jobs:
           echo "Hello, world" > test-${WORKFLOW_OS}.txt
           gsutil cp test-${WORKFLOW_OS}.txt gs://filament-build/
         env:
-          CLOUD_KEY_BASE64: ${{ secrets.CLOUD_KEY_BASE64 }}
+          GCLOUD_KEY_BASE64: ${{ secrets.GCLOUD_KEY_BASE64 }}
       - name: Run build script
         run: |
           WORKFLOW_OS=`echo \`uname\` | sed "s/Darwin/mac/" | tr [:upper:] [:lower:]`
