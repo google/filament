@@ -12,6 +12,12 @@ jobs:
         os: [macos-latest, ubuntu-latest]
 
     steps:
+      - name: Test Google Cloud upload
+        run: |
+          gcloud --version
+          gsutil --version
+          # This probably won't work yet:
+          gsutil ls gs://filament-build/
       - name: Checkout Filament
         run: |
           git version
