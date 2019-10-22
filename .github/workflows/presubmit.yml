@@ -22,7 +22,7 @@ jobs:
           git fetch --tags --prune --progress --no-recurse-submodules origin +${GITHUB_REF}:${GITHUB_REF/refs\//refs\/remote\/}
           git checkout --progress --force ${GITHUB_REF/refs\//refs\/remote\/}
       - name: Test Google Cloud upload
-      - with:
+        with:
           CLOUD_KEY_BASE64: ${{ secrets.CLOUD_KEY_BASE64 }}
         run: |
           WORKFLOW_OS=`echo \`uname\` | sed "s/Darwin/mac/" | tr [:upper:] [:lower:]`
