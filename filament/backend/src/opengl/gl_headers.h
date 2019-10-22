@@ -98,6 +98,12 @@
 #error "Minimum header version must be OpenGL ES 3.0 or OpenGL 4.1"
 #endif
 
+#if defined(GL_ES_VERSION_3_0)
+#define GLES30_HEADERS true
+#else
+#define GLES30_HEADERS false
+#endif
+
 #if defined(GL_ES_VERSION_3_1)
 #define GLES31_HEADERS true
 #else

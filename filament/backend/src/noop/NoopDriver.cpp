@@ -31,7 +31,7 @@ NoopDriver::NoopDriver() noexcept : DriverBase(new ConcreteDispatcher<NoopDriver
 NoopDriver::~NoopDriver() noexcept = default;
 
 backend::ShaderModel NoopDriver::getShaderModel() const noexcept {
-#if defined(GLES31_HEADERS)
+#if GLES30_HEADERS || GLES31_HEADERS
     return backend::ShaderModel::GL_ES_30;
 #else
     return backend::ShaderModel::GL_CORE_41;

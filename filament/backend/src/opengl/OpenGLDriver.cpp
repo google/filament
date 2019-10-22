@@ -93,7 +93,7 @@ Driver* OpenGLDriver::create(
             return {};
         }
 
-        if (GLES31_HEADERS) {
+        if (GLES30_HEADERS || GLES31_HEADERS) {
             // we require GLES 3.1 headers, but we support GLES 3.0
             if (UTILS_UNLIKELY(!(major >= 3 && minor >= 0))) {
                 PANIC_LOG("OpenGL ES 3.0 minimum needed (current %d.%d)", major, minor);
@@ -201,7 +201,7 @@ void OpenGLDriver::initClearProgram() noexcept {
         }
         )SHADER";
 
-    if (GLES31_HEADERS) {
+    if (GLES30_HEADERS || GLES31_HEADERS) {
         GLint status;
         char const* const vsource = clearVertexES;
         char const* const fsource = clearFragmentES;
@@ -234,7 +234,7 @@ void OpenGLDriver::initClearProgram() noexcept {
 }
 
 void OpenGLDriver::terminateClearProgram() noexcept {
-    if (GLES31_HEADERS) {
+    if (GLES30_HEADERS || GLES31_HEADERS) {
         glDetachShader(mClearProgram, mClearVertexShader);
         glDetachShader(mClearProgram, mClearFragmentShader);
         glDeleteShader(mClearVertexShader);
@@ -1810,7 +1810,7 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
 
         // glInvalidateFramebuffer appeared on GLES 3.0 and GL4.3, for simplicity we just
         // ignore it on GL (rather than having to do a runtime check).
-        if (GLES31_HEADERS) {
+        if (GLES30_HEADERS || GLES31_HEADERS) {
             if (!gl.bugs.disable_invalidate_framebuffer) {
                 std::array<GLenum, 3> attachments; // NOLINT
                 GLsizei attachmentCount = getAttachments(attachments, rt, discardFlags);
@@ -1862,7 +1862,7 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
         } else {
             gl.disable(GL_SCISSOR_TEST);
         }
-        if (respectScissor && GLES31_HEADERS && gl.bugs.clears_hurt_performance) {
+        if (respectScissor && (GLES30_HEADERS || GLES31_HEADERS) && gl.bugs.clears_hurt_performance) {
             // With OpenGL ES, we clear the viewport using geometry to improve performance on certain
             // OpenGL drivers. e.g. on Adreno this avoids needless loads from the GMEM.
             clearWithGeometryPipe(clearColor, params.clearColor,
@@ -1898,7 +1898,7 @@ void OpenGLDriver::endRenderPass(int) {
 
     // glInvalidateFramebuffer appeared on GLES 3.0 and GL4.3, for simplicity we just
     // ignore it on GL (rather than having to do a runtime check).
-    if (GLES31_HEADERS) {
+    if (GLES30_HEADERS || GLES31_HEADERS) {
         if (!gl.bugs.disable_invalidate_framebuffer) {
             // we wouldn't have to bind the framebuffer if we had glInvalidateNamedFramebuffer()
             gl.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
@@ -1950,7 +1950,7 @@ void OpenGLDriver::discardSubRenderTargetBuffers(Handle<HwRenderTarget> rth,
 
     // glInvalidateSubFramebuffer appeared on GLES 3.0 and GL4.3, for simplicity we just
     // ignore it on GL (rather than having to do a runtime check).
-    if (GLES31_HEADERS) {
+    if (GLES30_HEADERS || GLES31_HEADERS) {
         // we wouldn't have to bind the framebuffer if we had glInvalidateNamedFramebuffer()
         GLRenderTarget const* rt = handle_cast<GLRenderTarget const*>(rth);
 
@@ -2510,7 +2510,7 @@ void OpenGLDriver::clearWithGeometryPipe(
     auto& gl = mContext;
 
     // GLES is required to use this method; see initClearProgram.
-    assert(GLES31_HEADERS);
+    assert(GLES30_HEADERS || GLES31_HEADERS);
 
     // TODO: handle stencil clear with geometry as well
     if (clearStencil) {
