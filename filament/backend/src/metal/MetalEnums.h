@@ -216,7 +216,7 @@ constexpr inline MTLPixelFormat getMetalFormat(TextureFormat format) noexcept {
         case TextureFormat::RGBA32I: return MTLPixelFormatRGBA32Sint;
 
 #if defined(IOS)
-        // EAC / ETC2 formats are only available on iPhone
+        // EAC / ETC2 formats are only available on iPhone.
         case TextureFormat::EAC_R11: return MTLPixelFormatEAC_R11Unorm;
         case TextureFormat::EAC_R11_SIGNED: return MTLPixelFormatEAC_R11Snorm;
         case TextureFormat::EAC_RG11: return MTLPixelFormatEAC_RG11Unorm;
@@ -229,10 +229,15 @@ constexpr inline MTLPixelFormat getMetalFormat(TextureFormat format) noexcept {
         case TextureFormat::ETC2_EAC_SRGBA8: return MTLPixelFormatEAC_RGBA8_sRGB;
 #endif
 
-        case TextureFormat::DXT1_RGB:
-        case TextureFormat::DXT1_RGBA:
-        case TextureFormat::DXT3_RGBA:
-        case TextureFormat::DXT5_RGBA:
+#if !defined(IOS)
+        // DXT (BC) formats are only available on macOS desktkop.
+        // See https://en.wikipedia.org/wiki/S3_Texture_Compression#S3TC_format_comparison
+        case TextureFormat::DXT1_RGBA: return MTLPixelFormatBC1_RGBA;
+        case TextureFormat::DXT3_RGBA: return MTLPixelFormatBC2_RGBA;
+        case TextureFormat::DXT5_RGBA: return MTLPixelFormatBC3_RGBA;
+
+        case TextureFormat::DXT1_RGB: return MTLPixelFormatInvalid;
+#endif
 
         case TextureFormat::RGBA_ASTC_4x4:
         case TextureFormat::RGBA_ASTC_5x4:
