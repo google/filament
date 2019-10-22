@@ -215,17 +215,19 @@ constexpr inline MTLPixelFormat getMetalFormat(TextureFormat format) noexcept {
         case TextureFormat::RGBA32UI: return MTLPixelFormatRGBA32Uint;
         case TextureFormat::RGBA32I: return MTLPixelFormatRGBA32Sint;
 
-        // TODO: add compressed formats
-        case TextureFormat::EAC_R11:
-        case TextureFormat::EAC_R11_SIGNED:
-        case TextureFormat::EAC_RG11:
-        case TextureFormat::EAC_RG11_SIGNED:
-        case TextureFormat::ETC2_RGB8:
-        case TextureFormat::ETC2_SRGB8:
-        case TextureFormat::ETC2_RGB8_A1:
-        case TextureFormat::ETC2_SRGB8_A1:
-        case TextureFormat::ETC2_EAC_RGBA8:
-        case TextureFormat::ETC2_EAC_SRGBA8:
+#if defined(IOS)
+        // EAC / ETC2 formats are only available on iPhone
+        case TextureFormat::EAC_R11: return MTLPixelFormatEAC_R11Unorm;
+        case TextureFormat::EAC_R11_SIGNED: return MTLPixelFormatEAC_R11Snorm;
+        case TextureFormat::EAC_RG11: return MTLPixelFormatEAC_RG11Unorm;
+        case TextureFormat::EAC_RG11_SIGNED: return MTLPixelFormatEAC_RG11Snorm;
+        case TextureFormat::ETC2_RGB8: return MTLPixelFormatETC2_RGB8;
+        case TextureFormat::ETC2_SRGB8: return MTLPixelFormatETC2_RGB8_sRGB;
+        case TextureFormat::ETC2_RGB8_A1: return MTLPixelFormatETC2_RGB8A1;
+        case TextureFormat::ETC2_SRGB8_A1: return MTLPixelFormatETC2_RGB8A1_sRGB;
+        case TextureFormat::ETC2_EAC_RGBA8: return MTLPixelFormatEAC_RGBA8;
+        case TextureFormat::ETC2_EAC_SRGBA8: return MTLPixelFormatEAC_RGBA8_sRGB;
+#endif
 
         case TextureFormat::DXT1_RGB:
         case TextureFormat::DXT1_RGBA:
