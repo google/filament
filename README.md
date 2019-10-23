@@ -249,6 +249,28 @@ $ ./build.sh -j release
 
 If you use CMake directly instead of the build script, pass `-DENABLE_JAVA=OFF` to CMake instead.
 
+### Filament-specific CMake Options
+
+The following CMake options are boolean options specific to Filament:
+
+- `ENABLE_JAVA`:                Compile Java projects: requires a JDK and the JAVA_HOME env var
+- `ENABLE_LTO`:                 Enable link-time optimizations if supported by the compiler
+- `FILAMENT_BUILD_FILAMAT`:     Build filamat and JNI buildings
+- `FILAMENT_SUPPORTS_METAL`:    Include the Metal backend
+- `FILAMENT_SUPPORTS_VULKAN`:   Include the Vulkan backend
+- `GENERATE_JS_DOCS`:           Build WebGL documentation and tutorials
+- `INSTALL_BACKEND_TEST`:       Install the backend test library so it can be consumed on iOS
+- `USE_EXTERNAL_GLES3`:         Experimental: Compile Filament against OpenGL ES 3
+
+To turn an option on or off:
+
+```
+$ cd <cmake-build-directory>
+$ cmake . -DOPTION=ON       # Relace OPTION with the option name, set to ON / OFF
+```
+
+Options can also be set with the CMake GUI.
+
 ### Linux
 
 Make sure you've installed the following dependencies:
