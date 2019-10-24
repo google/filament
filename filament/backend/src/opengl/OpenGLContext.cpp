@@ -105,6 +105,7 @@ OpenGLContext::OpenGLContext() noexcept {
         initExtensionsGL(major, minor, exts);
         features.multisample_texture = true;
     };
+    assert(shaderModel != ShaderModel::UNKNOWN);
     mShaderModel = shaderModel;
 
     /*
