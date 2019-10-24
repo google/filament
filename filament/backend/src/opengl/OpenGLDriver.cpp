@@ -2510,7 +2510,7 @@ void OpenGLDriver::clearWithGeometryPipe(
     auto& gl = mContext;
 
     // GLES is required to use this method; see initClearProgram.
-    assert(GLES30_HEADERS || GLES31_HEADERS);
+    assert(GLES30_HEADERS);
 
     // TODO: handle stencil clear with geometry as well
     if (clearStencil) {
