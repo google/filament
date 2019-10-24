@@ -16,6 +16,7 @@
 
 #include "noop/NoopDriver.h"
 #include "CommandStreamDispatcher.h"
+#include "opengl/gl_headers.h"
 
 namespace filament {
 
