@@ -262,7 +262,9 @@ Entity createDisk(Engine* engine, Texture* reflection) {
 
     static quath quats[nverts];
     static float3 normals[1] = { float3(0, 0, 1) };
-    SurfaceOrientation::Builder().vertexCount(1).normals(normals).build().getQuats(quats, 1);
+    auto* helper = SurfaceOrientation::Builder().vertexCount(1).normals(normals).build();
+    helper->getQuats(quats, 1);
+    delete helper;
     for (int i = 1; i < nverts; i++) {
         quats[i] = quats[0];
     }

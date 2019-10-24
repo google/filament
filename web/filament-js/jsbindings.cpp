@@ -1338,7 +1338,7 @@ class_<SurfaceBuilder>("SurfaceOrientation$Builder")
     })
 
     .function("_build", EMBIND_LAMBDA(SurfaceOrientation*, (SurfaceBuilder* builder), {
-        return new SurfaceOrientation(builder->build());
+        return builder->build();
     }), allow_raw_pointers());
 
 class_<SurfaceOrientation>("SurfaceOrientation")

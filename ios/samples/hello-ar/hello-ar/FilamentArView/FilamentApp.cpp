@@ -106,11 +106,12 @@ void FilamentApp::updatePlaneGeometry(const FilamentArPlaneGeometry& geometry) {
     // upwards-facing normal, we only need to generate a single quaternion, which can be copied.
     quatf* quats = new quatf[vertexCount];
     static float3 normals[1] = { float3(0, 1, 0) };
-    geometry::SurfaceOrientation::Builder()
+    auto helper = geometry::SurfaceOrientation::Builder()
         .vertexCount(1)
         .normals(normals)
-        .build()
-        .getQuats(quats, 1);
+        .build();
+    helper->getQuats(quats, 1);
+    delete helper;
     for (int i = 1; i < vertexCount; i++) {
         quats[i] = quats[0];
     }

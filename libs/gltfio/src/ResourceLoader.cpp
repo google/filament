@@ -766,8 +766,9 @@ void ResourceLoader::computeTangents(FFilamentAsset* asset) const {
         }
 
         // Compute surface orientation quaternions.
-        auto helper = sob.build();
-        helper.getQuats(quats, vertexCount);
+        geometry::SurfaceOrientation* helper = sob.build();
+        helper->getQuats(quats, vertexCount);
+        delete helper;
 
         // Upload quaternions to the GPU.
         VertexBuffer::BufferDescriptor bd(quats, vertexCount * sizeof(short4), FREE_CALLBACK);

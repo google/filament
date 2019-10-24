@@ -83,9 +83,9 @@ public:
         Builder& triangles(const filament::math::ushort3*) noexcept;
 
         /**
-         * Generates quats or panics if the submitted data is an incomplete combination.
+         * Generates quats or returns null if the submitted data is an incomplete combination.
          */
-        SurfaceOrientation build();
+        SurfaceOrientation* build();
 
     private:
         OrientationBuilderImpl* mImpl;
@@ -111,7 +111,9 @@ public:
     void getQuats(filament::math::quatf* out, size_t quatCount, size_t stride = 0) const noexcept;
     void getQuats(filament::math::short4* out, size_t quatCount, size_t stride = 0) const noexcept;
     void getQuats(filament::math::quath* out, size_t quatCount, size_t stride = 0) const noexcept;
-    /** @} */
+    /**
+     * @}
+     */
 
 private:
     SurfaceOrientation(OrientationImpl*) noexcept;

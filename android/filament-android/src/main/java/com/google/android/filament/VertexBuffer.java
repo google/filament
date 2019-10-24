@@ -416,6 +416,9 @@ public class VertexBuffer {
      * basis.
      * </p>
      *
+     * @deprecated Instead please use SurfaceOrientation since it has additional capabilities and a
+     * builder-style API.
+     *
      * @param context an initialized QuatTangentContext object
      */
     public static void populateTangentQuaternions(@NonNull QuatTangentContext context) {
