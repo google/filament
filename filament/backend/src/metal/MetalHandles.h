@@ -132,10 +132,13 @@ struct MetalTexture : public HwTexture {
     void loadCubeImage(const PixelBufferDescriptor& data, const FaceOffsets& faceOffsets,
             int miplevel);
 
+    NSUInteger getBytesPerRow(PixelDataType type, NSUInteger width) const noexcept;
+
     MetalContext& context;
     MetalExternalImage externalImage;
     id<MTLTexture> texture = nil;
-    uint8_t bytesPerPixel;
+    uint8_t bytesPerElement; // The number of bytes per pixel, or block (for compressed texture formats).
+    uint8_t blockWidth; // The number of horizontal pixels per block (only for compressed texture formats).
     TextureReshaper reshaper;
 };
 

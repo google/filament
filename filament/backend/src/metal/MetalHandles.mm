@@ -23,6 +23,8 @@
 #include <utils/Panic.h>
 #include <utils/trap.h>
 
+#include <math.h>
+
 namespace filament {
 namespace backend {
 namespace metal {
@@ -307,7 +309,9 @@ MetalTexture::MetalTexture(MetalContext& context, backend::SamplerType target, u
     const TextureFormat reshapedFormat = reshaper.getReshapedFormat();
     const MTLPixelFormat pixelFormat = decidePixelFormat(context.device, reshapedFormat);
 
-    bytesPerPixel = static_cast<uint8_t>(getFormatSize(reshapedFormat));
+    bytesPerElement = static_cast<uint8_t>(getFormatSize(reshapedFormat));
+    assert(bytesPerElement > 0);
+    blockWidth = static_cast<uint8_t>(getBlockWidth(reshapedFormat));
 
     ASSERT_POSTCONDITION(pixelFormat != MTLPixelFormatInvalid, "Pixel format not supported.");
 
@@ -368,7 +372,7 @@ void MetalTexture::load2DImage(uint32_t level, uint32_t xoffset, uint32_t yoffse
             .depth = 1
         }
     };
-    NSUInteger bytesPerRow = bytesPerPixel * width;
+    const NSUInteger bytesPerRow = getBytesPerRow(data.type, width);
     [texture replaceRegion:region
                mipmapLevel:level
                      slice:0
@@ -381,8 +385,9 @@ void MetalTexture::load2DImage(uint32_t level, uint32_t xoffset, uint32_t yoffse
 
 void MetalTexture::loadCubeImage(const PixelBufferDescriptor& data, const FaceOffsets& faceOffsets,
         int miplevel) {
-    NSUInteger faceWidth = width >> miplevel;
-    NSUInteger bytesPerRow = bytesPerPixel * faceWidth;
+    const NSUInteger faceWidth = width >> miplevel;
+    const NSUInteger bytesPerRow = getBytesPerRow(data.type, faceWidth);
+
     MTLRegion region = MTLRegionMake2D(0, 0, faceWidth, faceWidth);
     for (NSUInteger slice = 0; slice < 6; slice++) {
         FaceOffsets::size_type faceOffset = faceOffsets.offsets[slice];
@@ -392,6 +397,20 @@ void MetalTexture::loadCubeImage(const PixelBufferDescriptor& data, const FaceOf
                      withBytes:static_cast<uint8_t*>(data.buffer) + faceOffset
                    bytesPerRow:bytesPerRow
                  bytesPerImage:0];
+    }
+}
+
+NSUInteger MetalTexture::getBytesPerRow(PixelDataType type, NSUInteger width) const noexcept {
+    // From https://developer.apple.com/documentation/metal/mtltexture/1515464-replaceregion:
+    // For an ordinary or packed pixel format, the stride, in bytes, between rows of source data.
+    // For a compressed pixel format, the stride is the number of bytes from the beginning of one
+    // row of blocks to the beginning of the next.
+    if (type == PixelDataType::COMPRESSED) {
+        assert(blockWidth > 0);
+        const NSUInteger blocksPerRow = std::ceil(width / (float) blockWidth);
+        return bytesPerElement * blocksPerRow;
+    } else {
+        return bytesPerElement * width;
     }
 }
 
