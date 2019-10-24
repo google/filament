@@ -71,3 +71,10 @@ Java_com_google_android_filament_gltfio_FilamentAsset_nGetName(JNIEnv* env, jcla
     const char* val = asset->getName(*entity);
     return val ? env->NewStringUTF(val) : nullptr;
 }
+
+extern "C" JNIEXPORT jlong JNICALL
+Java_com_google_android_filament_gltfio_FilamentAsset_nGetAnimator(JNIEnv* env, jclass,
+        jlong nativeAsset) {
+    FilamentAsset* asset = (FilamentAsset*) nativeAsset;
+    return (jlong) asset->getAnimator();
+}

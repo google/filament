@@ -3,6 +3,10 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
+## Next release
+
+- Add Java / Kotlin bindings for gltfio::Animator.
+
 ## v1.4.1
 
 - Added missing API documentation.
