@@ -55,10 +55,13 @@ import java.nio.Buffer;
  *     }
  *
  *     ResourceLoader(engine).loadResources(filamentAsset).destroy()
+ *     animator = asset.getAnimator()
+ *
  *     scene.addEntities(filamentAsset.entities)
  * }
  * </pre>
  *
+ * @see Animator
  * @see FilamentAsset
  * @see ResourceLoader
  */
