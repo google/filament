@@ -93,7 +93,7 @@ Driver* OpenGLDriver::create(
             return {};
         }
 
-        if (GLES30_HEADERS || GLES31_HEADERS) {
+        if (GLES30_HEADERS) {
             // we require GLES 3.1 headers, but we support GLES 3.0
             if (UTILS_UNLIKELY(!(major >= 3 && minor >= 0))) {
                 PANIC_LOG("OpenGL ES 3.0 minimum needed (current %d.%d)", major, minor);
