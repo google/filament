@@ -1862,7 +1862,7 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
         } else {
             gl.disable(GL_SCISSOR_TEST);
         }
-        if (respectScissor && (GLES30_HEADERS || GLES31_HEADERS) && gl.bugs.clears_hurt_performance) {
+        if (respectScissor && GLES30_HEADERS && gl.bugs.clears_hurt_performance) {
             // With OpenGL ES, we clear the viewport using geometry to improve performance on certain
             // OpenGL drivers. e.g. on Adreno this avoids needless loads from the GMEM.
             clearWithGeometryPipe(clearColor, params.clearColor,
