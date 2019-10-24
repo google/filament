@@ -201,7 +201,7 @@ void OpenGLDriver::initClearProgram() noexcept {
         }
         )SHADER";
 
-    if (GLES30_HEADERS || GLES31_HEADERS) {
+    if (GLES30_HEADERS) {
         GLint status;
         char const* const vsource = clearVertexES;
         char const* const fsource = clearFragmentES;
