@@ -1950,7 +1950,7 @@ void OpenGLDriver::discardSubRenderTargetBuffers(Handle<HwRenderTarget> rth,
 
     // glInvalidateSubFramebuffer appeared on GLES 3.0 and GL4.3, for simplicity we just
     // ignore it on GL (rather than having to do a runtime check).
-    if (GLES30_HEADERS || GLES31_HEADERS) {
+    if (GLES30_HEADERS) {
         // we wouldn't have to bind the framebuffer if we had glInvalidateNamedFramebuffer()
         GLRenderTarget const* rt = handle_cast<GLRenderTarget const*>(rth);
 
