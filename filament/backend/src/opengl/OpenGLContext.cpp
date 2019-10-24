@@ -90,7 +90,7 @@ OpenGLContext::OpenGLContext() noexcept {
     }
 
     ShaderModel shaderModel = ShaderModel::UNKNOWN;
-    if (GLES31_HEADERS) {
+    if (GLES30_HEADERS) {
         if (major == 3 && minor >= 0) {
             shaderModel = ShaderModel::GL_ES_30;
         }
