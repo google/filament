@@ -61,6 +61,96 @@ static bool vec3eq(float3 a, float3 b) {
             almostEqualUlps(a.z, b.z, 1);
 }
 
+TEST(FilamentTest, SkinningMath) {
+
+    struct Bone {
+        quatf q;
+        float4 t;
+        float4 s;
+    };
+
+    auto makeBone = [&](mat4f m) -> Bone {
+        // figure out the scales
+        float4 s = { length(m[0]), length(m[1]), length(m[2]), 0.0f };
+        if (dot(cross(m[0].xyz, m[1].xyz), m[2].xyz) < 0) {
+            s[2] = -s[2];
+        }
+
+        // compute the inverse scales
+        float4 is = { 1.0f/s.x, 1.0f/s.y, 1.0f/s.z, 0.0f };
+
+        // normalize the matrix
+        m[0] *= is[0];
+        m[1] *= is[1];
+        m[2] *= is[2];
+
+
+        Bone bone;
+        bone.s = s;
+        bone.q = m.toQuaternion();
+        bone.t = m[3];
+        return bone;
+    };
+
+    auto applyBone = [](Bone const& bone, float3 v) -> float3 {
+        float4 q = bone.q.xyzw;
+        float3 t = bone.t.xyz;
+        float3 s = bone.s.xyz;
+
+        // apply the non-uniform scales
+        v *= s;
+
+        // apply the rigid transform (valid only for unit quaternions)
+        v += 2.0 * cross(q.xyz, cross(q.xyz, v) + q.w * v);
+
+        // apply the translation
+        v += t;
+
+        return v;
+    };
+
+    auto check = [&](mat4f m, float3 v) {
+        float3 expect = (m * v).xyz;
+        float3 actual = applyBone(makeBone(m), v);
+        static constexpr float value_eps = 40 * std::numeric_limits<float>::epsilon();
+        EXPECT_NEAR(expect.x, actual.x, value_eps);
+        EXPECT_NEAR(expect.y, actual.y, value_eps);
+        EXPECT_NEAR(expect.z, actual.z, value_eps);
+    };
+
+    mat4f m;
+    float3 v = {1, 2, 3};
+
+    m = mat4f::translation(float3{1, 2, 3});
+    check(m, v);
+
+    m = mat4f::scaling(float3{1, 2, 3});
+    check(m, v);
+
+    m = mat4f::scaling(float3{1, 2, 3}) * mat4f::translation(float3{1, 2, 3});
+    check(m, v);
+
+    m = mat4f::translation(float3{1, 2, 3}) * mat4f::scaling(float3{1, 2, 3});
+    check(m, v);
+
+    m = mat4f::translation(float3{1, 2, 3}) * mat4f::scaling(float3{1, -4, 1});
+    check(m, v);
+
+
+    std::default_random_engine generator(82828); // NOLINT
+    std::uniform_real_distribution<float> distribution(-4, 4);
+    std::uniform_real_distribution<float> dangle(-2.0 * F_PI, 2.0 * F_PI);
+    auto rand_gen = std::bind(distribution, generator);
+
+    for (size_t i = 0; i < 100; ++i) {
+        m =
+                mat4f::translation(float3{rand_gen(), rand_gen(), rand_gen()}) *
+                mat4f::rotation(dangle(generator), normalize(float3{rand_gen(), rand_gen(), rand_gen()})) *
+                mat4f::scaling(float3{rand_gen(), rand_gen(), rand_gen()});
+        check(m, v);
+    }
+}
+
 TEST(FilamentTest, TransformManager) {
     filament::details::FTransformManager tcm;
     EntityManager& em = EntityManager::get();
