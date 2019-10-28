@@ -42,6 +42,7 @@ jobs:
           git config gc.auto 0
           git fetch --tags --prune --progress --no-recurse-submodules origin +%GITHUB_REF%:%GITHUB_REF:refs/=refs/remote/%
           git checkout --progress --force %GITHUB_REF:refs/=refs/remote/%
+        shell: cmd
       - name: Run build script
         run: |
           build\windows\build-github.bat
