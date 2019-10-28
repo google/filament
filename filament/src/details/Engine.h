@@ -134,7 +134,7 @@ public:
 
     static void destroy(FEngine* engine);
 
-    static void assertValid(Engine const& engine, const char* function);
+    static void assertValid(Engine const& engine);
 
     ~FEngine() noexcept;
 
