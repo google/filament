@@ -242,6 +242,11 @@ class MainActivity : Activity() {
                             0.0f,   -1.7f,  0.0f,   1.0f
                     ))
 
+
+            // The lucy asset does not have animation but we invoke the asset animator for demonstration purposes.
+            val elapsedTimeInSeconds = a.currentPlayTime.toFloat() / 1000.0f
+            filamentAsset.animator.applyAnimation(0, elapsedTimeInSeconds)
+            filamentAsset.animator.updateBoneMatrices()
         }
         animator.start()
     }

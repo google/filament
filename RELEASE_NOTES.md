@@ -6,6 +6,7 @@ A new header is inserted each time a *tag* is created.
 ## Next release
 
 - Added ETC2 and BC compressed texture support to Metal backend.
+- Add Java / Kotlin bindings for gltfio::Animator.
 
 ## v1.4.1
 
