@@ -61,7 +61,7 @@ RenderTarget::Builder& RenderTarget::Builder::layer(AttachmentPoint pt, uint32_t
 }
 
 RenderTarget* RenderTarget::Builder::build(Engine& engine) {
-    FEngine::assertValid(engine);
+    FEngine::assertValid(engine, __PRETTY_FUNCTION__);
     using backend::TextureUsage;
     const FRenderTarget::Attachment& color = mImpl->mAttachments[COLOR];
     const FRenderTarget::Attachment& depth = mImpl->mAttachments[DEPTH];

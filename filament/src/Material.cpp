@@ -73,7 +73,7 @@ Material::Builder& Material::Builder::package(const void* payload, size_t size) 
 }
 
 Material* Material::Builder::build(Engine& engine) {
-    FEngine::assertValid(engine);
+    FEngine::assertValid(engine, __PRETTY_FUNCTION__);
     MaterialParser* materialParser = FMaterial::createParser(
             upcast(engine).getBackend(), mImpl->mPayload, mImpl->mSize);
 
