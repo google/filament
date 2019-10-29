@@ -43,10 +43,9 @@ data class Framebuffer(
 
 class MainActivity : Activity() {
 
-    // Be sure to initialize not only Filament, but also gltfio (via AssetLoader)
+    // We are using the gltfio library, so init the AssetLoader rather than Filament.
     companion object {
         init {
-            Filament.init()
             AssetLoader.init()
         }
     }
