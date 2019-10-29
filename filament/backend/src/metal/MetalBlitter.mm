@@ -289,11 +289,7 @@ void MetalBlitter::blitFastPath(bool& blitColor, bool& blitDepth, const BlitArgs
 }
 
 void MetalBlitter::shutdown() noexcept {
-    for (auto it = mBlitFunctions.begin(); it != mBlitFunctions.end(); ++it) {
-        [it.value() release];
-    }
     mBlitFunctions.clear();
-    [mVertexFunction release];
     mVertexFunction = nil;
 }
 
@@ -348,8 +344,6 @@ id<MTLFunction> MetalBlitter::compileFragmentFunction(BlitFunctionKey key) {
                                                               error:&error];
     id<MTLFunction> function = [library newFunctionWithName:@"blitterFrag"];
     NSERROR_CHECK("Unable to compile shading library for MetalBlitter.");
-    [options release];
-    [library release];
 
     return function;
 }
@@ -367,7 +361,6 @@ id<MTLFunction> MetalBlitter::getBlitVertexFunction() {
                                                              error:&error];
     id<MTLFunction> function = [library newFunctionWithName:@"blitterVertex"];
     NSERROR_CHECK("Unable to compile shading library for MetalBlitter.");
-    [library release];
 
     mVertexFunction = function;
 

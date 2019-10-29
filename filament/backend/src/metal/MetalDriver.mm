@@ -52,7 +52,6 @@ MetalDriver::MetalDriver(backend::MetalPlatform* platform) noexcept
         : DriverBase(new ConcreteDispatcher<MetalDriver>()),
         mPlatform(*platform),
         mContext(new MetalContext) {
-    mContext->driverPool = [[NSAutoreleasePool alloc] init];
     mContext->device = MTLCreateSystemDefaultDevice();
     mContext->commandQueue = [mContext->device newCommandQueue];
     mContext->commandQueue.label = @"Filament";
@@ -73,7 +72,7 @@ MetalDriver::MetalDriver(backend::MetalPlatform* platform) noexcept
 }
 
 MetalDriver::~MetalDriver() noexcept {
-    [mContext->device release];
+    mContext->device = nil;
     CFRelease(mContext->textureCache);
     delete mContext->bufferPool;
     delete mContext->blitter;
@@ -91,16 +90,20 @@ void MetalDriver::debugCommand(const char *methodName) {
 
 void MetalDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId,
         backend::FrameFinishedCallback callback, void* user) {
-    mContext->framePool = [[NSAutoreleasePool alloc] init];
-
     id<MTLCommandBuffer> commandBuffer = acquireCommandBuffer(mContext);
     [commandBuffer addCompletedHandler:^(id <MTLCommandBuffer> buffer) {
-        mContext->resourceTracker.clearResources(buffer);
+        mContext->resourceTracker.clearResources((__bridge void*) buffer);
     }];
 
     // If a callback was specified, then the client is responsible for presenting the frame.
     mContext->frameFinishedCallback = callback;
     mContext->frameFinishedUserData = user;
+}
+
+void MetalDriver::execute(std::function<void(void)> fn) noexcept {
+    @autoreleasepool {
+        fn();
+    }
 }
 
 void MetalDriver::setPresentationTime(int64_t monotonic_clock_ns) {
@@ -116,15 +119,10 @@ void MetalDriver::endFrame(uint32_t frameId) {
         mContext->currentCommandBuffer = nil;
     }
 
-    // Release resources created during frame execution- like commandBuffer and currentDrawable.
-    [mContext->framePool drain];
     mContext->bufferPool->gc();
 
-    if (!mContext->frameFinishedCallback) {
-        // If we're responsible for presenting the frame, then by this point we've already done so
-        // and it's safe to release the drawable.
-        [mContext->currentDrawable release];
-    }
+    // If we acquired a drawable for this frame, ensure that we release it here.
+    mContext->currentDrawable = nil;
 
     CVMetalTextureCacheFlush(mContext->textureCache, 0);
 }
@@ -215,7 +213,7 @@ void MetalDriver::createFenceR(Handle<HwFence> fh, int dummy) {
 }
 
 void MetalDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
-    auto* metalLayer = (CAMetalLayer*) nativeWindow;
+    auto* metalLayer = (__bridge CAMetalLayer*) nativeWindow;
     construct_handle<MetalSwapChain>(mHandleMap, sch, mContext->device, metalLayer);
 }
 
@@ -366,8 +364,7 @@ void MetalDriver::terminate() {
     [oneOffBuffer waitUntilCompleted];
 
     mContext->bufferPool->reset();
-    [mContext->commandQueue release];
-    [mContext->driverPool drain];
+    mContext->commandQueue = nil;
 
     MetalExternalImage::shutdown();
     mContext->blitter->shutdown();
@@ -638,8 +635,9 @@ void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
 void MetalDriver::endRenderPass(int dummy) {
     [mContext->currentCommandEncoder endEncoding];
 
-    // Command encoders are one time use. Set it to nullptr so we don't accidentally use it again.
-    mContext->currentCommandEncoder = nullptr;
+    // Command encoders are one time use. Set it to nil to release the encoder and ensure we don't
+    // accidentally use it again.
+    mContext->currentCommandEncoder = nil;
 }
 
 void MetalDriver::discardSubRenderTargetBuffers(Handle<HwRenderTarget> rth,
@@ -677,7 +675,6 @@ void MetalDriver::makeCurrent(Handle<HwSwapChain> schDraw, Handle<HwSwapChain> s
 void MetalDriver::commit(Handle<HwSwapChain> sch) {
     if (mContext->currentDrawable != nil && !mContext->frameFinishedCallback) {
         [mContext->currentCommandBuffer presentDrawable:mContext->currentDrawable];
-        [mContext->currentDrawable release];
     }
     [mContext->currentCommandBuffer commit];
     mContext->currentCommandBuffer = nil;
