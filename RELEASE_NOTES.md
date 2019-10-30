@@ -3,9 +3,14 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## Next release
+## v1.4.2
 
-- Add Java / Kotlin bindings for gltfio::Animator.
+- Cleaned up the validation strategy in Engine (checks for use-after-destroy etc).
+- OpenGL: Fixed ES 3.0 support on iOS.
+- OpenGL: Added support for KHR_debug in debug builds.
+- gltfio: Added Java / Kotlin bindings for Animator.
+- gltfio: Fixed panic with the Android gltf-bloom demo.
+- gltfio: Java clients should no longer call Filament#init.
 
 ## v1.4.1
 
