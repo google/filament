@@ -642,23 +642,12 @@ void ResourceLoader::updateBoundingBoxes(details::FFilamentAsset* asset) const {
             auto renderable = rm.getInstance(iter.second);
             rm.setAxisAlignedBoundingBox(renderable, Box().set(aabb.min, aabb.max));
 
-            // Transform all eight corners of the bounding box to world space and find the new AABB.
-            // This is used for the asset-level bounding box.
+            // Transform this bounding box, then update the asset-level bounding box.
             auto transformable = tm.getInstance(iter.second);
-            mat4f worldTransform = tm.getWorldTransform(transformable);
-            float3 a = (worldTransform * float4(aabb.min.x, aabb.min.y, aabb.min.z, 1.0)).xyz;
-            float3 b = (worldTransform * float4(aabb.min.x, aabb.min.y, aabb.max.z, 1.0)).xyz;
-            float3 c = (worldTransform * float4(aabb.min.x, aabb.max.y, aabb.min.z, 1.0)).xyz;
-            float3 d = (worldTransform * float4(aabb.min.x, aabb.max.y, aabb.max.z, 1.0)).xyz;
-            float3 e = (worldTransform * float4(aabb.max.x, aabb.min.y, aabb.min.z, 1.0)).xyz;
-            float3 f = (worldTransform * float4(aabb.max.x, aabb.min.y, aabb.max.z, 1.0)).xyz;
-            float3 g = (worldTransform * float4(aabb.max.x, aabb.max.y, aabb.min.z, 1.0)).xyz;
-            float3 h = (worldTransform * float4(aabb.max.x, aabb.max.y, aabb.max.z, 1.0)).xyz;
-            float3 minpt = min(min(min(min(min(min(min(a, b), c), d), e), f), g), h);
-            float3 maxpt = max(max(max(max(max(max(max(a, b), c), d), e), f), g), h);
-
-            assetBounds.min = min(assetBounds.min, minpt);
-            assetBounds.max = max(assetBounds.max, maxpt);
+            const mat4f worldTransform = tm.getWorldTransform(transformable);
+            const Aabb transformed = aabb.transform(worldTransform);
+            assetBounds.min = min(assetBounds.min, transformed.min);
+            assetBounds.max = max(assetBounds.max, transformed.max);
         }
     }
 

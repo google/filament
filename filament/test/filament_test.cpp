@@ -21,8 +21,11 @@
 
 #include <math/vec3.h>
 #include <math/vec4.h>
+#include <math/mat3.h>
 #include <math/mat4.h>
+#include <math/scalar.h>
 
+#include <filament/Box.h>
 #include <filament/Camera.h>
 #include <filament/Color.h>
 #include <filament/Frustum.h>
@@ -59,6 +62,30 @@ static bool vec3eq(float3 a, float3 b) {
     return  almostEqualUlps(a.x, b.x, 1) &&
             almostEqualUlps(a.y, b.y, 1) &&
             almostEqualUlps(a.z, b.z, 1);
+}
+
+TEST(FilamentTest, AabbMath) {
+    constexpr Aabb aabb = {{4, 5, 6}, {12, 14, 11}};
+
+    const mat4f m(mat3f::rotation(F_PI_2, float3 {0, 0, 1}), float3 {-4, -5, -6});
+    const Aabb result = aabb.transform(m);
+
+    // Compare Arvo's method (above) with the naive method (below).
+    const float3 a = (m * float4(aabb.min.x, aabb.min.y, aabb.min.z, 1.0)).xyz;
+    const float3 b = (m * float4(aabb.min.x, aabb.min.y, aabb.max.z, 1.0)).xyz;
+    const float3 c = (m * float4(aabb.min.x, aabb.max.y, aabb.min.z, 1.0)).xyz;
+    const float3 d = (m * float4(aabb.min.x, aabb.max.y, aabb.max.z, 1.0)).xyz;
+    const float3 e = (m * float4(aabb.max.x, aabb.min.y, aabb.min.z, 1.0)).xyz;
+    const float3 f = (m * float4(aabb.max.x, aabb.min.y, aabb.max.z, 1.0)).xyz;
+    const float3 g = (m * float4(aabb.max.x, aabb.max.y, aabb.min.z, 1.0)).xyz;
+    const float3 h = (m * float4(aabb.max.x, aabb.max.y, aabb.max.z, 1.0)).xyz;
+    const Aabb expected {
+        .min = min(min(min(min(min(min(min(a, b), c), d), e), f), g), h),
+        .max = max(max(max(max(max(max(max(a, b), c), d), e), f), g), h),
+    };
+
+    EXPECT_PRED2(vec3eq, result.min, expected.min);
+    EXPECT_PRED2(vec3eq, result.max, expected.max);
 }
 
 TEST(FilamentTest, SkinningMath) {
