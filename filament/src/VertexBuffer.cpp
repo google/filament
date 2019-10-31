@@ -155,8 +155,12 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const VertexBuffer::Builder& build
             attributeArray[i].stride = attributes[i].stride;
             attributeArray[i].buffer = attributes[i].buffer;
             attributeArray[i].type   = attributes[i].type;
-            attributeArray[i].flags  = attributes[i].flags;
         }
+
+        // Even if the attribute is disabled, we need to copy the flags (in particular, the
+        // FLAG_INTEGER_TARGET we might have set above) to the attribute array passed to the
+        // backend.
+        attributeArray[i].flags  = attributes[i].flags;
     }
 
     FEngine::DriverApi& driver = engine.getDriverApi();
