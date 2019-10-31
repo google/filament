@@ -86,6 +86,8 @@ using namespace geometry;
 using namespace gltfio;
 using namespace image;
 
+namespace em = emscripten;
+
 // Many methods require a thin layer of C++ glue which is elegantly expressed with a lambda.
 // However, passing a bare lambda into embind's daisy chain requires a cast to a function pointer.
 #define EMBIND_LAMBDA(retval, arglist, impl) (retval (*) arglist) [] arglist impl
@@ -283,10 +285,10 @@ struct flatmat4 {
 };
 
 value_array<flatmat4>("mat4")
-    .element(index< 0>()).element(index< 1>()).element(index< 2>()).element(index< 3>())
-    .element(index< 4>()).element(index< 5>()).element(index< 6>()).element(index< 7>())
-    .element(index< 8>()).element(index< 9>()).element(index<10>()).element(index<11>())
-    .element(index<12>()).element(index<13>()).element(index<14>()).element(index<15>());
+    .element(em::index< 0>()).element(em::index< 1>()).element(em::index< 2>()).element(em::index< 3>())
+    .element(em::index< 4>()).element(em::index< 5>()).element(em::index< 6>()).element(em::index< 7>())
+    .element(em::index< 8>()).element(em::index< 9>()).element(em::index<10>()).element(em::index<11>())
+    .element(em::index<12>()).element(em::index<13>()).element(em::index<14>()).element(em::index<15>());
 
 struct flatmat3 {
     filament::math::mat3f m;
@@ -294,9 +296,9 @@ struct flatmat3 {
 };
 
 value_array<flatmat3>("mat3")
-    .element(index<0>()).element(index<1>()).element(index<2>())
-    .element(index<3>()).element(index<4>()).element(index<5>())
-    .element(index<6>()).element(index<7>()).element(index<8>());
+    .element(em::index<0>()).element(em::index<1>()).element(em::index<2>())
+    .element(em::index<3>()).element(em::index<4>()).element(em::index<5>())
+    .element(em::index<6>()).element(em::index<7>()).element(em::index<8>());
 
 value_object<RenderableManager::Bone>("RenderableManager$Bone")
     .field("unitQuaternion", &RenderableManager::Bone::unitQuaternion)

@@ -197,7 +197,7 @@ function build_webgl_with_target {
         cmake \
             -G "$BUILD_GENERATOR" \
             -DIMPORT_EXECUTABLES_DIR=out \
-            -DCMAKE_TOOLCHAIN_FILE=${EMSCRIPTEN}/cmake/Modules/Platform/Emscripten.cmake \
+            -DCMAKE_TOOLCHAIN_FILE=${EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake \
             -DCMAKE_BUILD_TYPE=$1 \
             -DCMAKE_INSTALL_PREFIX=../webgl-${lc_target}/filament \
             -DWEBGL=1 \
