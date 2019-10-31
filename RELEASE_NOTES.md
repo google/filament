@@ -6,6 +6,7 @@ A new header is inserted each time a *tag* is created.
 ## Next release
 
 - Fixed morph shapes not rendering in WebGL.
+- Added support for the latest version of emscripten.
 
 ## v1.4.2
 
