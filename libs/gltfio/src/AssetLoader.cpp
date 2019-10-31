@@ -745,16 +745,18 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
         return iter->second.instance;
     }
 
-    // The default glTF material is non-lit black.
-    if (inputMat == nullptr) {
-        MaterialKey matkey {
-            .unlit = true
-        };
-        MaterialInstance* mi = mMaterials->createMaterialInstance(&matkey, uvmap, "default");
-        mResult->mMaterialInstances.push_back(mi);
-        mMatInstanceCache[0] = {mi, *uvmap};
-        return mi;
-    }
+    // The default glTF material.
+    static const cgltf_material kDefaultMat = {
+        .name = (char*) "Default GLTF material",
+        .has_pbr_metallic_roughness = true,
+        .has_pbr_specular_glossiness = false,
+        .pbr_metallic_roughness = {
+	        .base_color_factor = {1.0, 1.0, 1.0, 1.0},
+	        .metallic_factor = 1.0,
+	        .roughness_factor = 1.0,
+        },
+    };
+    inputMat = inputMat ? inputMat : &kDefaultMat;
 
     auto mrConfig = inputMat->pbr_metallic_roughness;
     auto sgConfig = inputMat->pbr_specular_glossiness;
