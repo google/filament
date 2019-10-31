@@ -31,6 +31,7 @@
 namespace filament {
 
 class Engine;
+class RenderTarget;
 class SwapChain;
 class View;
 
@@ -190,7 +191,7 @@ public:
             Viewport const& srcViewport, uint32_t flags = 0);
 
     /**
-     * Read-back the content of the SwapChain associated with this Renderer.
+     * Reads back the content of the SwapChain associated with this Renderer.
      *
      * @param xoffset   Left offset of the sub-region to read back.
      * @param yoffset   Bottom offset of the sub-region to read back.
@@ -245,6 +246,67 @@ public:
      *
      */
     void readPixels(uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
+            backend::PixelBufferDescriptor&& buffer);
+
+
+    /**
+     * Reads back the content of the provided RenderTarget.
+     *
+     * @param renderTarget  RenderTarget to read back from.
+     * @param xoffset       Left offset of the sub-region to read back.
+     * @param yoffset       Bottom offset of the sub-region to read back.
+     * @param width         Width of the sub-region to read back.
+     * @param height        Height of the sub-region to read back.
+     * @param buffer        Client-side buffer where the read-back will be written.
+     *
+     *                  The following format are always supported:
+     *                      - PixelBufferDescriptor::PixelDataFormat::RGBA
+     *                      - PixelBufferDescriptor::PixelDataFormat::RGBA_INTEGER
+     *
+     *                  The following types are always supported:
+     *                      - PixelBufferDescriptor::PixelDataType::UBYTE
+     *                      - PixelBufferDescriptor::PixelDataType::UINT
+     *                      - PixelBufferDescriptor::PixelDataType::INT
+     *                      - PixelBufferDescriptor::PixelDataType::FLOAT
+     *
+     *                  Other combination of format/type may be supported. If a combination is
+     *                  not supported, this operation may fail silently. Use a DEBUG build
+     *                  to get some logs about the failure.
+     *
+     *
+     *  Framebuffer as seen on         User buffer (PixelBufferDescriptor&)
+     *  screen
+     *  +--------------------+
+     *  |                    |                .stride         .alignment
+     *  |                    |         ----------------------->-->
+     *  |                    |         O----------------------+--+   low addresses
+     *  |                    |         |          |           |  |
+     *  |             w      |         |          | .top      |  |
+     *  |       <--------->  |         |          V           |  |
+     *  |       +---------+  |         |     +---------+      |  |
+     *  |       |     ^   |  | ======> |     |         |      |  |
+     *  |   x   |    h|   |  |         |.left|         |      |  |
+     *  +------>|     v   |  |         +---->|         |      |  |
+     *  |       +.........+  |         |     +.........+      |  |
+     *  |            ^       |         |                      |  |
+     *  |          y |       |         +----------------------+--+  high addresses
+     *  O------------+-------+
+     *
+     *
+     * Typically readPixels() will be called after render() and before endFrame().
+     *
+     * After issuing this method, the callback associated with `buffer` will be invoked on the
+     * main thread, indicating that the read-back has completed. Typically, this will happen
+     * after multiple calls to beginFrame(), render(), endFrame().
+     *
+     * It is also possible to use a Fence to wait for the read-back.
+     *
+     * @remark
+     * readPixels() is intended for debugging and testing. It will impact performance significantly.
+     *
+     */
+    void readPixels(RenderTarget* renderTarget,
+            uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
             backend::PixelBufferDescriptor&& buffer);
 
     /**
