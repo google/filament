@@ -106,6 +106,8 @@ add_rawfile("third_party/models/AnimatedTriangle/SimpleTriangle.bin" "SimpleTria
 add_rawfile("third_party/models/AnimatedTriangle/animation.bin" "animation.bin")
 add_rawfile("third_party/models/AnimatedTriangle/AnimatedTriangle.gltf" "AnimatedTriangle.gltf")
 
+add_rawfile("third_party/models/AnimatedMorphCube/AnimatedMorphCube.glb" "AnimatedMorphCube.glb")
+
 # Convert OBJ files into filamesh files.
 function(add_mesh SOURCE TARGET)
     set(source_mesh "${ROOT_DIR}/${SOURCE}")
@@ -184,6 +186,7 @@ set(HTML_FILES
     animation.html
     helmet.html
     leaks.html
+    morphing.html
     parquet.html
     skinning.html
     suzanne.html
