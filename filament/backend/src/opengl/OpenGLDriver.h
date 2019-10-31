@@ -366,7 +366,6 @@ private:
     mutable tsl::robin_map<uint32_t, GLuint> mSamplerMap;
     mutable std::vector<GLTexture*> mExternalStreams;
 
-
     void attachStream(GLTexture* t, GLStream* stream) noexcept;
     void detachStream(GLTexture* t) noexcept;
     void replaceStream(GLTexture* t, GLStream* stream) noexcept;
@@ -377,6 +376,10 @@ private:
     void updateStream(GLTexture* t, backend::DriverApi* driver) noexcept;
     void updateBuffer(GLenum target, GLBuffer* buffer, backend::BufferDescriptor const& p, uint32_t alignment = 16) noexcept;
     void updateTextureLodRange(GLTexture* texture, int8_t targetLevel) noexcept;
+
+    void whenGpuCommandsComplete(std::function<void()> fn) noexcept;
+    void executeGpuCommandsCompleteOps() noexcept;
+    std::vector< std::pair<GLsync, std::function<void(void)>> > mGpuCommandCompleteOps;
 };
 
 // ------------------------------------------------------------------------------------------------

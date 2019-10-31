@@ -2419,24 +2419,73 @@ void OpenGLDriver::readPixels(Handle<HwRenderTarget> src,
     gl.bindFramebuffer(GL_READ_FRAMEBUFFER, s->gl.fbo);
 
     // TODO: we could use a PBO to make this asynchronous
-    glReadPixels(GLint(x), GLint(y), GLint(width), GLint(height), glFormat, glType, p.buffer);
+    //glReadPixels(GLint(x), GLint(y), GLint(width), GLint(height), glFormat, glType, p.buffer);
 
-    // now we need to flip the buffer vertically to match our API
-    size_t stride = p.stride ? p.stride : width;
-    size_t bpp = PixelBufferDescriptor::computeDataSize(p.format, p.type, 1, 1, 1);
-    size_t bpr = PixelBufferDescriptor::computeDataSize(p.format, p.type, stride, 1, p.alignment);
-    char* head = (char*)p.buffer + p.left * bpp + bpr * p.top;
-    char* tail = (char*)p.buffer + p.left * bpp + bpr * (p.top + height - 1);
-    // clang vectorizes this loop
-    while (head < tail) {
-        std::swap_ranges(head, head + bpp * width, tail);
-        head += bpr;
-        tail -= bpr;
-    }
+    GLuint pbo;
+    glGenBuffers(1, &pbo);
+    gl.bindBuffer(GL_PIXEL_PACK_BUFFER, pbo);
+    glBufferData(GL_PIXEL_PACK_BUFFER, p.size, nullptr, GL_STATIC_DRAW);
+    glReadPixels(GLint(x), GLint(y), GLint(width), GLint(height), glFormat, glType, nullptr);
+    gl.bindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 
-    scheduleDestroy(std::move(p));
+    // we're forced to make a copy on the stack because otherwise it deletes std::function<> copy
+    // constructor.
+    auto* pUserBuffer = new PixelBufferDescriptor(std::move(p));
+    whenGpuCommandsComplete([this, width, height, pbo, pUserBuffer]() mutable {
+        PixelBufferDescriptor& p = *pUserBuffer;
+        auto& gl = mContext;
+        gl.bindBuffer(GL_PIXEL_PACK_BUFFER, pbo);
+        void* vaddr = glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0,  p.size, GL_MAP_READ_BIT);
+        if (vaddr) {
+            // now we need to flip the buffer vertically to match our API
+            size_t stride = p.stride ? p.stride : width;
+            size_t bpp = PixelBufferDescriptor::computeDataSize(
+                    p.format, p.type, 1, 1, 1);
+            size_t bpr = PixelBufferDescriptor::computeDataSize(
+                    p.format, p.type, stride, 1, p.alignment);
+            char* head = (char*)vaddr + p.left * bpp + bpr * p.top;
+            char* tail = (char*)p.buffer + p.left * bpp + bpr * (p.top + height - 1);
+            for (size_t i = 0; i < height; ++i) {
+                memcpy(tail, head, bpp * width);
+                head += bpr;
+                tail -= bpr;
+            }
+            glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+        }
+        gl.bindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+        glDeleteBuffers(1, &pbo);
+        scheduleDestroy(std::move(p));
+        delete pUserBuffer;
+        CHECK_GL_ERROR(utils::slog.e)
+    });
 
     CHECK_GL_ERROR(utils::slog.e)
+}
+
+void OpenGLDriver::whenGpuCommandsComplete(std::function<void(void)> fn) noexcept {
+    GLsync sync = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+    mGpuCommandCompleteOps.emplace_back(sync, std::move(fn));
+    CHECK_GL_ERROR(utils::slog.e)
+}
+
+void OpenGLDriver::executeGpuCommandsCompleteOps() noexcept {
+    auto& v = mGpuCommandCompleteOps;
+    auto it = v.begin();
+    while (it != v.end()) {
+        GLenum status = glClientWaitSync(it->first, 0, 0);
+        if (status == GL_ALREADY_SIGNALED || status == GL_CONDITION_SATISFIED) {
+            it->second();
+            glDeleteSync(it->first);
+            it = v.erase(it);
+        } else if (UTILS_UNLIKELY(status == GL_WAIT_FAILED)) {
+            // This should never happen, but is very problematic if it does, as we might leak
+            // some data depending on what the callback does. However, we clean-up our own state.
+            glDeleteSync(it->first);
+            it = v.erase(it);
+        } else {
+            ++it;
+        }
+    }
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -2447,6 +2496,7 @@ void OpenGLDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId,
         backend::FrameFinishedCallback, void*) {
     auto& gl = mContext;
     insertEventMarker("beginFrame");
+    executeGpuCommandsCompleteOps();
     if (UTILS_UNLIKELY(!mExternalStreams.empty())) {
         OpenGLPlatform& platform = mPlatform;
         for (GLTexture const* t : mExternalStreams) {
@@ -2469,6 +2519,7 @@ void OpenGLDriver::setPresentationTime(int64_t monotonic_clock_ns) {
 void OpenGLDriver::endFrame(uint32_t frameId) {
     //SYSTRACE_NAME("glFinish");
     //glFinish();
+    //executeGpuCommandsCompleteOps();
     insertEventMarker("endFrame");
 }
 
