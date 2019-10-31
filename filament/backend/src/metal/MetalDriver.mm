@@ -527,19 +527,15 @@ void MetalDriver::setExternalStream(Handle<HwTexture> th, Handle<HwStream> sh) {
 }
 
 void MetalDriver::generateMipmaps(Handle<HwTexture> th) {
-    // @autoreleasepool is used to release the one-off command buffer and encoder in case this work
-    // is done outside a frame.
-    @autoreleasepool {
-        auto tex = handle_cast<MetalTexture>(mHandleMap, th);
-        // Create a one-off command buffer to execute the blit command. Technically, we could re-use
-        // this command buffer for later rendering commands, but we'll just commit it here for
-        // simplicity.
-        id <MTLCommandBuffer> commandBuffer = [mContext->commandQueue commandBuffer];
-        id <MTLBlitCommandEncoder> blitEncoder = [commandBuffer blitCommandEncoder];
-        [blitEncoder generateMipmapsForTexture:tex->texture];
-        [blitEncoder endEncoding];
-        [commandBuffer commit];
-    }
+    auto tex = handle_cast<MetalTexture>(mHandleMap, th);
+    // Create a one-off command buffer to execute the blit command. Technically, we could re-use
+    // this command buffer for later rendering commands, but we'll just commit it here for
+    // simplicity.
+    id <MTLCommandBuffer> commandBuffer = [mContext->commandQueue commandBuffer];
+    id <MTLBlitCommandEncoder> blitEncoder = [commandBuffer blitCommandEncoder];
+    [blitEncoder generateMipmapsForTexture:tex->texture];
+    [blitEncoder endEncoding];
+    [commandBuffer commit];
 }
 
 bool MetalDriver::canGenerateMipmaps() {
