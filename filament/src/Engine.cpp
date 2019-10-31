@@ -315,20 +315,32 @@ void FEngine::shutdown() {
     }
     cleanupResourceList(mFences);
 
-    // There might be commands added by the terminate() calls
-    flushCommandBuffer(mCommandBufferQueue);
-    if (!UTILS_HAS_THREADING) {
-        execute();
-    }
-
     /*
-     * terminate the rendering engine
+     * Shutdown the backend...
      */
 
+    // There might be commands added by the terminate() calls, so we need to flush all commands
+    // up to this point. After flushCommandBuffer() is called, all pending commands are guaranteed
+    // to be executed before the driver thread exits.
+    flushCommandBuffer(mCommandBufferQueue);
+
+    // now wait for all pending commands to be executed and the thread to exit
     mCommandBufferQueue.requestExit();
-    if (UTILS_HAS_THREADING) {
+    if (!UTILS_HAS_THREADING) {
+        execute();
+        getDriverApi().terminate();
+    } else {
         mDriverThread.join();
+
     }
+
+    // Finally, call user callbacks that might have been scheduled.
+    // These callbacks CANNOT call driver APIs.
+    getDriver().purge();
+
+    /*
+     * Terminate the JobSystem...
+     */
 
     // detach this thread from the jobsystem
     mJobSystem.emancipate();
@@ -446,6 +458,9 @@ int FEngine::loop() {
     }
 #endif
 
+    JobSystem::setThreadName("FEngine::loop");
+    JobSystem::setThreadPriority(JobSystem::Priority::DISPLAY);
+
     mDriver = platform->createDriver(mSharedGLContext);
     mDriverBarrier.latch();
     if (UTILS_UNLIKELY(!mDriver)) {
@@ -453,9 +468,6 @@ int FEngine::loop() {
         // been logged.
         return 0;
     }
-
-    JobSystem::setThreadName("FEngine::loop");
-    JobSystem::setThreadPriority(JobSystem::Priority::DISPLAY);
 
     // We use the highest affinity bit, assuming this is a Big core in a  big.little
     // configuration. This is also a core not used by the JobSystem.

@@ -163,6 +163,15 @@ OpenGLDriver::~OpenGLDriver() noexcept {
 // ------------------------------------------------------------------------------------------------
 
 void OpenGLDriver::terminate() {
+    // wait for the GPU to finish executing all commands
+    glFinish();
+
+    // and make sure to execute all the GpuCommandCompleteOps callbacks
+    executeGpuCommandsCompleteOps();
+
+    // because we called glFinish(), all callbacks should have been executed
+    assert(!mGpuCommandCompleteOps.size());
+
     for (auto& item : mSamplerMap) {
         mContext.unbindSampler(item.second);
         glDeleteSamplers(1, &item.second);
@@ -2428,7 +2437,7 @@ void OpenGLDriver::readPixels(Handle<HwRenderTarget> src,
     glReadPixels(GLint(x), GLint(y), GLint(width), GLint(height), glFormat, glType, nullptr);
     gl.bindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 
-    // we're forced to make a copy on the stack because otherwise it deletes std::function<> copy
+    // we're forced to make a copy on the heap because otherwise it deletes std::function<> copy
     // constructor.
     auto* pUserBuffer = new PixelBufferDescriptor(std::move(p));
     whenGpuCommandsComplete([this, width, height, pbo, pUserBuffer]() mutable {
@@ -2443,7 +2452,7 @@ void OpenGLDriver::readPixels(Handle<HwRenderTarget> src,
                     p.format, p.type, 1, 1, 1);
             size_t bpr = PixelBufferDescriptor::computeDataSize(
                     p.format, p.type, stride, 1, p.alignment);
-            char* head = (char*)vaddr + p.left * bpp + bpr * p.top;
+            char const* head = (char const*)vaddr + p.left * bpp + bpr * p.top;
             char* tail = (char*)p.buffer + p.left * bpp + bpr * (p.top + height - 1);
             for (size_t i = 0; i < height; ++i) {
                 memcpy(tail, head, bpp * width);
@@ -2534,6 +2543,7 @@ void OpenGLDriver::flush(int) {
 void OpenGLDriver::finish(int) {
     DEBUG_MARKER()
     glFinish();
+    executeGpuCommandsCompleteOps();
 }
 
 UTILS_NOINLINE
