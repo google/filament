@@ -3,6 +3,10 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
+## Next release
+
+- Fixed morph shapes not rendering in WebGL.
+
 ## v1.4.2
 
 - Cleaned up the validation strategy in Engine (checks for use-after-destroy etc).
