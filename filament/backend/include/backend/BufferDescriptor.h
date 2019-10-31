@@ -39,7 +39,12 @@ class UTILS_PUBLIC BufferDescriptor {
 public:
     /**
      * Callback used to destroy the buffer data.
-     * It is guaranteed to be called on the main filament thread.
+     * Guarantees:
+     *      Called on the main filament thread.
+     *
+     * Limitations:
+     *      Must be lightweight.
+     *      Must not call filament APIs.
      */
     using Callback = void(*)(void* buffer, size_t size, void* user);
 

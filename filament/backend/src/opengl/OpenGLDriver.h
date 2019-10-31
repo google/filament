@@ -379,7 +379,7 @@ private:
 
     void whenGpuCommandsComplete(std::function<void()> fn) noexcept;
     void executeGpuCommandsCompleteOps() noexcept;
-    std::vector< std::pair<GLsync, std::function<void(void)>> > mGpuCommandCompleteOps;
+    std::vector<std::pair<GLsync, std::function<void(void)>>> mGpuCommandCompleteOps;
 };
 
 // ------------------------------------------------------------------------------------------------
