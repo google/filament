@@ -291,6 +291,32 @@ public class Engine {
     }
 
     /**
+     * Creates a headless {@link SwapChain}
+     *
+     * @param width  width of the rendering buffer
+     * @param height height of the rendering buffer
+     * @param flags  configuration flags, see {@link SwapChain}
+     *
+     * @return a newly created {@link SwapChain} object
+     *
+     * @exception IllegalStateException can be thrown if the SwapChain couldn't be created
+     *
+     * @see SwapChain#CONFIG_DEFAULT
+     * @see SwapChain#CONFIG_TRANSPARENT
+     * @see SwapChain#CONFIG_READABLE
+     *
+     */
+    @NonNull
+    public SwapChain createSwapChain(int width, int height, long flags) {
+        if (width >= 0 && height >= 0) {
+            long nativeSwapChain = nCreateSwapChainHeadless(getNativeObject(), width, height, flags);
+            if (nativeSwapChain == 0) throw new IllegalStateException("Couldn't create SwapChain");
+            return new SwapChain(nativeSwapChain, null);
+        }
+        throw new IllegalArgumentException("Invalid parameters");
+    }
+
+    /**
      * Creates a {@link SwapChain} from a {@link NativeSurface}.
      *
      * @param surface a properly initialized {@link NativeSurface}
@@ -608,6 +634,7 @@ public class Engine {
     private static native void nDestroyEngine(long nativeEngine);
     private static native long nGetBackend(long nativeEngine);
     private static native long nCreateSwapChain(long nativeEngine, Object nativeWindow, long flags);
+    private static native long nCreateSwapChainHeadless(long nativeEngine, int width, int height, long flags);
     private static native long nCreateSwapChainFromRawPointer(long nativeEngine, long pointer, long flags);
     private static native void nDestroySwapChain(long nativeEngine, long nativeSwapChain);
     private static native long nCreateView(long nativeEngine);

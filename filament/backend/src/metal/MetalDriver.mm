@@ -127,8 +127,12 @@ void MetalDriver::endFrame(uint32_t frameId) {
     CVMetalTextureCacheFlush(mContext->textureCache, 0);
 }
 
-void MetalDriver::flush(int dummy) {
+void MetalDriver::flush(int) {
+    // TODO: implement flush, equivalent of glFlush() (needed for performance)
+}
 
+void MetalDriver::finish(int) {
+    // TODO: implement finish, equivalent of glFinish() (needed for unit tests)
 }
 
 void MetalDriver::createVertexBufferR(Handle<HwVertexBuffer> vbh, uint8_t bufferCount,
@@ -217,6 +221,11 @@ void MetalDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, 
     construct_handle<MetalSwapChain>(mHandleMap, sch, mContext->device, metalLayer);
 }
 
+void MetalDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch,
+        uint32_t width, uint32_t height, uint64_t flags) {
+    // TODO: implement headless swapchain
+}
+
 void MetalDriver::createStreamFromTextureIdR(Handle<HwStream>, intptr_t externalTextureId,
         uint32_t width, uint32_t height) {
 
@@ -263,6 +272,10 @@ Handle<HwFence> MetalDriver::createFenceS() noexcept {
 }
 
 Handle<HwSwapChain> MetalDriver::createSwapChainS() noexcept {
+    return alloc_handle<MetalSwapChain, HwSwapChain>();
+}
+
+Handle<HwSwapChain> MetalDriver::createSwapChainHeadlessS() noexcept {
     return alloc_handle<MetalSwapChain, HwSwapChain>();
 }
 

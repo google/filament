@@ -85,15 +85,15 @@ public class SwapChain {
      */
     public static final long CONFIG_READABLE = 0x2;
 
-    SwapChain(long nativeSwapChain, @NonNull Object surface) {
+    SwapChain(long nativeSwapChain, Object surface) {
         mNativeObject = nativeSwapChain;
         mSurface = surface;
     }
 
     /**
-     * @return the native <code>Object</code> this <code>SwapChain</code> was created from.
+     * @return the native <code>Object</code> this <code>SwapChain</code> was created from or null
+     *         for a headless SwapChain.
      */
-    @NonNull
     public Object getNativeWindow() {
         return mSurface;
     }

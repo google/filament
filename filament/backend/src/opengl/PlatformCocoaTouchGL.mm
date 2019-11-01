@@ -106,6 +106,11 @@ Platform::SwapChain* PlatformCocoaTouchGL::createSwapChain(void* nativewindow, u
     return (SwapChain*) nativewindow;
 }
 
+Platform::SwapChain* PlatformCocoaTouchGL::createSwapChain(uint32_t width, uint32_t height, uint64_t& flags) noexcept {
+    // TODO: implement headless SwapChain
+    return nullptr;
+}
+
 void PlatformCocoaTouchGL::destroySwapChain(Platform::SwapChain* swapChain) noexcept {
 }
 

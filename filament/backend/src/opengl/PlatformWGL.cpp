@@ -182,6 +182,11 @@ Platform::SwapChain* PlatformWGL::createSwapChain(void* nativeWindow, uint64_t& 
     return swapChain;
 }
 
+Platform::SwapChain* PlatformWGL::createSwapChain(uint32_t width, uint32_t height, uint64_t& flags) noexcept {
+    // TODO: implement headless SwapChain
+    return nullptr;
+}
+
 void PlatformWGL::destroySwapChain(Platform::SwapChain* swapChain) noexcept {
     HDC dc = (HDC) swapChain;
     HWND window = WindowFromDC(dc);

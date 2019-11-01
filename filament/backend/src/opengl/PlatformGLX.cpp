@@ -238,15 +238,34 @@ void PlatformGLX::terminate() noexcept {
     bluegl::unbind();
 }
 
-Platform::SwapChain* PlatformGLX::createSwapChain(
-        void* nativeWindow, uint64_t& flags) noexcept {
-
+Platform::SwapChain* PlatformGLX::createSwapChain(void* nativeWindow, uint64_t& flags) noexcept {
     // Transparent swap chain is not supported
     flags &= ~backend::SWAP_CHAIN_CONFIG_TRANSPARENT;
     return (SwapChain*) nativeWindow;
 }
 
-void PlatformGLX::destroySwapChain(Platform::SwapChain* /*swapChain*/) noexcept {
+Platform::SwapChain* PlatformGLX::createSwapChain(
+        uint32_t width, uint32_t height, uint64_t& flags) noexcept {
+    // Transparent swap chain is not supported
+    flags &= ~backend::SWAP_CHAIN_CONFIG_TRANSPARENT;
+    int pbufferAttribs[] = {
+            GLX_PBUFFER_WIDTH,  int(width),
+            GLX_PBUFFER_HEIGHT, int(height),
+            GL_NONE
+    };
+    GLXPbuffer sur = g_glx.createPbuffer(mGLXDisplay, mGLXConfig[0], pbufferAttribs);
+    if (sur) {
+        mPBuffers.push_back(sur);
+    }
+    return (SwapChain*) sur;
+}
+
+void PlatformGLX::destroySwapChain(Platform::SwapChain* swapChain) noexcept {
+    auto it = std::find(mPBuffers.begin(), mPBuffers.end(), (GLXPbuffer)swapChain);
+    if (it != mPBuffers.end()) {
+        g_glx.destroyPbuffer(mGLXDisplay, (GLXPbuffer)swapChain);
+        mPBuffers.erase(it);
+    }
 }
 
 void PlatformGLX::makeCurrent(

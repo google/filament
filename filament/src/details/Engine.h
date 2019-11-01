@@ -239,6 +239,7 @@ public:
     FView* createView() noexcept;
     FFence* createFence(FFence::Type type) noexcept;
     FSwapChain* createSwapChain(void* nativeWindow, uint64_t flags) noexcept;
+    FSwapChain* createSwapChain(uint32_t width, uint32_t height, uint64_t flags) noexcept;
 
     FCamera* createCamera(utils::Entity entity) noexcept;
     FCamera* getCameraComponent(utils::Entity entity) noexcept;

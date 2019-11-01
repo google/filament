@@ -36,11 +36,7 @@ OpenGLContext::OpenGLContext() noexcept {
     UTILS_UNUSED char const* const shader   = (char const*) glGetString(GL_SHADING_LANGUAGE_VERSION);
 
 #ifndef NDEBUG
-    slog.i
-        << vendor << io::endl
-        << renderer << io::endl
-        << version << io::endl
-        << shader << io::endl;
+    slog.i << vendor << ", " << renderer << ", " << version << ", " << shader << io::endl;
 #endif
 
     // OpenGL (ES) version
@@ -51,7 +47,8 @@ OpenGLContext::OpenGLContext() noexcept {
     glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &gets.max_uniform_block_size);
     glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &gets.uniform_buffer_offset_alignment);
 
-#ifndef NDEBUG
+#if 0
+    // this is useful for development, but too verbose even for debug builds
     slog.i
         << "GL_MAX_RENDERBUFFER_SIZE = " << gets.max_renderbuffer_size << io::endl
         << "GL_MAX_UNIFORM_BLOCK_SIZE = " << gets.max_uniform_block_size << io::endl
