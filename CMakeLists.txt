@@ -224,6 +224,12 @@ if (NOT CLANG_CL AND NOT MSVC AND NOT WEBGL)
 endif()
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${EXTRA_SANITIZE_OPTIONS}")
 
+# Disable the stack check for macOS to workaround a known issue in clang 11.0.0.
+# See: https://forums.developer.apple.com/thread/121887
+if (APPLE)
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}  -fno-stack-check")
+endif()
+
 # ==================================================================================================
 # Linker flags
 # ==================================================================================================
