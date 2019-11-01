@@ -219,7 +219,7 @@ endif()
 #  -fsanitize=address causes a crash with assimp, which we can't explain for now
 #set(EXTRA_SANITIZE_OPTIONS "-fsanitize=undefined -fsanitize=address")
 # clang-cl.exe on Windows does not support -fstack-protector.
-if (NOT CLANG_CL AND NOT MSVC)
+if (NOT CLANG_CL AND NOT MSVC AND NOT WEBGL)
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fstack-protector")
 endif()
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${EXTRA_SANITIZE_OPTIONS}")
@@ -228,7 +228,9 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${EXTRA_SANITIZE_OPTIONS}")
 # Linker flags
 # ==================================================================================================
 # Strip unused sections
-set(GC_SECTIONS "-Wl,--gc-sections")
+if (NOT WEBGL)
+    set(GC_SECTIONS "-Wl,--gc-sections")
+endif()
 set(B_SYMBOLIC_FUNCTIONS "-Wl,-Bsymbolic-functions")
 
 if (APPLE)
