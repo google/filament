@@ -33,6 +33,8 @@
 #include <utils/compiler.h>
 #include <utils/Log.h>
 
+#include <functional>
+
 #include <stdint.h>
 
 namespace filament {
@@ -55,6 +57,12 @@ public:
     virtual ShaderModel getShaderModel() const noexcept = 0;
 
     virtual Dispatcher& getDispatcher() noexcept = 0;
+
+    // called from CommandStream::execute on the render-thread
+    // the fn function will execute a batch of driver commands
+    // this gives the driver a chance to wrap their execution in a meaningful manner
+    // the default implementation simply calls fn
+    virtual void execute(std::function<void(void)> fn) noexcept;
 
 #ifndef NDEBUG
     virtual void debugCommand(const char* methodName) {}

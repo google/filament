@@ -25,26 +25,27 @@ namespace backend {
 namespace metal {
 
 void presentDrawable(bool presentFrame, void* user) {
-    id<CAMetalDrawable> drawable = (id<CAMetalDrawable>) user;
+    // CFBridgingRelease here is used to balance the CFBridgingRetain inside of acquireDrawable.
+    id<CAMetalDrawable> drawable = (id<CAMetalDrawable>) CFBridgingRelease(user);
     if (presentFrame) {
         [drawable present];
     }
-    [drawable release];
+    // The drawable will be released here when the "drawable" variable goes out of scope.
 }
 
 id<CAMetalDrawable> acquireDrawable(MetalContext* context) {
     if (!context->currentDrawable) {
-        // The drawable is retained here and will be released either:
-        // 1. in MetalDriver::commit
-        // 2. in the presentDrawable function, when the client calls the PresentCallable
-        context->currentDrawable = [[context->currentSurface->layer nextDrawable] retain];
+        context->currentDrawable = [context->currentSurface->layer nextDrawable];
 
         if (context->frameFinishedCallback) {
             id<CAMetalDrawable> drawable = context->currentDrawable;
             backend::FrameFinishedCallback callback = context->frameFinishedCallback;
             void* userData = context->frameFinishedUserData;
+            // This block strongly captures drawable to keep it alive until the handler executes.
             [context->currentCommandBuffer addScheduledHandler:^(id<MTLCommandBuffer> cb) {
-                PresentCallable callable(presentDrawable, (void*) drawable);
+                // CFBridgingRetain is used here to give the drawable a +1 retain count before
+                // casting it to a void*.
+                PresentCallable callable(presentDrawable, (void*) CFBridgingRetain(drawable));
                 dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
                     callback(callable, userData);
                 });

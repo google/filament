@@ -57,6 +57,10 @@ void DriverBase::scheduleDestroySlow(BufferDescriptor&& buffer) noexcept {
 
 Driver::~Driver() noexcept = default;
 
+void Driver::execute(std::function<void(void)> fn) noexcept {
+    fn();
+}
+
 size_t Driver::getElementTypeSize(ElementType type) noexcept {
     switch (type) {
         case ElementType::BYTE:     return sizeof(int8_t);

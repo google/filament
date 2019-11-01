@@ -50,14 +50,12 @@ struct MetalSwapChain : public HwSwapChain {
 struct MetalVertexBuffer : public HwVertexBuffer {
     MetalVertexBuffer(id<MTLDevice> device, uint8_t bufferCount, uint8_t attributeCount,
             uint32_t vertexCount, AttributeArray const& attributes);
-    ~MetalVertexBuffer();
 
     std::vector<id<MTLBuffer>> buffers;
 };
 
 struct MetalIndexBuffer : public HwIndexBuffer {
     MetalIndexBuffer(id<MTLDevice> device, uint8_t elementSize, uint32_t indexCount);
-    ~MetalIndexBuffer();
 
     id<MTLBuffer> buffer;
 };
@@ -99,7 +97,7 @@ private:
 struct MetalRenderPrimitive : public HwRenderPrimitive {
     void setBuffers(MetalVertexBuffer* vertexBuffer, MetalIndexBuffer* indexBuffer,
             uint32_t enabledAttributes);
-    // The pointers to MetalVertexBuffer, MetalIndexBuffer, and id<MTLBuffer> are "weak".
+    // The pointers to MetalVertexBuffer and MetalIndexBuffer are "weak".
     // The MetalVertexBuffer and MetalIndexBuffer must outlive the MetalRenderPrimitive.
 
     MetalVertexBuffer* vertexBuffer = nullptr;
@@ -114,7 +112,6 @@ struct MetalRenderPrimitive : public HwRenderPrimitive {
 
 struct MetalProgram : public HwProgram {
     MetalProgram(id<MTLDevice> device, const Program& program) noexcept;
-    ~MetalProgram();
 
     id<MTLFunction> vertexFunction;
     id<MTLFunction> fragmentFunction;
@@ -149,7 +146,6 @@ public:
             id<MTLTexture> color, id<MTLTexture> depth, uint8_t colorLevel, uint8_t depthLevel);
     explicit MetalRenderTarget(MetalContext* context)
             : HwRenderTarget(0, 0), context(context), defaultRenderTarget(true) {}
-    ~MetalRenderTarget();
 
     bool isDefaultRenderTarget() const { return defaultRenderTarget; }
     uint8_t getSamples() const { return samples; }
@@ -185,7 +181,6 @@ class MetalFence : public HwFence {
 public:
 
     MetalFence(MetalContext& context);
-    ~MetalFence();
 
     FenceStatus wait(uint64_t timeoutNs);
 
