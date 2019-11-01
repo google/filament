@@ -41,6 +41,10 @@ public:
     virtual void terminate() noexcept = 0;
 
     virtual SwapChain* createSwapChain(void* nativeWindow, uint64_t& flags) noexcept = 0;
+
+    // headless swapchain
+    virtual SwapChain* createSwapChain(uint32_t width, uint32_t height, uint64_t& flags) noexcept = 0;
+
     virtual void destroySwapChain(SwapChain* swapChain) noexcept = 0;
 
     virtual void createDefaultRenderTarget(uint32_t& framebuffer, uint32_t& colorbuffer,

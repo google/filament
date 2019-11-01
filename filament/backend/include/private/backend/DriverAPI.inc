@@ -124,6 +124,9 @@ DECL_DRIVER_API_N(endFrame,
 // can start rendering. e.g. correspond to glFlush() for a GLES driver.
 DECL_DRIVER_API_0(flush)
 
+// flush and wait for the effects to be done
+DECL_DRIVER_API_0(finish)
+
 /*
  * Creating driver objects
  * -----------------------
@@ -178,6 +181,11 @@ DECL_DRIVER_API_R_0(backend::FenceHandle, createFence)
 
 DECL_DRIVER_API_R_N(backend::SwapChainHandle, createSwapChain,
         void*, nativeWindow,
+        uint64_t, flags)
+
+DECL_DRIVER_API_R_N(backend::SwapChainHandle, createSwapChainHeadless,
+        uint32_t, width,
+        uint32_t, height,
         uint64_t, flags)
 
 DECL_DRIVER_API_R_N(backend::StreamHandle, createStreamFromTextureId,

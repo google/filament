@@ -343,8 +343,10 @@ void PlatformEGL::terminate() noexcept {
 Platform::SwapChain* PlatformEGL::createSwapChain(
         void* nativeWindow, uint64_t& flags) noexcept {
     EGLSurface sur = eglCreateWindowSurface(mEGLDisplay,
-            (flags & backend::SWAP_CHAIN_CONFIG_TRANSPARENT) ? mEGLTransparentConfig : mEGLConfig,
+            (flags & backend::SWAP_CHAIN_CONFIG_TRANSPARENT) ?
+            mEGLTransparentConfig : mEGLConfig,
             (EGLNativeWindowType)nativeWindow, nullptr);
+
     if (UTILS_UNLIKELY(sur == EGL_NO_SURFACE)) {
         logEglError("eglCreateWindowSurface");
         return nullptr;
@@ -358,6 +360,26 @@ Platform::SwapChain* PlatformEGL::createSwapChain(
     //    logEglError("eglSurfaceAttrib(..., EGL_TIMESTAMPS_ANDROID, EGL_TRUE)");
     //    // this is not fatal
     //}
+    return (SwapChain*)sur;
+}
+
+Platform::SwapChain* PlatformEGL::createSwapChain(
+        uint32_t width, uint32_t height, uint64_t& flags) noexcept {
+
+    EGLint attribs[] = {
+            EGL_WIDTH, EGLint(width),
+            EGL_HEIGHT, EGLint(height),
+            EGL_NONE
+    };
+
+    EGLSurface sur = eglCreatePbufferSurface(mEGLDisplay,
+                (flags & backend::SWAP_CHAIN_CONFIG_TRANSPARENT) ?
+                mEGLTransparentConfig : mEGLConfig, attribs);
+
+    if (UTILS_UNLIKELY(sur == EGL_NO_SURFACE)) {
+        logEglError("eglCreatePbufferSurface");
+        return nullptr;
+    }
     return (SwapChain*)sur;
 }
 

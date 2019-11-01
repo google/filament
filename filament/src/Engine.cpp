@@ -379,7 +379,15 @@ void FEngine::flush() {
 }
 
 void FEngine::flushAndWait() {
-    FFence::waitAndDestroy(FEngine::createFence(FFence::Type::SOFT), FFence::Mode::FLUSH);
+    // enqueue finish command -- this will stall in the driver until the GPU is done
+    getDriverApi().finish();
+
+    // then create a fence that will trigger when we're past the finish() above
+    FFence::waitAndDestroy(
+            FEngine::createFence(FFence::Type::SOFT), FFence::Mode::FLUSH);
+
+    // finally, execute callbacks that might have been scheduled
+    getDriver().purge();
 }
 
 // -----------------------------------------------------------------------------------------------
@@ -581,6 +589,14 @@ FFence* FEngine::createFence(FFence::Type type) noexcept {
 
 FSwapChain* FEngine::createSwapChain(void* nativeWindow, uint64_t flags) noexcept {
     FSwapChain* p = mHeapAllocator.make<FSwapChain>(*this, nativeWindow, flags);
+    if (p) {
+        mSwapChains.insert(p);
+    }
+    return p;
+}
+
+FSwapChain* FEngine::createSwapChain(uint32_t width, uint32_t height, uint64_t flags) noexcept {
+    FSwapChain* p = mHeapAllocator.make<FSwapChain>(*this, width, height, flags);
     if (p) {
         mSwapChains.insert(p);
     }
@@ -845,6 +861,10 @@ Fence* Engine::createFence() noexcept {
 
 SwapChain* Engine::createSwapChain(void* nativeWindow, uint64_t flags) noexcept {
     return upcast(this)->createSwapChain(nativeWindow, flags);
+}
+
+SwapChain* Engine::createSwapChain(uint32_t width, uint32_t height, uint64_t flags) noexcept {
+    return upcast(this)->createSwapChain(width, height, flags);
 }
 
 void Engine::destroy(const VertexBuffer* p) {

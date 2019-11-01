@@ -33,6 +33,12 @@ Platform::SwapChain* PlatformWebGL::createSwapChain(
     return (SwapChain*) nativeWindow;
 }
 
+Platform::SwapChain* PlatformWebGL::createSwapChain(
+        uint32_t width, uint32_t height, uint64_t& flags) noexcept {
+    // TODO: implement headless SwapChain
+    return nullptr;
+}
+
 void PlatformWebGL::destroySwapChain(Platform::SwapChain* swapChain) noexcept {
 }
 

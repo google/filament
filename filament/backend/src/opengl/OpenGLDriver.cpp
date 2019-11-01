@@ -328,7 +328,7 @@ void OpenGLDriver::setRasterStateSlow(RasterState rs) noexcept {
 // For reference on a 64-bits machine:
 //    GLFence                   :  8
 //    GLIndexBuffer             : 12        moderate
-//    GLSamplerGroup           : 16        moderate
+//    GLSamplerGroup            : 16        moderate
 // -- less than 16 bytes
 
 //    GLRenderPrimitive         : 40        many
@@ -351,7 +351,8 @@ OpenGLDriver::HandleAllocator::HandleAllocator(const utils::HeapArea& area)
           mPool2( pointermath::add(area.begin(), (6 * area.getSize()) / 16),
                   area.end()) {
 
-#ifndef NDEBUG
+#if 0
+    // this is useful for development, but too verbose even for debug builds
     slog.d << "HwFence: " << sizeof(HwFence) << io::endl;
     slog.d << "GLIndexBuffer: " << sizeof(GLIndexBuffer) << io::endl;
     slog.d << "GLSamplerGroup: " << sizeof(GLSamplerGroup) << io::endl;
@@ -461,6 +462,10 @@ Handle<HwFence> OpenGLDriver::createFenceS() noexcept {
 }
 
 Handle<HwSwapChain> OpenGLDriver::createSwapChainS() noexcept {
+    return Handle<HwSwapChain>( allocateHandle(sizeof(HwSwapChain)) );
+}
+
+Handle<HwSwapChain> OpenGLDriver::createSwapChainHeadlessS() noexcept {
     return Handle<HwSwapChain>( allocateHandle(sizeof(HwSwapChain)) );
 }
 
@@ -981,6 +986,14 @@ void OpenGLDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
 
     HwSwapChain* sc = construct<HwSwapChain>(sch);
     sc->swapChain = mPlatform.createSwapChain(nativeWindow, flags);
+}
+
+void OpenGLDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch,
+        uint32_t width, uint32_t height, uint64_t flags) {
+    DEBUG_MARKER()
+
+    HwSwapChain* sc = construct<HwSwapChain>(sch);
+    sc->swapChain = mPlatform.createSwapChain(width, height, flags);
 }
 
 void OpenGLDriver::createStreamFromTextureIdR(Handle<HwStream> sh,
@@ -2465,6 +2478,11 @@ void OpenGLDriver::flush(int) {
     if (!gl.bugs.disable_glFlush) {
         glFlush();
     }
+}
+
+void OpenGLDriver::finish(int) {
+    DEBUG_MARKER()
+    glFinish();
 }
 
 UTILS_NOINLINE

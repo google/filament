@@ -259,6 +259,20 @@ public:
      */
     SwapChain* createSwapChain(void* nativeWindow, uint64_t flags = 0) noexcept;
 
+
+    /**
+     * Creates a headless SwapChain.
+     *
+      * @param width    Width of the drawing buffer in pixels.
+      * @param height   Height of the drawing buffer in pixels.
+     * @param flags     One or more configuration flags as defined in `SwapChain`.
+     *
+     * @return A pointer to the newly created SwapChain or nullptr if it couldn't be created.
+     *
+     * @see Renderer.beginFrame()
+     */
+    SwapChain* createSwapChain(uint32_t width, uint32_t height, uint64_t flags = 0) noexcept;
+
     /**
      * Creates a renderer associated to this engine.
      *
