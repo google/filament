@@ -69,6 +69,15 @@ Java_com_google_android_filament_gltfio_AssetLoader_nCreateAssetFromBinary(JNIEn
             buffer.getSize());
 }
 
+extern "C" JNIEXPORT jlong JNICALL
+Java_com_google_android_filament_gltfio_AssetLoader_nCreateAssetFromJson(JNIEnv* env, jclass,
+        jlong nativeLoader, jobject javaBuffer, jint remaining) {
+    AssetLoader* loader = (AssetLoader*) nativeLoader;
+    AutoBuffer buffer(env, javaBuffer, remaining);
+    return (jlong) loader->createAssetFromJson((const uint8_t *) buffer.getData(),
+            buffer.getSize());
+}
+
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_gltfio_AssetLoader_nEnableDiagnostics(JNIEnv*, jclass,
         jlong nativeLoader, jboolean enable) {

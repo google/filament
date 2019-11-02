@@ -114,6 +114,15 @@ public class AssetLoader {
     }
 
     /**
+     * Creates a {@link FilamentAsset} from the contents of a GLTF file.
+     */
+    @Nullable
+    public FilamentAsset createAssetFromJson(@NonNull Buffer buffer) {
+        long nativeAsset = nCreateAssetFromJson(mNativeObject, buffer, buffer.remaining());
+        return new FilamentAsset(nativeAsset);
+    }
+
+    /**
      * Allows clients to enable diagnostic shading on newly-loaded assets.
      */
     public void enableDiagnostics(boolean enable) {
@@ -132,6 +141,7 @@ public class AssetLoader {
             long nativeEntities);
     private static native void nDestroyAssetLoader(long nativeLoader);
     private static native long nCreateAssetFromBinary(long nativeLoader, Buffer buffer, int remaining);
+    private static native long nCreateAssetFromJson(long nativeLoader, Buffer buffer, int remaining);
     private static native void nEnableDiagnostics(long nativeLoader, boolean enable);
     private static native void nDestroyAsset(long nativeLoader, long nativeAsset);
 }
