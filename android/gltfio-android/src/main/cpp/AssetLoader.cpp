@@ -32,7 +32,7 @@ using namespace utils;
 extern void registerCallbackUtils(JNIEnv*);
 extern void registerNioUtils(JNIEnv*);
 
-jint JNI_OnLoad(JavaVM* vm, void* reserved) {
+jint JNI_OnLoad(JavaVM* vm, void*) {
     JNIEnv* env;
     if (vm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6) != JNI_OK) {
         return -1;
