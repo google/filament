@@ -78,3 +78,21 @@ Java_com_google_android_filament_gltfio_FilamentAsset_nGetAnimator(JNIEnv* env, 
     FilamentAsset* asset = (FilamentAsset*) nativeAsset;
     return (jlong) asset->getAnimator();
 }
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_google_android_filament_gltfio_FilamentAsset_nGetResourceUriCount(JNIEnv*, jclass,
+                                                                           jlong nativeAsset) {
+    FilamentAsset* asset = (FilamentAsset*) nativeAsset;
+    return (jint) asset->getResourceUriCount();
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_gltfio_FilamentAsset_nGetResourceUris(JNIEnv* env, jclass,
+                                                                       jlong nativeAsset,
+                                                                       jobjectArray result) {
+    FilamentAsset* asset = (FilamentAsset*) nativeAsset;
+    auto resourceUris = asset->getResourceUris();
+    for (int i = 0; i < asset->getResourceUriCount(); ++i) {
+        env->SetObjectArrayElement(result, (jsize) i, env->NewStringUTF(resourceUris[i]));
+    }
+}

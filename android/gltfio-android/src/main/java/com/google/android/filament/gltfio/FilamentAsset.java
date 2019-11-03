@@ -103,6 +103,15 @@ public class FilamentAsset {
         return mAnimator;
     }
 
+    /**
+     * Gets resource URIs for all externally-referenced buffers.
+     */
+    public @NonNull String[] getResourceUris() {
+        String[] uris = new String[nGetResourceUriCount(mNativeObject)];
+        nGetResourceUris(mNativeObject, uris);
+        return uris;
+    }
+
     void clearNativeObject() {
         mNativeObject = 0;
     }
@@ -113,4 +122,6 @@ public class FilamentAsset {
     private static native void nGetBoundingBox(long nativeAsset, float[] box);
     private static native String nGetName(long nativeAsset, int entity);
     private static native long nGetAnimator(long nativeAsset);
+    private static native int nGetResourceUriCount(long nativeAsset);
+    private static native void nGetResourceUris(long nativeAsset, String[] result);
 }
