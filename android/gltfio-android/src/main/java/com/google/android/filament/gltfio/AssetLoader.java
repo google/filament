@@ -37,7 +37,6 @@ import java.nio.Buffer;
  *
  * companion object {
  *     init {
- *        Filament.init()
  *        AssetLoader.init()
  *    }
  * }
@@ -54,10 +53,20 @@ import java.nio.Buffer;
  *         assetLoader.createAssetFromBinary(ByteBuffer.wrap(bytes))!!
  *     }
  *
- *     ResourceLoader(engine).loadResources(filamentAsset).destroy()
+ *     val resourceLoader = ResourceLoader(engine)
+ *     resourceLoader.loadResources(filamentAsset)
+ *     for (uri in filamentAsset.resourceUris) {
+ *         val buffer = loadResource(uri)
+ *         resourceLoader.addResourceData(uri, buffer)
+ *     }
+ *     resourceLoader.destroy()
  *     animator = asset.getAnimator()
  *
  *     scene.addEntities(filamentAsset.entities)
+ * }
+ *
+ * private fun loadResource(uri: String): Buffer {
+ *     TODO()
  * }
  * </pre>
  *
