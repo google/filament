@@ -66,7 +66,7 @@ import java.nio.Buffer;
  * }
  *
  * private fun loadResource(uri: String): Buffer {
- *     TODO()
+ *     TODO("Load your asset here (e.g. using Android's AssetManager API)")
  * }
  * </pre>
  *
