@@ -141,7 +141,7 @@ public class AssetLoader {
     /**
      * Frees all memory associated with the given {@link FilamentAsset}.
      */
-    public void destroyAsset(@Nullable FilamentAsset asset) {
+    public void destroyAsset(@NonNull FilamentAsset asset) {
         nDestroyAsset(mNativeObject, asset.getNativeObject());
         asset.clearNativeObject();
     }
