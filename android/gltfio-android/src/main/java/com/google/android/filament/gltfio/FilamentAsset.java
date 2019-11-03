@@ -67,7 +67,7 @@ public class FilamentAsset {
      * <p>All of these have a transform component. Some of the returned entities may also have a
      * renderable component.</p>
      */
-    public @Entity int[] getEntities() {
+    public @NonNull @Entity int[] getEntities() {
         int[] result = new int[nGetEntityCount(mNativeObject)];
         nGetEntities(mNativeObject, result);
         return result;
@@ -95,7 +95,7 @@ public class FilamentAsset {
      * <p>When calling this for the first time, this must be called after
      * {@see ResourceLoader#loadResources}.</p>
      */
-    public Animator getAnimator() {
+    public @NonNull Animator getAnimator() {
         if (mAnimator != null) {
             return mAnimator;
         }
