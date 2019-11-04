@@ -73,6 +73,7 @@ MetalDriver::MetalDriver(backend::MetalPlatform* platform) noexcept
 
 MetalDriver::~MetalDriver() noexcept {
     mContext->device = nil;
+    mContext->emptyTexture = nil;
     CFRelease(mContext->textureCache);
     delete mContext->bufferPool;
     delete mContext->blitter;
@@ -906,6 +907,12 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
 
         if (metalTexture->externalImage.isValid()) {
             texturesToBind[binding] = metalTexture->externalImage.getMetalTextureForDraw();
+        }
+
+        if (!texturesToBind[binding]) {
+            utils::slog.w << "Warning: no texture bound at binding point " << (size_t) binding
+                    << "." << utils::io::endl;
+            texturesToBind[binding] = getOrCreateEmptyTexture(mContext);
         }
 
         id <MTLSamplerState> samplerState = mContext->samplerStateCache.getOrCreateState(sampler->s);

@@ -85,6 +85,9 @@ struct MetalContext {
     // External textures.
     CVMetalTextureCacheRef textureCache = nullptr;
 
+    // Empty texture used to prevent GPU errors when a sampler has been bound without a texture.
+    id<MTLTexture> emptyTexture = nil;
+
     MetalBlitter* blitter = nullptr;
 
     // Fences.
@@ -100,6 +103,8 @@ struct MetalContext {
 id<CAMetalDrawable> acquireDrawable(MetalContext* context);
 
 id<MTLCommandBuffer> acquireCommandBuffer(MetalContext* context);
+
+id<MTLTexture> getOrCreateEmptyTexture(MetalContext* context);
 
 } // namespace metal
 } // namespace backend

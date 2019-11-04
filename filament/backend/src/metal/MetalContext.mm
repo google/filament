@@ -63,6 +63,29 @@ id<MTLCommandBuffer> acquireCommandBuffer(MetalContext* context) {
     return commandBuffer;
 }
 
+id<MTLTexture> getOrCreateEmptyTexture(MetalContext* context) {
+    if (context->emptyTexture) {
+        return context->emptyTexture;
+    }
+
+    MTLTextureDescriptor* textureDescriptor = [MTLTextureDescriptor new];
+    textureDescriptor.pixelFormat = MTLPixelFormatBGRA8Unorm;
+    textureDescriptor.width = 1;
+    textureDescriptor.height = 1;
+    id<MTLTexture> texture = [context->device newTextureWithDescriptor:textureDescriptor];
+
+    MTLRegion region = {
+        { 0, 0, 0 },    // MTLOrigin
+        { 1, 1, 1 }     // MTLSize
+    };
+    uint8_t imageData[4] = {0, 0, 0, 0};
+    [texture replaceRegion:region mipmapLevel:0 withBytes:imageData bytesPerRow:4];
+
+    context->emptyTexture = texture;
+
+    return context->emptyTexture;
+}
+
 } // namespace metal
 } // namespace backend
 } // namespace filament
