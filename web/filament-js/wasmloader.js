@@ -76,6 +76,15 @@ Filament.postRun = function() {
 };
 
 /// fetch ::function:: Downloads assets and invokes a callback when done.
+///
+/// This utility consumes an array of URI strings and invokes callbacks after each asset is
+/// downloaded. Additionally, each downloaded asset becomes available in the `Filament.assets`
+/// global object, which is a mapping from URI strings to `Uint8Array`. If desired, clients can
+/// pre-populate entries in `Filament.assets` to circumvent HTTP requests (this should be done after
+/// calling `Filament.init`).
+///
+/// This function is used internally by `Filament.init` and `gltfio$FilamentAsset.loadResources`.
+///
 /// assets ::argument:: Array of strings containing URL's of required assets.
 /// onDone ::argument:: callback that gets invoked after all assets have been downloaded.
 /// onFetch ::argument:: optional callback that's invoked after each asset is downloaded.
