@@ -82,20 +82,31 @@ Filament.postRun = function() {
 Filament.fetch = function(assets, onDone, onFetched) {
     var remainingAssets = assets.length;
     assets.forEach(function(name) {
-        const lower = name.toLowerCase();
-        fetch(name).then(function(response) {
-            if (!response.ok) {
-                throw new Error(name);
-            }
-            return response.arrayBuffer();
-        }).then(function(arrayBuffer) {
-            Filament.assets[name] = new Uint8Array(arrayBuffer);
+
+        // Check if a buffer already exists in case the client wishes
+        // to provide its own data rather than using a HTTP request.
+        if (Filament.assets[name]) {
             if (onFetched) {
                 onFetched(name);
             }
             if (--remainingAssets === 0 && onDone) {
                 onDone();
             }
-        });
+        } else {
+            fetch(name).then(function(response) {
+                if (!response.ok) {
+                    throw new Error(name);
+                }
+                return response.arrayBuffer();
+            }).then(function(arrayBuffer) {
+                Filament.assets[name] = new Uint8Array(arrayBuffer);
+                if (onFetched) {
+                    onFetched(name);
+                }
+                if (--remainingAssets === 0 && onDone) {
+                    onDone();
+                }
+            });
+        }
     });
 };
