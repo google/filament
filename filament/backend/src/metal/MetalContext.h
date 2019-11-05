@@ -42,13 +42,6 @@ struct MetalContext {
     id<MTLDevice> device = nullptr;
     id<MTLCommandQueue> commandQueue = nullptr;
 
-    // A pool for autoreleased objects throughout the lifetime of the Metal driver.
-    NSAutoreleasePool* driverPool = nil;
-
-    // A pool for autoreleased objects allocated during the execution of a frame.
-    // The pool is created in beginFrame() and drained in endFrame().
-    NSAutoreleasePool* framePool = nil;
-
     // Single use, re-created each frame.
     id<MTLCommandBuffer> currentCommandBuffer = nullptr;
     id<MTLRenderCommandEncoder> currentCommandEncoder = nullptr;

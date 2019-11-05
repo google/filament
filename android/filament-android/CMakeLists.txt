@@ -50,57 +50,66 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fomit-frame-pointer -ff
 
 set(CMAKE_SHARED_LINKER_FLAGS" ${CMAKE_SHARED_LINKER_FLAGS} -Wl,--gc-sections")
 set(CMAKE_SHARED_LINKER_FLAGS" ${CMAKE_SHARED_LINKER_FLAGS} -Wl,-Bsymbolic-functions")
-set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} -Wl,--version-script=${CMAKE_SOURCE_DIR}/libfilament-jni.map")
 
-add_library(filament-jni SHARED
-      src/main/cpp/Camera.cpp
-      src/main/cpp/Colors.cpp
-      src/main/cpp/VertexBuffer.cpp
-      src/main/cpp/Engine.cpp
-      src/main/cpp/EntityManager.cpp
-      src/main/cpp/Fence.cpp
-      src/main/cpp/IndexBuffer.cpp
-      src/main/cpp/IndirectLight.cpp
-      src/main/cpp/LightManager.cpp
-      src/main/cpp/Material.cpp
-      src/main/cpp/MaterialInstance.cpp
-      src/main/cpp/MathUtils.cpp
-      src/main/cpp/RenderableManager.cpp
-      src/main/cpp/Renderer.cpp
-      src/main/cpp/RenderTarget.cpp
-      src/main/cpp/Scene.cpp
-      src/main/cpp/SkyBox.cpp
-      src/main/cpp/Stream.cpp
-      src/main/cpp/Texture.cpp
-      src/main/cpp/TextureSampler.cpp
-      src/main/cpp/TransformManager.cpp
-      src/main/cpp/View.cpp
-      # Android specific
-      src/main/cpp/nativewindow/Android.cpp
-      # Private utils
-      src/main/cpp/Filament.cpp
-      # Common utils
-      ../common/CallbackUtils.cpp
-      ../common/NioUtils.cpp
+add_library(filament-jni-obj OBJECT
+    src/main/cpp/Camera.cpp
+    src/main/cpp/Colors.cpp
+    src/main/cpp/VertexBuffer.cpp
+    src/main/cpp/Engine.cpp
+    src/main/cpp/EntityManager.cpp
+    src/main/cpp/Fence.cpp
+    src/main/cpp/IndexBuffer.cpp
+    src/main/cpp/IndirectLight.cpp
+    src/main/cpp/LightManager.cpp
+    src/main/cpp/Material.cpp
+    src/main/cpp/MaterialInstance.cpp
+    src/main/cpp/MathUtils.cpp
+    src/main/cpp/RenderableManager.cpp
+    src/main/cpp/Renderer.cpp
+    src/main/cpp/RenderTarget.cpp
+    src/main/cpp/Scene.cpp
+    src/main/cpp/SkyBox.cpp
+    src/main/cpp/Stream.cpp
+    src/main/cpp/Texture.cpp
+    src/main/cpp/TextureSampler.cpp
+    src/main/cpp/TransformManager.cpp
+    src/main/cpp/View.cpp
+    # Android specific
+    src/main/cpp/nativewindow/Android.cpp
 )
 
-target_link_libraries(filament-jni
-      filament
-      backend
-      filaflat
-      filabridge
-      geometry
-      ibl
-      utils
-      log
-      GLESv3
-      EGL
-      android
-      jnigraphics
-)
+if (NOT DISABLE_FILAMENT_JNI)
 
-option(FILAMENT_SUPPORTS_VULKAN "Enables Vulkan on Android" OFF)
+    set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/libfilament-jni.map")
 
-if (FILAMENT_SUPPORTS_VULKAN)
-    target_link_libraries(filament-jni bluevk smol-v)
+    add_library(filament-jni SHARED
+        $<TARGET_OBJECTS:filament-jni-obj>
+        # Private utils
+        src/main/cpp/Filament.cpp
+        # Common utils
+        ../common/CallbackUtils.cpp
+        ../common/NioUtils.cpp
+    )
+
+    target_link_libraries(filament-jni
+        filament
+        backend
+        filaflat
+        filabridge
+        geometry
+        ibl
+        utils
+        log
+        GLESv3
+        EGL
+        android
+        jnigraphics
+    )
+
+    option(FILAMENT_SUPPORTS_VULKAN "Enables Vulkan on Android" OFF)
+
+    if (FILAMENT_SUPPORTS_VULKAN)
+        target_link_libraries(filament-jni bluevk smol-v)
+    endif()
+
 endif()

@@ -148,7 +148,7 @@ IndirectLight::Builder& IndirectLight::Builder::rotation(mat3f const& rotation) 
 }
 
 IndirectLight* IndirectLight::Builder::build(Engine& engine) {
-    FEngine::assertValid(engine);
+    FEngine::assertValid(engine, __PRETTY_FUNCTION__);
     if (mImpl->mReflectionsMap) {
         if (!ASSERT_POSTCONDITION_NON_FATAL(
                 mImpl->mReflectionsMap->getTarget() == Texture::Sampler::SAMPLER_CUBEMAP,

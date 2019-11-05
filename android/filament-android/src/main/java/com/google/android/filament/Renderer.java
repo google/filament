@@ -300,6 +300,94 @@ public class Renderer {
     }
 
     /**
+     * Reads back the content of a specified {@link RenderTarget}.
+     *
+     *<pre>
+     *
+     *  Framebuffer as seen on         User buffer (PixelBufferDescriptor)
+     *  screen
+     *  +--------------------+
+     *  |                    |                .stride         .alignment
+     *  |                    |         ----------------------->-->
+     *  |                    |         O----------------------+--+   low addresses
+     *  |                    |         |          |           |  |
+     *  |             w      |         |          | .top      |  |
+     *  |       <--------->  |         |          V           |  |
+     *  |       +---------+  |         |     +---------+      |  |
+     *  |       |     ^   |  | ======> |     |         |      |  |
+     *  |   x   |    h|   |  |         |.left|         |      |  |
+     *  +------>|     v   |  |         +---->|         |      |  |
+     *  |       +.........+  |         |     +.........+      |  |
+     *  |            ^       |         |                      |  |
+     *  |          y |       |         +----------------------+--+  high addresses
+     *  O------------+-------+
+     *
+     *</pre>
+     *
+     *
+     * <p>Typically <code>readPixels</code> will be called after {@link #render} and before
+     * {@link #endFrame}.</p>
+     * <br>
+     * <p>After calling this method, the callback associated with <code>buffer</code>
+     * will be invoked on the main thread, indicating that the read-back has completed.
+     * Typically, this will happen after multiple calls to {@link #beginFrame},
+     * {@link #render}, {@link #endFrame}.</p>
+     * <br>
+     * <p><code>readPixels</code> is intended for debugging and testing.
+     * It will impact performance significantly.</p>
+     *
+     * @param renderTarget  {@link RenderTarget} to read back from
+     * @param xoffset       left offset of the sub-region to read back
+     * @param yoffset       bottom offset of the sub-region to read back
+     * @param width         width of the sub-region to read back
+     * @param height        height of the sub-region to read back
+     * @param buffer        client-side buffer where the read-back will be written
+     *
+     *                  <p>
+     *                  The following format are always supported:
+     *                      <li>{@link Texture.Format#RGBA}</li>
+     *                      <li>{@link Texture.Format#RGBA_INTEGER}</li>
+     *                  </p>
+     *
+     *                  <p>
+     *                  The following types are always supported:
+     *                      <li>{@link Texture.Type#UBYTE}</li>
+     *                      <li>{@link Texture.Type#UINT}</li>
+     *                      <li>{@link Texture.Type#INT}</li>
+     *                      <li>{@link Texture.Type#FLOAT}</li>
+     *                  </p>
+     *
+     *                  <p>Other combination of format/type may be supported. If a combination is
+     *                  not supported, this operation may fail silently. Use a DEBUG build
+     *                  to get some logs about the failure.</p>
+     *
+     * @exception BufferOverflowException if the specified parameters would result in reading
+     * outside of <code>buffer</code>.
+     */
+    public void readPixels(
+            @NonNull RenderTarget renderTarget,
+            @IntRange(from = 0) int xoffset, @IntRange(from = 0) int yoffset,
+            @IntRange(from = 0) int width, @IntRange(from = 0) int height,
+            @NonNull Texture.PixelBufferDescriptor buffer) {
+
+        if (buffer.storage.isReadOnly()) {
+            throw new ReadOnlyBufferException();
+        }
+
+        int result = nReadPixelsEx(getNativeObject(), mEngine.getNativeObject(),
+                renderTarget.getNativeObject(),
+                xoffset, yoffset, width, height,
+                buffer.storage, buffer.storage.remaining(),
+                buffer.left, buffer.top, buffer.type.ordinal(), buffer.alignment,
+                buffer.stride, buffer.format.ordinal(),
+                buffer.handler, buffer.callback);
+
+        if (result < 0) {
+            throw new BufferOverflowException();
+        }
+    }
+
+    /**
      * Returns a timestamp (in seconds) for the last call to {@link #beginFrame}. This value is
      * constant for all {@link View views} rendered during a frame. The epoch is set with
      * {@link #resetUserTime}.
@@ -382,6 +470,12 @@ public class Renderer {
             int srcLeft, int srcBottom, int srcWidth, int srcHeight,
             int flags);
     private static native int nReadPixels(long nativeRenderer, long nativeEngine,
+            int xoffset, int yoffset, int width, int height,
+            Buffer storage, int remaining,
+            int left, int top, int type, int alignment, int stride, int format,
+            Object handler, Runnable callback);
+    private static native int nReadPixelsEx(long nativeRenderer, long nativeEngine,
+            long nativeRenderTarget,
             int xoffset, int yoffset, int width, int height,
             Buffer storage, int remaining,
             int left, int top, int type, int alignment, int stride, int format,

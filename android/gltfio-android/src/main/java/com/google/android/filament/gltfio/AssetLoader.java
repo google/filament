@@ -37,7 +37,6 @@ import java.nio.Buffer;
  *
  * companion object {
  *     init {
- *        Filament.init()
  *        AssetLoader.init()
  *    }
  * }
@@ -54,10 +53,20 @@ import java.nio.Buffer;
  *         assetLoader.createAssetFromBinary(ByteBuffer.wrap(bytes))!!
  *     }
  *
- *     ResourceLoader(engine).loadResources(filamentAsset).destroy()
+ *     val resourceLoader = ResourceLoader(engine)
+ *     resourceLoader.loadResources(filamentAsset)
+ *     for (uri in filamentAsset.resourceUris) {
+ *         val buffer = loadResource(uri)
+ *         resourceLoader.addResourceData(uri, buffer)
+ *     }
+ *     resourceLoader.destroy()
  *     animator = asset.getAnimator()
  *
  *     scene.addEntities(filamentAsset.entities)
+ * }
+ *
+ * private fun loadResource(uri: String): Buffer {
+ *     TODO("Load your asset here (e.g. using Android's AssetManager API)")
  * }
  * </pre>
  *
@@ -114,6 +123,15 @@ public class AssetLoader {
     }
 
     /**
+     * Creates a {@link FilamentAsset} from the contents of a GLTF file.
+     */
+    @Nullable
+    public FilamentAsset createAssetFromJson(@NonNull Buffer buffer) {
+        long nativeAsset = nCreateAssetFromJson(mNativeObject, buffer, buffer.remaining());
+        return new FilamentAsset(nativeAsset);
+    }
+
+    /**
      * Allows clients to enable diagnostic shading on newly-loaded assets.
      */
     public void enableDiagnostics(boolean enable) {
@@ -123,7 +141,7 @@ public class AssetLoader {
     /**
      * Frees all memory associated with the given {@link FilamentAsset}.
      */
-    public void destroyAsset(@Nullable FilamentAsset asset) {
+    public void destroyAsset(@NonNull FilamentAsset asset) {
         nDestroyAsset(mNativeObject, asset.getNativeObject());
         asset.clearNativeObject();
     }
@@ -132,6 +150,7 @@ public class AssetLoader {
             long nativeEntities);
     private static native void nDestroyAssetLoader(long nativeLoader);
     private static native long nCreateAssetFromBinary(long nativeLoader, Buffer buffer, int remaining);
+    private static native long nCreateAssetFromJson(long nativeLoader, Buffer buffer, int remaining);
     private static native void nEnableDiagnostics(long nativeLoader, boolean enable);
     private static native void nDestroyAsset(long nativeLoader, long nativeAsset);
 }

@@ -67,7 +67,7 @@ public class FilamentAsset {
      * <p>All of these have a transform component. Some of the returned entities may also have a
      * renderable component.</p>
      */
-    public @Entity int[] getEntities() {
+    public @NonNull @Entity int[] getEntities() {
         int[] result = new int[nGetEntityCount(mNativeObject)];
         nGetEntities(mNativeObject, result);
         return result;
@@ -95,12 +95,21 @@ public class FilamentAsset {
      * <p>When calling this for the first time, this must be called after
      * {@see ResourceLoader#loadResources}.</p>
      */
-    public Animator getAnimator() {
+    public @NonNull Animator getAnimator() {
         if (mAnimator != null) {
             return mAnimator;
         }
         mAnimator = new Animator(nGetAnimator(getNativeObject()));
         return mAnimator;
+    }
+
+    /**
+     * Gets resource URIs for all externally-referenced buffers.
+     */
+    public @NonNull String[] getResourceUris() {
+        String[] uris = new String[nGetResourceUriCount(mNativeObject)];
+        nGetResourceUris(mNativeObject, uris);
+        return uris;
     }
 
     void clearNativeObject() {
@@ -113,4 +122,6 @@ public class FilamentAsset {
     private static native void nGetBoundingBox(long nativeAsset, float[] box);
     private static native String nGetName(long nativeAsset, int entity);
     private static native long nGetAnimator(long nativeAsset);
+    private static native int nGetResourceUriCount(long nativeAsset);
+    private static native void nGetResourceUris(long nativeAsset, String[] result);
 }

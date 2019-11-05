@@ -16,13 +16,12 @@ void computeShadingParams() {
     }
 #endif
 
+    shading_geometricNormal = normalize(n);
+
 #if defined(MATERIAL_HAS_ANISOTROPY) || defined(MATERIAL_HAS_NORMAL) || defined(MATERIAL_HAS_CLEAR_COAT_NORMAL)
-    // Re-normalize post-interpolation values
-    shading_tangentToWorld = mat3(
-            normalize(vertex_worldTangent), normalize(vertex_worldBitangent), normalize(n));
+    // We use unnormalized post-interpolation values, assuming mikktspace tangents
+    shading_tangentToWorld = mat3(vertex_worldTangent, vertex_worldBitangent, n);
 #endif
-    // Leave the tangent and bitangent uninitialized, we won't use them
-    shading_tangentToWorld[2] = normalize(n);
 #endif
 
     shading_position = vertex_worldPosition;

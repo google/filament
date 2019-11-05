@@ -27,7 +27,7 @@ extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_gltfio_Animator_nApplyAnimation(JNIEnv*, jclass, jlong nativeAnimator,
         jint index, jfloat time) {
     Animator* animator = (Animator*) nativeAnimator;
-    animator->applyAnimation(index, time);
+    animator->applyAnimation(static_cast<size_t>(index), time);
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -46,14 +46,14 @@ extern "C" JNIEXPORT float JNICALL
 Java_com_google_android_filament_gltfio_Animator_nGetAnimationDuration(JNIEnv*, jclass,
         jlong nativeAnimator, jint index) {
     Animator* animator = (Animator*) nativeAnimator;
-    return animator->getAnimationDuration(index);
+    return animator->getAnimationDuration(static_cast<size_t>(index));
 }
 
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_google_android_filament_gltfio_Animator_nGetAnimationName(JNIEnv* env, jclass,
         jlong nativeAnimator, jint index) {
     Animator* animator = (Animator*) nativeAnimator;
-    const char* val = animator->getAnimationName(index);
+    const char* val = animator->getAnimationName(static_cast<size_t>(index));
     return val ? env->NewStringUTF(val) : nullptr;
 
 }

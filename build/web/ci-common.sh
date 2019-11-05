@@ -9,10 +9,11 @@ export PATH="$PWD:$PATH"
 # npm install -g typescript
 
 # Install emscripten.
-curl -L https://github.com/emscripten-core/emsdk/archive/a77638d.zip > emsdk.zip
+curl -L https://github.com/emscripten-core/emsdk/archive/1b1f08f.zip > emsdk.zip
 unzip emsdk.zip ; mv emsdk-* emsdk ; cd emsdk
-python emsdk install latest
-python emsdk activate latest
+./emsdk install latest
+./emsdk activate latest
+source ./emsdk_env.sh
 
 export EMSDK="$PWD"
 cd ..

@@ -108,7 +108,7 @@ VertexBuffer::Builder& VertexBuffer::Builder::normalized(VertexAttribute attribu
 }
 
 VertexBuffer* VertexBuffer::Builder::build(Engine& engine) {
-    FEngine::assertValid(engine);
+    FEngine::assertValid(engine, __PRETTY_FUNCTION__);
     if (!ASSERT_PRECONDITION_NON_FATAL(mImpl->mVertexCount > 0, "vertexCount cannot be 0")) {
         return nullptr;
     }
@@ -130,10 +130,6 @@ namespace details {
 FVertexBuffer::FVertexBuffer(FEngine& engine, const VertexBuffer::Builder& builder)
         : mVertexCount(builder->mVertexCount), mBufferCount(builder->mBufferCount) {
     std::copy(std::begin(builder->mAttributes), std::end(builder->mAttributes), mAttributes.begin());
-
-    // Backends do not (and should not) know the semantics of each vertex attribute, but they
-    // need to know whether the vertex shader consumes them as integers or as floats.
-    mAttributes[BONE_INDICES].flags |= Attribute::FLAG_INTEGER_TARGET;
 
     mDeclaredAttributes = builder->mDeclaredAttributes;
     uint8_t attributeCount = (uint8_t) mDeclaredAttributes.count();
@@ -158,6 +154,11 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const VertexBuffer::Builder& build
             attributeArray[i].flags  = attributes[i].flags;
         }
     }
+
+    // Backends do not (and should not) know the semantics of each vertex attribute, but they
+    // need to know whether the vertex shader consumes them as integers or as floats.
+    // NOTE: This flag needs to be set regardless of whether the attribute is actually declared.
+    attributeArray[BONE_INDICES].flags |= Attribute::FLAG_INTEGER_TARGET;
 
     FEngine::DriverApi& driver = engine.getDriverApi();
     mHandle = driver.createVertexBuffer(
