@@ -8,7 +8,8 @@ A new header is inserted each time a *tag* is created.
 - Fixed morph shapes not rendering in WebGL.
 - Added support for the latest version of emscripten.
 - gltfio: fixed blackness seen with default material.
-- Rendering a SAMPLER_EXTERNAL texture before setting an external image no longer crashes the Metal backend.
+- Added ETC2 and BC compressed texture support to Metal backend.
+- Rendering a SAMPLER_EXTERNAL texture before setting an external image no longer results in GPU errors.
 
 ## v1.4.2
 

@@ -581,7 +581,18 @@ void FRenderer::endFrame() {
 
 void FRenderer::readPixels(uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
         PixelBufferDescriptor&& buffer) {
+    readPixels(mRenderTarget, xoffset, yoffset, width, height, std::move(buffer));
+}
 
+void FRenderer::readPixels(FRenderTarget* renderTarget,
+        uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
+        backend::PixelBufferDescriptor&& buffer) {
+    readPixels(renderTarget->getHwHandle(), xoffset, yoffset, width, height, std::move(buffer));
+}
+
+void FRenderer::readPixels(Handle<HwRenderTarget> renderTargetHandle,
+        uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
+        backend::PixelBufferDescriptor&& buffer) {
     if (!ASSERT_POSTCONDITION_NON_FATAL(
             buffer.type != PixelDataType::COMPRESSED,
             "buffer.format cannot be COMPRESSED")) {
@@ -613,7 +624,7 @@ void FRenderer::readPixels(uint32_t xoffset, uint32_t yoffset, uint32_t width, u
 
     FEngine& engine = getEngine();
     FEngine::DriverApi& driver = engine.getDriverApi();
-    driver.readPixels(mRenderTarget, xoffset, yoffset, width, height, std::move(buffer));
+    driver.readPixels(renderTargetHandle, xoffset, yoffset, width, height, std::move(buffer));
 }
 
 Handle<HwRenderTarget> FRenderer::getRenderTarget(FView& view) const noexcept {
@@ -670,6 +681,13 @@ void Renderer::copyFrame(SwapChain* dstSwapChain, filament::Viewport const& dstV
 void Renderer::readPixels(uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
         PixelBufferDescriptor&& buffer) {
     upcast(this)->readPixels(xoffset, yoffset, width, height, std::move(buffer));
+}
+
+void Renderer::readPixels(RenderTarget* renderTarget,
+        uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
+        PixelBufferDescriptor&& buffer) {
+    upcast(this)->readPixels(upcast(renderTarget),
+            xoffset, yoffset, width, height, std::move(buffer));
 }
 
 void Renderer::endFrame() {
