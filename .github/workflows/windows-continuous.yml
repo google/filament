@@ -1,0 +1,26 @@
+name: Windows
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build-windows:
+    name: build-windows
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Filament
+        run: |
+          git version
+          git init $GITHUB_WORKSPACE
+          cd $GITHUB_WORKSPACE
+          git remote add origin https://github.com/google/filament
+          git config gc.auto 0
+          git fetch --tags --prune --progress --no-recurse-submodules origin +${GITHUB_REF}:${GITHUB_REF/refs\//refs\/remote\/}
+          git checkout --progress --force ${GITHUB_REF/refs\//refs\/remote\/}
+        shell: bash
+      - name: Run build script
+        run: |
+          build\windows\build-github.bat continuous

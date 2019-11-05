@@ -45,7 +45,7 @@ jobs:
         shell: cmd
       - name: Run build script
         run: |
-          build\windows\build-github.bat
+          build\windows\build-github.bat presubmit
 
   build-android:
     name: build-android
