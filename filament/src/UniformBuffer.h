@@ -120,13 +120,24 @@ public:
         >::type;
     };
 
-    // invalidate an array of uniforms and return a pointer to the first element
-    // offset in bytes, and count is the number of elements to invalidate
+    // Invalidates an array of uniforms and returns a pointer to the first element.
+    //
+    // The offset is in bytes, and the count is the number of elements to invalidate.
+    // Note that Filament treats arrays of size 1 as being equivalent to a scalar.
+    //
+    // To compute the size occupied by the array, we account for std140 alignment, which specifies
+    // that the start of each array element is aligned to the size of a vec4. Consider an array that
+    // has three floats. It would be laid out in memory as follows, where each letter is a 32-bit
+    // word:
+    //
+    //      a x x x b x x x c
+    //
+    // The "x" symbols represent dummy words.
     template <typename T, typename = typename is_supported_type<T>::type>
     void setUniformArray(size_t offset, T const* UTILS_RESTRICT begin, size_t count) noexcept {
-        // we need to align array elements to the size of a vec4 (see std140 layout)
         constexpr size_t stride = (sizeof(T) + 0xF) & ~0xF;
-        T* UTILS_RESTRICT p = static_cast<T*>(invalidateUniforms(offset, stride * count));
+        size_t arraySize = stride * count - stride + sizeof(T);
+        T* UTILS_RESTRICT p = static_cast<T*>(invalidateUniforms(offset, arraySize));
         for (size_t i = 0; i < count; i++) {
             *p = begin[i];
             p = utils::pointermath::add(p, stride);

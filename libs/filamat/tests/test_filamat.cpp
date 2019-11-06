@@ -639,6 +639,16 @@ TEST_F(MaterialCompiler, Uv0AndUv1) {
     EXPECT_TRUE(result.isValid());
 }
 
+TEST_F(MaterialCompiler, Arrays) {
+    filamat::MaterialBuilder builder;
+
+    builder.parameter(UniformType::FLOAT4, 1, "f4");
+    builder.parameter(UniformType::FLOAT, 1, "f1");
+
+    filamat::Package result = builder.build();
+    EXPECT_TRUE(result.isValid());
+}
+
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
