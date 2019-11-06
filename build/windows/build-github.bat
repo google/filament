@@ -54,24 +54,24 @@ cmake ..\.. -G "Visual Studio 16 2019" -A x64 || exit /b
 if "%BUILD_RELEASE%" == "1" (
     :: /MT
     cmake . -DUSE_STATIC_CRT=ON -DCMAKE_INSTALL_PREFIX=..\mt
-    cmake --build . %INSTALL% --config Release || exit /b
+    cmake --build . %INSTALL% --config Release -- /m || exit /b
 
     if "%BUILD_RELEASE_VARIANTS%" == "1" (
         :: /MD
         cmake . -DUSE_STATIC_CRT=OFF -DCMAKE_INSTALL_PREFIX=..\md
-        cmake --build . %INSTALL% --config Release || exit /b
+        cmake --build . %INSTALL% --config Release -- /m || exit /b
     )
 )
 
 if "%BUILD_DEBUG%" == "1" (
     :: MTd
     cmake . -DUSE_STATIC_CRT=ON -DCMAKE_INSTALL_PREFIX=..\mtd
-    cmake --build . %INSTALL% --config Debug || exit /b
+    cmake --build . %INSTALL% --config Debug -- /m || exit /b
 
     if "%BUILD_RELEASE_VARIANTS%" == "1" (
         :: MDd
         cmake . -DUSE_STATIC_CRT=OFF -DCMAKE_INSTALL_PREFIX=..\mdd
-        cmake --build . %INSTALL% --config Debug || exit /b
+        cmake --build . %INSTALL% --config Debug -- /m || exit /b
     )
 )
 
