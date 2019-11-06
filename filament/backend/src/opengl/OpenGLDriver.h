@@ -124,7 +124,6 @@ public:
     struct GLStream : public backend::HwStream {
         static constexpr size_t ROUND_ROBIN_TEXTURE_COUNT = 3;      // 3 maximum
         using HwStream::HwStream;
-        bool isNativeStream() const { return gl.externalTextureId == 0; }
         struct Info {
             // storage for the read/write textures below
             backend::Platform::ExternalTexture* ets = nullptr;
@@ -143,8 +142,9 @@ public:
             GLuint fbo = 0;
         } gl;   // 20 bytes
 
+
         /*
-         * The fields below are access from the main application thread
+         * The fields below are accessed from the main application thread
          * (not the GL thread)
          */
         struct {
@@ -155,6 +155,8 @@ public:
             Info infos[ROUND_ROBIN_TEXTURE_COUNT];      // 48 bytes
             int64_t timestamp = 0;
             uint8_t cur = 0;
+            backend::AcquiredImage acquired;
+            backend::AcquiredImage pending;
         } user_thread;
     };
 
@@ -373,9 +375,12 @@ private:
     backend::OpenGLPlatform& mPlatform;
 
     OpenGLBlitter* mOpenGLBlitter = nullptr;
-    void updateStream(GLTexture* t, backend::DriverApi* driver) noexcept;
+    void updateStreamTexId(GLTexture* t, backend::DriverApi* driver) noexcept;
+    void updateStreamAcquired(GLTexture* t, backend::DriverApi* driver) noexcept;
     void updateBuffer(GLenum target, GLBuffer* buffer, backend::BufferDescriptor const& p, uint32_t alignment = 16) noexcept;
     void updateTextureLodRange(GLTexture* texture, int8_t targetLevel) noexcept;
+
+    void setExternalTexture(GLTexture* t, void* image);
 
     void whenGpuCommandsComplete(std::function<void()> fn) noexcept;
     void executeGpuCommandsCompleteOps() noexcept;

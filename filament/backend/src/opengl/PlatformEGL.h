@@ -69,6 +69,8 @@ public:
     void createExternalImageTexture(void* texture) noexcept final;
     void destroyExternalImage(void* texture) noexcept final;
 
+    backend::AcquiredImage createAcquiredImage(void* hwbuffer, backend::StreamCallback cb, void* userData) noexcept final;
+
     int getOSVersion() const noexcept final;
 
 private:

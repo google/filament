@@ -43,14 +43,27 @@ DriverBase::~DriverBase() noexcept {
 
 void DriverBase::purge() noexcept {
     std::vector<BufferDescriptor> buffersToPurge;
+    std::vector<AcquiredImage> imagesToPurge;
     std::unique_lock<std::mutex> lock(mPurgeLock);
     std::swap(buffersToPurge, mBufferToPurge);
+    std::swap(imagesToPurge, mImagesToPurge);
     lock.unlock(); // don't remove this, it ensures mBufferToPurge is destroyed without lock held
+    for (auto& image : imagesToPurge) {
+        image.callback(image.image, image.userData);
+    }
+    // When the BufferDescriptors go out of scope, their destructors invoke their callbacks.
 }
 
 void DriverBase::scheduleDestroySlow(BufferDescriptor&& buffer) noexcept {
     std::lock_guard<std::mutex> lock(mPurgeLock);
     mBufferToPurge.push_back(std::move(buffer));
+}
+
+// This is called from an async driver method so it's in the GL thread, but purge is called
+// on the user thread. This is typically called 0 or 1 times per frame.
+void DriverBase::scheduleRelease(AcquiredImage&& image) noexcept {
+    std::lock_guard<std::mutex> lock(mPurgeLock);
+    mImagesToPurge.push_back(std::move(image));
 }
 
 // ------------------------------------------------------------------------------------------------

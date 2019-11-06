@@ -392,8 +392,16 @@ ShaderModel MetalDriver::getShaderModel() const noexcept {
 #endif
 }
 
-Handle<HwStream> MetalDriver::createStream(void* stream) {
+Handle<HwStream> MetalDriver::createStreamNative(void* stream) {
     return {};
+}
+
+Handle<HwStream> MetalDriver::createStreamAcquired() {
+    return {};
+}
+
+void MetalDriver::setAcquiredImage(Handle<HwStream> sh, void* image, backend::StreamCallback cb,
+        void* userData) {
 }
 
 void MetalDriver::setStreamDimensions(Handle<HwStream> stream, uint32_t width,

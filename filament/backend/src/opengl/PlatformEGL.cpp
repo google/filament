@@ -542,6 +542,39 @@ void PlatformEGL::destroyExternalImage(void* texture) noexcept {
     glDeleteTextures(1, &t->gl.id);
 }
 
+backend::AcquiredImage PlatformEGL::createAcquiredImage(void* hwbuffer, backend::StreamCallback userCallback, void* userData) noexcept {
+
+    // Convert the AHardwareBuffer to EGLImage.
+    EGLClientBuffer clientBuffer = eglGetNativeClientBufferANDROID((const AHardwareBuffer*) hwbuffer);
+    if (!clientBuffer) {
+        slog.e << "Unable to get EGLClientBuffer from AHardwareBuffer." << io::endl;
+        return {};
+    }
+    // Note that this cannot be used to stream protected video (for now) because we do not set EGL_PROTECTED_CONTENT_EXT.
+    EGLint attrs[] = { EGL_NONE, EGL_NONE };
+    EGLImageKHR eglImage = eglCreateImageKHR(eglGetCurrentDisplay(), EGL_NO_CONTEXT, EGL_NATIVE_BUFFER_ANDROID, clientBuffer, attrs);
+    if (eglImage == EGL_NO_IMAGE_KHR) {
+        slog.e << "eglCreateImageKHR returned no image." << io::endl;
+        return {};
+    }
+
+    // Destroy the EGLImage before invoking the user's callback.
+    AcquiredImage* closure = new AcquiredImage();
+    closure->callback = userCallback;
+    closure->image = hwbuffer;
+    closure->userData = userData;
+    auto patchedCallback = [](void* image, void* userdata) {
+        if (eglDestroyImageKHR(eglGetCurrentDisplay(), (EGLImageKHR) image) == EGL_FALSE) {
+            slog.e << "eglDestroyImageKHR failed." << io::endl;
+        }
+        backend::AcquiredImage* closure = (backend::AcquiredImage*) userdata;
+        closure->callback(closure->image, closure->userData);
+        delete closure;
+    };
+
+    return {eglImage, patchedCallback, closure};
+}
+
 void PlatformEGL::initializeGlExtensions() noexcept {
     unordered_string_set glExtensions;
     GLint n;
