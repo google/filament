@@ -90,6 +90,9 @@ VertexBuffer::Builder& VertexBuffer::Builder::attribute(VertexAttribute attribut
         entry.stride = byteStride;
         entry.type = attributeType;
         mImpl->mDeclaredAttributes.set(attribute);
+    } else {
+        utils::slog.w << "Ignoring VertexBuffer attribute, the limit of " <<
+                MAX_VERTEX_ATTRIBUTE_COUNT << " attributes has been exceeded" << utils::io::endl;
     }
     return *this;
 }
