@@ -407,10 +407,10 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity entity) {
     if (numMorphTargets > 0) {
         RenderableManager::Instance renderable = mRenderableManager.getInstance(entity);
         float4 weights(0, 0, 0, 0);
-        for (cgltf_size i = 0; i < std::min(cgltf_size(4), mesh->weights_count); ++i) {
+        for (cgltf_size i = 0; i < std::min(MAX_MORPH_TARGETS, mesh->weights_count); ++i) {
             weights[i] = mesh->weights[i];
         }
-        for (cgltf_size i = 0; i < std::min(cgltf_size(4), node->weights_count); ++i) {
+        for (cgltf_size i = 0; i < std::min(MAX_MORPH_TARGETS, node->weights_count); ++i) {
             weights[i] = node->weights[i];
         }
         mRenderableManager.setMorphWeights(renderable, weights);
@@ -535,7 +535,12 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
         vbb.normalized(semantic, inputAccessor->normalized);
     }
 
-    const cgltf_size targetsCount = std::min(cgltf_size(4), inPrim->targets_count);
+    cgltf_size targetsCount = inPrim->targets_count;
+    if (targetsCount > MAX_MORPH_TARGETS) {
+        slog.w << "Too many morph targets in " << name << io::endl;
+        targetsCount = MAX_MORPH_TARGETS;
+    }
+
     constexpr int baseTangentsAttr = (int) VertexAttribute::MORPH_TANGENTS_0;
     constexpr int basePositionAttr = (int) VertexAttribute::MORPH_POSITION_0;
 
