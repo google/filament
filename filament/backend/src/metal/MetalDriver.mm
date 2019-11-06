@@ -396,6 +396,14 @@ Handle<HwStream> MetalDriver::createStream(void* stream) {
     return {};
 }
 
+Handle<HwStream> MetalDriver::createStreamAcquired() {
+    return {};
+}
+
+void MetalDriver::setAcquiredImage(Handle<HwStream> sh, void* image, backend::StreamCallback cb,
+        void* userData) {
+}
+
 void MetalDriver::setStreamDimensions(Handle<HwStream> stream, uint32_t width,
         uint32_t height) {
 

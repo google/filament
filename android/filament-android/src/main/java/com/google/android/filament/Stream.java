@@ -33,6 +33,19 @@ public class Stream {
     private long mNativeObject;
     private long mNativeEngine;
 
+    /**
+     * Represents the immutable stream type.
+     *
+     * - NATIVE streams are not synchronized but are copy-free.
+     * - TEXID streams are synchronized, but they are GL-only and incur copies.
+     * - ACQUIRED streams are synchronized, copy-free, and take a release callback.
+     */
+    enum StreamType {
+        NATIVE,
+        TEXID,
+        ACQUIRED,
+    };
+
     Stream(long nativeStream, Engine engine) {
         mNativeObject = nativeStream;
         mNativeEngine = engine.getNativeObject();
@@ -40,6 +53,12 @@ public class Stream {
 
     /**
      * Use <code>Builder</code> to construct an Stream object instance.
+     *
+     * By default, Stream objects are ACQUIRED and must have external images pushed to them via
+     * {@line #setAcquiredImage}.
+     *
+     * To create a NATIVE or TEXID stream, call one of the <pre>stream</pre> methods
+     * on the builder.
      */
     public static class Builder {
         @SuppressWarnings({"FieldCanBeLocal", "UnusedDeclaration"}) // Keep to finalize native resources
@@ -55,9 +74,11 @@ public class Stream {
         }
 
         /**
-         * Creates a native stream. Native streams can sample data directly from an
+         * Creates a NATIVE stream. Native streams can sample data directly from an
          * opaque platform object such as a {@link android.graphics.SurfaceTexture SurfaceTexture}
          * on Android.
+         *
+         * @deprecated This lacks synchronization so ACQUIRED is preferred.
          *
          * @param streamSource an opaque native stream handle, e.g.: on Android this must be a
          *                     {@link android.graphics.SurfaceTexture SurfaceTexture} object
@@ -74,7 +95,7 @@ public class Stream {
         }
 
         /**
-         * Creates a copy stream. A copy stream will sample data from the supplied
+         * Creates a TEXID stream. A copy stream will sample data from the supplied
          * external texture and copy it into an internal private texture.
          *
          * <p>Currently only OpenGL external texture ids are supported.</p>
@@ -150,12 +171,20 @@ public class Stream {
     }
 
     /**
-     * Indicates whether this <code>Stream</code> is a native stream or a copy stream.
-     *
-     * @return true if this is a native  <code>Stream</code>, false otherwise.
+     * Indicates whether this <code>Stream</code> is NATIVE, TEXID, or ACQUIRED.
      */
-    public boolean isNative() {
-        return nIsNative(getNativeObject());
+    public StreamType getStreamType() {
+        return StreamType.values()[nGetStreamType(getNativeObject())];
+    }
+
+    /**
+     * Updates an ACQUIRED stream with an image that is guaranteed to be used in the next frame.
+     *
+     * This method should be called on the same thread that calls Renderer::beginFrame, which is
+     * also where the callback is invoked.
+     */
+    public void setAcquiredImage(long eglImage, Object handler, Runnable callback) {
+        nSetAcquiredImage(getNativeObject(), mNativeEngine, eglImage, handler, callback);
     }
 
     /**
@@ -286,6 +315,7 @@ public class Stream {
     private static native void nBuilderHeight(long nativeStreamBuilder, int height);
     private static native long nBuilderBuild(long nativeStreamBuilder, long nativeEngine);
 
+    private static native int nGetStreamType(long nativeStream);
     private static native void nSetDimensions(long nativeStream, int width, int height);
     private static native int nReadPixels(long nativeStream, long nativeEngine,
             int xoffset, int yoffset, int width, int height,
@@ -293,6 +323,6 @@ public class Stream {
             int left, int top, int type, int alignment, int stride, int format,
             Object handler, Runnable callback);
     private static native long nGetTimestamp(long nativeStream);
-
-    private static native boolean nIsNative(long nativeStream);
+    private static native void nSetAcquiredImage(long nativeStream, long nativeEngine,
+            long eglImage, Object handler, Runnable callback);
 }

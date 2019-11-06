@@ -1015,6 +1015,7 @@ void OpenGLDriver::createStreamFromTextureIdR(Handle<HwStream> sh,
     s->width = width;
     s->height = height;
     s->gl.externalTextureId = static_cast<GLuint>(externalTextureId);
+    s->streamType = StreamType::TEXID;
     glGenTextures(GLStream::ROUND_ROBIN_TEXTURE_COUNT, s->user_thread.read);
     glGenTextures(GLStream::ROUND_ROBIN_TEXTURE_COUNT, s->user_thread.write);
     for (auto& info : s->user_thread.infos) {
@@ -1161,9 +1162,9 @@ void OpenGLDriver::destroyStream(Handle<HwStream> sh) {
         if (pos != externalStreams.end()) {
             detachStream(*pos);
         }
-        if (s->isNativeStream()) {
+        if (s->streamType == StreamType::NATIVE) {
             mPlatform.destroyStream(s->stream);
-        } else {
+        } else if (s->streamType == StreamType::TEXID) {
             glDeleteTextures(GLStream::ROUND_ROBIN_TEXTURE_COUNT, s->user_thread.read);
             glDeleteTextures(GLStream::ROUND_ROBIN_TEXTURE_COUNT, s->user_thread.write);
             if (s->gl.fbo) {
@@ -1189,6 +1190,27 @@ Handle<HwStream> OpenGLDriver::createStream(void* nativeStream) {
     return sh;
 }
 
+Handle<HwStream> OpenGLDriver::createStreamAcquired() {
+    Handle<HwStream> sh(allocateHandle(sizeof(GLStream)));
+    construct<GLStream>(sh);
+    return sh;
+}
+
+// Stashes an acquired external image and a release callback. The image is not bound to OpenGL until
+// the subsequent call to beginFrame (see updateStreamAcquired).
+//
+// setAcquiredImage should be called by the user outside of beginFrame / endFrame, and should be
+// called only once per frame. If the user pushes images to the same stream multiple times in a
+// single frame, we emit a warning and honor only the final image, skipping all other callbacks.
+void OpenGLDriver::setAcquiredImage(Handle<HwStream> sh, void* image,
+        backend::StreamCallback cb, void* userData) {
+    GLStream* glstream = handle_cast<GLStream*>(sh);
+    if (glstream->user_thread.pending.image) {
+        slog.w << "Acquired images should be set only once per frame." << io::endl;
+    }
+    glstream->user_thread.pending = {image, cb, userData};
+}
+
 void OpenGLDriver::updateStreams(DriverApi* driver) {
     if (UTILS_UNLIKELY(!mExternalStreams.empty())) {
         OpenGLBlitter::State state;
@@ -1198,13 +1220,17 @@ void OpenGLDriver::updateStreams(DriverApi* driver) {
             GLStream* s = static_cast<GLStream*>(t->hwStream);
             if (UTILS_UNLIKELY(s == nullptr)) {
                 // this can happen because we're called synchronously and the setExternalStream()
-                // call may bot have been processed yet.
+                // call may not have been processed yet.
                 continue;
             }
 
-            if (!s->isNativeStream()) {
+            if (s->streamType == StreamType::TEXID) {
                 state.setup();
-                updateStream(t, driver);
+                updateStreamTexId(t, driver);
+            }
+
+            if (s->streamType == StreamType::ACQUIRED) {
+                updateStreamAcquired(t, driver);
             }
         }
     }
@@ -1718,10 +1744,12 @@ void OpenGLDriver::cancelExternalImage(void* image) {
 }
 
 void OpenGLDriver::setExternalImage(Handle<HwTexture> th, void* image) {
-    GLTexture* t = handle_cast<GLTexture*>(th);
-    auto& gl = mContext;
+    mPlatform.setExternalImage(image, handle_cast<GLTexture*>(th));
+    setExternalTexture(handle_cast<GLTexture*>(th), image);
+}
 
-    mPlatform.setExternalImage(image, t);
+void OpenGLDriver::setExternalTexture(GLTexture* t, void* image) {
+    auto& gl = mContext;
 
     // TODO: move this logic to PlatformEGL.
     if (gl.ext.OES_EGL_image_external_essl3) {
@@ -1748,7 +1776,7 @@ void OpenGLDriver::setExternalStream(Handle<HwTexture> th, Handle<HwStream> sh) 
         if (UTILS_LIKELY(sh)) {
             GLStream* s = handle_cast<GLStream*>(sh);
             if (UTILS_LIKELY(!t->hwStream)) {
-                // we're not attached alread
+                // we're not attached already
                 attachStream(t, s);
             } else {
                 if (s->stream != t->hwStream->stream) {
@@ -1768,14 +1796,19 @@ void OpenGLDriver::attachStream(GLTexture* t, GLStream* hwStream) noexcept {
     auto& gl = mContext;
     mExternalStreams.push_back(t);
 
-    if (hwStream->isNativeStream()) {
-        mPlatform.attach(hwStream->stream, t->gl.id);
-    } else {
-        assert(t->target == SamplerType::SAMPLER_EXTERNAL);
-        // The texture doesn't need a texture name anymore, get rid of it
-        gl.unbindTexture(t->gl.target, t->gl.id);
-        glDeleteTextures(1, &t->gl.id);
-        t->gl.id = hwStream->user_thread.read[hwStream->user_thread.cur];
+    switch (hwStream->streamType) {
+        case StreamType::NATIVE:
+            mPlatform.attach(hwStream->stream, t->gl.id);
+            break;
+        case StreamType::TEXID:
+            assert(t->target == SamplerType::SAMPLER_EXTERNAL);
+            // The texture doesn't need a texture name anymore, get rid of it
+            gl.unbindTexture(t->gl.target, t->gl.id);
+            glDeleteTextures(1, &t->gl.id);
+            t->gl.id = hwStream->user_thread.read[hwStream->user_thread.cur];
+            break;
+        case StreamType::ACQUIRED:
+            break;
     }
     t->hwStream = hwStream;
 }
@@ -1789,28 +1822,35 @@ void OpenGLDriver::detachStream(GLTexture* t) noexcept {
     }
 
     GLStream* s = static_cast<GLStream*>(t->hwStream);
-    if (s->isNativeStream()) {
-        mPlatform.detach(t->hwStream->stream);
-        // this deletes the texture id
+    switch (s->streamType) {
+        case StreamType::NATIVE:
+            mPlatform.detach(t->hwStream->stream);
+            break;
+        case StreamType::TEXID:
+            glGenTextures(1, &t->gl.id);
+            break;
+        case StreamType::ACQUIRED:
+            break;
     }
-    glGenTextures(1, &t->gl.id);
+
     t->hwStream = nullptr;
 }
 
 UTILS_NOINLINE
 void OpenGLDriver::replaceStream(GLTexture* t, GLStream* hwStream) noexcept {
     GLStream* s = static_cast<GLStream*>(t->hwStream);
-    if (s->isNativeStream()) {
-        mPlatform.detach(t->hwStream->stream);
-        // this deletes the texture id
-    }
-
-    if (hwStream->isNativeStream()) {
-        glGenTextures(1, &t->gl.id);
-        mPlatform.attach(hwStream->stream, t->gl.id);
-    } else {
-        assert(t->target == SamplerType::SAMPLER_EXTERNAL);
-        t->gl.id = hwStream->user_thread.read[hwStream->user_thread.cur];
+    switch (s->streamType) {
+        case StreamType::NATIVE:
+            mPlatform.detach(t->hwStream->stream);
+            glGenTextures(1, &t->gl.id);
+            mPlatform.attach(hwStream->stream, t->gl.id);
+            break;
+        case StreamType::TEXID:
+            assert(t->target == SamplerType::SAMPLER_EXTERNAL);
+            t->gl.id = hwStream->user_thread.read[hwStream->user_thread.cur];
+            break;
+        case StreamType::ACQUIRED:
+            break;
     }
     t->hwStream = hwStream;
 }
@@ -2114,19 +2154,51 @@ void OpenGLDriver::setViewportScissor(Viewport const& viewportScissor) noexcept 
     gl.enable(GL_SCISSOR_TEST);
 }
 
-/*
- * This is called in the user thread
- */
+// Binds the external image stashed in the associated stream.
+//
+// updateStreamAcquired() and setAcquiredImage() are both called from on the application's thread
+// and therefore do not require synchronization. The former is always called immediately before
+// beginFrame, the latter is called by the user from anywhere outside beginFrame / endFrame.
+void OpenGLDriver::updateStreamAcquired(GLTexture* gltexture, DriverApi* driver) noexcept {
+    SYSTRACE_CALL();
+
+    GLStream* glstream = static_cast<GLStream*>(gltexture->hwStream);
+    assert(glstream);
+    assert(glstream->streamType == StreamType::ACQUIRED);
+
+    // If there's no pending image, do nothing. Note that GL_OES_EGL_image does not let you pass
+    // NULL to glEGLImageTargetTexture2DOES, and there is no concept of "detaching" an EGLimage from
+    // a texture.
+    if (glstream->user_thread.pending.image == nullptr) {
+        return;
+    }
+
+    AcquiredImage previousImage = glstream->user_thread.acquired;
+    glstream->user_thread.acquired = glstream->user_thread.pending;
+    glstream->user_thread.pending = {0};
+
+    // Bind the stashed EGLImage to its corresponding GL texture as soon as we start making the GL
+    // calls for the upcoming frame.
+    void* image = glstream->user_thread.acquired.image;
+    driver->queueCommand([this, gltexture, image, previousImage]() {
+        setExternalTexture(gltexture, image);
+        if (previousImage.image) {
+            whenGpuCommandsComplete([this, previousImage]()  {
+                scheduleRelease(previousImage);
+            });
+        }
+    });
+}
 
 #define DEBUG_NO_EXTERNAL_STREAM_COPY false
 
-void OpenGLDriver::updateStream(GLTexture* t, DriverApi* driver) noexcept {
+void OpenGLDriver::updateStreamTexId(GLTexture* t, DriverApi* driver) noexcept {
     SYSTRACE_CALL();
     auto& gl = mContext;
 
     GLStream* s = static_cast<GLStream*>(t->hwStream);
     assert(s);
-    assert(!s->isNativeStream());
+    assert(s->streamType == StreamType::TEXID);
 
     // round-robin to the next texture name
     if (UTILS_UNLIKELY(DEBUG_NO_EXTERNAL_STREAM_COPY ||
@@ -2136,7 +2208,7 @@ void OpenGLDriver::updateStream(GLTexture* t, DriverApi* driver) noexcept {
             // also make sure that this texture is still associated with the same stream
             auto& streams = mExternalStreams;
             if (UTILS_LIKELY(std::find(streams.begin(), streams.end(), t) != streams.end()) &&
-                (t->hwStream == s)) {
+                    (t->hwStream == s)) {
                 t->gl.id = s->gl.externalTextureId;
             }
         });
@@ -2221,7 +2293,13 @@ void OpenGLDriver::readStreamPixels(Handle<HwStream> sh,
     auto& gl = mContext;
 
     GLStream* s = handle_cast<GLStream*>(sh);
-    if (UTILS_LIKELY(!s->isNativeStream())) {
+
+    if (UTILS_UNLIKELY(s->streamType == StreamType::ACQUIRED)) {
+        PANIC_LOG("readStreamPixels with ACQUIRED streams is not yet implemented.");
+        return;
+    }
+
+    if (UTILS_LIKELY(s->streamType == StreamType::TEXID)) {
         GLuint tid = s->gl.externalTexture2DId;
         if (tid == 0) {
             return;
@@ -2510,7 +2588,7 @@ void OpenGLDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId,
         OpenGLPlatform& platform = mPlatform;
         for (GLTexture const* t : mExternalStreams) {
             assert(t && t->hwStream);
-            if (static_cast<GLStream*>(t->hwStream)->isNativeStream()) {
+            if (t->hwStream->streamType == StreamType::NATIVE) {
                 assert(t->hwStream->stream);
                 platform.updateTexImage(t->hwStream->stream,
                         &static_cast<GLStream*>(t->hwStream)->user_thread.timestamp);

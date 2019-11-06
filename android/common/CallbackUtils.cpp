@@ -27,39 +27,6 @@ struct {
     jmethodID execute;
 } gCallbackUtils;
 
-JniCallback* JniCallback::make(filament::Engine* engine,
-        JNIEnv* env, jobject handler, jobject callback) {
-    void* that = engine->streamAlloc(sizeof(JniCallback), alignof(JniCallback));
-    return new (that) JniCallback(env, handler, callback);
-}
-
-JniCallback::JniCallback(JNIEnv* env, jobject handler, jobject callback)
-        : mEnv(env)
-        , mHandler(env->NewGlobalRef(handler))
-        , mCallback(env->NewGlobalRef(callback)) {
-}
-
-JniCallback::~JniCallback() {
-    if (mHandler && mCallback) {
-#ifdef ANDROID
-        if (mEnv->IsInstanceOf(mHandler, gCallbackUtils.handlerClass)) {
-            mEnv->CallBooleanMethod(mHandler, gCallbackUtils.post, mCallback);
-        }
-#endif
-        if (mEnv->IsInstanceOf(mHandler, gCallbackUtils.executorClass)) {
-            mEnv->CallVoidMethod(mHandler, gCallbackUtils.execute, mCallback);
-        }
-    }
-    mEnv->DeleteGlobalRef(mHandler);
-    mEnv->DeleteGlobalRef(mCallback);
-}
-
-void JniCallback::invoke(void*, size_t, void* user) {
-    JniCallback* data = reinterpret_cast<JniCallback*>(user);
-    // don't call delete here, because we don't own the storage
-    data->~JniCallback();
-}
-
 JniBufferCallback* JniBufferCallback::make(filament::Engine* engine,
         JNIEnv* env, jobject handler, jobject callback, AutoBuffer&& buffer) {
     void* that = engine->streamAlloc(sizeof(JniBufferCallback), alignof(JniBufferCallback));
@@ -93,6 +60,37 @@ void JniBufferCallback::invoke(void*, size_t, void* user) {
     JniBufferCallback* data = reinterpret_cast<JniBufferCallback*>(user);
     // don't call delete here, because we don't own the storage
     data->~JniBufferCallback();
+}
+
+JniImageCallback* JniImageCallback::make(filament::Engine* engine,
+        JNIEnv* env, jobject handler, jobject callback, long image) {
+    void* that = engine->streamAlloc(sizeof(JniImageCallback), alignof(JniImageCallback));
+    return new (that) JniImageCallback(env, handler, callback, image);
+}
+
+JniImageCallback::JniImageCallback(JNIEnv* env, jobject handler, jobject callback, long image)
+        : mEnv(env)
+        , mHandler(env->NewGlobalRef(handler))
+        , mCallback(env->NewGlobalRef(callback))
+        , mImage(image) { }
+
+JniImageCallback::~JniImageCallback() {
+    if (mHandler && mCallback) {
+#ifdef ANDROID
+        if (mEnv->IsInstanceOf(mHandler, gCallbackUtils.handlerClass)) {
+            mEnv->CallBooleanMethod(mHandler, gCallbackUtils.post, mCallback);
+        }
+#endif
+        if (mEnv->IsInstanceOf(mHandler, gCallbackUtils.executorClass)) {
+            mEnv->CallVoidMethod(mHandler, gCallbackUtils.execute, mCallback);
+        }
+    }
+    mEnv->DeleteGlobalRef(mHandler);
+    mEnv->DeleteGlobalRef(mCallback);
+}
+
+void JniImageCallback::invoke(void* image, void* user) {
+    reinterpret_cast<JniImageCallback*>(user)->~JniImageCallback();
 }
 
 void registerCallbackUtils(JNIEnv *env) {

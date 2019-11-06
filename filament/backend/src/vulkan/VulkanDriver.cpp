@@ -549,6 +549,14 @@ Handle<HwStream> VulkanDriver::createStream(void* nativeStream) {
     return {};
 }
 
+Handle<HwStream> VulkanDriver::createStreamAcquired() {
+    return {};
+}
+
+void VulkanDriver::setAcquiredImage(Handle<HwStream> sh, void* image, backend::StreamCallback cb,
+        void* userData) {
+}
+
 void VulkanDriver::setStreamDimensions(Handle<HwStream> sh, uint32_t width, uint32_t height) {
 }
 

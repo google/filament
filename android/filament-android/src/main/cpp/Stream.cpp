@@ -108,10 +108,10 @@ Java_com_google_android_filament_Stream_nBuilderBuild(JNIEnv*, jclass,
     return (jlong) builder->builder()->build(*engine);
 }
 
-extern "C" JNIEXPORT jboolean JNICALL
-Java_com_google_android_filament_Stream_nIsNative(JNIEnv*, jclass, jlong nativeStream) {
+extern "C" JNIEXPORT jint JNICALL
+Java_com_google_android_filament_Stream_nGetStreamType(JNIEnv*, jclass, jlong nativeStream) {
     Stream* stream = (Stream*) nativeStream;
-    return (jboolean) stream->isNativeStream();
+    return (jint) stream->getStreamType();
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -159,4 +159,13 @@ extern "C" JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_Stream_nGetTimestamp(JNIEnv*, jclass, jlong nativeStream) {
     Stream *stream = (Stream *) nativeStream;
     return stream->getTimestamp();
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_Stream_nSetAcquiredImage(JNIEnv* env, jclass, jlong nativeStream,
+        jlong nativeEngine, jlong eglImage, jobject handler, jobject runnable) {
+    Engine* engine = (Engine*) nativeEngine;
+    Stream* stream = (Stream*) nativeStream;
+    auto* callback = JniImageCallback::make(engine, env, handler, runnable, eglImage);
+    stream->setAcquiredImage((void*) eglImage, &JniImageCallback::invoke, callback);
 }

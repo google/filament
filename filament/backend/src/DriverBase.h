@@ -132,9 +132,10 @@ struct HwSwapChain : public HwBase {
 };
 
 struct HwStream : public HwBase {
-    HwStream() = default;
-    explicit HwStream(Platform::Stream* stream) : stream(stream) { }
+    explicit HwStream() : streamType(StreamType::ACQUIRED) { }
+    explicit HwStream(Platform::Stream* stream) : stream(stream), streamType(StreamType::NATIVE) { }
     Platform::Stream* stream = nullptr;
+    StreamType streamType;
     uint32_t width = 0;
     uint32_t height = 0;
 };
@@ -168,9 +169,12 @@ protected:
 
     void scheduleDestroySlow(BufferDescriptor&& buffer) noexcept;
 
+    void scheduleRelease(const AcquiredImage& image) noexcept;
+
 private:
     std::mutex mPurgeLock;
     std::vector<BufferDescriptor> mBufferToPurge;
+    std::vector<AcquiredImage> mImagesToPurge;
 };
 
 
