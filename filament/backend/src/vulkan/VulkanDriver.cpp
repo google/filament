@@ -545,8 +545,16 @@ void VulkanDriver::destroySwapChain(Handle<HwSwapChain> sch) {
 void VulkanDriver::destroyStream(Handle<HwStream> sh) {
 }
 
-Handle<HwStream> VulkanDriver::createStream(void* nativeStream) {
+Handle<HwStream> VulkanDriver::createStreamNative(void* nativeStream) {
     return {};
+}
+
+Handle<HwStream> VulkanDriver::createStreamAcquired() {
+    return {};
+}
+
+void VulkanDriver::setAcquiredImage(Handle<HwStream> sh, void* image, backend::StreamCallback cb,
+        void* userData) {
 }
 
 void VulkanDriver::setStreamDimensions(Handle<HwStream> sh, uint32_t width, uint32_t height) {

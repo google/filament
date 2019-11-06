@@ -624,6 +624,23 @@ enum class BlendFunction : uint8_t {
     SRC_ALPHA_SATURATE      //!< f(src, dst) = (1,1,1) * min(src.a, 1 - dst.a), 1
 };
 
+//! Stream for external textures
+enum class StreamType {
+    NATIVE,
+    TEXTURE_ID,
+    ACQUIRED,
+};
+
+//! Releases an ACQUIRED external texture, guaranteed to be called on the application thread.
+using StreamCallback = void(*)(void* image, void* user);
+
+//! Bundles the state of an ACQUIRED stream.
+struct AcquiredImage {
+    void* image = nullptr;
+    backend::StreamCallback callback = nullptr;
+    void* userData = nullptr;
+};
+
 //! Vertex attribute descriptor
 struct Attribute {
     //! attribute is normalized (remapped between 0 and 1)

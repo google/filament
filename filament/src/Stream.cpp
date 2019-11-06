@@ -84,6 +84,10 @@ namespace details {
 
 FStream::FStream(FEngine& engine, const Builder& builder) noexcept
         : mEngine(engine),
+          mStreamType(
+            builder->mExternalTextureId ? StreamType::TEXTURE_ID :
+            (builder->mStream ? StreamType::NATIVE : StreamType::ACQUIRED)
+          ),
           mNativeStream(builder->mStream),
           mExternalTextureId(builder->mExternalTextureId),
           mWidth(builder->mWidth),
@@ -91,15 +95,21 @@ FStream::FStream(FEngine& engine, const Builder& builder) noexcept
 
     if (mNativeStream) {
         // Note: this is a synchronous call. On Android, this calls back into Java.
-        mStreamHandle = engine.getDriverApi().createStream(mNativeStream);
+        mStreamHandle = engine.getDriverApi().createStreamNative(mNativeStream);
     } else if (mExternalTextureId) {
         mStreamHandle = engine.getDriverApi().createStreamFromTextureId(
                 mExternalTextureId, mWidth, mHeight);
+    } else {
+        mStreamHandle = engine.getDriverApi().createStreamAcquired();
     }
 }
 
 void FStream::terminate(FEngine& engine) noexcept {
     engine.getDriverApi().destroyStream(mStreamHandle);
+}
+
+void FStream::setAcquiredImage(void* image, Callback callback, void* userdata) noexcept {
+    mEngine.getDriverApi().setAcquiredImage(mStreamHandle, image, callback, userdata);
 }
 
 void FStream::setDimensions(uint32_t width, uint32_t height) noexcept {
@@ -116,7 +126,7 @@ void FStream::setDimensions(uint32_t width, uint32_t height) noexcept {
 
 void FStream::readPixels(uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
         backend::PixelBufferDescriptor&& buffer) noexcept {
-    if (isExternalTextureId()) {
+    if (getStreamType() == StreamType::TEXTURE_ID) {
         // this works only on external texture id streams
 
         const size_t sizeNeeded = PixelBufferDescriptor::computeDataSize(
@@ -150,8 +160,12 @@ int64_t FStream::getTimestamp() const noexcept {
 
 using namespace details;
 
-bool Stream::isNativeStream() const noexcept {
-    return upcast(this)->isNativeStream();
+StreamType Stream::getStreamType() const noexcept {
+    return upcast(this)->getStreamType();
+}
+
+void Stream::setAcquiredImage(void* image, Callback callback, void* userdata) noexcept {
+    upcast(this)->setAcquiredImage(image, callback, userdata);
 }
 
 void Stream::setDimensions(uint32_t width, uint32_t height) noexcept {
