@@ -456,8 +456,48 @@ TEST(FilamentTest, UniformBuffer) {
 
     move = std::move(copy);
     CHECK(&move);
+}
 
-    //buffer.log(std::cout, ib);
+TEST(FilamentTest, UniformBufferSize1) {
+    UniformInterfaceBlock::Builder b;
+    b.name("UniformBufferSize1");
+    b.add("f4a", 1, UniformInterfaceBlock::Type::FLOAT4); // offset = 0
+    b.add("f4b", 1, UniformInterfaceBlock::Type::FLOAT4); // offset = 16
+    b.add("f1a", 1, UniformInterfaceBlock::Type::FLOAT);  // offset = 32
+    b.add("f1b", 1, UniformInterfaceBlock::Type::FLOAT);  // offset = 36
+    UniformInterfaceBlock uib(b.build());
+    UniformBuffer buffer(uib.getSize());
+
+    float4 f4(1.0f);
+    ssize_t f4_offset = uib.getUniformOffset("f4a", 0);
+    buffer.setUniformArray(f4_offset, &f4, 1);
+
+    float f1(1.0f);
+    ssize_t f1_offset = uib.getUniformOffset("f1b", 0);
+    buffer.setUniformArray(f1_offset, &f1, 1);
+
+    buffer.invalidate();
+}
+
+TEST(FilamentTest, UniformBufferSize2) {
+    UniformInterfaceBlock::Builder b;
+    b.name("UniformBufferSize2");
+    b.add("f4a", 1, UniformInterfaceBlock::Type::FLOAT4); // offset = 0
+    b.add("f4b", 1, UniformInterfaceBlock::Type::FLOAT4); // offset = 16
+    b.add("f1a", 1, UniformInterfaceBlock::Type::FLOAT);  // offset = 32
+    b.add("f2a", 1, UniformInterfaceBlock::Type::FLOAT2); // offset = 36
+    UniformInterfaceBlock uib(b.build());
+    UniformBuffer buffer(uib.getSize());
+
+    float4 f4(1.0f);
+    ssize_t f4_offset = uib.getUniformOffset("f4a", 0);
+    buffer.setUniformArray(f4_offset, &f4, 1);
+
+    float2 f2(1.0f);
+    ssize_t f2_offset = uib.getUniformOffset("f2a", 0);
+    buffer.setUniformArray(f2_offset, &f2, 1);
+
+    buffer.invalidate();
 }
 
 TEST(FilamentTest, BoxCulling) {
