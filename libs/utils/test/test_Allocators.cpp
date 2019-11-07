@@ -157,7 +157,7 @@ TEST(AllocatorTest, PoolAllocator) {
 TEST(AllocatorTest, CppAllocator) {
     struct Tracking {
         Tracking() noexcept { }
-        Tracking(const char* name, size_t size) noexcept { }
+        Tracking(const char* name, void const* base, size_t size) noexcept { }
         void onAlloc(void* p, size_t size, size_t alignment, size_t extra) {
             allocations.push_back(p);
         }
@@ -287,7 +287,7 @@ TEST(AllocatorTest, ScopedStackArena) {
 TEST(AllocatorTest, STLAllocator) {
     struct Tracking {
         Tracking() noexcept { }
-        Tracking(const char* name, size_t size) noexcept { }
+        Tracking(const char* name, void const* base, size_t size) noexcept { }
         void onAlloc(void* p, size_t size, size_t alignment, size_t extra) {
             allocations.push_back(p);
         }
