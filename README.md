@@ -1,11 +1,11 @@
 # Filament
 
-<img alt="Android" src="build/img/android.png" width="20px" height="20px" hspace="2px"/>[![Android Build Status](https://filament-build.storage.googleapis.com/badges/build_status_android.svg)](https://filament-build.storage.googleapis.com/badges/build_link_android.html)
-<img alt="iOS" src="build/img/macos.png" width="20px" height="20px" hspace="2px"/>[![iOS Build Status](https://filament-build.storage.googleapis.com/badges/build_status_ios.svg)](https://filament-build.storage.googleapis.com/badges/build_link_ios.html)
-<img alt="Linux" src="build/img/linux.png" width="20px" height="20px" hspace="2px"/>[![Linux Build Status](https://filament-build.storage.googleapis.com/badges/build_status_linux.svg)](https://filament-build.storage.googleapis.com/badges/build_link_linux.html)
-<img alt="macOS" src="build/img/macos.png" width="20px" height="20px" hspace="2px"/>[![MacOS Build Status](https://filament-build.storage.googleapis.com/badges/build_status_mac.svg)](https://filament-build.storage.googleapis.com/badges/build_link_mac.html)
-<img alt="Windows" src="build/img/windows.png" width="20px" height="20px" hspace="2px"/>[![Windows Build Status](https://filament-build.storage.googleapis.com/badges/build_status_windows.svg)](https://filament-build.storage.googleapis.com/badges/build_link_windows.html)
-<img alt="Web" src="build/img/web.png" width="20px" height="20px" hspace="2px"/>[![Web Build Status](https://filament-build.storage.googleapis.com/badges/build_status_web.svg)](https://filament-build.storage.googleapis.com/badges/build_link_web.html)
+![Android Build Status](https://github.com/google/filament/workflows/Android/badge.svg)
+![iOS Build Status](https://github.com/google/filament/workflows/iOS/badge.svg)
+![Linux Build Status](https://github.com/google/filament/workflows/Linux/badge.svg)
+![macOS Build Status](https://github.com/google/filament/workflows/macOS/badge.svg)
+![Windows Build Status](https://github.com/google/filament/workflows/Windows/badge.svg)
+![Web Build Status](https://github.com/google/filament/workflows/Web/badge.svg)
 
 Filament is a real-time physically based rendering engine for Android, iOS, Linux, macOS, Windows,
 and WebGL. It is designed to be as small as possible and as efficient as possible on Android.
