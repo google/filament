@@ -244,23 +244,26 @@ void FScene::prepareDynamicLights(const CameraInfo& camera, ArenaScope& rootAren
      */
 
     ArenaScope arena(rootArena.getAllocator());
-    float* const UTILS_RESTRICT distances = arena.allocate<float>(lightData.size(), CACHELINE_SIZE);
+    size_t const size = lightData.size();
+
+    // always allocate at least 4 entries, because the vectorized loops below rely on that
+    float* const UTILS_RESTRICT distances = arena.allocate<float>((size + 3u) & 3u, CACHELINE_SIZE);
 
     // pre-compute the lights' distance to the camera plane, for sorting below
     // - we don't skip the directional light, because we don't care, it's ignored during sorting
     float4 const* const UTILS_RESTRICT spheres = lightData.data<FScene::POSITION_RADIUS>();
-    computeLightCameraPlaneDistances(distances, camera, spheres, lightData.size());
+    computeLightCameraPlaneDistances(distances, camera, spheres, size);
 
     // skip directional light
     Zip2Iterator<FScene::LightSoa::iterator, float*> b = { lightData.begin(), distances };
-    std::sort(b + DIRECTIONAL_LIGHTS_COUNT, b + lightData.size(),
+    std::sort(b + DIRECTIONAL_LIGHTS_COUNT, b + size,
             [](auto const& lhs, auto const& rhs) { return lhs.second < rhs.second; });
 
     // drop excess lights
-    lightData.resize(std::min(lightData.size(), CONFIG_MAX_LIGHT_COUNT + DIRECTIONAL_LIGHTS_COUNT));
+    lightData.resize(std::min(size, CONFIG_MAX_LIGHT_COUNT + DIRECTIONAL_LIGHTS_COUNT));
 
     // number of point/spot lights
-    size_t positionalLightCount = lightData.size() - DIRECTIONAL_LIGHTS_COUNT;
+    size_t positionalLightCount = size - DIRECTIONAL_LIGHTS_COUNT;
 
     // compute the light ranges (needed when building light trees)
     float2* const zrange = lightData.data<FScene::SCREEN_SPACE_Z_RANGE>();
@@ -270,7 +273,7 @@ void FScene::prepareDynamicLights(const CameraInfo& camera, ArenaScope& rootAren
 
     auto const* UTILS_RESTRICT directions   = lightData.data<FScene::DIRECTION>();
     auto const* UTILS_RESTRICT instances    = lightData.data<FScene::LIGHT_INSTANCE>();
-    for (size_t i = DIRECTIONAL_LIGHTS_COUNT, c = lightData.size(); i < c; ++i) {
+    for (size_t i = DIRECTIONAL_LIGHTS_COUNT, c = size; i < c; ++i) {
         const size_t gpuIndex = i - DIRECTIONAL_LIGHTS_COUNT;
         auto li = instances[i];
         lp[gpuIndex].positionFalloff      = { spheres[i].xyz, lcm.getSquaredFalloffInv(li) };

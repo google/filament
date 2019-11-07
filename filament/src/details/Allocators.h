@@ -38,12 +38,12 @@ static constexpr size_t CONFIG_COMMAND_BUFFERS_SIZE     = 3 * CONFIG_MIN_COMMAND
 using HeapAllocatorArena = utils::Arena<
         utils::HeapAllocator,
         utils::LockingPolicy::NoLock,
-        utils::TrackingPolicy::Debug>;
+        utils::TrackingPolicy::DebugAndHighWatermark>;
 
 using LinearAllocatorArena = utils::Arena<
         utils::LinearAllocator,
         utils::LockingPolicy::NoLock,
-        utils::TrackingPolicy::Debug>;
+        utils::TrackingPolicy::DebugAndHighWatermark>;
 
 #else
 
