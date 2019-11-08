@@ -492,11 +492,11 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, backend::FrameFinishedCallback
     FEngine& engine = getEngine();
     FEngine::DriverApi& driver = engine.getDriverApi();
 
-    // NOTE: this makes synchronous calls to the driver
-    driver.updateStreams(&driver);
-
     mSwapChain = swapChain;
     swapChain->makeCurrent(driver);
+
+    // NOTE: this makes synchronous calls to the driver
+    driver.updateStreams(&driver);
 
     int64_t monotonic_clock_ns (std::chrono::steady_clock::now().time_since_epoch().count());
     driver.beginFrame(monotonic_clock_ns, mFrameId, callback, user);
