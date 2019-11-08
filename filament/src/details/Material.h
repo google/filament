@@ -155,16 +155,16 @@ private:
     mutable std::array<backend::Handle<backend::HwProgram>, VARIANT_COUNT> mCachedPrograms;
 
     backend::RasterState mRasterState;
-    BlendingMode mRenderBlendingMode;
-    TransparencyMode mTransparencyMode;
+    BlendingMode mRenderBlendingMode = BlendingMode::OPAQUE;
+    TransparencyMode mTransparencyMode = TransparencyMode::DEFAULT;
     bool mIsVariantLit;
-    Shading mShading;
+    Shading mShading = Shading::UNLIT;
 
-    BlendingMode mBlendingMode;
-    Interpolation mInterpolation;
-    VertexDomain mVertexDomain;
-    MaterialDomain mMaterialDomain;
-    CullingMode mCullingMode;
+    BlendingMode mBlendingMode = BlendingMode::OPAQUE;
+    Interpolation mInterpolation = Interpolation::SMOOTH;
+    VertexDomain mVertexDomain = VertexDomain::OBJECT;
+    MaterialDomain mMaterialDomain = MaterialDomain::SURFACE;
+    CullingMode mCullingMode = CullingMode::NONE;
     AttributeBitset mRequiredAttributes;
 
     float mMaskThreshold = 0.4f;
