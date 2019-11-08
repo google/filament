@@ -11,7 +11,7 @@
 
 float clampNoV(float NoV) {
     // Neubelt and Pettineo 2013, "Crafting a Next-gen Material Pipeline for The Order: 1886"
-    return max(dot(shading_normal, shading_view), MIN_N_DOT_V);
+    return max(NoV, MIN_N_DOT_V);
 }
 
 vec3 computeDiffuseColor(const vec4 baseColor, float metallic) {
