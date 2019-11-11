@@ -17,7 +17,7 @@
 #ifndef UTILS_CONDITION_H
 #define UTILS_CONDITION_H
 
-#if defined(__linux__)
+#if defined(__linux__) && !defined(__SANITIZE_THREAD__)
 #include <utils/linux/Condition.h>
 #else
 #include <utils/generic/Condition.h>
