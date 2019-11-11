@@ -11,6 +11,7 @@ A new header is inserted each time a *tag* is created.
 - gltfio: fixed blackness seen with default material.
 - Added ETC2 and BC compressed texture support to Metal backend.
 - Rendering a SAMPLER_EXTERNAL texture before setting an external image no longer results in GPU errors.
+- Fixed a normals issue when skinning without a normal map or anisotropy.
 
 ## v1.4.2
 
