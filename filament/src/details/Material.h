@@ -157,7 +157,7 @@ private:
     backend::RasterState mRasterState;
     BlendingMode mRenderBlendingMode = BlendingMode::OPAQUE;
     TransparencyMode mTransparencyMode = TransparencyMode::DEFAULT;
-    bool mIsVariantLit;
+    bool mIsVariantLit = false;
     Shading mShading = Shading::UNLIT;
 
     BlendingMode mBlendingMode = BlendingMode::OPAQUE;
@@ -168,10 +168,10 @@ private:
     AttributeBitset mRequiredAttributes;
 
     float mMaskThreshold = 0.4f;
-    float mSpecularAntiAliasingVariance;
-    float mSpecularAntiAliasingThreshold;
+    float mSpecularAntiAliasingVariance = 0.0f;
+    float mSpecularAntiAliasingThreshold = 0.0f;
 
-    bool mDoubleSided;
+    bool mDoubleSided = false;
     bool mDoubleSidedCapability = false;
     bool mHasShadowMultiplier = false;
     bool mHasCustomDepthShader = false;
