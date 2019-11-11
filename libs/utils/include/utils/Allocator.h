@@ -431,7 +431,12 @@ struct NoLock {
     void unlock() noexcept { }
 };
 
+// Unfortunately TSAN doesn't support homegrown synchronization primitives
+#if defined(__SANITIZE_THREAD__)
+using SpinLock = utils::Mutex;
+#else
 using SpinLock = utils::SpinLock;
+#endif
 
 using Mutex = utils::Mutex;
 
