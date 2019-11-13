@@ -1209,7 +1209,7 @@ void OpenGLDriver::setAcquiredImage(Handle<HwStream> sh, void* hwbuffer,
         scheduleRelease(std::move(glstream->user_thread.pending));
         slog.w << "Acquired image is set more than once per frame." << io::endl;
     }
-    glstream->user_thread.pending = mPlatform.createAcquiredImage(hwbuffer, cb, userData);
+    glstream->user_thread.pending = mPlatform.transformAcquiredImage({hwbuffer, cb, userData});
 }
 
 void OpenGLDriver::updateStreams(DriverApi* driver) {

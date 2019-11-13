@@ -542,7 +542,10 @@ void PlatformEGL::destroyExternalImage(void* texture) noexcept {
     glDeleteTextures(1, &t->gl.id);
 }
 
-backend::AcquiredImage PlatformEGL::createAcquiredImage(void* hwbuffer, backend::StreamCallback userCallback, void* userData) noexcept {
+backend::AcquiredImage PlatformEGL::transformAcquiredImage(backend::AcquiredImage source) noexcept {
+    void* const hwbuffer = source.image;
+    const backend::StreamCallback userCallback = source.callback;
+    void* const userData = source.userData;
 
     // Convert the AHardwareBuffer to EGLImage.
     EGLClientBuffer clientBuffer = eglGetNativeClientBufferANDROID((const AHardwareBuffer*) hwbuffer);
