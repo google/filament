@@ -292,7 +292,9 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     // SSAO pass -- automatically culled if not used
     if (useSSAO) {
-        pass.appendSortedCommands(RenderPass::CommandTypeFlags::DEPTH);
+        auto curr = pass.getCommands().end();
+        pass.appendCommands(RenderPass::CommandTypeFlags::DEPTH);
+        pass.sortCommands(curr);
     }
 
     FrameGraphId<FrameGraphTexture> ssao = ppm.ssao(fg, pass, svp, cameraInfo, view.getAmbientOcclusionOptions());
@@ -301,8 +303,9 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     // generate the normal commands
     RenderPass::CommandTypeFlags commandType = getCommandType(view.getDepthPrepass());
-    Command const* colorPassBegin = commands.end();
-    Command const* colorPassEnd = pass.appendSortedCommands(commandType);
+    Command* colorPassBegin = pass.getCommands().end();
+    pass.appendCommands(commandType);
+    Command const* colorPassEnd = pass.sortCommands(colorPassBegin);
 
     // We only honor the view's color buffer clear flags, depth/stencil are handled by the framefraph
     uint8_t viewClearFlags = view.getClearFlags() & (uint8_t)TargetBufferFlags::ALL;
@@ -601,7 +604,7 @@ void FRenderer::readPixels(Handle<HwRenderTarget> renderTargetHandle,
 
     if (!ASSERT_POSTCONDITION_NON_FATAL(
             buffer.alignment > 0 && buffer.alignment <= 8 &&
-            !(buffer.alignment & (buffer.alignment - 1)),
+            !(buffer.alignment & (buffer.alignment - 1u)),
             "buffer.alignment must be 1, 2, 4 or 8")) {
         return;
     }
