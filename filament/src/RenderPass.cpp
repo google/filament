@@ -259,6 +259,7 @@ void RenderPass::setupColorCommand(Command& cmdDraw, bool hasDepthPass,
     cmdDraw.key = hasBlending ? keyBlending : keyDraw;
     cmdDraw.primitive.rasterState = ma->getRasterState();
     cmdDraw.primitive.rasterState.inverseFrontFaces = inverseFrontFaces;
+    cmdDraw.primitive.rasterState.culling = mi->getCullingMode();
     cmdDraw.primitive.mi = mi;
     cmdDraw.primitive.materialVariant.key = variant;
 
