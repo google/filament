@@ -24,6 +24,7 @@
 
 #include <backend/DriverEnums.h>
 
+#include "private/backend/AcquiredImage.h"
 #include "private/backend/Driver.h"
 #include "private/backend/SamplerGroup.h"
 

@@ -34,6 +34,7 @@ set(SRCS
 )
 
 set(PRIVATE_HDRS
+        include/private/backend/AcquiredImage.h
         include/private/backend/CircularBuffer.h
         include/private/backend/CommandBufferQueue.h
         include/private/backend/CommandStream.h
