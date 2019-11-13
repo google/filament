@@ -43,7 +43,9 @@ namespace details {
 
 RenderPass::RenderPass(FEngine& engine,
         GrowingSlice<RenderPass::Command>& commands) noexcept
-        : mEngine(engine), mCommands(commands) {
+        : mEngine(engine), mCommands(commands),
+          mCustomCommands(engine.getPerRenderPassAllocator()) {
+    mCustomCommands.reserve(8); // preallocate allocate a reasonable number of custom commands
 }
 
 void RenderPass::setGeometry(FScene& scene, Range<uint32_t> vr) noexcept {
@@ -65,7 +67,7 @@ void RenderPass::overridePolygonOffset(backend::PolygonOffset* polygonOffset) no
     }
 }
 
-RenderPass::Command const* RenderPass::appendSortedCommands(CommandTypeFlags const commandTypeFlags) noexcept {
+RenderPass::Command* RenderPass::appendCommands(CommandTypeFlags const commandTypeFlags) noexcept {
     SYSTRACE_CONTEXT();
 
     FEngine& engine = mEngine;
@@ -114,17 +116,40 @@ RenderPass::Command const* RenderPass::appendSortedCommands(CommandTypeFlags con
     // command buffer.
     commands.grow(1)->key = uint64_t(Pass::SENTINEL);
 
-    { // sort all commands
-        SYSTRACE_NAME("sort commands");
-        std::sort(curr, commands.end());
-    }
-
     mCommandsHighWatermark = std::max(mCommandsHighWatermark, size_t(commands.size()));
+
+    return commands.end();
+}
+
+RenderPass::Command* RenderPass::appendCustomCommand(Pass pass, CustomCommand custom, uint32_t order,
+        std::function<void()> command) {
+
+    assert((uint64_t(order) << CUSTOM_ORDER_SHIFT) <=  CUSTOM_ORDER_MASK);
+
+    uint32_t index = mCustomCommands.size();
+    mCustomCommands.push_back(std::move(command));
+
+    uint64_t cmd = uint64_t(pass);
+    cmd |= uint64_t(custom);
+    cmd |= uint64_t(order) << CUSTOM_ORDER_SHIFT;
+    cmd |= uint64_t(index);
+
+    Command* const curr = mCommands.grow(1);
+    curr->key = cmd;
+    return curr + 1;
+}
+
+RenderPass::Command* RenderPass::sortCommands(Command* curr) noexcept {
+    SYSTRACE_NAME("sort and trim commands");
+
+    GrowingSlice<Command>& commands = mCommands;
+
+    std::sort(curr, commands.end());
 
     // find the last command
     Command const* const last = std::partition_point(curr, commands.end(),
             [](Command const& c) {
-                return ((c.key & PASS_MASK) >> PASS_SHIFT) != 0xFF;
+                return c.key != uint64_t(Pass::SENTINEL);
             });
 
     commands.resize(uint32_t(last - commands.begin()));
@@ -167,10 +192,18 @@ void RenderPass::recordDriverCommands(FEngine::DriverApi& driver, FScene& scene,
         Handle<HwUniformBuffer> uboHandle = scene.getRenderableUBO();
         FMaterialInstance const* UTILS_RESTRICT mi = nullptr;
         FMaterial const* UTILS_RESTRICT ma = nullptr;
-        while (first != last) {
+        auto const& customCommands = mCustomCommands;
+        first--;
+        while (++first != last) {
             /*
              * Be careful when changing code below, this is the hot inner-loop
              */
+
+            if (UTILS_UNLIKELY((first->key & CUSTOM_MASK) != uint64_t(CustomCommand::PASS))) {
+                uint32_t index = (first->key & CUSTOM_INDEX_MASK) >> CUSTOM_INDEX_SHIFT;
+                customCommands[index]();
+                continue;
+            }
 
             // per-renderable uniform
             const PrimitiveInfo info = first->primitive;
@@ -187,13 +220,13 @@ void RenderPass::recordDriverCommands(FEngine::DriverApi& driver, FScene& scene,
 
             pipeline.program = ma->getProgram(info.materialVariant.key);
             size_t offset = info.index * sizeof(PerRenderableUib);
-            if (info.perRenderableBones) {
+            driver.bindUniformBufferRange(BindingPoints::PER_RENDERABLE, uboHandle, offset, sizeof(PerRenderableUib));
+            if (UTILS_UNLIKELY(info.perRenderableBones)) {
                 driver.bindUniformBuffer(BindingPoints::PER_RENDERABLE_BONES, info.perRenderableBones);
             }
-            driver.bindUniformBufferRange(BindingPoints::PER_RENDERABLE, uboHandle, offset, sizeof(PerRenderableUib));
             driver.draw(pipeline, info.primitiveHandle);
-            ++first;
         }
+        mCustomCommands.clear();
     }
 }
 
@@ -212,10 +245,12 @@ void RenderPass::setupColorCommand(Command& cmdDraw, bool hasDepthPass,
     uint64_t keyBlending = cmdDraw.key;
     keyBlending &= ~(PASS_MASK | BLENDING_MASK);
     keyBlending |= uint64_t(Pass::BLENDED);
+    keyBlending |= uint64_t(CustomCommand::PASS);
 
     uint64_t keyDraw = cmdDraw.key;
     keyDraw &= ~(PASS_MASK | BLENDING_MASK | MATERIAL_MASK);
     keyDraw |= uint64_t(Pass::COLOR);
+    keyDraw |= uint64_t(CustomCommand::PASS);
     keyDraw |= mi->getSortingKey(); // already all set-up for direct or'ing
     keyDraw |= makeField(variant, MATERIAL_VARIANT_KEY_MASK, MATERIAL_VARIANT_KEY_SHIFT);
     keyDraw |= makeField(ma->getRasterState().alphaToCoverage, BLENDING_MASK, BLENDING_SHIFT);
@@ -376,6 +411,7 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
         // we're assuming we're always doing the depth (either way, it's correct)
         // this will generate front to back rendering
         cmdDepth.key = uint64_t(Pass::DEPTH);
+        cmdDepth.key |= uint64_t(CustomCommand::PASS);
         cmdDepth.key |= makeField(soaVisibility[i].priority, PRIORITY_MASK, PRIORITY_SHIFT);
         cmdDepth.key |= makeField(distanceBits, DISTANCE_BITS_MASK, DISTANCE_BITS_SHIFT);
         cmdDepth.primitive.index = (uint16_t)i;
