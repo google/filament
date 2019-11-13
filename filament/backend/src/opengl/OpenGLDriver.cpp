@@ -2205,9 +2205,7 @@ void OpenGLDriver::updateStreamAcquired(GLTexture* gltexture, DriverApi* driver)
     driver->queueCommand([this, gltexture, image, previousImage]() {
         setExternalTexture(gltexture, image);
         if (previousImage.image) {
-            whenGpuCommandsComplete([this, previousImage]()  {
-                scheduleRelease(AcquiredImage(previousImage));
-            });
+            scheduleRelease(AcquiredImage(previousImage));
         }
     });
 }
