@@ -634,13 +634,6 @@ enum class StreamType {
 //! Releases an ACQUIRED external texture, guaranteed to be called on the application thread.
 using StreamCallback = void(*)(void* image, void* user);
 
-//! Bundles the state of an ACQUIRED stream.
-struct AcquiredImage {
-    void* image = nullptr;
-    backend::StreamCallback callback = nullptr;
-    void* userData = nullptr;
-};
-
 //! Vertex attribute descriptor
 struct Attribute {
     //! attribute is normalized (remapped between 0 and 1)

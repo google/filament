@@ -19,6 +19,8 @@
 
 #include <backend/Platform.h>
 
+#include "private/backend/AcquiredImage.h"
+
 namespace filament {
 namespace backend {
 
