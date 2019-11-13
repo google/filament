@@ -37,11 +37,6 @@ typedef struct AHardwareBuffer AHardwareBuffer;
 
 #include <dlfcn.h>
 
-template <typename T>
-static void loadSymbol(T*& pfn, const char *symbol) noexcept {
-    pfn = (T*)dlsym(RTLD_DEFAULT, symbol);
-}
-
 #endif
 
 using namespace filament;
@@ -189,8 +184,15 @@ Java_com_google_android_filament_Stream_nSetAcquiredImage(JNIEnv* env, jclass, j
 
 #ifdef ANDROID
 
-    AHardwareBuffer* (*AHardwareBuffer_fromHardwareBuffer)(JNIEnv*, jobject);
-    loadSymbol(AHardwareBuffer_fromHardwareBuffer, "AHardwareBuffer_fromHardwareBuffer");
+    using PFN_FROMHARDWAREBUFFER = AHardwareBuffer* (*)(JNIEnv*, jobject);
+    static PFN_FROMHARDWAREBUFFER AHardwareBuffer_fromHardwareBuffer =
+            (PFN_FROMHARDWAREBUFFER) dlsym(RTLD_DEFAULT, "AHardwareBuffer_fromHardwareBuffer");
+
+    // This function is not available before NDK 15 or before Android 8.
+    if (!AHardwareBuffer_fromHardwareBuffer) {
+        __android_log_print(ANDROID_LOG_INFO, "Filament", "AHardwareBuffer_fromHardwareBuffer is not available.");
+        return;
+    }
 
     AHardwareBuffer* nativeBuffer = AHardwareBuffer_fromHardwareBuffer(env, hwbuffer);
     if (!nativeBuffer) {

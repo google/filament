@@ -40,10 +40,10 @@ public class Stream {
         /** Not synchronized but copy-free. Good for video. */
         NATIVE,
 
-        /** Synchronized, but GL-only and incurs copies. Good for AR on older devices. */
+        /** Synchronized, but GL-only and incurs copies. Good for AR on devices before API 26. */
         TEXTURE_ID,
 
-        /** Synchronized, copy-free, and take a release callback. Good for AR on newer devices. */
+        /** Synchronized, copy-free, and take a release callback. Good for AR but requires API 26+. */
         ACQUIRED,
     };
 
