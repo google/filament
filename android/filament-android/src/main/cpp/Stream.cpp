@@ -37,6 +37,10 @@ typedef struct AHardwareBuffer AHardwareBuffer;
 
 #include <dlfcn.h>
 
+using PFN_FROMHARDWAREBUFFER = AHardwareBuffer* (*)(JNIEnv*, jobject);
+static PFN_FROMHARDWAREBUFFER AHardwareBuffer_fromHardwareBuffer_fn = nullptr;
+static bool sHardwareBufferSupported = true;
+
 #endif
 
 using namespace filament;
@@ -184,17 +188,20 @@ Java_com_google_android_filament_Stream_nSetAcquiredImage(JNIEnv* env, jclass, j
 
 #ifdef ANDROID
 
-    using PFN_FROMHARDWAREBUFFER = AHardwareBuffer* (*)(JNIEnv*, jobject);
-    static PFN_FROMHARDWAREBUFFER AHardwareBuffer_fromHardwareBuffer =
-            (PFN_FROMHARDWAREBUFFER) dlsym(RTLD_DEFAULT, "AHardwareBuffer_fromHardwareBuffer");
-
     // This function is not available before NDK 15 or before Android 8.
-    if (!AHardwareBuffer_fromHardwareBuffer) {
-        __android_log_print(ANDROID_LOG_INFO, "Filament", "AHardwareBuffer_fromHardwareBuffer is not available.");
+    if (UTILS_UNLIKELY(!AHardwareBuffer_fromHardwareBuffer_fn)) {
+        if (!sHardwareBufferSupported) {
+            return;
+        }
+        AHardwareBuffer_fromHardwareBuffer_fn = (PFN_FROMHARDWAREBUFFER) dlsym(RTLD_DEFAULT, "AHardwareBuffer_fromHardwareBuffer");
+         if (!AHardwareBuffer_fromHardwareBuffer_fn) {
+            __android_log_print(ANDROID_LOG_WARN, "Filament", "AHardwareBuffer_fromHardwareBuffer is not available.");
+            sHardwareBufferSupported = false;
+        }
         return;
     }
 
-    AHardwareBuffer* nativeBuffer = AHardwareBuffer_fromHardwareBuffer(env, hwbuffer);
+    AHardwareBuffer* nativeBuffer = AHardwareBuffer_fromHardwareBuffer_fn(env, hwbuffer);
     if (!nativeBuffer) {
         __android_log_print(ANDROID_LOG_INFO, "Filament", "Unable to obtain native HardwareBuffer.");
         return;
