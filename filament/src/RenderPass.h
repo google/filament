@@ -248,7 +248,8 @@ public:
 
     RenderPass(FEngine& engine, utils::GrowingSlice<Command>& commands) noexcept;
     void overridePolygonOffset(backend::PolygonOffset* polygonOffset) noexcept;
-    void setGeometry(FScene& scene, utils::Range<uint32_t> vr) noexcept;
+    void setGeometry(FScene::RenderableSoa const& soa, utils::Range<uint32_t> vr,
+            backend::Handle<backend::HwUniformBuffer> uboHandle) noexcept;
     void setCamera(const CameraInfo& camera) noexcept;
     void setRenderFlags(RenderFlags flags) noexcept;
 
@@ -300,8 +301,8 @@ private:
     static void setupColorCommand(Command& cmdDraw, bool hasDepthPass,
             FMaterialInstance const* mi, bool inverseFrontFaces) noexcept;
 
-    void recordDriverCommands(FEngine::DriverApi& driver, FScene& scene,
-            const Command* first, const Command* last) const noexcept;
+    void recordDriverCommands(FEngine::DriverApi& driver, const Command* first,
+            const Command* last) const noexcept;
 
     static void updateSummedPrimitiveCounts(
             FScene::RenderableSoa& renderableData, utils::Range<uint32_t> vr) noexcept;
@@ -310,15 +311,32 @@ private:
     using CustomCommandVector = std::vector<CustomCommandFn,
             utils::STLAllocator<CustomCommandFn, LinearAllocatorArena>>;
 
+    // a reference to the Engine, mostly to get to things like JobSystem
     FEngine& mEngine;
+
+    // a reference to the command vector (so we can for e.g. append to it)
     utils::GrowingSlice<Command>& mCommands;
-    mutable  CustomCommandVector mCustomCommands;
-    FScene* mScene = nullptr;
+
+    // the SOA containing the renderables we're interested in
+    FScene::RenderableSoa const* mRenderableSoa = nullptr;
+    // and the range of visible renderables in the SOA above
     utils::Range<uint32_t> mVisibleRenderables{};
+    // the UBO containing the data for the renderables
+    backend::Handle<backend::HwUniformBuffer> mUboHandle;
+
+    // info about the camera
     CameraInfo mCamera;
+    // info about the scene features (e.g.: has shadows, lighting, etc...)
     RenderFlags mFlags{};
+    // whether to override the polygon offset setting
     bool mPolygonOffsetOverride = false;
+    // value of the override
     backend::PolygonOffset mPolygonOffset{};
+
+    // a vector for our custom commands
+    mutable CustomCommandVector mCustomCommands;
+
+    // high watermark for debugging
     size_t mCommandsHighWatermark = 0;
 };
 

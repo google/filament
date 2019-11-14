@@ -278,7 +278,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     CameraInfo const& cameraInfo = view.getCameraInfo();
     pass.setCamera(cameraInfo);
-    pass.setGeometry(scene, view.getVisibleRenderables());
+    pass.setGeometry(scene.getRenderableData(), view.getVisibleRenderables(), scene.getRenderableUBO());
 
     view.updatePrimitivesLod(engine, cameraInfo,
             scene.getRenderableData(), view.getVisibleRenderables());

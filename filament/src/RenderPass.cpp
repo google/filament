@@ -48,9 +48,11 @@ RenderPass::RenderPass(FEngine& engine,
     mCustomCommands.reserve(8); // preallocate allocate a reasonable number of custom commands
 }
 
-void RenderPass::setGeometry(FScene& scene, Range<uint32_t> vr) noexcept {
-    mScene = &scene;
+void RenderPass::setGeometry(FScene::RenderableSoa const& soa, Range<uint32_t> vr,
+        backend::Handle<backend::HwUniformBuffer> uboHandle) noexcept {
+    mRenderableSoa = &soa;
     mVisibleRenderables = vr;
+    mUboHandle = uboHandle;
 }
 
 void RenderPass::setCamera(const CameraInfo& camera) noexcept {
@@ -75,14 +77,17 @@ RenderPass::Command* RenderPass::appendCommands(CommandTypeFlags const commandTy
     GrowingSlice<Command>& commands = mCommands;
     const RenderFlags renderFlags = mFlags;
     CameraInfo const& camera = mCamera;
-    FScene& scene = *mScene;
     utils::Range<uint32_t> vr = mVisibleRenderables;
-    FScene::RenderableSoa const& soa = scene.getRenderableData();
+    if (UTILS_UNLIKELY(vr.empty())) {
+        return commands.end();
+    }
+    assert(mRenderableSoa);
 
     // trace the number of visible renderables
     SYSTRACE_VALUE32("visibleRenderables", vr.size());
 
     // up-to-date summed primitive counts needed for generateCommands()
+    FScene::RenderableSoa const& soa = *mRenderableSoa;
     updateSummedPrimitiveCounts(const_cast<FScene::RenderableSoa&>(soa), vr);
 
     // compute how much maximum storage we need for this pass
@@ -163,7 +168,6 @@ void RenderPass::execute(const char* name,
         Command const* first, Command const* last) const noexcept {
 
     FEngine& engine = mEngine;
-    FScene& scene = *mScene;
 
     // Take care not to upload data within the render pass (synchronize can commit froxel data)
     DriverApi& driver = engine.getDriverApi();
@@ -171,14 +175,14 @@ void RenderPass::execute(const char* name,
     // Now, execute all commands
     driver.pushGroupMarker(name);
     driver.beginRenderPass(renderTarget, params);
-    RenderPass::recordDriverCommands(driver, scene, first, last);
+    RenderPass::recordDriverCommands(driver, first, last);
     driver.endRenderPass();
     driver.popGroupMarker();
 }
 
 UTILS_NOINLINE // no need to be inlined
-void RenderPass::recordDriverCommands(FEngine::DriverApi& driver, FScene& scene,
-        const Command* UTILS_RESTRICT first, const Command* last)  const noexcept {
+void RenderPass::recordDriverCommands(FEngine::DriverApi& driver, const Command* first,
+        const Command* last) const noexcept {
     SYSTRACE_CALL();
 
     if (first != last) {
@@ -189,7 +193,7 @@ void RenderPass::recordDriverCommands(FEngine::DriverApi& driver, FScene& scene,
         PolygonOffset* const pPipelinePolygonOffset =
                 mPolygonOffsetOverride ? &dummyPolyOffset : &pipeline.polygonOffset;
 
-        Handle<HwUniformBuffer> uboHandle = scene.getRenderableUBO();
+        Handle<HwUniformBuffer> uboHandle = mUboHandle;
         FMaterialInstance const* UTILS_RESTRICT mi = nullptr;
         FMaterial const* UTILS_RESTRICT ma = nullptr;
         auto const& customCommands = mCustomCommands;
