@@ -427,7 +427,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::depthPass(FrameGraph& fg, Re
     // We limit the level size to 32 pixels (which is where the -5 comes from)
     const size_t levelCount = std::max(1, std::ilogbf(std::max(width, height)) + 1 - 5);
 
-    // SSAO generates its own depth path at 1/4 resolution
+    // SSAO generates its own depth pass at the requested resolution
     auto& ssaoDepthPass = fg.addPass<DepthPassData>("SSAO Depth Pass",
             [&](FrameGraph::Builder& builder, DepthPassData& data) {
                 data.depth = builder.createTexture("Depth Buffer", {
@@ -440,8 +440,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::depthPass(FrameGraph& fg, Re
                 // nested designated initializers not in C++ standard: https://tinyurl.com/y6krwocx
                 FrameGraphRenderTarget::Descriptor d;
                 d.attachments.depth = data.depth;
-                data.rt = builder.createRenderTarget("SSAO Depth Target",
-                                                     d,
+                data.rt = builder.createRenderTarget("SSAO Depth Target", d,
                                                      TargetBufferFlags::DEPTH);
             },
             [=, &pass](FrameGraphPassResources const& resources,
@@ -468,9 +467,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::mipmapPass(FrameGraph& fg,
     auto& depthMipmapPass = fg.addPass<DepthMipData>("Depth Mipmap Pass",
             [&](FrameGraph::Builder& builder, DepthMipData& data) {
                 const char* name = builder.getName(input);
-
                 data.in = builder.sample(input);
-
                 data.out = builder.write(data.in);
                 FrameGraphRenderTarget::Descriptor d;
                 d.attachments.depth = { data.out, uint8_t(level + 1) };
