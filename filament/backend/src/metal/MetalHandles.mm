@@ -62,8 +62,12 @@ MetalSwapChain::MetalSwapChain(id<MTLDevice> device, CAMetalLayer* nativeWindow)
         : layer(nativeWindow) {
     layer.device = device;
     CGSize size = layer.drawableSize;
-    surfaceHeight = (NSUInteger)(size.height);
+    surfaceHeight = (NSUInteger) (size.height);
+    surfaceWidth = (NSUInteger) (size.width);
 }
+
+MetalSwapChain::MetalSwapChain(int32_t width, int32_t height) : surfaceWidth(width),
+        surfaceHeight(height) { }
 
 MetalVertexBuffer::MetalVertexBuffer(id<MTLDevice> device, uint8_t bufferCount, uint8_t attributeCount,
             uint32_t vertexCount, AttributeArray const& attributes)
@@ -439,7 +443,7 @@ MetalRenderTarget::MetalRenderTarget(MetalContext* context, uint32_t width, uint
 
 id<MTLTexture> MetalRenderTarget::getColor() {
     if (defaultRenderTarget) {
-        return acquireDrawable(context).texture;
+        return acquireDrawable(context);
     }
     if (multisampledColor) {
         return multisampledColor;

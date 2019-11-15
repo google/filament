@@ -33,27 +33,48 @@ void presentDrawable(bool presentFrame, void* user) {
     // The drawable will be released here when the "drawable" variable goes out of scope.
 }
 
-id<CAMetalDrawable> acquireDrawable(MetalContext* context) {
-    if (!context->currentDrawable) {
-        context->currentDrawable = [context->currentSurface->layer nextDrawable];
-
-        if (context->frameFinishedCallback) {
-            id<CAMetalDrawable> drawable = context->currentDrawable;
-            backend::FrameFinishedCallback callback = context->frameFinishedCallback;
-            void* userData = context->frameFinishedUserData;
-            // This block strongly captures drawable to keep it alive until the handler executes.
-            [context->currentCommandBuffer addScheduledHandler:^(id<MTLCommandBuffer> cb) {
-                // CFBridgingRetain is used here to give the drawable a +1 retain count before
-                // casting it to a void*.
-                PresentCallable callable(presentDrawable, (void*) CFBridgingRetain(drawable));
-                dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-                    callback(callable, userData);
-                });
-            }];
+id<MTLTexture> acquireDrawable(MetalContext* context) {
+    if (context->currentDrawable) {
+        return context->currentDrawable.texture;
+    }
+    if (context->currentSurface->isHeadless()) {
+        if (context->headlessDrawable) {
+            return context->headlessDrawable;
         }
+        // For headless surfaces we construct a "fake" drawable, which is simply a renderable
+        // texture.
+        MTLTextureDescriptor* textureDescriptor = [MTLTextureDescriptor new];
+        textureDescriptor.pixelFormat = MTLPixelFormatBGRA8Unorm;
+        textureDescriptor.width = context->currentSurface->surfaceWidth;
+        textureDescriptor.height = context->currentSurface->surfaceHeight;
+        textureDescriptor.usage = MTLTextureUsageRenderTarget;
+#if defined(IOS)
+        textureDescriptor.storageMode = MTLStorageModeShared;
+#else
+        textureDescriptor.storageMode = MTLStorageModeManaged;
+#endif
+        context->headlessDrawable = [context->device newTextureWithDescriptor:textureDescriptor];
+        return context->headlessDrawable;
+    }
+
+    context->currentDrawable = [context->currentSurface->layer nextDrawable];
+
+    if (context->frameFinishedCallback) {
+        id<CAMetalDrawable> drawable = context->currentDrawable;
+        backend::FrameFinishedCallback callback = context->frameFinishedCallback;
+        void* userData = context->frameFinishedUserData;
+        // This block strongly captures drawable to keep it alive until the handler executes.
+        [context->currentCommandBuffer addScheduledHandler:^(id<MTLCommandBuffer> cb) {
+            // CFBridgingRetain is used here to give the drawable a +1 retain count before
+            // casting it to a void*.
+            PresentCallable callable(presentDrawable, (void*) CFBridgingRetain(drawable));
+            dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+                callback(callable, userData);
+            });
+        }];
     }
     ASSERT_POSTCONDITION(context->currentDrawable != nil, "Could not obtain drawable.");
-    return context->currentDrawable;
+    return context->currentDrawable.texture;
 }
 
 id<MTLCommandBuffer> acquireCommandBuffer(MetalContext* context) {

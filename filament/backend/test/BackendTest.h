@@ -59,6 +59,7 @@ protected:
     static void fullViewport(filament::backend::Viewport& viewport);
 
     filament::backend::DriverApi& getDriverApi() { return commandStream; }
+    filament::backend::Driver& getDriver() { return *driver; }
 
 private:
 

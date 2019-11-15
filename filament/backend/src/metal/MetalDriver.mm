@@ -124,6 +124,7 @@ void MetalDriver::endFrame(uint32_t frameId) {
 
     // If we acquired a drawable for this frame, ensure that we release it here.
     mContext->currentDrawable = nil;
+    mContext->headlessDrawable = nil;
 
     CVMetalTextureCacheFlush(mContext->textureCache, 0);
 }
@@ -133,7 +134,10 @@ void MetalDriver::flush(int) {
 }
 
 void MetalDriver::finish(int) {
-    // TODO: implement finish, equivalent of glFinish() (needed for unit tests)
+    // Wait for all frames to finish by submitting and waiting on a dummy command buffer.
+    id<MTLCommandBuffer> oneOffBuffer = [mContext->commandQueue commandBuffer];
+    [oneOffBuffer commit];
+    [oneOffBuffer waitUntilCompleted];
 }
 
 void MetalDriver::createVertexBufferR(Handle<HwVertexBuffer> vbh, uint8_t bufferCount,
@@ -186,6 +190,8 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
     auto getColorTexture = [&]() -> id<MTLTexture> {
         if (color.handle) {
             auto colorTexture = handle_cast<MetalTexture>(mHandleMap, color.handle);
+            ASSERT_PRECONDITION(colorTexture->texture,
+                    "Color texture passed to render target has no texture allocation");
             return colorTexture->texture;
         } else if (any(targetBufferFlags & TargetBufferFlags::COLOR)) {
             ASSERT_POSTCONDITION(false, "The COLOR flag was specified, but no color texture provided.");
@@ -196,6 +202,8 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
     auto getDepthTexture = [&]() -> id<MTLTexture> {
         if (depth.handle) {
             auto depthTexture = handle_cast<MetalTexture>(mHandleMap, depth.handle);
+            ASSERT_PRECONDITION(depthTexture->texture,
+                    "Depth texture passed to render target has no texture allocation.");
             return depthTexture->texture;
         } else if (any(targetBufferFlags & TargetBufferFlags::DEPTH)) {
             ASSERT_POSTCONDITION(false, "The DEPTH flag was specified, but no depth texture provided.");
@@ -224,7 +232,7 @@ void MetalDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, 
 
 void MetalDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch,
         uint32_t width, uint32_t height, uint64_t flags) {
-    // TODO: implement headless swapchain
+    construct_handle<MetalSwapChain>(mHandleMap, sch, width, height);
 }
 
 void MetalDriver::createStreamFromTextureIdR(Handle<HwStream>, intptr_t externalTextureId,
@@ -697,6 +705,7 @@ void MetalDriver::commit(Handle<HwSwapChain> sch) {
     [mContext->currentCommandBuffer commit];
     mContext->currentCommandBuffer = nil;
     mContext->currentDrawable = nil;
+    mContext->headlessDrawable = nil;
 }
 
 void MetalDriver::bindUniformBuffer(size_t index, Handle<HwUniformBuffer> ubh) {
@@ -741,10 +750,84 @@ void MetalDriver::stopCapture(int) {
     [[MTLCaptureManager sharedCaptureManager] stopCapture];
 }
 
-
 void MetalDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y, uint32_t width,
         uint32_t height, PixelBufferDescriptor&& data) {
+    ASSERT_PRECONDITION(mContext->currentCommandBuffer != nil &&
+                        mContext->currentCommandEncoder == nil,
+                        "readPixels must be called during a frame, but outside of a render pass.");
 
+    auto srcTarget = handle_cast<MetalRenderTarget>(mHandleMap, src);
+    id<MTLTexture> srcTexture = srcTarget->getColor();
+    size_t miplevel = srcTarget->getColorLevel();
+
+    auto chooseMetalPixelFormat = [] (PixelDataFormat format, PixelDataType type) {
+        // TODO: Add support for UINT and INT
+        if (format == PixelDataFormat::RGBA && type == PixelDataType::UBYTE) {
+                return MTLPixelFormatRGBA8Unorm;
+        }
+
+        if (format == PixelDataFormat::RGBA && type == PixelDataType::FLOAT) {
+                return MTLPixelFormatRGBA32Float;
+        }
+
+        return MTLPixelFormatInvalid;
+    };
+
+    const MTLPixelFormat format = chooseMetalPixelFormat(data.format, data.type);
+    ASSERT_PRECONDITION(format != MTLPixelFormatInvalid,
+            "The chosen combination of PixelDataFormat and PixelDataType is not supported for "
+            "readPixels.");
+    MTLTextureDescriptor* textureDescriptor =
+            [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:format
+                                                               width:(srcTexture.width >> miplevel)
+                                                              height:(srcTexture.height >> miplevel)
+                                                           mipmapped:NO];
+#if defined(IOS)
+    textureDescriptor.storageMode = MTLStorageModeShared;
+#else
+    textureDescriptor.storageMode = MTLStorageModeManaged;
+#endif
+    textureDescriptor.usage = MTLTextureUsageShaderWrite | MTLTextureUsageRenderTarget;
+    id<MTLTexture> readPixelsTexture = [mContext->device newTextureWithDescriptor:textureDescriptor];
+
+    MetalBlitter::BlitArgs args;
+    args.filter = SamplerMagFilter::NEAREST;
+    args.source.level = miplevel;
+    args.source.region = MTLRegionMake2D(0, 0, srcTexture.width >> miplevel, srcTexture.height >> miplevel);
+    args.destination.level = 0;
+    args.destination.region = MTLRegionMake2D(0, 0, readPixelsTexture.width, readPixelsTexture.height);
+    args.source.color = srcTexture;
+    args.destination.color = readPixelsTexture;
+
+    mContext->blitter->blit(args);
+
+#if !defined(IOS)
+    // Managed textures on macOS require explicit synchronization between GPU / CPU.
+    id <MTLBlitCommandEncoder> blitEncoder = [mContext->currentCommandBuffer blitCommandEncoder];
+    [blitEncoder synchronizeResource:readPixelsTexture];
+    [blitEncoder endEncoding];
+#endif
+
+    // TODO: right now, every Filament frame gets its own command buffer. We should adopt a more
+    // granular approach to command buffer allocation, as this command buffer won't start executing
+    // until the entire frame has been encoded.
+
+    PixelBufferDescriptor* p = new PixelBufferDescriptor(std::move(data));
+    [mContext->currentCommandBuffer addCompletedHandler:^(id<MTLCommandBuffer> cb) {
+        size_t stride = p->stride ? p->stride : width;
+        size_t bpp = PixelBufferDescriptor::computeDataSize(p->format, p->type, 1, 1, 1);
+        size_t bpr = PixelBufferDescriptor::computeDataSize(p->format, p->type, stride, 1, p->alignment);
+        // Metal's texture coordinates have (0, 0) at the top-left of the texture, but readPixels
+        // assumes (0, 0) at bottom-left.
+        MTLRegion srcRegion = MTLRegionMake2D(x, readPixelsTexture.height - y - height, width, height);
+        const uint8_t* bufferStart = (const uint8_t*) p->buffer + (p->left * bpp) +
+                                                                  (p->top * bpr);
+        [readPixelsTexture getBytes:(void*) bufferStart
+                       bytesPerRow:bpr
+                        fromRegion:srcRegion
+                       mipmapLevel:0];
+        scheduleDestroy(std::move(*p));
+    }];
 }
 
 void MetalDriver::readStreamPixels(Handle<HwStream> sh, uint32_t x, uint32_t y, uint32_t width,
