@@ -377,6 +377,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssao(FrameGraph& fg, RenderP
                 pInstance->setParameter("projectionScaleRadius", projectionScale * data.options.radius);
                 pInstance->setParameter("bias", data.options.bias);
                 pInstance->setParameter("power", data.options.power);
+                pInstance->setParameter("intensity", std::max(0.0f, data.options.intensity));
                 pInstance->setParameter("maxLevel", uint32_t(levelCount - 1));
                 pInstance->commit(driver);
 

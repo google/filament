@@ -347,7 +347,8 @@ static void gui(filament::Engine* engine, filament::View*) {
                 DebugRegistry& debug = engine->getDebugRegistry();
                 ImGui::Checkbox("enabled###ssao", &params.ssao);
                 ImGui::SliderFloat("radius", &params.ssaoOptions.radius, 0.05f, 5.0f);
-                ImGui::SliderFloat("bias", &params.ssaoOptions.bias, 0.0f, 0.1f);
+                ImGui::SliderFloat("bias", &params.ssaoOptions.bias, 0.0f, 0.01f, "%.6f");
+                ImGui::SliderFloat("intensity", &params.ssaoOptions.intensity, 0.0f, 10.0f);
                 ImGui::SliderFloat("power", &params.ssaoOptions.power, 0.0f, 1.0f);
             }
             ImGui::Unindent();
