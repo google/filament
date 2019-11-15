@@ -149,6 +149,11 @@ public class View {
          * How each dimension of the AO buffer is scaled. Must be positive and <= 1.
          */
         public float resolution = 0.5f;
+
+        /**
+         * Strength of the Ambient Occlusion effect. Must be positive.
+         */
+        public float intensity = 1.0f;
     }
 
     /**
@@ -761,7 +766,8 @@ public class View {
      */
     public void setAmbientOcclusionOptions(@NonNull AmbientOcclusionOptions options) {
         mAmbientOcclusionOptions = options;
-        nSetAmbientOcclusionOptions(getNativeObject(), options.radius, options.bias, options.power, options.resolution);
+        nSetAmbientOcclusionOptions(getNativeObject(), options.radius, options.bias, options.power,
+                options.resolution, options.intensity);
     }
 
     /**
@@ -819,5 +825,5 @@ public class View {
     private static native boolean nIsFrontFaceWindingInverted(long nativeView);
     private static native void nSetAmbientOcclusion(long nativeView, int ordinal);
     private static native int nGetAmbientOcclusion(long nativeView);
-    private static native void nSetAmbientOcclusionOptions(long nativeView, float radius, float bias, float power, float resolution);
+    private static native void nSetAmbientOcclusionOptions(long nativeView, float radius, float bias, float power, float resolution, float intensity);
 }

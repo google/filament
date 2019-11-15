@@ -31,6 +31,10 @@ material {
             name : power
         },
         {
+            type : float,
+            name : intensity
+        },
+        {
             type : int,
             name : maxLevel
         }
@@ -234,7 +238,7 @@ fragment {
         float vn = dot(v, normal);  // distance * cos(v, normal)
         const float uu = 0.015;
         float falloff = saturate(1.0 - vv * materialParams.invRadiusSquared);
-        float occlusion = falloff * max(0.0, vn - materialParams.bias) / (vv + uu);
+        float occlusion = falloff * max(0.0, vn + origin.z * materialParams.bias) / (vv + uu);
         return occlusion;
     }
 
@@ -258,7 +262,7 @@ fragment {
             occlusion += computeAmbientOcclusionSAO(i, ssDiskRadius, ssOrigin, origin, normal, noise);
         }
 
-        float ao = 1.0 - occlusion / float(kSpiralSampleCount);
+        float ao = max(0.0, 1.0 - (2.0 / float(kSpiralSampleCount)) * materialParams.intensity * occlusion);
 
         // simulate user-controled ao^n with n[1, 2]
         ao = mix(ao, ao * ao, materialParams.power);
