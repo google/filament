@@ -543,10 +543,13 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blurPass(FrameGraph& fg,
                 auto blurred = resources.getRenderTarget(data.rt);
                 auto const& desc = resources.getDescriptor(data.blurred);
 
+                // TODO: "oneOverEdgeDistance" should be a user-settable parameter
+                //       z-distance that constitute an edge for bilateral filtering
                 FMaterialInstance* const pInstance = mBlur.getMaterialInstance();
                 pInstance->setParameter("ssao", ssao, {});
                 pInstance->setParameter("depth", depth, {});
                 pInstance->setParameter("axis", axis);
+                pInstance->setParameter("oneOverEdgeDistance", 1.0f / 0.1f);
                 pInstance->setParameter("resolution",
                         float4{ desc.width, desc.height, 1.0f / desc.width, 1.0f / desc.height });
                 pInstance->commit(driver);
