@@ -7,6 +7,11 @@ material {
             precision: high
         },
         {
+            type : sampler2d,
+            name : noise,
+            precision: medium
+        },
+        {
             type : float4,
             name : resolution
         },
@@ -67,6 +72,8 @@ fragment {
     #define NOISE_TYPE      NOISE_PATTERN
 
     // tap samples are stored as polar coordinates (theta, r) as { cos(theta), sin(theta), r }
+    // noise samples are stored as polar coordinates (phi, q) as { cos(phi), sin(phi), q }
+    // and applied as: { cos(theta + phi), sin(theta + phi), r + q }
     const float kSpiralTurns = 7.0; // must match ssaogen.cpp
     const uint kSpiralSampleCount = 7u;
     const vec3 kSpiralSamples[] = vec3[](
@@ -74,20 +81,6 @@ fragment {
         vec3( 0.975223,  0.221226,  0.384615), vec3( 0.982771,  0.184826,  0.538462),
         vec3(-0.613055,  0.790040,  0.692308), vec3( 0.997237,  0.074289,  0.846154),
         vec3( 1.000000, -0.000001,  1.000000)
-    );
-
-    // noise samples are stored as polar coordinates (phi, q) as { cos(phi), sin(phi), q }
-    // and applied as: { cos(theta + phi), sin(theta + phi), r + q }
-    const uint kTrigNoiseSampleCount = 16u;
-    const vec3 kTrigNoiseSamples[] = vec3[](
-        vec3(-0.401209,  0.915987,  0.031720), vec3( 0.843133, -0.537704,  0.087921),
-        vec3( 0.457543,  0.889188,  0.017694), vec3( 0.976762, -0.214325,  0.093011),
-        vec3(-0.059645,  0.998220,  0.026175), vec3( 0.704176,  0.710025,  0.107385),
-        vec3(-0.707961,  0.706251,  0.037543), vec3( 0.909426,  0.415866,  0.102259),
-        vec3( 0.924620,  0.380890,  0.006362), vec3(-0.093862,  0.995585,  0.026716),
-        vec3(-0.905196, -0.424993,  0.056284), vec3( 0.196104,  0.980583,  0.115615),
-        vec3(-0.752002, -0.659161,  0.060520), vec3(-0.575921,  0.817505,  0.126910),
-        vec3( 0.794595, -0.607140,  0.086689), vec3( 0.178844,  0.983877,  0.115861)
     );
 
     vec2 sq(const vec2 a) {
@@ -129,9 +122,9 @@ fragment {
                 + phi * (2.0 * 6.28318 * kSpiralTurns) * dalpha2;
             return vec3(fast_cossin(dphi), dr);
         #elif NOISE_TYPE == NOISE_PATTERN
-            uint ix = uint(gl_FragCoord.x) & 3u;
-            uint iy = uint(gl_FragCoord.y) & 3u;
-            return kTrigNoiseSamples[ix + iy * 4u];
+            uint ix = uint(gl_FragCoord.x) & 0xFu;
+            uint iy = uint(gl_FragCoord.y) & 0xFu;
+            return texelFetch(materialParams_noise, ivec2(ix, iy), 0).xyz;
         #else
             return vec3(0.0);
         #endif
