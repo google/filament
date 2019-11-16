@@ -157,7 +157,7 @@ public:
     /**
      * Asynchronously copy-initializes the specified buffer from the given buffer data.
      *
-     * @param engine Reference to the filament::Engine to associate this IndexBuffer with.
+     * @param engine Reference to the filament::Engine to associate this VertexBuffer with.
      * @param bufferIndex Index of the buffer to initialize. Must be between 0
      *                    and Builder::bufferCount() - 1.
      * @param buffer A BufferDescriptor representing the data used to initialize the buffer at
