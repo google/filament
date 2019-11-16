@@ -113,6 +113,7 @@ private:
     PostProcessMaterial mFxaa;
 
     backend::Handle<backend::HwTexture> mNoSSAOTexture;
+    backend::Handle<backend::HwTexture> mNoiseTexture;
 };
 
 } // namespace filament
