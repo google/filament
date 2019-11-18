@@ -43,7 +43,13 @@ namespace metal {
 struct MetalSwapChain : public HwSwapChain {
     MetalSwapChain(id<MTLDevice> device, CAMetalLayer* nativeWindow);
 
+    // Instantiate a headless SwapChain.
+    MetalSwapChain(int32_t width, int32_t height);
+
+    bool isHeadless() { return layer == nullptr; }
+
     CAMetalLayer* layer = nullptr;
+    NSUInteger surfaceWidth = 0;
     NSUInteger surfaceHeight = 0;
 };
 

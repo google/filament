@@ -38,6 +38,7 @@
 {
     CAMetalLayer* metalLayer = (CAMetalLayer*) self.layer;
     metalLayer.pixelFormat = MTLPixelFormatBGRA8Unorm;
+    metalLayer.framebufferOnly = NO;
 
     CGRect nativeBounds = [UIScreen mainScreen].nativeBounds;
     metalLayer.drawableSize = nativeBounds.size;
