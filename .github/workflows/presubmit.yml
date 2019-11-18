@@ -11,3 +11,4 @@ jobs:
       - name: Test error
         run: |
           exit /b 1
+        shell: cmd
