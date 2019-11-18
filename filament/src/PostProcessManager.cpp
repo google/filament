@@ -311,8 +311,16 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(
     return ppResolve.getData().output;
 }
 
-FrameGraphId<FrameGraphTexture> PostProcessManager::dynamicScaling(FrameGraph& fg,
-        FrameGraphId<FrameGraphTexture> input, backend::TextureFormat outFormat) noexcept {
+FrameGraphId <FrameGraphTexture> PostProcessManager::dynamicScaling(FrameGraph& fg,
+        uint8_t msaa, bool scaled,
+        FrameGraphId <FrameGraphTexture> input, backend::TextureFormat outFormat) noexcept {
+
+    FrameGraphTexture::Descriptor const& inputDesc = fg.getDescriptor(input);
+    if (msaa > 1 && (scaled || inputDesc.format != outFormat)) {
+        // scaling and format conversion are not allowed with a MSAA blit, so we resolve first
+        // TODO: we could avoid this by using a quad instead of a blit
+        input = resolve(fg, input);
+    }
 
     struct PostProcessScaling {
         FrameGraphId<FrameGraphTexture> input;
@@ -330,7 +338,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dynamicScaling(FrameGraph& f
                 d.attachments.color = { data.input };
                 data.srt = builder.createRenderTarget(builder.getName(data.input), d);
 
-                data.output = builder.createTexture("scale output", {
+                data.output = builder.createTexture("scaled output", {
                         .width = inputDesc.width,
                         .height = inputDesc.height,
                         .format = outFormat

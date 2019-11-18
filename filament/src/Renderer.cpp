@@ -396,22 +396,28 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             input = ppm.fxaa(fg, input, ldrFormat, !toneMapping || translucent);
         }
         if (scaled) {
-            input = ppm.dynamicScaling(fg, input, ldrFormat);
+            input = ppm.dynamicScaling(fg, msaa, scaled, input, ldrFormat);
         }
     }
 
-    // If we're rendering into the default RenderTarget (viewRenderTarget), we must take care
-    // of a few things:
-    // - since viewRenderTarget doesn't have depth or multi-sample buffer, we have to use an
-    //   intermediate buffer which has one. We do this by forcing a blit.
-    // - however a blit operation cannot move or scale the source, so we must additionally
-    //   do a resolve pass in the multi-sample case.
-    if (input == colorPass.getData().color) {
-        if (msaa > 1) {
-            input = ppm.resolve(fg, input);
-            input = ppm.dynamicScaling(fg, input, ldrFormat);
-        } else if (colorPassNeedsDepthBuffer) {
-            input = ppm.dynamicScaling(fg, input, ldrFormat);
+    // We need to do special processing when rendering directly into the swap-chain (see
+    // comments below). That is when the viewRenderTarget is the default render target
+    // (mRenderTarget) and we're rendering into it.
+    if (viewRenderTarget == mRenderTarget && input == colorPass.getData().color) {
+        // here we know we're not scaled because either post-processing is disabled (which implies
+        // no scaling, or scaled==false because otherwise we wouldn't be rendering in the
+        // default target.
+        assert(!scaled);
+
+        // The default render target is not multi-sampled, so we need an intermediate
+        // buffer.
+        // The default render target also doesn't have a depth buffer, so if one is needed, we
+        // use an intermediate buffer also.
+        // The intermediate buffer  is accomplished with a "fake" dynamicScaling (i.e. blit)
+        // operation.
+
+        if (msaa > 1 || colorPassNeedsDepthBuffer) {
+            input = ppm.dynamicScaling(fg, msaa, scaled, input, ldrFormat);
         }
     }
 
