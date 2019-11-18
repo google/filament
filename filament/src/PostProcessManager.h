@@ -52,8 +52,9 @@ public:
             FrameGraphId<FrameGraphTexture> input, backend::TextureFormat outFormat,
             bool translucent) noexcept;
 
-    FrameGraphId<FrameGraphTexture> dynamicScaling(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, backend::TextureFormat outFormat) noexcept;
+    FrameGraphId <FrameGraphTexture> dynamicScaling(
+            FrameGraph& fg, uint8_t msaa, bool scaled, FrameGraphId <FrameGraphTexture> input,
+            backend::TextureFormat outFormat) noexcept;
 
     FrameGraphId<FrameGraphTexture> resolve(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input) noexcept;
