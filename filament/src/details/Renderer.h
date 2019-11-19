@@ -110,8 +110,8 @@ private:
         return mCommandsHighWatermark * sizeof(RenderPass::Command);
     }
 
-    backend::TextureFormat getHdrFormat(const View& view) const noexcept;
-    backend::TextureFormat getLdrFormat() const noexcept;
+    backend::TextureFormat getHdrFormat(const View& view, bool translucent) const noexcept;
+    backend::TextureFormat getLdrFormat(bool translucent) const noexcept;
 
     using clock = std::chrono::steady_clock;
     using Epoch = clock::time_point;

@@ -112,6 +112,7 @@ void PostProcessManager::init() noexcept {
     mSSAO = PostProcessMaterial(mEngine, MATERIALS_SAO_DATA, MATERIALS_SAO_SIZE);
     mMipmapDepth = PostProcessMaterial(mEngine, MATERIALS_MIPMAPDEPTH_DATA, MATERIALS_MIPMAPDEPTH_SIZE);
     mBlur = PostProcessMaterial(mEngine, MATERIALS_BLUR_DATA, MATERIALS_BLUR_SIZE);
+    mBlit = PostProcessMaterial(mEngine, MATERIALS_BLIT_DATA, MATERIALS_BLIT_SIZE);
     mTonemapping = PostProcessMaterial(mEngine, MATERIALS_TONEMAPPING_DATA, MATERIALS_TONEMAPPING_SIZE);
     mFxaa = PostProcessMaterial(mEngine, MATERIALS_FXAA_DATA, MATERIALS_FXAA_SIZE);
 
@@ -160,6 +161,7 @@ void PostProcessManager::terminate(backend::DriverApi& driver) noexcept {
     mSSAO.terminate(mEngine);
     mMipmapDepth.terminate(mEngine);
     mBlur.terminate(mEngine);
+    mBlit.terminate(mEngine);
     mTonemapping.terminate(mEngine);
     mFxaa.terminate(mEngine);
 }
@@ -275,52 +277,15 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::fxaa(FrameGraph& fg,
     return ppFXAA.getData().output;
 }
 
-FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(
-        FrameGraph& fg, FrameGraphId<FrameGraphTexture> input) noexcept {
-    struct PostProcessResolve {
-        FrameGraphId<FrameGraphTexture> input;
-        FrameGraphId<FrameGraphTexture> output;
-        FrameGraphRenderTargetHandle srt;
-        FrameGraphRenderTargetHandle drt;
-    };
+FrameGraphId<FrameGraphTexture> PostProcessManager::dynamicScaling(FrameGraph& fg,
+        uint8_t msaa, bool scaled, bool blend,
+        FrameGraphId<FrameGraphTexture> input, backend::TextureFormat outFormat) noexcept {
 
-    auto& ppResolve = fg.addPass<PostProcessResolve>("resolve",
-            [&](FrameGraph::Builder& builder, PostProcessResolve& data) {
-                auto const& inputDesc = fg.getDescriptor(input);
-
-                data.input = builder.read(input);
-                data.srt = builder.createRenderTarget(builder.getName(data.input),
-                           { .attachments = {data.input, {}}});
-
-                data.output = builder.createTexture("resolve output", {
-                        .width = inputDesc.width,
-                        .height = inputDesc.height,
-                        .format = inputDesc.format
-                });
-                data.drt = builder.createRenderTarget(data.output);
-            },
-            [=](FrameGraphPassResources const& resources,
-                    PostProcessResolve const& data, DriverApi& driver) {
-                auto in = resources.getRenderTarget(data.srt);
-                auto out = resources.getRenderTarget(data.drt);
-                driver.blit(TargetBufferFlags::COLOR,
-                        out.target, out.params.viewport, in.target, in.params.viewport,
-                        SamplerMagFilter::LINEAR);
-            });
-
-    return ppResolve.getData().output;
-}
-
-FrameGraphId <FrameGraphTexture> PostProcessManager::dynamicScaling(FrameGraph& fg,
-        uint8_t msaa, bool scaled,
-        FrameGraphId <FrameGraphTexture> input, backend::TextureFormat outFormat) noexcept {
-
+    // scaling and format conversion are not allowed with a MSAA blit
     FrameGraphTexture::Descriptor const& inputDesc = fg.getDescriptor(input);
-    if (msaa > 1 && (scaled || inputDesc.format != outFormat)) {
-        // scaling and format conversion are not allowed with a MSAA blit, so we resolve first
-        // TODO: we could avoid this by using a quad instead of a blit
-        input = resolve(fg, input);
-    }
+    const bool useQuad = (msaa > 1 && (scaled || inputDesc.format != outFormat)) || blend;
+
+    Handle<HwRenderPrimitive> fullScreenRenderPrimitive = mEngine.getFullScreenRenderPrimitive();
 
     struct PostProcessScaling {
         FrameGraphId<FrameGraphTexture> input;
@@ -329,7 +294,7 @@ FrameGraphId <FrameGraphTexture> PostProcessManager::dynamicScaling(FrameGraph& 
         FrameGraphRenderTargetHandle drt;
     };
 
-    auto& ppScaling = fg.addPass<PostProcessScaling>("scaling",
+    auto& ppBlitScaling = fg.addPass<PostProcessScaling>("blit scaling",
             [&](FrameGraph::Builder& builder, PostProcessScaling& data) {
                 auto const& inputDesc = fg.getDescriptor(input);
 
@@ -354,9 +319,51 @@ FrameGraphId <FrameGraphTexture> PostProcessManager::dynamicScaling(FrameGraph& 
                         SamplerMagFilter::LINEAR);
             });
 
-    return ppScaling.getData().output;
-}
+    auto& ppQuadScaling = fg.addPass<PostProcessScaling>("quad scaling",
+            [&](FrameGraph::Builder& builder, PostProcessScaling& data) {
+                auto const& inputDesc = fg.getDescriptor(input);
 
+                data.input = builder.sample(input);
+
+                data.output = builder.createTexture("scaled output", {
+                        .width = inputDesc.width,
+                        .height = inputDesc.height,
+                        .format = outFormat
+                });
+                data.drt = builder.createRenderTarget(data.output);
+            },
+            [=](FrameGraphPassResources const& resources,
+                PostProcessScaling const& data, DriverApi& driver) {
+
+                auto color = resources.getTexture(data.input);
+                auto out = resources.getRenderTarget(data.drt);
+
+                FMaterialInstance* const pInstance = mBlit.getMaterialInstance();
+                pInstance->setParameter("color", color, SamplerParams{
+                        .filterMag = SamplerMagFilter::LINEAR,
+                        .filterMin = SamplerMinFilter::LINEAR
+                });
+                pInstance->commit(driver);
+
+                PipelineState pipeline;
+                pipeline.program = mBlit.getProgram();
+                pipeline.rasterState = mBlit.getMaterial()->getRasterState();
+                pipeline.scissor = pInstance->getScissor();
+                if (blend) {
+                    pipeline.rasterState.blendFunctionSrcRGB   = BlendFunction::ONE;
+                    pipeline.rasterState.blendFunctionSrcAlpha = BlendFunction::ONE;
+                    pipeline.rasterState.blendFunctionDstRGB   = BlendFunction::ONE_MINUS_SRC_ALPHA;
+                    pipeline.rasterState.blendFunctionDstAlpha = BlendFunction::ONE_MINUS_SRC_ALPHA;
+                }
+                driver.beginRenderPass(out.target, out.params);
+                pInstance->use(driver);
+                driver.draw(pipeline, fullScreenRenderPrimitive);
+                driver.endRenderPass();
+            });
+
+    // we rely on automatic culling of unused render passes
+    return useQuad ? ppQuadScaling.getData().output : ppBlitScaling.getData().output;
+}
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::ssao(FrameGraph& fg, RenderPass& pass,
         filament::Viewport const& svp, CameraInfo const& cameraInfo,

@@ -138,6 +138,9 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
         window->mDepthView->getView()->setShadowsEnabled(false);
         window->mGodView->getView()->setShadowsEnabled(false);
         window->mOrthoView->getView()->setShadowsEnabled(false);
+
+        // the depthview doesn't draw the background (ibl), so we must clear it
+        window->mDepthView->getView()->setClearColor({0, 0, 0, 1});
     }
 
     loadIBL(config);
