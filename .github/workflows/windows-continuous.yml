@@ -15,3 +15,4 @@ jobs:
       - name: Run build script
         run: |
           build\windows\build-github.bat continuous
+        shell: cmd

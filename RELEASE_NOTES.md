@@ -13,6 +13,7 @@ A new header is inserted each time a *tag* is created.
 - Rendering a SAMPLER_EXTERNAL texture before setting an external image no longer results in GPU errors.
 - Fixed a normals issue when skinning without a normal map or anisotropy.
 - Fixed an issue where translucent views couldn't be used with post-processing.
+- Always use higher quality 3-bands SH for indirect lighting, even on mobile.
 
 ## v1.4.2
 
