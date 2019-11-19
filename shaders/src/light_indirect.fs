@@ -2,10 +2,6 @@
 // Image based lighting configuration
 //------------------------------------------------------------------------------
 
-#ifndef TARGET_MOBILE
-#define IBL_OFF_SPECULAR_PEAK
-#endif
-
 // Number of spherical harmonics bands (1, 2 or 3)
 #if defined(TARGET_MOBILE)
 #define SPHERICAL_HARMONICS_BANDS           2
@@ -94,20 +90,13 @@ vec3 prefilteredRadiance(const vec3 r, float roughness, float offset) {
     return decodeDataForIBL(textureLod(light_iblSpecular, r, lod + offset));
 }
 
-vec3 getSpecularDominantDirection(vec3 n, vec3 r, float roughness) {
-#if defined(IBL_OFF_SPECULAR_PEAK)
-    float s = 1.0 - roughness;
-    return mix(n, r, s * (sqrt(s) + roughness));
-#else
-    return r;
-#endif
+vec3 getSpecularDominantDirection(const vec3 n, const vec3 r, float roughness) {
+    return mix(r, n, roughness * roughness);
 }
 
 vec3 specularDFG(const PixelParams pixel) {
 #if defined(SHADING_MODEL_CLOTH)
     return pixel.f0 * pixel.dfg.z;
-#elif !defined(USE_MULTIPLE_SCATTERING_COMPENSATION)
-    return pixel.f0 * pixel.dfg.x + pixel.dfg.y;
 #else
     return mix(pixel.dfg.xxx, pixel.dfg.yyy, pixel.f0);
 #endif
@@ -284,7 +273,7 @@ void isEvaluateClearCoatIBL(const PixelParams pixel, float specularAO, inout vec
     float Fc = F_Schlick(0.04, 1.0, clearCoatNoV) * pixel.clearCoat;
     float attenuation = 1.0 - Fc;
     Fd *= attenuation;
-    Fr *= sq(attenuation);
+    Fr *= attenuation;
 
     PixelParams p;
     p.perceptualRoughness = pixel.clearCoatPerceptualRoughness;
@@ -312,6 +301,11 @@ void evaluateClothIndirectDiffuseBRDF(const PixelParams pixel, inout float diffu
 }
 
 void evaluateClearCoatIBL(const PixelParams pixel, float specularAO, inout vec3 Fd, inout vec3 Fr) {
+#if IBL_INTEGRATION == IBL_INTEGRATION_IMPORTANCE_SAMPLING
+    isEvaluateClearCoatIBL(pixel, specularAO, Fd, Fr);
+    return;
+#endif
+
 #if defined(MATERIAL_HAS_CLEAR_COAT)
 #if defined(MATERIAL_HAS_NORMAL) || defined(MATERIAL_HAS_CLEAR_COAT_NORMAL)
     // We want to use the geometric normal for the clear coat layer
@@ -324,9 +318,9 @@ void evaluateClearCoatIBL(const PixelParams pixel, float specularAO, inout vec3 
     // The clear coat layer assumes an IOR of 1.5 (4% reflectance)
     float Fc = F_Schlick(0.04, 1.0, clearCoatNoV) * pixel.clearCoat;
     float attenuation = 1.0 - Fc;
-    Fr *= sq(attenuation);
-    Fr += prefilteredRadiance(clearCoatR, pixel.clearCoatPerceptualRoughness) * (specularAO * Fc);
     Fd *= attenuation;
+    Fr *= attenuation;
+    Fr += prefilteredRadiance(clearCoatR, pixel.clearCoatPerceptualRoughness) * (specularAO * Fc);
 #endif
 }
 
@@ -345,32 +339,37 @@ void evaluateSubsurfaceIBL(const PixelParams pixel, const vec3 diffuseIrradiance
 void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout vec3 color) {
     // Apply transform here if we wanted to rotate the IBL
     vec3 n = shading_normal;
-    vec3 r = getReflectedVector(pixel, n);
 
     float ssao = evaluateSSAO();
     float diffuseAO = min(material.ambientOcclusion, ssao);
     float specularAO = computeSpecularAO(shading_NoV, diffuseAO, pixel.roughness);
 
-    // diffuse indirect
-    float diffuseBRDF = singleBounceAO(diffuseAO);// Fd_Lambert() is baked in the SH below
+    // specular layer
+    vec3 Fr;
+#if IBL_INTEGRATION == IBL_INTEGRATION_PREFILTERED_CUBEMAP
+    vec3 E = specularDFG(pixel);
+    vec3 r = getReflectedVector(pixel, n);
+    Fr = E * prefilteredRadiance(r, pixel.perceptualRoughness);
+#elif IBL_INTEGRATION == IBL_INTEGRATION_IMPORTANCE_SAMPLING
+    vec3 E = vec3(0.0); // TODO: fix for importance sampling
+    Fr = isEvaluateIBL(pixel, shading_normal, shading_view, shading_NoV);
+#endif
+    Fr *= singleBounceAO(specularAO) * pixel.energyCompensation;
+
+    // diffuse layer
+    float diffuseBRDF = singleBounceAO(diffuseAO); // Fd_Lambert() is baked in the SH below
     evaluateClothIndirectDiffuseBRDF(pixel, diffuseBRDF);
 
     vec3 diffuseIrradiance = diffuseIrradiance(n);
-    vec3 Fd = pixel.diffuseColor * diffuseIrradiance * diffuseBRDF;
+    vec3 Fd = pixel.diffuseColor * diffuseIrradiance * (1.0 - E) * diffuseBRDF;
 
-    // specular indirect
-    vec3 Fr;
-#if IBL_INTEGRATION == IBL_INTEGRATION_PREFILTERED_CUBEMAP
-    Fr = specularDFG(pixel) * prefilteredRadiance(r, pixel.perceptualRoughness);
-    Fr *= singleBounceAO(specularAO) * pixel.energyCompensation;
+    // clear coat layer
     evaluateClearCoatIBL(pixel, specularAO, Fd, Fr);
-#elif IBL_INTEGRATION == IBL_INTEGRATION_IMPORTANCE_SAMPLING
-    Fr = isEvaluateIBL(pixel, shading_normal, shading_view, shading_NoV);
-    Fr *= singleBounceAO(specularAO) * pixel.energyCompensation;
-    isEvaluateClearCoatIBL(pixel, specularAO, Fd, Fr);
-#endif
+
+    // subsurface layer
     evaluateSubsurfaceIBL(pixel, diffuseIrradiance, Fd, Fr);
 
+    // extra ambient occlusion term
     multiBounceAO(diffuseAO, pixel.diffuseColor, Fd);
     multiBounceSpecularAO(specularAO, pixel.f0, Fr);
 

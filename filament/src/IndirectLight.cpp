@@ -21,11 +21,10 @@
 
 #include "FilamentAPI-impl.h"
 
-#include <utils/Panic.h>
-
 #include <backend/DriverEnums.h>
 #include <filament/IndirectLight.h>
-#include <utils/Log.h>
+
+#include <utils/Panic.h>
 
 #include <math/scalar.h>
 
@@ -72,21 +71,63 @@ IndirectLight::Builder& IndirectLight::Builder::irradiance(uint8_t bands, float3
 }
 
 IndirectLight::Builder& IndirectLight::Builder::radiance(uint8_t bands, float3 const* sh) noexcept {
-    float3 irradiance[9];
-    if (bands >= 1) {
-        irradiance[0] = sh[0] * 0.282095f;
-        if (bands >= 2) {
-            irradiance[1] = sh[1] * -0.325735f;
-            irradiance[2] = sh[2] *  0.325735f;
-            irradiance[3] = sh[3] * -0.325735f;
-            if (bands >= 3) {
-                irradiance[4] = sh[4] *  0.273137f;
-                irradiance[5] = sh[5] * -0.273137f;
-                irradiance[6] = sh[6] *  0.078848f;
-                irradiance[7] = sh[7] * -0.273137f;
-                irradiance[8] = sh[8] *  0.136569f;
-            }
+    // Coefficient for the polynomial form of the SH functions -- these were taken from
+    // "Stupid Spherical Harmonics (SH)" by Peter-Pike Sloan
+    // They simply come for expanding the computation of each SH function.
+    //
+    // To render spherical harmonics we can use the polynomial form, like this:
+    //          c += sh[0] * A[0];
+    //          c += sh[1] * A[1] * s.y;
+    //          c += sh[2] * A[2] * s.z;
+    //          c += sh[3] * A[3] * s.x;
+    //          c += sh[4] * A[4] * s.y * s.x;
+    //          c += sh[5] * A[5] * s.y * s.z;
+    //          c += sh[6] * A[6] * (3 * s.z * s.z - 1);
+    //          c += sh[7] * A[7] * s.z * s.x;
+    //          c += sh[8] * A[8] * (s.x * s.x - s.y * s.y);
+    //
+    // To save math in the shader, we pre-multiply our SH coefficient by the A[i] factors.
+    // Additionally, we include the lambertian diffuse BRDF 1/pi and truncated cos.
+
+    constexpr float F_SQRT_PI = 1.7724538509f;
+    constexpr float F_SQRT_3  = 1.7320508076f;
+    constexpr float F_SQRT_5  = 2.2360679775f;
+    constexpr float F_SQRT_15 = 3.8729833462f;
+    constexpr float C[] = { F_PI, 2.0943951f, 0.785398f }; // <cos>
+    constexpr float A[] = {
+                  1.0f / (2.0f * F_SQRT_PI) * C[0] * F_1_PI,    // 0  0
+            -F_SQRT_3  / (2.0f * F_SQRT_PI) * C[1] * F_1_PI,    // 1 -1
+             F_SQRT_3  / (2.0f * F_SQRT_PI) * C[1] * F_1_PI,    // 1  0
+            -F_SQRT_3  / (2.0f * F_SQRT_PI) * C[1] * F_1_PI,    // 1  1
+             F_SQRT_15 / (2.0f * F_SQRT_PI) * C[2] * F_1_PI,    // 2 -2
+            -F_SQRT_15 / (2.0f * F_SQRT_PI) * C[2] * F_1_PI,    // 3 -1
+             F_SQRT_5  / (4.0f * F_SQRT_PI) * C[2] * F_1_PI,    // 3  0
+            -F_SQRT_15 / (2.0f * F_SQRT_PI) * C[2] * F_1_PI,    // 3  1
+             F_SQRT_15 / (4.0f * F_SQRT_PI) * C[2] * F_1_PI     // 3  2
+    };
+
+    // this is a way to "document" the actual value of these coefficients and at the same
+    // time make sure the expression and values are always in sync.
+    struct Debug {
+        static constexpr bool almost(float a, float b) {
+            constexpr float e = 1e-6f;
+            return (a > b - e) && (a < b + e);
         }
+    };
+    static_assert(Debug::almost(A[0],  0.282095f), "coefficient mismatch");
+    static_assert(Debug::almost(A[1], -0.325735f), "coefficient mismatch");
+    static_assert(Debug::almost(A[2],  0.325735f), "coefficient mismatch");
+    static_assert(Debug::almost(A[3], -0.325735f), "coefficient mismatch");
+    static_assert(Debug::almost(A[4],  0.273137f), "coefficient mismatch");
+    static_assert(Debug::almost(A[5], -0.273137f), "coefficient mismatch");
+    static_assert(Debug::almost(A[6],  0.078848f), "coefficient mismatch");
+    static_assert(Debug::almost(A[7], -0.273137f), "coefficient mismatch");
+    static_assert(Debug::almost(A[8],  0.136569f), "coefficient mismatch");
+
+    float3 irradiance[9];
+    bands = std::min(bands, uint8_t(3));
+    for (size_t i = 0, c = bands * bands; i<c; ++i) {
+        irradiance[i] = sh[i] * A[i];
     }
     return this->irradiance(bands, irradiance);
 }
@@ -107,6 +148,7 @@ IndirectLight::Builder& IndirectLight::Builder::rotation(mat3f const& rotation) 
 }
 
 IndirectLight* IndirectLight::Builder::build(Engine& engine) {
+    FEngine::assertValid(engine, __PRETTY_FUNCTION__);
     if (mImpl->mReflectionsMap) {
         if (!ASSERT_POSTCONDITION_NON_FATAL(
                 mImpl->mReflectionsMap->getTarget() == Texture::Sampler::SAMPLER_CUBEMAP,
@@ -209,12 +251,12 @@ float4 FIndirectLight::getColorEstimate(float3 direction) const noexcept {
 
     // The scale factor below is explained in the gamasutra article above, however it seems
     // to cause the intensity of the light to be too low.
-    //      constexpr float c = (16.0f * M_PI / 17.0f);
-    //      constexpr float LdSquared = (9.0f / (4.0f * M_PI)) * c * c;
+    //      constexpr float c = (16.0f * F_PI / 17.0f);
+    //      constexpr float LdSquared = (9.0f / (4.0f * F_PI)) * c * c;
     //      LdDotLe *= c / LdSquared; // Note the final coefficient is 17/36
 
     // We multiply by PI because our SH coefficients contain the 1/PI lambertian BRDF.
-    LdDotLe *= M_PI;
+    LdDotLe *= F_PI;
 
     // Make sure we don't have negative intensities
     LdDotLe = max(LdDotLe, float3{0});

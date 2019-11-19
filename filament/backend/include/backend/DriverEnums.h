@@ -19,6 +19,7 @@
 #ifndef TNT_FILAMENT_DRIVER_DRIVERENUMS_H
 #define TNT_FILAMENT_DRIVER_DRIVERENUMS_H
 
+#include <utils/BitmaskEnum.h>
 #include <utils/unwindows.h> // Because we define ERROR in the FenceStatus enum.
 
 #include <math/vec4.h>
@@ -29,7 +30,6 @@
 #include <stdint.h>
 
 namespace filament {
-
 /**
  * Types and enums used by filament's driver.
  *
@@ -62,39 +62,16 @@ enum class Backend : uint8_t {
 /**
  * Bitmask for selecting render buffers
  */
-enum TargetBufferFlags : uint8_t {
-    NONE = 0x0,                 //!< No buffer selected.
-    COLOR = 0x1,                //!< Color buffer selected.
-    DEPTH = 0x2,                //!< Depth buffer selected.
-    STENCIL = 0x4,              //!< Stencil buffer selected.
-    COLOR_AND_DEPTH = COLOR | DEPTH,
-    COLOR_AND_STENCIL = COLOR | STENCIL,
-    DEPTH_AND_STENCIL = DEPTH | STENCIL,
-    ALL = COLOR | DEPTH | STENCIL
+enum class TargetBufferFlags : uint8_t {
+    NONE = 0x0u,                            //!< No buffer selected.
+    COLOR = 0x1u,                           //!< Color buffer selected.
+    DEPTH = 0x2u,                           //!< Depth buffer selected.
+    STENCIL = 0x4u,                         //!< Stencil buffer selected.
+    COLOR_AND_DEPTH = COLOR | DEPTH,        //!< Color and depth buffer selected.
+    COLOR_AND_STENCIL = COLOR | STENCIL,    //!< Color and stencil buffer selected.
+    DEPTH_AND_STENCIL = DEPTH | STENCIL,    //!< depth and stencil buffer selected.
+    ALL = COLOR | DEPTH | STENCIL           //!< Color, depth and stencil buffer selected.
 };
-
-// implement requirement of BitmaskType
-inline constexpr TargetBufferFlags operator~(TargetBufferFlags rhs) noexcept {
-    return TargetBufferFlags(~uint8_t(rhs) & uint8_t(TargetBufferFlags::ALL));
-}
-inline constexpr TargetBufferFlags operator|=(TargetBufferFlags& lhs, TargetBufferFlags rhs) noexcept {
-    return lhs = TargetBufferFlags(uint8_t(lhs) | uint8_t(rhs));
-}
-inline constexpr TargetBufferFlags operator&=(TargetBufferFlags& lhs, TargetBufferFlags rhs) noexcept {
-    return lhs = TargetBufferFlags(uint8_t(lhs) & uint8_t(rhs));
-}
-inline constexpr TargetBufferFlags operator^=(TargetBufferFlags& lhs, TargetBufferFlags rhs) noexcept {
-    return lhs = TargetBufferFlags(uint8_t(lhs) ^ uint8_t(rhs));
-}
-inline constexpr TargetBufferFlags operator|(TargetBufferFlags lhs, TargetBufferFlags rhs) noexcept {
-    return TargetBufferFlags(uint8_t(lhs) | uint8_t(rhs));
-}
-inline constexpr TargetBufferFlags operator&(TargetBufferFlags lhs, TargetBufferFlags rhs) noexcept {
-    return TargetBufferFlags(uint8_t(lhs) & uint8_t(rhs));
-}
-inline constexpr TargetBufferFlags operator^(TargetBufferFlags lhs, TargetBufferFlags rhs) noexcept {
-    return TargetBufferFlags(uint8_t(lhs) ^ uint8_t(rhs));
-}
 
 /**
  * Frequency at which a buffer is expected to be modified and used. This is used as an hint
@@ -107,44 +84,18 @@ enum class BufferUsage : uint8_t {
 };
 
 /**
- * Selects which buffers to clear at the beginning of the render pass, as well as which buffers
- * can be discarded and the beginning and end of the render pass.
+ * Defines a viewport, which is the origin and extent of the clip-space.
+ * All drawing is clipped to the viewport.
  */
-
 struct Viewport {
-    int32_t left;
-    int32_t bottom;
-    uint32_t width;
-    uint32_t height;
+    int32_t left;       //!< left coordinate in window space.
+    int32_t bottom;     //!< bottom coordinate in window space.
+    uint32_t width;     //!< width in pixels
+    uint32_t height;    //!< height in pixels
+    //! get the right coordinate in window space of the viewport
     int32_t right() const noexcept { return left + width; }
+    //! get the top coordinate in window space of the viewport
     int32_t top() const noexcept { return bottom + height; }
-};
-
-struct RenderPassFlags {
-    uint8_t clear;
-    TargetBufferFlags discardStart;
-    TargetBufferFlags discardEnd;
-    uint8_t dependencies;
-
-    static constexpr uint8_t DEPENDENCY_BY_REGION = 1; // see "framebuffer-local" in Vulkan spec.
-
-    // Extra RenderPass-only flags stashed in the "clear" field.
-    static const uint8_t IGNORE_SCISSOR = 0x10;
-};
-
-struct RenderPassParams {
-    // RenderPass flags are 4 bytes.  The first three are buffer selections composed from
-    // TargetBufferFlags. The last byte is an optional dependency hint (used only for Vulkan).
-    RenderPassFlags flags{};
-
-    // Viewport (16 bytes)
-    Viewport viewport{};
-
-    // Clear values (32 bytes)
-    filament::math::float4 clearColor = {};
-    double clearDepth = 1.0;
-    uint32_t clearStencil = 0;
-    uint32_t reserved1 = 0;
 };
 
 /**
@@ -159,24 +110,34 @@ enum class FenceStatus : int8_t {
 
 static constexpr uint64_t FENCE_WAIT_FOR_EVER = uint64_t(-1);
 
-static constexpr size_t SHADER_MODEL_COUNT = 3;
+/**
+ * Shader model.
+ *
+ * These enumerants are used across all backends and refer to a level of functionality, rather
+ * than to an OpenGL specific shader model.
+ */
 enum class ShaderModel : uint8_t {
-    // For testing
+    //! For testing
     UNKNOWN    = 0,
-    // Mobile
-    GL_ES_30   = 1,
-    // Desktop
-    GL_CORE_41 = 2,
+    GL_ES_30   = 1,    //!< Mobile level functionality
+    GL_CORE_41 = 2,    //!< Desktop level functionality
 };
+static constexpr size_t SHADER_MODEL_COUNT = 3;
 
+/**
+ * Primitive types
+ */
 enum class PrimitiveType : uint8_t {
     // don't change the enums values (made to match GL)
-    POINTS      = 0,
-    LINES       = 1,
-    TRIANGLES   = 4,
+    POINTS      = 0,    //!< points
+    LINES       = 1,    //!< lines
+    TRIANGLES   = 4,    //!< triangles
     NONE        = 0xFF
 };
 
+/**
+ * Supported uniform types
+ */
 enum class UniformType : uint8_t {
     BOOL,
     BOOL2,
@@ -194,8 +155,8 @@ enum class UniformType : uint8_t {
     UINT2,
     UINT3,
     UINT4,
-    MAT3,
-    MAT4
+    MAT3,   //!< a 3x3 float matrix
+    MAT4    //!< a 4x4 float matrix
 };
 
 enum class Precision : uint8_t {
@@ -212,13 +173,17 @@ enum class SamplerType : uint8_t {
     SAMPLER_EXTERNAL,   //!< External texture
 };
 
+//! Texture sampler format
 enum class SamplerFormat : uint8_t {
-    INT = 0,
-    UINT = 1,
-    FLOAT = 2,
-    SHADOW = 3
+    INT = 0,        //!< signed integer sampler
+    UINT = 1,       //!< unsigned integer sampler
+    FLOAT = 2,      //!< float sampler
+    SHADOW = 3      //!< shadow sampler (PCF)
 };
 
+/**
+ * Supported element types
+ */
 enum class ElementType : uint8_t {
     BYTE,
     BYTE2,
@@ -248,42 +213,45 @@ enum class ElementType : uint8_t {
     HALF4,
 };
 
+//! Face culling Mode
 enum class CullingMode : uint8_t {
-    NONE,
-    FRONT,
-    BACK,
-    FRONT_AND_BACK
+    NONE,               //!< No culling, front and back faces are visible
+    FRONT,              //!< Front face culling, only back faces are visible
+    BACK,               //!< Back face culling, only front faces are visible
+    FRONT_AND_BACK      //!< Front and Back, geometry is not visible
 };
 
-//! PixelDataFormat
+//! Pixel Data Format
 enum class PixelDataFormat : uint8_t {
-    R,
-    R_INTEGER,
-    RG,
-    RG_INTEGER,
-    RGB,
-    RGB_INTEGER,
-    RGBA,
-    RGBA_INTEGER,
-    UNUSED,                 // used to be rgbm
-    DEPTH_COMPONENT,
-    DEPTH_STENCIL,
-    ALPHA
+    R,                  //!< One Red channel, float
+    R_INTEGER,          //!< One Red channel, integer
+    RG,                 //!< Two Red and Green channels, float
+    RG_INTEGER,         //!< Two Red and Green channels, integer
+    RGB,                //!< Three Red, Green and Blue channels, float
+    RGB_INTEGER,        //!< Three Red, Green and Blue channels, integer
+    RGBA,               //!< Four Red, Green, Blue and Alpha channels, float
+    RGBA_INTEGER,       //!< Four Red, Green, Blue and Alpha channels, integer
+    UNUSED,             // used to be rgbm
+    DEPTH_COMPONENT,    //!< Depth, 16-bit or 24-bits usually
+    DEPTH_STENCIL,      //!< Two Depth (24-bits) + Stencil (8-bits) channels
+    ALPHA               //! One Alpha channel, float
 };
 
+//! Pixel Data Type
 enum class PixelDataType : uint8_t {
-    UBYTE,
-    BYTE,
-    USHORT,
-    SHORT,
-    UINT,
-    INT,
-    HALF,
-    FLOAT,
-    COMPRESSED,
-    UINT_10F_11F_11F_REV,
+    UBYTE,          //!< unsigned byte
+    BYTE,           //!< signed byte
+    USHORT,         //!< unsigned short (16-bits)
+    SHORT,          //!< signed short (16-bits)
+    UINT,           //!< unsigned int (32-bits)
+    INT,            //!< signed int (32-bits)
+    HALF,           //!< half-float (16-bits float)
+    FLOAT,          //!< float (32-bits float)
+    COMPRESSED,     //!< compressed pixels, @see CompressedPixelDataType
+    UINT_10F_11F_11F_REV    //!< three low precision floating-point numbers
 };
 
+//! Compressed pixel data types
 enum class CompressedPixelDataType : uint16_t {
     // Mandatory in GLES 3.0 and GL 4.3
     EAC_R11, EAC_R11_SIGNED, EAC_RG11, EAC_RG11_SIGNED,
@@ -478,37 +446,15 @@ enum class TextureFormat : uint16_t {
     SRGB8_ALPHA8_ASTC_12x12,
 };
 
-enum TextureUsage : uint8_t {
-    COLOR_ATTACHMENT    = 0x1,
-    DEPTH_ATTACHMENT    = 0x2,
-    STENCIL_ATTACHMENT  = 0x4,
-    UPLOADABLE          = 0x8,
-    SAMPLEABLE          = 0x10,
-    DEFAULT = UPLOADABLE | SAMPLEABLE
+//! Bitmask describing the intended Texture Usage
+enum class TextureUsage : uint8_t {
+    COLOR_ATTACHMENT    = 0x1,  //!< Texture can be used as a color attachment
+    DEPTH_ATTACHMENT    = 0x2,  //!< Texture can be used as a depth attachment
+    STENCIL_ATTACHMENT  = 0x4,  //!< Texture can be used as a stencil attachment
+    UPLOADABLE          = 0x8,  //!< Data can be uploaded into this texture (default)
+    SAMPLEABLE          = 0x10, //!< Texture can be sampled (default)
+    DEFAULT = UPLOADABLE | SAMPLEABLE   //!< Default texture usage
 };
-
-// implement requirement of BitmaskType
-inline constexpr TextureUsage operator~(TextureUsage rhs) noexcept {
-    return TextureUsage(~uint8_t(rhs) & 0x1Fu);
-}
-inline constexpr TextureUsage operator|=(TextureUsage& lhs, TextureUsage rhs) noexcept {
-    return lhs = TextureUsage(uint8_t(lhs) | uint8_t(rhs));
-}
-inline constexpr TextureUsage operator&=(TextureUsage& lhs, TextureUsage rhs) noexcept {
-    return lhs = TextureUsage(uint8_t(lhs) & uint8_t(rhs));
-}
-inline constexpr TextureUsage operator^=(TextureUsage& lhs, TextureUsage rhs) noexcept {
-    return lhs = TextureUsage(uint8_t(lhs) ^ uint8_t(rhs));
-}
-inline constexpr TextureUsage operator|(TextureUsage lhs, TextureUsage rhs) noexcept {
-    return TextureUsage(uint8_t(lhs) | uint8_t(rhs));
-}
-inline constexpr TextureUsage operator&(TextureUsage lhs, TextureUsage rhs) noexcept {
-    return TextureUsage(uint8_t(lhs) & uint8_t(rhs));
-}
-inline constexpr TextureUsage operator^(TextureUsage lhs, TextureUsage rhs) noexcept {
-    return TextureUsage(uint8_t(lhs) ^ uint8_t(rhs));
-}
 
 //! returns whether this format a compressed format
 static constexpr bool isCompressedFormat(TextureFormat format) noexcept {
@@ -520,11 +466,12 @@ static constexpr bool isETC2Compression(TextureFormat format) noexcept {
     return format >= TextureFormat::EAC_R11 && format <= TextureFormat::ETC2_EAC_SRGBA8;
 }
 
+//! returns whether this format is an ETC3 compressed format
 static constexpr bool isS3TCCompression(TextureFormat format) noexcept {
     return format >= TextureFormat::DXT1_RGB && format <= TextureFormat::DXT5_RGBA;
 }
 
-//! TextureCubemapFace
+//! Texture Cubemap Face
 enum class TextureCubemapFace : uint8_t {
     // don't change the enums values
     POSITIVE_X = 0, //!< +x face
@@ -535,23 +482,24 @@ enum class TextureCubemapFace : uint8_t {
     NEGATIVE_Z = 5, //!< -z face
 };
 
+//! Face offsets for all faces of a cubemap
 struct FaceOffsets {
     using size_type = size_t;
     union {
         struct {
-            size_type px;
-            size_type nx;
-            size_type py;
-            size_type ny;
-            size_type pz;
-            size_type nz;
+            size_type px;   //!< +x face offset in bytes
+            size_type nx;   //!< -x face offset in bytes
+            size_type py;   //!< +y face offset in bytes
+            size_type ny;   //!< -y face offset in bytes
+            size_type pz;   //!< +z face offset in bytes
+            size_type nz;   //!< -z face offset in bytes
         };
         size_type offsets[6];
     };
     size_type  operator[](size_t n) const noexcept { return offsets[n]; }
     size_type& operator[](size_t n) { return offsets[n]; }
     FaceOffsets() noexcept = default;
-    FaceOffsets(size_type faceSize) noexcept {
+    explicit FaceOffsets(size_type faceSize) noexcept {
         px = faceSize * 0;
         nx = faceSize * 1;
         py = faceSize * 2;
@@ -578,63 +526,69 @@ struct FaceOffsets {
     }
 };
 
+//! Sampler Wrap mode
 enum class SamplerWrapMode : uint8_t {
-    CLAMP_TO_EDGE,
-    REPEAT,
-    MIRRORED_REPEAT,
+    CLAMP_TO_EDGE,      //!< clamp-to-edge. The edge of the texture extends to infinity.
+    REPEAT,             //!< repeat. The texture infinitely repeats in the wrap direction.
+    MIRRORED_REPEAT,    //!< mirrored-repeat. The texture infinitely repeats and mirrors in the wrap direction.
 };
 
+//! Sampler minification filter
 enum class SamplerMinFilter : uint8_t {
     // don't change the enums values
-    NEAREST = 0,
-    LINEAR = 1,
-    NEAREST_MIPMAP_NEAREST = 2,
-    LINEAR_MIPMAP_NEAREST = 3,
-    NEAREST_MIPMAP_LINEAR = 4,
-    LINEAR_MIPMAP_LINEAR = 5
+    NEAREST = 0,                //!< No filtering. Nearest neighbor is used.
+    LINEAR = 1,                 //!< Box filtering. Weighted average of 4 neighbors is used.
+    NEAREST_MIPMAP_NEAREST = 2, //!< Mip-mapping is activated. But no filtering occurs.
+    LINEAR_MIPMAP_NEAREST = 3,  //!< Box filtering within a mip-map level.
+    NEAREST_MIPMAP_LINEAR = 4,  //!< Mip-map levels are interpolated, but no other filtering occurs.
+    LINEAR_MIPMAP_LINEAR = 5    //!< Both interpolated Mip-mapping and linear filtering are used.
 };
 
+//! Sampler magnification filter
 enum class SamplerMagFilter : uint8_t {
     // don't change the enums values
-    NEAREST = 0,
-    LINEAR = 1,
+    NEAREST = 0,                //!< No filtering. Nearest neighbor is used.
+    LINEAR = 1,                 //!< Box filtering. Weighted average of 4 neighbors is used.
 };
 
+//! Sampler compare mode
 enum class SamplerCompareMode : uint8_t {
     // don't change the enums values
     NONE = 0,
     COMPARE_TO_TEXTURE = 1
 };
 
+//! comparison function for the depth sampler
 enum class SamplerCompareFunc : uint8_t {
     // don't change the enums values
-    LE = 0, GE, L, G, E, NE, A, N
+    LE = 0,     //!< Less or equal
+    GE,         //!< Greater or equal
+    L,          //!< Strictly less than
+    G,          //!< Strictly greater than
+    E,          //!< Equal
+    NE,         //!< Not equal
+    A,          //!< Always. Depth testing is deactivated.
+    N           //!< Never. The depth test always fails.
 };
 
-struct SamplerParams {
-    enum class no_init { };
-    static constexpr no_init NO_INIT = { };
-
-    constexpr SamplerParams() noexcept : u(0) { }
-    explicit SamplerParams(no_init) noexcept { }
-
+//! Sampler paramters
+struct SamplerParams { // NOLINT
     union {
         struct {
-            SamplerMagFilter filterMag      : 1;    // NEAREST
-            SamplerMinFilter filterMin      : 3;    // NEAREST
-            SamplerWrapMode wrapS           : 2;    // CLAMP_TO_EDGE
-            SamplerWrapMode wrapT           : 2;    // CLAMP_TO_EDGE
+            SamplerMagFilter filterMag      : 1;    //!< magnification filter (NEAREST)
+            SamplerMinFilter filterMin      : 3;    //!< minification filter  (NEAREST)
+            SamplerWrapMode wrapS           : 2;    //!< s-coordinate wrap mode (CLAMP_TO_EDGE)
+            SamplerWrapMode wrapT           : 2;    //!< t-coordinate wrap mode (CLAMP_TO_EDGE)
 
-            SamplerWrapMode wrapR           : 2;    // CLAMP_TO_EDGE
-            uint8_t anisotropyLog2          : 3;    // 0
-            SamplerCompareMode compareMode  : 1;    // NONE
-            bool depthStencil               : 1;    // false
-            uint8_t padding0                : 1;    // 0
+            SamplerWrapMode wrapR           : 2;    //!< r-coordinate wrap mode (CLAMP_TO_EDGE)
+            uint8_t anisotropyLog2          : 3;    //!< anisotropy level (0)
+            SamplerCompareMode compareMode  : 1;    //!< sampler compare mode (NONE)
+            uint8_t padding0                : 2;    //!< reserved. must be 0.
 
-            SamplerCompareFunc compareFunc  : 3;    // LE
-            uint8_t padding1                : 5;    // 0
+            SamplerCompareFunc compareFunc  : 3;    //!< sampler comparison function (LE)
+            uint8_t padding1                : 5;    //!< reserved. must be 0.
 
-            uint8_t padding2                : 8;    // 0
+            uint8_t padding2                : 8;    //!< reserved. must be 0.
         };
         uint32_t u;
     };
@@ -646,43 +600,56 @@ private:
 
 static_assert(sizeof(SamplerParams) == sizeof(uint32_t), "SamplerParams must be 32 bits");
 
+//! blending equation function
 enum class BlendEquation : uint8_t {
-    ADD, SUBTRACT, REVERSE_SUBTRACT, MIN, MAX
+    ADD,                    //!< the fragment is added to the color buffer
+    SUBTRACT,               //!< the fragment is subtracted from the color buffer
+    REVERSE_SUBTRACT,       //!< the color buffer is subtracted from the fragment
+    MIN,                    //!< the min between the fragment and color buffer
+    MAX                     //!< the max between the fragment and color buffer
 };
 
+//! blending function
 enum class BlendFunction : uint8_t {
-    ZERO, ONE,
-    SRC_COLOR, ONE_MINUS_SRC_COLOR,
-    DST_COLOR, ONE_MINUS_DST_COLOR,
-    SRC_ALPHA, ONE_MINUS_SRC_ALPHA,
-    DST_ALPHA, ONE_MINUS_DST_ALPHA,
-    SRC_ALPHA_SATURATE
+    ZERO,                   //!< f(src, dst) = 0
+    ONE,                    //!< f(src, dst) = 1
+    SRC_COLOR,              //!< f(src, dst) = src
+    ONE_MINUS_SRC_COLOR,    //!< f(src, dst) = 1-src
+    DST_COLOR,              //!< f(src, dst) = dst
+    ONE_MINUS_DST_COLOR,    //!< f(src, dst) = 1-dst
+    SRC_ALPHA,              //!< f(src, dst) = src.a
+    ONE_MINUS_SRC_ALPHA,    //!< f(src, dst) = 1-src.a
+    DST_ALPHA,              //!< f(src, dst) = dst.a
+    ONE_MINUS_DST_ALPHA,    //!< f(src, dst) = 1-dst.a
+    SRC_ALPHA_SATURATE      //!< f(src, dst) = (1,1,1) * min(src.a, 1 - dst.a), 1
 };
 
-static constexpr size_t PIPELINE_STAGE_COUNT = 2;
-enum ShaderType : uint8_t {
-    VERTEX = 0,
-    FRAGMENT = 1
+//! Stream for external textures
+enum class StreamType {
+    NATIVE,     //!< Not synchronized but copy-free. Good for video.
+    TEXTURE_ID, //!< Synchronized, but GL-only and incurs copies. Good for AR on devices before API 26.
+    ACQUIRED,   //!< Synchronized, copy-free, and take a release callback. Good for AR but requires API 26+.
 };
 
+//! Releases an ACQUIRED external texture, guaranteed to be called on the application thread.
+using StreamCallback = void(*)(void* image, void* user);
 
+//! Vertex attribute descriptor
 struct Attribute {
+    //! attribute is normalized (remapped between 0 and 1)
     static constexpr uint8_t FLAG_NORMALIZED     = 0x1;
+    //! attribute is an integer
     static constexpr uint8_t FLAG_INTEGER_TARGET = 0x2;
-    uint32_t offset = 0;
-    uint8_t stride = 0;
-    uint8_t buffer = 0xFF;
-    ElementType type = ElementType::BYTE;
-    uint8_t flags = 0x0;
+    uint32_t offset = 0;                    //!< attribute offset in bytes
+    uint8_t stride = 0;                     //!< attribute stride in bytes
+    uint8_t buffer = 0xFF;                  //!< attribute buffer index
+    ElementType type = ElementType::BYTE;   //!< attribute element type
+    uint8_t flags = 0x0;                    //!< attribute flags
 };
 
 using AttributeArray = std::array<Attribute, MAX_VERTEX_ATTRIBUTE_COUNT>;
 
-struct PolygonOffset {
-    float slope = 0;        // factor in GL-speak
-    float constant = 0;     // units in GL-speak
-};
-
+//! Raster state descriptor
 struct RasterState {
 
     using CullingMode = filament::backend::CullingMode;
@@ -690,7 +657,7 @@ struct RasterState {
     using BlendEquation = filament::backend::BlendEquation;
     using BlendFunction = filament::backend::BlendFunction;
 
-    RasterState() noexcept { // NOLINT(cppcoreguidelines-pro-type-member-init)
+    RasterState() noexcept { // NOLINT
         static_assert(sizeof(RasterState) == sizeof(uint32_t),
                 "RasterState size not what was intended");
         culling = CullingMode::BACK;
@@ -728,25 +695,116 @@ struct RasterState {
 
     union {
         struct {
+            //! culling mode
             CullingMode culling                 : 2;        //  2
+
+            //! blend equation for the red, green and blue components
             BlendEquation blendEquationRGB      : 3;        //  5
+            //! blend equation for the alpha component
             BlendEquation blendEquationAlpha    : 3;        //  8
+
+            //! blending function for the source color
             BlendFunction blendFunctionSrcRGB   : 4;        // 12
+            //! blending function for the source alpha
             BlendFunction blendFunctionSrcAlpha : 4;        // 16
+            //! blending function for the destination color
             BlendFunction blendFunctionDstRGB   : 4;        // 20
+            //! blending function for the destination alpha
             BlendFunction blendFunctionDstAlpha : 4;        // 24
+
+            //! Whether depth-buffer writes are enabled
             bool depthWrite                     : 1;        // 25
+            //! Depth test function
             DepthFunc depthFunc                 : 3;        // 28
+
+            //! Whether color-buffer writes are enabled
             bool colorWrite                     : 1;        // 29
+
+            //! use alpha-channel as coverage mask for anti-aliasing
             bool alphaToCoverage                : 1;        // 30
+
+            //! whether front face winding direction must be inverted
             bool inverseFrontFaces              : 1;        // 31
+
+            //! padding, must be 0
             uint8_t padding                     : 1;        // 32
         };
         uint32_t u = 0;
     };
 };
 
+/**
+ **********************************************************************************************
+ * \privatesection
+ */
+
+enum ShaderType : uint8_t {
+    VERTEX = 0,
+    FRAGMENT = 1
+};
+static constexpr size_t PIPELINE_STAGE_COUNT = 2;
+
+/**
+ * Selects which buffers to clear at the beginning of the render pass, as well as which buffers
+ * can be discarded at the beginning and end of the render pass.
+ *
+ */
+struct RenderPassFlags {
+    /**
+     * bitmask indicating which buffers to clear at the beginning of a render pass.
+     * This implies discard.
+     */
+    TargetBufferFlags clear;
+
+    /**
+     * bitmask indicating which buffers to discard at the beginning of a render pass.
+     * Discarded buffers have uninitialized content, they must be entirely drawn over or cleared.
+     */
+    TargetBufferFlags discardStart;
+
+    /**
+     * bitmask indicating which buffers to discard at the end of a render pass.
+     * Discarded buffers' content becomes invalid, they must not be read from again.
+     */
+    TargetBufferFlags discardEnd;
+
+    //! whether to ignore the scissor test during the clear operation
+    bool ignoreScissor;
+};
+
+/**
+ * Parameters of a render pass.
+ */
+struct RenderPassParams {
+    RenderPassFlags flags{};    //!< operations performed on the buffers for this pass
+
+    Viewport viewport{};        //!< viewport for this pass
+
+    //! Color to use to clear the COLOR buffer. RenderPassFlags::clear must be set.
+    filament::math::float4 clearColor = {};
+
+    //! Depth value to clear the depth buffer with
+    double clearDepth = 1.0;
+
+    //! Stencil value to clear the stencil buffer with
+    uint32_t clearStencil = 0;
+
+    //! reserved, must be zero
+    uint32_t reserved1 = 0;
+};
+
+struct PolygonOffset {
+    float slope = 0;        // factor in GL-speak
+    float constant = 0;     // units in GL-speak
+};
+
+
 } // namespace backend
 } // namespace filament
+
+template<> struct utils::EnableBitMaskOperators<filament::backend::TargetBufferFlags>
+        : public std::true_type {};
+template<> struct utils::EnableBitMaskOperators<filament::backend::TextureUsage>
+        : public std::true_type {};
 
 #endif // TNT_FILAMENT_DRIVER_DRIVERENUMS_H

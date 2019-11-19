@@ -49,7 +49,7 @@ extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_gltfio_FilamentAsset_nGetBoundingBox(JNIEnv* env, jclass,
         jlong nativeAsset, jfloatArray result) {
     FilamentAsset* asset = (FilamentAsset*) nativeAsset;
-    float* values = (float*) env->GetFloatArrayElements(result, nullptr);
+    float* values = env->GetFloatArrayElements(result, nullptr);
     const filament::Aabb box = asset->getBoundingBox();
     const float3 center = box.center();
     const float3 extent = box.extent();
@@ -59,15 +59,40 @@ Java_com_google_android_filament_gltfio_FilamentAsset_nGetBoundingBox(JNIEnv* en
     values[3] = extent.x;
     values[4] = extent.y;
     values[5] = extent.z;
-    env->ReleaseFloatArrayElements(result, (jfloat*) values, 0);
+    env->ReleaseFloatArrayElements(result, values, 0);
 }
 
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_google_android_filament_gltfio_FilamentAsset_nGetName(JNIEnv* env, jclass,
         jlong nativeAsset, jint entityId) {
-    uint32_t id = entityId;
+    uint32_t id = static_cast<uint32_t>(entityId);
     Entity* entity = (Entity*) &id;
     FilamentAsset* asset = (FilamentAsset*) nativeAsset;
     const char* val = asset->getName(*entity);
     return val ? env->NewStringUTF(val) : nullptr;
+}
+
+extern "C" JNIEXPORT jlong JNICALL
+Java_com_google_android_filament_gltfio_FilamentAsset_nGetAnimator(JNIEnv* , jclass,
+        jlong nativeAsset) {
+    FilamentAsset* asset = (FilamentAsset*) nativeAsset;
+    return (jlong) asset->getAnimator();
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_google_android_filament_gltfio_FilamentAsset_nGetResourceUriCount(JNIEnv*, jclass,
+                                                                           jlong nativeAsset) {
+    FilamentAsset* asset = (FilamentAsset*) nativeAsset;
+    return (jint) asset->getResourceUriCount();
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_gltfio_FilamentAsset_nGetResourceUris(JNIEnv* env, jclass,
+                                                                       jlong nativeAsset,
+                                                                       jobjectArray result) {
+    FilamentAsset* asset = (FilamentAsset*) nativeAsset;
+    auto resourceUris = asset->getResourceUris();
+    for (int i = 0; i < asset->getResourceUriCount(); ++i) {
+        env->SetObjectArrayElement(result, (jsize) i, env->NewStringUTF(resourceUris[i]));
+    }
 }

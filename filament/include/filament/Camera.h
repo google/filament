@@ -180,7 +180,7 @@ public:
      * @param aspect       aspect ratio \f$ \frac{width}{height} \f$. \p aspect > 0.
      * @param near         distance in world units from the camera to the near plane. \p near > 0.
      * @param far          distance in world units from the camera to the far plane. \p far > \p near.
-     * @param direction    direction of the \p fov parameter.
+     * @param direction    direction of the \p fovInDegrees parameter.
      *
      * @see Fov.
      */
@@ -294,7 +294,7 @@ public:
     //! Returns the entity representing this camera
     utils::Entity getEntity() const noexcept;
 
-    /** Sets this camera's exposure (default is 16, 1/125s, 100 ISO)
+    /** Sets this camera's exposure (default is f/16, 1/125s, 100 ISO)
      *
      * The exposure ultimately controls the scene's brightness, just like with a real camera.
      * The default values provide adequate exposure for a camera placed outdoors on a sunny day
@@ -316,9 +316,23 @@ public:
      * With the default parameters, the scene must contain at least one Light of intensity
      * similar to the sun (e.g.: a 100,000 lux directional light).
      *
-     * @see Light, Exposure
+     * @see LightManager, Exposure
      */
     void setExposure(float aperture, float shutterSpeed, float sensitivity) noexcept;
+
+    /** Sets this camera's exposure directly. Calling this method will set the aperture
+     * to 1.0, the shutter speed to 1.2 and the sensitivity will be computed to match
+     * the requested exposure (for a desired exposure of 1.0, the sensitivity will be
+     * set to 100 ISO).
+     *
+     * This method is useful when trying to match the lighting of other engines or tools.
+     * Many engines/tools use unit-less light intensities, which can be matched by setting
+     * the exposure manually. This can be typically achieved by setting the exposure to
+     * 1.0.
+     */
+    void setExposure(float exposure) noexcept {
+        setExposure(1.0f, 1.2f, 100.0f * (1.0f / exposure));
+    }
 
     //! returns this camera's aperture in f-stops
     float getAperture() const noexcept;

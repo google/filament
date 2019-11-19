@@ -43,6 +43,11 @@ FMaterialInstance::FMaterialInstance() noexcept = default;
 
 FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material) {
     mMaterial = material;
+
+    // We inherit the resolved culling mode rather than the builder-set culling mode.
+    // This preserves the property whereby double-sidedness automatically disables culling.
+    mCulling = mMaterial->getRasterState().culling;
+
     mMaterialSortingKey = RenderPass::makeMaterialSortingKey(
             material->getId(), material->generateMaterialInstanceId());
 
@@ -64,6 +69,11 @@ FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material)
 // This version is used to initialize the default material instance
 void FMaterialInstance::initDefaultInstance(FEngine& engine, FMaterial const* material) {
     mMaterial = material;
+
+    // We inherit the resolved culling mode rather than the builder-set culling mode.
+    // This preserves the property whereby double-sidedness automatically disables culling.
+    mCulling = mMaterial->getRasterState().culling;
+
     mMaterialSortingKey = RenderPass::makeMaterialSortingKey(
             material->getId(), material->generateMaterialInstanceId());
 
@@ -153,45 +163,52 @@ void FMaterialInstance::setDoubleSided(bool doubleSided) noexcept {
         return;
     }
     setParameter("_doubleSided", doubleSided);
+    if (doubleSided) {
+        setCullingMode(CullingMode::NONE);
+    }
+}
+
+void FMaterialInstance::setCullingMode(CullingMode culling) noexcept {
+    mCulling = culling;
 }
 
 // explicit template instantiation of our supported types
-template UTILS_NOINLINE void FMaterialInstance::setParameter<bool>    (const char* name, bool     v);
-template UTILS_NOINLINE void FMaterialInstance::setParameter<float>   (const char* name, float    v);
-template UTILS_NOINLINE void FMaterialInstance::setParameter<int32_t> (const char* name, int32_t  v);
-template UTILS_NOINLINE void FMaterialInstance::setParameter<uint32_t>(const char* name, uint32_t v);
-template UTILS_NOINLINE void FMaterialInstance::setParameter<bool2>   (const char* name, bool2    v);
-template UTILS_NOINLINE void FMaterialInstance::setParameter<bool3>   (const char* name, bool3    v);
-template UTILS_NOINLINE void FMaterialInstance::setParameter<bool4>   (const char* name, bool4    v);
-template UTILS_NOINLINE void FMaterialInstance::setParameter<int2>    (const char* name, int2     v);
-template UTILS_NOINLINE void FMaterialInstance::setParameter<int3>    (const char* name, int3     v);
-template UTILS_NOINLINE void FMaterialInstance::setParameter<int4>    (const char* name, int4     v);
-template UTILS_NOINLINE void FMaterialInstance::setParameter<uint2>   (const char* name, uint2    v);
-template UTILS_NOINLINE void FMaterialInstance::setParameter<uint3>   (const char* name, uint3    v);
-template UTILS_NOINLINE void FMaterialInstance::setParameter<uint4>   (const char* name, uint4    v);
-template UTILS_NOINLINE void FMaterialInstance::setParameter<float2>  (const char* name, float2   v);
-template UTILS_NOINLINE void FMaterialInstance::setParameter<float3>  (const char* name, float3   v);
-template UTILS_NOINLINE void FMaterialInstance::setParameter<float4>  (const char* name, float4   v);
-template UTILS_NOINLINE void FMaterialInstance::setParameter<mat3f>   (const char* name, mat3f    v);
-template UTILS_NOINLINE void FMaterialInstance::setParameter<mat4f>   (const char* name, mat4f    v);
-template UTILS_NOINLINE void FMaterialInstance::setParameter<bool>    (const char* name, const bool     *v, size_t c);
-template UTILS_NOINLINE void FMaterialInstance::setParameter<float>   (const char* name, const float    *v, size_t c);
-template UTILS_NOINLINE void FMaterialInstance::setParameter<int32_t> (const char* name, const int32_t  *v, size_t c);
-template UTILS_NOINLINE void FMaterialInstance::setParameter<uint32_t>(const char* name, const uint32_t *v, size_t c);
-template UTILS_NOINLINE void FMaterialInstance::setParameter<bool2>   (const char* name, const bool2    *v, size_t c);
-template UTILS_NOINLINE void FMaterialInstance::setParameter<bool3>   (const char* name, const bool3    *v, size_t c);
-template UTILS_NOINLINE void FMaterialInstance::setParameter<bool4>   (const char* name, const bool4    *v, size_t c);
-template UTILS_NOINLINE void FMaterialInstance::setParameter<int2>    (const char* name, const int2     *v, size_t c);
-template UTILS_NOINLINE void FMaterialInstance::setParameter<int3>    (const char* name, const int3     *v, size_t c);
-template UTILS_NOINLINE void FMaterialInstance::setParameter<int4>    (const char* name, const int4     *v, size_t c);
-template UTILS_NOINLINE void FMaterialInstance::setParameter<uint2>   (const char* name, const uint2    *v, size_t c);
-template UTILS_NOINLINE void FMaterialInstance::setParameter<uint3>   (const char* name, const uint3    *v, size_t c);
-template UTILS_NOINLINE void FMaterialInstance::setParameter<uint4>   (const char* name, const uint4    *v, size_t c);
-template UTILS_NOINLINE void FMaterialInstance::setParameter<float2>  (const char* name, const float2   *v, size_t c);
-template UTILS_NOINLINE void FMaterialInstance::setParameter<float3>  (const char* name, const float3   *v, size_t c);
-template UTILS_NOINLINE void FMaterialInstance::setParameter<float4>  (const char* name, const float4   *v, size_t c);
-template UTILS_NOINLINE void FMaterialInstance::setParameter<mat3f>   (const char* name, const mat3f    *v, size_t c);
-template UTILS_NOINLINE void FMaterialInstance::setParameter<mat4f>   (const char* name, const mat4f    *v, size_t c);
+template UTILS_NOINLINE void FMaterialInstance::setParameter<bool>    (const char* name, bool     v) noexcept;
+template UTILS_NOINLINE void FMaterialInstance::setParameter<float>   (const char* name, float    v) noexcept;
+template UTILS_NOINLINE void FMaterialInstance::setParameter<int32_t> (const char* name, int32_t  v) noexcept;
+template UTILS_NOINLINE void FMaterialInstance::setParameter<uint32_t>(const char* name, uint32_t v) noexcept;
+template UTILS_NOINLINE void FMaterialInstance::setParameter<bool2>   (const char* name, bool2    v) noexcept;
+template UTILS_NOINLINE void FMaterialInstance::setParameter<bool3>   (const char* name, bool3    v) noexcept;
+template UTILS_NOINLINE void FMaterialInstance::setParameter<bool4>   (const char* name, bool4    v) noexcept;
+template UTILS_NOINLINE void FMaterialInstance::setParameter<int2>    (const char* name, int2     v) noexcept;
+template UTILS_NOINLINE void FMaterialInstance::setParameter<int3>    (const char* name, int3     v) noexcept;
+template UTILS_NOINLINE void FMaterialInstance::setParameter<int4>    (const char* name, int4     v) noexcept;
+template UTILS_NOINLINE void FMaterialInstance::setParameter<uint2>   (const char* name, uint2    v) noexcept;
+template UTILS_NOINLINE void FMaterialInstance::setParameter<uint3>   (const char* name, uint3    v) noexcept;
+template UTILS_NOINLINE void FMaterialInstance::setParameter<uint4>   (const char* name, uint4    v) noexcept;
+template UTILS_NOINLINE void FMaterialInstance::setParameter<float2>  (const char* name, float2   v) noexcept;
+template UTILS_NOINLINE void FMaterialInstance::setParameter<float3>  (const char* name, float3   v) noexcept;
+template UTILS_NOINLINE void FMaterialInstance::setParameter<float4>  (const char* name, float4   v) noexcept;
+template UTILS_NOINLINE void FMaterialInstance::setParameter<mat3f>   (const char* name, mat3f    v) noexcept;
+template UTILS_NOINLINE void FMaterialInstance::setParameter<mat4f>   (const char* name, mat4f    v) noexcept;
+template UTILS_NOINLINE void FMaterialInstance::setParameter<bool>    (const char* name, const bool     *v, size_t c) noexcept;
+template UTILS_NOINLINE void FMaterialInstance::setParameter<float>   (const char* name, const float    *v, size_t c) noexcept;
+template UTILS_NOINLINE void FMaterialInstance::setParameter<int32_t> (const char* name, const int32_t  *v, size_t c) noexcept;
+template UTILS_NOINLINE void FMaterialInstance::setParameter<uint32_t>(const char* name, const uint32_t *v, size_t c) noexcept;
+template UTILS_NOINLINE void FMaterialInstance::setParameter<bool2>   (const char* name, const bool2    *v, size_t c) noexcept;
+template UTILS_NOINLINE void FMaterialInstance::setParameter<bool3>   (const char* name, const bool3    *v, size_t c) noexcept;
+template UTILS_NOINLINE void FMaterialInstance::setParameter<bool4>   (const char* name, const bool4    *v, size_t c) noexcept;
+template UTILS_NOINLINE void FMaterialInstance::setParameter<int2>    (const char* name, const int2     *v, size_t c) noexcept;
+template UTILS_NOINLINE void FMaterialInstance::setParameter<int3>    (const char* name, const int3     *v, size_t c) noexcept;
+template UTILS_NOINLINE void FMaterialInstance::setParameter<int4>    (const char* name, const int4     *v, size_t c) noexcept;
+template UTILS_NOINLINE void FMaterialInstance::setParameter<uint2>   (const char* name, const uint2    *v, size_t c) noexcept;
+template UTILS_NOINLINE void FMaterialInstance::setParameter<uint3>   (const char* name, const uint3    *v, size_t c) noexcept;
+template UTILS_NOINLINE void FMaterialInstance::setParameter<uint4>   (const char* name, const uint4    *v, size_t c) noexcept;
+template UTILS_NOINLINE void FMaterialInstance::setParameter<float2>  (const char* name, const float2   *v, size_t c) noexcept;
+template UTILS_NOINLINE void FMaterialInstance::setParameter<float3>  (const char* name, const float3   *v, size_t c) noexcept;
+template UTILS_NOINLINE void FMaterialInstance::setParameter<float4>  (const char* name, const float4   *v, size_t c) noexcept;
+template UTILS_NOINLINE void FMaterialInstance::setParameter<mat3f>   (const char* name, const mat3f    *v, size_t c) noexcept;
+template UTILS_NOINLINE void FMaterialInstance::setParameter<mat4f>   (const char* name, const mat4f    *v, size_t c) noexcept;
 
 } // namespace details
 
@@ -212,42 +229,42 @@ void MaterialInstance::setParameter(const char* name, const T* value, size_t cou
 }
 
 // explicit template instantiation of our supported types
-template UTILS_PUBLIC void MaterialInstance::setParameter<bool>    (const char* name, bool     v);
-template UTILS_PUBLIC void MaterialInstance::setParameter<float>   (const char* name, float    v);
-template UTILS_PUBLIC void MaterialInstance::setParameter<int32_t> (const char* name, int32_t  v);
-template UTILS_PUBLIC void MaterialInstance::setParameter<uint32_t>(const char* name, uint32_t v);
-template UTILS_PUBLIC void MaterialInstance::setParameter<bool2>   (const char* name, bool2    v);
-template UTILS_PUBLIC void MaterialInstance::setParameter<bool3>   (const char* name, bool3    v);
-template UTILS_PUBLIC void MaterialInstance::setParameter<bool4>   (const char* name, bool4    v);
-template UTILS_PUBLIC void MaterialInstance::setParameter<int2>    (const char* name, int2     v);
-template UTILS_PUBLIC void MaterialInstance::setParameter<int3>    (const char* name, int3     v);
-template UTILS_PUBLIC void MaterialInstance::setParameter<int4>    (const char* name, int4     v);
-template UTILS_PUBLIC void MaterialInstance::setParameter<uint2>   (const char* name, uint2    v);
-template UTILS_PUBLIC void MaterialInstance::setParameter<uint3>   (const char* name, uint3    v);
-template UTILS_PUBLIC void MaterialInstance::setParameter<uint4>   (const char* name, uint4    v);
-template UTILS_PUBLIC void MaterialInstance::setParameter<float2>  (const char* name, float2   v);
-template UTILS_PUBLIC void MaterialInstance::setParameter<float3>  (const char* name, float3   v);
-template UTILS_PUBLIC void MaterialInstance::setParameter<float4>  (const char* name, float4   v);
-template UTILS_PUBLIC void MaterialInstance::setParameter<mat3f>   (const char* name, mat3f    v);
-template UTILS_PUBLIC void MaterialInstance::setParameter<mat4f>   (const char* name, mat4f    v);
-template UTILS_PUBLIC void MaterialInstance::setParameter<bool>    (const char* name, const bool     *v, size_t c);
-template UTILS_PUBLIC void MaterialInstance::setParameter<float>   (const char* name, const float    *v, size_t c);
-template UTILS_PUBLIC void MaterialInstance::setParameter<int32_t> (const char* name, const int32_t  *v, size_t c);
-template UTILS_PUBLIC void MaterialInstance::setParameter<uint32_t>(const char* name, const uint32_t *v, size_t c);
-template UTILS_PUBLIC void MaterialInstance::setParameter<bool2>   (const char* name, const bool2    *v, size_t c);
-template UTILS_PUBLIC void MaterialInstance::setParameter<bool3>   (const char* name, const bool3    *v, size_t c);
-template UTILS_PUBLIC void MaterialInstance::setParameter<bool4>   (const char* name, const bool4    *v, size_t c);
-template UTILS_PUBLIC void MaterialInstance::setParameter<int2>    (const char* name, const int2     *v, size_t c);
-template UTILS_PUBLIC void MaterialInstance::setParameter<int3>    (const char* name, const int3     *v, size_t c);
-template UTILS_PUBLIC void MaterialInstance::setParameter<int4>    (const char* name, const int4     *v, size_t c);
-template UTILS_PUBLIC void MaterialInstance::setParameter<uint2>   (const char* name, const uint2    *v, size_t c);
-template UTILS_PUBLIC void MaterialInstance::setParameter<uint3>   (const char* name, const uint3    *v, size_t c);
-template UTILS_PUBLIC void MaterialInstance::setParameter<uint4>   (const char* name, const uint4    *v, size_t c);
-template UTILS_PUBLIC void MaterialInstance::setParameter<float2>  (const char* name, const float2   *v, size_t c);
-template UTILS_PUBLIC void MaterialInstance::setParameter<float3>  (const char* name, const float3   *v, size_t c);
-template UTILS_PUBLIC void MaterialInstance::setParameter<float4>  (const char* name, const float4   *v, size_t c);
-template UTILS_PUBLIC void MaterialInstance::setParameter<mat3f>   (const char* name, const mat3f    *v, size_t c);
-template UTILS_PUBLIC void MaterialInstance::setParameter<mat4f>   (const char* name, const mat4f    *v, size_t c);
+template UTILS_PUBLIC void MaterialInstance::setParameter<bool>    (const char* name, bool     v) noexcept;
+template UTILS_PUBLIC void MaterialInstance::setParameter<float>   (const char* name, float    v) noexcept;
+template UTILS_PUBLIC void MaterialInstance::setParameter<int32_t> (const char* name, int32_t  v) noexcept;
+template UTILS_PUBLIC void MaterialInstance::setParameter<uint32_t>(const char* name, uint32_t v) noexcept;
+template UTILS_PUBLIC void MaterialInstance::setParameter<bool2>   (const char* name, bool2    v) noexcept;
+template UTILS_PUBLIC void MaterialInstance::setParameter<bool3>   (const char* name, bool3    v) noexcept;
+template UTILS_PUBLIC void MaterialInstance::setParameter<bool4>   (const char* name, bool4    v) noexcept;
+template UTILS_PUBLIC void MaterialInstance::setParameter<int2>    (const char* name, int2     v) noexcept;
+template UTILS_PUBLIC void MaterialInstance::setParameter<int3>    (const char* name, int3     v) noexcept;
+template UTILS_PUBLIC void MaterialInstance::setParameter<int4>    (const char* name, int4     v) noexcept;
+template UTILS_PUBLIC void MaterialInstance::setParameter<uint2>   (const char* name, uint2    v) noexcept;
+template UTILS_PUBLIC void MaterialInstance::setParameter<uint3>   (const char* name, uint3    v) noexcept;
+template UTILS_PUBLIC void MaterialInstance::setParameter<uint4>   (const char* name, uint4    v) noexcept;
+template UTILS_PUBLIC void MaterialInstance::setParameter<float2>  (const char* name, float2   v) noexcept;
+template UTILS_PUBLIC void MaterialInstance::setParameter<float3>  (const char* name, float3   v) noexcept;
+template UTILS_PUBLIC void MaterialInstance::setParameter<float4>  (const char* name, float4   v) noexcept;
+template UTILS_PUBLIC void MaterialInstance::setParameter<mat3f>   (const char* name, mat3f    v) noexcept;
+template UTILS_PUBLIC void MaterialInstance::setParameter<mat4f>   (const char* name, mat4f    v) noexcept;
+template UTILS_PUBLIC void MaterialInstance::setParameter<bool>    (const char* name, const bool     *v, size_t c) noexcept;
+template UTILS_PUBLIC void MaterialInstance::setParameter<float>   (const char* name, const float    *v, size_t c) noexcept;
+template UTILS_PUBLIC void MaterialInstance::setParameter<int32_t> (const char* name, const int32_t  *v, size_t c) noexcept;
+template UTILS_PUBLIC void MaterialInstance::setParameter<uint32_t>(const char* name, const uint32_t *v, size_t c) noexcept;
+template UTILS_PUBLIC void MaterialInstance::setParameter<bool2>   (const char* name, const bool2    *v, size_t c) noexcept;
+template UTILS_PUBLIC void MaterialInstance::setParameter<bool3>   (const char* name, const bool3    *v, size_t c) noexcept;
+template UTILS_PUBLIC void MaterialInstance::setParameter<bool4>   (const char* name, const bool4    *v, size_t c) noexcept;
+template UTILS_PUBLIC void MaterialInstance::setParameter<int2>    (const char* name, const int2     *v, size_t c) noexcept;
+template UTILS_PUBLIC void MaterialInstance::setParameter<int3>    (const char* name, const int3     *v, size_t c) noexcept;
+template UTILS_PUBLIC void MaterialInstance::setParameter<int4>    (const char* name, const int4     *v, size_t c) noexcept;
+template UTILS_PUBLIC void MaterialInstance::setParameter<uint2>   (const char* name, const uint2    *v, size_t c) noexcept;
+template UTILS_PUBLIC void MaterialInstance::setParameter<uint3>   (const char* name, const uint3    *v, size_t c) noexcept;
+template UTILS_PUBLIC void MaterialInstance::setParameter<uint4>   (const char* name, const uint4    *v, size_t c) noexcept;
+template UTILS_PUBLIC void MaterialInstance::setParameter<float2>  (const char* name, const float2   *v, size_t c) noexcept;
+template UTILS_PUBLIC void MaterialInstance::setParameter<float3>  (const char* name, const float3   *v, size_t c) noexcept;
+template UTILS_PUBLIC void MaterialInstance::setParameter<float4>  (const char* name, const float4   *v, size_t c) noexcept;
+template UTILS_PUBLIC void MaterialInstance::setParameter<mat3f>   (const char* name, const mat3f    *v, size_t c) noexcept;
+template UTILS_PUBLIC void MaterialInstance::setParameter<mat4f>   (const char* name, const mat4f    *v, size_t c) noexcept;
 
 void MaterialInstance::setParameter(const char* name, Texture const* texture,
         TextureSampler const& sampler) noexcept {
@@ -289,6 +306,10 @@ void MaterialInstance::setSpecularAntiAliasingThreshold(float threshold) noexcep
 
 void MaterialInstance::setDoubleSided(bool doubleSided) noexcept {
     upcast(this)->setDoubleSided(doubleSided);
+}
+
+void MaterialInstance::setCullingMode(CullingMode culling) noexcept {
+    upcast(this)->setCullingMode(culling);
 }
 
 } // namespace filament

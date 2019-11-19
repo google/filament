@@ -18,6 +18,8 @@ set(PUBLIC_HDRS
 )
 
 set(SRCS
+        src/BackendUtils.cpp
+        src/Callable.cpp
         src/CircularBuffer.cpp
         src/CommandBufferQueue.cpp
         src/CommandStream.cpp
@@ -32,6 +34,7 @@ set(SRCS
 )
 
 set(PRIVATE_HDRS
+        include/private/backend/AcquiredImage.h
         include/private/backend/CircularBuffer.h
         include/private/backend/CommandBufferQueue.h
         include/private/backend/CommandStream.h
@@ -59,6 +62,8 @@ if (NOT USE_EXTERNAL_GLES3)
             src/opengl/GLUtils.h
             src/opengl/OpenGLBlitter.cpp
             src/opengl/OpenGLBlitter.h
+            src/opengl/OpenGLContext.cpp
+            src/opengl/OpenGLContext.h
             src/opengl/OpenGLDriver.cpp
             src/opengl/OpenGLDriver.h
             src/opengl/OpenGLDriverFactory.h
@@ -232,13 +237,22 @@ set(LINUX_COMPILER_FLAGS
         -fPIC
 )
 
-set(FILAMENT_WARNINGS
-        -Wextra -Wno-unused-parameter
-        -Wextra-semi -Wnewline-eof -Wdeprecated -Wundef
-        -Wgnu-conditional-omitted-operand
-        -Wweak-vtables -Wnon-virtual-dtor -Wclass-varargs -Wimplicit-fallthrough
-        -Wover-aligned
-)
+if (NOT MSVC_NATIVE)
+    set(FILAMENT_WARNINGS
+            -Wextra -Wno-unused-parameter
+            -Wextra-semi -Wnewline-eof -Wdeprecated -Wundef
+            -Wgnu-conditional-omitted-operand
+            -Wweak-vtables -Wnon-virtual-dtor -Wclass-varargs -Wimplicit-fallthrough
+            -Wover-aligned
+    )
+else()
+    set(FILAMENT_WARNINGS /W0)
+endif()
+
+if (APPLE)
+    # Turn on Automatic Reference Counting.
+    target_compile_options(${TARGET} PRIVATE "-fobjc-arc")
+endif()
 
 # clang-cl maps -Wall to -Weverything, which clutters logs with benign -Wc++98-compat warnings
 # Use /W4 instead for clang-cl builds
@@ -265,3 +279,74 @@ target_link_libraries(${TARGET} PRIVATE
 set(INSTALL_TYPE ARCHIVE)
 install(TARGETS ${TARGET} ${INSTALL_TYPE} DESTINATION lib/${DIST_DIR})
 install(DIRECTORY ${PUBLIC_HDR_DIR}/backend DESTINATION include)
+
+# ==================================================================================================
+# Test
+# ==================================================================================================
+option(INSTALL_BACKEND_TEST "Install the backend test library so it can be consumed on iOS" OFF)
+
+if (APPLE)
+    add_library(backend_test STATIC
+        test/BackendTest.cpp
+        test/ShaderGenerator.cpp
+        test/TrianglePrimitive.cpp
+        test/Arguments.cpp
+        test/test_MissingRequiredAttributes.cpp
+        test/test_ReadPixels.cpp)
+
+    target_link_libraries(backend_test PRIVATE
+        backend
+        filabridge
+        getopt
+        gtest
+        SPIRV
+        spirv-cross-glsl)
+
+    set(BACKEND_TEST_DEPS
+            OGLCompiler
+            OSDependent
+            SPIRV
+            SPIRV-Tools
+            SPIRV-Tools-opt
+            backend_test
+            filabridge
+            getopt
+            gtest
+            glslang
+            spirv-cross-core
+            spirv-cross-glsl
+            spirv-cross-msl
+            )
+
+    set(BACKEND_TEST_COMBINED_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/libbackendtest_combined.a")
+    combine_static_libs(backend_test "${BACKEND_TEST_COMBINED_OUTPUT}" "${BACKEND_TEST_DEPS}")
+
+    set(BACKEND_TEST_LIB_NAME ${CMAKE_STATIC_LIBRARY_PREFIX}backend_test${CMAKE_STATIC_LIBRARY_SUFFIX})
+
+    if (INSTALL_BACKEND_TEST)
+        install(FILES "${BACKEND_TEST_COMBINED_OUTPUT}" DESTINATION lib/${DIST_DIR} RENAME ${BACKEND_TEST_LIB_NAME})
+        install(FILES test/PlatformRunner.h DESTINATION include/backend_test)
+    endif()
+endif()
+
+if (APPLE AND NOT IOS)
+    add_executable(backend_test_mac test/mac_runner.mm)
+    target_link_libraries(backend_test_mac PRIVATE "-framework Metal -framework AppKit -framework QuartzCore")
+    # Because each test case is a separate file, the -force_load flag is necessary to prevent the
+    # linker from removing "unused" symbols.
+    target_link_libraries(backend_test_mac PRIVATE -force_load backend_test)
+endif()
+
+if (APPLE AND NOT Vulkan_LIBRARY)
+    message(STATUS "No Vulkan SDK was found, using prebuilt MoltenVK.")
+    set(MOLTENVK_DIR "../../third_party/moltenvk")
+    configure_file(
+            ${MOLTENVK_DIR}/libvulkan.1.dylib
+            ${PROJECT_BINARY_DIR}/libvulkan.1.dylib COPYONLY)
+    configure_file(
+            ${MOLTENVK_DIR}/MoltenVK_icd.json
+            ${PROJECT_BINARY_DIR}/MoltenVK_icd.json COPYONLY)
+    configure_file(
+            ${MOLTENVK_DIR}/libMoltenVK.dylib
+            ${PROJECT_BINARY_DIR}/libMoltenVK.dylib COPYONLY)
+endif()

@@ -134,7 +134,7 @@ int main(int argc, char** argv) {
     App app;
 
     app.config.title = "Filament";
-    app.config.iblDirectory = FilamentApp::getRootPath() + DEFAULT_IBL;
+    app.config.iblDirectory = FilamentApp::getRootAssetsPath() + DEFAULT_IBL;
 
     int option_index = handleCommandLineArguments(argc, argv, &app);
     utils::Path filename;
@@ -193,12 +193,12 @@ int main(int argc, char** argv) {
 
     auto loadResources = [&app] (utils::Path filename) {
         // Load external textures and buffers.
-        gltfio::ResourceLoader({
-            .engine = app.engine,
-            .gltfPath = filename.getAbsolutePath(),
-            .normalizeSkinningWeights = true,
-            .recomputeBoundingBoxes = false
-        }).loadResources(app.asset);
+        ResourceConfiguration configuration;
+        configuration.engine = app.engine;
+        configuration.gltfPath = filename.getAbsolutePath();
+        configuration.normalizeSkinningWeights = true;
+        configuration.recomputeBoundingBoxes = false;
+        gltfio::ResourceLoader(configuration).loadResources(app.asset);
 
         // Load animation data then free the source hierarchy.
         app.asset->getAnimator();
@@ -243,7 +243,6 @@ int main(int argc, char** argv) {
     };
 
     auto cleanup = [&app](Engine* engine, View*, Scene*) {
-        Fence::waitAndDestroy(engine->createFence());
         delete app.viewer;
         app.loader->destroyAsset(app.asset);
         app.materials->destroyMaterials();

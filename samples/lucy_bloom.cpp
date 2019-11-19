@@ -368,7 +368,6 @@ static void cleanup(LucyApp& app, Engine* engine) {
 
     engine->destroy(app.finalCamera);
 
-    Fence::waitAndDestroy(engine->createFence());
     app.loader->destroyAsset(app.asset);
     app.materials->destroyMaterials();
     delete app.materials;
@@ -376,11 +375,11 @@ static void cleanup(LucyApp& app, Engine* engine) {
 };
 
 int main(int argc, char** argv) {
-    static const char* DEFAULT_IBL = "envs/pillars";
+    static const char* DEFAULT_IBL = "venetian_crossroads_2k";
 
     LucyApp app;
     app.config.title = "Lucy";
-    app.config.iblDirectory = FilamentApp::getRootPath() + DEFAULT_IBL;
+    app.config.iblDirectory = FilamentApp::getRootAssetsPath() + DEFAULT_IBL;
     app.config.resizeable = false;
     app.showQuads = true;
     app.showImgui = true;

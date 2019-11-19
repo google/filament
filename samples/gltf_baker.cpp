@@ -668,7 +668,7 @@ int main(int argc, char** argv) {
     strncpy(app.exportOptions.bentNormalsPath, "bentNormals.png", PATH_SIZE);
 
     app.config.title = "gltf_baker";
-    app.config.iblDirectory = FilamentApp::getRootPath() + DEFAULT_IBL;
+    app.config.iblDirectory = FilamentApp::getRootAssetsPath() + DEFAULT_IBL;
 
     utils::Path filename;
     int option_index = handleCommandLineArguments(argc, argv, &app);
@@ -936,8 +936,6 @@ int main(int argc, char** argv) {
         AssetLoader::destroy(&app.loader);
         std::cout << "Destroying NameComponentManager..." << std::endl;
         delete app.names;
-
-        Fence::waitAndDestroy(engine->createFence());
     };
 
     auto animate = [&app](Engine* engine, View* view, double now) {

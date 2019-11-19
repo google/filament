@@ -27,7 +27,7 @@ float cospi(float p);
 
 float nan(int p);
 
-#if __cplusplus < 201103L
+#if !defined(_MSC_VER) && (__cplusplus < 201103L)
 float fmax(float p, float q);
 float fmin(float p, float q);
 #endif  // C++11

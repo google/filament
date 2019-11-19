@@ -33,6 +33,10 @@ else()
     target_compile_options(${TARGET} PRIVATE -ffast-math)
 endif()
 
+if (MSVC)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W0 /Zc:__cplusplus")
+endif()
+
 # =================================================================================================
 # Licenses
 # ==================================================================================================

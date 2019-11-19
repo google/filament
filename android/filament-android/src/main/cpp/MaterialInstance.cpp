@@ -316,3 +316,11 @@ Java_com_google_android_filament_MaterialInstance_nSetDoubleSided(JNIEnv*,
     MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
     instance->setDoubleSided(doubleSided);
 }
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_MaterialInstance_nSetCullingMode(JNIEnv*,
+        jclass, jlong nativeMaterialInstance, jlong cullingMode) {
+    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+    instance->setCullingMode((MaterialInstance::CullingMode) cullingMode);
+}

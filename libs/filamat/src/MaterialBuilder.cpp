@@ -41,6 +41,8 @@
 #include "eiff/DictionaryTextChunk.h"
 #include "eiff/DictionarySpirvChunk.h"
 
+#include "Includes.h"
+
 #ifndef FILAMAT_LITE
 #include "GLSLPostProcessor.h"
 #include "sca/GLSLTools.h"
@@ -78,7 +80,7 @@ void MaterialBuilderBase::prepare() {
             TargetLanguage::SPIRV : TargetLanguage::GLSL;
 
     // Select OpenGL as the default TargetApi if none was specified.
-    if (mTargetApi == (TargetApi) 0) {
+    if (none(mTargetApi)) {
         mTargetApi = TargetApi::OPENGL;
     }
 
@@ -88,13 +90,13 @@ void MaterialBuilderBase::prepare() {
         if (!mShaderModels.test(i)) {
             continue; // skip this shader model since it was not requested.
         }
-        if (mTargetApi & TargetApi::OPENGL) {
+        if (any(mTargetApi & TargetApi::OPENGL)) {
             mCodeGenPermutations.push_back({i, TargetApi::OPENGL, glTargetLanguage});
         }
-        if (mTargetApi & TargetApi::VULKAN) {
+        if (any(mTargetApi & TargetApi::VULKAN)) {
             mCodeGenPermutations.push_back({i, TargetApi::VULKAN, TargetLanguage::SPIRV});
         }
-        if (mTargetApi & TargetApi::METAL) {
+        if (any(mTargetApi & TargetApi::METAL)) {
             mCodeGenPermutations.push_back({i, TargetApi::METAL, TargetLanguage::SPIRV});
         }
     }
@@ -125,14 +127,19 @@ MaterialBuilder& MaterialBuilder::name(const char* name) noexcept {
 }
 
 MaterialBuilder& MaterialBuilder::material(const char* code, size_t line) noexcept {
-    mMaterialCode = CString(code);
-    mMaterialLineOffset = line;
+    mMaterialCode.setUnresolved(CString(code));
+    mMaterialCode.setLineOffset(line);
+    return *this;
+}
+
+MaterialBuilder& MaterialBuilder::includeCallback(IncludeCallback callback) noexcept {
+    mIncludeCallback = callback;
     return *this;
 }
 
 MaterialBuilder& MaterialBuilder::materialVertex(const char* code, size_t line) noexcept {
-    mMaterialVertexCode = CString(code);
-    mMaterialVertexLineOffset = line;
+    mMaterialVertexCode.setUnresolved(CString(code));
+    mMaterialVertexCode.setLineOffset(line);
     return *this;
 }
 
@@ -390,36 +397,51 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     info.specularAOSet = mSpecularAOSet;
 }
 
-bool MaterialBuilder::findProperties() noexcept {
+bool MaterialBuilder::findProperties(filament::backend::ShaderType type,
+        MaterialBuilder::PropertyList& allProperties) noexcept {
+#ifndef FILAMAT_LITE
+    // Use the first permutation to generate the shader code.
+    assert(!mCodeGenPermutations.empty());
+    CodeGenParams params = mCodeGenPermutations[0];
+
+    GLSLTools glslTools;
+    std::string shaderCodeAllProperties = peek(type, params, allProperties);
+    // Populate mProperties with the properties set in the shader.
+    if (!glslTools.findProperties(type, shaderCodeAllProperties, mProperties, params.targetApi,
+            ShaderModel(params.shaderModel))) {
+        return false;
+    }
+    return true;
+#else
+    return false;
+#endif
+}
+
+bool MaterialBuilder::findAllProperties() noexcept {
     if (mMaterialDomain != MaterialDomain::SURFACE) {
         return true;
     }
 
-#ifndef FILAMAT_LITE
     using namespace filament::backend;
-    GLSLTools glslTools;
 
+#ifndef FILAMAT_LITE
     // Some fields in MaterialInputs only exist if the property is set (e.g: normal, subsurface
     // for cloth shading model). Give our shader all properties. This will enable us to parse and
     // static code analyse the AST.
     MaterialBuilder::PropertyList allProperties;
     std::fill_n(allProperties, MATERIAL_PROPERTIES_COUNT, true);
 
-    // Use the first permutation to generate the shader code.
-    assert(!mCodeGenPermutations.empty());
-    CodeGenParams params = mCodeGenPermutations[0];
-    std::string shaderCodeAllProperties = peek(ShaderType::FRAGMENT, params, allProperties);
-
-    // Populate mProperties with the properties set in the shader.
-    if (!glslTools.findProperties(shaderCodeAllProperties, mProperties, params.targetApi,
-                ShaderModel(params.shaderModel))) {
-        return false;
-    }
+    findProperties(ShaderType::FRAGMENT, allProperties);
+    findProperties(ShaderType::VERTEX, allProperties);
 
     return true;
 #else
     GLSLToolsLite glslTools;
-    return glslTools.findProperties(mMaterialCode, mProperties);
+    if (glslTools.findProperties(ShaderType::FRAGMENT, mMaterialCode.getResolved(), mProperties)) {
+        return glslTools.findProperties(
+                ShaderType::VERTEX, mMaterialVertexCode.getResolved(), mProperties);
+    }
+    return false;
 #endif
 }
 
@@ -467,6 +489,17 @@ bool MaterialBuilder::checkLiteRequirements() noexcept {
     return true;
 }
 
+bool MaterialBuilder::ShaderCode::resolveIncludes(IncludeCallback callback) noexcept {
+    if (!mCode.empty()) {
+        if (!::filamat::resolveIncludes(utils::CString(""), mCode, callback)) {
+            return false;
+        }
+    }
+
+    mIncludesResolved = true;
+    return true;
+}
+
 static void showErrorMessage(const char* materialName, uint8_t variant,
         MaterialBuilder::TargetApi targetApi, filament::backend::ShaderType shaderType,
         const std::string& shaderCode) {
@@ -505,10 +538,11 @@ bool MaterialBuilder::generateShaders(const std::vector<Variant>& variants, Chun
     std::vector<uint32_t> spirv;
     std::string msl;
 
-    ShaderGenerator sg(mProperties, mVariables, mMaterialCode, mMaterialLineOffset,
-            mMaterialVertexCode, mMaterialVertexLineOffset, mMaterialDomain);
+    ShaderGenerator sg(mProperties, mVariables, mMaterialCode.getResolved(),
+            mMaterialCode.getLineOffset(), mMaterialVertexCode.getResolved(),
+            mMaterialVertexCode.getLineOffset(), mMaterialDomain);
 
-    bool emptyVertexCode = mMaterialVertexCode.empty();
+    bool emptyVertexCode = mMaterialVertexCode.getResolved().empty();
     bool customDepth = sg.hasCustomDepthShader() ||
             mBlendingMode == BlendingMode::MASKED || !emptyVertexCode;
     container.addSimpleChild<bool>(ChunkType::MaterialHasCustomDepthShader, customDepth);
@@ -630,6 +664,12 @@ Package MaterialBuilder::build() noexcept {
         return Package::invalidPackage();
     }
 
+    // Resolve all the #include directives within user code.
+    if (!mMaterialCode.resolveIncludes(mIncludeCallback) ||
+        !mMaterialVertexCode.resolveIncludes(mIncludeCallback)) {
+        return Package::invalidPackage();
+    }
+
     // prepareToBuild must be called first, to populate mCodeGenPermutations.
     MaterialInfo info;
     prepareToBuild(info);
@@ -637,7 +677,7 @@ Package MaterialBuilder::build() noexcept {
     // Run checks, in order.
     // The call to findProperties populates mProperties and must come before runSemanticAnalysis.
     if (!checkLiteRequirements() ||
-        !findProperties() ||
+        !findAllProperties() ||
         !runSemanticAnalysis()) {
         // Return an empty package to signal a failure to build the material.
         return Package::invalidPackage();
@@ -671,9 +711,9 @@ Package MaterialBuilder::build() noexcept {
 
 const std::string MaterialBuilder::peek(filament::backend::ShaderType type,
         const CodeGenParams& params, const PropertyList& properties) noexcept {
-
-    ShaderGenerator sg(properties, mVariables, mMaterialCode, mMaterialLineOffset,
-            mMaterialVertexCode, mMaterialVertexLineOffset, mMaterialDomain);
+    ShaderGenerator sg(properties, mVariables, mMaterialCode.getResolved(),
+            mMaterialCode.getLineOffset(), mMaterialVertexCode.getResolved(),
+            mMaterialVertexCode.getLineOffset(), mMaterialDomain);
 
     MaterialInfo info;
     prepareToBuild(info);

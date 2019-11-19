@@ -91,12 +91,14 @@ public:
     FilamentApp& operator=(const FilamentApp& rhs) = delete;
     FilamentApp& operator=(FilamentApp&& rhs) = delete;
 
-    // Returns the path to the Filament root for loading assets. This is determined from the
-    // executable folder, which allows users to launch samples from any folder.
-    static const utils::Path& getRootPath() {
-        static const utils::Path root = utils::Path::getCurrentExecutable().getParent();
-        return root;
-    }
+    /**
+     * Returns the path to the Filament root for loading assets. This is determined from the
+     * executable folder, which allows users to launch samples from any folder.
+     *
+     * This takes into account multi-configuration CMake generators, like Visual Studio or Xcode,
+     * that have different executable paths compared to single-configuration generators, like Ninja.
+     */
+    static const utils::Path& getRootAssetsPath();
 
 private:
     FilamentApp();

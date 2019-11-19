@@ -341,8 +341,11 @@ void createSwapChain(VulkanContext& context, VulkanSurfaceContext& surfaceContex
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkGetSwapchainImagesKHR error.");
     for (size_t i = 0; i < images.size(); ++i) {
         surfaceContext.swapContexts[i].attachment = {
+            .format = surfaceContext.surfaceFormat.format,
             .image = images[i],
-            .format = surfaceContext.surfaceFormat.format
+            .view = {},
+            .memory = {},
+            .offscreen = {}
         };
     }
     utils::slog.i
@@ -459,13 +462,13 @@ void acquireSwapCommandBuffer(VulkanContext& context) {
     // Restart the command buffer.
     VkCommandBuffer cmdbuffer = swap.commands.cmdbuffer;
     VkResult error = vkResetCommandBuffer(cmdbuffer, 0);
-    ASSERT_POSTCONDITION(not error, "vkResetCommandBuffer error.");
+    ASSERT_POSTCONDITION(!error, "vkResetCommandBuffer error.");
     VkCommandBufferBeginInfo beginInfo {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
         .flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT,
     };
     error = vkBeginCommandBuffer(cmdbuffer, &beginInfo);
-    ASSERT_POSTCONDITION(not error, "vkBeginCommandBuffer error.");
+    ASSERT_POSTCONDITION(!error, "vkBeginCommandBuffer error.");
     context.currentCommands = &swap.commands;
 }
 

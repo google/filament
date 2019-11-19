@@ -34,8 +34,8 @@ namespace {
 
 class MaterialGenerator : public MaterialProvider {
 public:
-    MaterialGenerator(filament::Engine* engine);
-    ~MaterialGenerator();
+    explicit MaterialGenerator(filament::Engine* engine);
+    ~MaterialGenerator() override;
 
     MaterialSource getSource() const noexcept override { return GENERATE_SHADERS; }
 
@@ -76,7 +76,7 @@ void MaterialGenerator::destroyMaterials() {
     mCache.clear();
 }
 
-static std::string shaderFromKey(const MaterialKey& config) {
+std::string shaderFromKey(const MaterialKey& config) {
     std::string shader = "void material(inout MaterialInputs material) {\n";
 
     if (config.hasNormalTexture && !config.unlit) {
@@ -195,7 +195,7 @@ static std::string shaderFromKey(const MaterialKey& config) {
     return shader;
 }
 
-static Material* createMaterial(Engine* engine, const MaterialKey& config, const UvMap& uvmap,
+Material* createMaterial(Engine* engine, const MaterialKey& config, const UvMap& uvmap,
         const char* name) {
     std::string shader = shaderFromKey(config);
     gltfio::details::processShaderString(&shader, uvmap, config);
@@ -203,22 +203,8 @@ static Material* createMaterial(Engine* engine, const MaterialKey& config, const
             .name(name)
             .flipUV(false)
             .material(shader.c_str())
-            .doubleSided(config.doubleSided);
-
-    switch (engine->getBackend()) {
-        case Engine::Backend::OPENGL:
-            builder.targetApi(MaterialBuilder::TargetApi::OPENGL);
-            break;
-        case Engine::Backend::VULKAN:
-            builder.targetApi(MaterialBuilder::TargetApi::VULKAN);
-            break;
-        case Engine::Backend::METAL:
-            builder.targetApi(MaterialBuilder::TargetApi::METAL);
-            break;
-        default:
-            slog.e << "Unresolved backend, unable to use filamat." << io::endl;
-            return nullptr;
-    }
+            .doubleSided(config.doubleSided)
+            .targetApi(filamat::targetApiFromBackend(engine->getBackend()));
 
 #ifndef NDEBUG
     builder.optimization(MaterialBuilder::Optimization::NONE);
@@ -294,7 +280,7 @@ static Material* createMaterial(Engine* engine, const MaterialKey& config, const
         }
     }
 
-    switch(config.alphaMode) {
+    switch (config.alphaMode) {
         case AlphaMode::OPAQUE:
             builder.blending(MaterialBuilder::BlendingMode::OPAQUE);
             break;
@@ -304,6 +290,10 @@ static Material* createMaterial(Engine* engine, const MaterialKey& config, const
         case AlphaMode::BLEND:
             builder.blending(MaterialBuilder::BlendingMode::FADE);
             builder.depthWrite(true);
+            break;
+        default:
+            // Ignore
+            break;
     }
 
     if (config.unlit) {

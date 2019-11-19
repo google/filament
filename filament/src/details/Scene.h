@@ -95,26 +95,28 @@ public:
      */
 
     enum {
-        RENDERABLE_INSTANCE,    //  4 instance of the Renderable component
-        WORLD_TRANSFORM,        // 16 instance of the Transform component
-        VISIBILITY_STATE,       //  1 visibility data of the component
-        BONES_UBH,              //  4 bones uniform buffer handle
-        WORLD_AABB_CENTER,      // 12 world-space bounding box center of the renderable
-        VISIBLE_MASK,           //  1 each bit represents a visibility in a pass
-        MORPH_WEIGHTS,          //  4 floats for morphing
+        RENDERABLE_INSTANCE,    //  4 | instance of the Renderable component
+        WORLD_TRANSFORM,        // 16 | instance of the Transform component
+        REVERSED_WINDING_ORDER, //  1 | det(WORLD_TRANSFORM)<0
+        VISIBILITY_STATE,       //  1 | visibility data of the component
+        BONES_UBH,              //  4 | bones uniform buffer handle
+        WORLD_AABB_CENTER,      // 12 | world-space bounding box center of the renderable
+        VISIBLE_MASK,           //  1 | each bit represents a visibility in a pass
+        MORPH_WEIGHTS,          //  4 | floats for morphing
 
         // These are not needed anymore after culling
-        LAYERS,                 //  1 layers
-        WORLD_AABB_EXTENT,      // 12 world-space bounding box half-extent of the renderable
+        LAYERS,                 //  1 | layers
+        WORLD_AABB_EXTENT,      // 12 | world-space bounding box half-extent of the renderable
 
         // These are temporaries and should be stored out of line
-        PRIMITIVES,             //  8 level-of-detail'ed primitives
-        SUMMED_PRIMITIVE_COUNT, //  4 summed visible primitive counts
+        PRIMITIVES,             //  8 | level-of-detail'ed primitives
+        SUMMED_PRIMITIVE_COUNT, //  4 | summed visible primitive counts
     };
 
     using RenderableSoa = utils::StructureOfArrays<
             utils::EntityInstance<RenderableManager>,   // RENDERABLE_INSTANCE
             math::mat4f,                                // WORLD_TRANSFORM
+            bool,                                       // REVERSED_WINDING_ORDER
             FRenderableManager::Visibility,             // VISIBILITY_STATE
             backend::Handle<backend::HwUniformBuffer>,  // BONES_UBH
             math::float3,                               // WORLD_AABB_CENTER

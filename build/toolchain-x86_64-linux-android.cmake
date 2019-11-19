@@ -30,15 +30,12 @@ set(DIST_ARCH x86_64)
 # toolchain
 string(TOLOWER ${CMAKE_HOST_SYSTEM_NAME} HOST_NAME_L)
 file(TO_CMAKE_PATH $ENV{ANDROID_HOME} ANDROID_HOME_UNIX)
-if (EXISTS ${ANDROID_HOME_UNIX}/ndk-bundle)
-    set(TOOLCHAIN ${ANDROID_HOME_UNIX}/ndk-bundle/toolchains/llvm/prebuilt/${HOST_NAME_L}-x86_64)
-else()
-    file(GLOB NDK_VERSIONS LIST_DIRECTORIES true ${ANDROID_HOME_UNIX}/ndk/*)
-    list(SORT NDK_VERSIONS)
-    list(GET NDK_VERSIONS -1 NDK_VERSION)
-    get_filename_component(NDK_VERSION ${NDK_VERSION} NAME)
-    set(TOOLCHAIN ${ANDROID_HOME_UNIX}/ndk/${NDK_VERSION}/toolchains/llvm/prebuilt/${HOST_NAME_L}-x86_64)
-endif()
+
+file(GLOB NDK_VERSIONS LIST_DIRECTORIES true ${ANDROID_HOME_UNIX}/ndk/*)
+list(SORT NDK_VERSIONS)
+list(GET NDK_VERSIONS -1 NDK_VERSION)
+get_filename_component(NDK_VERSION ${NDK_VERSION} NAME)
+set(TOOLCHAIN ${ANDROID_HOME_UNIX}/ndk/${NDK_VERSION}/toolchains/llvm/prebuilt/${HOST_NAME_L}-x86_64)
 
 # specify the cross compiler
 set(COMPILER_SUFFIX)

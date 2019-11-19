@@ -257,6 +257,8 @@ public:
     const_iterator cbegin() const noexcept { return begin(); }
     const_iterator cend() const noexcept { return end(); }
 
+    CString& replace(size_type pos, size_type len, const CString& str) noexcept;
+
     const_reference operator[](size_type pos) const noexcept {
         assert(pos < size());
         return begin()[pos];

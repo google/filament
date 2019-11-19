@@ -70,7 +70,8 @@ bool Path::isDirectory() const {
 Path Path::concat(const Path& path) const {
     if (path.isEmpty()) return *this;
     if (path.isAbsolute()) return path;
-    if (m_path.back() != SEPARATOR && !m_path.empty()) {
+    // std::string::back() is UB if the string is empty, so we rely on short-circuit evaluation
+    if (!m_path.empty() && m_path.back() != SEPARATOR) {
         return Path(m_path + SEPARATOR + path.getPath());
     }
     return Path(m_path + path.getPath());
@@ -80,7 +81,8 @@ void Path::concatToSelf(const Path& path)  {
     if (!path.isEmpty()) {
         if (path.isAbsolute()) {
             m_path = path.getPath();
-        } else if (m_path.back() != SEPARATOR) {
+        // std::string::back() is UB if the string is empty, so we rely on short-circuit evaluation
+        } else if (!m_path.empty() && m_path.back() != SEPARATOR) {
             m_path = getCanonicalPath(m_path + SEPARATOR + path.getPath());
         } else {
             m_path = getCanonicalPath(m_path + path.getPath());

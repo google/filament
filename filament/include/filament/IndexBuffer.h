@@ -42,7 +42,7 @@ class Engine;
  * The buffer itself is a GPU resource, therefore mutating the data can be relatively slow.
  * Typically these buffers are constant.
  *
- * It is possible, and even encouraged, to use a single index buffer for several Renderable.
+ * It is possible, and even encouraged, to use a single index buffer for several Renderables.
  *
  * @see VertexBuffer, RenderableManager
  */
@@ -71,7 +71,7 @@ public:
         Builder& operator=(Builder&& rhs) noexcept;
 
         /**
-         * Size of the index buffer in element.
+         * Size of the index buffer in elements.
          * @param indexCount Number of indices the IndexBuffer can hold.
          * @return A reference to this Builder for chaining calls.
          */
@@ -110,7 +110,7 @@ public:
      * @param engine Reference to the filament::Engine to associate this IndexBuffer with.
      * @param buffer A BufferDescriptor representing the data used to initialize the IndexBuffer.
      *               BufferDescriptor points to raw, untyped data that will be interpreted as
-     *               either 16-bit or 32-bits indices baed on the Type of this IndexBuffer.
+     *               either 16-bit or 32-bits indices based on the Type of this IndexBuffer.
      * @param byteOffset Offset in *bytes* into the IndexBuffer
      */
     void setBuffer(Engine& engine, BufferDescriptor&& buffer, uint32_t byteOffset = 0);

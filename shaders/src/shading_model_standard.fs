@@ -101,6 +101,8 @@ vec3 surfaceShading(const PixelParams pixel, const Light light, float occlusion)
     vec3 Fr = specularLobe(pixel, light, h, NoV, NoL, NoH, LoH);
     vec3 Fd = diffuseLobe(pixel, NoV, NoL, LoH);
 
+    // TODO: attenuate the diffuse lobe to avoid energy gain
+
 #if defined(MATERIAL_HAS_CLEAR_COAT)
     float Fcc;
     float clearCoat = clearCoatLobe(pixel, h, NoH, LoH, Fcc);
@@ -110,7 +112,7 @@ vec3 surfaceShading(const PixelParams pixel, const Light light, float occlusion)
     float attenuation = 1.0 - Fcc;
 
 #if defined(MATERIAL_HAS_NORMAL) || defined(MATERIAL_HAS_CLEAR_COAT_NORMAL)
-    vec3 color = (Fd + Fr * (pixel.energyCompensation * attenuation)) * attenuation * NoL;
+    vec3 color = (Fd + Fr * pixel.energyCompensation) * attenuation * NoL;
 
     // If the material has a normal map, we want to use the geometric normal
     // instead to avoid applying the normal map details to the clear coat layer
@@ -121,7 +123,7 @@ vec3 surfaceShading(const PixelParams pixel, const Light light, float occlusion)
     return (color * light.colorIntensity.rgb) *
             (light.colorIntensity.w * light.attenuation * occlusion);
 #else
-    vec3 color = (Fd + Fr * (pixel.energyCompensation * attenuation)) * attenuation + clearCoat;
+    vec3 color = (Fd + Fr * pixel.energyCompensation) * attenuation + clearCoat;
 #endif
 #else
     // The energy compensation term is used to counteract the darkening effect

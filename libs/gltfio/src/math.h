@@ -95,15 +95,15 @@ inline filament::math::mat4f composeMatrix(const filament::math::float3& transla
     float sz = scale[2];
     return filament::math::mat4f(
         (1 - 2 * qy*qy - 2 * qz*qz) * sx,
-        (2 * qx*qy + 2 * qz*qw) * sy,
-        (2 * qx*qz - 2 * qy*qw) * sz,
+        (2 * qx*qy + 2 * qz*qw) * sx,
+        (2 * qx*qz - 2 * qy*qw) * sx,
         0.f,
-        (2 * qx*qy - 2 * qz*qw) * sx,
+        (2 * qx*qy - 2 * qz*qw) * sy,
         (1 - 2 * qx*qx - 2 * qz*qz) * sy,
-        (2 * qy*qz + 2 * qx*qw) * sz,
+        (2 * qy*qz + 2 * qx*qw) * sy,
         0.f,
-        (2 * qx*qz + 2 * qy*qw) * sx,
-        (2 * qy*qz - 2 * qx*qw) * sy,
+        (2 * qx*qz + 2 * qy*qw) * sz,
+        (2 * qy*qz - 2 * qx*qw) * sz,
         (1 - 2 * qx*qx - 2 * qy*qy) * sz,
         0.f, tx, ty, tz, 1.f);
 }

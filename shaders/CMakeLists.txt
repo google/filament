@@ -18,14 +18,10 @@ set(SHADERS
         src/common_lighting.fs
         src/common_material.fs
         src/common_math.fs
-        src/common_post_process.fs
         src/common_shading.fs
         src/common_types.fs
-        src/conversion_functions.fs
         src/depth_main.fs
         src/depth_main.vs
-        src/dithering.fs
-        src/fxaa.fs
         src/getters.fs
         src/getters.vs
         src/inputs.fs
@@ -39,8 +35,9 @@ set(SHADERS
         src/material_inputs.vs
         src/post_process.fs
         src/post_process.vs
-        src/post_process_old.fs
-        src/post_process_old.vs
+        src/post_process_getters.vs
+        src/post_process_inputs.fs
+        src/post_process_inputs.vs
         src/shading_lit.fs
         src/shading_model_cloth.fs
         src/shading_model_standard.fs
@@ -48,8 +45,15 @@ set(SHADERS
         src/shading_parameters.fs
         src/shading_unlit.fs
         src/shadowing.fs
-        src/shadowing.vs
-        src/tone_mapping.fs)
+        src/shadowing.vs)
+
+# These files aren't part of libshaders, but are included by materials inside
+# filament/src/materials:
+#
+# fxaa.fs
+# tone_mapping.fs
+# conversion_functions.fs
+# dithering.fs
 
 set(MINIFIED_DIR ${CMAKE_CURRENT_BINARY_DIR}/minified)
 

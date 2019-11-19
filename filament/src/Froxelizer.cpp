@@ -195,11 +195,8 @@ bool Froxelizer::prepare(
     assert(mLightRecords.begin());
     assert(mFroxelShardedData.begin());
 
-#ifndef NDEBUG
-    memset(mFroxelBufferUser.data(),    0x55, mFroxelBufferUser.sizeInBytes());
-    memset(mRecordBufferUser.data(),    0xEB, mRecordBufferUser.sizeInBytes());
-    memset(mFroxelShardedData.data(),   0xFD, mFroxelShardedData.sizeInBytes());
-#endif
+    // initialize buffers that need to be
+    memset(mLightRecords.data(), 0, mLightRecords.sizeInBytes());
 
     return uniformsNeedUpdating;
 }
@@ -685,11 +682,12 @@ void Froxelizer::froxelizeAssignRecordsCompress() noexcept {
         }
 
         // We have a limitation of 255 spot + 255 point lights per froxel.
-        FroxelEntry entry = {
-                .offset = offset,
-                .pointLightCount = (uint8_t)std::min(size_t(255), (b.lights & ~spotLights).count()),
-                .spotLightCount  = (uint8_t)std::min(size_t(255), (b.lights &  spotLights).count())
-        };
+        // note: initializer list for union cannot have more than one element
+        FroxelEntry entry; 
+        entry.offset = offset;
+        entry.pointLightCount = (uint8_t)std::min(size_t(255), (b.lights & ~spotLights).count());
+        entry.spotLightCount  = (uint8_t)std::min(size_t(255), (b.lights &  spotLights).count());
+
         const size_t lightCount = entry.count[0] + entry.count[1];
 
         if (UTILS_UNLIKELY(offset + lightCount >= RECORD_BUFFER_ENTRY_COUNT)) {

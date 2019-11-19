@@ -138,9 +138,10 @@ public:
     VertexDomain getVertexDomain() const noexcept;
 
     //! Returns the material domain of this material.
+    //! The material domain determines how the material is used.
     MaterialDomain getMaterialDomain() const noexcept;
 
-    //! Returns the culling mode of this material.
+    //! Returns the default culling mode of this material.
     CullingMode getCullingMode() const noexcept;
 
     //! Returns the transparency mode of this material.

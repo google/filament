@@ -234,4 +234,12 @@ TEST(AlgorithmTest, Partition) {
 
     r = utils::partition_point(std::begin(array), std::end(array), [](int i) { return i < 2; });
     EXPECT_EQ(std::begin(array), r);
+
+    int array7[7] = { 2, 5, 4, 8, 9, 9, 9 };
+    r = utils::partition_point(std::begin(array7), std::end(array7), [](int i) { return i < 9; });
+    EXPECT_EQ(4, r - std::begin(array7));
+
+    int array9[9] = { 2, 5, 4, 8, 9, 9, 9, 9, 9 };
+    r = utils::partition_point(std::begin(array9), std::end(array9), [](int i) { return i < 9; });
+    EXPECT_EQ(4, r - std::begin(array9));
 }

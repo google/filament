@@ -157,26 +157,30 @@ public class Camera {
      * @param projection    type of projection to use
      *
      * @param left          distance in world units from the camera to the left plane,
-     *                      at the near plane. Precondition: left != right.
+     *                      at the near plane. Precondition: <code>left</code> != <code>right</code>
      *
      * @param right         distance in world units from the camera to the right plane,
-     *                      at the near plane. Precondition: left != right.
+     *                      at the near plane. Precondition: <code>left</code> != <code>right</code>
      *
      * @param bottom        distance in world units from the camera to the bottom plane,
-     *                      at the near plane. Precondition: bottom != top.
+     *                      at the near plane. Precondition: <code>bottom</code> != <code>top</code>
      *
      * @param top           distance in world units from the camera to the top plane,
-     *                      at the near plane. Precondition: left != right.
+     *                      at the near plane. Precondition: <code>bottom</code> != <code>top</code>
      *
      * @param near          distance in world units from the camera to the near plane.
-     *                      The near plane's position in view space is z = -near.
-     *                      Precondition: near > 0 for {@link Projection#PERSPECTIVE} or
-     *                                    near != far for {@link Projection#ORTHO}.
+     *                      The near plane's position in view space is z = -<code>near</code>.
+     *                      Precondition:
+     *                      <code>near</code> > 0 for {@link Projection#PERSPECTIVE} or
+     *                      <code>near</code> != <code>far</code> for {@link Projection#ORTHO}.
      *
      * @param far           distance in world units from the camera to the far plane.
-     *                      The far plane's position in view space is z = -far.
-     *                      Precondition: far > near for {@link Projection#PERSPECTIVE} or
-     *                                    far != near for {@link Projection#ORTHO}.
+     *                      The far plane's position in view space is z = -<code>far</code>.
+     *                      Precondition:
+     *                      <code>far</code> > <code>near</code>
+     *                              for {@link Projection#PERSPECTIVE} or
+     *                      <code>far</code> != <code>near</code>
+     *                              for {@link Projection#ORTHO}.
      *
      * <p>
      * These parameters are silently modified to meet the preconditions above.
@@ -189,12 +193,32 @@ public class Camera {
     }
 
     /**
+     * Sets the projection matrix from the field-of-view.
      *
-     * @param fovInDegrees
-     * @param aspect
-     * @param near
-     * @param far
-     * @param direction
+     * @param fovInDegrees  field-of-view in degrees from the camera center axis.
+     *                      0 < <code>fovInDegrees</code> < 180
+     *
+     * @param aspect        aspect ratio width/height. <code>aspect</code> > 0
+     *
+     * @param near          distance in world units from the camera to the near plane.
+     *                      The near plane's position in view space is z = -<code>near</code>.
+     *                      Precondition:
+     *                      <code>near</code> > 0 for {@link Projection#PERSPECTIVE} or
+     *                      <code>near</code> != <code>far</code> for {@link Projection#ORTHO}.
+     *
+     * @param far           distance in world units from the camera to the far plane.
+     *                      The far plane's position in view space is z = -<code>far</code>.
+     *                      Precondition:
+     *                      <code>far</code> > <code>near</code>
+     *                              for {@link Projection#PERSPECTIVE} or
+     *                      <code>far</code> != <code>near</code>
+     *                              for {@link Projection#ORTHO}.
+     *
+     * @param direction    direction of the field-of-view parameter.
+     * <p>
+     * These parameters are silently modified to meet the preconditions above.
+     *
+     * @see Fov
      */
     public void setProjection(double fovInDegrees, double aspect, double near, double far,
             @NonNull Fov direction) {
@@ -202,47 +226,86 @@ public class Camera {
     }
 
     /**
+     * Sets the projection matrix from the focal length
      *
-     * @param focalLength
-     * @param near
-     * @param far
+     * @param focalLength   lense's focal length in millimeters. <code>focalLength</code> > 0
+     *
+     * @param near          distance in world units from the camera to the near plane.
+     *                      The near plane's position in view space is z = -<code>near</code>.
+     *                      Precondition:
+     *                      <code>near</code> > 0 for {@link Projection#PERSPECTIVE} or
+     *                      <code>near</code> != <code>far</code> for {@link Projection#ORTHO}.
+     *
+     * @param far           distance in world units from the camera to the far plane.
+     *                      The far plane's position in view space is z = -<code>far</code>.
+     *                      Precondition:
+     *                      <code>far</code> > <code>near</code>
+     *                              for {@link Projection#PERSPECTIVE} or
+     *                      <code>far</code> != <code>near</code>
+     *                              for {@link Projection#ORTHO}.
+     *
      */
     public void setLensProjection(double focalLength, double near, double far) {
         nSetLensProjection(getNativeObject(), focalLength, near, far);
     }
 
     /**
+     * Sets the projection matrix.
      *
-     * @param inMatrix
-     * @param near
-     * @param far
+     * @param inMatrix      custom projection matrix.
+     *
+     * @param near          distance in world units from the camera to the near plane.
+     *                      The near plane's position in view space is z = -<code>near</code>.
+     *                      Precondition:
+     *                      <code>near</code> > 0 for {@link Projection#PERSPECTIVE} or
+     *                      <code>near</code> != <code>far</code> for {@link Projection#ORTHO}.
+     *
+     * @param far           distance in world units from the camera to the far plane.
+     *                      The far plane's position in view space is z = -<code>far</code>.
+     *                      Precondition:
+     *                      <code>far</code> > <code>near</code>
+     *                              for {@link Projection#PERSPECTIVE} or
+     *                      <code>far</code> != <code>near</code>
+     *                              for {@link Projection#ORTHO}.
      */
-    public void setCustomProjection(@NonNull @Size(min = 16) double inMatrix[],
+    public void setCustomProjection(@NonNull @Size(min = 16) double[] inMatrix,
             double near, double far) {
         Asserts.assertMat4dIn(inMatrix);
         nSetCustomProjection(getNativeObject(), inMatrix, near, far);
     }
 
     /**
+     * Sets the camera's view matrix.
+     * <p>
+     * Helper method to set the camera's entity transform component.
+     * Remember that the Camera "looks" towards its -z axis.
+     * <p>
+     * This has the same effect as calling:
      *
-     * @param in
+     * <pre>
+     *  engine.getTransformManager().setTransform(
+     *          engine.getTransformManager().getInstance(camera->getEntity()), viewMatrix);
+     * </pre>
+     *
+     * @param viewMatrix The camera position and orientation provided as a <b>rigid transform</b> matrix.
      */
-    public void setModelMatrix(@NonNull @Size(min = 16) float in[]) {
-        Asserts.assertMat4fIn(in);
-        nSetModelMatrix(getNativeObject(), in);
+    public void setModelMatrix(@NonNull @Size(min = 16) float[] viewMatrix) {
+        Asserts.assertMat4fIn(viewMatrix);
+        nSetModelMatrix(getNativeObject(), viewMatrix);
     }
 
     /**
+     * Sets the camera's view matrix.
      *
-     * @param eyeX
-     * @param eyeY
-     * @param eyeZ
-     * @param centerX
-     * @param centerY
-     * @param centerZ
-     * @param upX
-     * @param upY
-     * @param upZ
+     * @param eyeX      x-axis position of the camera in world space
+     * @param eyeY      y-axis position of the camera in world space
+     * @param eyeZ      z-axis position of the camera in world space
+     * @param centerX   x-axis position of the point in world space the camera is looking at
+     * @param centerY   y-axis position of the point in world space the camera is looking at
+     * @param centerZ   z-axis position of the point in world space the camera is looking at
+     * @param upX       x-axis coordinate of a unit vector denoting the camera's "up" direction
+     * @param upY       y-axis coordinate of a unit vector denoting the camera's "up" direction
+     * @param upZ       z-axis coordinate of a unit vector denoting the camera's "up" direction
      */
     public void lookAt(double eyeX, double eyeY, double eyeZ,
             double centerX, double centerY, double centerZ, double upX, double upY, double upZ) {
@@ -250,16 +313,14 @@ public class Camera {
     }
 
     /**
-     *
-     * @return Distance to the near plane.
+     * @return Distance to the near plane
      */
     public float getNear() {
         return nGetNear(getNativeObject());
     }
 
     /**
-     *
-     * @return Distance to the far plane.
+     * @return Distance to the far plane
      */
     public float getCullingFar() {
         return nGetCullingFar(getNativeObject());
@@ -267,12 +328,14 @@ public class Camera {
 
     /**
      * Retrieves the camera's projection matrix.
+     *
      * @param out A 16-float array where the projection matrix will be stored, or null in which
      *            case a new array is allocated.
+     *
      * @return A 16-float array containing the camera's projection as a column-major matrix.
      */
     @NonNull @Size(min = 16)
-    public double[] getProjectionMatrix(@Nullable @Size(min = 16) double out[]) {
+    public double[] getProjectionMatrix(@Nullable @Size(min = 16) double[] out) {
         out = Asserts.assertMat4d(out);
         nGetProjectionMatrix(getNativeObject(), out);
         return out;
@@ -281,12 +344,14 @@ public class Camera {
     /**
      * Retrieves the camera's model matrix. The model matrix encodes the camera position and
      * orientation, or pose.
+     *
      * @param out A 16-float array where the model matrix will be stored, or null in which
      *            case a new array is allocated.
+     *
      * @return A 16-float array containing the camera's pose as a column-major matrix.
      */
     @NonNull @Size(min = 16)
-    public float[] getModelMatrix(@Nullable @Size(min = 16) float out[]) {
+    public float[] getModelMatrix(@Nullable @Size(min = 16) float[] out) {
         out = Asserts.assertMat4f(out);
         nGetModelMatrix(getNativeObject(), out);
         return out;
@@ -297,10 +362,11 @@ public class Camera {
      *
      * @param out A 16-float array where the model view will be stored, or null in which
      *            case a new array is allocated.
+     *
      * @return A 16-float array containing the camera's view as a column-major matrix.
      */
     @NonNull @Size(min = 16)
-    public float[] getViewMatrix(@Nullable @Size(min = 16) float out[]) {
+    public float[] getViewMatrix(@Nullable @Size(min = 16) float[] out) {
         out = Asserts.assertMat4f(out);
         nGetViewMatrix(getNativeObject(), out);
         return out;
@@ -308,12 +374,14 @@ public class Camera {
 
     /**
      * Retrieves the camera position in world space.
+     *
      * @param out A 3-float array where the position will be stored, or null in which case a new
      *            array is allocated.
+     *
      * @return A 3-float array containing the camera's position in world units.
      */
     @NonNull @Size(min = 3)
-    public float[] getPosition(@Nullable @Size(min = 3) float out[]) {
+    public float[] getPosition(@Nullable @Size(min = 3) float[] out) {
         out = Asserts.assertFloat3(out);
         nGetPosition(getNativeObject(), out);
         return out;
@@ -322,12 +390,14 @@ public class Camera {
     /**
      * Retrieves the camera left unit vector in world space, that is a unit vector that points to
      * the left of the camera.
+     *
      * @param out A 3-float array where the left vector will be stored, or null in which case a new
      *            array is allocated.
+     *
      * @return A 3-float array containing the camera's left vector in world units.
      */
     @NonNull @Size(min = 3)
-    public float[] getLeftVector(@Nullable @Size(min = 3) float out[]) {
+    public float[] getLeftVector(@Nullable @Size(min = 3) float[] out) {
         out = Asserts.assertFloat3(out);
         nGetLeftVector(getNativeObject(), out);
         return out;
@@ -336,12 +406,14 @@ public class Camera {
     /**
      * Retrieves the camera up unit vector in world space, that is a unit vector that points up with
      * respect to the camera.
+     *
      * @param out A 3-float array where the up vector will be stored, or null in which case a new
      *            array is allocated.
+     *
      * @return A 3-float array containing the camera's up vector in world units.
      */
     @NonNull @Size(min = 3)
-    public float[] getUpVector(@Nullable @Size(min = 3) float out[]) {
+    public float[] getUpVector(@Nullable @Size(min = 3) float[] out) {
         out = Asserts.assertFloat3(out);
         nGetUpVector(getNativeObject(), out);
         return out;
@@ -350,46 +422,83 @@ public class Camera {
     /**
      * Retrieves the camera forward unit vector in world space, that is a unit vector that points
      * in the direction the camera is looking at.
+     *
      * @param out A 3-float array where the forward vector will be stored, or null in which case a
      *           new  array is allocated.
+     *
      * @return A 3-float array containing the camera's forward vector in world units.
      */
     @NonNull @Size(min = 3)
-    public float[] getForwardVector(@Nullable @Size(min = 3) float out[]) {
+    public float[] getForwardVector(@Nullable @Size(min = 3) float[] out) {
         out = Asserts.assertFloat3(out);
         nGetForwardVector(getNativeObject(), out);
         return out;
     }
 
     /**
+     * Sets this camera's exposure (default is f/16, 1/125s, 100 ISO)
      *
-     * @param aperture
-     * @param shutterSpeed
-     * @param sensitivity
+     * The exposure ultimately controls the scene's brightness, just like with a real camera.
+     * The default values provide adequate exposure for a camera placed outdoors on a sunny day
+     * with the sun at the zenith.
+     *
+     * With the default parameters, the scene must contain at least one Light of intensity
+     * similar to the sun (e.g.: a 100,000 lux directional light) and/or an indirect light
+     * of appropriate intensity (30,000).
+     *
+     * @param aperture      Aperture in f-stops, clamped between 0.5 and 64.
+     *                      A lower aperture value increases the exposure, leading to
+     *                      a brighter scene. Realistic values are between 0.95 and 32.
+     *
+     * @param shutterSpeed  Shutter speed in seconds, clamped between 1/25,000 and 60.
+     *                      A lower shutter speed increases the exposure. Realistic values are
+     *                      between 1/8000 and 30.
+     *
+     * @param sensitivity   Sensitivity in ISO, clamped between 10 and 204,800.
+     *                      A higher sensitivity increases the exposure. Realistic values are
+     *                      between 50 and 25600.
+     *
+     * @see LightManager
+     * @see #setExposure(float)
      */
     public void setExposure(float aperture, float shutterSpeed, float sensitivity) {
         nSetExposure(getNativeObject(), aperture, shutterSpeed, sensitivity);
     }
 
     /**
+     * Sets this camera's exposure directly. Calling this method will set the aperture
+     * to 1.0, the shutter speed to 1.2 and the sensitivity will be computed to match
+     * the requested exposure (for a desired exposure of 1.0, the sensitivity will be
+     * set to 100 ISO).
      *
-     * @return
+     * This method is useful when trying to match the lighting of other engines or tools.
+     * Many engines/tools use unit-less light intensities, which can be matched by setting
+     * the exposure manually. This can be typically achieved by setting the exposure to
+     * 1.0.
+     *
+     * @see LightManager
+     * @see #setExposure(float, float, float)
+     */
+    public void setExposure(float exposure) {
+        setExposure(1.0f, 1.2f, 100.0f * (1.0f / exposure));
+    }
+
+    /**
+     * @return Aperture in f-stops
      */
     public float getAperture() {
         return nGetAperture(getNativeObject());
     }
 
     /**
-     *
-     * @return
+     * @return Shutter speed in seconds
      */
     public float getShutterSpeed() {
         return nGetShutterSpeed(getNativeObject());
     }
 
     /**
-     *
-     * @return
+     * @return Sensitivity in ISO
      */
     public float getSensitivity() {
         return nGetSensitivity(getNativeObject());

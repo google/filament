@@ -41,7 +41,7 @@ command. For example, the following command will build for both devices (ARM64) 
 (x86_64) in Debug mode:
 
 ```
-$ ./build.sh -s -p ios debug
+$ ./build.sh -s -p ios -i debug
 ```
 
 When building for the simulator, the sample will then link against the libraries present in

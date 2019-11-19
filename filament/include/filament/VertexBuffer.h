@@ -42,14 +42,14 @@ class Engine;
  * The geometry of the Renderable itself is defined by a set of vertex attributes such as
  * position, color, normals, tangents, etc...
  *
- * There is no need to have a 1-to-1 mapping between attributes and buffer. i.e. a buffer can
- * hold the data of several attributes -- attributes are then referred as being "interleaved".
+ * There is no need to have a 1-to-1 mapping between attributes and buffer. A buffer can hold the
+ * data of several attributes -- attributes are then referred as being "interleaved".
  *
  * The buffers themselves are GPU resources, therefore mutating their data can be relatively slow.
  * For this reason, it is best to separate the constant data from the dynamic data into multiple
  * buffers.
  *
- * It is possible, and even encouraged, to use a single vertex buffer for several Renderable.
+ * It is possible, and even encouraged, to use a single vertex buffer for several Renderables.
  *
  * @see IndexBuffer, RenderableManager
  */
@@ -157,13 +157,13 @@ public:
     /**
      * Asynchronously copy-initializes the specified buffer from the given buffer data.
      *
-     * @param engine Reference to the filament::Engine to associate this IndexBuffer with.
+     * @param engine Reference to the filament::Engine to associate this VertexBuffer with.
      * @param bufferIndex Index of the buffer to initialize. Must be between 0
      *                    and Builder::bufferCount() - 1.
      * @param buffer A BufferDescriptor representing the data used to initialize the buffer at
      *               index \p bufferIndex. BufferDescriptor points to raw, untyped data that will
      *               be copied as-is into the buffer.
-     * @param byteOffset Offset in *byte* into the buffer at index \p bufferIndex of this vertex
+     * @param byteOffset Offset in *bytes* into the buffer at index \p bufferIndex of this vertex
      *                   buffer set.
      */
     void setBufferAt(Engine& engine, uint8_t bufferIndex, BufferDescriptor&& buffer,
@@ -196,9 +196,6 @@ public:
      * Convenience function that consumes normal vectors (and, optionally, tangent vectors) and
      * produces quaternions that can be passed into a TANGENTS buffer.
      *
-     * We may deprecate this method in the future. See also filament::geometry::SurfaceOrientation,
-     * which has additional capabilities.
-     *
      * The given output buffer must be preallocated with at least quatCount * outStride bytes.
      *
      * Normals are required but tangents are optional, in which case this function tries to generate
@@ -209,6 +206,10 @@ public:
      * basis.
      *
      * @param ctx An initialized QuatTangentContext structure.
+     *
+     * @deprecated Instead please use filament::geometry::SurfaceOrientation from libgeometry, it
+     * has additional capabilities and a daisy-chain API. Be sure to explicitly link libgeometry
+     * since its dependency might be removed in future versions of libfilament.
      */
     static void populateTangentQuaternions(const QuatTangentContext& ctx);
 };

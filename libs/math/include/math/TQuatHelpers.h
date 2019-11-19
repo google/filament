@@ -25,6 +25,7 @@
 #include <iostream>
 
 #include <math/compiler.h>
+#include <math/scalar.h>
 #include <math/vec3.h>
 
 namespace filament {
@@ -233,7 +234,7 @@ public:
     friend inline
     QUATERNION<T> MATH_PURE log(const QUATERNION<T>& q) {
         const T nq(norm(q));
-        return QUATERNION<T>((std::acos(q.w / nq) / norm(q.xyz)) * q.xyz, log(nq));
+        return QUATERNION<T>((std::acos(q.w / nq) / norm(q.xyz)) * q.xyz, std::log(nq));
     }
 
     friend inline
@@ -247,14 +248,15 @@ public:
     friend inline
     QUATERNION<T> MATH_PURE slerp(const QUATERNION<T>& p, const QUATERNION<T>& q, T t) {
         // could also be computed as: pow(q * inverse(p), t) * p;
-        const T d = std::abs(dot(p, q));
+        const T d = dot(p, q);
+        const T absd = std::abs(d);
         static constexpr T value_eps = T(10) * std::numeric_limits<T>::epsilon();
         // Prevent blowing up when slerping between two quaternions that are very near each other.
-        if ((T(1) - d) < value_eps) {
+        if ((T(1) - absd) < value_eps) {
             return normalize(lerp(p, q, t));
         }
-        const T npq = sqrt(dot(p, p) * dot(q, q));  // ||p|| * ||q||
-        const T a = std::acos(d / npq);
+        const T npq = std::sqrt(dot(p, p) * dot(q, q));  // ||p|| * ||q||
+        const T a = std::acos(filament::math::clamp(absd / npq, T(-1), T(1)));
         const T a0 = a * (1 - t);
         const T a1 = a * t;
         const T sina = sin(a);

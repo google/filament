@@ -106,16 +106,6 @@ UniformInterfaceBlock const& UibGenerator::getLightsUib() noexcept {
     return uib;
 }
 
-UniformInterfaceBlock const& UibGenerator::getPostProcessingUib() noexcept {
-    static UniformInterfaceBlock uib =  UniformInterfaceBlock::Builder()
-            .name("PostProcessUniforms")
-            .add("uvScale",   1, UniformInterfaceBlock::Type::FLOAT2)
-            .add("time",      1, UniformInterfaceBlock::Type::FLOAT)
-            .add("dithering", 1, UniformInterfaceBlock::Type::INT)
-            .build();
-    return uib;
-}
-
 UniformInterfaceBlock const& UibGenerator::getPerRenderableBonesUib() noexcept {
     static UniformInterfaceBlock uib = UniformInterfaceBlock::Builder()
             .name("BonesUniforms")

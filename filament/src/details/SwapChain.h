@@ -33,6 +33,7 @@ class FEngine;
 class FSwapChain : public SwapChain {
 public:
     FSwapChain(FEngine& engine, void* nativeWindow, uint64_t flags);
+    FSwapChain(FEngine& engine, uint32_t width, uint32_t height, uint64_t flags);
     void terminate(FEngine& engine) noexcept;
 
     void makeCurrent(backend::DriverApi& driverApi) noexcept {

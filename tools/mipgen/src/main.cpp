@@ -46,6 +46,7 @@ static bool g_stripAlpha = false;
 static bool g_grayscale = false;
 static bool g_ktxContainer = false;
 static bool g_linearized = false;
+static bool g_quietMode = false;
 
 static const char* USAGE = R"TXT(
 MIPGEN generates mipmaps for an image down to the 1x1 level.
@@ -69,6 +70,8 @@ Options:
        assume that image pixels are already linearized
    --page, -p
        generate HTML page for review purposes (mipmap.html)
+   --quiet, -q
+       suppress console output from the mipgen tool
    --grayscale, -g
        create a single-channel image and do not perform gamma correction
    --format=[exr|hdr|rgbm|psd|png|dds|ktx], -f [exr|hdr|rgbm|psd|png|dds|ktx]
@@ -132,13 +135,18 @@ static void printUsage(const char* name) {
 }
 
 static void license() {
-    cout <<
-    #include "licenses/licenses.inc"
-    ;
+    static const char *license[] = {
+        #include "licenses/licenses.inc"
+        nullptr
+    };
+
+    const char **p = &license[0];
+    while (*p)
+        std::cout << *p++ << std::endl;
 }
 
 static int handleArguments(int argc, char* argv[]) {
-    static constexpr const char* OPTSTR = "hLlgpf:c:k:sa";
+    static constexpr const char* OPTSTR = "hLlgpf:c:k:saq";
     static const struct option OPTIONS[] = {
             { "help",                 no_argument, 0, 'h' },
             { "license",              no_argument, 0, 'L' },
@@ -150,6 +158,7 @@ static int handleArguments(int argc, char* argv[]) {
             { "kernel",         required_argument, 0, 'k' },
             { "strip-alpha",          no_argument, 0, 's' },
             { "add-alpha",            no_argument, 0, 'a' },
+            { "quiet",                no_argument, 0, 'q' },
             { 0, 0, 0, 0 }  // termination of the option list
     };
 
@@ -187,6 +196,9 @@ static int handleArguments(int argc, char* argv[]) {
                 break;
             case 'a':
                 g_addAlpha = true;
+                break;
+            case 'q':
+                g_quietMode = true;
                 break;
             case 'f':
                 if (arg == "png") {
@@ -326,12 +338,16 @@ int main(int argc, char* argv[]) {
                 // Some encoders call exit(1) upon failure, so it's very useful to print some
                 // source image information here for when this is invoked from a build script.
                 // Note that some encoders also have limitations in terms of image size.
-                printf("Starting compression for %s (%dx%d)\n", inputPath.getName().c_str(),
-                        image.getWidth(), image.getHeight());
+                if (!g_quietMode) {
+                    printf("Starting compression for %s (%dx%d)\n", inputPath.getName().c_str(),
+                            image.getWidth(), image.getHeight());
+                }
                 CompressedTexture tex = compressTexture(config, image);
                 // Add newline here because the ASTC encoder has a progress indicator that issues a
                 // carriage return without a line feed.
-                putc('\n', stdout);
+                if (!g_quietMode) {
+                    putc('\n', stdout);
+                }
                 container.setBlob({mip++}, tex.data.get(), tex.size);
                 info.glInternalFormat = (uint32_t) tex.format;
                 return;
@@ -366,7 +382,9 @@ int main(int argc, char* argv[]) {
         ofstream outputStream(outputPattern, ios::out | ios::binary);
         outputStream.write((const char*) fileContents.data(), fileContents.size());
         outputStream.close();
-        puts("Done.");
+        if (!g_quietMode) {
+            puts("Done.");
+        }
         return 0;
     }
 

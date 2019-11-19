@@ -63,6 +63,14 @@ const TextureBinding* FilamentAsset::getTextureBindings() const noexcept {
     return upcast(this)->getTextureBindings();
 }
 
+size_t FilamentAsset::getResourceUriCount() const noexcept {
+    return upcast(this)->getResourceUriCount();
+}
+
+const char* const* FilamentAsset::getResourceUris() const noexcept {
+    return upcast(this)->getResourceUris();
+}
+
 filament::Aabb FilamentAsset::getBoundingBox() const noexcept {
     return upcast(this)->getBoundingBox();
 }

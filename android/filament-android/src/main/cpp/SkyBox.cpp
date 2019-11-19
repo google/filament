@@ -47,6 +47,13 @@ Java_com_google_android_filament_Skybox_nBuilderShowSun(JNIEnv *env, jclass type
     builder->showSun(show);
 }
 
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_Skybox_nBuilderIntensity(JNIEnv *env, jclass clazz,
+        jlong nativeSkyBoxBuilder, jfloat intensity) {
+    Skybox::Builder *builder = (Skybox::Builder *) nativeSkyBoxBuilder;
+    builder->intensity(intensity);
+}
+
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_Skybox_nBuilderBuild(JNIEnv *env, jclass type,
         jlong nativeSkyBoxBuilder, jlong nativeEngine) {
@@ -67,4 +74,11 @@ Java_com_google_android_filament_Skybox_nGetLayerMask(JNIEnv *env, jclass type,
         jlong nativeSkybox) {
     Skybox *skybox = (Skybox *) nativeSkybox;
     return static_cast<jint>(skybox->getLayerMask());
+}
+
+extern "C" JNIEXPORT jfloat JNICALL
+Java_com_google_android_filament_Skybox_nGetIntensity(JNIEnv *env, jclass clazz,
+        jlong nativeSkybox) {
+    Skybox *skybox = (Skybox *) nativeSkybox;
+    return static_cast<jint>(skybox->getIntensity());
 }

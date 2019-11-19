@@ -41,6 +41,10 @@ Path Path::getCurrentExecutable() {
     return result;
 }
 
+Path Path::getTemporaryDirectory() {
+    return Path("/tmp/");
+}
+
 std::vector<Path> Path::listContents() const {
     // Return an empty vector if the path doesn't exist or is not a directory
     if (!isDirectory() || !exists()) {
@@ -69,4 +73,3 @@ std::vector<Path> Path::listContents() const {
     return directory_contents;
 }
 } // namespace utils
-

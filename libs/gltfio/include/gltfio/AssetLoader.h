@@ -27,25 +27,50 @@ namespace utils {
     class NameComponentManager;
 }
 
+/**
+ * Loader and pipeline for glTF 2.0 assets.
+ */
 namespace gltfio {
 
+/**
+ * \struct AssetConfiguration AssetLoader.h gltfio/AssetLoader.h
+ * \brief Construction parameters for AssetLoader.
+ */
 struct AssetConfiguration {
+    //! The engine that the loader should pass to builder objects (e.g.
+    //! filament::VertexBuffer::Builder).
     class filament::Engine* engine;
+
+    //! Controls whether the loader uses filamat to generate materials on the fly, or loads a small
+    //! set of precompiled ubershader materials. See createMaterialGenerator() and
+    //! createUbershaderLoader().
     MaterialProvider* materials;
+
+    //! Optional manager for associating string names with entities in the transform hierarchy.
     utils::NameComponentManager* names = nullptr;
+
+    //! Overrides the factory used for creating entities in the transform hierarchy. If this is not
+    //! specified, AssetLoader will use the singleton EntityManager associated with the current
+    //! process.
     utils::EntityManager* entities = nullptr;
 };
 
 /**
- * AssetLoader consumes a blob of glTF 2.0 content (either JSON or GLB) and produces an "asset",
- * which is a bundle of Filament entities, material instances, textures, vertex buffers, and index
- * buffers.
+ * \class AssetLoader AssetLoader.h gltfio/AssetLoader.h
+ * \brief Consumes glTF content and produces FilamentAsset objects.
+ *
+ * AssetLoader consumes a blob of glTF 2.0 content (either JSON or GLB) and produces a FilamentAsset
+ * object, which is a bundle of Filament entities, material instances, textures, vertex buffers,
+ * and index buffers.
+ *
+ * Clients must use AssetLoader to create and destroy FilamentAsset objects.
  *
  * AssetLoader does not fetch external buffer data or create textures on its own. Clients can use
- * the provided ResourceLoader class for this, which obtains the URI list from the asset. This is
- * demonstrated in the code snippet below.
+ * ResourceLoader for this, which obtains the URI list from the asset. This is demonstrated in the
+ * code snippet below.
  *
- * AssetLoader also owns a cache of Material objects that may be re-used across multiple loads.
+ * AssetLoader also owns a cache of filament::Material objects that may be re-used across multiple
+ * loads.
  *
  * Example usage:
  *
@@ -137,10 +162,18 @@ public:
     /** Destroys the given asset and all of its associated Filament objects. */
     void destroyAsset(const FilamentAsset* asset);
 
-    /** Gets cached materials, used internally to create material instances for assets. */
-    size_t getMaterialsCount() const noexcept;
+    /**
+     * Gets a weak reference to an array of cached materials, used internally to create material
+     * instances for assets.
+     */
     const filament::Material* const* getMaterials() const noexcept;
 
+    /**
+     * Gets the number of cached materials.
+     */
+    size_t getMaterialsCount() const noexcept;
+
+    /*! \cond PRIVATE */
 protected:
     AssetLoader() noexcept = default;
     ~AssetLoader() = default;
@@ -150,6 +183,7 @@ public:
     AssetLoader(AssetLoader&&) = delete;
     AssetLoader& operator=(AssetLoader const&) = delete;
     AssetLoader& operator=(AssetLoader&&) = delete;
+    /*! \endcond */
 };
 
 } // namespace gltfio

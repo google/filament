@@ -18,20 +18,82 @@ package com.google.android.filament;
 
 import android.support.annotation.NonNull;
 
+/**
+ * A <code>SwapChain</code> represents an Operating System's <b>native</b> renderable surface.
+ *
+ * <p>Typically it's a native window or a view. Because a <code>SwapChain</code> is initialized
+ * from a native object, it is given to filament as an <code>Object</code>, which must be of the
+ * proper type for each platform filament is running on.</p>
+ *
+ * <code>
+ * SwapChain swapChain = engine.createSwapChain(nativeWindow);
+ * </code>
+ *
+ * <p>The <code>nativeWindow</code> parameter above must be of type:</p>
+ *
+ * <center>
+ * <table border="1">
+ *     <tr><th> Platform </th><th> nativeWindow type </th></tr>
+ *     <tr><td> Android </td><td>{@link android.view.Surface Surface}</td></tr>
+ * </table>
+ * </center>
+ * <p>
+ *
+ * <h1>Examples</h1>
+ *
+ * <h2>Android</h2>
+ *
+ *
+ * <p>A {@link android.view.Surface Surface} can be retrieved from a
+ * {@link android.view.SurfaceView SurfaceView} or {@link android.view.SurfaceHolder SurfaceHolder}
+ * easily using {@link android.view.SurfaceHolder#getSurface SurfaceHolder.getSurface()} and/or
+ * {@link android.view.SurfaceView#getHolder SurfaceView.getHolder()}.</p>
+ *
+ * <p>To use a {@link android.view.TextureView Textureview} as a <code>SwapChain</code>, it is
+ * necessary to first get its {@link android.graphics.SurfaceTexture SurfaceTexture},
+ * for instance using {@link android.view.TextureView.SurfaceTextureListener SurfaceTextureListener}
+ * and then create a {@link android.view.Surface Surface}:</p>
+ *
+ * <pre>
+ *  // using a TextureView.SurfaceTextureListener:
+ *  public void onSurfaceTextureAvailable(SurfaceTexture surfaceTexture, int width, int height) {
+ *      mSurface = new Surface(surfaceTexture);
+ *      // mSurface can now be used with Engine.createSwapChain()
+ *  }
+ * </pre>
+ *
+ * @see Engine
+ */
 public class SwapChain {
     private final Object mSurface;
     private long mNativeObject;
 
     public static final long CONFIG_DEFAULT = 0x0;
+
+    /**
+     * This flag indicates that the <code>SwapChain</code> must be allocated with an
+     * alpha-channel.
+     */
     public static final long CONFIG_TRANSPARENT = 0x1;
+
+    /**
+     * This flag indicates that the <code>SwapChain</code> may be used as a source surface
+     * for reading back render results.  This config must be set when creating
+     * any <code>SwapChain</code>  that will be used as the source for a blit operation.
+     *
+     * @see Renderer#copyFrame
+     */
     public static final long CONFIG_READABLE = 0x2;
 
-    SwapChain(long nativeSwapChain, @NonNull Object surface) {
+    SwapChain(long nativeSwapChain, Object surface) {
         mNativeObject = nativeSwapChain;
         mSurface = surface;
     }
 
-    @NonNull
+    /**
+     * @return the native <code>Object</code> this <code>SwapChain</code> was created from or null
+     *         for a headless SwapChain.
+     */
     public Object getNativeWindow() {
         return mSurface;
     }

@@ -20,39 +20,23 @@ namespace filament {
 namespace backend {
 
 // create a sampler buffer
-SamplerGroup::SamplerGroup(size_t count) noexcept : mSize(uint8_t(count)) {
-    assert(count <= mBuffer.size());
-    // samplers need to be initialized to their default so we can no-op in the driver
-    // if the user forgets to set them
-    constexpr Sampler prototype{{}, {}};
-    std::fill_n(mBuffer.begin(), mSize, prototype);
+SamplerGroup::SamplerGroup(size_t count) noexcept
+        : mBuffer(count) {
 }
 
-SamplerGroup::SamplerGroup(const SamplerGroup& rhs) noexcept
-        : mDirty(rhs.mDirty), mSize(rhs.mSize) {
-    std::copy_n(rhs.mBuffer.begin(), rhs.mSize, mBuffer.begin());
-}
+SamplerGroup::SamplerGroup(const SamplerGroup& rhs) noexcept = default;
 
 SamplerGroup::SamplerGroup(SamplerGroup&& rhs) noexcept
-        : mDirty(rhs.mDirty), mSize(rhs.mSize) {
-    std::copy_n(rhs.mBuffer.begin(), rhs.mSize, mBuffer.begin());
+        : mBuffer(rhs.mBuffer), mDirty(rhs.mDirty) {
     rhs.clean();
 }
 
-SamplerGroup& SamplerGroup::operator=(const SamplerGroup& rhs) noexcept {
-    if (this != &rhs) {
-        std::copy_n(rhs.mBuffer.begin(), rhs.mSize, mBuffer.begin());
-        mDirty = rhs.mDirty;
-        mSize = rhs.mSize;
-    }
-    return *this;
-}
+SamplerGroup& SamplerGroup::operator=(const SamplerGroup& rhs) noexcept = default;
 
 SamplerGroup& SamplerGroup::operator=(SamplerGroup&& rhs) noexcept {
     if (this != &rhs) {
-        std::copy_n(rhs.mBuffer.begin(), rhs.mSize, mBuffer.begin());
+        mBuffer = rhs.mBuffer;
         mDirty = rhs.mDirty;
-        mSize = rhs.mSize;
         rhs.clean();
     }
     return *this;
@@ -72,15 +56,14 @@ SamplerGroup& SamplerGroup::toCommandStream() const noexcept {
 
 SamplerGroup& SamplerGroup::setSamplers(SamplerGroup const& rhs) noexcept {
     if (this != &rhs) {
-        std::copy_n(rhs.mBuffer.begin(), rhs.mSize, mBuffer.begin());
-        mDirty.setValue((1u << rhs.mSize) - 1u);
-        mSize = rhs.mSize;
+        mBuffer = rhs.mBuffer;
+        mDirty.setValue((1u << rhs.mBuffer.size()) - 1u);
     }
     return *this;
 }
 
 void SamplerGroup::setSampler(size_t index, Sampler const& sampler) noexcept {
-    if (index < mSize) {
+    if (index < mBuffer.size()) {
         mBuffer[index] = sampler;
         mDirty.set(index);
     }

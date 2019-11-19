@@ -30,7 +30,6 @@ public:
     static UniformInterfaceBlock const& getPerViewUib() noexcept;
     static UniformInterfaceBlock const& getPerRenderableUib() noexcept;
     static UniformInterfaceBlock const& getLightsUib() noexcept;
-    static UniformInterfaceBlock const& getPostProcessingUib() noexcept;
     static UniformInterfaceBlock const& getPerRenderableBonesUib() noexcept;
 };
 
@@ -110,15 +109,6 @@ struct LightsUib {
     filament::math::float4 colorIntensity;    // { float3(col), intensity }
     filament::math::float4 directionIES;      // { float3(dir), IES index }
     filament::math::float4 spotScaleOffset;   // { scale, offset, unused, unused }
-};
-
-struct PostProcessingUib {
-    static const UniformInterfaceBlock& getUib() noexcept {
-        return UibGenerator::getPostProcessingUib();
-    }
-    filament::math::float2 uvScale;
-    float time;             // time in seconds, with a 1 second period, used for dithering
-    int dithering;          // type of dithering 0=none, 1=enabled
 };
 
 // This is not the UBO proper, but just an element of a bone array.

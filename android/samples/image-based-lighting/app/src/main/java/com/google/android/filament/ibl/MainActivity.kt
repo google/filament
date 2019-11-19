@@ -199,7 +199,7 @@ class MainActivity : Activity() {
     }
 
     private fun loadImageBasedLight() {
-        ibl = loadIbl(assets, "envs/flower_road_2k", engine)
+        ibl = loadIbl(assets, "envs/flower_road_no_sun_2k", engine)
         ibl.indirectLight.intensity = 40_000.0f
     }
 
@@ -230,12 +230,13 @@ class MainActivity : Activity() {
 
     override fun onDestroy() {
         super.onDestroy()
+
+        // Stop the animation and any pending frame
+        choreographer.removeFrameCallback(frameScheduler)
+        animator.cancel();
+
         // Always detach the surface before destroying the engine
         uiHelper.detach()
-
-        // This ensures that all the commands we've sent to Filament have
-        // been processed before we attempt to destroy anything
-        Fence.waitAndDestroy(engine.createFence(Fence.Type.SOFT), Fence.Mode.FLUSH)
 
         // Cleanup all resources
         destroyMesh(engine, mesh)

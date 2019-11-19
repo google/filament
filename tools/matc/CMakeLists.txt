@@ -22,7 +22,7 @@ file(GLOB_RECURSE HDRS
         src/matc/MaterialLexeme.h
         src/matc/MaterialLexer.h
         src/matc/ParametersProcessor.h
-        src/matc/PostprocessMaterialCompiler.h
+        src/matc/DirIncluder.h
         )
 
 set(SRCS
@@ -33,7 +33,7 @@ set(SRCS
         src/matc/MaterialCompiler.cpp
         src/matc/MaterialLexer.cpp
         src/matc/ParametersProcessor.cpp
-        src/matc/PostprocessMaterialCompiler.cpp
+        src/matc/DirIncluder.cpp
         )
 
 # ==================================================================================================
@@ -83,6 +83,7 @@ project(test_matc)
 set(TARGET test_matc)
 set(SRCS
     tests/test_matc.cpp
+    tests/test_includer.cpp
     tests/MockConfig.cpp
     tests/MockConfig.h)
 

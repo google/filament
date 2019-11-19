@@ -49,12 +49,9 @@ public:
     MaterialParser& operator=(MaterialParser const& rhs) noexcept = delete;
 
     bool parse() noexcept;
-    bool isShadingMaterial() const noexcept;
-    bool isPostProcessMaterial() const noexcept;
 
     // Accessors
     bool getMaterialVersion(uint32_t* value) const noexcept;
-    bool getPostProcessVersion(uint32_t* value) const noexcept;
     bool getName(utils::CString*) const noexcept;
     bool getUIB(UniformInterfaceBlock* uib) const noexcept;
     bool getSIB(SamplerInterfaceBlock* sib) const noexcept;

@@ -48,7 +48,7 @@ int main(int argc, char** argv) {
     Config config;
     config.title = "hellopbr";
     config.backend = Backend::VULKAN;
-    config.iblDirectory = FilamentApp::getRootPath() + IBL_FOLDER;
+    config.iblDirectory = FilamentApp::getRootAssetsPath() + IBL_FOLDER;
 
     App app;
     auto setup = [config, &app](Engine* engine, View* view, Scene* scene) {
@@ -85,7 +85,6 @@ int main(int argc, char** argv) {
     };
 
     auto cleanup = [&app](Engine* engine, View*, Scene*) {
-        Fence::waitAndDestroy(engine->createFence());
         engine->destroy(app.light);
         engine->destroy(app.materialInstance);
         engine->destroy(app.mesh.renderable);

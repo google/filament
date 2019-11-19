@@ -17,6 +17,8 @@
 #ifndef TNT_UTILS_HASH_H
 #define TNT_UTILS_HASH_H
 
+#include <functional>   // for std::hash
+
 #include <stdint.h>
 #include <stddef.h>
 

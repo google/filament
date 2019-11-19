@@ -24,6 +24,7 @@
 #include <math/mat4.h>
 #include <math/mat3.h>
 #include <math/quat.h>
+#include <math/scalar.h>
 
 using namespace filament::math;
 
@@ -32,7 +33,7 @@ protected:
 };
 
 TEST_F(MatTest, ConstexprMat2) {
-    constexpr float a = M_PI;
+    constexpr float a = F_PI;
     constexpr mat2f M;
     constexpr mat2f M0(a);
     constexpr mat2f M1(float2{a, a});
@@ -41,18 +42,21 @@ TEST_F(MatTest, ConstexprMat2) {
     constexpr mat2f M4(float2{1,2}, float2{3,4});
     constexpr float2 f0 = M0 * float2{1,2};
     constexpr float2 f1 = float2{1,2} * M1;
-    constexpr mat2f M5 = M2 * 2;
-    constexpr mat2f M7 = 2 * M2;
+    CONSTEXPR_IF_NOT_MSVC mat2f M5 = M2 * 2;
+    CONSTEXPR_IF_NOT_MSVC mat2f M7 = 2 * M2;
     constexpr float2 f3 = diag(M0);
     constexpr mat2f M8 = transpose(M0);
     constexpr mat2f M9 = inverse(M0);
+    constexpr mat2f M12 = abs(M0);
     constexpr mat2f M11 = details::matrix::cof(M0);
     constexpr mat2f M10 = M8 * M9;
     constexpr float s0 = trace(M0);
+    constexpr float f4 = M[0][0];
+    constexpr float f5 = M(0, 0);
 }
 
 TEST_F(MatTest, ConstexprMat3) {
-    constexpr float a = M_PI;
+    constexpr float a = F_PI;
     constexpr mat3f M;
     constexpr mat3f M0(a);
     constexpr mat3f M1(float3{a, a, a});
@@ -61,8 +65,8 @@ TEST_F(MatTest, ConstexprMat3) {
     constexpr mat3f M4(float3{1,2,3}, float3{4,5,6}, float3{7,8,9});
     constexpr float3 f0 = M0 * float3{1,2,3};
     constexpr float3 f1 = float3{1,2,3} * M1;
-    constexpr mat3f M5 = M2 * 2;
-    constexpr mat3f M7 = 2 * M2;
+    CONSTEXPR_IF_NOT_MSVC mat3f M5 = M2 * 2;
+    CONSTEXPR_IF_NOT_MSVC mat3f M7 = 2 * M2;
     constexpr float3 f3 = diag(M0);
     constexpr mat3f M8 = transpose(M0);
     constexpr mat3f M9 = inverse(M0);
@@ -74,7 +78,7 @@ TEST_F(MatTest, ConstexprMat3) {
 }
 
 TEST_F(MatTest, ConstexprMat4) {
-    constexpr float a = M_PI;
+    constexpr float a = F_PI;
     constexpr mat4f M;
     constexpr mat4f M0(a);
     constexpr mat4f M1(float4{a, a, a, a});
@@ -83,8 +87,8 @@ TEST_F(MatTest, ConstexprMat4) {
     constexpr mat4f M4(float4{1,2,3,4}, float4{5,6,7,8}, float4{9,10,11,12}, float4{13,14,15,16});
     constexpr float4 f0 = M0 * float4{1,2,3,4};
     constexpr float4 f1 = float4{1,2,3,4} * M1;
-    constexpr mat4f M5 = M2 * 2;
-    constexpr mat4f M7 = 2 * M2;
+    CONSTEXPR_IF_NOT_MSVC mat4f M5 = M2 * 2;
+    CONSTEXPR_IF_NOT_MSVC mat4f M7 = 2 * M2;
     constexpr float4 f3 = diag(M0);
     constexpr mat4f M8 = transpose(M0);
     constexpr mat4f M9 = inverse(M0);
@@ -436,7 +440,7 @@ public:
 
 typedef ::testing::Types<float,double> TestMatrixValueTypes;
 
-TYPED_TEST_CASE(MatTestT, TestMatrixValueTypes);
+TYPED_TEST_SUITE(MatTestT, TestMatrixValueTypes);
 
 #define TEST_MATRIX_INVERSE(MATRIX, EPSILON)                                \
 {                                                                           \
@@ -659,7 +663,7 @@ TYPED_TEST(MatTestT, EulerZYX_44) {
     typedef filament::math::details::TMat44<TypeParam> M44T;
 
     std::default_random_engine generator(82828); // NOLINT
-    std::uniform_real_distribution<TypeParam> distribution(-6.0 * 2.0*M_PI, 6.0 * 2.0*M_PI);
+    std::uniform_real_distribution<TypeParam> distribution(-6.0 * 2.0*F_PI, 6.0 * 2.0*F_PI);
     auto rand_gen = std::bind(distribution, generator);
 
     for (size_t i = 0; i < 100; ++i) {
@@ -678,7 +682,7 @@ TYPED_TEST(MatTestT, EulerZYX_33) {
     typedef filament::math::details::TMat33<TypeParam> M33T;
 
     std::default_random_engine generator(112233); // NOLINT
-    std::uniform_real_distribution<TypeParam> distribution(-6.0 * 2.0*M_PI, 6.0 * 2.0*M_PI);
+    std::uniform_real_distribution<TypeParam> distribution(-6.0 * 2.0*F_PI, 6.0 * 2.0*F_PI);
     auto rand_gen = std::bind(distribution, generator);
 
     for (size_t i = 0; i < 100; ++i) {
@@ -699,7 +703,7 @@ TYPED_TEST(MatTestT, ToQuaternionPostTranslation) {
     typedef filament::math::details::TQuaternion<TypeParam> QuatT;
 
     std::default_random_engine generator(112233); // NOLINT
-    std::uniform_real_distribution<TypeParam> distribution(-6.0 * 2.0*M_PI, 6.0 * 2.0*M_PI);
+    std::uniform_real_distribution<TypeParam> distribution(-6.0 * 2.0*F_PI, 6.0 * 2.0*F_PI);
     auto rand_gen = std::bind(distribution, generator);
 
     for (size_t i = 0; i < 100; ++i) {

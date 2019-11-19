@@ -17,6 +17,8 @@
 #ifndef TNT_GLSLTOOLSLITE_H
 #define TNT_GLSLTOOLSLITE_H
 
+#include <backend/DriverEnums.h>
+
 #include <filamat/MaterialBuilder.h>
 
 namespace filamat {
@@ -35,9 +37,10 @@ public:
      *     to another function which sets properties (this only works if the argument to the
      *     function is also named "material").
      */
-    bool findProperties(const utils::CString& material,
+    bool findProperties(
+            filament::backend::ShaderType type,
+            const utils::CString& material,
             MaterialBuilder::PropertyList& properties) const noexcept;
-
 };
 
 } // namespace filamat

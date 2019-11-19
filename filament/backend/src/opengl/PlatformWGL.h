@@ -34,6 +34,7 @@ public:
     void terminate() noexcept override;
 
     SwapChain* createSwapChain(void* nativewindow, uint64_t& flags) noexcept override;
+    SwapChain* createSwapChain(uint32_t width, uint32_t height, uint64_t& flags) noexcept override;
     void destroySwapChain(SwapChain* swapChain) noexcept override;
     void makeCurrent(SwapChain* drawSwapChain, SwapChain* readSwapChain) noexcept override;
     void commit(SwapChain* swapChain) noexcept override;

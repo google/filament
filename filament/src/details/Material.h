@@ -31,6 +31,7 @@
 
 #include <utils/compiler.h>
 
+#include <atomic>
 
 namespace filament {
 
@@ -77,6 +78,11 @@ public:
     backend::Handle<backend::HwProgram> getSurfaceProgramSlow(uint8_t variantKey) const noexcept;
     backend::Handle<backend::HwProgram> getPostProcessProgramSlow(uint8_t variantKey) const noexcept;
     backend::Handle<backend::HwProgram> getProgram(uint8_t variantKey) const noexcept {
+#if FILAMENT_ENABLE_MATDBG
+        if (UTILS_UNLIKELY(mPendingEdits.load())) {
+            const_cast<FMaterial*>(this)->applyPendingEdits();
+        }
+#endif
         backend::Handle<backend::HwProgram> const entry = mCachedPrograms[variantKey];
         return UTILS_LIKELY(entry) ? entry : getProgramSlow(variantKey);
     }
@@ -122,28 +128,50 @@ public:
 
     uint32_t generateMaterialInstanceId() const noexcept { return mMaterialInstanceId++; }
 
+    void applyPendingEdits() noexcept;
+
+    void destroyPrograms(FEngine& engine);
+
+    /**
+     * Callback handlers for the debug server, potentially called from any thread. The userdata
+     * argument has the same value that was passed to DebugServer::addMaterial(), which should
+     * be an instance of the public-facing Material.
+     * @{
+     */
+
+    /** Replaces the material package. */
+    static void onEditCallback(void* userdata, const utils::CString& name, const void* packageData,
+            size_t packageSize);
+
+    /** Queries the program cache to check which variants are resident. */
+    static void onQueryCallback(void* userdata, uint16_t* variants);
+
+    /** @}*/
+
+    static MaterialParser* createParser(backend::Backend backend, const void* data, size_t size);
+
 private:
     // try to order by frequency of use
     mutable std::array<backend::Handle<backend::HwProgram>, VARIANT_COUNT> mCachedPrograms;
 
     backend::RasterState mRasterState;
-    BlendingMode mRenderBlendingMode;
-    TransparencyMode mTransparencyMode;
-    bool mIsVariantLit;
-    Shading mShading;
+    BlendingMode mRenderBlendingMode = BlendingMode::OPAQUE;
+    TransparencyMode mTransparencyMode = TransparencyMode::DEFAULT;
+    bool mIsVariantLit = false;
+    Shading mShading = Shading::UNLIT;
 
-    BlendingMode mBlendingMode;
-    Interpolation mInterpolation;
-    VertexDomain mVertexDomain;
-    MaterialDomain mMaterialDomain;
-    CullingMode mCullingMode;
+    BlendingMode mBlendingMode = BlendingMode::OPAQUE;
+    Interpolation mInterpolation = Interpolation::SMOOTH;
+    VertexDomain mVertexDomain = VertexDomain::OBJECT;
+    MaterialDomain mMaterialDomain = MaterialDomain::SURFACE;
+    CullingMode mCullingMode = CullingMode::NONE;
     AttributeBitset mRequiredAttributes;
 
     float mMaskThreshold = 0.4f;
-    float mSpecularAntiAliasingVariance;
-    float mSpecularAntiAliasingThreshold;
+    float mSpecularAntiAliasingVariance = 0.0f;
+    float mSpecularAntiAliasingThreshold = 0.0f;
 
-    bool mDoubleSided;
+    bool mDoubleSided = false;
     bool mDoubleSidedCapability = false;
     bool mHasShadowMultiplier = false;
     bool mHasCustomDepthShader = false;
@@ -160,6 +188,7 @@ private:
     const uint32_t mMaterialId;
     mutable uint32_t mMaterialInstanceId = 0;
     MaterialParser* mMaterialParser = nullptr;
+    std::atomic<MaterialParser*> mPendingEdits = {};
 };
 
 

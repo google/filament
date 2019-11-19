@@ -17,6 +17,7 @@
 #include "OpenGLBlitter.h"
 
 #include "GLUtils.h"
+#include "OpenGLContext.h"
 
 #include <utils/compiler.h>
 #include <utils/Log.h>
@@ -74,7 +75,7 @@ void OpenGLBlitter::init() noexcept {
     GLint status;
     char const* vsource[2] = { s_vertexES, s_vertexGL };
     char const* fsource[2] = { s_fragmentES, s_fragmentGL };
-    const size_t index = GLES31_HEADERS ? 0 : 1;
+    const size_t index = GLES30_HEADERS ? 0 : 1;
 
     mVertexShader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(mVertexShader, 1, vsource + index, nullptr);
@@ -167,7 +168,7 @@ void OpenGLBlitter::State::save() noexcept {
     // we're using tmu 0 as the source texture
     glActiveTexture(GL_TEXTURE0 + tmu);
 
-    // save that depends on glActiveTexture
+    // save what depends on glActiveTexture
     glGetIntegerv(GL_SAMPLER_BINDING, &sampler);
     glGetIntegerv(GL_TEXTURE_BINDING_2D, &texture);
 

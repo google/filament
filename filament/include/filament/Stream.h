@@ -37,7 +37,18 @@ class UTILS_PUBLIC Stream : public FilamentAPI {
     struct BuilderDetails;
 
 public:
-    //! Use Builder to construct an Stream object instance
+    using Callback = backend::StreamCallback;
+    using StreamType = backend::StreamType;
+
+    /**
+     * Constructs a Stream object instance.
+     *
+     * By default, Stream objects are ACQUIRED and must have external images pushed to them via
+     * <pre>Stream::setAcquiredImage</pre>.
+     *
+     * To create a NATIVE or TEXTURE_ID stream, call one of the <pre>stream</pre> methods
+     * on the builder.
+     */
     class Builder : public BuilderBase<BuilderDetails> {
         friend struct BuilderDetails;
     public:
@@ -49,7 +60,7 @@ public:
         Builder& operator=(Builder&& rhs) noexcept;
 
         /**
-         * Creates a native stream. Native streams can sample data directly from an
+         * Creates a NATIVE stream. Native streams can sample data directly from an
          * opaque platform object such as a SurfaceTexture on Android.
          *
          * @param stream An opaque native stream handle. e.g.: on Android this is an
@@ -60,7 +71,7 @@ public:
         Builder& stream(void* stream) noexcept;
 
         /**
-         * Creates a copy stream. A copy stream will sample data from the supplied
+         * Creates a TEXTURE_ID stream. This will sample data from the supplied
          * external texture and copy it into an internal private texture.
          *
          * @param externalTextureId An opaque texture id (typically a GLuint created with glGenTextures)
@@ -107,9 +118,17 @@ public:
     };
 
     /**
-     * Indicates whether this stream is a native stream or a copy stream.
+     * Indicates whether this stream is a NATIVE stream, TEXTURE_ID stream, or ACQUIRED stream.
      */
-    bool isNativeStream() const noexcept;
+    StreamType getStreamType() const noexcept;
+
+    /**
+     * Updates an ACQUIRED stream with an image that is guaranteed to be used in the next frame.
+     *
+     * This method should be called on the same thread that calls Renderer::beginFrame, which is
+     * also where the callback is invoked.
+     */
+    void setAcquiredImage(void* image, Callback callback, void* userdata) noexcept;
 
     /**
      * Updates the size of the incoming stream. Whether this value is used is

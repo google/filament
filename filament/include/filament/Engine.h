@@ -259,6 +259,20 @@ public:
      */
     SwapChain* createSwapChain(void* nativeWindow, uint64_t flags = 0) noexcept;
 
+
+    /**
+     * Creates a headless SwapChain.
+     *
+      * @param width    Width of the drawing buffer in pixels.
+      * @param height   Height of the drawing buffer in pixels.
+     * @param flags     One or more configuration flags as defined in `SwapChain`.
+     *
+     * @return A pointer to the newly created SwapChain or nullptr if it couldn't be created.
+     *
+     * @see Renderer.beginFrame()
+     */
+    SwapChain* createSwapChain(uint32_t width, uint32_t height, uint64_t flags = 0) noexcept;
+
     /**
      * Creates a renderer associated to this engine.
      *
@@ -310,11 +324,9 @@ public:
     /**
      * Creates a Fence.
      *
-     * @param type Type of Fence to create
-     *
      * @return A pointer to the newly created Fence or nullptr if it couldn't be created.
      */
-    Fence* createFence(Fence::Type type = Fence::Type::SOFT) noexcept;
+    Fence* createFence() noexcept;
 
     void destroy(const VertexBuffer* p);        //!< Destroys an VertexBuffer object.
     void destroy(const Fence* p);               //!< Destroys a Fence object.
@@ -325,7 +337,7 @@ public:
      * Destroys a Material object
      * @param p the material object to destroy
      * @attention All MaterialInstance of the specified material must be destroyed before
-     *            destroying a Material.
+     *            destroying it.
      * @exception utils::PreConditionPanic is thrown if some MaterialInstances remain.
      * no-op if exceptions are disabled and some MaterialInstances remain.
      */
@@ -340,6 +352,18 @@ public:
     void destroy(const RenderTarget* p);        //!< Destroys a RenderTarget object.
     void destroy(const View* p);                //!< Destroys a View object.
     void destroy(utils::Entity e);              //!< Destroys all filament-known components from this entity
+
+    /**
+     * Kicks the hardware thread (e.g. the OpenGL, Vulkan or Metal thread) and blocks until
+     * all commands to this point are executed. Note that this doesn't guarantee that the
+     * hardware is actually finished.
+     *
+     * <p>This is typically used right after destroying the <code>SwapChain</code>,
+     * in cases where a guarantee about the <code>SwapChain</code> destruction is needed in a
+     * timely fashion, such as when responding to Android's
+     * <code>android.view.SurfaceHolder.Callback.surfaceDestroyed</code></p>
+     */
+    void flushAndWait();
 
     /**
      * Returns the default Material.

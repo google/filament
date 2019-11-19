@@ -22,6 +22,10 @@
 #include <math/vec4.h>
 
 namespace filament {
+
+/**
+ * Mesh-related utilities.
+ */
 namespace geometry {
 
 struct OrientationBuilderImpl;

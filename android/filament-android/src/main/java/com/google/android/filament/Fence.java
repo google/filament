@@ -26,11 +26,6 @@ public class Fence {
 
     public static final long WAIT_FOR_EVER = -1;
 
-    public enum Type {
-        SOFT,
-        HARD
-    }
-
     public enum Mode {
         FLUSH,
         DONT_FLUSH

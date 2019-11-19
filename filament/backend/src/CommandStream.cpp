@@ -73,11 +73,13 @@ void CommandStream::execute(void* buffer) {
         profiler.start();
     }
 
-    Driver& UTILS_RESTRICT driver = *mDriver;
-    CommandBase* UTILS_RESTRICT base = static_cast<CommandBase*>(buffer);
-    while (UTILS_LIKELY(base)) {
-        base = base->execute(driver);
-    }
+    mDriver->execute([this, buffer]() {
+        Driver& UTILS_RESTRICT driver = *mDriver;
+        CommandBase* UTILS_RESTRICT base = static_cast<CommandBase*>(buffer);
+        while (UTILS_LIKELY(base)) {
+            base = base->execute(driver);
+        }
+    });
 
     if (SYSTRACE_TAG) {
         // we want to remove all this when tracing is completely disabled
@@ -125,9 +127,9 @@ void CommandType<void (Driver::*)(ARGS...)>::Command<METHOD>::log() noexcept  {
 #if DEBUG_COMMAND_STREAM
 #define DECL_DRIVER_API_SYNCHRONOUS(RetType, methodName, paramsDecl, params)
 #define DECL_DRIVER_API(methodName, paramsDecl, params) \
-    template void CommandType<decltype(&Driver::methodName)>::Command<&Driver::methodName>::log();
+    template void CommandType<decltype(&Driver::methodName)>::Command<&Driver::methodName>::log() noexcept;
 #define DECL_DRIVER_API_RETURN(RetType, methodName, paramsDecl, params) \
-    template void CommandType<decltype(&Driver::methodName##R)>::Command<&Driver::methodName##R>::log();
+    template void CommandType<decltype(&Driver::methodName##R)>::Command<&Driver::methodName##R>::log() noexcept;
 #include "private/backend/DriverAPI.inc"
 #endif
 
@@ -272,6 +274,7 @@ io::ostream& operator<<(io::ostream& out, PixelDataFormat format) {
         CASE(PixelDataFormat, DEPTH_COMPONENT)
         CASE(PixelDataFormat, DEPTH_STENCIL)
         CASE(PixelDataFormat, ALPHA)
+        CASE(PixelDataFormat, UNUSED)
     }
     return out;
 }
@@ -287,6 +290,7 @@ io::ostream& operator<<(io::ostream& out, PixelDataType format) {
         CASE(PixelDataType, HALF)
         CASE(PixelDataType, FLOAT)
         CASE(PixelDataType, COMPRESSED)
+        CASE(PixelDataType, UINT_10F_11F_11F_REV)
     }
     return out;
 }
@@ -401,6 +405,8 @@ io::ostream& operator<<(io::ostream& out, TextureUsage usage) {
         CASE(TextureUsage, COLOR_ATTACHMENT)
         CASE(TextureUsage, DEPTH_ATTACHMENT)
         CASE(TextureUsage, STENCIL_ATTACHMENT)
+        CASE(TextureUsage, UPLOADABLE)
+        CASE(TextureUsage, SAMPLEABLE)
     }
     return out;
 }
@@ -475,7 +481,7 @@ io::ostream& operator<<(io::ostream& out, SamplerParams params) {
         << params.wrapS << ", "
         << params.wrapT << ", "
         << params.wrapR << ", "
-        << (1 << params.anisotropyLog2) << ", "
+        << (1u << params.anisotropyLog2) << ", "
         << params.compareMode << ", "
         << params.compareFunc
         << " }";
@@ -531,9 +537,9 @@ io::ostream& operator<<(io::ostream& out, const PipelineState& ps) {
 UTILS_PRIVATE
 io::ostream& operator<<(io::ostream& out, BufferDescriptor const& b) {
     out << "BufferDescriptor { buffer=" << b.buffer
-    << ", size=" << b.size
-    << ", callback=" << b.getCallback()
-    << ", user=" << b.getUser() << " }";
+        << ", size=" << b.size
+        << ", callback=" << b.getCallback()
+        << ", user=" << b.getUser() << " }";
     return out;
 }
 
@@ -541,12 +547,12 @@ UTILS_PRIVATE
 io::ostream& operator<<(io::ostream& out, PixelBufferDescriptor const& b) {
     BufferDescriptor const& base = static_cast<BufferDescriptor const&>(b);
     out << "PixelBufferDescriptor { " << base
-    << ", left=" << b.left
-    << ", top=" << b.top
-    << ", stride=" << b.stride
-    << ", format=" << b.format
-    << ", type=" << b.type
-    << ", alignment=" << b.alignment << " }";
+        << ", left=" << b.left
+        << ", top=" << b.top
+        << ", stride=" << b.stride
+        << ", format=" << b.format
+        << ", type=" << b.type
+        << ", alignment=" << b.alignment << " }";
     return out;
 }
 
@@ -557,6 +563,13 @@ io::ostream& operator<<(io::ostream& out, filament::backend::Viewport const& vie
         << ", bottom=" << viewport.bottom
         << ", width=" << viewport.width
         << ", height=" << viewport.height << "}";
+    return out;
+}
+
+UTILS_PRIVATE
+io::ostream& operator<<(io::ostream& out, TargetBufferFlags flags) {
+    // TODO: implement decoding of enum
+    out << uint8_t(flags);
     return out;
 }
 

@@ -57,6 +57,12 @@
 #   define MATH_UNLIKELY( exp )  (exp)
 #endif
 
+#if __has_attribute(unused)
+#   define MATH_UNUSED __attribute__((unused))
+#else
+#   define MATH_UNUSED
+#endif
+
 #if __has_attribute(pure)
 #   define MATH_PURE __attribute__((pure))
 #else
@@ -65,6 +71,7 @@
 
 #ifdef _MSC_VER
 #   define MATH_EMPTY_BASES __declspec(empty_bases)
+
 // MSVC does not support loop unrolling hints
 #   define MATH_NOUNROLL
 
@@ -72,6 +79,18 @@
 #   ifndef MAKE_CONSTEXPR
 #       define MAKE_CONSTEXPR(e) (e)
 #   endif
+
+// About value initialization, the C++ standard says:
+//   if T is a class type with a default constructor that is neither user-provided nor deleted
+//   (that is, it may be a class with an implicitly-defined or defaulted default constructor),
+//   the object is zero-initialized and then it is default-initialized
+//   if it has a non-trivial default constructor;
+// Unfortunately, MSVC always calls the default constructor, even if it is trivial, which
+// breaks constexpr-ness. To workaround this, we're always zero-initializing TVecN<>
+#   define MATH_CONSTEXPR_INIT {}
+#   define MATH_DEFAULT_CTOR {}
+#   define MATH_DEFAULT_CTOR_CONSTEXPR constexpr
+#   define CONSTEXPR_IF_NOT_MSVC // when declared constexpr, msvc fails with "failure was caused by cast of object of dynamic type"
 
 #else // _MSC_VER
 
@@ -82,5 +101,10 @@
 #   ifndef MAKE_CONSTEXPR
 #       define MAKE_CONSTEXPR(e) __builtin_constant_p(e) ? (e) : (e)
 #   endif
+
+#   define MATH_CONSTEXPR_INIT
+#   define MATH_DEFAULT_CTOR = default;
+#   define MATH_DEFAULT_CTOR_CONSTEXPR
+#   define CONSTEXPR_IF_NOT_MSVC constexpr
 
 #endif // _MSC_VER

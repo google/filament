@@ -35,17 +35,22 @@ static constexpr size_t CONFIG_COMMAND_BUFFERS_SIZE     = 3 * CONFIG_MIN_COMMAND
 
 #ifndef NDEBUG
 
+// on Debug builds, HeapAllocatorArena needs LockingPolicy::Mutex because it uses a
+// TrackingPolicy, which needs to be synchronized.
 using HeapAllocatorArena = utils::Arena<
         utils::HeapAllocator,
-        utils::LockingPolicy::NoLock>;
+        utils::LockingPolicy::Mutex,
+        utils::TrackingPolicy::DebugAndHighWatermark>;
 
 using LinearAllocatorArena = utils::Arena<
         utils::LinearAllocator,
         utils::LockingPolicy::NoLock,
-        utils::TrackingPolicy::HighWatermark>;
+        utils::TrackingPolicy::DebugAndHighWatermark>;
 
 #else
 
+// on Release builds, HeapAllocatorArena doesn't need a LockingPolicy because HeapAllocator is
+// intrinsically synchronized as it relies on heap allocations (i.e.: malloc/free)
 using HeapAllocatorArena = utils::Arena<
         utils::HeapAllocator,
         utils::LockingPolicy::NoLock>;

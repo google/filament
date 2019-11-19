@@ -16,6 +16,7 @@
 
 #include "ExternalStreamManagerAndroid.h"
 
+#include <utils/api_level.h>
 #include <utils/compiler.h>
 #include <utils/Log.h>
 
@@ -42,21 +43,21 @@ ExternalStreamManagerAndroid& ExternalStreamManagerAndroid::get() noexcept {
 
 ExternalStreamManagerAndroid::ExternalStreamManagerAndroid() noexcept
         : mVm(VirtualMachineEnv::get()) {
-    // We're not initializing the JVM here -- but we could -- because most of the time
-    // we don't need the jvm. Instead we do the initialization on first use. This means we could get
-    // a nasty slow down the very first time, but we'll live with it for now.
 
-    loadSymbol(ASurfaceTexture_fromSurfaceTexture,  "ASurfaceTexture_fromSurfaceTexture");
-    loadSymbol(ASurfaceTexture_release,             "ASurfaceTexture_release");
-    loadSymbol(ASurfaceTexture_attachToGLContext,   "ASurfaceTexture_attachToGLContext");
-    loadSymbol(ASurfaceTexture_detachFromGLContext, "ASurfaceTexture_detachFromGLContext");
-    loadSymbol(ASurfaceTexture_updateTexImage,      "ASurfaceTexture_updateTexImage");
-    loadSymbol(ASurfaceTexture_getTimestamp,        "ASurfaceTexture_getTimestamp");
+    // the following dlsym() calls don't work on API 19
+    if (api_level() >= 21) {
+        loadSymbol(ASurfaceTexture_fromSurfaceTexture, "ASurfaceTexture_fromSurfaceTexture");
+        loadSymbol(ASurfaceTexture_release, "ASurfaceTexture_release");
+        loadSymbol(ASurfaceTexture_attachToGLContext, "ASurfaceTexture_attachToGLContext");
+        loadSymbol(ASurfaceTexture_detachFromGLContext, "ASurfaceTexture_detachFromGLContext");
+        loadSymbol(ASurfaceTexture_updateTexImage, "ASurfaceTexture_updateTexImage");
+        loadSymbol(ASurfaceTexture_getTimestamp, "ASurfaceTexture_getTimestamp");
+    }
+
     if (ASurfaceTexture_fromSurfaceTexture) {
         slog.d << "Using ASurfaceTexture" << io::endl;
     }
 }
-
 
 UTILS_NOINLINE
 JNIEnv* ExternalStreamManagerAndroid::getEnvironmentSlow() noexcept {

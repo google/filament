@@ -40,7 +40,7 @@ FrameInfoManager::FrameInfoManager(FEngine& engine)
 FrameInfoManager::~FrameInfoManager() noexcept = default;
 
 void FrameInfo::beginFrame(FrameInfoManager* mgr) {
-    Fence* fence = mgr->getEngine().createFence(Fence::Type::HARD);
+    Fence* fence = mgr->getEngine().createFence(FFence::Type::HARD);
     mgr->push([this, fence]() {
         Fence::waitAndDestroy(fence, Fence::Mode::DONT_FLUSH);
         laps[START] = clock::now();
@@ -48,7 +48,7 @@ void FrameInfo::beginFrame(FrameInfoManager* mgr) {
 }
 
 void FrameInfo::lap(FrameInfoManager* mgr, lap_id id) {
-    Fence* fence = mgr->getEngine().createFence(Fence::Type::HARD);
+    Fence* fence = mgr->getEngine().createFence(FFence::Type::HARD);
     mgr->push([this, fence, id]() {
         Fence::waitAndDestroy(fence, Fence::Mode::DONT_FLUSH);
         laps[id] = clock::now();
@@ -56,7 +56,7 @@ void FrameInfo::lap(FrameInfoManager* mgr, lap_id id) {
 }
 
 void FrameInfo::endFrame(FrameInfoManager* mgr) {
-    Fence* fence = mgr->getEngine().createFence(Fence::Type::HARD);
+    Fence* fence = mgr->getEngine().createFence(FFence::Type::HARD);
     mgr->push([this, mgr, fence]() {
         char buf[256];
         snprintf(buf, 256, "GPU time [id=%u]", frame);

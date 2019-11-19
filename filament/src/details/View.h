@@ -150,12 +150,16 @@ public:
     }
 
     void setRenderTarget(FRenderTarget* renderTarget, TargetBufferFlags discard) noexcept {
-        mRenderTarget = renderTarget->getHwHandle();
+        mRenderTarget = renderTarget;
         mDiscardedTargetBuffers = discard;
     }
 
     void setRenderTarget(TargetBufferFlags discard) noexcept {
         mDiscardedTargetBuffers = discard;
+    }
+
+    FRenderTarget* getRenderTarget() const noexcept {
+        return mRenderTarget;
     }
 
     void setSampleCount(uint8_t count) noexcept {
@@ -261,19 +265,20 @@ public:
         return mVisibleShadowCasters;
     }
 
-    TargetBufferFlags getClearFlags() const noexcept {
+    uint8_t getClearFlags() const noexcept {
         uint8_t clearFlags = 0;
-        if (getClearTargetColor())     clearFlags |= TargetBufferFlags::COLOR;
-        if (getClearTargetDepth())     clearFlags |= TargetBufferFlags::DEPTH;
-        if (getClearTargetStencil())   clearFlags |= TargetBufferFlags::STENCIL;
-        return TargetBufferFlags(clearFlags);
+        if (getClearTargetColor())     clearFlags |= (uint8_t)TargetBufferFlags::COLOR;
+        if (getClearTargetDepth())     clearFlags |= (uint8_t)TargetBufferFlags::DEPTH;
+        if (getClearTargetStencil())   clearFlags |= (uint8_t)TargetBufferFlags::STENCIL;
+        return clearFlags;
     }
 
     FCamera& getCameraUser() noexcept { return *mCullingCamera; }
     void setCameraUser(FCamera* camera) noexcept { setCullingCamera(camera); }
 
-    backend::Handle<backend::HwRenderTarget> getRenderTarget() const noexcept {
-        return mRenderTarget;
+    backend::Handle<backend::HwRenderTarget> getRenderTargetHandle() const noexcept {
+        constexpr backend::Handle<backend::HwRenderTarget> kEmptyHandle;
+        return mRenderTarget == nullptr ? kEmptyHandle : mRenderTarget->getHwHandle();
     }
 
 private:
@@ -336,7 +341,7 @@ private:
     bool mClearTargetStencil = false;
 
     TargetBufferFlags mDiscardedTargetBuffers = TargetBufferFlags::ALL;
-    backend::Handle<backend::HwRenderTarget> mRenderTarget;
+    FRenderTarget* mRenderTarget = nullptr;
 
     uint8_t mVisibleLayers = 0x1;
     uint8_t mSampleCount = 1;

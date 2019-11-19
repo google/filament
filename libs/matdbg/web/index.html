@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Filament Debugger</title>
+    <meta charset="utf-8">
+    <link rel="icon" type="image/png" href="https://google.github.io/filament/favicon.png" />
+    <link href="https://fonts.googleapis.com/css?family=Lexend Deca" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="vbox viewport">
+
+        <header>matdbg</header>
+        <section class="main hbox space-between">
+          <nav class="vbox">
+            <div id="material-list" class="scrollable squishy">
+            </div>
+            <div id="material-detail" class="scrollable stretchy">
+            </div>
+          </nav>
+          <article id="shader-source">
+          </article>
+        </section>
+        <footer>&nbsp;</footer>
+
+    <template id="material-list-template">
+    <pre>
+{{#material}}<a class="material {{classes}}" data-matid="{{matid}}">{{matid}} {{name}}</a>
+{{/material}}
+    </pre>
+    </template>
+
+    <template id="material-detail-template">
+    <pre>
+name = {{ name }}
+version = {{ version }}
+
+<b>Required attributes</b>
+{{#required_attributes}}
+{{.}}
+{{/required_attributes}}
+
+DIR = DIRECTIONAL_LIGHTING
+DYN = DYNAMIC_LIGHTING
+SRE = SHADOW_RECEIVER
+SKN = SKINNING_OR_MORPHING
+
+<b>OpenGL shaders</b>
+{{#opengl}}
+<a class="shader {{classes}}" data-glindex="{{index}}">{{index}} {{shaderModel}} {{pipelineStage}} {{variantString}}</a>
+{{/opengl}}
+
+<b>Vulkan shaders</b>
+{{#vulkan}}
+<a class="shader {{classes}}" data-vkindex="{{index}}">{{index}} {{shaderModel}} {{pipelineStage}} {{variantString}}</a>
+{{/vulkan}}
+
+<b>Metal shaders</b>
+{{#metal}}
+<a class="shader {{classes}}" data-metalindex="{{index}}">{{index}} {{shaderModel}} {{pipelineStage}} {{variantString}}</a>
+{{/metal}}
+
+<b>Material details</b>
+{{#shading}}
+shading model = {{model}}
+vertex domain = {{vertex_domain}}
+interpolation = {{interpolation}}
+shadow multiply = {{shadow_multiply}}
+specular antialiasing = {{specular_antialiasing}}
+variance = {{variance}}
+threshold = {{threshold}}
+clear coat IOR change = {{clear_coat_IOR_change}}
+{{/shading}}
+{{#raster}}
+blending = {{blending}}
+mask threshold = {{mask_threshold}}
+color write = {{color_write}}
+depth write = {{depth_write}}
+depth test = {{depth_test}}
+double sided = {{double_sided}}
+culling = {{culling}}
+transparency = {{transparency}}
+{{/raster}}
+    </pre>
+    </template>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mustache.js/3.0.1/mustache.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.17.1/min/vs/loader.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

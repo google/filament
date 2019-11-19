@@ -22,7 +22,6 @@
 
 #include "fg/FrameGraph.h"
 
-#include "TextureResource.h"
 #include "fg/ResourceAllocator.h"
 #include "ResourceNode.h"
 #include "VirtualResource.h"
@@ -35,10 +34,10 @@ namespace fg {
 
 struct RenderTargetResource final : public VirtualResource {  // 104
 
-    RenderTargetResource(
+    RenderTargetResource(const char* name,
             FrameGraphRenderTarget::Descriptor const& desc, bool imported,
             backend::TargetBufferFlags targets, uint32_t width, uint32_t height, backend::TextureFormat format)
-            : desc(desc), imported(imported),
+            : desc(desc), imported(imported), name(name),
               attachments(targets), format(format), width(width), height(height) {
         targetInfo.params.viewport = desc.viewport;
         // if Descriptor was initialized with default values, set the viewport to width/height
@@ -56,6 +55,7 @@ struct RenderTargetResource final : public VirtualResource {  // 104
     // cache key
     const FrameGraphRenderTarget::Descriptor desc;
     const bool imported;
+    const char * const name;
 
     // render target creation info
     backend::TargetBufferFlags attachments;
@@ -70,25 +70,23 @@ struct RenderTargetResource final : public VirtualResource {  // 104
 
     void create(FrameGraph& fg) noexcept override {
         if (!imported) {
-            if (attachments) {
-                FrameGraph::Vector<ResourceNode> const& resourceNodes = fg.mResourceNodes;
-
+            if (any(attachments)) {
                 // devirtualize our texture handles. By this point these handles have been
                 // remapped to their alias if any.
                 backend::TargetBufferInfo infos[FrameGraphRenderTarget::Attachments::COUNT];
                 for (size_t i = 0, c = desc.attachments.textures.size(); i < c; i++) {
-                    auto const& r = desc.attachments.textures[i];
-                    if (r.isValid()) {
-                        ResourceNode const& node = resourceNodes[r.getHandle().index];
-                        assert(node.resource);
-                        infos[i].handle = node.resource->texture;
-                        infos[i].level = r.getLevel();
+                    auto const& attachmentInfo = desc.attachments.textures[i];
+                    if (attachmentInfo.isValid()) {
+                        fg::ResourceEntry<FrameGraphTexture> const& entry =
+                                fg.getResourceEntryUnchecked(attachmentInfo.getHandle());
+                        infos[i].handle = entry.getResource().texture;
+                        infos[i].level = attachmentInfo.getLevel();
                     }
                 }
 
                 // create the concrete rendertarget
-                targetInfo.target = fg.getResourceAllocator().createRenderTarget(attachments,
-                        width, height, desc.samples, infos[0], infos[1], {});
+                targetInfo.target = fg.getResourceAllocator().createRenderTarget(name,
+                        attachments, width, height, desc.samples, infos[0], infos[1], {});
             }
         }
     }

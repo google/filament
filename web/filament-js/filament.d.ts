@@ -81,6 +81,7 @@ export class MaterialInstance {
     public setPolygonOffset(scale: number, constant: number): void;
     public setMaskThreshold(threshold: number): void;
     public setDoubleSided(doubleSided: boolean): void;
+    public setCullingMode(mode: CullingMode): void;
 }
 
 export class EntityManager {
@@ -144,7 +145,33 @@ export class LightManager$Builder {
 }
 
 export class LightManager {
+    public hasComponent(entity: Entity): boolean;
+    public getInstance(entity: Entity): LightManager$Instance;
     public static Builder(ltype: LightManager$Type): LightManager$Builder;
+    public getType(instance: LightManager$Instance): LightManager$Type;
+    public isDirectional(instance: LightManager$Instance): boolean;
+    public isPointLight(instance: LightManager$Instance): boolean;
+    public isSpotLight(instance: LightManager$Instance): boolean;
+    public setPosition(instance: LightManager$Instance, value: float3): void;
+    public getPosition(instance: LightManager$Instance): float3;
+    public setDirection(instance: LightManager$Instance, value: float3): void;
+    public getDirection(instance: LightManager$Instance): float3;
+    public setColor(instance: LightManager$Instance, value: float3): void;
+    public getColor(instance: LightManager$Instance): float3;
+    public setIntensity(instance: LightManager$Instance, intensity: number): void;
+    public setIntensityEnergy(instance: LightManager$Instance, watts: number, efficiency: number): void;
+    public getIntensity(instance: LightManager$Instance): number;
+    public setFalloff(instance: LightManager$Instance, radius: number): void;
+    public getFalloff(instance: LightManager$Instance: number);
+    public setSpotLightCone(instance: LightManager$Instance, inner: number, outer: number): void;
+    public setSunAngularRadius(instance: LightManager$Instance, angularRadius: number): void;
+    public getSunAngularRadius(instance: LightManager$Instance): number;
+    public setSunHaloSize(instance: LightManager$Instance, haloSize: number): void;
+    public getSunHaloSize(instance: LightManager$Instance): number;
+    public setSunHaloFalloff(instance: LightManager$Instance, haloFalloff: number): void;
+    public getSunHaloFalloff(instance: LightManager$Instance): number;
+    public setShadowCaster(instance: LightManager$Instance, shadowCaster: boolean): number;
+    public isShadowCaster(instance: LightManager$Instance): boolean;
 }
 
 export interface RenderableManager$Bone {
@@ -236,6 +263,7 @@ export class Camera {
     public getForwardVector(): float3;
     public getFrustum(): Frustum;
     public setExposure(aperture: number, shutterSpeed: number, sensitivity: number): void;
+    public setExposureDirect(exposure: number): void;
     public getAperture(): number;
     public getShutterSpeed(): number;
     public getSensitivity(): number;
@@ -301,7 +329,7 @@ interface Filamesh {
 }
 
 export class Engine {
-    public static create(HTMLCanvasElement): Engine;
+    public static create(canvas: HTMLCanvasElement, contextOptions?: object): Engine;
     public createCamera(): Camera;
     public createIblFromKtx(url: string): IndirectLight;
     public createMaterial(url: string): Material;
@@ -425,6 +453,13 @@ export enum MinFilter {
     LINEAR_MIPMAP_NEAREST,
     NEAREST_MIPMAP_LINEAR,
     LINEAR_MIPMAP_LINEAR,
+}
+
+export enum CullingMode {
+    NONE,
+    FRONT,
+    BACK,
+    FRONT_AND_BACK,
 }
 
 export enum PixelDataFormat {
@@ -606,14 +641,15 @@ export enum VertexAttribute {
     UV1 = 4,
     BONE_INDICES = 5,
     BONE_WEIGHTS = 6,
-    CUSTOM0 = 7,
-    CUSTOM1 = 8,
-    CUSTOM2 = 9,
-    CUSTOM3 = 10,
-    CUSTOM4 = 11,
-    CUSTOM5 = 12,
-    CUSTOM6 = 13,
-    CUSTOM7 = 14,
+    UNUSED = 7,
+    CUSTOM0 = 8,
+    CUSTOM1 = 9,
+    CUSTOM2 = 10,
+    CUSTOM3 = 11,
+    CUSTOM4 = 12,
+    CUSTOM5 = 13,
+    CUSTOM6 = 14,
+    CUSTOM7 = 15,
     MORPH_POSITION_0 = CUSTOM0,
     MORPH_POSITION_1 = CUSTOM1,
     MORPH_POSITION_2 = CUSTOM2,

@@ -22,8 +22,6 @@
 
 #include <geometry/SurfaceOrientation.h>
 
-#include <math/mat3.h>
-#include <math/norm.h>
 #include <math/quat.h>
 #include <math/vec3.h>
 #include <math/vec4.h>
@@ -42,10 +40,6 @@ struct VertexBuffer::BuilderDetails {
     uint32_t mVertexCount = 0;
     uint8_t mBufferCount = 0;
 };
-
-static bool hasIntegerTarget(VertexAttribute attribute) {
-    return attribute == BONE_INDICES;
-}
 
 using BuilderType = VertexBuffer;
 BuilderType::Builder::Builder() noexcept = default;
@@ -80,11 +74,11 @@ VertexBuffer::Builder& VertexBuffer::Builder::attribute(VertexAttribute attribut
         size_t(bufferIndex) < MAX_VERTEX_ATTRIBUTE_COUNT) {
 
 #ifndef NDEBUG
-        if (byteOffset & 0x3) {
+        if (byteOffset & 0x3u) {
             utils::slog.d << "[performance] VertexBuffer::Builder::attribute() "
                              "byteOffset not multiple of 4" << utils::io::endl;
         }
-        if (byteStride & 0x3) {
+        if (byteStride & 0x3u) {
             utils::slog.d << "[performance] VertexBuffer::Builder::attribute() "
                              "byteStride not multiple of 4" << utils::io::endl;
         }
@@ -95,10 +89,10 @@ VertexBuffer::Builder& VertexBuffer::Builder::attribute(VertexAttribute attribut
         entry.offset = byteOffset;
         entry.stride = byteStride;
         entry.type = attributeType;
-        if (hasIntegerTarget(attribute)) {
-            entry.flags |= Attribute::FLAG_INTEGER_TARGET;
-        }
         mImpl->mDeclaredAttributes.set(attribute);
+    } else {
+        utils::slog.w << "Ignoring VertexBuffer attribute, the limit of " <<
+                MAX_VERTEX_ATTRIBUTE_COUNT << " attributes has been exceeded" << utils::io::endl;
     }
     return *this;
 }
@@ -117,10 +111,10 @@ VertexBuffer::Builder& VertexBuffer::Builder::normalized(VertexAttribute attribu
 }
 
 VertexBuffer* VertexBuffer::Builder::build(Engine& engine) {
+    FEngine::assertValid(engine, __PRETTY_FUNCTION__);
     if (!ASSERT_PRECONDITION_NON_FATAL(mImpl->mVertexCount > 0, "vertexCount cannot be 0")) {
         return nullptr;
     }
-
     if (!ASSERT_PRECONDITION_NON_FATAL(mImpl->mBufferCount > 0, "bufferCount cannot be 0")) {
         return nullptr;
     }
@@ -163,6 +157,11 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const VertexBuffer::Builder& build
             attributeArray[i].flags  = attributes[i].flags;
         }
     }
+
+    // Backends do not (and should not) know the semantics of each vertex attribute, but they
+    // need to know whether the vertex shader consumes them as integers or as floats.
+    // NOTE: This flag needs to be set regardless of whether the attribute is actually declared.
+    attributeArray[BONE_INDICES].flags |= Attribute::FLAG_INTEGER_TARGET;
 
     FEngine::DriverApi& driver = engine.getDriverApi();
     mHandle = driver.createVertexBuffer(

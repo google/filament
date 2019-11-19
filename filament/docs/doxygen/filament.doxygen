@@ -112,7 +112,14 @@ WARN_LOGFILE           =
 #---------------------------------------------------------------------------
 # Configuration options related to the input files
 #---------------------------------------------------------------------------
-INPUT                  = include backend/include ../libs/filabridge/include/filament
+INPUT                  = ../libs/filabridge/include \
+                         ../libs/filamat/include \
+                         ../libs/geometry/include \
+                         ../libs/gltfio/include \
+                         ../libs/utils/include \
+                         backend/include \
+                         include
+
 INPUT_ENCODING         = UTF-8
 FILE_PATTERNS          = *.inl \
                          *.h \

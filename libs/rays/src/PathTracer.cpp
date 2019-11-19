@@ -20,6 +20,7 @@
 #include <image/LinearImage.h>
 
 #include <math/mat4.h>
+#include <math/scalar.h>
 #include <math/vec2.h>
 
 #include <utils/JobSystem.h>
@@ -52,7 +53,7 @@ struct PixelRectangle {
 // TODO: the following two functions should be shared with libs/ibl
 
 static double3 hemisphereCosSample(double2 u) {
-    const double phi = 2 * M_PI * u.x;
+    const double phi = 2 * F_PI * u.x;
     const double cosTheta2 = 1 - u.y;
     const double cosTheta = std::sqrt(cosTheta2);
     const double sinTheta = std::sqrt(1 - cosTheta2);
@@ -167,7 +168,7 @@ static void renderTile(EmbreeContext* context, PixelRectangle rect) {
     const float tfar = context->config.aoRayFar;
     const float iw = 1.0f / ao.getWidth();
     const float ih = 1.0f / ao.getHeight();
-    const float theta = camera.vfovDegrees * M_PI / 180;
+    const float theta = camera.vfovDegrees * F_PI / 180;
     const float f = tanf(theta / 2);
     const float a = camera.aspectRatio;
     const float3 org = camera.eyePosition;

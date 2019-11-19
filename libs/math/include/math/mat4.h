@@ -17,12 +17,13 @@
 #ifndef MATH_MAT4_H_
 #define MATH_MAT4_H_
 
+#include <math/compiler.h>
 #include <math/mat3.h>
 #include <math/quat.h>
+#include <math/scalar.h>
 #include <math/TMatHelpers.h>
 #include <math/vec3.h>
 #include <math/vec4.h>
-#include <math/compiler.h>
 
 #include <stdint.h>
 #include <sys/types.h>
@@ -32,9 +33,6 @@ namespace filament {
 namespace math {
 // -------------------------------------------------------------------------------------
 namespace details {
-
-// Define PI here for compatibility with MSVC.
-static constexpr double PI = 3.14159265358979323846;
 
 template<typename T>
 class TQuaternion;
@@ -83,7 +81,7 @@ class MATH_EMPTY_BASES TMat44 :
         public TVecUnaryOperators<TMat44, T>,
         public TVecComparisonOperators<TMat44, T>,
         public TVecAddOperators<TMat44, T>,
-        public TMatProductOperators<TMat44, T>,
+        public TMatProductOperators<TMat44, T, TVec4>,
         public TMatSquareFunctions<TMat44, T>,
         public TMatTransform<TMat44, T>,
         public TMatHelpers<TMat44, T>,
@@ -123,13 +121,12 @@ private:
 
 public:
     // array access
-    inline constexpr col_type const& operator[](size_t column) const {
-        // only possible in C++0x14 with constexpr
+    inline constexpr col_type const& operator[](size_t column) const noexcept {
         assert(column < NUM_COLS);
         return m_value[column];
     }
 
-    inline constexpr col_type& operator[](size_t column) {
+    inline constexpr col_type& operator[](size_t column) noexcept {
         assert(column < NUM_COLS);
         return m_value[column];
     }
@@ -139,7 +136,7 @@ public:
      */
 
     // leaves object uninitialized. use with caution.
-    constexpr explicit TMat44(no_init) {}
+    constexpr explicit TMat44(no_init) noexcept {}
 
     /** initialize to identity.
      *
@@ -154,7 +151,7 @@ public:
      *      \right)
      *      \f$
      */
-    constexpr TMat44();
+    constexpr TMat44() noexcept;
 
     /** initialize to Identity*scalar.
      *
@@ -170,7 +167,7 @@ public:
      *      \f$
      */
     template<typename U>
-    constexpr explicit TMat44(U v);
+    constexpr explicit TMat44(U v) noexcept;
 
     /** sets the diagonal to a vector.
      *
@@ -186,11 +183,11 @@ public:
      *      \f$
      */
     template<typename U>
-    constexpr explicit TMat44(const TVec4<U>& v);
+    constexpr explicit TMat44(const TVec4<U>& v) noexcept;
 
     // construct from another matrix of the same size
     template<typename U>
-    constexpr explicit TMat44(const TMat44<U>& rhs);
+    constexpr explicit TMat44(const TMat44<U>& rhs) noexcept;
 
     /** construct from 4 column vectors.
      *
@@ -204,7 +201,7 @@ public:
      */
     template<typename A, typename B, typename C, typename D>
     constexpr TMat44(const TVec4<A>& v0, const TVec4<B>& v1, const TVec4<C>& v2,
-            const TVec4<D>& v3);
+            const TVec4<D>& v3) noexcept;
 
     /** construct from 16 elements in column-major form.
      *
@@ -227,7 +224,7 @@ public:
     constexpr explicit TMat44(A m00, B m01, C m02, D m03,
             E m10, F m11, G m12, H m13,
             I m20, J m21, K m22, L m23,
-            M m30, N m31, O m32, P m33);
+            M m30, N m31, O m32, P m33) noexcept;
 
 
     struct row_major_init {
@@ -250,31 +247,31 @@ public:
         TMat44 m;
     };
 
-    constexpr explicit TMat44(row_major_init c) : TMat44(std::move(c.m)) {}
+    constexpr explicit TMat44(row_major_init c) noexcept : TMat44(std::move(c.m)) {}
 
     /**
      * construct from a quaternion
      */
     template<typename U>
-    constexpr explicit TMat44(const TQuaternion<U>& q);
+    constexpr explicit TMat44(const TQuaternion<U>& q) noexcept;
 
     /**
      * construct from a 3x3 matrix
      */
     template<typename U>
-    constexpr explicit TMat44(const TMat33<U>& matrix);
+    constexpr explicit TMat44(const TMat33<U>& matrix) noexcept;
 
     /**
      * construct from a 3x3 matrix and 3d translation
      */
     template<typename U, typename V>
-    constexpr TMat44(const TMat33<U>& matrix, const TVec3<V>& translation);
+    constexpr TMat44(const TMat33<U>& matrix, const TVec3<V>& translation) noexcept;
 
     /**
      * construct from a 3x3 matrix and 4d last column.
      */
     template<typename U, typename V>
-    constexpr TMat44(const TMat33<U>& matrix, const TVec4<V>& column3);
+    constexpr TMat44(const TMat33<U>& matrix, const TVec4<V>& column3) noexcept;
 
     /*
      *  helpers
@@ -294,27 +291,27 @@ public:
         return result != 0;
     }
 
-    static constexpr TMat44 ortho(T left, T right, T bottom, T top, T near, T far);
+    static constexpr TMat44 ortho(T left, T right, T bottom, T top, T near, T far) noexcept;
 
-    static constexpr TMat44 frustum(T left, T right, T bottom, T top, T near, T far);
+    static constexpr TMat44 frustum(T left, T right, T bottom, T top, T near, T far) noexcept;
 
     enum class Fov {
         HORIZONTAL,
         VERTICAL
     };
-    static TMat44 perspective(T fov, T aspect, T near, T far, Fov direction = Fov::VERTICAL);
+    static TMat44 perspective(T fov, T aspect, T near, T far, Fov direction = Fov::VERTICAL) noexcept;
 
     template<typename A, typename B, typename C>
-    static TMat44 lookAt(const TVec3<A>& eye, const TVec3<B>& center, const TVec3<C>& up);
+    static TMat44 lookAt(const TVec3<A>& eye, const TVec3<B>& center, const TVec3<C>& up) noexcept;
 
     template<typename A>
-    static constexpr TVec3<A> project(const TMat44& projectionMatrix, TVec3<A> vertice) {
+    static constexpr TVec3<A> project(const TMat44& projectionMatrix, TVec3<A> vertice) noexcept{
         TVec4<A> r = projectionMatrix * TVec4<A>{ vertice, 1 };
         return TVec3<A>{ r[0], r[1], r[2] } * (1 / r[3]);
     }
 
     template<typename A>
-    static constexpr TVec4<A> project(const TMat44& projectionMatrix, TVec4<A> vertice) {
+    static constexpr TVec4<A> project(const TMat44& projectionMatrix, TVec4<A> vertice) noexcept{
         vertice = projectionMatrix * vertice;
         return { TVec3<A>{ vertice[0], vertice[1], vertice[2] } * (1 / vertice[3]), 1 };
     }
@@ -322,7 +319,7 @@ public:
     /**
      * Constructs a 3x3 matrix from the upper-left corner of this 4x4 matrix
      */
-    inline constexpr TMat33<T> upperLeft() const {
+    inline constexpr TMat33<T> upperLeft() const noexcept {
         const TVec3<T> v0 = { m_value[0][0], m_value[0][1], m_value[0][2] };
         const TVec3<T> v1 = { m_value[1][0], m_value[1][1], m_value[1][2] };
         const TVec3<T> v2 = { m_value[2][0], m_value[2][1], m_value[2][2] };
@@ -330,19 +327,19 @@ public:
     }
 
     template<typename A>
-    static constexpr TMat44 translation(const TVec3<A>& t) {
+    static constexpr TMat44 translation(const TVec3<A>& t) noexcept {
         TMat44 r;
         r[3] = TVec4<T>{ t, 1 };
         return r;
     }
 
     template<typename A>
-    static constexpr TMat44 scaling(const TVec3<A>& s) {
+    static constexpr TMat44 scaling(const TVec3<A>& s) noexcept {
         return TMat44{ TVec4<T>{ s, 1 }};
     }
 
     template<typename A>
-    static constexpr TMat44 scaling(A s) {
+    static constexpr TMat44 scaling(A s) noexcept {
         return TMat44{ TVec4<T>{ s, s, s, 1 }};
     }
 };
@@ -355,7 +352,7 @@ public:
 // operations.
 
 template<typename T>
-constexpr TMat44<T>::TMat44()
+constexpr TMat44<T>::TMat44() noexcept
         : m_value{
         col_type(1, 0, 0, 0),
         col_type(0, 1, 0, 0),
@@ -365,7 +362,7 @@ constexpr TMat44<T>::TMat44()
 
 template<typename T>
 template<typename U>
-constexpr TMat44<T>::TMat44(U v)
+constexpr TMat44<T>::TMat44(U v) noexcept
         : m_value{
         col_type(v, 0, 0, 0),
         col_type(0, v, 0, 0),
@@ -375,7 +372,7 @@ constexpr TMat44<T>::TMat44(U v)
 
 template<typename T>
 template<typename U>
-constexpr TMat44<T>::TMat44(const TVec4<U>& v)
+constexpr TMat44<T>::TMat44(const TVec4<U>& v) noexcept
         : m_value{
         col_type(v[0], 0, 0, 0),
         col_type(0, v[1], 0, 0),
@@ -394,7 +391,7 @@ template<
 constexpr TMat44<T>::TMat44(A m00, B m01, C m02, D m03,
         E m10, F m11, G m12, H m13,
         I m20, J m21, K m22, L m23,
-        M m30, N m31, O m32, P m33)
+        M m30, N m31, O m32, P m33) noexcept
         : m_value{
         col_type(m00, m01, m02, m03),
         col_type(m10, m11, m12, m13),
@@ -404,7 +401,7 @@ constexpr TMat44<T>::TMat44(A m00, B m01, C m02, D m03,
 
 template<typename T>
 template<typename U>
-constexpr TMat44<T>::TMat44(const TMat44<U>& rhs) {
+constexpr TMat44<T>::TMat44(const TMat44<U>& rhs) noexcept {
     for (size_t col = 0; col < NUM_COLS; ++col) {
         m_value[col] = col_type(rhs[col]);
     }
@@ -414,13 +411,13 @@ constexpr TMat44<T>::TMat44(const TMat44<U>& rhs) {
 template<typename T>
 template<typename A, typename B, typename C, typename D>
 constexpr TMat44<T>::TMat44(const TVec4<A>& v0, const TVec4<B>& v1,
-        const TVec4<C>& v2, const TVec4<D>& v3)
+        const TVec4<C>& v2, const TVec4<D>& v3) noexcept
         : m_value{ v0, v1, v2, v3 } {
 }
 
 template<typename T>
 template<typename U>
-constexpr TMat44<T>::TMat44(const TQuaternion<U>& q) : m_value{} {
+constexpr TMat44<T>::TMat44(const TQuaternion<U>& q) noexcept : m_value{} {
     const U n = q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w;
     const U s = n > 0 ? 2 / n : 0;
     const U x = s * q.x;
@@ -443,7 +440,7 @@ constexpr TMat44<T>::TMat44(const TQuaternion<U>& q) : m_value{} {
 
 template<typename T>
 template<typename U>
-constexpr TMat44<T>::TMat44(const TMat33<U>& m)
+constexpr TMat44<T>::TMat44(const TMat33<U>& m) noexcept
         : m_value{
         col_type(m[0][0], m[0][1], m[0][2], 0),
         col_type(m[1][0], m[1][1], m[1][2], 0),
@@ -454,7 +451,7 @@ constexpr TMat44<T>::TMat44(const TMat33<U>& m)
 
 template<typename T>
 template<typename U, typename V>
-constexpr TMat44<T>::TMat44(const TMat33<U>& m, const TVec3<V>& v)
+constexpr TMat44<T>::TMat44(const TMat33<U>& m, const TVec3<V>& v) noexcept
         : m_value{
         col_type(m[0][0], m[0][1], m[0][2], 0),
         col_type(m[1][0], m[1][1], m[1][2], 0),
@@ -465,7 +462,7 @@ constexpr TMat44<T>::TMat44(const TMat33<U>& m, const TVec3<V>& v)
 
 template<typename T>
 template<typename U, typename V>
-constexpr TMat44<T>::TMat44(const TMat33<U>& m, const TVec4<V>& v)
+constexpr TMat44<T>::TMat44(const TMat33<U>& m, const TVec4<V>& v) noexcept
         : m_value{
         col_type(m[0][0], m[0][1], m[0][2], 0),
         col_type(m[1][0], m[1][1], m[1][2], 0),
@@ -480,7 +477,7 @@ constexpr TMat44<T>::TMat44(const TMat33<U>& m, const TVec4<V>& v)
 // ----------------------------------------------------------------------------------------
 
 template<typename T>
-constexpr TMat44<T> TMat44<T>::ortho(T left, T right, T bottom, T top, T near, T far) {
+constexpr TMat44<T> TMat44<T>::ortho(T left, T right, T bottom, T top, T near, T far) noexcept {
     TMat44<T> m;
     m[0][0] = 2 / (right - left);
     m[1][1] = 2 / (top - bottom);
@@ -492,7 +489,7 @@ constexpr TMat44<T> TMat44<T>::ortho(T left, T right, T bottom, T top, T near, T
 }
 
 template<typename T>
-constexpr TMat44<T> TMat44<T>::frustum(T left, T right, T bottom, T top, T near, T far) {
+constexpr TMat44<T> TMat44<T>::frustum(T left, T right, T bottom, T top, T near, T far) noexcept {
     TMat44<T> m;
     m[0][0] = (2 * near) / (right - left);
     m[1][1] = (2 * near) / (top - bottom);
@@ -506,14 +503,14 @@ constexpr TMat44<T> TMat44<T>::frustum(T left, T right, T bottom, T top, T near,
 }
 
 template<typename T>
-TMat44<T> TMat44<T>::perspective(T fov, T aspect, T near, T far, TMat44::Fov direction) {
+TMat44<T> TMat44<T>::perspective(T fov, T aspect, T near, T far, TMat44::Fov direction) noexcept {
     T h, w;
 
     if (direction == TMat44::Fov::VERTICAL) {
-        h = std::tan(fov * PI / 360.0f) * near;
+        h = std::tan(fov * F_PI / 360.0f) * near;
         w = h * aspect;
     } else {
-        w = std::tan(fov * PI / 360.0f) * near;
+        w = std::tan(fov * F_PI / 360.0f) * near;
         h = w / aspect;
     }
     return frustum(-w, w, -h, h, near, far);
@@ -527,7 +524,7 @@ TMat44<T> TMat44<T>::perspective(T fov, T aspect, T near, T far, TMat44::Fov dir
 template<typename T>
 template<typename A, typename B, typename C>
 TMat44<T> TMat44<T>::lookAt(const TVec3<A>& eye, const TVec3<B>& center,
-        const TVec3<C>& up) {
+        const TVec3<C>& up) noexcept {
     TVec3<T> z_axis(normalize(center - eye));
     TVec3<T> norm_up(normalize(up));
     if (std::abs(dot(z_axis, norm_up)) > T(0.999)) {
@@ -547,67 +544,11 @@ TMat44<T> TMat44<T>::lookAt(const TVec3<A>& eye, const TVec3<B>& center,
 // Arithmetic operators outside of class
 // ----------------------------------------------------------------------------------------
 
-/* We use non-friend functions here to prevent the compiler from using
- * implicit conversions, for instance of a scalar to a vector. The result would
- * not be what the caller expects.
- *
- * Also note that the order of the arguments in the inner loop is important since
- * it determines the output type (only relevant when T != U).
- */
-
-// matrix * column-vector, result is a vector of the same type than the input vector
-template<typename T, typename U>
-constexpr typename TMat44<T>::col_type MATH_PURE operator*(const TMat44<T>& lhs,
-        const TVec4<U>& rhs) {
-    // Result is initialized to zero.
-    typename TMat44<T>::col_type result{};
-    for (size_t col = 0; col < TMat44<T>::NUM_COLS; ++col) {
-        result += lhs[col] * T(rhs[col]);
-    }
-    return result;
-}
-
 // mat44 * vec3, result is vec3( mat44 * {vec3, 1} )
 template<typename T, typename U>
 constexpr typename TMat44<T>::col_type MATH_PURE operator*(const TMat44<T>& lhs,
-        const TVec3<U>& rhs) {
+        const TVec3<U>& rhs) noexcept {
     return lhs * TVec4<U>{ rhs, 1 };
-}
-
-
-// row-vector * matrix, result is a vector of the same type than the input vector
-template<typename T, typename U>
-constexpr typename TMat44<U>::row_type MATH_PURE operator*(const TVec4<U>& lhs,
-        const TMat44<T>& rhs) {
-    typename TMat44<U>::row_type result{};
-    for (size_t col = 0; col < TMat44<T>::NUM_COLS; ++col) {
-        result[col] = dot(lhs, rhs[col]);
-    }
-    return result;
-}
-
-// matrix * scalar, result is a matrix of the same type than the input matrix
-template<typename T, typename U>
-constexpr typename std::enable_if<std::is_arithmetic<U>::value, TMat44<T>>::type MATH_PURE
-operator*(TMat44<T> lhs, U rhs) {
-    return lhs *= rhs;
-}
-
-// scalar * matrix, result is a matrix of the same type than the input matrix
-template<typename T, typename U>
-constexpr typename std::enable_if<std::is_arithmetic<U>::value, TMat44<T>>::type MATH_PURE
-operator*(U lhs, const TMat44<T>& rhs) {
-    return rhs * lhs;
-}
-
-// ----------------------------------------------------------------------------------------
-
-/* FIXME: this should go into TMatSquareFunctions<> but for some reason
- * BASE<T>::col_type is not accessible from there (???)
- */
-template<typename T>
-constexpr typename TMat44<T>::col_type MATH_PURE diag(const TMat44<T>& m) {
-    return matrix::diag(m);
 }
 
 } // namespace details

@@ -22,7 +22,6 @@
 #include "matc/Compiler.h"
 #include "matc/CommandlineConfig.h"
 #include "matc/MaterialCompiler.h"
-#include "matc/PostprocessMaterialCompiler.h"
 
 using namespace matc;
 
@@ -33,18 +32,7 @@ int main(int argc, char** argv) {
         return EXIT_FAILURE;
     }
 
-    std::unique_ptr<Compiler> compiler = nullptr;
-    switch (parameters.getMode()) {
-        case CommandlineConfig::Mode::MATERIAL:
-            compiler.reset(new MaterialCompiler());
-            break;
-        case CommandlineConfig::Mode::DEPTH:
-            // this option is obsolete
-            return EXIT_SUCCESS;
-        case CommandlineConfig::Mode::POSTPROCESS:
-            compiler.reset(new PostprocessMaterialCompiler());
-            break;
-    }
+    const std::unique_ptr<Compiler> compiler = std::make_unique<MaterialCompiler>();
 
     if (!compiler->start(parameters)) {
         return EXIT_FAILURE;

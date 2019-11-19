@@ -72,8 +72,6 @@ static void usage(char* name) {
             "       Specify output format: blob (default) or header\n\n"
             "   --debug, -d\n"
             "       Generate extra data for debugging\n\n"
-            "   --mode, -m\n"
-            "       Select package type: material (default), postprocess\n\n"
             "   --print\n"
             "       Print generated shaders for debugging\n\n"
     );
@@ -85,9 +83,14 @@ static void usage(char* name) {
 }
 
 static void license() {
-    std::cout <<
-    #include "licenses/licenses.inc"
-    ;
+    static const char *license[] = {
+        #include "licenses/licenses.inc"
+        nullptr
+    };
+
+    const char **p = &license[0];
+    while (*p)
+        std::cout << *p++ << std::endl;
 }
 
 static uint8_t parseVariantFilter(const std::string& arg) {
@@ -120,7 +123,6 @@ bool CommandlineConfig::parse() {
             { "output",            required_argument, nullptr, 'o' },
             { "output-format",     required_argument, nullptr, 'f' },
             { "debug",                   no_argument, nullptr, 'd' },
-            { "mode",              required_argument, nullptr, 'm' },
             { "variant-filter",    required_argument, nullptr, 'V' },
             { "platform",          required_argument, nullptr, 'p' },
             { "optimize",                no_argument, nullptr, 'x' }, // for backward compatibility
@@ -166,20 +168,6 @@ bool CommandlineConfig::parse() {
                 break;
             case 'd':
                 mDebug = true;
-                break;
-            case 'm':
-                if (arg == "material") {
-                    mMode = Mode::MATERIAL;
-                } else if (arg == "depth") {
-                    mMode = Mode::DEPTH;
-                    std::cerr << "--mode=depth is obsolete." << std::endl;
-                } else if (arg == "postprocess") {
-                    mMode = Mode::POSTPROCESS;
-                } else {
-                    std::cerr << "Unrecognized mode flag. Must be 'material'|'postprocess'."
-                            << std::endl;
-                   return false;
-                }
                 break;
             case 'p':
                 if (arg == "desktop") {

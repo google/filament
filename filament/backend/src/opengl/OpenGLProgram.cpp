@@ -111,7 +111,7 @@ OpenGLProgram::OpenGLProgram(OpenGLDriver* gl, const Program& programBuilder) no
         if (programBuilder.hasSamplers()) {
             // if we have samplers, we need to do a bit of extra work
             // activate this program so we can set all its samplers once and for all (glUniform1i)
-            gl->useProgram(program);
+            gl->getContext().useProgram(program);
 
             auto const& samplerGroupInfo = programBuilder.getSamplerGroupInfo();
             auto& indicesRun = mIndicesRuns;
@@ -150,11 +150,11 @@ OpenGLProgram::OpenGLProgram(OpenGLDriver* gl, const Program& programBuilder) no
         mIsValid = true;
     }
 
-    // failing to compile a program can't be fatal, because this will happen a lot in
+    // Failing to compile a program can't be fatal, because this will happen a lot in
     // the material tools. We need to have a better way to handle these errors and
-    // return to the editor.
+    // return to the editor. Also note the early "return" statements in this function.
     if (UTILS_UNLIKELY(!isValid())) {
-        PANIC_LOG("failed to compile glsl program");
+        PANIC_LOG("Failed to compile GLSL program.");
     }
 }
 
@@ -213,7 +213,7 @@ void OpenGLProgram::updateSamplers(OpenGLDriver* gl) noexcept {
 
             // FIXME: getSampler() is expensive because it's a hashmap lookup
             GLuint sampler = gl->getSampler(samplers[index].s);
-            gl->bindSampler(tmu, sampler);
+            gl->getContext().bindSampler(tmu, sampler);
         }
     }
     CHECK_GL_ERROR(utils::slog.e)
