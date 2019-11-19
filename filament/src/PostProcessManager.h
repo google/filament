@@ -53,12 +53,9 @@ public:
             bool translucent) noexcept;
 
     FrameGraphId <FrameGraphTexture> dynamicScaling(
-            FrameGraph& fg, uint8_t msaa, bool scaled, FrameGraphId <FrameGraphTexture> input,
+            FrameGraph& fg, uint8_t msaa, bool scaled, bool blend,
+            FrameGraphId <FrameGraphTexture> input,
             backend::TextureFormat outFormat) noexcept;
-
-    FrameGraphId<FrameGraphTexture> resolve(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input) noexcept;
-
 
     FrameGraphId<FrameGraphTexture> ssao(FrameGraph& fg, details::RenderPass& pass,
             filament::Viewport const& svp,
@@ -110,6 +107,7 @@ private:
     PostProcessMaterial mSSAO;
     PostProcessMaterial mMipmapDepth;
     PostProcessMaterial mBlur;
+    PostProcessMaterial mBlit;
     PostProcessMaterial mTonemapping;
     PostProcessMaterial mFxaa;
 

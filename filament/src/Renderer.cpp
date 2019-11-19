@@ -81,7 +81,7 @@ void FRenderer::init() noexcept {
         mHdrQualityMedium = TextureFormat::RGB8;
     }
 
-    // our default opqaue high quality HDR format, fallback to RGBA, then medium, then LDR
+    // our default opaque high quality HDR format, fallback to RGBA, then medium, then LDR
     // if not supported
     mHdrQualityHigh = TextureFormat::RGB16F;
     if (!driver.isRenderTargetFormatSupported(mHdrQualityHigh)) {
@@ -136,8 +136,7 @@ void FRenderer::resetUserTime() {
     mUserEpoch = std::chrono::steady_clock::now();
 }
 
-TextureFormat FRenderer::getHdrFormat(const View& view) const noexcept {
-    const bool translucent = mSwapChain->isTransparent();
+TextureFormat FRenderer::getHdrFormat(const View& view, bool translucent) const noexcept {
     if (translucent) {
         return mHdrTranslucent;
     }
@@ -152,10 +151,8 @@ TextureFormat FRenderer::getHdrFormat(const View& view) const noexcept {
     }
 }
 
-TextureFormat FRenderer::getLdrFormat() const noexcept {
-    const bool translucent = mSwapChain->isTransparent();
-    return (translucent || !mIsRGB8Supported) ? TextureFormat::RGBA8
-                                              : TextureFormat::RGB8;
+TextureFormat FRenderer::getLdrFormat(bool translucent) const noexcept {
+    return (translucent || !mIsRGB8Supported) ? TextureFormat::RGBA8 : TextureFormat::RGB8;
 }
 
 void FRenderer::render(FView const* view) {
@@ -259,7 +256,21 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     FrameGraph fg(engine.getResourceAllocator());
 
-    const TextureFormat hdrFormat = getHdrFormat(view);
+    // Figure out if we need to blend this view into the framebuffer. Maybe this should be
+    // explicit, but since we don't have an API right now, we use heuristics:
+    // - we are keeping the color buffer before rendering, and
+    // - we are not clearing or clearing with alpha
+    // FIXME: make this an explicit API
+    const bool blending = !(view.getDiscardedTargetBuffers() & TargetBufferFlags::COLOR)
+            && (!view.getClearTargetColor() || view.getClearColor().a < 1.0);
+
+    // If the swapchain is transparent or if we blend into it, we need to allocate our intermediate
+    // buffers with an alpha channel.
+    // FIXME: this doesn't work when the target is a user provided rendertarget
+    const bool translucent = mSwapChain->isTransparent() || blending;
+
+
+    const TextureFormat hdrFormat = getHdrFormat(view, translucent);
 
     // FIXME: we use "hasPostProcess" as a proxy for deciding if we need a depth-buffer or not
     //        historically this has been true, but it's definitely wrong.
@@ -309,6 +320,9 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     // We only honor the view's color buffer clear flags, depth/stencil are handled by the framefraph
     uint8_t viewClearFlags = view.getClearFlags() & (uint8_t)TargetBufferFlags::ALL;
+
+    // FIXME: when the view doesn't ask for a clear, but it's drawn in an intermediate buffer
+    //        that buffer needs to be cleared with transparent pixels if blending is enabled
     TargetBufferFlags clearFlags = (TargetBufferFlags(viewClearFlags) & TargetBufferFlags::COLOR)
                                    | TargetBufferFlags::DEPTH;
 
@@ -380,15 +394,10 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
      * Post Processing...
      */
 
-    const bool translucent = mSwapChain->isTransparent();
     const TextureFormat ldrFormat = (toneMapping && fxaa) ?
-            TextureFormat::RGBA8 : getLdrFormat(); // e.g. RGB8 or RGBA8
+            TextureFormat::RGBA8 : getLdrFormat(translucent); // e.g. RGB8 or RGBA8
 
     if (hasPostProcess) {
-        // FIXME: currently we can't render a view on top of another one (with transparency) if
-        //        any post-processing is performed on that view -- this is because post processing
-        //        uses intermediary buffers which are not blended back (they're blitted).
-
         if (toneMapping) {
             input = ppm.toneMapping(fg, input, ldrFormat, dithering, translucent);
         }
@@ -396,28 +405,34 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             input = ppm.fxaa(fg, input, ldrFormat, !toneMapping || translucent);
         }
         if (scaled) {
-            input = ppm.dynamicScaling(fg, msaa, scaled, input, ldrFormat);
+            input = ppm.dynamicScaling(fg, msaa, scaled, blending, input, ldrFormat);
         }
     }
 
     // We need to do special processing when rendering directly into the swap-chain (see
     // comments below). That is when the viewRenderTarget is the default render target
     // (mRenderTarget) and we're rendering into it.
-    if (viewRenderTarget == mRenderTarget && input == colorPass.getData().color) {
+    if (input == colorPass.getData().color) {
         // here we know we're not scaled because either post-processing is disabled (which implies
         // no scaling, or scaled==false because otherwise we wouldn't be rendering in the
         // default target.
         assert(!scaled);
 
-        // The default render target is not multi-sampled, so we need an intermediate
-        // buffer.
-        // The default render target also doesn't have a depth buffer, so if one is needed, we
-        // use an intermediate buffer also.
-        // The intermediate buffer  is accomplished with a "fake" dynamicScaling (i.e. blit)
-        // operation.
+        if (viewRenderTarget == mRenderTarget) {
+            // The default render target is not multi-sampled, so we need an intermediate
+            // buffer.
+            // The default render target also doesn't have a depth buffer, so if one is needed, we
+            // use an intermediate buffer also.
+            // The intermediate buffer  is accomplished with a "fake" dynamicScaling (i.e. blit)
+            // operation.
 
-        if (msaa > 1 || colorPassNeedsDepthBuffer) {
-            input = ppm.dynamicScaling(fg, msaa, scaled, input, ldrFormat);
+            if (msaa > 1 || colorPassNeedsDepthBuffer) {
+                input = ppm.dynamicScaling(fg, msaa, scaled, blending, input, ldrFormat);
+            }
+        }
+    } else {
+        if (blending) {
+            input = ppm.dynamicScaling(fg, msaa, scaled, blending, input, ldrFormat);
         }
     }
 
