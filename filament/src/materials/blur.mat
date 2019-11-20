@@ -39,11 +39,11 @@ vertex {
 }
 
 fragment {
-    const int kGaussianCount = 5;
+    const int kGaussianCount = 8;
     const float kGaussianSamples[] = float[](
-        0.239365, 0.199935, 0.116512, 0.047370, 0.013437
+        0.149603, 0.139446, 0.112927, 0.079454, 0.048569, 0.025795, 0.011902, 0.004772
     );
-    const float kGaussianWeightSum = 0.993872;
+    const float kGaussianWeightSum = 0.995331;
 
     ivec2 clampToEdge(const sampler2D s, ivec2 uv) {
         ivec2 size = textureSize(s, 0);
@@ -78,7 +78,7 @@ fragment {
     }
 
     void postProcess(inout PostProcessInputs postProcess) {
-        ivec2 uv = ivec2(variable_vertex.xy * materialParams.resolution.xy);
+        highp ivec2 uv = ivec2(variable_vertex.xy * materialParams.resolution.xy);
 
         float depth = texelFetch(materialParams_depth, uv, 0).r;
 
