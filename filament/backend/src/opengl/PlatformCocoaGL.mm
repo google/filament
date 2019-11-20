@@ -51,6 +51,7 @@ Driver* PlatformCocoaGL::createDriver(void* sharedContext) noexcept {
     // NSOpenGLPFAColorSize: when unspecified, a format that matches the screen is preferred
     NSOpenGLPixelFormatAttribute pixelFormatAttributes[] = {
             NSOpenGLPFAOpenGLProfile, NSOpenGLProfileVersion3_2Core,
+            NSOpenGLPFADepthSize,    (NSOpenGLPixelFormatAttribute) 24,
             NSOpenGLPFADoubleBuffer, (NSOpenGLPixelFormatAttribute) true,
             NSOpenGLPFAAccelerated,  (NSOpenGLPixelFormatAttribute) true,
             NSOpenGLPFANoRecovery,   (NSOpenGLPixelFormatAttribute) true,

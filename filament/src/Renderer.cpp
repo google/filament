@@ -269,14 +269,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     // FIXME: this doesn't work when the target is a user provided rendertarget
     const bool translucent = mSwapChain->isTransparent() || blending;
 
-
     const TextureFormat hdrFormat = getHdrFormat(view, translucent);
-
-    // FIXME: we use "hasPostProcess" as a proxy for deciding if we need a depth-buffer or not
-    //        historically this has been true, but it's definitely wrong.
-    //        This hack is needed because viewRenderTarget(output) doesn't have a depth-buffer,
-    //        so when skipping post-process (which draws directly into it), we can't rely on it.
-    const bool colorPassNeedsDepthBuffer = hasPostProcess;
 
     const Handle<HwRenderTarget> viewRenderTarget = getRenderTarget(view);
     FrameGraphRenderTargetHandle fgViewRenderTarget = fg.importRenderTarget("viewRenderTarget",
@@ -419,12 +412,10 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         if (viewRenderTarget == mRenderTarget) {
             // The default render target is not multi-sampled, so we need an intermediate
             // buffer.
-            // The default render target also doesn't have a depth buffer, so if one is needed, we
-            // use an intermediate buffer also.
             // The intermediate buffer  is accomplished with a "fake" dynamicScaling (i.e. blit)
             // operation.
 
-            if (msaa > 1 || colorPassNeedsDepthBuffer) {
+            if (msaa > 1) {
                 input = ppm.dynamicScaling(fg, msaa, scaled, blending, input, ldrFormat);
             }
         }
