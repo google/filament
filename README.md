@@ -21,9 +21,6 @@ Android devices and as the renderer inside the Android Studio plugin.
 Make sure you always use tools from the same release as the runtime library. This is particularly
 important for `matc` (material compiler).
 
-If you prefer to live on the edge, you can download a continuous build by clicking one of the build
-badges above.
-
 ## Documentation
 
 - [Filament](https://google.github.io/filament/Filament.html), an in-depth explanation of
