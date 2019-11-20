@@ -210,7 +210,8 @@ fragment {
         return clamp(uv, ivec2(0), size - ivec2(1));
     }
 
-    float computeAmbientOcclusionSAO(uint i, float ssDiskRadius, const ivec2 ssOrigin,
+    void computeAmbientOcclusionSAO(inout float occlusion,
+            uint i, float ssDiskRadius, const ivec2 ssOrigin,
             const highp vec3 origin, const vec3 normal, const vec3 noise) {
 
         vec3 tap = tapLocation(i, noise);
@@ -230,13 +231,12 @@ fragment {
         float vv = dot(v, v);       // squared distance
         float vn = dot(v, normal);  // distance * cos(v, normal)
         const float uu = 0.015;
-        float falloff = saturate(1.0 - vv * materialParams.invRadiusSquared);
-        float occlusion = falloff * max(0.0, vn + origin.z * materialParams.bias) / (vv + uu);
-        return occlusion;
+        float w = saturate(1.0 - vv * materialParams.invRadiusSquared);
+        occlusion += w * max(0.0, vn + origin.z * materialParams.bias) / (vv + uu);
     }
 
     void postProcess(inout PostProcessInputs postProcess) {
-        vec2 uv = variable_vertex.xy; // interpolated to pixel center
+        highp vec2 uv = variable_vertex.xy; // interpolated to pixel center
 
         highp float depth = sampleDepthLinear(uv);
         highp vec3 origin = computeViewSpacePositionFromDepth(uv, depth);
@@ -252,7 +252,7 @@ fragment {
 
         float occlusion = 0.0;
         for (uint i = 0u; i < kSpiralSampleCount; i++) {
-            occlusion += computeAmbientOcclusionSAO(i, ssDiskRadius, ssOrigin, origin, normal, noise);
+            computeAmbientOcclusionSAO(occlusion, i, ssDiskRadius, ssOrigin, origin, normal, noise);
         }
 
         float ao = max(0.0, 1.0 - (2.0 / float(kSpiralSampleCount)) * materialParams.intensity * occlusion);
