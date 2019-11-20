@@ -194,6 +194,7 @@ Driver* PlatformEGL::createDriver(void* sharedContext) noexcept {
             EGL_GREEN_SIZE,  8,
             EGL_BLUE_SIZE,   8,
             EGL_ALPHA_SIZE,  0, // reserved to set ALPHA_SIZE below
+            EGL_DEPTH_SIZE, 24,
             EGL_RECORDABLE_ANDROID, 1,
             EGL_NONE
     };
