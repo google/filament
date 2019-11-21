@@ -57,6 +57,13 @@ struct MaterialInputs {
 #if defined(MATERIAL_HAS_POST_LIGHTING_COLOR)
     vec4  postLightingColor;
 #endif
+
+#if defined(MATERIAL_HAS_IOR)
+    float ior;
+    float absorption;
+    float transmission;
+    float thin_layer_thickness;
+#endif
 };
 
 void initMaterial(out MaterialInputs material) {

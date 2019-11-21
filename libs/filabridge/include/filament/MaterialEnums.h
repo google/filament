@@ -153,7 +153,7 @@ enum MaterialDomain : uint8_t {
 // can't really use std::underlying_type<AttributeIndex>::type because the driver takes a uint32_t
 using AttributeBitset = utils::bitset32;
 
-static constexpr size_t MATERIAL_PROPERTIES_COUNT = 20;
+static constexpr size_t MATERIAL_PROPERTIES_COUNT = 24;
 enum class Property : uint8_t {
     BASE_COLOR,              // float4, all shading models
     ROUGHNESS,               // float,  lit shading models only
@@ -175,6 +175,12 @@ enum class Property : uint8_t {
     NORMAL,                  // float3, all shading models only, except unlit
     POST_LIGHTING_COLOR,     // float4, all shading models
     CLIP_SPACE_TRANSFORM,    // mat4,   vertex shader only
+    IOR,                     // float,  index of refraction (activate refraction)
+    ABSORPTION,              // float,  how much light is absorbed by the material
+    TRANSMISSION,            // float,  how much light is refracted through the material
+    THIN_LAYER_THICKNESS,    // float,  thin layer thickness
+
+
     // when adding new Properties, make sure to update MATERIAL_PROPERTIES_COUNT
 };
 
