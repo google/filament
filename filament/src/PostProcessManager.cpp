@@ -155,7 +155,7 @@ void PostProcessManager::init() noexcept {
     driver.update2DImage(mNoSSAOTexture, 0, 0, 0, 1, 1, std::move(data));
 }
 
-void PostProcessManager::terminate(backend::DriverApi& driver) noexcept {
+void PostProcessManager::terminate(DriverApi& driver) noexcept {
     driver.destroyTexture(mNoSSAOTexture);
     driver.destroyTexture(mNoiseTexture);
     mSSAO.terminate(mEngine);
@@ -168,11 +168,12 @@ void PostProcessManager::terminate(backend::DriverApi& driver) noexcept {
 
 // ------------------------------------------------------------------------------------------------
 
-FrameGraphId<FrameGraphTexture> PostProcessManager::toneMapping(FrameGraph& fg, FrameGraphId<FrameGraphTexture> input,
-        backend::TextureFormat outFormat, bool dithering, bool translucent) noexcept {
+FrameGraphId <FrameGraphTexture> PostProcessManager::toneMapping(FrameGraph& fg,
+        FrameGraphId <FrameGraphTexture> input, TextureFormat outFormat,
+        bool dithering, bool translucent, bool fxaa) noexcept {
 
     FEngine& engine = mEngine;
-    backend::Handle<backend::HwRenderPrimitive> const& fullScreenRenderPrimitive = engine.getFullScreenRenderPrimitive();
+    Handle<HwRenderPrimitive> const& fullScreenRenderPrimitive = engine.getFullScreenRenderPrimitive();
 
     struct PostProcessToneMapping {
         FrameGraphId<FrameGraphTexture> input;
@@ -196,14 +197,13 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::toneMapping(FrameGraph& fg, 
                 auto const& color = resources.getTexture(data.input);
 
                 FMaterialInstance* pInstance = mTonemapping.getMaterialInstance();
-                pInstance->setParameter("dithering", dithering);
                 pInstance->setParameter("colorBuffer", color, {});
-
+                pInstance->setParameter("dithering", dithering);
+                pInstance->setParameter("fxaa", fxaa);
                 pInstance->commit(driver);
 
-                const uint8_t variant = static_cast<uint8_t> (
-                        translucent ?
-                        PostProcessVariant::TRANSLUCENT : PostProcessVariant::OPAQUE );
+                const uint8_t variant = uint8_t(translucent ?
+                            PostProcessVariant::TRANSLUCENT : PostProcessVariant::OPAQUE);
 
                 PipelineState pipeline{
                         .program = mTonemapping.getMaterial()->getProgram(variant),
@@ -223,10 +223,10 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::toneMapping(FrameGraph& fg, 
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::fxaa(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> input,
-        backend::TextureFormat outFormat, bool translucent) noexcept {
+        TextureFormat outFormat, bool translucent) noexcept {
 
     FEngine& engine = mEngine;
-    backend::Handle<backend::HwRenderPrimitive> const& fullScreenRenderPrimitive = engine.getFullScreenRenderPrimitive();
+    Handle<HwRenderPrimitive> const& fullScreenRenderPrimitive = engine.getFullScreenRenderPrimitive();
 
     struct PostProcessFXAA {
         FrameGraphId<FrameGraphTexture> input;
@@ -257,9 +257,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::fxaa(FrameGraph& fg,
 
                 pInstance->commit(driver);
 
-                const uint8_t variant = static_cast<uint8_t> (
-                        translucent ?
-                        PostProcessVariant::TRANSLUCENT : PostProcessVariant::OPAQUE );
+                const uint8_t variant = uint8_t(translucent ?
+                    PostProcessVariant::TRANSLUCENT : PostProcessVariant::OPAQUE);
 
                 PipelineState pipeline{
                         .program = mFxaa.getMaterial()->getProgram(variant),
@@ -279,7 +278,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::fxaa(FrameGraph& fg,
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::dynamicScaling(FrameGraph& fg,
         uint8_t msaa, bool scaled, bool blend,
-        FrameGraphId<FrameGraphTexture> input, backend::TextureFormat outFormat) noexcept {
+        FrameGraphId<FrameGraphTexture> input, TextureFormat outFormat) noexcept {
 
     // scaling and format conversion are not allowed with a MSAA blit
     FrameGraphTexture::Descriptor const& inputDesc = fg.getDescriptor(input);

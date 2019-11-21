@@ -44,9 +44,9 @@ public:
     void init() noexcept;
     void terminate(backend::DriverApi& driver) noexcept;
 
-    FrameGraphId<FrameGraphTexture> toneMapping(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input,
-            backend::TextureFormat outFormat, bool dithering, bool translucent) noexcept;
+    FrameGraphId <FrameGraphTexture> toneMapping(FrameGraph& fg,
+            FrameGraphId <FrameGraphTexture> input,
+            backend::TextureFormat outFormat, bool dithering, bool translucent, bool fxaa) noexcept;
 
     FrameGraphId<FrameGraphTexture> fxaa(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, backend::TextureFormat outFormat,
