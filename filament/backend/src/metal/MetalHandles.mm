@@ -452,6 +452,9 @@ id<MTLTexture> MetalRenderTarget::getColor() {
 }
 
 id<MTLTexture> MetalRenderTarget::getDepth() {
+    if (defaultRenderTarget) {
+        return acquireDepthTexture(context);
+    }
     if (multisampledDepth) {
         return multisampledDepth;
     }
@@ -530,7 +533,6 @@ id<MTLTexture> MetalRenderTarget::createMultisampledTexture(id<MTLDevice> device
 
     return [device newTextureWithDescriptor:descriptor];
 }
-
 
 MetalFence::MetalFence(MetalContext& context) {
 #if METAL_FENCES_SUPPORTED
