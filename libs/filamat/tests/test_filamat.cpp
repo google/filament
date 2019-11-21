@@ -414,6 +414,30 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerClearCoat) {
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
+TEST_F(MaterialCompiler, StaticCodeAnalyzerIor) {
+    std::string fragmentCode(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.ior = 1.5;
+            material.absorption = 0.0;
+            material.transmission = 0.96;
+            material.thin_layer_thickness = 0.01;
+        }
+    )");
+
+    std::string shaderCode = shaderWithAllProperties(ShaderType::FRAGMENT, fragmentCode);
+
+    GLSLTools glslTools;
+    MaterialBuilder::PropertyList properties {false};
+    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
+    MaterialBuilder::PropertyList expected {false};
+    expected[size_t(filamat::MaterialBuilder::Property::IOR)] = true;
+    expected[size_t(filamat::MaterialBuilder::Property::ABSORPTION)] = true;
+    expected[size_t(filamat::MaterialBuilder::Property::TRANSMISSION)] = true;
+    expected[size_t(filamat::MaterialBuilder::Property::THIN_LAYER_THICKNESS)] = true;
+    EXPECT_TRUE(PropertyListsMatch(expected, properties));
+}
+
 TEST_F(MaterialCompiler, StaticCodeAnalyzerClearCoatRoughness) {
     std::string fragmentCode(R"(
         void material(inout MaterialInputs material) {
@@ -436,6 +460,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerClearCoatNormal) {
     std::string fragmentCode(R"(
         void material(inout MaterialInputs material) {
             prepareMaterial(material);
+            material.clearCoat = 0.8;
             material.clearCoatNormal = vec3(1.0, 1.0, 1.0);
         }
     )");
@@ -446,6 +471,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerClearCoatNormal) {
     MaterialBuilder::PropertyList properties {false};
     glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected {false};
+    expected[size_t(filamat::MaterialBuilder::Property::CLEAR_COAT)] = true;
     expected[size_t(filamat::MaterialBuilder::Property::CLEAR_COAT_NORMAL)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
