@@ -120,6 +120,7 @@ struct VulkanSurfaceContext {
     uint32_t currentSwapIndex;
     VkSemaphore imageAvailable;
     VkSemaphore renderingFinished;
+    VulkanAttachment depth;
 };
 
 void selectPhysicalDevice(VulkanContext& context);
@@ -137,6 +138,7 @@ VkFormat findSupportedFormat(VulkanContext& context, const std::vector<VkFormat>
         VkImageTiling tiling, VkFormatFeatureFlags features);
 VkCommandBuffer acquireWorkCommandBuffer(VulkanContext& context);
 void flushWorkCommandBuffer(VulkanContext& context);
+void createDepthBuffer(VulkanContext& context, VulkanSurfaceContext& sc, VkFormat depthFormat);
 
 } // namespace filament
 } // namespace backend
