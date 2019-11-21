@@ -78,7 +78,8 @@ struct MetalContext {
 
     // Surface-related properties.
     MetalSwapChain* currentSurface = nullptr;
-    id<CAMetalDrawable> currentDrawable = nullptr;
+    id<CAMetalDrawable> currentDrawable = nil;
+    id<MTLTexture> currentDepthTexture = nil;
     id<MTLTexture> headlessDrawable = nil;
     MTLPixelFormat currentSurfacePixelFormat = MTLPixelFormatInvalid;
     MTLPixelFormat currentDepthPixelFormat = MTLPixelFormatInvalid;
@@ -103,6 +104,8 @@ struct MetalContext {
 // drawable's texture.
 // For headless swapchains a new texture is created.
 id<MTLTexture> acquireDrawable(MetalContext* context);
+
+id<MTLTexture> acquireDepthTexture(MetalContext* context);
 
 id<MTLCommandBuffer> acquireCommandBuffer(MetalContext* context);
 
