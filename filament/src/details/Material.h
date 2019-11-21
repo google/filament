@@ -120,6 +120,10 @@ public:
     float getSpecularAntiAliasingVariance() const noexcept { return mSpecularAntiAliasingVariance; }
     float getSpecularAntiAliasingThreshold() const noexcept { return mSpecularAntiAliasingThreshold; }
 
+    bool hasMaterialProperty(Property property) const noexcept {
+        return bool(mMaterialProperties & uint64_t(property));
+    }
+
     size_t getParameterCount() const noexcept {
         return mUniformInterfaceBlock.getUniformInfoList().size() +
                 mSamplerInterfaceBlock.getSamplerInfoList().size();
@@ -166,6 +170,7 @@ private:
     MaterialDomain mMaterialDomain = MaterialDomain::SURFACE;
     CullingMode mCullingMode = CullingMode::NONE;
     AttributeBitset mRequiredAttributes;
+    uint64_t mMaterialProperties = 0;
 
     float mMaskThreshold = 0.4f;
     float mSpecularAntiAliasingVariance = 0.0f;

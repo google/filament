@@ -175,31 +175,6 @@ public:
         // when adding more variables, make sure to update MATERIAL_VARIABLES_COUNT
     };
 
-    static constexpr size_t MATERIAL_PROPERTIES_COUNT = 20;
-    enum class Property : uint8_t {
-        BASE_COLOR,              // float4, all shading models
-        ROUGHNESS,               // float,  lit shading models only
-        METALLIC,                // float,  all shading models, except unlit and cloth
-        REFLECTANCE,             // float,  all shading models, except unlit and cloth
-        AMBIENT_OCCLUSION,       // float,  lit shading models only, except subsurface and cloth
-        CLEAR_COAT,              // float,  lit shading models only, except subsurface and cloth
-        CLEAR_COAT_ROUGHNESS,    // float,  lit shading models only, except subsurface and cloth
-        CLEAR_COAT_NORMAL,       // float,  lit shading models only, except subsurface and cloth
-        ANISOTROPY,              // float,  lit shading models only, except subsurface and cloth
-        ANISOTROPY_DIRECTION,    // float3, lit shading models only, except subsurface and cloth
-        THICKNESS,               // float,  subsurface shading model only
-        SUBSURFACE_POWER,        // float,  subsurface shading model only
-        SUBSURFACE_COLOR,        // float3, subsurface and cloth shading models only
-        SHEEN_COLOR,             // float3, cloth shading model only
-        SPECULAR_COLOR,          // float3, specular-glossiness shading model only
-        GLOSSINESS,              // float,  specular-glossiness shading model only
-        EMISSIVE,                // float4, all shading models
-        NORMAL,                  // float3, all shading models only, except unlit
-        POST_LIGHTING_COLOR,     // float4, all shading models
-        CLIP_SPACE_TRANSFORM,    // mat4,   vertex shader only
-        // when adding new Properties, make sure to update MATERIAL_PROPERTIES_COUNT
-    };
-
     using MaterialDomain = filament::MaterialDomain;
 
     using BlendingMode = filament::BlendingMode;
@@ -469,6 +444,9 @@ public:
         };
         bool isSampler;
     };
+
+    static constexpr size_t MATERIAL_PROPERTIES_COUNT = filament::MATERIAL_PROPERTIES_COUNT;
+    using Property = filament::Property;
 
     using PropertyList = bool[MATERIAL_PROPERTIES_COUNT];
     using VariableList = utils::CString[MATERIAL_VARIABLES_COUNT];

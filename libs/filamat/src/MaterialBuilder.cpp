@@ -755,6 +755,14 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
     container.addSimpleChild<bool>(ChunkType::MaterialDepthWrite, mDepthWrite);
     container.addSimpleChild<bool>(ChunkType::MaterialDepthTest, mDepthTest);
     container.addSimpleChild<uint8_t>(ChunkType::MaterialCullingMode, static_cast<uint8_t>(mCullingMode));
+
+    uint64_t properties = 0;
+    for (size_t i = 0; i < MATERIAL_PROPERTIES_COUNT; i++) {
+        if (mProperties[i]) {
+            properties |= uint64_t(1u) << i;
+        }
+    }
+    container.addSimpleChild<uint64_t>(ChunkType::MaterialProperties, properties);
 }
 
 void MaterialBuilder::writeSurfaceChunks(ChunkContainer& container) const noexcept {

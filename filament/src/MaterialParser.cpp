@@ -141,6 +141,10 @@ bool MaterialParser::getShaderModels(uint32_t* value) const noexcept {
     return mImpl.getFromSimpleChunk(ChunkType::MaterialShaderModels, value);
 }
 
+bool MaterialParser::getMaterialProperties(uint64_t* value) const noexcept {
+    return mImpl.getFromSimpleChunk(ChunkType::MaterialProperties, value);
+}
+
 bool MaterialParser::getDepthWriteSet(bool* value) const noexcept {
     return mImpl.getFromSimpleChunk(ChunkType::MaterialDepthWriteSet, value);
 }
