@@ -26,6 +26,7 @@
 
 namespace filament {
 
+// update this when a new version of filament wouldn't work with older materials
 static constexpr size_t MATERIAL_VERSION = 4;
 
 /**
@@ -152,6 +153,30 @@ enum MaterialDomain : uint8_t {
 // can't really use std::underlying_type<AttributeIndex>::type because the driver takes a uint32_t
 using AttributeBitset = utils::bitset32;
 
+static constexpr size_t MATERIAL_PROPERTIES_COUNT = 20;
+enum class Property : uint8_t {
+    BASE_COLOR,              // float4, all shading models
+    ROUGHNESS,               // float,  lit shading models only
+    METALLIC,                // float,  all shading models, except unlit and cloth
+    REFLECTANCE,             // float,  all shading models, except unlit and cloth
+    AMBIENT_OCCLUSION,       // float,  lit shading models only, except subsurface and cloth
+    CLEAR_COAT,              // float,  lit shading models only, except subsurface and cloth
+    CLEAR_COAT_ROUGHNESS,    // float,  lit shading models only, except subsurface and cloth
+    CLEAR_COAT_NORMAL,       // float,  lit shading models only, except subsurface and cloth
+    ANISOTROPY,              // float,  lit shading models only, except subsurface and cloth
+    ANISOTROPY_DIRECTION,    // float3, lit shading models only, except subsurface and cloth
+    THICKNESS,               // float,  subsurface shading model only
+    SUBSURFACE_POWER,        // float,  subsurface shading model only
+    SUBSURFACE_COLOR,        // float3, subsurface and cloth shading models only
+    SHEEN_COLOR,             // float3, cloth shading model only
+    SPECULAR_COLOR,          // float3, specular-glossiness shading model only
+    GLOSSINESS,              // float,  specular-glossiness shading model only
+    EMISSIVE,                // float4, all shading models
+    NORMAL,                  // float3, all shading models only, except unlit
+    POST_LIGHTING_COLOR,     // float4, all shading models
+    CLIP_SPACE_TRANSFORM,    // mat4,   vertex shader only
+    // when adding new Properties, make sure to update MATERIAL_PROPERTIES_COUNT
+};
 
 } // namespace filament
 

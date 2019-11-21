@@ -154,6 +154,7 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     mSamplerBindings.populate(&mSamplerInterfaceBlock);
 
     parser->getShading(&mShading);
+    parser->getMaterialProperties(&mMaterialProperties);
     parser->getBlendingMode(&mBlendingMode);
     parser->getInterpolation(&mInterpolation);
     parser->getVertexDomain(&mVertexDomain);

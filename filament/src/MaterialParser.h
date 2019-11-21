@@ -56,6 +56,7 @@ public:
     bool getUIB(UniformInterfaceBlock* uib) const noexcept;
     bool getSIB(SamplerInterfaceBlock* sib) const noexcept;
     bool getShaderModels(uint32_t* value) const noexcept;
+    bool getMaterialProperties(uint64_t* value) const noexcept;
 
     bool getDepthWriteSet(bool* value) const noexcept;
     bool getDepthWrite(bool* value) const noexcept;
