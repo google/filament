@@ -399,7 +399,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     if (hasPostProcess) {
         if (toneMapping) {
-            input = ppm.toneMapping(fg, input, ldrFormat, dithering, translucent);
+            input = ppm.toneMapping(fg, input, ldrFormat, dithering, translucent, fxaa);
         }
         if (fxaa) {
             input = ppm.fxaa(fg, input, ldrFormat, !toneMapping || translucent);
