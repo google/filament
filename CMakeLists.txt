@@ -211,6 +211,13 @@ if (ANDROID OR WEBGL)
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fno-exceptions -fno-unwind-tables -fno-asynchronous-unwind-tables -fno-rtti")
 endif()
 
+# With WebGL, we disable RTTI even for debug builds because we pass emscripten::val back and forth
+# between C++ and JavaScript in order to efficiently access typed arrays, which are unbound.
+# NOTE: This is not documented in emscripten so we should consider a different approach.
+if (WEBGL)
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-rtti")
+endif()
+
 # ==================================================================================================
 # Debug compiler flags
 # ==================================================================================================
