@@ -49,7 +49,6 @@
 #include <fstream>
 #include <string>
 
-#include "generated/resources/gltf.h"
 #include "generated/resources/resources.h"
 
 using namespace filament;
