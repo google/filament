@@ -144,14 +144,14 @@ void MetalDriver::createVertexBufferR(Handle<HwVertexBuffer> vbh, uint8_t buffer
         uint8_t attributeCount, uint32_t vertexCount, AttributeArray attributes,
         BufferUsage usage) {
     // TODO: Take BufferUsage into account when creating the buffer.
-    construct_handle<MetalVertexBuffer>(mHandleMap, vbh, mContext->device, bufferCount,
+    construct_handle<MetalVertexBuffer>(mHandleMap, vbh, *mContext, bufferCount,
             attributeCount, vertexCount, attributes);
 }
 
 void MetalDriver::createIndexBufferR(Handle<HwIndexBuffer> ibh, ElementType elementType,
         uint32_t indexCount, BufferUsage usage) {
     auto elementSize = (uint8_t) getElementTypeSize(elementType);
-    construct_handle<MetalIndexBuffer>(mHandleMap, ibh, mContext->device, elementSize, indexCount);
+    construct_handle<MetalIndexBuffer>(mHandleMap, ibh, *mContext, elementSize, indexCount);
 }
 
 void MetalDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint8_t levels,
@@ -504,21 +504,18 @@ bool MetalDriver::isFrameTimeSupported() {
 #endif
 }
 
-// TODO: the implementations here for updateVertexBuffer and updateIndexBuffer assume static usage.
-// Dynamically updated vertex / index buffers will require synchronization.
-
 void MetalDriver::updateVertexBuffer(Handle<HwVertexBuffer> vbh, size_t index,
         BufferDescriptor&& data, uint32_t byteOffset) {
     assert(byteOffset == 0);    // TODO: handle byteOffset for vertex buffers
     auto* vb = handle_cast<MetalVertexBuffer>(mHandleMap, vbh);
-    memcpy(vb->buffers[index].contents, data.buffer, data.size);
+    vb->buffers[index]->copyIntoBuffer(data.buffer, data.size);
 }
 
 void MetalDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&& data,
         uint32_t byteOffset) {
     assert(byteOffset == 0);    // TODO: handle byteOffset for index buffers
     auto* ib = handle_cast<MetalIndexBuffer>(mHandleMap, ibh);
-    memcpy(ib->buffer.contents, data.buffer, data.size);
+    ib->buffer.copyIntoBuffer(data.buffer, data.size);
 }
 
 void MetalDriver::update2DImage(Handle<HwTexture> th, uint32_t level, uint32_t xoffset,
@@ -583,9 +580,9 @@ void MetalDriver::loadUniformBuffer(Handle<HwUniformBuffer> ubh,
        return;
     }
 
-    auto buffer = handle_cast<MetalUniformBuffer>(mHandleMap, ubh);
+    auto uniform = handle_cast<MetalUniformBuffer>(mHandleMap, ubh);
 
-    buffer->copyIntoBuffer(data.buffer, data.size);
+    uniform->buffer.copyIntoBuffer(data.buffer, data.size);
     scheduleDestroy(std::move(data));
 }
 
@@ -963,44 +960,18 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
     //  must be intersected with viewport (see OpenGLDriver.cpp for implementation details)
 
     // Bind uniform buffers.
-    id<MTLBuffer> uniformsToBind[Program::UNIFORM_BINDING_COUNT] = { nil };
+    MetalBuffer* uniformsToBind[Program::UNIFORM_BINDING_COUNT] = { nil };
     NSUInteger offsets[Program::UNIFORM_BINDING_COUNT] = { 0 };
 
     enumerateBoundUniformBuffers([&uniformsToBind, &offsets](const UniformBufferState& state,
             MetalUniformBuffer* uniform, uint32_t index) {
-        // getGpuBuffer() might return nil, which means there isn't a device allocation for this
-        // uniform. In this case, we'll update the uniform below with our CPU-side buffer via
-        // setVertexBytes and setFragmentBytes.
-        id<MTLBuffer> gpuBuffer = uniform->getGpuBufferForDraw();
-        if (gpuBuffer == nil) {
-            return;
-        }
-        uniformsToBind[index] = gpuBuffer;
+        uniformsToBind[index] = &uniform->buffer;
         offsets[index] = state.offset;
     });
+    MetalBuffer::bindBuffers(mContext->currentCommandEncoder, 0,
+            MetalBuffer::Stage::VERTEX | MetalBuffer::Stage::FRAGMENT, uniformsToBind, offsets,
+            Program::UNIFORM_BINDING_COUNT);
 
-    NSRange uniformRange = NSMakeRange(0, Program::UNIFORM_BINDING_COUNT);
-    [mContext->currentCommandEncoder setVertexBuffers:uniformsToBind
-                                              offsets:offsets
-                                            withRange:uniformRange];
-    [mContext->currentCommandEncoder setFragmentBuffers:uniformsToBind
-                                                offsets:offsets
-                                              withRange:uniformRange];
-
-    enumerateBoundUniformBuffers([commandEncoder = mContext->currentCommandEncoder](
-            const UniformBufferState& state, const MetalUniformBuffer* uniform, uint32_t index) {
-        void* cpuBuffer = uniform->getCpuBuffer();
-        if (!cpuBuffer) {
-            return;
-        }
-        uint8_t* bytes = static_cast<uint8_t*>(cpuBuffer) + state.offset;
-        [commandEncoder setVertexBytes:bytes
-                                length:(uniform->getSize() - state.offset)
-                               atIndex:index];
-        [commandEncoder setFragmentBytes:bytes
-                                  length:(uniform->getSize() - state.offset)
-                                 atIndex:index];
-    });
 
     // Enumerate all the sampler buffers for the program and check which textures and samplers need
     // to be bound.
@@ -1041,19 +1012,18 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
 
     NSRange samplerRange = NSMakeRange(0, SAMPLER_BINDING_COUNT);
     [mContext->currentCommandEncoder setFragmentTextures:texturesToBind
-                                             withRange:samplerRange];
+                                               withRange:samplerRange];
     [mContext->currentCommandEncoder setVertexTextures:texturesToBind
-                                           withRange:samplerRange];
+                                             withRange:samplerRange];
     [mContext->currentCommandEncoder setFragmentSamplerStates:samplersToBind
-                                                  withRange:samplerRange];
+                                                    withRange:samplerRange];
     [mContext->currentCommandEncoder setVertexSamplerStates:samplersToBind
-                                                withRange:samplerRange];
+                                                  withRange:samplerRange];
 
     // Bind the vertex buffers.
-    NSRange bufferRange = NSMakeRange(VERTEX_BUFFER_START, primitive->buffers.size());
-    [mContext->currentCommandEncoder setVertexBuffers:primitive->buffers.data()
-                                            offsets:primitive->offsets.data()
-                                          withRange:bufferRange];
+    MetalBuffer::bindBuffers(mContext->currentCommandEncoder, VERTEX_BUFFER_START,
+            MetalBuffer::Stage::VERTEX, primitive->buffers.data(), primitive->offsets.data(),
+            primitive->buffers.size());
 
     // Bind the zero buffer, used for missing vertex attributes.
     static const char bytes[16] = { 0 };
@@ -1064,10 +1034,10 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
     MetalIndexBuffer* indexBuffer = primitive->indexBuffer;
 
     [mContext->currentCommandEncoder drawIndexedPrimitives:getMetalPrimitiveType(primitive->type)
-                                              indexCount:primitive->count
-                                               indexType:getIndexType(indexBuffer->elementSize)
-                                             indexBuffer:indexBuffer->buffer
-                                       indexBufferOffset:primitive->offset];
+                                                indexCount:primitive->count
+                                                 indexType:getIndexType(indexBuffer->elementSize)
+                                               indexBuffer:indexBuffer->buffer.getGpuBufferForDraw()
+                                         indexBufferOffset:primitive->offset];
 }
 
 void MetalDriver::enumerateSamplerGroups(

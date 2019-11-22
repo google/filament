@@ -100,6 +100,7 @@ endif()
 if (FILAMENT_SUPPORTS_METAL)
     list(APPEND SRCS
             src/metal/MetalBlitter.mm
+            src/metal/MetalBuffer.mm
             src/metal/MetalBufferPool.mm
             src/metal/MetalContext.mm
             src/metal/MetalDriver.mm
@@ -292,7 +293,8 @@ if (APPLE)
         test/TrianglePrimitive.cpp
         test/Arguments.cpp
         test/test_MissingRequiredAttributes.cpp
-        test/test_ReadPixels.cpp)
+        test/test_ReadPixels.cpp
+        test/test_BufferUpdates.cpp)
 
     target_link_libraries(backend_test PRIVATE
         backend

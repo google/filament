@@ -69,8 +69,8 @@ MetalSwapChain::MetalSwapChain(id<MTLDevice> device, CAMetalLayer* nativeWindow)
 MetalSwapChain::MetalSwapChain(int32_t width, int32_t height) : surfaceWidth(width),
         surfaceHeight(height) { }
 
-MetalVertexBuffer::MetalVertexBuffer(id<MTLDevice> device, uint8_t bufferCount, uint8_t attributeCount,
-            uint32_t vertexCount, AttributeArray const& attributes)
+MetalVertexBuffer::MetalVertexBuffer(MetalContext& context, uint8_t bufferCount,
+            uint8_t attributeCount, uint32_t vertexCount, AttributeArray const& attributes)
     : HwVertexBuffer(bufferCount, attributeCount, vertexCount, attributes) {
     buffers.reserve(bufferCount);
 
@@ -84,99 +84,26 @@ MetalVertexBuffer::MetalVertexBuffer(id<MTLDevice> device, uint8_t bufferCount, 
             }
         }
 
-        id<MTLBuffer> buffer = nil;
+        MetalBuffer* buffer = nullptr;
         if (size > 0) {
-            buffer = [device newBufferWithLength:size
-                                         options:MTLResourceStorageModeShared];
+            buffer = new MetalBuffer(context, size);
         }
         buffers.push_back(buffer);
     }
 }
 
-MetalIndexBuffer::MetalIndexBuffer(id<MTLDevice> device, uint8_t elementSize, uint32_t indexCount)
-    : HwIndexBuffer(elementSize, indexCount) {
-    buffer = [device newBufferWithLength:(elementSize * indexCount)
-                                 options:MTLResourceStorageModeShared];
+MetalVertexBuffer::~MetalVertexBuffer() {
+    for (auto* b : buffers) {
+        delete b;
+    }
+    buffers.clear();
 }
+
+MetalIndexBuffer::MetalIndexBuffer(MetalContext& context, uint8_t elementSize, uint32_t indexCount)
+    : HwIndexBuffer(elementSize, indexCount), buffer(context, elementSize * indexCount, true) { }
 
 MetalUniformBuffer::MetalUniformBuffer(MetalContext& context, size_t size) : HwUniformBuffer(),
-        uniformSize(size), context(context) {
-    ASSERT_PRECONDITION(size > 0, "Cannot create Metal uniform with size %d.", size);
-    // If the buffer is less than 4K in size, we don't use an explicit buffer and instead use
-    // immediate command encoder methods like setVertexBytes:length:atIndex:.
-    if (size <= 4 * 1024) {   // 4K
-        bufferPoolEntry = nullptr;
-        cpuBuffer = malloc(size);
-    }
-}
-
-MetalUniformBuffer::~MetalUniformBuffer() {
-    if (cpuBuffer) {
-        free(cpuBuffer);
-    }
-    // This uniform buffer is being destroyed. If we have a buffer, release it as it is no longer
-    // needed.
-    if (bufferPoolEntry) {
-        context.bufferPool->releaseBuffer(bufferPoolEntry);
-    }
-}
-
-void MetalUniformBuffer::copyIntoBuffer(void* src, size_t size) {
-    if (size <= 0) {
-        return;
-    }
-    ASSERT_PRECONDITION(size <= this->uniformSize, "Attempting to copy %d bytes into a uniform of size %d",
-            size, this->uniformSize);
-
-    // Either copy into the Metal buffer or into our cpu buffer.
-    if (cpuBuffer) {
-        memcpy(cpuBuffer, src, size);
-        return;
-    }
-
-    // We're about to acquire a new buffer to hold the new contents of the uniform. If we previously
-    // had obtained a buffer we release it, decrementing its reference count, as this uniform no
-    // longer needs it.
-    if (bufferPoolEntry) {
-        context.bufferPool->releaseBuffer(bufferPoolEntry);
-    }
-
-    bufferPoolEntry = context.bufferPool->acquireBuffer(this->uniformSize);
-    memcpy(static_cast<uint8_t*>(bufferPoolEntry->buffer.contents), src, size);
-}
-
-id<MTLBuffer> MetalUniformBuffer::getGpuBufferForDraw() {
-    if (!bufferPoolEntry) {
-        // If there's a CPU buffer, then we return nil here, as the CPU-side buffer will be bound
-        // separately.
-        if (cpuBuffer) {
-            return nil;
-        }
-
-        // If there isn't a CPU buffer, it means no data has been loaded into this uniform yet. To
-        // avoid an error, we'll allocate an empty buffer.
-        bufferPoolEntry = context.bufferPool->acquireBuffer(this->uniformSize);
-    }
-
-    // This uniform is being used in a draw call, so we retain it so it's not released back into the
-    // buffer pool until the frame has finished.
-    auto uniformDeleter = [bufferPool = context.bufferPool](const void* resource){
-        bufferPool->releaseBuffer((const MetalBufferPoolEntry*) resource);
-    };
-    id<MTLCommandBuffer> commandBuffer = context.currentCommandBuffer;
-    if (context.resourceTracker.trackResource((__bridge void*) commandBuffer, bufferPoolEntry,
-            uniformDeleter)) {
-        // We only want to retain the buffer once per command buffer- trackResource will return
-        // true if this is the first time tracking this uniform for this command buffer.
-        context.bufferPool->retainBuffer(bufferPoolEntry);
-    }
-
-    return bufferPoolEntry->buffer;
-}
-
-void* MetalUniformBuffer::getCpuBuffer() const {
-    return cpuBuffer;
-}
+        buffer(context, size) { }
 
 void MetalRenderPrimitive::setBuffers(MetalVertexBuffer* vertexBuffer, MetalIndexBuffer*
         indexBuffer, uint32_t enabledAttributes) {

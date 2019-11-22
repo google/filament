@@ -32,7 +32,7 @@ namespace backend {
 namespace metal {
 
 class MetalRenderTarget;
-class MetalUniformBuffer;
+struct MetalUniformBuffer;
 struct MetalIndexBuffer;
 struct MetalSamplerGroup;
 struct MetalSwapChain;
