@@ -60,9 +60,12 @@ struct MaterialInputs {
 
 #if defined(MATERIAL_HAS_IOR)
     float ior;
-    float absorption;
+#if defined(MATERIAL_HAS_ABSORPTION)
+    vec3 absorption;
+#endif
+#if defined(MATERIAL_HAS_TRANSMISSION)
     float transmission;
-    float thin_layer_thickness;
+#endif
 #endif
 };
 
@@ -117,5 +120,15 @@ void initMaterial(out MaterialInputs material) {
 
 #if defined(MATERIAL_HAS_POST_LIGHTING_COLOR)
     material.postLightingColor = vec4(0.0);
+#endif
+
+#if defined(MATERIAL_HAS_IOR)
+    material.ior = 1.5;
+#if defined(MATERIAL_HAS_ABSORPTION)
+    material.absorption = vec3(0.0);
+#endif
+#if defined(MATERIAL_HAS_TRANSMISSION)
+    material.transmission = 0.96;
+#endif
 #endif
 }
