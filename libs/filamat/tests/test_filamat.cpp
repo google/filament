@@ -419,9 +419,8 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerIor) {
         void material(inout MaterialInputs material) {
             prepareMaterial(material);
             material.ior = 1.5;
-            material.absorption = 0.0;
+            material.absorption = vec3(0.0);
             material.transmission = 0.96;
-            material.thin_layer_thickness = 0.01;
         }
     )");
 
@@ -434,7 +433,6 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerIor) {
     expected[size_t(filamat::MaterialBuilder::Property::IOR)] = true;
     expected[size_t(filamat::MaterialBuilder::Property::ABSORPTION)] = true;
     expected[size_t(filamat::MaterialBuilder::Property::TRANSMISSION)] = true;
-    expected[size_t(filamat::MaterialBuilder::Property::THIN_LAYER_THICKNESS)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
