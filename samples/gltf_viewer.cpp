@@ -36,7 +36,7 @@
 #include <fstream>
 #include <string>
 
-#include "generated/resources/gltf.h"
+#include "generated/resources/gltf_viewer.h"
 
 using namespace filament;
 using namespace gltfio;
@@ -221,8 +221,8 @@ int main(int argc, char** argv) {
                 createMaterialGenerator(engine) : createUbershaderLoader(engine);
         app.loader = AssetLoader::create({engine, app.materials, app.names });
         if (filename.isEmpty()) {
-            app.asset = app.loader->createAssetFromBinary(GLTF_DAMAGEDHELMET_DATA,
-                    GLTF_DAMAGEDHELMET_SIZE);
+            app.asset = app.loader->createAssetFromBinary(GLTF_VIEWER_DAMAGEDHELMET_DATA,
+                    GLTF_VIEWER_DAMAGEDHELMET_SIZE);
         } else {
             loadAsset(filename);
         }

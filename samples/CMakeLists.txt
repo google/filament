@@ -163,14 +163,36 @@ endif()
 
 add_library(suzanne-resources ${DUMMY_SRC} ${RESGEN_SOURCE})
 
+
 # ==================================================================================================
-# Resources for the gltf_viewer and lucy demos
+# Resources for gltf_viewer
 # ==================================================================================================
 
-get_resgen_vars(${RESOURCE_DIR} gltf)
+add_library(gltf-resources ${DUMMY_SRC})
 
-set(GLTF_RESOURCE_FILES
+set(GLTF_VIEWER_RESOURCE_FILES
     ${ROOT_DIR}/third_party/models/DamagedHelmet/DamagedHelmet.glb
+)
+
+get_resgen_vars(${RESOURCE_DIR} gltf_viewer)
+
+add_custom_command(
+        OUTPUT ${RESGEN_OUTPUTS}
+        COMMAND resgen ${RESGEN_FLAGS} ${GLTF_VIEWER_RESOURCE_FILES}
+        DEPENDS resgen ${GLTF_VIEWER_RESOURCE_FILES}
+)
+
+if (DEFINED RESGEN_SOURCE_FLAGS)
+    set_source_files_properties(${RESGEN_SOURCE} PROPERTIES COMPILE_FLAGS ${RESGEN_SOURCE_FLAGS})
+endif()
+
+target_sources(gltf-resources PRIVATE ${RESGEN_SOURCE})
+
+# ==================================================================================================
+# Resources for lucy demo
+# ==================================================================================================
+
+set(GLTF_LUCY_RESOURCE_FILES
     ${ROOT_DIR}/third_party/models/lucy/lucy.glb
     ${ROOT_DIR}/third_party/textures/Blue_tiles_01/Blue_tiles_01_AO.png
     ${ROOT_DIR}/third_party/textures/Blue_tiles_01/Blue_tiles_01_Color.png
@@ -178,17 +200,19 @@ set(GLTF_RESOURCE_FILES
     ${ROOT_DIR}/third_party/textures/Blue_tiles_01/Blue_tiles_01_Roughness.png
 )
 
+get_resgen_vars(${RESOURCE_DIR} gltf_lucy)
+
 add_custom_command(
         OUTPUT ${RESGEN_OUTPUTS}
-        COMMAND resgen ${RESGEN_FLAGS} ${GLTF_RESOURCE_FILES}
-        DEPENDS resgen ${TEXTURE_FILES}
+        COMMAND resgen ${RESGEN_FLAGS} ${GLTF_LUCY_RESOURCE_FILES}
+        DEPENDS resgen ${GLTF_LUCY_RESOURCE_FILES}
 )
 
 if (DEFINED RESGEN_SOURCE_FLAGS)
     set_source_files_properties(${RESGEN_SOURCE} PROPERTIES COMPILE_FLAGS ${RESGEN_SOURCE_FLAGS})
 endif()
 
-add_library(gltf-resources ${DUMMY_SRC} ${RESGEN_SOURCE})
+target_sources(gltf-resources PRIVATE ${RESGEN_SOURCE})
 
 # ==================================================================================================
 # Common library
