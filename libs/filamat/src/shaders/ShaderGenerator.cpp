@@ -284,6 +284,19 @@ const std::string ShaderGenerator::createFragmentProgram(filament::backend::Shad
             material.specularAO : !isMobileTarget(shaderModel);
     cg.generateDefine(fs, "SPECULAR_AMBIENT_OCCLUSION", specularAO ? 1u : 0u);
 
+    cg.generateDefine(fs, "HAS_REFRACTION", material.refraction != Refraction::NONE);
+    if (material.refraction != Refraction::NONE) {
+        cg.generateDefine(fs, "REFRACTION_TYPE_CUBEMAP", uint32_t(Refraction::CUBEMAP));
+        switch (material.refraction) {
+            case NONE:
+                // don't generate a define
+                break;
+            case CUBEMAP:
+                cg.generateDefine(fs, "REFRACTION_TYPE", "REFRACTION_TYPE_CUBEMAP");
+                break;
+        }
+    }
+
     bool multiBounceAO = material.multiBounceAOSet ?
             material.multiBounceAO : !isMobileTarget(shaderModel);
     cg.generateDefine(fs, "MULTI_BOUNCE_AMBIENT_OCCLUSION", multiBounceAO ? 1u : 0u);

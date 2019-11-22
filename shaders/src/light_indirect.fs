@@ -332,6 +332,57 @@ void evaluateSubsurfaceIBL(const PixelParams pixel, const vec3 diffuseIrradiance
 #endif
 }
 
+#if defined(HAS_REFRACTION)
+void applyRefraction(const PixelParams pixel, const vec3 n, vec3 Fd, vec3 Fr, inout vec3 color) {
+    float eta = pixel.eta;
+    vec3 v = -shading_view;
+
+    // for a sphere, with local refraction (i.e. screen space)
+    //const float thickness = 1.0;
+    //vec3 r = refract(v, n, eta);
+    //float d = thickness * dot(-n, r);
+    //vec3 n2 = -normalize(dot(-n, r) * r + n * 0.5);
+    //vec3 p = d * r;   // sample screen space here
+    //r = refract(r, n2, 1.0 / eta);
+
+    // for a slab with local refraction (i.e. screen space)
+    //const float thickness = 1.0;
+    //vec3 r = refract(v, n, eta);
+    //float d = thickness / dot(-n, r);
+    //vec3 n2 = n;
+    //vec3 r = v;
+    //vec3 p = d * r;   // sample screen space here
+
+    // for a sphere, with light at infinity (i.e. cubemap)
+    vec3 r = refract(v, n, eta);
+    vec3 n2 = -normalize(dot(-n, r) * r + n * 0.5);
+    r = refract(r, n2, 1.0 / eta);
+
+    // for a slab, with light at infinity (i.e. cubemap)
+    //      r = refract(v, n, eta);
+    //      r = refract(r, n, 1.0 / pixel.eta);
+    //vec3 r = v;
+
+    // when reading from the cubemap, we are not pre-exposed so we apply iblLuminance
+    // which is not the case when we'll read from the screen-space buffer
+    vec3 Ft = prefilteredRadiance(r, pixel.perceptualRoughness) * frameUniforms.iblLuminance;
+    Fr *= frameUniforms.iblLuminance;
+    Fd *= frameUniforms.iblLuminance;
+
+    color.rgb += Fr + mix(Fd, Ft, pixel.transmission);
+}
+#endif
+
+void combineDiffuseAndSpecular(const PixelParams pixel,
+        const vec3 n, vec3 Fd, vec3 Fr,
+        inout vec3 color) {
+#if defined(HAS_REFRACTION)
+    applyRefraction(pixel, n, Fd, Fr, color);
+#else
+    color.rgb += (Fd + Fr) * frameUniforms.iblLuminance;
+#endif
+}
+
 void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout vec3 color) {
     // Apply transform here if we wanted to rotate the IBL
     vec3 n = shading_normal;
@@ -370,5 +421,5 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
     multiBounceSpecularAO(specularAO, pixel.f0, Fr);
 
     // Note: iblLuminance is already premultiplied by the exposure
-    color.rgb += (Fd + Fr) * frameUniforms.iblLuminance;
+    combineDiffuseAndSpecular(pixel, n, Fd, Fr, color);
 }

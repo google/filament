@@ -83,6 +83,15 @@ void getCommonPixelParams(const MaterialInputs material, inout PixelParams pixel
     pixel.subsurfaceColor = material.subsurfaceColor;
 #endif
 #endif
+
+#if defined(HAS_REFRACTION)
+    pixel.eta = f0ToEta(pixel.f0.g);
+#if defined(MATERIAL_HAS_TRANSMISSION)
+    pixel.transmission = saturate(material.transmission);
+#else
+    pixel.transmission = 1.0;
+#endif
+#endif
 }
 
 void getClearCoatPixelParams(const MaterialInputs material, inout PixelParams pixel) {

@@ -1,6 +1,7 @@
 material {
     name : Lit,
     shadingModel : lit,
+    refraction : cubemap,
     parameters : [
         {
             type : float3,

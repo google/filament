@@ -414,11 +414,10 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerClearCoat) {
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
-TEST_F(MaterialCompiler, StaticCodeAnalyzerIor) {
+TEST_F(MaterialCompiler, StaticCodeAnalyzerTransmission) {
     std::string fragmentCode(R"(
         void material(inout MaterialInputs material) {
             prepareMaterial(material);
-            material.ior = 1.5;
             material.absorption = vec3(0.0);
             material.transmission = 0.96;
         }
@@ -430,7 +429,6 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerIor) {
     MaterialBuilder::PropertyList properties {false};
     glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected {false};
-    expected[size_t(filamat::MaterialBuilder::Property::IOR)] = true;
     expected[size_t(filamat::MaterialBuilder::Property::ABSORPTION)] = true;
     expected[size_t(filamat::MaterialBuilder::Property::TRANSMISSION)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));

@@ -51,6 +51,11 @@ float f0ToIor(float f0) {
     return (1.0 + r) / (1.0 - r);
 }
 
+float f0ToEta(float f0) {
+    float r = sqrt(f0);
+    return (1.0 - r) / (1.0 + r);
+}
+
 vec3 f0ClearCoatToSurface(const vec3 f0) {
     // Approximation of iorTof0(f0ToIor(f0), 1.5)
     // This assumes that the clear coat layer has an IOR of 1.5
