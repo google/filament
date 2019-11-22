@@ -210,6 +210,11 @@ MaterialBuilder& MaterialBuilder::materialDomain(MaterialDomain materialDomain) 
     return *this;
 }
 
+MaterialBuilder& MaterialBuilder::materialRefraction(Refraction refraction) noexcept {
+    mRefraction = refraction;
+    return *this;
+}
+
 MaterialBuilder& MaterialBuilder::blending(BlendingMode blending) noexcept {
     mBlendingMode = blending;
     return *this;
@@ -395,6 +400,7 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     info.multiBounceAOSet = mMultiBounceAOSet;
     info.specularAO = mSpecularAO;
     info.specularAOSet = mSpecularAOSet;
+    info.refraction = mRefraction;
 }
 
 bool MaterialBuilder::findProperties(filament::backend::ShaderType type,
@@ -738,6 +744,7 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
     container.addSimpleChild<const char*>(ChunkType::MaterialName, mMaterialName.c_str_safe());
     container.addSimpleChild<uint32_t>(ChunkType::MaterialShaderModels, mShaderModels.getValue());
     container.addSimpleChild<uint8_t>(ChunkType::MaterialDomain, static_cast<uint8_t>(mMaterialDomain));
+    container.addSimpleChild<uint8_t>(ChunkType::MaterialRefraction, static_cast<uint8_t>(mRefraction));
 
     // UIB
     container.addChild<MaterialUniformInterfaceBlockChunk>(info.uib);
