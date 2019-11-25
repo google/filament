@@ -79,7 +79,13 @@ id<MTLTexture> acquireDrawable(MetalContext* context) {
 
 id<MTLTexture> acquireDepthTexture(MetalContext* context) {
     if (context->currentDepthTexture) {
-        return context->currentDepthTexture;
+        // If the surface size has changed, we'll need to allocate a new depth texture.
+        if (context->currentDepthTexture.width != context->currentSurface->surfaceWidth ||
+            context->currentDepthTexture.height != context->currentSurface->surfaceHeight) {
+            context->currentDepthTexture = nil;
+        } else {
+            return context->currentDepthTexture;
+        }
     }
 
     const MTLPixelFormat depthFormat =
@@ -95,7 +101,7 @@ id<MTLTexture> acquireDepthTexture(MetalContext* context) {
             [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:depthFormat
                                                                width:width
                                                               height:height
-                                                            mipmapped:NO];
+                                                           mipmapped:NO];
     descriptor.usage = MTLTextureUsageRenderTarget;
     descriptor.resourceOptions = MTLResourceStorageModePrivate;
 
