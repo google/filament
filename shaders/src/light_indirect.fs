@@ -333,9 +333,13 @@ void evaluateSubsurfaceIBL(const PixelParams pixel, const vec3 diffuseIrradiance
 }
 
 #if defined(HAS_REFRACTION)
-void applyRefraction(const PixelParams pixel, const vec3 n, vec3 Fd, vec3 Fr, inout vec3 color) {
-    float eta = pixel.eta;
-    vec3 v = -shading_view;
+void applyRefraction(const PixelParams pixel, const vec3 n0, vec3 Fd, vec3 Fr, inout vec3 color) {
+    float eta0 = pixel.eta;
+    vec3 r = -shading_view;
+
+#if defined(MATERIAL_HAS_ABSORPTION) && !defined(MATERIAL_HAS_THICKNESS)
+    vec3 T = 1.0 - pixel.absorption;
+#endif
 
     // for a sphere, with local refraction (i.e. screen space)
     //const float thickness = 1.0;
@@ -354,9 +358,16 @@ void applyRefraction(const PixelParams pixel, const vec3 n, vec3 Fd, vec3 Fr, in
     //vec3 p = d * r;   // sample screen space here
 
     // for a sphere, with light at infinity (i.e. cubemap)
-    vec3 r = refract(v, n, eta);
-    vec3 n2 = -normalize(dot(-n, r) * r + n * 0.5);
-    r = refract(r, n2, 1.0 / eta);
+    r = refract(r, n0, eta0);
+
+#if defined(MATERIAL_HAS_ABSORPTION) && defined(MATERIAL_HAS_THICKNESS)
+    float d = pixel.thickness * dot(-n0, r);
+    vec3 T = exp(-pixel.absorption * d);
+#endif
+
+    vec3 n1 = -normalize(dot(-n0, r) * r + n0 * 0.5);
+    float eta1 = 1.0 / eta0;
+    r = refract(r, n1, eta1);
 
     // for a slab, with light at infinity (i.e. cubemap)
     //      r = refract(v, n, eta);
@@ -366,6 +377,11 @@ void applyRefraction(const PixelParams pixel, const vec3 n, vec3 Fd, vec3 Fr, in
     // when reading from the cubemap, we are not pre-exposed so we apply iblLuminance
     // which is not the case when we'll read from the screen-space buffer
     vec3 Ft = prefilteredRadiance(r, pixel.perceptualRoughness) * frameUniforms.iblLuminance;
+
+#if defined(MATERIAL_HAS_ABSORPTION)
+    Ft *= T;
+#endif
+
     Fr *= frameUniforms.iblLuminance;
     Fd *= frameUniforms.iblLuminance;
 

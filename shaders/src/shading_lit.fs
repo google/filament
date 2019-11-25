@@ -91,6 +91,14 @@ void getCommonPixelParams(const MaterialInputs material, inout PixelParams pixel
 #else
     pixel.transmission = 1.0;
 #endif
+#if defined(MATERIAL_HAS_ABSORPTION)
+    pixel.absorption = saturate(material.absorption);
+#else
+    pixel.absorption = vec3(0.0);
+#endif
+#if defined(MATERIAL_HAS_THICKNESS)
+    pixel.thickness = max(0.0, material.thickness);
+#endif
 #endif
 }
 

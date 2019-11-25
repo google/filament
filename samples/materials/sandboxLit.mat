@@ -38,6 +38,8 @@ material {
 fragment {
     void material(inout MaterialInputs material) {
         prepareMaterial(material);
+        //material.absorption = -log(vec3(1.0, 0.7, 0.1)) / 4.0;
+        //material.thickness = 1.0;
         material.baseColor.rgb = materialParams.baseColor;
         material.roughness = materialParams.roughness;
         material.metallic = materialParams.metallic;
