@@ -29,8 +29,10 @@ struct MaterialInputs {
     float anisotropy;
     vec3  anisotropyDirection;
 
-#if defined(SHADING_MODEL_SUBSURFACE)
+#if defined(SHADING_MODEL_SUBSURFACE) || defined(HAS_REFRACTION)
     float thickness;
+#endif
+#if defined(SHADING_MODEL_SUBSURFACE)
     float subsurfacePower;
     vec3  subsurfaceColor;
 #endif
@@ -92,8 +94,10 @@ void initMaterial(out MaterialInputs material) {
     material.anisotropyDirection = vec3(1.0, 0.0, 0.0);
 #endif
 
-#if defined(SHADING_MODEL_SUBSURFACE)
+#if defined(SHADING_MODEL_SUBSURFACE) || defined(HAS_REFRACTION)
     material.thickness = 0.5;
+#endif
+#if defined(SHADING_MODEL_SUBSURFACE)
     material.subsurfacePower = 12.234;
     material.subsurfaceColor = vec3(1.0);
 #endif
