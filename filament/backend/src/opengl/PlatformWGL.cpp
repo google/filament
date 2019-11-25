@@ -119,7 +119,7 @@ Driver* PlatformWGL::createDriver(void* const sharedGLContext) noexcept {
 
     PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribs =
             (PFNWGLCREATECONTEXTATTRIBSARBPROC) wglGetProcAddress("wglCreateContextAttribsARB");
-    mContext = wglCreateContextAttribs(whdc, nullptr, attribs);
+    mContext = wglCreateContextAttribs(whdc, (HGLRC) sharedGLContext, attribs);
     if (!mContext) {
         utils::slog.e << "wglCreateContextAttribs() failed, whdc=" << whdc << utils::io::endl;
         goto error;
