@@ -338,32 +338,18 @@ void applyRefraction(const PixelParams pixel,
     inout vec3 color) {
     // when reading from the cubemap, we are not pre-exposed so we apply iblLuminance
     // which is not the case when we'll read from the screen-space buffer
-    float scale = frameUniforms.iblLuminance;
     float perceptualRoughness = pixel.perceptualRoughness;
     float eta0 = pixel.eta;
     vec3 r = -shading_view;
 
 #if defined(MATERIAL_HAS_ABSORPTION) && !defined(MATERIAL_HAS_THICKNESS)
     vec3 T = 1.0 - pixel.absorption;
+#if REFRACTION_MODE == REFRACTION_MODE_SCREEN_SPACE
+    float d = 1.0;
+#endif
 #endif
 
-    // for a sphere, with local refraction (i.e. screen space)
-    //const float thickness = 1.0;
-    //vec3 r = refract(v, n, eta);
-    //float d = thickness * dot(-n, r);
-    //vec3 n2 = -normalize(dot(-n, r) * r + n * 0.5);
-    //vec3 p = d * r;   // sample screen space here
-    //r = refract(r, n2, 1.0 / eta);
-
-    // for a slab with local refraction (i.e. screen space)
-    //const float thickness = 1.0;
-    //vec3 r = refract(v, n, eta);
-    //float d = thickness / dot(-n, r);
-    //vec3 n2 = n;
-    //vec3 r = v;
-    //vec3 p = d * r;   // sample screen space here
-
-
+    /* compute first interface refraction */
 #if REFRACTION_TYPE == REFRACTION_TYPE_SOLID
     // for a sphere, with light at infinity (i.e. cubemap)
     r = refract(r, n0, eta0);
@@ -375,7 +361,8 @@ void applyRefraction(const PixelParams pixel,
 #error "invalid REFRACTION_TYPE"
 #endif
 
-#if defined(MATERIAL_HAS_ABSORPTION) && defined(MATERIAL_HAS_THICKNESS)
+    /* compute transmission T and distance traveled d, if needed */
+#if (defined(MATERIAL_HAS_ABSORPTION) || (REFRACTION_MODE == REFRACTION_MODE_SCREEN_SPACE)) && defined(MATERIAL_HAS_THICKNESS)
 #if REFRACTION_TYPE == REFRACTION_TYPE_SOLID
     float d = pixel.thickness * -N0oR;
 #else
@@ -384,21 +371,33 @@ void applyRefraction(const PixelParams pixel,
     float N0oR = dot(-n0, refract(r, n0, eta0));
     float d = pixel.thickness / max(N0oR, 0.1);
 #endif
+#if defined(MATERIAL_HAS_ABSORPTION)
     vec3 T = exp(-pixel.absorption * d);
 #endif
-
-#if REFRACTION_TYPE == REFRACTION_TYPE_SOLID
-    vec3 n1 = normalize(N0oR * r - n0 * 0.5);
-    float eta1 = 1.0 / eta0;
-    // note: Total Internal Reflection cannot happen in a sphere from an outside ray
-    r = refract(r, n1, eta1);
 #endif
 
-    vec3 Ft = prefilteredRadiance(r, perceptualRoughness) * scale;
+    /* sample the cubemap or screen-space */
+#if REFRACTION_MODE == REFRACTION_MODE_CUBEMAP
+#if REFRACTION_TYPE == REFRACTION_TYPE_SOLID
+    // compute the direction of the output ray (needed for accessing the cubemap)
+    vec3 n1 = normalize(N0oR * r - n0 * 0.5);
+    float eta1 = 1.0 / eta0;
+    r = refract(r, n1, eta1);
+#endif
+    vec3 Ft = prefilteredRadiance(r, perceptualRoughness) * frameUniforms.iblLuminance;
+#else
+    // compute the point where the ray exists the medium, if needed
+    vec4 p = vec4(shading_position + r * d, 1.0);
+    vec3 Ft;
+    p = frameUniforms.clipFromWorldMatrix * p;
+    // TODO: sample screen-space at p
+    Ft = vec3(0.0);
+#endif
 
-    // fresnel from the first interface
+    /* fresnel from the first interface */
     Ft *= 1.0 - E;
 
+    /* apply absoption */
 #if defined(MATERIAL_HAS_ABSORPTION)
     Ft *= T;
 #endif
