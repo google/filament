@@ -333,7 +333,12 @@ void evaluateSubsurfaceIBL(const PixelParams pixel, const vec3 diffuseIrradiance
 }
 
 #if defined(HAS_REFRACTION)
-void applyRefraction(const PixelParams pixel, const vec3 n0, vec3 Fd, vec3 Fr, inout vec3 color) {
+void applyRefraction(const PixelParams pixel,
+    const vec3 n0, const vec3 E, vec3 Fd, vec3 Fr,
+    inout vec3 color) {
+    // when reading from the cubemap, we are not pre-exposed so we apply iblLuminance
+    // which is not the case when we'll read from the screen-space buffer
+    float scale = frameUniforms.iblLuminance;
     float eta0 = pixel.eta;
     vec3 r = -shading_view;
 
@@ -357,26 +362,30 @@ void applyRefraction(const PixelParams pixel, const vec3 n0, vec3 Fd, vec3 Fr, i
     //vec3 r = v;
     //vec3 p = d * r;   // sample screen space here
 
-    // for a sphere, with light at infinity (i.e. cubemap)
-    r = refract(r, n0, eta0);
-
-#if defined(MATERIAL_HAS_ABSORPTION) && defined(MATERIAL_HAS_THICKNESS)
-    float d = pixel.thickness * dot(-n0, r);
-    vec3 T = exp(-pixel.absorption * d);
-#endif
-
-    vec3 n1 = -normalize(dot(-n0, r) * r + n0 * 0.5);
-    float eta1 = 1.0 / eta0;
-    r = refract(r, n1, eta1);
-
     // for a slab, with light at infinity (i.e. cubemap)
     //      r = refract(v, n, eta);
     //      r = refract(r, n, 1.0 / pixel.eta);
     //vec3 r = v;
 
-    // when reading from the cubemap, we are not pre-exposed so we apply iblLuminance
-    // which is not the case when we'll read from the screen-space buffer
-    vec3 Ft = prefilteredRadiance(r, pixel.perceptualRoughness) * frameUniforms.iblLuminance;
+
+    // for a sphere, with light at infinity (i.e. cubemap)
+    r = refract(r, n0, eta0);
+
+    float N0oR = dot(n0, r);
+#if defined(MATERIAL_HAS_ABSORPTION) && defined(MATERIAL_HAS_THICKNESS)
+    float d = pixel.thickness * -N0oR;
+    vec3 T = exp(-pixel.absorption * d);
+#endif
+
+    vec3 n1 = normalize(N0oR * r - n0 * 0.5);
+    float eta1 = 1.0 / eta0;
+    // note: Total Internal Reflection cannot happen in a sphere from an outside ray
+    r = refract(r, n1, eta1);
+
+    vec3 Ft = prefilteredRadiance(r, pixel.perceptualRoughness) * scale;
+
+    // fresnel from the first interface
+    Ft *= 1.0 - E;
 
 #if defined(MATERIAL_HAS_ABSORPTION)
     Ft *= T;
@@ -384,16 +393,15 @@ void applyRefraction(const PixelParams pixel, const vec3 n0, vec3 Fd, vec3 Fr, i
 
     Fr *= frameUniforms.iblLuminance;
     Fd *= frameUniforms.iblLuminance;
-
     color.rgb += Fr + mix(Fd, Ft, pixel.transmission);
 }
 #endif
 
 void combineDiffuseAndSpecular(const PixelParams pixel,
-        const vec3 n, vec3 Fd, vec3 Fr,
+        const vec3 n, const vec3 E, const vec3 Fd, const vec3 Fr,
         inout vec3 color) {
 #if defined(HAS_REFRACTION)
-    applyRefraction(pixel, n, Fd, Fr, color);
+    applyRefraction(pixel, n, E, Fd, Fr, color);
 #else
     color.rgb += (Fd + Fr) * frameUniforms.iblLuminance;
 #endif
@@ -437,5 +445,5 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
     multiBounceSpecularAO(specularAO, pixel.f0, Fr);
 
     // Note: iblLuminance is already premultiplied by the exposure
-    combineDiffuseAndSpecular(pixel, n, Fd, Fr, color);
+    combineDiffuseAndSpecular(pixel, n, E, Fd, Fr, color);
 }
