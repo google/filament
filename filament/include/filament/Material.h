@@ -179,6 +179,12 @@ public:
     //! Returns the list of vertex attributes required by this material.
     AttributeBitset getRequiredAttributes() const noexcept;
 
+    //! Returns the refraction mode used by this material.
+    Refraction getRefraction() const noexcept;
+
+    // Return the refraction type used by this material.
+    RefractionType getRefractionType() const noexcept;
+
     /**
      * Returns the number of parameters declared by this material.
      * The returned value can be 0.

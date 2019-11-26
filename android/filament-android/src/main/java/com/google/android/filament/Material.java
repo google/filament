@@ -142,6 +142,31 @@ public class Material {
     }
 
     /**
+     * Supported refraction modes
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/blendingandtransparency:refraction">
+     * Blending and transparency: refraction</a>
+     */
+    public enum Refraction {
+        NONE,
+        CUBEMAP,
+        SCREEN_SPACE
+    }
+
+    /**
+     * Supported refraction types
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/blendingandtransparency:refractiontype">
+     * Blending and transparency: refractionType</a>
+     */
+    public enum RefractionType {
+        SOLID,
+        THIN
+    }
+
+    /**
      * Supported types of vertex domains
      *
      * @see
@@ -350,6 +375,29 @@ public class Material {
     public BlendingMode getBlendingMode() {
         return BlendingMode.values()[nGetBlendingMode(getNativeObject())];
     }
+
+    /**
+     * Returns the refraction mode of this material.
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/blendingandtransparency:refraction">
+     * Blending and transparency: refraction</a>
+     */
+    public Refraction getRefraction() {
+        return Refraction.values()[nGetRefraction(getNativeObject())];
+    }
+
+    /**
+     * Returns the refraction type of this material.
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/blendingandtransparency:refractiontype">
+     * Blending and transparency: refractionType</a>
+     */
+    public RefractionType getRefractionType() {
+        return RefractionType.values()[nGetRefractionType(getNativeObject())];
+    }
+
 
     /**
      * Returns the vertex domain of this material.
@@ -847,6 +895,9 @@ public class Material {
     private static native float nGetMaskThreshold(long nativeMaterial);
     private static native float nGetSpecularAntiAliasingVariance(long nativeMaterial);
     private static native float nGetSpecularAntiAliasingThreshold(long nativeMaterial);
+    private static native int nGetRefraction(long nativeMaterial);
+    private static native int nGetRefractionType(long nativeMaterial);
+
 
     private static native int nGetParameterCount(long nativeMaterial);
     private static native void nGetParameters(long nativeMaterial,
