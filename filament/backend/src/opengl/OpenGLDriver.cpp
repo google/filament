@@ -1889,20 +1889,18 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     TargetBufferFlags discardFlags = params.flags.discardStart;
 
     GLRenderTarget* rt = handle_cast<GLRenderTarget*>(rth);
-    if (UTILS_UNLIKELY(gl.getDrawFbo() != rt->gl.fbo)) {
-        gl.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
+    gl.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
 
-        // glInvalidateFramebuffer appeared on GLES 3.0 and GL4.3, for simplicity we just
-        // ignore it on GL (rather than having to do a runtime check).
-        if (GLES30_HEADERS) {
-            if (!gl.bugs.disable_invalidate_framebuffer) {
-                std::array<GLenum, 3> attachments; // NOLINT
-                GLsizei attachmentCount = getAttachments(attachments, rt, discardFlags);
-                if (attachmentCount) {
-                    glInvalidateFramebuffer(GL_FRAMEBUFFER, attachmentCount, attachments.data());
-                }
-                CHECK_GL_ERROR(utils::slog.e)
+    // glInvalidateFramebuffer appeared on GLES 3.0 and GL4.3, for simplicity we just
+    // ignore it on GL (rather than having to do a runtime check).
+    if (GLES30_HEADERS) {
+        if (!gl.bugs.disable_invalidate_framebuffer) {
+            std::array<GLenum, 3> attachments; // NOLINT
+            GLsizei attachmentCount = getAttachments(attachments, rt, discardFlags);
+            if (attachmentCount) {
+                glInvalidateFramebuffer(GL_FRAMEBUFFER, attachmentCount, attachments.data());
             }
+            CHECK_GL_ERROR(utils::slog.e)
         }
     }
 
