@@ -681,19 +681,19 @@ n_{ior} = \frac{2}{1 - \sqrt{\fNormal}} - 1
 Table [commonMatReflectance] describes acceptable Fresnel reflectance values for various types of materials (no real world material has a value under 2%).
 
 
-          Material         |    Reflectance   |   Linear value
---------------------------:|:-----------------|:----------------
-Water                      | 2%               | 0.35
-Fabric                     | 4% to 5.6%       | 0.5 to 0.59
-Common liquids             | 2% to 4%         | 0.35 to 0.5
-Common gemstones           | 5% to 16%        | 0.56 to 1.0
-Plastics, glass            | 4% to 5%         | 0.5 to 0.56
-Other dielectric materials | 2% to 5%         | 0.35 to 0.56
-Eyes                       | 2.5%             | 0.39
-Skin                       | 2.8%             | 0.42
-Hair                       | 4.6%             | 0.54
-Teeth                      | 5.8%             | 0.6
-Default value              | 4%               | 0.5
+          Material         |    Reflectance   |        IOR       |   Linear value
+--------------------------:|:-----------------|:-----------------|:----------------
+Water                      | 2%               | 1.33             | 0.35
+Fabric                     | 4% to 5.6%       | 1.5 to 1.62      | 0.5 to 0.59
+Common liquids             | 2% to 4%         | 1.33 to 1.5      | 0.35 to 0.5
+Common gemstones           | 5% to 16%        | 1.58 to 2.33     | 0.56 to 1.0
+Plastics, glass            | 4% to 5%         | 1.5 to 1.58      | 0.5 to 0.56
+Other dielectric materials | 2% to 5%         | 1.33 to 1.58     | 0.35 to 0.56
+Eyes                       | 2.5%             | 1.38             | 0.39
+Skin                       | 2.8%             | 1.4              | 0.42
+Hair                       | 4.6%             | 1.55             | 0.54
+Teeth                      | 5.8%             | 1.63             | 0.6
+Default value              | 4%               | 1.5              | 0.5
 [Table [commonMatReflectance]: Reflectance of common materials (source: Real-Time Rendering 4th Edition)]
 
 Table [fNormalMetals] lists the $\fNormal$ values for a few metals. The values are given in sRGB and must be used as the base color in our material model. Please refer to the annex, section [Specular color], for an explanation of how these sRGB colors are computed from measured data.
