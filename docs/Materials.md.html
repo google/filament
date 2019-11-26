@@ -1620,6 +1620,7 @@ The following APIs are only available from the fragment block:
 **inverseTonemap(float3)**          | float3   |  Applies the inverse tone mapping operator to the specified linear sRGB color and returns a linear sRGB color. This operation may be an approximation
 **inverseTonemapSRGB(float3)**      | float3   |  Applies the inverse tone mapping operator to the specified non-linear sRGB color and returns a linear sRGB color. This operation may be an approximation
 **luminance(float3)**               | float    |  Computes the luminance of the specified linear sRGB color
+**ycbcrToRgb(float, float2)**       | float3   |  Converts a luminance and CbCr pair to a sRGB color
 **uvToRenderTargetUV(float2)**      | float2   |  Transforms a UV coordinate to allow sampling from a `RenderTarget` attachment
 
 !!! TIP: world space
