@@ -465,9 +465,10 @@ static bool processDomain(MaterialBuilder& builder, const JsonishValue& value) {
 }
 
 static bool processRefraction(MaterialBuilder& builder, const JsonishValue& value) {
-    static const std::unordered_map<std::string, MaterialBuilder::Refraction> strToEnum {
-            { "none",    MaterialBuilder::Refraction::NONE },
-            { "cubemap", MaterialBuilder::Refraction::CUBEMAP },
+    static const std::unordered_map<std::string, MaterialBuilder::Refraction> strToEnum{
+            { "none",        MaterialBuilder::Refraction::NONE },
+            { "cubemap",     MaterialBuilder::Refraction::CUBEMAP },
+            { "screenspace", MaterialBuilder::Refraction::SCREEN_SPACE },
     };
     auto jsonString = value.toJsonString();
     if (!isStringValidEnum(strToEnum, jsonString->getString())) {
