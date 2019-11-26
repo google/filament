@@ -339,6 +339,7 @@ void applyRefraction(const PixelParams pixel,
     // when reading from the cubemap, we are not pre-exposed so we apply iblLuminance
     // which is not the case when we'll read from the screen-space buffer
     float scale = frameUniforms.iblLuminance;
+    float perceptualRoughness = pixel.perceptualRoughness;
     float eta0 = pixel.eta;
     vec3 r = -shading_view;
 
@@ -362,27 +363,38 @@ void applyRefraction(const PixelParams pixel,
     //vec3 r = v;
     //vec3 p = d * r;   // sample screen space here
 
-    // for a slab, with light at infinity (i.e. cubemap)
-    //      r = refract(v, n, eta);
-    //      r = refract(r, n, 1.0 / pixel.eta);
-    //vec3 r = v;
 
-
+#if REFRACTION_TYPE == REFRACTION_TYPE_SOLID
     // for a sphere, with light at infinity (i.e. cubemap)
     r = refract(r, n0, eta0);
-
     float N0oR = dot(n0, r);
+#elif REFRACTION_TYPE == REFRACTION_TYPE_THIN
+    // disney roughness remaping for thin layers
+    perceptualRoughness *= (0.65 / eta0 - 0.35) * pixel.perceptualRoughness;
+#else
+#error "invalid REFRACTION_TYPE"
+#endif
+
 #if defined(MATERIAL_HAS_ABSORPTION) && defined(MATERIAL_HAS_THICKNESS)
+#if REFRACTION_TYPE == REFRACTION_TYPE_SOLID
     float d = pixel.thickness * -N0oR;
+#else
+    // note: we need the refracted ray to calculate the distance traveled
+    // we could use shading_NoV, but we would lose the dependency on ior.
+    float N0oR = dot(-n0, refract(r, n0, eta0));
+    float d = pixel.thickness / max(N0oR, 0.1);
+#endif
     vec3 T = exp(-pixel.absorption * d);
 #endif
 
+#if REFRACTION_TYPE == REFRACTION_TYPE_SOLID
     vec3 n1 = normalize(N0oR * r - n0 * 0.5);
     float eta1 = 1.0 / eta0;
     // note: Total Internal Reflection cannot happen in a sphere from an outside ray
     r = refract(r, n1, eta1);
+#endif
 
-    vec3 Ft = prefilteredRadiance(r, pixel.perceptualRoughness) * scale;
+    vec3 Ft = prefilteredRadiance(r, perceptualRoughness) * scale;
 
     // fresnel from the first interface
     Ft *= 1.0 - E;
