@@ -246,6 +246,18 @@ bool MaterialParser::getRequiredAttributes(AttributeBitset* value) const noexcep
     return true;
 }
 
+bool MaterialParser::getRefraction(Refraction* value) const noexcept {
+    static_assert(sizeof(Refraction) == sizeof(uint8_t),
+            "Refraction expected size is wrong");
+    return mImpl.getFromSimpleChunk(ChunkType::MaterialRefraction, (uint8_t*)value);
+}
+
+bool MaterialParser::getRefractionType(RefractionType* value) const noexcept {
+    static_assert(sizeof(RefractionType) == sizeof(uint8_t),
+            "RefractionType expected size is wrong");
+    return mImpl.getFromSimpleChunk(ChunkType::MaterialRefractionType, (uint8_t*)value);
+}
+
 bool MaterialParser::getShader(ShaderBuilder& shader,
         ShaderModel shaderModel, uint8_t variant, ShaderType stage) noexcept {
     return mImpl.mMaterialChunk.getShader(shader,

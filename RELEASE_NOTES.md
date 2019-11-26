@@ -4,6 +4,7 @@ This file contains one line summaries of commits that are worthy of mentioning i
 A new header is inserted each time a *tag* is created.
 
 ## Next release
+- Added support for solid and thin layer cubemap and screen-space refraction.
 
 - Improve high roughness material rendering by default when regenerating environments maps
 
