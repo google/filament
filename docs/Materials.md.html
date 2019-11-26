@@ -89,6 +89,8 @@ in table [standardProperties].
 **clearCoatNormal**     | A detail normal used to perturb the clear coat layer using _bump mapping_ (_normal mapping_)
 **emissive**            | Additional diffuse albedo to simulate emissive surfaces (such as neons, etc.) This property is mostly useful in an HDR pipeline with a bloom pass
 **postLightingColor**   | Additional color that can be blended with the result of the lighting computations. See `postLightingBlending`
+**transmission**        | Defines how much of the diffuse light of a dielectric is transmitted through the object, in other words this defines how transparent an object is
+**absoption**           | Absorption factor for refractive objects
 [Table [standardProperties]: Properties of the standard model]
 
 The type and range of each property is described in table [standardPropertiesTypes].
@@ -108,6 +110,8 @@ The type and range of each property is described in table [standardPropertiesTyp
 **clearCoatNormal**     | float3   |  [0..1]                  | Linear RGB, encodes a direction vector in tangent space
 **emissive**            | float4   |  rgb=[0..1], a=[-n..n]   | Alpha is the exposure compensation
 **postLightingColor**   | float4   |  [0..1]                  | Pre-multiplied linear RGB
+**transmission**        | float    |  [0..1]                  |
+**absorption**          | float3   |  [0..1]                  | Linear RGB, encodes how much of each component is absorbed
 [Table [standardPropertiesTypes]: Range and type of the standard model's properties]
 
 
@@ -224,19 +228,19 @@ Table [commonMatReflectance] describes acceptable reflectance values for various
 (no real world material has a value under 2%).
 
 
-          Material         |    Reflectance   |  Property value
---------------------------:|:-----------------|:----------------
-Water                      | 2%               | 0.35
-Fabric                     | 4% to 5.6%       | 0.5 to 0.59
-Common liquids             | 2% to 4%         | 0.35 to 0.5
-Common gemstones           | 5% to 16%        | 0.56 to 1.0
-Plastics, glass            | 4% to 5%         | 0.5 to 0.56
-Other dielectric materials | 2% to 5%         | 0.35 to 0.56
-Eyes                       | 2.5%             | 0.39
-Skin                       | 2.8%             | 0.42
-Hair                       | 4.6%             | 0.54
-Teeth                      | 5.8%             | 0.6
-Default value              | 4%               | 0.5
+Material                   |    Reflectance   |        IOR       |   Linear value
+--------------------------:|:-----------------|:-----------------|:----------------
+Water                      | 2%               | 1.33             | 0.35
+Fabric                     | 4% to 5.6%       | 1.5 to 1.62      | 0.5 to 0.59
+Common liquids             | 2% to 4%         | 1.33 to 1.5      | 0.35 to 0.5
+Common gemstones           | 5% to 16%        | 1.58 to 2.33     | 0.56 to 1.0
+Plastics, glass            | 4% to 5%         | 1.5 to 1.58      | 0.5 to 0.56
+Other dielectric materials | 2% to 5%         | 1.33 to 1.58     | 0.35 to 0.56
+Eyes                       | 2.5%             | 1.38             | 0.39
+Skin                       | 2.8%             | 1.4              | 0.42
+Hair                       | 4.6%             | 1.55             | 0.54
+Teeth                      | 5.8%             | 1.63             | 0.6
+Default value              | 4%               | 1.5              | 0.5
 [Table [commonMatReflectance]: Reflectance of common materials]
 
 ### Clear coat
@@ -1093,6 +1097,53 @@ material {
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+### Blending and transparency: refraction
+
+Type
+:    `string`
+
+Value
+:     Any of `none`, `cubemap`, `screenspace`. Defaults to `none`.
+
+Description
+:     Activates refraction when set to anything but `none`. A value of `cubemap` will only use the
+      IBL cubemap as source of refraction, while this is significantly more efficient, no scene
+      objects will be refracted, only the distant environment encoded in the cubemap. This mode is
+      adequate for an object viewer for instance. A value of `screenspace` will employ the more
+      advanced screen-space refraction algorithm which allows opaque objects in the scene to be
+      refracted. In `cubemap` mode, refracted rays are assumed to emerge from the center of the
+      object. In `screenspace` mode, refracted rays are assumed to travel parallel to the view
+      direction when they exit the refractive medium.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
+material {
+    refraction : cubemap,
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+### Blending and transparency: refractionType
+
+Type
+:    `string`
+
+Value
+:     Any of `solid`, `thin`. Defaults to `solid`.
+
+Description
+:     This is only meaningful when `refraction` is set to anything but `none`. `refractionType`
+      defines the refraction model used. `solid` is used for thick objects such as a crystal ball,
+      an ice cube or as sculpture. `thin` is used for thin objects such as a window, an ornament
+      ball or a soap bubble. In `solid` mode all refracive objects are assumed to be a sphere
+      tangent to the entry point and of radius `thickness`. In `thin` mode, all refractive objects
+      are assumed to be flat and thin and of thickness `thickness`.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
+material {
+    refraction : cubemap,
+    refractionType : thin,
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 ### Rasterization: culling
 
 Type
@@ -1505,8 +1556,10 @@ struct MaterialInputs {
     float  anisotropy;          // default: 0.0
     float3 anisotropyDirection; // default: float3(1.0, 0.0, 0.0)
 
-    // only available when the shading model is subsurface
+    // only available when the shading model is subsurface or refraction is enabled
     float  thickness;           // default: 0.5
+
+    // only available when the shading model is subsurface
     float  subsurfacePower;     // default: 12.234
     float3 subsurfaceColor;     // default: float3(1.0)
 
@@ -1521,6 +1574,10 @@ struct MaterialInputs {
     // not available when the shading model is unlit
     // must be set before calling prepareMaterial()
     float3 normal;              // default: float3(0.0, 0.0, 1.0)
+
+    // only available when refraction is enabled
+    float transmission;         // default: 1.0
+    float3 absorption;          // default float3(0.0, 0.0, 0.0)
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
