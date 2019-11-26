@@ -286,13 +286,27 @@ const std::string ShaderGenerator::createFragmentProgram(filament::backend::Shad
 
     cg.generateDefine(fs, "HAS_REFRACTION", material.refraction != Refraction::NONE);
     if (material.refraction != Refraction::NONE) {
-        cg.generateDefine(fs, "REFRACTION_TYPE_CUBEMAP", uint32_t(Refraction::CUBEMAP));
+        cg.generateDefine(fs, "REFRACTION_MODE_CUBEMAP", uint32_t(Refraction::CUBEMAP));
+        cg.generateDefine(fs, "REFRACTION_MODE_SCREEN_SPACE", uint32_t(Refraction::SCREEN_SPACE));
         switch (material.refraction) {
             case NONE:
-                // don't generate a define
+                // can't be here
                 break;
             case CUBEMAP:
-                cg.generateDefine(fs, "REFRACTION_TYPE", "REFRACTION_TYPE_CUBEMAP");
+                cg.generateDefine(fs, "REFRACTION_MODE", "REFRACTION_MODE_CUBEMAP");
+                break;
+            case SCREEN_SPACE:
+                cg.generateDefine(fs, "REFRACTION_MODE", "REFRACTION_MODE_SCREEN_SPACE");
+                break;
+        }
+        cg.generateDefine(fs, "REFRACTION_TYPE_SOLID", uint32_t(RefractionType::SOLID));
+        cg.generateDefine(fs, "REFRACTION_TYPE_THIN", uint32_t(RefractionType::THIN));
+        switch (material.refractionType) {
+            case SOLID:
+                cg.generateDefine(fs, "REFRACTION_TYPE", "REFRACTION_TYPE_SOLID");
+                break;
+            case THIN:
+                cg.generateDefine(fs, "REFRACTION_TYPE", "REFRACTION_TYPE_THIN");
                 break;
         }
     }

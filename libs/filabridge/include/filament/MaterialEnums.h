@@ -156,6 +156,15 @@ enum MaterialDomain : uint8_t {
 enum Refraction : uint8_t {
     NONE            = 0, //!< no refraction
     CUBEMAP         = 1, //!< refracted rays go to the ibl cubemap
+    SCREEN_SPACE    = 2, //!< refracted rays go to screen space
+};
+
+/**
+ * Refraction type
+ */
+enum RefractionType : uint8_t {
+    SOLID           = 0, //!< refraction through solid objects (e.g. a sphere)
+    THIN            = 1, //!< refraction through thin objects (e.g. window)
 };
 
 // can't really use std::underlying_type<AttributeIndex>::type because the driver takes a uint32_t
