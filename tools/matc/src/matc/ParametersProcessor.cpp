@@ -478,6 +478,20 @@ static bool processRefraction(MaterialBuilder& builder, const JsonishValue& valu
     return true;
 }
 
+static bool processRefractionType(MaterialBuilder& builder, const JsonishValue& value) {
+    static const std::unordered_map<std::string, MaterialBuilder::RefractionType> strToEnum {
+            { "solid", MaterialBuilder::RefractionType::SOLID },
+            { "thin",  MaterialBuilder::RefractionType::THIN },
+    };
+    auto jsonString = value.toJsonString();
+    if (!isStringValidEnum(strToEnum, jsonString->getString())) {
+        return logEnumIssue("refractionType", *jsonString, strToEnum);
+    }
+
+    builder.materialRefractionType(stringToEnum(strToEnum, jsonString->getString()));
+    return true;
+}
+
 static bool processVariantFilter(MaterialBuilder& builder, const JsonishValue& value) {
     // We avoid using an initializer list for this particular map to avoid build errors that are
     // due to static initialization ordering.
@@ -544,6 +558,7 @@ ParametersProcessor::ParametersProcessor() {
     mParameters["specularAmbientOcclusion"]      = { &processSpecularAmbientOcclusion, Type::BOOL };
     mParameters["domain"]                        = { &processDomain, Type::STRING };
     mParameters["refraction"]                    = { &processRefraction, Type::STRING };
+    mParameters["refractionType"]                = { &processRefractionType, Type::STRING };
 }
 
 bool ParametersProcessor::process(MaterialBuilder& builder, const JsonishObject& jsonObject) {

@@ -44,6 +44,7 @@ struct UTILS_PUBLIC MaterialInfo {
     bool specularAO;
     bool specularAOSet;
     filament::Refraction refraction;
+    filament::RefractionType refractionType;
     filament::AttributeBitset requiredAttributes;
     filament::BlendingMode blendingMode;
     filament::BlendingMode postLightingBlendingMode;
