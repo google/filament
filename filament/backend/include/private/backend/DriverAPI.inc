@@ -277,6 +277,11 @@ DECL_DRIVER_API_N(setExternalImage,
         backend::TextureHandle, th,
         void*, image)
 
+DECL_DRIVER_API_N(setExternalImagePlane,
+        backend::TextureHandle, th,
+        void*, image,
+        size_t, plane)
+
 DECL_DRIVER_API_N(setExternalStream,
         backend::TextureHandle, th,
         backend::StreamHandle, sh)

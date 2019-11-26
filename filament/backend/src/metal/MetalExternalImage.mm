@@ -78,12 +78,7 @@ bool MetalExternalImage::isValid() const noexcept {
 }
 
 void MetalExternalImage::set(CVPixelBufferRef image) noexcept {
-    CVPixelBufferRelease(mImage);
-    CVBufferRelease(mTexture);
-
-    mImage = nullptr;
-    mTexture = nullptr;
-    mRgbTexture = nil;
+    unset();
 
     if (!image) {
         return;
@@ -129,6 +124,37 @@ void MetalExternalImage::set(CVPixelBufferRef image) noexcept {
     }
 }
 
+void MetalExternalImage::set(CVPixelBufferRef image, size_t plane) noexcept {
+    unset();
+
+    if (!image) {
+        return;
+    }
+
+    const OSType formatType = CVPixelBufferGetPixelFormatType(image);
+    ASSERT_POSTCONDITION(formatType == kCVPixelFormatType_420YpCbCr8BiPlanarFullRange,
+            "Metal planar external images must be in the 420f format.");
+
+    mImage = image;
+
+    auto getPlaneFormat = [] (size_t plane) {
+      // Right now Metal only supports kCVPixelFormatType_420YpCbCr8BiPlanarFullRange planar
+      // external images, so we can make the following assumptions about the format of each plane.
+      if (plane == 0) {
+        return MTLPixelFormatR8Unorm; // luminance
+      }
+      if (plane == 1) {
+        // CbCr
+        return MTLPixelFormatRG8Unorm; // CbCr
+      }
+      return MTLPixelFormatInvalid;
+    };
+
+    const MTLPixelFormat format = getPlaneFormat(plane);
+    assert(format != MTLPixelFormatInvalid);
+    mTexture = createTextureFromImage(image, format, plane);
+}
+
 id<MTLTexture> MetalExternalImage::getMetalTextureForDraw() const noexcept {
     if (mRgbTexture) {
         return mRgbTexture;
@@ -151,8 +177,8 @@ id<MTLTexture> MetalExternalImage::getMetalTextureForDraw() const noexcept {
 
 CVMetalTextureRef MetalExternalImage::createTextureFromImage(CVPixelBufferRef image,
         MTLPixelFormat format, size_t plane) {
-    size_t width = CVPixelBufferGetWidthOfPlane(image, plane);
-    size_t height = CVPixelBufferGetHeightOfPlane(image, plane);
+    const size_t width = CVPixelBufferGetWidthOfPlane(image, plane);
+    const size_t height = CVPixelBufferGetHeightOfPlane(image, plane);
 
     CVMetalTextureRef texture;
     CVReturn result = CVMetalTextureCacheCreateTextureFromImage(kCFAllocatorDefault,
@@ -165,6 +191,15 @@ CVMetalTextureRef MetalExternalImage::createTextureFromImage(CVPixelBufferRef im
 
 void MetalExternalImage::shutdown() noexcept {
     gComputePipelineState = nil;
+}
+
+void MetalExternalImage::unset() {
+    CVPixelBufferRelease(mImage);
+    CVBufferRelease(mTexture);
+
+    mImage = nullptr;
+    mTexture = nullptr;
+    mRgbTexture = nil;
 }
 
 id<MTLTexture> MetalExternalImage::createRgbTexture(size_t width, size_t height) {

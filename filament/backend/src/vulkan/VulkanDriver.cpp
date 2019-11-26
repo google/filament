@@ -673,6 +673,9 @@ void VulkanDriver::cancelExternalImage(void* image) {
 void VulkanDriver::setExternalImage(Handle<HwTexture> th, void* image) {
 }
 
+void VulkanDriver::setExternalImagePlane(Handle<HwTexture> th, void* image, size_t plane) {
+}
+
 void VulkanDriver::setExternalStream(Handle<HwTexture> th, Handle<HwStream> sh) {
 }
 
