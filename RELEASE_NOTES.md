@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release
 
+## v1.4.3
+
 - Fixed an assertion when a parameter array occurs last in a material definition.
 - Fixed morph shapes not rendering in WebGL.
 - Added support for the latest version of emscripten.
