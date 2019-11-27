@@ -552,6 +552,11 @@ void MetalDriver::setExternalImage(Handle<HwTexture> th, void* image) {
     texture->externalImage.set((CVPixelBufferRef) image);
 }
 
+void MetalDriver::setExternalImagePlane(Handle<HwTexture> th, void* image, size_t plane) {
+    auto texture = handle_cast<MetalTexture>(mHandleMap, th);
+    texture->externalImage.set((CVPixelBufferRef) image, plane);
+}
+
 void MetalDriver::setExternalStream(Handle<HwTexture> th, Handle<HwStream> sh) {
 
 }

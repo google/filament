@@ -1749,6 +1749,10 @@ void OpenGLDriver::setExternalImage(Handle<HwTexture> th, void* image) {
     setExternalTexture(handle_cast<GLTexture*>(th), image);
 }
 
+void OpenGLDriver::setExternalImagePlane(Handle<HwTexture> th, void* image, size_t plane) {
+
+}
+
 void OpenGLDriver::setExternalTexture(GLTexture* t, void* image) {
     auto& gl = mContext;
 

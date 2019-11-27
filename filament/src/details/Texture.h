@@ -65,6 +65,7 @@ public:
             PrefilterOptions const* options);
 
     void setExternalImage(FEngine& engine, void* image) noexcept;
+    void setExternalImage(FEngine& engine, void* image, size_t plane) noexcept;
     void setExternalStream(FEngine& engine, FStream* stream) noexcept;
 
     void generateMipmaps(FEngine& engine) const noexcept;

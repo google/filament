@@ -167,6 +167,15 @@ void FTexture::setExternalImage(FEngine& engine, void* image) noexcept {
     }
 }
 
+void FTexture::setExternalImage(FEngine& engine, void* image, size_t plane) noexcept {
+    if (mTarget == Sampler::SAMPLER_EXTERNAL) {
+        // The call to setupExternalImage is synchronous, and allows the driver to take ownership of
+        // the external image on this thread, if necessary.
+        engine.getDriverApi().setupExternalImage(image);
+        engine.getDriverApi().setExternalImagePlane(mHandle, image, plane);
+    }
+}
+
 void FTexture::setExternalStream(FEngine& engine, FStream* stream) noexcept {
     if (stream) {
         if (!ASSERT_POSTCONDITION_NON_FATAL(mTarget == Sampler::SAMPLER_EXTERNAL,
@@ -500,6 +509,10 @@ void Texture::setImage(Engine& engine, size_t level,
 
 void Texture::setExternalImage(Engine& engine, void* image) noexcept {
     upcast(this)->setExternalImage(upcast(engine), image);
+}
+
+void Texture::setExternalImage(Engine& engine, void* image, size_t plane) noexcept {
+    upcast(this)->setExternalImage(upcast(engine), image, plane);
 }
 
 void Texture::setExternalStream(Engine& engine, Stream* stream) noexcept {

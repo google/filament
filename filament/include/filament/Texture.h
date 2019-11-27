@@ -337,6 +337,35 @@ public:
      */
     void setExternalImage(Engine& engine, void* image) noexcept;
 
+    /**
+     * Specify the external image and plane to associate with this Texture. Typically the external
+     * image is OS specific, and can be a video or camera frame. When using this method, the
+     * external image must be a planar type (such as a YUV camera frame). The plane parameter
+     * selects which image plane is bound to this texture.
+     *
+     * A single external image can be bound to different Filament textures, with each texture
+     * associated with a separate plane:
+     *
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     * textureA->setExternalImage(engine, image, 0);
+     * textureB->setExternalImage(engine, image, 1);
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     *
+     * There are many restrictions when using an external image as a texture, such as:
+     *   - only the level of detail (lod) 0 can be specified
+     *   - only nearest or linear filtering is supported
+     *   - the size and format of the texture is defined by the external image
+     *
+     * @param engine        Engine this texture is associated to.
+     * @param image         An opaque handle to a platform specific image. Supported types are
+     *                      eglImageOES on Android and CVPixelBufferRef on iOS.
+     * @param plane         The plane index of the external image to associate with this texture.
+     *
+     *                      This method is only meaningful on iOS with
+     *                      kCVPixelFormatType_420YpCbCr8BiPlanarFullRange images. On platforms
+     *                      other than iOS, this method is a no-op.
+     */
+    void setExternalImage(Engine& engine, void* image, size_t plane) noexcept;
 
     /**
      * Specify the external stream to associate with this Texture. Typically the external

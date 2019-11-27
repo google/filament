@@ -14,6 +14,7 @@ A new header is inserted each time a *tag* is created.
 - Fixed a normals issue when skinning without a normal map or anisotropy.
 - Fixed an issue where translucent views couldn't be used with post-processing.
 - Always use higher quality 3-bands SH for indirect lighting, even on mobile.
+- The Metal backend can now handle binding individual planes of YUV external images.
 
 ## v1.4.2
 
