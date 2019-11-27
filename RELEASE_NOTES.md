@@ -10,11 +10,13 @@ A new header is inserted each time a *tag* is created.
 - Added support for the latest version of emscripten.
 - gltfio: fixed blackness seen with default material.
 - Added ETC2 and BC compressed texture support to Metal backend.
-- Rendering a SAMPLER_EXTERNAL texture before setting an external image no longer results in GPU errors.
+- Rendering a `SAMPLER_EXTERNAL` texture before setting an external image no longer results in GPU errors.
 - Fixed a normals issue when skinning without a normal map or anisotropy.
-- Fixed an issue where translucent views couldn't be used with post-processing.
+- Fixed an issue where transparent views couldn't be used with post-processing.
 - Always use higher quality 3-bands SH for indirect lighting, even on mobile.
 - The Metal backend can now handle binding individual planes of YUV external images.
+- Added support for depth buffer when post-processing is turned off
+- Improved performance on GPUs that use tile-based rendering
 
 ## v1.4.2
 
