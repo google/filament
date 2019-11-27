@@ -52,6 +52,20 @@ Demonstrates how to load glTF models and render to an offscreen buffer:
 
 ![glTF Bloom](../../docs/images/samples/sample_gltf_bloom.jpg)
 
+### `hello-camera`
+
+Demonstrates how to use `Stream` with Android's Camera2 API:
+
+![Hello Camera](../../docs/images/samples/sample_hello_camera.jpg)
+
+### `stream-test`
+
+Tests the various ways to interact with `Stream` by drawing into an external texture using Canvas.
+See the following screenshot; if the two sets of stripes are perfectly aligned, then the Filament
+frame and the external texture are perfectly synchronized.
+
+![Stream Test](../../docs/images/samples/sample_stream_test.jpg)
+
 ## Prerequisites
 
 Before you start, make sure to read [Filament's README](../../README.md). You need to be able to

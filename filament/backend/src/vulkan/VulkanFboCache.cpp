@@ -62,11 +62,11 @@ VkFramebuffer VulkanFboCache::getFramebuffer(FboKey config, uint32_t w, uint32_t
     VkFramebufferCreateInfo info {
         .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
         .renderPass = config.renderPass,
+        .attachmentCount = nAttachments,
+        .pAttachments = config.attachments,
         .width = w,
         .height = h,
-        .layers = 1,
-        .attachmentCount = nAttachments,
-        .pAttachments = config.attachments
+        .layers = 1
     };
     mRenderPassRefCount[info.renderPass]++;
     VkFramebuffer framebuffer;
@@ -132,9 +132,9 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
         .attachmentCount = 0u,
         .pAttachments = attachments,
-        .dependencyCount = 0u,
         .subpassCount = 1,
-        .pSubpasses = &subpass
+        .pSubpasses = &subpass,
+        .dependencyCount = 0u
     };
     if (hasColor) {
         attachments[renderPassInfo.attachmentCount++] = colorAttachment;

@@ -40,47 +40,62 @@ namespace details {
 class RenderPass {
 public:
     static constexpr uint64_t DISTANCE_BITS_MASK            = 0xFFFFFFFFllu;
-    static constexpr int DISTANCE_BITS_SHIFT                = 0;
+    static constexpr unsigned DISTANCE_BITS_SHIFT           = 0;
 
     static constexpr uint64_t BLEND_ORDER_MASK              = 0xFFFEllu;
-    static constexpr int BLEND_ORDER_SHIFT                  = 1;
+    static constexpr unsigned BLEND_ORDER_SHIFT             = 1;
 
     static constexpr uint64_t BLEND_TWO_PASS_MASK           = 0x1llu;
-    static constexpr int BLEND_TWO_PASS_SHIFT               = 0;
+    static constexpr unsigned BLEND_TWO_PASS_SHIFT          = 0;
 
     static constexpr uint64_t MATERIAL_INSTANCE_ID_MASK     = 0x0000FFFFllu;
-    static constexpr int MATERIAL_INSTANCE_ID_SHIFT         = 0;
+    static constexpr unsigned MATERIAL_INSTANCE_ID_SHIFT    = 0;
 
     static constexpr uint64_t MATERIAL_VARIANT_KEY_MASK     = 0x001F0000llu;
-    static constexpr int MATERIAL_VARIANT_KEY_SHIFT         = 16;
+    static constexpr unsigned MATERIAL_VARIANT_KEY_SHIFT    = 16;
 
     static constexpr uint64_t MATERIAL_ID_MASK              = 0xFFE00000llu;
-    static constexpr int MATERIAL_ID_SHIFT                  = 21;
+    static constexpr unsigned MATERIAL_ID_SHIFT             = 21;
 
     static constexpr uint64_t BLEND_DISTANCE_MASK           = 0xFFFFFFFF0000llu;
-    static constexpr int BLEND_DISTANCE_SHIFT               = 16;
+    static constexpr unsigned BLEND_DISTANCE_SHIFT          = 16;
 
     static constexpr uint64_t MATERIAL_MASK                 = 0xFFFFFFFFllu;
-    static constexpr int MATERIAL_SHIFT                     = 0;
+    static constexpr unsigned MATERIAL_SHIFT                = 0;
 
     static constexpr uint64_t Z_BUCKET_MASK                 = 0x3FF00000000llu;
-    static constexpr int Z_BUCKET_SHIFT                     = 32;
+    static constexpr unsigned Z_BUCKET_SHIFT                = 32;
 
     static constexpr uint64_t PRIORITY_MASK                 = 0x001C000000000000llu;
-    static constexpr int PRIORITY_SHIFT                     = 50;
+    static constexpr unsigned PRIORITY_SHIFT                = 50;
 
     static constexpr uint64_t BLENDING_MASK                 = 0x0020000000000000llu;
-    static constexpr int BLENDING_SHIFT                     = 53;
+    static constexpr unsigned BLENDING_SHIFT                = 53;
 
-    static constexpr uint64_t PASS_MASK                     = 0xFF00000000000000llu;
-    static constexpr int PASS_SHIFT                         = 56;
+    static constexpr uint64_t PASS_MASK                     = 0xFC00000000000000llu;
+    static constexpr unsigned PASS_SHIFT                    = 58;
+
+    static constexpr uint64_t CUSTOM_MASK                   = 0x0300000000000000llu;
+    static constexpr unsigned CUSTOM_SHIFT                  = 56;
+
+    static constexpr uint64_t CUSTOM_ORDER_MASK             = 0x003FFFFF00000000llu;
+    static constexpr unsigned CUSTOM_ORDER_SHIFT            = 32;
+
+    static constexpr uint64_t CUSTOM_INDEX_MASK             = 0x00000000FFFFFFFFllu;
+    static constexpr unsigned CUSTOM_INDEX_SHIFT            = 0;
 
 
-    enum class Pass : uint64_t {    // 8-bits max
-        DEPTH    = 0llu << PASS_SHIFT,
-        COLOR    = 1llu << PASS_SHIFT,
-        BLENDED  = 2llu << PASS_SHIFT,
+    enum class Pass : uint64_t {    // 6-bits max
+        DEPTH    = uint64_t(0x00) << PASS_SHIFT,
+        COLOR    = uint64_t(0x01) << PASS_SHIFT,
+        BLENDED  = uint64_t(0x02) << PASS_SHIFT,
         SENTINEL = 0xffffffffffffffffllu
+    };
+
+    enum class CustomCommand : uint64_t {    // 2-bits max
+        PROLOG  = uint64_t(0x0) << CUSTOM_SHIFT,
+        PASS    = uint64_t(0x1) << CUSTOM_SHIFT,
+        EPILOG  = uint64_t(0x2) << CUSTOM_SHIFT
     };
 
     enum CommandTypeFlags : uint8_t {
@@ -88,14 +103,12 @@ public:
         DEPTH = 0x2,    // generate the depth pass only ( e.g. shadowmap)
         COLOR_AND_DEPTH = COLOR | DEPTH,
 
-
         // shadow-casters are rendered in the depth buffer, regardless of blending (or alpha masking)
         DEPTH_CONTAINS_SHADOW_CASTERS = 0x4,
         // alpha-blended objects are not rendered in the depth buffer
         DEPTH_FILTER_TRANSLUCENT_OBJECTS = 0x8,
         // alpha-tested objects are not rendered in the depth buffer
         DEPTH_FILTER_ALPHA_MASKED_OBJECTS = 0x10,
-
 
         // generate commands for color with depth pre-pass -- in this case, we want to put
         // objects that use alpha-testing or blending in the depth prepass.
@@ -115,35 +128,51 @@ public:
     // 0     = reserved, must be zero
     //
     // DEPTH command
-    // |    8   | 2|1| 3 | 2|       16       |               32               |
-    // +--------+--+-+---+--+----------------+--------------------------------+
-    // |00000000|00|0|ppp|00|0000000000000000|          distanceBits          |
-    // +--------+--+-+---+-------------------+--------------------------------+
-    // | correctness     |     optimizations (truncation allowed)             |
+    // |   6  | 2| 2|1| 3 | 2|       16       |               32               |
+    // +------+--+--+-+---+--+----------------+--------------------------------+
+    // |000000|01|00|0|ppp|00|0000000000000000|          distanceBits          |
+    // +------+--+--+-+---+-------------------+--------------------------------+
+    // | correctness      |     optimizations (truncation allowed)             |
     //
     //
     // COLOR command (with depth prepass)
-    // |    8   | 2|1| 3 | 2|       16       |               32               |
-    // +--------+--+-+---+--+----------------+--------------------------------+
-    // |00000001|00|a|ppp|00|0000000000000000|          material-id           |
-    // +--------+--+-+---+--+----------------+--------------------------------+
-    // | correctness     |        optimizations (truncation allowed)          |
+    // |   6  | 2| 2|1| 3 | 2|       16       |               32               |
+    // +------+--+--+-+---+--+----------------+--------------------------------+
+    // |000001|01|00|a|ppp|00|0000000000000000|          material-id           |
+    // +------+--+--+-+---+--+----------------+--------------------------------+
+    // | correctness      |        optimizations (truncation allowed)          |
     //
     //
     // COLOR command (without depth prepass)
-    // |    8   | 2|1| 3 | 2|  6   |   10     |               32               |
-    // +--------+--+-+---+--+------+----------+--------------------------------+
-    // |00000001|00|a|ppp|00|000000| Z-bucket |          material-id           |
-    // +--------+--+-+---+--+------+----------+--------------------------------+
-    // | correctness     |      optimizations (truncation allowed)             |
+    // |   6  | 2| 2|1| 3 | 2|  6   |   10     |               32               |
+    // +------+--+--+-+---+--+------+----------+--------------------------------+
+    // |000001|01|00|a|ppp|00|000000| Z-bucket |          material-id           |
+    // +------+--+--+-+---+--+------+----------+--------------------------------+
+    // | correctness      |      optimizations (truncation allowed)             |
     //
     //
     // BLENDED command
-    // |    8   | 2|1| 3 | 2|              32                |         15    |1|
-    // +--------+--+-+---+--+--------------------------------+---------------+-+
-    // |00000010|00|0|ppp|00|         ~distanceBits          |   blendOrder  |t|
-    // +--------+--+-+---+--+--------------------------------+---------------+-+
-    // | correctness                                                          |
+    // |   6  | 2| 2|1| 3 | 2|              32                |         15    |1|
+    // +------+--+--+-+---+--+--------------------------------+---------------+-+
+    // |000010|01|00|0|ppp|00|         ~distanceBits          |   blendOrder  |t|
+    // +------+--+--+-+---+--+--------------------------------+---------------+-+
+    // | correctness                                                            |
+    //
+    //
+    // pre-CUSTOM command
+    // |   6  | 2| 2|         22           |               32               |
+    // +------+--+--+----------------------+--------------------------------+
+    // | pass |00|00|        order         |      custom command index      |
+    // +------+--+--+----------------------+--------------------------------+
+    // | correctness                                                        |
+    //
+    //
+    // post-CUSTOM command
+    // |   6  | 2| 2|         22           |               32               |
+    // +------+--+--+----------------------+--------------------------------+
+    // | pass |11|00|        order         |      custom command index      |
+    // +------+--+--+----------------------+--------------------------------+
+    // | correctness                                                        |
     //
     //
     // SENTINEL command
@@ -171,13 +200,13 @@ public:
     }
 
     template<typename T>
-    static CommandKey makeField(T value, uint64_t mask, int shift) noexcept {
+    static CommandKey makeField(T value, uint64_t mask, unsigned shift) noexcept {
         assert(!((uint64_t(value) << shift) & ~mask));
         return uint64_t(value) << shift;
     }
 
     template<typename T>
-    static CommandKey makeFieldTruncate(T value, uint64_t mask, int shift) noexcept {
+    static CommandKey makeFieldTruncate(T value, uint64_t mask, unsigned shift) noexcept {
         return (uint64_t(value) << shift) & mask;
     }
 
@@ -219,10 +248,23 @@ public:
 
     RenderPass(FEngine& engine, utils::GrowingSlice<Command>& commands) noexcept;
     void overridePolygonOffset(backend::PolygonOffset* polygonOffset) noexcept;
-    void setGeometry(FScene& scene, utils::Range<uint32_t> vr) noexcept;
+    void overrideMaterial(FMaterial const* material, FMaterialInstance const* mi) noexcept;
+    void setGeometry(FScene::RenderableSoa const& soa, utils::Range<uint32_t> vr,
+            backend::Handle<backend::HwUniformBuffer> uboHandle) noexcept;
     void setCamera(const CameraInfo& camera) noexcept;
     void setRenderFlags(RenderFlags flags) noexcept;
-    Command const* appendSortedCommands(CommandTypeFlags const commandTypeFlags) noexcept;
+
+    // returns mCommands.end()
+    Command* appendCommands(CommandTypeFlags commandTypeFlags) noexcept;
+
+    // returns mCommands.end()
+    Command* appendCustomCommand(Pass pass, CustomCommand custom, uint32_t order,
+            std::function<void()> command);
+
+    // sorts commands from curr to mCommands.end(), then trims sentinels and returns
+    // the new mCommands.end()
+    Command* sortCommands(Command* curr) noexcept;
+
     void execute(const char* name,
             backend::Handle<backend::HwRenderTarget> renderTarget,
             backend::RenderPassParams params,
@@ -252,28 +294,51 @@ private:
             math::float3 cameraPosition, math::float3 cameraForward) noexcept;
 
     template<uint32_t commandTypeFlags>
-    static inline void generateCommandsImpl(uint32_t, Command* commands, FScene::RenderableSoa const& soa,
-            utils::Range<uint32_t> range, RenderFlags renderFlags, math::float3 cameraPosition,
-            math::float3 cameraForward) noexcept;
+    static inline void generateCommandsImpl(uint32_t, Command* commands,
+            FScene::RenderableSoa const& soa, utils::Range<uint32_t> range,
+            RenderFlags renderFlags,
+            math::float3 cameraPosition, math::float3 cameraForward) noexcept;
 
     static void setupColorCommand(Command& cmdDraw, bool hasDepthPass,
-            FMaterialInstance const* const mi, bool inverseFrontFaces) noexcept;
+            FMaterialInstance const* mi, bool inverseFrontFaces) noexcept;
 
-    void recordDriverCommands(FEngine::DriverApi& driver, FScene& scene,
-            const Command* first, const Command* last) const noexcept;
+    void recordDriverCommands(FEngine::DriverApi& driver, const Command* first,
+            const Command* last) const noexcept;
 
     static void updateSummedPrimitiveCounts(
             FScene::RenderableSoa& renderableData, utils::Range<uint32_t> vr) noexcept;
 
+    using CustomCommandFn = std::function<void()>;
+    using CustomCommandVector = std::vector<CustomCommandFn,
+            utils::STLAllocator<CustomCommandFn, LinearAllocatorArena>>;
 
+    // a reference to the Engine, mostly to get to things like JobSystem
     FEngine& mEngine;
+
+    // a reference to the command vector (so we can for e.g. append to it)
     utils::GrowingSlice<Command>& mCommands;
-    FScene* mScene = nullptr;
+
+    // the SOA containing the renderables we're interested in
+    FScene::RenderableSoa const* mRenderableSoa = nullptr;
+    // and the range of visible renderables in the SOA above
     utils::Range<uint32_t> mVisibleRenderables{};
+    // the UBO containing the data for the renderables
+    backend::Handle<backend::HwUniformBuffer> mUboHandle;
+
+    // info about the camera
     CameraInfo mCamera;
+    // info about the scene features (e.g.: has shadows, lighting, etc...)
     RenderFlags mFlags{};
+    // whether to override the polygon offset setting
     bool mPolygonOffsetOverride = false;
+    // value of the override
     backend::PolygonOffset mPolygonOffset{};
+    FMaterialInstance const* mMaterialInstanceOverride = nullptr;
+
+    // a vector for our custom commands
+    mutable CustomCommandVector mCustomCommands;
+
+    // high watermark for debugging
     size_t mCommandsHighWatermark = 0;
 };
 

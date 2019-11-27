@@ -322,13 +322,26 @@ public class Texture {
         public CompressedFormat compressedFormat;
 
         @Nullable public Object handler;
-        @Nullable public Runnable callback;
 
         /**
-         * Valid handler types:
-         * - Android: Handler, Executor
-         * - Other: Executor
+         * Callback used to destroy the buffer data.
+         * <p>
+         * Guarantees:
+         * <ul>
+         *     <li>Called on the main filament thread.</li>
+         * </ul>
+         * </p>
+         *
+         * <p>
+         * Limitations:
+         * <ul>
+         *     <li>Must be lightweight.</li>
+         *     <li>Must not call filament APIs.</li>
+         * </ul>
+         * </p>
          */
+        @Nullable public Runnable callback;
+
 
         /**
          * Creates a <code>PixelBufferDescriptor</code>

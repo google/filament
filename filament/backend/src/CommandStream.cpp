@@ -73,11 +73,13 @@ void CommandStream::execute(void* buffer) {
         profiler.start();
     }
 
-    Driver& UTILS_RESTRICT driver = *mDriver;
-    CommandBase* UTILS_RESTRICT base = static_cast<CommandBase*>(buffer);
-    while (UTILS_LIKELY(base)) {
-        base = base->execute(driver);
-    }
+    mDriver->execute([this, buffer]() {
+        Driver& UTILS_RESTRICT driver = *mDriver;
+        CommandBase* UTILS_RESTRICT base = static_cast<CommandBase*>(buffer);
+        while (UTILS_LIKELY(base)) {
+            base = base->execute(driver);
+        }
+    });
 
     if (SYSTRACE_TAG) {
         // we want to remove all this when tracing is completely disabled

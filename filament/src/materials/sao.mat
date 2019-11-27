@@ -7,6 +7,11 @@ material {
             precision: high
         },
         {
+            type : sampler2d,
+            name : noise,
+            precision: medium
+        },
+        {
             type : float4,
             name : resolution
         },
@@ -29,6 +34,10 @@ material {
         {
             type : float,
             name : power
+        },
+        {
+            type : float,
+            name : intensity
         },
         {
             type : int,
@@ -62,25 +71,16 @@ fragment {
     #define NOISE_RANDOM    2
     #define NOISE_TYPE      NOISE_PATTERN
 
+    // tap samples are stored as polar coordinates (theta, r) as { cos(theta), sin(theta), r }
+    // noise samples are stored as polar coordinates (phi, q) as { cos(phi), sin(phi), q }
+    // and applied as: { cos(theta + phi), sin(theta + phi), r + q }
     const float kSpiralTurns = 7.0; // must match ssaogen.cpp
     const uint kSpiralSampleCount = 7u;
     const vec3 kSpiralSamples[] = vec3[](
-        vec3(0.966326, 0.257322, 0.0769231), vec3(-0.69718, 0.716896, 0.230769),
-        vec3(0.975223, 0.221226, 0.384615), vec3(0.982771, 0.184826, 0.538462),
-        vec3(-0.613055, 0.79004, 0.692308), vec3(0.997237, 0.0742889, 0.846154),
-        vec3(1, -1.16027e-06, 1)
-    );
-
-    const uint kTrigNoiseSampleCount = 16u;
-    const vec3 kTrigNoiseSamples[] = vec3[](
-        vec3(-0.401209, 0.915987, 0.0317202), vec3(0.843133, -0.537704, 0.0879207),
-        vec3(0.457543, 0.889188, 0.0176937), vec3(0.976762, -0.214325, 0.0930107),
-        vec3(-0.0596454, 0.99822, 0.026175), vec3(0.704176, 0.710025, 0.107385),
-        vec3(-0.707961, 0.706251, 0.0375434), vec3(0.909426, 0.415866, 0.102259),
-        vec3(0.92462, 0.38089, 0.00636207), vec3(-0.0938624, 0.995585, 0.0267157),
-        vec3(-0.905196, -0.424993, 0.056284), vec3(0.196104, 0.980583, 0.115615),
-        vec3(-0.752002, -0.659161, 0.0605199), vec3(-0.575921, 0.817505, 0.12691),
-        vec3(0.794595, -0.60714, 0.0866893), vec3(0.178844, 0.983877, 0.115861)
+        vec3( 0.966326,  0.257322,  0.076923), vec3(-0.697180,  0.716896,  0.230769),
+        vec3( 0.975223,  0.221226,  0.384615), vec3( 0.982771,  0.184826,  0.538462),
+        vec3(-0.613055,  0.790040,  0.692308), vec3( 0.997237,  0.074289,  0.846154),
+        vec3( 1.000000, -0.000001,  1.000000)
     );
 
     vec2 sq(const vec2 a) {
@@ -122,9 +122,9 @@ fragment {
                 + phi * (2.0 * 6.28318 * kSpiralTurns) * dalpha2;
             return vec3(fast_cossin(dphi), dr);
         #elif NOISE_TYPE == NOISE_PATTERN
-            uint ix = uint(gl_FragCoord.x) & 3u;
-            uint iy = uint(gl_FragCoord.y) & 3u;
-            return kTrigNoiseSamples[ix + iy * 4u];
+            uint ix = uint(gl_FragCoord.x) & 0xFu;
+            uint iy = uint(gl_FragCoord.y) & 0xFu;
+            return texelFetch(materialParams_noise, ivec2(ix, iy), 0).xyz;
         #else
             return vec3(0.0);
         #endif
@@ -180,7 +180,7 @@ fragment {
         float phi = random(variable_vertex.xy);
         float radius = (float(i) + phi + 0.5) * dalpha;
         float angle = (radius * radius) * (kSpiralTurns * 6.28318) + phi * 6.28318;
-        return vec3(cos(angle), sin(angle), radius * radius);
+        return vec3(cos(angle), sin(angle), radius);
     }
 
     vec3 tapLocationReferenceNoNoise(uint i) {
@@ -201,7 +201,7 @@ fragment {
             #endif
             mat2 M = mat2(noise.xy, vec2(-noise.y, noise.x));
             float radius = tap.z + noise.z;
-            return vec3(M * tap.xy, radius * radius);
+            return vec3(M * tap.xy, radius);
         #endif
     }
 
@@ -210,11 +210,12 @@ fragment {
         return clamp(uv, ivec2(0), size - ivec2(1));
     }
 
-    float computeAmbientOcclusionSAO(uint i, float ssDiskRadius, const ivec2 ssOrigin,
+    void computeAmbientOcclusionSAO(inout float occlusion,
+            uint i, float ssDiskRadius, const ivec2 ssOrigin,
             const highp vec3 origin, const vec3 normal, const vec3 noise) {
 
         vec3 tap = tapLocation(i, noise);
-        float ssRadius = max(1.0, tap.z * ssDiskRadius); // at least 1 pixel screen-space radius
+        float ssRadius = max(1.0, tap.z * tap.z * ssDiskRadius); // at least 1 pixel screen-space radius
 
         ivec2 ssSamplePos = ssOrigin + ivec2(ssRadius * tap.xy);
         vec2 uvSamplePos = (vec2(ssSamplePos) + vec2(0.5)) * materialParams.resolution.zw;
@@ -230,13 +231,12 @@ fragment {
         float vv = dot(v, v);       // squared distance
         float vn = dot(v, normal);  // distance * cos(v, normal)
         const float uu = 0.015;
-        float falloff = saturate(1.0 - vv * materialParams.invRadiusSquared);
-        float occlusion = falloff * max(0.0, vn - materialParams.bias) / (vv + uu);
-        return occlusion;
+        float w = saturate(1.0 - vv * materialParams.invRadiusSquared);
+        occlusion += w * max(0.0, vn + origin.z * materialParams.bias) / (vv + uu);
     }
 
     void postProcess(inout PostProcessInputs postProcess) {
-        vec2 uv = variable_vertex.xy; // interpolated to pixel center
+        highp vec2 uv = variable_vertex.xy; // interpolated to pixel center
 
         highp float depth = sampleDepthLinear(uv);
         highp vec3 origin = computeViewSpacePositionFromDepth(uv, depth);
@@ -252,10 +252,10 @@ fragment {
 
         float occlusion = 0.0;
         for (uint i = 0u; i < kSpiralSampleCount; i++) {
-            occlusion += computeAmbientOcclusionSAO(i, ssDiskRadius, ssOrigin, origin, normal, noise);
+            computeAmbientOcclusionSAO(occlusion, i, ssDiskRadius, ssOrigin, origin, normal, noise);
         }
 
-        float ao = 1.0 - occlusion / float(kSpiralSampleCount);
+        float ao = max(0.0, 1.0 - (2.0 / float(kSpiralSampleCount)) * materialParams.intensity * occlusion);
 
         // simulate user-controled ao^n with n[1, 2]
         ao = mix(ao, ao * ao, materialParams.power);

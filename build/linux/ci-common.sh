@@ -29,6 +29,7 @@ cd ..
 # Steps for GitHub Workflows
 if [[ "$GITHUB_WORKFLOW" ]]; then
     sudo wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+    sudo apt-get update
     sudo apt-get install clang-$GITHUB_CLANG_VERSION libc++-$GITHUB_CLANG_VERSION-dev libc++abi-$GITHUB_CLANG_VERSION-dev
     sudo apt-get install mesa-common-dev libxi-dev libxxf86vm-dev
 

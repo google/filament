@@ -60,6 +60,13 @@ Java_com_google_android_filament_Engine_nCreateSwapChain(JNIEnv* env,
 }
 
 extern "C" JNIEXPORT jlong JNICALL
+Java_com_google_android_filament_Engine_nCreateSwapChainHeadless(JNIEnv* env,
+        jclass klass, jlong nativeEngine, jint width, jint height, jlong flags) {
+    Engine* engine = (Engine*) nativeEngine;
+    return (jlong) engine->createSwapChain(width, height, (uint64_t) flags);
+}
+
+extern "C" JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_Engine_nCreateSwapChainFromRawPointer(JNIEnv*,
         jclass, jlong nativeEngine, jlong pointer, jlong flags) {
      Engine* engine = (Engine*) nativeEngine;

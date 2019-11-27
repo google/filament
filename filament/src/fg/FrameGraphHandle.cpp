@@ -26,6 +26,16 @@ using namespace backend;
 
 void FrameGraphTexture::create(FrameGraph& fg, const char* name,
         FrameGraphTexture::Descriptor const& desc) noexcept {
+
+    // FIXME (workaround): a texture could end up with no usage if it was used as an attachment
+    //  of a RenderTarget that itself was replaced by a moveResource(). In this case, the texture
+    //  is simply unused.  A better fix would be to let the framegraph culling eliminate the
+    //  this resource, but this is currently not working or set-up this way.
+    //  Instead, we simply do nothing here.
+    if (none(desc.usage)) {
+        return;
+    }
+
     assert(any(desc.usage));
     // (it means it's only used as an attachment for a rendertarget)
     uint8_t samples = desc.samples;

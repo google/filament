@@ -3,11 +3,7 @@
 //------------------------------------------------------------------------------
 
 // Number of spherical harmonics bands (1, 2 or 3)
-#if defined(TARGET_MOBILE)
-#define SPHERICAL_HARMONICS_BANDS           2
-#else
 #define SPHERICAL_HARMONICS_BANDS           3
-#endif
 
 // IBL integration algorithm
 #define IBL_INTEGRATION_PREFILTERED_CUBEMAP         0

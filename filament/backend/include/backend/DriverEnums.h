@@ -624,6 +624,16 @@ enum class BlendFunction : uint8_t {
     SRC_ALPHA_SATURATE      //!< f(src, dst) = (1,1,1) * min(src.a, 1 - dst.a), 1
 };
 
+//! Stream for external textures
+enum class StreamType {
+    NATIVE,     //!< Not synchronized but copy-free. Good for video.
+    TEXTURE_ID, //!< Synchronized, but GL-only and incurs copies. Good for AR on devices before API 26.
+    ACQUIRED,   //!< Synchronized, copy-free, and take a release callback. Good for AR but requires API 26+.
+};
+
+//! Releases an ACQUIRED external texture, guaranteed to be called on the application thread.
+using StreamCallback = void(*)(void* image, void* user);
+
 //! Vertex attribute descriptor
 struct Attribute {
     //! attribute is normalized (remapped between 0 and 1)

@@ -36,27 +36,17 @@
 
 #include "fg/ResourceAllocator.h"
 
-#include "private/backend/Program.h"
 
 #include <private/filament/SibGenerator.h>
 
-#include <filament/Exposure.h>
 #include <filament/MaterialEnums.h>
 
-#include <filaflat/ShaderBuilder.h>
-
 #include <utils/compiler.h>
-#include <utils/CString.h>
 #include <utils/Log.h>
 #include <utils/Panic.h>
 #include <utils/Systrace.h>
 
-#include <math/fast.h>
-#include <math/scalar.h>
-
-#include <functional>
-
-#include <stdio.h>
+#include <memory>
 
 #include "generated/resources/materials.h"
 
@@ -70,9 +60,42 @@ using namespace filaflat;
 
 namespace details {
 
-// The global list of engines
-static std::unordered_map<Engine const*, std::unique_ptr<FEngine>> sEngines;
-static std::mutex sEnginesLock;
+// Global list of engines used for diagnostic purposes only.
+// This console output in the constructor helps catch situations where the Filament library is
+// loaded twice, or not at all. Note that we avoid using slog due to static initialization.
+class EngineList {
+public:
+    EngineList() {
+        io::LogStream cinfo(io::LogStream::Priority::INFO);
+        cinfo << "Filament library loaded." << io::endl;
+    }
+    void add(FEngine* instance) {
+        std::unique_ptr<FEngine> engine(instance);
+        std::lock_guard<std::mutex> guard(mLock);
+        Engine* handle = engine.get();
+        mEngines[handle] = std::move(engine);
+    }
+    std::unique_ptr<FEngine> remove(FEngine* instance) {
+        std::unique_ptr<FEngine> filamentEngine;
+        std::lock_guard<std::mutex> guard(mLock);
+        auto const& pos = mEngines.find(instance);
+        if (pos != mEngines.end()) {
+            std::swap(filamentEngine, pos->second);
+            mEngines.erase(pos);
+        }
+        return filamentEngine;
+    }
+    bool isValid(Engine const& engine, const char* function)  {
+        std::lock_guard<std::mutex> guard(mLock);
+        auto const& pos = mEngines.find(&engine);
+        return pos != mEngines.end();
+    }
+private:
+    std::unordered_map<Engine const*, std::unique_ptr<FEngine>> mEngines;
+    std::mutex mLock;
+};
+
+static EngineList sEngines;
 
 FEngine* FEngine::create(Backend backend, Platform* platform, void* sharedGLContext) {
     FEngine* instance = new FEngine(backend, platform, sharedGLContext);
@@ -108,13 +131,7 @@ FEngine* FEngine::create(Backend backend, Platform* platform, void* sharedGLCont
         }
     }
 
-    // Add this Engine to the list of active Engines
-    { // scope for the lock
-        std::unique_ptr<FEngine> engine(instance);
-        std::lock_guard<std::mutex> guard(sEnginesLock);
-        Engine* handle = engine.get();
-        sEngines[handle] = std::move(engine);
-    }
+    sEngines.add(instance);
 
     // now we can initialize the largest part of the engine
     instance->init();
@@ -126,16 +143,10 @@ FEngine* FEngine::create(Backend backend, Platform* platform, void* sharedGLCont
     return instance;
 }
 
-void FEngine::assertValid(Engine const& engine) {
-    bool valid;
-    { // scope for the lock
-        std::lock_guard<std::mutex> guard(sEnginesLock);
-        auto const& engines = sEngines;
-        auto const& pos = engines.find(&engine);
-        valid = pos != engines.end();
-    }
+void FEngine::assertValid(Engine const& engine, const char* function) {
+    bool valid = sEngines.isValid(engine, function);
     ASSERT_POSTCONDITION(valid,
-            "Using an Engine instance (@ %p) after it's been destroyed", &engine);
+            "Using an invalid Engine instance (@ %p) from %s.", &engine, function);
 }
 
 // these must be static because only a pointer is copied to the render stream
@@ -236,7 +247,7 @@ void FEngine::init() {
 
     mPostProcessManager.init();
     mLightManager.init(*this);
-    mDFG.reset(new DFG(*this));
+    mDFG = std::make_unique<DFG>(*this);
 }
 
 FEngine::~FEngine() noexcept {
@@ -304,20 +315,32 @@ void FEngine::shutdown() {
     }
     cleanupResourceList(mFences);
 
-    // There might be commands added by the terminate() calls
-    flushCommandBuffer(mCommandBufferQueue);
-    if (!UTILS_HAS_THREADING) {
-        execute();
-    }
-
     /*
-     * terminate the rendering engine
+     * Shutdown the backend...
      */
 
+    // There might be commands added by the terminate() calls, so we need to flush all commands
+    // up to this point. After flushCommandBuffer() is called, all pending commands are guaranteed
+    // to be executed before the driver thread exits.
+    flushCommandBuffer(mCommandBufferQueue);
+
+    // now wait for all pending commands to be executed and the thread to exit
     mCommandBufferQueue.requestExit();
-    if (UTILS_HAS_THREADING) {
+    if (!UTILS_HAS_THREADING) {
+        execute();
+        getDriverApi().terminate();
+    } else {
         mDriverThread.join();
+
     }
+
+    // Finally, call user callbacks that might have been scheduled.
+    // These callbacks CANNOT call driver APIs.
+    getDriver().purge();
+
+    /*
+     * Terminate the JobSystem...
+     */
 
     // detach this thread from the jobsystem
     mJobSystem.emancipate();
@@ -368,7 +391,15 @@ void FEngine::flush() {
 }
 
 void FEngine::flushAndWait() {
-    FFence::waitAndDestroy(FEngine::createFence(FFence::Type::SOFT), FFence::Mode::FLUSH);
+    // enqueue finish command -- this will stall in the driver until the GPU is done
+    getDriverApi().finish();
+
+    // then create a fence that will trigger when we're past the finish() above
+    FFence::waitAndDestroy(
+            FEngine::createFence(FFence::Type::SOFT), FFence::Mode::FLUSH);
+
+    // finally, execute callbacks that might have been scheduled
+    getDriver().purge();
 }
 
 // -----------------------------------------------------------------------------------------------
@@ -427,6 +458,9 @@ int FEngine::loop() {
     }
 #endif
 
+    JobSystem::setThreadName("FEngine::loop");
+    JobSystem::setThreadPriority(JobSystem::Priority::DISPLAY);
+
     mDriver = platform->createDriver(mSharedGLContext);
     mDriverBarrier.latch();
     if (UTILS_UNLIKELY(!mDriver)) {
@@ -434,9 +468,6 @@ int FEngine::loop() {
         // been logged.
         return 0;
     }
-
-    JobSystem::setThreadName("FEngine::loop");
-    JobSystem::setThreadPriority(JobSystem::Priority::DISPLAY);
 
     // We use the highest affinity bit, assuming this is a Big core in a  big.little
     // configuration. This is also a core not used by the JobSystem.
@@ -570,6 +601,14 @@ FFence* FEngine::createFence(FFence::Type type) noexcept {
 
 FSwapChain* FEngine::createSwapChain(void* nativeWindow, uint64_t flags) noexcept {
     FSwapChain* p = mHeapAllocator.make<FSwapChain>(*this, nativeWindow, flags);
+    if (p) {
+        mSwapChains.insert(p);
+    }
+    return p;
+}
+
+FSwapChain* FEngine::createSwapChain(uint32_t width, uint32_t height, uint64_t flags) noexcept {
+    FSwapChain* p = mHeapAllocator.make<FSwapChain>(*this, width, height, flags);
     if (p) {
         mSwapChains.insert(p);
     }
@@ -759,6 +798,15 @@ bool FEngine::execute() {
     return true;
 }
 
+void FEngine::destroy(FEngine* engine) {
+    if (engine) {
+        std::unique_ptr<FEngine> filamentEngine = sEngines.remove(engine);
+        if (filamentEngine) {
+            filamentEngine->shutdown();
+        }
+    }
+}
+
 } // namespace details
 
 // ------------------------------------------------------------------------------------------------
@@ -772,27 +820,14 @@ Engine* Engine::create(Backend backend, Platform* platform, void* sharedGLContex
 }
 
 void Engine::destroy(Engine* engine) {
-    destroy(&engine);
+    FEngine::destroy(upcast(engine));
 }
 
-void Engine::destroy(Engine** engine) {
-    if (engine) {
-        std::unique_ptr<FEngine> filamentEngine;
-
-        std::unique_lock<std::mutex> guard(sEnginesLock);
-        auto const& pos = sEngines.find(*engine);
-        if (pos != sEngines.end()) {
-            std::swap(filamentEngine, pos->second);
-            sEngines.erase(pos);
-        }
-        guard.unlock();
-
-        // Make sure to call into shutdown() without the lock held
-        if (filamentEngine) {
-            filamentEngine->shutdown();
-            // clear the user's handle
-            *engine = nullptr;
-        }
+void Engine::destroy(Engine** pEngine) {
+    if (pEngine) {
+        Engine* engine = *pEngine;
+        FEngine::destroy(upcast(engine));
+        *pEngine = nullptr;
     }
 }
 
@@ -838,6 +873,10 @@ Fence* Engine::createFence() noexcept {
 
 SwapChain* Engine::createSwapChain(void* nativeWindow, uint64_t flags) noexcept {
     return upcast(this)->createSwapChain(nativeWindow, flags);
+}
+
+SwapChain* Engine::createSwapChain(uint32_t width, uint32_t height, uint64_t flags) noexcept {
+    return upcast(this)->createSwapChain(width, height, flags);
 }
 
 void Engine::destroy(const VertexBuffer* p) {

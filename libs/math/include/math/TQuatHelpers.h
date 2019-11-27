@@ -25,6 +25,7 @@
 #include <iostream>
 
 #include <math/compiler.h>
+#include <math/scalar.h>
 #include <math/vec3.h>
 
 namespace filament {
@@ -255,7 +256,7 @@ public:
             return normalize(lerp(p, q, t));
         }
         const T npq = std::sqrt(dot(p, p) * dot(q, q));  // ||p|| * ||q||
-        const T a = std::acos(absd / npq);
+        const T a = std::acos(filament::math::clamp(absd / npq, T(-1), T(1)));
         const T a0 = a * (1 - t);
         const T a1 = a * t;
         const T sina = sin(a);

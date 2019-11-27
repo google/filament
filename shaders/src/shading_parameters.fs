@@ -9,20 +9,27 @@
 void computeShadingParams() {
 #if defined(HAS_ATTRIBUTE_TANGENTS)
     highp vec3 n = vertex_worldNormal;
+#if defined(MATERIAL_HAS_ANISOTROPY) || defined(MATERIAL_HAS_NORMAL) || defined(MATERIAL_HAS_CLEAR_COAT_NORMAL)
+    highp vec3 t = vertex_worldTangent;
+    highp vec3 b = vertex_worldBitangent;
+#endif
 
 #if defined(MATERIAL_HAS_DOUBLE_SIDED_CAPABILITY)
     if (isDoubleSided()) {
         n = gl_FrontFacing ? n : -n;
+#if defined(MATERIAL_HAS_ANISOTROPY) || defined(MATERIAL_HAS_NORMAL) || defined(MATERIAL_HAS_CLEAR_COAT_NORMAL)
+        t = gl_FrontFacing ? t : -t;
+        b = gl_FrontFacing ? b : -b;
+#endif
     }
 #endif
 
+    shading_geometricNormal = normalize(n);
+
 #if defined(MATERIAL_HAS_ANISOTROPY) || defined(MATERIAL_HAS_NORMAL) || defined(MATERIAL_HAS_CLEAR_COAT_NORMAL)
-    // Re-normalize post-interpolation values
-    shading_tangentToWorld = mat3(
-            normalize(vertex_worldTangent), normalize(vertex_worldBitangent), normalize(n));
+    // We use unnormalized post-interpolation values, assuming mikktspace tangents
+    shading_tangentToWorld = mat3(t, b, n);
 #endif
-    // Leave the tangent and bitangent uninitialized, we won't use them
-    shading_tangentToWorld[2] = normalize(n);
 #endif
 
     shading_position = vertex_worldPosition;

@@ -23,42 +23,6 @@
 static constexpr size_t CONFIG_MIN_COMMAND_BUFFERS_SIZE = 1 * 1024 * 1024;
 static constexpr size_t CONFIG_COMMAND_BUFFERS_SIZE     = 3 * CONFIG_MIN_COMMAND_BUFFERS_SIZE;
 
-namespace {
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-// Shaders
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-std::string vertex (R"(#version 450 core
-
-layout(location = 0) in vec4 mesh_position;
-
-layout(set = 0, binding = 0, std140) uniform TestUniforms
-{
-    vec4 color;
-} uniforms;
-
-void main() {
-    gl_Position = vec4(mesh_position.xy, uniforms.color.z, 1.0);
-}
-)");
-
-std::string fragment (R"(#version 450 core
-
-layout(location = 0) out vec4 fragColor;
-
-layout(set = 0, binding = 0, std140) uniform TestUniforms
-{
-    vec4 color;
-} uniforms;
-
-void main() {
-    fragColor = uniforms.color;
-}
-)");
-
-}
-
 namespace test {
 
 using namespace filament;

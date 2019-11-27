@@ -20,8 +20,6 @@
 
 #include "details/Engine.h"
 
-#include <filament/LightManager.h>
-
 #include <math/fast.h>
 #include <math/scalar.h>
 
@@ -130,7 +128,7 @@ LightManager::Builder& LightManager::Builder::sunHaloFalloff(float haloFalloff) 
 }
 
 LightManager::Builder::Result LightManager::Builder::build(Engine& engine, Entity entity) {
-    FEngine::assertValid(engine);
+    FEngine::assertValid(engine, __PRETTY_FUNCTION__);
     upcast(engine).createLight(*this, entity);
     return Success;
 }

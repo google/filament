@@ -3,6 +3,44 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
+## Next release
+
+- Fixed an assertion when a parameter array occurs last in a material definition.
+- Fixed morph shapes not rendering in WebGL.
+- Added support for the latest version of emscripten.
+- gltfio: fixed blackness seen with default material.
+- Added ETC2 and BC compressed texture support to Metal backend.
+- Rendering a SAMPLER_EXTERNAL texture before setting an external image no longer results in GPU errors.
+- Fixed a normals issue when skinning without a normal map or anisotropy.
+- Fixed an issue where translucent views couldn't be used with post-processing.
+- Always use higher quality 3-bands SH for indirect lighting, even on mobile.
+
+## v1.4.2
+
+- Cleaned up the validation strategy in Engine (checks for use-after-destroy etc).
+- OpenGL: Fixed ES 3.0 support on iOS.
+- OpenGL: Added support for KHR_debug in debug builds.
+- gltfio: Added Java / Kotlin bindings for Animator.
+- gltfio: Fixed panic with the Android gltf-bloom demo.
+- gltfio: Java clients should no longer call Filament#init.
+
+## v1.4.1
+
+- Added missing API documentation.
+- Fixed crash for sandboxed macOS apps using Filament.
+- Fixed an issue that limited the camera near plane to ~1mm.
+- Added Android sample for Camera Stream.
+- Fixed an Xcode assertion when rendering skinned meshes using the Metal backend.
+- Added support for Core Animation / Metal frame synchronization with Metal backend.
+- Fixed an issue with culling in `MaterialInstance`.
+- Fix additional compatibility issues with MSVC, including the Vulkan backend.
+- matdbg: fixed missing symbol issue when linking against debug builds.
+- filamat: fixed crash when using the "lite" version of the library.
+- matinfo: Fix a crash with on Windows.
+- gltfio: fixed an animation loop bug.
+- gltfio: added support for sparse accessors.
+- Add JS binding to unary `Camera::setExposure`.
+
 ## v1.4.0
 
 - API Breakage: Simplified public-facing Fence API.

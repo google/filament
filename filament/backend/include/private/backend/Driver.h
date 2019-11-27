@@ -21,6 +21,7 @@
 #include <backend/Handle.h>
 #include <backend/PipelineState.h>
 #include <backend/PixelBufferDescriptor.h>
+#include <backend/PresentCallable.h>
 #include <backend/TargetBufferInfo.h>
 
 #include "private/backend/DriverApiForward.h"
@@ -31,6 +32,8 @@
 
 #include <utils/compiler.h>
 #include <utils/Log.h>
+
+#include <functional>
 
 #include <stdint.h>
 
@@ -54,6 +57,12 @@ public:
     virtual ShaderModel getShaderModel() const noexcept = 0;
 
     virtual Dispatcher& getDispatcher() noexcept = 0;
+
+    // called from CommandStream::execute on the render-thread
+    // the fn function will execute a batch of driver commands
+    // this gives the driver a chance to wrap their execution in a meaningful manner
+    // the default implementation simply calls fn
+    virtual void execute(std::function<void(void)> fn) noexcept;
 
 #ifndef NDEBUG
     virtual void debugCommand(const char* methodName) {}

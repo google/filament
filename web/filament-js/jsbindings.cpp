@@ -86,6 +86,12 @@ using namespace geometry;
 using namespace gltfio;
 using namespace image;
 
+namespace em = emscripten;
+
+#if __has_feature(cxx_rtti)
+#error Filament JS bindings require RTTI to be disabled.
+#endif
+
 // Many methods require a thin layer of C++ glue which is elegantly expressed with a lambda.
 // However, passing a bare lambda into embind's daisy chain requires a cast to a function pointer.
 #define EMBIND_LAMBDA(retval, arglist, impl) (retval (*) arglist) [] arglist impl
@@ -148,8 +154,7 @@ using VertexBuilder = VertexBuffer::Builder;
 struct BufferDescriptor {
     BufferDescriptor() {}
     // This form is used when JavaScript sends a buffer into WASM.
-    BufferDescriptor(val arrdata) {
-        auto byteLength = arrdata["byteLength"].as<uint32_t>();
+    BufferDescriptor(uint32_t byteLength) {
         this->bd.reset(new backend::BufferDescriptor(malloc(byteLength), byteLength,
                 [](void* buffer, size_t size, void* user) { free(buffer); }));
     }
@@ -170,16 +175,14 @@ struct BufferDescriptor {
 // Exposed to JavaScript as "driver$PixelBufferDescriptor", but clients will normally use the
 // PixelBuffer or CompressedPixelBuffer helper functions (implemented in utilities.js)
 struct PixelBufferDescriptor {
-    PixelBufferDescriptor(val arrdata, backend::PixelDataFormat fmt, backend::PixelDataType dtype) {
-        auto byteLength = arrdata["byteLength"].as<uint32_t>();
+    PixelBufferDescriptor(uint32_t byteLength, backend::PixelDataFormat fmt, backend::PixelDataType dtype) {
         this->pbd.reset(new backend::PixelBufferDescriptor(malloc(byteLength), byteLength,
                 fmt, dtype, [](void* buffer, size_t size, void* user) { free(buffer); }));
     }
     // Note that embind allows overloading based on number of arguments, but not on types.
     // It's fine to have two constructors but they can't both have the same number of arguments.
-    PixelBufferDescriptor(val arrdata, backend::CompressedPixelDataType cdtype, int imageSize,
+    PixelBufferDescriptor(uint32_t byteLength, backend::CompressedPixelDataType cdtype, int imageSize,
             bool compressed) {
-        auto byteLength = arrdata["byteLength"].as<uint32_t>();
         assert(compressed == true);
         // For compressed cubemaps, the image size should be one-sixth the size of the entire blob.
         assert(imageSize == byteLength || imageSize == byteLength / 6);
@@ -187,10 +190,10 @@ struct PixelBufferDescriptor {
                 cdtype, imageSize, [](void* buffer, size_t size, void* user) { free(buffer); }));
     }
     val getBytes() {
-        unsigned char *byteBuffer = (unsigned char*) pbd->buffer;
+        unsigned char* byteBuffer = (unsigned char*) pbd->buffer;
         size_t bufferLength = pbd->size;
         return val(typed_memory_view(bufferLength, byteBuffer));
-    };
+    }
     // In order to match its JavaScript counterpart, the Buffer wrapper needs to use reference
     // counting, and the easiest way to achieve that is with shared_ptr.
     std::shared_ptr<backend::PixelBufferDescriptor> pbd;
@@ -283,10 +286,10 @@ struct flatmat4 {
 };
 
 value_array<flatmat4>("mat4")
-    .element(index< 0>()).element(index< 1>()).element(index< 2>()).element(index< 3>())
-    .element(index< 4>()).element(index< 5>()).element(index< 6>()).element(index< 7>())
-    .element(index< 8>()).element(index< 9>()).element(index<10>()).element(index<11>())
-    .element(index<12>()).element(index<13>()).element(index<14>()).element(index<15>());
+    .element(em::index< 0>()).element(em::index< 1>()).element(em::index< 2>()).element(em::index< 3>())
+    .element(em::index< 4>()).element(em::index< 5>()).element(em::index< 6>()).element(em::index< 7>())
+    .element(em::index< 8>()).element(em::index< 9>()).element(em::index<10>()).element(em::index<11>())
+    .element(em::index<12>()).element(em::index<13>()).element(em::index<14>()).element(em::index<15>());
 
 struct flatmat3 {
     filament::math::mat3f m;
@@ -294,9 +297,9 @@ struct flatmat3 {
 };
 
 value_array<flatmat3>("mat3")
-    .element(index<0>()).element(index<1>()).element(index<2>())
-    .element(index<3>()).element(index<4>()).element(index<5>())
-    .element(index<6>()).element(index<7>()).element(index<8>());
+    .element(em::index<0>()).element(em::index<1>()).element(em::index<2>())
+    .element(em::index<3>()).element(em::index<4>()).element(em::index<5>())
+    .element(em::index<6>()).element(em::index<7>()).element(em::index<8>());
 
 value_object<RenderableManager::Bone>("RenderableManager$Bone")
     .field("unitQuaternion", &RenderableManager::Bone::unitQuaternion)
@@ -1070,7 +1073,7 @@ class_<utils::EntityManager>("EntityManager")
 /// BufferDescriptor ::class:: Low level buffer wrapper.
 /// Clients should use the [Buffer] helper function to contruct BufferDescriptor objects.
 class_<BufferDescriptor>("driver$BufferDescriptor")
-    .constructor<emscripten::val>()
+    .constructor<uint32_t>()
     /// getBytes ::method:: Gets a view of the WASM heap referenced by the buffer descriptor.
     /// ::retval:: Uint8Array
     .function("getBytes", &BufferDescriptor::getBytes);
@@ -1078,8 +1081,8 @@ class_<BufferDescriptor>("driver$BufferDescriptor")
 /// PixelBufferDescriptor ::class:: Low level pixel buffer wrapper.
 /// Clients should use the [PixelBuffer] helper function to contruct PixelBufferDescriptor objects.
 class_<PixelBufferDescriptor>("driver$PixelBufferDescriptor")
-    .constructor<emscripten::val, backend::PixelDataFormat, backend::PixelDataType>()
-    .constructor<emscripten::val, backend::CompressedPixelDataType, int, bool>()
+    .constructor<uint32_t, backend::PixelDataFormat, backend::PixelDataType>()
+    .constructor<uint32_t, backend::CompressedPixelDataType, int, bool>()
     /// getBytes ::method:: Gets a view of the WASM heap referenced by the buffer descriptor.
     /// ::retval:: Uint8Array
     .function("getBytes", &PixelBufferDescriptor::getBytes);

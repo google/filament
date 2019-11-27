@@ -37,16 +37,17 @@ import com.google.android.filament.Entity;
  * <p>Clients can use {@link ResourceLoader} to create textures, compute tangent quaternions, and
  * upload data into vertex buffers and index buffers.</p>
  *
- * <p>TODO: <code>Animator</code> is not yet exposed to Java / Kotlin clients.</p>
- *
  * @see ResourceLoader
+ * @see Animator
  * @see AssetLoader
  */
 public class FilamentAsset {
     private long mNativeObject;
+    private Animator mAnimator;
 
     FilamentAsset(long nativeObject) {
         mNativeObject = nativeObject;
+        mAnimator = null;
     }
 
     long getNativeObject() {
@@ -66,7 +67,7 @@ public class FilamentAsset {
      * <p>All of these have a transform component. Some of the returned entities may also have a
      * renderable component.</p>
      */
-    public @Entity int[] getEntities() {
+    public @NonNull @Entity int[] getEntities() {
         int[] result = new int[nGetEntityCount(mNativeObject)];
         nGetEntities(mNativeObject, result);
         return result;
@@ -82,10 +83,33 @@ public class FilamentAsset {
     }
 
     /**
-     * Gets the <code>NameComponentManager<?code> label for the given entity, if it exists.
+     * Gets the <code>NameComponentManager</code> label for the given entity, if it exists.
      */
     public String getName(@Entity int entity) {
         return nGetName(getNativeObject(), entity);
+    }
+
+    /**
+     * Creates or retrieves the <code>Animator</code> for this asset.
+     *
+     * <p>When calling this for the first time, this must be called after
+     * {@see ResourceLoader#loadResources}.</p>
+     */
+    public @NonNull Animator getAnimator() {
+        if (mAnimator != null) {
+            return mAnimator;
+        }
+        mAnimator = new Animator(nGetAnimator(getNativeObject()));
+        return mAnimator;
+    }
+
+    /**
+     * Gets resource URIs for all externally-referenced buffers.
+     */
+    public @NonNull String[] getResourceUris() {
+        String[] uris = new String[nGetResourceUriCount(mNativeObject)];
+        nGetResourceUris(mNativeObject, uris);
+        return uris;
     }
 
     void clearNativeObject() {
@@ -97,4 +121,7 @@ public class FilamentAsset {
     private static native void nGetEntities(long nativeAsset, int[] result);
     private static native void nGetBoundingBox(long nativeAsset, float[] box);
     private static native String nGetName(long nativeAsset, int entity);
+    private static native long nGetAnimator(long nativeAsset);
+    private static native int nGetResourceUriCount(long nativeAsset);
+    private static native void nGetResourceUris(long nativeAsset, String[] result);
 }

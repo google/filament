@@ -13,19 +13,19 @@ material {
     ],
     variables : [
     ],
-    vertexDomain : device,
+    domain : postprocess,
     depthWrite : true,
     depthCulling : false,
-    shadingModel : unlit,
-    variantFilter : [ skinning, shadowReceiver ],
     culling: none
 }
 
 fragment {
-    void material(inout MaterialInputs material) {
-        prepareMaterial(material);
+    // We use a rotated grid sub-sample as it's cheap and gives good results
+    // See Scalable Ambient Obscurance by McGuire and al.
+    void postProcess(inout PostProcessInputs postProcess) {
         int level = materialParams.level;
-        ivec2 xy = ivec2(gl_FragCoord.xy) * 2;
-        gl_FragDepth = texelFetch(materialParams_depth, xy + ivec2(xy.x & 1, xy.y & 1), level).r;
+        ivec2 icoord = ivec2(gl_FragCoord.xy);
+        gl_FragDepth = texelFetch(materialParams_depth,
+                2 * icoord + ivec2(icoord.y & 1, icoord.x & 1), level).r;
     }
 }

@@ -122,7 +122,6 @@ private:
 public:
     // array access
     inline constexpr col_type const& operator[](size_t column) const noexcept {
-        // only possible in C++0x14 with constexpr
         assert(column < NUM_COLS);
         return m_value[column];
     }
@@ -550,16 +549,6 @@ template<typename T, typename U>
 constexpr typename TMat44<T>::col_type MATH_PURE operator*(const TMat44<T>& lhs,
         const TVec3<U>& rhs) noexcept {
     return lhs * TVec4<U>{ rhs, 1 };
-}
-
-// ----------------------------------------------------------------------------------------
-
-/* FIXME: this should go into TMatSquareFunctions<> but for some reason
- * BASE<T>::col_type is not accessible from there (???)
- */
-template<typename T>
-constexpr typename TMat44<T>::col_type MATH_PURE diag(const TMat44<T>& m) noexcept {
-    return matrix::diag(m);
 }
 
 } // namespace details

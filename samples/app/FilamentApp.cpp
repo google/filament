@@ -138,6 +138,9 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
         window->mDepthView->getView()->setShadowsEnabled(false);
         window->mGodView->getView()->setShadowsEnabled(false);
         window->mOrthoView->getView()->setShadowsEnabled(false);
+
+        // the depthview doesn't draw the background (ibl), so we must clear it
+        window->mDepthView->getView()->setClearColor({0, 0, 0, 1});
     }
 
     loadIBL(config);
@@ -157,7 +160,7 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
 
     if (imguiCallback) {
         mImGuiHelper = std::make_unique<ImGuiHelper>(mEngine, window->mUiView->getView(),
-            getRootPath() + "assets/fonts/Roboto-Medium.ttf");
+            getRootAssetsPath() + "assets/fonts/Roboto-Medium.ttf");
         ImGuiIO& io = ImGui::GetIO();
         #ifdef WIN32
             SDL_SysWMinfo wmInfo;
@@ -409,6 +412,17 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
     mEngine->destroy(mScene);
     Engine::destroy(&mEngine);
     mEngine = nullptr;
+}
+
+// RELATIVE_ASSET_PATH is set inside samples/CMakeLists.txt and used to support multi-configuration
+// generators, like Visual Studio or Xcode.
+#ifndef RELATIVE_ASSET_PATH
+#define RELATIVE_ASSET_PATH "."
+#endif
+
+const utils::Path& FilamentApp::getRootAssetsPath() {
+    static const utils::Path root = utils::Path::getCurrentExecutable().getParent() + RELATIVE_ASSET_PATH;
+    return root;
 }
 
 void FilamentApp::loadIBL(const Config& config) {

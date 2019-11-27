@@ -34,8 +34,8 @@ VulkanStage const* VulkanStagePool::acquireStage(uint32_t numBytes) {
     VulkanStage* stage = new VulkanStage({
         .memory = VK_NULL_HANDLE,
         .buffer = VK_NULL_HANDLE,
-        .lastAccessed = mCurrentFrame,
         .capacity = numBytes,
+        .lastAccessed = mCurrentFrame,
     });
 
     // Create the VkBuffer.

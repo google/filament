@@ -43,6 +43,7 @@ public:
     void terminate() noexcept override;
 
     SwapChain* createSwapChain(void* nativewindow, uint64_t& flags) noexcept final;
+    SwapChain* createSwapChain(uint32_t width, uint32_t height, uint64_t& flags) noexcept final;
     void destroySwapChain(SwapChain* swapChain) noexcept final;
     void makeCurrent(SwapChain* drawSwapChain, SwapChain* readSwapChain) noexcept final;
     void commit(SwapChain* swapChain) noexcept final;
@@ -67,6 +68,8 @@ public:
 
     void createExternalImageTexture(void* texture) noexcept final;
     void destroyExternalImage(void* texture) noexcept final;
+
+    backend::AcquiredImage transformAcquiredImage(backend::AcquiredImage source) noexcept final;
 
     int getOSVersion() const noexcept final;
 

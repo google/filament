@@ -21,12 +21,7 @@ import android.support.annotation.Nullable;
 
 import com.google.android.filament.Engine;
 import com.google.android.filament.EntityManager;
-import com.google.android.filament.IndirectLight;
-import com.google.android.filament.Skybox;
-import com.google.android.filament.Texture;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Method;
 import java.nio.Buffer;
 
 /**
@@ -42,7 +37,6 @@ import java.nio.Buffer;
  *
  * companion object {
  *     init {
- *        Filament.init()
  *        AssetLoader.init()
  *    }
  * }
@@ -59,46 +53,35 @@ import java.nio.Buffer;
  *         assetLoader.createAssetFromBinary(ByteBuffer.wrap(bytes))!!
  *     }
  *
- *     ResourceLoader(engine).loadResources(filamentAsset).destroy()
+ *     val resourceLoader = ResourceLoader(engine)
+ *     resourceLoader.loadResources(filamentAsset)
+ *     for (uri in filamentAsset.resourceUris) {
+ *         val buffer = loadResource(uri)
+ *         resourceLoader.addResourceData(uri, buffer)
+ *     }
+ *     resourceLoader.destroy()
+ *     animator = asset.getAnimator()
+ *
  *     scene.addEntities(filamentAsset.entities)
+ * }
+ *
+ * private fun loadResource(uri: String): Buffer {
+ *     TODO("Load your asset here (e.g. using Android's AssetManager API)")
  * }
  * </pre>
  *
+ * @see Animator
  * @see FilamentAsset
  * @see ResourceLoader
  */
 public class AssetLoader {
     private long mNativeObject;
 
-    static Method sEngineGetNativeObject;
-    static Method sEntityManagerGetNativeObject;
-    static Constructor<Texture> sTextureConstructor;
-    static Constructor<IndirectLight> sIndirectLightConstructor;
-    static Constructor<Skybox> sSkyboxConstructor;
-
     /**
      * Initializes the gltfio JNI layer. Must be called before using any gltfio functionality.
      */
     public static void init() {
         System.loadLibrary("gltfio-jni");
-        try {
-            sEngineGetNativeObject = Engine.class.getDeclaredMethod("getNativeObject");
-            sEngineGetNativeObject.setAccessible(true);
-
-            sEntityManagerGetNativeObject = EntityManager.class.getDeclaredMethod("getNativeObject");
-            sEntityManagerGetNativeObject.setAccessible(true);
-
-            sTextureConstructor = Texture.class.getDeclaredConstructor(long.class);
-            sTextureConstructor.setAccessible(true);
-
-            sIndirectLightConstructor = IndirectLight.class.getDeclaredConstructor(long.class);
-            sIndirectLightConstructor.setAccessible(true);
-
-            sSkyboxConstructor = Skybox.class.getDeclaredConstructor(long.class);
-            sSkyboxConstructor.setAccessible(true);
-        } catch (NoSuchMethodException e) {
-            // Cannot happen
-        }
     }
 
     /**
@@ -111,14 +94,12 @@ public class AssetLoader {
      */
     public AssetLoader(@NonNull Engine engine, @NonNull MaterialProvider generator,
             @NonNull EntityManager entities) {
-        try {
-            long nativeEngine = (long) sEngineGetNativeObject.invoke(engine);
-            long nativeMaterials = generator.getNativeObject();
-            long nativeEntities = (long) sEntityManagerGetNativeObject.invoke(entities);
-            mNativeObject = nCreateAssetLoader(nativeEngine, nativeMaterials, nativeEntities);
-        } catch (Exception e) {
-            // Ignored
-        }
+
+        long nativeEngine = engine.getNativeObject();
+        long nativeMaterials = generator.getNativeObject();
+        long nativeEntities = entities.getNativeObject();
+        mNativeObject = nCreateAssetLoader(nativeEngine, nativeMaterials, nativeEntities);
+
         if (mNativeObject == 0) {
             throw new IllegalStateException("Unable to parse glTF asset.");
         }
@@ -142,6 +123,15 @@ public class AssetLoader {
     }
 
     /**
+     * Creates a {@link FilamentAsset} from the contents of a GLTF file.
+     */
+    @Nullable
+    public FilamentAsset createAssetFromJson(@NonNull Buffer buffer) {
+        long nativeAsset = nCreateAssetFromJson(mNativeObject, buffer, buffer.remaining());
+        return new FilamentAsset(nativeAsset);
+    }
+
+    /**
      * Allows clients to enable diagnostic shading on newly-loaded assets.
      */
     public void enableDiagnostics(boolean enable) {
@@ -151,7 +141,7 @@ public class AssetLoader {
     /**
      * Frees all memory associated with the given {@link FilamentAsset}.
      */
-    public void destroyAsset(@Nullable FilamentAsset asset) {
+    public void destroyAsset(@NonNull FilamentAsset asset) {
         nDestroyAsset(mNativeObject, asset.getNativeObject());
         asset.clearNativeObject();
     }
@@ -160,6 +150,7 @@ public class AssetLoader {
             long nativeEntities);
     private static native void nDestroyAssetLoader(long nativeLoader);
     private static native long nCreateAssetFromBinary(long nativeLoader, Buffer buffer, int remaining);
+    private static native long nCreateAssetFromJson(long nativeLoader, Buffer buffer, int remaining);
     private static native void nEnableDiagnostics(long nativeLoader, boolean enable);
     private static native void nDestroyAsset(long nativeLoader, long nativeAsset);
 }

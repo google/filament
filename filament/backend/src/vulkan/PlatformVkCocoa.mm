@@ -47,7 +47,7 @@ Driver* PlatformVkCocoa::createDriver(void* sharedContext) noexcept {
 void* PlatformVkCocoa::createVkSurfaceKHR(void* nativeWindow, void* instance,
         uint32_t* width, uint32_t* height) noexcept {
     // Obtain the CAMetalLayer-backed view.
-    NSView* nsview = (NSView*) nativeWindow;
+    NSView* nsview = (__bridge NSView*) nativeWindow;
     ASSERT_POSTCONDITION(nsview, "Unable to obtain Metal-backed NSView.");
 
     // Create the VkSurface.
@@ -55,7 +55,7 @@ void* PlatformVkCocoa::createVkSurfaceKHR(void* nativeWindow, void* instance,
     VkSurfaceKHR surface = nullptr;
     VkMacOSSurfaceCreateInfoMVK createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_MACOS_SURFACE_CREATE_INFO_MVK;
-    createInfo.pView = nsview;
+    createInfo.pView = (__bridge void*) nsview;
     VkResult result = vkCreateMacOSSurfaceMVK((VkInstance) instance, &createInfo, VKALLOC, &surface);
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateMacOSSurfaceMVK error.");
 

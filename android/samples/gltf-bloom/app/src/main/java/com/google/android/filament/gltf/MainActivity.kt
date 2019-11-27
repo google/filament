@@ -43,10 +43,9 @@ data class Framebuffer(
 
 class MainActivity : Activity() {
 
-    // Be sure to initialize not only Filament, but also gltfio (via AssetLoader)
+    // We are using the gltfio library, so init the AssetLoader rather than Filament.
     companion object {
         init {
-            Filament.init()
             AssetLoader.init()
         }
     }
@@ -155,7 +154,7 @@ class MainActivity : Activity() {
         // IndirectLight and SkyBox
         // ------------------------
 
-        val ibl = "venetian_crossroads_2k";
+        val ibl = "venetian_crossroads_2k"
 
         readUncompressedAsset("envs/$ibl/${ibl}_ibl.ktx").let {
             primary.scene.indirectLight = KtxLoader.createIndirectLight(engine, it, KtxLoader.Options())
@@ -242,6 +241,13 @@ class MainActivity : Activity() {
                             0.0f,   -1.7f,  0.0f,   1.0f
                     ))
 
+
+            // The lucy asset does not have animation but we invoke the asset animator for demonstration purposes.
+            if (filamentAsset.animator.animationCount > 0) {
+                val elapsedTimeInSeconds = a.currentPlayTime.toFloat() / 1000.0f
+                filamentAsset.animator.applyAnimation(0, elapsedTimeInSeconds)
+                filamentAsset.animator.updateBoneMatrices()
+            }
         }
         animator.start()
     }
@@ -429,7 +435,7 @@ class MainActivity : Activity() {
 
         // Stop the animation and any pending frame
         choreographer.removeFrameCallback(frameScheduler)
-        animator.cancel();
+        animator.cancel()
 
         // Always detach the surface before destroying the engine
         uiHelper.detach()

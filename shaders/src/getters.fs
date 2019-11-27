@@ -48,7 +48,7 @@ vec3 getWorldNormalVector() {
 
 /** @public-api */
 vec3 getWorldGeometricNormalVector() {
-    return shading_tangentToWorld[2];
+    return shading_geometricNormal;
 }
 
 /** @public-api */

@@ -19,6 +19,7 @@ set(PUBLIC_HDRS
 
 set(SRCS
         src/BackendUtils.cpp
+        src/Callable.cpp
         src/CircularBuffer.cpp
         src/CommandBufferQueue.cpp
         src/CommandStream.cpp
@@ -33,6 +34,7 @@ set(SRCS
 )
 
 set(PRIVATE_HDRS
+        include/private/backend/AcquiredImage.h
         include/private/backend/CircularBuffer.h
         include/private/backend/CommandBufferQueue.h
         include/private/backend/CommandStream.h
@@ -247,6 +249,11 @@ else()
     set(FILAMENT_WARNINGS /W0)
 endif()
 
+if (APPLE)
+    # Turn on Automatic Reference Counting.
+    target_compile_options(${TARGET} PRIVATE "-fobjc-arc")
+endif()
+
 # clang-cl maps -Wall to -Weverything, which clutters logs with benign -Wc++98-compat warnings
 # Use /W4 instead for clang-cl builds
 if (CLANG_CL)
@@ -284,7 +291,8 @@ if (APPLE)
         test/ShaderGenerator.cpp
         test/TrianglePrimitive.cpp
         test/Arguments.cpp
-        test/test_MissingRequiredAttributes.cpp)
+        test/test_MissingRequiredAttributes.cpp
+        test/test_ReadPixels.cpp)
 
     target_link_libraries(backend_test PRIVATE
         backend

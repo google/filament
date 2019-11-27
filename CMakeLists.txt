@@ -211,6 +211,13 @@ if (ANDROID OR WEBGL)
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fno-exceptions -fno-unwind-tables -fno-asynchronous-unwind-tables -fno-rtti")
 endif()
 
+# With WebGL, we disable RTTI even for debug builds because we pass emscripten::val back and forth
+# between C++ and JavaScript in order to efficiently access typed arrays, which are unbound.
+# NOTE: This is not documented in emscripten so we should consider a different approach.
+if (WEBGL)
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-rtti")
+endif()
+
 # ==================================================================================================
 # Debug compiler flags
 # ==================================================================================================
@@ -219,16 +226,24 @@ endif()
 #  -fsanitize=address causes a crash with assimp, which we can't explain for now
 #set(EXTRA_SANITIZE_OPTIONS "-fsanitize=undefined -fsanitize=address")
 # clang-cl.exe on Windows does not support -fstack-protector.
-if (NOT CLANG_CL AND NOT MSVC)
+if (NOT CLANG_CL AND NOT MSVC AND NOT WEBGL)
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fstack-protector")
 endif()
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${EXTRA_SANITIZE_OPTIONS}")
+
+# Disable the stack check for macOS to workaround a known issue in clang 11.0.0.
+# See: https://forums.developer.apple.com/thread/121887
+if (APPLE)
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}  -fno-stack-check")
+endif()
 
 # ==================================================================================================
 # Linker flags
 # ==================================================================================================
 # Strip unused sections
-set(GC_SECTIONS "-Wl,--gc-sections")
+if (NOT WEBGL)
+    set(GC_SECTIONS "-Wl,--gc-sections")
+endif()
 set(B_SYMBOLIC_FUNCTIONS "-Wl,-Bsymbolic-functions")
 
 if (APPLE)

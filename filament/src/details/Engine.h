@@ -132,7 +132,9 @@ public:
     static FEngine* create(Backend backend = Backend::DEFAULT,
             Platform* platform = nullptr, void* sharedGLContext = nullptr);
 
-    static void assertValid(Engine const& engine);
+    static void destroy(FEngine* engine);
+
+    static void assertValid(Engine const& engine, const char* function);
 
     ~FEngine() noexcept;
 
@@ -215,8 +217,6 @@ public:
         return clock::now() - getEngineEpoch();
     }
 
-    void shutdown();
-
     template <typename T>
     T* create(ResourceList<T>& list, typename T::Builder const& builder) noexcept;
 
@@ -239,6 +239,7 @@ public:
     FView* createView() noexcept;
     FFence* createFence(FFence::Type type) noexcept;
     FSwapChain* createSwapChain(void* nativeWindow, uint64_t flags) noexcept;
+    FSwapChain* createSwapChain(uint32_t width, uint32_t height, uint64_t flags) noexcept;
 
     FCamera* createCamera(utils::Entity entity) noexcept;
     FCamera* getCameraComponent(utils::Entity entity) noexcept;
@@ -286,6 +287,7 @@ public:
 private:
     FEngine(Backend backend, Platform* platform, void* sharedGLContext);
     void init();
+    void shutdown();
 
     int loop();
     void flushCommandBuffer(backend::CommandBufferQueue& commandBufferQueue);

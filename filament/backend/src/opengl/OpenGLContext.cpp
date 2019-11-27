@@ -36,11 +36,7 @@ OpenGLContext::OpenGLContext() noexcept {
     UTILS_UNUSED char const* const shader   = (char const*) glGetString(GL_SHADING_LANGUAGE_VERSION);
 
 #ifndef NDEBUG
-    slog.i
-        << vendor << io::endl
-        << renderer << io::endl
-        << version << io::endl
-        << shader << io::endl;
+    slog.i << vendor << ", " << renderer << ", " << version << ", " << shader << io::endl;
 #endif
 
     // OpenGL (ES) version
@@ -51,7 +47,8 @@ OpenGLContext::OpenGLContext() noexcept {
     glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &gets.max_uniform_block_size);
     glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &gets.uniform_buffer_offset_alignment);
 
-#ifndef NDEBUG
+#if 0
+    // this is useful for development, but too verbose even for debug builds
     slog.i
         << "GL_MAX_RENDERBUFFER_SIZE = " << gets.max_renderbuffer_size << io::endl
         << "GL_MAX_UNIFORM_BLOCK_SIZE = " << gets.max_uniform_block_size << io::endl
@@ -90,7 +87,7 @@ OpenGLContext::OpenGLContext() noexcept {
     }
 
     ShaderModel shaderModel = ShaderModel::UNKNOWN;
-    if (GLES31_HEADERS) {
+    if (GLES30_HEADERS) {
         if (major == 3 && minor >= 0) {
             shaderModel = ShaderModel::GL_ES_30;
         }
@@ -105,6 +102,7 @@ OpenGLContext::OpenGLContext() noexcept {
         initExtensionsGL(major, minor, exts);
         features.multisample_texture = true;
     };
+    assert(shaderModel != ShaderModel::UNKNOWN);
     mShaderModel = shaderModel;
 
     /*
@@ -138,6 +136,35 @@ OpenGLContext::OpenGLContext() noexcept {
     glHint(GL_FRAGMENT_SHADER_DERIVATIVE_HINT, GL_NICEST);
 #endif
 
+#if !defined(NDEBUG) && defined(GL_KHR_debug)
+    if (ext.KHR_debug) {
+        auto cb = [](GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length,
+                const GLchar* message, const void *userParam) {
+            io::LogStream* stream;
+            switch (severity) {
+                case GL_DEBUG_SEVERITY_HIGH: stream = &slog.e; break;
+                case GL_DEBUG_SEVERITY_MEDIUM: stream = &slog.w; break;
+                case GL_DEBUG_SEVERITY_LOW: stream = &slog.d; break;
+                case GL_DEBUG_SEVERITY_NOTIFICATION: stream = &slog.i; break;
+            }
+            io::LogStream& out = *stream;
+            out << "KHR_debug ";
+            switch (type) {
+                case GL_DEBUG_TYPE_ERROR: out << "ERROR"; break;
+                case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR: out << "DEPRECATED_BEHAVIOR"; break;
+                case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR: out << "UNDEFINED_BEHAVIOR"; break;
+                case GL_DEBUG_TYPE_PORTABILITY: out << "PORTABILITY"; break;
+                case GL_DEBUG_TYPE_PERFORMANCE: out << "PERFORMANCE"; break;
+                case GL_DEBUG_TYPE_OTHER: out << "OTHER"; break;
+                case GL_DEBUG_TYPE_MARKER: out << "MARKER"; break;
+            }
+            out << ": " << message << io::endl;
+        };
+        glEnable(GL_DEBUG_OUTPUT);
+        glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+        glDebugMessageCallback(cb, nullptr);
+    }
+#endif
 }
 
 UTILS_NOINLINE
@@ -157,6 +184,7 @@ void OpenGLContext::initExtensionsGLES(GLint major, GLint minor, ExtentionSet co
     ext.APPLE_color_buffer_packed_float = hasExtension(exts, "GL_APPLE_color_buffer_packed_float");
     ext.texture_compression_s3tc = hasExtension(exts, "WEBGL_compressed_texture_s3tc");
     ext.EXT_multisampled_render_to_texture = hasExtension(exts, "GL_EXT_multisampled_render_to_texture");
+    ext.KHR_debug = hasExtension(exts, "GL_KHR_debug");
     // ES 3.2 implies EXT_color_buffer_float
     if (major >= 3 && minor >= 2) {
         ext.EXT_color_buffer_float = true;
@@ -172,6 +200,7 @@ void OpenGLContext::initExtensionsGL(GLint major, GLint minor, ExtentionSet cons
     ext.EXT_color_buffer_half_float = true;  // Assumes core profile.
     ext.EXT_color_buffer_float = true;  // Assumes core profile.
     ext.APPLE_color_buffer_packed_float = true;  // Assumes core profile.
+    ext.KHR_debug = major >= 4 && minor >= 3;
 }
 
 void OpenGLContext::bindBuffer(GLenum target, GLuint buffer) noexcept {

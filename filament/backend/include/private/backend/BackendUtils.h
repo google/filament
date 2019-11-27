@@ -22,9 +22,16 @@ namespace filament {
 namespace backend {
 
 /**
- * Returns the number of bytes per pixel for the given format.
+ * Returns the number of bytes per pixel for the given format. For compressed texture formats,
+ * returns the number of bytes per block.
  */
 size_t getFormatSize(TextureFormat format) noexcept;
+
+/**
+ * For compressed texture formats, returns the number of horizontal pixels per block. Otherwise
+ * returns 0.
+ */
+size_t getBlockWidth(TextureFormat format) noexcept;
 
 } // namespace backend
 } // namespace filament

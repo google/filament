@@ -235,7 +235,8 @@ void VulkanDriver::terminate() {
     mContext.instance = nullptr;
 }
 
-void VulkanDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId) {
+void VulkanDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId,
+        backend::FrameFinishedCallback, void*) {
     // We allow multiple beginFrame / endFrame pairs before commit(), so gracefully return early
     // if the swap chain has already been acquired.
     if (mContext.currentCommands) {
@@ -280,6 +281,10 @@ void VulkanDriver::endFrame(uint32_t frameId) {
 
 void VulkanDriver::flush(int) {
     // Todo: equivalent of glFlush()
+}
+
+void VulkanDriver::finish(int) {
+    // Todo: equivalent of glFinish()
 }
 
 void VulkanDriver::createSamplerGroupR(Handle<HwSamplerGroup> sbh, size_t count) {
@@ -435,6 +440,12 @@ void VulkanDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
     mContext.currentSurface = &sc;
 }
 
+void VulkanDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch,
+        uint32_t width, uint32_t height, uint64_t flags) {
+    //auto* swapChain = construct_handle<VulkanSwapChain>(mHandleMap, sch);
+    // TODO: implement headless swapchain
+}
+
 void VulkanDriver::createStreamFromTextureIdR(Handle<HwStream> sh, intptr_t externalTextureId,
         uint32_t width, uint32_t height) {
 }
@@ -480,6 +491,10 @@ Handle<HwFence> VulkanDriver::createFenceS() noexcept {
 }
 
 Handle<HwSwapChain> VulkanDriver::createSwapChainS() noexcept {
+    return alloc_handle<VulkanSwapChain, HwSwapChain>();
+}
+
+Handle<HwSwapChain> VulkanDriver::createSwapChainHeadlessS() noexcept {
     return alloc_handle<VulkanSwapChain, HwSwapChain>();
 }
 
@@ -530,8 +545,16 @@ void VulkanDriver::destroySwapChain(Handle<HwSwapChain> sch) {
 void VulkanDriver::destroyStream(Handle<HwStream> sh) {
 }
 
-Handle<HwStream> VulkanDriver::createStream(void* nativeStream) {
+Handle<HwStream> VulkanDriver::createStreamNative(void* nativeStream) {
     return {};
+}
+
+Handle<HwStream> VulkanDriver::createStreamAcquired() {
+    return {};
+}
+
+void VulkanDriver::setAcquiredImage(Handle<HwStream> sh, void* image, backend::StreamCallback cb,
+        void* userData) {
 }
 
 void VulkanDriver::setStreamDimensions(Handle<HwStream> sh, uint32_t width, uint32_t height) {
@@ -715,9 +738,11 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
         .finalDepthLayout = finalDepthLayout,
         .colorFormat = color.format,
         .depthFormat = depth.format,
-        .flags.clear = params.flags.clear,
-        .flags.discardStart = params.flags.discardStart,
-        .flags.discardEnd = params.flags.discardEnd
+        .flags = {
+            .clear = params.flags.clear,
+            .discardStart = params.flags.discardStart,
+            .discardEnd = params.flags.discardEnd
+        }
     });
     mBinder.bindRenderPass(renderPass);
 
@@ -734,10 +759,10 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
         .renderPass = renderPass,
         .framebuffer = mFramebufferCache.getFramebuffer(fbo, extent.width, extent.height),
-        .renderArea.offset.x = params.viewport.left,
-        .renderArea.offset.y = params.viewport.bottom,
-        .renderArea.extent.width = params.viewport.width,
-        .renderArea.extent.height = params.viewport.height,
+        .renderArea = {
+            .offset = {params.viewport.left, params.viewport.bottom},
+            .extent = {params.viewport.width, params.viewport.height}
+        }
     };
 
     rt->transformClientRectToPlatform(&renderPassInfo.renderArea);
@@ -768,8 +793,8 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
             .maxDepth = 1.0f
     };
     VkRect2D scissor {
-            .extent = { (uint32_t) viewport.width, (uint32_t) viewport.height },
-            .offset = { std::max(0, (int32_t) viewport.x), std::max(0, (int32_t) viewport.y) }
+            .offset = { std::max(0, (int32_t) viewport.x), std::max(0, (int32_t) viewport.y) },
+            .extent = { (uint32_t) viewport.width, (uint32_t) viewport.height }
     };
 
     mCurrentRenderTarget->transformClientRectToPlatform(&scissor);
@@ -1124,8 +1149,8 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
     const int32_t top = std::min(viewportScissor.bottom + (int32_t)viewportScissor.height,
             (int32_t)(mContext.viewport.y + mContext.viewport.height));
     VkRect2D scissor{
-            .extent = { (uint32_t)right - x, (uint32_t)top - y },
-            .offset = { std::max(0, x), std::max(0, y) }
+            .offset = { std::max(0, x), std::max(0, y) },
+            .extent = { (uint32_t)right - x, (uint32_t)top - y }
     };
     rt->transformClientRectToPlatform(&scissor);
     vkCmdSetScissor(cmdbuffer, 0, 1, &scissor);

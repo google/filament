@@ -22,9 +22,13 @@ namespace filament {
 namespace details {
 
 FSwapChain::FSwapChain(FEngine& engine, void* nativeWindow, uint64_t flags)
-        : mNativeWindow(nativeWindow) {
-    mConfigFlags = flags;
-    mSwapChain = engine.getDriverApi().createSwapChain(nativeWindow, mConfigFlags);
+        : mNativeWindow(nativeWindow), mConfigFlags(flags) {
+    mSwapChain = engine.getDriverApi().createSwapChain(nativeWindow, flags);
+}
+
+FSwapChain::FSwapChain(FEngine& engine, uint32_t width, uint32_t height, uint64_t flags)
+        : mConfigFlags(flags) {
+    mSwapChain = engine.getDriverApi().createSwapChainHeadless(width, height, flags);
 }
 
 void FSwapChain::terminate(FEngine& engine) noexcept {

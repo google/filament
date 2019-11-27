@@ -44,20 +44,18 @@ public:
     void init() noexcept;
     void terminate(backend::DriverApi& driver) noexcept;
 
-    FrameGraphId<FrameGraphTexture> toneMapping(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input,
-            backend::TextureFormat outFormat, bool dithering, bool translucent) noexcept;
+    FrameGraphId <FrameGraphTexture> toneMapping(FrameGraph& fg,
+            FrameGraphId <FrameGraphTexture> input,
+            backend::TextureFormat outFormat, bool dithering, bool translucent, bool fxaa) noexcept;
 
     FrameGraphId<FrameGraphTexture> fxaa(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, backend::TextureFormat outFormat,
             bool translucent) noexcept;
 
-    FrameGraphId<FrameGraphTexture> dynamicScaling(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, backend::TextureFormat outFormat) noexcept;
-
-    FrameGraphId<FrameGraphTexture> resolve(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input) noexcept;
-
+    FrameGraphId <FrameGraphTexture> dynamicScaling(
+            FrameGraph& fg, uint8_t msaa, bool scaled, bool blend,
+            FrameGraphId <FrameGraphTexture> input,
+            backend::TextureFormat outFormat) noexcept;
 
     FrameGraphId<FrameGraphTexture> ssao(FrameGraph& fg, details::RenderPass& pass,
             filament::Viewport const& svp,
@@ -109,10 +107,12 @@ private:
     PostProcessMaterial mSSAO;
     PostProcessMaterial mMipmapDepth;
     PostProcessMaterial mBlur;
+    PostProcessMaterial mBlit;
     PostProcessMaterial mTonemapping;
     PostProcessMaterial mFxaa;
 
     backend::Handle<backend::HwTexture> mNoSSAOTexture;
+    backend::Handle<backend::HwTexture> mNoiseTexture;
 };
 
 } // namespace filament

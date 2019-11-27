@@ -121,6 +121,7 @@ public:
         bool EXT_color_buffer_float = false;
         bool APPLE_color_buffer_packed_float = false;
         bool EXT_multisampled_render_to_texture = false;
+        bool KHR_debug = false;
     } ext;
 
     struct {

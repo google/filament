@@ -58,6 +58,9 @@ private:
 
     ShaderModel getShaderModel() const noexcept final;
 
+    // Overrides the default implementation by wrapping the call to fn in an @autoreleasepool block.
+    void execute(std::function<void(void)> fn) noexcept final;
+
     /*
      * Driver interface
      */
