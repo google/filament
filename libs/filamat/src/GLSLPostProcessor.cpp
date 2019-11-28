@@ -315,35 +315,15 @@ void GLSLPostProcessor::fullOptimization(const TShader& tShader,
     GlslangToSpv(*tShader.getIntermediate(), spirv, &options);
 
     // Run the SPIR-V optimizer
-    Optimizer optimizer(SPV_ENV_UNIVERSAL_1_0);
-    optimizer.SetMessageConsumer([](spv_message_level_t level,
-            const char* source, const spv_position_t& position, const char* message) {
-        utils::slog.e << stringifySpvOptimizerMessage(level, source, position, message)
-                << utils::io::endl;
-    });
-
-    if (mOptimization == MaterialBuilder::Optimization::SIZE) {
-        registerSizePasses(optimizer);
-    } else if (mOptimization == MaterialBuilder::Optimization::PERFORMANCE) {
-        registerPerformancePasses(optimizer);
-    }
-
-    if (!optimizer.Run(spirv.data(), spirv.size(), &spirv)) {
-        utils::slog.e << "SPIR-V optimizer pass failed" << utils::io::endl;
-        return;
-    }
-
-    // Remove dead module-level objects: functions, types, vars
-    spv::spirvbin_t remapper(0);
-    remapper.registerErrorHandler(errorHandler);
-    remapper.remap(spirv, spv::spirvbin_base_t::DCE_ALL);
+    OptimizerPtr optimizer = createOptimizer(mOptimization, config);
+    optimizeSpirv(optimizer, spirv);
 
     if (mSpirvOutput) {
         *mSpirvOutput = spirv;
     }
 
     if (mMslOutput) {
-        SpvToMsl(mSpirvOutput, mMslOutput, config);
+        SpvToMsl(&spirv, mMslOutput, config);
     }
 
     // Transpile back to GLSL
@@ -370,7 +350,38 @@ void GLSLPostProcessor::fullOptimization(const TShader& tShader,
     }
 }
 
-void GLSLPostProcessor::registerPerformancePasses(Optimizer& optimizer) const {
+std::shared_ptr<spvtools::Optimizer> GLSLPostProcessor::createOptimizer(
+        MaterialBuilder::Optimization optimization, Config const& config) {
+    auto optimizer = std::make_shared<spvtools::Optimizer>(SPV_ENV_UNIVERSAL_1_0);
+
+    optimizer->SetMessageConsumer([](spv_message_level_t level,
+            const char* source, const spv_position_t& position, const char* message) {
+        utils::slog.e << stringifySpvOptimizerMessage(level, source, position, message)
+                << utils::io::endl;
+    });
+
+    if (optimization == MaterialBuilder::Optimization::SIZE) {
+        registerSizePasses(*optimizer, config);
+    } else if (optimization == MaterialBuilder::Optimization::PERFORMANCE) {
+        registerPerformancePasses(*optimizer, config);
+    }
+
+    return optimizer;
+}
+
+void GLSLPostProcessor::optimizeSpirv(OptimizerPtr optimizer, SpirvBlob& spirv) const {
+    if (!optimizer->Run(spirv.data(), spirv.size(), &spirv)) {
+        utils::slog.e << "SPIR-V optimizer pass failed" << utils::io::endl;
+        return;
+    }
+
+    // Remove dead module-level objects: functions, types, vars
+    spv::spirvbin_t remapper(0);
+    remapper.registerErrorHandler(errorHandler);
+    remapper.remap(spirv, spv::spirvbin_base_t::DCE_ALL);
+}
+
+void GLSLPostProcessor::registerPerformancePasses(Optimizer& optimizer, Config const& config) {
     optimizer
             .RegisterPass(CreateWrapOpKillPass())
             .RegisterPass(CreateDeadBranchElimPass())
@@ -409,7 +420,7 @@ void GLSLPostProcessor::registerPerformancePasses(Optimizer& optimizer) const {
             .RegisterPass(CreateSimplificationPass());
 }
 
-void GLSLPostProcessor::registerSizePasses(Optimizer& optimizer) const {
+void GLSLPostProcessor::registerSizePasses(Optimizer& optimizer, Config const& config) {
     optimizer
             .RegisterPass(CreateWrapOpKillPass())
             .RegisterPass(CreateDeadBranchElimPass())
