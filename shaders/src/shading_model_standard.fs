@@ -106,9 +106,6 @@ vec3 surfaceShading(const PixelParams pixel, const Light light, float occlusion)
 #if defined(MATERIAL_HAS_CLEAR_COAT)
     float Fcc;
     float clearCoat = clearCoatLobe(pixel, h, NoH, LoH, Fcc);
-    // Energy compensation and absorption; the clear coat Fresnel term is
-    // squared to take into account both entering through and exiting through
-    // the clear coat layer
     float attenuation = 1.0 - Fcc;
 
 #if defined(MATERIAL_HAS_NORMAL) || defined(MATERIAL_HAS_CLEAR_COAT_NORMAL)
