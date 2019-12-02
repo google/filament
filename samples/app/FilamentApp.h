@@ -121,8 +121,6 @@ private:
         filament::View const* getView() const { return view; }
         filament::View* getView() { return view; }
 
-        CameraManipulator* getCameraManipulator() const { return mCameraManipulator; }
-
     private:
         enum class Mode : uint8_t {
             NONE, ROTATE, TRACK
@@ -173,7 +171,6 @@ private:
         filament::Engine::Backend mBackend;
 
         CameraManipulator mMainCameraMan;
-        CameraManipulator mOrthoCameraMan;
         CameraManipulator mDebugCameraMan;
         filament::SwapChain* mSwapChain = nullptr;
 

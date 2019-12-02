@@ -108,19 +108,11 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
 
         rcm.setLayerMask(rcm.getInstance(cameraCube->getSolidRenderable()), 0x3, 0x2);
         rcm.setLayerMask(rcm.getInstance(cameraCube->getWireFrameRenderable()), 0x3, 0x2);
-        cameraCube->mapFrustum(*mEngine, window->mMainCameraMan.getCamera());
 
         rcm.setLayerMask(rcm.getInstance(lightmapCube->getSolidRenderable()), 0x3, 0x2);
         rcm.setLayerMask(rcm.getInstance(lightmapCube->getWireFrameRenderable()), 0x3, 0x2);
 
         // Create the camera mesh
-        window->mMainCameraMan.setCameraChangedCallback(
-                [&cameraCube, &lightmapCube, &window, engine = mEngine](Camera const* camera) {
-            cameraCube->mapFrustum(*engine, camera);
-            lightmapCube->mapFrustum(*engine,
-                    window->mMainView->getView()->getDirectionalLightCamera());
-        });
-
         mScene->addEntity(cameraCube->getWireFrameRenderable());
         mScene->addEntity(cameraCube->getSolidRenderable());
 
@@ -358,7 +350,14 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
             mImGuiHelper->render(timeStep, imguiCallback);
         }
 
-        window->mMainCameraMan.updateCameraTransform();
+        // Update the position and orientation of the two cameras.
+        window->mMainCamera->setModelMatrix(window->mMainCameraMan.getCameraTransform());
+        window->mDebugCamera->setModelMatrix(window->mDebugCameraMan.getCameraTransform());
+
+        // Update the cube distortion matrix used for frustum visualization.
+        const Camera* lightmapCamera = window->mMainView->getView()->getDirectionalLightCamera();
+        lightmapCube->mapFrustum(*mEngine, lightmapCamera);
+        cameraCube->mapFrustum(*mEngine, window->mMainCamera);
 
         // TODO: we need better timing or use SDL_GL_SetSwapInterval
         SDL_Delay(16);
@@ -518,8 +517,6 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
 
     // set-up the camera manipulators
     double3 at(0, 0, -4);
-    mMainCameraMan.setCamera(mMainCamera);
-    mDebugCameraMan.setCamera(mDebugCamera);
     mMainView->setCamera(mMainCamera);
     mMainView->setCameraManipulator(&mMainCameraMan);
     mUiView->setCamera(mUiCamera);
@@ -536,7 +533,6 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
 
         mDepthView->setCameraManipulator(&mMainCameraMan);
         mGodView->setCameraManipulator(&mDebugCameraMan);
-        mOrthoView->setCameraManipulator(&mOrthoCameraMan);
     }
 
     // configure the cameras
@@ -544,7 +540,6 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
 
     mMainCameraMan.lookAt(at + double3{ 0, 0, 4 }, at);
     mDebugCameraMan.lookAt(at + double3{ 0, 0, 4 }, at);
-    mOrthoCameraMan.lookAt(at + double3{ 0, 0, 4 }, at);
 
     mMainCamera->lookAt({4, 0, -4}, {0, 0, -4}, {0, 1, 0});
 }
@@ -675,11 +670,6 @@ void FilamentApp::Window::configureCamerasForWindow() {
         mDepthView->setViewport({ int32_t(vpw),            0, w - vpw, vph     });
         mGodView->setViewport  ({ int32_t(vpw), int32_t(vph), w - vpw, h - vph });
         mOrthoView->setViewport({            0, int32_t(vph),     vpw, h - vph });
-
-        mMainView->getCameraManipulator()->updateCameraTransform();
-        mDepthView->getCameraManipulator()->updateCameraTransform();
-        mGodView->getCameraManipulator()->updateCameraTransform();
-        mOrthoView->getCameraManipulator()->updateCameraTransform();
     } else {
         mMainView->setViewport({ sidebar, 0, w - sidebar, h });
     }
