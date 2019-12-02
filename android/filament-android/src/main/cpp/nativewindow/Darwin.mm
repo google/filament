@@ -17,7 +17,16 @@
 #include <stdio.h>
 
 #include <jawt.h>
+
+#if defined(__has_include)
+#if __has_include(<darwin/jawt_md.h>)
 #include <darwin/jawt_md.h>
+#else
+#include <jawt_md.h>
+#endif
+#else
+#include <darwin/jawt_md.h>
+#endif
 
 #include <filament/Engine.h>
 #include "JAWTUtils.h"
