@@ -50,22 +50,19 @@ if (WIN32)
         set(CRT_FLAGS_DEBUG "/MDd")
     endif()
 
-    if (CMAKE_C_COMPILER_ID MATCHES "Clang")
-        # TODO: Figure out why pdb generation messes with incremental compilaton.
-        # IN RELEASE_WITH_DEBUG_INFO, generate debug info in .obj, no in pdb.
-        set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} ${CRT_FLAGS_RELEASE} /Z7")
-        set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} ${CRT_FLAGS_RELEASE} /Z7")
-
-        # In DEBUG, avoid generating a PDB file which seems to mess with incremental compilation.
-        # Instead generate debug info directly inside obj files.
-        set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${CRT_FLAGS_DEBUG} /Z7")
-        set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${CRT_FLAGS_DEBUG} /Z7")
-    endif()
+    # TODO: Figure out why pdb generation messes with incremental compilaton.
+    # IN RELEASE_WITH_DEBUG_INFO, generate debug info in .obj, no in pdb.
+    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} ${CRT_FLAGS_RELEASE} /Z7")
+    set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} ${CRT_FLAGS_RELEASE} /Z7")
 
     # In RELEASE, also generate PDBs.
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${CRT_FLAGS_RELEASE} /Zi")
     set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${CRT_FLAGS_RELEASE} /Zi")
 
+    # In DEBUG, avoid generating a PDB file which seems to mess with incremental compilation.
+    # Instead generate debug info directly inside obj files.
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${CRT_FLAGS_DEBUG} /Z7")
+    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${CRT_FLAGS_DEBUG} /Z7")
 endif()
 
 # ==================================================================================================
