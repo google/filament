@@ -64,6 +64,9 @@ OpenGLContext::OpenGLContext() noexcept {
             bugs.disable_shared_context_draws = true;
             bugs.texture_external_needs_rebind = true;
         }
+        if (strstr(renderer, "Mali-G")) {
+            bugs.disable_texture_filter_anisotropic = true;
+        }
     } else if (strstr(renderer, "Intel")) {
         bugs.vao_doesnt_store_element_array_buffer_binding = true;
     } else if (strstr(renderer, "PowerVR") || strstr(renderer, "Apple")) {
@@ -127,7 +130,7 @@ OpenGLContext::OpenGLContext() noexcept {
 #endif
 
 #ifdef GL_EXT_texture_filter_anisotropic
-    if (ext.texture_filter_anisotropic) {
+    if (ext.texture_filter_anisotropic && !bugs.disable_texture_filter_anisotropic) {
         glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &gets.maxAnisotropy);
     }
 #endif

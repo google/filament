@@ -147,6 +147,10 @@ public:
         // Some web browsers seem to immediately clear the default framebuffer when calling
         // glInvalidateFramebuffer with WebGL 2.0
         bool disable_invalidate_framebuffer = false;
+
+        // Some drivers declare GL_EXT_texture_filter_anisotropic but don't support
+        // calling glSamplerParameter() with GL_TEXTURE_MAX_ANISOTROPY_EXT
+        bool disable_texture_filter_anisotropic = false;
     } bugs;
 
     // state getters -- as needed.
