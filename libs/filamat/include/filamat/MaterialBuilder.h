@@ -176,7 +176,7 @@ public:
     };
 
     using MaterialDomain = filament::MaterialDomain;
-    using Refraction = filament::Refraction;
+    using RefractionMode = filament::RefractionMode;
     using RefractionType = filament::RefractionType;
 
     using BlendingMode = filament::BlendingMode;
@@ -236,7 +236,7 @@ public:
     MaterialBuilder& materialDomain(MaterialDomain materialDomain) noexcept;
 
     //! Specify the refraction
-    MaterialBuilder& materialRefraction(Refraction refraction) noexcept;
+    MaterialBuilder& materialRefraction(RefractionMode refraction) noexcept;
 
     //! Specify the refraction type
     MaterialBuilder& materialRefractionType(RefractionType refractionType) noexcept;
@@ -543,7 +543,7 @@ private:
     CullingMode mCullingMode = CullingMode::BACK;
     Shading mShading = Shading::LIT;
     MaterialDomain mMaterialDomain = MaterialDomain::SURFACE;
-    Refraction mRefraction = Refraction::CUBEMAP;
+    RefractionMode mRefractionMode = RefractionMode::NONE;
     RefractionType mRefractionType = RefractionType::SOLID;
     Interpolation mInterpolation = Interpolation::SMOOTH;
     VertexDomain mVertexDomain = VertexDomain::OBJECT;

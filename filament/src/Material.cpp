@@ -160,7 +160,7 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     parser->getVertexDomain(&mVertexDomain);
     parser->getMaterialDomain(&mMaterialDomain);
     parser->getRequiredAttributes(&mRequiredAttributes);
-    parser->getRefraction(&mRefraction);
+    parser->getRefractionMode(&mRefractionMode);
     parser->getRefractionType(&mRefractionType);
 
     if (mBlendingMode == BlendingMode::MASKED) {
@@ -603,8 +603,8 @@ AttributeBitset Material::getRequiredAttributes() const noexcept {
     return upcast(this)->getRequiredAttributes();
 }
 
-Refraction Material::getRefraction() const noexcept {
-    return upcast(this)->getRefraction();
+RefractionMode Material::getRefractionMode() const noexcept {
+    return upcast(this)->getRefractionMode();
 }
 
 RefractionType Material::getRefractionType() const noexcept {

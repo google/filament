@@ -348,7 +348,7 @@ void applyRefraction(const PixelParams pixel,
     r = refract(r, n0, eta0);
     float N0oR = dot(n0, r);
 #elif REFRACTION_TYPE == REFRACTION_TYPE_THIN
-    // Disney roughness remaping for thin layers
+    // Roughness remaping for thin layers, see Burley 2012, "Physically-Based Shading at Disney"
    perceptualRoughness = saturate((0.65 * eta0 - 0.35) * perceptualRoughness);
 #else
 #error "invalid REFRACTION_TYPE"
@@ -385,7 +385,7 @@ void applyRefraction(const PixelParams pixel,
 #endif
     vec3 Ft = prefilteredRadiance(r, perceptualRoughness) * frameUniforms.iblLuminance;
 #else
-    // compute the point where the ray exists the medium, if needed
+    // compute the point where the ray exits the medium, if needed
     vec4 p = vec4(shading_position + r * d, 1.0);
     vec3 Ft;
     p = frameUniforms.clipFromWorldMatrix * p;
@@ -396,7 +396,7 @@ void applyRefraction(const PixelParams pixel,
     /* fresnel from the first interface */
     Ft *= 1.0 - E;
 
-    /* apply absoption */
+    /* apply absorption */
 #if defined(MATERIAL_HAS_ABSORPTION)
     Ft *= T;
 #endif

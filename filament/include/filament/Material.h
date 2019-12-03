@@ -180,7 +180,7 @@ public:
     AttributeBitset getRequiredAttributes() const noexcept;
 
     //! Returns the refraction mode used by this material.
-    Refraction getRefraction() const noexcept;
+    RefractionMode getRefractionMode() const noexcept;
 
     // Return the refraction type used by this material.
     RefractionType getRefractionType() const noexcept;

@@ -90,7 +90,7 @@ JNIEXPORT jint JNICALL
 Java_com_google_android_filament_Material_nGetRefraction(JNIEnv*, jclass,
         jlong nativeMaterial) {
     Material* material = (Material*) nativeMaterial;
-    return (jint) material->getRefraction();
+    return (jint)material->getRefractionMode();
 }
 
 extern "C"
