@@ -284,11 +284,11 @@ const std::string ShaderGenerator::createFragmentProgram(filament::backend::Shad
             material.specularAO : !isMobileTarget(shaderModel);
     cg.generateDefine(fs, "SPECULAR_AMBIENT_OCCLUSION", specularAO ? 1u : 0u);
 
-    cg.generateDefine(fs, "HAS_REFRACTION", material.refraction != Refraction::NONE);
-    if (material.refraction != Refraction::NONE) {
-        cg.generateDefine(fs, "REFRACTION_MODE_CUBEMAP", uint32_t(Refraction::CUBEMAP));
-        cg.generateDefine(fs, "REFRACTION_MODE_SCREEN_SPACE", uint32_t(Refraction::SCREEN_SPACE));
-        switch (material.refraction) {
+    cg.generateDefine(fs, "HAS_REFRACTION", material.refractionMode != RefractionMode::NONE);
+    if (material.refractionMode != RefractionMode::NONE) {
+        cg.generateDefine(fs, "REFRACTION_MODE_CUBEMAP", uint32_t(RefractionMode::CUBEMAP));
+        cg.generateDefine(fs, "REFRACTION_MODE_SCREEN_SPACE", uint32_t(RefractionMode::SCREEN_SPACE));
+        switch (material.refractionMode) {
             case NONE:
                 // can't be here
                 break;

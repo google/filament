@@ -90,7 +90,7 @@ in table [standardProperties].
 **emissive**            | Additional diffuse albedo to simulate emissive surfaces (such as neons, etc.) This property is mostly useful in an HDR pipeline with a bloom pass
 **postLightingColor**   | Additional color that can be blended with the result of the lighting computations. See `postLightingBlending`
 **transmission**        | Defines how much of the diffuse light of a dielectric is transmitted through the object, in other words this defines how transparent an object is
-**absoption**           | Absorption factor for refractive objects
+**absorption**          | Absorption factor for refractive objects
 **ior**                 | Index of refraction for refracive objects
 [Table [standardProperties]: Properties of the standard model]
 
@@ -113,7 +113,7 @@ The type and range of each property is described in table [standardPropertiesTyp
 **postLightingColor**   | float4   |  [0..1]                  | Pre-multiplied linear RGB
 **transmission**        | float    |  [0..1]                  |
 **absorption**          | float3   |  [0..n]                  |
-**ior**                 | float    |  [0..n]                  | Optional, usually deduced from the reflectance
+**ior**                 | float    |  [1..n]                  | Optional, usually deduced from the reflectance
 [Table [standardPropertiesTypes]: Range and type of the standard model's properties]
 
 
@@ -1114,7 +1114,7 @@ material {
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-### Blending and transparency: refraction
+### Blending and transparency: refractionMode
 
 Type
 :    `string`
@@ -1135,7 +1135,7 @@ Description
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
 material {
-    refraction : cubemap,
+    refractionMode : cubemap,
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -1148,7 +1148,7 @@ Value
 :     Any of `solid`, `thin`. Defaults to `solid`.
 
 Description
-:     This is only meaningful when `refraction` is set to anything but `none`. `refractionType`
+:     This is only meaningful when `refractionMode` is set to anything but `none`. `refractionType`
       defines the refraction model used. `solid` is used for thick objects such as a crystal ball,
       an ice cube or as sculpture. `thin` is used for thin objects such as a window, an ornament
       ball or a soap bubble. In `solid` mode all refracive objects are assumed to be a sphere
@@ -1157,7 +1157,7 @@ Description
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
 material {
-    refraction : cubemap,
+    refractionMode : cubemap,
     refractionType : thin,
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

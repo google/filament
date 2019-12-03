@@ -464,11 +464,11 @@ static bool processDomain(MaterialBuilder& builder, const JsonishValue& value) {
     return true;
 }
 
-static bool processRefraction(MaterialBuilder& builder, const JsonishValue& value) {
-    static const std::unordered_map<std::string, MaterialBuilder::Refraction> strToEnum{
-            { "none",        MaterialBuilder::Refraction::NONE },
-            { "cubemap",     MaterialBuilder::Refraction::CUBEMAP },
-            { "screenspace", MaterialBuilder::Refraction::SCREEN_SPACE },
+static bool processRefractionMode(MaterialBuilder& builder, const JsonishValue& value) {
+    static const std::unordered_map<std::string, MaterialBuilder::RefractionMode> strToEnum{
+            { "none",        MaterialBuilder::RefractionMode::NONE },
+            { "cubemap",     MaterialBuilder::RefractionMode::CUBEMAP },
+            { "screenspace", MaterialBuilder::RefractionMode::SCREEN_SPACE },
     };
     auto jsonString = value.toJsonString();
     if (!isStringValidEnum(strToEnum, jsonString->getString())) {
@@ -558,7 +558,7 @@ ParametersProcessor::ParametersProcessor() {
     mParameters["multiBounceAmbientOcclusion"]   = { &processMultiBounceAO, Type::BOOL };
     mParameters["specularAmbientOcclusion"]      = { &processSpecularAmbientOcclusion, Type::BOOL };
     mParameters["domain"]                        = { &processDomain, Type::STRING };
-    mParameters["refraction"]                    = { &processRefraction, Type::STRING };
+    mParameters["refractionMode"]                = { &processRefractionMode, Type::STRING };
     mParameters["refractionType"]                = { &processRefractionType, Type::STRING };
 }
 

@@ -99,7 +99,7 @@ void getCommonPixelParams(const MaterialInputs material, inout PixelParams pixel
     float materialIOR = f0ToIor(pixel.f0.g);
 #else
     // if ior is set in the material, use it (can lead to unrealistic materials)
-    float materialIOR = max(0.0, material.ior);
+    float materialIOR = max(1.0, material.ior);
 #endif
     pixel.etaOutIn = airIOR / materialIOR;  // air -> material
     pixel.etaInOut = materialIOR / airIOR;  // material -> air

@@ -146,9 +146,9 @@ public class Material {
      *
      * @see
      * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/blendingandtransparency:refraction">
-     * Blending and transparency: refraction</a>
+     * Blending and transparency: refractionMode</a>
      */
-    public enum Refraction {
+    public enum RefractionMode {
         NONE,
         CUBEMAP,
         SCREEN_SPACE
@@ -383,8 +383,8 @@ public class Material {
      * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/blendingandtransparency:refraction">
      * Blending and transparency: refraction</a>
      */
-    public Refraction getRefraction() {
-        return Refraction.values()[nGetRefraction(getNativeObject())];
+    public RefractionMode getRefractionMode() {
+        return RefractionMode.values()[nGetRefractionMode(getNativeObject())];
     }
 
     /**
@@ -895,7 +895,7 @@ public class Material {
     private static native float nGetMaskThreshold(long nativeMaterial);
     private static native float nGetSpecularAntiAliasingVariance(long nativeMaterial);
     private static native float nGetSpecularAntiAliasingThreshold(long nativeMaterial);
-    private static native int nGetRefraction(long nativeMaterial);
+    private static native int nGetRefractionMode(long nativeMaterial);
     private static native int nGetRefractionType(long nativeMaterial);
 
 

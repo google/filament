@@ -75,7 +75,7 @@ public:
     bool getMaskThreshold(float*) const noexcept;
     bool hasShadowMultiplier(bool*) const noexcept;
     bool getRequiredAttributes(AttributeBitset*) const noexcept;
-    bool getRefraction(Refraction* value) const noexcept;
+    bool getRefractionMode(RefractionMode* value) const noexcept;
     bool getRefractionType(RefractionType* value) const noexcept;
     bool hasCustomDepthShader(bool* value) const noexcept;
     bool hasSpecularAntiAliasing(bool* value) const noexcept;

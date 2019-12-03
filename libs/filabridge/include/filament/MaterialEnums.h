@@ -153,7 +153,7 @@ enum MaterialDomain : uint8_t {
 /**
  * Refraction
  */
-enum Refraction : uint8_t {
+enum RefractionMode : uint8_t {
     NONE            = 0, //!< no refraction
     CUBEMAP         = 1, //!< refracted rays go to the ibl cubemap
     SCREEN_SPACE    = 2, //!< refracted rays go to screen space

@@ -1,7 +1,7 @@
 material {
     name : Lit,
     shadingModel : lit,
-    refraction : cubemap,
+    refractionMode : cubemap,
     refractionType : solid,
     parameters : [
         {
