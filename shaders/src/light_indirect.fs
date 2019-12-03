@@ -342,13 +342,6 @@ void applyRefraction(const PixelParams pixel,
     float eta0 = pixel.etaOutIn;
     vec3 r = -shading_view;
 
-#if defined(MATERIAL_HAS_ABSORPTION) && !defined(MATERIAL_HAS_THICKNESS)
-    vec3 T = 1.0 - pixel.absorption;
-#if REFRACTION_MODE == REFRACTION_MODE_SCREEN_SPACE
-    float d = 1.0;
-#endif
-#endif
-
     /* compute first interface refraction */
 #if REFRACTION_TYPE == REFRACTION_TYPE_SOLID
     // for a sphere, with light at infinity (i.e. cubemap)
@@ -356,12 +349,12 @@ void applyRefraction(const PixelParams pixel,
     float N0oR = dot(n0, r);
 #elif REFRACTION_TYPE == REFRACTION_TYPE_THIN
     // Disney roughness remaping for thin layers
-   perceptualRoughness *= (0.65 * eta0 - 0.35);
+   perceptualRoughness = saturate((0.65 * eta0 - 0.35) * perceptualRoughness);
 #else
 #error "invalid REFRACTION_TYPE"
 #endif
 
-    /* compute transmission T and distance traveled d, if needed */
+    /* compute distance traveled d */
 #if (defined(MATERIAL_HAS_ABSORPTION) || (REFRACTION_MODE == REFRACTION_MODE_SCREEN_SPACE)) && defined(MATERIAL_HAS_THICKNESS)
 #if REFRACTION_TYPE == REFRACTION_TYPE_SOLID
     float d = pixel.thickness * -N0oR;
@@ -371,9 +364,15 @@ void applyRefraction(const PixelParams pixel,
     float N0oR = dot(n0, refract(r, n0, eta0));
     float d = pixel.thickness / max(-N0oR, 0.1);
 #endif
-#if defined(MATERIAL_HAS_ABSORPTION)
-    vec3 T = exp(-pixel.absorption * d);
+#else
+    float d = 0.0;
 #endif
+
+    /* compute transmission T */
+#if defined(MATERIAL_HAS_ABSORPTION) && !defined(MATERIAL_HAS_THICKNESS)
+    vec3 T = 1.0 - pixel.absorption;
+#else
+    vec3 T = exp(-pixel.absorption * d);
 #endif
 
     /* sample the cubemap or screen-space */
