@@ -372,7 +372,7 @@ void applyRefraction(const PixelParams pixel,
 #if defined(MATERIAL_HAS_ABSORPTION) && !defined(MATERIAL_HAS_THICKNESS)
     vec3 T = 1.0 - pixel.absorption;
 #else
-    vec3 T = exp(-pixel.absorption * d);
+    vec3 T = min(vec3(1.0), exp(-pixel.absorption * d));
 #endif
 
     /* sample the cubemap or screen-space */
