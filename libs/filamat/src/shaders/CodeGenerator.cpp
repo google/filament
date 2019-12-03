@@ -549,6 +549,7 @@ char const* CodeGenerator::getConstantName(MaterialBuilder::Property property) n
         case Property::CLIP_SPACE_TRANSFORM: return "CLIP_SPACE_TRANSFORM";
         case Property::ABSORPTION:           return "ABSORPTION";
         case Property::TRANSMISSION:         return "TRANSMISSION";
+        case Property::IOR:                  return "IOR";
     }
 }
 

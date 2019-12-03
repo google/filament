@@ -67,6 +67,9 @@ struct MaterialInputs {
 #if defined(MATERIAL_HAS_TRANSMISSION)
     float transmission;
 #endif
+#if defined(MATERIAL_HAS_IOR)
+    float ior;
+#endif
 #endif
 };
 
@@ -131,6 +134,9 @@ void initMaterial(out MaterialInputs material) {
 #endif
 #if defined(MATERIAL_HAS_TRANSMISSION)
     material.transmission = 1.0;
+#endif
+#if defined(MATERIAL_HAS_IOR)
+    material.ior = 1.5;
 #endif
 #endif
 }

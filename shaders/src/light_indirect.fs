@@ -339,7 +339,7 @@ void applyRefraction(const PixelParams pixel,
     // when reading from the cubemap, we are not pre-exposed so we apply iblLuminance
     // which is not the case when we'll read from the screen-space buffer
     float perceptualRoughness = pixel.perceptualRoughness;
-    float eta0 = pixel.eta;
+    float eta0 = pixel.etaOutIn;
     vec3 r = -shading_view;
 
 #if defined(MATERIAL_HAS_ABSORPTION) && !defined(MATERIAL_HAS_THICKNESS)
@@ -355,8 +355,8 @@ void applyRefraction(const PixelParams pixel,
     r = refract(r, n0, eta0);
     float N0oR = dot(n0, r);
 #elif REFRACTION_TYPE == REFRACTION_TYPE_THIN
-    // disney roughness remaping for thin layers
-    perceptualRoughness *= (0.65 / eta0 - 0.35) * pixel.perceptualRoughness;
+    // Disney roughness remaping for thin layers
+   perceptualRoughness *= (0.65 * eta0 - 0.35);
 #else
 #error "invalid REFRACTION_TYPE"
 #endif
@@ -368,8 +368,8 @@ void applyRefraction(const PixelParams pixel,
 #else
     // note: we need the refracted ray to calculate the distance traveled
     // we could use shading_NoV, but we would lose the dependency on ior.
-    float N0oR = dot(-n0, refract(r, n0, eta0));
-    float d = pixel.thickness / max(N0oR, 0.1);
+    float N0oR = dot(n0, refract(r, n0, eta0));
+    float d = pixel.thickness / max(-N0oR, 0.1);
 #endif
 #if defined(MATERIAL_HAS_ABSORPTION)
     vec3 T = exp(-pixel.absorption * d);
@@ -381,7 +381,7 @@ void applyRefraction(const PixelParams pixel,
 #if REFRACTION_TYPE == REFRACTION_TYPE_SOLID
     // compute the direction of the output ray (needed for accessing the cubemap)
     vec3 n1 = normalize(N0oR * r - n0 * 0.5);
-    float eta1 = 1.0 / eta0;
+    float eta1 = pixel.etaInOut;
     r = refract(r, n1, eta1);
 #endif
     vec3 Ft = prefilteredRadiance(r, perceptualRoughness) * frameUniforms.iblLuminance;

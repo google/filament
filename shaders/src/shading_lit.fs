@@ -73,9 +73,16 @@ void getCommonPixelParams(const MaterialInputs material, inout PixelParams pixel
 #elif !defined(SHADING_MODEL_CLOTH)
     pixel.diffuseColor = computeDiffuseColor(baseColor, material.metallic);
 
+#if defined(HAS_REFRACTION) && (!defined(MATERIAL_HAS_REFLECTANCE) && defined(MATERIAL_HAS_IOR))
+    // If refraction is enabled, and reflectance is not set in the material, but ior is,
+    // then use it -- othterwise proceed as usual.
+    pixel.f0 = vec3(iorToF0(material.ior, 1.0));
+#else
     // Assumes an interface from air to an IOR of 1.5 for dielectrics
     float reflectance = computeDielectricF0(material.reflectance);
     pixel.f0 = computeF0(baseColor, material.metallic, reflectance);
+#endif
+
 #else
     pixel.diffuseColor = baseColor.rgb;
     pixel.f0 = material.sheenColor;
@@ -85,7 +92,17 @@ void getCommonPixelParams(const MaterialInputs material, inout PixelParams pixel
 #endif
 
 #if defined(HAS_REFRACTION)
-    pixel.eta = f0ToEta(pixel.f0.g);
+    // Air's Index of refraction is 1.000277 at STP but everybody uses 1.0
+    const float airIOR = 1.0;
+#if !defined(MATERIAL_HAS_IOR)
+    // [common case] ior is not set in the material, deduce it from F0
+    float materialIOR = f0ToIor(pixel.f0.g);
+#else
+    // if ior is set in the material, use it (can lead to unrealistic materials)
+    float materialIOR = max(0.0, material.ior);
+#endif
+    pixel.etaOutIn = airIOR / materialIOR;  // air -> material
+    pixel.etaInOut = materialIOR / airIOR;  // material -> air
 #if defined(MATERIAL_HAS_TRANSMISSION)
     pixel.transmission = saturate(material.transmission);
 #else
