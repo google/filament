@@ -43,6 +43,7 @@ std::unordered_map<std::string, Property> Enums::mStringToProperty = {
         { "clipSpaceTransform",  Property::CLIP_SPACE_TRANSFORM },
         { "absorption",          Property::ABSORPTION },
         { "transmission",        Property::TRANSMISSION },
+        { "ior",                 Property::IOR },
 };
 
 template <>

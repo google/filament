@@ -420,6 +420,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerTransmission) {
             prepareMaterial(material);
             material.absorption = vec3(0.0);
             material.transmission = 0.96;
+            material.ior = 1.33;
         }
     )");
 
@@ -431,6 +432,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerTransmission) {
     MaterialBuilder::PropertyList expected {false};
     expected[size_t(filamat::MaterialBuilder::Property::ABSORPTION)] = true;
     expected[size_t(filamat::MaterialBuilder::Property::TRANSMISSION)] = true;
+    expected[size_t(filamat::MaterialBuilder::Property::IOR)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 

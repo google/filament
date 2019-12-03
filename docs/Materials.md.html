@@ -91,6 +91,7 @@ in table [standardProperties].
 **postLightingColor**   | Additional color that can be blended with the result of the lighting computations. See `postLightingBlending`
 **transmission**        | Defines how much of the diffuse light of a dielectric is transmitted through the object, in other words this defines how transparent an object is
 **absoption**           | Absorption factor for refractive objects
+**ior**                 | Index of refraction for refracive objects
 [Table [standardProperties]: Properties of the standard model]
 
 The type and range of each property is described in table [standardPropertiesTypes].
@@ -112,6 +113,7 @@ The type and range of each property is described in table [standardPropertiesTyp
 **postLightingColor**   | float4   |  [0..1]                  | Pre-multiplied linear RGB
 **transmission**        | float    |  [0..1]                  |
 **absorption**          | float3   |  [0..1]                  | Linear RGB, encodes how much of each component is absorbed
+**ior**                 | float    |  [0..n]                  | Optional, usually deduced from the reflectance
 [Table [standardPropertiesTypes]: Range and type of the standard model's properties]
 
 
@@ -123,6 +125,14 @@ The type and range of each property is described in table [standardPropertiesTyp
 !!! Note: About pre-multiplied RGB
     Filament materials expect colors to use pre-multiplied alpha. See the Pre-multiplied alpha
     section for more information.
+
+!!! Note: About ior and reflectance
+    The index of refraction (IOR) and the reflectance represent the same physical attribute,
+    therefore they don't need to be both specified. Typically, only the reflectance is specified
+    and the IOR is deduced automatically. When only the IOR is specified, the reflectance is then
+    deduced automatically. It is possible to specify both, in which case their values are kept
+    as-is, which can lead to physically impossible materials, however, this might be desirable
+    for artistic reasons.
 
 ### Base color
 
@@ -1112,8 +1122,9 @@ Description
       adequate for an object viewer for instance. A value of `screenspace` will employ the more
       advanced screen-space refraction algorithm which allows opaque objects in the scene to be
       refracted. In `cubemap` mode, refracted rays are assumed to emerge from the center of the
-      object. In `screenspace` mode, refracted rays are assumed to travel parallel to the view
-      direction when they exit the refractive medium.
+      object and the `thickness` parameter is only used for computing the absorption, but has no
+      impact on the refraction itself. In `screenspace` mode, refracted rays are assumed to travel
+      parallel to the view direction when they exit the refractive medium.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
 material {
@@ -1578,6 +1589,7 @@ struct MaterialInputs {
     // only available when refraction is enabled
     float transmission;         // default: 1.0
     float3 absorption;          // default float3(0.0, 0.0, 0.0)
+    float ior;                  // default: 1.5
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

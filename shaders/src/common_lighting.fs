@@ -38,7 +38,8 @@ struct PixelParams {
 #endif
 
 #if defined(HAS_REFRACTION)
-    float eta;
+    float etaInOut;
+    float etaOutIn;
     float transmission;
     vec3 absorption;
 #endif
