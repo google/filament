@@ -112,7 +112,7 @@ The type and range of each property is described in table [standardPropertiesTyp
 **emissive**            | float4   |  rgb=[0..1], a=[-n..n]   | Alpha is the exposure compensation
 **postLightingColor**   | float4   |  [0..1]                  | Pre-multiplied linear RGB
 **transmission**        | float    |  [0..1]                  |
-**absorption**          | float3   |  [0..1]                  | Linear RGB, encodes how much of each component is absorbed
+**absorption**          | float3   |  [0..n]                  |
 **ior**                 | float    |  [0..n]                  | Optional, usually deduced from the reflectance
 [Table [standardPropertiesTypes]: Range and type of the standard model's properties]
 
@@ -125,6 +125,13 @@ The type and range of each property is described in table [standardPropertiesTyp
 !!! Note: About pre-multiplied RGB
     Filament materials expect colors to use pre-multiplied alpha. See the Pre-multiplied alpha
     section for more information.
+
+!!! Note: About absorption
+    The light attenuation through the material is defined as $e^{-absorption * distance}$,
+    and the distance depends on the `thickness` parameter. If `thickness` is not provided, then
+    the `absorption` parameter is used directly and the light attenuation through the material
+    becomes $1 - absorption$. To obtain a certain color at a desired distance, the above
+    equation can be inverted such as $absorption = -ln(color)/distance$.
 
 !!! Note: About ior and reflectance
     The index of refraction (IOR) and the reflectance represent the same physical attribute,
