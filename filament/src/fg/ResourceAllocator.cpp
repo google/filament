@@ -161,12 +161,16 @@ void ResourceAllocator::gc() noexcept {
     // this is called regularly -- usually once per frame of each Renderer
 
     // increase our age
-    mAge++;
+    const size_t age = mAge++;
 
-    // Remove entries that are older than a certain age
+    // Purging strategy:
+    // + remove entries that are older than a certain age
+    // - remove only one entry per gc(), unless we're at capacity
+
     auto& textureCache = mTextureCache;
     for (auto it = textureCache.begin(); it != textureCache.end();) {
-        if (mAge - it->second.age > CACHE_MAX_AGE) {
+        const size_t ageDiff = age - it->second.age;
+        if (ageDiff >= CACHE_MAX_AGE) {
             mBackend.destroyTexture(it->second.handle);
             mCacheSize -= it->second.size;
             //slog.d << "purging " << it->second.handle.getId() << io::endl;
