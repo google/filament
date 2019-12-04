@@ -113,6 +113,15 @@ backend::TextureHandle ResourceAllocator::createTexture(const char* name,
         backend::SamplerType target, uint8_t levels,
         backend::TextureFormat format, uint8_t samples, uint32_t width, uint32_t height,
         uint32_t depth, backend::TextureUsage usage) noexcept {
+
+    if (!(usage & TextureUsage::SAMPLEABLE)) {
+        // If this texture is not going to be sampled, we can round its size up
+        // this helps prevent many reallocations for small size changes.
+        // We round to 16 pixels, which works for 720p btw.
+        width  = (width  + 15u) & ~15u;
+        height = (height + 15u) & ~15u;
+    }
+
     // do we have a suitable texture in the cache?
     TextureHandle handle;
     if (mEnabled) {
