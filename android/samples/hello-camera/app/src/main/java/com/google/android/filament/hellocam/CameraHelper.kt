@@ -29,6 +29,9 @@ import android.util.Size
 import android.view.Surface
 
 import android.Manifest
+import android.graphics.ImageFormat
+import android.hardware.HardwareBuffer
+import android.media.ImageReader
 import android.opengl.Matrix
 import android.view.Display
 
@@ -53,7 +56,12 @@ class CameraHelper(val activity: Activity, private val filamentEngine: Engine, p
     private var resolution = Size(640, 480)
     private var filamentTexture: Texture? = null
     private var filamentStream: Stream? = null
-    private var surfaceTexture: SurfaceTexture? = null
+    private val imageReader = ImageReader.newInstance(
+            resolution.width,
+            resolution.height,
+            ImageFormat.PRIVATE,
+            kImageReaderMaxImages,
+            HardwareBuffer.USAGE_GPU_SAMPLED_IMAGE)
 
     private val cameraCallback = object : CameraDevice.StateCallback() {
         override fun onOpened(cameraDevice: CameraDevice) {
@@ -69,6 +77,18 @@ class CameraHelper(val activity: Activity, private val filamentEngine: Engine, p
         override fun onError(cameraDevice: CameraDevice, error: Int) {
             onDisconnected(cameraDevice)
             this@CameraHelper.activity.finish()
+        }
+    }
+
+    /**
+     * Fetches the latest image (if any) from ImageReader and passes its HardwareBuffer to Filament.
+     */
+    fun pushExternalImageToFilament() {
+        val stream = filamentStream
+        if (stream != null) {
+            imageReader.acquireLatestImage()?.also {
+                stream.setAcquiredImage(it.hardwareBuffer, Handler()) { it.close() }
+            }
         }
     }
 
@@ -137,21 +157,10 @@ class CameraHelper(val activity: Activity, private val filamentEngine: Engine, p
     }
 
     private fun createCaptureSession() {
-        if (surfaceTexture != null) {
-            surfaceTexture!!.release()
-            filamentEngine.destroyStream(filamentStream!!)
-        }
-
-        // Create the Android surface that will hold the camera image.
-        surfaceTexture = SurfaceTexture(0)
-        surfaceTexture!!.setDefaultBufferSize(resolution.width, resolution.height)
-        surfaceTexture!!.detachFromGLContext()
-        val surface = Surface(surfaceTexture)
+        filamentStream?.apply { filamentEngine.destroyStream(this) }
 
         // [Re]create the Filament Stream object that gets bound to the Texture.
-        filamentStream = Stream.Builder()
-                .stream(surfaceTexture!!)
-                .build(filamentEngine)
+        filamentStream = Stream.Builder().build(filamentEngine)
 
         // Create the Filament Texture object if we haven't done so already.
         if (filamentTexture == null) {
@@ -193,9 +202,9 @@ class CameraHelper(val activity: Activity, private val filamentEngine: Engine, p
 
         // Start the capture session. You could also use TEMPLATE_PREVIEW here.
         val captureRequestBuilder = cameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_RECORD)
-        captureRequestBuilder.addTarget(surface)
+        captureRequestBuilder.addTarget(imageReader.surface)
 
-        cameraDevice?.createCaptureSession(listOf(surface),
+        cameraDevice?.createCaptureSession(listOf(imageReader.surface),
                 object : CameraCaptureSession.StateCallback() {
                     override fun onConfigured(cameraCaptureSession: CameraCaptureSession) {
                         if (cameraDevice == null) return
@@ -214,6 +223,7 @@ class CameraHelper(val activity: Activity, private val filamentEngine: Engine, p
     companion object {
         private const val kLogTag = "CameraHelper"
         private const val kRequestCameraPermission = 1
+        private const val kImageReaderMaxImages = 7
     }
 
 }

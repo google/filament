@@ -21,9 +21,7 @@ import android.app.Activity
 import android.opengl.Matrix
 import android.os.Bundle
 import android.support.v4.app.ActivityCompat
-import android.util.Log
 import android.view.Choreographer
-import android.view.Display
 import android.view.Surface
 import android.view.SurfaceView
 import android.view.animation.LinearInterpolator
@@ -360,6 +358,9 @@ class MainActivity : Activity(), ActivityCompat.OnRequestPermissionsResultCallba
 
             // This check guarantees that we have a swap chain
             if (uiHelper.isReadyToRender) {
+
+                cameraHelper.pushExternalImageToFilament()
+
                 // If beginFrame() returns false you should skip the frame
                 // This means you are sending frames too quickly to the GPU
                 if (renderer.beginFrame(swapChain!!)) {
