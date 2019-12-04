@@ -207,7 +207,6 @@ void RenderPass::recordDriverCommands(FEngine::DriverApi& driver, const Command*
             mi = materialInstance;
             ma = mi->getMaterial();
             pipeline.scissor = mi->getScissor();
-            pipeline.rasterState.culling = mi->getCullingMode();
             *pPipelinePolygonOffset = mi->getPolygonOffset();
             mi->use(driver);
         };
@@ -541,7 +540,7 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
                 // unconditionally write the command
                 cmdDepth.primitive.primitiveHandle = primitive.getHwHandle();
                 cmdDepth.primitive.mi = mi;
-                cmdDepth.primitive.rasterState.culling = rs.culling;
+                cmdDepth.primitive.rasterState.culling = mi->getCullingMode();
                 *curr = cmdDepth;
 
                 // FIXME: should writeDepthForShadowCasters take precedence over rs.depthWrite?
