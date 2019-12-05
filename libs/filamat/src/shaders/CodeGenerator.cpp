@@ -550,6 +550,7 @@ char const* CodeGenerator::getConstantName(MaterialBuilder::Property property) n
         case Property::ABSORPTION:           return "ABSORPTION";
         case Property::TRANSMISSION:         return "TRANSMISSION";
         case Property::IOR:                  return "IOR";
+        case Property::MICRO_THICKNESS:      return "MICRO_THICKNESS";
     }
 }
 

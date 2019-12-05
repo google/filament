@@ -70,6 +70,9 @@ struct MaterialInputs {
 #if defined(MATERIAL_HAS_IOR)
     float ior;
 #endif
+#if defined(MATERIAL_HAS_MICRO_THICKNESS) && (REFRACTION_TYPE == REFRACTION_TYPE_THIN)
+    float microThickness;
+#endif
 #endif
 };
 
@@ -137,6 +140,9 @@ void initMaterial(out MaterialInputs material) {
 #endif
 #if defined(MATERIAL_HAS_IOR)
     material.ior = 1.5;
+#endif
+#if defined(MATERIAL_HAS_MICRO_THICKNESS) && (REFRACTION_TYPE == REFRACTION_TYPE_THIN)
+    material.microThickness = 0.0;
 #endif
 #endif
 }
