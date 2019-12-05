@@ -384,7 +384,7 @@ void applyRefraction(const PixelParams pixel,
     // Note: this remapping is valid only for realistic IORs.
     // Note: it's unclear whether we should use perceptualRoughness or roughness here, using
     // roughness seems to produce worse results.
-    float perceptualRoughness = saturate((0.65 * pixel.etaRI - 0.35) * pixel.perceptualRoughness);
+    float perceptualRoughness = saturate((0.65 * pixel.etaRI - 0.35) * pixel.perceptualRoughnessUnclamped);
 
     /* sample the cubemap or screen-space */
 #if REFRACTION_MODE == REFRACTION_MODE_CUBEMAP
