@@ -101,8 +101,8 @@ void getCommonPixelParams(const MaterialInputs material, inout PixelParams pixel
     // if ior is set in the material, use it (can lead to unrealistic materials)
     float materialIOR = max(1.0, material.ior);
 #endif
-    pixel.etaOutIn = airIOR / materialIOR;  // air -> material
-    pixel.etaInOut = materialIOR / airIOR;  // material -> air
+    pixel.etaIR = airIOR / materialIOR;  // air -> material
+    pixel.etaRI = materialIOR / airIOR;  // material -> air
 #if defined(MATERIAL_HAS_TRANSMISSION)
     pixel.transmission = saturate(material.transmission);
 #else
