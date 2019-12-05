@@ -336,11 +336,9 @@ void evaluateSubsurfaceIBL(const PixelParams pixel, const vec3 diffuseIrradiance
 void applyRefraction(const PixelParams pixel,
     const vec3 n0, const vec3 E, vec3 Fd, vec3 Fr,
     inout vec3 color) {
-    // when reading from the cubemap, we are not pre-exposed so we apply iblLuminance
-    // which is not the case when we'll read from the screen-space buffer
-    float perceptualRoughness = pixel.perceptualRoughness;
-    float eta0 = pixel.etaOutIn;
+
     vec3 r = -shading_view;
+    float eta0 = pixel.etaIR;
 
     /* compute first interface refraction */
 #if REFRACTION_TYPE == REFRACTION_TYPE_SOLID
@@ -348,8 +346,7 @@ void applyRefraction(const PixelParams pixel,
     r = refract(r, n0, eta0);
     float N0oR = dot(n0, r);
 #elif REFRACTION_TYPE == REFRACTION_TYPE_THIN
-    // Roughness remaping for thin layers, see Burley 2012, "Physically-Based Shading at Disney"
-   perceptualRoughness = saturate((0.65 * eta0 - 0.35) * perceptualRoughness);
+    // for thin layers, the direction of the refracted ray is the same as the incoming ray
 #else
 #error "invalid REFRACTION_TYPE"
 #endif
@@ -375,14 +372,25 @@ void applyRefraction(const PixelParams pixel,
     vec3 T = min(vec3(1.0), exp(-pixel.absorption * d));
 #endif
 
+    // Roughness remaping for thin layers, see Burley 2012, "Physically-Based Shading at Disney"
+    //
+    // We apply this remapping to solid objects too because we are handling both interfaces
+    // in one go for solids as well.
+    // Note: this remapping is valid only for realistic IORs.
+    // Note: it's unclear whether we should use perceptualRoughness or roughness here, using
+    // roughness seems to produce worse results.
+    float perceptualRoughness = saturate((0.65 * pixel.etaRI - 0.35) * pixel.perceptualRoughness);
+
     /* sample the cubemap or screen-space */
 #if REFRACTION_MODE == REFRACTION_MODE_CUBEMAP
 #if REFRACTION_TYPE == REFRACTION_TYPE_SOLID
     // compute the direction of the output ray (needed for accessing the cubemap)
     vec3 n1 = normalize(N0oR * r - n0 * 0.5);
-    float eta1 = pixel.etaInOut;
+    float eta1 = pixel.etaRI;
     r = refract(r, n1, eta1);
 #endif
+    // when reading from the cubemap, we are not pre-exposed so we apply iblLuminance
+    // which is not the case when we'll read from the screen-space buffer
     vec3 Ft = prefilteredRadiance(r, perceptualRoughness) * frameUniforms.iblLuminance;
 #else
     // compute the point where the ray exits the medium, if needed
