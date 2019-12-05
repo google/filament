@@ -162,9 +162,6 @@ void getRoughnessPixelParams(const MaterialInputs material, inout PixelParams pi
     float perceptualRoughness = material.roughness;
 #endif
 
-    // Clamp the roughness to a minimum value to avoid divisions by 0 during lighting
-    perceptualRoughness = clamp(perceptualRoughness, MIN_PERCEPTUAL_ROUGHNESS, 1.0);
-
 #if defined(GEOMETRIC_SPECULAR_AA)
     perceptualRoughness = normalFiltering(perceptualRoughness, getWorldGeometricNormalVector());
 #endif
@@ -177,9 +174,11 @@ void getRoughnessPixelParams(const MaterialInputs material, inout PixelParams pi
     perceptualRoughness = mix(perceptualRoughness, basePerceptualRoughness, pixel.clearCoat);
 #endif
 
+    pixel.perceptualRoughnessUnclamped = perceptualRoughness;
+    // Clamp the roughness to a minimum value to avoid divisions by 0 during lighting
+    pixel.perceptualRoughness = clamp(perceptualRoughness, MIN_PERCEPTUAL_ROUGHNESS, 1.0);
     // Remaps the roughness to a perceptually linear roughness (roughness^2)
-    pixel.perceptualRoughness = perceptualRoughness;
-    pixel.roughness = perceptualRoughnessToRoughness(perceptualRoughness);
+    pixel.roughness = perceptualRoughnessToRoughness(pixel.perceptualRoughness);
 }
 
 void getSubsurfacePixelParams(const MaterialInputs material, inout PixelParams pixel) {

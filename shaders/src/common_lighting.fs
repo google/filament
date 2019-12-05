@@ -8,6 +8,7 @@ struct Light {
 struct PixelParams {
     vec3  diffuseColor;
     float perceptualRoughness;
+    float perceptualRoughnessUnclamped;
     vec3  f0;
     float roughness;
     vec3  dfg;
