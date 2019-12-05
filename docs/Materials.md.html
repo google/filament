@@ -91,7 +91,8 @@ in table [standardProperties].
 **postLightingColor**   | Additional color that can be blended with the result of the lighting computations. See `postLightingBlending`
 **transmission**        | Defines how much of the diffuse light of a dielectric is transmitted through the object, in other words this defines how transparent an object is
 **absorption**          | Absorption factor for refractive objects
-**ior**                 | Index of refraction for refracive objects
+**ior**                 | Index of refraction for refractive objects
+**microThickness**      | Thickness of the thin layer of refractive objects
 [Table [standardProperties]: Properties of the standard model]
 
 The type and range of each property is described in table [standardPropertiesTypes].
@@ -114,6 +115,7 @@ The type and range of each property is described in table [standardPropertiesTyp
 **transmission**        | float    |  [0..1]                  |
 **absorption**          | float3   |  [0..n]                  |
 **ior**                 | float    |  [1..n]                  | Optional, usually deduced from the reflectance
+**microThickness**      | float    |  [0..n]                  |
 [Table [standardPropertiesTypes]: Range and type of the standard model's properties]
 
 
@@ -140,6 +142,14 @@ The type and range of each property is described in table [standardPropertiesTyp
     deduced automatically. It is possible to specify both, in which case their values are kept
     as-is, which can lead to physically impossible materials, however, this might be desirable
     for artistic reasons.
+
+!!! Note: About thickness and microThickness for refraction
+    `thickness` represents the thickness of solid objects in the direction of the normal, for
+    satisfactory results, this should be provided per fragment (e.g.: as a texture) or at least per
+    vertex.  `microThickness` represent the thickness of the thin layer of an object, and can
+    generally be provided as a constant value. For example, a 1mm thin hollow sphere of radius 1m,
+    would have a `thickness` of 1 and a `microThickness` of 0.001. Currently `thickness` is not
+    used when `refractionType` is set to "thin".
 
 ### Base color
 
@@ -1597,6 +1607,7 @@ struct MaterialInputs {
     float transmission;         // default: 1.0
     float3 absorption;          // default float3(0.0, 0.0, 0.0)
     float ior;                  // default: 1.5
+    float microThickness;       // default: 0.0, not available with refractionType "solid"
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

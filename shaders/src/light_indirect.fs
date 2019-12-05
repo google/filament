@@ -352,24 +352,29 @@ void applyRefraction(const PixelParams pixel,
 #endif
 
     /* compute distance traveled d */
-#if (defined(MATERIAL_HAS_ABSORPTION) || (REFRACTION_MODE == REFRACTION_MODE_SCREEN_SPACE)) && defined(MATERIAL_HAS_THICKNESS)
+    float d = 0.0;
+#if defined(MATERIAL_HAS_ABSORPTION) || (REFRACTION_MODE == REFRACTION_MODE_SCREEN_SPACE)
 #if REFRACTION_TYPE == REFRACTION_TYPE_SOLID
-    float d = pixel.thickness * -N0oR;
-#else
+#if defined(MATERIAL_HAS_THICKNESS)
+    d = pixel.thickness * -N0oR;
+#endif
+#elif REFRACTION_TYPE == REFRACTION_TYPE_THIN
+#if defined(MATERIAL_HAS_MICRO_THICKNESS)
     // note: we need the refracted ray to calculate the distance traveled
     // we could use shading_NoV, but we would lose the dependency on ior.
     float N0oR = dot(n0, refract(r, n0, eta0));
-    float d = pixel.thickness / max(-N0oR, 0.1);
+    d = pixel.uThickness / max(-N0oR, 0.01);
 #endif
-#else
-    float d = 0.0;
+#endif
 #endif
 
     /* compute transmission T */
-#if defined(MATERIAL_HAS_ABSORPTION) && !defined(MATERIAL_HAS_THICKNESS)
-    vec3 T = 1.0 - pixel.absorption;
-#else
+#if defined(MATERIAL_HAS_ABSORPTION)
+#if defined(MATERIAL_HAS_THICKNESS) || defined(MATERIAL_HAS_MICRO_THICKNESS)
     vec3 T = min(vec3(1.0), exp(-pixel.absorption * d));
+#else
+    vec3 T = 1.0 - pixel.absorption;
+#endif
 #endif
 
     // Roughness remaping for thin layers, see Burley 2012, "Physically-Based Shading at Disney"

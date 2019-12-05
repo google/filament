@@ -44,6 +44,7 @@ std::unordered_map<std::string, Property> Enums::mStringToProperty = {
         { "absorption",          Property::ABSORPTION },
         { "transmission",        Property::TRANSMISSION },
         { "ior",                 Property::IOR },
+        { "microThickness",      Property::MICRO_THICKNESS },
 };
 
 template <>
