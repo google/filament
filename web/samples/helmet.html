@@ -10,7 +10,7 @@ html, body { height: 100%; }
 body       { margin: 0; overflow: hidden; }
 #container { position: relative; height: 100%; }
 canvas     { position: absolute; width: 100%; height: 100%; }
-#messages  { position: absolute; width: 100%; height: 100%; padding-left: 10px; }
+#messages  { position: absolute; width: 100%; height: 100%; padding-left: 10px; color:white; }
 </style>
 </head>
 <body>
@@ -48,7 +48,7 @@ class App {
         const iblDirection = indirectLight.getDirectionEstimate();
         const iblColor = indirectLight.getColorEstimate(iblDirection);
 
-        indirectLight.setIntensity(30000);
+        indirectLight.setIntensity(50000);
 
         const skybox = engine.createSkyFromKtx(sky_url);
         this.scene.setSkybox(skybox);
@@ -56,7 +56,7 @@ class App {
         const sunlight = Filament.EntityManager.get().create();
         Filament.LightManager.Builder(LightType.SUN)
             .color(iblColor.slice(0, 3))
-            .intensity(iblColor[3])
+            .intensity(150000)
             .direction(iblDirection)
             .sunAngularRadius(1.9)
             .castShadows(true)
@@ -103,6 +103,7 @@ class App {
         this.swapChain = engine.createSwapChain();
         this.renderer = engine.createRenderer();
         this.camera = engine.createCamera();
+        this.camera.setExposure(32, 1/125.0, 100);
         this.view = engine.createView();
         this.view.setCamera(this.camera);
         this.view.setScene(this.scene);
