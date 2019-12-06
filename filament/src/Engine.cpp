@@ -236,7 +236,6 @@ void FEngine::init() {
     mDefaultIbl = upcast(IndirectLight::Builder()
             .reflections(mDefaultIblTexture)
             .irradiance(3, reinterpret_cast<const float3*>(sh))
-            .intensity(1.0f)
             .build(*this));
 
     // Always initialize the default material, most materials' depth shaders fallback on it.

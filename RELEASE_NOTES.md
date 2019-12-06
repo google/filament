@@ -8,6 +8,8 @@ A new header is inserted each time a *tag* is created.
 
 - Improve high roughness material rendering by default when regenerating environments maps
 
+- Fix bad state after removing an IBL from the Scene.
+
 ## v1.4.3
 
 - Fixed an assertion when a parameter array occurs last in a material definition.
