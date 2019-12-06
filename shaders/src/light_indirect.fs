@@ -334,7 +334,7 @@ void evaluateSubsurfaceIBL(const PixelParams pixel, const vec3 diffuseIrradiance
 
 #if defined(HAS_REFRACTION)
 void applyRefraction(const PixelParams pixel,
-    const vec3 n0, const vec3 E, vec3 Fd, vec3 Fr,
+    const vec3 n0, vec3 E, vec3 Fd, vec3 Fr,
     inout vec3 color) {
 
     vec3 r = -shading_view;
@@ -393,7 +393,17 @@ void applyRefraction(const PixelParams pixel,
     vec3 n1 = normalize(N0oR * r - n0 * 0.5);
     float eta1 = pixel.etaRI;
     r = refract(r, n1, eta1);
+#elif REFRACTION_TYPE == REFRACTION_TYPE_THIN
+    // For thin surfaces, the light will bounce off at the second interface in the direction of
+    // the reflection, effectively adding to the specular, but this process will repeat itself.
+    // Each time the ray exits the surface on the front side after the first bounce,
+    // it's multiplied by E^2, and we get: E + E(1-E)^2 + E^3(1-E)^2 + ...
+    // This infinite serie converges and is easy to simplify.
+    // Note: we calculate these bounces only on a single component,
+    // since it's a fairly subtle effect.
+    E *= 1.0 + pixel.transmission * (1.0 - E.g) / (1.0 + E.g);
 #endif
+
     // when reading from the cubemap, we are not pre-exposed so we apply iblLuminance
     // which is not the case when we'll read from the screen-space buffer
     vec3 Ft = prefilteredRadiance(r, perceptualRoughness) * frameUniforms.iblLuminance;
