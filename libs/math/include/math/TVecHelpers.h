@@ -29,6 +29,20 @@
 
 namespace filament {
 namespace math {
+
+// MSVC 2019 16.4 doesn't seem to like it when we specialize std::is_arithmetic for
+// filament::math::half, so we're forced to create own is_arithmetic here and specialize it inside
+// of half.h.
+template<typename T>
+struct is_arithmetic : std::integral_constant<bool,
+        std::is_integral<T>::value || std::is_floating_point<T>::value> {
+};
+
+}
+}
+
+namespace filament {
+namespace math {
 namespace details {
 // -------------------------------------------------------------------------------------
 
@@ -52,10 +66,10 @@ using arithmetic_result_t = typename arithmetic_result<T, U>::type;
 
 template<typename A, typename B = int, typename C = int, typename D = int>
 using enable_if_arithmetic_t = std::enable_if_t<
-        std::is_arithmetic<A>::value &&
-        std::is_arithmetic<B>::value &&
-        std::is_arithmetic<C>::value &&
-        std::is_arithmetic<D>::value>;
+        is_arithmetic<A>::value &&
+        is_arithmetic<B>::value &&
+        is_arithmetic<C>::value &&
+        is_arithmetic<D>::value>;
 
 /*
  * No user serviceable parts here.
