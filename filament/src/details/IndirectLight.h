@@ -35,7 +35,7 @@ class FEngine;
 
 class FIndirectLight : public IndirectLight {
 public:
-    static constexpr float DEFAULT_INTENSITY = 30000.0f;    // lux
+    static constexpr float DEFAULT_INTENSITY = 30000.0f;    // lux of the sun
 
     FIndirectLight(FEngine& engine, const Builder& builder) noexcept;
 
