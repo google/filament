@@ -337,29 +337,24 @@ void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaSc
     u.setUniform(offsetof(PerViewUib, exposure), exposure);
     u.setUniform(offsetof(PerViewUib, ev100), ev100);
 
-    // If the scene does not have an IBL, use the black 1x1 IBL and honor the fallback intensity
-    // associated with the skybox.
-    FIndirectLight const* ibl = scene->getIndirectLight();
-    float intensity;
+    // IBL
+    FIndirectLight const* const ibl = scene->getIndirectLight();
     if (UTILS_LIKELY(ibl)) {
-        intensity = ibl->getIntensity();
+        float2 iblMaxMipLevel{ ibl->getMaxMipLevel(), 1u << ibl->getMaxMipLevel() };
+        u.setUniform(offsetof(PerViewUib, iblMaxMipLevel), iblMaxMipLevel);
+        u.setUniform(offsetof(PerViewUib, iblLuminance), ibl->getIntensity() * exposure);
+        u.setUniformArray(offsetof(PerViewUib, iblSH), ibl->getSH(), 9);
+        if (ibl->getReflectionMap()) {
+            mPerViewSb.setSampler(PerViewSib::IBL_SPECULAR, {
+                    ibl->getReflectionMap(), {
+                            .filterMag = SamplerMagFilter::LINEAR,
+                            .filterMin = SamplerMinFilter::LINEAR_MIPMAP_LINEAR
+                    }});
+        }
     } else {
-        ibl = engine.getDefaultIndirectLight();
         FSkybox const* const skybox = scene->getSkybox();
-        intensity = skybox ? skybox->getIntensity() : FIndirectLight::DEFAULT_INTENSITY;
-    }
-
-    // Set up uniforms and sampler for the IBL, guaranteed to be non-null at this point.
-    float2 iblMaxMipLevel{ ibl->getMaxMipLevel(), 1u << ibl->getMaxMipLevel() };
-    u.setUniform(offsetof(PerViewUib, iblMaxMipLevel), iblMaxMipLevel);
-    u.setUniform(offsetof(PerViewUib, iblLuminance), intensity * exposure);
-    u.setUniformArray(offsetof(PerViewUib, iblSH), ibl->getSH(), 9);
-    if (ibl->getReflectionMap()) {
-        mPerViewSb.setSampler(PerViewSib::IBL_SPECULAR, {
-                ibl->getReflectionMap(), {
-                        .filterMag = SamplerMagFilter::LINEAR,
-                        .filterMin = SamplerMinFilter::LINEAR_MIPMAP_LINEAR
-                }});
+        const float intensity = skybox ? skybox->getIntensity() : FIndirectLight::DEFAULT_INTENSITY;
+        u.setUniform(offsetof(PerViewUib, iblLuminance), intensity * exposure);
     }
 
     // Directional light (always at index 0)

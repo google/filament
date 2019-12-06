@@ -42,7 +42,8 @@ namespace details {
 // ------------------------------------------------------------------------------------------------
 
 FScene::FScene(FEngine& engine) :
-        mEngine(engine) {
+        mEngine(engine),
+        mIndirectLight(engine.getDefaultIndirectLight()) {
 }
 
 FScene::~FScene() noexcept = default;
