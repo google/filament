@@ -39,7 +39,7 @@ Filament.loadClassExtensions = function() {
             majorVersion: 2,
             minorVersion: 0,
             antialias: false,
-            depth: false,
+            depth: true,
             alpha: false
         };
         options = Object.assign(defaults, options);
