@@ -45,7 +45,7 @@ struct IndirectLight::BuilderDetails {
     Texture const* mIrradianceMap = nullptr;
     float3 mIrradianceCoefs[9] = {};
     mat3f mRotation = {};
-    float mIntensity = 30000.0f;
+    float mIntensity = FIndirectLight::DEFAULT_INTENSITY;
 };
 
 using BuilderType = IndirectLight;
