@@ -58,6 +58,7 @@ enum class ShFile {
 
 static const size_t DFG_LUT_DEFAULT_SIZE = 128;
 static const size_t IBL_DEFAULT_SIZE = 256;
+static const size_t IBL_DEFAULT_MIN_LOD_SIZE = 16;
 
 enum class OutputType {
     FACES, KTX, EQUIRECT, OCTAHEDRON
@@ -71,6 +72,7 @@ static float g_extract_blur = 0.0;
 static utils::Path g_extract_dir;
 
 static size_t g_output_size = 0;
+static size_t g_min_lod_size = 0;
 
 static bool g_quiet = false;
 static bool g_debug = false;
@@ -210,6 +212,8 @@ static void printUsage(char* name) {
             "       Diffuse irradiance into <dir>\n\n"
             "   --ibl-no-prefilter\n"
             "       Use importance sampling instead of prefiltered importance sampling\n\n"
+            "   --ibl-min-lod-size\n"
+            "       Minimum LOD size [default: 16]\n\n"
             "   --sh=bands\n"
             "       SH decomposition of input cubemap\n\n"
             "   --sh-output=filename.[exr|hdr|psd|rgbm|rgb32f|png|dds|txt]\n"
@@ -240,7 +244,7 @@ static void license() {
 }
 
 static int handleCommandLineArgments(int argc, char* argv[]) {
-    static constexpr const char* OPTSTR = "hqidt:f:c:s:x:w:";
+    static constexpr const char* OPTSTR = "hqidt:f:c:s:x:w:S:";
     static const struct option OPTIONS[] = {
             { "help",                       no_argument, nullptr, 'h' },
             { "license",                    no_argument, nullptr, 'l' },
@@ -264,6 +268,7 @@ static int handleCommandLineArgments(int argc, char* argv[]) {
             { "ibl-dfg-multiscatter",       no_argument, nullptr, 'u' },
             { "ibl-dfg-cloth",              no_argument, nullptr, 'C' },
             { "ibl-no-prefilter",           no_argument, nullptr, 'n' },
+            { "ibl-min-lod-size",     required_argument, nullptr, 'S' },
             { "ibl-samples",          required_argument, nullptr, 'k' },
             { "deploy",               required_argument, nullptr, 'x' },
             { "no-mirror",                  no_argument, nullptr, 'm' },
@@ -350,6 +355,13 @@ static int handleCommandLineArgments(int argc, char* argv[]) {
                 g_output_size = std::stoul(arg);
                 if (!isPOT(g_output_size)) {
                     std::cerr << "output size must be a power of two" << std::endl;
+                    exit(0);
+                }
+                break;
+            case 'S':
+                g_min_lod_size = std::stoul(arg);
+                if (!isPOT(g_min_lod_size)) {
+                    std::cerr << "min LOD size must be a power of two" << std::endl;
                     exit(0);
                 }
                 break;
@@ -877,8 +889,13 @@ void iblRoughnessPrefilter(
     const bool DEBUG_FULL_RESOLUTION = false;
 
     const size_t baseExp = utils::ctz(g_output_size ? g_output_size : IBL_DEFAULT_SIZE);
+    size_t minLod = utils::ctz(g_min_lod_size ? g_min_lod_size : IBL_DEFAULT_MIN_LOD_SIZE);
+    if (minLod >= baseExp) {
+        minLod = 0;
+    }
+
     size_t numSamples = g_num_samples;
-    const size_t numLevels = baseExp + 1;
+    const size_t numLevels = (baseExp + 1) - minLod;
 
     // It's convenient to create an empty KTX bundle on the stack in this scope, regardless of
     // whether KTX is requested. It does not consume memory if empty.
@@ -895,7 +912,7 @@ void iblRoughnessPrefilter(
         .pixelDepth = 0,
     };
 
-    for (ssize_t i = baseExp; i >= 0; --i) {
+    for (ssize_t i = baseExp; i >= ssize_t((baseExp + 1) - numLevels) ; --i) {
         const size_t dim = 1U << (DEBUG_FULL_RESOLUTION ? baseExp : i); // NOLINT
         const size_t level = baseExp - i;
         if (level >= 2) {
