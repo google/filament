@@ -156,12 +156,6 @@ IndirectLight* IndirectLight::Builder::build(Engine& engine) {
             return nullptr;
         }
 
-        if (!ASSERT_POSTCONDITION_NON_FATAL(mImpl->mReflectionsMap->getLevels() ==
-                upcast(mImpl->mReflectionsMap)->getMaxLevelCount(),
-                "reflection map must have %u mipmap levels",
-                upcast(mImpl->mReflectionsMap)->getMaxLevelCount())) {
-            return nullptr;
-        }
         if (IBL_INTEGRATION == IBL_INTEGRATION_IMPORTANCE_SAMPLING) {
             mImpl->mReflectionsMap->generateMipmaps(engine);
         }
