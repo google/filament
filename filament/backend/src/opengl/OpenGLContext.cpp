@@ -115,10 +115,11 @@ OpenGLContext::OpenGLContext() noexcept {
     disable(GL_DITHER);
     enable(GL_DEPTH_TEST);
 
-    // With desktop GL, the application must enable point size to allow vertex shaders to set it,
-    // but with OpenGL ES, this is always on and there is no enable flag.
+    // Point sprite size and seamless cubemap filtering are disabled by default in desktop GL.
+    // In OpenGL ES, these flags do not exist because they are always on.
 #if GL41_HEADERS
     enable(GL_PROGRAM_POINT_SIZE);
+    enable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 #endif
 
     // TODO: Don't enable scissor when it is not necessary. This optimization could be done here in
