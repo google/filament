@@ -24,11 +24,17 @@ struct FroxelParams {
 uvec3 getFroxelCoords(const vec3 fragCoords) {
     uvec3 froxelCoord;
 
-    froxelCoord.xy = uvec2((fragCoords.xy - frameUniforms.origin.xy) *
+    vec3 adjustedFragCoords = fragCoords;
+// In Vulkan and Metal, texture coords are Y-down. In OpenGL, texture coords are Y-up.
+#if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
+    adjustedFragCoords.y = frameUniforms.resolution.y - adjustedFragCoords.y;
+#endif
+
+    froxelCoord.xy = uvec2((adjustedFragCoords.xy - frameUniforms.origin.xy) *
             vec2(frameUniforms.oneOverFroxelDimension, frameUniforms.oneOverFroxelDimensionY));
 
     froxelCoord.z = uint(max(0.0,
-            log2(frameUniforms.zParams.x * fragCoords.z + frameUniforms.zParams.y) *
+            log2(frameUniforms.zParams.x * adjustedFragCoords.z + frameUniforms.zParams.y) *
                     frameUniforms.zParams.z + frameUniforms.zParams.w));
 
     return froxelCoord;
