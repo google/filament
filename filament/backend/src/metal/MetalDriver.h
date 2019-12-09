@@ -34,7 +34,7 @@ class MetalPlatform;
 
 namespace metal {
 
-class MetalUniformBuffer;
+struct MetalUniformBuffer;
 struct MetalContext;
 struct MetalProgram;
 struct UniformBufferState;

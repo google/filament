@@ -19,6 +19,8 @@
 
 #include "private/backend/DriverApi.h"
 
+#include <math/vec2.h>
+
 namespace test {
 
 /**
@@ -32,12 +34,18 @@ public:
     using VertexHandle = filament::backend::Handle<filament::backend::HwVertexBuffer>;
     using IndexHandle = filament::backend::Handle<filament::backend::HwIndexBuffer>;
 
-    TrianglePrimitive(filament::backend::DriverApi& driverApi);
+    TrianglePrimitive(filament::backend::DriverApi& driverApi, bool allocateLargeBuffers = false);
     ~TrianglePrimitive();
 
     PrimitiveHandle getRenderPrimitive() const noexcept;
 
+    void updateVertices(const filament::math::float2 vertices[3]) noexcept;
+    void updateIndices(const short indices[3]) noexcept;
+
 private:
+
+    size_t mVertexCount = 3;
+    size_t mIndexCount = 3;
 
     filament::backend::DriverApi& mDriverApi;
 
