@@ -497,6 +497,14 @@ private:
         return v;
     }
 
+    friend inline constexpr VECTOR<T> MATH_PURE mix(VECTOR<T> x, VECTOR<T> y, T a) noexcept {
+        return x * (VECTOR<T>(1) - a) + y * a;
+    }
+
+    friend inline constexpr VECTOR<T> MATH_PURE lerp(VECTOR<T> x, VECTOR<T> y, T a) noexcept {
+        return mix(x, y, a);
+    }
+
     friend inline constexpr VECTOR<T> MATH_PURE fma(const VECTOR<T>& lv, const VECTOR<T>& rv,
             VECTOR<T> a) {
         for (size_t i = 0; i < lv.size(); i++) {
