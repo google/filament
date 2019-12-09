@@ -41,7 +41,8 @@ static ::testing::AssertionResult PropertyListsMatch(const MaterialBuilder::Prop
 
 std::string shaderWithAllProperties(ShaderType type,
         const std::string fragmentCode, const std::string vertexCode = "",
-        filamat::MaterialBuilder::Shading shadingModel = filamat::MaterialBuilder::Shading::LIT) {
+        filamat::MaterialBuilder::Shading shadingModel = filamat::MaterialBuilder::Shading::LIT,
+        filamat::MaterialBuilder::RefractionMode refractionMode = filamat::MaterialBuilder::RefractionMode::NONE) {
     MockIncluder includer;
     includer
         .sourceForInclude("modify_normal.h", "material.normal = vec3(0.8);");
@@ -53,6 +54,7 @@ std::string shaderWithAllProperties(ShaderType type,
     builder.optimization(filamat::MaterialBuilder::Optimization::NONE);
     builder.shading(shadingModel);
     builder.includeCallback(includer);
+    builder.materialRefraction(refractionMode);
 
     MaterialBuilder::PropertyList allProperties;
     std::fill_n(allProperties, MaterialBuilder::MATERIAL_PROPERTIES_COUNT, true);
@@ -424,7 +426,9 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerTransmission) {
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(ShaderType::FRAGMENT, fragmentCode);
+    std::string shaderCode = shaderWithAllProperties(ShaderType::FRAGMENT, fragmentCode, "",
+            filamat::MaterialBuilder::Shading::LIT,
+            filamat::MaterialBuilder::RefractionMode::CUBEMAP);
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties {false};
