@@ -22,7 +22,6 @@
 #include <type_traits>
 
 #include <math/compiler.h>
-#include <math/TVecHelpers.h>
 
 namespace filament {
 namespace math {
