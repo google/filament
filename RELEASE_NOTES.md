@@ -10,6 +10,8 @@ A new header is inserted each time a *tag* is created.
 
 - Fix bad state after removing an IBL from the Scene.
 
+- Fixed incorrect punctual light binning (affected Metal and Vulkan backends).
+
 ## v1.4.3
 
 - Fixed an assertion when a parameter array occurs last in a material definition.
