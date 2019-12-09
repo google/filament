@@ -79,8 +79,15 @@ void PlatformCocoaGL::terminate() noexcept {
 }
 
 Platform::SwapChain* PlatformCocoaGL::createSwapChain(void* nativewindow, uint64_t& flags) noexcept {
+
+    if (flags & SWAP_CHAIN_CONFIG_HIGH_DPI) {
+        NSView* nsView = (__bridge NSView*)nativewindow;
+        [nsView setWantsBestResolutionOpenGLSurface:YES];
+    }
+
     // Transparent SwapChain is not supported
     flags &= ~backend::SWAP_CHAIN_CONFIG_TRANSPARENT;
+
     return (SwapChain*) nativewindow;
 }
 

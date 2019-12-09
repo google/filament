@@ -153,6 +153,12 @@ public:
      */
     static const uint64_t CONFIG_READABLE = backend::SWAP_CHAIN_CONFIG_READABLE;
 
+    /**
+     * This flag is required on some platforms in order to create a high DPI swap chain.
+     * Currently this is only used for macOS.
+     */
+    static const uint64_t CONFIG_HIGH_DPI = backend::SWAP_CHAIN_CONFIG_HIGH_DPI;
+
     void* getNativeWindow() const noexcept;
 };
 

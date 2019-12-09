@@ -85,6 +85,12 @@ public class SwapChain {
      */
     public static final long CONFIG_READABLE = 0x2;
 
+    /**
+     * This flag is required on some platforms in order to create a window with a high DPI surface.
+     * Currently this is only used for macOS.
+     */
+    public static final long CONFIG_HIGH_DPI = 0x4;
+
     SwapChain(long nativeSwapChain, Object surface) {
         mNativeObject = nativeSwapChain;
         mSurface = surface;
