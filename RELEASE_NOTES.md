@@ -5,6 +5,7 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release
 
+- Fix bad instruction exception with macOS Catalina.
 - Added support for solid and thin layer cubemap and screen-space refraction.
 - Improved high roughness material rendering by default when regenerating environments maps.
 - Fixed bad state after removing an IBL from the Scene.
