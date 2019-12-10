@@ -289,6 +289,9 @@ static void gui(filament::Engine* engine, filament::View*) {
 
             ImGui::ColorEdit3("baseColor", &params.color.r);
 
+            bool hasRefraction = params.currentBlending == BLENDING_THIN_REFRACTION ||
+                    params.currentBlending == BLENDING_SOLID_REFRACTION;
+
             if (params.currentMaterialModel > MATERIAL_MODEL_UNLIT) {
                 if (params.currentBlending == BLENDING_TRANSPARENT ||
                         params.currentBlending == BLENDING_FADE) {
@@ -302,8 +305,10 @@ static void gui(filament::Engine* engine, filament::View*) {
                 }
                 if (params.currentMaterialModel != MATERIAL_MODEL_CLOTH &&
                         params.currentMaterialModel != MATERIAL_MODEL_SPECGLOSS) {
-                    ImGui::SliderFloat("metallic", &params.metallic, 0.0f, 1.0f);
-                    ImGui::SliderFloat("reflectance", &params.reflectance, 0.0f, 1.0f);
+                    if (!hasRefraction) {
+                        ImGui::SliderFloat("metallic", &params.metallic, 0.0f, 1.0f);
+                        ImGui::SliderFloat("reflectance", &params.reflectance, 0.0f, 1.0f);
+                    }
                 }
                 if (params.currentMaterialModel != MATERIAL_MODEL_CLOTH &&
                         params.currentMaterialModel != MATERIAL_MODEL_SUBSURFACE) {
@@ -321,8 +326,6 @@ static void gui(filament::Engine* engine, filament::View*) {
                     ImGui::ColorEdit3("subsurfaceColor", &params.subsurfaceColor.r);
                 }
 
-                bool hasRefraction = params.currentBlending == BLENDING_THIN_REFRACTION ||
-                        params.currentBlending == BLENDING_SOLID_REFRACTION;
                 if (hasRefraction) {
                     ImGui::SliderFloat("ior", &params.ior, 1.0f, 3.0f);
                     ImGui::SliderFloat("transmission", &params.transmission, 0.0f, 1.0f);
