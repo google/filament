@@ -53,7 +53,7 @@ using namespace image;
 // -----------------------------------------------------------------------------------------------
 
 enum class ShFile {
-    SH_NONE, SH_CROSS, SH_TEXT
+    SH_NONE, SH_FILE, SH_TEXT
 };
 
 static const size_t DFG_LUT_DEFAULT_SIZE = 128;
@@ -377,7 +377,7 @@ static int handleCommandLineArgments(int argc, char* argv[]) {
             case 'o':
                 g_sh_compute = 1;
                 g_sh_output = true;
-                g_sh_file = ShFile::SH_CROSS;
+                g_sh_file = ShFile::SH_FILE;
                 g_sh_filename = arg;
                 if (g_sh_filename.getExtension() == "txt") {
                     g_sh_file = ShFile::SH_TEXT;
@@ -754,7 +754,22 @@ void sphericalHarmonics(utils::JobSystem& js, const utils::Path& iname, const Cu
                 CubemapSH::renderSH(js, cm, sh, g_sh_compute);
             }
 
-            if (g_sh_file == ShFile::SH_CROSS) {
+            cm.makeSeamless();
+
+            if (g_sh_file == ShFile::SH_FILE) {
+                Image image;
+                if (g_type == OutputType::EQUIRECT) {
+                    size_t dim = cm.getDimensions();
+                    image = Image(dim * 2, dim);
+                    CubemapUtils::cubemapToEquirectangular(js, image, cm);
+                }
+
+                if (g_type == OutputType::OCTAHEDRON) {
+                    size_t dim = cm.getDimensions();
+                    image = Image(dim, dim);
+                    CubemapUtils::cubemapToOctahedron(js, image, cm);
+                }
+
                 saveImage(g_sh_filename, ImageEncoder::chooseFormat(g_sh_filename.getName()),
                         image, g_compression);
             }
@@ -1042,11 +1057,33 @@ void iblDiffuseIrradiance(utils::JobSystem& js, const utils::Path& iname,
         updater.stop();
     }
 
+    dst.makeSeamless();
+
     std::string ext = ImageEncoder::chooseExtension(g_format);
-    for (size_t j = 0; j < 6; j++) {
-        Cubemap::Face face = (Cubemap::Face) j;
-        std::string filename = outputDir + ("i_" + std::string(CubemapUtils::getFaceName(face)) + ext);
-        saveImage(filename, g_format, dst.getImageForFace(face), g_compression);
+
+    if (g_type == OutputType::EQUIRECT) {
+        size_t dim = dst.getDimensions();
+        Image image(dim * 2, dim);
+        CubemapUtils::cubemapToEquirectangular(js, image, dst);
+        std::string filename = outputDir + ("irradiance" + ext);
+        saveImage(filename, g_format, image, g_compression);
+    }
+
+    if (g_type == OutputType::OCTAHEDRON) {
+        size_t dim = dst.getDimensions();
+        Image image(dim, dim);
+        CubemapUtils::cubemapToOctahedron(js, image, dst);
+        std::string filename = outputDir + ("irradiance" + ext);
+        saveImage(filename, g_format, image, g_compression);
+    }
+
+    if (g_type == OutputType::FACES) {
+        for (size_t j = 0; j < 6; j++) {
+            Cubemap::Face face = (Cubemap::Face)j;
+            std::string filename =
+                    outputDir + ("i_" + std::string(CubemapUtils::getFaceName(face)) + ext);
+            saveImage(filename, g_format, dst.getImageForFace(face), g_compression);
+        }
     }
 
     if (g_debug) {
