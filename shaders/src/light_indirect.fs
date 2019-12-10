@@ -337,6 +337,7 @@ void applyRefraction(const PixelParams pixel,
     const vec3 n0, vec3 E, vec3 Fd, vec3 Fr,
     inout vec3 color) {
 
+    float perceptualRoughness = pixel.perceptualRoughnessUnclamped;
     vec3 r = -shading_view;
     float eta0 = pixel.etaIR;
 
@@ -378,13 +379,9 @@ void applyRefraction(const PixelParams pixel,
 #endif
 
     // Roughness remaping for thin layers, see Burley 2012, "Physically-Based Shading at Disney"
-    //
-    // We apply this remapping to solid objects too because we are handling both interfaces
-    // in one go for solids as well.
-    // Note: this remapping is valid only for realistic IORs.
-    // Note: it's unclear whether we should use perceptualRoughness or roughness here, using
-    // roughness seems to produce worse results.
-    float perceptualRoughness = saturate((0.65 * pixel.etaRI - 0.35) * pixel.perceptualRoughnessUnclamped);
+#if REFRACTION_TYPE == REFRACTION_TYPE_THIN
+    perceptualRoughness = saturate((0.65 * pixel.etaRI - 0.35) * perceptualRoughness);
+#endif
 
     /* sample the cubemap or screen-space */
 #if REFRACTION_MODE == REFRACTION_MODE_CUBEMAP
