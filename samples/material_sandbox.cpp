@@ -284,7 +284,7 @@ static void gui(filament::Engine* engine, filament::View*) {
 
             if (params.currentMaterialModel == MATERIAL_MODEL_LIT) {
                 ImGui::Combo("blending", &params.currentBlending,
-                        "opaque\0transparent\0fade\0\0");
+                        "opaque\0transparent\0fade\0thin refraction\0solid refraction\0\0");
             }
 
             ImGui::ColorEdit3("baseColor", &params.color.r);
@@ -319,6 +319,15 @@ static void gui(filament::Engine* engine, filament::View*) {
                 if (params.currentMaterialModel == MATERIAL_MODEL_CLOTH) {
                     ImGui::ColorEdit3("sheenColor", &params.sheenColor.r);
                     ImGui::ColorEdit3("subsurfaceColor", &params.subsurfaceColor.r);
+                }
+
+                bool hasRefraction = params.currentBlending == BLENDING_THIN_REFRACTION ||
+                        params.currentBlending == BLENDING_SOLID_REFRACTION;
+                if (hasRefraction) {
+                    ImGui::SliderFloat("ior", &params.ior, 1.0f, 3.0f);
+                    ImGui::SliderFloat("transmission", &params.transmission, 0.0f, 1.0f);
+                    ImGui::SliderFloat("thickness", &params.thickness, 0.0f, 1.0f);
+                    ImGui::ColorEdit3("absorption", &params.absorption.r);
                 }
             }
         }

@@ -42,6 +42,8 @@ set(MATERIAL_SRCS
         materials/sandboxLit.mat
         materials/sandboxLitFade.mat
         materials/sandboxLitTransparent.mat
+        materials/sandboxLitThinRefraction.mat
+        materials/sandboxLitSolidRefraction.mat
         materials/sandboxSpecGloss.mat
         materials/sandboxSubsurface.mat
         materials/sandboxUnlit.mat
