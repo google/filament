@@ -9,6 +9,7 @@ A new header is inserted each time a *tag* is created.
 - Improved high roughness material rendering by default when regenerating environments maps.
 - Fixed bad state after removing an IBL from the Scene.
 - Fixed incorrect punctual light binning (affected Metal and Vulkan backends).
+- Fixed crash when using a Metal headless SwapChain with an Intel integrated GPU.
 
 ## v1.4.3
 
