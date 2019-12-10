@@ -134,22 +134,21 @@ When building Filament from source, the `USE_STATIC_CRT` CMake option can be
 used to change the run-time library version.
 
 ```
-FILAMENT_LIBS=lib/x86_64/mt/filament.lib lib/x86_64/mt/backend.lib lib/x86_64/mt/bluegl.lib \
-              lib/x86_64/mt/filabridge.lib lib/x86_64/mt/filaflat.lib lib/x86_64/mt/utils.lib \
-              lib/x86_64/mt/geometry.lib lib/x86_64/mt/smol-v.lib lib/x86_64/mt/ibl.lib
-CC=clang-cl.exe
+FILAMENT_LIBS=filament.lib backend.lib bluegl.lib filabridge.lib filaflat.lib utils.lib \
+              geometry.lib smol-v.lib ibl.lib
+CC=cl.exe
 
 main.exe: main.obj
-	$(CC) main.obj $(FILAMENT_LIBS) gdi32.lib user32.lib opengl32.lib
+	$(CC) main.obj /link /libpath:"lib\\x86_64\\mt\\" $(FILAMENT_LIBS) \
+	gdi32.lib user32.lib opengl32.lib
 
 main.obj: main.cpp
-	$(CC) /MT /Iinclude/ /std:c++14 /c main.cpp
+	$(CC) /MT /Iinclude\\ /std:c++14 /c main.cpp
 
 clean:
 	del main.exe main.obj
 
 .PHONY: clean
-
 ```
 
 ### Compiling
