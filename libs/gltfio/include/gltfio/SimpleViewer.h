@@ -91,7 +91,7 @@ public:
     /**
      * Sets or changes the current scene's IBL to allow the UI manipulate it.
      */
-    void setIndirectLight(filament::IndirectLight* ibl);
+    void setIndirectLight(filament::IndirectLight* ibl, filament::math::float3 const* sh3);
 
     /**
      * Applies the currently-selected glTF animation to the transformation hierarchy and updates
@@ -288,12 +288,13 @@ void SimpleViewer::removeAsset() {
     mAnimator = nullptr;
 }
 
-void SimpleViewer::setIndirectLight(filament::IndirectLight* ibl) {
+void SimpleViewer::setIndirectLight(filament::IndirectLight* ibl,
+        filament::math::float3 const* sh3) {
     using namespace filament::math;
     mIndirectLight = ibl;
     if (ibl) {
-        float3 d = ibl->getDirectionEstimate();
-        float4 c = ibl->getColorEstimate(d);
+        float3 d = filament::IndirectLight::getDirectionEstimate(sh3);
+        float4 c = filament::IndirectLight::getColorEstimate(sh3, d);
         mSunlightDirection = d;
         mSunlightColor = c.rgb;
         mSunlightIntensity = c[3] * ibl->getIntensity();
