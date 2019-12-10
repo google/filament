@@ -432,7 +432,7 @@ static void loadAssetFromDisk(BakerApp& app) {
     delete app.pipeline;
     app.pipeline = pipeline;
 
-    app.viewer->setIndirectLight(FilamentApp::get().getIBL()->getIndirectLight());
+    app.viewer->setIndirectLight(FilamentApp::get().getIBL()->getIndirectLight(), nullptr);
     app.flattenedAsset = handle;
     app.requestViewerUpdate = true;
 

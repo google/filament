@@ -209,7 +209,7 @@ int main(int argc, char** argv) {
 
         auto ibl = FilamentApp::get().getIBL();
         if (ibl) {
-            app.viewer->setIndirectLight(ibl->getIndirectLight());
+            app.viewer->setIndirectLight(ibl->getIndirectLight(), ibl->getSphericalHarmonics());
         }
     };
 
