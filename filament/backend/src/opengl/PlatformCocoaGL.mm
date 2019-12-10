@@ -115,14 +115,20 @@ void PlatformCocoaGL::makeCurrent(Platform::SwapChain* drawSwapChain,
         glGetIntegerv(GL_VIEWPORT, viewport);
         glGetIntegerv(GL_SCISSOR_BOX, scissor);
 
-        [pImpl->mGLContext setView:nsView];
+        // NOTE: This is not documented well (if at all) but Apple requires the following two
+        // context methods to be called from the UI thread. This became a hard requirement with the
+        // arrival of macOS 10.15 (Catalina). If we were to call these methods from the GL thread,
+        // we would see EXC_BAD_INSTRUCTION.
+        NSOpenGLContext* glContext = pImpl->mGLContext;
+        dispatch_sync(dispatch_get_main_queue(), ^(void) {
+            [glContext setView:nsView];
+            [glContext update];
+        });
 
         // Recall viewport and scissor state.
         glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
         glScissor(scissor[0], scissor[1], scissor[2], scissor[3]);
     }
-    // this is needed only when the view resized. Not sure how to do only when needed.
-    [pImpl->mGLContext update];
 }
 
 void PlatformCocoaGL::commit(Platform::SwapChain* swapChain) noexcept {
