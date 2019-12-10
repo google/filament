@@ -54,6 +54,8 @@ public:
         return mSkybox;
     }
 
+    filament::math::float3 const* getSphericalHarmonics() const { return mBands; }
+
 private:
     bool loadCubemapLevel(filament::Texture** texture, const utils::Path& path,
             size_t level = 0, std::string const& levelPrefix = "") const;

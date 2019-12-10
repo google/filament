@@ -33,6 +33,7 @@ A new header is inserted each time a *tag* is created.
 - gltfio: Added Java / Kotlin bindings for Animator.
 - gltfio: Fixed panic with the Android gltf-bloom demo.
 - gltfio: Java clients should no longer call Filament#init.
+- Improved IBL diffuse by allowing to use the specular cubemap at `roughness` = 1 instead of Spherical Harmonics
 
 ## v1.4.1
 
