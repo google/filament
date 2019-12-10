@@ -108,12 +108,6 @@ void PlatformCocoaGL::makeCurrent(Platform::SwapChain* drawSwapChain,
     NSView *nsView = (__bridge NSView*) drawSwapChain;
     if (pImpl->mCurrentView != nsView) {
         pImpl->mCurrentView = nsView;
-        // Calling setView could change the viewport and/or scissor box state, but this isn't
-        // accounted for in our OpenGL driver- so we save their state and recall it afterwards.
-        GLint viewport[4];
-        GLint scissor[4];
-        glGetIntegerv(GL_VIEWPORT, viewport);
-        glGetIntegerv(GL_SCISSOR_BOX, scissor);
 
         // NOTE: This is not documented well (if at all) but Apple requires the following two
         // context methods to be called from the UI thread. This became a hard requirement with the
@@ -124,10 +118,6 @@ void PlatformCocoaGL::makeCurrent(Platform::SwapChain* drawSwapChain,
             [glContext setView:nsView];
             [glContext update];
         });
-
-        // Recall viewport and scissor state.
-        glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
-        glScissor(scissor[0], scissor[1], scissor[2], scissor[3]);
     }
 }
 
