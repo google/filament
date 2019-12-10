@@ -69,34 +69,14 @@ private fun loadIndirectLight(
             .sampler(Texture.Sampler.SAMPLER_CUBEMAP)
             .build(engine)
 
-    repeat(texture.levels) {
-        loadCubemap(texture, assets, name, engine, "m${it}_", it)
+    for (i in 0 until texture.levels) {
+        if (!loadCubemap(texture, assets, name, engine, "m${i}_", i)) break
     }
-
-    val sphericalHarmonics = loadSphericalHarmonics(assets, name)
 
     return IndirectLight.Builder()
             .reflections(texture)
-            .irradiance(3, sphericalHarmonics)
             .intensity(30_000.0f)
             .build(engine) to texture
-}
-
-private fun loadSphericalHarmonics(assets: AssetManager, name: String): FloatArray {
-    val re = Regex("""\(\s*([+-]?\d+\.\d+),\s*([+-]?\d+\.\d+),\s*([+-]?\d+\.\d+)\);""")
-    // 3 bands = 9 RGB coefficients, so 9 * 3 floats
-    val sphericalHarmonics = FloatArray(9 * 3)
-    BufferedReader(InputStreamReader(assets.open("$name/sh.txt"))).use { input ->
-        repeat(9) { i ->
-            val line = input.readLine()
-            re.find(line)?.let {
-                sphericalHarmonics[i * 3] = it.groups[1]?.value?.toFloat() ?: 0.0f
-                sphericalHarmonics[i * 3 + 1] = it.groups[2]?.value?.toFloat() ?: 0.0f
-                sphericalHarmonics[i * 3 + 2] = it.groups[3]?.value?.toFloat() ?: 0.0f
-            }
-        }
-    }
-    return sphericalHarmonics
 }
 
 private fun loadSkybox(assets: AssetManager, name: String, engine: Engine): Pair<Skybox, Texture> {
@@ -119,7 +99,7 @@ private fun loadCubemap(texture: Texture,
                         name: String,
                         engine: Engine,
                         prefix: String = "",
-                        level: Int = 0) {
+                        level: Int = 0): Boolean {
     // This is important, the alpha channel does not encode opacity but some
     // of the bits of an R11G11B10F image to represent HDR data. We must tell
     // Android to not premultiply the RGB channels by the alpha channel
@@ -132,9 +112,13 @@ private fun loadCubemap(texture: Texture,
     val storage = ByteBuffer.allocateDirect(faceSize * 6)
 
     arrayOf("px", "nx", "py", "ny", "pz", "nz").forEach { suffix ->
-        assets.open("$name/$prefix$suffix.rgb32f").use {
-            val bitmap = BitmapFactory.decodeStream(it, null, opts)
-            bitmap?.copyPixelsToBuffer(storage)
+        try {
+            assets.open("$name/$prefix$suffix.rgb32f").use {
+                val bitmap = BitmapFactory.decodeStream(it, null, opts)
+                bitmap?.copyPixelsToBuffer(storage)
+            }
+        } catch (e: Exception) {
+            return false
         }
     }
 
@@ -144,4 +128,6 @@ private fun loadCubemap(texture: Texture,
     val buffer = Texture.PixelBufferDescriptor(storage,
             Texture.Format.RGB, Texture.Type.UINT_10F_11F_11F_REV)
     texture.setImage(engine, level, buffer, offsets)
+
+    return true
 }
