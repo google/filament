@@ -63,7 +63,10 @@ import com.google.android.filament.proguard.UsedByReflection;
  * <h1>Irradiance</h1>
  *
  * <p>The irradiance represents the light that comes from the environment and shines an
- * object's surface. It is represented as
+ * object's surface.
+ * The irradiance is calculated automatically from the Reflections (see below), and generally
+ * doesn't need to be provided explicitly.  However, it can be provided separately from the
+ * Reflections as
  * <a href="https://en.wikipedia.org/wiki/Spherical_harmonics">Spherical Harmonics</a> (SH) of 1, 2 or
  * 3 bands, respectively 1, 4 or 9 coefficients.</p>
  *
@@ -402,6 +405,7 @@ public class IndirectLight {
      * <p>The dominant light direction can be used to set a directional light's direction,
      * for instance to produce shadows that match the environment.</p>
      *
+     * @param sh        pre-scaled 3-bands spherical harmonics
      * @param direction an array of 3 floats to receive a unit vector representing the direction of
      *                 the dominant light or <code>null</code>
      * @return the <code>direction</code> paramter if it was provided, or a newly allocated float
@@ -410,12 +414,26 @@ public class IndirectLight {
      * @see LightManager.Builder#direction
      * @see #getColorEstimate
      */
+
+    @NonNull @Size(min = 3)
+    public static float[] getDirectionEstimate(@NonNull float[] sh, @Nullable @Size(min = 3) float[] direction) {
+        if (sh.length < 9 * 3) {
+            throw new ArrayIndexOutOfBoundsException(
+                    "3 bands SH required, array must be at least 9 x float3");
+        }
+        direction = Asserts.assertFloat3(direction);
+        nGetDirectionEstimateStatic(sh, direction);
+        return direction;
+    }
+
+    /** @deprecated */
     @NonNull @Size(min = 3)
     public float[] getDirectionEstimate(@Nullable @Size(min = 3) float[] direction) {
         direction = Asserts.assertFloat3(direction);
         nGetDirectionEstimate(getNativeObject(), direction);
         return direction;
     }
+
 
     /**
      * Helper to estimate the color and relative intensity of the environment in a given direction.
@@ -424,6 +442,7 @@ public class IndirectLight {
      * make sure to multiply this relative intensity by the the intensity of this indirect light.</p>
      *
      * @param colorIntensity an array of 4 floats to receive the result or <code>null</code>
+     * @param sh        pre-scaled 3-bands spherical harmonics
      * @param x the x coordinate of a unit vector representing the direction of the light
      * @param y the x coordinate of a unit vector representing the direction of the light
      * @param z the x coordinate of a unit vector representing the direction of the light
@@ -437,6 +456,19 @@ public class IndirectLight {
      * @see #getIntensity
      * @see #setIntensity
      */
+    @NonNull @Size(min = 4)
+    public static float[] getColorEstimate(@Nullable @Size(min = 4) float[] colorIntensity, @NonNull float[] sh, float x, float y, float z) {
+        if (sh.length < 9 * 3) {
+            throw new ArrayIndexOutOfBoundsException(
+                    "3 bands SH required, array must be at least 9 x float3");
+        }
+        colorIntensity = Asserts.assertFloat4(colorIntensity);
+        nGetColorEstimateStatic(colorIntensity, sh, x, y, z);
+        return colorIntensity;
+    }
+
+
+    /** @deprecated */
     @NonNull @Size(min = 4)
     public float[] getColorEstimate(@Nullable @Size(min = 4) float[] colorIntensity, float x, float y, float z) {
         colorIntensity = Asserts.assertFloat4(colorIntensity);
@@ -472,4 +504,7 @@ public class IndirectLight {
     private static native void nGetRotation(long nativeIndirectLight, float[] outRotation);
     private static native void nGetDirectionEstimate(long nativeIndirectLight, float[] outDirection);
     private static native void nGetColorEstimate(long nativeIndirectLight, float[] outColor, float x, float y, float z);
+
+    private static native void nGetDirectionEstimateStatic(float[] sh, float[] direction);
+    private static native void nGetColorEstimateStatic(float[] colorIntensity, float[] sh, float x, float y, float z);
 }

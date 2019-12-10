@@ -61,12 +61,21 @@ vec3 Irradiance_SphericalHarmonics(const vec3 n) {
         , 0.0);
 }
 
+vec3 Irradiance_RoughnessOne(const vec3 n) {
+    // note: lod used is always integer, hopefully the hardware skips tri-linear filtering
+    return decodeDataForIBL(textureLod(light_iblSpecular, n, frameUniforms.iblMaxMipLevel.x));
+}
+
 //------------------------------------------------------------------------------
 // IBL irradiance dispatch
 //------------------------------------------------------------------------------
 
 vec3 diffuseIrradiance(const vec3 n) {
-    return Irradiance_SphericalHarmonics(n);
+    if (frameUniforms.iblSH[0].x == 65504.0) {
+        return Irradiance_RoughnessOne(n);
+    } else {
+        return Irradiance_SphericalHarmonics(n);
+    }
 }
 
 //------------------------------------------------------------------------------

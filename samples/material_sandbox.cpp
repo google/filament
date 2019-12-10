@@ -266,8 +266,8 @@ static void setup(Engine* engine, View*, Scene* scene) {
     if (ibl) {
         auto& params = g_params;
         IndirectLight* const pIndirectLight = ibl->getIndirectLight();
-        params.lightDirection = pIndirectLight->getDirectionEstimate();
-        float4 c = pIndirectLight->getColorEstimate(params.lightDirection);
+        params.lightDirection = IndirectLight::getDirectionEstimate(ibl->getSphericalHarmonics());
+        float4 c = pIndirectLight->getColorEstimate(ibl->getSphericalHarmonics(), params.lightDirection);
         params.lightIntensity = c.w * pIndirectLight->getIntensity();
         params.lightColor = c.rgb;
     }
