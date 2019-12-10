@@ -16,6 +16,8 @@
 
 #pragma once
 
+#include <type_traits>
+
 #if defined (WIN32)
 
 #ifdef max
@@ -108,3 +110,17 @@
 #   define CONSTEXPR_IF_NOT_MSVC constexpr
 
 #endif // _MSC_VER
+
+namespace filament {
+namespace math {
+
+// MSVC 2019 16.4 doesn't seem to like it when we specialize std::is_arithmetic for
+// filament::math::half, so we're forced to create our own is_arithmetic here and specialize it
+// inside of half.h.
+template<typename T>
+struct is_arithmetic : std::integral_constant<bool,
+        std::is_integral<T>::value || std::is_floating_point<T>::value> {
+};
+
+}
+}

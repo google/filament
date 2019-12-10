@@ -52,10 +52,10 @@ using arithmetic_result_t = typename arithmetic_result<T, U>::type;
 
 template<typename A, typename B = int, typename C = int, typename D = int>
 using enable_if_arithmetic_t = std::enable_if_t<
-        std::is_arithmetic<A>::value &&
-        std::is_arithmetic<B>::value &&
-        std::is_arithmetic<C>::value &&
-        std::is_arithmetic<D>::value>;
+        is_arithmetic<A>::value &&
+        is_arithmetic<B>::value &&
+        is_arithmetic<C>::value &&
+        is_arithmetic<D>::value>;
 
 /*
  * No user serviceable parts here.
