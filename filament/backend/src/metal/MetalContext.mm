@@ -47,7 +47,8 @@ id<MTLTexture> acquireDrawable(MetalContext* context) {
         textureDescriptor.pixelFormat = MTLPixelFormatBGRA8Unorm;
         textureDescriptor.width = context->currentSurface->surfaceWidth;
         textureDescriptor.height = context->currentSurface->surfaceHeight;
-        textureDescriptor.usage = MTLTextureUsageRenderTarget;
+        // Specify MTLTextureUsageShaderRead so the headless surface can be blitted from.
+        textureDescriptor.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
 #if defined(IOS)
         textureDescriptor.storageMode = MTLStorageModeShared;
 #else
@@ -92,7 +93,8 @@ id<MTLTexture> acquireDepthTexture(MetalContext* context) {
 #if defined(IOS)
             MTLPixelFormatDepth32Float;
 #else
-            MTLPixelFormatDepth24Unorm_Stencil8;
+    context->device.depth24Stencil8PixelFormatSupported ?
+            MTLPixelFormatDepth24Unorm_Stencil8 : MTLPixelFormatDepth32Float;
 #endif
 
     const NSUInteger width = context->currentSurface->surfaceWidth;
