@@ -1008,9 +1008,25 @@ class_<IndirectLight>("IndirectLight")
     }), allow_raw_pointers())
     .function("getRotation", EMBIND_LAMBDA(flatmat3, (IndirectLight* self), {
         return flatmat3 { self->getRotation() };
-    }), allow_raw_pointers());
-//    .function("getDirectionEstimate", &IndirectLight::getDirectionEstimate)
-//    .function("getColorEstimate", &IndirectLight::getColorEstimate);
+    }), allow_raw_pointers())
+   .class_function("getDirectionEstimate", EMBIND_LAMBDA(filament::math::float3,
+            (IndirectLight* self, val ta), {
+        size_t nfloats = ta["length"].as<size_t>();
+        std::vector<float> floats(nfloats);
+        for (size_t i = 0; i < nfloats; i++) {
+            floats[i] = ta[i].as<float>();
+        }
+        return IndirectLight::getDirectionEstimate((filament::math::float3*) floats.data());
+   }), allow_raw_pointers())
+   .class_function("getColorEstimate", EMBIND_LAMBDA(filament::math::float4, (IndirectLight* self,
+            val ta, filament::math::float3 dir), {
+        size_t nfloats = ta["length"].as<size_t>();
+        std::vector<float> floats(nfloats);
+        for (size_t i = 0; i < nfloats; i++) {
+            floats[i] = ta[i].as<float>();
+        }
+        return IndirectLight::getColorEstimate((filament::math::float3*) floats.data(), dir);
+   }), allow_raw_pointers());
 
 class_<IblBuilder>("IndirectLight$Builder")
     .function("_build", EMBIND_LAMBDA(IndirectLight*, (IblBuilder* builder, Engine* engine), {
