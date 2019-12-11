@@ -330,7 +330,8 @@ static void gui(filament::Engine* engine, filament::View*) {
                     ImGui::SliderFloat("ior", &params.ior, 1.0f, 3.0f);
                     ImGui::SliderFloat("transmission", &params.transmission, 0.0f, 1.0f);
                     ImGui::SliderFloat("thickness", &params.thickness, 0.0f, 1.0f);
-                    ImGui::ColorEdit3("absorption", &params.absorption.r);
+                    ImGui::ColorEdit3("transmittance", &params.transmittanceColor.r);
+                    ImGui::SliderFloat("distance", &params.distance, 0.0f, 4.0f);
                 }
             }
         }
