@@ -473,6 +473,10 @@ static constexpr bool isS3TCCompression(TextureFormat format) noexcept {
     return format >= TextureFormat::DXT1_RGB && format <= TextureFormat::DXT5_SRGBA;
 }
 
+static constexpr bool isS3TCSRGBCompression(TextureFormat format) noexcept {
+	return format >= TextureFormat::DXT1_SRGB && format <= TextureFormat::DXT5_SRGBA;
+}
+
 //! Texture Cubemap Face
 enum class TextureCubemapFace : uint8_t {
     // don't change the enums values
