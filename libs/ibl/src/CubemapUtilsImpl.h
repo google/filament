@@ -34,6 +34,8 @@ void CubemapUtils::process(
         const STATE& prototype) {
     using namespace utils;
 
+#if UTILS_HAS_THREADING
+
     const size_t dim = cm.getDimensions();
 
     STATE states[6];
@@ -83,6 +85,12 @@ void CubemapUtils::process(
     for (STATE& s : states) {
         reduce(s);
     }
+
+#else
+
+    processSingleThreaded(cm, js, proc, reduce, prototype);
+
+#endif
 }
 
 template<typename STATE>
