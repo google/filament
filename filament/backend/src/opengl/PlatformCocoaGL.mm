@@ -144,6 +144,21 @@ void PlatformCocoaGL::commit(Platform::SwapChain* swapChain) noexcept {
     [pImpl->mGLContext flushBuffer];
 }
 
+bool PlatformCocoaGL::pumpEvents() noexcept {
+    if (![NSThread isMainThread]) {
+        return false;
+    }
+    while (true) {
+        NSEvent *event = [NSApp nextEventMatchingMask:NSEventMaskAny untilDate:[NSDate distantPast] inMode:NSDefaultRunLoopMode dequeue:YES];
+        if (event == nil) {
+            break;
+        }
+        [NSApp sendEvent:event];
+    }
+    return true;
+}
+
+
 } // namespace filament
 
 #pragma clang diagnostic pop
