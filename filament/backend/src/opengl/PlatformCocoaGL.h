@@ -62,6 +62,8 @@ public:
 
     int getOSVersion() const noexcept final { return 0; }
 
+    bool pumpEvents() noexcept override;
+
 private:
     PlatformCocoaGLImpl* pImpl = nullptr;
 };

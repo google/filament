@@ -32,6 +32,11 @@ namespace details {
 utils::Mutex FFence::sLock;
 utils::Condition FFence::sCondition;
 
+static const constexpr uint64_t PUMP_INTERVAL_MILLISECONDS = 1;
+
+using ms = std::chrono::milliseconds;
+using ns = std::chrono::nanoseconds;
+
 FFence::FFence(FEngine& engine, Type type)
     : mEngine(engine), mFenceSignal(std::make_shared<FenceSignal>(type)) {
     DriverApi& driverApi = engine.getDriverApi();
@@ -77,7 +82,29 @@ FenceStatus FFence::wait(Mode mode, uint64_t timeout) noexcept {
     }
 
     FenceSignal * const fs = mFenceSignal.get();
-    FenceStatus status = fs->wait(timeout);
+
+    FenceStatus status;
+
+    if (UTILS_LIKELY(!engine.pumpPlatformEvents())) {
+        status = fs->wait(timeout);
+    } else {
+        // Unfortunately, some platforms might force us to have sync points between the GL thread
+        // and user thread. To prevent deadlock on these platforms, we chop up the waiting time into
+        // polling and pumping the platform's event queue.
+        const auto startTime = std::chrono::system_clock::now();
+        while (true) {
+            status = fs->wait(ns(ms(PUMP_INTERVAL_MILLISECONDS)).count());
+            if (status != FenceStatus::TIMEOUT_EXPIRED) {
+                break;
+            }
+            engine.pumpPlatformEvents();
+            const auto elapsed = std::chrono::system_clock::now() - startTime;
+            if (elapsed >= ns(timeout)) {
+                break;
+            }
+        }
+    }
+
     if (status != FenceStatus::CONDITION_SATISFIED) {
         return status;
     }
@@ -110,7 +137,6 @@ Fence::FenceStatus FFence::FenceSignal::wait(uint64_t timeout) noexcept {
         if (timeout == FENCE_WAIT_FOR_EVER) {
             FFence::sCondition.wait(lock);
         } else {
-            using ns = std::chrono::nanoseconds;
             if (timeout == 0 ||
                     sCondition.wait_for(lock, ns(timeout)) == std::cv_status::timeout) {
                 return FenceStatus::TIMEOUT_EXPIRED;

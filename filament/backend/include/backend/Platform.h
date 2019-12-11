@@ -57,6 +57,15 @@ public:
      * @return nullptr on failure, or a pointer to the newly created driver.
      */
     virtual backend::Driver* createDriver(void* sharedContext) noexcept = 0;
+
+    /**
+     * Processes the platform's event queue when called from its primary event-handling thread.
+     *
+     * Internally, Filament might need to call this when waiting on a fence. It is only implemented
+     * on platforms that need it, such as macOS + OpenGL. Returns false if this is not the main
+     * thread, or if the platform does not need to perform any special processing.
+     */
+    virtual bool pumpEvents() noexcept { return false; }
 };
 
 
