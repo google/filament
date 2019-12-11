@@ -114,7 +114,9 @@ public:
         // objects that use alpha-testing or blending in the depth prepass.
         COLOR_WITH_DEPTH_PREPASS = DEPTH | COLOR | DEPTH_FILTER_TRANSLUCENT_OBJECTS | DEPTH_FILTER_ALPHA_MASKED_OBJECTS,
         // generate commands for shadow map
-        SHADOW = DEPTH | DEPTH_CONTAINS_SHADOW_CASTERS
+        SHADOW = DEPTH | DEPTH_CONTAINS_SHADOW_CASTERS,
+        // generate commands for SSAO
+        SSAO = DEPTH | DEPTH_FILTER_TRANSLUCENT_OBJECTS | DEPTH_FILTER_ALPHA_MASKED_OBJECTS,
     };
 
 

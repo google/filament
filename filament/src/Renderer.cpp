@@ -297,7 +297,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     // SSAO pass -- automatically culled if not used
     if (useSSAO) {
         auto curr = pass.getCommands().end();
-        pass.appendCommands(RenderPass::CommandTypeFlags::DEPTH);
+        pass.appendCommands(RenderPass::CommandTypeFlags::SSAO);
         pass.sortCommands(curr);
     }
 
