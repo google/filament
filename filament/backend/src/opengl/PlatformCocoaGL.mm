@@ -36,7 +36,7 @@ using namespace backend;
 struct PlatformCocoaGLImpl {
     NSOpenGLContext* mGLContext = nullptr;
     NSView* mCurrentView = nullptr;
-    NSObject* mObserver = nullptr;
+    id<NSObject> mObserver = nullptr;
     std::vector<NSView*> mHeadlessSwapChains;
 };
 
@@ -71,16 +71,6 @@ Driver* PlatformCocoaGL::createDriver(void* sharedContext) noexcept {
 
     int result = bluegl::bind();
     ASSERT_POSTCONDITION(!result, "Unable to load OpenGL entry points.");
-
-    pImpl->mObserver = [
-        [NSNotificationCenter defaultCenter] addObserverForName: NSViewGlobalFrameDidChangeNotification
-        object: nil
-        queue: nil
-        usingBlock: ^ (NSNotification * note) {
-            [nsOpenGLContext update];
-        }
-    ];
-
     return OpenGLDriverFactory::create(this, sharedContext);
 }
 
@@ -121,11 +111,28 @@ void PlatformCocoaGL::makeCurrent(Platform::SwapChain* drawSwapChain,
     if (pImpl->mCurrentView != nsView) {
         pImpl->mCurrentView = nsView;
 
-        // NOTE: This is not documented well (if at all) but Apple requires the following two
-        // context methods to be called from the UI thread. This became a hard requirement with the
+        // NOTE: This is not documented well (if at all) but NSOpenGLContext requires "setView"
+        // and "update" to be called from the UI thread. This became a hard requirement with the
         // arrival of macOS 10.15 (Catalina). If we were to call these methods from the GL thread,
         // we would see EXC_BAD_INSTRUCTION.
+
+        // Remove the old observer because this might be a multi-window app.
+        [[NSNotificationCenter defaultCenter] removeObserver: pImpl->mObserver];
+
+        // Create a copy of the current GL context pointer for the closure.
         NSOpenGLContext* glContext = pImpl->mGLContext;
+
+        pImpl->mObserver = [
+            [NSNotificationCenter defaultCenter] addObserverForName: NSViewGlobalFrameDidChangeNotification
+            object: nil
+            queue: nil
+            usingBlock: ^ (NSNotification* note) {
+                if (note.object == nsView) {
+                    [glContext update];
+                }
+            }
+        ];
+
         dispatch_sync(dispatch_get_main_queue(), ^(void) {
             [glContext setView:nsView];
             [glContext update];
