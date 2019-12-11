@@ -37,6 +37,12 @@ public class Fence {
         TIMEOUT_EXPIRED
     }
 
+    /**
+     * Blocks the current thread until the Fence signals.
+     *
+     * <p><b>Use with caution on macOS.</b> Currently this may lead to deadlock on macOS because we
+     * block the GL thread when binding a Cocoa view to the GL context.</p>
+     */
     public FenceStatus wait(@NonNull Mode mode, long timeoutNanoSeconds) {
         int nativeResult = nWait(getNativeObject(), mode.ordinal(), timeoutNanoSeconds);
         switch (nativeResult) {
