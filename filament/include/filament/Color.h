@@ -125,6 +125,20 @@ public:
      */
     static LinearColor illuminantD(float K);
 
+    /**
+     * computes the Beer-Lambert absorption coefficients from the specified
+     * transmittance color and distance. The computed absorption will guarantee
+     * the white light will become the specified color at the specified distance.
+     * The output of this function can be used as the absorption parameter of
+     * materials that use refraction.
+     *
+     * @param color the desired linear RGB color in sRGB space
+     * @param distance the distance at which white light should become the specified color
+     *
+     * @return absorption coefficients for the Beer-Lambert law
+     */
+    static math::float3 absorptionAtDistance(LinearColor const& color, float distance);
+
 private:
     static math::float3 sRGBToLinear(math::float3 color) noexcept;
     static math::float3 linearToSRGB(math::float3 color) noexcept;

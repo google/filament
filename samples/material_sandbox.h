@@ -71,10 +71,10 @@ struct SandboxParameters {
     float specularAntiAliasingVariance = 0.0f;
     float specularAntiAliasingThreshold = 0.0f;
     float transmission = 1.0f;
-    filament::math::float3 absorption =  0.0f;
+    float distance = 1.0f;
     float ior = 1.5;
-
-    filament::sRGBColor specularColor = {0.0f, 0.0f, 0.0f};
+    filament::sRGBColor transmittanceColor =  { 1.0f };
+    filament::sRGBColor specularColor = {0.0f };
     filament::sRGBColor subsurfaceColor = {0.0f};
     filament::sRGBColor sheenColor = {0.83f, 0.0f, 0.0f};
     int currentMaterialModel = MATERIAL_MODEL_LIT;
@@ -205,7 +205,9 @@ inline filament::MaterialInstance* updateInstances(SandboxParameters& params,
             materialInstance->setParameter("alpha", params.alpha);
         }
         if  (hasRefraction) {
-            materialInstance->setParameter("absorption", params.absorption);
+            math::float3 color = Color::toLinear(params.transmittanceColor);
+            materialInstance->setParameter("absorption",
+                    Color::absorptionAtDistance(color, params.distance));
             materialInstance->setParameter("ior", params.ior);
             materialInstance->setParameter("transmission", params.transmission);
             materialInstance->setParameter("thickness", params.thickness);

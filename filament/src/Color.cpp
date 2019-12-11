@@ -20,6 +20,8 @@
 
 #include <math/mat3.h>
 
+#include <cmath>
+
 using namespace filament::math;
 
 namespace filament {
@@ -75,6 +77,10 @@ LinearColor Color::illuminantD(float K) {
     float3 linear = XYZ_to_sRGB(xyY_to_XYZ({x, y, 1.0f}));
     // normalize and saturate
     return saturate(linear / std::max(1e-5f, max(linear)));
+}
+
+LinearColor Color::absorptionAtDistance(LinearColor const& color, float distance) {
+    return -log(clamp(color, 1e-5f, 1.0f)) / std::max(1e-5f, distance);
 }
 
 } // namespace filament
