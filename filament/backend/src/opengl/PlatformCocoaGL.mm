@@ -70,6 +70,16 @@ Driver* PlatformCocoaGL::createDriver(void* sharedContext) noexcept {
 
     int result = bluegl::bind();
     ASSERT_POSTCONDITION(!result, "Unable to load OpenGL entry points.");
+
+    [
+        [NSNotificationCenter defaultCenter] addObserverForName: NSViewGlobalFrameDidChangeNotification
+        object: nil
+        queue: nil
+        usingBlock: ^ (NSNotification * note) {
+            [nsOpenGLContext update];
+        }
+    ];
+
     return OpenGLDriverFactory::create(this, sharedContext);
 }
 
