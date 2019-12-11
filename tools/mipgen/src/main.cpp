@@ -343,11 +343,6 @@ int main(int argc, char* argv[]) {
                             image.getWidth(), image.getHeight());
                 }
                 CompressedTexture tex = compressTexture(config, image);
-                // Add newline here because the ASTC encoder has a progress indicator that issues a
-                // carriage return without a line feed.
-                if (!g_quietMode) {
-                    putc('\n', stdout);
-                }
                 container.setBlob({mip++}, tex.data.get(), tex.size);
                 info.glInternalFormat = (uint32_t) tex.format;
                 return;

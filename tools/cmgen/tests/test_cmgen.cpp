@@ -95,7 +95,7 @@ static void processEnvMap(string inputPath, string resultPath, string goldenPath
     resultPath = Path::getCurrentExecutable().getParent() + resultPath;
     goldenPath = Path::getCurrentDirectory() + goldenPath;
 
-    launchTool(std::move(inputPath), "-f rgbm -x " + executableFolder);
+    launchTool(std::move(inputPath), "--quiet -f rgbm -x " + executableFolder);
 
     std::cout << "Reading result image from " << resultPath << std::endl;
     checkFileExistence(resultPath);
@@ -123,7 +123,7 @@ static void compareSh(const string& content, const string& regex,
 TEST_F(CmgenTest, SphericalHarmonics) { // NOLINT
     const string inputPath = "assets/environments/white_furnace/white_furnace.exr";
     const string resultPath = Path::getCurrentExecutable().getParent() + "white_furnace_sh.txt";
-    launchTool(inputPath, "--sh=3 --sh-shader", "> " + resultPath);
+    launchTool(inputPath, "--quiet --sh=3 --sh-shader", "> " + resultPath);
 
     string content = readFile(resultPath);
     string vec3(R"(\(\s+([-+0-9.]+),\s+([-+0-9.]+),\s+([-+0-9.]+)\); // )");
