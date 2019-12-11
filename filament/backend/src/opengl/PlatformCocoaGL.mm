@@ -36,6 +36,7 @@ using namespace backend;
 struct PlatformCocoaGLImpl {
     NSOpenGLContext* mGLContext = nullptr;
     NSView* mCurrentView = nullptr;
+    NSObject* mObserver = nullptr;
     std::vector<NSView*> mHeadlessSwapChains;
 };
 
@@ -71,7 +72,7 @@ Driver* PlatformCocoaGL::createDriver(void* sharedContext) noexcept {
     int result = bluegl::bind();
     ASSERT_POSTCONDITION(!result, "Unable to load OpenGL entry points.");
 
-    [
+    pImpl->mObserver = [
         [NSNotificationCenter defaultCenter] addObserverForName: NSViewGlobalFrameDidChangeNotification
         object: nil
         queue: nil
@@ -84,6 +85,7 @@ Driver* PlatformCocoaGL::createDriver(void* sharedContext) noexcept {
 }
 
 void PlatformCocoaGL::terminate() noexcept {
+    [[NSNotificationCenter defaultCenter] removeObserver: pImpl->mObserver];
     pImpl->mGLContext = nil;
     bluegl::unbind();
 }
