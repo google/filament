@@ -267,6 +267,10 @@ public:
     // flush the current buffer
     void flush();
 
+    void pumpPlatformEvents() {
+        mPlatform->pumpEvents();
+    }
+
     void prepare();
     void gc();
 

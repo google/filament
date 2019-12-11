@@ -32,6 +32,12 @@ namespace details {
 utils::Mutex FFence::sLock;
 utils::Condition FFence::sCondition;
 
+#ifdef __APPLE__
+static const constexpr uint64_t PUMP_INTERVAL = 8;
+#else
+static const constexpr uint64_t PUMP_INTERVAL = FENCE_WAIT_FOR_EVER;
+#endif
+
 FFence::FFence(FEngine& engine, Type type)
     : mEngine(engine), mFenceSignal(std::make_shared<FenceSignal>(type)) {
     DriverApi& driverApi = engine.getDriverApi();
@@ -77,7 +83,17 @@ FenceStatus FFence::wait(Mode mode, uint64_t timeout) noexcept {
     }
 
     FenceSignal * const fs = mFenceSignal.get();
-    FenceStatus status = fs->wait(timeout);
+
+    // Prevent deadlock on macOS by pumping the event loop in bursts.
+    FenceStatus status = FenceStatus::ERROR;
+    uint64_t elapsed = 0;
+    while (status != FenceStatus::CONDITION_SATISFIED && elapsed < timeout) {
+        mEngine.pumpPlatformEvents();
+        status = fs->wait(PUMP_INTERVAL);
+        // TODO: add sleep (DO NOT COMMIT)
+        elapsed += PUMP_INTERVAL;
+    }
+
     if (status != FenceStatus::CONDITION_SATISFIED) {
         return status;
     }
