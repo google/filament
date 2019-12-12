@@ -358,9 +358,6 @@ public:
      * all commands to this point are executed. Note that this doesn't guarantee that the
      * hardware is actually finished.
      *
-     * \warning Use with caution on macOS. Currently this may lead to deadlock on macOS because we
-     * block the GL thread when binding a Cocoa view to the GL context.
-     *
      * <p>This is typically used right after destroying the <code>SwapChain</code>,
      * in cases where a guarantee about the <code>SwapChain</code> destruction is needed in a
      * timely fashion, such as when responding to Android's
