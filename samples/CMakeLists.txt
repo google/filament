@@ -99,7 +99,7 @@ add_library(common-resources ${DUMMY_SRC} ${RESGEN_SOURCE})
 # Invoke cmgen to build KTX files for the default IBL and skybox
 # ==================================================================================================
 
-set(CMGEN_ARGS --quiet -x . --format=ktx --size=256 --extract-blur=0.1)
+set(CMGEN_ARGS --quiet --format=ktx --size=256 --extract-blur=0.1)
 
 function(add_envmap SOURCE TARGET)
     set(source_envmap "${ROOT_DIR}/${SOURCE}")
@@ -111,7 +111,7 @@ function(add_envmap SOURCE TARGET)
     set(target_envmaps ${target_envmaps} ${target_envmap} PARENT_SCOPE)
 
     add_custom_command(OUTPUT ${target_skybox} ${target_envmap}
-        COMMAND cmgen ${CMGEN_ARGS} ${source_envmap}
+        COMMAND cmgen -x ${TARGET} ${CMGEN_ARGS} ${source_envmap}
         MAIN_DEPENDENCY ${source_envmap}
         DEPENDS cmgen)
 endfunction()
@@ -394,8 +394,8 @@ add_dependencies(filament assets)
 add_custom_target(envs DEPENDS ${target_envmaps})
 add_dependencies(filament envs)
 
-add_custom_target(run_gltf_viewer DEPENDS gltf_viewer
+add_custom_target(run_gltf_viewer DEPENDS gltf_viewer assets
         COMMAND gltf_viewer)
 
-add_custom_target(run_material_sandbox DEPENDS material_sandbox
+add_custom_target(run_material_sandbox DEPENDS material_sandbox assets
         COMMAND material_sandbox --ibl=venetian_crossroads_2k assets/models/material_sphere/material_sphere.obj)

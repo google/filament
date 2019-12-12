@@ -58,7 +58,7 @@ produce two cubemap files: a mipmapped IBL and a blurry skybox.
 Download [pillars_2k.hdr], then invoke the following command in your terminal.
 
 ```bash
-cmgen -x . --format=ktx --size=256 --extract-blur=0.1 pillars_2k.hdr
+cmgen -x pillars_2k --format=ktx --size=256 --extract-blur=0.1 pillars_2k.hdr
 ```
 
 You should now have a `pillars_2k` folder containing a couple KTX files for the IBL and skybox, as
