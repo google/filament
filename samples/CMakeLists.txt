@@ -393,3 +393,9 @@ add_dependencies(filament assets)
 
 add_custom_target(envs DEPENDS ${target_envmaps})
 add_dependencies(filament envs)
+
+add_custom_target(run_gltf_viewer DEPENDS gltf_viewer
+        COMMAND gltf_viewer)
+
+add_custom_target(run_material_sandbox DEPENDS material_sandbox
+        COMMAND material_sandbox --ibl=venetian_crossroads_2k assets/models/material_sphere/material_sphere.obj)
