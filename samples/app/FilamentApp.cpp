@@ -108,19 +108,11 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
 
         rcm.setLayerMask(rcm.getInstance(cameraCube->getSolidRenderable()), 0x3, 0x2);
         rcm.setLayerMask(rcm.getInstance(cameraCube->getWireFrameRenderable()), 0x3, 0x2);
-        cameraCube->mapFrustum(*mEngine, window->mMainCameraMan.getCamera());
 
         rcm.setLayerMask(rcm.getInstance(lightmapCube->getSolidRenderable()), 0x3, 0x2);
         rcm.setLayerMask(rcm.getInstance(lightmapCube->getWireFrameRenderable()), 0x3, 0x2);
 
         // Create the camera mesh
-        window->mMainCameraMan.setCameraChangedCallback(
-                [&cameraCube, &lightmapCube, &window, engine = mEngine](Camera const* camera) {
-            cameraCube->mapFrustum(*engine, camera);
-            lightmapCube->mapFrustum(*engine,
-                    window->mMainView->getView()->getDirectionalLightCamera());
-        });
-
         mScene->addEntity(cameraCube->getWireFrameRenderable());
         mScene->addEntity(cameraCube->getSolidRenderable());
 
@@ -138,6 +130,9 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
         window->mDepthView->getView()->setShadowsEnabled(false);
         window->mGodView->getView()->setShadowsEnabled(false);
         window->mOrthoView->getView()->setShadowsEnabled(false);
+
+        // the depthview doesn't draw the background (ibl), so we must clear it
+        window->mDepthView->getView()->setClearColor({0, 0, 0, 1});
     }
 
     loadIBL(config);
@@ -157,7 +152,7 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
 
     if (imguiCallback) {
         mImGuiHelper = std::make_unique<ImGuiHelper>(mEngine, window->mUiView->getView(),
-            getRootPath() + "assets/fonts/Roboto-Medium.ttf");
+            getRootAssetsPath() + "assets/fonts/Roboto-Medium.ttf");
         ImGuiIO& io = ImGui::GetIO();
         #ifdef WIN32
             SDL_SysWMinfo wmInfo;
@@ -355,7 +350,14 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
             mImGuiHelper->render(timeStep, imguiCallback);
         }
 
-        window->mMainCameraMan.updateCameraTransform();
+        // Update the position and orientation of the two cameras.
+        window->mMainCamera->setModelMatrix(window->mMainCameraMan.getCameraTransform());
+        window->mDebugCamera->setModelMatrix(window->mDebugCameraMan.getCameraTransform());
+
+        // Update the cube distortion matrix used for frustum visualization.
+        const Camera* lightmapCamera = window->mMainView->getView()->getDirectionalLightCamera();
+        lightmapCube->mapFrustum(*mEngine, lightmapCamera);
+        cameraCube->mapFrustum(*mEngine, window->mMainCamera);
 
         // TODO: we need better timing or use SDL_GL_SetSwapInterval
         SDL_Delay(16);
@@ -409,6 +411,17 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
     mEngine->destroy(mScene);
     Engine::destroy(&mEngine);
     mEngine = nullptr;
+}
+
+// RELATIVE_ASSET_PATH is set inside samples/CMakeLists.txt and used to support multi-configuration
+// generators, like Visual Studio or Xcode.
+#ifndef RELATIVE_ASSET_PATH
+#define RELATIVE_ASSET_PATH "."
+#endif
+
+const utils::Path& FilamentApp::getRootAssetsPath() {
+    static const utils::Path root = utils::Path::getCurrentExecutable().getParent() + RELATIVE_ASSET_PATH;
+    return root;
 }
 
 void FilamentApp::loadIBL(const Config& config) {
@@ -504,8 +517,6 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
 
     // set-up the camera manipulators
     double3 at(0, 0, -4);
-    mMainCameraMan.setCamera(mMainCamera);
-    mDebugCameraMan.setCamera(mDebugCamera);
     mMainView->setCamera(mMainCamera);
     mMainView->setCameraManipulator(&mMainCameraMan);
     mUiView->setCamera(mUiCamera);
@@ -522,7 +533,6 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
 
         mDepthView->setCameraManipulator(&mMainCameraMan);
         mGodView->setCameraManipulator(&mDebugCameraMan);
-        mOrthoView->setCameraManipulator(&mOrthoCameraMan);
     }
 
     // configure the cameras
@@ -530,7 +540,6 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
 
     mMainCameraMan.lookAt(at + double3{ 0, 0, 4 }, at);
     mDebugCameraMan.lookAt(at + double3{ 0, 0, 4 }, at);
-    mOrthoCameraMan.lookAt(at + double3{ 0, 0, 4 }, at);
 
     mMainCamera->lookAt({4, 0, -4}, {0, 0, -4}, {0, 1, 0});
 }
@@ -661,11 +670,6 @@ void FilamentApp::Window::configureCamerasForWindow() {
         mDepthView->setViewport({ int32_t(vpw),            0, w - vpw, vph     });
         mGodView->setViewport  ({ int32_t(vpw), int32_t(vph), w - vpw, h - vph });
         mOrthoView->setViewport({            0, int32_t(vph),     vpw, h - vph });
-
-        mMainView->getCameraManipulator()->updateCameraTransform();
-        mDepthView->getCameraManipulator()->updateCameraTransform();
-        mGodView->getCameraManipulator()->updateCameraTransform();
-        mOrthoView->getCameraManipulator()->updateCameraTransform();
     } else {
         mMainView->setViewport({ sidebar, 0, w - sidebar, h });
     }

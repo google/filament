@@ -59,8 +59,6 @@ public:
         if (mSbHandle) {
             driver.bindSamplers(BindingPoints::PER_MATERIAL_INSTANCE, mSbHandle);
         }
-        driver.setViewportScissor(mScissorRect.left, mScissorRect.bottom,
-                mScissorRect.width, mScissorRect.height);
     }
 
     template <typename T>
@@ -96,6 +94,10 @@ public:
         };
     }
 
+    backend::Viewport const& getScissor() const noexcept { return mScissorRect; }
+
+    backend::CullingMode getCullingMode() const noexcept { return mCulling; }
+
     void setPolygonOffset(float scale, float constant) noexcept {
         mPolygonOffset = { scale, constant };
     }
@@ -116,6 +118,8 @@ public:
 
     void setDoubleSided(bool doubleSided) noexcept;
 
+    void setCullingMode(CullingMode culling) noexcept;
+
 private:
     friend class FMaterial;
     friend class MaterialInstance;
@@ -134,6 +138,7 @@ private:
     UniformBuffer mUniforms;
     backend::SamplerGroup mSamplers;
     backend::PolygonOffset mPolygonOffset;
+    backend::CullingMode mCulling;
 
     uint64_t mMaterialSortingKey = 0;
 

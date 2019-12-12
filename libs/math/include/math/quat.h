@@ -96,26 +96,25 @@ public:
     // default constructor. sets all values to zero.
     constexpr TQuaternion() : x(0), y(0), z(0), w(0) {}
 
-    // handles implicit conversion to a tvec4. must not be explicit.
-    template<typename A>
-    constexpr TQuaternion(A w) : x(0), y(0), z(0), w(w) {
-        static_assert(std::is_arithmetic<A>::value, "requires arithmetic type");
-    }
+    // handles implicit conversion to a quat. must not be explicit.
+    template<typename A, typename = enable_if_arithmetic_t<A>>
+    constexpr TQuaternion(A w) : x(0), y(0), z(0), w(w) {}
 
     // initialize from 4 values to w + xi + yj + zk
-    template<typename A, typename B, typename C, typename D>
+    template<typename A, typename B, typename C, typename D,
+            typename = enable_if_arithmetic_t<A, B, C, D>>
     constexpr TQuaternion(A w, B x, C y, D z) : x(x), y(y), z(z), w(w) {}
 
     // initialize from a vec3 + a value to : v.xi + v.yj + v.zk + w
-    template<typename A, typename B>
+    template<typename A, typename B, typename = enable_if_arithmetic_t<A, B>>
     constexpr TQuaternion(const TVec3<A>& v, B w) : x(v.x), y(v.y), z(v.z), w(w) {}
 
-    // initialize from a double4
-    template<typename A>
+    // initialize from a vec4
+    template<typename A, typename = enable_if_arithmetic_t<A>>
     constexpr explicit TQuaternion(const TVec4<A>& v) : x(v.x), y(v.y), z(v.z), w(v.w) {}
 
     // initialize from a quaternion of a different type
-    template<typename A>
+    template<typename A, typename = enable_if_arithmetic_t<A>>
     constexpr explicit TQuaternion(const TQuaternion<A>& v) : x(v.x), y(v.y), z(v.z), w(v.w) {}
 
     // conjugate operator
@@ -124,7 +123,7 @@ public:
     }
 
     // constructs a quaternion from an axis and angle
-    template<typename A, typename B>
+    template<typename A, typename B, typename = enable_if_arithmetic_t<A, B>>
     constexpr static TQuaternion MATH_PURE fromAxisAngle(const TVec3<A>& axis, B angle) {
         return TQuaternion(std::sin(angle * 0.5) * normalize(axis), std::cos(angle * 0.5));
     }

@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+//! \file
+
 #ifndef TNT_FILAMAT_MATERIAL_PACKAGE_BUILDER_H
 #define TNT_FILAMAT_MATERIAL_PACKAGE_BUILDER_H
 
@@ -30,6 +32,7 @@
 #include <filamat/IncludeCallback.h>
 #include <filamat/Package.h>
 
+#include <utils/BitmaskEnum.h>
 #include <utils/bitset.h>
 #include <utils/compiler.h>
 #include <utils/CString.h>
@@ -42,8 +45,10 @@ struct Variant;
 
 class UTILS_PUBLIC MaterialBuilderBase {
 public:
-    // High-level hint that works in concert with TargetApi to determine the shader models
-    // (used to generate GLSL) and final output representations (spirv and/or text).
+    /**
+     * High-level hint that works in concert with TargetApi to determine the shader models (used to
+     * generate GLSL) and final output representations (spirv and/or text).
+     */
     enum class Platform {
         DESKTOP,
         MOBILE,
@@ -69,11 +74,19 @@ public:
         PERFORMANCE
     };
 
-    // Must be called first before building any materials.
+    /**
+     * Initialize MaterialBuilder.
+     *
+     * init must be called first before building any materials.
+     */
     static void init();
 
-    // Call when finished building materials to release all internal resources. After calling
-    // shutdown, another call to MaterialBuilder::init must precede another material build.
+    /**
+     * Release internal MaterialBuilder resources.
+     *
+     * Call shutdown when finished building materials to release all internal resources. After
+     * calling shutdown, another call to MaterialBuilder::init must precede another material build.
+     */
     static void shutdown();
 
 protected:
@@ -102,21 +115,53 @@ protected:
     static std::atomic<int> materialBuilderClients;
 };
 
-inline constexpr MaterialBuilderBase::TargetApi operator|(MaterialBuilderBase::TargetApi lhs,
-        MaterialBuilderBase::TargetApi rhs) noexcept {
-    return MaterialBuilderBase::TargetApi(uint8_t(lhs) | uint8_t(rhs));
+// Utility function that looks at an Engine backend to determine TargetApi
+inline constexpr MaterialBuilderBase::TargetApi targetApiFromBackend(
+            filament::backend::Backend backend) noexcept {
+    using filament::backend::Backend;
+    using TargetApi = MaterialBuilderBase::TargetApi;
+    switch (backend) {
+        case Backend::DEFAULT: return TargetApi::ALL;
+        case Backend::OPENGL:  return TargetApi::OPENGL;
+        case Backend::VULKAN:  return TargetApi::VULKAN;
+        case Backend::METAL:   return TargetApi::METAL;
+        case Backend::NOOP:    return TargetApi::OPENGL;
+    }
 }
 
-inline constexpr MaterialBuilderBase::TargetApi operator|=(MaterialBuilderBase::TargetApi& lhs,
-        MaterialBuilderBase::TargetApi rhs) noexcept {
-    return lhs = (lhs | rhs);
-}
+/**
+ * MaterialBuilder builds Filament materials from shader code.
+ *
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * #include <filamat/MaterialBuilder.h>
+ * using namespace filamat;
+ *
+ * // Must be called before any materials can be built.
+ * MaterialBuilder::init();
 
-inline constexpr bool operator&(MaterialBuilderBase::TargetApi lhs,
-        MaterialBuilderBase::TargetApi rhs) noexcept {
-    return bool(uint8_t(lhs) & uint8_t(rhs));
-}
+ * MaterialBuilder builder;
+ * builder
+ *     .name("My material")
+ *     .material("void material (inout MaterialInputs material) {"
+ *               "  prepareMaterial(material);"
+ *               "  material.baseColor.rgb = float3(1.0, 0.0, 0.0);"
+ *               "}")
+ *     .shading(MaterialBuilder::Shading::LIT)
+ *     .targetApi(MaterialBuilder::TargetApi::ALL)
+ *     .platform(MaterialBuilder::Platform::ALL);
 
+ * Package package = builder.build();
+ * if (package.isValid()) {
+ *     // success!
+ * }
+
+ * // Call when finished building all materials to release internal
+ * // MaterialBuilder resources.
+ * MaterialBuilder::shutdown();
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *
+ * @see filament::Material
+ */
 class UTILS_PUBLIC MaterialBuilder : public MaterialBuilderBase {
 public:
     MaterialBuilder();
@@ -130,29 +175,9 @@ public:
         // when adding more variables, make sure to update MATERIAL_VARIABLES_COUNT
     };
 
-    static constexpr size_t MATERIAL_PROPERTIES_COUNT = 19;
-    enum class Property : uint8_t {
-        BASE_COLOR,              // float4, all shading models
-        ROUGHNESS,               // float,  lit shading models only
-        METALLIC,                // float,  all shading models, except unlit and cloth
-        REFLECTANCE,             // float,  all shading models, except unlit and cloth
-        AMBIENT_OCCLUSION,       // float,  lit shading models only, except subsurface and cloth
-        CLEAR_COAT,              // float,  lit shading models only, except subsurface and cloth
-        CLEAR_COAT_ROUGHNESS,    // float,  lit shading models only, except subsurface and cloth
-        CLEAR_COAT_NORMAL,       // float,  lit shading models only, except subsurface and cloth
-        ANISOTROPY,              // float,  lit shading models only, except subsurface and cloth
-        ANISOTROPY_DIRECTION,    // float3, lit shading models only, except subsurface and cloth
-        THICKNESS,               // float,  subsurface shading model only
-        SUBSURFACE_POWER,        // float,  subsurface shading model only
-        SUBSURFACE_COLOR,        // float3, subsurface and cloth shading models only
-        SHEEN_COLOR,             // float3, cloth shading model only
-        SPECULAR_COLOR,          // float3, specular-glossiness shading model only
-        GLOSSINESS,              // float,  specular-glossiness shading model only
-        EMISSIVE,                // float4, all shading models
-        NORMAL,                  // float3, all shading models only, except unlit
-        POST_LIGHTING_COLOR,     // float4, all shading models
-        // when adding new Properties, make sure to update MATERIAL_PROPERTIES_COUNT
-    };
+    using MaterialDomain = filament::MaterialDomain;
+    using RefractionMode = filament::RefractionMode;
+    using RefractionType = filament::RefractionType;
 
     using BlendingMode = filament::BlendingMode;
     using Shading = filament::Shading;
@@ -166,164 +191,248 @@ public:
     using SamplerPrecision = filament::backend::Precision;
     using CullingMode = filament::backend::CullingMode;
 
-    // set name of this material
+    //! Set the name of this material.
     MaterialBuilder& name(const char* name) noexcept;
 
-    // set the shading model
-    using MaterialDomain = filament::MaterialDomain;
+    //! Set the shading model.
     MaterialBuilder& shading(Shading shading) noexcept;
 
-    // set the interpolation mode
+    //! Set the interpolation mode.
     MaterialBuilder& interpolation(Interpolation interpolation) noexcept;
 
-    // add a parameter (i.e.: a uniform) to this material
+    //! Add a parameter (i.e., a uniform) to this material.
     MaterialBuilder& parameter(UniformType type, const char* name) noexcept;
 
-    // add a parameter array to this material
+    //! Add a parameter array to this material.
     MaterialBuilder& parameter(UniformType type, size_t size, const char* name) noexcept;
 
-    // add a sampler parameter to this material
-    // When SamplerType::SAMPLER_EXTERNAL is specifed, format and precision are ignored
+    /**
+     * Add a sampler parameter to this material.
+     *
+     * When SamplerType::SAMPLER_EXTERNAL is specifed, format and precision are ignored.
+     */
     MaterialBuilder& parameter(SamplerType samplerType, SamplerFormat format,
             SamplerPrecision precision, const char* name) noexcept;
+    /// @copydoc parameter(SamplerType, SamplerFormat, SamplerPrecision, const char*)
     MaterialBuilder& parameter(SamplerType samplerType, SamplerFormat format,
             const char* name) noexcept;
+    /// @copydoc parameter(SamplerType, SamplerFormat, SamplerPrecision, const char*)
     MaterialBuilder& parameter(SamplerType samplerType, SamplerPrecision precision,
             const char* name) noexcept;
+    /// @copydoc parameter(SamplerType, SamplerFormat, SamplerPrecision, const char*)
     MaterialBuilder& parameter(SamplerType samplerType, const char* name) noexcept;
 
-    // custom variables (all float4)
+    //! Custom variables (all float4).
     MaterialBuilder& variable(Variable v, const char* name) noexcept;
 
-    // require a specified attribute, position is always required and normal
-    // depends on the shading model
+    /**
+     * Require a specified attribute.
+     *
+     * position is always required and normal depends on the shading model.
+     */
     MaterialBuilder& require(filament::VertexAttribute attribute) noexcept;
 
-    // specify the domain that this material will operate in
+    //! Specify the domain that this material will operate in.
     MaterialBuilder& materialDomain(MaterialDomain materialDomain) noexcept;
 
-    // set the code content of this material
-    // for materials in the SURFACE domain:
-    //     must declare a function "void material(inout MaterialInputs material)"
-    //     this function *must* call "prepareMaterial(material)" before it returns
-    // for materials in the POST_PROCESS domain:
-    //     must declare a function "void postProcess(inout PostProcessInputs postProcess)"
+    //! Specify the refraction
+    MaterialBuilder& materialRefraction(RefractionMode refraction) noexcept;
+
+    //! Specify the refraction type
+    MaterialBuilder& materialRefractionType(RefractionType refractionType) noexcept;
+
+    /**
+     * Set the code content of this material.
+     *
+     * Surface Domain
+     * --------------
+     *
+     * Materials in the SURFACE domain must declare a function:
+     * ~~~~~
+     * void material(inout MaterialInputs material) {
+     *     prepareMaterial(material);
+     *     material.baseColor.rgb = float3(1.0, 0.0, 0.0);
+     * }
+     * ~~~~~
+     * this function *must* call `prepareMaterial(material)` before it returns.
+     *
+     * Post-process Domain
+     * -------------------
+     *
+     * Materials in the POST_PROCESS domain must declare a function:
+     * ~~~~~
+     * void postProcess(inout PostProcessInputs postProcess) {
+     *     postProcess.color = float4(1.0);
+     * }
+     * ~~~~~
+     */
     MaterialBuilder& material(const char* code, size_t line = 0) noexcept;
 
-    // the callback used for resolving #include directives
-    // the default is no callback, which disallows all includes
+    /**
+     * Set the callback used for resolving include directives.
+     * The default is no callback, which disallows all includes.
+     */
     MaterialBuilder& includeCallback(IncludeCallback callback) noexcept;
 
-    // set the vertex code content of this material
-    // for materials in the SURFACE domain:
-    //     must declare a function "void materialVertex(inout MaterialVertexInputs material)"
-    // for materials in the POST_PROCESS domain:
-    //     must declare a function "void postProcessVertex(inout PostProcessVertexInputs postProcess)"
+    /**
+     * Set the vertex code content of this material.
+     *
+     * Surface Domain
+     * --------------
+     *
+     * Materials in the SURFACE domain must declare a function:
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     * void materialVertex(inout MaterialVertexInputs material) {
+     *
+     * }
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     *
+     * Post-process Domain
+     * -------------------
+     *
+     * Materials in the POST_PROCESS domain must declare a function:
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     * void postProcessVertex(inout PostProcessVertexInputs postProcess) {
+     *
+     * }
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     */
     MaterialBuilder& materialVertex(const char* code, size_t line = 0) noexcept;
 
-    // set blending mode for this material
+    //! Set the blending mode for this material.
     MaterialBuilder& blending(BlendingMode blending) noexcept;
 
-    // set blending mode of the post lighting color for this material
-    // only OPAQUE, TRANSPARENT and ADD are supported, the default is TRANSPARENT
-    // this setting requires the material property "postLightingColor" to be set
+    /**
+     * Set the blending mode of the post-lighting color for this material.
+     * Only OPAQUE, TRANSPARENT and ADD are supported, the default is TRANSPARENT.
+     * This setting requires the material property "postLightingColor" to be set.
+     */
     MaterialBuilder& postLightingBlending(BlendingMode blending) noexcept;
 
-    // set vertex domain for this material
+    //! Set the vertex domain for this material.
     MaterialBuilder& vertexDomain(VertexDomain domain) noexcept;
 
-    // how triangles are culled (doesn't affect points or lines, back-face culling by default)
+    /**
+     * How triangles are culled by default (doesn't affect points or lines, BACK by default).
+     * Material instances can override this.
+     */
     MaterialBuilder& culling(CullingMode culling) noexcept;
 
-    // enable/disable color-buffer write (enabled by default)
+    //! Enable / disable color-buffer write (enabled by default).
     MaterialBuilder& colorWrite(bool enable) noexcept;
 
-    // enable/disable depth-buffer write (enabled by default for opaque, disabled for others)
+    //! Enable / disable depth-buffer write (enabled by default for opaque, disabled for others).
     MaterialBuilder& depthWrite(bool enable) noexcept;
 
-    // enable/disable depth based culling (enabled by default)
+    //! Enable / disable depth based culling (enabled by default).
     MaterialBuilder& depthCulling(bool enable) noexcept;
 
-    // double-sided materials don't cull faces, equivalent to culling(CullingMode::NONE)
-    // doubleSided() overrides culling() if called
-    // when called with "false", this enables the capability for a run-time toggle
+    /**
+     * Double-sided materials don't cull faces, equivalent to culling(CullingMode::NONE).
+     * doubleSided() overrides culling() if called.
+     * When called with "false", this enables the capability for a run-time toggle.
+     */
     MaterialBuilder& doubleSided(bool doubleSided) noexcept;
 
-    // any fragment with an alpha below this threshold is clipped (MASKED blending mode only)
-    // the mask threshold can also be controlled by using the float material parameter
-    // called "_maskTrehshold", or by calling MaterialInstance::setMaskTreshold
+    /**
+     * Any fragment with an alpha below this threshold is clipped (MASKED blending mode only).
+     * The mask threshold can also be controlled by using the float material parameter called
+     * `_maskThreshold`, or by calling
+     * @ref filament::MaterialInstance::setMaskThreshold "MaterialInstance::setMaskThreshold".
+     */
     MaterialBuilder& maskThreshold(float threshold) noexcept;
 
-    // the material output is multiplied by the shadowing factor (UNLIT model only)
+    //! The material output is multiplied by the shadowing factor (UNLIT model only).
     MaterialBuilder& shadowMultiplier(bool shadowMultiplier) noexcept;
 
-    // reduces specular aliasing for materials that have low roughness. Turning this feature
-    // on also helps preserve the shapes of specular highlights as an object moves away from
-    // the camera. When turned on, two float material parameters are added to control the effect:
-    // "_specularAAScreenSpaceVariance" and "_specularAAThreshold". You can also use
-    // MaterialInstance::setSpecularAntiAliasingVariance and setSpecularAntiAliasingThreshold
-    // disabled by default
+    /**
+     * Reduces specular aliasing for materials that have low roughness. Turning this feature on also
+     * helps preserve the shapes of specular highlights as an object moves away from the camera.
+     * When turned on, two float material parameters are added to control the effect:
+     * `_specularAAScreenSpaceVariance` and `_specularAAThreshold`. You can also use
+     * @ref filament::MaterialInstance::setSpecularAntiAliasingVariance
+     * "MaterialInstance::setSpecularAntiAliasingVariance" and
+     * @ref filament::MaterialInstance::setSpecularAntiAliasingThreshold
+     * "setSpecularAntiAliasingThreshold"
+     *
+     * Disabled by default.
+     */
     MaterialBuilder& specularAntiAliasing(bool specularAntiAliasing) noexcept;
 
-    // sets the screen space variance of the filter kernel used when applying specular
-    // anti-aliasing. The default value is set to 0.15. The specified value should be between
-    // 0 and 1 and will be clamped if necessary.
+    /**
+     * Sets the screen-space variance of the filter kernel used when applying specular
+     * anti-aliasing. The default value is set to 0.15. The specified value should be between 0 and
+     * 1 and will be clamped if necessary.
+     */
     MaterialBuilder& specularAntiAliasingVariance(float screenSpaceVariance) noexcept;
 
-    // sets the clamping threshold used to suppress estimation errors when applying specular
-    // anti-aliasing. The default value is set to 0.2. The specified value should be between 0
-    // and 1 and will be clamped if necessary.
+    /**
+     * Sets the clamping threshold used to suppress estimation errors when applying specular
+     * anti-aliasing. The default value is set to 0.2. The specified value should be between 0 and 1
+     * and will be clamped if necessary.
+     */
     MaterialBuilder& specularAntiAliasingThreshold(float threshold) noexcept;
 
-    // enables or disables the index of refraction (IoR) change caused by the clear coat layer when
-    // present. When the IoR changes, the base color is darkened. Disabling this feature preserves
-    // the base color as initially specified
-    // enabled by default
+    /**
+     * Enables or disables the index of refraction (IoR) change caused by the clear coat layer when
+     * present. When the IoR changes, the base color is darkened. Disabling this feature preserves
+     * the base color as initially specified.
+     *
+     * Enabled by default.
+     */
     MaterialBuilder& clearCoatIorChange(bool clearCoatIorChange) noexcept;
 
-    // enable/disable flipping of the Y coordinate of UV attributes, enabled by default
+    //! Enable / disable flipping of the Y coordinate of UV attributes, enabled by default.
     MaterialBuilder& flipUV(bool flipUV) noexcept;
 
-    // enable/disable multi-bounce ambient occlusion, disabled by default on mobile
+    //! Enable / disable multi-bounce ambient occlusion, disabled by default on mobile.
     MaterialBuilder& multiBounceAmbientOcclusion(bool multiBounceAO) noexcept;
 
-    // enable/disable specular ambient occlusion, disabled by default on mobile
+    //! Enable / disable specular ambient occlusion, disabled by default on mobile.
     MaterialBuilder& specularAmbientOcclusion(bool specularAO) noexcept;
 
-    // specifies how transparent objects should be rendered (default is DEFAULT)
+    //! Specifies how transparent objects should be rendered (default is DEFAULT).
     MaterialBuilder& transparencyMode(TransparencyMode mode) noexcept;
 
-    // specifies desktop vs mobile; works in concert with TargetApi to determine the shader models
-    // (used to generate code) and final output representations (spirv and/or text).
+    /**
+     * Specifies desktop vs mobile; works in concert with TargetApi to determine the shader models
+     * (used to generate code) and final output representations (spirv and/or text).
+     */
     MaterialBuilder& platform(Platform platform) noexcept;
 
-    // specifies opengl, vulkan, or metal
-    // This can be called repeatedly to build for multiple APIs.
-    // Works in concert with Platform to determine the shader models (used to generate code) and
-    // final output representations (spirv and/or text).
-    // If linking against filamat_lite, only "opengl" is allowed.
+    /**
+     * Specifies OpenGL, Vulkan, or Metal.
+     * This can be called repeatedly to build for multiple APIs.
+     * Works in concert with Platform to determine the shader models (used to generate code) and
+     * final output representations (spirv and/or text).
+     * If linking against filamat_lite, only `OPENGL` is allowed.
+     */
     MaterialBuilder& targetApi(TargetApi targetApi) noexcept;
 
-    // specifies the level of optimization to apply to the shaders (default is PERFORMANCE)
-    // if linking against filamat_lite, this _must_ be called with Optimization::NONE.
+    /**
+     * Specifies the level of optimization to apply to the shaders (default is PERFORMANCE).
+     * If linking against filamat_lite, this _must_ be called with Optimization::NONE.
+     */
     MaterialBuilder& optimization(Optimization optimization) noexcept;
 
-    // if true, will output the generated GLSL shader code to stdout
     // TODO: this is present here for matc's "--print" flag, but ideally does not belong inside
-    // MaterialBuilder
+    // MaterialBuilder.
+    //! If true, will output the generated GLSL shader code to stdout.
     MaterialBuilder& printShaders(bool printShaders) noexcept;
 
-    // if true, will include debugging information in generated SPIRV
+    //! If true, will include debugging information in generated SPIRV.
     MaterialBuilder& generateDebugInfo(bool generateDebugInfo) noexcept;
 
-    // specifies a list of variants that should be filtered out during code generation.
+    //! Specifies a list of variants that should be filtered out during code generation.
     MaterialBuilder& variantFilter(uint8_t variantFilter) noexcept;
 
-    // build the material
+    //! Build the material.
     Package build() noexcept;
 
 public:
     // The methods and types below are for internal use
+    /// @cond never
+
     struct Parameter {
         Parameter() noexcept = default;
         Parameter(const char* paramName, SamplerType t, SamplerFormat f, SamplerPrecision p)
@@ -343,6 +452,9 @@ public:
         };
         bool isSampler;
     };
+
+    static constexpr size_t MATERIAL_PROPERTIES_COUNT = filament::MATERIAL_PROPERTIES_COUNT;
+    using Property = filament::Property;
 
     using PropertyList = bool[MATERIAL_PROPERTIES_COUNT];
     using VariableList = utils::CString[MATERIAL_VARIABLES_COUNT];
@@ -366,12 +478,19 @@ public:
 
     uint8_t getVariantFilter() const { return mVariantFilter; }
 
+    /// @endcond
+
 private:
     void prepareToBuild(MaterialInfo& info) noexcept;
 
-    // Return true if:
-    // The shader is syntactically and semantically valid
-    bool findProperties() noexcept;
+    // Return true if the shader is syntactically and semantically valid.
+    // This method finds all the properties defined in the fragment and
+    // vertex shaders of the material.
+    bool findAllProperties() noexcept;
+    // Multiple calls to findProperties accumulate the property sets across fragment
+    // and vertex shaders in mProperties.
+    bool findProperties(filament::backend::ShaderType type,
+            MaterialBuilder::PropertyList& p) noexcept;
     bool runSemanticAnalysis() noexcept;
 
     bool checkLiteRequirements() noexcept;
@@ -424,6 +543,8 @@ private:
     CullingMode mCullingMode = CullingMode::BACK;
     Shading mShading = Shading::LIT;
     MaterialDomain mMaterialDomain = MaterialDomain::SURFACE;
+    RefractionMode mRefractionMode = RefractionMode::NONE;
+    RefractionType mRefractionType = RefractionType::SOLID;
     Interpolation mInterpolation = Interpolation::SMOOTH;
     VertexDomain mVertexDomain = VertexDomain::OBJECT;
     TransparencyMode mTransparencyMode = TransparencyMode::DEFAULT;
@@ -457,4 +578,8 @@ private:
 };
 
 } // namespace filamat
+
+template<> struct utils::EnableBitMaskOperators<filamat::MaterialBuilder::TargetApi>
+        : public std::true_type {};
+
 #endif

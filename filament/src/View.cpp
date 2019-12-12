@@ -337,24 +337,29 @@ void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaSc
     u.setUniform(offsetof(PerViewUib, exposure), exposure);
     u.setUniform(offsetof(PerViewUib, ev100), ev100);
 
-    // IBL
-    FIndirectLight const* const ibl = scene->getIndirectLight();
+    // If the scene does not have an IBL, use the black 1x1 IBL and honor the fallback intensity
+    // associated with the skybox.
+    FIndirectLight const* ibl = scene->getIndirectLight();
+    float intensity;
     if (UTILS_LIKELY(ibl)) {
-        float2 iblMaxMipLevel{ ibl->getMaxMipLevel(), 1u << ibl->getMaxMipLevel() };
-        u.setUniform(offsetof(PerViewUib, iblMaxMipLevel), iblMaxMipLevel);
-        u.setUniform(offsetof(PerViewUib, iblLuminance), ibl->getIntensity() * exposure);
-        u.setUniformArray(offsetof(PerViewUib, iblSH), ibl->getSH(), 9);
-        if (ibl->getReflectionMap()) {
-            SamplerParams reflectionSamplerParams;
-            reflectionSamplerParams.filterMag = SamplerMagFilter::LINEAR;
-            reflectionSamplerParams.filterMin = SamplerMinFilter::LINEAR_MIPMAP_LINEAR;
-            mPerViewSb.setSampler(PerViewSib::IBL_SPECULAR,
-                    { ibl->getReflectionMap(), reflectionSamplerParams });
-        }
+        intensity = ibl->getIntensity();
     } else {
+        ibl = engine.getDefaultIndirectLight();
         FSkybox const* const skybox = scene->getSkybox();
-        const float intensity = skybox ? skybox->getIntensity() : FIndirectLight::DEFAULT_INTENSITY;
-        u.setUniform(offsetof(PerViewUib, iblLuminance), intensity * exposure);
+        intensity = skybox ? skybox->getIntensity() : FIndirectLight::DEFAULT_INTENSITY;
+    }
+
+    // Set up uniforms and sampler for the IBL, guaranteed to be non-null at this point.
+    float2 iblMaxMipLevel{ ibl->getMaxMipLevel(), 1u << ibl->getMaxMipLevel() };
+    u.setUniform(offsetof(PerViewUib, iblMaxMipLevel), iblMaxMipLevel);
+    u.setUniform(offsetof(PerViewUib, iblLuminance), intensity * exposure);
+    u.setUniformArray(offsetof(PerViewUib, iblSH), ibl->getSH(), 9);
+    if (ibl->getReflectionMap()) {
+        mPerViewSb.setSampler(PerViewSib::IBL_SPECULAR, {
+                ibl->getReflectionMap(), {
+                        .filterMag = SamplerMagFilter::LINEAR,
+                        .filterMin = SamplerMinFilter::LINEAR_MIPMAP_LINEAR
+                }});
     }
 
     // Directional light (always at index 0)
@@ -563,7 +568,8 @@ void FView::prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& are
      * Update driver state
      */
 
-    float fraction = (engine.getEngineTime().count() % 1000000000) / 1000000000.0f;
+    const uint64_t oneSecondRemainder = engine.getEngineTime().count() % 1000000000;
+    const float fraction = float(double(oneSecondRemainder) / 1000000000.0);
     mPerViewUb.setUniform(offsetof(PerViewUib, time), fraction);
     mPerViewUb.setUniform(offsetof(PerViewUib, userTime), userTime);
 
@@ -583,7 +589,7 @@ void FView::computeVisibilityMasks(
     // __restrict__ seems to only be taken into account as function parameters. This is very
     // important here, otherwise, this loop doesn't get vectorized.
     // This is vectorized 16x.
-    count = (count + 0xF) & ~0xF; // capacity guaranteed to be multiple of 16
+    count = (count + 0xFu) & ~0xFu; // capacity guaranteed to be multiple of 16
     for (size_t i = 0; i < count; ++i) {
         Culler::result_type mask = visibleMask[i];
         FRenderableManager::Visibility v = visibility[i];
@@ -591,7 +597,7 @@ void FView::computeVisibilityMasks(
         bool visRenderables   = (!v.culling || (mask & VISIBLE_RENDERABLE))    && inVisibleLayer;
         bool visShadowCasters = (!v.culling || (mask & VISIBLE_SHADOW_CASTER)) && inVisibleLayer && v.castShadows;
         visibleMask[i] = Culler::result_type(visRenderables) |
-                         Culler::result_type(visShadowCasters << 1);
+                         Culler::result_type(visShadowCasters << 1u);
     }
 }
 
@@ -635,9 +641,9 @@ void FView::prepareCamera(const CameraInfo& camera, const filament::Viewport& vi
 }
 
 void FView::prepareSSAO(Handle<HwTexture> ssao) const noexcept {
-    SamplerParams params;
-    params.filterMag = SamplerMagFilter::LINEAR;
-    mPerViewSb.setSampler(PerViewSib::SSAO, ssao, params);
+    mPerViewSb.setSampler(PerViewSib::SSAO, ssao, {
+            .filterMag = SamplerMagFilter::LINEAR
+    });
 }
 
 void FView::cleanupSSAO() const noexcept {
@@ -865,6 +871,10 @@ void View::setRenderTarget(TargetBufferFlags discard) noexcept {
     upcast(this)->setRenderTarget(discard);
 }
 
+RenderTarget* View::getRenderTarget() const noexcept {
+    return upcast(this)->getRenderTarget();
+}
+
 void View::setSampleCount(uint8_t count) noexcept {
     upcast(this)->setSampleCount(count);
 }
@@ -931,6 +941,10 @@ bool View::isFrontFaceWindingInverted() const noexcept {
 
 void View::setDepthPrepass(View::DepthPrepass prepass) noexcept {
     upcast(this)->setDepthPrepass(prepass);
+}
+
+View::DepthPrepass View::getDepthPrepass() const noexcept {
+    return upcast(this)->getDepthPrepass();
 }
 
 void View::setDynamicLightingOptions(float zLightNear, float zLightFar) noexcept {

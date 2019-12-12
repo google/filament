@@ -25,41 +25,43 @@
 
 namespace filament {
 
+using namespace backend;
 using namespace details;
 
 struct RenderTarget::BuilderDetails {
     FRenderTarget::Attachment mAttachments[RenderTarget::ATTACHMENT_COUNT];
 };
 
-using BuilderType = RenderTarget::Builder;
-BuilderType::Builder() noexcept = default;
-BuilderType::~Builder() noexcept = default;
-BuilderType::Builder(Builder const& rhs) noexcept = default;
-BuilderType::Builder(Builder&& rhs) noexcept = default;
-BuilderType& BuilderType::operator=(BuilderType const& rhs) noexcept = default;
-BuilderType& BuilderType::operator=(BuilderType&& rhs) noexcept = default;
+using BuilderType = RenderTarget;
+BuilderType::Builder::Builder() noexcept = default;
+BuilderType::Builder::~Builder() noexcept = default;
+BuilderType::Builder::Builder(BuilderType::Builder const& rhs) noexcept = default;
+BuilderType::Builder::Builder(BuilderType::Builder&& rhs) noexcept = default;
+BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder const& rhs) noexcept = default;
+BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder&& rhs) noexcept = default;
 
-BuilderType& BuilderType::texture(AttachmentPoint pt, Texture* texture) noexcept {
+RenderTarget::Builder& RenderTarget::Builder::texture(AttachmentPoint pt, Texture* texture) noexcept {
     mImpl->mAttachments[pt].texture = upcast(texture);
     return *this;
 }
 
-BuilderType& BuilderType::mipLevel(AttachmentPoint pt, uint8_t level) noexcept {
+RenderTarget::Builder& RenderTarget::Builder::mipLevel(AttachmentPoint pt, uint8_t level) noexcept {
     mImpl->mAttachments[pt].mipLevel = level;
     return *this;
 }
 
-BuilderType& BuilderType::face(AttachmentPoint pt, CubemapFace face) noexcept {
+RenderTarget::Builder& RenderTarget::Builder::face(AttachmentPoint pt, CubemapFace face) noexcept {
     mImpl->mAttachments[pt].face = face;
     return *this;
 }
 
-BuilderType& BuilderType::layer(AttachmentPoint pt, uint32_t layer) noexcept {
+RenderTarget::Builder& RenderTarget::Builder::layer(AttachmentPoint pt, uint32_t layer) noexcept {
     mImpl->mAttachments[pt].layer = layer;
     return *this;
 }
 
 RenderTarget* RenderTarget::Builder::build(Engine& engine) {
+    FEngine::assertValid(engine, __PRETTY_FUNCTION__);
     using backend::TextureUsage;
     const FRenderTarget::Attachment& color = mImpl->mAttachments[COLOR];
     const FRenderTarget::Attachment& depth = mImpl->mAttachments[DEPTH];
@@ -97,18 +99,18 @@ FRenderTarget::HwHandle FRenderTarget::createHandle(FEngine& engine, const Build
     FEngine::DriverApi& driver = engine.getDriverApi();
     const Attachment& color = builder.mImpl->mAttachments[COLOR];
     const Attachment& depth = builder.mImpl->mAttachments[DEPTH];
-    const backend::TargetBufferFlags flags =
-            depth.texture ? backend::COLOR_AND_DEPTH : backend::COLOR;
+    const TargetBufferFlags flags =
+            depth.texture ? TargetBufferFlags::COLOR_AND_DEPTH : TargetBufferFlags::COLOR;
 
     // For now we do not support multisampled render targets in the public-facing API, but please
     // note that post-processing includes FXAA by default.
     const uint8_t samples = 1;
 
-    const backend::TargetBufferInfo cinfo(upcast(color.texture)->getHwHandle(),
+    const TargetBufferInfo cinfo(upcast(color.texture)->getHwHandle(),
             color.mipLevel, color.face);
 
-    const backend::TargetBufferInfo dinfo(
-            depth.texture ? upcast(depth.texture)->getHwHandle() : backend::TextureHandle(),
+    const TargetBufferInfo dinfo(
+            depth.texture ? upcast(depth.texture)->getHwHandle() : TextureHandle(),
             color.mipLevel, color.face);
 
     const uint32_t width = FTexture::valueForLevel(color.mipLevel, color.texture->getWidth());

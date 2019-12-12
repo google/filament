@@ -60,6 +60,13 @@ Java_com_google_android_filament_Engine_nCreateSwapChain(JNIEnv* env,
 }
 
 extern "C" JNIEXPORT jlong JNICALL
+Java_com_google_android_filament_Engine_nCreateSwapChainHeadless(JNIEnv* env,
+        jclass klass, jlong nativeEngine, jint width, jint height, jlong flags) {
+    Engine* engine = (Engine*) nativeEngine;
+    return (jlong) engine->createSwapChain(width, height, (uint64_t) flags);
+}
+
+extern "C" JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_Engine_nCreateSwapChainFromRawPointer(JNIEnv*,
         jclass, jlong nativeEngine, jlong pointer, jlong flags) {
      Engine* engine = (Engine*) nativeEngine;
@@ -154,9 +161,9 @@ Java_com_google_android_filament_Engine_nDestroyScene(JNIEnv*, jclass,
 
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_Engine_nCreateFence(JNIEnv*, jclass,
-        jlong nativeEngine, jint fenceType) {
+        jlong nativeEngine) {
     Engine* engine = (Engine*) nativeEngine;
-    return (jlong) engine->createFence((Fence::Type) fenceType);
+    return (jlong) engine->createFence();
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -250,6 +257,13 @@ Java_com_google_android_filament_Engine_nDestroyEntity(JNIEnv*, jclass,
     Engine* engine = (Engine*) nativeEngine;
     Entity& entity = *reinterpret_cast<Entity*>(&entity_);
     engine->destroy(entity);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_Engine_nFlushAndWait(JNIEnv *env, jclass clazz,
+        jlong nativeEngine) {
+    Engine* engine = (Engine*) nativeEngine;
+    engine->flushAndWait();
 }
 
 // Managers...

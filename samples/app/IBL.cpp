@@ -70,8 +70,8 @@ bool IBL::loadFromKtx(const std::string& prefix) {
     KtxBundle* iblKtx = createKtx(iblPath);
     KtxBundle* skyKtx = createKtx(skyPath);
 
-    mSkyboxTexture = KtxUtility::createTexture(&mEngine, skyKtx, false);
-    mTexture = KtxUtility::createTexture(&mEngine, iblKtx, false);
+    mSkyboxTexture = ktx::createTexture(&mEngine, skyKtx, false);
+    mTexture = ktx::createTexture(&mEngine, iblKtx, false);
 
     if (!iblKtx->getSphericalHarmonics(mBands)) {
         return false;
@@ -79,7 +79,6 @@ bool IBL::loadFromKtx(const std::string& prefix) {
 
     mIndirectLight = IndirectLight::Builder()
             .reflections(mTexture)
-            .irradiance(3, mBands)
             .intensity(IBL_INTENSITY)
             .build(mEngine);
 
@@ -116,7 +115,7 @@ bool IBL::loadFromDirectory(const utils::Path& path) {
     size_t numLevels = mTexture->getLevels();
     for (size_t i = 1; i<numLevels; i++) {
         const std::string levelPrefix = prefix + std::to_string(i) + "_";
-        if (!loadCubemapLevel(&mTexture, path, i, levelPrefix)) return false;
+        loadCubemapLevel(&mTexture, path, i, levelPrefix);
     }
 
     if (!loadCubemapLevel(&mSkyboxTexture, path)) return false;
@@ -136,8 +135,7 @@ bool IBL::loadCubemapLevel(filament::Texture** texture, const utils::Path& path,
         std::string const& levelPrefix) const {
     Texture::FaceOffsets offsets;
     Texture::PixelBufferDescriptor buffer;
-    bool success = loadCubemapLevel(texture, &buffer, &offsets, path, level, levelPrefix);
-    if (!success) return false;
+    loadCubemapLevel(texture, &buffer, &offsets, path, level, levelPrefix);
     (*texture)->setImage(mEngine, level, std::move(buffer), offsets);
     return true;
 }
@@ -152,7 +150,7 @@ bool IBL::loadCubemapLevel(
     size_t size = 0;
     size_t numLevels = 1;
 
-    { // this is just a scope to avoid variable name hidding below
+    { // this is just a scope to avoid variable name hiding below
         int w, h;
         std::string faceName = levelPrefix + faceSuffix[0] + ".rgb32f";
         Path facePath(Path::concat(path, faceName));

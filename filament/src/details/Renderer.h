@@ -33,6 +33,7 @@
 
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
+#include <backend/PresentCallable.h>
 
 #include <utils/compiler.h>
 #include <utils/Allocator.h>
@@ -74,12 +75,16 @@ public:
     void copyFrame(FSwapChain* dstSwapChain, Viewport const& dstViewport,
             Viewport const& srcViewport, CopyFrameFlag flags);
 
-    bool beginFrame(FSwapChain* swapChain);
+    bool beginFrame(FSwapChain* swapChain, backend::FrameFinishedCallback callback, void* user);
     void endFrame();
 
     void resetUserTime();
 
     void readPixels(uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
+            backend::PixelBufferDescriptor&& buffer);
+
+    void readPixels(FRenderTarget* renderTarget,
+            uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
             backend::PixelBufferDescriptor&& buffer);
 
     // Clean-up everything, this is typically called when the client calls Engine::destroyRenderer()
@@ -91,6 +96,10 @@ private:
 
     backend::Handle<backend::HwRenderTarget> getRenderTarget(FView& view) const noexcept;
 
+    void readPixels(backend::Handle<backend::HwRenderTarget> renderTargetHandle,
+            uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
+            backend::PixelBufferDescriptor&& buffer);
+
     RenderPass::CommandTypeFlags getCommandType(View::DepthPrepass prepass) const noexcept;
 
     void recordHighWatermark(size_t watermark) noexcept {
@@ -101,8 +110,8 @@ private:
         return mCommandsHighWatermark * sizeof(RenderPass::Command);
     }
 
-    backend::TextureFormat getHdrFormat(const View& view) const noexcept;
-    backend::TextureFormat getLdrFormat() const noexcept;
+    backend::TextureFormat getHdrFormat(const View& view, bool translucent) const noexcept;
+    backend::TextureFormat getLdrFormat(bool translucent) const noexcept;
 
     using clock = std::chrono::steady_clock;
     using Epoch = clock::time_point;
@@ -121,7 +130,9 @@ private:
     size_t mCommandsHighWatermark = 0;
     uint32_t mFrameId = 0;
     FrameInfoManager mFrameInfoManager;
-    bool mIsRGB16FSupported : 1;
+    backend::TextureFormat mHdrTranslucent{};
+    backend::TextureFormat mHdrQualityMedium{};
+    backend::TextureFormat mHdrQualityHigh{};
     bool mIsRGB8Supported : 1;
     Epoch mUserEpoch;
     math::float4 mShaderUserTime{};

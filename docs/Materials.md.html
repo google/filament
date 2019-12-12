@@ -89,6 +89,10 @@ in table [standardProperties].
 **clearCoatNormal**     | A detail normal used to perturb the clear coat layer using _bump mapping_ (_normal mapping_)
 **emissive**            | Additional diffuse albedo to simulate emissive surfaces (such as neons, etc.) This property is mostly useful in an HDR pipeline with a bloom pass
 **postLightingColor**   | Additional color that can be blended with the result of the lighting computations. See `postLightingBlending`
+**transmission**        | Defines how much of the diffuse light of a dielectric is transmitted through the object, in other words this defines how transparent an object is
+**absorption**          | Absorption factor for refractive objects
+**ior**                 | Index of refraction for refractive objects
+**microThickness**      | Thickness of the thin layer of refractive objects
 [Table [standardProperties]: Properties of the standard model]
 
 The type and range of each property is described in table [standardPropertiesTypes].
@@ -100,7 +104,7 @@ The type and range of each property is described in table [standardPropertiesTyp
 **roughness**           | float    |  [0..1]                  |
 **reflectance**         | float    |  [0..1]                  | Prefer values > 0.35
 **clearCoat**           | float    |  [0..1]                  | Should be 0 or 1
-**clearCoatRoughness**  | float    |  [0..1]                  | Remaps to [0..0.6]
+**clearCoatRoughness**  | float    |  [0..1]                  |
 **anisotropy**          | float    |  [-1..1]                 | Anisotropy is in the tangent direction when this value is positive
 **anisotropyDirection** | float3   |  [0..1]                  | Linear RGB, encodes a direction vector in tangent space
 **ambientOcclusion**    | float    |  [0..1]                  |
@@ -108,6 +112,10 @@ The type and range of each property is described in table [standardPropertiesTyp
 **clearCoatNormal**     | float3   |  [0..1]                  | Linear RGB, encodes a direction vector in tangent space
 **emissive**            | float4   |  rgb=[0..1], a=[-n..n]   | Alpha is the exposure compensation
 **postLightingColor**   | float4   |  [0..1]                  | Pre-multiplied linear RGB
+**transmission**        | float    |  [0..1]                  |
+**absorption**          | float3   |  [0..n]                  |
+**ior**                 | float    |  [1..n]                  | Optional, usually deduced from the reflectance
+**microThickness**      | float    |  [0..n]                  |
 [Table [standardPropertiesTypes]: Range and type of the standard model's properties]
 
 
@@ -119,6 +127,29 @@ The type and range of each property is described in table [standardPropertiesTyp
 !!! Note: About pre-multiplied RGB
     Filament materials expect colors to use pre-multiplied alpha. See the Pre-multiplied alpha
     section for more information.
+
+!!! Note: About absorption
+    The light attenuation through the material is defined as $e^{-absorption * distance}$,
+    and the distance depends on the `thickness` parameter. If `thickness` is not provided, then
+    the `absorption` parameter is used directly and the light attenuation through the material
+    becomes $1 - absorption$. To obtain a certain color at a desired distance, the above
+    equation can be inverted such as $absorption = -ln(color)/distance$.
+
+!!! Note: About ior and reflectance
+    The index of refraction (IOR) and the reflectance represent the same physical attribute,
+    therefore they don't need to be both specified. Typically, only the reflectance is specified
+    and the IOR is deduced automatically. When only the IOR is specified, the reflectance is then
+    deduced automatically. It is possible to specify both, in which case their values are kept
+    as-is, which can lead to physically impossible materials, however, this might be desirable
+    for artistic reasons.
+
+!!! Note: About thickness and microThickness for refraction
+    `thickness` represents the thickness of solid objects in the direction of the normal, for
+    satisfactory results, this should be provided per fragment (e.g.: as a texture) or at least per
+    vertex.  `microThickness` represent the thickness of the thin layer of an object, and can
+    generally be provided as a constant value. For example, a 1mm thin hollow sphere of radius 1m,
+    would have a `thickness` of 1 and a `microThickness` of 0.001. Currently `thickness` is not
+    used when `refractionType` is set to "thin".
 
 ### Base color
 
@@ -224,19 +255,19 @@ Table [commonMatReflectance] describes acceptable reflectance values for various
 (no real world material has a value under 2%).
 
 
-          Material         |    Reflectance   |  Property value
---------------------------:|:-----------------|:----------------
-Water                      | 2%               | 0.35
-Fabric                     | 4% to 5.6%       | 0.5 to 0.59
-Common liquids             | 2% to 4%         | 0.35 to 0.5
-Common gemstones           | 5% to 16%        | 0.56 to 1.0
-Plastics, glass            | 4% to 5%         | 0.5 to 0.56
-Other dielectric materials | 2% to 5%         | 0.35 to 0.56
-Eyes                       | 2.5%             | 0.39
-Skin                       | 2.8%             | 0.42
-Hair                       | 4.6%             | 0.54
-Teeth                      | 5.8%             | 0.6
-Default value              | 4%               | 0.5
+Material                   |    Reflectance   |        IOR       |   Linear value
+--------------------------:|:-----------------|:-----------------|:----------------
+Water                      | 2%               | 1.33             | 0.35
+Fabric                     | 4% to 5.6%       | 1.5 to 1.62      | 0.5 to 0.59
+Common liquids             | 2% to 4%         | 1.33 to 1.5      | 0.35 to 0.5
+Common gemstones           | 5% to 16%        | 1.58 to 2.33     | 0.56 to 1.0
+Plastics, glass            | 4% to 5%         | 1.5 to 1.58      | 0.5 to 0.56
+Other dielectric materials | 2% to 5%         | 1.33 to 1.58     | 0.35 to 0.56
+Eyes                       | 2.5%             | 1.38             | 0.39
+Skin                       | 2.8%             | 1.4              | 0.42
+Hair                       | 4.6%             | 1.55             | 0.54
+Teeth                      | 5.8%             | 1.63             | 0.6
+Default value              | 4%               | 1.5              | 0.5
 [Table [commonMatReflectance]: Reflectance of common materials]
 
 ### Clear coat
@@ -268,8 +299,7 @@ The effect of `clearCoat` on a rough metal is shown in figure [clearCoatProperty
 ### Clear coat roughness
 
 The `clearCoatRoughness` property is similar to the `roughness` property but applies only to the
-clear coat layer. In addition, since clear coat layers are never completely rough, the value between
-0 and 1 is remapped internally to an actual roughness of 0 to 0.6.
+clear coat layer.
 
 The effect of `clearCoatRoughness` on a rough metal is shown in figure [clearCoatRoughnessProperty]
 (click on the image to see a larger version).
@@ -1094,6 +1124,54 @@ material {
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+### Blending and transparency: refractionMode
+
+Type
+:    `string`
+
+Value
+:     Any of `none`, `cubemap`, `screenspace`. Defaults to `none`.
+
+Description
+:     Activates refraction when set to anything but `none`. A value of `cubemap` will only use the
+      IBL cubemap as source of refraction, while this is significantly more efficient, no scene
+      objects will be refracted, only the distant environment encoded in the cubemap. This mode is
+      adequate for an object viewer for instance. A value of `screenspace` will employ the more
+      advanced screen-space refraction algorithm which allows opaque objects in the scene to be
+      refracted. In `cubemap` mode, refracted rays are assumed to emerge from the center of the
+      object and the `thickness` parameter is only used for computing the absorption, but has no
+      impact on the refraction itself. In `screenspace` mode, refracted rays are assumed to travel
+      parallel to the view direction when they exit the refractive medium.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
+material {
+    refractionMode : cubemap,
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+### Blending and transparency: refractionType
+
+Type
+:    `string`
+
+Value
+:     Any of `solid`, `thin`. Defaults to `solid`.
+
+Description
+:     This is only meaningful when `refractionMode` is set to anything but `none`. `refractionType`
+      defines the refraction model used. `solid` is used for thick objects such as a crystal ball,
+      an ice cube or as sculpture. `thin` is used for thin objects such as a window, an ornament
+      ball or a soap bubble. In `solid` mode all refracive objects are assumed to be a sphere
+      tangent to the entry point and of radius `thickness`. In `thin` mode, all refractive objects
+      are assumed to be flat and thin and of thickness `thickness`.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
+material {
+    refractionMode : cubemap,
+    refractionType : thin,
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 ### Rasterization: culling
 
 Type
@@ -1176,7 +1254,7 @@ Description
 :     Enables two-sided rendering and its capability to be toggled at run time. When set to `true`,
       `culling` is automatically set to `none`; if the triangle is back-facing, the triangle's
       normal is flipped to become front-facing. When explicitly set to `false`, this allows the
-      doubleSided property to be toggled at run time.
+      double-sidedness to be toggled at run time.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
 material {
@@ -1391,16 +1469,19 @@ APIs listed in the Shader public APIs section.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ GLSL
 struct MaterialVertexInputs {
-    float4 color;         // if the color attribute is required
-    float2 uv0;           // if the uv0 attribute is required
-    float2 uv1;           // if the uv1 attribute is required
-    float3 worldNormal;   // only if the shading model is not unlit
-    float4 worldPosition; // always available (see note below about world-space)
+    float4 color;              // if the color attribute is required
+    float2 uv0;                // if the uv0 attribute is required
+    float2 uv1;                // if the uv1 attribute is required
+    float3 worldNormal;        // only if the shading model is not unlit
+    float4 worldPosition;      // always available (see note below about world-space)
+
+    mat4   clipSpaceTransform; // default: identity, transforms the clip-space position
+
     // variable* names are replaced with actual names
-    float4 variable0;     // if 1 or more variables is defined
-    float4 variable1;     // if 2 or more variables is defined
-    float4 variable2;     // if 3 or more variables is defined
-    float4 variable3;     // if 4 or more variables is defined
+    float4 variable0;          // if 1 or more variables is defined
+    float4 variable1;          // if 2 or more variables is defined
+    float4 variable2;          // if 3 or more variables is defined
+    float4 variable3;          // if 4 or more variables is defined
 };
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -1503,8 +1584,10 @@ struct MaterialInputs {
     float  anisotropy;          // default: 0.0
     float3 anisotropyDirection; // default: float3(1.0, 0.0, 0.0)
 
-    // only available when the shading model is subsurface
+    // only available when the shading model is subsurface or refraction is enabled
     float  thickness;           // default: 0.5
+
+    // only available when the shading model is subsurface
     float  subsurfacePower;     // default: 12.234
     float3 subsurfaceColor;     // default: float3(1.0)
 
@@ -1519,6 +1602,12 @@ struct MaterialInputs {
     // not available when the shading model is unlit
     // must be set before calling prepareMaterial()
     float3 normal;              // default: float3(0.0, 0.0, 1.0)
+
+    // only available when refraction is enabled
+    float transmission;         // default: 1.0
+    float3 absorption;          // default float3(0.0, 0.0, 0.0)
+    float ior;                  // default: 1.5
+    float microThickness;       // default: 0.0, not available with refractionType "solid"
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -1618,10 +1707,17 @@ The following APIs are only available from the fragment block:
 **inverseTonemap(float3)**          | float3   |  Applies the inverse tone mapping operator to the specified linear sRGB color and returns a linear sRGB color. This operation may be an approximation
 **inverseTonemapSRGB(float3)**      | float3   |  Applies the inverse tone mapping operator to the specified non-linear sRGB color and returns a linear sRGB color. This operation may be an approximation
 **luminance(float3)**               | float    |  Computes the luminance of the specified linear sRGB color
+**ycbcrToRgb(float, float2)**       | float3   |  Converts a luminance and CbCr pair to a sRGB color
+**uvToRenderTargetUV(float2)**      | float2   |  Transforms a UV coordinate to allow sampling from a `RenderTarget` attachment
 
 !!! TIP: world space
     To obtain API-level world space coordinates, custom materials should add `getWorldOffset()` to
     `getWorldPosition()` (et al).
+
+!!! TIP: sampling from render targets
+    When sampling from a `filament::Texture` that is attached to a `filament::RenderTarget` for
+    materials in the surface domain, please use `uvToRenderTargetUV` to transform the texture
+    coordinate. This will flip the coordinate depending on which backend is being used.
 
 # Compiling materials
 

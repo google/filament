@@ -97,12 +97,12 @@ void ResourceAllocator::terminate() noexcept {
     }
 }
 
-RenderTargetHandle ResourceAllocator::createRenderTarget(
+RenderTargetHandle ResourceAllocator::createRenderTarget(const char* name,
         TargetBufferFlags targetBufferFlags, uint32_t width, uint32_t height,
         uint8_t samples, TargetBufferInfo color, TargetBufferInfo depth,
         TargetBufferInfo stencil) noexcept {
     return mBackend.createRenderTarget(targetBufferFlags,
-            width, height, samples, color, depth, stencil);
+            width, height, samples ? samples : 1u, color, depth, stencil);
 }
 
 void ResourceAllocator::destroyRenderTarget(RenderTargetHandle h) noexcept {
@@ -113,6 +113,15 @@ backend::TextureHandle ResourceAllocator::createTexture(const char* name,
         backend::SamplerType target, uint8_t levels,
         backend::TextureFormat format, uint8_t samples, uint32_t width, uint32_t height,
         uint32_t depth, backend::TextureUsage usage) noexcept {
+
+    if (!(usage & TextureUsage::SAMPLEABLE)) {
+        // If this texture is not going to be sampled, we can round its size up
+        // this helps prevent many reallocations for small size changes.
+        // We round to 16 pixels, which works for 720p btw.
+        width  = (width  + 15u) & ~15u;
+        height = (height + 15u) & ~15u;
+    }
+
     // do we have a suitable texture in the cache?
     TextureHandle handle;
     if (mEnabled) {
@@ -161,12 +170,16 @@ void ResourceAllocator::gc() noexcept {
     // this is called regularly -- usually once per frame of each Renderer
 
     // increase our age
-    mAge++;
+    const size_t age = mAge++;
 
-    // Remove entries that are older than a certain age
+    // Purging strategy:
+    // + remove entries that are older than a certain age
+    // - remove only one entry per gc(), unless we're at capacity
+
     auto& textureCache = mTextureCache;
     for (auto it = textureCache.begin(); it != textureCache.end();) {
-        if (mAge - it->second.age > CACHE_MAX_AGE) {
+        const size_t ageDiff = age - it->second.age;
+        if (ageDiff >= CACHE_MAX_AGE) {
             mBackend.destroyTexture(it->second.handle);
             mCacheSize -= it->second.size;
             //slog.d << "purging " << it->second.handle.getId() << io::endl;

@@ -38,9 +38,7 @@ using namespace utils;
 
 namespace filagui {
 
-static const uint8_t UI_BLIT_PACKAGE[] = {
-    #include "generated/material/uiBlit.inc"
-};
+#include "generated/resources/filagui_resources.h"
 
 ImGuiHelper::ImGuiHelper(Engine* engine, filament::View* view, const Path& fontPath) :
         mEngine(engine), mView(view) {
@@ -49,7 +47,7 @@ ImGuiHelper::ImGuiHelper(Engine* engine, filament::View* view, const Path& fontP
 
     // Create a simple alpha-blended 2D blitting material.
     mMaterial = Material::Builder()
-            .package((void*)UI_BLIT_PACKAGE, sizeof(UI_BLIT_PACKAGE))
+            .package(FILAGUI_RESOURCES_UIBLIT_DATA, FILAGUI_RESOURCES_UIBLIT_SIZE)
             .build(*engine);
 
     // If the given font path is invalid, ImGui will silently fall back to proggy, which is a

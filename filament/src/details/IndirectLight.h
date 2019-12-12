@@ -35,7 +35,7 @@ class FEngine;
 
 class FIndirectLight : public IndirectLight {
 public:
-    static constexpr float DEFAULT_INTENSITY = 30000.0f;    // lux
+    static constexpr float DEFAULT_INTENSITY = 30000.0f;    // lux of the sun
 
     FIndirectLight(FEngine& engine, const Builder& builder) noexcept;
 
@@ -51,6 +51,8 @@ public:
     size_t getMaxMipLevel() const noexcept { return mMaxMipLevel; }
     math::float3 getDirectionEstimate() const noexcept;
     math::float4 getColorEstimate(math::float3 direction) const noexcept;
+    static math::float3 getDirectionEstimate(const math::float3 sh[9]) noexcept;
+    static math::float4 getColorEstimate(const math::float3 sh[9], math::float3 direction) noexcept;
 
 private:
     backend::Handle<backend::HwTexture> mReflectionsMapHandle;

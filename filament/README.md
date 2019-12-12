@@ -37,6 +37,10 @@ To use Filament from Java you must use the following two libraries instead:
 - `filament-java.jar`, Contains Filament's Java classes
 - `filament-jni`, Filament's JNI bindings
 
+To link against debug builds of Filament, you must also link against:
+
+- `matdbg`, Support library that adds an interactive web-based debugger to Filament
+
 To use the Vulkan backend on macOS you must also make the following libraries available at runtime:
 - `MoltenVK_icd.json`
 - `libMoltenVK.dylib`
@@ -123,28 +127,28 @@ clean:
 Note that the static libraries distributed for Windows include several
 variants: mt, md, mtd, mdd. These correspond to the [run-time library
 flags](https://docs.microsoft.com/en-us/cpp/build/reference/md-mt-ld-use-run-time-library?view=vs-2017)
-`/MT`, `/MD`, `/MTd`, and `/MDd`, respectively. Here we use the mt variant.
+`/MT`, `/MD`, `/MTd`, and `/MDd`, respectively. Here we use the mt variant. For the debug variants,
+be sure to also include `matdbg.lib` in `FILAMENT_LIBS`.
 
 When building Filament from source, the `USE_STATIC_CRT` CMake option can be
 used to change the run-time library version.
 
 ```
-FILAMENT_LIBS=lib/x86_64/mt/filament.lib lib/x86_64/mt/backend.lib lib/x86_64/mt/bluegl.lib \
-              lib/x86_64/mt/filabridge.lib lib/x86_64/mt/filaflat.lib lib/x86_64/mt/utils.lib \
-              lib/x86_64/mt/geometry.lib lib/x86_64/mt/smol-v.lib lib/x86_64/mt/ibl.lib
-CC=clang-cl.exe
+FILAMENT_LIBS=filament.lib backend.lib bluegl.lib filabridge.lib filaflat.lib utils.lib \
+              geometry.lib smol-v.lib ibl.lib
+CC=cl.exe
 
 main.exe: main.obj
-	$(CC) main.obj $(FILAMENT_LIBS) gdi32.lib user32.lib opengl32.lib
+	$(CC) main.obj /link /libpath:"lib\\x86_64\\mt\\" $(FILAMENT_LIBS) \
+	gdi32.lib user32.lib opengl32.lib
 
 main.obj: main.cpp
-	$(CC) /MT /Iinclude/ /std:c++14 /c main.cpp
+	$(CC) /MT /Iinclude\\ /std:c++14 /c main.cpp
 
 clean:
 	del main.exe main.obj
 
 .PHONY: clean
-
 ```
 
 ### Compiling

@@ -84,8 +84,6 @@ id<MTLRenderPipelineState> PipelineStateCreator::operator()(id<MTLDevice> device
     }
     ASSERT_POSTCONDITION(error == nil, "Could not create Metal pipeline state.");
 
-    [descriptor release];
-
     return pipeline;
 }
 
@@ -94,15 +92,12 @@ id<MTLDepthStencilState> DepthStateCreator::operator()(id<MTLDevice> device,
     MTLDepthStencilDescriptor* depthStencilDescriptor = [MTLDepthStencilDescriptor new];
     depthStencilDescriptor.depthCompareFunction = state.compareFunction;
     depthStencilDescriptor.depthWriteEnabled = state.depthWriteEnabled;
-    id<MTLDepthStencilState> depthStencilState =
-            [device newDepthStencilStateWithDescriptor:depthStencilDescriptor];
-    [depthStencilDescriptor release];
-    return depthStencilState;
+    return [device newDepthStencilStateWithDescriptor:depthStencilDescriptor];
 }
 
 id<MTLSamplerState> SamplerStateCreator::operator()(id<MTLDevice> device,
         const backend::SamplerParams& state) noexcept {
-    MTLSamplerDescriptor* samplerDescriptor = [[MTLSamplerDescriptor new] autorelease];
+    MTLSamplerDescriptor* samplerDescriptor = [MTLSamplerDescriptor new];
     samplerDescriptor.minFilter = getFilter(state.filterMin);
     samplerDescriptor.magFilter = getFilter(state.filterMag);
     samplerDescriptor.mipFilter = getMipFilter(state.filterMin);

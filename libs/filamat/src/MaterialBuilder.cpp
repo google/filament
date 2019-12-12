@@ -80,7 +80,7 @@ void MaterialBuilderBase::prepare() {
             TargetLanguage::SPIRV : TargetLanguage::GLSL;
 
     // Select OpenGL as the default TargetApi if none was specified.
-    if (mTargetApi == (TargetApi) 0) {
+    if (none(mTargetApi)) {
         mTargetApi = TargetApi::OPENGL;
     }
 
@@ -90,13 +90,13 @@ void MaterialBuilderBase::prepare() {
         if (!mShaderModels.test(i)) {
             continue; // skip this shader model since it was not requested.
         }
-        if (mTargetApi & TargetApi::OPENGL) {
+        if (any(mTargetApi & TargetApi::OPENGL)) {
             mCodeGenPermutations.push_back({i, TargetApi::OPENGL, glTargetLanguage});
         }
-        if (mTargetApi & TargetApi::VULKAN) {
+        if (any(mTargetApi & TargetApi::VULKAN)) {
             mCodeGenPermutations.push_back({i, TargetApi::VULKAN, TargetLanguage::SPIRV});
         }
-        if (mTargetApi & TargetApi::METAL) {
+        if (any(mTargetApi & TargetApi::METAL)) {
             mCodeGenPermutations.push_back({i, TargetApi::METAL, TargetLanguage::SPIRV});
         }
     }
@@ -207,6 +207,16 @@ MaterialBuilder& MaterialBuilder::require(filament::VertexAttribute attribute) n
 
 MaterialBuilder& MaterialBuilder::materialDomain(MaterialDomain materialDomain) noexcept {
     mMaterialDomain = materialDomain;
+    return *this;
+}
+
+MaterialBuilder& MaterialBuilder::materialRefraction(RefractionMode refraction) noexcept {
+    mRefractionMode = refraction;
+    return *this;
+}
+
+MaterialBuilder& MaterialBuilder::materialRefractionType(RefractionType refractionType) noexcept {
+    mRefractionType = refractionType;
     return *this;
 }
 
@@ -395,38 +405,55 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     info.multiBounceAOSet = mMultiBounceAOSet;
     info.specularAO = mSpecularAO;
     info.specularAOSet = mSpecularAOSet;
+    info.refractionMode = mRefractionMode;
+    info.refractionType = mRefractionType;
 }
 
-bool MaterialBuilder::findProperties() noexcept {
+bool MaterialBuilder::findProperties(filament::backend::ShaderType type,
+        MaterialBuilder::PropertyList& allProperties) noexcept {
+#ifndef FILAMAT_LITE
+    // Use the first permutation to generate the shader code.
+    assert(!mCodeGenPermutations.empty());
+    CodeGenParams params = mCodeGenPermutations[0];
+
+    GLSLTools glslTools;
+    std::string shaderCodeAllProperties = peek(type, params, allProperties);
+    // Populate mProperties with the properties set in the shader.
+    if (!glslTools.findProperties(type, shaderCodeAllProperties, mProperties, params.targetApi,
+            ShaderModel(params.shaderModel))) {
+        return false;
+    }
+    return true;
+#else
+    return false;
+#endif
+}
+
+bool MaterialBuilder::findAllProperties() noexcept {
     if (mMaterialDomain != MaterialDomain::SURFACE) {
         return true;
     }
 
-#ifndef FILAMAT_LITE
     using namespace filament::backend;
-    GLSLTools glslTools;
 
+#ifndef FILAMAT_LITE
     // Some fields in MaterialInputs only exist if the property is set (e.g: normal, subsurface
     // for cloth shading model). Give our shader all properties. This will enable us to parse and
     // static code analyse the AST.
     MaterialBuilder::PropertyList allProperties;
     std::fill_n(allProperties, MATERIAL_PROPERTIES_COUNT, true);
 
-    // Use the first permutation to generate the shader code.
-    assert(!mCodeGenPermutations.empty());
-    CodeGenParams params = mCodeGenPermutations[0];
-    std::string shaderCodeAllProperties = peek(ShaderType::FRAGMENT, params, allProperties);
-
-    // Populate mProperties with the properties set in the shader.
-    if (!glslTools.findProperties(shaderCodeAllProperties, mProperties, params.targetApi,
-                ShaderModel(params.shaderModel))) {
-        return false;
-    }
+    findProperties(ShaderType::FRAGMENT, allProperties);
+    findProperties(ShaderType::VERTEX, allProperties);
 
     return true;
 #else
     GLSLToolsLite glslTools;
-    return glslTools.findProperties(mMaterialCode.getResolved(), mProperties);
+    if (glslTools.findProperties(ShaderType::FRAGMENT, mMaterialCode.getResolved(), mProperties)) {
+        return glslTools.findProperties(
+                ShaderType::VERTEX, mMaterialVertexCode.getResolved(), mProperties);
+    }
+    return false;
 #endif
 }
 
@@ -662,7 +689,7 @@ Package MaterialBuilder::build() noexcept {
     // Run checks, in order.
     // The call to findProperties populates mProperties and must come before runSemanticAnalysis.
     if (!checkLiteRequirements() ||
-        !findProperties() ||
+        !findAllProperties() ||
         !runSemanticAnalysis()) {
         // Return an empty package to signal a failure to build the material.
         return Package::invalidPackage();
@@ -723,6 +750,8 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
     container.addSimpleChild<const char*>(ChunkType::MaterialName, mMaterialName.c_str_safe());
     container.addSimpleChild<uint32_t>(ChunkType::MaterialShaderModels, mShaderModels.getValue());
     container.addSimpleChild<uint8_t>(ChunkType::MaterialDomain, static_cast<uint8_t>(mMaterialDomain));
+    container.addSimpleChild<uint8_t>(ChunkType::MaterialRefraction, static_cast<uint8_t>(mRefractionMode));
+    container.addSimpleChild<uint8_t>(ChunkType::MaterialRefractionType, static_cast<uint8_t>(mRefractionType));
 
     // UIB
     container.addChild<MaterialUniformInterfaceBlockChunk>(info.uib);
@@ -740,6 +769,14 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
     container.addSimpleChild<bool>(ChunkType::MaterialDepthWrite, mDepthWrite);
     container.addSimpleChild<bool>(ChunkType::MaterialDepthTest, mDepthTest);
     container.addSimpleChild<uint8_t>(ChunkType::MaterialCullingMode, static_cast<uint8_t>(mCullingMode));
+
+    uint64_t properties = 0;
+    for (size_t i = 0; i < MATERIAL_PROPERTIES_COUNT; i++) {
+        if (mProperties[i]) {
+            properties |= uint64_t(1u) << i;
+        }
+    }
+    container.addSimpleChild<uint64_t>(ChunkType::MaterialProperties, properties);
 }
 
 void MaterialBuilder::writeSurfaceChunks(ChunkContainer& container) const noexcept {

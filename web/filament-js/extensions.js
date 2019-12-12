@@ -39,7 +39,7 @@ Filament.loadClassExtensions = function() {
             majorVersion: 2,
             minorVersion: 0,
             antialias: false,
-            depth: false,
+            depth: true,
             alpha: false
         };
         options = Object.assign(defaults, options);
@@ -258,7 +258,7 @@ Filament.loadClassExtensions = function() {
     Filament.gltfio$FilamentAsset.prototype.loadResources = function(onDone, onFetched, basePath) {
         const asset = this;
         const engine = this.getEngine();
-        const names = this.getResourceUrls();
+        const names = this.getResourceUris();
         const urlset = new Set();
         const urlToName = {};
 

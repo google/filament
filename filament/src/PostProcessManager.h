@@ -21,7 +21,7 @@
 
 #include "private/backend/DriverApiForward.h"
 
-#include "fg/FrameGraphResource.h"
+#include "fg/FrameGraphHandle.h"
 
 #include <backend/DriverEnums.h>
 #include <filament/View.h>
@@ -43,26 +43,21 @@ public:
 
     void init() noexcept;
     void terminate(backend::DriverApi& driver) noexcept;
-    void setSource(uint32_t viewportWidth, uint32_t viewportHeight,
-            backend::Handle<backend::HwTexture> color,
-            backend::Handle<backend::HwTexture> depth,
-            uint32_t textureWidth, uint32_t textureHeight) const noexcept;
 
-    FrameGraphResource toneMapping(FrameGraph& fg, FrameGraphResource input,
-            backend::TextureFormat outFormat, bool dithering, bool translucent) noexcept;
+    FrameGraphId <FrameGraphTexture> toneMapping(FrameGraph& fg,
+            FrameGraphId <FrameGraphTexture> input,
+            backend::TextureFormat outFormat, bool dithering, bool translucent, bool fxaa) noexcept;
 
-    FrameGraphResource fxaa(
-            FrameGraph& fg, FrameGraphResource input, backend::TextureFormat outFormat,
+    FrameGraphId<FrameGraphTexture> fxaa(FrameGraph& fg,
+            FrameGraphId<FrameGraphTexture> input, backend::TextureFormat outFormat,
             bool translucent) noexcept;
 
-    FrameGraphResource dynamicScaling(
-            FrameGraph& fg, FrameGraphResource input, backend::TextureFormat outFormat) noexcept;
+    FrameGraphId <FrameGraphTexture> dynamicScaling(
+            FrameGraph& fg, uint8_t msaa, bool scaled, bool blend,
+            FrameGraphId <FrameGraphTexture> input,
+            backend::TextureFormat outFormat) noexcept;
 
-    FrameGraphResource resolve(
-            FrameGraph& fg, FrameGraphResource input) noexcept;
-
-
-    FrameGraphResource ssao(FrameGraph& fg, details::RenderPass& pass,
+    FrameGraphId<FrameGraphTexture> ssao(FrameGraph& fg, details::RenderPass& pass,
             filament::Viewport const& svp,
             details::CameraInfo const& cameraInfo,
             View::AmbientOcclusionOptions const& options) noexcept;
@@ -74,18 +69,15 @@ public:
 private:
     details::FEngine& mEngine;
 
-    FrameGraphResource depthPass(FrameGraph& fg, details::RenderPass& pass,
+    FrameGraphId<FrameGraphTexture> depthPass(FrameGraph& fg, details::RenderPass& pass,
             uint32_t width, uint32_t height, View::AmbientOcclusionOptions const& options) noexcept;
 
-    FrameGraphResource mipmapPass(FrameGraph& fg, FrameGraphResource input, size_t level) noexcept;
+    FrameGraphId<FrameGraphTexture> mipmapPass(FrameGraph& fg,
+            FrameGraphId<FrameGraphTexture> input, size_t level) noexcept;
 
-    FrameGraphResource blurPass(FrameGraph& fg,
-            FrameGraphResource input, FrameGraphResource depth, math::int2 axis) noexcept;
-
-    // we need only one of these
-    mutable UniformBuffer mPostProcessUb;
-    backend::Handle<backend::HwSamplerGroup> mPostProcessSbh;
-    backend::Handle<backend::HwUniformBuffer> mPostProcessUbh;
+    FrameGraphId<FrameGraphTexture> blurPass(FrameGraph& fg,
+            FrameGraphId<FrameGraphTexture> input,
+            FrameGraphId<FrameGraphTexture> depth, math::int2 axis) noexcept;
 
     class PostProcessMaterial {
     public:
@@ -115,8 +107,12 @@ private:
     PostProcessMaterial mSSAO;
     PostProcessMaterial mMipmapDepth;
     PostProcessMaterial mBlur;
+    PostProcessMaterial mBlit;
+    PostProcessMaterial mTonemapping;
+    PostProcessMaterial mFxaa;
 
     backend::Handle<backend::HwTexture> mNoSSAOTexture;
+    backend::Handle<backend::HwTexture> mNoiseTexture;
 };
 
 } // namespace filament

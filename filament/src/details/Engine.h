@@ -28,6 +28,7 @@
 #include "details/Allocators.h"
 #include "details/Camera.h"
 #include "details/DebugRegistry.h"
+#include "details/Fence.h"
 #include "details/RenderTarget.h"
 #include "details/ResourceList.h"
 #include "details/Skybox.h"
@@ -131,6 +132,10 @@ public:
     static FEngine* create(Backend backend = Backend::DEFAULT,
             Platform* platform = nullptr, void* sharedGLContext = nullptr);
 
+    static void destroy(FEngine* engine);
+
+    static void assertValid(Engine const& engine, const char* function);
+
     ~FEngine() noexcept;
 
     backend::Driver& getDriver() const noexcept { return *mDriver; }
@@ -148,15 +153,6 @@ public:
     const FMaterial* getDefaultMaterial() const noexcept { return mDefaultMaterial; }
     const FMaterial* getSkyboxMaterial() const noexcept;
     const FIndirectLight* getDefaultIndirectLight() const noexcept { return mDefaultIbl; }
-
-    backend::Handle<backend::HwProgram> getPostProcessProgramSlow(PostProcessStage stage) const noexcept;
-    backend::Handle<backend::HwProgram> getPostProcessProgram(PostProcessStage stage) const noexcept {
-        backend::Handle<backend::HwProgram> program = mPostProcessPrograms[uint8_t(stage)];
-        if (UTILS_UNLIKELY(!program)) {
-            return getPostProcessProgramSlow(stage);
-        }
-        return program;
-    }
 
     backend::Handle<backend::HwRenderPrimitive> getFullScreenRenderPrimitive() const noexcept {
         return mFullScreenTriangleRph;
@@ -221,8 +217,6 @@ public:
         return clock::now() - getEngineEpoch();
     }
 
-    void shutdown();
-
     template <typename T>
     T* create(ResourceList<T>& list, typename T::Builder const& builder) noexcept;
 
@@ -243,8 +237,9 @@ public:
 
     FScene* createScene() noexcept;
     FView* createView() noexcept;
-    FFence* createFence(Fence::Type type = Fence::Type::SOFT) noexcept;
+    FFence* createFence(FFence::Type type) noexcept;
     FSwapChain* createSwapChain(void* nativeWindow, uint64_t flags) noexcept;
+    FSwapChain* createSwapChain(uint32_t width, uint32_t height, uint64_t flags) noexcept;
 
     FCamera* createCamera(utils::Entity entity) noexcept;
     FCamera* getCameraComponent(utils::Entity entity) noexcept;
@@ -266,6 +261,8 @@ public:
     void destroy(const FSwapChain* p);
     void destroy(const FView* p);
     void destroy(utils::Entity e);
+
+    void flushAndWait();
 
     // flush the current buffer
     void flush();
@@ -290,6 +287,7 @@ public:
 private:
     FEngine(Backend backend, Platform* platform, void* sharedGLContext);
     void init();
+    void shutdown();
 
     int loop();
     void flushCommandBuffer(backend::CommandBufferQueue& commandBufferQueue);
@@ -299,9 +297,6 @@ private:
 
     template<typename T, typename L>
     void cleanupResourceList(ResourceList<T, L>& list);
-
-    backend::Handle<backend::HwProgram> createPostProcessProgram(MaterialParser& parser,
-            backend::ShaderModel model, PostProcessStage stage) const noexcept;
 
     backend::Driver* mDriver = nullptr;
 
@@ -360,9 +355,6 @@ private:
 
     mutable FTexture* mDefaultIblTexture = nullptr;
     mutable FIndirectLight* mDefaultIbl = nullptr;
-
-    mutable backend::Handle<backend::HwProgram> mPostProcessPrograms[POST_PROCESS_STAGES_COUNT];
-    mutable std::unique_ptr<MaterialParser> mPostProcessParser;
 
     mutable utils::CountDownLatch mDriverBarrier;
 

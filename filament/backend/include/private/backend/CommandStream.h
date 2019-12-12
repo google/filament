@@ -25,6 +25,7 @@
 #include <backend/Handle.h>
 #include <backend/PipelineState.h>
 #include <backend/PixelBufferDescriptor.h>
+#include <backend/PresentCallable.h>
 #include <backend/TargetBufferInfo.h>
 
 #include "private/backend/DriverApi.h"
@@ -44,9 +45,9 @@
 #include <thread>
 #include <utility>
 
-#include <assert.h>
+#include <cassert>
 #include <cstddef>
-#include <stdint.h>
+#include <cstdint>
 
 // Set to true to print every commands out on log.d. This requires RTTI and DEBUG
 #define DEBUG_COMMAND_STREAM false
@@ -99,7 +100,7 @@ public:
         // of return value -- it allows the compiler to perform the tail call optimization.
         intptr_t next;
         mExecute(driver, this, &next);
-        return reinterpret_cast<CommandBase*>(reinterpret_cast<char*>(this) + next);
+        return reinterpret_cast<CommandBase*>(reinterpret_cast<intptr_t>(this) + next);
     }
 
     inline ~CommandBase() noexcept = default;
@@ -110,14 +111,21 @@ private:
 
 // ------------------------------------------------------------------------------------------------
 
+template<typename T, typename Type, typename D, typename ... ARGS>
+constexpr decltype(auto) invoke(Type T::* m, D&& d, ARGS&& ... args) {
+    static_assert(std::is_base_of<T, std::decay_t<D>>::value,
+            "member function and object not related");
+    return (std::forward<D>(d).*m)(std::forward<ARGS>(args)...);
+}
+
 template<typename M, typename D, typename T, std::size_t... I>
-constexpr void trampoline(M&& m, D&& d, T&& t, std::index_sequence<I...>) {
-    (d.*m)(std::move(std::get<I>(std::forward<T>(t)))...);
+constexpr decltype(auto) trampoline(M&& m, D&& d, T&& t, std::index_sequence<I...>) {
+    return invoke(std::forward<M>(m), std::forward<D>(d), std::get<I>(std::forward<T>(t))...);
 }
 
 template<typename M, typename D, typename T>
-constexpr void apply(M&& m, D&& d, T&& t) {
-    trampoline(std::forward<M>(m), std::forward<D>(d), std::forward<T>(t),
+constexpr decltype(auto) apply(M&& m, D&& d, T&& t) {
+    return trampoline(std::forward<M>(m), std::forward<D>(d), std::forward<T>(t),
             std::make_index_sequence< std::tuple_size<std::remove_reference_t<T>>::value >{});
 }
 
@@ -153,11 +161,11 @@ struct CommandType<void (Driver::*)(ARGS...)> {
         static inline void execute(M&& method, D&& driver, CommandBase* base, intptr_t* next) noexcept {
             Command* self = static_cast<Command*>(base);
             *next = align(sizeof(Command));
-            if (DEBUG_COMMAND_STREAM) {
+#if DEBUG_COMMAND_STREAM
                 // must call this before invoking the method
                 self->log();
-            }
-            apply(std::forward<M>(method), std::forward<D>(driver), self->mArgs);
+#endif
+            apply(std::forward<M>(method), std::forward<D>(driver), std::move(self->mArgs));
             self->~Command();
         }
 
@@ -226,7 +234,7 @@ public:
 #define DECL_DRIVER_API_SYNCHRONOUS(RetType, methodName, paramsDecl, params)                    \
     inline RetType methodName(paramsDecl) {                                                     \
         DEBUG_COMMAND(methodName, params);                                                      \
-        return mDriver->methodName(params);                                                     \
+        return apply(&Driver::methodName, *mDriver, std::forward_as_tuple(params));             \
     }
 
 #define DECL_DRIVER_API_RETURN(RetType, methodName, paramsDecl, params)                         \

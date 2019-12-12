@@ -24,6 +24,7 @@
 
 #include <backend/DriverEnums.h>
 
+#include "private/backend/AcquiredImage.h"
 #include "private/backend/Driver.h"
 #include "private/backend/SamplerGroup.h"
 
@@ -133,8 +134,9 @@ struct HwSwapChain : public HwBase {
 
 struct HwStream : public HwBase {
     HwStream() = default;
-    explicit HwStream(Platform::Stream* stream) : stream(stream) { }
+    explicit HwStream(Platform::Stream* stream) : stream(stream), streamType(StreamType::NATIVE) { }
     Platform::Stream* stream = nullptr;
+    StreamType streamType = StreamType::ACQUIRED;
     uint32_t width = 0;
     uint32_t height = 0;
 };
@@ -168,9 +170,12 @@ protected:
 
     void scheduleDestroySlow(BufferDescriptor&& buffer) noexcept;
 
+    void scheduleRelease(AcquiredImage&& image) noexcept;
+
 private:
     std::mutex mPurgeLock;
     std::vector<BufferDescriptor> mBufferToPurge;
+    std::vector<AcquiredImage> mImagesToPurge;
 };
 
 

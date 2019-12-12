@@ -19,6 +19,14 @@
 #include <Wingdi.h>
 
 #include "OpenGLDriverFactory.h"
+
+#ifdef _MSC_VER
+    // this variable is checked in BlueGL.h (included from "gl_headers.h" right after this), 
+    // and prevents duplicate definition of OpenGL apis when building this file. 
+    // However, GL_GLEXT_PROTOTYPES need to be defined in BlueGL.h when included from other files.
+    #define FILAMENT_PLATFORM_WGL
+#endif
+
 #include "gl_headers.h"
 
 #include "Windows.h"
@@ -111,7 +119,7 @@ Driver* PlatformWGL::createDriver(void* const sharedGLContext) noexcept {
 
     PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribs =
             (PFNWGLCREATECONTEXTATTRIBSARBPROC) wglGetProcAddress("wglCreateContextAttribsARB");
-    mContext = wglCreateContextAttribs(whdc, nullptr, attribs);
+    mContext = wglCreateContextAttribs(whdc, (HGLRC) sharedGLContext, attribs);
     if (!mContext) {
         utils::slog.e << "wglCreateContextAttribs() failed, whdc=" << whdc << utils::io::endl;
         goto error;
@@ -172,6 +180,11 @@ Platform::SwapChain* PlatformWGL::createSwapChain(void* nativeWindow, uint64_t& 
 
     SwapChain* swapChain = (SwapChain*) hdc;
     return swapChain;
+}
+
+Platform::SwapChain* PlatformWGL::createSwapChain(uint32_t width, uint32_t height, uint64_t& flags) noexcept {
+    // TODO: implement headless SwapChain
+    return nullptr;
 }
 
 void PlatformWGL::destroySwapChain(Platform::SwapChain* swapChain) noexcept {

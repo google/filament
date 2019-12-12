@@ -42,25 +42,6 @@ public:
     //! Error codes for Fence::wait()
     using FenceStatus = backend::FenceStatus;
 
-    //! Type of the Fence being created
-    enum class Type : uint8_t {
-        /**
-         * Synchronization with the command stream.
-         *
-         * Calling wait() on a SOFT fence will only wait for all commands prior to the Fence to
-         * be issued, but not for the commands themselves to complete on the GPU.
-         */
-        SOFT,
-
-        /**
-         * Synchronization with the GPU
-         *
-         * Calling wait() on a HARD fence will wait for all commands prior to the Fence to
-         * have completed on the GPU.
-         */
-        HARD
-    };
-
     /** Mode controls the behavior of the command stream when calling wait()
      *
      * @attention
@@ -76,6 +57,9 @@ public:
      * Client-side wait on the Fence.
      *
      * Blocks the current thread until the Fence signals.
+     *
+     * \warning Use with caution on macOS. Currently this may lead to deadlock on macOS because we
+     * block the GL thread when binding a Cocoa view to the GL context.
      *
      * @param mode      Whether the command stream is flushed before waiting or not.
      * @param timeout   Wait time out. Using a \p timeout of 0 is a way to query the state of the fence.

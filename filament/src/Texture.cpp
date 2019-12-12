@@ -92,6 +92,7 @@ Texture::Builder& Texture::Builder::usage(Texture::Usage usage) noexcept {
 }
 
 Texture* Texture::Builder::build(Engine& engine) {
+    FEngine::assertValid(engine, __PRETTY_FUNCTION__);
     if (!ASSERT_POSTCONDITION_NON_FATAL(Texture::isTextureFormatSupported(engine, mImpl->mFormat),
             "Texture format %u not supported on this platform", mImpl->mFormat)) {
         return nullptr;
@@ -163,6 +164,15 @@ void FTexture::setExternalImage(FEngine& engine, void* image) noexcept {
         // the external image on this thread, if necessary.
         engine.getDriverApi().setupExternalImage(image);
         engine.getDriverApi().setExternalImage(mHandle, image);
+    }
+}
+
+void FTexture::setExternalImage(FEngine& engine, void* image, size_t plane) noexcept {
+    if (mTarget == Sampler::SAMPLER_EXTERNAL) {
+        // The call to setupExternalImage is synchronous, and allows the driver to take ownership of
+        // the external image on this thread, if necessary.
+        engine.getDriverApi().setupExternalImage(image);
+        engine.getDriverApi().setExternalImagePlane(mHandle, image, plane);
     }
 }
 
@@ -499,6 +509,10 @@ void Texture::setImage(Engine& engine, size_t level,
 
 void Texture::setExternalImage(Engine& engine, void* image) noexcept {
     upcast(this)->setExternalImage(upcast(engine), image);
+}
+
+void Texture::setExternalImage(Engine& engine, void* image, size_t plane) noexcept {
+    upcast(this)->setExternalImage(upcast(engine), image, plane);
 }
 
 void Texture::setExternalStream(Engine& engine, Stream* stream) noexcept {

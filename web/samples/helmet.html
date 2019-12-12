@@ -10,7 +10,7 @@ html, body { height: 100%; }
 body       { margin: 0; overflow: hidden; }
 #container { position: relative; height: 100%; }
 canvas     { position: absolute; width: 100%; height: 100%; }
-#messages  { position: absolute; width: 100%; height: 100%; padding-left: 10px; }
+#messages  { position: absolute; width: 100%; height: 100%; padding-left: 10px; color:white; }
 </style>
 </head>
 <body>
@@ -26,7 +26,7 @@ canvas     { position: absolute; width: 100%; height: 100%; }
 const env = 'venetian_crossroads_2k';
 const ibl_url = `${env}/${env}_ibl.ktx`;
 const sky_url = `${env}/${env}_skybox.ktx`;
-const mesh_url = 'helmet.gltf';
+const mesh_url = 'FlightHelmet.gltf';
 
 Filament.init([mesh_url, ibl_url, sky_url], () => {
     window.gltfio = Filament.gltfio;
@@ -48,7 +48,7 @@ class App {
         const iblDirection = indirectLight.getDirectionEstimate();
         const iblColor = indirectLight.getColorEstimate(iblDirection);
 
-        indirectLight.setIntensity(30000);
+        indirectLight.setIntensity(50000);
 
         const skybox = engine.createSkyFromKtx(sky_url);
         this.scene.setSkybox(skybox);
@@ -56,7 +56,7 @@ class App {
         const sunlight = Filament.EntityManager.get().create();
         Filament.LightManager.Builder(LightType.SUN)
             .color(iblColor.slice(0, 3))
-            .intensity(iblColor[3])
+            .intensity(150000)
             .direction(iblDirection)
             .sunAngularRadius(1.9)
             .castShadows(true)
@@ -70,7 +70,7 @@ class App {
 
         const messages = document.getElementById('messages');
 
-        // Crudely indicate progress by printing the URL of each resource as it is loaded.
+        // Crudely indicate progress by printing the URI of each resource as it is loaded.
         // Note that we wait 1 ms after the last asset has downloaded, but before finalization.
         // This gives the browser time to display the latest status.
         const onFetched = (uri) => messages.innerText += `Downloaded ${uri}\n`;
@@ -103,6 +103,7 @@ class App {
         this.swapChain = engine.createSwapChain();
         this.renderer = engine.createRenderer();
         this.camera = engine.createCamera();
+        this.camera.setExposure(32, 1/125.0, 100);
         this.view = engine.createView();
         this.view.setCamera(this.camera);
         this.view.setScene(this.scene);

@@ -32,7 +32,7 @@ namespace backend {
 namespace metal {
 
 class MetalRenderTarget;
-class MetalUniformBuffer;
+struct MetalUniformBuffer;
 struct MetalIndexBuffer;
 struct MetalSamplerGroup;
 struct MetalSwapChain;
@@ -42,16 +42,18 @@ struct MetalContext {
     id<MTLDevice> device = nullptr;
     id<MTLCommandQueue> commandQueue = nullptr;
 
-    // A pool for autoreleased objects throughout the lifetime of the Metal driver.
-    NSAutoreleasePool* driverPool = nil;
-
-    // A pool for autoreleased objects allocated during the execution of a frame.
-    // The pool is created in beginFrame() and drained in endFrame().
-    NSAutoreleasePool* framePool = nil;
-
     // Single use, re-created each frame.
     id<MTLCommandBuffer> currentCommandBuffer = nullptr;
     id<MTLRenderCommandEncoder> currentCommandEncoder = nullptr;
+
+    // These two fields store a callback and user data to notify the client that a frame is ready
+    // for presentation.
+    // If frameFinishedCallback is nullptr, then the Metal backend automatically calls
+    // presentDrawable when the frame is commited.
+    // Otherwise, the Metal backend will not automatically present the frame. Instead, clients bear
+    // the responsibility of presenting the frame by calling the PresentCallable object.
+    backend::FrameFinishedCallback frameFinishedCallback = nullptr;
+    void* frameFinishedUserData = nullptr;
 
     // Tracks resources used by command buffers.
     MetalResourceTracker resourceTracker;
@@ -76,12 +78,17 @@ struct MetalContext {
 
     // Surface-related properties.
     MetalSwapChain* currentSurface = nullptr;
-    id<CAMetalDrawable> currentDrawable = nullptr;
+    id<CAMetalDrawable> currentDrawable = nil;
+    id<MTLTexture> currentDepthTexture = nil;
+    id<MTLTexture> headlessDrawable = nil;
     MTLPixelFormat currentSurfacePixelFormat = MTLPixelFormatInvalid;
     MTLPixelFormat currentDepthPixelFormat = MTLPixelFormatInvalid;
 
     // External textures.
     CVMetalTextureCacheRef textureCache = nullptr;
+
+    // Empty texture used to prevent GPU errors when a sampler has been bound without a texture.
+    id<MTLTexture> emptyTexture = nil;
 
     MetalBlitter* blitter = nullptr;
 
@@ -93,11 +100,16 @@ struct MetalContext {
 };
 
 // Acquire the current surface's CAMetalDrawable for the current frame if it has not already been
-// acquired.
-// This method returns the drawable and stores it in the context's currentDrawable field.
-id<CAMetalDrawable> acquireDrawable(MetalContext* context);
+// acquired. This method stores it in the context's currentDrawable field and returns the
+// drawable's texture.
+// For headless swapchains a new texture is created.
+id<MTLTexture> acquireDrawable(MetalContext* context);
+
+id<MTLTexture> acquireDepthTexture(MetalContext* context);
 
 id<MTLCommandBuffer> acquireCommandBuffer(MetalContext* context);
+
+id<MTLTexture> getOrCreateEmptyTexture(MetalContext* context);
 
 } // namespace metal
 } // namespace backend

@@ -83,12 +83,13 @@ Entity createQuad(Engine* engine, Texture* tex, ImageOp op, Texture* secondary) 
             .material(R"SHADER(
                 void material(inout MaterialInputs material) {
                     prepareMaterial(material);
-                    material.baseColor = texture(materialParams_color, getUV0());
+                    vec2 uv = uvToRenderTargetUV(getUV0());
+                    material.baseColor = texture(materialParams_color, uv);
                 }
             )SHADER")
             .require(VertexAttribute::UV0)
             .parameter(filamat::MaterialBuilder::SamplerType::SAMPLER_2D, "color")
-            .targetApi(filamat::MaterialBuilder::TargetApi::OPENGL)
+            .targetApi(filamat::targetApiFromBackend(engine.getBackend()))
             .shading(Shading::UNLIT)
             .depthWrite(false)
             .depthCulling(false)
@@ -102,8 +103,9 @@ Entity createQuad(Engine* engine, Texture* tex, ImageOp op, Texture* secondary) 
             .material(R"SHADER(
                 void material(inout MaterialInputs material) {
                     prepareMaterial(material);
-                    vec4 primary = texture(materialParams_color, getUV0());
-                    vec4 blurred = texture(materialParams_secondary, getUV0());
+                    vec2 uv = uvToRenderTargetUV(getUV0());
+                    vec4 primary = texture(materialParams_color, uv);
+                    vec4 blurred = texture(materialParams_secondary, uv);
                     // HACK: this is a crude bloom effect
                     float L = max(0.0, max(blurred.r, max(blurred.g, blurred.b)) - 1.0);
                     material.baseColor = mix(primary, blurred, min(1.0, L));
@@ -112,7 +114,7 @@ Entity createQuad(Engine* engine, Texture* tex, ImageOp op, Texture* secondary) 
             .require(VertexAttribute::UV0)
             .parameter(filamat::MaterialBuilder::SamplerType::SAMPLER_2D, "color")
             .parameter(filamat::MaterialBuilder::SamplerType::SAMPLER_2D, "secondary")
-            .targetApi(filamat::MaterialBuilder::TargetApi::OPENGL)
+            .targetApi(filamat::targetApiFromBackend(engine.getBackend()))
             .shading(Shading::UNLIT)
             .depthWrite(false)
             .depthCulling(false)
@@ -177,10 +179,10 @@ Entity createQuad(Engine* engine, Texture* tex, ImageOp op, Texture* secondary) 
         std::string txt = R"SHADER(
             void material(inout MaterialInputs material) {
                 prepareMaterial(material);
-                float2 uv = gl_FragCoord.xy;
+                float2 uv = uvToRenderTargetUV(getUV0());
                 vec4 c = vec4(0);
                 for (int i = 0; i < SAMPLE_COUNT; i++) {
-                    float2 st = (uv + materialParams.weights[i].yz) * getResolution().zw;
+                    float2 st = uv + materialParams.weights[i].yz * getResolution().zw;
                     c += texture(materialParams_color, st) * materialParams.weights[i].x;
                 }
                 material.baseColor = c;
@@ -196,7 +198,7 @@ Entity createQuad(Engine* engine, Texture* tex, ImageOp op, Texture* secondary) 
             .require(VertexAttribute::UV0)
             .parameter(filamat::MaterialBuilder::SamplerType::SAMPLER_2D, "color")
             .parameter(filamat::MaterialBuilder::UniformType::FLOAT4, SAMPLE_COUNT, "weights")
-            .targetApi(filamat::MaterialBuilder::TargetApi::OPENGL)
+            .targetApi(filamat::targetApiFromBackend(engine.getBackend()))
             .shading(Shading::UNLIT)
             .depthWrite(false)
             .depthCulling(false)
@@ -312,7 +314,7 @@ Entity createDisk(Engine* engine, Texture* reflection) {
         .parameter(filamat::MaterialBuilder::SamplerType::SAMPLER_2D, "roughness")
         .parameter(filamat::MaterialBuilder::SamplerType::SAMPLER_2D, "ao")
         .parameter(filamat::MaterialBuilder::SamplerType::SAMPLER_2D, "reflection")
-        .targetApi(filamat::MaterialBuilder::TargetApi::OPENGL)
+        .targetApi(filamat::targetApiFromBackend(engine->getBackend()))
         .specularAntiAliasing(true)
         .shading(Shading::LIT)
         .build();

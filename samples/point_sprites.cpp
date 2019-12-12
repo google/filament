@@ -154,7 +154,6 @@ void setup(App& app, Engine* engine, View* view, Scene* scene) {
 };
 
 void cleanup(App& app, Engine* engine) {
-    Fence::waitAndDestroy(engine->createFence());
     engine->destroy(app.renderable);
     engine->destroy(app.matInstance);
     engine->destroy(app.mat);

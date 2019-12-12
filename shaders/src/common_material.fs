@@ -7,13 +7,11 @@
     #define MIN_ROUGHNESS            0.002025
 #endif
 
-#define MAX_CLEAR_COAT_PERCEPTUAL_ROUGHNESS 0.6
-
 #define MIN_N_DOT_V 1e-4
 
 float clampNoV(float NoV) {
     // Neubelt and Pettineo 2013, "Crafting a Next-gen Material Pipeline for The Order: 1886"
-    return max(dot(shading_normal, shading_view), MIN_N_DOT_V);
+    return max(NoV, MIN_N_DOT_V);
 }
 
 vec3 computeDiffuseColor(const vec4 baseColor, float metallic) {

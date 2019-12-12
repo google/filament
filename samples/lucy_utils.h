@@ -23,9 +23,9 @@
 
 #include <math/mat4.h>
 
-#include "generated/resources/gltf.h"
+#include "generated/resources/gltf_lucy.h"
 
-#define RESOURCE_ARGS(name) GLTF_##name##_DATA, GLTF_##name##_SIZE
+#define RESOURCE_ARGS(name) GLTF_LUCY_##name##_DATA, GLTF_LUCY_##name##_SIZE
 
 namespace LucyUtils {
     enum ImageOp { BLIT, HBLUR, VBLUR, MIX };

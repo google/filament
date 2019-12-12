@@ -138,9 +138,10 @@ public:
     VertexDomain getVertexDomain() const noexcept;
 
     //! Returns the material domain of this material.
+    //! The material domain determines how the material is used.
     MaterialDomain getMaterialDomain() const noexcept;
 
-    //! Returns the culling mode of this material.
+    //! Returns the default culling mode of this material.
     CullingMode getCullingMode() const noexcept;
 
     //! Returns the transparency mode of this material.
@@ -177,6 +178,12 @@ public:
 
     //! Returns the list of vertex attributes required by this material.
     AttributeBitset getRequiredAttributes() const noexcept;
+
+    //! Returns the refraction mode used by this material.
+    RefractionMode getRefractionMode() const noexcept;
+
+    // Return the refraction type used by this material.
+    RefractionType getRefractionType() const noexcept;
 
     /**
      * Returns the number of parameters declared by this material.

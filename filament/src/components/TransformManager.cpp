@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-#include <filament/TransformManager.h>
-
 #include "components/TransformManager.h"
 
 using namespace utils;
@@ -139,22 +137,13 @@ void FTransformManager::setTransform(Instance ci, const mat4f& model) noexcept {
 }
 
 void FTransformManager::updateNodeTransform(Instance i) noexcept {
+    if (UTILS_UNLIKELY(mLocalTransformTransactionOpen)) {
+        return;
+    }
+
     validateNode(i);
     auto& manager = mManager;
     assert(i);
-
-    if (UTILS_UNLIKELY(mLocalTransformTransactionOpen)) {
-        // don't update the world transform until commitLocalTransformTransaction() is called
-        Instance ci = manager[i].firstChild;
-        while (ci) {
-            Instance child = manager[ci].firstChild;
-            ci = manager[ci].next;
-            if (child) {
-                updateNodeTransform(child);
-            }
-        }
-        return;
-    }
 
     // find our parent's world transform, if any
     // note: by using the raw_array() we don't need to check that parent is valid.

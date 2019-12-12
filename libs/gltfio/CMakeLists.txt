@@ -30,6 +30,7 @@ set(SRCS
         src/Wireframe.h
         src/math.h
         src/upcast.h
+        src/Image.cpp
 )
 
 # ==================================================================================================
@@ -43,6 +44,7 @@ if (CMAKE_CROSSCOMPILING)
 endif()
 
 function(generate_mat SHADINGMODEL BLENDING)
+    set(DOUBLESIDED false)
     set(GENERATED_MAT "${RESOURCE_DIR}/${SHADINGMODEL}_${BLENDING}.mat")
     configure_file(materials/ubershader.mat.in ${GENERATED_MAT})
     set(MATERIAL_SRCS ${MATERIAL_SRCS} ${GENERATED_MAT} PARENT_SCOPE)
@@ -65,10 +67,10 @@ foreach (input_path ${MATERIAL_SRCS})
     set(output_path "${RESOURCE_DIR}/${basename}.filamat")
     add_custom_command(
             OUTPUT ${output_path}
-            COMMAND matc ${MATC_BASE_FLAGS} -m material -o ${output_path} ${input_path}
+            COMMAND matc ${MATC_BASE_FLAGS} -o ${output_path} ${input_path}
             MAIN_DEPENDENCY ${input_path}
             DEPENDS matc
-            COMMENT "Compiling material ${mat_src} to ${output_path}"
+            COMMENT "Compiling material ${input_path} to ${output_path}"
     )
     list(APPEND RESOURCE_BINS ${output_path})
 endforeach()
@@ -118,7 +120,9 @@ if (NOT WEBGL AND NOT ANDROID AND NOT IOS)
     # ==================================================================================================
     # Compiler flags
     # ==================================================================================================
-    target_compile_options(${TARGET} PRIVATE -Wno-deprecated-register)
+    if (NOT MSVC_NATIVE)
+        target_compile_options(${TARGET} PRIVATE -Wno-deprecated-register)
+    endif()
 
     if (MSVC OR CLANG_CL)
         target_compile_options(${TARGET} PRIVATE $<$<CONFIG:Release>:/fp:fast>)

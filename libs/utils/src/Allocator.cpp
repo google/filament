@@ -125,13 +125,67 @@ AtomicFreeList::AtomicFreeList(void* begin, void* end,
     mHead.store({ int32_t(head - mStorage), 0 });
 }
 
+// ------------------------------------------------------------------------------------------------
+
+void TrackingPolicy::HighWatermark::onAlloc(
+        void* p, size_t size, size_t alignment, size_t extra) noexcept {
+    mCurrent += uint32_t(size);
+    mHighWaterMark = mCurrent > mHighWaterMark ? mCurrent : mHighWaterMark;
+}
+
 TrackingPolicy::HighWatermark::~HighWatermark() noexcept {
-    size_t wm = mHighWaterMark;
-    size_t wmpct = wm / (mSize / 100);
-    if (wmpct > 80) {
-        slog.d << mName << " arena: High watermark "
-            << wm / 1024 << " KiB (" << wmpct << "%)" << io::endl;
+    if (mSize > 0) {
+        size_t wm = mHighWaterMark;
+        size_t wmpct = wm / (mSize / 100);
+        if (wmpct > 80) {
+            slog.d << mName << " arena: High watermark "
+                   << wm / 1024 << " KiB (" << wmpct << "%)" << io::endl;
+        }
     }
+}
+
+void TrackingPolicy::HighWatermark::onFree(void* p, size_t size) noexcept {
+    assert(mCurrent >= size);
+    mCurrent -= uint32_t(size);
+}
+void TrackingPolicy::HighWatermark::onReset() noexcept {
+    // we should never be here if mBase is nullptr because compilation would have failed when
+    // Arena::onReset() tries to call the underlying allocator's onReset()
+    assert(mBase);
+    mCurrent = 0;
+}
+
+void TrackingPolicy::HighWatermark::onRewind(void const* addr) noexcept {
+    // we should never be here if mBase is nullptr because compilation would have failed when
+    // Arena::onRewind() tries to call the underlying allocator's onReset()
+    assert(mBase);
+    assert(addr >= mBase);
+    mCurrent = uint32_t(uintptr_t(addr) - uintptr_t(mBase));
+}
+
+// ------------------------------------------------------------------------------------------------
+
+void TrackingPolicy::Debug::onAlloc(void* p, size_t size, size_t alignment, size_t extra) noexcept {
+    memset(p, 0xeb, size);
+}
+
+void TrackingPolicy::Debug::onFree(void* p, size_t size) noexcept {
+    memset(p, 0xef, size);
+}
+
+void TrackingPolicy::Debug::onReset() noexcept {
+    // we should never be here if mBase is nullptr because compilation would have failed when
+    // Arena::onReset() tries to call the underlying allocator's onReset()
+    assert(mBase);
+    memset(mBase, 0xec, mSize);
+}
+
+void TrackingPolicy::Debug::onRewind(void* addr) noexcept {
+    // we should never be here if mBase is nullptr because compilation would have failed when
+    // Arena::onRewind() tries to call the underlying allocator's onReset()
+    assert(mBase);
+    assert(addr >= mBase);
+    memset(addr, 0x55, uintptr_t(mBase) + mSize - uintptr_t(addr));
 }
 
 } // namespace utils

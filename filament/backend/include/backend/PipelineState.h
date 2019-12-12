@@ -20,15 +20,23 @@
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
+#include <limits>
+
 #include <stdint.h>
 
 namespace filament {
 namespace backend {
 
+//! \privatesection
+
 struct PipelineState {
     Handle<HwProgram> program;
     RasterState rasterState;
     PolygonOffset polygonOffset;
+    Viewport scissor{ 0, 0,
+                      (uint32_t)std::numeric_limits<int32_t>::max(),
+                      (uint32_t)std::numeric_limits<int32_t>::max()
+    };
 };
 
 

@@ -30,7 +30,7 @@
 #include <backend/PixelBufferDescriptor.h>
 
 #include "fg/FrameGraph.h"
-#include "fg/FrameGraphResource.h"
+#include "fg/FrameGraphHandle.h"
 #include "fg/ResourceAllocator.h"
 
 
@@ -54,7 +54,6 @@ FRenderer::FRenderer(FEngine& engine) :
         mEngine(engine),
         mFrameSkipper(engine, 2),
         mFrameInfoManager(engine),
-        mIsRGB16FSupported(false),
         mIsRGB8Supported(false),
         mPerRenderPassArena(engine.getPerRenderPassAllocator())
 {
@@ -66,8 +65,36 @@ void FRenderer::init() noexcept {
     DriverApi& driver = mEngine.getDriverApi();
     mUserEpoch = mEngine.getEngineEpoch();
     mRenderTarget = driver.createDefaultRenderTarget();
-    mIsRGB16FSupported = driver.isRenderTargetFormatSupported(backend::TextureFormat::RGB16F);
-    mIsRGB8Supported = driver.isRenderTargetFormatSupported(backend::TextureFormat::RGB8);
+    mIsRGB8Supported = driver.isRenderTargetFormatSupported(TextureFormat::RGB8);
+
+    // our default HDR translucent format, fallback to LDR if not supported by the backend
+    mHdrTranslucent = TextureFormat::RGBA16F;
+    if (!driver.isRenderTargetFormatSupported(TextureFormat::RGBA16F)) {
+        // this will clip all HDR data, but we don't have a choice
+        mHdrTranslucent = TextureFormat::RGBA8;
+    }
+
+    // our default opaque low/medium quality HDR format, fallback to LDR if not supported
+    mHdrQualityMedium = TextureFormat::R11F_G11F_B10F;
+    if (!driver.isRenderTargetFormatSupported(mHdrQualityMedium)) {
+        // this will clip all HDR data, but we don't have a choice
+        mHdrQualityMedium = TextureFormat::RGB8;
+    }
+
+    // our default opaque high quality HDR format, fallback to RGBA, then medium, then LDR
+    // if not supported
+    mHdrQualityHigh = TextureFormat::RGB16F;
+    if (!driver.isRenderTargetFormatSupported(mHdrQualityHigh)) {
+        mHdrQualityHigh = TextureFormat::RGBA16F;
+    }
+    if (!driver.isRenderTargetFormatSupported(mHdrQualityHigh)) {
+        mHdrQualityHigh = TextureFormat::R11F_G11F_B10F;
+    }
+    if (!driver.isRenderTargetFormatSupported(mHdrQualityHigh)) {
+        // this will clip all HDR data, but we don't have a choice
+        mHdrQualityHigh = TextureFormat::RGB8;
+    }
+
     if (UTILS_HAS_THREADING) {
         mFrameInfoManager.run();
     }
@@ -96,7 +123,7 @@ void FRenderer::terminate(FEngine& engine) {
     // that all pending commands have been executed (as they could reference data in this
     // instance, e.g. Fences, Callbacks, etc...)
     if (UTILS_HAS_THREADING) {
-        Fence::waitAndDestroy(engine.createFence());
+        Fence::waitAndDestroy(engine.createFence(FFence::Type::SOFT));
         mFrameInfoManager.terminate();
     } else {
         // In single threaded mode, allow recently-created objects (e.g. no-op fences in Skipper)
@@ -109,25 +136,23 @@ void FRenderer::resetUserTime() {
     mUserEpoch = std::chrono::steady_clock::now();
 }
 
-backend::TextureFormat FRenderer::getHdrFormat(const View& view) const noexcept {
-    const bool translucent = mSwapChain->isTransparent();
-    if (translucent) return backend::TextureFormat::RGBA16F;
-
+TextureFormat FRenderer::getHdrFormat(const View& view, bool translucent) const noexcept {
+    if (translucent) {
+        return mHdrTranslucent;
+    }
     switch (view.getRenderQuality().hdrColorBuffer) {
         case View::QualityLevel::LOW:
         case View::QualityLevel::MEDIUM:
-            return backend::TextureFormat::R11F_G11F_B10F;
+            return mHdrQualityMedium;
         case View::QualityLevel::HIGH:
-        case View::QualityLevel::ULTRA:
-            return !mIsRGB16FSupported ? backend::TextureFormat::RGBA16F
-                                       : backend::TextureFormat::RGB16F;
+        case View::QualityLevel::ULTRA: {
+            return mHdrQualityHigh;
+        }
     }
 }
 
-backend::TextureFormat FRenderer::getLdrFormat() const noexcept {
-    const bool translucent = mSwapChain->isTransparent();
-    return (translucent || !mIsRGB8Supported) ? backend::TextureFormat::RGBA8
-                                              : backend::TextureFormat::RGB8;
+TextureFormat FRenderer::getLdrFormat(bool translucent) const noexcept {
+    return (translucent || !mIsRGB8Supported) ? TextureFormat::RGBA8 : TextureFormat::RGB8;
 }
 
 void FRenderer::render(FView const* view) {
@@ -231,16 +256,23 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     FrameGraph fg(engine.getResourceAllocator());
 
-    const TextureFormat hdrFormat = getHdrFormat(view);
+    // Figure out if we need to blend this view into the framebuffer. Maybe this should be
+    // explicit, but since we don't have an API right now, we use heuristics:
+    // - we are keeping the color buffer before rendering, and
+    // - we are not clearing or clearing with alpha
+    // FIXME: make this an explicit API
+    const bool blending = !(view.getDiscardedTargetBuffers() & TargetBufferFlags::COLOR)
+            && (!view.getClearTargetColor() || view.getClearColor().a < 1.0);
 
-    // FIXME: we use "hasPostProcess" as a proxy for deciding if we need a depth-buffer or not
-    //        historically this has been true, but it's definitely wrong.
-    //        This hack is needed because viewRenderTarget(output) doesn't have a depth-buffer,
-    //        so when skipping post-process (which draws directly into it), we can't rely on it.
-    const bool colorPassNeedsDepthBuffer = hasPostProcess;
+    // If the swapchain is transparent or if we blend into it, we need to allocate our intermediate
+    // buffers with an alpha channel.
+    // FIXME: this doesn't work when the target is a user provided rendertarget
+    const bool translucent = mSwapChain->isTransparent() || blending;
 
-    const backend::Handle<backend::HwRenderTarget> viewRenderTarget = getRenderTarget(view);
-    FrameGraphResource output = fg.importResource("viewRenderTarget",
+    const TextureFormat hdrFormat = getHdrFormat(view, translucent);
+
+    const Handle<HwRenderTarget> viewRenderTarget = getRenderTarget(view);
+    FrameGraphRenderTargetHandle fgViewRenderTarget = fg.importRenderTarget("viewRenderTarget",
             { .viewport = vp }, viewRenderTarget, vp.width, vp.height,
             view.getDiscardedTargetBuffers());
 
@@ -250,7 +282,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     CameraInfo const& cameraInfo = view.getCameraInfo();
     pass.setCamera(cameraInfo);
-    pass.setGeometry(scene, view.getVisibleRenderables());
+    pass.setGeometry(scene.getRenderableData(), view.getVisibleRenderables(), scene.getRenderableUBO());
 
     view.updatePrimitivesLod(engine, cameraInfo,
             scene.getRenderableData(), view.getVisibleRenderables());
@@ -264,58 +296,63 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     // SSAO pass -- automatically culled if not used
     if (useSSAO) {
-        pass.appendSortedCommands(RenderPass::CommandTypeFlags::DEPTH);
+        auto curr = pass.getCommands().end();
+        pass.appendCommands(RenderPass::CommandTypeFlags::SSAO);
+        pass.sortCommands(curr);
     }
 
-    FrameGraphResource ssao = ppm.ssao(fg, pass, svp, cameraInfo, view.getAmbientOcclusionOptions());
+    FrameGraphId<FrameGraphTexture> ssao = ppm.ssao(fg, pass, svp, cameraInfo, view.getAmbientOcclusionOptions());
 
     // --------------------------------------------------------------------------------------------
 
     // generate the normal commands
     RenderPass::CommandTypeFlags commandType = getCommandType(view.getDepthPrepass());
-    Command const* colorPassBegin = commands.end();
-    Command const* colorPassEnd = pass.appendSortedCommands(commandType);
+    Command* colorPassBegin = pass.getCommands().end();
+    pass.appendCommands(commandType);
+    Command const* colorPassEnd = pass.sortCommands(colorPassBegin);
 
     // We only honor the view's color buffer clear flags, depth/stencil are handled by the framefraph
-    TargetBufferFlags clearFlags = view.getClearFlags() & TargetBufferFlags::COLOR | TargetBufferFlags::DEPTH;
+    uint8_t viewClearFlags = view.getClearFlags() & (uint8_t)TargetBufferFlags::ALL;
+
+    // FIXME: when the view doesn't ask for a clear, but it's drawn in an intermediate buffer
+    //        that buffer needs to be cleared with transparent pixels if blending is enabled
+    TargetBufferFlags clearFlags = (TargetBufferFlags(viewClearFlags) & TargetBufferFlags::COLOR)
+                                   | TargetBufferFlags::DEPTH;
 
     struct ColorPassData {
-        FrameGraphResource color;
-        FrameGraphResource depth;
-        FrameGraphResource ssao;
+        FrameGraphId<FrameGraphTexture> color;
+        FrameGraphId<FrameGraphTexture> depth;
+        FrameGraphId<FrameGraphTexture> ssao;
+        FrameGraphRenderTargetHandle rt{};
     };
 
     auto& colorPass = fg.addPass<ColorPassData>("Color Pass",
-            [&svp, hdrFormat, colorPassNeedsDepthBuffer, msaa, clearFlags, useSSAO, ssao]
+            [&svp, hdrFormat, msaa, clearFlags, useSSAO, ssao]
             (FrameGraph::Builder& builder, ColorPassData& data) {
 
                 if (useSSAO) {
-                    data.ssao = builder.read(ssao);
+                    data.ssao = builder.sample(ssao);
                 }
 
                 data.color = builder.createTexture("Color Buffer",
-                        { .width = svp.width, .height = svp.height, .format = hdrFormat, .samples = msaa });
+                        { .width = svp.width, .height = svp.height, .format = hdrFormat });
 
-                if (colorPassNeedsDepthBuffer) {
-                    data.depth = builder.createTexture("Depth Buffer", {
-                            .width = svp.width, .height = svp.height,
-                            .format = TextureFormat::DEPTH24,
-                            .samples = msaa
-                    });
-                    data.depth = builder.write(builder.read(data.depth, true));
-                }
+                data.depth = builder.createTexture("Depth Buffer", {
+                        .width = svp.width, .height = svp.height,
+                        .format = TextureFormat::DEPTH24
+                });
+                data.depth = builder.write(builder.read(data.depth));
 
-                data.color = builder.write(builder.read(data.color, true));
-                builder.createRenderTarget("Color Pass Target", {
+                data.color = builder.write(builder.read(data.color));
+                data.rt = builder.createRenderTarget("Color Pass Target", {
+                        .attachments = { data.color, data.depth },
                         .samples = msaa,
-                        .attachments.color = data.color,
-                        .attachments.depth = data.depth
                 }, clearFlags);
             },
             [&pass, &ppm, colorPassBegin, colorPassEnd, jobFroxelize, &js, &view]
                     (FrameGraphPassResources const& resources,
                             ColorPassData const& data, DriverApi& driver) {
-                auto out = resources.getRenderTarget(data.color);
+                auto out = resources.getRenderTarget(data.rt);
                 Handle<HwTexture> ssao;
                 if (data.ssao.isValid()) {
                     ssao = resources.getTexture(data.ssao);
@@ -342,50 +379,55 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             });
 
     jobFroxelize = nullptr;
-    FrameGraphResource input = colorPass.getData().color;
+    FrameGraphId<FrameGraphTexture> input = colorPass.getData().color;
 
     /*
      * Post Processing...
      */
 
-    const bool translucent = mSwapChain->isTransparent();
     const TextureFormat ldrFormat = (toneMapping && fxaa) ?
-            TextureFormat::RGBA8 : getLdrFormat(); // e.g. RGB8 or RGBA8
+            TextureFormat::RGBA8 : getLdrFormat(translucent); // e.g. RGB8 or RGBA8
 
     if (hasPostProcess) {
-        // FIXME: currently we can't render a view on top of another one (with transparency) if
-        //        any post-processing is performed on that view -- this is because post processing
-        //        uses intermediary buffers which are not blended back (they're blitted).
-
         if (toneMapping) {
-            input = ppm.toneMapping(fg, input, ldrFormat, dithering, translucent);
+            input = ppm.toneMapping(fg, input, ldrFormat, dithering, translucent, fxaa);
         }
         if (fxaa) {
             input = ppm.fxaa(fg, input, ldrFormat, !toneMapping || translucent);
         }
         if (scaled) {
-            input = ppm.dynamicScaling(fg, input, ldrFormat);
+            input = ppm.dynamicScaling(fg, msaa, scaled, blending, input, ldrFormat);
         }
     }
 
-    // If we're rendering into the default RenderTarget (viewRenderTarget), we must take care
-    // of a few things:
-    // - since viewRenderTarget doesn't have depth or multi-sample buffer, we have to use an
-    //   intermediate buffer which has one. We do this by forcing a blit.
-    // - however a blit operation cannot move or scale the source, so we must additionally
-    //   do a resolve pass in the multi-sample case.
+    // We need to do special processing when rendering directly into the swap-chain (see
+    // comments below). That is when the viewRenderTarget is the default render target
+    // (mRenderTarget) and we're rendering into it.
     if (input == colorPass.getData().color) {
-        if (msaa > 1) {
-            input = ppm.resolve(fg, input);
-            input = ppm.dynamicScaling(fg, input, ldrFormat);
-        } else if (colorPassNeedsDepthBuffer) {
-            input = ppm.dynamicScaling(fg, input, ldrFormat);
+        // here we know we're not scaled because either post-processing is disabled (which implies
+        // no scaling, or scaled==false because otherwise we wouldn't be rendering in the
+        // default target.
+        assert(!scaled);
+
+        if (viewRenderTarget == mRenderTarget) {
+            // The default render target is not multi-sampled, so we need an intermediate
+            // buffer.
+            // The intermediate buffer  is accomplished with a "fake" dynamicScaling (i.e. blit)
+            // operation.
+
+            if (msaa > 1) {
+                input = ppm.dynamicScaling(fg, msaa, scaled, blending, input, ldrFormat);
+            }
+        }
+    } else {
+        if (blending) {
+            input = ppm.dynamicScaling(fg, msaa, scaled, blending, input, ldrFormat);
         }
     }
 
     fg.present(input);
 
-    fg.moveResource(output, input);
+    fg.moveResource(fgViewRenderTarget, input);
 
     fg.compile();
     //fg.export_graphviz(slog.d);
@@ -415,15 +457,15 @@ void FRenderer::copyFrame(FSwapChain* dstSwapChain, filament::Viewport const& ds
     RenderPassParams params = {};
     // Clear color to black if the CLEAR flag is set.
     if (flags & CLEAR) {
-        params.flags.clear = TargetBufferFlags::COLOR;
         params.clearColor = {0.f, 0.f, 0.f, 1.f};
+        params.flags.clear = TargetBufferFlags::COLOR;
+        params.flags.ignoreScissor = true;
         params.flags.discardStart = TargetBufferFlags::ALL;
         params.flags.discardEnd = TargetBufferFlags::NONE;
         params.viewport.left = 0;
         params.viewport.bottom = 0;
         params.viewport.width = std::numeric_limits<uint32_t>::max();
         params.viewport.height = std::numeric_limits<uint32_t>::max();
-        params.flags.clear |= RenderPassFlags::IGNORE_SCISSOR;
     }
     driver.beginRenderPass(mRenderTarget, params);
 
@@ -446,7 +488,8 @@ void FRenderer::copyFrame(FSwapChain* dstSwapChain, filament::Viewport const& ds
     mSwapChain->makeCurrent(driver);
 }
 
-bool FRenderer::beginFrame(FSwapChain* swapChain) {
+bool FRenderer::beginFrame(FSwapChain* swapChain, backend::FrameFinishedCallback callback,
+        void* user) {
     SYSTRACE_CALL();
 
     assert(swapChain);
@@ -462,14 +505,14 @@ bool FRenderer::beginFrame(FSwapChain* swapChain) {
     FEngine& engine = getEngine();
     FEngine::DriverApi& driver = engine.getDriverApi();
 
-    // NOTE: this makes synchronous calls to the driver
-    driver.updateStreams(&driver);
-
     mSwapChain = swapChain;
     swapChain->makeCurrent(driver);
 
+    // NOTE: this makes synchronous calls to the driver
+    driver.updateStreams(&driver);
+
     int64_t monotonic_clock_ns (std::chrono::steady_clock::now().time_since_epoch().count());
-    driver.beginFrame(monotonic_clock_ns, mFrameId);
+    driver.beginFrame(monotonic_clock_ns, mFrameId, callback, user);
 
     // This need to occur after the backend beginFrame() because some backends need to start
     // a command buffer before creating a fence.
@@ -550,8 +593,19 @@ void FRenderer::endFrame() {
 }
 
 void FRenderer::readPixels(uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
-        backend::PixelBufferDescriptor&& buffer) {
+        PixelBufferDescriptor&& buffer) {
+    readPixels(mRenderTarget, xoffset, yoffset, width, height, std::move(buffer));
+}
 
+void FRenderer::readPixels(FRenderTarget* renderTarget,
+        uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
+        backend::PixelBufferDescriptor&& buffer) {
+    readPixels(renderTarget->getHwHandle(), xoffset, yoffset, width, height, std::move(buffer));
+}
+
+void FRenderer::readPixels(Handle<HwRenderTarget> renderTargetHandle,
+        uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
+        backend::PixelBufferDescriptor&& buffer) {
     if (!ASSERT_POSTCONDITION_NON_FATAL(
             buffer.type != PixelDataType::COMPRESSED,
             "buffer.format cannot be COMPRESSED")) {
@@ -560,7 +614,7 @@ void FRenderer::readPixels(uint32_t xoffset, uint32_t yoffset, uint32_t width, u
 
     if (!ASSERT_POSTCONDITION_NON_FATAL(
             buffer.alignment > 0 && buffer.alignment <= 8 &&
-            !(buffer.alignment & (buffer.alignment - 1)),
+            !(buffer.alignment & (buffer.alignment - 1u)),
             "buffer.alignment must be 1, 2, 4 or 8")) {
         return;
     }
@@ -583,11 +637,11 @@ void FRenderer::readPixels(uint32_t xoffset, uint32_t yoffset, uint32_t width, u
 
     FEngine& engine = getEngine();
     FEngine::DriverApi& driver = engine.getDriverApi();
-    driver.readPixels(mRenderTarget, xoffset, yoffset, width, height, std::move(buffer));
+    driver.readPixels(renderTargetHandle, xoffset, yoffset, width, height, std::move(buffer));
 }
 
-backend::Handle<backend::HwRenderTarget> FRenderer::getRenderTarget(FView& view) const noexcept {
-    backend::Handle<backend::HwRenderTarget> viewRenderTarget = view.getRenderTarget();
+Handle<HwRenderTarget> FRenderer::getRenderTarget(FView& view) const noexcept {
+    Handle<HwRenderTarget> viewRenderTarget = view.getRenderTargetHandle();
     return viewRenderTarget ? viewRenderTarget : mRenderTarget;
 }
 
@@ -627,8 +681,9 @@ void Renderer::render(View const* view) {
     upcast(this)->render(upcast(view));
 }
 
-bool Renderer::beginFrame(SwapChain* swapChain) {
-    return upcast(this)->beginFrame(upcast(swapChain));
+bool Renderer::beginFrame(SwapChain* swapChain, backend::FrameFinishedCallback callback,
+        void* user) {
+    return upcast(this)->beginFrame(upcast(swapChain), callback, user);
 }
 
 void Renderer::copyFrame(SwapChain* dstSwapChain, filament::Viewport const& dstViewport,
@@ -637,8 +692,15 @@ void Renderer::copyFrame(SwapChain* dstSwapChain, filament::Viewport const& dstV
 }
 
 void Renderer::readPixels(uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
-        backend::PixelBufferDescriptor&& buffer) {
+        PixelBufferDescriptor&& buffer) {
     upcast(this)->readPixels(xoffset, yoffset, width, height, std::move(buffer));
+}
+
+void Renderer::readPixels(RenderTarget* renderTarget,
+        uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
+        PixelBufferDescriptor&& buffer) {
+    upcast(this)->readPixels(upcast(renderTarget),
+            xoffset, yoffset, width, height, std::move(buffer));
 }
 
 void Renderer::endFrame() {

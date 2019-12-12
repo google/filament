@@ -22,6 +22,7 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -72,24 +73,16 @@ Examples:
 
 static const char* APPLE_ASM_TEMPLATE = R"ASM(
     .global _{RESOURCES}PACKAGE
-    .global _{RESOURCES}PACKAGE_SIZE
     .section __TEXT,__const
 _{RESOURCES}PACKAGE:
     .incbin "{resources}.bin"
-1:
-_{RESOURCES}PACKAGE_SIZE:
-    .int 1b - _{RESOURCES}PACKAGE
 )ASM";
 
 static const char* ASM_TEMPLATE = R"ASM(
     .global {RESOURCES}PACKAGE
-    .global {RESOURCES}PACKAGE_SIZE
     .section .rodata
 {RESOURCES}PACKAGE:
     .incbin "{resources}.bin"
-1:
-{RESOURCES}PACKAGE_SIZE:
-    .int 1b - {RESOURCES}PACKAGE
 )ASM";
 
 static void printUsage(const char* name) {
@@ -103,9 +96,14 @@ static void printUsage(const char* name) {
 }
 
 static void license() {
-    cout <<
-    #include "licenses/licenses.inc"
-    ;
+    static const char *license[] = {
+        #include "licenses/licenses.inc"
+        nullptr
+    };
+
+    const char **p = &license[0];
+    while (*p)
+        std::cout << *p++ << std::endl;
 }
 
 static int handleArguments(int argc, char* argv[]) {
@@ -206,8 +204,6 @@ int main(int argc, char* argv[]) {
         cerr << "Unable to open " << appleAsmPath << endl;
         exit(1);
     }
-    appleAsmStream << aasmstr << endl;
-    appleAsmStream.close();
 
     // Generate the non-Apple assembly language file.
     ofstream asmStream(asmPath.getPath());
@@ -215,8 +211,6 @@ int main(int argc, char* argv[]) {
         cerr << "Unable to open " << asmPath << endl;
         exit(1);
     }
-    asmStream << asmstr << endl;
-    asmStream.close();
 
     // Open the bin file for writing.
     ofstream binStream(binPath.getPath(), ios::binary);
@@ -225,19 +219,18 @@ int main(int argc, char* argv[]) {
         exit(1);
     }
 
-    // Open the header file for writing.
-    ofstream headerStream(headerPath.getPath());
-    if (!headerStream) {
-        cerr << "Unable to open " << headerPath << endl;
-        exit(1);
-    }
+    // Open the header file stream for writing.
+    ostringstream headerStream;
     headerStream << "#ifndef " << packagePrefix << "H_" << endl
             << "#define " << packagePrefix << "H_" << endl << endl
             << "#include <stdint.h>" << endl << endl
             << "extern \"C\" {" << endl
-            << "    extern const uint8_t " << package << "[];" << endl
-            << "    extern const int " << package << "_SIZE;" << endl
-            << "}" << endl << endl;
+            << "    extern const uint8_t " << package << "[];" << endl;
+
+    ostringstream headerMacros;
+    ostringstream xxdDefinitions;
+    ostringstream appleDataAsmStream;
+    ostringstream dataAsmStream;
 
     // Open the generated C file for writing.
     ofstream xxdStream;
@@ -272,14 +265,40 @@ int main(int argc, char* argv[]) {
         // Write the binary blob into the bin file.
         binStream.write((const char*) content.data(), content.size());
 
-        // Write the offset and size into the header file.
-        headerStream
-                << "#define " << prname << "_OFFSET " << offset << "\n"
-                << "#define " << prname << "_SIZE " << content.size() << "\n"
+        // Write the offsets and sizes.
+        headerMacros
                 << "#define " << prname << "_DATA (" << package << " + " << prname << "_OFFSET)\n";
+
+        headerStream
+                << "    extern int " << prname << "_OFFSET;\n"
+                << "    extern int " << prname << "_SIZE;\n";
+
+        dataAsmStream
+                << prname << "_OFFSET:\n"
+                << "    .int " << offset << "\n"
+                << prname << "_SIZE:\n"
+                << "    .int " << content.size() << "\n";
+
+        asmStream
+                << "    .global " << prname << "_OFFSET;\n"
+                << "    .global " << prname << "_SIZE;\n";
+
+        appleDataAsmStream
+                << "_" << prname << "_OFFSET:\n"
+                << "    .int " << offset << "\n"
+                << "_" << prname << "_SIZE:\n"
+                << "    .int " << content.size() << "\n";
+
+        appleAsmStream
+                << "    .global _" << prname << "_OFFSET;\n"
+                << "    .global _" << prname << "_SIZE;\n";
 
         // Write the xxd-style ASCII array, followed by a blank line.
         if (g_generateC) {
+            xxdDefinitions
+                    << "int " << prname << "_OFFSET = " << offset << ";\n"
+                    << "int " << prname << "_SIZE = " << content.size() << ";\n";
+
             xxdStream << "// " << rname << "\n";
             xxdStream << setfill('0') << hex;
             size_t i = 0;
@@ -296,7 +315,37 @@ int main(int argc, char* argv[]) {
         offset += content.size();
     }
 
+    headerStream << "}\n" << headerMacros.str();
     headerStream << "\n#endif\n";
+
+    // To optimize builds, avoid overwriting the header file if nothing has changed.
+    bool headerIsDirty = true;
+    ifstream headerInStream(headerPath.getPath(), std::ifstream::ate);
+    string headerContents = headerStream.str();
+    if (headerInStream) {
+        long fileSize = static_cast<long>(headerInStream.tellg());
+        if (fileSize == headerContents.size()) {
+            vector<char> previous(fileSize);
+            headerInStream.seekg(0);
+            headerInStream.read(previous.data(), fileSize);
+            headerIsDirty = 0 != memcmp(previous.data(), headerContents.c_str(), fileSize);
+        }
+    }
+
+    if (headerIsDirty) {
+        ofstream headerOutStream(headerPath.getPath());
+        if (!headerOutStream) {
+            cerr << "Unable to open " << headerPath << endl;
+            exit(1);
+        }
+        headerOutStream << headerContents;
+    }
+
+    asmStream << asmstr << dataAsmStream.str() << endl;
+    asmStream.close();
+
+    appleAsmStream << aasmstr << appleDataAsmStream.str() << endl;
+    appleAsmStream.close();
 
     cout << "Generated files: "
         << headerPath << " "
@@ -305,7 +354,7 @@ int main(int argc, char* argv[]) {
         << binPath;
 
     if (g_generateC) {
-        xxdStream << "};\n\nconst int " << package << "_SIZE = " << dec << offset << ";\n";
+        xxdStream << "};\n\n" << xxdDefinitions.str();
         cout << " " << xxdPath;
     }
 

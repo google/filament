@@ -42,8 +42,6 @@ using filaflat::ChunkContainer;
 using filament::backend::Backend;
 using utils::Path;
 
-static const int alignment = 24;
-
 struct Config {
     bool printGLSL = false;
     bool printSPIRV = false;
@@ -91,9 +89,14 @@ static void printUsage(const char* name) {
 }
 
 static void license() {
-    std::cout <<
-    #include "licenses/licenses.inc"
-    ;
+    static const char *license[] = {
+        #include "licenses/licenses.inc"
+        nullptr
+    };
+
+    const char **p = &license[0];
+    while (*p)
+        std::cout << *p++ << std::endl;
 }
 
 static int handleArguments(int argc, char* argv[], Config* config) {
@@ -357,7 +360,7 @@ static bool parseChunks(Config config, void* data, size_t size) {
 
     if (config.serverPort) {
         // Spin up a web server on a secondary thread.
-        DebugServer server(STANDALONE, config.serverPort);
+        DebugServer server(Backend::DEFAULT, config.serverPort);
 
         // Notify the server that we have a filamat file.
         utils::CString name;
@@ -378,8 +381,7 @@ static bool parseChunks(Config config, void* data, size_t size) {
 
         if (config.printGLSL) {
             ShaderExtractor parser(Backend::OPENGL, data, size);
-            if (!parser.parse() ||
-                    (!parser.isShadingMaterial() && !parser.isPostProcessMaterial())) {
+            if (!parser.parse()) {
                 return false;
             }
 
@@ -405,8 +407,7 @@ static bool parseChunks(Config config, void* data, size_t size) {
 
         if (config.printSPIRV) {
             ShaderExtractor parser(Backend::VULKAN, data, size);
-            if (!parser.parse() ||
-                    (!parser.isShadingMaterial() && !parser.isPostProcessMaterial())) {
+            if (!parser.parse()) {
                 return false;
             }
 
@@ -442,8 +443,7 @@ static bool parseChunks(Config config, void* data, size_t size) {
 
         if (config.printMetal) {
             ShaderExtractor parser(Backend::METAL, data, size);
-            if (!parser.parse() ||
-                    (!parser.isShadingMaterial() && !parser.isPostProcessMaterial())) {
+            if (!parser.parse()) {
                 return false;
             }
 
@@ -519,7 +519,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    std::ifstream in(src.c_str(), std::ifstream::in);
+    std::ifstream in(src.c_str(), std::ifstream::in | std::ios::binary);
     if (in.is_open()) {
         if (src.getExtension() == "inc") {
             return parseTextBlob(config, in) ? 0 : 1;

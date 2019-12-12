@@ -78,20 +78,11 @@ bool MetalExternalImage::isValid() const noexcept {
 }
 
 void MetalExternalImage::set(CVPixelBufferRef image) noexcept {
-    CVPixelBufferRelease(mImage);
-    CVBufferRelease(mTexture);
-    [mRgbTexture release];
-
-    mImage = nullptr;
-    mTexture = nullptr;
-    mRgbTexture = nil;
+    unset();
 
     if (!image) {
         return;
     }
-
-    // This pool is necessary because set is called outside of a frame.
-    NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
 
     OSType formatType = CVPixelBufferGetPixelFormatType(image);
     ASSERT_POSTCONDITION(formatType == kCVPixelFormatType_32BGRA ||
@@ -131,8 +122,37 @@ void MetalExternalImage::set(CVPixelBufferRef image) noexcept {
 
         [commandBuffer commit];
     }
+}
 
-    [pool drain];
+void MetalExternalImage::set(CVPixelBufferRef image, size_t plane) noexcept {
+    unset();
+
+    if (!image) {
+        return;
+    }
+
+    const OSType formatType = CVPixelBufferGetPixelFormatType(image);
+    ASSERT_POSTCONDITION(formatType == kCVPixelFormatType_420YpCbCr8BiPlanarFullRange,
+            "Metal planar external images must be in the 420f format.");
+
+    mImage = image;
+
+    auto getPlaneFormat = [] (size_t plane) {
+      // Right now Metal only supports kCVPixelFormatType_420YpCbCr8BiPlanarFullRange planar
+      // external images, so we can make the following assumptions about the format of each plane.
+      if (plane == 0) {
+        return MTLPixelFormatR8Unorm; // luminance
+      }
+      if (plane == 1) {
+        // CbCr
+        return MTLPixelFormatRG8Unorm; // CbCr
+      }
+      return MTLPixelFormatInvalid;
+    };
+
+    const MTLPixelFormat format = getPlaneFormat(plane);
+    assert(format != MTLPixelFormatInvalid);
+    mTexture = createTextureFromImage(image, format, plane);
 }
 
 id<MTLTexture> MetalExternalImage::getMetalTextureForDraw() const noexcept {
@@ -145,10 +165,10 @@ id<MTLTexture> MetalExternalImage::getMetalTextureForDraw() const noexcept {
     // lifetime is automatically managed by Metal.
     auto& tracker = mContext.resourceTracker;
     auto commandBuffer = mContext.currentCommandBuffer;
-    if (tracker.trackResource(commandBuffer, mImage, cvBufferDeleter)) {
+    if (tracker.trackResource((__bridge void*) commandBuffer, mImage, cvBufferDeleter)) {
         CVPixelBufferRetain(mImage);
     }
-    if (tracker.trackResource(commandBuffer, mTexture, cvBufferDeleter)) {
+    if (tracker.trackResource((__bridge void*) commandBuffer, mTexture, cvBufferDeleter)) {
         CVBufferRetain(mTexture);
     }
 
@@ -157,8 +177,8 @@ id<MTLTexture> MetalExternalImage::getMetalTextureForDraw() const noexcept {
 
 CVMetalTextureRef MetalExternalImage::createTextureFromImage(CVPixelBufferRef image,
         MTLPixelFormat format, size_t plane) {
-    size_t width = CVPixelBufferGetWidthOfPlane(image, plane);
-    size_t height = CVPixelBufferGetHeightOfPlane(image, plane);
+    const size_t width = CVPixelBufferGetWidthOfPlane(image, plane);
+    const size_t height = CVPixelBufferGetHeightOfPlane(image, plane);
 
     CVMetalTextureRef texture;
     CVReturn result = CVMetalTextureCacheCreateTextureFromImage(kCFAllocatorDefault,
@@ -170,8 +190,16 @@ CVMetalTextureRef MetalExternalImage::createTextureFromImage(CVPixelBufferRef im
 }
 
 void MetalExternalImage::shutdown() noexcept {
-    [gComputePipelineState release];
     gComputePipelineState = nil;
+}
+
+void MetalExternalImage::unset() {
+    CVPixelBufferRelease(mImage);
+    CVBufferRelease(mTexture);
+
+    mImage = nullptr;
+    mTexture = nullptr;
+    mRgbTexture = nil;
 }
 
 id<MTLTexture> MetalExternalImage::createRgbTexture(size_t width, size_t height) {
@@ -200,12 +228,10 @@ void MetalExternalImage::ensureComputePipelineState() {
     NSERROR_CHECK("Unable to compile Metal shading library.");
 
     id<MTLFunction> kernelFunction = [library newFunctionWithName:@"ycbcrToRgb"];
-    [library release];
 
     gComputePipelineState = [mContext.device newComputePipelineStateWithFunction:kernelFunction
                                                                            error:&error];
     NSERROR_CHECK("Unable to create Metal compute pipeline state.");
-    [kernelFunction release];
 }
 
 id<MTLCommandBuffer> MetalExternalImage::encodeColorConversionPass(id<MTLTexture> inYPlane,

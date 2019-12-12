@@ -64,12 +64,9 @@ public:
     // generate common functions for the given shader
     utils::io::sstream& generateCommon(utils::io::sstream& out, ShaderType type) const;
     utils::io::sstream& generateCommonMaterial(utils::io::sstream& out, ShaderType type) const;
-    utils::io::sstream& generateCommonPostProcess(utils::io::sstream& out, ShaderType type) const;
 
     // generate the shader's main()
     utils::io::sstream& generateShaderMain(utils::io::sstream& out, ShaderType type) const;
-    utils::io::sstream& generatePostProcessMainOld(utils::io::sstream& out, ShaderType type,
-            filament::PostProcessStage variant) const;
     utils::io::sstream& generatePostProcessMain(utils::io::sstream& out, ShaderType type) const;
 
     // generate the shader's code for the lit shading model
@@ -87,6 +84,7 @@ public:
     // generate declarations for non-custom "in" variables
     utils::io::sstream& generateShaderInputs(utils::io::sstream& out, ShaderType type,
         const filament::AttributeBitset& attributes, filament::Interpolation interpolation) const;
+    utils::io::sstream& generatePostProcessInputs(utils::io::sstream& out, ShaderType type) const;
 
     // generate no-op shader for depth prepass
     utils::io::sstream& generateDepthShaderMain(utils::io::sstream& out, ShaderType type) const;
@@ -113,7 +111,7 @@ public:
     utils::io::sstream& generateIndexedDefine(utils::io::sstream& out, const char* name,
             uint32_t index, uint32_t value) const;
 
-    utils::io::sstream& generateCommonGetters(utils::io::sstream& out) const;
+    utils::io::sstream& generatePostProcessGetters(utils::io::sstream& out, ShaderType type) const;
     utils::io::sstream& generateGetters(utils::io::sstream& out, ShaderType type) const;
     utils::io::sstream& generateParameters(utils::io::sstream& out, ShaderType type) const;
 

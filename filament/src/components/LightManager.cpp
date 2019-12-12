@@ -22,8 +22,8 @@
 
 #include <math/fast.h>
 #include <math/scalar.h>
-#include <filament/LightManager.h>
 
+#include <assert.h>
 
 using namespace filament::math;
 using namespace utils;
@@ -43,7 +43,7 @@ struct LightManager::BuilderDetails {
     LinearColor mColor = LinearColor{ 1.0f };
     float mIntensity = 100000.0f;
     float3 mDirection = { 0.0f, -1.0f, 0.0f };
-    float2 mSpotInnerOuter = { (float)M_PI, (float)M_PI };
+    float2 mSpotInnerOuter = { (float) F_PI, (float) F_PI };
     float mSunAngle = 0.00951f; // 0.545° in radians
     float mSunHaloSize = 10.0f;
     float mSunHaloFalloff = 80.0f;
@@ -128,6 +128,7 @@ LightManager::Builder& LightManager::Builder::sunHaloFalloff(float haloFalloff) 
 }
 
 LightManager::Builder::Result LightManager::Builder::build(Engine& engine, Entity entity) {
+    FEngine::assertValid(engine, __PRETTY_FUNCTION__);
     upcast(engine).createLight(*this, entity);
     return Success;
 }
@@ -249,7 +250,7 @@ void FLightManager::setIntensity(Instance i, float intensity) noexcept {
 
             case Type::POINT:
                 // li = lp / (4*pi)
-                luminousIntensity = luminousPower * float(M_1_PI) * 0.25f;
+                luminousIntensity = luminousPower * float(F_1_PI) * 0.25f;
                 break;
 
             case Type::FOCUSED_SPOT: {
@@ -258,13 +259,13 @@ void FLightManager::setIntensity(Instance i, float intensity) noexcept {
                 float2 scaleOffset = spotParams.scaleOffset;
                 float cosOuter = -scaleOffset.y / scaleOffset.x;
                 float cosHalfOuter = std::sqrt((1.0f + cosOuter) * 0.5f); // half-angle identities
-                luminousIntensity = luminousPower / (2.0f * float(M_PI) * (1.0f - cosHalfOuter));
+                luminousIntensity = luminousPower / (2.0f * float(F_PI) * (1.0f - cosHalfOuter));
                 spotParams.luminousPower = luminousPower;
                 break;
             }
             case Type::SPOT:
                 // li = lp / pi
-                luminousIntensity = luminousPower * float(M_1_PI);
+                luminousIntensity = luminousPower * float(F_1_PI);
                 break;
         }
         manager[i].intensity = luminousIntensity;
@@ -285,8 +286,8 @@ void FLightManager::setSpotLightCone(Instance i, float inner, float outer) noexc
     auto& manager = mManager;
     if (i && isSpotLight(i)) {
         // clamp the inner/outer angles to pi
-        float outerClamped = std::min(std::abs(outer), float(M_PI));
-        float innerClamped = std::min(std::abs(inner), float(M_PI));
+        float outerClamped = std::min(std::abs(outer), float(F_PI));
+        float innerClamped = std::min(std::abs(inner), float(F_PI));
 
         // inner must always be smaller than outer
         innerClamped = std::min(innerClamped, outerClamped);
@@ -307,7 +308,7 @@ void FLightManager::setSpotLightCone(Instance i, float inner, float outer) noexc
         if (type == Type::FOCUSED_SPOT) {
             float luminousPower = spotParams.luminousPower;
             float cosHalfOuter = std::sqrt((1.0f + cosOuter) * 0.5f); // half-angle identities
-            float luminousIntensity = luminousPower / (2.0f * float(M_PI) * (1.0f - cosHalfOuter));
+            float luminousIntensity = luminousPower / (2.0f * float(F_PI) * (1.0f - cosHalfOuter));
             manager[i].intensity = luminousIntensity;
         }
     }
@@ -316,7 +317,7 @@ void FLightManager::setSpotLightCone(Instance i, float inner, float outer) noexc
 void FLightManager::setSunAngularRadius(Instance i, float angularRadius) noexcept {
     if (i && isSunLight(i)) {
         angularRadius = clamp(angularRadius, 0.25f, 20.0f);
-        mManager[i].sunAngularRadius = angularRadius * float(M_PI / 180.0);
+        mManager[i].sunAngularRadius = angularRadius * float(F_PI / 180.0);
     }
 }
 
@@ -411,7 +412,7 @@ void LightManager::setSunAngularRadius(Instance i, float angularRadius) noexcept
 
 float LightManager::getSunAngularRadius(Instance i) const noexcept {
     float radius = upcast(this)->getSunAngularRadius(i);
-    return radius * float(180.0 / M_PI);
+    return radius * float(180.0 / F_PI);
 }
 
 void LightManager::setSunHaloSize(Instance i, float haloSize) noexcept {

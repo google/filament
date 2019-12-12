@@ -42,6 +42,12 @@
 #   define UTILS_PACKED
 #endif
 
+#if __has_attribute(noreturn)
+#    define UTILS_NORETURN __attribute__((noreturn))
+#else
+#    define UTILS_NORETURN
+#endif
+
 #if __has_attribute(visibility)
 #    ifndef TNT_DEV
 #        define UTILS_PRIVATE __attribute__((visibility("hidden")))
@@ -64,8 +70,8 @@
 #      define UTILS_UNLIKELY( exp )  (__builtin_expect( !!(exp), 0 ))
 #   endif
 #else
-#   define UTILS_LIKELY( exp )    (exp)
-#   define UTILS_UNLIKELY( exp )  (exp)
+#   define UTILS_LIKELY( exp )    (!!(exp))
+#   define UTILS_UNLIKELY( exp )  (!!(exp))
 #endif
 
 #if __has_builtin(__builtin_prefetch)
@@ -129,7 +135,9 @@
 #    define UTILS_RESTRICT
 #endif
 
-#if __has_feature(cxx_thread_local)
+#if defined(_MSC_VER) && _MSC_VER >= 1900
+#       define UTILS_HAS_FEATURE_CXX_THREAD_LOCAL 1
+#elif __has_feature(cxx_thread_local)
 #   ifdef ANDROID
 #       // Android NDK lies about supporting cxx_thread_local
 #       define UTILS_HAS_FEATURE_CXX_THREAD_LOCAL 0
@@ -140,7 +148,7 @@
 #   define UTILS_HAS_FEATURE_CXX_THREAD_LOCAL 0
 #endif
 
-#if __has_feature(cxx_rtti)
+#if __has_feature(cxx_rtti) || defined(_CPPRTTI)
 #   define UTILS_HAS_RTTI 1
 #else
 #   define UTILS_HAS_RTTI 0
@@ -191,5 +199,11 @@ typedef SSIZE_T ssize_t;
 #else
     #define IMPORTSYMB
 #endif
+
+#if defined(_MSC_VER) && !defined(__PRETTY_FUNCTION__)
+#    define __PRETTY_FUNCTION__ __FUNCSIG__
+#endif 
+
+
 
 #endif // TNT_UTILS_COMPILER_H

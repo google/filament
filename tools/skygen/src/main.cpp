@@ -86,8 +86,8 @@ static float angleBetween(float thetav, float phiv, float theta, float phi) {
 
 static void generateSky(LinearImage image) {
     printf("Sky parameters\n");
-    printf("    Elevation: %.2f°\n", g_elevation * 180.0 * M_1_PI);
-    printf("    Azimuth:   %.2f°\n", g_azimuth * 180.0 * M_1_PI);
+    printf("    Elevation: %.2f°\n", g_elevation * 180.0 * F_1_PI);
+    printf("    Azimuth:   %.2f°\n", g_azimuth * 180.0 * F_1_PI);
     printf("    Turbidity: %.2f\n", g_turbidity);
     printf("\n");
 
@@ -95,8 +95,8 @@ static void generateSky(LinearImage image) {
         std::vector<float> maximas;
         std::mutex maximasMutex;
 
-        float solarElevation = clamp(g_elevation, 0.0f, float(M_PI_2));
-        float sunTheta = float(M_PI_2 - solarElevation);
+        float solarElevation = clamp(g_elevation, 0.0f, float(F_PI_2));
+        float sunTheta = float(F_PI_2 - solarElevation);
         float sunPhi = 0.0f;
 
         float3 integral = 0.0f;
@@ -128,14 +128,14 @@ static void generateSky(LinearImage image) {
                 float3* UTILS_RESTRICT data = image.get<float3>(0, (uint32_t) y);
 
                 float v = (y + 0.5f) / h;
-                float theta = float(M_PI * v);
-                if (theta > M_PI_2) return;
+                float theta = float(F_PI * v);
+                if (theta > F_PI_2) return;
 
                 float integralDelta = sin(theta) / (w * h / 2.0f);
 
                 for (size_t x = 0; x < w; x++, data++) {
                     float u = (x + 0.5f) / w;
-                    float phi = float(-2.0 * M_PI * u + M_PI + g_azimuth);
+                    float phi = float(-2.0 * F_PI * u + F_PI + g_azimuth);
 
                     float gamma = angleBetween(theta, phi, jobData.sunTheta, jobData.sunPhi);
 
@@ -146,7 +146,7 @@ static void generateSky(LinearImage image) {
                     };
 
                     if (g_normalize) {
-                        sample *= float(4.0 * M_PI / 683.0);
+                        sample *= float(4.0 * F_PI / 683.0);
                     }
 
                     maxSample = std::max(maxSample, sample.y);
@@ -196,7 +196,7 @@ static void generateSky(LinearImage image) {
             }
             break;
     }
-    if (g_normalize) maxValue /= float(4.0 * M_PI / 683.0);
+    if (g_normalize) maxValue /= float(4.0 * F_PI / 683.0);
 
     const size_t w = image.getWidth();
     const size_t h = image.getHeight();
@@ -223,7 +223,7 @@ static void generateSky(LinearImage image) {
     printf("Information\n");
     printf("    Max radiance:    %.2f W/(m^2.sr.nm)\n", maxValue);
     printf("    Max luminance:   %.2f nt\n", maxValue * 683.0f);
-    printf("    Max illuminance: %.2f lx\n", maxValue * 683.0f * 2.0 * M_PI);
+    printf("    Max illuminance: %.2f lx\n", maxValue * 683.0f * 2.0 * F_PI);
     printf("\n");
 
     printf("Rendering parameters\n");
@@ -279,9 +279,14 @@ static void printUsage(const char* name) {
 }
 
 static void license() {
-    std::cout <<
-    #include "licenses/licenses.inc"
-    ;
+    static const char *license[] = {
+        #include "licenses/licenses.inc"
+        nullptr
+    };
+
+    const char **p = &license[0];
+    while (*p)
+        std::cout << *p++ << std::endl;
 }
 
 static int handleArguments(int argc, char* argv[]) {
@@ -361,10 +366,10 @@ static int handleArguments(int argc, char* argv[]) {
                 g_turbidity = clamp(strtof(arg.c_str(), nullptr), 1.0f, 11.0f);
                 break;
             case 'e':
-                g_elevation = (float) (strtof(arg.c_str(), nullptr) * M_PI / 180.0);
+                g_elevation = (float) (strtof(arg.c_str(), nullptr) * F_PI / 180.0);
                 break;
             case 'a':
-                g_azimuth = (float) (strtof(arg.c_str(), nullptr) * M_PI / 180.0);
+                g_azimuth = (float) (strtof(arg.c_str(), nullptr) * F_PI / 180.0);
                 break;
             case 'g':
                 g_groundAlbedo = clamp(strtof(arg.c_str(), nullptr), 0.0f, 1.0f);

@@ -24,11 +24,14 @@
 
 #include <utils/compiler.h>
 
+#include <backend/PresentCallable.h>
+
 #include <stdint.h>
 
 namespace filament {
 
 class Engine;
+class RenderTarget;
 class SwapChain;
 class View;
 
@@ -188,7 +191,7 @@ public:
             Viewport const& srcViewport, uint32_t flags = 0);
 
     /**
-     * Read-back the content of the SwapChain associated with this Renderer.
+     * Reads back the content of the SwapChain associated with this Renderer.
      *
      * @param xoffset   Left offset of the sub-region to read back.
      * @param yoffset   Bottom offset of the sub-region to read back.
@@ -245,6 +248,67 @@ public:
     void readPixels(uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
             backend::PixelBufferDescriptor&& buffer);
 
+
+    /**
+     * Reads back the content of the provided RenderTarget.
+     *
+     * @param renderTarget  RenderTarget to read back from.
+     * @param xoffset       Left offset of the sub-region to read back.
+     * @param yoffset       Bottom offset of the sub-region to read back.
+     * @param width         Width of the sub-region to read back.
+     * @param height        Height of the sub-region to read back.
+     * @param buffer        Client-side buffer where the read-back will be written.
+     *
+     *                  The following format are always supported:
+     *                      - PixelBufferDescriptor::PixelDataFormat::RGBA
+     *                      - PixelBufferDescriptor::PixelDataFormat::RGBA_INTEGER
+     *
+     *                  The following types are always supported:
+     *                      - PixelBufferDescriptor::PixelDataType::UBYTE
+     *                      - PixelBufferDescriptor::PixelDataType::UINT
+     *                      - PixelBufferDescriptor::PixelDataType::INT
+     *                      - PixelBufferDescriptor::PixelDataType::FLOAT
+     *
+     *                  Other combination of format/type may be supported. If a combination is
+     *                  not supported, this operation may fail silently. Use a DEBUG build
+     *                  to get some logs about the failure.
+     *
+     *
+     *  Framebuffer as seen on         User buffer (PixelBufferDescriptor&)
+     *  screen
+     *  +--------------------+
+     *  |                    |                .stride         .alignment
+     *  |                    |         ----------------------->-->
+     *  |                    |         O----------------------+--+   low addresses
+     *  |                    |         |          |           |  |
+     *  |             w      |         |          | .top      |  |
+     *  |       <--------->  |         |          V           |  |
+     *  |       +---------+  |         |     +---------+      |  |
+     *  |       |     ^   |  | ======> |     |         |      |  |
+     *  |   x   |    h|   |  |         |.left|         |      |  |
+     *  +------>|     v   |  |         +---->|         |      |  |
+     *  |       +.........+  |         |     +.........+      |  |
+     *  |            ^       |         |                      |  |
+     *  |          y |       |         +----------------------+--+  high addresses
+     *  O------------+-------+
+     *
+     *
+     * Typically readPixels() will be called after render() and before endFrame().
+     *
+     * After issuing this method, the callback associated with `buffer` will be invoked on the
+     * main thread, indicating that the read-back has completed. Typically, this will happen
+     * after multiple calls to beginFrame(), render(), endFrame().
+     *
+     * It is also possible to use a Fence to wait for the read-back.
+     *
+     * @remark
+     * readPixels() is intended for debugging and testing. It will impact performance significantly.
+     *
+     */
+    void readPixels(RenderTarget* renderTarget,
+            uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
+            backend::PixelBufferDescriptor&& buffer);
+
     /**
      * Set-up a frame for this Renderer.
      *
@@ -259,8 +323,17 @@ public:
      * beginFrame() attempts to detect this situation and returns false in that case, indicating
      * to the caller to skip the current frame.
      *
+     * Typically, Filament is responsible for scheduling the frame's presentation to the SwapChain.
+     * If a backend::FrameFinishedCallback is provided, however, the application bares the
+     * responsibility of scheduling a frame for presentation by calling the backend::PresentCallable
+     * passed to the callback function. Currently this functionality is only supported by the Metal
+     * backend.
+     *
      * @param swapChain A pointer to the SwapChain instance to use.
-     * 
+     * @param callback  A callback function that will be called when the backend has finished
+     *                  processing the frame.
+     * @param user      User data to be passed to the callback function.
+     *
      * @return
      *      *false* the current frame must be skipped,
      *      *true* the current frame can be drawn.
@@ -272,9 +345,10 @@ public:
      * All calls to render() must happen *after* beginFrame().
      *
      * @see
-     * endFrame()
+     * endFrame(), backend::PresentCallable, backend::FrameFinishedCallback
      */
-    bool beginFrame(SwapChain* swapChain);
+    bool beginFrame(SwapChain* swapChain, backend::FrameFinishedCallback callback = nullptr,
+            void* user = nullptr);
 
     /**
      * Finishes the current frame and schedules it for display.

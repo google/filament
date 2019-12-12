@@ -19,6 +19,8 @@
 
 #include <filaflat/ChunkContainer.h>
 
+#include <backend/DriverEnums.h>
+
 #include <utils/CString.h>
 
 namespace filament {
@@ -26,7 +28,16 @@ namespace matdbg {
 
 class JsonWriter {
 public:
+
+    // Returns a JSON object describing the given material.
     bool writeMaterialInfo(const filaflat::ChunkContainer& package);
+
+    // Returns a JSON array of the form [ backend, shaderIndex0, shaderIndex1, ... ] where each
+    // shader index is an active variant. Each bit in the activeVariants bitmask
+    // represents one of the possible variant combinations.
+    bool writeActiveInfo(const filaflat::ChunkContainer& package, backend::Backend backend,
+            uint16_t activeVariants);
+
     const char* getJsonString() const;
     size_t getJsonSize() const;
 private:

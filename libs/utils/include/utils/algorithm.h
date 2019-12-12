@@ -241,7 +241,8 @@ RandomAccessIterator partition_point(
         // handle non power-of-two sized arrays. If it's POT, the next line is a no-op
         // and gets optimized out if the size is known at compile time.
         len = 1u << (31 - clz(uint32_t(len)));     // next power of two length / 2
-        first += pred(first[len]) ? ((last - first) - len) : 0;
+        size_t difference = (last - first) - len;
+        first += !difference || pred(first[len]) ? difference : 0;
     }
 
     while (len) {
@@ -258,9 +259,7 @@ RandomAccessIterator partition_point(
 template <class To, class From>
 typename std::enable_if_t<
     (sizeof(To) == sizeof(From)) &&
-    std::is_trivially_copyable<From>::value &&
-    std::is_trivial<To>::value,
-    // this implementation requires that To is trivially default constructible
+    std::is_trivially_copyable<From>::value,
     To>
 // constexpr support needs compiler magic
 bit_cast(const From &src) noexcept {

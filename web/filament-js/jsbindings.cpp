@@ -86,6 +86,12 @@ using namespace geometry;
 using namespace gltfio;
 using namespace image;
 
+namespace em = emscripten;
+
+#if __has_feature(cxx_rtti)
+#error Filament JS bindings require RTTI to be disabled.
+#endif
+
 // Many methods require a thin layer of C++ glue which is elegantly expressed with a lambda.
 // However, passing a bare lambda into embind's daisy chain requires a cast to a function pointer.
 #define EMBIND_LAMBDA(retval, arglist, impl) (retval (*) arglist) [] arglist impl
@@ -148,8 +154,7 @@ using VertexBuilder = VertexBuffer::Builder;
 struct BufferDescriptor {
     BufferDescriptor() {}
     // This form is used when JavaScript sends a buffer into WASM.
-    BufferDescriptor(val arrdata) {
-        auto byteLength = arrdata["byteLength"].as<uint32_t>();
+    BufferDescriptor(uint32_t byteLength) {
         this->bd.reset(new backend::BufferDescriptor(malloc(byteLength), byteLength,
                 [](void* buffer, size_t size, void* user) { free(buffer); }));
     }
@@ -170,16 +175,14 @@ struct BufferDescriptor {
 // Exposed to JavaScript as "driver$PixelBufferDescriptor", but clients will normally use the
 // PixelBuffer or CompressedPixelBuffer helper functions (implemented in utilities.js)
 struct PixelBufferDescriptor {
-    PixelBufferDescriptor(val arrdata, backend::PixelDataFormat fmt, backend::PixelDataType dtype) {
-        auto byteLength = arrdata["byteLength"].as<uint32_t>();
+    PixelBufferDescriptor(uint32_t byteLength, backend::PixelDataFormat fmt, backend::PixelDataType dtype) {
         this->pbd.reset(new backend::PixelBufferDescriptor(malloc(byteLength), byteLength,
                 fmt, dtype, [](void* buffer, size_t size, void* user) { free(buffer); }));
     }
     // Note that embind allows overloading based on number of arguments, but not on types.
     // It's fine to have two constructors but they can't both have the same number of arguments.
-    PixelBufferDescriptor(val arrdata, backend::CompressedPixelDataType cdtype, int imageSize,
+    PixelBufferDescriptor(uint32_t byteLength, backend::CompressedPixelDataType cdtype, int imageSize,
             bool compressed) {
-        auto byteLength = arrdata["byteLength"].as<uint32_t>();
         assert(compressed == true);
         // For compressed cubemaps, the image size should be one-sixth the size of the entire blob.
         assert(imageSize == byteLength || imageSize == byteLength / 6);
@@ -187,10 +190,10 @@ struct PixelBufferDescriptor {
                 cdtype, imageSize, [](void* buffer, size_t size, void* user) { free(buffer); }));
     }
     val getBytes() {
-        unsigned char *byteBuffer = (unsigned char*) pbd->buffer;
+        unsigned char* byteBuffer = (unsigned char*) pbd->buffer;
         size_t bufferLength = pbd->size;
         return val(typed_memory_view(bufferLength, byteBuffer));
-    };
+    }
     // In order to match its JavaScript counterpart, the Buffer wrapper needs to use reference
     // counting, and the easiest way to achieve that is with shared_ptr.
     std::shared_ptr<backend::PixelBufferDescriptor> pbd;
@@ -283,10 +286,10 @@ struct flatmat4 {
 };
 
 value_array<flatmat4>("mat4")
-    .element(index< 0>()).element(index< 1>()).element(index< 2>()).element(index< 3>())
-    .element(index< 4>()).element(index< 5>()).element(index< 6>()).element(index< 7>())
-    .element(index< 8>()).element(index< 9>()).element(index<10>()).element(index<11>())
-    .element(index<12>()).element(index<13>()).element(index<14>()).element(index<15>());
+    .element(em::index< 0>()).element(em::index< 1>()).element(em::index< 2>()).element(em::index< 3>())
+    .element(em::index< 4>()).element(em::index< 5>()).element(em::index< 6>()).element(em::index< 7>())
+    .element(em::index< 8>()).element(em::index< 9>()).element(em::index<10>()).element(em::index<11>())
+    .element(em::index<12>()).element(em::index<13>()).element(em::index<14>()).element(em::index<15>());
 
 struct flatmat3 {
     filament::math::mat3f m;
@@ -294,9 +297,9 @@ struct flatmat3 {
 };
 
 value_array<flatmat3>("mat3")
-    .element(index<0>()).element(index<1>()).element(index<2>())
-    .element(index<3>()).element(index<4>()).element(index<5>())
-    .element(index<6>()).element(index<7>()).element(index<8>());
+    .element(em::index<0>()).element(em::index<1>()).element(em::index<2>())
+    .element(em::index<3>()).element(em::index<4>()).element(em::index<5>())
+    .element(em::index<6>()).element(em::index<7>()).element(em::index<8>());
 
 value_object<RenderableManager::Bone>("RenderableManager$Bone")
     .field("unitQuaternion", &RenderableManager::Bone::unitQuaternion)
@@ -558,7 +561,8 @@ class_<Camera>("Camera")
     .function("getUpVector", &Camera::getUpVector)
     .function("getForwardVector", &Camera::getForwardVector)
     .function("getFrustum", &Camera::getFrustum)
-    .function("setExposure", &Camera::setExposure)
+    .function("setExposure", (void(Camera::*)(float, float, float)) &Camera::setExposure)
+    .function("setExposureDirect", (void(Camera::*)(float)) &Camera::setExposure)
     .function("getAperture", &Camera::getAperture)
     .function("getShutterSpeed", &Camera::getShutterSpeed)
     .function("getSensitivity", &Camera::getSensitivity)
@@ -821,8 +825,55 @@ class_<LightBuilder>("LightManager$Builder")
             (LightBuilder* builder, float value), { return &builder->sunHaloFalloff(value); });
 
 class_<LightManager>("LightManager")
+    .function("hasComponent", &LightManager::hasComponent)
+
+    /// getInstance ::method:: Gets an instance of the light component for an entity.
+    /// entity ::argument:: an [Entity]
+    /// ::retval:: a light source component
+    .function("getInstance", &LightManager::getInstance)
+
     .class_function("Builder", (LightBuilder (*)(LightManager::Type)) [] (LightManager::Type lt) {
-        return LightBuilder(lt); });
+        return LightBuilder(lt); })
+
+    .function("getType", &LightManager::getType)
+    .function("isDirectional", &LightManager::isDirectional)
+    .function("isPointLight", &LightManager::isPointLight)
+    .function("isSpotLight", &LightManager::isSpotLight)
+    .function("setPosition", &LightManager::setPosition)
+    .function("getPosition", &LightManager::getPosition)
+    .function("setDirection", &LightManager::setDirection)
+    .function("getDirection", &LightManager::getDirection)
+    .function("setColor", &LightManager::setColor)
+    .function("getColor", &LightManager::getColor)
+
+    .function("setIntensity", EMBIND_LAMBDA(void, (LightManager* self,
+            LightManager::Instance instance, float intensity), {
+        self->setIntensity(instance, intensity);
+    }), allow_raw_pointers())
+
+    .function("setIntensityEnergy", EMBIND_LAMBDA(void, (LightManager* self,
+            LightManager::Instance instance, float watts, float efficiency), {
+        self->setIntensity(instance, watts, efficiency);
+    }), allow_raw_pointers())
+
+    .function("getIntensity", &LightManager::getIntensity)
+    .function("setFalloff", &LightManager::setFalloff)
+    .function("getFalloff", &LightManager::getFalloff)
+    .function("setSpotLightCone", &LightManager::setSpotLightCone)
+    .function("setSunAngularRadius", &LightManager::setSunAngularRadius)
+    .function("getSunAngularRadius", &LightManager::getSunAngularRadius)
+    .function("setSunHaloSize", &LightManager::setSunHaloSize)
+    .function("getSunHaloSize", &LightManager::getSunHaloSize)
+    .function("setSunHaloFalloff", &LightManager::setSunHaloFalloff)
+    .function("getSunHaloFalloff", &LightManager::getSunHaloFalloff)
+    .function("setShadowCaster", &LightManager::setShadowCaster)
+    .function("isShadowCaster", &LightManager::isShadowCaster)
+    ;
+
+/// LightManager$Instance ::class:: Component instance returned by [LightManager]
+/// Be sure to call the instance's `delete` method when you're done with it.
+class_<LightManager::Instance>("LightManager$Instance");
+    /// delete ::method:: Frees an instance obtained via `getInstance`
 
 class_<VertexBuilder>("VertexBuffer$Builder")
     .function("_build", EMBIND_LAMBDA(VertexBuffer*, (VertexBuilder* builder, Engine* engine), {
@@ -908,7 +959,8 @@ class_<MaterialInstance>("MaterialInstance")
         self->setParameter(name.c_str(), type, value); }), allow_raw_pointers())
     .function("setPolygonOffset", &MaterialInstance::setPolygonOffset)
     .function("setMaskThreshold", &MaterialInstance::setMaskThreshold)
-    .function("setDoubleSided", &MaterialInstance::setDoubleSided);
+    .function("setDoubleSided", &MaterialInstance::setDoubleSided)
+    .function("setCullingMode", &MaterialInstance::setCullingMode);
 
 class_<TextureSampler>("TextureSampler")
     .constructor<backend::SamplerMinFilter, backend::SamplerMagFilter, backend::SamplerWrapMode>();
@@ -957,8 +1009,24 @@ class_<IndirectLight>("IndirectLight")
     .function("getRotation", EMBIND_LAMBDA(flatmat3, (IndirectLight* self), {
         return flatmat3 { self->getRotation() };
     }), allow_raw_pointers())
-    .function("getDirectionEstimate", &IndirectLight::getDirectionEstimate)
-    .function("getColorEstimate", &IndirectLight::getColorEstimate);
+   .class_function("getDirectionEstimate", EMBIND_LAMBDA(filament::math::float3,
+            (IndirectLight* self, val ta), {
+        size_t nfloats = ta["length"].as<size_t>();
+        std::vector<float> floats(nfloats);
+        for (size_t i = 0; i < nfloats; i++) {
+            floats[i] = ta[i].as<float>();
+        }
+        return IndirectLight::getDirectionEstimate((filament::math::float3*) floats.data());
+   }), allow_raw_pointers())
+   .class_function("getColorEstimate", EMBIND_LAMBDA(filament::math::float4, (IndirectLight* self,
+            val ta, filament::math::float3 dir), {
+        size_t nfloats = ta["length"].as<size_t>();
+        std::vector<float> floats(nfloats);
+        for (size_t i = 0; i < nfloats; i++) {
+            floats[i] = ta[i].as<float>();
+        }
+        return IndirectLight::getColorEstimate((filament::math::float3*) floats.data(), dir);
+   }), allow_raw_pointers());
 
 class_<IblBuilder>("IndirectLight$Builder")
     .function("_build", EMBIND_LAMBDA(IndirectLight*, (IblBuilder* builder, Engine* engine), {
@@ -1021,7 +1089,7 @@ class_<utils::EntityManager>("EntityManager")
 /// BufferDescriptor ::class:: Low level buffer wrapper.
 /// Clients should use the [Buffer] helper function to contruct BufferDescriptor objects.
 class_<BufferDescriptor>("driver$BufferDescriptor")
-    .constructor<emscripten::val>()
+    .constructor<uint32_t>()
     /// getBytes ::method:: Gets a view of the WASM heap referenced by the buffer descriptor.
     /// ::retval:: Uint8Array
     .function("getBytes", &BufferDescriptor::getBytes);
@@ -1029,8 +1097,8 @@ class_<BufferDescriptor>("driver$BufferDescriptor")
 /// PixelBufferDescriptor ::class:: Low level pixel buffer wrapper.
 /// Clients should use the [PixelBuffer] helper function to contruct PixelBufferDescriptor objects.
 class_<PixelBufferDescriptor>("driver$PixelBufferDescriptor")
-    .constructor<emscripten::val, backend::PixelDataFormat, backend::PixelDataType>()
-    .constructor<emscripten::val, backend::CompressedPixelDataType, int, bool>()
+    .constructor<uint32_t, backend::PixelDataFormat, backend::PixelDataType>()
+    .constructor<uint32_t, backend::CompressedPixelDataType, int, bool>()
     /// getBytes ::method:: Gets a view of the WASM heap referenced by the buffer descriptor.
     /// ::retval:: Uint8Array
     .function("getBytes", &PixelBufferDescriptor::getBytes);
@@ -1060,7 +1128,7 @@ class_<KtxBundle>("KtxBundle")
     /// Returns "undefined" if no valid Filament enumerant exists.
     .function("getInternalFormat",
             EMBIND_LAMBDA(Texture::InternalFormat, (KtxBundle* self, bool srgb), {
-        auto result = KtxUtility::toTextureFormat(self->info());
+        auto result = ktx::toTextureFormat(self->info());
         if (srgb) {
             if (result == Texture::InternalFormat::RGB8) {
                 result = Texture::InternalFormat::SRGB8;
@@ -1077,7 +1145,7 @@ class_<KtxBundle>("KtxBundle")
     /// Returns "undefined" if no valid Filament enumerant exists.
     .function("getPixelDataFormat",
             EMBIND_LAMBDA(backend::PixelDataFormat, (KtxBundle* self), {
-        return KtxUtility::toPixelDataFormat(self->getInfo());
+        return ktx::toPixelDataFormat(self->getInfo());
     }), allow_raw_pointers())
 
     /// getPixelDataType ::method::
@@ -1085,7 +1153,7 @@ class_<KtxBundle>("KtxBundle")
     /// Returns "undefined" if no valid Filament enumerant exists.
     .function("getPixelDataType",
             EMBIND_LAMBDA(backend::PixelDataType, (KtxBundle* self), {
-        return KtxUtility::toPixelDataType(self->getInfo());
+        return ktx::toPixelDataType(self->getInfo());
     }), allow_raw_pointers())
 
     /// getCompressedPixelDataType ::method::
@@ -1093,14 +1161,14 @@ class_<KtxBundle>("KtxBundle")
     /// Returns "undefined" if no valid Filament enumerant exists.
     .function("getCompressedPixelDataType",
             EMBIND_LAMBDA(backend::CompressedPixelDataType, (KtxBundle* self), {
-        return KtxUtility::toCompressedPixelDataType(self->getInfo());
+        return ktx::toCompressedPixelDataType(self->getInfo());
     }), allow_raw_pointers())
 
     /// isCompressed ::method::
     /// Per spec, compressed textures in KTX always have their glFormat field set to 0.
     /// ::retval:: boolean
     .function("isCompressed", EMBIND_LAMBDA(bool, (KtxBundle* self), {
-        return KtxUtility::isCompressed(self->getInfo());
+        return ktx::isCompressed(self->getInfo());
     }), allow_raw_pointers())
 
     .function("isCubemap", &KtxBundle::isCubemap)
@@ -1129,9 +1197,9 @@ class_<KtxBundle>("KtxBundle")
         return std::string(self->getMetadata(key.c_str()));
     }), allow_raw_pointers());
 
-function("KtxUtility$createTexture", EMBIND_LAMBDA(Texture*,
+function("ktx$createTexture", EMBIND_LAMBDA(Texture*,
         (Engine* engine, const KtxBundle& ktx, bool srgb), {
-    return KtxUtility::createTexture(engine, ktx, srgb, nullptr, nullptr);
+    return ktx::createTexture(engine, ktx, srgb, nullptr, nullptr);
 }), allow_raw_pointers());
 
 /// KtxInfo ::class:: Property accessor for KTX header.
@@ -1315,15 +1383,11 @@ class_<FilamentAsset>("gltfio$FilamentAsset")
         return std::vector<const MaterialInstance*>(ptr, ptr + self->getMaterialInstanceCount());
     }), allow_raw_pointers())
 
-    .function("getResourceUrls", EMBIND_LAMBDA(std::vector<std::string>, (FilamentAsset* self), {
+    .function("getResourceUris", EMBIND_LAMBDA(std::vector<std::string>, (FilamentAsset* self), {
         std::vector<std::string> retval;
-        const BufferBinding* bbinding = self->getBufferBindings();
-        for (size_t i = 0, len = self->getBufferBindingCount(); i < len; ++i, ++bbinding) {
-            retval.push_back(bbinding->uri);
-        }
-        const TextureBinding* tbinding = self->getTextureBindings();
-        for (size_t i = 0, len = self->getTextureBindingCount(); i < len; ++i, ++tbinding) {
-            retval.push_back(tbinding->uri);
+        auto uris = self->getResourceUris();
+        for (size_t i = 0, len = self->getResourceUriCount(); i < len; ++i) {
+            retval.push_back(uris[i]);
         }
         return retval;
     }), allow_raw_pointers())

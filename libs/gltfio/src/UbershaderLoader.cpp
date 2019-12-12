@@ -29,6 +29,8 @@ using namespace utils;
 
 namespace {
 
+using CullingMode = MaterialInstance::CullingMode;
+
 class UbershaderLoader : public MaterialProvider {
 public:
     UbershaderLoader(filament::Engine* engine);
@@ -45,35 +47,25 @@ public:
 
     Material* getMaterial(const MaterialKey& config) const;
 
-    Material* mMaterials[6];
-    Material* mLitOpaqueMaterial;
-    Material* mLitMaskedMaterial;
-    Material* mLitTransparentMaterial;
-    Material* mUnlitOpaqueMaterial;
-    Material* mUnlitMaskedMaterial;
-    Material* mUnlitTransparentMaterial;
+    enum ShadingMode {
+        UNLIT = 0,
+        LIT = 1,
+        SPECULAR_GLOSSINESS = 2,
+    };
+
+    mutable Material* mMaterials[9] = {};
     Texture* mDummyTexture = nullptr;
 
     filament::Engine* mEngine;
 };
 
-UbershaderLoader::UbershaderLoader(Engine* engine) : mEngine(engine) {
-    int i = 0;
-    mMaterials[i++] = mLitOpaqueMaterial = Material::Builder()
-        .package(GLTFRESOURCES_LIT_OPAQUE_DATA, GLTFRESOURCES_LIT_OPAQUE_SIZE).build(*engine);
-    mMaterials[i++] = mLitMaskedMaterial = Material::Builder()
-        .package(GLTFRESOURCES_LIT_MASKED_DATA, GLTFRESOURCES_LIT_MASKED_SIZE).build(*engine);
-    mMaterials[i++] = mLitTransparentMaterial = Material::Builder()
-        .package(GLTFRESOURCES_LIT_FADE_DATA, GLTFRESOURCES_LIT_FADE_SIZE)
-        .build(*engine);
-    mMaterials[i++] = mUnlitOpaqueMaterial = Material::Builder()
-        .package(GLTFRESOURCES_UNLIT_OPAQUE_DATA, GLTFRESOURCES_UNLIT_OPAQUE_SIZE).build(*engine);
-    mMaterials[i++] = mUnlitMaskedMaterial = Material::Builder()
-        .package(GLTFRESOURCES_UNLIT_MASKED_DATA, GLTFRESOURCES_UNLIT_MASKED_SIZE).build(*engine);
-    mMaterials[i++] = mUnlitTransparentMaterial = Material::Builder()
-        .package(GLTFRESOURCES_UNLIT_FADE_DATA, GLTFRESOURCES_UNLIT_FADE_SIZE)
-        .build(*engine);
+#define CREATE_MATERIAL(name) Material::Builder() \
+    .package(GLTFRESOURCES_ ## name ## _DATA, GLTFRESOURCES_ ## name ## _SIZE) \
+    .build(*mEngine);
 
+#define MATINDEX(shading, alpha) (int(shading) + 3 * int(alpha))
+
+UbershaderLoader::UbershaderLoader(Engine* engine) : mEngine(engine) {
     #ifdef EMSCRIPTEN
     unsigned char texels[4] = {};
     mDummyTexture = Texture::Builder()
@@ -103,14 +95,24 @@ void UbershaderLoader::destroyMaterials() {
 }
 
 Material* UbershaderLoader::getMaterial(const MaterialKey& config) const {
-    switch(config.alphaMode) {
-        case AlphaMode::OPAQUE:
-            return config.unlit ? mUnlitOpaqueMaterial : mLitOpaqueMaterial;
-        case AlphaMode::MASK:
-            return config.unlit ? mUnlitMaskedMaterial : mLitMaskedMaterial;
-        case AlphaMode::BLEND:
-            return config.unlit ? mUnlitTransparentMaterial : mLitTransparentMaterial;
+    const ShadingMode shading = config.unlit ? UNLIT :
+            (config.useSpecularGlossiness ? SPECULAR_GLOSSINESS : LIT);
+    const int matindex = MATINDEX(shading, config.alphaMode);
+    if (mMaterials[matindex] != nullptr) {
+        return mMaterials[matindex];
     }
+    switch (matindex) {
+        case MATINDEX(LIT, AlphaMode::OPAQUE): mMaterials[matindex] = CREATE_MATERIAL(LIT_OPAQUE); break;
+        case MATINDEX(LIT, AlphaMode::MASK): mMaterials[matindex] = CREATE_MATERIAL(LIT_MASKED); break;
+        case MATINDEX(LIT, AlphaMode::BLEND): mMaterials[matindex] = CREATE_MATERIAL(LIT_FADE); break;
+        case MATINDEX(UNLIT, AlphaMode::OPAQUE): mMaterials[matindex] = CREATE_MATERIAL(UNLIT_OPAQUE); break;
+        case MATINDEX(UNLIT, AlphaMode::MASK): mMaterials[matindex] = CREATE_MATERIAL(UNLIT_MASKED); break;
+        case MATINDEX(UNLIT, AlphaMode::BLEND): mMaterials[matindex] = CREATE_MATERIAL(UNLIT_FADE); break;
+        case MATINDEX(SPECULAR_GLOSSINESS, AlphaMode::OPAQUE): mMaterials[matindex] = CREATE_MATERIAL(SPECULARGLOSSINESS_OPAQUE); break;
+        case MATINDEX(SPECULAR_GLOSSINESS, AlphaMode::MASK): mMaterials[matindex] = CREATE_MATERIAL(SPECULARGLOSSINESS_MASKED); break;
+        case MATINDEX(SPECULAR_GLOSSINESS, AlphaMode::BLEND): mMaterials[matindex] = CREATE_MATERIAL(SPECULARGLOSSINESS_FADE); break;
+    }
+    return mMaterials[matindex];
 }
 
 MaterialInstance* UbershaderLoader::createMaterialInstance(MaterialKey* config, UvMap* uvmap,
@@ -134,6 +136,7 @@ MaterialInstance* UbershaderLoader::createMaterialInstance(MaterialKey* config, 
     mi->setParameter("emissiveIndex", getUvIndex(config->emissiveUV, config->hasEmissiveTexture));
 
     mi->setDoubleSided(config->doubleSided);
+    mi->setCullingMode(config->doubleSided ? CullingMode::NONE : CullingMode::BACK);
 
     mat3f identity;
     mi->setParameter("baseColorUvMatrix", identity);

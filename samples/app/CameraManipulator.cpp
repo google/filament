@@ -31,19 +31,14 @@ static inline double3 rotateVector(double rx, double ry, const double3& v) {
 
 CameraManipulator::CameraManipulator() = default;
 
-CameraManipulator::CameraManipulator(Camera* camera, size_t width, size_t height)
-        : mCamera(camera), mWidth(width), mHeight(height), mAspect(double(width)/height) {
+CameraManipulator::CameraManipulator(size_t width, size_t height)
+        : mWidth(width), mHeight(height) {
     lookAt(double3(0), double3(0,0,-1));
-}
-
-void CameraManipulator::setCamera(Camera* camera) {
-    mCamera = camera;
 }
 
 void CameraManipulator::setViewport(size_t w, size_t h) {
     mWidth = w;
     mHeight = h;
-    mAspect = double(w)/h;
 }
 
 //------------------------------------------------------------------------------
@@ -55,7 +50,6 @@ void CameraManipulator::lookAt(const double3& eye, const double3& at) {
     mRotation.x = std::atan2(dt.y, -dt.z);
     mRotation.y = std::atan2(dt.x, yz_length);
     mCenterOfInterest = -length(dt);
-    updateCameraTransform();
 }
 
 //------------------------------------------------------------------------------
@@ -72,7 +66,6 @@ void CameraManipulator::track(const double2& delta) {
     double t =  mult_t * delta.y;
 
     mTranslation += (s * d_s) + (t * d_t);
-    updateCameraTransform();
 }
 
 //------------------------------------------------------------------------------
@@ -92,7 +85,6 @@ void CameraManipulator::dolly(double delta, double dolly_speed) {
     mTranslation = new_eye;
     v = new_eye - view;
     mCenterOfInterest = -length(v);
-    updateCameraTransform();
 }
 
 void CameraManipulator::rotate(const double2& delta, double rotate_speed) {
@@ -108,32 +100,13 @@ void CameraManipulator::rotate(const double2& delta, double rotate_speed) {
 
     mTranslation = view + rotateVector(rot_x, rot_y, {0.0, 0.0, -mCenterOfInterest});
     mRotation = double3(rot_x, rot_y, rot_z);
-    updateCameraTransform();
 }
 
-void CameraManipulator::updateCameraTransform() {
-    if (mCamera) {
-        mat4 rotate_z  = mat4::rotation(mRotation.z, double3(0, 0, 1));
-        mat4 rotate_x  = mat4::rotation(mRotation.x, double3(1, 0, 0));
-        mat4 rotate_y  = mat4::rotation(mRotation.y, double3(0, 1, 0));
-        mat4 translate = mat4::translation(mTranslation);
-        mat4 view = translate * (rotate_y * rotate_x * rotate_z);
-        mCamera->setModelMatrix(mat4f(view));
-        if (mCameraChanged) {
-            mCameraChanged(mCamera);
-        }
-    }
-}
-
-void CameraManipulator::updateCameraProjection() {
-    if (mCamera) {
-        mCamera->setProjection(mFovx, mAspect, mClipNear, mClipFar);
-        if (mCameraChanged) {
-            mCameraChanged(mCamera);
-        }
-    }
-}
-
-void CameraManipulator::setCameraChangedCallback(CameraManipulator::CameraChangedCallback cb) {
-    mCameraChanged = cb;
+mat4f CameraManipulator::getCameraTransform() const {
+    mat4 rotate_z  = mat4::rotation(mRotation.z, double3(0, 0, 1));
+    mat4 rotate_x  = mat4::rotation(mRotation.x, double3(1, 0, 0));
+    mat4 rotate_y  = mat4::rotation(mRotation.y, double3(0, 1, 0));
+    mat4 translate = mat4::translation(mTranslation);
+    mat4 view = translate * (rotate_y * rotate_x * rotate_z);
+    return mat4f(view);
 }

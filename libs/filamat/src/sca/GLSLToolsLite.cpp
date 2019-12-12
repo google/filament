@@ -18,6 +18,8 @@
 
 #include <filamat/Enums.h>
 
+#include <stdlib.h>
+
 using namespace filament::backend;
 
 namespace filamat {
@@ -73,8 +75,14 @@ static std::string stripComments(const std::string& code) {
     return result;
 }
 
-bool GLSLToolsLite::findProperties(const utils::CString& material,
-                    MaterialBuilder::PropertyList& properties) const noexcept {
+bool GLSLToolsLite::findProperties(
+        filament::backend::ShaderType type,
+        const utils::CString& material,
+        MaterialBuilder::PropertyList& properties) const noexcept {
+    if (material.empty()) {
+        return true;
+    }
+
     const std::string shaderCode = stripComments(material.c_str());
 
     size_t start = 0, end = 0;
@@ -82,6 +90,7 @@ bool GLSLToolsLite::findProperties(const utils::CString& material,
     const auto p = Enums::map<Property>();
 
     // Find all occurrences of "material.someProperty" in the shader string.
+    // TODO: We should find the name of the structure and search for <theName>.someProperty
     size_t loc;
     while ((loc = shaderCode.find("material", start)) != std::string::npos) {
         // Set start to the index of the first character after "material"

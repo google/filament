@@ -1,0 +1,62 @@
+material {
+    name : tonemap,
+    parameters : [
+        {
+            type : sampler2d,
+            name : colorBuffer,
+            precision: high
+        },
+        {
+            type : int,
+            name : dithering
+        },
+        {
+            type : int,
+            name : fxaa
+        }
+    ],
+    depthWrite : false,
+    depthCulling : false,
+    domain: postprocess
+}
+
+fragment {
+
+#include "../../../shaders/src/tone_mapping.fs"
+#include "../../../shaders/src/conversion_functions.fs"
+#include "../../../shaders/src/dithering.fs"
+
+    vec3 resolveFragment(const ivec2 uv) {
+        return texelFetch(materialParams_colorBuffer, uv, 0).rgb;
+    }
+
+    vec4 resolveAlphaFragment(const ivec2 uv) {
+        return texelFetch(materialParams_colorBuffer, uv, 0);
+    }
+
+    vec4 resolve() {
+#if POST_PROCESS_OPAQUE
+        vec4 color = vec4(resolveFragment(ivec2(getUV())), 1.0);
+        color.rgb  = tonemap(color.rgb);
+        color.rgb  = OECF(color.rgb);
+        if (materialParams.fxaa > 0) {
+            color.a = luminance(color.rgb);
+        }
+#else
+        vec4 color = resolveAlphaFragment(ivec2(getUV()));
+        color.rgb /= color.a + FLT_EPS;
+        color.rgb  = tonemap(color.rgb);
+        color.rgb  = OECF(color.rgb);
+        color.rgb *= color.a + FLT_EPS;
+#endif
+        return color;
+    }
+
+    void postProcess(inout PostProcessInputs postProcess) {
+        postProcess.color = resolve();
+        if (materialParams.dithering > 0) {
+            postProcess.color = dither(postProcess.color);
+        }
+    }
+
+}

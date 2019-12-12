@@ -26,7 +26,6 @@
 
 #include "FilamentAPI-impl.h"
 
-#include <filament/MaterialInstance.h>
 #include <backend/DriverEnums.h>
 
 #include <utils/Panic.h>
@@ -69,6 +68,7 @@ Skybox::Builder& Skybox::Builder::showSun(bool show) noexcept {
 }
 
 Skybox* Skybox::Builder::build(Engine& engine) {
+    FEngine::assertValid(engine, __PRETTY_FUNCTION__);
     FTexture* cubemap = upcast(mImpl->mEnvironmentMap);
 
     if (!ASSERT_PRECONDITION_NON_FATAL(cubemap, "environment texture not set")) {

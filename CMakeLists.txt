@@ -71,7 +71,7 @@ endif()
 # ==================================================================================================
 
 find_package(embree 3.0 QUIET PATHS /usr/lib64/cmake)
-if (embree_FOUND AND NOT ANDROID)
+if (embree_FOUND AND NOT ANDROID AND NOT IOS)
     message("Found embree in ${embree_DIR}")
     set(MKLDNN_THREADING "TBB")
     include(third_party/OpenImageDenoise/cmake/resource.cmake)
@@ -113,7 +113,7 @@ if (CMAKE_C_COMPILER_ID MATCHES "Clang")
     if (CMAKE_C_COMPILER_VERSION VERSION_LESS MIN_CLANG_VERSION)
         message(FATAL_ERROR "Detected C compiler Clang ${CMAKE_C_COMPILER_VERSION} < ${MIN_CLANG_VERSION}")
     endif()
-else()
+elseif (NOT MSVC)
     message(FATAL_ERROR "Detected C compiler ${CMAKE_C_COMPILER_ID} is unsupported")
 endif()
 
@@ -121,13 +121,17 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS MIN_CLANG_VERSION)
         message(FATAL_ERROR "Detected CXX compiler Clang ${CMAKE_CXX_COMPILER_VERSION} < ${MIN_CLANG_VERSION}")
     endif()
-else()
+elseif (NOT MSVC)
     message(FATAL_ERROR "Detected CXX compiler ${CMAKE_CXX_COMPILER_ID} is unsupported")
 endif()
 
 # Detect use of the clang-cl.exe frontend, which does not support all of clangs normal options
-if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" AND "${CMAKE_CXX_SIMULATE_ID}" STREQUAL "MSVC")
-    set(CLANG_CL true)
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+    if ("${CMAKE_CXX_SIMULATE_ID}" STREQUAL "MSVC")
+        set(CLANG_CL true)
+    endif()
+elseif (MSVC)
+    set(MSVC_NATIVE true)
 endif()
 
 # ==================================================================================================
@@ -152,7 +156,12 @@ if (WIN32)
     set(CXX_STANDARD "/std:c++14")
 endif()
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_STANDARD} -fstrict-aliasing -Wno-unknown-pragmas -Wno-unused-function")
+if (MSVC_NATIVE)
+    set(CXX_STANDARD "/std:c++latest")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_STANDARD} /W0 /Zc:__cplusplus")
+else()
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_STANDARD} -fstrict-aliasing -Wno-unknown-pragmas -Wno-unused-function")
+endif()
 
 if (USE_EXTERNAL_GLES3)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_EXTERNAL_GLES3")
@@ -173,7 +182,7 @@ if (CYGWIN)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions -fno-rtti")
 endif()
 
-if (CLANG_CL)
+if (CLANG_CL OR MSVC)
     # Since the "secure" replacements that MSVC suggests are not portable, disable
     # the deprecation warnings. Also disable warnings about use of POSIX functions (i.e. "unlink").
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE")
@@ -189,7 +198,7 @@ endif()
 # ==================================================================================================
 # Release compiler flags
 # ==================================================================================================
-if (NOT CLANG_CL)
+if (NOT CLANG_CL AND NOT MSVC)
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fomit-frame-pointer -ffunction-sections -fdata-sections")
 endif()
 
@@ -197,6 +206,13 @@ endif()
 # saved by -fno-exception and 10 KiB saved by -fno-rtti).
 if (ANDROID OR WEBGL)
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fno-exceptions -fno-unwind-tables -fno-asynchronous-unwind-tables -fno-rtti")
+endif()
+
+# With WebGL, we disable RTTI even for debug builds because we pass emscripten::val back and forth
+# between C++ and JavaScript in order to efficiently access typed arrays, which are unbound.
+# NOTE: This is not documented in emscripten so we should consider a different approach.
+if (WEBGL)
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-rtti")
 endif()
 
 # ==================================================================================================
@@ -207,16 +223,24 @@ endif()
 #  -fsanitize=address causes a crash with assimp, which we can't explain for now
 #set(EXTRA_SANITIZE_OPTIONS "-fsanitize=undefined -fsanitize=address")
 # clang-cl.exe on Windows does not support -fstack-protector.
-if (NOT CLANG_CL)
+if (NOT CLANG_CL AND NOT MSVC AND NOT WEBGL)
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fstack-protector")
 endif()
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${EXTRA_SANITIZE_OPTIONS}")
+
+# Disable the stack check for macOS to workaround a known issue in clang 11.0.0.
+# See: https://forums.developer.apple.com/thread/121887
+if (APPLE)
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}  -fno-stack-check")
+endif()
 
 # ==================================================================================================
 # Linker flags
 # ==================================================================================================
 # Strip unused sections
-set(GC_SECTIONS "-Wl,--gc-sections")
+if (NOT WEBGL)
+    set(GC_SECTIONS "-Wl,--gc-sections")
+endif()
 set(B_SYMBOLIC_FUNCTIONS "-Wl,-Bsymbolic-functions")
 
 if (APPLE)
@@ -324,19 +348,46 @@ endif()
 # ==================================================================================================
 # Functions
 # ==================================================================================================
+## The MSVC compiler has a limitation on literal string length which is reached when all the
+## licenses are concatenated together into a large string... so split them into multiple strings.
 function(list_licenses OUTPUT MODULES)
-    file(WRITE ${OUTPUT} "R\"FILAMENT__(\n")
+    set(STR_OPENER "R\"FILAMENT__(")
+    set(STR_CLOSER ")FILAMENT__\"")
+    set(CONTENT)
     set(_MODULES ${MODULES} ${ARGN})
     foreach(module ${_MODULES})
         set(license_path "../../third_party/${module}/LICENSE")
         get_filename_component(fullname "${license_path}" ABSOLUTE)
-        file(APPEND ${OUTPUT} "License and copyrights for ${module}:\n\n")
-        file(READ ${license_path} license)
-        file(APPEND ${OUTPUT} ${license})
-        file(APPEND ${OUTPUT} "\n\n")
+        string(APPEND CONTENT "${STR_OPENER}License and copyrights for ${module}:\n${STR_CLOSER},\n")
+        file(READ ${license_path} license_long)
+        string(REPLACE "\n" "${STR_CLOSER},\n${STR_OPENER}" license ${license_long})
+        string(APPEND CONTENT ${STR_OPENER}${license}\n${STR_CLOSER},)
+        string(APPEND CONTENT "\n\n")
     endforeach()
-    file(APPEND ${OUTPUT} ")FILAMENT__\"\n")
+    configure_file(${FILAMENT}/build/licenses.inc.in ${OUTPUT})
 endfunction(list_licenses)
+
+set(COMBINE_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/build/linux/combine-static-libs.sh")
+if (WIN32)
+    set(COMBINE_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/build/windows/combine-static-libs.bat")
+    set(CMAKE_AR "lib.exe")
+endif()
+
+# Add a custom command to TARGET that combines the static libraries in DEPS into a single archive.
+function(combine_static_libs TARGET OUTPUT DEPS)
+    # Loop through the dependent libraries and query their location on disk.
+    set(DEPS_FILES )
+    foreach(DEPENDENCY ${DEPS})
+        list(APPEND DEPS_FILES "$<TARGET_FILE:${DEPENDENCY}>")
+    endforeach()
+
+    add_custom_command(
+        TARGET ${TARGET} POST_BUILD
+        COMMAND "${COMBINE_SCRIPT}" "${CMAKE_AR}" "${OUTPUT}" ${DEPS_FILES}
+        COMMENT "Combining ${target} dependencies into single shared library"
+        VERBATIM
+    )
+endfunction()
 
 # ==================================================================================================
 # Configuration for CMAKE_CROSSCOMPILING.
@@ -416,7 +467,6 @@ add_subdirectory(${LIBRARIES}/math)
 add_subdirectory(${LIBRARIES}/utils)
 add_subdirectory(${FILAMENT}/filament)
 add_subdirectory(${FILAMENT}/shaders)
-add_subdirectory(${EXTERNAL}/civetweb/tnt)
 add_subdirectory(${EXTERNAL}/robin-map/tnt)
 add_subdirectory(${EXTERNAL}/smol-v/tnt)
 add_subdirectory(${EXTERNAL}/benchmark/tnt)
@@ -424,6 +474,7 @@ add_subdirectory(${EXTERNAL}/meshoptimizer)
 add_subdirectory(${EXTERNAL}/cgltf/tnt)
 add_subdirectory(${EXTERNAL}/xatlas/tnt)
 add_subdirectory(${EXTERNAL}/stb/tnt)
+add_subdirectory(${EXTERNAL}/getopt)
 
 if (FILAMENT_BUILD_FILAMAT)
     # spirv-tools must come before filamat, as filamat relies on the presence of the
@@ -467,8 +518,8 @@ if (NOT ANDROID AND NOT WEBGL AND NOT IOS)
     add_subdirectory(${FILAMENT}/samples)
 
     add_subdirectory(${EXTERNAL}/astcenc/tnt)
+    add_subdirectory(${EXTERNAL}/civetweb/tnt)
     add_subdirectory(${EXTERNAL}/etc2comp)
-    add_subdirectory(${EXTERNAL}/getopt)
     add_subdirectory(${EXTERNAL}/imgui/tnt)
     add_subdirectory(${EXTERNAL}/libassimp/tnt)
     add_subdirectory(${EXTERNAL}/libpng/tnt)
@@ -476,6 +527,7 @@ if (NOT ANDROID AND NOT WEBGL AND NOT IOS)
     add_subdirectory(${EXTERNAL}/libz/tnt)
     add_subdirectory(${EXTERNAL}/skylight/tnt)
     add_subdirectory(${EXTERNAL}/tinyexr/tnt)
+
     add_subdirectory(${TOOLS}/cmgen)
     add_subdirectory(${TOOLS}/filamesh)
     add_subdirectory(${TOOLS}/glslminifier)
@@ -487,10 +539,11 @@ if (NOT ANDROID AND NOT WEBGL AND NOT IOS)
     add_subdirectory(${TOOLS}/roughness-prefilter)
     add_subdirectory(${TOOLS}/skygen)
     add_subdirectory(${TOOLS}/specular-color)
-endif()
 
-if (DENOISE_LIBRARY)
-    add_subdirectory(${EXTERNAL}/OpenImageDenoise/tnt)
+    if (DENOISE_LIBRARY)
+        add_subdirectory(${EXTERNAL}/OpenImageDenoise/tnt)
+    endif()
+
 endif()
 
 # Generate exported executables for cross-compiled builds (Android, WebGL, and iOS)

@@ -61,7 +61,6 @@ class FIndirectLight;
  *
  *  filament::IndirectLight* environment = filament::IndirectLight::Builder()
  *              .reflections(cubemap)
- *              .irradiance(numBands, sphericalHarmonicsCoefficients)
  *              .build(*engine);
  *
  *  engine->destroy(environment);
@@ -72,7 +71,11 @@ class FIndirectLight;
  * ==========
  *
  * The irradiance represents the light that comes from the environment and shines an
- * object's surface. It is represented as
+ * object's surface.
+ *
+ * The irradiance is calculated automatically from the Reflections (see below), and generally
+ * doesn't need to be provided explicitly.  However, it can be provided separately from the
+ * Reflections as
  * [spherical harmonics](https://en.wikipedia.org/wiki/Spherical_harmonics) (SH) of 1, 2 or
  * 3 bands, respectively 1, 4 or 9 coefficients.
  *
@@ -281,7 +284,8 @@ public:
     const math::mat3f& getRotation() const noexcept;
 
     /**
-     * Helper to estimate the direction of the dominant light in the environment.
+     * Helper to estimate the direction of the dominant light in the environment represented by
+     * spherical harmonics.
      *
      * This assumes that there is only a single dominant light (such as the sun in outdoors
      * environments), if it's not the case the direction returned will be an average of the
@@ -293,19 +297,23 @@ public:
      * The dominant light direction can be used to set a directional light's direction,
      * for instance to produce shadows that match the environment.
      *
+     * @param sh        3-band spherical harmonics
+     *
      * @return A unit vector representing the direction of the dominant light
      *
      * @see LightManager::Builder::direction()
      * @see getColorEstimate()
      */
-    math::float3 getDirectionEstimate() const noexcept;
+    static math::float3 getDirectionEstimate(const math::float3 sh[9]) noexcept;
 
     /**
-     * Helper to estimate the color and relative intensity of the environment in a given direction.
+     * Helper to estimate the color and relative intensity of the environment represented by
+     * spherical harmonics in a given direction.
      *
      * This can be used to set the color and intensity of a directional light. In this case
      * make sure to multiply this relative intensity by the the intensity of this indirect light.
      *
+     * @param sh        3-band spherical harmonics
      * @param direction a unit vector representing the direction of the light to estimate the
      *                  color of. Typically this the value returned by getDirectionEstimate().
      *
@@ -316,6 +324,13 @@ public:
      * @see LightManager::Builder::intensity()
      * @see getDirectionEstimate, getIntensity, setIntensity
      */
+    static math::float4 getColorEstimate(const math::float3 sh[9], math::float3 direction) noexcept;
+
+
+    /** @deprecated use static versions instead */
+    math::float3 getDirectionEstimate() const noexcept;
+
+    /** @deprecated use static versions instead */
     math::float4 getColorEstimate(math::float3 direction) const noexcept;
 };
 

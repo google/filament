@@ -99,10 +99,130 @@ size_t getFormatSize(TextureFormat format) noexcept {
         case TextureFormat::RGBA32I:
             return 16;
 
+        // Compressed formats ---------------------------------------------------------------------
+
+        case TextureFormat::EAC_RG11:
+        case TextureFormat::EAC_RG11_SIGNED:
+        case TextureFormat::ETC2_EAC_RGBA8:
+        case TextureFormat::ETC2_EAC_SRGBA8:
+            return 16;
+
+        case TextureFormat::EAC_R11:
+        case TextureFormat::EAC_R11_SIGNED:
+        case TextureFormat::ETC2_RGB8:
+        case TextureFormat::ETC2_SRGB8:
+        case TextureFormat::ETC2_RGB8_A1:
+        case TextureFormat::ETC2_SRGB8_A1:
+            return 8;
+
+        case TextureFormat::DXT1_RGB:
+            return 8;
+
+        case TextureFormat::DXT3_RGBA:
+        case TextureFormat::DXT5_RGBA:
+            return 16;
+
+        // The block size for ASTC compression is always 16 bytes.
+        case TextureFormat::RGBA_ASTC_4x4:
+        case TextureFormat::RGBA_ASTC_5x4:
+        case TextureFormat::RGBA_ASTC_5x5:
+        case TextureFormat::RGBA_ASTC_6x5:
+        case TextureFormat::RGBA_ASTC_6x6:
+        case TextureFormat::RGBA_ASTC_8x5:
+        case TextureFormat::RGBA_ASTC_8x6:
+        case TextureFormat::RGBA_ASTC_8x8:
+        case TextureFormat::RGBA_ASTC_10x5:
+        case TextureFormat::RGBA_ASTC_10x6:
+        case TextureFormat::RGBA_ASTC_10x8:
+        case TextureFormat::RGBA_ASTC_10x10:
+        case TextureFormat::RGBA_ASTC_12x10:
+        case TextureFormat::RGBA_ASTC_12x12:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_4x4:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_5x4:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_5x5:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_6x5:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_6x6:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_8x5:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_8x6:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_8x8:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_10x5:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_10x6:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_10x8:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_10x10:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_12x10:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_12x12:
+            return 16;
+
         default:
             return 0;
     }
 }
+
+size_t getBlockWidth(TextureFormat format) noexcept {
+    switch (format) {
+        case TextureFormat::EAC_RG11:
+        case TextureFormat::EAC_RG11_SIGNED:
+        case TextureFormat::ETC2_EAC_RGBA8:
+        case TextureFormat::ETC2_EAC_SRGBA8:
+        case TextureFormat::EAC_R11:
+        case TextureFormat::EAC_R11_SIGNED:
+        case TextureFormat::ETC2_RGB8:
+        case TextureFormat::ETC2_SRGB8:
+        case TextureFormat::ETC2_RGB8_A1:
+        case TextureFormat::ETC2_SRGB8_A1:
+            return 4;
+
+        case TextureFormat::DXT1_RGB:
+        case TextureFormat::DXT3_RGBA:
+        case TextureFormat::DXT5_RGBA:
+            return 4;
+
+        case TextureFormat::RGBA_ASTC_4x4:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_4x4:
+            return 4;
+
+        case TextureFormat::RGBA_ASTC_5x4:
+        case TextureFormat::RGBA_ASTC_5x5:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_5x4:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_5x5:
+            return 5;
+            return 5;
+
+        case TextureFormat::RGBA_ASTC_6x5:
+        case TextureFormat::RGBA_ASTC_6x6:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_6x5:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_6x6:
+            return 6;
+
+        case TextureFormat::RGBA_ASTC_8x5:
+        case TextureFormat::RGBA_ASTC_8x6:
+        case TextureFormat::RGBA_ASTC_8x8:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_8x5:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_8x6:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_8x8:
+            return 8;
+
+        case TextureFormat::RGBA_ASTC_10x5:
+        case TextureFormat::RGBA_ASTC_10x6:
+        case TextureFormat::RGBA_ASTC_10x8:
+        case TextureFormat::RGBA_ASTC_10x10:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_10x5:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_10x6:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_10x8:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_10x10:
+            return 10;
+
+        case TextureFormat::RGBA_ASTC_12x10:
+        case TextureFormat::RGBA_ASTC_12x12:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_12x10:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_12x12:
+            return 12;
+
+        default:
+            return 0;
+    }
+}
+
 
 } // namespace backend
 } // namespace filament

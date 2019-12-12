@@ -12,6 +12,7 @@ file(GLOB_RECURSE PUBLIC_HDRS ${PUBLIC_HDR_DIR}/${TARGET}/*.h)
 set(DIST_HDRS
         ${PUBLIC_HDR_DIR}/${TARGET}/algorithm.h
         ${PUBLIC_HDR_DIR}/${TARGET}/bitset.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/BitmaskEnum.h
         ${PUBLIC_HDR_DIR}/${TARGET}/compiler.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Entity.h
         ${PUBLIC_HDR_DIR}/${TARGET}/EntityInstance.h
@@ -22,6 +23,7 @@ set(DIST_HDRS
 )
 
 set(SRCS
+        src/api_level.cpp
         src/ashmem.cpp
         src/Allocator.cpp
         src/CallStack.cpp
@@ -49,7 +51,7 @@ if (LINUX OR ANDROID)
     list(APPEND SRCS src/linux/Path.cpp)
 endif()
 if (APPLE)
-    list(APPEND SRCS src/darwin/Path.cpp)
+    list(APPEND SRCS src/darwin/Path.mm)
 endif()
 
 # ==================================================================================================
@@ -130,18 +132,21 @@ target_link_libraries(test_${TARGET} PRIVATE gtest utils tsl math)
 # Benchmarks
 # ==================================================================================================
 
-add_library(benchmark_${TARGET}_callee SHARED benchmark/benchmark_callee.cpp)
+if (NOT WEBGL)
+
+    add_library(benchmark_${TARGET}_callee SHARED benchmark/benchmark_callee.cpp)
+
+    set(BENCHMARK_SRCS
+            benchmark/benchmark_allocators.cpp
+            benchmark/benchmark_binary_search.cpp
+            benchmark/benchmark_calls.cpp
+            benchmark/benchmark_JobSystem.cpp
+            benchmark/benchmark_mutex.cpp
+            benchmark/benchmark_memcpy.cpp)
 
 
-set(BENCHMARK_SRCS
-        benchmark/benchmark_allocators.cpp
-        benchmark/benchmark_binary_search.cpp
-        benchmark/benchmark_calls.cpp
-        benchmark/benchmark_JobSystem.cpp
-        benchmark/benchmark_mutex.cpp
-        benchmark/benchmark_memcpy.cpp)
+    add_executable(benchmark_${TARGET} ${BENCHMARK_SRCS})
 
+    target_link_libraries(benchmark_${TARGET} PRIVATE benchmark_main utils benchmark_${TARGET}_callee)
 
-add_executable(benchmark_${TARGET} ${BENCHMARK_SRCS})
-
-target_link_libraries(benchmark_${TARGET} PRIVATE benchmark_main utils benchmark_${TARGET}_callee)
+endif()

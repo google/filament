@@ -25,7 +25,7 @@ namespace filamat {
 
 struct IncludeResult {
     /**
-     * The full contents of the include file. This may contain additional, recursive #include
+     * The full contents of the include file. This may contain additional, recursive include
      * directives.
      */
     utils::CString source;

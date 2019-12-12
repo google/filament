@@ -19,7 +19,6 @@
 #include "components/LightManager.h"
 
 #include "details/Engine.h"
-#include "details/ShadowMap.h"
 #include "details/Scene.h"
 #include "details/View.h"
 
@@ -136,13 +135,13 @@ void ShadowMap::prepare(DriverApi& driver, SamplerGroup& sb) noexcept {
             TargetBufferFlags::DEPTH, dim, dim, 1,
             {}, { mShadowMapHandle }, {});
 
-    SamplerParams s;
-    s.filterMag = SamplerMagFilter::LINEAR;
-    s.filterMin = SamplerMinFilter::LINEAR;
-    s.compareFunc = SamplerCompareFunc::LE;
-    s.compareMode = SamplerCompareMode::COMPARE_TO_TEXTURE;
-    s.depthStencil = true;
-    sb.setSampler(PerViewSib::SHADOW_MAP, { mShadowMapHandle, s });
+    sb.setSampler(PerViewSib::SHADOW_MAP, {
+        mShadowMapHandle, {
+                    .filterMag = SamplerMagFilter::LINEAR,
+                    .filterMin = SamplerMinFilter::LINEAR,
+                    .compareMode = SamplerCompareMode::COMPARE_TO_TEXTURE,
+                    .compareFunc = SamplerCompareFunc::LE
+            }});
 }
 
 void ShadowMap::render(DriverApi& driver, RenderPass& pass, FView& view) noexcept {
@@ -166,7 +165,7 @@ void ShadowMap::render(DriverApi& driver, RenderPass& pass, FView& view) noexcep
     params.viewport = viewport;
     // disable scissor for clearing so the whole surface, but set the viewport to the
     // the inset-by-1 rectangle.
-    params.flags.clear |= RenderPassFlags::IGNORE_SCISSOR;
+    params.flags.ignoreScissor = true;
 
     FCamera const& camera = getCamera();
     details::CameraInfo cameraInfo = {
@@ -180,14 +179,18 @@ void ShadowMap::render(DriverApi& driver, RenderPass& pass, FView& view) noexcep
     pass.setCamera(cameraInfo);
 
     FView::Range visibleRenderables = view.getVisibleShadowCasters();
-    pass.setGeometry(scene, visibleRenderables);
+    pass.setGeometry(scene.getRenderableData(), visibleRenderables, scene.getRenderableUBO());
 
     view.updatePrimitivesLod(engine, cameraInfo, scene.getRenderableData(), visibleRenderables);
     view.prepareCamera(cameraInfo, viewport);
     view.commitUniforms(driver);
 
     pass.overridePolygonOffset(&mPolygonOffset);
-    pass.appendSortedCommands(RenderPass::SHADOW);
+
+    auto curr = pass.getCommands().end();
+    pass.appendCommands(RenderPass::SHADOW);
+    pass.sortCommands(curr);
+
     pass.execute("Shadow map Pass", getRenderTarget(), params,
             pass.getCommands().begin(), pass.getCommands().end());
     pass.overridePolygonOffset(nullptr);
@@ -214,8 +217,8 @@ void ShadowMap::update(
 
     FLightManager::ShadowParams params = lcm.getShadowParams(li);
     mPolygonOffset = {
-            .constant = params.options.polygonOffsetConstant,
-            .slope = params.options.polygonOffsetSlope
+            .slope = params.options.polygonOffsetSlope,
+            .constant = params.options.polygonOffsetConstant
     };
     mat4f projection(camera.cullingProjection);
     if (params.options.shadowFar > 0.0f) {
@@ -236,10 +239,10 @@ void ShadowMap::update(
             .projection = projection,
             .model = camera.model,
             .view = camera.view,
+            .worldOrigin = camera.worldOrigin,
             .zn = camera.zn,
             .zf = camera.zf,
-            .frustum = Frustum(projection * camera.view),
-            .worldOrigin = camera.worldOrigin
+            .frustum = Frustum(projection * camera.view)
     };
 
     // debugging...
@@ -532,7 +535,7 @@ mat4f ShadowMap::applyLISPSM(math::mat4f& Wp,
         float3 const& dir) {
 
     const float LoV = dot(camera.getForwardVector(), dir);
-    const float sinLV = std::sqrt(1.0f - LoV * LoV);
+    const float sinLV = std::sqrt(std::max(0.0f, 1.0f - LoV * LoV));
 
     // Virtual near plane -- the default is 1m, can be changed by the user.
     // The virtual near plane prevents too much resolution to be wasted in the area near the eye
@@ -561,7 +564,8 @@ mat4f ShadowMap::applyLISPSM(math::mat4f& Wp,
 
     mat4f W;
     // see nopt1 below for an explanation about this test
-    if (3.0f * (dzn / (zf - zn)) < 2.0f) {
+    // sinLV is positive since it comes from a square-root
+    if (sinLV > 0 && 3.0f * (dzn / (zf - zn)) < 2.0f) {
         // nopt is the optimal near plane distance of Wp (i.e. distance from P).
 
         // virtual near and far planes

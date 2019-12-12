@@ -47,7 +47,7 @@ public:
     static constexpr size_t SIZE = 2;
 
     union {
-        T v[SIZE];
+        T v[SIZE] MATH_CONSTEXPR_INIT;
         struct { T x, y; };
         struct { T s, t; };
         struct { T r, g; };
@@ -56,13 +56,12 @@ public:
     inline constexpr size_type size() const { return SIZE; }
 
     // array access
-    inline constexpr T const& operator[](size_t i) const {
-        // only possible in C++0x14 with constexpr
+    inline constexpr T const& operator[](size_t i) const noexcept {
         assert(i < SIZE);
         return v[i];
     }
 
-    inline constexpr T& operator[](size_t i) {
+    inline constexpr T& operator[](size_t i) noexcept {
         assert(i < SIZE);
         return v[i];
     }
@@ -70,23 +69,23 @@ public:
     // constructors
 
     // default constructor
-    constexpr TVec2() = default;
+    MATH_DEFAULT_CTOR_CONSTEXPR TVec2() MATH_DEFAULT_CTOR
 
     // handles implicit conversion to a tvec4. must not be explicit.
-    template<typename A>
-    constexpr TVec2(A v) : v{ T(v), T(v) } {}
+    template<typename A, typename = enable_if_arithmetic_t<A>>
+    constexpr TVec2(A v) noexcept : v{ T(v), T(v) } {}
 
-    template<typename A, typename B>
-    constexpr TVec2(A x, B y) : v{ T(x), T(y) } {}
+    template<typename A, typename B, typename = enable_if_arithmetic_t<A, B>>
+    constexpr TVec2(A x, B y) noexcept : v{ T(x), T(y) } {}
 
-    template<typename A>
-    constexpr TVec2(const TVec2<A>& v) : v{ T(v[0]), T(v[1]) } {}
+    template<typename A, typename = enable_if_arithmetic_t<A>>
+    constexpr TVec2(const TVec2<A>& v) noexcept : v{ T(v[0]), T(v[1]) } {}
 
     // cross product works only on vectors of size 2 or 3
-    template<typename RT>
-    friend inline
-    constexpr value_type cross(const TVec2& u, const TVec2<RT>& v) {
-        return value_type(u[0] * v[1] - u[1] * v[0]);
+    template<typename U>
+    friend inline constexpr
+    arithmetic_result_t<T, U> cross(const TVec2& u, const TVec2<U>& v) noexcept {
+        return u[0] * v[1] - u[1] * v[0];
     }
 };
 
@@ -94,7 +93,7 @@ public:
 
 // ----------------------------------------------------------------------------------------
 
-template<typename T, typename = typename std::enable_if<std::is_arithmetic<T>::value>::type>
+template<typename T, typename = details::enable_if_arithmetic_t<T>>
 using vec2 = details::TVec2<T>;
 
 using double2 = vec2<double>;

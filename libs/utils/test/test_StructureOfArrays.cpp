@@ -130,7 +130,7 @@ TEST(StructureOfArraysTest, Simple) {
     for (size_t i = 0; i < 4; i++) {
         EXPECT_EQ(i    , soa.elementAt<0>(i));
         EXPECT_EQ(i * 2, soa.elementAt<1>(i));
-        EXPECT_EQ(i * 4, soa.elementAt<2>(i));
+        EXPECT_EQ(TestFloat4{ i * 4 }, soa.elementAt<2>(i));
     }
 
     // check we can add a few elements
@@ -144,7 +144,7 @@ TEST(StructureOfArraysTest, Simple) {
     for (size_t i = 0; i < 4; i++) {
         EXPECT_EQ(i    , soa.elementAt<0>(i));
         EXPECT_EQ(i * 2, soa.elementAt<1>(i));
-        EXPECT_EQ(i * 4, soa.elementAt<2>(i));
+        EXPECT_EQ(TestFloat4{ i * 4 }, soa.elementAt<2>(i));
     }
 
 
@@ -166,7 +166,7 @@ TEST(StructureOfArraysTest, Simple) {
     for (size_t i = 0; i < 4; i++) {
         EXPECT_EQ(i    , soa.elementAt<0>(i));
         EXPECT_EQ(i * 2, soa.elementAt<1>(i));
-        EXPECT_EQ(i * 4, soa.elementAt<2>(i));
+        EXPECT_EQ(TestFloat4{ i * 4 }, soa.elementAt<2>(i));
     }
 
     soa.push_back(0.0f, 1.0, destroyedFloat4);

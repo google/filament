@@ -30,7 +30,6 @@ class SamplerInterfaceBlock;
 class SibGenerator {
 public:
     static SamplerInterfaceBlock const& getPerViewSib() noexcept;
-    static SamplerInterfaceBlock const& getPostProcessSib() noexcept;
     static SamplerInterfaceBlock const* getSib(uint8_t bindingPoint) noexcept;
 };
 
@@ -44,14 +43,6 @@ struct PerViewSib {
     static constexpr size_t SSAO           = 5;
 
     static constexpr size_t SAMPLER_COUNT = 6;
-};
-
-struct PostProcessSib {
-    // indices of each samplers in this SamplerInterfaceBlock (see: getPostProcessSib())
-    static constexpr size_t COLOR_BUFFER   = 0;
-    static constexpr size_t DEPTH_BUFFER   = 1;
-
-    static constexpr size_t SAMPLER_COUNT = 2;
 };
 
 }

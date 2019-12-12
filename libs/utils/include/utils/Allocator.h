@@ -431,7 +431,12 @@ struct NoLock {
     void unlock() noexcept { }
 };
 
+// Unfortunately TSAN doesn't support homegrown synchronization primitives
+#if defined(__SANITIZE_THREAD__)
+using SpinLock = utils::Mutex;
+#else
 using SpinLock = utils::SpinLock;
+#endif
 
 using Mutex = utils::Mutex;
 
@@ -440,38 +445,69 @@ using Mutex = utils::Mutex;
 
 namespace TrackingPolicy {
 
+// default no-op tracker
 struct Untracked {
     Untracked() noexcept = default;
-    Untracked(const char* name, size_t size) noexcept { }
+    Untracked(const char* name, void* base, size_t size) noexcept { }
     void onAlloc(void* p, size_t size, size_t alignment, size_t extra) noexcept { }
     void onFree(void* p, size_t = 0) noexcept { }
     void onReset() noexcept { }
     void onRewind(void* addr) noexcept { }
 };
 
-// This high watermark tracker works only with allocator that either implement
-// free(void*, size_t), or reset() / rewind()
-
+// This just track the max memory usage and logs it in the destructor
 struct HighWatermark {
     HighWatermark() noexcept = default;
-    HighWatermark(const char* name, size_t size) noexcept
-            : mName(name), mSize(uint32_t(size)) { }
+    HighWatermark(const char* name, void* base, size_t size) noexcept
+        : mName(name), mBase(base), mSize(uint32_t(size)) { }
     ~HighWatermark() noexcept;
-    void onAlloc(void* p, size_t size, size_t alignment, size_t extra) noexcept {
-        if (!mBase) { mBase = p; }
-        mCurrent += uint32_t(size);
-        mHighWaterMark = mCurrent > mHighWaterMark ? mCurrent : mHighWaterMark;
-    }
-    void onFree(void* p, size_t size) noexcept { mCurrent -= uint32_t(size); }
-    void onReset() noexcept {  mCurrent = 0; }
-    void onRewind(void const* addr) noexcept { mCurrent = uint32_t(uintptr_t(addr) - uintptr_t(mBase)); }
-
-private:
+    void onAlloc(void* p, size_t size, size_t alignment, size_t extra) noexcept;
+    void onFree(void* p, size_t size) noexcept;
+    void onReset() noexcept;
+    void onRewind(void const* addr) noexcept;
+protected:
     const char* mName = nullptr;
     void* mBase = nullptr;
     uint32_t mSize = 0;
     uint32_t mCurrent = 0;
     uint32_t mHighWaterMark = 0;
+};
+
+// This just fills buffers with known values to help catch uninitialized access and use after free.
+struct Debug {
+    Debug() noexcept = default;
+    Debug(const char* name, void* base, size_t size) noexcept
+            : mName(name), mBase(base), mSize(uint32_t(size)) { }
+    void onAlloc(void* p, size_t size, size_t alignment, size_t extra) noexcept;
+    void onFree(void* p, size_t size) noexcept;
+    void onReset() noexcept;
+    void onRewind(void* addr) noexcept;
+protected:
+    const char* mName = nullptr;
+    void* mBase = nullptr;
+    uint32_t mSize = 0;
+};
+
+struct DebugAndHighWatermark : protected HighWatermark, protected Debug {
+    DebugAndHighWatermark() noexcept = default;
+    DebugAndHighWatermark(const char* name, void* base, size_t size) noexcept
+            : HighWatermark(name, base, size), Debug(name, base, size) { }
+    void onAlloc(void* p, size_t size, size_t alignment, size_t extra) noexcept {
+        HighWatermark::onAlloc(p, size, alignment, extra);
+        Debug::onAlloc(p, size, alignment, extra);
+    }
+    void onFree(void* p, size_t size) noexcept {
+        HighWatermark::onFree(p, size);
+        Debug::onFree(p, size);
+    }
+    void onReset() noexcept {
+        HighWatermark::onReset();
+        Debug::onReset();
+    }
+    void onRewind(void* addr) noexcept {
+        HighWatermark::onRewind(addr);
+        Debug::onRewind(addr);
+    }
 };
 
 } // namespace TrackingPolicy
@@ -492,7 +528,7 @@ public:
     Arena(const char* name, size_t size, ARGS&& ... args)
             : mArea(size),
               mAllocator(mArea, std::forward<ARGS>(args) ... ),
-              mListener(name, size),
+              mListener(name, mArea.data(), size),
               mArenaName(name) {
     }
 
@@ -716,13 +752,13 @@ public:
     // these should be out-of-class friends, but this doesn't seem to work with some compilers
     // which complain about multiple definition each time a STLAllocator<> is instantiated.
     template <typename U, typename A>
-    bool operator==(const STLAllocator<U, A>& lhs) noexcept {
-        return std::addressof(mArena) == std::addressof(lhs.mArena);
+    bool operator==(const STLAllocator<U, A>& rhs) const noexcept {
+        return std::addressof(mArena) == std::addressof(rhs.mArena);
     }
 
     template <typename U, typename A>
-    bool operator!=(const STLAllocator<U, A>& lhs) noexcept {
-        return !operator==(lhs);
+    bool operator!=(const STLAllocator<U, A>& rhs) const noexcept {
+        return !operator==(rhs);
     }
 
 private:

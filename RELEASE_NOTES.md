@@ -3,6 +3,77 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
+## Next release
+
+- Fix bad instruction exception with macOS Catalina.
+- Added support for solid and thin layer cubemap and screen-space refraction.
+- Improved high roughness material rendering by default when regenerating environments maps.
+- Fixed bad state after removing an IBL from the Scene.
+- Fixed incorrect punctual light binning (affected Metal and Vulkan backends).
+- Fixed crash when using a Metal headless SwapChain with an Intel integrated GPU.
+
+## v1.4.3
+
+- Fixed an assertion when a parameter array occurs last in a material definition.
+- Fixed morph shapes not rendering in WebGL.
+- Added support for the latest version of emscripten.
+- gltfio: fixed blackness seen with default material.
+- Added ETC2 and BC compressed texture support to Metal backend.
+- Rendering a `SAMPLER_EXTERNAL` texture before setting an external image no longer results in GPU errors.
+- Fixed a normals issue when skinning without a normal map or anisotropy.
+- Fixed an issue where transparent views couldn't be used with post-processing.
+- Always use higher quality 3-bands SH for indirect lighting, even on mobile.
+- The Metal backend can now handle binding individual planes of YUV external images.
+- Added support for depth buffer when post-processing is turned off
+- Improved performance on GPUs that use tile-based rendering
+
+## v1.4.2
+
+- Cleaned up the validation strategy in Engine (checks for use-after-destroy etc).
+- OpenGL: Fixed ES 3.0 support on iOS.
+- OpenGL: Added support for KHR_debug in debug builds.
+- gltfio: Added Java / Kotlin bindings for Animator.
+- gltfio: Fixed panic with the Android gltf-bloom demo.
+- gltfio: Java clients should no longer call Filament#init.
+- Improved IBL diffuse by allowing to use the specular cubemap at `roughness` = 1 instead of Spherical Harmonics
+
+## v1.4.1
+
+- Added missing API documentation.
+- Fixed crash for sandboxed macOS apps using Filament.
+- Fixed an issue that limited the camera near plane to ~1mm.
+- Added Android sample for Camera Stream.
+- Fixed an Xcode assertion when rendering skinned meshes using the Metal backend.
+- Added support for Core Animation / Metal frame synchronization with Metal backend.
+- Fixed an issue with culling in `MaterialInstance`.
+- Fix additional compatibility issues with MSVC, including the Vulkan backend.
+- matdbg: fixed missing symbol issue when linking against debug builds.
+- filamat: fixed crash when using the "lite" version of the library.
+- matinfo: Fix a crash with on Windows.
+- gltfio: fixed an animation loop bug.
+- gltfio: added support for sparse accessors.
+- Add JS binding to unary `Camera::setExposure`.
+
+## v1.4.0
+
+- API Breakage: Simplified public-facing Fence API.
+- Minimum API level on Android is now API 19 instead of API 21.
+- Filament can now be built with msvc 2019.
+- Added the ability to modify clip space coordinates in the vertex shader.
+- Added missing API documentation.
+- Improved existing API documentation.
+- Added `Camera::setExposure(float)` to directly control the camera's exposure.
+- Backface culling can now be toggled on material instances.
+- Face direction is now reversed when transforms have negative scale.
+- Dielectrics now behave properly under a white furnace (energy preserving and conserving).
+- Clear coat roughness now remains in the 0..1 (previously remapped to the 0..0.6 range).
+- gltfio: Fixed several limitations with ubershader mode.
+- gltfio: Fixed a transforms issue with non-uniform scale.
+- webgl: Fixed an issue with JPEG textures.
+- Windows: Fix link error in debug builds.
+- matdbg: Web server must now be enabled with an environment variable.
+- matdbg: Added support for editing GLSL and MSL code.
+
 ## v1.3.2
 
 - Added optional web server for real-time inspection of shader code.

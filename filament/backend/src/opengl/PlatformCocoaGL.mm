@@ -27,6 +27,8 @@
 #include <OpenGL/OpenGL.h>
 #include <Cocoa/Cocoa.h>
 
+#include <vector>
+
 namespace filament {
 
 using namespace backend;
@@ -34,6 +36,8 @@ using namespace backend;
 struct PlatformCocoaGLImpl {
     NSOpenGLContext* mGLContext = nullptr;
     NSView* mCurrentView = nullptr;
+    id<NSObject> mObserver = nullptr;
+    std::vector<NSView*> mHeadlessSwapChains;
 };
 
 PlatformCocoaGL::PlatformCocoaGL()
@@ -48,16 +52,16 @@ Driver* PlatformCocoaGL::createDriver(void* sharedContext) noexcept {
     // NSOpenGLPFAColorSize: when unspecified, a format that matches the screen is preferred
     NSOpenGLPixelFormatAttribute pixelFormatAttributes[] = {
             NSOpenGLPFAOpenGLProfile, NSOpenGLProfileVersion3_2Core,
+            NSOpenGLPFADepthSize,    (NSOpenGLPixelFormatAttribute) 24,
             NSOpenGLPFADoubleBuffer, (NSOpenGLPixelFormatAttribute) true,
             NSOpenGLPFAAccelerated,  (NSOpenGLPixelFormatAttribute) true,
             NSOpenGLPFANoRecovery,   (NSOpenGLPixelFormatAttribute) true,
             0, 0,
     };
 
-    NSOpenGLContext* shareContext = (NSOpenGLContext*)sharedContext;
+    NSOpenGLContext* shareContext = (__bridge NSOpenGLContext*) sharedContext;
     NSOpenGLPixelFormat* pixelFormat = [[NSOpenGLPixelFormat alloc] initWithAttributes:pixelFormatAttributes];
     NSOpenGLContext* nsOpenGLContext = [[NSOpenGLContext alloc] initWithFormat:pixelFormat shareContext:shareContext];
-    [pixelFormat release];
 
     GLint interval = 0;
     [nsOpenGLContext makeCurrentContext];
@@ -71,41 +75,69 @@ Driver* PlatformCocoaGL::createDriver(void* sharedContext) noexcept {
 }
 
 void PlatformCocoaGL::terminate() noexcept {
-    [pImpl->mGLContext release];
+    [[NSNotificationCenter defaultCenter] removeObserver: pImpl->mObserver];
+    pImpl->mGLContext = nil;
     bluegl::unbind();
 }
 
 Platform::SwapChain* PlatformCocoaGL::createSwapChain(void* nativewindow, uint64_t& flags) noexcept {
-    // Transparent swap chain is not supported
+    // Transparent SwapChain is not supported
     flags &= ~backend::SWAP_CHAIN_CONFIG_TRANSPARENT;
     return (SwapChain*) nativewindow;
 }
 
+Platform::SwapChain* PlatformCocoaGL::createSwapChain(uint32_t width, uint32_t height, uint64_t& flags) noexcept {
+    NSView* nsView = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, width, height)];
+    // adding the pointer to the array retains the NSView
+    pImpl->mHeadlessSwapChains.push_back(nsView);
+    return (__bridge SwapChain*)nsView;
+}
+
 void PlatformCocoaGL::destroySwapChain(Platform::SwapChain* swapChain) noexcept {
+    auto& v = pImpl->mHeadlessSwapChains;
+    NSView* nsView = (__bridge NSView*)swapChain;
+    auto it = std::find(v.begin(), v.end(), nsView);
+    if (it != v.end()) {
+        // removing the pointer from the array releases the NSView
+        v.erase(it);
+    }
 }
 
 void PlatformCocoaGL::makeCurrent(Platform::SwapChain* drawSwapChain,
         Platform::SwapChain* readSwapChain) noexcept {
     ASSERT_PRECONDITION_NON_FATAL(drawSwapChain == readSwapChain,
             "ContextManagerCocoa does not support using distinct draw/read swap chains.");
-    NSView *nsView = (NSView*) drawSwapChain;
+    NSView *nsView = (__bridge NSView*) drawSwapChain;
     if (pImpl->mCurrentView != nsView) {
         pImpl->mCurrentView = nsView;
-        // Calling setView could change the viewport and/or scissor box state, but this isn't
-        // accounted for in our OpenGL driver- so we save their state and recall it afterwards.
-        GLint viewport[4];
-        GLint scissor[4];
-        glGetIntegerv(GL_VIEWPORT, viewport);
-        glGetIntegerv(GL_SCISSOR_BOX, scissor);
 
-        [pImpl->mGLContext setView:nsView];
+        // NOTE: This is not documented well (if at all) but NSOpenGLContext requires "setView"
+        // and "update" to be called from the UI thread. This became a hard requirement with the
+        // arrival of macOS 10.15 (Catalina). If we were to call these methods from the GL thread,
+        // we would see EXC_BAD_INSTRUCTION.
 
-        // Recall viewport and scissor state.
-        glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
-        glScissor(scissor[0], scissor[1], scissor[2], scissor[3]);
+        // Remove the old observer because this might be a multi-window app.
+        [[NSNotificationCenter defaultCenter] removeObserver: pImpl->mObserver];
+
+        // Create a copy of the current GL context pointer for the closure.
+        NSOpenGLContext* glContext = pImpl->mGLContext;
+
+        pImpl->mObserver = [
+            [NSNotificationCenter defaultCenter] addObserverForName: NSViewGlobalFrameDidChangeNotification
+            object: nil
+            queue: nil
+            usingBlock: ^ (NSNotification* note) {
+                if (note.object == nsView) {
+                    [glContext update];
+                }
+            }
+        ];
+
+        dispatch_sync(dispatch_get_main_queue(), ^(void) {
+            [glContext setView:nsView];
+            [glContext update];
+        });
     }
-    // this is needed only when the view resized. Not sure how to do only when needed.
-    [pImpl->mGLContext update];
 }
 
 void PlatformCocoaGL::commit(Platform::SwapChain* swapChain) noexcept {

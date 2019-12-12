@@ -89,21 +89,15 @@ static void createSampler(const cgltf_animation_sampler& src, Sampler& dst) {
     switch (valuesAccessor->type) {
         case cgltf_type_scalar:
             dst.values.resize(valuesAccessor->count);
-            for (cgltf_size i = 0; i < valuesAccessor->count; ++i) {
-                cgltf_accessor_read_float(src.output, i, &dst.values[i], 1);
-            }
+            cgltf_accessor_unpack_floats(src.output, &dst.values[0], valuesAccessor->count);
             break;
         case cgltf_type_vec3:
             dst.values.resize(valuesAccessor->count * 3);
-            for (cgltf_size i = 0; i < valuesAccessor->count; ++i) {
-                cgltf_accessor_read_float(src.output, i, &dst.values[i * 3], 3);
-            }
+            cgltf_accessor_unpack_floats(src.output, &dst.values[0], valuesAccessor->count * 3);
             break;
         case cgltf_type_vec4:
             dst.values.resize(valuesAccessor->count * 4);
-            for (cgltf_size i = 0; i < valuesAccessor->count; ++i) {
-                cgltf_accessor_read_float(src.output, i, &dst.values[i * 4], 4);
-            }
+            cgltf_accessor_unpack_floats(src.output, &dst.values[0], valuesAccessor->count * 4);
             break;
         default:
             slog.e << "Unknown animation type." << io::endl;
@@ -217,8 +211,7 @@ void Animator::applyAnimation(size_t animationIndex, float time) const {
         TimeValues::const_iterator prevIter;
         TimeValues::const_iterator nextIter;
         if (iter == times.end()) {
-            prevIter = --times.end();
-            nextIter = times.begin();
+            continue;
         } else if (iter == times.begin()) {
             prevIter = nextIter = iter;
         } else {

@@ -370,28 +370,34 @@ LinearImage HDRDecoder::decode() {
         if (sx == '-') image = horizontalFlip(image);
         if (sy == '+') image = verticalFlip(image);
 
-        uint16_t w;
-        uint16_t magic;
+        // Allocate memory to hold one row of decoded pixel data.
         std::unique_ptr<uint8_t[]> rgbe(new uint8_t[width * 4]);
 
-        if (width < 8 || width > 32767) {
+        // First, test for non-RLE images.
+        const auto pos = mStream.tellg();
+        mStream.read((char*) rgbe.get(), 3);
+        mStream.seekg(pos);
+
+        if (rgbe[0] != 0x2 || rgbe[1] != 0x2 || (rgbe[2] & 0x80) || width < 8 || width > 32767) {
             for (uint32_t y = 0; y < height; y++) {
-                 filament::math::float3* i = reinterpret_cast< filament::math::float3*>(image.getPixelRef(0, y));
-                mStream.read((char*) &rgbe, width * 4);
+                filament::math::float3* dst = reinterpret_cast<filament::math::float3*>(image.getPixelRef(0, y));
+                mStream.read((char*) rgbe.get(), width * 4);
                 // (rgb/256) * 2^(e-128)
                 size_t pixel = 0;
                 for (size_t x = 0; x < width; x++, pixel += 4) {
-                     filament::math::float3 v(rgbe[pixel], rgbe[pixel + 1], rgbe[pixel + 2]);
-                    i[x] = v * std::ldexp(1.0f, rgbe[pixel + 3] - (128 + 8));
+                    filament::math::float3 v(rgbe[pixel], rgbe[pixel + 1], rgbe[pixel + 2]);
+                    dst[x] = v * std::ldexp(1.0f, rgbe[pixel + 3] - (128 + 8));
                 }
             }
         } else {
             for (uint32_t y = 0; y < height; y++) {
-                //std::cout << "line: " << y << std::endl;
+                uint16_t magic;
                 mStream.read((char*) &magic, 2);
                 if (magic != 0x0202) {
                     throw std::runtime_error("invalid scanline (magic)");
                 }
+
+                uint16_t w;
                 mStream.read((char*) &w, 2);
                 if (ntohs(w) != width) {
                     throw std::runtime_error("invalid scanline (width)");
@@ -424,11 +430,11 @@ LinearImage HDRDecoder::decode() {
                 uint8_t const* g = &rgbe[width];
                 uint8_t const* b = &rgbe[2 * width];
                 uint8_t const* e = &rgbe[3 * width];
-                 filament::math::float3* i = reinterpret_cast< filament::math::float3*>(image.getPixelRef(0, y));
+                filament::math::float3* dst = reinterpret_cast<filament::math::float3*>(image.getPixelRef(0, y));
                 // (rgb/256) * 2^(e-128)
                 for (size_t x = 0; x < width; x++, r++, g++, b++, e++) {
-                     filament::math::float3 v(r[0], g[0], b[0]);
-                    i[x] = v * std::ldexp(1.0f, e[0] - (128 + 8));
+                    filament::math::float3 v(r[0], g[0], b[0]);
+                    dst[x] = v * std::ldexp(1.0f, e[0] - (128 + 8));
                 }
             }
         }

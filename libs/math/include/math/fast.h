@@ -18,9 +18,11 @@
 #define TNT_MATH_FAST_H
 
 #include <cmath>
-#include <stdint.h>
+#include <cstdint>
 #include <type_traits>
+
 #include <math/compiler.h>
+#include <math/scalar.h>
 
 #ifdef __ARM_NEON
 #include <arm_neon.h>
@@ -33,9 +35,9 @@ namespace fast {
 // fast cos(x), ~8 cycles (vs. 66 cycles on ARM)
 // can be vectorized
 // x between -pi and pi
-template<typename T, typename = typename std::enable_if<std::is_floating_point<T>::value>::type>
+template<typename T, typename = std::enable_if_t<std::is_floating_point<T>::value>>
 constexpr T MATH_PURE cos(T x) noexcept {
-    x *= T(M_1_PI / 2);
+    x *= T(F_1_PI / 2);
     x -= T(0.25) + std::floor(x + T(0.25));
     x *= T(16.0) * std::abs(x) - T(8.0);
     x += T(0.225) * x * (std::abs(x) - T(1.0));
@@ -45,9 +47,9 @@ constexpr T MATH_PURE cos(T x) noexcept {
 // fast sin(x), ~8 cycles (vs. 66 cycles on ARM)
 // can be vectorized
 // x between -pi and pi
-template<typename T, typename = typename std::enable_if<std::is_floating_point<T>::value>::type>
+template<typename T, typename = std::enable_if_t<std::is_floating_point<T>::value>>
 constexpr T MATH_PURE sin(T x) noexcept {
-    return filament::math::fast::cos<T>(x - T(M_PI_2));
+    return filament::math::fast::cos<T>(x - T(F_PI_2));
 }
 
 constexpr inline float MATH_PURE ilog2(float x) noexcept {
@@ -156,19 +158,19 @@ inline uint16_t MATH_PURE qsub(uint16_t a, uint16_t b) noexcept { return vqsubh_
 inline uint32_t MATH_PURE qsub(uint32_t a, uint32_t b) noexcept { return vqsubs_s32(a, b); }
 #else
 
-template<typename T, typename = typename std::enable_if<
+template<typename T, typename = std::enable_if_t<
         std::is_same<uint8_t, T>::value ||
         std::is_same<uint16_t, T>::value ||
-        std::is_same<uint32_t, T>::value>::type>
+        std::is_same<uint32_t, T>::value>>
 inline T MATH_PURE qadd(T a, T b) noexcept {
     T r = a + b;
     return r | -T(r < a);
 }
 
-template<typename T, typename = typename std::enable_if<
+template<typename T, typename = std::enable_if_t<
         std::is_same<uint8_t, T>::value ||
         std::is_same<uint16_t, T>::value ||
-        std::is_same<uint32_t, T>::value>::type>
+        std::is_same<uint32_t, T>::value>>
 inline T MATH_PURE qsub(T a, T b) noexcept {
     T r = a - b;
     return r & -T(r <= a);

@@ -32,28 +32,44 @@ namespace details {
     class AssetPool;
 }
 
+/**
+ * \struct ResourceConfiguration ResourceLoader.h gltfio/ResourceLoader.h
+ * \brief Construction parameters for ResourceLoader.
+ */
 struct ResourceConfiguration {
+    //! The engine that the loader should pass to builder objects (e.g.
+    //! filament::Texture::Builder).
     class filament::Engine* engine;
+
+    //! Optional path or URI that points to the base glTF file. This is used solely
+    //! to resolve relative paths.
     utils::Path gltfPath;
+
+    //! If true, adjusts skinning weights to sum to 1. Well formed glTF files do not need this,
+    //! but it is useful for robustness.
     bool normalizeSkinningWeights;
+
+    //! If true, computes the bounding boxes of all \c POSITION attibutes. Well formed glTF files
+    //! do not need this, but it is useful for robustness.
     bool recomputeBoundingBoxes;
 };
 
 /**
- * ResourceLoader asynchronously uploads vertex buffers and textures to the GPU, computes
- * surface orientation quaternions, and optionally normalizes skinning weights.
+ * \class ResourceLoader ResourceLoader.h gltfio/ResourceLoader.h
+ * \brief Asynchronously uploads vertex buffers and textures to the GPU and computes tangents.
  *
- * For a usage example, see the comment block for AssetLoader.
+ * For a usage example, see the documentation for AssetLoader.
  *
  * In theory, this class could cache a map of URL's to data blobs and could therefore be useful
  * across multiple assets. However, clients should feel free to immediately destroy this after
  * calling loadResources. There is no need to wait for resources to finish uploading because this is
  * done in the the background.
  *
- * The resource loader must be destroyed on the same thread that calls Renderer::render because it
- * listens to BufferDescriptor callbacks in order to determine when to free CPU-side data blobs.
+ * ResourceLoader must be destroyed on the same thread that calls filament::Renderer::render()
+ * because it listens to filament::backend::BufferDescriptor callbacks in order to determine when to
+ * free CPU-side data blobs.
  *
- * TODO: the GPU upload is asynchronous but the load-from-disk and image decode is not.
+ * \todo The GPU upload is asynchronous but the load-from-disk and image decode is not.
  */
 class ResourceLoader {
 public:
@@ -80,6 +96,7 @@ public:
 
 private:
     bool createTextures(details::FFilamentAsset* asset) const;
+    void applySparseData(details::FFilamentAsset* asset) const;
     void computeTangents(details::FFilamentAsset* asset) const;
     void normalizeSkinningWeights(details::FFilamentAsset* asset) const;
     void updateBoundingBoxes(details::FFilamentAsset* asset) const;

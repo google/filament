@@ -242,7 +242,7 @@ The type and range of each property is described in <a href="#table_standardprop
 <tr><td style="text-align:right"> <strong class="asterisk">roughness</strong> </td><td style="text-align:center"> float </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> &#xA0; </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">reflectance</strong> </td><td style="text-align:center"> float </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> Prefer values &gt; 0.35 </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">clearCoat</strong> </td><td style="text-align:center"> float </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> Should be 0 or 1 </td></tr>
-<tr><td style="text-align:right"> <strong class="asterisk">clearCoatRoughness</strong> </td><td style="text-align:center"> float </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> Remaps to [0..0.6] </td></tr>
+<tr><td style="text-align:right"> <strong class="asterisk">clearCoatRoughness</strong> </td><td style="text-align:center"> float </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> &#xA0; </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">anisotropy</strong> </td><td style="text-align:center"> float </td><td style="text-align:center"> [&#x2212;1..1] </td><td style="text-align:left"> Anisotropy is in the tangent direction when this value is positive </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">anisotropyDirection</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> Linear RGB, encodes a direction vector in tangent space </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">ambientOcclusion</strong> </td><td style="text-align:center"> float </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> &#xA0; </td></tr>
@@ -475,8 +475,7 @@ The effect of <code>clearCoat</code> on a rough metal is shown in <a href="#figu
 
 
 The <code>clearCoatRoughness</code> property is similar to the <code>roughness</code> property but applies only to the
-clear coat layer. In addition, since clear coat layers are never completely rough, the value between
-0 and 1 is remapped internally to an actual roughness of 0 to 0.6.
+clear coat layer.
 
 </p><p>
 
@@ -1495,7 +1494,7 @@ and sorting issues are minimized or eliminated</div></div></center>
 </p></dd><dt>Description</dt><dd><p>      Enables two-sided rendering and its capability to be toggled at run time. When set to <code>true</code>,
       <code>culling</code> is automatically set to <code>none</code>; if the triangle is back-facing, the triangle&apos;s
       normal is flipped to become front-facing. When explicitly set to <code>false</code>, this allows the
-      doubleSided property to be toggled at run time.
+      double-sidedness to be toggled at run time.
 
 </p></dd></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
 <span class="line">    doubleSided : true</span>
@@ -1686,16 +1685,19 @@ APIs listed in the <a href="#shaderpublicapis">Shader public APIs</a> section.
 </p>
 <a class="target" name="materialvertexinputs">&#xA0;</a><a class="target" name="materialdefinitions/vertexblock/materialvertexinputs">&#xA0;</a><a class="target" name="toc4.3.1">&#xA0;</a><h3>Material vertex inputs</h3>
 <pre class="listing tilde"><code><span class="line">struct MaterialVertexInputs {</span>
-<span class="line">    float4 color;         <span class="hljs-comment">// if the color attribute is required</span></span>
-<span class="line">    float2 uv0;           <span class="hljs-comment">// if the uv0 attribute is required</span></span>
-<span class="line">    float2 uv1;           <span class="hljs-comment">// if the uv1 attribute is required</span></span>
-<span class="line">    float3 worldNormal;   <span class="hljs-comment">// only if the shading model is not unlit</span></span>
-<span class="line">    float4 worldPosition; <span class="hljs-comment">// always available (see note below about world-space)</span></span>
+<span class="line">    float4 color;              <span class="hljs-comment">// if the color attribute is required</span></span>
+<span class="line">    float2 uv0;                <span class="hljs-comment">// if the uv0 attribute is required</span></span>
+<span class="line">    float2 uv1;                <span class="hljs-comment">// if the uv1 attribute is required</span></span>
+<span class="line">    float3 worldNormal;        <span class="hljs-comment">// only if the shading model is not unlit</span></span>
+<span class="line">    float4 worldPosition;      <span class="hljs-comment">// always available (see note below about world-space)</span></span>
+<span class="line"></span>
+<span class="line">    <span class="hljs-type">mat4</span>   clipSpaceTransform; <span class="hljs-comment">// default: identity, transforms the clip-space position</span></span>
+<span class="line"></span>
 <span class="line">    <span class="hljs-comment">// variable* names are replaced with actual names</span></span>
-<span class="line">    float4 variable0;     <span class="hljs-comment">// if 1 or more variables is defined</span></span>
-<span class="line">    float4 variable1;     <span class="hljs-comment">// if 2 or more variables is defined</span></span>
-<span class="line">    float4 variable2;     <span class="hljs-comment">// if 3 or more variables is defined</span></span>
-<span class="line">    float4 variable3;     <span class="hljs-comment">// if 4 or more variables is defined</span></span>
+<span class="line">    float4 variable0;          <span class="hljs-comment">// if 1 or more variables is defined</span></span>
+<span class="line">    float4 variable1;          <span class="hljs-comment">// if 2 or more variables is defined</span></span>
+<span class="line">    float4 variable2;          <span class="hljs-comment">// if 3 or more variables is defined</span></span>
+<span class="line">    float4 variable3;          <span class="hljs-comment">// if 4 or more variables is defined</span></span>
 <span class="line">};</span></code></pre><p>
 
 
@@ -1934,6 +1936,8 @@ The following APIs are only available from the fragment block:
 <tr><td style="text-align:left"> <strong class="asterisk">inverseTonemap(float3)</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:left"> Applies the inverse tone mapping operator to the specified linear sRGB color and returns a linear sRGB color. This operation may be an approximation </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">inverseTonemapSRGB(float3)</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:left"> Applies the inverse tone mapping operator to the specified non-linear sRGB color and returns a linear sRGB color. This operation may be an approximation </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">luminance(float3)</strong> </td><td style="text-align:center"> float </td><td style="text-align:left"> Computes the luminance of the specified linear sRGB color </td></tr>
+<tr><td style="text-align:left"> <strong class="asterisk">ycbcrToRgb(float, float2)</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:left"> Converts a luminance and CbCr pair to a sRGB color </td></tr>
+<tr><td style="text-align:left"> <strong class="asterisk">uvToRenderTargetUV(float2)</strong> </td><td style="text-align:center"> float2 </td><td style="text-align:left"> Transforms a UV coordinate to allow sampling from a <code>RenderTarget</code> attachment </td></tr>
 </tbody></table></div>
 
 <p></p><p>
@@ -1944,6 +1948,16 @@ The following APIs are only available from the fragment block:
 
     To obtain API-level world space coordinates, custom materials should add <code>getWorldOffset()</code> to
     <code>getWorldPosition()</code> (et al).</p></div>
+
+<p></p><p>
+
+</p><div class="admonition tip"><div class="admonition-title"> sampling from render targets</div>
+
+<p></p><p>
+
+    When sampling from a <code>filament::Texture</code> that is attached to a <code>filament::RenderTarget</code> for
+    materials in the surface domain, please use <code>uvToRenderTargetUV</code> to transform the texture
+    coordinate. This will flip the coordinate depending on which backend is being used.</p></div>
 
 <p></p>
 <a class="target" name="compilingmaterials">&#xA0;</a><a class="target" name="compilingmaterials">&#xA0;</a><a class="target" name="toc5">&#xA0;</a><h1>Compiling materials</h1>

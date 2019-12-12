@@ -23,29 +23,66 @@ import java.nio.Buffer;
 import java.nio.BufferOverflowException;
 import java.nio.ReadOnlyBufferException;
 
+/**
+ * <code>Stream</code> is used to attach a native video stream to a filament {@link Texture}.
+ *
+ * @see Texture#setExternalStream
+ * @see Engine#destroyStream
+ */
 public class Stream {
     private long mNativeObject;
     private long mNativeEngine;
+
+    /**
+     * Represents the immutable stream type.
+     */
+    public enum StreamType {
+        /** Not synchronized but copy-free. Good for video. */
+        NATIVE,
+
+        /** Synchronized, but GL-only and incurs copies. Good for AR on devices before API 26. */
+        TEXTURE_ID,
+
+        /** Synchronized, copy-free, and take a release callback. Good for AR but requires API 26+. */
+        ACQUIRED,
+    };
 
     Stream(long nativeStream, Engine engine) {
         mNativeObject = nativeStream;
         mNativeEngine = engine.getNativeObject();
     }
 
+    /**
+     * Use <code>Builder</code> to construct an Stream object instance.
+     *
+     * By default, Stream objects are {@link StreamType#ACQUIRED ACQUIRED} and must have external images pushed to them via
+     * {@line #setAcquiredImage}.
+     *
+     * To create a {@link StreamType#NATIVE NATIVE} or {@link StreamType#TEXTURE_ID TEXTURE_ID} stream, call one of the <pre>stream</pre> methods
+     * on the builder.
+     */
     public static class Builder {
         @SuppressWarnings({"FieldCanBeLocal", "UnusedDeclaration"}) // Keep to finalize native resources
         private final BuilderFinalizer mFinalizer;
         private final long mNativeBuilder;
 
+        /**
+         * Use <code>Builder</code> to construct an Stream object instance.
+         */
         public Builder() {
             mNativeBuilder = nCreateBuilder();
             mFinalizer = new BuilderFinalizer(mNativeBuilder);
         }
 
         /**
-         * Accepted types for the stream source:
-         * - Android: SurfaceView
-         * - Other: none
+         * Creates a {@link StreamType#NATIVE NATIVE} stream. Native streams can sample data
+         * directly from an opaque platform object such as a {@link android.graphics.SurfaceTexture SurfaceTexture}
+         * on Android.
+         *
+         * @param streamSource an opaque native stream handle, e.g.: on Android this must be a
+         *                     {@link android.graphics.SurfaceTexture SurfaceTexture} object
+         * @return This Builder, for chaining calls.
+         * @see Texture#setExternalStream
          */
         @NonNull
         public Builder stream(@NonNull Object streamSource) {
@@ -56,24 +93,57 @@ public class Stream {
             throw new IllegalArgumentException("Invalid stream source: " + streamSource);
         }
 
+        /**
+         * Creates a {@link StreamType#TEXTURE_ID TEXTURE_ID} stream. A copy stream will sample data from the supplied
+         * external texture and copy it into an internal private texture.
+         *
+         * <p>Currently only OpenGL external texture ids are supported.</p>
+         *
+         * @param externalTextureId An opaque texture id (typically a GLuint created with
+         *                          <code>glGenTextures()</code>) in a context shared with
+         *                          filament -- in that case this texture's target must be
+         *                          <code>GL_TEXTURE_EXTERNAL_OES.</code>
+         * @return This Builder, for chaining calls.
+         * @see Texture#setExternalStream
+         */
         @NonNull
         public Builder stream(long externalTextureId) {
             nBuilderStream(mNativeBuilder, externalTextureId);
             return this;
         }
 
+        /**
+         * @param width initial width of the incoming stream. Whether this value is used is
+         *              stream dependent. On Android, it must be set when using
+         *              {@link #stream(long)}
+         * @return This Builder, for chaining calls.
+         */
         @NonNull
         public Builder width(int width) {
             nBuilderWidth(mNativeBuilder, width);
             return this;
         }
 
+        /**
+         * @param height initial height of the incoming stream. Whether this value is used is
+         *              stream dependent. On Android, it must be set when using
+         *              {@link #stream(long)}
+         * @return This Builder, for chaining calls.
+         */
         @NonNull
         public Builder height(int height) {
             nBuilderHeight(mNativeBuilder, height);
             return this;
         }
 
+        /**
+         * Creates a new <code>Stream</code> object instance.
+         *
+         * @param engine {@link Engine} instance to associate this <code>Stream</code> with.
+         *
+         * @return newly created <code>Stream</code> object
+         * @exception IllegalStateException if the <code>Stream</code> couldn't be created
+         */
         @NonNull
         public Stream build(@NonNull Engine engine) {
             long nativeStream = nBuilderBuild(mNativeBuilder, engine.getNativeObject());
@@ -99,14 +169,104 @@ public class Stream {
         }
     }
 
-    public boolean isNative() {
-        return nIsNative(getNativeObject());
+    /**
+     * Indicates whether this <code>Stream</code> is NATIVE, TEXTURE_ID, or ACQUIRED.
+     */
+    public StreamType getStreamType() {
+        return StreamType.values()[nGetStreamType(getNativeObject())];
     }
 
+    /**
+     * Updates an <pre>ACQUIRED</pre> stream with an image that is guaranteed to be used in the next frame.
+     *
+     * This method should be called on the same thread that calls {#link Renderer#beginFrame}, which is
+     * also where the callback is invoked.
+     *
+     * @param hwbuffer {@link android.hardware.HardwareBuffer HardwareBuffer} (requires API level 26)
+     * @param handler {@link java.util.concurrent.Executor Executor} or {@link android.os.Handler Handler}.
+     * @param callback a callback invoked by <code>handler</code> when the <code>hwbuffer</code> can be released.
+     */
+    public void setAcquiredImage(Object hwbuffer, Object handler, Runnable callback) {
+        nSetAcquiredImage(getNativeObject(), mNativeEngine, hwbuffer, handler, callback);
+    }
+
+    /**
+     * Updates the size of the incoming stream. Whether this value is used is
+     * stream dependent. On Android, it must be set when using
+     * {@link Builder#stream(long)}
+     *
+     * @param width  new width of the incoming stream
+     * @param height new height of the incoming stream
+     */
     public void setDimensions(@IntRange(from = 0) int width, @IntRange(from = 0) int height) {
         nSetDimensions(getNativeObject(), width, height);
     }
 
+    /**
+     * Reads back the content of the last frame of a <code>Stream</code> since the last call to
+     * {@link Renderer#beginFrame}.
+     *
+     * <p>The Stream must be a copy stream, which can be checked with {@link #isNative()}.
+     * This function is a no-op otherwise.</p>
+     *
+     * <pre>
+     *
+     *  Stream buffer                  User buffer (PixelBufferDescriptor)
+     *  +--------------------+
+     *  |                    |                .stride         .alignment
+     *  |                    |         ----------------------->-->
+     *  |                    |         O----------------------+--+   low addresses
+     *  |                    |         |          |           |  |
+     *  |             w      |         |          | .top      |  |
+     *  |       <--------->  |         |          V           |  |
+     *  |       +---------+  |         |     +---------+      |  |
+     *  |       |     ^   |  | ======> |     |         |      |  |
+     *  |   x   |    h|   |  |         |.left|         |      |  |
+     *  +------>|     v   |  |         +---->|         |      |  |
+     *  |       +.........+  |         |     +.........+      |  |
+     *  |            ^       |         |                      |  |
+     *  |          y |       |         +----------------------+--+  high addresses
+     *  O------------+-------+
+     *
+     * </pre>
+     *
+     * <p>Typically readPixels() will be called after {@link Renderer#beginFrame}.</p>
+     *
+     * <p>After calling this method, the callback associated with <code>buffer</code>
+     * will be invoked on the main thread, indicating that the read-back has completed.
+     * Typically, this will happen after multiple calls to {@link Renderer#beginFrame},
+     * {@link Renderer#render}, {@link Renderer#endFrame}.</p>
+     *
+     * <p><code>readPixels</code> is intended for debugging and testing.
+     * It will impact performance significantly.</p>
+     *
+     * @param xoffset   left offset of the sub-region to read back
+     * @param yoffset   bottom offset of the sub-region to read back
+     * @param width     width of the sub-region to read back
+     * @param height    height of the sub-region to read back
+     * @param buffer    client-side buffer where the read-back will be written
+     *
+     *                  <p>
+     *                  The following format are always supported:
+     *                      <li>{@link Texture.Format#RGBA}</li>
+     *                      <li>{@link Texture.Format#RGBA_INTEGER}</li>
+     *                  </p>
+     *
+     *                  <p>
+     *                  The following types are always supported:
+     *                      <li>{@link Texture.Type#UBYTE}</li>
+     *                      <li>{@link Texture.Type#UINT}</li>
+     *                      <li>{@link Texture.Type#INT}</li>
+     *                      <li>{@link Texture.Type#FLOAT}</li>
+     *                  </p>
+     *
+     *                  <p>Other combination of format/type may be supported. If a combination is
+     *                  not supported, this operation may fail silently. Use a DEBUG build
+     *                  to get some logs about the failure.</p>
+     *
+     * @exception BufferOverflowException if the specified parameters would result in reading
+     * outside of <code>buffer</code>.
+     */
     public void readPixels(
             @IntRange(from = 0) int xoffset, @IntRange(from = 0) int yoffset,
             @IntRange(from = 0) int width, @IntRange(from = 0) int height,
@@ -128,6 +288,13 @@ public class Stream {
         }
     }
 
+    /**
+     * Returns the presentation time of the currently displayed frame in nanosecond.
+     *
+     * This value can change at any time.
+     *
+     * @return timestamp in nanosecond.
+     */
     public long getTimestamp() {
         return nGetTimestamp(getNativeObject());
     }
@@ -151,6 +318,7 @@ public class Stream {
     private static native void nBuilderHeight(long nativeStreamBuilder, int height);
     private static native long nBuilderBuild(long nativeStreamBuilder, long nativeEngine);
 
+    private static native int nGetStreamType(long nativeStream);
     private static native void nSetDimensions(long nativeStream, int width, int height);
     private static native int nReadPixels(long nativeStream, long nativeEngine,
             int xoffset, int yoffset, int width, int height,
@@ -158,6 +326,6 @@ public class Stream {
             int left, int top, int type, int alignment, int stride, int format,
             Object handler, Runnable callback);
     private static native long nGetTimestamp(long nativeStream);
-
-    private static native boolean nIsNative(long nativeStream);
+    private static native void nSetAcquiredImage(long nativeStream, long nativeEngine,
+            Object hwbuffer, Object handler, Runnable callback);
 }

@@ -681,19 +681,19 @@ n_{ior} = \frac{2}{1 - \sqrt{\fNormal}} - 1
 Table [commonMatReflectance] describes acceptable Fresnel reflectance values for various types of materials (no real world material has a value under 2%).
 
 
-          Material         |    Reflectance   |   Linear value
---------------------------:|:-----------------|:----------------
-Water                      | 2%               | 0.35
-Fabric                     | 4% to 5.6%       | 0.5 to 0.59
-Common liquids             | 2% to 4%         | 0.35 to 0.5
-Common gemstones           | 5% to 16%        | 0.56 to 1.0
-Plastics, glass            | 4% to 5%         | 0.5 to 0.56
-Other dielectric materials | 2% to 5%         | 0.35 to 0.56
-Eyes                       | 2.5%             | 0.39
-Skin                       | 2.8%             | 0.42
-Hair                       | 4.6%             | 0.54
-Teeth                      | 5.8%             | 0.6
-Default value              | 4%               | 0.5
+          Material         |    Reflectance   |        IOR       |   Linear value
+--------------------------:|:-----------------|:-----------------|:----------------
+Water                      | 2%               | 1.33             | 0.35
+Fabric                     | 4% to 5.6%       | 1.5 to 1.62      | 0.5 to 0.59
+Common liquids             | 2% to 4%         | 1.33 to 1.5      | 0.35 to 0.5
+Common gemstones           | 5% to 16%        | 1.58 to 2.33     | 0.56 to 1.0
+Plastics, glass            | 4% to 5%         | 1.5 to 1.58      | 0.5 to 0.56
+Other dielectric materials | 2% to 5%         | 1.33 to 1.58     | 0.35 to 0.56
+Eyes                       | 2.5%             | 1.38             | 0.39
+Skin                       | 2.8%             | 1.4              | 0.42
+Hair                       | 4.6%             | 1.55             | 0.54
+Teeth                      | 5.8%             | 1.63             | 0.6
+Default value              | 4%               | 1.5              | 0.5
 [Table [commonMatReflectance]: Reflectance of common materials (source: Real-Time Rendering 4th Edition)]
 
 Table [fNormalMetals] lists the $\fNormal$ values for a few metals. The values are given in sRGB and must be used as the base color in our material model. Please refer to the annex, section [Specular color], for an explanation of how these sRGB colors are computed from measured data.
@@ -851,10 +851,10 @@ This corresponds to a Fresnel reflectance of 4% that we know is associated with 
 Because we must take into account the loss of energy caused by the addition of the clear coat layer, we can reformulate the BRDF from equation $\ref{brdf}$ thusly:
 
 $$\begin{equation}
-f(v,l)=\fDiffuse(n,l) (1 - F_c) + \fSpecular(n,l) (1 - F_c)^2 + f_c(n,l)
+f(v,l)=\fDiffuse(n,l) (1 - F_c) + \fSpecular(n,l) (1 - F_c) + f_c(n,l)
 \end{equation}$$
 
-Where $F_c$ is the Fresnel term of the clear coat BRDF and $f_c$ the clear coat BRDF. The multiplication by $(1 - F_c)^2$ of the specular component is to remain energy conservative as the light enters and exits the clear coat layer. The multiplication by $1 - F_c$ of the diffuse component is an attempt at energy conservation.
+Where $F_c$ is the Fresnel term of the clear coat BRDF and $f_c$ the clear coat BRDF 
 
 ### Clear coat parameterization
 
@@ -867,7 +867,7 @@ The clear coat material model encompasses all the parameters previously defined 
 **ClearCoatRoughness** | Perceived smoothness or roughness of the clear coat layer. Scalar between 0 and 1
 [Table [clearCoatParameters]: Clear coat model parameters]
 
-The clear coat roughness parameter is remapped and clamped in a similar way to the roughness parameter of the standard material. The main difference is that we want to lower the clear coat roughness range from [0..1] to the smaller [0..0.6] range. This remapping is arbitrary but matches the fact that clear coat layers are almost always glossy. The remapped value is squared to produce a perceptually linear roughness value.
+The clear coat roughness parameter is remapped and clamped in a similar way to the roughness parameter of the standard material.
 
 Figure [clearCoat] and figure [clearCoatRoughness] show how the clear coat parameters affect the appearance of a surface.
 
@@ -882,7 +882,7 @@ void BRDF(...) {
     // compute Fd and Fr from standard model
 
     // remapping and linearization of clear coat roughness
-    clearCoatPerceptualRoughness = mix(0.089, 0.6, clearCoatPerceptualRoughness);
+    clearCoatPerceptualRoughness = clamp(clearCoatPerceptualRoughness, 0.089, 1.0);
     clearCoatRoughness = clearCoatPerceptualRoughness * clearCoatPerceptualRoughness;
 
     // clear coat BRDF
@@ -1143,7 +1143,7 @@ Where $F(v,h)$ is the Fresnel term of the cloth specular BRDF in equation $\ref{
 Subsurface scattering is implemented using the wrapped diffuse lighting technique, in its energy conservative form:
 
 $$\begin{equation}
-f_{d}(v,h) = \frac{c_{diff}}{\pi}(1 - F(v,h)) \left< \NoL + \frac{w}{(1 + w)} \right> \left< c_{subsurface} + \NoL \right>
+f_{d}(v,h) = \frac{c_{diff}}{\pi}(1 - F(v,h)) \left< \NoL + \frac{w}{(1 + w)^2} \right> \left< c_{subsurface} + \NoL \right>
 \end{equation}$$
 
 Where $w$ is a value between 0 and 1 defining by how much the diffuse light should wrap around the terminator. To avoid introducing another parameter, we fix $w = 0.5$. Note that with wrap diffuse lighting, the diffuse term must not be multiplied by $\NoL$. The effect of this cheap
@@ -2186,10 +2186,12 @@ Figure [iblVisualized] shows how indirect lighting interacts with dielectrics an
 Listing [iblEvaluation] presents a GLSL implementation to evaluate the IBL, using the various textures described in the previous sections. 
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-vec3 ibl(vec3 n, vec3 v, vec3 diffuseColor, vec3 f0, vec3 f90, float perceptualRoughness) {
+vec3 ibl(vec3 n, vec3 v, vec3 diffuseColor, vec3 f0, vec3 f90,
+        float perceptualRoughness) {
     vec3 r = reflect(n);
     vec3 Ld = textureCube(irradianceEnvMap, r) * diffuseColor;
-    vec3 Lld = textureCube(prefilteredEnvMap, r, computeLODFromRoughness(perceptualRoughness));
+    float lod = computeLODFromRoughness(perceptualRoughness);
+    vec3 Lld = textureCube(prefilteredEnvMap, r, lod);
     vec2 Ldfg = textureLod(dfgLut, vec2(dot(n, v), perceptualRoughness), 0.0).xy;
     vec3 Lr =  (f0 * Ldfg.x + f90 * Ldfg.y) * Lld;
     return Ld + Lr;
@@ -2214,20 +2216,6 @@ vec3 irradianceSH(vec3 n) {
         + sphericalHarmonics[6] * (3.0 * n.z * n.z - 1.0)
         + sphericalHarmonics[7] * (n.z * n.x)
         + sphericalHarmonics[8] * (n.x * n.x - n.y * n.y);
-}
-
-// NOTE: this approximation is not valid if the energy compensation term
-// for multiscattering is applied. We use the DFG LUT solution to implement
-// multiscattering
-vec2 prefilteredDFG(float NoV, float perceptualRoughness) {
-    // Karis' approximation based on Lazarov's
-    const vec4 c0 = vec4(-1.0, -0.0275, -0.572,  0.022);
-    const vec4 c1 = vec4( 1.0,  0.0425,  1.040, -0.040);
-    vec4 r = roughness * c0 + c1;
-    float a004 = min(r.x * r.x, exp2(-9.28 * NoV)) * r.x + r.y;
-    return vec2(-1.04, 1.04) * a004 + r.zw;
-    // Zioma's approximation based on Karis
-    // return vec2(1.0, pow(1.0 - max(perceptualRoughness, NoV), 3.0));
 }
 
 // NOTE: this is the DFG LUT implementation of the function above

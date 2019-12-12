@@ -1,0 +1,175 @@
+name: Release
+
+# This Workflow can be triggered two ways:
+# 1. A GitHub release is created (using the GitHub web UI). This triggers all of the platforms to build and upload assets.
+# 2. A repository_dispatch API event is sent. This triggers a build for only the platform specified in the dispatch event.
+
+env:
+  RELEASE_TAG: ${{ github.event.client_payload.release_tag }}
+
+on:
+  repository_dispatch:
+  release:
+    types: [created]
+
+jobs:
+  build-desktop:
+    name: build-desktop
+    runs-on: ${{ matrix.os }}
+    if: github.event_name == 'release' || github.event.client_payload.platform == 'desktop'
+
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+
+    steps:
+      - name: Decide Git ref
+        id: git_ref
+        run: |
+          REF=${RELEASE_TAG:-${GITHUB_REF}}
+          TAG=${REF##*/}
+          echo ::set-output name=ref::${REF}
+          echo ::set-output name=tag::${TAG}
+      - uses: actions/checkout@v1.0.0
+        with:
+          ref: ${{ steps.git_ref.outputs.ref }}
+      - name: Run build script
+        run: |
+          WORKFLOW_OS=`echo \`uname\` | sed "s/Darwin/mac/" | tr [:upper:] [:lower:]`
+          cd build/$WORKFLOW_OS && ./build.sh release
+      - name: Upload release assets
+        run: |
+          pip3 install setuptools
+          pip3 install PyGithub
+          DATE=`date +%Y%m%d`
+          if [ -f out/filament-release-darwin.tgz ]; then mv out/filament-release-darwin.tgz out/filament-${DATE}-mac.tgz; fi;
+          if [ -f out/filament-release-linux.tgz ]; then mv out/filament-release-linux.tgz out/filament-${DATE}-linux.tgz; fi;
+          python3 build/common/upload-assets.py ${TAG} out/*.tgz
+        env:
+          TAG: ${{ steps.git_ref.outputs.tag }}
+          GITHUB_API_KEY: ${{ secrets.GITHUB_API_KEY }}
+
+  build-web:
+    name: build-web
+    runs-on: macos-latest
+    if: github.event_name == 'release' || github.event.client_payload.platform == 'web'
+
+    steps:
+      - name: Decide Git ref
+        id: git_ref
+        run: |
+          REF=${RELEASE_TAG:-${GITHUB_REF}}
+          TAG=${REF##*/}
+          echo ::set-output name=ref::${REF}
+          echo ::set-output name=tag::${TAG}
+      - uses: actions/checkout@v1.0.0
+        with:
+          ref: ${{ steps.git_ref.outputs.ref }}
+      - name: Run build script
+        run: |
+          cd build/web && ./build.sh release
+      - name: Upload release assets
+        run: |
+          pip3 install setuptools
+          pip3 install PyGithub
+          DATE=`date +%Y%m%d`
+          mv out/filament-release-web.tgz out/filament-${DATE}-web.tgz
+          python3 build/common/upload-assets.py ${TAG} out/*.tgz
+        env:
+          TAG: ${{ steps.git_ref.outputs.tag }}
+          GITHUB_API_KEY: ${{ secrets.GITHUB_API_KEY }}
+
+  build-android:
+    name: build-android
+    runs-on: macos-latest
+    if: github.event_name == 'release' || github.event.client_payload.platform == 'android'
+
+    steps:
+      - name: Decide Git ref
+        id: git_ref
+        run: |
+          REF=${RELEASE_TAG:-${GITHUB_REF}}
+          TAG=${REF##*/}
+          echo ::set-output name=ref::${REF}
+          echo ::set-output name=tag::${TAG}
+      - uses: actions/checkout@v1.0.0
+        with:
+          ref: ${{ steps.git_ref.outputs.ref }}
+      - name: Run build script
+        run: |
+          cd build/android && ./build.sh release
+      - name: Upload release assets
+        run: |
+          pip3 install setuptools
+          pip3 install PyGithub
+          DATE=`date +%Y%m%d`
+          mv out/filament-android-release.aar out/filament-${DATE}-android.aar
+          mv out/filamat-android-full-release.aar out/filamat-${DATE}-full-android.aar
+          mv out/filamat-android-lite-release.aar out/filamat-${DATE}-lite-android.aar
+          mv out/gltfio-android-release.aar out/gltfio-${DATE}-android.aar
+          python3 build/common/upload-assets.py ${TAG} out/*.aar
+        env:
+          TAG: ${{ steps.git_ref.outputs.tag }}
+          GITHUB_API_KEY: ${{ secrets.GITHUB_API_KEY }}
+
+  build-ios:
+    name: build-ios
+    runs-on: macos-latest
+    if: github.event_name == 'release' || github.event.client_payload.platform == 'ios'
+
+    steps:
+      - name: Decide Git ref
+        id: git_ref
+        run: |
+          REF=${RELEASE_TAG:-${GITHUB_REF}}
+          TAG=${REF##*/}
+          echo ::set-output name=ref::${REF}
+          echo ::set-output name=tag::${TAG}
+      - uses: actions/checkout@v1.0.0
+        with:
+          ref: ${{ steps.git_ref.outputs.ref }}
+      - name: Run build script
+        run: |
+          cd build/ios && ./build.sh release
+      - name: Upload release assets
+        run: |
+          pip3 install setuptools
+          pip3 install PyGithub
+          DATE=`date +%Y%m%d`
+          mv out/filament-release-ios.tgz out/filament-${DATE}-ios.tgz
+          python3 build/common/upload-assets.py ${TAG} out/*.tgz
+        env:
+          TAG: ${{ steps.git_ref.outputs.tag }}
+          GITHUB_API_KEY: ${{ secrets.GITHUB_API_KEY }}
+
+  build-windows:
+    name: build-windows
+    runs-on: windows-latest
+    if: github.event_name == 'release' || github.event.client_payload.platform == 'windows'
+
+    steps:
+      - name: Decide Git ref
+        id: git_ref
+        run: |
+          REF=${RELEASE_TAG:-${GITHUB_REF}}
+          TAG=${REF##*/}
+          echo ::set-output name=ref::${REF}
+          echo ::set-output name=tag::${TAG}
+        shell: bash
+      - uses: actions/checkout@v1.0.0
+        with:
+          ref: ${{ steps.git_ref.outputs.ref }}
+      - name: Run build script
+        run: |
+          build\windows\build-github.bat release
+        shell: cmd
+      - name: Upload release assets
+        run: |
+          pip3 install PyGithub
+          DATE=`date +%Y%m%d`
+          mv out/filament-windows.tgz out/filament-${DATE}-windows.tgz
+          python build/common/upload-assets.py ${TAG} out/*.tgz
+        shell: bash
+        env:
+          TAG: ${{ steps.git_ref.outputs.tag }}
+          GITHUB_API_KEY: ${{ secrets.GITHUB_API_KEY }}

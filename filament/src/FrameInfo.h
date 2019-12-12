@@ -86,7 +86,7 @@ public:
     explicit FrameInfoManager(FEngine& engine);
     ~FrameInfoManager() noexcept;
 
-    Engine& getEngine() { return mEngine; }
+    FEngine& getEngine() { return mEngine; }
 
     void run() {
         mSyncThread.run();

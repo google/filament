@@ -37,11 +37,11 @@ clean.doFirst {
 }
 
 android {
-    compileSdkVersion 28
+    compileSdkVersion 29
     defaultConfig {
         applicationId "com.google.android.filament.textured"
-        minSdkVersion 26
-        targetSdkVersion 28
+        minSdkVersion 19
+        targetSdkVersion 29
         versionCode 1
         versionName "1.0"
     }

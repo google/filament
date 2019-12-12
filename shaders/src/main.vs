@@ -47,12 +47,15 @@ void main() {
     #else // MATERIAL_HAS_ANISOTROPY || MATERIAL_HAS_NORMAL
         // Without anisotropy or normal mapping we only need the normal vector
         toTangentFrame(mesh_tangents, material.worldNormal);
-        material.worldNormal = objectUniforms.worldFromModelNormalMatrix * material.worldNormal;
+
         #if defined(HAS_SKINNING_OR_MORPHING)
             if (objectUniforms.skinningEnabled == 1) {
                 skinNormal(material.worldNormal, mesh_bone_indices, mesh_bone_weights);
             }
         #endif
+
+        material.worldNormal = objectUniforms.worldFromModelNormalMatrix * material.worldNormal;
+
     #endif // MATERIAL_HAS_ANISOTROPY || MATERIAL_HAS_NORMAL
 #endif // HAS_ATTRIBUTE_TANGENTS
 
@@ -99,6 +102,10 @@ void main() {
     gl_Position = getPosition();
 #else
     gl_Position = getClipFromWorldMatrix() * getWorldPosition(material);
+#endif
+
+#ifdef MATERIAL_HAS_CLIP_SPACE_TRANSFORM
+    gl_Position = getClipSpaceTransform(material) * gl_Position;
 #endif
 
 #if defined(TARGET_VULKAN_ENVIRONMENT)

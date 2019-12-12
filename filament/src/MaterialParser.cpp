@@ -108,31 +108,9 @@ bool MaterialParser::parse() noexcept {
     return true;
 }
 
-bool MaterialParser::isShadingMaterial() const noexcept {
-    ChunkContainer const& cc = getChunkContainer();
-    return cc.hasChunk(MaterialName) &&
-           cc.hasChunk(MaterialVersion) &&
-           cc.hasChunk(MaterialUib) &&
-           cc.hasChunk(MaterialSib) &&
-           (cc.hasChunk(MaterialGlsl) || cc.hasChunk(MaterialSpirv) || cc.hasChunk(MaterialMetal)) &&
-           cc.hasChunk(MaterialShaderModels);
-}
-
-bool MaterialParser::isPostProcessMaterial() const noexcept {
-    ChunkContainer const& cc = getChunkContainer();
-    return cc.hasChunk(PostProcessVersion) &&
-           ((cc.hasChunk(MaterialSpirv) && cc.hasChunk(DictionarySpirv)) ||
-            (cc.hasChunk(MaterialGlsl) && cc.hasChunk(DictionaryGlsl)) ||
-            (cc.hasChunk(MaterialMetal) && cc.hasChunk(DictionaryMetal)));
-}
-
 // Accessors
 bool MaterialParser::getMaterialVersion(uint32_t* value) const noexcept {
     return mImpl.getFromSimpleChunk(ChunkType::MaterialVersion, value);
-}
-
-bool MaterialParser::getPostProcessVersion(uint32_t* value) const noexcept {
-    return mImpl.getFromSimpleChunk(ChunkType::PostProcessVersion, value);
 }
 
 bool MaterialParser::getName(utils::CString* cstring) const noexcept {
@@ -161,6 +139,10 @@ bool MaterialParser::getSIB(SamplerInterfaceBlock* sib) const noexcept {
 
 bool MaterialParser::getShaderModels(uint32_t* value) const noexcept {
     return mImpl.getFromSimpleChunk(ChunkType::MaterialShaderModels, value);
+}
+
+bool MaterialParser::getMaterialProperties(uint64_t* value) const noexcept {
+    return mImpl.getFromSimpleChunk(ChunkType::MaterialProperties, value);
 }
 
 bool MaterialParser::getDepthWriteSet(bool* value) const noexcept {
@@ -262,6 +244,18 @@ bool MaterialParser::getRequiredAttributes(AttributeBitset* value) const noexcep
     *value = AttributeBitset();
     value->setValue(rawAttributes);
     return true;
+}
+
+bool MaterialParser::getRefractionMode(RefractionMode* value) const noexcept {
+    static_assert(sizeof(RefractionMode) == sizeof(uint8_t),
+            "Refraction expected size is wrong");
+    return mImpl.getFromSimpleChunk(ChunkType::MaterialRefraction, (uint8_t*)value);
+}
+
+bool MaterialParser::getRefractionType(RefractionType* value) const noexcept {
+    static_assert(sizeof(RefractionType) == sizeof(uint8_t),
+            "RefractionType expected size is wrong");
+    return mImpl.getFromSimpleChunk(ChunkType::MaterialRefractionType, (uint8_t*)value);
 }
 
 bool MaterialParser::getShader(ShaderBuilder& shader,

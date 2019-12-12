@@ -23,6 +23,7 @@
 #include <Metal/Metal.h>
 #include <QuartzCore/QuartzCore.h> // for CAMetalLayer
 
+#include "MetalBuffer.h"
 #include "MetalContext.h"
 #include "MetalDefines.h"
 #include "MetalEnums.h"
@@ -43,63 +44,40 @@ namespace metal {
 struct MetalSwapChain : public HwSwapChain {
     MetalSwapChain(id<MTLDevice> device, CAMetalLayer* nativeWindow);
 
+    // Instantiate a headless SwapChain.
+    MetalSwapChain(int32_t width, int32_t height);
+
+    bool isHeadless() { return layer == nullptr; }
+
     CAMetalLayer* layer = nullptr;
+    NSUInteger surfaceWidth = 0;
     NSUInteger surfaceHeight = 0;
 };
 
 struct MetalVertexBuffer : public HwVertexBuffer {
-    MetalVertexBuffer(id<MTLDevice> device, uint8_t bufferCount, uint8_t attributeCount,
+    MetalVertexBuffer(MetalContext& context, uint8_t bufferCount, uint8_t attributeCount,
             uint32_t vertexCount, AttributeArray const& attributes);
     ~MetalVertexBuffer();
 
-    std::vector<id<MTLBuffer>> buffers;
+    std::vector<MetalBuffer*> buffers;
 };
 
 struct MetalIndexBuffer : public HwIndexBuffer {
-    MetalIndexBuffer(id<MTLDevice> device, uint8_t elementSize, uint32_t indexCount);
-    ~MetalIndexBuffer();
+    MetalIndexBuffer(MetalContext& context, uint8_t elementSize, uint32_t indexCount);
 
-    id<MTLBuffer> buffer;
+    MetalBuffer buffer;
 };
 
-class MetalUniformBuffer : public HwUniformBuffer {
-public:
+struct MetalUniformBuffer : public HwUniformBuffer {
     MetalUniformBuffer(MetalContext& context, size_t size);
-    ~MetalUniformBuffer();
 
-    size_t getSize() const { return size; }
-
-    /**
-     * Update the uniform with data inside src. Potentially allocates a new buffer allocation to
-     * hold the bytes which will be released when the current frame is finished.
-     */
-    void copyIntoBuffer(void* src, size_t size);
-
-    /**
-     * Denotes that this uniform is used for a draw call ensuring that its allocation remains valid
-     * until the end of the current frame.
-     *
-     * @return The MTLBuffer representing the current state of the uniform to bind, or nil if there
-     * is no device allocation.
-     */
-    id<MTLBuffer> getGpuBufferForDraw();
-
-    /**
-     * @return A pointer to the CPU buffer holding the uniform data or nullptr if there isn't one.
-     */
-    void* getCpuBuffer() const;
-
-private:
-    size_t size = 0;
-    const MetalBufferPoolEntry* bufferPoolEntry = nullptr;
-    void* cpuBuffer = nullptr;
-    MetalContext& context;
+    MetalBuffer buffer;
 };
 
 struct MetalRenderPrimitive : public HwRenderPrimitive {
     void setBuffers(MetalVertexBuffer* vertexBuffer, MetalIndexBuffer* indexBuffer,
             uint32_t enabledAttributes);
-    // The pointers to MetalVertexBuffer, MetalIndexBuffer, and id<MTLBuffer> are "weak".
+    // The pointers to MetalVertexBuffer and MetalIndexBuffer are "weak".
     // The MetalVertexBuffer and MetalIndexBuffer must outlive the MetalRenderPrimitive.
 
     MetalVertexBuffer* vertexBuffer = nullptr;
@@ -108,13 +86,12 @@ struct MetalRenderPrimitive : public HwRenderPrimitive {
     // This struct is used to create the pipeline description to describe vertex assembly.
     VertexDescription vertexDescription = {};
 
-    std::vector<id<MTLBuffer>> buffers;
+    std::vector<MetalBuffer*> buffers;
     std::vector<NSUInteger> offsets;
 };
 
 struct MetalProgram : public HwProgram {
     MetalProgram(id<MTLDevice> device, const Program& program) noexcept;
-    ~MetalProgram();
 
     id<MTLFunction> vertexFunction;
     id<MTLFunction> fragmentFunction;
@@ -132,10 +109,13 @@ struct MetalTexture : public HwTexture {
     void loadCubeImage(const PixelBufferDescriptor& data, const FaceOffsets& faceOffsets,
             int miplevel);
 
+    NSUInteger getBytesPerRow(PixelDataType type, NSUInteger width) const noexcept;
+
     MetalContext& context;
     MetalExternalImage externalImage;
     id<MTLTexture> texture = nil;
-    uint8_t bytesPerPixel;
+    uint8_t bytesPerElement; // The number of bytes per pixel, or block (for compressed texture formats).
+    uint8_t blockWidth; // The number of horizontal pixels per block (only for compressed texture formats).
     TextureReshaper reshaper;
 };
 
@@ -149,7 +129,6 @@ public:
             id<MTLTexture> color, id<MTLTexture> depth, uint8_t colorLevel, uint8_t depthLevel);
     explicit MetalRenderTarget(MetalContext* context)
             : HwRenderTarget(0, 0), context(context), defaultRenderTarget(true) {}
-    ~MetalRenderTarget();
 
     bool isDefaultRenderTarget() const { return defaultRenderTarget; }
     uint8_t getSamples() const { return samples; }
@@ -185,7 +164,6 @@ class MetalFence : public HwFence {
 public:
 
     MetalFence(MetalContext& context);
-    ~MetalFence();
 
     FenceStatus wait(uint64_t timeoutNs);
 

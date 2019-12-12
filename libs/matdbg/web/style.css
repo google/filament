@@ -15,9 +15,13 @@ a, a:visited {
     cursor: pointer;
 }
 
-a:hover, a.active {
+a:hover, a.current {
     font-weight: bold;
     color: #07f;
+}
+
+a.inactive {
+    color: #aaa;
 }
 
 pre {

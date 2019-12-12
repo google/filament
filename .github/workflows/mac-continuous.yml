@@ -1,0 +1,17 @@
+name: macOS
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build-mac:
+    name: build-mac
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v1.0.0
+      - name: Run build script
+        run: |
+          cd build/mac && ./build.sh continuous

@@ -34,7 +34,7 @@ Filament.Buffer = function(typedarray) {
         typedarray = new Uint8Array(typedarray);
     }
     const ta = typedarray;
-    const bd = new Filament.driver$BufferDescriptor(ta);
+    const bd = new Filament.driver$BufferDescriptor(ta.byteLength);
     const uint8array = new Uint8Array(ta.buffer, ta.byteOffset, ta.byteLength);
     bd.getBytes().set(uint8array);
     return bd;
@@ -53,7 +53,7 @@ Filament.PixelBuffer = function(typedarray, format, datatype) {
         typedarray = new Uint8Array(typedarray);
     }
     const ta = typedarray;
-    const bd = new Filament.driver$PixelBufferDescriptor(ta, format, datatype);
+    const bd = new Filament.driver$PixelBufferDescriptor(ta.byteLength, format, datatype);
     const uint8array = new Uint8Array(ta.buffer, ta.byteOffset, ta.byteLength);
     bd.getBytes().set(uint8array);
     return bd;
@@ -73,7 +73,7 @@ Filament.CompressedPixelBuffer = function(typedarray, cdatatype, faceSize) {
         typedarray = new Uint8Array(typedarray);
     }
     const ta = typedarray;
-    const bd = new Filament.driver$PixelBufferDescriptor(ta, cdatatype, faceSize, true);
+    const bd = new Filament.driver$PixelBufferDescriptor(ta.byteLength, cdatatype, faceSize, true);
     const uint8array = new Uint8Array(ta.buffer, ta.byteOffset, ta.byteLength);
     bd.getBytes().set(uint8array);
     return bd;
@@ -254,7 +254,7 @@ Filament._createTextureFromKtx = function(ktxdata, engine, options) {
     options = options || {};
     const ktx = options['ktx'] || new Filament.KtxBundle(ktxdata);
     const srgb = !!options['srgb'];
-    return Filament.KtxUtility$createTexture(engine, ktx, srgb);
+    return Filament.ktx$createTexture(engine, ktx, srgb);
 };
 
 Filament._createIblFromKtx = function(ktxdata, engine, options) {
