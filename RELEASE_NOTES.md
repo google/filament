@@ -11,6 +11,7 @@ A new header is inserted each time a *tag* is created.
 - Fixed bad state after removing an IBL from the Scene.
 - Fixed incorrect punctual light binning (affected Metal and Vulkan backends).
 - Fixed crash when using a Metal headless SwapChain with an Intel integrated GPU.
+- cmgen now places KTX files directly in the specified deployment folder.
 
 ## v1.4.3
 

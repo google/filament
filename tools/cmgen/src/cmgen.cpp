@@ -496,13 +496,18 @@ int main(int argc, char* argv[]) {
     utils::Path iname(command);
 
     if (g_deploy) {
-        utils::Path out_dir = g_deploy_dir + iname.getNameWithoutExtension();
+        utils::Path sh_dir = g_deploy_dir;
+
+        // KTX files are self-contained and do not need to live in a subfolder.
+        if (g_type != OutputType::KTX) {
+            sh_dir += iname.getNameWithoutExtension();
+        }
 
         // generate pre-scaled irradiance sh to text file
         g_sh_compute = 3;
         g_sh_shader = true;
         g_sh_irradiance = true;
-        g_sh_filename = out_dir + "sh.txt";
+        g_sh_filename = sh_dir + "sh.txt";
         g_sh_file = ShFile::SH_TEXT;
         g_sh_output = true;
 
@@ -899,7 +904,10 @@ float lodToPerceptualRoughness(float lod) {
 void iblRoughnessPrefilter(
         utils::JobSystem& js, const utils::Path& iname, const std::vector<Cubemap>& levels,
         bool prefilter, const utils::Path& dir) {
-    utils::Path outputDir(dir.getAbsolutePath() + iname.getNameWithoutExtension());
+    utils::Path outputDir = dir.getAbsolutePath();
+    if (g_type != OutputType::KTX) {
+        outputDir += iname.getNameWithoutExtension();
+    }
     if (!outputDir.exists()) {
         outputDir.mkdirRecursive();
     }
@@ -1028,7 +1036,7 @@ void iblRoughnessPrefilter(
         }
         std::vector<uint8_t> fileContents(container.getSerializedLength());
         container.serialize(fileContents.data(), (uint32_t) fileContents.size());
-        std::string filename = iname.getNameWithoutExtension() + "_ibl.ktx";
+        std::string filename = dir.getNameWithoutExtension() + "_ibl.ktx";
         auto fullpath = outputDir + filename;
         std::ofstream outputStream(fullpath.c_str(), std::ios::out | std::ios::binary);
         outputStream.write((const char*) fileContents.data(), fileContents.size());
@@ -1170,7 +1178,10 @@ void iblLutDfg(utils::JobSystem& js, const utils::Path& filename, size_t size, b
 
 void extractCubemapFaces(utils::JobSystem& js, const utils::Path& iname, const Cubemap& cm,
         const utils::Path& dir) {
-    utils::Path outputDir(dir.getAbsolutePath() + iname.getNameWithoutExtension());
+    utils::Path outputDir(dir.getAbsolutePath());
+    if (g_type != OutputType::KTX) {
+        outputDir += iname.getNameWithoutExtension();
+    }
     if (!outputDir.exists()) {
         outputDir.mkdirRecursive();
     }
@@ -1190,7 +1201,7 @@ void extractCubemapFaces(utils::JobSystem& js, const utils::Path& iname, const C
             .pixelDepth = 0,
         };
         exportKtxFaces(container, 0, cm);
-        std::string filename = iname.getNameWithoutExtension() + "_skybox.ktx";
+        std::string filename = dir.getNameWithoutExtension() + "_skybox.ktx";
         auto fullpath = outputDir + filename;
         std::vector<uint8_t> fileContents(container.getSerializedLength());
         container.serialize(fileContents.data(), (uint32_t) fileContents.size());
