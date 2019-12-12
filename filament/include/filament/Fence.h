@@ -58,9 +58,6 @@ public:
      *
      * Blocks the current thread until the Fence signals.
      *
-     * \warning Use with caution on macOS. Currently this may lead to deadlock on macOS because we
-     * block the GL thread when binding a Cocoa view to the GL context.
-     *
      * @param mode      Whether the command stream is flushed before waiting or not.
      * @param timeout   Wait time out. Using a \p timeout of 0 is a way to query the state of the fence.
      *                  A \p timeout value of FENCE_WAIT_FOR_EVER is used to disable the timeout.
