@@ -68,6 +68,9 @@ function print_help {
     echo "    Desktop matc target, release build:"
     echo "        \$ ./$self_name release matc"
     echo ""
+    echo "    Build gltf_viewer then immediately run it with no arguments:"
+    echo "        \$ ./$self_name release run_gltf_viewer"
+    echo ""
  }
 
 # Requirements
@@ -449,7 +452,7 @@ function ensure_ios_toolchain {
     echo "iOS toolchain file does not exist."
     echo "It will automatically be downloaded from http://opensource.apple.com."
 
-    if [[ "$KOKORO_BUILD_ID" || "$GITHUB_WORKFLOW" ]]; then
+    if [[ "$GITHUB_WORKFLOW" ]]; then
         REPLY=y
     else
         read -p "Continue? (y/n) " -n 1 -r
