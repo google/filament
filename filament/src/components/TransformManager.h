@@ -115,7 +115,7 @@ public:
         math::float3 worldTranslationLo = mManager[ci].worldTranslationLo;
         math::double3 translation = math::double3{ world[3].xyz } + worldTranslationLo;
         return { world[0], world[1], world[2],
-                 math::float4{ translation, world[3][3] }};
+                 math::double4{ translation, world[3][3] }};
     }
 
 private:
