@@ -18,7 +18,7 @@
 
 #if defined(ANDROID)
     #ifndef USE_EXTERNAL_GLES3
-        #include "opengl/PlatformEGL.h"
+        #include "opengl/PlatformEGLAndroid.h"
     #endif
     #if defined (FILAMENT_DRIVER_SUPPORTS_VULKAN)
         #include "vulkan/PlatformVkAndroid.h"
@@ -110,8 +110,10 @@ DefaultPlatform* DefaultPlatform::create(Backend* backend) noexcept {
     }
     #if defined(USE_EXTERNAL_GLES3)
         return nullptr;
-    #elif defined(ANDROID)
+    #elif defined(EGL) && !defined(ANDROID)
         return new PlatformEGL();
+    #elif defined(ANDROID)
+        return new PlatformEGLAndroid();
     #elif defined(IOS)
         return new PlatformCocoaTouchGL();
     #elif defined(__APPLE__)
@@ -125,7 +127,6 @@ DefaultPlatform* DefaultPlatform::create(Backend* backend) noexcept {
     #else
         return new PlatformDummyGL();
     #endif
-    return nullptr;
 }
 
 // destroys an Platform create by create()

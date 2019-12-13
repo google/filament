@@ -71,6 +71,7 @@ set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fPIE -pie -static-libstdc
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -static-libstdc++" CACHE STRING "Toolchain LDFLAGS")
 
 set(ANDROID TRUE)
+set(EGL TRUE)
 
 # we are compiling Android on Windows
 set(ANDROID_ON_WINDOWS FALSE)
