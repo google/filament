@@ -277,6 +277,7 @@ export class IndirectLight {
     public getRotation(): mat3;
     public static getDirectionEstimate(f32array: any): float3;
     public static getColorEstimate(f32array: any, direction: float3): float4;
+    shfloats: Array<number>;
 }
 
 export class IndirectLight$Builder {
