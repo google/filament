@@ -48,7 +48,7 @@ fi
 # optimized for loading into Filament.
 mkdir -p "${PROJECT_DIR}/generated/"
 "${filamesh_path}" \
-    "${PROJECT_DIR}/../../../assets/models/cube/cube.obj" \
+    "${PROJECT_DIR}/../../../assets/models/rounded_cube/rounded_cube.obj" \
     "${PROJECT_DIR}/generated/cube.filamesh"
 
 # The matc tool compiles the clear_coat.mat, shadow_plane.mat, and camera_feed.mat materials into

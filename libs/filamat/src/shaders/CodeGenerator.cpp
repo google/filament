@@ -546,6 +546,11 @@ char const* CodeGenerator::getConstantName(MaterialBuilder::Property property) n
         case Property::EMISSIVE:             return "EMISSIVE";
         case Property::NORMAL:               return "NORMAL";
         case Property::POST_LIGHTING_COLOR:  return "POST_LIGHTING_COLOR";
+        case Property::CLIP_SPACE_TRANSFORM: return "CLIP_SPACE_TRANSFORM";
+        case Property::ABSORPTION:           return "ABSORPTION";
+        case Property::TRANSMISSION:         return "TRANSMISSION";
+        case Property::IOR:                  return "IOR";
+        case Property::MICRO_THICKNESS:      return "MICRO_THICKNESS";
     }
 }
 

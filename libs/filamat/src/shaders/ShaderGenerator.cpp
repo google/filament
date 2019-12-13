@@ -284,6 +284,33 @@ const std::string ShaderGenerator::createFragmentProgram(filament::backend::Shad
             material.specularAO : !isMobileTarget(shaderModel);
     cg.generateDefine(fs, "SPECULAR_AMBIENT_OCCLUSION", specularAO ? 1u : 0u);
 
+    cg.generateDefine(fs, "HAS_REFRACTION", material.refractionMode != RefractionMode::NONE);
+    if (material.refractionMode != RefractionMode::NONE) {
+        cg.generateDefine(fs, "REFRACTION_MODE_CUBEMAP", uint32_t(RefractionMode::CUBEMAP));
+        cg.generateDefine(fs, "REFRACTION_MODE_SCREEN_SPACE", uint32_t(RefractionMode::SCREEN_SPACE));
+        switch (material.refractionMode) {
+            case NONE:
+                // can't be here
+                break;
+            case CUBEMAP:
+                cg.generateDefine(fs, "REFRACTION_MODE", "REFRACTION_MODE_CUBEMAP");
+                break;
+            case SCREEN_SPACE:
+                cg.generateDefine(fs, "REFRACTION_MODE", "REFRACTION_MODE_SCREEN_SPACE");
+                break;
+        }
+        cg.generateDefine(fs, "REFRACTION_TYPE_SOLID", uint32_t(RefractionType::SOLID));
+        cg.generateDefine(fs, "REFRACTION_TYPE_THIN", uint32_t(RefractionType::THIN));
+        switch (material.refractionType) {
+            case SOLID:
+                cg.generateDefine(fs, "REFRACTION_TYPE", "REFRACTION_TYPE_SOLID");
+                break;
+            case THIN:
+                cg.generateDefine(fs, "REFRACTION_TYPE", "REFRACTION_TYPE_THIN");
+                break;
+        }
+    }
+
     bool multiBounceAO = material.multiBounceAOSet ?
             material.multiBounceAO : !isMobileTarget(shaderModel);
     cg.generateDefine(fs, "MULTI_BOUNCE_AMBIENT_OCCLUSION", multiBounceAO ? 1u : 0u);

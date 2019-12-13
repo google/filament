@@ -31,6 +31,15 @@
 namespace filament {
 namespace backend {
 
+/**
+ * A descriptor to an image in main memory, typically used to transfer image data from the CPU
+ * to the GPU.
+ *
+ * A PixelBufferDescriptor owns the memory buffer it references, therefore PixelBufferDescriptor
+ * cannot be copied, but can be moved.
+ *
+ * PixelBufferDescriptor releases ownership of the memory-buffer when it's destroyed.
+ */
 class UTILS_PUBLIC PixelBufferDescriptor : public BufferDescriptor {
 public:
     using PixelDataFormat = backend::PixelDataFormat;
@@ -38,6 +47,20 @@ public:
 
     PixelBufferDescriptor() = default;
 
+    /**
+     * Creates a new PixelBufferDescriptor referencing an image in main memory
+     *
+     * @param buffer    Virtual address of the buffer containing the image
+     * @param size      Size in bytes of the buffer containing the image
+     * @param format    Format of the image pixels
+     * @param type      Type of the image pixels
+     * @param alignment Alignment in bytes of pixel rows
+     * @param left      Left coordinate in pixels
+     * @param top       Top coordinate in pixels
+     * @param stride    Stride of a row in pixels
+     * @param callback  A callback used to release the CPU buffer
+     * @param user      An opaque user pointer passed to the callback function when it's called
+     */
     PixelBufferDescriptor(void const* buffer, size_t size,
             PixelDataFormat format, PixelDataType type, uint8_t alignment = 1,
             uint32_t left = 0, uint32_t top = 0, uint32_t stride = 0,
@@ -47,6 +70,16 @@ public:
               format(format), type(type), alignment(alignment) {
     }
 
+    /**
+     * Creates a new PixelBufferDescriptor referencing an image in main memory
+     *
+     * @param buffer    Virtual address of the buffer containing the image
+     * @param size      Size in bytes of the buffer containing the image
+     * @param format    Format of the image pixels
+     * @param type      Type of the image pixels
+     * @param callback  A callback used to release the CPU buffer
+     * @param user      An opaque user pointer passed to the callback function when it's called
+     */
     PixelBufferDescriptor(void const* buffer, size_t size,
             PixelDataFormat format, PixelDataType type,
             Callback callback, void* user = nullptr) noexcept
@@ -54,6 +87,16 @@ public:
               stride(0), format(format), type(type), alignment(1) {
     }
 
+    /**
+     * Creates a new PixelBufferDescriptor referencing a compressed image in main memory
+     *
+     * @param buffer    Virtual address of the buffer containing the image
+     * @param size      Size in bytes of the buffer containing the image
+     * @param format    Compressed format of the image
+     * @param imageSize Compressed size of the image
+     * @param callback  A callback used to release the CPU buffer
+     * @param user      An opaque user pointer passed to the callback function when it's called
+     */
     PixelBufferDescriptor(void const* buffer, size_t size,
             backend::CompressedPixelDataType format, uint32_t imageSize,
             Callback callback, void* user = nullptr) noexcept
@@ -62,6 +105,16 @@ public:
               alignment(1) {
     }
 
+    /**
+     * Computes the size in bytes needed to fit an image of given dimensions and format
+     *
+     * @param format    Format of the image pixels
+     * @param type      Type of the image pixels
+     * @param stride    Stride of a row in pixels
+     * @param height    Height of the image in rows
+     * @param alignment Alignment in bytes of pixel rows
+     * @return The buffer size needed to fit this image in bytes
+     */
     static constexpr size_t computeDataSize(PixelDataFormat format, PixelDataType type,
             size_t stride, size_t height, size_t alignment) noexcept {
         assert(alignment);
@@ -123,19 +176,27 @@ public:
         return bprAligned * height;
     }
 
+    //! left coordinate in pixels
     uint32_t left   = 0;
+    //! top coordinate in pixels
     uint32_t top    = 0;
     union {
         struct {
+            //! stride in pixels
             uint32_t stride;
+            //! Pixel data format
             PixelDataFormat format;
         };
         struct {
+            //! compressed image size
             uint32_t imageSize;
+            //! compressed image format
             backend::CompressedPixelDataType compressedFormat;
         };
     };
+    //! pixel data type
     PixelDataType type : 4;
+    //! row alignment in bytes
     uint8_t alignment  : 4;
 };
 

@@ -9,6 +9,10 @@ material {
         {
             type : int,
             name : dithering
+        },
+        {
+            type : int,
+            name : fxaa
         }
     ],
     depthWrite : false,
@@ -35,7 +39,9 @@ fragment {
         vec4 color = vec4(resolveFragment(ivec2(getUV())), 1.0);
         color.rgb  = tonemap(color.rgb);
         color.rgb  = OECF(color.rgb);
-        color.a    = luminance(color.rgb);
+        if (materialParams.fxaa > 0) {
+            color.a = luminance(color.rgb);
+        }
 #else
         vec4 color = resolveAlphaFragment(ivec2(getUV()));
         color.rgb /= color.a + FLT_EPS;

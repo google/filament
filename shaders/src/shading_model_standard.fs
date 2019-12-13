@@ -100,15 +100,15 @@ vec3 surfaceShading(const PixelParams pixel, const Light light, float occlusion)
 
     vec3 Fr = specularLobe(pixel, light, h, NoV, NoL, NoH, LoH);
     vec3 Fd = diffuseLobe(pixel, NoV, NoL, LoH);
+#if defined(HAS_REFRACTION)
+    Fd *= (1.0 - pixel.transmission);
+#endif
 
     // TODO: attenuate the diffuse lobe to avoid energy gain
 
 #if defined(MATERIAL_HAS_CLEAR_COAT)
     float Fcc;
     float clearCoat = clearCoatLobe(pixel, h, NoH, LoH, Fcc);
-    // Energy compensation and absorption; the clear coat Fresnel term is
-    // squared to take into account both entering through and exiting through
-    // the clear coat layer
     float attenuation = 1.0 - Fcc;
 
 #if defined(MATERIAL_HAS_NORMAL) || defined(MATERIAL_HAS_CLEAR_COAT_NORMAL)

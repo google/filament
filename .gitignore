@@ -3,7 +3,7 @@
 imgui.ini
 cmake-*
 ImportExecutables-*.cmake
-out
+/out*
 dist
 dist-*
 toolchains
@@ -12,3 +12,4 @@ filament/docs/html/**
 gltf_baker.ini
 *tmp*.png
 civetweb.txt
+/TAGS

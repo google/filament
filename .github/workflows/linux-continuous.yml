@@ -1,0 +1,17 @@
+name: Linux
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build-linux:
+    name: build-linux
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v1.0.0
+      - name: Run build script
+        run: |
+          cd build/linux && ./build.sh continuous

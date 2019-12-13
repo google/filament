@@ -337,24 +337,29 @@ void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaSc
     u.setUniform(offsetof(PerViewUib, exposure), exposure);
     u.setUniform(offsetof(PerViewUib, ev100), ev100);
 
-    // IBL
-    FIndirectLight const* const ibl = scene->getIndirectLight();
+    // If the scene does not have an IBL, use the black 1x1 IBL and honor the fallback intensity
+    // associated with the skybox.
+    FIndirectLight const* ibl = scene->getIndirectLight();
+    float intensity;
     if (UTILS_LIKELY(ibl)) {
-        float2 iblMaxMipLevel{ ibl->getMaxMipLevel(), 1u << ibl->getMaxMipLevel() };
-        u.setUniform(offsetof(PerViewUib, iblMaxMipLevel), iblMaxMipLevel);
-        u.setUniform(offsetof(PerViewUib, iblLuminance), ibl->getIntensity() * exposure);
-        u.setUniformArray(offsetof(PerViewUib, iblSH), ibl->getSH(), 9);
-        if (ibl->getReflectionMap()) {
-            mPerViewSb.setSampler(PerViewSib::IBL_SPECULAR, {
-                    ibl->getReflectionMap(), {
-                            .filterMag = SamplerMagFilter::LINEAR,
-                            .filterMin = SamplerMinFilter::LINEAR_MIPMAP_LINEAR
-                    }});
-        }
+        intensity = ibl->getIntensity();
     } else {
+        ibl = engine.getDefaultIndirectLight();
         FSkybox const* const skybox = scene->getSkybox();
-        const float intensity = skybox ? skybox->getIntensity() : FIndirectLight::DEFAULT_INTENSITY;
-        u.setUniform(offsetof(PerViewUib, iblLuminance), intensity * exposure);
+        intensity = skybox ? skybox->getIntensity() : FIndirectLight::DEFAULT_INTENSITY;
+    }
+
+    // Set up uniforms and sampler for the IBL, guaranteed to be non-null at this point.
+    float2 iblMaxMipLevel{ ibl->getMaxMipLevel(), 1u << ibl->getMaxMipLevel() };
+    u.setUniform(offsetof(PerViewUib, iblMaxMipLevel), iblMaxMipLevel);
+    u.setUniform(offsetof(PerViewUib, iblLuminance), intensity * exposure);
+    u.setUniformArray(offsetof(PerViewUib, iblSH), ibl->getSH(), 9);
+    if (ibl->getReflectionMap()) {
+        mPerViewSb.setSampler(PerViewSib::IBL_SPECULAR, {
+                ibl->getReflectionMap(), {
+                        .filterMag = SamplerMagFilter::LINEAR,
+                        .filterMin = SamplerMinFilter::LINEAR_MIPMAP_LINEAR
+                }});
     }
 
     // Directional light (always at index 0)
@@ -866,6 +871,10 @@ void View::setRenderTarget(TargetBufferFlags discard) noexcept {
     upcast(this)->setRenderTarget(discard);
 }
 
+RenderTarget* View::getRenderTarget() const noexcept {
+    return upcast(this)->getRenderTarget();
+}
+
 void View::setSampleCount(uint8_t count) noexcept {
     upcast(this)->setSampleCount(count);
 }
@@ -932,6 +941,10 @@ bool View::isFrontFaceWindingInverted() const noexcept {
 
 void View::setDepthPrepass(View::DepthPrepass prepass) noexcept {
     upcast(this)->setDepthPrepass(prepass);
+}
+
+View::DepthPrepass View::getDepthPrepass() const noexcept {
+    return upcast(this)->getDepthPrepass();
 }
 
 void View::setDynamicLightingOptions(float zLightNear, float zLightFar) noexcept {

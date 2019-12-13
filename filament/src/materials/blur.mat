@@ -18,6 +18,10 @@ material {
         {
             type : int2,
             name : axis
+        },
+        {
+            type : float,
+            name : oneOverEdgeDistance
         }
     ],
     variables : [
@@ -35,15 +39,11 @@ vertex {
 }
 
 fragment {
-    // z-distance (in m) that constitute an edge for bilateral filtering
-    #define EDGE_DISTANCE   0.1
-
-    const int kGaussianCount = 5;
-    const int kRadius = kGaussianCount - 1;
+    const int kGaussianCount = 8;
     const float kGaussianSamples[] = float[](
-        0.239365, 0.199935, 0.116512, 0.0473701, 0.0134367
+        0.149603, 0.139446, 0.112927, 0.079454, 0.048569, 0.025795, 0.011902, 0.004772
     );
-    const float kGaussianWeightSum = 0.993872;
+    const float kGaussianWeightSum = 0.995331;
 
     ivec2 clampToEdge(const sampler2D s, ivec2 uv) {
         ivec2 size = textureSize(s, 0);
@@ -62,7 +62,7 @@ fragment {
     float bilateralWeight(const ivec2 p, in float depth) {
         float sampleDepth = texelFetch(materialParams_depth, p, 0).r;
         float ddepth = linearizeDepthDifference(depth, sampleDepth);
-        float diff = (1.0 / EDGE_DISTANCE) * ddepth;
+        float diff = materialParams.oneOverEdgeDistance * ddepth;
         return max(0.0, 1.0 - diff * diff);
     }
 
@@ -78,7 +78,7 @@ fragment {
     }
 
     void postProcess(inout PostProcessInputs postProcess) {
-        ivec2 uv = ivec2(variable_vertex.xy * materialParams.resolution.xy);
+        highp ivec2 uv = ivec2(variable_vertex.xy * materialParams.resolution.xy);
 
         float depth = texelFetch(materialParams_depth, uv, 0).r;
 
@@ -87,7 +87,7 @@ fragment {
         float totalWeight = kGaussianSamples[0];
         float sum = texelFetch(materialParams_ssao, uv, 0).r * totalWeight;
 
-        for (int i = 1; i <= kRadius; i++) {
+        for (int i = 1; i < kGaussianCount; i++) {
             float weight = kGaussianSamples[i];
             ivec2 offset = i * materialParams.axis;
             tap(sum, totalWeight, weight, depth, uv + offset);

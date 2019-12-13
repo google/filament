@@ -28,7 +28,7 @@ using namespace filament;
 using namespace gltfio;
 using namespace utils;
 
-static void destroy(void* data, size_t size, void *userData) {
+static void destroy(void*, size_t, void *userData) {
     AutoBuffer* buffer = (AutoBuffer*) userData;
     delete buffer;
 }

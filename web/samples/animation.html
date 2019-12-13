@@ -14,7 +14,6 @@ canvas { touch-action: none; width: 100%; height: 100%; }
 <canvas></canvas>
 <script src="filament.js"></script>
 <script src="gl-matrix-min.js"></script>
-<script src="https://unpkg.com/gltumble"></script>
 <script>
 
 const mesh_url = "AnimatedTriangle.gltf";
@@ -22,6 +21,7 @@ const mesh_url = "AnimatedTriangle.gltf";
 Filament.init([mesh_url], () => {
     window.gltfio = Filament.gltfio;
     window.Fov = Filament.Camera$Fov;
+    window.LightType = Filament.LightManager$Type;
     window.app = new App(document.querySelector("canvas"));
 });
 
@@ -30,15 +30,26 @@ class App {
         this.canvas = canvas;
         const engine = this.engine = Filament.Engine.create(this.canvas);
         const scene = this.scene = engine.createScene();
-        this.trackball = new Trackball(canvas, {startSpin: 0.035});
 
         const loader = engine.createAssetLoader();
         const asset = this.asset = loader.createAssetFromJson(mesh_url);
 
+        const sunlight = Filament.EntityManager.get().create();
+        Filament.LightManager.Builder(LightType.SUN).direction([0, 0, -1]).build(engine, sunlight);
+        this.scene.addEntity(sunlight);
+
         const onDone = finalize => {
             finalize();
             loader.delete();
-            scene.addEntities(asset.getEntities());
+
+            // Dynamically enable two-sided lighting for testing purposes.
+            const entities = asset.getEntities();
+            const rm = engine.getRenderableManager();
+            const instance = rm.getInstance(entities.get(0));
+            rm.getMaterialInstanceAt(instance, 0).setDoubleSided(true)
+            instance.delete();
+
+            scene.addEntities(entities);
             this.animator = asset.getAnimator();
             this.animationStartTime = Date.now();
         };
@@ -51,7 +62,7 @@ class App {
         this.view = engine.createView();
         this.view.setCamera(this.camera);
         this.view.setScene(this.scene);
-        this.view.setClearColor([0.6, 0.6, 0.6, 1.0]);
+        this.view.setClearColor([0.2, 0.3, 0.4, 1.0]);
 
         this.resize();
         this.render = this.render.bind(this);
@@ -61,11 +72,6 @@ class App {
     }
 
     render() {
-        const tcm = this.engine.getTransformManager();
-        const inst = tcm.getInstance(this.asset.getRoot());
-        tcm.setTransform(inst, this.trackball.getMatrix());
-        inst.delete();
-
         if (this.animator) {
             const ms = Date.now() - this.animationStartTime;
             this.animator.applyAnimation(0, (ms / 1000) % 1.0);

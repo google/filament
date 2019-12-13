@@ -35,6 +35,10 @@
 // we don't want to rely on it.
 #define ALLOW_REVERSE_MULTISAMPLE_RESOLVE false
 
+// We can only support this feature on OpenGL ES 3.1+
+// Support is currently disabled as we don't need it
+#define TEXTURE_2D_MULTISAMPLE_SUPPORTED false
+
 #if defined(__EMSCRIPTEN__)
 #define HAS_MAPBUFFERS 0
 #else
@@ -65,7 +69,7 @@ Driver* OpenGLDriverFactory::create(
     return OpenGLDriver::create(platform, sharedGLContext);
 }
 
-} // namesapce backend
+} // namespace backend
 
 using namespace backend;
 using namespace GLUtils;
@@ -76,7 +80,8 @@ Driver* OpenGLDriver::create(
     assert(platform);
     OpenGLPlatform* const ec = platform;
 
-    { // here we check we're on a supported version of GL before initializing the driver
+    {
+        // here we check we're on a supported version of GL before initializing the driver
         GLint major = 0, minor = 0;
         glGetIntegerv(GL_MAJOR_VERSION, &major);
         glGetIntegerv(GL_MINOR_VERSION, &minor);
@@ -88,12 +93,11 @@ Driver* OpenGLDriver::create(
             return {};
         }
 
-        if (GLES31_HEADERS) {
+        if (GLES30_HEADERS) {
             // we require GLES 3.1 headers, but we support GLES 3.0
             if (UTILS_UNLIKELY(!(major >= 3 && minor >= 0))) {
                 PANIC_LOG("OpenGL ES 3.0 minimum needed (current %d.%d)", major, minor);
                 goto cleanup;
-
             }
         } else if (GL41_HEADERS) {
             // we require GL 4.1 headers and minimum version
@@ -159,6 +163,15 @@ OpenGLDriver::~OpenGLDriver() noexcept {
 // ------------------------------------------------------------------------------------------------
 
 void OpenGLDriver::terminate() {
+    // wait for the GPU to finish executing all commands
+    glFinish();
+
+    // and make sure to execute all the GpuCommandCompleteOps callbacks
+    executeGpuCommandsCompleteOps();
+
+    // because we called glFinish(), all callbacks should have been executed
+    assert(!mGpuCommandCompleteOps.size());
+
     for (auto& item : mSamplerMap) {
         mContext.unbindSampler(item.second);
         glDeleteSamplers(1, &item.second);
@@ -197,7 +210,7 @@ void OpenGLDriver::initClearProgram() noexcept {
         }
         )SHADER";
 
-    if (GLES31_HEADERS) {
+    if (GLES30_HEADERS) {
         GLint status;
         char const* const vsource = clearVertexES;
         char const* const fsource = clearFragmentES;
@@ -230,7 +243,7 @@ void OpenGLDriver::initClearProgram() noexcept {
 }
 
 void OpenGLDriver::terminateClearProgram() noexcept {
-    if (GLES31_HEADERS) {
+    if (GLES30_HEADERS) {
         glDetachShader(mClearProgram, mClearVertexShader);
         glDetachShader(mClearProgram, mClearFragmentShader);
         glDeleteShader(mClearVertexShader);
@@ -324,7 +337,7 @@ void OpenGLDriver::setRasterStateSlow(RasterState rs) noexcept {
 // For reference on a 64-bits machine:
 //    GLFence                   :  8
 //    GLIndexBuffer             : 12        moderate
-//    GLSamplerGroup           : 16        moderate
+//    GLSamplerGroup            : 16        moderate
 // -- less than 16 bytes
 
 //    GLRenderPrimitive         : 40        many
@@ -347,7 +360,8 @@ OpenGLDriver::HandleAllocator::HandleAllocator(const utils::HeapArea& area)
           mPool2( pointermath::add(area.begin(), (6 * area.getSize()) / 16),
                   area.end()) {
 
-#ifndef NDEBUG
+#if 0
+    // this is useful for development, but too verbose even for debug builds
     slog.d << "HwFence: " << sizeof(HwFence) << io::endl;
     slog.d << "GLIndexBuffer: " << sizeof(GLIndexBuffer) << io::endl;
     slog.d << "GLSamplerGroup: " << sizeof(GLSamplerGroup) << io::endl;
@@ -460,17 +474,21 @@ Handle<HwSwapChain> OpenGLDriver::createSwapChainS() noexcept {
     return Handle<HwSwapChain>( allocateHandle(sizeof(HwSwapChain)) );
 }
 
+Handle<HwSwapChain> OpenGLDriver::createSwapChainHeadlessS() noexcept {
+    return Handle<HwSwapChain>( allocateHandle(sizeof(HwSwapChain)) );
+}
+
 Handle<HwStream> OpenGLDriver::createStreamFromTextureIdS() noexcept {
     return Handle<HwStream>( allocateHandle(sizeof(GLStream)) );
 }
 
 void OpenGLDriver::createVertexBufferR(
         Handle<HwVertexBuffer> vbh,
-    uint8_t bufferCount,
-    uint8_t attributeCount,
-    uint32_t elementCount,
-    AttributeArray attributes,
-    BufferUsage usage) {
+        uint8_t bufferCount,
+        uint8_t attributeCount,
+        uint32_t elementCount,
+        AttributeArray attributes,
+        BufferUsage usage) {
     DEBUG_MARKER()
 
     auto& gl = mContext;
@@ -573,20 +591,22 @@ void OpenGLDriver::textureStorage(OpenGLDriver::GLTexture* t,
             break;
         }
         case GL_TEXTURE_2D_MULTISAMPLE:
-            // NOTE: if there is a mix of texture and renderbuffers, "fixed_sample_locations" must be true
-            // NOTE: what's the benefit of setting "fixed_sample_locations" to false?
+            if (TEXTURE_2D_MULTISAMPLE_SUPPORTED) {
+                // NOTE: if there is a mix of texture and renderbuffers, "fixed_sample_locations" must be true
+                // NOTE: what's the benefit of setting "fixed_sample_locations" to false?
 #if GLES31_HEADERS
-            // only supported from GL 4.3 and GLES 3.1
-            glTexStorage2DMultisample(t->gl.target, t->samples, t->gl.internalFormat,
-                    GLsizei(width), GLsizei(height), GL_TRUE);
+                // only supported from GL 4.3 and GLES 3.1
+                glTexStorage2DMultisample(t->gl.target, t->samples, t->gl.internalFormat,
+                        GLsizei(width), GLsizei(height), GL_TRUE);
 #elif GL41_HEADERS
-            // only supported in GL (never in GLES)
-            // TODO: use glTexStorage2DMultisample() on GL 4.3 and above
-            glTexImage2DMultisample(t->gl.target, t->samples, t->gl.internalFormat,
-                    GLsizei(width), GLsizei(height), GL_TRUE);
-#else
-#   error "GL/GLES header version not supported"
+                // only supported in GL (never in GLES)
+                // TODO: use glTexStorage2DMultisample() on GL 4.3 and above
+                glTexImage2DMultisample(t->gl.target, t->samples, t->gl.internalFormat,
+                        GLsizei(width), GLsizei(height), GL_TRUE);
 #endif
+            } else {
+                PANIC_LOG("GL_TEXTURE_2D_MULTISAMPLE is not supported");
+            }
             break;
         default: // cannot happen
             break;
@@ -861,6 +881,8 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
     /*
      * The GLES 3.0 spec states:
      *
+     *                             --------------
+     *
      * GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE is returned
      * - if the value of GL_RENDERBUFFER_SAMPLES is not the same for all attached renderbuffers or,
      * - if the attached images are a mix of renderbuffers and textures,
@@ -880,6 +902,15 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
      *
      * 'features.multisample_texture' below is a proxy for "GLES3.1 or GL4.x".
      *
+     *                             --------------
+     *
+     * About the size of the attachments:
+     *
+     *  If the attachment sizes are not all identical, the results of rendering are defined only
+     *  within the largest area that can fit in all of the attachments. This area is defined as
+     *  the intersection of rectangles having a lower left of (0, 0) and an upper right of
+     *  (width, height) for each attachment. Contents of attachments outside this area are
+     *  undefined after execution of a rendering command.
      */
 
     rt->gl.samples = samples;
@@ -896,8 +927,8 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         assert(color.handle);
         rt->gl.color.texture = handle_cast<GLTexture*>(color.handle);
         rt->gl.color.level = color.level;
-        assert(width == valueForLevel(color.level, rt->gl.color.texture->width) &&
-               height == valueForLevel(color.level, rt->gl.color.texture->height));
+        assert(width <= valueForLevel(color.level, rt->gl.color.texture->width) &&
+               height <= valueForLevel(color.level, rt->gl.color.texture->height));
 
         if (any(rt->gl.color.texture->usage & TextureUsage::SAMPLEABLE)) {
             framebufferTexture(color, rt, GL_COLOR_ATTACHMENT0);
@@ -920,8 +951,8 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         assert(!stencil.handle || stencil.handle == depth.handle);
         rt->gl.depth.texture = handle_cast<GLTexture*>(depth.handle);
         rt->gl.depth.level = depth.level;
-        assert(width == valueForLevel(depth.level, rt->gl.depth.texture->width) &&
-               height == valueForLevel(depth.level, rt->gl.depth.texture->height));
+        assert(width <= valueForLevel(depth.level, rt->gl.depth.texture->width) &&
+               height <= valueForLevel(depth.level, rt->gl.depth.texture->height));
         if (any(rt->gl.depth.texture->usage & TextureUsage::SAMPLEABLE)) {
             // special case: depth & stencil requested, and both provided as the same texture
             specialCased = true;
@@ -938,8 +969,8 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
             assert(depth.handle);
             rt->gl.depth.texture = handle_cast<GLTexture*>(depth.handle);
             rt->gl.depth.level = depth.level;
-            assert(width == valueForLevel(depth.level, rt->gl.depth.texture->width) &&
-                   height == valueForLevel(depth.level, rt->gl.depth.texture->height));
+            assert(width <= valueForLevel(depth.level, rt->gl.depth.texture->width) &&
+                   height <= valueForLevel(depth.level, rt->gl.depth.texture->height));
             if (any(rt->gl.depth.texture->usage & TextureUsage::SAMPLEABLE)) {
                 framebufferTexture(depth, rt, GL_DEPTH_ATTACHMENT);
             } else {
@@ -950,8 +981,8 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
             assert(stencil.handle);
             rt->gl.stencil.texture = handle_cast<GLTexture*>(stencil.handle);
             rt->gl.stencil.level = stencil.level;
-            assert(width == valueForLevel(stencil.level, rt->gl.stencil.texture->width) &&
-                   height == valueForLevel(stencil.level, rt->gl.stencil.texture->height));
+            assert(width <= valueForLevel(stencil.level, rt->gl.stencil.texture->width) &&
+                   height <= valueForLevel(stencil.level, rt->gl.stencil.texture->height));
             if (any(rt->gl.stencil.texture->usage & TextureUsage::SAMPLEABLE)) {
                 framebufferTexture(stencil, rt, GL_STENCIL_ATTACHMENT);
             } else {
@@ -977,6 +1008,14 @@ void OpenGLDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
     sc->swapChain = mPlatform.createSwapChain(nativeWindow, flags);
 }
 
+void OpenGLDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch,
+        uint32_t width, uint32_t height, uint64_t flags) {
+    DEBUG_MARKER()
+
+    HwSwapChain* sc = construct<HwSwapChain>(sch);
+    sc->swapChain = mPlatform.createSwapChain(width, height, flags);
+}
+
 void OpenGLDriver::createStreamFromTextureIdR(Handle<HwStream> sh,
         intptr_t externalTextureId, uint32_t width, uint32_t height) {
     DEBUG_MARKER()
@@ -987,6 +1026,7 @@ void OpenGLDriver::createStreamFromTextureIdR(Handle<HwStream> sh,
     s->width = width;
     s->height = height;
     s->gl.externalTextureId = static_cast<GLuint>(externalTextureId);
+    s->streamType = StreamType::TEXTURE_ID;
     glGenTextures(GLStream::ROUND_ROBIN_TEXTURE_COUNT, s->user_thread.read);
     glGenTextures(GLStream::ROUND_ROBIN_TEXTURE_COUNT, s->user_thread.write);
     for (auto& info : s->user_thread.infos) {
@@ -1133,9 +1173,9 @@ void OpenGLDriver::destroyStream(Handle<HwStream> sh) {
         if (pos != externalStreams.end()) {
             detachStream(*pos);
         }
-        if (s->isNativeStream()) {
+        if (s->streamType == StreamType::NATIVE) {
             mPlatform.destroyStream(s->stream);
-        } else {
+        } else if (s->streamType == StreamType::TEXTURE_ID) {
             glDeleteTextures(GLStream::ROUND_ROBIN_TEXTURE_COUNT, s->user_thread.read);
             glDeleteTextures(GLStream::ROUND_ROBIN_TEXTURE_COUNT, s->user_thread.write);
             if (s->gl.fbo) {
@@ -1154,11 +1194,33 @@ void OpenGLDriver::destroyStream(Handle<HwStream> sh) {
 // These are called on the application's thread
 // ------------------------------------------------------------------------------------------------
 
-Handle<HwStream> OpenGLDriver::createStream(void* nativeStream) {
+Handle<HwStream> OpenGLDriver::createStreamNative(void* nativeStream) {
     Handle<HwStream> sh( allocateHandle(sizeof(GLStream)) );
     Platform::Stream* stream = mPlatform.createStream(nativeStream);
     construct<GLStream>(sh, stream);
     return sh;
+}
+
+Handle<HwStream> OpenGLDriver::createStreamAcquired() {
+    Handle<HwStream> sh(allocateHandle(sizeof(GLStream)));
+    construct<GLStream>(sh);
+    return sh;
+}
+
+// Stashes an acquired external image and a release callback. The image is not bound to OpenGL until
+// the subsequent call to beginFrame (see updateStreamAcquired).
+//
+// setAcquiredImage should be called by the user outside of beginFrame / endFrame, and should be
+// called only once per frame. If the user pushes images to the same stream multiple times in a
+// single frame, we emit a warning and honor only the final image, but still invoke all callbacks.
+void OpenGLDriver::setAcquiredImage(Handle<HwStream> sh, void* hwbuffer,
+        backend::StreamCallback cb, void* userData) {
+    GLStream* glstream = handle_cast<GLStream*>(sh);
+    if (glstream->user_thread.pending.image) {
+        scheduleRelease(std::move(glstream->user_thread.pending));
+        slog.w << "Acquired image is set more than once per frame." << io::endl;
+    }
+    glstream->user_thread.pending = mPlatform.transformAcquiredImage({hwbuffer, cb, userData});
 }
 
 void OpenGLDriver::updateStreams(DriverApi* driver) {
@@ -1170,13 +1232,17 @@ void OpenGLDriver::updateStreams(DriverApi* driver) {
             GLStream* s = static_cast<GLStream*>(t->hwStream);
             if (UTILS_UNLIKELY(s == nullptr)) {
                 // this can happen because we're called synchronously and the setExternalStream()
-                // call may bot have been processed yet.
+                // call may not have been processed yet.
                 continue;
             }
 
-            if (!s->isNativeStream()) {
+            if (s->streamType == StreamType::TEXTURE_ID) {
                 state.setup();
-                updateStream(t, driver);
+                updateStreamTexId(t, driver);
+            }
+
+            if (s->streamType == StreamType::ACQUIRED) {
+                updateStreamAcquired(t, driver);
             }
         }
     }
@@ -1690,10 +1756,16 @@ void OpenGLDriver::cancelExternalImage(void* image) {
 }
 
 void OpenGLDriver::setExternalImage(Handle<HwTexture> th, void* image) {
-    GLTexture* t = handle_cast<GLTexture*>(th);
-    auto& gl = mContext;
+    mPlatform.setExternalImage(image, handle_cast<GLTexture*>(th));
+    setExternalTexture(handle_cast<GLTexture*>(th), image);
+}
 
-    mPlatform.setExternalImage(image, t);
+void OpenGLDriver::setExternalImagePlane(Handle<HwTexture> th, void* image, size_t plane) {
+
+}
+
+void OpenGLDriver::setExternalTexture(GLTexture* t, void* image) {
+    auto& gl = mContext;
 
     // TODO: move this logic to PlatformEGL.
     if (gl.ext.OES_EGL_image_external_essl3) {
@@ -1720,7 +1792,7 @@ void OpenGLDriver::setExternalStream(Handle<HwTexture> th, Handle<HwStream> sh) 
         if (UTILS_LIKELY(sh)) {
             GLStream* s = handle_cast<GLStream*>(sh);
             if (UTILS_LIKELY(!t->hwStream)) {
-                // we're not attached alread
+                // we're not attached already
                 attachStream(t, s);
             } else {
                 if (s->stream != t->hwStream->stream) {
@@ -1740,20 +1812,26 @@ void OpenGLDriver::attachStream(GLTexture* t, GLStream* hwStream) noexcept {
     auto& gl = mContext;
     mExternalStreams.push_back(t);
 
-    if (hwStream->isNativeStream()) {
-        mPlatform.attach(hwStream->stream, t->gl.id);
-    } else {
-        assert(t->target == SamplerType::SAMPLER_EXTERNAL);
-        // The texture doesn't need a texture name anymore, get rid of it
-        gl.unbindTexture(t->gl.target, t->gl.id);
-        glDeleteTextures(1, &t->gl.id);
-        t->gl.id = hwStream->user_thread.read[hwStream->user_thread.cur];
+    switch (hwStream->streamType) {
+        case StreamType::NATIVE:
+            mPlatform.attach(hwStream->stream, t->gl.id);
+            break;
+        case StreamType::TEXTURE_ID:
+            assert(t->target == SamplerType::SAMPLER_EXTERNAL);
+            // The texture doesn't need a texture name anymore, get rid of it
+            gl.unbindTexture(t->gl.target, t->gl.id);
+            glDeleteTextures(1, &t->gl.id);
+            t->gl.id = hwStream->user_thread.read[hwStream->user_thread.cur];
+            break;
+        case StreamType::ACQUIRED:
+            break;
     }
     t->hwStream = hwStream;
 }
 
 UTILS_NOINLINE
 void OpenGLDriver::detachStream(GLTexture* t) noexcept {
+    auto& gl = mContext;
     auto& streams = mExternalStreams;
     auto pos = std::find(streams.begin(), streams.end(), t);
     if (pos != streams.end()) {
@@ -1761,30 +1839,57 @@ void OpenGLDriver::detachStream(GLTexture* t) noexcept {
     }
 
     GLStream* s = static_cast<GLStream*>(t->hwStream);
-    if (s->isNativeStream()) {
-        mPlatform.detach(t->hwStream->stream);
-        // this deletes the texture id
+    switch (s->streamType) {
+        case StreamType::NATIVE:
+            mPlatform.detach(t->hwStream->stream);
+            // ^ this deletes the texture id
+            break;
+        case StreamType::TEXTURE_ID:
+            break;
+        case StreamType::ACQUIRED:
+            gl.unbindTexture(t->gl.target, t->gl.id);
+            glDeleteTextures(1, &t->gl.id);
+            break;
     }
+
     glGenTextures(1, &t->gl.id);
+
     t->hwStream = nullptr;
 }
 
 UTILS_NOINLINE
-void OpenGLDriver::replaceStream(GLTexture* t, GLStream* hwStream) noexcept {
-    GLStream* s = static_cast<GLStream*>(t->hwStream);
-    if (s->isNativeStream()) {
-        mPlatform.detach(t->hwStream->stream);
-        // this deletes the texture id
+void OpenGLDriver::replaceStream(GLTexture* texture, GLStream* newStream) noexcept {
+    assert(newStream && "Do not use replaceStream to detach a stream.");
+
+    // This could be implemented via detachStream + attachStream but inlining allows
+    // a few small optimizations, like not touching the mExternalStreams list.
+
+    GLStream* oldStream = static_cast<GLStream*>(texture->hwStream);
+    switch (oldStream->streamType) {
+        case StreamType::NATIVE:
+            mPlatform.detach(texture->hwStream->stream);
+            // ^ this deletes the texture id
+            break;
+        case StreamType::TEXTURE_ID:
+        case StreamType::ACQUIRED:
+            break;
     }
 
-    if (hwStream->isNativeStream()) {
-        glGenTextures(1, &t->gl.id);
-        mPlatform.attach(hwStream->stream, t->gl.id);
-    } else {
-        assert(t->target == SamplerType::SAMPLER_EXTERNAL);
-        t->gl.id = hwStream->user_thread.read[hwStream->user_thread.cur];
+    switch (newStream->streamType) {
+        case StreamType::NATIVE:
+            glGenTextures(1, &texture->gl.id);
+            mPlatform.attach(newStream->stream, texture->gl.id);
+            break;
+        case StreamType::TEXTURE_ID:
+            assert(texture->target == SamplerType::SAMPLER_EXTERNAL);
+            texture->gl.id = newStream->user_thread.read[newStream->user_thread.cur];
+            break;
+        case StreamType::ACQUIRED:
+            // Just re-use the old texture id.
+            break;
     }
-    t->hwStream = hwStream;
+
+    texture->hwStream = newStream;
 }
 
 void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
@@ -1794,25 +1899,23 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
 
     mRenderPassTarget = rth;
     mRenderPassParams = params;
-    const auto clearFlags = TargetBufferFlags(params.flags.clear & ~RenderPassFlags::IGNORE_SCISSOR);
-    const uint8_t ignoreScissor = params.flags.clear & RenderPassFlags::IGNORE_SCISSOR;
+    const TargetBufferFlags clearFlags = params.flags.clear;
+    const bool ignoreScissor = params.flags.ignoreScissor;
     TargetBufferFlags discardFlags = params.flags.discardStart;
 
     GLRenderTarget* rt = handle_cast<GLRenderTarget*>(rth);
-    if (UTILS_UNLIKELY(gl.getDrawFbo() != rt->gl.fbo)) {
-        gl.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
+    gl.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
 
-        // glInvalidateFramebuffer appeared on GLES 3.0 and GL4.3, for simplicity we just
-        // ignore it on GL (rather than having to do a runtime check).
-        if (GLES31_HEADERS) {
-            if (!gl.bugs.disable_invalidate_framebuffer) {
-                std::array<GLenum, 3> attachments; // NOLINT
-                GLsizei attachmentCount = getAttachments(attachments, rt, discardFlags);
-                if (attachmentCount) {
-                    glInvalidateFramebuffer(GL_FRAMEBUFFER, attachmentCount, attachments.data());
-                }
-                CHECK_GL_ERROR(utils::slog.e)
+    // glInvalidateFramebuffer appeared on GLES 3.0 and GL4.3, for simplicity we just
+    // ignore it on GL (rather than having to do a runtime check).
+    if (GLES30_HEADERS) {
+        if (!gl.bugs.disable_invalidate_framebuffer) {
+            std::array<GLenum, 3> attachments; // NOLINT
+            GLsizei attachmentCount = getAttachments(attachments, rt, discardFlags);
+            if (attachmentCount) {
+                glInvalidateFramebuffer(GL_FRAMEBUFFER, attachmentCount, attachments.data());
             }
+            CHECK_GL_ERROR(utils::slog.e)
         }
     }
 
@@ -1823,7 +1926,7 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
         // everything must appear as though the multi-sample buffer was lost.
         if (ALLOW_REVERSE_MULTISAMPLE_RESOLVE) {
             // We only copy the non msaa buffers that were not discarded or cleared.
-            const TargetBufferFlags discarded = discardFlags | (clearFlags & TargetBufferFlags::ALL);
+            const TargetBufferFlags discarded = discardFlags | clearFlags;
             resolvePass(ResolveAction::LOAD, rt, discarded);
         } else {
             // However, for now filament specifies that a non multi-sample attachment to a
@@ -1837,7 +1940,7 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
             params.viewport.width, params.viewport.height);
 
     // Use scissor test if not told to ignore, and if the viewport doesn't cover the whole target.
-    const bool respectScissor = !(ignoreScissor & RenderPassFlags::IGNORE_SCISSOR) &&
+    const bool respectScissor = !ignoreScissor &&
                                 (params.viewport.left != 0 ||
                                     params.viewport.bottom != 0 ||
                                     params.viewport.width != rt->width ||
@@ -1856,7 +1959,7 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
         } else {
             gl.disable(GL_SCISSOR_TEST);
         }
-        if (respectScissor && GLES31_HEADERS && gl.bugs.clears_hurt_performance) {
+        if (respectScissor && GLES30_HEADERS && gl.bugs.clears_hurt_performance) {
             // With OpenGL ES, we clear the viewport using geometry to improve performance on certain
             // OpenGL drivers. e.g. on Adreno this avoids needless loads from the GMEM.
             clearWithGeometryPipe(clearColor, params.clearColor,
@@ -1892,7 +1995,7 @@ void OpenGLDriver::endRenderPass(int) {
 
     // glInvalidateFramebuffer appeared on GLES 3.0 and GL4.3, for simplicity we just
     // ignore it on GL (rather than having to do a runtime check).
-    if (GLES31_HEADERS) {
+    if (GLES30_HEADERS) {
         if (!gl.bugs.disable_invalidate_framebuffer) {
             // we wouldn't have to bind the framebuffer if we had glInvalidateNamedFramebuffer()
             gl.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
@@ -1944,7 +2047,7 @@ void OpenGLDriver::discardSubRenderTargetBuffers(Handle<HwRenderTarget> rth,
 
     // glInvalidateSubFramebuffer appeared on GLES 3.0 and GL4.3, for simplicity we just
     // ignore it on GL (rather than having to do a runtime check).
-    if (GLES31_HEADERS) {
+    if (GLES30_HEADERS) {
         // we wouldn't have to bind the framebuffer if we had glInvalidateNamedFramebuffer()
         GLRenderTarget const* rt = handle_cast<GLRenderTarget const*>(rth);
 
@@ -2024,6 +2127,15 @@ void OpenGLDriver::setRenderPrimitiveBuffer(Handle<HwRenderPrimitive> rph,
 
                 gl.enableVertexAttribArray(GLuint(i));
             } else {
+
+                // In some OpenGL implementations, we must supply a properly-typed placeholder for
+                // every integer input that is declared in the vertex shader.
+                if (UTILS_UNLIKELY(eb->attributes[i].flags & Attribute::FLAG_INTEGER_TARGET)) {
+                    glVertexAttribI4ui(GLuint(i), 0, 0, 0, 0);
+                } else {
+                    glVertexAttrib4f(GLuint(i), 0, 0, 0, 0);
+                }
+
                 gl.disableVertexAttribArray(GLuint(i));
             }
         }
@@ -2077,19 +2189,49 @@ void OpenGLDriver::setViewportScissor(Viewport const& viewportScissor) noexcept 
     gl.enable(GL_SCISSOR_TEST);
 }
 
-/*
- * This is called in the user thread
- */
+// Binds the external image stashed in the associated stream.
+//
+// updateStreamAcquired() and setAcquiredImage() are both called from on the application's thread
+// and therefore do not require synchronization. The former is always called immediately before
+// beginFrame, the latter is called by the user from anywhere outside beginFrame / endFrame.
+void OpenGLDriver::updateStreamAcquired(GLTexture* gltexture, DriverApi* driver) noexcept {
+    SYSTRACE_CALL();
+
+    GLStream* glstream = static_cast<GLStream*>(gltexture->hwStream);
+    assert(glstream);
+    assert(glstream->streamType == StreamType::ACQUIRED);
+
+    // If there's no pending image, do nothing. Note that GL_OES_EGL_image does not let you pass
+    // NULL to glEGLImageTargetTexture2DOES, and there is no concept of "detaching" an EGLimage from
+    // a texture.
+    if (glstream->user_thread.pending.image == nullptr) {
+        return;
+    }
+
+    AcquiredImage previousImage = glstream->user_thread.acquired;
+    glstream->user_thread.acquired = glstream->user_thread.pending;
+    glstream->user_thread.pending = {0};
+
+    // Bind the stashed EGLImage to its corresponding GL texture as soon as we start making the GL
+    // calls for the upcoming frame.
+    void* image = glstream->user_thread.acquired.image;
+    driver->queueCommand([this, gltexture, image, previousImage]() {
+        setExternalTexture(gltexture, image);
+        if (previousImage.image) {
+            scheduleRelease(AcquiredImage(previousImage));
+        }
+    });
+}
 
 #define DEBUG_NO_EXTERNAL_STREAM_COPY false
 
-void OpenGLDriver::updateStream(GLTexture* t, DriverApi* driver) noexcept {
+void OpenGLDriver::updateStreamTexId(GLTexture* t, DriverApi* driver) noexcept {
     SYSTRACE_CALL();
     auto& gl = mContext;
 
     GLStream* s = static_cast<GLStream*>(t->hwStream);
     assert(s);
-    assert(!s->isNativeStream());
+    assert(s->streamType == StreamType::TEXTURE_ID);
 
     // round-robin to the next texture name
     if (UTILS_UNLIKELY(DEBUG_NO_EXTERNAL_STREAM_COPY ||
@@ -2099,7 +2241,7 @@ void OpenGLDriver::updateStream(GLTexture* t, DriverApi* driver) noexcept {
             // also make sure that this texture is still associated with the same stream
             auto& streams = mExternalStreams;
             if (UTILS_LIKELY(std::find(streams.begin(), streams.end(), t) != streams.end()) &&
-                (t->hwStream == s)) {
+                    (t->hwStream == s)) {
                 t->gl.id = s->gl.externalTextureId;
             }
         });
@@ -2184,7 +2326,13 @@ void OpenGLDriver::readStreamPixels(Handle<HwStream> sh,
     auto& gl = mContext;
 
     GLStream* s = handle_cast<GLStream*>(sh);
-    if (UTILS_LIKELY(!s->isNativeStream())) {
+
+    if (UTILS_UNLIKELY(s->streamType == StreamType::ACQUIRED)) {
+        PANIC_LOG("readStreamPixels with ACQUIRED streams is not yet implemented.");
+        return;
+    }
+
+    if (UTILS_LIKELY(s->streamType == StreamType::TEXTURE_ID)) {
         GLuint tid = s->gl.externalTexture2DId;
         if (tid == 0) {
             return;
@@ -2299,7 +2447,7 @@ GLuint OpenGLDriver::getSamplerSlow(SamplerParams params) const noexcept {
 // TODO: Why does this fail with WebGL 2.0? The run-time check should suffice.
 #if defined(GL_EXT_texture_filter_anisotropic) && !defined(__EMSCRIPTEN__)
     auto& gl = mContext;
-    if (gl.ext.texture_filter_anisotropic) {
+    if (gl.ext.texture_filter_anisotropic && !gl.bugs.disable_texture_filter_anisotropic) {
         GLfloat anisotropy = float(1u << params.anisotropyLog2);
         glSamplerParameterf(s, GL_TEXTURE_MAX_ANISOTROPY_EXT, std::min(gl.gets.maxAnisotropy, anisotropy));
     }
@@ -2391,38 +2539,89 @@ void OpenGLDriver::readPixels(Handle<HwRenderTarget> src,
     gl.bindFramebuffer(GL_READ_FRAMEBUFFER, s->gl.fbo);
 
     // TODO: we could use a PBO to make this asynchronous
-    glReadPixels(GLint(x), GLint(y), GLint(width), GLint(height), glFormat, glType, p.buffer);
+    //glReadPixels(GLint(x), GLint(y), GLint(width), GLint(height), glFormat, glType, p.buffer);
 
-    // now we need to flip the buffer vertically to match our API
-    size_t stride = p.stride ? p.stride : width;
-    size_t bpp = PixelBufferDescriptor::computeDataSize(p.format, p.type, 1, 1, 1);
-    size_t bpr = PixelBufferDescriptor::computeDataSize(p.format, p.type, stride, 1, p.alignment);
-    char* head = (char*)p.buffer + p.left * bpp + bpr * p.top;
-    char* tail = (char*)p.buffer + p.left * bpp + bpr * (p.top + height - 1);
-    // clang vectorizes this loop
-    while (head < tail) {
-        std::swap_ranges(head, head + bpp * width, tail);
-        head += bpr;
-        tail -= bpr;
-    }
+    GLuint pbo;
+    glGenBuffers(1, &pbo);
+    gl.bindBuffer(GL_PIXEL_PACK_BUFFER, pbo);
+    glBufferData(GL_PIXEL_PACK_BUFFER, p.size, nullptr, GL_STATIC_DRAW);
+    glReadPixels(GLint(x), GLint(y), GLint(width), GLint(height), glFormat, glType, nullptr);
+    gl.bindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 
-    scheduleDestroy(std::move(p));
+    // we're forced to make a copy on the heap because otherwise it deletes std::function<> copy
+    // constructor.
+    auto* pUserBuffer = new PixelBufferDescriptor(std::move(p));
+    whenGpuCommandsComplete([this, width, height, pbo, pUserBuffer]() mutable {
+        PixelBufferDescriptor& p = *pUserBuffer;
+        auto& gl = mContext;
+        gl.bindBuffer(GL_PIXEL_PACK_BUFFER, pbo);
+        void* vaddr = glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0,  p.size, GL_MAP_READ_BIT);
+        if (vaddr) {
+            // now we need to flip the buffer vertically to match our API
+            size_t stride = p.stride ? p.stride : width;
+            size_t bpp = PixelBufferDescriptor::computeDataSize(
+                    p.format, p.type, 1, 1, 1);
+            size_t bpr = PixelBufferDescriptor::computeDataSize(
+                    p.format, p.type, stride, 1, p.alignment);
+            char const* head = (char const*)vaddr + p.left * bpp + bpr * p.top;
+            char* tail = (char*)p.buffer + p.left * bpp + bpr * (p.top + height - 1);
+            for (size_t i = 0; i < height; ++i) {
+                memcpy(tail, head, bpp * width);
+                head += bpr;
+                tail -= bpr;
+            }
+            glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+        }
+        gl.bindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+        glDeleteBuffers(1, &pbo);
+        scheduleDestroy(std::move(p));
+        delete pUserBuffer;
+        CHECK_GL_ERROR(utils::slog.e)
+    });
 
     CHECK_GL_ERROR(utils::slog.e)
+}
+
+void OpenGLDriver::whenGpuCommandsComplete(std::function<void(void)> fn) noexcept {
+    GLsync sync = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+    mGpuCommandCompleteOps.emplace_back(sync, std::move(fn));
+    CHECK_GL_ERROR(utils::slog.e)
+}
+
+void OpenGLDriver::executeGpuCommandsCompleteOps() noexcept {
+    auto& v = mGpuCommandCompleteOps;
+    auto it = v.begin();
+    while (it != v.end()) {
+        GLenum status = glClientWaitSync(it->first, 0, 0);
+        if (status == GL_ALREADY_SIGNALED || status == GL_CONDITION_SATISFIED) {
+            it->second();
+            glDeleteSync(it->first);
+            it = v.erase(it);
+        } else if (UTILS_UNLIKELY(status == GL_WAIT_FAILED)) {
+            // This should never happen, but is very problematic if it does, as we might leak
+            // some data depending on what the callback does. However, we clean-up our own state.
+            glDeleteSync(it->first);
+            it = v.erase(it);
+        } else {
+            ++it;
+        }
+    }
 }
 
 // ------------------------------------------------------------------------------------------------
 // Rendering ops
 // ------------------------------------------------------------------------------------------------
 
-void OpenGLDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId) {
+void OpenGLDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId,
+        backend::FrameFinishedCallback, void*) {
     auto& gl = mContext;
     insertEventMarker("beginFrame");
+    executeGpuCommandsCompleteOps();
     if (UTILS_UNLIKELY(!mExternalStreams.empty())) {
         OpenGLPlatform& platform = mPlatform;
         for (GLTexture const* t : mExternalStreams) {
             assert(t && t->hwStream);
-            if (static_cast<GLStream*>(t->hwStream)->isNativeStream()) {
+            if (t->hwStream->streamType == StreamType::NATIVE) {
                 assert(t->hwStream->stream);
                 platform.updateTexImage(t->hwStream->stream,
                         &static_cast<GLStream*>(t->hwStream)->user_thread.timestamp);
@@ -2440,6 +2639,7 @@ void OpenGLDriver::setPresentationTime(int64_t monotonic_clock_ns) {
 void OpenGLDriver::endFrame(uint32_t frameId) {
     //SYSTRACE_NAME("glFinish");
     //glFinish();
+    //executeGpuCommandsCompleteOps();
     insertEventMarker("endFrame");
 }
 
@@ -2449,6 +2649,12 @@ void OpenGLDriver::flush(int) {
     if (!gl.bugs.disable_glFlush) {
         glFlush();
     }
+}
+
+void OpenGLDriver::finish(int) {
+    DEBUG_MARKER()
+    glFinish();
+    executeGpuCommandsCompleteOps();
 }
 
 UTILS_NOINLINE
@@ -2494,7 +2700,7 @@ void OpenGLDriver::clearWithGeometryPipe(
     auto& gl = mContext;
 
     // GLES is required to use this method; see initClearProgram.
-    assert(GLES31_HEADERS);
+    assert(GLES30_HEADERS);
 
     // TODO: handle stencil clear with geometry as well
     if (clearStencil) {

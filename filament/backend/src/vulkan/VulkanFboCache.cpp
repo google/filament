@@ -62,11 +62,11 @@ VkFramebuffer VulkanFboCache::getFramebuffer(FboKey config, uint32_t w, uint32_t
     VkFramebufferCreateInfo info {
         .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
         .renderPass = config.renderPass,
+        .attachmentCount = nAttachments,
+        .pAttachments = config.attachments,
         .width = w,
         .height = h,
-        .layers = 1,
-        .attachmentCount = nAttachments,
-        .pAttachments = config.attachments
+        .layers = 1
     };
     mRenderPassRefCount[info.renderPass]++;
     VkFramebuffer framebuffer;
@@ -108,7 +108,7 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
     VkAttachmentDescription colorAttachment {
         .format = config.colorFormat,
         .samples = VK_SAMPLE_COUNT_1_BIT,
-        .loadOp = (config.flags.clear & (uint8_t)TargetBufferFlags::COLOR) ?
+        .loadOp = any(config.flags.clear & TargetBufferFlags::COLOR) ?
                 VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE,
         .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
         .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
@@ -118,7 +118,7 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
     VkAttachmentDescription depthAttachment {
         .format = config.depthFormat,
         .samples = VK_SAMPLE_COUNT_1_BIT,
-        .loadOp = (config.flags.clear & (uint8_t)TargetBufferFlags::DEPTH) ?
+        .loadOp = any(config.flags.clear & TargetBufferFlags::DEPTH) ?
                 VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE,
         .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
         .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
@@ -126,38 +126,15 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
         .finalLayout = config.finalDepthLayout
     };
 
-    // We define dependencies only when the framebuffer local hint is applied.
-    // NOTE: It's likely that VK_DEPENDENCY_BY_REGION_BIT and VK_ACCESS_COLOR_ATTACHMENT_READ do
-    // not actually achieve anything since are neither defining multiple subpasses, nor reading back
-    // from the framebuffer in the shader using subpassLoad().
-    VkSubpassDependency dependencies[] = {{
-        .srcSubpass = VK_SUBPASS_EXTERNAL,
-        .dstSubpass = 0,
-        .srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-        .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-        .srcAccessMask = VK_ACCESS_MEMORY_READ_BIT,
-        .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-        .dependencyFlags = config.flags.dependencies
-    }, {
-        .srcSubpass = 0,
-        .dstSubpass = VK_SUBPASS_EXTERNAL,
-        .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-        .dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-        .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-        .dstAccessMask = VK_ACCESS_MEMORY_READ_BIT,
-        .dependencyFlags = config.flags.dependencies
-    }};
-
     // Finally, create the VkRenderPass.
     VkAttachmentDescription attachments[2];
     VkRenderPassCreateInfo renderPassInfo {
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
         .attachmentCount = 0u,
         .pAttachments = attachments,
-        .dependencyCount = config.flags.dependencies ? 2u : 0u,
-        .pDependencies = config.flags.dependencies ? dependencies : nullptr,
         .subpassCount = 1,
-        .pSubpasses = &subpass
+        .pSubpasses = &subpass,
+        .dependencyCount = 0u
     };
     if (hasColor) {
         attachments[renderPassInfo.attachmentCount++] = colorAttachment;

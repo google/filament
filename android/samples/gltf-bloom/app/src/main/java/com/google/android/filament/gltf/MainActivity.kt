@@ -43,10 +43,9 @@ data class Framebuffer(
 
 class MainActivity : Activity() {
 
-    // Be sure to initialize not only Filament, but also gltfio (via AssetLoader)
+    // We are using the gltfio library, so init the AssetLoader rather than Filament.
     companion object {
         init {
-            Filament.init()
             AssetLoader.init()
         }
     }
@@ -155,7 +154,7 @@ class MainActivity : Activity() {
         // IndirectLight and SkyBox
         // ------------------------
 
-        val ibl = "venetian_crossroads_2k";
+        val ibl = "venetian_crossroads_2k"
 
         readUncompressedAsset("envs/$ibl/${ibl}_ibl.ktx").let {
             primary.scene.indirectLight = KtxLoader.createIndirectLight(engine, it, KtxLoader.Options())
@@ -209,7 +208,7 @@ class MainActivity : Activity() {
             }
         }
 
-        // Punctual Light Sources
+        // Light Sources
         // ----------------------
 
         light = EntityManager.get().create()
@@ -236,12 +235,19 @@ class MainActivity : Activity() {
 
             tm.setTransform(tm.getInstance(filamentAsset.root),
                     floatArrayOf(
-                            cos(v),  0.0f,  -sin(v), 0.0f,
-                            0.0f,        1.0f,  0.0f,        0.0f,
-                            sin(v),  0.0f,  cos(v),  0.0f,
-                            0.0f,        -1.7f, 0.0f,        1.0f
+                            cos(v),  0.0f, -sin(v), 0.0f,
+                            0.0f,    1.0f,  0.0f,   0.0f,
+                            sin(v),  0.0f,  cos(v), 0.0f,
+                            0.0f,   -1.7f,  0.0f,   1.0f
                     ))
 
+
+            // The lucy asset does not have animation but we invoke the asset animator for demonstration purposes.
+            if (filamentAsset.animator.animationCount > 0) {
+                val elapsedTimeInSeconds = a.currentPlayTime.toFloat() / 1000.0f
+                filamentAsset.animator.applyAnimation(0, elapsedTimeInSeconds)
+                filamentAsset.animator.updateBoneMatrices()
+            }
         }
         animator.start()
     }
@@ -426,12 +432,13 @@ class MainActivity : Activity() {
 
     override fun onDestroy() {
         super.onDestroy()
+
+        // Stop the animation and any pending frame
+        choreographer.removeFrameCallback(frameScheduler)
+        animator.cancel()
+
         // Always detach the surface before destroying the engine
         uiHelper.detach()
-
-        // This ensures that all the commands we've sent to Filament have
-        // been processed before we attempt to destroy anything
-        Fence.waitAndDestroy(engine.createFence(Fence.Type.SOFT), Fence.Mode.FLUSH)
 
         assetLoader.destroyAsset(filamentAsset)
         assetLoader.destroy()

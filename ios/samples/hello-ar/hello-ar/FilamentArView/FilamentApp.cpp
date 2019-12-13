@@ -200,7 +200,7 @@ void FilamentApp::setupIbl() {
                                                        RESOURCES_VENETIAN_CROSSROADS_2K_IBL_SIZE);
     float3 harmonics[9];
     iblBundle->getSphericalHarmonics(harmonics);
-    app.iblTexture = image::KtxUtility::createTexture(engine, iblBundle, false);
+    app.iblTexture = image::ktx::createTexture(engine, iblBundle, false);
 
     app.indirectLight = IndirectLight::Builder()
         .reflections(app.iblTexture)

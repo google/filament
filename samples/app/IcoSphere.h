@@ -17,14 +17,9 @@
 #ifndef TNT_FILAMENT_SAMPLE_ICOSPHERE_H
 #define TNT_FILAMENT_SAMPLE_ICOSPHERE_H
 
-
-#include <utils/Entity.h>
-
 #include <math/vec3.h>
 
-#include <algorithm>
 #include <map>
-#include <utility>
 #include <vector>
 
 class IcoSphere {

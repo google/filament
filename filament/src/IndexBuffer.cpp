@@ -48,6 +48,7 @@ IndexBuffer::Builder& IndexBuffer::Builder::bufferType(IndexType indexType) noex
 }
 
 IndexBuffer* IndexBuffer::Builder::build(Engine& engine) {
+    FEngine::assertValid(engine, __PRETTY_FUNCTION__);
     return upcast(engine).createIndexBuffer(*this);
 }
 

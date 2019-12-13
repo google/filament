@@ -83,7 +83,10 @@ target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 # Compiler flags
 # ==================================================================================================
 
-target_compile_options(${TARGET} PRIVATE -Wno-deprecated-register)
+if (NOT MSVC_NATIVE)
+    target_compile_options(${TARGET} PRIVATE -Wno-deprecated-register)
+endif()
+
 target_compile_options(${TARGET} PRIVATE $<$<PLATFORM_ID:Linux>:-fPIC>)
 
 if (MSVC OR CLANG_CL)
@@ -96,5 +99,21 @@ endif()
 # Installation
 # ==================================================================================================
 
-install(TARGETS ${TARGET} ARCHIVE DESTINATION lib/${DIST_DIR})
+# matdbg has dependencies on non-installed libraries. Here we bundle them all together into a single
+# library that gets copied into the installation folder so users are only required to link against
+# matdbg.
+set(MATDBG_DEPS
+    matdbg
+    matdbg_resources
+    civetweb
+    SPIRV-Tools
+    spirv-cross-core
+    spirv-cross-glsl
+    )
+
+set(MATDBG_COMBINED_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/libmatdbg_combined.a")
+combine_static_libs(matdbg "${MATDBG_COMBINED_OUTPUT}" "${MATDBG_DEPS}")
+
+set(MATDBG_LIB_NAME ${CMAKE_STATIC_LIBRARY_PREFIX}matdbg${CMAKE_STATIC_LIBRARY_SUFFIX})
+install(FILES "${MATDBG_COMBINED_OUTPUT}" DESTINATION lib/${DIST_DIR} RENAME ${MATDBG_LIB_NAME})
 install(DIRECTORY ${PUBLIC_HDR_DIR}/matdbg DESTINATION include)

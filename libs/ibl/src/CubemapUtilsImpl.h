@@ -97,6 +97,8 @@ void CubemapUtils::processSingleThreaded(
     const size_t dim = cm.getDimensions();
 
     STATE s;
+    s = prototype;
+
     for (size_t faceIndex = 0; faceIndex < 6; faceIndex++) {
         const Cubemap::Face f = (Cubemap::Face)faceIndex;
         Image& image(cm.getImageForFace(f));

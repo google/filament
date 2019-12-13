@@ -136,6 +136,9 @@ struct Attachments {
         uint8_t mLevel = 0;
     };
 
+    constexpr Attachments() noexcept : textures{} {}
+    Attachments(AttachmentInfo c, AttachmentInfo d) noexcept : color(c), depth(d) {}
+
     enum { COLOR = 0, DEPTH = 1 };
     static constexpr size_t COUNT = 2;
     union {

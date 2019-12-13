@@ -36,20 +36,24 @@ struct TextureBinding;
 class Animator;
 
 /**
- * FilamentAsset owns a bundle of Filament objects that have been created by AssetLoader.
- * For usage instructions, see the comment block for AssetLoader.
+ * \class FilamentAsset FilamentAsset.h gltfio/FilamentAsset.h
+ * \brief Owns a bundle of Filament objects that have been created by AssetLoader.
+ *
+ * For usage instructions, see the documentation for AssetLoader.
  *
  * This class owns a hierarchy of entities that have been loaded from a glTF asset. Every entity has
- * a TransformManager component, and some entities also have Name and/or Renderable components.
+ * a filament::TransformManager component, and some entities also have \c Name and/or \c Renderable
+ * components.
  *
  * In addition to the aforementioned entities, an asset has strong ownership over a list of
- * VertexBuffer, IndexBuffer, MaterialInstance, Texture, and, optionally, a simple animation engine.
+ * filament::VertexBuffer, filament::IndexBuffer, filament::MaterialInstance, filament::Texture,
+ * and, optionally, a simple animation engine (gltfio::Animator).
  *
- * Clients must use ResourceLoader to create Texture objects, compute tangent quaternions, and
- * upload data into vertex buffers and index buffers.
+ * Clients must use ResourceLoader to create filament::Texture objects, compute tangent quaternions,
+ * and upload data into vertex buffers and index buffers.
  *
- * TODO: Only the default glTF scene is loaded, other glTF scenes are ignored.
- * TODO: Cameras, extras, and extensions are ignored.
+ * \todo Only the default glTF scene is loaded, other glTF scenes are ignored.
+ * \todo Cameras, extras, and extensions are ignored.
  */
 class FilamentAsset {
 public:
@@ -58,28 +62,42 @@ public:
      * Gets the list of entities, one for each glTF node. All of these have a Transform component.
      * Some of the returned entities may also have a Renderable component.
      */
-    size_t getEntityCount() const noexcept;
     const utils::Entity* getEntities() const noexcept;
+
+    /**
+     * Gets the number of entities returned by getEntities().
+     */
+    size_t getEntityCount() const noexcept;
 
     /** Gets the transform root for the asset, which has no matching glTF node. */
     utils::Entity getRoot() const noexcept;
 
     /** Gets all material instances. These are already bound to renderables. */
-    size_t getMaterialInstanceCount() const noexcept;
     const filament::MaterialInstance* const* getMaterialInstances() const noexcept;
+
+    /** Gets all material instances (non-const). These are already bound to renderables. */
     filament::MaterialInstance* const* getMaterialInstances() noexcept;
 
+    /** Gets the number of materials returned by getMaterialInstances(). */
+    size_t getMaterialInstanceCount() const noexcept;
+
     /** Gets loading instructions for vertex buffers and index buffers. */
-    size_t getBufferBindingCount() const noexcept;
     const BufferBinding* getBufferBindings() const noexcept;
 
+    /** Gets the number of bindings returned by getBufferBindings(). */
+    size_t getBufferBindingCount() const noexcept;
+
     /** Gets loading instructions for textures. */
-    size_t getTextureBindingCount() const noexcept;
     const TextureBinding* getTextureBindings() const noexcept;
 
+    /** Gets the number of bindings returned by getTextureBindings(). */
+    size_t getTextureBindingCount() const noexcept;
+
     /** Gets resource URIs for all externally-referenced buffers. */
-    size_t getResourceUriCount() const noexcept;
     const char* const* getResourceUris() const noexcept;
+
+    /** Gets the number of resource URIs returned by getResourceUris(). */
+    size_t getResourceUriCount() const noexcept;
 
     /** Gets the bounding box computed from the supplied min / max values in glTF accessors. */
     filament::Aabb getBoundingBox() const noexcept;
@@ -118,6 +136,7 @@ public:
      */
     const void* getSourceAsset() noexcept;
 
+    /*! \cond PRIVATE */
 protected:
     FilamentAsset() noexcept = default;
     ~FilamentAsset() = default;
@@ -127,17 +146,21 @@ public:
     FilamentAsset(FilamentAsset&&) = delete;
     FilamentAsset& operator=(FilamentAsset const&) = delete;
     FilamentAsset& operator=(FilamentAsset&&) = delete;
+    /*! \endcond */
 };
 
 /**
- * BufferBinding is a read-only structure that tells clients how to load a source blob into a
- * VertexBuffer slot or IndexBuffer.
+ * \struct BufferBinding FilamentAsset.h gltfio/FilamentAsset.h
+ * \brief Read-only structure that tells the resource loader how to load a source blob into a
+ * filament::VertexBuffer, filament::IndexBuffer, etc.
+ *
+ * \warning Clients usually do not need to interact with BufferBinding directly, they can use
+ * ResourceLoader instead.
  *
  * Each binding instance corresponds to one of the following:
  *
- *  (a) One call to VertexBuffer::setBufferAt().
- *  (b) One call to IndexBuffer::setBuffer().
- *
+ * - One call to VertexBuffer::setBufferAt().
+ * - One call to IndexBuffer::setBuffer().
  */
 struct BufferBinding {
     const char* uri;      // unique identifier for the source blob
@@ -155,12 +178,20 @@ struct BufferBinding {
     bool generateTrivialIndices; // the resource loader must generate indices like: 0, 1, 2, ...
     bool generateDummyData;      // the resource loader should generate a sequence of 1.0 values
     bool generateTangents;       // the resource loader should generate tangents
+    bool sparseAccessor;         // the resource loader should apply a sparse data set
 
     bool isMorphTarget;
     uint8_t morphTargetIndex;
 };
 
-/** Describes a binding from a Texture to a MaterialInstance. */
+/**
+ * \struct TextureBinding FilamentAsset.h gltfio/FilamentAsset.h
+ * \brief Read-only structure that describes a binding between filament::Texture and
+ * filament::MaterialInstance.
+ *
+ * \warning Clients usually do not need to interact with TextureBinding directly, they can use
+ * ResourceLoader instead.
+ */
 struct TextureBinding {
     const char* uri;
     uint32_t totalSize;

@@ -119,7 +119,7 @@ Driver* PlatformWGL::createDriver(void* const sharedGLContext) noexcept {
 
     PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribs =
             (PFNWGLCREATECONTEXTATTRIBSARBPROC) wglGetProcAddress("wglCreateContextAttribsARB");
-    mContext = wglCreateContextAttribs(whdc, nullptr, attribs);
+    mContext = wglCreateContextAttribs(whdc, (HGLRC) sharedGLContext, attribs);
     if (!mContext) {
         utils::slog.e << "wglCreateContextAttribs() failed, whdc=" << whdc << utils::io::endl;
         goto error;
@@ -180,6 +180,11 @@ Platform::SwapChain* PlatformWGL::createSwapChain(void* nativeWindow, uint64_t& 
 
     SwapChain* swapChain = (SwapChain*) hdc;
     return swapChain;
+}
+
+Platform::SwapChain* PlatformWGL::createSwapChain(uint32_t width, uint32_t height, uint64_t& flags) noexcept {
+    // TODO: implement headless SwapChain
+    return nullptr;
 }
 
 void PlatformWGL::destroySwapChain(Platform::SwapChain* swapChain) noexcept {

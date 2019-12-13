@@ -19,6 +19,8 @@
 
 #include <backend/Platform.h>
 
+#include "private/backend/AcquiredImage.h"
+
 namespace filament {
 namespace backend {
 
@@ -41,6 +43,10 @@ public:
     virtual void terminate() noexcept = 0;
 
     virtual SwapChain* createSwapChain(void* nativeWindow, uint64_t& flags) noexcept = 0;
+
+    // headless swapchain
+    virtual SwapChain* createSwapChain(uint32_t width, uint32_t height, uint64_t& flags) noexcept = 0;
+
     virtual void destroySwapChain(SwapChain* swapChain) noexcept = 0;
 
     virtual void createDefaultRenderTarget(uint32_t& framebuffer, uint32_t& colorbuffer,
@@ -85,6 +91,10 @@ public:
 
     virtual void destroyExternalTextureStorage(ExternalTexture* ets) noexcept = 0;
 
+    // The method allows platforms to convert a user-supplied external image object into a new type
+    // (e.g. HardwareBuffer => EGLImage). It makes sense for the default implementation to do nothing.
+    virtual AcquiredImage transformAcquiredImage(AcquiredImage source) noexcept { return source; }
+
     // called to bind the platform-specific externalImage to a texture
     // texture points to a OpenGLDriver::GLTexture
     virtual bool setExternalImage(void* externalImage, void* texture) noexcept {
@@ -102,7 +112,6 @@ public:
 
     // called once before a SAMPLER_EXTERNAL texture is destroyed.
     virtual void destroyExternalImage(void* texture) noexcept {}
-
 };
 
 } // namespace backend

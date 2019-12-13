@@ -42,6 +42,8 @@ set(MATERIAL_SRCS
         materials/sandboxLit.mat
         materials/sandboxLitFade.mat
         materials/sandboxLitTransparent.mat
+        materials/sandboxLitThinRefraction.mat
+        materials/sandboxLitSolidRefraction.mat
         materials/sandboxSpecGloss.mat
         materials/sandboxSubsurface.mat
         materials/sandboxUnlit.mat
@@ -137,7 +139,7 @@ function(add_pngfile SOURCE TARGET)
     set(TEXTURE_FILES ${TEXTURE_FILES} ${target_path} PARENT_SCOPE)
     add_custom_command(
         OUTPUT ${target_path}
-        COMMAND cmake -E copy ${source_path} ${target_path}
+        COMMAND ${CMAKE_COMMAND} -E copy ${source_path} ${target_path}
         MAIN_DEPENDENCY ${source_path})
 endfunction()
 
@@ -163,14 +165,36 @@ endif()
 
 add_library(suzanne-resources ${DUMMY_SRC} ${RESGEN_SOURCE})
 
+
 # ==================================================================================================
-# Resources for the gltf_viewer and lucy demos
+# Resources for gltf_viewer
 # ==================================================================================================
 
-get_resgen_vars(${RESOURCE_DIR} gltf)
+add_library(gltf-resources ${DUMMY_SRC})
 
-set(GLTF_RESOURCE_FILES
+set(GLTF_VIEWER_RESOURCE_FILES
     ${ROOT_DIR}/third_party/models/DamagedHelmet/DamagedHelmet.glb
+)
+
+get_resgen_vars(${RESOURCE_DIR} gltf_viewer)
+
+add_custom_command(
+        OUTPUT ${RESGEN_OUTPUTS}
+        COMMAND resgen ${RESGEN_FLAGS} ${GLTF_VIEWER_RESOURCE_FILES}
+        DEPENDS resgen ${GLTF_VIEWER_RESOURCE_FILES}
+)
+
+if (DEFINED RESGEN_SOURCE_FLAGS)
+    set_source_files_properties(${RESGEN_SOURCE} PROPERTIES COMPILE_FLAGS ${RESGEN_SOURCE_FLAGS})
+endif()
+
+target_sources(gltf-resources PRIVATE ${RESGEN_SOURCE})
+
+# ==================================================================================================
+# Resources for lucy demo
+# ==================================================================================================
+
+set(GLTF_LUCY_RESOURCE_FILES
     ${ROOT_DIR}/third_party/models/lucy/lucy.glb
     ${ROOT_DIR}/third_party/textures/Blue_tiles_01/Blue_tiles_01_AO.png
     ${ROOT_DIR}/third_party/textures/Blue_tiles_01/Blue_tiles_01_Color.png
@@ -178,17 +202,19 @@ set(GLTF_RESOURCE_FILES
     ${ROOT_DIR}/third_party/textures/Blue_tiles_01/Blue_tiles_01_Roughness.png
 )
 
+get_resgen_vars(${RESOURCE_DIR} gltf_lucy)
+
 add_custom_command(
         OUTPUT ${RESGEN_OUTPUTS}
-        COMMAND resgen ${RESGEN_FLAGS} ${GLTF_RESOURCE_FILES}
-        DEPENDS resgen ${TEXTURE_FILES}
+        COMMAND resgen ${RESGEN_FLAGS} ${GLTF_LUCY_RESOURCE_FILES}
+        DEPENDS resgen ${GLTF_LUCY_RESOURCE_FILES}
 )
 
 if (DEFINED RESGEN_SOURCE_FLAGS)
     set_source_files_properties(${RESGEN_SOURCE} PROPERTIES COMPILE_FLAGS ${RESGEN_SOURCE_FLAGS})
 endif()
 
-add_library(gltf-resources ${DUMMY_SRC} ${RESGEN_SOURCE})
+target_sources(gltf-resources PRIVATE ${RESGEN_SOURCE})
 
 # ==================================================================================================
 # Common library
@@ -205,7 +231,9 @@ set(APP_SRCS
         app/FilamentApp.cpp
         app/IBL.cpp
         app/IcoSphere.cpp
-        app/Sphere.cpp)
+        app/Sphere.cpp
+        app/Image.cpp
+        )
 
 if (APPLE)
     list(APPEND APP_SRCS app/NativeWindowHelperCocoa.mm)
@@ -225,6 +253,16 @@ include_directories(app)
 add_library(sample-app ${APP_SRCS})
 target_include_directories(sample-app PUBLIC app)
 
+# Multi-configuration generators, like Visual Studio or Xcode, place executable binaries in a
+# sub-directory named after the configuration, like "Debug" or "Release".
+# For these generators, in order to find assets, we must "walk" up an additional directory.
+get_property(_isMultiConfig GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+if (_isMultiConfig)
+    target_compile_definitions(sample-app PRIVATE RELATIVE_ASSET_PATH="..")
+else()
+    target_compile_definitions(sample-app PRIVATE RELATIVE_ASSET_PATH=".")
+endif()
+
 target_link_libraries(sample-app PRIVATE ${APP_LIBS})
 
 list(APPEND APP_LIBS sample-app)
@@ -233,9 +271,11 @@ list(APPEND APP_LIBS sample-app)
 # Compiler flags
 # ==================================================================================================
 
-set(COMPILER_FLAGS
-        -Wno-extern-c-compat
-        $<$<NOT:$<PLATFORM_ID:Linux>>:-Wno-address-of-packed-member>)
+if (NOT MSVC_NATIVE)
+    set(COMPILER_FLAGS
+            -Wno-extern-c-compat
+            $<$<NOT:$<PLATFORM_ID:Linux>>:-Wno-address-of-packed-member>)
+endif()
 
 if (MSVC OR CLANG_CL)
     set(COMPILER_FLAGS ${COMPILER_FLAGS} $<$<CONFIG:Release>:/fp:fast>)
@@ -353,3 +393,9 @@ add_dependencies(filament assets)
 
 add_custom_target(envs DEPENDS ${target_envmaps})
 add_dependencies(filament envs)
+
+add_custom_target(run_gltf_viewer DEPENDS gltf_viewer
+        COMMAND gltf_viewer)
+
+add_custom_target(run_material_sandbox DEPENDS material_sandbox
+        COMMAND material_sandbox --ibl=venetian_crossroads_2k assets/models/material_sphere/material_sphere.obj)

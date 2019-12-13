@@ -74,8 +74,12 @@ static Texture* loadNormalMap(Engine* engine, const uint8_t* normals, size_t nby
 int main(int argc, char** argv) {
     Config config;
     config.title = "suzanne";
+#ifdef _MSC_VER
+    config.backend = Engine::Backend::OPENGL;
+#else
     config.backend = Engine::Backend::VULKAN;
-    config.iblDirectory = FilamentApp::getRootPath() + IBL_FOLDER;
+#endif
+    config.iblDirectory = FilamentApp::getRootAssetsPath() + IBL_FOLDER;
 
     App app;
     auto setup = [config, &app](Engine* engine, View* view, Scene* scene) {
@@ -88,10 +92,10 @@ int main(int argc, char** argv) {
         auto ao = new image::KtxBundle(TEXTURES_AO_DATA, TEXTURES_AO_SIZE);
         auto metallic = new image::KtxBundle(TEXTURES_METALLIC_DATA, TEXTURES_METALLIC_SIZE);
         auto roughness = new image::KtxBundle(TEXTURES_ROUGHNESS_DATA, TEXTURES_ROUGHNESS_SIZE);
-        app.albedo = KtxUtility::createTexture(engine, albedo, true);
-        app.ao = KtxUtility::createTexture(engine, ao, false);
-        app.metallic = KtxUtility::createTexture(engine, metallic, false);
-        app.roughness = KtxUtility::createTexture(engine, roughness, false);
+        app.albedo = ktx::createTexture(engine, albedo, true);
+        app.ao = ktx::createTexture(engine, ao, false);
+        app.metallic = ktx::createTexture(engine, metallic, false);
+        app.roughness = ktx::createTexture(engine, roughness, false);
         app.normal = loadNormalMap(engine, TEXTURES_NORMAL_DATA, TEXTURES_NORMAL_SIZE);
         TextureSampler sampler(TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR,
                 TextureSampler::MagFilter::LINEAR);
@@ -121,7 +125,6 @@ int main(int argc, char** argv) {
     };
 
     auto cleanup = [&app](Engine* engine, View*, Scene*) {
-        Fence::waitAndDestroy(engine->createFence());
         engine->destroy(app.materialInstance);
         engine->destroy(app.mesh.renderable);
         engine->destroy(app.material);

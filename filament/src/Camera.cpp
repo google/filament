@@ -22,6 +22,7 @@
 #include "details/Engine.h"
 
 #include <utils/compiler.h>
+#include <utils/Panic.h>
 
 #include <math/scalar.h>
 
@@ -46,7 +47,7 @@ FCamera::FCamera(FEngine& engine, Entity e)
 void UTILS_NOINLINE FCamera::setProjection(double fov, double aspect, double near, double far,
         Camera::Fov direction) noexcept {
     double w, h;
-    double s = std::tan(fov * (M_PI / 360.0)) * near;
+    double s = std::tan(fov * (F_PI / 360.0)) * near;
     if (direction == Fov::VERTICAL) {
         w = s * aspect;
         h = s;
@@ -80,25 +81,19 @@ void UTILS_NOINLINE FCamera::setProjection(Camera::Projection projection,
         double bottom, double top,
         double near, double far) noexcept {
 
-    // we silently make sure our preconditions are verified
-    // this is to avoid potential inconsistent state in the renderer later.
-
-    if (UTILS_UNLIKELY(left == right)) {
-        left -= 1;
-        right += 1;
-    }
-
-    if (UTILS_UNLIKELY(bottom == top)) {
-        bottom -= 1;
-        top += 1;
-    }
-
-    if (UTILS_UNLIKELY(projection == Projection::PERSPECTIVE && near < 1.0 / 1024.0)) {
-        near = 1.0 / 1024.0; // about 1mm
-    }
-
-    if (UTILS_UNLIKELY(near == far)) {
-        far += 1;
+    // we make sure our preconditions are verified, using default values,
+    // to avoid inconsistent states in the renderer later.
+    if (UTILS_UNLIKELY(left == right ||
+                       bottom == top ||
+                       (projection == Projection::PERSPECTIVE && (near <= 0 || far <= near)) ||
+                       (projection == Projection::ORTHO && (near == far)))) {
+        PANIC_LOG("Camera preconditions not met. Using default projection.");
+        left = -0.1;
+        right = 0.1;
+        bottom = -0.1;
+        top = 0.1;
+        near = 0.1;
+        far = 100.0;
     }
 
     mat4 p;

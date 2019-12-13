@@ -180,9 +180,10 @@ void MetalBlitter::blit(const BlitArgs& args) {
         [encoder setFragmentTexture:args.source.depth atIndex:1];
     }
 
-    SamplerParams samplerState;
-    samplerState.filterMin = static_cast<SamplerMinFilter>(args.filter);
-    samplerState.filterMag = args.filter;
+    SamplerParams samplerState{
+            .filterMag = args.filter,
+            .filterMin = static_cast<SamplerMinFilter>(args.filter)
+    };
     id<MTLSamplerState> sampler = mContext.samplerStateCache.getOrCreateState(samplerState);
     [encoder setFragmentSamplerState:sampler atIndex:0];
 
@@ -288,11 +289,7 @@ void MetalBlitter::blitFastPath(bool& blitColor, bool& blitDepth, const BlitArgs
 }
 
 void MetalBlitter::shutdown() noexcept {
-    for (auto it = mBlitFunctions.begin(); it != mBlitFunctions.end(); ++it) {
-        [it.value() release];
-    }
     mBlitFunctions.clear();
-    [mVertexFunction release];
     mVertexFunction = nil;
 }
 
@@ -347,8 +344,6 @@ id<MTLFunction> MetalBlitter::compileFragmentFunction(BlitFunctionKey key) {
                                                               error:&error];
     id<MTLFunction> function = [library newFunctionWithName:@"blitterFrag"];
     NSERROR_CHECK("Unable to compile shading library for MetalBlitter.");
-    [options release];
-    [library release];
 
     return function;
 }
@@ -366,7 +361,6 @@ id<MTLFunction> MetalBlitter::getBlitVertexFunction() {
                                                              error:&error];
     id<MTLFunction> function = [library newFunctionWithName:@"blitterVertex"];
     NSERROR_CHECK("Unable to compile shading library for MetalBlitter.");
-    [library release];
 
     mVertexFunction = function;
 

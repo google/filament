@@ -32,6 +32,7 @@
 
 #include <utils/JobSystem.h>
 #include <utils/Path.h>
+#include <utils/algorithm.h>
 
 #include <math/scalar.h>
 #include <math/vec4.h>
@@ -52,11 +53,12 @@ using namespace image;
 // -----------------------------------------------------------------------------------------------
 
 enum class ShFile {
-    SH_NONE, SH_CROSS, SH_TEXT
+    SH_NONE, SH_FILE, SH_TEXT
 };
 
 static const size_t DFG_LUT_DEFAULT_SIZE = 128;
 static const size_t IBL_DEFAULT_SIZE = 256;
+static const size_t IBL_DEFAULT_MIN_LOD_SIZE = 16;
 
 enum class OutputType {
     FACES, KTX, EQUIRECT, OCTAHEDRON
@@ -70,6 +72,7 @@ static float g_extract_blur = 0.0;
 static utils::Path g_extract_dir;
 
 static size_t g_output_size = 0;
+static size_t g_min_lod_size = 0;
 
 static bool g_quiet = false;
 static bool g_debug = false;
@@ -209,6 +212,8 @@ static void printUsage(char* name) {
             "       Diffuse irradiance into <dir>\n\n"
             "   --ibl-no-prefilter\n"
             "       Use importance sampling instead of prefiltered importance sampling\n\n"
+            "   --ibl-min-lod-size\n"
+            "       Minimum LOD size [default: 16]\n\n"
             "   --sh=bands\n"
             "       SH decomposition of input cubemap\n\n"
             "   --sh-output=filename.[exr|hdr|psd|rgbm|rgb32f|png|dds|txt]\n"
@@ -228,13 +233,18 @@ static void printUsage(char* name) {
 }
 
 static void license() {
-    std::cout <<
-    #include "licenses/licenses.inc"
-    ;
+    static const char *license[] = {
+        #include "licenses/licenses.inc"
+        nullptr
+    };
+
+    const char **p = &license[0];
+    while (*p)
+        std::cout << *p++ << std::endl;
 }
 
 static int handleCommandLineArgments(int argc, char* argv[]) {
-    static constexpr const char* OPTSTR = "hqidt:f:c:s:x:w:";
+    static constexpr const char* OPTSTR = "hqidt:f:c:s:x:w:S:";
     static const struct option OPTIONS[] = {
             { "help",                       no_argument, nullptr, 'h' },
             { "license",                    no_argument, nullptr, 'l' },
@@ -258,6 +268,7 @@ static int handleCommandLineArgments(int argc, char* argv[]) {
             { "ibl-dfg-multiscatter",       no_argument, nullptr, 'u' },
             { "ibl-dfg-cloth",              no_argument, nullptr, 'C' },
             { "ibl-no-prefilter",           no_argument, nullptr, 'n' },
+            { "ibl-min-lod-size",     required_argument, nullptr, 'S' },
             { "ibl-samples",          required_argument, nullptr, 'k' },
             { "deploy",               required_argument, nullptr, 'x' },
             { "no-mirror",                  no_argument, nullptr, 'm' },
@@ -347,6 +358,13 @@ static int handleCommandLineArgments(int argc, char* argv[]) {
                     exit(0);
                 }
                 break;
+            case 'S':
+                g_min_lod_size = std::stoul(arg);
+                if (!isPOT(g_min_lod_size)) {
+                    std::cerr << "min LOD size must be a power of two" << std::endl;
+                    exit(0);
+                }
+                break;
             case 'z':
                 g_sh_compute = 1;
                 g_sh_output = true;
@@ -359,7 +377,7 @@ static int handleCommandLineArgments(int argc, char* argv[]) {
             case 'o':
                 g_sh_compute = 1;
                 g_sh_output = true;
-                g_sh_file = ShFile::SH_CROSS;
+                g_sh_file = ShFile::SH_FILE;
                 g_sh_filename = arg;
                 if (g_sh_filename.getExtension() == "txt") {
                     g_sh_file = ShFile::SH_TEXT;
@@ -736,7 +754,22 @@ void sphericalHarmonics(utils::JobSystem& js, const utils::Path& iname, const Cu
                 CubemapSH::renderSH(js, cm, sh, g_sh_compute);
             }
 
-            if (g_sh_file == ShFile::SH_CROSS) {
+            cm.makeSeamless();
+
+            if (g_sh_file == ShFile::SH_FILE) {
+                Image image;
+                if (g_type == OutputType::EQUIRECT) {
+                    size_t dim = cm.getDimensions();
+                    image = Image(dim * 2, dim);
+                    CubemapUtils::cubemapToEquirectangular(js, image, cm);
+                }
+
+                if (g_type == OutputType::OCTAHEDRON) {
+                    size_t dim = cm.getDimensions();
+                    image = Image(dim, dim);
+                    CubemapUtils::cubemapToOctahedron(js, image, cm);
+                }
+
                 saveImage(g_sh_filename, ImageEncoder::chooseFormat(g_sh_filename.getName()),
                         image, g_compression);
             }
@@ -870,9 +903,14 @@ void iblRoughnessPrefilter(
     // This is useful for debugging.
     const bool DEBUG_FULL_RESOLUTION = false;
 
-    const size_t baseExp = __builtin_ctz(g_output_size ? g_output_size : IBL_DEFAULT_SIZE);
+    const size_t baseExp = utils::ctz(g_output_size ? g_output_size : IBL_DEFAULT_SIZE);
+    size_t minLod = utils::ctz(g_min_lod_size ? g_min_lod_size : IBL_DEFAULT_MIN_LOD_SIZE);
+    if (minLod >= baseExp) {
+        minLod = 0;
+    }
+
     size_t numSamples = g_num_samples;
-    const size_t numLevels = baseExp + 1;
+    const size_t numLevels = (baseExp + 1) - minLod;
 
     // It's convenient to create an empty KTX bundle on the stack in this scope, regardless of
     // whether KTX is requested. It does not consume memory if empty.
@@ -889,7 +927,7 @@ void iblRoughnessPrefilter(
         .pixelDepth = 0,
     };
 
-    for (ssize_t i = baseExp; i >= 0; --i) {
+    for (ssize_t i = baseExp; i >= ssize_t((baseExp + 1) - numLevels) ; --i) {
         const size_t dim = 1U << (DEBUG_FULL_RESOLUTION ? baseExp : i); // NOLINT
         const size_t level = baseExp - i;
         if (level >= 2) {
@@ -999,7 +1037,7 @@ void iblDiffuseIrradiance(utils::JobSystem& js, const utils::Path& iname,
         outputDir.mkdirRecursive();
     }
 
-    const size_t baseExp = __builtin_ctz(g_output_size ? g_output_size : IBL_DEFAULT_SIZE);
+    const size_t baseExp = utils::ctz(g_output_size ? g_output_size : IBL_DEFAULT_SIZE);
     size_t numSamples = g_num_samples;
     const size_t dim = 1U << baseExp;
     Image image;
@@ -1019,11 +1057,33 @@ void iblDiffuseIrradiance(utils::JobSystem& js, const utils::Path& iname,
         updater.stop();
     }
 
+    dst.makeSeamless();
+
     std::string ext = ImageEncoder::chooseExtension(g_format);
-    for (size_t j = 0; j < 6; j++) {
-        Cubemap::Face face = (Cubemap::Face) j;
-        std::string filename = outputDir + ("i_" + std::string(CubemapUtils::getFaceName(face)) + ext);
-        saveImage(filename, g_format, dst.getImageForFace(face), g_compression);
+
+    if (g_type == OutputType::EQUIRECT) {
+        size_t dim = dst.getDimensions();
+        Image image(dim * 2, dim);
+        CubemapUtils::cubemapToEquirectangular(js, image, dst);
+        std::string filename = outputDir + ("irradiance" + ext);
+        saveImage(filename, g_format, image, g_compression);
+    }
+
+    if (g_type == OutputType::OCTAHEDRON) {
+        size_t dim = dst.getDimensions();
+        Image image(dim, dim);
+        CubemapUtils::cubemapToOctahedron(js, image, dst);
+        std::string filename = outputDir + ("irradiance" + ext);
+        saveImage(filename, g_format, image, g_compression);
+    }
+
+    if (g_type == OutputType::FACES) {
+        for (size_t j = 0; j < 6; j++) {
+            Cubemap::Face face = (Cubemap::Face)j;
+            std::string filename =
+                    outputDir + ("i_" + std::string(CubemapUtils::getFaceName(face)) + ext);
+            saveImage(filename, g_format, dst.getImageForFace(face), g_compression);
+        }
     }
 
     if (g_debug) {

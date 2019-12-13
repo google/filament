@@ -25,6 +25,8 @@
 namespace filament {
 namespace backend {
 
+//! \privatesection
+
 class TargetBufferInfo {
 public:
     // ctor for 2D textures

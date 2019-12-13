@@ -263,6 +263,7 @@ export class Camera {
     public getForwardVector(): float3;
     public getFrustum(): Frustum;
     public setExposure(aperture: number, shutterSpeed: number, sensitivity: number): void;
+    public setExposureDirect(exposure: number): void;
     public getAperture(): number;
     public getShutterSpeed(): number;
     public getSensitivity(): number;
@@ -274,8 +275,18 @@ export class IndirectLight {
     public getIntensity(): number;
     public setRotation(value: mat3);
     public getRotation(): mat3;
-    public getDirectionEstimate(): float3;
-    public getColorEstimate(direction: float3): float4;
+    public static getDirectionEstimate(f32array: any): float3;
+    public static getColorEstimate(f32array: any, direction: float3): float4;
+    shfloats: Array<number>;
+}
+
+export class IndirectLight$Builder {
+    public reflections(cubemap: Texture): IndirectLight$Builder;
+    public irradianceTex(cubemap: Texture): IndirectLight$Builder;
+    public irradianceSh(nbands: number, f32array: any): IndirectLight$Builder;
+    public intensity(value: number): IndirectLight$Builder;
+    public rotation(value: mat3): IndirectLight$Builder;
+    public build(engine: Engine): IndirectLight;
 }
 
 export class IcoSphere {

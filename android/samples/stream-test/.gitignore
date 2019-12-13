@@ -1,0 +1,12 @@
+*.iml
+.gradle
+/local.properties
+/.idea/workspace.xml
+/.idea/libraries
+/.idea/caches
+/.idea/gradle.xml
+.DS_Store
+/build
+/captures
+/app/src/main/assets/materials/*.filamat
+.externalNativeBuild

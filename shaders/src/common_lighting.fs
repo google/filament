@@ -8,6 +8,7 @@ struct Light {
 struct PixelParams {
     vec3  diffuseColor;
     float perceptualRoughness;
+    float perceptualRoughnessUnclamped;
     vec3  f0;
     float roughness;
     vec3  dfg;
@@ -25,14 +26,24 @@ struct PixelParams {
     float anisotropy;
 #endif
 
-#if defined(SHADING_MODEL_SUBSURFACE)
+#if defined(SHADING_MODEL_SUBSURFACE) || defined(HAS_REFRACTION)
     float thickness;
+#endif
+#if defined(SHADING_MODEL_SUBSURFACE)
     vec3  subsurfaceColor;
     float subsurfacePower;
 #endif
 
 #if defined(SHADING_MODEL_CLOTH) && defined(MATERIAL_HAS_SUBSURFACE_COLOR)
     vec3  subsurfaceColor;
+#endif
+
+#if defined(HAS_REFRACTION)
+    float etaRI;
+    float etaIR;
+    float transmission;
+    float uThickness;
+    vec3 absorption;
 #endif
 };
 

@@ -3,11 +3,7 @@
 //------------------------------------------------------------------------------
 
 // Number of spherical harmonics bands (1, 2 or 3)
-#if defined(TARGET_MOBILE)
-#define SPHERICAL_HARMONICS_BANDS           2
-#else
 #define SPHERICAL_HARMONICS_BANDS           3
-#endif
 
 // IBL integration algorithm
 #define IBL_INTEGRATION_PREFILTERED_CUBEMAP         0
@@ -65,12 +61,21 @@ vec3 Irradiance_SphericalHarmonics(const vec3 n) {
         , 0.0);
 }
 
+vec3 Irradiance_RoughnessOne(const vec3 n) {
+    // note: lod used is always integer, hopefully the hardware skips tri-linear filtering
+    return decodeDataForIBL(textureLod(light_iblSpecular, n, frameUniforms.iblMaxMipLevel.x));
+}
+
 //------------------------------------------------------------------------------
 // IBL irradiance dispatch
 //------------------------------------------------------------------------------
 
 vec3 diffuseIrradiance(const vec3 n) {
-    return Irradiance_SphericalHarmonics(n);
+    if (frameUniforms.iblSH[0].x == 65504.0) {
+        return Irradiance_RoughnessOne(n);
+    } else {
+        return Irradiance_SphericalHarmonics(n);
+    }
 }
 
 //------------------------------------------------------------------------------
@@ -336,6 +341,111 @@ void evaluateSubsurfaceIBL(const PixelParams pixel, const vec3 diffuseIrradiance
 #endif
 }
 
+#if defined(HAS_REFRACTION)
+void applyRefraction(const PixelParams pixel,
+    const vec3 n0, vec3 E, vec3 Fd, vec3 Fr,
+    inout vec3 color) {
+
+    float perceptualRoughness = pixel.perceptualRoughnessUnclamped;
+    vec3 r = -shading_view;
+    float eta0 = pixel.etaIR;
+
+    /* compute first interface refraction */
+#if REFRACTION_TYPE == REFRACTION_TYPE_SOLID
+    // for a sphere, with light at infinity (i.e. cubemap)
+    r = refract(r, n0, eta0);
+    float N0oR = dot(n0, r);
+#elif REFRACTION_TYPE == REFRACTION_TYPE_THIN
+    // for thin layers, the direction of the refracted ray is the same as the incoming ray
+#else
+#error "invalid REFRACTION_TYPE"
+#endif
+
+    /* compute distance traveled d */
+    float d = 0.0;
+#if defined(MATERIAL_HAS_ABSORPTION) || (REFRACTION_MODE == REFRACTION_MODE_SCREEN_SPACE)
+#if REFRACTION_TYPE == REFRACTION_TYPE_SOLID
+#if defined(MATERIAL_HAS_THICKNESS)
+    d = pixel.thickness * -N0oR;
+#endif
+#elif REFRACTION_TYPE == REFRACTION_TYPE_THIN
+#if defined(MATERIAL_HAS_MICRO_THICKNESS)
+    // note: we need the refracted ray to calculate the distance traveled
+    // we could use shading_NoV, but we would lose the dependency on ior.
+    float N0oR = dot(n0, refract(r, n0, eta0));
+    d = pixel.uThickness / max(-N0oR, 0.01);
+#endif
+#endif
+#endif
+
+    /* compute transmission T */
+#if defined(MATERIAL_HAS_ABSORPTION)
+#if defined(MATERIAL_HAS_THICKNESS) || defined(MATERIAL_HAS_MICRO_THICKNESS)
+    vec3 T = min(vec3(1.0), exp(-pixel.absorption * d));
+#else
+    vec3 T = 1.0 - pixel.absorption;
+#endif
+#endif
+
+    // Roughness remaping for thin layers, see Burley 2012, "Physically-Based Shading at Disney"
+#if REFRACTION_TYPE == REFRACTION_TYPE_THIN
+    perceptualRoughness = saturate((0.65 * pixel.etaRI - 0.35) * perceptualRoughness);
+#endif
+
+    /* sample the cubemap or screen-space */
+#if REFRACTION_MODE == REFRACTION_MODE_CUBEMAP
+#if REFRACTION_TYPE == REFRACTION_TYPE_SOLID
+    // compute the direction of the output ray (needed for accessing the cubemap)
+    vec3 n1 = normalize(N0oR * r - n0 * 0.5);
+    float eta1 = pixel.etaRI;
+    r = refract(r, n1, eta1);
+#elif REFRACTION_TYPE == REFRACTION_TYPE_THIN
+    // For thin surfaces, the light will bounce off at the second interface in the direction of
+    // the reflection, effectively adding to the specular, but this process will repeat itself.
+    // Each time the ray exits the surface on the front side after the first bounce,
+    // it's multiplied by E^2, and we get: E + E(1-E)^2 + E^3(1-E)^2 + ...
+    // This infinite serie converges and is easy to simplify.
+    // Note: we calculate these bounces only on a single component,
+    // since it's a fairly subtle effect.
+    E *= 1.0 + pixel.transmission * (1.0 - E.g) / (1.0 + E.g);
+#endif
+
+    // when reading from the cubemap, we are not pre-exposed so we apply iblLuminance
+    // which is not the case when we'll read from the screen-space buffer
+    vec3 Ft = prefilteredRadiance(r, perceptualRoughness) * frameUniforms.iblLuminance;
+#else
+    // compute the point where the ray exits the medium, if needed
+    vec4 p = vec4(shading_position + r * d, 1.0);
+    vec3 Ft;
+    p = frameUniforms.clipFromWorldMatrix * p;
+    // TODO: sample screen-space at p
+    Ft = vec3(0.0);
+#endif
+
+    /* fresnel from the first interface */
+    Ft *= 1.0 - E;
+
+    /* apply absorption */
+#if defined(MATERIAL_HAS_ABSORPTION)
+    Ft *= T;
+#endif
+
+    Fr *= frameUniforms.iblLuminance;
+    Fd *= frameUniforms.iblLuminance;
+    color.rgb += Fr + mix(Fd, Ft, pixel.transmission);
+}
+#endif
+
+void combineDiffuseAndSpecular(const PixelParams pixel,
+        const vec3 n, const vec3 E, const vec3 Fd, const vec3 Fr,
+        inout vec3 color) {
+#if defined(HAS_REFRACTION)
+    applyRefraction(pixel, n, E, Fd, Fr, color);
+#else
+    color.rgb += (Fd + Fr) * frameUniforms.iblLuminance;
+#endif
+}
+
 void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout vec3 color) {
     // Apply transform here if we wanted to rotate the IBL
     vec3 n = shading_normal;
@@ -374,5 +484,5 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
     multiBounceSpecularAO(specularAO, pixel.f0, Fr);
 
     // Note: iblLuminance is already premultiplied by the exposure
-    color.rgb += (Fd + Fr) * frameUniforms.iblLuminance;
+    combineDiffuseAndSpecular(pixel, n, E, Fd, Fr, color);
 }

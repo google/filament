@@ -147,27 +147,31 @@ add_library(${TARGET} SHARED ${SRCS})
 # libraries we're linking against
 target_link_libraries(${TARGET} ${EXTRA_LIBS})
 
-target_compile_options(${TARGET}
-    PRIVATE -msse2
-    PRIVATE -msse
-    PRIVATE -mmmx
-    PRIVATE -Wno-unused-variable
-    PRIVATE -Wno-deprecated-declarations
-    PRIVATE -Wno-switch
-    PRIVATE -Wno-tautological-pointer-compare
-    PRIVATE -Wno-parentheses-equality
-)
+if(NOT MSVC)
+    target_compile_options(${TARGET}
+        PRIVATE -msse2
+        PRIVATE -msse
+        PRIVATE -mmmx
+        PRIVATE -Wno-unused-variable
+        PRIVATE -Wno-deprecated-declarations
+        PRIVATE -Wno-switch
+        PRIVATE -Wno-tautological-pointer-compare
+        PRIVATE -Wno-parentheses-equality
+    )
+endif()
 
 # specify where the public headers of this library are
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 
 if (WIN32)
-    # Making this option public because the warning occurs in public headers
-    target_compile_options(${TARGET} PUBLIC -Wno-pragma-pack)
-    target_compile_options(${TARGET} PRIVATE -Wno-unused-local-typedef)
     # Windows needs a WinMain static library.
     add_library(${TARGET}main ${SRC_DIR}/main/windows/SDL_windows_main.c)
-    target_compile_options(${TARGET}main PRIVATE -Wno-pragma-pack)
+    if(NOT MSVC)
+        # Making this option public because the warning occurs in public headers
+        target_compile_options(${TARGET} PUBLIC -Wno-pragma-pack)
+        target_compile_options(${TARGET} PRIVATE -Wno-unused-local-typedef)
+        target_compile_options(${TARGET}main PRIVATE -Wno-pragma-pack)
+    endif()
 else()
     target_compile_options(${TARGET} PRIVATE -fvisibility=hidden)
 endif()

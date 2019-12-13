@@ -21,7 +21,7 @@ set(CMAKE_SYSTEM_NAME Linux)
 set(CMAKE_SYSTEM_VERSION 1)
 
 # android
-set(API_LEVEL 21)
+set(API_LEVEL 19)
 
 # architecture
 set(ARCH armv7a-linux-androideabi)
@@ -84,6 +84,7 @@ set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -march=armv7-a -Wl,-
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 set(ANDROID TRUE)
+set(EGL TRUE)
 
 # we are compiling Android on Windows
 set(ANDROID_ON_WINDOWS FALSE)

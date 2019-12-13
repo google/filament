@@ -52,6 +52,9 @@ public:
      */
     TextureSampler() noexcept = default;
 
+    TextureSampler(const TextureSampler& rhs) noexcept = default;
+    TextureSampler& operator=(const TextureSampler& rhs) noexcept = default;
+
     /**
      * Creates a TextureSampler with the default parameters but setting the filtering and wrap modes.
      * @param minMag filtering for both minification and magnification
@@ -104,9 +107,6 @@ public:
         mSamplerParams.compareMode = mode;
         mSamplerParams.compareFunc = func;
     }
-
-    TextureSampler(const TextureSampler& rhs) noexcept = default;
-    TextureSampler& operator=(const TextureSampler& rhs) noexcept = default;
 
     /**
      * Sets the minification filter
@@ -168,20 +168,36 @@ public:
         mSamplerParams.compareFunc = func;
     }
 
-    backend::SamplerParams getSamplerParams() const noexcept  { return mSamplerParams; }
-
+    //! returns the minification filter value
     MinFilter getMinFilter() const noexcept { return mSamplerParams.filterMin; }
+
+    //! returns the magnification filter value
     MagFilter getMagFilter() const noexcept { return mSamplerParams.filterMag; }
+
+    //! returns the s-coordinate wrap mode (horizontal)
     WrapMode getWrapModeS() const noexcept  { return mSamplerParams.wrapS; }
+
+    //! returns the t-coordinate wrap mode (vertical)
     WrapMode getWrapModeT() const noexcept  { return mSamplerParams.wrapT; }
+
+    //! returns the r-coordinate wrap mode (depth)
     WrapMode getWrapModeR() const noexcept  { return mSamplerParams.wrapR; }
-    float getAnisotropy() const noexcept { return float(1 << mSamplerParams.anisotropyLog2); }
+
+    //! returns the anisotropy value
+    float getAnisotropy() const noexcept { return float(1u << mSamplerParams.anisotropyLog2); }
+
+    //! returns the compare mode
     CompareMode getCompareMode() const noexcept { return mSamplerParams.compareMode; }
+
+    //! returns the compare function
     CompareFunc getCompareFunc() const noexcept { return mSamplerParams.compareFunc; }
 
 
+    // no user-serviceable parts below...
+    backend::SamplerParams getSamplerParams() const noexcept  { return mSamplerParams; }
+
 private:
-    backend::SamplerParams mSamplerParams;
+    backend::SamplerParams mSamplerParams{};
 };
 
 } // namespace filament

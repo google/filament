@@ -29,6 +29,47 @@ import java.nio.ByteBuffer;
 
 import static com.google.android.filament.Texture.Type.COMPRESSED;
 
+/**
+ * Texture
+ * <p>The <code>Texture</code> class supports:</p>
+ * <ul>
+ *  <li>2D textures</li>
+ *  <li>3D textures</li>
+ *  <li>Cube maps</li>
+ *  <li>mip mapping</li>
+ * </ul>
+ *
+ *
+ * <h1>Usage example</h1>
+ *
+ * A <code>Texture</code> object is created using the {@link Texture.Builder} and destroyed by
+ * calling {@link Engine#destroyTexture}. They're bound using {@link MaterialInstance#setParameter}.
+ *
+ * <pre>
+ *  Engine engine = Engine.create();
+ *
+ *  Material material = new Material.Builder()
+ *              .payload( ... )
+ *              .build(ending);
+ *
+ *  MaterialInstance mi = material.getDefaultInstance();
+ *
+ *  Texture texture = new Texture.Builder()
+ *              .width(64)
+ *              .height(64)
+ *              .build(engine);
+ *
+ *
+ *  texture.setImage(engine, 0,
+ *          new Texture.PixelBufferDescriptor( ... ));
+ *
+ *  mi.setParameter("parameterName", texture, new TextureSampler());
+ * </pre>
+ *
+ * @see #setImage
+ * @see PixelBufferDescriptor
+ * @see MaterialInstance#setParameter(String, Texture, TextureSampler)
+ */
 public class Texture {
     private long mNativeObject;
 
@@ -37,12 +78,95 @@ public class Texture {
         mNativeObject = nativeTexture;
     }
 
+    /**
+     * Type of sampler
+     */
     public enum Sampler {
+        /** 2D sampler */
         SAMPLER_2D,
+        /** Cubemap sampler */
         SAMPLER_CUBEMAP,
+        /** External texture sampler */
         SAMPLER_EXTERNAL
     }
 
+    /**
+     * Internal texel formats
+     *
+     * <p>These formats are used to specify a texture's internal storage format.</p>
+     *
+     * <h1>Enumerants syntax format</h1>
+     *
+     * <code>[components][size][type]</code>
+     * <br><code>components</code> : List of stored components by this format
+     * <br><code>size</code>       : Size in bit of each component
+     * <br><code>type</code>       : Type this format is stored as
+     *
+     * <center>
+     * <table border="1">
+     *     <tr><th> Name    </th><th> Component                     </th></tr>
+     *     <tr><td> R       </td><td> Linear Red                    </td></tr>
+     *     <tr><td> RG      </td><td> Linear Red, Green             </td></tr>
+     *     <tr><td> RGB     </td><td> Linear Red, Green, Blue       </td></tr>
+     *     <tr><td> RGBA    </td><td> Linear Red, Green Blue, Alpha </td></tr>
+     *     <tr><td> SRGB    </td><td> sRGB encoded Red, Green, Blue </td></tr>
+     *     <tr><td> DEPTH   </td><td> Depth                         </td></tr>
+     *     <tr><td> STENCIL </td><td> Stencil                       </td></tr>
+     * </table>
+     * </center>
+     * <br>
+     *
+     * <center>
+     * <table border="1">
+     *     <tr><th> Name   </th><th> Type                                                       </th></tr>
+     *     <tr><td> (none) </td><td> Unsigned Normalized Integer [0, 1]                         </th></tr>
+     *     <tr><td> _SNORM </td><td> Signed Normalized Integer [-1, 1]                          </td></tr>
+     *     <tr><td> UI     </td><td> Unsigned Integer [0, 2<sup>size</sup>]                     </td></tr>
+     *     <tr><td> I      </td><td> Signed Integer [-2<sup>size-1</sup>, 2<sup>size-1</sup>-1] </td></tr>
+     *     <tr><td> F      </td><td> Floating-point                                             </td></tr>
+     * </table>
+     * </center>
+     * <br>
+     *
+     * <h1>Special color formats</h1>
+     *
+     * There are a few special color formats that don't follow the convention above:
+     *
+     * <center>
+     * <table border="1">
+     *     <tr><th> Name             </th><th> Format </th></tr>
+     *     <tr><td> RGB565           </td><td>  5-bits for R and B, 6-bits for G.                            </td></tr>
+     *     <tr><td> RGB5_A1          </td><td>  5-bits for R, G and B, 1-bit for A.                          </td></tr>
+     *     <tr><td> RGB10_A2         </td><td> 10-bits for R, G and B, 2-bits for A.                         </td></tr>
+     *     <tr><td> RGB9_E5          </td><td> <b>Unsigned</b> floating point. 9-bits mantissa for RGB, 5-bits shared exponent                 </td></tr>
+     *     <tr><td> R11F_G11F_B10F   </td><td> <b>Unsigned</b> floating point. 6-bits mantissa, for R and G, 5-bits for B. 5-bits exponent.    </td></tr>
+     *     <tr><td> SRGB8_A8         </td><td> sRGB 8-bits with linear 8-bits alpha.                        </td></tr>
+     *     <tr><td> DEPTH24_STENCIL8 </td><td> 24-bits unsigned normalized integer depth, 8-bits stencil.   </td></tr>
+     * </table>
+     * </center>
+     * <br>
+     *
+     * <h1>Compressed texture formats</h1>
+     *
+     * Many compressed texture formats are supported as well, which include (but are not limited to)
+     * the following list:
+     *
+     * <center>
+     * <table border="1">
+     *     <tr><th> Name            </th><th> Format                            </th></tr>
+     *     <tr><td> EAC_R11         </td><td> Compresses R11UI                  </td></tr>
+     *     <tr><td> EAC_R11_SIGNED  </td><td> Compresses R11I                   </td></tr>
+     *     <tr><td> EAC_RG11        </td><td> Compresses RG11UI                 </td></tr>
+     *     <tr><td> EAC_RG11_SIGNED </td><td> Compresses RG11I                  </td></tr>
+     *     <tr><td> ETC2_RGB8       </td><td> Compresses RGB8                   </td></tr>
+     *     <tr><td> ETC2_SRGB8      </td><td> compresses SRGB8                  </td></tr>
+     *     <tr><td> ETC2_EAC_RGBA8  </td><td> Compresses RGBA8                  </td></tr>
+     *     <tr><td> ETC2_EAC_SRGBA8 </td><td> Compresses SRGB8_A8               </td></tr>
+     *     <tr><td> ETC2_RGB8_A1    </td><td> Compresses RGB8 with 1-bit alpha  </td></tr>
+     *     <tr><td> ETC2_SRGB8_A1   </td><td> Compresses sRGB8 with 1-bit alpha </td></tr>
+     * </table>
+     * </center>
+     */
     public enum InternalFormat {
         // 8-bits per element
         R8, R8_SNORM, R8UI, R8I, STENCIL8,
@@ -92,6 +216,10 @@ public class Texture {
         DXT1_RGB, DXT1_RGBA, DXT3_RGBA, DXT5_RGBA
     }
 
+    /**
+     * Compressed data types for use with {@link PixelBufferDescriptor}
+     * @see InternalFormat
+     */
     public enum CompressedFormat {
         // Mandatory in GLES 3.0 and GL 4.3
         EAC_R11, EAC_R11_SIGNED, EAC_RG11, EAC_RG11_SIGNED,
@@ -103,15 +231,27 @@ public class Texture {
         DXT1_RGB, DXT1_RGBA, DXT3_RGBA, DXT5_RGBA
     }
 
+    /**
+     * Cubemap faces
+     */
     public enum CubemapFace {
+        /** +x face */
         POSITIVE_X,
+        /** -x face */
         NEGATIVE_X,
+        /** +y face */
         POSITIVE_Y,
+        /** -y face */
         NEGATIVE_Y,
+        /** +z face */
         POSITIVE_Z,
+        /** -z face */
         NEGATIVE_Z
     }
 
+    /**
+     * Pixel color format
+     */
     public enum Format {
         R,
         R_INTEGER,
@@ -128,19 +268,43 @@ public class Texture {
         ALPHA
     }
 
+    /**
+     * Pixel data type
+     */
     public enum Type {
+        /** unsigned byte, 8-bits */
         UBYTE,
+        /** signed byte, 8-bits */
         BYTE,
+        /** unsigned short, 16-bits */
         USHORT,
+        /** signed short, 16-bits */
         SHORT,
+        /** unsigned int, 32-bits */
         UINT,
+        /** signed int, 32-bits */
         INT,
+        /** half-float, 16-bits float with 10 bits mantissa */
         HALF,
+        /** float, 32-bits float, with 24 bits mantissa */
         FLOAT,
+        /** a compessed type */
         COMPRESSED,
+        /** unsigned 5.6 (5.5 for blue) float packed in 32-bits */
         UINT_10F_11F_11F_REV
     }
 
+    /**
+     * A descriptor to an image in main memory, typically used to transfer image data from the CPU
+     * to the GPU.
+     * <p>A <code>PixelBufferDescriptor</code> owns the memory buffer it references,
+     * therefore <code>PixelBufferDescriptor</code> cannot be copied, but can be moved.</p>
+     *
+     * <code>PixelBufferDescriptor</code> releases ownership of the memory-buffer when it's
+     * destroyed.
+     *
+     * @see #setImage
+     */
     public static class PixelBufferDescriptor {
         public Buffer storage;
 
@@ -158,12 +322,39 @@ public class Texture {
         public CompressedFormat compressedFormat;
 
         @Nullable public Object handler;
-        @Nullable public Runnable callback;
 
         /**
-         * Valid handler types:
-         * - Android: Handler, Executor
-         * - Other: Executor
+         * Callback used to destroy the buffer data.
+         * <p>
+         * Guarantees:
+         * <ul>
+         *     <li>Called on the main filament thread.</li>
+         * </ul>
+         * </p>
+         *
+         * <p>
+         * Limitations:
+         * <ul>
+         *     <li>Must be lightweight.</li>
+         *     <li>Must not call filament APIs.</li>
+         * </ul>
+         * </p>
+         */
+        @Nullable public Runnable callback;
+
+
+        /**
+         * Creates a <code>PixelBufferDescriptor</code>
+         *
+         * @param storage       CPU-side buffer containing the image data to upload into the texture
+         * @param format        Pixel {@link Format format} of the CPU-side image
+         * @param type          Pixel data {@link Type type} of the  CPU-side image
+         * @param alignment     Row-alignment in bytes of the CPU-side image (1 to 8 bytes)
+         * @param left          Left coordinate in pixels of the CPU-side image
+         * @param top           Top coordinate in pixels of the CPU-side image
+         * @param stride        Stride in pixels of the CPU-side image (i.e. distance in pixels to the next row)
+         * @param handler       An {@link java.util.concurrent.Executor Executor}. On Android this can also be a {@link android.os.Handler Handler}.
+         * @param callback      A callback executed by <code>handler</code> when <code>storage</code> is no longer needed.
          */
         public PixelBufferDescriptor(@NonNull Buffer storage,
                 @NonNull Format format, @NonNull Type type,
@@ -182,17 +373,48 @@ public class Texture {
             this.callback = callback;
         }
 
+        /**
+         * Creates a <code>PixelBufferDescriptor</code> with some default values and no callback.
+         *
+         * @param storage       CPU-side buffer containing the image data to upload into the texture
+         * @param format        Pixel {@link Format format} of the CPU-side image
+         * @param type          Pixel data {@link Type type} of the  CPU-side image
+         *
+         * @see #setCallback
+         */
         public PixelBufferDescriptor(@NonNull Buffer storage,
                 @NonNull Format format, @NonNull Type type) {
             this(storage, format, type, 1, 0, 0, 0, null, null);
         }
 
+        /**
+         * Creates a <code>PixelBufferDescriptor</code> with some default values and no callback.
+         *
+         * @param storage       CPU-side buffer containing the image data to upload into the texture
+         * @param format        Pixel {@link Format format} of the CPU-side image
+         * @param type          Pixel data {@link Type type} of the  CPU-side image
+         * @param alignment     Row-alignment in bytes of the CPU-side image (1 to 8 bytes)
+         *
+         * @see #setCallback
+         */
         public PixelBufferDescriptor(@NonNull Buffer storage,
                 @NonNull Format format, @NonNull Type type,
                 @IntRange(from = 1, to = 8) int alignment) {
             this(storage, format, type, alignment, 0, 0, 0, null, null);
         }
 
+        /**
+         * Creates a <code>PixelBufferDescriptor</code> with some default values and no callback.
+         *
+         * @param storage       CPU-side buffer containing the image data to upload into the texture
+         * @param format        Pixel {@link Format format} of the CPU-side image
+         * @param type          Pixel data {@link Type type} of the  CPU-side image
+         * @param alignment     Row-alignment in bytes of the CPU-side image (1 to 8 bytes)
+         * @param left          Left coordinate in pixels of the CPU-side image
+         * @param top           Top coordinate in pixels of the CPU-side image
+         *
+         * @see #setCallback
+         */
         public PixelBufferDescriptor(@NonNull Buffer storage,
                 @NonNull Format format, @NonNull Type type,
                 @IntRange(from = 1, to = 8) int alignment,
@@ -200,6 +422,14 @@ public class Texture {
             this(storage, format, type, alignment, left, top, 0, null, null);
         }
 
+        /**
+         *
+         * @param storage       CPU-side buffer containing the image data to upload into the texture
+         * @param format        Compressed pixel {@link CompressedFormat format} of the CPU-side image
+         * @param compressedSizeInBytes Size of the compressed data in bytes
+         *
+         * @see #setCallback
+         */
         public PixelBufferDescriptor(@NonNull ByteBuffer storage,
                 @NonNull CompressedFormat format,
                 @IntRange(from = 0) int compressedSizeInBytes) {
@@ -211,9 +441,10 @@ public class Texture {
         }
 
         /**
-         * Valid handler types:
-         * - Android: Handler, Executor
-         * - Other: Executor
+         * Set or replace the callback called when the CPU-side data is no longer needed.
+         *
+         * @param handler       An {@link java.util.concurrent.Executor Executor}. On Android this can also be a {@link android.os.Handler Handler}.
+         * @param callback      A callback executed by <code>handler</code> when <code>storage</code> is no longer needed.
          */
         public void setCallback(@Nullable Object handler, @Nullable Runnable callback) {
             this.handler = handler;
@@ -288,57 +519,109 @@ public class Texture {
         }
     }
 
+    /**
+     * Options of {@link #generatePrefilterMipmap}
+     */
     public static class PrefilterOptions {
+        /** number of samples for roughness pre-filtering */
         public int sampleCount = 8;
+        /** whether to generate a reflection map (mirror) */
         public boolean mirror = true;
     }
 
+    /**
+     * Checks whether a given format is supported for texturing in this {@link Engine}.
+     * This depends on the selected backend.
+     *
+     * @param engine {@link Engine} to test the {@link InternalFormat InternalFormat} against
+     * @param format format to check
+     * @return <code>true</code> if this format is supported for texturing.
+     */
     public static boolean isTextureFormatSupported(@NonNull Engine engine,
             @NonNull InternalFormat format) {
         return nIsTextureFormatSupported(engine.getNativeObject(), format.ordinal());
     }
 
+    /**
+     * Use <code>Builder</code> to construct a <code>Texture</code> object instance.
+     */
     public static class Builder {
         @SuppressWarnings({"FieldCanBeLocal", "UnusedDeclaration"})
         // Keep to finalize native resources
         private final BuilderFinalizer mFinalizer;
         private final long mNativeBuilder;
 
+        /**
+         * Use <code>Builder</code> to construct a <code>Texture</code> object instance.
+         */
         public Builder() {
             mNativeBuilder = nCreateBuilder();
             mFinalizer = new BuilderFinalizer(mNativeBuilder);
         }
 
+        /**
+         * Specifies the width of the texture in texels.
+         * @param width texture width in texels, must be at least 1. Default is 1.
+         * @return This Builder, for chaining calls.
+         */
         @NonNull
         public Builder width(@IntRange(from = 1) int width) {
             nBuilderWidth(mNativeBuilder, width);
             return this;
         }
 
+        /**
+         * Specifies the height of the texture in texels.
+         * @param height texture height in texels, must be at least 1. Default is 1.
+         * @return This Builder, for chaining calls.
+         */
         @NonNull
         public Builder height(@IntRange(from = 1) int height) {
             nBuilderHeight(mNativeBuilder, height);
             return this;
         }
 
+        /**
+         * Specifies the texture's number of layers. This creates a 3D texture.
+         * @param depth texture number of layer, must be at least 1. Default is 1.
+         * @return This Builder, for chaining calls.
+         */
         @NonNull
         public Builder depth(@IntRange(from = 1) int depth) {
             nBuilderDepth(mNativeBuilder, depth);
             return this;
         }
 
+        /**
+         * Specifies the number of mipmap levels
+         * @param levels must be at least 1 and less or equal to <code>floor(log<sub>2</sub>(max(width, height))) + 1</code>. Default is 1.
+         * @return This Builder, for chaining calls.
+         */
         @NonNull
         public Builder levels(@IntRange(from = 1) int levels) {
             nBuilderLevels(mNativeBuilder, levels);
             return this;
         }
 
+        /**
+         * Specifies the type of sampler to use.
+         * @param target {@link Sampler Sampler} type
+         * @return This Builder, for chaining calls.
+         */
         @NonNull
         public Builder sampler(@NonNull Sampler target) {
             nBuilderSampler(mNativeBuilder, target.ordinal());
             return this;
         }
 
+        /**
+         * Specifies the texture's internal format.
+         * <p>The internal format specifies how texels are stored (which may be different from how
+         * they're specified in {@link #setImage}). {@link InternalFormat InternalFormat} specifies
+         * both the color components and the data type used.</p>
+         * @param format texture's {@link InternalFormat internal format}.
+         * @return This Builder, for chaining calls.
+         */
         @NonNull
         public Builder format(@NonNull InternalFormat format) {
             nBuilderFormat(mNativeBuilder, format.ordinal());
@@ -356,6 +639,13 @@ public class Texture {
             return this;
         }
 
+        /**
+         * Creates a new <code>Texture</code> instance.
+         * @param engine The {@link Engine} to associate this <code>Texture</code> with.
+         * @return A newly created <code>Texture</code>
+         * @exception IllegalStateException if a parameter to a builder function was invalid.
+         *            A mode detailed message about the error is output in the system log.
+         */
         @NonNull
         public Texture build(@NonNull Engine engine) {
             long nativeTexture = nBuilderBuild(mNativeBuilder, engine.getNativeObject());
@@ -382,38 +672,71 @@ public class Texture {
         }
     }
 
+    /**
+     * A bitmask to specify how the texture will be used.
+     */
     public static class Usage {
+        /** The texture will be used as a color attachment */
         public static final int COLOR_ATTACHMENT = 0x1;
+        /** The texture will be used as a depth attachment */
         public static final int DEPTH_ATTACHMENT = 0x2;
+        /** The texture will be used as a stencil attachment */
         public static final int STENCIL_ATTACHMENT = 0x4;
+        /** The texture content can be set with {@link #setImage} */
         public static final int UPLOADABLE = 0x8;
+        /** The texture can be read from a shader or blitted from */
         public static final int SAMPLEABLE = 0x10;
+        /** by default textures are <code>UPLOADABLE</code> and <code>SAMPLEABLE</code>*/
         public static final int DEFAULT = UPLOADABLE | SAMPLEABLE;
     }
 
     public static final int BASE_LEVEL = 0;
 
+    /**
+     * Queries the width of a given level of this texture.
+     * @param level to query the with of. Must be between 0 and {@link #getLevels}
+     * @return The width in texel of the given level
+     */
     public int getWidth(@IntRange(from = 0) int level) {
         return nGetWidth(getNativeObject(), level);
     }
 
+    /**
+     * Queries the height of a given level of this texture.
+     * @param level to query the height of. Must be between 0 and {@link #getLevels}
+     * @return The height in texel of the given level
+     */
     public int getHeight(@IntRange(from = 0) int level) {
         return nGetHeight(getNativeObject(), level);
     }
 
+    /**
+     * Queries the number of layers of given level of this texture has.
+     * @param level to query the number of layers of. Must be between 0 and {@link #getLevels}
+     * @return The number of layers of the given level
+     */
     public int getDepth(@IntRange(from = 0) int level) {
         return nGetDepth(getNativeObject(), level);
     }
 
+    /**
+     * @return the number of mipmap levels of this texture
+     */
     public int getLevels() {
         return nGetLevels(getNativeObject());
     }
 
+    /**
+     * @return This texture {@link Sampler Sampler} type.
+     */
     @NonNull
     public Sampler getTarget() {
         return Sampler.values()[nGetTarget(getNativeObject())];
     }
 
+    /**
+     * @return This texture's {@link InternalFormat InternalFormat}.
+     */
     @NonNull
     public InternalFormat getFormat() {
         return InternalFormat.values()[nGetInternalFormat(getNativeObject())];
@@ -421,12 +744,65 @@ public class Texture {
 
     // TODO: add a setImage() version that takes an android Bitmap
 
+    /**
+     * <code>setImage</code> is used to modify the whole content of the texure from a CPU-buffer.
+     *
+     *  <p>This <code>Texture</code> instance must use {@link Sampler#SAMPLER_2D SAMPLER_2D} or
+     *  {@link Sampler#SAMPLER_EXTERNAL SAMPLER_EXTERNAL}. If the later is specified
+     *  and external textures are supported by the driver implementation,
+     *  this method will have no effect, otherwise it will behave as if the
+     *  texture was specified with {@link Sampler#SAMPLER_2D SAMPLER_2D}.</p>
+     *
+     * This is equivalent to calling: <br>
+     *
+     * <code>setImage(engine, level, 0, 0, getWidth(level), getHeight(level), buffer)</code>
+     *
+     * @param engine    {@link Engine} this texture is associated to. Must be the
+     *                  instance passed to {@link Builder#build Builder.build()}.
+     * @param level     Level to set the image for. Must be less than {@link #getLevels()}.
+     * @param buffer    Client-side buffer containing the image to set.
+     *                  <code>buffer</code>'s {@link Format format} must match that
+     *                  of {@link #getFormat()}
+     *
+     * @exception BufferOverflowException if the specified parameters would result in reading
+     * outside of <code>buffer</code>.
+     *
+     * @see Builder#sampler
+     * @see PixelBufferDescriptor
+     */
     public void setImage(@NonNull Engine engine,
             @IntRange(from = 0) int level,
             @NonNull PixelBufferDescriptor buffer) {
         setImage(engine, level, 0, 0, getWidth(level), getHeight(level), buffer);
     }
 
+
+    /**
+     * <code>setImage</code> is used to modify a sub-region of the texure from a CPU-buffer.
+     *
+     *  <p>This <code>Texture</code> instance must use {@link Sampler#SAMPLER_2D SAMPLER_2D} or
+     *  {@link Sampler#SAMPLER_EXTERNAL SAMPLER_EXTERNAL}. If the later is specified
+     *  and external textures are supported by the driver implementation,
+     *  this method will have no effect, otherwise it will behave as if the
+     *  texture was specified with {@link Sampler#SAMPLER_2D SAMPLER_2D}.</p>
+     *
+     * @param engine    {@link Engine} this texture is associated to. Must be the
+     *                  instance passed to {@link Builder#build Builder.build()}.
+     * @param level     Level to set the image for. Must be less than {@link #getLevels()}.
+     * @param xoffset   x-offset in texel of the region to modify
+     * @param yoffset   y-offset in texel of the region to modify
+     * @param width     width in texel of the region to modify
+     * @param height    height in texel of the region to modify
+     * @param buffer    Client-side buffer containing the image to set.
+     *                  <code>buffer</code>'s {@link Format format} must match that
+     *                  of {@link #getFormat()}
+     *
+     * @exception BufferOverflowException if the specified parameters would result in reading
+     * outside of <code>buffer</code>.
+     *
+     * @see Builder#sampler
+     * @see PixelBufferDescriptor
+     */
     public void setImage(@NonNull Engine engine,
             @IntRange(from = 0) int level,
             @IntRange(from = 0) int xoffset, @IntRange(from = 0) int yoffset,
@@ -453,9 +829,33 @@ public class Texture {
         }
     }
 
-    // note: faceOffsetsInBytes are offsets in byte in the buffer relative to the current position()
-    // note: use Texture CubemapFace to index the faceOffsetsInBytes array
-    // note: we assume all 6 faces are tightly packed
+    /**
+     * <code>setImage</code> is used to specify all six images of a cubemap level and
+     * follows exactly the OpenGL conventions
+     *
+     *  <p>This <code>Texture</code> instance must use
+     *  {@link Sampler#SAMPLER_CUBEMAP SAMPLER_CUBEMAP}.</p>
+     *
+     * @param engine                {@link Engine} this texture is associated to. Must be the
+     *                              instance passed to {@link Builder#build Builder.build()}.
+     * @param level                 Level to set the image for. Must be less than {@link #getLevels()}.
+     * @param buffer                Client-side buffer containing the image to set.
+     *                              <code>buffer</code>'s {@link Format format} must match that
+     *                              of {@link #getFormat()}
+     * @param faceOffsetsInBytes    Offsets in bytes into <code>buffer</code> for all six images.
+     *                              The offsets are specified in the following order:
+     *                              +x, -x, +y, -y, +z, -z.
+     *
+     * <p><code>faceOffsetsInBytes</code> are offsets in byte in the <code>buffer</code> relative
+     * to the current {@link Buffer#position()}. Use {@link CubemapFace} to index the
+     * <code>faceOffsetsInBytes</code> array. All six faces must be tightly packed.</p>
+     *
+     * @exception BufferOverflowException if the specified parameters would result in reading
+     * outside of <code>buffer</code>.
+     *
+     * @see Builder#sampler
+     * @see PixelBufferDescriptor
+     */
     public void setImage(@NonNull Engine engine, @IntRange(from = 0) int level,
             @NonNull PixelBufferDescriptor buffer,
             @NonNull @Size(min = 6) int[] faceOffsetsInBytes) {
@@ -478,10 +878,60 @@ public class Texture {
         }
     }
 
+    /**
+     * Specifies the external image to associate with this <code>Texture</code>.
+     *
+     *  <p>This <code>Texture</code> instance must use
+     *  {@link Sampler#SAMPLER_EXTERNAL SAMPLER_EXTERNAL}.</p>
+     * <p>Typically the external image is OS specific, and can be a video or camera frame.
+     * There are many restrictions when using an external image as a texture, such as:</p>
+     * <ul>
+     *   <li> only the level of detail (LOD) 0 can be specified</li>
+     *   <li> only {@link TextureSampler.MagFilter#NEAREST NEAREST} or
+     *             {@link TextureSampler.MagFilter#LINEAR LINEAR} filtering is supported</li>
+     *   <li> the size and format of the texture is defined by the external image</li>
+     * </ul>
+     *
+     * @param engine    {@link Engine} this texture is associated to. Must be the
+     *                  instance passed to {@link Builder#build Builder.build()}.
+     * @param eglImage  An opaque handle to a platform specific image. Supported types are
+     *                  <code>eglImageOES</code> on Android and <code>CVPixelBufferRef</code> on iOS.
+     *                  <p>On iOS the following pixel formats are supported: <ul>
+     *                          <li><code>kCVPixelFormatType_32BGRA</code></li>
+     *                          <li><code>kCVPixelFormatType_420YpCbCr8BiPlanarFullRange</code></li>
+     *                   </ul></p>
+     *
+     * @see Builder#sampler
+     */
     public void setExternalImage(@NonNull Engine engine, long eglImage) {
         nSetExternalImage(getNativeObject(), engine.getNativeObject(), eglImage);
     }
 
+    /**
+     * Specifies the external stream to associate with this <code>Texture</code>.
+     *
+     *  <p>This <code>Texture</code> instance must use
+     *  {@link Sampler#SAMPLER_EXTERNAL SAMPLER_EXTERNAL}.</p>
+     * <p>Typically the external image is OS specific, and can be a video or camera frame.
+     * There are many restrictions when using an external image as a texture, such as:</p>
+     * <ul>
+     *   <li> only the level of detail (LOD) 0 can be specified</li>
+     *   <li> only {@link TextureSampler.MagFilter#NEAREST NEAREST} or
+     *             {@link TextureSampler.MagFilter#LINEAR LINEAR} filtering is supported</li>
+     *   <li> the size and format of the texture is defined by the external image</li>
+     * </ul>
+     *
+     * @param engine    {@link Engine} this texture is associated to. Must be the
+     *                  instance passed to {@link Builder#build Builder.build()}.
+     * @param stream    A {@link Stream} object
+     *
+     * @exception IllegalStateException if the sampler type is not
+     *                                  {@link Sampler#SAMPLER_EXTERNAL SAMPLER_EXTERNAL}
+     *
+     * @see Stream
+     * @see Builder#sampler
+     *
+     */
     public void setExternalStream(@NonNull Engine engine, @NonNull Stream stream) {
         long nativeObject = getNativeObject();
         long streamNativeObject = stream.getNativeObject();
@@ -492,10 +942,68 @@ public class Texture {
         nSetExternalStream(nativeObject, engine.getNativeObject(), streamNativeObject);
     }
 
+    /**
+     * Generates all the mipmap levels automatically. This requires the texture to have a
+     * color-renderable format.
+     *
+     *  <p>This <code>Texture</code> instance must <b>not</b> use
+     *  {@link Sampler#SAMPLER_CUBEMAP SAMPLER_CUBEMAP}, or it has no effect.</p>
+     *
+     * @param engine    {@link Engine} this texture is associated to. Must be the
+     *                  instance passed to {@link Builder#build Builder.build()}.
+     */
     public void generateMipmaps(@NonNull Engine engine) {
         nGenerateMipmaps(getNativeObject(), engine.getNativeObject());
     }
 
+    /**
+     * Creates a reflection map from an environment map.
+     *
+     * <p>This is a utility function that replaces calls to {@link #setImage}.
+     * The provided environment map is processed and all mipmap levels are populated. The
+     * processing is similar to the offline tool <code>cmgen</code> at a lower quality setting.</p>
+     *
+     * <p>This function is intended to be used when the environment cannot be processed offline,
+     * for instance if it's generated at runtime.</p>
+     *
+     * <p>The source data must obey to some constraints:</p>
+     * <ul>
+     *     <li>the data {@link Format format} must be {@link Format#RGB}</li>
+     *     <li>the data {@link Type type} must be one of
+     *         <ul>
+     *             <li>{@link Type#FLOAT}</li>
+     *             <li>{@link Type#HALF}</li>
+     *         </ul>
+     *     </li>
+     * </ul>
+     *
+     * <p>The current texture must be a cubemap.</p>
+     *
+     * <p>The reflections cubemap's {@link InternalFormat internal format} cannot be a compressed format.</p>
+     *
+     * <p>The reflections cubemap's dimension must be a power-of-two.</p>
+     *
+     * <p>This operation is computationally intensive, especially with large environments and
+     *          is currently <b>synchronous</b>. Expect about 1ms for a 16 &times 16 cubemap.</p>
+     *
+     * @param engine    {@link Engine} this texture is associated to. Must be the
+     *                  instance passed to {@link Builder#build Builder.build()}.
+     * @param buffer    Client-side buffer containing the image to set.
+     *                  <code>buffer</code>'s {@link Format format} and {@link Type type} must match
+     *                  the constraints above.
+     * @param faceOffsetsInBytes    Offsets in bytes into <code>buffer</code> for all six images.
+     *                              The offsets are specified in the following order:
+     *                              +x, -x, +y, -y, +z, -z.
+     *
+     * @param options   Optional parameter to control user-specified quality and options.
+     *
+     * <p><code>faceOffsetsInBytes</code> are offsets in byte in the <code>buffer</code> relative
+     * to the current {@link Buffer#position()}. Use {@link CubemapFace} to index the
+     * <code>faceOffsetsInBytes</code> array. All six faces must be tightly packed.</p>
+     *
+     * @exception BufferOverflowException if the specified parameters would result in reading
+     * outside of <code>buffer</code>.
+     */
     public void generatePrefilterMipmap(@NonNull Engine engine,
         @NonNull PixelBufferDescriptor buffer, @NonNull @Size(min = 6) int[] faceOffsetsInBytes,
             PrefilterOptions options) {

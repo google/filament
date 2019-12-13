@@ -44,14 +44,14 @@ public:
         VkFormat depthFormat; // 4 bytes
         union {
             struct {
-                uint8_t clear;
-                uint8_t discardStart;
-                uint8_t discardEnd;
-                uint8_t dependencies;
+                TargetBufferFlags clear;
+                TargetBufferFlags discardStart;
+                TargetBufferFlags discardEnd;
+                uint8_t padding0;
             };
             uint32_t value; // 4 bytes
         } flags;
-        uint32_t padding; // 4 bytes
+        uint32_t padding1; // 4 bytes
     };
     struct RenderPassVal {
         VkRenderPass handle;

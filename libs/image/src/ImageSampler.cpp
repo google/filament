@@ -17,8 +17,10 @@
 #include <image/ImageSampler.h>
 #include <image/ImageOps.h>
 
+#include <math/scalar.h>
 #include <math/vec3.h>
 #include <math/vec4.h>
+
 #include <utils/Panic.h>
 #include <utils/CString.h>
 
@@ -36,7 +38,7 @@ struct FilterFunction {
     bool rejectExternalSamples = true;
 };
 
-constexpr float M_PIf = float(M_PI);
+constexpr float M_PIf = float(filament::math::F_PI);
 
 const FilterFunction Box {
     .fn = [](float t) { return t <= 0.5f ? 1.0f : 0.0f; },
@@ -340,8 +342,8 @@ void generateMipmaps(const LinearImage& source, Filter filter, LinearImage* resu
     uint32_t width = source.getWidth();
     uint32_t height = source.getHeight();
     for (uint32_t n = 0; n < mips; ++n) {
-       width = std::max(width >> 1, 1u);
-       height = std::max(height >> 1, 1u);
+       width = std::max(width >> 1u, 1u);
+       height = std::max(height >> 1u, 1u);
        result[n] = resampleImage(source, width, height, filter);
     }
 }
@@ -352,8 +354,8 @@ uint32_t getMipmapCount(const LinearImage& source) {
     uint32_t count = 0;
     while (width > 1 || height > 1) {
         ++count;
-        width = std::max(width >> 1, 1u);
-        height = std::max(height >> 1, 1u);
+        width = std::max(width >> 1u, 1u);
+        height = std::max(height >> 1u, 1u);
     }
     return count;
 }

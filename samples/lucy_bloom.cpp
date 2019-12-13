@@ -368,7 +368,6 @@ static void cleanup(LucyApp& app, Engine* engine) {
 
     engine->destroy(app.finalCamera);
 
-    Fence::waitAndDestroy(engine->createFence());
     app.loader->destroyAsset(app.asset);
     app.materials->destroyMaterials();
     delete app.materials;
@@ -380,7 +379,7 @@ int main(int argc, char** argv) {
 
     LucyApp app;
     app.config.title = "Lucy";
-    app.config.iblDirectory = FilamentApp::getRootPath() + DEFAULT_IBL;
+    app.config.iblDirectory = FilamentApp::getRootAssetsPath() + DEFAULT_IBL;
     app.config.resizeable = false;
     app.showQuads = true;
     app.showImgui = true;

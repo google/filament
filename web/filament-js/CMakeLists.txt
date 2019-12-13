@@ -14,6 +14,7 @@ set(CPP_SRC
 # The emcc options are not documented well, the best place to find them is the source:
 # https://github.com/kripken/emscripten/blob/master/src/settings.js
 
+# The following setting is required because we disable RTTI.
 set(COPTS "${COPTS} -DEMSCRIPTEN_HAS_UNBOUND_TYPE_NAMES=0")
 
 # Uncomment the following line to check for leaks with leaks.html
@@ -47,7 +48,7 @@ foreach (RESOURCE package.json README.md filament.d.ts)
     add_custom_command(
         OUTPUT ${PROJECT_BINARY_DIR}/${RESOURCE}
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${RESOURCE}
-        COMMAND cmake -E copy ${CMAKE_CURRENT_SOURCE_DIR}/${RESOURCE} ${PROJECT_BINARY_DIR})
+        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/${RESOURCE} ${PROJECT_BINARY_DIR})
     list(APPEND RESOURCES ${PROJECT_BINARY_DIR}/${RESOURCE})
 endforeach()
 

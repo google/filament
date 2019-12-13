@@ -352,7 +352,7 @@ TEST(FrameGraphTest, RenderTargetLifetime) {
                 renderPassExecuted2 = true;
                 auto const& rt = resources.getRenderTarget(data.rt);
                 EXPECT_TRUE(rt.target);
-                EXPECT_EQ(0x40u|0x80u, rt.params.flags.clear);
+                EXPECT_EQ(TargetBufferFlags(0x40u|0x80u), rt.params.flags.clear);
                 EXPECT_EQ(rt1.getId(), rt.target.getId()); // FIXME: this test is always true the NoopDriver
                 EXPECT_EQ(TargetBufferFlags::DEPTH_AND_STENCIL, rt.params.flags.discardStart);
                 EXPECT_EQ(TargetBufferFlags::DEPTH_AND_STENCIL, rt.params.flags.discardEnd);

@@ -24,6 +24,9 @@ struct MaterialVertexInputs {
     vec3 worldNormal;
 #endif
     vec4 worldPosition;
+#ifdef MATERIAL_HAS_CLIP_SPACE_TRANSFORM
+    mat4 clipSpaceTransform;
+#endif
 };
 
 // Workaround for a driver bug on ARM Bifrost GPUs. Assigning a structure member
@@ -31,6 +34,12 @@ struct MaterialVertexInputs {
 vec4 getWorldPosition(const MaterialVertexInputs material) {
     return material.worldPosition;
 }
+
+#ifdef MATERIAL_HAS_CLIP_SPACE_TRANSFORM
+mat4 getClipSpaceTransform(const MaterialVertexInputs material) {
+    return material.clipSpaceTransform;
+}
+#endif
 
 void initMaterialVertex(out MaterialVertexInputs material) {
 #ifdef HAS_ATTRIBUTE_COLOR
@@ -63,4 +72,7 @@ void initMaterialVertex(out MaterialVertexInputs material) {
     material.VARIABLE_CUSTOM3 = vec4(0.0);
 #endif
     material.worldPosition = computeWorldPosition();
+#ifdef MATERIAL_HAS_CLIP_SPACE_TRANSFORM
+    material.clipSpaceTransform = mat4(1.0);
+#endif
 }

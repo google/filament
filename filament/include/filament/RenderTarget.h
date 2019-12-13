@@ -48,13 +48,17 @@ class UTILS_PUBLIC RenderTarget : public FilamentAPI {
 public:
     using CubemapFace = backend::TextureCubemapFace;
 
+    /**
+     * Attachment identifiers
+     */
     enum AttachmentPoint {
-        COLOR = 0,
-        DEPTH = 1,
+        COLOR = 0,      //!< identifies the color attachment
+        DEPTH = 1,      //!< identifies the depth attachment
     };
 
     static constexpr size_t ATTACHMENT_COUNT = 2;
 
+    //! Use Builder to construct a RenderTarget object instance
     class Builder : public BuilderBase<BuilderDetails> {
         friend struct BuilderDetails;
     public:
@@ -115,9 +119,33 @@ public:
         friend class details::FRenderTarget;
     };
 
+    /**
+     * Gets the texture set on the given attachment point
+     * @param attachment Attachment point
+     * @return A Texture object or nullptr if no texture is set for this attachment point
+     */
     Texture* getTexture(AttachmentPoint attachment) const noexcept;
+
+    /**
+     * Returns the mipmap level set on the given attachment point
+     * @param attachment Attachment point
+     * @return the mipmap level set on the given attachment point
+     */
     uint8_t getMipLevel(AttachmentPoint attachment) const noexcept;
+
+    /**
+     * Returns the face of a cubemap set on the given attachment point
+     * @param attachment Attachment point
+     * @return A cubemap face identifier. This is only relevant if the attachment's texture is
+     * a cubemap.
+     */
     CubemapFace getFace(AttachmentPoint attachment) const noexcept;
+
+    /**
+     * Returns the texture-layer set on the given attachment point
+     * @param attachment Attachment point
+     * @return A texture layer. This is only relevant if the attachment's texture is a 3D texture.
+     */
     uint32_t getLayer(AttachmentPoint attachment) const noexcept;
 };
 

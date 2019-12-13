@@ -212,6 +212,10 @@ class MainActivity : Activity() {
                         "    material.clearCoat = 1.0;\n" +
                         "}\n")
 
+                // Turn off shader code optimization so this sample is compatible with the "lite"
+                // variant of the filamat library.
+                .optimization(MaterialBuilder.Optimization.NONE)
+
                 .build()
 
         if (matPackage.isValid) {
@@ -266,12 +270,13 @@ class MainActivity : Activity() {
 
     override fun onDestroy() {
         super.onDestroy()
+
+        // Stop the animation and any pending frame
+        choreographer.removeFrameCallback(frameScheduler)
+        animator.cancel();
+
         // Always detach the surface before destroying the engine
         uiHelper.detach()
-
-        // This ensures that all the commands we've sent to Filament have
-        // been processed before we attempt to destroy anything
-        Fence.waitAndDestroy(engine.createFence(Fence.Type.SOFT), Fence.Mode.FLUSH)
 
         // Cleanup all resources
         destroyMesh(engine, mesh)

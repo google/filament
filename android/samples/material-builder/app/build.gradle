@@ -24,11 +24,11 @@ preBuild.dependsOn compileMesh
 preBuild.dependsOn generateIbl
 
 android {
-    compileSdkVersion 28
+    compileSdkVersion 29
     defaultConfig {
         applicationId "com.google.android.filament.material_builder"
-        minSdkVersion 21
-        targetSdkVersion 28
+        minSdkVersion 19
+        targetSdkVersion 29
         versionCode 1
         versionName "1.0"
     }
@@ -71,6 +71,13 @@ android {
         universal {
             dimension 'cpuArch'
         }
+    }
+
+    // The filamat library has two variants: full and lite. Here we default to the "full" variant.
+    // Replace "full" with "lite" to use the filamat-lite variant, which has a smaller binary size
+    // but comes with certain restrictions. See "Filamat Lite" in libs/filamat/README.md.
+    defaultConfig {
+        missingDimensionStrategy 'functionality', 'full'
     }
 
     // We use the .filamat extension for materials compiled with matc

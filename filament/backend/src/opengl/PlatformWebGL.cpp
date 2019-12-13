@@ -30,14 +30,20 @@ void PlatformWebGL::terminate() noexcept {
 
 Platform::SwapChain* PlatformWebGL::createSwapChain(
         void* nativeWindow, uint64_t& flags) noexcept {
-    return (SwapChain*) nativeWindow;
+    return (SwapChain*)nativeWindow;
+}
+
+Platform::SwapChain* PlatformWebGL::createSwapChain(
+        uint32_t width, uint32_t height, uint64_t& flags) noexcept {
+    // TODO: implement headless SwapChain
+    return nullptr;
 }
 
 void PlatformWebGL::destroySwapChain(Platform::SwapChain* swapChain) noexcept {
 }
 
 void PlatformWebGL::makeCurrent(Platform::SwapChain* drawSwapChain,
-                                Platform::SwapChain* readSwapChain) noexcept {
+        Platform::SwapChain* readSwapChain) noexcept {
 }
 
 void PlatformWebGL::commit(Platform::SwapChain* swapChain) noexcept {

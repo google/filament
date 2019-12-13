@@ -34,21 +34,6 @@ public final class TextureHelper {
     private static final int BITMAP_CONFIG_RGBA_F16   = 4;
     private static final int BITMAP_CONFIG_HARDWARE   = 5;
 
-    private static Method sEngineGetNativeObject;
-    private static Method sTextureGetNativeObject;
-
-    static {
-        try {
-            sEngineGetNativeObject = Engine.class.getDeclaredMethod("getNativeObject");
-            sTextureGetNativeObject = Texture.class.getDeclaredMethod("getNativeObject");
-
-            sEngineGetNativeObject.setAccessible(true);
-            sTextureGetNativeObject.setAccessible(true);
-        } catch (NoSuchMethodException e) {
-            // Cannot happen
-        }
-    }
-
     private TextureHelper() {
     }
 
@@ -69,14 +54,10 @@ public final class TextureHelper {
             throw new IllegalArgumentException("Unsupported config: ARGB_4444 or HARDWARE");
         }
 
-        try {
-            long nativeTexture = (Long) sTextureGetNativeObject.invoke(texture);
-            long nativeEngine = (Long) sEngineGetNativeObject.invoke(engine);
-            nSetBitmap(nativeTexture, nativeEngine, level, xoffset, yoffset, width, height,
-                    bitmap, format);
-        } catch (Exception e) {
-            // Ignored
-        }
+        long nativeTexture = texture.getNativeObject();
+        long nativeEngine = engine.getNativeObject();
+        nSetBitmap(nativeTexture, nativeEngine, level, xoffset, yoffset, width, height,
+                bitmap, format);
     }
 
     private static int toNativeFormat(Bitmap.Config config) {

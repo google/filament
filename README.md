@@ -1,11 +1,11 @@
 # Filament
 
-<img alt="Android" src="build/img/android.png" width="20px" height="20px" hspace="2px"/>[![Android Build Status](https://filament-build.storage.googleapis.com/badges/build_status_android.svg)](https://filament-build.storage.googleapis.com/badges/build_link_android.html)
-<img alt="iOS" src="build/img/macos.png" width="20px" height="20px" hspace="2px"/>[![iOS Build Status](https://filament-build.storage.googleapis.com/badges/build_status_ios.svg)](https://filament-build.storage.googleapis.com/badges/build_link_ios.html)
-<img alt="Linux" src="build/img/linux.png" width="20px" height="20px" hspace="2px"/>[![Linux Build Status](https://filament-build.storage.googleapis.com/badges/build_status_linux.svg)](https://filament-build.storage.googleapis.com/badges/build_link_linux.html)
-<img alt="macOS" src="build/img/macos.png" width="20px" height="20px" hspace="2px"/>[![MacOS Build Status](https://filament-build.storage.googleapis.com/badges/build_status_mac.svg)](https://filament-build.storage.googleapis.com/badges/build_link_mac.html)
-<img alt="Windows" src="build/img/windows.png" width="20px" height="20px" hspace="2px"/>[![Windows Build Status](https://filament-build.storage.googleapis.com/badges/build_status_windows.svg)](https://filament-build.storage.googleapis.com/badges/build_link_windows.html)
-<img alt="Web" src="build/img/web.png" width="20px" height="20px" hspace="2px"/>[![Web Build Status](https://filament-build.storage.googleapis.com/badges/build_status_web.svg)](https://filament-build.storage.googleapis.com/badges/build_link_web.html)
+![Android Build Status](https://github.com/google/filament/workflows/Android/badge.svg)
+![iOS Build Status](https://github.com/google/filament/workflows/iOS/badge.svg)
+![Linux Build Status](https://github.com/google/filament/workflows/Linux/badge.svg)
+![macOS Build Status](https://github.com/google/filament/workflows/macOS/badge.svg)
+![Windows Build Status](https://github.com/google/filament/workflows/Windows/badge.svg)
+![Web Build Status](https://github.com/google/filament/workflows/Web/badge.svg)
 
 Filament is a real-time physically based rendering engine for Android, iOS, Linux, macOS, Windows,
 and WebGL. It is designed to be as small as possible and as efficient as possible on Android.
@@ -20,9 +20,6 @@ Android devices and as the renderer inside the Android Studio plugin.
 
 Make sure you always use tools from the same release as the runtime library. This is particularly
 important for `matc` (material compiler).
-
-If you prefer to live on the edge, you can download a continuous build by clicking one of the build
-badges above.
 
 ## Documentation
 
@@ -249,6 +246,28 @@ $ ./build.sh -j release
 
 If you use CMake directly instead of the build script, pass `-DENABLE_JAVA=OFF` to CMake instead.
 
+### Filament-specific CMake Options
+
+The following CMake options are boolean options specific to Filament:
+
+- `ENABLE_JAVA`:                Compile Java projects: requires a JDK and the JAVA_HOME env var
+- `ENABLE_LTO`:                 Enable link-time optimizations if supported by the compiler
+- `FILAMENT_BUILD_FILAMAT`:     Build filamat and JNI buildings
+- `FILAMENT_SUPPORTS_METAL`:    Include the Metal backend
+- `FILAMENT_SUPPORTS_VULKAN`:   Include the Vulkan backend
+- `GENERATE_JS_DOCS`:           Build WebGL documentation and tutorials
+- `INSTALL_BACKEND_TEST`:       Install the backend test library so it can be consumed on iOS
+- `USE_EXTERNAL_GLES3`:         Experimental: Compile Filament against OpenGL ES 3
+
+To turn an option on or off:
+
+```
+$ cd <cmake-build-directory>
+$ cmake . -DOPTION=ON       # Relace OPTION with the option name, set to ON / OFF
+```
+
+Options can also be set with the CMake GUI.
+
 ### Linux
 
 Make sure you've installed the following dependencies:
@@ -341,111 +360,37 @@ See [ios/samples/README.md](./ios/samples/README.md) for more information.
 
 ### Windows
 
-The following instructions have been tested on a machine running Windows 10. They should take you
-from a machine with only the operating system to a machine able to build and run Filament.
-
-Google employees require additional steps which can be found here [go/filawin](http://go/filawin).
+#### Building on Windows with Visual Studio 2019
 
 Install the following components:
 
+- [Visual Studio 2019](https://www.visualstudio.com/downloads)
 - [Windows 10 SDK](https://developer.microsoft.com/en-us/windows/downloads/windows-10-sdk)
-- [Visual Studio 2015 or 2017](https://www.visualstudio.com/downloads)
-- [Clang 7](http://releases.llvm.org/download.html)
 - [Python 3.7](https://www.python.org/ftp/python/3.7.0/python-3.7.0.exe)
-- [Cmake 3.13 or later](https://github.com/Kitware/CMake/releases/download/v3.13.4/cmake-3.13.4-win64-x64.msi)
+- [CMake 3.14 or later](https://github.com/Kitware/CMake/releases/download/v3.14.7/cmake-3.14.7-win64-x64.msi)
 
-If you're using Visual Studio 2017, you'll also need to install the [LLVM Compiler
-Toolchain](https://marketplace.visualstudio.com/items?itemName=LLVMExtensions.llvm-toolchain)
-extension.
+The latest Windows SDK can also by installed by opening Visual Studio and selecting _Get Tools and
+Features..._ under the _Tools_ menu.
 
-Open an appropriate Native Tools terminal for the version of Visual Studio you are using:
-- VS 2015: VS2015 x64 Native Tools Command Prompt
-- VS 2017: x64 Native Tools Command Prompt for VS 2017
+Open the `x64 Native Tools Command Prompt for VS 2019`.
 
-You can find these by clicking the start button and typing "x64 native tools".
-
-Create a working directory:
-```
-> mkdir out/cmake-release
-> cd out/cmake-release
-```
-
-Create the msBuild project:
-```
-# Visual Studio 2015:
-> cmake -T"LLVM-vs2014" -G "Visual Studio 14 2015 Win64" ../..
-
-# Visual Studio 2017
-> cmake ..\.. -T"LLVM" -G "Visual Studio 15 2017 Win64" ^
--DCMAKE_CXX_COMPILER:PATH="C:\Program Files\LLVM\bin\clang-cl.exe" ^
--DCMAKE_C_COMPILER:PATH="C:\Program Files\LLVM\bin\clang-cl.exe" ^
--DCMAKE_LINKER:PATH="C:\Program Files\LLVM\bin\lld-link.exe"
-```
-
-Check out the output and make sure Clang for Windows frontend was found. You should see a line
-showing the following output. Note that for Visual Studio 2017 this line may list Microsoft's
-compiler, but the build will still in fact use Clang and you can proceed.
+Create a working directory, and run cmake in it:
 
 ```
-Clang:C:/Program Files/LLVM/msbuild-bin/cl.exe
+> mkdir out
+> cd out
+> cmake ..
 ```
 
-You are now ready to build:
-```
-> msbuild  TNT.sln /t:material_sandbox /m /p:configuration=Release
-```
+Open the generated solution file `TNT.sln` in Visual Studio.
 
-Run it:
-```
-> samples\Release\material_sandbox.exe ..\..\assets\models\monkey\monkey.obj
-```
+To build all targets, run _Build Solution_ from the _Build_ menu. Alternatively, right click on a
+target in the _Solution Explorer_ and choose _Build_ to build a specific target.
 
-#### Tips
-
-- To troubleshoot an issue, use verbose mode via `/v:d` flag.
-- To build a specific project, use `/t:NAME` flag (e.g: `/t:material_sandbox`).
-- To build using more than one core, use parallel build flag: `/m`.
-- To build a specific profile, use `/p:configuration=` (e.g: `/p:configuration=Debug`,
-  `/p:configuration=Release`, and `/p:configuration=RelWithDebInfo`).
-- The msBuild project is what is used by Visual Studio behind the scene to build. Building from VS
-  or from the command-line is the same thing.
-
-#### Building with Ninja on Windows
-
-Alternatively, you can use [Ninja](https://ninja-build.org/) to build for Windows. An MSVC
-installation is still necessary.
-
-First, install the dependencies listed under [Windows](#Windows) as well as Ninja. Then open up a
-Native Tools terminal as before. Create a build directory inside Filament and run the
-following CMake command:
+For example, build the `material_sandbox` sample and run it from the `out` directory with:
 
 ```
-> cmake .. -G Ninja ^
--DCMAKE_CXX_COMPILER:PATH="C:\Program Files\LLVM\bin\clang-cl.exe" ^
--DCMAKE_C_COMPILER:PATH="C:\Program Files\LLVM\bin\clang-cl.exe" ^
--DCMAKE_LINKER:PATH="C:\Program Files\LLVM\bin\lld-link.exe" ^
--DCMAKE_BUILD_TYPE=Release
-```
-
-You should then be able to build by invoking Ninja:
-
-```
-> ninja
-```
-
-#### Development tips
-
-- Before shipping a binary, make sure you used Release profile and make sure you have no libc/libc++
-  dependencies with [Dependency Walker](http://www.dependencywalker.com).
-- Application Verifier and gflags.exe can be of great help to trackdown heap corruption. Application
-  Verifier is easy to setup with a GUI. For gflags, use: `gflags /p /enable pheap-buggy.exe`.
-
-#### Running a simple test
-
-To confirm Filament was properly built, run the following command from the build directory:
-
-```
-> samples\material_sandbox.exe --ibl=..\..\samples\envs\pillars ..\..\assets\models\sphere\sphere.obj
+> samples\Debug\material_sandbox.exe ..\assets\models\monkey\monkey.obj
 ```
 
 ### Android
@@ -668,13 +613,11 @@ same version that our continuous builds use.
 
 ```
 cd <your chosen parent folder for the emscripten SDK>
-curl -L https://github.com/emscripten-core/emsdk/archive/a77638d.zip > emsdk.zip
-unzip emsdk.zip
-mv emsdk-* emsdk
-cd emsdk
-./emsdk update
-./emsdk install sdk-1.38.28-64bit
-./emsdk activate sdk-1.38.28-64bit
+curl -L https://github.com/emscripten-core/emsdk/archive/1b1f08f.zip > emsdk.zip
+unzip emsdk.zip ; mv emsdk-* emsdk ; cd emsdk
+./emsdk install lastest
+./emsdk activate lastest
+source ./emsdk_env.sh
 ```
 
 After this you can invoke the [easy build](#easy-build) script as follows:

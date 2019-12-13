@@ -21,8 +21,11 @@
 
 #include <math/vec3.h>
 #include <math/vec4.h>
+#include <math/mat3.h>
 #include <math/mat4.h>
+#include <math/scalar.h>
 
+#include <filament/Box.h>
 #include <filament/Camera.h>
 #include <filament/Color.h>
 #include <filament/Frustum.h>
@@ -59,6 +62,120 @@ static bool vec3eq(float3 a, float3 b) {
     return  almostEqualUlps(a.x, b.x, 1) &&
             almostEqualUlps(a.y, b.y, 1) &&
             almostEqualUlps(a.z, b.z, 1);
+}
+
+TEST(FilamentTest, AabbMath) {
+    constexpr Aabb aabb = {{4, 5, 6}, {12, 14, 11}};
+
+    const mat4f m(mat3f::rotation(F_PI_2, float3 {0, 0, 1}), float3 {-4, -5, -6});
+    const Aabb result = aabb.transform(m);
+
+    // Compare Arvo's method (above) with the naive method (below).
+    const float3 a = (m * float4(aabb.min.x, aabb.min.y, aabb.min.z, 1.0)).xyz;
+    const float3 b = (m * float4(aabb.min.x, aabb.min.y, aabb.max.z, 1.0)).xyz;
+    const float3 c = (m * float4(aabb.min.x, aabb.max.y, aabb.min.z, 1.0)).xyz;
+    const float3 d = (m * float4(aabb.min.x, aabb.max.y, aabb.max.z, 1.0)).xyz;
+    const float3 e = (m * float4(aabb.max.x, aabb.min.y, aabb.min.z, 1.0)).xyz;
+    const float3 f = (m * float4(aabb.max.x, aabb.min.y, aabb.max.z, 1.0)).xyz;
+    const float3 g = (m * float4(aabb.max.x, aabb.max.y, aabb.min.z, 1.0)).xyz;
+    const float3 h = (m * float4(aabb.max.x, aabb.max.y, aabb.max.z, 1.0)).xyz;
+    const Aabb expected {
+        .min = min(min(min(min(min(min(min(a, b), c), d), e), f), g), h),
+        .max = max(max(max(max(max(max(max(a, b), c), d), e), f), g), h),
+    };
+
+    EXPECT_PRED2(vec3eq, result.min, expected.min);
+    EXPECT_PRED2(vec3eq, result.max, expected.max);
+}
+
+TEST(FilamentTest, SkinningMath) {
+
+    struct Bone {
+        quatf q;
+        float4 t;
+        float4 s;
+    };
+
+    auto makeBone = [&](mat4f m) -> Bone {
+        // figure out the scales
+        float4 s = { length(m[0]), length(m[1]), length(m[2]), 0.0f };
+        if (dot(cross(m[0].xyz, m[1].xyz), m[2].xyz) < 0) {
+            s[2] = -s[2];
+        }
+
+        // compute the inverse scales
+        float4 is = { 1.0f/s.x, 1.0f/s.y, 1.0f/s.z, 0.0f };
+
+        // normalize the matrix
+        m[0] *= is[0];
+        m[1] *= is[1];
+        m[2] *= is[2];
+
+
+        Bone bone;
+        bone.s = s;
+        bone.q = m.toQuaternion();
+        bone.t = m[3];
+        return bone;
+    };
+
+    auto applyBone = [](Bone const& bone, float3 v) -> float3 {
+        float4 q = bone.q.xyzw;
+        float3 t = bone.t.xyz;
+        float3 s = bone.s.xyz;
+
+        // apply the non-uniform scales
+        v *= s;
+
+        // apply the rigid transform (valid only for unit quaternions)
+        v += 2.0 * cross(q.xyz, cross(q.xyz, v) + q.w * v);
+
+        // apply the translation
+        v += t;
+
+        return v;
+    };
+
+    auto check = [&](mat4f m, float3 v) {
+        float3 expect = (m * v).xyz;
+        float3 actual = applyBone(makeBone(m), v);
+        static constexpr float value_eps = 40 * std::numeric_limits<float>::epsilon();
+        EXPECT_NEAR(expect.x, actual.x, value_eps);
+        EXPECT_NEAR(expect.y, actual.y, value_eps);
+        EXPECT_NEAR(expect.z, actual.z, value_eps);
+    };
+
+    mat4f m;
+    float3 v = {1, 2, 3};
+
+    m = mat4f::translation(float3{1, 2, 3});
+    check(m, v);
+
+    m = mat4f::scaling(float3{1, 2, 3});
+    check(m, v);
+
+    m = mat4f::scaling(float3{1, 2, 3}) * mat4f::translation(float3{1, 2, 3});
+    check(m, v);
+
+    m = mat4f::translation(float3{1, 2, 3}) * mat4f::scaling(float3{1, 2, 3});
+    check(m, v);
+
+    m = mat4f::translation(float3{1, 2, 3}) * mat4f::scaling(float3{1, -4, 1});
+    check(m, v);
+
+
+    std::default_random_engine generator(82828); // NOLINT
+    std::uniform_real_distribution<float> distribution(-4, 4);
+    std::uniform_real_distribution<float> dangle(-2.0 * F_PI, 2.0 * F_PI);
+    auto rand_gen = std::bind(distribution, generator);
+
+    for (size_t i = 0; i < 100; ++i) {
+        m =
+                mat4f::translation(float3{rand_gen(), rand_gen(), rand_gen()}) *
+                mat4f::rotation(dangle(generator), normalize(float3{rand_gen(), rand_gen(), rand_gen()})) *
+                mat4f::scaling(float3{rand_gen(), rand_gen(), rand_gen()});
+        check(m, v);
+    }
 }
 
 TEST(FilamentTest, TransformManager) {
@@ -339,8 +456,48 @@ TEST(FilamentTest, UniformBuffer) {
 
     move = std::move(copy);
     CHECK(&move);
+}
 
-    //buffer.log(std::cout, ib);
+TEST(FilamentTest, UniformBufferSize1) {
+    UniformInterfaceBlock::Builder b;
+    b.name("UniformBufferSize1");
+    b.add("f4a", 1, UniformInterfaceBlock::Type::FLOAT4); // offset = 0
+    b.add("f4b", 1, UniformInterfaceBlock::Type::FLOAT4); // offset = 16
+    b.add("f1a", 1, UniformInterfaceBlock::Type::FLOAT);  // offset = 32
+    b.add("f1b", 1, UniformInterfaceBlock::Type::FLOAT);  // offset = 36
+    UniformInterfaceBlock uib(b.build());
+    UniformBuffer buffer(uib.getSize());
+
+    float4 f4(1.0f);
+    ssize_t f4_offset = uib.getUniformOffset("f4a", 0);
+    buffer.setUniformArray(f4_offset, &f4, 1);
+
+    float f1(1.0f);
+    ssize_t f1_offset = uib.getUniformOffset("f1b", 0);
+    buffer.setUniformArray(f1_offset, &f1, 1);
+
+    buffer.invalidate();
+}
+
+TEST(FilamentTest, UniformBufferSize2) {
+    UniformInterfaceBlock::Builder b;
+    b.name("UniformBufferSize2");
+    b.add("f4a", 1, UniformInterfaceBlock::Type::FLOAT4); // offset = 0
+    b.add("f4b", 1, UniformInterfaceBlock::Type::FLOAT4); // offset = 16
+    b.add("f1a", 1, UniformInterfaceBlock::Type::FLOAT);  // offset = 32
+    b.add("f2a", 1, UniformInterfaceBlock::Type::FLOAT2); // offset = 36
+    UniformInterfaceBlock uib(b.build());
+    UniformBuffer buffer(uib.getSize());
+
+    float4 f4(1.0f);
+    ssize_t f4_offset = uib.getUniformOffset("f4a", 0);
+    buffer.setUniformArray(f4_offset, &f4, 1);
+
+    float2 f2(1.0f);
+    ssize_t f2_offset = uib.getUniformOffset("f2a", 0);
+    buffer.setUniformArray(f2_offset, &f2, 1);
+
+    buffer.invalidate();
 }
 
 TEST(FilamentTest, BoxCulling) {
@@ -489,9 +646,9 @@ TEST(FilamentTest, FroxelData) {
     Froxel f = froxelData.getFroxelAt(0,0,0);
 
     // 45-deg plane, with normal pointing outward to the left
-    EXPECT_FLOAT_EQ(-M_SQRT2/2, f.planes[Froxel::LEFT].x);
+    EXPECT_FLOAT_EQ(-F_SQRT2/2, f.planes[Froxel::LEFT].x);
     EXPECT_FLOAT_EQ(         0, f.planes[Froxel::LEFT].y);
-    EXPECT_FLOAT_EQ( M_SQRT2/2, f.planes[Froxel::LEFT].z);
+    EXPECT_FLOAT_EQ( F_SQRT2/2, f.planes[Froxel::LEFT].z);
 
     // the right side of froxel 1 is near 45-deg plane pointing outward to the right
     EXPECT_TRUE(f.planes[Froxel::RIGHT].x > 0);
@@ -500,9 +657,9 @@ TEST(FilamentTest, FroxelData) {
 
     // right side of last horizontal froxel is 45-deg plane pointing outward to the right
     Froxel g = froxelData.getFroxelAt(froxelData.getFroxelCountX()-1,0,0);
-    EXPECT_FLOAT_EQ(M_SQRT2/2, g.planes[Froxel::RIGHT].x);
+    EXPECT_FLOAT_EQ(F_SQRT2/2, g.planes[Froxel::RIGHT].x);
     EXPECT_FLOAT_EQ(        0, g.planes[Froxel::RIGHT].y);
-    EXPECT_FLOAT_EQ(M_SQRT2/2, g.planes[Froxel::RIGHT].z);
+    EXPECT_FLOAT_EQ(F_SQRT2/2, g.planes[Froxel::RIGHT].z);
 
     // first froxel near plane facing us
     EXPECT_FLOAT_EQ(        0, f.planes[Froxel::NEAR].x);
@@ -568,8 +725,8 @@ TEST(FilamentTest, FroxelData) {
     }
 
     froxelData.terminate(engine->getDriverApi());
-    engine->shutdown();
-    delete engine;
+
+    Engine::destroy((Engine **)&engine);
 }
 
 TEST(FilamentTest, Bones) {
@@ -677,21 +834,21 @@ TEST(FilamentTest, Bones) {
     Test::check(mat4f::scaling(float3{ 4, -2, 3 }));
     Test::check(mat4f::scaling(float3{ 4, 2, -3 }));
 
-    Test::check(mat4f::rotation(M_PI_2, float3{ 0, 0, 1 }));
-    Test::check(mat4f::rotation(M_PI_2, float3{ 0, 1, 0 }));
-    Test::check(mat4f::rotation(M_PI_2, float3{ 1, 0, 0 }));
-    Test::check(mat4f::rotation(M_PI_2, float3{ 0, 1, 1 }));
-    Test::check(mat4f::rotation(M_PI_2, float3{ 1, 0, 1 }));
-    Test::check(mat4f::rotation(M_PI_2, float3{ 1, 1, 0 }));
-    Test::check(mat4f::rotation(-M_PI_2, float3{ 0, 0, 1 }));
-    Test::check(mat4f::rotation(-M_PI_2, float3{ 0, 1, 0 }));
-    Test::check(mat4f::rotation(-M_PI_2, float3{ 1, 0, 0 }));
-    Test::check(mat4f::rotation(-M_PI_2, float3{ 0, 1, 1 }));
-    Test::check(mat4f::rotation(-M_PI_2, float3{ 1, 0, 1 }));
-    Test::check(mat4f::rotation(-M_PI_2, float3{ 1, 1, 0 }));
+    Test::check(mat4f::rotation(F_PI_2, float3{ 0, 0, 1 }));
+    Test::check(mat4f::rotation(F_PI_2, float3{ 0, 1, 0 }));
+    Test::check(mat4f::rotation(F_PI_2, float3{ 1, 0, 0 }));
+    Test::check(mat4f::rotation(F_PI_2, float3{ 0, 1, 1 }));
+    Test::check(mat4f::rotation(F_PI_2, float3{ 1, 0, 1 }));
+    Test::check(mat4f::rotation(F_PI_2, float3{ 1, 1, 0 }));
+    Test::check(mat4f::rotation(-F_PI_2, float3{ 0, 0, 1 }));
+    Test::check(mat4f::rotation(-F_PI_2, float3{ 0, 1, 0 }));
+    Test::check(mat4f::rotation(-F_PI_2, float3{ 1, 0, 0 }));
+    Test::check(mat4f::rotation(-F_PI_2, float3{ 0, 1, 1 }));
+    Test::check(mat4f::rotation(-F_PI_2, float3{ 1, 0, 1 }));
+    Test::check(mat4f::rotation(-F_PI_2, float3{ 1, 1, 0 }));
 
     mat4f m = mat4f::translation(float3{ 1, 2, 3 }) *
-                                                    mat4f::rotation(-M_PI_2, float3{ 1, 1, 0 }) *
+                                                    mat4f::rotation(-F_PI_2, float3{ 1, 1, 0 }) *
                                                     mat4f::scaling(float3{ -2, 3, 0.04 });
 
     Test::check(m);

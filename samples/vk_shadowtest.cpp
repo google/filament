@@ -58,7 +58,7 @@ static GroundPlane createGroundPlane(Engine* engine);
 
 static const Config config {
     .title = "shadowtest",
-    .iblDirectory = FilamentApp::getRootPath() + IBL_FOLDER,
+    .iblDirectory = FilamentApp::getRootAssetsPath() + IBL_FOLDER,
     .scale = 1,
     .splitView = false,
     .backend = Backend::VULKAN,
@@ -74,7 +74,7 @@ int main(int argc, char** argv) {
 
         // Add geometry into the scene.
         app.meshes = new MeshAssimp(*engine);
-        app.meshes->addFromFile(FilamentApp::getRootPath() + MODEL_FILE, app.materials);
+        app.meshes->addFromFile(FilamentApp::getRootAssetsPath() + MODEL_FILE, app.materials);
         auto ti = tcm.getInstance(app.meshes->getRenderables()[0]);
         app.transform = mat4f{ mat3f(1), float3(0, 0, -4) } * tcm.getWorldTransform(ti);
         for (auto renderable : app.meshes->getRenderables()) {
@@ -105,7 +105,6 @@ int main(int argc, char** argv) {
     };
 
     auto cleanup = [&app](Engine* engine, View*, Scene*) {
-        Fence::waitAndDestroy(engine->createFence());
         engine->destroy(app.plane.renderable);
         engine->destroy(app.plane.mat);
         engine->destroy(app.plane.vb);

@@ -162,6 +162,8 @@ inline constexpr half operator "" _h(long double v) {
     return half( static_cast<float>(v) );
 }
 
+template<> struct is_arithmetic<filament::math::half> : public std::true_type {};
+
 } // namespace math
 } // namespace filament
 
@@ -170,6 +172,8 @@ namespace std {
 template<> struct is_floating_point<filament::math::half> : public std::true_type {};
 
 // note: this shouldn't be needed (is_floating_point<> is enough) but some version of msvc need it
+// This stopped working with MSVC 2019 16.4, so we specialize our own version of is_arithmetic in
+// the math::filament namespace (see above).
 template<> struct is_arithmetic<filament::math::half> : public std::true_type {};
 
 template<>

@@ -128,9 +128,7 @@ static_assert(sizeof(BlendState) == 56, "BlendState is unexpected size.");
 
 // StateCache caches Metal state objects using StateType as a key.
 // MetalType is the corresponding Metal API type.
-// StateCreator is a functor that creates a new state of type MetalType. It is assumed that this
-// type is created with a positive reference count (i.e., a new* method, per Apple convention), and
-// thus each cached object is released in StateCache's destructor.
+// StateCreator is a functor that creates a new state of type MetalType.
 template<typename StateType,
          typename MetalType,
          typename StateCreator>
@@ -142,12 +140,6 @@ public:
 
     StateCache(const StateCache&) = delete;
     StateCache& operator=(const StateCache&) = delete;
-
-    ~StateCache() {
-        for (auto it = mStateCache.begin(); it != mStateCache.end(); ++it) {
-            [it.value() release];
-        }
-    }
 
     void setDevice(id<MTLDevice> device) noexcept { mDevice = device; }
 

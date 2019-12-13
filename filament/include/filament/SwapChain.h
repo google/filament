@@ -149,7 +149,7 @@ public:
      * any swap chain that will be used as the source for a blit operation.
      *
      * @see
-     * Renderer.mirrorFrame()
+     * Renderer.copyFrame()
      */
     static const uint64_t CONFIG_READABLE = backend::SWAP_CHAIN_CONFIG_READABLE;
 

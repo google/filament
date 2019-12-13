@@ -17,6 +17,7 @@ rm Source/stb_image.c Source/imgdiff.cpp
 sed -i "" 's/stb_image.c/stb_image.h/g' Source/astc_stb_tga.cpp
 sed -i "" 's/main/standalone_main/g' Source/astc_toplevel.cpp
 add #if 0 to astc_image_load_store.cpp
+change do_print to 0
 
 #
 # Copy modified source into the Filament repo.

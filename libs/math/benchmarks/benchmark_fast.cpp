@@ -38,7 +38,7 @@ static void BM_trig(benchmark::State& state) noexcept {
     std::vector<float> data(1024);
     std::vector<typename T::result_type> res(1024);
     for (size_t i = 0; i < data.size(); i++) {
-        data[i] = float((float(i) / data.size()) * M_2_PI - M_PI);
+        data[i] = float((float(i) / data.size()) * F_2_PI - F_PI);
     }
 
     {

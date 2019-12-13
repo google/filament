@@ -56,6 +56,7 @@ public:
     bool getUIB(UniformInterfaceBlock* uib) const noexcept;
     bool getSIB(SamplerInterfaceBlock* sib) const noexcept;
     bool getShaderModels(uint32_t* value) const noexcept;
+    bool getMaterialProperties(uint64_t* value) const noexcept;
 
     bool getDepthWriteSet(bool* value) const noexcept;
     bool getDepthWrite(bool* value) const noexcept;
@@ -74,6 +75,8 @@ public:
     bool getMaskThreshold(float*) const noexcept;
     bool hasShadowMultiplier(bool*) const noexcept;
     bool getRequiredAttributes(AttributeBitset*) const noexcept;
+    bool getRefractionMode(RefractionMode* value) const noexcept;
+    bool getRefractionType(RefractionType* value) const noexcept;
     bool hasCustomDepthShader(bool* value) const noexcept;
     bool hasSpecularAntiAliasing(bool* value) const noexcept;
     bool getSpecularAntiAliasingVariance(float* value) const noexcept;

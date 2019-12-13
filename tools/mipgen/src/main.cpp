@@ -135,9 +135,14 @@ static void printUsage(const char* name) {
 }
 
 static void license() {
-    cout <<
-    #include "licenses/licenses.inc"
-    ;
+    static const char *license[] = {
+        #include "licenses/licenses.inc"
+        nullptr
+    };
+
+    const char **p = &license[0];
+    while (*p)
+        std::cout << *p++ << std::endl;
 }
 
 static int handleArguments(int argc, char* argv[]) {
@@ -338,11 +343,6 @@ int main(int argc, char* argv[]) {
                             image.getWidth(), image.getHeight());
                 }
                 CompressedTexture tex = compressTexture(config, image);
-                // Add newline here because the ASTC encoder has a progress indicator that issues a
-                // carriage return without a line feed.
-                if (!g_quietMode) {
-                    putc('\n', stdout);
-                }
                 container.setBlob({mip++}, tex.data.get(), tex.size);
                 info.glInternalFormat = (uint32_t) tex.format;
                 return;

@@ -79,7 +79,7 @@ public:
     backend::Handle<backend::HwProgram> getPostProcessProgramSlow(uint8_t variantKey) const noexcept;
     backend::Handle<backend::HwProgram> getProgram(uint8_t variantKey) const noexcept {
 #if FILAMENT_ENABLE_MATDBG
-        if (UTILS_UNLIKELY(mPendingEdits)) {
+        if (UTILS_UNLIKELY(mPendingEdits.load())) {
             const_cast<FMaterial*>(this)->applyPendingEdits();
         }
 #endif
@@ -115,10 +115,16 @@ public:
     float getMaskThreshold() const noexcept { return mMaskThreshold; }
     bool hasShadowMultiplier() const noexcept { return mHasShadowMultiplier; }
     AttributeBitset getRequiredAttributes() const noexcept { return mRequiredAttributes; }
+    RefractionMode getRefractionMode() const noexcept { return mRefractionMode; }
+    RefractionType getRefractionType() const noexcept { return mRefractionType; }
 
     bool hasSpecularAntiAliasing() const noexcept { return mSpecularAntiAliasing; }
     float getSpecularAntiAliasingVariance() const noexcept { return mSpecularAntiAliasingVariance; }
     float getSpecularAntiAliasingThreshold() const noexcept { return mSpecularAntiAliasingThreshold; }
+
+    bool hasMaterialProperty(Property property) const noexcept {
+        return bool(mMaterialProperties & uint64_t(property));
+    }
 
     size_t getParameterCount() const noexcept {
         return mUniformInterfaceBlock.getUniformInfoList().size() +
@@ -155,23 +161,26 @@ private:
     mutable std::array<backend::Handle<backend::HwProgram>, VARIANT_COUNT> mCachedPrograms;
 
     backend::RasterState mRasterState;
-    BlendingMode mRenderBlendingMode;
-    TransparencyMode mTransparencyMode;
-    bool mIsVariantLit;
-    Shading mShading;
+    BlendingMode mRenderBlendingMode = BlendingMode::OPAQUE;
+    TransparencyMode mTransparencyMode = TransparencyMode::DEFAULT;
+    bool mIsVariantLit = false;
+    Shading mShading = Shading::UNLIT;
 
-    BlendingMode mBlendingMode;
-    Interpolation mInterpolation;
-    VertexDomain mVertexDomain;
-    MaterialDomain mMaterialDomain;
-    CullingMode mCullingMode;
+    BlendingMode mBlendingMode = BlendingMode::OPAQUE;
+    Interpolation mInterpolation = Interpolation::SMOOTH;
+    VertexDomain mVertexDomain = VertexDomain::OBJECT;
+    MaterialDomain mMaterialDomain = MaterialDomain::SURFACE;
+    CullingMode mCullingMode = CullingMode::NONE;
     AttributeBitset mRequiredAttributes;
+    RefractionMode mRefractionMode = RefractionMode::NONE;
+    RefractionType mRefractionType = RefractionType::SOLID;
+    uint64_t mMaterialProperties = 0;
 
     float mMaskThreshold = 0.4f;
-    float mSpecularAntiAliasingVariance;
-    float mSpecularAntiAliasingThreshold;
+    float mSpecularAntiAliasingVariance = 0.0f;
+    float mSpecularAntiAliasingThreshold = 0.0f;
 
-    bool mDoubleSided;
+    bool mDoubleSided = false;
     bool mDoubleSidedCapability = false;
     bool mHasShadowMultiplier = false;
     bool mHasCustomDepthShader = false;

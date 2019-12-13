@@ -38,6 +38,10 @@ PFNGLPOPGROUPMARKEREXTPROC glPopGroupMarkerEXT;
 PFNGLRENDERBUFFERSTORAGEMULTISAMPLEEXTPROC glRenderbufferStorageMultisampleEXT;
 PFNGLFRAMEBUFFERTEXTURE2DMULTISAMPLEEXTPROC glFramebufferTexture2DMultisampleEXT;
 #endif
+#ifdef GL_KHR_debug
+PFNGLDEBUGMESSAGECALLBACKKHRPROC glDebugMessageCallbackKHR;
+PFNGLGETDEBUGMESSAGELOGKHRPROC glGetDebugMessageLogKHR;
+#endif
 
 static std::once_flag sGlExtInitialized;
 
@@ -80,35 +84,17 @@ void importGLESExtensionsEntryPoints() {
                 (PFNGLRENDERBUFFERSTORAGEMULTISAMPLEEXTPROC)eglGetProcAddress(
                         "glRenderbufferStorageMultisampleEXT");
 #endif
+#ifdef GL_KHR_debug
+        glDebugMessageCallbackKHR =
+                (PFNGLDEBUGMESSAGECALLBACKKHRPROC)eglGetProcAddress(
+                        "glDebugMessageCallbackKHR");
+        glGetDebugMessageLogKHR =
+                (PFNGLGETDEBUGMESSAGELOGKHRPROC)eglGetProcAddress(
+                        "glGetDebugMessageLogKHR");
+#endif
     });
 }
 
 } // namespace glext
-
-#endif
-
-#if defined(IOS)
-
-#include <OpenGLES/ES3/gl.h>
-#include <OpenGLES/ES3/glext.h>
-
-#include <utils/Panic.h>
-
-void glTexStorage2DMultisample (GLenum target, GLsizei samples, GLenum internalformat,
-            GLsizei width, GLsizei height, GLboolean fixedsamplelocations) {
-    PANIC_PRECONDITION("glTexStorage2DMultisample should not be called on iOS.");
-}
-
-namespace glext {
-    void glFramebufferTexture2DMultisampleEXT (GLenum target, GLenum attachment,
-            GLenum textarget, GLuint texture, GLint level, GLsizei samples) {
-        PANIC_PRECONDITION("glFramebufferTexture2DMultisampleEXT should not be called on iOS.");
-    }
-
-    void glRenderbufferStorageMultisampleEXT (GLenum target, GLsizei samples,
-            GLenum internalformat, GLsizei width, GLsizei height) {
-        PANIC_PRECONDITION("glRenderbufferStorageMultisampleEXT should not be called on iOS.");
-    }
-}
 
 #endif

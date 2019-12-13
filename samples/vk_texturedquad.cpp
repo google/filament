@@ -79,7 +79,7 @@ int main(int argc, char** argv) {
     auto setup = [&app](Engine* engine, View* view, Scene* scene) {
 
         // Load texture
-        Path path = FilamentApp::getRootPath() + "textures/Moss_01/Moss_01_Color.png";
+        Path path = FilamentApp::getRootAssetsPath() + "textures/Moss_01/Moss_01_Color.png";
         if (!path.exists()) {
             std::cerr << "The texture " << path << " does not exist" << std::endl;
             exit(1);
@@ -144,7 +144,6 @@ int main(int argc, char** argv) {
     };
 
     auto cleanup = [&app](Engine* engine, View*, Scene*) {
-        Fence::waitAndDestroy(engine->createFence());
         engine->destroy(app.renderable);
         engine->destroy(app.matInstance);
         engine->destroy(app.mat);

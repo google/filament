@@ -26,11 +26,6 @@ public class Fence {
 
     public static final long WAIT_FOR_EVER = -1;
 
-    public enum Type {
-        SOFT,
-        HARD
-    }
-
     public enum Mode {
         FLUSH,
         DONT_FLUSH
@@ -42,6 +37,9 @@ public class Fence {
         TIMEOUT_EXPIRED
     }
 
+    /**
+     * Blocks the current thread until the Fence signals.
+     */
     public FenceStatus wait(@NonNull Mode mode, long timeoutNanoSeconds) {
         int nativeResult = nWait(getNativeObject(), mode.ordinal(), timeoutNanoSeconds);
         switch (nativeResult) {

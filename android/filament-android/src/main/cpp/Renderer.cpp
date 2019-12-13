@@ -97,6 +97,42 @@ Java_com_google_android_filament_Renderer_nReadPixels(JNIEnv *env, jclass,
     return 0;
 }
 
+extern "C" JNIEXPORT jint JNICALL
+Java_com_google_android_filament_Renderer_nReadPixelsEx(JNIEnv *env, jclass,
+        jlong nativeRenderer, jlong nativeEngine, jlong nativeRenderTarget,
+        jint xoffset, jint yoffset, jint width, jint height,
+        jobject storage, jint remaining,
+        jint left, jint top, jint type, jint alignment, jint stride, jint format,
+        jobject handler, jobject runnable) {
+    Renderer *renderer = (Renderer *) nativeRenderer;
+    Engine *engine = (Engine *) nativeEngine;
+    RenderTarget *renderTarget = (RenderTarget *) nativeRenderTarget;
+
+    stride = stride ? stride : width;
+    size_t sizeInBytes = PixelBufferDescriptor::computeDataSize(
+            (PixelDataFormat) format, (PixelDataType) type,
+            (size_t) stride, (size_t) (height + top), (size_t) alignment);
+
+    AutoBuffer nioBuffer(env, storage, 0);
+    if (sizeInBytes > (remaining << nioBuffer.getShift())) {
+        // BufferOverflowException
+        return -1;
+    }
+
+    void *buffer = nioBuffer.getData();
+    auto *callback = JniBufferCallback::make(engine, env, handler, runnable, std::move(nioBuffer));
+
+    PixelBufferDescriptor desc(buffer, sizeInBytes, (backend::PixelDataFormat) format,
+            (backend::PixelDataType) type, (uint8_t) alignment, (uint32_t) left, (uint32_t) top,
+            (uint32_t) stride, &JniBufferCallback::invoke, callback);
+
+    renderer->readPixels(renderTarget,
+            uint32_t(xoffset), uint32_t(yoffset), uint32_t(width), uint32_t(height),
+            std::move(desc));
+
+    return 0;
+}
+
 extern "C" JNIEXPORT jdouble JNICALL
 Java_com_google_android_filament_Renderer_nGetUserTime(JNIEnv*, jclass, jlong nativeRenderer) {
     Renderer *renderer = (Renderer *) nativeRenderer;

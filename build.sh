@@ -68,6 +68,9 @@ function print_help {
     echo "    Desktop matc target, release build:"
     echo "        \$ ./$self_name release matc"
     echo ""
+    echo "    Build gltf_viewer then immediately run it with no arguments:"
+    echo "        \$ ./$self_name release run_gltf_viewer"
+    echo ""
  }
 
 # Requirements
@@ -121,8 +124,11 @@ function build_clean {
     echo "Cleaning build directories..."
     rm -Rf out
     rm -Rf android/filament-android/build android/filament-android/.externalNativeBuild
+    rm -Rf android/filament-android/build android/filament-android/.cxx
     rm -Rf android/filamat-android/build android/filamat-android/.externalNativeBuild
+    rm -Rf android/filamat-android/build android/filamat-android/.cxx
     rm -Rf android/gltfio-android/build android/gltfio-android/.externalNativeBuild
+    rm -Rf android/gltfio-android/build android/gltfio-android/.cxx
 }
 
 function build_desktop_target {
@@ -194,7 +200,7 @@ function build_webgl_with_target {
         cmake \
             -G "$BUILD_GENERATOR" \
             -DIMPORT_EXECUTABLES_DIR=out \
-            -DCMAKE_TOOLCHAIN_FILE=${EMSCRIPTEN}/cmake/Modules/Platform/Emscripten.cmake \
+            -DCMAKE_TOOLCHAIN_FILE=${EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake \
             -DCMAKE_BUILD_TYPE=$1 \
             -DCMAKE_INSTALL_PREFIX=../webgl-${lc_target}/filament \
             -DWEBGL=1 \
@@ -446,7 +452,7 @@ function ensure_ios_toolchain {
     echo "iOS toolchain file does not exist."
     echo "It will automatically be downloaded from http://opensource.apple.com."
 
-    if [[ "$KOKORO_BUILD_ID" || "$GITHUB_WORKFLOW" ]]; then
+    if [[ "$GITHUB_WORKFLOW" ]]; then
         REPLY=y
     else
         read -p "Continue? (y/n) " -n 1 -r

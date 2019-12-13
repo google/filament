@@ -49,7 +49,6 @@
 #include <fstream>
 #include <string>
 
-#include "generated/resources/gltf.h"
 #include "generated/resources/resources.h"
 
 using namespace filament;
@@ -433,7 +432,7 @@ static void loadAssetFromDisk(BakerApp& app) {
     delete app.pipeline;
     app.pipeline = pipeline;
 
-    app.viewer->setIndirectLight(FilamentApp::get().getIBL()->getIndirectLight());
+    app.viewer->setIndirectLight(FilamentApp::get().getIBL()->getIndirectLight(), nullptr);
     app.flattenedAsset = handle;
     app.requestViewerUpdate = true;
 
@@ -668,7 +667,7 @@ int main(int argc, char** argv) {
     strncpy(app.exportOptions.bentNormalsPath, "bentNormals.png", PATH_SIZE);
 
     app.config.title = "gltf_baker";
-    app.config.iblDirectory = FilamentApp::getRootPath() + DEFAULT_IBL;
+    app.config.iblDirectory = FilamentApp::getRootAssetsPath() + DEFAULT_IBL;
 
     utils::Path filename;
     int option_index = handleCommandLineArguments(argc, argv, &app);
@@ -936,8 +935,6 @@ int main(int argc, char** argv) {
         AssetLoader::destroy(&app.loader);
         std::cout << "Destroying NameComponentManager..." << std::endl;
         delete app.names;
-
-        Fence::waitAndDestroy(engine->createFence());
     };
 
     auto animate = [&app](Engine* engine, View* view, double now) {

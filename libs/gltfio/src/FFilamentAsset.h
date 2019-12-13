@@ -160,14 +160,16 @@ struct FFilamentAsset : public FilamentAsset {
     }
 
     void releaseSourceData() noexcept {
-        mBufferBindings.clear();
-        mBufferBindings.shrink_to_fit();
-        mTextureBindings.clear();
-        mTextureBindings.shrink_to_fit();
-        mResourceUris.clear();
-        mResourceUris.shrink_to_fit();
-        mNodeMap.clear();
-        mPrimMap.clear();
+        // To ensure that all possible memory is freed, we reassign to new containers rather than
+        // calling clear(). With many container types (such as robin_map), clearing is a fast
+        // operation that merely frees the storage for the items.
+        // TODO: bundle all these transient items into a "SourceData" struct.
+        mBufferBindings = {};
+        mTextureBindings = {};
+        mResourceUris = {};
+        mNodeMap = {};
+        mPrimMap = {};
+        mAccessorMap = {};
         releaseSourceAsset();
     }
 
@@ -205,17 +207,16 @@ struct FFilamentAsset : public FilamentAsset {
     Wireframe* mWireframe = nullptr;
     int mSourceAssetRefCount = 0;
     bool mResourcesLoaded = false;
+    bool mSharedSourceAsset = false;
 
-    /** @{
-     * Transient source data that can freed via releaseSourceData(). */
+    // Transient source data that can freed via releaseSourceData:
     std::vector<BufferBinding> mBufferBindings;
     std::vector<TextureBinding> mTextureBindings;
     std::vector<const char*> mResourceUris;
     const cgltf_data* mSourceAsset = nullptr;
     tsl::robin_map<const cgltf_node*, utils::Entity> mNodeMap;
     tsl::robin_map<const cgltf_primitive*, filament::VertexBuffer*> mPrimMap;
-    bool mSharedSourceAsset = false;
-    /** @} */
+    tsl::robin_map<const cgltf_accessor*, std::vector<filament::VertexBuffer*>> mAccessorMap;
 };
 
 FILAMENT_UPCAST(FilamentAsset)

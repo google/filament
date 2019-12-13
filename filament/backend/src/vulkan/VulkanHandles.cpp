@@ -107,9 +107,11 @@ VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context, uint32_t width, u
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .image = mColor.image,
             .format = mColor.format,
-            .subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-            .subresourceRange.baseMipLevel = colorLevel,
-            .subresourceRange.levelCount = 1
+            .subresourceRange = {
+                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                .baseMipLevel = colorLevel,
+                .levelCount = 1
+            }
         };
         if (color->target == SamplerType::SAMPLER_CUBEMAP) {
             viewInfo.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
@@ -125,9 +127,11 @@ VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context, uint32_t width, u
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .image = mDepth.image,
             .format = mDepth.format,
-            .subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
-            .subresourceRange.baseMipLevel = depthLevel,
-            .subresourceRange.levelCount = 1
+            .subresourceRange = {
+                .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
+                .baseMipLevel = depthLevel,
+                .levelCount = 1
+            }
         };
         if (depth->target == SamplerType::SAMPLER_CUBEMAP) {
             viewInfo.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
@@ -297,14 +301,12 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
     VkImageCreateInfo imageInfo {
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
         .imageType = VK_IMAGE_TYPE_2D,
-        .extent.width = w,
-        .extent.height = h,
-        .extent.depth = depth,
         .format = vkformat,
+        .extent = { w, h, depth },
         .mipLevels = levels,
         .arrayLayers = 1,
-        .usage = 0,
         .samples = VK_SAMPLE_COUNT_1_BIT,
+        .usage = 0
     };
     if (target == SamplerType::SAMPLER_CUBEMAP) {
         imageInfo.arrayLayers = 6;
@@ -595,15 +597,11 @@ void VulkanRenderPrimitive::setBuffers(VulkanVertexBuffer* vertexBuffer,
 
         // We re-use the positions buffer as a dummy buffer for any disabled attribute that might
         // be consumed by the shader.
-        VkBuffer vkbuffer = 0;
         if (!(enabledAttributes & (1U << attribIndex))) {
 
-            // TODO: all vertex attributes are floats, except for mesh_bone_indices, which are
-            // unsigned integers. Ideally the Vulkan backend would not need to know about this.
-            const uint32_t kBoneIndicesLocation = 5; // VertexAttribute::BONE_INDICES
-            vkformat = attribIndex == kBoneIndicesLocation ? VK_FORMAT_R8G8B8A8_UINT : vkformat;
+            const bool isInteger = attrib.flags & Attribute::FLAG_INTEGER_TARGET;
+            vkformat = isInteger ? VK_FORMAT_R8G8B8A8_UINT : vkformat;
 
-            // TODO: avoid using dummy buffers by adding the concept of frozen renderables.
             if (UTILS_LIKELY(enabledAttributes & 1)) {
                 attrib = vertexBuffer->attributes[0];
             } else {

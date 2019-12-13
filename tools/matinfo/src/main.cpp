@@ -89,9 +89,14 @@ static void printUsage(const char* name) {
 }
 
 static void license() {
-    std::cout <<
-    #include "licenses/licenses.inc"
-    ;
+    static const char *license[] = {
+        #include "licenses/licenses.inc"
+        nullptr
+    };
+
+    const char **p = &license[0];
+    while (*p)
+        std::cout << *p++ << std::endl;
 }
 
 static int handleArguments(int argc, char* argv[], Config* config) {
@@ -514,7 +519,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    std::ifstream in(src.c_str(), std::ifstream::in);
+    std::ifstream in(src.c_str(), std::ifstream::in | std::ios::binary);
     if (in.is_open()) {
         if (src.getExtension() == "inc") {
             return parseTextBlob(config, in) ? 0 : 1;

@@ -167,6 +167,7 @@ RenderableManager::Builder& RenderableManager::Builder::blendOrder(size_t index,
 }
 
 RenderableManager::Builder::Result RenderableManager::Builder::build(Engine& engine, Entity entity) {
+    FEngine::assertValid(engine, __PRETTY_FUNCTION__);
     bool isEmpty = true;
 
     if (!ASSERT_PRECONDITION_NON_FATAL(mImpl->mSkinningBoneCount <= CONFIG_MAX_BONE_COUNT,

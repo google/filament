@@ -40,11 +40,11 @@ public:
     }
 
     // Returns the total storage size, assuming that each blob is prefixed with a 64-bit size.
-    constexpr size_t getSize() const noexcept {
+    size_t getSize() const noexcept {
         return mStorageSize + 8 * getBlobCount();
     }
 
-    constexpr bool isEmpty() const noexcept {
+    bool isEmpty() const noexcept {
         return mBlobs.size() == 0;
     }
 

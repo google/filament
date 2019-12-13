@@ -397,7 +397,7 @@ void *encode_astc_image_threadfunc(void *vblk)
 					// routine to print the progress counter.
 					if (suppress_progress_counter == 0 && (pctr % progress_counter_divider) == 0 && print_tile_errors == 0 && print_statistics == 0)
 					{
-						int do_print = 1;
+						int do_print = 0;
 						// the current thread has the responsibility for printing the progress counter
 						// if every previous thread has completed. Also, if we have ever received the
 						// responsibility to print the progress counter, we are going to keep it

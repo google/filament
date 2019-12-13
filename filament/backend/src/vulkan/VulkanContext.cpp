@@ -341,8 +341,11 @@ void createSwapChain(VulkanContext& context, VulkanSurfaceContext& surfaceContex
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkGetSwapchainImagesKHR error.");
     for (size_t i = 0; i < images.size(); ++i) {
         surfaceContext.swapContexts[i].attachment = {
+            .format = surfaceContext.surfaceFormat.format,
             .image = images[i],
-            .format = surfaceContext.surfaceFormat.format
+            .view = {},
+            .memory = {},
+            .offscreen = {}
         };
     }
     utils::slog.i
@@ -383,6 +386,8 @@ void createSwapChain(VulkanContext& context, VulkanSurfaceContext& surfaceContex
     for (uint32_t i = 0; i < allocateInfo.commandBufferCount; ++i) {
         surfaceContext.swapContexts[i].commands.cmdbuffer = cmdbufs[i];
     }
+
+    createDepthBuffer(context, surfaceContext, context.depthFormat);
 }
 
 uint32_t selectMemoryType(VulkanContext& context, uint32_t flags, VkFlags reqs) {
@@ -459,13 +464,13 @@ void acquireSwapCommandBuffer(VulkanContext& context) {
     // Restart the command buffer.
     VkCommandBuffer cmdbuffer = swap.commands.cmdbuffer;
     VkResult error = vkResetCommandBuffer(cmdbuffer, 0);
-    ASSERT_POSTCONDITION(not error, "vkResetCommandBuffer error.");
+    ASSERT_POSTCONDITION(!error, "vkResetCommandBuffer error.");
     VkCommandBufferBeginInfo beginInfo {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
         .flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT,
     };
     error = vkBeginCommandBuffer(cmdbuffer, &beginInfo);
-    ASSERT_POSTCONDITION(not error, "vkBeginCommandBuffer error.");
+    ASSERT_POSTCONDITION(!error, "vkBeginCommandBuffer error.");
     context.currentCommands = &swap.commands;
 }
 
@@ -549,6 +554,80 @@ void flushWorkCommandBuffer(VulkanContext& context) {
     vkEndCommandBuffer(work.cmdbuffer);
     vkQueueSubmit(context.graphicsQueue, 1, &submitInfo, work.fence->fence);
     work.fence->submitted = true;
+}
+
+void createDepthBuffer(VulkanContext& context, VulkanSurfaceContext& surfaceContext,
+        VkFormat depthFormat) {
+    // Create an appropriately-sized device-only VkImage.
+    const auto size = surfaceContext.surfaceCapabilities.currentExtent;
+    VkImage depthImage;
+    VkImageCreateInfo imageInfo {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+        .imageType = VK_IMAGE_TYPE_2D,
+        .extent = { size.width, size.height, 1 },
+        .format = depthFormat,
+        .mipLevels = 1,
+        .arrayLayers = 1,
+        .usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+        .samples = VK_SAMPLE_COUNT_1_BIT,
+    };
+    VkResult error = vkCreateImage(context.device, &imageInfo, VKALLOC, &depthImage);
+    assert(!error && "Unable to create depth image.");
+
+    // Allocate memory for the VkImage and bind it.
+    VkMemoryRequirements memReqs;
+    vkGetImageMemoryRequirements(context.device, depthImage, &memReqs);
+    VkMemoryAllocateInfo allocInfo {
+        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+        .allocationSize = memReqs.size,
+        .memoryTypeIndex = selectMemoryType(context, memReqs.memoryTypeBits,
+                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+    };
+    error = vkAllocateMemory(context.device, &allocInfo, nullptr,
+            &surfaceContext.depth.memory);
+    assert(!error && "Unable to allocate depth memory.");
+    error = vkBindImageMemory(context.device, depthImage, surfaceContext.depth.memory, 0);
+    assert(!error && "Unable to bind depth memory.");
+
+    // Create a VkImageView so that we can attach depth to the framebuffer.
+    VkImageView depthView;
+    VkImageViewCreateInfo viewInfo {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        .image = depthImage,
+        .viewType = VK_IMAGE_VIEW_TYPE_2D,
+        .format = depthFormat,
+        .subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
+        .subresourceRange.levelCount = 1,
+        .subresourceRange.layerCount = 1,
+    };
+    error = vkCreateImageView(context.device, &viewInfo, VKALLOC, &depthView);
+    assert(!error && "Unable to create depth view.");
+
+    // Unlike the color attachments (which are double-buffered or triple-buffered), we only need one
+    // depth attachment in the entire chain.
+    surfaceContext.depth.view = depthView;
+    surfaceContext.depth.image = depthImage;
+    surfaceContext.depth.format = depthFormat;
+
+    // Begin a new command buffer solely for the purpose of transitioning the image layout.
+    VkCommandBuffer cmdbuffer = acquireWorkCommandBuffer(context);
+
+    // Transition the depth image into an optimal layout.
+    VkImageMemoryBarrier barrier {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+        .newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .image = depthImage,
+        .subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
+        .subresourceRange.levelCount = 1,
+        .subresourceRange.layerCount = 1,
+        .dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT
+    };
+    vkCmdPipelineBarrier(cmdbuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+            VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+
+    flushWorkCommandBuffer(context);
 }
 
 } // namespace filament

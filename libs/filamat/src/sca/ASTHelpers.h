@@ -61,10 +61,10 @@ bool isFunctionCalled(const std::string& functionName, TIntermNode& functionNode
 void traceSymbols(TIntermNode& functionNode, std::deque<Symbol>& vector);
 
 struct FunctionParameter {
-  enum Qualifier {IN, OUT, INOUT, CONST};
-  std::string name;
-  std::string type;
-  Qualifier qualifier;
+    enum Qualifier { IN, OUT, INOUT, CONST };
+    std::string name;
+    std::string type;
+    Qualifier qualifier;
 };
 
 // Traverse function definition node, looking for parameters and populate params vector.

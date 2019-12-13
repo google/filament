@@ -137,11 +137,11 @@ set(PRIVATE_HDRS
 
 set(MATERIAL_SRCS
         src/materials/defaultMaterial.mat
+        src/materials/blit.mat
         src/materials/blur.mat
         src/materials/mipmapDepth.mat
         src/materials/skybox.mat
         src/materials/sao.mat
-        src/materials/ssao.mat
         src/materials/tonemapping.mat
         src/materials/fxaa.mat
 )
@@ -327,13 +327,17 @@ set(LINUX_COMPILER_FLAGS
         -fPIC
 )
 
-set(FILAMENT_WARNINGS
-        -Wextra -Wno-unused-parameter
-        -Wextra-semi -Wnewline-eof -Wdeprecated -Wundef
-        -Wgnu-conditional-omitted-operand
-        -Wweak-vtables -Wnon-virtual-dtor -Wclass-varargs -Wimplicit-fallthrough
-        -Wover-aligned
-)
+if (MSVC_NATIVE)
+    set(FILAMENT_WARNINGS -W0)
+else()
+    set(FILAMENT_WARNINGS
+            -Wextra -Wno-unused-parameter
+            -Wextra-semi -Wnewline-eof -Wdeprecated -Wundef
+            -Wgnu-conditional-omitted-operand
+            -Wweak-vtables -Wnon-virtual-dtor -Wclass-varargs -Wimplicit-fallthrough
+            -Wover-aligned
+    )
+endif()
 
 # clang-cl maps -Wall to -Weverything, which clutters logs with benign -Wc++98-compat warnings
 # Use /W4 instead for clang-cl builds

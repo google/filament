@@ -32,35 +32,36 @@ struct RenderTarget::BuilderDetails {
     FRenderTarget::Attachment mAttachments[RenderTarget::ATTACHMENT_COUNT];
 };
 
-using BuilderType = RenderTarget::Builder;
-BuilderType::Builder() noexcept = default;
-BuilderType::~Builder() noexcept = default;
-BuilderType::Builder(Builder const& rhs) noexcept = default;
-BuilderType::Builder(Builder&& rhs) noexcept = default;
-BuilderType& BuilderType::operator=(BuilderType const& rhs) noexcept = default;
-BuilderType& BuilderType::operator=(BuilderType&& rhs) noexcept = default;
+using BuilderType = RenderTarget;
+BuilderType::Builder::Builder() noexcept = default;
+BuilderType::Builder::~Builder() noexcept = default;
+BuilderType::Builder::Builder(BuilderType::Builder const& rhs) noexcept = default;
+BuilderType::Builder::Builder(BuilderType::Builder&& rhs) noexcept = default;
+BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder const& rhs) noexcept = default;
+BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder&& rhs) noexcept = default;
 
-BuilderType& BuilderType::texture(AttachmentPoint pt, Texture* texture) noexcept {
+RenderTarget::Builder& RenderTarget::Builder::texture(AttachmentPoint pt, Texture* texture) noexcept {
     mImpl->mAttachments[pt].texture = upcast(texture);
     return *this;
 }
 
-BuilderType& BuilderType::mipLevel(AttachmentPoint pt, uint8_t level) noexcept {
+RenderTarget::Builder& RenderTarget::Builder::mipLevel(AttachmentPoint pt, uint8_t level) noexcept {
     mImpl->mAttachments[pt].mipLevel = level;
     return *this;
 }
 
-BuilderType& BuilderType::face(AttachmentPoint pt, CubemapFace face) noexcept {
+RenderTarget::Builder& RenderTarget::Builder::face(AttachmentPoint pt, CubemapFace face) noexcept {
     mImpl->mAttachments[pt].face = face;
     return *this;
 }
 
-BuilderType& BuilderType::layer(AttachmentPoint pt, uint32_t layer) noexcept {
+RenderTarget::Builder& RenderTarget::Builder::layer(AttachmentPoint pt, uint32_t layer) noexcept {
     mImpl->mAttachments[pt].layer = layer;
     return *this;
 }
 
 RenderTarget* RenderTarget::Builder::build(Engine& engine) {
+    FEngine::assertValid(engine, __PRETTY_FUNCTION__);
     using backend::TextureUsage;
     const FRenderTarget::Attachment& color = mImpl->mAttachments[COLOR];
     const FRenderTarget::Attachment& depth = mImpl->mAttachments[DEPTH];

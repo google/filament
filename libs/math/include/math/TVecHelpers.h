@@ -52,10 +52,10 @@ using arithmetic_result_t = typename arithmetic_result<T, U>::type;
 
 template<typename A, typename B = int, typename C = int, typename D = int>
 using enable_if_arithmetic_t = std::enable_if_t<
-        std::is_arithmetic<A>::value &&
-        std::is_arithmetic<B>::value &&
-        std::is_arithmetic<C>::value &&
-        std::is_arithmetic<D>::value>;
+        is_arithmetic<A>::value &&
+        is_arithmetic<B>::value &&
+        is_arithmetic<C>::value &&
+        is_arithmetic<D>::value>;
 
 /*
  * No user serviceable parts here.
@@ -129,6 +129,12 @@ private:
         return lv + VECTOR<U>(rv);
     }
 
+    template<typename U, typename = enable_if_arithmetic_t<U>>
+    friend inline constexpr
+    VECTOR<arithmetic_result_t<T, U>> MATH_PURE operator+(U lv, const VECTOR<T>& rv) {
+        return VECTOR<U>(lv) + rv;
+    }
+
     template<typename U>
     friend inline constexpr
     VECTOR<arithmetic_result_t<T, U>> MATH_PURE operator-(const VECTOR<T>& lv, const VECTOR<U>& rv) {
@@ -141,6 +147,12 @@ private:
     friend inline constexpr
     VECTOR<arithmetic_result_t<T, U>> MATH_PURE operator-(const VECTOR<T>& lv, U rv) {
         return lv - VECTOR<U>(rv);
+    }
+
+    template<typename U, typename = enable_if_arithmetic_t<U>>
+    friend inline constexpr
+    VECTOR<arithmetic_result_t<T, U>> MATH_PURE operator-(U lv, const VECTOR<T>& rv) {
+        return VECTOR<U>(lv) - rv;
     }
 };
 
@@ -198,8 +210,13 @@ private:
     template<typename U, typename = enable_if_arithmetic_t<U>>
     friend inline constexpr
     VECTOR<arithmetic_result_t<T, U>> MATH_PURE operator*(const VECTOR<T>& lv, U rv) {
-        VECTOR<arithmetic_result_t<T, U>> res(lv);
-        return res * VECTOR<U>(rv);
+        return lv * VECTOR<U>(rv);
+    }
+
+    template<typename U, typename = enable_if_arithmetic_t<U>>
+    friend inline constexpr
+    VECTOR<arithmetic_result_t<T, U>> MATH_PURE operator*(U lv, const VECTOR<T>& rv) {
+        return VECTOR<U>(lv) * rv;
     }
 
     template<typename U>
@@ -213,8 +230,13 @@ private:
     template<typename U, typename = enable_if_arithmetic_t<U>>
     friend inline constexpr
     VECTOR<arithmetic_result_t<T, U>> MATH_PURE operator/(const VECTOR<T>& lv, U rv) {
-        VECTOR<arithmetic_result_t<T, U>> res(lv);
-        return res / VECTOR<U>(rv);
+        return lv / VECTOR<U>(rv);
+    }
+
+    template<typename U, typename = enable_if_arithmetic_t<U>>
+    friend inline constexpr
+    VECTOR<arithmetic_result_t<T, U>> MATH_PURE operator/(U lv, const VECTOR<T>& rv) {
+        return VECTOR<U>(lv) / rv;
     }
 };
 
@@ -446,6 +468,13 @@ private:
     friend inline VECTOR<T> MATH_PURE pow(VECTOR<T> v, T p) {
         for (size_t i = 0; i < v.size(); i++) {
             v[i] = std::pow(v[i], p);
+        }
+        return v;
+    }
+
+    friend inline VECTOR<T> MATH_PURE log(VECTOR<T> v) {
+        for (size_t i = 0; i < v.size(); i++) {
+            v[i] = std::log(v[i]);
         }
         return v;
     }
