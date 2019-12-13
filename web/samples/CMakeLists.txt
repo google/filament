@@ -185,7 +185,6 @@ add_custom_target(filamentjs_public DEPENDS ${SERVER_DIR}/filament.js ${SERVER_D
 set(HTML_FILES
     animation.html
     helmet.html
-    leaks.html
     morphing.html
     parquet.html
     skinning.html
