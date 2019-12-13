@@ -24,6 +24,8 @@ if "%TARGET%" == "presubmit" (
 if "%TARGET%" == "continuous" (
     set BUILD_DEBUG=1
     set BUILD_RELEASE=1
+    set INSTALL=--target install
+    set CREATE_ARCHIVE=1
 )
 
 if "%TARGET%" == "release" (
@@ -31,6 +33,7 @@ if "%TARGET%" == "release" (
     set BUILD_RELEASE=1
     set INSTALL=--target install
     set BUILD_RELEASE_VARIANTS=1
+    set CREATE_ARCHIVE=1
 )
 
 set VISUAL_STUDIO_VERSION="Enterprise"
@@ -65,7 +68,7 @@ if "%BUILD_DEBUG%" == "1" (
     )
 )
 
-if "%BUILD_RELEASE_VARIANTS%" == "1" (
+if "%CREATE_ARCHIVE%" == "1" (
     :: Use the /MT version as the "base" install.
     move out\mt out\install
     mkdir out\install\lib\x86_64\mt\
@@ -77,7 +80,7 @@ if "%BUILD_RELEASE_VARIANTS%" == "1" (
 )
 
 :: Create an archive.
-if "%BUILD_RELEASE_VARIANTS%" == "1" (
+if "%CREATE_ARCHIVE%" == "1" (
     cd out\install
     7z a -ttar -so ..\..\filament-release.tar * | 7z a -si ..\filament-windows.tgz
 )
