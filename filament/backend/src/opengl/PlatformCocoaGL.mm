@@ -36,7 +36,6 @@ using namespace backend;
 struct PlatformCocoaGLImpl {
     NSOpenGLContext* mGLContext = nullptr;
     NSView* mCurrentView = nullptr;
-    id<NSObject> mObserver = nullptr;
     std::vector<NSView*> mHeadlessSwapChains;
 };
 
@@ -75,7 +74,6 @@ Driver* PlatformCocoaGL::createDriver(void* sharedContext) noexcept {
 }
 
 void PlatformCocoaGL::terminate() noexcept {
-    [[NSNotificationCenter defaultCenter] removeObserver: pImpl->mObserver];
     pImpl->mGLContext = nil;
     bluegl::unbind();
 }
@@ -83,6 +81,15 @@ void PlatformCocoaGL::terminate() noexcept {
 Platform::SwapChain* PlatformCocoaGL::createSwapChain(void* nativewindow, uint64_t& flags) noexcept {
     // Transparent SwapChain is not supported
     flags &= ~backend::SWAP_CHAIN_CONFIG_TRANSPARENT;
+    NSView* nsView = (__bridge NSView*)nativewindow;
+
+    // If the SwapChain is being recreated (e.g. if the underlying surface has been resized),
+    // then we need to force an update to occur in the subsequent makeCurrent, which can be done by
+    // simply resetting the current view. In multi-window situations, this happens automatically.
+    if (pImpl->mCurrentView == nsView) {
+        pImpl->mCurrentView = nullptr;
+    }
+
     return (SwapChain*) nativewindow;
 }
 
@@ -116,22 +123,8 @@ void PlatformCocoaGL::makeCurrent(Platform::SwapChain* drawSwapChain,
         // arrival of macOS 10.15 (Catalina). If we were to call these methods from the GL thread,
         // we would see EXC_BAD_INSTRUCTION.
 
-        // Remove the old observer because this might be a multi-window app.
-        [[NSNotificationCenter defaultCenter] removeObserver: pImpl->mObserver];
-
         // Create a copy of the current GL context pointer for the closure.
         NSOpenGLContext* glContext = pImpl->mGLContext;
-
-        pImpl->mObserver = [
-            [NSNotificationCenter defaultCenter] addObserverForName: NSViewGlobalFrameDidChangeNotification
-            object: nil
-            queue: nil
-            usingBlock: ^ (NSNotification* note) {
-                if (note.object == nsView) {
-                    [glContext update];
-                }
-            }
-        ];
 
         dispatch_sync(dispatch_get_main_queue(), ^(void) {
             [glContext setView:nsView];
