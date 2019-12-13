@@ -32,6 +32,7 @@ Filament.init([mesh_url, ibl_url, sky_url], () => {
     window.gltfio = Filament.gltfio;
     window.Fov = Filament.Camera$Fov;
     window.LightType = Filament.LightManager$Type;
+    window.IndirectLight = Filament.IndirectLight;
     window.app = new App(document.getElementsByTagName('canvas')[0]);
 });
 
@@ -45,8 +46,8 @@ class App {
         const indirectLight = this.ibl = engine.createIblFromKtx(ibl_url);
         this.scene.setIndirectLight(indirectLight);
 
-        const iblDirection = indirectLight.getDirectionEstimate();
-        const iblColor = indirectLight.getColorEstimate(iblDirection);
+        const iblDirection = IndirectLight.getDirectionEstimate(indirectLight.shfloats);
+        const iblColor = IndirectLight.getColorEstimate(indirectLight.shfloats, iblDirection);
 
         indirectLight.setIntensity(50000);
 

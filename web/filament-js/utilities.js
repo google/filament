@@ -269,11 +269,11 @@ Filament._createIblFromKtx = function(ktxdata, engine, options) {
 
     const ibltex = Filament._createTextureFromKtx(ktxdata, engine, options);
     const shstring = iblktx.getMetadata("sh");
-    const shfloats = shstring.split(/\s/, 9 * 3).map(parseFloat);
-    return Filament.IndirectLight.Builder()
+    const ibl = Filament.IndirectLight.Builder()
         .reflections(ibltex)
-        .irradianceSh(3, shfloats)
         .build(engine);
+    ibl.shfloats = shstring.split(/\s/, 9 * 3).map(parseFloat);
+    return ibl;
 };
 
 Filament._createTextureFromPng = function(pngdata, engine, options) {
