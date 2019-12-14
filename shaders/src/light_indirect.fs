@@ -82,11 +82,15 @@ vec3 diffuseIrradiance(const vec3 n) {
 // IBL specular
 //------------------------------------------------------------------------------
 
+float perceptualRoughnessToLod(float perceptualRoughness) {
+    // See: https://s3.amazonaws.com/docs.knaldtech.com/knald/1.0.0/lys_power_drops.html
+    // (Pre-convolved Cube Maps vs Path Tracers)
+    // Below is a quadratic fit to the formula in the article above at NoV=1
+    return frameUniforms.iblMaxMipLevel.x * perceptualRoughness * (1.686 - 0.686 * perceptualRoughness);
+}
+
 vec3 prefilteredRadiance(const vec3 r, float perceptualRoughness) {
-    // lod = lod_count * sqrt(roughness), which is the mapping used by cmgen
-    // where roughness = perceptualRoughness^2
-    // using all the mip levels requires seamless cubemap sampling
-    float lod = frameUniforms.iblMaxMipLevel.x * perceptualRoughness;
+    float lod = perceptualRoughnessToLod(perceptualRoughness);
     return decodeDataForIBL(textureLod(light_iblSpecular, r, lod));
 }
 

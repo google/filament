@@ -890,6 +890,12 @@ void iblMipmapPrefilter(utils::JobSystem& js, const utils::Path& iname,
     }
 }
 
+float lodToPerceptualRoughness(float lod) {
+    const float a = 1.686f;
+    const float b = -0.686f;
+    return saturate((std::sqrt(a * a + 4.0f * b * lod) - a) / (2.0f * b));
+}
+
 void iblRoughnessPrefilter(
         utils::JobSystem& js, const utils::Path& iname, const std::vector<Cubemap>& levels,
         bool prefilter, const utils::Path& dir) {
@@ -942,12 +948,12 @@ void iblRoughnessPrefilter(
         const float lod = saturate(level / (numLevels - 1.0f));
         // map the lod to a linear_roughness,  here we're using ^2, but other mappings are possible.
         // ==> lod = sqrt(linear_roughness)
-        const float linear_roughness = lod * lod;
+        const float perceptualRoughness = lodToPerceptualRoughness(lod);
+        const float roughness = perceptualRoughness * perceptualRoughness;
         if (!g_quiet) {
-            std::cout << "Level " << level <<
-                    std::setprecision(3)
-                    << ", roughness(lin) = " << linear_roughness
-                    << ", roughness = " << sqrt(linear_roughness)
+            std::cout << "Level " << level << std::setprecision(3)
+                      << ", roughness = " << roughness
+                      << ", roughness (perceptual) = " << perceptualRoughness
                     << std::endl;
         }
         Image image;
@@ -957,7 +963,7 @@ void iblRoughnessPrefilter(
         if (!g_quiet) {
             updater.start();
         }
-        CubemapIBL::roughnessFilter(js, dst, levels, linear_roughness, numSamples,
+        CubemapIBL::roughnessFilter(js, dst, levels, roughness, numSamples,
                 float3{ 1, 1, 1 }, prefilter,
                 [&updater, quiet = g_quiet](size_t index, float v) {
                     if (!quiet) {
