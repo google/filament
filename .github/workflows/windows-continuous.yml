@@ -16,3 +16,7 @@ jobs:
         run: |
           build\windows\build-github.bat continuous
         shell: cmd
+      - uses: actions/upload-artifact@v1.0.0
+        with:
+          name: filament-windows
+          path: out/filament-windows.tgz
