@@ -116,7 +116,7 @@ backend::TextureHandle ResourceAllocator::createTexture(const char* name,
 
     // Some WebGL implementations complain about an incomplete framebuffer when the attachment sizes
     // are heterogeneous. This merits further investigation.
-#if defined(__EMSCRIPTEN__)
+#if !defined(__EMSCRIPTEN__)
     if (!(usage & TextureUsage::SAMPLEABLE)) {
         // If this texture is not going to be sampled, we can round its size up
         // this helps prevent many reallocations for small size changes.
