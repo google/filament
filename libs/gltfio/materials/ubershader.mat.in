@@ -6,7 +6,6 @@ material {
     depthWrite : true,
     doubleSided : ${DOUBLESIDED},
     flipUV : false,
-    specularAmbientOcclusion: true,
     parameters : [
 
         { type : float3, name : specularFactor },
