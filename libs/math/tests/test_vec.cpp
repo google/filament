@@ -312,6 +312,16 @@ TEST_F(VecTest, ArithmeticFunc) {
 
     float3 vf(east);
     EXPECT_EQ(length(vf), 1);
+
+    float3 between = mix(float3(2, 5, 8), float3(6, 5, 4), 0.5);
+    EXPECT_FLOAT_EQ(between.x, 4);
+    EXPECT_FLOAT_EQ(between.y, 5);
+    EXPECT_FLOAT_EQ(between.z, 6);
+
+    float3 between2 = mix(float3(2, 5, 8), float3(6, 5, 4), float3(0.0, 0.5, 1.0));
+    EXPECT_FLOAT_EQ(between2.x, 2);
+    EXPECT_FLOAT_EQ(between2.y, 5);
+    EXPECT_FLOAT_EQ(between2.z, 4);
 }
 
 TEST_F(VecTest, MiscFunc) {
