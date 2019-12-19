@@ -498,6 +498,7 @@ private:
     }
 
     friend inline constexpr VECTOR<T> MATH_PURE mix(VECTOR<T> x, VECTOR<T> y, T a) noexcept {
+        static_assert(!std::is_integral<T>::value, "You cannot use mix with integers.");
         return x * (VECTOR<T>(1) - a) + y * a;
     }
 
@@ -505,18 +506,7 @@ private:
         return mix(x, y, a);
     }
 
-    // Note that the mix/lerp in <scalar.h> already covers the following two cases, but they are
-    // defined here in case users do not include <scalar.h>. We use VECTOR<T> for the third argument
-    // instead of a secondary template argument (e.g. typename U) in order to avoid a naming
-    // conflict with the mix/lerp that is defined in <scalar.h>.
-
-    friend inline constexpr VECTOR<T> MATH_PURE mix(VECTOR<T> x, VECTOR<T> y, VECTOR<T> a) noexcept {
-        return x * (VECTOR<T>(1) - a) + y * a;
-    }
-
-    friend inline constexpr VECTOR<T> MATH_PURE lerp(VECTOR<T> x, VECTOR<T> y, VECTOR<T> a) noexcept {
-        return mix(x, y, a);
-    }
+    // Note that the mix/lerp in <scalar.h> already covers the vector,vector,vector pattern.
 
     friend inline constexpr VECTOR<T> MATH_PURE fma(const VECTOR<T>& lv, const VECTOR<T>& rv,
             VECTOR<T> a) {
