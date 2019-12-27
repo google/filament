@@ -258,7 +258,7 @@ MetalTexture::~MetalTexture() {
 }
 
 void MetalTexture::load2DImage(uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t width,
-            uint32_t height, PixelBufferDescriptor&& p) noexcept {
+        uint32_t height, PixelBufferDescriptor&& p) noexcept {
     PixelBufferDescriptor data = reshaper.reshape(std::move(p));
 
     id<MTLCommandBuffer> blitCommandBuffer = [context.commandQueue commandBuffer];
@@ -271,8 +271,8 @@ void MetalTexture::load2DImage(uint32_t level, uint32_t xoffset, uint32_t yoffse
     [blitCommandBuffer commit];
 }
 
-void MetalTexture::loadCubeImage(PixelBufferDescriptor&& p, const FaceOffsets& faceOffsets,
-        int miplevel) {
+void MetalTexture::loadCubeImage(const FaceOffsets& faceOffsets, int miplevel,
+        PixelBufferDescriptor&& p) {
     PixelBufferDescriptor data = reshaper.reshape(std::move(p));
 
     id<MTLCommandBuffer> blitCommandBuffer = [context.commandQueue commandBuffer];

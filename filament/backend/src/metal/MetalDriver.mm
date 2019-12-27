@@ -527,7 +527,7 @@ void MetalDriver::update2DImage(Handle<HwTexture> th, uint32_t level, uint32_t x
 void MetalDriver::updateCubeImage(Handle<HwTexture> th, uint32_t level,
         PixelBufferDescriptor&& data, FaceOffsets faceOffsets) {
     auto tex = handle_cast<MetalTexture>(mHandleMap, th);
-    tex->loadCubeImage(std::move(data), faceOffsets, level);
+    tex->loadCubeImage(faceOffsets, level, std::move(data));
 }
 
 void MetalDriver::setupExternalImage(void* image) {
