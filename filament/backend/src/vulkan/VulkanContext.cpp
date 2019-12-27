@@ -564,12 +564,12 @@ void createDepthBuffer(VulkanContext& context, VulkanSurfaceContext& surfaceCont
     VkImageCreateInfo imageInfo {
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
         .imageType = VK_IMAGE_TYPE_2D,
-        .extent = { size.width, size.height, 1 },
         .format = depthFormat,
+        .extent = { size.width, size.height, 1 },
         .mipLevels = 1,
         .arrayLayers = 1,
-        .usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
         .samples = VK_SAMPLE_COUNT_1_BIT,
+        .usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
     };
     VkResult error = vkCreateImage(context.device, &imageInfo, VKALLOC, &depthImage);
     assert(!error && "Unable to create depth image.");
@@ -596,9 +596,11 @@ void createDepthBuffer(VulkanContext& context, VulkanSurfaceContext& surfaceCont
         .image = depthImage,
         .viewType = VK_IMAGE_VIEW_TYPE_2D,
         .format = depthFormat,
-        .subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
-        .subresourceRange.levelCount = 1,
-        .subresourceRange.layerCount = 1,
+        .subresourceRange = {
+            .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
+            .levelCount = 1,
+            .layerCount = 1,
+        },
     };
     error = vkCreateImageView(context.device, &viewInfo, VKALLOC, &depthView);
     assert(!error && "Unable to create depth view.");
@@ -615,14 +617,16 @@ void createDepthBuffer(VulkanContext& context, VulkanSurfaceContext& surfaceCont
     // Transition the depth image into an optimal layout.
     VkImageMemoryBarrier barrier {
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+        .dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
         .newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .image = depthImage,
-        .subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
-        .subresourceRange.levelCount = 1,
-        .subresourceRange.layerCount = 1,
-        .dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT
+        .subresourceRange = {
+            .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
+            .levelCount = 1,
+            .layerCount = 1,
+        },
     };
     vkCmdPipelineBarrier(cmdbuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
             VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
