@@ -105,11 +105,13 @@ struct MetalTexture : public HwTexture {
     ~MetalTexture();
 
     void load2DImage(uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t width,
-            uint32_t height, PixelBufferDescriptor& data) noexcept;
-    void loadCubeImage(const PixelBufferDescriptor& data, const FaceOffsets& faceOffsets,
+            uint32_t height, PixelBufferDescriptor&& p) noexcept;
+    void loadCubeImage(PixelBufferDescriptor&& p, const FaceOffsets& faceOffsets,
             int miplevel);
-
-    NSUInteger getBytesPerRow(PixelDataType type, NSUInteger width) const noexcept;
+    void loadSlice(uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t width,
+            uint32_t height, uint32_t byteOffset, uint32_t slice,
+            PixelBufferDescriptor& data, id<MTLBlitCommandEncoder> blitCommandEncoder,
+            id<MTLCommandBuffer> blitCommandBuffer) noexcept;
 
     MetalContext& context;
     MetalExternalImage externalImage;
@@ -117,6 +119,7 @@ struct MetalTexture : public HwTexture {
     uint8_t bytesPerElement; // The number of bytes per pixel, or block (for compressed texture formats).
     uint8_t blockWidth; // The number of horizontal pixels per block (only for compressed texture formats).
     TextureReshaper reshaper;
+    MTLPixelFormat metalPixelFormat;
 };
 
 struct MetalSamplerGroup : public HwSamplerGroup {

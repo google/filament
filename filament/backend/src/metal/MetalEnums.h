@@ -230,7 +230,7 @@ constexpr inline MTLPixelFormat getMetalFormat(TextureFormat format) noexcept {
 #endif
 
 #if !defined(IOS)
-        // DXT (BC) formats are only available on macOS desktkop.
+        // DXT (BC) formats are only available on macOS desktop.
         // See https://en.wikipedia.org/wiki/S3_Texture_Compression#S3TC_format_comparison
         case TextureFormat::DXT1_RGBA: return MTLPixelFormatBC1_RGBA;
         case TextureFormat::DXT3_RGBA: return MTLPixelFormatBC2_RGBA;
