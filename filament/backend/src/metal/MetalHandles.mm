@@ -214,6 +214,7 @@ MetalTexture::MetalTexture(MetalContext& context, backend::SamplerType target, u
     bytesPerElement = static_cast<uint8_t>(getFormatSize(reshapedFormat));
     assert(bytesPerElement > 0);
     blockWidth = static_cast<uint8_t>(getBlockWidth(reshapedFormat));
+    blockHeight = static_cast<uint8_t>(getBlockHeight(reshapedFormat));
 
     ASSERT_POSTCONDITION(metalPixelFormat != MTLPixelFormatInvalid, "Pixel format not supported.");
 
@@ -304,12 +305,13 @@ void MetalTexture::loadSlice(uint32_t level, uint32_t xoffset, uint32_t yoffset,
 
     if (data.type == PixelDataType::COMPRESSED) {
         assert(blockWidth > 0);
+        assert(blockHeight > 0);
         // From https://developer.apple.com/documentation/metal/mtltexture/1515464-replaceregion:
         // For an ordinary or packed pixel format, the stride, in bytes, between rows of source
         // data. For a compressed pixel format, the stride is the number of bytes from the
         // beginning of one row of blocks to the beginning of the next.
         const NSUInteger blocksPerRow = std::ceil(width / (float) blockWidth);
-        const NSUInteger blocksPerCol = std::ceil(height / (float) blockWidth);
+        const NSUInteger blocksPerCol = std::ceil(height / (float) blockHeight);
         bytesPerRow = bytesPerElement * blocksPerRow;
         bytesPerSlice = bytesPerRow * blocksPerCol;
     }
