@@ -521,15 +521,13 @@ void MetalDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&
 void MetalDriver::update2DImage(Handle<HwTexture> th, uint32_t level, uint32_t xoffset,
         uint32_t yoffset, uint32_t width, uint32_t height, PixelBufferDescriptor&& data) {
     auto tex = handle_cast<MetalTexture>(mHandleMap, th);
-    tex->load2DImage(level, xoffset, yoffset, width, height, data);
-    scheduleDestroy(std::move(data));
+    tex->load2DImage(level, xoffset, yoffset, width, height, std::move(data));
 }
 
 void MetalDriver::updateCubeImage(Handle<HwTexture> th, uint32_t level,
         PixelBufferDescriptor&& data, FaceOffsets faceOffsets) {
     auto tex = handle_cast<MetalTexture>(mHandleMap, th);
-    tex->loadCubeImage(data, faceOffsets, level);
-    scheduleDestroy(std::move(data));
+    tex->loadCubeImage(faceOffsets, level, std::move(data));
 }
 
 void MetalDriver::setupExternalImage(void* image) {
@@ -825,9 +823,9 @@ void MetalDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y,
         const uint8_t* bufferStart = (const uint8_t*) p->buffer + (p->left * bpp) +
                                                                   (p->top * bpr);
         [readPixelsTexture getBytes:(void*) bufferStart
-                       bytesPerRow:bpr
-                        fromRegion:srcRegion
-                       mipmapLevel:0];
+                        bytesPerRow:bpr
+                         fromRegion:srcRegion
+                        mipmapLevel:0];
         scheduleDestroy(std::move(*p));
     }];
 }

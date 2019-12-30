@@ -116,6 +116,7 @@ size_t getFormatSize(TextureFormat format) noexcept {
             return 8;
 
         case TextureFormat::DXT1_RGB:
+        case TextureFormat::DXT1_RGBA:
             return 8;
 
         case TextureFormat::DXT3_RGBA:
@@ -173,6 +174,7 @@ size_t getBlockWidth(TextureFormat format) noexcept {
             return 4;
 
         case TextureFormat::DXT1_RGB:
+        case TextureFormat::DXT1_RGBA:
         case TextureFormat::DXT3_RGBA:
         case TextureFormat::DXT5_RGBA:
             return 4;
