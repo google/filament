@@ -254,7 +254,7 @@ constexpr inline MTLPixelFormat getMetalFormat(TextureFormat format) noexcept {
         case TextureFormat::RGBA_ASTC_10x10: return MTLPixelFormatASTC_10x10_HDR;
         case TextureFormat::RGBA_ASTC_12x10: return MTLPixelFormatASTC_12x10_HDR;
         case TextureFormat::RGBA_ASTC_12x12: return MTLPixelFormatASTC_12x12_HDR;
-        case TextureFormat::SRGB8_ALPHA8_ASTC_4x4: return MTLPixelFormatASTC_4x4_HDR;
+        case TextureFormat::SRGB8_ALPHA8_ASTC_4x4: return MTLPixelFormatASTC_4x4_sRGB;
         case TextureFormat::SRGB8_ALPHA8_ASTC_5x4: return MTLPixelFormatASTC_5x4_sRGB;
         case TextureFormat::SRGB8_ALPHA8_ASTC_5x5: return MTLPixelFormatASTC_5x5_sRGB;
         case TextureFormat::SRGB8_ALPHA8_ASTC_6x5: return MTLPixelFormatASTC_6x5_sRGB;
