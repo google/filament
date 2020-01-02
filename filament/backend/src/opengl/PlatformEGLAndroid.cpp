@@ -89,6 +89,33 @@ PlatformEGLAndroid::PlatformEGLAndroid() noexcept
     }
 }
 
+backend::Driver* PlatformEGLAndroid::createDriver(void* sharedContext) noexcept {
+    backend::Driver* driver = PlatformEGL::createDriver(sharedContext);
+    auto extensions = GLUtils::split(eglQueryString(mEGLDisplay, EGL_EXTENSIONS));
+
+    eglGetNativeClientBufferANDROID = (PFNEGLGETNATIVECLIENTBUFFERANDROIDPROC) eglGetProcAddress("eglGetNativeClientBufferANDROID");
+
+    if (extensions.has("EGL_ANDROID_presentation_time")) {
+        eglPresentationTimeANDROID = (PFNEGLPRESENTATIONTIMEANDROIDPROC)eglGetProcAddress(
+                "eglPresentationTimeANDROID");
+    }
+
+    if (extensions.has("EGL_ANDROID_get_frame_timestamps")) {
+        eglGetCompositorTimingSupportedANDROID = (PFNEGLGETCOMPOSITORTIMINGSUPPORTEDANDROIDPROC)eglGetProcAddress(
+                "eglGetCompositorTimingSupportedANDROID");
+        eglGetCompositorTimingANDROID = (PFNEGLGETCOMPOSITORTIMINGANDROIDPROC)eglGetProcAddress(
+                "eglGetCompositorTimingANDROID");
+        eglGetNextFrameIdANDROID = (PFNEGLGETNEXTFRAMEIDANDROIDPROC)eglGetProcAddress(
+                "eglGetNextFrameIdANDROID");
+        eglGetFrameTimestampSupportedANDROID = (PFNEGLGETFRAMETIMESTAMPSUPPORTEDANDROIDPROC)eglGetProcAddress(
+                "eglGetFrameTimestampSupportedANDROID");
+        eglGetFrameTimestampsANDROID = (PFNEGLGETFRAMETIMESTAMPSANDROIDPROC)eglGetProcAddress(
+                "eglGetFrameTimestampsANDROID");
+    }
+
+    return driver;
+}
+
 void PlatformEGLAndroid::setPresentationTime(int64_t presentationTimeInNanosecond) noexcept {
     if (mCurrentDrawSurface != EGL_NO_SURFACE) {
         if (eglPresentationTimeANDROID) {

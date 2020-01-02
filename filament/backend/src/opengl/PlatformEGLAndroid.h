@@ -29,6 +29,8 @@ public:
 
     PlatformEGLAndroid() noexcept;
 
+    backend::Driver* createDriver(void* sharedContext) noexcept final;
+
     int getOSVersion() const noexcept final;
 
     void setPresentationTime(int64_t presentationTimeInNanosecond) noexcept final;
