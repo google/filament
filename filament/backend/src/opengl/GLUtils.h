@@ -22,6 +22,9 @@
 
 #include <backend/DriverEnums.h>
 
+#include <string>
+#include <unordered_set>
+
 #include "gl_headers.h"
 
 namespace filament {
@@ -451,6 +454,28 @@ constexpr /* inline */ GLenum getInternalFormat(backend::TextureFormat format) n
         case TextureFormat::UNUSED:
             return 0;
     }
+}
+
+class unordered_string_set : public std::unordered_set<std::string> {
+public:
+    bool has(const char* str) {
+        return find(std::string(str)) != end();
+    }
+};
+
+inline unordered_string_set split(const char* spacedList) {
+    unordered_string_set set;
+    const char* current = spacedList;
+    const char* head = current;
+    do {
+        head = strchr(current, ' ');
+        std::string s(current, head ? head - current : strlen(current));
+        if (s.length()) {
+            set.insert(std::move(s));
+        }
+        current = head + 1;
+    } while (head);
+    return set;
 }
 
 } // namespace GLUtils
