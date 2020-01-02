@@ -918,7 +918,8 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
             .sourceAlphaBlendFactor = getMetalBlendFactor(rs.blendFunctionSrcAlpha),
             .destinationRGBBlendFactor = getMetalBlendFactor(rs.blendFunctionDstRGB),
             .destinationAlphaBlendFactor = getMetalBlendFactor(rs.blendFunctionDstAlpha)
-        }
+        },
+        .colorWrite = rs.colorWrite
     };
     mContext->pipelineState.updateState(pipelineState);
     if (mContext->pipelineState.stateChanged()) {
