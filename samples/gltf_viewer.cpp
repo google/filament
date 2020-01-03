@@ -34,6 +34,7 @@
 #include <utils/NameComponentManager.h>
 
 #include <fstream>
+#include <iostream>
 #include <string>
 
 #include "generated/resources/gltf_viewer.h"

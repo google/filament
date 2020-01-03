@@ -28,6 +28,7 @@
 
 #include <array>
 #include <limits>
+#include <iomanip>
 
 using namespace filament::math;
 using namespace utils;
