@@ -166,8 +166,8 @@ void logAndPanic(char const* function, char const* file, int line, const char* f
 
 // -----------------------------------------------------------------------------------------------
 
-template class TPanic<PreconditionPanic>;
-template class TPanic<PostconditionPanic>;
-template class TPanic<ArithmeticPanic>;
+template class UTILS_PUBLIC TPanic<PreconditionPanic>;
+template class UTILS_PUBLIC TPanic<PostconditionPanic>;
+template class UTILS_PUBLIC TPanic<ArithmeticPanic>;
 
 } // namespace utils
