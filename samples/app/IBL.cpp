@@ -17,6 +17,7 @@
 #include "IBL.h"
 
 #include <fstream>
+#include <iostream>
 #include <string>
 
 #include <filament/Engine.h>

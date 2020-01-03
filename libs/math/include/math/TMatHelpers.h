@@ -23,8 +23,7 @@
 
 #include <algorithm>        // for std::swap
 #include <cmath>            // for std:: namespace
-#include <iostream>         // for operator<<
-#include <iomanip>          // for std::setw
+#include <iosfwd>           // for operator<<
 
 #include <math.h>
 #include <stdint.h>
@@ -801,34 +800,14 @@ public:
     }
 };
 
+template<typename T>
+std::ostream& printMatrix(std::ostream& stream, const T* data, size_t rows, size_t cols);
 
 template<template<typename T> class BASE, typename T>
 class TMatDebug {
 private:
     friend std::ostream& operator<<(std::ostream& stream, const BASE<T>& m) {
-        for (size_t row = 0; row < BASE<T>::NUM_ROWS; ++row) {
-            if (row != 0) {
-                stream << std::endl;
-            }
-            if (row == 0) {
-                stream << "/ ";
-            } else if (row == BASE<T>::NUM_ROWS - 1) {
-                stream << "\\ ";
-            } else {
-                stream << "| ";
-            }
-            for (size_t col = 0; col < BASE<T>::NUM_COLS; ++col) {
-                stream << std::setw(10) << std::to_string(m[col][row]);
-            }
-            if (row == 0) {
-                stream << " \\";
-            } else if (row == BASE<T>::NUM_ROWS - 1) {
-                stream << " /";
-            } else {
-                stream << " |";
-            }
-        }
-        return stream;
+        return printMatrix(stream, &m[0][0], BASE<T>::NUM_ROWS, BASE<T>::NUM_COLS);
     }
 };
 

@@ -22,7 +22,7 @@
 #include <stdint.h>
 #include <sys/types.h>
 
-#include <iostream>
+#include <iosfwd>
 
 #include <math/compiler.h>
 #include <math/scalar.h>
@@ -286,6 +286,9 @@ public:
     }
 };
 
+template<template<typename T> class BASE, typename T>
+std::ostream& printQuat(std::ostream& stream, const BASE<T>& m);
+
 /*
  * TQuatDebug implements functions on a vector of type BASE<T>.
  *
@@ -304,7 +307,7 @@ public:
      * (the first one, BASE<T> being known).
      */
     friend std::ostream& operator<<(std::ostream& stream, const QUATERNION<T>& q) {
-        return stream << "< " << q.w << " + " << q.x << "i + " << q.y << "j + " << q.z << "k >";
+        return printQuat(stream, q);
     }
 };
 

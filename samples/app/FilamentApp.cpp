@@ -25,6 +25,8 @@
 #    include <utils/unwindows.h>
 #endif
 
+#include <iostream>
+
 #include <imgui.h>
 
 #include <utils/Panic.h>

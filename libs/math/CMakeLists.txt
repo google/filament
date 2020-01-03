@@ -13,9 +13,25 @@ endif()
 # ==================================================================================================
 # Sources and headers
 # ==================================================================================================
-file(GLOB_RECURSE PUBLIC_HDRS ${PUBLIC_HDR_DIR}/${TARGET}/*.h)
+set(PUBLIC_HDRS
+        include/math/TMatHelpers.h
+        include/math/TQuatHelpers.h
+        include/math/TVecHelpers.h
+        include/math/compiler.h
+        include/math/fast.h
+        include/math/half.h
+        include/math/mat2.h
+        include/math/mat3.h
+        include/math/mat4.h
+        include/math/norm.h
+        include/math/quat.h
+        include/math/scalar.h
+        include/math/vec2.h
+        include/math/vec3.h
+        include/math/vec4.h
+)
 
-set(SRCS dummy.cpp)
+set(SRCS src/StreamHelpers.cpp)
 
 # ==================================================================================================
 # Include and target definitions

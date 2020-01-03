@@ -47,6 +47,7 @@
 #include <atomic>
 #include <functional>
 #include <fstream>
+#include <iostream>
 #include <string>
 
 #include "generated/resources/resources.h"

@@ -22,6 +22,8 @@
 
 #include <dlfcn.h>
 
+#include <chrono>
+
 using namespace utils;
 
 namespace filament {
