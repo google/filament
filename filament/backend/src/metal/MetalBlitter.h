@@ -58,7 +58,7 @@ public:
         }
     };
 
-    void blit(const BlitArgs& args);
+    void blit(id<MTLCommandBuffer> cmdBuffer, const BlitArgs& args);
 
     /**
      * Free resources. Should be called at least once per process when no further calls to blit will
@@ -89,7 +89,8 @@ private:
         }
     };
 
-    void blitFastPath(bool& blitColor, bool& blitDepth, const BlitArgs& args);
+    void blitFastPath(id<MTLCommandBuffer> cmdBuffer, bool& blitColor, bool& blitDepth,
+            const BlitArgs& args);
     id<MTLFunction> compileFragmentFunction(BlitFunctionKey key);
     id<MTLFunction> getBlitVertexFunction();
     id<MTLFunction> getBlitFragmentFunction(BlitFunctionKey key);

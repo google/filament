@@ -262,21 +262,20 @@ void MetalTexture::load2DImage(uint32_t level, uint32_t xoffset, uint32_t yoffse
         uint32_t height, PixelBufferDescriptor&& p) noexcept {
     PixelBufferDescriptor data = reshaper.reshape(std::move(p));
 
-    id<MTLCommandBuffer> blitCommandBuffer = [context.commandQueue commandBuffer];
+    id<MTLCommandBuffer> blitCommandBuffer = getPendingCommandBuffer(&context);
     id<MTLBlitCommandEncoder> blitCommandEncoder = [blitCommandBuffer blitCommandEncoder];
 
     loadSlice(level, xoffset, yoffset, width, height, 0, 0, data, blitCommandEncoder,
             blitCommandBuffer);
 
     [blitCommandEncoder endEncoding];
-    [blitCommandBuffer commit];
 }
 
 void MetalTexture::loadCubeImage(const FaceOffsets& faceOffsets, int miplevel,
         PixelBufferDescriptor&& p) {
     PixelBufferDescriptor data = reshaper.reshape(std::move(p));
 
-    id<MTLCommandBuffer> blitCommandBuffer = [context.commandQueue commandBuffer];
+    id<MTLCommandBuffer> blitCommandBuffer = getPendingCommandBuffer(&context);
     id<MTLBlitCommandEncoder> blitCommandEncoder = [blitCommandBuffer blitCommandEncoder];
 
     const NSUInteger faceWidth = width >> miplevel;
@@ -288,7 +287,6 @@ void MetalTexture::loadCubeImage(const FaceOffsets& faceOffsets, int miplevel,
     }
 
     [blitCommandEncoder endEncoding];
-    [blitCommandBuffer commit];
 }
 
 void MetalTexture::loadSlice(uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t width,
@@ -510,7 +508,7 @@ MetalFence::MetalFence(MetalContext& context) {
     cv = std::make_shared<std::condition_variable>();
     event = [context.device newSharedEvent];
     value = context.signalId++;
-    [context.currentCommandBuffer encodeSignalEvent:event value:value];
+    [getPendingCommandBuffer(&context) encodeSignalEvent:event value:value];
 
     // Using a weak_ptr here because the Fence could be deleted before the block executes.
     std::weak_ptr<std::condition_variable> weakCv = cv;
