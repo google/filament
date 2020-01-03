@@ -323,11 +323,15 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity entity) {
     Primitive* outputPrim = mMeshCache[mesh].data();
     const cgltf_primitive* inputPrim = &mesh->primitives[0];
 
-    if (mNameManager && mesh->name) {
+    // Create a name component using the node label if it exists, otherwise use the mesh label.
+    const char* name = node->name ? node->name : mesh->name;
+    if (mNameManager && name) {
         mNameManager->addComponent(entity);
-        mNameManager->setName(mNameManager->getInstance(entity), mesh->name);
+        mNameManager->setName(mNameManager->getInstance(entity), name);
     }
-    const char* name = mesh->name ? mesh->name : (node->name ? node->name : "mesh");
+
+    // If neither a node or mesh name is provided in the glTF, use "node" for error messages.
+    name = name ? name : "node";
 
     Aabb aabb;
 
