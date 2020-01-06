@@ -31,8 +31,7 @@
 
 #include <stb_image.h>
 
-#include <cmath>
-#include <stdint.h>
+#include <iostream> // for cerr
 
 #include "generated/resources/resources.h"
 

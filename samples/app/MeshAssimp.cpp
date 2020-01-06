@@ -31,6 +31,7 @@
 #include <string.h>
 
 #include <array>
+#include <iostream>
 
 #include <filament/Color.h>
 #include <filament/VertexBuffer.h>

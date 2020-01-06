@@ -21,7 +21,7 @@
 
 #include <cmath>            // for std:: namespace
 #include <functional>       // for appl() and map()
-#include <iostream>         // for operator<<
+#include <iosfwd>           // for operator<<
 
 #include <math.h>
 #include <stdint.h>
@@ -567,6 +567,9 @@ private:
     }
 };
 
+template<typename T>
+std::ostream& printVector(std::ostream& stream, const T* data, size_t count);
+
 /*
  * TVecDebug implements functions on a vector of type BASE<T>.
  *
@@ -585,12 +588,7 @@ private:
      * (the first one, BASE<T> being known).
      */
     friend std::ostream& operator<<(std::ostream& stream, const VECTOR<T>& v) {
-        stream << "< ";
-        for (size_t i = 0; i < v.size() - 1; i++) {
-            stream << T(v[i]) << ", ";
-        }
-        stream << T(v[v.size() - 1]) << " >";
-        return stream;
+        return printVector(stream, &v[0], v.size());
     }
 };
 

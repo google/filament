@@ -50,7 +50,7 @@ public:
      * @return The MTLBuffer representing the current state of the buffer to bind, or nil if there
      * is no device allocation.
      */
-    id<MTLBuffer> getGpuBufferForDraw() noexcept;
+    id<MTLBuffer> getGpuBufferForDraw(id<MTLCommandBuffer> cmdBuffer) noexcept;
 
     void* getCpuBuffer() const noexcept { return mCpuBuffer; }
 
@@ -65,8 +65,9 @@ public:
      * bindBuffers binds an array of buffers to the given stage(s) of a MTLRenderCommandEncoder's
      * pipeline.
      */
-    static void bindBuffers(id<MTLRenderCommandEncoder> encoder, size_t bufferStart,
-            uint8_t stages, MetalBuffer* const* buffers, size_t const* offsets, size_t count);
+    static void bindBuffers(id<MTLCommandBuffer> cmdBuffer, id<MTLRenderCommandEncoder> encoder,
+            size_t bufferStart, uint8_t stages, MetalBuffer* const* buffers, size_t const* offsets,
+            size_t count);
 
 private:
 

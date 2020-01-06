@@ -40,6 +40,7 @@
 
 #include <stb_image.h>
 
+#include <iostream>
 #include <memory>
 #include <map>
 #include <string>
@@ -93,7 +94,7 @@ static void printUsage(char* name) {
     std::string usage(
             "SAMPLE_PBR is an example of loading PBR assets with base color + packed metallic/roughness\n"
             "Usage:\n"
-            "    SAMPLE_PBR [options] <OBJ/FBX/COLLADA>\n"
+            "    SAMPLE_PBR [options] <OBJ/FBX>\n"
             "Options:\n"
             "   --help, -h\n"
             "       Prints this message\n\n"

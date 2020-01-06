@@ -68,7 +68,7 @@ void MetalBuffer::copyIntoBuffer(void* src, size_t size) {
     memcpy(static_cast<uint8_t*>(mBufferPoolEntry->buffer.contents), src, size);
 }
 
-id<MTLBuffer> MetalBuffer::getGpuBufferForDraw() noexcept {
+id<MTLBuffer> MetalBuffer::getGpuBufferForDraw(id<MTLCommandBuffer> cmdBuffer) noexcept {
     if (!mBufferPoolEntry) {
         // If there's a CPU buffer, then we return nil here, as the CPU-side buffer will be bound
         // separately.
@@ -86,8 +86,7 @@ id<MTLBuffer> MetalBuffer::getGpuBufferForDraw() noexcept {
     auto uniformDeleter = [bufferPool = mContext.bufferPool] (const void* resource) {
         bufferPool->releaseBuffer((const MetalBufferPoolEntry*) resource);
     };
-    id<MTLCommandBuffer> commandBuffer = mContext.currentCommandBuffer;
-    if (mContext.resourceTracker.trackResource((__bridge void*) commandBuffer, mBufferPoolEntry,
+    if (mContext.resourceTracker.trackResource((__bridge void*) cmdBuffer, mBufferPoolEntry,
             uniformDeleter)) {
         // We only want to retain the buffer once per command buffer- trackResource will return
         // true if this is the first time tracking this uniform for this command buffer.
@@ -97,8 +96,9 @@ id<MTLBuffer> MetalBuffer::getGpuBufferForDraw() noexcept {
     return mBufferPoolEntry->buffer;
 }
 
-void MetalBuffer::bindBuffers(id<MTLRenderCommandEncoder> encoder, size_t bufferStart,
-        uint8_t stages, MetalBuffer* const* buffers, size_t const* offsets, size_t count) {
+void MetalBuffer::bindBuffers(id<MTLCommandBuffer> cmdBuffer, id<MTLRenderCommandEncoder> encoder,
+        size_t bufferStart, uint8_t stages, MetalBuffer* const* buffers, size_t const* offsets,
+        size_t count) {
     const NSRange bufferRange = NSMakeRange(bufferStart, count);
 
     std::vector<id<MTLBuffer>> metalBuffers(count, nil);
@@ -111,7 +111,7 @@ void MetalBuffer::bindBuffers(id<MTLRenderCommandEncoder> encoder, size_t buffer
         }
         // getGpuBufferForDraw() might return nil, which means there isn't a device allocation for
         // this buffer. In this case, we'll bind the buffer below with the CPU-side memory.
-        id<MTLBuffer> gpuBuffer = buffer->getGpuBufferForDraw();
+        id<MTLBuffer> gpuBuffer = buffer->getGpuBufferForDraw(cmdBuffer);
         if (!gpuBuffer) {
             continue;
         }

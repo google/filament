@@ -20,7 +20,7 @@
 
 #include <cstdint>
 #include <cstring> // for memcmp
-#include <istream>
+#include <iostream> // for cerr
 #include <limits>
 #include <memory>
 #include <sstream>

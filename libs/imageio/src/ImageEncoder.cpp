@@ -22,7 +22,7 @@
 #include <functional>
 #include <limits>
 #include <memory>
-#include <ostream>
+#include <iostream> // for cerr
 
 #if defined(WIN32)
     #include <Winsock2.h>

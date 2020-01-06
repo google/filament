@@ -16,6 +16,8 @@
 
 #include <atomic>
 #include <fstream>
+#include <iomanip>
+#include <iostream>
 #include <map>
 #include <memory>
 #include <string>
@@ -93,7 +95,7 @@ static void printUsage(char* name) {
     std::string usage(
             "SAMPLE_FRAME_GENERATOR tests a material by varying float parameters\n"
             "Usage:\n"
-            "    SAMPLE_FRAME_GENERATOR [options] <mesh files (.obj, .fbx, COLLADA)>\n"
+            "    SAMPLE_FRAME_GENERATOR [options] <mesh files (.obj, .fbx)>\n"
             "\n"
             "This tool loads an object, applies the specified material and renders N\n"
             "frames as specified by the -c flag. For each frame rendered, the material\n"

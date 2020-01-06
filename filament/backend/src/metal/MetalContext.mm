@@ -65,7 +65,7 @@ id<MTLTexture> acquireDrawable(MetalContext* context) {
         backend::FrameFinishedCallback callback = context->frameFinishedCallback;
         void* userData = context->frameFinishedUserData;
         // This block strongly captures drawable to keep it alive until the handler executes.
-        [context->currentCommandBuffer addScheduledHandler:^(id<MTLCommandBuffer> cb) {
+        [getPendingCommandBuffer(context) addScheduledHandler:^(id<MTLCommandBuffer> cb) {
             // CFBridgingRetain is used here to give the drawable a +1 retain count before
             // casting it to a void*.
             PresentCallable callable(presentDrawable, (void*) CFBridgingRetain(drawable));
@@ -112,11 +112,27 @@ id<MTLTexture> acquireDepthTexture(MetalContext* context) {
     return context->currentDepthTexture;
 }
 
-id<MTLCommandBuffer> acquireCommandBuffer(MetalContext* context) {
-    id<MTLCommandBuffer> commandBuffer = [context->commandQueue commandBuffer];
-    ASSERT_POSTCONDITION(commandBuffer != nil, "Could not obtain command buffer.");
-    context->currentCommandBuffer = commandBuffer;
-    return commandBuffer;
+id<MTLCommandBuffer> getPendingCommandBuffer(MetalContext* context) {
+    if (context->pendingCommandBuffer) {
+        return context->pendingCommandBuffer;
+    }
+    context->pendingCommandBuffer = [context->commandQueue commandBuffer];
+    // It's safe for this block to capture the context variable. MetalDriver::terminate will ensure
+    // all frames and their completion handlers finish before context is deallocated.
+    [context->pendingCommandBuffer addCompletedHandler:^(id <MTLCommandBuffer> buffer) {
+        context->resourceTracker.clearResources((__bridge void*) buffer);
+    }];
+    ASSERT_POSTCONDITION(context->pendingCommandBuffer, "Could not obtain command buffer.");
+    return context->pendingCommandBuffer;
+}
+
+void submitPendingCommands(MetalContext* context) {
+    if (!context->pendingCommandBuffer) {
+        return;
+    }
+    assert(context->pendingCommandBuffer.status != MTLCommandBufferStatusCommitted);
+    [context->pendingCommandBuffer commit];
+    context->pendingCommandBuffer = nil;
 }
 
 id<MTLTexture> getOrCreateEmptyTexture(MetalContext* context) {
@@ -140,6 +156,10 @@ id<MTLTexture> getOrCreateEmptyTexture(MetalContext* context) {
     context->emptyTexture = texture;
 
     return context->emptyTexture;
+}
+
+bool isInRenderPass(MetalContext* context) {
+    return context->currentRenderPassEncoder != nil;
 }
 
 } // namespace metal

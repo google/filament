@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include <iostream>
 #include <string>
 #include <map>
 #include <vector>
@@ -68,7 +69,7 @@ static void printUsage(char* name) {
     std::string usage(
             "SAMPLE_MATERIAL showcases all material models\n"
             "Usage:\n"
-            "    SAMPLE_MATERIAL [options] <mesh files (.obj, .fbx, COLLADA)>\n"
+            "    SAMPLE_MATERIAL [options] <mesh files (.obj, .fbx)>\n"
             "Options:\n"
             "   --help, -h\n"
             "       Prints this message\n\n"
