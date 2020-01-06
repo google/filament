@@ -82,14 +82,14 @@ public:
         vec3 u = grabScene - Base::mEye;
 
         // Prevent getting stuck when zooming in.
-        if (scrolldelta > 0) {
+        if (scrolldelta < 0) {
             const FLOAT distanceToSurface = length(u);
             if (distanceToSurface < Base::mProps.zoomSpeed) {
                 return;
             }
         }
 
-        u *= scrolldelta * Base::mProps.zoomSpeed;
+        u *= -scrolldelta * Base::mProps.zoomSpeed;
 
         const vec3 eyePosition = Base::mEye + u;
         const vec3 targetPosition = Base::mTarget + u;
