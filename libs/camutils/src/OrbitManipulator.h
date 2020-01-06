@@ -112,7 +112,7 @@ public:
 
     void zoom(int x, int y, FLOAT scrolldelta) override {
         const vec3 gaze = normalize(Base::mTarget - Base::mEye);
-        const vec3 movement = gaze * Base::mProps.zoomSpeed * scrolldelta;
+        const vec3 movement = gaze * Base::mProps.zoomSpeed * -scrolldelta;
         const vec3 v0 = mPivot - Base::mEye;
         Base::mEye += movement;
         Base::mTarget += movement;

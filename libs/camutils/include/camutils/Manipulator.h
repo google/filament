@@ -176,7 +176,7 @@ public:
      *
      * @param x X-coordinate for point of interest in viewport space
      * @param y Y-coordinate for point of interest in viewport space
-     * @param scrolldelta Positive means "zoom in", negative means "zoom out"
+     * @param scrolldelta Negative means "zoom in", positive means "zoom out"
      */
     virtual void zoom(int x, int y, FLOAT scrolldelta) = 0;
 
