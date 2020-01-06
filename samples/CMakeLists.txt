@@ -220,13 +220,12 @@ target_sources(gltf-resources PRIVATE ${RESGEN_SOURCE})
 # Common library
 # ==================================================================================================
 
-set(APP_LIBS filament sdl2 stb math filamat utils getopt imgui filagui image common-resources)
+set(APP_LIBS filament sdl2 stb math filamat utils getopt imgui filagui image camutils common-resources)
 if (WIN32)
     list(APPEND APP_LIBS sdl2main)
 endif()
 
 set(APP_SRCS
-        app/CameraManipulator.cpp
         app/Cube.cpp
         app/FilamentApp.cpp
         app/IBL.cpp
