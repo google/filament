@@ -42,9 +42,8 @@ struct MetalContext {
     id<MTLDevice> device = nullptr;
     id<MTLCommandQueue> commandQueue = nullptr;
 
-    // Single use, re-created each frame.
-    id<MTLCommandBuffer> currentCommandBuffer = nullptr;
-    id<MTLRenderCommandEncoder> currentCommandEncoder = nullptr;
+    id<MTLCommandBuffer> pendingCommandBuffer = nullptr;
+    id<MTLRenderCommandEncoder> currentRenderPassEncoder = nullptr;
 
     // These two fields store a callback and user data to notify the client that a frame is ready
     // for presentation.
@@ -107,9 +106,13 @@ id<MTLTexture> acquireDrawable(MetalContext* context);
 
 id<MTLTexture> acquireDepthTexture(MetalContext* context);
 
-id<MTLCommandBuffer> acquireCommandBuffer(MetalContext* context);
+id<MTLCommandBuffer> getPendingCommandBuffer(MetalContext* context);
+
+void submitPendingCommands(MetalContext* context);
 
 id<MTLTexture> getOrCreateEmptyTexture(MetalContext* context);
+
+bool isInRenderPass(MetalContext* context);
 
 } // namespace metal
 } // namespace backend
