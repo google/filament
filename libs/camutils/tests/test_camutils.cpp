@@ -41,9 +41,9 @@ TEST_F(CamUtilsTest, Orbit) {
 
     CamManipulator* orbit = CamManipulator::create(camutils::Mode::ORBIT, {
         .viewport = {256, 256},
-        .zoomSpeed = 0.01,
         .targetPosition = {0, 0, 0},
         .upVector = {0, 1, 0},
+        .zoomSpeed = 0.01,
         .orbitHomePosition = {0, 0, 4},
         .orbitSpeed = {1, 1},
     });
@@ -71,8 +71,8 @@ TEST_F(CamUtilsTest, Map) {
 
     CamManipulator* map = CamManipulator::create(camutils::Mode::MAP, {
         .viewport = {256, 256},
-        .zoomSpeed = 0.01,
         .targetPosition = {0, 0, 0},
+        .zoomSpeed = 0.01,
         .orbitHomePosition = {0, 0, 4},
     });
 
