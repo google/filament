@@ -34,7 +34,7 @@ public:
     using vec2 = filament::math::vec2<FLOAT>;
     using vec3 = filament::math::vec3<FLOAT>;
     using vec4 = filament::math::vec4<FLOAT>;
-    using Bookmark = Bookmark<FLOAT>;
+    using Bookmark = filament::camutils::Bookmark<FLOAT>;
     using Base = Manipulator<FLOAT>;
     using Config = typename Base::Config;
 
