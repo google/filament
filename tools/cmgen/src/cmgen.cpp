@@ -520,13 +520,6 @@ int main(int argc, char* argv[]) {
         g_prefilter_dir = g_deploy_dir;
     }
 
-    if (g_debug) {
-        if (g_prefilter && !g_is_mipmap) {
-            g_is_mipmap = true;
-            g_is_mipmap_dir = g_prefilter_dir;
-        }
-    }
-
     // Images store the actual data
     std::vector<Image> images;
 
