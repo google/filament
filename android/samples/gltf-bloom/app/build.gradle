@@ -21,7 +21,7 @@ generateIbl {
     group 'Filament'
     description 'Generate IBL'
 
-    cmgenArgs = "--format=ktx --size=256 --extract-blur=0.1 --deploy=src/main/assets/envs"
+    cmgenArgs = "--format=ktx --size=256 --extract-blur=0.1 --deploy=src/main/assets/envs/venetian_crossroads_2k"
     inputFile = file("../../../../third_party/environments/venetian_crossroads_2k.hdr")
     outputDir = file("src/main/assets/envs")
 }
