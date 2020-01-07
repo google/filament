@@ -28,7 +28,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
 import java.nio.ByteBuffer;
 
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
 
 /**
