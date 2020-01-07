@@ -15,7 +15,7 @@ package com.google.android.filament;
  * limitations under the License.
  */
 
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
 public class Fence {
     private long mNativeObject;

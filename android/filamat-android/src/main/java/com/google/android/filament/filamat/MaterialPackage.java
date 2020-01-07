@@ -16,7 +16,7 @@
 
 package com.google.android.filament.filamat;
 
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 import java.nio.ByteBuffer;
 
 public class MaterialPackage {

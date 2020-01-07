@@ -16,7 +16,7 @@
 
 package com.google.android.filament;
 
-import android.support.annotation.Nullable;
+import androidx.annotation.Nullable;
 
 /**
  * A <code>Scene</code> is a flat container of {@link RenderableManager} and {@link LightManager}

@@ -1,0 +1,5 @@
+include ':filament-android'
+include ':filamat-android'
+include ':gltfio-android'
+
+rootProject.name = 'filament'

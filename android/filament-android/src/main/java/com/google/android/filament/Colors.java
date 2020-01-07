@@ -16,8 +16,8 @@
 
 package com.google.android.filament;
 
-import android.support.annotation.NonNull;
-import android.support.annotation.Size;
+import androidx.annotation.NonNull;
+import androidx.annotation.Size;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;

@@ -1,0 +1,53 @@
+// This script accepts the following parameters:
+//
+// filament_dist_dir
+//     Path to the Filament distribution/install directory for Android
+//     (produced by make/ninja install). This directory must contain lib/arm64-v8a/ etc.
+//
+// Example:
+//     ./gradlew -Pfilament_dist_dir=../dist-android-release assembleRelease
+
+buildscript {
+    def filamentPath = file("../out/android-release/filament").absolutePath
+    if (project.hasProperty("filament_dist_dir")) {
+        filamentPath = file("$filament_dist_dir").absolutePath
+    }
+
+    ext.filamentPath = filamentPath
+
+    // Our minSdkVersion is actually 19, we lie and say 14 here so apps don't have
+    // to increase their minSdkVersion unnecessarily. It is however up to them to
+    // ensure they do not initialize Filament on API levels < 19.
+    ext.versions = [
+        'minSdk': 14,
+        'targetSdk': 29,
+        'compileSdk': 29,
+    ]
+
+    ext.deps = [
+        'androidx': [
+            'annotations': "androidx.annotation:annotation:1.0.0",
+        ],
+    ]
+
+    repositories {
+        mavenCentral()
+        google()
+        jcenter()
+    }
+
+    dependencies {
+        classpath 'com.android.tools.build:gradle:3.5.0'
+    }
+}
+
+subprojects { project ->
+    group = GROUP
+    version = VERSION_NAME
+
+    repositories {
+        mavenCentral()
+        google()
+        jcenter()
+    }
+}
