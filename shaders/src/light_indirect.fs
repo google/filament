@@ -83,10 +83,10 @@ vec3 diffuseIrradiance(const vec3 n) {
 //------------------------------------------------------------------------------
 
 float perceptualRoughnessToLod(float perceptualRoughness) {
-    // See: https://s3.amazonaws.com/docs.knaldtech.com/knald/1.0.0/lys_power_drops.html
-    // (Pre-convolved Cube Maps vs Path Tracers)
-    // Below is a quadratic fit to the formula in the article above at NoV=1
-    return frameUniforms.iblMaxMipLevel.x * perceptualRoughness * (1.686 - 0.686 * perceptualRoughness);
+    // The mapping below is a quadratic fit for log2(perceptualRoughness)+iblMaxMipLevel when
+    // iblMaxMipLevel is 4. We found empirically that this mapping works very well for
+    // a 256 cubemap with 5 levels used. But also scales well for other iblMaxMipLevel values.
+    return frameUniforms.iblMaxMipLevel.x * perceptualRoughness * (2.0 - perceptualRoughness);
 }
 
 vec3 prefilteredRadiance(const vec3 r, float perceptualRoughness) {
