@@ -333,7 +333,7 @@ endif()
 
 add_executable(heightfield heightfield.cpp)
 target_link_libraries(heightfield PRIVATE ${APP_LIBS})
-target_link_libraries(heightfield PRIVATE ${COMPILER_FLAGS})
+target_compile_options(heightfield PRIVATE ${COMPILER_FLAGS})
 
 # ==================================================================================================
 # Copy the MoltenVK dylibs and JSON on MacOS
