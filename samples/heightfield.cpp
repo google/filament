@@ -31,7 +31,7 @@
 
 #include <getopt/getopt.h>
 
-#include "../samples/app/FilamentApp.h"
+#include "app/FilamentApp.h"
 
 #define STB_PERLIN_IMPLEMENTATION
 #include <stb_perlin.h>
