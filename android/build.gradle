@@ -22,12 +22,15 @@ buildscript {
         'minSdk': 14,
         'targetSdk': 29,
         'compileSdk': 29,
+        'kotlin': '1.3.11',
     ]
 
     ext.deps = [
         'androidx': [
             'annotations': "androidx.annotation:annotation:1.0.0",
+            'core': "androidx.core:core:1.1.0",
         ],
+        'kotlin': "org.jetbrains.kotlin:kotlin-stdlib-jdk8:${versions.kotlin}"
     ]
 
     repositories {
@@ -38,6 +41,7 @@ buildscript {
 
     dependencies {
         classpath 'com.android.tools.build:gradle:3.5.0'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${versions.kotlin}"
     }
 }
 

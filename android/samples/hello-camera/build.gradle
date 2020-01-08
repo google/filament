@@ -14,28 +14,43 @@
  * limitations under the License.
  */
 
-buildscript {
-    ext.kotlin_version = '1.3.50'
-    repositories {
-        google()
-        jcenter()
-    }
-    dependencies {
-        classpath 'com.android.tools.build:gradle:3.5.0'
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android'
+apply plugin: 'kotlin-android-extensions'
 
-        // NOTE: Do not place your application dependencies here; they belong
-        // in the individual module build.gradle files
+apply from: '../../gradle/filament-tasks.gradle'
+
+compileMaterials {
+    group 'Filament'
+    description 'Compile materials'
+
+    inputDir = file("src/main/materials")
+    outputDir = file("src/main/assets/materials")
+}
+
+preBuild.dependsOn compileMaterials
+
+clean.doFirst {
+    delete "src/main/assets"
+}
+
+android {
+    compileSdkVersion versions.compileSdk
+    defaultConfig {
+        applicationId "com.google.android.filament.hellocamera"
+        minSdkVersion versions.minSdk
+        targetSdkVersion versions.targetSdk
+    }
+
+    // We use the .filamat extension for materials compiled with matc
+    // Telling aapt to not compress them allows to load them efficiently
+    aaptOptions {
+        noCompress 'filamat', 'ktx'
     }
 }
 
-allprojects {
-    repositories {
-        google()
-        jcenter()
-    }
-}
-
-task clean(type: Delete) {
-    delete rootProject.buildDir
+dependencies {
+    implementation deps.kotlin
+    implementation deps.androidx.core
+    implementation project(':filament-android')
 }

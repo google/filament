@@ -1,3 +1,0 @@
-includeBuild '../../filament-android'
-
-include ':app'

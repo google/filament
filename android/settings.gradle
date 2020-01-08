@@ -1,5 +1,18 @@
+// Libraries
 include ':filament-android'
 include ':filamat-android'
 include ':gltfio-android'
+
+// Samples
+include ':samples:gltf-bloom'
+include ':samples:hello-camera'
+include ':samples:hello-triangle'
+include ':samples:image-based-lighting'
+include ':samples:lit-cube'
+include ':samples:material-builder'
+include ':samples:stream-test'
+include ':samples:texture-view'
+include ':samples:textured-object'
+include ':samples:transparent-view'
 
 rootProject.name = 'filament'

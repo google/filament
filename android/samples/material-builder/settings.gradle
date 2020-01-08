@@ -1,4 +1,0 @@
-includeBuild '../../filament-android'
-includeBuild '../../filamat-android'
-
-include ':app'

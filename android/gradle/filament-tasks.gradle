@@ -12,7 +12,7 @@ import org.gradle.internal.os.OperatingSystem
 import org.gradle.api.logging.Logger;
 import org.gradle.api.logging.LogLevel;
 
-def filamentToolsPath = file("../../../../out/release/filament")
+def filamentToolsPath = file("../../../out/release/filament")
 if (project.hasProperty("filament_tools_dir")) {
     filamentToolsPath = file("$filament_tools_dir")
 }
