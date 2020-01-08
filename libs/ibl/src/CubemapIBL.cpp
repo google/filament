@@ -28,6 +28,7 @@
 #include <math/mat3.h>
 #include <math/scalar.h>
 
+#include <random>
 #include <vector>
 
 using namespace filament::math;
@@ -405,7 +406,14 @@ void CubemapIBL::roughnessFilter(
         return lhs.brdf_NoL < rhs.brdf_NoL;
     });
 
-    auto scanline = [&](CubemapUtils::EmptyState&, size_t y,
+
+    struct State {
+        // maybe blue-noise instead would look even better
+        std::default_random_engine gen;
+        std::uniform_real_distribution<float> distribution{ -F_PI, F_PI };
+    };
+
+    auto scanline = [&](State& state, size_t y,
             Cubemap::Face f, Cubemap::Texel* data, size_t dim) {
         if (UTILS_UNLIKELY(updater)) {
             size_t p = progress.fetch_add(1, std::memory_order_relaxed) + 1;
@@ -423,6 +431,8 @@ void CubemapIBL::roughnessFilter(
             R[1] = cross(N, R[0]);
             R[2] = N;
 
+            R *= mat3f::rotation(state.distribution(state.gen), float3{0,0,1});
+
             float3 Li = 0;
             for (size_t sample = 0; sample < numSamples; sample++) {
                 const CacheEntry& e = cache[sample];
@@ -439,9 +449,9 @@ void CubemapIBL::roughnessFilter(
     // don't use the jobsystem unless we have enough work per scanline -- or the overhead of
     // launching jobs will prevail.
     if (dst.getDimensions() * maxNumSamples <= 256) {
-        CubemapUtils::processSingleThreaded<CubemapUtils::EmptyState>(dst, js, std::ref(scanline));
+        CubemapUtils::processSingleThreaded<State>(dst, js, std::ref(scanline));
     } else {
-        CubemapUtils::process<CubemapUtils::EmptyState>(dst, js, std::ref(scanline));
+        CubemapUtils::process<State>(dst, js, std::ref(scanline));
     }
 }
 
