@@ -304,7 +304,35 @@ TEST(FrameGraphTest, SimplePassCulling) {
 
 TEST(FrameGraphTest, RenderTargetLifetime) {
 
-    fg::ResourceAllocator resourceAllocator(driverApi);
+    class MockResourceAllocator : public fg::ResourceAllocatorInterface {
+        uint32_t handle = 0;
+    public:
+        virtual backend::RenderTargetHandle createRenderTarget(const char* name,
+                backend::TargetBufferFlags targetBufferFlags,
+                uint32_t width,
+                uint32_t height,
+                uint8_t samples,
+                backend::TargetBufferInfo color,
+                backend::TargetBufferInfo depth,
+                backend::TargetBufferInfo stencil) noexcept {
+            return backend::RenderTargetHandle(++handle);
+        }
+
+        virtual void destroyRenderTarget(backend::RenderTargetHandle h) noexcept {
+        }
+
+        virtual backend::TextureHandle createTexture(const char* name, backend::SamplerType target,
+                uint8_t levels,
+                backend::TextureFormat format, uint8_t samples, uint32_t width, uint32_t height,
+                uint32_t depth, backend::TextureUsage usage) noexcept {
+            return backend::TextureHandle(++handle);
+        }
+
+        virtual void destroyTexture(backend::TextureHandle h) noexcept {
+        }
+    };
+
+    MockResourceAllocator resourceAllocator;
     FrameGraph fg(resourceAllocator);
 
     bool renderPassExecuted1 = false;
@@ -353,7 +381,7 @@ TEST(FrameGraphTest, RenderTargetLifetime) {
                 auto const& rt = resources.getRenderTarget(data.rt);
                 EXPECT_TRUE(rt.target);
                 EXPECT_EQ(TargetBufferFlags(0x40u|0x80u), rt.params.flags.clear);
-                EXPECT_EQ(rt1.getId(), rt.target.getId()); // FIXME: this test is always true the NoopDriver
+                EXPECT_EQ(rt1.getId(), rt.target.getId());
                 EXPECT_EQ(TargetBufferFlags::DEPTH_AND_STENCIL, rt.params.flags.discardStart);
                 EXPECT_EQ(TargetBufferFlags::DEPTH_AND_STENCIL, rt.params.flags.discardEnd);
 
@@ -365,6 +393,4 @@ TEST(FrameGraphTest, RenderTargetLifetime) {
 
     EXPECT_TRUE(renderPassExecuted1);
     EXPECT_TRUE(renderPassExecuted2);
-
-    resourceAllocator.terminate();
 }
