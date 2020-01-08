@@ -93,13 +93,13 @@ $ ./gradlew -Pfilament_tools_dir=../../dist-release assembleDebug
 ## Important: SDK location
 
 
-Either ensure your `ANDROID_HOME` environment variable is set or make sure each project contains a
-`local.properties` file with the `sdk.dir` property pointing to your installation of the Android
-SDK. This includes the project `filament-android` in the parent directory.
+Either ensure your `ANDROID_HOME` environment variable is set or make sure the root project
+contains a `local.properties` file with the `sdk.dir` property pointing to your installation of
+the Android SDK.
 
 ## Android Studio
 
-You must use Android Studio 3.3 or higher to open these projects.
+You must use Android Studio 3.5 or higher to open these projects.
 
 ## Compiling
 
