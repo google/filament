@@ -104,13 +104,15 @@ private:
 
     struct PrepareColorPassesData {
         FrameGraphId<FrameGraphTexture> ssao;
+        FrameGraphId<FrameGraphTexture> color;
+        FrameGraphId<FrameGraphTexture> depth;
         Viewport svp;
         backend::TextureFormat hdrFormat;
         uint8_t msaa;
     };
 
     static FrameGraphId<FrameGraphTexture> colorPass(FrameGraph& fg,
-            PrepareColorPassesData const& blackboard, RenderPass const& pass,
+            PrepareColorPassesData& blackboard, RenderPass const& pass,
             backend::TargetBufferFlags clearFlags, math::float4 clearColor = {}) noexcept;
 
     void recordHighWatermark(size_t watermark) noexcept {
