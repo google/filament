@@ -219,7 +219,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             [&engine, &view](JobSystem&, JobSystem::Job*) { view.froxelize(engine); }));
 
     /*
-     * Allocate command buffer.
+     * Allocate command buffer
      */
 
     FScene& scene = *view.getScene();
@@ -229,7 +229,6 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     GrowingSlice<Command> commands(
             arena.allocate<Command>(commandsCount, CACHELINE_SIZE), commandsCount);
 
-
     RenderPass pass(engine, commands);
     RenderPass::RenderFlags renderFlags = 0;
     if (view.hasShadowing())               renderFlags |= RenderPass::HAS_SHADOWING;
@@ -238,16 +237,16 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     if (view.isFrontFaceWindingInverted()) renderFlags |= RenderPass::HAS_INVERSE_FRONT_FACES;
     pass.setRenderFlags(renderFlags);
 
-
     /*
      * Shadow pass
      */
 
     if (view.hasShadowing()) {
-        view.getShadowMap().render(driver, pass, view);
+        // TODO: use the framegraph for the shadow passes
+        RenderPass shadowMapPass = pass;
+        view.getShadowMap().render(driver, shadowMapPass, view);
         driver.flush(); // Kick the GPU since we're done with this render target
         engine.flush(); // Wake-up the driver thread
-        commands.clear();
     }
 
     /*
@@ -284,34 +283,62 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     pass.setCamera(cameraInfo);
     pass.setGeometry(scene.getRenderableData(), view.getVisibleRenderables(), scene.getRenderableUBO());
 
-    view.updatePrimitivesLod(engine, cameraInfo,
-            scene.getRenderableData(), view.getVisibleRenderables());
+    view.updatePrimitivesLod(engine, cameraInfo,scene.getRenderableData(), view.getVisibleRenderables());
     view.prepareCamera(cameraInfo, svp);
     view.commitUniforms(driver);
 
-
     // --------------------------------------------------------------------------------------------
+    // SSAO pass
 
     const bool useSSAO = view.getAmbientOcclusion() != View::AmbientOcclusion::NONE;
-
-    // SSAO pass -- automatically culled if not used
     if (useSSAO) {
-        auto curr = pass.getCommands().end();
+        // don't generate commands if we don't have SSAO
+        // TODO: ideally this should be a FrameGraph pass to participate to automatic culling
+        pass.newCommandBuffer();
         pass.appendCommands(RenderPass::CommandTypeFlags::SSAO);
-        pass.sortCommands(curr);
+        pass.sortCommands();
     }
 
-    FrameGraphId<FrameGraphTexture> ssao = ppm.ssao(fg, pass, svp, cameraInfo, view.getAmbientOcclusionOptions());
+    // SSAO pass -- automatically culled if not used
+    FrameGraphId<FrameGraphTexture> ssao = ppm.ssao(fg, pass, svp, cameraInfo,
+            view.getAmbientOcclusionOptions());
 
     // --------------------------------------------------------------------------------------------
+    // Color passes
 
-    // generate the normal commands
+    // TODO: ideally this should be a FrameGraph pass to participate to automatic culling
     RenderPass::CommandTypeFlags commandType = getCommandType(view.getDepthPrepass());
-    Command* colorPassBegin = pass.getCommands().end();
+    pass.newCommandBuffer();
     pass.appendCommands(commandType);
-    Command const* colorPassEnd = pass.sortCommands(colorPassBegin);
+    pass.sortCommands();
 
-    // We only honor the view's color buffer clear flags, depth/stencil are handled by the framefraph
+    // We use a framegraph pass to commit the View's uniforms and wait for froxelization to finish
+    auto& prepareColorPasses = fg.addPass<PrepareColorPassesData>("Prepare Color Passes",
+            [useSSAO, ssao, msaa, hdrFormat, &svp]
+                    (FrameGraph::Builder& builder, PrepareColorPassesData& data) {
+                if (useSSAO) {
+                    data.ssao = builder.sample(ssao);
+                }
+                data.svp = svp;
+                data.hdrFormat = hdrFormat;
+                data.msaa = msaa;
+                builder.sideEffect();
+            },
+            [&ppm, &js, &view, jobFroxelize]
+                    (FrameGraphPassResources const& resources,
+                            PrepareColorPassesData const& data, DriverApi& driver) {
+                view.prepareSSAO(data.ssao.isValid() ? resources.getTexture(data.ssao)
+                                                     : ppm.getNoSSAOTexture());
+                view.commitUniforms(driver);
+                if (jobFroxelize) {
+                    auto sync = jobFroxelize;
+                    js.waitAndRelease(sync);
+                    view.commitFroxels(driver);
+                }
+            });
+
+
+    // We only honor the view's color buffer clear flags, depth/stencil are handled by the FrameGraph
     uint8_t viewClearFlags = view.getClearFlags() & (uint8_t)TargetBufferFlags::ALL;
 
     // FIXME: when the view doesn't ask for a clear, but it's drawn in an intermediate buffer
@@ -319,71 +346,18 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     TargetBufferFlags clearFlags = (TargetBufferFlags(viewClearFlags) & TargetBufferFlags::COLOR)
                                    | TargetBufferFlags::DEPTH;
 
-    struct ColorPassData {
-        FrameGraphId<FrameGraphTexture> color;
-        FrameGraphId<FrameGraphTexture> depth;
-        FrameGraphId<FrameGraphTexture> ssao;
-        FrameGraphRenderTargetHandle rt{};
-    };
+    FrameGraphId<FrameGraphTexture> colorPassOutput = colorPass(fg, prepareColorPasses.getData(),
+            pass, clearFlags, view.getClearColor());
 
-    auto& colorPass = fg.addPass<ColorPassData>("Color Pass",
-            [&svp, hdrFormat, msaa, clearFlags, useSSAO, ssao]
-            (FrameGraph::Builder& builder, ColorPassData& data) {
+    FrameGraphId<FrameGraphTexture> input = colorPassOutput;
 
-                if (useSSAO) {
-                    data.ssao = builder.sample(ssao);
-                }
+    fg.simpleSideEffectPass("Finish Color Passes", [&view]() {
+        // Unbind SSAO sampler, b/c the FrameGraph will delete the texture at the end of the pass.
+        view.cleanupSSAO();
+    });
 
-                data.color = builder.createTexture("Color Buffer",
-                        { .width = svp.width, .height = svp.height, .format = hdrFormat });
-
-                data.depth = builder.createTexture("Depth Buffer", {
-                        .width = svp.width, .height = svp.height,
-                        .format = TextureFormat::DEPTH24
-                });
-                data.depth = builder.write(builder.read(data.depth));
-
-                data.color = builder.write(builder.read(data.color));
-                data.rt = builder.createRenderTarget("Color Pass Target", {
-                        .attachments = { data.color, data.depth },
-                        .samples = msaa,
-                }, clearFlags);
-            },
-            [&pass, &ppm, colorPassBegin, colorPassEnd, jobFroxelize, &js, &view]
-                    (FrameGraphPassResources const& resources,
-                            ColorPassData const& data, DriverApi& driver) {
-                auto out = resources.getRenderTarget(data.rt);
-                Handle<HwTexture> ssao;
-                if (data.ssao.isValid()) {
-                    ssao = resources.getTexture(data.ssao);
-                } else {
-                    ssao = ppm.getNoSSAOTexture();
-                }
-                view.prepareSSAO(ssao);
-                view.commitUniforms(driver);
-
-                out.params.clearColor = view.getClearColor();
-
-                if (jobFroxelize) {
-                    auto sync = jobFroxelize;
-                    js.waitAndRelease(sync);
-                    view.commitFroxels(driver);
-                }
-
-                pass.execute(resources.getPassName(), out.target, out.params,
-                        colorPassBegin, colorPassEnd);
-
-                // Unbind the SSAO sampler, as the frame graph will delete the texture at the end of
-                // the pass.
-                view.cleanupSSAO();
-            });
-
-    jobFroxelize = nullptr;
-    FrameGraphId<FrameGraphTexture> input = colorPass.getData().color;
-
-    /*
-     * Post Processing...
-     */
+    // --------------------------------------------------------------------------------------------
+    // Post Processing...
 
     const TextureFormat ldrFormat = (toneMapping && fxaa) ?
             TextureFormat::RGBA8 : getLdrFormat(translucent); // e.g. RGB8 or RGBA8
@@ -403,7 +377,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     // We need to do special processing when rendering directly into the swap-chain (see
     // comments below). That is when the viewRenderTarget is the default render target
     // (mRenderTarget) and we're rendering into it.
-    if (input == colorPass.getData().color) {
+    if (input == colorPassOutput) {
         // here we know we're not scaled because either post-processing is disabled (which implies
         // no scaling, or scaled==false because otherwise we wouldn't be rendering in the
         // default target.
@@ -437,6 +411,58 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     commands.clear();
 
     recordHighWatermark(pass.getCommandsHighWatermark());
+}
+
+FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg,
+        PrepareColorPassesData const& blackboard,
+        RenderPass const& pass, TargetBufferFlags clearFlags, float4 clearColor) noexcept {
+
+    struct ColorPassData {
+        FrameGraphId<FrameGraphTexture> color;
+        FrameGraphId<FrameGraphTexture> depth;
+        FrameGraphId<FrameGraphTexture> ssao;
+        FrameGraphRenderTargetHandle rt{};
+    };
+
+    auto& colorPass = fg.addPass<ColorPassData>("Color Pass",
+            [&blackboard, clearFlags]
+                    (FrameGraph::Builder& builder, ColorPassData& data) {
+
+                auto& svp = blackboard.svp;
+                auto hdrFormat = blackboard.hdrFormat;
+                auto msaa = blackboard.msaa;
+
+                if (blackboard.ssao.isValid()) {
+                    data.ssao = builder.sample(blackboard.ssao);
+                }
+
+                data.color = builder.createTexture("Color Buffer",
+                        { .width = svp.width, .height = svp.height, .format = hdrFormat });
+
+                data.depth = builder.createTexture("Depth Buffer", {
+                        .width = svp.width, .height = svp.height,
+                        .format = TextureFormat::DEPTH24
+                });
+
+                data.color = builder.write(builder.read(data.color));
+                data.depth = builder.write(builder.read(data.depth));
+
+                data.rt = builder.createRenderTarget("Color Pass Target", {
+                        .attachments = { data.color, data.depth },
+                        .samples = msaa,
+                }, clearFlags);
+            },
+            [pass, clearColor]
+                    (FrameGraphPassResources const& resources,
+                            ColorPassData const& data, DriverApi& driver) {
+                auto out = resources.getRenderTarget(data.rt);
+
+                out.params.clearColor = clearColor;
+
+                pass.execute(resources.getPassName(), out.target, out.params);
+            });
+
+    return colorPass.getData().color;
 }
 
 void FRenderer::copyFrame(FSwapChain* dstSwapChain, filament::Viewport const& dstViewport,
@@ -645,7 +671,7 @@ Handle<HwRenderTarget> FRenderer::getRenderTarget(FView& view) const noexcept {
     return viewRenderTarget ? viewRenderTarget : mRenderTarget;
 }
 
-RenderPass::CommandTypeFlags FRenderer::getCommandType(View::DepthPrepass prepass) const noexcept {
+RenderPass::CommandTypeFlags FRenderer::getCommandType(View::DepthPrepass prepass) noexcept {
     RenderPass::CommandTypeFlags commandType;
     switch (prepass) {
         case View::DepthPrepass::DEFAULT:
