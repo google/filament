@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 The Android Open Source Project
+ * Copyright (C) 2020 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.android.filament.gltfio;
+package com.google.android.filament.utils;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -25,7 +25,6 @@ import com.google.android.filament.Skybox;
 import com.google.android.filament.Texture;
 
 import java.lang.reflect.Constructor;
-import java.lang.reflect.Method;
 import java.nio.Buffer;
 
 /**

@@ -27,6 +27,7 @@ import android.view.animation.LinearInterpolator
 import com.google.android.filament.*
 import com.google.android.filament.android.UiHelper
 import com.google.android.filament.gltfio.*
+import com.google.android.filament.utils.*
 
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -46,7 +47,7 @@ class MainActivity : Activity() {
 
     companion object {
         init {
-            Gltfio.init()
+            Utils.init()
         }
     }
 
