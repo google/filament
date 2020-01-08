@@ -17,8 +17,8 @@
 package com.google.android.filament.android;
 
 import android.graphics.Bitmap;
-import android.support.annotation.IntRange;
-import android.support.annotation.NonNull;
+import androidx.annotation.IntRange;
+import androidx.annotation.NonNull;
 
 import com.google.android.filament.Engine;
 import com.google.android.filament.Texture;

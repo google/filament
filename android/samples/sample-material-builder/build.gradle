@@ -1,0 +1,56 @@
+apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android'
+apply plugin: 'kotlin-android-extensions'
+
+apply from: '../../gradle/filament-tasks.gradle'
+
+compileMesh {
+    group 'Filament'
+    description 'Compile mesh'
+
+    inputFile = file("../../../third_party/models/shader_ball/shader_ball.obj")
+    outputDir = file("src/main/assets/models")
+}
+
+generateIbl {
+    group 'Filament'
+    description 'Generate IBL'
+
+    inputFile = file("../../../third_party/environments/flower_road_no_sun_2k.hdr")
+    outputDir = file("src/main/assets/envs")
+}
+
+preBuild.dependsOn compileMesh
+preBuild.dependsOn generateIbl
+
+clean.doFirst {
+    delete "src/main/assets"
+}
+
+android {
+    compileSdkVersion versions.compileSdk
+    defaultConfig {
+        applicationId "com.google.android.filament.material_builder"
+        minSdkVersion versions.minSdk
+        targetSdkVersion versions.targetSdk
+    }
+
+    // The filamat library has two variants: full and lite. Here we default to the "full" variant.
+    // Replace "full" with "lite" to use the filamat-lite variant, which has a smaller binary size
+    // but comes with certain restrictions. See "Filamat Lite" in libs/filamat/README.md.
+    defaultConfig {
+        missingDimensionStrategy 'functionality', 'full'
+    }
+
+    // We use the .filamat extension for materials compiled with matc
+    // Telling aapt to not compress them allows to load them efficiently
+    aaptOptions {
+        noCompress 'filamat'
+    }
+}
+
+dependencies {
+    implementation deps.kotlin
+    implementation project(':filament-android')
+    implementation project(':filamat-android')
+}

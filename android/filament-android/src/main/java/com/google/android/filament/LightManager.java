@@ -16,9 +16,9 @@
 
 package com.google.android.filament;
 
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.annotation.Size;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.Size;
 
 public class LightManager {
     private long mNativeObject;

@@ -16,7 +16,7 @@
 
 package com.google.android.filament;
 
-import android.support.annotation.IntRange;
+import androidx.annotation.IntRange;
 
 /**
  * Specifies a rectangular region within a render target in terms of pixel coordinates.

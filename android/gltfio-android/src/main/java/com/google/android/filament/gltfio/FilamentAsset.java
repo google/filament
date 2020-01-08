@@ -16,7 +16,7 @@
 
 package com.google.android.filament.gltfio;
 
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
 import com.google.android.filament.Box;
 import com.google.android.filament.Entity;

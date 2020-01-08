@@ -156,6 +156,6 @@ set(JAVA_SOURCE_FILES
 
 add_jar(${TARGET}
         SOURCES ${JAVA_SOURCE_FILES}
-        INCLUDE_JARS ../lib/support-annotations.jar)
+        INCLUDE_JARS ../lib/annotation-1.0.0.jar)
 
 install_jar(${TARGET} lib)

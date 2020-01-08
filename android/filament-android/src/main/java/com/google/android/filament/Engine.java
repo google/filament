@@ -16,7 +16,7 @@
 
 package com.google.android.filament;
 
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
 import com.google.android.filament.proguard.UsedByReflection;
 

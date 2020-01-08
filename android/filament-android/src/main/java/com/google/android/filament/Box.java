@@ -16,8 +16,8 @@
 
 package com.google.android.filament;
 
-import android.support.annotation.NonNull;
-import android.support.annotation.Size;
+import androidx.annotation.NonNull;
+import androidx.annotation.Size;
 
 /**
  * An axis-aligned 3D box represented by its center and half-extent.

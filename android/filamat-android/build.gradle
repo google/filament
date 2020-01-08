@@ -1,67 +1,22 @@
-// This script accepts the following parameters:
-//
-// filament_dist_dir
-//     Path to the Filament distribution/install directory for Android
-//     (produced by make/ninja install). This directory must contain lib/arm64-v8a/ etc.
-//
-// Example:
-//     ./gradlew -Pfilament_dist_dir=../../dist-android-release assembleRelease
-
-buildscript {
-    repositories {
-        google()
-        jcenter()
-    }
-    dependencies {
-        classpath 'com.android.tools.build:gradle:3.5.0'
-    }
-}
-
-allprojects {
-    repositories {
-        google()
-        jcenter()
-    }
-}
-
-group = "com.google.android.filament"
-version = "1.3"
-
 apply plugin: 'com.android.library'
 
-def filament_path = file("../../out/android-release/filament").absolutePath
-if (project.hasProperty("filament_dist_dir")) {
-    filament_path = file("$filament_dist_dir").absolutePath
-}
-
 android {
-    compileSdkVersion 29
+    compileSdkVersion versions.compileSdk
     defaultConfig {
-        minSdkVersion 14
-        targetSdkVersion 29
-        versionCode 1
-        versionName "1.0"
-
-        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+        minSdkVersion versions.minSdk
+        targetSdkVersion versions.targetSdk
 
         externalNativeBuild {
             cmake {
                 arguments.add("-DANDROID_PIE=ON")
-                arguments.add("-DANDROID_PLATFORM=android-19")
+                arguments.add("-DANDROID_PLATFORM=android-${versions.targetSdk}".toString())
                 arguments.add("-DANDROID_STL=c++_static")
-                arguments.add("-DFILAMENT_DIST_DIR=${filament_path}".toString())
+                arguments.add("-DFILAMENT_DIST_DIR=${filamentPath}".toString())
                 cppFlags.add("-std=c++14")
                 if (project.hasProperty('extra_cmake_args')) {
                     arguments.add(extra_cmake_args)
                 }
             }
-        }
-    }
-
-    buildTypes {
-        release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
 
@@ -101,6 +56,7 @@ android {
 }
 
 dependencies {
-    implementation fileTree(include: ['*.jar'], dir: 'libs')
-    implementation 'com.android.support:support-annotations:28.0.0'
+    implementation deps.androidx.annotations
 }
+
+apply from: rootProject.file('gradle/gradle-mvn-push.gradle')

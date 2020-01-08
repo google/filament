@@ -121,9 +121,9 @@ This repository not only contains the core Filament engine, but also its support
 and tools.
 
 - `android`:               Android libraries and projects
-  - `build`:               Custom Gradle tasks for Android builds
   - `filamat-android`:     Filament material generation library (AAR) for Android
   - `filament-android`:    Filament library (AAR) for Android
+  - `gltfio-android`:      Filament glTF loading library (AAR) for Android
   - `samples`:             Android-specific Filament samples
 - `art`:                   Source for various artworks (logos, PDF manuals, etc.)
 - `assets`:                3D assets to use with sample applications
@@ -548,7 +548,7 @@ as explained in the sections above. You must have the following ABIs built in
 - `x86_64`
 - `x86`
 
-To build Filament's AAR simply open the Android Studio project in `android/filament-android`. The
+To build Filament's AAR simply open the Android Studio project in `android/`. The
 AAR is a universal AAR that contains all supported build targets:
 
 - `arm64-v8a`
@@ -559,8 +559,8 @@ AAR is a universal AAR that contains all supported build targets:
 To filter out unneeded ABIs, rely on the `abiFilters` of the project that links against Filament's
 AAR.
 
-Alternatively you can build the AAR from the command line by executing the following the
-`android/filament-android` directory:
+Alternatively you can build the AAR from the command line by executing the following in the
+`android/` directory:
 
 ```
 $ ./gradlew -Pfilament_dist_dir=../../out/android-release/filament assembleRelease

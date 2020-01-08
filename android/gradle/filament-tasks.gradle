@@ -1,0 +1,239 @@
+// This script accepts the following parameters:
+//
+// filament_tools_dir
+//     Path to the Filament distribution/install directory for desktop
+//     (produced by make/ninja install). This directory must contain bin/matc
+//
+// Example:
+//     ./gradlew -Pfilament_tools_dir=../../dist-release assembleDebug
+
+import java.nio.file.Paths
+import org.gradle.internal.os.OperatingSystem
+import org.gradle.api.logging.Logger;
+import org.gradle.api.logging.LogLevel;
+
+ext.filamentToolsPath = file("../../../out/release/filament")
+if (project.hasProperty("filament_tools_dir")) {
+    ext.filamentToolsPath = file("$filament_tools_dir")
+}
+
+class TaskWithBinary extends DefaultTask {
+    private final String binaryName = name;
+    private File binaryPath = null;
+
+    TaskWithBinary(String name) {
+        binaryName = name;
+    }
+
+    File getBinary() {
+        if (binaryPath == null) {
+            def fullPath = getBinaryPath(binaryName, project.ext.filamentToolsPath)
+            binaryPath = OperatingSystem.current().isWindows() ? fullPath[0] : fullPath[1]
+        }
+        return binaryPath
+    }
+
+    private List<File> getBinaryPath(String name, File toolsPath) {
+        def tool = ["/bin/${name}.exe", "/bin/${name}"]
+        def toolFullPath = tool.collect { path -> Paths.get(toolsPath.absolutePath, path).toFile() }
+
+        // Ensure that at least one matc binary and Filament library is present
+        if (!toolFullPath.any { path -> project.file(path).exists() }) {
+            throw new StopActionException("No ${name} binary could be found in " + toolsPath +
+                    "/bin. Ensure Filament has been built/installed before building this app.")
+        }
+
+        return toolFullPath
+    }
+}
+
+class LogOutputStream extends ByteArrayOutputStream {
+    private final Logger logger;
+    private final LogLevel level;
+
+    public LogOutputStream(Logger logger, LogLevel level) {
+        this.logger = logger;
+        this.level = level;
+    }
+
+    public Logger getLogger() {
+        return logger;
+    }
+
+    public LogLevel getLevel() {
+        return level;
+    }
+
+    @Override
+    public void flush() {
+        logger.log(level, toString());
+        reset();
+    }
+}
+
+// Custom task to compile material files using matc
+// This task handles incremental builds
+class MaterialCompiler extends TaskWithBinary {
+    @SuppressWarnings("GroovyUnusedDeclaration")
+    @InputDirectory
+    File inputDir
+
+    @OutputDirectory
+    File outputDir
+
+    MaterialCompiler() {
+        super("matc")
+    }
+
+    @SuppressWarnings("GroovyUnusedDeclaration")
+    @TaskAction
+    void execute(IncrementalTaskInputs inputs) {
+        if (!inputs.incremental) {
+            project.delete(project.fileTree(outputDir).matching { include '*.filamat' })
+        }
+
+        inputs.outOfDate { InputFileDetails outOfDate ->
+            if (outOfDate.file.directory) return
+            def file = outOfDate.file
+
+            def out = new LogOutputStream(logger, LogLevel.LIFECYCLE)
+            def err = new LogOutputStream(logger, LogLevel.ERROR)
+
+            def header = ("Compiling material " + file + "\n").getBytes()
+            out.write(header)
+            out.flush()
+
+            project.exec {
+                standardOutput out
+                errorOutput err
+                executable "${getBinary()}"
+                args('-a', 'all', '-p', 'mobile', '-o', getOutputFile(file), file)
+            }
+        }
+
+        inputs.removed { InputFileDetails removed ->
+            getOutputFile(removed.file).delete()
+        }
+    }
+
+    File getOutputFile(final File file) {
+        return new File(outputDir, file.name[0..file.name.lastIndexOf('.')] + 'filamat')
+    }
+}
+
+// Custom task to process IBLs using cmgen
+// This task handles incremental builds
+class IblGenerator extends TaskWithBinary {
+    String cmgenArgs = null;
+
+    @SuppressWarnings("GroovyUnusedDeclaration")
+    @InputFile
+    File inputFile
+
+    @OutputDirectory
+    File outputDir
+
+    IblGenerator() {
+        super("cmgen")
+    }
+
+    @SuppressWarnings("GroovyUnusedDeclaration")
+    @TaskAction
+    void execute(IncrementalTaskInputs inputs) {
+        if (!inputs.incremental) {
+            project.delete(project.fileTree(outputDir).matching { include '*' })
+        }
+
+        inputs.outOfDate { InputFileDetails outOfDate ->
+            def file = outOfDate.file
+
+            def out = new LogOutputStream(logger, LogLevel.LIFECYCLE)
+            def err = new LogOutputStream(logger, LogLevel.ERROR)
+
+            def header = ("Generating IBL " + file + "\n").getBytes()
+            out.write(header)
+            out.flush()
+
+            project.exec {
+                standardOutput out
+                errorOutput err
+                executable "${getBinary()}"
+                args('-x', outputDir, file)
+            }
+
+            project.exec {
+                standardOutput out
+                if (!cmgenArgs) {
+                    cmgenArgs = '--format=rgb32f --extract-blur=0.08 --extract=' + outputDir.absolutePath
+                }
+                cmgenArgs = cmgenArgs + " " + file
+                errorOutput err
+                executable "${cmgenPath}"
+                args(cmgenArgs.split())
+            }
+        }
+
+        inputs.removed { InputFileDetails removed ->
+            getOutputFile(removed.file).delete()
+        }
+    }
+
+    File getOutputFile(final File file) {
+        return new File(outputDir, file.name[0..file.name.lastIndexOf('.') - 1])
+    }
+}
+
+// Custom task to compile mesh files using filamesh
+// This task handles incremental builds
+class MeshCompiler extends TaskWithBinary {
+    @SuppressWarnings("GroovyUnusedDeclaration")
+    @InputFile
+    File inputFile
+
+    @OutputDirectory
+    File outputDir
+
+    MeshCompiler() {
+        super("filamesh")
+    }
+
+    @SuppressWarnings("GroovyUnusedDeclaration")
+    @TaskAction
+    void execute(IncrementalTaskInputs inputs) {
+        if (!inputs.incremental) {
+            project.delete(project.fileTree(outputDir).matching { include '*.filamesh' })
+        }
+
+        inputs.outOfDate { InputFileDetails outOfDate ->
+            def file = outOfDate.file
+
+            def out = new LogOutputStream(logger, LogLevel.LIFECYCLE)
+            def err = new LogOutputStream(logger, LogLevel.ERROR)
+
+            def header = ("Compiling mesh " + file + "\n").getBytes()
+            out.write(header)
+            out.flush()
+
+            project.exec {
+                standardOutput out
+                errorOutput err
+                executable "${getBinary()}"
+                args(file, getOutputFile(file))
+            }
+        }
+
+        inputs.removed { InputFileDetails removed ->
+            getOutputFile(removed.file).delete()
+        }
+    }
+
+    File getOutputFile(final File file) {
+        return new File(outputDir, file.name[0..file.name.lastIndexOf('.')] + 'filamesh')
+    }
+}
+
+task compileMaterials(type: MaterialCompiler)
+
+task generateIbl(type: IblGenerator)
+
+task compileMesh(type: MeshCompiler)

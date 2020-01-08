@@ -366,79 +366,51 @@ function build_android {
         archive_android "Release"
     fi
 
-    cd android/filament-android
+    cd android
 
     if [[ "$ISSUE_DEBUG_BUILD" == "true" ]]; then
-        ./gradlew -Pfilament_dist_dir=../../out/android-debug/filament assembleDebug \
-            -Pextra_cmake_args=${VULKAN_ANDROID_OPTION}
-
-        if [[ "$INSTALL_COMMAND" ]]; then
-            echo "Installing out/filament-android-debug.aar..."
-            cp build/outputs/aar/filament-android-debug.aar ../../out/
-        fi
-    fi
-
-    if [[ "$ISSUE_RELEASE_BUILD" == "true" ]]; then
-        ./gradlew -Pfilament_dist_dir=../../out/android-release/filament assembleRelease \
-            -Pextra_cmake_args=${VULKAN_ANDROID_OPTION}
-
-        if [[ "$INSTALL_COMMAND" ]]; then
-            echo "Installing out/filament-android-release.aar..."
-            cp build/outputs/aar/filament-android-release.aar ../../out/
-        fi
-    fi
-
-    cd ../..
-
-
-    cd android/filamat-android
-
-    if [[ "$ISSUE_DEBUG_BUILD" == "true" ]]; then
-        ./gradlew -Pfilament_dist_dir=../../out/android-debug/filament assembleDebug
+        ./gradlew \
+            -Pfilament_dist_dir=../out/android-debug/filament \
+            -Pextra_cmake_args=${VULKAN_ANDROID_OPTION} \
+            :filamat-android:assembleDebug \
+            :filament-android:assembleDebug \
+            :gltfio-android:assembleDebug
 
         if [[ "$INSTALL_COMMAND" ]]; then
             echo "Installing out/filamat-android-debug.aar..."
-            cp build/outputs/aar/filamat-android-full-debug.aar ../../out/
-            cp build/outputs/aar/filamat-android-lite-debug.aar ../../out/
+            cp filamat-android/build/outputs/aar/filamat-android-full-debug.aar ../out/
+            cp filamat-android/build/outputs/aar/filamat-android-lite-debug.aar ../out/
+
+            echo "Installing out/filament-android-debug.aar..."
+            cp filament-android/build/outputs/aar/filament-android-debug.aar ../out/
+
+            echo "Installing out/gltfio-android-debug.aar..."
+            cp gltfio-android/build/outputs/aar/gltfio-android-debug.aar ../out/
         fi
     fi
 
     if [[ "$ISSUE_RELEASE_BUILD" == "true" ]]; then
-        ./gradlew -Pfilament_dist_dir=../../out/android-release/filament assembleRelease
+        ./gradlew \
+            -Pfilament_dist_dir=../out/android-release/filament \
+            -Pextra_cmake_args=${VULKAN_ANDROID_OPTION} \
+            :filamat-android:assembleRelease \
+            :filament-android:assembleRelease \
+            :gltfio-android:assembleRelease
 
         if [[ "$INSTALL_COMMAND" ]]; then
             echo "Installing out/filamat-android-release.aar..."
-            cp build/outputs/aar/filamat-android-full-release.aar ../../out/
-            cp build/outputs/aar/filamat-android-lite-release.aar ../../out/
-        fi
-    fi
+            cp filamat-android/build/outputs/aar/filamat-android-full-release.aar ../out/
+            cp filamat-android/build/outputs/aar/filamat-android-lite-release.aar ../out/
 
-    cd ../..
+            echo "Installing out/filament-android-release.aar..."
+            cp filament-android/build/outputs/aar/filament-android-release.aar ../out/
 
-
-    cd android/gltfio-android
-
-    if [[ "$ISSUE_DEBUG_BUILD" == "true" ]]; then
-        ./gradlew -Pfilament_dist_dir=../../out/android-debug/filament assembleDebug \
-                    -Pextra_cmake_args=${VULKAN_ANDROID_OPTION}
-
-        if [[ "$INSTALL_COMMAND" ]]; then
-            echo "Installing out/gltfio-android-debug.aar..."
-            cp build/outputs/aar/gltfio-android-debug.aar ../../out/
-        fi
-    fi
-
-    if [[ "$ISSUE_RELEASE_BUILD" == "true" ]]; then
-        ./gradlew -Pfilament_dist_dir=../../out/android-release/filament assembleRelease \
-                -Pextra_cmake_args=${VULKAN_ANDROID_OPTION}
-
-        if [[ "$INSTALL_COMMAND" ]]; then
             echo "Installing out/gltfio-android-release.aar..."
-            cp build/outputs/aar/gltfio-android-release.aar ../../out/
+            cp gltfio-android/build/outputs/aar/gltfio-android-release.aar ../out/
         fi
     fi
 
-    cd ../..
+    cd ..
 }
 
 function ensure_ios_toolchain {
