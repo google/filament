@@ -170,7 +170,7 @@ FrameGraphPassResources::getRenderTarget(FrameGraphRenderTargetHandle handle, ui
 
 // ------------------------------------------------------------------------------------------------
 
-FrameGraph::FrameGraph(fg::ResourceAllocator& resourceAllocator)
+FrameGraph::FrameGraph(fg::ResourceAllocatorInterface& resourceAllocator)
         : mResourceAllocator(resourceAllocator),
           mArena("FrameGraph Arena", 32768), // TODO: the Area will eventually come from outside
           mPassNodes(mArena),
