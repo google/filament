@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 The Android Open Source Project
+ * Copyright (C) 2020 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,8 +28,23 @@ using namespace filament;
 using namespace filament::math;
 using namespace image;
 
+extern void registerCallbackUtils(JNIEnv*);
+extern void registerNioUtils(JNIEnv*);
+
+jint JNI_OnLoad(JavaVM* vm, void*) {
+    JNIEnv* env;
+    if (vm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6) != JNI_OK) {
+        return -1;
+    }
+
+    registerCallbackUtils(env);
+    registerNioUtils(env);
+
+    return JNI_VERSION_1_6;
+}
+
 extern "C" JNIEXPORT jlong JNICALL
-Java_com_google_android_filament_gltfio_KtxLoader_nCreateTexture(JNIEnv* env, jclass,
+Java_com_google_android_filament_utils_KtxLoader_nCreateTexture(JNIEnv* env, jclass,
         jlong nativeEngine, jobject javaBuffer, jint remaining, jboolean srgb) {
     Engine* engine = (Engine*) nativeEngine;
     AutoBuffer buffer(env, javaBuffer, remaining);
@@ -41,7 +56,7 @@ Java_com_google_android_filament_gltfio_KtxLoader_nCreateTexture(JNIEnv* env, jc
 }
 
 extern "C" JNIEXPORT jlong JNICALL
-Java_com_google_android_filament_gltfio_KtxLoader_nCreateIndirectLight(JNIEnv* env, jclass,
+Java_com_google_android_filament_utils_KtxLoader_nCreateIndirectLight(JNIEnv* env, jclass,
         jlong nativeEngine, jobject javaBuffer, jint remaining, jboolean srgb) {
     Engine* engine = (Engine*) nativeEngine;
     AutoBuffer buffer(env, javaBuffer, remaining);
@@ -64,7 +79,7 @@ Java_com_google_android_filament_gltfio_KtxLoader_nCreateIndirectLight(JNIEnv* e
 }
 
 extern "C" JNIEXPORT jlong JNICALL
-Java_com_google_android_filament_gltfio_KtxLoader_nCreateSkybox(JNIEnv* env, jclass,
+Java_com_google_android_filament_utils_KtxLoader_nCreateSkybox(JNIEnv* env, jclass,
         jlong nativeEngine, jobject javaBuffer, jint remaining, jboolean srgb) {
     Engine* engine = (Engine*) nativeEngine;
     AutoBuffer buffer(env, javaBuffer, remaining);

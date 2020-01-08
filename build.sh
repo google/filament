@@ -129,6 +129,8 @@ function build_clean {
     rm -Rf android/filamat-android/build android/filamat-android/.cxx
     rm -Rf android/gltfio-android/build android/gltfio-android/.externalNativeBuild
     rm -Rf android/gltfio-android/build android/gltfio-android/.cxx
+    rm -Rf android/filament-utils-android/build android/filament-utils-android/.externalNativeBuild
+    rm -Rf android/filament-utils-android/build android/filament-utils-android/.cxx
 }
 
 function build_desktop_target {
@@ -373,7 +375,8 @@ function build_android {
             -Pfilament_dist_dir=../out/android-debug/filament \
             -Pextra_cmake_args=${VULKAN_ANDROID_OPTION} \
             :filament-android:assembleDebug \
-            :gltfio-android:assembleDebug
+            :gltfio-android:assembleDebug \
+            :filament-utils-android:assembleDebug
 
         ./gradlew \
             -Pfilament_dist_dir=../out/android-debug/filament \
@@ -389,6 +392,9 @@ function build_android {
 
             echo "Installing out/gltfio-android-debug.aar..."
             cp gltfio-android/build/outputs/aar/gltfio-android-debug.aar ../out/
+
+            echo "Installing out/filament-utils-android-debug.aar..."
+            cp filament-utils-android/build/outputs/aar/filament-utils-android-debug.aar ../out/
         fi
     fi
 
@@ -396,7 +402,8 @@ function build_android {
         ./gradlew \
             -Pfilament_dist_dir=../out/android-release/filament \
             :filament-android:assembleRelease \
-            :gltfio-android:assembleRelease
+            :gltfio-android:assembleRelease \
+            :filament-utils-android:assembleRelease
 
         ./gradlew \
             -Pfilament_dist_dir=../out/android-release/filament \
@@ -412,6 +419,9 @@ function build_android {
 
             echo "Installing out/gltfio-android-release.aar..."
             cp gltfio-android/build/outputs/aar/gltfio-android-release.aar ../out/
+
+            echo "Installing out/filament-utils-android-debug.aar..."
+            cp filament-utils-android/build/outputs/aar/filament-utils-android-release.aar ../out/
         fi
     fi
 

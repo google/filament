@@ -2,6 +2,7 @@
 include ':filament-android'
 include ':filamat-android'
 include ':gltfio-android'
+include ':filament-utils-android'
 
 // Samples
 include ':samples:sample-gltf-bloom'
