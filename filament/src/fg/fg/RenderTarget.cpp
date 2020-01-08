@@ -35,7 +35,6 @@ void RenderTarget::resolve(FrameGraph& fg) noexcept {
 
     if (pos != renderTargetCache.end()) {
         cache = pos->get();
-        cache->targetInfo.params.flags.clear |= userClearFlags;
     } else {
         TargetBufferFlags attachments{};
         uint32_t width = 0;
@@ -100,7 +99,6 @@ void RenderTarget::resolve(FrameGraph& fg) noexcept {
                             backend::TargetBufferFlags(attachments), width, height, colorFormat);
             renderTargetCache.emplace_back(pRenderTargetResource, fg);
             cache = pRenderTargetResource;
-            cache->targetInfo.params.flags.clear |= userClearFlags;
         }
     }
 }
