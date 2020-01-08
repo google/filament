@@ -346,10 +346,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     TargetBufferFlags clearFlags = (TargetBufferFlags(viewClearFlags) & TargetBufferFlags::COLOR)
                                    | TargetBufferFlags::DEPTH;
 
-    FrameGraphId<FrameGraphTexture> colorPassOutput = colorPass(fg, prepareColorPasses.getData(),
-            pass, clearFlags, view.getClearColor());
-
-    FrameGraphId<FrameGraphTexture> input = colorPassOutput;
+    FrameGraphId<FrameGraphTexture> input;
+    input = colorPass(fg, prepareColorPasses.getData(), pass, clearFlags, view.getClearColor());
 
     fg.simpleSideEffectPass("Finish Color Passes", [&view]() {
         // Unbind SSAO sampler, b/c the FrameGraph will delete the texture at the end of the pass.
@@ -377,18 +375,12 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     // We need to do special processing when rendering directly into the swap-chain (see
     // comments below). That is when the viewRenderTarget is the default render target
     // (mRenderTarget) and we're rendering into it.
-    if (input == colorPassOutput) {
-        // here we know we're not scaled because either post-processing is disabled (which implies
-        // no scaling, or scaled==false because otherwise we wouldn't be rendering in the
-        // default target.
+    if (!hasPostProcess || (!toneMapping && !fxaa && !scaled)) {
         assert(!scaled);
-
         if (viewRenderTarget == mRenderTarget) {
-            // The default render target is not multi-sampled, so we need an intermediate
-            // buffer.
-            // The intermediate buffer  is accomplished with a "fake" dynamicScaling (i.e. blit)
+            // The default render target is not multi-sampled, so we need an intermediate buffer.
+            // The intermediate buffer is accomplished with a "fake" dynamicScaling (i.e. blit)
             // operation.
-
             if (msaa > 1) {
                 input = ppm.dynamicScaling(fg, msaa, scaled, blending, input, ldrFormat);
             }
@@ -414,7 +406,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 }
 
 FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg,
-        PrepareColorPassesData const& blackboard,
+        PrepareColorPassesData& blackboard,
         RenderPass const& pass, TargetBufferFlags clearFlags, float4 clearColor) noexcept {
 
     struct ColorPassData {
@@ -436,16 +428,20 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg,
                     data.ssao = builder.sample(blackboard.ssao);
                 }
 
-                data.color = builder.createTexture("Color Buffer",
-                        { .width = svp.width, .height = svp.height, .format = hdrFormat });
+                if (!blackboard.color.isValid()) {
+                    blackboard.color = builder.createTexture("Color Buffer",
+                            { .width = svp.width, .height = svp.height, .format = hdrFormat });
+                }
 
-                data.depth = builder.createTexture("Depth Buffer", {
-                        .width = svp.width, .height = svp.height,
-                        .format = TextureFormat::DEPTH24
-                });
+                if (!blackboard.depth.isValid()) {
+                    blackboard.depth = builder.createTexture("Depth Buffer", {
+                            .width = svp.width, .height = svp.height,
+                            .format = TextureFormat::DEPTH24
+                    });
+                }
 
-                data.color = builder.write(builder.read(data.color));
-                data.depth = builder.write(builder.read(data.depth));
+                data.color = blackboard.color = builder.write(builder.read(blackboard.color));
+                data.depth = blackboard.depth = builder.write(builder.read(blackboard.depth));
 
                 data.rt = builder.createRenderTarget("Color Pass Target", {
                         .attachments = { data.color, data.depth },
