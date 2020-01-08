@@ -14,6 +14,7 @@ A new header is inserted each time a *tag* is created.
 - Fixed crash when using a Metal headless SwapChain with an Intel integrated GPU.
 - cmgen now places KTX files directly in the specified deployment folder.
 - Added support for ASTC textures on iOS with Metal backend.
+- Added new heightfield sample.
 
 ## v1.4.3
 

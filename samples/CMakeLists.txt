@@ -38,6 +38,7 @@ set(MATERIAL_SRCS
         materials/aiDefaultTrans.mat
         materials/depthVisualizer.mat
         materials/groundShadow.mat
+        materials/heightfield.mat
         materials/sandboxCloth.mat
         materials/sandboxLit.mat
         materials/sandboxLitFade.mat
@@ -328,6 +329,10 @@ if (NOT ANDROID)
     target_compile_options(lucy_bloom PRIVATE ${COMPILER_FLAGS})
     target_link_libraries(lucy_bloom PRIVATE ${APP_LIBS} gltf-resources gltfio)
 endif()
+
+add_executable(heightfield heightfield.cpp)
+target_link_libraries(heightfield PRIVATE ${APP_LIBS})
+target_compile_options(heightfield PRIVATE ${COMPILER_FLAGS})
 
 # ==================================================================================================
 # Copy the MoltenVK dylibs and JSON on MacOS
