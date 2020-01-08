@@ -17,18 +17,12 @@
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
+apply plugin: FilamentToolsPlugin
 
-apply from: '../../gradle/filament-tasks.gradle'
-
-compileMaterials {
-    group 'Filament'
-    description 'Compile materials'
-
-    inputDir = file("src/main/materials")
-    outputDir = file("src/main/assets/materials")
+filamentTools {
+    materialInputDir = file("src/main/materials")
+    materialOutputDir = file("src/main/assets/materials")
 }
-
-preBuild.dependsOn compileMaterials
 
 clean.doFirst {
     delete "src/main/assets"

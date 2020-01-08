@@ -9,65 +9,57 @@
 
 import java.nio.file.Paths
 import org.gradle.internal.os.OperatingSystem
-import org.gradle.api.logging.Logger;
-import org.gradle.api.logging.LogLevel;
-
-ext.filamentToolsPath = file("../../../out/release/filament")
-if (project.hasProperty("filament_tools_dir")) {
-    ext.filamentToolsPath = file("$filament_tools_dir")
-}
+import org.gradle.api.*
+import org.gradle.api.logging.*
+import org.gradle.api.tasks.*
+import org.gradle.api.tasks.incremental.*
 
 class TaskWithBinary extends DefaultTask {
-    private final String binaryName = name;
-    private File binaryPath = null;
+    private final String binaryName
+    private File binaryPath = null
 
     TaskWithBinary(String name) {
-        binaryName = name;
+        binaryName = name
+    }
+
+    String getBinaryName() {
+        return binaryName
     }
 
     File getBinary() {
         if (binaryPath == null) {
-            def fullPath = getBinaryPath(binaryName, project.ext.filamentToolsPath)
+            def tool = ["/bin/${binaryName}.exe", "/bin/${binaryName}"]
+            def fullPath = tool.collect { path ->
+                Paths.get(project.ext.filamentToolsPath.absolutePath, path).toFile()
+            }
+
             binaryPath = OperatingSystem.current().isWindows() ? fullPath[0] : fullPath[1]
         }
         return binaryPath
     }
-
-    private List<File> getBinaryPath(String name, File toolsPath) {
-        def tool = ["/bin/${name}.exe", "/bin/${name}"]
-        def toolFullPath = tool.collect { path -> Paths.get(toolsPath.absolutePath, path).toFile() }
-
-        // Ensure that at least one matc binary and Filament library is present
-        if (!toolFullPath.any { path -> project.file(path).exists() }) {
-            throw new StopActionException("No ${name} binary could be found in " + toolsPath +
-                    "/bin. Ensure Filament has been built/installed before building this app.")
-        }
-
-        return toolFullPath
-    }
 }
 
 class LogOutputStream extends ByteArrayOutputStream {
-    private final Logger logger;
-    private final LogLevel level;
+    private final Logger logger
+    private final LogLevel level
 
-    public LogOutputStream(Logger logger, LogLevel level) {
-        this.logger = logger;
-        this.level = level;
+    LogOutputStream(Logger logger, LogLevel level) {
+        this.logger = logger
+        this.level = level
     }
 
-    public Logger getLogger() {
-        return logger;
+    Logger getLogger() {
+        return logger
     }
 
-    public LogLevel getLevel() {
-        return level;
+    LogLevel getLevel() {
+        return level
     }
 
     @Override
-    public void flush() {
-        logger.log(level, toString());
-        reset();
+    void flush() {
+        logger.log(level, toString())
+        reset()
     }
 }
 
@@ -103,6 +95,11 @@ class MaterialCompiler extends TaskWithBinary {
             out.write(header)
             out.flush()
 
+            if (!getBinary().exists()) {
+                throw new GradleException("Could not find ${getBinary()}." +
+                        " Ensure Filament has been built/installed before building this app.")
+            }
+
             project.exec {
                 standardOutput out
                 errorOutput err
@@ -124,7 +121,7 @@ class MaterialCompiler extends TaskWithBinary {
 // Custom task to process IBLs using cmgen
 // This task handles incremental builds
 class IblGenerator extends TaskWithBinary {
-    String cmgenArgs = null;
+    String cmgenArgs = null
 
     @SuppressWarnings("GroovyUnusedDeclaration")
     @InputFile
@@ -154,21 +151,20 @@ class IblGenerator extends TaskWithBinary {
             out.write(header)
             out.flush()
 
-            project.exec {
-                standardOutput out
-                errorOutput err
-                executable "${getBinary()}"
-                args('-x', outputDir, file)
+            if (!getBinary().exists()) {
+                throw new GradleException("Could not find ${getBinary()}." +
+                        " Ensure Filament has been built/installed before building this app.")
             }
 
             project.exec {
                 standardOutput out
                 if (!cmgenArgs) {
-                    cmgenArgs = '--format=rgb32f --extract-blur=0.08 --extract=' + outputDir.absolutePath
+                    cmgenArgs = '-q -x ' + outputDir +
+                            ' --format=rgb32f --extract-blur=0.08 --extract=' + outputDir.absolutePath
                 }
                 cmgenArgs = cmgenArgs + " " + file
                 errorOutput err
-                executable "${cmgenPath}"
+                executable "${getBinary()}"
                 args(cmgenArgs.split())
             }
         }
@@ -214,6 +210,11 @@ class MeshCompiler extends TaskWithBinary {
             out.write(header)
             out.flush()
 
+            if (!getBinary().exists()) {
+                throw new GradleException("Could not find ${getBinary()}." +
+                        " Ensure Filament has been built/installed before building this app.")
+            }
+
             project.exec {
                 standardOutput out
                 errorOutput err
@@ -232,8 +233,50 @@ class MeshCompiler extends TaskWithBinary {
     }
 }
 
-task compileMaterials(type: MaterialCompiler)
+class FilamentToolsPluginExtension {
+    File materialInputDir
+    File materialOutputDir
 
-task generateIbl(type: IblGenerator)
+    String cmgenArgs
+    File iblInputFile
+    File iblOutputDir
 
-task compileMesh(type: MeshCompiler)
+    File meshInputFile
+    File meshOutputDir
+}
+
+class FilamentToolsPlugin implements Plugin<Project> {
+    void apply(Project project) {
+        def extension = project.extensions.create('filamentTools', FilamentToolsPluginExtension)
+
+        project.ext.filamentToolsPath = project.file("../../../out/release/filament")
+        if (project.hasProperty("filament_tools_dir")) {
+            project.ext.filamentToolsPath = project.file("$filament_tools_dir")
+        }
+
+        project.tasks.register("filamentCompileMaterials", MaterialCompiler) {
+            enabled = extension.materialInputDir != null && extension.materialOutputDir != null
+            inputDir = extension.materialInputDir
+            outputDir = extension.materialOutputDir
+        }
+
+        project.preBuild.dependsOn "filamentCompileMaterials"
+
+        project.tasks.register("filamentGenerateIbl", IblGenerator) {
+            enabled = extension.iblInputFile != null && extension.iblOutputDir != null
+            cmgenArgs = extension.cmgenArgs
+            inputFile = extension.iblInputFile
+            outputDir = extension.iblOutputDir
+        }
+
+        project.preBuild.dependsOn "filamentGenerateIbl"
+
+        project.tasks.register("filamentCompileMesh", MeshCompiler) {
+            enabled = extension.meshInputFile != null && extension.meshOutputDir != null
+            inputFile = extension.meshInputFile
+            outputDir = extension.meshOutputDir
+        }
+
+        project.preBuild.dependsOn "filamentCompileMesh"
+    }
+}

@@ -8,6 +8,5 @@
 .DS_Store
 /build
 /captures
-/app/src/main/assets/materials/*.filamat
-/app/src/main/assets/envs
+/src/main/assets
 .externalNativeBuild
