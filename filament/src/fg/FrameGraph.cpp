@@ -216,7 +216,7 @@ FrameGraphHandle FrameGraph::moveResource(FrameGraphHandle from, FrameGraphHandl
 }
 
 void FrameGraph::present(FrameGraphHandle input) {
-    addPass<std::tuple<>>("Present",
+    addPass<Empty>("Present",
             [&](Builder& builder, auto& data) {
                 builder.read(input);
                 builder.sideEffect();

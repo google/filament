@@ -74,6 +74,12 @@ void RenderPass::overrideMaterial(FMaterial const* material, FMaterialInstance c
     mMaterialInstanceOverride = mi;
 }
 
+RenderPass::Command* RenderPass::newCommandBuffer() noexcept {
+    GrowingSlice<Command>& commands = mCommands;
+    commands = GrowingSlice<Command>(commands.end(), commands.capacity() - commands.size());
+    return commands.begin();
+}
+
 RenderPass::Command* RenderPass::appendCommands(CommandTypeFlags const commandTypeFlags) noexcept {
     SYSTRACE_CONTEXT();
 
@@ -149,15 +155,15 @@ RenderPass::Command* RenderPass::appendCustomCommand(Pass pass, CustomCommand cu
     return curr + 1;
 }
 
-RenderPass::Command* RenderPass::sortCommands(Command* curr) noexcept {
+RenderPass::Command* RenderPass::sortCommands() noexcept {
     SYSTRACE_NAME("sort and trim commands");
 
     GrowingSlice<Command>& commands = mCommands;
 
-    std::sort(curr, commands.end());
+    std::sort(commands.begin(), commands.end());
 
     // find the last command
-    Command const* const last = std::partition_point(curr, commands.end(),
+    Command const* const last = std::partition_point(commands.begin(), commands.end(),
             [](Command const& c) {
                 return c.key != uint64_t(Pass::SENTINEL);
             });
@@ -169,10 +175,11 @@ RenderPass::Command* RenderPass::sortCommands(Command* curr) noexcept {
 
 void RenderPass::execute(const char* name,
         backend::Handle<backend::HwRenderTarget> renderTarget,
-        backend::RenderPassParams params,
-        Command const* first, Command const* last) const noexcept {
+        backend::RenderPassParams params) const noexcept {
 
     FEngine& engine = mEngine;
+    Command const* const first = mCommands.begin();
+    Command const* const last = mCommands.end();
 
     // Take care not to upload data within the render pass (synchronize can commit froxel data)
     DriverApi& driver = engine.getDriverApi();

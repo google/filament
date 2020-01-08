@@ -163,6 +163,8 @@ public:
     using size_type         = typename Slice<T, SIZE_TYPE>::size_type;
 
     GrowingSlice() noexcept = default;
+    GrowingSlice(GrowingSlice const& rhs) noexcept = default;
+    GrowingSlice(GrowingSlice&& rhs) noexcept = default;
 
     template<typename Iter>
     GrowingSlice(Iter begin, size_type count) noexcept
@@ -180,7 +182,7 @@ public:
     template<typename Iter>
     void set(Iter begin, size_type count) UTILS_RESTRICT noexcept {
         this->Slice<T, SIZE_TYPE>::set(begin, count);
-       mCapOffset = count;
+        mCapOffset = count;
     }
 
     template<typename Iter>

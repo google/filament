@@ -69,7 +69,7 @@ public:
 private:
     details::FEngine& mEngine;
 
-    FrameGraphId<FrameGraphTexture> depthPass(FrameGraph& fg, details::RenderPass& pass,
+    FrameGraphId<FrameGraphTexture> depthPass(FrameGraph& fg, details::RenderPass const& pass,
             uint32_t width, uint32_t height, View::AmbientOcclusionOptions const& options) noexcept;
 
     FrameGraphId<FrameGraphTexture> mipmapPass(FrameGraph& fg,
