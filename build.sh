@@ -390,8 +390,8 @@ function build_android {
     fi
 
     if [[ "$ISSUE_RELEASE_BUILD" == "true" ]]; then
-        ./gradlew
-            -Pfilament_dist_dir=../out/android-debug/filament \
+        ./gradlew \
+            -Pfilament_dist_dir=../out/android-release/filament \
             -Pextra_cmake_args=${VULKAN_ANDROID_OPTION} \
             :filamat-android:assembleRelease \
             :filament-android:assembleRelease \
