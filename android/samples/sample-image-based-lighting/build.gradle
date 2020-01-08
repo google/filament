@@ -1,36 +1,18 @@
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
+apply plugin: FilamentToolsPlugin
 
-apply from: '../../gradle/filament-tasks.gradle'
+filamentTools {
+    materialInputDir = file("src/main/materials")
+    materialOutputDir = file("src/main/assets/materials")
 
-compileMaterials {
-    group 'Filament'
-    description 'Compile materials'
+    meshInputFile = file("../../../third_party/models/shader_ball/shader_ball.obj")
+    meshOutputDir = file("src/main/assets/models")
 
-    inputDir = file("src/main/materials")
-    outputDir = file("src/main/assets/materials")
+    iblInputFile = file("../../../third_party/environments/flower_road_no_sun_2k.hdr")
+    iblOutputDir = file("src/main/assets/envs")
 }
-
-compileMesh {
-    group 'Filament'
-    description 'Compile mesh'
-
-    inputFile = file("../../../third_party/models/shader_ball/shader_ball.obj")
-    outputDir = file("src/main/assets/models")
-}
-
-generateIbl {
-    group 'Filament'
-    description 'Generate IBL'
-
-    inputFile = file("../../../third_party/environments/flower_road_no_sun_2k.hdr")
-    outputDir = file("src/main/assets/envs")
-}
-
-preBuild.dependsOn compileMaterials
-preBuild.dependsOn compileMesh
-preBuild.dependsOn generateIbl
 
 clean.doFirst {
     delete "src/main/assets"
