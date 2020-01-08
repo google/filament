@@ -12,28 +12,40 @@ import org.gradle.internal.os.OperatingSystem
 import org.gradle.api.logging.Logger;
 import org.gradle.api.logging.LogLevel;
 
-def filamentToolsPath = file("../../../out/release/filament")
+ext.filamentToolsPath = file("../../../out/release/filament")
 if (project.hasProperty("filament_tools_dir")) {
-    filamentToolsPath = file("$filament_tools_dir")
+    ext.filamentToolsPath = file("$filament_tools_dir")
 }
 
-List<File> getBinaries(String name, File toolsPath) {
-    def tool = ["/bin/${name}.exe", "/bin/${name}"]
-    def toolFullPath = tool.collect { path -> Paths.get(toolsPath.absolutePath, path).toFile() }
+class TaskWithBinary extends DefaultTask {
+    private final String binaryName = name;
+    private File binaryPath = null;
 
-    // Ensure that at least one matc binary and Filament library is present
-    if (!toolFullPath.any { path -> file(path).exists() }) {
-        throw new StopActionException("No ${name} binary could be found in " + toolsPath +
-                "/bin. Ensure Filament has been built/installed before building this app.")
+    TaskWithBinary(String name) {
+        binaryName = name;
     }
 
-    return toolFullPath
-}
+    File getBinary() {
+        if (binaryPath == null) {
+            def fullPath = getBinaryPath(binaryName, project.ext.filamentToolsPath)
+            binaryPath = OperatingSystem.current().isWindows() ? fullPath[0] : fullPath[1]
+        }
+        return binaryPath
+    }
 
-ext.matcFullPath = getBinaries('matc', filamentToolsPath)
-ext.cmgenFullPath = getBinaries('cmgen', filamentToolsPath)
-ext.filameshFullPath = getBinaries('filamesh', filamentToolsPath)
-ext.resgenFullPath = getBinaries('resgen', filamentToolsPath)
+    private List<File> getBinaryPath(String name, File toolsPath) {
+        def tool = ["/bin/${name}.exe", "/bin/${name}"]
+        def toolFullPath = tool.collect { path -> Paths.get(toolsPath.absolutePath, path).toFile() }
+
+        // Ensure that at least one matc binary and Filament library is present
+        if (!toolFullPath.any { path -> project.file(path).exists() }) {
+            throw new StopActionException("No ${name} binary could be found in " + toolsPath +
+                    "/bin. Ensure Filament has been built/installed before building this app.")
+        }
+
+        return toolFullPath
+    }
+}
 
 class LogOutputStream extends ByteArrayOutputStream {
     private final Logger logger;
@@ -61,9 +73,7 @@ class LogOutputStream extends ByteArrayOutputStream {
 
 // Custom task to compile material files using matc
 // This task handles incremental builds
-class MaterialCompiler extends DefaultTask {
-    File matcPath
-
+class MaterialCompiler extends TaskWithBinary {
     @SuppressWarnings("GroovyUnusedDeclaration")
     @InputDirectory
     File inputDir
@@ -72,8 +82,7 @@ class MaterialCompiler extends DefaultTask {
     File outputDir
 
     MaterialCompiler() {
-        matcPath = OperatingSystem.current().isWindows() ?
-                project.ext.matcFullPath[0] : project.ext.matcFullPath[1]
+        super("matc")
     }
 
     @SuppressWarnings("GroovyUnusedDeclaration")
@@ -97,7 +106,7 @@ class MaterialCompiler extends DefaultTask {
             project.exec {
                 standardOutput out
                 errorOutput err
-                executable "${matcPath}"
+                executable "${getBinary()}"
                 args('-a', 'all', '-p', 'mobile', '-o', getOutputFile(file), file)
             }
         }
@@ -114,8 +123,7 @@ class MaterialCompiler extends DefaultTask {
 
 // Custom task to process IBLs using cmgen
 // This task handles incremental builds
-class IblGenerator extends DefaultTask {
-    File cmgenPath
+class IblGenerator extends TaskWithBinary {
     String cmgenArgs = null;
 
     @SuppressWarnings("GroovyUnusedDeclaration")
@@ -126,8 +134,7 @@ class IblGenerator extends DefaultTask {
     File outputDir
 
     IblGenerator() {
-        cmgenPath = OperatingSystem.current().isWindows() ?
-                project.ext.cmgenFullPath[0] : project.ext.cmgenFullPath[1]
+        super("cmgen")
     }
 
     @SuppressWarnings("GroovyUnusedDeclaration")
@@ -150,7 +157,7 @@ class IblGenerator extends DefaultTask {
             project.exec {
                 standardOutput out
                 errorOutput err
-                executable "${cmgenPath}"
+                executable "${getBinary()}"
                 args('-x', outputDir, file)
             }
 
@@ -178,9 +185,7 @@ class IblGenerator extends DefaultTask {
 
 // Custom task to compile mesh files using filamesh
 // This task handles incremental builds
-class MeshCompiler extends DefaultTask {
-    File filameshPath
-
+class MeshCompiler extends TaskWithBinary {
     @SuppressWarnings("GroovyUnusedDeclaration")
     @InputFile
     File inputFile
@@ -189,8 +194,7 @@ class MeshCompiler extends DefaultTask {
     File outputDir
 
     MeshCompiler() {
-        filameshPath = OperatingSystem.current().isWindows() ?
-                project.ext.filameshFullPath[0] : project.ext.filameshFullPath[1]
+        super("filamesh")
     }
 
     @SuppressWarnings("GroovyUnusedDeclaration")
@@ -213,7 +217,7 @@ class MeshCompiler extends DefaultTask {
             project.exec {
                 standardOutput out
                 errorOutput err
-                executable "${filameshPath}"
+                executable "${getBinary()}"
                 args(file, getOutputFile(file))
             }
         }
