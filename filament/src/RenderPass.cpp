@@ -42,7 +42,7 @@ using namespace backend;
 namespace details {
 
 RenderPass::RenderPass(FEngine& engine,
-        GrowingSlice<RenderPass::Command>& commands) noexcept
+        GrowingSlice<RenderPass::Command> commands) noexcept
         : mEngine(engine), mCommands(commands),
           mCustomCommands(engine.getPerRenderPassAllocator()) {
     mCustomCommands.reserve(8); // preallocate allocate a reasonable number of custom commands
@@ -274,15 +274,17 @@ void RenderPass::setupColorCommand(Command& cmdDraw, bool hasDepthPass,
     keyBlending |= uint64_t(Pass::BLENDED);
     keyBlending |= uint64_t(CustomCommand::PASS);
 
+    bool hasScreenSpaceRefraction = ma->getRefractionMode() == RefractionMode::SCREEN_SPACE;
+    bool hasBlending = !hasScreenSpaceRefraction && ma->getRasterState().hasBlending();
+
     uint64_t keyDraw = cmdDraw.key;
     keyDraw &= ~(PASS_MASK | BLENDING_MASK | MATERIAL_MASK);
-    keyDraw |= uint64_t(Pass::COLOR);
+    keyDraw |= uint64_t(hasScreenSpaceRefraction ? Pass::REFRACT : Pass::COLOR);
     keyDraw |= uint64_t(CustomCommand::PASS);
     keyDraw |= mi->getSortingKey(); // already all set-up for direct or'ing
     keyDraw |= makeField(variant, MATERIAL_VARIANT_KEY_MASK, MATERIAL_VARIANT_KEY_SHIFT);
     keyDraw |= makeField(ma->getRasterState().alphaToCoverage, BLENDING_MASK, BLENDING_SHIFT);
 
-    bool hasBlending = ma->getRasterState().hasBlending();
     cmdDraw.key = hasBlending ? keyBlending : keyDraw;
     cmdDraw.primitive.rasterState = ma->getRasterState();
     cmdDraw.primitive.rasterState.inverseFrontFaces = inverseFrontFaces;

@@ -313,21 +313,26 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     pass.appendCommands(commandType);
     pass.sortCommands();
 
+    const ColorPassConfig config {
+            .svp = svp,
+            .hdrFormat = hdrFormat,
+            .msaa = msaa
+    };
+
     // We use a framegraph pass to commit the View's uniforms and wait for froxelization to finish
-    auto& prepareColorPasses = fg.addPass<PrepareColorPassesData>("Prepare Color Passes",
-            [useSSAO, ssao, msaa, hdrFormat, &svp]
-                    (FrameGraph::Builder& builder, PrepareColorPassesData& data) {
+    struct PrepareColorPassesData {
+        FrameGraphId<FrameGraphTexture> ssao;
+    };
+    fg.addPass<PrepareColorPassesData>("Prepare Color Passes",
+            [&fg, useSSAO, ssao](FrameGraph::Builder& builder, auto& data) {
                 if (useSSAO) {
                     data.ssao = builder.sample(ssao);
                 }
-                data.svp = svp;
-                data.hdrFormat = hdrFormat;
-                data.msaa = msaa;
+                fg.getBlackboard().put("ssao", data.ssao);
                 builder.sideEffect();
             },
             [&ppm, &js, &view, jobFroxelize]
-                    (FrameGraphPassResources const& resources,
-                            PrepareColorPassesData const& data, DriverApi& driver) {
+                    (FrameGraphPassResources const& resources, auto const& data, DriverApi& driver) {
                 view.prepareSSAO(data.ssao.isValid() ? resources.getTexture(data.ssao)
                                                      : ppm.getNoSSAOTexture());
                 view.commitUniforms(driver);
@@ -338,7 +343,6 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                 }
             });
 
-
     // We only honor the view's color buffer clear flags, depth/stencil are handled by the FrameGraph
     uint8_t viewClearFlags = view.getClearFlags() & (uint8_t)TargetBufferFlags::ALL;
 
@@ -348,7 +352,10 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                                    | TargetBufferFlags::DEPTH;
 
     FrameGraphId<FrameGraphTexture> input;
-    input = colorPass(fg, prepareColorPasses.getData(), pass, clearFlags, view.getClearColor());
+    input = colorPass(fg, config, pass, clearFlags, view.getClearColor());
+
+    // TODO: look for refraction draw calls only if screen-space refraction is enabled
+    input = refractionPass(fg, config, pass, input, view, clearFlags);
 
     fg.simpleSideEffectPass("Finish Color Passes", [&view]() {
         // Unbind SSAO sampler, b/c the FrameGraph will delete the texture at the end of the pass.
@@ -373,41 +380,72 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         }
     }
 
-    // We need to do special processing when rendering directly into the swap-chain (see
-    // comments below). That is when the viewRenderTarget is the default render target
-    // (mRenderTarget) and we're rendering into it.
-    if (!hasPostProcess || (!toneMapping && !fxaa && !scaled)) {
-        assert(!scaled);
-        if (viewRenderTarget == mRenderTarget) {
-            // The default render target is not multi-sampled, so we need an intermediate buffer.
-            // The intermediate buffer is accomplished with a "fake" dynamicScaling (i.e. blit)
-            // operation.
-            if (msaa > 1) {
-                input = ppm.dynamicScaling(fg, msaa, scaled, blending, input, ldrFormat);
-            }
-        }
-    } else {
-        if (blending) {
-            input = ppm.dynamicScaling(fg, msaa, scaled, blending, input, ldrFormat);
-        }
+    // We need to do special processing when rendering directly into the swap-chain, that is when
+    // the viewRenderTarget is the default render target (mRenderTarget) and we're rendering into
+    // it. This is because the default render target is not multi-sampled, so we need an
+    // intermediate buffer when MSAA is enabled.
+    // We also need an extra buffer for blending the result to the framebuffer if the view
+    // is translucent.
+    // The intermediate buffer is accomplished with a "fake" dynamicScaling (i.e. blit)
+    // operation.
+
+    const bool outputIsInput = !hasPostProcess || (!toneMapping && !fxaa && !scaled);
+    if ((outputIsInput && viewRenderTarget == mRenderTarget && msaa > 1) ||
+        (!outputIsInput && blending)) {
+        input = ppm.dynamicScaling(fg, msaa, scaled, blending, input, ldrFormat);
     }
 
     fg.present(input);
-
     fg.moveResource(fgViewRenderTarget, input);
-
     fg.compile();
     //fg.export_graphviz(slog.d);
-
     fg.execute(engine, driver);
-
-    commands.clear();
 
     recordHighWatermark(pass.getCommandsHighWatermark());
 }
 
+FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
+        ColorPassConfig const& config, RenderPass const& pass,
+        FrameGraphId<FrameGraphTexture> input,
+        FView const& view, TargetBufferFlags clearFlags) noexcept {
+
+    FrameGraphId<FrameGraphTexture> output = input;
+
+    // find the first refractive object
+    Command const* const refraction = std::partition_point(pass.begin(), pass.end(),
+            [](auto const& command) {
+                return (command.key & RenderPass::PASS_MASK) < uint64_t(RenderPass::Pass::REFRACT);
+            });
+
+    const bool hasScreenSpaceRefraction =
+            (refraction->key & RenderPass::PASS_MASK) == uint64_t(RenderPass::Pass::REFRACT);
+
+    if (UTILS_UNLIKELY(hasScreenSpaceRefraction)) {
+        // clear the color/depth buffers, which will orphan (and cull) the color pass
+        fg.getBlackboard().remove("color");
+        fg.getBlackboard().remove("depth");
+
+        RenderPass opaquePass(pass);
+        opaquePass.getCommands().set(
+                const_cast<Command*>(pass.begin()),
+                const_cast<Command*>(refraction));
+        output = colorPass(fg, config, opaquePass, clearFlags, view.getClearColor());
+
+        // TODO: copy the color buffer into a texture, generate the mip-levels, feed the next pass
+
+        // set-up the refraction pass
+        RenderPass translucentPass(pass);
+        translucentPass.getCommands().set(
+                const_cast<Command*>(refraction),
+                const_cast<Command*>(pass.end()));
+        output = colorPass(fg, config, translucentPass,TargetBufferFlags::NONE);
+    }
+
+    return output;
+}
+
 FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg,
-        PrepareColorPassesData& blackboard,
+        ColorPassConfig const& config,
         RenderPass const& pass, TargetBufferFlags clearFlags, float4 clearColor) noexcept {
 
     struct ColorPassData {
@@ -418,35 +456,42 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg,
     };
 
     auto& colorPass = fg.addPass<ColorPassData>("Color Pass",
-            [&blackboard, clearFlags]
+            [&fg, &config, clearFlags]
                     (FrameGraph::Builder& builder, ColorPassData& data) {
 
-                auto& svp = blackboard.svp;
-                auto hdrFormat = blackboard.hdrFormat;
-                auto msaa = blackboard.msaa;
+                Blackboard& blackboard = fg.getBlackboard();
 
-                if (blackboard.ssao.isValid()) {
-                    data.ssao = builder.sample(blackboard.ssao);
+                data.ssao = blackboard.get<FrameGraphTexture>("ssao");
+                data.color = blackboard.get<FrameGraphTexture>("color");
+                data.depth = blackboard.get<FrameGraphTexture>("depth");
+                
+                if (data.ssao.isValid()) {
+                    data.ssao = builder.sample(data.ssao);
                 }
 
-                if (!blackboard.color.isValid()) {
-                    blackboard.color = builder.createTexture("Color Buffer",
-                            { .width = svp.width, .height = svp.height, .format = hdrFormat });
+                if (!data.color.isValid()) {
+                    data.color = builder.createTexture("Color Buffer",
+                            { .width = config.svp.width,
+                                    .height = config.svp.height,
+                                    .format = config.hdrFormat });
                 }
 
-                if (!blackboard.depth.isValid()) {
-                    blackboard.depth = builder.createTexture("Depth Buffer", {
-                            .width = svp.width, .height = svp.height,
+                if (!data.depth.isValid()) {
+                    data.depth = builder.createTexture("Depth Buffer", {
+                            .width = config.svp.width, .height = config.svp.height,
                             .format = TextureFormat::DEPTH24
                     });
                 }
 
-                data.color = blackboard.color = builder.write(builder.read(blackboard.color));
-                data.depth = blackboard.depth = builder.write(builder.read(blackboard.depth));
+                data.color = builder.write(builder.read(data.color));
+                data.depth = builder.write(builder.read(data.depth));
+
+                blackboard["color"] = data.color;
+                blackboard["depth"] = data.depth;
 
                 data.rt = builder.createRenderTarget("Color Pass Target", {
                         .attachments = { data.color, data.depth },
-                        .samples = msaa,
+                        .samples = config.msaa,
                 }, clearFlags);
             },
             [pass, clearColor]
