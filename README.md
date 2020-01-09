@@ -10,10 +10,6 @@
 Filament is a real-time physically based rendering engine for Android, iOS, Linux, macOS, Windows,
 and WebGL. It is designed to be as small as possible and as efficient as possible on Android.
 
-Filament is currently used in the
-[Sceneform](https://developers.google.com/ar/develop/java/sceneform/) library both at runtime on
-Android devices and as the renderer inside the Android Studio plugin.
-
 ## Download
 
 [Download Filament releases](https://github.com/google/filament/releases) to access stable builds.
@@ -21,10 +17,32 @@ Android devices and as the renderer inside the Android Studio plugin.
 Make sure you always use tools from the same release as the runtime library. This is particularly
 important for `matc` (material compiler).
 
+### Android
+
+Android projects can simply declare Filament libraries as Maven dependencies:
+
+```
+repositories {
+    // ...
+    mavenCentral()
+}
+
+dependencies {
+    // Filament rendering engine
+    implementation 'com.google.android.filament:filament-android:1.4.4'
+    // Filamat material builder
+    implementation 'com.google.android.filament:filamat-android-full:1.4.4'
+    // glTF 2.0 loader
+    implementation 'com.google.android.filament:gltfio-android:1.4.4'
+}
+```
+
+### Snapshots
+
 If you prefer to live on the edge, you can download a continuous build by following the following
 steps:
 
-1. Find the [commit](https://github.com/bejado/filament/commits/master) you're interested in.
+1. Find the [commit](https://github.com/google/filament/commits/master) you're interested in.
 2. Click the green check mark under the commit message.
 3. Click on the _Details_ link for the platform you're interested in.
 4. On the top right, click on the _Artifacts_ dropdown and choose an artifact.
@@ -41,7 +59,9 @@ steps:
 - [Material Properties](https://google.github.io/filament/Material%20Properties.pdf), a reference
   sheet for the standard material model.
 
-## Samples
+## Examples
+
+### Materials
 
 Here are a few sample materials rendered with Filament:
 
@@ -53,15 +73,15 @@ Here are a few sample materials rendered with Filament:
 ![Material 6](docs/images/samples/material_06.jpg)
 ![Material 8](docs/images/samples/material_08.jpg)
 
-## Applications
+### Applications
 
 Here are a few screenshots of applications that use Filament in production:
 
-### Google Maps AR Navigation
+#### Google Maps AR Navigation
 
 ![Google Maps AR Navigation](docs/images/samples/app_gmm_ar_nav.jpg)
 
-### Google Search 3D/AR Viewer on Android
+#### Google Search 3D/AR Viewer on Android
 
 ![Google Search 3D/AR Viewer on Android](docs/images/samples/app_google_3d_viewer.jpg)
 
@@ -429,9 +449,10 @@ $ ./build.sh -p android release
 
 Run `build.sh -h` for more information.
 
-#### ARM 64-bit target (arm64-v8a)
+#### Manual builds
 
-Then invoke CMake in a build directory of your choice, inside of filament's directory:
+Invoke CMake in a build directory of your choice, inside of filament's directory. The commands
+below show how to build Filament for ARM 64-bit (`aarch64`).
 
 ```
 $ mkdir out/android-build-release-aarch64
@@ -456,88 +477,7 @@ This will generate Filament's Android binaries in `out/android-release`. This lo
 to build the Android Studio projects located in `filament/android`. After install, the library
 binaries should be found in `out/android-release/filament/lib/arm64-v8a`.
 
-#### ARM 32-bit target (armeabi-v7a)
-
-Then invoke CMake in a build directory of your choice, inside of filament's directory:
-
-```
-$ mkdir out/android-build-release-arm
-$ cd out/android-build-release-arm
-$ cmake -G Ninja -DCMAKE_TOOLCHAIN_FILE=../../build/toolchain-arm7-linux-android.cmake \
-        -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../android-release/filament ../..
-```
-
-And then invoke `ninja`:
-
-```
-$ ninja install
-```
-
-or
-
-```
-$ ninja install/strip
-```
-
-This will generate Filament's Android binaries in `out/android-release`. This location is important
-to build the Android Studio projects located in `filament/android`. After install, the library
-binaries should be found in `out/android-release/filament/lib/armeabi-v7a`.
-
-#### Intel 64-bit target (x86_64)
-
-Then invoke CMake in a build directory of your choice, sibling of filament's directory:
-
-```
-$ mkdir out/android-build-release-x86_64
-$ cd out/android-build-release-x86_64
-$ cmake -G Ninja -DCMAKE_TOOLCHAIN_FILE=../../filament/build/toolchain-x86_64-linux-android.cmake \
-        -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../out/android-release/filament ../..
-```
-
-And then invoke `ninja`:
-
-```
-$ ninja install
-```
-
-or
-
-```
-$ ninja install/strip
-```
-
-This will generate Filament's Android binaries in `out/android-release`. This location is important
-to build the Android Studio projects located in `filament/android`. After install, the library
-binaries should be found in `out/android-release/filament/lib/x86_64`.
-
-#### Intel 32-bit target (x86)
-
-Then invoke CMake in a build directory of your choice, sibling of filament's directory:
-
-```
-$ mkdir out/android-build-release-x86
-$ cd out/android-build-release-x86
-$ cmake -G Ninja -DCMAKE_TOOLCHAIN_FILE=../../filament/build/toolchain-x86-linux-android.cmake \
-        -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../out/android-release/filament ../..
-```
-
-And then invoke `ninja`:
-
-```
-$ ninja install
-```
-
-or
-
-```
-$ ninja install/strip
-```
-
-This will generate Filament's Android binaries in `out/android-release`. This location is important
-to build the Android Studio projects located in `filament/android`. After install, the library
-binaries should be found in `out/android-release/filament/lib/x86`.
-
-### AAR
+#### AAR
 
 Before you attempt to build the AAR, make sure you've compiled and installed the native libraries
 as explained in the sections above. You must have the following ABIs built in
@@ -569,7 +509,7 @@ $ ./gradlew -Pfilament_dist_dir=../../out/android-release/filament assembleRelea
 The `-Pfilament_dist_dir` can be used to specify a different installation directory (it must match
 the CMake install prefix used in the previous steps).
 
-### Using Filament's AAR
+#### Using Filament's AAR
 
 Create a new module in your project and select _Import .JAR or .AAR Package_ when prompted. Make
 sure to add the newly created module as a dependency to your application.
@@ -595,7 +535,7 @@ productFlavors {
     x86_64 {
         dimension 'cpuArch'
         ndk {
-            abiFilters 'x86_64'
+            abiFilters 'x86_64'.
         }
     }
     x86 {
@@ -683,7 +623,7 @@ cross, or a list of cubemap faces (horizontal or vertical).
 `cmgen` will automatically create a directory based on the name of the source environment map. In
 the example above, the final directory will be `./ibls/my_ibl/`. This directory should contain the
 pre-filtered environment map (one file per cubemap face and per mip level), the environment map
-texture for the skybox and a text file containing the spherical harmonics for indirect diffuse
+texture for the skybox and a text file containing the level harmonics for indirect diffuse
 lighting.
 
 If you prefer a blurred background, run `cmgen` with this flag: `--extract-blur=0.1`. The numerical
