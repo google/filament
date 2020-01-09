@@ -5,16 +5,18 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release
 
-- Removed `<iostream>` from math headers.
-- Fix bad instruction exception with macOS Catalina.
+## v1.4.4
+
 - Added support for solid and thin layer cubemap and screen-space refraction.
 - Improved high roughness material rendering by default when regenerating environments maps.
+- Fix bad instruction exception with macOS Catalina.
 - Fixed bad state after removing an IBL from the Scene.
 - Fixed incorrect punctual light binning (affected Metal and Vulkan backends).
 - Fixed crash when using a Metal headless SwapChain with an Intel integrated GPU.
-- cmgen now places KTX files directly in the specified deployment folder.
 - Added support for ASTC textures on iOS with Metal backend.
 - Added new heightfield sample.
+- Removed `<iostream>` from math headers.
+- cmgen now places KTX files directly in the specified deployment folder.
 
 ## v1.4.3
 
