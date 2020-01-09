@@ -21,7 +21,7 @@ important for `matc` (material compiler).
 
 Android projects can simply declare Filament libraries as Maven dependencies:
 
-```
+```gradle
 repositories {
     // ...
     mavenCentral()
