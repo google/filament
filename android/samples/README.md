@@ -48,7 +48,7 @@ host machine:
 
 ### `gltf-bloom`
 
-Demonstrates how to load glTF models and render to an offscreen buffer:
+Demonstrates how to load glb models and use the RenderTarget API:
 
 ![glTF Bloom](../../docs/images/samples/sample_gltf_bloom.jpg)
 
@@ -92,14 +92,15 @@ $ ./gradlew -Pfilament_tools_dir=../../dist-release assembleDebug
 
 ## Important: SDK location
 
-
 Either ensure your `ANDROID_HOME` environment variable is set or make sure the root project
 contains a `local.properties` file with the `sdk.dir` property pointing to your installation of
 the Android SDK.
 
 ## Android Studio
 
-You must use Android Studio 3.5 or higher to open these projects.
+You must use Android Studio 3.5 or higher. To open the project, point Studio to the `android`
+folder. After opening the project and syncing to gradle, select the sample of your choice using the
+drop-down widget in the toolbar.
 
 ## Compiling
 
