@@ -172,3 +172,11 @@ afterEvaluate { project ->
     }
   }
 }
+
+afterEvaluate { project ->
+  android.libraryVariants.all { variant ->
+    tasks.androidJavadocs.doFirst {
+      classpath += files(variant.javaCompileProvider.get().classpath.files.join(File.pathSeparator))
+    }
+  }
+}

@@ -402,10 +402,9 @@ public class Material {
     /**
      * Returns the vertex domain of this material.
      *
-     * @se
+     * @see
      * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/vertexandattributes:vertexdomain">
      * Vertex and attributes: vertexDomain</a>
-     * @return
      */
     public VertexDomain getVertexDomain() {
         return VertexDomain.values()[nGetVertexDomain(getNativeObject())];

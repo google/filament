@@ -93,7 +93,7 @@ public class FilamentAsset {
      * Creates or retrieves the <code>Animator</code> for this asset.
      *
      * <p>When calling this for the first time, this must be called after
-     * {@see ResourceLoader#loadResources}.</p>
+     * {@link ResourceLoader#loadResources}.</p>
      */
     public @NonNull Animator getAnimator() {
         if (mAnimator != null) {

@@ -56,7 +56,7 @@ public class Stream {
      * Use <code>Builder</code> to construct an Stream object instance.
      *
      * By default, Stream objects are {@link StreamType#ACQUIRED ACQUIRED} and must have external images pushed to them via
-     * {@line #setAcquiredImage}.
+     * {@link #setAcquiredImage}.
      *
      * To create a {@link StreamType#NATIVE NATIVE} or {@link StreamType#TEXTURE_ID TEXTURE_ID} stream, call one of the <pre>stream</pre> methods
      * on the builder.
@@ -206,7 +206,7 @@ public class Stream {
      * Reads back the content of the last frame of a <code>Stream</code> since the last call to
      * {@link Renderer#beginFrame}.
      *
-     * <p>The Stream must be a copy stream, which can be checked with {@link #isNative()}.
+     * <p>The Stream must be a copy stream, which can be checked with {@link #getStreamType()}.
      * This function is a no-op otherwise.</p>
      *
      * <pre>

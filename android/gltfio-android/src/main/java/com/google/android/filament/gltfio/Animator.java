@@ -19,6 +19,7 @@ package com.google.android.filament.gltfio;
 import androidx.annotation.IntRange;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import java.nio.Buffer;
 
 /**
  * Updates matrices according to glTF <code>animation</code> and <code>skin</code> definitions.
@@ -55,8 +56,8 @@ public class Animator {
     }
 
     /**
-     * Computes root-to-node transforms for all bone nodes, then passes
-     * the results into {@see RenderableManager#setBones}.
+     * Computes root-to-node transforms for all bone nodes, then passes the results into
+     * {@link com.google.android.filament.RenderableManager#setBonesAsMatrices(int, Buffer, int, int)}.
      * Uses <code>TransformManager</code> and <code>RenderableManager</code>.
      *
      * <p>NOTE: this operation is independent of <code>animation</code>.</p>

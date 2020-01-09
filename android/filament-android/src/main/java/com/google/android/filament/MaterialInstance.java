@@ -356,7 +356,7 @@ public class MaterialInstance {
      *  to produce a resolvable offset for a given implementation. This offset is added before the
      *  depth test.
      *
-     *  @warning using a polygon offset other than zero has a significant negative performance
+     *  Warning: using a polygon offset other than zero has a significant negative performance
      *  impact, as most implementations have to disable early depth culling. DO NOT USE unless
      *  absolutely necessary.
      *

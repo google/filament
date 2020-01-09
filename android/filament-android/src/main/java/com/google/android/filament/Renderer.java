@@ -16,6 +16,7 @@
 
 package com.google.android.filament;
 
+import android.app.Activity;
 import androidx.annotation.IntRange;
 import androidx.annotation.NonNull;
 
@@ -443,7 +444,7 @@ public class Renderer {
      * <br>
      * <p>Use this method used to keep the precision of time high in materials, in practice it should
      * be called at least when the application is paused, e.g.
-     * {@link android.app.Activity#onPause() Activity.onPause} in Android.</p>
+     * {@link Activity#onPause()}  Activity.onPause} in Android.</p>
      *
      * @see #getUserTime
      */
