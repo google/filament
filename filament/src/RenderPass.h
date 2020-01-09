@@ -88,7 +88,8 @@ public:
     enum class Pass : uint64_t {    // 6-bits max
         DEPTH    = uint64_t(0x00) << PASS_SHIFT,
         COLOR    = uint64_t(0x01) << PASS_SHIFT,
-        BLENDED  = uint64_t(0x02) << PASS_SHIFT,
+        REFRACT  = uint64_t(0x02) << PASS_SHIFT,
+        BLENDED  = uint64_t(0x03) << PASS_SHIFT,
         SENTINEL = 0xffffffffffffffffllu
     };
 
@@ -141,6 +142,7 @@ public:
     // |   6  | 2| 2|1| 3 | 2|       16       |               32               |
     // +------+--+--+-+---+--+----------------+--------------------------------+
     // |000001|01|00|a|ppp|00|0000000000000000|          material-id           |
+    // |000010|01|00|a|ppp|00|0000000000000000|          material-id           |  refraction
     // +------+--+--+-+---+--+----------------+--------------------------------+
     // | correctness      |        optimizations (truncation allowed)          |
     //
@@ -149,6 +151,7 @@ public:
     // |   6  | 2| 2|1| 3 | 2|  6   |   10     |               32               |
     // +------+--+--+-+---+--+------+----------+--------------------------------+
     // |000001|01|00|a|ppp|00|000000| Z-bucket |          material-id           |
+    // |000010|01|00|a|ppp|00|000000| Z-bucket |          material-id           | refraction
     // +------+--+--+-+---+--+------+----------+--------------------------------+
     // | correctness      |      optimizations (truncation allowed)             |
     //
@@ -156,7 +159,7 @@ public:
     // BLENDED command
     // |   6  | 2| 2|1| 3 | 2|              32                |         15    |1|
     // +------+--+--+-+---+--+--------------------------------+---------------+-+
-    // |000010|01|00|0|ppp|00|         ~distanceBits          |   blendOrder  |t|
+    // |000011|01|00|0|ppp|00|         ~distanceBits          |   blendOrder  |t|
     // +------+--+--+-+---+--+--------------------------------+---------------+-+
     // | correctness                                                            |
     //
@@ -248,13 +251,19 @@ public:
     static constexpr RenderFlags HAS_INVERSE_FRONT_FACES = 0x08;
 
 
-    RenderPass(FEngine& engine, utils::GrowingSlice<Command>& commands) noexcept;
+    RenderPass(FEngine& engine, utils::GrowingSlice<Command> commands) noexcept;
     void overridePolygonOffset(backend::PolygonOffset* polygonOffset) noexcept;
     void overrideMaterial(FMaterial const* material, FMaterialInstance const* mi) noexcept;
     void setGeometry(FScene::RenderableSoa const& soa, utils::Range<uint32_t> vr,
             backend::Handle<backend::HwUniformBuffer> uboHandle) noexcept;
     void setCamera(const CameraInfo& camera) noexcept;
     void setRenderFlags(RenderFlags flags) noexcept;
+
+    Command* begin() noexcept { return mCommands.begin(); }
+    Command* end() noexcept { return mCommands.end(); }
+
+    Command const* begin() const noexcept { return mCommands.begin(); }
+    Command const* end() const noexcept { return mCommands.end(); }
 
     Command* newCommandBuffer() noexcept;
 
