@@ -148,8 +148,11 @@ public:
     FrameGraph& operator = (FrameGraph const&) = delete;
     ~FrameGraph();
 
+    // returns the default Blackboard
     Blackboard& getBlackboard() noexcept { return mBlackboard; }
-    Blackboard const& getDefaultBlackboard() const noexcept { return mBlackboard; }
+
+    // returns the default Blackboard
+    Blackboard const& getBlackboard() const noexcept { return mBlackboard; }
 
     struct Empty{};
 
@@ -194,6 +197,8 @@ public:
     // Returns whether the resource handle is valid. A resource handle becomes invalid after
     // it's used to declare a resource write (see Builder::write()).
     bool isValid(FrameGraphHandle r) const noexcept;
+
+    bool equal(FrameGraphHandle lhs, FrameGraphHandle rhs) const noexcept;
 
     // Return the Descriptor associated to this resource handle. The handle must be valid.
     template<typename T>

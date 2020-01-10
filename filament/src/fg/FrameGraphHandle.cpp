@@ -49,6 +49,8 @@ void FrameGraphTexture::create(FrameGraph& fg, const char* name,
 
     texture = fg.getResourceAllocator().createTexture(name, desc.type, desc.levels,
             desc.format, samples, desc.width, desc.height, desc.depth, desc.usage);
+
+    assert(texture);
 }
 
 void FrameGraphTexture::destroy(FrameGraph& fg) noexcept {
