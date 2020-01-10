@@ -20,23 +20,22 @@ android {
         }
     }
 
-// FIXME TODO: Disable flavors until we have a way to handle flavors when uploading archives to Maven
-//    flavorDimensions "functionality"
-//    productFlavors {
-//        full {
-//            dimension "functionality"
-//        }
-//
-//        lite {
-//            dimension "functionality"
-//
-//            externalNativeBuild {
-//                cmake {
-//                    arguments.add("-DFILAMAT_LITE=ON")
-//                }
-//            }
-//        }
-//    }
+    flavorDimensions "functionality"
+    productFlavors {
+        full {
+            dimension "functionality"
+        }
+
+        lite {
+            dimension "functionality"
+
+            externalNativeBuild {
+                cmake {
+                    arguments.add("-DFILAMAT_LITE=ON")
+                }
+            }
+        }
+    }
 
     externalNativeBuild {
         cmake {
