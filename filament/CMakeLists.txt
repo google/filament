@@ -44,6 +44,7 @@ set(SRCS
         src/components/LightManager.cpp
         src/components/RenderableManager.cpp
         src/components/TransformManager.cpp
+        src/fg/Blackboard.cpp
         src/fg/FrameGraph.cpp
         src/fg/FrameGraphHandle.cpp
         src/fg/fg/RenderTarget.cpp
@@ -90,6 +91,7 @@ set(PRIVATE_HDRS
         src/components/LightManager.h
         src/components/RenderableManager.h
         src/components/TransformManager.h
+        src/fg/Blackboard.h
         src/fg/FrameGraph.h
         src/fg/FrameGraphPass.h
         src/fg/FrameGraphPassResources.h

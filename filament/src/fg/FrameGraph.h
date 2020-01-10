@@ -18,6 +18,7 @@
 #define TNT_FILAMENT_FRAMEGRAPH_H
 
 
+#include "Blackboard.h"
 #include "FrameGraphPass.h"
 #include "FrameGraphHandle.h"
 #include "FrameGraphPassResources.h"
@@ -146,6 +147,9 @@ public:
     FrameGraph(FrameGraph const&) = delete;
     FrameGraph& operator = (FrameGraph const&) = delete;
     ~FrameGraph();
+
+    Blackboard& getBlackboard() noexcept { return mBlackboard; }
+    Blackboard const& getDefaultBlackboard() const noexcept { return mBlackboard; }
 
     struct Empty{};
 
@@ -322,6 +326,7 @@ private:
 
     FrameGraphHandle moveResource(FrameGraphHandle from, FrameGraphHandle to);
 
+    Blackboard mBlackboard;
     fg::ResourceAllocatorInterface& mResourceAllocator;
     details::LinearAllocatorArena mArena;
     Vector<fg::PassNode> mPassNodes;                    // list of frame graph passes
