@@ -54,11 +54,11 @@ import java.nio.Buffer;
  *     }
  *
  *     val resourceLoader = ResourceLoader(engine)
- *     resourceLoader.loadResources(filamentAsset)
  *     for (uri in filamentAsset.resourceUris) {
  *         val buffer = loadResource(uri)
  *         resourceLoader.addResourceData(uri, buffer)
  *     }
+ *     resourceLoader.loadResources(filamentAsset)
  *     resourceLoader.destroy()
  *     animator = asset.getAnimator()
  *
@@ -119,7 +119,7 @@ public class AssetLoader {
     @Nullable
     public FilamentAsset createAssetFromBinary(@NonNull Buffer buffer) {
         long nativeAsset = nCreateAssetFromBinary(mNativeObject, buffer, buffer.remaining());
-        return new FilamentAsset(nativeAsset);
+        return nativeAsset != 0 ? new FilamentAsset(nativeAsset) : null;
     }
 
     /**
@@ -128,7 +128,7 @@ public class AssetLoader {
     @Nullable
     public FilamentAsset createAssetFromJson(@NonNull Buffer buffer) {
         long nativeAsset = nCreateAssetFromJson(mNativeObject, buffer, buffer.remaining());
-        return new FilamentAsset(nativeAsset);
+        return nativeAsset != 0 ? new FilamentAsset(nativeAsset) : null;
     }
 
     /**

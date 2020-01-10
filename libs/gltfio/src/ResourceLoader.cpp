@@ -143,10 +143,11 @@ bool ResourceLoader::loadResources(FilamentAsset* asset) {
     auto gltf = (cgltf_data*) fasset->mSourceAsset;
     cgltf_options options {};
 
-    // For emscripten builds we have a custom implementation of cgltf_load_buffers which looks
-    // inside a cache of externally-supplied data blobs, rather than loading from the filesystem.
+    // For emscripten and android builds we have a custom implementation of cgltf_load_buffers which
+    // looks inside a cache of externally-supplied data blobs, rather than loading from the
+    // filesystem.
 
-    #if defined(__EMSCRIPTEN__)
+    #if defined(__EMSCRIPTEN__) || defined(ANDROID)
 
     if (gltf->buffers_count && !gltf->buffers[0].data && !gltf->buffers[0].uri && gltf->bin) {
         if (gltf->bin_size < gltf->buffers[0].size) {
@@ -155,6 +156,8 @@ bool ResourceLoader::loadResources(FilamentAsset* asset) {
         }
         gltf->buffers[0].data = (void*) gltf->bin;
     }
+
+    bool missingResources = false;
 
     for (cgltf_size i = 0; i < gltf->buffers_count; ++i) {
         if (gltf->buffers[i].data) {
@@ -179,14 +182,19 @@ bool ResourceLoader::loadResources(FilamentAsset* asset) {
         } else if (strstr(uri, "://") == nullptr) {
             auto iter = pImpl->mUserCache.find(uri);
             if (iter == pImpl->mUserCache.end()) {
-                slog.e << "Unable to load " << uri << io::endl;
-                return false;
+                slog.e << "Unable to load external resource: " << uri << io::endl;
+                missingResources = true;
             }
             gltf->buffers[i].data = iter->second.buffer;
         } else {
             slog.e << "Unable to load " << uri << io::endl;
             return false;
         }
+    }
+
+    if (missingResources) {
+        slog.e << "Some external resources have not been added via addResourceData()" << io::endl;
+        return false;
     }
 
     #else
@@ -366,7 +374,7 @@ bool ResourceLoader::createTextures(details::FFilamentAsset* asset) const {
                 js->run(decode);
             }
         } else {
-            #if defined(__EMSCRIPTEN__)
+            #if defined(__EMSCRIPTEN__) || defined(ANDROID)
                 slog.e << "Unable to load texture: " << tb.uri << io::endl;
                 return false;
             #else
