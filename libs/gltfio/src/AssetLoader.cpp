@@ -164,6 +164,7 @@ FFilamentAsset* FAssetLoader::createAssetFromJson(const uint8_t* bytes, uint32_t
     cgltf_data* sourceAsset;
     cgltf_result result = cgltf_parse(&options, bytes, nbytes, &sourceAsset);
     if (result != cgltf_result_success) {
+        slog.e << "Unable to parse JSON file." << io::endl;
         return nullptr;
     }
     createAsset(sourceAsset);
@@ -185,6 +186,7 @@ FilamentAsset* FAssetLoader::createAssetFromBinary(const uint8_t* bytes, uint32_
     cgltf_data* sourceAsset;
     cgltf_result result = cgltf_parse(&options, glbdata.data(), nbytes, &sourceAsset);
     if (result != cgltf_result_success) {
+        slog.e << "Unable to parse glb file." << io::endl;
         return nullptr;
     }
     createAsset(sourceAsset);
