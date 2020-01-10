@@ -48,6 +48,7 @@ set(SRCS
         src/fg/FrameGraph.cpp
         src/fg/FrameGraphHandle.cpp
         src/fg/fg/RenderTarget.cpp
+        src/fg/fg/RenderTargetResource.cpp
         src/fg/fg/ResourceEntry.cpp
         src/fg/ResourceAllocator.cpp
         src/Box.cpp

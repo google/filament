@@ -83,6 +83,8 @@ class FrameGraphHandle {
 public:
     bool isValid() const noexcept { return index != UNINITIALIZED; }
 
+    void clear() noexcept { index = UNINITIALIZED; }
+
     bool operator < (const FrameGraphHandle& rhs) const noexcept {
         return index < rhs.index;
     }

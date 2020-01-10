@@ -199,6 +199,21 @@ bool FrameGraph::isValid(FrameGraphHandle handle) const noexcept {
     return node.version == node.resource->version;
 }
 
+bool FrameGraph::equal(FrameGraphHandle lhs, FrameGraphHandle rhs) const noexcept {
+    if (lhs == rhs) {
+        return true;
+    }
+    if (lhs.isValid() != rhs.isValid()) {
+        return false;
+    }
+    auto const& registry = mResourceNodes;
+    assert(lhs.index < registry.size());
+    assert(rhs.index < registry.size());
+    assert(registry[lhs.index].resource);
+    assert(registry[rhs.index].resource);
+    return registry[lhs.index].resource == registry[rhs.index].resource;
+}
+
 FrameGraphHandle FrameGraph::createResourceNode(fg::ResourceEntryBase* resource) noexcept {
     auto& resourceNodes = mResourceNodes;
     size_t index = resourceNodes.size();
@@ -288,7 +303,7 @@ bool FrameGraph::equals(FrameGraphRenderTarget::Descriptor const& cacheEntry,
         FrameGraphRenderTarget::Descriptor const& rt) const noexcept {
     const Vector<ResourceNode>& resourceNodes = mResourceNodes;
 
-    // if the rendertarget we're looking up doesn't has the sample field set to 0, it means the
+    // if the rendertarget we're looking up doesn't have the sample field set to 0, it means the
     // user didn't specify it, and it's okay to match it to any sample count.
     // Otherwise, sample count must match, with the caveat that 0 or 1 are treated the same.
     const bool samplesMatch = (!rt.samples) ||
