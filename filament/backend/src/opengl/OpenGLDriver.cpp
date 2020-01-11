@@ -170,7 +170,7 @@ void OpenGLDriver::terminate() {
     executeGpuCommandsCompleteOps();
 
     // because we called glFinish(), all callbacks should have been executed
-    assert(!mGpuCommandCompleteOps.size());
+    assert(mGpuCommandCompleteOps.empty());
 
     for (auto& item : mSamplerMap) {
         mContext.unbindSampler(item.second);
@@ -1942,9 +1942,9 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     // Use scissor test if not told to ignore, and if the viewport doesn't cover the whole target.
     const bool respectScissor = !ignoreScissor &&
                                 (params.viewport.left != 0 ||
-                                    params.viewport.bottom != 0 ||
-                                    params.viewport.width != rt->width ||
-                                    params.viewport.height != rt->height);
+                                 params.viewport.bottom != 0 ||
+                                 params.viewport.width != rt->width ||
+                                 params.viewport.height != rt->height);
     if (respectScissor) {
         gl.setScissor(params.viewport.left, params.viewport.bottom,
                 params.viewport.width, params.viewport.height);
