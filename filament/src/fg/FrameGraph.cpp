@@ -675,6 +675,7 @@ void FrameGraph::execute(DriverApi& driver) noexcept {
 }
 
 void FrameGraph::export_graphviz(utils::io::ostream& out) {
+#ifndef NDEBUG
     out << "digraph framegraph {\n";
     out << "rankdir = LR\n";
     out << "bgcolor = black\n";
@@ -697,16 +698,16 @@ void FrameGraph::export_graphviz(utils::io::ostream& out) {
     for (ResourceNode const& node : registry) {
         ResourceEntryBase const* subresource = node.resource;
 
-        auto textureResource = dynamic_cast<ResourceEntry<FrameGraphTexture> const*>(subresource);
-
         out << "\"R" << node.resource->id << "_" << +node.version << "\""
             "[label=\"" << node.resource->name << "\\n(version: " << +node.version << ")"                                                                                           "\\nid:" << node.resource->id <<
             "\\nrefs:" << node.resource->refs;
 
+#if UTILS_HAS_RTTI
+        auto textureResource = dynamic_cast<ResourceEntry<FrameGraphTexture> const*>(subresource);
         if (textureResource) {
             out << ", " << (bool(textureResource->descriptor.usage & TextureUsage::SAMPLEABLE) ? "texture" : "renderbuffer");
         }
-
+#endif
         out << "\", style=filled, fillcolor="
             << ((subresource->imported) ?
                 (node.resource->refs ? "palegreen" : "palegreen4") :
@@ -753,6 +754,7 @@ void FrameGraph::export_graphviz(utils::io::ostream& out) {
     }
 
     out << "}" << utils::io::endl;
+#endif
 }
 
 // avoid creating a .o just for these
