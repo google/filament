@@ -834,8 +834,6 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
     } else {
         gl.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
         glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment, GL_RENDERBUFFER, t->gl.id);
-        // unbind the renderbuffer, to avoid any later confusion
-        glBindRenderbuffer(GL_RENDERBUFFER, 0);
     }
 
     CHECK_GL_ERROR(utils::slog.e)
@@ -860,6 +858,9 @@ void OpenGLDriver::renderBufferStorage(GLuint rbo, GLenum internalformat, uint32
     } else {
         glRenderbufferStorage(GL_RENDERBUFFER, internalformat, width, height);
     }
+    // unbind the renderbuffer, to avoid any later confusion
+    glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
     CHECK_GL_ERROR(utils::slog.e)
 }
 
@@ -932,13 +933,6 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         rt->gl.color.texture = handle_cast<GLTexture*>(color.handle);
         rt->gl.color.level = color.level;
         framebufferTexture(color, rt, GL_COLOR_ATTACHMENT0);
-#ifndef NDEBUG
-        // clear the color buffer we just allocated to yellow
-        mContext.setClearColor(1, 1, 0, 1);
-        mContext.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
-        mContext.disable(GL_SCISSOR_TEST);
-        glClear(GL_COLOR_BUFFER_BIT);
-#endif
     }
 
     // handle special cases first (where depth/stencil are packed)
