@@ -1,6 +1,7 @@
 apply plugin: 'com.android.library'
 
 android {
+    buildToolsVersion versions.buildTools
     compileSdkVersion versions.compileSdk
     defaultConfig {
         minSdkVersion versions.minSdk
@@ -60,3 +61,19 @@ dependencies {
 }
 
 apply from: rootProject.file('gradle/gradle-mvn-push.gradle')
+
+afterEvaluate { project ->
+    publishing {
+        publications {
+            fullRelease(MavenPublication) {
+                artifactId = POM_ARTIFACT_ID_FULL
+                from components.fullRelease
+            }
+
+            liteRelease(MavenPublication) {
+                artifactId = POM_ARTIFACT_ID_LITE
+                from components.liteRelease
+            }
+        }
+    }
+}

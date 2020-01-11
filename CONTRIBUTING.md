@@ -40,3 +40,18 @@ information on using pull requests.
 
 This project follows
 [Google's Open Source Community Guidelines](https://opensource.google.com/conduct/).
+
+## Dependencies
+
+One of our design goals is that Filament itself should have no dependencies or as few dependencies
+as possible. The current external dependencies of the runtime library include:
+
+- STL
+- robin-map (header only library)
+
+When building with Vulkan enabled, we have a few additional small dependencies:
+
+- vkmemalloc
+- smol-v
+
+Host tools (such as `matc` or `cmgen`) can use external dependencies freely.
