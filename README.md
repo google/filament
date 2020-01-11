@@ -13,9 +13,12 @@ and WebGL. It is designed to be as small as possible and as efficient as possibl
 ## Download
 
 [Download Filament releases](https://github.com/google/filament/releases) to access stable builds.
+Filament release archives contains host-side tools that are required to generate assets.
 
 Make sure you always use tools from the same release as the runtime library. This is particularly
 important for `matc` (material compiler).
+
+If you'd rather build Filament yourself, please refer to our [build manual](BUILDING.md).
 
 ### Android
 
@@ -126,19 +129,6 @@ Here are a few screenshots of applications that use Filament in production:
 - Temporal dithering
 - FXAA, MSAA and specular anti-aliasing
 - Dynamic resolution (on Android and iOS)
-
-### Future
-
-Many other features have been either prototyped or planned:
-
-- IES light profiles/cookies
-- Area lights
-- Fog
-- Color grading
-- Bloom
-- TAA
-- etc.
-
 
 ## Rendering with Filament
 
