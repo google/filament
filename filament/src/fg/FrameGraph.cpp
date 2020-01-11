@@ -696,15 +696,22 @@ void FrameGraph::export_graphviz(utils::io::ostream& out) {
     out << "\n";
     for (ResourceNode const& node : registry) {
         ResourceEntryBase const* subresource = node.resource;
+
+        auto textureResource = dynamic_cast<ResourceEntry<FrameGraphTexture> const*>(subresource);
+
         out << "\"R" << node.resource->id << "_" << +node.version << "\""
-               "[label=\"" << node.resource->name << "\\n(version: " << +node.version << ")"
-               "\\nid:" << node.resource->id <<
-               "\\nrefs:" << node.resource->refs << ", texture: **FIXME**" << /*bool(node.resource->usage & TextureUsage::SAMPLEABLE) <<*/
-               "\", style=filled, fillcolor="
-               << ((subresource->imported) ?
-                    (node.resource->refs ? "palegreen" : "palegreen4") :
-                    (node.resource->refs ? "skyblue" : "skyblue4"))
-               << "]\n";
+            "[label=\"" << node.resource->name << "\\n(version: " << +node.version << ")"                                                                                           "\\nid:" << node.resource->id <<
+            "\\nrefs:" << node.resource->refs;
+
+        if (textureResource) {
+            out << ", " << (bool(textureResource->descriptor.usage & TextureUsage::SAMPLEABLE) ? "texture" : "renderbuffer");
+        }
+
+        out << "\", style=filled, fillcolor="
+            << ((subresource->imported) ?
+                (node.resource->refs ? "palegreen" : "palegreen4") :
+                (node.resource->refs ? "skyblue" : "skyblue4"))
+            << "]\n";
     }
 
     // connect passes to resources

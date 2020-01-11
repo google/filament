@@ -93,7 +93,7 @@ public:
 
         // Write to a resource (i.e. add a reference to that pass)
         template<typename T>
-        FrameGraphId<T> write(FrameGraphId<T> output) {
+        [[nodiscard]] FrameGraphId<T> write(FrameGraphId<T> output) {
             return FrameGraphId<T>(write(FrameGraphHandle(output)));
         }
 
@@ -137,7 +137,7 @@ public:
         Builder(FrameGraph& fg, fg::PassNode& pass) noexcept;
         ~Builder() noexcept;
         FrameGraphHandle read(FrameGraphHandle input);
-        FrameGraphHandle write(FrameGraphHandle output);
+        [[nodiscard]] FrameGraphHandle write(FrameGraphHandle output);
         FrameGraph& mFrameGraph;
         fg::PassNode& mPass;
     };
