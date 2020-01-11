@@ -284,9 +284,6 @@ private:
     void framebufferTexture(backend::TargetBufferInfo const& binfo,
             GLRenderTarget const* rt, GLenum attachment) noexcept;
 
-    void framebufferRenderbuffer(GLTexture const* t,
-            GLRenderTarget const* rt, GLenum attachment) noexcept;
-
     void setRasterStateSlow(backend::RasterState rs) noexcept;
     void setRasterState(backend::RasterState rs) noexcept {
         if (UTILS_UNLIKELY(rs != mRasterState)) {

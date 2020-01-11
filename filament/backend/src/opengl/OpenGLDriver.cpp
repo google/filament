@@ -692,131 +692,153 @@ void OpenGLDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
 
 void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
         GLRenderTarget const* rt, GLenum attachment) noexcept {
+
+#if !defined(NDEBUG)
+    // Only used by assert() checks below
+    UTILS_UNUSED_IN_RELEASE auto valueForLevel = [](size_t level, size_t value) {
+        return std::max(size_t(1), value >> level);
+    };
+#endif
+
+    assert(binfo.handle);
+
     GLTexture* t = handle_cast<GLTexture*>(binfo.handle);
-    auto& gl = mContext;
 
     assert(t->target != SamplerType::SAMPLER_EXTERNAL);
+    assert(rt->width  <= valueForLevel(binfo.level, t->width) &&
+           rt->height <= valueForLevel(binfo.level, t->height));
 
-    GLenum target = GL_TEXTURE_2D;
-    switch (t->target) {
-        case SamplerType::SAMPLER_2D:
-            target = t->gl.target;  // this could be GL_TEXTURE_2D_MULTISAMPLE or GL_TEXTURE_2D_ARRAY
-            // note: multi-sampled textures can't have mipmaps
-            break;
-        case SamplerType::SAMPLER_CUBEMAP:
-            target = getCubemapTarget(binfo.face);
-            // note: cubemaps can't be multi-sampled
-            break;
-        default:
-            break;
-    }
+    auto& gl = mContext;
 
-    if (rt->gl.samples <= 1 ||
-        (rt->gl.samples > 1 && t->samples > 1 && gl.features.multisample_texture)) {
-        // on GL3.2 / GLES3.1 and above multisample is handled when creating the texture.
-        // If multisampled textures are not supported and we end-up here, things should
-        // still work, albeit without MSAA.
-        gl.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
-        switch (target) {
-            case GL_TEXTURE_CUBE_MAP_POSITIVE_X:
-            case GL_TEXTURE_CUBE_MAP_NEGATIVE_X:
-            case GL_TEXTURE_CUBE_MAP_POSITIVE_Y:
-            case GL_TEXTURE_CUBE_MAP_NEGATIVE_Y:
-            case GL_TEXTURE_CUBE_MAP_POSITIVE_Z:
-            case GL_TEXTURE_CUBE_MAP_NEGATIVE_Z:
-            case GL_TEXTURE_2D:
-            case GL_TEXTURE_2D_MULTISAMPLE:
-                glFramebufferTexture2D(GL_FRAMEBUFFER, attachment,
-                        target, t->gl.id, binfo.level);
+    if (any(t->usage & TextureUsage::SAMPLEABLE)) {
+        GLenum target = GL_TEXTURE_2D;
+        switch (t->target) {
+            case SamplerType::SAMPLER_2D:
+                // this could be GL_TEXTURE_2D_MULTISAMPLE or GL_TEXTURE_2D_ARRAY
+                target = t->gl.target;
+                // note: multi-sampled textures can't have mipmaps
                 break;
-            case GL_TEXTURE_2D_ARRAY:
-                // GL_TEXTURE_2D_MULTISAMPLE_ARRAY is not supported in GLES
-                glFramebufferTextureLayer(GL_FRAMEBUFFER, attachment,
-                        t->gl.id, binfo.level, binfo.layer);
+            case SamplerType::SAMPLER_CUBEMAP:
+                target = getCubemapTarget(binfo.face);
+                // note: cubemaps can't be multi-sampled
                 break;
             default:
-                // we shouldn't be here
                 break;
         }
-        CHECK_GL_ERROR(utils::slog.e)
-    } else
+
+        if (rt->gl.samples <= 1 ||
+            (rt->gl.samples > 1 && t->samples > 1 && gl.features.multisample_texture)) {
+            // on GL3.2 / GLES3.1 and above multisample is handled when creating the texture.
+            // If multisampled textures are not supported and we end-up here, things should
+            // still work, albeit without MSAA.
+            gl.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
+            switch (target) {
+                case GL_TEXTURE_CUBE_MAP_POSITIVE_X:
+                case GL_TEXTURE_CUBE_MAP_NEGATIVE_X:
+                case GL_TEXTURE_CUBE_MAP_POSITIVE_Y:
+                case GL_TEXTURE_CUBE_MAP_NEGATIVE_Y:
+                case GL_TEXTURE_CUBE_MAP_POSITIVE_Z:
+                case GL_TEXTURE_CUBE_MAP_NEGATIVE_Z:
+                case GL_TEXTURE_2D:
+                case GL_TEXTURE_2D_MULTISAMPLE:
+                    glFramebufferTexture2D(GL_FRAMEBUFFER, attachment,
+                            target, t->gl.id, binfo.level);
+                    break;
+                case GL_TEXTURE_2D_ARRAY:
+                    // GL_TEXTURE_2D_MULTISAMPLE_ARRAY is not supported in GLES
+                    glFramebufferTextureLayer(GL_FRAMEBUFFER, attachment,
+                            t->gl.id, binfo.level, binfo.layer);
+                    break;
+                default:
+                    // we shouldn't be here
+                    break;
+            }
+            CHECK_GL_ERROR(utils::slog.e)
+        } else
 #if GLES31_HEADERS
-    if (gl.ext.EXT_multisampled_render_to_texture && t->depth <= 1) {
-        assert(rt->gl.samples > 1);
-        // We have a multi-sample rendertarget and we have EXT_multisampled_render_to_texture,
-        // so, we can directly use a 1-sample texture as attachment, multi-sample resolve,
-        // will happen automagically and efficiently in the driver.
-        // This extension only exists on OpenGL ES.
-        gl.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
-        glext::glFramebufferTexture2DMultisampleEXT(GL_FRAMEBUFFER,
-                attachment, target, t->gl.id, binfo.level, rt->gl.samples);
-    } else
+            if (gl.ext.EXT_multisampled_render_to_texture && t->depth <= 1) {
+                assert(rt->gl.samples > 1);
+                // We have a multi-sample rendertarget and we have EXT_multisampled_render_to_texture,
+                // so, we can directly use a 1-sample texture as attachment, multi-sample resolve,
+                // will happen automagically and efficiently in the driver.
+                // This extension only exists on OpenGL ES.
+                gl.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
+                glext::glFramebufferTexture2DMultisampleEXT(GL_FRAMEBUFFER,
+                        attachment, target, t->gl.id, binfo.level, rt->gl.samples);
+            } else
 #endif
-    { // here we emulate ext.EXT_multisampled_render_to_texture
-        assert(rt->gl.samples > 1);
+        { // here we emulate ext.EXT_multisampled_render_to_texture
+            assert(rt->gl.samples > 1);
 
-        // If the texture doesn't already have one, create a sidecar multi-sampled renderbuffer,
-        // which is where drawing will actually take place, make that our attachment.
+            // If the texture doesn't already have one, create a sidecar multi-sampled renderbuffer,
+            // which is where drawing will actually take place, make that our attachment.
+            gl.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
+            if (t->gl.rb == 0) {
+                glGenRenderbuffers(1, &t->gl.rb);
+                renderBufferStorage(t->gl.rb,
+                        t->gl.internalFormat, rt->width, rt->height, rt->gl.samples);
+            }
+            glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment, GL_RENDERBUFFER, t->gl.rb);
+
+            // We also need a "read" sidecar fbo, used later for the resolve, which takes place in
+            // endRenderPass().
+            if (!rt->gl.fbo_read) {
+                glGenFramebuffers(1, &rt->gl.fbo_read);
+            }
+            gl.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo_read);
+            switch (target) {
+                case GL_TEXTURE_CUBE_MAP_POSITIVE_X:
+                case GL_TEXTURE_CUBE_MAP_NEGATIVE_X:
+                case GL_TEXTURE_CUBE_MAP_POSITIVE_Y:
+                case GL_TEXTURE_CUBE_MAP_NEGATIVE_Y:
+                case GL_TEXTURE_CUBE_MAP_POSITIVE_Z:
+                case GL_TEXTURE_CUBE_MAP_NEGATIVE_Z:
+                case GL_TEXTURE_2D:
+                    glFramebufferTexture2D(GL_FRAMEBUFFER, attachment,
+                            target, t->gl.id, binfo.level);
+                    break;
+                case GL_TEXTURE_2D_ARRAY:
+                    glFramebufferTextureLayer(GL_FRAMEBUFFER, attachment,
+                            t->gl.id, binfo.level, binfo.layer);
+                    break;
+                default:
+                    // we shouldn't be here
+                    break;
+            }
+
+            CHECK_GL_ERROR(utils::slog.e)
+
+            switch (attachment) {
+                case GL_COLOR_ATTACHMENT0:
+                    rt->gl.resolve |= TargetBufferFlags::COLOR;
+                    break;
+                case GL_DEPTH_ATTACHMENT:
+                    rt->gl.resolve |= TargetBufferFlags::DEPTH;
+                    break;
+                case GL_STENCIL_ATTACHMENT:
+                    rt->gl.resolve |= TargetBufferFlags::STENCIL;
+                    break;
+                case GL_DEPTH_STENCIL_ATTACHMENT:
+                    rt->gl.resolve |= TargetBufferFlags::DEPTH;
+                    rt->gl.resolve |= TargetBufferFlags::STENCIL;
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        // In a sense, drawing to a texture level is similar to calling setTextureData on it; in
+        // both cases, we update the base/max LOD to give shaders access to levels as they become
+        // available.
+        updateTextureLodRange(t, binfo.level);
+    } else {
         gl.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
-        if (t->gl.rb == 0) {
-            glGenRenderbuffers(1, &t->gl.rb);
-            renderBufferStorage(t->gl.rb,
-                    t->gl.internalFormat, rt->width, rt->height, rt->gl.samples);
-        }
-        glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment, GL_RENDERBUFFER, t->gl.rb);
-
-        // We also need a "read" sidecar fbo, used later for the resolve, which takes place in
-        // endRenderPass().
-        if (!rt->gl.fbo_read) {
-            glGenFramebuffers(1, &rt->gl.fbo_read);
-        }
-        gl.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo_read);
-        switch (target) {
-            case GL_TEXTURE_CUBE_MAP_POSITIVE_X:
-            case GL_TEXTURE_CUBE_MAP_NEGATIVE_X:
-            case GL_TEXTURE_CUBE_MAP_POSITIVE_Y:
-            case GL_TEXTURE_CUBE_MAP_NEGATIVE_Y:
-            case GL_TEXTURE_CUBE_MAP_POSITIVE_Z:
-            case GL_TEXTURE_CUBE_MAP_NEGATIVE_Z:
-            case GL_TEXTURE_2D:
-                glFramebufferTexture2D(GL_FRAMEBUFFER, attachment,
-                        target, t->gl.id, binfo.level);
-                break;
-            case GL_TEXTURE_2D_ARRAY:
-                glFramebufferTextureLayer(GL_FRAMEBUFFER, attachment,
-                        t->gl.id, binfo.level, binfo.layer);
-                break;
-            default:
-                // we shouldn't be here
-                break;
-        }
-
-        CHECK_GL_ERROR(utils::slog.e)
-
-        switch (attachment) {
-            case GL_COLOR_ATTACHMENT0:
-                rt->gl.resolve |= TargetBufferFlags::COLOR;
-                break;
-            case GL_DEPTH_ATTACHMENT:
-                rt->gl.resolve |= TargetBufferFlags::DEPTH;
-                break;
-            case GL_STENCIL_ATTACHMENT:
-                rt->gl.resolve |= TargetBufferFlags::STENCIL;
-                break;
-            case GL_DEPTH_STENCIL_ATTACHMENT:
-                rt->gl.resolve |= TargetBufferFlags::DEPTH;
-                rt->gl.resolve |= TargetBufferFlags::STENCIL;
-                break;
-            default:
-                break;
-        }
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment, GL_RENDERBUFFER, t->gl.id);
+        // unbind the renderbuffer, to avoid any later confusion
+        glBindRenderbuffer(GL_RENDERBUFFER, 0);
     }
 
-    // In a sense, drawing to a texture level is similar to calling setTextureData on it; in
-    // both cases, we update the base/max LOD to give shaders access to levels as they become
-    // available.
-    updateTextureLodRange(t, binfo.level);
-
+    CHECK_GL_ERROR(utils::slog.e)
     CHECK_GL_FRAMEBUFFER_STATUS(utils::slog.e)
 }
 
@@ -838,17 +860,7 @@ void OpenGLDriver::renderBufferStorage(GLuint rbo, GLenum internalformat, uint32
     } else {
         glRenderbufferStorage(GL_RENDERBUFFER, internalformat, width, height);
     }
-}
-
-void OpenGLDriver::framebufferRenderbuffer(GLTexture const* t,
-        GLRenderTarget const* rt, GLenum attachment) noexcept {
-    auto& gl = mContext;
-    gl.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
-    glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment, GL_RENDERBUFFER, t->gl.id);
-    // unbind the renderbuffer, to avoid any later confusion
-    glBindRenderbuffer(GL_RENDERBUFFER, 0);
     CHECK_GL_ERROR(utils::slog.e)
-    CHECK_GL_FRAMEBUFFER_STATUS(utils::slog.e)
 }
 
 void OpenGLDriver::createDefaultRenderTargetR(
@@ -915,26 +927,11 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
 
     rt->gl.samples = samples;
 
-#if !defined(NDEBUG)
-    // Only used by assert() checks below
-    UTILS_UNUSED_IN_RELEASE auto valueForLevel = [](size_t level, size_t value) {
-        return std::max(size_t(1), value >> level);
-    };
-#endif
-
     if (any(targets & TargetBufferFlags::COLOR)) {
         // TODO: handle multiple color attachments
-        assert(color.handle);
         rt->gl.color.texture = handle_cast<GLTexture*>(color.handle);
         rt->gl.color.level = color.level;
-        assert(width <= valueForLevel(color.level, rt->gl.color.texture->width) &&
-               height <= valueForLevel(color.level, rt->gl.color.texture->height));
-
-        if (any(rt->gl.color.texture->usage & TextureUsage::SAMPLEABLE)) {
-            framebufferTexture(color, rt, GL_COLOR_ATTACHMENT0);
-        } else {
-            framebufferRenderbuffer(rt->gl.color.texture, rt, GL_COLOR_ATTACHMENT0);
-        }
+        framebufferTexture(color, rt, GL_COLOR_ATTACHMENT0);
 #ifndef NDEBUG
         // clear the color buffer we just allocated to yellow
         mContext.setClearColor(1, 1, 0, 1);
@@ -951,43 +948,25 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         assert(!stencil.handle || stencil.handle == depth.handle);
         rt->gl.depth.texture = handle_cast<GLTexture*>(depth.handle);
         rt->gl.depth.level = depth.level;
-        assert(width <= valueForLevel(depth.level, rt->gl.depth.texture->width) &&
-               height <= valueForLevel(depth.level, rt->gl.depth.texture->height));
-        if (any(rt->gl.depth.texture->usage & TextureUsage::SAMPLEABLE)) {
+        if (any(rt->gl.depth.texture->usage & TextureUsage::SAMPLEABLE) ||
+            (!depth.handle && !stencil.handle)) {
             // special case: depth & stencil requested, and both provided as the same texture
-            specialCased = true;
-            framebufferTexture(depth, rt, GL_DEPTH_STENCIL_ATTACHMENT);
-        } else if (!depth.handle && !stencil.handle) {
             // special case: depth & stencil requested, but both not provided
             specialCased = true;
-            framebufferRenderbuffer(rt->gl.depth.texture, rt, GL_DEPTH_STENCIL_ATTACHMENT);
+            framebufferTexture(depth, rt, GL_DEPTH_STENCIL_ATTACHMENT);
         }
     }
 
     if (!specialCased) {
         if (any(targets & TargetBufferFlags::DEPTH)) {
-            assert(depth.handle);
             rt->gl.depth.texture = handle_cast<GLTexture*>(depth.handle);
             rt->gl.depth.level = depth.level;
-            assert(width <= valueForLevel(depth.level, rt->gl.depth.texture->width) &&
-                   height <= valueForLevel(depth.level, rt->gl.depth.texture->height));
-            if (any(rt->gl.depth.texture->usage & TextureUsage::SAMPLEABLE)) {
-                framebufferTexture(depth, rt, GL_DEPTH_ATTACHMENT);
-            } else {
-                framebufferRenderbuffer(rt->gl.depth.texture, rt, GL_DEPTH_ATTACHMENT);
-            }
+            framebufferTexture(depth, rt, GL_DEPTH_ATTACHMENT);
         }
         if (any(targets & TargetBufferFlags::STENCIL)) {
-            assert(stencil.handle);
             rt->gl.stencil.texture = handle_cast<GLTexture*>(stencil.handle);
             rt->gl.stencil.level = stencil.level;
-            assert(width <= valueForLevel(stencil.level, rt->gl.stencil.texture->width) &&
-                   height <= valueForLevel(stencil.level, rt->gl.stencil.texture->height));
-            if (any(rt->gl.stencil.texture->usage & TextureUsage::SAMPLEABLE)) {
-                framebufferTexture(stencil, rt, GL_STENCIL_ATTACHMENT);
-            } else {
-                framebufferRenderbuffer(rt->gl.stencil.texture, rt, GL_STENCIL_ATTACHMENT);
-            }
+            framebufferTexture(stencil, rt, GL_STENCIL_ATTACHMENT);
         }
     }
 
