@@ -400,7 +400,7 @@ function build_android {
 
         ./gradlew \
             -Pfilament_dist_dir=../out/android-debug/filament \
-            :filamat-android:assembleDebug
+            :filamat-android:assembleRelease
 
         if [[ "$INSTALL_COMMAND" ]]; then
             echo "Installing out/filamat-android-release.aar..."
