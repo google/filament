@@ -399,7 +399,7 @@ function build_android {
             :gltfio-android:assembleRelease
 
         ./gradlew \
-            -Pfilament_dist_dir=../out/android-debug/filament \
+            -Pfilament_dist_dir=../out/android-release/filament \
             :filamat-android:assembleRelease
 
         if [[ "$INSTALL_COMMAND" ]]; then
