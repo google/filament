@@ -372,9 +372,12 @@ function build_android {
         ./gradlew \
             -Pfilament_dist_dir=../out/android-debug/filament \
             -Pextra_cmake_args=${VULKAN_ANDROID_OPTION} \
-            :filamat-android:assembleDebug \
             :filament-android:assembleDebug \
             :gltfio-android:assembleDebug
+
+        ./gradlew \
+            -Pfilament_dist_dir=../out/android-debug/filament \
+            :filamat-android:assembleDebug
 
         if [[ "$INSTALL_COMMAND" ]]; then
             echo "Installing out/filamat-android-debug.aar..."
@@ -392,10 +395,12 @@ function build_android {
     if [[ "$ISSUE_RELEASE_BUILD" == "true" ]]; then
         ./gradlew \
             -Pfilament_dist_dir=../out/android-release/filament \
-            -Pextra_cmake_args=${VULKAN_ANDROID_OPTION} \
-            :filamat-android:assembleRelease \
             :filament-android:assembleRelease \
             :gltfio-android:assembleRelease
+
+        ./gradlew \
+            -Pfilament_dist_dir=../out/android-release/filament \
+            :filamat-android:assembleRelease
 
         if [[ "$INSTALL_COMMAND" ]]; then
             echo "Installing out/filamat-android-release.aar..."
