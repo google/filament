@@ -2,7 +2,7 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2018, assimp team
+Copyright (c) 2006-2019, assimp team
 
 
 All rights reserved.
@@ -52,7 +52,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <tuple>
 
 #ifndef ASSIMP_BUILD_NO_COMPRESSED_IFC
-#   include <unzip.h>
+#  ifdef ASSIMP_USE_HUNTER
+#    include <minizip/unzip.h>
+#  else
+#    include <unzip.h>
+#  endif
 #endif
 
 #include "IFCLoader.h"
@@ -207,10 +211,21 @@ void IFCImporter::InternReadFile( const std::string& pFile, aiScene* pScene, IOS
                 }
                 uint8_t* buff = new uint8_t[fileInfo.uncompressed_size];
                 LogInfo("Decompressing IFCZIP file");
-                unzOpenCurrentFile( zip  );
-                const int ret = unzReadCurrentFile( zip, buff, fileInfo.uncompressed_size);
+                unzOpenCurrentFile(zip);
+                size_t total = 0;
+                int read = 0;
+                do {
+                    int bufferSize = fileInfo.uncompressed_size < INT16_MAX ? fileInfo.uncompressed_size : INT16_MAX;
+                    void* buffer = malloc(bufferSize);
+                    read = unzReadCurrentFile(zip, buffer, bufferSize);
+                    if (read > 0) {
+                        memcpy((char*)buff + total, buffer, read);
+                        total += read;
+                    }
+                    free(buffer);
+                } while (read > 0);
                 size_t filesize = fileInfo.uncompressed_size;
-                if ( ret < 0 || size_t(ret) != filesize )
+                if (total == 0 || size_t(total) != filesize)
                 {
                     delete[] buff;
                     ThrowException("Failed to decompress IFC ZIP file");
@@ -659,8 +674,8 @@ void ProcessMetadata(uint64_t relDefinesByPropertiesID, ConversionData& conv, Me
 }
 
 // ------------------------------------------------------------------------------------------------
-aiNode* ProcessSpatialStructure(aiNode* parent, const Schema_2x3::IfcProduct& el, ConversionData& conv, std::vector<TempOpening>* collect_openings = NULL)
-{
+aiNode* ProcessSpatialStructure(aiNode* parent, const Schema_2x3::IfcProduct& el, ConversionData& conv,
+        std::vector<TempOpening>* collect_openings = nullptr ) {
     const STEP::DB::RefMap& refs = conv.db.GetRefs();
 
     // skip over space and annotation nodes - usually, these have no meaning in Assimp's context
@@ -675,12 +690,12 @@ aiNode* ProcessSpatialStructure(aiNode* parent, const Schema_2x3::IfcProduct& el
     if(conv.settings.skipAnnotations) {
         if(el.ToPtr<Schema_2x3::IfcAnnotation>()) {
             IFCImporter::LogDebug("skipping IfcAnnotation entity due to importer settings");
-            return NULL;
+            return nullptr;
         }
     }
 
     // add an output node for this spatial structure
-    std::unique_ptr<aiNode> nd(new aiNode());
+    aiNode *nd(new aiNode );
     nd->mName.Set(el.GetClassName()+"_"+(el.Name?el.Name.Get():"Unnamed")+"_"+el.GlobalId);
     nd->mParent = parent;
 
@@ -693,8 +708,7 @@ aiNode* ProcessSpatialStructure(aiNode* parent, const Schema_2x3::IfcProduct& el
         if (children.first==children.second) {
             // handles single property set
             ProcessMetadata((*children.first).second, conv, properties);
-        }
-        else {
+        } else {
             // handles multiple property sets (currently all property sets are merged,
             // which may not be the best solution in the long run)
             for (STEP::DB::RefMap::const_iterator it=children.first; it!=children.second; ++it) {
@@ -751,7 +765,7 @@ aiNode* ProcessSpatialStructure(aiNode* parent, const Schema_2x3::IfcProduct& el
                         continue;
                     }
 
-                    aiNode* const ndnew = ProcessSpatialStructure(nd.get(),pro,conv,NULL);
+                    aiNode* const ndnew = ProcessSpatialStructure(nd,pro,conv,nullptr);
                     if(ndnew) {
                         subnodes.push_back( ndnew );
                     }
@@ -765,7 +779,7 @@ aiNode* ProcessSpatialStructure(aiNode* parent, const Schema_2x3::IfcProduct& el
                     // move opening elements to a separate node since they are semantically different than elements that are just 'contained'
                     std::unique_ptr<aiNode> nd_aggr(new aiNode());
                     nd_aggr->mName.Set("$RelVoidsElement");
-                    nd_aggr->mParent = nd.get();
+                    nd_aggr->mParent = nd;
 
                     nd_aggr->mTransformation = nd->mTransformation;
 
@@ -810,7 +824,7 @@ aiNode* ProcessSpatialStructure(aiNode* parent, const Schema_2x3::IfcProduct& el
                 // move aggregate elements to a separate node since they are semantically different than elements that are just 'contained'
                 std::unique_ptr<aiNode> nd_aggr(new aiNode());
                 nd_aggr->mName.Set("$RelAggregates");
-                nd_aggr->mParent = nd.get();
+                nd_aggr->mParent = nd;
 
                 nd_aggr->mTransformation = nd->mTransformation;
 
@@ -835,19 +849,18 @@ aiNode* ProcessSpatialStructure(aiNode* parent, const Schema_2x3::IfcProduct& el
         }
 
         if (!skipGeometry) {
-          ProcessProductRepresentation(el,nd.get(),subnodes,conv);
-          conv.apply_openings = conv.collect_openings = NULL;
+          ProcessProductRepresentation(el, nd, subnodes, conv);
+          conv.apply_openings = conv.collect_openings = nullptr;
         }
 
         if (subnodes.size()) {
             nd->mChildren = new aiNode*[subnodes.size()]();
             for(aiNode* nd2 : subnodes) {
                 nd->mChildren[nd->mNumChildren++] = nd2;
-                nd2->mParent = nd.get();
+                nd2->mParent = nd;
             }
         }
-    }
-    catch(...) {
+    } catch(...) {
         // it hurts, but I don't want to pull boost::ptr_vector into -noboost only for these few spots here
         std::for_each(subnodes.begin(),subnodes.end(),delete_fun<aiNode>());
         throw;
@@ -855,7 +868,7 @@ aiNode* ProcessSpatialStructure(aiNode* parent, const Schema_2x3::IfcProduct& el
 
     ai_assert(conv.already_processed.find(el.GetID()) != conv.already_processed.end());
     conv.already_processed.erase(conv.already_processed.find(el.GetID()));
-    return nd.release();
+    return nd;
 }
 
 // ------------------------------------------------------------------------------------------------

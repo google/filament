@@ -2,7 +2,7 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2018, assimp team
+Copyright (c) 2006-2019, assimp team
 
 
 All rights reserved.
@@ -311,10 +311,9 @@ class TrimmedCurve : public BoundedCurve {
 public:
     // --------------------------------------------------
     TrimmedCurve(const Schema_2x3::IfcTrimmedCurve& entity, ConversionData& conv)
-        : BoundedCurve(entity,conv)
+        : BoundedCurve(entity,conv),
+          base(std::shared_ptr<const Curve>(Curve::Convert(entity.BasisCurve,conv)))
     {
-        base = std::shared_ptr<const Curve>(Curve::Convert(entity.BasisCurve,conv));
-
         typedef std::shared_ptr<const STEP::EXPRESS::DataType> Entry;
 
         // for some reason, trimmed curves can either specify a parametric value
@@ -500,7 +499,7 @@ bool Curve::InRange(IfcFloat u) const {
     if (IsClosed()) {
         return true;
     }
-    const IfcFloat epsilon = 1e-5;
+    const IfcFloat epsilon = Math::getEpsilon<float>();
     return u - range.first > -epsilon && range.second - u > -epsilon;
 }
 #endif

@@ -10,8 +10,11 @@
 #include "irrArray.h"
 
 #include <cassert>
+#include <stdlib.h>    
+#include <cctype>
+#include <cstdint>
+//using namespace Assimp;
 
-using namespace Assimp;
 
 #ifdef _DEBUG
 #define IRR_DEBUGPRINT(x) printf((x));
@@ -162,7 +165,8 @@ public:
 			return 0;
 
 		core::stringc c = attr->Value.c_str();
-		return fast_atof(c.c_str());
+        return static_cast<float>(atof(c.c_str()));
+        //return fast_atof(c.c_str());
 	}
 
 
@@ -174,7 +178,8 @@ public:
 			return 0;
 
 		core::stringc c = attrvalue;
-		return fast_atof(c.c_str());
+        return static_cast<float>(atof(c.c_str()));
+		//return fast_atof(c.c_str());
 	}
 
 
@@ -428,7 +433,7 @@ private:
 			++P;
 
     // remove trailing whitespace, if any
-    while( isspace( P[-1]))
+    while( std::isspace( P[-1]))
       --P;
 
 		NodeName = core::string<char_type>(pBeginClose, (int)(P - pBeginClose));

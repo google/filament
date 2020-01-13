@@ -25,11 +25,4 @@ Other Changes
 
 (1)
 
-In glTF2Importer.cpp, change from:
-    ai_anim->mNumChannels = r.skins[0].jointNames.size();
-to:
-    ai_anim->mNumChannels = r.skins.Size() > 0 ? r.skins[0].jointNames.size() : 0;
-
-(2)
-
-Negate the bitangent in CalcTangentsProcess.cpp
+Negate the bitangent in CalcTangentsProcess.cpp (see Filament commit 84eb954).

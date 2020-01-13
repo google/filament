@@ -2,7 +2,7 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2018, assimp team
+Copyright (c) 2006-2019, assimp team
 
 
 All rights reserved.
@@ -196,8 +196,7 @@ bool GetNextLine( const char_t*& buffer, char_t out[ BufferSize ] ) {
 
 // ---------------------------------------------------------------------------------
 template <class char_t>
-AI_FORCE_INLINE bool IsNumeric( char_t in)
-{
+AI_FORCE_INLINE bool IsNumeric( char_t in) {
     return ( in >= '0' && in <= '9' ) || '-' == in || '+' == in;
 }
 

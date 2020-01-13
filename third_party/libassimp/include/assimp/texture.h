@@ -3,7 +3,7 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2018, assimp team
+Copyright (c) 2006-2019, assimp team
 
 
 
@@ -117,6 +117,8 @@ struct aiTexel
 
 #include "./Compiler/poppack1.h"
 
+#define HINTMAXTEXTURELEN 9
+
 // --------------------------------------------------------------------------------
 /** Helper structure to describe an embedded texture
  *
@@ -166,7 +168,7 @@ struct aiTexture {
      * E.g. 'dds\\0', 'pcx\\0', 'jpg\\0'.  All characters are lower-case.
      * The fourth character will always be '\\0'.
      */
-    char achFormatHint[9];// 8 for string + 1 for terminator.
+    char achFormatHint[ HINTMAXTEXTURELEN ];// 8 for string + 1 for terminator.
 
     /** Data of the texture.
      *

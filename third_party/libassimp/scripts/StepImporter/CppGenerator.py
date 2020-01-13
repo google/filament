@@ -52,8 +52,8 @@ use_ifc_template = False
 	
 input_step_template_h   = 'StepReaderGen.h.template'
 input_step_template_cpp = 'StepReaderGen.cpp.template'
-input_ifc_template_h        = 'IFCReaderGen.h.template'
-input_ifc_template_cpp      = 'IFCReaderGen.cpp.template'
+input_ifc_template_h    = 'IFCReaderGen.h.template'
+input_ifc_template_cpp  = 'IFCReaderGen.cpp.template'
 
 cpp_keywords = "class"
 
@@ -87,7 +87,7 @@ template_type = r"""
 
 template_stub_decl = '\tDECL_CONV_STUB({type});\n'
 template_schema = '\t\tSchemaEntry("{normalized_name}",&STEP::ObjectHelper<{type},{argcnt}>::Construct )\n'
-template_schema_type = '\t\tSchemaEntry("{normalized_name}",NULL )\n'
+template_schema_type = '\t\tSchemaEntry("{normalized_name}",nullptr )\n'
 template_converter = r"""
 // -----------------------------------------------------------------------------------------------------------
 template <> size_t GenericFill<{type}>(const DB& db, const LIST& params, {type}* in)
@@ -99,7 +99,7 @@ template_converter_prologue_a = '\tsize_t base = GenericFill(db,params,static_ca
 template_converter_prologue_b = '\tsize_t base = 0;\n'
 template_converter_check_argcnt = '\tif (params.GetSize() < {max_arg}) {{ throw STEP::TypeError("expected {max_arg} arguments to {name}"); }}'
 template_converter_code_per_field = r"""    do {{ // convert the '{fieldname}' argument
-        boost::shared_ptr<const DataType> arg = params[base++];{handle_unset}{convert}
+        std::shared_ptr<const DataType> arg = params[base++];{handle_unset}{convert}
     }} while(0);
 """
 template_allow_optional = r"""
@@ -151,11 +151,8 @@ def handle_unset_args(field,entity,schema,argnum):
     return n+template_allow_optional.format()
 
 def get_single_conversion(field,schema,argnum=0,classname='?'):
-    typen = field.type
     name = field.name
-    if field.collection:
-        typen = 'LIST'
-    return template_convert_single.format(type=typen,name=name,argnum=argnum,classname=classname,full_type=field.fullspec)
+    return template_convert_single.format(name=name,argnum=argnum,classname=classname,full_type=field.fullspec)
 
 def count_args_up(entity,schema):
     return len(entity.members) + (count_args_up(schema.entities[entity.parent],schema) if entity.parent else 0)
@@ -218,7 +215,7 @@ def get_derived(e,schema):
     return res
 
 def get_hierarchy(e,schema):
-    return get_derived(e.schema)+[e.name]+get_base_classes(e,schema)
+    return get_derived(e, schema)+[e.name]+get_base_classes(e,schema)
 
 def sort_entity_list(schema):
     deps = []
@@ -299,6 +296,9 @@ def work(filename):
     with open(input_template_cpp,'rt') as inp:
         with open(output_file_cpp,'wt') as outp:
             outp.write(inp.read().replace('{schema-static-table}',schema_table).replace('{converter-impl}',converters))
+
+    # Finished without error, so return 0
+    return 0
 
 if __name__ == "__main__":
     sys.exit(work(sys.argv[1] if len(sys.argv)>1 else 'schema.exp'))

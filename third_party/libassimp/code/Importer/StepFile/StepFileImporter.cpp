@@ -3,7 +3,7 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2018, assimp team
+Copyright (c) 2006-2019, assimp team
 
 
 
@@ -41,7 +41,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ---------------------------------------------------------------------------
 */
 
-#ifndef ASSIMP_BUILD_NO_STEPFILE_IMPORTER
+#ifndef ASSIMP_BUILD_NO_STEP_IMPORTER
 
 #include "StepFileImporter.h"
 #include "../../Importer/STEPParser/STEPFileReader.h"
@@ -110,5 +110,5 @@ void StepFileImporter::InternReadFile(const std::string &file, aiScene* pScene, 
 } // Namespace StepFile
 } // Namespace Assimp
 
-#endif // ASSIMP_BUILD_NO_STEPFILE_IMPORTER
+#endif // ASSIMP_BUILD_NO_STEP_IMPORTER
 

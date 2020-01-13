@@ -9,7 +9,7 @@
 #include "irrXML.h"
 #include "irrString.h"
 #include "irrArray.h"
-#include <assimp/fast_atof.h>
+//#include <assimp/fast_atof.h>
 #include "CXMLReaderImpl.h"
 
 namespace irr
@@ -18,7 +18,7 @@ namespace io
 {
 
 //! Implementation of the file read callback for ordinary files
-class CFileReadCallBack : public IFileReadCallBack
+class IRRXML_API CFileReadCallBack : public IFileReadCallBack
 {
 public:
 

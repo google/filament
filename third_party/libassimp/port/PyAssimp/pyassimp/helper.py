@@ -6,7 +6,6 @@ Some fancy helper functions.
 
 import os
 import ctypes
-from ctypes import POINTER
 import operator
 
 from distutils.sysconfig import get_python_lib
@@ -14,7 +13,7 @@ import re
 import sys
 
 try: import numpy
-except: numpy = None
+except ImportError: numpy = None
 
 import logging;logger = logging.getLogger("pyassimp")
 
@@ -193,9 +192,9 @@ def try_load_functions(library_path, dll):
 
     # library found!
     from .structs import Scene, ExportDataBlob
-    load.restype = POINTER(Scene)
-    load_mem.restype = POINTER(Scene)
-    export2blob.restype = POINTER(ExportDataBlob)
+    load.restype = ctypes.POINTER(Scene)
+    load_mem.restype = ctypes.POINTER(Scene)
+    export2blob.restype = ctypes.POINTER(ExportDataBlob)
     return (library_path, load, load_mem, export, export2blob, release, dll)
 
 def search_library():
@@ -275,6 +274,8 @@ def hasattr_silent(object, name):
     """
 
     try:
+        if not object:
+            return False
         return hasattr(object, name)
-    except:
+    except AttributeError:
         return False

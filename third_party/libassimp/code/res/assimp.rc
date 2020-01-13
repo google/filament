@@ -1,7 +1,7 @@
 // Microsoft Visual C++ generated resource script.
 //
 #include "resource.h"
-#include "..\..\revision.h"
+#include "revision.h"
 
 #define APSTUDIO_READONLY_SYMBOLS
 /////////////////////////////////////////////////////////////////////////////
@@ -31,8 +31,8 @@ LANGUAGE LANG_GERMAN, SUBLANG_GERMAN
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,1,SVNRevision, 0
- PRODUCTVERSION 1,1,SVNRevision,0
+ FILEVERSION VER_FILEVERSION
+ PRODUCTVERSION VER_FILEVERSION
  FILEFLAGSMASK 0x17L
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -50,12 +50,12 @@ BEGIN
             VALUE "Comments", "Licensed under a 3-clause BSD license"
             VALUE "CompanyName", "assimp team"
             VALUE "FileDescription", "Open Asset Import Library"
-            VALUE "FileVersion", 1,1,SVNRevision,0
+            VALUE "FileVersion", VER_FILEVERSION
             VALUE "InternalName", "assimp "
-            VALUE "LegalCopyright", "Copyright (C) 2006-2010"
-            VALUE "OriginalFilename", "assimpNN.dll"
+            VALUE "LegalCopyright", "Copyright (C) 2006-2019"
+            VALUE "OriginalFilename", VER_ORIGINAL_FILENAME_STR
             VALUE "ProductName", "Open Asset Import Library"
-            VALUE "ProductVersion", 1,1,SVNRevision,0
+            VALUE "ProductVersion", VER_FILEVERSION_STR
 		,0
         END
     END

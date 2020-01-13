@@ -1173,6 +1173,18 @@ float4 PimpMyPixel (float4 prev)
 
 @endcode
 
+@section shdacc How to access shader-code from a texture (AI_MATKEY_GLOBAL_SHADERLANG and AI_MATKEY_SHADER_VERTEX, ...)
+
+You can get assigned shader sources by using the following material keys:
+
+<li>AI_MATKEY_GLOBAL_SHADERLANG</li>To get the used shader language.
+<li>AI_MATKEY_SHADER_VERTEX</li> Assigned vertex shader code stored as a string.
+<li>AI_MATKEY_SHADER_FRAGMENT</li> Assigned fragment shader code stored as a string.
+<li>AI_MATKEY_SHADER_GEO</li> Assigned geometry shader code stored as a string.
+<li>AI_MATKEY_SHADER_TESSELATION</li> Assigned tesselation shader code stored as a string.
+<li>AI_MATKEY_SHADER_PRIMITIVE</li> Assigned primitive shader code stored as a string.
+<li>AI_MATKEY_SHADER_COMPUTE</li> Assigned compute shader code stored as a string.
+
 */
 
 
