@@ -215,17 +215,6 @@ void FTransformManager::insertNode(Instance i, Instance parent) noexcept {
             // and we are the previous sibling of our next sibling
             manager[next].prev = i;
         }
-        // ensure instances are still in order
-        Instance it = std::min(i, parent);
-        Instance end = manager.end();
-        while (it != end) {
-          Instance itParent = Instance(manager[it].parent);
-          if (UTILS_UNLIKELY(itParent > it)) {
-            swapNode(it, itParent);
-          } else {
-            ++it;
-          }
-        }
     }
 
     validateNode(i);
