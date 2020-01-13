@@ -35,13 +35,16 @@ http://www.cmake.org/.
 
 For Unix:
 
-1. cmake CMakeLists.txt -G 'Unix Makefiles'
-2. make
+1. mkdir build && cd build
+2. cmake .. -G 'Unix Makefiles'
+3. make -j4
 
 For Windows:
 1. Open a command prompt
-2. cmake CMakeLists.txt
-2. Open your default IDE and build it
+2. mkdir build
+3. cd build
+4. cmake ..
+5. cmake --build .
 
 For iOS:
 Just check the following project, which deploys a compiler toolchain for different iOS-versions: https://github.com/assimp/assimp/tree/master/port/iOS

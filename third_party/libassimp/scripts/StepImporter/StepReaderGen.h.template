@@ -2,7 +2,7 @@
 Open Asset Import Library (ASSIMP)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2018, ASSIMP Development Team
+Copyright (c) 2006-2019, ASSIMP Development Team
 All rights reserved.
 
 Redistribution and use of this software in source and binary forms, 
@@ -47,25 +47,23 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace Assimp {
 namespace StepFile {
-	using namespace STEP;
-	using namespace STEP::EXPRESS;
-	
-	
-	struct NotImplemented : public ObjectHelper<NotImplemented,0> {
-		
-	};
-	
 
-	// ******************************************************************************
-	// StepFile Custom data types
-	// ******************************************************************************
+using namespace STEP;
+using namespace STEP::EXPRESS;
+
+struct NotImplemented : public ObjectHelper<NotImplemented,0> {
+
+};
+
+// ******************************************************************************
+// StepFile Custom data types
+// ******************************************************************************
 
 {types}
 
-
-	// ******************************************************************************
-	// StepFile Entities
-	// ******************************************************************************
+// ******************************************************************************
+// StepFile Entities
+// ******************************************************************************
 
 {predefs}
 {entities}
@@ -73,11 +71,12 @@ namespace StepFile {
 	void GetSchema(EXPRESS::ConversionSchema& out);
 
 } //! StepFile
+
 namespace STEP {
 
-	// ******************************************************************************
-	// Converter stubs
-	// ******************************************************************************
+// ******************************************************************************
+// Converter stubs
+// ******************************************************************************
 	
 #define DECL_CONV_STUB(type) template <> size_t GenericFill<IFC::type>(const STEP::DB& db, const EXPRESS::LIST& params, IFC::type* in)
 	

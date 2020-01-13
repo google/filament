@@ -3,7 +3,7 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2018, assimp team
+Copyright (c) 2006-2019, assimp team
 
 
 
@@ -48,11 +48,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef AI_STREAMREADER_H_INCLUDED
 #define AI_STREAMREADER_H_INCLUDED
 
+#include <assimp/IOStream.hpp>
+#include <assimp/Defines.h>
+
 #include "ByteSwapper.h"
 #include "Exceptional.h"
 #include <memory>
-#include <assimp/IOStream.hpp>
-#include <assimp/Defines.h>
 
 namespace Assimp {
 
@@ -314,7 +315,7 @@ private:
         const size_t read = stream->Read(current,1,s);
         // (read < s) can only happen if the stream was opened in text mode, in which case FileSize() is not reliable
         ai_assert(read <= s);
-        end = limit = &buffer[read];
+        end = limit = &buffer[read-1] + 1;
     }
 
 private:

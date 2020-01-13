@@ -1,0 +1,22 @@
+# See <http://EditorConfig.org> for details
+
+root = true
+
+[CMakeLists.txt,*.cmake{,.in}]
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_size = 2
+indent_style = space
+
+[*.h.in]
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_size = 4
+indent_style = space
+
+[*.txt]
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true

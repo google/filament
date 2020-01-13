@@ -2,7 +2,7 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2018, assimp team
+Copyright (c) 2006-2019, assimp team
 
 
 All rights reserved.
@@ -62,7 +62,6 @@ std::string AddLineNumber(const std::string& s,uint64_t line /*= LINE_NOT_SPECIF
 {
     return line == STEP::SyntaxError::LINE_NOT_SPECIFIED ? prefix+s : static_cast<std::string>( (Formatter::format(),prefix,"(line ",line,") ",s) );
 }
-
 
 // ------------------------------------------------------------------------------------------------
 std::string AddEntityID(const std::string& s,uint64_t entity /*= ENTITY_NOT_SPECIFIED*/, const std::string& prefix = "")
@@ -243,7 +242,6 @@ void STEP::ReadFile(DB& db,const EXPRESS::ConversionSchema& scheme,
 
         std::string::size_type n2 = s.find_last_of(')');
         if (n2 == std::string::npos || n2 < n1 || n2 == s.length() - 1 || s[n2 + 1] != ';') {
-
             has_next = true;
             bool ok = false;
             for( ++splitter; splitter; ++splitter) {
@@ -251,14 +249,14 @@ void STEP::ReadFile(DB& db,const EXPRESS::ConversionSchema& scheme,
                 if (snext.empty()) {
                     continue;
                 }
+
                 // the next line doesn't start an entity, so maybe it is
                 // just a continuation  for this line, keep going
                 if (!IsEntityDef(snext)) {
                     s.append(snext);
                     n2 = s.find_last_of(')');
                     ok = !(n2 == std::string::npos || n2 < n1 || n2 == s.length() - 1 || s[n2 + 1] != ';');
-                }
-                else {
+                } else {
                     break;
                 }
             }
@@ -280,10 +278,10 @@ void STEP::ReadFile(DB& db,const EXPRESS::ConversionSchema& scheme,
         std::transform( type.begin(), type.end(), type.begin(), &Assimp::ToLower<char>  );
         const char* sz = scheme.GetStaticStringForToken(type);
         if(sz) {
-            const std::string::size_type len = n2-n1+1;
-            char* const copysz = new char[len+1];
+            const std::string::size_type szLen = n2-n1+1;
+            char* const copysz = new char[szLen+1];
             std::copy(s.c_str()+n1,s.c_str()+n2+1,copysz);
-            copysz[len] = '\0';
+            copysz[szLen] = '\0';
             db.InternInsert(new LazyObject(db,id,line,sz,copysz));
         }
         if(!has_next) {
@@ -424,10 +422,8 @@ std::shared_ptr<const EXPRESS::DataType> EXPRESS::DataType::Parse(const char*& i
     return std::make_shared<EXPRESS::INTEGER>(neg?-num:num);
 }
 
-
 // ------------------------------------------------------------------------------------------------
-std::shared_ptr<const EXPRESS::LIST> EXPRESS::LIST::Parse(const char*& inout,uint64_t line, const EXPRESS::ConversionSchema* schema /*= NULL*/)
-{
+std::shared_ptr<const EXPRESS::LIST> EXPRESS::LIST::Parse(const char*& inout,uint64_t line, const EXPRESS::ConversionSchema* schema /*= NULL*/) {
     const std::shared_ptr<EXPRESS::LIST> list = std::make_shared<EXPRESS::LIST>();
     EXPRESS::LIST::MemberList& members = list->members;
 
@@ -468,61 +464,73 @@ std::shared_ptr<const EXPRESS::LIST> EXPRESS::LIST::Parse(const char*& inout,uin
     return list;
 }
 
+// ------------------------------------------------------------------------------------------------
+static void handleSkippedDepthFromToken(const char *a, int64_t &skip_depth ) {
+    if (*a == '(') {
+        ++skip_depth;
+    } else if (*a == ')') {
+        --skip_depth;
+    }
+}
+
+// ------------------------------------------------------------------------------------------------
+static int64_t getIdFromToken(const char *a) {
+    const char *tmp;
+    const int64_t num = static_cast<int64_t>(strtoul10_64(a + 1, &tmp));
+
+    return num;
+}
 
 // ------------------------------------------------------------------------------------------------
 STEP::LazyObject::LazyObject(DB& db, uint64_t id,uint64_t /*line*/, const char* const type,const char* args)
-    : id(id)
-    , type(type)
-    , db(db)
-    , args(args)
-    , obj()
-{
+: id(id)
+, type(type)
+, db(db)
+, args(args)
+, obj() {
     // find any external references and store them in the database.
     // this helps us emulate STEPs INVERSE fields.
-    if (db.KeepInverseIndicesForType(type)) {
-        const char* a  = args;
+    if (!db.KeepInverseIndicesForType(type)) {
+        return;
+    }
 
-        // do a quick scan through the argument tuple and watch out for entity references
-        int64_t skip_depth = 0;
-        while(*a) {
-            if (*a == '(') {
-                ++skip_depth;
-            }
-            else if (*a == ')') {
-                --skip_depth;
-            }
+    // do a quick scan through the argument tuple and watch out for entity references
+    const char *a( args );
+    int64_t skip_depth( 0 );
+    while ( *a ) {
+        handleSkippedDepthFromToken(a, skip_depth);
+        /*if (*a == '(') {
+            ++skip_depth;
+        } else if (*a == ')') {
+            --skip_depth;
+        }*/
 
-			if (skip_depth >= 1 && *a=='#') {
-				if (*(a + 1) != '#')
-				{
-					const char* tmp;
-					const int64_t num = static_cast<int64_t>(strtoul10_64(a + 1, &tmp));
-					db.MarkRef(num, id);
-				}
-				else
-				{
-					++a;
-				}
-            }
-            ++a;
+		if (skip_depth >= 1 && *a=='#') {
+			if (*(a + 1) != '#') {
+				/*const char *tmp;
+				const int64_t num = static_cast<int64_t>(strtoul10_64(a + 1, &tmp));
+				db.MarkRef(num, id);*/
+                db.MarkRef(getIdFromToken(a), id);
+			} else {
+				++a;
+			}
         }
-
+        ++a;
     }
 }
 
 // ------------------------------------------------------------------------------------------------
-STEP::LazyObject::~LazyObject()
-{
+STEP::LazyObject::~LazyObject() {
     // make sure the right dtor/operator delete get called
     if (obj) {
         delete obj;
+    } else {
+        delete[] args;
     }
-    else delete[] args;
 }
 
 // ------------------------------------------------------------------------------------------------
-void STEP::LazyObject::LazyInit() const
-{
+void STEP::LazyObject::LazyInit() const {
     const EXPRESS::ConversionSchema& schema = db.GetSchema();
     STEP::ConvertObjectProc proc = schema.GetConverterProc(type);
 

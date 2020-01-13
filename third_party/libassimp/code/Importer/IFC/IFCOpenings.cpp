@@ -46,11 +46,16 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifndef ASSIMP_BUILD_NO_IFC_IMPORTER
 #include "IFCUtil.h"
-#include "code/PolyTools.h"
-#include "code/ProcessHelper.h"
+#include "Common/PolyTools.h"
+#include "PostProcessing/ProcessHelper.h"
 
-#include "../contrib/poly2tri/poly2tri/poly2tri.h"
-#include "../contrib/clipper/clipper.hpp"
+#ifdef ASSIMP_USE_HUNTER
+#  include <poly2tri/poly2tri.h>
+#  include <polyclipping/clipper.hpp>
+#else
+#  include "../contrib/poly2tri/poly2tri/poly2tri.h"
+#  include "../contrib/clipper/clipper.hpp"
+#endif
 
 #include <iterator>
 
@@ -588,7 +593,7 @@ typedef std::vector<std::pair<
 bool BoundingBoxesAdjacent(const BoundingBox& bb, const BoundingBox& ibb)
 {
     // TODO: I'm pretty sure there is a much more compact way to check this
-    const IfcFloat epsilon = 1e-5f;
+    const IfcFloat epsilon = Math::getEpsilon<float>();
     return  (std::fabs(bb.second.x - ibb.first.x) < epsilon && bb.first.y <= ibb.second.y && bb.second.y >= ibb.first.y) ||
         (std::fabs(bb.first.x - ibb.second.x) < epsilon && ibb.first.y <= bb.second.y && ibb.second.y >= bb.first.y) ||
         (std::fabs(bb.second.y - ibb.first.y) < epsilon && bb.first.x <= ibb.second.x && bb.second.x >= ibb.first.x) ||
@@ -676,7 +681,7 @@ bool IntersectingLineSegments(const IfcVector2& n0, const IfcVector2& n1,
 // ------------------------------------------------------------------------------------------------
 void FindAdjacentContours(ContourVector::iterator current, const ContourVector& contours)
 {
-    const IfcFloat sqlen_epsilon = static_cast<IfcFloat>(1e-8);
+    const IfcFloat sqlen_epsilon = static_cast<IfcFloat>(Math::getEpsilon<float>());
     const BoundingBox& bb = (*current).bb;
 
     // What is to be done here is to populate the skip lists for the contour
@@ -753,7 +758,7 @@ void FindAdjacentContours(ContourVector::iterator current, const ContourVector& 
 // ------------------------------------------------------------------------------------------------
 AI_FORCE_INLINE bool LikelyBorder(const IfcVector2& vdelta)
 {
-    const IfcFloat dot_point_epsilon = static_cast<IfcFloat>(1e-5);
+    const IfcFloat dot_point_epsilon = static_cast<IfcFloat>(Math::getEpsilon<float>());
     return std::fabs(vdelta.x * vdelta.y) < dot_point_epsilon;
 }
 

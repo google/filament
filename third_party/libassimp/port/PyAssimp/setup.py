@@ -8,7 +8,7 @@ def readme():
         return f.read()
 
 setup(name='pyassimp',
-      version='4.1.3',
+      version='4.1.4',
       license='ISC',
       description='Python bindings for the Open Asset Import Library (ASSIMP)',
       long_description=readme(),

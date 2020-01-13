@@ -153,6 +153,89 @@ public final class AiMesh {
     private final int SIZEOF_V3D = Jassimp.NATIVE_AIVEKTOR3D_SIZE;
     
     
+	    /**
+     * The primitive types used by this mesh.
+     */
+    private final Set<AiPrimitiveType> m_primitiveTypes = 
+            EnumSet.noneOf(AiPrimitiveType.class);
+    
+    
+    /**
+     * Number of vertices in this mesh.
+     */
+    private int m_numVertices = 0;
+    
+    
+    /**
+     * Number of faces in this mesh.
+     */
+    private int m_numFaces = 0;
+    
+    /**
+     * Material used by this mesh.
+     */
+    private int m_materialIndex = -1;
+    
+    /**
+     * The name of the mesh.
+     */
+    private String m_name = "";
+    
+    /**
+     * Buffer for vertex position data.
+     */
+    private ByteBuffer m_vertices = null;
+        
+    /**
+     * Buffer for faces/ indices.
+     */
+    private ByteBuffer m_faces = null;
+    
+
+    /**
+     * Index structure for m_faces.<p>
+     * 
+     * Only used by meshes that are not pure triangular
+     */
+    private ByteBuffer m_faceOffsets = null;
+    
+    /**
+     * Buffer for normals.
+     */
+    private ByteBuffer m_normals = null;
+    
+    /**
+     * Buffer for tangents.
+     */
+    private ByteBuffer m_tangents = null;
+    
+    /**
+     * Buffer for bitangents.
+     */
+    private ByteBuffer m_bitangents = null;
+    
+    /**
+     * Vertex colors.
+     */
+    private ByteBuffer[] m_colorsets = 
+            new ByteBuffer[JassimpConfig.MAX_NUMBER_COLORSETS];
+      
+    /**
+     * Number of UV components for each texture coordinate set.
+     */
+    private int[] m_numUVComponents = new int[JassimpConfig.MAX_NUMBER_TEXCOORDS];
+    
+    /**
+     * Texture coordinates.
+     */
+    private ByteBuffer[] m_texcoords = 
+            new ByteBuffer[JassimpConfig.MAX_NUMBER_TEXCOORDS];
+        
+    /**
+     * Bones.
+     */
+    private final List<AiBone> m_bones = new ArrayList<AiBone>();
+
     /**
      * This class is instantiated via JNI, no accessible constructor.
      */
@@ -1335,99 +1418,4 @@ public final class AiMesh {
         }
     }
     // }}
-    
-    
-    /**
-     * The primitive types used by this mesh.
-     */
-    private final Set<AiPrimitiveType> m_primitiveTypes = 
-            EnumSet.noneOf(AiPrimitiveType.class);
-    
-    
-    /**
-     * Number of vertices in this mesh.
-     */
-    private int m_numVertices = 0;
-    
-    
-    /**
-     * Number of faces in this mesh.
-     */
-    private int m_numFaces = 0;
-    
-    
-    /**
-     * Material used by this mesh.
-     */
-    private int m_materialIndex = -1;
-    
-    
-    /**
-     * The name of the mesh.
-     */
-    private String m_name = "";
-    
-    
-    /**
-     * Buffer for vertex position data.
-     */
-    private ByteBuffer m_vertices = null;
-    
-    
-    /**
-     * Buffer for faces/ indices.
-     */
-    private ByteBuffer m_faces = null;
-    
-    
-    /**
-     * Index structure for m_faces.<p>
-     * 
-     * Only used by meshes that are not pure triangular
-     */
-    private ByteBuffer m_faceOffsets = null;
-    
-    
-    /**
-     * Buffer for normals.
-     */
-    private ByteBuffer m_normals = null;
-    
-    
-    /**
-     * Buffer for tangents.
-     */
-    private ByteBuffer m_tangents = null;
-    
-    
-    /**
-     * Buffer for bitangents.
-     */
-    private ByteBuffer m_bitangents = null;
-    
-    
-    /**
-     * Vertex colors.
-     */
-    private ByteBuffer[] m_colorsets = 
-            new ByteBuffer[JassimpConfig.MAX_NUMBER_COLORSETS];
-    
-    
-    /**
-     * Number of UV components for each texture coordinate set.
-     */
-    private int[] m_numUVComponents = new int[JassimpConfig.MAX_NUMBER_TEXCOORDS];
-    
-    
-    /**
-     * Texture coordinates.
-     */
-    private ByteBuffer[] m_texcoords = 
-            new ByteBuffer[JassimpConfig.MAX_NUMBER_TEXCOORDS];
-    
-    
-    /**
-     * Bones.
-     */
-    private final List<AiBone> m_bones = new ArrayList<AiBone>();
 }

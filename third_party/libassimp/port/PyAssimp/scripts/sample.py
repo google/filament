@@ -5,7 +5,7 @@
 This module demonstrates the functionality of PyAssimp.
 """
 
-import os, sys
+import sys
 import logging
 logging.basicConfig(level=logging.INFO)
 
@@ -50,8 +50,8 @@ def main(filename=None):
         print("    colors:" + str(len(mesh.colors)))
         tcs = mesh.texturecoords
         if tcs.any():
-            for index, tc in enumerate(tcs):
-                print("    texture-coords "+ str(index) + ":" + str(len(tcs[index])) + "first3:" + str(tcs[index][:3]))
+            for tc_index, tc in enumerate(tcs):
+                print("    texture-coords "+ str(tc_index) + ":" + str(len(tcs[tc_index])) + "first3:" + str(tcs[tc_index][:3]))
 
         else:
             print("    no texture coordinates")

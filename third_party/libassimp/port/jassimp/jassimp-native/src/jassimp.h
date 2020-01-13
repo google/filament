@@ -39,7 +39,7 @@ JNIEXPORT jstring JNICALL Java_jassimp_Jassimp_getErrorString
  * Signature: (Ljava/lang/String;J)Ljassimp/AiScene;
  */
 JNIEXPORT jobject JNICALL Java_jassimp_Jassimp_aiImportFile
-  (JNIEnv *, jclass, jstring, jlong, jobject);
+  (JNIEnv *, jclass, jstring, jlong, jobject, jobject);
 
 #ifdef __cplusplus
 }

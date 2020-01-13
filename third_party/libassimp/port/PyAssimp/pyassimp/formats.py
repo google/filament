@@ -21,7 +21,7 @@ FORMATS = ["CSM",
             "STL", 
             "IRR", 
             "Q3O",
-            "Q3D"
+            "Q3D",
             "MS3D", 
             "Q3S", 
             "ZGL", 

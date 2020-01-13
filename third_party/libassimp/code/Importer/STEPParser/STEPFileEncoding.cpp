@@ -2,7 +2,7 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2018, assimp team
+Copyright (c) 2006-2019, assimp team
 
 
 All rights reserved.
@@ -45,7 +45,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "STEPFileEncoding.h"
 #include <assimp/fast_atof.h>
-#include <contrib/utf8cpp/source/utf8.h>
+#ifdef ASSIMP_USE_HUNTER
+#  include <utf8/utf8.h>
+#else
+#  include <contrib/utf8cpp/source/utf8.h>
+#endif
 
 #include <memory>
 

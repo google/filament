@@ -56,6 +56,24 @@ import java.util.List;
  */
 public final class AiBone {
     /**
+     * Name of the bone.
+     */
+    private String m_name;
+    
+    
+    /**
+     * Bone weights.
+     */
+    private final List<AiBoneWeight> m_boneWeights = 
+            new ArrayList<AiBoneWeight>();
+    
+    
+    /**
+     * Offset matrix.
+     */
+    private Object m_offsetMatrix; 
+
+    /**
      * Constructor.
      */
     AiBone() {
@@ -114,24 +132,5 @@ public final class AiBone {
             AiWrapperProvider<V3, M4, C, N, Q>  wrapperProvider) {
         
         return (M4) m_offsetMatrix;
-    }
-    
-    
-    /**
-     * Name of the bone.
-     */
-    private String m_name;
-    
-    
-    /**
-     * Bone weights.
-     */
-    private final List<AiBoneWeight> m_boneWeights = 
-            new ArrayList<AiBoneWeight>();
-    
-    
-    /**
-     * Offset matrix.
-     */
-    private Object m_offsetMatrix; 
+    }    
 }

@@ -1,7 +1,7 @@
 Build Asset Importer Lib for Android
 ====================================
-This module provides a fascade for the io-stream-access to files behind the
-android-asset-management within an Android native application.
+This module provides a facade for the io-stream-access to files behind the android-asset-management within 
+an Android-native application.
 - It is built as a static library
 - It requires Android NDK with android API > 9 support.
 
@@ -20,6 +20,8 @@ A small example how to wrap assimp for Android:
 #include <assimp/port/AndroidJNI/AndroidJNIIOSystem.h>
 
 Assimp::Importer* importer = new Assimp::Importer();
-Assimp::AndroidJNIIOSystem* ioSystem = new Assimp::AndroidJNIIOSystem(app->activity);
-importer->SetIOHandler(ioSystem);
+Assimp::AndroidJNIIOSystem *ioSystem = new Assimp::AndroidJNIIOSystem(app->activity);
+if ( nullptr != iosSystem ) {
+  importer->SetIOHandler(ioSystem);
+}  
 ```

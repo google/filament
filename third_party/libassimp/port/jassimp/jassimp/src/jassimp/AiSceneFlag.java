@@ -114,8 +114,12 @@ public enum AiSceneFlag {
      * you actually need to render it).
      */
     TERRAIN(0x10);
-    
-    
+
+    /**
+     * The mapped c/c++ integer enum value.
+     */
+    private final int m_rawValue;
+
     /**
      * Utility method for converting from c/c++ based integer enums to java 
      * enums.<p>
@@ -143,11 +147,5 @@ public enum AiSceneFlag {
      */
     private AiSceneFlag(int rawValue) {
         m_rawValue = rawValue;
-    }
-    
-    
-    /**
-     * The mapped c/c++ integer enum value.
-     */
-    private final int m_rawValue;
+    }    
 }
