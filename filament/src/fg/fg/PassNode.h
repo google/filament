@@ -37,6 +37,7 @@ struct PassNode { // 200
             : name(name), id(id), base(base, fg),
               reads(fg.getArena()),
               writes(fg.getArena()),
+              samples(fg.getArena()),
               renderTargets(fg.getArena()),
               devirtualize(fg.getArena()),
               destroy(fg.getArena()) {
@@ -56,18 +57,24 @@ struct PassNode { // 200
         // don't allow multiple reads of the same resource -- it's just redundant.
         auto pos = std::find_if(reads.begin(), reads.end(),
                 [&handle](FrameGraphHandle cur) { return handle.index == cur.index; });
-        if (pos != reads.end()) {
-            return *pos;
+        if (pos == reads.end()) {
+            // just record that we're reading from this resource (at the given version)
+            reads.push_back(handle);
         }
-        // just record that we're reading from this resource (at the given version)
-        reads.push_back(handle);
         return handle;
     }
 
     FrameGraphId<FrameGraphTexture> sample(FrameGraph& fg, FrameGraphId<FrameGraphTexture> handle) {
-        auto& textureResource = fg.getResourceEntry(handle);
-        textureResource.descriptor.usage |= backend::TextureUsage::SAMPLEABLE;
+        // sample implies a read
         read(fg, handle);
+
+        // don't allow multiple reads of the same resource -- it's just redundant.
+        auto pos = std::find_if(samples.begin(), samples.end(),
+                [&handle](FrameGraphHandle cur) { return handle.index == cur.index; });
+        if (pos == samples.end()) {
+            // just record that we're reading from this resource (at the given version)
+            samples.push_back(handle);
+        }
         return handle;
     }
 
@@ -75,6 +82,12 @@ struct PassNode { // 200
         auto pos = std::find_if(reads.begin(), reads.end(),
                 [resource](FrameGraphHandle cur) { return resource.index == cur.index; });
         return (pos != reads.end());
+    }
+
+    bool isSamplingFrom(FrameGraphHandle resource) const noexcept {
+        auto pos = std::find_if(samples.begin(), samples.end(),
+                [resource](FrameGraphHandle cur) { return resource.index == cur.index; });
+        return (pos != samples.end());
     }
 
     FrameGraphHandle write(FrameGraph& fg, const FrameGraphHandle& handle) {
@@ -122,8 +135,9 @@ struct PassNode { // 200
     FrameGraph::UniquePtr<FrameGraphPassExecutor> base; // type eraser for calling execute()
 
     // set by the builder
-    Vector<FrameGraphHandle> reads;               // resources we're reading from
-    Vector<FrameGraphHandle> writes;              // resources we're writing to
+    Vector<FrameGraphHandle> reads;                     // resources we're reading from
+    Vector<FrameGraphHandle> writes;                    // resources we're writing to
+    Vector<FrameGraphId<FrameGraphTexture>> samples;    // resources we're sampling from
     Vector<uint16_t> renderTargets;
 
     // computed during compile()

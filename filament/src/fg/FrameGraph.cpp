@@ -417,7 +417,6 @@ FrameGraph& FrameGraph::compile() noexcept {
      */
 
     if (!mAliases.empty()) {
-        Vector<FrameGraphHandle> sratch(mArena); // keep out of loops to avoid reallocations
         for (fg::Alias const& alias : mAliases) {
             // disconnect all writes to "from"
             ResourceNode& from = resourceNodes[alias.from.index];
@@ -456,11 +455,22 @@ FrameGraph& FrameGraph::compile() noexcept {
                 // passes that were reading from "from node", now read from "to node" as well
                 for (FrameGraphHandle handle : pass.reads) {
                     if (handle == alias.from) {
-                        sratch.push_back(alias.to);
+                        if (!pass.isReadingFrom(alias.to)) {
+                            pass.reads.push_back(alias.to);
+                        }
+                        break;
                     }
                 }
-                pass.reads.insert(pass.reads.end(), sratch.begin(), sratch.end());
-                sratch.clear();
+
+                for (FrameGraphHandle handle : pass.samples) {
+                    if (handle == alias.from) {
+                        if (!pass.isSamplingFrom(alias.to)) {
+                            pass.samples.push_back(
+                                    static_cast<FrameGraphId<FrameGraphTexture>>(alias.to));
+                        }
+                        break;
+                    }
+                }
 
                 // Passes that were writing to "from node", no longer do
                 pass.writes.erase(
@@ -468,12 +478,6 @@ FrameGraph& FrameGraph::compile() noexcept {
                                 [&alias](auto handle) { return handle == alias.from; }),
                         pass.writes.end());
             }
-        }
-
-        // remove duplicates that might have been created when aliasing
-        for (PassNode& pass : passNodes) {
-            std::sort(pass.reads.begin(), pass.reads.end());
-            pass.reads.erase(std::unique(pass.reads.begin(), pass.reads.end()), pass.reads.end());
         }
     }
 
@@ -533,10 +537,22 @@ FrameGraph& FrameGraph::compile() noexcept {
         node.resource->refs += node.readerCount;
     }
 
+    // update the SAMPLEABLE bit, now that we culled unneeded passes
+    for (PassNode& pass : passNodes) {
+        if (pass.refCount) {
+            for (auto handle : pass.samples) {
+                auto& texture = getResourceEntryUnchecked(handle);
+                texture.descriptor.usage |= backend::TextureUsage::SAMPLEABLE;
+            }
+        }
+    }
+
     // resolve render targets
     for (PassNode& pass : passNodes) {
-        for (auto i : pass.renderTargets) {
-            renderTargets[i].resolve(*this);
+        if (pass.refCount) {
+            for (auto i : pass.renderTargets) {
+                renderTargets[i].resolve(*this);
+            }
         }
     }
 
