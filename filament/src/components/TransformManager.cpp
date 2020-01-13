@@ -66,15 +66,16 @@ void FTransformManager::setParent(Instance i, Instance parent) noexcept {
             insertNode(i, parent);
             updateNodeTransform(i);
             // Ensure that instances are still in order
-            Instance it = std::min(i, parent);
-            Instance end = manager.end();
-            while (it != end) {
-              Instance itParent = Instance(manager[it].parent);
-              if (UTILS_UNLIKELY(itParent > it)) {
-                swapNode(it, itParent);
-              } else {
-                ++it;
-              }
+            if (i < parent) {
+                Instance end = manager.end();
+                while (i != end) {
+                    Instance iParent = Instance(manager[i].parent);
+                    if (UTILS_UNLIKELY(iParent > i)) {
+                        swapNode(i, iParent);
+                    } else {
+                        ++i;
+                    }
+                }
             }
         }
     }
@@ -186,10 +187,6 @@ void FTransformManager::commitLocalTransformTransaction() noexcept {
 
         mat4f const* const UTILS_RESTRICT world = manager.raw_array<WORLD>();
         for (Instance i = manager.begin(), e = manager.end(); i != e; ++i) {
-            // Ensure that children are always sorted after their parent.
-            while (UTILS_UNLIKELY(Instance(manager[i].parent) > i)) {
-                swapNode(i, manager[i].parent);
-            }
             Instance parent = manager[i].parent;
             assert(parent < i);
             manager[i].world = world[parent] * static_cast<mat4f const&>(manager[i].local);
