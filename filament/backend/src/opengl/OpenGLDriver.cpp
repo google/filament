@@ -1286,12 +1286,12 @@ bool OpenGLDriver::isTextureFormatSupported(TextureFormat format) {
         return gl.ext.texture_compression_etc2;
     }
     if (isS3TCCompression(format)) {
-		if (isS3TCSRGBCompression(format))		{
-			return gl.ext.texture_compression_s3tc && gl.ext.EXT_texture_sRGB;
-		}
-		else {
-			return gl.ext.texture_compression_s3tc;
-		}
+        if (isS3TCSRGBCompression(format))		{
+            return gl.ext.texture_compression_s3tc && gl.ext.EXT_texture_sRGB;
+        }
+        else {
+            return gl.ext.texture_compression_s3tc;
+        }
     }
     return getInternalFormat(format) != 0;
 }
