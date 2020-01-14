@@ -65,18 +65,10 @@ void FTransformManager::setParent(Instance i, Instance parent) noexcept {
             removeNode(i);
             insertNode(i, parent);
             updateNodeTransform(i);
-            // Ensure that instances are still in order
-            if (!mLocalTransformTransactionOpen && i < parent) {
-                Instance end = manager.end();
-                while (i != end) {
-                    Instance iParent = Instance(manager[i].parent);
-                    if (UTILS_UNLIKELY(iParent > i)) {
-                        swapNode(i, iParent);
-                    } else {
-                        ++i;
-                    }
-                }
-            }
+            // Note: setParent() doesn't reorder the child after the parent in the array,
+            // but that's not a problem because TransformManager doesn't rely on that.
+            // Also note that commitLocalTransformTransaction() does reorder all children after
+            // their parent, as an optimization to calculate the world transform.
         }
     }
 }

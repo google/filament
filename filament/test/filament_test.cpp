@@ -235,13 +235,13 @@ TEST(FilamentTest, TransformManager) {
     tcm.create(entities[2]);
     EXPECT_TRUE(tcm.hasComponent(entities[2]));
     TransformManager::Instance newParent = tcm.getInstance(entities[2]);
-    EXPECT_TRUE(bool(newParent));
+    ASSERT_LT(child, newParent);
 
     // test reparenting
     tcm.setParent(child, newParent);
 
-    // make sure child/parent are out of order
-    ASSERT_LT(child, newParent);
+    // make sure child/parent are out of order (i.e.: setParent() doesn't invalidate instances)
+    EXPECT_LT(tcm.getInstance(entities[1]), tcm.getInstance(entities[2]));
 
     // local transaction reorders parent/child
     tcm.openLocalTransformTransaction();
