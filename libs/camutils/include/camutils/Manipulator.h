@@ -43,9 +43,9 @@ enum class Fov { VERTICAL, HORIZONTAL };
  *     CameraManipulator* manip;
  *
  *     void init() {
- *         manip = CameraManipulator::create(camutils::Mode::ORBIT, {
- *             .viewport = {1024, 768}
- *         });
+ *         manip = CameraManipulator::Builder()
+ *             .viewport(1024, 768)
+ *             .build(camutils::Mode::ORBIT);
  *     }
  *
  *     void onMouseDown(int x, int y) {
@@ -84,41 +84,55 @@ public:
     /** Optional raycasting function to enable perspective-correct panning. */
     typedef bool (*RayCallback)(const vec3& origin, const vec3& dir, FLOAT* t, void* userdata);
 
-    /**
-     * User-controlled configuration that is never changed by the manipulator.
-     *
-     * This is a Builder expressed as a POD structure. Many of the fields fall back to reasonable
-     * default values if they are zero-filled.
-     */
+    /** Builder state, direct access is allowed but Builder methods are preferred. **/
     struct Config {
-        int viewport[2];             //! Width and height of the viewing area
-        vec3 targetPosition;         //! World-space position of interest, defaults to (0,0,0)
-        vec3 upVector;               //! Orientation for the home position, defaults to (0,1,0)
-        FLOAT zoomSpeed;             //! Multiplied with scroll delta, defaults to 0.01
-
-        // Orbit mode properties
-        vec3 orbitHomePosition;      //! Initial eye position in world space, defaults to (0,0,1)
-        vec2 orbitSpeed;             //! Multiplied with viewport delta, defaults to 0.01
-
-        // Map mode properties
-        Fov fovDirection;           //! The FOV axis that's held constant when the viewport changes
-        FLOAT fovDegrees;           //! The full FOV (not the half-angle)
-        FLOAT farPlane;             //! The distance to the far plane
-        vec2 mapExtent;             //! The ground plane size used to compute the home position
-        FLOAT mapMinDistance;       //! Constrains the zoom-in level
-
-        // Raycast properties
-        vec4 groundPlane;            //! Plane equation used as a raycast fallback
-        RayCallback raycastCallback; //! Raycast function for accurate grab-and-pan
-        void* raycastUserdata;       //! Callback userdata for closures
+        int viewport[2];
+        vec3 targetPosition;
+        vec3 upVector;
+        FLOAT zoomSpeed;
+        vec3 orbitHomePosition;
+        vec2 orbitSpeed;
+        Fov fovDirection;
+        FLOAT fovDegrees;
+        FLOAT farPlane;
+        vec2 mapExtent;
+        FLOAT mapMinDistance;
+        vec4 groundPlane;
+        RayCallback raycastCallback;
+        void* raycastUserdata;
     };
 
-    /**
-     * Creates a new camera manipulator, either ORBIT or MAP.
-     *
-     * Clients can simply use "delete" to destroy the manipulator.
-     */
-    static Manipulator* create(Mode mode, const Config& props);
+    struct Builder {
+        // Common properties
+        Builder& viewport(int width, int height);           //! Width and height of the viewing area
+        Builder& targetPosition(FLOAT x, FLOAT y, FLOAT z); //! World-space position of interest, defaults to (0,0,0)
+        Builder& upVector(FLOAT x, FLOAT y, FLOAT z);       //! Orientation for the home position, defaults to (0,1,0)
+        Builder& zoomSpeed(FLOAT val);                      //! Multiplied with scroll delta, defaults to 0.01
+
+        // Orbit mode properties
+        Builder& orbitHomePosition(FLOAT x, FLOAT y, FLOAT z); //! Initial eye position in world space, defaults to (0,0,1)
+        Builder& orbitSpeed(FLOAT x, FLOAT y);                 //! Multiplied with viewport delta, defaults to 0.01
+
+        // Map mode properties
+        Builder& fovDirection(Fov fov);                          //! The axis that's held constant when viewport changes
+        Builder& fovDegrees(FLOAT degrees);                      //! The full FOV (not the half-angle)
+        Builder& farPlane(FLOAT distance);                       //! The distance to the far plane
+        Builder& mapExtent(FLOAT worldWidth, FLOAT worldHeight); //! The ground size for computing home position
+        Builder& mapMinDistance(FLOAT mindist);                  //! Constrains the zoom-in level
+
+        // Raycast properties
+        Builder& groundPlane(FLOAT a, FLOAT b, FLOAT c, FLOAT d);  //! Plane equation used as a raycast fallback
+        Builder& raycastCallback(RayCallback cb, void* userdata);  //! Raycast function for accurate grab-and-pan
+
+        /**
+         * Creates a new camera manipulator, either ORBIT or MAP.
+         *
+         * Clients can simply use "delete" to destroy the manipulator.
+         */
+        Manipulator* build(Mode mode);
+
+        Config details;
+    };
 
     virtual ~Manipulator() = default;
 

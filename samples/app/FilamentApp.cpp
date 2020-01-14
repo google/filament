@@ -522,8 +522,8 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
 
     // set-up the camera manipulators
     camutils::Mode mode = camutils::Mode::ORBIT;
-    mMainCameraMan = CameraManipulator::create(mode, { .targetPosition = {0, 0, -4} });
-    mDebugCameraMan = CameraManipulator::create(mode, { .targetPosition = {0, 0, -4} });
+    mMainCameraMan = CameraManipulator::Builder().targetPosition(0, 0, -4).build(mode);
+    mDebugCameraMan = CameraManipulator::Builder().targetPosition(0, 0, -4).build(mode);
 
     mMainView->setCamera(mMainCamera);
     mMainView->setCameraManipulator(mMainCameraMan);
