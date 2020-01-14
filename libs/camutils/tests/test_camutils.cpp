@@ -39,14 +39,14 @@ TEST_F(CamUtilsTest, Orbit) {
 
     float3 eye, targetPosition, up;
 
-    CamManipulator* orbit = CamManipulator::create(camutils::Mode::ORBIT, {
-        .viewport = {256, 256},
-        .targetPosition = {0, 0, 0},
-        .upVector = {0, 1, 0},
-        .zoomSpeed = 0.01,
-        .orbitHomePosition = {0, 0, 4},
-        .orbitSpeed = {1, 1},
-    });
+    CamManipulator* orbit = CamManipulator::Builder()
+        .viewport(256, 256)
+        .targetPosition(0, 0, 0)
+        .upVector(0, 1, 0)
+        .zoomSpeed(0.01)
+        .orbitHomePosition(0, 0, 4)
+        .orbitSpeed(1, 1)
+        .build(camutils::Mode::ORBIT);
 
     orbit->getLookAt(&eye, &targetPosition, &up);
     EXPECT_VEC_EQ(eye, 0, 0, 4);
@@ -69,12 +69,12 @@ TEST_F(CamUtilsTest, Map) {
 
     float3 eye, targetPosition, up;
 
-    CamManipulator* map = CamManipulator::create(camutils::Mode::MAP, {
-        .viewport = {256, 256},
-        .targetPosition = {0, 0, 0},
-        .zoomSpeed = 0.01,
-        .orbitHomePosition = {0, 0, 4},
-    });
+    CamManipulator* map = CamManipulator::Builder()
+        .viewport(256, 256)
+        .targetPosition(0, 0, 0)
+        .zoomSpeed(0.01)
+        .orbitHomePosition(0, 0, 4)
+        .build(camutils::Mode::MAP);
 
     delete map;
 }

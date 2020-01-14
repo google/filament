@@ -26,12 +26,93 @@ using namespace filament::math;
 namespace filament {
 namespace camutils {
 
-template <typename FLOAT> Manipulator<FLOAT>*
-Manipulator<FLOAT>::create(Mode mode, const Manipulator<FLOAT>::Config& props) {
+template <typename FLOAT> typename
+Manipulator<FLOAT>::Builder& Manipulator<FLOAT>::Builder::viewport(int width, int height) {
+    details.viewport[0] = width;
+    details.viewport[1] = height;
+    return *this;
+}
+
+template <typename FLOAT> typename
+Manipulator<FLOAT>::Builder& Manipulator<FLOAT>::Builder::targetPosition(FLOAT x, FLOAT y, FLOAT z) {
+    details.targetPosition = {x, y, z};
+    return *this;
+}
+
+template <typename FLOAT> typename
+Manipulator<FLOAT>::Builder& Manipulator<FLOAT>::Builder::upVector(FLOAT x, FLOAT y, FLOAT z) {
+    details.upVector = {x, y, z};
+    return *this;
+}
+
+template <typename FLOAT> typename
+Manipulator<FLOAT>::Builder& Manipulator<FLOAT>::Builder::zoomSpeed(FLOAT val) {
+    details.zoomSpeed = val;
+    return *this;
+}
+
+template <typename FLOAT> typename
+Manipulator<FLOAT>::Builder& Manipulator<FLOAT>::Builder::orbitHomePosition(FLOAT x, FLOAT y, FLOAT z) {
+    details.orbitHomePosition = {x, y, z};
+    return *this;
+}
+
+template <typename FLOAT> typename
+Manipulator<FLOAT>::Builder& Manipulator<FLOAT>::Builder::orbitSpeed(FLOAT x, FLOAT y) {
+    details.orbitSpeed = {x, y};
+    return *this;
+}
+
+template <typename FLOAT> typename
+Manipulator<FLOAT>::Builder& Manipulator<FLOAT>::Builder::fovDirection(Fov fov) {
+    details.fovDirection = fov;
+    return *this;
+}
+
+template <typename FLOAT> typename
+Manipulator<FLOAT>::Builder& Manipulator<FLOAT>::Builder::fovDegrees(FLOAT degrees) {
+    details.fovDegrees = degrees;
+    return *this;
+}
+
+template <typename FLOAT> typename
+Manipulator<FLOAT>::Builder& Manipulator<FLOAT>::Builder::farPlane(FLOAT distance) {
+    details.farPlane = distance;
+    return *this;
+}
+
+template <typename FLOAT> typename
+Manipulator<FLOAT>::Builder& Manipulator<FLOAT>::Builder::mapExtent(FLOAT worldWidth, FLOAT worldHeight) {
+    details.mapExtent = {worldWidth, worldHeight};
+    return *this;
+}
+
+template <typename FLOAT> typename
+Manipulator<FLOAT>::Builder& Manipulator<FLOAT>::Builder::mapMinDistance(FLOAT mindist) {
+    details.mapMinDistance = mindist;
+    return *this;
+}
+
+template <typename FLOAT> typename
+Manipulator<FLOAT>::Builder& Manipulator<FLOAT>::Builder::groundPlane(FLOAT a, FLOAT b, FLOAT c, FLOAT d) {
+    details.groundPlane = {a, b, c, d};
+    return *this;
+}
+
+template <typename FLOAT> typename
+Manipulator<FLOAT>::Builder& Manipulator<FLOAT>::Builder::raycastCallback(RayCallback cb, void* userdata) {
+    details.raycastCallback = cb;
+    details.raycastUserdata = userdata;
+    return *this;
+}
+
+
+template <typename FLOAT>
+Manipulator<FLOAT>* Manipulator<FLOAT>::Builder::build(Mode mode) {
     if (mode == Mode::MAP) {
-        return new MapManipulator<FLOAT>(mode, props);
+        return new MapManipulator<FLOAT>(mode, details);
     }
-    return new OrbitManipulator<FLOAT>(mode, props);
+    return new OrbitManipulator<FLOAT>(mode, details);
 }
 
 template <typename FLOAT>
