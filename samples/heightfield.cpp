@@ -22,10 +22,12 @@
 #include <filament/RenderableManager.h>
 #include <filament/Scene.h>
 #include <filament/Texture.h>
+#include <filament/TextureSampler.h>
 #include <filament/TransformManager.h>
 #include <filament/VertexBuffer.h>
 #include <filament/View.h>
 
+#include <utils/EntityManager.h>
 #include <utils/JobSystem.h>
 #include <utils/Path.h>
 

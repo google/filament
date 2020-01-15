@@ -19,9 +19,7 @@
 #ifndef TNT_FILAMENT_VIEW_H
 #define TNT_FILAMENT_VIEW_H
 
-#include <filament/Camera.h>
 #include <filament/Color.h>
-#include <filament/Viewport.h>
 #include <filament/FilamentAPI.h>
 
 #include <backend/DriverEnums.h>
@@ -37,6 +35,7 @@ class Camera;
 class MaterialInstance;
 class RenderTarget;
 class Scene;
+class Viewport;
 
 /**
  * A View encompasses all the state needed for rendering a Scene.

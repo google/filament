@@ -22,9 +22,12 @@
 
 #include <filagui/ImGuiMath.h>
 
+#include <filament/Camera.h>
 #include <filament/Engine.h>
+#include <filament/IndexBuffer.h>
 #include <filament/Scene.h>
 #include <filament/View.h>
+#include <filament/VertexBuffer.h>
 
 #include <gltfio/AssetLoader.h>
 #include <gltfio/AssetPipeline.h>

@@ -17,10 +17,14 @@
 #include <filament/Engine.h>
 #include <filament/IndirectLight.h>
 #include <filament/LightManager.h>
+#include <filament/Material.h>
 #include <filament/RenderableManager.h>
 #include <filament/Scene.h>
+#include <filament/TextureSampler.h>
 #include <filament/TransformManager.h>
 #include <filament/View.h>
+
+#include <utils/EntityManager.h>
 
 #include <filameshio/MeshReader.h>
 

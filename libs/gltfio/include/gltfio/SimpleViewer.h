@@ -214,6 +214,8 @@ filament::math::mat4f fitIntoUnitCube(const filament::Aabb& bounds);
 #include <filament/LightManager.h>
 #include <filament/Material.h>
 
+#include <utils/EntityManager.h>
+
 #include <math/mat4.h>
 #include <math/vec3.h>
 

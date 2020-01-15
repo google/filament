@@ -34,6 +34,7 @@
 
 #include <MaterialParser.h>
 
+#include <utils/CString.h>
 #include <utils/Panic.h>
 
 #include <sstream>

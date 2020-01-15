@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include <filament/Camera.h>
 #include <filament/Engine.h>
 #include <filament/IndexBuffer.h>
 #include <filament/Material.h>
@@ -23,6 +24,8 @@
 #include <filament/TransformManager.h>
 #include <filament/VertexBuffer.h>
 #include <filament/View.h>
+
+#include <utils/EntityManager.h>
 
 #include "../samples/app/Config.h"
 #include "../samples/app/FilamentApp.h"

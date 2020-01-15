@@ -22,6 +22,8 @@
 
 #include "../samples/app/FilamentApp.h"
 
+#include <utils/EntityManager.h>
+
 using namespace filament;
 
 struct App {

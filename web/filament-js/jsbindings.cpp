@@ -36,6 +36,7 @@
 
 #include <filament/Camera.h>
 #include <filament/Engine.h>
+#include <filament/Frustum.h>
 #include <filament/IndexBuffer.h>
 #include <filament/IndirectLight.h>
 #include <filament/LightManager.h>
@@ -51,6 +52,7 @@
 #include <filament/TransformManager.h>
 #include <filament/VertexBuffer.h>
 #include <filament/View.h>
+#include <filament/Viewport.h>
 
 #include <geometry/SurfaceOrientation.h>
 

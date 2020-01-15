@@ -29,6 +29,7 @@
 #include <filament/Engine.h>
 #include <filament/DebugRegistry.h>
 #include <filament/IndirectLight.h>
+#include <filament/IndexBuffer.h>
 #include <filament/LightManager.h>
 #include <filament/Material.h>
 #include <filament/MaterialInstance.h>
@@ -36,6 +37,7 @@
 #include <filament/Scene.h>
 #include <filament/TransformManager.h>
 #include <filament/View.h>
+#include <filament/VertexBuffer.h>
 
 #include <math/mat3.h>
 #include <math/mat4.h>

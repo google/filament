@@ -43,6 +43,8 @@ namespace details {
 
 class FMaterialInstance;
 class FRenderPrimitive;
+class FIndexBuffer;
+class FVertexBuffer;
 
 class FRenderableManager : public RenderableManager {
 public:

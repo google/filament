@@ -20,7 +20,6 @@
 #define TNT_FILAMENT_RENDERER_H
 
 #include <filament/FilamentAPI.h>
-#include <filament/Viewport.h>
 
 #include <utils/compiler.h>
 
@@ -34,6 +33,7 @@ class Engine;
 class RenderTarget;
 class SwapChain;
 class View;
+class Viewport;
 
 namespace backend {
 class PixelBufferDescriptor;

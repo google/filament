@@ -16,6 +16,7 @@
 
 #include <filament/Camera.h>
 #include <filament/Color.h>
+#include <filament/Frustum.h>
 #include <filament/IndexBuffer.h>
 #include <filament/LightManager.h>
 #include <filament/RenderableManager.h>

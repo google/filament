@@ -19,6 +19,7 @@
 #include "details/Engine.h"
 
 #include "fg/FrameGraph.h"
+#include "fg/FrameGraphPassResources.h"
 
 #include "RenderPass.h"
 

@@ -28,6 +28,7 @@
 #include <filament/VertexBuffer.h>
 #include <filament/View.h>
 
+#include <utils/Entity.h>
 #include <utils/Path.h>
 
 struct ImDrawData;

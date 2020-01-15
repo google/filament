@@ -21,8 +21,9 @@
 #include <backend/TargetBufferInfo.h>
 
 #include "fg/FrameGraph.h"
-
+#include "fg/FrameGraphPassResources.h"
 #include "fg/ResourceAllocator.h"
+
 #include "ResourceNode.h"
 #include "VirtualResource.h"
 

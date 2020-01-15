@@ -20,12 +20,16 @@
 #include <filament/FilamentAPI.h>
 
 #include <utils/compiler.h>
-#include <utils/Entity.h>
 #include <utils/EntityInstance.h>
 
 #include <math/mat4.h>
 
 #include <iterator>
+
+
+namespace utils {
+class Entity;
+} // namespace utils
 
 namespace filament {
 
