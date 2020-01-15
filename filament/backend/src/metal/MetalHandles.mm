@@ -504,36 +504,36 @@ id<MTLTexture> MetalRenderTarget::createMultisampledTexture(id<MTLDevice> device
 }
 
 MetalFence::MetalFence(MetalContext& context) {
-#if METAL_FENCES_SUPPORTED
-    cv = std::make_shared<std::condition_variable>();
-    event = [context.device newSharedEvent];
-    value = context.signalId++;
-    [getPendingCommandBuffer(&context) encodeSignalEvent:event value:value];
+    if (@available(macOS 10.14, iOS 12, *)) {
+        cv = std::make_shared<std::condition_variable>();
+        event = [context.device newSharedEvent];
+        value = context.signalId++;
+        [getPendingCommandBuffer(&context) encodeSignalEvent:event value:value];
 
-    // Using a weak_ptr here because the Fence could be deleted before the block executes.
-    std::weak_ptr<std::condition_variable> weakCv = cv;
-    [event notifyListener:context.eventListener atValue:value block:^(id <MTLSharedEvent> o,
-            uint64_t value) {
-        if (auto cv = weakCv.lock()) {
-            cv->notify_all();
-        }
-    }];
-#endif
+        // Using a weak_ptr here because the Fence could be deleted before the block executes.
+        std::weak_ptr<std::condition_variable> weakCv = cv;
+        [event notifyListener:context.eventListener atValue:value block:^(id <MTLSharedEvent> o,
+                                                                          uint64_t value) {
+            if (auto cv = weakCv.lock()) {
+                cv->notify_all();
+            }
+        }];
+    }
 }
 
 FenceStatus MetalFence::wait(uint64_t timeoutNs) {
-#if METAL_FENCES_SUPPORTED
-    std::unique_lock<std::mutex> guard(mutex);
-    while (event.signaledValue != value) {
-        if (timeoutNs == 0 ||
-            cv->wait_for(guard, std::chrono::nanoseconds(timeoutNs)) == std::cv_status::timeout) {
-            return FenceStatus::TIMEOUT_EXPIRED;
+    if (@available(macOS 10.14, iOS 12, *)) {
+        std::unique_lock<std::mutex> guard(mutex);
+        while (event.signaledValue != value) {
+            if (timeoutNs == 0 ||
+                cv->wait_for(guard, std::chrono::nanoseconds(timeoutNs)) ==
+                        std::cv_status::timeout) {
+                return FenceStatus::TIMEOUT_EXPIRED;
+            }
         }
+        return FenceStatus::CONDITION_SATISFIED;
     }
-    return FenceStatus::CONDITION_SATISFIED;
-#else
     return FenceStatus::ERROR;
-#endif
 }
 
 } // namespace metal

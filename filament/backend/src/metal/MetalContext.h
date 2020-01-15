@@ -19,7 +19,6 @@
 
 #include "MetalBlitter.h"
 #include "MetalBufferPool.h"
-#include "MetalDefines.h"
 #include "MetalResourceTracker.h"
 #include "MetalState.h"
 
@@ -91,11 +90,9 @@ struct MetalContext {
 
     MetalBlitter* blitter = nullptr;
 
-    // Fences.
-#if METAL_FENCES_SUPPORTED
+    // Fences, only supported on macOS 10.14 and iOS 12 and above.
     MTLSharedEventListener* eventListener = nil;
     uint64_t signalId = 1;
-#endif
 };
 
 // Acquire the current surface's CAMetalDrawable for the current frame if it has not already been
