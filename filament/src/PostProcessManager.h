@@ -52,10 +52,17 @@ public:
             FrameGraphId<FrameGraphTexture> input, backend::TextureFormat outFormat,
             bool translucent) noexcept;
 
-    FrameGraphId <FrameGraphTexture> dynamicScaling(
-            FrameGraph& fg, uint8_t msaa, bool scaled, bool blend,
-            FrameGraphId <FrameGraphTexture> input,
+    FrameGraphId<FrameGraphTexture> dynamicScaling(FrameGraph& fg,
+            uint8_t msaa, bool scaled, bool blend,
+            FrameGraphId<FrameGraphTexture> input,
             backend::TextureFormat outFormat) noexcept;
+
+    FrameGraphId<FrameGraphTexture> quadBlit(FrameGraph& fg,
+            bool blend, FrameGraphId<FrameGraphTexture> input,
+            backend::TextureFormat outFormat) noexcept;
+
+    FrameGraphId <FrameGraphTexture> resolve(FrameGraph& fg,
+            const char* outputBufferName, FrameGraphId <FrameGraphTexture> input) noexcept;
 
     FrameGraphId<FrameGraphTexture> ssao(FrameGraph& fg, details::RenderPass& pass,
             filament::Viewport const& svp,
