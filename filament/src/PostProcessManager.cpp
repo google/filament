@@ -170,7 +170,7 @@ void PostProcessManager::terminate(DriverApi& driver) noexcept {
 // ------------------------------------------------------------------------------------------------
 
 FrameGraphId <FrameGraphTexture> PostProcessManager::toneMapping(FrameGraph& fg,
-        FrameGraphId <FrameGraphTexture> input, TextureFormat outFormat,
+        FrameGraphId<FrameGraphTexture> input, TextureFormat outFormat,
         bool dithering, bool translucent, bool fxaa) noexcept {
 
     FEngine& engine = mEngine;
@@ -285,8 +285,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dynamicScaling(FrameGraph& f
     FrameGraphTexture::Descriptor const& inputDesc = fg.getDescriptor(input);
     const bool useQuad = (msaa > 1 && (scaled || inputDesc.format != outFormat)) || blend;
 
-    Handle<HwRenderPrimitive> fullScreenRenderPrimitive = mEngine.getFullScreenRenderPrimitive();
-
     struct PostProcessScaling {
         FrameGraphId<FrameGraphTexture> input;
         FrameGraphId<FrameGraphTexture> output;
@@ -319,12 +317,27 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dynamicScaling(FrameGraph& f
                         SamplerMagFilter::LINEAR);
             });
 
-    auto& ppQuadScaling = fg.addPass<PostProcessScaling>("quad scaling",
-            [&](FrameGraph::Builder& builder, PostProcessScaling& data) {
+    auto ppQuadScalingOutput = quadBlit(fg, blend, input, outFormat);
+
+    // we rely on automatic culling of unused render passes
+    return useQuad ? ppQuadScalingOutput : ppBlitScaling.getData().output;
+}
+
+FrameGraphId<FrameGraphTexture> PostProcessManager::quadBlit(FrameGraph& fg,
+        bool blend, FrameGraphId<FrameGraphTexture> input, TextureFormat outFormat) noexcept {
+
+    Handle<HwRenderPrimitive> fullScreenRenderPrimitive = mEngine.getFullScreenRenderPrimitive();
+
+    struct QuadBlitData {
+        FrameGraphId<FrameGraphTexture> input;
+        FrameGraphId<FrameGraphTexture> output;
+        FrameGraphRenderTargetHandle drt;
+    };
+
+    auto& ppQuadScaling = fg.addPass<QuadBlitData>("quad scaling",
+            [&](FrameGraph::Builder& builder, auto& data) {
                 auto const& inputDesc = fg.getDescriptor(input);
-
                 data.input = builder.sample(input);
-
                 data.output = builder.createTexture("scaled output", {
                         .width = inputDesc.width,
                         .height = inputDesc.height,
@@ -333,7 +346,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dynamicScaling(FrameGraph& f
                 data.drt = builder.createRenderTarget(data.output);
             },
             [=](FrameGraphPassResources const& resources,
-                PostProcessScaling const& data, DriverApi& driver) {
+                    auto const& data, DriverApi& driver) {
 
                 auto color = resources.getTexture(data.input);
                 auto out = resources.getRenderTarget(data.drt);
@@ -362,7 +375,35 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dynamicScaling(FrameGraph& f
             });
 
     // we rely on automatic culling of unused render passes
-    return useQuad ? ppQuadScaling.getData().output : ppBlitScaling.getData().output;
+    return ppQuadScaling.getData().output;
+}
+
+FrameGraphId <FrameGraphTexture> PostProcessManager::resolve(FrameGraph& fg,
+        const char* outputBufferName, FrameGraphId <FrameGraphTexture> input) noexcept {
+    struct ResolveData {
+        FrameGraphId<FrameGraphTexture> output;
+        FrameGraphRenderTargetHandle srt;
+        FrameGraphRenderTargetHandle drt;
+    };
+    auto& ppResolve = fg.addPass<ResolveData>("resolve",
+            [&](FrameGraph::Builder& builder, auto& data) {
+                auto inputDesc = fg.getDescriptor(input);
+                inputDesc.samples = 0;
+                input = builder.read(input);
+                FrameGraphRenderTarget::Descriptor d;
+                d.attachments.color = { input };
+                data.srt = builder.createRenderTarget(builder.getName(input), d);
+                data.output = builder.createTexture(outputBufferName, inputDesc);
+                data.drt = builder.createRenderTarget(data.output);
+            },
+            [](FrameGraphPassResources const& resources, auto const& data, DriverApi& driver) {
+                auto in = resources.getRenderTarget(data.srt);
+                auto out = resources.getRenderTarget(data.drt);
+                driver.blit(TargetBufferFlags::COLOR,
+                        out.target, out.params.viewport, in.target, in.params.viewport,
+                        SamplerMagFilter::NEAREST);
+            });
+    return ppResolve.getData().output;
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::ssao(FrameGraph& fg, RenderPass& pass,
