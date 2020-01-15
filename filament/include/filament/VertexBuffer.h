@@ -23,7 +23,6 @@
 #include <filament/MaterialEnums.h>
 
 #include <backend/BufferDescriptor.h>
-
 #include <backend/DriverEnums.h>
 
 #include <utils/compiler.h>

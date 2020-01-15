@@ -17,6 +17,7 @@
 #include <jni.h>
 
 #include <filament/View.h>
+#include <filament/Viewport.h>
 
 using namespace filament;
 

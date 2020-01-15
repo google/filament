@@ -17,6 +17,8 @@
 #include <gltfio/MaterialProvider.h>
 
 #include <filament/MaterialInstance.h>
+#include <filament/Texture.h>
+#include <filament/TextureSampler.h>
 
 #include <math/mat4.h>
 

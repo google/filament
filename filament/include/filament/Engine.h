@@ -17,14 +17,13 @@
 #ifndef TNT_FILAMENT_ENGINE_H
 #define TNT_FILAMENT_ENGINE_H
 
-#include <filament/Camera.h>
-#include <filament/Fence.h>
-#include <filament/SwapChain.h>
-
 #include <backend/Platform.h>
 
 #include <utils/compiler.h>
-#include <utils/EntityManager.h>
+
+namespace utils {
+class Entity;
+} // namespace utils
 
 namespace filament {
 
@@ -40,6 +39,7 @@ class RenderTarget;
 class Scene;
 class Skybox;
 class Stream;
+class SwapChain;
 class Texture;
 class VertexBuffer;
 class View;
@@ -398,9 +398,7 @@ public:
      *
      * @return A camera component
      */
-    inline Camera* createCamera() noexcept {
-        return createCamera(utils::EntityManager::get().create());
-    }
+    Camera* createCamera() noexcept;
 
     /**
      * helper for destroying the Camera component and its Entity in one call
@@ -409,9 +407,7 @@ public:
      *               components managed by filament are destroyed.
      * @deprecated use destroyCameraComponent(Entity) instead
      */
-    inline void destroy(const Camera* camera) {
-        destroy(camera->getEntity());
-    }
+    void destroy(const Camera* camera);
 
    /**
      * Invokes one iteration of the render loop, used only on single-threaded platforms.

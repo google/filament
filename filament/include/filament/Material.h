@@ -21,22 +21,27 @@
 #include <filament/FilamentAPI.h>
 #include <filament/MaterialEnums.h>
 #include <filament/MaterialInstance.h>
-#include <filament/Texture.h>
-#include <filament/TextureSampler.h>
 
 #include <backend/DriverEnums.h>
 
 #include <utils/compiler.h>
-#include <utils/CString.h>
 
 #include <math/vec4.h>
 
 #include <stdint.h>
 
+namespace utils {
+    class CString;
+} // namespace utils
+
 namespace filament {
+
+class Texture;
+class TextureSampler;
+
 namespace details {
-class  FEngine;
-class  FMaterial;
+class FEngine;
+class FMaterial;
 } // namespace details
 
 class Engine;

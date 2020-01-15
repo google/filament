@@ -16,11 +16,11 @@
 
 #include <filament/MaterialInstance.h>
 
+#include <filament/TextureSampler.h>
+
 #include "details/MaterialInstance.h"
 
 #include "RenderPass.h"
-
-#include <private/filament/UniformInterfaceBlock.h>
 
 #include "details/Engine.h"
 #include "details/Material.h"

@@ -20,6 +20,7 @@
 #include <vector>
 
 #include <filament/Engine.h>
+#include <filament/Box.h>
 #include <filament/Camera.h>
 #include <filament/Material.h>
 #include <filament/MaterialInstance.h>

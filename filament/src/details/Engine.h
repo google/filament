@@ -29,6 +29,7 @@
 #include "details/Camera.h"
 #include "details/DebugRegistry.h"
 #include "details/Fence.h"
+#include "details/IndexBuffer.h"
 #include "details/RenderTarget.h"
 #include "details/ResourceList.h"
 #include "details/Skybox.h"

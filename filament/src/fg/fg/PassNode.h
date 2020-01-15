@@ -19,15 +19,15 @@
 
 #include "fg/FrameGraph.h"
 
-#include "ResourceNode.h"
-#include "VirtualResource.h"
-
 #include <vector>
 
 #include <stdint.h>
 
 namespace filament {
 namespace fg {
+
+struct ResourceNode;
+struct VirtualResource;
 
 struct PassNode { // 200
     template <typename T>

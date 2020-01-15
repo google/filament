@@ -31,6 +31,7 @@
 
 #include "fg/FrameGraph.h"
 #include "fg/FrameGraphHandle.h"
+#include "fg/FrameGraphPassResources.h"
 #include "fg/ResourceAllocator.h"
 
 

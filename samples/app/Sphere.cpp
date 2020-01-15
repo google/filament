@@ -19,6 +19,7 @@
 
 #include <filament/Engine.h>
 #include <filament/IndexBuffer.h>
+#include <filament/Material.h>
 #include <filament/RenderableManager.h>
 #include <filament/TransformManager.h>
 #include <filament/VertexBuffer.h>

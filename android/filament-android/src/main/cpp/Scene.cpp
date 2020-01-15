@@ -18,6 +18,8 @@
 
 #include <filament/Scene.h>
 
+#include <utils/Entity.h>
+
 using namespace filament;
 using namespace utils;
 
