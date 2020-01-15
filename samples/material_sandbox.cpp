@@ -350,6 +350,7 @@ static void gui(filament::Engine* engine, filament::View*) {
                     ImGui::SliderFloat("thickness", &params.thickness, 0.0f, 1.0f);
                     ImGui::ColorEdit3("transmittance", &params.transmittanceColor.r);
                     ImGui::SliderFloat("distance", &params.distance, 0.0f, 4.0f);
+                    ImGui::Checkbox("Screen Space Refraction", &params.ssr);
                 }
             }
         }

@@ -30,13 +30,16 @@ void RenderTargetResource::create(FrameGraph& fg) noexcept {
             backend::TargetBufferInfo infos[FrameGraphRenderTarget::Attachments::COUNT];
             for (size_t i = 0, c = desc.attachments.textures.size(); i < c; i++) {
 
+                auto const& attachmentInfo = desc.attachments.textures[i];
+
+#ifndef NDEBUG
                 static constexpr TargetBufferFlags flags[] = {
                         TargetBufferFlags::COLOR,
                         TargetBufferFlags::DEPTH,
                         TargetBufferFlags::STENCIL };
 
-                auto const& attachmentInfo = desc.attachments.textures[i];
                 assert(bool(attachments & flags[i]) == attachmentInfo.isValid());
+#endif
 
                 if (attachmentInfo.isValid()) {
                     fg::ResourceEntry<FrameGraphTexture> const& entry =

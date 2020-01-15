@@ -290,6 +290,9 @@ public:
     //! Returns the camera's forward vector
     math::float3 getForwardVector() const noexcept;
 
+    //! Returns the camera's field of view in degrees
+    float getFieldOfViewInDegrees(Fov direction) const noexcept;
+
     //! Returns a Frustum object in world space
     class Frustum getFrustum() const noexcept;
 
