@@ -128,6 +128,8 @@ public:
             ArenaScope& arena, Viewport const& viewport) noexcept;
     void prepareSSAO(backend::Handle<backend::HwTexture> ssao) const noexcept;
     void cleanupSSAO() const noexcept;
+    void prepareSSR(backend::Handle<backend::HwTexture> ssr) const noexcept;
+    void cleanupSSR() const noexcept;
     void froxelize(FEngine& engine) const noexcept;
     void commitUniforms(backend::DriverApi& driver) const noexcept;
     void commitFroxels(backend::DriverApi& driverApi) const noexcept;
@@ -265,14 +267,15 @@ public:
         return mVisibleShadowCasters;
     }
 
-    uint8_t getClearFlags() const noexcept {
-        uint8_t clearFlags = 0;
-        if (getClearTargetColor())     clearFlags |= (uint8_t)TargetBufferFlags::COLOR;
-        if (getClearTargetDepth())     clearFlags |= (uint8_t)TargetBufferFlags::DEPTH;
-        if (getClearTargetStencil())   clearFlags |= (uint8_t)TargetBufferFlags::STENCIL;
+    TargetBufferFlags getClearFlags() const noexcept {
+        TargetBufferFlags clearFlags = {};
+        if (getClearTargetColor())     clearFlags |= TargetBufferFlags::COLOR;
+        if (getClearTargetDepth())     clearFlags |= TargetBufferFlags::DEPTH;
+        if (getClearTargetStencil())   clearFlags |= TargetBufferFlags::STENCIL;
         return clearFlags;
     }
 
+    FCamera const& getCameraUser() const noexcept { return *mCullingCamera; }
     FCamera& getCameraUser() noexcept { return *mCullingCamera; }
     void setCameraUser(FCamera* camera) noexcept { setCullingCamera(camera); }
 

@@ -108,14 +108,14 @@ private:
         uint8_t msaa;
     };
 
-    static FrameGraphId<FrameGraphTexture> colorPass(FrameGraph& fg,
-            ColorPassConfig const& config, RenderPass const& pass,
-            backend::TargetBufferFlags clearFlags, math::float4 clearColor = {}) noexcept;
+    static FrameGraphId<FrameGraphTexture> colorPass(FrameGraph& fg, const char* name,
+            FrameGraphTexture::Descriptor const& colorBufferDesc, ColorPassConfig const& config,
+            RenderPass const& pass, backend::TargetBufferFlags clearFlags,
+            math::float4 clearColor = {}) noexcept;
 
-    static FrameGraphId<FrameGraphTexture> refractionPass(FrameGraph& fg,
+    FrameGraphId<FrameGraphTexture> refractionPass(FrameGraph& fg,
             ColorPassConfig const& config, RenderPass const& pass,
-            FrameGraphId<FrameGraphTexture> input,
-            FView const& view, backend::TargetBufferFlags clearFlags) noexcept;
+            FView const& view, backend::TargetBufferFlags clearFlags) const noexcept;
 
     void recordHighWatermark(size_t watermark) noexcept {
         mCommandsHighWatermark = std::max(mCommandsHighWatermark, watermark);

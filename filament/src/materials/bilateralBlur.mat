@@ -1,5 +1,5 @@
 material {
-    name : blur,
+    name : bilateralBlur,
     parameters : [
         {
             type : sampler2d,

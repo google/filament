@@ -1,0 +1,70 @@
+material {
+    name : ThinRefraction,
+    shadingModel : lit,
+    refractionType : thin,
+    refractionMode : screenspace,
+    parameters : [
+        {
+            type : float,
+            name : alpha
+        },
+        {
+            type : float3,
+            name : baseColor
+        },
+        {
+            type : float,
+            name : roughness
+        },
+        {
+            type : float,
+            name : metallic
+        },
+        {
+            type : float,
+            name : clearCoat
+        },
+        {
+            type : float,
+            name : clearCoatRoughness
+        },
+        {
+            type : float,
+            name : anisotropy
+        },
+        {
+            type : float3,
+            name : absorption
+        },
+        {
+            type : float,
+            name : thickness
+        },
+        {
+            type : float,
+            name : ior
+        },
+        {
+            type : float,
+            name : transmission
+        }
+    ],
+    specularAntiAliasing : true
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        material.baseColor.rgb = materialParams.baseColor * materialParams.alpha;
+        material.baseColor.a = materialParams.alpha;
+        material.roughness = materialParams.roughness;
+        material.metallic = materialParams.metallic;
+        material.clearCoat = materialParams.clearCoat;
+        material.clearCoatRoughness = materialParams.clearCoatRoughness;
+        material.anisotropy = materialParams.anisotropy;
+        material.absorption = materialParams.absorption;
+        material.microThickness = materialParams.thickness;
+        material.ior = materialParams.ior;
+        material.transmission = materialParams.transmission;
+    }
+}

@@ -26,6 +26,7 @@
 #include "details/Camera.h"
 #include "details/Material.h"
 #include "details/MaterialInstance.h"
+#include "details/Texture.h"
 #include "generated/resources/materials.h"
 
 #include <private/filament/SibGenerator.h>
@@ -112,10 +113,19 @@ void PostProcessManager::init() noexcept {
     // TODO: load materials lazily as to reduce start-up time and memory usage
     mSSAO = PostProcessMaterial(mEngine, MATERIALS_SAO_DATA, MATERIALS_SAO_SIZE);
     mMipmapDepth = PostProcessMaterial(mEngine, MATERIALS_MIPMAPDEPTH_DATA, MATERIALS_MIPMAPDEPTH_SIZE);
-    mBlur = PostProcessMaterial(mEngine, MATERIALS_BLUR_DATA, MATERIALS_BLUR_SIZE);
+    mBilateralBlur = PostProcessMaterial(mEngine, MATERIALS_BILATERALBLUR_DATA, MATERIALS_BILATERALBLUR_SIZE);
+    mSeparableGaussianBlur = PostProcessMaterial(mEngine, MATERIALS_SEPARABLEGAUSSIANBLUR_DATA, MATERIALS_SEPARABLEGAUSSIANBLUR_SIZE);
     mBlit = PostProcessMaterial(mEngine, MATERIALS_BLIT_DATA, MATERIALS_BLIT_SIZE);
     mTonemapping = PostProcessMaterial(mEngine, MATERIALS_TONEMAPPING_DATA, MATERIALS_TONEMAPPING_SIZE);
     mFxaa = PostProcessMaterial(mEngine, MATERIALS_FXAA_DATA, MATERIALS_FXAA_SIZE);
+
+    // UBO storage size.
+    // The effective kernel size is (kMaxPositiveKernelSize - 1) * 4 + 1.
+    // e.g.: 5 positive-side samples, give 4+1+4=9 samples both sides
+    // taking advantage of linear filtering produces a effective kernel of 8+1+8=17 samples
+    // and because it's a separable filter, the effective 2D filter kernel size is 17*17
+    // The total number of samples needed over the two passes is 18.
+    mSeparableGaussianBlurKernelStorageSize = mSeparableGaussianBlur.getMaterial()->reflect("kernel")->size;
 
     DriverApi& driver = mEngine.getDriverApi();
     mNoSSAOTexture = driver.createTexture(SamplerType::SAMPLER_2D, 1,
@@ -161,7 +171,8 @@ void PostProcessManager::terminate(DriverApi& driver) noexcept {
     driver.destroyTexture(mNoiseTexture);
     mSSAO.terminate(mEngine);
     mMipmapDepth.terminate(mEngine);
-    mBlur.terminate(mEngine);
+    mBilateralBlur.terminate(mEngine);
+    mSeparableGaussianBlur.terminate(mEngine);
     mBlit.terminate(mEngine);
     mTonemapping.terminate(mEngine);
     mFxaa.terminate(mEngine);
@@ -379,7 +390,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::quadBlit(FrameGraph& fg,
 }
 
 FrameGraphId <FrameGraphTexture> PostProcessManager::resolve(FrameGraph& fg,
-        const char* outputBufferName, FrameGraphId <FrameGraphTexture> input) noexcept {
+        const char* outputBufferName, uint8_t levels,
+        FrameGraphId<FrameGraphTexture> input) noexcept {
     struct ResolveData {
         FrameGraphId<FrameGraphTexture> output;
         FrameGraphRenderTargetHandle srt;
@@ -387,13 +399,14 @@ FrameGraphId <FrameGraphTexture> PostProcessManager::resolve(FrameGraph& fg,
     };
     auto& ppResolve = fg.addPass<ResolveData>("resolve",
             [&](FrameGraph::Builder& builder, auto& data) {
-                auto inputDesc = fg.getDescriptor(input);
-                inputDesc.samples = 0;
+                auto outputDesc = fg.getDescriptor(input);
+                outputDesc.levels = levels ? levels : 1;
+                outputDesc.samples = 0;
                 input = builder.read(input);
                 FrameGraphRenderTarget::Descriptor d;
                 d.attachments.color = { input };
                 data.srt = builder.createRenderTarget(builder.getName(input), d);
-                data.output = builder.createTexture(outputBufferName, inputDesc);
+                data.output = builder.createTexture(outputBufferName, outputDesc);
                 data.drt = builder.createRenderTarget(data.output);
             },
             [](FrameGraphPassResources const& resources, auto const& data, DriverApi& driver) {
@@ -508,10 +521,10 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssao(FrameGraph& fg, RenderP
      */
 
     // horizontal separable blur pass
-    ssao = blurPass(fg, ssao, depth, {1, 0});
+    ssao = bilateralBlurPass(fg, ssao, depth, { 1, 0 });
 
     // vertical separable blur pass
-    ssao = blurPass(fg, ssao, depth, {0, 1});
+    ssao = bilateralBlurPass(fg, ssao, depth, { 0, 1 });
     return ssao;
 }
 
@@ -605,7 +618,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::mipmapPass(FrameGraph& fg,
     return depthMipmapPass.getData().out;
 }
 
-FrameGraphId<FrameGraphTexture> PostProcessManager::blurPass(FrameGraph& fg,
+FrameGraphId<FrameGraphTexture> PostProcessManager::bilateralBlurPass(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> input,
         FrameGraphId<FrameGraphTexture> depth, math::int2 axis) noexcept {
 
@@ -648,7 +661,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blurPass(FrameGraph& fg,
 
                 // TODO: "oneOverEdgeDistance" should be a user-settable parameter
                 //       z-distance that constitute an edge for bilateral filtering
-                FMaterialInstance* const pInstance = mBlur.getMaterialInstance();
+                FMaterialInstance* const pInstance = mBilateralBlur.getMaterialInstance();
                 pInstance->setParameter("ssao", ssao, {});
                 pInstance->setParameter("depth", depth, {});
                 pInstance->setParameter("axis", axis);
@@ -658,8 +671,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blurPass(FrameGraph& fg,
                 pInstance->commit(driver);
 
                 PipelineState pipeline;
-                pipeline.program = mBlur.getProgram();
-                pipeline.rasterState = mBlur.getMaterial()->getRasterState();
+                pipeline.program = mBilateralBlur.getProgram();
+                pipeline.rasterState = mBilateralBlur.getMaterial()->getRasterState();
                 pipeline.rasterState.depthFunc = RasterState::DepthFunc::G;
                 pipeline.scissor = pInstance->getScissor();
 
@@ -670,6 +683,142 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blurPass(FrameGraph& fg,
             });
 
     return blurPass.getData().blurred;
+}
+
+FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph& fg,
+        FrameGraphId<FrameGraphTexture> input, uint8_t srcLevel, uint8_t dstLevel, float alpha) noexcept {
+
+    Handle<HwRenderPrimitive> fullScreenRenderPrimitive = mEngine.getFullScreenRenderPrimitive();
+
+    auto computeGaussianCoefficients = [](float2* kernel, size_t size, float alpha) -> size_t {
+        // Figure out how many samples we need. A gaussian filter keeps its gaussianness
+        // if it has at least 6q-1 coefficient (q = standard deviation)
+        // standard deviation
+        float q = 1 / std::sqrt(2.0f * alpha);
+        // number of samples needed
+        size_t n = (size_t)std::max(1.0f, std::ceil(6.0f * q - 1.0f));
+        // number of positive-side samples needed, using linear sampling
+        size_t m = (n - 1) / 4 + 1;
+        // clamp to what we have
+        m = std::min(size, m);
+
+        kernel[0].x = 1.0;
+        kernel[0].y = 0.0;
+        float totalWeight = kernel[0].x;
+
+        for (size_t i = 1; i < m; i++) {
+            float x0 = i * 2 - 1;
+            float x1 = i * 2;
+            float k0 = std::exp(-alpha * x0 * x0);
+            float k1 = std::exp(-alpha * x1 * x1);
+            float k = k0 + k1;
+            float o = k0 / k;
+            kernel[i].x = k;
+            kernel[i].y = o;
+            totalWeight += (k0 + k1) * 2.0f;
+        }
+        for (size_t i = 0; i < m; i++) {
+            kernel[i].x *= 1.0f / totalWeight;
+        }
+        return m;
+    };
+
+    struct BlurPassData {
+        FrameGraphId<FrameGraphTexture> inout;
+        FrameGraphId<FrameGraphTexture> temp;
+        FrameGraphRenderTargetHandle tempRT;
+        FrameGraphRenderTargetHandle inoutRT;
+    };
+
+    backend::SamplerParams sampler {
+            .filterMag = SamplerMagFilter::LINEAR,
+            .filterMin = SamplerMinFilter::LINEAR
+    };
+
+    const size_t kernelStorageSize = mSeparableGaussianBlurKernelStorageSize;
+    auto& gaussianBlurPasses = fg.addPass<BlurPassData>("Gaussian Blur Passes",
+            [&](FrameGraph::Builder& builder, BlurPassData& data) {
+                auto desc = builder.getDescriptor(input);
+
+                data.inout = builder.write(builder.sample(input));
+
+                // width of the destination level (b/c we're blurring horizontally)
+                desc.width = FTexture::valueForLevel(dstLevel, desc.width);
+                // height of the source level (b/c it's not blurred in this pass)
+                desc.height = FTexture::valueForLevel(srcLevel, desc.height);
+
+                data.temp = builder.createTexture("Horizontal temporary buffer", desc);
+                data.temp = builder.write(builder.sample(data.temp));
+
+                data.tempRT = builder.createRenderTarget("Horizontal temporary target", {
+                        .attachments = { data.temp, {}}
+                }, TargetBufferFlags::NONE);
+
+                data.inoutRT = builder.createRenderTarget("Blurred target", {
+                        .attachments = {{ data.inout, dstLevel }, {}}
+                }, TargetBufferFlags::NONE);
+            },
+            [=](FrameGraphPassResources const& resources,
+                    BlurPassData const& data, DriverApi& driver) {
+
+                PostProcessMaterial const& separableGaussianBlur = mSeparableGaussianBlur;
+                FMaterialInstance* const mi = separableGaussianBlur.getMaterialInstance();
+
+                PipelineState pipeline;
+                pipeline.program = separableGaussianBlur.getProgram();
+                pipeline.rasterState = separableGaussianBlur.getMaterial()->getRasterState();
+                pipeline.scissor = mi->getScissor();
+
+                float2 kernel[128];
+                size_t m = computeGaussianCoefficients(kernel,
+                        std::min(sizeof(kernel) / sizeof(*kernel), kernelStorageSize), alpha);
+
+                // horizontal pass
+                auto hwTempRT = resources.getRenderTarget(data.tempRT);
+                auto hwInoutRT = resources.getRenderTarget(data.inoutRT);
+                auto hwTemp = resources.getTexture(data.temp);
+                auto hwInout = resources.getTexture(data.inout);
+                auto const& inoutDesc = resources.getDescriptor(data.inout);
+                auto const& tempDesc = resources.getDescriptor(data.temp);
+
+                mi->setParameter("source", hwInout, sampler);
+                mi->setParameter("level", (float)srcLevel);
+                mi->setParameter("resolution", float4{
+                        tempDesc.width, tempDesc.height,
+                        1.0f / tempDesc.width, 1.0f / tempDesc.height });
+                mi->setParameter("axis",
+                        float2{ 1.0f / FTexture::valueForLevel(srcLevel, inoutDesc.width), 0 });
+                mi->setParameter("count", (int32_t)m);
+                mi->setParameter("kernel", kernel, m);
+                mi->commit(driver);
+                mi->use(driver);
+
+                // FIXME: see if the framegraph could figure this out
+                hwTempRT.params.flags.discardEnd = TargetBufferFlags::NONE;
+
+                driver.beginRenderPass(hwTempRT.target, hwTempRT.params);
+                driver.draw(pipeline, fullScreenRenderPrimitive);
+                driver.endRenderPass();
+
+                // vertical pass
+                auto width = FTexture::valueForLevel(dstLevel, inoutDesc.width);
+                auto height = FTexture::valueForLevel(dstLevel, inoutDesc.height);
+                assert(width == hwInoutRT.params.viewport.width);
+                assert(height == hwInoutRT.params.viewport.height);
+
+                mi->setParameter("source", hwTemp, sampler);
+                mi->setParameter("level", 0.0f);
+                mi->setParameter("resolution",
+                        float4{ width, height, 1.0f / width, 1.0f / height });
+                mi->setParameter("axis", float2{ 0, 1.0f / tempDesc.height });
+                mi->commit(driver);
+
+                driver.beginRenderPass(hwInoutRT.target, hwInoutRT.params);
+                driver.draw(pipeline, fullScreenRenderPrimitive);
+                driver.endRenderPass();
+            });
+
+    return gaussianBlurPasses.getData().inout;
 }
 
 } // namespace filament
