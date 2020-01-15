@@ -117,10 +117,14 @@ size_t getFormatSize(TextureFormat format) noexcept {
 
         case TextureFormat::DXT1_RGB:
         case TextureFormat::DXT1_RGBA:
+        case TextureFormat::DXT1_SRGB:
+        case TextureFormat::DXT1_SRGBA:
             return 8;
 
         case TextureFormat::DXT3_RGBA:
+        case TextureFormat::DXT3_SRGBA:
         case TextureFormat::DXT5_RGBA:
+        case TextureFormat::DXT5_SRGBA:
             return 16;
 
         // The block size for ASTC compression is always 16 bytes.
@@ -175,8 +179,12 @@ size_t getBlockWidth(TextureFormat format) noexcept {
 
         case TextureFormat::DXT1_RGB:
         case TextureFormat::DXT1_RGBA:
+        case TextureFormat::DXT1_SRGB:
+        case TextureFormat::DXT1_SRGBA:
         case TextureFormat::DXT3_RGBA:
+        case TextureFormat::DXT3_SRGBA:
         case TextureFormat::DXT5_RGBA:
+        case TextureFormat::DXT5_SRGBA:
             return 4;
 
         case TextureFormat::RGBA_ASTC_4x4:

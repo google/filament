@@ -390,6 +390,20 @@ constexpr /* inline */ GLenum getInternalFormat(backend::TextureFormat format) n
             return 0;
 #endif
 
+#if defined(GL_EXT_texture_sRGB) || defined(GL_EXT_texture_compression_s3tc_srgb)
+        case TextureFormat::DXT1_SRGB:         return GL_COMPRESSED_SRGB_S3TC_DXT1_EXT;
+        case TextureFormat::DXT1_SRGBA:        return GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT;
+        case TextureFormat::DXT3_SRGBA:        return GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT;
+        case TextureFormat::DXT5_SRGBA:        return GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT;
+#else
+        case TextureFormat::DXT1_SRGB:
+        case TextureFormat::DXT1_SRGBA:
+        case TextureFormat::DXT3_SRGBA:
+        case TextureFormat::DXT5_SRGBA:
+            // this should not happen
+            return 0;
+#endif
+
 #if defined(GL_KHR_texture_compression_astc_hdr)
         case TextureFormat::RGBA_ASTC_4x4:     return GL_COMPRESSED_RGBA_ASTC_4x4_KHR;
         case TextureFormat::RGBA_ASTC_5x4:     return GL_COMPRESSED_RGBA_ASTC_5x4_KHR;

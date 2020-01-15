@@ -261,6 +261,7 @@ enum class CompressedPixelDataType : uint16_t {
 
     // Available everywhere except Android/iOS
     DXT1_RGB, DXT1_RGBA, DXT3_RGBA, DXT5_RGBA,
+    DXT1_SRGB, DXT1_SRGBA, DXT3_SRGBA, DXT5_SRGBA,
 
     // ASTC formats are available with a GLES extension
     RGBA_ASTC_4x4,
@@ -414,6 +415,7 @@ enum class TextureFormat : uint16_t {
 
     // Available everywhere except Android/iOS
     DXT1_RGB, DXT1_RGBA, DXT3_RGBA, DXT5_RGBA,
+    DXT1_SRGB, DXT1_SRGBA, DXT3_SRGBA, DXT5_SRGBA,
 
     // ASTC formats are available with a GLES extension
     RGBA_ASTC_4x4,
@@ -468,7 +470,11 @@ static constexpr bool isETC2Compression(TextureFormat format) noexcept {
 
 //! returns whether this format is an ETC3 compressed format
 static constexpr bool isS3TCCompression(TextureFormat format) noexcept {
-    return format >= TextureFormat::DXT1_RGB && format <= TextureFormat::DXT5_RGBA;
+    return format >= TextureFormat::DXT1_RGB && format <= TextureFormat::DXT5_SRGBA;
+}
+
+static constexpr bool isS3TCSRGBCompression(TextureFormat format) noexcept {
+    return format >= TextureFormat::DXT1_SRGB && format <= TextureFormat::DXT5_SRGBA;
 }
 
 //! Texture Cubemap Face
