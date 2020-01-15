@@ -98,7 +98,7 @@ the Android SDK.
 
 ## Android Studio
 
-You must use Android Studio 3.5 or higher. To open the project, point Studio to the `android`
+You must use Android Studio 3.6 RC 1 or higher. To open the project, point Studio to the `android`
 folder. After opening the project and syncing to gradle, select the sample of your choice using the
 drop-down widget in the toolbar.
 
