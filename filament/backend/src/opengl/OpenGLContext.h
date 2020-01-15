@@ -123,6 +123,7 @@ public:
         bool EXT_multisampled_render_to_texture = false;
         bool KHR_debug = false;
         bool EXT_texture_sRGB = false;
+        bool EXT_texture_compression_s3tc_srgb = false;
     } ext;
 
     struct {
