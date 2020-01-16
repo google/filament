@@ -57,45 +57,54 @@ include_directories(${FILAMENT_DIR}/include
         ..
         ../../libs/utils/include)
 
-set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} -Wl,--version-script=${CMAKE_SOURCE_DIR}/libgltfio-jni.map")
-
-add_library(gltfio-jni SHARED
+add_library(gltfio-jni-obj OBJECT
         src/main/cpp/Animator.cpp
         src/main/cpp/AssetLoader.cpp
         src/main/cpp/FilamentAsset.cpp
         src/main/cpp/KtxLoader.cpp
         src/main/cpp/MaterialProvider.cpp
-        src/main/cpp/ResourceLoader.cpp
+        src/main/cpp/ResourceLoader.cpp)
 
-        ../common/CallbackUtils.cpp
-        ../common/NioUtils.cpp
+if (NOT DISABLE_GLTFIO_JNI)
 
-        $<TARGET_OBJECTS:filament-jni-obj>
-)
+    set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/libgltfio-jni.map")
 
-set_target_properties(gltfio-jni PROPERTIES LINK_DEPENDS
-        ${CMAKE_CURRENT_SOURCE_DIR}/libgltfio-jni.symbols)
+    add_library(gltfio-jni SHARED
+            $<TARGET_OBJECTS:gltfio-jni-obj>
 
-# The ordering in the following list is important because CMake does not have dependency information.
-target_link_libraries(gltfio-jni
-        gltfio
-        filament
-        backend
-        filaflat
-        filabridge
-        geometry
-        image
-        ibl
-        utils
-        log
-        GLESv3
-        EGL
-        android
-        jnigraphics
-        gltfio_resources
-        m
-)
+            src/main/cpp/Gltfio.cpp
 
-if (FILAMENT_SUPPORTS_VULKAN)
-    target_link_libraries(gltfio-jni bluevk smol-v)
+            ../common/CallbackUtils.cpp
+            ../common/NioUtils.cpp
+
+            $<TARGET_OBJECTS:filament-jni-obj>
+    )
+
+    set_target_properties(gltfio-jni PROPERTIES LINK_DEPENDS
+            ${CMAKE_CURRENT_SOURCE_DIR}/libgltfio-jni.symbols)
+
+    # The ordering in the following list is important because CMake does not have dependency information.
+    target_link_libraries(gltfio-jni
+            gltfio
+            filament
+            backend
+            filaflat
+            filabridge
+            geometry
+            image
+            ibl
+            utils
+            log
+            GLESv3
+            EGL
+            android
+            jnigraphics
+            gltfio_resources
+            m
+    )
+
+    if (FILAMENT_SUPPORTS_VULKAN)
+        target_link_libraries(gltfio-jni bluevk smol-v)
+    endif()
+
 endif()

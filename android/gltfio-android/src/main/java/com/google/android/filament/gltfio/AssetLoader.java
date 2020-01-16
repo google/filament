@@ -37,7 +37,7 @@ import java.nio.Buffer;
  *
  * companion object {
  *     init {
- *        AssetLoader.init()
+ *        Gltfio.init()
  *    }
  * }
  *
@@ -76,13 +76,6 @@ import java.nio.Buffer;
  */
 public class AssetLoader {
     private long mNativeObject;
-
-    /**
-     * Initializes the gltfio JNI layer. Must be called before using any gltfio functionality.
-     */
-    public static void init() {
-        System.loadLibrary("gltfio-jni");
-    }
 
     /**
      * Constructs an <code>AssetLoader </code>that can be used to create and destroy instances of
