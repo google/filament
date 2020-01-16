@@ -105,7 +105,7 @@ Here are a few screenshots of applications that use Filament in production:
 - OpenGL 4.1+ for Linux, macOS and Windows
 - OpenGL ES 3.0+ for Android and iOS
 - Metal for macOS and iOS
-- Vulkan 1.0 for Android, Linux, macOS and iOS (with MoltenVk), and Windows
+- Vulkan 1.0 for Android, Linux, macOS, and Windows
 - WebGL 2.0 for all platforms
 
 ### Rendering
