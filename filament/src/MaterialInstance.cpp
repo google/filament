@@ -130,7 +130,7 @@ void FMaterialInstance::commitSlow(DriverApi& driver) const {
     }
 }
 
-template<typename T>
+template<typename T, typename>
 inline void FMaterialInstance::setParameter(const char* name, T value) noexcept {
     ssize_t offset = mMaterial->getUniformInterfaceBlock().getUniformOffset(name, 0);
     if (offset >= 0) {
@@ -138,7 +138,7 @@ inline void FMaterialInstance::setParameter(const char* name, T value) noexcept 
     }
 }
 
-template <typename T>
+template <typename T, typename >
 inline void FMaterialInstance::setParameter(const char* name, const T* value, size_t count) noexcept {
     ssize_t offset = mMaterial->getUniformInterfaceBlock().getUniformOffset(name, 0);
     if (offset >= 0) {
@@ -218,12 +218,12 @@ Material const* MaterialInstance::getMaterial() const noexcept {
     return upcast(this)->mMaterial;
 }
 
-template <typename T>
+template <typename T, typename>
 void MaterialInstance::setParameter(const char* name, T value) noexcept {
     upcast(this)->setParameter<T>(name, value);
 }
 
-template <typename T>
+template <typename T, typename>
 void MaterialInstance::setParameter(const char* name, const T* value, size_t count) noexcept {
     upcast(this)->setParameter<T>(name, value, count);
 }
