@@ -31,6 +31,7 @@ import com.google.android.filament.gltfio.*
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.channels.Channels
+
 import kotlin.math.*
 
 data class Framebuffer(
@@ -43,10 +44,9 @@ data class Framebuffer(
 
 class MainActivity : Activity() {
 
-    // We are using the gltfio library, so init the AssetLoader rather than Filament.
     companion object {
         init {
-            AssetLoader.init()
+            Gltfio.init()
         }
     }
 
