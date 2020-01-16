@@ -499,8 +499,12 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
             utils::slog.e << "Unrecognized vertex semantic in " << name << utils::io::endl;
             return false;
         }
-        UvSet uvset = uvmap[inputAttribute.index];
         if (inputAttribute.type == cgltf_attribute_type_texcoord) {
+            if (inputAttribute.index >= sizeof(uvmap) / sizeof(uvmap[0])) {
+                utils::slog.e << "Too many texture coordinate sets in " << name << utils::io::endl;
+                continue;
+            }
+            UvSet uvset = uvmap[inputAttribute.index];
             switch (uvset) {
                 case UV0:
                     semantic = VertexAttribute::UV0;
@@ -649,6 +653,11 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
                 uvmap[inputAttribute.index] == UNUSED)) {
             continue;
         }
+        if (inputAttribute.type == cgltf_attribute_type_texcoord &&
+                inputAttribute.index >= sizeof(uvmap) / sizeof(uvmap[0])) {
+            continue;
+        }
+
         if (inputAttribute.type == cgltf_attribute_type_normal) {
             mResult->mBufferBindings.push_back({
                 .uri = bv->buffer->uri,
