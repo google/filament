@@ -123,6 +123,21 @@ VertexBuffer* VertexBuffer::Builder::build(Engine& engine) {
         return nullptr;
     }
 
+    // Next we check if any unused buffer slots have been allocated. This helps prevent errors
+    // because uploading to an unused slot can trigger undefined behavior in the backend.
+    auto const& declaredAttributes = mImpl->mDeclaredAttributes;
+    auto const& attributes = mImpl->mAttributes;
+    utils::bitset32 attributedBuffers;
+    for (size_t j = 0; j < MAX_VERTEX_ATTRIBUTE_COUNT; ++j) {
+        if (declaredAttributes[j]) {
+            attributedBuffers.set(attributes[j].buffer);
+        }
+    }
+    if (!ASSERT_PRECONDITION_NON_FATAL(attributedBuffers.count() == mImpl->mBufferCount,
+            "At least one buffer slot was never assigned to an attribute.")) {
+        return nullptr;
+    }
+
     return upcast(engine).createVertexBuffer(*this);
 }
 
