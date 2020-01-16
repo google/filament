@@ -131,6 +131,7 @@ public class UiHelper {
     private RenderSurface mRenderSurface;
 
     private boolean mOpaque = true;
+    private boolean mOverlay = false;
 
     /**
      * Enum used to decide whether UiHelper should perform extra error checking.
@@ -173,7 +174,7 @@ public class UiHelper {
         void detach();
     }
 
-    private class SurfaceViewHandler implements RenderSurface {
+    private static class SurfaceViewHandler implements RenderSurface {
         private SurfaceView mSurfaceView;
 
         SurfaceViewHandler(SurfaceView surface) {
@@ -324,6 +325,30 @@ public class UiHelper {
     }
 
     /**
+     * Returns true if the SurfaceView used as a render target should be positioned above
+     * other surfaces but below the activity's surface. False by default.
+     */
+    public boolean isMediaOverlay() {
+        return mOverlay;
+    }
+
+    /**
+     * Controls whether the surface of the SurfaceView used as a render target should be
+     * positioned above other surfaces but below the activity's surface. This property
+     * only has an effect when used in combination with {@link #setOpaque(boolean) setOpaque(false)}
+     * and does not affect TextureView targets.
+     *
+     * Must be called before calling {@link #attachTo(SurfaceView)}
+     * or {@link #attachTo(TextureView)}.
+     *
+     * @param overlay Indicates whether the render target should be rendered below the activity's
+     *                surface when transparent.
+     */
+    public void setMediaOverlay(boolean overlay) {
+        mOverlay = overlay;
+    }
+
+    /**
      * Returns the flags to pass to
      * {@link com.google.android.filament.Engine#createSwapChain(Object, long)} to honor all
      * the options set on this UiHelper.
@@ -340,10 +365,17 @@ public class UiHelper {
      */
     public void attachTo(@NonNull SurfaceView view) {
         if (attach(view)) {
-            if (!isOpaque()) {
-                view.setZOrderOnTop(true);
-                view.getHolder().setFormat(PixelFormat.TRANSLUCENT);
+            boolean translucent = !isOpaque();
+            // setZOrderOnTop() and setZOrderMediaOverlay() override each other,
+            // we must only call one of them
+            if (isMediaOverlay()) {
+                view.setZOrderMediaOverlay(translucent);
+            } else {
+                view.setZOrderOnTop(translucent);
             }
+
+            int format = isOpaque() ? PixelFormat.OPAQUE : PixelFormat.TRANSLUCENT;
+            view.getHolder().setFormat(format);
 
             mRenderSurface = new SurfaceViewHandler(view);
 
@@ -377,7 +409,6 @@ public class UiHelper {
             final Surface surface = holder.getSurface();
             if (surface != null && surface.isValid()) {
                 callback.surfaceCreated(holder);
-                int format = isOpaque() ? PixelFormat.OPAQUE : PixelFormat.TRANSLUCENT;
                 callback.surfaceChanged(holder, format,
                         holder.getSurfaceFrame().width(), holder.getSurfaceFrame().height());
             }
