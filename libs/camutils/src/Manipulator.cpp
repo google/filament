@@ -132,10 +132,6 @@ void Manipulator<FLOAT>::setProperties(const Config& props) {
         mProps.upVector = vec3(0, 1, 0);
     }
 
-    if (mProps.groundPlane == vec4(0)) {
-        mProps.groundPlane = vec4(0, 0, 1, 0);
-    }
-
     if (mProps.fovDegrees == FLOAT(0)) {
         mProps.fovDegrees = 33;
     }

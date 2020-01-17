@@ -131,7 +131,7 @@ public:
          */
         Manipulator* build(Mode mode);
 
-        Config details;
+        Config details = {};
     };
 
     virtual ~Manipulator() = default;

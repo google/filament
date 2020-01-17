@@ -41,6 +41,7 @@ public:
     enum GrabState { INACTIVE, GRABBING, STRAFING };
 
     OrbitManipulator(Mode mode, const Config& props) : Base(mode, props) {
+        setProperties(props);
         Base::mEye = Base::mProps.orbitHomePosition;
         mPivot = Base::mTarget = Base::mProps.targetPosition;
     }
