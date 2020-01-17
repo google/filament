@@ -116,7 +116,7 @@ extern "C" JNIEXPORT void JNICALL Java_com_google_android_filament_utils_Manipul
     manip->setViewport(width, height);
 }
 
-extern "C" JNIEXPORT void JNICALL Java_com_google_android_filament_utils_Manipulator_nGetLookAt(JNIEnv* env, jclass, jlong nativeManip, jfloatArray eyePosition, jfloatArray targetPosition, jfloatArray upward) {
+extern "C" JNIEXPORT void JNICALL Java_com_google_android_filament_utils_Manipulator_nGetLookAtFloat(JNIEnv* env, jclass, jlong nativeManip, jfloatArray eyePosition, jfloatArray targetPosition, jfloatArray upward) {
     auto manip = (Manipulator<float>*) nativeManip;
 
     jfloat *eye = env->GetFloatArrayElements(eyePosition, NULL);
@@ -128,6 +128,24 @@ extern "C" JNIEXPORT void JNICALL Java_com_google_android_filament_utils_Manipul
     env->ReleaseFloatArrayElements(eyePosition, eye, 0);
     env->ReleaseFloatArrayElements(targetPosition, target, 0);
     env->ReleaseFloatArrayElements(upward, up, 0);
+}
+
+extern "C" JNIEXPORT void JNICALL Java_com_google_android_filament_utils_Manipulator_nGetLookAtDouble(JNIEnv* env, jclass, jlong nativeManip, jdoubleArray eyePosition, jdoubleArray targetPosition, jdoubleArray upward) {
+    auto manip = (Manipulator<float>*) nativeManip;
+    float3 eyef, targetf, upf;
+    manip->getLookAt(&eyef, &targetf, &upf);
+
+    jdouble *eye = env->GetDoubleArrayElements(eyePosition, NULL);
+    jdouble *target = env->GetDoubleArrayElements(targetPosition, NULL);
+    jdouble *up = env->GetDoubleArrayElements(upward, NULL);
+
+    *((double3*) eye) = eyef;
+    *((double3*) target) = targetf;
+    *((double3*) up) = upf;
+
+    env->ReleaseDoubleArrayElements(eyePosition, eye, 0);
+    env->ReleaseDoubleArrayElements(targetPosition, target, 0);
+    env->ReleaseDoubleArrayElements(upward, up, 0);
 }
 
 extern "C" JNIEXPORT void JNICALL Java_com_google_android_filament_utils_Manipulator_nRaycast(JNIEnv* env, jclass, jlong nativeManip, jint x, jint y, jfloatArray result) {
