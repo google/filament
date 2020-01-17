@@ -28,37 +28,39 @@ class GestureDetector(private val view: View, private val manipulator: Manipulat
     private enum class Gesture { NONE, ORBIT, PAN, ZOOM }
 
     // Simplified memento of MotionEvent, minimal but sufficient for our purposes.
-    private data class TouchEvent(var pt0: Float2, var pt1: Float2, var count: Int) {
+    private data class TouchPair(var pt0: Float2, var pt1: Float2, var count: Int) {
         constructor() : this(Float2(0f), Float2(0f), 0)
-        constructor(me: MotionEvent) : this() {
+        constructor(me: MotionEvent, height: Int) : this() {
             if (me.pointerCount >= 1) {
-                this.pt0 = Float2(me.getX(0), me.getY(0))
+                this.pt0 = Float2(me.getX(0), height - me.getY(0))
+                this.pt1 = this.pt0
                 this.count++
             }
             if (me.pointerCount >= 2) {
-                this.pt1 = Float2(me.getX(1), me.getY(1))
+                this.pt1 = Float2(me.getX(1), height - me.getY(1))
                 this.count++
             }
         }
-        fun getPinchDistance(): Float { return distance(pt0, pt1) }
-        fun getTouchesMidpoint(): Float2 { return mix(pt0, pt1, 0.5f) }
+        val separation get() = distance(pt0, pt1)
+        val midpoint get() = mix(pt0, pt1, 0.5f)
+        val x: Int get() = midpoint.x.toInt()
+        val y: Int get() = midpoint.y.toInt()
     }
 
     private var currentGesture = Gesture.NONE
-    private var previousEvent = TouchEvent()
-    private val tentativePanEvents = ArrayList<TouchEvent>()
-    private val tentativeOrbitEvents = ArrayList<TouchEvent>()
-    private val tentativeZoomEvents = ArrayList<TouchEvent>()
+    private var previousTouch = TouchPair()
+    private val tentativePanEvents = ArrayList<TouchPair>()
+    private val tentativeOrbitEvents = ArrayList<TouchPair>()
+    private val tentativeZoomEvents = ArrayList<TouchPair>()
 
     private val kGestureConfidenceCount = 2
-    private val kPanConfidenceDistance = 5
+    private val kPanConfidenceDistance = 4
     private val kZoomConfidenceDistance = 10
     private val kZoomSpeed = 1f / 10f
 
     init {
         view.setOnTouchListener func@{ _, event ->
-            val x = event.getX(0).toInt()
-            val y = view.height - event.getY(0).toInt()
+            val touch = TouchPair(event, view.height)
             when (event.actionMasked) {
                 MotionEvent.ACTION_MOVE -> {
 
@@ -74,43 +76,43 @@ class GestureDetector(private val view: View, private val manipulator: Manipulat
                     // UPDATE EXISTING GESTURE
 
                     if (currentGesture == Gesture.ZOOM) {
-                        val d0 = previousEvent.getPinchDistance()
-                        val d1 = TouchEvent(event).getPinchDistance()
-                        manipulator.zoom(x, y, (d0 - d1) * kZoomSpeed)
-                        previousEvent = TouchEvent(event)
+                        val d0 = previousTouch.separation
+                        val d1 = touch.separation
+                        manipulator.zoom(touch.x, touch.y, (d0 - d1) * kZoomSpeed)
+                        previousTouch = touch
                         return@func true
                     }
 
                     if (currentGesture != Gesture.NONE) {
-                        manipulator.grabUpdate(x, y)
+                        manipulator.grabUpdate(touch.x, touch.y)
                         return@func true
                     }
 
                     // DETECT NEW GESTURE
 
                     if (event.pointerCount == 1) {
-                        tentativeOrbitEvents.add(TouchEvent(event))
+                        tentativeOrbitEvents.add(touch)
                     }
 
                     if (event.pointerCount == 2) {
-                        tentativePanEvents.add(TouchEvent(event))
-                        tentativeZoomEvents.add(TouchEvent(event))
+                        tentativePanEvents.add(touch)
+                        tentativeZoomEvents.add(touch)
                     }
 
                     if (isOrbitGesture()) {
-                        manipulator.grabBegin(x, y, false)
+                        manipulator.grabBegin(touch.x, touch.y, false)
                         currentGesture = Gesture.ORBIT
                         return@func true
                     }
 
                     if (isZoomGesture()) {
                         currentGesture = Gesture.ZOOM
-                        previousEvent = TouchEvent(event)
+                        previousTouch = touch
                         return@func true
                     }
 
                     if (isPanGesture()) {
-                        manipulator.grabBegin(x, y, true)
+                        manipulator.grabBegin(touch.x, touch.y, true)
                         currentGesture = Gesture.PAN
                         return@func true
                     }
@@ -140,8 +142,8 @@ class GestureDetector(private val view: View, private val manipulator: Manipulat
         if (tentativePanEvents.size <= kGestureConfidenceCount) {
             return false
         }
-        val oldest = tentativePanEvents.first().getTouchesMidpoint()
-        val newest = tentativePanEvents.last().getTouchesMidpoint()
+        val oldest = tentativePanEvents.first().midpoint
+        val newest = tentativePanEvents.last().midpoint
         return distance(oldest, newest) > kPanConfidenceDistance
     }
 
@@ -149,8 +151,8 @@ class GestureDetector(private val view: View, private val manipulator: Manipulat
         if (tentativeZoomEvents.size <= kGestureConfidenceCount) {
             return false
         }
-        val oldest = tentativeZoomEvents.first().getPinchDistance()
-        val newest = tentativeZoomEvents.last().getPinchDistance()
+        val oldest = tentativeZoomEvents.first().separation
+        val newest = tentativeZoomEvents.last().separation
         return kotlin.math.abs(newest - oldest) > kZoomConfidenceDistance
     }
 }
