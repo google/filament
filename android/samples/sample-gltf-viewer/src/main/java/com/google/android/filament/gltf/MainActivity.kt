@@ -48,6 +48,7 @@ class MainActivity : Activity() {
     private lateinit var assetLoader: AssetLoader
     private lateinit var filamentAsset: FilamentAsset
     private lateinit var gestureDetector: GestureDetector
+    private lateinit var filamentAnimator: Animator
 
     // core filament objects
     private lateinit var engine: Engine
@@ -118,6 +119,9 @@ class MainActivity : Activity() {
             resourceLoader.addResourceData(uri, buffer)
         }
         resourceLoader.loadResources(filamentAsset)
+        resourceLoader.destroy()
+        filamentAnimator = filamentAsset.animator
+        filamentAsset.releaseSourceData()
 
         scene.addEntities(filamentAsset.entities)
 
