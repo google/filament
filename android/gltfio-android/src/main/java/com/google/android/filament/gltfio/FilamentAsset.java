@@ -112,6 +112,16 @@ public class FilamentAsset {
         return uris;
     }
 
+    /**
+     * Reclaims CPU-side memory for URI strings, binding lists, and raw animation data.
+     *
+     * This should only be called after ResourceLoader#loadResources().
+     * If using Animator, this should be called after getAnimator().
+     */
+    public void releaseSourceData() {
+        nReleaseSourceData(mNativeObject);
+    }
+
     void clearNativeObject() {
         mNativeObject = 0;
     }
@@ -124,4 +134,5 @@ public class FilamentAsset {
     private static native long nGetAnimator(long nativeAsset);
     private static native int nGetResourceUriCount(long nativeAsset);
     private static native void nGetResourceUris(long nativeAsset, String[] result);
+    private static native void nReleaseSourceData(long nativeAsset);
 }

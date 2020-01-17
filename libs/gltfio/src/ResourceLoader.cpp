@@ -185,7 +185,11 @@ bool ResourceLoader::loadResources(FilamentAsset* asset) {
                 slog.e << "Unable to load external resource: " << uri << io::endl;
                 missingResources = true;
             }
-            gltf->buffers[i].data = iter->second.buffer;
+            // Make a copy to allow cgltf_free() to work as expected and prevent a double-free.
+            // TODO: Future versions of CGLTF will make this easier, see the following ticket.
+            // https://github.com/jkuhlmann/cgltf/issues/94
+            gltf->buffers[i].data = malloc(iter->second.size);
+            memcpy(gltf->buffers[i].data, iter->second.buffer, iter->second.size);
         } else {
             slog.e << "Unable to load " << uri << io::endl;
             return false;

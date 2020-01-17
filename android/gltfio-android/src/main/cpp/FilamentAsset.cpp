@@ -96,3 +96,10 @@ Java_com_google_android_filament_gltfio_FilamentAsset_nGetResourceUris(JNIEnv* e
         env->SetObjectArrayElement(result, (jsize) i, env->NewStringUTF(resourceUris[i]));
     }
 }
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_gltfio_FilamentAsset_nReleaseSourceData(JNIEnv* env, jclass,
+        jlong nativeAsset) {
+    FilamentAsset* asset = (FilamentAsset*) nativeAsset;
+    asset->releaseSourceData();
+}

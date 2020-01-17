@@ -25,8 +25,8 @@ import com.google.android.filament.EntityManager;
 import java.nio.Buffer;
 
 /**
- * Consumes a blob of glTF 2.0 content (either JSON or GLB) and produces {@link FilamentAsset}
- * objects, which are bundles of Filament entities, material instances, textures, vertex buffers,
+ * Consumes a blob of glTF 2.0 content (either JSON or GLB) and produces a {@link FilamentAsset}
+ * object, which is a bundle of Filament entities, material instances, textures, vertex buffers,
  * and index buffers.
  *
  * <p>AssetLoader does not fetch external buffer data or create textures on its own. Clients can use
@@ -37,7 +37,7 @@ import java.nio.Buffer;
  *
  * companion object {
  *     init {
- *        Gltfio.init()
+ *        Gltfio.init() // or, use Utils.init() if depending on filament-utils
  *    }
  * }
  *
@@ -47,10 +47,10 @@ import java.nio.Buffer;
  *
  *     assetLoader = AssetLoader(engine, MaterialProvider(engine), EntityManager.get())
  *
- *     filamentAsset = assets.open("models/lucy.glb").use { input ->
+ *     filamentAsset = assets.open("models/lucy.gltf").use { input ->
  *         val bytes = ByteArray(input.available())
  *         input.read(bytes)
- *         assetLoader.createAssetFromBinary(ByteBuffer.wrap(bytes))!!
+ *         assetLoader.createAssetFromJson(ByteBuffer.wrap(bytes))!!
  *     }
  *
  *     val resourceLoader = ResourceLoader(engine)
@@ -61,6 +61,7 @@ import java.nio.Buffer;
  *     resourceLoader.loadResources(filamentAsset)
  *     resourceLoader.destroy()
  *     animator = asset.getAnimator()
+ *     filamentAsset.releaseSourceData();
  *
  *     scene.addEntities(filamentAsset.entities)
  * }
