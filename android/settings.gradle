@@ -6,6 +6,7 @@ include ':filament-utils-android'
 
 // Samples
 include ':samples:sample-gltf-bloom'
+include ':samples:sample-gltf-viewer'
 include ':samples:sample-hello-camera'
 include ':samples:sample-hello-triangle'
 include ':samples:sample-image-based-lighting'

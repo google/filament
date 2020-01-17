@@ -46,6 +46,12 @@ host machine:
 
 ![Material Builder](../../docs/images/samples/sample_image_based_lighting.jpg)
 
+### `gltf-viewer`
+
+Demonstrates how to load glTF models and use the camera manipulator:
+
+![glTF Viewer](../../docs/images/samples/sample_gltf_viewer.jpg)
+
 ### `gltf-bloom`
 
 Demonstrates how to load glb models and use the RenderTarget API:
