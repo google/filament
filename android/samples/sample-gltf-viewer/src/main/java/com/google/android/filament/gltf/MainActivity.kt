@@ -16,14 +16,12 @@
 
 package com.google.android.filament.gltf
 
-import android.animation.ValueAnimator
 import android.app.Activity
 import android.os.Bundle
 import android.view.Choreographer
 import android.view.Surface
 import android.view.SurfaceView
 import android.util.Log
-import android.view.animation.LinearInterpolator
 
 import com.google.android.filament.*
 import com.google.android.filament.android.UiHelper
@@ -36,18 +34,14 @@ import java.nio.channels.Channels
 class MainActivity : Activity() {
 
     companion object {
-        init {
-            Utils.init()
-        }
+        // Load the library for the utility layer,  which includes gltfio and the Filament core.
+        init { Utils.init() }
     }
 
     private lateinit var surfaceView: SurfaceView
     private lateinit var uiHelper: UiHelper
     private lateinit var choreographer: Choreographer
     private val frameScheduler = FrameCallback()
-    private val animator = ValueAnimator.ofFloat(0.0f, (2.0 * kotlin.math.PI).toFloat())
-    private var width = 720
-    private var height = 1280
 
     // gltfio and utils objects
     private lateinit var manipulator: Manipulator
@@ -67,32 +61,29 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        surfaceView = SurfaceView(this)
-        setContentView(surfaceView)
+        surfaceView = SurfaceView(this).apply { setContentView(this) }
 
         choreographer = Choreographer.getInstance()
 
         uiHelper = UiHelper(UiHelper.ContextErrorPolicy.DONT_CHECK)
         uiHelper.renderCallback = SurfaceCallback()
-        uiHelper.setDesiredSize(width, height)
         uiHelper.attachTo(surfaceView)
 
         manipulator = Manipulator.Builder()
                 .targetPosition(0.0f, 0.0f, -4.0f)
-                .viewport(width, height)
+                .viewport(surfaceView.width, surfaceView.height)
                 .build(Manipulator.Mode.ORBIT)
 
         gestureDetector = GestureDetector(surfaceView, manipulator)
 
-        // Engine, Renderer, Scene, View, Camera
+        // Engine, Renderer, Scene, Camera, View
         // -------------------------------------
 
         engine = Engine.create()
         renderer = engine.createRenderer()
         scene = engine.createScene()
+        camera = engine.createCamera().apply { setExposure(16.0f, 1.0f / 125.0f, 100.0f) }
         view = engine.createView()
-        camera = engine.createCamera()
-        camera.setExposure(16.0f, 1.0f / 125.0f, 100.0f)
         view.scene = scene
         view.camera = camera
 
@@ -109,11 +100,6 @@ class MainActivity : Activity() {
         readUncompressedAsset("envs/$ibl/${ibl}_skybox.ktx").let {
             scene.skybox = KtxLoader.createSkybox(engine, it, KtxLoader.Options())
         }
-
-        camera.lookAt(
-                0.0, 0.0, 0.0,
-                0.0, 0.0, -1.0,
-                0.0, 1.0, 0.0)
 
         // glTF Entities, Textures, and Materials
         // --------------------------------------
@@ -133,7 +119,6 @@ class MainActivity : Activity() {
         }
         resourceLoader.loadResources(filamentAsset)
 
-        Log.i("gltf-viewer", "Adding ${filamentAsset.entities.size} entities to scene...")
         scene.addEntities(filamentAsset.entities)
 
         // Transform to unit cube
@@ -162,34 +147,16 @@ class MainActivity : Activity() {
                 .build(engine, light)
 
         scene.addEntity(light)
-
-        // Start Animation
-        // ---------------
-
-        animator.interpolator = LinearInterpolator()
-        animator.duration = 1_000_000
-        animator.repeatMode = ValueAnimator.RESTART
-        animator.repeatCount = ValueAnimator.INFINITE
-        animator.addUpdateListener { a ->
-            if (filamentAsset.animator.animationCount > 0) {
-                val elapsedTimeInSeconds = a.currentPlayTime.toFloat() / 1000.0f
-                filamentAsset.animator.applyAnimation(0, elapsedTimeInSeconds)
-                filamentAsset.animator.updateBoneMatrices()
-            }
-        }
-        animator.start()
     }
 
     override fun onResume() {
         super.onResume()
         choreographer.postFrameCallback(frameScheduler)
-        animator.start()
     }
 
     override fun onPause() {
         super.onPause()
         choreographer.removeFrameCallback(frameScheduler)
-        animator.cancel()
     }
 
     override fun onDestroy() {
@@ -197,7 +164,6 @@ class MainActivity : Activity() {
 
         // Stop the animation and any pending frame
         choreographer.removeFrameCallback(frameScheduler)
-        animator.cancel()
 
         // Always detach the surface before destroying the engine
         uiHelper.detach()
@@ -224,8 +190,13 @@ class MainActivity : Activity() {
         private val eyepos = DoubleArray(3)
         private val target = DoubleArray(3)
         private val upward = DoubleArray(3)
+        private val startTime = System.nanoTime()
         override fun doFrame(frameTimeNanos: Long) {
             choreographer.postFrameCallback(this)
+
+            if (!uiHelper.isReadyToRender) {
+                return
+            }
 
             manipulator.getLookAt(eyepos, target, upward)
             camera.lookAt(
@@ -233,11 +204,13 @@ class MainActivity : Activity() {
                     target[0], target[1], target[2],
                     upward[0], upward[1], upward[2])
 
-            if (uiHelper.isReadyToRender) {
-                if (renderer.beginFrame(swapChain!!)) {
-                    renderer.render(view)
-                    renderer.endFrame()
-                }
+            val elapsedTimeSeconds = (frameTimeNanos - startTime).toDouble() / 1_000_000_000
+            filamentAsset.animator.applyAnimation(0, elapsedTimeSeconds.toFloat())
+            filamentAsset.animator.updateBoneMatrices()
+
+            if (renderer.beginFrame(swapChain!!)) {
+                renderer.render(view)
+                renderer.endFrame()
             }
         }
     }
@@ -260,8 +233,6 @@ class MainActivity : Activity() {
         }
 
         override fun onResized(width: Int, height: Int) {
-            this@MainActivity.width = width
-            this@MainActivity.height = height
             view.viewport = Viewport(0, 0, width, height)
             val aspect = width.toDouble() / height.toDouble()
             camera.setProjection(45.0, aspect, 0.5, 10000.0, Camera.Fov.VERTICAL)
