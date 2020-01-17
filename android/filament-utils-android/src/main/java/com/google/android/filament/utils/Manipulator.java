@@ -314,7 +314,7 @@ public class Manipulator {
     /**
      * Gets a handle that can be used to reset the manipulator back to its current position.
      *
-     * \see jumpToBookmark
+     * @see #jumpToBookmark(Bookmark)
      */
     public Bookmark getCurrentBookmark() {
         return new Bookmark(nGetCurrentBookmark(mNativeObject));
@@ -332,7 +332,8 @@ public class Manipulator {
     /**
      * Sets the manipulator position and orientation back to a stashed state.
      *
-     * \see getCurrentBookmark, getHomeBookmark
+     * @see #getCurrentBookmark()
+     * @see #getHomeBookmark()
      */
     public void jumpToBookmark(Bookmark bookmark) {
         nJumpToBookmark(mNativeObject, bookmark.getNativeObject());
