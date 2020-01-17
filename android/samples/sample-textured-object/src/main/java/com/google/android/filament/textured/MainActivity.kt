@@ -25,6 +25,7 @@ import android.view.SurfaceView
 import android.view.animation.LinearInterpolator
 
 import com.google.android.filament.*
+import com.google.android.filament.utils.*
 import com.google.android.filament.android.UiHelper
 
 import java.nio.ByteBuffer
@@ -34,11 +35,10 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 class MainActivity : Activity() {
-    // Make sure to initialize Filament first
-    // This loads the JNI library needed by most API calls
+    // Make sure to initialize the correct Filament JNI layer.
     companion object {
         init {
-            Filament.init()
+            Utils.init()
         }
     }
 
@@ -218,7 +218,7 @@ class MainActivity : Activity() {
     }
 
     private fun loadImageBasedLight() {
-        ibl = loadIbl(assets, "envs/venetian_crossroads_2k", engine)
+        ibl = loadIbl(assets, "envs/flower_road_no_sun_2k", engine)
         ibl.indirectLight.intensity = 40_000.0f
     }
 
