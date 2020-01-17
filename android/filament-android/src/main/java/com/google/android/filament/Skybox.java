@@ -49,8 +49,7 @@ import com.google.android.filament.proguard.UsedByReflection;
 public class Skybox {
     private long mNativeObject;
 
-    @UsedByReflection("KtxLoader.java")
-    Skybox(long nativeSkybox) {
+    public Skybox(long nativeSkybox) {
         mNativeObject = nativeSkybox;
     }
 

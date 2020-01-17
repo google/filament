@@ -86,8 +86,7 @@ import com.google.android.filament.proguard.UsedByReflection;
 public class IndirectLight {
     long mNativeObject;
 
-    @UsedByReflection("KtxLoader.java")
-    IndirectLight(long indirectLight) {
+    public IndirectLight(long indirectLight) {
         mNativeObject = indirectLight;
     }
 
