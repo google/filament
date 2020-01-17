@@ -258,7 +258,14 @@ public class Manipulator {
             @NonNull @Size(min = 3) float[] eyePosition,
             @NonNull @Size(min = 3) float[] targetPosition,
             @NonNull @Size(min = 3) float[] upward) {
-        nGetLookAt(mNativeObject, eyePosition, targetPosition, upward);
+        nGetLookAtFloat(mNativeObject, eyePosition, targetPosition, upward);
+    }
+
+    public void getLookAt(
+            @NonNull @Size(min = 3) double[] eyePosition,
+            @NonNull @Size(min = 3) double[] targetPosition,
+            @NonNull @Size(min = 3) double[] upward) {
+        nGetLookAtDouble(mNativeObject, eyePosition, targetPosition, upward);
     }
 
     /**
@@ -358,7 +365,8 @@ public class Manipulator {
     private static native void nDestroyManipulator(long nativeManip);
     private static native int nGetMode(long nativeManip);
     private static native void nSetViewport(long nativeManip, int width, int height);
-    private static native void nGetLookAt(long nativeManip, float[] eyePosition, float[] targetPosition, float[] upward);
+    private static native void nGetLookAtFloat(long nativeManip, float[] eyePosition, float[] targetPosition, float[] upward);
+    private static native void nGetLookAtDouble(long nativeManip, double[] eyePosition, double[] targetPosition, double[] upward);
     private static native void nRaycast(long nativeManip, int x, int y, float[] result);
     private static native void nGrabBegin(long nativeManip, int x, int y, boolean strafe);
     private static native void nGrabUpdate(long nativeManip, int x, int y);
