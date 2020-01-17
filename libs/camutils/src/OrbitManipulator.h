@@ -38,7 +38,7 @@ public:
     using Base = Manipulator<FLOAT>;
     using Config = typename Base::Config;
 
-    enum GrabState { INACTIVE, GRABBING, STRAFING };
+    enum GrabState { INACTIVE, ORBITING, PANNING };
 
     OrbitManipulator(Mode mode, const Config& props) : Base(mode, props) {
         setProperties(props);
@@ -58,7 +58,7 @@ public:
         }
 
         // By default, place the ground plane so that it aligns with the targetPosition position.
-        // This is used only when strafing.
+        // This is used only when PANNING.
         if (resolved.groundPlane == vec4(0)) {
             const FLOAT d = length(resolved.targetPosition);
             const vec3 n = normalize(resolved.orbitHomePosition - resolved.targetPosition);
@@ -69,7 +69,7 @@ public:
     }
 
     void grabBegin(int x, int y, bool strafe) override {
-        mGrabState = strafe ? STRAFING : GRABBING;
+        mGrabState = strafe ? PANNING : ORBITING;
         mGrabPivot = mPivot;
         mGrabEye = Base::mEye;
         mGrabTarget = Base::mTarget;
@@ -84,7 +84,7 @@ public:
         const int delx = mGrabWinX - x;
         const int dely = mGrabWinY - y;
 
-        if (mGrabState == GRABBING) {
+        if (mGrabState == ORBITING) {
             Bookmark bookmark = getCurrentBookmark();
 
             const FLOAT theta = delx * Base::mProps.orbitSpeed.x;
@@ -97,7 +97,7 @@ public:
             jumpToBookmark(bookmark);
         }
 
-        if (mGrabState == STRAFING) {
+        if (mGrabState == PANNING) {
             const FLOAT ulen = distance(mGrabScene, mGrabEye);
             const FLOAT vlen = distance(mGrabFar, mGrabScene);
             const vec3 translation = (mGrabFar - Base::raycastFarPlane(x, y)) * ulen / vlen;
