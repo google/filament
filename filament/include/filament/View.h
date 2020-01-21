@@ -224,6 +224,8 @@ public:
     /**
      * Sets whether this view is rendered with or without a depth pre-pass.
      *
+     * NOTE: this setting is ignored and will be removed in future versions of Filament.
+     *
      * By default, the system picks the most appropriate strategy, this method lets the
      * application override that strategy.
      *
