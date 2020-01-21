@@ -625,6 +625,8 @@ public class View {
     /**
      * Sets whether this view is rendered with or without a depth pre-pass.
      *
+     * <p><b>This setting is ignored and will be removed in future versions of Filament.</b></p>
+     *
      * <p>
      * By default, the system picks the most appropriate strategy for your platform; this method
      * lets you override that strategy.
@@ -647,6 +649,7 @@ public class View {
      * <li>DepthPrepass::ENABLE enables the depth pre-pass</li>
      * </ul>
      */
+    @Deprecated
     public void setDepthPrepass(@NonNull DepthPrepass depthPrepass) {
         mDepthPrepass = depthPrepass;
         nSetDepthPrepass(getNativeObject(), depthPrepass.value);
