@@ -57,6 +57,7 @@
 #include <gltfio/Animator.h>
 #include <gltfio/AssetLoader.h>
 #include <gltfio/FilamentAsset.h>
+#include <gltfio/Image.h>
 #include <gltfio/MaterialProvider.h>
 #include <gltfio/ResourceLoader.h>
 
@@ -74,10 +75,6 @@
 
 #include <emscripten.h>
 #include <emscripten/bind.h>
-
-#define STBI_NO_STDIO
-#define STBI_ONLY_PNG
-#include <stb_image.h>
 
 using namespace emscripten;
 using namespace filament;
