@@ -197,7 +197,7 @@ struct PixelBufferDescriptor {
 };
 
 // Small structure whose sole purpose is to return decoded image data to JavaScript.
-struct DecodedPng {
+struct DecodedImage {
     int width;
     int height;
     int encoded_ncomp;
@@ -206,8 +206,8 @@ struct DecodedPng {
 };
 
 // JavaScript clients should call [createTextureFromPng] rather than calling this directly.
-DecodedPng decodePng(BufferDescriptor encoded_data, int requested_ncomp) {
-    DecodedPng result;
+DecodedImage decodeImage(BufferDescriptor encoded_data, int requested_ncomp) {
+    DecodedImage result;
     stbi_uc* decoded_data = stbi_load_from_memory(
             (stbi_uc const *) encoded_data.bd->buffer,
             encoded_data.bd->size,
@@ -1284,13 +1284,14 @@ class_<MeshReader::Mesh>("MeshReader$Mesh")
         return mesh.indexBuffer;
     }), allow_raw_pointers());
 
-// Clients should call [createTextureFromPng] rather than using decodePng and DecodedPng directly.
+// Clients should call [createTextureFromPng] (et al) rather than using decodeImage directly.
 
-function("decodePng", &decodePng);
-class_<DecodedPng>("DecodedPng")
-    .property("width", &DecodedPng::width)
-    .property("height", &DecodedPng::height)
-    .property("data", &DecodedPng::decoded_data);
+function("decodeImage", &decodeImage);
+
+class_<DecodedImage>("DecodedImage")
+    .property("width", &DecodedImage::width)
+    .property("height", &DecodedImage::height)
+    .property("data", &DecodedImage::decoded_data);
 
 class_<SurfaceBuilder>("SurfaceOrientation$Builder")
 
