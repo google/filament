@@ -199,7 +199,7 @@ foreach (NAME ${HTML_FILES})
     list(APPEND DEMO_ASSETS ${SERVER_DIR}/${NAME})
 endforeach()
 
-set(TEXTURE_FILES floor_ao_roughness_metallic.png floor_basecolor.png floor_normal.png)
+set(TEXTURE_FILES floor_ao_roughness_metallic.png floor_basecolor.jpg floor_normal.png)
 foreach (NAME ${TEXTURE_FILES})
     add_custom_command(
         OUTPUT ${SERVER_DIR}/${NAME}

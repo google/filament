@@ -23,7 +23,7 @@ Filament.init([
     'parquet.filamat',
     'shader_ball.filamesh',
     'floor_ao_roughness_metallic.png',
-    'floor_basecolor.png',
+    'floor_basecolor.jpg',
     'floor_normal.png',
     iblfile, skyfile
 ], () => {
@@ -73,7 +73,7 @@ class App {
             Filament.WrapMode.REPEAT);
 
         const ao = engine.createTextureFromPng('floor_ao_roughness_metallic.png');
-        const basecolor = engine.createTextureFromPng('floor_basecolor.png', {'srgb': true});
+        const basecolor = engine.createTextureFromJpeg('floor_basecolor.jpg', {'srgb': true});
         const normal = engine.createTextureFromPng('floor_normal.png');
         matinstance.setTextureParameter('aoRoughnessMetallic', ao, sampler)
         matinstance.setTextureParameter('baseColor', basecolor, sampler)
