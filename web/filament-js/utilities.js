@@ -276,7 +276,7 @@ Filament._createIblFromKtx = function(ktxdata, engine, options) {
     return ibl;
 };
 
-Filament._createTextureFromPng = function(pngdata, engine, options) {
+Filament._createTextureFromImageFile = function(fileContents, engine, options) {
     const Sampler = Filament.Texture$Sampler;
     const TextureFormat = Filament.Texture$InternalFormat;
     const PixelDataFormat = Filament.PixelDataFormat;
@@ -286,7 +286,7 @@ Filament._createTextureFromPng = function(pngdata, engine, options) {
     const noalpha = !!options['noalpha'];
     const nomips = !!options['nomips'];
 
-    const decodedpng = Filament.decodePng(pngdata, noalpha ? 3 : 4);
+    const decodedImage = Filament.decodeImage(fileContents, noalpha ? 3 : 4);
 
     var texformat, pbformat, pbtype;
     if (noalpha) {
@@ -300,52 +300,14 @@ Filament._createTextureFromPng = function(pngdata, engine, options) {
     }
 
     const tex = Filament.Texture.Builder()
-        .width(decodedpng.width)
-        .height(decodedpng.height)
+        .width(decodedImage.width)
+        .height(decodedImage.height)
         .levels(nomips ? 1 : 0xff)
         .sampler(Sampler.SAMPLER_2D)
         .format(texformat)
         .build(engine);
 
-    const pixelbuffer = Filament.PixelBuffer(decodedpng.data.getBytes(), pbformat, pbtype);
-    tex.setImage(engine, 0, pixelbuffer);
-    if (!nomips) {
-        tex.generateMipmaps(engine);
-    }
-    return tex;
-};
-
-Filament._createTextureFromJpeg = function(image, engine, options) {
-
-    options = options || {};
-    const srgb = !!options['srgb'];
-    const nomips = !!options['nomips'];
-
-    var context2d = document.createElement('canvas').getContext('2d');
-    context2d.canvas.width = image.width;
-    context2d.canvas.height = image.height;
-    context2d.width = image.width;
-    context2d.height = image.height;
-    context2d.globalCompositeOperation = 'copy';
-    context2d.drawImage(image, 0, 0);
-
-    var imgdata = context2d.getImageData(0, 0, image.width, image.height).data.buffer;
-    var decodedjpeg = new Uint8Array(imgdata);
-
-    const TF = Filament.Texture$InternalFormat;
-    const texformat = srgb ? TF.SRGB8_A8 : TF.RGBA8;
-    const pbformat = Filament.PixelDataFormat.RGBA;
-    const pbtype = Filament.PixelDataType.UBYTE;
-
-    const tex = Filament.Texture.Builder()
-        .width(image.width)
-        .height(image.height)
-        .levels(nomips ? 1 : 0xff)
-        .sampler(Filament.Texture$Sampler.SAMPLER_2D)
-        .format(texformat)
-        .build(engine);
-
-    const pixelbuffer = Filament.PixelBuffer(decodedjpeg, pbformat, pbtype);
+    const pixelbuffer = Filament.PixelBuffer(decodedImage.data.getBytes(), pbformat, pbtype);
     tex.setImage(engine, 0, pixelbuffer);
     if (!nomips) {
         tex.generateMipmaps(engine);
