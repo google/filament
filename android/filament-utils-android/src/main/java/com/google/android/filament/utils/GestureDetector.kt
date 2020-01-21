@@ -58,72 +58,68 @@ class GestureDetector(private val view: View, private val manipulator: Manipulat
     private val kZoomConfidenceDistance = 10
     private val kZoomSpeed = 1f / 10f
 
-    init {
-        view.setOnTouchListener func@{ _, event ->
-            val touch = TouchPair(event, view.height)
-            when (event.actionMasked) {
-                MotionEvent.ACTION_MOVE -> {
+    fun onTouchEvent(event: MotionEvent) {
+        val touch = TouchPair(event, view.height)
+        when (event.actionMasked) {
+            MotionEvent.ACTION_MOVE -> {
 
-                    // CANCEL GESTURE DUE TO UNEXPECTED POINTER COUNT
+                // CANCEL GESTURE DUE TO UNEXPECTED POINTER COUNT
 
-                    if ((event.pointerCount != 1 && currentGesture == Gesture.ORBIT) ||
-                            (event.pointerCount != 2 && currentGesture == Gesture.PAN) ||
-                            (event.pointerCount != 2 && currentGesture == Gesture.ZOOM)) {
-                        endGesture()
-                        return@func true
-                    }
-
-                    // UPDATE EXISTING GESTURE
-
-                    if (currentGesture == Gesture.ZOOM) {
-                        val d0 = previousTouch.separation
-                        val d1 = touch.separation
-                        manipulator.zoom(touch.x, touch.y, (d0 - d1) * kZoomSpeed)
-                        previousTouch = touch
-                        return@func true
-                    }
-
-                    if (currentGesture != Gesture.NONE) {
-                        manipulator.grabUpdate(touch.x, touch.y)
-                        return@func true
-                    }
-
-                    // DETECT NEW GESTURE
-
-                    if (event.pointerCount == 1) {
-                        tentativeOrbitEvents.add(touch)
-                    }
-
-                    if (event.pointerCount == 2) {
-                        tentativePanEvents.add(touch)
-                        tentativeZoomEvents.add(touch)
-                    }
-
-                    if (isOrbitGesture()) {
-                        manipulator.grabBegin(touch.x, touch.y, false)
-                        currentGesture = Gesture.ORBIT
-                        return@func true
-                    }
-
-                    if (isZoomGesture()) {
-                        currentGesture = Gesture.ZOOM
-                        previousTouch = touch
-                        return@func true
-                    }
-
-                    if (isPanGesture()) {
-                        manipulator.grabBegin(touch.x, touch.y, true)
-                        currentGesture = Gesture.PAN
-                        return@func true
-                    }
-                }
-                MotionEvent.ACTION_CANCEL, MotionEvent.ACTION_UP -> {
+                if ((event.pointerCount != 1 && currentGesture == Gesture.ORBIT) ||
+                        (event.pointerCount != 2 && currentGesture == Gesture.PAN) ||
+                        (event.pointerCount != 2 && currentGesture == Gesture.ZOOM)) {
                     endGesture()
+                    return
+                }
+
+                // UPDATE EXISTING GESTURE
+
+                if (currentGesture == Gesture.ZOOM) {
+                    val d0 = previousTouch.separation
+                    val d1 = touch.separation
+                    manipulator.zoom(touch.x, touch.y, (d0 - d1) * kZoomSpeed)
+                    previousTouch = touch
+                    return
+                }
+
+                if (currentGesture != Gesture.NONE) {
+                    manipulator.grabUpdate(touch.x, touch.y)
+                    return
+                }
+
+                // DETECT NEW GESTURE
+
+                if (event.pointerCount == 1) {
+                    tentativeOrbitEvents.add(touch)
+                }
+
+                if (event.pointerCount == 2) {
+                    tentativePanEvents.add(touch)
+                    tentativeZoomEvents.add(touch)
+                }
+
+                if (isOrbitGesture()) {
+                    manipulator.grabBegin(touch.x, touch.y, false)
+                    currentGesture = Gesture.ORBIT
+                    return
+                }
+
+                if (isZoomGesture()) {
+                    currentGesture = Gesture.ZOOM
+                    previousTouch = touch
+                    return
+                }
+
+                if (isPanGesture()) {
+                    manipulator.grabBegin(touch.x, touch.y, true)
+                    currentGesture = Gesture.PAN
+                    return
                 }
             }
-            true
+            MotionEvent.ACTION_CANCEL, MotionEvent.ACTION_UP -> {
+                endGesture()
+            }
         }
-
     }
 
     private fun endGesture() {
