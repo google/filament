@@ -19,18 +19,19 @@ package com.google.android.filament.utils
 import android.view.MotionEvent
 import android.view.Surface
 import android.view.SurfaceView
+import android.view.TextureView
 import com.google.android.filament.*
 import com.google.android.filament.android.UiHelper
 import com.google.android.filament.gltfio.*
 import java.nio.Buffer
 
 /**
- * Helper class for rendering glTF models with an orbit controller.
+ * Helps render glTF models into a [SurfaceView] or [TextureView] with an orbit controller.
  *
  * `ModelViewer` owns a Filament engine, renderer, swapchain, view, and scene. It allows clients
- * to access these objects via read-only properties. By design, the viewer can display only one
- * glTF scene at a time. The scene can be scaled and translated into the viewing frustum by
- * calling [transformToUnitCube]. All ECS entities can be accessed via the [asset] property.
+ * to access these objects via read-only properties. The viewer can display only one glTF scene
+ * at a time, which can be scaled and translated into the viewing frustum by calling
+ * [transformToUnitCube]. All ECS entities can be accessed via the [asset] property.
  *
  * For GLB files, clients can call [loadModelGlb] and pass in a [Buffer] with the contents of the
  * GLB file. For glTF files, clients can call [loadModelGltf] and pass in a [Buffer] with the JSON
@@ -46,7 +47,7 @@ import java.nio.Buffer
  *
  * See `sample-gltf-viewer` for a usage example.
  */
-class ModelViewer(val surfaceView: SurfaceView) {
+class ModelViewer {
 
     var asset: FilamentAsset? = null
         private set
@@ -78,23 +79,7 @@ class ModelViewer(val surfaceView: SurfaceView) {
     private val kShutterSpeed = 1f / 125f
     private val kSensitivity = 100f
 
-    /**
-     * Creates the Filament engine, scene, and helper objects.
-     *
-     * When the model viewer is no longer needed, clients should call [detach] to explicitly
-     * free all native objects.
-     */
     init {
-        uiHelper.renderCallback = SurfaceCallback()
-        uiHelper.attachTo(surfaceView)
-
-        cameraManipulator = Manipulator.Builder()
-                .targetPosition(0.0f, 0.0f, -4.0f)
-                .viewport(surfaceView.width, surfaceView.height)
-                .build(Manipulator.Mode.ORBIT)
-
-        gestureDetector = GestureDetector(surfaceView, cameraManipulator)
-
         engine = Engine.create()
         renderer = engine.createRenderer()
         scene = engine.createScene()
@@ -119,6 +104,29 @@ class ModelViewer(val surfaceView: SurfaceView) {
                 .build(engine, light)
 
         scene.addEntity(light)
+    }
+
+    constructor(surfaceView: SurfaceView) {
+        cameraManipulator = Manipulator.Builder()
+                .targetPosition(0.0f, 0.0f, -4.0f)
+                .viewport(surfaceView.width, surfaceView.height)
+                .build(Manipulator.Mode.ORBIT)
+
+        gestureDetector = GestureDetector(surfaceView, cameraManipulator)
+        uiHelper.renderCallback = SurfaceCallback()
+        uiHelper.attachTo(surfaceView)
+    }
+
+    @Suppress("unused")
+    constructor(textureView: TextureView) {
+        cameraManipulator = Manipulator.Builder()
+                .targetPosition(0.0f, 0.0f, -4.0f)
+                .viewport(textureView.width, textureView.height)
+                .build(Manipulator.Mode.ORBIT)
+
+        gestureDetector = GestureDetector(textureView, cameraManipulator)
+        uiHelper.renderCallback = SurfaceCallback()
+        uiHelper.attachTo(textureView)
     }
 
     /**
