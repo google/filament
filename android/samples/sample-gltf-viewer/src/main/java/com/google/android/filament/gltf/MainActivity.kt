@@ -19,7 +19,6 @@ package com.google.android.filament.gltf
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.os.Bundle
-import android.util.Log
 import android.view.Choreographer
 import android.view.GestureDetector
 import android.view.MotionEvent
@@ -91,7 +90,6 @@ class MainActivity : Activity() {
     }
 
     private fun readUncompressedAsset(assetName: String): ByteBuffer {
-        Log.i("gltf-viewer", "Reading ${assetName}...")
         assets.openFd(assetName).use { fd ->
             val input = fd.createInputStream()
             val dst = ByteBuffer.allocate(fd.length.toInt())
