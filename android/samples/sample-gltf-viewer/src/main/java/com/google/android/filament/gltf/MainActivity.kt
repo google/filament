@@ -29,7 +29,6 @@ import com.google.android.filament.utils.Utils
 import java.nio.ByteBuffer
 import java.nio.channels.Channels
 
-
 class MainActivity : Activity() {
 
     companion object {
@@ -113,9 +112,6 @@ class MainActivity : Activity() {
     override fun onDestroy() {
         super.onDestroy()
         choreographer.removeFrameCallback(frameScheduler)
-        modelViewer.scene.skybox?.let { modelViewer.engine.destroySkybox(it) }
-        modelViewer.scene.indirectLight?.let { modelViewer.engine.destroyIndirectLight(it) }
-        modelViewer.detach()
     }
 
     inner class FrameCallback : Choreographer.FrameCallback {

@@ -21,7 +21,7 @@ import android.view.View
 import java.util.*
 
 /**
- * Sets up a touch listener on an Android View and forwards events to a camera manipulator.
+ * Responds to Android touch events and manages a camera manipulator.
  * Supports one-touch orbit, two-touch pan, and pinch-to-zoom.
  */
 class GestureDetector(private val view: View, private val manipulator: Manipulator) {
