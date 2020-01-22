@@ -31,7 +31,7 @@ import java.nio.Buffer
  * `ModelViewer` owns a Filament engine, renderer, swapchain, view, and scene. It allows clients
  * to access these objects via read-only properties. The viewer can display only one glTF scene
  * at a time, which can be scaled and translated into the viewing frustum by calling
- * [transformToUnitCube]. All ECS entities can be accessed via the [asset] property.
+ * [transformToUnitCube]. All ECS entities can be accessed and modified via the [asset] property.
  *
  * For GLB files, clients can call [loadModelGlb] and pass in a [Buffer] with the contents of the
  * GLB file. For glTF files, clients can call [loadModelGltf] and pass in a [Buffer] with the JSON
@@ -43,7 +43,9 @@ import java.nio.Buffer
  *
  * 1. Call [onTouchEvent] from a touch handler.
  * 2. Call [render] and [Animator.applyAnimation] from a `Choreographer` frame callback.
- * 3. Call [detach] when the model viewer is no longer needed.
+ *
+ * NOTE: if its associated SurfaceView or TextureView has become detached from its window, the
+ * ModelViewer becomes invalid and must be recreated.
  *
  * See `sample-gltf-viewer` for a usage example.
  */
@@ -115,6 +117,7 @@ class ModelViewer {
         gestureDetector = GestureDetector(surfaceView, cameraManipulator)
         uiHelper.renderCallback = SurfaceCallback()
         uiHelper.attachTo(surfaceView)
+        addDetachListener(surfaceView)
     }
 
     @Suppress("unused")
@@ -127,6 +130,7 @@ class ModelViewer {
         gestureDetector = GestureDetector(textureView, cameraManipulator)
         uiHelper.renderCallback = SurfaceCallback()
         uiHelper.attachTo(textureView)
+        addDetachListener(textureView)
     }
 
     /**
@@ -182,8 +186,6 @@ class ModelViewer {
 
     /**
      * Frees all entities associated with the most recently-loaded model.
-     *
-     * @see detach
      */
     fun destroyModel() {
         asset?.let { asset ->
@@ -191,30 +193,6 @@ class ModelViewer {
             this.asset = null
             this.animator = null
         }
-    }
-
-    /**
-     * Destroys the Filament engine and all related objects.
-     *
-     * The ModelViewer becomes invalid after this is called.
-     *
-     * @see destroyModel
-     */
-    fun detach() {
-        uiHelper.detach()
-
-        destroyModel()
-        assetLoader.destroy()
-
-        engine.destroyEntity(light)
-        engine.destroyRenderer(renderer)
-        engine.destroyView(view)
-        engine.destroyScene(scene)
-        engine.destroyCamera(camera)
-
-        EntityManager.get().destroy(light)
-
-        engine.destroy()
     }
 
     /**
@@ -235,6 +213,28 @@ class ModelViewer {
             renderer.render(view)
             renderer.endFrame()
         }
+    }
+
+    private fun addDetachListener(view: android.view.View) {
+        view.addOnAttachStateChangeListener(object : android.view.View.OnAttachStateChangeListener {
+            override fun onViewAttachedToWindow(v: android.view.View?) {}
+            override fun onViewDetachedFromWindow(v: android.view.View?) {
+                uiHelper.detach()
+
+                destroyModel()
+                assetLoader.destroy()
+
+                engine.destroyEntity(light)
+                engine.destroyRenderer(renderer)
+                engine.destroyView(this@ModelViewer.view)
+                engine.destroyScene(scene)
+                engine.destroyCamera(camera)
+
+                EntityManager.get().destroy(light)
+
+                engine.destroy()
+            }
+        })
     }
 
     /**
