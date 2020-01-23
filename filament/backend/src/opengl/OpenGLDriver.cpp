@@ -645,15 +645,14 @@ void OpenGLDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
                 case SamplerType::SAMPLER_EXTERNAL:
                     // we can't be here -- doesn't mater what we do
                 case SamplerType::SAMPLER_2D:
-                    if (depth <= 1) {
-                        t->gl.target = GL_TEXTURE_2D;
-                        t->gl.targetIndex = (uint8_t)
-                                gl.getIndexForTextureTarget(GL_TEXTURE_2D);
-                    } else {
-                        t->gl.target = GL_TEXTURE_2D_ARRAY;
-                        t->gl.targetIndex = (uint8_t)
-                                gl.getIndexForTextureTarget(GL_TEXTURE_2D_ARRAY);
-                    }
+                    t->gl.target = GL_TEXTURE_2D;
+                    t->gl.targetIndex = (uint8_t)
+                            gl.getIndexForTextureTarget(GL_TEXTURE_2D);
+                    break;
+                case SamplerType::SAMPLER_2D_ARRAY:
+                    t->gl.target = GL_TEXTURE_2D_ARRAY;
+                    t->gl.targetIndex = (uint8_t)
+                            gl.getIndexForTextureTarget(GL_TEXTURE_2D_ARRAY);
                     break;
                 case SamplerType::SAMPLER_CUBEMAP:
                     t->gl.target = GL_TEXTURE_CUBE_MAP;
@@ -713,13 +712,12 @@ void OpenGLDriver::importTextureR(Handle<HwTexture> th, intptr_t id,
             t->gl.targetIndex = (uint8_t)gl.getIndexForTextureTarget(GL_TEXTURE_EXTERNAL_OES);
             break;
         case SamplerType::SAMPLER_2D:
-            if (depth <= 1) {
-                t->gl.target = GL_TEXTURE_2D;
-                t->gl.targetIndex = (uint8_t)gl.getIndexForTextureTarget(GL_TEXTURE_2D);
-            } else {
-                t->gl.target = GL_TEXTURE_2D_ARRAY;
-                t->gl.targetIndex = (uint8_t)gl.getIndexForTextureTarget(GL_TEXTURE_2D_ARRAY);
-            }
+            t->gl.target = GL_TEXTURE_2D;
+            t->gl.targetIndex = (uint8_t)gl.getIndexForTextureTarget(GL_TEXTURE_2D);
+            break;
+        case SamplerType::SAMPLER_2D_ARRAY:
+            t->gl.target = GL_TEXTURE_2D_ARRAY;
+            t->gl.targetIndex = (uint8_t)gl.getIndexForTextureTarget(GL_TEXTURE_2D_ARRAY);
             break;
         case SamplerType::SAMPLER_CUBEMAP:
             t->gl.target = GL_TEXTURE_CUBE_MAP;
@@ -766,6 +764,7 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
         GLenum target = GL_TEXTURE_2D;
         switch (t->target) {
             case SamplerType::SAMPLER_2D:
+            case SamplerType::SAMPLER_2D_ARRAY:
                 // this could be GL_TEXTURE_2D_MULTISAMPLE or GL_TEXTURE_2D_ARRAY
                 target = t->gl.target;
                 // note: multi-sampled textures can't have mipmaps
@@ -1640,21 +1639,19 @@ void OpenGLDriver::setTextureData(GLTexture* t,
             // NOTE: GL_TEXTURE_2D_MULTISAMPLE is not allowed
             bindTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1, t);
             gl.activeTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1);
-            switch (t->gl.target) {
-                case GL_TEXTURE_2D:
-                    glTexSubImage2D(t->gl.target, GLint(level),
-                            GLint(xoffset), GLint(yoffset),
-                            width, height, glFormat, glType, p.buffer);
-                    break;
-                case GL_TEXTURE_2D_ARRAY:
-                    glTexSubImage3D(t->gl.target, GLint(level),
-                            GLint(xoffset), GLint(yoffset), GLint(zoffset),
-                            width, height, depth, glFormat, glType, p.buffer);
-                    break;
-                default:
-                    // we shouldn't be here
-                    break;
-            }
+            assert(t->gl.target == GL_TEXTURE_2D);
+            glTexSubImage2D(t->gl.target, GLint(level),
+                    GLint(xoffset), GLint(yoffset),
+                    width, height, glFormat, glType, p.buffer);
+            break;
+        case SamplerType::SAMPLER_2D_ARRAY:
+            // NOTE: GL_TEXTURE_2D_MULTISAMPLE is not allowed
+            bindTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1, t);
+            gl.activeTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1);
+            assert(t->gl.target == GL_TEXTURE_2D_ARRAY);
+            glTexSubImage3D(t->gl.target, GLint(level),
+                    GLint(xoffset), GLint(yoffset), GLint(zoffset),
+                    width, height, depth, glFormat, glType, p.buffer);
             break;
         case SamplerType::SAMPLER_CUBEMAP: {
             assert(t->gl.target == GL_TEXTURE_CUBE_MAP);
@@ -1722,21 +1719,16 @@ void OpenGLDriver::setCompressedTextureData(GLTexture* t,
             // NOTE: GL_TEXTURE_2D_MULTISAMPLE is not allowed
             bindTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1, t);
             gl.activeTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1);
-            switch (t->gl.target) {
-                case GL_TEXTURE_2D:
-                    glCompressedTexSubImage2D(t->gl.target, GLint(level),
-                            GLint(xoffset), GLint(yoffset),
-                            width, height, t->gl.internalFormat, imageSize, p.buffer);
-                    break;
-                case GL_TEXTURE_2D_ARRAY:
-                    glCompressedTexSubImage3D(t->gl.target, GLint(level),
-                            GLint(xoffset), GLint(yoffset), GLint(zoffset),
-                            width, height, depth, t->gl.internalFormat, imageSize, p.buffer);
-                    break;
-                default:
-                    // we shouldn't be here
-                    break;
-            }
+            assert(t->gl.target == GL_TEXTURE_2D);
+            glCompressedTexSubImage2D(t->gl.target, GLint(level),
+                    GLint(xoffset), GLint(yoffset),
+                    width, height, t->gl.internalFormat, imageSize, p.buffer);
+            break;
+        case SamplerType::SAMPLER_2D_ARRAY:
+            assert(t->gl.target == GL_TEXTURE_2D_ARRAY);
+            glCompressedTexSubImage3D(t->gl.target, GLint(level),
+                    GLint(xoffset), GLint(yoffset), GLint(zoffset),
+                    width, height, depth, t->gl.internalFormat, imageSize, p.buffer);
             break;
         case SamplerType::SAMPLER_CUBEMAP: {
             assert(faceOffsets);

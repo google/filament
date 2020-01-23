@@ -83,6 +83,8 @@ public class Texture {
     public enum Sampler {
         /** 2D sampler */
         SAMPLER_2D,
+        /** 2D array sampler  */
+        SAMPLER_2D_ARRAY,
         /** Cubemap sampler */
         SAMPLER_CUBEMAP,
         /** External texture sampler */
@@ -581,8 +583,12 @@ public class Texture {
         }
 
         /**
-         * Specifies the texture's number of layers. This creates a 3D texture.
-         * @param depth texture number of layer, must be at least 1. Default is 1.
+         * Specifies the texture's number of layers. Values greater than 1 create a 3D texture.
+         *
+         * <p>This <code>Texture</code> instance must use
+         * {@link Sampler#SAMPLER_2D_ARRAY SAMPLER_2D_ARRAY} or it has no effect.</p>
+         *
+         * @param depth texture number of layers. Default is 1.
          * @return This Builder, for chaining calls.
          */
         @NonNull
