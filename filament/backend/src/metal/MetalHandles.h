@@ -25,7 +25,6 @@
 
 #include "MetalBuffer.h"
 #include "MetalContext.h"
-#include "MetalDefines.h"
 #include "MetalEnums.h"
 #include "MetalExternalImage.h"
 #include "MetalState.h" // for MetalState::VertexDescription
@@ -172,12 +171,15 @@ public:
 
 private:
 
-#if METAL_FENCES_SUPPORTED
     std::shared_ptr<std::condition_variable> cv;
     std::mutex mutex;
+
+    // MTLSharedEvent is only available on macOS 10.14 and iOS 12.0 and above.
+    // The availability annotation ensures we wrap all usages of event in an @availability check.
+    API_AVAILABLE(macos(10.14), ios(12.0))
     id<MTLSharedEvent> event;
+
     uint64_t value;
-#endif
 };
 
 } // namespace metal

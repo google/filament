@@ -5,9 +5,15 @@ application.
 
 ## Prequisites
 
-iOS support for Filament is experimental. Currently, both the OpenGL ES 3.0 and Metal backends are
-supported. Building for the iOS simulator is also supported, but only for the OpenGL backend
-(Apple's simulator has no support for Metal).
+Currently, both the OpenGL ES 3.0 and Metal backends are supported, but using the Metal backend is
+recommended. Building for the iOS simulator is also supported, but only for the OpenGL backend.
+
+Filament is kept up-to-date with Apple's latest SDK and thus must be built using the latest Xcode.
+Pre-built binaries can be accessed from [Filament
+releases](https://github.com/google/filament/releases).
+
+The iOS Metal backend is supported on iOS 12 and up. The OpenGL ES backend should be supported on iOS 7
+and up, though it is not regularly tested.
 
 Before attempting to build for iOS, read [Filament's README](../../README.md). You must first
 cross-compile Filament for desktop and ARM64 on a macOS host before running the sample. The easiest

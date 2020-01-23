@@ -462,10 +462,17 @@ function ensure_ios_toolchain {
     local REPLACE='SET(PLATFORM_NAME "iphoneos" CACHE STRING "iOS platform to build for")'
     sed -i '' "s/${FIND}/${REPLACE}/g" ./${toolchain_path}
 
-    # Append Filament-specific settings.
-    cat build/toolchain-mac-ios.filament.cmake >> ${toolchain_path}
+    # Apple's toolchain specifies isysroot based on an environment variable, which we don't set.
+    # The toolchain doesn't need to do this, however, as isysroot is implicitly set in the toolchain
+    # via CMAKE_OSX_SYSROOT.
+    local FIND='SET(IOS_COMMON_FLAGS "-isysroot $ENV{SDKROOT} '
+    local REPLACE='SET(IOS_COMMON_FLAGS "'
+    sed -i '' "s/${FIND}/${REPLACE}/g" ./${toolchain_path}
 
-    echo "Successfully downloaded iOS toolchain file and appended Filament-specific settings."
+    # Prepend Filament-specific settings.
+    (cat build/toolchain-mac-ios.filament.cmake; cat ${toolchain_path}) > tmp && mv tmp ${toolchain_path}
+
+    echo "Successfully downloaded iOS toolchain file and prepended Filament-specific settings."
 }
 
 function build_ios_target {
@@ -486,6 +493,7 @@ function build_ios_target {
             -DCMAKE_INSTALL_PREFIX=../ios-${lc_target}/filament \
             -DIOS_ARCH=${arch} \
             -DPLATFORM_NAME=${platform} \
+            -DIOS_MIN_TARGET=12.0 \
             -DIOS=1 \
             -DCMAKE_TOOLCHAIN_FILE=../../build/toolchain-mac-ios.cmake \
             ../..
