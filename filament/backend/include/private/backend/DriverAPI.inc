@@ -70,11 +70,12 @@
 #define PAIR_ARGS_6(M, X, Y, ...) M(X, Y), EXPAND(PAIR_ARGS_5(M, __VA_ARGS__))
 #define PAIR_ARGS_7(M, X, Y, ...) M(X, Y), EXPAND(PAIR_ARGS_6(M, __VA_ARGS__))
 #define PAIR_ARGS_8(M, X, Y, ...) M(X, Y), EXPAND(PAIR_ARGS_7(M, __VA_ARGS__))
+#define PAIR_ARGS_9(M, X, Y, ...) M(X, Y), EXPAND(PAIR_ARGS_8(M, __VA_ARGS__))
 
-#define PAIR_ARGS_N__(_0, E1, _1, E2, _2, E3, _3, E4, _4, E5, _5, E6, _6, E7, _7, E8, _8, X, ...) PAIR_ARGS_##X
+#define PAIR_ARGS_N__(_0, E1, _1, E2, _2, E3, _3, E4, _4, E5, _5, E6, _6, E7, _7, E8, _8, E9, _9, X, ...) PAIR_ARGS_##X
 
 #define PAIR_ARGS_N(M, ...) \
-    EXPAND(EXPAND(PAIR_ARGS_N__(0, ##__VA_ARGS__, 8, E, 7, E, 6, E, 5, E, 4, E, 3, E, 2, E, 1, E, 0))(M, __VA_ARGS__))
+    EXPAND(EXPAND(PAIR_ARGS_N__(0, ##__VA_ARGS__, 9, E, 8, E, 7, E, 6, E, 5, E, 4, E, 3, E, 2, E, 1, E, 0))(M, __VA_ARGS__))
 
 #define ARG(T, P) T P
 
@@ -145,6 +146,17 @@ DECL_DRIVER_API_R_N(backend::IndexBufferHandle, createIndexBuffer,
         backend::BufferUsage, usage)
 
 DECL_DRIVER_API_R_N(backend::TextureHandle, createTexture,
+        backend::SamplerType, target,
+        uint8_t, levels,
+        backend::TextureFormat, format,
+        uint8_t, samples,
+        uint32_t, width,
+        uint32_t, height,
+        uint32_t, depth,
+        backend::TextureUsage, usage)
+
+DECL_DRIVER_API_R_N(backend::TextureHandle, importTexture,
+        intptr_t, id,
         backend::SamplerType, target,
         uint8_t, levels,
         backend::TextureFormat, format,

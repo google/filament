@@ -87,6 +87,7 @@ public:
 
 private:
     friend class Texture;
+    FStream* mStream = nullptr;
     backend::Handle<backend::HwTexture> mHandle;
     uint32_t mWidth = 1;
     uint32_t mHeight = 1;
@@ -95,7 +96,6 @@ private:
     Sampler mTarget = Sampler::SAMPLER_2D;
     uint8_t mLevelCount = 1;
     uint8_t mSampleCount = 1;
-    FStream* mStream = nullptr;
     Usage mUsage = Usage::DEFAULT;
 };
 
