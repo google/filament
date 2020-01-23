@@ -22,6 +22,7 @@
 #include "OpenGLDriverFactory.h"
 #include "gl_headers.h"
 
+#include <utils/compiler.h>
 #include <utils/Panic.h>
 
 #include <OpenGL/OpenGL.h>
@@ -126,10 +127,15 @@ void PlatformCocoaGL::makeCurrent(Platform::SwapChain* drawSwapChain,
         // Create a copy of the current GL context pointer for the closure.
         NSOpenGLContext* glContext = pImpl->mGLContext;
 
+        #if UTILS_HAS_THREADING
         dispatch_sync(dispatch_get_main_queue(), ^(void) {
             [glContext setView:nsView];
             [glContext update];
         });
+        #else
+            [glContext setView:nsView];
+            [glContext update];
+        #endif
     }
 }
 
