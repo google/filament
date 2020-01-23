@@ -668,23 +668,9 @@ Handle<HwRenderTarget> FRenderer::getRenderTarget(FView& view) const noexcept {
 }
 
 RenderPass::CommandTypeFlags FRenderer::getCommandType(View::DepthPrepass prepass) noexcept {
-    RenderPass::CommandTypeFlags commandType;
-    switch (prepass) {
-        case View::DepthPrepass::DEFAULT:
-            // TODO: better default strategy (can even change on a per-frame basis)
-            commandType = RenderPass::COLOR_WITH_DEPTH_PREPASS;
-#if defined(ANDROID) || defined(__EMSCRIPTEN__)
-            commandType = RenderPass::COLOR;
-#endif
-            break;
-        case View::DepthPrepass::DISABLED:
-            commandType = RenderPass::COLOR;
-            break;
-        case View::DepthPrepass::ENABLED:
-            commandType = RenderPass::COLOR_WITH_DEPTH_PREPASS;
-            break;
-    }
-    return commandType;
+    // We are universally disabling the depth prepass for multiple reasons: invariance artifacts
+    // on many platforms, insufficient / negative performance gains, and the complexity it incurs.
+    return RenderPass::COLOR;
 }
 
 } // namespace details

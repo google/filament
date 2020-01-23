@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release
 
+- The depth prepass setting in View is now ignored and deprecated.
+
 ## v1.4.4
 
 - Added support for solid and thin layer cubemap and screen-space refraction.
