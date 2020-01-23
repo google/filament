@@ -156,6 +156,12 @@ void MetalDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint8
             width, height, depth, usage);
 }
 
+void MetalDriver::importTextureR(Handle<HwTexture> th, intptr_t id,
+        SamplerType target, uint8_t levels,
+        TextureFormat format, uint8_t samples, uint32_t width, uint32_t height,
+        uint32_t depth, TextureUsage usage) {
+}
+
 void MetalDriver::createSamplerGroupR(Handle<HwSamplerGroup> sbh, size_t size) {
     construct_handle<MetalSamplerGroup>(mHandleMap, sbh, size);
 }
@@ -243,6 +249,10 @@ Handle<HwIndexBuffer> MetalDriver::createIndexBufferS() noexcept {
 }
 
 Handle<HwTexture> MetalDriver::createTextureS() noexcept {
+    return alloc_handle<MetalTexture, HwTexture>();
+}
+
+Handle<HwTexture> MetalDriver::importTextureS() noexcept {
     return alloc_handle<MetalTexture, HwTexture>();
 }
 

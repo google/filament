@@ -109,6 +109,7 @@ public:
             int8_t baseLevel = 127;
             int8_t maxLevel = -1;
             uint8_t targetIndex = 0;    // optimization: index corresponding to target
+            bool imported = false;
         } gl;
 
         void* platformPImpl = nullptr;

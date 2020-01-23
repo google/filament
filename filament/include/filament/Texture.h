@@ -188,6 +188,10 @@ public:
          */
         Texture* build(Engine& engine);
 
+        /* no user serviceable parts below */
+
+        Builder& import(intptr_t id) noexcept;
+
     private:
         friend class details::FTexture;
     };
