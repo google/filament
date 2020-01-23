@@ -127,6 +127,7 @@ static void printShaderInfo(ostream& json, const std::vector<ShaderInfo>& info) 
             if (item.variant & filament::Variant::DYNAMIC_LIGHTING)      variantString += "DYN|";
             if (item.variant & filament::Variant::SHADOW_RECEIVER)       variantString += "SRE|";
             if (item.variant & filament::Variant::SKINNING_OR_MORPHING)  variantString += "SKN|";
+            if (item.variant & filament::Variant::DEPTH)                 variantString += "DEP|";
             variantString = variantString.substr(0, variantString.length() - 1);
         }
 
