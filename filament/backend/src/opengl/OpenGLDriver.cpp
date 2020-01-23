@@ -458,6 +458,10 @@ Handle<HwTexture> OpenGLDriver::createTextureS() noexcept {
     return Handle<HwTexture>( allocateHandle(sizeof(GLTexture)) );
 }
 
+Handle<HwTexture> OpenGLDriver::importTextureS() noexcept {
+    return Handle<HwTexture>( allocateHandle(sizeof(GLTexture)) );
+}
+
 Handle<HwRenderTarget> OpenGLDriver::createDefaultRenderTargetS() noexcept {
     return Handle<HwRenderTarget>( allocateHandle(sizeof(GLRenderTarget)) );
 }
@@ -627,11 +631,6 @@ void OpenGLDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
     GLTexture* t = construct<GLTexture>(th, target, levels, samples, w, h, depth, format, usage);
     if (UTILS_LIKELY(usage & TextureUsage::SAMPLEABLE)) {
 
-        // below we're using the a = foo(b = C) pattern, this is on purpose, to make sure
-        // we don't forget to update targetIndex, and that we do it with the correct value.
-        // We DO NOT update targetIndex at function exit to take advantage of the fact that
-        // getIndexForTextureTarget() is constexpr -- so all of this disappears at compile time.
-
         if (UTILS_UNLIKELY(t->target == SamplerType::SAMPLER_EXTERNAL)) {
             mPlatform.createExternalImageTexture(t);
         } else {
@@ -640,23 +639,26 @@ void OpenGLDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
             t->gl.internalFormat = getInternalFormat(format);
             assert(t->gl.internalFormat);
 
+            // We DO NOT update targetIndex at function exit to take advantage of the fact that
+            // getIndexForTextureTarget() is constexpr -- so all of this disappears at compile time.
             switch (target) {
                 case SamplerType::SAMPLER_EXTERNAL:
-                    // if we get there, it's because the user is trying to use an external texture
-                    // but it's not supported, so instead, we behave like a texture2d.
-                    // fallthrough...
+                    // we can't be here -- doesn't mater what we do
                 case SamplerType::SAMPLER_2D:
                     if (depth <= 1) {
+                        t->gl.target = GL_TEXTURE_2D;
                         t->gl.targetIndex = (uint8_t)
-                                gl.getIndexForTextureTarget(t->gl.target = GL_TEXTURE_2D);
+                                gl.getIndexForTextureTarget(GL_TEXTURE_2D);
                     } else {
+                        t->gl.target = GL_TEXTURE_2D_ARRAY;
                         t->gl.targetIndex = (uint8_t)
-                                gl.getIndexForTextureTarget(t->gl.target = GL_TEXTURE_2D_ARRAY);
+                                gl.getIndexForTextureTarget(GL_TEXTURE_2D_ARRAY);
                     }
                     break;
                 case SamplerType::SAMPLER_CUBEMAP:
+                    t->gl.target = GL_TEXTURE_CUBE_MAP;
                     t->gl.targetIndex = (uint8_t)
-                            gl.getIndexForTextureTarget(t->gl.target = GL_TEXTURE_CUBE_MAP);
+                            gl.getIndexForTextureTarget(GL_TEXTURE_CUBE_MAP);
                     break;
             }
 
@@ -665,13 +667,13 @@ void OpenGLDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
                 // allow the creation of multi-sampled textures.
                 if (gl.features.multisample_texture) {
                     // multi-sample texture on GL 3.2 / GLES 3.1 and above
+                    t->gl.target = GL_TEXTURE_2D_MULTISAMPLE;
                     t->gl.targetIndex = (uint8_t)
-                            gl.getIndexForTextureTarget(t->gl.target = GL_TEXTURE_2D_MULTISAMPLE);
+                            gl.getIndexForTextureTarget(GL_TEXTURE_2D_MULTISAMPLE);
                 } else {
                     // Turn off multi-sampling for that texture. It's just not supported.
                 }
             }
-
             textureStorage(t, w, h, depth);
         }
     } else {
@@ -685,6 +687,56 @@ void OpenGLDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
         t->gl.target = GL_RENDERBUFFER;
         glGenRenderbuffers(1, &t->gl.id);
         renderBufferStorage(t->gl.id, t->gl.internalFormat, w, h, samples);
+    }
+
+    CHECK_GL_ERROR(utils::slog.e)
+}
+
+void OpenGLDriver::importTextureR(Handle<HwTexture> th, intptr_t id,
+        SamplerType target, uint8_t levels, TextureFormat format, uint8_t samples,
+        uint32_t w, uint32_t h, uint32_t depth, TextureUsage usage) {
+    DEBUG_MARKER()
+
+    auto& gl = mContext;
+    GLTexture* t = construct<GLTexture>(th, target, levels, samples, w, h, depth, format, usage);
+
+    t->gl.id = (GLuint)id;
+    t->gl.imported = true;
+    t->gl.internalFormat = getInternalFormat(format);
+    assert(t->gl.internalFormat);
+
+    // We DO NOT update targetIndex at function exit to take advantage of the fact that
+    // getIndexForTextureTarget() is constexpr -- so all of this disappears at compile time.
+    switch (target) {
+        case SamplerType::SAMPLER_EXTERNAL:
+            t->gl.target = GL_TEXTURE_EXTERNAL_OES;
+            t->gl.targetIndex = (uint8_t)gl.getIndexForTextureTarget(GL_TEXTURE_EXTERNAL_OES);
+            break;
+        case SamplerType::SAMPLER_2D:
+            if (depth <= 1) {
+                t->gl.target = GL_TEXTURE_2D;
+                t->gl.targetIndex = (uint8_t)gl.getIndexForTextureTarget(GL_TEXTURE_2D);
+            } else {
+                t->gl.target = GL_TEXTURE_2D_ARRAY;
+                t->gl.targetIndex = (uint8_t)gl.getIndexForTextureTarget(GL_TEXTURE_2D_ARRAY);
+            }
+            break;
+        case SamplerType::SAMPLER_CUBEMAP:
+            t->gl.target = GL_TEXTURE_CUBE_MAP;
+            t->gl.targetIndex = (uint8_t)gl.getIndexForTextureTarget(GL_TEXTURE_CUBE_MAP);
+            break;
+    }
+
+    if (t->samples > 1) {
+        // Note: we can't be here in practice because filament's user API doesn't
+        // allow the creation of multi-sampled textures.
+        if (gl.features.multisample_texture) {
+            // multi-sample texture on GL 3.2 / GLES 3.1 and above
+            t->gl.target = GL_TEXTURE_2D_MULTISAMPLE;
+            t->gl.targetIndex = (uint8_t)gl.getIndexForTextureTarget(GL_TEXTURE_2D_MULTISAMPLE);
+        } else {
+            // Turn off multi-sampling for that texture. It's just not supported.
+        }
     }
 
     CHECK_GL_ERROR(utils::slog.e)
@@ -1076,28 +1128,30 @@ void OpenGLDriver::destroyTexture(Handle<HwTexture> th) {
     DEBUG_MARKER()
 
     if (th) {
-        auto& gl = mContext;
         GLTexture* t = handle_cast<GLTexture*>(th);
-        if (UTILS_LIKELY(t->usage & TextureUsage::SAMPLEABLE)) {
-            gl.unbindTexture(t->gl.target, t->gl.id);
-            if (UTILS_UNLIKELY(t->hwStream)) {
-                detachStream(t);
-            }
-            if (t->gl.rb) {
-                glDeleteRenderbuffers(1, &t->gl.rb);
-            }
-            if (UTILS_UNLIKELY(t->target == SamplerType::SAMPLER_EXTERNAL)) {
-                mPlatform.destroyExternalImage(t);
+        if (UTILS_LIKELY(!t->gl.imported)) {
+            auto& gl = mContext;
+            if (UTILS_LIKELY(t->usage & TextureUsage::SAMPLEABLE)) {
+                gl.unbindTexture(t->gl.target, t->gl.id);
+                if (UTILS_UNLIKELY(t->hwStream)) {
+                    detachStream(t);
+                }
+                if (t->gl.rb) {
+                    glDeleteRenderbuffers(1, &t->gl.rb);
+                }
+                if (UTILS_UNLIKELY(t->target == SamplerType::SAMPLER_EXTERNAL)) {
+                    mPlatform.destroyExternalImage(t);
+                } else {
+                    glDeleteTextures(1, &t->gl.id);
+                }
             } else {
-                glDeleteTextures(1, &t->gl.id);
+                assert(t->gl.target == GL_RENDERBUFFER);
+                assert(t->gl.rb == 0);
+                glDeleteRenderbuffers(1, &t->gl.id);
             }
-        } else {
-            assert(t->gl.target == GL_RENDERBUFFER);
-            assert(t->gl.rb == 0);
-            glDeleteRenderbuffers(1, &t->gl.id);
-        }
-        if (t->gl.fence) {
-            glDeleteSync(t->gl.fence);
+            if (t->gl.fence) {
+                glDeleteSync(t->gl.fence);
+            }
         }
         destruct(th, t);
     }
