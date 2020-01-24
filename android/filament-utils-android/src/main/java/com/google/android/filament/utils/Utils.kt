@@ -16,12 +16,11 @@
 
 package com.google.android.filament.utils;
 
-public class Utils {
-
+object Utils {
     /**
      * Initializes the utils JNI layer. Must be called before using any utils functionality.
      */
-    public static void init() {
-        System.loadLibrary("filament-utils-jni");
+    fun init() {
+        System.loadLibrary("filament-utils-jni")
     }
 }
