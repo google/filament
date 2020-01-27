@@ -102,7 +102,7 @@ add_rawfile("third_party/models/FlightHelmet/FlightHelmet_occlusionRoughnessMeta
 add_rawfile("third_party/models/FlightHelmet/FlightHelmet.bin" "FlightHelmet.bin")
 add_rawfile("third_party/models/FlightHelmet/FlightHelmet.gltf" "FlightHelmet.gltf")
 
-add_rawfile("third_party/models/AnimatedTriangle/SimpleTriangle.bin" "SimpleTriangle.bin")
+add_rawfile("third_party/models/AnimatedTriangle/simpleTriangle.bin" "simpleTriangle.bin")
 add_rawfile("third_party/models/AnimatedTriangle/animation.bin" "animation.bin")
 add_rawfile("third_party/models/AnimatedTriangle/AnimatedTriangle.gltf" "AnimatedTriangle.gltf")
 
