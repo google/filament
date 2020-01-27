@@ -5,7 +5,18 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release
 
+## v1.4.5
+
 - The depth prepass setting in View is now ignored and deprecated.
+- Fixed a threading bug with the NOOP backend.
+- Improved memory management for gltfio on Android.
+- Introduced `filament-utils` library with `TextureLoader`, `ModelViewer`, and Java bindings for `camutils`.
+- Fix out-of-bounds bug when glTF has many UV sets.
+- Added new `setMediaOverlay` API to `UiHelper` for controlling surface ordering.
+- Implemented sRGB support for DXT encoded textures.
+- Fix bug with incorrect world transforms computed in `TransformManager`.
+- gltfio: support external resources on Android.
+
 
 ## v1.4.4
 
