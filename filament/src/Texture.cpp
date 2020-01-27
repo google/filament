@@ -31,7 +31,6 @@
 #include <utils/Panic.h>
 #include <filament/Texture.h>
 
-
 using namespace utils;
 
 namespace filament {
@@ -128,7 +127,7 @@ FTexture::FTexture(FEngine& engine, const Builder& builder) {
         mHandle = driver.createTexture(
                 mTarget, mLevelCount, mFormat, mSampleCount, mWidth, mHeight, mDepth, mUsage);
     } else {
-        assert(mUsage & TextureUsage::SAMPLEABLE);
+        assert((bool)(mUsage & TextureUsage::SAMPLEABLE));
         mHandle = driver.importTexture(builder->mImportedId,
                 mTarget, mLevelCount, mFormat, mSampleCount, mWidth, mHeight, mDepth, mUsage);
     }
