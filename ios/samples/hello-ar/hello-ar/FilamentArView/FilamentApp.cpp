@@ -16,8 +16,13 @@
 
 #include "FilamentApp.h"
 
+#include <filament/Camera.h>
+#include <filament/IndexBuffer.h>
 #include <filament/LightManager.h>
+#include <filament/Material.h>
 #include <filament/TransformManager.h>
+#include <filament/VertexBuffer.h>
+#include <filament/Viewport.h>
 
 #include <filameshio/MeshReader.h>
 #include <geometry/SurfaceOrientation.h>

@@ -26,6 +26,8 @@
 #include <filament/TransformManager.h>
 #include <filament/View.h>
 
+#include <utils/EntityManager.h>
+
 #include "FullScreenTriangle.h"
 
 using namespace filament;
