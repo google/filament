@@ -268,6 +268,10 @@ public:
     // flush the current buffer
     void flush();
 
+    /**
+     * Processes the platform's event queue when called from the platform's event-handling thread.
+     * Returns false when called from any other thread.
+     */
     bool pumpPlatformEvents() {
         return mPlatform->pumpEvents();
     }
