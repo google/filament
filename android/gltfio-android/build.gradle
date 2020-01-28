@@ -29,6 +29,7 @@ android {
 
     sourceSets {
         main {
+            java.srcDirs += "../filament-android/src/main/java"
             jni.srcDirs "src/main/cpp"
         }
     }
@@ -41,7 +42,6 @@ android {
 
 dependencies {
     implementation deps.androidx.annotations
-    implementation project(':filament-android')
 }
 
 apply from: rootProject.file('gradle/gradle-mvn-push.gradle')

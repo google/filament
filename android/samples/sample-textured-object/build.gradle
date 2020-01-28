@@ -35,6 +35,5 @@ android {
 
 dependencies {
     implementation deps.kotlin
-    implementation project(':filament-android')
     implementation project(':filament-utils-android')
 }

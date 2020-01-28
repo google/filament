@@ -31,6 +31,8 @@ android {
 
     sourceSets {
         main {
+            java.srcDirs += "../filament-android/src/main/java"
+            java.srcDirs += "../gltfio-android/src/main/java"
             jni.srcDirs "src/main/cpp"
             kotlin.srcDirs += "src/main/java"
         }
@@ -45,8 +47,6 @@ android {
 dependencies {
     implementation deps.kotlin
     implementation deps.androidx.annotations
-    implementation project(':filament-android')
-    implementation project(':gltfio-android')
 }
 
 apply from: rootProject.file('gradle/gradle-mvn-push.gradle')

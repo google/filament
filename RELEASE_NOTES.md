@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release
 
+- The Android support libraries (gltfio and filament-utils) now use dynamic linking.
+
 ## v1.4.5
 
 - The depth prepass setting in View is now ignored and deprecated.
