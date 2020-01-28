@@ -51,7 +51,9 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fomit-frame-pointer -ff
 set(CMAKE_SHARED_LINKER_FLAGS" ${CMAKE_SHARED_LINKER_FLAGS} -Wl,--gc-sections")
 set(CMAKE_SHARED_LINKER_FLAGS" ${CMAKE_SHARED_LINKER_FLAGS} -Wl,-Bsymbolic-functions")
 
-add_library(filament-jni-obj OBJECT
+set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/libfilament-jni.map")
+
+add_library(filament-jni SHARED
     src/main/cpp/Camera.cpp
     src/main/cpp/Colors.cpp
     src/main/cpp/VertexBuffer.cpp
@@ -76,40 +78,30 @@ add_library(filament-jni-obj OBJECT
     src/main/cpp/View.cpp
     # Android specific
     src/main/cpp/nativewindow/Android.cpp
+    # Private utils
+    src/main/cpp/Filament.cpp
+    # Common utils
+    ../common/CallbackUtils.cpp
+    ../common/NioUtils.cpp
 )
 
-if (NOT DISABLE_FILAMENT_JNI)
+target_link_libraries(filament-jni
+    filament
+    backend
+    filaflat
+    filabridge
+    geometry
+    ibl
+    utils
+    log
+    GLESv3
+    EGL
+    android
+    jnigraphics
+)
 
-    set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/libfilament-jni.map")
+option(FILAMENT_SUPPORTS_VULKAN "Enables Vulkan on Android" OFF)
 
-    add_library(filament-jni SHARED
-        $<TARGET_OBJECTS:filament-jni-obj>
-        # Private utils
-        src/main/cpp/Filament.cpp
-        # Common utils
-        ../common/CallbackUtils.cpp
-        ../common/NioUtils.cpp
-    )
-
-    target_link_libraries(filament-jni
-        filament
-        backend
-        filaflat
-        filabridge
-        geometry
-        ibl
-        utils
-        log
-        GLESv3
-        EGL
-        android
-        jnigraphics
-    )
-
-    option(FILAMENT_SUPPORTS_VULKAN "Enables Vulkan on Android" OFF)
-
-    if (FILAMENT_SUPPORTS_VULKAN)
-        target_link_libraries(filament-jni bluevk smol-v)
-    endif()
-
+if (FILAMENT_SUPPORTS_VULKAN)
+    target_link_libraries(filament-jni bluevk smol-v)
 endif()
