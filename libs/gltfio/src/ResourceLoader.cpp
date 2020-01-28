@@ -15,6 +15,7 @@
  */
 
 #include <gltfio/ResourceLoader.h>
+#include <gltfio/Image.h>
 
 #include "FFilamentAsset.h"
 #include "upcast.h"
@@ -35,8 +36,6 @@
 #include <utils/Log.h>
 
 #include <cgltf.h>
-
-#include <stb_image.h>
 
 #include <tsl/robin_map.h>
 
@@ -147,7 +146,7 @@ bool ResourceLoader::loadResources(FilamentAsset* asset) {
     // looks inside a cache of externally-supplied data blobs, rather than loading from the
     // filesystem.
 
-    #if defined(__EMSCRIPTEN__) || defined(ANDROID)
+    #if defined(STBI_NO_STDIO)
 
     if (gltf->buffers_count && !gltf->buffers[0].data && !gltf->buffers[0].uri && gltf->bin) {
         if (gltf->bin_size < gltf->buffers[0].size) {
@@ -378,7 +377,7 @@ bool ResourceLoader::createTextures(details::FFilamentAsset* asset) const {
                 js->run(decode);
             }
         } else {
-            #if defined(__EMSCRIPTEN__) || defined(ANDROID)
+            #if defined(STBI_NO_STDIO)
                 slog.e << "Unable to load texture: " << tb.uri << io::endl;
                 return false;
             #else
