@@ -116,8 +116,12 @@ static void importSkinningData(Skin& dstSkin, const cgltf_skin& srcSkin) {
     }
 }
 
-void ResourceLoader::addResourceData(std::string url, BufferDescriptor&& buffer) {
+void ResourceLoader::addResourceData(const char* url, BufferDescriptor&& buffer) {
     pImpl->mUserCache.emplace(url, std::move(buffer));
+}
+
+bool ResourceLoader::hasResourceData(const char* url) const {
+    return pImpl->mUserCache.find(url) != pImpl->mUserCache.end();
 }
 
 static void convertBytesToShorts(uint16_t* dst, const uint8_t* src, size_t count) {
