@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include <filament/Camera.h>
 #include <filament/Engine.h>
 #include <filament/IndexBuffer.h>
 #include <filament/Material.h>
@@ -21,8 +22,11 @@
 #include <filament/RenderableManager.h>
 #include <filament/Scene.h>
 #include <filament/TransformManager.h>
+#include <filament/TextureSampler.h>
 #include <filament/VertexBuffer.h>
 #include <filament/View.h>
+
+#include <utils/EntityManager.h>
 
 #include <image/ImageSampler.h>
 #include <image/LinearImage.h>

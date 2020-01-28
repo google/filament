@@ -18,6 +18,9 @@
 
 #include <filament/Engine.h>
 
+#include <utils/Entity.h>
+#include <utils/EntityManager.h>
+
 using namespace filament;
 using namespace utils;
 

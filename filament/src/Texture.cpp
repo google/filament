@@ -29,6 +29,7 @@
 #include <ibl/Image.h>
 
 #include <utils/Panic.h>
+#include <filament/Texture.h>
 
 using namespace utils;
 
@@ -38,6 +39,7 @@ using namespace details;
 using namespace backend;
 
 struct Texture::BuilderDetails {
+    intptr_t mImportedId = 0;
     uint32_t mWidth = 1;
     uint32_t mHeight = 1;
     uint32_t mDepth = 1;
@@ -91,6 +93,12 @@ Texture::Builder& Texture::Builder::usage(Texture::Usage usage) noexcept {
     return *this;
 }
 
+Texture::Builder& Texture::Builder::import(intptr_t id) noexcept {
+    assert(id); // imported id can't be zero
+    mImpl->mImportedId = id;
+    return *this;
+}
+
 Texture* Texture::Builder::build(Engine& engine) {
     FEngine::assertValid(engine, __PRETTY_FUNCTION__);
     if (!ASSERT_POSTCONDITION_NON_FATAL(Texture::isTextureFormatSupported(engine, mImpl->mFormat),
@@ -115,8 +123,14 @@ FTexture::FTexture(FEngine& engine, const Builder& builder) {
             static_cast<uint8_t>(std::ilogbf(std::max(mWidth, mHeight)) + 1));
 
     FEngine::DriverApi& driver = engine.getDriverApi();
-    mHandle = driver.createTexture(
-            mTarget, mLevelCount, mFormat, mSampleCount, mWidth, mHeight, mDepth, mUsage);
+    if (UTILS_LIKELY(builder->mImportedId == 0)) {
+        mHandle = driver.createTexture(
+                mTarget, mLevelCount, mFormat, mSampleCount, mWidth, mHeight, mDepth, mUsage);
+    } else {
+        assert((bool)(mUsage & TextureUsage::SAMPLEABLE));
+        mHandle = driver.importTexture(builder->mImportedId,
+                mTarget, mLevelCount, mFormat, mSampleCount, mWidth, mHeight, mDepth, mUsage);
+    }
 }
 
 // frees driver resources, object becomes invalid

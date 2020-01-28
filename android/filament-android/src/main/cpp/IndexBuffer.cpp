@@ -22,6 +22,8 @@
 
 #include <filament/IndexBuffer.h>
 
+#include <backend/BufferDescriptor.h>
+
 #include "common/CallbackUtils.h"
 #include "common/NioUtils.h"
 

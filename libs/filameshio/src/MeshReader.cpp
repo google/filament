@@ -20,9 +20,11 @@
 #include <filament/Box.h>
 #include <filament/Engine.h>
 #include <filament/Fence.h>
+#include <filament/IndexBuffer.h>
 #include <filament/Material.h>
 #include <filament/MaterialInstance.h>
 #include <filament/RenderableManager.h>
+#include <filament/VertexBuffer.h>
 
 #include <meshoptimizer.h>
 

@@ -28,6 +28,7 @@
 #include <filament/Material.h>
 #include <filament/MaterialInstance.h>
 #include <filament/RenderableManager.h>
+#include <filament/TextureSampler.h>
 #include <filament/TransformManager.h>
 #include <filament/Scene.h>
 #include <filament/Texture.h>

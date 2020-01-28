@@ -19,6 +19,8 @@
 #include <filament/Engine.h>
 #include <filament/Renderer.h>
 #include <filament/View.h>
+#include <filament/Viewport.h>
+
 #include <backend/PixelBufferDescriptor.h>
 
 using namespace filament;

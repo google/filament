@@ -21,13 +21,18 @@
 #include <filament/Engine.h>
 #include <filament/IndexBuffer.h>
 #include <filament/IndirectLight.h>
+#include <filament/Material.h>
 #include <filament/MaterialInstance.h>
 #include <filament/RenderableManager.h>
 #include <filament/Scene.h>
 #include <filament/TransformManager.h>
+#include <filament/TextureSampler.h>
 #include <filament/VertexBuffer.h>
 
 #include <geometry/SurfaceOrientation.h>
+
+#include <utils/Entity.h>
+#include <utils/EntityManager.h>
 
 #include <stb_image.h>
 

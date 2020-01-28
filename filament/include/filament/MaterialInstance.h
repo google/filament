@@ -19,7 +19,6 @@
 
 #include <filament/FilamentAPI.h>
 #include <filament/Color.h>
-#include <filament/TextureSampler.h>
 
 #include <backend/DriverEnums.h>
 
@@ -29,6 +28,7 @@ namespace filament {
 
 class Material;
 class Texture;
+class TextureSampler;
 class UniformBuffer;
 class UniformInterfaceBlock;
 

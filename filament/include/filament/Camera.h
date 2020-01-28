@@ -19,13 +19,15 @@
 #ifndef TNT_FILAMENT_CAMERA_H
 #define TNT_FILAMENT_CAMERA_H
 
-#include <filament/Frustum.h>
 #include <filament/FilamentAPI.h>
 
-#include <utils/Entity.h>
 #include <utils/compiler.h>
 
 #include <math/mat4.h>
+
+namespace utils {
+class Entity;
+} // namespace utils
 
 namespace filament {
 
@@ -289,7 +291,7 @@ public:
     math::float3 getForwardVector() const noexcept;
 
     //! Returns a Frustum object in world space
-    Frustum getFrustum() const noexcept;
+    class Frustum getFrustum() const noexcept;
 
     //! Returns the entity representing this camera
     utils::Entity getEntity() const noexcept;

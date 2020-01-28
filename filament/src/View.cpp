@@ -28,6 +28,7 @@
 #include "details/Skybox.h"
 
 #include <filament/Exposure.h>
+#include <filament/TextureSampler.h>
 
 #include <private/filament/SibGenerator.h>
 #include <private/filament/UibGenerator.h>

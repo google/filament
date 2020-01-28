@@ -358,9 +358,15 @@ backend::FenceStatus PlatformEGL::waitFence(
 void PlatformEGL::createExternalImageTexture(void* texture) noexcept {
     auto* t = (OpenGLDriver::GLTexture*) texture;
     glGenTextures(1, &t->gl.id);
-    if (ext.OES_EGL_image_external_essl3) {
+    if (UTILS_LIKELY(ext.OES_EGL_image_external_essl3)) {
+        t->gl.target = GL_TEXTURE_EXTERNAL_OES;
         t->gl.targetIndex = (uint8_t)
-                OpenGLContext::getIndexForTextureTarget(t->gl.target = GL_TEXTURE_EXTERNAL_OES);
+                OpenGLContext::getIndexForTextureTarget(GL_TEXTURE_EXTERNAL_OES);
+    } else {
+        // if texture external is not supported, revert to texture 2d
+        t->gl.target = GL_TEXTURE_2D;
+        t->gl.targetIndex = (uint8_t)
+                OpenGLContext::getIndexForTextureTarget(GL_TEXTURE_2D);
     }
 }
 

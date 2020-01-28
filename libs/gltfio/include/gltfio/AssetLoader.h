@@ -24,6 +24,7 @@
 #include <gltfio/MaterialProvider.h>
 
 namespace utils {
+    class EntityManager;
     class NameComponentManager;
 }
 

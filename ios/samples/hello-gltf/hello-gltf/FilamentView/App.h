@@ -28,6 +28,7 @@
 
 #include "CameraManipulator.h"
 
+#include <utils/EntityManager.h>
 #include <utils/Path.h>
 
 using namespace filament;

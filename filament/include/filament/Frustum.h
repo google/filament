@@ -19,8 +19,6 @@
 #ifndef TNT_FILAMENT_FRUSTUM_H
 #define TNT_FILAMENT_FRUSTUM_H
 
-#include <filament/Box.h>
-
 #include <utils/compiler.h>
 
 #include <math/mat4.h>
@@ -28,6 +26,8 @@
 #include <utils/unwindows.h> // Because we define NEAR and FAR in the Plane enum.
 
 namespace filament {
+
+class Box;
 
 namespace details {
 class Culler;

@@ -22,7 +22,10 @@
 #include <filament/FilamentAPI.h>
 
 #include <utils/compiler.h>
-#include <utils/Entity.h>
+
+namespace utils {
+    class Entity;
+} // namespace utils
 
 namespace filament {
 

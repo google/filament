@@ -16,6 +16,12 @@
 
 #include "RenderTarget.h"
 
+#include "fg/FrameGraph.h"
+
+#include "RenderTargetResource.h"
+
+#include "details/Texture.h"
+
 #include <backend/DriverEnums.h>
 
 namespace filament {

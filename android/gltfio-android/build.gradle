@@ -37,6 +37,14 @@ android {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
+
+    // No need to package up the following shared libs, which arise as a side effect of our
+    // externalNativeBuild dependencies. When clients pick and choose from project-level gradle
+    // dependencies, these shared libs already get pulled in, so we need to avoid the error:
+    // "More than one file was found with OS independent path ..."
+    packagingOptions {
+        exclude 'lib/*/libfilament-jni.so'
+    }
 }
 
 dependencies {

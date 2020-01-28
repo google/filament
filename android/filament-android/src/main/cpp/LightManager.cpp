@@ -18,6 +18,8 @@
 
 #include <filament/LightManager.h>
 
+#include <utils/Entity.h>
+
 using namespace filament;
 using namespace utils;
 
