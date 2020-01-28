@@ -27,7 +27,8 @@ function build_project {
         -scheme "${project} Metal" \
         -configuration "Metal ${configuration}" \
         build \
-        ${XCODEBUILD_FLAGS}
+        ${XCODEBUILD_FLAGS} \
+        HOST_TOOLS_PATH="../../../out/cmake-release/tools"
 }
 
 for project in ${PROJECTS}; do

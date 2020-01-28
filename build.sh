@@ -2,7 +2,7 @@
 set -e
 
 # Host tools required by Android, WebGL, and iOS builds
-MOBILE_HOST_TOOLS="matc resgen cmgen"
+MOBILE_HOST_TOOLS="matc resgen cmgen filamesh"
 WEB_HOST_TOOLS="${MOBILE_HOST_TOOLS} mipgen filamesh"
 IOS_TOOLCHAIN_URL="https://opensource.apple.com/source/clang/clang-800.0.38/src/cmake/platforms/iOS.cmake"
 
