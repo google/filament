@@ -92,7 +92,12 @@ public:
      * Adds raw resource data into a cache for platforms that do not have filesystem or network
      * access.
      */
-    void addResourceData(std::string url, BufferDescriptor&& buffer);
+    void addResourceData(const char* url, BufferDescriptor&& buffer);
+
+    /**
+     * Checks if the given resource has already been loaded.
+     */
+    bool hasResourceData(const char* url) const;
 
 private:
     bool createTextures(details::FFilamentAsset* asset) const;

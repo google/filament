@@ -1447,7 +1447,11 @@ class_<ResourceLoader>("gltfio$ResourceLoader")
 
     .function("addResourceData", EMBIND_LAMBDA(void, (ResourceLoader* self, std::string url,
             BufferDescriptor buffer), {
-        self->addResourceData(url, std::move(*buffer.bd));
+        self->addResourceData(url.c_str(), std::move(*buffer.bd));
+    }), allow_raw_pointers())
+
+    .function("hasResourceData", EMBIND_LAMBDA(bool, (ResourceLoader* self, std::string url), {
+        return self->hasResourceData(url.c_str());
     }), allow_raw_pointers())
 
     .function("loadResources", &ResourceLoader::loadResources, allow_raw_pointers());
