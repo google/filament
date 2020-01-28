@@ -17,5 +17,5 @@ source `dirname $0`/../common/build-common.sh
 
 pushd `dirname $0`/../.. > /dev/null
 
-./build.sh -p ios -c $GENERATE_ARCHIVES $BUILD_DEBUG $BUILD_RELEASE
+./build.sh -i -p ios -c $GENERATE_ARCHIVES $BUILD_DEBUG $BUILD_RELEASE
 
