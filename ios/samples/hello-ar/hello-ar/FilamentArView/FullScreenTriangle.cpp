@@ -20,8 +20,11 @@
 #include "resources.h"
 
 #include <filament/IndexBuffer.h>
-#include <filament/VertexBuffer.h>
+#include <filament/Material.h>
 #include <filament/RenderableManager.h>
+#include <filament/Texture.h>
+#include <filament/TextureSampler.h>
+#include <filament/VertexBuffer.h>
 
 #include <utils/EntityManager.h>
 

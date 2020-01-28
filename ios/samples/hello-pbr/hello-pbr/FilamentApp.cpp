@@ -16,6 +16,9 @@
 
 #include "FilamentApp.h"
 
+#include <filament/Material.h>
+#include <filament/Viewport.h>
+
 #include <filameshio/MeshReader.h>
 
 #include <image/KtxUtility.h>

@@ -18,12 +18,14 @@
 
 #include <filament/LightManager.h>
 #include <filament/TransformManager.h>
+#include <filament/Viewport.h>
 
 #include <image/KtxUtility.h>
 #include <gltfio/AssetLoader.h>
 #include <gltfio/ResourceLoader.h>
 
 #include <fstream>
+#include <iostream>
 #include <sstream>
 
 // This file is generated via the "Run Script" build phase and contains the IBL and skybox
