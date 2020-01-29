@@ -178,7 +178,7 @@ public:
 
     /** Sets the projection matrix from the field-of-view.
      *
-     * @param fovInDegrees field-of-view in degrees from the camera center axis. 0 < \p fov < 180.
+     * @param fovInDegrees full field-of-view in degrees. 0 < \p fov < 180.
      * @param aspect       aspect ratio \f$ \frac{width}{height} \f$. \p aspect > 0.
      * @param near         distance in world units from the camera to the near plane. \p near > 0.
      * @param far          distance in world units from the camera to the far plane. \p far > \p near.
