@@ -195,7 +195,7 @@ public class Camera {
     /**
      * Sets the projection matrix from the field-of-view.
      *
-     * @param fovInDegrees  field-of-view in degrees from the camera center axis.
+     * @param fovInDegrees  full field-of-view in degrees.
      *                      0 < <code>fovInDegrees</code> < 180
      *
      * @param aspect        aspect ratio width/height. <code>aspect</code> > 0
