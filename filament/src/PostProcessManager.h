@@ -61,9 +61,12 @@ public:
             bool blend, FrameGraphId<FrameGraphTexture> input,
             backend::TextureFormat outFormat) noexcept;
 
-    FrameGraphId <FrameGraphTexture> resolve(FrameGraph& fg,
-            const char* outputBufferName, uint8_t levels,
-            FrameGraphId <FrameGraphTexture> input) noexcept;
+    FrameGraphId<FrameGraphTexture> resolve(FrameGraph& fg, const char* outputBufferName,
+            FrameGraphId<FrameGraphTexture> input) noexcept;
+
+    FrameGraphId<FrameGraphTexture> resolve(FrameGraph& fg, const char* outputBufferName,
+            uint8_t levels, backend::TextureFormat preferredOutputFormat,
+            FrameGraphId<FrameGraphTexture> input) noexcept;
 
     FrameGraphId<FrameGraphTexture> ssao(FrameGraph& fg, details::RenderPass& pass,
             filament::Viewport const& svp,

@@ -464,7 +464,8 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
 
         // Copy the color buffer into a texture, we use resolve() because in case of a multi-sample
         // buffer, it'll also resolve it.
-        input = ppm.resolve(fg, "Refraction Buffer", kNumRoughnessLods, input);
+        input = ppm.resolve(fg, "Refraction Buffer",
+                kNumRoughnessLods, TextureFormat::R11F_G11F_B10F, input);
 
         // scale factor for the gaussian so it matches our resolution / FOV
         const float verticalFieldOfView = view.getCameraUser().getFieldOfView(Camera::Fov::VERTICAL);
@@ -517,10 +518,11 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
                 config, translucentPass, TargetBufferFlags::NONE);
 
         if (config.msaa > 1) {
-            // this is because in this case, the render target must be a renderbuffer (i.e. not
-            // sampleable), because only renderbuffers can be multi-sampled and conserved
-            // after a resolve.
-            output = ppm.resolve(fg, "Resolved Color Buffer", 1, output);
+            // We need to do a resolve here because later passes (such as tonemapping) will need
+            // to sample from 'output'. However, because we have MSAA, we know we're not sampleable.
+            // And this is because in the SSR case, we had to use a renderbuffer to conserve the
+            // multi-sample buffer.
+            output = ppm.resolve(fg, "Resolved Color Buffer", output);
         }
     } else {
         output = input;

@@ -389,8 +389,15 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::quadBlit(FrameGraph& fg,
     return ppQuadScaling.getData().output;
 }
 
-FrameGraphId <FrameGraphTexture> PostProcessManager::resolve(FrameGraph& fg,
-        const char* outputBufferName, uint8_t levels,
+UTILS_NOINLINE
+FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(FrameGraph& fg,
+        const char* outputBufferName, FrameGraphId<FrameGraphTexture> input) noexcept {
+    auto desc = fg.getDescriptor(input);
+    return resolve(fg, outputBufferName, 1, desc.format, input);
+}
+
+FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(FrameGraph& fg,
+        const char* outputBufferName, uint8_t levels, backend::TextureFormat preferredOutputFormat,
         FrameGraphId<FrameGraphTexture> input) noexcept {
     struct ResolveData {
         FrameGraphId<FrameGraphTexture> output;
@@ -401,6 +408,7 @@ FrameGraphId <FrameGraphTexture> PostProcessManager::resolve(FrameGraph& fg,
             [&](FrameGraph::Builder& builder, auto& data) {
                 auto outputDesc = fg.getDescriptor(input);
                 outputDesc.levels = levels ? levels : 1;
+                outputDesc.format = outputDesc.samples <= 1 ? preferredOutputFormat : outputDesc.format;
                 outputDesc.samples = 0;
                 input = builder.read(input);
                 FrameGraphRenderTarget::Descriptor d;
