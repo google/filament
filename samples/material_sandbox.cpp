@@ -65,6 +65,7 @@ static std::map<std::string, MaterialInstance*> g_meshMaterialInstances;
 static SandboxParameters g_params;
 static Config g_config;
 static bool g_shadowPlane = false;
+static bool g_singleMode = false;
 
 static void printUsage(char* name) {
     std::string exec_name(Path(name).getName());
@@ -85,6 +86,8 @@ static void printUsage(char* name) {
             "       Applies uniform scale\n\n"
             "   --shadow-plane, -p\n"
             "       Enable shadow plane\n\n"
+            "   --single\n"
+            "       Only apply the edited material to the first renderable in the scene\n\n"
     );
     const std::string from("SAMPLE_MATERIAL");
     for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
@@ -96,12 +99,13 @@ static void printUsage(char* name) {
 static int handleCommandLineArgments(int argc, char* argv[], Config* config) {
     static constexpr const char* OPTSTR = "ha:vps:i:";
     static const struct option OPTIONS[] = {
-            { "help",       no_argument,       nullptr, 'h' },
-            { "api",        required_argument, nullptr, 'a' },
-            { "ibl",        required_argument, nullptr, 'i' },
-            { "split-view", no_argument,       nullptr, 'v' },
-            { "scale",      required_argument, nullptr, 's' },
-            { "shadow-plane", no_argument,     nullptr, 'p' },
+            { "help",         no_argument,       nullptr, 'h' },
+            { "api",          required_argument, nullptr, 'a' },
+            { "ibl",          required_argument, nullptr, 'i' },
+            { "split-view",   no_argument,       nullptr, 'v' },
+            { "scale",        required_argument, nullptr, 's' },
+            { "shadow-plane", no_argument,       nullptr, 'p' },
+            { "single",       no_argument,       nullptr, 'n' },
             { nullptr, 0, nullptr, 0 }  // termination of the option list
     };
     int opt;
@@ -141,6 +145,9 @@ static int handleCommandLineArgments(int argc, char* argv[], Config* config) {
                 break;
             case 'p':
                 g_shadowPlane = true;
+                break;
+            case 'n':
+                g_singleMode = true;
                 break;
         }
     }
@@ -184,6 +191,7 @@ static void setup(Engine* engine, View*, Scene* scene) {
     tcm.setTransform(ei, mat4f{ mat3f(g_config.scale), float3(0.0f, 0.0f, -4.0f) } *
             tcm.getWorldTransform(ei));
 
+    size_t count = 0;
     auto& rcm = engine->getRenderableManager();
     for (auto renderable : g_meshSet->getRenderables()) {
         auto instance = rcm.getInstance(renderable);
@@ -191,9 +199,16 @@ static void setup(Engine* engine, View*, Scene* scene) {
 
         rcm.setCastShadows(instance, g_params.castShadows);
 
-        for (size_t i = 0; i < rcm.getPrimitiveCount(instance); i++) {
-            rcm.setMaterialInstanceAt(instance, i, g_params.materialInstance[MATERIAL_LIT]);
+        if (!g_singleMode || count == 0) {
+            for (size_t i = 0; i < rcm.getPrimitiveCount(instance); i++) {
+                rcm.setMaterialInstanceAt(instance, i, g_params.materialInstance[MATERIAL_LIT]);
+            }
+        } else {
+            auto ei = tcm.getInstance(renderable);
+            tcm.setTransform(ei, mat4f{ mat3f(g_config.scale), float3(0.0f, 0.0f, -3.0f) } *
+                    tcm.getWorldTransform(ei));
         }
+        count++;
 
         scene->addEntity(renderable);
     }
@@ -413,12 +428,16 @@ static void gui(filament::Engine* engine, filament::View*) {
     MaterialInstance* materialInstance = updateInstances(params, *engine);
 
     auto& rcm = engine->getRenderableManager();
+    size_t count = 0;
     for (auto renderable : g_meshSet->getRenderables()) {
         auto instance = rcm.getInstance(renderable);
         if (!instance) continue;
-        for (size_t i = 0; i < rcm.getPrimitiveCount(instance); i++) {
-            rcm.setMaterialInstanceAt(instance, i, materialInstance);
+        if (!g_singleMode || count == 0) {
+            for (size_t i = 0; i < rcm.getPrimitiveCount(instance); i++) {
+                rcm.setMaterialInstanceAt(instance, i, materialInstance);
+            }
         }
+        count++;
         rcm.setCastShadows(instance, params.castShadows);
     }
 
