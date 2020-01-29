@@ -58,20 +58,15 @@ struct ResourceConfiguration {
 
 /**
  * \class ResourceLoader ResourceLoader.h gltfio/ResourceLoader.h
- * \brief Asynchronously uploads vertex buffers and textures to the GPU and computes tangents.
+ * \brief Prepares and uploads vertex buffers and textures to the GPU.
  *
  * For a usage example, see the documentation for AssetLoader.
- *
- * In theory, this class could cache a map of URL's to data blobs and could therefore be useful
- * across multiple assets. However, clients should feel free to immediately destroy this after
- * calling loadResources. There is no need to wait for resources to finish uploading because this is
- * done in the the background.
  *
  * ResourceLoader must be destroyed on the same thread that calls filament::Renderer::render()
  * because it listens to filament::backend::BufferDescriptor callbacks in order to determine when to
  * free CPU-side data blobs.
  *
- * \todo If clients persist their ResourceLoader, Texture objects are currently re-created upon
+ * \todo If clients persist their ResourceLoader, Filament textures are currently re-created upon
  * subsequent re-loads of the same asset. To fix this, we would need to enable shared ownership
  * of Texture objects between ResourceLoader and FilamentAsset.
  */
@@ -83,9 +78,24 @@ public:
     ~ResourceLoader();
 
     /**
-     * Adds raw resource data into a cache for platforms that do not have filesystem access.
+     * Feeds the binary content of an external resource into the loader's URI cache.
+     *
+     * On some platforms, `ResourceLoader` does not know how to download external resources on its
+     * own (external resources might come from a filesystem, a database, or the internet) so this
+     * method allows clients to download external resources and push them to the loader.
+     *
+     * Every resource should be passed in before calling #loadResources or #asyncBeginLoad. See
+     * also FilamentAsset#getResourceUris.
+     *
+     * When loading GLB files (as opposed to JSON-based glTF files), clients typically do not
+     * need to call this method.
      */
-    void addResourceData(const char* url, BufferDescriptor&& buffer);
+    void addResourceData(const char* uri, BufferDescriptor&& buffer);
+
+    /**
+     * Checks if the given resource has already been added to the URI cache.
+     */
+    bool hasResourceData(const char* uri) const;
 
     /**
      * Loads resources for the given asset from the filesystem or data cache and "finalizes" the
@@ -96,13 +106,33 @@ public:
      * be loaded.
      *
      * Note: this method is synchronous and blocks until all textures have been decoded.
+     * For an asynchronous alternative, see #asyncBeginLoad.
      */
     bool loadResources(FilamentAsset* asset);
 
     /**
-     * Checks if the given resource has already been loaded.
+     * Starts an asynchronous resource load.
+     *
+     * Returns false if the loading process was unable to start.
+     *
+     * This is an alternative to #loadResources and requires periodic calls to #asyncUpdateLoad.
+     * On multi-threaded systems this creates threads for texture decoding.
      */
-    bool hasResourceData(const char* url) const;
+    bool asyncBeginLoad(FilamentAsset* asset);
+
+    /**
+     * Gets the status of an asynchronous resource load as a percentage in [0,1].
+     */
+    float asyncGetLoadProgress() const;
+
+    /**
+     * Updates an asynchronous load by performing any pending work that must take place
+     * on the main thread.
+     *
+     * Clients must periodically call this until #asyncGetLoadProgress returns 100%.
+     * After progress reaches 100%, calling this is harmless; it just does nothing.
+     */
+    void asyncUpdateLoad();
 
 private:
     bool loadResources(details::FFilamentAsset* asset, bool async);

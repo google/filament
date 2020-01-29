@@ -1455,6 +1455,13 @@ class_<ResourceLoader>("gltfio$ResourceLoader")
 
     .function("loadResources", EMBIND_LAMBDA(bool, (ResourceLoader* self, FilamentAsset* asset), {
         return self->loadResources(asset);
-    }), allow_raw_pointers());
+    }), allow_raw_pointers())
+
+    .function("asyncBeginLoad", EMBIND_LAMBDA(bool, (ResourceLoader* self, FilamentAsset* asset), {
+        return self->asyncBeginLoad(asset);
+    }), allow_raw_pointers())
+
+    .function("asyncGetLoadProgress", &ResourceLoader::asyncGetLoadProgress)
+    .function("asyncUpdateLoad", &ResourceLoader::asyncUpdateLoad);
 
 } // EMSCRIPTEN_BINDINGS
