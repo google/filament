@@ -254,12 +254,17 @@ Filament.loadClassExtensions = function() {
     // URL, but clients can do the following to resolve a relative URL:
     //    const basePath = '' + new URL(myRelativeUrl, document.location);
     // If the given base path is null, document.location is used as the base.
-    Filament.gltfio$FilamentAsset.prototype.loadResources = function(onDone, onFetched, basePath) {
+    //
+    // The optional asyncInterval argument allows clients to control how finalization is amortized
+    // over time. It represents the number of milliseconds between each texture decoding task.
+    Filament.gltfio$FilamentAsset.prototype.loadResources = function(onDone, onFetched, basePath,
+            asyncInterval) {
         const asset = this;
         const engine = this.getEngine();
         const names = this.getResourceUris();
         const urlset = new Set();
         const urlToName = {};
+        const interval = asyncInterval || 30;
 
         basePath = basePath || document.location;
 
@@ -275,15 +280,21 @@ Filament.loadClassExtensions = function() {
 
         const onComplete = function() {
             const finalize = function() {
-                resourceLoader.loadResources(asset);
+                resourceLoader.asyncBeginLoad(asset);
 
-                // The buffer data won't get sent to the GPU until the next call to
-                // "renderer.render()", so wait two frames before freeing the CPU-side data.
-                window.requestAnimationFrame(function() {
-                    window.requestAnimationFrame(function() {
+                // Decode a PNG or JPEG every 100 milliseconds. This is slow but it's useful to
+                // decode in the native layer instead of using Canvas2D. This allows us to have more
+                // control (handling of alpha, srgb, etc) and better parity with Filament on native
+                // platforms. In the future we may wish to offload this to web workers.
+                const timer = setInterval(() => {
+                    resourceLoader.asyncUpdateLoad();
+                    const progress = resourceLoader.asyncGetLoadProgress();
+                    if (progress >= 1) {
+                        clearInterval(timer);
                         resourceLoader.delete();
-                    });
-                });
+                    }
+                }, interval);
+
             };
             if (onDone) {
                 onDone(finalize);

@@ -8,6 +8,7 @@ A new header is inserted each time a *tag* is created.
 - The Android support libraries (gltfio and filament-utils) now use dynamic linking.
 - Screen-space refraction is now supported.
 - Removed depth-prepass related APIs.
+- gltfio: add asynchronous API to ResourceLoader.
 
 ## v1.4.5
 

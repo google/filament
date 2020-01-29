@@ -76,3 +76,25 @@ Java_com_google_android_filament_gltfio_ResourceLoader_nLoadResources(JNIEnv*, j
     FilamentAsset* asset = (FilamentAsset*) nativeAsset;
     loader->loadResources(asset);
 }
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_gltfio_ResourceLoader_nAsyncBeginLoad(JNIEnv*, jclass,
+        jlong nativeLoader, jlong nativeAsset) {
+    ResourceLoader* loader = (ResourceLoader*) nativeLoader;
+    FilamentAsset* asset = (FilamentAsset*) nativeAsset;
+    return loader->asyncBeginLoad(asset);
+}
+
+extern "C" JNIEXPORT jfloat JNICALL
+Java_com_google_android_filament_gltfio_ResourceLoader_nAsyncGetLoadProgress(JNIEnv*, jclass,
+        jlong nativeLoader) {
+    ResourceLoader* loader = (ResourceLoader*) nativeLoader;
+    return loader->asyncGetLoadProgress();
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_gltfio_ResourceLoader_nAsyncUpdateLoad(JNIEnv*, jclass,
+        jlong nativeLoader) {
+    ResourceLoader* loader = (ResourceLoader*) nativeLoader;
+    loader->asyncUpdateLoad();
+}
