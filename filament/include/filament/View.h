@@ -169,13 +169,6 @@ public:
         FXAA = 1    //!< FXAA is a low-quality but very efficient type of anti-aliasing. (default).
     };
 
-    /** @see setDepthPrepass */
-    enum class DepthPrepass : int8_t {
-        DEFAULT = -1,
-        DISABLED,
-        ENABLED,
-    };
-
     /**
      * List of available post-processing dithering techniques.
      */
@@ -219,34 +212,6 @@ public:
      * @return ambient occlusion options currently set.
      */
     AmbientOcclusionOptions const& getAmbientOcclusionOptions() const noexcept;
-
-    /**
-     * Sets whether this view is rendered with or without a depth pre-pass.
-     *
-     * NOTE: this setting is ignored and will be removed in future versions of Filament.
-     *
-     * By default, the system picks the most appropriate strategy, this method lets the
-     * application override that strategy.
-     *
-     * When the depth pre-pass is enabled, the renderer will first draw all objects in the
-     * depth buffer from front to back, and then draw the objects again but sorted to minimize
-     * state changes. With the depth pre-pass disabled, objects are drawn only once, but it may
-     * result in more state changes or more overdraw.
-     *
-     * The best strategy may depend on the scene and/or GPU.
-     *
-     * @param prepass   DepthPrepass::DEFAULT uses the most appropriate strategy,
-     *                  DepthPrepass::DISABLED disables the depth pre-pass,
-     *                  DepthPrepass::ENABLE enables the depth pre-pass.
-     */
-    void setDepthPrepass(DepthPrepass prepass) noexcept;
-
-    /**
-     * Checks if this view is rendered with a depth-only prepass.
-     *
-     * @return the value set by setDepthPass().
-     */
-    DepthPrepass getDepthPrepass() const noexcept;
 
     /**
      * Sets the View's name. Only useful for debugging.

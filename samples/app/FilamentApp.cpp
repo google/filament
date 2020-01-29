@@ -516,7 +516,6 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
         mViews.emplace_back(mDepthView = new CView(*mRenderer, "Depth View"));
         mViews.emplace_back(mGodView = new GodView(*mRenderer, "God View"));
         mViews.emplace_back(mOrthoView = new CView(*mRenderer, "Ortho View"));
-        mDepthView->getView()->setDepthPrepass(View::DepthPrepass::DISABLED);
     }
     mViews.emplace_back(mUiView = new CView(*mRenderer, "UI View"));
 

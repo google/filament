@@ -68,7 +68,6 @@ int main(int argc, char** argv) {
     auto setup = [&app](Engine* engine, View* view, Scene* scene) {
         view->setClearColor({0.1, 0.125, 0.25, 1.0});
         view->setPostProcessingEnabled(false);
-        view->setDepthPrepass(filament::View::DepthPrepass::DISABLED);
         static_assert(sizeof(Vertex) == 12, "Strange vertex size.");
         app.vb = VertexBuffer::Builder()
                 .vertexCount(3)

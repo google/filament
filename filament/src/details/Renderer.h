@@ -100,8 +100,6 @@ private:
             uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
             backend::PixelBufferDescriptor&& buffer);
 
-    static RenderPass::CommandTypeFlags getCommandType(View::DepthPrepass prepass) noexcept;
-
     struct ColorPassConfig {
         Viewport svp;
         backend::TextureFormat hdrFormat;

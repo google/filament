@@ -704,12 +704,6 @@ export enum View$AntiAliasing {
     FXAA,
 }
 
-export enum View$DepthPrepass {
-    DEFAULT,
-    DISABLED,
-    ENABLED,
-}
-
 export enum WrapMode {
     CLAMP_TO_EDGE,
     REPEAT,
