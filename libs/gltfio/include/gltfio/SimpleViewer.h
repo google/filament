@@ -258,14 +258,20 @@ SimpleViewer::~SimpleViewer() {
 }
 
 void SimpleViewer::setAsset(FilamentAsset* asset, bool scale) {
-    using namespace filament::math;
+    if (mAsset == asset) {
+        return;
+    }
     removeAsset();
     mAsset = asset;
+    if (!asset) {
+        mAnimator = nullptr;
+        return;
+    }
     mAnimator = asset->getAnimator();
     if (scale) {
         auto& tcm = mEngine->getTransformManager();
         auto root = tcm.getInstance(mAsset->getRoot());
-        mat4f transform = fitIntoUnitCube(mAsset->getBoundingBox());
+        filament::math::mat4f transform = fitIntoUnitCube(mAsset->getBoundingBox());
         tcm.setTransform(root, transform);
     }
     mScene->addEntities(mAsset->getEntities(), mAsset->getEntityCount());
@@ -306,6 +312,9 @@ void SimpleViewer::updateIndirectLight() {
 }
 
 void SimpleViewer::applyAnimation(double currentTime) {
+    if (!mAnimator) {
+        return;
+    }
     static double startTime = 0;
     const size_t numAnimations = mAnimator->getAnimationCount();
     if (mResetAnimation) {

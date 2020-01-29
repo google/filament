@@ -1453,6 +1453,8 @@ class_<ResourceLoader>("gltfio$ResourceLoader")
         return self->hasResourceData(url.c_str());
     }), allow_raw_pointers())
 
-    .function("loadResources", &ResourceLoader::loadResources, allow_raw_pointers());
+    .function("loadResources", EMBIND_LAMBDA(bool, (ResourceLoader* self, FilamentAsset* asset), {
+        return self->loadResources(asset);
+    }), allow_raw_pointers());
 
 } // EMSCRIPTEN_BINDINGS
