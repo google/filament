@@ -194,13 +194,6 @@ Java_com_google_android_filament_View_nSetDynamicLightingOptions(JNIEnv*,
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_View_nSetDepthPrepass(JNIEnv*,
-        jclass, jlong nativeView, jint value) {
-    View* view = (View*) nativeView;
-    view->setDepthPrepass(View::DepthPrepass(value));
-}
-
-extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_View_nSetPostProcessingEnabled(JNIEnv*,
         jclass, jlong nativeView, jboolean enabled) {
     View* view = (View*) nativeView;

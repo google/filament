@@ -951,14 +951,6 @@ bool View::isFrontFaceWindingInverted() const noexcept {
     return upcast(this)->isFrontFaceWindingInverted();
 }
 
-void View::setDepthPrepass(View::DepthPrepass prepass) noexcept {
-    upcast(this)->setDepthPrepass(prepass);
-}
-
-View::DepthPrepass View::getDepthPrepass() const noexcept {
-    return upcast(this)->getDepthPrepass();
-}
-
 void View::setDynamicLightingOptions(float zLightNear, float zLightFar) noexcept {
     upcast(this)->setDynamicLightingOptions(zLightNear, zLightFar);
 }

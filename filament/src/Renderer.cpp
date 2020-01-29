@@ -320,9 +320,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     // Color passes
 
     // TODO: ideally this should be a FrameGraph pass to participate to automatic culling
-    RenderPass::CommandTypeFlags commandType = getCommandType(view.getDepthPrepass());
     pass.newCommandBuffer();
-    pass.appendCommands(commandType);
+    pass.appendCommands(RenderPass::COLOR);
     pass.sortCommands();
 
     const ColorPassConfig config {
@@ -799,12 +798,6 @@ void FRenderer::readPixels(Handle<HwRenderTarget> renderTargetHandle,
 Handle<HwRenderTarget> FRenderer::getRenderTarget(FView& view) const noexcept {
     Handle<HwRenderTarget> viewRenderTarget = view.getRenderTargetHandle();
     return viewRenderTarget ? viewRenderTarget : mRenderTarget;
-}
-
-RenderPass::CommandTypeFlags FRenderer::getCommandType(View::DepthPrepass prepass) noexcept {
-    // We are universally disabling the depth prepass for multiple reasons: invariance artifacts
-    // on many platforms, insufficient / negative performance gains, and the complexity it incurs.
-    return RenderPass::COLOR;
 }
 
 } // namespace details

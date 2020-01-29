@@ -224,22 +224,6 @@ public:
         mHasPostProcessPass = enabled;
     }
 
-    void setDepthPrepass(DepthPrepass prepass) noexcept {
-#ifdef __EMSCRIPTEN__
-        if (prepass == View::DepthPrepass::ENABLED) {
-            utils::slog.w << "WARNING: " <<
-                "Depth prepass cannot be enabled on web due to invariance requirements." <<
-                utils::io::endl;
-            return;
-        }
-#endif
-        mDepthPrepass = prepass;
-    }
-
-    DepthPrepass getDepthPrepass() const noexcept {
-        return mDepthPrepass;
-    }
-
     void setAmbientOcclusion(AmbientOcclusion ambientOcclusion) noexcept {
         mAmbientOcclusion = ambientOcclusion;
     }
@@ -353,7 +337,6 @@ private:
     Dithering mDithering = Dithering::TEMPORAL;
     bool mShadowingEnabled = true;
     bool mHasPostProcessPass = true;
-    DepthPrepass mDepthPrepass = DepthPrepass::DEFAULT;
     AmbientOcclusion mAmbientOcclusion = AmbientOcclusion::NONE;
     AmbientOcclusionOptions mAmbientOcclusionOptions{};
 

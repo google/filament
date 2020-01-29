@@ -338,7 +338,7 @@ void RenderPass::generateCommands(uint32_t commandTypeFlags, Command* const comm
      *  easier to debug and doesn't impact performance (it's just a predicted jump).
      */
 
-    switch (commandTypeFlags & CommandTypeFlags::COLOR_AND_DEPTH) {
+    switch (commandTypeFlags & (CommandTypeFlags::COLOR | CommandTypeFlags::DEPTH)) {
         case CommandTypeFlags::COLOR:
             generateCommandsImpl<CommandTypeFlags::COLOR>(commandTypeFlags, curr,
                     soa, range, renderFlags, cameraPosition, cameraForward);
@@ -347,9 +347,8 @@ void RenderPass::generateCommands(uint32_t commandTypeFlags, Command* const comm
             generateCommandsImpl<CommandTypeFlags::DEPTH>(commandTypeFlags, curr,
                     soa, range, renderFlags, cameraPosition, cameraForward);
             break;
-        case CommandTypeFlags::COLOR_AND_DEPTH:
-            generateCommandsImpl<CommandTypeFlags::COLOR_AND_DEPTH>(commandTypeFlags, curr,
-                    soa, range, renderFlags, cameraPosition, cameraForward);
+        default:
+            // we should never end-up here
             break;
     }
 }
@@ -522,17 +521,14 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
                             (mode == TransparencyMode::TWO_PASSES_ONE_SIDE) ?
                             SamplerCompareFunc::LE : cmdColor.primitive.rasterState.depthFunc;
                 } else {
-                    // color pass, opaque objects...
-                    if (!depthPass) {
-                        // ...without depth pre-pass:
-                        // this will bucket objects by Z, front-to-back and then sort by material
-                        // in each buckets. We use the top 10 bits of the distance, which
-                        // bucketizes the depth by its log2 and in 4 linear chunks in each bucket.
-                        cmdColor.key &= ~Z_BUCKET_MASK;
-                        cmdColor.key |= makeField(distanceBits >> 22u, Z_BUCKET_MASK,
-                                Z_BUCKET_SHIFT);
-                    }
-                    // ...with depth pre-pass, we just sort by materials
+                    // color pass:
+                    // This will bucket objects by Z, front-to-back and then sort by material
+                    // in each buckets. We use the top 10 bits of the distance, which
+                    // bucketizes the depth by its log2 and in 4 linear chunks in each bucket.
+                    cmdColor.key &= ~Z_BUCKET_MASK;
+                    cmdColor.key |= makeField(distanceBits >> 22u, Z_BUCKET_MASK,
+                            Z_BUCKET_SHIFT);
+
                     curr->key = uint64_t(Pass::SENTINEL);
                     ++curr;
                 }

@@ -100,9 +100,8 @@ public:
     };
 
     enum CommandTypeFlags : uint8_t {
-        COLOR = 0x1,    // generate the color pass only (e.g. no depth-prepass)
+        COLOR = 0x1,    // generate the color pass only
         DEPTH = 0x2,    // generate the depth pass only ( e.g. shadowmap)
-        COLOR_AND_DEPTH = COLOR | DEPTH,
 
         // shadow-casters are rendered in the depth buffer, regardless of blending (or alpha masking)
         DEPTH_CONTAINS_SHADOW_CASTERS = 0x4,
@@ -111,9 +110,6 @@ public:
         // alpha-tested objects are not rendered in the depth buffer
         DEPTH_FILTER_ALPHA_MASKED_OBJECTS = 0x10,
 
-        // generate commands for color with depth pre-pass -- in this case, we want to put
-        // objects that use alpha-testing or blending in the depth prepass.
-        COLOR_WITH_DEPTH_PREPASS = DEPTH | COLOR | DEPTH_FILTER_TRANSLUCENT_OBJECTS | DEPTH_FILTER_ALPHA_MASKED_OBJECTS,
         // generate commands for shadow map
         SHADOW = DEPTH | DEPTH_CONTAINS_SHADOW_CASTERS,
         // generate commands for SSAO
@@ -138,16 +134,7 @@ public:
     // | correctness      |     optimizations (truncation allowed)             |
     //
     //
-    // COLOR command (with depth prepass)
-    // |   6  | 2| 2|1| 3 | 2|       16       |               32               |
-    // +------+--+--+-+---+--+----------------+--------------------------------+
-    // |000001|01|00|a|ppp|00|0000000000000000|          material-id           |
-    // |000010|01|00|a|ppp|00|0000000000000000|          material-id           |  refraction
-    // +------+--+--+-+---+--+----------------+--------------------------------+
-    // | correctness      |        optimizations (truncation allowed)          |
-    //
-    //
-    // COLOR command (without depth prepass)
+    // COLOR command
     // |   6  | 2| 2|1| 3 | 2|  6   |   10     |               32               |
     // +------+--+--+-+---+--+------+----------+--------------------------------+
     // |000001|01|00|a|ppp|00|000000| Z-bucket |          material-id           |

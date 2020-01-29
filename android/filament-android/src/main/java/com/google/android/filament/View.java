@@ -62,7 +62,6 @@ public class View {
     private Viewport mViewport = new Viewport(0, 0, 0, 0);
     private DynamicResolutionOptions mDynamicResolution;
     private RenderQuality mRenderQuality;
-    private DepthPrepass mDepthPrepass = DepthPrepass.DEFAULT;
     private AmbientOcclusionOptions mAmbientOcclusionOptions;
     private RenderTarget mRenderTarget;
 
@@ -239,19 +238,6 @@ public class View {
         NONE,
         TEMPORAL
     }
-
-    /** @see #setDepthPrepass */
-    public enum DepthPrepass {
-        DEFAULT(-1),
-        DISABLED(0),
-        ENABLED(1);
-
-        final int value;
-
-        DepthPrepass(int value) {
-            this.value = value;
-        }
-    };
 
     View(long nativeView) {
         mNativeObject = nativeView;
@@ -613,49 +599,6 @@ public class View {
     }
 
     /**
-     * Checks if this view is rendered with a depth-only prepass.
-     *
-     * @return the value set by {@link #setDepthPrepass}.
-     */
-    @NonNull
-    public DepthPrepass getDepthPrepass() {
-        return mDepthPrepass;
-    }
-
-    /**
-     * Sets whether this view is rendered with or without a depth pre-pass.
-     *
-     * <p><b>This setting is ignored and will be removed in future versions of Filament.</b></p>
-     *
-     * <p>
-     * By default, the system picks the most appropriate strategy for your platform; this method
-     * lets you override that strategy.
-     * </p>
-     *
-     * <p>
-     * When the depth pre-pass is enabled, the renderer will first draw all objects in the
-     * depth buffer from front to back, and then draw the objects again but sorted to minimize
-     * state changes. With the depth pre-pass disabled, objects are drawn only once, but it may
-     * result in more state changes or more overdraw.
-     * </p>
-     *
-     * <p>
-     * The best strategy may depend on the scene and/or GPU.
-     * </p>
-     *
-     * <ul>
-     * <li>DepthPrepass::DEFAULT uses the most appropriate strategy</li>
-     * <li>DepthPrepass::DISABLED disables the depth pre-pass</li>
-     * <li>DepthPrepass::ENABLE enables the depth pre-pass</li>
-     * </ul>
-     */
-    @Deprecated
-    public void setDepthPrepass(@NonNull DepthPrepass depthPrepass) {
-        mDepthPrepass = depthPrepass;
-        nSetDepthPrepass(getNativeObject(), depthPrepass.value);
-    }
-
-    /**
      * Returns true if post-processing is enabled.
      *
      * @see #setPostProcessingEnabled
@@ -821,7 +764,6 @@ public class View {
             float minScale, float maxScale, int history);
     private static native void nSetRenderQuality(long nativeView, int hdrColorBufferQuality);
     private static native void nSetDynamicLightingOptions(long nativeView, float zLightNear, float zLightFar);
-    private static native void nSetDepthPrepass(long nativeView, int value);
     private static native void nSetPostProcessingEnabled(long nativeView, boolean enabled);
     private static native boolean nIsPostProcessingEnabled(long nativeView);
     private static native void nSetFrontFaceWindingInverted(long nativeView, boolean inverted);

@@ -117,11 +117,6 @@ enum_<View::AntiAliasing>("View$AntiAliasing")
     .value("NONE", View::AntiAliasing::NONE)
     .value("FXAA", View::AntiAliasing::FXAA);
 
-enum_<View::DepthPrepass>("View$DepthPrepass")
-    .value("DEFAULT", View::DepthPrepass::DEFAULT)
-    .value("DISABLED", View::DepthPrepass::DISABLED)
-    .value("ENABLED", View::DepthPrepass::ENABLED);
-
 enum_<Camera::Projection>("Camera$Projection")
     .value("PERSPECTIVE", Camera::Projection::PERSPECTIVE)
     .value("ORTHO", Camera::Projection::ORTHO);
