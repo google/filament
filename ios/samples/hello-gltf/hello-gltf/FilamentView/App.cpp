@@ -143,7 +143,6 @@ void App::setupMesh() {
 
 void App::setupView() {
     view = engine->createView();
-    view->setDepthPrepass(filament::View::DepthPrepass::DISABLED);
     view->setScene(scene);
     view->setCamera(camera);
     view->setViewport(Viewport(0, 0, width, height));

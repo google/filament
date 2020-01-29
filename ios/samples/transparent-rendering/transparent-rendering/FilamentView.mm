@@ -167,7 +167,6 @@ static constexpr uint8_t BAKED_COLOR_PACKAGE[] = {
     filaView->setClearColor({0.0f, 0.0f, 0.0f, 0.0f});
 
     filaView->setPostProcessingEnabled(false);
-    filaView->setDepthPrepass(filament::View::DepthPrepass::DISABLED);
 
     app.vb = VertexBuffer::Builder()
         .vertexCount(3)
