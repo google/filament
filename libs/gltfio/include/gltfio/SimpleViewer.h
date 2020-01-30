@@ -259,6 +259,9 @@ SimpleViewer::~SimpleViewer() {
 
 void SimpleViewer::setAsset(FilamentAsset* asset, bool scale) {
     if (mAsset == asset) {
+        while (utils::Entity e = mAsset->popRenderable()) {
+            mScene->addEntity(e);
+        }
         return;
     }
     removeAsset();
@@ -274,7 +277,9 @@ void SimpleViewer::setAsset(FilamentAsset* asset, bool scale) {
         filament::math::mat4f transform = fitIntoUnitCube(mAsset->getBoundingBox());
         tcm.setTransform(root, transform);
     }
-    mScene->addEntities(mAsset->getEntities(), mAsset->getEntityCount());
+    while (utils::Entity e = mAsset->popRenderable()) {
+        mScene->addEntity(e);
+    }
 }
 
 void SimpleViewer::removeAsset() {

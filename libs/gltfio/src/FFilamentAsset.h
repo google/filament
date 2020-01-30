@@ -38,6 +38,7 @@
 
 #include "upcast.h"
 #include "Wireframe.h"
+#include "DependencyGraph.h"
 
 #include <tsl/robin_map.h>
 
@@ -91,6 +92,10 @@ struct FFilamentAsset : public FilamentAsset {
 
     utils::Entity getRoot() const noexcept {
         return mRoot;
+    }
+
+    utils::Entity popRenderable() noexcept {
+        return mDependencyGraph.popReadyRenderable();
     }
 
     size_t getMaterialInstanceCount() const noexcept {
@@ -192,6 +197,15 @@ struct FFilamentAsset : public FilamentAsset {
         }
     }
 
+    void takeOwnership(filament::Texture* texture) {
+        mTextures.push_back(texture);
+    }
+
+    void bindTexture(const TextureBinding& tb, filament::Texture* texture) {
+        tb.materialInstance->setParameter(tb.materialParameter, texture, tb.sampler);
+        mDependencyGraph.addEdge(texture, tb.materialInstance, tb.materialParameter);
+    }
+
     filament::Engine* mEngine;
     utils::NameComponentManager* mNameManager;
     std::vector<uint8_t> mGlbData;
@@ -208,6 +222,7 @@ struct FFilamentAsset : public FilamentAsset {
     int mSourceAssetRefCount = 0;
     bool mResourcesLoaded = false;
     bool mSharedSourceAsset = false;
+    DependencyGraph mDependencyGraph;
 
     // Transient source data that can freed via releaseSourceData:
     std::vector<BufferBinding> mBufferBindings;

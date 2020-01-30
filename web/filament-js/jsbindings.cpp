@@ -1067,7 +1067,8 @@ class_<SkyBuilder>("Skybox$Builder")
 
 /// Entity ::core class:: Handle to an object consisting of a set of components.
 /// To create an entity with no components, use [EntityManager].
-class_<utils::Entity>("Entity");
+class_<utils::Entity>("Entity")
+    .function("getId", &utils::Entity::getId);
 
 /// EntityManager ::core class:: Singleton used for constructing entities in Filament's ECS.
 class_<utils::EntityManager>("EntityManager")
@@ -1374,6 +1375,8 @@ class_<FilamentAsset>("gltfio$FilamentAsset")
     }), allow_raw_pointers())
 
     .function("getRoot", &FilamentAsset::getRoot)
+
+    .function("popRenderable", &FilamentAsset::popRenderable)
 
     .function("getMaterialInstances", EMBIND_LAMBDA(std::vector<const MaterialInstance*>,
             (FilamentAsset* self), {

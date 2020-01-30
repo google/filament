@@ -149,7 +149,6 @@ class ModelViewer {
             resourceLoader.asyncBeginLoad(asset)
             animator = asset.animator
             asset.releaseSourceData()
-            scene.addEntities(asset.entities)
         }
     }
 
@@ -166,7 +165,6 @@ class ModelViewer {
             resourceLoader.asyncBeginLoad(asset)
             animator = asset.animator
             asset.releaseSourceData()
-            scene.addEntities(asset.entities)
         }
     }
 
@@ -207,6 +205,15 @@ class ModelViewer {
 
         // Allow the resource loader to finalize textures that have become ready.
         resourceLoader.asyncUpdateLoad()
+
+        // Add renderable entities to the scene as they become ready.
+        asset?.let {
+            var entity = 0
+            val popRenderable = {entity = it.popRenderable(); entity != 0}
+            while (popRenderable()) {
+                scene.addEntity(entity)
+            }
+        }
 
         // Extract the camera basis from the helper and push it to the Filament camera.
         cameraManipulator.getLookAt(eyePos, target, upward)

@@ -358,6 +358,7 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity entity) {
         UvMap uvmap {};
         bool hasVertexColor = primitiveHasVertexColor(inputPrim);
         MaterialInstance* mi = createMaterialInstance(inputPrim->material, &uvmap, hasVertexColor);
+        mResult->mDependencyGraph.addEdge(entity, mi);
         builder.material(index, mi);
 
         // Create a Filament VertexBuffer and IndexBuffer for this prim if we haven't already.
@@ -963,6 +964,7 @@ void FAssetLoader::addTextureBinding(MaterialInstance* materialInstance, const c
         .sampler = dstSampler,
         .srgb = srgb
     });
+    mResult->mDependencyGraph.addEdge(materialInstance, parameterName);
 }
 
 void FAssetLoader::importSkinningData(Skin& dstSkin, const cgltf_skin& srcSkin) {

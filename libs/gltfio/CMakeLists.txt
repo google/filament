@@ -20,6 +20,8 @@ set(PUBLIC_HDRS
 set(SRCS
         src/Animator.cpp
         src/AssetLoader.cpp
+        src/DependencyGraph.cpp
+        src/DependencyGraph.h
         src/FFilamentAsset.h
         src/FilamentAsset.cpp
         src/GltfEnums.h
