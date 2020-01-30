@@ -75,7 +75,7 @@ public:
 
     FrameGraphId<FrameGraphTexture> gaussianBlurPass(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, uint8_t srcLevel,
-            uint8_t dstLevel, float alpha) noexcept;
+            uint8_t dstLevel) noexcept;
 
     backend::Handle<backend::HwTexture> getNoSSAOTexture() const {
         return mNoSSAOTexture;

@@ -694,17 +694,20 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bilateralBlurPass(FrameGraph
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph& fg,
-        FrameGraphId<FrameGraphTexture> input, uint8_t srcLevel, uint8_t dstLevel, float alpha) noexcept {
+        FrameGraphId<FrameGraphTexture> input, uint8_t srcLevel, uint8_t dstLevel) noexcept {
 
     Handle<HwRenderPrimitive> fullScreenRenderPrimitive = mEngine.getFullScreenRenderPrimitive();
 
-    auto computeGaussianCoefficients = [](float2* kernel, size_t size, float alpha) -> size_t {
-        // Figure out how many samples we need. A gaussian filter keeps its gaussianness
-        // if it has at least 6q-1 coefficient (q = standard deviation)
-        // standard deviation
-        float q = 1 / std::sqrt(2.0f * alpha);
-        // number of samples needed
-        size_t n = (size_t)std::max(1.0f, std::ceil(6.0f * q - 1.0f));
+    auto computeGaussianCoefficients = [](float2* kernel, size_t size) -> size_t {
+        // The kernel-size was determined empirically so that we don't get too many aritfacts
+        // due to the down-sampling.
+        const size_t n = 17;
+
+        // The relation between n and q the variance should 6q - 1 = n, however here we
+        // use 4q - 1 = n, which gives a stronger blur, without bringing too many artifacts.
+        const float q = (n + 1) / 4;
+        const float alpha = 1.0f / (2.0f * q * q);
+
         // number of positive-side samples needed, using linear sampling
         size_t m = (n - 1) / 4 + 1;
         // clamp to what we have
@@ -754,6 +757,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
                 desc.width = FTexture::valueForLevel(dstLevel, desc.width);
                 // height of the source level (b/c it's not blurred in this pass)
                 desc.height = FTexture::valueForLevel(srcLevel, desc.height);
+                // only one level
+                desc.levels = 1;
 
                 data.temp = builder.createTexture("Horizontal temporary buffer", desc);
                 data.temp = builder.write(builder.sample(data.temp));
@@ -779,7 +784,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
 
                 float2 kernel[128];
                 size_t m = computeGaussianCoefficients(kernel,
-                        std::min(sizeof(kernel) / sizeof(*kernel), kernelStorageSize), alpha);
+                        std::min(sizeof(kernel) / sizeof(*kernel), kernelStorageSize));
 
                 // horizontal pass
                 auto hwTempRT = resources.getRenderTarget(data.tempRT);
