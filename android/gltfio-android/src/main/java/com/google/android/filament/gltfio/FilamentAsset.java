@@ -62,6 +62,16 @@ public class FilamentAsset {
     }
 
     /**
+     * Pops a ready renderable off the queue, or returns 0 if no renderables have become ready.
+     *
+     * This helper method allows clients to progressively add renderables to the scene as textures
+     * gradually become ready through asynchronous loading.
+     */
+    public @Entity int popRenderable() {
+        return nPopRenderable(mNativeObject);
+    }
+
+    /**
      * Gets the list of entities, one for each glTF node.
      *
      * <p>All of these have a transform component. Some of the returned entities may also have a
@@ -127,6 +137,7 @@ public class FilamentAsset {
     }
 
     private static native int nGetRoot(long nativeAsset);
+    private static native int nPopRenderable(long nativeAsset);
     private static native int nGetEntityCount(long nativeAsset);
     private static native void nGetEntities(long nativeAsset, int[] result);
     private static native void nGetBoundingBox(long nativeAsset, float[] box);

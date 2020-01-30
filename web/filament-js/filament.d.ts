@@ -38,7 +38,6 @@ export type mat3 = glm.mat3|number[];
 export type mat4 = glm.mat4|number[];
 export type quat = glm.quat|number[];
 
-export class Entity {}
 export class Skybox {}
 export class Texture {}
 export class SwapChain {}
@@ -51,6 +50,10 @@ export interface Box {
 export interface Aabb {
     min: float3;
     max: float3;
+}
+
+export class Entity {
+    public getId(): number;
 }
 
 export class LightManager$Instance {

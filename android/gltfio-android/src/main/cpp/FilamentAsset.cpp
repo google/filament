@@ -30,6 +30,13 @@ Java_com_google_android_filament_gltfio_FilamentAsset_nGetRoot(JNIEnv*, jclass, 
 }
 
 extern "C" JNIEXPORT jint JNICALL
+Java_com_google_android_filament_gltfio_FilamentAsset_nPopRenderable(JNIEnv*, jclass,
+        jlong nativeAsset) {
+    FilamentAsset* asset = (FilamentAsset*) nativeAsset;
+    return asset->popRenderable().getId();
+}
+
+extern "C" JNIEXPORT jint JNICALL
 Java_com_google_android_filament_gltfio_FilamentAsset_nGetEntityCount(JNIEnv*, jclass,
         jlong nativeAsset) {
     FilamentAsset* asset = (FilamentAsset*) nativeAsset;

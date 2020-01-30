@@ -260,10 +260,8 @@ int main(int argc, char** argv) {
     auto animate = [&app](Engine* engine, View* view, double now) {
         app.resourceLoader->asyncUpdateLoad();
 
-        // Add the renderables to the scene after the textures have finished loading.
-        if (app.resourceLoader->asyncGetLoadProgress() == 1.0f) {
-            app.viewer->setAsset(app.asset, !app.actualSize);
-        }
+        // Add renderables to the scene as they become ready.
+        app.viewer->setAsset(app.asset, !app.actualSize);
 
         app.viewer->applyAnimation(now);
     };
