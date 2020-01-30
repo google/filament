@@ -11,34 +11,36 @@ set -e
 # 4. The skybox image
 # These will be compiled into the final binary via the resgen tool.
 
-filamesh_path="../../../out/release/filament/bin/filamesh"
-matc_path="../../../out/release/filament/bin/matc"
-resgen_path="../../../out/release/filament/bin/resgen"
-cmgen_path="../../../out/release/filament/bin/cmgen"
+HOST_TOOLS_PATH="${HOST_TOOLS_PATH:-../../../out/release/filament/bin}"
+
+filamesh_path=`find ${HOST_TOOLS_PATH} -name filamesh -type f | head -n 1`
+matc_path=`find ${HOST_TOOLS_PATH} -name matc -type f | head -n 1`
+resgen_path=`find ${HOST_TOOLS_PATH} -name resgen -type f | head -n 1`
+cmgen_path=`find ${HOST_TOOLS_PATH} -name cmgen -type f | head -n 1`
 
 # Ensure that the required tools are present in the out/ directory.
 # These can be built by running ./build.sh -p desktop -i release at Filament's root directory.
 
 if [[ ! -e "${filamesh_path}" ]]; then
-  echo "No filamesh binary could be found in ../../../out/release/filament/bin/."
+  echo "No filamesh binary could be found in ${HOST_TOOLS_PATH}."
   echo "Ensure Filament has been built/installed before building this app."
   exit 1
 fi
 
 if [[ ! -e "${matc_path}" ]]; then
-  echo "No matc binary could be found in ../../../out/release/filament/bin/."
+  echo "No matc binary could be found in ${HOST_TOOLS_PATH}."
   echo "Ensure Filament has been built/installed before building this app."
   exit 1
 fi
 
 if [[ ! -e "${resgen_path}" ]]; then
-  echo "No resgen binary could be found in ../../../out/release/filament/bin/."
+  echo "No resgen binary could be found in ${HOST_TOOLS_PATH}."
   echo "Ensure Filament has been built/installed before building this app."
   exit 1
 fi
 
 if [[ ! -e "${cmgen_path}" ]]; then
-  echo "No cmgen binary could be found in ../../../out/release/filament/bin/."
+  echo "No cmgen binary could be found in ${HOST_TOOLS_PATH}."
   echo "Ensure Filament has been built/installed before building this app."
   exit 1
 fi
@@ -59,7 +61,7 @@ mkdir -p "${PROJECT_DIR}/generated/"
 
 # cmgen consumes an HDR environment map and generates two mipmapped KTX files (IBL and skybox)
 "${cmgen_path}" \
-    --deploy="${PROJECT_DIR}/generated" \
+    --deploy="${PROJECT_DIR}/generated/venetian_crossroads_2k" \
     --format=ktx --size=256 --extract-blur=0.1 \
     "${PROJECT_DIR}/../../../third_party/environments/venetian_crossroads_2k.hdr"
 

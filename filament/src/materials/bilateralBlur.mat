@@ -1,5 +1,5 @@
 material {
-    name : blur,
+    name : bilateralBlur,
     parameters : [
         {
             type : sampler2d,
@@ -34,7 +34,7 @@ material {
 
 vertex {
     void postProcessVertex(inout PostProcessVertexInputs postProcess) {
-        postProcess.vertex.xy = postProcess.normalizedUV;
+        postProcess.vertex.xy = postProcess.normalizedUV * materialParams.resolution.xy;
     }
 }
 
@@ -78,7 +78,7 @@ fragment {
     }
 
     void postProcess(inout PostProcessInputs postProcess) {
-        highp ivec2 uv = ivec2(variable_vertex.xy * materialParams.resolution.xy);
+        highp ivec2 uv = ivec2(variable_vertex.xy);
 
         float depth = texelFetch(materialParams_depth, uv, 0).r;
 

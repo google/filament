@@ -2,7 +2,7 @@
 set -e
 
 # Host tools required by Android, WebGL, and iOS builds
-MOBILE_HOST_TOOLS="matc resgen cmgen"
+MOBILE_HOST_TOOLS="matc resgen cmgen filamesh"
 WEB_HOST_TOOLS="${MOBILE_HOST_TOOLS} mipgen filamesh"
 IOS_TOOLCHAIN_URL="https://opensource.apple.com/source/clang/clang-800.0.38/src/cmake/platforms/iOS.cmake"
 
@@ -146,6 +146,13 @@ function build_desktop_target {
 
     cd out/cmake-${lc_target}
 
+    # On macOS, set the deployment target to 10.14.
+    local name=`echo $(uname)`
+    local lc_name=`echo $name | tr '[:upper:]' '[:lower:]'`
+    if [[ "$lc_name" == "darwin" ]]; then
+        local deployment_target="-DCMAKE_OSX_DEPLOYMENT_TARGET=10.14"
+    fi
+
     if [[ ! -d "CMakeFiles" ]] || [[ "$ISSUE_CMAKE_ALWAYS" == "true" ]]; then
         cmake \
             -G "$BUILD_GENERATOR" \
@@ -153,6 +160,7 @@ function build_desktop_target {
             -DCMAKE_BUILD_TYPE=$1 \
             -DCMAKE_INSTALL_PREFIX=../${lc_target}/filament \
             -DENABLE_JAVA=${ENABLE_JAVA} \
+            ${deployment_target} \
             ../..
     fi
     ${BUILD_COMMAND} ${build_targets}

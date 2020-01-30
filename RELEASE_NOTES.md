@@ -6,6 +6,8 @@ A new header is inserted each time a *tag* is created.
 ## Next release
 
 - The Android support libraries (gltfio and filament-utils) now use dynamic linking.
+- Screen-space refraction is now supported.
+- Removed depth-prepass related APIs.
 
 ## v1.4.5
 

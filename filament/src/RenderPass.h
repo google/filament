@@ -88,7 +88,8 @@ public:
     enum class Pass : uint64_t {    // 6-bits max
         DEPTH    = uint64_t(0x00) << PASS_SHIFT,
         COLOR    = uint64_t(0x01) << PASS_SHIFT,
-        BLENDED  = uint64_t(0x02) << PASS_SHIFT,
+        REFRACT  = uint64_t(0x02) << PASS_SHIFT,
+        BLENDED  = uint64_t(0x03) << PASS_SHIFT,
         SENTINEL = 0xffffffffffffffffllu
     };
 
@@ -99,9 +100,8 @@ public:
     };
 
     enum CommandTypeFlags : uint8_t {
-        COLOR = 0x1,    // generate the color pass only (e.g. no depth-prepass)
+        COLOR = 0x1,    // generate the color pass only
         DEPTH = 0x2,    // generate the depth pass only ( e.g. shadowmap)
-        COLOR_AND_DEPTH = COLOR | DEPTH,
 
         // shadow-casters are rendered in the depth buffer, regardless of blending (or alpha masking)
         DEPTH_CONTAINS_SHADOW_CASTERS = 0x4,
@@ -110,9 +110,6 @@ public:
         // alpha-tested objects are not rendered in the depth buffer
         DEPTH_FILTER_ALPHA_MASKED_OBJECTS = 0x10,
 
-        // generate commands for color with depth pre-pass -- in this case, we want to put
-        // objects that use alpha-testing or blending in the depth prepass.
-        COLOR_WITH_DEPTH_PREPASS = DEPTH | COLOR | DEPTH_FILTER_TRANSLUCENT_OBJECTS | DEPTH_FILTER_ALPHA_MASKED_OBJECTS,
         // generate commands for shadow map
         SHADOW = DEPTH | DEPTH_CONTAINS_SHADOW_CASTERS,
         // generate commands for SSAO
@@ -137,18 +134,11 @@ public:
     // | correctness      |     optimizations (truncation allowed)             |
     //
     //
-    // COLOR command (with depth prepass)
-    // |   6  | 2| 2|1| 3 | 2|       16       |               32               |
-    // +------+--+--+-+---+--+----------------+--------------------------------+
-    // |000001|01|00|a|ppp|00|0000000000000000|          material-id           |
-    // +------+--+--+-+---+--+----------------+--------------------------------+
-    // | correctness      |        optimizations (truncation allowed)          |
-    //
-    //
-    // COLOR command (without depth prepass)
+    // COLOR command
     // |   6  | 2| 2|1| 3 | 2|  6   |   10     |               32               |
     // +------+--+--+-+---+--+------+----------+--------------------------------+
     // |000001|01|00|a|ppp|00|000000| Z-bucket |          material-id           |
+    // |000010|01|00|a|ppp|00|000000| Z-bucket |          material-id           | refraction
     // +------+--+--+-+---+--+------+----------+--------------------------------+
     // | correctness      |      optimizations (truncation allowed)             |
     //
@@ -156,7 +146,7 @@ public:
     // BLENDED command
     // |   6  | 2| 2|1| 3 | 2|              32                |         15    |1|
     // +------+--+--+-+---+--+--------------------------------+---------------+-+
-    // |000010|01|00|0|ppp|00|         ~distanceBits          |   blendOrder  |t|
+    // |000011|01|00|0|ppp|00|         ~distanceBits          |   blendOrder  |t|
     // +------+--+--+-+---+--+--------------------------------+---------------+-+
     // | correctness                                                            |
     //
@@ -248,13 +238,19 @@ public:
     static constexpr RenderFlags HAS_INVERSE_FRONT_FACES = 0x08;
 
 
-    RenderPass(FEngine& engine, utils::GrowingSlice<Command>& commands) noexcept;
+    RenderPass(FEngine& engine, utils::GrowingSlice<Command> commands) noexcept;
     void overridePolygonOffset(backend::PolygonOffset* polygonOffset) noexcept;
     void overrideMaterial(FMaterial const* material, FMaterialInstance const* mi) noexcept;
     void setGeometry(FScene::RenderableSoa const& soa, utils::Range<uint32_t> vr,
             backend::Handle<backend::HwUniformBuffer> uboHandle) noexcept;
     void setCamera(const CameraInfo& camera) noexcept;
     void setRenderFlags(RenderFlags flags) noexcept;
+
+    Command* begin() noexcept { return mCommands.begin(); }
+    Command* end() noexcept { return mCommands.end(); }
+
+    Command const* begin() const noexcept { return mCommands.begin(); }
+    Command const* end() const noexcept { return mCommands.end(); }
 
     Command* newCommandBuffer() noexcept;
 

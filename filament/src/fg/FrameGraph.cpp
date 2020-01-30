@@ -455,11 +455,22 @@ FrameGraph& FrameGraph::compile() noexcept {
             //  attachment would be missing).
             for (fg::RenderTarget& rt : renderTargets) {
                 auto& textures = rt.desc.attachments.textures;
-                if (textures[0].isValid()) {
-                    FrameGraphHandle handle = textures[0];
+                FrameGraphHandle handle = textures[0];
+                if (handle.isValid()) {
                     ResourceNode const& node = resourceNodes[handle.index];
                     if (node.resource->imported && node.resource == from.resource) {
                         for (size_t i = 1; i < textures.size(); ++i) {
+                            // FIXME: here we're likely leaking the resources we're clearing,
+                            //  however, we can't know for sure because currently RenderTargets
+                            //  don't hold references to their attachment (Passes do). We can't
+                            //  go back to the passes to clear the reference because we can't know
+                            //  for sure that the pass doesn't need the resource (i.e. we don't
+                            //  know if it did a read() or write() for the purpose of the
+                            //  RT attachment or something else).
+                            //  To fix this, we need the RT to hold references to attachments,
+                            //  and Passes to RTs. This way passes wouldn't have to add references
+                            //  to attachments, and clearing attachments would release their
+                            //  resources.
                             textures[i] = {};
                         }
                     }

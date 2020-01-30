@@ -316,6 +316,10 @@ float3 Camera::getForwardVector() const noexcept {
     return upcast(this)->getForwardVector();
 }
 
+float Camera::getFieldOfViewInDegrees(Camera::Fov direction) const noexcept {
+    return upcast(this)->getFieldOfViewInDegrees(direction);
+}
+
 Frustum Camera::getFrustum() const noexcept {
     return upcast(this)->getFrustum();
 }

@@ -128,6 +128,8 @@ public:
             ArenaScope& arena, Viewport const& viewport) noexcept;
     void prepareSSAO(backend::Handle<backend::HwTexture> ssao) const noexcept;
     void cleanupSSAO() const noexcept;
+    void prepareSSR(backend::Handle<backend::HwTexture> ssr) const noexcept;
+    void cleanupSSR() const noexcept;
     void froxelize(FEngine& engine) const noexcept;
     void commitUniforms(backend::DriverApi& driver) const noexcept;
     void commitFroxels(backend::DriverApi& driverApi) const noexcept;
@@ -222,22 +224,6 @@ public:
         mHasPostProcessPass = enabled;
     }
 
-    void setDepthPrepass(DepthPrepass prepass) noexcept {
-#ifdef __EMSCRIPTEN__
-        if (prepass == View::DepthPrepass::ENABLED) {
-            utils::slog.w << "WARNING: " <<
-                "Depth prepass cannot be enabled on web due to invariance requirements." <<
-                utils::io::endl;
-            return;
-        }
-#endif
-        mDepthPrepass = prepass;
-    }
-
-    DepthPrepass getDepthPrepass() const noexcept {
-        return mDepthPrepass;
-    }
-
     void setAmbientOcclusion(AmbientOcclusion ambientOcclusion) noexcept {
         mAmbientOcclusion = ambientOcclusion;
     }
@@ -265,14 +251,15 @@ public:
         return mVisibleShadowCasters;
     }
 
-    uint8_t getClearFlags() const noexcept {
-        uint8_t clearFlags = 0;
-        if (getClearTargetColor())     clearFlags |= (uint8_t)TargetBufferFlags::COLOR;
-        if (getClearTargetDepth())     clearFlags |= (uint8_t)TargetBufferFlags::DEPTH;
-        if (getClearTargetStencil())   clearFlags |= (uint8_t)TargetBufferFlags::STENCIL;
+    TargetBufferFlags getClearFlags() const noexcept {
+        TargetBufferFlags clearFlags = {};
+        if (getClearTargetColor())     clearFlags |= TargetBufferFlags::COLOR;
+        if (getClearTargetDepth())     clearFlags |= TargetBufferFlags::DEPTH;
+        if (getClearTargetStencil())   clearFlags |= TargetBufferFlags::STENCIL;
         return clearFlags;
     }
 
+    FCamera const& getCameraUser() const noexcept { return *mCullingCamera; }
     FCamera& getCameraUser() noexcept { return *mCullingCamera; }
     void setCameraUser(FCamera* camera) noexcept { setCullingCamera(camera); }
 
@@ -350,7 +337,6 @@ private:
     Dithering mDithering = Dithering::TEMPORAL;
     bool mShadowingEnabled = true;
     bool mHasPostProcessPass = true;
-    DepthPrepass mDepthPrepass = DepthPrepass::DEFAULT;
     AmbientOcclusion mAmbientOcclusion = AmbientOcclusion::NONE;
     AmbientOcclusionOptions mAmbientOcclusionOptions{};
 

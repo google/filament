@@ -42,7 +42,7 @@ using namespace backend;
 namespace details {
 
 RenderPass::RenderPass(FEngine& engine,
-        GrowingSlice<RenderPass::Command>& commands) noexcept
+        GrowingSlice<RenderPass::Command> commands) noexcept
         : mEngine(engine), mCommands(commands),
           mCustomCommands(engine.getPerRenderPassAllocator()) {
     mCustomCommands.reserve(8); // preallocate allocate a reasonable number of custom commands
@@ -274,15 +274,17 @@ void RenderPass::setupColorCommand(Command& cmdDraw, bool hasDepthPass,
     keyBlending |= uint64_t(Pass::BLENDED);
     keyBlending |= uint64_t(CustomCommand::PASS);
 
+    bool hasScreenSpaceRefraction = ma->getRefractionMode() == RefractionMode::SCREEN_SPACE;
+    bool hasBlending = !hasScreenSpaceRefraction && ma->getRasterState().hasBlending();
+
     uint64_t keyDraw = cmdDraw.key;
     keyDraw &= ~(PASS_MASK | BLENDING_MASK | MATERIAL_MASK);
-    keyDraw |= uint64_t(Pass::COLOR);
+    keyDraw |= uint64_t(hasScreenSpaceRefraction ? Pass::REFRACT : Pass::COLOR);
     keyDraw |= uint64_t(CustomCommand::PASS);
     keyDraw |= mi->getSortingKey(); // already all set-up for direct or'ing
     keyDraw |= makeField(variant, MATERIAL_VARIANT_KEY_MASK, MATERIAL_VARIANT_KEY_SHIFT);
     keyDraw |= makeField(ma->getRasterState().alphaToCoverage, BLENDING_MASK, BLENDING_SHIFT);
 
-    bool hasBlending = ma->getRasterState().hasBlending();
     cmdDraw.key = hasBlending ? keyBlending : keyDraw;
     cmdDraw.primitive.rasterState = ma->getRasterState();
     cmdDraw.primitive.rasterState.inverseFrontFaces = inverseFrontFaces;
@@ -336,7 +338,7 @@ void RenderPass::generateCommands(uint32_t commandTypeFlags, Command* const comm
      *  easier to debug and doesn't impact performance (it's just a predicted jump).
      */
 
-    switch (commandTypeFlags & CommandTypeFlags::COLOR_AND_DEPTH) {
+    switch (commandTypeFlags & (CommandTypeFlags::COLOR | CommandTypeFlags::DEPTH)) {
         case CommandTypeFlags::COLOR:
             generateCommandsImpl<CommandTypeFlags::COLOR>(commandTypeFlags, curr,
                     soa, range, renderFlags, cameraPosition, cameraForward);
@@ -345,9 +347,8 @@ void RenderPass::generateCommands(uint32_t commandTypeFlags, Command* const comm
             generateCommandsImpl<CommandTypeFlags::DEPTH>(commandTypeFlags, curr,
                     soa, range, renderFlags, cameraPosition, cameraForward);
             break;
-        case CommandTypeFlags::COLOR_AND_DEPTH:
-            generateCommandsImpl<CommandTypeFlags::COLOR_AND_DEPTH>(commandTypeFlags, curr,
-                    soa, range, renderFlags, cameraPosition, cameraForward);
+        default:
+            // we should never end-up here
             break;
     }
 }
@@ -520,17 +521,14 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
                             (mode == TransparencyMode::TWO_PASSES_ONE_SIDE) ?
                             SamplerCompareFunc::LE : cmdColor.primitive.rasterState.depthFunc;
                 } else {
-                    // color pass, opaque objects...
-                    if (!depthPass) {
-                        // ...without depth pre-pass:
-                        // this will bucket objects by Z, front-to-back and then sort by material
-                        // in each buckets. We use the top 10 bits of the distance, which
-                        // bucketizes the depth by its log2 and in 4 linear chunks in each bucket.
-                        cmdColor.key &= ~Z_BUCKET_MASK;
-                        cmdColor.key |= makeField(distanceBits >> 22u, Z_BUCKET_MASK,
-                                Z_BUCKET_SHIFT);
-                    }
-                    // ...with depth pre-pass, we just sort by materials
+                    // color pass:
+                    // This will bucket objects by Z, front-to-back and then sort by material
+                    // in each buckets. We use the top 10 bits of the distance, which
+                    // bucketizes the depth by its log2 and in 4 linear chunks in each bucket.
+                    cmdColor.key &= ~Z_BUCKET_MASK;
+                    cmdColor.key |= makeField(distanceBits >> 22u, Z_BUCKET_MASK,
+                            Z_BUCKET_SHIFT);
+
                     curr->key = uint64_t(Pass::SENTINEL);
                     ++curr;
                 }

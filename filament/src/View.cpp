@@ -647,8 +647,19 @@ void FView::prepareSSAO(Handle<HwTexture> ssao) const noexcept {
     });
 }
 
+void FView::prepareSSR(Handle<HwTexture> ssr) const noexcept {
+    mPerViewSb.setSampler(PerViewSib::SSR, ssr, {
+            .filterMag = SamplerMagFilter::LINEAR,
+            .filterMin = SamplerMinFilter::LINEAR_MIPMAP_LINEAR
+    });
+}
+
 void FView::cleanupSSAO() const noexcept {
     mPerViewSb.setSampler(PerViewSib::SSAO, {}, {});
+}
+
+void FView::cleanupSSR() const noexcept {
+    mPerViewSb.setSampler(PerViewSib::SSR, {}, {});
 }
 
 void FView::froxelize(FEngine& engine) const noexcept {
@@ -938,14 +949,6 @@ void View::setFrontFaceWindingInverted(bool inverted) noexcept {
 
 bool View::isFrontFaceWindingInverted() const noexcept {
     return upcast(this)->isFrontFaceWindingInverted();
-}
-
-void View::setDepthPrepass(View::DepthPrepass prepass) noexcept {
-    upcast(this)->setDepthPrepass(prepass);
-}
-
-View::DepthPrepass View::getDepthPrepass() const noexcept {
-    return upcast(this)->getDepthPrepass();
 }
 
 void View::setDynamicLightingOptions(float zLightNear, float zLightFar) noexcept {

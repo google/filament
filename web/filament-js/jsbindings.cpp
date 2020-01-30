@@ -464,7 +464,6 @@ class_<View>("View")
     .function("getViewport", &View::getViewport)
     .function("setViewport", &View::setViewport)
     .function("setClearColor", &View::setClearColor)
-    .function("setDepthPrepass", &View::setDepthPrepass)
     .function("setPostProcessingEnabled", &View::setPostProcessingEnabled)
     .function("setAntiAliasing", &View::setAntiAliasing)
     .function("getAntiAliasing", &View::getAntiAliasing)
@@ -1447,9 +1446,15 @@ class_<ResourceLoader>("gltfio$ResourceLoader")
 
     .function("addResourceData", EMBIND_LAMBDA(void, (ResourceLoader* self, std::string url,
             BufferDescriptor buffer), {
-        self->addResourceData(url, std::move(*buffer.bd));
+        self->addResourceData(url.c_str(), std::move(*buffer.bd));
     }), allow_raw_pointers())
 
-    .function("loadResources", &ResourceLoader::loadResources, allow_raw_pointers());
+    .function("hasResourceData", EMBIND_LAMBDA(bool, (ResourceLoader* self, std::string url), {
+        return self->hasResourceData(url.c_str());
+    }), allow_raw_pointers())
+
+    .function("loadResources", EMBIND_LAMBDA(bool, (ResourceLoader* self, FilamentAsset* asset), {
+        return self->loadResources(asset);
+    }), allow_raw_pointers());
 
 } // EMSCRIPTEN_BINDINGS

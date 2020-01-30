@@ -1,0 +1,82 @@
+material {
+    name : separableGaussianBlur,
+    parameters : [
+        {
+            type : sampler2d,
+            name : source,
+            precision: medium
+        },
+        {
+            type : float4,
+            name : resolution,
+            precision: high
+        },
+        {
+            type : float2,
+            name : axis
+        },
+        {
+            type : float,
+            name : level
+        },
+        {
+            type : int,
+            name : count
+        },
+        {
+            type : float2[32],
+            name : kernel
+        }
+    ],
+    variables : [
+        vertex
+    ],
+    domain : postprocess,
+    depthWrite : false,
+    depthCulling : false
+}
+
+vertex {
+    void postProcessVertex(inout PostProcessVertexInputs postProcess) {
+        // in the fragment shader, this is interpolated to pixel centers, but since we use
+        // texel-fetch, it's not what we want. Convert from screen uv to texture uv.
+        vec2 size = vec2(textureSize(materialParams_source, int(materialParams.level)));
+        postProcess.vertex.xy = (postProcess.normalizedUV - 0.5 * materialParams.resolution.zw) + 0.5 / size;
+    }
+}
+
+fragment {
+    vec3 Tonemap_ReinhardWeighted(const vec3 x, float weight) {
+        // Weighted Reinhard tone-mapping operator designed for post-processing
+        // This tone-mapping operator is invertible
+        return x * (weight / (max3(x) + 1.0));
+    }
+
+    vec3 Tonemap_ReinhardWeighted_Invert(const vec3 x) {
+        // Inverse Reinhard tone-mapping operator, designed to be used in conjunction
+        // with the weighted Reinhard tone-mapping operator
+        return x / (1.0 - max3(x));
+    }
+    void tap(inout vec3 sum, float weight, highp vec2 position) {
+        vec3 s = textureLod(materialParams_source, position, materialParams.level).rgb;
+        sum += Tonemap_ReinhardWeighted(s, weight);
+    }
+
+    void postProcess(inout PostProcessInputs postProcess) {
+        highp vec2 uv = variable_vertex.xy;
+
+        // we handle the center pixel separately
+        vec3 sum = vec3(0);
+        tap(sum, materialParams.kernel[0].x, uv);
+
+        vec2 offset = materialParams.axis;
+        for (int i = 1; i < materialParams.count; i++, offset += materialParams.axis * 2.0) {
+            float k = materialParams.kernel[i].x;
+            vec2 o = offset + materialParams.axis * materialParams.kernel[i].y;
+            tap(sum, k, uv + o);
+            tap(sum, k, uv - o);
+        }
+
+        postProcess.color.rgb = Tonemap_ReinhardWeighted_Invert(sum);
+    }
+}

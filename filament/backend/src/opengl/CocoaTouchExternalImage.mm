@@ -25,6 +25,7 @@
 
 #include <math/vec2.h>
 
+#include <utils/compiler.h>
 #include <utils/Panic.h>
 
 namespace filament {
@@ -143,7 +144,7 @@ bool CocoaTouchExternalImage::set(CVPixelBufferRef image) noexcept {
 
     // The pixel buffer must be locked whenever we do rendering with it. We'll unlock it before
     // releasing.
-    CVReturn lockStatus = CVPixelBufferLockBaseAddress(image, 0);
+    UTILS_UNUSED_IN_RELEASE CVReturn lockStatus = CVPixelBufferLockBaseAddress(image, 0);
     assert(lockStatus == kCVReturnSuccess);
 
     if (planeCount == 0) {
@@ -217,9 +218,10 @@ CVOpenGLESTextureRef CocoaTouchExternalImage::createTextureFromImage(CVPixelBuff
     const size_t height = CVPixelBufferGetHeightOfPlane(image, plane);
 
     CVOpenGLESTextureRef texture = nullptr;
-    CVReturn success = CVOpenGLESTextureCacheCreateTextureFromImage(kCFAllocatorDefault,
-        mTextureCache, image, nullptr, GL_TEXTURE_2D, glFormat, width, height,
-        glFormat, GL_UNSIGNED_BYTE, plane, &texture);
+    UTILS_UNUSED_IN_RELEASE CVReturn success =
+            CVOpenGLESTextureCacheCreateTextureFromImage(kCFAllocatorDefault,
+            mTextureCache, image, nullptr, GL_TEXTURE_2D, glFormat, width, height,
+            glFormat, GL_UNSIGNED_BYTE, plane, &texture);
     assert(success == kCVReturnSuccess);
 
     return texture;

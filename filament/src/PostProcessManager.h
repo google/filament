@@ -44,23 +44,35 @@ public:
     void init() noexcept;
     void terminate(backend::DriverApi& driver) noexcept;
 
-    FrameGraphId <FrameGraphTexture> toneMapping(FrameGraph& fg,
-            FrameGraphId <FrameGraphTexture> input,
+    FrameGraphId<FrameGraphTexture> toneMapping(FrameGraph& fg,
+            FrameGraphId<FrameGraphTexture> input,
             backend::TextureFormat outFormat, bool dithering, bool translucent, bool fxaa) noexcept;
 
     FrameGraphId<FrameGraphTexture> fxaa(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, backend::TextureFormat outFormat,
             bool translucent) noexcept;
 
-    FrameGraphId <FrameGraphTexture> dynamicScaling(
-            FrameGraph& fg, uint8_t msaa, bool scaled, bool blend,
-            FrameGraphId <FrameGraphTexture> input,
+    FrameGraphId<FrameGraphTexture> dynamicScaling(FrameGraph& fg,
+            uint8_t msaa, bool scaled, bool blend,
+            FrameGraphId<FrameGraphTexture> input,
             backend::TextureFormat outFormat) noexcept;
+
+    FrameGraphId<FrameGraphTexture> quadBlit(FrameGraph& fg,
+            bool blend, FrameGraphId<FrameGraphTexture> input,
+            backend::TextureFormat outFormat) noexcept;
+
+    FrameGraphId <FrameGraphTexture> resolve(FrameGraph& fg,
+            const char* outputBufferName, uint8_t levels,
+            FrameGraphId <FrameGraphTexture> input) noexcept;
 
     FrameGraphId<FrameGraphTexture> ssao(FrameGraph& fg, details::RenderPass& pass,
             filament::Viewport const& svp,
             details::CameraInfo const& cameraInfo,
             View::AmbientOcclusionOptions const& options) noexcept;
+
+    FrameGraphId<FrameGraphTexture> gaussianBlurPass(FrameGraph& fg,
+            FrameGraphId<FrameGraphTexture> input, uint8_t srcLevel,
+            uint8_t dstLevel, float alpha) noexcept;
 
     backend::Handle<backend::HwTexture> getNoSSAOTexture() const {
         return mNoSSAOTexture;
@@ -75,7 +87,7 @@ private:
     FrameGraphId<FrameGraphTexture> mipmapPass(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, size_t level) noexcept;
 
-    FrameGraphId<FrameGraphTexture> blurPass(FrameGraph& fg,
+    FrameGraphId<FrameGraphTexture> bilateralBlurPass(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input,
             FrameGraphId<FrameGraphTexture> depth, math::int2 axis) noexcept;
 
@@ -106,13 +118,16 @@ private:
 
     PostProcessMaterial mSSAO;
     PostProcessMaterial mMipmapDepth;
-    PostProcessMaterial mBlur;
+    PostProcessMaterial mBilateralBlur;
+    PostProcessMaterial mSeparableGaussianBlur;
     PostProcessMaterial mBlit;
     PostProcessMaterial mTonemapping;
     PostProcessMaterial mFxaa;
 
     backend::Handle<backend::HwTexture> mNoSSAOTexture;
     backend::Handle<backend::HwTexture> mNoiseTexture;
+
+    size_t mSeparableGaussianBlurKernelStorageSize = 0;
 };
 
 } // namespace filament

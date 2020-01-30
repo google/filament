@@ -76,6 +76,13 @@ public class ResourceLoader {
     }
 
     /**
+     * Checks if the given resource has already been loaded.
+     */
+    public boolean hasResourceData(@NonNull String uri) {
+        return nHasResourceData(mNativeObject, uri);
+    }
+
+    /**
      * Iterates through all external buffers and images and creates corresponding Filament objects
      * (vertex buffers, textures, etc), which become owned by the asset.
      *
@@ -95,5 +102,6 @@ public class ResourceLoader {
     private static native void nDestroyResourceLoader(long nativeLoader);
     private static native void nAddResourceData(long nativeLoader, String url, Buffer buffer,
             int remaining);
+    private static native boolean nHasResourceData(long nativeLoader, String url);
     private static native void nLoadResources(long nativeLoader, long nativeAsset);
 }

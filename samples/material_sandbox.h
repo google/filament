@@ -37,16 +37,18 @@ constexpr uint8_t MATERIAL_MODEL_SUBSURFACE =  2;
 constexpr uint8_t MATERIAL_MODEL_CLOTH =       3;
 constexpr uint8_t MATERIAL_MODEL_SPECGLOSS =   4;
 
-constexpr uint8_t MATERIAL_UNLIT            = 0;
-constexpr uint8_t MATERIAL_LIT              = 1;
-constexpr uint8_t MATERIAL_SUBSURFACE       = 2;
-constexpr uint8_t MATERIAL_CLOTH            = 3;
-constexpr uint8_t MATERIAL_SPECGLOSS        = 4;
-constexpr uint8_t MATERIAL_TRANSPARENT      = 5;
-constexpr uint8_t MATERIAL_FADE             = 6;
-constexpr uint8_t MATERIAL_THIN_REFRACTION  = 7;
-constexpr uint8_t MATERIAL_SOLID_REFRACTION = 8;
-constexpr uint8_t MATERIAL_COUNT            = 9;
+constexpr uint8_t MATERIAL_UNLIT                = 0;
+constexpr uint8_t MATERIAL_LIT                  = 1;
+constexpr uint8_t MATERIAL_SUBSURFACE           = 2;
+constexpr uint8_t MATERIAL_CLOTH                = 3;
+constexpr uint8_t MATERIAL_SPECGLOSS            = 4;
+constexpr uint8_t MATERIAL_TRANSPARENT          = 5;
+constexpr uint8_t MATERIAL_FADE                 = 6;
+constexpr uint8_t MATERIAL_THIN_REFRACTION      = 7;
+constexpr uint8_t MATERIAL_SOLID_REFRACTION     = 8;
+constexpr uint8_t MATERIAL_THIN_SS_REFRACTION   = 9;
+constexpr uint8_t MATERIAL_SOLID_SS_REFRACTION  = 10;
+constexpr uint8_t MATERIAL_COUNT                = 11;
 
 constexpr uint8_t BLENDING_OPAQUE           = 0;
 constexpr uint8_t BLENDING_TRANSPARENT      = 1;
@@ -79,6 +81,7 @@ struct SandboxParameters {
     filament::sRGBColor sheenColor = {0.83f, 0.0f, 0.0f};
     int currentMaterialModel = MATERIAL_MODEL_LIT;
     int currentBlending = BLENDING_OPAQUE;
+    bool ssr = false;
     bool castShadows = true;
     filament::sRGBColor lightColor = {0.98f, 0.92f, 0.89f};
     float lightIntensity = 110000.0f;
@@ -137,11 +140,23 @@ inline void createInstances(SandboxParameters& params, filament::Engine& engine)
     params.materialInstance[MATERIAL_THIN_REFRACTION] =
             params.material[MATERIAL_THIN_REFRACTION]->createInstance();
 
+    params.material[MATERIAL_THIN_SS_REFRACTION] = Material::Builder()
+            .package(RESOURCES_SANDBOXLITTHINREFRACTIONSSR_DATA, RESOURCES_SANDBOXLITTHINREFRACTIONSSR_SIZE)
+            .build(engine);
+    params.materialInstance[MATERIAL_THIN_SS_REFRACTION] =
+            params.material[MATERIAL_THIN_SS_REFRACTION]->createInstance();
+
     params.material[MATERIAL_SOLID_REFRACTION] = Material::Builder()
             .package(RESOURCES_SANDBOXLITSOLIDREFRACTION_DATA, RESOURCES_SANDBOXLITSOLIDREFRACTION_SIZE)
             .build(engine);
     params.materialInstance[MATERIAL_SOLID_REFRACTION] =
             params.material[MATERIAL_SOLID_REFRACTION]->createInstance();
+
+    params.material[MATERIAL_SOLID_SS_REFRACTION] = Material::Builder()
+            .package(RESOURCES_SANDBOXLITSOLIDREFRACTIONSSR_DATA, RESOURCES_SANDBOXLITSOLIDREFRACTIONSSR_SIZE)
+            .build(engine);
+    params.materialInstance[MATERIAL_SOLID_SS_REFRACTION] =
+            params.material[MATERIAL_SOLID_SS_REFRACTION]->createInstance();
 
     params.material[MATERIAL_SUBSURFACE] = Material::Builder()
             .package(RESOURCES_SANDBOXSUBSURFACE_DATA, RESOURCES_SANDBOXSUBSURFACE_SIZE)
@@ -180,8 +195,13 @@ inline filament::MaterialInstance* updateInstances(SandboxParameters& params,
     if (material == MATERIAL_MODEL_LIT) {
         if (params.currentBlending == BLENDING_TRANSPARENT) material = MATERIAL_TRANSPARENT;
         if (params.currentBlending == BLENDING_FADE) material = MATERIAL_FADE;
-        if (params.currentBlending == BLENDING_THIN_REFRACTION) material = MATERIAL_THIN_REFRACTION;
-        if (params.currentBlending == BLENDING_SOLID_REFRACTION) material = MATERIAL_SOLID_REFRACTION;
+        if (params.ssr) {
+            if (params.currentBlending == BLENDING_THIN_REFRACTION) material = MATERIAL_THIN_SS_REFRACTION;
+            if (params.currentBlending == BLENDING_SOLID_REFRACTION) material = MATERIAL_SOLID_SS_REFRACTION;
+        } else {
+            if (params.currentBlending == BLENDING_THIN_REFRACTION) material = MATERIAL_THIN_REFRACTION;
+            if (params.currentBlending == BLENDING_SOLID_REFRACTION) material = MATERIAL_SOLID_REFRACTION;
+        }
     }
 
     bool hasRefraction = params.currentBlending == BLENDING_THIN_REFRACTION ||
