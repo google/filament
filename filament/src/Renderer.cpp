@@ -455,24 +455,43 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
 
         // Number of roughness levels we want. Perceptual roughness will be mapped between
         // 0 and 0.5 (see lodToPerceptualRoughness() below).
-        const size_t kNumRoughnessLods = 10;
+        const size_t kNumRoughnessLods = 5;
+
+        // maps a LOD to the perceptual roughness. this must match the inverse mapping
+        // in light_indirect.fs
+        auto lodToPerceptualRoughness = [](float lod) -> float {
+            return 0.5f * std::pow(2.0f, lod - (kNumRoughnessLods - 1)); };
 
         // Copy the color buffer into a texture, we use resolve() because in case of a multi-sample
         // buffer, it'll also resolve it.
         input = ppm.resolve(fg, "Refraction Buffer",
                 kNumRoughnessLods, TextureFormat::R11F_G11F_B10F, input);
 
-//        // scale factor for the gaussian so it matches our resolution / FOV
+        // scale factor for the gaussian so it matches our resolution / FOV
         const float verticalFieldOfView = view.getCameraUser().getFieldOfView(Camera::Fov::VERTICAL);
         const float s = pow2(verticalFieldOfView / desc.height);
 
-        float alpha0 = 0.2469f / s;
+        // this compute the alpha parameter of a gaussian that is applied on a base gaussian
+        // and for which the result of the convolution is given.
+        auto deconvolveGaussian = [](float baseAlpha, float convolvedAlpha) -> float {
+            return (baseAlpha * convolvedAlpha) / (baseAlpha - convolvedAlpha);
+        };
+
+        float prevAlpha = 65536.0; // just need a large number
         for (size_t i = 1; i < kNumRoughnessLods; i++) {
-            float alpha = alpha0 / float(1 << i * 2);
-            float roughness = 1.0f / std::sqrt(alpha);
-            float perceptualRoughness = std::sqrt(roughness);
-            slog.d << "lod=" << i << ", alpha=" << alpha << ", perceptualRoughness=" << perceptualRoughness << io::endl;
-            input = ppm.gaussianBlurPass(fg, input, i - 1, i);
+            // compute our gaussian parameter, alpha, for a given pereceptual roughness
+            // The gaussian kernel is e^(-alpha * x^2)
+            // and alpha = 1/roughness^2, with x between -pi/2 and pi/2
+            // with, roughness = perceptual_roughnes^2
+            const float perceptualRoughness = lodToPerceptualRoughness(i);
+            const float roughness = pow2(perceptualRoughness);
+            const float alpha = s * (1.0f / pow2(roughness));
+            const float r = float(1 << (i - 1) * 2);
+            const float alphaForLod = r * deconvolveGaussian(prevAlpha, alpha);
+            input = ppm.gaussianBlurPass(fg, input, i - 1, i, alphaForLod);
+            prevAlpha = alpha;
+            //slog.d << "roughness=" << perceptualRoughness
+            //    << ", alpha=" << alpha << ", " << alphaForLod << io::endl;
         }
 
         struct PrepareSSRData {
