@@ -550,6 +550,12 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
         vbb.normalized(semantic, inputAccessor->normalized);
     }
 
+    // If the model is lit but does not have normals, we'll need to generate flat normals.
+    if (inPrim->material && !inPrim->material->unlit && !hasNormals) {
+        vbb.attribute(VertexAttribute::TANGENTS, slot++, VertexBuffer::AttributeType::SHORT4);
+        vbb.normalized(VertexAttribute::TANGENTS);
+    }
+
     cgltf_size targetsCount = inPrim->targets_count;
     if (targetsCount > MAX_MORPH_TARGETS) {
         slog.w << "Too many morph targets in " << name << io::endl;
@@ -633,10 +639,6 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
         }
     }
 
-    if (inPrim->material && !inPrim->material->unlit && !hasNormals) {
-        slog.w << "Missing normals in " << name << io::endl;
-    }
-
     if (needsDummyData) {
         slot++;
     }
@@ -693,6 +695,22 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
             .generateTangents = false,
             .sparseAccessor = (bool) inputAccessor->is_sparse,
         });
+    }
+
+    // If the model is lit but does not have normals, we'll need to generate flat normals.
+    if (inPrim->material && !inPrim->material->unlit && !hasNormals) {
+            mResult->mBufferBindings.push_back({
+                .uri = "",
+                .totalSize = 0,
+                .bufferIndex = uint8_t(slot++),
+                .vertexBuffer = vertices,
+                .indexBuffer = nullptr,
+                .convertBytesToShorts = false,
+                .generateTrivialIndices = false,
+                .generateDummyData = false,
+                .generateTangents = true,
+                .sparseAccessor = false,
+            });
     }
 
     for (cgltf_size targetIndex = 0; targetIndex < targetsCount; targetIndex++) {

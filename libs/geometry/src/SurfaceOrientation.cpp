@@ -46,6 +46,7 @@ struct OrientationBuilderImpl {
     SurfaceOrientation buildWithNormalsOnly();
     SurfaceOrientation buildWithSuppliedTangents();
     SurfaceOrientation buildWithUvs();
+    SurfaceOrientation buildWithFlatNormals();
 };
 
 struct OrientationImpl {
@@ -110,21 +111,23 @@ Builder& Builder::triangles(const ushort3* triangles) noexcept {
 }
 
 SurfaceOrientation Builder::build() {
-    ASSERT_PRECONDITION(mImpl->normals != nullptr, "Normals are required.");
     ASSERT_PRECONDITION(mImpl->vertexCount > 0, "Vertex count must be non-zero.");
+    if (mImpl->triangles16 || mImpl->triangles32) {
+        ASSERT_PRECONDITION(mImpl->positions, "Positions are required.");
+        ASSERT_PRECONDITION(!mImpl->triangles16 || !mImpl->triangles32,
+                "Choose 16 or 32-bit indices, not both.");
+        ASSERT_PRECONDITION(mImpl->triangleCount > 0, "Triangle count is required.");
+        if (mImpl->normals == nullptr) {
+            return mImpl->buildWithFlatNormals();
+        }
+    }
+    ASSERT_PRECONDITION(mImpl->normals != nullptr, "Normals are required.");
     if (mImpl->tangents != nullptr) {
         return mImpl->buildWithSuppliedTangents();
     }
     if (mImpl->uvs == nullptr) {
         return mImpl->buildWithNormalsOnly();
     }
-    bool hasTriangles = mImpl->triangles16 || mImpl->triangles32;
-    bool bothTypes = mImpl->triangles16 && mImpl->triangles32;
-    ASSERT_PRECONDITION(hasTriangles && mImpl->positions,
-            "When using UVs, positions and triangles are required.");
-    ASSERT_PRECONDITION(!bothTypes, "Choose 16 or 32-bit indices, not both.");
-    ASSERT_PRECONDITION(mImpl->triangleCount > 0,
-            "When using UVs, triangle count is required.");
     return mImpl->buildWithUvs();
 }
 
@@ -191,7 +194,8 @@ SurfaceOrientation OrientationBuilderImpl::buildWithSuppliedTangents() {
 // http://www.terathon.com/code/tangent.html
 //
 // We considered mikktspace (which thankfully has a zlib-style license) but it would require
-// re-indexing via meshoptimizer and is therefore a bit heavyweight.
+// re-indexing (i.e. welding) and is therefore a bit heavyweight. Note that the welding could be
+// done via meshoptimizer.
 //
 SurfaceOrientation OrientationBuilderImpl::buildWithUvs() {
     ASSERT_PRECONDITION(this->normalStride == 0, "Non-zero normal stride not yet supported.");
@@ -306,6 +310,25 @@ void SurfaceOrientation::getQuats(quath* out, size_t quatCount, size_t stride) c
         *out = quath(in[i]);
         out = (decltype(out)) (((uint8_t*) out) + stride);
     }
+}
+
+SurfaceOrientation OrientationBuilderImpl::buildWithFlatNormals() {
+    float3* normals = new float3[vertexCount];
+    for (size_t a = 0; a < triangleCount; ++a) {
+        const uint3 tri = triangles16 ? uint3(triangles16[a]) : triangles32[a];
+        const float3 v1 = positions[tri.x];
+        const float3 v2 = positions[tri.y];
+        const float3 v3 = positions[tri.z];
+        const float3 normal = normalize(cross(v2 - v1, v3 - v1));
+        normals[tri.x] = normal;
+        normals[tri.y] = normal;
+        normals[tri.z] = normal;
+    }
+    this->normals = normals;
+    SurfaceOrientation result = buildWithNormalsOnly();
+    this->normals = nullptr;
+    delete[] normals;
+    return result;
 }
 
 } // namespace geometry
