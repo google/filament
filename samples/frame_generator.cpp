@@ -348,7 +348,7 @@ static LinearImage toLinear(size_t w, size_t h, size_t bpr, const uint8_t* src) 
         for (size_t x = 0; x < w; ++x, p += 3) {
             filament::math::float3 sRGB(p[0], p[1], p[2]);
             sRGB /= std::numeric_limits<T>::max();
-            *d++ = sRGB;
+            *d++ = sRGBToLinear(sRGB);
         }
     }
     return result;
