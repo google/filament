@@ -131,7 +131,9 @@ This document is part of the <a href="https://github.com/google/filament">Filame
 
 
 </p><ul>
-<li class="minus"><a href="https://github.com/romainguy">Romain Guy</a>, <a href="https://twitter.com/romainguy">@romainguy</a></li></ul>
+<li class="minus"><a href="https://github.com/romainguy">Romain Guy</a>, <a href="https://twitter.com/romainguy">@romainguy</a>
+</li>
+<li class="minus"><a href="https://github.com/pixelflinger">Mathias Agopian</a>, <a href="https://twitter.com/darthmoosious">@romainguy</a></li></ul>
 
 <p></p>
 <a class="target" name="overview">&#xA0;</a><a class="target" name="overview">&#xA0;</a><a class="target" name="toc2">&#xA0;</a><h1>Overview</h1>
@@ -291,11 +293,11 @@ The type and range of each property is described in <a href="#table_standardprop
 
 <p></p><p>
 
-    The light attenuation through the material is defined as \(e^{-absorption * distance}\),
+    The light attenuation through the material is defined as \(e^{-absorption \cdot distance}\),
     and the distance depends on the <code>thickness</code> parameter. If <code>thickness</code> is not provided, then
     the <code>absorption</code> parameter is used directly and the light attenuation through the material
     becomes \(1 - absorption\). To obtain a certain color at a desired distance, the above
-    equation can be inverted such as \(absorption = -ln(color)/distance\).</p></div>
+    equation can be inverted such as \(absorption = -\frac{ln(color)}{distance}\).</p></div>
 
 <p></p><p>
 

@@ -13,6 +13,7 @@ This document is part of the [Filament project](https://github.com/google/filame
 ## Authors
 
 - [Romain Guy](https://github.com/romainguy), [@romainguy](https://twitter.com/romainguy)
+- [Mathias Agopian](https://github.com/pixelflinger), [@romainguy](https://twitter.com/darthmoosious)
 
 # Overview
 
@@ -131,11 +132,11 @@ The type and range of each property is described in table [standardPropertiesTyp
     section for more information.
 
 !!! Note: About absorption
-    The light attenuation through the material is defined as $e^{-absorption * distance}$,
+    The light attenuation through the material is defined as $e^{-absorption \cdot distance}$,
     and the distance depends on the `thickness` parameter. If `thickness` is not provided, then
     the `absorption` parameter is used directly and the light attenuation through the material
     becomes $1 - absorption$. To obtain a certain color at a desired distance, the above
-    equation can be inverted such as $absorption = -ln(color)/distance$.
+    equation can be inverted such as $absorption = -\frac{ln(color)}{distance}$.
 
 !!! Note: About ior and reflectance
     The index of refraction (IOR) and the reflectance represent the same physical attribute,
