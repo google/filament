@@ -98,10 +98,10 @@ TEST(FrameGraphTest, SimpleRenderPass2) {
 
                 data.outColor = builder.write(builder.read(data.outColor));
                 data.outDepth = builder.write(builder.read(data.outDepth));
-                data.rt = builder.createRenderTarget("rt", {
-                        .attachments.color = data.outColor,
-                        .attachments.depth = data.outDepth
-                });
+                FrameGraphRenderTarget::Descriptor renderTargetDescr;
+                renderTargetDescr.attachments.color = data.outColor;
+                renderTargetDescr.attachments.depth = data.outDepth;
+                data.rt = builder.createRenderTarget("rt", renderTargetDescr);
 
                 EXPECT_TRUE(fg.isValid(data.outColor));
                 EXPECT_TRUE(fg.isValid(data.outDepth));
@@ -146,9 +146,9 @@ TEST(FrameGraphTest, ScenarioDepthPrePass) {
                 inputDesc.format = TextureFormat::DEPTH24;
                 data.outDepth = builder.createTexture("depth buffer", inputDesc);
                 data.outDepth = builder.write(builder.read(data.outDepth));
-                data.rt = builder.createRenderTarget("rt depth", {
-                        .attachments.depth = data.outDepth
-                });
+                FrameGraphRenderTarget::Descriptor renderTargetDescr;
+                renderTargetDescr.attachments.depth = data.outDepth;
+                data.rt = builder.createRenderTarget("rt depth", renderTargetDescr);
                 EXPECT_TRUE(fg.isValid(data.outDepth));
             },
             [=, &depthPrepassExecuted](
@@ -179,10 +179,10 @@ TEST(FrameGraphTest, ScenarioDepthPrePass) {
 
                 data.outColor = builder.write(builder.read(data.outColor));
                 data.outDepth = builder.write(builder.read(data.outDepth));
-                data.rt = builder.createRenderTarget("rt color+depth", {
-                        .attachments.color = data.outColor,
-                        .attachments.depth = data.outDepth
-                });
+                FrameGraphRenderTarget::Descriptor renderTargetDescr;
+                renderTargetDescr.attachments.color = data.outColor;
+                renderTargetDescr.attachments.depth = data.outDepth;
+                data.rt = builder.createRenderTarget("rt color+depth", renderTargetDescr);
 
                 EXPECT_FALSE(fg.isValid(depthPrepass.getData().outDepth));
                 EXPECT_TRUE(fg.isValid(data.outColor));
