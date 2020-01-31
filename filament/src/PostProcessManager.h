@@ -73,9 +73,9 @@ public:
             details::CameraInfo const& cameraInfo,
             View::AmbientOcclusionOptions const& options) noexcept;
 
-    FrameGraphId<FrameGraphTexture> gaussianBlurPass(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, uint8_t srcLevel,
-            uint8_t dstLevel, float alpha) noexcept;
+    FrameGraphId <FrameGraphTexture> gaussianBlurPass(FrameGraph& fg,
+            FrameGraphId <FrameGraphTexture> input, uint8_t srcLevel, uint8_t dstLevel,
+            size_t kernelWidth, float sigma) noexcept;
 
     backend::Handle<backend::HwTexture> getNoSSAOTexture() const {
         return mNoSSAOTexture;

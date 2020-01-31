@@ -445,11 +445,11 @@ void applyRefraction(const PixelParams pixel,
     p.xy = uvToRenderTargetUV(p.xy * (0.5 / p.w) + 0.5);
 
     // perceptualRoughness to LOD
-    const float kNumRoughnessLods = 5.0;
     // Empirical factor to compensate for the gaussian approximation of Dggx, chosen so
     // cubemap and screen-space modes match at perceptualRoughness 0.125
     float tweakedPerceptualRoughness = perceptualRoughness * 1.74;
-    float lod = log2(tweakedPerceptualRoughness * 2.0) + (kNumRoughnessLods - 1.0);
+    float lod = max(0.0, 2.0 * log2(tweakedPerceptualRoughness) + frameUniforms.refractionLodOffset);
+
     vec3 Ft = textureLod(light_ssr, p.xy, lod).rgb;
 #endif
 
