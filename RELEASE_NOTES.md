@@ -9,6 +9,7 @@ A new header is inserted each time a *tag* is created.
 - Screen-space refraction is now supported.
 - Removed depth-prepass related APIs.
 - gltfio: add asynchronous API to ResourceLoader.
+- gltfio: generate normals for flat-shaded models that do not have normals.
 
 ## v1.4.5
 

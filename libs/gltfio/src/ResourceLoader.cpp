@@ -690,7 +690,7 @@ void ResourceLoader::computeTangents(FFilamentAsset* asset) const {
 
         // At a minimum we need normals to generate tangents.
         auto normalsInfo = accessors[cgltf_attribute_type_normal];
-        if (normalsInfo == nullptr || vertexCount == 0) {
+        if (vertexCount == 0) {
             return;
         }
 
@@ -700,11 +700,13 @@ void ResourceLoader::computeTangents(FFilamentAsset* asset) const {
         sob.vertexCount(vertexCount);
 
         // Convert normals into packed floats.
-        assert(normalsInfo->count == vertexCount);
-        assert(normalsInfo->type == cgltf_type_vec3);
-        fp32Normals.resize(vertexCount);
-        cgltf_accessor_unpack_floats(normalsInfo, &fp32Normals[0].x, vertexCount * 3);
-        sob.normals(fp32Normals.data());
+        if (normalsInfo) {
+            assert(normalsInfo->count == vertexCount);
+            assert(normalsInfo->type == cgltf_type_vec3);
+            fp32Normals.resize(vertexCount);
+            cgltf_accessor_unpack_floats(normalsInfo, &fp32Normals[0].x, vertexCount * 3);
+            sob.normals(fp32Normals.data());
+        }
 
         // Convert tangents into packed floats.
         auto tangentsInfo = accessors[cgltf_attribute_type_tangent];
