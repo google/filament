@@ -128,7 +128,7 @@ public:
             ArenaScope& arena, Viewport const& viewport) noexcept;
     void prepareSSAO(backend::Handle<backend::HwTexture> ssao) const noexcept;
     void cleanupSSAO() const noexcept;
-    void prepareSSR(backend::Handle<backend::HwTexture> ssr) const noexcept;
+    void prepareSSR(backend::Handle<backend::HwTexture> ssr, float refractionLodOffset) const noexcept;
     void cleanupSSR() const noexcept;
     void froxelize(FEngine& engine) const noexcept;
     void commitUniforms(backend::DriverApi& driver) const noexcept;
