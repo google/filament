@@ -64,8 +64,13 @@ public class FilamentAsset {
     /**
      * Pops a ready renderable off the queue, or returns 0 if no renderables have become ready.
      *
+     * NOTE: To determine the progress percentage or completion status, please use
+     * ResourceLoader#asyncGetLoadProgress.
+     *
      * This helper method allows clients to progressively add renderables to the scene as textures
      * gradually become ready through asynchronous loading.
+     *
+     * See also ResourceLoader#asyncBeginLoad.
      */
     public @Entity int popRenderable() {
         return nPopRenderable(mNativeObject);

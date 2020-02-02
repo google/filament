@@ -261,7 +261,7 @@ int main(int argc, char** argv) {
         app.resourceLoader->asyncUpdateLoad();
 
         // Add renderables to the scene as they become ready.
-        app.viewer->setAsset(app.asset, !app.actualSize);
+        app.viewer->populateScene(app.asset, !app.actualSize);
 
         app.viewer->applyAnimation(now);
     };

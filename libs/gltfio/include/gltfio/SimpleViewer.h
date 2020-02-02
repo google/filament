@@ -69,17 +69,16 @@ public:
     ~SimpleViewer();
 
     /**
-     * Sets or changes the asset that is being viewed.
+     * Adds the asset's ready-to-render entities into the scene and optionally transforms the root
+     * node to make it fit into a unit cube at the origin.
      *
-     * This adds all the asset's entities into the scene and optionally transforms the asset to make
-     * it fit into a unit cube at the origin. The viewer does not claim ownership over the asset or
-     * its entities. Clients should use AssetLoader and ResourceLoader to load an asset before
-     * passing it in.
+     * The viewer does not claim ownership over the asset or its entities. Clients should use
+     * AssetLoader and ResourceLoader to load an asset before passing it in.
      *
      * @param asset The asset to view.
      * @param scale Adds a transform to the root to fit the asset into a unit cube at the origin.
      */
-    void setAsset(FilamentAsset* asset, bool scale);
+    void populateScene(FilamentAsset* asset, bool scale);
 
     /**
      * Removes the current asset from the viewer.
@@ -257,7 +256,7 @@ SimpleViewer::~SimpleViewer() {
     mEngine->destroy(mSunlight);
 }
 
-void SimpleViewer::setAsset(FilamentAsset* asset, bool scale) {
+void SimpleViewer::populateScene(FilamentAsset* asset, bool scale) {
     if (mAsset == asset) {
         while (utils::Entity e = mAsset->popRenderable()) {
             mScene->addEntity(e);

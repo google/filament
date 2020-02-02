@@ -43,16 +43,16 @@ namespace gltfio {
  * One graph corresponds to a single glTF asset. The graph only contains weak references, it does
  * not have ownership over any Filament objects. Here's an example:
  *
- *    Entity          Entity   Entity   Entity
- *      |            /      \     |     /
- *      |           /        \    |    /
- *   Material   Material       Material
- *             /   |    \          |
- *            /    |     \         |
- *        Param  Param   Param   Param
- *           \     /        \     /
- *            \   /          \   /
- *          Texture         Texture
+ *    Entity           Entity     Entity   Entity
+ *      |            /        \     |     /
+ *      |           /          \    |    /
+ *   Material   Material         Material
+ *             /   |    \           |
+ *            /    |     \          |
+ *        Param  Param   Param    Param
+ *           \     /       |        |
+ *            \   /        |        |
+ *          Texture     Texture  Texture
  *
  * Note that the left-most entity in the above graph has no textures, so it becomes ready as soon as
  * finalize is called.
@@ -77,28 +77,34 @@ public:
     void markAsReady(filament::Texture* texture);
 
 private:
-    struct TextureStatus {
+    struct TextureNode {
         filament::Texture* texture;
         bool ready;
     };
 
-    struct MaterialStatus {
-        tsl::robin_map<std::string, TextureStatus*> params;
+    struct MaterialNode {
+        tsl::robin_map<std::string, TextureNode*> params;
     };
 
-    struct EntityStatus {
+    struct EntityNode {
         tsl::robin_set<Material*> materials;
         size_t numReadyMaterials = 0;
     };
 
     void markAsReady(Material* material);
-    TextureStatus* getStatus(filament::Texture* texture);
+    TextureNode* getStatus(filament::Texture* texture);
 
-    tsl::robin_map<Entity, EntityStatus> mEntityToMaterial;
+    // The following maps contain the directed edges in the graph.
+    tsl::robin_map<Entity, EntityNode> mEntityToMaterial;
     tsl::robin_map<Material*, tsl::robin_set<Entity>> mMaterialToEntity;
-    tsl::robin_map<Material*, MaterialStatus> mMaterialToTexture;
+    tsl::robin_map<Material*, MaterialNode> mMaterialToTexture;
     tsl::robin_map<filament::Texture*, tsl::robin_set<Material*>> mTextureToMaterial;
-    tsl::robin_map<filament::Texture*, std::unique_ptr<TextureStatus>> mTextures;
+
+    // Each texture (and its readiness flag) can be referenced from multiple nodes, so we own
+    // a collection of wrapper objects in the following map. This uses std::unique_ptr to allow
+    // nodes to refer to a texture wrapper using a stable weak pointer.
+    tsl::robin_map<filament::Texture*, std::unique_ptr<TextureNode>> mTextureNodes;
+
     std::queue<Entity> mReadyRenderables;
     bool mFinalized = false;
 };
