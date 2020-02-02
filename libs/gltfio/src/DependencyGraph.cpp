@@ -59,7 +59,7 @@ void DependencyGraph::addEdge(Texture* texture, MaterialInstance* material, cons
 
 void DependencyGraph::markAsReady(Texture* texture) {
     assert(texture && mFinalized);
-    mTextures.at(texture)->ready = true;
+    mTextureNodes.at(texture)->ready = true;
 
     // Iterate over the materials associated with this texture to check if any have become ready.
     // This is O(n2) but the inner loop is always small.
@@ -94,10 +94,10 @@ void DependencyGraph::markAsReady(MaterialInstance* material) {
     }
 }
 
-DependencyGraph::TextureStatus* DependencyGraph::getStatus(Texture* texture) {
-    auto iter = mTextures.find(texture);
-    if (iter == mTextures.end()) {
-        TextureStatus* status = (mTextures[texture] = std::make_unique<TextureStatus>()).get();
+DependencyGraph::TextureNode* DependencyGraph::getStatus(Texture* texture) {
+    auto iter = mTextureNodes.find(texture);
+    if (iter == mTextureNodes.end()) {
+        TextureNode* status = (mTextureNodes[texture] = std::make_unique<TextureNode>()).get();
         *status = {texture, false};
         return status;
     }

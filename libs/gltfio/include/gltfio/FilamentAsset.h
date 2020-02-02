@@ -75,9 +75,12 @@ public:
     /**
      * Pops a ready renderable off the queue, or returns 0 if no renderables have become ready.
      *
-     * This helper method allows clients to progressively add renderables to the scene as textures
-     * gradually become ready through asynchronous loading. For example, on every frame progressive
-     * applications can do something like this:
+     * NOTE: To determine the progress percentage or completion status, please use
+     * ResourceLoader#asyncGetLoadProgress.
+     *
+     * This method allows clients to progressively add the asset's renderables to the scene as
+     * textures gradually become ready through asynchronous loading. For example, on every frame
+     * progressive applications can do something like this:
      *
      *    while (utils::Entity e = popRenderable()) { scene.addEntity(e); }
      *
