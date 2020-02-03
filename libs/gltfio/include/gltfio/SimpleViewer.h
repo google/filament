@@ -257,27 +257,26 @@ SimpleViewer::~SimpleViewer() {
 }
 
 void SimpleViewer::populateScene(FilamentAsset* asset, bool scale) {
-    if (mAsset == asset) {
-        while (utils::Entity e = mAsset->popRenderable()) {
-            mScene->addEntity(e);
+    if (mAsset != asset) {
+        removeAsset();
+        mAsset = asset;
+        if (!asset) {
+            mAnimator = nullptr;
+            return;
         }
-        return;
+        mAnimator = asset->getAnimator();
+        if (scale) {
+            auto& tcm = mEngine->getTransformManager();
+            auto root = tcm.getInstance(mAsset->getRoot());
+            filament::math::mat4f transform = fitIntoUnitCube(mAsset->getBoundingBox());
+            tcm.setTransform(root, transform);
+        }
     }
-    removeAsset();
-    mAsset = asset;
-    if (!asset) {
-        mAnimator = nullptr;
-        return;
-    }
-    mAnimator = asset->getAnimator();
-    if (scale) {
-        auto& tcm = mEngine->getTransformManager();
-        auto root = tcm.getInstance(mAsset->getRoot());
-        filament::math::mat4f transform = fitIntoUnitCube(mAsset->getBoundingBox());
-        tcm.setTransform(root, transform);
-    }
-    while (utils::Entity e = mAsset->popRenderable()) {
-        mScene->addEntity(e);
+
+    static constexpr int kNumAvailable = 128;
+    utils::Entity renderables[kNumAvailable];
+    while (size_t numWritten = mAsset->popRenderables(renderables, kNumAvailable)) {
+        mScene->addEntities(renderables, numWritten);
     }
 }
 

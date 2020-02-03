@@ -37,6 +37,17 @@ Java_com_google_android_filament_gltfio_FilamentAsset_nPopRenderable(JNIEnv*, jc
 }
 
 extern "C" JNIEXPORT jint JNICALL
+Java_com_google_android_filament_gltfio_FilamentAsset_nPopRenderables(JNIEnv* env, jclass,
+        jlong nativeAsset, jintArray result) {
+    FilamentAsset* asset = (FilamentAsset*) nativeAsset;
+    jsize available = env->GetArrayLength(result);
+    Entity* entities = (Entity*) env->GetIntArrayElements(result, nullptr);
+    size_t retval = asset->popRenderables(entities, available);
+    env->ReleaseIntArrayElements(result, (jint*) entities, 0);
+    return retval;
+}
+
+extern "C" JNIEXPORT jint JNICALL
 Java_com_google_android_filament_gltfio_FilamentAsset_nGetEntityCount(JNIEnv*, jclass,
         jlong nativeAsset) {
     FilamentAsset* asset = (FilamentAsset*) nativeAsset;
@@ -47,8 +58,10 @@ extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_gltfio_FilamentAsset_nGetEntities(JNIEnv* env, jclass,
         jlong nativeAsset, jintArray result) {
     FilamentAsset* asset = (FilamentAsset*) nativeAsset;
+    jsize available = env->GetArrayLength(result);
     Entity* entities = (Entity*) env->GetIntArrayElements(result, nullptr);
-    std::copy_n(asset->getEntities(), asset->getEntityCount(), entities);
+    std::copy_n(asset->getEntities(),
+            std::min(available, (jsize) asset->getEntityCount()), entities);
     env->ReleaseIntArrayElements(result, (jint*) entities, 0);
 }
 
