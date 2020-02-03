@@ -74,6 +74,7 @@ class ModelViewer {
     private var swapChain: SwapChain? = null
     private var assetLoader: AssetLoader
     private var resourceLoader: ResourceLoader
+    private val readyRenderables = IntArray(128) // add up to 128 entities at a time
 
     private val eyePos = DoubleArray(3)
     private val target = DoubleArray(3)
@@ -207,13 +208,7 @@ class ModelViewer {
         resourceLoader.asyncUpdateLoad()
 
         // Add renderable entities to the scene as they become ready.
-        asset?.let {
-            var entity = 0
-            val popRenderable = {entity = it.popRenderable(); entity != 0}
-            while (popRenderable()) {
-                scene.addEntity(entity)
-            }
-        }
+        asset?.let { populateScene(it) }
 
         // Extract the camera basis from the helper and push it to the Filament camera.
         cameraManipulator.getLookAt(eyePos, target, upward)
@@ -226,6 +221,14 @@ class ModelViewer {
         if (renderer.beginFrame(swapChain!!)) {
             renderer.render(view)
             renderer.endFrame()
+        }
+    }
+
+    private fun populateScene(asset: FilamentAsset) {
+        var count = 0
+        val popRenderables = {count = asset.popRenderables(readyRenderables); count != 0}
+        while (popRenderables()) {
+            scene.addEntities(readyRenderables.take(count).toIntArray())
         }
     }
 

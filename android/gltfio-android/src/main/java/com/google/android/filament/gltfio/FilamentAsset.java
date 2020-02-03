@@ -17,6 +17,7 @@
 package com.google.android.filament.gltfio;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.google.android.filament.Box;
 import com.google.android.filament.Entity;
@@ -74,6 +75,16 @@ public class FilamentAsset {
      */
     public @Entity int popRenderable() {
         return nPopRenderable(mNativeObject);
+    }
+
+    /**
+     * Pops one or more renderables off the queue, or returns the available number.
+     *
+     * Returns the number of entities written into the given array. If the given array
+     * is null, returns the number of available renderables.
+     */
+    public int popRenderables(@Nullable @Entity int[] entities) {
+        return nPopRenderables(mNativeObject, entities);
     }
 
     /**
@@ -143,6 +154,7 @@ public class FilamentAsset {
 
     private static native int nGetRoot(long nativeAsset);
     private static native int nPopRenderable(long nativeAsset);
+    private static native int nPopRenderables(long nativeAsset, int[] result);
     private static native int nGetEntityCount(long nativeAsset);
     private static native void nGetEntities(long nativeAsset, int[] result);
     private static native void nGetBoundingBox(long nativeAsset, float[] box);

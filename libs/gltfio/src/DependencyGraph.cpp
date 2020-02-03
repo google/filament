@@ -21,13 +21,16 @@ using namespace utils;
 
 namespace gltfio {
 
-Entity DependencyGraph::popReadyRenderable() noexcept {
-    if (mReadyRenderables.empty()) {
-        return Entity();
+size_t DependencyGraph::popRenderables(Entity* result, size_t count) noexcept {
+    if (result == nullptr) {
+        return mReadyRenderables.size();
     }
-    auto oldest = mReadyRenderables.front();
-    mReadyRenderables.pop();
-    return oldest;
+    size_t numWritten = 0;
+    while (numWritten < count && !mReadyRenderables.empty()) {
+        result[numWritten++] = mReadyRenderables.front();
+        mReadyRenderables.pop();
+    }
+    return numWritten;
 }
 
 void DependencyGraph::addEdge(Entity entity, MaterialInstance* mi) {

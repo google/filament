@@ -62,8 +62,10 @@ public:
     using Material = filament::MaterialInstance;
     using Entity = utils::Entity;
 
-    // Returns a ready-to-render entity, or 0 if no new entities have become renderable.
-    Entity popReadyRenderable() noexcept;
+    // Pops up to "count" ready-to-render entities off the queue.
+    // If "result" is non-null, returns the number of written items.
+    // If "result" is null, returns the number of available entities.
+    size_t popRenderables(Entity* result, size_t count) noexcept;
 
     // These are called during the initial asset loader phase.
     void addEdge(Entity entity, Material* material);

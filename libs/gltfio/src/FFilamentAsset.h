@@ -94,8 +94,8 @@ struct FFilamentAsset : public FilamentAsset {
         return mRoot;
     }
 
-    utils::Entity popRenderable() noexcept {
-        return mDependencyGraph.popReadyRenderable();
+    size_t popRenderables(utils::Entity* entities, size_t count) noexcept {
+        return mDependencyGraph.popRenderables(entities, count);
     }
 
     size_t getMaterialInstanceCount() const noexcept {

@@ -36,7 +36,13 @@ Entity FilamentAsset::getRoot() const noexcept {
 }
 
 Entity FilamentAsset::popRenderable() noexcept {
-    return upcast(this)->popRenderable();
+    Entity result[1];
+    const bool empty = !popRenderables(result, 1);
+    return empty ? Entity() : result[0];
+}
+
+size_t FilamentAsset::popRenderables(Entity* result, size_t count) noexcept {
+    return upcast(this)->popRenderables(result, count);
 }
 
 size_t FilamentAsset::getMaterialInstanceCount() const noexcept {

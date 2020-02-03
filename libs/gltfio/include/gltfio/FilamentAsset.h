@@ -76,7 +76,8 @@ public:
      * Pops a ready renderable off the queue, or returns 0 if no renderables have become ready.
      *
      * NOTE: To determine the progress percentage or completion status, please use
-     * ResourceLoader#asyncGetLoadProgress.
+     * ResourceLoader#asyncGetLoadProgress. To get the number of ready renderables,
+     * please use popRenderables().
      *
      * This method allows clients to progressively add the asset's renderables to the scene as
      * textures gradually become ready through asynchronous loading. For example, on every frame
@@ -84,9 +85,21 @@ public:
      *
      *    while (utils::Entity e = popRenderable()) { scene.addEntity(e); }
      *
-     * See ResourceLoader#asyncBeginLoad.
+     * \see ResourceLoader#asyncBeginLoad
+     * \see popRenderables()
      */
     utils::Entity popRenderable() noexcept;
+
+    /**
+     * Pops up to "count" ready renderables off the queue, or returns the available number.
+     *
+     * The given pointer should either be null or point to memory that can hold up to count
+     * entities. If the pointer is null, returns the number of available renderables. Otherwise
+     * returns the number of entities that have been written.
+     *
+     * \see ResourceLoader#asyncBeginLoad
+     */
+    size_t popRenderables(utils::Entity* entities, size_t count) noexcept;
 
     /** Gets all material instances. These are already bound to renderables. */
     const filament::MaterialInstance* const* getMaterialInstances() const noexcept;
