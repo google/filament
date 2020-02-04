@@ -16,3 +16,8 @@ set( EXE_NAME test_write )
 add_executable( ${EXE_NAME} test_write.cpp )
 set_property( TARGET ${EXE_NAME} PROPERTY CXX_STANDARD 11 )
 install( TARGETS ${EXE_NAME} RUNTIME DESTINATION bin )
+
+set( EXE_NAME test_math )
+add_executable( ${EXE_NAME} test_math.cpp )
+set_property( TARGET ${EXE_NAME} PROPERTY CXX_STANDARD 11 )
+install( TARGETS ${EXE_NAME} RUNTIME DESTINATION bin )

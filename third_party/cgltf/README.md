@@ -1,11 +1,14 @@
-# cgltf
+# :diamond_shape_with_a_dot_inside: cgltf
 **Single-file/stb-style C glTF loader and writer**
 
 [![Build Status](https://travis-ci.org/jkuhlmann/cgltf.svg?branch=master)](https://travis-ci.org/jkuhlmann/cgltf)
 
+Used in: [bgfx](https://github.com/bkaradzic/bgfx), [Filament](https://github.com/google/filament), [meshoptimizer](https://github.com/zeux/meshoptimizer), [raylib](https://github.com/raysan5/raylib), and more!
+
 ## Usage: Loading
 Loading from file:
 ```c
+#define CGLTF_IMPLEMENTATION
 #include "cgltf.h"
 
 cgltf_options options = {0};
@@ -20,6 +23,7 @@ if (result == cgltf_result_success)
 
 Loading from memory:
 ```c
+#define CGLTF_IMPLEMENTATION
 #include "cgltf.h"
 
 void* buf; /* Pointer to glb or gltf file data */
@@ -45,6 +49,8 @@ When writing glTF data, you need a valid `cgltf_data` structure that represents 
 
 Writing to file:
 ```c
+#define CGLTF_IMPLEMENTATION
+#define CGLTF_WRITE_IMPLEMENTATION
 #include "cgltf_write.h"
 
 cgltf_options options = {0};
@@ -58,6 +64,8 @@ if (result != cgltf_result_success)
 
 Writing to memory:
 ```c
+#define CGLTF_IMPLEMENTATION
+#define CGLTF_WRITE_IMPLEMENTATION
 #include "cgltf_write.h"
 cgltf_options options = {0};
 cgltf_data* data = /* TODO must be valid data */;
