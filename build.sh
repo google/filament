@@ -409,6 +409,7 @@ function build_android {
     if [[ "$ISSUE_RELEASE_BUILD" == "true" ]]; then
         ./gradlew \
             -Pfilament_dist_dir=../out/android-release/filament \
+            -Pextra_cmake_args=${VULKAN_ANDROID_OPTION} \
             :filament-android:assembleRelease \
             :gltfio-android:assembleRelease \
             :filament-utils-android:assembleRelease
@@ -709,8 +710,8 @@ while getopts ":hacfijmp:tuvslw" opt; do
             VULKAN_ANDROID_OPTION="-DFILAMENT_SUPPORTS_VULKAN=ON"
             echo "Enabling support for Vulkan in the core Filament library."
             echo ""
-            echo "To switch your application to Vulkan, in Android Studio go to "
-            echo "File > Settings > Build > Compiler. In the command-line options field, "
+            echo "To switch your application to Vulkan, in Android Studio go to Preferences > "
+            echo "Build, Executation Deployment > Compiler. In the command-line options field, "
             echo "add -Pextra_cmake_args=-DFILAMENT_SUPPORTS_VULKAN=ON."
             echo "Also be sure to pass Engine.Backend.VULKAN to Engine.create."
             echo ""
