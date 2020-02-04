@@ -51,10 +51,6 @@ using namespace backend;
 
 namespace details {
 
-static constexpr float pow2(float x) noexcept {
-    return x * x;
-}
-
 FRenderer::FRenderer(FEngine& engine) :
         mEngine(engine),
         mFrameSkipper(engine, 2),
@@ -453,45 +449,39 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
         input = colorPass(fg, "Color Pass (opaque)", desc,
                 config, opaquePass, clearFlags, view.getClearColor());
 
-        // Number of roughness levels we want. Perceptual roughness will be mapped between
-        // 0 and 0.5 (see lodToPerceptualRoughness() below).
-        const size_t kNumRoughnessLods = 5;
+        // scale factor for the gaussian so it matches our resolution / FOV
+        const float verticalFieldOfView = view.getCameraUser().getFieldOfView(Camera::Fov::VERTICAL);
+        const float s = verticalFieldOfView / desc.height;
 
-        // maps a LOD to the perceptual roughness. this must match the inverse mapping
-        // in light_indirect.fs
-        auto lodToPerceptualRoughness = [](float lod) -> float {
-            return 0.5f * std::pow(2.0f, lod - (kNumRoughnessLods - 1)); };
+        // The kernel-size was determined empirically so that we don't get too many artifacts
+        // due to the down-sampling with a box filter (which happens implicitly).
+        const size_t kernelSize = 17;   // requires only 5 stored coefficients and 9 taps/pass
+
+        // The relation between n and sigma (variance) should 6*sigma - 1 = N, however here we
+        // use 4*sigma - 1 = N, which gives a stronger blur, without bringing too many artifacts.
+        const float sigma0 = (kernelSize + 1) / 4.0f;
+
+        // The variance doubles each time we go one mip down, so the relation between LOD and
+        // sigma is: lod = log2(sigma/sigma0).
+        // sigma is deduced from the roughness: roughness = sqrt(2) * s * sigma
+        // In the end we get: lod = 2 * log2(perceptualRoughness) - log2(sigma0 * s * sqrt2)
+        const float refractionLodOffset = -std::log2(sigma0 * s * (float)F_SQRT2);
+        const float maxPerceptualRoughness = 0.5f;
+        const uint32_t maxLod = std::ceil(2.0f * std::log2(maxPerceptualRoughness) + refractionLodOffset);
+
+        // Number of roughness levels we want.
+        // TODO: If we want to limit the number of mip levels, we must reduce the initial
+        //       resolution (if we want to keep the same filter, and still match the IBL somewhat).
+        size_t roughnessLodCount =
+                std::min(maxLod, (uint32_t)std::ilogbf(std::max(desc.width, desc.height))) + 1u;
 
         // Copy the color buffer into a texture, we use resolve() because in case of a multi-sample
         // buffer, it'll also resolve it.
         input = ppm.resolve(fg, "Refraction Buffer",
-                kNumRoughnessLods, TextureFormat::R11F_G11F_B10F, input);
+                roughnessLodCount, TextureFormat::R11F_G11F_B10F, input);
 
-        // scale factor for the gaussian so it matches our resolution / FOV
-        const float verticalFieldOfView = view.getCameraUser().getFieldOfView(Camera::Fov::VERTICAL);
-        const float s = pow2(verticalFieldOfView / desc.height);
-
-        // this compute the alpha parameter of a gaussian that is applied on a base gaussian
-        // and for which the result of the convolution is given.
-        auto deconvolveGaussian = [](float baseAlpha, float convolvedAlpha) -> float {
-            return (baseAlpha * convolvedAlpha) / (baseAlpha - convolvedAlpha);
-        };
-
-        float prevAlpha = 65536.0; // just need a large number
-        for (size_t i = 1; i < kNumRoughnessLods; i++) {
-            // compute our gaussian parameter, alpha, for a given pereceptual roughness
-            // The gaussian kernel is e^(-alpha * x^2)
-            // and alpha = 1/roughness^2, with x between -pi/2 and pi/2
-            // with, roughness = perceptual_roughnes^2
-            const float perceptualRoughness = lodToPerceptualRoughness(i);
-            const float roughness = pow2(perceptualRoughness);
-            const float alpha = s * (1.0f / pow2(roughness));
-            const float r = float(1 << (i - 1) * 2);
-            const float alphaForLod = r * deconvolveGaussian(prevAlpha, alpha);
-            input = ppm.gaussianBlurPass(fg, input, i - 1, i, alphaForLod);
-            prevAlpha = alpha;
-            //slog.d << "roughness=" << perceptualRoughness
-            //    << ", alpha=" << alpha << ", " << alphaForLod << io::endl;
+        for (size_t i = 1; i < roughnessLodCount; i++) {
+            input = ppm.gaussianBlurPass(fg, input, i - 1, i, kernelSize, sigma0);
         }
 
         struct PrepareSSRData {
@@ -503,8 +493,9 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
                     blackboard["ssr"] = data.ssr;
                     builder.sideEffect();
                 },
-                [&view](FrameGraphPassResources const& resources, auto const& data, DriverApi& driver) {
-                    view.prepareSSR(resources.getTexture(data.ssr));
+                [&view, refractionLodOffset]
+                (FrameGraphPassResources const& resources, auto const& data, DriverApi& driver) {
+                    view.prepareSSR(resources.getTexture(data.ssr), refractionLodOffset);
                     view.commitUniforms(driver);
                 });
 
