@@ -114,6 +114,10 @@ FEngine* FEngine::create(Backend backend, Platform* platform, void* sharedGLCont
             instance->mPlatform = platform;
             instance->mOwnPlatform = true;
         }
+        if (platform == nullptr) {
+            slog.e << "Selected backend not supported in this build." << io::endl;
+            return nullptr;
+        }
         instance->mDriver = platform->createDriver(sharedGLContext);
     } else {
         // start the driver thread
@@ -430,6 +434,11 @@ int FEngine::loop() {
                 break;
         }
         slog.d << io::endl;
+        if (mPlatform == nullptr) {
+            slog.e << "Selected backend not supported in this build." << io::endl;
+            mDriverBarrier.latch();
+            return 0;
+        }
     }
 
 #if FILAMENT_ENABLE_MATDBG
