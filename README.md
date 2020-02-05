@@ -126,6 +126,7 @@ Here are a few screenshots of applications that use Filament in production:
 - Physical light units
 - Point light, spot light and directional light
 - SSAO
+- Screen-space refractions
 - ACES-like tone-mapping
 - Temporal dithering
 - FXAA, MSAA and specular anti-aliasing
