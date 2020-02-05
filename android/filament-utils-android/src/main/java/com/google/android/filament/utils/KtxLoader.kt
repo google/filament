@@ -42,7 +42,7 @@ object KtxLoader {
      * @param options Loader options.
      * @return The resulting Filament texture, or null on failure.
      */
-    fun createTexture(engine: Engine, buffer: Buffer, options: Options): Texture {
+    fun createTexture(engine: Engine, buffer: Buffer, options: Options = Options()): Texture {
         val nativeEngine = engine.nativeObject
         val nativeTexture = nCreateTexture(nativeEngine, buffer, buffer.remaining(), options.srgb)
         return Texture(nativeTexture)
@@ -56,7 +56,7 @@ object KtxLoader {
      * @param options Loader options.
      * @return The resulting Filament texture, or null on failure.
      */
-    fun createIndirectLight(engine: Engine, buffer: Buffer, options: Options): IndirectLight {
+    fun createIndirectLight(engine: Engine, buffer: Buffer, options: Options = Options()): IndirectLight {
         val nativeEngine = engine.nativeObject
         val nativeIndirectLight = nCreateIndirectLight(nativeEngine, buffer, buffer.remaining(), options.srgb)
         return IndirectLight(nativeIndirectLight)
@@ -70,7 +70,7 @@ object KtxLoader {
      * @param options Loader options.
      * @return The resulting Filament texture, or null on failure.
      */
-    fun createSkybox(engine: Engine, buffer: Buffer, options: Options): Skybox {
+    fun createSkybox(engine: Engine, buffer: Buffer, options: Options = Options()): Skybox {
         val nativeEngine = engine.nativeObject
         val nativeSkybox = nCreateSkybox(nativeEngine, buffer, buffer.remaining(), options.srgb)
         return Skybox(nativeSkybox)
