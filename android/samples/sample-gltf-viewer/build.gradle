@@ -27,12 +27,6 @@ android {
         minSdkVersion 16
         targetSdkVersion versions.targetSdk
     }
-
-    // We use the .filamat extension for materials compiled with matc
-    // Telling aapt to not compress them allows to load them efficiently
-    aaptOptions {
-        noCompress 'filamat', 'ktx', 'bin'
-    }
 }
 
 dependencies {
