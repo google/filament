@@ -178,7 +178,16 @@ private:
     std::function<void()> mCustomUI;
 
     // Properties that can be changed from the UI.
-    int mCurrentAnimation = 1;
+    enum AnimationOption {
+        DISABLED,
+        PLAY_ALL,
+
+        COUNT
+    };
+    int mSelectedAnimationRadio = AnimationOption::PLAY_ALL;
+    int mCurrentAnimation = 0;
+    bool mDisableAnimations = false;
+    bool mPlayAllAnimations = false;
     bool mResetAnimation = true;
     float mIblIntensity = 30000.0f;
     float mIblRotation = 0.0f;
@@ -324,8 +333,14 @@ void SimpleViewer::applyAnimation(double currentTime) {
         }
         mResetAnimation = false;
     }
-    if (numAnimations > 0 && mCurrentAnimation > 0) {
-        mAnimator->applyAnimation(mCurrentAnimation - 1, currentTime - startTime);
+    if (numAnimations > 0 && !mDisableAnimations) {
+        if (mPlayAllAnimations) {
+            for (size_t i = 0; i < numAnimations; i++) {
+                mAnimator->applyAnimation(i, currentTime - startTime);
+            }
+        } else {
+            mAnimator->applyAnimation(mCurrentAnimation, currentTime - startTime);
+        }
     }
     mAnimator->updateBoneMatrices();
 }
@@ -388,18 +403,24 @@ void SimpleViewer::updateUserInterface() {
 
     auto animationsTreeItem = [&]() {
         size_t count = mAnimator->getAnimationCount();
-        int selectedAnimation = mCurrentAnimation;
-        ImGui::RadioButton("Disable", &selectedAnimation, 0);
+        int selectedAnimation = mSelectedAnimationRadio;
+        ImGui::RadioButton("Disable", &selectedAnimation, AnimationOption::DISABLED);
+        ImGui::RadioButton("Play All", &selectedAnimation, AnimationOption::PLAY_ALL);
         for (size_t i = 0; i < count; ++i) {
             std::string label = mAnimator->getAnimationName(i);
             if (label.empty()) {
                 label = "Unnamed " + std::to_string(i);
             }
-            ImGui::RadioButton(label.c_str(), &selectedAnimation, i + 1);
+            ImGui::RadioButton(label.c_str(), &selectedAnimation, i + AnimationOption::COUNT);
         }
-        if (selectedAnimation != mCurrentAnimation) {
-            mCurrentAnimation = selectedAnimation;
+        mDisableAnimations = selectedAnimation == AnimationOption::DISABLED;
+        mPlayAllAnimations = selectedAnimation == AnimationOption::PLAY_ALL;
+        if (mSelectedAnimationRadio >= AnimationOption::COUNT) {
+            mCurrentAnimation = selectedAnimation - AnimationOption::COUNT;
+        }
+        if (selectedAnimation != mSelectedAnimationRadio) {
             mResetAnimation = true;
+            mSelectedAnimationRadio = selectedAnimation;
         }
     };
 
