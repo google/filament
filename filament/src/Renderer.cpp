@@ -455,7 +455,13 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
 
         // The kernel-size was determined empirically so that we don't get too many artifacts
         // due to the down-sampling with a box filter (which happens implicitly).
-        const size_t kernelSize = 17;   // requires only 5 stored coefficients and 9 taps/pass
+        // e.g.: size of 13 (4 stored coefficients)
+        //      +-------+-------+-------*===*-------+-------+-------+
+        //  ... | 6 | 5 | 4 | 3 | 2 | 1 | 0 | 1 | 2 | 3 | 4 | 5 | 6 | ...
+        //      +-------+-------+-------*===*-------+-------+-------+
+        const size_t kernelSize = 17;   // requires only 5 stored coefficients and 9 tap/pass
+        static_assert(kernelSize & 1, "kernel size must be odd");
+        static_assert((((kernelSize - 1) / 2) & 1) == 0, "kernel positive side size must be even");
 
         // The relation between n and sigma (variance) should 6*sigma - 1 = N, however here we
         // use 4*sigma - 1 = N, which gives a stronger blur, without bringing too many artifacts.
@@ -480,9 +486,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
         input = ppm.resolve(fg, "Refraction Buffer",
                 roughnessLodCount, TextureFormat::R11F_G11F_B10F, input);
 
-        for (size_t i = 1; i < roughnessLodCount; i++) {
-            input = ppm.gaussianBlurPass(fg, input, i - 1, i, kernelSize, sigma0);
-        }
+        input = ppm.generateGaussianMipmap(fg, input, roughnessLodCount, kernelSize, sigma0);
 
         struct PrepareSSRData {
             FrameGraphId<FrameGraphTexture> ssr;

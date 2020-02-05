@@ -73,8 +73,12 @@ public:
             details::CameraInfo const& cameraInfo,
             View::AmbientOcclusionOptions const& options) noexcept;
 
+    FrameGraphId <FrameGraphTexture> generateGaussianMipmap(FrameGraph& fg,
+            FrameGraphId<FrameGraphTexture> input, size_t roughnessLodCount,
+            size_t kernelWidth, float sigma) noexcept;
+
     FrameGraphId <FrameGraphTexture> gaussianBlurPass(FrameGraph& fg,
-            FrameGraphId <FrameGraphTexture> input, uint8_t srcLevel, uint8_t dstLevel,
+            FrameGraphId<FrameGraphTexture> input, uint8_t srcLevel, uint8_t dstLevel,
             size_t kernelWidth, float sigma) noexcept;
 
     backend::Handle<backend::HwTexture> getNoSSAOTexture() const {

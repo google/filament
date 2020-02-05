@@ -693,8 +693,17 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bilateralBlurPass(FrameGraph
     return blurPass.getData().blurred;
 }
 
-FrameGraphId <FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph& fg,
-        FrameGraphId <FrameGraphTexture> input, uint8_t srcLevel, uint8_t dstLevel,
+FrameGraphId<FrameGraphTexture> PostProcessManager::generateGaussianMipmap(FrameGraph& fg,
+        FrameGraphId<FrameGraphTexture> input, size_t roughnessLodCount,
+        size_t kernelWidth, float sigma) noexcept {
+    for (size_t i = 1; i < roughnessLodCount; i++) {
+        input = gaussianBlurPass(fg, input, i - 1, i, kernelWidth, sigma);
+    }
+    return input;
+}
+
+FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph& fg,
+        FrameGraphId<FrameGraphTexture> input, uint8_t srcLevel, uint8_t dstLevel,
         size_t kernelWidth, float sigma) noexcept {
 
     Handle<HwRenderPrimitive> fullScreenRenderPrimitive = mEngine.getFullScreenRenderPrimitive();
@@ -706,6 +715,12 @@ FrameGraphId <FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph
         size_t m = (kernelWidth - 1) / 4 + 1;
         // clamp to what we have
         m = std::min(size, m);
+
+        // How the kernel samples are stored:
+        //  *===*---+---+---+---+---+---+
+        //  | 0 | 1 | 2 | 3 | 4 | 5 | 6 |       Gaussian coefficients (right size)
+        //  *===*-------+-------+-------+
+        //  | 0 |   1   |   2   |   3   |       stored coefficients (right side)
 
         kernel[0].x = 1.0;
         kernel[0].y = 0.0;
