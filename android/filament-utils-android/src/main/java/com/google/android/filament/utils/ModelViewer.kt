@@ -41,7 +41,8 @@ import java.nio.Buffer
  * clients still have the responsibility of adding an [IndirectLight] and [Skybox] to the scene.
  * Additionally, clients should:
  *
- * 1. Call [onTouchEvent] from a touch handler.
+ * 1. Pass the model viewer into [SurfaceView.setOnTouchListener] or call its [onTouchEvent]
+ *    method from your touch handler.
  * 2. Call [render] and [Animator.applyAnimation] from a `Choreographer` frame callback.
  *
  * NOTE: if its associated SurfaceView or TextureView has become detached from its window, the
@@ -49,7 +50,7 @@ import java.nio.Buffer
  *
  * See `sample-gltf-viewer` for a usage example.
  */
-class ModelViewer {
+class ModelViewer : android.view.View.OnTouchListener {
 
     var asset: FilamentAsset? = null
         private set
@@ -260,6 +261,12 @@ class ModelViewer {
      */
     fun onTouchEvent(event: MotionEvent) {
         gestureDetector.onTouchEvent(event)
+    }
+
+    @SuppressWarnings("ClickableViewAccessibility")
+    override fun onTouch(view: android.view.View, event: MotionEvent): Boolean {
+        onTouchEvent(event)
+        return true
     }
 
     inner class SurfaceCallback : UiHelper.RendererCallback {
