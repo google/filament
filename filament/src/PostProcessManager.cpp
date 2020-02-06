@@ -289,12 +289,12 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::fxaa(FrameGraph& fg,
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::dynamicScaling(FrameGraph& fg,
-        uint8_t msaa, bool scaled, bool blend,
-        FrameGraphId<FrameGraphTexture> input, TextureFormat outFormat) noexcept {
+        bool scaled, bool blend, FrameGraphId<FrameGraphTexture> input,
+        TextureFormat outFormat) noexcept {
 
-    // scaling and format conversion are not allowed with a MSAA blit
-    FrameGraphTexture::Descriptor const& inputDesc = fg.getDescriptor(input);
-    const bool useQuad = (msaa > 1 && (scaled || inputDesc.format != outFormat)) || blend;
+    if (UTILS_UNLIKELY(blend)) {
+        return quadBlit(fg, blend, input, outFormat);
+    }
 
     struct PostProcessScaling {
         FrameGraphId<FrameGraphTexture> input;
@@ -307,10 +307,26 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dynamicScaling(FrameGraph& f
             [&](FrameGraph::Builder& builder, PostProcessScaling& data) {
                 auto const& inputDesc = fg.getDescriptor(input);
 
-                data.input = builder.read(input);
-                FrameGraphRenderTarget::Descriptor d;
-                d.attachments.color = { data.input };
-                data.srt = builder.createRenderTarget(builder.getName(data.input), d);
+                // we currently have no use for this case, so we just assert. This is better for now to trap
+                // cases that we might not intend.
+                assert(inputDesc.samples <= 1);
+
+                // FIXME: here we use sample() instead of read() because this forces the
+                //      backend to use a texture (instead of a renderbuffer). We need this because
+                //      "implicit resolve" renderbuffers are currently not supported -- and
+                //      implicit resolves are needed when taking the blit path.
+                //      (we do this only when the texture does not request multisampling, since
+                //      these are not sampleable).
+                data.input = (inputDesc.samples > 1) ? builder.read(input) : builder.sample(input);
+
+                data.srt = builder.createRenderTarget(builder.getName(data.input), {
+                        .attachments = { data.input, {}},
+                        // We must set the sample count (as opposed to leaving to 0) to express
+                        // the fact that we want a new rendertarget (as opposed to match one
+                        // that might exist with multisample enabled). This is because sample
+                        // count is only matched if specified.
+                        .samples = std::max(uint8_t(1), inputDesc.samples)
+                });
 
                 data.output = builder.createTexture("scaled output", {
                         .width = inputDesc.width,
@@ -328,10 +344,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dynamicScaling(FrameGraph& f
                         SamplerMagFilter::LINEAR);
             });
 
-    auto ppQuadScalingOutput = quadBlit(fg, blend, input, outFormat);
-
     // we rely on automatic culling of unused render passes
-    return useQuad ? ppQuadScalingOutput : ppBlitScaling.getData().output;
+    return ppBlitScaling.getData().output;
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::quadBlit(FrameGraph& fg,

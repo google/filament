@@ -383,7 +383,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             input = ppm.fxaa(fg, input, ldrFormat, !toneMapping || translucent);
         }
         if (scaled) {
-            input = ppm.dynamicScaling(fg, msaa, scaled, blending, input, ldrFormat);
+            input = ppm.dynamicScaling(fg, scaled, blending, input, ldrFormat);
         }
     }
 
@@ -399,7 +399,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     const bool outputIsInput = fg.equal(input, colorPassOutput);
     if ((outputIsInput && viewRenderTarget == mRenderTarget && msaa > 1) ||
         (!outputIsInput && blending)) {
-        input = ppm.dynamicScaling(fg, msaa, scaled, blending, input, ldrFormat);
+        input = ppm.dynamicScaling(fg, scaled, blending, input, ldrFormat);
     }
 
     fg.present(input);
