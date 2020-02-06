@@ -46,7 +46,12 @@ void RenderTargetResource::create(FrameGraph& fg) noexcept {
                             fg.getResourceEntryUnchecked(attachmentInfo.getHandle());
                     infos[i].handle = entry.getResource().texture;
                     infos[i].level = attachmentInfo.getLevel();
+                    // the attachment buffer (texture or renderbuffer) must be valid
                     assert(infos[i].handle);
+                    // the attachment level must be within range
+                    assert(infos[i].level < entry.descriptor.levels);
+                    // if the attachment is multisampled, then the rendertarget must be too
+                    assert(entry.descriptor.samples <= 1 || entry.descriptor.samples == desc.samples);
                 }
             }
             targetInfo.target = fg.getResourceAllocator().createRenderTarget(name,

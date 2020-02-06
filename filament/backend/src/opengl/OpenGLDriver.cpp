@@ -884,6 +884,7 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
         // available.
         updateTextureLodRange(t, binfo.level);
     } else {
+        assert(std::max(uint8_t(1), t->samples) == std::max(uint8_t(1), rt->gl.samples));
         gl.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
         glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment, GL_RENDERBUFFER, t->gl.id);
     }
@@ -896,17 +897,10 @@ void OpenGLDriver::renderBufferStorage(GLuint rbo, GLenum internalformat, uint32
         uint32_t height, uint8_t samples) const noexcept {
     glBindRenderbuffer(GL_RENDERBUFFER, rbo);
     if (samples > 1) {
-#if GLES31_HEADERS
-        auto& gl = mContext;
-        if (gl.ext.EXT_multisampled_render_to_texture) {
-            // FIXME: if real multi-sample textures are/will be used as attachment,
-            //        we shouldn't be here. But we don't have an easy way to know at this point.
-            glext::glRenderbufferStorageMultisampleEXT(GL_RENDERBUFFER, samples, internalformat, width, height);
-        } else
-#endif
-        {
-            glRenderbufferStorageMultisample(GL_RENDERBUFFER, samples, internalformat, width, height);
-        }
+        // We don't support "implicit" (i.e. EXT_multisampled_render_to_texture) renderbuffer
+        // (in practice this means that a texture must be marked 'SAMPLEABLE' if 'implicit'
+        // resolves are desired.
+        glRenderbufferStorageMultisample(GL_RENDERBUFFER, samples, internalformat, width, height);
     } else {
         glRenderbufferStorage(GL_RENDERBUFFER, internalformat, width, height);
     }
@@ -2022,7 +2016,9 @@ void OpenGLDriver::endRenderPass(int) {
     GLRenderTarget const* const rt = handle_cast<GLRenderTarget*>(mRenderPassTarget);
 
     const TargetBufferFlags discardFlags = mRenderPassParams.flags.discardEnd;
-    resolvePass(ResolveAction::STORE, rt, discardFlags);
+    if (rt->gl.fbo_read) {
+        resolvePass(ResolveAction::STORE, rt, discardFlags);
+    }
 
     // glInvalidateFramebuffer appeared on GLES 3.0 and GL4.3, for simplicity we just
     // ignore it on GL (rather than having to do a runtime check).
@@ -2053,6 +2049,7 @@ void OpenGLDriver::endRenderPass(int) {
 
 void OpenGLDriver::resolvePass(ResolveAction action, GLRenderTarget const* rt,
         backend::TargetBufferFlags discardFlags) noexcept {
+    assert(rt->gl.fbo_read);
     auto& gl = mContext;
     const TargetBufferFlags resolve = rt->gl.resolve & ~discardFlags;
     GLbitfield mask = getAttachmentBitfield(resolve);
@@ -2065,7 +2062,8 @@ void OpenGLDriver::resolvePass(ResolveAction action, GLRenderTarget const* rt,
         gl.bindFramebuffer(GL_READ_FRAMEBUFFER, read);
         gl.bindFramebuffer(GL_DRAW_FRAMEBUFFER, draw);
         gl.disable(GL_SCISSOR_TEST);
-        glBlitFramebuffer(0, 0, rt->width, rt->height, 0, 0, rt->width, rt->height, mask, GL_NEAREST);
+        glBlitFramebuffer(0, 0, rt->width, rt->height,
+                0, 0, rt->width, rt->height, mask, GL_NEAREST);
         CHECK_GL_ERROR(utils::slog.e)
     }
 }
@@ -2811,6 +2809,10 @@ void OpenGLDriver::blit(TargetBufferFlags buffers,
         // GL_INVALID_OPERATION is generated if GL_SAMPLE_BUFFERS for the read buffer is greater
         // than zero and (...) the source and destination rectangles are not defined with the
         // same (X0, Y0) and (X1, Y1) bounds.
+
+        // Additionally the EXT_multisampled_render_to_texture extension doesn't specify what
+        // happens when blitting from an "implicit" resolve render target (does it work?), so
+        // to ere on the safe side, we don't allow it.
         if (s->gl.samples > 1) {
             assert(!memcmp(&dstRect, &srcRect, sizeof(srcRect)));
         }
