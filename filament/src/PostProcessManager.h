@@ -44,9 +44,10 @@ public:
     void init() noexcept;
     void terminate(backend::DriverApi& driver) noexcept;
 
-    FrameGraphId<FrameGraphTexture> toneMapping(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input,
-            backend::TextureFormat outFormat, bool dithering, bool translucent, bool fxaa) noexcept;
+    FrameGraphId <FrameGraphTexture> toneMapping(FrameGraph& fg,
+            FrameGraphId <FrameGraphTexture> input,
+            backend::TextureFormat outFormat, bool translucent, bool fxaa, math::float2 scale,
+            View::BloomOptions bloomOptions, bool dithering) noexcept;
 
     FrameGraphId<FrameGraphTexture> fxaa(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, backend::TextureFormat outFormat,
@@ -94,6 +95,11 @@ private:
             FrameGraphId<FrameGraphTexture> input,
             FrameGraphId<FrameGraphTexture> depth, math::int2 axis) noexcept;
 
+    FrameGraphId<FrameGraphTexture> bloomPass(FrameGraph& fg,
+            FrameGraphId<FrameGraphTexture> input, backend::TextureFormat outFormat,
+            View::BloomOptions& bloomOptions, math::float2 scale) noexcept;
+
+
     class PostProcessMaterial {
     public:
         PostProcessMaterial() noexcept = default;
@@ -123,6 +129,8 @@ private:
     PostProcessMaterial mMipmapDepth;
     PostProcessMaterial mBilateralBlur;
     PostProcessMaterial mSeparableGaussianBlur;
+    PostProcessMaterial mBloomDownsample;
+    PostProcessMaterial mBloomUpsample;
     PostProcessMaterial mBlit;
     PostProcessMaterial mTonemapping;
     PostProcessMaterial mFxaa;
