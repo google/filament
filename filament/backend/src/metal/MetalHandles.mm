@@ -441,6 +441,9 @@ id<MTLTexture> MetalRenderTarget::getDepthResolve() {
 }
 
 id<MTLTexture> MetalRenderTarget::getBlitColorSource() {
+    if (defaultRenderTarget) {
+        return acquireDrawable(context);
+    }
     if (color) {
         return color;
     }
@@ -448,6 +451,9 @@ id<MTLTexture> MetalRenderTarget::getBlitColorSource() {
 }
 
 id<MTLTexture> MetalRenderTarget::getBlitDepthSource() {
+    if (defaultRenderTarget) {
+        return acquireDepthTexture(context);
+    }
     if (depth) {
         return depth;
     }
