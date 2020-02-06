@@ -465,7 +465,8 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
 
         // The relation between n and sigma (variance) should 6*sigma - 1 = N, however here we
         // use 4*sigma - 1 = N, which gives a stronger blur, without bringing too many artifacts.
-        const float sigma0 = (kernelSize + 1) / 4.0f;
+        const float sigmaRatio = 4.0f;
+        const float sigma0 = (kernelSize + 1) / sigmaRatio;
 
         // The variance doubles each time we go one mip down, so the relation between LOD and
         // sigma is: lod = log2(sigma/sigma0).
@@ -486,7 +487,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
         input = ppm.resolve(fg, "Refraction Buffer",
                 roughnessLodCount, TextureFormat::R11F_G11F_B10F, input);
 
-        input = ppm.generateGaussianMipmap(fg, input, roughnessLodCount, kernelSize, sigma0);
+        input = ppm.generateGaussianMipmap(fg, input, roughnessLodCount, kernelSize, sigmaRatio);
 
         struct PrepareSSRData {
             FrameGraphId<FrameGraphTexture> ssr;

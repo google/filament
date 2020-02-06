@@ -709,16 +709,19 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bilateralBlurPass(FrameGraph
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::generateGaussianMipmap(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> input, size_t roughnessLodCount,
-        size_t kernelWidth, float sigma) noexcept {
+        size_t kernelWidth, float sigmaRatio) noexcept {
     for (size_t i = 1; i < roughnessLodCount; i++) {
-        input = gaussianBlurPass(fg, input, i - 1, i, kernelWidth, sigma);
+        input = gaussianBlurPass(fg, input, i - 1, input, i, kernelWidth, sigmaRatio);
     }
     return input;
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph& fg,
-        FrameGraphId<FrameGraphTexture> input, uint8_t srcLevel, uint8_t dstLevel,
-        size_t kernelWidth, float sigma) noexcept {
+        FrameGraphId<FrameGraphTexture> input, uint8_t srcLevel,
+        FrameGraphId<FrameGraphTexture> output, uint8_t dstLevel,
+        size_t kernelWidth, float sigmaRatio) noexcept {
+
+    const float sigma = (kernelWidth + 1) / sigmaRatio;
 
     Handle<HwRenderPrimitive> fullScreenRenderPrimitive = mEngine.getFullScreenRenderPrimitive();
 
@@ -758,10 +761,11 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
     };
 
     struct BlurPassData {
-        FrameGraphId<FrameGraphTexture> inout;
+        FrameGraphId<FrameGraphTexture> in;
+        FrameGraphId<FrameGraphTexture> out;
         FrameGraphId<FrameGraphTexture> temp;
+        FrameGraphRenderTargetHandle outRT;
         FrameGraphRenderTargetHandle tempRT;
-        FrameGraphRenderTargetHandle inoutRT;
     };
 
     backend::SamplerParams sampler {
@@ -774,7 +778,13 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
             [&](FrameGraph::Builder& builder, BlurPassData& data) {
                 auto desc = builder.getDescriptor(input);
 
-                data.inout = builder.write(builder.sample(input));
+                if (!output.isValid()) {
+                    output = builder.createTexture("Blurred texture", desc);
+                }
+
+                data.in = builder.sample(input);
+
+                data.out = builder.write(output);
 
                 // width of the destination level (b/c we're blurring horizontally)
                 desc.width = FTexture::valueForLevel(dstLevel, desc.width);
@@ -790,8 +800,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
                         .attachments = { data.temp, {}}
                 }, TargetBufferFlags::NONE);
 
-                data.inoutRT = builder.createRenderTarget("Blurred target", {
-                        .attachments = {{ data.inout, dstLevel }, {}}
+                data.outRT = builder.createRenderTarget("Blurred target", {
+                        .attachments = {{ data.out, dstLevel }, {}}
                 }, TargetBufferFlags::NONE);
             },
             [=](FrameGraphPassResources const& resources,
@@ -811,19 +821,20 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
 
                 // horizontal pass
                 auto hwTempRT = resources.getRenderTarget(data.tempRT);
-                auto hwInoutRT = resources.getRenderTarget(data.inoutRT);
+                auto hwOutRT = resources.getRenderTarget(data.outRT);
                 auto hwTemp = resources.getTexture(data.temp);
-                auto hwInout = resources.getTexture(data.inout);
-                auto const& inoutDesc = resources.getDescriptor(data.inout);
+                auto hwIn = resources.getTexture(data.in);
+                auto const& inDesc = resources.getDescriptor(data.in);
+                auto const& outDesc = resources.getDescriptor(data.out);
                 auto const& tempDesc = resources.getDescriptor(data.temp);
 
-                mi->setParameter("source", hwInout, sampler);
+                mi->setParameter("source", hwIn, sampler);
                 mi->setParameter("level", (float)srcLevel);
                 mi->setParameter("resolution", float4{
                         tempDesc.width, tempDesc.height,
                         1.0f / tempDesc.width, 1.0f / tempDesc.height });
                 mi->setParameter("axis",
-                        float2{ 1.0f / FTexture::valueForLevel(srcLevel, inoutDesc.width), 0 });
+                        float2{ 1.0f / FTexture::valueForLevel(srcLevel, inDesc.width), 0 });
                 mi->setParameter("count", (int32_t)m);
                 mi->setParameter("kernel", kernel, m);
                 mi->commit(driver);
@@ -837,10 +848,10 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
                 driver.endRenderPass();
 
                 // vertical pass
-                auto width = FTexture::valueForLevel(dstLevel, inoutDesc.width);
-                auto height = FTexture::valueForLevel(dstLevel, inoutDesc.height);
-                assert(width == hwInoutRT.params.viewport.width);
-                assert(height == hwInoutRT.params.viewport.height);
+                auto width = FTexture::valueForLevel(dstLevel, outDesc.width);
+                auto height = FTexture::valueForLevel(dstLevel, outDesc.height);
+                assert(width == hwOutRT.params.viewport.width);
+                assert(height == hwOutRT.params.viewport.height);
 
                 mi->setParameter("source", hwTemp, sampler);
                 mi->setParameter("level", 0.0f);
@@ -849,12 +860,12 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
                 mi->setParameter("axis", float2{ 0, 1.0f / tempDesc.height });
                 mi->commit(driver);
 
-                driver.beginRenderPass(hwInoutRT.target, hwInoutRT.params);
+                driver.beginRenderPass(hwOutRT.target, hwOutRT.params);
                 driver.draw(pipeline, fullScreenRenderPrimitive);
                 driver.endRenderPass();
             });
 
-    return gaussianBlurPasses.getData().inout;
+    return gaussianBlurPasses.getData().out;
 }
 
 } // namespace filament
