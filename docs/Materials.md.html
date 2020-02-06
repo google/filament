@@ -131,14 +131,14 @@ The type and range of each property is described in table [standardPropertiesTyp
     Filament materials expect colors to use pre-multiplied alpha. See the Pre-multiplied alpha
     section for more information.
 
-!!! Note: About absorption
+!!! Note: About `absorption`
     The light attenuation through the material is defined as $e^{-absorption \cdot distance}$,
     and the distance depends on the `thickness` parameter. If `thickness` is not provided, then
     the `absorption` parameter is used directly and the light attenuation through the material
     becomes $1 - absorption$. To obtain a certain color at a desired distance, the above
     equation can be inverted such as $absorption = -\frac{ln(color)}{distance}$.
 
-!!! Note: About ior and reflectance
+!!! Note: About `ior` and `reflectance`
     The index of refraction (IOR) and the reflectance represent the same physical attribute,
     therefore they don't need to be both specified. Typically, only the reflectance is specified
     and the IOR is deduced automatically. When only the IOR is specified, the reflectance is then
@@ -146,7 +146,7 @@ The type and range of each property is described in table [standardPropertiesTyp
     as-is, which can lead to physically impossible materials, however, this might be desirable
     for artistic reasons.
 
-!!! Note: About thickness and microThickness for refraction
+!!! Note: About `thickness` and `microThickness` for refraction
     `thickness` represents the thickness of solid objects in the direction of the normal, for
     satisfactory results, this should be provided per fragment (e.g.: as a texture) or at least per
     vertex. `microThickness` represent the thickness of the thin layer of an object, and can
@@ -235,6 +235,15 @@ The effect of `roughness` on metallic surfaces is shown in figure [roughnessCond
 
 ![Figure [roughnessConductorProperty]: Conductor `roughness` varying from 0.0
 (left) to 1.0 (right)](images/materials/conductor_roughness.png)
+
+### Refraction
+
+When refraction through an object is enabled (using a `refractonType` of `thin` or `solid`), the
+`roughness` property will also affect the refractions, as shown in figure
+[roughnessRefractionProperty] (click on the image to see a larger version).
+                             
+![Figure [roughnessRefractionProperty]: Refractive sphere with `roughness` varying from 0.0
+ (left) to 1.0 (right)](images/materials/refraction_roughness.png)
 
 ### Reflectance
 
@@ -513,7 +522,73 @@ The effect of `transmission` on a glossy dielectric (`ior` of 1.5, `refractionMo
 
 ### Absorption
 
+The `absorption` property defines the absorption coefficients of light transmitted through the
+material. Figure [absorptionExample] shows the effect of `absorption` on a refracting object with
+an index of refraction of 1.5 and a base color set to white.
+
+![Figure [absorptionExample]: Refracting object without (left)
+and with (right) absorption](images/material_absorption.png)
+
+Transmittance through a volume is exponential with respect to the optical depth (defined either
+with `microThickness` or `thickness`). The computed color follows the following formula:
+
+$$color \cdot e^{-absorption \cdot distance}$$
+
+Where `distance` is either `microThickness` or `thickness`, that is the distance light will travel
+through the material at a given point. If no thickness/distance is specified, the computed color
+follows this formula instead:
+
+$$color \cdot (1 - absorption)$$
+
+The effect of varying the `absorption` coefficients is shown in figure [absorptionProperty]
+(click on the image to see a larger version). In this picture, the object has a fixed `thickness`
+of 4.5 and an index of refraction set to 1.3.
+
+![Figure [absorptionProperty]: `absorption` varying from (0.0, 0.02, 0.14)
+(left) to (0.0, 0.36, 2.3) (right)](images/materials/absorption.png)
+
+Setting the absorption coefficients directly can be unintuitive which is why we recommend working
+with a _transmittance color_ and a _"at distance"_ factor instead. These two parameters allow an
+artist to specify the precise color the material should have at a specified distance through the
+volume. The value to pass to `absorption` can be computed this way:
+
+$$absorption = -\frac{ln(transmittanceColor)}{atDistance}$$
+
+While this computation can be done in the material itself we recommend doing it offline whenever
+possible. Filament provides an API for this purpose, `Color::absorptionAtDistance()`.
+
 ### Micro-thickness and thickness
+
+The `microThickness` and `thickness` properties define the optical depth of the material of a
+refracting object. `microThickness` is used when `refractionType` is set to `thin`, and `thickness`
+is used when `refractionType` is set to `volume`.
+
+`thickness` represents the thickness of solid objects in the direction of the normal, for
+satisfactory results, this should be provided per fragment (e.g.: as a texture) or at least per
+vertex.
+
+`microThickness` represent the thickness of the thin layer (shell) of an object, and can generally
+be provided as a constant value. For example, a 1mm thin hollow sphere of radius 1m, would have a
+`thickness` of 1 and a `microThickness` of 0.001. Currently `thickness` is not used when
+`refractionType` is set to `thin`. Both properties are made available for possible future use.
+
+Both `thickness` and `microThickness` are used to compute the transmitted color of the material
+when the `absorption` property is set. In solid volumes, `thickness` will also affect how light
+rays are refracted.
+
+The effect `thickness` in a solid volume with `refractionMode` set to `screenSpace` is shown in
+figure [thicknessProperty] (click on the image to see a larger version). Note how the `thickness`
+value not only changes the effect of `absorption` but also modifies the direction of the refracted
+light.
+
+![Figure [thicknessProperty]: `thickness` varying from 0.0
+(left) to 2.0 (right)](images/materials/thickness.png)
+
+Figure [varyingThickness] shows what a prism with spatially varying `thickness` looks like when
+the `refractionType` is set to `solid` and `absorption` coefficients are set.
+
+![Figure [varyingThickness]: `thickness` varying from 0.0 at the top of the prism to 3.0 at the
+bottom of the prism](images/material_thickness.png)
 
 ## Subsurface model
 
