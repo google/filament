@@ -141,6 +141,8 @@ set(PRIVATE_HDRS
 set(MATERIAL_SRCS
         src/materials/defaultMaterial.mat
         src/materials/blit.mat
+        src/materials/bloomDownsample.mat
+        src/materials/bloomUpsample.mat
         src/materials/bilateralBlur.mat
         src/materials/mipmapDepth.mat
         src/materials/skybox.mat
@@ -209,6 +211,7 @@ add_custom_command(
     DEPENDS ../shaders/src/tone_mapping.fs
     DEPENDS ../shaders/src/conversion_functions.fs
     DEPENDS ../shaders/src/dithering.fs
+    DEPENDS ../shaders/src/bloom.fs
     APPEND
 )
 

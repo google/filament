@@ -191,6 +191,7 @@ private:
     bool mEnableFxaa = true;
     bool mEnableMsaa = true;
     bool mEnableSsao = true;
+    filament::View::BloomOptions mBloomOptions = { .enabled = true };
     int mSidebarWidth;
     uint32_t mFlags;
 };
@@ -425,6 +426,7 @@ void SimpleViewer::updateUserInterface() {
         ImGui::Checkbox("FXAA", &mEnableFxaa);
         ImGui::Checkbox("MSAA 4x", &mEnableMsaa);
         ImGui::Checkbox("SSAO", &mEnableSsao);
+        ImGui::Checkbox("Bloom", &mBloomOptions.enabled);
     }
 
     mView->setDithering(mEnableDithering ? View::Dithering::TEMPORAL : View::Dithering::NONE);
@@ -432,6 +434,7 @@ void SimpleViewer::updateUserInterface() {
     mView->setSampleCount(mEnableMsaa ? 4 : 1);
     mView->setAmbientOcclusion(
             mEnableSsao ? View::AmbientOcclusion::SSAO : View::AmbientOcclusion::NONE);
+    mView->setBloomOptions(mBloomOptions);
 
     if (ImGui::CollapsingHeader("Light", headerFlags)) {
         ImGui::SliderFloat("IBL intensity", &mIblIntensity, 0.0f, 100000.0f);

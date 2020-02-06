@@ -65,6 +65,9 @@ const uint8_t kBlueNoise[] = {
     0x49, 0xbf, 0x09, 0xd2, 0x2b, 0x60, 0x07, 0x88, 0xe7, 0x50, 0x0a, 0x7c, 0xe1, 0xcf, 0x9b, 0xb7
 };
 
+static constexpr uint8_t kMaxBloomLevels = 12u;
+static_assert(kMaxBloomLevels >= 3, "We require at least 3 bloom levels");
+
 // ------------------------------------------------------------------------------------------------
 
 PostProcessManager::PostProcessMaterial::PostProcessMaterial(FEngine& engine,
@@ -115,6 +118,8 @@ void PostProcessManager::init() noexcept {
     mMipmapDepth = PostProcessMaterial(mEngine, MATERIALS_MIPMAPDEPTH_DATA, MATERIALS_MIPMAPDEPTH_SIZE);
     mBilateralBlur = PostProcessMaterial(mEngine, MATERIALS_BILATERALBLUR_DATA, MATERIALS_BILATERALBLUR_SIZE);
     mSeparableGaussianBlur = PostProcessMaterial(mEngine, MATERIALS_SEPARABLEGAUSSIANBLUR_DATA, MATERIALS_SEPARABLEGAUSSIANBLUR_SIZE);
+    mBloomDownsample = PostProcessMaterial(mEngine, MATERIALS_BLOOMDOWNSAMPLE_DATA, MATERIALS_BLOOMDOWNSAMPLE_SIZE);
+    mBloomUpsample = PostProcessMaterial(mEngine, MATERIALS_BLOOMUPSAMPLE_DATA, MATERIALS_BLOOMUPSAMPLE_SIZE);
     mBlit = PostProcessMaterial(mEngine, MATERIALS_BLIT_DATA, MATERIALS_BLIT_SIZE);
     mTonemapping = PostProcessMaterial(mEngine, MATERIALS_TONEMAPPING_DATA, MATERIALS_TONEMAPPING_SIZE);
     mFxaa = PostProcessMaterial(mEngine, MATERIALS_FXAA_DATA, MATERIALS_FXAA_SIZE);
@@ -169,20 +174,24 @@ void PostProcessManager::init() noexcept {
 void PostProcessManager::terminate(DriverApi& driver) noexcept {
     driver.destroyTexture(mNoSSAOTexture);
     driver.destroyTexture(mNoiseTexture);
-    mSSAO.terminate(mEngine);
-    mMipmapDepth.terminate(mEngine);
-    mBilateralBlur.terminate(mEngine);
-    mSeparableGaussianBlur.terminate(mEngine);
-    mBlit.terminate(mEngine);
-    mTonemapping.terminate(mEngine);
-    mFxaa.terminate(mEngine);
+    FEngine& engine = mEngine;
+    mSSAO.terminate(engine);
+    mMipmapDepth.terminate(engine);
+    mBilateralBlur.terminate(engine);
+    mSeparableGaussianBlur.terminate(engine);
+    mBloomDownsample.terminate(engine);
+    mBloomUpsample.terminate(engine);
+    mBlit.terminate(engine);
+    mTonemapping.terminate(engine);
+    mFxaa.terminate(engine);
 }
 
 // ------------------------------------------------------------------------------------------------
 
-FrameGraphId <FrameGraphTexture> PostProcessManager::toneMapping(FrameGraph& fg,
-        FrameGraphId<FrameGraphTexture> input, TextureFormat outFormat,
-        bool dithering, bool translucent, bool fxaa) noexcept {
+FrameGraphId<FrameGraphTexture> PostProcessManager::toneMapping(FrameGraph& fg,
+        FrameGraphId<FrameGraphTexture> input,
+        backend::TextureFormat outFormat, bool translucent, bool fxaa, float2 scale,
+        View::BloomOptions bloomOptions, bool dithering) noexcept {
 
     FEngine& engine = mEngine;
     Handle<HwRenderPrimitive> const& fullScreenRenderPrimitive = engine.getFullScreenRenderPrimitive();
@@ -190,8 +199,17 @@ FrameGraphId <FrameGraphTexture> PostProcessManager::toneMapping(FrameGraph& fg,
     struct PostProcessToneMapping {
         FrameGraphId<FrameGraphTexture> input;
         FrameGraphId<FrameGraphTexture> output;
+        FrameGraphId<FrameGraphTexture> bloom;
         FrameGraphRenderTargetHandle rt;
     };
+
+    FrameGraphId<FrameGraphTexture> bloomBlur;
+
+    float bloom = 0.0f;
+    if (bloomOptions.enabled) {
+        bloom = clamp(bloomOptions.strength, 0.0f, 1.0f);
+        bloomBlur = bloomPass(fg, input, TextureFormat::R11F_G11F_B10F, bloomOptions, scale);
+    }
 
     auto& ppToneMapping = fg.addPass<PostProcessToneMapping>("tonemapping",
             [&](FrameGraph::Builder& builder, PostProcessToneMapping& data) {
@@ -203,14 +221,32 @@ FrameGraphId <FrameGraphTexture> PostProcessManager::toneMapping(FrameGraph& fg,
                         .format = outFormat
                 });
                 data.rt = builder.createRenderTarget(data.output);
+
+                if (!bloomBlur.isValid()) {
+                    // we need a dummy texture
+                    bloomBlur = builder.createTexture("dummy", {});
+                }
+                data.bloom = builder.sample(bloomBlur);
             },
             [=](FrameGraphPassResources const& resources,
                     PostProcessToneMapping const& data, DriverApi& driver) {
-                auto const& color = resources.getTexture(data.input);
+                auto const& colorTexture = resources.getTexture(data.input);
+                auto const& bloomTexture = resources.getTexture(data.bloom);
 
                 FMaterialInstance* pInstance = mTonemapping.getMaterialInstance();
-                pInstance->setParameter("colorBuffer", color, {});
+                pInstance->setParameter("colorBuffer", colorTexture, { /* shader uses texelFetch */ });
+                pInstance->setParameter("bloomBuffer", bloomTexture, {
+                        .filterMag = SamplerMagFilter::LINEAR,
+                        .filterMin = SamplerMinFilter::LINEAR /* always read base level in shader */
+                });
+
+                float2 bloomParameter{ bloom / float(bloomOptions.levels), 1.0f };
+                if (bloomOptions.blendMode == View::BloomOptions::BlendMode::INTERPOLATE) {
+                    bloomParameter.y = 1.0f - bloomParameter.x;
+                }
+
                 pInstance->setParameter("dithering", dithering);
+                pInstance->setParameter("bloom", bloomParameter);
                 pInstance->setParameter("fxaa", fxaa);
                 pInstance->commit(driver);
 
@@ -765,7 +801,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
 
     const size_t kernelStorageSize = mSeparableGaussianBlurKernelStorageSize;
     auto& gaussianBlurPasses = fg.addPass<BlurPassData>("Gaussian Blur Passes",
-            [&](FrameGraph::Builder& builder, BlurPassData& data) {
+            [&](FrameGraph::Builder& builder, auto& data) {
                 auto desc = builder.getDescriptor(input);
 
                 if (!output.isValid()) {
@@ -795,15 +831,16 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
                 }, TargetBufferFlags::NONE);
             },
             [=](FrameGraphPassResources const& resources,
-                    BlurPassData const& data, DriverApi& driver) {
+                    auto const& data, DriverApi& driver) {
 
                 PostProcessMaterial const& separableGaussianBlur = mSeparableGaussianBlur;
                 FMaterialInstance* const mi = separableGaussianBlur.getMaterialInstance();
 
-                PipelineState pipeline;
-                pipeline.program = separableGaussianBlur.getProgram();
-                pipeline.rasterState = separableGaussianBlur.getMaterial()->getRasterState();
-                pipeline.scissor = mi->getScissor();
+                PipelineState pipeline{
+                        .program = separableGaussianBlur.getProgram(),
+                        .rasterState = separableGaussianBlur.getMaterial()->getRasterState(),
+                        .scissor = mi->getScissor()
+                };
 
                 float2 kernel[64];
                 size_t m = computeGaussianCoefficients(kernel,
@@ -862,6 +899,142 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
             });
 
     return gaussianBlurPasses.getData().out;
+}
+
+FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
+        FrameGraphId<FrameGraphTexture> input, backend::TextureFormat outFormat,
+        View::BloomOptions& bloomOptions, float2 scale) noexcept {
+
+    Handle<HwRenderPrimitive> fullScreenRenderPrimitive = mEngine.getFullScreenRenderPrimitive();
+
+    // Figure out a good size for the bloom buffer. We pick the major axis lower
+    // power of two, and scale the minor axis accordingly.
+    auto const& desc = fg.getDescriptor(input);
+    uint32_t width = desc.width / scale.x;
+    uint32_t height = desc.height / scale.y;
+    if (bloomOptions.anamorphism >= 1.0) {
+        height *= bloomOptions.anamorphism;
+    } else if (bloomOptions.anamorphism < 1.0) {
+        width *= 1.0f / std::max(bloomOptions.anamorphism, 1.0f / 4096.0f);
+    }
+    // FIXME: compensate for dynamic scaling
+    uint32_t& major = width > height ? width : height;
+    uint32_t& minor = width < height ? width : height;
+    uint32_t newMinor = clamp(bloomOptions.resolution,
+            1u << bloomOptions.levels, std::min(minor, 1u << kMaxBloomLevels));
+    major = major * uint64_t(newMinor) / minor;
+    minor = newMinor;
+
+    // we might need to adjust the max # of levels
+    const uint8_t maxLevels = static_cast<uint8_t>(std::ilogbf(major) + 1);
+    bloomOptions.levels = std::min(bloomOptions.levels, maxLevels);
+    bloomOptions.levels = std::min(bloomOptions.levels, kMaxBloomLevels);
+
+//    slog.d << desc.width << "x" << desc.height << " -> " << width << "x" << height
+//           << ", levels=" << +bloomOptions.levels << io::endl;
+
+    struct BloomPassData {
+        FrameGraphId<FrameGraphTexture> in;
+        FrameGraphId<FrameGraphTexture> out;
+        FrameGraphRenderTargetHandle outRT[kMaxBloomLevels];
+    };
+
+    auto& bloomPass = fg.addPass<BloomPassData>("Gaussian Blur Passes",
+            [&](FrameGraph::Builder& builder, auto& data) {
+                data.in = builder.sample(input);
+                data.out = builder.createTexture("Bloom Texture", {
+                        .width = width,
+                        .height = height,
+                        .levels = bloomOptions.levels,
+                        .format = outFormat
+                });
+                data.out = builder.write(builder.sample(data.out));
+
+                for (size_t i = 0; i < bloomOptions.levels; i++) {
+                    data.outRT[i] = builder.createRenderTarget("Bloom target", {
+                            .attachments = {{ data.out, uint8_t(i) }, {}}
+                    }, TargetBufferFlags::NONE);
+                }
+            },
+            [=](FrameGraphPassResources const& resources,
+                    auto const& data, DriverApi& driver) {
+
+                PostProcessMaterial const& bloomDownsample = mBloomDownsample;
+                FMaterialInstance* mi = bloomDownsample.getMaterialInstance();
+
+                PipelineState pipeline{
+                        .program = bloomDownsample.getProgram(),
+                        .rasterState = bloomDownsample.getMaterial()->getRasterState(),
+                        .scissor = mi->getScissor(),
+                };
+
+                auto hwIn = resources.getTexture(data.in);
+                auto hwOut = resources.getTexture(data.out);
+                auto const& outDesc = resources.getDescriptor(data.out);
+
+                mi->use(driver);
+                mi->setParameter("source", hwIn,  {
+                        .filterMag = SamplerMagFilter::LINEAR,
+                        .filterMin = SamplerMinFilter::LINEAR /* level is always 0 */
+                });
+                mi->setParameter("level", 0.0f);
+
+                // downsample phase
+                for (size_t i = 0; i < bloomOptions.levels; i++) {
+                    auto hwOutRT = resources.getRenderTarget(data.outRT[i]);
+
+                    auto w = FTexture::valueForLevel(i, outDesc.width);
+                    auto h = FTexture::valueForLevel(i, outDesc.height);
+                    mi->setParameter("resolution", float4{ w, h, 1.0f / w, 1.0f / h });
+                    mi->commit(driver);
+
+                    hwOutRT.params.flags.discardStart = TargetBufferFlags::COLOR;
+                    hwOutRT.params.flags.discardEnd = TargetBufferFlags::NONE;
+                    driver.beginRenderPass(hwOutRT.target, hwOutRT.params);
+                    driver.draw(pipeline, fullScreenRenderPrimitive);
+                    driver.endRenderPass();
+
+                    // prepare the next level
+                    mi->setParameter("source", hwOut,  {
+                            .filterMag = SamplerMagFilter::LINEAR,
+                            .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
+                    });
+                    mi->setParameter("level", float(i));
+                }
+
+                // upsample phase
+                PostProcessMaterial const& bloomUpsample = mBloomUpsample;
+                mi = bloomUpsample.getMaterialInstance();
+                pipeline.program = bloomUpsample.getProgram();
+                pipeline.rasterState = bloomUpsample.getMaterial()->getRasterState();
+                pipeline.scissor = mi->getScissor();
+                pipeline.rasterState.blendFunctionSrcRGB = BlendFunction::ONE;
+                pipeline.rasterState.blendFunctionDstRGB = BlendFunction::ONE;
+
+                mi->use(driver);
+
+                for (size_t i = bloomOptions.levels - 1; i >= 1; i--) {
+                    auto hwDstRT = resources.getRenderTarget(data.outRT[i - 1]);
+                    hwDstRT.params.flags.discardStart = TargetBufferFlags::NONE; // because we'll blend
+                    hwDstRT.params.flags.discardEnd = TargetBufferFlags::NONE;
+
+                    auto w = FTexture::valueForLevel(i - 1, outDesc.width);
+                    auto h = FTexture::valueForLevel(i - 1, outDesc.height);
+                    mi->setParameter("resolution", float4{ w, h, 1.0f / w, 1.0f / h });
+                    mi->setParameter("source", hwOut, {
+                            .filterMag = SamplerMagFilter::LINEAR,
+                            .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
+                    });
+                    mi->setParameter("level", float(i));
+                    mi->commit(driver);
+
+                    driver.beginRenderPass(hwDstRT.target, hwDstRT.params);
+                    driver.draw(pipeline, fullScreenRenderPrimitive);
+                    driver.endRenderPass();
+                }
+            });
+
+    return bloomPass.getData().out;
 }
 
 } // namespace filament

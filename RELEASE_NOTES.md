@@ -11,6 +11,7 @@ A new header is inserted each time a *tag* is created.
 - gltfio: add asynchronous API to ResourceLoader.
 - gltfio: generate normals for flat-shaded models that do not have normals.
 - Material instances now allow dynamic depth testing and other rasterization state.
+- Support for Bloom as a post-process effect.
 
 ## v1.4.5
 

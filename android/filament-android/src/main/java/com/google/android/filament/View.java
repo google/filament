@@ -63,6 +63,7 @@ public class View {
     private DynamicResolutionOptions mDynamicResolution;
     private RenderQuality mRenderQuality;
     private AmbientOcclusionOptions mAmbientOcclusionOptions;
+    private BloomOptions mBloomOptions;
     private RenderTarget mRenderTarget;
 
     /**
@@ -153,6 +154,64 @@ public class View {
          * Strength of the Ambient Occlusion effect. Must be positive.
          */
         public float intensity = 1.0f;
+    }
+
+    /**
+     * Options for controlling the Bloom effect
+     *
+     * enabled:     Enable or disable the bloom post-processing effect. Disabled by default.
+     * levels:      Number of successive blurs to achieve the blur effect, the minimum is 3 and the
+     *              maximum is 12. This value together with resolution influences the spread of the
+     *              blur effect. This value can be silently reduced to accommodate the original
+     *              image size.
+     * resolution:  Resolution of bloom's minor axis. The minimum value is 2^levels and the
+     *              the maximum is lower of the original resolution and 4096. This parameter is
+     *              silently clamped to the minimum and maximum.
+     *              It is highly recommended that this value be smaller than the target resolution
+     *              after dynamic resolution is applied (horizontally and vertically).
+     * strength:    how much of the bloom is added to the original image. Between 0 and 1.
+     * blendMode:   Whether the bloom effect is purely additive (false) or mixed with the original
+     *              image (true).
+     * anamorphism: Bloom's aspect ratio (x/y), for artistic purposes.
+     *
+     * @see setBloomOptions
+     */
+    public static class BloomOptions {
+
+        public enum BlendingMode {
+            ADD,
+            INTERPOLATE
+        }
+
+        /**
+         * Strength of the bloom effect, between 0.0 and 1.0
+         */
+        public float strength = 0.10f;
+
+        /**
+         * Resolution of minor axis (2^levels to 4096)
+         */
+        public int resolution = 360;
+
+        /**
+         * Bloom x/y aspect-ratio (1/32 to 32)
+         */
+        public float anamorphism = 1.0f;
+
+        /**
+         * Number of blur levels (3 to 12)
+         */
+        public int levels = 6;
+
+        /**
+         * How the bloom effect is applied
+         */
+        public BlendingMode blendingMode = BlendingMode.ADD;
+
+        /**
+         * enable or disable bloom
+         */
+        public boolean enabled = false;
     }
 
     /**
@@ -729,6 +788,31 @@ public class View {
         return mAmbientOcclusionOptions;
     }
 
+    /**
+     * Sets bloom options.
+     *
+     * @param options Options for bloom.
+     */
+    public void setBloomOptions(@NonNull BloomOptions options) {
+        mBloomOptions = options;
+        nSetBloomOptions(getNativeObject(), options.strength, options.resolution,
+                options.anamorphism, options.levels, options.blendingMode.ordinal(),
+                options.enabled);
+    }
+
+    /**
+     * Gets the bloom options
+     *
+     * @return bloom options currently set.
+     */
+    @NonNull
+    public BloomOptions getBloomOptions() {
+        if (mBloomOptions == null) {
+            mBloomOptions = new BloomOptions();
+        }
+        return mBloomOptions;
+    }
+
     public long getNativeObject() {
         if (mNativeObject == 0) {
             throw new IllegalStateException("Calling method on destroyed View");
@@ -771,4 +855,5 @@ public class View {
     private static native void nSetAmbientOcclusion(long nativeView, int ordinal);
     private static native int nGetAmbientOcclusion(long nativeView);
     private static native void nSetAmbientOcclusionOptions(long nativeView, float radius, float bias, float power, float resolution, float intensity);
+    private static native void nSetBloomOptions(long nativeView, float strength, int resolution, float anamorphism, int levels, int blendMode, boolean enabled);
 }

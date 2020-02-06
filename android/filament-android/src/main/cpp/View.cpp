@@ -246,3 +246,19 @@ Java_com_google_android_filament_View_nSetAmbientOcclusionOptions(JNIEnv*, jclas
     };
     view->setAmbientOcclusionOptions(options);
 }
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_View_nSetBloomOptions(JNIEnv*, jclass,
+        jlong nativeView, jfloat strength, jint resolution, jfloat anamorphism, jint levels,
+        jint blendMode, jboolean enabled) {
+    View* view = (View*) nativeView;
+    View::BloomOptions options = {
+            .strength = strength,
+            .resolution = (uint32_t)resolution,
+            .anamorphism = anamorphism,
+            .levels = (uint8_t)levels,
+            .blendMode = (View::BloomOptions::BlendMode)blendMode,
+            .enabled = (bool)enabled
+    };
+    view->setBloomOptions(options);
+}

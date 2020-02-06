@@ -102,6 +102,9 @@ void FView::terminate(FEngine& engine) {
 }
 
 void FView::setViewport(filament::Viewport const& viewport) noexcept {
+    // catch the cases were user had an underflow and didn't catch it.
+    assert((int32_t)viewport.width > 0);
+    assert((int32_t)viewport.height > 0);
     mViewport = viewport;
 }
 
@@ -970,6 +973,14 @@ void View::setAmbientOcclusionOptions(View::AmbientOcclusionOptions const& optio
 
 View::AmbientOcclusionOptions const& View::getAmbientOcclusionOptions() const noexcept {
     return upcast(this)->getAmbientOcclusionOptions();
+}
+
+void View::setBloomOptions(View::BloomOptions options) noexcept {
+    upcast(this)->setBloomOptions(options);
+}
+
+View::BloomOptions View::getBloomOptions() const noexcept {
+    return upcast(this)->getBloomOptions();
 }
 
 
