@@ -47,6 +47,10 @@ material {
         {
             type : float,
             name : transmission
+        },
+        {
+            type : float4,
+            name : emissive
         }
     ],
     specularAntiAliasing : true
@@ -66,5 +70,6 @@ fragment {
         material.thickness = materialParams.thickness;
         material.ior = materialParams.ior;
         material.transmission = materialParams.transmission;
+        material.emissive = materialParams.emissive;
     }
 }

@@ -315,12 +315,14 @@ static void gui(filament::Engine* engine, filament::View*) {
                         params.currentBlending == BLENDING_FADE) {
                     ImGui::SliderFloat("alpha", &params.alpha, 0.0f, 1.0f);
                 }
+
                 if (params.currentMaterialModel != MATERIAL_MODEL_SPECGLOSS) {
                     ImGui::SliderFloat("roughness", &params.roughness, 0.0f, 1.0f);
                 } else {
                     ImGui::SliderFloat("glossiness", &params.glossiness, 0.0f, 1.0f);
                     ImGui::ColorEdit3("specularColor", &params.specularColor.r);
                 }
+
                 if (params.currentMaterialModel != MATERIAL_MODEL_CLOTH &&
                         params.currentMaterialModel != MATERIAL_MODEL_SPECGLOSS) {
                     if (!hasRefraction) {
@@ -328,17 +330,20 @@ static void gui(filament::Engine* engine, filament::View*) {
                         ImGui::SliderFloat("reflectance", &params.reflectance, 0.0f, 1.0f);
                     }
                 }
+
                 if (params.currentMaterialModel != MATERIAL_MODEL_CLOTH &&
                         params.currentMaterialModel != MATERIAL_MODEL_SUBSURFACE) {
                     ImGui::SliderFloat("clearCoat", &params.clearCoat, 0.0f, 1.0f);
                     ImGui::SliderFloat("clearCoatRoughness", &params.clearCoatRoughness, 0.0f, 1.0f);
                     ImGui::SliderFloat("anisotropy", &params.anisotropy, -1.0f, 1.0f);
                 }
+
                 if (params.currentMaterialModel == MATERIAL_MODEL_SUBSURFACE) {
                     ImGui::SliderFloat("thickness", &params.thickness, 0.0f, 1.0f);
                     ImGui::SliderFloat("subsurfacePower", &params.subsurfacePower, 1.0f, 24.0f);
                     ImGui::ColorEdit3("subsurfaceColor", &params.subsurfaceColor.r);
                 }
+
                 if (params.currentMaterialModel == MATERIAL_MODEL_CLOTH) {
                     ImGui::ColorEdit3("sheenColor", &params.sheenColor.r);
                     ImGui::ColorEdit3("subsurfaceColor", &params.subsurfaceColor.r);
@@ -353,6 +358,9 @@ static void gui(filament::Engine* engine, filament::View*) {
                     ImGui::Checkbox("Screen Space Refraction", &params.ssr);
                 }
             }
+
+            ImGui::ColorEdit3("emissiveColor", &params.emissiveColor.r);
+            ImGui::SliderFloat("emissiveEC", &params.emissiveEC, 0.0f, 6.0f);
         }
 
         if (ImGui::CollapsingHeader("Shading AA")) {

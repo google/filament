@@ -29,6 +29,10 @@ material {
         {
             type : float3,
             name : subsurfaceColor
+        },
+        {
+            type : float4,
+            name : emissive
         }
     ],
     specularAntiAliasing : true
@@ -44,5 +48,6 @@ fragment {
         material.thickness = materialParams.thickness;
         material.subsurfacePower = materialParams.subsurfacePower;
         material.subsurfaceColor = materialParams.subsurfaceColor;
+        material.emissive = materialParams.emissive;
     }
 }

@@ -28,6 +28,7 @@
 #include <utils/EntityManager.h>
 
 #include <math/vec3.h>
+#include <math/vec4.h>
 
 #include "generated/resources/resources.h"
 
@@ -75,10 +76,12 @@ struct SandboxParameters {
     float transmission = 1.0f;
     float distance = 1.0f;
     float ior = 1.5;
+    float emissiveEC = 0.0f;
     filament::sRGBColor transmittanceColor =  { 1.0f };
     filament::sRGBColor specularColor = {0.0f };
-    filament::sRGBColor subsurfaceColor = {0.0f};
-    filament::sRGBColor sheenColor = {0.83f, 0.0f, 0.0f};
+    filament::sRGBColor subsurfaceColor = {0.0f };
+    filament::sRGBColor sheenColor = {0.83f, 0.0f, 0.0f };
+    filament::sRGBColor emissiveColor = {0.0f, 0.0f, 0.0f };
     int currentMaterialModel = MATERIAL_MODEL_LIT;
     int currentBlending = BLENDING_OPAQUE;
     bool ssr = false;
@@ -208,11 +211,11 @@ inline filament::MaterialInstance* updateInstances(SandboxParameters& params,
             params.currentBlending == BLENDING_SOLID_REFRACTION;
 
     MaterialInstance* materialInstance = params.materialInstance[material];
-    if (params.currentMaterialModel == MATERIAL_MODEL_UNLIT) {
-        materialInstance->setParameter("baseColor", RgbType::sRGB, params.color);
-    }
+    materialInstance->setParameter("baseColor", RgbType::sRGB, params.color);
+    math::float4 emissive(Color::toLinear(params.emissiveColor), params.emissiveEC);
+    materialInstance->setParameter("emissive", emissive);
+
     if (params.currentMaterialModel == MATERIAL_MODEL_LIT) {
-        materialInstance->setParameter("baseColor", RgbType::sRGB, params.color);
         materialInstance->setParameter("roughness", params.roughness);
         materialInstance->setParameter("metallic", params.metallic);
         if (!hasRefraction) {
@@ -221,9 +224,11 @@ inline filament::MaterialInstance* updateInstances(SandboxParameters& params,
         materialInstance->setParameter("clearCoat", params.clearCoat);
         materialInstance->setParameter("clearCoatRoughness", params.clearCoatRoughness);
         materialInstance->setParameter("anisotropy", params.anisotropy);
+
         if (params.currentBlending != BLENDING_OPAQUE) {
             materialInstance->setParameter("alpha", params.alpha);
         }
+
         if  (hasRefraction) {
             math::float3 color = Color::toLinear(params.transmittanceColor);
             materialInstance->setParameter("absorption",
@@ -233,8 +238,8 @@ inline filament::MaterialInstance* updateInstances(SandboxParameters& params,
             materialInstance->setParameter("thickness", params.thickness);
         }
     }
+
     if (params.currentMaterialModel == MATERIAL_MODEL_SPECGLOSS) {
-        materialInstance->setParameter("baseColor", RgbType::sRGB, params.color);
         materialInstance->setParameter("glossiness", params.glossiness);
         materialInstance->setParameter("specularColor", params.specularColor);
         materialInstance->setParameter("reflectance", params.reflectance);
@@ -242,8 +247,8 @@ inline filament::MaterialInstance* updateInstances(SandboxParameters& params,
         materialInstance->setParameter("clearCoatRoughness", params.clearCoatRoughness);
         materialInstance->setParameter("anisotropy", params.anisotropy);
     }
+
     if (params.currentMaterialModel == MATERIAL_MODEL_SUBSURFACE) {
-        materialInstance->setParameter("baseColor", RgbType::sRGB, params.color);
         materialInstance->setParameter("roughness", params.roughness);
         materialInstance->setParameter("metallic", params.metallic);
         materialInstance->setParameter("reflectance", params.reflectance);
@@ -251,12 +256,13 @@ inline filament::MaterialInstance* updateInstances(SandboxParameters& params,
         materialInstance->setParameter("subsurfacePower", params.subsurfacePower);
         materialInstance->setParameter("subsurfaceColor", RgbType::sRGB, params.subsurfaceColor);
     }
+
     if (params.currentMaterialModel == MATERIAL_MODEL_CLOTH) {
-        materialInstance->setParameter("baseColor", RgbType::sRGB, params.color);
         materialInstance->setParameter("roughness", params.roughness);
         materialInstance->setParameter("sheenColor", RgbType::sRGB, params.sheenColor);
         materialInstance->setParameter("subsurfaceColor", RgbType::sRGB, params.subsurfaceColor);
     }
+
     if (params.currentMaterialModel != MATERIAL_MODEL_UNLIT) {
         materialInstance->setSpecularAntiAliasingVariance(params.specularAntiAliasingVariance);
         materialInstance->setSpecularAntiAliasingThreshold(params.specularAntiAliasingThreshold);
