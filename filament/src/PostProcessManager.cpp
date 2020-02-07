@@ -621,7 +621,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::mipmapPass(FrameGraph& fg,
                 auto out = resources.getRenderTarget(data.rt, level + 1u);
 
                 FMaterialInstance* const pInstance = mMipmapDepth.getMaterialInstance();
-                pInstance->setParameter("depth", in, {});
+                pInstance->setParameter("depth", in, { /* uses texelFetch */ });
                 pInstance->setParameter("level", uint32_t(level));
                 pInstance->commit(driver);
 
@@ -768,11 +768,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
         FrameGraphRenderTargetHandle tempRT;
     };
 
-    backend::SamplerParams sampler {
-            .filterMag = SamplerMagFilter::LINEAR,
-            .filterMin = SamplerMinFilter::LINEAR
-    };
-
     const size_t kernelStorageSize = mSeparableGaussianBlurKernelStorageSize;
     auto& gaussianBlurPasses = fg.addPass<BlurPassData>("Gaussian Blur Passes",
             [&](FrameGraph::Builder& builder, BlurPassData& data) {
@@ -828,7 +823,10 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
                 auto const& outDesc = resources.getDescriptor(data.out);
                 auto const& tempDesc = resources.getDescriptor(data.temp);
 
-                mi->setParameter("source", hwIn, sampler);
+                mi->setParameter("source", hwIn, {
+                        .filterMag = SamplerMagFilter::LINEAR,
+                        .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
+                });
                 mi->setParameter("level", (float)srcLevel);
                 mi->setParameter("resolution", float4{
                         tempDesc.width, tempDesc.height,
@@ -853,7 +851,10 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
                 assert(width == hwOutRT.params.viewport.width);
                 assert(height == hwOutRT.params.viewport.height);
 
-                mi->setParameter("source", hwTemp, sampler);
+                mi->setParameter("source", hwTemp, {
+                        .filterMag = SamplerMagFilter::LINEAR,
+                        .filterMin = SamplerMinFilter::LINEAR /* level is always 0 */
+                });
                 mi->setParameter("level", 0.0f);
                 mi->setParameter("resolution",
                         float4{ width, height, 1.0f / width, 1.0f / height });
