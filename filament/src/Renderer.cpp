@@ -459,14 +459,12 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
         //      +-------+-------+-------*===*-------+-------+-------+
         //  ... | 6 | 5 | 4 | 3 | 2 | 1 | 0 | 1 | 2 | 3 | 4 | 5 | 6 | ...
         //      +-------+-------+-------*===*-------+-------+-------+
-        const size_t kernelSize = 17;   // requires only 5 stored coefficients and 9 tap/pass
+        const size_t kernelSize = 21;   // requires only 6 stored coefficients and 11 tap/pass
         static_assert(kernelSize & 1, "kernel size must be odd");
         static_assert((((kernelSize - 1) / 2) & 1) == 0, "kernel positive side size must be even");
 
-        // The relation between n and sigma (variance) should 6*sigma - 1 = N, however here we
-        // use 4*sigma - 1 = N, which gives a stronger blur, without bringing too many artifacts.
-        const float sigmaRatio = 4.0f;
-        const float sigma0 = (kernelSize + 1) / sigmaRatio;
+        // The relation between n and sigma (variance) is 6*sigma - 1 = N
+        const float sigma0 = (kernelSize + 1) / 6.0f;
 
         // The variance doubles each time we go one mip down, so the relation between LOD and
         // sigma is: lod = log2(sigma/sigma0).
@@ -487,7 +485,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
         input = ppm.resolve(fg, "Refraction Buffer",
                 roughnessLodCount, TextureFormat::R11F_G11F_B10F, input);
 
-        input = ppm.generateGaussianMipmap(fg, input, roughnessLodCount, kernelSize, sigmaRatio);
+        input = ppm.generateGaussianMipmap(fg, input, roughnessLodCount, kernelSize);
 
         struct PrepareSSRData {
             FrameGraphId<FrameGraphTexture> ssr;
