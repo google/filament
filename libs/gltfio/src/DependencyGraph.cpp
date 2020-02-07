@@ -44,10 +44,20 @@ void DependencyGraph::addEdge(MaterialInstance* mi, const char* parameter) {
     mMaterialToTexture[mi].params[parameter] = nullptr;
 }
 
+// During finalization, the structure of the glTF is known but we have not yet created texture
+// objects. Find all non-textured entities and immediately add mark them as ready.
 void DependencyGraph::finalize() {
     assert(!mFinalized);
     for (auto pair : mEntityToMaterial) {
-        if (pair.second.materials.empty()) {
+        const auto& materials = pair.second.materials;
+        bool textured = false;
+        for (auto mi : materials) {
+            textured = mMaterialToTexture.find(mi) != mMaterialToTexture.end();
+            if (textured) {
+                break;
+            }
+        }
+        if (!textured) {
             mReadyRenderables.push(pair.first);
         }
     }
