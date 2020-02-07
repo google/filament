@@ -14,6 +14,7 @@ set_target_properties(gltfio_resources PROPERTIES IMPORTED_LOCATION
 
 include_directories(${FILAMENT_DIR}/include
         ..
+        ../../third_party/robin-map
         ../../libs/utils/include)
 
 set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/libgltfio-jni.map")
