@@ -85,10 +85,9 @@ Java_com_google_android_filament_gltfio_FilamentAsset_nGetBoundingBox(JNIEnv* en
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_google_android_filament_gltfio_FilamentAsset_nGetName(JNIEnv* env, jclass,
         jlong nativeAsset, jint entityId) {
-    uint32_t id = static_cast<uint32_t>(entityId);
-    Entity* entity = (Entity*) &id;
+    Entity entity = Entity::import(entityId);
     FilamentAsset* asset = (FilamentAsset*) nativeAsset;
-    const char* val = asset->getName(*entity);
+    const char* val = asset->getName(entity);
     return val ? env->NewStringUTF(val) : nullptr;
 }
 

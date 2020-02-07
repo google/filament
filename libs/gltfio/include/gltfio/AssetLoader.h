@@ -174,6 +174,8 @@ public:
      */
     size_t getMaterialsCount() const noexcept;
 
+    utils::NameComponentManager* getNames() const noexcept;
+
     /*! \cond PRIVATE */
 protected:
     AssetLoader() noexcept = default;

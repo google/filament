@@ -122,6 +122,10 @@ struct FAssetLoader : public AssetLoader {
         return mMaterials->getMaterialsCount();
     }
 
+    NameComponentManager* getNames() const noexcept {
+        return mNameManager;
+    }
+
     const Material* const* getMaterials() const noexcept {
         return mMaterials->getMaterials();
     }
@@ -1022,6 +1026,10 @@ void AssetLoader::destroyAsset(const FilamentAsset* asset) {
 
 size_t AssetLoader::getMaterialsCount() const noexcept {
     return upcast(this)->getMaterialsCount();
+}
+
+NameComponentManager* AssetLoader::getNames() const noexcept {
+    return upcast(this)->getNames();
 }
 
 const Material* const* AssetLoader::getMaterials() const noexcept {
