@@ -48,17 +48,10 @@ void DependencyGraph::addEdge(MaterialInstance* mi, const char* parameter) {
 // objects. Find all non-textured entities and immediately add mark them as ready.
 void DependencyGraph::finalize() {
     assert(!mFinalized);
-    for (auto pair : mEntityToMaterial) {
-        const auto& materials = pair.second.materials;
-        bool textured = false;
-        for (auto mi : materials) {
-            textured = mMaterialToTexture.find(mi) != mMaterialToTexture.end();
-            if (textured) {
-                break;
-            }
-        }
-        if (!textured) {
-            mReadyRenderables.push(pair.first);
+    for (auto pair : mMaterialToEntity) {
+        auto mi = pair.first;
+        if (mMaterialToTexture.find(mi) == mMaterialToTexture.end()) {
+            markAsReady(mi);
         }
     }
     mFinalized = true;
