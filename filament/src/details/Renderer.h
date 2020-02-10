@@ -101,7 +101,9 @@ private:
             backend::PixelBufferDescriptor&& buffer);
 
     struct ColorPassConfig {
+        Viewport vp;
         Viewport svp;
+        math::float2 scale;
         backend::TextureFormat hdrFormat;
         uint8_t msaa;
     };

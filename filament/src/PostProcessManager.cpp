@@ -288,12 +288,12 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::fxaa(FrameGraph& fg,
     return ppFXAA.getData().output;
 }
 
-FrameGraphId<FrameGraphTexture> PostProcessManager::dynamicScaling(FrameGraph& fg,
-        bool scaled, bool blend, FrameGraphId<FrameGraphTexture> input,
-        TextureFormat outFormat) noexcept {
+FrameGraphId<FrameGraphTexture> PostProcessManager::dynamicScaling(FrameGraph& fg, bool blend,
+        FrameGraphId<FrameGraphTexture> input,
+        FrameGraphTexture::Descriptor outDesc) noexcept {
 
     if (UTILS_UNLIKELY(blend)) {
-        return quadBlit(fg, blend, input, outFormat);
+        return quadBlit(fg, blend, input, outDesc.format);
     }
 
     struct PostProcessScaling {
@@ -328,11 +328,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dynamicScaling(FrameGraph& f
                         .samples = std::max(uint8_t(1), inputDesc.samples)
                 });
 
-                data.output = builder.createTexture("scaled output", {
-                        .width = inputDesc.width,
-                        .height = inputDesc.height,
-                        .format = outFormat
-                });
+                data.output = builder.createTexture("scaled output", outDesc);
                 data.drt = builder.createRenderTarget(data.output);
             },
             [=](FrameGraphPassResources const& resources,
@@ -403,26 +399,25 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::quadBlit(FrameGraph& fg,
     return ppQuadScaling.getData().output;
 }
 
-UTILS_NOINLINE
 FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(FrameGraph& fg,
         const char* outputBufferName, FrameGraphId<FrameGraphTexture> input) noexcept {
-    auto desc = fg.getDescriptor(input);
-    return resolve(fg, outputBufferName, 1, desc.format, input);
-}
 
-FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(FrameGraph& fg,
-        const char* outputBufferName, uint8_t levels, backend::TextureFormat preferredOutputFormat,
-        FrameGraphId<FrameGraphTexture> input) noexcept {
+    // Don't do anything if we're not a MSAA buffer
+    auto desc = fg.getDescriptor(input);
+    if (desc.samples <= 1) {
+        return input;
+    }
+
     struct ResolveData {
         FrameGraphId<FrameGraphTexture> output;
         FrameGraphRenderTargetHandle srt;
         FrameGraphRenderTargetHandle drt;
     };
+
     auto& ppResolve = fg.addPass<ResolveData>("resolve",
             [&](FrameGraph::Builder& builder, auto& data) {
-                auto outputDesc = fg.getDescriptor(input);
-                outputDesc.levels = levels ? levels : 1;
-                outputDesc.format = outputDesc.samples <= 1 ? preferredOutputFormat : outputDesc.format;
+                auto outputDesc = builder.getDescriptor(input);
+                outputDesc.levels = 1;
                 outputDesc.samples = 0;
                 input = builder.read(input);
                 FrameGraphRenderTarget::Descriptor d;
