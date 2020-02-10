@@ -850,6 +850,9 @@ void MetalDriver::blit(TargetBufferFlags buffers,
     id<MTLTexture> srcTexture = srcTarget->getBlitColorSource();
     id<MTLTexture> dstTexture = dstTarget->getColor();
 
+    ASSERT_PRECONDITION(srcTexture != nil && dstTexture != nil,
+            "Source texture and destination texture must not be nil");
+
     // Metal's texture coordinates have (0, 0) at the top-left of the texture, but Filament's
     // coordinates have (0, 0) at bottom-left.
     MTLRegion srcRegion = MTLRegionMake2D(
