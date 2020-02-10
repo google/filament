@@ -321,7 +321,9 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     pass.sortCommands();
 
     const ColorPassConfig config {
+            .vp = vp,
             .svp = svp,
+            .scale = scale,
             .hdrFormat = hdrFormat,
             .msaa = msaa
     };
@@ -383,7 +385,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             input = ppm.fxaa(fg, input, ldrFormat, !toneMapping || translucent);
         }
         if (scaled) {
-            input = ppm.dynamicScaling(fg, scaled, blending, input, ldrFormat);
+            input = ppm.dynamicScaling(fg, blending, input, { .format = ldrFormat });
         }
     }
 
@@ -399,7 +401,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     const bool outputIsInput = fg.equal(input, colorPassOutput);
     if ((outputIsInput && viewRenderTarget == mRenderTarget && msaa > 1) ||
         (!outputIsInput && blending)) {
-        input = ppm.dynamicScaling(fg, scaled, blending, input, ldrFormat);
+        input = ppm.dynamicScaling(fg, blending, input, { .format = ldrFormat });
     }
 
     fg.present(input);
@@ -480,10 +482,26 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
         size_t roughnessLodCount =
                 std::min(maxLod, (uint32_t)std::ilogbf(std::max(desc.width, desc.height))) + 1u;
 
-        // Copy the color buffer into a texture, we use resolve() because in case of a multi-sample
-        // buffer, it'll also resolve it.
-        input = ppm.resolve(fg, "Refraction Buffer",
-                roughnessLodCount, TextureFormat::R11F_G11F_B10F, input);
+        // First we need to resolve the MSAA buffer if enabled
+        input = ppm.resolve(fg, "Resolved Color Buffer", input);
+
+        // Then copy the color buffer into a texture, and make sure to scale it back properly.
+        uint32_t w = config.svp.width;
+        uint32_t h = config.svp.height;
+        if (config.scale.x < config.scale.y) {
+            // we're downscaling more horizontally
+            w = config.vp.width * config.scale.y;
+        } else {
+            // we're downscaling more vertically
+            h = config.vp.height * config.scale.x;
+        }
+
+        input = ppm.dynamicScaling(fg, false, input, {
+            .width = w,
+            .height = h,
+            .levels = uint8_t(roughnessLodCount),
+            .format = TextureFormat::R11F_G11F_B10F,
+        });
 
         input = ppm.generateGaussianMipmap(fg, input, roughnessLodCount, kernelSize);
 
