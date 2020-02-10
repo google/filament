@@ -85,6 +85,9 @@ export class MaterialInstance {
     public setMaskThreshold(threshold: number): void;
     public setDoubleSided(doubleSided: boolean): void;
     public setCullingMode(mode: CullingMode): void;
+    public setColorWrite(enable: boolean): void;
+    public setDepthWrite(enable: boolean): void;
+    public setDepthCulling(enable: boolean): void;
 }
 
 export class EntityManager {

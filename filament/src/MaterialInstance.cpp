@@ -44,9 +44,15 @@ FMaterialInstance::FMaterialInstance() noexcept = default;
 FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material) {
     mMaterial = material;
 
+    const RasterState& rasterState = mMaterial->getRasterState();
+
     // We inherit the resolved culling mode rather than the builder-set culling mode.
     // This preserves the property whereby double-sidedness automatically disables culling.
-    mCulling = mMaterial->getRasterState().culling;
+    mCulling = rasterState.culling;
+
+    mColorWrite = rasterState.colorWrite;
+    mDepthWrite = rasterState.depthWrite;
+    mDepthFunc = rasterState.depthFunc;
 
     mMaterialSortingKey = RenderPass::makeMaterialSortingKey(
             material->getId(), material->generateMaterialInstanceId());
@@ -170,6 +176,18 @@ void FMaterialInstance::setDoubleSided(bool doubleSided) noexcept {
 
 void FMaterialInstance::setCullingMode(CullingMode culling) noexcept {
     mCulling = culling;
+}
+
+void FMaterialInstance::setColorWrite(bool enable) noexcept {
+    mColorWrite = enable;
+}
+
+void FMaterialInstance::setDepthWrite(bool enable) noexcept {
+    mDepthWrite = enable;
+}
+
+void FMaterialInstance::setDepthCulling(bool enable) noexcept {
+    mDepthFunc = enable ? RasterState::DepthFunc::LE : RasterState::DepthFunc::A;
 }
 
 // explicit template instantiation of our supported types
@@ -311,5 +329,18 @@ void MaterialInstance::setDoubleSided(bool doubleSided) noexcept {
 void MaterialInstance::setCullingMode(CullingMode culling) noexcept {
     upcast(this)->setCullingMode(culling);
 }
+
+void MaterialInstance::setColorWrite(bool enable) noexcept {
+    upcast(this)->setColorWrite(enable);
+}
+
+void MaterialInstance::setDepthWrite(bool enable) noexcept {
+    upcast(this)->setDepthWrite(enable);
+}
+
+void MaterialInstance::setDepthCulling(bool enable) noexcept {
+    upcast(this)->setDepthCulling(enable);
+}
+
 
 } // namespace filament
