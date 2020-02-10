@@ -69,11 +69,6 @@ void RenderPass::overridePolygonOffset(backend::PolygonOffset* polygonOffset) no
     }
 }
 
-void RenderPass::overrideMaterial(FMaterial const* material, FMaterialInstance const* mi) noexcept {
-    assert(mi->getMaterial() == material);
-    mMaterialInstanceOverride = mi;
-}
-
 RenderPass::Command* RenderPass::newCommandBuffer() noexcept {
     GrowingSlice<Command>& commands = mCommands;
     commands = GrowingSlice<Command>(commands.end(), commands.capacity() - commands.size());
@@ -210,19 +205,6 @@ void RenderPass::recordDriverCommands(FEngine::DriverApi& driver, const Command*
         FMaterial const* UTILS_RESTRICT ma = nullptr;
         auto const& customCommands = mCustomCommands;
 
-        auto useMaterialInstance = [&](FMaterialInstance const* materialInstance) {
-            mi = materialInstance;
-            ma = mi->getMaterial();
-            pipeline.scissor = mi->getScissor();
-            *pPipelinePolygonOffset = mi->getPolygonOffset();
-            mi->use(driver);
-        };
-
-        FMaterialInstance const * const materialInstanceOverride = mMaterialInstanceOverride;
-        if (UTILS_UNLIKELY(materialInstanceOverride)) {
-            useMaterialInstance(materialInstanceOverride);
-        }
-
         first--;
         while (++first != last) {
             /*
@@ -238,9 +220,13 @@ void RenderPass::recordDriverCommands(FEngine::DriverApi& driver, const Command*
             // per-renderable uniform
             const PrimitiveInfo info = first->primitive;
             pipeline.rasterState = info.rasterState;
-            if (UTILS_UNLIKELY(!materialInstanceOverride && mi != info.mi)) {
+            if (UTILS_UNLIKELY(mi != info.mi)) {
                 // this is always taken the first time
-                useMaterialInstance(info.mi);
+                mi = info.mi;
+                ma = mi->getMaterial();
+                pipeline.scissor = mi->getScissor();
+                *pPipelinePolygonOffset = mi->getPolygonOffset();
+                mi->use(driver);
             }
 
             pipeline.program = ma->getProgram(info.materialVariant.key);
