@@ -422,7 +422,7 @@ public class Material {
     }
 
     /**
-     * Indicates whether this material will write to the color buffer.
+     * Indicates whether instances of this material will, by default, write to the color buffer.
      *
      * @see
      * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/rasterization:colorwrite">
@@ -433,7 +433,7 @@ public class Material {
     }
 
     /**
-     * Indicates whether this material will write to the depth buffer.
+     * Indicates whether instances of this material will, by default, write to the depth buffer.
      *
      * @see
      * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/rasterization:depthwrite">
@@ -444,7 +444,7 @@ public class Material {
     }
 
     /**
-     * Indicates whether this material will use depth testing.
+     * Indicates whether instances of this material will, by default, use depth testing.
      *
      * @see
      * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/rasterization:depthculling">

@@ -125,7 +125,7 @@ public:
 
     /**
      * Set up a custom scissor rectangle; by default this encompasses the View.
-     * 
+     *
      * @param left      left coordinate of the scissor box
      * @param bottom    bottom coordinate of the scissor box
      * @param width     width of the scissor box
@@ -188,6 +188,21 @@ public:
      * Overrides the default triangle culling state that was set on the material.
      */
     void setCullingMode(CullingMode culling) noexcept;
+
+    /**
+     * Overrides the default color-buffer write state that was set on the material.
+     */
+    void setColorWrite(bool enable) noexcept;
+
+    /**
+     * Overrides the default depth-buffer write state that was set on the material.
+     */
+    void setDepthWrite(bool enable) noexcept;
+
+    /**
+     * Overrides the default depth testing state that was set on the material.
+     */
+    void setDepthCulling(bool enable) noexcept;
 };
 
 } // namespace filament

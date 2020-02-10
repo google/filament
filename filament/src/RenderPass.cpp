@@ -210,7 +210,7 @@ void RenderPass::recordDriverCommands(FEngine::DriverApi& driver, const Command*
         FMaterial const* UTILS_RESTRICT ma = nullptr;
         auto const& customCommands = mCustomCommands;
 
-        auto updateMaterial = [&](FMaterialInstance const* materialInstance) {
+        auto useMaterialInstance = [&](FMaterialInstance const* materialInstance) {
             mi = materialInstance;
             ma = mi->getMaterial();
             pipeline.scissor = mi->getScissor();
@@ -220,7 +220,7 @@ void RenderPass::recordDriverCommands(FEngine::DriverApi& driver, const Command*
 
         FMaterialInstance const * const materialInstanceOverride = mMaterialInstanceOverride;
         if (UTILS_UNLIKELY(materialInstanceOverride)) {
-            updateMaterial(materialInstanceOverride);
+            useMaterialInstance(materialInstanceOverride);
         }
 
         first--;
@@ -240,7 +240,7 @@ void RenderPass::recordDriverCommands(FEngine::DriverApi& driver, const Command*
             pipeline.rasterState = info.rasterState;
             if (UTILS_UNLIKELY(!materialInstanceOverride && mi != info.mi)) {
                 // this is always taken the first time
-                updateMaterial(info.mi);
+                useMaterialInstance(info.mi);
             }
 
             pipeline.program = ma->getProgram(info.materialVariant.key);
@@ -289,6 +289,9 @@ void RenderPass::setupColorCommand(Command& cmdDraw, bool hasDepthPass,
     cmdDraw.primitive.rasterState = ma->getRasterState();
     cmdDraw.primitive.rasterState.inverseFrontFaces = inverseFrontFaces;
     cmdDraw.primitive.rasterState.culling = mi->getCullingMode();
+    cmdDraw.primitive.rasterState.colorWrite = mi->getColorWrite();
+    cmdDraw.primitive.rasterState.depthWrite = mi->getDepthWrite();
+    cmdDraw.primitive.rasterState.depthFunc = mi->getDepthFunc();
     cmdDraw.primitive.mi = mi;
     cmdDraw.primitive.materialVariant.key = variant;
 

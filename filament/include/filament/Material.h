@@ -153,13 +153,13 @@ public:
     //! This value only makes sense when the blending mode is transparent or fade.
     TransparencyMode getTransparencyMode() const noexcept;
 
-    //! Indicates whether this material will write to the color buffer.
+    //! Indicates whether instances of this material will, by default, write to the color buffer.
     bool isColorWriteEnabled() const noexcept;
 
-    //! Indicates whether this material will write to the depth buffer.
+    //! Indicates whether instances of this material will, by default, write to the depth buffer.
     bool isDepthWriteEnabled() const noexcept;
 
-    //! Indicates whether this material will use depth testing.
+    //! Indicates whether instances of this material will, by default, use depth testing.
     bool isDepthCullingEnabled() const noexcept;
 
     //! Indicates whether this material is double-sided.

@@ -958,7 +958,10 @@ class_<MaterialInstance>("MaterialInstance")
     .function("setPolygonOffset", &MaterialInstance::setPolygonOffset)
     .function("setMaskThreshold", &MaterialInstance::setMaskThreshold)
     .function("setDoubleSided", &MaterialInstance::setDoubleSided)
-    .function("setCullingMode", &MaterialInstance::setCullingMode);
+    .function("setCullingMode", &MaterialInstance::setCullingMode)
+    .function("setColorWrite", &MaterialInstance::setColorWrite)
+    .function("setDepthWrite", &MaterialInstance::setDepthWrite)
+    .function("setDepthCulling", &MaterialInstance::setDepthCulling);
 
 class_<TextureSampler>("TextureSampler")
     .constructor<backend::SamplerMinFilter, backend::SamplerMagFilter, backend::SamplerWrapMode>();
