@@ -21,6 +21,7 @@
 #include <utility>
 #include <vector>
 
+#include "source/ext_inst.h"
 #include "source/table.h"
 #include "spirv-tools/libspirv.h"
 
@@ -83,6 +84,17 @@ class Instruction {
   /// Provides direct access to instructions spv_ext_inst_type_t object.
   const spv_ext_inst_type_t& ext_inst_type() const {
     return inst_.ext_inst_type;
+  }
+
+  bool IsNonSemantic() const {
+    return opcode() == SpvOp::SpvOpExtInst &&
+           spvExtInstIsNonSemantic(inst_.ext_inst_type);
+  }
+
+  /// True if this is an OpExtInst for debug info extension.
+  bool IsDebugInfo() const {
+    return opcode() == SpvOp::SpvOpExtInst &&
+           spvExtInstIsDebugInfo(inst_.ext_inst_type);
   }
 
   // Casts the words belonging to the operand under |index| to |T| and returns.

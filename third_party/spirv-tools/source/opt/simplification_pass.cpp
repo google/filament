@@ -32,6 +32,18 @@ Pass::Status SimplificationPass::Process() {
   return (modified ? Status::SuccessWithChange : Status::SuccessWithoutChange);
 }
 
+void SimplificationPass::AddNewOperands(
+    Instruction* folded_inst, std::unordered_set<Instruction*>* inst_seen,
+    std::vector<Instruction*>* work_list) {
+  analysis::DefUseManager* def_use_mgr = get_def_use_mgr();
+  folded_inst->ForEachInId(
+      [&inst_seen, &def_use_mgr, &work_list](uint32_t* iid) {
+        Instruction* iid_inst = def_use_mgr->GetDef(*iid);
+        if (!inst_seen->insert(iid_inst).second) return;
+        work_list->push_back(iid_inst);
+      });
+}
+
 bool SimplificationPass::SimplifyFunction(Function* function) {
   bool modified = false;
   // Phase 1: Traverse all instructions in dominance order.
@@ -44,19 +56,25 @@ bool SimplificationPass::SimplifyFunction(Function* function) {
   std::unordered_set<Instruction*> process_phis;
   std::unordered_set<Instruction*> inst_to_kill;
   std::unordered_set<Instruction*> in_work_list;
+  std::unordered_set<Instruction*> inst_seen;
   const InstructionFolder& folder = context()->get_instruction_folder();
 
   cfg()->ForEachBlockInReversePostOrder(
       function->entry().get(),
       [&modified, &process_phis, &work_list, &in_work_list, &inst_to_kill,
-       folder, this](BasicBlock* bb) {
+       &folder, &inst_seen, this](BasicBlock* bb) {
         for (Instruction* inst = &*bb->begin(); inst; inst = inst->NextNode()) {
+          inst_seen.insert(inst);
           if (inst->opcode() == SpvOpPhi) {
             process_phis.insert(inst);
           }
 
-          if (inst->opcode() == SpvOpCopyObject ||
-              folder.FoldInstruction(inst)) {
+          bool is_foldable_copy =
+              inst->opcode() == SpvOpCopyObject &&
+              context()->get_decoration_mgr()->HaveSubsetOfDecorations(
+                  inst->result_id(), inst->GetSingleWordInOperand(0));
+
+          if (is_foldable_copy || folder.FoldInstruction(inst)) {
             modified = true;
             context()->AnalyzeUses(inst);
             get_def_use_mgr()->ForEachUser(inst, [&work_list, &process_phis,
@@ -66,9 +84,20 @@ bool SimplificationPass::SimplifyFunction(Function* function) {
                 work_list.push_back(use);
               }
             });
+
+            AddNewOperands(inst, &inst_seen, &work_list);
+
             if (inst->opcode() == SpvOpCopyObject) {
-              context()->ReplaceAllUsesWith(inst->result_id(),
-                                            inst->GetSingleWordInOperand(0));
+              context()->ReplaceAllUsesWithPredicate(
+                  inst->result_id(), inst->GetSingleWordInOperand(0),
+                  [](Instruction* user, uint32_t) {
+                    const auto opcode = user->opcode();
+                    if (!spvOpcodeIsDebug(opcode) &&
+                        !spvOpcodeIsDecoration(opcode)) {
+                      return true;
+                    }
+                    return false;
+                  });
               inst_to_kill.insert(inst);
               in_work_list.insert(inst);
             } else if (inst->opcode() == SpvOpNop) {
@@ -85,7 +114,14 @@ bool SimplificationPass::SimplifyFunction(Function* function) {
   for (size_t i = 0; i < work_list.size(); ++i) {
     Instruction* inst = work_list[i];
     in_work_list.erase(inst);
-    if (inst->opcode() == SpvOpCopyObject || folder.FoldInstruction(inst)) {
+    inst_seen.insert(inst);
+
+    bool is_foldable_copy =
+        inst->opcode() == SpvOpCopyObject &&
+        context()->get_decoration_mgr()->HaveSubsetOfDecorations(
+            inst->result_id(), inst->GetSingleWordInOperand(0));
+
+    if (is_foldable_copy || folder.FoldInstruction(inst)) {
       modified = true;
       context()->AnalyzeUses(inst);
       get_def_use_mgr()->ForEachUser(
@@ -96,9 +132,18 @@ bool SimplificationPass::SimplifyFunction(Function* function) {
             }
           });
 
+      AddNewOperands(inst, &inst_seen, &work_list);
+
       if (inst->opcode() == SpvOpCopyObject) {
-        context()->ReplaceAllUsesWith(inst->result_id(),
-                                      inst->GetSingleWordInOperand(0));
+        context()->ReplaceAllUsesWithPredicate(
+            inst->result_id(), inst->GetSingleWordInOperand(0),
+            [](Instruction* user, uint32_t) {
+              const auto opcode = user->opcode();
+              if (!spvOpcodeIsDebug(opcode) && !spvOpcodeIsDecoration(opcode)) {
+                return true;
+              }
+              return false;
+            });
         inst_to_kill.insert(inst);
         in_work_list.insert(inst);
       } else if (inst->opcode() == SpvOpNop) {

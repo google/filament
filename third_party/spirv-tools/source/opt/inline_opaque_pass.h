@@ -48,7 +48,7 @@ class InlineOpaquePass : public InlinePass {
   // Inline all function calls in |func| that have opaque params or return
   // type. Inline similarly all code that is inlined into func. Return true
   // if func is modified.
-  bool InlineOpaque(Function* func);
+  Status InlineOpaque(Function* func);
 
   void Initialize();
   Pass::Status ProcessImpl();

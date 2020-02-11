@@ -12,7 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-spirv_add_nosetests(expect)
-spirv_add_nosetests(spirv_test_framework)
-
+add_test(NAME spirv-tools_expect_unittests
+         COMMAND ${PYTHON_EXECUTABLE} -m unittest expect_unittest.py
+         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+add_test(NAME spirv-tools_spirv_test_framework_unittests
+         COMMAND ${PYTHON_EXECUTABLE} -m unittest spirv_test_framework_unittest.py
+         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 add_subdirectory(opt)

@@ -43,7 +43,10 @@ class PassManager {
   PassManager()
       : consumer_(nullptr),
         print_all_stream_(nullptr),
-        time_report_stream_(nullptr) {}
+        time_report_stream_(nullptr),
+        target_env_(SPV_ENV_UNIVERSAL_1_2),
+        val_options_(nullptr),
+        validate_after_all_(false) {}
 
   // Sets the message consumer to the given |consumer|.
   void SetMessageConsumer(MessageConsumer c) { consumer_ = std::move(c); }
@@ -89,6 +92,24 @@ class PassManager {
     return *this;
   }
 
+  // Sets the target environment for validation.
+  PassManager& SetTargetEnv(spv_target_env env) {
+    target_env_ = env;
+    return *this;
+  }
+
+  // Sets the validation options.
+  PassManager& SetValidatorOptions(spv_validator_options options) {
+    val_options_ = options;
+    return *this;
+  }
+
+  // Sets the option to validate after each pass.
+  PassManager& SetValidateAfterAll(bool validate) {
+    validate_after_all_ = validate;
+    return *this;
+  }
+
  private:
   // Consumer for messages.
   MessageConsumer consumer_;
@@ -100,6 +121,12 @@ class PassManager {
   // The output stream to write the resource utilization of each pass. If this
   // is null, no output is generated.
   std::ostream* time_report_stream_;
+  // The target environment.
+  spv_target_env target_env_;
+  // The validator options (used when validating each pass).
+  spv_validator_options val_options_;
+  // Controls whether validation occurs after every pass.
+  bool validate_after_all_;
 };
 
 inline void PassManager::AddPass(std::unique_ptr<Pass> pass) {

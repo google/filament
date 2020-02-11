@@ -14,8 +14,6 @@
 # limitations under the License.
 """Tests correctness of opt pass tools/opt --compact-ids."""
 
-from __future__ import print_function
-
 import os.path
 import sys
 import tempfile

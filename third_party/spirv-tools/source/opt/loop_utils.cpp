@@ -352,6 +352,7 @@ void LoopUtils::CreateLoopDedicatedExits() {
     assert(insert_pt != function->end() && "Basic Block not found");
 
     // Create the dedicate exit basic block.
+    // TODO(1841): Handle id overflow.
     BasicBlock& exit = *insert_pt.InsertBefore(std::unique_ptr<BasicBlock>(
         new BasicBlock(std::unique_ptr<Instruction>(new Instruction(
             context_, SpvOpLabel, 0, context_->TakeNextId(), {})))));
@@ -491,6 +492,7 @@ Loop* LoopUtils::CloneAndAttachLoopToHeader(LoopCloningResult* cloning_result) {
   Loop* new_loop = CloneLoop(cloning_result);
 
   // Create a new exit block/label for the new loop.
+  // TODO(1841): Handle id overflow.
   std::unique_ptr<Instruction> new_label{new Instruction(
       context_, SpvOp::SpvOpLabel, 0, context_->TakeNextId(), {})};
   std::unique_ptr<BasicBlock> new_exit_bb{new BasicBlock(std::move(new_label))};
@@ -528,6 +530,7 @@ Loop* LoopUtils::CloneAndAttachLoopToHeader(LoopCloningResult* cloning_result) {
                           inst->SetOperand(operand, {new_header});
                       });
 
+  // TODO(1841): Handle failure to create pre-header.
   def_use->ForEachUse(
       loop_->GetOrCreatePreHeaderBlock()->id(),
       [new_merge_block, this](Instruction* inst, uint32_t operand) {
@@ -560,6 +563,7 @@ Loop* LoopUtils::CloneLoop(
     // between old and new ids.
     BasicBlock* new_bb = old_bb->Clone(context_);
     new_bb->SetParent(&function_);
+    // TODO(1841): Handle id overflow.
     new_bb->GetLabelInst()->SetResultId(context_->TakeNextId());
     def_use_mgr->AnalyzeInstDef(new_bb->GetLabelInst());
     context_->set_instr_block(new_bb->GetLabelInst(), new_bb);
@@ -575,6 +579,7 @@ Loop* LoopUtils::CloneLoop(
          new_inst != new_bb->end(); ++new_inst, ++old_inst) {
       cloning_result->ptr_map_[&*new_inst] = &*old_inst;
       if (new_inst->HasResultId()) {
+        // TODO(1841): Handle id overflow.
         new_inst->SetResultId(context_->TakeNextId());
         cloning_result->value_map_[old_inst->result_id()] =
             new_inst->result_id();

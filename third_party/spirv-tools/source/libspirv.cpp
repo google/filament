@@ -115,7 +115,7 @@ bool SpirvTools::Validate(const uint32_t* binary,
 }
 
 bool SpirvTools::Validate(const uint32_t* binary, const size_t binary_size,
-                          const ValidatorOptions& options) const {
+                          spv_validator_options options) const {
   spv_const_binary_t the_binary{binary, binary_size};
   spv_diagnostic diagnostic = nullptr;
   bool valid = spvValidateWithOptions(impl_->context, options, &the_binary,
@@ -127,5 +127,7 @@ bool SpirvTools::Validate(const uint32_t* binary, const size_t binary_size,
   spvDiagnosticDestroy(diagnostic);
   return valid;
 }
+
+bool SpirvTools::IsValid() const { return impl_->context != nullptr; }
 
 }  // namespace spvtools

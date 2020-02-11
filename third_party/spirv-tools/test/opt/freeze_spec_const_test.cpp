@@ -47,7 +47,7 @@ TEST_P(FreezeSpecConstantValueTypeTest, PrimaryType) {
 }
 
 // Test each primary type.
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     PrimaryTypeSpecConst, FreezeSpecConstantValueTypeTest,
     ::testing::ValuesIn(std::vector<FreezeSpecConstantValueTypeTestCase>({
         // Type declaration, original spec constant definition, expected frozen

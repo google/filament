@@ -28,7 +28,23 @@ namespace opt {
 
 class InstructionFolder {
  public:
-  explicit InstructionFolder(IRContext* context) : context_(context) {}
+  explicit InstructionFolder(IRContext* context)
+      : context_(context),
+        const_folding_rules_(new ConstantFoldingRules(context)),
+        folding_rules_(new FoldingRules(context)) {
+    folding_rules_->AddFoldingRules();
+    const_folding_rules_->AddFoldingRules();
+  }
+
+  explicit InstructionFolder(
+      IRContext* context, std::unique_ptr<FoldingRules>&& folding_rules,
+      std::unique_ptr<ConstantFoldingRules>&& constant_folding_rules)
+      : context_(context),
+        const_folding_rules_(std::move(constant_folding_rules)),
+        folding_rules_(std::move(folding_rules)) {
+    folding_rules_->AddFoldingRules();
+    const_folding_rules_->AddFoldingRules();
+  }
 
   // Returns the result of folding a scalar instruction with the given |opcode|
   // and |operands|. Each entry in |operands| is a pointer to an
@@ -95,18 +111,18 @@ class InstructionFolder {
   bool FoldInstruction(Instruction* inst) const;
 
   // Return true if this opcode has a const folding rule associtated with it.
-  bool HasConstFoldingRule(SpvOp opcode) const {
-    return GetConstantFoldingRules().HasFoldingRule(opcode);
+  bool HasConstFoldingRule(const Instruction* inst) const {
+    return GetConstantFoldingRules().HasFoldingRule(inst);
   }
 
  private:
   // Returns a reference to the ConstnatFoldingRules instance.
   const ConstantFoldingRules& GetConstantFoldingRules() const {
-    return const_folding_rules;
+    return *const_folding_rules_;
   }
 
   // Returns a reference to the FoldingRules instance.
-  const FoldingRules& GetFoldingRules() const { return folding_rules; }
+  const FoldingRules& GetFoldingRules() const { return *folding_rules_; }
 
   // Returns the single-word result from performing the given unary operation on
   // the operand value which is passed in as a 32-bit word.
@@ -159,10 +175,10 @@ class InstructionFolder {
   IRContext* context_;
 
   // Folding rules used by |FoldInstructionToConstant| and |FoldInstruction|.
-  ConstantFoldingRules const_folding_rules;
+  std::unique_ptr<ConstantFoldingRules> const_folding_rules_;
 
   // Folding rules used by |FoldInstruction|.
-  FoldingRules folding_rules;
+  std::unique_ptr<FoldingRules> folding_rules_;
 };
 
 }  // namespace opt

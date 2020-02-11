@@ -767,7 +767,9 @@ OpReturn
 OpFunctionEnd
 )";
 
+  // Relax logical pointers to allow pointer allocations.
   SetAssembleOptions(SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+  ValidatorOptions()->relax_logical_pointer = true;
   SinglePassRunAndCheck<LocalSingleStoreElimPass>(before, after, true, true);
 }
 
@@ -844,6 +846,61 @@ OpFunctionEnd
   SetAssembleOptions(SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
   SinglePassRunAndCheck<LocalSingleStoreElimPass>(predefs + before,
                                                   predefs + after, true, true);
+}
+
+TEST_F(LocalSingleStoreElimTest, VariablePointerTest) {
+  // Check that the load of the first variable is still used and that the load
+  // of the third variable is propagated.  The first load has to remain because
+  // of the store to the variable pointer.
+  const std::string text = R"(
+; CHECK: [[v1:%\w+]] = OpVariable
+; CHECK: [[v2:%\w+]] = OpVariable
+; CHECK: [[v3:%\w+]] = OpVariable
+; CHECK: [[ld1:%\w+]] = OpLoad %int [[v1]]
+; CHECK: OpIAdd %int [[ld1]] %int_0
+               OpCapability Shader
+               OpCapability VariablePointers
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %2 "main"
+               OpExecutionMode %2 LocalSize 1 1 1
+               OpSource GLSL 450
+               OpMemberDecorate %_struct_3 0 Offset 0
+               OpMemberDecorate %_struct_3 1 Offset 4
+       %void = OpTypeVoid
+          %5 = OpTypeFunction %void
+        %int = OpTypeInt 32 1
+       %bool = OpTypeBool
+  %_struct_3 = OpTypeStruct %int %int
+%_ptr_Function__struct_3 = OpTypePointer Function %_struct_3
+%_ptr_Function_int = OpTypePointer Function %int
+       %true = OpConstantTrue %bool
+      %int_0 = OpConstant %int 0
+      %int_1 = OpConstant %int 1
+         %13 = OpConstantNull %_struct_3
+          %2 = OpFunction %void None %5
+         %14 = OpLabel
+         %15 = OpVariable %_ptr_Function_int Function
+         %16 = OpVariable %_ptr_Function_int Function
+         %17 = OpVariable %_ptr_Function_int Function
+               OpStore %15 %int_1
+               OpStore %17 %int_0
+               OpSelectionMerge %18 None
+               OpBranchConditional %true %19 %20
+         %19 = OpLabel
+               OpBranch %18
+         %20 = OpLabel
+               OpBranch %18
+         %18 = OpLabel
+         %21 = OpPhi %_ptr_Function_int %15 %19 %16 %20
+               OpStore %21 %int_0
+         %22 = OpLoad %int %15
+         %23 = OpLoad %int %17
+         %24 = OpIAdd %int %22 %23
+               OpReturn
+               OpFunctionEnd
+  )";
+  SinglePassRunAndMatch<LocalSingleStoreElimPass>(text, false);
 }
 // TODO(greg-lunarg): Add tests to verify handling of these cases:
 //

@@ -30,6 +30,14 @@ class LoopUnroller : public Pass {
 
   Status Process() override;
 
+  IRContext::Analysis GetPreservedAnalyses() override {
+    return IRContext::kAnalysisDefUse |
+           IRContext::kAnalysisInstrToBlockMapping |
+           IRContext::kAnalysisDecorations | IRContext::kAnalysisCombinators |
+           IRContext::kAnalysisNameMap | IRContext::kAnalysisConstants |
+           IRContext::kAnalysisTypes;
+  }
+
  private:
   bool fully_unroll_;
   int unroll_factor_;

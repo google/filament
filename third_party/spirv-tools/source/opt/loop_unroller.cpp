@@ -244,6 +244,10 @@ class LoopUnrollerUtilsImpl {
   // ect).
   void AssignNewResultIds(BasicBlock* basic_block);
 
+  // Using the map built by AssignNewResultIds, replace the uses in |inst|
+  // by the id that the use maps to.
+  void RemapOperands(Instruction* inst);
+
   // Using the map built by AssignNewResultIds, for each instruction in
   // |basic_block| use
   // that map to substitute the IDs used by instructions (in the operands) with
@@ -373,6 +377,7 @@ void LoopUnrollerUtilsImpl::Init(Loop* loop) {
 // number of bodies.
 void LoopUnrollerUtilsImpl::PartiallyUnrollResidualFactor(Loop* loop,
                                                           size_t factor) {
+  // TODO(1841): Handle id overflow.
   std::unique_ptr<Instruction> new_label{new Instruction(
       context_, SpvOp::SpvOpLabel, 0, context_->TakeNextId(), {})};
   std::unique_ptr<BasicBlock> new_exit_bb{new BasicBlock(std::move(new_label))};
@@ -389,12 +394,12 @@ void LoopUnrollerUtilsImpl::PartiallyUnrollResidualFactor(Loop* loop,
   // This is a naked new due to the VS2013 requirement of not having unique
   // pointers in vectors, as it will be inserted into a vector with
   // loop_descriptor.AddLoop.
-  Loop* new_loop = new Loop(*loop);
+  std::unique_ptr<Loop> new_loop = MakeUnique<Loop>(*loop);
 
   // Clear the basic blocks of the new loop.
   new_loop->ClearBlocks();
 
-  DuplicateLoop(loop, new_loop);
+  DuplicateLoop(loop, new_loop.get());
 
   // Add the blocks to the function.
   AddBlocksToFunction(loop->GetMergeBlock());
@@ -409,10 +414,10 @@ void LoopUnrollerUtilsImpl::PartiallyUnrollResidualFactor(Loop* loop,
   loop_induction_variable_ = state_.new_phi;
   // Unroll the new loop by the factor with the usual -1 to account for the
   // existing block iteration.
-  Unroll(new_loop, factor);
+  Unroll(new_loop.get(), factor);
 
-  LinkLastPhisToStart(new_loop);
-  AddBlocksToLoop(new_loop);
+  LinkLastPhisToStart(new_loop.get());
+  AddBlocksToLoop(new_loop.get());
 
   // Add the new merge block to the back of the list of blocks to be added. It
   // needs to be the last block added to maintain dominator order in the binary.
@@ -448,11 +453,9 @@ void LoopUnrollerUtilsImpl::PartiallyUnrollResidualFactor(Loop* loop,
   // If the remainder is negative then we add a signed constant, otherwise just
   // add an unsigned constant.
   if (remainder < 0) {
-    new_constant =
-        builder.Add32BitSignedIntegerConstant(static_cast<int32_t>(remainder));
+    new_constant = builder.GetSintConstant(static_cast<int32_t>(remainder));
   } else {
-    new_constant = builder.Add32BitUnsignedIntegerConstant(
-        static_cast<int32_t>(remainder));
+    new_constant = builder.GetUintConstant(static_cast<int32_t>(remainder));
   }
 
   uint32_t constant_id = new_constant->result_id();
@@ -504,7 +507,7 @@ void LoopUnrollerUtilsImpl::PartiallyUnrollResidualFactor(Loop* loop,
 
   LoopDescriptor& loop_descriptor = *context_->GetLoopDescriptor(&function_);
 
-  loop_descriptor.AddLoop(new_loop, loop->GetParent());
+  loop_descriptor.AddLoop(std::move(new_loop), loop->GetParent());
 
   RemoveDeadInstructions();
 }
@@ -547,7 +550,10 @@ void LoopUnrollerUtilsImpl::RemoveDeadInstructions() {
 
 void LoopUnrollerUtilsImpl::ReplaceInductionUseWithFinalValue(Loop* loop) {
   context_->InvalidateAnalysesExceptFor(
-      IRContext::Analysis::kAnalysisLoopAnalysis);
+      IRContext::Analysis::kAnalysisLoopAnalysis |
+      IRContext::Analysis::kAnalysisDefUse |
+      IRContext::Analysis::kAnalysisInstrToBlockMapping);
+
   std::vector<Instruction*> inductions;
   loop->GetInductionVariables(inductions);
 
@@ -588,7 +594,8 @@ void LoopUnrollerUtilsImpl::FullyUnroll(Loop* loop) {
   RemoveDeadInstructions();
   // Invalidate all analyses.
   context_->InvalidateAnalysesExceptFor(
-      IRContext::Analysis::kAnalysisLoopAnalysis);
+      IRContext::Analysis::kAnalysisLoopAnalysis |
+      IRContext::Analysis::kAnalysisDefUse);
 }
 
 // Copy a given basic block, give it a new result_id, and store the new block
@@ -611,6 +618,7 @@ void LoopUnrollerUtilsImpl::CopyBasicBlock(Loop* loop, const BasicBlock* itr,
     if (!preserve_instructions) {
       Instruction* merge_inst = loop->GetHeaderBlock()->GetLoopMergeInst();
       merge_inst->SetInOperand(1, {basic_block->id()});
+      context_->UpdateDefUse(merge_inst);
     }
 
     state_.new_continue_block = basic_block;
@@ -651,15 +659,17 @@ void LoopUnrollerUtilsImpl::CopyBody(Loop* loop, bool eliminate_conditions) {
   }
 
   // Set the previous latch block to point to the new header.
-  Instruction& latch_branch = *state_.previous_latch_block_->tail();
-  latch_branch.SetInOperand(0, {state_.new_header_block->id()});
+  Instruction* latch_branch = state_.previous_latch_block_->terminator();
+  latch_branch->SetInOperand(0, {state_.new_header_block->id()});
+  context_->UpdateDefUse(latch_branch);
 
   // As the algorithm copies the original loop blocks exactly, the tail of the
   // latch block on iterations after the first one will be a branch to the new
   // header and not the actual loop header. The last continue block in the loop
   // should always be a backedge to the global header.
-  Instruction& new_latch_branch = *state_.new_latch_block->tail();
-  new_latch_branch.SetInOperand(0, {loop->GetHeaderBlock()->id()});
+  Instruction* new_latch_branch = state_.new_latch_block->terminator();
+  new_latch_branch->SetInOperand(0, {loop->GetHeaderBlock()->id()});
+  context_->AnalyzeUses(new_latch_branch);
 
   std::vector<Instruction*> inductions;
   loop->GetInductionVariables(inductions);
@@ -721,7 +731,10 @@ void LoopUnrollerUtilsImpl::FoldConditionBlock(BasicBlock* condition_block,
 
   context_->KillInst(&old_branch);
   // Add the new unconditional branch to the merge block.
-  InstructionBuilder builder{context_, condition_block};
+  InstructionBuilder builder(
+      context_, condition_block,
+      IRContext::Analysis::kAnalysisDefUse |
+          IRContext::Analysis::kAnalysisInstrToBlockMapping);
   builder.AddBranch(new_target);
 }
 
@@ -732,8 +745,9 @@ void LoopUnrollerUtilsImpl::CloseUnrolledLoop(Loop* loop) {
 
   // Remove the final backedge to the header and make it point instead to the
   // merge block.
-  state_.previous_latch_block_->tail()->SetInOperand(
-      0, {loop->GetMergeBlock()->id()});
+  Instruction* latch_instruction = state_.previous_latch_block_->terminator();
+  latch_instruction->SetInOperand(0, {loop->GetMergeBlock()->id()});
+  context_->UpdateDefUse(latch_instruction);
 
   // Remove all induction variables as the phis will now be invalid. Replace all
   // uses with the constant initializer value (all uses of phis will be in
@@ -756,6 +770,11 @@ void LoopUnrollerUtilsImpl::CloseUnrolledLoop(Loop* loop) {
 
   for (BasicBlock* block : loop_blocks_inorder_) {
     RemapOperands(block);
+  }
+
+  // Rewrite the last phis, since they may still reference the original phi.
+  for (Instruction* last_phi : state_.previous_phis_) {
+    RemapOperands(last_phi);
   }
 }
 
@@ -812,13 +831,17 @@ void LoopUnrollerUtilsImpl::AddBlocksToFunction(
 // Assign all result_ids in |basic_block| instructions to new IDs and preserve
 // the mapping of new ids to old ones.
 void LoopUnrollerUtilsImpl::AssignNewResultIds(BasicBlock* basic_block) {
+  analysis::DefUseManager* def_use_mgr = context_->get_def_use_mgr();
+
   // Label instructions aren't covered by normal traversal of the
   // instructions.
+  // TODO(1841): Handle id overflow.
   uint32_t new_label_id = context_->TakeNextId();
 
   // Assign a new id to the label.
   state_.new_inst[basic_block->GetLabelInst()->result_id()] = new_label_id;
   basic_block->GetLabelInst()->SetResultId(new_label_id);
+  def_use_mgr->AnalyzeInstDefUse(basic_block->GetLabelInst());
 
   for (Instruction& inst : *basic_block) {
     uint32_t old_id = inst.result_id();
@@ -829,7 +852,9 @@ void LoopUnrollerUtilsImpl::AssignNewResultIds(BasicBlock* basic_block) {
     }
 
     // Give the instruction a new id.
+    // TODO(1841): Handle id overflow.
     inst.SetResultId(context_->TakeNextId());
+    def_use_mgr->AnalyzeInstDef(&inst);
 
     // Save the mapping of old_id -> new_id.
     state_.new_inst[old_id] = inst.result_id();
@@ -842,19 +867,22 @@ void LoopUnrollerUtilsImpl::AssignNewResultIds(BasicBlock* basic_block) {
   }
 }
 
-// For all instructions in |basic_block| check if the operands used are from a
-// copied instruction and if so swap out the operand for the copy of it.
+void LoopUnrollerUtilsImpl::RemapOperands(Instruction* inst) {
+  auto remap_operands_to_new_ids = [this](uint32_t* id) {
+    auto itr = state_.new_inst.find(*id);
+
+    if (itr != state_.new_inst.end()) {
+      *id = itr->second;
+    }
+  };
+
+  inst->ForEachInId(remap_operands_to_new_ids);
+  context_->AnalyzeUses(inst);
+}
+
 void LoopUnrollerUtilsImpl::RemapOperands(BasicBlock* basic_block) {
   for (Instruction& inst : *basic_block) {
-    auto remap_operands_to_new_ids = [this](uint32_t* id) {
-      auto itr = state_.new_inst.find(*id);
-
-      if (itr != state_.new_inst.end()) {
-        *id = itr->second;
-      }
-    };
-
-    inst.ForEachInId(remap_operands_to_new_ids);
+    RemapOperands(&inst);
   }
 }
 

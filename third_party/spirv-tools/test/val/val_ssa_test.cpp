@@ -118,7 +118,7 @@ TEST_F(ValidateSSA, DominateUsageWithinBlockBad) {
   CompileSuccessfully(str);
   ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
   EXPECT_THAT(getDiagnosticString(),
-              MatchesRegex("ID .\\[bad\\] has not been defined\n"
+              MatchesRegex("ID .\\[%bad\\] has not been defined\n"
                            "  %8 = OpIAdd %uint %uint_1 %bad\n"));
 }
 
@@ -141,7 +141,7 @@ TEST_F(ValidateSSA, DominateUsageSameInstructionBad) {
   CompileSuccessfully(str);
   ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
   EXPECT_THAT(getDiagnosticString(),
-              MatchesRegex("ID .\\[sum\\] has not been defined\n"
+              MatchesRegex("ID .\\[%sum\\] has not been defined\n"
                            "  %sum = OpIAdd %uint %uint_1 %sum\n"));
 }
 
@@ -202,7 +202,9 @@ TEST_F(ValidateSSA, ForwardMemberNameMissingTargetBad) {
 )";
   CompileSuccessfully(str);
   ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
-  EXPECT_THAT(getDiagnosticString(), HasSubstr("size"));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("The following forward referenced IDs have not been "
+                        "defined:\n2[%2]"));
 }
 
 TEST_F(ValidateSSA, ForwardDecorateGood) {
@@ -821,7 +823,7 @@ std::pair<std::string, bool> cases[] = {
     {"OpGetKernelWorkGroupSize", kNoNDrange},
     {"OpGetKernelPreferredWorkGroupSizeMultiple", kNoNDrange}};
 
-INSTANTIATE_TEST_CASE_P(KernelArgs, ValidateSSA, ::testing::ValuesIn(cases), );
+INSTANTIATE_TEST_SUITE_P(KernelArgs, ValidateSSA, ::testing::ValuesIn(cases));
 
 static const std::string return_instructions = R"(
   OpReturn
@@ -1124,17 +1126,18 @@ TEST_F(ValidateSSA, IdDoesNotDominateItsUseBad) {
   ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
   EXPECT_THAT(
       getDiagnosticString(),
-      MatchesRegex("ID .\\[eleven\\] defined in block .\\[true_block\\] does "
-                   "not dominate its use in block .\\[false_block\\]\n"
+      MatchesRegex("ID .\\[%eleven\\] defined in block .\\[%true_block\\] "
+                   "does not dominate its use in block .\\[%false_block\\]\n"
                    "  %false_block = OpLabel\n"));
 }
 
 TEST_F(ValidateSSA, PhiUseDoesntDominateDefinitionGood) {
   std::string str = kHeader + kBasicTypes +
                     R"(
+%funcintptrt = OpTypePointer Function %uintt
 %func        = OpFunction %voidt None %vfunct
 %entry       = OpLabel
-%var_one     = OpVariable %intptrt Function %one
+%var_one     = OpVariable %funcintptrt Function %one
 %one_val     = OpLoad %uintt %var_one
                OpBranch %loop
 %loop        = OpLabel
@@ -1184,7 +1187,7 @@ TEST_F(ValidateSSA,
   CompileSuccessfully(str);
   ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
   EXPECT_THAT(getDiagnosticString(),
-              MatchesRegex("ID .\\[inew\\] has not been defined\n"
+              MatchesRegex("ID .\\[%inew\\] has not been defined\n"
                            "  %19 = OpIAdd %uint %inew %uint_1\n"));
 }
 
@@ -1267,8 +1270,8 @@ TEST_F(ValidateSSA, PhiVariableDefNotDominatedByParentBlockBad) {
   ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
   EXPECT_THAT(
       getDiagnosticString(),
-      MatchesRegex("In OpPhi instruction .\\[phi\\], ID .\\[true_copy\\] "
-                   "definition does not dominate its parent .\\[if_false\\]\n"
+      MatchesRegex("In OpPhi instruction .\\[%phi\\], ID .\\[%true_copy\\] "
+                   "definition does not dominate its parent .\\[%if_false\\]\n"
                    "  %phi = OpPhi %bool %true_copy %if_false %false_copy "
                    "%if_true\n"));
 }
@@ -1395,8 +1398,8 @@ TEST_F(ValidateSSA, UseFunctionParameterFromOtherFunctionBad) {
   ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
   EXPECT_THAT(
       getDiagnosticString(),
-      MatchesRegex("ID .\\[first\\] used in function .\\[func2\\] is used "
-                   "outside of it's defining function .\\[func\\]\n"
+      MatchesRegex("ID .\\[%first\\] used in function .\\[%func2\\] is used "
+                   "outside of it's defining function .\\[%func\\]\n"
                    "  %func = OpFunction %void None %14\n"));
 }
 
@@ -1412,7 +1415,8 @@ TEST_F(ValidateSSA, TypeForwardPointerForwardReference) {
                OpName %intptrt "intptrt"
                OpTypeForwardPointer %intptrt UniformConstant
        %uint = OpTypeInt 32 0
-    %intptrt = OpTypePointer UniformConstant %uint
+     %struct = OpTypeStruct %uint
+    %intptrt = OpTypePointer UniformConstant %struct
 )";
 
   CompileSuccessfully(str);

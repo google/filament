@@ -54,31 +54,31 @@ TEST_P(FriendlyNameTest, SingleMapping) {
       << " for id " << GetParam().id;
 }
 
-INSTANTIATE_TEST_CASE_P(ScalarType, FriendlyNameTest,
-                        ::testing::ValuesIn(std::vector<NameIdCase>{
-                            {"%1 = OpTypeVoid", 1, "void"},
-                            {"%1 = OpTypeBool", 1, "bool"},
-                            {"%1 = OpTypeInt 8 0", 1, "uchar"},
-                            {"%1 = OpTypeInt 8 1", 1, "char"},
-                            {"%1 = OpTypeInt 16 0", 1, "ushort"},
-                            {"%1 = OpTypeInt 16 1", 1, "short"},
-                            {"%1 = OpTypeInt 32 0", 1, "uint"},
-                            {"%1 = OpTypeInt 32 1", 1, "int"},
-                            {"%1 = OpTypeInt 64 0", 1, "ulong"},
-                            {"%1 = OpTypeInt 64 1", 1, "long"},
-                            {"%1 = OpTypeInt 1 0", 1, "u1"},
-                            {"%1 = OpTypeInt 1 1", 1, "i1"},
-                            {"%1 = OpTypeInt 33 0", 1, "u33"},
-                            {"%1 = OpTypeInt 33 1", 1, "i33"},
+INSTANTIATE_TEST_SUITE_P(ScalarType, FriendlyNameTest,
+                         ::testing::ValuesIn(std::vector<NameIdCase>{
+                             {"%1 = OpTypeVoid", 1, "void"},
+                             {"%1 = OpTypeBool", 1, "bool"},
+                             {"%1 = OpTypeInt 8 0", 1, "uchar"},
+                             {"%1 = OpTypeInt 8 1", 1, "char"},
+                             {"%1 = OpTypeInt 16 0", 1, "ushort"},
+                             {"%1 = OpTypeInt 16 1", 1, "short"},
+                             {"%1 = OpTypeInt 32 0", 1, "uint"},
+                             {"%1 = OpTypeInt 32 1", 1, "int"},
+                             {"%1 = OpTypeInt 64 0", 1, "ulong"},
+                             {"%1 = OpTypeInt 64 1", 1, "long"},
+                             {"%1 = OpTypeInt 1 0", 1, "u1"},
+                             {"%1 = OpTypeInt 1 1", 1, "i1"},
+                             {"%1 = OpTypeInt 33 0", 1, "u33"},
+                             {"%1 = OpTypeInt 33 1", 1, "i33"},
 
-                            {"%1 = OpTypeFloat 16", 1, "half"},
-                            {"%1 = OpTypeFloat 32", 1, "float"},
-                            {"%1 = OpTypeFloat 64", 1, "double"},
-                            {"%1 = OpTypeFloat 10", 1, "fp10"},
-                            {"%1 = OpTypeFloat 55", 1, "fp55"},
-                        }), );
+                             {"%1 = OpTypeFloat 16", 1, "half"},
+                             {"%1 = OpTypeFloat 32", 1, "float"},
+                             {"%1 = OpTypeFloat 64", 1, "double"},
+                             {"%1 = OpTypeFloat 10", 1, "fp10"},
+                             {"%1 = OpTypeFloat 55", 1, "fp55"},
+                         }));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     VectorType, FriendlyNameTest,
     ::testing::ValuesIn(std::vector<NameIdCase>{
         {"%1 = OpTypeBool %2 = OpTypeVector %1 1", 2, "v1bool"},
@@ -97,9 +97,9 @@ INSTANTIATE_TEST_CASE_P(
         // OpName overrides the element name.
         {"OpName %1 \"time\" %1 = OpTypeFloat 32 %2 = OpTypeVector %1 2", 2,
          "v2time"},
-    }), );
+    }));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     MatrixType, FriendlyNameTest,
     ::testing::ValuesIn(std::vector<NameIdCase>{
         {"%1 = OpTypeBool %2 = OpTypeVector %1 2 %3 = OpTypeMatrix %2 2", 3,
@@ -114,9 +114,9 @@ INSTANTIATE_TEST_CASE_P(
         {"OpName %2 \"lat_long\" %1 = OpTypeFloat 32 %2 = OpTypeVector %1 2 %3 "
          "= OpTypeMatrix %2 4",
          3, "mat4lat_long"},
-    }), );
+    }));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     OpName, FriendlyNameTest,
     ::testing::ValuesIn(std::vector<NameIdCase>{
         {"OpName %1 \"abcdefg\"", 1, "abcdefg"},
@@ -146,38 +146,38 @@ INSTANTIATE_TEST_CASE_P(
         // OpName can override other inferences.  We assume valid instruction
         // ordering, where OpName precedes type definitions.
         {"OpName %1 \"myfloat\" %1 = OpTypeFloat 32", 1, "myfloat"},
-    }), );
+    }));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     UniquenessHeuristic, FriendlyNameTest,
     ::testing::ValuesIn(std::vector<NameIdCase>{
         {"%1 = OpTypeVoid %2 = OpTypeVoid %3 = OpTypeVoid", 1, "void"},
         {"%1 = OpTypeVoid %2 = OpTypeVoid %3 = OpTypeVoid", 2, "void_0"},
         {"%1 = OpTypeVoid %2 = OpTypeVoid %3 = OpTypeVoid", 3, "void_1"},
-    }), );
+    }));
 
-INSTANTIATE_TEST_CASE_P(Arrays, FriendlyNameTest,
-                        ::testing::ValuesIn(std::vector<NameIdCase>{
-                            {"OpName %2 \"FortyTwo\" %1 = OpTypeFloat 32 "
-                             "%2 = OpConstant %1 42 %3 = OpTypeArray %1 %2",
-                             3, "_arr_float_FortyTwo"},
-                            {"%1 = OpTypeInt 32 0 "
-                             "%2 = OpTypeRuntimeArray %1",
-                             2, "_runtimearr_uint"},
-                        }), );
+INSTANTIATE_TEST_SUITE_P(Arrays, FriendlyNameTest,
+                         ::testing::ValuesIn(std::vector<NameIdCase>{
+                             {"OpName %2 \"FortyTwo\" %1 = OpTypeFloat 32 "
+                              "%2 = OpConstant %1 42 %3 = OpTypeArray %1 %2",
+                              3, "_arr_float_FortyTwo"},
+                             {"%1 = OpTypeInt 32 0 "
+                              "%2 = OpTypeRuntimeArray %1",
+                              2, "_runtimearr_uint"},
+                         }));
 
-INSTANTIATE_TEST_CASE_P(Structs, FriendlyNameTest,
-                        ::testing::ValuesIn(std::vector<NameIdCase>{
-                            {"%1 = OpTypeBool "
-                             "%2 = OpTypeStruct %1 %1 %1",
-                             2, "_struct_2"},
-                            {"%1 = OpTypeBool "
-                             "%2 = OpTypeStruct %1 %1 %1 "
-                             "%3 = OpTypeStruct %2 %2",
-                             3, "_struct_3"},
-                        }), );
+INSTANTIATE_TEST_SUITE_P(Structs, FriendlyNameTest,
+                         ::testing::ValuesIn(std::vector<NameIdCase>{
+                             {"%1 = OpTypeBool "
+                              "%2 = OpTypeStruct %1 %1 %1",
+                              2, "_struct_2"},
+                             {"%1 = OpTypeBool "
+                              "%2 = OpTypeStruct %1 %1 %1 "
+                              "%3 = OpTypeStruct %2 %2",
+                              3, "_struct_3"},
+                         }));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     Pointer, FriendlyNameTest,
     ::testing::ValuesIn(std::vector<NameIdCase>{
         {"%1 = OpTypeFloat 32 %2 = OpTypePointer Workgroup %1", 2,
@@ -189,22 +189,22 @@ INSTANTIATE_TEST_CASE_P(
         {"%1 = OpTypeBool OpTypeForwardPointer %2 Private %2 = OpTypePointer "
          "Private %1",
          2, "_ptr_Private_bool"},
-    }), );
+    }));
 
-INSTANTIATE_TEST_CASE_P(ExoticTypes, FriendlyNameTest,
-                        ::testing::ValuesIn(std::vector<NameIdCase>{
-                            {"%1 = OpTypeEvent", 1, "Event"},
-                            {"%1 = OpTypeDeviceEvent", 1, "DeviceEvent"},
-                            {"%1 = OpTypeReserveId", 1, "ReserveId"},
-                            {"%1 = OpTypeQueue", 1, "Queue"},
-                            {"%1 = OpTypeOpaque \"hello world!\"", 1,
-                             "Opaque_hello_world_"},
-                            {"%1 = OpTypePipe ReadOnly", 1, "PipeReadOnly"},
-                            {"%1 = OpTypePipe WriteOnly", 1, "PipeWriteOnly"},
-                            {"%1 = OpTypePipe ReadWrite", 1, "PipeReadWrite"},
-                            {"%1 = OpTypePipeStorage", 1, "PipeStorage"},
-                            {"%1 = OpTypeNamedBarrier", 1, "NamedBarrier"},
-                        }), );
+INSTANTIATE_TEST_SUITE_P(ExoticTypes, FriendlyNameTest,
+                         ::testing::ValuesIn(std::vector<NameIdCase>{
+                             {"%1 = OpTypeEvent", 1, "Event"},
+                             {"%1 = OpTypeDeviceEvent", 1, "DeviceEvent"},
+                             {"%1 = OpTypeReserveId", 1, "ReserveId"},
+                             {"%1 = OpTypeQueue", 1, "Queue"},
+                             {"%1 = OpTypeOpaque \"hello world!\"", 1,
+                              "Opaque_hello_world_"},
+                             {"%1 = OpTypePipe ReadOnly", 1, "PipeReadOnly"},
+                             {"%1 = OpTypePipe WriteOnly", 1, "PipeWriteOnly"},
+                             {"%1 = OpTypePipe ReadWrite", 1, "PipeReadWrite"},
+                             {"%1 = OpTypePipeStorage", 1, "PipeStorage"},
+                             {"%1 = OpTypeNamedBarrier", 1, "NamedBarrier"},
+                         }));
 
 // Makes a test case for a BuiltIn variable declaration.
 NameIdCase BuiltInCase(std::string assembly_name, std::string expected) {
@@ -226,7 +226,7 @@ NameIdCase BuiltInGLCase(std::string assembly_name) {
   return BuiltInCase(assembly_name, std::string("gl_") + assembly_name);
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     BuiltIns, FriendlyNameTest,
     ::testing::ValuesIn(std::vector<NameIdCase>{
         BuiltInGLCase("Position"),
@@ -275,15 +275,15 @@ INSTANTIATE_TEST_CASE_P(
         BuiltInCase("SubgroupGtMaskKHR"),
         BuiltInCase("SubgroupLeMaskKHR"),
         BuiltInCase("SubgroupLtMaskKHR"),
-    }), );
+    }));
 
-INSTANTIATE_TEST_CASE_P(DebugNameOverridesBuiltin, FriendlyNameTest,
-                        ::testing::ValuesIn(std::vector<NameIdCase>{
-                            {"OpName %1 \"foo\" OpDecorate %1 BuiltIn WorkDim "
-                             "%1 = OpVariable %2 Input",
-                             1, "foo"}}), );
+INSTANTIATE_TEST_SUITE_P(DebugNameOverridesBuiltin, FriendlyNameTest,
+                         ::testing::ValuesIn(std::vector<NameIdCase>{
+                             {"OpName %1 \"foo\" OpDecorate %1 BuiltIn WorkDim "
+                              "%1 = OpVariable %2 Input",
+                              1, "foo"}}));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     SimpleIntegralConstants, FriendlyNameTest,
     ::testing::ValuesIn(std::vector<NameIdCase>{
         {"%1 = OpTypeInt 32 0 %2 = OpConstant %1 0", 2, "uint_0"},
@@ -301,9 +301,9 @@ INSTANTIATE_TEST_CASE_P(
         {"%1 = OpTypeInt 33 0 %2 = OpConstant %1 0", 2, "u33_0"},
         {"%1 = OpTypeInt 33 1 %2 = OpConstant %1 10", 2, "i33_10"},
         {"%1 = OpTypeInt 33 1 %2 = OpConstant %1 -19", 2, "i33_n19"},
-    }), );
+    }));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     SimpleFloatConstants, FriendlyNameTest,
     ::testing::ValuesIn(std::vector<NameIdCase>{
         {"%1 = OpTypeFloat 16\n%2 = OpConstant %1 0x1.ff4p+16", 2,
@@ -334,14 +334,14 @@ INSTANTIATE_TEST_CASE_P(
          "double_0x1p_1024"},  // Inf
         {"%1 = OpTypeFloat 64\n%2 = OpConstant %1 -0x1p+1024", 2,
          "double_n0x1p_1024"},  // -Inf
-    }), );
+    }));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     BooleanConstants, FriendlyNameTest,
     ::testing::ValuesIn(std::vector<NameIdCase>{
         {"%1 = OpTypeBool\n%2 = OpConstantTrue %1", 2, "true"},
         {"%1 = OpTypeBool\n%2 = OpConstantFalse %1", 2, "false"},
-    }), );
+    }));
 
 }  // namespace
 }  // namespace spvtools

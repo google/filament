@@ -51,12 +51,12 @@ TEST_P(OpSelectionMergeTest, AnySingleSelectionControlMask) {
 
 // clang-format off
 #define CASE(VALUE,NAME) { SpvSelectionControl##VALUE, NAME}
-INSTANTIATE_TEST_CASE_P(TextToBinarySelectionMerge, OpSelectionMergeTest,
+INSTANTIATE_TEST_SUITE_P(TextToBinarySelectionMerge, OpSelectionMergeTest,
                         ValuesIn(std::vector<EnumCase<SpvSelectionControlMask>>{
                             CASE(MaskNone, "None"),
                             CASE(FlattenMask, "Flatten"),
                             CASE(DontFlattenMask, "DontFlatten"),
-                        }),);
+                        }));
 #undef CASE
 // clang-format on
 
@@ -95,7 +95,7 @@ TEST_P(OpLoopMergeTest, AnySingleLoopControlMask) {
   {                                       \
     SpvLoopControl##VALUE, NAME, { PARM } \
   }
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TextToBinaryLoopMerge, OpLoopMergeTest,
     Combine(Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
             ValuesIn(std::vector<EnumCase<int>>{
@@ -104,9 +104,9 @@ INSTANTIATE_TEST_CASE_P(
                 CASE(UnrollMask, "Unroll"),
                 CASE(DontUnrollMask, "DontUnroll"),
                 // clang-format on
-            })), );
+            })));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TextToBinaryLoopMergeV11, OpLoopMergeTest,
     Combine(Values(SPV_ENV_UNIVERSAL_1_1),
             ValuesIn(std::vector<EnumCase<int>>{
@@ -116,7 +116,7 @@ INSTANTIATE_TEST_CASE_P(
                 {SpvLoopControlUnrollMask|SpvLoopControlDependencyLengthMask,
                       "DependencyLength|Unroll", {33}},
                 // clang-format on
-            })), );
+            })));
 #undef CASE
 #undef CASE1
 
@@ -251,7 +251,7 @@ SwitchTestCase MakeSwitchTestCase(uint32_t integer_width,
                            Concatenate({{2, 3}, encoded_case_value, {4}}))})}};
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TextToBinaryOpSwitchValid1Word, OpSwitchValidTest,
     ValuesIn(std::vector<SwitchTestCase>({
         MakeSwitchTestCase(32, 0, "42", {42}, "100", {100}),
@@ -270,10 +270,10 @@ INSTANTIATE_TEST_CASE_P(
         MakeSwitchTestCase(16, 1, "0x8000", {0xffff8000}, "0x8100",
                            {0xffff8100}),
         MakeSwitchTestCase(16, 0, "0x8000", {0x00008000}, "0x8100", {0x8100}),
-    })), );
+    })));
 
 // NB: The words LOW ORDER bits show up first.
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TextToBinaryOpSwitchValid2Words, OpSwitchValidTest,
     ValuesIn(std::vector<SwitchTestCase>({
         MakeSwitchTestCase(33, 0, "101", {101, 0}, "500", {500, 0}),
@@ -291,9 +291,9 @@ INSTANTIATE_TEST_CASE_P(
         MakeSwitchTestCase(63, 0, "0x500000000", {0, 5}, "12", {12, 0}),
         MakeSwitchTestCase(64, 0, "0x600000000", {0, 6}, "12", {12, 0}),
         MakeSwitchTestCase(64, 1, "0x700000123", {0x123, 7}, "12", {12, 0}),
-    })), );
+    })));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     OpSwitchRoundTripUnsignedIntegers, RoundTripTest,
     ValuesIn(std::vector<std::string>({
         // Unsigned 16-bit.
@@ -307,9 +307,9 @@ INSTANTIATE_TEST_CASE_P(
         // Unsigned 64-bit, three non-default cases.
         "%1 = OpTypeInt 64 0\n%2 = OpConstant %1 9223372036854775807\n"
         "OpSwitch %2 %3 100 %4 102 %5 9000000000000000000 %6\n",
-    })), );
+    })));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     OpSwitchRoundTripSignedIntegers, RoundTripTest,
     ValuesIn(std::vector<std::string>{
         // Signed 16-bit, with two non-default cases
@@ -332,7 +332,7 @@ INSTANTIATE_TEST_CASE_P(
         "OpSwitch %2 %3 100 %4 7000000000 %5 -1000000000000000000 %6\n",
         "%1 = OpTypeInt 64 1\n%2 = OpConstant %1 -9223372036854775808\n"
         "OpSwitch %2 %3 100 %4 7000000000 %5 -1000000000000000000 %6\n",
-    }), );
+    }));
 
 using OpSwitchInvalidTypeTestCase =
     spvtest::TextToBinaryTestBase<TestWithParam<std::string>>;
@@ -342,14 +342,14 @@ TEST_P(OpSwitchInvalidTypeTestCase, InvalidTypes) {
       "%1 = " + GetParam() +
       "\n"
       "%3 = OpCopyObject %1 %2\n"  // We only care the type of the expression
-      "%4 = OpSwitch %3 %default 32 %c\n";
+      "     OpSwitch %3 %default 32 %c\n";
   EXPECT_THAT(CompileFailure(input),
               Eq("The selector operand for OpSwitch must be the result of an "
                  "instruction that generates an integer scalar"));
 }
 
 // clang-format off
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TextToBinaryOpSwitchInvalidTests, OpSwitchInvalidTypeTestCase,
     ValuesIn(std::vector<std::string>{
       {"OpTypeVoid",
@@ -371,11 +371,14 @@ INSTANTIATE_TEST_CASE_P(
        "OpTypeReserveId",
        "OpTypeQueue",
        "OpTypePipe ReadOnly",
-       "OpTypeForwardPointer %a UniformConstant",
-           // At least one thing that isn't a type at all
+
+       // Skip OpTypeForwardPointer becasuse it doesn't even produce a result
+       // ID.
+
+       // At least one thing that isn't a type at all
        "OpNot %a %b"
       },
-    }),);
+    }));
 // clang-format on
 
 // TODO(dneto): OpPhi

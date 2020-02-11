@@ -45,8 +45,8 @@ TEST_P(TargetEnvTest, ValidSpirvVersion) {
   ASSERT_THAT(spirv_version, AnyOf(0x10000, 0x10100, 0x10200, 0x10300));
 }
 
-INSTANTIATE_TEST_CASE_P(AllTargetEnvs, TargetEnvTest,
-                        ValuesIn(spvtest::AllTargetEnvironments()));
+INSTANTIATE_TEST_SUITE_P(AllTargetEnvs, TargetEnvTest,
+                         ValuesIn(spvtest::AllTargetEnvironments()));
 
 TEST(GetContextTest, InvalidTargetEnvProducesNull) {
   // Use a value beyond the last valid enum value.
@@ -63,14 +63,16 @@ struct ParseCase {
 
 using TargetParseTest = ::testing::TestWithParam<ParseCase>;
 
-TEST_P(TargetParseTest, InvalidTargetEnvProducesNull) {
+TEST_P(TargetParseTest, Samples) {
   spv_target_env env;
   bool parsed = spvParseTargetEnv(GetParam().input, &env);
   EXPECT_THAT(parsed, Eq(GetParam().success));
-  EXPECT_THAT(env, Eq(GetParam().env));
+  if (parsed) {
+    EXPECT_THAT(env, Eq(GetParam().env));
+  }
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TargetParsing, TargetParseTest,
     ValuesIn(std::vector<ParseCase>{
         {"spv1.0", true, SPV_ENV_UNIVERSAL_1_0},
@@ -79,6 +81,7 @@ INSTANTIATE_TEST_CASE_P(
         {"spv1.3", true, SPV_ENV_UNIVERSAL_1_3},
         {"vulkan1.0", true, SPV_ENV_VULKAN_1_0},
         {"vulkan1.1", true, SPV_ENV_VULKAN_1_1},
+        {"vulkan1.2", true, SPV_ENV_VULKAN_1_2},
         {"opencl2.1", true, SPV_ENV_OPENCL_2_1},
         {"opencl2.2", true, SPV_ENV_OPENCL_2_2},
         {"opengl4.0", true, SPV_ENV_OPENGL_4_0},
@@ -95,11 +98,67 @@ INSTANTIATE_TEST_CASE_P(
         {"webgpu0", true, SPV_ENV_WEBGPU_0},
         {"opencl2.3", false, SPV_ENV_UNIVERSAL_1_0},
         {"opencl3.0", false, SPV_ENV_UNIVERSAL_1_0},
-        {"vulkan1.2", false, SPV_ENV_UNIVERSAL_1_0},
+        {"vulkan1.9", false, SPV_ENV_UNIVERSAL_1_0},
         {"vulkan2.0", false, SPV_ENV_UNIVERSAL_1_0},
         {nullptr, false, SPV_ENV_UNIVERSAL_1_0},
         {"", false, SPV_ENV_UNIVERSAL_1_0},
         {"abc", false, SPV_ENV_UNIVERSAL_1_0},
+    }));
+
+// A test case for parsing an environment string.
+struct ParseVulkanCase {
+  uint32_t vulkan;
+  uint32_t spirv;
+  bool success;        // Expect to successfully parse?
+  spv_target_env env;  // The parsed environment, if successful.
+};
+
+using TargetParseVulkanTest = ::testing::TestWithParam<ParseVulkanCase>;
+
+TEST_P(TargetParseVulkanTest, Samples) {
+  spv_target_env env;
+  bool parsed = spvParseVulkanEnv(GetParam().vulkan, GetParam().spirv, &env);
+  EXPECT_THAT(parsed, Eq(GetParam().success));
+  if (parsed) {
+    EXPECT_THAT(env, Eq(GetParam().env));
+  }
+}
+
+#define VK(MAJ, MIN) ((MAJ << 22) | (MIN << 12))
+#define SPV(MAJ, MIN) ((MAJ << 16) | (MIN << 8))
+INSTANTIATE_TEST_SUITE_P(
+    TargetVulkanParsing, TargetParseVulkanTest,
+    ValuesIn(std::vector<ParseVulkanCase>{
+        // Vulkan 1.0 cases
+        {VK(1, 0), SPV(1, 0), true, SPV_ENV_VULKAN_1_0},
+        {VK(1, 0), SPV(1, 1), true, SPV_ENV_VULKAN_1_1},
+        {VK(1, 0), SPV(1, 2), true, SPV_ENV_VULKAN_1_1},
+        {VK(1, 0), SPV(1, 3), true, SPV_ENV_VULKAN_1_1},
+        {VK(1, 0), SPV(1, 4), true, SPV_ENV_VULKAN_1_1_SPIRV_1_4},
+        {VK(1, 0), SPV(1, 5), true, SPV_ENV_VULKAN_1_2},
+        {VK(1, 0), SPV(1, 6), false, SPV_ENV_UNIVERSAL_1_0},
+        // Vulkan 1.1 cases
+        {VK(1, 1), SPV(1, 0), true, SPV_ENV_VULKAN_1_1},
+        {VK(1, 1), SPV(1, 1), true, SPV_ENV_VULKAN_1_1},
+        {VK(1, 1), SPV(1, 2), true, SPV_ENV_VULKAN_1_1},
+        {VK(1, 1), SPV(1, 3), true, SPV_ENV_VULKAN_1_1},
+        {VK(1, 1), SPV(1, 4), true, SPV_ENV_VULKAN_1_1_SPIRV_1_4},
+        {VK(1, 1), SPV(1, 5), true, SPV_ENV_VULKAN_1_2},
+        {VK(1, 1), SPV(1, 6), false, SPV_ENV_UNIVERSAL_1_0},
+        // Vulkan 1.2 cases
+        {VK(1, 2), SPV(1, 0), true, SPV_ENV_VULKAN_1_2},
+        {VK(1, 2), SPV(1, 1), true, SPV_ENV_VULKAN_1_2},
+        {VK(1, 2), SPV(1, 2), true, SPV_ENV_VULKAN_1_2},
+        {VK(1, 2), SPV(1, 3), true, SPV_ENV_VULKAN_1_2},
+        {VK(1, 2), SPV(1, 4), true, SPV_ENV_VULKAN_1_2},
+        {VK(1, 2), SPV(1, 5), true, SPV_ENV_VULKAN_1_2},
+        {VK(1, 2), SPV(1, 6), false, SPV_ENV_UNIVERSAL_1_0},
+        // Vulkan 1.3 cases
+        {VK(1, 3), SPV(1, 0), false, SPV_ENV_UNIVERSAL_1_0},
+        // Vulkan 2.0 cases
+        {VK(2, 0), SPV(1, 0), false, SPV_ENV_UNIVERSAL_1_0},
+        // Vulkan 99.0 cases
+        {VK(99, 0), SPV(1, 0), false, SPV_ENV_UNIVERSAL_1_0},
     }));
 
 }  // namespace

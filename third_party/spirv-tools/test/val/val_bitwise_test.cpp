@@ -42,6 +42,7 @@ OpCapability Float64)";
       R"(
 OpMemoryModel Logical GLSL450
 OpEntryPoint Fragment %main "main"
+OpExecutionMode %main OriginUpperLeft
 %void = OpTypeVoid
 %func = OpTypeFunction %void
 %bool = OpTypeBool

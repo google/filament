@@ -18,6 +18,7 @@
 
 #include "source/diagnostic.h"
 #include "source/opcode.h"
+#include "source/spirv_constant.h"
 #include "source/val/instruction.h"
 #include "source/val/validation_state.h"
 
@@ -32,43 +33,61 @@ spv_result_t ConversionPass(ValidationState_t& _, const Instruction* inst) {
   switch (opcode) {
     case SpvOpConvertFToU: {
       if (!_.IsUnsignedIntScalarType(result_type) &&
-          !_.IsUnsignedIntVectorType(result_type))
+          !_.IsUnsignedIntVectorType(result_type) &&
+          !_.IsUnsignedIntCooperativeMatrixType(result_type))
         return _.diag(SPV_ERROR_INVALID_DATA, inst)
                << "Expected unsigned int scalar or vector type as Result Type: "
                << spvOpcodeString(opcode);
 
       const uint32_t input_type = _.GetOperandTypeId(inst, 2);
       if (!input_type || (!_.IsFloatScalarType(input_type) &&
-                          !_.IsFloatVectorType(input_type)))
+                          !_.IsFloatVectorType(input_type) &&
+                          !_.IsFloatCooperativeMatrixType(input_type)))
         return _.diag(SPV_ERROR_INVALID_DATA, inst)
                << "Expected input to be float scalar or vector: "
                << spvOpcodeString(opcode);
 
-      if (_.GetDimension(result_type) != _.GetDimension(input_type))
-        return _.diag(SPV_ERROR_INVALID_DATA, inst)
-               << "Expected input to have the same dimension as Result Type: "
-               << spvOpcodeString(opcode);
+      if (_.IsCooperativeMatrixType(result_type) ||
+          _.IsCooperativeMatrixType(input_type)) {
+        spv_result_t ret =
+            _.CooperativeMatrixShapesMatch(inst, result_type, input_type);
+        if (ret != SPV_SUCCESS) return ret;
+      } else {
+        if (_.GetDimension(result_type) != _.GetDimension(input_type))
+          return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                 << "Expected input to have the same dimension as Result Type: "
+                 << spvOpcodeString(opcode);
+      }
 
       break;
     }
 
     case SpvOpConvertFToS: {
-      if (!_.IsIntScalarType(result_type) && !_.IsIntVectorType(result_type))
+      if (!_.IsIntScalarType(result_type) && !_.IsIntVectorType(result_type) &&
+          !_.IsIntCooperativeMatrixType(result_type))
         return _.diag(SPV_ERROR_INVALID_DATA, inst)
                << "Expected int scalar or vector type as Result Type: "
                << spvOpcodeString(opcode);
 
       const uint32_t input_type = _.GetOperandTypeId(inst, 2);
       if (!input_type || (!_.IsFloatScalarType(input_type) &&
-                          !_.IsFloatVectorType(input_type)))
+                          !_.IsFloatVectorType(input_type) &&
+                          !_.IsFloatCooperativeMatrixType(input_type)))
         return _.diag(SPV_ERROR_INVALID_DATA, inst)
                << "Expected input to be float scalar or vector: "
                << spvOpcodeString(opcode);
 
-      if (_.GetDimension(result_type) != _.GetDimension(input_type))
-        return _.diag(SPV_ERROR_INVALID_DATA, inst)
-               << "Expected input to have the same dimension as Result Type: "
-               << spvOpcodeString(opcode);
+      if (_.IsCooperativeMatrixType(result_type) ||
+          _.IsCooperativeMatrixType(input_type)) {
+        spv_result_t ret =
+            _.CooperativeMatrixShapesMatch(inst, result_type, input_type);
+        if (ret != SPV_SUCCESS) return ret;
+      } else {
+        if (_.GetDimension(result_type) != _.GetDimension(input_type))
+          return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                 << "Expected input to have the same dimension as Result Type: "
+                 << spvOpcodeString(opcode);
+      }
 
       break;
     }
@@ -76,44 +95,62 @@ spv_result_t ConversionPass(ValidationState_t& _, const Instruction* inst) {
     case SpvOpConvertSToF:
     case SpvOpConvertUToF: {
       if (!_.IsFloatScalarType(result_type) &&
-          !_.IsFloatVectorType(result_type))
+          !_.IsFloatVectorType(result_type) &&
+          !_.IsFloatCooperativeMatrixType(result_type))
         return _.diag(SPV_ERROR_INVALID_DATA, inst)
                << "Expected float scalar or vector type as Result Type: "
                << spvOpcodeString(opcode);
 
       const uint32_t input_type = _.GetOperandTypeId(inst, 2);
       if (!input_type ||
-          (!_.IsIntScalarType(input_type) && !_.IsIntVectorType(input_type)))
+          (!_.IsIntScalarType(input_type) && !_.IsIntVectorType(input_type) &&
+           !_.IsIntCooperativeMatrixType(input_type)))
         return _.diag(SPV_ERROR_INVALID_DATA, inst)
                << "Expected input to be int scalar or vector: "
                << spvOpcodeString(opcode);
 
-      if (_.GetDimension(result_type) != _.GetDimension(input_type))
-        return _.diag(SPV_ERROR_INVALID_DATA, inst)
-               << "Expected input to have the same dimension as Result Type: "
-               << spvOpcodeString(opcode);
+      if (_.IsCooperativeMatrixType(result_type) ||
+          _.IsCooperativeMatrixType(input_type)) {
+        spv_result_t ret =
+            _.CooperativeMatrixShapesMatch(inst, result_type, input_type);
+        if (ret != SPV_SUCCESS) return ret;
+      } else {
+        if (_.GetDimension(result_type) != _.GetDimension(input_type))
+          return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                 << "Expected input to have the same dimension as Result Type: "
+                 << spvOpcodeString(opcode);
+      }
 
       break;
     }
 
     case SpvOpUConvert: {
       if (!_.IsUnsignedIntScalarType(result_type) &&
-          !_.IsUnsignedIntVectorType(result_type))
+          !_.IsUnsignedIntVectorType(result_type) &&
+          !_.IsUnsignedIntCooperativeMatrixType(result_type))
         return _.diag(SPV_ERROR_INVALID_DATA, inst)
                << "Expected unsigned int scalar or vector type as Result Type: "
                << spvOpcodeString(opcode);
 
       const uint32_t input_type = _.GetOperandTypeId(inst, 2);
       if (!input_type ||
-          (!_.IsIntScalarType(input_type) && !_.IsIntVectorType(input_type)))
+          (!_.IsIntScalarType(input_type) && !_.IsIntVectorType(input_type) &&
+           !_.IsIntCooperativeMatrixType(input_type)))
         return _.diag(SPV_ERROR_INVALID_DATA, inst)
                << "Expected input to be int scalar or vector: "
                << spvOpcodeString(opcode);
 
-      if (_.GetDimension(result_type) != _.GetDimension(input_type))
-        return _.diag(SPV_ERROR_INVALID_DATA, inst)
-               << "Expected input to have the same dimension as Result Type: "
-               << spvOpcodeString(opcode);
+      if (_.IsCooperativeMatrixType(result_type) ||
+          _.IsCooperativeMatrixType(input_type)) {
+        spv_result_t ret =
+            _.CooperativeMatrixShapesMatch(inst, result_type, input_type);
+        if (ret != SPV_SUCCESS) return ret;
+      } else {
+        if (_.GetDimension(result_type) != _.GetDimension(input_type))
+          return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                 << "Expected input to have the same dimension as Result Type: "
+                 << spvOpcodeString(opcode);
+      }
 
       if (_.GetBitWidth(result_type) == _.GetBitWidth(input_type))
         return _.diag(SPV_ERROR_INVALID_DATA, inst)
@@ -124,22 +161,31 @@ spv_result_t ConversionPass(ValidationState_t& _, const Instruction* inst) {
     }
 
     case SpvOpSConvert: {
-      if (!_.IsIntScalarType(result_type) && !_.IsIntVectorType(result_type))
+      if (!_.IsIntScalarType(result_type) && !_.IsIntVectorType(result_type) &&
+          !_.IsIntCooperativeMatrixType(result_type))
         return _.diag(SPV_ERROR_INVALID_DATA, inst)
                << "Expected int scalar or vector type as Result Type: "
                << spvOpcodeString(opcode);
 
       const uint32_t input_type = _.GetOperandTypeId(inst, 2);
       if (!input_type ||
-          (!_.IsIntScalarType(input_type) && !_.IsIntVectorType(input_type)))
+          (!_.IsIntScalarType(input_type) && !_.IsIntVectorType(input_type) &&
+           !_.IsIntCooperativeMatrixType(input_type)))
         return _.diag(SPV_ERROR_INVALID_DATA, inst)
                << "Expected input to be int scalar or vector: "
                << spvOpcodeString(opcode);
 
-      if (_.GetDimension(result_type) != _.GetDimension(input_type))
-        return _.diag(SPV_ERROR_INVALID_DATA, inst)
-               << "Expected input to have the same dimension as Result Type: "
-               << spvOpcodeString(opcode);
+      if (_.IsCooperativeMatrixType(result_type) ||
+          _.IsCooperativeMatrixType(input_type)) {
+        spv_result_t ret =
+            _.CooperativeMatrixShapesMatch(inst, result_type, input_type);
+        if (ret != SPV_SUCCESS) return ret;
+      } else {
+        if (_.GetDimension(result_type) != _.GetDimension(input_type))
+          return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                 << "Expected input to have the same dimension as Result Type: "
+                 << spvOpcodeString(opcode);
+      }
 
       if (_.GetBitWidth(result_type) == _.GetBitWidth(input_type))
         return _.diag(SPV_ERROR_INVALID_DATA, inst)
@@ -151,22 +197,31 @@ spv_result_t ConversionPass(ValidationState_t& _, const Instruction* inst) {
 
     case SpvOpFConvert: {
       if (!_.IsFloatScalarType(result_type) &&
-          !_.IsFloatVectorType(result_type))
+          !_.IsFloatVectorType(result_type) &&
+          !_.IsFloatCooperativeMatrixType(result_type))
         return _.diag(SPV_ERROR_INVALID_DATA, inst)
                << "Expected float scalar or vector type as Result Type: "
                << spvOpcodeString(opcode);
 
       const uint32_t input_type = _.GetOperandTypeId(inst, 2);
       if (!input_type || (!_.IsFloatScalarType(input_type) &&
-                          !_.IsFloatVectorType(input_type)))
+                          !_.IsFloatVectorType(input_type) &&
+                          !_.IsFloatCooperativeMatrixType(input_type)))
         return _.diag(SPV_ERROR_INVALID_DATA, inst)
                << "Expected input to be float scalar or vector: "
                << spvOpcodeString(opcode);
 
-      if (_.GetDimension(result_type) != _.GetDimension(input_type))
-        return _.diag(SPV_ERROR_INVALID_DATA, inst)
-               << "Expected input to have the same dimension as Result Type: "
-               << spvOpcodeString(opcode);
+      if (_.IsCooperativeMatrixType(result_type) ||
+          _.IsCooperativeMatrixType(input_type)) {
+        spv_result_t ret =
+            _.CooperativeMatrixShapesMatch(inst, result_type, input_type);
+        if (ret != SPV_SUCCESS) return ret;
+      } else {
+        if (_.GetDimension(result_type) != _.GetDimension(input_type))
+          return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                 << "Expected input to have the same dimension as Result Type: "
+                 << spvOpcodeString(opcode);
+      }
 
       if (_.GetBitWidth(result_type) == _.GetBitWidth(input_type))
         return _.diag(SPV_ERROR_INVALID_DATA, inst)
@@ -202,6 +257,23 @@ spv_result_t ConversionPass(ValidationState_t& _, const Instruction* inst) {
       if (!_.IsPointerType(input_type))
         return _.diag(SPV_ERROR_INVALID_DATA, inst)
                << "Expected input to be a pointer: " << spvOpcodeString(opcode);
+
+      if (_.addressing_model() == SpvAddressingModelLogical)
+        return _.diag(SPV_ERROR_INVALID_DATA, inst)
+               << "Logical addressing not supported: "
+               << spvOpcodeString(opcode);
+
+      if (_.addressing_model() ==
+          SpvAddressingModelPhysicalStorageBuffer64EXT) {
+        uint32_t input_storage_class = 0;
+        uint32_t input_data_type = 0;
+        _.GetPointerTypeInfo(input_type, &input_data_type,
+                             &input_storage_class);
+        if (input_storage_class != SpvStorageClassPhysicalStorageBufferEXT)
+          return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                 << "Pointer storage class must be PhysicalStorageBufferEXT: "
+                 << spvOpcodeString(opcode);
+      }
       break;
     }
 
@@ -233,9 +305,26 @@ spv_result_t ConversionPass(ValidationState_t& _, const Instruction* inst) {
                << spvOpcodeString(opcode);
 
       const uint32_t input_type = _.GetOperandTypeId(inst, 2);
-      if (!_.IsIntScalarType(input_type))
+      if (!input_type || !_.IsIntScalarType(input_type))
         return _.diag(SPV_ERROR_INVALID_DATA, inst)
                << "Expected int scalar as input: " << spvOpcodeString(opcode);
+
+      if (_.addressing_model() == SpvAddressingModelLogical)
+        return _.diag(SPV_ERROR_INVALID_DATA, inst)
+               << "Logical addressing not supported: "
+               << spvOpcodeString(opcode);
+
+      if (_.addressing_model() ==
+          SpvAddressingModelPhysicalStorageBuffer64EXT) {
+        uint32_t result_storage_class = 0;
+        uint32_t result_data_type = 0;
+        _.GetPointerTypeInfo(result_type, &result_data_type,
+                             &result_storage_class);
+        if (result_storage_class != SpvStorageClassPhysicalStorageBufferEXT)
+          return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                 << "Pointer storage class must be PhysicalStorageBufferEXT: "
+                 << spvOpcodeString(opcode);
+      }
       break;
     }
 
@@ -379,15 +468,40 @@ spv_result_t ConversionPass(ValidationState_t& _, const Instruction* inst) {
                << "Expected input to be a pointer or int or float vector "
                << "or scalar: " << spvOpcodeString(opcode);
 
-      if (result_is_pointer && !input_is_pointer && !input_is_int_scalar)
-        return _.diag(SPV_ERROR_INVALID_DATA, inst)
-               << "Expected input to be a pointer or int scalar if Result Type "
-               << "is pointer: " << spvOpcodeString(opcode);
+      if (_.version() >= SPV_SPIRV_VERSION_WORD(1, 5) ||
+          _.HasExtension(kSPV_KHR_physical_storage_buffer)) {
+        const bool result_is_int_vector = _.IsIntVectorType(result_type);
+        const bool result_has_int32 =
+            _.ContainsSizedIntOrFloatType(result_type, SpvOpTypeInt, 32);
+        const bool input_is_int_vector = _.IsIntVectorType(input_type);
+        const bool input_has_int32 =
+            _.ContainsSizedIntOrFloatType(input_type, SpvOpTypeInt, 32);
+        if (result_is_pointer && !input_is_pointer && !input_is_int_scalar &&
+            !(input_is_int_vector && input_has_int32))
+          return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                 << "Expected input to be a pointer, int scalar or 32-bit int "
+                    "vector if Result Type is pointer: "
+                 << spvOpcodeString(opcode);
 
-      if (input_is_pointer && !result_is_pointer && !result_is_int_scalar)
-        return _.diag(SPV_ERROR_INVALID_DATA, inst)
-               << "Pointer can only be converted to another pointer or int "
-               << "scalar: " << spvOpcodeString(opcode);
+        if (input_is_pointer && !result_is_pointer && !result_is_int_scalar &&
+            !(result_is_int_vector && result_has_int32))
+          return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                 << "Pointer can only be converted to another pointer, int "
+                    "scalar or 32-bit int vector: "
+                 << spvOpcodeString(opcode);
+      } else {
+        if (result_is_pointer && !input_is_pointer && !input_is_int_scalar)
+          return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                 << "Expected input to be a pointer or int scalar if Result "
+                    "Type is pointer: "
+                 << spvOpcodeString(opcode);
+
+        if (input_is_pointer && !result_is_pointer && !result_is_int_scalar)
+          return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                 << "Pointer can only be converted to another pointer or int "
+                    "scalar: "
+                 << spvOpcodeString(opcode);
+      }
 
       if (!result_is_pointer && !input_is_pointer) {
         const uint32_t result_size =
@@ -404,6 +518,25 @@ spv_result_t ConversionPass(ValidationState_t& _, const Instruction* inst) {
 
     default:
       break;
+  }
+
+  if (_.HasCapability(SpvCapabilityShader)) {
+    switch (inst->opcode()) {
+      case SpvOpConvertFToU:
+      case SpvOpConvertFToS:
+      case SpvOpConvertSToF:
+      case SpvOpConvertUToF:
+      case SpvOpBitcast:
+        if (_.ContainsLimitedUseIntOrFloatType(inst->type_id()) ||
+            _.ContainsLimitedUseIntOrFloatType(_.GetOperandTypeId(inst, 2u))) {
+          return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                 << "8- or 16-bit types can only be used with width-only "
+                    "conversions";
+        }
+        break;
+      default:
+        break;
+    }
   }
 
   return SPV_SUCCESS;

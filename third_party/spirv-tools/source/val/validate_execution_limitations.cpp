@@ -53,6 +53,17 @@ spv_result_t ValidateExecutionLimitations(ValidationState_t& _,
         }
       }
     }
+
+    std::string reason;
+    if (!func->CheckLimitations(_, _.function(entry_id), &reason)) {
+      return _.diag(SPV_ERROR_INVALID_ID, inst)
+             << "OpEntryPoint Entry Point <id> '" << _.getIdName(entry_id)
+             << "'s callgraph contains function <id> "
+             << _.getIdName(inst->id())
+             << ", which cannot be used with the current execution "
+                "modes:\n"
+             << reason;
+    }
   }
   return SPV_SUCCESS;
 }

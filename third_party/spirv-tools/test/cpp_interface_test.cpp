@@ -36,6 +36,10 @@ OpMemoryModel Logical GLSL450
 )";
 }
 
+// When we assemble with a target environment of SPIR-V 1.1, we expect
+// the following in the module header version word.
+const uint32_t kExpectedSpvVersion = 0x10100;
+
 TEST(CppInterface, SuccessfulRoundTrip) {
   const std::string input_text = "%2 = OpSizeOf %1 %3\n";
   SpirvTools t(SPV_ENV_UNIVERSAL_1_1);
@@ -44,7 +48,7 @@ TEST(CppInterface, SuccessfulRoundTrip) {
   EXPECT_TRUE(t.Assemble(input_text, &binary));
   EXPECT_TRUE(binary.size() > 5u);
   EXPECT_EQ(SpvMagicNumber, binary[0]);
-  EXPECT_EQ(SpvVersion, binary[1]);
+  EXPECT_EQ(kExpectedSpvVersion, binary[1]);
 
   // This cannot pass validation since %1 is not defined.
   t.SetMessageConsumer([](spv_message_level_t level, const char* source,
@@ -54,7 +58,8 @@ TEST(CppInterface, SuccessfulRoundTrip) {
     EXPECT_EQ(0u, position.line);
     EXPECT_EQ(0u, position.column);
     EXPECT_EQ(1u, position.index);
-    EXPECT_STREQ("ID 1 has not been defined\n  %2 = OpSizeOf %1 %3\n", message);
+    EXPECT_STREQ("ID 1[%1] has not been defined\n  %2 = OpSizeOf %1 %3\n",
+                 message);
   });
   EXPECT_FALSE(t.Validate(binary));
 
@@ -70,7 +75,7 @@ TEST(CppInterface, AssembleEmptyModule) {
   // We only have the header.
   EXPECT_EQ(5u, binary.size());
   EXPECT_EQ(SpvMagicNumber, binary[0]);
-  EXPECT_EQ(SpvVersion, binary[1]);
+  EXPECT_EQ(kExpectedSpvVersion, binary[1]);
 }
 
 TEST(CppInterface, AssembleOverloads) {
@@ -81,21 +86,21 @@ TEST(CppInterface, AssembleOverloads) {
     EXPECT_TRUE(t.Assemble(input_text, &binary));
     EXPECT_TRUE(binary.size() > 5u);
     EXPECT_EQ(SpvMagicNumber, binary[0]);
-    EXPECT_EQ(SpvVersion, binary[1]);
+    EXPECT_EQ(kExpectedSpvVersion, binary[1]);
   }
   {
     std::vector<uint32_t> binary;
     EXPECT_TRUE(t.Assemble(input_text.data(), input_text.size(), &binary));
     EXPECT_TRUE(binary.size() > 5u);
     EXPECT_EQ(SpvMagicNumber, binary[0]);
-    EXPECT_EQ(SpvVersion, binary[1]);
+    EXPECT_EQ(kExpectedSpvVersion, binary[1]);
   }
   {  // Ignore the last newline.
     std::vector<uint32_t> binary;
     EXPECT_TRUE(t.Assemble(input_text.data(), input_text.size() - 1, &binary));
     EXPECT_TRUE(binary.size() > 5u);
     EXPECT_EQ(SpvMagicNumber, binary[0]);
-    EXPECT_EQ(SpvVersion, binary[1]);
+    EXPECT_EQ(kExpectedSpvVersion, binary[1]);
   }
 }
 

@@ -35,6 +35,26 @@ const char* kDebugOpcodes[] = {
 
 }  // anonymous namespace
 
+MessageConsumer GetTestMessageConsumer(
+    std::vector<Message>& expected_messages) {
+  return [&expected_messages](spv_message_level_t level, const char* source,
+                              const spv_position_t& position,
+                              const char* message) {
+    EXPECT_TRUE(!expected_messages.empty());
+    if (expected_messages.empty()) {
+      return;
+    }
+
+    EXPECT_EQ(expected_messages[0].level, level);
+    EXPECT_EQ(expected_messages[0].line_number, position.line);
+    EXPECT_EQ(expected_messages[0].column_number, position.column);
+    EXPECT_STREQ(expected_messages[0].source_file, source);
+    EXPECT_STREQ(expected_messages[0].message, message);
+
+    expected_messages.erase(expected_messages.begin());
+  };
+}
+
 bool FindAndReplace(std::string* process_str, const std::string find_str,
                     const std::string replace_str) {
   if (process_str->empty() || find_str.empty()) {

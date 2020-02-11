@@ -1277,6 +1277,46 @@ TEST_F(PassClassTest, FissionSimulation) {
   }
 }
 
+// Test that register liveness does not fail when there is an unreachable block.
+// We are not testing if the liveness is computed correctly because the specific
+// results do not matter for unreachable blocks.
+TEST_F(PassClassTest, RegisterLivenessWithUnreachableBlock) {
+  const std::string text = R"(
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %2 "main"
+               OpExecutionMode %2 OriginLowerLeft
+               OpSource GLSL 330
+               OpSourceExtension "GL_ARB_shading_language_420pack"
+       %void = OpTypeVoid
+          %4 = OpTypeFunction %void
+          %2 = OpFunction %void None %4
+          %5 = OpLabel
+               OpBranch %6
+          %6 = OpLabel
+               OpLoopMerge %7 %8 None
+               OpBranch %9
+          %9 = OpLabel
+               OpBranch %7
+          %8 = OpLabel
+               OpBranch %6
+          %7 = OpLabel
+               OpReturn
+               OpFunctionEnd
+  )";
+
+  std::unique_ptr<IRContext> context =
+      BuildModule(SPV_ENV_UNIVERSAL_1_1, nullptr, text,
+                  SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+  Module* module = context->module();
+  EXPECT_NE(nullptr, module) << "Assembling failed for shader:\n"
+                             << text << std::endl;
+  Function* f = &*module->begin();
+  LivenessAnalysis* liveness_analysis = context->GetLivenessAnalysis();
+  liveness_analysis->Get(f);
+}
+
 }  // namespace
 }  // namespace opt
 }  // namespace spvtools

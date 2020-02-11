@@ -2952,6 +2952,52 @@ OpFunctionEnd
   EXPECT_NE(loop_2.GetLatchBlock(), loop_2.GetContinueBlock());
 }
 
+// Test that a loop with a self-referencing OpPhi instruction is handled
+// correctly.
+TEST_F(PassClassTest, OpPhiSelfReference) {
+  const std::string text = R"(
+  ; Find the two adds from the unrolled loop
+  ; CHECK: OpIAdd
+  ; CHECK: OpIAdd
+  ; CHECK: OpIAdd %uint %uint_0 %uint_1
+  ; CHECK-NEXT: OpReturn
+          OpCapability Shader
+     %1 = OpExtInstImport "GLSL.std.450"
+          OpMemoryModel Logical GLSL450
+          OpEntryPoint GLCompute %2 "main"
+          OpExecutionMode %2 LocalSize 8 8 1
+          OpSource HLSL 600
+  %uint = OpTypeInt 32 0
+  %void = OpTypeVoid
+     %5 = OpTypeFunction %void
+%uint_0 = OpConstant %uint 0
+%uint_1 = OpConstant %uint 1
+  %bool = OpTypeBool
+  %true = OpConstantTrue %bool
+     %2 = OpFunction %void None %5
+    %10 = OpLabel
+          OpBranch %19
+    %19 = OpLabel
+    %20 = OpPhi %uint %uint_0 %10 %20 %21
+    %22 = OpPhi %uint %uint_0 %10 %23 %21
+    %24 = OpULessThanEqual %bool %22 %uint_1
+          OpLoopMerge %25 %21 Unroll
+          OpBranchConditional %24 %21 %25
+    %21 = OpLabel
+    %23 = OpIAdd %uint %22 %uint_1
+          OpBranch %19
+    %25 = OpLabel
+    %14 = OpIAdd %uint %20 %uint_1
+          OpReturn
+          OpFunctionEnd
+  )";
+
+  const bool kFullyUnroll = true;
+  const uint32_t kUnrollFactor = 0;
+  SinglePassRunAndMatch<opt::LoopUnroller>(text, true, kFullyUnroll,
+                                           kUnrollFactor);
+}
+
 }  // namespace
 }  // namespace opt
 }  // namespace spvtools

@@ -51,6 +51,8 @@ TEST_F(StripLineDebugInfoTest, LineNoLine) {
                "OpLine %3 4 4",
                "OpNoLine",
                "OpFunctionEnd",
+               "OpNoLine",
+               "OpLine %3 4 5"
       // clang-format on
   };
   SinglePassRunAndCheck<StripDebugInfoPass>(JoinAllInsts(text),
@@ -74,6 +76,129 @@ TEST_F(StripLineDebugInfoTest, LineNoLine) {
                                             /* skip_nop = */ false);
 }
 
+using StripDebugStringTest = PassTest<::testing::Test>;
+
+TEST_F(StripDebugStringTest, OpDecorateRemoved) {
+  std::vector<const char*> input{
+      // clang-format off
+                     "OpCapability Shader",
+                "%1 = OpExtInstImport \"GLSL.std.450\"",
+                     "OpMemoryModel Logical GLSL450",
+                     "OpEntryPoint Vertex %2 \"main\"",
+                "%3 = OpString \"minimal.vert\"",
+                     "OpDecorate %3 Location 1337",
+             "%void = OpTypeVoid",
+                "%5 = OpTypeFunction %void",
+                "%2 = OpFunction %void None %5",
+                "%6 = OpLabel",
+                     "OpReturn",
+                     "OpFunctionEnd",
+      // clang-format on
+  };
+  std::vector<const char*> output{
+      // clang-format off
+                     "OpCapability Shader",
+                "%1 = OpExtInstImport \"GLSL.std.450\"",
+                     "OpMemoryModel Logical GLSL450",
+                     "OpEntryPoint Vertex %2 \"main\"",
+             "%void = OpTypeVoid",
+                "%5 = OpTypeFunction %void",
+                "%2 = OpFunction %void None %5",
+                "%6 = OpLabel",
+                     "OpReturn",
+                     "OpFunctionEnd",
+      // clang-format on
+  };
+  SinglePassRunAndCheck<StripDebugInfoPass>(JoinAllInsts(input),
+                                            JoinAllInsts(output),
+                                            /* skip_nop = */ false,
+                                            /* do_validation */ true);
+}
+
+TEST_F(StripDebugStringTest, OpNameRemoved) {
+  std::vector<const char*> input{
+      // clang-format off
+                     "OpCapability Shader",
+                "%1 = OpExtInstImport \"GLSL.std.450\"",
+                     "OpMemoryModel Logical GLSL450",
+                     "OpEntryPoint Vertex %2 \"main\"",
+                "%3 = OpString \"minimal.vert\"",
+                     "OpName %3 \"bob\"",
+             "%void = OpTypeVoid",
+                "%5 = OpTypeFunction %void",
+                "%2 = OpFunction %void None %5",
+                "%6 = OpLabel",
+                     "OpReturn",
+                     "OpFunctionEnd",
+      // clang-format on
+  };
+  std::vector<const char*> output{
+      // clang-format off
+                     "OpCapability Shader",
+                "%1 = OpExtInstImport \"GLSL.std.450\"",
+                     "OpMemoryModel Logical GLSL450",
+                     "OpEntryPoint Vertex %2 \"main\"",
+             "%void = OpTypeVoid",
+                "%5 = OpTypeFunction %void",
+                "%2 = OpFunction %void None %5",
+                "%6 = OpLabel",
+                     "OpReturn",
+                     "OpFunctionEnd",
+      // clang-format on
+  };
+  SinglePassRunAndCheck<StripDebugInfoPass>(JoinAllInsts(input),
+                                            JoinAllInsts(output),
+                                            /* skip_nop = */ false,
+                                            /* do_validation */ true);
+}
+
+TEST_F(StripDebugStringTest, OpStringRemovedWithNonSemantic) {
+  std::vector<const char*> input{
+      // clang-format off
+                     "OpCapability Shader",
+                     "OpExtension \"SPV_KHR_non_semantic_info\"",
+                "%1 = OpExtInstImport \"NonSemantic.Testing.Set\"",
+                     "OpMemoryModel Logical GLSL450",
+                     "OpEntryPoint Vertex %2 \"main\"",
+                // this string is not referenced, should be removed fully
+                "%3 = OpString \"minimal.vert\"",
+                     "OpName %3 \"bob\"",
+                // this string is referenced and cannot be removed,
+                // but the name should be
+                "%4 = OpString \"secondary.inc\"",
+                     "OpName %4 \"sue\"",
+             "%void = OpTypeVoid",
+                "%6 = OpTypeFunction %void",
+                "%2 = OpFunction %void None %6",
+                "%7 = OpLabel",
+                "%8 = OpExtInst %void %1 5 %4",
+                     "OpReturn",
+                     "OpFunctionEnd",
+      // clang-format on
+  };
+  std::vector<const char*> output{
+      // clang-format off
+                     "OpCapability Shader",
+                     "OpExtension \"SPV_KHR_non_semantic_info\"",
+                "%1 = OpExtInstImport \"NonSemantic.Testing.Set\"",
+                     "OpMemoryModel Logical GLSL450",
+                     "OpEntryPoint Vertex %2 \"main\"",
+                "%4 = OpString \"secondary.inc\"",
+             "%void = OpTypeVoid",
+                "%6 = OpTypeFunction %void",
+                "%2 = OpFunction %void None %6",
+                "%7 = OpLabel",
+                "%8 = OpExtInst %void %1 5 %4",
+                     "OpReturn",
+                     "OpFunctionEnd",
+      // clang-format on
+  };
+  SinglePassRunAndCheck<StripDebugInfoPass>(JoinAllInsts(input),
+                                            JoinAllInsts(output),
+                                            /* skip_nop = */ false,
+                                            /* do_validation */ true);
+}
+
 using StripDebugInfoTest = PassTest<::testing::TestWithParam<const char*>>;
 
 TEST_P(StripDebugInfoTest, Kind) {
@@ -89,7 +214,7 @@ TEST_P(StripDebugInfoTest, Kind) {
 
 // Test each possible non-line debug instruction.
 // clang-format off
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     SingleKindDebugInst, StripDebugInfoTest,
     ::testing::ValuesIn(std::vector<const char*>({
         "OpSourceContinued \"I'm a happy shader! Yay! ;)\"",

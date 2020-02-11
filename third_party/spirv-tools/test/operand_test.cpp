@@ -33,10 +33,10 @@ TEST_P(GetTargetTest, InvalidPointerTable) {
   ASSERT_EQ(SPV_ERROR_INVALID_POINTER, spvOperandTableGet(nullptr, GetParam()));
 }
 
-INSTANTIATE_TEST_CASE_P(OperandTableGet, GetTargetTest,
-                        ValuesIn(std::vector<spv_target_env>{
-                            SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1,
-                            SPV_ENV_VULKAN_1_0}), );
+INSTANTIATE_TEST_SUITE_P(OperandTableGet, GetTargetTest,
+                         ValuesIn(std::vector<spv_target_env>{
+                             SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1,
+                             SPV_ENV_VULKAN_1_0}));
 
 TEST(OperandString, AllAreDefinedExceptVariable) {
   // None has no string, so don't test it.

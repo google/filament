@@ -39,6 +39,7 @@ void LoopPeeling::DuplicateAndConnectLoop(
   assert(CanPeelLoop() && "Cannot peel loop!");
 
   std::vector<BasicBlock*> ordered_loop_blocks;
+  // TODO(1841): Handle failure to create pre-header.
   BasicBlock* pre_header = loop_->GetOrCreatePreHeaderBlock();
 
   loop_->ComputeLoopStructuredOrder(&ordered_loop_blocks);
@@ -131,6 +132,7 @@ void LoopPeeling::DuplicateAndConnectLoop(
 
   // Force the creation of a new preheader for the original loop and set it as
   // the merge block for the cloned loop.
+  // TODO(1841): Handle failure to create pre-header.
   cloned_loop_->SetMergeBlock(loop_->GetOrCreatePreHeaderBlock());
 }
 
@@ -151,7 +153,7 @@ void LoopPeeling::InsertCanonicalInductionVariable(
       context_, &*insert_point,
       IRContext::kAnalysisDefUse | IRContext::kAnalysisInstrToBlockMapping);
   Instruction* uint_1_cst =
-      builder.Add32BitConstantInteger<uint32_t>(1, int_type_->IsSigned());
+      builder.GetIntConstant<uint32_t>(1, int_type_->IsSigned());
   // Create the increment.
   // Note that we do "1 + 1" here, one of the operand should the phi
   // value but we don't have it yet. The operand will be set latter.
@@ -162,8 +164,7 @@ void LoopPeeling::InsertCanonicalInductionVariable(
 
   canonical_induction_variable_ = builder.AddPhi(
       uint_1_cst->type_id(),
-      {builder.Add32BitConstantInteger<uint32_t>(0, int_type_->IsSigned())
-           ->result_id(),
+      {builder.GetIntConstant<uint32_t>(0, int_type_->IsSigned())->result_id(),
        GetClonedLoop()->GetPreHeaderBlock()->id(), iv_inc->result_id(),
        GetClonedLoop()->GetLatchBlock()->id()});
   // Connect everything.
@@ -346,6 +347,7 @@ BasicBlock* LoopPeeling::CreateBlockBefore(BasicBlock* bb) {
   CFG& cfg = *context_->cfg();
   assert(cfg.preds(bb->id()).size() == 1 && "More than one predecessor");
 
+  // TODO(1841): Handle id overflow.
   std::unique_ptr<BasicBlock> new_bb =
       MakeUnique<BasicBlock>(std::unique_ptr<Instruction>(new Instruction(
           context_, SpvOpLabel, 0, context_->TakeNextId(), {})));
@@ -392,6 +394,7 @@ BasicBlock* LoopPeeling::CreateBlockBefore(BasicBlock* bb) {
 
 BasicBlock* LoopPeeling::ProtectLoop(Loop* loop, Instruction* condition,
                                      BasicBlock* if_merge) {
+  // TODO(1841): Handle failure to create pre-header.
   BasicBlock* if_block = loop->GetOrCreatePreHeaderBlock();
   // Will no longer be a pre-header because of the if.
   loop->SetPreHeaderBlock(nullptr);
@@ -422,7 +425,7 @@ void LoopPeeling::PeelBefore(uint32_t peel_factor) {
       context_, &*cloned_loop_->GetPreHeaderBlock()->tail(),
       IRContext::kAnalysisDefUse | IRContext::kAnalysisInstrToBlockMapping);
   Instruction* factor =
-      builder.Add32BitConstantInteger(peel_factor, int_type_->IsSigned());
+      builder.GetIntConstant(peel_factor, int_type_->IsSigned());
 
   Instruction* has_remaining_iteration = builder.AddLessThan(
       factor->result_id(), loop_iteration_count_->result_id());
@@ -484,7 +487,7 @@ void LoopPeeling::PeelAfter(uint32_t peel_factor) {
       context_, &*cloned_loop_->GetPreHeaderBlock()->tail(),
       IRContext::kAnalysisDefUse | IRContext::kAnalysisInstrToBlockMapping);
   Instruction* factor =
-      builder.Add32BitConstantInteger(peel_factor, int_type_->IsSigned());
+      builder.GetIntConstant(peel_factor, int_type_->IsSigned());
 
   Instruction* has_remaining_iteration = builder.AddLessThan(
       factor->result_id(), loop_iteration_count_->result_id());
@@ -677,8 +680,8 @@ std::pair<bool, Loop*> LoopPeelingPass::ProcessLoop(Loop* loop,
       InstructionBuilder(
           context(), loop->GetHeaderBlock(),
           IRContext::kAnalysisDefUse | IRContext::kAnalysisInstrToBlockMapping)
-          .Add32BitConstantInteger<uint32_t>(static_cast<uint32_t>(iterations),
-                                             is_signed),
+          .GetIntConstant<uint32_t>(static_cast<uint32_t>(iterations),
+                                    is_signed),
       canonical_induction_variable);
 
   if (!peeler.CanPeelLoop()) {

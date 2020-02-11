@@ -39,6 +39,7 @@ OpCapability Matrix
 %ext_inst = OpExtInstImport "GLSL.std.450"
 OpMemoryModel Logical GLSL450
 OpEntryPoint Fragment %main "main"
+OpExecutionMode %main OriginUpperLeft
 %void = OpTypeVoid
 %func = OpTypeFunction %void
 %bool = OpTypeBool
@@ -604,10 +605,9 @@ TEST_F(ValidateArithmetics, DotNotVectorTypeOperand1) {
 )";
 
   CompileSuccessfully(GenerateCode(body).c_str());
-  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
-  EXPECT_THAT(
-      getDiagnosticString(),
-      HasSubstr("Expected float vector as operand: Dot operand index 2"));
+  ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(), HasSubstr("Operand 6[%float] cannot be a "
+                                               "type"));
 }
 
 TEST_F(ValidateArithmetics, DotNotVectorTypeOperand2) {
@@ -1163,6 +1163,150 @@ TEST_F(ValidateArithmetics, OuterProductRightOperandWrongDimension) {
       getDiagnosticString(),
       HasSubstr("Expected number of columns of the matrix to be equal to the "
                 "vector size of the right operand: OuterProduct"));
+}
+
+std::string GenerateCoopMatCode(const std::string& extra_types,
+                                const std::string& main_body) {
+  const std::string prefix =
+      R"(
+OpCapability Shader
+OpCapability Float16
+OpCapability CooperativeMatrixNV
+OpExtension "SPV_NV_cooperative_matrix"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+%void = OpTypeVoid
+%func = OpTypeFunction %void
+%bool = OpTypeBool
+%f16 = OpTypeFloat 16
+%f32 = OpTypeFloat 32
+%u32 = OpTypeInt 32 0
+%s32 = OpTypeInt 32 1
+
+%u32_8 = OpConstant %u32 8
+%u32_16 = OpConstant %u32 16
+%u32_4 = OpConstant %u32 4
+%subgroup = OpConstant %u32 3
+
+%f16mat = OpTypeCooperativeMatrixNV %f16 %subgroup %u32_8 %u32_8
+%u32mat = OpTypeCooperativeMatrixNV %u32 %subgroup %u32_8 %u32_8
+%s32mat = OpTypeCooperativeMatrixNV %s32 %subgroup %u32_8 %u32_8
+
+%f16_1 = OpConstant %f16 1
+%f32_1 = OpConstant %f32 1
+%u32_1 = OpConstant %u32 1
+%s32_1 = OpConstant %s32 1
+
+%f16mat_1 = OpConstantComposite %f16mat %f16_1
+%u32mat_1 = OpConstantComposite %u32mat %u32_1
+%s32mat_1 = OpConstantComposite %s32mat %s32_1
+
+%u32_c1 = OpSpecConstant %u32 1
+%u32_c2 = OpSpecConstant %u32 2
+
+%f16matc = OpTypeCooperativeMatrixNV %f16 %subgroup %u32_c1 %u32_c2
+%f16matc_1 = OpConstantComposite %f16matc %f16_1
+
+%mat16x4 = OpTypeCooperativeMatrixNV %f16 %subgroup %u32_16 %u32_4
+%mat4x16 = OpTypeCooperativeMatrixNV %f16 %subgroup %u32_4 %u32_16
+%mat16x16 = OpTypeCooperativeMatrixNV %f16 %subgroup %u32_16 %u32_16
+%f16mat_16x4_1 = OpConstantComposite %mat16x4 %f16_1
+%f16mat_4x16_1 = OpConstantComposite %mat4x16 %f16_1
+%f16mat_16x16_1 = OpConstantComposite %mat16x16 %f16_1)";
+
+  const std::string func_begin =
+      R"(
+%main = OpFunction %void None %func
+%main_entry = OpLabel)";
+
+  const std::string suffix =
+      R"(
+OpReturn
+OpFunctionEnd)";
+
+  return prefix + extra_types + func_begin + main_body + suffix;
+}
+
+TEST_F(ValidateArithmetics, CoopMatSuccess) {
+  const std::string body = R"(
+%val1 = OpFAdd %f16mat %f16mat_1 %f16mat_1
+%val2 = OpFSub %f16mat %f16mat_1 %f16mat_1
+%val3 = OpFDiv %f16mat %f16mat_1 %f16mat_1
+%val4 = OpFNegate %f16mat %f16mat_1
+%val5 = OpIAdd %u32mat %u32mat_1 %u32mat_1
+%val6 = OpISub %u32mat %u32mat_1 %u32mat_1
+%val7 = OpUDiv %u32mat %u32mat_1 %u32mat_1
+%val8 = OpIAdd %s32mat %s32mat_1 %s32mat_1
+%val9 = OpISub %s32mat %s32mat_1 %s32mat_1
+%val10 = OpSDiv %s32mat %s32mat_1 %s32mat_1
+%val11 = OpSNegate %s32mat %s32mat_1
+%val12 = OpMatrixTimesScalar %f16mat %f16mat_1 %f16_1
+%val13 = OpMatrixTimesScalar %u32mat %u32mat_1 %u32_1
+%val14 = OpMatrixTimesScalar %s32mat %s32mat_1 %s32_1
+%val15 = OpCooperativeMatrixMulAddNV %mat16x16 %f16mat_16x4_1 %f16mat_4x16_1 %f16mat_16x16_1
+%val16 = OpCooperativeMatrixMulAddNV %f16matc %f16matc_1 %f16matc_1 %f16matc_1
+)";
+
+  CompileSuccessfully(GenerateCoopMatCode("", body).c_str());
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
+TEST_F(ValidateArithmetics, CoopMatFMulFail) {
+  const std::string body = R"(
+%val1 = OpFMul %f16mat %f16mat_1 %f16mat_1
+)";
+
+  CompileSuccessfully(GenerateCoopMatCode("", body).c_str());
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr(
+          "Expected floating scalar or vector type as Result Type: FMul"));
+}
+
+TEST_F(ValidateArithmetics, CoopMatMatrixTimesScalarMismatchFail) {
+  const std::string body = R"(
+%val1 = OpMatrixTimesScalar %f16mat %f16mat_1 %f32_1
+)";
+
+  CompileSuccessfully(GenerateCoopMatCode("", body).c_str());
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("Expected scalar operand type to be equal to the component "
+                "type of the matrix operand: MatrixTimesScalar"));
+}
+
+TEST_F(ValidateArithmetics, CoopMatScopeFail) {
+  const std::string types = R"(
+%workgroup = OpConstant %u32 2
+
+%mat16x16_wg = OpTypeCooperativeMatrixNV %f16 %workgroup %u32_16 %u32_16
+%f16matwg_16x16_1 = OpConstantComposite %mat16x16_wg %f16_1
+)";
+
+  const std::string body = R"(
+%val1 = OpCooperativeMatrixMulAddNV %mat16x16 %f16mat_16x4_1 %f16mat_4x16_1 %f16matwg_16x16_1
+)";
+
+  CompileSuccessfully(GenerateCoopMatCode(types, body).c_str());
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr(
+          "Cooperative matrix scopes must match: CooperativeMatrixMulAddNV"));
+}
+
+TEST_F(ValidateArithmetics, CoopMatDimFail) {
+  const std::string body = R"(
+%val1 = OpCooperativeMatrixMulAddNV %mat16x16 %f16mat_4x16_1 %f16mat_16x4_1 %f16mat_16x16_1
+)";
+
+  CompileSuccessfully(GenerateCoopMatCode("", body).c_str());
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("Cooperative matrix 'M' mismatch: CooperativeMatrixMulAddNV"));
 }
 
 TEST_F(ValidateArithmetics, IAddCarrySuccess) {
