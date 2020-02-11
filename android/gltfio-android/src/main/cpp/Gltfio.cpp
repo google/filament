@@ -16,19 +16,11 @@
 
 #include <jni.h>
 
-#include "common/NioUtils.h"
-
-extern void registerCallbackUtils(JNIEnv*);
-extern void registerNioUtils(JNIEnv*);
-
 jint JNI_OnLoad(JavaVM* vm, void*) {
     JNIEnv* env;
     if (vm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6) != JNI_OK) {
         return -1;
     }
-
-    registerCallbackUtils(env);
-    registerNioUtils(env);
 
     return JNI_VERSION_1_6;
 }

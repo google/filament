@@ -41,6 +41,13 @@
 
 #include <string>
 
+#if defined(__EMSCRIPTEN__) || defined(ANDROID)
+#define USE_FILESYSTEM 0
+#else
+#define USE_FILESYSTEM 1
+#include <utils/Path.h>
+#endif
+
 using namespace filament;
 using namespace filament::math;
 using namespace utils;
@@ -195,7 +202,7 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
     // looks inside a cache of externally-supplied data blobs, rather than loading from the
     // filesystem.
 
-    #if defined(STBI_NO_STDIO)
+    #if !USE_FILESYSTEM
 
     if (gltf->buffers_count && !gltf->buffers[0].data && !gltf->buffers[0].uri && gltf->bin) {
         if (gltf->bin_size < gltf->buffers[0].size) {
@@ -395,13 +402,13 @@ void ResourceLoader::Impl::decodeSingleTexture() {
         }
 
         // Otherwise load it from the file system if this platform supports it.
-        #if defined(STBI_NO_STDIO)
+        #if !USE_FILESYSTEM
             slog.e << "Unable to load texture: " << uri << io::endl;
             entry->completed = true;
             mNumDecoderTasksFinished++;
             return;
         #else
-            utils::Path fullpath = this->mConfig.gltfPath.getParent() + uri;
+            utils::Path fullpath = utils::Path(this->mConfig.gltfPath).getParent() + uri;
             entry->texels = stbi_load(fullpath.c_str(), &w, &h, &c, 4);
             return;
         #endif
@@ -430,7 +437,6 @@ void ResourceLoader::Impl::uploadPendingTextures() {
 
 void ResourceLoader::Impl::addTextureCacheEntry(const TextureBinding& tb) {
     TextureCacheEntry* entry = nullptr;
-    const Path directory = mConfig.gltfPath.getParent();
 
     // Check if the texture binding uses BufferView data (i.e. it does not have a URI).
     if (tb.data) {
@@ -464,10 +470,10 @@ void ResourceLoader::Impl::addTextureCacheEntry(const TextureBinding& tb) {
                 &entry->height, &entry->numComponents);
         return;
     }
-    #if defined(STBI_NO_STDIO)
+    #if !USE_FILESYSTEM
         slog.e << "Unable to load texture: " << tb.uri << io::endl;
     #else
-        utils::Path fullpath = directory + tb.uri;
+        utils::Path fullpath = utils::Path(mConfig.gltfPath).getParent() + tb.uri;
         stbi_info(fullpath.c_str(), &entry->width, &entry->height, &entry->numComponents);
     #endif
 }
@@ -579,11 +585,11 @@ bool ResourceLoader::Impl::createTextures(bool async) {
         }
 
         // Otherwise load it from the file system if this platform supports it.
-        #if defined(STBI_NO_STDIO)
+        #if !USE_FILESYSTEM
             slog.e << "Unable to load texture: " << uri << io::endl;
             return false;
         #else
-            utils::Path fullpath = this->mConfig.gltfPath.getParent() + uri;
+            utils::Path fullpath = utils::Path(this->mConfig.gltfPath).getParent() + uri;
             utils::JobSystem::Job* decode = utils::jobs::createJob(*js, parent, [=] {
                 int width, height, comp;
                 entry->texels = stbi_load(fullpath.c_str(), &width, &height, &comp, 4);
