@@ -173,6 +173,8 @@ public class View {
      * blendMode:   Whether the bloom effect is purely additive (false) or mixed with the original
      *              image (true).
      * anamorphism: Bloom's aspect ratio (x/y), for artistic purposes.
+     * threshold:   When enabled, a threshold at 1.0 is applied on the source image, this is
+     *              useful for artistic reasons.
      *
      * @see setBloomOptions
      */
@@ -207,6 +209,11 @@ public class View {
          * How the bloom effect is applied
          */
         public BlendingMode blendingMode = BlendingMode.ADD;
+
+        /**
+         * Whether to threshold the source
+         */
+        public boolean threshold = true;
 
         /**
          * enable or disable bloom
@@ -797,7 +804,7 @@ public class View {
         mBloomOptions = options;
         nSetBloomOptions(getNativeObject(), options.strength, options.resolution,
                 options.anamorphism, options.levels, options.blendingMode.ordinal(),
-                options.enabled);
+                options.threshold, options.enabled);
     }
 
     /**
@@ -855,5 +862,5 @@ public class View {
     private static native void nSetAmbientOcclusion(long nativeView, int ordinal);
     private static native int nGetAmbientOcclusion(long nativeView);
     private static native void nSetAmbientOcclusionOptions(long nativeView, float radius, float bias, float power, float resolution, float intensity);
-    private static native void nSetBloomOptions(long nativeView, float strength, int resolution, float anamorphism, int levels, int blendMode, boolean enabled);
+    private static native void nSetBloomOptions(long nativeView, float strength, int resolution, float anamorphism, int levels, int blendMode, boolean threshold, boolean enabled);
 }

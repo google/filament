@@ -250,7 +250,7 @@ Java_com_google_android_filament_View_nSetAmbientOcclusionOptions(JNIEnv*, jclas
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_View_nSetBloomOptions(JNIEnv*, jclass,
         jlong nativeView, jfloat strength, jint resolution, jfloat anamorphism, jint levels,
-        jint blendMode, jboolean enabled) {
+        jint blendMode, jboolean threshold, jboolean enabled) {
     View* view = (View*) nativeView;
     View::BloomOptions options = {
             .strength = strength,
@@ -258,6 +258,7 @@ Java_com_google_android_filament_View_nSetBloomOptions(JNIEnv*, jclass,
             .anamorphism = anamorphism,
             .levels = (uint8_t)levels,
             .blendMode = (View::BloomOptions::BlendMode)blendMode,
+            .threshold = (bool)threshold,
             .enabled = (bool)enabled
     };
     view->setBloomOptions(options);

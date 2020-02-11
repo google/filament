@@ -978,6 +978,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
                         .filterMin = SamplerMinFilter::LINEAR /* level is always 0 */
                 });
                 mi->setParameter("level", 0.0f);
+                mi->setParameter("threshold", bloomOptions.threshold ? 1.0f : 0.0f);
 
                 // downsample phase
                 for (size_t i = 0; i < bloomOptions.levels; i++) {
