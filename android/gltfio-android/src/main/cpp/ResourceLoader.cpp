@@ -37,7 +37,7 @@ extern "C" JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_gltfio_ResourceLoader_nCreateResourceLoader(JNIEnv*, jclass,
         jlong nativeEngine) {
     Engine* engine = (Engine*) nativeEngine;
-    return (jlong) new ResourceLoader({ engine, utils::Path(), true, true });
+    return (jlong) new ResourceLoader({ engine, {}, true, true });
 }
 
 extern "C" JNIEXPORT void JNICALL
