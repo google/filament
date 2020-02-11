@@ -53,13 +53,12 @@ public:
             FrameGraphId<FrameGraphTexture> input, backend::TextureFormat outFormat,
             bool translucent) noexcept;
 
-    FrameGraphId<FrameGraphTexture> dynamicScaling(FrameGraph& fg, bool blend,
-            FrameGraphId<FrameGraphTexture> input,
-            FrameGraphTexture::Descriptor outDesc) noexcept;
+    FrameGraphId<FrameGraphTexture> opaqueBlit(FrameGraph& fg,
+            FrameGraphId<FrameGraphTexture> input, FrameGraphTexture::Descriptor outDesc) noexcept;
 
-    FrameGraphId<FrameGraphTexture> quadBlit(FrameGraph& fg,
-            bool blend, FrameGraphId<FrameGraphTexture> input,
-            backend::TextureFormat outFormat) noexcept;
+    FrameGraphId <FrameGraphTexture> blendBlit(FrameGraph& fg,
+            FrameGraphId <FrameGraphTexture> input,
+            FrameGraphTexture::Descriptor outDesc) noexcept;
 
     FrameGraphId<FrameGraphTexture> resolve(FrameGraph& fg,
             const char* outputBufferName, FrameGraphId<FrameGraphTexture> input) noexcept;

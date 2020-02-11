@@ -324,13 +324,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::fxaa(FrameGraph& fg,
     return ppFXAA.getData().output;
 }
 
-FrameGraphId<FrameGraphTexture> PostProcessManager::dynamicScaling(FrameGraph& fg, bool blend,
-        FrameGraphId<FrameGraphTexture> input,
-        FrameGraphTexture::Descriptor outDesc) noexcept {
-
-    if (UTILS_UNLIKELY(blend)) {
-        return quadBlit(fg, blend, input, outDesc.format);
-    }
+FrameGraphId<FrameGraphTexture> PostProcessManager::opaqueBlit(FrameGraph& fg,
+        FrameGraphId<FrameGraphTexture> input, FrameGraphTexture::Descriptor outDesc) noexcept {
 
     struct PostProcessScaling {
         FrameGraphId<FrameGraphTexture> input;
@@ -339,7 +334,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dynamicScaling(FrameGraph& f
         FrameGraphRenderTargetHandle drt;
     };
 
-    auto& ppBlitScaling = fg.addPass<PostProcessScaling>("blit scaling",
+    auto& ppBlit = fg.addPass<PostProcessScaling>("blit scaling",
             [&](FrameGraph::Builder& builder, PostProcessScaling& data) {
                 auto const& inputDesc = fg.getDescriptor(input);
 
@@ -377,11 +372,12 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dynamicScaling(FrameGraph& f
             });
 
     // we rely on automatic culling of unused render passes
-    return ppBlitScaling.getData().output;
+    return ppBlit.getData().output;
 }
 
-FrameGraphId<FrameGraphTexture> PostProcessManager::quadBlit(FrameGraph& fg,
-        bool blend, FrameGraphId<FrameGraphTexture> input, TextureFormat outFormat) noexcept {
+FrameGraphId<FrameGraphTexture> PostProcessManager::blendBlit(FrameGraph& fg,
+        FrameGraphId<FrameGraphTexture> input,
+        FrameGraphTexture::Descriptor outDesc) noexcept {
 
     Handle<HwRenderPrimitive> fullScreenRenderPrimitive = mEngine.getFullScreenRenderPrimitive();
 
@@ -391,15 +387,10 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::quadBlit(FrameGraph& fg,
         FrameGraphRenderTargetHandle drt;
     };
 
-    auto& ppQuadScaling = fg.addPass<QuadBlitData>("quad scaling",
+    auto& ppQuadBlit = fg.addPass<QuadBlitData>("quad scaling",
             [&](FrameGraph::Builder& builder, auto& data) {
-                auto const& inputDesc = fg.getDescriptor(input);
                 data.input = builder.sample(input);
-                data.output = builder.createTexture("scaled output", {
-                        .width = inputDesc.width,
-                        .height = inputDesc.height,
-                        .format = outFormat
-                });
+                data.output = builder.createTexture("scaled output", outDesc);
                 data.drt = builder.createRenderTarget(data.output);
             },
             [=](FrameGraphPassResources const& resources,
@@ -419,12 +410,10 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::quadBlit(FrameGraph& fg,
                 pipeline.program = mBlit.getProgram();
                 pipeline.rasterState = mBlit.getMaterial()->getRasterState();
                 pipeline.scissor = pInstance->getScissor();
-                if (blend) {
-                    pipeline.rasterState.blendFunctionSrcRGB   = BlendFunction::ONE;
-                    pipeline.rasterState.blendFunctionSrcAlpha = BlendFunction::ONE;
-                    pipeline.rasterState.blendFunctionDstRGB   = BlendFunction::ONE_MINUS_SRC_ALPHA;
-                    pipeline.rasterState.blendFunctionDstAlpha = BlendFunction::ONE_MINUS_SRC_ALPHA;
-                }
+                pipeline.rasterState.blendFunctionSrcRGB   = BlendFunction::ONE;
+                pipeline.rasterState.blendFunctionSrcAlpha = BlendFunction::ONE;
+                pipeline.rasterState.blendFunctionDstRGB   = BlendFunction::ONE_MINUS_SRC_ALPHA;
+                pipeline.rasterState.blendFunctionDstAlpha = BlendFunction::ONE_MINUS_SRC_ALPHA;
                 driver.beginRenderPass(out.target, out.params);
                 pInstance->use(driver);
                 driver.draw(pipeline, fullScreenRenderPrimitive);
@@ -432,7 +421,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::quadBlit(FrameGraph& fg,
             });
 
     // we rely on automatic culling of unused render passes
-    return ppQuadScaling.getData().output;
+    return ppQuadBlit.getData().output;
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(FrameGraph& fg,
@@ -930,8 +919,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
     bloomOptions.levels = std::min(bloomOptions.levels, maxLevels);
     bloomOptions.levels = std::min(bloomOptions.levels, kMaxBloomLevels);
 
-//    slog.d << desc.width << "x" << desc.height << " -> " << width << "x" << height
-//           << ", levels=" << +bloomOptions.levels << io::endl;
 
     struct BloomPassData {
         FrameGraphId<FrameGraphTexture> in;

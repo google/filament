@@ -386,7 +386,11 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             input = ppm.fxaa(fg, input, ldrFormat, !toneMapping || translucent);
         }
         if (scaled) {
-            input = ppm.dynamicScaling(fg, blending, input, { .format = ldrFormat });
+            if (UTILS_LIKELY(!blending)) {
+                input = ppm.opaqueBlit(fg, input, { .format = ldrFormat });
+            } else {
+                input = ppm.blendBlit(fg, input, { .format = ldrFormat });
+            }
         }
     }
 
@@ -396,13 +400,17 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     // intermediate buffer when MSAA is enabled.
     // We also need an extra buffer for blending the result to the framebuffer if the view
     // is translucent.
-    // The intermediate buffer is accomplished with a "fake" dynamicScaling (i.e. blit)
+    // The intermediate buffer is accomplished with a "fake" opaqueBlit (i.e. blit)
     // operation.
 
     const bool outputIsInput = fg.equal(input, colorPassOutput);
     if ((outputIsInput && viewRenderTarget == mRenderTarget && msaa > 1) ||
         (!outputIsInput && blending)) {
-        input = ppm.dynamicScaling(fg, blending, input, { .format = ldrFormat });
+        if (UTILS_LIKELY(!blending)) {
+            input = ppm.opaqueBlit(fg, input, { .format = ldrFormat });
+        } else {
+            input = ppm.blendBlit(fg, input, { .format = ldrFormat });
+        }
     }
 
     fg.present(input);
@@ -497,11 +505,11 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
             h = config.vp.height * config.scale.x;
         }
 
-        input = ppm.dynamicScaling(fg, false, input, {
-            .width = w,
-            .height = h,
-            .levels = uint8_t(roughnessLodCount),
-            .format = TextureFormat::R11F_G11F_B10F,
+        input = ppm.opaqueBlit(fg, input, {
+                .width = w,
+                .height = h,
+                .levels = uint8_t(roughnessLodCount),
+                .format = TextureFormat::R11F_G11F_B10F,
         });
 
         input = ppm.generateGaussianMipmap(fg, input, roughnessLodCount, kernelSize);
