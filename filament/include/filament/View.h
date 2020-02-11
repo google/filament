@@ -139,6 +139,8 @@ public:
      * blendMode:   Whether the bloom effect is purely additive (false) or mixed with the original
      *              image (true).
      * anamorphism: Bloom's aspect ratio (x/y), for artistic purposes.
+     * threshold:   When enabled, a threshold at 1.0 is applied on the source image, this is
+     *              useful for artistic reasons.
      */
     struct BloomOptions {
         enum class BlendMode : uint8_t {
@@ -150,6 +152,7 @@ public:
         float anamorphism = 1.0f;                //!< Bloom x/y aspect-ratio (1/32 to 32)
         uint8_t levels = 6;                      //!< number of blur levels (3 to 12)
         BlendMode blendMode = BlendMode::ADD;    //!< How the bloom effect is applied
+        bool threshold = true;                   //!< Whether to threshold the source
         bool enabled = false;                    //!< enable or disable bloom
     };
 
