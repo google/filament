@@ -28,6 +28,7 @@ fragment {
         if (materialParams.showSun && frameUniforms.sun.w >= 0.0f) {
             vec3 direction = normalize(variable_eyeDirection.xyz);
             vec3 sun = frameUniforms.lightColorIntensity.rgb * frameUniforms.lightColorIntensity.a;
+            sun *= 4.0 * PI; // emprirical factor to make the sun look better with bloom
             float cosAngle = dot(direction, frameUniforms.lightDirection);
             float x = (cosAngle - frameUniforms.sun.x) * frameUniforms.sun.z;
             float gradient = pow(1.0 - saturate(x), frameUniforms.sun.w);
