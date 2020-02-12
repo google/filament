@@ -119,8 +119,7 @@ FTexture::FTexture(FEngine& engine, const Builder& builder) {
     mUsage = builder->mUsage;
     mTarget = builder->mTarget;
     mDepth  = static_cast<uint32_t>(builder->mDepth);
-    mLevelCount = std::min(builder->mLevels,
-            static_cast<uint8_t>(std::ilogbf(std::max(mWidth, mHeight)) + 1));
+    mLevelCount = std::min(builder->mLevels, FTexture::maxLevelCount(mWidth, mHeight));
 
     FEngine::DriverApi& driver = engine.getDriverApi();
     if (UTILS_LIKELY(builder->mImportedId == 0)) {

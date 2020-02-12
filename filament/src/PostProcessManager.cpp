@@ -571,8 +571,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssao(FrameGraph& fg, RenderP
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::depthPass(FrameGraph& fg, RenderPass const& pass,
-        uint32_t width, uint32_t height,
-        View::AmbientOcclusionOptions const& options) noexcept {
+        uint32_t width, uint32_t height, View::AmbientOcclusionOptions const& options) noexcept {
 
     // SSAO depth pass -- automatically culled if not used
     struct DepthPassData {
@@ -581,12 +580,13 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::depthPass(FrameGraph& fg, Re
     };
 
     // sanitize a bit the user provided scaling factor
-    const float scale = std::min(std::abs(options.resolution), 1.0f);
-    width  = std::ceil(width * scale);
-    height = std::ceil(height * scale);
+    const float scale = options.resolution;
+    width  = std::max(32u, (uint32_t)std::ceil(width * scale));
+    height = std::max(32u, (uint32_t)std::ceil(height * scale));
 
-    // We limit the level size to 32 pixels (which is where the -5 comes from)
-    const size_t levelCount = std::max(1, std::ilogbf(std::max(width, height)) + 1 - 5);
+    // We limit the lowest lod size to 32 pixels (which is where the -5 comes from)
+    const size_t levelCount = FTexture::maxLevelCount(width, height) - 5;
+    assert(levelCount >= 1);
 
     // SSAO generates its own depth pass at the requested resolution
     auto& ssaoDepthPass = fg.addPass<DepthPassData>("SSAO Depth Pass",
@@ -915,7 +915,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
     minor = newMinor;
 
     // we might need to adjust the max # of levels
-    const uint8_t maxLevels = static_cast<uint8_t>(std::ilogbf(major) + 1);
+    const uint8_t maxLevels = FTexture::maxLevelCount(major);
     bloomOptions.levels = std::min(bloomOptions.levels, maxLevels);
     bloomOptions.levels = std::min(bloomOptions.levels, kMaxBloomLevels);
 

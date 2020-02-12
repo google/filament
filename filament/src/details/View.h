@@ -232,11 +232,12 @@ public:
         return mAmbientOcclusion;
     }
 
-    void setAmbientOcclusionOptions(AmbientOcclusionOptions const& options) noexcept {
+    void setAmbientOcclusionOptions(AmbientOcclusionOptions options) noexcept {
+        options.radius = math::clamp(0.0f, 10.0f, options.radius);
+        options.bias = math::clamp(0.0f, 0.1f, options.bias);
+        options.power = math::clamp(0.0f, 1.0f, options.power);
+        options.resolution = math::clamp(0.0f, 1.0f, options.resolution);
         mAmbientOcclusionOptions = options;
-        mAmbientOcclusionOptions.radius = math::clamp(0.0f, 10.0f, mAmbientOcclusionOptions.radius);
-        mAmbientOcclusionOptions.bias = math::clamp(0.0f, 0.1f, mAmbientOcclusionOptions.bias);
-        mAmbientOcclusionOptions.power = math::clamp(0.0f, 1.0f, mAmbientOcclusionOptions.power);
     }
 
     AmbientOcclusionOptions const& getAmbientOcclusionOptions() const noexcept {
