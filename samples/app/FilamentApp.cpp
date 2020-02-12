@@ -641,45 +641,49 @@ void FilamentApp::Window::resize() {
 void FilamentApp::Window::configureCamerasForWindow() {
 
     // Determine the current size of the window in physical pixels.
-    uint32_t w, h;
-    SDL_GL_GetDrawableSize(mWindow, (int*) &w, (int*) &h);
-    mWidth = (size_t) w;
-    mHeight = (size_t) h;
+    uint32_t width, height;
+    SDL_GL_GetDrawableSize(mWindow, (int*) &width, (int*) &height);
+    mWidth = (size_t) width;
+    mHeight = (size_t) height;
 
     // Compute the "virtual pixels to physical pixels" scale factor that the
     // the platform uses for UI elements.
     int virtualWidth, virtualHeight;
     SDL_GetWindowSize(mWindow, &virtualWidth, &virtualHeight);
-    float dpiScaleX = (float) w / virtualWidth;
-    float dpiScaleY = (float) h / virtualHeight;
+    float dpiScaleX = (float) width / virtualWidth;
+    float dpiScaleY = (float) height / virtualHeight;
 
     const float3 at(0, 0, -4);
-    const double ratio = double(h) / double(w);
+    const double ratio = double(height) / double(width);
     const int sidebar = mFilamentApp->mSidebarWidth * dpiScaleX;
+
+    // To trigger a floating-point exception, users could shrink the window to be smaller than
+    // the sidebar. To prevent this we simply clamp the width of the main viewport.
+    const uint32_t mainWidth = std::max(1, (int)width - sidebar);
 
     double near = 0.1;
     double far = 50;
-    mMainCamera->setProjection(45.0, double(w - sidebar) / h, near, far, Camera::Fov::VERTICAL);
-    mDebugCamera->setProjection(45.0, double(w) / h, 0.0625, 4096, Camera::Fov::VERTICAL);
+    mMainCamera->setProjection(45.0, double(mainWidth) / height, near, far, Camera::Fov::VERTICAL);
+    mDebugCamera->setProjection(45.0, double(width) / height, 0.0625, 4096, Camera::Fov::VERTICAL);
     mOrthoCamera->setProjection(Camera::Projection::ORTHO, -3, 3, -3 * ratio, 3 * ratio, near, far);
     mOrthoCamera->lookAt({ 0, 0, 0 }, {0, 0, -4});
     mUiCamera->setProjection(Camera::Projection::ORTHO,
-            0.0, w / dpiScaleX,
-            h / dpiScaleY, 0.0,
+            0.0, width / dpiScaleX,
+            height / dpiScaleY, 0.0,
             0.0, 1.0);
 
     // We're in split view when there are more views than just the Main and UI views.
     if (mViews.size() > 2) {
-        uint32_t vpw = w / 2;
-        uint32_t vph = h / 2;
-        mMainView->setViewport ({            0,            0,     vpw, vph     });
-        mDepthView->setViewport({ int32_t(vpw),            0, w - vpw, vph     });
-        mGodView->setViewport  ({ int32_t(vpw), int32_t(vph), w - vpw, h - vph });
-        mOrthoView->setViewport({            0, int32_t(vph),     vpw, h - vph });
+        uint32_t vpw = width / 2;
+        uint32_t vph = height / 2;
+        mMainView->setViewport ({            0,            0, vpw,         vph          });
+        mDepthView->setViewport({ int32_t(vpw),            0, width - vpw, vph          });
+        mGodView->setViewport  ({ int32_t(vpw), int32_t(vph), width - vpw, height - vph });
+        mOrthoView->setViewport({            0, int32_t(vph), vpw,         height - vph });
     } else {
-        mMainView->setViewport({ sidebar, 0, w - sidebar, h });
+        mMainView->setViewport({ sidebar, 0, mainWidth, height });
     }
-    mUiView->setViewport({ 0, 0, w, h });
+    mUiView->setViewport({ 0, 0, width, height });
 }
 
 // ------------------------------------------------------------------------------------------------
