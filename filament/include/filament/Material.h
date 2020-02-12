@@ -26,7 +26,7 @@
 
 #include <utils/compiler.h>
 
-#include <math/vec4.h>
+#include <math/mathfwd.h>
 
 #include <stdint.h>
 

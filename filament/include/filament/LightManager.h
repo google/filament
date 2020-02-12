@@ -23,9 +23,7 @@
 #include <utils/compiler.h>
 #include <utils/EntityInstance.h>
 
-#include <math/vec3.h>
-
-#include <math.h>
+#include <math/mathfwd.h>
 
 namespace utils {
     class Entity;

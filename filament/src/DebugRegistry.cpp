@@ -16,6 +16,10 @@
 
 #include "details/DebugRegistry.h"
 
+#include <math/vec2.h>
+#include <math/vec3.h>
+#include <math/vec4.h>
+
 #ifndef NDEBUG
 #   define DEBUG_PROPERTIES_WRITABLE true
 #else

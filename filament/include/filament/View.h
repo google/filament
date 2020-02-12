@@ -26,8 +26,7 @@
 
 #include <utils/compiler.h>
 
-#include <math/vec2.h>
-#include <math/vec3.h>
+#include <math/mathfwd.h>
 
 namespace filament {
 

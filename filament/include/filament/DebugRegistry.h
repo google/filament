@@ -23,12 +23,10 @@
 
 #include <utils/compiler.h>
 
-#include <math/vec2.h>
-#include <math/vec3.h>
-#include <math/vec4.h>
+#include <math/mathfwd.h>
 
 // FIXME: could we get rid of <utility>
-#include <utility>
+#include <utility> // for std::pair
 
 #include <stdint.h>
 
