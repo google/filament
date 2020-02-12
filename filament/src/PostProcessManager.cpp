@@ -919,6 +919,15 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
     bloomOptions.levels = std::min(bloomOptions.levels, maxLevels);
     bloomOptions.levels = std::min(bloomOptions.levels, kMaxBloomLevels);
 
+    if (2 * width < desc.width || 2 * height < desc.height) {
+        // if we're scaling down by more than 2x, prescale the image with a blit to improve
+        // performance. This is important on mobile/tilers.
+        input = opaqueBlit(fg, input, {
+            .width = desc.width / 2,
+            .height = desc.height / 2,
+            .format = outFormat
+        });
+    }
 
     struct BloomPassData {
         FrameGraphId<FrameGraphTexture> in;
