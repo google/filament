@@ -197,7 +197,7 @@ int main(int argc, char** argv) {
         // Load external textures and buffers.
         ResourceConfiguration configuration;
         configuration.engine = app.engine;
-        configuration.gltfPath = filename.getAbsolutePath();
+        configuration.gltfPath = filename.getAbsolutePath().c_str();
         configuration.normalizeSkinningWeights = true;
         configuration.recomputeBoundingBoxes = false;
         if (!app.resourceLoader) {

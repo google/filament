@@ -74,7 +74,17 @@ namespace {
 namespace gltfio {
 
 struct ResourceLoader::Impl {
-    ResourceConfiguration mConfig;
+    Impl(const ResourceConfiguration& config) {
+        mGltfPath = std::string(config.gltfPath ? config.gltfPath : "");
+        mEngine = config.engine;
+        mNormalizeSkinningWeights = config.normalizeSkinningWeights;
+        mRecomputeBoundingBoxes = config.recomputeBoundingBoxes;
+    }
+
+    Engine* mEngine;
+    bool mNormalizeSkinningWeights;
+    bool mRecomputeBoundingBoxes;
+    std::string mGltfPath;
 
     // User-provided resource data with URI string keys, populated with addResourceData().
     // This is used on platforms without traditional file systems, such as Android and WebGL.
@@ -144,9 +154,7 @@ private:
 using namespace details;
 
 ResourceLoader::ResourceLoader(const ResourceConfiguration& config) :
-        mPool(new AssetPool), pImpl(new Impl) {
-    pImpl->mConfig = config;
-}
+        mPool(new AssetPool), pImpl(new Impl(config)) { }
 
 ResourceLoader::~ResourceLoader() {
     mPool->onLoaderDestroyed();
@@ -259,7 +267,7 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
     #else
 
     // Read data from the file system and base64 URIs.
-    cgltf_result result = cgltf_load_buffers(&options, gltf, pImpl->mConfig.gltfPath.c_str());
+    cgltf_result result = cgltf_load_buffers(&options, gltf, pImpl->mGltfPath.c_str());
     if (result != cgltf_result_success) {
         slog.e << "Unable to load resources." << io::endl;
         return false;
@@ -279,15 +287,15 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
     // places, this will needlessly repeat the work. In the future we would like to remove this
     // feature, and instead simply require correct models. See also:
     // https://github.com/KhronosGroup/glTF-Sample-Models/issues/215
-    if (pImpl->mConfig.normalizeSkinningWeights) {
+    if (pImpl->mNormalizeSkinningWeights) {
         normalizeSkinningWeights(asset);
     }
 
-    if (pImpl->mConfig.recomputeBoundingBoxes) {
+    if (pImpl->mRecomputeBoundingBoxes) {
         updateBoundingBoxes(asset);
     }
 
-    Engine& engine = *pImpl->mConfig.engine;
+    Engine& engine = *pImpl->mEngine;
 
     // Upload data to the GPU.
     const BufferBinding* bindings = asset->getBufferBindings();
@@ -408,7 +416,7 @@ void ResourceLoader::Impl::decodeSingleTexture() {
             mNumDecoderTasksFinished++;
             return;
         #else
-            utils::Path fullpath = utils::Path(this->mConfig.gltfPath).getParent() + uri;
+            utils::Path fullpath = utils::Path(mGltfPath).getParent() + uri;
             entry->texels = stbi_load(fullpath.c_str(), &w, &h, &c, 4);
             return;
         #endif
@@ -430,9 +438,8 @@ void ResourceLoader::Impl::uploadPendingTextures() {
             mCurrentAsset->mDependencyGraph.markAsReady(texture);
         }
     };
-    Engine& engine = *mConfig.engine;
-    for (auto& pair : mBufferTextureCache) upload(pair.second.get(), engine);
-    for (auto& pair : mUriTextureCache) upload(pair.second.get(), engine);
+    for (auto& pair : mBufferTextureCache) upload(pair.second.get(), *mEngine);
+    for (auto& pair : mUriTextureCache) upload(pair.second.get(), *mEngine);
 }
 
 void ResourceLoader::Impl::addTextureCacheEntry(const TextureBinding& tb) {
@@ -473,7 +480,7 @@ void ResourceLoader::Impl::addTextureCacheEntry(const TextureBinding& tb) {
     #if !USE_FILESYSTEM
         slog.e << "Unable to load texture: " << tb.uri << io::endl;
     #else
-        utils::Path fullpath = utils::Path(mConfig.gltfPath).getParent() + tb.uri;
+        utils::Path fullpath = utils::Path(mGltfPath).getParent() + tb.uri;
         stbi_info(fullpath.c_str(), &entry->width, &entry->height, &entry->numComponents);
     #endif
 }
@@ -533,7 +540,7 @@ bool ResourceLoader::Impl::createTextures(bool async) {
             .height(entry->height)
             .levels(0xff)
             .format(entry->srgb ? Texture::InternalFormat::SRGB8_A8 : Texture::InternalFormat::RGBA8)
-            .build(*mConfig.engine);
+            .build(*mEngine);
         asset->takeOwnership(entry->texture);
     };
     for (auto& pair : mBufferTextureCache) createTexture(pair.second.get());
@@ -589,7 +596,7 @@ bool ResourceLoader::Impl::createTextures(bool async) {
             slog.e << "Unable to load texture: " << uri << io::endl;
             return false;
         #else
-            utils::Path fullpath = utils::Path(this->mConfig.gltfPath).getParent() + uri;
+            utils::Path fullpath = utils::Path(mGltfPath).getParent() + uri;
             utils::JobSystem::Job* decode = utils::jobs::createJob(*js, parent, [=] {
                 int width, height, comp;
                 entry->texels = stbi_load(fullpath.c_str(), &width, &height, &comp, 4);
@@ -627,7 +634,7 @@ void ResourceLoader::applySparseData(FFilamentAsset* asset) const {
         float* generated = (float*) malloc(numBytes);
         cgltf_accessor_unpack_floats(accessor, generated, numFloats);
         VertexBuffer::BufferDescriptor bd(generated, numBytes, FREE_CALLBACK);
-        vb->setBufferAt(*pImpl->mConfig.engine, slot, std::move(bd));
+        vb->setBufferAt(*pImpl->mEngine, slot, std::move(bd));
     };
 
     // Collect all vertex attribute slots that need to be populated.
@@ -778,7 +785,7 @@ void ResourceLoader::computeTangents(FFilamentAsset* asset) const {
 
         // Upload quaternions to the GPU.
         VertexBuffer::BufferDescriptor bd(quats, vertexCount * sizeof(short4), FREE_CALLBACK);
-        vb->setBufferAt(*pImpl->mConfig.engine, slot, std::move(bd));
+        vb->setBufferAt(*pImpl->mEngine, slot, std::move(bd));
     };
 
     // Collect all TANGENT vertex attribute slots that need to be populated.
@@ -852,8 +859,8 @@ void ResourceLoader::normalizeSkinningWeights(details::FFilamentAsset* asset) co
 }
 
 void ResourceLoader::updateBoundingBoxes(details::FFilamentAsset* asset) const {
-    auto& rm = pImpl->mConfig.engine->getRenderableManager();
-    auto& tm = pImpl->mConfig.engine->getTransformManager();
+    auto& rm = pImpl->mEngine->getRenderableManager();
+    auto& tm = pImpl->mEngine->getTransformManager();
 
     // The purpose of the root node is to give the client a place for custom transforms.
     // Since it is not part of the source model, it should be ignored when computing the

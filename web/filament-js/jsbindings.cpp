@@ -1444,7 +1444,7 @@ class_<ResourceLoader>("gltfio$ResourceLoader")
     .constructor(EMBIND_LAMBDA(ResourceLoader*, (Engine* engine), {
         return new ResourceLoader({
             .engine = engine,
-            .gltfPath = utils::Path(),
+            .gltfPath = nullptr,
             .normalizeSkinningWeights = true,
             .recomputeBoundingBoxes = true
         });
