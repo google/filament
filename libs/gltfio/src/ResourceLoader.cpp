@@ -15,8 +15,8 @@
  */
 
 #include <gltfio/ResourceLoader.h>
-#include <gltfio/Image.h>
 
+#include "Image.h"
 #include "FFilamentAsset.h"
 #include "upcast.h"
 
@@ -41,10 +41,7 @@
 
 #include <string>
 
-#if defined(__EMSCRIPTEN__) || defined(ANDROID)
-#define USE_FILESYSTEM 0
-#else
-#define USE_FILESYSTEM 1
+#if GLTFIO_USE_FILESYSTEM
 #include <utils/Path.h>
 #endif
 
@@ -57,13 +54,14 @@ static const auto FREE_CALLBACK = [](void* mem, size_t, void*) { free(mem); };
 namespace {
     struct TextureCacheEntry {
         Texture* texture;
-        std::atomic<stbi_uc*> texels;
-        uint32_t bufferSize;
+        Texture::PixelBufferDescriptor pbd;
+        uint32_t sourceBufferSize;
         int width;
         int height;
         int numComponents;
         bool srgb;
-        bool completed;
+        std::atomic<bool> ready; // indicates that the pbd has been populated
+        bool completed;          // indicates that the pbd has been pushed to the Texture
     };
 
     using BufferTextureCache = tsl::robin_map<const void*, std::unique_ptr<TextureCacheEntry>>;
@@ -210,7 +208,7 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
     // looks inside a cache of externally-supplied data blobs, rather than loading from the
     // filesystem.
 
-    #if !USE_FILESYSTEM
+    #if !GLTFIO_USE_FILESYSTEM
 
     if (gltf->buffers_count && !gltf->buffers[0].data && !gltf->buffers[0].uri && gltf->bin) {
         if (gltf->bin_size < gltf->buffers[0].size) {
@@ -386,10 +384,11 @@ void ResourceLoader::Impl::decodeSingleTexture() {
     for (auto& pair : mBufferTextureCache) {
         const uint8_t* sourceData = (const uint8_t*) pair.first;
         TextureCacheEntry* entry = pair.second.get();
-        if (entry->texels) {
+        if (entry->ready) {
             continue;
         }
-        entry->texels = stbi_load_from_memory(sourceData, entry->bufferSize, &w, &h, &c, 4);
+        entry->pbd = decode_from_memory(mEngine, sourceData, entry->sourceBufferSize, &w, &h, &c, 4);
+        entry->ready = true;
         return;
     }
 
@@ -397,7 +396,7 @@ void ResourceLoader::Impl::decodeSingleTexture() {
     for (auto& pair : mUriTextureCache) {
         auto uri = pair.first;
         TextureCacheEntry* entry = pair.second.get();
-        if (entry->texels) {
+        if (entry->ready) {
             continue;
         }
 
@@ -405,19 +404,21 @@ void ResourceLoader::Impl::decodeSingleTexture() {
         auto iter = mUriDataCache.find(uri);
         if (iter != mUriDataCache.end()) {
             const uint8_t* sourceData = (const uint8_t*) iter->second.buffer;
-            entry->texels = stbi_load_from_memory(sourceData, iter->second.size, &w, &h, &c, 4);
+            entry->pbd = decode_from_memory(mEngine, sourceData, iter->second.size, &w, &h, &c, 4);
+            entry->ready = true;
             return;
         }
 
         // Otherwise load it from the file system if this platform supports it.
-        #if !USE_FILESYSTEM
+        #if !GLTFIO_USE_FILESYSTEM
             slog.e << "Unable to load texture: " << uri << io::endl;
             entry->completed = true;
             mNumDecoderTasksFinished++;
             return;
         #else
             utils::Path fullpath = utils::Path(mGltfPath).getParent() + uri;
-            entry->texels = stbi_load(fullpath.c_str(), &w, &h, &c, 4);
+            entry->pbd = decode_from_file(mEngine, fullpath.c_str(), &w, &h, &c, 4);
+            entry->ready = true;
             return;
         #endif
     }
@@ -426,12 +427,9 @@ void ResourceLoader::Impl::decodeSingleTexture() {
 void ResourceLoader::Impl::uploadPendingTextures() {
     auto upload = [this](TextureCacheEntry* entry, Engine& engine) {
         Texture* texture = entry->texture;
-        uint8_t* texels = entry->texels;
-        if (texture && texels && !entry->completed) {
-            Texture::PixelBufferDescriptor pbd(texels,
-                    texture->getWidth() * texture->getHeight() * 4,
-                    Texture::Format::RGBA, Texture::Type::UBYTE, FREE_CALLBACK);
-            texture->setImage(engine, 0, std::move(pbd));
+        bool ready = entry->ready;
+        if (texture && ready && !entry->completed) {
+            texture->setImage(engine, 0, std::move(entry->pbd));
             texture->generateMipmaps(engine);
             entry->completed = true;
             mNumDecoderTasksFinished++;
@@ -454,9 +452,9 @@ void ResourceLoader::Impl::addTextureCacheEntry(const TextureBinding& tb) {
         }
         entry = (mBufferTextureCache[sourceData] = std::make_unique<TextureCacheEntry>()).get();
         entry->srgb = tb.srgb;
-        stbi_info_from_memory(sourceData, tb.totalSize, &entry->width, &entry->height,
+        decode_info_from_memory(mEngine, sourceData, tb.totalSize, &entry->width, &entry->height,
                 &entry->numComponents);
-        entry->bufferSize = tb.totalSize;
+        entry->sourceBufferSize = tb.totalSize;
         return;
     }
 
@@ -473,15 +471,16 @@ void ResourceLoader::Impl::addTextureCacheEntry(const TextureBinding& tb) {
     auto iter = mUriDataCache.find(tb.uri);
     if (iter != mUriDataCache.end()) {
         const uint8_t* sourceData = (const uint8_t*) iter->second.buffer;
-        stbi_info_from_memory(sourceData, iter->second.size, &entry->width,
+        decode_info_from_memory(mEngine, sourceData, iter->second.size, &entry->width,
                 &entry->height, &entry->numComponents);
         return;
     }
-    #if !USE_FILESYSTEM
+    #if !GLTFIO_USE_FILESYSTEM
         slog.e << "Unable to load texture: " << tb.uri << io::endl;
     #else
         utils::Path fullpath = utils::Path(mGltfPath).getParent() + tb.uri;
-        stbi_info(fullpath.c_str(), &entry->width, &entry->height, &entry->numComponents);
+        decode_info_from_file(mEngine, fullpath.c_str(), &entry->width, &entry->height,
+                &entry->numComponents);
     #endif
 }
 
@@ -567,8 +566,9 @@ bool ResourceLoader::Impl::createTextures(bool async) {
         TextureCacheEntry* entry = pair.second.get();
         utils::JobSystem::Job* decode = utils::jobs::createJob(*js, parent, [=] {
             int width, height, comp;
-            entry->texels = stbi_load_from_memory(sourceData, entry->bufferSize,
+            entry->pbd = decode_from_memory(mEngine, sourceData, entry->sourceBufferSize,
                     &width, &height, &comp, 4);
+            entry->ready = true;
         });
         js->run(decode);
     }
@@ -584,22 +584,24 @@ bool ResourceLoader::Impl::createTextures(bool async) {
             const uint8_t* sourceData = (const uint8_t*) iter->second.buffer;
             utils::JobSystem::Job* decode = utils::jobs::createJob(*js, parent, [=] {
                 int width, height, comp;
-                entry->texels = stbi_load_from_memory(sourceData, iter->second.size, &width,
+                entry->pbd = decode_from_memory(mEngine, sourceData, iter->second.size, &width,
                         &height, &comp, 4);
+                entry->ready = true;
             });
             js->run(decode);
             continue;
         }
 
         // Otherwise load it from the file system if this platform supports it.
-        #if !USE_FILESYSTEM
+        #if !GLTFIO_USE_FILESYSTEM
             slog.e << "Unable to load texture: " << uri << io::endl;
             return false;
         #else
             utils::Path fullpath = utils::Path(mGltfPath).getParent() + uri;
             utils::JobSystem::Job* decode = utils::jobs::createJob(*js, parent, [=] {
                 int width, height, comp;
-                entry->texels = stbi_load(fullpath.c_str(), &width, &height, &comp, 4);
+                entry->pbd = decode_from_file(mEngine, fullpath.c_str(), &width, &height, &comp, 4);
+                entry->ready = true;
             });
             js->run(decode);
         #endif

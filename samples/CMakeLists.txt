@@ -223,7 +223,9 @@ target_sources(gltf-resources PRIVATE ${RESGEN_SOURCE})
 # Common library
 # ==================================================================================================
 
-set(APP_LIBS filament sdl2 stb math filamat utils getopt imgui filagui image camutils common-resources)
+# We include gltfio in all desktop samples even if they don't use GLTF because the IBL loader needs STB.
+
+set(APP_LIBS filament sdl2 stb math filamat utils getopt imgui filagui image camutils gltfio common-resources)
 if (WIN32)
     list(APPEND APP_LIBS sdl2main)
 endif()
@@ -234,7 +236,6 @@ set(APP_SRCS
         app/IBL.cpp
         app/IcoSphere.cpp
         app/Sphere.cpp
-        app/Image.cpp
         )
 
 if (APPLE)
@@ -324,12 +325,12 @@ if (NOT ANDROID)
     # Sample app specific
     target_link_libraries(frame_generator PRIVATE imageio)
     target_link_libraries(suzanne PRIVATE suzanne-resources)
-    target_link_libraries(gltf_viewer PRIVATE gltf-resources gltfio)
+    target_link_libraries(gltf_viewer PRIVATE gltf-resources)
     target_link_libraries(gltf_baker PRIVATE gltf-resources gltfio_pipeline imageio)
 
     add_executable(lucy_bloom lucy_bloom.cpp lucy_utils.h lucy_utils.cpp)
     target_compile_options(lucy_bloom PRIVATE ${COMPILER_FLAGS})
-    target_link_libraries(lucy_bloom PRIVATE ${APP_LIBS} gltf-resources gltfio)
+    target_link_libraries(lucy_bloom PRIVATE ${APP_LIBS} gltf-resources)
 endif()
 
 add_executable(heightfield heightfield.cpp)

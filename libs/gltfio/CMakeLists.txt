@@ -32,6 +32,7 @@ set(SRCS
         src/Wireframe.h
         src/math.h
         src/upcast.h
+        src/Image.h
         src/Image.cpp
 )
 

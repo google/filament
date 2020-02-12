@@ -59,7 +59,6 @@
 #include <gltfio/Animator.h>
 #include <gltfio/AssetLoader.h>
 #include <gltfio/FilamentAsset.h>
-#include <gltfio/Image.h>
 #include <gltfio/MaterialProvider.h>
 #include <gltfio/ResourceLoader.h>
 
@@ -70,6 +69,8 @@
 #include <math/vec3.h>
 #include <math/vec4.h>
 #include <math/mat4.h>
+
+#include <stb_image.h>
 
 #include <utils/EntityManager.h>
 #include <utils/NameComponentManager.h>

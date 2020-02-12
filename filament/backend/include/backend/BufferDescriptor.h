@@ -114,7 +114,7 @@ public:
         return user;
     }
 
-    //! CPU mempry-buffer virtual address
+    //! CPU memory-buffer virtual address
     void* buffer = nullptr;
 
     //! CPU memory-buffer size in bytes
