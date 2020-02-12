@@ -926,7 +926,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
         FrameGraphRenderTargetHandle outRT[kMaxBloomLevels];
     };
 
-    auto& bloomPass = fg.addPass<BloomPassData>("Gaussian Blur Passes",
+    // downsample phase
+    auto& bloomDownsamplePass = fg.addPass<BloomPassData>("Bloom Downsample",
             [&](FrameGraph::Builder& builder, auto& data) {
                 data.in = builder.sample(input);
                 data.out = builder.createTexture("Bloom Texture", {
@@ -967,7 +968,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
                 mi->setParameter("level", 0.0f);
                 mi->setParameter("threshold", bloomOptions.threshold ? 1.0f : 0.0f);
 
-                // downsample phase
                 for (size_t i = 0; i < bloomOptions.levels; i++) {
                     auto hwOutRT = resources.getRenderTarget(data.outRT[i]);
 
@@ -989,13 +989,35 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
                     });
                     mi->setParameter("level", float(i));
                 }
+            });
 
-                // upsample phase
+    input = bloomDownsamplePass.getData().out;
+
+    // upsample phase
+    auto& bloomUpsamplePass = fg.addPass<BloomPassData>("Bloom Upsample",
+            [&](FrameGraph::Builder& builder, auto& data) {
+                data.in = builder.sample(input);
+                data.out = builder.write(input);
+
+                for (size_t i = 0; i < bloomOptions.levels; i++) {
+                    data.outRT[i] = builder.createRenderTarget("Bloom target", {
+                            .attachments = {{ data.out, uint8_t(i) }, {}}
+                    }, TargetBufferFlags::NONE);
+                }
+            },
+            [=](FrameGraphPassResources const& resources,
+                    auto const& data, DriverApi& driver) {
+
+                auto hwIn = resources.getTexture(data.in);
+                auto const& outDesc = resources.getDescriptor(data.out);
+
                 PostProcessMaterial const& bloomUpsample = mBloomUpsample;
-                mi = bloomUpsample.getMaterialInstance();
-                pipeline.program = bloomUpsample.getProgram();
-                pipeline.rasterState = bloomUpsample.getMaterial()->getRasterState();
-                pipeline.scissor = mi->getScissor();
+                FMaterialInstance* mi = bloomUpsample.getMaterialInstance();
+                PipelineState pipeline{
+                        .program = bloomUpsample.getProgram(),
+                        .rasterState = bloomUpsample.getMaterial()->getRasterState(),
+                        .scissor = mi->getScissor()
+                };
                 pipeline.rasterState.blendFunctionSrcRGB = BlendFunction::ONE;
                 pipeline.rasterState.blendFunctionDstRGB = BlendFunction::ONE;
 
@@ -1009,7 +1031,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
                     auto w = FTexture::valueForLevel(i - 1, outDesc.width);
                     auto h = FTexture::valueForLevel(i - 1, outDesc.height);
                     mi->setParameter("resolution", float4{ w, h, 1.0f / w, 1.0f / h });
-                    mi->setParameter("source", hwOut, {
+                    mi->setParameter("source", hwIn, {
                             .filterMag = SamplerMagFilter::LINEAR,
                             .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
                     });
@@ -1022,7 +1044,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
                 }
             });
 
-    return bloomPass.getData().out;
+    return bloomUpsamplePass.getData().out;
 }
 
 } // namespace filament
