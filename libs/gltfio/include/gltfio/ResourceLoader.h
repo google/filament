@@ -21,8 +21,6 @@
 
 #include <backend/BufferDescriptor.h>
 
-#include <string>
-
 namespace filament {
     class Engine;
 }
@@ -44,8 +42,8 @@ struct ResourceConfiguration {
     class filament::Engine* engine;
 
     //! Optional path or URI that points to the base glTF file. This is used solely
-    //! to resolve relative paths.
-    std::string gltfPath;
+    //! to resolve relative paths. The string pointer is not retained.
+    const char* gltfPath;
 
     //! If true, adjusts skinning weights to sum to 1. Well formed glTF files do not need this,
     //! but it is useful for robustness.
