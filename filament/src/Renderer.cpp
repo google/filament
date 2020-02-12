@@ -22,6 +22,7 @@
 #include "details/Fence.h"
 #include "details/Scene.h"
 #include "details/SwapChain.h"
+#include "details/Texture.h"
 #include "details/View.h"
 
 #include <filament/Scene.h>
@@ -483,13 +484,13 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
         // In the end we get: lod = 2 * log2(perceptualRoughness) - log2(sigma0 * s * sqrt2)
         const float refractionLodOffset = -std::log2(sigma0 * s * (float)F_SQRT2);
         const float maxPerceptualRoughness = 0.5f;
-        const uint32_t maxLod = std::ceil(2.0f * std::log2(maxPerceptualRoughness) + refractionLodOffset);
+        const uint8_t maxLod = std::ceil(2.0f * std::log2(maxPerceptualRoughness) + refractionLodOffset);
 
         // Number of roughness levels we want.
         // TODO: If we want to limit the number of mip levels, we must reduce the initial
         //       resolution (if we want to keep the same filter, and still match the IBL somewhat).
-        size_t roughnessLodCount =
-                std::min(maxLod, (uint32_t)std::ilogbf(std::max(desc.width, desc.height))) + 1u;
+        const uint8_t roughnessLodCount =
+                std::min(maxLod, FTexture::maxLevelCount(desc.width, desc.height));
 
         // First we need to resolve the MSAA buffer if enabled
         input = ppm.resolve(fg, "Resolved Color Buffer", input);
@@ -508,7 +509,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
         input = ppm.opaqueBlit(fg, input, {
                 .width = w,
                 .height = h,
-                .levels = uint8_t(roughnessLodCount),
+                .levels = roughnessLodCount,
                 .format = TextureFormat::R11F_G11F_B10F,
         });
 

@@ -154,7 +154,7 @@ public:
      *                   The maximum permissible value is 7.
      */
     void setAnisotropy(float anisotropy) noexcept {
-        const int log2 = ilogbf(fabsf(anisotropy));
+        const int log2 = ilogbf(anisotropy > 0 ? anisotropy : -anisotropy);
         mSamplerParams.anisotropyLog2 = uint8_t(log2 < 7 ? log2 : 7);
     }
 

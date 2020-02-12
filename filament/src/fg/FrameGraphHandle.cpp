@@ -20,6 +20,12 @@
 
 #include "fg/ResourceAllocator.h"
 
+#ifndef NDEBUG
+#include "details/Texture.h"    // only needed for assert()
+#endif
+
+#include <assert.h>
+
 namespace filament {
 
 using namespace backend;
@@ -45,7 +51,7 @@ void FrameGraphTexture::create(FrameGraph& fg, const char* name,
     if (!(desc.usage & TextureUsage::SAMPLEABLE)) {
         levels = 1;
     }
-    assert(levels <= static_cast<uint8_t>(std::ilogbf(std::max(desc.width, desc.height)) + 1));
+    assert(levels <= details::FTexture::maxLevelCount(desc.width, desc.height));
 
     uint8_t samples = desc.samples;
     assert(samples <= 1 || none(desc.usage & TextureUsage::SAMPLEABLE));
