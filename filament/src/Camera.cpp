@@ -292,6 +292,10 @@ void Camera::lookAt(const float3& eye, const float3& center, float3 const& up) n
     upcast(this)->lookAt(eye, center, up);
 }
 
+void Camera::lookAt(const float3& eye, const float3& center) noexcept {
+    upcast(this)->lookAt(eye, center, {0, 1, 0});
+}
+
 mat4f Camera::getModelMatrix() const noexcept {
     return upcast(this)->getModelMatrix();
 }

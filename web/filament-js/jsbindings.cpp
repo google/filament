@@ -544,7 +544,12 @@ class_<Camera>("Camera")
         self->setModelMatrix(m.m);
     }), allow_raw_pointers())
 
-    .function("lookAt", &Camera::lookAt)
+    .function("lookAt", EMBIND_LAMBDA(void, (Camera* self,
+            const math::float3& eye,
+            const math::float3& center,
+            const math::float3& up), {
+        self->lookAt(eye, center, up);
+    }), allow_raw_pointers())
 
     .function("getModelMatrix", EMBIND_LAMBDA(flatmat4, (Camera* self), {
         return flatmat4 { self->getModelMatrix() };

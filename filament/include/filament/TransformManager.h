@@ -22,7 +22,7 @@
 #include <utils/compiler.h>
 #include <utils/EntityInstance.h>
 
-#include <math/mat4.h>
+#include <math/mathfwd.h>
 
 #include <iterator>
 
@@ -126,7 +126,8 @@ public:
      *
      * @see destroy()
      */
-    void create(utils::Entity entity, Instance parent = {}, const math::mat4f& localTransform = {});
+    void create(utils::Entity entity, Instance parent, const math::mat4f& localTransform);
+    void create(utils::Entity entity, Instance parent = {});
 
     /**
      * Destroys this component from the given entity, children are orphaned.

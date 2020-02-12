@@ -23,7 +23,7 @@
 
 #include <utils/compiler.h>
 
-#include <math/mat4.h>
+#include <math/mathfwd.h>
 
 namespace utils {
 class Entity;
@@ -258,7 +258,15 @@ public:
      */
     void lookAt(const math::float3& eye,
                 const math::float3& center,
-                const math::float3& up = { 0, 1, 0 }) noexcept;
+                const math::float3& up) noexcept;
+
+    /** Sets the camera's view matrix, assuming up is along the y axis
+     *
+     * @param eye       The position of the camera in world space.
+     * @param center    The point in world space the camera is looking at.
+     */
+    void lookAt(const math::float3& eye,
+                const math::float3& center) noexcept;
 
     /** Returns the camera's model matrix
      *

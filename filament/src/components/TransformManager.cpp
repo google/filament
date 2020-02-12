@@ -16,6 +16,8 @@
 
 #include "components/TransformManager.h"
 
+#include <math/mat4.h>
+
 using namespace utils;
 using namespace filament::math;
 
@@ -393,6 +395,10 @@ TransformManager::children_iterator& TransformManager::children_iterator::operat
 
 void TransformManager::create(Entity entity, Instance parent, const mat4f& worldTransform) {
     upcast(this)->create(entity, parent, worldTransform);
+}
+
+void TransformManager::create(Entity entity, Instance parent) {
+    upcast(this)->create(entity, parent, {});
 }
 
 void TransformManager::destroy(Entity e) noexcept {

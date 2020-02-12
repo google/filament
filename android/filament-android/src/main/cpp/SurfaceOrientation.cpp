@@ -20,6 +20,8 @@
 
 #include "common/NioUtils.h"
 
+#include <algorithm>
+
 using namespace filament;
 using namespace filament::geometry;
 using namespace filament::math;

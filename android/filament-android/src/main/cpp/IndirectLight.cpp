@@ -20,6 +20,7 @@
 #include <filament/Texture.h>
 #include <common/NioUtils.h>
 #include <common/CallbackUtils.h>
+#include <math/mat4.h>
 
 using namespace filament;
 

@@ -27,6 +27,7 @@
 #include <utils/Panic.h>
 
 #include <math/scalar.h>
+#include <math/mat4.h>
 
 #define IBL_INTEGRATION_PREFILTERED_CUBEMAP         0
 #define IBL_INTEGRATION_IMPORTANCE_SAMPLING         1

@@ -26,6 +26,8 @@
 
 #include <utils/compiler.h>
 
+#include <math/mat3.h>
+
 #include <array>
 
 namespace filament {
