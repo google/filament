@@ -249,6 +249,10 @@ TEST(PathTest, GetParent) {
     r = p.getParent();
     EXPECT_EQ("/out/", r);
 
+    p = "F:\\out\\bin\\";
+    r = p.getParent();
+    EXPECT_EQ("F:/out/", r);
+
     p = "out/bin";
     r = p.getParent();
     EXPECT_EQ("out/", r);
@@ -304,6 +308,10 @@ TEST(PathTest, Split) {
     EXPECT_EQ(1, segments.size());
     EXPECT_EQ("/", segments[0]);
 
+    segments = Path("d:\\").split();
+    EXPECT_EQ(1, segments.size());
+    EXPECT_EQ("d:", segments[0]);
+
     segments = Path("out/blue/bin").split();
     EXPECT_EQ(3, segments.size());
     EXPECT_EQ("out", segments[0]);
@@ -316,6 +324,18 @@ TEST(PathTest, Split) {
     EXPECT_EQ("out", segments[1]);
     EXPECT_EQ("blue", segments[2]);
     EXPECT_EQ("bin", segments[3]);
+
+    segments = Path("d:\\out\\blue").split();
+    EXPECT_EQ(3, segments.size());
+    EXPECT_EQ("d:", segments[0]);
+    EXPECT_EQ("out", segments[1]);
+    EXPECT_EQ("blue", segments[2]);
+
+    segments = Path("\\out\\blue").split();
+    EXPECT_EQ(3, segments.size());
+    EXPECT_EQ("/", segments[0]);
+    EXPECT_EQ("out", segments[1]);
+    EXPECT_EQ("blue", segments[2]);
 
     segments = Path("/out/blue/bin/").split();
     EXPECT_EQ(4, segments.size());
