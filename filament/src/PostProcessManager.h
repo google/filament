@@ -69,13 +69,13 @@ public:
             View::AmbientOcclusionOptions const& options) noexcept;
 
     FrameGraphId<FrameGraphTexture> generateGaussianMipmap(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, size_t roughnessLodCount,
+            FrameGraphId<FrameGraphTexture> input, size_t roughnessLodCount, bool reinhard,
             size_t kernelWidth, float sigmaRatio = 6.0f) noexcept;
 
     FrameGraphId<FrameGraphTexture> gaussianBlurPass(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, uint8_t srcLevel,
             FrameGraphId<FrameGraphTexture> output, uint8_t dstLevel,
-            size_t kernelWidth, float sigma = 6.0f) noexcept;
+            bool reinhard, size_t kernelWidth, float sigma = 6.0f) noexcept;
 
     backend::Handle<backend::HwTexture> getNoSSAOTexture() const {
         return mNoSSAOTexture;

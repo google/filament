@@ -729,9 +729,10 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bilateralBlurPass(FrameGraph
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::generateGaussianMipmap(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> input, size_t roughnessLodCount,
-        size_t kernelWidth, float sigmaRatio) noexcept {
+        bool reinhard, size_t kernelWidth, float sigmaRatio) noexcept {
     for (size_t i = 1; i < roughnessLodCount; i++) {
-        input = gaussianBlurPass(fg, input, i - 1, input, i, kernelWidth, sigmaRatio);
+        input = gaussianBlurPass(fg, input, i - 1, input, i, reinhard, kernelWidth, sigmaRatio);
+        reinhard = false; // only do the reinhard filtering on the first level
     }
     return input;
 }
@@ -739,7 +740,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::generateGaussianMipmap(Frame
 FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> input, uint8_t srcLevel,
         FrameGraphId<FrameGraphTexture> output, uint8_t dstLevel,
-        size_t kernelWidth, float sigmaRatio) noexcept {
+        bool reinhard, size_t kernelWidth, float sigmaRatio) noexcept {
 
     const float sigma = (kernelWidth + 1) / sigmaRatio;
 
@@ -849,6 +850,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
                         .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
                 });
                 mi->setParameter("level", (float)srcLevel);
+                mi->setParameter("reinhard", reinhard ? uint32_t(1) : uint32_t(0));
                 mi->setParameter("resolution", float4{
                         tempDesc.width, tempDesc.height,
                         1.0f / tempDesc.width, 1.0f / tempDesc.height });
