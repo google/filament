@@ -36,6 +36,14 @@ set(SRCS
         src/Image.cpp
 )
 
+if (ANDROID)
+    set(PRIVATE_HEADER_DIR ../../android)
+    list(APPEND SRCS
+        ../../android/common/AutoBitmap.h
+        ../../android/common/JniDecoder.h
+        ../../android/common/JniDecoder.cpp)
+endif()
+
 # ==================================================================================================
 # Build materials
 # ==================================================================================================
@@ -108,7 +116,10 @@ link_libraries(math utils filament cgltf stb geometry gltfio_resources)
 
 add_library(gltfio_core STATIC ${PUBLIC_HDRS} ${SRCS})
 
-target_include_directories(gltfio_core PUBLIC ${PUBLIC_HDR_DIR})
+target_include_directories(gltfio_core
+        PUBLIC ${PUBLIC_HDR_DIR}
+        PRIVATE ${PRIVATE_HEADER_DIR})
+
 target_compile_options(gltfio_core PRIVATE $<$<PLATFORM_ID:Linux>:-fPIC>)
 
 if (NOT WEBGL AND NOT ANDROID AND NOT IOS)

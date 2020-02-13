@@ -14,17 +14,7 @@
  * limitations under the License.
  */
 
+#include "AutoBitmap.h"
+#include "JniDecoder.h"
+
 #include <jni.h>
-
-#include <common/JniDecoder.h>
-
-jint JNI_OnLoad(JavaVM* vm, void*) {
-    JNIEnv* env;
-    if (vm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6) != JNI_OK) {
-        return -1;
-    }
-
-    JniDecoder::Init(vm, "JniDecoder");
-
-    return JNI_VERSION_1_6;
-}

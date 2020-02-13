@@ -18,6 +18,12 @@
 
 #include <filament/Texture.h>
 
+#if defined(ANDROID)
+
+#include <common/JniDecoder.h>
+
+#endif
+
 #define STB_IMAGE_IMPLEMENTATION
 
 // gltfio supports PNG and JPEG, disable all other formats.

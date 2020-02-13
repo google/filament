@@ -26,6 +26,9 @@ add_library(gltfio-jni SHARED
         src/main/cpp/MaterialProvider.cpp
         src/main/cpp/ResourceLoader.cpp
         src/main/cpp/Gltfio.cpp
+        ../common/AutoBitmap.h
+        ../common/JniDecoder.h
+        ../common/JniDecoder.cpp
         ../common/NioUtils.cpp
 )
 

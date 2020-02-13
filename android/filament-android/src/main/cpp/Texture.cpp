@@ -20,7 +20,7 @@
 #include <functional>
 
 #ifdef ANDROID
-#include <android/bitmap.h>
+#include "common/AutoBitmap.h"
 #endif
 
 #include <backend/BufferDescriptor.h>
@@ -376,81 +376,6 @@ Java_com_google_android_filament_Texture_nGeneratePrefilterMipmap(JNIEnv *env, j
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #ifdef ANDROID
-
-#define BITMAP_CONFIG_ALPHA_8   0
-#define BITMAP_CONFIG_RGB_565   1
-#define BITMAP_CONFIG_RGBA_4444 2
-#define BITMAP_CONFIG_RGBA_8888 3
-#define BITMAP_CONFIG_RGBA_F16  4
-#define BITMAP_CONFIG_HARDWARE  5
-
-class AutoBitmap {
-public:
-    AutoBitmap(JNIEnv* env, jobject bitmap) noexcept
-            : mEnv(env)
-            , mBitmap(env->NewGlobalRef(bitmap))
-    {
-        if (mBitmap) {
-            AndroidBitmap_getInfo(mEnv, mBitmap, &mInfo);
-            AndroidBitmap_lockPixels(mEnv, mBitmap, &mData);
-        }
-    }
-
-    ~AutoBitmap() noexcept {
-        if (mBitmap) {
-            AndroidBitmap_unlockPixels(mEnv, mBitmap);
-            mEnv->DeleteGlobalRef(mBitmap);
-        }
-    }
-
-    AutoBitmap(AutoBitmap &&rhs) noexcept {
-        mEnv = rhs.mEnv;
-        std::swap(mData, rhs.mData);
-        std::swap(mBitmap, rhs.mBitmap);
-        std::swap(mInfo, rhs.mInfo);
-    }
-
-    void* getData() const noexcept {
-        return mData;
-    }
-
-    size_t getSizeInBytes() const noexcept {
-        return mInfo.height * mInfo.stride;
-    }
-
-    PixelDataFormat getFormat(int format) const noexcept {
-        // AndroidBitmapInfo does not capture the HARDWARE and RGBA_F16 formats
-        // so we switch on the Bitmap.Config values directly
-        switch (format) {
-            case BITMAP_CONFIG_ALPHA_8: return PixelDataFormat::ALPHA;
-            case BITMAP_CONFIG_RGB_565: return PixelDataFormat::RGB;
-            default:                    return PixelDataFormat::RGBA;
-        }
-    }
-
-    PixelDataType getType(int format) const noexcept {
-        switch (format) {
-            case BITMAP_CONFIG_RGBA_F16: return PixelDataType::HALF;
-            default:                     return PixelDataType::UBYTE;
-        }
-    }
-
-    static void invoke(void* buffer, size_t n, void* user) {
-        AutoBitmap* data = reinterpret_cast<AutoBitmap*>(user);
-        data->~AutoBitmap();
-    }
-
-    static AutoBitmap* make(Engine* engine, JNIEnv* env, jobject bitmap) {
-        void* that = engine->streamAlloc(sizeof(AutoBitmap), alignof(AutoBitmap));
-        return new (that) AutoBitmap(env, bitmap);
-    }
-
-private:
-    JNIEnv* mEnv;
-    void* mData = nullptr;
-    jobject mBitmap = nullptr;
-    AndroidBitmapInfo mInfo;
-};
 
 extern "C"
 JNIEXPORT void JNICALL

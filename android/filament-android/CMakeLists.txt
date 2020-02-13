@@ -82,6 +82,7 @@ add_library(filament-jni SHARED
     # Private utils
     src/main/cpp/Filament.cpp
     # Common utils
+    ../common/AutoBitmap.h
     ../common/CallbackUtils.cpp
     ../common/NioUtils.cpp
 )
