@@ -513,7 +513,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
                 .format = TextureFormat::R11F_G11F_B10F,
         });
 
-        input = ppm.generateGaussianMipmap(fg, input, roughnessLodCount, kernelSize);
+        input = ppm.generateGaussianMipmap(fg, input, roughnessLodCount, true, kernelSize);
 
         struct PrepareSSRData {
             FrameGraphId<FrameGraphTexture> ssr;
