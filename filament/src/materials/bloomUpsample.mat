@@ -34,20 +34,30 @@ fragment {
     void postProcess(inout PostProcessInputs postProcess) {
         float lod = materialParams.level;
         highp vec2 uv = variable_vertex.xy;
+
+#if defined(TARGET_MOBILE)
+        highp float du = materialParams.resolution.z;
+        highp float dv = materialParams.resolution.w;
+        vec3 c;
+        c  = textureLod(materialParams_source, uv + vec2(-du, -dv), lod).rgb;
+        c += textureLod(materialParams_source, uv + vec2( du, -dv), lod).rgb;
+        c += textureLod(materialParams_source, uv + vec2( du,  dv), lod).rgb;
+        c += textureLod(materialParams_source, uv + vec2(-du,  dv), lod).rgb;
+        postProcess.color.rgb = c * 0.25;
+#else
         highp float du = 2.0 * materialParams.resolution.z;
         highp float dv = 2.0 * materialParams.resolution.w;
-
-        vec3 c0 = 4.0 * textureLod(materialParams_source, uv, lod).rgb;
-        c0 += textureLod(materialParams_source, uv + vec2(-du, -dv), lod).rgb;
+        vec3 c0, c1;
+        c0  = textureLod(materialParams_source, uv + vec2(-du, -dv), lod).rgb;
         c0 += textureLod(materialParams_source, uv + vec2( du, -dv), lod).rgb;
         c0 += textureLod(materialParams_source, uv + vec2( du,  dv), lod).rgb;
         c0 += textureLod(materialParams_source, uv + vec2(-du,  dv), lod).rgb;
-
-        vec3 c1 = textureLod(materialParams_source, uv + vec2(-du,  0.0), lod).rgb;
+        c0 += 4.0 * textureLod(materialParams_source, uv, lod).rgb;
+        c1  = textureLod(materialParams_source, uv + vec2(-du,  0.0), lod).rgb;
         c1 += textureLod(materialParams_source, uv + vec2( 0.0, -dv), lod).rgb;
         c1 += textureLod(materialParams_source, uv + vec2( du,  0.0), lod).rgb;
         c1 += textureLod(materialParams_source, uv + vec2( 0.0,  dv), lod).rgb;
-
         postProcess.color.rgb = (c0 + 2.0 * c1) * (1.0 / 16.0);
+#endif
     }
 }
