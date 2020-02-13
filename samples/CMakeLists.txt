@@ -223,9 +223,7 @@ target_sources(gltf-resources PRIVATE ${RESGEN_SOURCE})
 # Common library
 # ==================================================================================================
 
-# We include gltfio in all desktop samples even if they don't use GLTF because the IBL loader needs STB.
-
-set(APP_LIBS filament sdl2 stb math filamat utils getopt imgui filagui image camutils gltfio common-resources)
+set(APP_LIBS filament sdl2 stb math filamat utils getopt imgui filagui image camutils common-resources)
 if (WIN32)
     list(APPEND APP_LIBS sdl2main)
 endif()
@@ -295,6 +293,7 @@ function(add_assimp_demo NAME)
     add_executable(
             ${NAME}
             ${NAME}.cpp
+            app/Image.cpp
             app/MeshAssimp.cpp)
     target_link_libraries(${NAME} PRIVATE ${APP_LIBS} assimp)
     target_compile_options(${NAME} PRIVATE ${COMPILER_FLAGS})
@@ -304,8 +303,18 @@ function(add_filamesh_demo NAME)
     include_directories(${GENERATION_ROOT})
     add_executable(
             ${NAME}
+            app/Image.cpp
             ${NAME}.cpp)
     target_link_libraries(${NAME} PRIVATE ${APP_LIBS} filameshio)
+    target_compile_options(${NAME} PRIVATE ${COMPILER_FLAGS})
+endfunction()
+
+function(add_gltf_demo NAME)
+    include_directories(${GENERATION_ROOT})
+    add_executable(
+            ${NAME}
+            ${NAME}.cpp)
+    target_link_libraries(${NAME} PRIVATE ${APP_LIBS} gltf-resources gltfio)
     target_compile_options(${NAME} PRIVATE ${COMPILER_FLAGS})
 endfunction()
 
@@ -319,23 +328,21 @@ if (NOT ANDROID)
     add_filamesh_demo(sample_cloth)
     add_filamesh_demo(sample_normal_map)
     add_filamesh_demo(suzanne)
-    add_filamesh_demo(gltf_viewer)
-    add_filamesh_demo(gltf_baker)
+
+    add_gltf_demo(gltf_viewer)
+    add_gltf_demo(gltf_baker)
 
     # Sample app specific
     target_link_libraries(frame_generator PRIVATE imageio)
     target_link_libraries(suzanne PRIVATE suzanne-resources)
-    target_link_libraries(gltf_viewer PRIVATE gltf-resources)
-    target_link_libraries(gltf_baker PRIVATE gltf-resources gltfio_pipeline imageio)
+    target_link_libraries(gltf_baker PRIVATE gltfio_pipeline imageio)
 
     add_executable(lucy_bloom lucy_bloom.cpp lucy_utils.h lucy_utils.cpp)
     target_compile_options(lucy_bloom PRIVATE ${COMPILER_FLAGS})
-    target_link_libraries(lucy_bloom PRIVATE ${APP_LIBS} gltf-resources)
+    target_link_libraries(lucy_bloom PRIVATE ${APP_LIBS} gltf-resources gltfio)
 endif()
 
-add_executable(heightfield heightfield.cpp)
-target_link_libraries(heightfield PRIVATE ${APP_LIBS})
-target_compile_options(heightfield PRIVATE ${COMPILER_FLAGS})
+add_filamesh_demo(heightfield)
 
 # ==================================================================================================
 # Copy the MoltenVK dylibs and JSON on MacOS
