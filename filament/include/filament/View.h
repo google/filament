@@ -34,6 +34,7 @@ class Camera;
 class MaterialInstance;
 class RenderTarget;
 class Scene;
+class Texture;
 class Viewport;
 
 /**
@@ -140,19 +141,24 @@ public:
      * anamorphism: Bloom's aspect ratio (x/y), for artistic purposes.
      * threshold:   When enabled, a threshold at 1.0 is applied on the source image, this is
      *              useful for artistic reasons.
+     * dirt:        A dirt/scratch/smudges texture (that can be RGB), which gets added to the
+     *              bloom effect. Smudges are visible where bloom occurs.
+     * dirtStrength: Strength of the dirt texture.
      */
     struct BloomOptions {
         enum class BlendMode : uint8_t {
             ADD,           //!< Bloom is modulated by the strength parameter and added to the scene
             INTERPOLATE    //!< Bloom is interpolated with the scene using the strength parameter
         };
-        float strength = 0.10f;                  //!< Between 0.0 and 1.0
-        uint32_t resolution = 360;               //!< Resolution of minor axis (2^levels to 4096)
-        float anamorphism = 1.0f;                //!< Bloom x/y aspect-ratio (1/32 to 32)
-        uint8_t levels = 6;                      //!< number of blur levels (3 to 12)
-        BlendMode blendMode = BlendMode::ADD;    //!< How the bloom effect is applied
-        bool threshold = true;                   //!< Whether to threshold the source
-        bool enabled = false;                    //!< enable or disable bloom
+        Texture* dirt = nullptr;                //!< User provided dirt texture
+        float dirtStrength = 0.2f;              //!< strength of the dirt texture
+        float strength = 0.10f;                 //!< Between 0.0 and 1.0
+        uint32_t resolution = 360;              //!< Resolution of minor axis (2^levels to 4096)
+        float anamorphism = 1.0f;               //!< Bloom x/y aspect-ratio (1/32 to 32)
+        uint8_t levels = 6;                     //!< number of blur levels (3 to 12)
+        BlendMode blendMode = BlendMode::ADD;   //!< How the bloom effect is applied
+        bool threshold = true;                  //!< Whether to threshold the source
+        bool enabled = false;                   //!< enable or disable bloom
     };
 
     /**

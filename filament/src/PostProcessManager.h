@@ -77,9 +77,8 @@ public:
             FrameGraphId<FrameGraphTexture> output, uint8_t dstLevel,
             bool reinhard, size_t kernelWidth, float sigma = 6.0f) noexcept;
 
-    backend::Handle<backend::HwTexture> getNoSSAOTexture() const {
-        return mNoSSAOTexture;
-    }
+    backend::Handle<backend::HwTexture> getOneTexture() const { return mDummyOneTexture; }
+    backend::Handle<backend::HwTexture> getZeroTexture() const { return mDummyZeroTexture; }
 
 private:
     details::FEngine& mEngine;
@@ -134,7 +133,8 @@ private:
     PostProcessMaterial mTonemapping;
     PostProcessMaterial mFxaa;
 
-    backend::Handle<backend::HwTexture> mNoSSAOTexture;
+    backend::Handle<backend::HwTexture> mDummyOneTexture;
+    backend::Handle<backend::HwTexture> mDummyZeroTexture;
     backend::Handle<backend::HwTexture> mNoiseTexture;
 
     size_t mSeparableGaussianBlurKernelStorageSize = 0;

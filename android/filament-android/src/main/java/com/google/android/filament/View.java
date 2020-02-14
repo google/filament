@@ -175,6 +175,9 @@ public class View {
      * anamorphism: Bloom's aspect ratio (x/y), for artistic purposes.
      * threshold:   When enabled, a threshold at 1.0 is applied on the source image, this is
      *              useful for artistic reasons.
+     * dirt:        A dirt/scratch/smudges texture (that can be RGB), which gets added to the
+     *              bloom effect. Smudges are visible where bloom occurs.
+     * dirtStrength: Strength of the dirt texture.
      *
      * @see setBloomOptions
      */
@@ -184,6 +187,17 @@ public class View {
             ADD,
             INTERPOLATE
         }
+
+        /**
+         * User provided dirt texture
+         */
+        @Nullable
+        public Texture dirt = null;
+
+        /**
+         * strength of the dirt texture
+         */
+        public float dirtStrength = 0.2f;
 
         /**
          * Strength of the bloom effect, between 0.0 and 1.0
@@ -802,7 +816,8 @@ public class View {
      */
     public void setBloomOptions(@NonNull BloomOptions options) {
         mBloomOptions = options;
-        nSetBloomOptions(getNativeObject(), options.strength, options.resolution,
+        nSetBloomOptions(getNativeObject(), options.dirt.getNativeObject(),
+                options.dirtStrength, options.strength, options.resolution,
                 options.anamorphism, options.levels, options.blendingMode.ordinal(),
                 options.threshold, options.enabled);
     }
@@ -862,5 +877,5 @@ public class View {
     private static native void nSetAmbientOcclusion(long nativeView, int ordinal);
     private static native int nGetAmbientOcclusion(long nativeView);
     private static native void nSetAmbientOcclusionOptions(long nativeView, float radius, float bias, float power, float resolution, float intensity);
-    private static native void nSetBloomOptions(long nativeView, float strength, int resolution, float anamorphism, int levels, int blendMode, boolean threshold, boolean enabled);
+    private static native void nSetBloomOptions(long nativeView, long dirtNativeObject, float dirtStrength, float strength, int resolution, float anamorphism, int levels, int blendMode, boolean threshold, boolean enabled);
 }

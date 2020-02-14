@@ -24,6 +24,7 @@
 struct Config {
     std::string title;
     std::string iblDirectory;
+    std::string dirt;
     float scale = 1.0f;
     bool splitView = false;
     filament::Engine::Backend backend = filament::Engine::Backend::OPENGL;

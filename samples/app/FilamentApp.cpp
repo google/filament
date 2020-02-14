@@ -46,6 +46,8 @@
 #include "Cube.h"
 #include "NativeWindowHelper.h"
 
+#include <stb_image.h>
+
 #include "generated/resources/resources.h"
 
 using namespace filament;
@@ -137,6 +139,7 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
         window->mDepthView->getView()->setClearColor({0, 0, 0, 1});
     }
 
+    loadDirt(config);
     loadIBL(config);
     if (mIBL != nullptr) {
         mIBL->getSkybox()->setLayerMask(0x7, 0x4);
@@ -449,6 +452,37 @@ void FilamentApp::loadIBL(const Config& config) {
             mIBL.reset(nullptr);
             return;
         }
+    }
+}
+
+void FilamentApp::loadDirt(const Config& config) {
+    if (!config.dirt.empty()) {
+        Path dirtPath(config.dirt);
+
+        if (!dirtPath.exists()) {
+            std::cerr << "The specified dirt file does not exist: " << dirtPath << std::endl;
+            return;
+        }
+
+        if (!dirtPath.isFile()) {
+            std::cerr << "The specified dirt path is not a file: " << dirtPath << std::endl;
+            return;
+        }
+
+        int w, h, n;
+
+        unsigned char* data = stbi_load(dirtPath.getAbsolutePath().c_str(), &w, &h, &n, 3);
+        assert(n == 3);
+
+        mDirt = Texture::Builder()
+                .width(w)
+                .height(h)
+                .format(Texture::InternalFormat::RGB8)
+                .build(*mEngine);
+
+        mDirt->setImage(*mEngine, 0, { data, size_t(w * h * 3),
+                Texture::Format::RGB, Texture::Type::UBYTE,
+                (Texture::PixelBufferDescriptor::Callback)&stbi_image_free });
     }
 }
 
