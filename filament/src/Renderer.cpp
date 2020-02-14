@@ -344,7 +344,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             [&ppm, &js, &view, jobFroxelize]
                     (FrameGraphPassResources const& resources, auto const& data, DriverApi& driver) {
                 view.prepareSSAO(data.ssao.isValid() ? resources.getTexture(data.ssao)
-                                                     : ppm.getNoSSAOTexture());
+                                                     : ppm.getOneTexture());
                 view.commitUniforms(driver);
                 if (jobFroxelize) {
                     auto sync = jobFroxelize;

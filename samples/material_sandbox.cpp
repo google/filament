@@ -88,6 +88,8 @@ static void printUsage(char* name) {
             "       Enable shadow plane\n\n"
             "   --single\n"
             "       Only apply the edited material to the first renderable in the scene\n\n"
+            "   --dirt\n"
+            "       Specify a dirt texture\n\n"
     );
     const std::string from("SAMPLE_MATERIAL");
     for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
@@ -97,7 +99,7 @@ static void printUsage(char* name) {
 }
 
 static int handleCommandLineArgments(int argc, char* argv[], Config* config) {
-    static constexpr const char* OPTSTR = "ha:vps:i:";
+    static constexpr const char* OPTSTR = "ha:vps:i:d:";
     static const struct option OPTIONS[] = {
             { "help",         no_argument,       nullptr, 'h' },
             { "api",          required_argument, nullptr, 'a' },
@@ -106,6 +108,7 @@ static int handleCommandLineArgments(int argc, char* argv[], Config* config) {
             { "scale",        required_argument, nullptr, 's' },
             { "shadow-plane", no_argument,       nullptr, 'p' },
             { "single",       no_argument,       nullptr, 'n' },
+            { "dirt",         required_argument, nullptr, 'd' },
             { nullptr, 0, nullptr, 0 }  // termination of the option list
     };
     int opt;
@@ -148,6 +151,9 @@ static int handleCommandLineArgments(int argc, char* argv[], Config* config) {
                 break;
             case 'n':
                 g_singleMode = true;
+                break;
+            case 'd':
+                config->dirt =  arg;
                 break;
         }
     }
@@ -289,6 +295,8 @@ static void setup(Engine* engine, View*, Scene* scene) {
         params.lightIntensity = c.w * pIndirectLight->getIntensity();
         params.lightColor = c.rgb;
     }
+
+    g_params.bloomOptions.dirt = FilamentApp::get().getDirtTexture();
 }
 
 static void gui(filament::Engine* engine, filament::View*) {
@@ -401,6 +409,7 @@ static void gui(filament::Engine* engine, filament::View*) {
                 ImGui::Checkbox("bloom", &params.bloomOptions.enabled);
                 if (params.bloomOptions.enabled) {
                     ImGui::SliderFloat("strength", &params.bloomOptions.strength, 0.0f, 1.0f);
+                    ImGui::SliderFloat("dirt", &params.bloomOptions.dirtStrength, 0.0f, 1.0f);
                 }
                 ImGui::Checkbox("dithering", &params.dithering);
                 ImGui::Unindent();
@@ -520,6 +529,5 @@ int main(int argc, char* argv[]) {
     g_config.title = "Material Sandbox";
     FilamentApp& filamentApp = FilamentApp::get();
     filamentApp.run(g_config, setup, cleanup, gui, preRender);
-
     return 0;
 }

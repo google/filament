@@ -155,6 +155,14 @@ public:
     void enableSSAO(bool b) { mEnableSsao = b; }
 
     /**
+     * Enables Bloom.
+     * Defaults to true.
+     */
+    void enableBloom(bool bloom) {
+        mBloomOptions.enabled = bloom;
+    }
+
+    /**
      * Adjusts the intensity of the IBL.
      * See also filament::IndirectLight::setIntensity().
      * Defaults to 30000.0.

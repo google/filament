@@ -249,10 +249,14 @@ Java_com_google_android_filament_View_nSetAmbientOcclusionOptions(JNIEnv*, jclas
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_View_nSetBloomOptions(JNIEnv*, jclass,
-        jlong nativeView, jfloat strength, jint resolution, jfloat anamorphism, jint levels,
+        jlong nativeView, jlong nativeTexture,
+        jfloat dirtStrength, jfloat strength, jint resolution, jfloat anamorphism, jint levels,
         jint blendMode, jboolean threshold, jboolean enabled) {
     View* view = (View*) nativeView;
+    Texture* dirt = (Texture*) nativeTexture;
     View::BloomOptions options = {
+            .dirt = dirt,
+            .dirtStrength = dirtStrength,
             .strength = strength,
             .resolution = (uint32_t)resolution,
             .anamorphism = anamorphism,

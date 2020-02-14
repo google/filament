@@ -76,6 +76,7 @@ public:
     filament::Material const* getDefaultMaterial() const noexcept { return mDefaultMaterial; }
     filament::Material const* getTransparentMaterial() const noexcept { return mTransparentMaterial; }
     IBL* getIBL() const noexcept { return mIBL.get(); }
+    filament::Texture* getDirtTexture() const noexcept { return mDirt; }
     filament::View* getGuiView() const noexcept;
 
     void close() { mClosed = true; }
@@ -199,10 +200,12 @@ private:
     void initSDL();
 
     void loadIBL(const Config& config);
+    void loadDirt(const Config& config);
 
     filament::Engine* mEngine = nullptr;
     filament::Scene* mScene = nullptr;
     std::unique_ptr<IBL> mIBL;
+    filament::Texture* mDirt = nullptr;
     bool mClosed = false;
     uint64_t mTime = 0;
 

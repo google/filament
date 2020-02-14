@@ -133,8 +133,11 @@ void PostProcessManager::init() noexcept {
     mSeparableGaussianBlurKernelStorageSize = mSeparableGaussianBlur.getMaterial()->reflect("kernel")->size;
 
     DriverApi& driver = mEngine.getDriverApi();
-    mNoSSAOTexture = driver.createTexture(SamplerType::SAMPLER_2D, 1,
-            TextureFormat::R8, 0, 1, 1, 1, TextureUsage::DEFAULT);
+    mDummyOneTexture = driver.createTexture(SamplerType::SAMPLER_2D, 1,
+            TextureFormat::RGBA8, 0, 1, 1, 1, TextureUsage::DEFAULT);
+
+    mDummyZeroTexture = driver.createTexture(SamplerType::SAMPLER_2D, 1,
+            TextureFormat::RGBA8, 0, 1, 1, 1, TextureUsage::DEFAULT);
 
     mNoiseTexture = driver.createTexture(SamplerType::SAMPLER_2D, 1,
             TextureFormat::RGB16F, 0, 16, 16, 1, TextureUsage::DEFAULT);
@@ -164,17 +167,19 @@ void PostProcessManager::init() noexcept {
     }
     driver.update2DImage(mNoiseTexture, 0, 0, 0, 16, 16, std::move(noiseData));
 
-
-    PixelBufferDescriptor data(driver.allocate(1), 1, PixelDataFormat::R, PixelDataType::UBYTE);
-    auto p = static_cast<uint8_t *>(data.buffer);
-    *p = 0xFFu;
-    driver.update2DImage(mNoSSAOTexture, 0, 0, 0, 1, 1, std::move(data));
+    PixelBufferDescriptor dataOne(driver.allocate(4), 4, PixelDataFormat::RGBA, PixelDataType::UBYTE);
+    PixelBufferDescriptor dataZero(driver.allocate(4), 4, PixelDataFormat::RGBA, PixelDataType::UBYTE);
+    *static_cast<uint32_t *>(dataOne.buffer) = 0xFFFFFFFF;
+    *static_cast<uint32_t *>(dataZero.buffer) = 0;
+    driver.update2DImage(mDummyOneTexture, 0, 0, 0, 1, 1, std::move(dataOne));
+    driver.update2DImage(mDummyZeroTexture, 0, 0, 0, 1, 1, std::move(dataZero));
 }
 
 void PostProcessManager::terminate(DriverApi& driver) noexcept {
-    driver.destroyTexture(mNoSSAOTexture);
-    driver.destroyTexture(mNoiseTexture);
     FEngine& engine = mEngine;
+    driver.destroyTexture(mDummyOneTexture);
+    driver.destroyTexture(mDummyZeroTexture);
+    driver.destroyTexture(mNoiseTexture);
     mSSAO.terminate(engine);
     mMipmapDepth.terminate(engine);
     mBilateralBlur.terminate(engine);
@@ -200,15 +205,26 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::toneMapping(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> input;
         FrameGraphId<FrameGraphTexture> output;
         FrameGraphId<FrameGraphTexture> bloom;
+        FrameGraphId<FrameGraphTexture> dirt;
         FrameGraphRenderTargetHandle rt;
     };
 
     FrameGraphId<FrameGraphTexture> bloomBlur;
+    FrameGraphId<FrameGraphTexture> bloomDirt;
 
     float bloom = 0.0f;
     if (bloomOptions.enabled) {
         bloom = clamp(bloomOptions.strength, 0.0f, 1.0f);
         bloomBlur = bloomPass(fg, input, TextureFormat::R11F_G11F_B10F, bloomOptions, scale);
+        if (bloomOptions.dirt) {
+            FTexture* fdirt = upcast(bloomOptions.dirt);
+            FrameGraphTexture frameGraphTexture { .texture = fdirt->getHwHandle() };
+            bloomDirt = fg.import("dirt", {
+                    .width = (uint32_t)fdirt->getWidth(0u),
+                    .height = (uint32_t)fdirt->getHeight(0u),
+                    .format = fdirt->getFormat()
+            }, frameGraphTexture);
+        }
     }
 
     auto& ppToneMapping = fg.addPass<PostProcessToneMapping>("tonemapping",
@@ -222,33 +238,49 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::toneMapping(FrameGraph& fg,
                 });
                 data.rt = builder.createRenderTarget(data.output);
 
-                if (!bloomBlur.isValid()) {
-                    // we need a dummy texture
-                    bloomBlur = builder.createTexture("dummy", {});
+                if (bloomBlur.isValid()) {
+                    data.bloom = builder.sample(bloomBlur);
                 }
-                data.bloom = builder.sample(bloomBlur);
+                if (bloomDirt.isValid()) {
+                    data.dirt = builder.sample(bloomDirt);
+                }
             },
             [=](FrameGraphPassResources const& resources,
                     PostProcessToneMapping const& data, DriverApi& driver) {
-                auto const& colorTexture = resources.getTexture(data.input);
-                auto const& bloomTexture = resources.getTexture(data.bloom);
 
-                FMaterialInstance* pInstance = mTonemapping.getMaterialInstance();
-                pInstance->setParameter("colorBuffer", colorTexture, { /* shader uses texelFetch */ });
-                pInstance->setParameter("bloomBuffer", bloomTexture, {
+                Handle<HwTexture> colorTexture = resources.getTexture(data.input);
+
+                Handle<HwTexture> bloomTexture =
+                        data.bloom.isValid() ? resources.getTexture(data.bloom) : getZeroTexture();
+
+                Handle<HwTexture> dirtTexture =
+                        data.dirt.isValid() ? resources.getTexture(data.dirt) : getOneTexture();
+
+                FMaterialInstance* mi = mTonemapping.getMaterialInstance();
+                mi->setParameter("colorBuffer", colorTexture, { /* shader uses texelFetch */ });
+                mi->setParameter("bloomBuffer", bloomTexture, {
                         .filterMag = SamplerMagFilter::LINEAR,
                         .filterMin = SamplerMinFilter::LINEAR /* always read base level in shader */
                 });
+                mi->setParameter("dirtBuffer", dirtTexture, {
+                        .filterMag = SamplerMagFilter::LINEAR,
+                        .filterMin = SamplerMinFilter::LINEAR
+                });
 
-                float2 bloomParameter{ bloom / float(bloomOptions.levels), 1.0f };
+                float4 bloomParameter{
+                    bloom / float(bloomOptions.levels),
+                    1.0f,
+                    (bloomOptions.enabled && bloomOptions.dirt) ? bloomOptions.dirtStrength : 0.0f,
+                    0.0f
+                };
                 if (bloomOptions.blendMode == View::BloomOptions::BlendMode::INTERPOLATE) {
                     bloomParameter.y = 1.0f - bloomParameter.x;
                 }
 
-                pInstance->setParameter("dithering", dithering);
-                pInstance->setParameter("bloom", bloomParameter);
-                pInstance->setParameter("fxaa", fxaa);
-                pInstance->commit(driver);
+                mi->setParameter("dithering", dithering);
+                mi->setParameter("bloom", bloomParameter);
+                mi->setParameter("fxaa", fxaa);
+                mi->commit(driver);
 
                 const uint8_t variant = uint8_t(translucent ?
                             PostProcessVariant::TRANSLUCENT : PostProcessVariant::OPAQUE);
@@ -256,12 +288,12 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::toneMapping(FrameGraph& fg,
                 PipelineState pipeline{
                         .program = mTonemapping.getMaterial()->getProgram(variant),
                         .rasterState = mTonemapping.getMaterial()->getRasterState(),
-                        .scissor = pInstance->getScissor()
+                        .scissor = mi->getScissor()
                 };
 
                 auto const& target = resources.getRenderTarget(data.rt);
                 driver.beginRenderPass(target.target, target.params);
-                pInstance->use(driver);
+                mi->use(driver);
                 driver.draw(pipeline, fullScreenRenderPrimitive);
                 driver.endRenderPass();
             });
