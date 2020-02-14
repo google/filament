@@ -31,11 +31,17 @@ using namespace image;
 extern void registerCallbackUtils(JNIEnv*);
 extern void registerNioUtils(JNIEnv*);
 
+namespace gltfio {
+    void JNI_OnLoad(JNIEnv* env);
+}
+
 jint JNI_OnLoad(JavaVM* vm, void*) {
     JNIEnv* env;
     if (vm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6) != JNI_OK) {
         return -1;
     }
+
+    gltfio::JNI_OnLoad(env);
 
     registerCallbackUtils(env);
     registerNioUtils(env);

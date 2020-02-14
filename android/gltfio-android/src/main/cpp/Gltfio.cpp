@@ -16,11 +16,27 @@
 
 #include <jni.h>
 
+#include <utils/compiler.h>
+
+extern void registerNioUtils(JNIEnv*);
+
 jint JNI_OnLoad(JavaVM* vm, void*) {
     JNIEnv* env;
     if (vm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6) != JNI_OK) {
         return -1;
     }
 
+    registerNioUtils(env);
+
     return JNI_VERSION_1_6;
+}
+
+// This alternative init function is necessary when gltfio is loaded using an ELF dependency.
+namespace gltfio {
+
+    UTILS_PUBLIC
+    void JNI_OnLoad(JNIEnv* env) {
+        registerNioUtils(env);
+    }
+
 }
