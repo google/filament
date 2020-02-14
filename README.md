@@ -124,9 +124,10 @@ Here are a few screenshots of applications that use Filament in production:
 - Image-based lighting
 - Physically-based camera (shutter speed, sensitivity and aperture)
 - Physical light units
-- Point light, spot light and directional light
-- SSAO
-- Screen-space refractions
+- Point lights, spot lights and directional light
+- Screen-space ambient occlusion
+- Screen-space refraction
+- HDR bloom
 - ACES-like tone-mapping
 - Temporal dithering
 - FXAA, MSAA and specular anti-aliasing
