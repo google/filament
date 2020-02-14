@@ -30,13 +30,13 @@ SamplerInterfaceBlock const& SibGenerator::getPerViewSib() noexcept {
     // TODO: ideally we'd want this to be constexpr, this is a compile time structure
     static SamplerInterfaceBlock sib = SamplerInterfaceBlock::Builder()
             .name("Light")
-            .add("shadowMap",     Type::SAMPLER_2D,      Format::SHADOW,Precision::LOW)
-            .add("records",       Type::SAMPLER_2D,      Format::UINT,  Precision::MEDIUM)
-            .add("froxels",       Type::SAMPLER_2D,      Format::UINT,  Precision::MEDIUM)
-            .add("iblDFG",        Type::SAMPLER_2D,      Format::FLOAT, Precision::MEDIUM)
-            .add("iblSpecular",   Type::SAMPLER_CUBEMAP, Format::FLOAT, Precision::MEDIUM)
-            .add("ssao",          Type::SAMPLER_2D,      Format::FLOAT, Precision::MEDIUM)
-            .add("ssr",           Type::SAMPLER_2D,      Format::FLOAT, Precision::MEDIUM)
+            .add("shadowMap",     Type::SAMPLER_2D_ARRAY,   Format::SHADOW, Precision::LOW)
+            .add("records",       Type::SAMPLER_2D,         Format::UINT,   Precision::MEDIUM)
+            .add("froxels",       Type::SAMPLER_2D,         Format::UINT,   Precision::MEDIUM)
+            .add("iblDFG",        Type::SAMPLER_2D,         Format::FLOAT,  Precision::MEDIUM)
+            .add("iblSpecular",   Type::SAMPLER_CUBEMAP,    Format::FLOAT,  Precision::MEDIUM)
+            .add("ssao",          Type::SAMPLER_2D,         Format::FLOAT,  Precision::MEDIUM)
+            .add("ssr",           Type::SAMPLER_2D,         Format::FLOAT,  Precision::MEDIUM)
             .build();
 
     assert(sib.getSize() == PerViewSib::SAMPLER_COUNT);
