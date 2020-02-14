@@ -125,7 +125,7 @@ public:
 /**
  * An axis aligned box represented by its min and max coordinates
  */
-struct Aabb {
+struct UTILS_PUBLIC Aabb {
 
     /** min coordinates */
     math::float3 min = std::numeric_limits<float>::max();
