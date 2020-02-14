@@ -73,6 +73,10 @@ target_include_directories(gltfio-jni PRIVATE
 set_target_properties(gltfio-jni PROPERTIES LINK_DEPENDS
         ${CMAKE_CURRENT_SOURCE_DIR}/libgltfio-jni.symbols)
 
+# Force a relink when the version script is changed.
+set_target_properties(gltfio-jni PROPERTIES LINK_DEPENDS
+        ${CMAKE_CURRENT_SOURCE_DIR}/libgltfio-jni.map)
+
 # The ordering in the following list is important because CMake does not have dependency information.
 target_link_libraries(gltfio-jni
         filament-jni

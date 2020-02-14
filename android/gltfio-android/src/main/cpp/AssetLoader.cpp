@@ -30,9 +30,6 @@ using namespace filament;
 using namespace gltfio;
 using namespace utils;
 
-extern void registerCallbackUtils(JNIEnv*);
-extern void registerNioUtils(JNIEnv*);
-
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_gltfio_AssetLoader_nCreateAssetLoader(JNIEnv*, jclass,
         jlong nativeEngine, jlong nativeProvider, jlong nativeEntities) {
