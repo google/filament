@@ -143,6 +143,7 @@ else()
 
     install(TARGETS gltfio_core gltfio_resources ARCHIVE DESTINATION lib/${DIST_DIR})
     install(DIRECTORY ${PUBLIC_HDR_DIR}/gltfio DESTINATION include)
+    install(FILES ${RESOURCE_DIR}/gltfresources.h DESTINATION include/gltfio/resources)
 
 endif()
 
