@@ -13,6 +13,7 @@ A new header is inserted each time a *tag* is created.
 - Material instances now allow dynamic depth testing and other rasterization state.
 - Support for Bloom as a post-process effect.
 - Added Java bindings for geometry::SurfaceOrientation.
+- Fixed bug rendering transparent objects with Metal backend.
 
 ## v1.4.5
 
