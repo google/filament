@@ -231,7 +231,8 @@ struct PipelineState {
                 this->colorAttachmentPixelFormat == rhs.colorAttachmentPixelFormat &&
                 this->depthAttachmentPixelFormat == rhs.depthAttachmentPixelFormat &&
                 this->sampleCount == rhs.sampleCount &&
-                this->blendState == rhs.blendState
+                this->blendState == rhs.blendState &&
+                this->colorWrite == rhs.colorWrite
         );
     }
 
