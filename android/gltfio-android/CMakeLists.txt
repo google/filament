@@ -4,6 +4,10 @@ set(FILAMENT_DIR ${FILAMENT_DIST_DIR})
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../filament-android ${CMAKE_CURRENT_BINARY_DIR}/filament-android)
 
+add_library(utils STATIC IMPORTED)
+set_target_properties(utils PROPERTIES IMPORTED_LOCATION
+        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libutils.a)
+
 add_library(gltfio STATIC IMPORTED)
 set_target_properties(gltfio PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libgltfio_core.a)
@@ -46,5 +50,7 @@ set_target_properties(gltfio-jni PROPERTIES LINK_DEPENDS
 target_link_libraries(gltfio-jni
         filament-jni
         gltfio
+        utils
         gltfio_resources
+        log
 )

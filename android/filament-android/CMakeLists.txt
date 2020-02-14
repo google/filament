@@ -39,8 +39,6 @@ set_target_properties(smol-v PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libsmol-v.a)
 
 
-include_directories(.. ${FILAMENT_DIR}/include)
-
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fno-stack-protector")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fno-exceptions -fno-unwind-tables -fno-asynchronous-unwind-tables -fno-rtti")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -ffast-math -ffp-contract=fast")
@@ -48,10 +46,11 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fvisibility-inlines-hid
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fvisibility=hidden")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fomit-frame-pointer -ffunction-sections -fdata-sections")
 
-set(CMAKE_SHARED_LINKER_FLAGS" ${CMAKE_SHARED_LINKER_FLAGS} -Wl,--gc-sections")
-set(CMAKE_SHARED_LINKER_FLAGS" ${CMAKE_SHARED_LINKER_FLAGS} -Wl,-Bsymbolic-functions")
+set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--gc-sections")
+set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-Bsymbolic-functions")
 
-set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/libfilament-jni.map")
+set(VERSION_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/libfilament-jni.map")
+set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} -Wl,--version-script=${VERSION_SCRIPT}")
 
 add_library(filament-jni SHARED
     src/main/cpp/Camera.cpp
@@ -86,20 +85,30 @@ add_library(filament-jni SHARED
     ../common/NioUtils.cpp
 )
 
+# Ordering is significant in the following list. The PRIVATE qualifier prevents transitive deps.
 target_link_libraries(filament-jni
-    filament
-    backend
-    filaflat
-    filabridge
-    geometry
-    ibl
-    utils
-    log
-    GLESv3
-    EGL
-    android
-    jnigraphics
+    PRIVATE filament
+    PRIVATE backend
+    PRIVATE filaflat
+    PRIVATE filabridge
+    PRIVATE geometry
+    PRIVATE ibl
+    PRIVATE log
+    PRIVATE GLESv3
+    PRIVATE EGL
+    PRIVATE android
+    PRIVATE jnigraphics
+    PRIVATE utils
 )
+
+target_include_directories(filament-jni PRIVATE
+        ..
+        ${FILAMENT_DIR}/include
+        ../../third_party/robin-map
+        ../../libs/utils/include)
+
+# Force a relink when the version script is changed:
+set_target_properties(filament-jni PROPERTIES LINK_DEPENDS ${VERSION_SCRIPT})
 
 option(FILAMENT_SUPPORTS_VULKAN "Enables Vulkan on Android" OFF)
 
