@@ -13,6 +13,10 @@ add_library(gltfio_resources STATIC IMPORTED)
 set_target_properties(gltfio_resources PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libgltfio_resources.a)
 
+add_library(gltfio_resources_lite STATIC IMPORTED)
+set_target_properties(gltfio_resources_lite PROPERTIES IMPORTED_LOCATION
+        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libgltfio_resources_lite.a)
+
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fno-stack-protector")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fno-exceptions -fno-unwind-tables -fno-asynchronous-unwind-tables -fno-rtti")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -ffast-math -ffp-contract=fast")
@@ -25,7 +29,7 @@ set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-Bsymbolic-funct
 
 set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/libgltfio-jni.map")
 
-add_library(gltfio-jni SHARED
+set(GLTFIO_SRCS
         ${GLTFIO_DIR}/include/gltfio/Animator.h
         ${GLTFIO_DIR}/include/gltfio/AssetLoader.h
         ${GLTFIO_DIR}/include/gltfio/MaterialProvider.h
@@ -60,7 +64,7 @@ add_library(gltfio-jni SHARED
         ../common/NioUtils.cpp
 )
 
-target_include_directories(gltfio-jni PRIVATE
+set(GLTFIO_INCLUDE_DIRS
         ..
         ${FILAMENT_DIR}/include
         ${FILAMENT_DIR}/include/gltfio/resources
@@ -70,17 +74,16 @@ target_include_directories(gltfio-jni PRIVATE
         ../../libs/utils/include
 )
 
-set_target_properties(gltfio-jni PROPERTIES LINK_DEPENDS
-        ${CMAKE_CURRENT_SOURCE_DIR}/libgltfio-jni.symbols)
+add_library(gltfio-jni SHARED ${GLTFIO_SRCS})
+target_include_directories(gltfio-jni PRIVATE ${GLTFIO_INCLUDE_DIRS})
+set_target_properties(gltfio-jni PROPERTIES LINK_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/libgltfio-jni.symbols)
+set_target_properties(gltfio-jni PROPERTIES LINK_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/libgltfio-jni.map)
+target_link_libraries(gltfio-jni filament-jni utils gltfio_resources log)
 
-# Force a relink when the version script is changed.
-set_target_properties(gltfio-jni PROPERTIES LINK_DEPENDS
-        ${CMAKE_CURRENT_SOURCE_DIR}/libgltfio-jni.map)
+add_library(gltfio-jni-lite SHARED ${GLTFIO_SRCS})
+target_include_directories(gltfio-jni-lite PRIVATE ${GLTFIO_INCLUDE_DIRS})
+set_target_properties(gltfio-jni-lite PROPERTIES LINK_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/libgltfio-jni.symbols)
+set_target_properties(gltfio-jni-lite PROPERTIES LINK_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/libgltfio-jni.map)
+target_link_libraries(gltfio-jni-lite filament-jni utils gltfio_resources_lite log)
 
-# The ordering in the following list is important because CMake does not have dependency information.
-target_link_libraries(gltfio-jni
-        filament-jni
-        utils
-        gltfio_resources
-        log
-)
+target_compile_definitions(gltfio-jni-lite PUBLIC GLTFIO_LITE=1)

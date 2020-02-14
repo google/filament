@@ -362,6 +362,11 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity entity) {
         UvMap uvmap {};
         bool hasVertexColor = primitiveHasVertexColor(inputPrim);
         MaterialInstance* mi = createMaterialInstance(inputPrim->material, &uvmap, hasVertexColor);
+        if (!mi) {
+            mError = true;
+            continue;
+        }
+
         mResult->mDependencyGraph.addEdge(entity, mi);
         builder.material(index, mi);
 
@@ -868,6 +873,11 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
     // This not only creates a material instance, it modifies the material key according to our
     // rendering constraints. For example, Filament only supports 2 sets of texture coordinates.
     MaterialInstance* mi = mMaterials->createMaterialInstance(&matkey, uvmap, inputMat->name);
+    if (!mi) {
+        slog.e << "No material with the specified requirements exists." << io::endl;
+        return nullptr;
+    }
+
     mResult->mMaterialInstances.push_back(mi);
 
     if (inputMat->alpha_mode == cgltf_alpha_mode_mask) {
