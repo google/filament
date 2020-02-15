@@ -222,6 +222,11 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
     const BOOL multisampled = samples > 1;
     const BOOL textureArray = target == SamplerType::SAMPLER_2D_ARRAY;
 
+#if defined(IOS)
+    ASSERT_PRECONDITION(!textureArray || !multisampled,
+            "iOS does not support multisampled texture arrays.");
+#endif
+
     const auto getTextureType = [](bool isArray, bool isMultisampled) {
         uint8_t value = 0;
         if (isMultisampled) {
@@ -239,7 +244,12 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
             case 0b10:
                 return MTLTextureType2DMultisample;
             case 0b11:
+#if !defined(IOS)
                 return MTLTextureType2DMultisampleArray;
+#else
+                // should not get here
+                return MTLTextureType2DArray;
+#endif
         }
     };
 
