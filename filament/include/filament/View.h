@@ -140,9 +140,10 @@ public:
      *              image (true).
      * anamorphism: Bloom's aspect ratio (x/y), for artistic purposes.
      * threshold:   When enabled, a threshold at 1.0 is applied on the source image, this is
-     *              useful for artistic reasons.
+     *              useful for artistic reasons and is usually needed when a dirt texture is used.
      * dirt:        A dirt/scratch/smudges texture (that can be RGB), which gets added to the
-     *              bloom effect. Smudges are visible where bloom occurs.
+     *              bloom effect. Smudges are visible where bloom occurs. Threshold must be
+     *              enabled for the dirt effect to work properly.
      * dirtStrength: Strength of the dirt texture.
      */
     struct BloomOptions {
