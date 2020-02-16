@@ -508,6 +508,14 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssao(FrameGraph& fg, RenderP
                         0.5f * cameraInfo.projection[0].x * desc.width,
                         0.5f * cameraInfo.projection[1].y * desc.height);
 
+
+                // Where the falloff function peaks
+                const float peak = 0.1 * options.radius;
+                // We further scale the user intensity by 2, for a better default at intensity=1
+                const float intensity = (2.0f * F_PI * peak) * data.options.intensity * 2.0f;
+                // always square AO result, as it looks much better
+                const float power = data.options.power * 2.0f;
+
                 FMaterialInstance* const mi = mSSAO.getMaterialInstance();
                 mi->setParameter("depth", depth, {
                         .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST
@@ -517,9 +525,10 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssao(FrameGraph& fg, RenderP
                 mi->setParameter("radius", data.options.radius);
                 mi->setParameter("invRadiusSquared", 1.0f / (data.options.radius * data.options.radius));
                 mi->setParameter("projectionScaleRadius", projectionScale * data.options.radius);
+                mi->setParameter("peak2", peak * peak);
                 mi->setParameter("bias", data.options.bias);
-                mi->setParameter("power", data.options.power);
-                mi->setParameter("intensity", std::max(0.0f, data.options.intensity));
+                mi->setParameter("power", power);
+                mi->setParameter("intensity", intensity);
                 mi->setParameter("maxLevel", uint32_t(levelCount - 1));
                 mi->commit(driver);
                 mi->use(driver);

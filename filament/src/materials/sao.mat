@@ -20,6 +20,10 @@ material {
         },
         {
             type : float,
+            name : peak2
+        },
+        {
+            type : float,
             name : projectionScaleRadius
         },
         {
@@ -55,7 +59,7 @@ vertex {
 
 fragment {
     const float kSpiralSampleCount = 7.0;
-    const float kSpiralTurns = 7.0;
+    const float kSpiralTurns = 5.0;
     const float kLog2LodRate = 3.0;
 
     vec2 sq(const vec2 a) {
@@ -132,7 +136,7 @@ fragment {
         // note: with this formulation we could precompute the samples in an array
         //       and combine the noise, which would allow is to call sin/cos only
         //       once per pixel.
-        float radius = (i + 0.5) / (kSpiralSampleCount - 0.5);
+        float radius = (i + 0.5) * (1.0 / kSpiralSampleCount);
         float angle = (radius * kSpiralTurns + noise) * (2.0 * PI);
         return vec3(fast_cossin(angle), radius);
     }
@@ -151,12 +155,11 @@ fragment {
         highp vec3 p = computeViewSpacePositionFromDepth(uvSamplePos, occlusionDepth);
 
         // now we have the sample, compute AO
-        const float uu = 0.015;
         vec3 v = p - origin;        // sample vector
         float vv = dot(v, v);       // squared distance
         float vn = dot(v, normal);  // distance * cos(v, normal)
         float w = saturate(1.0 - vv * materialParams.invRadiusSquared);
-        occlusion += w * max(0.0, vn + origin.z * materialParams.bias) / (vv + uu);
+        occlusion += w * max(0.0, vn + origin.z * materialParams.bias) / (vv + materialParams.peak2);
     }
 
     void postProcess(inout PostProcessInputs postProcess) {
@@ -178,10 +181,8 @@ fragment {
             computeAmbientOcclusionSAO(occlusion, i, ssDiskRadius, uv, origin, normal, noise);
         }
 
-        float ao = max(0.0, 1.0 - (2.0 / kSpiralSampleCount) * materialParams.intensity * occlusion);
-
-        // simulate user-controled ao^n with n[1, 2]
-        ao = mix(ao, ao * ao, materialParams.power);
+        float ao = max(0.0, 1.0 - occlusion * (materialParams.intensity * (1.0 / kSpiralSampleCount)));
+        ao = pow(ao, materialParams.power);
 
         postProcess.color.r = ao;
     }
