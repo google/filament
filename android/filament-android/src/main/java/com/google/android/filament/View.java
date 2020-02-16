@@ -138,12 +138,13 @@ public class View {
         /**
          * Self-occlusion bias in meters. Use to avoid self-occlusion. Between 0 and a few mm.
          */
-        public float bias = 0.005f;
+        public float bias = 0.0005f;
 
         /**
-         * Controls ambient occlusion's contrast. Between 0 (linear) and 1 (squared)
+         * Controls ambient occlusion's contrast. Must be positive. Default is 1.
+         * Good values are between 0.5 and 3.
          */
-        public float power = 0.0f;
+        public float power = 1.0f;
 
         /**
          * How each dimension of the AO buffer is scaled. Must be positive and <= 1.
