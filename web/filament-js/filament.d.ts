@@ -168,7 +168,7 @@ export class LightManager {
     public setIntensityEnergy(instance: LightManager$Instance, watts: number, efficiency: number): void;
     public getIntensity(instance: LightManager$Instance): number;
     public setFalloff(instance: LightManager$Instance, radius: number): void;
-    public getFalloff(instance: LightManager$Instance: number);
+    public getFalloff(instance: LightManager$Instance): number;
     public setSpotLightCone(instance: LightManager$Instance, inner: number, outer: number): void;
     public setSunAngularRadius(instance: LightManager$Instance, angularRadius: number): void;
     public getSunAngularRadius(instance: LightManager$Instance): number;
