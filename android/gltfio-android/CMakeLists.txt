@@ -61,6 +61,9 @@ set(GLTFIO_SRCS
         src/main/cpp/ResourceLoader.cpp
         src/main/cpp/Gltfio.cpp
 
+        ${FILAMENT_DIR}/include/gltfio/resources/gltfresources_lite.h
+        ${FILAMENT_DIR}/include/gltfio/resources/gltfresources.h
+
         ../common/NioUtils.cpp
 )
 
@@ -85,5 +88,4 @@ target_include_directories(gltfio-jni-lite PRIVATE ${GLTFIO_INCLUDE_DIRS})
 set_target_properties(gltfio-jni-lite PROPERTIES LINK_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/libgltfio-jni.symbols)
 set_target_properties(gltfio-jni-lite PROPERTIES LINK_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/libgltfio-jni.map)
 target_link_libraries(gltfio-jni-lite filament-jni utils gltfio_resources_lite log)
-
 target_compile_definitions(gltfio-jni-lite PUBLIC GLTFIO_LITE=1)

@@ -118,10 +118,17 @@ Material* UbershaderLoader::getMaterial(const MaterialKey& config) const {
         return mMaterials[matindex];
     }
     switch (matindex) {
+
+        #if !GLTFIO_LITE || defined(GLTFRESOURCES_LITE_LIT_OPAQUE_DATA)
         case MATINDEX(LIT, AlphaMode::OPAQUE): mMaterials[matindex] = CREATE_MATERIAL(LIT_OPAQUE); break;
+        #endif
+
+        #if !GLTFIO_LITE || defined(GLTFRESOURCES_LITE_LIT_BLEND_DATA)
+        case MATINDEX(LIT, AlphaMode::BLEND): mMaterials[matindex] = CREATE_MATERIAL(LIT_FADE); break;
+        #endif
+
         #if !GLTFIO_LITE
         case MATINDEX(LIT, AlphaMode::MASK): mMaterials[matindex] = CREATE_MATERIAL(LIT_MASKED); break;
-        case MATINDEX(LIT, AlphaMode::BLEND): mMaterials[matindex] = CREATE_MATERIAL(LIT_FADE); break;
         case MATINDEX(UNLIT, AlphaMode::OPAQUE): mMaterials[matindex] = CREATE_MATERIAL(UNLIT_OPAQUE); break;
         case MATINDEX(UNLIT, AlphaMode::MASK): mMaterials[matindex] = CREATE_MATERIAL(UNLIT_MASKED); break;
         case MATINDEX(UNLIT, AlphaMode::BLEND): mMaterials[matindex] = CREATE_MATERIAL(UNLIT_FADE); break;
