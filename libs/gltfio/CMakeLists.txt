@@ -99,10 +99,12 @@ add_custom_command(OUTPUT ${DUMMY_SRC} COMMAND echo "//" > ${DUMMY_SRC})
 add_library(gltfio_resources ${DUMMY_SRC} ${RESGEN_SOURCE})
 
 # ==================================================================================================
-# Build "lite" resources library, which contains only one material
+# Build "lite" resources library, which contains only a few materials
 # ==================================================================================================
 
-set(RESOURCE_BINS "${RESOURCE_DIR}/lit_opaque.filamat")
+set(RESOURCE_BINS
+    "${RESOURCE_DIR}/lit_opaque.filamat"
+    "${RESOURCE_DIR}/lit_fade.filamat")
 
 get_resgen_vars(${RESOURCE_DIR} gltfresources_lite)
 
