@@ -24,6 +24,7 @@ android {
         applicationId "com.google.android.filament.textured"
         minSdkVersion versions.minSdk
         targetSdkVersion versions.targetSdk
+        missingDimensionStrategy 'functionality', 'full'
     }
 
     // We use the .filamat extension for materials compiled with matc
@@ -36,5 +37,5 @@ android {
 dependencies {
     implementation deps.kotlin
     implementation project(':filament-android')
-    implementation project(':filament-utils-android')
+    implementation project(':filament-utils-android') // required for KtxLoader
 }

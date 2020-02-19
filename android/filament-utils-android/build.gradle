@@ -23,6 +23,13 @@ android {
         }
     }
 
+    // The gltfio library has two variants: full and lite. Here we default to the "full" variant.
+    // Replace "full" with "lite" to use the gltfio-lite variant, which has a smaller binary size
+    // but comes with certain restrictions.
+    defaultConfig {
+        missingDimensionStrategy 'functionality', 'full'
+    }
+
     externalNativeBuild {
         cmake {
             path "CMakeLists.txt"
