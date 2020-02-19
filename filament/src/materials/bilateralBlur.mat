@@ -36,9 +36,9 @@ vertex {
 }
 
 fragment {
-    const int kGaussianCount = 8;
+    const int kGaussianCount = 4;
     const float kGaussianSamples[] = float[](
-        0.149603, 0.139446, 0.112927, 0.079454, 0.048569, 0.025795, 0.011902, 0.004772
+        0.199471, 0.176033, 0.120985, 0.064759      // stdev = 2.0
     );
 
     highp float linearizeDepth(highp float depth) {

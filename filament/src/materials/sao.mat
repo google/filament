@@ -110,22 +110,20 @@ fragment {
 
     // compute normals using derivatives, which essentially results in half-resolution normals
     // this creates arifacts around geometry edges.
-    // Moreover, this seems slower (measured on Pixel4), which I find curious.
-    highp vec3 computeViewSpaceNormalNotNormalized(const highp vec3 position) {
-        highp vec3 dpdx = dFdx(position);
-        highp vec3 dpdy = dFdy(position);
-        return cross(dpdx, dpdy);
+    // Moreover, this seems a lot slower (measured on Pixel4), which I find curious.
+    highp vec3 computeViewSpaceNormal(const highp vec3 position) {
+        return normalize(cross(dFdx(position), dFdy(position)));
     }
 
     // compute normals directly from the depth texture, resulting in full resolution normals
-    highp vec3 computeViewSpaceNormalNotNormalized(const highp vec3 position, const vec2 uv) {
+    highp vec3 computeViewSpaceNormal(const highp vec3 position, const vec2 uv) {
         vec2 uvdx = uv + vec2(materialParams.resolution.z, 0.0);
         vec2 uvdy = uv + vec2(0.0, materialParams.resolution.w);
         highp vec3 px = computeViewSpacePositionFromDepth(uvdx, sampleDepthLinear(uvdx, 0.0));
         highp vec3 py = computeViewSpacePositionFromDepth(uvdy, sampleDepthLinear(uvdy, 0.0));
         highp vec3 dpdx = px - position;
         highp vec3 dpdy = py - position;
-        return cross(dpdx, dpdy);
+        return normalize(cross(dpdx, dpdy));
     }
 
     // Ambient Occlusion, largely inspired from:
@@ -167,9 +165,8 @@ fragment {
 
         highp float depth = sampleDepthLinear(uv, 0.0);
         highp vec3 origin = computeViewSpacePositionFromDepth(uv, depth);
-        highp vec3 normalNotNormalized = computeViewSpaceNormalNotNormalized(origin, uv);
 
-        vec3 normal = normalize(normalNotNormalized);
+        vec3 normal = computeViewSpaceNormal(origin, uv);
         float noise = random(gl_FragCoord.xy);
 
         // Choose the screen-space sample radius
@@ -184,6 +181,15 @@ fragment {
         float ao = max(0.0, 1.0 - occlusion * (materialParams.intensity * (1.0 / kSpiralSampleCount)));
         ao = pow(ao, materialParams.power);
 
+        // Apply a 2x2 bilateral box filter, taking advantage of quad shading. If we were not
+        // applying the bilateral filter, this would be equivalent to downsampling the AO buffer
+        // using a 2x2 box. Thanks to the bilateral filter, we keep some sharp edges.
+        // mod2() below will return either 0.5 or 1.5
+        // This assumes full derivatives are supported.
+        const float kEdgeDistance = 0.1; // this shouldn't be hardcoded
+        ivec2 coords = ivec2(gl_FragCoord.xy);
+        ao += (1.0 - step(kEdgeDistance, abs(dFdx(origin.z)))) * dFdx(ao) * (0.5 - float(coords.x & 1));
+        ao += (1.0 - step(kEdgeDistance, abs(dFdy(origin.z)))) * dFdy(ao) * (0.5 - float(coords.y & 1));
         postProcess.color.r = ao;
     }
 }

@@ -27,7 +27,7 @@ int main(int argc, char** argv) {
     std::default_random_engine generator;
 
     float weightSum = 0;
-    size_t gaussianWidth = 15;   // must be odd
+    size_t gaussianWidth = 7;   // must be odd
     const size_t gaussianSampleCount = (gaussianWidth + 1) / 2;
     std::cout << "const int kGaussianCount = " << gaussianSampleCount << ";" << std::endl;
     std::cout << "const int kRadius = kGaussianCount - 1;" << std::endl;
@@ -46,7 +46,8 @@ int main(int argc, char** argv) {
         // Cut-off frequency definition:
         //      fc = 1.1774 / (2pi * q)       (half power frequency or 0.707 amplitude)
 
-        float q = (gaussianWidth + 1.0f) / 6.0f;  // ~2.667 for 15 taps
+        //float q = (gaussianWidth + 1.0f) / 6.0f;  // ~1.333 for 7 taps
+        float q = 2.0; // this works better, eventhough the filter is no longer really gaussian
         float g = float((1.0 / (std::sqrt(2.0 * F_PI) * q)) * std::exp(-(x * x) / (2.0 * q * q)));
         weightSum += g * (i == 0 ? 1.0f : 2.0f);
 
