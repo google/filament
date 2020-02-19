@@ -239,8 +239,8 @@ Java_com_google_android_filament_View_nSetAmbientOcclusionOptions(JNIEnv*, jclas
     View* view = (View*) nativeView;
     View::AmbientOcclusionOptions options = {
             .radius = radius,
-            .bias = bias,
             .power = power,
+            .bias = bias,
             .resolution = resolution,
             .intensity = intensity
     };

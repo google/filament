@@ -545,14 +545,13 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssao(FrameGraph& fg, RenderP
     FrameGraphId<FrameGraphTexture> ssao = SSAOPass.getData().ssao;
 
     /*
-     * Final separable blur pass
+     * Final separable bilateral blur pass
+     *
+     * Since we apply a 2x2 box filter to the output of the AO -- effectively downsampling it
+     * (except at edges), we can widen the blur by skipping every other sample.
      */
-
-    // horizontal separable blur pass
-    ssao = bilateralBlurPass(fg, ssao, depth, { 1, 0 });
-
-    // vertical separable blur pass
-    ssao = bilateralBlurPass(fg, ssao, depth, { 0, 1 });
+    ssao = bilateralBlurPass(fg, ssao, depth, { 2, 0 }); // horizontal pass
+    ssao = bilateralBlurPass(fg, ssao, depth, { 0, 2 }); // vertical pass
     return ssao;
 }
 
