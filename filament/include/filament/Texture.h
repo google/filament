@@ -126,9 +126,11 @@ public:
 
         /**
          * Specifies the depth in texels of the texture. Doesn't need to be a power-of-two.
-         * This creates a 3D textures.
+         * The depth controls the number of layers in a 2D array texture. Values greater than 1
+         * effectively create a 3D texture.
          * @param depth Depth of the texture in texels (default: 1).
          * @return This Builder, for chaining calls.
+         * @attention This Texture instance must use Sampler::SAMPLER_2D_ARRAY or it has no effect.
          */
         Builder& depth(uint32_t depth) noexcept;
 
@@ -142,9 +144,8 @@ public:
         Builder& levels(uint8_t levels) noexcept;
 
         /**
-         * Specifies whether this texture is a cubemap
-         * @param target either Sampler::SAMPLER_2D or
-         *                      Sampler::SAMPLER_CUBEMAP
+         * Specifies the type of sampler to use.
+         * @param target Sampler type
          * @return This Builder, for chaining calls.
          * @see Sampler
          */

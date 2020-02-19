@@ -182,6 +182,7 @@ template<>
 const char* toString(backend::SamplerType type) {
     switch (type) {
         case backend::SamplerType::SAMPLER_2D: return "sampler2D";
+        case backend::SamplerType::SAMPLER_2D_ARRAY: return "sampler2DArray";
         case backend::SamplerType::SAMPLER_CUBEMAP: return "samplerCubemap";
         case backend::SamplerType::SAMPLER_EXTERNAL: return "samplerExternal";
     }

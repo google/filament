@@ -98,9 +98,9 @@ struct MetalProgram : public HwProgram {
 };
 
 struct MetalTexture : public HwTexture {
-    MetalTexture(MetalContext& context, backend::SamplerType target, uint8_t levels,
-            TextureFormat format, uint8_t samples, uint32_t width, uint32_t height, uint32_t depth,
-            TextureUsage usage) noexcept;
+    MetalTexture(MetalContext& context, SamplerType target, uint8_t levels, TextureFormat format,
+            uint8_t samples, uint32_t width, uint32_t height, uint32_t depth, TextureUsage usage)
+            noexcept;
     ~MetalTexture();
 
     void load2DImage(uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t width,
@@ -127,8 +127,14 @@ struct MetalSamplerGroup : public HwSamplerGroup {
 
 class MetalRenderTarget : public HwRenderTarget {
 public:
+
+    struct TargetInfo {
+        uint8_t level;
+        uint16_t layer;
+    };
+
     MetalRenderTarget(MetalContext* context, uint32_t width, uint32_t height, uint8_t samples,
-            id<MTLTexture> color, id<MTLTexture> depth, uint8_t colorLevel, uint8_t depthLevel);
+            id<MTLTexture> color, TargetInfo colorInfo, id<MTLTexture> depth, TargetInfo depthInfo);
     explicit MetalRenderTarget(MetalContext* context)
             : HwRenderTarget(0, 0), context(context), defaultRenderTarget(true) {}
 
@@ -143,8 +149,9 @@ public:
     id<MTLTexture> getDepthResolve();
     id<MTLTexture> getBlitColorSource();
     id<MTLTexture> getBlitDepthSource();
-    uint8_t getColorLevel() { return colorLevel; }
-    uint8_t getDepthLevel() { return depthLevel; }
+
+    const TargetInfo& getColorInfo() const { return colorInfo; }
+    const TargetInfo& getDepthInfo() const { return depthInfo; }
 
 private:
     static id<MTLTexture> createMultisampledTexture(id<MTLDevice> device, MTLPixelFormat format,
@@ -153,11 +160,9 @@ private:
     MetalContext* context;
     bool defaultRenderTarget = false;
     uint8_t samples = 1;
-    uint8_t colorLevel = 0;
-    uint8_t depthLevel = 0;
 
-    id<MTLTexture> color = nil;
-    id<MTLTexture> depth = nil;
+    id<MTLTexture> color = nil, depth = nil;
+    TargetInfo colorInfo = {}, depthInfo = {};
     id<MTLTexture> multisampledColor = nil;
     id<MTLTexture> multisampledDepth = nil;
 };

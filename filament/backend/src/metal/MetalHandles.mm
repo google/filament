@@ -200,7 +200,7 @@ static MTLPixelFormat decidePixelFormat(id<MTLDevice> device, TextureFormat form
     return metalFormat;
 }
 
-MetalTexture::MetalTexture(MetalContext& context, backend::SamplerType target, uint8_t levels,
+MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t levels,
         TextureFormat format, uint8_t samples, uint32_t width, uint32_t height, uint32_t depth,
         TextureUsage usage) noexcept
     : HwTexture(target, levels, samples, width, height, depth, format, usage), context(context),
@@ -220,37 +220,73 @@ MetalTexture::MetalTexture(MetalContext& context, backend::SamplerType target, u
 
     const BOOL mipmapped = levels > 1;
     const BOOL multisampled = samples > 1;
+    const BOOL textureArray = target == SamplerType::SAMPLER_2D_ARRAY;
+
+#if defined(IOS)
+    ASSERT_PRECONDITION(!textureArray || !multisampled,
+            "iOS does not support multisampled texture arrays.");
+#endif
+
+    const auto getTextureType = [](bool isArray, bool isMultisampled) {
+        uint8_t value = 0;
+        if (isMultisampled) {
+            value |= 0b10u;
+        }
+        if (isArray) {
+            value |= 0b01u;
+        }
+        switch (value) {
+            default:
+            case 0b00:
+                return MTLTextureType2D;
+            case 0b01:
+                return MTLTextureType2DArray;
+            case 0b10:
+                return MTLTextureType2DMultisample;
+            case 0b11:
+#if !defined(IOS)
+                return MTLTextureType2DMultisampleArray;
+#else
+                // should not get here
+                return MTLTextureType2DArray;
+#endif
+        }
+    };
 
     MTLTextureDescriptor* descriptor;
-    if (target == backend::SamplerType::SAMPLER_2D) {
-        descriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:metalPixelFormat
-                                                                        width:width
-                                                                       height:height
-                                                                    mipmapped:mipmapped];
-        descriptor.mipmapLevelCount = levels;
-        descriptor.textureType = multisampled ? MTLTextureType2DMultisample : MTLTextureType2D;
-        descriptor.sampleCount = multisampled ? samples : 1;
-        descriptor.usage = getMetalTextureUsage(usage);
-        descriptor.storageMode = MTLStorageModePrivate;
-        texture = [context.device newTextureWithDescriptor:descriptor];
-        ASSERT_POSTCONDITION(texture != nil, "Could not create Metal texture. Out of memory?");
-    } else if (target == backend::SamplerType::SAMPLER_CUBEMAP) {
-        ASSERT_POSTCONDITION(!multisampled, "Multisampled cubemap faces not supported.");
-        ASSERT_POSTCONDITION(width == height, "Cubemap faces must be square.");
-        descriptor = [MTLTextureDescriptor textureCubeDescriptorWithPixelFormat:metalPixelFormat
-                                                                           size:width
-                                                                      mipmapped:mipmapped];
-        descriptor.mipmapLevelCount = levels;
-        descriptor.usage = getMetalTextureUsage(usage);
-        descriptor.storageMode = MTLStorageModePrivate;
-        texture = [context.device newTextureWithDescriptor:descriptor];
-        ASSERT_POSTCONDITION(texture != nil, "Could not create Metal texture. Out of memory?");
-    } else if (target == backend::SamplerType::SAMPLER_EXTERNAL) {
-        // If we're using external textures (CVPixelBufferRefs), we don't need to make any texture
-        // allocations.
-        texture = nil;
-    } else {
-        ASSERT_POSTCONDITION(false, "Sampler type not supported.");
+    switch (target) {
+        case SamplerType::SAMPLER_2D:
+        case SamplerType::SAMPLER_2D_ARRAY:
+            descriptor = [MTLTextureDescriptor new];
+            descriptor.pixelFormat = metalPixelFormat;
+            descriptor.textureType = getTextureType(textureArray, multisampled);
+            descriptor.width = width;
+            descriptor.height = height;
+            descriptor.arrayLength = depth;
+            descriptor.mipmapLevelCount = levels;
+            descriptor.sampleCount = multisampled ? samples : 1;
+            descriptor.usage = getMetalTextureUsage(usage);
+            descriptor.storageMode = MTLStorageModePrivate;
+            texture = [context.device newTextureWithDescriptor:descriptor];
+            ASSERT_POSTCONDITION(texture != nil, "Could not create Metal texture. Out of memory?");
+            break;
+        case SamplerType::SAMPLER_CUBEMAP:
+            ASSERT_POSTCONDITION(!multisampled, "Multisampled cubemap faces not supported.");
+            ASSERT_POSTCONDITION(width == height, "Cubemap faces must be square.");
+            descriptor = [MTLTextureDescriptor textureCubeDescriptorWithPixelFormat:metalPixelFormat
+                                                                               size:width
+                                                                          mipmapped:mipmapped];
+            descriptor.mipmapLevelCount = levels;
+            descriptor.usage = getMetalTextureUsage(usage);
+            descriptor.storageMode = MTLStorageModePrivate;
+            texture = [context.device newTextureWithDescriptor:descriptor];
+            ASSERT_POSTCONDITION(texture != nil, "Could not create Metal texture. Out of memory?");
+            break;
+        case SamplerType::SAMPLER_EXTERNAL:
+            // If we're using external textures (CVPixelBufferRefs), we don't need to make any
+            // texture allocations.
+            texture = nil;
+            break;
     }
 }
 
@@ -369,9 +405,9 @@ void MetalTexture::loadSlice(uint32_t level, uint32_t xoffset, uint32_t yoffset,
 }
 
 MetalRenderTarget::MetalRenderTarget(MetalContext* context, uint32_t width, uint32_t height,
-        uint8_t samples, id<MTLTexture> color, id<MTLTexture> depth, uint8_t colorLevel,
-        uint8_t depthLevel) : HwRenderTarget(width, height), context(context), samples(samples),
-        colorLevel(colorLevel), depthLevel(depthLevel) {
+        uint8_t samples, id<MTLTexture> color, TargetInfo colorInfo, id<MTLTexture> depth,
+        TargetInfo depthInfo) : HwRenderTarget(width, height), context(context), samples(samples),
+        colorInfo(colorInfo), depthInfo(depthInfo) {
     ASSERT_PRECONDITION(color || depth, "Must provide either a color or depth texture.");
 
     if (color) {

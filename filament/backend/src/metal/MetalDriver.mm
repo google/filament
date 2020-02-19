@@ -212,8 +212,16 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         return nil;
     };
 
+    MetalRenderTarget::TargetInfo colorInfo;
+    colorInfo.level = color.level;
+    colorInfo.layer = color.layer;
+
+    MetalRenderTarget::TargetInfo depthInfo;
+    depthInfo.level = depth.level;
+    depthInfo.layer = depth.layer;
+
     construct_handle<MetalRenderTarget>(mHandleMap, rth, mContext, width, height, samples,
-            getColorTexture(), getDepthTexture(), color.level, depth.level);
+            getColorTexture(), colorInfo, getDepthTexture(), depthInfo);
 
     ASSERT_POSTCONDITION(
             !stencil.handle &&
@@ -611,7 +619,8 @@ void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     const auto& colorAttachment = descriptor.colorAttachments[0];
     colorAttachment.texture = renderTarget->getColor();
     colorAttachment.resolveTexture = discardColor ? nil : renderTarget->getColorResolve();
-    colorAttachment.level = renderTarget->getColorLevel();
+    colorAttachment.level = renderTarget->getColorInfo().level;
+    colorAttachment.slice = renderTarget->getColorInfo().layer;
     mContext->currentSurfacePixelFormat = colorAttachment.texture.pixelFormat;
 
     // Metal clears the entire attachment without respect to viewport or scissor.
@@ -630,7 +639,8 @@ void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     depthAttachment.loadAction = renderTarget->getLoadAction(params, TargetBufferFlags::DEPTH);
     depthAttachment.storeAction = renderTarget->getStoreAction(params, TargetBufferFlags::DEPTH);
     depthAttachment.clearDepth = params.clearDepth;
-    depthAttachment.level = renderTarget->getDepthLevel();
+    depthAttachment.level = renderTarget->getDepthInfo().level;
+    depthAttachment.slice = renderTarget->getDepthInfo().layer;
     mContext->currentDepthPixelFormat = descriptor.depthAttachment.texture.pixelFormat;
 
     mContext->currentRenderPassEncoder =
@@ -760,7 +770,7 @@ void MetalDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y,
 
     auto srcTarget = handle_cast<MetalRenderTarget>(mHandleMap, src);
     id<MTLTexture> srcTexture = srcTarget->getColor();
-    size_t miplevel = srcTarget->getColorLevel();
+    size_t miplevel = srcTarget->getColorInfo().level;
 
     auto chooseMetalPixelFormat = [] (PixelDataFormat format, PixelDataType type) {
         // TODO: Add support for UINT and INT
@@ -865,8 +875,8 @@ void MetalDriver::blit(TargetBufferFlags buffers,
             dstTexture.height - (NSUInteger) dstRect.bottom - dstRect.height,
             dstRect.width, dstRect.height);
 
-    const uint8_t srcLevel = srcTarget->getColorLevel();
-    const uint8_t dstLevel = dstTarget->getColorLevel();
+    const uint8_t srcLevel = srcTarget->getColorInfo().level;
+    const uint8_t dstLevel = dstTarget->getColorInfo().level;
 
     auto isBlitableTextureType = [](MTLTextureType t) {
         return t == MTLTextureType2D || t == MTLTextureType2DMultisample;
