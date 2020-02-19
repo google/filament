@@ -26,6 +26,7 @@ android {
         applicationId "com.google.android.filament.gltf"
         minSdkVersion 16
         targetSdkVersion versions.targetSdk
+        missingDimensionStrategy 'functionality', 'full'
     }
 }
 

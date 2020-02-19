@@ -29,6 +29,7 @@ android {
         applicationId "com.google.android.filament.bloom"
         minSdkVersion versions.minSdk
         targetSdkVersion versions.targetSdk
+        missingDimensionStrategy 'functionality', 'full'
     }
 
     // We use the .filamat extension for materials compiled with matc

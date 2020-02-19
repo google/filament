@@ -27,12 +27,11 @@ import com.google.android.filament.utils.KtxLoader
 import com.google.android.filament.utils.ModelViewer
 import com.google.android.filament.utils.Utils
 import java.nio.ByteBuffer
-import java.nio.channels.Channels
 
 class MainActivity : Activity() {
 
     companion object {
-        // Load the library for the utility layer,  which includes gltfio and the Filament core.
+        // Load the library for the utility layer, which in turn loads gltfio and the Filament core.
         init { Utils.init() }
     }
 

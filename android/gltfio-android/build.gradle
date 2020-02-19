@@ -21,6 +21,23 @@ android {
         }
     }
 
+    flavorDimensions "functionality"
+    productFlavors {
+        full {
+            dimension "functionality"
+        }
+
+        lite {
+            dimension "functionality"
+
+            externalNativeBuild {
+                cmake {
+                    arguments.add("-DGLTFIO_LITE=ON")
+                }
+            }
+        }
+    }
+
     externalNativeBuild {
         cmake {
             path "CMakeLists.txt"
@@ -57,9 +74,14 @@ apply from: rootProject.file('gradle/gradle-mvn-push.gradle')
 afterEvaluate { project ->
     publishing {
         publications {
-            release(MavenPublication) {
-                artifactId = POM_ARTIFACT_ID
-                from components.release
+            fullRelease(MavenPublication) {
+                artifactId = POM_ARTIFACT_ID_FULL
+                from components.fullRelease
+            }
+
+            liteRelease(MavenPublication) {
+                artifactId = POM_ARTIFACT_ID_LITE
+                from components.liteRelease
             }
         }
     }
