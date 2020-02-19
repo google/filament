@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include <iostream>
 #include <string>
 #include <map>
 #include <vector>
@@ -28,6 +29,7 @@
 #include <filament/Engine.h>
 #include <filament/DebugRegistry.h>
 #include <filament/IndirectLight.h>
+#include <filament/IndexBuffer.h>
 #include <filament/LightManager.h>
 #include <filament/Material.h>
 #include <filament/MaterialInstance.h>
@@ -35,6 +37,7 @@
 #include <filament/Scene.h>
 #include <filament/TransformManager.h>
 #include <filament/View.h>
+#include <filament/VertexBuffer.h>
 
 #include <math/mat3.h>
 #include <math/mat4.h>
@@ -62,13 +65,14 @@ static std::map<std::string, MaterialInstance*> g_meshMaterialInstances;
 static SandboxParameters g_params;
 static Config g_config;
 static bool g_shadowPlane = false;
+static bool g_singleMode = false;
 
 static void printUsage(char* name) {
     std::string exec_name(Path(name).getName());
     std::string usage(
             "SAMPLE_MATERIAL showcases all material models\n"
             "Usage:\n"
-            "    SAMPLE_MATERIAL [options] <mesh files (.obj, .fbx, COLLADA)>\n"
+            "    SAMPLE_MATERIAL [options] <mesh files (.obj, .fbx)>\n"
             "Options:\n"
             "   --help, -h\n"
             "       Prints this message\n\n"
@@ -82,6 +86,10 @@ static void printUsage(char* name) {
             "       Applies uniform scale\n\n"
             "   --shadow-plane, -p\n"
             "       Enable shadow plane\n\n"
+            "   --single\n"
+            "       Only apply the edited material to the first renderable in the scene\n\n"
+            "   --dirt\n"
+            "       Specify a dirt texture\n\n"
     );
     const std::string from("SAMPLE_MATERIAL");
     for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
@@ -91,14 +99,16 @@ static void printUsage(char* name) {
 }
 
 static int handleCommandLineArgments(int argc, char* argv[], Config* config) {
-    static constexpr const char* OPTSTR = "ha:vps:i:";
+    static constexpr const char* OPTSTR = "ha:vps:i:d:";
     static const struct option OPTIONS[] = {
-            { "help",       no_argument,       nullptr, 'h' },
-            { "api",        required_argument, nullptr, 'a' },
-            { "ibl",        required_argument, nullptr, 'i' },
-            { "split-view", no_argument,       nullptr, 'v' },
-            { "scale",      required_argument, nullptr, 's' },
-            { "shadow-plane", no_argument,     nullptr, 'p' },
+            { "help",         no_argument,       nullptr, 'h' },
+            { "api",          required_argument, nullptr, 'a' },
+            { "ibl",          required_argument, nullptr, 'i' },
+            { "split-view",   no_argument,       nullptr, 'v' },
+            { "scale",        required_argument, nullptr, 's' },
+            { "shadow-plane", no_argument,       nullptr, 'p' },
+            { "single",       no_argument,       nullptr, 'n' },
+            { "dirt",         required_argument, nullptr, 'd' },
             { nullptr, 0, nullptr, 0 }  // termination of the option list
     };
     int opt;
@@ -138,6 +148,12 @@ static int handleCommandLineArgments(int argc, char* argv[], Config* config) {
                 break;
             case 'p':
                 g_shadowPlane = true;
+                break;
+            case 'n':
+                g_singleMode = true;
+                break;
+            case 'd':
+                config->dirt =  arg;
                 break;
         }
     }
@@ -181,6 +197,7 @@ static void setup(Engine* engine, View*, Scene* scene) {
     tcm.setTransform(ei, mat4f{ mat3f(g_config.scale), float3(0.0f, 0.0f, -4.0f) } *
             tcm.getWorldTransform(ei));
 
+    size_t count = 0;
     auto& rcm = engine->getRenderableManager();
     for (auto renderable : g_meshSet->getRenderables()) {
         auto instance = rcm.getInstance(renderable);
@@ -188,9 +205,16 @@ static void setup(Engine* engine, View*, Scene* scene) {
 
         rcm.setCastShadows(instance, g_params.castShadows);
 
-        for (size_t i = 0; i < rcm.getPrimitiveCount(instance); i++) {
-            rcm.setMaterialInstanceAt(instance, i, g_params.materialInstance[MATERIAL_LIT]);
+        if (!g_singleMode || count == 0) {
+            for (size_t i = 0; i < rcm.getPrimitiveCount(instance); i++) {
+                rcm.setMaterialInstanceAt(instance, i, g_params.materialInstance[MATERIAL_LIT]);
+            }
+        } else {
+            auto ei = tcm.getInstance(renderable);
+            tcm.setTransform(ei, mat4f{ mat3f(g_config.scale), float3(0.0f, 0.0f, -3.0f) } *
+                    tcm.getWorldTransform(ei));
         }
+        count++;
 
         scene->addEntity(renderable);
     }
@@ -271,6 +295,8 @@ static void setup(Engine* engine, View*, Scene* scene) {
         params.lightIntensity = c.w * pIndirectLight->getIntensity();
         params.lightColor = c.rgb;
     }
+
+    g_params.bloomOptions.dirt = FilamentApp::get().getDirtTexture();
 }
 
 static void gui(filament::Engine* engine, filament::View*) {
@@ -297,12 +323,14 @@ static void gui(filament::Engine* engine, filament::View*) {
                         params.currentBlending == BLENDING_FADE) {
                     ImGui::SliderFloat("alpha", &params.alpha, 0.0f, 1.0f);
                 }
+
                 if (params.currentMaterialModel != MATERIAL_MODEL_SPECGLOSS) {
                     ImGui::SliderFloat("roughness", &params.roughness, 0.0f, 1.0f);
                 } else {
                     ImGui::SliderFloat("glossiness", &params.glossiness, 0.0f, 1.0f);
                     ImGui::ColorEdit3("specularColor", &params.specularColor.r);
                 }
+
                 if (params.currentMaterialModel != MATERIAL_MODEL_CLOTH &&
                         params.currentMaterialModel != MATERIAL_MODEL_SPECGLOSS) {
                     if (!hasRefraction) {
@@ -310,17 +338,20 @@ static void gui(filament::Engine* engine, filament::View*) {
                         ImGui::SliderFloat("reflectance", &params.reflectance, 0.0f, 1.0f);
                     }
                 }
+
                 if (params.currentMaterialModel != MATERIAL_MODEL_CLOTH &&
                         params.currentMaterialModel != MATERIAL_MODEL_SUBSURFACE) {
                     ImGui::SliderFloat("clearCoat", &params.clearCoat, 0.0f, 1.0f);
                     ImGui::SliderFloat("clearCoatRoughness", &params.clearCoatRoughness, 0.0f, 1.0f);
                     ImGui::SliderFloat("anisotropy", &params.anisotropy, -1.0f, 1.0f);
                 }
+
                 if (params.currentMaterialModel == MATERIAL_MODEL_SUBSURFACE) {
                     ImGui::SliderFloat("thickness", &params.thickness, 0.0f, 1.0f);
                     ImGui::SliderFloat("subsurfacePower", &params.subsurfacePower, 1.0f, 24.0f);
                     ImGui::ColorEdit3("subsurfaceColor", &params.subsurfaceColor.r);
                 }
+
                 if (params.currentMaterialModel == MATERIAL_MODEL_CLOTH) {
                     ImGui::ColorEdit3("sheenColor", &params.sheenColor.r);
                     ImGui::ColorEdit3("subsurfaceColor", &params.subsurfaceColor.r);
@@ -332,8 +363,12 @@ static void gui(filament::Engine* engine, filament::View*) {
                     ImGui::SliderFloat("thickness", &params.thickness, 0.0f, 1.0f);
                     ImGui::ColorEdit3("transmittance", &params.transmittanceColor.r);
                     ImGui::SliderFloat("distance", &params.distance, 0.0f, 4.0f);
+                    ImGui::Checkbox("Screen Space Refraction", &params.ssr);
                 }
             }
+
+            ImGui::ColorEdit3("emissiveColor", &params.emissiveColor.r);
+            ImGui::SliderFloat("emissiveEC", &params.emissiveEC, 0.0f, 6.0f);
         }
 
         if (ImGui::CollapsingHeader("Shading AA")) {
@@ -371,6 +406,11 @@ static void gui(filament::Engine* engine, filament::View*) {
             ImGui::Checkbox("msaa 4x", &params.msaa);
             ImGui::Checkbox("tone-mapping", &params.tonemapping);
             ImGui::Indent();
+                ImGui::Checkbox("bloom", &params.bloomOptions.enabled);
+                if (params.bloomOptions.enabled) {
+                    ImGui::SliderFloat("strength", &params.bloomOptions.strength, 0.0f, 1.0f);
+                    ImGui::SliderFloat("dirt", &params.bloomOptions.dirtStrength, 0.0f, 1.0f);
+                }
                 ImGui::Checkbox("dithering", &params.dithering);
                 ImGui::Unindent();
             ImGui::Checkbox("fxaa", &params.fxaa);
@@ -410,12 +450,16 @@ static void gui(filament::Engine* engine, filament::View*) {
     MaterialInstance* materialInstance = updateInstances(params, *engine);
 
     auto& rcm = engine->getRenderableManager();
+    size_t count = 0;
     for (auto renderable : g_meshSet->getRenderables()) {
         auto instance = rcm.getInstance(renderable);
         if (!instance) continue;
-        for (size_t i = 0; i < rcm.getPrimitiveCount(instance); i++) {
-            rcm.setMaterialInstanceAt(instance, i, materialInstance);
+        if (!g_singleMode || count == 0) {
+            for (size_t i = 0; i < rcm.getPrimitiveCount(instance); i++) {
+                rcm.setMaterialInstanceAt(instance, i, materialInstance);
+            }
         }
+        count++;
         rcm.setCastShadows(instance, params.castShadows);
     }
 
@@ -456,6 +500,7 @@ static void preRender(filament::Engine*, filament::View* view, filament::Scene*,
     view->setAntiAliasing(g_params.fxaa ? View::AntiAliasing::FXAA : View::AntiAliasing::NONE);
     view->setToneMapping(g_params.tonemapping ? View::ToneMapping::ACES : View::ToneMapping::LINEAR);
     view->setDithering(g_params.dithering ? View::Dithering::TEMPORAL : View::Dithering::NONE);
+    view->setBloomOptions(g_params.bloomOptions);
     view->setSampleCount((uint8_t) (g_params.msaa ? 4 : 1));
     view->setAmbientOcclusion(
             g_params.ssao ? View::AmbientOcclusion::SSAO : View::AmbientOcclusion::NONE);
@@ -479,9 +524,10 @@ int main(int argc, char* argv[]) {
         g_filenames.push_back(filename);
     }
 
+    g_params.bloomOptions.enabled = true;
+
     g_config.title = "Material Sandbox";
     FilamentApp& filamentApp = FilamentApp::get();
     filamentApp.run(g_config, setup, cleanup, gui, preRender);
-
     return 0;
 }

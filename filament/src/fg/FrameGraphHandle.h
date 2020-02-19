@@ -34,6 +34,7 @@ struct RenderTarget;
 struct RenderTargetResource;
 } // namespace fg
 
+class Blackboard;
 class FrameGraph;
 class FrameGraphPassResources;
 
@@ -64,6 +65,7 @@ class FrameGraphId;
 class FrameGraphHandle {
     template<typename T>
     friend class FrameGraphId;
+    friend class Blackboard;
     friend class FrameGraph;
     friend class FrameGraphPassResources;
     friend struct fg::PassNode;
@@ -80,6 +82,8 @@ class FrameGraphHandle {
 
 public:
     bool isValid() const noexcept { return index != UNINITIALIZED; }
+
+    void clear() noexcept { index = UNINITIALIZED; }
 
     bool operator < (const FrameGraphHandle& rhs) const noexcept {
         return index < rhs.index;

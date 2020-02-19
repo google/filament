@@ -17,10 +17,16 @@
 #include <gltfio/MaterialProvider.h>
 
 #include <filament/MaterialInstance.h>
+#include <filament/Texture.h>
+#include <filament/TextureSampler.h>
 
 #include <math/mat4.h>
 
+#if GLTFIO_LITE
+#include "gltfresources_lite.h"
+#else
 #include "gltfresources.h"
+#endif
 
 using namespace filament;
 using namespace filament::math;
@@ -59,9 +65,19 @@ public:
     filament::Engine* mEngine;
 };
 
+#if GLTFIO_LITE
+
+#define CREATE_MATERIAL(name) Material::Builder() \
+    .package(GLTFRESOURCES_LITE_ ## name ## _DATA, GLTFRESOURCES_LITE_ ## name ## _SIZE) \
+    .build(*mEngine);
+
+#else
+
 #define CREATE_MATERIAL(name) Material::Builder() \
     .package(GLTFRESOURCES_ ## name ## _DATA, GLTFRESOURCES_ ## name ## _SIZE) \
     .build(*mEngine);
+
+#endif
 
 #define MATINDEX(shading, alpha) (int(shading) + 3 * int(alpha))
 
@@ -102,15 +118,24 @@ Material* UbershaderLoader::getMaterial(const MaterialKey& config) const {
         return mMaterials[matindex];
     }
     switch (matindex) {
+
+        #if !GLTFIO_LITE || defined(GLTFRESOURCES_LITE_LIT_OPAQUE_DATA)
         case MATINDEX(LIT, AlphaMode::OPAQUE): mMaterials[matindex] = CREATE_MATERIAL(LIT_OPAQUE); break;
-        case MATINDEX(LIT, AlphaMode::MASK): mMaterials[matindex] = CREATE_MATERIAL(LIT_MASKED); break;
+        #endif
+
+        #if !GLTFIO_LITE || defined(GLTFRESOURCES_LITE_LIT_BLEND_DATA)
         case MATINDEX(LIT, AlphaMode::BLEND): mMaterials[matindex] = CREATE_MATERIAL(LIT_FADE); break;
+        #endif
+
+        #if !GLTFIO_LITE
+        case MATINDEX(LIT, AlphaMode::MASK): mMaterials[matindex] = CREATE_MATERIAL(LIT_MASKED); break;
         case MATINDEX(UNLIT, AlphaMode::OPAQUE): mMaterials[matindex] = CREATE_MATERIAL(UNLIT_OPAQUE); break;
         case MATINDEX(UNLIT, AlphaMode::MASK): mMaterials[matindex] = CREATE_MATERIAL(UNLIT_MASKED); break;
         case MATINDEX(UNLIT, AlphaMode::BLEND): mMaterials[matindex] = CREATE_MATERIAL(UNLIT_FADE); break;
         case MATINDEX(SPECULAR_GLOSSINESS, AlphaMode::OPAQUE): mMaterials[matindex] = CREATE_MATERIAL(SPECULARGLOSSINESS_OPAQUE); break;
         case MATINDEX(SPECULAR_GLOSSINESS, AlphaMode::MASK): mMaterials[matindex] = CREATE_MATERIAL(SPECULARGLOSSINESS_MASKED); break;
         case MATINDEX(SPECULAR_GLOSSINESS, AlphaMode::BLEND): mMaterials[matindex] = CREATE_MATERIAL(SPECULARGLOSSINESS_FADE); break;
+        #endif
     }
     return mMaterials[matindex];
 }

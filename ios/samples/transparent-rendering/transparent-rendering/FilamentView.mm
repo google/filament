@@ -16,12 +16,20 @@
 
 #import "FilamentView.h"
 
-#import <filament/Engine.h>
-#import <filament/Renderer.h>
-#import <filament/Scene.h>
-#import <filament/View.h>
-#import <filament/RenderableManager.h>
-#import <filament/TransformManager.h>
+#include <filament/Camera.h>
+#include <filament/Engine.h>
+#include <filament/IndexBuffer.h>
+#include <filament/Material.h>
+#include <filament/RenderableManager.h>
+#include <filament/Renderer.h>
+#include <filament/Scene.h>
+#include <filament/SwapChain.h>
+#include <filament/TransformManager.h>
+#include <filament/VertexBuffer.h>
+#include <filament/View.h>
+#include <filament/Viewport.h>
+
+#include <utils/EntityManager.h>
 
 // These defines are set in the "Preprocessor Macros" build setting for each scheme.
 #if !FILAMENT_APP_USE_METAL && \
@@ -159,7 +167,6 @@ static constexpr uint8_t BAKED_COLOR_PACKAGE[] = {
     filaView->setClearColor({0.0f, 0.0f, 0.0f, 0.0f});
 
     filaView->setPostProcessingEnabled(false);
-    filaView->setDepthPrepass(filament::View::DepthPrepass::DISABLED);
 
     app.vb = VertexBuffer::Builder()
         .vertexCount(3)

@@ -37,7 +37,7 @@ extern "C" JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_gltfio_ResourceLoader_nCreateResourceLoader(JNIEnv*, jclass,
         jlong nativeEngine) {
     Engine* engine = (Engine*) nativeEngine;
-    return (jlong) new ResourceLoader({ engine, utils::Path(), true, true });
+    return (jlong) new ResourceLoader({ engine, {}, true, true });
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -52,10 +52,21 @@ Java_com_google_android_filament_gltfio_ResourceLoader_nAddResourceData(JNIEnv* 
         jlong nativeLoader, jstring url, jobject javaBuffer, jint remaining) {
     ResourceLoader* loader = (ResourceLoader*) nativeLoader;
     AutoBuffer* buffer = new AutoBuffer(env, javaBuffer, remaining);
-    const char* curl = env->GetStringUTFChars(url, nullptr);
-    loader->addResourceData(curl,
+    const char* cstring = env->GetStringUTFChars(url, nullptr);
+    loader->addResourceData(cstring,
             ResourceLoader::BufferDescriptor(buffer->getData(), buffer->getSize(), &destroy,
                     buffer));
+    env->ReleaseStringUTFChars(url, cstring);
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_gltfio_ResourceLoader_nHasResourceData(JNIEnv* env, jclass,
+        jlong nativeLoader, jstring url) {
+    ResourceLoader* loader = (ResourceLoader*) nativeLoader;
+    const char* cstring = env->GetStringUTFChars(url, nullptr);
+    bool status = loader->hasResourceData(cstring);
+    env->ReleaseStringUTFChars(url, cstring);
+    return status;
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -64,4 +75,26 @@ Java_com_google_android_filament_gltfio_ResourceLoader_nLoadResources(JNIEnv*, j
     ResourceLoader* loader = (ResourceLoader*) nativeLoader;
     FilamentAsset* asset = (FilamentAsset*) nativeAsset;
     loader->loadResources(asset);
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_gltfio_ResourceLoader_nAsyncBeginLoad(JNIEnv*, jclass,
+        jlong nativeLoader, jlong nativeAsset) {
+    ResourceLoader* loader = (ResourceLoader*) nativeLoader;
+    FilamentAsset* asset = (FilamentAsset*) nativeAsset;
+    return loader->asyncBeginLoad(asset);
+}
+
+extern "C" JNIEXPORT jfloat JNICALL
+Java_com_google_android_filament_gltfio_ResourceLoader_nAsyncGetLoadProgress(JNIEnv*, jclass,
+        jlong nativeLoader) {
+    ResourceLoader* loader = (ResourceLoader*) nativeLoader;
+    return loader->asyncGetLoadProgress();
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_gltfio_ResourceLoader_nAsyncUpdateLoad(JNIEnv*, jclass,
+        jlong nativeLoader) {
+    ResourceLoader* loader = (ResourceLoader*) nativeLoader;
+    loader->asyncUpdateLoad();
 }

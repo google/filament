@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include <iostream>
 #include <string>
 #include <map>
 #include <vector>
@@ -24,11 +25,13 @@
 #include <utils/Path.h>
 
 #include <filament/Engine.h>
+#include <filament/IndexBuffer.h>
 #include <filament/Material.h>
 #include <filament/Scene.h>
 #include <filament/LightManager.h>
 #include <filament/RenderableManager.h>
 #include <filament/TransformManager.h>
+#include <filament/VertexBuffer.h>
 
 #include <math/norm.h>
 #include <utils/Log.h>

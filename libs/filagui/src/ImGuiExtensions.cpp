@@ -22,6 +22,7 @@
 #include <math/vec3.h>
 #include <math/quat.h>
 
+#include <algorithm>
 #include <limits>
 
 using namespace filament::math;
@@ -30,7 +31,7 @@ using namespace filament::math;
 // Maughan's port to ImGui. Thanks Chris!
 class ArrowWidget {
 public:
-    ArrowWidget(float3 direction);
+    explicit ArrowWidget(float3 direction);
     bool draw();
     float3 getDirection() const;
 private:

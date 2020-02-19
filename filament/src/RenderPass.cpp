@@ -42,7 +42,7 @@ using namespace backend;
 namespace details {
 
 RenderPass::RenderPass(FEngine& engine,
-        GrowingSlice<RenderPass::Command>& commands) noexcept
+        GrowingSlice<RenderPass::Command> commands) noexcept
         : mEngine(engine), mCommands(commands),
           mCustomCommands(engine.getPerRenderPassAllocator()) {
     mCustomCommands.reserve(8); // preallocate allocate a reasonable number of custom commands
@@ -69,9 +69,10 @@ void RenderPass::overridePolygonOffset(backend::PolygonOffset* polygonOffset) no
     }
 }
 
-void RenderPass::overrideMaterial(FMaterial const* material, FMaterialInstance const* mi) noexcept {
-    assert(mi->getMaterial() == material);
-    mMaterialInstanceOverride = mi;
+RenderPass::Command* RenderPass::newCommandBuffer() noexcept {
+    GrowingSlice<Command>& commands = mCommands;
+    commands = GrowingSlice<Command>(commands.end(), commands.capacity() - commands.size());
+    return commands.begin();
 }
 
 RenderPass::Command* RenderPass::appendCommands(CommandTypeFlags const commandTypeFlags) noexcept {
@@ -149,15 +150,15 @@ RenderPass::Command* RenderPass::appendCustomCommand(Pass pass, CustomCommand cu
     return curr + 1;
 }
 
-RenderPass::Command* RenderPass::sortCommands(Command* curr) noexcept {
+RenderPass::Command* RenderPass::sortCommands() noexcept {
     SYSTRACE_NAME("sort and trim commands");
 
     GrowingSlice<Command>& commands = mCommands;
 
-    std::sort(curr, commands.end());
+    std::sort(commands.begin(), commands.end());
 
     // find the last command
-    Command const* const last = std::partition_point(curr, commands.end(),
+    Command const* const last = std::partition_point(commands.begin(), commands.end(),
             [](Command const& c) {
                 return c.key != uint64_t(Pass::SENTINEL);
             });
@@ -169,10 +170,11 @@ RenderPass::Command* RenderPass::sortCommands(Command* curr) noexcept {
 
 void RenderPass::execute(const char* name,
         backend::Handle<backend::HwRenderTarget> renderTarget,
-        backend::RenderPassParams params,
-        Command const* first, Command const* last) const noexcept {
+        backend::RenderPassParams params) const noexcept {
 
     FEngine& engine = mEngine;
+    Command const* const first = mCommands.begin();
+    Command const* const last = mCommands.end();
 
     // Take care not to upload data within the render pass (synchronize can commit froxel data)
     DriverApi& driver = engine.getDriverApi();
@@ -203,19 +205,6 @@ void RenderPass::recordDriverCommands(FEngine::DriverApi& driver, const Command*
         FMaterial const* UTILS_RESTRICT ma = nullptr;
         auto const& customCommands = mCustomCommands;
 
-        auto updateMaterial = [&](FMaterialInstance const* materialInstance) {
-            mi = materialInstance;
-            ma = mi->getMaterial();
-            pipeline.scissor = mi->getScissor();
-            *pPipelinePolygonOffset = mi->getPolygonOffset();
-            mi->use(driver);
-        };
-
-        FMaterialInstance const * const materialInstanceOverride = mMaterialInstanceOverride;
-        if (UTILS_UNLIKELY(materialInstanceOverride)) {
-            updateMaterial(materialInstanceOverride);
-        }
-
         first--;
         while (++first != last) {
             /*
@@ -231,9 +220,13 @@ void RenderPass::recordDriverCommands(FEngine::DriverApi& driver, const Command*
             // per-renderable uniform
             const PrimitiveInfo info = first->primitive;
             pipeline.rasterState = info.rasterState;
-            if (UTILS_UNLIKELY(!materialInstanceOverride && mi != info.mi)) {
+            if (UTILS_UNLIKELY(mi != info.mi)) {
                 // this is always taken the first time
-                updateMaterial(info.mi);
+                mi = info.mi;
+                ma = mi->getMaterial();
+                pipeline.scissor = mi->getScissor();
+                *pPipelinePolygonOffset = mi->getPolygonOffset();
+                mi->use(driver);
             }
 
             pipeline.program = ma->getProgram(info.materialVariant.key);
@@ -267,19 +260,24 @@ void RenderPass::setupColorCommand(Command& cmdDraw, bool hasDepthPass,
     keyBlending |= uint64_t(Pass::BLENDED);
     keyBlending |= uint64_t(CustomCommand::PASS);
 
+    bool hasScreenSpaceRefraction = ma->getRefractionMode() == RefractionMode::SCREEN_SPACE;
+    bool hasBlending = !hasScreenSpaceRefraction && ma->getRasterState().hasBlending();
+
     uint64_t keyDraw = cmdDraw.key;
     keyDraw &= ~(PASS_MASK | BLENDING_MASK | MATERIAL_MASK);
-    keyDraw |= uint64_t(Pass::COLOR);
+    keyDraw |= uint64_t(hasScreenSpaceRefraction ? Pass::REFRACT : Pass::COLOR);
     keyDraw |= uint64_t(CustomCommand::PASS);
     keyDraw |= mi->getSortingKey(); // already all set-up for direct or'ing
     keyDraw |= makeField(variant, MATERIAL_VARIANT_KEY_MASK, MATERIAL_VARIANT_KEY_SHIFT);
     keyDraw |= makeField(ma->getRasterState().alphaToCoverage, BLENDING_MASK, BLENDING_SHIFT);
 
-    bool hasBlending = ma->getRasterState().hasBlending();
     cmdDraw.key = hasBlending ? keyBlending : keyDraw;
     cmdDraw.primitive.rasterState = ma->getRasterState();
     cmdDraw.primitive.rasterState.inverseFrontFaces = inverseFrontFaces;
     cmdDraw.primitive.rasterState.culling = mi->getCullingMode();
+    cmdDraw.primitive.rasterState.colorWrite = mi->getColorWrite();
+    cmdDraw.primitive.rasterState.depthWrite = mi->getDepthWrite();
+    cmdDraw.primitive.rasterState.depthFunc = mi->getDepthFunc();
     cmdDraw.primitive.mi = mi;
     cmdDraw.primitive.materialVariant.key = variant;
 
@@ -329,7 +327,7 @@ void RenderPass::generateCommands(uint32_t commandTypeFlags, Command* const comm
      *  easier to debug and doesn't impact performance (it's just a predicted jump).
      */
 
-    switch (commandTypeFlags & CommandTypeFlags::COLOR_AND_DEPTH) {
+    switch (commandTypeFlags & (CommandTypeFlags::COLOR | CommandTypeFlags::DEPTH)) {
         case CommandTypeFlags::COLOR:
             generateCommandsImpl<CommandTypeFlags::COLOR>(commandTypeFlags, curr,
                     soa, range, renderFlags, cameraPosition, cameraForward);
@@ -338,9 +336,8 @@ void RenderPass::generateCommands(uint32_t commandTypeFlags, Command* const comm
             generateCommandsImpl<CommandTypeFlags::DEPTH>(commandTypeFlags, curr,
                     soa, range, renderFlags, cameraPosition, cameraForward);
             break;
-        case CommandTypeFlags::COLOR_AND_DEPTH:
-            generateCommandsImpl<CommandTypeFlags::COLOR_AND_DEPTH>(commandTypeFlags, curr,
-                    soa, range, renderFlags, cameraPosition, cameraForward);
+        default:
+            // we should never end-up here
             break;
     }
 }
@@ -513,17 +510,14 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
                             (mode == TransparencyMode::TWO_PASSES_ONE_SIDE) ?
                             SamplerCompareFunc::LE : cmdColor.primitive.rasterState.depthFunc;
                 } else {
-                    // color pass, opaque objects...
-                    if (!depthPass) {
-                        // ...without depth pre-pass:
-                        // this will bucket objects by Z, front-to-back and then sort by material
-                        // in each buckets. We use the top 10 bits of the distance, which
-                        // bucketizes the depth by its log2 and in 4 linear chunks in each bucket.
-                        cmdColor.key &= ~Z_BUCKET_MASK;
-                        cmdColor.key |= makeField(distanceBits >> 22u, Z_BUCKET_MASK,
-                                Z_BUCKET_SHIFT);
-                    }
-                    // ...with depth pre-pass, we just sort by materials
+                    // color pass:
+                    // This will bucket objects by Z, front-to-back and then sort by material
+                    // in each buckets. We use the top 10 bits of the distance, which
+                    // bucketizes the depth by its log2 and in 4 linear chunks in each bucket.
+                    cmdColor.key &= ~Z_BUCKET_MASK;
+                    cmdColor.key |= makeField(distanceBits >> 22u, Z_BUCKET_MASK,
+                            Z_BUCKET_SHIFT);
+
                     curr->key = uint64_t(Pass::SENTINEL);
                     ++curr;
                 }

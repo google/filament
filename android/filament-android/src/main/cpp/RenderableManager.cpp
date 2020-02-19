@@ -18,6 +18,10 @@
 #include <jni.h>
 
 #include <filament/RenderableManager.h>
+#include <filament/MaterialInstance.h>
+
+#include <utils/Entity.h>
+
 #include "common/NioUtils.h"
 
 using namespace filament;

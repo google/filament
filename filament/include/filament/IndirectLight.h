@@ -23,7 +23,7 @@
 
 #include <utils/compiler.h>
 
-#include <math/mat4.h>
+#include <math/mathfwd.h>
 
 namespace filament {
 

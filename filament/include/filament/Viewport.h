@@ -24,7 +24,7 @@
 #include <utils/compiler.h>
 
 #include <math/scalar.h>
-#include <math/vec2.h>
+#include <math/mathfwd.h>
 
 #include <stddef.h>
 #include <stdint.h>

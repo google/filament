@@ -22,9 +22,12 @@
 
 #include <filagui/ImGuiMath.h>
 
+#include <filament/Camera.h>
 #include <filament/Engine.h>
+#include <filament/IndexBuffer.h>
 #include <filament/Scene.h>
 #include <filament/View.h>
+#include <filament/VertexBuffer.h>
 
 #include <gltfio/AssetLoader.h>
 #include <gltfio/AssetPipeline.h>
@@ -47,6 +50,7 @@
 #include <atomic>
 #include <functional>
 #include <fstream>
+#include <iostream>
 #include <string>
 
 #include "generated/resources/resources.h"
@@ -319,7 +323,7 @@ static void updateViewerMesh(BakerApp& app) {
         // Load external textures and buffers.
         gltfio::ResourceLoader({
             .engine = app.engine,
-            .gltfPath = app.filename.getAbsolutePath(),
+            .gltfPath = app.filename.getAbsolutePath().c_str(),
             .normalizeSkinningWeights = true,
             .recomputeBoundingBoxes = false
         }).loadResources(app.viewerAsset);
@@ -328,7 +332,7 @@ static void updateViewerMesh(BakerApp& app) {
         app.viewerAsset->getAnimator();
 
         // Remove old renderables and add new renderables to the scene.
-        app.viewer->setAsset(app.viewerAsset, !app.viewerActualSize);
+        app.viewer->populateScene(app.viewerAsset, !app.viewerActualSize);
 
         // Destory old Filament entities.
         app.loader->destroyAsset(previousViewerAsset);

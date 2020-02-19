@@ -38,7 +38,6 @@ export type mat3 = glm.mat3|number[];
 export type mat4 = glm.mat4|number[];
 export type quat = glm.quat|number[];
 
-export class Entity {}
 export class Skybox {}
 export class Texture {}
 export class SwapChain {}
@@ -51,6 +50,10 @@ export interface Box {
 export interface Aabb {
     min: float3;
     max: float3;
+}
+
+export class Entity {
+    public getId(): number;
 }
 
 export class LightManager$Instance {
@@ -82,6 +85,9 @@ export class MaterialInstance {
     public setMaskThreshold(threshold: number): void;
     public setDoubleSided(doubleSided: boolean): void;
     public setCullingMode(mode: CullingMode): void;
+    public setColorWrite(enable: boolean): void;
+    public setDepthWrite(enable: boolean): void;
+    public setDepthCulling(enable: boolean): void;
 }
 
 export class EntityManager {
@@ -162,7 +168,7 @@ export class LightManager {
     public setIntensityEnergy(instance: LightManager$Instance, watts: number, efficiency: number): void;
     public getIntensity(instance: LightManager$Instance): number;
     public setFalloff(instance: LightManager$Instance, radius: number): void;
-    public getFalloff(instance: LightManager$Instance: number);
+    public getFalloff(instance: LightManager$Instance): number;
     public setSpotLightCone(instance: LightManager$Instance, inner: number, outer: number): void;
     public setSunAngularRadius(instance: LightManager$Instance, angularRadius: number): void;
     public getSunAngularRadius(instance: LightManager$Instance): number;
@@ -702,12 +708,6 @@ export enum VertexBuffer$AttributeType {
 export enum View$AntiAliasing {
     NONE,
     FXAA,
-}
-
-export enum View$DepthPrepass {
-    DEFAULT,
-    DISABLED,
-    ENABLED,
 }
 
 export enum WrapMode {

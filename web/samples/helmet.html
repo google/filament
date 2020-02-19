@@ -92,9 +92,6 @@ class App {
                     instance.delete();
                 }
 
-                // Add renderables to the scene.
-                scene.addEntities(entities);
-
                 // Hide the HUD.
                 messages.remove();
             }, 1);
@@ -116,10 +113,23 @@ class App {
     }
 
     render() {
+        // Spin the model according to the trackball controller.
         const tcm = this.engine.getTransformManager();
         const inst = tcm.getInstance(this.asset.getRoot());
         tcm.setTransform(inst, this.trackball.getMatrix());
         inst.delete();
+
+        // Add renderable entities to the scene as they become ready.
+        let entity;
+        const popRenderable = () => {
+            entity = this.asset.popRenderable();
+            return entity.getId() != 0;
+        }
+        while (popRenderable()) {
+            this.scene.addEntity(entity);
+        }
+
+        // Render the scene and request the next animation frame.
         this.renderer.render(this.swapChain, this.view);
         window.requestAnimationFrame(this.render);
     }

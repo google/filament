@@ -16,7 +16,8 @@
 
 package com.google.android.filament.gltfio;
 
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.google.android.filament.Box;
 import com.google.android.filament.Entity;
@@ -62,6 +63,31 @@ public class FilamentAsset {
     }
 
     /**
+     * Pops a ready renderable off the queue, or returns 0 if no renderables have become ready.
+     *
+     * NOTE: To determine the progress percentage or completion status, please use
+     * ResourceLoader#asyncGetLoadProgress.
+     *
+     * This helper method allows clients to progressively add renderables to the scene as textures
+     * gradually become ready through asynchronous loading.
+     *
+     * See also ResourceLoader#asyncBeginLoad.
+     */
+    public @Entity int popRenderable() {
+        return nPopRenderable(mNativeObject);
+    }
+
+    /**
+     * Pops one or more renderables off the queue, or returns the available number.
+     *
+     * Returns the number of entities written into the given array. If the given array
+     * is null, returns the number of available renderables.
+     */
+    public int popRenderables(@Nullable @Entity int[] entities) {
+        return nPopRenderables(mNativeObject, entities);
+    }
+
+    /**
      * Gets the list of entities, one for each glTF node.
      *
      * <p>All of these have a transform component. Some of the returned entities may also have a
@@ -93,7 +119,7 @@ public class FilamentAsset {
      * Creates or retrieves the <code>Animator</code> for this asset.
      *
      * <p>When calling this for the first time, this must be called after
-     * {@see ResourceLoader#loadResources}.</p>
+     * {@link ResourceLoader#loadResources}.</p>
      */
     public @NonNull Animator getAnimator() {
         if (mAnimator != null) {
@@ -112,11 +138,23 @@ public class FilamentAsset {
         return uris;
     }
 
+    /**
+     * Reclaims CPU-side memory for URI strings, binding lists, and raw animation data.
+     *
+     * This should only be called after ResourceLoader#loadResources().
+     * If using Animator, this should be called after getAnimator().
+     */
+    public void releaseSourceData() {
+        nReleaseSourceData(mNativeObject);
+    }
+
     void clearNativeObject() {
         mNativeObject = 0;
     }
 
     private static native int nGetRoot(long nativeAsset);
+    private static native int nPopRenderable(long nativeAsset);
+    private static native int nPopRenderables(long nativeAsset, int[] result);
     private static native int nGetEntityCount(long nativeAsset);
     private static native void nGetEntities(long nativeAsset, int[] result);
     private static native void nGetBoundingBox(long nativeAsset, float[] box);
@@ -124,4 +162,5 @@ public class FilamentAsset {
     private static native long nGetAnimator(long nativeAsset);
     private static native int nGetResourceUriCount(long nativeAsset);
     private static native void nGetResourceUris(long nativeAsset, String[] result);
+    private static native void nReleaseSourceData(long nativeAsset);
 }

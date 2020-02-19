@@ -27,9 +27,10 @@
 #include <filament/Engine.h>
 #include <filament/Viewport.h>
 
+#include <camutils/Manipulator.h>
+
 #include <utils/Path.h>
 
-#include "CameraManipulator.h"
 #include "Config.h"
 #include "IBL.h"
 
@@ -75,6 +76,7 @@ public:
     filament::Material const* getDefaultMaterial() const noexcept { return mDefaultMaterial; }
     filament::Material const* getTransparentMaterial() const noexcept { return mTransparentMaterial; }
     IBL* getIBL() const noexcept { return mIBL.get(); }
+    filament::Texture* getDirtTexture() const noexcept { return mDirt; }
     filament::View* getGuiView() const noexcept;
 
     void close() { mClosed = true; }
@@ -103,6 +105,8 @@ public:
 private:
     FilamentApp();
 
+    using CameraManipulator = filament::camutils::Manipulator<float>;
+
     class CView {
     public:
         CView(filament::Renderer& renderer, std::string name);
@@ -130,8 +134,6 @@ private:
         filament::Viewport mViewport;
         filament::View* view = nullptr;
         CameraManipulator* mCameraManipulator = nullptr;
-        filament::math::double2 mLastMousePosition;
-        Mode mMode = Mode::NONE;
         std::string mName;
     };
 
@@ -170,8 +172,8 @@ private:
         filament::Renderer* mRenderer = nullptr;
         filament::Engine::Backend mBackend;
 
-        CameraManipulator mMainCameraMan;
-        CameraManipulator mDebugCameraMan;
+        CameraManipulator* mMainCameraMan;
+        CameraManipulator* mDebugCameraMan;
         filament::SwapChain* mSwapChain = nullptr;
 
         filament::Camera* mCameras[4] = { nullptr };
@@ -198,10 +200,12 @@ private:
     void initSDL();
 
     void loadIBL(const Config& config);
+    void loadDirt(const Config& config);
 
     filament::Engine* mEngine = nullptr;
     filament::Scene* mScene = nullptr;
     std::unique_ptr<IBL> mIBL;
+    filament::Texture* mDirt = nullptr;
     bool mClosed = false;
     uint64_t mTime = 0;
 

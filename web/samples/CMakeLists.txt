@@ -102,7 +102,7 @@ add_rawfile("third_party/models/FlightHelmet/FlightHelmet_occlusionRoughnessMeta
 add_rawfile("third_party/models/FlightHelmet/FlightHelmet.bin" "FlightHelmet.bin")
 add_rawfile("third_party/models/FlightHelmet/FlightHelmet.gltf" "FlightHelmet.gltf")
 
-add_rawfile("third_party/models/AnimatedTriangle/SimpleTriangle.bin" "SimpleTriangle.bin")
+add_rawfile("third_party/models/AnimatedTriangle/simpleTriangle.bin" "simpleTriangle.bin")
 add_rawfile("third_party/models/AnimatedTriangle/animation.bin" "animation.bin")
 add_rawfile("third_party/models/AnimatedTriangle/AnimatedTriangle.gltf" "AnimatedTriangle.gltf")
 
@@ -142,9 +142,8 @@ function(add_envmap SOURCE TARGET)
 
     add_custom_command(OUTPUT ${target_skybox} ${target_skybox_tiny} ${target_envmap}
 
-        # Create a low-resolution skybox, then rename it.
-        COMMAND cmgen -x ${TARGET} ${CMGEN_ARGS_TINY} ${source_envmap}
-        COMMAND mv ${target_skybox} ${target_skybox_tiny}
+        # Create a low-resolution skybox.
+        COMMAND cmgen -x ${TARGET}_skybox_tiny ${CMGEN_ARGS_TINY} ${source_envmap}
 
         # Finally, create KTX files for the uncompressed envmap.
         COMMAND cmgen -x ${TARGET} ${CMGEN_ARGS} ${source_envmap}
@@ -200,7 +199,7 @@ foreach (NAME ${HTML_FILES})
     list(APPEND DEMO_ASSETS ${SERVER_DIR}/${NAME})
 endforeach()
 
-set(TEXTURE_FILES floor_ao_roughness_metallic.png floor_basecolor.png floor_normal.png)
+set(TEXTURE_FILES floor_ao_roughness_metallic.png floor_basecolor.jpg floor_normal.png)
 foreach (NAME ${TEXTURE_FILES})
     add_custom_command(
         OUTPUT ${SERVER_DIR}/${NAME}

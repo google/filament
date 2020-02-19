@@ -435,6 +435,7 @@ aiProcess_Debone  = 0x4000000
 aiProcess_GenEntityMeshes = 0x100000
 aiProcess_OptimizeAnimations = 0x200000
 aiProcess_FixTexturePaths = 0x200000
+aiProcess_EmbedTextures  = 0x10000000,
 
 ## @def aiProcess_ConvertToLeftHanded
  #  @brief Shortcut flag for Direct3D-based applications. 

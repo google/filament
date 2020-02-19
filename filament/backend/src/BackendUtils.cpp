@@ -116,10 +116,15 @@ size_t getFormatSize(TextureFormat format) noexcept {
             return 8;
 
         case TextureFormat::DXT1_RGB:
+        case TextureFormat::DXT1_RGBA:
+        case TextureFormat::DXT1_SRGB:
+        case TextureFormat::DXT1_SRGBA:
             return 8;
 
         case TextureFormat::DXT3_RGBA:
+        case TextureFormat::DXT3_SRGBA:
         case TextureFormat::DXT5_RGBA:
+        case TextureFormat::DXT5_SRGBA:
             return 16;
 
         // The block size for ASTC compression is always 16 bytes.
@@ -173,8 +178,13 @@ size_t getBlockWidth(TextureFormat format) noexcept {
             return 4;
 
         case TextureFormat::DXT1_RGB:
+        case TextureFormat::DXT1_RGBA:
+        case TextureFormat::DXT1_SRGB:
+        case TextureFormat::DXT1_SRGBA:
         case TextureFormat::DXT3_RGBA:
+        case TextureFormat::DXT3_SRGBA:
         case TextureFormat::DXT5_RGBA:
+        case TextureFormat::DXT5_SRGBA:
             return 4;
 
         case TextureFormat::RGBA_ASTC_4x4:
@@ -185,7 +195,6 @@ size_t getBlockWidth(TextureFormat format) noexcept {
         case TextureFormat::RGBA_ASTC_5x5:
         case TextureFormat::SRGB8_ALPHA8_ASTC_5x4:
         case TextureFormat::SRGB8_ALPHA8_ASTC_5x5:
-            return 5;
             return 5;
 
         case TextureFormat::RGBA_ASTC_6x5:
@@ -220,6 +229,54 @@ size_t getBlockWidth(TextureFormat format) noexcept {
 
         default:
             return 0;
+    }
+}
+
+size_t getBlockHeight(TextureFormat format) noexcept {
+    switch (format) {
+        case TextureFormat::RGBA_ASTC_4x4:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_4x4:
+        case TextureFormat::RGBA_ASTC_5x4:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_5x4:
+            return 4;
+
+        case TextureFormat::RGBA_ASTC_5x5:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_5x5:
+        case TextureFormat::RGBA_ASTC_6x5:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_6x5:
+        case TextureFormat::RGBA_ASTC_8x5:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_8x5:
+        case TextureFormat::RGBA_ASTC_10x5:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_10x5:
+            return 5;
+
+        case TextureFormat::RGBA_ASTC_6x6:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_6x6:
+        case TextureFormat::RGBA_ASTC_8x6:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_8x6:
+        case TextureFormat::RGBA_ASTC_10x6:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_10x6:
+            return 6;
+
+        case TextureFormat::RGBA_ASTC_8x8:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_8x8:
+        case TextureFormat::RGBA_ASTC_10x8:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_10x8:
+            return 8;
+
+        case TextureFormat::RGBA_ASTC_10x10:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_10x10:
+        case TextureFormat::RGBA_ASTC_12x10:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_12x10:
+            return 10;
+
+        case TextureFormat::RGBA_ASTC_12x12:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_12x12:
+            return 12;
+
+        default:
+            // Most compressed formats use square blocks, only ASTC is special.
+            return getBlockWidth(format);
     }
 }
 

@@ -16,7 +16,7 @@
 
 package com.google.android.filament.gltfio;
 
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 import android.util.Log;
 
 import com.google.android.filament.Engine;
@@ -26,9 +26,10 @@ import java.lang.reflect.Method;
 import java.nio.Buffer;
 
 /**
- * Uploads vertex buffers and textures to the GPU and computes tangents.
+ * Prepares and uploads vertex buffers and textures to the GPU.
  *
- * <p>For a usage example, see the documentation for {@link AssetLoader}.</p>
+ * <p>For a usage example, see the documentation for {@link AssetLoader}.
+ * All methods should be called from the main thread.</p>
  *
  * @see AssetLoader
  * @see FilamentAsset
@@ -58,12 +59,15 @@ public class ResourceLoader {
     /**
      * Feeds the binary content of an external resource into the loader's URI cache.
      *
-     * <p><code>ResourceLoader</code> does not know how to download external resources on its own
-     * (for example, external resources might come from a filesystem, a database, or the internet)
-     * so this method allows clients to download external resources and push them to the loader.</p>
+     * On some platforms, `ResourceLoader` does not know how to download external resources on its
+     * own (external resources might come from a filesystem, a database, or the internet) so this
+     * method allows clients to download external resources and push them to the loader.
      *
-     * <p>When loading GLB files (as opposed to JSON-based glTF files), clients typically do not
-     * need to call this method.</p>
+     * Every resource should be passed in before calling [loadResources] or [asyncBeginLoad]. See
+     * also [FilamentAsset#getResourceUris].
+     *
+     * When loading GLB files (as opposed to JSON-based glTF files), clients typically do not
+     * need to call this method.
      *
      * @param uri the string path that matches an image URI or buffer URI in the glTF
      * @param buffer the binary blob corresponding to the given URI
@@ -76,11 +80,17 @@ public class ResourceLoader {
     }
 
     /**
+     * Checks if the given resource has already been added to the URI cache.
+     */
+    public boolean hasResourceData(@NonNull String uri) {
+        return nHasResourceData(mNativeObject, uri);
+    }
+
+    /**
      * Iterates through all external buffers and images and creates corresponding Filament objects
      * (vertex buffers, textures, etc), which become owned by the asset.
      *
-     * <p>This is the main entry point for <code>ResourceLoader</code>, and only needs to be called
-     * once.</p>
+     * NOTE: this is a synchronous API, please see [asyncBeginLoad] as an alternative.
      *
      * @param asset the Filament asset that contains URI-based resources
      * @return self (for daisy chaining)
@@ -91,9 +101,43 @@ public class ResourceLoader {
         return this;
     }
 
+    /**
+     * Starts an asynchronous resource load.
+     *
+     * Returns false if the loading process was unable to start.
+     *
+     * This is an alternative to #loadResources and requires periodic calls to #asyncUpdateLoad.
+     * On multi-threaded systems this creates threads for texture decoding.
+     */
+    public boolean asyncBeginLoad(@NonNull FilamentAsset asset) {
+        return nAsyncBeginLoad(mNativeObject, asset.getNativeObject());
+    }
+
+    /**
+     * Gets the status of an asynchronous resource load as a percentage in [0,1].
+     */
+    public float asyncGetLoadProgress() {
+        return nAsyncGetLoadProgress(mNativeObject);
+    }
+
+    /**
+     * Updates an asynchronous load by performing any pending work that must take place
+     * on the main thread.
+     *
+     * Clients must periodically call this until #asyncGetLoadProgress returns 100%.
+     * After progress reaches 100%, calling this is harmless; it just does nothing.
+     */
+    public void asyncUpdateLoad() {
+        nAsyncUpdateLoad(mNativeObject);
+    }
+
     private static native long nCreateResourceLoader(long nativeEngine);
     private static native void nDestroyResourceLoader(long nativeLoader);
     private static native void nAddResourceData(long nativeLoader, String url, Buffer buffer,
             int remaining);
+    private static native boolean nHasResourceData(long nativeLoader, String url);
     private static native void nLoadResources(long nativeLoader, long nativeAsset);
+    private static native boolean nAsyncBeginLoad(long nativeLoader, long nativeAsset);
+    private static native float nAsyncGetLoadProgress(long nativeLoader);
+    private static native void nAsyncUpdateLoad(long nativeLoader);
 }

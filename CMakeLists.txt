@@ -455,6 +455,7 @@ endfunction()
 
 # Common to all platforms
 add_subdirectory(${EXTERNAL}/libgtest/tnt)
+add_subdirectory(${LIBRARIES}/camutils)
 add_subdirectory(${LIBRARIES}/filabridge)
 add_subdirectory(${LIBRARIES}/filaflat)
 add_subdirectory(${LIBRARIES}/filameshio)

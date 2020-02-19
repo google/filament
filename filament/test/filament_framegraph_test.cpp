@@ -98,10 +98,10 @@ TEST(FrameGraphTest, SimpleRenderPass2) {
 
                 data.outColor = builder.write(builder.read(data.outColor));
                 data.outDepth = builder.write(builder.read(data.outDepth));
-                data.rt = builder.createRenderTarget("rt", {
-                        .attachments.color = data.outColor,
-                        .attachments.depth = data.outDepth
-                });
+                FrameGraphRenderTarget::Descriptor renderTargetDescr;
+                renderTargetDescr.attachments.color = data.outColor;
+                renderTargetDescr.attachments.depth = data.outDepth;
+                data.rt = builder.createRenderTarget("rt", renderTargetDescr);
 
                 EXPECT_TRUE(fg.isValid(data.outColor));
                 EXPECT_TRUE(fg.isValid(data.outDepth));
@@ -146,9 +146,9 @@ TEST(FrameGraphTest, ScenarioDepthPrePass) {
                 inputDesc.format = TextureFormat::DEPTH24;
                 data.outDepth = builder.createTexture("depth buffer", inputDesc);
                 data.outDepth = builder.write(builder.read(data.outDepth));
-                data.rt = builder.createRenderTarget("rt depth", {
-                        .attachments.depth = data.outDepth
-                });
+                FrameGraphRenderTarget::Descriptor renderTargetDescr;
+                renderTargetDescr.attachments.depth = data.outDepth;
+                data.rt = builder.createRenderTarget("rt depth", renderTargetDescr);
                 EXPECT_TRUE(fg.isValid(data.outDepth));
             },
             [=, &depthPrepassExecuted](
@@ -179,10 +179,10 @@ TEST(FrameGraphTest, ScenarioDepthPrePass) {
 
                 data.outColor = builder.write(builder.read(data.outColor));
                 data.outDepth = builder.write(builder.read(data.outDepth));
-                data.rt = builder.createRenderTarget("rt color+depth", {
-                        .attachments.color = data.outColor,
-                        .attachments.depth = data.outDepth
-                });
+                FrameGraphRenderTarget::Descriptor renderTargetDescr;
+                renderTargetDescr.attachments.color = data.outColor;
+                renderTargetDescr.attachments.depth = data.outDepth;
+                data.rt = builder.createRenderTarget("rt color+depth", renderTargetDescr);
 
                 EXPECT_FALSE(fg.isValid(depthPrepass.getData().outDepth));
                 EXPECT_TRUE(fg.isValid(data.outColor));
@@ -304,7 +304,35 @@ TEST(FrameGraphTest, SimplePassCulling) {
 
 TEST(FrameGraphTest, RenderTargetLifetime) {
 
-    fg::ResourceAllocator resourceAllocator(driverApi);
+    class MockResourceAllocator : public fg::ResourceAllocatorInterface {
+        uint32_t handle = 0;
+    public:
+        virtual backend::RenderTargetHandle createRenderTarget(const char* name,
+                backend::TargetBufferFlags targetBufferFlags,
+                uint32_t width,
+                uint32_t height,
+                uint8_t samples,
+                backend::TargetBufferInfo color,
+                backend::TargetBufferInfo depth,
+                backend::TargetBufferInfo stencil) noexcept {
+            return backend::RenderTargetHandle(++handle);
+        }
+
+        virtual void destroyRenderTarget(backend::RenderTargetHandle h) noexcept {
+        }
+
+        virtual backend::TextureHandle createTexture(const char* name, backend::SamplerType target,
+                uint8_t levels,
+                backend::TextureFormat format, uint8_t samples, uint32_t width, uint32_t height,
+                uint32_t depth, backend::TextureUsage usage) noexcept {
+            return backend::TextureHandle(++handle);
+        }
+
+        virtual void destroyTexture(backend::TextureHandle h) noexcept {
+        }
+    };
+
+    MockResourceAllocator resourceAllocator;
     FrameGraph fg(resourceAllocator);
 
     bool renderPassExecuted1 = false;
@@ -322,7 +350,7 @@ TEST(FrameGraphTest, RenderTargetLifetime) {
                         .format = TextureFormat::RGBA16F
                 };
                 data.output = builder.createTexture("color buffer", desc);
-                data.rt = builder.createRenderTarget(data.output, (TargetBufferFlags)0x80);
+                data.rt = builder.createRenderTarget(data.output, TargetBufferFlags::COLOR);
                 EXPECT_TRUE(fg.isValid(data.output));
             },
             [=, &rt1, &renderPassExecuted1](
@@ -333,6 +361,7 @@ TEST(FrameGraphTest, RenderTargetLifetime) {
                 auto const& rt = resources.getRenderTarget(data.rt);
                 rt1 = rt.target;
                 EXPECT_TRUE(rt.target);
+                EXPECT_EQ(TargetBufferFlags::COLOR, rt.params.flags.clear);
                 EXPECT_EQ(TargetBufferFlags::ALL, rt.params.flags.discardStart);
                 EXPECT_EQ(TargetBufferFlags::DEPTH_AND_STENCIL, rt.params.flags.discardEnd);
             });
@@ -340,9 +369,7 @@ TEST(FrameGraphTest, RenderTargetLifetime) {
     auto& renderPass2 = fg.addPass<RenderPassData>("Render2",
             [&](FrameGraph::Builder& builder, RenderPassData& data) {
                 data.output = builder.write(builder.read(renderPass1.getData().output));
-                data.rt = builder.createRenderTarget("color", {
-                        .attachments.color = { data.output }
-                }, (TargetBufferFlags)0x40);
+                data.rt = builder.createRenderTarget(data.output, TargetBufferFlags::NONE);
                 EXPECT_TRUE(fg.isValid(data.output));
             },
             [=, &rt1, &renderPassExecuted2](
@@ -352,8 +379,8 @@ TEST(FrameGraphTest, RenderTargetLifetime) {
                 renderPassExecuted2 = true;
                 auto const& rt = resources.getRenderTarget(data.rt);
                 EXPECT_TRUE(rt.target);
-                EXPECT_EQ(TargetBufferFlags(0x40u|0x80u), rt.params.flags.clear);
-                EXPECT_EQ(rt1.getId(), rt.target.getId()); // FIXME: this test is always true the NoopDriver
+                EXPECT_EQ(TargetBufferFlags::NONE, rt.params.flags.clear);
+                EXPECT_EQ(rt1.getId(), rt.target.getId());
                 EXPECT_EQ(TargetBufferFlags::DEPTH_AND_STENCIL, rt.params.flags.discardStart);
                 EXPECT_EQ(TargetBufferFlags::DEPTH_AND_STENCIL, rt.params.flags.discardEnd);
 
@@ -365,6 +392,4 @@ TEST(FrameGraphTest, RenderTargetLifetime) {
 
     EXPECT_TRUE(renderPassExecuted1);
     EXPECT_TRUE(renderPassExecuted2);
-
-    resourceAllocator.terminate();
 }

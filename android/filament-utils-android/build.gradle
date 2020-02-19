@@ -1,0 +1,72 @@
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+apply plugin: 'kotlin-android-extensions'
+
+android {
+    buildToolsVersion versions.buildTools
+    compileSdkVersion versions.compileSdk
+    defaultConfig {
+        minSdkVersion versions.minSdk
+        targetSdkVersion versions.targetSdk
+
+        externalNativeBuild {
+            cmake {
+                arguments.add("-DANDROID_PIE=ON")
+                arguments.add("-DANDROID_PLATFORM=android-${versions.targetSdk}".toString())
+                arguments.add("-DANDROID_STL=c++_static")
+                arguments.add("-DFILAMENT_DIST_DIR=${filamentPath}".toString())
+                cppFlags.add("-std=c++14")
+                if (project.hasProperty('extra_cmake_args')) {
+                    arguments.add(extra_cmake_args)
+                }
+            }
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path "CMakeLists.txt"
+        }
+    }
+
+    sourceSets {
+        main {
+            jni.srcDirs "src/main/cpp"
+            kotlin.srcDirs += "src/main/java"
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    // No need to package up the following shared libs, which arise as a side effect of our
+    // externalNativeBuild dependencies. When clients pick and choose from project-level gradle
+    // dependencies, these shared libs already get pulled in, so we need to avoid the error:
+    // "More than one file was found with OS independent path ..."
+    packagingOptions {
+        exclude 'lib/*/libfilament-jni.so'
+        exclude 'lib/*/libgltfio-jni.so'
+    }
+}
+
+dependencies {
+    implementation deps.kotlin
+    implementation deps.androidx.annotations
+    implementation project(':filament-android')
+    implementation project(':gltfio-android')
+}
+
+apply from: rootProject.file('gradle/gradle-mvn-push.gradle')
+
+afterEvaluate { project ->
+    publishing {
+        publications {
+            release(MavenPublication) {
+                artifactId = POM_ARTIFACT_ID
+                from components.release
+            }
+        }
+    }
+}

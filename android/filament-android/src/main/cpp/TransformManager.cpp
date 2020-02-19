@@ -17,8 +17,11 @@
 
 #include <jni.h>
 
-#include <utils/Entity.h>
 #include <filament/TransformManager.h>
+
+#include <utils/Entity.h>
+
+#include <math/mat4.h>
 
 using namespace utils;
 using namespace filament;

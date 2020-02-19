@@ -18,6 +18,7 @@
 #define TNT_TEXTURERESHAPER_H
 
 #include <backend/DriverEnums.h>
+#include <backend/PixelBufferDescriptor.h>
 
 namespace filament {
 namespace backend {
@@ -42,27 +43,17 @@ public:
     /**
      * reshapes the pixel buffer by adding components.
      *
-     * @param data The pixel buffer to reshape.
-     * @param size The size in bytes of the pixel buffer.
-     * @return The reshaped pixel buffer.
+     * @param p The pixel buffer to reshape.
+     * @return A new PixelBufferDescriptor containing the reshaped pixels.
      */
-    void* reshape(void* data, size_t size) const;
-
-    /**
-     * The reshape method allocates a temporary buffer for reshaped pixels. Call freeBuffer to free
-     * the reshaped pixel buffer. If the pixels did not need reshaping, this method is an no-op.
-     *
-     * @param buffer The buffer returned from a prior call to reshape.
-     */
-    void freeBuffer(void* buffer) const;
+    PixelBufferDescriptor reshape(PixelBufferDescriptor&& p) const;
 
     static bool canReshapeTextureFormat(TextureFormat format) noexcept;
 
 private:
 
-    std::function<void*(void*, size_t)> reshapeFunction =
-            [](void* buffer, size_t){ return buffer; };
-    std::function<void(void*)> deleter = [](void* buffer){};
+    std::function<PixelBufferDescriptor(PixelBufferDescriptor&& p)> reshapeFunction =
+            [](PixelBufferDescriptor&& p){ return std::move(p); };
     TextureFormat reshapedFormat;
 
 };

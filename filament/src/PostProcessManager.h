@@ -46,38 +46,57 @@ public:
 
     FrameGraphId <FrameGraphTexture> toneMapping(FrameGraph& fg,
             FrameGraphId <FrameGraphTexture> input,
-            backend::TextureFormat outFormat, bool dithering, bool translucent, bool fxaa) noexcept;
+            backend::TextureFormat outFormat, bool translucent, bool fxaa, math::float2 scale,
+            View::BloomOptions bloomOptions, bool dithering) noexcept;
 
     FrameGraphId<FrameGraphTexture> fxaa(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, backend::TextureFormat outFormat,
             bool translucent) noexcept;
 
-    FrameGraphId <FrameGraphTexture> dynamicScaling(
-            FrameGraph& fg, uint8_t msaa, bool scaled, bool blend,
+    FrameGraphId<FrameGraphTexture> opaqueBlit(FrameGraph& fg,
+            FrameGraphId<FrameGraphTexture> input, FrameGraphTexture::Descriptor outDesc) noexcept;
+
+    FrameGraphId <FrameGraphTexture> blendBlit(FrameGraph& fg,
             FrameGraphId <FrameGraphTexture> input,
-            backend::TextureFormat outFormat) noexcept;
+            FrameGraphTexture::Descriptor outDesc) noexcept;
+
+    FrameGraphId<FrameGraphTexture> resolve(FrameGraph& fg,
+            const char* outputBufferName, FrameGraphId<FrameGraphTexture> input) noexcept;
 
     FrameGraphId<FrameGraphTexture> ssao(FrameGraph& fg, details::RenderPass& pass,
             filament::Viewport const& svp,
             details::CameraInfo const& cameraInfo,
             View::AmbientOcclusionOptions const& options) noexcept;
 
-    backend::Handle<backend::HwTexture> getNoSSAOTexture() const {
-        return mNoSSAOTexture;
-    }
+    FrameGraphId<FrameGraphTexture> generateGaussianMipmap(FrameGraph& fg,
+            FrameGraphId<FrameGraphTexture> input, size_t roughnessLodCount, bool reinhard,
+            size_t kernelWidth, float sigmaRatio = 6.0f) noexcept;
+
+    FrameGraphId<FrameGraphTexture> gaussianBlurPass(FrameGraph& fg,
+            FrameGraphId<FrameGraphTexture> input, uint8_t srcLevel,
+            FrameGraphId<FrameGraphTexture> output, uint8_t dstLevel,
+            bool reinhard, size_t kernelWidth, float sigma = 6.0f) noexcept;
+
+    backend::Handle<backend::HwTexture> getOneTexture() const { return mDummyOneTexture; }
+    backend::Handle<backend::HwTexture> getZeroTexture() const { return mDummyZeroTexture; }
 
 private:
     details::FEngine& mEngine;
 
-    FrameGraphId<FrameGraphTexture> depthPass(FrameGraph& fg, details::RenderPass& pass,
+    FrameGraphId<FrameGraphTexture> depthPass(FrameGraph& fg, details::RenderPass const& pass,
             uint32_t width, uint32_t height, View::AmbientOcclusionOptions const& options) noexcept;
 
     FrameGraphId<FrameGraphTexture> mipmapPass(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, size_t level) noexcept;
 
-    FrameGraphId<FrameGraphTexture> blurPass(FrameGraph& fg,
+    FrameGraphId<FrameGraphTexture> bilateralBlurPass(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input,
             FrameGraphId<FrameGraphTexture> depth, math::int2 axis) noexcept;
+
+    FrameGraphId<FrameGraphTexture> bloomPass(FrameGraph& fg,
+            FrameGraphId<FrameGraphTexture> input, backend::TextureFormat outFormat,
+            View::BloomOptions& bloomOptions, math::float2 scale) noexcept;
+
 
     class PostProcessMaterial {
     public:
@@ -106,13 +125,19 @@ private:
 
     PostProcessMaterial mSSAO;
     PostProcessMaterial mMipmapDepth;
-    PostProcessMaterial mBlur;
+    PostProcessMaterial mBilateralBlur;
+    PostProcessMaterial mSeparableGaussianBlur;
+    PostProcessMaterial mBloomDownsample;
+    PostProcessMaterial mBloomUpsample;
     PostProcessMaterial mBlit;
     PostProcessMaterial mTonemapping;
     PostProcessMaterial mFxaa;
 
-    backend::Handle<backend::HwTexture> mNoSSAOTexture;
+    backend::Handle<backend::HwTexture> mDummyOneTexture;
+    backend::Handle<backend::HwTexture> mDummyZeroTexture;
     backend::Handle<backend::HwTexture> mNoiseTexture;
+
+    size_t mSeparableGaussianBlurKernelStorageSize = 0;
 };
 
 } // namespace filament

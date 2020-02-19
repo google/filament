@@ -1,0 +1,32 @@
+apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android'
+apply plugin: 'kotlin-android-extensions'
+apply plugin: FilamentToolsPlugin
+
+filamentTools {
+    materialInputDir = file("src/main/materials")
+    materialOutputDir = file("src/main/assets/materials")
+}
+
+clean.doFirst {
+    delete "src/main/assets"
+}
+android {
+    compileSdkVersion versions.compileSdk
+    defaultConfig {
+        applicationId "com.google.android.filament.litcube"
+        minSdkVersion versions.minSdk
+        targetSdkVersion versions.targetSdk
+    }
+
+    // We use the .filamat extension for materials compiled with matc
+    // Telling aapt to not compress them allows to load them efficiently
+    aaptOptions {
+        noCompress 'filamat', 'ktx'
+    }
+}
+
+dependencies {
+    implementation deps.kotlin
+    implementation project(':filament-android')
+}

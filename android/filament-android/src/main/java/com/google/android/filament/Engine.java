@@ -16,7 +16,7 @@
 
 package com.google.android.filament;
 
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
 import com.google.android.filament.proguard.UsedByReflection;
 
@@ -119,13 +119,17 @@ public class Engine {
          */
         DEFAULT,
         /**
-         * Selects the OpenGL ES driver.
+         * Selects the OpenGL driver (which supports OpenGL ES as well).
          */
         OPENGL,
         /**
-         * Selects the experimental Vulkan driver.
+         * Selects the Vulkan driver if the platform supports it.
          */
         VULKAN,
+        /**
+         * Selects the Metal driver if the platform supports it.
+         */
+        METAL,
         /**
          * Selects the no-op driver for testing purposes.
          */

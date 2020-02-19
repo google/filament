@@ -26,6 +26,8 @@
 
 #include "FilamentAPI-impl.h"
 
+#include <filament/TextureSampler.h>
+
 #include <backend/DriverEnums.h>
 
 #include <utils/Panic.h>

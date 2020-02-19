@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include <iostream>
 #include <string>
 #include <map>
 #include <vector>
@@ -27,9 +28,10 @@
 #include <filament/Material.h>
 #include <filament/MaterialInstance.h>
 #include <filament/RenderableManager.h>
-#include <filament/TransformManager.h>
 #include <filament/Scene.h>
 #include <filament/Texture.h>
+#include <filament/TextureSampler.h>
+#include <filament/TransformManager.h>
 
 #include <math/mat3.h>
 #include <math/mat4.h>

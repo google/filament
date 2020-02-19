@@ -366,6 +366,13 @@ void VulkanDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
     });
 }
 
+void VulkanDriver::importTextureR(Handle<HwTexture> th, intptr_t id,
+        SamplerType target, uint8_t levels,
+        TextureFormat format, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
+        TextureUsage usage) {
+    // not support in this backend
+}
+
 void VulkanDriver::destroyTexture(Handle<HwTexture> th) {
     if (th) {
         auto texture = handle_cast<VulkanTexture>(mHandleMap, th);
@@ -459,6 +466,10 @@ Handle<HwIndexBuffer> VulkanDriver::createIndexBufferS() noexcept {
 }
 
 Handle<HwTexture> VulkanDriver::createTextureS() noexcept {
+    return alloc_handle<VulkanTexture, HwTexture>();
+}
+
+Handle<HwTexture> VulkanDriver::importTextureS() noexcept {
     return alloc_handle<VulkanTexture, HwTexture>();
 }
 

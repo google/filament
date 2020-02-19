@@ -19,7 +19,6 @@
 
 #include "MetalBlitter.h"
 #include "MetalBufferPool.h"
-#include "MetalDefines.h"
 #include "MetalResourceTracker.h"
 #include "MetalState.h"
 
@@ -42,9 +41,8 @@ struct MetalContext {
     id<MTLDevice> device = nullptr;
     id<MTLCommandQueue> commandQueue = nullptr;
 
-    // Single use, re-created each frame.
-    id<MTLCommandBuffer> currentCommandBuffer = nullptr;
-    id<MTLRenderCommandEncoder> currentCommandEncoder = nullptr;
+    id<MTLCommandBuffer> pendingCommandBuffer = nullptr;
+    id<MTLRenderCommandEncoder> currentRenderPassEncoder = nullptr;
 
     // These two fields store a callback and user data to notify the client that a frame is ready
     // for presentation.
@@ -92,11 +90,9 @@ struct MetalContext {
 
     MetalBlitter* blitter = nullptr;
 
-    // Fences.
-#if METAL_FENCES_SUPPORTED
+    // Fences, only supported on macOS 10.14 and iOS 12 and above.
     MTLSharedEventListener* eventListener = nil;
     uint64_t signalId = 1;
-#endif
 };
 
 // Acquire the current surface's CAMetalDrawable for the current frame if it has not already been
@@ -107,9 +103,13 @@ id<MTLTexture> acquireDrawable(MetalContext* context);
 
 id<MTLTexture> acquireDepthTexture(MetalContext* context);
 
-id<MTLCommandBuffer> acquireCommandBuffer(MetalContext* context);
+id<MTLCommandBuffer> getPendingCommandBuffer(MetalContext* context);
+
+void submitPendingCommands(MetalContext* context);
 
 id<MTLTexture> getOrCreateEmptyTexture(MetalContext* context);
+
+bool isInRenderPass(MetalContext* context);
 
 } // namespace metal
 } // namespace backend

@@ -60,6 +60,9 @@ id<MTLRenderPipelineState> PipelineStateCreator::operator()(id<MTLDevice> device
     // Color attachments
     descriptor.colorAttachments[0].pixelFormat = state.colorAttachmentPixelFormat;
 
+    descriptor.colorAttachments[0].writeMask =
+            state.colorWrite ? MTLColorWriteMaskAll : MTLColorWriteMaskNone;
+
     const auto& bs = state.blendState;
     descriptor.colorAttachments[0].blendingEnabled = bs.blendingEnabled;
     descriptor.colorAttachments[0].alphaBlendOperation = bs.alphaBlendOperation;

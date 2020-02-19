@@ -109,12 +109,14 @@ FEngine* FEngine::create(Backend backend, Platform* platform, void* sharedGLCont
     // Normally we launch a thread and create the context and Driver from there (see FEngine::loop).
     // In the single-threaded case, we do so in the here and now.
     if (!UTILS_HAS_THREADING) {
-        // we don't own the external context at that point, set it to null
-        instance->mPlatform = nullptr;
         if (platform == nullptr) {
             platform = DefaultPlatform::create(&instance->mBackend);
             instance->mPlatform = platform;
             instance->mOwnPlatform = true;
+        }
+        if (platform == nullptr) {
+            slog.e << "Selected backend not supported in this build." << io::endl;
+            return nullptr;
         }
         instance->mDriver = platform->createDriver(sharedGLContext);
     } else {
@@ -406,13 +408,8 @@ void FEngine::flushAndWait() {
 // -----------------------------------------------------------------------------------------------
 
 int FEngine::loop() {
-    // we don't own the external context at that point, set it to null
-    Platform* platform = mPlatform;
-    mPlatform = nullptr;
-
-    if (platform == nullptr) {
-        platform = DefaultPlatform::create(&mBackend);
-        mPlatform = platform;
+    if (mPlatform == nullptr) {
+        mPlatform = DefaultPlatform::create(&mBackend);
         mOwnPlatform = true;
         slog.d << "FEngine resolved backend: ";
         switch (mBackend) {
@@ -437,6 +434,11 @@ int FEngine::loop() {
                 break;
         }
         slog.d << io::endl;
+        if (mPlatform == nullptr) {
+            slog.e << "Selected backend not supported in this build." << io::endl;
+            mDriverBarrier.latch();
+            return 0;
+        }
     }
 
 #if FILAMENT_ENABLE_MATDBG
@@ -460,7 +462,7 @@ int FEngine::loop() {
     JobSystem::setThreadName("FEngine::loop");
     JobSystem::setThreadPriority(JobSystem::Priority::DISPLAY);
 
-    mDriver = platform->createDriver(mSharedGLContext);
+    mDriver = mPlatform->createDriver(mSharedGLContext);
     mDriverBarrier.latch();
     if (UTILS_UNLIKELY(!mDriver)) {
         // if we get here, it's because the driver couldn't be initialized and the problem has
@@ -970,5 +972,12 @@ DebugRegistry& Engine::getDebugRegistry() noexcept {
     return upcast(this)->getDebugRegistry();
 }
 
+Camera* Engine::createCamera() noexcept {
+    return createCamera(utils::EntityManager::get().create());
+}
+
+void Engine::destroy(const Camera* camera) {
+    destroy(camera->getEntity());
+}
 
 } // namespace filament

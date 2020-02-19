@@ -164,7 +164,7 @@ id<MTLTexture> MetalExternalImage::getMetalTextureForDraw() const noexcept {
     // not need to be done for the RGB texture, because it is an Objective-C object whose
     // lifetime is automatically managed by Metal.
     auto& tracker = mContext.resourceTracker;
-    auto commandBuffer = mContext.currentCommandBuffer;
+    auto commandBuffer = getPendingCommandBuffer(&mContext);
     if (tracker.trackResource((__bridge void*) commandBuffer, mImage, cvBufferDeleter)) {
         CVPixelBufferRetain(mImage);
     }

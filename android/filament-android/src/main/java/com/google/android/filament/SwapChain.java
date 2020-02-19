@@ -16,7 +16,7 @@
 
 package com.google.android.filament;
 
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
 /**
  * A <code>SwapChain</code> represents an Operating System's <b>native</b> renderable surface.

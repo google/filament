@@ -122,6 +122,10 @@ struct FAssetLoader : public AssetLoader {
         return mMaterials->getMaterialsCount();
     }
 
+    NameComponentManager* getNames() const noexcept {
+        return mNameManager;
+    }
+
     const Material* const* getMaterials() const noexcept {
         return mMaterials->getMaterials();
     }
@@ -164,6 +168,7 @@ FFilamentAsset* FAssetLoader::createAssetFromJson(const uint8_t* bytes, uint32_t
     cgltf_data* sourceAsset;
     cgltf_result result = cgltf_parse(&options, bytes, nbytes, &sourceAsset);
     if (result != cgltf_result_success) {
+        slog.e << "Unable to parse JSON file." << io::endl;
         return nullptr;
     }
     createAsset(sourceAsset);
@@ -185,6 +190,7 @@ FilamentAsset* FAssetLoader::createAssetFromBinary(const uint8_t* bytes, uint32_
     cgltf_data* sourceAsset;
     cgltf_result result = cgltf_parse(&options, glbdata.data(), nbytes, &sourceAsset);
     if (result != cgltf_result_success) {
+        slog.e << "Unable to parse glb file." << io::endl;
         return nullptr;
     }
     createAsset(sourceAsset);
@@ -323,11 +329,15 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity entity) {
     Primitive* outputPrim = mMeshCache[mesh].data();
     const cgltf_primitive* inputPrim = &mesh->primitives[0];
 
-    if (mNameManager && mesh->name) {
+    // Create a name component using the node label if it exists, otherwise use the mesh label.
+    const char* name = node->name ? node->name : mesh->name;
+    if (mNameManager && name) {
         mNameManager->addComponent(entity);
-        mNameManager->setName(mNameManager->getInstance(entity), mesh->name);
+        mNameManager->setName(mNameManager->getInstance(entity), name);
     }
-    const char* name = mesh->name ? mesh->name : (node->name ? node->name : "mesh");
+
+    // If neither a node or mesh name is provided in the glTF, use "node" for error messages.
+    name = name ? name : "node";
 
     Aabb aabb;
 
@@ -352,6 +362,12 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity entity) {
         UvMap uvmap {};
         bool hasVertexColor = primitiveHasVertexColor(inputPrim);
         MaterialInstance* mi = createMaterialInstance(inputPrim->material, &uvmap, hasVertexColor);
+        if (!mi) {
+            mError = true;
+            continue;
+        }
+
+        mResult->mDependencyGraph.addEdge(entity, mi);
         builder.material(index, mi);
 
         // Create a Filament VertexBuffer and IndexBuffer for this prim if we haven't already.
@@ -493,8 +509,12 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
             utils::slog.e << "Unrecognized vertex semantic in " << name << utils::io::endl;
             return false;
         }
-        UvSet uvset = uvmap[inputAttribute.index];
         if (inputAttribute.type == cgltf_attribute_type_texcoord) {
+            if (inputAttribute.index >= sizeof(uvmap) / sizeof(uvmap[0])) {
+                utils::slog.e << "Too many texture coordinate sets in " << name << utils::io::endl;
+                continue;
+            }
+            UvSet uvset = uvmap[inputAttribute.index];
             switch (uvset) {
                 case UV0:
                     semantic = VertexAttribute::UV0;
@@ -533,6 +553,12 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
         // As a convenience, cgltf also replaces zero (default) stride with the actual stride.
         vbb.attribute(semantic, slot++, atype, 0, inputAccessor->stride);
         vbb.normalized(semantic, inputAccessor->normalized);
+    }
+
+    // If the model is lit but does not have normals, we'll need to generate flat normals.
+    if (inPrim->material && !inPrim->material->unlit && !hasNormals) {
+        vbb.attribute(VertexAttribute::TANGENTS, slot++, VertexBuffer::AttributeType::SHORT4);
+        vbb.normalized(VertexAttribute::TANGENTS);
     }
 
     cgltf_size targetsCount = inPrim->targets_count;
@@ -618,10 +644,6 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
         }
     }
 
-    if (inPrim->material && !inPrim->material->unlit && !hasNormals) {
-        slog.w << "Missing normals in " << name << io::endl;
-    }
-
     if (needsDummyData) {
         slot++;
     }
@@ -643,6 +665,11 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
                 uvmap[inputAttribute.index] == UNUSED)) {
             continue;
         }
+        if (inputAttribute.type == cgltf_attribute_type_texcoord &&
+                inputAttribute.index >= sizeof(uvmap) / sizeof(uvmap[0])) {
+            continue;
+        }
+
         if (inputAttribute.type == cgltf_attribute_type_normal) {
             mResult->mBufferBindings.push_back({
                 .uri = bv->buffer->uri,
@@ -673,6 +700,22 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
             .generateTangents = false,
             .sparseAccessor = (bool) inputAccessor->is_sparse,
         });
+    }
+
+    // If the model is lit but does not have normals, we'll need to generate flat normals.
+    if (inPrim->material && !inPrim->material->unlit && !hasNormals) {
+            mResult->mBufferBindings.push_back({
+                .uri = "",
+                .totalSize = 0,
+                .bufferIndex = uint8_t(slot++),
+                .vertexBuffer = vertices,
+                .indexBuffer = nullptr,
+                .convertBytesToShorts = false,
+                .generateTrivialIndices = false,
+                .generateDummyData = false,
+                .generateTangents = true,
+                .sparseAccessor = false,
+            });
     }
 
     for (cgltf_size targetIndex = 0; targetIndex < targetsCount; targetIndex++) {
@@ -830,6 +873,11 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
     // This not only creates a material instance, it modifies the material key according to our
     // rendering constraints. For example, Filament only supports 2 sets of texture coordinates.
     MaterialInstance* mi = mMaterials->createMaterialInstance(&matkey, uvmap, inputMat->name);
+    if (!mi) {
+        slog.e << "No material with the specified requirements exists." << io::endl;
+        return nullptr;
+    }
+
     mResult->mMaterialInstances.push_back(mi);
 
     if (inputMat->alpha_mode == cgltf_alpha_mode_mask) {
@@ -948,6 +996,7 @@ void FAssetLoader::addTextureBinding(MaterialInstance* materialInstance, const c
         .sampler = dstSampler,
         .srgb = srgb
     });
+    mResult->mDependencyGraph.addEdge(materialInstance, parameterName);
 }
 
 void FAssetLoader::importSkinningData(Skin& dstSkin, const cgltf_skin& srcSkin) {
@@ -1005,6 +1054,10 @@ void AssetLoader::destroyAsset(const FilamentAsset* asset) {
 
 size_t AssetLoader::getMaterialsCount() const noexcept {
     return upcast(this)->getMaterialsCount();
+}
+
+NameComponentManager* AssetLoader::getNames() const noexcept {
+    return upcast(this)->getNames();
 }
 
 const Material* const* AssetLoader::getMaterials() const noexcept {

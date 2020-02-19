@@ -468,7 +468,7 @@ class PyAssimp3DViewer:
         try:
             self.set_shaders_v130()
             self.prepare_shaders()
-        except RuntimeError, message:
+        except RuntimeError as message:
             sys.stderr.write("%s\n" % message)
             sys.stdout.write("Could not compile shaders in version 1.30, trying version 1.20\n")
 
@@ -1177,6 +1177,22 @@ class PyAssimp3DViewer:
         return True
 
     def controls_3d(self, dx, dy, zooming_one_shot=False):
+        """ Orbiting the camera is implemented the following way:
+
+        - the rotation is split into a rotation around the *world* Z axis
+          (controlled by the horizontal mouse motion along X) and a
+          rotation around the *X* axis of the camera (pitch) *shifted to
+          the focal origin* (the world origin for now). This is controlled
+          by the vertical motion of the mouse (Y axis).
+        - as a result, the resulting transformation of the camera in the
+          world frame C' is:
+            C' = (T · Rx · T⁻¹ · (Rz · C)⁻¹)⁻¹
+          where:
+          - C is the original camera transformation in the world frame,
+          - Rz is the rotation along the Z axis (in the world frame)
+          - T is the translation camera -> world (ie, the inverse of the
+            translation part of C
+          - Rx is the rotation around X in the (translated) camera frame """
 
         CAMERA_TRANSLATION_FACTOR = 0.01
         CAMERA_ROTATION_FACTOR = 0.01
@@ -1188,26 +1204,6 @@ class PyAssimp3DViewer:
         distance = numpy.linalg.norm(self.focal_point - current_pos)
 
         if self.is_rotating:
-            """ Orbiting the camera is implemented the following way:
-
-            - the rotation is split into a rotation around the *world* Z axis
-              (controlled by the horizontal mouse motion along X) and a
-              rotation around the *X* axis of the camera (pitch) *shifted to
-              the focal origin* (the world origin for now). This is controlled
-              by the vertical motion of the mouse (Y axis).
-
-            - as a result, the resulting transformation of the camera in the
-              world frame C' is:
-                C' = (T · Rx · T⁻¹ · (Rz · C)⁻¹)⁻¹
-
-              where:
-                - C is the original camera transformation in the world frame,
-                - Rz is the rotation along the Z axis (in the world frame)
-                - T is the translation camera -> world (ie, the inverse of the
-                  translation part of C
-                - Rx is the rotation around X in the (translated) camera frame
-            """
-
             rotation_camera_x = dy * CAMERA_ROTATION_FACTOR
             rotation_world_z = dx * CAMERA_ROTATION_FACTOR
             world_z_rotation = transformations.euler_matrix(0, 0, rotation_world_z)

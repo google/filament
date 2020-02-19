@@ -5,12 +5,40 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release
 
-- Fix bad instruction exception with macOS Catalina.
+- The Android support libraries (gltfio and filament-utils) now use dynamic linking.
+- Screen-space refraction is now supported.
+- Removed depth-prepass related APIs.
+- gltfio: add asynchronous API to ResourceLoader.
+- gltfio: generate normals for flat-shaded models that do not have normals.
+- Material instances now allow dynamic depth testing and other rasterization state.
+- Support for Bloom as a post-process effect.
+- Added Java bindings for geometry::SurfaceOrientation.
+- Fixed bug rendering transparent objects with Metal backend.
+
+## v1.4.5
+
+- The depth prepass setting in View is now ignored and deprecated.
+- Fixed a threading bug with the NOOP backend.
+- Improved memory management for gltfio on Android.
+- Introduced `filament-utils` library with `TextureLoader`, `ModelViewer`, and Java bindings for `camutils`.
+- Fix out-of-bounds bug when glTF has many UV sets.
+- Added new `setMediaOverlay` API to `UiHelper` for controlling surface ordering.
+- Implemented sRGB support for DXT encoded textures.
+- Fix bug with incorrect world transforms computed in `TransformManager`.
+- gltfio: support external resources on Android.
+
+
+## v1.4.4
+
 - Added support for solid and thin layer cubemap and screen-space refraction.
 - Improved high roughness material rendering by default when regenerating environments maps.
+- Fix bad instruction exception with macOS Catalina.
 - Fixed bad state after removing an IBL from the Scene.
 - Fixed incorrect punctual light binning (affected Metal and Vulkan backends).
 - Fixed crash when using a Metal headless SwapChain with an Intel integrated GPU.
+- Added support for ASTC textures on iOS with Metal backend.
+- Added new heightfield sample.
+- Removed `<iostream>` from math headers.
 - cmgen now places KTX files directly in the specified deployment folder.
 
 ## v1.4.3

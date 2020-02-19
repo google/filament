@@ -51,6 +51,17 @@ import java.nio.ByteBuffer;
  */
 public final class AiQuaternion {
     /**
+     * Wrapped buffer.
+     */
+    private final ByteBuffer m_buffer;
+    
+    
+    /**
+     * Offset into m_buffer.
+     */
+    private final int m_offset;
+
+    /**
      * Constructor.
      * 
      * @param buffer the buffer to wrap
@@ -150,17 +161,5 @@ public final class AiQuaternion {
     public String toString() {
         return "[" + getX() + ", " + getY() + ", " + getZ() + ", " + 
                 getW() + "]";
-    }
-    
-    
-    /**
-     * Wrapped buffer.
-     */
-    private final ByteBuffer m_buffer;
-    
-    
-    /**
-     * Offset into m_buffer.
-     */
-    private final int m_offset;
+    }    
 }

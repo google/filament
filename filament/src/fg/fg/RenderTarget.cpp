@@ -16,6 +16,12 @@
 
 #include "RenderTarget.h"
 
+#include "fg/FrameGraph.h"
+
+#include "RenderTargetResource.h"
+
+#include "details/Texture.h"
+
 #include <backend/DriverEnums.h>
 
 namespace filament {
@@ -35,7 +41,6 @@ void RenderTarget::resolve(FrameGraph& fg) noexcept {
 
     if (pos != renderTargetCache.end()) {
         cache = pos->get();
-        cache->targetInfo.params.flags.clear |= userClearFlags;
     } else {
         TargetBufferFlags attachments{};
         uint32_t width = 0;
@@ -64,8 +69,13 @@ void RenderTarget::resolve(FrameGraph& fg) noexcept {
                         fg.getResourceEntryUnchecked(attachment.getHandle());
                 // update usage flags for referenced attachments
                 entry.descriptor.usage |= usages[i];
-                // update attachment sample count if not specified
-                entry.descriptor.samples = entry.descriptor.samples ? entry.descriptor.samples : desc.samples;
+
+                // update attachment sample count if not specified and usage permits it
+                if (!entry.descriptor.samples &&
+                    none(entry.descriptor.usage & backend::TextureUsage::SAMPLEABLE)) {
+                    entry.descriptor.samples = desc.samples;
+                }
+
                 attachments |= flags[i];
 
                 // figure out the min/max dimensions across all attachments
@@ -100,7 +110,6 @@ void RenderTarget::resolve(FrameGraph& fg) noexcept {
                             backend::TargetBufferFlags(attachments), width, height, colorFormat);
             renderTargetCache.emplace_back(pRenderTargetResource, fg);
             cache = pRenderTargetResource;
-            cache->targetInfo.params.flags.clear |= userClearFlags;
         }
     }
 }

@@ -17,6 +17,7 @@
 #include <jni.h>
 
 #include <filament/View.h>
+#include <filament/Viewport.h>
 
 using namespace filament;
 
@@ -193,13 +194,6 @@ Java_com_google_android_filament_View_nSetDynamicLightingOptions(JNIEnv*,
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_View_nSetDepthPrepass(JNIEnv*,
-        jclass, jlong nativeView, jint value) {
-    View* view = (View*) nativeView;
-    view->setDepthPrepass(View::DepthPrepass(value));
-}
-
-extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_View_nSetPostProcessingEnabled(JNIEnv*,
         jclass, jlong nativeView, jboolean enabled) {
     View* view = (View*) nativeView;
@@ -251,4 +245,25 @@ Java_com_google_android_filament_View_nSetAmbientOcclusionOptions(JNIEnv*, jclas
             .intensity = intensity
     };
     view->setAmbientOcclusionOptions(options);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_View_nSetBloomOptions(JNIEnv*, jclass,
+        jlong nativeView, jlong nativeTexture,
+        jfloat dirtStrength, jfloat strength, jint resolution, jfloat anamorphism, jint levels,
+        jint blendMode, jboolean threshold, jboolean enabled) {
+    View* view = (View*) nativeView;
+    Texture* dirt = (Texture*) nativeTexture;
+    View::BloomOptions options = {
+            .dirt = dirt,
+            .dirtStrength = dirtStrength,
+            .strength = strength,
+            .resolution = (uint32_t)resolution,
+            .anamorphism = anamorphism,
+            .levels = (uint8_t)levels,
+            .blendMode = (View::BloomOptions::BlendMode)blendMode,
+            .threshold = (bool)threshold,
+            .enabled = (bool)enabled
+    };
+    view->setBloomOptions(options);
 }

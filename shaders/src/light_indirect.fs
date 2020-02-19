@@ -83,10 +83,10 @@ vec3 diffuseIrradiance(const vec3 n) {
 //------------------------------------------------------------------------------
 
 float perceptualRoughnessToLod(float perceptualRoughness) {
-    // See: https://s3.amazonaws.com/docs.knaldtech.com/knald/1.0.0/lys_power_drops.html
-    // (Pre-convolved Cube Maps vs Path Tracers)
-    // Below is a quadratic fit to the formula in the article above at NoV=1
-    return frameUniforms.iblMaxMipLevel.x * perceptualRoughness * (1.686 - 0.686 * perceptualRoughness);
+    // The mapping below is a quadratic fit for log2(perceptualRoughness)+iblMaxMipLevel when
+    // iblMaxMipLevel is 4. We found empirically that this mapping works very well for
+    // a 256 cubemap with 5 levels used. But also scales well for other iblMaxMipLevel values.
+    return frameUniforms.iblMaxMipLevel.x * perceptualRoughness * (2.0 - perceptualRoughness);
 }
 
 vec3 prefilteredRadiance(const vec3 r, float perceptualRoughness) {
@@ -346,64 +346,84 @@ void evaluateSubsurfaceIBL(const PixelParams pixel, const vec3 diffuseIrradiance
 }
 
 #if defined(HAS_REFRACTION)
+
+struct Refraction {
+    vec3 position;
+    vec3 direction;
+    float d;
+};
+
+void refractionSolidSphere(const PixelParams pixel,
+    const vec3 n, vec3 r, out Refraction ray) {
+    r = refract(r, n, pixel.etaIR);
+    float NoR = dot(n, r);
+    float d = pixel.thickness * -NoR;
+    ray.position = vec3(shading_position + r * d);
+    ray.d = d;
+    vec3 n1 = normalize(NoR * r - n * 0.5);
+    ray.direction = refract(r, n1,  pixel.etaRI);
+}
+
+void refractionSolidBox(const PixelParams pixel,
+    const vec3 n, vec3 r, out Refraction ray) {
+    vec3 rr = refract(r, n, pixel.etaIR);
+    float NoR = dot(n, rr);
+    float d = pixel.thickness / max(-NoR, 0.001);
+    ray.position = vec3(shading_position + rr * d);
+    ray.direction = r;
+    ray.d = d;
+#if REFRACTION_MODE == REFRACTION_MODE_CUBEMAP
+    // fudge direction vector, so we see the offset due to the thickness of the object
+    float envDistance = 10.0; // this should come from a ubo
+    ray.direction = normalize((ray.position - shading_position) + ray.direction * envDistance);
+#endif
+}
+
+void refractionThinSphere(const PixelParams pixel,
+    const vec3 n, vec3 r, out Refraction ray) {
+    float d = 0.0;
+#if defined(MATERIAL_HAS_MICRO_THICKNESS)
+    // note: we need the refracted ray to calculate the distance traveled
+    // we could use shading_NoV, but we would lose the dependency on ior.
+    vec3 rr = refract(r, n, pixel.etaIR);
+    float NoR = dot(n, rr);
+    d = pixel.uThickness / max(-NoR, 0.001);
+    ray.position = vec3(shading_position + rr * d);
+#else
+    ray.position = vec3(shading_position);
+#endif
+    ray.direction = r;
+    ray.d = d;
+}
+
 void applyRefraction(const PixelParams pixel,
     const vec3 n0, vec3 E, vec3 Fd, vec3 Fr,
     inout vec3 color) {
 
-    float perceptualRoughness = pixel.perceptualRoughnessUnclamped;
-    vec3 r = -shading_view;
-    float eta0 = pixel.etaIR;
+    Refraction ray;
 
-    /* compute first interface refraction */
 #if REFRACTION_TYPE == REFRACTION_TYPE_SOLID
-    // for a sphere, with light at infinity (i.e. cubemap)
-    r = refract(r, n0, eta0);
-    float N0oR = dot(n0, r);
+    refractionSolidSphere(pixel, n0, -shading_view, ray);
 #elif REFRACTION_TYPE == REFRACTION_TYPE_THIN
-    // for thin layers, the direction of the refracted ray is the same as the incoming ray
+    refractionThinSphere(pixel, n0, -shading_view, ray);
 #else
 #error "invalid REFRACTION_TYPE"
-#endif
-
-    /* compute distance traveled d */
-    float d = 0.0;
-#if defined(MATERIAL_HAS_ABSORPTION) || (REFRACTION_MODE == REFRACTION_MODE_SCREEN_SPACE)
-#if REFRACTION_TYPE == REFRACTION_TYPE_SOLID
-#if defined(MATERIAL_HAS_THICKNESS)
-    d = pixel.thickness * -N0oR;
-#endif
-#elif REFRACTION_TYPE == REFRACTION_TYPE_THIN
-#if defined(MATERIAL_HAS_MICRO_THICKNESS)
-    // note: we need the refracted ray to calculate the distance traveled
-    // we could use shading_NoV, but we would lose the dependency on ior.
-    float N0oR = dot(n0, refract(r, n0, eta0));
-    d = pixel.uThickness / max(-N0oR, 0.01);
-#endif
-#endif
 #endif
 
     /* compute transmission T */
 #if defined(MATERIAL_HAS_ABSORPTION)
 #if defined(MATERIAL_HAS_THICKNESS) || defined(MATERIAL_HAS_MICRO_THICKNESS)
-    vec3 T = min(vec3(1.0), exp(-pixel.absorption * d));
+    vec3 T = min(vec3(1.0), exp(-pixel.absorption * ray.d));
 #else
     vec3 T = 1.0 - pixel.absorption;
 #endif
 #endif
 
-    // Roughness remaping for thin layers, see Burley 2012, "Physically-Based Shading at Disney"
+    float perceptualRoughness = pixel.perceptualRoughnessUnclamped;
 #if REFRACTION_TYPE == REFRACTION_TYPE_THIN
+    // Roughness remaping for thin layers, see Burley 2012, "Physically-Based Shading at Disney"
     perceptualRoughness = saturate((0.65 * pixel.etaRI - 0.35) * perceptualRoughness);
-#endif
 
-    /* sample the cubemap or screen-space */
-#if REFRACTION_MODE == REFRACTION_MODE_CUBEMAP
-#if REFRACTION_TYPE == REFRACTION_TYPE_SOLID
-    // compute the direction of the output ray (needed for accessing the cubemap)
-    vec3 n1 = normalize(N0oR * r - n0 * 0.5);
-    float eta1 = pixel.etaRI;
-    r = refract(r, n1, eta1);
-#elif REFRACTION_TYPE == REFRACTION_TYPE_THIN
     // For thin surfaces, the light will bounce off at the second interface in the direction of
     // the reflection, effectively adding to the specular, but this process will repeat itself.
     // Each time the ray exits the surface on the front side after the first bounce,
@@ -414,16 +434,23 @@ void applyRefraction(const PixelParams pixel,
     E *= 1.0 + pixel.transmission * (1.0 - E.g) / (1.0 + E.g);
 #endif
 
+    /* sample the cubemap or screen-space */
+#if REFRACTION_MODE == REFRACTION_MODE_CUBEMAP
     // when reading from the cubemap, we are not pre-exposed so we apply iblLuminance
     // which is not the case when we'll read from the screen-space buffer
-    vec3 Ft = prefilteredRadiance(r, perceptualRoughness) * frameUniforms.iblLuminance;
+    vec3 Ft = prefilteredRadiance(ray.direction, perceptualRoughness) * frameUniforms.iblLuminance;
 #else
     // compute the point where the ray exits the medium, if needed
-    vec4 p = vec4(shading_position + r * d, 1.0);
-    vec3 Ft;
-    p = frameUniforms.clipFromWorldMatrix * p;
-    // TODO: sample screen-space at p
-    Ft = vec3(0.0);
+    vec4 p = vec4(frameUniforms.clipFromWorldMatrix * vec4(ray.position, 1.0));
+    p.xy = uvToRenderTargetUV(p.xy * (0.5 / p.w) + 0.5);
+
+    // perceptualRoughness to LOD
+    // Empirical factor to compensate for the gaussian approximation of Dggx, chosen so
+    // cubemap and screen-space modes match at perceptualRoughness 0.125
+    float tweakedPerceptualRoughness = perceptualRoughness * 1.74;
+    float lod = max(0.0, 2.0 * log2(tweakedPerceptualRoughness) + frameUniforms.refractionLodOffset);
+
+    vec3 Ft = textureLod(light_ssr, p.xy, lod).rgb;
 #endif
 
     /* fresnel from the first interface */

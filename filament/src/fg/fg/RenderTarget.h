@@ -19,17 +19,17 @@
 
 #include <backend/DriverEnums.h>
 
-#include "details/Texture.h"
-
-#include "fg/FrameGraph.h"
 #include "fg/FrameGraphHandle.h"
-
-#include "RenderTargetResource.h"
 
 #include <stdint.h>
 
 namespace filament {
+
+class FrameGraph;
+
 namespace fg {
+
+struct RenderTargetResource;
 
 struct RenderTarget { // 32
     RenderTarget(const char* name,

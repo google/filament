@@ -100,7 +100,22 @@ private:
             uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
             backend::PixelBufferDescriptor&& buffer);
 
-    RenderPass::CommandTypeFlags getCommandType(View::DepthPrepass prepass) const noexcept;
+    struct ColorPassConfig {
+        Viewport vp;
+        Viewport svp;
+        math::float2 scale;
+        backend::TextureFormat hdrFormat;
+        uint8_t msaa;
+    };
+
+    static FrameGraphId<FrameGraphTexture> colorPass(FrameGraph& fg, const char* name,
+            FrameGraphTexture::Descriptor const& colorBufferDesc, ColorPassConfig const& config,
+            RenderPass const& pass, backend::TargetBufferFlags clearFlags,
+            math::float4 clearColor = {}) noexcept;
+
+    FrameGraphId<FrameGraphTexture> refractionPass(FrameGraph& fg,
+            ColorPassConfig const& config, RenderPass const& pass,
+            FView const& view, backend::TargetBufferFlags clearFlags) const noexcept;
 
     void recordHighWatermark(size_t watermark) noexcept {
         mCommandsHighWatermark = std::max(mCommandsHighWatermark, watermark);

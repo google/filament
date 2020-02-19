@@ -34,6 +34,7 @@
 
 #include <MaterialParser.h>
 
+#include <utils/CString.h>
 #include <utils/Panic.h>
 
 #include <sstream>
@@ -295,6 +296,15 @@ bool FMaterial::hasParameter(const char* name) const noexcept {
         return mSamplerInterfaceBlock.hasSampler(name);
     }
     return true;
+}
+
+UniformInterfaceBlock::UniformInfo const* FMaterial::reflect(
+        utils::StaticString const& name) const noexcept {
+    auto const& list = mUniformInterfaceBlock.getUniformInfoList();
+    auto p = std::find_if(list.begin(), list.end(), [&](auto const& e) {
+        return e.name == name;
+    });
+    return p == list.end() ? nullptr : &static_cast<UniformInterfaceBlock::UniformInfo const&>(*p);
 }
 
 backend::Handle<backend::HwProgram> FMaterial::getProgramSlow(uint8_t variantKey) const noexcept {

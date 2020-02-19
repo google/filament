@@ -63,6 +63,7 @@ void ResourceAllocator::AssociativeContainer<K, V, H>::emplace(ARGS&& ... args) 
 }
 
 // ------------------------------------------------------------------------------------------------
+ResourceAllocatorInterface::~ResourceAllocatorInterface() = default;
 
 size_t ResourceAllocator::TextureKey::getSize() const noexcept {
     size_t pixelCount = width * height * depth;

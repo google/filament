@@ -1,6 +1,6 @@
 This folder was last updated as follows:
 
-    export sha=4827a4b
+    export sha=f834103304ba409fce5f64b0bc9dd56a924872f9
     cd third_party
     curl -L -O https://github.com/jkuhlmann/cgltf/archive/${sha}.zip
     unzip ${sha}.zip

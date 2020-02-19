@@ -18,9 +18,9 @@
 #define TNT_FILAMENT_FRAMEGRAPH_H
 
 
+#include "Blackboard.h"
 #include "FrameGraphPass.h"
 #include "FrameGraphHandle.h"
-#include "FrameGraphPassResources.h"
 
 #include <fg/fg/ResourceEntry.h>
 
@@ -55,7 +55,7 @@ struct RenderTarget;
 struct RenderTargetResource;
 struct PassNode;
 struct Alias;
-class ResourceAllocator;
+class ResourceAllocatorInterface;
 } // namespace fg
 
 class FrameGraphPassResources;
@@ -93,7 +93,7 @@ public:
 
         // Write to a resource (i.e. add a reference to that pass)
         template<typename T>
-        FrameGraphId<T> write(FrameGraphId<T> output) {
+        [[nodiscard]] FrameGraphId<T> write(FrameGraphId<T> output) {
             return FrameGraphId<T>(write(FrameGraphHandle(output)));
         }
 
@@ -137,15 +137,23 @@ public:
         Builder(FrameGraph& fg, fg::PassNode& pass) noexcept;
         ~Builder() noexcept;
         FrameGraphHandle read(FrameGraphHandle input);
-        FrameGraphHandle write(FrameGraphHandle output);
+        [[nodiscard]] FrameGraphHandle write(FrameGraphHandle output);
         FrameGraph& mFrameGraph;
         fg::PassNode& mPass;
     };
 
-    explicit FrameGraph(fg::ResourceAllocator& resourceAllocator);
+    explicit FrameGraph(fg::ResourceAllocatorInterface& resourceAllocator);
     FrameGraph(FrameGraph const&) = delete;
     FrameGraph& operator = (FrameGraph const&) = delete;
     ~FrameGraph();
+
+    // returns the default Blackboard
+    Blackboard& getBlackboard() noexcept { return mBlackboard; }
+
+    // returns the default Blackboard
+    Blackboard const& getBlackboard() const noexcept { return mBlackboard; }
+
+    struct Empty{};
 
     /*
      * Add a pass to the framegraph.
@@ -172,12 +180,24 @@ public:
         return *pass;
     }
 
+    // Adds a simple execute-only pass with side effect (so it's not culled)
+    template<typename Execute>
+    void addTrivialSideEffectPass(const char* name, Execute&& execute) {
+        addPass<Empty>(name, [](FrameGraph::Builder& builder, auto&) { builder.sideEffect(); },
+                [execute](FrameGraphPassResources const&, auto const&,
+                        backend::DriverApi& driver) {
+                    execute();
+                });
+    }
+
     // Adds a reference to 'input', preventing it from being culled.
     void present(FrameGraphHandle input);
 
     // Returns whether the resource handle is valid. A resource handle becomes invalid after
     // it's used to declare a resource write (see Builder::write()).
     bool isValid(FrameGraphHandle r) const noexcept;
+
+    bool equal(FrameGraphHandle lhs, FrameGraphHandle rhs) const noexcept;
 
     // Return the Descriptor associated to this resource handle. The handle must be valid.
     template<typename T>
@@ -278,7 +298,7 @@ private:
 
     void executeInternal(fg::PassNode const& node, backend::DriverApi& driver) noexcept;
 
-    fg::ResourceAllocator& getResourceAllocator() noexcept { return mResourceAllocator; }
+    fg::ResourceAllocatorInterface& getResourceAllocator() noexcept { return mResourceAllocator; }
 
     void reset() noexcept;
 
@@ -310,7 +330,8 @@ private:
 
     FrameGraphHandle moveResource(FrameGraphHandle from, FrameGraphHandle to);
 
-    fg::ResourceAllocator& mResourceAllocator;
+    Blackboard mBlackboard;
+    fg::ResourceAllocatorInterface& mResourceAllocator;
     details::LinearAllocatorArena mArena;
     Vector<fg::PassNode> mPassNodes;                    // list of frame graph passes
     Vector<fg::ResourceNode> mResourceNodes;            // list of resource nodes

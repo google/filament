@@ -20,6 +20,8 @@ set(PUBLIC_HDRS
 set(SRCS
         src/Animator.cpp
         src/AssetLoader.cpp
+        src/DependencyGraph.cpp
+        src/DependencyGraph.h
         src/FFilamentAsset.h
         src/FilamentAsset.cpp
         src/GltfEnums.h
@@ -97,6 +99,31 @@ add_custom_command(OUTPUT ${DUMMY_SRC} COMMAND echo "//" > ${DUMMY_SRC})
 add_library(gltfio_resources ${DUMMY_SRC} ${RESGEN_SOURCE})
 
 # ==================================================================================================
+# Build "lite" resources library, which contains only a few materials
+# ==================================================================================================
+
+set(RESOURCE_BINS
+    "${RESOURCE_DIR}/lit_opaque.filamat"
+    "${RESOURCE_DIR}/lit_fade.filamat")
+
+get_resgen_vars(${RESOURCE_DIR} gltfresources_lite)
+
+add_custom_command(
+        OUTPUT ${RESGEN_OUTPUTS}
+        COMMAND resgen ${RESGEN_FLAGS} ${RESOURCE_BINS}
+        DEPENDS resgen ${RESOURCE_BINS}
+)
+
+if (DEFINED RESGEN_SOURCE_FLAGS)
+    set_source_files_properties(${RESGEN_SOURCE} PROPERTIES COMPILE_FLAGS ${RESGEN_SOURCE_FLAGS})
+endif()
+
+set(DUMMY_SRC "${RESOURCE_DIR}/dummy.c")
+add_custom_command(OUTPUT ${DUMMY_SRC} COMMAND echo "//" > ${DUMMY_SRC})
+
+add_library(gltfio_resources_lite ${DUMMY_SRC} ${RESGEN_SOURCE})
+
+# ==================================================================================================
 # Build the "core" library (no filamat or pipeline)
 # ==================================================================================================
 
@@ -139,8 +166,10 @@ if (NOT WEBGL AND NOT ANDROID AND NOT IOS)
 
 else()
 
-    install(TARGETS gltfio_core gltfio_resources ARCHIVE DESTINATION lib/${DIST_DIR})
+    install(TARGETS gltfio_core gltfio_resources gltfio_resources_lite ARCHIVE DESTINATION lib/${DIST_DIR})
     install(DIRECTORY ${PUBLIC_HDR_DIR}/gltfio DESTINATION include)
+    install(FILES ${RESOURCE_DIR}/gltfresources.h DESTINATION include/gltfio/resources)
+    install(FILES ${RESOURCE_DIR}/gltfresources_lite.h DESTINATION include/gltfio/resources)
 
 endif()
 

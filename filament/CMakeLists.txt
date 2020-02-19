@@ -44,9 +44,11 @@ set(SRCS
         src/components/LightManager.cpp
         src/components/RenderableManager.cpp
         src/components/TransformManager.cpp
+        src/fg/Blackboard.cpp
         src/fg/FrameGraph.cpp
         src/fg/FrameGraphHandle.cpp
         src/fg/fg/RenderTarget.cpp
+        src/fg/fg/RenderTargetResource.cpp
         src/fg/fg/ResourceEntry.cpp
         src/fg/ResourceAllocator.cpp
         src/Box.cpp
@@ -90,6 +92,7 @@ set(PRIVATE_HDRS
         src/components/LightManager.h
         src/components/RenderableManager.h
         src/components/TransformManager.h
+        src/fg/Blackboard.h
         src/fg/FrameGraph.h
         src/fg/FrameGraphPass.h
         src/fg/FrameGraphPassResources.h
@@ -138,10 +141,13 @@ set(PRIVATE_HDRS
 set(MATERIAL_SRCS
         src/materials/defaultMaterial.mat
         src/materials/blit.mat
-        src/materials/blur.mat
+        src/materials/bloomDownsample.mat
+        src/materials/bloomUpsample.mat
+        src/materials/bilateralBlur.mat
         src/materials/mipmapDepth.mat
         src/materials/skybox.mat
         src/materials/sao.mat
+        src/materials/separableGaussianBlur.mat
         src/materials/tonemapping.mat
         src/materials/fxaa.mat
 )
@@ -205,6 +211,7 @@ add_custom_command(
     DEPENDS ../shaders/src/tone_mapping.fs
     DEPENDS ../shaders/src/conversion_functions.fs
     DEPENDS ../shaders/src/dithering.fs
+    DEPENDS ../shaders/src/bloom.fs
     APPEND
 )
 

@@ -42,202 +42,147 @@ set(PUBLIC_HDRS
 
 # private headers dependencies
 set(PRIVATE_HDRS
-    ${PRIVATE_HDR_DIR}/BaseProcess.h
-    ${PRIVATE_HDR_DIR}/BlenderBMesh.h
-    ${PRIVATE_HDR_DIR}/BlenderDNA.h
-    ${PRIVATE_HDR_DIR}/BlenderIntermediate.h
-    ${PRIVATE_HDR_DIR}/BlenderLoader.h
-    ${PRIVATE_HDR_DIR}/BlenderModifier.h
-    ${PRIVATE_HDR_DIR}/BlenderScene.h
-    ${PRIVATE_HDR_DIR}/BlenderSceneGen.h
-    ${PRIVATE_HDR_DIR}/BlenderTessellator.h
-    ${PRIVATE_HDR_DIR}/CInterfaceIOWrapper.h
-    ${PRIVATE_HDR_DIR}/CalcTangentsProcess.h
-    ${PRIVATE_HDR_DIR}/ColladaHelper.h
-    ${PRIVATE_HDR_DIR}/ColladaLoader.h
-    ${PRIVATE_HDR_DIR}/ColladaParser.h
-    ${PRIVATE_HDR_DIR}/ComputeUVMappingProcess.h
-    ${PRIVATE_HDR_DIR}/ConvertToLHProcess.h
-    ${PRIVATE_HDR_DIR}/DeboneProcess.h
-    ${PRIVATE_HDR_DIR}/DefaultProgressHandler.h
-    ${PRIVATE_HDR_DIR}/DropFaceNormalsProcess.h
-    ${PRIVATE_HDR_DIR}/EmbedTexturesProcess.h
-    ${PRIVATE_HDR_DIR}/FBXCommon.h
-    ${PRIVATE_HDR_DIR}/FBXCompileConfig.h
-    ${PRIVATE_HDR_DIR}/FBXConverter.h
-    ${PRIVATE_HDR_DIR}/FBXDocument.h
-    ${PRIVATE_HDR_DIR}/FBXDocumentUtil.h
-    ${PRIVATE_HDR_DIR}/FBXImportSettings.h
-    ${PRIVATE_HDR_DIR}/FBXImporter.h
-    ${PRIVATE_HDR_DIR}/FBXMeshGeometry.h
-    ${PRIVATE_HDR_DIR}/FBXParser.h
-    ${PRIVATE_HDR_DIR}/FBXProperties.h
-    ${PRIVATE_HDR_DIR}/FBXTokenizer.h
-    ${PRIVATE_HDR_DIR}/FBXUtil.h
-    ${PRIVATE_HDR_DIR}/FileLogStream.h
-    ${PRIVATE_HDR_DIR}/FileSystemFilter.h
-    ${PRIVATE_HDR_DIR}/FindDegenerates.h
-    ${PRIVATE_HDR_DIR}/FindInstancesProcess.h
-    ${PRIVATE_HDR_DIR}/FindInvalidDataProcess.h
-    ${PRIVATE_HDR_DIR}/FixNormalsStep.h
-    ${PRIVATE_HDR_DIR}/GenFaceNormalsProcess.h
-    ${PRIVATE_HDR_DIR}/GenVertexNormalsProcess.h
-    ${PRIVATE_HDR_DIR}/IFF.h
-    ${PRIVATE_HDR_DIR}/Importer.h
-    ${PRIVATE_HDR_DIR}/ImproveCacheLocality.h
-    ${PRIVATE_HDR_DIR}/JoinVerticesProcess.h
-    ${PRIVATE_HDR_DIR}/LimitBoneWeightsProcess.h
-    ${PRIVATE_HDR_DIR}/MakeVerboseFormat.h
-    ${PRIVATE_HDR_DIR}/MaterialSystem.h
-    ${PRIVATE_HDR_DIR}/ObjFileData.h
-    ${PRIVATE_HDR_DIR}/ObjFileImporter.h
-    ${PRIVATE_HDR_DIR}/ObjFileMtlImporter.h
-    ${PRIVATE_HDR_DIR}/ObjFileParser.h
-    ${PRIVATE_HDR_DIR}/ObjTools.h
-    ${PRIVATE_HDR_DIR}/OptimizeGraph.h
-    ${PRIVATE_HDR_DIR}/OptimizeMeshes.h
-    ${PRIVATE_HDR_DIR}/PlyLoader.h
-    ${PRIVATE_HDR_DIR}/PlyParser.h
-    ${PRIVATE_HDR_DIR}/PolyTools.h
-    ${PRIVATE_HDR_DIR}/PretransformVertices.h
-    ${PRIVATE_HDR_DIR}/ProcessHelper.h
-    ${PRIVATE_HDR_DIR}/RemoveRedundantMaterials.h
-    ${PRIVATE_HDR_DIR}/RemoveVCProcess.h
-    ${PRIVATE_HDR_DIR}/ScaleProcess.h
-    ${PRIVATE_HDR_DIR}/ScenePreprocessor.h
-    ${PRIVATE_HDR_DIR}/ScenePrivate.h
-    ${PRIVATE_HDR_DIR}/SortByPTypeProcess.h
-    ${PRIVATE_HDR_DIR}/SplitByBoneCountProcess.h
-    ${PRIVATE_HDR_DIR}/SplitLargeMeshes.h
-    ${PRIVATE_HDR_DIR}/StdOStreamLogStream.h
-    ${PRIVATE_HDR_DIR}/TargetAnimation.h
-    ${PRIVATE_HDR_DIR}/TextureTransform.h
-    ${PRIVATE_HDR_DIR}/TriangulateProcess.h
-    ${PRIVATE_HDR_DIR}/ValidateDataStructure.h
-    ${PRIVATE_HDR_DIR}/VertexTriangleAdjacency.h
-    ${PRIVATE_HDR_DIR}/Win32DebugLogStream.h
-    ${PRIVATE_HDR_DIR}/assbin_chunks.h
-    ${PRIVATE_HDR_DIR}/glTF2Asset.h
-    ${PRIVATE_HDR_DIR}/glTF2AssetWriter.h
-    ${PRIVATE_HDR_DIR}/glTF2Importer.h
-    ${PRIVATE_HDR_DIR}/glTFAsset.h
-    ${PRIVATE_HDR_DIR}/glTFAssetWriter.h
-    ${PRIVATE_HDR_DIR}/glTFImporter.h
-    ${PRIVATE_HDR_DIR}/Importer/IFC/IFCLoader.h
-    ${PRIVATE_HDR_DIR}/Importer/IFC/IFCReaderGen_2x3.h
-    ${PRIVATE_HDR_DIR}/Importer/IFC/IFCReaderGen_4.h
-    ${PRIVATE_HDR_DIR}/Importer/IFC/IFCUtil.h
-    ${PRIVATE_HDR_DIR}/Importer/StepFile/StepFileImporter.h
-    ${PRIVATE_HDR_DIR}/Importer/StepFile/StepReaderGen.h
-    ${PRIVATE_HDR_DIR}/Importer/STEPParser/STEPFileEncoding.h
-    ${PRIVATE_HDR_DIR}/Importer/STEPParser/STEPFileReader.h
+    ${PRIVATE_HDR_DIR}/Common/BaseProcess.h
+    ${PRIVATE_HDR_DIR}/CApi/CInterfaceIOWrapper.h
+    ${PRIVATE_HDR_DIR}/PostProcessing/CalcTangentsProcess.h
+    ${PRIVATE_HDR_DIR}/PostProcessing/ComputeUVMappingProcess.h
+    ${PRIVATE_HDR_DIR}/PostProcessing/ConvertToLHProcess.h
+    ${PRIVATE_HDR_DIR}/PostProcessing/DeboneProcess.h
+    ${PRIVATE_HDR_DIR}/Common/DefaultProgressHandler.h
+    ${PRIVATE_HDR_DIR}/PostProcessing/DropFaceNormalsProcess.h
+    ${PRIVATE_HDR_DIR}/PostProcessing/EmbedTexturesProcess.h
+    ${PRIVATE_HDR_DIR}/FBX/FBXCommon.h
+    ${PRIVATE_HDR_DIR}/FBX/FBXCompileConfig.h
+    ${PRIVATE_HDR_DIR}/FBX/FBXConverter.h
+    ${PRIVATE_HDR_DIR}/FBX/FBXDocument.h
+    ${PRIVATE_HDR_DIR}/FBX/FBXDocumentUtil.h
+    ${PRIVATE_HDR_DIR}/FBX/FBXImportSettings.h
+    ${PRIVATE_HDR_DIR}/FBX/FBXImporter.h
+    ${PRIVATE_HDR_DIR}/FBX/FBXMeshGeometry.h
+    ${PRIVATE_HDR_DIR}/FBX/FBXParser.h
+    ${PRIVATE_HDR_DIR}/FBX/FBXProperties.h
+    ${PRIVATE_HDR_DIR}/FBX/FBXTokenizer.h
+    ${PRIVATE_HDR_DIR}/FBX/FBXUtil.h
+    ${PRIVATE_HDR_DIR}/Common/FileLogStream.h
+    ${PRIVATE_HDR_DIR}/Common/FileSystemFilter.h
+    ${PRIVATE_HDR_DIR}/PostProcessing/FindDegenerates.h
+    ${PRIVATE_HDR_DIR}/PostProcessing/FindInstancesProcess.h
+    ${PRIVATE_HDR_DIR}/PostProcessing/FindInvalidDataProcess.h
+    ${PRIVATE_HDR_DIR}/PostProcessing/FixNormalsStep.h
+    ${PRIVATE_HDR_DIR}/PostProcessing/GenFaceNormalsProcess.h
+    ${PRIVATE_HDR_DIR}/PostProcessing/GenVertexNormalsProcess.h
+    ${PRIVATE_HDR_DIR}/Common/IFF.h
+    ${PRIVATE_HDR_DIR}/Common/Importer.h
+    ${PRIVATE_HDR_DIR}/PostProcessing/ImproveCacheLocality.h
+    ${PRIVATE_HDR_DIR}/PostProcessing/JoinVerticesProcess.h
+    ${PRIVATE_HDR_DIR}/PostProcessing/LimitBoneWeightsProcess.h
+    ${PRIVATE_HDR_DIR}/PostProcessing/MakeVerboseFormat.h
+    ${PRIVATE_HDR_DIR}/Material/MaterialSystem.h
+    ${PRIVATE_HDR_DIR}/Obj/ObjFileData.h
+    ${PRIVATE_HDR_DIR}/Obj/ObjFileImporter.h
+    ${PRIVATE_HDR_DIR}/Obj/ObjFileMtlImporter.h
+    ${PRIVATE_HDR_DIR}/Obj/ObjFileParser.h
+    ${PRIVATE_HDR_DIR}/Obj/ObjTools.h
+    ${PRIVATE_HDR_DIR}/PostProcessing/OptimizeGraph.h
+    ${PRIVATE_HDR_DIR}/PostProcessing/OptimizeMeshes.h
+    ${PRIVATE_HDR_DIR}/Common/PolyTools.h
+    ${PRIVATE_HDR_DIR}/PostProcessing/PretransformVertices.h
+    ${PRIVATE_HDR_DIR}/PostProcessing/ProcessHelper.h
+    ${PRIVATE_HDR_DIR}/PostProcessing/RemoveRedundantMaterials.h
+    ${PRIVATE_HDR_DIR}/PostProcessing/RemoveVCProcess.h
+    ${PRIVATE_HDR_DIR}/PostProcessing/ScaleProcess.h
+    ${PRIVATE_HDR_DIR}/Common/ScenePreprocessor.h
+    ${PRIVATE_HDR_DIR}/Common/ScenePrivate.h
+    ${PRIVATE_HDR_DIR}/PostProcessing/SortByPTypeProcess.h
+    ${PRIVATE_HDR_DIR}/Common/SplitByBoneCountProcess.h
+    ${PRIVATE_HDR_DIR}/PostProcessing/SplitLargeMeshes.h
+    ${PRIVATE_HDR_DIR}/Common/StdOStreamLogStream.h
+    ${PRIVATE_HDR_DIR}/Common/TargetAnimation.h
+    ${PRIVATE_HDR_DIR}/PostProcessing/TextureTransform.h
+    ${PRIVATE_HDR_DIR}/PostProcessing/TriangulateProcess.h
+    ${PRIVATE_HDR_DIR}/PostProcessing/ValidateDataStructure.h
+    ${PRIVATE_HDR_DIR}/Common/VertexTriangleAdjacency.h
+    ${PRIVATE_HDR_DIR}/Common/Win32DebugLogStream.h
+    ${PRIVATE_HDR_DIR}/Common/assbin_chunks.h
 )
 
 # sources dependencies
 set(SRCS
-    ${SRC_DIR}/code/Assimp.cpp
-    ${SRC_DIR}/code/BaseImporter.cpp
-    ${SRC_DIR}/code/BaseProcess.cpp
-    ${SRC_DIR}/code/Bitmap.cpp
-    ${SRC_DIR}/code/BlenderBMesh.cpp
-    ${SRC_DIR}/code/BlenderDNA.cpp
-    ${SRC_DIR}/code/BlenderLoader.cpp
-    ${SRC_DIR}/code/BlenderModifier.cpp
-    ${SRC_DIR}/code/BlenderScene.cpp
-    ${SRC_DIR}/code/BlenderTessellator.cpp
-    ${SRC_DIR}/code/CInterfaceIOWrapper.cpp
-    ${SRC_DIR}/code/CalcTangentsProcess.cpp
-    ${SRC_DIR}/code/ColladaLoader.cpp
-    ${SRC_DIR}/code/ColladaParser.cpp
-    ${SRC_DIR}/code/ComputeUVMappingProcess.cpp
-    ${SRC_DIR}/code/ConvertToLHProcess.cpp
-    ${SRC_DIR}/code/CreateAnimMesh.cpp
-    ${SRC_DIR}/code/DeboneProcess.cpp
-    ${SRC_DIR}/code/DefaultIOStream.cpp
-    ${SRC_DIR}/code/DefaultIOSystem.cpp
-    ${SRC_DIR}/code/DefaultLogger.cpp
-    ${SRC_DIR}/code/DropFaceNormalsProcess.cpp
-    ${SRC_DIR}/code/EmbedTexturesProcess.cpp
-    ${SRC_DIR}/code/Exporter.cpp
-    ${SRC_DIR}/code/FBXAnimation.cpp
-    ${SRC_DIR}/code/FBXBinaryTokenizer.cpp
-    ${SRC_DIR}/code/FBXConverter.cpp
-    ${SRC_DIR}/code/FBXDeformer.cpp
-    ${SRC_DIR}/code/FBXDocument.cpp
-    ${SRC_DIR}/code/FBXDocumentUtil.cpp
-    ${SRC_DIR}/code/FBXImporter.cpp
-    ${SRC_DIR}/code/FBXMaterial.cpp
-    ${SRC_DIR}/code/FBXMeshGeometry.cpp
-    ${SRC_DIR}/code/FBXModel.cpp
-    ${SRC_DIR}/code/FBXNodeAttribute.cpp
-    ${SRC_DIR}/code/FBXParser.cpp
-    ${SRC_DIR}/code/FBXProperties.cpp
-    ${SRC_DIR}/code/FBXTokenizer.cpp
-    ${SRC_DIR}/code/FBXUtil.cpp
-    ${SRC_DIR}/code/FIReader.cpp
-    ${SRC_DIR}/code/FindDegenerates.cpp
-    ${SRC_DIR}/code/FindInstancesProcess.cpp
-    ${SRC_DIR}/code/FindInvalidDataProcess.cpp
-    ${SRC_DIR}/code/FixNormalsStep.cpp
-    ${SRC_DIR}/code/GenFaceNormalsProcess.cpp
-    ${SRC_DIR}/code/GenVertexNormalsProcess.cpp
-    ${SRC_DIR}/code/Importer.cpp
-    ${SRC_DIR}/code/ImporterRegistry.cpp
-    ${SRC_DIR}/code/ImproveCacheLocality.cpp
-    ${SRC_DIR}/code/JoinVerticesProcess.cpp
-    ${SRC_DIR}/code/LimitBoneWeightsProcess.cpp
-    ${SRC_DIR}/code/MakeVerboseFormat.cpp
-    ${SRC_DIR}/code/MaterialSystem.cpp
-    ${SRC_DIR}/code/ObjFileImporter.cpp
-    ${SRC_DIR}/code/ObjFileMtlImporter.cpp
-    ${SRC_DIR}/code/ObjFileParser.cpp
-    ${SRC_DIR}/code/OptimizeGraph.cpp
-    ${SRC_DIR}/code/OptimizeMeshes.cpp
-    ${SRC_DIR}/code/PlyLoader.cpp
-    ${SRC_DIR}/code/PlyParser.cpp
-    ${SRC_DIR}/code/PostStepRegistry.cpp
-    ${SRC_DIR}/code/PretransformVertices.cpp
-    ${SRC_DIR}/code/ProcessHelper.cpp
-    ${SRC_DIR}/code/RemoveComments.cpp
-    ${SRC_DIR}/code/RemoveRedundantMaterials.cpp
-    ${SRC_DIR}/code/RemoveVCProcess.cpp
-    ${SRC_DIR}/code/SGSpatialSort.cpp
-    ${SRC_DIR}/code/ScaleProcess.cpp
-    ${SRC_DIR}/code/SceneCombiner.cpp
-    ${SRC_DIR}/code/ScenePreprocessor.cpp
-    ${SRC_DIR}/code/SkeletonMeshBuilder.cpp
-    ${SRC_DIR}/code/SortByPTypeProcess.cpp
-    ${SRC_DIR}/code/SpatialSort.cpp
-    ${SRC_DIR}/code/SplitByBoneCountProcess.cpp
-    ${SRC_DIR}/code/SplitLargeMeshes.cpp
-    ${SRC_DIR}/code/StandardShapes.cpp
-    ${SRC_DIR}/code/Subdivision.cpp
-    ${SRC_DIR}/code/TargetAnimation.cpp
-    ${SRC_DIR}/code/TextureTransform.cpp
-    ${SRC_DIR}/code/TriangulateProcess.cpp
-    ${SRC_DIR}/code/ValidateDataStructure.cpp
-    ${SRC_DIR}/code/Version.cpp
-    ${SRC_DIR}/code/VertexTriangleAdjacency.cpp
-    ${SRC_DIR}/code/glTF2Importer.cpp
-    ${SRC_DIR}/code/glTFImporter.cpp
-    ${SRC_DIR}/code/scene.cpp
-    ${SRC_DIR}/code/Importer/IFC/IFCBoolean.cpp
-    ${SRC_DIR}/code/Importer/IFC/IFCCurve.cpp
-    ${SRC_DIR}/code/Importer/IFC/IFCGeometry.cpp
-    ${SRC_DIR}/code/Importer/IFC/IFCLoader.cpp
-    ${SRC_DIR}/code/Importer/IFC/IFCMaterial.cpp
-    ${SRC_DIR}/code/Importer/IFC/IFCOpenings.cpp
-    ${SRC_DIR}/code/Importer/IFC/IFCProfile.cpp
-    ${SRC_DIR}/code/Importer/IFC/IFCReaderGen1_2x3.cpp
-    ${SRC_DIR}/code/Importer/IFC/IFCReaderGen2_2x3.cpp
-    ${SRC_DIR}/code/Importer/IFC/IFCReaderGen_4.cpp
-    ${SRC_DIR}/code/Importer/IFC/IFCUtil.cpp
-    ${SRC_DIR}/code/Importer/StepFile/StepFileImporter.cpp
-    ${SRC_DIR}/code/Importer/StepFile/StepFileGen1.cpp
-    ${SRC_DIR}/code/Importer/StepFile/StepFileGen2.cpp
-    ${SRC_DIR}/code/Importer/StepFile/StepFileGen3.cpp
-    ${SRC_DIR}/code/Importer/STEPParser/STEPFileEncoding.cpp
-    ${SRC_DIR}/code/Importer/STEPParser/STEPFileReader.cpp
+    ${SRC_DIR}/code/Common/Assimp.cpp
+    ${SRC_DIR}/code/Common/BaseImporter.cpp
+    ${SRC_DIR}/code/Common/BaseProcess.cpp
+    ${SRC_DIR}/code/Common/Bitmap.cpp
+    ${SRC_DIR}/code/CApi/CInterfaceIOWrapper.cpp
+    ${SRC_DIR}/code/PostProcessing/CalcTangentsProcess.cpp
+    ${SRC_DIR}/code/PostProcessing/ComputeUVMappingProcess.cpp
+    ${SRC_DIR}/code/PostProcessing/ConvertToLHProcess.cpp
+    ${SRC_DIR}/code/Common/CreateAnimMesh.cpp
+    ${SRC_DIR}/code/PostProcessing/DeboneProcess.cpp
+    ${SRC_DIR}/code/Common/DefaultIOStream.cpp
+    ${SRC_DIR}/code/Common/DefaultIOSystem.cpp
+    ${SRC_DIR}/code/Common/DefaultLogger.cpp
+    ${SRC_DIR}/code/PostProcessing/DropFaceNormalsProcess.cpp
+    ${SRC_DIR}/code/PostProcessing/EmbedTexturesProcess.cpp
+    ${SRC_DIR}/code/Common/Exporter.cpp
+    ${SRC_DIR}/code/FBX/FBXAnimation.cpp
+    ${SRC_DIR}/code/FBX/FBXBinaryTokenizer.cpp
+    ${SRC_DIR}/code/FBX/FBXConverter.cpp
+    ${SRC_DIR}/code/FBX/FBXDeformer.cpp
+    ${SRC_DIR}/code/FBX/FBXDocument.cpp
+    ${SRC_DIR}/code/FBX/FBXDocumentUtil.cpp
+    ${SRC_DIR}/code/FBX/FBXImporter.cpp
+    ${SRC_DIR}/code/FBX/FBXMaterial.cpp
+    ${SRC_DIR}/code/FBX/FBXMeshGeometry.cpp
+    ${SRC_DIR}/code/FBX/FBXModel.cpp
+    ${SRC_DIR}/code/FBX/FBXNodeAttribute.cpp
+    ${SRC_DIR}/code/FBX/FBXParser.cpp
+    ${SRC_DIR}/code/FBX/FBXProperties.cpp
+    ${SRC_DIR}/code/FBX/FBXTokenizer.cpp
+    ${SRC_DIR}/code/FBX/FBXUtil.cpp
+    ${SRC_DIR}/code/X3D/FIReader.cpp
+    ${SRC_DIR}/code/PostProcessing/FindDegenerates.cpp
+    ${SRC_DIR}/code/PostProcessing/FindInstancesProcess.cpp
+    ${SRC_DIR}/code/PostProcessing/FindInvalidDataProcess.cpp
+    ${SRC_DIR}/code/PostProcessing/FixNormalsStep.cpp
+    ${SRC_DIR}/code/PostProcessing/GenFaceNormalsProcess.cpp
+    ${SRC_DIR}/code/PostProcessing/GenBoundingBoxesProcess.cpp
+    ${SRC_DIR}/code/PostProcessing/GenVertexNormalsProcess.cpp
+    ${SRC_DIR}/code/Common/Importer.cpp
+    ${SRC_DIR}/code/Common/ImporterRegistry.cpp
+    ${SRC_DIR}/code/PostProcessing/ImproveCacheLocality.cpp
+    ${SRC_DIR}/code/PostProcessing/JoinVerticesProcess.cpp
+    ${SRC_DIR}/code/PostProcessing/LimitBoneWeightsProcess.cpp
+    ${SRC_DIR}/code/PostProcessing/MakeVerboseFormat.cpp
+    ${SRC_DIR}/code/Material/MaterialSystem.cpp
+    ${SRC_DIR}/code/Obj/ObjFileImporter.cpp
+    ${SRC_DIR}/code/Obj/ObjFileMtlImporter.cpp
+    ${SRC_DIR}/code/Obj/ObjFileParser.cpp
+    ${SRC_DIR}/code/PostProcessing/OptimizeGraph.cpp
+    ${SRC_DIR}/code/PostProcessing/OptimizeMeshes.cpp
+    ${SRC_DIR}/code/Common/PostStepRegistry.cpp
+    ${SRC_DIR}/code/PostProcessing/PretransformVertices.cpp
+    ${SRC_DIR}/code/PostProcessing/ProcessHelper.cpp
+    ${SRC_DIR}/code/Common/RemoveComments.cpp
+    ${SRC_DIR}/code/PostProcessing/RemoveRedundantMaterials.cpp
+    ${SRC_DIR}/code/PostProcessing/RemoveVCProcess.cpp
+    ${SRC_DIR}/code/Common/SGSpatialSort.cpp
+    ${SRC_DIR}/code/PostProcessing/ScaleProcess.cpp
+    ${SRC_DIR}/code/Common/SceneCombiner.cpp
+    ${SRC_DIR}/code/Common/ScenePreprocessor.cpp
+    ${SRC_DIR}/code/Common/SkeletonMeshBuilder.cpp
+    ${SRC_DIR}/code/PostProcessing/SortByPTypeProcess.cpp
+    ${SRC_DIR}/code/Common/SpatialSort.cpp
+    ${SRC_DIR}/code/Common/SplitByBoneCountProcess.cpp
+    ${SRC_DIR}/code/PostProcessing/SplitLargeMeshes.cpp
+    ${SRC_DIR}/code/Common/StandardShapes.cpp
+    ${SRC_DIR}/code/Common/Subdivision.cpp
+    ${SRC_DIR}/code/Common/TargetAnimation.cpp
+    ${SRC_DIR}/code/PostProcessing/TextureTransform.cpp
+    ${SRC_DIR}/code/PostProcessing/TriangulateProcess.cpp
+    ${SRC_DIR}/code/PostProcessing/ValidateDataStructure.cpp
+    ${SRC_DIR}/code/Common/Version.cpp
+    ${SRC_DIR}/code/Common/VertexTriangleAdjacency.cpp
+    ${SRC_DIR}/code/Common/scene.cpp
     ${SRC_DIR}/contrib/clipper/clipper.cpp
     ${SRC_DIR}/contrib/irrXML/irrXML.cpp
     ${SRC_DIR}/contrib/poly2tri/poly2tri/common/shapes.cc
@@ -262,8 +207,11 @@ add_definitions(
     -DASSIMP_BUILD_NO_BVH_IMPORTER
     -DASSIMP_BUILD_NO_C4D_IMPORTER
     -DASSIMP_BUILD_NO_COB_IMPORTER
+    -DASSIMP_BUILD_NO_COLLADA_IMPORTER
     -DASSIMP_BUILD_NO_CSM_IMPORTER
     -DASSIMP_BUILD_NO_DXF_IMPORTER
+    -DASSIMP_BUILD_NO_GLTF_IMPORTER
+    -DASSIMP_BUILD_NO_GLTF2_IMPORTER
     -DASSIMP_BUILD_NO_HMP_IMPORTER
     -DASSIMP_BUILD_NO_IFC_IMPORTER
     -DASSIMP_BUILD_NO_IRR_IMPORTER
@@ -283,17 +231,20 @@ add_definitions(
     -DASSIMP_BUILD_NO_OFF_IMPORTER
     -DASSIMP_BUILD_NO_OGRE_IMPORTER
     -DASSIMP_BUILD_NO_OPENGEX_IMPORTER
+    -DASSIMP_BUILD_NO_PLY_IMPORTER
     -DASSIMP_BUILD_NO_Q3BSP_IMPORTER
     -DASSIMP_BUILD_NO_Q3D_IMPORTER
     -DASSIMP_BUILD_NO_RAW_IMPORTER
     -DASSIMP_BUILD_NO_SIB_IMPORTER
     -DASSIMP_BUILD_NO_SMD_IMPORTER
+    -DASSIMP_BUILD_NO_STEPFILE_IMPORTER
     -DASSIMP_BUILD_NO_STL_IMPORTER
     -DASSIMP_BUILD_NO_TERRAGEN_IMPORTER
     -DASSIMP_BUILD_NO_X3D_IMPORTER
     -DASSIMP_BUILD_NO_XGL_IMPORTER
     -DASSIMP_BUILD_NO_X_IMPORTER
     -DASSIMP_BUILD_NO_XX_IMPORTER
+    -DASSIMP_BUILD_NO_STEP_IMPORTER
     -DASSIMP_BUILD_NO_EXPORTER
 )
 
@@ -305,7 +256,7 @@ add_definitions(
 include_directories(${SRC_DIR}/contrib/irrXML)
 include_directories(${SRC_DIR}/contrib/rapidjson/include)
 include_directories(${SRC_DIR})
-include_directories(${SRC_DIR}/code/BoostWorkaround)
+include_directories(${PRIVATE_HDR_DIR})
 
 # we're building a library
 add_library(${TARGET} STATIC ${PRIVATE_HDRS} ${PUBLIC_HDRS} ${SRCS})

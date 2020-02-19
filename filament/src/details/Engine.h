@@ -29,6 +29,7 @@
 #include "details/Camera.h"
 #include "details/DebugRegistry.h"
 #include "details/Fence.h"
+#include "details/IndexBuffer.h"
 #include "details/RenderTarget.h"
 #include "details/ResourceList.h"
 #include "details/Skybox.h"
@@ -267,6 +268,10 @@ public:
     // flush the current buffer
     void flush();
 
+    /**
+     * Processes the platform's event queue when called from the platform's event-handling thread.
+     * Returns false when called from any other thread.
+     */
     bool pumpPlatformEvents() {
         return mPlatform->pumpEvents();
     }

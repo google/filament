@@ -72,6 +72,35 @@ public:
     /** Gets the transform root for the asset, which has no matching glTF node. */
     utils::Entity getRoot() const noexcept;
 
+    /**
+     * Pops a ready renderable off the queue, or returns 0 if no renderables have become ready.
+     *
+     * NOTE: To determine the progress percentage or completion status, please use
+     * ResourceLoader#asyncGetLoadProgress. To get the number of ready renderables,
+     * please use popRenderables().
+     *
+     * This method allows clients to progressively add the asset's renderables to the scene as
+     * textures gradually become ready through asynchronous loading. For example, on every frame
+     * progressive applications can do something like this:
+     *
+     *    while (utils::Entity e = popRenderable()) { scene.addEntity(e); }
+     *
+     * \see ResourceLoader#asyncBeginLoad
+     * \see popRenderables()
+     */
+    utils::Entity popRenderable() noexcept;
+
+    /**
+     * Pops up to "count" ready renderables off the queue, or returns the available number.
+     *
+     * The given pointer should either be null or point to memory that can hold up to count
+     * entities. If the pointer is null, returns the number of available renderables. Otherwise
+     * returns the number of entities that have been written.
+     *
+     * \see ResourceLoader#asyncBeginLoad
+     */
+    size_t popRenderables(utils::Entity* entities, size_t count) noexcept;
+
     /** Gets all material instances. These are already bound to renderables. */
     const filament::MaterialInstance* const* getMaterialInstances() const noexcept;
 
@@ -80,18 +109,6 @@ public:
 
     /** Gets the number of materials returned by getMaterialInstances(). */
     size_t getMaterialInstanceCount() const noexcept;
-
-    /** Gets loading instructions for vertex buffers and index buffers. */
-    const BufferBinding* getBufferBindings() const noexcept;
-
-    /** Gets the number of bindings returned by getBufferBindings(). */
-    size_t getBufferBindingCount() const noexcept;
-
-    /** Gets loading instructions for textures. */
-    const TextureBinding* getTextureBindings() const noexcept;
-
-    /** Gets the number of bindings returned by getTextureBindings(). */
-    size_t getTextureBindingCount() const noexcept;
 
     /** Gets resource URIs for all externally-referenced buffers. */
     const char* const* getResourceUris() const noexcept;
@@ -135,6 +152,11 @@ public:
      * calling releaseSourceData();
      */
     const void* getSourceAsset() noexcept;
+
+    const BufferBinding* getBufferBindings() const noexcept;   //!< \deprecated please use ResourceLoader
+    size_t getBufferBindingCount() const noexcept;             //!< \deprecated please use ResourceLoader
+    const TextureBinding* getTextureBindings() const noexcept; //!< \deprecated please use ResourceLoader
+    size_t getTextureBindingCount() const noexcept;            //!< \deprecated please use ResourceLoader
 
     /*! \cond PRIVATE */
 protected:

@@ -19,17 +19,14 @@
 #ifndef TNT_FILAMENT_VIEW_H
 #define TNT_FILAMENT_VIEW_H
 
-#include <filament/Camera.h>
 #include <filament/Color.h>
-#include <filament/Viewport.h>
 #include <filament/FilamentAPI.h>
 
 #include <backend/DriverEnums.h>
 
 #include <utils/compiler.h>
 
-#include <math/vec2.h>
-#include <math/vec3.h>
+#include <math/mathfwd.h>
 
 namespace filament {
 
@@ -37,6 +34,8 @@ class Camera;
 class MaterialInstance;
 class RenderTarget;
 class Scene;
+class Texture;
+class Viewport;
 
 /**
  * A View encompasses all the state needed for rendering a Scene.
@@ -62,6 +61,13 @@ class Scene;
 class UTILS_PUBLIC View : public FilamentAPI {
 public:
     using TargetBufferFlags = backend::TargetBufferFlags;
+
+    enum class QualityLevel : int8_t {
+        LOW,
+        MEDIUM,
+        HIGH,
+        ULTRA
+    };
 
     /**
      * Dynamic resolution can be used to either reach a desired target frame rate
@@ -116,11 +122,44 @@ public:
         bool homogeneousScaling = false;                //!< set to true to force homogeneous scaling
     };
 
-    enum class QualityLevel : int8_t {
-        LOW,
-        MEDIUM,
-        HIGH,
-        ULTRA
+    /**
+     * Options to control the bloom effect
+     *
+     * enabled:     Enable or disable the bloom post-processing effect. Disabled by default.
+     * levels:      Number of successive blurs to achieve the blur effect, the minimum is 3 and the
+     *              maximum is 12. This value together with resolution influences the spread of the
+     *              blur effect. This value can be silently reduced to accommodate the original
+     *              image size.
+     * resolution:  Resolution of bloom's minor axis. The minimum value is 2^levels and the
+     *              the maximum is lower of the original resolution and 4096. This parameter is
+     *              silently clamped to the minimum and maximum.
+     *              It is highly recommended that this value be smaller than the target resolution
+     *              after dynamic resolution is applied (horizontally and vertically).
+     * strength:    how much of the bloom is added to the original image. Between 0 and 1.
+     * blendMode:   Whether the bloom effect is purely additive (false) or mixed with the original
+     *              image (true).
+     * anamorphism: Bloom's aspect ratio (x/y), for artistic purposes.
+     * threshold:   When enabled, a threshold at 1.0 is applied on the source image, this is
+     *              useful for artistic reasons and is usually needed when a dirt texture is used.
+     * dirt:        A dirt/scratch/smudges texture (that can be RGB), which gets added to the
+     *              bloom effect. Smudges are visible where bloom occurs. Threshold must be
+     *              enabled for the dirt effect to work properly.
+     * dirtStrength: Strength of the dirt texture.
+     */
+    struct BloomOptions {
+        enum class BlendMode : uint8_t {
+            ADD,           //!< Bloom is modulated by the strength parameter and added to the scene
+            INTERPOLATE    //!< Bloom is interpolated with the scene using the strength parameter
+        };
+        Texture* dirt = nullptr;                //!< User provided dirt texture
+        float dirtStrength = 0.2f;              //!< strength of the dirt texture
+        float strength = 0.10f;                 //!< Between 0.0 and 1.0
+        uint32_t resolution = 360;              //!< Resolution of minor axis (2^levels to 4096)
+        float anamorphism = 1.0f;               //!< Bloom x/y aspect-ratio (1/32 to 32)
+        uint8_t levels = 6;                     //!< number of blur levels (3 to 12)
+        BlendMode blendMode = BlendMode::ADD;   //!< How the bloom effect is applied
+        bool threshold = true;                  //!< Whether to threshold the source
+        bool enabled = false;                   //!< enable or disable bloom
     };
 
     /**
@@ -170,13 +209,6 @@ public:
         FXAA = 1    //!< FXAA is a low-quality but very efficient type of anti-aliasing. (default).
     };
 
-    /** @see setDepthPrepass */
-    enum class DepthPrepass : int8_t {
-        DEFAULT = -1,
-        DISABLED,
-        ENABLED,
-    };
-
     /**
      * List of available post-processing dithering techniques.
      */
@@ -220,32 +252,6 @@ public:
      * @return ambient occlusion options currently set.
      */
     AmbientOcclusionOptions const& getAmbientOcclusionOptions() const noexcept;
-
-    /**
-     * Sets whether this view is rendered with or without a depth pre-pass.
-     *
-     * By default, the system picks the most appropriate strategy, this method lets the
-     * application override that strategy.
-     *
-     * When the depth pre-pass is enabled, the renderer will first draw all objects in the
-     * depth buffer from front to back, and then draw the objects again but sorted to minimize
-     * state changes. With the depth pre-pass disabled, objects are drawn only once, but it may
-     * result in more state changes or more overdraw.
-     *
-     * The best strategy may depend on the scene and/or GPU.
-     *
-     * @param prepass   DepthPrepass::DEFAULT uses the most appropriate strategy,
-     *                  DepthPrepass::DISABLED disables the depth pre-pass,
-     *                  DepthPrepass::ENABLE enables the depth pre-pass.
-     */
-    void setDepthPrepass(DepthPrepass prepass) noexcept;
-
-    /**
-     * Checks if this view is rendered with a depth-only prepass.
-     *
-     * @return the value set by setDepthPass().
-     */
-    DepthPrepass getDepthPrepass() const noexcept;
 
     /**
      * Sets the View's name. Only useful for debugging.
@@ -485,6 +491,20 @@ public:
     ToneMapping getToneMapping() const noexcept;
 
     /**
+     * Enables or disables bloom in the post-processing stage. Disabled by default.
+     *
+     * @param bloom options
+     */
+    void setBloomOptions(BloomOptions options) noexcept;
+
+    /**
+     * Queries the bloom options.
+     *
+     * @return the current bloom options for this view.
+     */
+    BloomOptions getBloomOptions() const noexcept;
+
+    /**
      * Enables or disables dithering in the post-processing stage. Enabled by default.
      *
      * @param dithering dithering type
@@ -552,6 +572,7 @@ public:
      * Enables or disables post processing. Enabled by default.
      *
      * Post-processing includes:
+     *  - Bloom
      *  - Tone-mapping & gamma encoding
      *  - Dithering
      *  - MSAA
@@ -563,7 +584,7 @@ public:
      *
      * @param enabled true enables post processing, false disables it.
      *
-     * @see setToneMapping, setAntiAliasing, setDithering, setSampleCount
+     * @see setBloomOptions, setToneMapping, setAntiAliasing, setDithering, setSampleCount
      */
     void setPostProcessingEnabled(bool enabled) noexcept;
 

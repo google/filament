@@ -38,12 +38,15 @@ set(MATERIAL_SRCS
         materials/aiDefaultTrans.mat
         materials/depthVisualizer.mat
         materials/groundShadow.mat
+        materials/heightfield.mat
         materials/sandboxCloth.mat
         materials/sandboxLit.mat
         materials/sandboxLitFade.mat
         materials/sandboxLitTransparent.mat
         materials/sandboxLitThinRefraction.mat
+        materials/sandboxLitThinRefractionSsr.mat
         materials/sandboxLitSolidRefraction.mat
+        materials/sandboxLitSolidRefractionSsr.mat
         materials/sandboxSpecGloss.mat
         materials/sandboxSubsurface.mat
         materials/sandboxUnlit.mat
@@ -220,13 +223,12 @@ target_sources(gltf-resources PRIVATE ${RESGEN_SOURCE})
 # Common library
 # ==================================================================================================
 
-set(APP_LIBS filament sdl2 stb math filamat utils getopt imgui filagui image common-resources)
+set(APP_LIBS filament sdl2 stb math filamat utils getopt imgui filagui image camutils common-resources)
 if (WIN32)
     list(APPEND APP_LIBS sdl2main)
 endif()
 
 set(APP_SRCS
-        app/CameraManipulator.cpp
         app/Cube.cpp
         app/FilamentApp.cpp
         app/IBL.cpp
@@ -329,6 +331,10 @@ if (NOT ANDROID)
     target_compile_options(lucy_bloom PRIVATE ${COMPILER_FLAGS})
     target_link_libraries(lucy_bloom PRIVATE ${APP_LIBS} gltf-resources gltfio)
 endif()
+
+add_executable(heightfield heightfield.cpp)
+target_link_libraries(heightfield PRIVATE ${APP_LIBS})
+target_compile_options(heightfield PRIVATE ${COMPILER_FLAGS})
 
 # ==================================================================================================
 # Copy the MoltenVK dylibs and JSON on MacOS

@@ -34,6 +34,7 @@
 #include <utils/NameComponentManager.h>
 
 #include <fstream>
+#include <iostream>
 #include <string>
 
 #include "generated/resources/gltf_viewer.h"
@@ -52,6 +53,7 @@ struct App {
     MaterialProvider* materials;
     MaterialSource materialSource = GENERATE_SHADERS;
     bool actualSize = false;
+    gltfio::ResourceLoader* resourceLoader = nullptr;
 };
 
 static const char* DEFAULT_IBL = "venetian_crossroads_2k";
@@ -195,17 +197,17 @@ int main(int argc, char** argv) {
         // Load external textures and buffers.
         ResourceConfiguration configuration;
         configuration.engine = app.engine;
-        configuration.gltfPath = filename.getAbsolutePath();
+        configuration.gltfPath = filename.getAbsolutePath().c_str();
         configuration.normalizeSkinningWeights = true;
         configuration.recomputeBoundingBoxes = false;
-        gltfio::ResourceLoader(configuration).loadResources(app.asset);
+        if (!app.resourceLoader) {
+            app.resourceLoader = new gltfio::ResourceLoader(configuration);
+        }
+        app.resourceLoader->asyncBeginLoad(app.asset);
 
         // Load animation data then free the source hierarchy.
         app.asset->getAnimator();
         app.asset->releaseSourceData();
-
-        // Add the renderables to the scene.
-        app.viewer->setAsset(app.asset, !app.actualSize);
 
         auto ibl = FilamentApp::get().getIBL();
         if (ibl) {
@@ -230,6 +232,10 @@ int main(int argc, char** argv) {
         loadResources(filename);
 
         app.viewer->setUiCallback([&app, scene] () {
+            float progress = app.resourceLoader->asyncGetLoadProgress();
+            if (progress < 1.0) {
+                ImGui::ProgressBar(progress);
+            }
             if (ImGui::CollapsingHeader("Stats")) {
                 ImGui::Text("%zu entities in the asset", app.asset->getEntityCount());
                 ImGui::Text("%zu renderables (excluding UI)", scene->getRenderableCount());
@@ -252,6 +258,11 @@ int main(int argc, char** argv) {
     };
 
     auto animate = [&app](Engine* engine, View* view, double now) {
+        app.resourceLoader->asyncUpdateLoad();
+
+        // Add renderables to the scene as they become ready.
+        app.viewer->populateScene(app.asset, !app.actualSize);
+
         app.viewer->applyAnimation(now);
     };
 

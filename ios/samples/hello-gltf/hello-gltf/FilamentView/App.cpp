@@ -18,12 +18,14 @@
 
 #include <filament/LightManager.h>
 #include <filament/TransformManager.h>
+#include <filament/Viewport.h>
 
 #include <image/KtxUtility.h>
 #include <gltfio/AssetLoader.h>
 #include <gltfio/ResourceLoader.h>
 
 #include <fstream>
+#include <iostream>
 #include <sstream>
 
 // This file is generated via the "Run Script" build phase and contains the IBL and skybox
@@ -141,7 +143,6 @@ void App::setupMesh() {
 
 void App::setupView() {
     view = engine->createView();
-    view->setDepthPrepass(filament::View::DepthPrepass::DISABLED);
     view->setScene(scene);
     view->setCamera(camera);
     view->setViewport(Viewport(0, 0, width, height));

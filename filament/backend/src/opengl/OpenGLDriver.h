@@ -109,6 +109,7 @@ public:
             int8_t baseLevel = 127;
             int8_t maxLevel = -1;
             uint8_t targetIndex = 0;    // optimization: index corresponding to target
+            bool imported = false;
         } gl;
 
         void* platformPImpl = nullptr;
@@ -282,9 +283,6 @@ private:
     /* Misc... */
 
     void framebufferTexture(backend::TargetBufferInfo const& binfo,
-            GLRenderTarget const* rt, GLenum attachment) noexcept;
-
-    void framebufferRenderbuffer(GLTexture const* t,
             GLRenderTarget const* rt, GLenum attachment) noexcept;
 
     void setRasterStateSlow(backend::RasterState rs) noexcept;

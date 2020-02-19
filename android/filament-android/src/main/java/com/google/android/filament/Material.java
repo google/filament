@@ -16,9 +16,9 @@
 
 package com.google.android.filament;
 
-import android.support.annotation.IntRange;
-import android.support.annotation.NonNull;
-import android.support.annotation.Size;
+import androidx.annotation.IntRange;
+import androidx.annotation.NonNull;
+import androidx.annotation.Size;
 
 import com.google.android.filament.proguard.UsedByNative;
 
@@ -402,10 +402,9 @@ public class Material {
     /**
      * Returns the vertex domain of this material.
      *
-     * @se
+     * @see
      * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/vertexandattributes:vertexdomain">
      * Vertex and attributes: vertexDomain</a>
-     * @return
      */
     public VertexDomain getVertexDomain() {
         return VertexDomain.values()[nGetVertexDomain(getNativeObject())];
@@ -423,7 +422,7 @@ public class Material {
     }
 
     /**
-     * Indicates whether this material will write to the color buffer.
+     * Indicates whether instances of this material will, by default, write to the color buffer.
      *
      * @see
      * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/rasterization:colorwrite">
@@ -434,7 +433,7 @@ public class Material {
     }
 
     /**
-     * Indicates whether this material will write to the depth buffer.
+     * Indicates whether instances of this material will, by default, write to the depth buffer.
      *
      * @see
      * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/rasterization:depthwrite">
@@ -445,7 +444,7 @@ public class Material {
     }
 
     /**
-     * Indicates whether this material will use depth testing.
+     * Indicates whether instances of this material will, by default, use depth testing.
      *
      * @see
      * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/rasterization:depthculling">

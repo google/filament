@@ -61,10 +61,10 @@ public:
         }
     }
 
-    template <typename T>
+    template <typename T, typename = is_supported_parameter_t<T>>
     void setParameter(const char* name, T value) noexcept;
 
-    template <typename T>
+    template <typename T, typename = is_supported_parameter_t<T>>
     void setParameter(const char* name, const T* value, size_t count) noexcept;
 
     void setParameter(const char* name,
@@ -98,6 +98,12 @@ public:
 
     backend::CullingMode getCullingMode() const noexcept { return mCulling; }
 
+    bool getColorWrite() const noexcept { return mColorWrite; }
+
+    bool getDepthWrite() const noexcept { return mDepthWrite; }
+
+    backend::RasterState::DepthFunc getDepthFunc() const noexcept { return mDepthFunc; }
+
     void setPolygonOffset(float scale, float constant) noexcept {
         mPolygonOffset = { scale, constant };
     }
@@ -120,6 +126,12 @@ public:
 
     void setCullingMode(CullingMode culling) noexcept;
 
+    void setColorWrite(bool enable) noexcept;
+
+    void setDepthWrite(bool enable) noexcept;
+
+    void setDepthCulling(bool enable) noexcept;
+
 private:
     friend class FMaterial;
     friend class MaterialInstance;
@@ -139,6 +151,9 @@ private:
     backend::SamplerGroup mSamplers;
     backend::PolygonOffset mPolygonOffset;
     backend::CullingMode mCulling;
+    bool mColorWrite;
+    bool mDepthWrite;
+    backend::RasterState::DepthFunc mDepthFunc;
 
     uint64_t mMaterialSortingKey = 0;
 

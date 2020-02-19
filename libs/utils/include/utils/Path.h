@@ -17,7 +17,7 @@
 #ifndef UTILS_PATH_H_
 #define UTILS_PATH_H_
 
-#include <ostream>
+#include <iosfwd>
 #include <string>
 #include <vector>
 

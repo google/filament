@@ -61,6 +61,45 @@ import java.util.Set;
 public final class Jassimp {
 
     /**
+     * The native interface.
+     * 
+     * @param filename the file to load
+     * @param postProcessing post processing flags
+     * @return the loaded scene, or null if an error occurred
+     * @throws IOException if an error occurs
+     */
+    private static native AiScene aiImportFile(String filename,
+            long postProcessing, AiIOSystem<?> ioSystem,
+                AiProgressHandler progressHandler) throws IOException;
+    
+    
+    /**
+     * The active wrapper provider.
+     */
+    private static AiWrapperProvider<?, ?, ?, ?, ?> s_wrapperProvider = 
+            new AiBuiltInWrapperProvider();
+    
+    
+    /**
+     * The library loader to load the native library.
+     */
+    private static JassimpLibraryLoader s_libraryLoader = 
+            new JassimpLibraryLoader();
+   
+    /**
+     * Status flag if the library is loaded.
+     * 
+     * Volatile to avoid problems with double checked locking.
+     * 
+     */
+    private static volatile boolean s_libraryLoaded = false;
+    
+    /**
+     * Lock for library loading.
+     */
+    private static final Object s_libraryLoadingLock = new Object();
+
+    /**
      * The default wrapper provider using built in types.
      */
     public static final AiWrapperProvider<?, ?, ?, ?, ?> BUILTIN = 
@@ -120,11 +159,26 @@ public final class Jassimp {
     public static AiScene importFile(String filename, 
             Set<AiPostProcessSteps> postProcessing, AiIOSystem<?> ioSystem) 
                   throws IOException {
-        
-       loadLibrary();
-       
+        return importFile(filename, postProcessing, ioSystem, null);
+    }
+
+    /**
+     * Imports a file via assimp.
+     *
+     * @param filename the file to import
+     * @param postProcessing post processing flags
+     * @param ioSystem ioSystem to load files, or null for default
+     * @return the loaded scene, or null if an error occurred
+     * @throws IOException if an error occurs
+     */
+    public static AiScene importFile(String filename,
+            Set<AiPostProcessSteps> postProcessing, AiIOSystem<?> ioSystem,
+            AiProgressHandler progressHandler) throws IOException {
+
+        loadLibrary();
+
         return aiImportFile(filename, AiPostProcessSteps.toRawValue(
-                postProcessing), ioSystem);
+                postProcessing), ioSystem, progressHandler);
     }
     
     
@@ -327,48 +381,9 @@ public final class Jassimp {
                 s_libraryLoaded = true;
              }
           }
-          
        }
     }
-    
-    /**
-     * The native interface.
-     * 
-     * @param filename the file to load
-     * @param postProcessing post processing flags
-     * @return the loaded scene, or null if an error occurred
-     * @throws IOException if an error occurs
-     */
-    private static native AiScene aiImportFile(String filename, 
-            long postProcessing, AiIOSystem<?> ioSystem) throws IOException;
-    
-    
-    /**
-     * The active wrapper provider.
-     */
-    private static AiWrapperProvider<?, ?, ?, ?, ?> s_wrapperProvider = 
-            new AiBuiltInWrapperProvider();
-    
-    
-    /**
-     * The library loader to load the native library.
-     */
-    private static JassimpLibraryLoader s_libraryLoader = 
-            new JassimpLibraryLoader();
-   
-    /**
-     * Status flag if the library is loaded.
-     * 
-     * Volatile to avoid problems with double checked locking.
-     * 
-     */
-    private static volatile boolean s_libraryLoaded = false;
-    
-    /**
-     * Lock for library loading.
-     */
-    private static final Object s_libraryLoadingLock = new Object();
-    
+        
     /**
      * Pure static class, no accessible constructor.
      */
@@ -384,5 +399,4 @@ public final class Jassimp {
     public static int NATIVE_UINT_SIZE; 
     public static int NATIVE_DOUBLE_SIZE; 
     public static int NATIVE_LONG_SIZE; 
-
 }

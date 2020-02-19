@@ -16,10 +16,10 @@
 
 package com.google.android.filament;
 
-import android.support.annotation.IntRange;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.annotation.Size;
+import androidx.annotation.IntRange;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.Size;
 
 import com.google.android.filament.proguard.UsedByReflection;
 
@@ -86,8 +86,7 @@ import com.google.android.filament.proguard.UsedByReflection;
 public class IndirectLight {
     long mNativeObject;
 
-    @UsedByReflection("KtxLoader.java")
-    IndirectLight(long indirectLight) {
+    public IndirectLight(long indirectLight) {
         mNativeObject = indirectLight;
     }
 

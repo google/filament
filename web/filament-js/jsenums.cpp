@@ -16,6 +16,7 @@
 
 #include <filament/Camera.h>
 #include <filament/Color.h>
+#include <filament/Frustum.h>
 #include <filament/IndexBuffer.h>
 #include <filament/LightManager.h>
 #include <filament/RenderableManager.h>
@@ -115,11 +116,6 @@ enum_<RenderableManager::PrimitiveType>("RenderableManager$PrimitiveType")
 enum_<View::AntiAliasing>("View$AntiAliasing")
     .value("NONE", View::AntiAliasing::NONE)
     .value("FXAA", View::AntiAliasing::FXAA);
-
-enum_<View::DepthPrepass>("View$DepthPrepass")
-    .value("DEFAULT", View::DepthPrepass::DEFAULT)
-    .value("DISABLED", View::DepthPrepass::DISABLED)
-    .value("ENABLED", View::DepthPrepass::ENABLED);
 
 enum_<Camera::Projection>("Camera$Projection")
     .value("PERSPECTIVE", Camera::Projection::PERSPECTIVE)

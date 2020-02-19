@@ -21,13 +21,18 @@
 #include <filament/Engine.h>
 #include <filament/IndexBuffer.h>
 #include <filament/IndirectLight.h>
+#include <filament/Material.h>
 #include <filament/MaterialInstance.h>
 #include <filament/RenderableManager.h>
 #include <filament/Scene.h>
 #include <filament/TransformManager.h>
+#include <filament/TextureSampler.h>
 #include <filament/VertexBuffer.h>
 
 #include <geometry/SurfaceOrientation.h>
+
+#include <utils/Entity.h>
+#include <utils/EntityManager.h>
 
 #include <stb_image.h>
 
@@ -257,7 +262,9 @@ Entity createDisk(Engine* engine, Texture* reflection) {
 
     static quath quats[nverts];
     static float3 normals[1] = { float3(0, 0, 1) };
-    SurfaceOrientation::Builder().vertexCount(1).normals(normals).build().getQuats(quats, 1);
+    auto* helper = SurfaceOrientation::Builder().vertexCount(1).normals(normals).build();
+    helper->getQuats(quats, 1);
+    delete helper;
     for (int i = 1; i < nverts; i++) {
         quats[i] = quats[0];
     }

@@ -228,7 +228,7 @@ static void printUsage(const char* name) {
                     "    FILAMESH [options] <source mesh> <destination file>\n"
                     "\n"
                     "Supported mesh formats:\n"
-                    "    COLLADA, FBX, OBJ, GLTF\n"
+                    "    FBX, OBJ\n"
                     "\n"
                     "Input meshes must have texture coordinates.\n"
                     "\n"

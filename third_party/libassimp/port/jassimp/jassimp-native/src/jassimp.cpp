@@ -1,6 +1,7 @@
 #include "jassimp.h"
 
 #include <assimp/Importer.hpp>
+#include <assimp/ProgressHandler.hpp>
 #include <assimp/scene.h>
 #include <assimp/IOStream.hpp>
 #include <assimp/IOSystem.hpp>
@@ -248,7 +249,7 @@ static bool call(JNIEnv *env, jobject object, const char* typeName, const char* 
 		return false;
 	}
 
-	jboolean jReturnValue = env->CallBooleanMethod(object, mid, params[0].l);
+	jboolean jReturnValue = env->CallBooleanMethodA(object, mid, params);
 
 	return (bool)jReturnValue;
 }
@@ -591,6 +592,24 @@ class JavaIOSystem : public Assimp::IOSystem {
 	
 };
 
+class JavaProgressHandler : public Assimp::ProgressHandler {
+	private:
+    JNIEnv* mJniEnv;
+	jobject& mJavaProgressHandler;
+	
+	public:
+	JavaProgressHandler(JNIEnv* env, jobject& javaProgressHandler) :
+		mJniEnv(env),
+		mJavaProgressHandler(javaProgressHandler)
+	{};
+	
+    bool Update(float percentage)
+    {
+    	jvalue params[1];
+		params[0].f = percentage;
+	    return call(mJniEnv, mJavaProgressHandler, "jassimp/AiProgressHandler", "update", "(F)Z", params);
+    }
+};
 
 static bool loadMeshes(JNIEnv *env, const aiScene* cScene, jobject& jScene)
 {
@@ -1880,7 +1899,7 @@ JNIEXPORT jstring JNICALL Java_jassimp_Jassimp_getErrorString
 
 
 JNIEXPORT jobject JNICALL Java_jassimp_Jassimp_aiImportFile
-  (JNIEnv *env, jclass jClazz, jstring jFilename, jlong postProcess, jobject ioSystem)
+  (JNIEnv *env, jclass jClazz, jstring jFilename, jlong postProcess, jobject ioSystem, jobject progressHandler)
 {
 	jobject jScene = NULL; 
 
@@ -1894,6 +1913,11 @@ JNIEXPORT jobject JNICALL Java_jassimp_Jassimp_aiImportFile
 	{
 		imp.SetIOHandler(new JavaIOSystem(env, ioSystem));		
 		lprintf("Created aiFileIO\n");
+	}
+	
+	if(progressHandler != NULL)
+	{
+		imp.SetProgressHandler(new JavaProgressHandler(env, progressHandler));
 	}
 	
 	lprintf("opening file: %s\n", cFilename);

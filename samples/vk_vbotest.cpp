@@ -23,6 +23,8 @@
 
 #include "../samples/app/FilamentApp.h"
 
+#include <utils/EntityManager.h>
+
 #include "generated/resources/resources.h"
 
 using namespace filament;

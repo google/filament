@@ -3,7 +3,7 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2018, assimp team
+Copyright (c) 2006-2019, assimp team
 
 
 
@@ -43,7 +43,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
 
-#ifndef ASSIMP_BUILD_NO_STEPFILE_IMPORTER
+#ifndef ASSIMP_BUILD_NO_STEP_IMPORTER
 
 #include <assimp/BaseImporter.h>
 
@@ -66,4 +66,4 @@ private:
 } // Namespace StepFile
 } // Namespace Assimp
 
-#endif // ASSIMP_BUILD_NO_STEPFILE_IMPORTER
+#endif // ASSIMP_BUILD_NO_STEP_IMPORTER

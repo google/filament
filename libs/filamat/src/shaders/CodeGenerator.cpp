@@ -79,13 +79,6 @@ io::sstream& CodeGenerator::generateProlog(io::sstream& out, ShaderType type,
     out << "precision " << precision << " float;\n";
     out << "precision " << precision << " int;\n";
 
-    // The version of the Metal Shading Language (MSL) we use does not have the invariant qualifier.
-    // New versions of MSL (> 2.1) have it, but we want to support older devices.
-    if (type == ShaderType::VERTEX && mTargetApi != TargetApi::METAL) {
-        out << "\n";
-        out << "invariant gl_Position;\n";
-    }
-
     out << SHADERS_COMMON_TYPES_FS_DATA;
 
     out << "\n";

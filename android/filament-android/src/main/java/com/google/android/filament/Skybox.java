@@ -16,8 +16,8 @@
 
 package com.google.android.filament;
 
-import android.support.annotation.IntRange;
-import android.support.annotation.NonNull;
+import androidx.annotation.IntRange;
+import androidx.annotation.NonNull;
 
 import com.google.android.filament.proguard.UsedByReflection;
 
@@ -49,8 +49,7 @@ import com.google.android.filament.proguard.UsedByReflection;
 public class Skybox {
     private long mNativeObject;
 
-    @UsedByReflection("KtxLoader.java")
-    Skybox(long nativeSkybox) {
+    public Skybox(long nativeSkybox) {
         mNativeObject = nativeSkybox;
     }
 

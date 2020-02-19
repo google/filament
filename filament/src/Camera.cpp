@@ -292,6 +292,10 @@ void Camera::lookAt(const float3& eye, const float3& center, float3 const& up) n
     upcast(this)->lookAt(eye, center, up);
 }
 
+void Camera::lookAt(const float3& eye, const float3& center) noexcept {
+    upcast(this)->lookAt(eye, center, {0, 1, 0});
+}
+
 mat4f Camera::getModelMatrix() const noexcept {
     return upcast(this)->getModelMatrix();
 }
@@ -314,6 +318,10 @@ float3 Camera::getUpVector() const noexcept {
 
 float3 Camera::getForwardVector() const noexcept {
     return upcast(this)->getForwardVector();
+}
+
+float Camera::getFieldOfViewInDegrees(Camera::Fov direction) const noexcept {
+    return upcast(this)->getFieldOfViewInDegrees(direction);
 }
 
 Frustum Camera::getFrustum() const noexcept {

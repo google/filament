@@ -1,101 +1,91 @@
 cmake_minimum_required(VERSION 3.6)
 
 set(FILAMENT_DIR ${FILAMENT_DIST_DIR})
+set(GLTFIO_DIR ../../libs/gltfio)
 
-set(DISABLE_FILAMENT_JNI TRUE)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../filament-android ${CMAKE_CURRENT_BINARY_DIR}/filament-android)
-
-add_library(filament STATIC IMPORTED)
-set_target_properties(filament PROPERTIES IMPORTED_LOCATION
-        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libfilament.a)
-
-add_library(backend STATIC IMPORTED)
-set_target_properties(backend PROPERTIES IMPORTED_LOCATION
-        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libbackend.a)
 
 add_library(utils STATIC IMPORTED)
 set_target_properties(utils PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libutils.a)
 
-add_library(filaflat STATIC IMPORTED)
-set_target_properties(filaflat PROPERTIES IMPORTED_LOCATION
-        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libfilaflat.a)
-
-add_library(image STATIC IMPORTED)
-set_target_properties(image PROPERTIES IMPORTED_LOCATION
-        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libimage.a)
-
-add_library(ibl STATIC IMPORTED)
-set_target_properties(ibl PROPERTIES IMPORTED_LOCATION
-        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libibl.a)
-
-add_library(geometry STATIC IMPORTED)
-set_target_properties(geometry PROPERTIES IMPORTED_LOCATION
-        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libgeometry.a)
-
-add_library(filabridge STATIC IMPORTED)
-set_target_properties(filabridge PROPERTIES IMPORTED_LOCATION
-        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libfilabridge.a)
-
-add_library(gltfio STATIC IMPORTED)
-set_target_properties(gltfio PROPERTIES IMPORTED_LOCATION
-        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libgltfio_core.a)
-
 add_library(gltfio_resources STATIC IMPORTED)
 set_target_properties(gltfio_resources PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libgltfio_resources.a)
 
-add_library(bluevk STATIC IMPORTED)
-set_target_properties(bluevk PROPERTIES IMPORTED_LOCATION
-        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libbluevk.a)
+add_library(gltfio_resources_lite STATIC IMPORTED)
+set_target_properties(gltfio_resources_lite PROPERTIES IMPORTED_LOCATION
+        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libgltfio_resources_lite.a)
 
-add_library(smol-v STATIC IMPORTED)
-set_target_properties(smol-v PROPERTIES IMPORTED_LOCATION
-        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libsmol-v.a)
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fno-stack-protector")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fno-exceptions -fno-unwind-tables -fno-asynchronous-unwind-tables -fno-rtti")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -ffast-math -ffp-contract=fast")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fvisibility-inlines-hidden")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fvisibility=hidden")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fomit-frame-pointer -ffunction-sections -fdata-sections")
 
-include_directories(${FILAMENT_DIR}/include
-        ..
-        ../../libs/utils/include)
+set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--gc-sections")
+set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-Bsymbolic-functions")
 
-set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} -Wl,--version-script=${CMAKE_SOURCE_DIR}/libgltfio-jni.map")
+set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/libgltfio-jni.map")
 
-add_library(gltfio-jni SHARED
+set(GLTFIO_SRCS
+        ${GLTFIO_DIR}/include/gltfio/Animator.h
+        ${GLTFIO_DIR}/include/gltfio/AssetLoader.h
+        ${GLTFIO_DIR}/include/gltfio/MaterialProvider.h
+        ${GLTFIO_DIR}/include/gltfio/AssetPipeline.h
+        ${GLTFIO_DIR}/include/gltfio/ResourceLoader.h
+        ${GLTFIO_DIR}/include/gltfio/SimpleViewer.h
+        ${GLTFIO_DIR}/include/gltfio/FilamentAsset.h
+
+        ${GLTFIO_DIR}/src/Animator.cpp
+        ${GLTFIO_DIR}/src/AssetLoader.cpp
+        ${GLTFIO_DIR}/src/DependencyGraph.cpp
+        ${GLTFIO_DIR}/src/DependencyGraph.h
+        ${GLTFIO_DIR}/src/FFilamentAsset.h
+        ${GLTFIO_DIR}/src/FilamentAsset.cpp
+        ${GLTFIO_DIR}/src/GltfEnums.h
+        ${GLTFIO_DIR}/src/MaterialProvider.cpp
+        ${GLTFIO_DIR}/src/ResourceLoader.cpp
+        ${GLTFIO_DIR}/src/UbershaderLoader.cpp
+        ${GLTFIO_DIR}/src/Wireframe.cpp
+        ${GLTFIO_DIR}/src/Wireframe.h
+        ${GLTFIO_DIR}/src/math.h
+        ${GLTFIO_DIR}/src/upcast.h
+        ${GLTFIO_DIR}/src/Image.cpp
+
         src/main/cpp/Animator.cpp
         src/main/cpp/AssetLoader.cpp
         src/main/cpp/FilamentAsset.cpp
-        src/main/cpp/KtxLoader.cpp
         src/main/cpp/MaterialProvider.cpp
         src/main/cpp/ResourceLoader.cpp
+        src/main/cpp/Gltfio.cpp
 
-        ../common/CallbackUtils.cpp
+        ${FILAMENT_DIR}/include/gltfio/resources/gltfresources_lite.h
+        ${FILAMENT_DIR}/include/gltfio/resources/gltfresources.h
+
         ../common/NioUtils.cpp
-
-        $<TARGET_OBJECTS:filament-jni-obj>
 )
 
-set_target_properties(gltfio-jni PROPERTIES LINK_DEPENDS
-        ${CMAKE_CURRENT_SOURCE_DIR}/libgltfio-jni.symbols)
-
-# The ordering in the following list is important because CMake does not have dependency information.
-target_link_libraries(gltfio-jni
-        gltfio
-        filament
-        backend
-        filaflat
-        filabridge
-        geometry
-        image
-        ibl
-        utils
-        log
-        GLESv3
-        EGL
-        android
-        jnigraphics
-        gltfio_resources
-        m
+set(GLTFIO_INCLUDE_DIRS
+        ..
+        ${FILAMENT_DIR}/include
+        ${FILAMENT_DIR}/include/gltfio/resources
+        ../../third_party/cgltf
+        ../../third_party/robin-map
+        ../../third_party/stb
+        ../../libs/utils/include
 )
 
-if (FILAMENT_SUPPORTS_VULKAN)
-    target_link_libraries(gltfio-jni bluevk smol-v)
-endif()
+add_library(gltfio-jni SHARED ${GLTFIO_SRCS})
+target_include_directories(gltfio-jni PRIVATE ${GLTFIO_INCLUDE_DIRS})
+set_target_properties(gltfio-jni PROPERTIES LINK_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/libgltfio-jni.symbols)
+set_target_properties(gltfio-jni PROPERTIES LINK_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/libgltfio-jni.map)
+target_link_libraries(gltfio-jni filament-jni utils gltfio_resources log)
+
+add_library(gltfio-jni-lite SHARED ${GLTFIO_SRCS})
+target_include_directories(gltfio-jni-lite PRIVATE ${GLTFIO_INCLUDE_DIRS})
+set_target_properties(gltfio-jni-lite PROPERTIES LINK_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/libgltfio-jni.symbols)
+set_target_properties(gltfio-jni-lite PROPERTIES LINK_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/libgltfio-jni.map)
+target_link_libraries(gltfio-jni-lite filament-jni utils gltfio_resources_lite log)
+target_compile_definitions(gltfio-jni-lite PUBLIC GLTFIO_LITE=1)

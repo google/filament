@@ -25,7 +25,6 @@
 
 #include "MetalBuffer.h"
 #include "MetalContext.h"
-#include "MetalDefines.h"
 #include "MetalEnums.h"
 #include "MetalExternalImage.h"
 #include "MetalState.h" // for MetalState::VertexDescription
@@ -105,18 +104,21 @@ struct MetalTexture : public HwTexture {
     ~MetalTexture();
 
     void load2DImage(uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t width,
-            uint32_t height, PixelBufferDescriptor& data) noexcept;
-    void loadCubeImage(const PixelBufferDescriptor& data, const FaceOffsets& faceOffsets,
-            int miplevel);
-
-    NSUInteger getBytesPerRow(PixelDataType type, NSUInteger width) const noexcept;
+            uint32_t height, PixelBufferDescriptor&& p) noexcept;
+    void loadCubeImage(const FaceOffsets& faceOffsets, int miplevel, PixelBufferDescriptor&& p);
+    void loadSlice(uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t width,
+            uint32_t height, uint32_t byteOffset, uint32_t slice,
+            PixelBufferDescriptor& data, id<MTLBlitCommandEncoder> blitCommandEncoder,
+            id<MTLCommandBuffer> blitCommandBuffer) noexcept;
 
     MetalContext& context;
     MetalExternalImage externalImage;
     id<MTLTexture> texture = nil;
     uint8_t bytesPerElement; // The number of bytes per pixel, or block (for compressed texture formats).
     uint8_t blockWidth; // The number of horizontal pixels per block (only for compressed texture formats).
+    uint8_t blockHeight; // The number of vertical pixels per block (only for compressed texture formats).
     TextureReshaper reshaper;
+    MTLPixelFormat metalPixelFormat;
 };
 
 struct MetalSamplerGroup : public HwSamplerGroup {
@@ -169,12 +171,15 @@ public:
 
 private:
 
-#if METAL_FENCES_SUPPORTED
     std::shared_ptr<std::condition_variable> cv;
     std::mutex mutex;
+
+    // MTLSharedEvent is only available on macOS 10.14 and iOS 12.0 and above.
+    // The availability annotation ensures we wrap all usages of event in an @availability check.
+    API_AVAILABLE(macos(10.14), ios(12.0))
     id<MTLSharedEvent> event;
+
     uint64_t value;
-#endif
 };
 
 } // namespace metal

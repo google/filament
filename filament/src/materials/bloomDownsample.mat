@@ -1,0 +1,115 @@
+material {
+    name : bloomDownsample,
+    parameters : [
+        {
+            type : sampler2d,
+            name : source,
+            precision: medium
+        },
+        {
+            type : float4,
+            name : resolution,
+            precision: high
+        },
+        {
+            type : float,
+            name : level
+        },
+        {
+            type : float,
+            name : threshold
+        }
+    ],
+    variables : [
+        vertex
+    ],
+    domain : postprocess,
+    depthWrite : false,
+    depthCulling : false
+}
+
+vertex {
+    void postProcessVertex(inout PostProcessVertexInputs postProcess) {
+        postProcess.vertex.xy = postProcess.normalizedUV;
+    }
+}
+
+fragment {
+    void threshold(inout vec3 c) {
+        c *= step(1.0, max3(c));
+    }
+
+    vec3 box4x4(vec3 s0, vec3 s1, vec3 s2, vec3 s3) {
+        return (s0 + s1 + s2 + s3) * 0.25;
+    }
+
+    vec3 box4x4Reinhard(vec3 s0, vec3 s1, vec3 s2, vec3 s3) {
+        float w0 = 1.0 / (1.0 + max3(s0));
+        float w1 = 1.0 / (1.0 + max3(s1));
+        float w2 = 1.0 / (1.0 + max3(s2));
+        float w3 = 1.0 / (1.0 + max3(s3));
+        return (s0 * w0 + s1 * w1 + s2 * w2 + s3 * w3) * (1.0 / (w0 + w1 + w2 + w3));
+    }
+
+    void postProcess(inout PostProcessInputs postProcess) {
+        float lod = materialParams.level;
+        highp vec2 uv = variable_vertex.xy;
+        highp float du = materialParams.resolution.z;
+        highp float dv = materialParams.resolution.w;
+
+        vec3 c = textureLod(materialParams_source, uv, lod).rgb;
+
+        vec3 lt = textureLod(materialParams_source, uv + 0.5 * vec2(-du, -dv), lod).rgb;
+        vec3 rt = textureLod(materialParams_source, uv + 0.5 * vec2( du, -dv), lod).rgb;
+        vec3 rb = textureLod(materialParams_source, uv + 0.5 * vec2( du,  dv), lod).rgb;
+        vec3 lb = textureLod(materialParams_source, uv + 0.5 * vec2(-du,  dv), lod).rgb;
+
+        vec3 lt2 = textureLod(materialParams_source, uv + vec2(-du, -dv), lod).rgb;
+        vec3 rt2 = textureLod(materialParams_source, uv + vec2( du, -dv), lod).rgb;
+        vec3 rb2 = textureLod(materialParams_source, uv + vec2( du,  dv), lod).rgb;
+        vec3 lb2 = textureLod(materialParams_source, uv + vec2(-du,  dv), lod).rgb;
+
+        vec3 l = textureLod(materialParams_source, uv + vec2(-du,  0.0), lod).rgb;
+        vec3 t = textureLod(materialParams_source, uv + vec2( 0.0, -dv), lod).rgb;
+        vec3 r = textureLod(materialParams_source, uv + vec2( du,  0.0), lod).rgb;
+        vec3 b = textureLod(materialParams_source, uv + vec2( 0.0,  dv), lod).rgb;
+
+        // five h4x4 boxes
+        vec3 c0, c1;
+
+        if (materialParams.level <= 0.5) {
+            if (materialParams.threshold > 0.0) {
+                // Threshold the first level blur
+                threshold(c);
+                threshold(lt);
+                threshold(rt);
+                threshold(rb);
+                threshold(lb);
+                threshold(lt2);
+                threshold(rt2);
+                threshold(rb2);
+                threshold(lb2);
+                threshold(l);
+                threshold(t);
+                threshold(r);
+                threshold(b);
+            }
+            // Also apply fireflies (flickering) filtering
+            c0  = box4x4Reinhard(lt, rt, rb, lb);
+            c1  = box4x4Reinhard(c, l, t, lt2);
+            c1 += box4x4Reinhard(c, r, t, rt2);
+            c1 += box4x4Reinhard(c, r, b, rb2);
+            c1 += box4x4Reinhard(c, l, b, lb2);
+        } else {
+            // common case
+            c0  = box4x4(lt, rt, rb, lb);
+            c1  = box4x4(c, l, t, lt2);
+            c1 += box4x4(c, r, t, rt2);
+            c1 += box4x4(c, r, b, rb2);
+            c1 += box4x4(c, l, b, lb2);
+        }
+
+        // weighted average of the five boxes
+        postProcess.color.rgb = c0 * 0.5 + c1 * 0.125;
+    }
+}

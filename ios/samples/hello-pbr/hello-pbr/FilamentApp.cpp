@@ -16,6 +16,9 @@
 
 #include "FilamentApp.h"
 
+#include <filament/Material.h>
+#include <filament/Viewport.h>
+
 #include <filameshio/MeshReader.h>
 
 #include <image/KtxUtility.h>
@@ -41,7 +44,6 @@ void FilamentApp::initialize() {
     camera = engine->createCamera();
 
     filaView = engine->createView();
-    filaView->setDepthPrepass(filament::View::DepthPrepass::DISABLED);
 
     image::KtxBundle* iblBundle = new image::KtxBundle(RESOURCES_VENETIAN_CROSSROADS_2K_IBL_DATA,
             RESOURCES_VENETIAN_CROSSROADS_2K_IBL_SIZE);

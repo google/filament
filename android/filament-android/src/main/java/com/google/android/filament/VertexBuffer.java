@@ -16,9 +16,9 @@
 
 package com.google.android.filament;
 
-import android.support.annotation.IntRange;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
+import androidx.annotation.IntRange;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import java.nio.Buffer;
 import java.nio.BufferOverflowException;
@@ -415,6 +415,9 @@ public class VertexBuffer {
      * normals. The w component of the tangent is a sign (-1 or +1) indicating handedness of the
      * basis.
      * </p>
+     *
+     * @deprecated Instead please use SurfaceOrientation since it has additional capabilities and a
+     * builder-style API.
      *
      * @param context an initialized QuatTangentContext object
      */

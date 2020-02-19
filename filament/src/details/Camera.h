@@ -27,6 +27,7 @@
 #include <utils/Entity.h>
 
 #include <math/mat4.h>
+#include <math/scalar.h>
 
 namespace filament {
 namespace details {
@@ -109,6 +110,20 @@ public:
     math::float3 getForwardVector() const noexcept {
         // the camera looks towards -z
         return normalize(-getModelMatrix()[2].xyz);
+    }
+
+    float getFieldOfView(Camera::Fov direction) const noexcept {
+        auto const& p = getProjectionMatrix();
+        switch (direction) {
+            case Fov::VERTICAL:
+                return 2.0f * std::atan(1.0f / float(p[1][1]));
+            case Fov::HORIZONTAL:
+                return 2.0f * std::atan(1.0f / float(p[0][0]));
+        }
+    }
+
+    float getFieldOfViewInDegrees(Camera::Fov direction) const noexcept {
+        return getFieldOfView(direction) * float(180.0f / math::F_PI);
     }
 
     // returns a Frustum object in world space

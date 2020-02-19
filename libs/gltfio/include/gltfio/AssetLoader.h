@@ -24,6 +24,7 @@
 #include <gltfio/MaterialProvider.h>
 
 namespace utils {
+    class EntityManager;
     class NameComponentManager;
 }
 
@@ -172,6 +173,8 @@ public:
      * Gets the number of cached materials.
      */
     size_t getMaterialsCount() const noexcept;
+
+    utils::NameComponentManager* getNames() const noexcept;
 
     /*! \cond PRIVATE */
 protected:

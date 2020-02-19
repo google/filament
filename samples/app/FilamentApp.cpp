@@ -25,6 +25,8 @@
 #    include <utils/unwindows.h>
 #endif
 
+#include <iostream>
+
 #include <imgui.h>
 
 #include <utils/Panic.h>
@@ -43,6 +45,8 @@
 
 #include "Cube.h"
 #include "NativeWindowHelper.h"
+
+#include <stb_image.h>
 
 #include "generated/resources/resources.h"
 
@@ -135,6 +139,7 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
         window->mDepthView->getView()->setClearColor({0, 0, 0, 1});
     }
 
+    loadDirt(config);
     loadIBL(config);
     if (mIBL != nullptr) {
         mIBL->getSkybox()->setLayerMask(0x7, 0x4);
@@ -351,8 +356,11 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
         }
 
         // Update the position and orientation of the two cameras.
-        window->mMainCamera->setModelMatrix(window->mMainCameraMan.getCameraTransform());
-        window->mDebugCamera->setModelMatrix(window->mDebugCameraMan.getCameraTransform());
+        filament::math::float3 eye, center, up;
+        window->mMainCameraMan->getLookAt(&eye, &center, &up);
+        window->mMainCamera->lookAt(eye, center, up);
+        window->mDebugCameraMan->getLookAt(&eye, &center, &up);
+        window->mDebugCamera->lookAt(eye, center, up);
 
         // Update the cube distortion matrix used for frustum visualization.
         const Camera* lightmapCamera = window->mMainView->getView()->getDirectionalLightCamera();
@@ -447,6 +455,37 @@ void FilamentApp::loadIBL(const Config& config) {
     }
 }
 
+void FilamentApp::loadDirt(const Config& config) {
+    if (!config.dirt.empty()) {
+        Path dirtPath(config.dirt);
+
+        if (!dirtPath.exists()) {
+            std::cerr << "The specified dirt file does not exist: " << dirtPath << std::endl;
+            return;
+        }
+
+        if (!dirtPath.isFile()) {
+            std::cerr << "The specified dirt path is not a file: " << dirtPath << std::endl;
+            return;
+        }
+
+        int w, h, n;
+
+        unsigned char* data = stbi_load(dirtPath.getAbsolutePath().c_str(), &w, &h, &n, 3);
+        assert(n == 3);
+
+        mDirt = Texture::Builder()
+                .width(w)
+                .height(h)
+                .format(Texture::InternalFormat::RGB8)
+                .build(*mEngine);
+
+        mDirt->setImage(*mEngine, 0, { data, size_t(w * h * 3),
+                Texture::Format::RGB, Texture::Type::UBYTE,
+                (Texture::PixelBufferDescriptor::Callback)&stbi_image_free });
+    }
+}
+
 void FilamentApp::initSDL() {
     ASSERT_POSTCONDITION(SDL_Init(SDL_INIT_EVENTS) == 0, "SDL_Init Failure");
 }
@@ -511,14 +550,16 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
         mViews.emplace_back(mDepthView = new CView(*mRenderer, "Depth View"));
         mViews.emplace_back(mGodView = new GodView(*mRenderer, "God View"));
         mViews.emplace_back(mOrthoView = new CView(*mRenderer, "Ortho View"));
-        mDepthView->getView()->setDepthPrepass(View::DepthPrepass::DISABLED);
     }
     mViews.emplace_back(mUiView = new CView(*mRenderer, "UI View"));
 
     // set-up the camera manipulators
-    double3 at(0, 0, -4);
+    camutils::Mode mode = camutils::Mode::ORBIT;
+    mMainCameraMan = CameraManipulator::Builder().targetPosition(0, 0, -4).build(mode);
+    mDebugCameraMan = CameraManipulator::Builder().targetPosition(0, 0, -4).build(mode);
+
     mMainView->setCamera(mMainCamera);
-    mMainView->setCameraManipulator(&mMainCameraMan);
+    mMainView->setCameraManipulator(mMainCameraMan);
     mUiView->setCamera(mUiCamera);
     if (config.splitView) {
         // Depth view always uses the main camera
@@ -531,15 +572,12 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
         // Ortho view obviously uses an ortho camera
         mOrthoView->setCamera( (Camera *)mMainView->getView()->getDirectionalLightCamera() );
 
-        mDepthView->setCameraManipulator(&mMainCameraMan);
-        mGodView->setCameraManipulator(&mDebugCameraMan);
+        mDepthView->setCameraManipulator(mMainCameraMan);
+        mGodView->setCameraManipulator(mDebugCameraMan);
     }
 
     // configure the cameras
     configureCamerasForWindow();
-
-    mMainCameraMan.lookAt(at + double3{ 0, 0, 4 }, at);
-    mDebugCameraMan.lookAt(at + double3{ 0, 0, 4 }, at);
 
     mMainCamera->lookAt({4, 0, -4}, {0, 0, -4}, {0, 1, 0});
 }
@@ -552,6 +590,8 @@ FilamentApp::Window::~Window() {
     mFilamentApp->mEngine->destroy(mRenderer);
     mFilamentApp->mEngine->destroy(mSwapChain);
     SDL_DestroyWindow(mWindow);
+    delete mMainCameraMan;
+    delete mDebugCameraMan;
 }
 
 void FilamentApp::Window::mouseDown(int button, ssize_t x, ssize_t y) {
@@ -635,45 +675,49 @@ void FilamentApp::Window::resize() {
 void FilamentApp::Window::configureCamerasForWindow() {
 
     // Determine the current size of the window in physical pixels.
-    uint32_t w, h;
-    SDL_GL_GetDrawableSize(mWindow, (int*) &w, (int*) &h);
-    mWidth = (size_t) w;
-    mHeight = (size_t) h;
+    uint32_t width, height;
+    SDL_GL_GetDrawableSize(mWindow, (int*) &width, (int*) &height);
+    mWidth = (size_t) width;
+    mHeight = (size_t) height;
 
     // Compute the "virtual pixels to physical pixels" scale factor that the
     // the platform uses for UI elements.
     int virtualWidth, virtualHeight;
     SDL_GetWindowSize(mWindow, &virtualWidth, &virtualHeight);
-    float dpiScaleX = (float) w / virtualWidth;
-    float dpiScaleY = (float) h / virtualHeight;
+    float dpiScaleX = (float) width / virtualWidth;
+    float dpiScaleY = (float) height / virtualHeight;
 
     const float3 at(0, 0, -4);
-    const double ratio = double(h) / double(w);
+    const double ratio = double(height) / double(width);
     const int sidebar = mFilamentApp->mSidebarWidth * dpiScaleX;
+
+    // To trigger a floating-point exception, users could shrink the window to be smaller than
+    // the sidebar. To prevent this we simply clamp the width of the main viewport.
+    const uint32_t mainWidth = std::max(1, (int)width - sidebar);
 
     double near = 0.1;
     double far = 50;
-    mMainCamera->setProjection(45.0, double(w - sidebar) / h, near, far, Camera::Fov::VERTICAL);
-    mDebugCamera->setProjection(45.0, double(w) / h, 0.0625, 4096, Camera::Fov::VERTICAL);
+    mMainCamera->setProjection(45.0, double(mainWidth) / height, near, far, Camera::Fov::VERTICAL);
+    mDebugCamera->setProjection(45.0, double(width) / height, 0.0625, 4096, Camera::Fov::VERTICAL);
     mOrthoCamera->setProjection(Camera::Projection::ORTHO, -3, 3, -3 * ratio, 3 * ratio, near, far);
-    mOrthoCamera->lookAt(at + float3{ 4, 0, 0 }, at);
+    mOrthoCamera->lookAt({ 0, 0, 0 }, {0, 0, -4});
     mUiCamera->setProjection(Camera::Projection::ORTHO,
-            0.0, w / dpiScaleX,
-            h / dpiScaleY, 0.0,
+            0.0, width / dpiScaleX,
+            height / dpiScaleY, 0.0,
             0.0, 1.0);
 
     // We're in split view when there are more views than just the Main and UI views.
     if (mViews.size() > 2) {
-        uint32_t vpw = w / 2;
-        uint32_t vph = h / 2;
-        mMainView->setViewport ({            0,            0,     vpw, vph     });
-        mDepthView->setViewport({ int32_t(vpw),            0, w - vpw, vph     });
-        mGodView->setViewport  ({ int32_t(vpw), int32_t(vph), w - vpw, h - vph });
-        mOrthoView->setViewport({            0, int32_t(vph),     vpw, h - vph });
+        uint32_t vpw = width / 2;
+        uint32_t vph = height / 2;
+        mMainView->setViewport ({            0,            0, vpw,         vph          });
+        mDepthView->setViewport({ int32_t(vpw),            0, width - vpw, vph          });
+        mGodView->setViewport  ({ int32_t(vpw), int32_t(vph), width - vpw, height - vph });
+        mOrthoView->setViewport({            0, int32_t(vph), vpw,         height - vph });
     } else {
-        mMainView->setViewport({ sidebar, 0, w - sidebar, h });
+        mMainView->setViewport({ sidebar, 0, mainWidth, height });
     }
-    mUiView->setViewport({ 0, 0, w, h });
+    mUiView->setViewport({ 0, 0, width, height });
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -698,38 +742,26 @@ void FilamentApp::CView::setViewport(Viewport const& viewport) {
 }
 
 void FilamentApp::CView::mouseDown(int button, ssize_t x, ssize_t y) {
-    mLastMousePosition = double2(x, y);
-    if (button == 1) {
-        mMode = Mode::ROTATE;
-    } else if (button == 3) {
-        mMode = Mode::TRACK;
+    if (mCameraManipulator) {
+        mCameraManipulator->grabBegin(x, y, button == 3);
     }
 }
 
 void FilamentApp::CView::mouseUp(ssize_t x, ssize_t y) {
-    mMode = Mode::NONE;
+    if (mCameraManipulator) {
+        mCameraManipulator->grabEnd();
+    }
 }
 
 void FilamentApp::CView::mouseMoved(ssize_t x, ssize_t y) {
     if (mCameraManipulator) {
-        double2 delta = double2(x, y) - mLastMousePosition;
-        mLastMousePosition = double2(x, y);
-        switch (mMode) {
-            case Mode::NONE:
-                break;
-            case Mode::ROTATE:
-                mCameraManipulator->rotate(delta);
-                break;
-            case Mode::TRACK:
-                mCameraManipulator->track(delta);
-                break;
-        }
+        mCameraManipulator->grabUpdate(x, y);
     }
 }
 
 void FilamentApp::CView::mouseWheel(ssize_t x) {
-    if (mCameraManipulator){
-        mCameraManipulator->dolly(x);
+    if (mCameraManipulator) {
+        mCameraManipulator->zoom(0, 0, x);
     }
 }
 

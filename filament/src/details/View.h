@@ -128,6 +128,8 @@ public:
             ArenaScope& arena, Viewport const& viewport) noexcept;
     void prepareSSAO(backend::Handle<backend::HwTexture> ssao) const noexcept;
     void cleanupSSAO() const noexcept;
+    void prepareSSR(backend::Handle<backend::HwTexture> ssr, float refractionLodOffset) const noexcept;
+    void cleanupSSR() const noexcept;
     void froxelize(FEngine& engine) const noexcept;
     void commitUniforms(backend::DriverApi& driver) const noexcept;
     void commitFroxels(backend::DriverApi& driverApi) const noexcept;
@@ -222,22 +224,6 @@ public:
         mHasPostProcessPass = enabled;
     }
 
-    void setDepthPrepass(DepthPrepass prepass) noexcept {
-#ifdef __EMSCRIPTEN__
-        if (prepass == View::DepthPrepass::ENABLED) {
-            utils::slog.w << "WARNING: " <<
-                "Depth prepass cannot be enabled on web due to invariance requirements." <<
-                utils::io::endl;
-            return;
-        }
-#endif
-        mDepthPrepass = prepass;
-    }
-
-    DepthPrepass getDepthPrepass() const noexcept {
-        return mDepthPrepass;
-    }
-
     void setAmbientOcclusion(AmbientOcclusion ambientOcclusion) noexcept {
         mAmbientOcclusion = ambientOcclusion;
     }
@@ -246,15 +232,26 @@ public:
         return mAmbientOcclusion;
     }
 
-    void setAmbientOcclusionOptions(AmbientOcclusionOptions const& options) noexcept {
+    void setAmbientOcclusionOptions(AmbientOcclusionOptions options) noexcept {
+        options.radius = math::clamp(0.0f, 10.0f, options.radius);
+        options.bias = math::clamp(0.0f, 0.1f, options.bias);
+        options.power = math::clamp(0.0f, 1.0f, options.power);
+        options.resolution = math::clamp(0.0f, 1.0f, options.resolution);
         mAmbientOcclusionOptions = options;
-        mAmbientOcclusionOptions.radius = math::clamp(0.0f, 10.0f, mAmbientOcclusionOptions.radius);
-        mAmbientOcclusionOptions.bias = math::clamp(0.0f, 0.1f, mAmbientOcclusionOptions.bias);
-        mAmbientOcclusionOptions.power = math::clamp(0.0f, 1.0f, mAmbientOcclusionOptions.power);
     }
 
     AmbientOcclusionOptions const& getAmbientOcclusionOptions() const noexcept {
         return mAmbientOcclusionOptions;
+    }
+
+    void setBloomOptions(BloomOptions options) noexcept {
+        options.dirtStrength = math::saturate(options.dirtStrength);
+        options.levels = math::clamp(options.levels, uint8_t(3), uint8_t(12));
+        mBloomOptions = options;
+    }
+
+    BloomOptions getBloomOptions() const noexcept {
+        return mBloomOptions;
     }
 
     Range const& getVisibleRenderables() const noexcept {
@@ -265,14 +262,15 @@ public:
         return mVisibleShadowCasters;
     }
 
-    uint8_t getClearFlags() const noexcept {
-        uint8_t clearFlags = 0;
-        if (getClearTargetColor())     clearFlags |= (uint8_t)TargetBufferFlags::COLOR;
-        if (getClearTargetDepth())     clearFlags |= (uint8_t)TargetBufferFlags::DEPTH;
-        if (getClearTargetStencil())   clearFlags |= (uint8_t)TargetBufferFlags::STENCIL;
+    TargetBufferFlags getClearFlags() const noexcept {
+        TargetBufferFlags clearFlags = {};
+        if (getClearTargetColor())     clearFlags |= TargetBufferFlags::COLOR;
+        if (getClearTargetDepth())     clearFlags |= TargetBufferFlags::DEPTH;
+        if (getClearTargetStencil())   clearFlags |= TargetBufferFlags::STENCIL;
         return clearFlags;
     }
 
+    FCamera const& getCameraUser() const noexcept { return *mCullingCamera; }
     FCamera& getCameraUser() noexcept { return *mCullingCamera; }
     void setCameraUser(FCamera* camera) noexcept { setCullingCamera(camera); }
 
@@ -350,9 +348,9 @@ private:
     Dithering mDithering = Dithering::TEMPORAL;
     bool mShadowingEnabled = true;
     bool mHasPostProcessPass = true;
-    DepthPrepass mDepthPrepass = DepthPrepass::DEFAULT;
     AmbientOcclusion mAmbientOcclusion = AmbientOcclusion::NONE;
     AmbientOcclusionOptions mAmbientOcclusionOptions{};
+    BloomOptions mBloomOptions;
 
     using duration = std::chrono::duration<float, std::milli>;
     DynamicResolutionOptions mDynamicResolution;

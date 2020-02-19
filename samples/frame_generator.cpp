@@ -16,6 +16,8 @@
 
 #include <atomic>
 #include <fstream>
+#include <iomanip>
+#include <iostream>
 #include <map>
 #include <memory>
 #include <string>
@@ -34,6 +36,7 @@
 #include <filament/LightManager.h>
 #include <filament/Material.h>
 #include <filament/MaterialInstance.h>
+#include <filament/Renderer.h>
 #include <filament/RenderableManager.h>
 #include <filament/Scene.h>
 #include <filament/Skybox.h>
@@ -93,7 +96,7 @@ static void printUsage(char* name) {
     std::string usage(
             "SAMPLE_FRAME_GENERATOR tests a material by varying float parameters\n"
             "Usage:\n"
-            "    SAMPLE_FRAME_GENERATOR [options] <mesh files (.obj, .fbx, COLLADA)>\n"
+            "    SAMPLE_FRAME_GENERATOR [options] <mesh files (.obj, .fbx)>\n"
             "\n"
             "This tool loads an object, applies the specified material and renders N\n"
             "frames as specified by the -c flag. For each frame rendered, the material\n"
@@ -345,7 +348,7 @@ static LinearImage toLinear(size_t w, size_t h, size_t bpr, const uint8_t* src) 
         for (size_t x = 0; x < w; ++x, p += 3) {
             filament::math::float3 sRGB(p[0], p[1], p[2]);
             sRGB /= std::numeric_limits<T>::max();
-            *d++ = sRGB;
+            *d++ = sRGBToLinear(sRGB);
         }
     }
     return result;

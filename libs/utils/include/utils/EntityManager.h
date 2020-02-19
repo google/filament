@@ -21,10 +21,11 @@
 #include <stdint.h>
 
 #include <utils/Entity.h>
+#include <utils/compiler.h>
 
 namespace utils {
 
-class EntityManager {
+class UTILS_PUBLIC EntityManager {
 public:
     // Get the global EntityManager. Is is recommended to cache this value.
     // Thread Safe.

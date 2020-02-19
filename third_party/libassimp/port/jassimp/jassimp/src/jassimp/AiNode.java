@@ -56,6 +56,34 @@ import java.util.Map;
  */
 public final class AiNode {
     /**
+     * Parent node.
+     */
+    private final AiNode m_parent;
+    
+    
+    /**
+     * Mesh references.
+     */
+    private final int[] m_meshReferences;
+    
+    
+    /**
+     * List of children.
+     */
+    private final List<AiNode> m_children = new ArrayList<AiNode>();
+
+    /**
+     * List of metadata entries.
+     */
+     private final Map<String, AiMetadataEntry> m_metaData = new HashMap<String, AiMetadataEntry>();
+    
+    
+    /**
+     * Buffer for transformation matrix.
+     */
+    private final Object m_transformationMatrix;
+
+    /**
      * Constructor.
      * 
      * @param parent the parent node, may be null
@@ -214,34 +242,5 @@ public final class AiNode {
     /**
      * Name.
      */
-    private final String m_name;
-    
-    
-    /**
-     * Parent node.
-     */
-    private final AiNode m_parent;
-    
-    
-    /**
-     * Mesh references.
-     */
-    private final int[] m_meshReferences;
-    
-    
-    /**
-     * List of children.
-     */
-    private final List<AiNode> m_children = new ArrayList<AiNode>();
-
-    /**
-     * List of metadata entries.
-     */
-     private final Map<String, AiMetadataEntry> m_metaData = new HashMap<String, AiMetadataEntry>();
-    
-    
-    /**
-     * Buffer for transformation matrix.
-     */
-    private final Object m_transformationMatrix;
+    private final String m_name;    
 }

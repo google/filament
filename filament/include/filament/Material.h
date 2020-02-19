@@ -21,22 +21,27 @@
 #include <filament/FilamentAPI.h>
 #include <filament/MaterialEnums.h>
 #include <filament/MaterialInstance.h>
-#include <filament/Texture.h>
-#include <filament/TextureSampler.h>
 
 #include <backend/DriverEnums.h>
 
 #include <utils/compiler.h>
-#include <utils/CString.h>
 
-#include <math/vec4.h>
+#include <math/mathfwd.h>
 
 #include <stdint.h>
 
+namespace utils {
+    class CString;
+} // namespace utils
+
 namespace filament {
+
+class Texture;
+class TextureSampler;
+
 namespace details {
-class  FEngine;
-class  FMaterial;
+class FEngine;
+class FMaterial;
 } // namespace details
 
 class Engine;
@@ -148,13 +153,13 @@ public:
     //! This value only makes sense when the blending mode is transparent or fade.
     TransparencyMode getTransparencyMode() const noexcept;
 
-    //! Indicates whether this material will write to the color buffer.
+    //! Indicates whether instances of this material will, by default, write to the color buffer.
     bool isColorWriteEnabled() const noexcept;
 
-    //! Indicates whether this material will write to the depth buffer.
+    //! Indicates whether instances of this material will, by default, write to the depth buffer.
     bool isDepthWriteEnabled() const noexcept;
 
-    //! Indicates whether this material will use depth testing.
+    //! Indicates whether instances of this material will, by default, use depth testing.
     bool isDepthCullingEnabled() const noexcept;
 
     //! Indicates whether this material is double-sided.

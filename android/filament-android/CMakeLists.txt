@@ -39,8 +39,6 @@ set_target_properties(smol-v PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libsmol-v.a)
 
 
-include_directories(.. ${FILAMENT_DIR}/include)
-
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fno-stack-protector")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fno-exceptions -fno-unwind-tables -fno-asynchronous-unwind-tables -fno-rtti")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -ffast-math -ffp-contract=fast")
@@ -48,10 +46,13 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fvisibility-inlines-hid
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fvisibility=hidden")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fomit-frame-pointer -ffunction-sections -fdata-sections")
 
-set(CMAKE_SHARED_LINKER_FLAGS" ${CMAKE_SHARED_LINKER_FLAGS} -Wl,--gc-sections")
-set(CMAKE_SHARED_LINKER_FLAGS" ${CMAKE_SHARED_LINKER_FLAGS} -Wl,-Bsymbolic-functions")
+set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--gc-sections")
+set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-Bsymbolic-functions")
 
-add_library(filament-jni-obj OBJECT
+set(VERSION_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/libfilament-jni.map")
+set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} -Wl,--version-script=${VERSION_SCRIPT}")
+
+add_library(filament-jni SHARED
     src/main/cpp/Camera.cpp
     src/main/cpp/Colors.cpp
     src/main/cpp/VertexBuffer.cpp
@@ -70,46 +71,47 @@ add_library(filament-jni-obj OBJECT
     src/main/cpp/Scene.cpp
     src/main/cpp/SkyBox.cpp
     src/main/cpp/Stream.cpp
+    src/main/cpp/SurfaceOrientation.cpp
     src/main/cpp/Texture.cpp
     src/main/cpp/TextureSampler.cpp
     src/main/cpp/TransformManager.cpp
     src/main/cpp/View.cpp
     # Android specific
     src/main/cpp/nativewindow/Android.cpp
+    # Private utils
+    src/main/cpp/Filament.cpp
+    # Common utils
+    ../common/CallbackUtils.cpp
+    ../common/NioUtils.cpp
 )
 
-if (NOT DISABLE_FILAMENT_JNI)
+# Ordering is significant in the following list. The PRIVATE qualifier prevents transitive deps.
+target_link_libraries(filament-jni
+    PRIVATE filament
+    PRIVATE backend
+    PRIVATE filaflat
+    PRIVATE filabridge
+    PRIVATE geometry
+    PRIVATE ibl
+    PRIVATE log
+    PRIVATE GLESv3
+    PRIVATE EGL
+    PRIVATE android
+    PRIVATE jnigraphics
+    PRIVATE utils
+)
 
-    set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/libfilament-jni.map")
+target_include_directories(filament-jni PRIVATE
+        ..
+        ${FILAMENT_DIR}/include
+        ../../third_party/robin-map
+        ../../libs/utils/include)
 
-    add_library(filament-jni SHARED
-        $<TARGET_OBJECTS:filament-jni-obj>
-        # Private utils
-        src/main/cpp/Filament.cpp
-        # Common utils
-        ../common/CallbackUtils.cpp
-        ../common/NioUtils.cpp
-    )
+# Force a relink when the version script is changed:
+set_target_properties(filament-jni PROPERTIES LINK_DEPENDS ${VERSION_SCRIPT})
 
-    target_link_libraries(filament-jni
-        filament
-        backend
-        filaflat
-        filabridge
-        geometry
-        ibl
-        utils
-        log
-        GLESv3
-        EGL
-        android
-        jnigraphics
-    )
+option(FILAMENT_SUPPORTS_VULKAN "Enables Vulkan on Android" OFF)
 
-    option(FILAMENT_SUPPORTS_VULKAN "Enables Vulkan on Android" OFF)
-
-    if (FILAMENT_SUPPORTS_VULKAN)
-        target_link_libraries(filament-jni bluevk smol-v)
-    endif()
-
+if (FILAMENT_SUPPORTS_VULKAN)
+    target_link_libraries(filament-jni bluevk smol-v)
 endif()

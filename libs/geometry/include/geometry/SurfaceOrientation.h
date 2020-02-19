@@ -41,12 +41,25 @@ public:
      * The Builder is used to construct an immutable surface orientation helper.
      *
      * Clients provide pointers into their own data, which is synchronously consumed during build().
-     * At a minimum, clients must supply a vertex count and normals buffer. They can supply data in
-     * any of the following three combinations:
+     * At a minimum, clients must supply a vertex count. They can supply data in any of the
+     * following combinations:
      *
-     *   1. vec3 normals only (not recommended)
-     *   2. vec3 normals + vec4 tangents (sign of W determines bitangent orientation)
-     *   3. vec3 normals + vec2 uvs + vec3 positions + uint3 indices
+     *   1. normals only ........................... not recommended, selects arbitrary orientation
+     *   2. normals + tangents ..................... sign of W determines bitangent orientation
+     *   3. normals + uvs + positions + indices .... selects Lengyel’s Method
+     *   4. positions + indices .................... generates normals for flat shading only
+     *
+     * Additionally, the client-side data has the following type constraints:
+     *
+     *  - Normals must be float3
+     *  - Tangents must be float4
+     *  - UVs must be float2
+     *  - Positions must be float3
+     *  - Triangles must be uint3 or ushort3
+     *
+     * Currently, mikktspace is not supported because it requires re-indexing the mesh. Instead
+     * we use the method described by Eric Lengyel in "Foundations of Game Engine Development"
+     * (Volume 2, Chapter 7).
      */
     class Builder {
     public:
@@ -56,14 +69,11 @@ public:
         Builder& operator=(Builder&& that) noexcept;
 
         /**
-         * These two attributes are required. They are not passed into the constructor to force
-         * calling code to be self-documenting.
-         * @{
+         * This attribute is required.
          */
         Builder& vertexCount(size_t vertexCount) noexcept;
-        Builder& normals(const filament::math::float3*, size_t stride = 0) noexcept;
-        /** @} */
 
+        Builder& normals(const filament::math::float3*, size_t stride = 0) noexcept;
         Builder& tangents(const filament::math::float4*, size_t stride = 0) noexcept;
         Builder& uvs(const filament::math::float2*, size_t stride = 0) noexcept;
         Builder& positions(const filament::math::float3*, size_t stride = 0) noexcept;
@@ -73,9 +83,9 @@ public:
         Builder& triangles(const filament::math::ushort3*) noexcept;
 
         /**
-         * Generates quats or panics if the submitted data is an incomplete combination.
+         * Generates quats or returns null if the submitted data is an incomplete combination.
          */
-        SurfaceOrientation build();
+        SurfaceOrientation* build();
 
     private:
         OrientationBuilderImpl* mImpl;
@@ -101,7 +111,9 @@ public:
     void getQuats(filament::math::quatf* out, size_t quatCount, size_t stride = 0) const noexcept;
     void getQuats(filament::math::short4* out, size_t quatCount, size_t stride = 0) const noexcept;
     void getQuats(filament::math::quath* out, size_t quatCount, size_t stride = 0) const noexcept;
-    /** @} */
+    /**
+     * @}
+     */
 
 private:
     SurfaceOrientation(OrientationImpl*) noexcept;

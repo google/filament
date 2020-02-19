@@ -141,7 +141,7 @@ fragment {
     }
 
     highp float sampleDepthLinear(const vec2 uv) {
-        return linearizeDepth(texture(materialParams_depth, uv, 0.0).r);
+        return linearizeDepth(textureLod(materialParams_depth, uv, 0.0).r);
     }
 
     highp vec3 computeViewSpacePositionFromDepth(vec2 p, highp float linearDepth) {

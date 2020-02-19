@@ -2,7 +2,7 @@
 set -e
 
 # Host tools required by Android, WebGL, and iOS builds
-MOBILE_HOST_TOOLS="matc resgen cmgen"
+MOBILE_HOST_TOOLS="matc resgen cmgen filamesh"
 WEB_HOST_TOOLS="${MOBILE_HOST_TOOLS} mipgen filamesh"
 IOS_TOOLCHAIN_URL="https://opensource.apple.com/source/clang/clang-800.0.38/src/cmake/platforms/iOS.cmake"
 
@@ -129,6 +129,8 @@ function build_clean {
     rm -Rf android/filamat-android/build android/filamat-android/.cxx
     rm -Rf android/gltfio-android/build android/gltfio-android/.externalNativeBuild
     rm -Rf android/gltfio-android/build android/gltfio-android/.cxx
+    rm -Rf android/filament-utils-android/build android/filament-utils-android/.externalNativeBuild
+    rm -Rf android/filament-utils-android/build android/filament-utils-android/.cxx
 }
 
 function build_desktop_target {
@@ -144,6 +146,13 @@ function build_desktop_target {
 
     cd out/cmake-${lc_target}
 
+    # On macOS, set the deployment target to 10.14.
+    local name=`echo $(uname)`
+    local lc_name=`echo $name | tr '[:upper:]' '[:lower:]'`
+    if [[ "$lc_name" == "darwin" ]]; then
+        local deployment_target="-DCMAKE_OSX_DEPLOYMENT_TARGET=10.14"
+    fi
+
     if [[ ! -d "CMakeFiles" ]] || [[ "$ISSUE_CMAKE_ALWAYS" == "true" ]]; then
         cmake \
             -G "$BUILD_GENERATOR" \
@@ -151,6 +160,7 @@ function build_desktop_target {
             -DCMAKE_BUILD_TYPE=$1 \
             -DCMAKE_INSTALL_PREFIX=../${lc_target}/filament \
             -DENABLE_JAVA=${ENABLE_JAVA} \
+            ${deployment_target} \
             ../..
     fi
     ${BUILD_COMMAND} ${build_targets}
@@ -366,79 +376,65 @@ function build_android {
         archive_android "Release"
     fi
 
-    cd android/filament-android
+    cd android
 
     if [[ "$ISSUE_DEBUG_BUILD" == "true" ]]; then
-        ./gradlew -Pfilament_dist_dir=../../out/android-debug/filament assembleDebug \
-            -Pextra_cmake_args=${VULKAN_ANDROID_OPTION}
+        ./gradlew \
+            -Pfilament_dist_dir=../out/android-debug/filament \
+            -Pextra_cmake_args=${VULKAN_ANDROID_OPTION} \
+            :filament-android:assembleDebug \
+            :gltfio-android:assembleDebug \
+            :filament-utils-android:assembleDebug
 
-        if [[ "$INSTALL_COMMAND" ]]; then
-            echo "Installing out/filament-android-debug.aar..."
-            cp build/outputs/aar/filament-android-debug.aar ../../out/
-        fi
-    fi
-
-    if [[ "$ISSUE_RELEASE_BUILD" == "true" ]]; then
-        ./gradlew -Pfilament_dist_dir=../../out/android-release/filament assembleRelease \
-            -Pextra_cmake_args=${VULKAN_ANDROID_OPTION}
-
-        if [[ "$INSTALL_COMMAND" ]]; then
-            echo "Installing out/filament-android-release.aar..."
-            cp build/outputs/aar/filament-android-release.aar ../../out/
-        fi
-    fi
-
-    cd ../..
-
-
-    cd android/filamat-android
-
-    if [[ "$ISSUE_DEBUG_BUILD" == "true" ]]; then
-        ./gradlew -Pfilament_dist_dir=../../out/android-debug/filament assembleDebug
+        ./gradlew \
+            -Pfilament_dist_dir=../out/android-debug/filament \
+            :filamat-android:assembleDebug
 
         if [[ "$INSTALL_COMMAND" ]]; then
             echo "Installing out/filamat-android-debug.aar..."
-            cp build/outputs/aar/filamat-android-full-debug.aar ../../out/
-            cp build/outputs/aar/filamat-android-lite-debug.aar ../../out/
+            cp filamat-android/build/outputs/aar/filamat-android-full-debug.aar ../out/
+            cp filamat-android/build/outputs/aar/filamat-android-lite-debug.aar ../out/
+
+            echo "Installing out/filament-android-debug.aar..."
+            cp filament-android/build/outputs/aar/filament-android-debug.aar ../out/
+
+            echo "Installing out/gltfio-android-debug.aar..."
+            cp gltfio-android/build/outputs/aar/gltfio-android-debug.aar ../out/
+
+            echo "Installing out/filament-utils-android-debug.aar..."
+            cp filament-utils-android/build/outputs/aar/filament-utils-android-debug.aar ../out/
         fi
     fi
 
     if [[ "$ISSUE_RELEASE_BUILD" == "true" ]]; then
-        ./gradlew -Pfilament_dist_dir=../../out/android-release/filament assembleRelease
+        ./gradlew \
+            -Pfilament_dist_dir=../out/android-release/filament \
+            -Pextra_cmake_args=${VULKAN_ANDROID_OPTION} \
+            :filament-android:assembleRelease \
+            :gltfio-android:assembleRelease \
+            :filament-utils-android:assembleRelease
+
+        ./gradlew \
+            -Pfilament_dist_dir=../out/android-release/filament \
+            :filamat-android:assembleRelease
 
         if [[ "$INSTALL_COMMAND" ]]; then
             echo "Installing out/filamat-android-release.aar..."
-            cp build/outputs/aar/filamat-android-full-release.aar ../../out/
-            cp build/outputs/aar/filamat-android-lite-release.aar ../../out/
-        fi
-    fi
+            cp filamat-android/build/outputs/aar/filamat-android-full-release.aar ../out/
+            cp filamat-android/build/outputs/aar/filamat-android-lite-release.aar ../out/
 
-    cd ../..
+            echo "Installing out/filament-android-release.aar..."
+            cp filament-android/build/outputs/aar/filament-android-release.aar ../out/
 
-
-    cd android/gltfio-android
-
-    if [[ "$ISSUE_DEBUG_BUILD" == "true" ]]; then
-        ./gradlew -Pfilament_dist_dir=../../out/android-debug/filament assembleDebug \
-                    -Pextra_cmake_args=${VULKAN_ANDROID_OPTION}
-
-        if [[ "$INSTALL_COMMAND" ]]; then
-            echo "Installing out/gltfio-android-debug.aar..."
-            cp build/outputs/aar/gltfio-android-debug.aar ../../out/
-        fi
-    fi
-
-    if [[ "$ISSUE_RELEASE_BUILD" == "true" ]]; then
-        ./gradlew -Pfilament_dist_dir=../../out/android-release/filament assembleRelease \
-                -Pextra_cmake_args=${VULKAN_ANDROID_OPTION}
-
-        if [[ "$INSTALL_COMMAND" ]]; then
             echo "Installing out/gltfio-android-release.aar..."
-            cp build/outputs/aar/gltfio-android-release.aar ../../out/
+            cp gltfio-android/build/outputs/aar/gltfio-android-release.aar ../out/
+
+            echo "Installing out/filament-utils-android-release.aar..."
+            cp filament-utils-android/build/outputs/aar/filament-utils-android-release.aar ../out/
         fi
     fi
 
-    cd ../..
+    cd ..
 }
 
 function ensure_ios_toolchain {
@@ -475,10 +471,17 @@ function ensure_ios_toolchain {
     local REPLACE='SET(PLATFORM_NAME "iphoneos" CACHE STRING "iOS platform to build for")'
     sed -i '' "s/${FIND}/${REPLACE}/g" ./${toolchain_path}
 
-    # Append Filament-specific settings.
-    cat build/toolchain-mac-ios.filament.cmake >> ${toolchain_path}
+    # Apple's toolchain specifies isysroot based on an environment variable, which we don't set.
+    # The toolchain doesn't need to do this, however, as isysroot is implicitly set in the toolchain
+    # via CMAKE_OSX_SYSROOT.
+    local FIND='SET(IOS_COMMON_FLAGS "-isysroot $ENV{SDKROOT} '
+    local REPLACE='SET(IOS_COMMON_FLAGS "'
+    sed -i '' "s/${FIND}/${REPLACE}/g" ./${toolchain_path}
 
-    echo "Successfully downloaded iOS toolchain file and appended Filament-specific settings."
+    # Prepend Filament-specific settings.
+    (cat build/toolchain-mac-ios.filament.cmake; cat ${toolchain_path}) > tmp && mv tmp ${toolchain_path}
+
+    echo "Successfully downloaded iOS toolchain file and prepended Filament-specific settings."
 }
 
 function build_ios_target {
@@ -499,6 +502,7 @@ function build_ios_target {
             -DCMAKE_INSTALL_PREFIX=../ios-${lc_target}/filament \
             -DIOS_ARCH=${arch} \
             -DPLATFORM_NAME=${platform} \
+            -DIOS_MIN_TARGET=12.0 \
             -DIOS=1 \
             -DCMAKE_TOOLCHAIN_FILE=../../build/toolchain-mac-ios.cmake \
             ../..
@@ -706,8 +710,8 @@ while getopts ":hacfijmp:tuvslw" opt; do
             VULKAN_ANDROID_OPTION="-DFILAMENT_SUPPORTS_VULKAN=ON"
             echo "Enabling support for Vulkan in the core Filament library."
             echo ""
-            echo "To switch your application to Vulkan, in Android Studio go to "
-            echo "File > Settings > Build > Compiler. In the command-line options field, "
+            echo "To switch your application to Vulkan, in Android Studio go to Preferences > "
+            echo "Build, Executation Deployment > Compiler. In the command-line options field, "
             echo "add -Pextra_cmake_args=-DFILAMENT_SUPPORTS_VULKAN=ON."
             echo "Also be sure to pass Engine.Backend.VULKAN to Engine.create."
             echo ""

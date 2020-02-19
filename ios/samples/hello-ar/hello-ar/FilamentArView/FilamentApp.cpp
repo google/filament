@@ -16,8 +16,13 @@
 
 #include "FilamentApp.h"
 
+#include <filament/Camera.h>
+#include <filament/IndexBuffer.h>
 #include <filament/LightManager.h>
+#include <filament/Material.h>
 #include <filament/TransformManager.h>
+#include <filament/VertexBuffer.h>
+#include <filament/Viewport.h>
 
 #include <filameshio/MeshReader.h>
 #include <geometry/SurfaceOrientation.h>
@@ -101,11 +106,12 @@ void FilamentApp::updatePlaneGeometry(const FilamentArPlaneGeometry& geometry) {
     // upwards-facing normal, we only need to generate a single quaternion, which can be copied.
     quatf* quats = new quatf[vertexCount];
     static float3 normals[1] = { float3(0, 1, 0) };
-    geometry::SurfaceOrientation::Builder()
+    auto helper = geometry::SurfaceOrientation::Builder()
         .vertexCount(1)
         .normals(normals)
-        .build()
-        .getQuats(quats, 1);
+        .build();
+    helper->getQuats(quats, 1);
+    delete helper;
     for (int i = 1; i < vertexCount; i++) {
         quats[i] = quats[0];
     }
@@ -247,7 +253,6 @@ void FilamentApp::setupMesh() {
 
 void FilamentApp::setupView() {
     view = engine->createView();
-    view->setDepthPrepass(filament::View::DepthPrepass::DISABLED);
     view->setScene(scene);
     view->setCamera(camera);
     view->setViewport(Viewport(0, 0, width, height));

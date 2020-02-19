@@ -43,9 +43,10 @@ struct OrientationBuilderImpl {
     size_t uvStride = 0;
     size_t positionStride = 0;
     size_t triangleCount = 0;
-    SurfaceOrientation buildWithNormalsOnly();
-    SurfaceOrientation buildWithSuppliedTangents();
-    SurfaceOrientation buildWithUvs();
+    SurfaceOrientation* buildWithNormalsOnly();
+    SurfaceOrientation* buildWithSuppliedTangents();
+    SurfaceOrientation* buildWithUvs();
+    SurfaceOrientation* buildWithFlatNormals();
 };
 
 struct OrientationImpl {
@@ -109,22 +110,34 @@ Builder& Builder::triangles(const ushort3* triangles) noexcept {
     return *this;
 }
 
-SurfaceOrientation Builder::build() {
-    ASSERT_PRECONDITION(mImpl->normals != nullptr, "Normals are required.");
-    ASSERT_PRECONDITION(mImpl->vertexCount > 0, "Vertex count must be non-zero.");
+SurfaceOrientation* Builder::build() {
+    if (!ASSERT_PRECONDITION_NON_FATAL(mImpl->vertexCount > 0, "Vertex count must be non-zero.")) {
+        return nullptr;
+    }
+    if (mImpl->triangles16 || mImpl->triangles32) {
+        if (!ASSERT_PRECONDITION_NON_FATAL(mImpl->positions, "Positions are required.")) {
+            return nullptr;
+        }
+        if (!ASSERT_PRECONDITION_NON_FATAL(!mImpl->triangles16 || !mImpl->triangles32,
+                "Choose 16 or 32-bit indices, not both.")) {
+            return nullptr;
+        }
+        if (!ASSERT_PRECONDITION_NON_FATAL(mImpl->triangleCount > 0, "Triangle count is required.")) {
+            return nullptr;
+        }
+        if (mImpl->normals == nullptr) {
+            return mImpl->buildWithFlatNormals();
+        }
+    }
+    if (!ASSERT_PRECONDITION_NON_FATAL(mImpl->normals != nullptr, "Normals are required.")) {
+        return nullptr;
+    }
     if (mImpl->tangents != nullptr) {
         return mImpl->buildWithSuppliedTangents();
     }
     if (mImpl->uvs == nullptr) {
         return mImpl->buildWithNormalsOnly();
     }
-    bool hasTriangles = mImpl->triangles16 || mImpl->triangles32;
-    bool bothTypes = mImpl->triangles16 && mImpl->triangles32;
-    ASSERT_PRECONDITION(hasTriangles && mImpl->positions,
-            "When using UVs, positions and triangles are required.");
-    ASSERT_PRECONDITION(!bothTypes, "Choose 16 or 32-bit indices, not both.");
-    ASSERT_PRECONDITION(mImpl->triangleCount > 0,
-            "When using UVs, triangle count is required.");
     return mImpl->buildWithUvs();
 }
 
@@ -138,7 +151,7 @@ static float3 randomPerp(const float3& n) {
     return perp / sqrlen;
 }
 
-SurfaceOrientation OrientationBuilderImpl::buildWithNormalsOnly() {
+SurfaceOrientation* OrientationBuilderImpl::buildWithNormalsOnly() {
     vector<quatf> quats(vertexCount);
 
     const float3* normal = this->normals;
@@ -152,10 +165,10 @@ SurfaceOrientation OrientationBuilderImpl::buildWithNormalsOnly() {
         normal = (const float3*) (((const uint8_t*) normal) + nstride);
     }
 
-    return SurfaceOrientation(new OrientationImpl( { std::move(quats) } ));
+    return new SurfaceOrientation(new OrientationImpl( { std::move(quats) } ));
 }
 
-SurfaceOrientation OrientationBuilderImpl::buildWithSuppliedTangents() {
+SurfaceOrientation* OrientationBuilderImpl::buildWithSuppliedTangents() {
     vector<quatf> quats(vertexCount);
 
     const float3* normal = this->normals;
@@ -182,7 +195,7 @@ SurfaceOrientation OrientationBuilderImpl::buildWithSuppliedTangents() {
         tandir = (const float*) (((const uint8_t*) tandir) + tstride);
     }
 
-    return SurfaceOrientation(new OrientationImpl( { std::move(quats) } ));
+    return new SurfaceOrientation(new OrientationImpl( { std::move(quats) } ));
 }
 
 // This method is based on:
@@ -191,13 +204,22 @@ SurfaceOrientation OrientationBuilderImpl::buildWithSuppliedTangents() {
 // http://www.terathon.com/code/tangent.html
 //
 // We considered mikktspace (which thankfully has a zlib-style license) but it would require
-// re-indexing via meshoptimizer and is therefore a bit heavyweight.
+// re-indexing (i.e. welding) and is therefore a bit heavyweight. Note that the welding could be
+// done via meshoptimizer.
 //
-SurfaceOrientation OrientationBuilderImpl::buildWithUvs() {
-    ASSERT_PRECONDITION(this->normalStride == 0, "Non-zero normal stride not yet supported.");
-    ASSERT_PRECONDITION(this->tangentStride == 0, "Non-zero tangent stride not yet supported.");
-    ASSERT_PRECONDITION(this->uvStride == 0, "Non-zero uv stride not yet supported.");
-    ASSERT_PRECONDITION(this->positionStride == 0, "Non-zero positions stride not yet supported.");
+SurfaceOrientation* OrientationBuilderImpl::buildWithUvs() {
+    if (!ASSERT_PRECONDITION_NON_FATAL(this->normalStride == 0, "Non-zero normal stride not yet supported.")) {
+        return nullptr;
+    }
+    if (!ASSERT_PRECONDITION_NON_FATAL(this->tangentStride == 0, "Non-zero tangent stride not yet supported.")) {
+        return nullptr;
+    }
+    if (!ASSERT_PRECONDITION_NON_FATAL(this->uvStride == 0, "Non-zero uv stride not yet supported.")) {
+        return nullptr;
+    }
+    if (!ASSERT_PRECONDITION_NON_FATAL(this->positionStride == 0, "Non-zero positions stride not yet supported.")) {
+        return nullptr;
+    }
     vector<float3> tan1(vertexCount);
     vector<float3> tan2(vertexCount);
     memset(tan1.data(), 0, sizeof(float3) * vertexCount);
@@ -258,7 +280,7 @@ SurfaceOrientation OrientationBuilderImpl::buildWithUvs() {
         float3 b = w < 0 ? cross(t, n) : cross(n, t);
         quats[a] = mat3f::packTangentFrame({t, b, n});
     }
-    return SurfaceOrientation(new OrientationImpl( { std::move(quats) } ));
+    return new SurfaceOrientation(new OrientationImpl( { std::move(quats) } ));
 }
 
 SurfaceOrientation::SurfaceOrientation(OrientationImpl* impl) noexcept : mImpl(impl) {}
@@ -306,6 +328,25 @@ void SurfaceOrientation::getQuats(quath* out, size_t quatCount, size_t stride) c
         *out = quath(in[i]);
         out = (decltype(out)) (((uint8_t*) out) + stride);
     }
+}
+
+SurfaceOrientation* OrientationBuilderImpl::buildWithFlatNormals() {
+    float3* normals = new float3[vertexCount];
+    for (size_t a = 0; a < triangleCount; ++a) {
+        const uint3 tri = triangles16 ? uint3(triangles16[a]) : triangles32[a];
+        const float3 v1 = positions[tri.x];
+        const float3 v2 = positions[tri.y];
+        const float3 v3 = positions[tri.z];
+        const float3 normal = normalize(cross(v2 - v1, v3 - v1));
+        normals[tri.x] = normal;
+        normals[tri.y] = normal;
+        normals[tri.z] = normal;
+    }
+    this->normals = normals;
+    SurfaceOrientation* result = buildWithNormalsOnly();
+    this->normals = nullptr;
+    delete[] normals;
+    return result;
 }
 
 } // namespace geometry

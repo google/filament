@@ -23,32 +23,44 @@
 namespace filament {
 namespace backend {
 
-TextureReshaper::TextureReshaper(TextureFormat requestedFormat) noexcept {
-    const auto freeDeleter = [](void* buffer) { free(buffer); };
+static void freeDeleter(void* buffer, size_t, void*) {
+    free(buffer);
+}
 
+TextureReshaper::TextureReshaper(TextureFormat requestedFormat) noexcept {
     reshapedFormat = requestedFormat;
 
     if (requestedFormat == TextureFormat::RGB16F) {
         reshapedFormat = TextureFormat::RGBA16F;
-        reshapeFunction = [](void* data, size_t size) {
-            void* reshapeBuffer = malloc(size / 6 * 8);    // reshaping from 6 to 8 bytes per pixel
+        reshapeFunction = [](PixelBufferDescriptor&& p) {
+            const size_t reshapedSize = p.size / 6 * 8;     // reshaping from 6 to 8 bytes per pixel
+            void* reshapeBuffer = malloc(reshapedSize);
             ASSERT_POSTCONDITION(reshapeBuffer, "Could not allocate memory to reshape pixels.");
             // 0x3c00 is 1.0 in 16 bit floating point.
-            DataReshaper::reshape<uint16_t, 3, 4, 0x3c00>(reshapeBuffer, data, size);
-            return reshapeBuffer;
+            DataReshaper::reshape<uint16_t, 3, 4, 0x3c00>(reshapeBuffer, p.buffer, p.size);
+
+            PixelBufferDescriptor reshaped(reshapeBuffer, reshapedSize,
+                    PixelBufferDescriptor::PixelDataFormat::RGBA,
+                    PixelBufferDescriptor::PixelDataType::HALF, 1, p.left, p.top, p.stride,
+                    freeDeleter);
+            return reshaped;
         };
-        deleter = freeDeleter;
     };
 
     if (requestedFormat == TextureFormat::RGB8) {
         reshapedFormat = TextureFormat::RGBA8;
-        reshapeFunction = [](void* data, size_t size) {
-            void* reshapeBuffer = malloc(size / 3 * 4);    // reshaping from 3 to 4 bytes per pixel
+        reshapeFunction = [](PixelBufferDescriptor&& p) {
+            const size_t reshapedSize = p.size / 3 * 4;     // reshaping from 3 to 4 bytes per pixel
+            void* reshapeBuffer = malloc(reshapedSize);
             ASSERT_POSTCONDITION(reshapeBuffer, "Could not allocate memory to reshape pixels.");
-            DataReshaper::reshape<uint8_t, 3, 4>(reshapeBuffer, data, size);
-            return reshapeBuffer;
+            DataReshaper::reshape<uint8_t, 3, 4>(reshapeBuffer, p.buffer, p.size);
+
+            PixelBufferDescriptor reshaped(reshapeBuffer, reshapedSize,
+                    PixelBufferDescriptor::PixelDataFormat::RGBA,
+                    PixelBufferDescriptor::PixelDataType::UBYTE, 1, p.left, p.top, p.stride,
+                    freeDeleter);
+            return reshaped;
         };
-        deleter = freeDeleter;
     }
 }
 
@@ -56,12 +68,8 @@ TextureFormat TextureReshaper::getReshapedFormat() const noexcept {
     return reshapedFormat;
 }
 
-void* TextureReshaper::reshape(void* data, size_t size) const {
-    return reshapeFunction(data, size);
-}
-
-void TextureReshaper::freeBuffer(void* buffer) const {
-    deleter(buffer);
+PixelBufferDescriptor TextureReshaper::reshape(PixelBufferDescriptor&& p) const {
+    return reshapeFunction(std::move(p));
 }
 
 bool TextureReshaper::canReshapeTextureFormat(TextureFormat format) noexcept {

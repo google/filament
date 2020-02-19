@@ -1,4 +1,0 @@
-includeBuild '../../filament-android'
-includeBuild '../../gltfio-android'
-
-include ':app'

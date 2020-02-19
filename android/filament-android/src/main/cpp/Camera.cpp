@@ -18,6 +18,8 @@
 
 #include <filament/Camera.h>
 
+#include <math/mat4.h>
+
 using namespace filament;
 
 extern "C" JNIEXPORT void JNICALL

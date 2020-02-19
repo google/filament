@@ -16,8 +16,8 @@
 
 package com.google.android.filament;
 
-import android.support.annotation.IntRange;
-import android.support.annotation.NonNull;
+import androidx.annotation.IntRange;
+import androidx.annotation.NonNull;
 
 import java.nio.Buffer;
 import java.nio.BufferOverflowException;
@@ -443,7 +443,7 @@ public class Renderer {
      * <br>
      * <p>Use this method used to keep the precision of time high in materials, in practice it should
      * be called at least when the application is paused, e.g.
-     * {@link android.app.Activity#onPause() Activity.onPause} in Android.</p>
+     * <code>Activity.onPause</code> in Android.</p>
      *
      * @see #getUserTime
      */

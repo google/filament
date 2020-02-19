@@ -26,6 +26,7 @@
 #include <math/vec4.h>
 #include <math/half.h>
 
+#include <algorithm>
 #include <memory>
 
 namespace image {

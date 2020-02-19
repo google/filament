@@ -520,13 +520,6 @@ int main(int argc, char* argv[]) {
         g_prefilter_dir = g_deploy_dir;
     }
 
-    if (g_debug) {
-        if (g_prefilter && !g_is_mipmap) {
-            g_is_mipmap = true;
-            g_is_mipmap_dir = g_prefilter_dir;
-        }
-    }
-
     // Images store the actual data
     std::vector<Image> images;
 
@@ -895,10 +888,17 @@ void iblMipmapPrefilter(utils::JobSystem& js, const utils::Path& iname,
     }
 }
 
-float lodToPerceptualRoughness(float lod) {
-    const float a = 1.686f;
-    const float b = -0.686f;
-    return saturate((std::sqrt(a * a + 4.0f * b * lod) - a) / (2.0f * b));
+static float lodToPerceptualRoughness(float lod) noexcept {
+    // Inverse perceptualRoughness-to-LOD mapping:
+    // The LOD-to-perceptualRoughness mapping is a quadratic fit for
+    // log2(perceptualRoughness)+iblMaxMipLevel when iblMaxMipLevel is 4.
+    // We found empirically that this mapping works very well for a 256 cubemap with 5 levels used,
+    // but also scales well for other iblMaxMipLevel values.
+    const float a = 2.0f;
+    const float b = -1.0f;
+    return (lod != 0)
+            ? saturate((std::sqrt(a * a + 4.0f * b * lod) - a) / (2.0f * b))
+            : 0.0f;
 }
 
 void iblRoughnessPrefilter(
@@ -954,8 +954,7 @@ void iblRoughnessPrefilter(
         }
 
         const float lod = saturate(level / (numLevels - 1.0f));
-        // map the lod to a linear_roughness,  here we're using ^2, but other mappings are possible.
-        // ==> lod = sqrt(linear_roughness)
+        // map the lod to a perceptualRoughness
         const float perceptualRoughness = lodToPerceptualRoughness(lod);
         const float roughness = perceptualRoughness * perceptualRoughness;
         if (!g_quiet) {

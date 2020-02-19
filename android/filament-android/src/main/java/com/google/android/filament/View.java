@@ -16,10 +16,10 @@
 
 package com.google.android.filament;
 
-import android.support.annotation.IntRange;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.annotation.Size;
+import androidx.annotation.IntRange;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.Size;
 
 import static com.google.android.filament.Colors.LinearColor;
 
@@ -62,8 +62,8 @@ public class View {
     private Viewport mViewport = new Viewport(0, 0, 0, 0);
     private DynamicResolutionOptions mDynamicResolution;
     private RenderQuality mRenderQuality;
-    private DepthPrepass mDepthPrepass = DepthPrepass.DEFAULT;
     private AmbientOcclusionOptions mAmbientOcclusionOptions;
+    private BloomOptions mBloomOptions;
     private RenderTarget mRenderTarget;
 
     /**
@@ -157,6 +157,86 @@ public class View {
     }
 
     /**
+     * Options for controlling the Bloom effect
+     *
+     * enabled:     Enable or disable the bloom post-processing effect. Disabled by default.
+     * levels:      Number of successive blurs to achieve the blur effect, the minimum is 3 and the
+     *              maximum is 12. This value together with resolution influences the spread of the
+     *              blur effect. This value can be silently reduced to accommodate the original
+     *              image size.
+     * resolution:  Resolution of bloom's minor axis. The minimum value is 2^levels and the
+     *              the maximum is lower of the original resolution and 4096. This parameter is
+     *              silently clamped to the minimum and maximum.
+     *              It is highly recommended that this value be smaller than the target resolution
+     *              after dynamic resolution is applied (horizontally and vertically).
+     * strength:    how much of the bloom is added to the original image. Between 0 and 1.
+     * blendMode:   Whether the bloom effect is purely additive (false) or mixed with the original
+     *              image (true).
+     * anamorphism: Bloom's aspect ratio (x/y), for artistic purposes.
+     * threshold:   When enabled, a threshold at 1.0 is applied on the source image, this is
+     *              useful for artistic reasons and is usually needed when a dirt texture is used.
+     * dirt:        A dirt/scratch/smudges texture (that can be RGB), which gets added to the
+     *              bloom effect. Smudges are visible where bloom occurs. Threshold must be
+     *              enabled for the dirt effect to work properly.
+     * dirtStrength: Strength of the dirt texture.
+     *
+     * @see setBloomOptions
+     */
+    public static class BloomOptions {
+
+        public enum BlendingMode {
+            ADD,
+            INTERPOLATE
+        }
+
+        /**
+         * User provided dirt texture
+         */
+        @Nullable
+        public Texture dirt = null;
+
+        /**
+         * strength of the dirt texture
+         */
+        public float dirtStrength = 0.2f;
+
+        /**
+         * Strength of the bloom effect, between 0.0 and 1.0
+         */
+        public float strength = 0.10f;
+
+        /**
+         * Resolution of minor axis (2^levels to 4096)
+         */
+        public int resolution = 360;
+
+        /**
+         * Bloom x/y aspect-ratio (1/32 to 32)
+         */
+        public float anamorphism = 1.0f;
+
+        /**
+         * Number of blur levels (3 to 12)
+         */
+        public int levels = 6;
+
+        /**
+         * How the bloom effect is applied
+         */
+        public BlendingMode blendingMode = BlendingMode.ADD;
+
+        /**
+         * Whether to threshold the source
+         */
+        public boolean threshold = true;
+
+        /**
+         * enable or disable bloom
+         */
+        public boolean enabled = false;
+    }
+
+    /**
      * Sets the quality of the HDR color buffer.
      *
      * <p>
@@ -239,19 +319,6 @@ public class View {
         NONE,
         TEMPORAL
     }
-
-    /** @see #setDepthPrepass */
-    public enum DepthPrepass {
-        DEFAULT(-1),
-        DISABLED(0),
-        ENABLED(1);
-
-        final int value;
-
-        DepthPrepass(int value) {
-            this.value = value;
-        }
-    };
 
     View(long nativeView) {
         mNativeObject = nativeView;
@@ -613,46 +680,6 @@ public class View {
     }
 
     /**
-     * Checks if this view is rendered with a depth-only prepass.
-     *
-     * @return the value set by {@link #setDepthPrepass}.
-     */
-    @NonNull
-    public DepthPrepass getDepthPrepass() {
-        return mDepthPrepass;
-    }
-
-    /**
-     * Sets whether this view is rendered with or without a depth pre-pass.
-     *
-     * <p>
-     * By default, the system picks the most appropriate strategy for your platform; this method
-     * lets you override that strategy.
-     * </p>
-     *
-     * <p>
-     * When the depth pre-pass is enabled, the renderer will first draw all objects in the
-     * depth buffer from front to back, and then draw the objects again but sorted to minimize
-     * state changes. With the depth pre-pass disabled, objects are drawn only once, but it may
-     * result in more state changes or more overdraw.
-     * </p>
-     *
-     * <p>
-     * The best strategy may depend on the scene and/or GPU.
-     * </p>
-     *
-     * <ul>
-     * <li>DepthPrepass::DEFAULT uses the most appropriate strategy</li>
-     * <li>DepthPrepass::DISABLED disables the depth pre-pass</li>
-     * <li>DepthPrepass::ENABLE enables the depth pre-pass</li>
-     * </ul>
-     */
-    public void setDepthPrepass(@NonNull DepthPrepass depthPrepass) {
-        mDepthPrepass = depthPrepass;
-        nSetDepthPrepass(getNativeObject(), depthPrepass.value);
-    }
-
-    /**
      * Returns true if post-processing is enabled.
      *
      * @see #setPostProcessingEnabled
@@ -783,6 +810,32 @@ public class View {
         return mAmbientOcclusionOptions;
     }
 
+    /**
+     * Sets bloom options.
+     *
+     * @param options Options for bloom.
+     */
+    public void setBloomOptions(@NonNull BloomOptions options) {
+        mBloomOptions = options;
+        nSetBloomOptions(getNativeObject(), options.dirt.getNativeObject(),
+                options.dirtStrength, options.strength, options.resolution,
+                options.anamorphism, options.levels, options.blendingMode.ordinal(),
+                options.threshold, options.enabled);
+    }
+
+    /**
+     * Gets the bloom options
+     *
+     * @return bloom options currently set.
+     */
+    @NonNull
+    public BloomOptions getBloomOptions() {
+        if (mBloomOptions == null) {
+            mBloomOptions = new BloomOptions();
+        }
+        return mBloomOptions;
+    }
+
     public long getNativeObject() {
         if (mNativeObject == 0) {
             throw new IllegalStateException("Calling method on destroyed View");
@@ -818,7 +871,6 @@ public class View {
             float minScale, float maxScale, int history);
     private static native void nSetRenderQuality(long nativeView, int hdrColorBufferQuality);
     private static native void nSetDynamicLightingOptions(long nativeView, float zLightNear, float zLightFar);
-    private static native void nSetDepthPrepass(long nativeView, int value);
     private static native void nSetPostProcessingEnabled(long nativeView, boolean enabled);
     private static native boolean nIsPostProcessingEnabled(long nativeView);
     private static native void nSetFrontFaceWindingInverted(long nativeView, boolean inverted);
@@ -826,4 +878,5 @@ public class View {
     private static native void nSetAmbientOcclusion(long nativeView, int ordinal);
     private static native int nGetAmbientOcclusion(long nativeView);
     private static native void nSetAmbientOcclusionOptions(long nativeView, float radius, float bias, float power, float resolution, float intensity);
+    private static native void nSetBloomOptions(long nativeView, long dirtNativeObject, float dirtStrength, float strength, int resolution, float anamorphism, int levels, int blendMode, boolean threshold, boolean enabled);
 }

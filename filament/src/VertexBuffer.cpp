@@ -123,6 +123,21 @@ VertexBuffer* VertexBuffer::Builder::build(Engine& engine) {
         return nullptr;
     }
 
+    // Next we check if any unused buffer slots have been allocated. This helps prevent errors
+    // because uploading to an unused slot can trigger undefined behavior in the backend.
+    auto const& declaredAttributes = mImpl->mDeclaredAttributes;
+    auto const& attributes = mImpl->mAttributes;
+    utils::bitset32 attributedBuffers;
+    for (size_t j = 0; j < MAX_VERTEX_ATTRIBUTE_COUNT; ++j) {
+        if (declaredAttributes[j]) {
+            attributedBuffers.set(attributes[j].buffer);
+        }
+    }
+    if (!ASSERT_PRECONDITION_NON_FATAL(attributedBuffers.count() == mImpl->mBufferCount,
+            "At least one buffer slot was never assigned to an attribute.")) {
+        return nullptr;
+    }
+
     return upcast(engine).createVertexBuffer(*this);
 }
 
@@ -206,7 +221,7 @@ void VertexBuffer::setBufferAt(Engine& engine, uint8_t bufferIndex,
 }
 
 void VertexBuffer::populateTangentQuaternions(const QuatTangentContext& ctx) {
-    auto quats = geometry::SurfaceOrientation::Builder()
+    auto* quats = geometry::SurfaceOrientation::Builder()
         .vertexCount(ctx.quatCount)
         .normals(ctx.normals, ctx.normalsStride)
         .tangents(ctx.tangents, ctx.tangentsStride)
@@ -214,15 +229,17 @@ void VertexBuffer::populateTangentQuaternions(const QuatTangentContext& ctx) {
 
     switch (ctx.quatType) {
         case HALF4:
-            quats.getQuats((quath*) ctx.outBuffer, ctx.quatCount, ctx.outStride);
+            quats->getQuats((quath*) ctx.outBuffer, ctx.quatCount, ctx.outStride);
             break;
         case SHORT4:
-            quats.getQuats((short4*) ctx.outBuffer, ctx.quatCount, ctx.outStride);
+            quats->getQuats((short4*) ctx.outBuffer, ctx.quatCount, ctx.outStride);
             break;
         case FLOAT4:
-            quats.getQuats((quatf*) ctx.outBuffer, ctx.quatCount, ctx.outStride);
+            quats->getQuats((quatf*) ctx.outBuffer, ctx.quatCount, ctx.outStride);
             break;
     }
+
+    delete quats;
 }
 
 } // namespace filament

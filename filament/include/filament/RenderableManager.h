@@ -18,24 +18,30 @@
 #define TNT_FILAMENT_RENDERABLECOMPONENTMANAGER_H
 
 #include <filament/Box.h>
-#include <filament/VertexBuffer.h>
-#include <filament/IndexBuffer.h>
-#include <filament/Material.h>
-#include <filament/MaterialInstance.h>
-#include <filament/Renderer.h>
 #include <filament/FilamentAPI.h>
+#include <filament/MaterialEnums.h>
+
+#include <backend/DriverEnums.h>
 
 #include <utils/compiler.h>
-#include <utils/Entity.h>
 #include <utils/EntityInstance.h>
 
-#include <math/mat4.h>
-#include <math/vec3.h>
-#include <math/vec4.h>
+#include <math/mathfwd.h>
 
 #include <type_traits>
 
+namespace utils {
+    class Entity;
+} // namespace utils
+
 namespace filament {
+
+class Engine;
+class IndexBuffer;
+class Material;
+class MaterialInstance;
+class Renderer;
+class VertexBuffer;
 
 namespace details {
 class FEngine;

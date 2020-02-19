@@ -16,8 +16,8 @@
 
 package com.google.android.filament.gltfio;
 
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.google.android.filament.Engine;
 import com.google.android.filament.EntityManager;
@@ -25,8 +25,8 @@ import com.google.android.filament.EntityManager;
 import java.nio.Buffer;
 
 /**
- * Consumes a blob of glTF 2.0 content (either JSON or GLB) and produces {@link FilamentAsset}
- * objects, which are bundles of Filament entities, material instances, textures, vertex buffers,
+ * Consumes a blob of glTF 2.0 content (either JSON or GLB) and produces a {@link FilamentAsset}
+ * object, which is a bundle of Filament entities, material instances, textures, vertex buffers,
  * and index buffers.
  *
  * <p>AssetLoader does not fetch external buffer data or create textures on its own. Clients can use
@@ -37,7 +37,7 @@ import java.nio.Buffer;
  *
  * companion object {
  *     init {
- *        AssetLoader.init()
+ *        Gltfio.init() // or, use Utils.init() if depending on filament-utils
  *    }
  * }
  *
@@ -47,20 +47,21 @@ import java.nio.Buffer;
  *
  *     assetLoader = AssetLoader(engine, MaterialProvider(engine), EntityManager.get())
  *
- *     filamentAsset = assets.open("models/lucy.glb").use { input ->
+ *     filamentAsset = assets.open("models/lucy.gltf").use { input ->
  *         val bytes = ByteArray(input.available())
  *         input.read(bytes)
- *         assetLoader.createAssetFromBinary(ByteBuffer.wrap(bytes))!!
+ *         assetLoader.createAssetFromJson(ByteBuffer.wrap(bytes))!!
  *     }
  *
  *     val resourceLoader = ResourceLoader(engine)
- *     resourceLoader.loadResources(filamentAsset)
  *     for (uri in filamentAsset.resourceUris) {
  *         val buffer = loadResource(uri)
  *         resourceLoader.addResourceData(uri, buffer)
  *     }
+ *     resourceLoader.loadResources(filamentAsset)
  *     resourceLoader.destroy()
  *     animator = asset.getAnimator()
+ *     filamentAsset.releaseSourceData();
  *
  *     scene.addEntities(filamentAsset.entities)
  * }
@@ -76,13 +77,6 @@ import java.nio.Buffer;
  */
 public class AssetLoader {
     private long mNativeObject;
-
-    /**
-     * Initializes the gltfio JNI layer. Must be called before using any gltfio functionality.
-     */
-    public static void init() {
-        System.loadLibrary("gltfio-jni");
-    }
 
     /**
      * Constructs an <code>AssetLoader </code>that can be used to create and destroy instances of
@@ -119,7 +113,7 @@ public class AssetLoader {
     @Nullable
     public FilamentAsset createAssetFromBinary(@NonNull Buffer buffer) {
         long nativeAsset = nCreateAssetFromBinary(mNativeObject, buffer, buffer.remaining());
-        return new FilamentAsset(nativeAsset);
+        return nativeAsset != 0 ? new FilamentAsset(nativeAsset) : null;
     }
 
     /**
@@ -128,7 +122,7 @@ public class AssetLoader {
     @Nullable
     public FilamentAsset createAssetFromJson(@NonNull Buffer buffer) {
         long nativeAsset = nCreateAssetFromJson(mNativeObject, buffer, buffer.remaining());
-        return new FilamentAsset(nativeAsset);
+        return nativeAsset != 0 ? new FilamentAsset(nativeAsset) : null;
     }
 
     /**

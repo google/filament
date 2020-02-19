@@ -26,9 +26,6 @@
 #include <utils/compiler.h>
 #include <utils/Log.h>
 
-#include <string>
-#include <unordered_set>
-
 #include <assert.h>
 
 
@@ -82,28 +79,6 @@ static void clearGlError() noexcept {
     }
 }
 
-class unordered_string_set : public std::unordered_set<std::string> {
-public:
-    bool has(const char* str) {
-        return find(std::string(str)) != end();
-    }
-};
-
-static unordered_string_set split(const char* spacedList) {
-    unordered_string_set set;
-    const char* current = spacedList;
-    const char* head = current;
-    do {
-        head = strchr(current, ' ');
-        std::string s(current, head ? head - current : strlen(current));
-        if (s.length()) {
-            set.insert(std::move(s));
-        }
-        current = head + 1;
-    } while (head);
-    return set;
-}
-
 // ---------------------------------------------------------------------------------------------
 
 PlatformEGL::PlatformEGL() noexcept = default;
@@ -121,7 +96,7 @@ Driver* PlatformEGL::createDriver(void* sharedContext) noexcept {
 
     importGLESExtensionsEntryPoints();
 
-    auto extensions = split(eglQueryString(mEGLDisplay, EGL_EXTENSIONS));
+    auto extensions = GLUtils::split(eglQueryString(mEGLDisplay, EGL_EXTENSIONS));
 
     eglCreateSyncKHR = (PFNEGLCREATESYNCKHRPROC) eglGetProcAddress("eglCreateSyncKHR");
     eglDestroySyncKHR = (PFNEGLDESTROYSYNCKHRPROC) eglGetProcAddress("eglDestroySyncKHR");
@@ -383,9 +358,15 @@ backend::FenceStatus PlatformEGL::waitFence(
 void PlatformEGL::createExternalImageTexture(void* texture) noexcept {
     auto* t = (OpenGLDriver::GLTexture*) texture;
     glGenTextures(1, &t->gl.id);
-    if (ext.OES_EGL_image_external_essl3) {
+    if (UTILS_LIKELY(ext.OES_EGL_image_external_essl3)) {
+        t->gl.target = GL_TEXTURE_EXTERNAL_OES;
         t->gl.targetIndex = (uint8_t)
-                OpenGLContext::getIndexForTextureTarget(t->gl.target = GL_TEXTURE_EXTERNAL_OES);
+                OpenGLContext::getIndexForTextureTarget(GL_TEXTURE_EXTERNAL_OES);
+    } else {
+        // if texture external is not supported, revert to texture 2d
+        t->gl.target = GL_TEXTURE_2D;
+        t->gl.targetIndex = (uint8_t)
+                OpenGLContext::getIndexForTextureTarget(GL_TEXTURE_2D);
     }
 }
 
@@ -395,7 +376,7 @@ void PlatformEGL::destroyExternalImage(void* texture) noexcept {
 }
 
 void PlatformEGL::initializeGlExtensions() noexcept {
-    unordered_string_set glExtensions;
+    GLUtils::unordered_string_set glExtensions;
     GLint n;
     glGetIntegerv(GL_NUM_EXTENSIONS, &n);
     for (GLint i = 0; i < n; ++i) {

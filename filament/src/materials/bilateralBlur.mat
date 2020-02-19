@@ -1,0 +1,99 @@
+material {
+    name : bilateralBlur,
+    parameters : [
+        {
+            type : sampler2d,
+            name : ssao,
+            precision: medium
+        },
+        {
+            type : sampler2d,
+            name : depth,
+            precision: medium
+        },
+        {
+            type : float4,
+            name : resolution
+        },
+        {
+            type : int2,
+            name : axis
+        },
+        {
+            type : float,
+            name : oneOverEdgeDistance
+        }
+    ],
+    variables : [
+        vertex
+    ],
+    domain : postprocess,
+    depthWrite : false,
+    depthCulling : true
+}
+
+vertex {
+    void postProcessVertex(inout PostProcessVertexInputs postProcess) {
+        postProcess.vertex.xy = postProcess.normalizedUV * materialParams.resolution.xy;
+    }
+}
+
+fragment {
+    const int kGaussianCount = 8;
+    const float kGaussianSamples[] = float[](
+        0.149603, 0.139446, 0.112927, 0.079454, 0.048569, 0.025795, 0.011902, 0.004772
+    );
+    const float kGaussianWeightSum = 0.995331;
+
+    ivec2 clampToEdge(const sampler2D s, ivec2 uv) {
+        ivec2 size = textureSize(s, 0);
+        return clamp(uv, ivec2(0), size - ivec2(1));
+    }
+
+    float linearizeDepthDifference(float d0, float d1) {
+        mat4 projection = getClipFromViewMatrix();
+        float A = -projection[3].z;
+        float B =  projection[2].z;
+        float K = (2.0 * A) / (d0 * 2.0 + (B - 1.0)); // actually a constant for this fragment
+        float d = K * (d0 - d1) / (d1 * 2.0 + (B - 1.0));
+        return d;
+    }
+
+    float bilateralWeight(const ivec2 p, in float depth) {
+        float sampleDepth = texelFetch(materialParams_depth, p, 0).r;
+        float ddepth = linearizeDepthDifference(depth, sampleDepth);
+        float diff = materialParams.oneOverEdgeDistance * ddepth;
+        return max(0.0, 1.0 - diff * diff);
+    }
+
+    void tap(inout float sum, inout float totalWeight, float weight, float depth, ivec2 position) {
+        position = clampToEdge(materialParams_ssao, position);
+        // ambient occlusion sample
+        float ao = texelFetch(materialParams_ssao, position, 0).r;
+        // bilateral sample
+        float bilateral = bilateralWeight(position, depth);
+        bilateral *= weight;
+        sum += ao * bilateral;
+        totalWeight += bilateral;
+    }
+
+    void postProcess(inout PostProcessInputs postProcess) {
+        highp ivec2 uv = ivec2(variable_vertex.xy);
+
+        float depth = texelFetch(materialParams_depth, uv, 0).r;
+
+        // we handle the center pixel separately because it doesn't participate in
+        // bilateral filtering
+        float totalWeight = kGaussianSamples[0];
+        float sum = texelFetch(materialParams_ssao, uv, 0).r * totalWeight;
+
+        for (int i = 1; i < kGaussianCount; i++) {
+            float weight = kGaussianSamples[i];
+            ivec2 offset = i * materialParams.axis;
+            tap(sum, totalWeight, weight, depth, uv + offset);
+            tap(sum, totalWeight, weight, depth, uv - offset);
+        }
+
+        postProcess.color.r = sum * (1.0 / totalWeight);
+    }
+}

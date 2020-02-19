@@ -16,6 +16,8 @@
 
 #include <gltfio/MaterialProvider.h>
 
+#include <string>
+
 using namespace gltfio;
 
 bool gltfio::operator==(const MaterialKey& k1, const MaterialKey& k2) {

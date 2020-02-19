@@ -24,7 +24,7 @@ vertex {
 fragment {
     void postProcess(inout PostProcessInputs postProcess) {
         highp vec2 uv = variable_vertex.xy; // interpolated to pixel center
-        postProcess.color = texture(materialParams_color, uv, 0.0);
+        postProcess.color = textureLod(materialParams_color, uv, 0.0);
     }
 }
 

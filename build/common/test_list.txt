@@ -8,3 +8,4 @@ tools/matc/test_matc
 tools/cmgen/test_cmgen compare
 tools/glslminifier/test_glslminifier
 libs/filameshio/test_filameshio
+libs/camutils/test_camutils

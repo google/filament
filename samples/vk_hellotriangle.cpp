@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include <filament/Camera.h>
 #include <filament/Engine.h>
 #include <filament/IndexBuffer.h>
 #include <filament/Material.h>
@@ -23,6 +24,8 @@
 #include <filament/TransformManager.h>
 #include <filament/VertexBuffer.h>
 #include <filament/View.h>
+
+#include <utils/EntityManager.h>
 
 #include "../samples/app/Config.h"
 #include "../samples/app/FilamentApp.h"
@@ -65,7 +68,6 @@ int main(int argc, char** argv) {
     auto setup = [&app](Engine* engine, View* view, Scene* scene) {
         view->setClearColor({0.1, 0.125, 0.25, 1.0});
         view->setPostProcessingEnabled(false);
-        view->setDepthPrepass(filament::View::DepthPrepass::DISABLED);
         static_assert(sizeof(Vertex) == 12, "Strange vertex size.");
         app.vb = VertexBuffer::Builder()
                 .vertexCount(3)

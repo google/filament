@@ -28,6 +28,7 @@
 #include "details/Skybox.h"
 
 #include <filament/Exposure.h>
+#include <filament/TextureSampler.h>
 
 #include <private/filament/SibGenerator.h>
 #include <private/filament/UibGenerator.h>
@@ -101,6 +102,9 @@ void FView::terminate(FEngine& engine) {
 }
 
 void FView::setViewport(filament::Viewport const& viewport) noexcept {
+    // catch the cases were user had an underflow and didn't catch it.
+    assert((int32_t)viewport.width > 0);
+    assert((int32_t)viewport.height > 0);
     mViewport = viewport;
 }
 
@@ -646,8 +650,20 @@ void FView::prepareSSAO(Handle<HwTexture> ssao) const noexcept {
     });
 }
 
+void FView::prepareSSR(backend::Handle<backend::HwTexture> ssr, float refractionLodOffset) const noexcept {
+    mPerViewSb.setSampler(PerViewSib::SSR, ssr, {
+            .filterMag = SamplerMagFilter::LINEAR,
+            .filterMin = SamplerMinFilter::LINEAR_MIPMAP_LINEAR
+    });
+    mPerViewUb.setUniform(offsetof(PerViewUib, refractionLodOffset), refractionLodOffset);
+}
+
 void FView::cleanupSSAO() const noexcept {
     mPerViewSb.setSampler(PerViewSib::SSAO, {}, {});
+}
+
+void FView::cleanupSSR() const noexcept {
+    mPerViewSb.setSampler(PerViewSib::SSR, {}, {});
 }
 
 void FView::froxelize(FEngine& engine) const noexcept {
@@ -939,14 +955,6 @@ bool View::isFrontFaceWindingInverted() const noexcept {
     return upcast(this)->isFrontFaceWindingInverted();
 }
 
-void View::setDepthPrepass(View::DepthPrepass prepass) noexcept {
-    upcast(this)->setDepthPrepass(prepass);
-}
-
-View::DepthPrepass View::getDepthPrepass() const noexcept {
-    return upcast(this)->getDepthPrepass();
-}
-
 void View::setDynamicLightingOptions(float zLightNear, float zLightFar) noexcept {
     upcast(this)->setDynamicLightingOptions(zLightNear, zLightFar);
 }
@@ -965,6 +973,14 @@ void View::setAmbientOcclusionOptions(View::AmbientOcclusionOptions const& optio
 
 View::AmbientOcclusionOptions const& View::getAmbientOcclusionOptions() const noexcept {
     return upcast(this)->getAmbientOcclusionOptions();
+}
+
+void View::setBloomOptions(View::BloomOptions options) noexcept {
+    upcast(this)->setBloomOptions(options);
+}
+
+View::BloomOptions View::getBloomOptions() const noexcept {
+    return upcast(this)->getBloomOptions();
 }
 
 

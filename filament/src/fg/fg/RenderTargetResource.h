@@ -21,8 +21,9 @@
 #include <backend/TargetBufferInfo.h>
 
 #include "fg/FrameGraph.h"
-
+#include "fg/FrameGraphPassResources.h"
 #include "fg/ResourceAllocator.h"
+
 #include "ResourceNode.h"
 #include "VirtualResource.h"
 
@@ -68,37 +69,9 @@ struct RenderTargetResource final : public VirtualResource {  // 104
     // updated during execute with the current pass' discard flags
     FrameGraphPassResources::RenderTargetInfo targetInfo;
 
-    void create(FrameGraph& fg) noexcept override {
-        if (!imported) {
-            if (any(attachments)) {
-                // devirtualize our texture handles. By this point these handles have been
-                // remapped to their alias if any.
-                backend::TargetBufferInfo infos[FrameGraphRenderTarget::Attachments::COUNT];
-                for (size_t i = 0, c = desc.attachments.textures.size(); i < c; i++) {
-                    auto const& attachmentInfo = desc.attachments.textures[i];
-                    if (attachmentInfo.isValid()) {
-                        fg::ResourceEntry<FrameGraphTexture> const& entry =
-                                fg.getResourceEntryUnchecked(attachmentInfo.getHandle());
-                        infos[i].handle = entry.getResource().texture;
-                        infos[i].level = attachmentInfo.getLevel();
-                    }
-                }
+    void create(FrameGraph& fg) noexcept override;
 
-                // create the concrete rendertarget
-                targetInfo.target = fg.getResourceAllocator().createRenderTarget(name,
-                        attachments, width, height, desc.samples, infos[0], infos[1], {});
-            }
-        }
-    }
-
-    void destroy(FrameGraph& fg) noexcept override {
-        if (!imported) {
-            if (targetInfo.target) {
-                fg.getResourceAllocator().destroyRenderTarget(targetInfo.target);
-                targetInfo.target.clear();
-            }
-        }
-    }
+    void destroy(FrameGraph& fg) noexcept override;
 };
 
 } // namespace fg

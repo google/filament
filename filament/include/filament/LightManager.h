@@ -21,12 +21,13 @@
 #include <filament/Color.h>
 
 #include <utils/compiler.h>
-#include <utils/Entity.h>
 #include <utils/EntityInstance.h>
 
-#include <math/vec3.h>
+#include <math/mathfwd.h>
 
-#include <math.h>
+namespace utils {
+    class Entity;
+} // namespace utils
 
 namespace filament {
 

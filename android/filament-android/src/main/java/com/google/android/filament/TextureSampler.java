@@ -16,7 +16,7 @@
 
 package com.google.android.filament;
 
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
 /**
  * <code>TextureSampler</code> defines how a texture is accessed.

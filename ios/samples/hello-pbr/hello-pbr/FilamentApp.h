@@ -27,6 +27,8 @@
 #include <filament/TransformManager.h>
 #include <filament/View.h>
 
+#include <utils/EntityManager.h>
+
 #include "CameraManipulator.h"
 
 using namespace filament;
