@@ -12,10 +12,6 @@ material {
         },
         {
             type : float,
-            name : radius
-        },
-        {
-            type : float,
             name : invRadiusSquared
         },
         {
@@ -156,8 +152,9 @@ fragment {
         vec3 v = p - origin;        // sample vector
         float vv = dot(v, v);       // squared distance
         float vn = dot(v, normal);  // distance * cos(v, normal)
-        float w = saturate(1.0 - vv * materialParams.invRadiusSquared);
-        occlusion += w * max(0.0, vn + origin.z * materialParams.bias) / (vv + materialParams.peak2);
+
+        float w = max(0.0, 1.0 - vv * materialParams.invRadiusSquared);
+        occlusion += (w * w) * max(0.0, vn + origin.z * materialParams.bias) / (vv + materialParams.peak2);
     }
 
     void postProcess(inout PostProcessInputs postProcess) {
