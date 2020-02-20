@@ -511,8 +511,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssao(FrameGraph& fg, RenderP
 
                 // Where the falloff function peaks
                 const float peak = 0.1 * options.radius;
-                // We further scale the user intensity by 2, for a better default at intensity=1
-                const float intensity = (2.0f * F_PI * peak) * data.options.intensity * 2.0f;
+                // We further scale the user intensity by 3, for a better default at intensity=1
+                const float intensity = (2.0f * F_PI * peak) * data.options.intensity * 3.0f;
                 // always square AO result, as it looks much better
                 const float power = data.options.power * 2.0f;
 
@@ -522,7 +522,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssao(FrameGraph& fg, RenderP
                 });
                 mi->setParameter("resolution",
                         float4{ desc.width, desc.height, 1.0f / desc.width, 1.0f / desc.height });
-                mi->setParameter("radius", data.options.radius);
                 mi->setParameter("invRadiusSquared", 1.0f / (data.options.radius * data.options.radius));
                 mi->setParameter("projectionScaleRadius", projectionScale * data.options.radius);
                 mi->setParameter("peak2", peak * peak);
