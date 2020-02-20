@@ -67,6 +67,16 @@ public class View {
     private RenderTarget mRenderTarget;
 
     /**
+     * Generic Quality Level
+     */
+    public enum QualityLevel {
+        LOW,
+        MEDIUM,
+        HIGH,
+        ULTRA
+    }
+
+    /**
      * Dynamic resolution can be used to either reach a desired target frame rate by lowering the
      * resolution of a <code>View</code>, or to increase the quality when the rendering is faster
      * than the target frame rate.
@@ -155,6 +165,14 @@ public class View {
          * Strength of the Ambient Occlusion effect. Must be positive.
          */
         public float intensity = 1.0f;
+
+        /**
+         * The quality setting controls the number of samples used for evaluating Ambient
+         * occlusion. The default is QualityLevel.LOW which is sufficient for most mobile
+         * applications.
+         */
+        @NonNull
+        public QualityLevel quality = QualityLevel.LOW;
     }
 
     /**
@@ -238,24 +256,6 @@ public class View {
     }
 
     /**
-     * Sets the quality of the HDR color buffer.
-     *
-     * <p>
-     * A quality of <code>HIGH</code> or <code>ULTRA</code> means using an RGB16F or RGBA16F color
-     * buffer. This means colors in the LDR range (0..1) have 10 bit precision. A quality of
-     * <code>LOW</code> or <code>MEDIUM</code> means using an R11G11B10F opaque color buffer or an
-     * RGBA16F transparent color buffer. With R11G11B10F colors in the LDR range have a precision of
-     * either 6 bits (red and green channels) or 5 bits (blue channel).
-     * </p>
-     */
-    public enum QualityLevel {
-        LOW,
-        MEDIUM,
-        HIGH,
-        ULTRA
-    }
-
-    /**
      * Structure used to set the color precision for the rendering of a <code>View</code>.
      *
      * <p>
@@ -267,6 +267,15 @@ public class View {
      * @see #getRenderQuality
      */
     public static class RenderQuality {
+        /**
+          * <p>
+          * A quality of <code>HIGH</code> or <code>ULTRA</code> means using an RGB16F or RGBA16F color
+          * buffer. This means colors in the LDR range (0..1) have 10 bit precision. A quality of
+          * <code>LOW</code> or <code>MEDIUM</code> means using an R11G11B10F opaque color buffer or an
+          * RGBA16F transparent color buffer. With R11G11B10F colors in the LDR range have a precision of
+          * either 6 bits (red and green channels) or 5 bits (blue channel).
+          * </p>
+          */
         public QualityLevel hdrColorBuffer = QualityLevel.HIGH;
     }
 
@@ -795,7 +804,7 @@ public class View {
     public void setAmbientOcclusionOptions(@NonNull AmbientOcclusionOptions options) {
         mAmbientOcclusionOptions = options;
         nSetAmbientOcclusionOptions(getNativeObject(), options.radius, options.bias, options.power,
-                options.resolution, options.intensity);
+                options.resolution, options.intensity, options.quality.ordinal());
     }
 
     /**
@@ -878,6 +887,6 @@ public class View {
     private static native boolean nIsFrontFaceWindingInverted(long nativeView);
     private static native void nSetAmbientOcclusion(long nativeView, int ordinal);
     private static native int nGetAmbientOcclusion(long nativeView);
-    private static native void nSetAmbientOcclusionOptions(long nativeView, float radius, float bias, float power, float resolution, float intensity);
+    private static native void nSetAmbientOcclusionOptions(long nativeView, float radius, float bias, float power, float resolution, float intensity, int quality);
     private static native void nSetBloomOptions(long nativeView, long dirtNativeObject, float dirtStrength, float strength, int resolution, float anamorphism, int levels, int blendMode, boolean threshold, boolean enabled);
 }

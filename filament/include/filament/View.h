@@ -190,6 +190,7 @@ public:
         float bias = 0.0005f;   //!< Self-occlusion bias in meters. Use to avoid self-occlusion. Between 0 and a few mm.
         float resolution = 0.5; //!< How each dimension of the AO buffer is scaled. Must be positive and <= 1.
         float intensity = 1.0;  //!< Strength of the Ambient Occlusion effect.
+        QualityLevel quality = QualityLevel::LOW; //!< affects # of samples used for AO.
     };
 
     /**

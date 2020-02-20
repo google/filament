@@ -235,14 +235,16 @@ Java_com_google_android_filament_View_nGetAmbientOcclusion(JNIEnv*, jclass, jlon
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_View_nSetAmbientOcclusionOptions(JNIEnv*, jclass,
-    jlong nativeView, jfloat radius, jfloat bias, jfloat power, jfloat resolution, jfloat intensity) {
+    jlong nativeView, jfloat radius, jfloat bias, jfloat power, jfloat resolution, jfloat intensity,
+    jint quality) {
     View* view = (View*) nativeView;
     View::AmbientOcclusionOptions options = {
             .radius = radius,
             .power = power,
             .bias = bias,
             .resolution = resolution,
-            .intensity = intensity
+            .intensity = intensity,
+            .quality = (View::QualityLevel)quality
     };
     view->setAmbientOcclusionOptions(options);
 }
