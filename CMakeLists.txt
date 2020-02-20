@@ -11,7 +11,6 @@ project(TNT)
 # ==================================================================================================
 # Options
 # ==================================================================================================
-
 option(ENABLE_JAVA "Compile Java projects, requires a JDK and the JAVA_HOME env var" ON)
 
 option(USE_EXTERNAL_GLES3 "Experimental: Compile Filament against OpenGL ES 3" OFF)
@@ -19,6 +18,33 @@ option(USE_EXTERNAL_GLES3 "Experimental: Compile Filament against OpenGL ES 3" O
 option(GENERATE_JS_DOCS "Build WebGL documentation and tutorials" OFF)
 
 option(ENABLE_LTO "Enable link-time optimizations if supported by the compiler" OFF)
+
+# ==================================================================================================
+# Support for ccache
+# ==================================================================================================
+find_program(CCACHE_PROGRAM ccache)
+if (CCACHE_PROGRAM)
+    set(C_LAUNCHER   "${CCACHE_PROGRAM}")
+    set(CXX_LAUNCHER "${CCACHE_PROGRAM}")
+
+    configure_file(build/launch-c.in   launch-c)
+    configure_file(build/launch-cxx.in launch-cxx)
+
+    execute_process(COMMAND chmod a+rx
+        "${CMAKE_BINARY_DIR}/launch-c"
+        "${CMAKE_BINARY_DIR}/launch-cxx"
+    )
+
+    if (CMAKE_GENERATOR STREQUAL "Xcode")
+        set(CMAKE_XCODE_ATTRIBUTE_CC         "${CMAKE_BINARY_DIR}/launch-c")
+        set(CMAKE_XCODE_ATTRIBUTE_CXX        "${CMAKE_BINARY_DIR}/launch-cxx")
+        set(CMAKE_XCODE_ATTRIBUTE_LD         "${CMAKE_BINARY_DIR}/launch-c")
+        set(CMAKE_XCODE_ATTRIBUTE_LDPLUSPLUS "${CMAKE_BINARY_DIR}/launch-cxx")
+    else()
+        set(CMAKE_C_COMPILER_LAUNCHER        "${CMAKE_BINARY_DIR}/launch-c")
+        set(CMAKE_CXX_COMPILER_LAUNCHER      "${CMAKE_BINARY_DIR}/launch-cxx")
+    endif()
+endif()
 
 # ==================================================================================================
 # OS specific
@@ -69,7 +95,6 @@ endif()
 # Check if embree is available.
 # This is an optional dependency and can be installed with homebrew, apt-get, etc.
 # ==================================================================================================
-
 find_package(embree 3.0 QUIET PATHS /usr/lib64/cmake)
 if (embree_FOUND AND NOT ANDROID AND NOT IOS)
     message("Found embree in ${embree_DIR}")
