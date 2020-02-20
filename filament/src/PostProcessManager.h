@@ -89,9 +89,9 @@ private:
     FrameGraphId<FrameGraphTexture> mipmapPass(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, size_t level) noexcept;
 
-    FrameGraphId<FrameGraphTexture> bilateralBlurPass(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input,
-            FrameGraphId<FrameGraphTexture> depth, math::int2 axis) noexcept;
+    FrameGraphId<FrameGraphTexture> bilateralBlurPass(
+            FrameGraph& fg, FrameGraphId<FrameGraphTexture> input, math::int2 axis, float zf,
+            backend::TextureFormat format) noexcept;
 
     FrameGraphId<FrameGraphTexture> bloomPass(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, backend::TextureFormat outFormat,

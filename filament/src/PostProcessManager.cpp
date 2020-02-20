@@ -484,7 +484,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssao(FrameGraph& fg, RenderP
                 data.ssao = builder.createTexture("SSAO Buffer", {
                         .width = desc.width,
                         .height = desc.height,
-                        .format = TextureFormat::R8
+                        .format = TextureFormat::RGB8
                 });
 
                 // Here we use the depth test to skip pixels at infinity (i.e. the skybox)
@@ -552,6 +552,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssao(FrameGraph& fg, RenderP
                 mi->setParameter("maxLevel", uint32_t(levelCount - 1));
                 mi->setParameter("sampleCount", float2{ sampleCount, 1.0 / sampleCount });
                 mi->setParameter("spiralTurns", spiralTurns);
+                mi->setParameter("invFarPlane", 1.0f / -cameraInfo.zf);
                 mi->commit(driver);
                 mi->use(driver);
 
@@ -572,8 +573,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssao(FrameGraph& fg, RenderP
      * Since we apply a 2x2 box filter to the output of the AO -- effectively downsampling it
      * (except at edges), we can widen the blur by skipping every other sample.
      */
-    ssao = bilateralBlurPass(fg, ssao, depth, { 2, 0 }); // horizontal pass
-    ssao = bilateralBlurPass(fg, ssao, depth, { 0, 2 }); // vertical pass
+    ssao = bilateralBlurPass(fg, ssao, { 2, 0 }, cameraInfo.zf, TextureFormat::RGB8);
+    ssao = bilateralBlurPass(fg, ssao, { 0, 2 }, cameraInfo.zf, TextureFormat::R8);
     return ssao;
 }
 
@@ -658,15 +659,14 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::mipmapPass(FrameGraph& fg,
     return depthMipmapPass.getData().out;
 }
 
-FrameGraphId<FrameGraphTexture> PostProcessManager::bilateralBlurPass(FrameGraph& fg,
-        FrameGraphId<FrameGraphTexture> input,
-        FrameGraphId<FrameGraphTexture> depth, math::int2 axis) noexcept {
+FrameGraphId<FrameGraphTexture> PostProcessManager::bilateralBlurPass(
+        FrameGraph& fg, FrameGraphId<FrameGraphTexture> input, math::int2 axis, float zf,
+        TextureFormat format) noexcept {
 
     Handle<HwRenderPrimitive> fullScreenRenderPrimitive = mEngine.getFullScreenRenderPrimitive();
 
     struct BlurPassData {
         FrameGraphId<FrameGraphTexture> input;
-        FrameGraphId<FrameGraphTexture> depth;
         FrameGraphId<FrameGraphTexture> blurred;
         FrameGraphRenderTargetHandle rt;
     };
@@ -677,25 +677,21 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bilateralBlurPass(FrameGraph
                 auto const& desc = builder.getDescriptor(input);
 
                 data.input = builder.sample(input);
-                data.depth = builder.sample(depth);
 
                 data.blurred = builder.createTexture("Blurred output", {
-                        .width = desc.width, .height = desc.height, .format = desc.format });
+                        .width = desc.width, .height = desc.height, .format = format });
 
                 // Here we use the depth test to skip pixels at infinity (i.e. the skybox)
                 // Note that we're not clearing the SAO buffer, which will leave skipped pixels
                 // in an undefined state -- this doesn't matter because the skybox material
                 // doesn't use SSAO.
-                depth = builder.read(depth);
                 data.blurred = builder.write(data.blurred);
                 data.rt = builder.createRenderTarget("Blurred target",
-                        { .attachments = { data.blurred, depth }
-                        }, TargetBufferFlags::NONE);
+                        { .attachments = { data.blurred, {} } }, TargetBufferFlags::NONE);
             },
             [=](FrameGraphPassResources const& resources,
                 auto const& data, DriverApi& driver) {
                 auto ssao = resources.getTexture(data.input);
-                auto depth = resources.getTexture(data.depth);
                 auto blurred = resources.getRenderTarget(data.rt);
                 auto const& desc = resources.getDescriptor(data.blurred);
 
@@ -703,9 +699,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bilateralBlurPass(FrameGraph
                 //       z-distance that constitute an edge for bilateral filtering
                 FMaterialInstance* const mi = mBilateralBlur.getMaterialInstance();
                 mi->setParameter("ssao", ssao, { /* only reads level 0 */ });
-                mi->setParameter("depth", depth, { /* only reads level 0 */ });
                 mi->setParameter("axis", axis / float2{desc.width, desc.height});
-                mi->setParameter("oneOverEdgeDistance", 1.0f / 0.1f);
+                mi->setParameter("farPlaneOverEdgeDistance", -zf / 0.1f);
                 mi->commit(driver);
                 mi->use(driver);
 

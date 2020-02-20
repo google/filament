@@ -7,18 +7,13 @@ material {
             precision: medium
         },
         {
-            type : sampler2d,
-            name : depth,
-            precision: high
-        },
-        {
             type : float2,
             name : axis,
             precision: high
         },
         {
             type : float,
-            name : oneOverEdgeDistance
+            name : farPlaneOverEdgeDistance
         }
     ],
     variables : [
@@ -26,7 +21,7 @@ material {
     ],
     domain : postprocess,
     depthWrite : false,
-    depthCulling : true
+    depthCulling : false
 }
 
 vertex {
@@ -41,43 +36,42 @@ fragment {
         0.199471, 0.176033, 0.120985, 0.064759      // stdev = 2.0
     );
 
-    highp float linearizeDepth(highp float depth) {
-        // Our far plane is at infinity, which causes a division by zero below, which in turn
-        // causes some issues on some GPU. We workaround it by replacing "infinity" by the closest
-        // value representable in  a 24 bit depth buffer.
-        const float preventDiv0 = -1.0 / 16777216.0;
-        highp mat4 projection = getClipFromViewMatrix();
-        highp float z = depth * 2.0 - 1.0; // depth in clip space
-        return -projection[3].z / min(preventDiv0, z + projection[2].z);
+    float unpack(vec2 depth) {
+        // this is equivalent to (x8 * 256 + y8) / 65535, which gives a value between 0 and 1
+        return (depth.x * (256.0 / 257.0) + depth.y * (1.0 / 257.0));
     }
 
-    float bilateralWeight(const vec2 p, in float depth) {
-        float sampleDepth = textureLod(materialParams_depth, p, 0.0).r;
-        float ddepth = linearizeDepth(sampleDepth) - depth;
-        float diff = materialParams.oneOverEdgeDistance * ddepth;
+    float bilateralWeight(in float depth, in float sampleDepth) {
+        float diff = (sampleDepth - depth) * materialParams.farPlaneOverEdgeDistance;
         return max(0.0, 1.0 - diff * diff);
     }
 
     void tap(inout float sum, inout float totalWeight, float weight, float depth, vec2 position) {
         // ambient occlusion sample
-        float ao = textureLod(materialParams_ssao, position, 0.0).r;
+        vec3 data = textureLod(materialParams_ssao, position, 0.0).rgb;
+
         // bilateral sample
-        float bilateral = bilateralWeight(position, depth);
+        float bilateral = bilateralWeight(depth, unpack(data.gb));
         bilateral *= weight;
-        sum += ao * bilateral;
+        sum += data.r * bilateral;
         totalWeight += bilateral;
     }
 
     void postProcess(inout PostProcessInputs postProcess) {
         highp vec2 uv = variable_vertex.xy; // interpolated at pixel's center
 
-        float depth = textureLod(materialParams_depth, uv, 0.0).r;
-        depth = linearizeDepth(depth);
+        vec3 data = textureLod(materialParams_ssao, uv, 0.0).rgb;
+        if (data.g * data.b == 1.0) {
+            // This is the skybox, skip
+            postProcess.color.rgb = data;
+            return;
+        }
 
         // we handle the center pixel separately because it doesn't participate in
         // bilateral filtering
+        float depth = unpack(data.gb);
         float totalWeight = kGaussianSamples[0];
-        float sum = textureLod(materialParams_ssao, uv, 0.0).r * totalWeight;
+        float sum = data.r * totalWeight;
 
         vec2 offset = materialParams.axis;
         for (int i = 1; i < kGaussianCount; i++) {
@@ -88,5 +82,6 @@ fragment {
         }
 
         postProcess.color.r = sum * (1.0 / totalWeight);
+        postProcess.color.gb = data.gb;
     }
 }

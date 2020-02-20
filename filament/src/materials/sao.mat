@@ -43,6 +43,10 @@ material {
             name : spiralTurns
         },
         {
+            type : float,
+            name : invFarPlane
+        },
+        {
             type : int,
             name : maxLevel
         }
@@ -63,9 +67,19 @@ vertex {
 
 fragment {
     const float kLog2LodRate = 3.0;
+    const float kEdgeDistance = 0.1; // this shouldn't be hardcoded
 
     vec2 sq(const vec2 a) {
         return a * a;
+    }
+
+    vec2 pack(highp float depth) {
+        // we need 16-bits of precision
+        highp float z = clamp(depth * materialParams.invFarPlane, 0.0, 1.0);
+        highp float t = floor(256.0 * z);
+        mediump float hi = t * (1.0 / 256.0);   // we only need 8-bits of precision
+        mediump float lo = (256.0 * z) - t;     // we only need b-bits of precision
+        return vec2(hi, lo);
     }
 
     // random number between 0 and 1, using interleaved gradient noise
@@ -96,11 +110,15 @@ fragment {
         return vec3(p * -linearDepth, linearDepth);
     }
 
+    highp vec3 faceNormal(highp vec3 dpdx, highp vec3 dpdy) {
+        return normalize(cross(dpdx, dpdy));
+    }
+
     // compute normals using derivatives, which essentially results in half-resolution normals
     // this creates arifacts around geometry edges.
     // Moreover, this seems a lot slower (measured on Pixel4), which I find curious.
     highp vec3 computeViewSpaceNormal(const highp vec3 position) {
-        return normalize(cross(dFdx(position), dFdy(position)));
+        return faceNormal(dFdx(position), dFdy(position));
     }
 
     // compute normals directly from the depth texture, resulting in full resolution normals
@@ -111,7 +129,7 @@ fragment {
         highp vec3 py = computeViewSpacePositionFromDepth(uvdy, sampleDepthLinear(uvdy, 0.0));
         highp vec3 dpdx = px - position;
         highp vec3 dpdy = py - position;
-        return normalize(cross(dpdx, dpdy));
+        return faceNormal(dpdx, dpdy);
     }
 
     // Ambient Occlusion, largely inspired from:
@@ -175,10 +193,9 @@ fragment {
         // using a 2x2 box. Thanks to the bilateral filter, we keep some sharp edges.
         // mod2() below will return either 0.5 or 1.5
         // This assumes full derivatives are supported.
-        const float kEdgeDistance = 0.1; // this shouldn't be hardcoded
         ivec2 coords = ivec2(gl_FragCoord.xy);
         ao += (1.0 - step(kEdgeDistance, abs(dFdx(origin.z)))) * dFdx(ao) * (0.5 - float(coords.x & 1));
         ao += (1.0 - step(kEdgeDistance, abs(dFdy(origin.z)))) * dFdy(ao) * (0.5 - float(coords.y & 1));
-        postProcess.color.r = ao;
+        postProcess.color.rgb = vec3(ao, pack(origin.z));
     }
 }
