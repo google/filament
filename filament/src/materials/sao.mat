@@ -68,20 +68,6 @@ fragment {
         return a * a;
     }
 
-    // remaps to -1 and 1, repeating
-    float reduce(highp float x) {
-        return fract(0.5 * x + 0.5) * 2.0 - 1.0;
-    }
-
-    // very crude and fast sin/cos approximation
-    vec2 fast_cossin(highp float x) {
-        x *= 1.0/PI;
-        vec2 a = vec2(reduce(x + 0.5), reduce(x));
-        vec2 xn = sq(a * 2.0 + 1.0) - 1.0;
-        vec2 xp = 1.0 - sq(a * 2.0 - 1.0);
-        return vec2(a.x < 0.0 ? xn.x : xp.x, a.y < 0.0 ? xn.y : xp.y);
-    }
-
     // random number between 0 and 1, using interleaved gradient noise
     float random(vec2 w) {
         const vec3 m = vec3(0.06711056, 0.00583715, 52.9829189);
@@ -138,7 +124,7 @@ fragment {
         //       once per pixel.
         float radius = (i + 0.5) * materialParams.sampleCount.y;
         float angle = (radius * materialParams.spiralTurns + noise) * (2.0 * PI);
-        return vec3(fast_cossin(angle), radius);
+        return vec3(cos(angle), sin(angle), radius);
     }
 
     void computeAmbientOcclusionSAO(inout float occlusion,
