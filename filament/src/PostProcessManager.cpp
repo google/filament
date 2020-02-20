@@ -498,7 +498,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssao(FrameGraph& fg, RenderP
                 }, TargetBufferFlags::COLOR);
             },
             [=](FrameGraphPassResources const& resources,
-                    auto const& data, DriverApi& driver) {
+                auto const& data, DriverApi& driver) {
                 auto depth = resources.getTexture(data.depth);
                 auto ssao = resources.getRenderTarget(data.rt);
                 auto const& desc = resources.getDescriptor(data.ssao);
@@ -516,6 +516,27 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssao(FrameGraph& fg, RenderP
                 // always square AO result, as it looks much better
                 const float power = data.options.power * 2.0f;
 
+                float sampleCount = 7.0f;
+                float spiralTurns = 5.0f;
+                switch (data.options.quality) {
+                    case View::QualityLevel::LOW:
+                        sampleCount = 7.0f;
+                        spiralTurns = 5.0f;
+                        break;
+                    case View::QualityLevel::MEDIUM:
+                        sampleCount = 11.0f;
+                        spiralTurns = 9.0f;
+                        break;
+                    case View::QualityLevel::HIGH:
+                        sampleCount = 16.0f;
+                        spiralTurns = 10.0f;
+                        break;
+                    case View::QualityLevel::ULTRA:
+                        sampleCount = 32.0f;
+                        spiralTurns = 14.0f;
+                        break;
+                }
+
                 FMaterialInstance* const mi = mSSAO.getMaterialInstance();
                 mi->setParameter("depth", depth, {
                         .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST
@@ -529,6 +550,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssao(FrameGraph& fg, RenderP
                 mi->setParameter("power", power);
                 mi->setParameter("intensity", intensity);
                 mi->setParameter("maxLevel", uint32_t(levelCount - 1));
+                mi->setParameter("sampleCount", float2{ sampleCount, 1.0 / sampleCount });
+                mi->setParameter("spiralTurns", spiralTurns);
                 mi->commit(driver);
                 mi->use(driver);
 

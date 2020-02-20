@@ -35,6 +35,14 @@ material {
             name : intensity
         },
         {
+            type : float2,
+            name : sampleCount
+        },
+        {
+            type : float,
+            name : spiralTurns
+        },
+        {
             type : int,
             name : maxLevel
         }
@@ -54,8 +62,6 @@ vertex {
 }
 
 fragment {
-    const float kSpiralSampleCount = 7.0;
-    const float kSpiralTurns = 5.0;
     const float kLog2LodRate = 3.0;
 
     vec2 sq(const vec2 a) {
@@ -130,8 +136,8 @@ fragment {
         // note: with this formulation we could precompute the samples in an array
         //       and combine the noise, which would allow is to call sin/cos only
         //       once per pixel.
-        float radius = (i + 0.5) * (1.0 / kSpiralSampleCount);
-        float angle = (radius * kSpiralTurns + noise) * (2.0 * PI);
+        float radius = (i + 0.5) * materialParams.sampleCount.y;
+        float angle = (radius * materialParams.spiralTurns + noise) * (2.0 * PI);
         return vec3(fast_cossin(angle), radius);
     }
 
@@ -171,11 +177,11 @@ fragment {
         float ssDiskRadius = -(materialParams.projectionScaleRadius / origin.z);
 
         float occlusion = 0.0;
-        for (float i = 0.0; i < kSpiralSampleCount; i += 1.0) {
+        for (float i = 0.0; i < materialParams.sampleCount.x; i += 1.0) {
             computeAmbientOcclusionSAO(occlusion, i, ssDiskRadius, uv, origin, normal, noise);
         }
 
-        float ao = max(0.0, 1.0 - occlusion * (materialParams.intensity * (1.0 / kSpiralSampleCount)));
+        float ao = max(0.0, 1.0 - occlusion * (materialParams.intensity * materialParams.sampleCount.y));
         ao = pow(ao, materialParams.power);
 
         // Apply a 2x2 bilateral box filter, taking advantage of quad shading. If we were not
