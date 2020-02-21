@@ -33,8 +33,8 @@ jobs:
           path: out/gltfio-android-release.aar
       - uses: actions/upload-artifact@v1.0.0
         with:
-          name: gltfio-lite-android-release
-          path: out/gltfio-lite-android-release.aar
+          name: gltfio-android-lite-release
+          path: out/gltfio-android-lite-release.aar
       - uses: actions/upload-artifact@v1.0.0
         with:
           name: filament-utils-android-release
