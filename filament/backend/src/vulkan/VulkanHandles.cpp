@@ -421,8 +421,7 @@ void VulkanTexture::update2DImage(const PixelBufferDescriptor& data, uint32_t wi
         copyBufferToImage(commands.cmdbuffer, stage->buffer, textureImage, width, height, nullptr,
                 miplevel);
         transitionImageLayout(commands.cmdbuffer, textureImage,
-                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, miplevel, 1);
+                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, getTextureLayout(usage), miplevel, 1);
 
         mStagePool.releaseStage(stage, commands);
     };
@@ -466,8 +465,7 @@ void VulkanTexture::updateCubeImage(const PixelBufferDescriptor& data,
         copyBufferToImage(commands.cmdbuffer, stage->buffer, textureImage, width, height,
                 &faceOffsets, miplevel);
         transitionImageLayout(commands.cmdbuffer, textureImage,
-                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, miplevel, 6);
+                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, getTextureLayout(usage), miplevel, 6);
 
         mStagePool.releaseStage(stage, commands);
     };
@@ -484,6 +482,9 @@ void VulkanTexture::updateCubeImage(const PixelBufferDescriptor& data,
 
 void VulkanTexture::transitionImageLayout(VkCommandBuffer cmd, VkImage image,
         VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t miplevel, uint32_t layerCount) {
+    if (oldLayout == newLayout) {
+        return;
+    }
     VkImageMemoryBarrier barrier = {};
     barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
     barrier.oldLayout = oldLayout;
@@ -512,6 +513,12 @@ void VulkanTexture::transitionImageLayout(VkCommandBuffer cmd, VkImage image,
             destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
             break;
         case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+            barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+            destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+            break;
+        case VK_IMAGE_LAYOUT_GENERAL:
             barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
             barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
             sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
