@@ -827,7 +827,7 @@ public class View {
      */
     public void setBloomOptions(@NonNull BloomOptions options) {
         mBloomOptions = options;
-        nSetBloomOptions(getNativeObject(), options.dirt.getNativeObject(),
+        nSetBloomOptions(getNativeObject(), options.dirt != null ? options.dirt.getNativeObject() : 0,
                 options.dirtStrength, options.strength, options.resolution,
                 options.anamorphism, options.levels, options.blendingMode.ordinal(),
                 options.threshold, options.enabled);
