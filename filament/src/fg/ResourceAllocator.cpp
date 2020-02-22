@@ -68,14 +68,14 @@ ResourceAllocatorInterface::~ResourceAllocatorInterface() = default;
 size_t ResourceAllocator::TextureKey::getSize() const noexcept {
     size_t pixelCount = width * height * depth;
     size_t size = pixelCount * FTexture::getFormatSize(format);
+    size_t s = std::max(uint8_t(1), samples);
+    if (s > 1) {
+        // if we have MSAA, we assume N times the storage
+        size *= s;
+    }
     if (levels > 1) {
         // if we have mip-maps we assume the full pyramid
         size += size / 3;
-    }
-    size_t s = std::max(uint8_t(1), samples);
-    if (s > 1) {
-        // if we have MSAA, we assume 8 bit extra per pixel
-        size += pixelCount;
     }
     return size;
 }
