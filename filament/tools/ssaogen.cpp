@@ -27,7 +27,7 @@ int main(int argc, char** argv) {
     std::default_random_engine generator;
 
     float weightSum = 0;
-    size_t gaussianWidth = 7;   // must be odd
+    size_t gaussianWidth = 15;   // must be odd
     const size_t gaussianSampleCount = (gaussianWidth + 1) / 2;
     std::cout << "const int kGaussianCount = " << gaussianSampleCount << ";" << std::endl;
     std::cout << "const int kRadius = kGaussianCount - 1;" << std::endl;

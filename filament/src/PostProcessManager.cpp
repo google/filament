@@ -537,6 +537,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssao(FrameGraph& fg, RenderP
                         break;
                 }
 
+                const auto invProjection = inverse(cameraInfo.projection);
+
                 FMaterialInstance* const mi = mSSAO.getMaterialInstance();
                 mi->setParameter("depth", depth, {
                         .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST
@@ -545,12 +547,16 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssao(FrameGraph& fg, RenderP
                         float4{ desc.width, desc.height, 1.0f / desc.width, 1.0f / desc.height });
                 mi->setParameter("invRadiusSquared", 1.0f / (data.options.radius * data.options.radius));
                 mi->setParameter("projectionScaleRadius", projectionScale * data.options.radius);
+                mi->setParameter("depthParams", float2{
+                        -cameraInfo.projection[3].z, cameraInfo.projection[2].z - 1.0 } * 0.5f);
+                mi->setParameter("positionParams", float2{
+                        invProjection[0][0], invProjection[1][1] } * 2.0f);
                 mi->setParameter("peak2", peak * peak);
                 mi->setParameter("bias", data.options.bias);
                 mi->setParameter("power", power);
                 mi->setParameter("intensity", intensity);
                 mi->setParameter("maxLevel", uint32_t(levelCount - 1));
-                mi->setParameter("sampleCount", float2{ sampleCount, 1.0 / sampleCount });
+                mi->setParameter("sampleCount", float2{ sampleCount, 1.0f / (sampleCount - 0.5f) });
                 mi->setParameter("spiralTurns", spiralTurns);
                 mi->setParameter("invFarPlane", 1.0f / -cameraInfo.zf);
                 mi->commit(driver);
@@ -700,7 +706,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bilateralBlurPass(
                 FMaterialInstance* const mi = mBilateralBlur.getMaterialInstance();
                 mi->setParameter("ssao", ssao, { /* only reads level 0 */ });
                 mi->setParameter("axis", axis / float2{desc.width, desc.height});
-                mi->setParameter("farPlaneOverEdgeDistance", -zf / 0.1f);
+                mi->setParameter("farPlaneOverEdgeDistance", -zf / 0.0625f);
                 mi->commit(driver);
                 mi->use(driver);
 

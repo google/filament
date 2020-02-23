@@ -8,7 +8,18 @@ material {
         },
         {
             type : float4,
-            name : resolution
+            name : resolution,
+            precision: high
+        },
+        {
+            type : float2,
+            name : depthParams,
+            precision: high
+        },
+        {
+            type : float2,
+            name : positionParams,
+            precision: high
         },
         {
             type : float,
@@ -67,7 +78,7 @@ vertex {
 
 fragment {
     const float kLog2LodRate = 3.0;
-    const float kEdgeDistance = 0.1; // this shouldn't be hardcoded
+    const float kEdgeDistance = 0.0625; // this shouldn't be hardcoded
 
     vec2 sq(const vec2 a) {
         return a * a;
@@ -78,7 +89,7 @@ fragment {
         highp float z = clamp(depth * materialParams.invFarPlane, 0.0, 1.0);
         highp float t = floor(256.0 * z);
         mediump float hi = t * (1.0 / 256.0);   // we only need 8-bits of precision
-        mediump float lo = (256.0 * z) - t;     // we only need b-bits of precision
+        mediump float lo = (256.0 * z) - t;     // we only need 8-bits of precision
         return vec2(hi, lo);
     }
 
@@ -93,38 +104,36 @@ fragment {
         // causes some issues on some GPU. We workaround it by replacing "infinity" by the closest
         // value representable in  a 24 bit depth buffer.
         const float preventDiv0 = -1.0 / 16777216.0;
-        highp mat4 projection = getClipFromViewMatrix();
-        highp float z = depth * 2.0 - 1.0; // depth in clip space
-        return -projection[3].z / min(preventDiv0, z + projection[2].z);
+        return materialParams.depthParams.x / min(depth + materialParams.depthParams.y, preventDiv0);
     }
 
     highp float sampleDepthLinear(const vec2 uv, float level) {
         return linearizeDepth(textureLod(materialParams_depth, uv, level).r);
     }
 
-    highp vec3 computeViewSpacePositionFromDepth(vec2 p, highp float linearDepth) {
-        p = p * 2.0 - 1.0; // to clip space
-        highp mat4 invProjection = getViewFromClipMatrix();
-        p.x *= invProjection[0].x;
-        p.y *= invProjection[1].y;
-        return vec3(p * -linearDepth, linearDepth);
+    highp vec3 computeViewSpacePositionFromDepth(highp vec2 uv, highp float linearDepth) {
+        return vec3((0.5 - uv) * materialParams.positionParams.xy * linearDepth, linearDepth);
     }
 
     highp vec3 faceNormal(highp vec3 dpdx, highp vec3 dpdy) {
         return normalize(cross(dpdx, dpdy));
     }
 
-    // compute normals using derivatives, which essentially results in half-resolution normals
+    // Compute normals using derivatives, which essentially results in half-resolution normals
     // this creates arifacts around geometry edges.
-    // Moreover, this seems a lot slower (measured on Pixel4), which I find curious.
+    // Note: when using the spirv optimizer, this results in much slower execution time because
+    //       this whole expression is inlined in the AO loop below.
     highp vec3 computeViewSpaceNormal(const highp vec3 position) {
         return faceNormal(dFdx(position), dFdy(position));
     }
 
-    // compute normals directly from the depth texture, resulting in full resolution normals
-    highp vec3 computeViewSpaceNormal(const highp vec3 position, const vec2 uv) {
-        vec2 uvdx = uv + vec2(materialParams.resolution.z, 0.0);
-        vec2 uvdy = uv + vec2(0.0, materialParams.resolution.w);
+    // Compute normals directly from the depth texture, resulting in full resolution normals
+    // Note: This is actually as cheap as using derivatives because the texture fetches
+    //       are essentially equivalent to textureGather (which we don't have on ES3.0),
+    //       and this is executed just once.
+    highp vec3 computeViewSpaceNormal(const highp vec3 position, const highp vec2 uv) {
+        highp vec2 uvdx = uv + vec2(materialParams.resolution.z, 0.0);
+        highp vec2 uvdy = uv + vec2(0.0, materialParams.resolution.w);
         highp vec3 px = computeViewSpacePositionFromDepth(uvdx, sampleDepthLinear(uvdx, 0.0));
         highp vec3 py = computeViewSpacePositionFromDepth(uvdy, sampleDepthLinear(uvdy, 0.0));
         highp vec3 dpdx = px - position;
@@ -145,14 +154,14 @@ fragment {
         return vec3(cos(angle), sin(angle), radius);
     }
 
-    void computeAmbientOcclusionSAO(inout float occlusion,
-            float i, float ssDiskRadius, const vec2 ssOrigin,
-            const highp vec3 origin, const vec3 normal, const float noise) {
+    void computeAmbientOcclusionSAO(inout float occlusion, float i, float ssDiskRadius,
+            const highp vec2 uv,  const highp vec3 origin, const vec3 normal,
+            const float noise) {
 
         vec3 tap = tapLocation(i, noise);
         float ssRadius = max(1.0, tap.z * ssDiskRadius); // at least 1 pixel screen-space radius
 
-        vec2 uvSamplePos = ssOrigin + vec2(ssRadius * tap.xy) * materialParams.resolution.zw;
+        vec2 uvSamplePos = uv + vec2(ssRadius * tap.xy) * materialParams.resolution.zw;
 
         float level = clamp(floor(log2(ssRadius)) - kLog2LodRate, 0.0, float(materialParams.maxLevel));
         highp float occlusionDepth = sampleDepthLinear(uvSamplePos, level);
