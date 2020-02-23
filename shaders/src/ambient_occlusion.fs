@@ -5,7 +5,7 @@
 float evaluateSSAO() {
     // TODO: Don't use gl_FragCoord.xy, use the view bounds
     vec2 uv = gl_FragCoord.xy * frameUniforms.resolution.zw;
-    return texture(light_ssao, uv, 0.0).r;
+    return textureLod(light_ssao, uv, 0.0).r;
 }
 
 /**
