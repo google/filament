@@ -35,8 +35,7 @@ class App {
         const loader = engine.createAssetLoader();
         const asset = this.asset = loader.createAssetFromBinary(mesh_url);
 
-        const onDone = finalize => {
-            finalize();
+        const onDone = () => {
             loader.delete();
             scene.addEntities(asset.getEntities());
             this.animator = asset.getAnimator();

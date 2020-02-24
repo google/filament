@@ -396,7 +396,7 @@ export class gltfio$AssetLoader {
 }
 
 export class gltfio$FilamentAsset {
-    public loadResources(onDone: (finalize: () => void) => void, onFetched: (s: string) => void,
+    public loadResources(onDone: () => void|null, onFetched: (s: string) => void|null,
             basePath: string|null, asyncInterval: number|null): void;
     public getEntities(): EntityVector;
     public getRoot(): Entity;
