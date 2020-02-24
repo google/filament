@@ -22,7 +22,7 @@ Building the `rays` library (used for light baking) is optional and requires the
 
 To build Filament for Android you must also install the following:
 
-- Android Studio 3.6
+- Android Studio 3.6 or more recent
 - Android SDK
 - Android NDK "side-by-side" 20 or higher
 
