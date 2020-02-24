@@ -135,8 +135,7 @@ Filament.loadClassExtensions = function() {
         return result;
     };
 
-    /// createAssetLoader ::static method::
-    /// engine ::argument:: an instance of [Engine]
+    /// createAssetLoader ::method::
     /// ::retval:: an instance of [AssetLoader]
     /// Clients should create only one asset loader for the lifetime of their app, this prevents
     /// memory leaks and duplication of Material objects.
