@@ -38,8 +38,7 @@ class App {
         Filament.LightManager.Builder(LightType.SUN).direction([0, 0, -1]).build(engine, sunlight);
         this.scene.addEntity(sunlight);
 
-        const onDone = finalize => {
-            finalize();
+        const onDone = () => {
             loader.delete();
 
             // Dynamically enable two-sided lighting for testing purposes.

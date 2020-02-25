@@ -240,13 +240,8 @@ Filament.loadClassExtensions = function() {
     // See the C++ documentation for ResourceLoader and AssetLoader. The JavaScript API differs in
     // that it takes two optional callbacks:
     //
-    // - onDone is called after all resources have been downloaded, but before the
-    //   asset has been finalized. The onDone callback is passed the finalize function.
-    //
+    // - onDone is called after all resources have been downloaded and decoded.
     // - onFetched is called after each resource has finished downloading.
-    //
-    // "Finalization" refers to decoding texture data, converting the format of the
-    // vertex data if needed, and potentially computing tangents.
     //
     // Takes an optional base path for resolving the URI strings in the glTF file, which is
     // typically the path to the parent glTF file. The given base path cannot itself be a relative
@@ -254,19 +249,22 @@ Filament.loadClassExtensions = function() {
     //    const basePath = '' + new URL(myRelativeUrl, document.location);
     // If the given base path is null, document.location is used as the base.
     //
-    // The optional asyncInterval argument allows clients to control how finalization is amortized
+    // The optional asyncInterval argument allows clients to control how decoding is amortized
     // over time. It represents the number of milliseconds between each texture decoding task.
     Filament.gltfio$FilamentAsset.prototype.loadResources = function(onDone, onFetched, basePath,
             asyncInterval) {
         const asset = this;
         const engine = this.getEngine();
         const names = this.getResourceUris();
-        const urlset = new Set();
-        const urlToName = {};
         const interval = asyncInterval || 30;
 
         basePath = basePath || document.location;
+        onFetched = onFetched || ((name) => {});
+        onDone = onDone || (() => {});
 
+        // Construct the set of URI strings to fetch.
+        const urlset = new Set();
+        const urlToName = {};
         for (var i = 0; i < names.size(); i++) {
             const name = names.get(i);
             if (name) {
@@ -275,31 +273,26 @@ Filament.loadClassExtensions = function() {
                 urlset.add(url);
             }
         }
+
+        // Construct a resource loader and start decoding after all textures are fetched.
         const resourceLoader = new Filament.gltfio$ResourceLoader(engine);
+        const onComplete = () => {
+            resourceLoader.asyncBeginLoad(asset);
 
-        const onComplete = function() {
-            const finalize = function() {
-                resourceLoader.asyncBeginLoad(asset);
+            // NOTE: This decodes in the wasm layer instead of using Canvas2D, which allows Filament
+            // to have more control (handling of alpha, srgb, etc) and improves parity with native
+            // platforms. In the future we may wish to offload this to web workers.
 
-                // Decode a PNG or JPEG every 100 milliseconds. This is slow but it's useful to
-                // decode in the native layer instead of using Canvas2D. This allows us to have more
-                // control (handling of alpha, srgb, etc) and better parity with Filament on native
-                // platforms. In the future we may wish to offload this to web workers.
-                const timer = setInterval(() => {
-                    resourceLoader.asyncUpdateLoad();
-                    const progress = resourceLoader.asyncGetLoadProgress();
-                    if (progress >= 1) {
-                        clearInterval(timer);
-                        resourceLoader.delete();
-                    }
-                }, interval);
-
-            };
-            if (onDone) {
-                onDone(finalize);
-            } else {
-                finalize();
-            }
+            // Decode a single PNG or JPG every 30 milliseconds, or at the specified interval.
+            const timer = setInterval(() => {
+                resourceLoader.asyncUpdateLoad();
+                const progress = resourceLoader.asyncGetLoadProgress();
+                if (progress >= 1) {
+                    clearInterval(timer);
+                    resourceLoader.delete();
+                    onDone();
+                }
+            }, interval);
         };
 
         if (urlset.size == 0) {
@@ -307,14 +300,13 @@ Filament.loadClassExtensions = function() {
             return;
         }
 
+        // Begin downloading all external resources.
         Filament.fetch(Array.from(urlset), onComplete, function(url) {
             const buffer = getBufferDescriptor(url);
             const name = urlToName[url];
             resourceLoader.addResourceData(name, buffer);
             buffer.delete();
-            if (onFetched) {
-                onFetched(name);
-            }
+            onFetched(name);
         });
     };
 };
