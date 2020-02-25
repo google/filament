@@ -147,9 +147,10 @@ function(add_envmap SOURCE TARGET)
     add_custom_command(OUTPUT ${target_skybox} ${target_skybox_tiny} ${target_envmap}
 
         # Create a low-resolution skybox.
-        COMMAND cmgen -x ${TARGET}_skybox_tiny ${CMGEN_ARGS_TINY} ${source_envmap}
+        COMMAND cmgen -x ${TARGET} ${CMGEN_ARGS_TINY} ${source_envmap}
+        COMMAND mv ${target_skybox} ${target_skybox_tiny}
 
-        # Finally, create KTX files for the uncompressed envmap.
+        # Create KTX files for the full-size envmap.
         COMMAND cmgen -x ${TARGET} ${CMGEN_ARGS} ${source_envmap}
 
         MAIN_DEPENDENCY ${source_envmap}
