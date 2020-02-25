@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.10)
 project(websamples)
 
+if (FILAMENT_SKIP_SAMPLES)
+    return()
+endif()
+
 set(SERVER_DIR ${PROJECT_BINARY_DIR})
 set(ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../..)
 

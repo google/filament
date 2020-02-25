@@ -79,20 +79,22 @@ compilation step simply pass the `-j` flag to `build.sh`:
 $ ./build.sh -j release
 ```
 
-If you use CMake directly instead of the build script, pass `-DENABLE_JAVA=OFF` to CMake instead.
+If you use CMake directly instead of the build script, pass `-DFILAMENT_ENABLE_JAVA=OFF`
+to CMake instead.
 
 ### Filament-specific CMake Options
 
 The following CMake options are boolean options specific to Filament:
 
-- `ENABLE_JAVA`:                Compile Java projects: requires a JDK and the JAVA_HOME env var
-- `ENABLE_LTO`:                 Enable link-time optimizations if supported by the compiler
-- `FILAMENT_BUILD_FILAMAT`:     Build filamat and JNI buildings
-- `FILAMENT_SUPPORTS_METAL`:    Include the Metal backend
-- `FILAMENT_SUPPORTS_VULKAN`:   Include the Vulkan backend
-- `GENERATE_JS_DOCS`:           Build WebGL documentation and tutorials
-- `INSTALL_BACKEND_TEST`:       Install the backend test library so it can be consumed on iOS
-- `USE_EXTERNAL_GLES3`:         Experimental: Compile Filament against OpenGL ES 3
+- `FILAMENT_ENABLE_JAVA`:          Compile Java projects: requires a JDK and the JAVA_HOME env var
+- `FILAMENT_ENABLE_LTO`:           Enable link-time optimizations if supported by the compiler
+- `FILAMENT_BUILD_FILAMAT`:        Build filamat and JNI buildings
+- `FILAMENT_SUPPORTS_METAL`:       Include the Metal backend
+- `FILAMENT_SUPPORTS_VULKAN`:      Include the Vulkan backend
+- `FILAMENT_GENERATE_JS_DOCS`:     Build WebGL documentation and tutorials
+- `FILAMENT_INSTALL_BACKEND_TEST`: Install the backend test library so it can be consumed on iOS
+- `FILAMENT_USE_EXTERNAL_GLES3`:   Experimental: Compile Filament against OpenGL ES 3
+- `FILAMENT_SKIP_SAMPLES`:         Don't build sample apps
 
 To turn an option on or off:
 

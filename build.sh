@@ -103,7 +103,7 @@ RUN_TESTS=false
 
 JS_DOCS_OPTION="-DGENERATE_JS_DOCS=OFF"
 
-ENABLE_JAVA=ON
+FILAMENT_ENABLE_JAVA=ON
 
 INSTALL_COMMAND=
 
@@ -159,7 +159,7 @@ function build_desktop_target {
             -DIMPORT_EXECUTABLES_DIR=out \
             -DCMAKE_BUILD_TYPE=$1 \
             -DCMAKE_INSTALL_PREFIX=../${lc_target}/filament \
-            -DENABLE_JAVA=${ENABLE_JAVA} \
+            -DFILAMENT_ENABLE_JAVA=${FILAMENT_ENABLE_JAVA} \
             ${deployment_target} \
             ../..
     fi
@@ -603,7 +603,7 @@ function validate_build_command {
     local javac_binary=`which javac`
     if [[ "$JAVA_HOME" == "" ]] || [[ ! "$javac_binary" ]]; then
         echo "Warning: JAVA_HOME is not set, skipping Java projects"
-        ENABLE_JAVA=OFF
+        FILAMENT_ENABLE_JAVA=OFF
     fi
     # If building a WebAssembly module, ensure we know where Emscripten lives.
     if [[ "$EMSDK" == "" ]] && [[ "$ISSUE_WEBGL_BUILD" == "true" ]]; then
@@ -671,7 +671,7 @@ while getopts ":hacfijmp:tuvslw" opt; do
             INSTALL_COMMAND=install
             ;;
         j)
-            ENABLE_JAVA=OFF
+            FILAMENT_ENABLE_JAVA=OFF
             ;;
         m)
             BUILD_GENERATOR="Unix Makefiles"
