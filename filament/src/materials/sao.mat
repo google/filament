@@ -98,8 +98,8 @@ fragment {
         return -projection[3].z / min(preventDiv0, z + projection[2].z);
     }
 
-    highp float sampleDepthLinear(const vec2 uv, float level) {
-        return linearizeDepth(textureLod(materialParams_depth, uv, level).r);
+    highp float sampleDepthLinear(const vec2 uv, float lod) {
+        return linearizeDepth(textureLod(materialParams_depth, uv, lod).r);
     }
 
     highp vec3 computeViewSpacePositionFromDepth(vec2 p, highp float linearDepth) {

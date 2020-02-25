@@ -14,6 +14,7 @@ A new header is inserted each time a *tag* is created.
 - Support for Bloom as a post-process effect.
 - Added Java bindings for geometry::SurfaceOrientation.
 - Fixed bug rendering transparent objects with Metal backend.
+- Fixed crash on macOS Catalina when rendering with Metal backend
 
 ## v1.4.5
 
