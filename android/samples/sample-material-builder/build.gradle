@@ -1,8 +1,9 @@
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
-
 apply plugin: FilamentToolsPlugin
+
+project.ext.isSample = true
 
 filamentTools {
     meshInputFile = file("../../../third_party/models/shader_ball/shader_ball.obj")

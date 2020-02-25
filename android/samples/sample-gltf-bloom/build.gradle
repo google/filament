@@ -3,6 +3,8 @@ apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
 apply plugin: FilamentToolsPlugin
 
+project.ext.isSample = true
+
 filamentTools {
     materialInputDir = file("src/main/materials")
     materialOutputDir = file("src/main/assets/materials")

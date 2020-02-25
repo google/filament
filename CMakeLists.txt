@@ -11,13 +11,15 @@ project(TNT)
 # ==================================================================================================
 # Options
 # ==================================================================================================
-option(ENABLE_JAVA "Compile Java projects, requires a JDK and the JAVA_HOME env var" ON)
+option(FILAMENT_ENABLE_JAVA "Compile Java projects, requires a JDK and the JAVA_HOME env var" ON)
 
-option(USE_EXTERNAL_GLES3 "Experimental: Compile Filament against OpenGL ES 3" OFF)
+option(FILAMENT_USE_EXTERNAL_GLES3 "Experimental: Compile Filament against OpenGL ES 3" OFF)
 
-option(GENERATE_JS_DOCS "Build WebGL documentation and tutorials" OFF)
+option(FILAMENT_GENERATE_JS_DOCS "Build WebGL documentation and tutorials" OFF)
 
-option(ENABLE_LTO "Enable link-time optimizations if supported by the compiler" OFF)
+option(FILAMENT_ENABLE_LTO "Enable link-time optimizations if supported by the compiler" OFF)
+
+option(FILAMENT_SKIP_SAMPLES "Don't build samples" OFF)
 
 # ==================================================================================================
 # Support for ccache
@@ -162,7 +164,7 @@ endif()
 # ==================================================================================================
 # Link time optimizations (LTO)
 # ==================================================================================================
-if (ENABLE_LTO)
+if (FILAMENT_ENABLE_LTO)
     include(CheckIPOSupported)
 
     check_ipo_supported(RESULT IPO_SUPPORT)
@@ -188,7 +190,7 @@ else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_STANDARD} -fstrict-aliasing -Wno-unknown-pragmas -Wno-unused-function")
 endif()
 
-if (USE_EXTERNAL_GLES3)
+if (FILAMENT_USE_EXTERNAL_GLES3)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_EXTERNAL_GLES3")
 endif()
 
@@ -520,13 +522,13 @@ if (APPLE)
     add_subdirectory(${EXTERNAL}/moltenvk/tnt)
 endif()
 
-set (FILAMENT_SAMPLES_BINARY_DIR ${PROJECT_BINARY_DIR}/samples)
+set(FILAMENT_SAMPLES_BINARY_DIR ${PROJECT_BINARY_DIR}/samples)
 
 if (WEBGL)
     add_subdirectory(web/filament-js)
     add_subdirectory(web/samples)
 
-    if (GENERATE_JS_DOCS)
+    if (FILAMENT_GENERATE_JS_DOCS)
         add_subdirectory(web/docs)
     endif()
 
@@ -541,6 +543,7 @@ if (NOT ANDROID AND NOT WEBGL AND NOT IOS)
 
     add_subdirectory(${FILAMENT}/java/filamat)
     add_subdirectory(${FILAMENT}/java/filament)
+
     add_subdirectory(${FILAMENT}/samples)
 
     add_subdirectory(${EXTERNAL}/astcenc/tnt)

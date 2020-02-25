@@ -4,6 +4,9 @@
 //     Path to the Filament distribution/install directory for Android
 //     (produced by make/ninja install). This directory must contain lib/arm64-v8a/ etc.
 //
+// filament_skip_samples
+//     Exclude samples from the project. Useful to speed up compilation.
+//
 // Example:
 //     ./gradlew -Pfilament_dist_dir=../dist-android-release assembleRelease
 
@@ -54,5 +57,13 @@ subprojects { project ->
         mavenCentral()
         google()
         jcenter()
+    }
+}
+
+gradle.taskGraph.whenReady {
+    gradle.taskGraph.allTasks.each {
+        it.onlyIf {
+            !it.project.ext.has('isSample') || !project.hasProperty('filament_skip_samples')
+         }
     }
 }

@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.10)
 project(filament-samples C ASM)
 
+if (FILAMENT_SKIP_SAMPLES)
+    return()
+endif()
+
 set(ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/..)
 set(GENERATION_ROOT ${CMAKE_CURRENT_BINARY_DIR})
 set(RESOURCE_DIR  "${GENERATION_ROOT}/generated/resources")

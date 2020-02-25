@@ -25,7 +25,7 @@ cmake ^
     -DCMAKE_C_COMPILER:PATH="C:\Program Files\LLVM\bin\clang-cl.exe" ^
     -DCMAKE_LINKER:PATH="C:\Program Files\LLVM\bin\lld-link.exe" ^
     -DCMAKE_INSTALL_PREFIX=..\release\filament ^
-    -DENABLE_JAVA=NO ^
+    -DFILAMENT_ENABLE_JAVA=NO ^
     -DCMAKE_BUILD_TYPE=Release ^
     ..\..
 ```
