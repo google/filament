@@ -76,9 +76,15 @@ FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material)
 void FMaterialInstance::initDefaultInstance(FEngine& engine, FMaterial const* material) {
     mMaterial = material;
 
+    const RasterState& rasterState = mMaterial->getRasterState();
+
     // We inherit the resolved culling mode rather than the builder-set culling mode.
     // This preserves the property whereby double-sidedness automatically disables culling.
-    mCulling = mMaterial->getRasterState().culling;
+    mCulling = rasterState.culling;
+
+    mColorWrite = rasterState.colorWrite;
+    mDepthWrite = rasterState.depthWrite;
+    mDepthFunc = rasterState.depthFunc;
 
     mMaterialSortingKey = RenderPass::makeMaterialSortingKey(
             material->getId(), material->generateMaterialInstanceId());
