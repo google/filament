@@ -48,25 +48,14 @@ mipgen --grayscale --compression<span style="color: #666666">=</span>etc_r11_num
 <p>For more information on mipgen's arguments and supported formats, do <code>mipgen --help</code>.</p>
 <p>In a production setting, you'd want to invoke these commands with a script or build system.</p>
 <h2>Bake environment map</h2>
-<p>Much like the <a href="tutorial_redball.html">previous tutorial</a> we need to use Filament's <code>cmgen</code> tool to produce cubemap files,
-but this time we'll create compressed variants.</p>
-<p>Download <a href="//github.com/google/filament/blob/master/third_party/environments/syferfontein_18d_clear_2k.hdr">syferfontein_18d_clear_2k.hdr</a>, then invoke the following commands in your terminal.</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #408080; font-style: italic"># Create S3TC variant of the IBL, then rename it to have a _s3tc suffix.</span>
-cmgen -x . --format<span style="color: #666666">=</span>ktx --size<span style="color: #666666">=256</span> --extract-blur<span style="color: #666666">=0</span>.1 --compression<span style="color: #666666">=</span>s3tc_rgba_dxt5 <span style="color: #BB6622; font-weight: bold">\</span>
-    syferfontein_18d_clear_2k.hdr
-<span style="color: #008000">cd</span> syfer* ; mv syfer*_ibl.ktx syferfontein_18d_clear_2k_ibl_s3tc.ktx ; <span style="color: #008000">cd</span> -
+<p>Much like the <a href="tutorial_redball.html">previous tutorial</a> we need to use Filament's <code>cmgen</code> tool to produce cubemap files.</p>
+<p>Download <a href="//github.com/google/filament/blob/master/third_party/environments/venetian_crossroads_2k.hdr">venetian_crossroads_2k.hdr</a>, then invoke the following commands in your terminal.</p>
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span>cmgen -x . --format<span style="color: #666666">=</span>ktx --size<span style="color: #666666">=64</span> --extract-blur<span style="color: #666666">=0</span>.1 venetian_crossroads_2k.hdr
+<span style="color: #008000">cd</span> venetian* ; mv venetian*_ibl.ktx venetian_crossroads_2k_skybox_tiny.ktx ; <span style="color: #008000">cd</span> -
 
-<span style="color: #408080; font-style: italic"># Create ETC variant of the IBL, then rename it to have a _s3tc suffix.</span>
-cmgen -x . --format<span style="color: #666666">=</span>ktx --size<span style="color: #666666">=256</span> --extract-blur<span style="color: #666666">=0</span>.1 --compression<span style="color: #666666">=</span>etc_rgba8_rgba_40 <span style="color: #BB6622; font-weight: bold">\</span>
-    syferfontein_18d_clear_2k.hdr
-<span style="color: #008000">cd</span> syfer* ; mv syfer*_ibl.ktx syferfontein_18d_clear_2k_ibl_etc.ktx ; <span style="color: #008000">cd</span> -
-
-<span style="color: #408080; font-style: italic"># Create small uncompressed Skybox variant, then rename it to have a _tiny suffix.</span>
-cmgen -x . --format<span style="color: #666666">=</span>ktx --size<span style="color: #666666">=64</span> --extract-blur<span style="color: #666666">=0</span>.1 syferfontein_18d_clear_2k.hdr
-<span style="color: #008000">cd</span> syfer* ; mv syfer*_ibl.ktx syferfontein_18d_clear_2k_skybox_tiny.ktx ; <span style="color: #008000">cd</span> -
-
-<span style="color: #408080; font-style: italic"># Create full-size uncompressed Skybox and IBL</span>
-cmgen -x . --format<span style="color: #666666">=</span>ktx --size<span style="color: #666666">=256</span> --extract-blur<span style="color: #666666">=0</span>.1 syferfontein_18d_clear_2k.hdr
+cmgen -x . --format<span style="color: #666666">=</span>ktx --size<span style="color: #666666">=256</span> --extract-blur<span style="color: #666666">=0</span>.1 venetian_crossroads_2k.hdr
+cmgen -x . --format<span style="color: #666666">=</span>ktx --size<span style="color: #666666">=256</span> --extract-blur<span style="color: #666666">=0</span>.1 venetian_crossroads_2k.hdr
+cmgen -x . --format<span style="color: #666666">=</span>ktx --size<span style="color: #666666">=256</span> --extract-blur<span style="color: #666666">=0</span>.1 venetian_crossroads_2k.hdr
 </pre></div>
 
 <h2>Define textured material</h2>
@@ -170,9 +159,9 @@ Filament.init([ filamat_url, filamesh_url, sky_small_url, ibl_url ], () =&gt; {
 }
 </pre></div>
 
-<p>Our app will use 10 downloaded assets, but it only requires 4 of them to be present for <code>App</code>
-construction. We'll download the other 6 assets after construction. By using a progressive loading
-strategy, we can reduce the perceived load time.</p>
+<p>Our app will only require a subset of assets to be present for <code>App</code> construction. We'll download
+the other assets after construction. By using a progressive loading strategy, we can reduce the
+perceived load time.</p>
 <p>Next we need to supply the URLs for various assets. This is actually a bit tricky, because different
 clients have different capabilities for compressed textures.</p>
 <p>To help you download only the texture assets that you need, Filament provides a
@@ -180,16 +169,14 @@ clients have different capabilities for compressed textures.</p>
 (<code>etc</code>, <code>s3tc</code>, or <code>astc</code>) that the app developer knows is available from the server. The function
 performs an intersection of the <em>desired</em> set with the <em>supported</em> set, then returns an appropriate
 string -- which might be empty.</p>
-<p>In our case, we know that our web server will have <code>etc</code> and <code>s3tc</code> variants for the IBL, <code>astc</code> and
-<code>s3tc</code> variants for albedo, and <code>etc</code> variants for the other textures. The uncompressed variants
-(empty string) are always available as a last resort. Go ahead and replace the <strong>declare asset
-URLs</strong> comment with the following snippet.</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #008000; font-weight: bold">const</span> ibl_suffix <span style="color: #666666">=</span> Filament.getSupportedFormatSuffix(<span style="color: #BA2121">&#39;etc s3tc&#39;</span>);
-<span style="color: #008000; font-weight: bold">const</span> albedo_suffix <span style="color: #666666">=</span> Filament.getSupportedFormatSuffix(<span style="color: #BA2121">&#39;astc s3tc&#39;</span>);
+<p>In our case, we know that our web server will have <code>astc</code> and <code>s3tc</code> variants for albedo, and <code>etc</code>
+variants for the other textures. The uncompressed variants (empty string) are always available as a
+last resort. Go ahead and replace the <strong>declare asset URLs</strong> comment with the following snippet.</p>
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #008000; font-weight: bold">const</span> albedo_suffix <span style="color: #666666">=</span> Filament.getSupportedFormatSuffix(<span style="color: #BA2121">&#39;astc s3tc&#39;</span>);
 <span style="color: #008000; font-weight: bold">const</span> texture_suffix <span style="color: #666666">=</span> Filament.getSupportedFormatSuffix(<span style="color: #BA2121">&#39;etc&#39;</span>);
 
-<span style="color: #008000; font-weight: bold">const</span> environ <span style="color: #666666">=</span> <span style="color: #BA2121">&#39;syferfontein_18d_clear_2k&#39;</span>
-<span style="color: #008000; font-weight: bold">const</span> ibl_url <span style="color: #666666">=</span> <span style="color: #BA2121">`</span><span style="color: #BB6688; font-weight: bold">${</span>environ<span style="color: #BB6688; font-weight: bold">}</span><span style="color: #BA2121">/</span><span style="color: #BB6688; font-weight: bold">${</span>environ<span style="color: #BB6688; font-weight: bold">}</span><span style="color: #BA2121">_ibl</span><span style="color: #BB6688; font-weight: bold">${</span>ibl_suffix<span style="color: #BB6688; font-weight: bold">}</span><span style="color: #BA2121">.ktx`</span>;
+<span style="color: #008000; font-weight: bold">const</span> environ <span style="color: #666666">=</span> <span style="color: #BA2121">&#39;venetian_crossroads_2k&#39;</span>
+<span style="color: #008000; font-weight: bold">const</span> ibl_url <span style="color: #666666">=</span> <span style="color: #BA2121">`</span><span style="color: #BB6688; font-weight: bold">${</span>environ<span style="color: #BB6688; font-weight: bold">}</span><span style="color: #BA2121">/</span><span style="color: #BB6688; font-weight: bold">${</span>environ<span style="color: #BB6688; font-weight: bold">}</span><span style="color: #BA2121">_ibl.ktx`</span>;
 <span style="color: #008000; font-weight: bold">const</span> sky_small_url <span style="color: #666666">=</span> <span style="color: #BA2121">`</span><span style="color: #BB6688; font-weight: bold">${</span>environ<span style="color: #BB6688; font-weight: bold">}</span><span style="color: #BA2121">/</span><span style="color: #BB6688; font-weight: bold">${</span>environ<span style="color: #BB6688; font-weight: bold">}</span><span style="color: #BA2121">_skybox_tiny.ktx`</span>;
 <span style="color: #008000; font-weight: bold">const</span> sky_large_url <span style="color: #666666">=</span> <span style="color: #BA2121">`</span><span style="color: #BB6688; font-weight: bold">${</span>environ<span style="color: #BB6688; font-weight: bold">}</span><span style="color: #BA2121">/</span><span style="color: #BB6688; font-weight: bold">${</span>environ<span style="color: #BB6688; font-weight: bold">}</span><span style="color: #BA2121">_skybox.ktx`</span>;
 <span style="color: #008000; font-weight: bold">const</span> albedo_url <span style="color: #666666">=</span> <span style="color: #BA2121">`albedo</span><span style="color: #BB6688; font-weight: bold">${</span>albedo_suffix<span style="color: #BB6688; font-weight: bold">}</span><span style="color: #BA2121">.ktx`</span>;
