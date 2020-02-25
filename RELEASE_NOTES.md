@@ -6,12 +6,13 @@ A new header is inserted each time a *tag* is created.
 ## Next release
 
 - The Android support libraries (gltfio and filament-utils) now use dynamic linking.
-- Screen-space refraction is now supported.
 - Removed depth-prepass related APIs. (⚠ API Change)
 - gltfio: add asynchronous API to ResourceLoader.
 - gltfio: generate normals for flat-shaded models that do not have normals.
 - Material instances now allow dynamic depth testing and other rasterization state.
-- Support for Bloom as a post-process effect.
+- Unlit materials now apply emissive in the same way as lit materials.
+- Screen-space refraction is now supported.
+- Support for HDR Bloom as a post-process effect.
 - Added Java bindings for geometry::SurfaceOrientation.
 - Fixed bug rendering transparent objects with Metal backend.
 - Fixed crash on macOS Catalina when rendering with Metal backend.

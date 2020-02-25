@@ -299,6 +299,89 @@ static void setup(Engine* engine, View*, Scene* scene) {
     g_params.bloomOptions.dirt = FilamentApp::get().getDirtTexture();
 }
 
+static filament::MaterialInstance* updateInstances(
+        SandboxParameters& params, filament::Engine& engine) {
+
+    int material = params.currentMaterialModel;
+    if (material == MATERIAL_MODEL_LIT) {
+        if (params.currentBlending == BLENDING_TRANSPARENT) material = MATERIAL_TRANSPARENT;
+        if (params.currentBlending == BLENDING_FADE) material = MATERIAL_FADE;
+        if (params.ssr) {
+            if (params.currentBlending == BLENDING_THIN_REFRACTION) material = MATERIAL_THIN_SS_REFRACTION;
+            if (params.currentBlending == BLENDING_SOLID_REFRACTION) material = MATERIAL_SOLID_SS_REFRACTION;
+        } else {
+            if (params.currentBlending == BLENDING_THIN_REFRACTION) material = MATERIAL_THIN_REFRACTION;
+            if (params.currentBlending == BLENDING_SOLID_REFRACTION) material = MATERIAL_SOLID_REFRACTION;
+        }
+    }
+
+    bool hasRefraction = params.currentBlending == BLENDING_THIN_REFRACTION ||
+            params.currentBlending == BLENDING_SOLID_REFRACTION;
+
+    MaterialInstance* materialInstance = params.materialInstance[material];
+    materialInstance->setParameter("baseColor", RgbType::sRGB, params.color);
+
+    if (params.currentMaterialModel != MATERIAL_MODEL_CLOTH) {
+        math::float4 emissive(Color::toLinear(params.emissiveColor), params.emissiveEC);
+        materialInstance->setParameter("emissive", emissive);
+    }
+
+    if (params.currentMaterialModel == MATERIAL_MODEL_LIT) {
+        materialInstance->setParameter("roughness", params.roughness);
+        materialInstance->setParameter("metallic", params.metallic);
+        if (!hasRefraction) {
+            materialInstance->setParameter("reflectance", params.reflectance);
+        }
+        materialInstance->setParameter("clearCoat", params.clearCoat);
+        materialInstance->setParameter("clearCoatRoughness", params.clearCoatRoughness);
+        materialInstance->setParameter("anisotropy", params.anisotropy);
+
+        if (params.currentBlending != BLENDING_OPAQUE) {
+            materialInstance->setParameter("alpha", params.alpha);
+        }
+
+        if  (hasRefraction) {
+            math::float3 color = Color::toLinear(params.transmittanceColor);
+            materialInstance->setParameter("absorption",
+                    Color::absorptionAtDistance(color, params.distance));
+            materialInstance->setParameter("ior", params.ior);
+            materialInstance->setParameter("transmission", params.transmission);
+            materialInstance->setParameter("thickness", params.thickness);
+        }
+    }
+
+    if (params.currentMaterialModel == MATERIAL_MODEL_SPECGLOSS) {
+        materialInstance->setParameter("glossiness", params.glossiness);
+        materialInstance->setParameter("specularColor", params.specularColor);
+        materialInstance->setParameter("reflectance", params.reflectance);
+        materialInstance->setParameter("clearCoat", params.clearCoat);
+        materialInstance->setParameter("clearCoatRoughness", params.clearCoatRoughness);
+        materialInstance->setParameter("anisotropy", params.anisotropy);
+    }
+
+    if (params.currentMaterialModel == MATERIAL_MODEL_SUBSURFACE) {
+        materialInstance->setParameter("roughness", params.roughness);
+        materialInstance->setParameter("metallic", params.metallic);
+        materialInstance->setParameter("reflectance", params.reflectance);
+        materialInstance->setParameter("thickness", params.thickness);
+        materialInstance->setParameter("subsurfacePower", params.subsurfacePower);
+        materialInstance->setParameter("subsurfaceColor", RgbType::sRGB, params.subsurfaceColor);
+    }
+
+    if (params.currentMaterialModel == MATERIAL_MODEL_CLOTH) {
+        materialInstance->setParameter("roughness", params.roughness);
+        materialInstance->setParameter("sheenColor", RgbType::sRGB, params.sheenColor);
+        materialInstance->setParameter("subsurfaceColor", RgbType::sRGB, params.subsurfaceColor);
+    }
+
+    if (params.currentMaterialModel != MATERIAL_MODEL_UNLIT) {
+        materialInstance->setSpecularAntiAliasingVariance(params.specularAntiAliasingVariance);
+        materialInstance->setSpecularAntiAliasingThreshold(params.specularAntiAliasingThreshold);
+    }
+
+    return materialInstance;
+}
+
 static void gui(filament::Engine* engine, filament::View*) {
     auto& params = g_params;
     ImGui::SetNextWindowSize(ImVec2(0.0f, 0.0f));
@@ -368,7 +451,7 @@ static void gui(filament::Engine* engine, filament::View*) {
             }
 
             ImGui::ColorEdit3("emissiveColor", &params.emissiveColor.r);
-            ImGui::SliderFloat("emissiveEC", &params.emissiveEC, 0.0f, 6.0f);
+            ImGui::SliderFloat("emissiveEC", &params.emissiveEC, 0.0f, 12.0f);
         }
 
         if (ImGui::CollapsingHeader("Shading AA")) {
