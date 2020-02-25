@@ -138,7 +138,7 @@ private:
 
     FMaterialInstance() noexcept;
     void initDefaultInstance(FEngine& engine, FMaterial const* material);
-    void initParameters(FMaterial const* material);
+    void initialize(FMaterial const* material);
 
     void commitSlow(FEngine::DriverApi& driver) const;
 
