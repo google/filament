@@ -104,7 +104,7 @@ class MaterialCompiler extends TaskWithBinary {
                 standardOutput out
                 errorOutput err
                 executable "${getBinary()}"
-                args('-a', 'all', '-p', 'mobile', '-o', getOutputFile(file), file)
+                args('-a', 'opengl', '-a', 'vulkan', '-p', 'mobile', '-o', getOutputFile(file), file)
             }
         }
 
