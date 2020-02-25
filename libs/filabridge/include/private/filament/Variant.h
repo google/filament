@@ -41,7 +41,8 @@ namespace filament {
         // Variant                 0  | DEP | SKN | SRE | DYN | DIR |
         //                    ...-----+-----+-----+-----+-----+-----+
         // Reserved variants:
-        //       Depth shader            1     X     0     0     0
+        //       Vertex depth            1     X     0     0     0
+        //     Fragment depth            1     0     0     0     0
         //           Reserved            1     X     X     X     X
         //           Reserved            0     X     1     X     0
         //
