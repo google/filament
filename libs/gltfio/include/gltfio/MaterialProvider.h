@@ -60,13 +60,22 @@ struct alignas(4) MaterialKey {
     };
     uint8_t baseColorUV;
     // -- 32 bit boundary --
+    bool hasClearCoatTexture : 1;
+    uint8_t clearCoatUV : 7;
+    bool hasClearCoatRoughnessTexture : 1;
+    uint8_t clearCoatRoughnessUV : 7;
+    bool hasClearCoatNormalTexture : 1;
+    uint8_t clearCoatNormalUV : 7;
+    bool hasClearCoat : 1;
+    bool hasTextureTransforms : 7;
+    // -- 32 bit boundary --
     uint8_t emissiveUV;
     uint8_t aoUV;
     uint8_t normalUV;
-    bool hasTextureTransforms : 8;
+    uint8_t UNUSED;
 };
 
-static_assert(sizeof(MaterialKey) == 8, "MaterialKey has unexpected padding.");
+static_assert(sizeof(MaterialKey) == 12, "MaterialKey has unexpected padding.");
 
 bool operator==(const MaterialKey& k1, const MaterialKey& k2);
 
