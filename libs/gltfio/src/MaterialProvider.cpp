@@ -35,7 +35,14 @@ bool gltfio::operator==(const MaterialKey& k1, const MaterialKey& k2) {
         (k1.metallicRoughnessUV == k2.metallicRoughnessUV) &&
         (k1.emissiveUV == k2.emissiveUV) &&
         (k1.aoUV == k2.aoUV) &&
-        (k1.normalUV == k2.normalUV);
+        (k1.normalUV == k2.normalUV) &&
+        (k1.hasClearCoat == k2.hasClearCoat) &&
+        (k1.hasClearCoatTexture == k2.hasClearCoatTexture) &&
+        (k1.hasClearCoatRoughnessTexture == k2.hasClearCoatRoughnessTexture) &&
+        (k1.hasClearCoatNormalTexture == k2.hasClearCoatNormalTexture) &&
+        (k1.clearCoatUV == k2.clearCoatUV) &&
+        (k1.clearCoatRoughnessUV == k2.clearCoatRoughnessUV) &&
+        (k1.clearCoatNormalUV == k2.clearCoatNormalUV);
 }
 
 // Filament supports up to 2 UV sets. glTF has arbitrary texcoord set indices, but it allows
@@ -73,6 +80,28 @@ void details::constrainMaterial(MaterialKey* key, UvMap* uvmap) {
             retval[key->emissiveUV] = (UvSet) index++;
         }
     }
+    if (key->hasClearCoatTexture && retval[key->clearCoatUV] == UNUSED) {
+        if (index > MAX_INDEX) {
+            key->hasClearCoatTexture = false;
+        } else {
+            retval[key->clearCoatUV] = (UvSet) index++;
+        }
+    }
+    if (key->hasClearCoatRoughnessTexture && retval[key->clearCoatRoughnessUV] == UNUSED) {
+        if (index > MAX_INDEX) {
+            key->hasClearCoatRoughnessTexture = false;
+        } else {
+            retval[key->clearCoatRoughnessUV] = (UvSet) index++;
+        }
+    }
+    if (key->hasClearCoatNormalTexture && retval[key->clearCoatNormalUV] == UNUSED) {
+        if (index > MAX_INDEX) {
+            key->hasClearCoatNormalTexture = false;
+        } else {
+            retval[key->clearCoatNormalUV] = (UvSet) index++;
+        }
+    }
+    // NOTE: KHR_materials_clearcoat does not provide separate UVs, we'll assume UV0
     *uvmap = retval;
 }
 
@@ -90,9 +119,15 @@ void details::processShaderString(std::string* shader, const UvMap& uvmap,
     const auto& metallicRoughnessUV = uvstrings[uvmap[config.metallicRoughnessUV]];
     const auto& emissiveUV = uvstrings[uvmap[config.emissiveUV]];
     const auto& aoUV = uvstrings[uvmap[config.aoUV]];
+    const auto& clearCoatUV = uvstrings[uvmap[config.clearCoatUV]];
+    const auto& clearCoatRoughnessUV = uvstrings[uvmap[config.clearCoatRoughnessUV]];
+    const auto& clearCoatNormalUV = uvstrings[uvmap[config.clearCoatNormalUV]];
     replaceAll("${normal}", normalUV);
     replaceAll("${color}", baseColorUV);
     replaceAll("${metallic}", metallicRoughnessUV);
     replaceAll("${ao}", aoUV);
     replaceAll("${emissive}", emissiveUV);
+    replaceAll("${clearCoat}", clearCoatUV);
+    replaceAll("${clearCoatRoughness}", clearCoatRoughnessUV);
+    replaceAll("${clearCoatNormal}", clearCoatNormalUV);
 }

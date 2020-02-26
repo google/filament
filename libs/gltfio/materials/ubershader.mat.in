@@ -41,7 +41,21 @@ material {
         { type : int, name : emissiveIndex },
         { type : float3, name : emissiveFactor },
         { type : sampler2d, name : emissiveMap },
-        { type : mat3, name : emissiveUvMatrix }
+        { type : mat3, name : emissiveUvMatrix },
+
+        // Cleat coat
+        { type : float, name : clearCoatFactor },
+        { type : float, name : clearCoatRoughnessFactor },
+        { type : int, name : clearCoatIndex },
+        { type : sampler2d, name : clearCoatMap },
+        { type : mat3, name : clearCoatUvMatrix },
+        { type : int, name : clearCoatRoughnessIndex },
+        { type : sampler2d, name : clearCoatRoughnessMap },
+        { type : mat3, name : clearCoatRoughnessUvMatrix },
+        { type : int, name : clearCoatNormalIndex },
+        { type : sampler2d, name : clearCoatNormalMap },
+        { type : mat3, name : clearCoatNormalUvMatrix },
+        { type : float, name : clearCoatNormalScale }
     ],
 }
 
@@ -58,6 +72,14 @@ fragment {
                 material.normal = texture(materialParams_normalMap, uv).xyz * 2.0 - 1.0;
                 material.normal.xy *= materialParams.normalScale;
             }
+            #if defined(SHADING_MODEL_LIT)
+            if (materialParams.clearCoatNormalIndex > -1) {
+                float2 uv = uvs[materialParams.clearCoatNormalIndex];
+                uv = (vec3(uv, 1.0) * materialParams.clearCoatNormalUvMatrix).xy;
+                material.clearCoatNormal = texture(materialParams_clearCoatNormalMap, uv).xyz * 2.0 - 1.0;
+                material.clearCoatNormal.xy *= materialParams.clearCoatNormalScale;
+            }
+            #endif
         #endif
 
         prepareMaterial(material);
@@ -80,6 +102,22 @@ fragment {
             #if defined(SHADING_MODEL_LIT)
                 material.roughness = materialParams.roughnessFactor;
                 material.metallic = materialParams.metallicFactor;
+
+                // KHR_materials_clearcoat forbids clear coat from
+                // being applied in the specular/glossiness model
+                material.clearCoat = materialParams.clearCoatFactor;
+                material.clearCoatRoughness = materialParams.clearCoatRoughnessFactor;
+
+                if (materialParams.clearCoatIndex > -1) {
+                    float2 uv = uvs[materialParams.clearCoatIndex];
+                    uv = (vec3(uv, 1.0) * materialParams.clearCoatUvMatrix).xy;
+                    material.clearCoat *= texture(materialParams_clearCoatMap, uv).r;
+                }
+                if (materialParams.clearCoatRoughnessIndex > -1) {
+                    float2 uv = uvs[materialParams.clearCoatRoughnessIndex];
+                    uv = (vec3(uv, 1.0) * materialParams.clearCoatRoughnessUvMatrix).xy;
+                    material.clearCoatRoughness *= texture(materialParams_clearCoatRoughnessMap, uv).g;
+                }
             #endif
 
             material.emissive.rgb = materialParams.emissiveFactor.rgb;
