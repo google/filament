@@ -150,7 +150,7 @@ struct CommandType<void (Driver::*)(ARGS...)> {
     template<void(Driver::*)(ARGS...)>
     class Command : public CommandBase {
         // We use a std::tuple<> to record the arguments passed to the constructor
-        using SavedParameters = std::tuple<typename std::decay<ARGS>::type...>;
+        using SavedParameters = std::tuple<std::remove_reference_t<ARGS>...>;
         SavedParameters mArgs;
 
         void log() noexcept;
@@ -174,7 +174,7 @@ struct CommandType<void (Driver::*)(ARGS...)> {
 
         template<typename... A>
         inline explicit constexpr Command(Execute execute, A&& ... args)
-                : CommandBase(execute), mArgs(std::move(args)...) {
+                : CommandBase(execute), mArgs(std::forward<A>(args)...) {
         }
 
         // placement new declared as "throw" to avoid the compiler's null-check
@@ -228,7 +228,7 @@ public:
         DEBUG_COMMAND(methodName, params);                                                      \
         using Cmd = COMMAND_TYPE(methodName);                                                   \
         void* const p = allocateCommand(CommandBase::align(sizeof(Cmd)));                       \
-        new(p) Cmd(mDispatcher->methodName##_, params);                                         \
+        new(p) Cmd(mDispatcher->methodName##_, APPLY(std::move, params));                       \
     }
 
 #define DECL_DRIVER_API_SYNCHRONOUS(RetType, methodName, paramsDecl, params)                    \
@@ -243,7 +243,7 @@ public:
         RetType result = mDriver->methodName##S();                                              \
         using Cmd = COMMAND_TYPE(methodName##R);                                                \
         void* const p = allocateCommand(CommandBase::align(sizeof(Cmd)));                       \
-        new(p) Cmd(mDispatcher->methodName##_, RetType(result), params);                        \
+        new(p) Cmd(mDispatcher->methodName##_, RetType(result), APPLY(std::move, params));      \
         return result;                                                                          \
     }
 
