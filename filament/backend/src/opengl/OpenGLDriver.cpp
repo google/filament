@@ -861,7 +861,16 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
 
             switch (attachment) {
                 case GL_COLOR_ATTACHMENT0:
-                    rt->gl.resolve |= TargetBufferFlags::COLOR;
+                    rt->gl.resolve |= TargetBufferFlags::COLOR0;
+                    break;
+                case GL_COLOR_ATTACHMENT1:
+                    rt->gl.resolve |= TargetBufferFlags::COLOR1;
+                    break;
+                case GL_COLOR_ATTACHMENT2:
+                    rt->gl.resolve |= TargetBufferFlags::COLOR2;
+                    break;
+                case GL_COLOR_ATTACHMENT3:
+                    rt->gl.resolve |= TargetBufferFlags::COLOR3;
                     break;
                 case GL_DEPTH_ATTACHMENT:
                     rt->gl.resolve |= TargetBufferFlags::DEPTH;
@@ -928,7 +937,7 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         uint32_t width,
         uint32_t height,
         uint8_t samples,
-        TargetBufferInfo color,
+        backend::MRT color,
         TargetBufferInfo depth,
         TargetBufferInfo stencil) {
     DEBUG_MARKER()
@@ -973,11 +982,12 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
 
     rt->gl.samples = samples;
 
-    if (any(targets & TargetBufferFlags::COLOR)) {
-        // TODO: handle multiple color attachments
-        rt->gl.color.texture = handle_cast<GLTexture*>(color.handle);
-        rt->gl.color.level = color.level;
-        framebufferTexture(color, rt, GL_COLOR_ATTACHMENT0);
+    for (size_t i = 0; i < 4; i++) {
+        if (any(targets & getMRTColorFlag(i))) {
+            rt->gl.color[i].texture = handle_cast<GLTexture*>(color[i].handle);
+            rt->gl.color[i].level = color[i].level;
+            framebufferTexture(color[i], rt, GL_COLOR_ATTACHMENT0 + i);
+        }
     }
 
     // handle special cases first (where depth/stencil are packed)
@@ -1927,7 +1937,7 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     // ignore it on GL (rather than having to do a runtime check).
     if (GLES30_HEADERS) {
         if (!gl.bugs.disable_invalidate_framebuffer) {
-            std::array<GLenum, 3> attachments; // NOLINT
+            std::array<GLenum, 6> attachments; // NOLINT
             GLsizei attachmentCount = getAttachments(attachments, rt, discardFlags);
             if (attachmentCount) {
                 glInvalidateFramebuffer(GL_FRAMEBUFFER, attachmentCount, attachments.data());
@@ -2018,7 +2028,7 @@ void OpenGLDriver::endRenderPass(int) {
         if (!gl.bugs.disable_invalidate_framebuffer) {
             // we wouldn't have to bind the framebuffer if we had glInvalidateNamedFramebuffer()
             gl.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
-            std::array<GLenum, 3> attachments; // NOLINT
+            std::array<GLenum, 6> attachments; // NOLINT
             GLsizei attachmentCount = getAttachments(attachments, rt, discardFlags);
             if (attachmentCount) {
                 glInvalidateFramebuffer(GL_FRAMEBUFFER, attachmentCount, attachments.data());
@@ -2079,7 +2089,7 @@ void OpenGLDriver::discardSubRenderTargetBuffers(Handle<HwRenderTarget> rth,
         if (left < right && bottom < top) {
             gl.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
 
-            std::array<GLenum, 3> attachments; // NOLINT
+            std::array<GLenum, 6> attachments; // NOLINT
             GLsizei attachmentCount = getAttachments(attachments, rt, buffers);
             if (attachmentCount) {
                 glInvalidateSubFramebuffer(GL_FRAMEBUFFER, attachmentCount, attachments.data(),
@@ -2091,13 +2101,25 @@ void OpenGLDriver::discardSubRenderTargetBuffers(Handle<HwRenderTarget> rth,
     }
 }
 
-GLsizei OpenGLDriver::getAttachments(std::array<GLenum, 3>& attachments,
+GLsizei OpenGLDriver::getAttachments(std::array<GLenum, 6>& attachments,
         GLRenderTarget const* rt, TargetBufferFlags buffers) const noexcept {
     GLsizei attachmentCount = 0;
     // the default framebuffer uses different constants!!!
     const bool defaultFramebuffer = (rt->gl.fbo == 0);
-    if (any(buffers & TargetBufferFlags::COLOR)) {
+    if (any(buffers & TargetBufferFlags::COLOR0)) {
         attachments[attachmentCount++] = defaultFramebuffer ? GL_COLOR : GL_COLOR_ATTACHMENT0;
+    }
+    if (any(buffers & TargetBufferFlags::COLOR1)) {
+        assert(!defaultFramebuffer);
+        attachments[attachmentCount++] = GL_COLOR_ATTACHMENT1;
+    }
+    if (any(buffers & TargetBufferFlags::COLOR2)) {
+        assert(!defaultFramebuffer);
+        attachments[attachmentCount++] = GL_COLOR_ATTACHMENT2;
+    }
+    if (any(buffers & TargetBufferFlags::COLOR3)) {
+        assert(!defaultFramebuffer);
+        attachments[attachmentCount++] = GL_COLOR_ATTACHMENT3;
     }
     if (any(buffers & TargetBufferFlags::DEPTH)) {
         attachments[attachmentCount++] = defaultFramebuffer ? GL_DEPTH : GL_DEPTH_ATTACHMENT;
