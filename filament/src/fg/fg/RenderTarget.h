@@ -49,7 +49,7 @@ struct RenderTarget { // 32
     backend::TargetBufferFlags userClearFlags{};
 
     // set in compile
-    backend::RenderPassFlags targetFlags{};
+    backend::TargetBufferFlags clear = {}; // this is eventually set by the user
     RenderTargetResource* cache = nullptr;
 
     void resolve(FrameGraph& fg) noexcept;

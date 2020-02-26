@@ -22,7 +22,7 @@ using namespace backend;
 
 namespace fg {
 
-void RenderTargetResource::create(FrameGraph& fg) noexcept {
+void RenderTargetResource::preExecuteDevirtualize(FrameGraph& fg) noexcept {
     if (!imported) {
         if (any(attachments)) {
             // devirtualize our texture handles. By this point these handles have been
@@ -61,7 +61,7 @@ void RenderTargetResource::create(FrameGraph& fg) noexcept {
     }
 }
 
-void RenderTargetResource::destroy(FrameGraph& fg) noexcept {
+void RenderTargetResource::postExecuteDestroy(FrameGraph& fg) noexcept {
     if (!imported) {
         if (targetInfo.target) {
             fg.getResourceAllocator().destroyRenderTarget(targetInfo.target);

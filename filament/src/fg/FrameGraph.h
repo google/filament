@@ -288,10 +288,8 @@ private:
 
     FrameGraphHandle createResourceNode(fg::ResourceEntryBase* resource) noexcept;
 
-    enum class DiscardPhase { START, END };
-    backend::TargetBufferFlags computeDiscardFlags(DiscardPhase phase,
-            fg::PassNode const* curr, fg::PassNode const* first,
-            fg::RenderTarget const& renderTarget);
+    bool computeDiscard(const Vector<FrameGraphHandle> fg::PassNode::* list,
+            fg::PassNode const* curr, fg::PassNode const* first, FrameGraphHandle resource);
 
     bool equals(FrameGraphRenderTarget::Descriptor const& cacheEntry,
             FrameGraphRenderTarget::Descriptor const& rt) const noexcept;
