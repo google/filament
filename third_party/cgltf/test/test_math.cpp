@@ -22,7 +22,7 @@ static void check(cgltf_float target[3], float x, float y, float z) {
     }
 }
 
-int main(int argc, char** argv)
+int main(int, char**)
 {
     cgltf_node node = {};
 
