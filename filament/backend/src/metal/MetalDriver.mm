@@ -185,12 +185,12 @@ void MetalDriver::createDefaultRenderTargetR(Handle<HwRenderTarget> rth, int dum
 
 void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         TargetBufferFlags targetBufferFlags, uint32_t width, uint32_t height,
-        uint8_t samples, TargetBufferInfo color,
+        uint8_t samples, backend::MRT color,
         TargetBufferInfo depth, TargetBufferInfo stencil) {
 
     auto getColorTexture = [&]() -> id<MTLTexture> {
-        if (color.handle) {
-            auto colorTexture = handle_cast<MetalTexture>(mHandleMap, color.handle);
+        if (color[0].handle) {
+            auto colorTexture = handle_cast<MetalTexture>(mHandleMap, color[0].handle);
             ASSERT_PRECONDITION(colorTexture->texture,
                     "Color texture passed to render target has no texture allocation");
             return colorTexture->texture;
@@ -213,8 +213,8 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
     };
 
     MetalRenderTarget::TargetInfo colorInfo;
-    colorInfo.level = color.level;
-    colorInfo.layer = color.layer;
+    colorInfo.level = color[0].level;
+    colorInfo.layer = color[0].layer;
 
     MetalRenderTarget::TargetInfo depthInfo;
     depthInfo.level = depth.level;

@@ -169,7 +169,7 @@ public:
                 uint8_t level = 0; // level when attached to a texture
             };
             // field ordering to optimize size on 64-bits
-            RenderBuffer color;
+            RenderBuffer color[4];
             RenderBuffer depth;
             RenderBuffer stencil;
             GLuint fbo = 0;
@@ -333,7 +333,7 @@ private:
         return mSamplerBindings;
     }
 
-    GLsizei getAttachments(std::array<GLenum, 3>& attachments,
+    GLsizei getAttachments(std::array<GLenum, 6>& attachments,
             GLRenderTarget const* rt, backend::TargetBufferFlags buffers) const noexcept;
 
     backend::RasterState mRasterState;

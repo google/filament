@@ -64,14 +64,23 @@ enum class Backend : uint8_t {
  */
 enum class TargetBufferFlags : uint8_t {
     NONE = 0x0u,                            //!< No buffer selected.
-    COLOR = 0x1u,                           //!< Color buffer selected.
-    DEPTH = 0x2u,                           //!< Depth buffer selected.
-    STENCIL = 0x4u,                         //!< Stencil buffer selected.
+    COLOR0 = 0x1u,                          //!< Color buffer selected.
+    COLOR1 = 0x2u,                          //!< Color buffer selected.
+    COLOR2 = 0x4u,                          //!< Color buffer selected.
+    COLOR3 = 0x8u,                          //!< Color buffer selected.
+    COLOR = COLOR0,                         //!< Color buffer selected.
+    DEPTH = 0x10u,                          //!< Depth buffer selected.
+    STENCIL = 0x20u,                        //!< Stencil buffer selected.
     COLOR_AND_DEPTH = COLOR | DEPTH,        //!< Color and depth buffer selected.
     COLOR_AND_STENCIL = COLOR | STENCIL,    //!< Color and stencil buffer selected.
     DEPTH_AND_STENCIL = DEPTH | STENCIL,    //!< depth and stencil buffer selected.
     ALL = COLOR | DEPTH | STENCIL           //!< Color, depth and stencil buffer selected.
 };
+
+inline TargetBufferFlags getMRTColorFlag(size_t index) noexcept {
+    assert(index < 4);
+    return TargetBufferFlags(1u << index);
+}
 
 /**
  * Frequency at which a buffer is expected to be modified and used. This is used as an hint

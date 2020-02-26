@@ -96,7 +96,7 @@ private:
     }
 
     template<typename Dp, typename B>
-    Dp* handle_cast(HandleMap& handleMap, Handle<B>& handle) noexcept {
+    Dp* handle_cast(HandleMap& handleMap, Handle<B> handle) noexcept {
         std::lock_guard<std::mutex> lock(mHandleMapMutex);
         assert(handle);
         auto iter = handleMap.find(handle.getId());
