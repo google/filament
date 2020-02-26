@@ -57,9 +57,9 @@ cgltf_size cgltf_write(const cgltf_options* options, char* buffer, cgltf_size si
  *
  */
 
-#ifdef __INTELLISENSE__
-/* This makes MSVC intellisense work. */
-#define CGLTF_WRITE_IMPLEMENTATION
+#if defined(__INTELLISENSE__) || defined(__JETBRAINS_IDE__)
+/* This makes MSVC/CLion intellisense work. */
+#define CGLTF_IMPLEMENTATION
 #endif
 
 #ifdef CGLTF_WRITE_IMPLEMENTATION
@@ -69,10 +69,11 @@ cgltf_size cgltf_write(const cgltf_options* options, char* buffer, cgltf_size si
 #include <stdlib.h>
 #include <string.h>
 
-#define CGLTF_EXTENSION_FLAG_TEXTURE_TRANSFORM   (1 << 0)
-#define CGLTF_EXTENSION_FLAG_MATERIALS_UNLIT     (1 << 1)
-#define CGLTF_EXTENSION_FLAG_SPECULAR_GLOSSINESS (1 << 2)
-#define CGLTF_EXTENSION_FLAG_LIGHTS_PUNCTUAL     (1 << 3)
+#define CGLTF_EXTENSION_FLAG_TEXTURE_TRANSFORM      (1 << 0)
+#define CGLTF_EXTENSION_FLAG_MATERIALS_UNLIT        (1 << 1)
+#define CGLTF_EXTENSION_FLAG_SPECULAR_GLOSSINESS    (1 << 2)
+#define CGLTF_EXTENSION_FLAG_LIGHTS_PUNCTUAL        (1 << 3)
+#define CGLTF_EXTENSION_FLAG_DRACO_MESH_COMPRESSION (1 << 4)
 
 typedef struct {
 	char* buffer;
@@ -86,6 +87,7 @@ typedef struct {
 	const char* indent;
 	int needs_comma;
 	uint32_t extension_flags;
+	uint32_t required_extension_flags;
 } cgltf_write_context;
 
 #define CGLTF_MIN(a, b) (a < b ? a : b)
@@ -405,6 +407,31 @@ static void cgltf_write_primitive(cgltf_write_context* context, const cgltf_prim
 		cgltf_write_line(context, "]");
 	}
 	cgltf_write_extras(context, &prim->extras);
+
+	cgltf_bool has_extensions = prim->has_draco_mesh_compression;
+	if (has_extensions) {
+		cgltf_write_line(context, "\"extensions\": {");
+
+		if (prim->has_draco_mesh_compression) {
+			context->extension_flags |= CGLTF_EXTENSION_FLAG_DRACO_MESH_COMPRESSION;
+			if (prim->attributes_count == 0 || prim->indices == 0) {
+				context->required_extension_flags |= CGLTF_EXTENSION_FLAG_DRACO_MESH_COMPRESSION;				 
+			}
+
+			cgltf_write_line(context, "\"KHR_draco_mesh_compression\": {");
+			CGLTF_WRITE_IDXPROP("bufferView", prim->draco_mesh_compression.buffer_view, context->data->buffer_views);
+			cgltf_write_line(context, "\"attributes\": {");
+			for (cgltf_size i = 0; i < prim->draco_mesh_compression.attributes_count; ++i)
+			{
+				const cgltf_attribute* attr = prim->draco_mesh_compression.attributes + i;
+				CGLTF_WRITE_IDXPROP(attr->name, attr->data, context->data->accessors);
+			}
+			cgltf_write_line(context, "}");
+			cgltf_write_line(context, "}");
+		}
+
+		cgltf_write_line(context, "}");
+	}
 }
 
 static void cgltf_write_mesh(cgltf_write_context* context, const cgltf_mesh* mesh)
@@ -836,6 +863,25 @@ cgltf_result cgltf_write_file(const cgltf_options* options, const char* path, co
 	return cgltf_result_success;
 }
 
+static void cgltf_write_extensions(cgltf_write_context* context, uint32_t extension_flags)
+{
+	if (extension_flags & CGLTF_EXTENSION_FLAG_TEXTURE_TRANSFORM) {
+		cgltf_write_stritem(context, "KHR_texture_transform");
+	}
+	if (extension_flags & CGLTF_EXTENSION_FLAG_MATERIALS_UNLIT) {
+		cgltf_write_stritem(context, "KHR_materials_unlit");
+	}
+	if (extension_flags & CGLTF_EXTENSION_FLAG_SPECULAR_GLOSSINESS) {
+		cgltf_write_stritem(context, "KHR_materials_pbrSpecularGlossiness");
+	}
+	if (extension_flags & CGLTF_EXTENSION_FLAG_LIGHTS_PUNCTUAL) {
+		cgltf_write_stritem(context, "KHR_lights_punctual");
+	}
+	if (extension_flags & CGLTF_EXTENSION_FLAG_DRACO_MESH_COMPRESSION) {
+		cgltf_write_stritem(context, "KHR_draco_mesh_compression");
+	}
+}
+
 cgltf_size cgltf_write(const cgltf_options* options, char* buffer, cgltf_size size, const cgltf_data* data)
 {
 	(void)options;
@@ -850,6 +896,7 @@ cgltf_size cgltf_write(const cgltf_options* options, char* buffer, cgltf_size si
 	ctx.indent = "  ";
 	ctx.needs_comma = 0;
 	ctx.extension_flags = 0;
+	ctx.required_extension_flags = 0;
 
 	cgltf_write_context* context = &ctx;
 
@@ -1007,18 +1054,13 @@ cgltf_size cgltf_write(const cgltf_options* options, char* buffer, cgltf_size si
 
 	if (context->extension_flags != 0) {
 		cgltf_write_line(context, "\"extensionsUsed\": [");
-		if (context->extension_flags & CGLTF_EXTENSION_FLAG_TEXTURE_TRANSFORM) {
-			cgltf_write_stritem(context, "KHR_texture_transform");
-		}
-		if (context->extension_flags & CGLTF_EXTENSION_FLAG_MATERIALS_UNLIT) {
-			cgltf_write_stritem(context, "KHR_materials_unlit");
-		}
-		if (context->extension_flags & CGLTF_EXTENSION_FLAG_SPECULAR_GLOSSINESS) {
-			cgltf_write_stritem(context, "KHR_materials_pbrSpecularGlossiness");
-		}
-		if (context->extension_flags & CGLTF_EXTENSION_FLAG_LIGHTS_PUNCTUAL) {
-			cgltf_write_stritem(context, "KHR_lights_punctual");
-		}
+		cgltf_write_extensions(context, context->extension_flags);
+		cgltf_write_line(context, "]");
+	}
+
+	if (context->required_extension_flags != 0) {
+		cgltf_write_line(context, "\"extensionsRequired\": [");
+		cgltf_write_extensions(context, context->required_extension_flags);
 		cgltf_write_line(context, "]");
 	}
 

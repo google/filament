@@ -29,7 +29,7 @@ int main(int argc, char** argv)
 	if (result != cgltf_result_success || strstr(argv[1], "Draco"))
 		return result;
 
-	const cgltf_accessor* blobs = data->accessors;
+	//const cgltf_accessor* blobs = data->accessors;
 	cgltf_float element_float[16];
 	cgltf_uint element_uint[4];
 	for (cgltf_size blob_index = 0; blob_index < data->accessors_count; ++blob_index)
