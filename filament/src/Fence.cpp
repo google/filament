@@ -99,7 +99,7 @@ FenceStatus FFence::wait(Mode mode, uint64_t timeout) noexcept {
             }
             engine.pumpPlatformEvents();
             const auto elapsed = std::chrono::system_clock::now() - startTime;
-            if (elapsed >= ns(timeout)) {
+            if (timeout != Fence::FENCE_WAIT_FOR_EVER && elapsed >= ns(timeout)) {
                 break;
             }
         }
