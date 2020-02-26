@@ -341,10 +341,10 @@ constexpr inline MTLSamplerMinMagFilter getFilter(SamplerMinFilter filter) noexc
     switch (filter) {
         case SamplerMinFilter::NEAREST:
         case SamplerMinFilter::NEAREST_MIPMAP_NEAREST:
-        case SamplerMinFilter::LINEAR_MIPMAP_NEAREST:
-            return MTLSamplerMinMagFilterNearest;
-        case SamplerMinFilter::LINEAR:
         case SamplerMinFilter::NEAREST_MIPMAP_LINEAR:
+            return MTLSamplerMinMagFilterNearest;
+        case SamplerMinFilter::LINEAR_MIPMAP_NEAREST:
+        case SamplerMinFilter::LINEAR:
         case SamplerMinFilter::LINEAR_MIPMAP_LINEAR:
             return MTLSamplerMinMagFilterLinear;
     }
