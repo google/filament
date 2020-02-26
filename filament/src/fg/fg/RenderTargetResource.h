@@ -69,9 +69,10 @@ struct RenderTargetResource final : public VirtualResource {  // 104
     // updated during execute with the current pass' discard flags
     FrameGraphPassResources::RenderTargetInfo targetInfo;
 
-    void create(FrameGraph& fg) noexcept override;
-
-    void destroy(FrameGraph& fg) noexcept override;
+    void preExecuteDevirtualize(FrameGraph& fg) noexcept override;
+    void postExecuteDestroy(FrameGraph& fg) noexcept override;
+    void preExecuteDestroy(FrameGraph& fg) noexcept override {}
+    void postExecuteDevirtualize(FrameGraph& fg) noexcept override {}
 };
 
 } // namespace fg

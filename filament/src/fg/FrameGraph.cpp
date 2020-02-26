@@ -152,9 +152,35 @@ FrameGraphPassResources::getRenderTarget(FrameGraphRenderTargetHandle handle, ui
     assert(info.target);
 
     // overwrite discard flags with the per-rendertarget (per-pass) computed value
-    info.params.flags.discardStart = renderTarget.targetFlags.discardStart;
-    info.params.flags.discardEnd   = renderTarget.targetFlags.discardEnd;
+    info.params.flags.discardStart = TargetBufferFlags::NONE;
+    info.params.flags.discardEnd   = TargetBufferFlags::NONE;
     info.params.flags.clear        = renderTarget.userClearFlags;
+
+    static constexpr TargetBufferFlags flags[] = {
+            TargetBufferFlags::COLOR,
+            TargetBufferFlags::DEPTH,
+            TargetBufferFlags::STENCIL };
+
+    auto& resourceNodes = fg.mResourceNodes;
+    for (size_t i = 0; i <renderTarget.desc.attachments.textures.size(); i++) {
+        FrameGraphHandle attachment = renderTarget.desc.attachments.textures[i];
+        if (attachment.isValid()) {
+            if (resourceNodes[attachment.index].resource->discardStart) {
+                info.params.flags.discardStart |= flags[i];
+            }
+            if (resourceNodes[attachment.index].resource->discardEnd) {
+                info.params.flags.discardEnd |= flags[i];
+            }
+        }
+    }
+
+    // clear implies discarding the content of the buffer
+    info.params.flags.discardStart |= (renderTarget.userClearFlags & TargetBufferFlags::ALL);
+    if (renderTarget.cache->imported) {
+        // we never discard more than the user flags
+        info.params.flags.discardStart &= renderTarget.cache->discardStart;
+        info.params.flags.discardEnd   &= renderTarget.cache->discardEnd;
+    }
 
     // check that this FrameGraphRenderTarget is indeed declared by this pass
     ASSERT_POSTCONDITION_NON_FATAL(info.target,
@@ -369,56 +395,24 @@ FrameGraphRenderTargetHandle FrameGraph::importRenderTarget(const char* name,
     return FrameGraphRenderTargetHandle(renderTarget.index);
 }
 
-TargetBufferFlags FrameGraph::computeDiscardFlags(DiscardPhase phase,
-        PassNode const* curr, PassNode const* first, fg::RenderTarget const& renderTarget) {
+bool FrameGraph::computeDiscard(const Vector<FrameGraphHandle> fg::PassNode::* list,
+        PassNode const* curr, PassNode const* first, FrameGraphHandle attachment) {
     auto& resourceNodes = mResourceNodes;
-    TargetBufferFlags discardFlags = TargetBufferFlags::ALL;
-
-    static constexpr TargetBufferFlags flags[] = {
-            TargetBufferFlags::COLOR,
-            TargetBufferFlags::DEPTH,
-            TargetBufferFlags::STENCIL };
-
-    auto const& desc = renderTarget.cache->desc;
-
-    // for each pass...
-    while (any(discardFlags) && curr != first) {
+    while (curr != first) {
         PassNode const& pass = *curr++;
         // TODO: maybe find a more efficient way of figuring this out
         // for each resource written or read...
-        for (FrameGraphHandle cur : ((phase == DiscardPhase::START) ? pass.writes : pass.reads)) {
+        for (FrameGraphHandle cur : pass.*list) {
             // for all possible attachments of our renderTarget...
             ResourceEntryBase const* const pResource = resourceNodes[cur.index].resource;
-            for (size_t i = 0; i < desc.attachments.textures.size(); i++) {
-                FrameGraphHandle attachment = desc.attachments.textures[i];
-                if (attachment.isValid() && resourceNodes[attachment.index].resource == pResource) {
-                    // we can't discard this attachment since it's read/written
-                    discardFlags &= ~flags[i];
-                }
-            }
-            if (!discardFlags) {
-                break;
+            if (attachment.isValid() && resourceNodes[attachment.index].resource == pResource) {
+                return false;
             }
         }
     }
-
-    if (phase == DiscardPhase::START) {
-        // clear implies discarding the content of the buffer
-        discardFlags |= (renderTarget.userClearFlags & TargetBufferFlags::ALL);
-    }
-
-    if (renderTarget.cache->imported) {
-        // we never discard more than the user flags
-        if (phase == DiscardPhase::START) {
-            discardFlags &= renderTarget.cache->discardStart;
-        }
-        if (phase == DiscardPhase::END) {
-            discardFlags &= renderTarget.cache->discardEnd;
-        }
-    }
-
-    return discardFlags;
+    return true;
 }
+
 
 FrameGraph& FrameGraph::compile() noexcept {
     Vector<fg::PassNode>& passNodes = mPassNodes;
@@ -586,8 +580,6 @@ FrameGraph& FrameGraph::compile() noexcept {
      * compute first/last users for active passes
      */
 
-    auto const first = passNodes.data();
-    auto const last = passNodes.data() + passNodes.size();
     for (PassNode& pass : passNodes) {
         if (!pass.refCount) {
             assert(!pass.hasSideEffect);
@@ -608,30 +600,11 @@ FrameGraph& FrameGraph::compile() noexcept {
             pResource->last = &pass;
         }
         for (auto i : pass.renderTargets) {
-            fg::RenderTarget* const pRenderTarget = &renderTargets[i];
             VirtualResource* const pResource = renderTargets[i].cache;
             // figure out which is the first pass to need this resource
             pResource->first = pResource->first ? pResource->first : &pass;
             // figure out which is the last pass to need this resource
             pResource->last = &pass;
-
-            // compute this resource discard flag for this pass for this resource
-
-            // does anyone writes to this resource before us -- if so, don't discard those buffers on enter
-            // (i.e. if nobody wrote, no need to load from memory)
-            TargetBufferFlags discardStart = computeDiscardFlags(
-                    DiscardPhase::START, first, &pass, *pRenderTarget);
-
-            // does anyone reads this resource after us -- if so, don't discard those buffers on exit
-            // (i.e. if nobody is going to read, no need to write back to memory)
-            TargetBufferFlags discardEnd = computeDiscardFlags(
-                    DiscardPhase::END, &pass + 1, last, *pRenderTarget);
-
-            pRenderTarget->targetFlags = {
-                    .clear = {},  // this is eventually set by the user
-                    .discardStart = discardStart,
-                    .discardEnd = discardEnd
-            };
         }
     }
 
@@ -662,16 +635,22 @@ void FrameGraph::executeInternal(PassNode const& node, DriverApi& driver) noexce
     assert(node.base);
     // create concrete resources and rendertargets
     for (VirtualResource* resource : node.devirtualize) {
-        resource->create(*this);
+        resource->preExecuteDevirtualize(*this);
+    }
+    for (VirtualResource* resource : node.destroy) {
+        resource->preExecuteDestroy(*this);
     }
 
     // execute the pass
     FrameGraphPassResources resources(*this, node);
     node.base->execute(resources, driver);
 
+    for (VirtualResource* resource : node.devirtualize) {
+        resource->postExecuteDevirtualize(*this);
+    }
     // destroy concrete resources
     for (VirtualResource* resource : node.destroy) {
-        resource->destroy(*this);
+        resource->postExecuteDestroy(*this);
     }
 }
 
@@ -741,7 +720,8 @@ void FrameGraph::export_graphviz(utils::io::ostream& out) {
         ResourceEntryBase const* subresource = node.resource;
 
         out << "\"R" << node.resource->id << "_" << +node.version << "\""
-            "[label=\"" << node.resource->name << "\\n(version: " << +node.version << ")"                                                                                           "\\nid:" << node.resource->id <<
+            "[label=\"" << node.resource->name << "\\n(version: " << +node.version << ")"
+            "\\nid:" << node.resource->id <<
             "\\nrefs:" << node.resource->refs;
 
 #if UTILS_HAS_RTTI

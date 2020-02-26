@@ -35,6 +35,14 @@ public:
     ResourceEntryBase(ResourceEntryBase const&) = default;
     ~ResourceEntryBase() override;
 
+    void preExecuteDestroy(FrameGraph& fg) noexcept override {
+        discardEnd = true;
+    }
+
+    void postExecuteDevirtualize(FrameGraph& fg) noexcept override {
+        discardStart = false;
+    }
+
     // constants
     const char* const name;
     const uint16_t id;                      // for debugging and graphing
@@ -45,6 +53,10 @@ public:
 
     // computed during compile()
     uint32_t refs = 0;                      // final reference count
+
+    // updated during execute()
+    bool discardStart = true;
+    bool discardEnd = false;
 };
 
 
@@ -68,13 +80,13 @@ public:
 
     T& getResource() noexcept { return resource; }
 
-    void create(FrameGraph& fg) noexcept override {
+    void preExecuteDevirtualize(FrameGraph& fg) noexcept override {
         if (!imported) {
             resource.create(fg, name, descriptor);
         }
     }
 
-    void destroy(FrameGraph& fg) noexcept override {
+    void postExecuteDestroy(FrameGraph& fg) noexcept override {
         if (!imported) {
             resource.destroy(fg);
         }

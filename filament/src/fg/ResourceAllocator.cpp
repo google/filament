@@ -107,7 +107,7 @@ RenderTargetHandle ResourceAllocator::createRenderTarget(const char* name,
 }
 
 void ResourceAllocator::destroyRenderTarget(RenderTargetHandle h) noexcept {
-    return mBackend.destroyRenderTarget(h);
+    mBackend.destroyRenderTarget(h);
 }
 
 backend::TextureHandle ResourceAllocator::createTexture(const char* name,
