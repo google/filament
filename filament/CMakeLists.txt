@@ -47,6 +47,7 @@ set(SRCS
         src/fg/Blackboard.cpp
         src/fg/FrameGraph.cpp
         src/fg/FrameGraphHandle.cpp
+        src/fg/FrameGraphPassResources.cpp
         src/fg/fg/RenderTarget.cpp
         src/fg/fg/RenderTargetResource.cpp
         src/fg/fg/ResourceEntry.cpp
