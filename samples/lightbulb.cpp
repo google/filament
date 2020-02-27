@@ -370,7 +370,8 @@ static void setup(Engine* engine, View* view, Scene* scene) {
         short4 tbn = filament::math::packSnorm16(
                 mat3f::packTangentFrame(
                         filament::math::mat3f{
-                                float3{ 1.0f, 0.0f, 0.0f }, float3{ 0.0f, 0.0f, 1.0f },
+                                float3{ 1.0f, 0.0f, 0.0f },
+                                float3{ 0.0f, 0.0f, 1.0f },
                                 float3{ 0.0f, 1.0f, 0.0f }
                         }
                 ).xyzw);
