@@ -588,21 +588,30 @@ void FView::computeVisibilityMasks(
     // This is vectorized 16x.
     count = (count + 0xFu) & ~0xFu; // capacity guaranteed to be multiple of 16
     for (size_t i = 0; i < count; ++i) {
+        Culler::result_type mask = visibleMask[i];
         FRenderableManager::Visibility v = visibility[i];
         bool inVisibleLayer = layers[i] & visibleLayers;
 
-        if (!inVisibleLayer) {
-            visibleMask[i] = 0;
-            continue;
-        }
-        if (!v.culling) {
-            // If culling is turned off, we ignore the results of the culling tests by setting all
-            // bits to 1.
-            visibleMask[i] = VISIBLE_ALL;
-        }
-        if (!v.castShadows) {
-            // Renderables that do not cast shadows should not have their shadow visibility bit set.
-            visibleMask[i] &= ~VISIBLE_DIR_SHADOW_CASTER;
+        // The logic below essentially does the following:
+        //
+        // if inVisibleLayer:
+        //     if !v.culling:
+        //         set all bits in visibleMask to 1
+        // else:
+        //     set all bits in visibleMask to 0
+        // if !v.castShadows:
+        //     set shadow visibility bits in visibleMask to 0
+        //
+        // It is written without if statements to avoid branches, which allows it to be vectorized 16x.
+
+        bool visRenderables   = (!v.culling || (mask & VISIBLE_RENDERABLE))    && inVisibleLayer;
+        bool visShadowCasters = (!v.culling || (mask & VISIBLE_DIR_SHADOW_CASTER)) && inVisibleLayer && v.castShadows;
+        visibleMask[i] = Culler::result_type(visRenderables) |
+                Culler::result_type(visShadowCasters << 1u);
+        // this loop gets fully unrolled
+        for (size_t j = 0; j < CONFIG_MAX_SHADOW_CASTING_SPOTS; ++j) {
+            bool vIsSpotShadowCaster = (!v.culling || (mask & VISIBLE_SPOT_SHADOW_CASTER_N(j))) && inVisibleLayer && v.castShadows;
+            visibleMask[i] |= Culler::result_type(vIsSpotShadowCaster << (j + 2));
         }
     }
 }
