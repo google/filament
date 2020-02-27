@@ -8,6 +8,6 @@ material {
 fragment {
     void material(inout MaterialInputs material) {
         prepareMaterial(material);
-        material.baseColor = vec4(0.0, 0.0, 0.0, 0.7);
+        material.baseColor = vec4(0.0, 0.0, 0.0, 0.75);
     }
 }

@@ -181,6 +181,7 @@ add_library(gltf-resources ${DUMMY_SRC})
 
 set(GLTF_VIEWER_RESOURCE_FILES
     ${ROOT_DIR}/third_party/models/DamagedHelmet/DamagedHelmet.glb
+    ${MATERIAL_DIR}/groundShadow.filamat
 )
 
 get_resgen_vars(${RESOURCE_DIR} gltf_viewer)

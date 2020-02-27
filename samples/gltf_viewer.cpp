@@ -21,7 +21,9 @@
 #include "app/IBL.h"
 
 #include <filament/Engine.h>
+#include <filament/IndexBuffer.h>
 #include <filament/Scene.h>
+#include <filament/VertexBuffer.h>
 #include <filament/View.h>
 
 #include <gltfio/AssetLoader.h>
@@ -31,7 +33,13 @@
 
 #include <getopt/getopt.h>
 
+#include <utils/Log.h>
 #include <utils/NameComponentManager.h>
+
+#include <math/vec3.h>
+#include <math/vec4.h>
+#include <math/mat3.h>
+#include <math/norm.h>
 
 #include <fstream>
 #include <iostream>
@@ -54,6 +62,7 @@ struct App {
     MaterialSource materialSource = GENERATE_SHADERS;
     bool actualSize = false;
     gltfio::ResourceLoader* resourceLoader = nullptr;
+    bool shadowPlane = false;
 };
 
 static const char* DEFAULT_IBL = "venetian_crossroads_2k";
@@ -75,6 +84,8 @@ static void printUsage(char* name) {
         "       Do not scale the model to fit into a unit cube\n\n"
         "   --ubershader, -u\n"
         "       Enable ubershaders (improves load time, adds shader complexity)\n\n"
+        "   --shadow-plane, -p\n"
+        "       Enable shadow plane\n\n"
     );
     const std::string from("SHOWCASE");
     for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
@@ -84,13 +95,14 @@ static void printUsage(char* name) {
 }
 
 static int handleCommandLineArguments(int argc, char* argv[], App* app) {
-    static constexpr const char* OPTSTR = "ha:i:us";
+    static constexpr const char* OPTSTR = "ha:i:usp";
     static const struct option OPTIONS[] = {
-        { "help",       no_argument,       nullptr, 'h' },
-        { "api",        required_argument, nullptr, 'a' },
-        { "ibl",        required_argument, nullptr, 'i' },
-        { "ubershader", no_argument,       nullptr, 'u' },
-        { "actual-size", no_argument,      nullptr, 's' },
+        { "help",         no_argument,       nullptr, 'h' },
+        { "api",          required_argument, nullptr, 'a' },
+        { "ibl",          required_argument, nullptr, 'i' },
+        { "ubershader",   no_argument,       nullptr, 'u' },
+        { "actual-size",  no_argument,       nullptr, 's' },
+        { "shadow-plane", no_argument,       nullptr, 'p' },
         { nullptr, 0, nullptr, 0 }
     };
     int opt;
@@ -122,6 +134,9 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
             case 's':
                 app->actualSize = true;
                 break;
+            case 'p':
+                app->shadowPlane = true;
+                break;
         }
     }
     return optind;
@@ -130,6 +145,85 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
 static std::ifstream::pos_type getFileSize(const char* filename) {
     std::ifstream in(filename, std::ifstream::ate | std::ifstream::binary);
     return in.tellg();
+}
+
+static void createGroundPlane(Engine* engine, Scene* scene, App app) {
+    EntityManager& em = EntityManager::get();
+    Material* shadowMaterial = Material::Builder()
+            .package(GLTF_VIEWER_GROUNDSHADOW_DATA, GLTF_VIEWER_GROUNDSHADOW_SIZE)
+            .build(*engine);
+
+    const static uint32_t indices[] = {
+            0, 1, 2, 2, 3, 0
+    };
+
+    auto& tcm = engine->getTransformManager();
+    Aabb aabb = app.asset->getBoundingBox();
+    if (!app.actualSize) {
+        math::mat4f transform = fitIntoUnitCube(aabb);
+        aabb = aabb.transform(transform);
+    }
+
+    math::float3 planeExtent{10.0f * aabb.extent().x, 0.0f, 10.0f * aabb.extent().z};
+
+    const static filament::math::float3 vertices[] = {
+            { -planeExtent.x, 0, -planeExtent.z },
+            { -planeExtent.x, 0,  planeExtent.z },
+            {  planeExtent.x, 0,  planeExtent.z },
+            {  planeExtent.x, 0, -planeExtent.z },
+    };
+
+    math::short4 tbn = math::packSnorm16(
+            math::mat3f::packTangentFrame(
+                    math::mat3f{
+                            math::float3{ 1.0f, 0.0f, 0.0f },
+                            math::float3{ 0.0f, 0.0f, 1.0f },
+                            math::float3{ 0.0f, 1.0f, 0.0f }
+                    }
+            ).xyzw);
+
+    const static filament::math::short4 normals[] { tbn, tbn, tbn, tbn };
+
+    VertexBuffer* vertexBuffer = VertexBuffer::Builder()
+            .vertexCount(4)
+            .bufferCount(2)
+            .attribute(VertexAttribute::POSITION,
+                    0, VertexBuffer::AttributeType::FLOAT3)
+            .attribute(VertexAttribute::TANGENTS,
+                    1, VertexBuffer::AttributeType::SHORT4)
+            .normalized(VertexAttribute::TANGENTS)
+            .build(*engine);
+
+    vertexBuffer->setBufferAt(*engine, 0, VertexBuffer::BufferDescriptor(
+            vertices, vertexBuffer->getVertexCount() * sizeof(vertices[0])));
+    vertexBuffer->setBufferAt(*engine, 1, VertexBuffer::BufferDescriptor(
+            normals, vertexBuffer->getVertexCount() * sizeof(normals[0])));
+
+    IndexBuffer* indexBuffer = IndexBuffer::Builder()
+            .indexCount(6)
+            .build(*engine);
+
+    indexBuffer->setBuffer(*engine, IndexBuffer::BufferDescriptor(
+            indices, indexBuffer->getIndexCount() * sizeof(uint32_t)));
+
+    Entity planeRenderable = em.create();
+    RenderableManager::Builder(1)
+            .boundingBox({
+                { -planeExtent.x, 0, -planeExtent.z },
+                { planeExtent.x, 1e-4f, planeExtent.z }
+            })
+            .material(0, shadowMaterial->getDefaultInstance())
+            .geometry(0, RenderableManager::PrimitiveType::TRIANGLES,
+                    vertexBuffer, indexBuffer, 0, 6)
+            .culling(false)
+            .receiveShadows(true)
+            .castShadows(false)
+            .build(*engine, planeRenderable);
+
+    scene->addEntity(planeRenderable);
+
+    tcm.setTransform(tcm.getInstance(planeRenderable),
+            math::mat4f::translation(math::float3{ 0, aabb.min.y, -4 }));
 }
 
 int main(int argc, char** argv) {
@@ -223,13 +317,18 @@ int main(int argc, char** argv) {
                 createMaterialGenerator(engine) : createUbershaderLoader(engine);
         app.loader = AssetLoader::create({engine, app.materials, app.names });
         if (filename.isEmpty()) {
-            app.asset = app.loader->createAssetFromBinary(GLTF_VIEWER_DAMAGEDHELMET_DATA,
+            app.asset = app.loader->createAssetFromBinary(
+                    GLTF_VIEWER_DAMAGEDHELMET_DATA,
                     GLTF_VIEWER_DAMAGEDHELMET_SIZE);
         } else {
             loadAsset(filename);
         }
 
         loadResources(filename);
+
+        if (app.shadowPlane) {
+            createGroundPlane(engine, scene, app);
+        }
 
         app.viewer->setUiCallback([&app, scene] () {
             float progress = app.resourceLoader->asyncGetLoadProgress();
