@@ -14,6 +14,8 @@ android {
                 arguments.add("-DANDROID_STL=c++_static")
                 arguments.add("-DFILAMENT_DIST_DIR=${filamentPath}".toString())
                 cppFlags.add("-std=c++14")
+                // Required to support API levels below 23
+                cppFlags.add("-Wl,--hash-style=both")
                 if (project.hasProperty('extra_cmake_args')) {
                     arguments.add(extra_cmake_args)
                 }
