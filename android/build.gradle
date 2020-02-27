@@ -16,8 +16,6 @@ buildscript {
         filamentPath = file("$filament_dist_dir").absolutePath
     }
 
-    ext.filamentPath = filamentPath
-
     // Our minSdkVersion is actually 19, we lie and say 14 here so apps don't have
     // to increase their minSdkVersion unnecessarily. It is however up to them to
     // ensure they do not initialize Filament on API levels < 19.
@@ -37,15 +35,43 @@ buildscript {
         'kotlin': "org.jetbrains.kotlin:kotlin-stdlib-jdk8:${versions.kotlin}"
     ]
 
+    dependencies {
+        classpath 'com.android.tools.build:gradle:3.6.0'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${versions.kotlin}"
+    }
+
+    ext.cmakeArgs = [
+        "-DANDROID_PIE=ON",
+        "-DANDROID_PLATFORM=android-${versions.targetSdk}".toString(),
+        "-DANDROID_STL=c++_static",
+        "-DFILAMENT_DIST_DIR=${filamentPath}".toString()
+    ]
+
+    ext.cppFlags = [
+        "-std=c++14",
+        "-Wno-unused-command-line-argument",
+        // Required to support API levels below 23
+        "-Wl,--hash-style=both",
+        "-fno-stack-protector",
+        "-fno-exceptions",
+        "-fno-unwind-tables",
+        "-fno-asynchronous-unwind-tables",
+        "-fno-rtti",
+        "-ffast-math",
+        "-ffp-contract=fast",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-fomit-frame-pointer",
+        "-ffunction-sections",
+        "-fdata-sections",
+        "-Wl,--gc-sections",
+        "-Wl,-Bsymbolic-functions",
+    ]
+
     repositories {
         mavenCentral()
         google()
         jcenter()
-    }
-
-    dependencies {
-        classpath 'com.android.tools.build:gradle:3.6.0'
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${versions.kotlin}"
     }
 }
 
