@@ -166,11 +166,15 @@ void TrackingPolicy::HighWatermark::onRewind(void const* addr) noexcept {
 // ------------------------------------------------------------------------------------------------
 
 void TrackingPolicy::Debug::onAlloc(void* p, size_t size, size_t alignment, size_t extra) noexcept {
-    memset(p, 0xeb, size);
+    if (p) {
+        memset(p, 0xeb, size);
+    }
 }
 
 void TrackingPolicy::Debug::onFree(void* p, size_t size) noexcept {
-    memset(p, 0xef, size);
+    if (p) {
+        memset(p, 0xef, size);
+    }
 }
 
 void TrackingPolicy::Debug::onReset() noexcept {

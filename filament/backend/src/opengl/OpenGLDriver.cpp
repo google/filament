@@ -395,6 +395,7 @@ void OpenGLDriver::HandleAllocator::free(void* p, size_t size) noexcept {
 UTILS_NOINLINE
 HandleBase::HandleId OpenGLDriver::allocateHandle(size_t size) noexcept {
     void* addr = mHandleArena.alloc(size);
+    assert(addr);
     char* const base = (char *)mHandleArena.getArea().begin();
     size_t offset = (char*)addr - base;
     return HandleBase::HandleId(offset >> HandleAllocator::MIN_ALIGNMENT_SHIFT);
