@@ -33,7 +33,6 @@
 
 #include <getopt/getopt.h>
 
-#include <utils/Log.h>
 #include <utils/NameComponentManager.h>
 
 #include <math/vec3.h>
