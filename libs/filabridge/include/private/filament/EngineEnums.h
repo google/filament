@@ -53,7 +53,7 @@ constexpr size_t CONFIG_MAX_LIGHT_INDEX = CONFIG_MAX_LIGHT_COUNT - 1;
 // Light space coordinates are computed in the vertex shader and interpolated across fragments.
 // Thus, each additional shadow-casting spot light adds 4 additional varying components. Higher
 // values may cause the number of varyings to exceed the driver limit.
-constexpr size_t CONFIG_MAX_SHADOW_CASTING_SPOTS = 2;
+constexpr size_t CONFIG_MAX_SHADOW_CASTING_SPOTS = 0;
 
 // This value is also limited by UBO size, ES3.0 only guarantees 16 KiB.
 // We store 64 bytes per bone.
