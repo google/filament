@@ -407,7 +407,7 @@ void applyRefraction(const PixelParams pixel,
 #elif REFRACTION_TYPE == REFRACTION_TYPE_THIN
     refractionThinSphere(pixel, n0, -shading_view, ray);
 #else
-#error "invalid REFRACTION_TYPE"
+#error invalid REFRACTION_TYPE
 #endif
 
     /* compute transmission T */
