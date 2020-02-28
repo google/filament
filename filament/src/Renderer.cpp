@@ -282,8 +282,13 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     const TextureFormat hdrFormat = getHdrFormat(view, translucent);
 
     const Handle<HwRenderTarget> viewRenderTarget = getRenderTarget(view);
-    FrameGraphRenderTargetHandle fgViewRenderTarget = fg.importRenderTarget("viewRenderTarget",
-            { .viewport = vp }, viewRenderTarget, vp.width, vp.height, discardedFlags);
+    FrameGraphRenderTargetHandle fgViewRenderTarget = fg.import<FrameGraphRenderTarget>(
+            "viewRenderTarget",{ .viewport = vp },{
+                    .target = viewRenderTarget,
+                    .params = {
+                            .flags = { .discardStart = discardedFlags },
+                            .viewport = vp
+                    }});
 
     /*
      * Depth + Color passes
@@ -414,8 +419,9 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         }
     }
 
-    fg.present(input);
-    fg.moveResource(fgViewRenderTarget, input);
+    auto output = input;
+    fg.present(output);
+    fg.moveResource(fgViewRenderTarget, output);
     fg.compile();
     //fg.export_graphviz(slog.d);
     fg.execute(engine, driver);
@@ -604,12 +610,12 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 data.rt = builder.createRenderTarget("Color Pass Target", {
                         .attachments = { data.color, data.depth },
                         .samples = config.msaa,
-                }, clearFlags);
+                        .clearFlags = clearFlags });
             },
             [pass, clearColor]
                     (FrameGraphPassResources const& resources,
                             ColorPassData const& data, DriverApi& driver) {
-                auto out = resources.getRenderTarget(data.rt);
+                auto out = resources.get(data.rt);
                 out.params.clearColor = clearColor;
 
                 pass.execute(resources.getPassName(), out.target, out.params);

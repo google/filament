@@ -21,8 +21,8 @@ namespace fg {
 
 VirtualResource::~VirtualResource() = default;
 
-ResourceEntryBase::ResourceEntryBase(const char* name, uint16_t id, bool imported) noexcept
-        : name(name), id(id), imported(imported) {
+ResourceEntryBase::ResourceEntryBase(const char* name, uint16_t id, bool imported, uint8_t priority) noexcept
+        : name(name), id(id), imported(imported), priority(priority) {
 }
 
 ResourceEntryBase::~ResourceEntryBase() = default;

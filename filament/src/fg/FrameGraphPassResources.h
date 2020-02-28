@@ -61,8 +61,6 @@ public:
         return get(handle).texture;
     }
 
-    RenderTargetInfo getRenderTarget(FrameGraphRenderTargetHandle handle, uint8_t level = 0) const noexcept;
-
 private:
     friend class FrameGraph;
     explicit FrameGraphPassResources(FrameGraph& fg, fg::PassNode const& pass) noexcept;

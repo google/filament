@@ -200,7 +200,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::toneMapping(FrameGraph& fg,
                         .height = inputDesc.height,
                         .format = outFormat
                 });
-                data.rt = builder.createRenderTarget(data.output);
+                data.output = builder.write(data.output);
+                data.rt = builder.createRenderTarget("ToneMapping Target", {
+                        .attachments = { data.output } });
 
                 if (bloomBlur.isValid()) {
                     data.bloom = builder.sample(bloomBlur);
@@ -250,7 +252,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::toneMapping(FrameGraph& fg,
                 const uint8_t variant = uint8_t(translucent ?
                             PostProcessVariant::TRANSLUCENT : PostProcessVariant::OPAQUE);
 
-                auto const& target = resources.getRenderTarget(data.rt);
+                auto const& target = resources.get(data.rt);
                 driver.beginRenderPass(target.target, target.params);
                 driver.draw(mTonemapping.getPipelineState(variant), fullScreenRenderPrimitive);
                 driver.endRenderPass();
@@ -281,7 +283,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::fxaa(FrameGraph& fg,
                         .height = inputDesc.height,
                         .format = outFormat
                 });
-                data.rt = builder.createRenderTarget(data.output);
+                data.output = builder.write(data.output);
+                data.rt = builder.createRenderTarget("FXAA Target", {
+                        .attachments = { data.output } });
             },
             [=](FrameGraphPassResources const& resources,
                 auto const& data, DriverApi& driver) {
@@ -299,7 +303,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::fxaa(FrameGraph& fg,
                 const uint8_t variant = uint8_t(translucent ?
                     PostProcessVariant::TRANSLUCENT : PostProcessVariant::OPAQUE);
 
-                auto const& target = resources.getRenderTarget(data.rt);
+                auto const& target = resources.get(data.rt);
                 driver.beginRenderPass(target.target, target.params);
                 driver.draw(mFxaa.getPipelineState(variant), fullScreenRenderPrimitive);
                 driver.endRenderPass();
@@ -335,7 +339,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::opaqueBlit(FrameGraph& fg,
                 data.input = (inputDesc.samples > 1) ? builder.read(input) : builder.sample(input);
 
                 data.srt = builder.createRenderTarget(builder.getName(data.input), {
-                        .attachments = { data.input, {}},
+                        .attachments = { data.input },
                         // We must set the sample count (as opposed to leaving to 0) to express
                         // the fact that we want a new rendertarget (as opposed to match one
                         // that might exist with multisample enabled). This is because sample
@@ -344,11 +348,13 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::opaqueBlit(FrameGraph& fg,
                 });
 
                 data.output = builder.createTexture("scaled output", outDesc);
-                data.drt = builder.createRenderTarget(data.output);
+                data.output = builder.write(data.output);
+                data.drt = builder.createRenderTarget("Scaled Targed", {
+                        .attachments = { data.output } });
             },
             [=](FrameGraphPassResources const& resources, auto const& data, DriverApi& driver) {
-                auto in = resources.getRenderTarget(data.srt);
-                auto out = resources.getRenderTarget(data.drt);
+                auto in = resources.get(data.srt);
+                auto out = resources.get(data.drt);
                 driver.blit(TargetBufferFlags::COLOR,
                         out.target, out.params.viewport, in.target, in.params.viewport,
                         SamplerMagFilter::LINEAR);
@@ -374,13 +380,15 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blendBlit(FrameGraph& fg,
             [&](FrameGraph::Builder& builder, auto& data) {
                 data.input = builder.sample(input);
                 data.output = builder.createTexture("scaled output", outDesc);
-                data.drt = builder.createRenderTarget(data.output);
+                data.output = builder.write(data.output);
+                data.drt = builder.createRenderTarget("Scaled Target",{
+                        .attachments = { data.output } });
             },
             [=](FrameGraphPassResources const& resources,
                     auto const& data, DriverApi& driver) {
 
                 auto color = resources.getTexture(data.input);
-                auto out = resources.getRenderTarget(data.drt);
+                auto out = resources.get(data.drt);
 
                 FMaterialInstance* const mi = mBlit.getMaterialInstance();
                 mi->setParameter("color", color, {
@@ -421,19 +429,21 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(FrameGraph& fg,
 
     auto& ppResolve = fg.addPass<ResolveData>("resolve",
             [&](FrameGraph::Builder& builder, auto& data) {
-                auto outputDesc = builder.getDescriptor(input);
+                auto outputDesc = desc;
+                input = builder.read(input);
+                data.srt = builder.createRenderTarget(builder.getName(input), {
+                        .attachments = { input }, .samples = desc.samples });
+
                 outputDesc.levels = 1;
                 outputDesc.samples = 0;
-                input = builder.read(input);
-                FrameGraphRenderTarget::Descriptor d;
-                d.attachments.color = { input };
-                data.srt = builder.createRenderTarget(builder.getName(input), d);
                 data.output = builder.createTexture(outputBufferName, outputDesc);
-                data.drt = builder.createRenderTarget(data.output);
+                data.output = builder.write(data.output);
+                data.drt = builder.createRenderTarget(outputBufferName, {
+                        .attachments = { data.output } });
             },
             [](FrameGraphPassResources const& resources, auto const& data, DriverApi& driver) {
-                auto in = resources.getRenderTarget(data.srt);
-                auto out = resources.getRenderTarget(data.drt);
+                auto in = resources.get(data.srt);
+                auto out = resources.get(data.drt);
                 driver.blit(TargetBufferFlags::COLOR,
                         out.target, out.params.viewport, in.target, in.params.viewport,
                         SamplerMagFilter::NEAREST);
@@ -494,13 +504,14 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssao(FrameGraph& fg, RenderP
 
                 data.ssao = builder.write(data.ssao);
                 data.rt = builder.createRenderTarget("SSAO Target", {
-                        .attachments = { data.ssao, data.depth }
-                }, TargetBufferFlags::COLOR);
+                        .attachments = { data.ssao, data.depth },
+                        .clearFlags = TargetBufferFlags::COLOR
+                });
             },
             [=](FrameGraphPassResources const& resources,
                 auto const& data, DriverApi& driver) {
                 auto depth = resources.getTexture(data.depth);
-                auto ssao = resources.getRenderTarget(data.rt);
+                auto ssao = resources.get(data.rt);
                 auto const& desc = resources.getDescriptor(data.ssao);
 
                 // estimate of the size in pixel of a 1m tall/wide object viewed from 1m away (i.e. at z=-1)
@@ -613,11 +624,12 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::depthPass(FrameGraph& fg, Re
                 data.depth = builder.write(builder.read(data.depth));
 
                 data.rt = builder.createRenderTarget("SSAO Depth Target", {
-                        .attachments = {{}, { data.depth }}
-                }, TargetBufferFlags::DEPTH);
+                        .attachments = {{}, data.depth },
+                        .clearFlags = TargetBufferFlags::DEPTH
+                });
             },
             [=](FrameGraphPassResources const& resources, auto const& data, DriverApi& driver) {
-                auto out = resources.getRenderTarget(data.rt);
+                auto out = resources.get(data.rt);
                 pass.execute(resources.getPassName(), out.target, out.params);
             });
 
@@ -641,15 +653,14 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::mipmapPass(FrameGraph& fg,
                 const char* name = builder.getName(input);
                 data.in = builder.sample(input);
                 data.out = builder.write(data.in);
-                FrameGraphRenderTarget::Descriptor d;
-                d.attachments.depth = { data.out, uint8_t(level + 1) };
-                data.rt = builder.createRenderTarget(name, d);
+                data.rt = builder.createRenderTarget(name, {
+                        .attachments = {{}, { data.out, uint8_t(level + 1) }}});
             },
             [=](FrameGraphPassResources const& resources,
                     auto const& data, DriverApi& driver) {
 
                 auto in = resources.getTexture(data.in);
-                auto out = resources.getRenderTarget(data.rt, level + 1u);
+                auto out = resources.get(data.rt);
 
                 FMaterialInstance* const mi = mMipmapDepth.getMaterialInstance();
                 mi->setParameter("depth", in, { /* uses texelFetch */ });
@@ -692,13 +703,13 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bilateralBlurPass(
                 // in an undefined state -- this doesn't matter because the skybox material
                 // doesn't use SSAO.
                 data.blurred = builder.write(data.blurred);
-                data.rt = builder.createRenderTarget("Blurred target",
-                        { .attachments = { data.blurred, {} } }, TargetBufferFlags::NONE);
+                data.rt = builder.createRenderTarget("Blurred target", {
+                        .attachments = { data.blurred }});
             },
             [=](FrameGraphPassResources const& resources,
                 auto const& data, DriverApi& driver) {
                 auto ssao = resources.getTexture(data.input);
-                auto blurred = resources.getRenderTarget(data.rt);
+                auto blurred = resources.get(data.rt);
                 auto const& desc = resources.getDescriptor(data.blurred);
 
                 // TODO: "oneOverEdgeDistance" should be a user-settable parameter
@@ -807,12 +818,10 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
                 data.temp = builder.write(builder.sample(data.temp));
 
                 data.tempRT = builder.createRenderTarget("Horizontal temporary target", {
-                        .attachments = { data.temp, {}}
-                }, TargetBufferFlags::NONE);
+                        .attachments = { data.temp } });
 
                 data.outRT = builder.createRenderTarget("Blurred target", {
-                        .attachments = {{ data.out, dstLevel }, {}}
-                }, TargetBufferFlags::NONE);
+                        .attachments = {{ data.out, dstLevel }} });
             },
             [=](FrameGraphPassResources const& resources,
                     auto const& data, DriverApi& driver) {
@@ -825,8 +834,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
                         std::min(sizeof(kernel) / sizeof(*kernel), kernelStorageSize));
 
                 // horizontal pass
-                auto hwTempRT = resources.getRenderTarget(data.tempRT);
-                auto hwOutRT = resources.getRenderTarget(data.outRT);
+                auto hwTempRT = resources.get(data.tempRT);
+                auto hwOutRT = resources.get(data.outRT);
                 auto hwTemp = resources.getTexture(data.temp);
                 auto hwIn = resources.getTexture(data.in);
                 auto const& inDesc = resources.getDescriptor(data.in);
@@ -939,8 +948,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
 
                 for (size_t i = 0; i < bloomOptions.levels; i++) {
                     data.outRT[i] = builder.createRenderTarget("Bloom target", {
-                            .attachments = {{ data.out, uint8_t(i) }, {}}
-                    }, TargetBufferFlags::NONE);
+                            .attachments = {{ data.out, uint8_t(i) }} });
                 }
             },
             [=](FrameGraphPassResources const& resources,
@@ -964,7 +972,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
                 mi->setParameter("threshold", bloomOptions.threshold ? 1.0f : 0.0f);
 
                 for (size_t i = 0; i < bloomOptions.levels; i++) {
-                    auto hwOutRT = resources.getRenderTarget(data.outRT[i]);
+                    auto hwOutRT = resources.get(data.outRT[i]);
 
                     auto w = FTexture::valueForLevel(i, outDesc.width);
                     auto h = FTexture::valueForLevel(i, outDesc.height);
@@ -996,8 +1004,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
 
                 for (size_t i = 0; i < bloomOptions.levels; i++) {
                     data.outRT[i] = builder.createRenderTarget("Bloom target", {
-                            .attachments = {{ data.out, uint8_t(i) }, {}}
-                    }, TargetBufferFlags::NONE);
+                            .attachments = {{ data.out, uint8_t(i) }} });
                 }
             },
             [=](FrameGraphPassResources const& resources,
@@ -1015,7 +1022,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
                 mi->use(driver);
 
                 for (size_t i = bloomOptions.levels - 1; i >= 1; i--) {
-                    auto hwDstRT = resources.getRenderTarget(data.outRT[i - 1]);
+                    auto hwDstRT = resources.get(data.outRT[i - 1]);
                     hwDstRT.params.flags.discardStart = TargetBufferFlags::NONE; // because we'll blend
                     hwDstRT.params.flags.discardEnd = TargetBufferFlags::NONE;
 
