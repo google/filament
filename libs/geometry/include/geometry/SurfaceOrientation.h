@@ -21,6 +21,8 @@
 #include <math/vec3.h>
 #include <math/vec4.h>
 
+#include <utils/compiler.h>
+
 namespace filament {
 
 /**
@@ -34,7 +36,7 @@ struct OrientationImpl;
 /**
  * The surface orientation helper can be used to populate Filament-style TANGENTS buffers.
  */
-class SurfaceOrientation {
+class UTILS_PUBLIC SurfaceOrientation {
 public:
 
     /**
