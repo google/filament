@@ -42,7 +42,7 @@ buildscript {
 
     ext.cmakeArgs = [
         "-DANDROID_PIE=ON",
-        "-DANDROID_PLATFORM=android-${versions.targetSdk}".toString(),
+        "-DANDROID_PLATFORM=21",
         "-DANDROID_STL=c++_static",
         "-DFILAMENT_DIST_DIR=${filamentPath}".toString()
     ]
