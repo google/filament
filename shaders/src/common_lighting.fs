@@ -3,6 +3,9 @@ struct Light {
     vec3 l;
     float attenuation;
     float NoL;
+    bool castsShadows;
+    uint shadowIndex;
+    uint shadowLayer;
 };
 
 struct PixelParams {
