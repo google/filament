@@ -56,6 +56,7 @@ namespace details {
 FView::FView(FEngine& engine)
     : mFroxelizer(engine),
       mPerViewUb(PerViewUib::getUib().getSize()),
+      mShadowUb(ShadowUib::getUib().getSize()),
       mPerViewSb(PerViewSib::SAMPLER_COUNT),
       mDirectionalShadowMap(engine) {
     DriverApi& driver = engine.getDriverApi();
@@ -77,6 +78,7 @@ FView::FView(FEngine& engine)
     // allocate ubos
     mPerViewUbh = driver.createUniformBuffer(mPerViewUb.getSize(), backend::BufferUsage::DYNAMIC);
     mLightUbh = driver.createUniformBuffer(CONFIG_MAX_LIGHT_COUNT * sizeof(LightsUib), backend::BufferUsage::DYNAMIC);
+    mShadowUbh = driver.createUniformBuffer(mShadowUb.getSize(), backend::BufferUsage::DYNAMIC);
 
     mIsDynamicResolutionSupported = driver.isFrameTimeSupported();
 }
@@ -88,6 +90,7 @@ void FView::terminate(FEngine& engine) {
     DriverApi& driver = engine.getDriverApi();
     driver.destroyUniformBuffer(mPerViewUbh);
     driver.destroyUniformBuffer(mLightUbh);
+    driver.destroyUniformBuffer(mShadowUbh);
     driver.destroySamplerGroup(mPerViewSbh);
     driver.destroyUniformBuffer(mRenderableUbh);
     mDirectionalShadowMap.terminate(driver);
@@ -689,6 +692,10 @@ void FView::froxelize(FEngine& engine) const noexcept {
 void FView::commitUniforms(backend::DriverApi& driver) const noexcept {
     if (mPerViewUb.isDirty()) {
         driver.loadUniformBuffer(mPerViewUbh, mPerViewUb.toBufferDescriptor(driver));
+    }
+
+    if (mShadowUb.isDirty()) {
+        driver.loadUniformBuffer(mShadowUbh, mShadowUb.toBufferDescriptor(driver));
     }
 
     if (mPerViewSb.isDirty()) {
