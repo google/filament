@@ -53,13 +53,6 @@ using namespace backend;
 
 namespace details {
 
-// values of the 'VISIBLE_MASK' after culling (0: not visible)
-static constexpr size_t VISIBLE_RENDERABLE_BIT = 0u;
-static constexpr size_t VISIBLE_SHADOW_CASTER_BIT = 1u;
-static constexpr uint8_t VISIBLE_RENDERABLE = 1u << VISIBLE_RENDERABLE_BIT;
-static constexpr uint8_t VISIBLE_SHADOW_CASTER = 1u << VISIBLE_SHADOW_CASTER_BIT;
-static constexpr uint8_t VISIBLE_ALL = VISIBLE_RENDERABLE | VISIBLE_SHADOW_CASTER;
-
 FView::FView(FEngine& engine)
     : mFroxelizer(engine),
       mPerViewUb(PerViewUib::getUib().getSize()),
@@ -512,7 +505,7 @@ void FView::prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& are
 
         /*
          * Shadowing: compute the shadow camera and cull shadow casters
-         * (this will set the VISIBLE_SHADOW_CASTER bit)
+         * (this will set the VISIBLE_DIR_SHADOW_CASTER bit)
          */
 
         prepareShadowing(engine, driver, renderableData, scene->getLightData());
@@ -536,7 +529,7 @@ void FView::prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& are
         auto beginCasters = partition(beginRenderables, renderableData.end(), VISIBLE_RENDERABLE);
         auto beginCastersOnly = partition(beginCasters, renderableData.end(), VISIBLE_ALL);
         auto endCastersOnly = partition(beginCastersOnly, renderableData.end(),
-                VISIBLE_SHADOW_CASTER);
+                VISIBLE_DIR_SHADOW_CASTER);
 
         // convert to indices
         uint32_t iEnd = uint32_t(endCastersOnly - beginRenderables);
@@ -598,10 +591,28 @@ void FView::computeVisibilityMasks(
         Culler::result_type mask = visibleMask[i];
         FRenderableManager::Visibility v = visibility[i];
         bool inVisibleLayer = layers[i] & visibleLayers;
+
+        // The logic below essentially does the following:
+        //
+        // if inVisibleLayer:
+        //     if !v.culling:
+        //         set all bits in visibleMask to 1
+        // else:
+        //     set all bits in visibleMask to 0
+        // if !v.castShadows:
+        //     set shadow visibility bits in visibleMask to 0
+        //
+        // It is written without if statements to avoid branches, which allows it to be vectorized 16x.
+
         bool visRenderables   = (!v.culling || (mask & VISIBLE_RENDERABLE))    && inVisibleLayer;
-        bool visShadowCasters = (!v.culling || (mask & VISIBLE_SHADOW_CASTER)) && inVisibleLayer && v.castShadows;
+        bool visShadowCasters = (!v.culling || (mask & VISIBLE_DIR_SHADOW_CASTER)) && inVisibleLayer && v.castShadows;
         visibleMask[i] = Culler::result_type(visRenderables) |
-                         Culler::result_type(visShadowCasters << 1u);
+                Culler::result_type(visShadowCasters << 1u);
+        // this loop gets fully unrolled
+        for (size_t j = 0; j < CONFIG_MAX_SHADOW_CASTING_SPOTS; ++j) {
+            bool vIsSpotShadowCaster = (!v.culling || (mask & VISIBLE_SPOT_SHADOW_CASTER_N(j))) && inVisibleLayer && v.castShadows;
+            visibleMask[i] |= Culler::result_type(vIsSpotShadowCaster << (j + 2));
+        }
     }
 }
 
@@ -707,7 +718,7 @@ UTILS_NOINLINE
 void FView::prepareVisibleShadowCasters(JobSystem& js,
         Frustum const& lightFrustum, FScene::RenderableSoa& renderableData) noexcept {
     SYSTRACE_CALL();
-    FView::cullRenderables(js, renderableData, lightFrustum, VISIBLE_SHADOW_CASTER_BIT);
+    FView::cullRenderables(js, renderableData, lightFrustum, VISIBLE_DIR_SHADOW_CASTER_BIT);
 }
 
 void FView::cullRenderables(JobSystem& js,
