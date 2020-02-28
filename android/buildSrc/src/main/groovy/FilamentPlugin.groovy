@@ -1,8 +1,11 @@
-// This script accepts the following parameters:
+// This plugin accepts the following parameters:
 //
 // filament_tools_dir
-//     Path to the Filament distribution/install directory for desktop
-//     (produced by make/ninja install). This directory must contain bin/matc
+//     Path to the Filament distribution/install directory for desktop.
+//     This directory must contain bin/matc.
+//
+// filament_supports_vulkan
+//     When set, support for Vulkan will be enabled
 //
 // Example:
 //     ./gradlew -Pfilament_tools_dir=../../dist-release assembleDebug
@@ -100,11 +103,17 @@ class MaterialCompiler extends TaskWithBinary {
                         " Ensure Filament has been built/installed before building this app.")
             }
 
+            def matcArgs = []
+            if (project.hasProperty("filament_supports_vulkan")) {
+                matcArgs += ['-a', 'vulkan']
+            }
+            matcArgs += ['-a', 'opengl', '-p', 'mobile', '-o', getOutputFile(file), file]
+
             project.exec {
                 standardOutput out
                 errorOutput err
                 executable "${getBinary()}"
-                args('-a', 'opengl', '-a', 'vulkan', '-p', 'mobile', '-o', getOutputFile(file), file)
+                args matcArgs
             }
         }
 

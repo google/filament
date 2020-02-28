@@ -108,6 +108,7 @@ FILAMENT_ENABLE_JAVA=ON
 INSTALL_COMMAND=
 
 VULKAN_ANDROID_OPTION="-DFILAMENT_SUPPORTS_VULKAN=OFF"
+VULKAN_ANDROID_GRADLE_OPTION=""
 
 IOS_BUILD_SIMULATOR=false
 
@@ -381,7 +382,7 @@ function build_android {
     if [[ "$ISSUE_DEBUG_BUILD" == "true" ]]; then
         ./gradlew \
             -Pfilament_dist_dir=../out/android-debug/filament \
-            -Pextra_cmake_args=${VULKAN_ANDROID_OPTION} \
+            ${VULKAN_ANDROID_GRADLE_OPTION} \
             :filament-android:assembleDebug \
             :gltfio-android:assembleDebug \
             :filament-utils-android:assembleDebug
@@ -410,7 +411,7 @@ function build_android {
     if [[ "$ISSUE_RELEASE_BUILD" == "true" ]]; then
         ./gradlew \
             -Pfilament_dist_dir=../out/android-release/filament \
-            -Pextra_cmake_args=${VULKAN_ANDROID_OPTION} \
+            ${VULKAN_ANDROID_GRADLE_OPTION} \
             :filament-android:assembleRelease \
             :gltfio-android:assembleRelease \
             :filament-utils-android:assembleRelease
@@ -710,12 +711,8 @@ while getopts ":hacfijmp:tuvslw" opt; do
             ;;
         v)
             VULKAN_ANDROID_OPTION="-DFILAMENT_SUPPORTS_VULKAN=ON"
+            VULKAN_ANDROID_GRADLE_OPTION="-Pfilament_supports_vulkan"
             echo "Enabling support for Vulkan in the core Filament library."
-            echo ""
-            echo "To switch your application to Vulkan, in Android Studio go to Preferences > "
-            echo "Build, Executation Deployment > Compiler. In the command-line options field, "
-            echo "add -Pextra_cmake_args=-DFILAMENT_SUPPORTS_VULKAN=ON."
-            echo "Also be sure to pass Engine.Backend.VULKAN to Engine.create."
             echo ""
             ;;
         s)
