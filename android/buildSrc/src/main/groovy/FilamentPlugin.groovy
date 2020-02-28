@@ -251,7 +251,7 @@ class FilamentToolsPlugin implements Plugin<Project> {
 
         project.ext.filamentToolsPath = project.file("../../../out/release/filament")
         if (project.hasProperty("filament_tools_dir")) {
-            project.ext.filamentToolsPath = project.file("$filament_tools_dir")
+            project.ext.filamentToolsPath = project.file(project.property("filament_tools_dir"))
         }
 
         project.tasks.register("filamentCompileMaterials", MaterialCompiler) {
