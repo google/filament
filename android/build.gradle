@@ -13,7 +13,7 @@
 buildscript {
     def filamentPath = file("../out/android-release/filament").absolutePath
     if (project.hasProperty("filament_dist_dir")) {
-        filamentPath = file("$filament_dist_dir").absolutePath
+        filamentPath = file(project.property("filament_dist_dir")).absolutePath
     }
 
     // Our minSdkVersion is actually 19, we lie and say 14 here so apps don't have
