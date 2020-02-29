@@ -198,19 +198,20 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
     bool mousePressed[3] = { false };
 
     int sidebarWidth = mSidebarWidth;
+    float cameraFocalLength = mCameraFocalLength;
 
     SDL_EventState(SDL_DROPFILE, SDL_ENABLE);
     SDL_Window* sdlWindow = window->getSDLWindow();
 
     while (!mClosed) {
-
         if (mWindowTitle != SDL_GetWindowTitle(sdlWindow)) {
             SDL_SetWindowTitle(sdlWindow, mWindowTitle.c_str());
         }
 
-        if (mSidebarWidth != sidebarWidth) {
+        if (mSidebarWidth != sidebarWidth || mCameraFocalLength != cameraFocalLength) {
             window->configureCamerasForWindow();
             sidebarWidth = mSidebarWidth;
+            cameraFocalLength = mCameraFocalLength;
         }
 
         if (!UTILS_HAS_THREADING) {
@@ -673,7 +674,6 @@ void FilamentApp::Window::resize() {
 }
 
 void FilamentApp::Window::configureCamerasForWindow() {
-
     // Determine the current size of the window in physical pixels.
     uint32_t width, height;
     SDL_GL_GetDrawableSize(mWindow, (int*) &width, (int*) &height);
@@ -693,11 +693,11 @@ void FilamentApp::Window::configureCamerasForWindow() {
 
     // To trigger a floating-point exception, users could shrink the window to be smaller than
     // the sidebar. To prevent this we simply clamp the width of the main viewport.
-    const uint32_t mainWidth = std::max(1, (int)width - sidebar);
+    const uint32_t mainWidth = std::max(1, (int) width - sidebar);
 
     double near = 0.1;
     double far = 50;
-    mMainCamera->setProjection(45.0, double(mainWidth) / height, near, far, Camera::Fov::VERTICAL);
+    mMainCamera->setLensProjection(mFilamentApp->mCameraFocalLength, double(mainWidth) / height, near, far);
     mDebugCamera->setProjection(45.0, double(width) / height, 0.0625, 4096, Camera::Fov::VERTICAL);
     mOrthoCamera->setProjection(Camera::Projection::ORTHO, -3, 3, -3 * ratio, 3 * ratio, near, far);
     mOrthoCamera->lookAt({ 0, 0, 0 }, {0, 0, -4});

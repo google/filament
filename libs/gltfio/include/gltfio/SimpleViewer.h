@@ -384,7 +384,7 @@ void SimpleViewer::updateUserInterface() {
         const char* name = mAsset->getName(entity);
         const char* label = name ? name : (rinstance ? "Mesh" : "Node");
 
-        ImGuiTreeNodeFlags flags = rinstance ? 0 : ImGuiTreeNodeFlags_DefaultOpen;
+        ImGuiTreeNodeFlags flags = 0; // rinstance ? 0 : ImGuiTreeNodeFlags_DefaultOpen;
         std::vector<utils::Entity> children(tm.getChildCount(tinstance));
         if (ImGui::TreeNodeEx((const void*) treeNodeId, flags, "%s", label)) {
             if (rinstance) {
@@ -474,7 +474,7 @@ void SimpleViewer::updateUserInterface() {
                     ImGui::TreePop();
                 }
             }
-            ImGui::Checkbox("Wireframe", &mEnableWireframe);
+            ImGui::Checkbox("Show bounds", &mEnableWireframe);
             treeNode(mAsset->getRoot());
         }
 
