@@ -522,7 +522,15 @@ class_<Camera>("Camera")
         self->setProjection(fovInDegrees, aspect, near, far, direction);
     }), allow_raw_pointers())
 
-    .function("setLensProjection", &Camera::setLensProjection)
+    .function("setLensProjectionWithAspect", EMBIND_LAMBDA(void, (Camera* self,
+                double focalLength, double aspect, double near, double far), {
+        self->setLensProjection(focalLength, aspect, near, far);
+    }), allow_raw_pointers())
+
+    .function("setLensProjection", EMBIND_LAMBDA(void, (Camera* self,
+                double focalLength, double near, double far), {
+        self->setLensProjection(focalLength, near, far);
+    }), allow_raw_pointers())
 
     .function("setCustomProjection", EMBIND_LAMBDA(void, (Camera* self,
             flatmat4 m, double near, double far), {

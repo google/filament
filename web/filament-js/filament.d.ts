@@ -260,6 +260,7 @@ export class Camera {
     public setProjectionFov(fovInDegrees: number, aspect: number,
         near: number, far: number, fov: Camera$Fov): void;
     public setLensProjection(focalLength: number, near: number, far: number): void;
+    public setLensProjectionWithAspect(focalLength: number, aspect: number, near: number, far: number): void;
     public setCustomProjection(projection: mat4, near: number, far: number): void;
     public getProjectionMatrix(): mat4;
     public getCullingProjectionMatrix(): mat4;
