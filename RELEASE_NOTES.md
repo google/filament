@@ -18,6 +18,7 @@ A new header is inserted each time a *tag* is created.
 - Added Java bindings for geometry::SurfaceOrientation.
 - Fixed bug rendering transparent objects with Metal backend.
 - Fixed crash on macOS Catalina when rendering with Metal backend.
+- Fixed bug in Camera::setLensProjection() and added a variant that accepts an aspect ratio.
 - WebGL: Improved TypeScript annotations.
 - WebGL: Simplified callback API for glTF. (⚠ API Change)
 
