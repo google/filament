@@ -83,6 +83,7 @@ public:
 
     void setSidebarWidth(int width) { mSidebarWidth = width; }
     void setWindowTitle(const char* title) { mWindowTitle = title; }
+    float& getCameraFocalLength() { return mCameraFocalLength; }
 
     void addOffscreenView(filament::View* view) { mOffscreenViews.push_back(view); }
 
@@ -220,6 +221,7 @@ private:
     size_t mSkippedFrames = 0;
     std::string mWindowTitle;
     std::vector<filament::View*> mOffscreenViews;
+    float mCameraFocalLength = 28.0f;
 };
 
 #endif // TNT_FILAMENT_SAMPLE_FILAMENTAPP_H

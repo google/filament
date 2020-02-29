@@ -135,6 +135,7 @@ static GroundPlane createGroundPlane(Engine* engine) {
     Material* shadowMaterial = Material::Builder()
         .package(RESOURCES_GROUNDSHADOW_DATA, RESOURCES_GROUNDSHADOW_SIZE)
         .build(*engine);
+    shadowMaterial->setDefaultParameter("strength", 0.7f);
 
     const static uint32_t indices[] {
         0, 1, 2, 2, 3, 0

@@ -189,13 +189,25 @@ public:
     void setProjection(double fovInDegrees, double aspect, double near, double far,
                        Fov direction = Fov::VERTICAL) noexcept;
 
-    /** Sets the projection matrix from the focal length
+    /** Sets the projection matrix from the focal length. The aspect ratio is fixed
+     * to that of a 35mm sensor.
      *
-     * @param focalLength   lense's focal length in millimeters. \p focalLength > 0.
-     * @param near      distance in world units from the camera to the near plane. \p near > 0.
-     * @param far       distance in world units from the camera to the far plane. \p far > \p near.
+     * @param focalLength lens's focal length in millimeters. \p focalLength > 0.
+     * @param near        distance in world units from the camera to the near plane. \p near > 0.
+     * @param far         distance in world units from the camera to the far plane. \p far > \p near.
      */
-    void setLensProjection(double focalLength, double near, double far) noexcept;
+    void setLensProjection(double focalLength, double near, double far) noexcept  {
+        setLensProjection(focalLength, 36.0 / 24.0, near, far);
+    }
+
+    /** Sets the projection matrix from the focal length.
+     *
+     * @param focalLength lens's focal length in millimeters. \p focalLength > 0.
+     * @param aspect      aspect ratio \f$ \frac{width}{height} \f$. \p aspect > 0.
+     * @param near        distance in world units from the camera to the near plane. \p near > 0.
+     * @param far         distance in world units from the camera to the far plane. \p far > \p near.
+     */
+    void setLensProjection(double focalLength, double aspect, double near, double far) noexcept;
 
     /** Sets the projection matrix.
      *

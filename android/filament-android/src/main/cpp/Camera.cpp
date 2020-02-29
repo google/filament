@@ -40,9 +40,9 @@ Java_com_google_android_filament_Camera_nSetProjectionFov(JNIEnv*, jclass ,
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_Camera_nSetLensProjection(JNIEnv*, jclass,
-        jlong nativeCamera, jdouble focalLength, jdouble near, jdouble far) {
+        jlong nativeCamera, jdouble focalLength, jdouble aspect, jdouble near, jdouble far) {
     Camera *camera = (Camera *) nativeCamera;
-    camera->setLensProjection(focalLength, near, far);
+    camera->setLensProjection(focalLength, aspect, near, far);
 }
 
 extern "C" JNIEXPORT void JNICALL
