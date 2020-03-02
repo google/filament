@@ -392,11 +392,9 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
     for (uint32_t i = range.first; i < range.last; ++i) {
         // Check if this renderable passes the visibilityMask. If it doesn't, encode a SENTINEL
         // command (no-op).
-        if (!(soaVisibilityMask[i] & visibilityMask)) {
-            Command command;
-            command.key = uint64_t(Pass::SENTINEL);
-            *curr = command;
-            curr++;
+        if (UTILS_UNLIKELY(!(soaVisibilityMask[i] & visibilityMask))) {
+            curr->key = uint64_t(Pass::SENTINEL);
+            ++curr;
             continue;
         }
 
