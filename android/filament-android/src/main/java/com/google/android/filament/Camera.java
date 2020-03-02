@@ -226,30 +226,6 @@ public class Camera {
     }
 
     /**
-     * Sets the projection matrix from the focal length for a 35mm sensor.
-     *
-     * @param focalLength   lens's focal length in millimeters. <code>focalLength</code> > 0
-     *
-     * @param near          distance in world units from the camera to the near plane.
-     *                      The near plane's position in view space is z = -<code>near</code>.
-     *                      Precondition:
-     *                      <code>near</code> > 0 for {@link Projection#PERSPECTIVE} or
-     *                      <code>near</code> != <code>far</code> for {@link Projection#ORTHO}.
-     *
-     * @param far           distance in world units from the camera to the far plane.
-     *                      The far plane's position in view space is z = -<code>far</code>.
-     *                      Precondition:
-     *                      <code>far</code> > <code>near</code>
-     *                              for {@link Projection#PERSPECTIVE} or
-     *                      <code>far</code> != <code>near</code>
-     *                              for {@link Projection#ORTHO}.
-     *
-     */
-    public void setLensProjection(double focalLength, double near, double far) {
-        nSetLensProjection(getNativeObject(), focalLength, 36.0 / 24.0, near, far);
-    }
-
-    /**
      * Sets the projection matrix from the focal length.
      *
      * @param focalLength   lens's focal length in millimeters. <code>focalLength</code> > 0
