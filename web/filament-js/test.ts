@@ -43,8 +43,7 @@ function smoke_camera_frustum() {
     const camera: Filament.Camera = engine.createCamera();
     camera.setProjection(Filament.Camera$Projection.ORTHO, 0, 1, 0, 1, 0, 1);
     camera.setProjectionFov(45, 1.0, 0.0, 1.0, Filament.Camera$Fov.HORIZONTAL);
-    camera.setLensProjection(0, 1, 2);
-    camera.setLensProjectionWithAspect(0, 0.33, 1, 2);
+    camera.setLensProjection(0, 0.33, 1, 2);
     camera.setCustomProjection(m4, 0, 1);
     const m5 = camera.getProjectionMatrix() as glm.mat4;
     const m6 = camera.getCullingProjectionMatrix() as glm.mat4;
