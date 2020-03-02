@@ -3,75 +3,75 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 50;
+	objectVersion = 51;
 	objects = {
 
 /* Begin PBXBuildFile section */
-		25391681B7E1FAD8C35259C2FB43AA0C /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 46A2FAD3D476FDADF45F70F88D39B377 /* LaunchScreen.storyboard */; };
-		4831F43B77D0E8C437B64E0CD223DD61 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 45FE9476D47ECFFEA65D7146A57C5807 /* AppDelegate.m */; };
-		CD70F3CC948993A3E182EEAE716413C0 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = E56C70616FF30C50DFA8238B177D825B /* main.m */; };
-		E00008AE8D480B194E25A0D98AB97F2D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 524293A0A8CDE9047347EF48D0651A12 /* Assets.xcassets */; };
-		E69F0688FDC3C597E6A02DC66C949C82 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = DDE4A219AEB5B4507F51B8735787157D /* Main.storyboard */; };
-		F864F73179636D71BDCF7695C325FCBF /* FilamentView.mm in Sources */ = {isa = PBXBuildFile; fileRef = 0CDCD26337640C57D07E41ED006B9C6D /* FilamentView.mm */; };
-		FE8718DB24186A895AD2E45650C88C5C /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 2620C967534D81CFFAB5D3FFC47A66A3 /* ViewController.m */; };
+		4715F63AF782F1A15A37EFA8 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 45FE9476D47ECFFEA65D7146 /* AppDelegate.m */; };
+		4B0C2B6E7D4BF89D8EDEB84F /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 2620C967534D81CFFAB5D3FF /* ViewController.m */; };
+		67B75B37DC3FFFE6BDD91455 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = DDE4A219AEB5B4507F51B873 /* Main.storyboard */; };
+		8897619E0912B69F232FCC88 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 524293A0A8CDE9047347EF48 /* Assets.xcassets */; };
+		A05C6F2172B5C29D9A056E39 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 46A2FAD3D476FDADF45F70F8 /* LaunchScreen.storyboard */; };
+		AC1320F672694ABEF53EFAC8 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = E56C70616FF30C50DFA8238B /* main.m */; };
+		BED52BA49D882353BBCEA4F4 /* FilamentView.mm in Sources */ = {isa = PBXBuildFile; fileRef = 0CDCD26337640C57D07E41ED /* FilamentView.mm */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		0CDCD26337640C57D07E41ED006B9C6D /* FilamentView.mm */ = {isa = PBXFileReference; path = FilamentView.mm; sourceTree = "<group>"; };
-		2620C967534D81CFFAB5D3FFC47A66A3 /* ViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ViewController.m; sourceTree = "<group>"; };
-		350DC65C7EE8D98D8FE181DC993DCB2C /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
-		3BB2247EC7FE4EFB2C3ED10A5046333B /* hello-triangle.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "hello-triangle.app"; sourceTree = BUILT_PRODUCTS_DIR; };
-		41033B581E89DF4B33A2EB534A7020C3 /* bakedColor.mat */ = {isa = PBXFileReference; path = bakedColor.mat; sourceTree = "<group>"; };
-		45FE9476D47ECFFEA65D7146A57C5807 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
-		524293A0A8CDE9047347EF48D0651A12 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		761A2C7D6295697614AD3434356B8E9E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		C16E9A84F33BDFAEDC1E483774DF336C /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
-		C311F8DEBEFEB185F0A7E4CCC6733265 /* ViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ViewController.h; sourceTree = "<group>"; };
-		CDBB6BE341D1C708FCB687507015103B /* FilamentView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FilamentView.h; sourceTree = "<group>"; };
-		E36D17DB3F44ADF8EFBEDBAFB037DBFD /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
-		E56C70616FF30C50DFA8238B177D825B /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		0CDCD26337640C57D07E41ED /* FilamentView.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = FilamentView.mm; sourceTree = "<group>"; };
+		2620C967534D81CFFAB5D3FF /* ViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ViewController.m; sourceTree = "<group>"; };
+		350DC65C7EE8D98D8FE181DC /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
+		3BB2247EC7FE4EFB2C3ED10A /* hello-triangle.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "hello-triangle.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		41033B581E89DF4B33A2EB53 /* bakedColor.mat */ = {isa = PBXFileReference; path = bakedColor.mat; sourceTree = "<group>"; };
+		45FE9476D47ECFFEA65D7146 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
+		524293A0A8CDE9047347EF48 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		761A2C7D6295697614AD3434 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		C16E9A84F33BDFAEDC1E4837 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
+		C311F8DEBEFEB185F0A7E4CC /* ViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ViewController.h; sourceTree = "<group>"; };
+		CDBB6BE341D1C708FCB68750 /* FilamentView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FilamentView.h; sourceTree = "<group>"; };
+		E36D17DB3F44ADF8EFBEDBAF /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		E56C70616FF30C50DFA8238B /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
-		39FD47E0213E1FFE59609A06BA1585EA /* Products */ = {
+		39FD47E0213E1FFE59609A06 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				3BB2247EC7FE4EFB2C3ED10A5046333B /* hello-triangle.app */,
+				3BB2247EC7FE4EFB2C3ED10A /* hello-triangle.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
 		};
-		5B3E3AAF5C756449084924104376C030 = {
+		5B3E3AAF5C75644908492410 = {
 			isa = PBXGroup;
 			children = (
-				C54ABC8D31D1863EF16253A04649C424 /* hello-triangle */,
-				8F55D652979868A470D724FA650F6B6B /* Materials */,
-				39FD47E0213E1FFE59609A06BA1585EA /* Products */,
+				C54ABC8D31D1863EF16253A0 /* hello-triangle */,
+				8F55D652979868A470D724FA /* Materials */,
+				39FD47E0213E1FFE59609A06 /* Products */,
 			);
 			sourceTree = "<group>";
 		};
-		8F55D652979868A470D724FA650F6B6B /* Materials */ = {
+		8F55D652979868A470D724FA /* Materials */ = {
 			isa = PBXGroup;
 			children = (
-				41033B581E89DF4B33A2EB534A7020C3 /* bakedColor.mat */,
+				41033B581E89DF4B33A2EB53 /* bakedColor.mat */,
 			);
 			path = Materials;
 			sourceTree = "<group>";
 		};
-		C54ABC8D31D1863EF16253A04649C424 /* hello-triangle */ = {
+		C54ABC8D31D1863EF16253A0 /* hello-triangle */ = {
 			isa = PBXGroup;
 			children = (
-				C16E9A84F33BDFAEDC1E483774DF336C /* AppDelegate.h */,
-				45FE9476D47ECFFEA65D7146A57C5807 /* AppDelegate.m */,
-				524293A0A8CDE9047347EF48D0651A12 /* Assets.xcassets */,
-				CDBB6BE341D1C708FCB687507015103B /* FilamentView.h */,
-				0CDCD26337640C57D07E41ED006B9C6D /* FilamentView.mm */,
-				761A2C7D6295697614AD3434356B8E9E /* Info.plist */,
-				46A2FAD3D476FDADF45F70F88D39B377 /* LaunchScreen.storyboard */,
-				E56C70616FF30C50DFA8238B177D825B /* main.m */,
-				DDE4A219AEB5B4507F51B8735787157D /* Main.storyboard */,
-				C311F8DEBEFEB185F0A7E4CCC6733265 /* ViewController.h */,
-				2620C967534D81CFFAB5D3FFC47A66A3 /* ViewController.m */,
+				C16E9A84F33BDFAEDC1E4837 /* AppDelegate.h */,
+				45FE9476D47ECFFEA65D7146 /* AppDelegate.m */,
+				524293A0A8CDE9047347EF48 /* Assets.xcassets */,
+				CDBB6BE341D1C708FCB68750 /* FilamentView.h */,
+				0CDCD26337640C57D07E41ED /* FilamentView.mm */,
+				761A2C7D6295697614AD3434 /* Info.plist */,
+				46A2FAD3D476FDADF45F70F8 /* LaunchScreen.storyboard */,
+				E56C70616FF30C50DFA8238B /* main.m */,
+				DDE4A219AEB5B4507F51B873 /* Main.storyboard */,
+				C311F8DEBEFEB185F0A7E4CC /* ViewController.h */,
+				2620C967534D81CFFAB5D3FF /* ViewController.m */,
 			);
 			path = "hello-triangle";
 			sourceTree = "<group>";
@@ -79,13 +79,13 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		E1728FC11488F3D9841B25E76585B515 /* hello-triangle */ = {
+		E1728FC11488F3D9841B25E7 /* hello-triangle */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 4ADB63CF62C87304D2537574900228C6 /* Build configuration list for PBXNativeTarget "hello-triangle" */;
+			buildConfigurationList = 4ADB63CF62C87304D2537574 /* Build configuration list for PBXNativeTarget "hello-triangle" */;
 			buildPhases = (
-				668105208CE7DFC4DC55F8ECC0EABF67 /* Build Materials */,
-				7B94E1FEEC48280815A91021223A792F /* Sources */,
-				471869BF4E82B6ADC791072D1BE189ED /* Resources */,
+				668105208CE7DFC4DC55F8EC /* Build Materials */,
+				7B94E1FEEC48280815A91021 /* Sources */,
+				471869BF4E82B6ADC791072D /* Resources */,
 			);
 			buildRules = (
 			);
@@ -93,48 +93,50 @@
 			);
 			name = "hello-triangle";
 			productName = "hello-triangle";
-			productReference = 3BB2247EC7FE4EFB2C3ED10A5046333B /* hello-triangle.app */;
+			productReference = 3BB2247EC7FE4EFB2C3ED10A /* hello-triangle.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
-		72185E8715083808BEBA6666B47D8988 /* Project object */ = {
+		72185E8715083808BEBA6666 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 1000;
+				LastUpgradeCheck = 1020;
+				TargetAttributes = {
+				};
 			};
-			buildConfigurationList = 69A012BABE82CB5D1986B1BB73B4BDC6 /* Build configuration list for PBXProject "hello-triangle" */;
-			compatibilityVersion = "Xcode 9.3";
+			buildConfigurationList = 69A012BABE82CB5D1986B1BB /* Build configuration list for PBXProject "hello-triangle" */;
+			compatibilityVersion = "Xcode 10.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				Base,
 			);
-			mainGroup = 5B3E3AAF5C756449084924104376C030;
+			mainGroup = 5B3E3AAF5C75644908492410;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				E1728FC11488F3D9841B25E76585B515 /* hello-triangle */,
+				E1728FC11488F3D9841B25E7 /* hello-triangle */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		471869BF4E82B6ADC791072D1BE189ED /* Resources */ = {
+		471869BF4E82B6ADC791072D /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				E00008AE8D480B194E25A0D98AB97F2D /* Assets.xcassets in Resources */,
-				25391681B7E1FAD8C35259C2FB43AA0C /* LaunchScreen.storyboard in Resources */,
-				E69F0688FDC3C597E6A02DC66C949C82 /* Main.storyboard in Resources */,
+				8897619E0912B69F232FCC88 /* Assets.xcassets in Resources */,
+				A05C6F2172B5C29D9A056E39 /* LaunchScreen.storyboard in Resources */,
+				67B75B37DC3FFFE6BDD91455 /* Main.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		668105208CE7DFC4DC55F8ECC0EABF67 /* Build Materials */ = {
+		668105208CE7DFC4DC55F8EC /* Build Materials */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -155,32 +157,32 @@
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		7B94E1FEEC48280815A91021223A792F /* Sources */ = {
+		7B94E1FEEC48280815A91021 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4831F43B77D0E8C437B64E0CD223DD61 /* AppDelegate.m in Sources */,
-				F864F73179636D71BDCF7695C325FCBF /* FilamentView.mm in Sources */,
-				FE8718DB24186A895AD2E45650C88C5C /* ViewController.m in Sources */,
-				CD70F3CC948993A3E182EEAE716413C0 /* main.m in Sources */,
+				4715F63AF782F1A15A37EFA8 /* AppDelegate.m in Sources */,
+				BED52BA49D882353BBCEA4F4 /* FilamentView.mm in Sources */,
+				4B0C2B6E7D4BF89D8EDEB84F /* ViewController.m in Sources */,
+				AC1320F672694ABEF53EFAC8 /* main.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXVariantGroup section */
-		46A2FAD3D476FDADF45F70F88D39B377 /* LaunchScreen.storyboard */ = {
+		46A2FAD3D476FDADF45F70F8 /* LaunchScreen.storyboard */ = {
 			isa = PBXVariantGroup;
 			children = (
-				E36D17DB3F44ADF8EFBEDBAFB037DBFD /* Base */,
+				E36D17DB3F44ADF8EFBEDBAF /* Base */,
 			);
 			name = LaunchScreen.storyboard;
 			sourceTree = "<group>";
 		};
-		DDE4A219AEB5B4507F51B8735787157D /* Main.storyboard */ = {
+		DDE4A219AEB5B4507F51B873 /* Main.storyboard */ = {
 			isa = PBXVariantGroup;
 			children = (
-				350DC65C7EE8D98D8FE181DC993DCB2C /* Base */,
+				350DC65C7EE8D98D8FE181DC /* Base */,
 			);
 			name = Main.storyboard;
 			sourceTree = "<group>";
@@ -188,10 +190,9 @@
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
-		72904931900727BD2A28C94ABEE47975 /* OpenGL Debug */ = {
+		72904931900727BD2A28C94A /* OpenGL Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				ENABLE_BITCODE = NO;
@@ -205,7 +206,10 @@
 				);
 				INFOPLIST_FILE = "hello-triangle/Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 12.1;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
 				LIBRARY_SEARCH_PATHS = (
 					"../../../out/ios-debug/filament/lib/$(CURRENT_ARCH)",
 				);
@@ -225,7 +229,7 @@
 			};
 			name = "OpenGL Debug";
 		};
-		A8AA57A6886708B36E05C9F62E8BD8F1 /* Metal Debug */ = {
+		A8AA57A6886708B36E05C9F6 /* Metal Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -280,14 +284,13 @@
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				SWIFT_VERSION = 4.2;
+				SWIFT_VERSION = 5.0;
 			};
 			name = "Metal Debug";
 		};
-		B4B89CE65EA71CC3818FF4A42DFB01A3 /* Metal Release */ = {
+		B4B89CE65EA71CC3818FF4A4 /* Metal Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				ENABLE_BITCODE = NO;
@@ -301,7 +304,10 @@
 				);
 				INFOPLIST_FILE = "hello-triangle/Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 12.1;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
 				LIBRARY_SEARCH_PATHS = (
 					"../../../out/ios-release/filament/lib/$(CURRENT_ARCH)",
 				);
@@ -321,10 +327,9 @@
 			};
 			name = "Metal Release";
 		};
-		CBEE96866E504FF3642ADC342AD7C717 /* OpenGL Release */ = {
+		CBEE96866E504FF3642ADC34 /* OpenGL Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				ENABLE_BITCODE = NO;
@@ -338,7 +343,10 @@
 				);
 				INFOPLIST_FILE = "hello-triangle/Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 12.1;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
 				LIBRARY_SEARCH_PATHS = (
 					"../../../out/ios-release/filament/lib/$(CURRENT_ARCH)",
 				);
@@ -358,7 +366,7 @@
 			};
 			name = "OpenGL Release";
 		};
-		D32EE4FDCEE2FA200C53742A1A2A8E57 /* Metal Release */ = {
+		D32EE4FDCEE2FA200C53742A /* Metal Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -403,13 +411,13 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
-				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
-				SWIFT_VERSION = 4.2;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_VERSION = 5.0;
 				VALIDATE_PRODUCT = YES;
 			};
 			name = "Metal Release";
 		};
-		EBDBF377A7118E2F3A35DF01A226A1AF /* OpenGL Release */ = {
+		EBDBF377A7118E2F3A35DF01 /* OpenGL Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -454,16 +462,15 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
-				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
-				SWIFT_VERSION = 4.2;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_VERSION = 5.0;
 				VALIDATE_PRODUCT = YES;
 			};
 			name = "OpenGL Release";
 		};
-		ED7978DA0F9577A62C5EAC191761A15D /* Metal Debug */ = {
+		ED7978DA0F9577A62C5EAC19 /* Metal Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				ENABLE_BITCODE = NO;
@@ -477,7 +484,10 @@
 				);
 				INFOPLIST_FILE = "hello-triangle/Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 12.1;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
 				LIBRARY_SEARCH_PATHS = (
 					"../../../out/ios-debug/filament/lib/$(CURRENT_ARCH)",
 				);
@@ -497,7 +507,7 @@
 			};
 			name = "Metal Debug";
 		};
-		FF7096BA27E09404E7938C1C5DA74C34 /* OpenGL Debug */ = {
+		FF7096BA27E09404E7938C1C /* OpenGL Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -552,36 +562,36 @@
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				SWIFT_VERSION = 4.2;
+				SWIFT_VERSION = 5.0;
 			};
 			name = "OpenGL Debug";
 		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		4ADB63CF62C87304D2537574900228C6 /* Build configuration list for PBXNativeTarget "hello-triangle" */ = {
+		4ADB63CF62C87304D2537574 /* Build configuration list for PBXNativeTarget "hello-triangle" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				ED7978DA0F9577A62C5EAC191761A15D /* Metal Debug */,
-				B4B89CE65EA71CC3818FF4A42DFB01A3 /* Metal Release */,
-				72904931900727BD2A28C94ABEE47975 /* OpenGL Debug */,
-				CBEE96866E504FF3642ADC342AD7C717 /* OpenGL Release */,
+				ED7978DA0F9577A62C5EAC19 /* Metal Debug */,
+				B4B89CE65EA71CC3818FF4A4 /* Metal Release */,
+				72904931900727BD2A28C94A /* OpenGL Debug */,
+				CBEE96866E504FF3642ADC34 /* OpenGL Release */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = "";
+			defaultConfigurationName = "Metal Debug";
 		};
-		69A012BABE82CB5D1986B1BB73B4BDC6 /* Build configuration list for PBXProject "hello-triangle" */ = {
+		69A012BABE82CB5D1986B1BB /* Build configuration list for PBXProject "hello-triangle" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				A8AA57A6886708B36E05C9F62E8BD8F1 /* Metal Debug */,
-				D32EE4FDCEE2FA200C53742A1A2A8E57 /* Metal Release */,
-				FF7096BA27E09404E7938C1C5DA74C34 /* OpenGL Debug */,
-				EBDBF377A7118E2F3A35DF01A226A1AF /* OpenGL Release */,
+				A8AA57A6886708B36E05C9F6 /* Metal Debug */,
+				D32EE4FDCEE2FA200C53742A /* Metal Release */,
+				FF7096BA27E09404E7938C1C /* OpenGL Debug */,
+				EBDBF377A7118E2F3A35DF01 /* OpenGL Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = "Metal Debug";
 		};
 /* End XCConfigurationList section */
 	};
-	rootObject = 72185E8715083808BEBA6666B47D8988 /* Project object */;
+	rootObject = 72185E8715083808BEBA6666 /* Project object */;
 }

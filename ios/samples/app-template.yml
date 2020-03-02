@@ -9,8 +9,8 @@ targetTemplates:
         platform: iOS
         deploymentTarget: "12.1"
         sources:
-            - path: $target_name
-            - path: Materials
+            - path: ${target_name}/${target_name}
+            - path: ${target_name}/Materials
               buildPhase: none
               optional: true
         scheme:
