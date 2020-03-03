@@ -11,6 +11,9 @@
     "type": "git",
     "url": "https://github.com/google/filament.git"
   },
+  "dependencies": {
+    "gl-matrix": "^3.2.1"
+  },
   "files": [
     "filament.d.ts",
     "filament.js",
