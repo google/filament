@@ -127,6 +127,13 @@ namespace emscripten {
         BIND(utils::EntityManager)
         BIND(VertexBuffer)
         BIND(View)
+
+        // Permit use of Texture* inside emscripten::value_object.
+        template<> struct TypeID<Texture*> {
+            static constexpr TYPEID get() {
+                return LightTypeID<Texture>::get();
+            }
+        };
     }
 }
 #undef BIND
@@ -275,6 +282,25 @@ value_object<Box>("Box")
 value_object<filament::Aabb>("Aabb")
     .field("min", &filament::Aabb::min)
     .field("max", &filament::Aabb::max);
+
+value_object<filament::View::AmbientOcclusionOptions>("View$AmbientOcclusionOptions")
+    .field("radius", &filament::View::AmbientOcclusionOptions::radius)
+    .field("power", &filament::View::AmbientOcclusionOptions::power)
+    .field("bias", &filament::View::AmbientOcclusionOptions::bias)
+    .field("resolution", &filament::View::AmbientOcclusionOptions::resolution)
+    .field("intensity", &filament::View::AmbientOcclusionOptions::intensity)
+    .field("quality", &filament::View::AmbientOcclusionOptions::quality);
+
+value_object<filament::View::BloomOptions>("View$BloomOptions")
+    .field("dirtStrength", &filament::View::BloomOptions::dirtStrength)
+    .field("strength", &filament::View::BloomOptions::strength)
+    .field("resolution", &filament::View::BloomOptions::resolution)
+    .field("anamorphism", &filament::View::BloomOptions::anamorphism)
+    .field("levels", &filament::View::BloomOptions::levels)
+    .field("threshold", &filament::View::BloomOptions::threshold)
+    .field("enabled", &filament::View::BloomOptions::enabled)
+    .field("blendMode", &filament::View::BloomOptions::blendMode)
+    .field("dirt", &filament::View::BloomOptions::dirt);
 
 // In JavaScript, a flat contiguous representation is best for matrices (see gl-matrix) so we
 // need to define a small wrapper here.
@@ -465,6 +491,10 @@ class_<View>("View")
     .function("setViewport", &View::setViewport)
     .function("setClearColor", &View::setClearColor)
     .function("setPostProcessingEnabled", &View::setPostProcessingEnabled)
+    .function("_setAmbientOcclusionOptions", &View::setAmbientOcclusionOptions)
+    .function("_setBloomOptions", &View::setBloomOptions)
+    .function("setAmbientOcclusion", &View::setAmbientOcclusion)
+    .function("getAmbientOcclusion", &View::getAmbientOcclusion)
     .function("setAntiAliasing", &View::setAntiAliasing)
     .function("getAntiAliasing", &View::getAntiAliasing)
     .function("setSampleCount", &View::setSampleCount)
