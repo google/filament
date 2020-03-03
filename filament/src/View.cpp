@@ -545,8 +545,8 @@ void FView::prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& are
         uint32_t iEnd = uint32_t(beginSpotLightCastersOnly - beginRenderables);
         uint32_t iSpotLightCastersEnd = uint32_t(endSpotLightCastersOnly - beginRenderables);
         mVisibleRenderables = Range{ 0, uint32_t(beginCastersOnly - beginRenderables) };
-        mVisibleDirectionalShadowCasters = Range{uint32_t(beginCasters - beginRenderables), iEnd };
-        mSpotLightShadowCasters = Range{0, iSpotLightCastersEnd };
+        mVisibleDirectionalShadowCasters = Range{ uint32_t(beginCasters - beginRenderables), iEnd };
+        mSpotLightShadowCasters = Range{ 0, iSpotLightCastersEnd };
         merged = Range{ 0, iSpotLightCastersEnd };
 
         // update those UBOs
