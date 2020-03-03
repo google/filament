@@ -332,6 +332,7 @@ backend::Handle<backend::HwProgram> FMaterial::getSurfaceProgramSlow(uint8_t var
     pb
         .setUniformBlock(BindingPoints::PER_VIEW, UibGenerator::getPerViewUib().getName())
         .setUniformBlock(BindingPoints::LIGHTS, UibGenerator::getLightsUib().getName())
+        .setUniformBlock(BindingPoints::SHADOW, UibGenerator::getShadowUib().getName())
         .setUniformBlock(BindingPoints::PER_RENDERABLE, UibGenerator::getPerRenderableUib().getName())
         .setUniformBlock(BindingPoints::PER_MATERIAL_INSTANCE, mUniformInterfaceBlock.getName());
 

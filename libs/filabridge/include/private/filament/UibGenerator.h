@@ -21,6 +21,8 @@
 #include <math/mat4.h>
 #include <math/vec4.h>
 
+#include <private/filament/EngineEnums.h>
+
 namespace filament {
 
 class UniformInterfaceBlock;
@@ -30,6 +32,7 @@ public:
     static UniformInterfaceBlock const& getPerViewUib() noexcept;
     static UniformInterfaceBlock const& getPerRenderableUib() noexcept;
     static UniformInterfaceBlock const& getLightsUib() noexcept;
+    static UniformInterfaceBlock const& getShadowUib() noexcept;
     static UniformInterfaceBlock const& getPerRenderableBonesUib() noexcept;
 };
 
@@ -110,6 +113,16 @@ struct LightsUib {
     filament::math::float4 colorIntensity;    // { float3(col), intensity }
     filament::math::float4 directionIES;      // { float3(dir), IES index }
     filament::math::float4 spotScaleOffset;   // { scale, offset, unused, unused }
+};
+
+// UBO for punctual (spot light) shadows.
+struct ShadowUib {
+    static const UniformInterfaceBlock& getUib() noexcept {
+        return UibGenerator::getShadowUib();
+    }
+
+    filament::math::mat4f spotLightFromWorldMatrix[CONFIG_MAX_SHADOW_CASTING_SPOTS];
+    filament::math::float4 directionShadowBias[CONFIG_MAX_SHADOW_CASTING_SPOTS]; // light direction, normal bias
 };
 
 // This is not the UBO proper, but just an element of a bone array.

@@ -338,6 +338,7 @@ private:
     void bindPerViewUniformsAndSamplers(FEngine::DriverApi& driver) const noexcept {
         driver.bindUniformBuffer(BindingPoints::PER_VIEW, mPerViewUbh);
         driver.bindUniformBuffer(BindingPoints::LIGHTS, mLightUbh);
+        driver.bindUniformBuffer(BindingPoints::SHADOW, mShadowUbh);
         driver.bindSamplers(BindingPoints::PER_VIEW, mPerViewSbh);
     }
 
@@ -350,6 +351,7 @@ private:
     backend::Handle<backend::HwSamplerGroup> mPerViewSbh;
     backend::Handle<backend::HwUniformBuffer> mPerViewUbh;
     backend::Handle<backend::HwUniformBuffer> mLightUbh;
+    backend::Handle<backend::HwUniformBuffer> mShadowUbh;
     backend::Handle<backend::HwUniformBuffer> mRenderableUbh;
 
     backend::Handle<backend::HwSamplerGroup> getUsh() const noexcept { return mPerViewSbh; }
@@ -399,6 +401,7 @@ private:
     RenderQuality mRenderQuality;
 
     mutable UniformBuffer mPerViewUb;
+    mutable UniformBuffer mShadowUb;
     mutable backend::SamplerGroup mPerViewSb;
 
     utils::CString mName;

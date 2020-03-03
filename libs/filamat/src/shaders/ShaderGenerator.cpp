@@ -205,6 +205,10 @@ const std::string ShaderGenerator::createVertexProgram(filament::backend::Shader
             BindingPoints::PER_VIEW, UibGenerator::getPerViewUib());
     cg.generateUniforms(vs, ShaderType::VERTEX,
             BindingPoints::PER_RENDERABLE, UibGenerator::getPerRenderableUib());
+    if (litVariants && variant.hasShadowReceiver()) {
+        cg.generateUniforms(vs, ShaderType::VERTEX,
+                BindingPoints::SHADOW, UibGenerator::getShadowUib());
+    }
     if (variant.hasSkinningOrMorphing()) {
         cg.generateUniforms(vs, ShaderType::VERTEX,
                 BindingPoints::PER_RENDERABLE_BONES,

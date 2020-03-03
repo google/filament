@@ -107,6 +107,15 @@ UniformInterfaceBlock const& UibGenerator::getLightsUib() noexcept {
     return uib;
 }
 
+UniformInterfaceBlock const& UibGenerator::getShadowUib() noexcept {
+    static UniformInterfaceBlock uib = UniformInterfaceBlock::Builder()
+            .name("ShadowUniforms")
+            .add("spotLightFromWorldMatrix", CONFIG_MAX_SHADOW_CASTING_SPOTS, UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
+            .add("directionShadowBias", CONFIG_MAX_SHADOW_CASTING_SPOTS, UniformInterfaceBlock::Type::FLOAT4, Precision::HIGH)
+            .build();
+    return uib;
+}
+
 UniformInterfaceBlock const& UibGenerator::getPerRenderableBonesUib() noexcept {
     static UniformInterfaceBlock uib = UniformInterfaceBlock::Builder()
             .name("BonesUniforms")
