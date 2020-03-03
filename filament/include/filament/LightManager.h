@@ -617,6 +617,8 @@ public:
      */
     void setSpotLightCone(Instance i, float inner, float outer) noexcept;
 
+    float getSpotLightOuterCone(Instance i) const noexcept;
+
     /**
      * Dynamically updates the angular radius of a Type.SUN light
      *

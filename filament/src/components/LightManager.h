@@ -71,6 +71,7 @@ public:
 
     struct SpotParams {
         float radius = 0;
+        float outerClamped = 0;
         float cosOuterSquared = 1;
         float sinInverse = std::numeric_limits<float>::infinity();
         float luminousPower = 0;

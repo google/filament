@@ -299,6 +299,7 @@ void FLightManager::setSpotLightCone(Instance i, float inner, float outer) noexc
         float offset = -cosOuter * scale;
 
         SpotParams& spotParams = manager[i].spotParams;
+        spotParams.outerClamped = outerClamped;
         spotParams.cosOuterSquared = cosOuterSquared;
         spotParams.sinInverse = 1 / std::sqrt(1 - cosOuterSquared);
         spotParams.scaleOffset = { scale, offset };
@@ -404,6 +405,10 @@ float LightManager::getFalloff(Instance i) const noexcept {
 
 void LightManager::setSpotLightCone(Instance i, float inner, float outer) noexcept {
     upcast(this)->setSpotLightCone(i, inner, outer);
+}
+
+float LightManager::getSpotLightOuterCone(Instance i) const noexcept {
+    return upcast(this)->getSpotParams(i).outerClamped;
 }
 
 void LightManager::setSunAngularRadius(Instance i, float angularRadius) noexcept {
