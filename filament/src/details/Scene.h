@@ -94,6 +94,8 @@ public:
      * Storage for per-frame renderable data
      */
 
+    using VisibleMaskType = Culler::result_type;
+
     enum {
         RENDERABLE_INSTANCE,    //  4 | instance of the Renderable component
         WORLD_TRANSFORM,        // 16 | instance of the Transform component
@@ -120,7 +122,7 @@ public:
             FRenderableManager::Visibility,             // VISIBILITY_STATE
             backend::Handle<backend::HwUniformBuffer>,  // BONES_UBH
             math::float3,                               // WORLD_AABB_CENTER
-            Culler::result_type,                        // VISIBLE_MASK
+            VisibleMaskType,                            // VISIBLE_MASK
             math::float4,                               // MORPH_WEIGHTS
             uint8_t,                                    // LAYERS
             math::float3,                               // WORLD_AABB_EXTENT

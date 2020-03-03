@@ -30,6 +30,8 @@
 #include <utils/compiler.h>
 #include <utils/Slice.h>
 
+#include <limits>
+
 namespace utils {
 class JobSystem;
 }
@@ -245,6 +247,16 @@ public:
     void setCamera(const CameraInfo& camera) noexcept;
     void setRenderFlags(RenderFlags flags) noexcept;
 
+    // Sets the visibility mask, which is AND-ed against each Renderable's VISIBLE_MASK to determine
+    // if the renderable is visible for this pass.
+    // Defaults to all 1's, which means all renderables in this render pass will be rendered.
+    void setVisibilityMask(FScene::VisibleMaskType mask) noexcept { mVisibilityMask = mask; }
+
+    // Resets the visibility mask to the default value of all 1's.
+    void clearVisibilityMask() noexcept {
+        mVisibilityMask = std::numeric_limits<FScene::VisibleMaskType>::max();
+    }
+
     Command* begin() noexcept { return mCommands.begin(); }
     Command* end() noexcept { return mCommands.end(); }
 
@@ -289,12 +301,12 @@ private:
 
     static inline void generateCommands(uint32_t commandTypeFlags, Command* commands,
             FScene::RenderableSoa const& soa, utils::Range<uint32_t> range, RenderFlags renderFlags,
-            math::float3 cameraPosition, math::float3 cameraForward) noexcept;
+            FScene::VisibleMaskType visibilityMask, math::float3 cameraPosition, math::float3 cameraForward) noexcept;
 
     template<uint32_t commandTypeFlags>
     static inline void generateCommandsImpl(uint32_t, Command* commands,
             FScene::RenderableSoa const& soa, utils::Range<uint32_t> range,
-            RenderFlags renderFlags,
+            RenderFlags renderFlags, FScene::VisibleMaskType visibilityMask,
             math::float3 cameraPosition, math::float3 cameraForward) noexcept;
 
     static void setupColorCommand(Command& cmdDraw, bool hasDepthPass,
@@ -326,6 +338,7 @@ private:
     CameraInfo mCamera;
     // info about the scene features (e.g.: has shadows, lighting, etc...)
     RenderFlags mFlags{};
+    FScene::VisibleMaskType mVisibilityMask = std::numeric_limits<FScene::VisibleMaskType>::max();
     // whether to override the polygon offset setting
     bool mPolygonOffsetOverride = false;
     // value of the override

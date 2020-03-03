@@ -82,6 +82,7 @@ RenderPass::Command* RenderPass::appendCommands(CommandTypeFlags const commandTy
     JobSystem& js = engine.getJobSystem();
     GrowingSlice<Command>& commands = mCommands;
     const RenderFlags renderFlags = mFlags;
+    const FScene::VisibleMaskType visibilityMask = mVisibilityMask;
     CameraInfo const& camera = mCamera;
     utils::Range<uint32_t> vr = mVisibleRenderables;
     if (UTILS_UNLIKELY(vr.empty())) {
@@ -107,10 +108,11 @@ RenderPass::Command* RenderPass::appendCommands(CommandTypeFlags const commandTy
     // we extract camera position/forward outside of the loop, because these are not cheap.
     const float3 cameraPosition(camera.getPosition());
     const float3 cameraForwardVector(camera.getForwardVector());
-    auto work = [commandTypeFlags, curr, &soa, renderFlags, cameraPosition, cameraForwardVector]
+    auto work = [commandTypeFlags, curr, &soa, renderFlags, visibilityMask, cameraPosition,
+                 cameraForwardVector]
             (uint32_t startIndex, uint32_t indexCount) {
         RenderPass::generateCommands(commandTypeFlags, curr,
-                soa, { startIndex, startIndex + indexCount }, renderFlags,
+                soa, { startIndex, startIndex + indexCount }, renderFlags, visibilityMask,
                 cameraPosition, cameraForwardVector);
     };
 
@@ -303,7 +305,7 @@ void RenderPass::setupColorCommand(Command& cmdDraw, bool hasDepthPass,
 UTILS_NOINLINE
 void RenderPass::generateCommands(uint32_t commandTypeFlags, Command* const commands,
         FScene::RenderableSoa const& soa, Range<uint32_t> range, RenderFlags renderFlags,
-        float3 cameraPosition, float3 cameraForward) noexcept {
+        FScene::VisibleMaskType visibilityMask, float3 cameraPosition, float3 cameraForward) noexcept {
 
     // generateCommands() writes both the draw and depth commands simultaneously such that
     // we go throw the list of renderables just once.
@@ -330,11 +332,11 @@ void RenderPass::generateCommands(uint32_t commandTypeFlags, Command* const comm
     switch (commandTypeFlags & (CommandTypeFlags::COLOR | CommandTypeFlags::DEPTH)) {
         case CommandTypeFlags::COLOR:
             generateCommandsImpl<CommandTypeFlags::COLOR>(commandTypeFlags, curr,
-                    soa, range, renderFlags, cameraPosition, cameraForward);
+                    soa, range, renderFlags, visibilityMask, cameraPosition, cameraForward);
             break;
         case CommandTypeFlags::DEPTH:
             generateCommandsImpl<CommandTypeFlags::DEPTH>(commandTypeFlags, curr,
-                    soa, range, renderFlags, cameraPosition, cameraForward);
+                    soa, range, renderFlags, visibilityMask, cameraPosition, cameraForward);
             break;
         default:
             // we should never end-up here
@@ -348,7 +350,7 @@ UTILS_NOINLINE
 void RenderPass::generateCommandsImpl(uint32_t extraFlags,
         Command* UTILS_RESTRICT curr,
         FScene::RenderableSoa const& UTILS_RESTRICT soa, Range<uint32_t> range,
-        RenderFlags renderFlags,
+        RenderFlags renderFlags, FScene::VisibleMaskType visibilityMask,
         float3 cameraPosition, float3 cameraForward) noexcept {
 
     // generateCommands() writes both the draw and depth commands simultaneously such that
@@ -367,6 +369,7 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
     auto const* const UTILS_RESTRICT soaVisibility      = soa.data<FScene::VISIBILITY_STATE>();
     auto const* const UTILS_RESTRICT soaPrimitives      = soa.data<FScene::PRIMITIVES>();
     auto const* const UTILS_RESTRICT soaBonesUbh        = soa.data<FScene::BONES_UBH>();
+    auto const* const UTILS_RESTRICT soaVisibilityMask  = soa.data<FScene::VISIBLE_MASK>();
 
     const bool hasShadowing = renderFlags & HAS_SHADOWING;
     const bool viewInverseFrontFaces = renderFlags & HAS_INVERSE_FRONT_FACES;
@@ -387,6 +390,14 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
     cmdDepth.primitive.rasterState.alphaToCoverage = false;
 
     for (uint32_t i = range.first; i < range.last; ++i) {
+        // Check if this renderable passes the visibilityMask. If it doesn't, encode a SENTINEL
+        // command (no-op).
+        if (UTILS_UNLIKELY(!(soaVisibilityMask[i] & visibilityMask))) {
+            curr->key = uint64_t(Pass::SENTINEL);
+            ++curr;
+            continue;
+        }
+
         // Signed distance from camera to object's center. Positive distances are in front of
         // the camera. Some objects with a center behind the camera can still be visible
         // so their distance will be negative (this happens a lot for the shadow map).
