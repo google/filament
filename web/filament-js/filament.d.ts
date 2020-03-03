@@ -52,7 +52,28 @@ export interface Aabb {
     max: float3;
 }
 
-// TODO: Remove the entity type and just use integers for better parity with Java.
+export interface View$AmbientOcclusionOptions {
+    radius?: number;
+    power?: number;
+    bias?: number;
+    resolution?: number;
+    intensity?: number;
+    quality?: View$QualityLevel;
+}
+
+export interface View$BloomOptions {
+    dirtStrength?: number;
+    strength?: number;
+    resolution?: number;
+    anamorphism?: number;
+    levels?: number;
+    blendMode?: View$BloomOptions$BlendMode;
+    threshold?: boolean;
+    enabled?: boolean;
+    dirt?: Texture|null;
+}
+
+// TODO: Remove the entity type and just use integers for parity with Filament's Java bindings.
 export class Entity {
     public getId(): number;
 }
@@ -104,10 +125,8 @@ export class EntityManager {
 export class VertexBuffer$Builder {
     public vertexCount(count: number): VertexBuffer$Builder;
     public bufferCount(count: number): VertexBuffer$Builder;
-    public attribute(attrib: VertexAttribute,
-                        bufindex: number,
-                        atype: VertexBuffer$AttributeType,
-                        offset: number, stride: number): VertexBuffer$Builder;
+    public attribute(attrib: VertexAttribute, bufindex: number, atype: VertexBuffer$AttributeType,
+            offset: number, stride: number): VertexBuffer$Builder;
     public normalized(attrib: VertexAttribute): VertexBuffer$Builder;
     public normalizedIf(attrib: VertexAttribute, normalized: boolean): VertexBuffer$Builder;
     public build(engine: Engine): VertexBuffer;
@@ -120,10 +139,8 @@ export class IndexBuffer$Builder {
 }
 
 export class RenderableManager$Builder {
-    public geometry(slot: number,
-        ptype: RenderableManager$PrimitiveType,
-        vb: VertexBuffer,
-        ib: IndexBuffer): RenderableManager$Builder;
+    public geometry(slot: number, ptype: RenderableManager$PrimitiveType, vb: VertexBuffer,
+            ib: IndexBuffer): RenderableManager$Builder;
     public material(geo: number, minstance: MaterialInstance): RenderableManager$Builder;
     public boundingBox(box: Box): RenderableManager$Builder;
     public layerMask(select: number, values: number): RenderableManager$Builder;
@@ -256,9 +273,9 @@ export class Frustum {
 
 export class Camera {
     public setProjection(proj: Camera$Projection, left: number, right: number, bottom: number,
-        top: number, near: number, far: number): void;
+            top: number, near: number, far: number): void;
     public setProjectionFov(fovInDegrees: number, aspect: number,
-        near: number, far: number, fov: Camera$Fov): void;
+            near: number, far: number, fov: Camera$Fov): void;
     public setLensProjection(focalLength: number, aspect: number, near: number, far: number): void;
     public setCustomProjection(projection: mat4, near: number, far: number): void;
     public getProjectionMatrix(): mat4;
@@ -747,6 +764,23 @@ export enum VertexBuffer$AttributeType {
 export enum View$AntiAliasing {
     NONE,
     FXAA,
+}
+
+export enum View$QualityLevel {
+    LOW,
+    MEDIUM,
+    HIGH,
+    ULTRA,
+}
+
+export enum View$AmbientOcclusion {
+    NONE,
+    SSAO,
+}
+
+export enum View$BloomOptions$BlendMode {
+    ADD,
+    INTERPOLATE,
 }
 
 export enum WrapMode {

@@ -113,6 +113,20 @@ enum_<RenderableManager::PrimitiveType>("RenderableManager$PrimitiveType")
     .value("TRIANGLES", RenderableManager::PrimitiveType::TRIANGLES)
     .value("NONE", RenderableManager::PrimitiveType::NONE);
 
+enum_<View::QualityLevel>("View$QualityLevel")
+    .value("LOW", View::QualityLevel::LOW)
+    .value("MEDIUM", View::QualityLevel::MEDIUM)
+    .value("HIGH", View::QualityLevel::HIGH)
+    .value("ULTRA", View::QualityLevel::ULTRA);
+
+enum_<View::AmbientOcclusion>("View$AmbientOcclusion")
+    .value("NONE", View::AmbientOcclusion::NONE)
+    .value("SSAO", View::AmbientOcclusion::SSAO);
+
+enum_<View::BloomOptions::BlendMode>("View$BloomOptions$BlendMode")
+    .value("ADD", View::BloomOptions::BlendMode::ADD)
+    .value("INTERPOLATE", View::BloomOptions::BlendMode::INTERPOLATE);
+
 enum_<View::AntiAliasing>("View$AntiAliasing")
     .value("NONE", View::AntiAliasing::NONE)
     .value("FXAA", View::AntiAliasing::FXAA);
