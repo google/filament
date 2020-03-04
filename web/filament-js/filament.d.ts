@@ -347,6 +347,10 @@ export class View {
     public setScene(scene: Scene): void;
     public setViewport(viewport: float4): void;
     public setRenderTarget(renderTarget: RenderTarget): void;
+    public setAmbientOcclusionOptions(options: View$AmbientOcclusionOptions): void;
+    public setBloomOptions(options: View$BloomOptions): void;
+    public setAmbientOcclusion(enable: boolean): void;
+    public getAmbientOcclusion(): boolean;
 }
 
 export class TransformManager {
