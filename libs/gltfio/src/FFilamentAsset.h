@@ -37,6 +37,7 @@
 #include <cgltf.h>
 
 #include "upcast.h"
+#include "Bindings.h"
 #include "Wireframe.h"
 #include "DependencyGraph.h"
 
