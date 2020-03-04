@@ -62,9 +62,8 @@ const char* FrameGraph::Builder::getName(FrameGraphHandle const& r) const noexce
     return pResource ? pResource->name : "(invalid)";
 }
 
-template<>
-FrameGraphId<FrameGraphRenderTarget> FrameGraph::Builder::create(const char* name,
-        FrameGraphRenderTarget::Descriptor const& desc) noexcept {
+FrameGraphId<FrameGraphRenderTarget> FrameGraph::Builder::createRenderTargetImpl(
+        const char* name, typename FrameGraphRenderTarget::Descriptor const& desc) noexcept {
     auto handle = mFrameGraph.create<FrameGraphRenderTarget>(name, desc);
     return mPass.use(mFrameGraph, handle);
 }

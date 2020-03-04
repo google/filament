@@ -77,7 +77,9 @@ public:
 
         template<>
         FrameGraphId<FrameGraphRenderTarget> create(const char* name,
-                typename FrameGraphRenderTarget::Descriptor const& desc) noexcept;
+                typename FrameGraphRenderTarget::Descriptor const& desc) noexcept {
+            return createRenderTargetImpl(name, desc);
+        }
 
         // Helper to create a Texture resource
         FrameGraphId<FrameGraphTexture> createTexture(const char* name,
@@ -137,6 +139,8 @@ public:
         ~Builder() noexcept;
         FrameGraphHandle readImpl(FrameGraphHandle input);
         [[nodiscard]] FrameGraphHandle writeImpl(FrameGraphHandle output);
+        FrameGraphId<FrameGraphRenderTarget> createRenderTargetImpl(
+                const char* name, typename FrameGraphRenderTarget::Descriptor const& desc) noexcept;
         FrameGraph& mFrameGraph;
         fg::PassNode& mPass;
     };
