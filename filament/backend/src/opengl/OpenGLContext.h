@@ -89,10 +89,6 @@ public:
     inline void setScissor(GLint left, GLint bottom, GLsizei width, GLsizei height) noexcept;
     inline void viewport(GLint left, GLint bottom, GLsizei width, GLsizei height) noexcept;
 
-    inline void setClearColor(GLfloat r, GLfloat g, GLfloat b, GLfloat a) noexcept;
-    inline void setClearDepth(GLfloat depth) noexcept;
-    inline void setClearStencil(GLint stencil) noexcept;
-
     void deleteBuffers(GLsizei n, const GLuint* buffers, GLenum target) noexcept;
     void deleteVextexArrays(GLsizei n, const GLuint* arrays) noexcept;
 
@@ -247,12 +243,6 @@ private:
             vec4gli scissor { 0 };
             vec4gli viewport { 0 };
         } window;
-
-        struct {
-            math::float4 color = {};
-            GLfloat depth = 1.0f;
-            GLint stencil = 0;
-        } clears;
     } state;
 
     RenderPrimitive mDefaultVAO;
@@ -355,25 +345,6 @@ void OpenGLContext::viewport(GLint left, GLint bottom, GLsizei width, GLsizei he
     vec4gli viewport(left, bottom, width, height);
     update_state(state.window.viewport, viewport, [&]() {
         glViewport(left, bottom, width, height);
-    });
-}
-
-void OpenGLContext::setClearColor(GLfloat r, GLfloat g, GLfloat b, GLfloat a) noexcept {
-    math::float4 color(r, g, b, a);
-    update_state(state.clears.color, color, [&]() {
-        glClearColor(r, g, b, a);
-    });
-}
-
-void OpenGLContext::setClearDepth(GLfloat depth) noexcept {
-    update_state(state.clears.depth, depth, [&]() {
-        glClearDepthf(depth);
-    });
-}
-
-void OpenGLContext::setClearStencil(GLint stencil) noexcept {
-    update_state(state.clears.stencil, stencil, [&]() {
-        glClearStencil(stencil);
     });
 }
 

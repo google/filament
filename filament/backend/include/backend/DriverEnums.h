@@ -68,13 +68,12 @@ enum class TargetBufferFlags : uint8_t {
     COLOR1 = 0x2u,                          //!< Color buffer selected.
     COLOR2 = 0x4u,                          //!< Color buffer selected.
     COLOR3 = 0x8u,                          //!< Color buffer selected.
-    COLOR = COLOR0,                         //!< Color buffer selected.
+    COLOR = COLOR0,                         //!< \deprecated
+    COLOR_ALL = COLOR0 | COLOR1 | COLOR2 | COLOR3,
     DEPTH = 0x10u,                          //!< Depth buffer selected.
     STENCIL = 0x20u,                        //!< Stencil buffer selected.
-    COLOR_AND_DEPTH = COLOR | DEPTH,        //!< Color and depth buffer selected.
-    COLOR_AND_STENCIL = COLOR | STENCIL,    //!< Color and stencil buffer selected.
     DEPTH_AND_STENCIL = DEPTH | STENCIL,    //!< depth and stencil buffer selected.
-    ALL = COLOR | DEPTH | STENCIL           //!< Color, depth and stencil buffer selected.
+    ALL = COLOR_ALL | DEPTH | STENCIL       //!< Color, depth and stencil buffer selected.
 };
 
 inline TargetBufferFlags getMRTColorFlag(size_t index) noexcept {
