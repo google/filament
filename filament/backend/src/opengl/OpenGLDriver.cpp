@@ -2071,37 +2071,6 @@ void OpenGLDriver::resolvePass(ResolveAction action, GLRenderTarget const* rt,
     }
 }
 
-void OpenGLDriver::discardSubRenderTargetBuffers(Handle<HwRenderTarget> rth,
-        TargetBufferFlags buffers,
-        uint32_t left, uint32_t bottom, uint32_t width, uint32_t height) {
-    DEBUG_MARKER()
-    auto& gl = mContext;
-
-    // glInvalidateSubFramebuffer appeared on GLES 3.0 and GL4.3, for simplicity we just
-    // ignore it on GL (rather than having to do a runtime check).
-    if (GLES30_HEADERS) {
-        // we wouldn't have to bind the framebuffer if we had glInvalidateNamedFramebuffer()
-        GLRenderTarget const* rt = handle_cast<GLRenderTarget const*>(rth);
-
-        // clamping is necessary to avoid GL_INVALID_VALUE
-        uint32_t right = std::min(left + width, rt->width);
-        uint32_t top   = std::min(bottom + height, rt->height);
-
-        if (left < right && bottom < top) {
-            gl.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
-
-            std::array<GLenum, 6> attachments; // NOLINT
-            GLsizei attachmentCount = getAttachments(attachments, rt, buffers);
-            if (attachmentCount) {
-                glInvalidateSubFramebuffer(GL_FRAMEBUFFER, attachmentCount, attachments.data(),
-                        left, bottom, right - left, top - bottom);
-            }
-
-            CHECK_GL_ERROR(utils::slog.e)
-        }
-    }
-}
-
 GLsizei OpenGLDriver::getAttachments(std::array<GLenum, 6>& attachments,
         GLRenderTarget const* rt, TargetBufferFlags buffers) const noexcept {
     GLsizei attachmentCount = 0;

@@ -680,12 +680,6 @@ void MetalDriver::endRenderPass(int dummy) {
     mContext->currentRenderPassEncoder = nil;
 }
 
-void MetalDriver::discardSubRenderTargetBuffers(Handle<HwRenderTarget> rth,
-        TargetBufferFlags targetBufferFlags, uint32_t left, uint32_t bottom, uint32_t width,
-        uint32_t height) {
-
-}
-
 void MetalDriver::setRenderPrimitiveBuffer(Handle<HwRenderPrimitive> rph,
         Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh, uint32_t enabledAttributes) {
     auto primitive = handle_cast<MetalRenderPrimitive>(mHandleMap, rph);
