@@ -21,6 +21,7 @@ A new header is inserted each time a *tag* is created.
 - Fixed bug in Camera::setLensProjection() and added the aspect ratio parameter. (⚠ API Change)
 - WebGL: Improved TypeScript annotations.
 - WebGL: Simplified callback API for glTF. (⚠ API Change)
+- gltfio: Removed deprecated "Bindings" API. (⚠ API Change)
 
 ## v1.4.5
 
