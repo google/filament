@@ -19,9 +19,7 @@
 #include "FrameGraph.h"
 #include "FrameGraphHandle.h"
 
-#include "fg/RenderTargetResource.h"
 #include "fg/ResourceNode.h"
-#include "fg/RenderTarget.h"
 #include "fg/PassNode.h"
 
 #include <utils/Panic.h>
@@ -49,68 +47,13 @@ fg::ResourceEntryBase const& FrameGraphPassResources::getResourceEntryBase(Frame
     fg::ResourceEntryBase const* const pResource = node.resource;
     assert(pResource);
 
-// TODO: we should check for write to
-//    // check that this FrameGraphHandle is indeed used by this pass
-//    ASSERT_POSTCONDITION_NON_FATAL(mPass.isReadingFrom(r),
-//            "Pass \"%s\" doesn't declare reads to resource \"%s\" -- expect graphic corruptions",
-//            mPass.name, pResource->name);
+    // TODO: we should check for write to
+    //    // check that this FrameGraphHandle is indeed used by this pass
+    //    ASSERT_POSTCONDITION_NON_FATAL(mPass.isReadingFrom(r),
+    //            "Pass \"%s\" doesn't declare reads to resource \"%s\" -- expect graphic corruptions",
+    //            mPass.name, pResource->name);
 
     return *pResource;
-}
-
-FrameGraphPassResources::RenderTargetInfo
-FrameGraphPassResources::getRenderTarget(FrameGraphRenderTargetHandle handle, uint8_t level) const noexcept {
-    FrameGraphPassResources::RenderTargetInfo info{};
-    FrameGraph& fg = mFrameGraph;
-
-    fg::RenderTarget& renderTarget = fg.mRenderTargets[handle];
-    assert(renderTarget.cache);
-
-    info = renderTarget.cache->targetInfo;
-    assert(info.target);
-
-    // overwrite discard flags with the per-rendertarget (per-pass) computed value
-    info.params.flags.discardStart = TargetBufferFlags::NONE;
-    info.params.flags.discardEnd   = TargetBufferFlags::NONE;
-    info.params.flags.clear        = renderTarget.userClearFlags;
-
-    static constexpr TargetBufferFlags flags[] = {
-            TargetBufferFlags::COLOR,
-            TargetBufferFlags::DEPTH,
-            TargetBufferFlags::STENCIL };
-
-    auto& resourceNodes = fg.mResourceNodes;
-    for (size_t i = 0; i <renderTarget.desc.attachments.textures.size(); i++) {
-        FrameGraphHandle attachment = renderTarget.desc.attachments.textures[i];
-        if (attachment.isValid()) {
-            if (resourceNodes[attachment.index].resource->discardStart) {
-                info.params.flags.discardStart |= flags[i];
-            }
-            if (resourceNodes[attachment.index].resource->discardEnd) {
-                info.params.flags.discardEnd |= flags[i];
-            }
-        }
-    }
-
-    // clear implies discarding the content of the buffer
-    info.params.flags.discardStart |= (renderTarget.userClearFlags & TargetBufferFlags::ALL);
-    if (renderTarget.cache->imported) {
-        // we never discard more than the user flags
-        info.params.flags.discardStart &= renderTarget.cache->discardStart;
-        info.params.flags.discardEnd   &= renderTarget.cache->discardEnd;
-    }
-
-    // check that this FrameGraphRenderTarget is indeed declared by this pass
-    ASSERT_POSTCONDITION_NON_FATAL(info.target,
-            "Pass \"%s\" doesn't declare rendertarget \"%s\" -- expect graphic corruptions",
-            mPass.name, renderTarget.name);
-
-//    slog.d << mPass.name << ": resource = \"" << renderTarget.name << "\", flags = "
-//        << io::hex
-//        << renderTarget.targetInfo.params.discardStart << ", "
-//        << renderTarget.targetInfo.params.discardEnd << io::endl;
-
-    return info;
 }
 
 } // namespace filament
