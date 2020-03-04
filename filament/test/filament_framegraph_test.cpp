@@ -162,7 +162,7 @@ TEST(FrameGraphTest, SimpleRenderPass2) {
                 renderPassExecuted = true;
                 auto const& rt = resources.get(data.rt);
                 EXPECT_TRUE(rt.target);
-                EXPECT_EQ(TargetBufferFlags::COLOR_AND_DEPTH, rt.params.flags.discardStart);
+                EXPECT_EQ(TargetBufferFlags::COLOR0 | TargetBufferFlags::DEPTH, rt.params.flags.discardStart);
                 EXPECT_EQ(TargetBufferFlags::NONE, rt.params.flags.discardEnd);
             });
 

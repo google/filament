@@ -193,7 +193,13 @@ const float2 OpenGLDriver::mClearTriangle[3] = {{ -1.0f,  3.0f },
                                                 {  3.0f, -1.0f }};
 
 void OpenGLDriver::initClearProgram() noexcept {
-    const char clearVertexES[] = R"SHADER(#version 300 es
+    const char clearVertexES[] =
+#if GLES30_HEADERS
+            R"SHADER(#version 300 es)SHADER"
+#else
+            R"SHADER(#version 410 core)SHADER"
+#endif
+            R"SHADER(
         uniform float depth;
         in vec4 pos;
         void main() {
@@ -201,55 +207,60 @@ void OpenGLDriver::initClearProgram() noexcept {
         }
         )SHADER";
 
-    const char clearFragmentES[] = R"SHADER(#version 300 es
+    const char clearFragmentES[] =
+#if GLES30_HEADERS
+            R"SHADER(#version 300 es)SHADER"
+#else
+            R"SHADER(#version 410 core)SHADER"
+#endif
+            R"SHADER(
         precision mediump float;
         uniform vec4 color;
-        out vec4 fragColor;
+        out vec4 fragColor[4];
         void main() {
-            fragColor = color;
+            fragColor[0] = color;
+            fragColor[1] = color;
+            fragColor[2] = color;
+            fragColor[3] = color;
         }
         )SHADER";
 
-    if (GLES30_HEADERS) {
-        GLint status;
-        char const* const vsource = clearVertexES;
-        char const* const fsource = clearFragmentES;
+    GLint status;
+    char const* const vsource = clearVertexES;
+    char const* const fsource = clearFragmentES;
 
-        mClearVertexShader = glCreateShader(GL_VERTEX_SHADER);
-        glShaderSource(mClearVertexShader, 1, &vsource, nullptr);
-        glCompileShader(mClearVertexShader);
-        glGetShaderiv(mClearVertexShader, GL_COMPILE_STATUS, &status);
-        assert(status == GL_TRUE);
+    mClearVertexShader = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(mClearVertexShader, 1, &vsource, nullptr);
+    glCompileShader(mClearVertexShader);
+    glGetShaderiv(mClearVertexShader, GL_COMPILE_STATUS, &status);
+    assert(status == GL_TRUE);
 
-        mClearFragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-        glShaderSource(mClearFragmentShader, 1, &fsource, nullptr);
-        glCompileShader(mClearFragmentShader);
-        glGetShaderiv(mClearFragmentShader, GL_COMPILE_STATUS, &status);
-        assert(status == GL_TRUE);
+    mClearFragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(mClearFragmentShader, 1, &fsource, nullptr);
+    glCompileShader(mClearFragmentShader);
+    glGetShaderiv(mClearFragmentShader, GL_COMPILE_STATUS, &status);
+    assert(status == GL_TRUE);
 
-        mClearProgram = glCreateProgram();
-        glAttachShader(mClearProgram, mClearVertexShader);
-        glAttachShader(mClearProgram, mClearFragmentShader);
-        glLinkProgram(mClearProgram);
-        glGetProgramiv(mClearProgram, GL_LINK_STATUS, &status);
-        assert(status == GL_TRUE);
+    mClearProgram = glCreateProgram();
+    glAttachShader(mClearProgram, mClearVertexShader);
+    glAttachShader(mClearProgram, mClearFragmentShader);
+    glLinkProgram(mClearProgram);
+    glGetProgramiv(mClearProgram, GL_LINK_STATUS, &status);
+    assert(status == GL_TRUE);
 
-        mContext.useProgram(mClearProgram);
-        mClearColorLocation = glGetUniformLocation(mClearProgram, "color");
-        mClearDepthLocation = glGetUniformLocation(mClearProgram, "depth");
+    mContext.useProgram(mClearProgram);
+    mClearColorLocation = glGetUniformLocation(mClearProgram, "color");
+    mClearDepthLocation = glGetUniformLocation(mClearProgram, "depth");
 
-        CHECK_GL_ERROR(utils::slog.e)
-    }
+    CHECK_GL_ERROR(utils::slog.e)
 }
 
 void OpenGLDriver::terminateClearProgram() noexcept {
-    if (GLES30_HEADERS) {
-        glDetachShader(mClearProgram, mClearVertexShader);
-        glDetachShader(mClearProgram, mClearFragmentShader);
-        glDeleteShader(mClearVertexShader);
-        glDeleteShader(mClearFragmentShader);
-        glDeleteProgram(mClearProgram);
-    }
+    glDetachShader(mClearProgram, mClearVertexShader);
+    glDetachShader(mClearProgram, mClearFragmentShader);
+    glDeleteShader(mClearVertexShader);
+    glDeleteShader(mClearFragmentShader);
+    glDeleteProgram(mClearProgram);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -983,12 +994,18 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
 
     rt->gl.samples = samples;
 
-    for (size_t i = 0; i < 4; i++) {
-        if (any(targets & getMRTColorFlag(i))) {
-            rt->gl.color[i].texture = handle_cast<GLTexture*>(color[i].handle);
-            rt->gl.color[i].level = color[i].level;
-            framebufferTexture(color[i], rt, GL_COLOR_ATTACHMENT0 + i);
+    if (any(targets & TargetBufferFlags::COLOR_ALL)) {
+        GLenum bufs[4] = { GL_NONE };
+        for (size_t i = 0; i < 4; i++) {
+            if (any(targets & getMRTColorFlag(i))) {
+                rt->gl.color[i].texture = handle_cast<GLTexture*>(color[i].handle);
+                rt->gl.color[i].level = color[i].level;
+                framebufferTexture(color[i], rt, GL_COLOR_ATTACHMENT0 + i);
+                bufs[i] = GL_COLOR_ATTACHMENT0 + i;
+            }
         }
+        glDrawBuffers(4, bufs);
+        CHECK_GL_ERROR(utils::slog.e)
     }
 
     // handle special cases first (where depth/stencil are packed)
@@ -1616,10 +1633,10 @@ bool OpenGLDriver::canGenerateMipmaps() {
 }
 
 void OpenGLDriver::setTextureData(GLTexture* t,
-                                  uint32_t level,
-                                  uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
-                                  uint32_t width, uint32_t height, uint32_t depth,
-                                  PixelBufferDescriptor&& p, FaceOffsets const* faceOffsets) {
+        uint32_t level,
+        uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
+        uint32_t width, uint32_t height, uint32_t depth,
+        PixelBufferDescriptor&& p, FaceOffsets const* faceOffsets) {
     DEBUG_MARKER()
     auto& gl = mContext;
 
@@ -1978,35 +1995,30 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
                 params.viewport.width, params.viewport.height);
     }
 
-    if (any(clearFlags & TargetBufferFlags::ALL)) {
-        const bool clearColor   = any(clearFlags & TargetBufferFlags::COLOR);
-        const bool clearDepth   = any(clearFlags & TargetBufferFlags::DEPTH);
-        const bool clearStencil = any(clearFlags & TargetBufferFlags::STENCIL);
+    if (any(clearFlags)) {
         if (respectScissor) {
             gl.enable(GL_SCISSOR_TEST);
         } else {
             gl.disable(GL_SCISSOR_TEST);
         }
-        if (respectScissor && GLES30_HEADERS && gl.bugs.clears_hurt_performance) {
+        if (respectScissor && gl.bugs.clears_hurt_performance) {
             // With OpenGL ES, we clear the viewport using geometry to improve performance on certain
             // OpenGL drivers. e.g. on Adreno this avoids needless loads from the GMEM.
-            clearWithGeometryPipe(clearColor, params.clearColor,
-                    clearDepth, params.clearDepth,
-                    clearStencil, params.clearStencil);
+            clearWithGeometryPipe(clearFlags,
+                    params.clearColor, params.clearDepth, params.clearStencil);
         } else {
-            // With OpenGL we always clear using glClear()
-            clearWithRasterPipe(clearColor, params.clearColor,
-                    clearDepth, params.clearDepth,
-                    clearStencil, params.clearStencil);
+            // With OpenGL we always clear using glClearBuffer()
+            clearWithRasterPipe(clearFlags,
+                    params.clearColor, params.clearDepth, params.clearStencil);
         }
     }
 
 #ifndef NDEBUG
     // clear the discarded (but not the cleared ones) buffers in debug builds
-    mContext.setClearColor(1, 0, 0, 1);
     mContext.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
     mContext.disable(GL_SCISSOR_TEST);
-    glClear(getAttachmentBitfield(discardFlags & ~clearFlags));
+    clearWithRasterPipe(discardFlags & ~clearFlags,
+            { 1, 0, 0, 1 }, 1.0, 0);
 #endif
 }
 
@@ -2040,10 +2052,10 @@ void OpenGLDriver::endRenderPass(int) {
 
 #ifndef NDEBUG
     // clear the discarded buffers in debug builds
-    mContext.setClearColor(0, 1, 0, 1);
     mContext.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
     mContext.disable(GL_SCISSOR_TEST);
-    glClear(getAttachmentBitfield(discardFlags));
+    clearWithRasterPipe(discardFlags,
+            { 0, 1, 0, 1 }, 1.0, 0);
 #endif
 
     mRenderPassTarget.clear();
@@ -2671,55 +2683,58 @@ void OpenGLDriver::finish(int) {
 }
 
 UTILS_NOINLINE
-void OpenGLDriver::clearWithRasterPipe(
-        bool clearColor, float4 const& linearColor,
-        bool clearDepth, double depth,
-        bool clearStencil, uint32_t stencil) noexcept {
+void OpenGLDriver::clearWithRasterPipe(TargetBufferFlags clearFlags,
+        math::float4 const& linearColor, GLfloat depth, GLint stencil) noexcept {
     DEBUG_MARKER()
-    auto& gl = mContext;
-
-    GLbitfield bitmask = 0;
-
     RasterState rs(mRasterState);
 
-    if (clearColor) {
-        bitmask |= GL_COLOR_BUFFER_BIT;
-        gl.setClearColor(linearColor.r, linearColor.g, linearColor.b, linearColor.a);
+    if (any(clearFlags & TargetBufferFlags::COLOR_ALL)) {
         rs.colorWrite = true;
     }
-    if (clearDepth) {
-        bitmask |= GL_DEPTH_BUFFER_BIT;
-        gl.setClearDepth(GLfloat(depth));
+    if (any(clearFlags & TargetBufferFlags::DEPTH)) {
         rs.depthWrite = true;
     }
-    if (clearStencil) {
-        bitmask |= GL_STENCIL_BUFFER_BIT;
-        gl.setClearStencil(GLint(stencil));
-        // stencil state is not part of RasterState for now
+    // stencil state is not part of the RasterState currently
+    if (any(clearFlags & (TargetBufferFlags::COLOR_ALL | TargetBufferFlags::DEPTH))) {
+        setRasterState(rs);
     }
 
-    if (bitmask) {
-        setRasterState(rs);
-        glClear(bitmask);
+    if (any(clearFlags & TargetBufferFlags::COLOR0)) {
+        glClearBufferfv(GL_COLOR, 0, linearColor.v);
+    }
+    if (any(clearFlags & TargetBufferFlags::COLOR1)) {
+        glClearBufferfv(GL_COLOR, 1, linearColor.v);
+    }
+    if (any(clearFlags & TargetBufferFlags::COLOR2)) {
+        glClearBufferfv(GL_COLOR, 2, linearColor.v);
+    }
+    if (any(clearFlags & TargetBufferFlags::COLOR3)) {
+        glClearBufferfv(GL_COLOR, 3, linearColor.v);
+    }
+
+    if ((clearFlags & TargetBufferFlags::DEPTH_AND_STENCIL) == TargetBufferFlags::DEPTH_AND_STENCIL) {
+        glClearBufferfi(GL_DEPTH_STENCIL, 0, depth, stencil);
+    } else {
+        if (any(clearFlags & TargetBufferFlags::DEPTH)) {
+            glClearBufferfv(GL_DEPTH, 0, &depth);
+        }
+        if (any(clearFlags & TargetBufferFlags::STENCIL)) {
+            glClearBufferiv(GL_STENCIL, 0, &stencil);
+        }
     }
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-void OpenGLDriver::clearWithGeometryPipe(
-        bool clearColor, float4 const& linearColor,
-        bool clearDepth, double depth,
-        bool clearStencil, uint32_t stencil) noexcept {
+void OpenGLDriver::clearWithGeometryPipe(backend::TargetBufferFlags clearFlags,
+        math::float4 const& linearColor, double depth, uint32_t stencil) noexcept {
     DEBUG_MARKER()
     auto& gl = mContext;
 
-    // GLES is required to use this method; see initClearProgram.
-    assert(GLES30_HEADERS);
-
     // TODO: handle stencil clear with geometry as well
-    if (clearStencil) {
-        gl.setClearStencil(GLint(stencil));
-        glClear(GL_STENCIL_BUFFER_BIT);
-        CHECK_GL_ERROR(utils::slog.e)
+    if (any(clearFlags & TargetBufferFlags::STENCIL)) {
+        GLint s = GLint(stencil);
+        glClearBufferiv(GL_STENCIL, 0, &s);
+        // stencil state is not part of the RasterState currently
     }
 
     RasterState rs;
@@ -2727,28 +2742,24 @@ void OpenGLDriver::clearWithGeometryPipe(
     rs.colorWrite = false;
     rs.depthWrite = false;
 
-    if (clearColor) {
-        rs.colorWrite = true;
+    if (any(clearFlags & (TargetBufferFlags::COLOR_ALL | TargetBufferFlags::DEPTH))) {
         gl.useProgram(mClearProgram);
-        glUniform4f(mClearColorLocation,
-                linearColor.r, linearColor.g, linearColor.b, linearColor.a);
-        CHECK_GL_ERROR(utils::slog.e)
-    }
-    if (clearDepth) {
-        rs.depthWrite = true;
-        gl.useProgram(mClearProgram);
-        glUniform1f(mClearDepthLocation, float(depth) * 2.0f - 1.0f);
-        CHECK_GL_ERROR(utils::slog.e)
-    }
-
-    if (clearColor || clearDepth) {
-        // by the time we get here, useProgram() has been called
+        if (any(clearFlags & TargetBufferFlags::COLOR_ALL)) {
+            glUniform4fv(mClearColorLocation, 4, linearColor.v);
+            rs.colorWrite = true;
+        }
+        if (any(clearFlags & TargetBufferFlags::DEPTH)) {
+            glUniform1f(mClearDepthLocation, float(depth) * 2.0f - 1.0f);
+            rs.depthWrite = true;
+        }
+        // FIXME: handle MRTs
         setRasterState(rs);
         gl.bindVertexArray(nullptr);
         gl.bindBuffer(GL_ARRAY_BUFFER, 0);
         glEnableVertexAttribArray(0);
         glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, mClearTriangle);
         glDrawArrays(GL_TRIANGLES, 0, 3);
+
         CHECK_GL_ERROR(utils::slog.e)
     }
 }
