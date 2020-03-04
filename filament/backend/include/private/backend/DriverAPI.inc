@@ -318,14 +318,6 @@ DECL_DRIVER_API_N(beginRenderPass,
 
 DECL_DRIVER_API_0(endRenderPass)
 
-DECL_DRIVER_API_N(discardSubRenderTargetBuffers,
-        backend::RenderTargetHandle, rth,
-        backend::TargetBufferFlags, targetBufferFlags,
-        uint32_t, left,
-        uint32_t, bottom,
-        uint32_t, width,
-        uint32_t, height)
-
 DECL_DRIVER_API_N(setRenderPrimitiveBuffer,
         backend::RenderPrimitiveHandle, rph,
         backend::VertexBufferHandle, vbh,

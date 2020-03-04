@@ -194,11 +194,6 @@ void NoopDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassPar
 void NoopDriver::endRenderPass(int) {
 }
 
-void NoopDriver::discardSubRenderTargetBuffers(Handle<HwRenderTarget> rth,
-        TargetBufferFlags buffers,
-        uint32_t left, uint32_t bottom, uint32_t width, uint32_t height) {
-}
-
 void NoopDriver::setRenderPrimitiveBuffer(Handle<HwRenderPrimitive> rph,
         Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh,
         uint32_t enabledAttributes) {

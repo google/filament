@@ -825,11 +825,6 @@ void VulkanDriver::endRenderPass(int) {
     mContext.currentRenderPass.renderPass = VK_NULL_HANDLE;
 }
 
-void VulkanDriver::discardSubRenderTargetBuffers(Handle<HwRenderTarget> rth,
-        TargetBufferFlags buffers,
-        uint32_t left, uint32_t bottom, uint32_t width, uint32_t height) {
-}
-
 void VulkanDriver::setRenderPrimitiveBuffer(Handle<HwRenderPrimitive> rph,
         Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh,
         uint32_t enabledAttributes) {
