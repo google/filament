@@ -138,19 +138,29 @@ struct FrameGraphRenderTarget {
             uint8_t mLevel = 0;
         };
 
-        constexpr Attachments() noexcept : textures{} {}
-        Attachments(AttachmentInfo c) noexcept : color(c) {}
-        Attachments(AttachmentInfo c, AttachmentInfo d) noexcept : color(c), depth(d) {}
+        Attachments() noexcept
+                : textures{} {
+        }
 
-        enum { COLOR = 0, DEPTH = 1 };
-        static constexpr size_t COUNT = 2;
-        union {
-            std::array<AttachmentInfo, COUNT> textures = {};
-            struct {
-                AttachmentInfo color;
-                AttachmentInfo depth;
-            };
-        };
+        Attachments(AttachmentInfo c) noexcept  // NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
+                : textures{ c } {
+        }
+
+        Attachments(AttachmentInfo c, AttachmentInfo d) noexcept
+                : textures{ c, {}, {}, {}, d } {
+        }
+
+        Attachments(AttachmentInfo c, AttachmentInfo d, AttachmentInfo s) noexcept
+                : textures{ c, {}, {}, {}, d, s } {
+        }
+
+        Attachments(std::array<AttachmentInfo, 4> mrt,
+                AttachmentInfo d, AttachmentInfo s) noexcept
+                : textures{ mrt[0], mrt[1], mrt[2], mrt[3], d, s } {
+        }
+
+        static constexpr size_t COUNT = 6;
+        std::array<AttachmentInfo, COUNT> textures = {};
     };
 
     struct Descriptor {
