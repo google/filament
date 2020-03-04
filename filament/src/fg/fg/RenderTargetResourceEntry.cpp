@@ -44,14 +44,26 @@ void RenderTargetResourceEntry::resolve(FrameGraph& fg) noexcept {
     auto& resource = getResource();
 
     static constexpr TargetBufferFlags flags[] = {
-            TargetBufferFlags::COLOR,
+            TargetBufferFlags::COLOR0,
+            TargetBufferFlags::COLOR1,
+            TargetBufferFlags::COLOR2,
+            TargetBufferFlags::COLOR3,
             TargetBufferFlags::DEPTH,
             TargetBufferFlags::STENCIL };
 
+    static_assert(sizeof(flags)/sizeof(*flags) == FrameGraphRenderTarget::Attachments::COUNT,
+            "array sizes don't match");
+
     static constexpr TextureUsage usages[] = {
+            TextureUsage::COLOR_ATTACHMENT,
+            TextureUsage::COLOR_ATTACHMENT,
+            TextureUsage::COLOR_ATTACHMENT,
             TextureUsage::COLOR_ATTACHMENT,
             TextureUsage::DEPTH_ATTACHMENT,
             TextureUsage::STENCIL_ATTACHMENT };
+
+    static_assert(sizeof(flags)/sizeof(*flags) == sizeof(usages)/sizeof(*usages),
+            "array sizes don't match");
 
     uint32_t minWidth = std::numeric_limits<uint32_t>::max();
     uint32_t minHeight = std::numeric_limits<uint32_t>::max();
@@ -114,9 +126,15 @@ void RenderTargetResourceEntry::update(FrameGraph& fg, PassNode const& pass) noe
         resource.params.flags.discardEnd   = TargetBufferFlags::NONE;
 
         static constexpr TargetBufferFlags flags[] = {
-                TargetBufferFlags::COLOR,
+                TargetBufferFlags::COLOR0,
+                TargetBufferFlags::COLOR1,
+                TargetBufferFlags::COLOR2,
+                TargetBufferFlags::COLOR3,
                 TargetBufferFlags::DEPTH,
                 TargetBufferFlags::STENCIL };
+
+        static_assert(sizeof(flags)/sizeof(*flags) == FrameGraphRenderTarget::Attachments::COUNT,
+                "array sizes don't match");
 
         auto& resourceNodes = fg.mResourceNodes;
         for (size_t i = 0; i < descriptor.attachments.textures.size(); i++) {
@@ -158,9 +176,14 @@ void RenderTargetResourceEntry::preExecuteDevirtualize(FrameGraph& fg) noexcept 
             auto const& attachmentInfo = descriptor.attachments.textures[i];
 #ifndef NDEBUG
             static constexpr TargetBufferFlags flags[] = {
-                    TargetBufferFlags::COLOR,
+                    TargetBufferFlags::COLOR0,
+                    TargetBufferFlags::COLOR1,
+                    TargetBufferFlags::COLOR2,
+                    TargetBufferFlags::COLOR3,
                     TargetBufferFlags::DEPTH,
                     TargetBufferFlags::STENCIL };
+            static_assert(sizeof(flags)/sizeof(*flags) == FrameGraphRenderTarget::Attachments::COUNT,
+                    "array sizes don't match");
             assert(bool(attachments & flags[i]) == attachmentInfo.isValid());
 #endif
             if (attachmentInfo.isValid()) {
@@ -179,7 +202,9 @@ void RenderTargetResourceEntry::preExecuteDevirtualize(FrameGraph& fg) noexcept 
 
         auto& resource = getResource();
         resource.target = fg.getResourceAllocator().createRenderTarget(name,
-                attachments, width, height, descriptor.samples, infos[0], infos[1], {});
+                attachments, width, height, descriptor.samples,
+                { infos[0], infos[1], infos[2], infos[3] },
+                infos[4], infos[5]);
     }
 
 }
