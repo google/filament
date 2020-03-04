@@ -267,8 +267,6 @@ void ShadowMapManager::render(FEngine& engine, FView& view, backend::DriverApi& 
                 view.getVisibleSpotShadowCasters(), pass, view);
         pass.clearVisibilityMask();
     }
-
-    utils::slog.d << utils::io::endl;
 }
 
 UTILS_NOINLINE
