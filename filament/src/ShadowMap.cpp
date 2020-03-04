@@ -163,9 +163,6 @@ void ShadowMap::render(DriverApi& driver, RenderPass& pass, FView& view) noexcep
     params.flags.discardEnd = TargetBufferFlags::COLOR0 | TargetBufferFlags::STENCIL;
     params.clearDepth = 1.0;
     params.viewport = viewport;
-    // disable scissor for clearing so the whole surface, but set the viewport to the
-    // the inset-by-1 rectangle.
-    params.flags.ignoreScissor = true;
 
     FCamera const& camera = getCamera();
     details::CameraInfo cameraInfo = {

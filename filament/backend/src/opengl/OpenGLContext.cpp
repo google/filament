@@ -56,7 +56,6 @@ OpenGLContext::OpenGLContext() noexcept {
 #endif
 
     if (strstr(renderer, "Adreno")) {
-        bugs.clears_hurt_performance = true;
     } else if (strstr(renderer, "Mali")) {
         bugs.vao_doesnt_store_element_array_buffer_binding = true;
         if (strstr(renderer, "Mali-T")) {
