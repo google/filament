@@ -85,7 +85,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
 
     filament::math::float2 iblMaxMipLevel; // maxlevel, float(1<<maxlevel)
     float refractionLodOffset;
-    float padding0;
+    uint32_t directionalShadows; // whether the directional light (sun) casts shadows
 
     filament::math::float3 worldOffset; // this is (0,0,0) when camera_at_origin is disabled
     float padding1;

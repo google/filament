@@ -20,6 +20,7 @@
 #include <private/filament/UniformInterfaceBlock.h>
 #include <filament/MaterialEnums.h>
 
+#include <private/filament/EngineEnums.h>
 #include <private/filament/SibGenerator.h>
 #include <private/filament/UibGenerator.h>
 #include <private/filament/Variant.h>
@@ -166,6 +167,8 @@ const std::string ShaderGenerator::createVertexProgram(filament::backend::Shader
 
     cg.generateProlog(vs, ShaderType::VERTEX, material.hasExternalSamplers);
 
+    cg.generateDefine(vs, "MAX_SHADOW_CASTING_SPOTS", uint32_t(CONFIG_MAX_SHADOW_CASTING_SPOTS));
+
     cg.generateDefine(vs, "FLIP_UV_ATTRIBUTE", material.flipUV);
 
     bool litVariants = lit || material.hasShadowMultiplier;
@@ -283,6 +286,8 @@ const std::string ShaderGenerator::createFragmentProgram(filament::backend::Shad
     cg.generateDefine(fs, "GEOMETRIC_SPECULAR_AA", material.specularAntiAliasing && lit);
 
     cg.generateDefine(fs, "CLEAR_COAT_IOR_CHANGE", material.clearCoatIorChange);
+
+    cg.generateDefine(fs, "MAX_SHADOW_CASTING_SPOTS", uint32_t(CONFIG_MAX_SHADOW_CASTING_SPOTS));
 
     bool specularAO = material.specularAOSet ?
             material.specularAO : !isMobileTarget(shaderModel);

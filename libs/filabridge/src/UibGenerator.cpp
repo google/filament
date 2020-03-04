@@ -76,7 +76,7 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             // ibl max mip level
             .add("iblMaxMipLevel",          1, UniformInterfaceBlock::Type::FLOAT2)
             .add("refractionLodOffset",     1, UniformInterfaceBlock::Type::FLOAT)
-            .add("padding0",                1, UniformInterfaceBlock::Type::FLOAT)
+            .add("directionalShadows",      1, UniformInterfaceBlock::Type::BOOL)
             // view
             .add("worldOffset",             1, UniformInterfaceBlock::Type::FLOAT3)
             // bring size to 1 KiB
