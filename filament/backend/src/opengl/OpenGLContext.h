@@ -131,10 +131,6 @@ public:
         // in the VAO state.
         bool vao_doesnt_store_element_array_buffer_binding = false;
 
-        // On some drivers, glClear() cancels glInvalidateFrameBuffer() which results
-        // in extra GPU memory loads.
-        bool clears_hurt_performance = false;
-
         // Some drivers have gl state issues when drawing from shared contexts
         bool disable_shared_context_draws = false;
 

@@ -342,19 +342,8 @@ private:
     backend::Handle<backend::HwRenderTarget> mRenderPassTarget;
     backend::RenderPassParams mRenderPassParams;
 
-    // state needed for clearing the viewport "by hand", i.e. with a triangle
-    GLuint mClearVertexShader;
-    GLuint mClearFragmentShader;
-    GLuint mClearProgram;
-    GLint mClearColorLocation;
-    GLint mClearDepthLocation;
-    static const math::float2 mClearTriangle[3];
-    void initClearProgram() noexcept;
-    void terminateClearProgram() noexcept;
     void clearWithRasterPipe(backend::TargetBufferFlags clearFlags,
             math::float4 const& linearColor, GLfloat depth, GLint stencil) noexcept;
-    void clearWithGeometryPipe(backend::TargetBufferFlags clearFlags,
-            math::float4 const& linearColor, double depth, uint32_t stencil) noexcept;
 
     void setViewportScissor(backend::Viewport const& viewportScissor) noexcept;
 

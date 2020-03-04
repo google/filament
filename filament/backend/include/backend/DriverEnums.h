@@ -782,9 +782,6 @@ struct RenderPassFlags {
      * Discarded buffers' content becomes invalid, they must not be read from again.
      */
     TargetBufferFlags discardEnd;
-
-    //! whether to ignore the scissor test during the clear operation
-    bool ignoreScissor;
 };
 
 /**
