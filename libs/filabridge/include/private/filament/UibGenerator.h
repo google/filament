@@ -112,7 +112,8 @@ struct LightsUib {
     filament::math::float4 positionFalloff;   // { float3(pos), 1/falloff^2 }
     filament::math::float4 colorIntensity;    // { float3(col), intensity }
     filament::math::float4 directionIES;      // { float3(dir), IES index }
-    filament::math::float4 spotScaleOffset;   // { scale, offset, unused, unused }
+    filament::math::float2 spotScaleOffset;   // { scale, offset }
+    filament::math::uint2 shadow;             // { shadow bits (see ShadowInfo), unused }
 };
 
 // UBO for punctual (spot light) shadows.

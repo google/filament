@@ -132,17 +132,23 @@ Light getSpotLight(uint index) {
     ivec2 texCoord = getRecordTexCoord(index);
     uint lightIndex = texelFetch(light_records, texCoord, 0).r;
 
-    highp vec4 positionFalloff = lightsUniforms.lights[lightIndex][0];
-    highp vec4 colorIntensity  = lightsUniforms.lights[lightIndex][1];
-          vec4 directionIES    = lightsUniforms.lights[lightIndex][2];
-          vec2 scaleOffset     = lightsUniforms.lights[lightIndex][3].xy;
+    highp vec4 positionFalloff       = lightsUniforms.lights[lightIndex][0];
+    highp vec4 colorIntensity        = lightsUniforms.lights[lightIndex][1];
+          vec4 directionIES          = lightsUniforms.lights[lightIndex][2];
+    highp vec4 scaleOffsetShadow     = lightsUniforms.lights[lightIndex][3];
 
     light.colorIntensity.rgb = colorIntensity.rgb;
     light.colorIntensity.w = computePreExposedIntensity(colorIntensity.w, frameUniforms.exposure);
 
     setupPunctualLight(light, positionFalloff);
 
-    light.attenuation *= getAngleAttenuation(-directionIES.xyz, light.l, scaleOffset);
+    light.attenuation *= getAngleAttenuation(-directionIES.xyz, light.l, scaleOffsetShadow.xy);
+
+    uint shadowBits = floatBitsToUint(scaleOffsetShadow.z);
+
+    light.castsShadows = bool(shadowBits & 0x1u);
+    light.shadowIndex = ((shadowBits & 0x01Eu) >> 1u);
+    light.shadowLayer = ((shadowBits & 0x1E0u) >> 5u);
 
     return light;
 }
