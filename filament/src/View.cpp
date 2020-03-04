@@ -514,13 +514,18 @@ void FView::prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& are
          * Parition the SoA so that renderables are partitioned w.r.t their visibility into the
          * following groups:
          *
-         * - renderables
-         * - renderables and directional shadow casters
-         * - directional shadow casters only
-         * - punctual light shadow casters only
-         * - invisible renderables
+         * 1. renderables
+         * 2. renderables and directional shadow casters
+         * 3. directional shadow casters only
+         * 4. punctual light shadow casters only
+         * 5. invisible renderables
          *
-         * this operation is somewhat heavy as it sorts the whole SoA. We use std::partition instead
+         * Note that the first three groups are partitioned based only on the lowest two bits of the
+         * VISIBLE_MASK (VISIBLE_RENDERABLE and VISIBLE_DIR_SHADOW_CASTER), and thus can also
+         * contain punctual light shadow casters as well. The fourth group contains *only* punctual
+         * shadow casters.
+         *
+         * This operation is somewhat heavy as it sorts the whole SoA. We use std::partition instead
          * of sort(), which gives us O(4.N) instead of O(N.log(N)) application of swap().
          */
 
