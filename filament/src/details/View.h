@@ -28,7 +28,10 @@
 #include "details/Froxelizer.h"
 #include "details/RenderTarget.h"
 #include "details/ShadowMap.h"
+#include "details/ShadowMapManager.h"
 #include "details/Scene.h"
+
+#include <private/filament/EngineEnums.h>
 
 #include "private/backend/DriverApi.h"
 
@@ -43,6 +46,7 @@
 #include <math/scalar.h>
 
 #include <array>
+#include <memory>
 
 namespace utils {
 class JobSystem;
@@ -155,7 +159,7 @@ public:
 
     void prepareCamera(const CameraInfo& camera, const Viewport& viewport) const noexcept;
     void prepareShadowing(FEngine& engine, backend::DriverApi& driver,
-            FScene::RenderableSoa& renderableData, FScene::LightSoa const& lightData) noexcept;
+            FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData) noexcept;
     void prepareLighting(FEngine& engine, FEngine::DriverApi& driver,
             ArenaScope& arena, Viewport const& viewport) noexcept;
     void prepareSSAO(backend::Handle<backend::HwTexture> ssao) const noexcept;
@@ -168,16 +172,15 @@ public:
 
     bool hasDirectionalLight() const noexcept { return mHasDirectionalLight; }
     bool hasDynamicLighting() const noexcept { return mHasDynamicLighting; }
-    bool hasShadowing() const noexcept { return mHasShadowing & mDirectionalShadowMap.hasVisibleShadows(); }
+    bool hasShadowing() const noexcept { return mHasShadowing; }
+
+    void renderShadowMaps(FEngine& engine, FEngine::DriverApi& driver, RenderPass& pass) noexcept;
 
     void updatePrimitivesLod(
             FEngine& engine, const CameraInfo& camera,
             FScene::RenderableSoa& renderableData, Range visible) noexcept;
 
     void setShadowsEnabled(bool enabled) noexcept { mShadowingEnabled = enabled; }
-
-    ShadowMap const& getShadowMap() const { return mDirectionalShadowMap; }
-    ShadowMap& getShadowMap() { return mDirectionalShadowMap; }
 
     FCamera const* getDirectionalLightCamera() const noexcept {
         return &mDirectionalShadowMap.getDebugCamera();
@@ -316,21 +319,18 @@ public:
         return mRenderTarget == nullptr ? kEmptyHandle : mRenderTarget->getHwHandle();
     }
 
+    static void cullRenderables(utils::JobSystem& js, FScene::RenderableSoa& renderableData,
+            Frustum const& frustum, size_t bit) noexcept;
+
 private:
     static constexpr size_t MAX_FRAMETIME_HISTORY = 32u;
 
     void prepareVisibleRenderables(utils::JobSystem& js,
             Frustum const& frustum, FScene::RenderableSoa& renderableData) const noexcept;
 
-    static void prepareVisibleShadowCasters(utils::JobSystem& js,
-            Frustum const& lightFrustum, FScene::RenderableSoa& renderableData) noexcept;
-
     static void prepareVisibleLights(
             FLightManager const& lcm, utils::JobSystem& js, Frustum const& frustum,
             FScene::LightSoa& lightData) noexcept;
-
-    static void cullRenderables(utils::JobSystem& js,
-            FScene::RenderableSoa& renderableData, Frustum const& frustum, size_t bit) noexcept;
 
     void computeVisibilityMasks(
             uint8_t visibleLayers, uint8_t const* layers,
@@ -416,7 +416,9 @@ private:
     mutable bool mHasDirectionalLight = false;
     mutable bool mHasDynamicLighting = false;
     mutable bool mHasShadowing = false;
+    ShadowMapManager mShadowMapManager;
     mutable ShadowMap mDirectionalShadowMap;
+    mutable std::array<std::unique_ptr<ShadowMap>, CONFIG_MAX_SHADOW_CASTING_SPOTS> mSpotShadowMap;
 };
 
 FILAMENT_UPCAST(View)

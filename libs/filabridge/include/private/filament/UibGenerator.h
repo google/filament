@@ -17,7 +17,6 @@
 #ifndef TNT_FILABRIDGE_UIBGENERATOR_H
 #define TNT_FILABRIDGE_UIBGENERATOR_H
 
-
 #include <math/mat4.h>
 #include <math/vec4.h>
 

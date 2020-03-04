@@ -28,4 +28,8 @@ LAYOUT_LOCATION(10) in highp vec4 vertex_uv01;
 LAYOUT_LOCATION(11) in highp vec4 vertex_lightSpacePosition;
 #endif
 
+#if defined(HAS_SHADOWING) && defined(HAS_DYNAMIC_LIGHTING)
+LAYOUT_LOCATION(12) in highp vec4 vertex_spotLightSpacePosition[MAX_SHADOW_CASTING_SPOTS];
+#endif
+
 layout(location = 0) out vec4 fragColor;
