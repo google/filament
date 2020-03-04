@@ -64,7 +64,7 @@ float samplingBias(float depth, const vec2 rpdb, const vec2 texelSize) {
     return depth;
 }
 
-float sampleDepth(const lowp sampler2DShadow map, vec2 base, vec2 dudv, float depth, vec2 rpdb) {
+float sampleDepth(const lowp sampler2DArrayShadow map, const uint layer, vec2 base, vec2 dudv, float depth, vec2 rpdb) {
 #if SHADOW_RECEIVER_PLANE_DEPTH_BIAS == SHADOW_RECEIVER_PLANE_DEPTH_BIAS_ENABLED
  #if SHADOW_SAMPLING_METHOD >= SHADOW_RECEIVER_PLANE_DEPTH_BIAS_MIN_SAMPLING_METHOD
     depth += dot(dudv, rpdb);
@@ -73,19 +73,19 @@ float sampleDepth(const lowp sampler2DShadow map, vec2 base, vec2 dudv, float de
     // depth must be clamped to support floating-point depth formats. This is to avoid comparing a
     // value from the depth texture (which is never greater than 1.0) with a greater-than-one
     // comparison value (which is possible with floating-point formats).
-    return texture(map, vec3(base + dudv, clamp(depth, 0.0, 1.0)));
+    return texture(map, vec4(base + dudv, layer, clamp(depth, 0.0, 1.0)));
 }
 
 #if SHADOW_SAMPLING_METHOD == SHADOW_SAMPLING_PCF_HARD
-float ShadowSample_Hard(const lowp sampler2DShadow map, const vec2 size, const vec3 position) {
+float ShadowSample_Hard(const lowp sampler2DArrayShadow map, const uint layer, const vec2 size, const vec3 position) {
     vec2 rpdb = computeReceiverPlaneDepthBias(position);
     float depth = samplingBias(position.z, rpdb, vec2(1.0) / size);
-    return texture(map, vec3(position.xy, clamp(depth, 0.0, 1.0)));
+    return texture(map, vec4(position.xy, layer, clamp(depth, 0.0, 1.0)));
 }
 #endif
 
 #if SHADOW_SAMPLING_METHOD == SHADOW_SAMPLING_PCF_LOW
-float ShadowSample_PCF_Low(const lowp sampler2DShadow map, const vec2 size, vec3 position) {
+float ShadowSample_PCF_Low(const lowp sampler2DArrayShadow map, const uint layer, const vec2 size, vec3 position) {
     //  Castaño, 2013, "Shadow Mapping Summary Part 1"
     vec2 texelSize = vec2(1.0) / size;
 
@@ -111,18 +111,18 @@ float ShadowSample_PCF_Low(const lowp sampler2DShadow map, const vec2 size, vec3
     float depth = samplingBias(position.z, rpdb, texelSize);
     float sum = 0.0;
 
-    sum += uw.x * vw.x * sampleDepth(map, base, vec2(u.x, v.x), depth, rpdb);
-    sum += uw.y * vw.x * sampleDepth(map, base, vec2(u.y, v.x), depth, rpdb);
+    sum += uw.x * vw.x * sampleDepth(map, layer, base, vec2(u.x, v.x), depth, rpdb);
+    sum += uw.y * vw.x * sampleDepth(map, layer, base, vec2(u.y, v.x), depth, rpdb);
 
-    sum += uw.x * vw.y * sampleDepth(map, base, vec2(u.x, v.y), depth, rpdb);
-    sum += uw.y * vw.y * sampleDepth(map, base, vec2(u.y, v.y), depth, rpdb);
+    sum += uw.x * vw.y * sampleDepth(map, layer, base, vec2(u.x, v.y), depth, rpdb);
+    sum += uw.y * vw.y * sampleDepth(map, layer, base, vec2(u.y, v.y), depth, rpdb);
 
     return sum * (1.0 / 16.0);
 }
 #endif
 
 #if SHADOW_SAMPLING_METHOD == SHADOW_SAMPLING_PCF_MEDIUM
-float ShadowSample_PCF_Medium(const lowp sampler2DShadow map, const vec2 size, vec3 position) {
+float ShadowSample_PCF_Medium(const lowp sampler2DArrayShadow map, const uint layer, const vec2 size, vec3 position) {
     //  Castaño, 2013, "Shadow Mapping Summary Part 1"
     vec2 texelSize = vec2(1.0) / size;
 
@@ -148,24 +148,24 @@ float ShadowSample_PCF_Medium(const lowp sampler2DShadow map, const vec2 size, v
     float depth = samplingBias(position.z, rpdb, texelSize);
     float sum = 0.0;
 
-    sum += uw.x * vw.x * sampleDepth(map, base, vec2(u.x, v.x), depth, rpdb);
-    sum += uw.y * vw.x * sampleDepth(map, base, vec2(u.y, v.x), depth, rpdb);
-    sum += uw.z * vw.x * sampleDepth(map, base, vec2(u.z, v.x), depth, rpdb);
+    sum += uw.x * vw.x * sampleDepth(map, layer, base, vec2(u.x, v.x), depth, rpdb);
+    sum += uw.y * vw.x * sampleDepth(map, layer, base, vec2(u.y, v.x), depth, rpdb);
+    sum += uw.z * vw.x * sampleDepth(map, layer, base, vec2(u.z, v.x), depth, rpdb);
 
-    sum += uw.x * vw.y * sampleDepth(map, base, vec2(u.x, v.y), depth, rpdb);
-    sum += uw.y * vw.y * sampleDepth(map, base, vec2(u.y, v.y), depth, rpdb);
-    sum += uw.z * vw.y * sampleDepth(map, base, vec2(u.z, v.y), depth, rpdb);
+    sum += uw.x * vw.y * sampleDepth(map, layer, base, vec2(u.x, v.y), depth, rpdb);
+    sum += uw.y * vw.y * sampleDepth(map, layer, base, vec2(u.y, v.y), depth, rpdb);
+    sum += uw.z * vw.y * sampleDepth(map, layer, base, vec2(u.z, v.y), depth, rpdb);
 
-    sum += uw.x * vw.z * sampleDepth(map, base, vec2(u.x, v.z), depth, rpdb);
-    sum += uw.y * vw.z * sampleDepth(map, base, vec2(u.y, v.z), depth, rpdb);
-    sum += uw.z * vw.z * sampleDepth(map, base, vec2(u.z, v.z), depth, rpdb);
+    sum += uw.x * vw.z * sampleDepth(map, layer, base, vec2(u.x, v.z), depth, rpdb);
+    sum += uw.y * vw.z * sampleDepth(map, layer, base, vec2(u.y, v.z), depth, rpdb);
+    sum += uw.z * vw.z * sampleDepth(map, layer, base, vec2(u.z, v.z), depth, rpdb);
 
     return sum * (1.0 / 144.0);
 }
 #endif
 
 #if SHADOW_SAMPLING_METHOD == SHADOW_SAMPLING_PCF_HIGH
-float ShadowSample_PCF_High(const lowp sampler2DShadow map, const vec2 size, vec3 position) {
+float ShadowSample_PCF_High(const lowp sampler2DArrayShadow map, const uint layer, const vec2 size, vec3 position) {
     //  Castaño, 2013, "Shadow Mapping Summary Part 1"
     vec2 texelSize = vec2(1.0) / size;
 
@@ -207,25 +207,25 @@ float ShadowSample_PCF_High(const lowp sampler2DShadow map, const vec2 size, vec
     float depth = samplingBias(position.z, rpdb, texelSize);
     float sum = 0.0;
 
-    sum += uw.x * vw.x * sampleDepth(map, base, vec2(u.x, v.x), depth, rpdb);
-    sum += uw.y * vw.x * sampleDepth(map, base, vec2(u.y, v.x), depth, rpdb);
-    sum += uw.z * vw.x * sampleDepth(map, base, vec2(u.z, v.x), depth, rpdb);
-    sum += uw.w * vw.x * sampleDepth(map, base, vec2(u.w, v.x), depth, rpdb);
+    sum += uw.x * vw.x * sampleDepth(map, layer, base, vec2(u.x, v.x), depth, rpdb);
+    sum += uw.y * vw.x * sampleDepth(map, layer, base, vec2(u.y, v.x), depth, rpdb);
+    sum += uw.z * vw.x * sampleDepth(map, layer, base, vec2(u.z, v.x), depth, rpdb);
+    sum += uw.w * vw.x * sampleDepth(map, layer, base, vec2(u.w, v.x), depth, rpdb);
 
-    sum += uw.x * vw.y * sampleDepth(map, base, vec2(u.x, v.y), depth, rpdb);
-    sum += uw.y * vw.y * sampleDepth(map, base, vec2(u.y, v.y), depth, rpdb);
-    sum += uw.z * vw.y * sampleDepth(map, base, vec2(u.z, v.y), depth, rpdb);
-    sum += uw.w * vw.y * sampleDepth(map, base, vec2(u.w, v.y), depth, rpdb);
+    sum += uw.x * vw.y * sampleDepth(map, layer, base, vec2(u.x, v.y), depth, rpdb);
+    sum += uw.y * vw.y * sampleDepth(map, layer, base, vec2(u.y, v.y), depth, rpdb);
+    sum += uw.z * vw.y * sampleDepth(map, layer, base, vec2(u.z, v.y), depth, rpdb);
+    sum += uw.w * vw.y * sampleDepth(map, layer, base, vec2(u.w, v.y), depth, rpdb);
 
-    sum += uw.x * vw.z * sampleDepth(map, base, vec2(u.x, v.z), depth, rpdb);
-    sum += uw.y * vw.z * sampleDepth(map, base, vec2(u.y, v.z), depth, rpdb);
-    sum += uw.z * vw.z * sampleDepth(map, base, vec2(u.z, v.z), depth, rpdb);
-    sum += uw.w * vw.z * sampleDepth(map, base, vec2(u.w, v.z), depth, rpdb);
+    sum += uw.x * vw.z * sampleDepth(map, layer, base, vec2(u.x, v.z), depth, rpdb);
+    sum += uw.y * vw.z * sampleDepth(map, layer, base, vec2(u.y, v.z), depth, rpdb);
+    sum += uw.z * vw.z * sampleDepth(map, layer, base, vec2(u.z, v.z), depth, rpdb);
+    sum += uw.w * vw.z * sampleDepth(map, layer, base, vec2(u.w, v.z), depth, rpdb);
 
-    sum += uw.x * vw.w * sampleDepth(map, base, vec2(u.x, v.w), depth, rpdb);
-    sum += uw.y * vw.w * sampleDepth(map, base, vec2(u.y, v.w), depth, rpdb);
-    sum += uw.z * vw.w * sampleDepth(map, base, vec2(u.z, v.w), depth, rpdb);
-    sum += uw.w * vw.w * sampleDepth(map, base, vec2(u.w, v.w), depth, rpdb);
+    sum += uw.x * vw.w * sampleDepth(map, layer, base, vec2(u.x, v.w), depth, rpdb);
+    sum += uw.y * vw.w * sampleDepth(map, layer, base, vec2(u.y, v.w), depth, rpdb);
+    sum += uw.z * vw.w * sampleDepth(map, layer, base, vec2(u.z, v.w), depth, rpdb);
+    sum += uw.w * vw.w * sampleDepth(map, layer, base, vec2(u.w, v.w), depth, rpdb);
 
     return sum * (1.0 / 2704.0);
 }
@@ -240,15 +240,15 @@ float ShadowSample_PCF_High(const lowp sampler2DShadow map, const vec2 size, vec
  * space. The output is a filtered visibility factor that can be used to multiply
  * the light intensity.
  */
-float shadow(const lowp sampler2DShadow shadowMap, const vec3 shadowPosition) {
+float shadow(const lowp sampler2DArrayShadow shadowMap, const uint layer, const vec3 shadowPosition) {
     vec2 size = vec2(textureSize(shadowMap, 0));
 #if SHADOW_SAMPLING_METHOD == SHADOW_SAMPLING_PCF_HARD
-    return ShadowSample_Hard(shadowMap, size, shadowPosition);
+    return ShadowSample_Hard(shadowMap, layer, size, shadowPosition);
 #elif SHADOW_SAMPLING_METHOD == SHADOW_SAMPLING_PCF_LOW
-    return ShadowSample_PCF_Low(shadowMap, size, shadowPosition);
+    return ShadowSample_PCF_Low(shadowMap, layer, size, shadowPosition);
 #elif SHADOW_SAMPLING_METHOD == SHADOW_SAMPLING_PCF_MEDIUM
-    return ShadowSample_PCF_Medium(shadowMap, size, shadowPosition);
+    return ShadowSample_PCF_Medium(shadowMap, layer, size, shadowPosition);
 #elif SHADOW_SAMPLING_METHOD == SHADOW_SAMPLING_PCF_HIGH
-    return ShadowSample_PCF_High(shadowMap, size, shadowPosition);
+    return ShadowSample_PCF_High(shadowMap, layer, size, shadowPosition);
 #endif
 }

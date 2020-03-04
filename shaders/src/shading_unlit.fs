@@ -36,7 +36,7 @@ vec4 evaluateMaterial(const MaterialInputs material) {
 
 #if defined(HAS_DIRECTIONAL_LIGHTING)
 #if defined(HAS_SHADOWING)
-    color *= 1.0 - shadow(light_shadowMap, getLightSpacePosition());
+    color *= 1.0 - shadow(light_shadowMap, 0u, getLightSpacePosition());
 #else
     color = vec4(0.0);
 #endif
