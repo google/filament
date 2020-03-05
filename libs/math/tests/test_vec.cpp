@@ -326,9 +326,6 @@ TEST_F(VecTest, MiscFunc) {
 
     EXPECT_TRUE(all(bool3(true)));
     EXPECT_FALSE(all(bool3(false, false, true)));
-
-    std::function<bool(float)> p = [](float v) -> bool { return v > 0.0f; };
-    EXPECT_TRUE(all(map(float3(1, 2, 3), p)));
 }
 
 int main(int argc, char** argv) {

@@ -20,6 +20,8 @@
 #include <backend/DriverEnums.h>
 #include <backend/PixelBufferDescriptor.h>
 
+#include <functional>
+
 namespace filament {
 namespace backend {
 

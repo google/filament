@@ -17,6 +17,7 @@
 #ifndef TNT_FILAMENT_SAMPLE_FILAMENTAPP_H
 #define TNT_FILAMENT_SAMPLE_FILAMENTAPP_H
 
+#include <functional>
 #include <memory>
 #include <map>
 #include <string>
