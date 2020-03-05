@@ -31,6 +31,10 @@ namespace details {
 
 ShadowMapManager::ShadowMapManager() : mTextureState(0, 0) {}
 
+ShadowMapManager::~ShadowMapManager() {
+    assert(mRenderTargets.empty());
+}
+
 void ShadowMapManager::terminate(DriverApi& driverApi) noexcept {
     destroyResources(driverApi);
 }
@@ -93,7 +97,7 @@ void ShadowMapManager::prepare(FEngine& engine, DriverApi& driver, SamplerGroup&
 
     // Create a render target, one for each layer.
     for (uint16_t l = 0; l < layersNeeded; l++) {
-        HwRenderTarget rt = driver.createRenderTarget(
+        Handle<HwRenderTarget> rt = driver.createRenderTarget(
                 TargetBufferFlags::DEPTH, dim, dim, 1,
                 {}, { mShadowMapTexture, 0, l }, {});
         mRenderTargets.push_back(rt);
@@ -270,8 +274,8 @@ void ShadowMapManager::render(FEngine& engine, FView& view, backend::DriverApi& 
 }
 
 UTILS_NOINLINE
-void ShadowMapManager::fillWithDebugPattern(backend::DriverApi& driverApi, HwTexture texture)
-        const noexcept {
+void ShadowMapManager::fillWithDebugPattern(backend::DriverApi& driverApi,
+        Handle<HwTexture> texture) const noexcept {
     const size_t dim = mTextureState.size;
     size_t size = dim * dim;
     uint8_t* ptr = (uint8_t*)malloc(size);

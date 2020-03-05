@@ -44,6 +44,7 @@ class ShadowMapManager {
 public:
 
     ShadowMapManager();
+    ~ShadowMapManager();
 
     void terminate(backend::DriverApi& driverApi) noexcept;
 
@@ -67,10 +68,8 @@ public:
 
 private:
 
-    using HwRenderTarget = backend::Handle<backend::HwRenderTarget>;
-    using HwTexture = backend::Handle<backend::HwTexture>;
-
-    void fillWithDebugPattern(backend::DriverApi& driverApi, HwTexture texture) const noexcept;
+    void fillWithDebugPattern(backend::DriverApi& driverApi,
+            backend::Handle<backend::HwTexture> texture) const noexcept;
     void destroyResources(backend::DriverApi& driver) noexcept;
 
     struct ShadowLayout {
@@ -121,8 +120,8 @@ private:
     backend::TextureFormat mTextureFormat = backend::TextureFormat::DEPTH16;
     float mTextureZResolution = 1.0f / (1u << 16u);
 
-    HwTexture mShadowMapTexture;
-    std::vector<HwRenderTarget> mRenderTargets;
+    backend::Handle<backend::HwTexture> mShadowMapTexture;
+    std::vector<backend::Handle<backend::HwRenderTarget>> mRenderTargets;
     ShadowMapEntry mDirectionalShadowMap;
     std::vector<ShadowMapEntry> mSpotShadowMaps;
 };
