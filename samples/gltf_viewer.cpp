@@ -24,6 +24,7 @@
 #include <filament/Engine.h>
 #include <filament/IndexBuffer.h>
 #include <filament/Scene.h>
+#include <filament/Skybox.h>
 #include <filament/VertexBuffer.h>
 #include <filament/View.h>
 
@@ -74,6 +75,8 @@ struct App {
         float cameraISO = 100.0f;
         float groundShadowStrength = 0.75f;
         bool groundPlaneEnabled = false;
+        bool skyboxEnabled = true;
+        sRGBColor backgroundColor = { 0.0f };
     } viewOptions;
 
     struct Scene {
@@ -249,6 +252,10 @@ static void createGroundPlane(Engine* engine, Scene* scene, App& app) {
     app.scene.groundMaterial = shadowMaterial;
 }
 
+static LinearColor inverseTonemapSRGB(sRGBColor x) {
+    return (x * -0.155) / (x - 1.019);
+}
+
 int main(int argc, char** argv) {
     App app;
 
@@ -365,6 +372,8 @@ int main(int argc, char** argv) {
             }
 
             if (ImGui::CollapsingHeader("Scene")) {
+                ImGui::Checkbox("Show skybox", &app.viewOptions.skyboxEnabled);
+                ImGui::ColorEdit3("Background color", &app.viewOptions.backgroundColor.r);
                 ImGui::Checkbox("Ground shadow", &app.viewOptions.groundPlaneEnabled);
                 ImGui::Indent();
                 ImGui::SliderFloat("Strength", &app.viewOptions.groundShadowStrength, 0.0f, 1.0f);
@@ -429,6 +438,11 @@ int main(int argc, char** argv) {
 
         app.scene.groundMaterial->setDefaultParameter(
                 "strength", app.viewOptions.groundShadowStrength);
+
+        FilamentApp::get().getIBL()->getSkybox()->setLayerMask(
+                0xff, app.viewOptions.skyboxEnabled ? 0xff : 0x00);
+        view->setClearColor(
+                LinearColorA{ inverseTonemapSRGB(app.viewOptions.backgroundColor), 1.0f });
     };
 
     FilamentApp& filamentApp = FilamentApp::get();
