@@ -184,7 +184,7 @@ void ShadowMap::render(DriverApi& driver, RenderPass& pass, FView& view) noexcep
     };
     pass.setCamera(cameraInfo);
 
-    FView::Range visibleRenderables = view.getVisibleShadowCasters();
+    FView::Range visibleRenderables = view.getVisibleDirectionalShadowCasters();
     pass.setGeometry(scene.getRenderableData(), visibleRenderables, scene.getRenderableUBO());
 
     view.updatePrimitivesLod(engine, cameraInfo, scene.getRenderableData(), visibleRenderables);

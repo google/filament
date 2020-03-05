@@ -81,8 +81,6 @@ static constexpr uint8_t VISIBLE_SPOT_SHADOW_CASTER_N(size_t n) {
 static constexpr uint8_t VISIBLE_SPOT_SHADOW_CASTER =
         (0xFF >> (sizeof(uint8_t) * 8u - CONFIG_MAX_SHADOW_CASTING_SPOTS)) << 2u;
 
-static constexpr uint8_t VISIBLE_ALL = VISIBLE_RENDERABLE | VISIBLE_DIR_SHADOW_CASTER;
-
 // Because we're using a uint8_t for the visibility mask, we're limited to 6 spot light shadows.
 // (2 of the bits are used for visible renderables + directional light shadow casters).
 static_assert(CONFIG_MAX_SHADOW_CASTING_SPOTS <= 6,
@@ -293,8 +291,12 @@ public:
         return mVisibleRenderables;
     }
 
-    Range const& getVisibleShadowCasters() const noexcept {
-        return mVisibleShadowCasters;
+    Range const& getVisibleDirectionalShadowCasters() const noexcept {
+        return mVisibleDirectionalShadowCasters;
+    }
+
+    Range const& getVisibleSpotShadowCasters() const noexcept {
+        return mSpotLightShadowCasters;
     }
 
     TargetBufferFlags getClearFlags() const noexcept {
@@ -408,7 +410,8 @@ private:
 
     // the following values are set by prepare()
     Range mVisibleRenderables;
-    Range mVisibleShadowCasters;
+    Range mVisibleDirectionalShadowCasters;
+    Range mSpotLightShadowCasters;
     uint32_t mRenderableUBOSize = 0;
     mutable bool mHasDirectionalLight = false;
     mutable bool mHasDynamicLighting = false;

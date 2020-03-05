@@ -508,18 +508,28 @@ void FView::prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& are
 
         /*
          * Shadowing: compute the shadow camera and cull shadow casters
-         * (this will set the VISIBLE_DIR_SHADOW_CASTER bit)
+         * (this will set the VISIBLE_DIR_SHADOW_CASTER bit and VISIBLE_SPOT_SHADOW_CASTER bits)
          */
 
         prepareShadowing(engine, driver, renderableData, scene->getLightData());
 
         /*
-         * partition the array of renderable w.r.t their visibility:
+         * Parition the SoA so that renderables are partitioned w.r.t their visibility into the
+         * following groups:
          *
-         * Sort the SoA so that invisible objects are first, then renderables,
-         * then both renderable and casters, then casters only -- this operation is somewhat heavy
-         * as it sorts the whole SoA. We use std::partition instead of sort(), which gives us
-         * O(3.N) instead of O(N.log(N)) application of swap().
+         * 1. renderables
+         * 2. renderables and directional shadow casters
+         * 3. directional shadow casters only
+         * 4. punctual light shadow casters only
+         * 5. invisible renderables
+         *
+         * Note that the first three groups are partitioned based only on the lowest two bits of the
+         * VISIBLE_MASK (VISIBLE_RENDERABLE and VISIBLE_DIR_SHADOW_CASTER), and thus can also
+         * contain punctual light shadow casters as well. The fourth group contains *only* punctual
+         * shadow casters.
+         *
+         * This operation is somewhat heavy as it sorts the whole SoA. We use std::partition instead
+         * of sort(), which gives us O(4.N) instead of O(N.log(N)) application of swap().
          */
 
         // calculate the sorting key for all elements, based on their visibility
@@ -530,15 +540,22 @@ void FView::prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& are
 
         auto const beginRenderables = renderableData.begin();
         auto beginCasters = partition(beginRenderables, renderableData.end(), VISIBLE_RENDERABLE);
-        auto beginCastersOnly = partition(beginCasters, renderableData.end(), VISIBLE_ALL);
-        auto endCastersOnly = partition(beginCastersOnly, renderableData.end(),
+        auto beginCastersOnly = partition(beginCasters, renderableData.end(),
+                VISIBLE_RENDERABLE | VISIBLE_DIR_SHADOW_CASTER);
+        auto beginSpotLightCastersOnly = partition(beginCastersOnly, renderableData.end(),
                 VISIBLE_DIR_SHADOW_CASTER);
+        auto endSpotLightCastersOnly = std::partition(beginSpotLightCastersOnly,
+                renderableData.end(), [](auto it) {
+                    return (it.template get<FScene::VISIBLE_MASK>() & VISIBLE_SPOT_SHADOW_CASTER);
+                });
 
         // convert to indices
-        uint32_t iEnd = uint32_t(endCastersOnly - beginRenderables);
+        uint32_t iEnd = uint32_t(beginSpotLightCastersOnly - beginRenderables);
+        uint32_t iSpotLightCastersEnd = uint32_t(endSpotLightCastersOnly - beginRenderables);
         mVisibleRenderables = Range{ 0, uint32_t(beginCastersOnly - beginRenderables) };
-        mVisibleShadowCasters = Range{ uint32_t(beginCasters - beginRenderables), iEnd };
-        merged = Range{ 0, iEnd };
+        mVisibleDirectionalShadowCasters = Range{ uint32_t(beginCasters - beginRenderables), iEnd };
+        mSpotLightShadowCasters = Range{ 0, iSpotLightCastersEnd };
+        merged = Range{ 0, iSpotLightCastersEnd };
 
         // update those UBOs
         const size_t size = merged.size() * sizeof(PerRenderableUib);
@@ -625,7 +642,10 @@ UTILS_NOINLINE
         FScene::RenderableSoa::iterator end,
         uint8_t mask) noexcept {
     return std::partition(begin, end, [mask](auto it) {
-        return it.template get<FScene::VISIBLE_MASK>() == mask;
+        // Mask VISIBLE_MASK to ignore higher bits related to spot shadows. We only partition based
+        // on renderable and directional shadow visibility.
+        return (it.template get<FScene::VISIBLE_MASK>() &
+                (VISIBLE_RENDERABLE | VISIBLE_DIR_SHADOW_CASTER)) == mask;
     });
 }
 
