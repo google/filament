@@ -81,7 +81,8 @@ bool operator==(const MaterialKey& k1, const MaterialKey& k2);
 
 // Define a mapping from a uv set index in the source asset to one of Filament's uv sets.
 enum UvSet : uint8_t { UNUSED, UV0, UV1 };
-using UvMap = std::array<UvSet, 8>;
+constexpr int UvMapSize = 8;
+using UvMap = std::array<UvSet, UvMapSize>;
 
 inline uint8_t getNumUvSets(const UvMap& uvmap) {
     return std::max({

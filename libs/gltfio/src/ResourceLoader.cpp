@@ -102,14 +102,17 @@ struct ResourceLoader::Impl {
     details::FFilamentAsset* mCurrentAsset;
 
     bool createTextures(bool async);
-    void addTextureCacheEntry(const TextureBinding& tb);
-    void bindTextureToMaterial(const TextureBinding& tb);
+    void addTextureCacheEntry(const details::TextureSlot& tb);
+    void bindTextureToMaterial(const details::TextureSlot& tb);
     void decodeSingleTexture();
     void uploadPendingTextures();
     ~Impl();
 };
 
 namespace details {
+
+uint32_t computeBindingSize(const cgltf_accessor* accessor);
+uint32_t computeBindingOffset(const cgltf_accessor* accessor);
 
 // The AssetPool tracks references to raw source data (cgltf hierarchies) and frees them
 // appropriately. It releases all source assets only after the pending upload count is zero and the
@@ -153,14 +156,6 @@ private:
 
 using namespace details;
 
-ResourceLoader::ResourceLoader(const ResourceConfiguration& config) :
-        mPool(new AssetPool), pImpl(new Impl(config)) { }
-
-ResourceLoader::~ResourceLoader() {
-    mPool->onLoaderDestroyed();
-    delete pImpl;
-}
-
 static void importSkinningData(Skin& dstSkin, const cgltf_skin& srcSkin) {
     const cgltf_accessor* srcMatrices = srcSkin.inverse_bind_matrices;
     dstSkin.inverseBindMatrices.resize(srcSkin.joints_count);
@@ -172,24 +167,26 @@ static void importSkinningData(Skin& dstSkin, const cgltf_skin& srcSkin) {
     }
 }
 
-void ResourceLoader::addResourceData(const char* uri, BufferDescriptor&& buffer) {
-    pImpl->mUriDataCache.emplace(uri, std::move(buffer));
-}
-
-bool ResourceLoader::hasResourceData(const char* uri) const {
-    return pImpl->mUriDataCache.find(uri) != pImpl->mUriDataCache.end();
-}
-
 static void convertBytesToShorts(uint16_t* dst, const uint8_t* src, size_t count) {
     for (size_t i = 0; i < count; ++i) {
         dst[i] = src[i];
     }
 }
 
-static void generateTrivialIndices(uint32_t* dst, size_t numVertices) {
-    for (size_t i = 0; i < numVertices; ++i) {
-        dst[i] = i;
-    }
+ResourceLoader::ResourceLoader(const ResourceConfiguration& config) :
+        mPool(new AssetPool), pImpl(new Impl(config)) { }
+
+ResourceLoader::~ResourceLoader() {
+    mPool->onLoaderDestroyed();
+    delete pImpl;
+}
+
+void ResourceLoader::addResourceData(const char* uri, BufferDescriptor&& buffer) {
+    pImpl->mUriDataCache.emplace(uri, std::move(buffer));
+}
+
+bool ResourceLoader::hasResourceData(const char* uri) const {
+    return pImpl->mUriDataCache.find(uri) != pImpl->mUriDataCache.end();
 }
 
 bool ResourceLoader::loadResources(FilamentAsset* asset) {
@@ -297,61 +294,46 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
 
     Engine& engine = *pImpl->mEngine;
 
-    // Upload data to the GPU.
-    const BufferBinding* bindings = asset->getBufferBindings();
-    bool needsTangents = false;
-    bool needsSparseData = false;
-    for (size_t i = 0, n = asset->getBufferBindingCount(); i < n; ++i) {
-        auto bb = bindings[i];
-        if (bb.vertexBuffer && bb.generateTangents) {
-            needsTangents = true;
-        } else if (bb.vertexBuffer && bb.sparseAccessor) {
-            needsSparseData = true;
-        } else if (bb.vertexBuffer && !bb.generateDummyData) {
-            const uint8_t* data8 = bb.offset + (const uint8_t*) *bb.data;
-            mPool->addPendingUpload();
-            VertexBuffer::BufferDescriptor bd(data8, bb.size, AssetPool::onLoadedResource, mPool);
-            bb.vertexBuffer->setBufferAt(engine, bb.bufferIndex, std::move(bd));
-        } else if (bb.vertexBuffer) {
-            uint32_t* dummyData = (uint32_t*) malloc(bb.size);
-            memset(dummyData, 0xff, bb.size);
-            VertexBuffer::BufferDescriptor bd(dummyData, bb.size, FREE_CALLBACK);
-            bb.vertexBuffer->setBufferAt(engine, bb.bufferIndex, std::move(bd));
-        } else if (bb.generateTrivialIndices) {
-            uint32_t* data32 = (uint32_t*) malloc(bb.size);
-            generateTrivialIndices(data32, bb.size / sizeof(uint32_t));
-            IndexBuffer::BufferDescriptor bd(data32, bb.size, FREE_CALLBACK);
-            bb.indexBuffer->setBuffer(engine, std::move(bd));
-        } else if (bb.convertBytesToShorts) {
-            const uint8_t* data8 = bb.offset + (const uint8_t*) *bb.data;
-            size_t size16 = bb.size * 2;
-            uint16_t* data16 = (uint16_t*) malloc(size16);
-            convertBytesToShorts(data16, data8, bb.size);
-            IndexBuffer::BufferDescriptor bd(data16, size16, FREE_CALLBACK);
-            bb.indexBuffer->setBuffer(engine, std::move(bd));
-        } else if (bb.indexBuffer) {
-            const uint8_t* data8 = bb.offset + (const uint8_t*) *bb.data;
-            mPool->addPendingUpload();
-            IndexBuffer::BufferDescriptor bd(data8, bb.size, AssetPool::onLoadedResource, mPool);
-            bb.indexBuffer->setBuffer(engine, std::move(bd));
-        }
-    }
+    // Upload VertexBuffer and IndexBuffer data to the GPU.
 
-    // Copy over the inverse bind matrices to allow users to destroy the source asset.
+    for (auto slot : asset->mBufferSlots) {
+        const cgltf_accessor* accessor = slot.accessor;
+        if (!accessor->buffer_view) {
+            continue;
+        }
+        auto bufferData = (const uint8_t*) accessor->buffer_view->buffer->data;
+        const uint8_t* data = computeBindingOffset(accessor) + bufferData;
+        const uint32_t size = computeBindingSize(accessor);
+        if (slot.vertexBuffer) {
+            mPool->addPendingUpload();
+            VertexBuffer::BufferDescriptor bd(data, size, AssetPool::onLoadedResource, mPool);
+            slot.vertexBuffer->setBufferAt(engine, slot.bufferIndex, std::move(bd));
+            continue;
+        }
+        assert(slot.indexBuffer);
+        if (accessor->component_type == cgltf_component_type_r_8u) {
+            const size_t size16 = size * 2;
+            uint16_t* data16 = (uint16_t*) malloc(size16);
+            convertBytesToShorts(data16, data, size);
+            IndexBuffer::BufferDescriptor bd(data16, size16, FREE_CALLBACK);
+            slot.indexBuffer->setBuffer(engine, std::move(bd));
+            continue;
+        }
+        mPool->addPendingUpload();
+        IndexBuffer::BufferDescriptor bd(data, size, AssetPool::onLoadedResource, mPool);
+        slot.indexBuffer->setBuffer(engine, std::move(bd));
+    }
+    // Copy over the inverse bind matrices.
     for (cgltf_size i = 0, len = gltf->skins_count; i < len; ++i) {
         importSkinningData(asset->mSkins[i], gltf->skins[i]);
     }
 
     // Apply sparse data modifications to base arrays, then upload the result.
-    if (needsSparseData) {
-        applySparseData(asset);
-    }
+    applySparseData(asset);
 
     // Compute surface orientation quaternions if necessary. This is similar to sparse data in that
     // we need to generate the contents of a GPU buffer by processing one or more CPU buffer(s).
-    if (needsTangents) {
-        computeTangents(asset);
-    }
+    computeTangents(asset);
 
     // Non-textured renderables are now considered ready, so notify the dep graph.
     asset->mDependencyGraph.finalize();
@@ -442,35 +424,42 @@ void ResourceLoader::Impl::uploadPendingTextures() {
     for (auto& pair : mUriTextureCache) upload(pair.second.get(), *mEngine);
 }
 
-void ResourceLoader::Impl::addTextureCacheEntry(const TextureBinding& tb) {
+void ResourceLoader::Impl::addTextureCacheEntry(const TextureSlot& tb) {
     TextureCacheEntry* entry = nullptr;
 
+    const cgltf_texture* srcTexture = tb.texture;
+    const cgltf_buffer_view* bv = srcTexture->image->buffer_view;
+    const char* uri = srcTexture->image->uri;
+    const uint32_t totalSize = uint32_t(bv ? bv->size : 0);
+    void** data = bv ? &bv->buffer->data : nullptr;
+    const size_t offset = bv ? bv->offset : 0;
+
     // Check if the texture binding uses BufferView data (i.e. it does not have a URI).
-    if (tb.data) {
-        const uint8_t* sourceData = tb.offset + (const uint8_t*) *tb.data;
+    if (data) {
+        const uint8_t* sourceData = offset + (const uint8_t*) *data;
         entry = mBufferTextureCache[sourceData] ? mBufferTextureCache[sourceData].get() : nullptr;
         if (entry) {
             return;
         }
         entry = (mBufferTextureCache[sourceData] = std::make_unique<TextureCacheEntry>()).get();
         entry->srgb = tb.srgb;
-        stbi_info_from_memory(sourceData, tb.totalSize, &entry->width, &entry->height,
+        stbi_info_from_memory(sourceData, totalSize, &entry->width, &entry->height,
                 &entry->numComponents);
-        entry->bufferSize = tb.totalSize;
+        entry->bufferSize = totalSize;
         return;
     }
 
     // Check if we already created a Texture object for this URI.
-    entry = mUriTextureCache[tb.uri] ? mUriTextureCache[tb.uri].get() : nullptr;
+    entry = mUriTextureCache[uri] ? mUriTextureCache[uri].get() : nullptr;
     if (entry) {
         return;
     }
 
-    entry = (mUriTextureCache[tb.uri] = std::make_unique<TextureCacheEntry>()).get();
+    entry = (mUriTextureCache[uri] = std::make_unique<TextureCacheEntry>()).get();
     entry->srgb = tb.srgb;
 
     // Check the user-supplied resource cache for this URI, otherwise peek at the file.
-    auto iter = mUriDataCache.find(tb.uri);
+    auto iter = mUriDataCache.find(uri);
     if (iter != mUriDataCache.end()) {
         const uint8_t* sourceData = (const uint8_t*) iter->second.buffer;
         stbi_info_from_memory(sourceData, iter->second.size, &entry->width,
@@ -478,19 +467,25 @@ void ResourceLoader::Impl::addTextureCacheEntry(const TextureBinding& tb) {
         return;
     }
     #if !USE_FILESYSTEM
-        slog.e << "Unable to load texture: " << tb.uri << io::endl;
+        slog.e << "Unable to load texture: " << uri << io::endl;
     #else
-        utils::Path fullpath = utils::Path(mGltfPath).getParent() + tb.uri;
+        utils::Path fullpath = utils::Path(mGltfPath).getParent() + uri;
         stbi_info(fullpath.c_str(), &entry->width, &entry->height, &entry->numComponents);
     #endif
 }
 
-void ResourceLoader::Impl::bindTextureToMaterial(const TextureBinding& tb) {
+void ResourceLoader::Impl::bindTextureToMaterial(const TextureSlot& tb) {
     details::FFilamentAsset* asset = mCurrentAsset;
 
+    const cgltf_texture* srcTexture = tb.texture;
+    const cgltf_buffer_view* bv = srcTexture->image->buffer_view;
+    const char* uri = srcTexture->image->uri;
+    void** data = bv ? &bv->buffer->data : nullptr;
+    const size_t offset = bv ? bv->offset : 0;
+
     // First check if this is a buffer-based texture.
-    if (tb.data) {
-        const uint8_t* sourceData = tb.offset + (const uint8_t*) *tb.data;
+    if (data) {
+        const uint8_t* sourceData = offset + (const uint8_t*) *data;
         auto& entry = mBufferTextureCache[sourceData];
         if (entry.get() && entry->texture) {
             asset->bindTexture(tb, entry->texture);
@@ -499,7 +494,7 @@ void ResourceLoader::Impl::bindTextureToMaterial(const TextureBinding& tb) {
     }
 
     // Next check if this is a URI-based texture.
-    auto& entry = mUriTextureCache[tb.uri];
+    auto& entry = mUriTextureCache[uri];
     if (entry.get() && entry->texture) {
         asset->bindTexture(tb, entry->texture);
     }
@@ -518,8 +513,8 @@ bool ResourceLoader::Impl::createTextures(bool async) {
 
     // First, determine texture dimensions and create texture cache entries.
     details::FFilamentAsset* asset = mCurrentAsset;
-    for (size_t i = 0, n = asset->getTextureBindingCount(); i < n; ++i) {
-        addTextureCacheEntry(asset->getTextureBindings()[i]);
+    for (auto slot : asset->mTextureSlots) {
+        addTextureCacheEntry(slot);
     }
 
     // Tally up the total number of textures that need to be decoded. Zero textures is a special
@@ -547,8 +542,8 @@ bool ResourceLoader::Impl::createTextures(bool async) {
     for (auto& pair : mUriTextureCache) createTexture(pair.second.get());
 
     // Bind the textures to material instances.
-    for (size_t i = 0, n = asset->getTextureBindingCount(); i < n; ++i) {
-        bindTextureToMaterial(asset->getTextureBindings()[i]);
+    for (auto slot : asset->mTextureSlots) {
+        bindTextureToMaterial(slot);
     }
 
     // Before creating jobs for PNG / JPEG decoding, we might need to return early. On single
@@ -628,41 +623,24 @@ ResourceLoader::Impl::~Impl() {
 }
 
 void ResourceLoader::applySparseData(FFilamentAsset* asset) const {
-    auto uploadSparseData = [&](const cgltf_accessor* accessor, VertexBuffer* vb, uint8_t slot) {
+    for (auto slot : asset->mBufferSlots) {
+        const cgltf_accessor* accessor = slot.accessor;
+        if (!accessor->is_sparse) {
+            continue;
+        }
         cgltf_size numFloats = accessor->count * cgltf_num_components(accessor->type);
         cgltf_size numBytes = sizeof(float) * numFloats;
         float* generated = (float*) malloc(numBytes);
         cgltf_accessor_unpack_floats(accessor, generated, numFloats);
         VertexBuffer::BufferDescriptor bd(generated, numBytes, FREE_CALLBACK);
-        vb->setBufferAt(*pImpl->mEngine, slot, std::move(bd));
-    };
-
-    // Collect all vertex attribute slots that need to be populated.
-    const BufferBinding* bindings = asset->getBufferBindings();
-    tsl::robin_map<VertexBuffer*, uint8_t> sparseBuffers;
-    for (size_t i = 0, n = asset->getBufferBindingCount(); i < n; ++i) {
-        auto bb = bindings[i];
-        if (bb.vertexBuffer && bb.sparseAccessor) {
-            sparseBuffers[bb.vertexBuffer] = bb.bufferIndex;
-        }
-    }
-
-    // Go through all cgltf accessors and apply sparse data if requested.
-    for (cgltf_size index = 0; index < asset->mSourceAsset->accessors_count; index++) {
-        const cgltf_accessor* accessor = asset->mSourceAsset->accessors + index;
-        auto iter = asset->mAccessorMap.find(accessor);
-        if (iter != asset->mAccessorMap.end()) {
-            for (VertexBuffer* vb : iter->second) {
-                auto iter = sparseBuffers.find(vb);
-                if (iter != sparseBuffers.end()) {
-                    uploadSparseData(accessor, vb, iter->second);
-                }
-            }
-        }
+        slot.vertexBuffer->setBufferAt(*pImpl->mEngine, slot.bufferIndex, std::move(bd));
     }
 }
 
 void ResourceLoader::computeTangents(FFilamentAsset* asset) const {
+    const cgltf_accessor* kGenerateTangents = &asset->mGenerateTangents;
+    const cgltf_accessor* kGenerateNormals = &asset->mGenerateNormals;
+
     // Declare vectors of normals and tangents, which we'll extract & convert from the source.
     std::vector<float3> fp32Normals;
     std::vector<float4> fp32Tangents;
@@ -791,36 +769,30 @@ void ResourceLoader::computeTangents(FFilamentAsset* asset) const {
     // Collect all TANGENT vertex attribute slots that need to be populated.
     tsl::robin_map<VertexBuffer*, uint8_t> baseTangents;
     tsl::robin_map<VertexBuffer*, uint8_t> morphTangents[4];
-    const BufferBinding* bindings = asset->getBufferBindings();
-    for (size_t i = 0, n = asset->getBufferBindingCount(); i < n; ++i) {
-        auto bb = bindings[i];
-        if (bb.vertexBuffer && bb.generateTangents) {
-            if (bb.isMorphTarget) {
-                morphTangents[bb.morphTargetIndex][bb.vertexBuffer] = bb.bufferIndex;
-            } else {
-                baseTangents[bb.vertexBuffer] = bb.bufferIndex;
-            }
+    for (auto slot : asset->mBufferSlots) {
+        if (slot.accessor != kGenerateTangents && slot.accessor != kGenerateNormals) {
+            continue;
         }
+        if (slot.morphTarget) {
+            morphTangents[slot.morphTarget - 1][slot.vertexBuffer] = slot.bufferIndex;
+            continue;
+        }
+        baseTangents[slot.vertexBuffer] = slot.bufferIndex;
     }
 
     // Go through all cgltf primitives and populate their tangents if requested.
-    for (auto iter : asset->mNodeMap) {
-        const cgltf_mesh* mesh = iter.first->mesh;
-        if (mesh) {
-            cgltf_size nprims = mesh->primitives_count;
-            for (cgltf_size index = 0; index < nprims; ++index) {
-                VertexBuffer* vb = asset->mPrimMap.at(mesh->primitives + index);
-                auto iter = baseTangents.find(vb);
-                if (iter != baseTangents.end()) {
-                    computeQuats(mesh->primitives[index], vb, iter->second, kMorphTargetUnused);
-                }
-                for (int morphTarget = 0; morphTarget < 4; morphTarget++) {
-                    const auto& tangents = morphTangents[morphTarget];
-                    auto iter = tangents.find(vb);
-                    if (iter != tangents.end()) {
-                        computeQuats(mesh->primitives[index], vb, iter->second, morphTarget);
-                    }
-                }
+    for (auto pair : asset->mPrimitives) {
+        const cgltf_primitive& prim = *pair.first;
+        VertexBuffer* vb = pair.second;
+        auto iter = baseTangents.find(vb);
+        if (iter != baseTangents.end()) {
+            computeQuats(prim, vb, iter->second, kMorphTargetUnused);
+        }
+        for (int morphTarget = 0; morphTarget < 4; morphTarget++) {
+            const auto& tangents = morphTangents[morphTarget];
+            auto iter = tangents.find(vb);
+            if (iter != tangents.end()) {
+                computeQuats(prim, vb, iter->second, morphTarget);
             }
         }
     }

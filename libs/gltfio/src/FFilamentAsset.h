@@ -37,7 +37,6 @@
 #include <cgltf.h>
 
 #include "upcast.h"
-#include "Bindings.h"
 #include "Wireframe.h"
 #include "DependencyGraph.h"
 
@@ -54,6 +53,25 @@ struct Skin {
     std::vector<filament::math::mat4f> inverseBindMatrices;
     std::vector<utils::Entity> joints;
     std::vector<utils::Entity> targets;
+};
+
+// Encapsulates VertexBuffer::setBufferAt() or IndexBuffer::setBuffer().
+struct BufferSlot {
+    const cgltf_accessor* accessor;
+    cgltf_attribute_type attribute;
+    int bufferIndex; // for vertex buffers only
+    int morphTarget; // 0 if no morphing, otherwise 1-based index
+    filament::VertexBuffer* vertexBuffer;
+    filament::IndexBuffer* indexBuffer;
+};
+
+// Encapsulates a connection between Texture and MaterialInstance.
+struct TextureSlot {
+    const cgltf_texture* texture;
+    filament::MaterialInstance* materialInstance;
+    const char* materialParameter;
+    filament::TextureSampler sampler;
+    bool srgb;
 };
 
 struct FFilamentAsset : public FilamentAsset {
@@ -110,22 +128,6 @@ struct FFilamentAsset : public FilamentAsset {
         return mMaterialInstances.data();
     }
 
-    size_t getBufferBindingCount() const noexcept {
-        return mBufferBindings.size();
-    }
-
-    const BufferBinding* getBufferBindings() const noexcept {
-        return mBufferBindings.data();
-    }
-
-    size_t getTextureBindingCount() const noexcept {
-        return mTextureBindings.size();
-    }
-
-    const TextureBinding* getTextureBindings() const noexcept {
-        return mTextureBindings.data();
-    }
-
     size_t getResourceUriCount() const noexcept {
         return mResourceUris.size();
     }
@@ -168,13 +170,11 @@ struct FFilamentAsset : public FilamentAsset {
         // To ensure that all possible memory is freed, we reassign to new containers rather than
         // calling clear(). With many container types (such as robin_map), clearing is a fast
         // operation that merely frees the storage for the items.
-        // TODO: bundle all these transient items into a "SourceData" struct.
-        mBufferBindings = {};
-        mTextureBindings = {};
         mResourceUris = {};
         mNodeMap = {};
-        mPrimMap = {};
-        mAccessorMap = {};
+        mPrimitives = {};
+        mBufferSlots = {};
+        mTextureSlots = {};
         releaseSourceAsset();
     }
 
@@ -201,7 +201,7 @@ struct FFilamentAsset : public FilamentAsset {
         mTextures.push_back(texture);
     }
 
-    void bindTexture(const TextureBinding& tb, filament::Texture* texture) {
+    void bindTexture(const TextureSlot& tb, filament::Texture* texture) {
         tb.materialInstance->setParameter(tb.materialParameter, texture, tb.sampler);
         mDependencyGraph.addEdge(texture, tb.materialInstance, tb.materialParameter);
     }
@@ -224,14 +224,17 @@ struct FFilamentAsset : public FilamentAsset {
     bool mSharedSourceAsset = false;
     DependencyGraph mDependencyGraph;
 
+    // Sentinels for situations where ResourceLoader needs to generate data.
+    const cgltf_accessor mGenerateNormals = {};
+    const cgltf_accessor mGenerateTangents = {};
+
     // Transient source data that can freed via releaseSourceData:
-    std::vector<BufferBinding> mBufferBindings;
-    std::vector<TextureBinding> mTextureBindings;
+    std::vector<BufferSlot> mBufferSlots;
+    std::vector<TextureSlot> mTextureSlots;
     std::vector<const char*> mResourceUris;
     const cgltf_data* mSourceAsset = nullptr;
     tsl::robin_map<const cgltf_node*, utils::Entity> mNodeMap;
-    tsl::robin_map<const cgltf_primitive*, filament::VertexBuffer*> mPrimMap;
-    tsl::robin_map<const cgltf_accessor*, std::vector<filament::VertexBuffer*>> mAccessorMap;
+    std::vector<std::pair<const cgltf_primitive*, filament::VertexBuffer*> > mPrimitives;
 };
 
 FILAMENT_UPCAST(FilamentAsset)
