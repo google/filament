@@ -41,6 +41,23 @@ public:
     explicit ShadowMap(FEngine& engine) noexcept;
     ~ShadowMap();
 
+    struct ShadowMapLayout {
+        // the smallest increment in depth precision
+        // e.g., for 16 bit depth textures, is this 1 / (2^16)
+        float zResolution = 0.0f;
+
+        // the dimension of the encompassing texture atlas
+        size_t atlasDimension = 0;
+
+        // the dimension of a single shadow map texture within the atlas
+        // e.g., for at atlas size of 1024 split into 4 quadrants, textureDimension would be 512
+        size_t textureDimension = 0;
+
+        // the dimension of the actual shadow map, taking into account the 1 texel border
+        // e.g., for a texture dimension of 512, shadowDimension would be 510
+        size_t shadowDimension = 0;
+    };
+
     void terminate(backend::DriverApi& driverApi) noexcept;
 
     // Call once per frame if the light, scene (or visible layers) or camera changes.
@@ -106,6 +123,9 @@ private:
             math::float3 const& direction, FScene const* scene,
             CameraInfo const& camera, FLightManager::ShadowParams const& params,
             uint8_t visibleLayers) noexcept;
+    void computeShadowCameraSpot(math::float3 const& position, math::float3 const& dir,
+            float outerConeAngle, float radius, CameraInfo const& camera,
+            FLightManager::ShadowParams const& params) noexcept;
 
     static math::mat4f applyLISPSM(math::mat4f& Wp,
             CameraInfo const& camera, FLightManager::ShadowParams const& params,
@@ -200,7 +220,7 @@ private:
 
     // set-up in update()
     uint32_t mShadowMapDimension = 0;
-    math::float3 mShadowMapResolution = {};     // 1 / effective resolution
+    ShadowMapLayout mShadowMapLayout;
     bool mHasVisibleShadows = false;
     backend::PolygonOffset mPolygonOffset{};
 
@@ -210,6 +230,7 @@ private:
 
     FEngine& mEngine;
     const bool mClipSpaceFlipped;
+    const bool mTextureSpaceFlipped;
 };
 
 } // namespace details

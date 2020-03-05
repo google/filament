@@ -45,8 +45,8 @@ static constexpr bool ENABLE_LISPSM = true;
 
 ShadowMap::ShadowMap(FEngine& engine) noexcept :
         mEngine(engine),
-        mClipSpaceFlipped(engine.getBackend() == Backend::VULKAN ||
-                          engine.getBackend() == Backend::METAL) {
+        mClipSpaceFlipped(engine.getBackend() == Backend::VULKAN),
+        mTextureSpaceFlipped(engine.getBackend() == Backend::METAL) {
     mCamera = mEngine.createCamera(EntityManager::get().create());
     mDebugCamera = mEngine.createCamera(EntityManager::get().create());
     FDebugRegistry& debugRegistry = engine.getDebugRegistry();
@@ -109,7 +109,13 @@ void ShadowMap::prepare(DriverApi& driver, SamplerGroup& sb) noexcept {
     // don't seem let us clear depth attachments to anything greater than 1.0, so we'd need a way to
     // do this other than clearing.
     mViewport = { 1, 1, dim - 2, dim - 2 };
-    mShadowMapResolution.xy = 1.0f / (dim - 2);
+
+    // TODO: this will be passed into ShadowMap during update() for spot light shadows.
+    mShadowMapLayout = ShadowMapLayout {
+        .atlasDimension = dim,
+        .textureDimension = dim,
+        .shadowDimension = dim - 2
+    };
 
     // 16-bits seems enough. TODO: make it an option.
     TextureFormat format = TextureFormat::DEPTH16;
@@ -117,13 +123,13 @@ void ShadowMap::prepare(DriverApi& driver, SamplerGroup& sb) noexcept {
         default:
             // this should not happen
         case TextureFormat::DEPTH16:
-            mShadowMapResolution.z = 1.0f / (1u << 16u);
+            mShadowMapLayout.zResolution = 1.0f / (1u << 16u);
             break;
         case TextureFormat::DEPTH32F:
             // for 32-bits float assume 24-bits resolution. we shouldn't use that for shadow-maps.
         case TextureFormat::DEPTH24:
         case TextureFormat::DEPTH24_STENCIL8:
-            mShadowMapResolution.z = 1.0f / (1u << 24u);
+            mShadowMapLayout.zResolution = 1.0f / (1u << 24u);;
             break;
     }
 
@@ -260,6 +266,9 @@ void ShadowMap::update(
             break;
         case Type::FOCUSED_SPOT:
         case Type::SPOT:
+            computeShadowCameraSpot(lightData.elementAt<FScene::POSITION_RADIUS>(index).xyz,
+                    lightData.elementAt<FScene::DIRECTION>(index), lcm.getSpotLightOuterCone(li),
+                    lightData.elementAt<FScene::POSITION_RADIUS>(index).w, cameraInfo, params);
             break;
         case Type::POINT:
             break;
@@ -478,7 +487,7 @@ void ShadowMap::computeShadowCameraDirectional(
 
         if (params.options.stable) {
             // Use the world origin as reference point, fixed w.r.t. the camera
-            snapLightFrustum(s, o, Mv, camera.worldOrigin[3].xyz, mShadowMapResolution.xy);
+            snapLightFrustum(s, o, Mv, camera.worldOrigin[3].xyz, 1.0f / mShadowMapLayout.shadowDimension);
         }
 
         const mat4f F(mat4f::row_major_init {
@@ -521,6 +530,44 @@ void ShadowMap::computeShadowCameraDirectional(
         // for the debug camera, we need to undo the world origin
         mDebugCamera->setCustomProjection(mat4(Sb * camera.worldOrigin), znear, zfar);
     }
+}
+
+void ShadowMap::computeShadowCameraSpot(math::float3 const& position, math::float3 const& dir,
+        float outerConeAngle, float radius, CameraInfo const& camera, FLightManager::ShadowParams const& params) noexcept {
+
+    // TODO: correctly compute if this spot light has any visible shadows.
+    mHasVisibleShadows = true;
+
+    /*
+     * Compute the light models matrix.
+     */
+
+    // Choose a reasonable value for the near plane.
+    const float nearPlane = 0.1f;
+
+    const float3 lightPosition = position;
+    const mat4f M = mat4f::lookAt(lightPosition, lightPosition + dir, float3{0, 1, 0});
+    const mat4f Mv = FCamera::rigidTransformInverse(M);
+
+    float outerConeAngleDegrees = outerConeAngle / (2.0f * F_PI) * 360.0f;
+    const mat4f Mp = mat4f::perspective(outerConeAngleDegrees * 2, 1.0f, nearPlane, radius,
+            mat4f::Fov::HORIZONTAL);
+
+    const mat4f MpMv(Mp * Mv);
+
+    // Final shadow transform
+    const mat4f S = MpMv;
+
+    const mat4f MbMt = getTextureCoordsMapping();
+    const mat4f St = MbMt * S;
+    mTexelSizeWs = texelSizeWorldSpace(Mp, MbMt);
+    mLightSpace = St;
+
+    const mat4f Sb = S * mat4f::translation(dir * params.options.constantBias);
+    mCamera->setCustomProjection(mat4(Sb), nearPlane, radius);
+
+    // for the debug camera, we need to undo the world origin
+    mDebugCamera->setCustomProjection(mat4(Sb * camera.worldOrigin), nearPlane, radius);
 }
 
 mat4f ShadowMap::applyLISPSM(math::mat4f& Wp,
@@ -614,9 +661,19 @@ mat4f ShadowMap::getTextureCoordsMapping() const noexcept {
               0,    0,    0,    1
     });
 
+    // the shadow map texture might be larger than the shadow map dimension, so we add a scaling
+    // factor
+    const float v = (float) mShadowMapLayout.textureDimension / mShadowMapLayout.atlasDimension;
+    const mat4f Mv(mat4f::row_major_init{
+            v, 0, 0, 0,
+            0, v, 0, 0,
+            0, 0, 1, 0,
+            0, 0, 0, 1
+    });
+
     // apply the 1-texel border viewport transform
-    const float o = 1.0f / mShadowMapDimension;
-    const float s = 1.0f - 2.0f * o;
+    const float o = 1.0f / mShadowMapLayout.atlasDimension;
+    const float s = 1.0f - 2.0f * (1.0f / mShadowMapLayout.textureDimension);
     const mat4f Mb(mat4f::row_major_init{
              s, 0, 0, o,
              0, s, 0, o,
@@ -624,8 +681,15 @@ mat4f ShadowMap::getTextureCoordsMapping() const noexcept {
              0, 0, 0, 1
     });
 
+    const mat4f Mf = mTextureSpaceFlipped ? mat4f(mat4f::row_major_init{
+            1,  0,  0,  0,
+            0, -1,  0,  1,
+            0,  0,  1,  0,
+            0,  0,  0,  1
+    }) : mat4f();
+
     // Compute shadow-map texture access transform
-    return Mb * Mt;
+    return Mf * Mb * Mv * Mt;
 }
 
 // This construct a frustum (similar to glFrustum or frustum), except
@@ -947,8 +1011,8 @@ float ShadowMap::texelSizeWorldSpace(const mat3f& worldToShadowTexture) const no
     // orthographic projections. We just need to inverse worldToShadowTexture,
     // which is guaranteed to be orthographic.
     // The two first columns give us the how a texel maps in world-space.
-    const float ures = mShadowMapResolution.x;
-    const float vres = mShadowMapResolution.y;
+    const float ures = 1.0f / mShadowMapLayout.shadowDimension;
+    const float vres = 1.0f / mShadowMapLayout.shadowDimension;
     const mat3f shadowTextureToWorld(inverse(worldToShadowTexture));
     const float3 Jx = shadowTextureToWorld[0];
     const float3 Jy = shadowTextureToWorld[1];
@@ -971,9 +1035,9 @@ float ShadowMap::texelSizeWorldSpace(const mat4f& Wp, const mat4f& MbMtF) const 
     // It might be better to do this computation in the vertex shader.
     float3 p = {0.5, 0.5, 0.0};
 
-    const float ures = mShadowMapResolution.x;
-    const float vres = mShadowMapResolution.y;
-    const float dres = mShadowMapResolution.z;
+    const float ures = 1.0f / mShadowMapLayout.shadowDimension;
+    const float vres = 1.0f / mShadowMapLayout.shadowDimension;
+    const float dres = mShadowMapLayout.zResolution;
 
     constexpr bool JACOBIAN_ESTIMATE = false;
     if (JACOBIAN_ESTIMATE) {
