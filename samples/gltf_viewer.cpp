@@ -312,9 +312,10 @@ int main(int argc, char** argv) {
 
     auto loadResources = [&app] (utils::Path filename) {
         // Load external textures and buffers.
+        std::string gltfPath = filename.getAbsolutePath();
         ResourceConfiguration configuration;
         configuration.engine = app.engine;
-        configuration.gltfPath = filename.getAbsolutePath().c_str();
+        configuration.gltfPath = gltfPath.c_str();
         configuration.normalizeSkinningWeights = true;
         configuration.recomputeBoundingBoxes = false;
         if (!app.resourceLoader) {

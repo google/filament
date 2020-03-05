@@ -321,9 +321,10 @@ static void updateViewerMesh(BakerApp& app) {
         app.viewerAsset = app.loader->createAssetFromHandle(handle);
 
         // Load external textures and buffers.
+        std::string gltfPath = app.filename.getAbsolutePath();
         gltfio::ResourceLoader({
             .engine = app.engine,
-            .gltfPath = app.filename.getAbsolutePath().c_str(),
+            .gltfPath = gltfPath.c_str(),
             .normalizeSkinningWeights = true,
             .recomputeBoundingBoxes = false
         }).loadResources(app.viewerAsset);
