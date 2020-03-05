@@ -542,12 +542,16 @@ void ShadowMap::computeShadowCameraSpot(math::float3 const& position, math::floa
      * Compute the light models matrix.
      */
 
+    // Choose a reasonable value for the near plane.
+    const float nearPlane = 0.1f;
+
     const float3 lightPosition = position;
     const mat4f M = mat4f::lookAt(lightPosition, lightPosition + dir, float3{0, 1, 0});
     const mat4f Mv = FCamera::rigidTransformInverse(M);
 
     float outerConeAngleDegrees = outerConeAngle / (2.0f * F_PI) * 360.0f;
-    const mat4f Mp = mat4f::perspective(outerConeAngleDegrees * 2, 1.0f, 0.1f, radius, mat4f::Fov::HORIZONTAL);
+    const mat4f Mp = mat4f::perspective(outerConeAngleDegrees * 2, 1.0f, nearPlane, radius,
+            mat4f::Fov::HORIZONTAL);
 
     const mat4f MpMv(Mp * Mv);
 
@@ -560,10 +564,10 @@ void ShadowMap::computeShadowCameraSpot(math::float3 const& position, math::floa
     mLightSpace = St;
 
     const mat4f Sb = S * mat4f::translation(dir * params.options.constantBias);
-    mCamera->setCustomProjection(mat4(Sb), 0.1, radius);
+    mCamera->setCustomProjection(mat4(Sb), nearPlane, radius);
 
     // for the debug camera, we need to undo the world origin
-    mDebugCamera->setCustomProjection(mat4(Sb * camera.worldOrigin), 0.1, radius);
+    mDebugCamera->setCustomProjection(mat4(Sb * camera.worldOrigin), nearPlane, radius);
 }
 
 mat4f ShadowMap::applyLISPSM(math::mat4f& Wp,
