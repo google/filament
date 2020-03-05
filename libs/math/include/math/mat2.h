@@ -70,8 +70,7 @@ class MATH_EMPTY_BASES TMat22 :
         public TVecAddOperators<TMat22, T>,
         public TMatProductOperators<TMat22, T, TVec2>,
         public TMatSquareFunctions<TMat22, T>,
-        public TMatHelpers<TMat22, T>,
-        public TMatDebug<TMat22, T> {
+        public TMatHelpers<TMat22, T> {
 public:
     enum no_init {
         NO_INIT

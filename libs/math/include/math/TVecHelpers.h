@@ -20,8 +20,6 @@
 #include <math/compiler.h>
 
 #include <cmath>            // for std:: namespace
-#include <functional>       // for appl() and map()
-#include <iosfwd>           // for operator<<
 
 #include <math.h>
 #include <stdint.h>
@@ -535,13 +533,6 @@ private:
         return r;
     }
 
-    friend inline VECTOR<T> MATH_PURE apply(VECTOR<T> v, const std::function<T(T)>& f) {
-        for (size_t i = 0; i < v.size(); i++) {
-            v[i] = f(v[i]);
-        }
-        return v;
-    }
-
     friend inline constexpr bool MATH_PURE any(const VECTOR<T>& v) {
         for (size_t i = 0; i < v.size(); i++) {
             if (v[i] != T(0)) return true;
@@ -555,40 +546,6 @@ private:
             result &= (v[i] != T(0));
         }
         return result;
-    }
-
-    template<typename R>
-    friend inline VECTOR<R> MATH_PURE map(VECTOR<T> v, const std::function<R(T)>& f) {
-        VECTOR<R> result;
-        for (size_t i = 0; i < v.size(); i++) {
-            result[i] = f(v[i]);
-        }
-        return result;
-    }
-};
-
-template<typename T>
-std::ostream& printVector(std::ostream& stream, const T* data, size_t count);
-
-/*
- * TVecDebug implements functions on a vector of type BASE<T>.
- *
- * BASE only needs to implement operator[] and size().
- * By simply inheriting from TVecDebug<BASE, T> BASE will automatically
- * get all the functionality here.
- */
-template<template<typename T> class VECTOR, typename T>
-class TVecDebug {
-private:
-    /*
-     * NOTE: the functions below ARE NOT member methods. They are friend functions
-     * with they definition inlined with their declaration. This makes these
-     * template functions available to the compiler when (and only when) this class
-     * is instantiated, at which point they're only templated on the 2nd parameter
-     * (the first one, BASE<T> being known).
-     */
-    friend std::ostream& operator<<(std::ostream& stream, const VECTOR<T>& v) {
-        return printVector(stream, &v[0], v.size());
     }
 };
 

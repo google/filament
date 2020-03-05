@@ -32,7 +32,7 @@ set(PUBLIC_HDRS
         include/math/vec4.h
 )
 
-set(SRCS src/StreamHelpers.cpp)
+set(SRCS src/dummy.cpp)
 
 # ==================================================================================================
 # Include and target definitions

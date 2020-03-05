@@ -76,8 +76,7 @@ class MATH_EMPTY_BASES TMat33 :
         public TMatProductOperators<TMat33, T, TVec3>,
         public TMatSquareFunctions<TMat33, T>,
         public TMatTransform<TMat33, T>,
-        public TMatHelpers<TMat33, T>,
-        public TMatDebug<TMat33, T> {
+        public TMatHelpers<TMat33, T> {
 public:
     enum no_init {
         NO_INIT
