@@ -390,11 +390,17 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
     cmdDepth.primitive.rasterState.alphaToCoverage = false;
 
     for (uint32_t i = range.first; i < range.last; ++i) {
-        // Check if this renderable passes the visibilityMask. If it doesn't, encode a SENTINEL
-        // command (no-op).
+        // Check if this renderable passes the visibilityMask. If it doesn't, encode SENTINEL
+        // commands (no-op).
         if (UTILS_UNLIKELY(!(soaVisibilityMask[i] & visibilityMask))) {
-            curr->key = uint64_t(Pass::SENTINEL);
-            ++curr;
+            // We need to encode a SENTINEL for each command that would have been generated
+            // otherwise. Color passes get 2 commands per primitive; depth passes get 1.
+            const Slice<FRenderPrimitive>& primitives = soaPrimitives[i];
+            const size_t commandsToEncode = (colorPass * 2 + depthPass) * primitives.size();
+            for (size_t j = 0; j < commandsToEncode; j++) {
+                curr->key = uint64_t(Pass::SENTINEL);
+                ++curr;
+            }
             continue;
         }
 
