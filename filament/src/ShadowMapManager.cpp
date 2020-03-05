@@ -140,11 +140,11 @@ bool ShadowMapManager::update(FEngine& engine, FView& view, UniformBuffer& perVi
         assert(l == 0);
 
         const size_t textureDimension = mDirectionalShadowMap.getLayout().size;
-        const ShadowMap::ShadowMapLayout layout {
-            .textureDimension = textureDimension,
-            .atlasDimension = textureSize,
-            .shadowDimension = textureDimension - 2,
-            .zResolution = mTextureZResolution
+        const ShadowMap::ShadowMapLayout layout{
+                .zResolution = mTextureZResolution,
+                .atlasDimension = textureSize,
+                .textureDimension = textureDimension,
+                .shadowDimension = textureDimension - 2
         };
         shadowMap.update(lightData, 0, scene, viewingCameraInfo, visibleLayers, layout);
         if (shadowMap.hasVisibleShadows()) {
@@ -182,11 +182,11 @@ bool ShadowMapManager::update(FEngine& engine, FView& view, UniformBuffer& perVi
         size_t l = mSpotShadowMaps[i].getLightIndex();
 
         const size_t textureDimension = mSpotShadowMaps[i].getLayout().size;
-        const ShadowMap::ShadowMapLayout layout {
-                .textureDimension = textureDimension,
+        const ShadowMap::ShadowMapLayout layout{
+                .zResolution = mTextureZResolution,
                 .atlasDimension = textureSize,
-                .shadowDimension = textureDimension - 2,
-                .zResolution = mTextureZResolution
+                .textureDimension = textureDimension,
+                .shadowDimension = textureDimension - 2
         };
         shadowMap.update(lightData, l, scene, viewingCameraInfo, visibleLayers, layout);
         if (shadowMap.hasVisibleShadows()) {
