@@ -426,8 +426,10 @@ void FrameGraph::reset() noexcept {
 
 void FrameGraph::execute(FEngine& engine, DriverApi& driver) noexcept {
     auto const& passNodes = mPassNodes;
+    driver.pushGroupMarker("FrameGraph");
     for (PassNode const& node : passNodes) {
         if (node.refCount) {
+            driver.pushGroupMarker(node.name);
             executeInternal(node, driver);
             if (&node != &passNodes.back()) {
                 // wake-up the driver thread and consume data in the command queue, this helps with
@@ -437,10 +439,12 @@ void FrameGraph::execute(FEngine& engine, DriverApi& driver) noexcept {
                 // 2) an engine.flush() is always performed by Renderer at the end of a renderJob.
                 engine.flush();
             }
+            driver.popGroupMarker();
         }
     }
     // this is a good place to kick the GPU, since we've just done a bunch of work
     driver.flush();
+    driver.popGroupMarker();
     reset();
 }
 

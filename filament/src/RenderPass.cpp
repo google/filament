@@ -182,11 +182,9 @@ void RenderPass::execute(const char* name,
     DriverApi& driver = engine.getDriverApi();
 
     // Now, execute all commands
-    driver.pushGroupMarker(name);
     driver.beginRenderPass(renderTarget, params);
     RenderPass::recordDriverCommands(driver, first, last);
     driver.endRenderPass();
-    driver.popGroupMarker();
 }
 
 UTILS_NOINLINE // no need to be inlined
