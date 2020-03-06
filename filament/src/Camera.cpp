@@ -62,7 +62,7 @@ void FCamera::setLensProjection(double focalLength, double aspect, double near, 
     // a 35mm camera has a 36x24mm wide frame size
     double theta = 2.0 * std::atan(24.0 / (2.0 * focalLength));
     theta *= 180.0 / math::F_PI;
-    FCamera::setProjection(theta, aspect, near, far,Fov::VERTICAL);
+    FCamera::setProjection(theta, aspect, near, far, Fov::VERTICAL);
 }
 
 /*
