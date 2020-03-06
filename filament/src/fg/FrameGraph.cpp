@@ -391,9 +391,10 @@ void FrameGraph::executeInternal(PassNode const& node, DriverApi& driver) noexce
     for (VirtualResource* resource : node.devirtualize) {
         resource->preExecuteDevirtualize(*this);
     }
-    for (VirtualResource* resource : node.destroy) {
+    // the destroy list is ran backward, so that objects are destroyed in reverse order
+    std::for_each(node.destroy.rbegin(), node.destroy.rend(), [this](auto* resource){
         resource->preExecuteDestroy(*this);
-    }
+    });
 
     // update the RenderTarget discard flags
     for (auto handle : node.renderTargets) {
@@ -408,11 +409,13 @@ void FrameGraph::executeInternal(PassNode const& node, DriverApi& driver) noexce
 
     for (VirtualResource* resource : node.devirtualize) {
         resource->postExecuteDevirtualize(*this);
-    }
+    };
+
     // destroy concrete resources
-    for (VirtualResource* resource : node.destroy) {
+    // the destroy list is ran backward, so that objects are destroyed in reverse order
+    std::for_each(node.destroy.rbegin(), node.destroy.rend(), [this](auto* resource){
         resource->postExecuteDestroy(*this);
-    }
+    });
 }
 
 void FrameGraph::reset() noexcept {
