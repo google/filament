@@ -17,6 +17,20 @@
 #ifndef MATH_MATHFWD_H_
 #define MATH_MATHFWD_H_
 
+#ifdef _MSC_VER
+
+// MSVC cannot compute the size of math types correctly when this file is included before the
+// actual implementations.
+// See github.com/google/filament/issues/2190.
+#include <math/vec2.h>
+#include <math/vec3.h>
+#include <math/vec4.h>
+#include <math/mat2.h>
+#include <math/mat3.h>
+#include <math/mat4.h>
+
+#else
+
 #include <stdint.h>
 
 namespace filament {
@@ -74,5 +88,7 @@ using mat4f     = details::TMat44<float>;
 
 }  // namespace math
 }  // namespace filament
+
+#endif // _MSC_VER
 
 #endif  // MATH_MATHFWD_H_
