@@ -431,8 +431,11 @@ struct NoLock {
     void unlock() noexcept { }
 };
 
-// Unfortunately TSAN doesn't support homegrown synchronization primitives
 #if defined(__SANITIZE_THREAD__)
+// Unfortunately TSAN doesn't support homegrown synchronization primitives
+using SpinLock = utils::Mutex;
+#elif defined(__ARM_ARCH_7A__)
+// We've had problems with  "wfe" on some ARM-V7 devices, causing spurious SIGILL
 using SpinLock = utils::Mutex;
 #else
 using SpinLock = utils::SpinLock;
