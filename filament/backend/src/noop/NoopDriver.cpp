@@ -143,6 +143,10 @@ bool NoopDriver::isRenderTargetFormatSupported(TextureFormat format) {
     return true;
 }
 
+bool NoopDriver::isFrameBufferFetchSupported() {
+    return false;
+}
+
 bool NoopDriver::isFrameTimeSupported() {
     return true;
 }

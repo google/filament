@@ -568,6 +568,10 @@ bool MetalDriver::isRenderTargetFormatSupported(TextureFormat format) {
     return mtlFormat != MTLPixelFormatInvalid && mtlFormat != MTLPixelFormatRGB9E5Float;
 }
 
+bool MetalDriver::isFrameBufferFetchSupported() {
+    return false;
+}
+
 bool MetalDriver::isFrameTimeSupported() {
     // Frame time is calculated via hard fences, which are only available on iOS 12 and above.
     if (@available(macOS 10.14, iOS 12, *)) {
