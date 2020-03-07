@@ -124,6 +124,7 @@ public:
         bool EXT_texture_sRGB = false;
         bool EXT_texture_compression_s3tc_srgb = false;
         bool EXT_disjoint_timer_query = false;
+        bool EXT_shader_framebuffer_fetch = false;
     } ext;
 
     struct {

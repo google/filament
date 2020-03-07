@@ -696,6 +696,10 @@ bool VulkanDriver::isRenderTargetFormatSupported(TextureFormat format) {
     return (info.optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) != 0;
 }
 
+bool VulkanDriver::isFrameBufferFetchSupported() {
+    return false;
+}
+
 bool VulkanDriver::isFrameTimeSupported() {
     return true;
 }
