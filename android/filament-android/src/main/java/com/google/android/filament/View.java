@@ -133,6 +133,14 @@ public class View {
          * History size. higher values, tend to filter more (clamped to 30).
          */
         public int history = 9;
+
+        /**
+         * Upscaling quality. LOW: 1 bilinear taps, MEDIUM: 4 bilinear taps, HIGH: 9 bilinear taps.
+         * If minScale needs to be very low, it might help to use MEDIUM or HIGH here.
+         * The default upsacling quality is set to LOW.
+         */
+        @NonNull
+        public QualityLevel quality = QualityLevel.LOW;
     }
 
     /**
@@ -652,7 +660,8 @@ public class View {
                 options.scaleRate,
                 options.minScale,
                 options.maxScale,
-                options.history);
+                options.history,
+                options.quality.ordinal());
     }
 
     /**
@@ -878,7 +887,7 @@ public class View {
     private static native void nSetDynamicResolutionOptions(long nativeView,
             boolean enabled, boolean homogeneousScaling,
             float targetFrameTimeMilli, float headRoomRatio, float scaleRate,
-            float minScale, float maxScale, int history);
+            float minScale, float maxScale, int history, int quality);
     private static native void nSetRenderQuality(long nativeView, int hdrColorBufferQuality);
     private static native void nSetDynamicLightingOptions(long nativeView, float zLightNear, float zLightFar);
     private static native void nSetPostProcessingEnabled(long nativeView, boolean enabled);

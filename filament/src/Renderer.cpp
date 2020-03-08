@@ -199,6 +199,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     bool fxaa = view.getAntiAliasing() == View::AntiAliasing::FXAA;
     uint8_t msaa = view.getSampleCount();
     float2 scale = view.updateScale(mFrameInfoManager.getLastFrameTime());
+    const View::QualityLevel upscalingQuality = view.getDynamicResolutionOptions().quality;
     if (!hasPostProcess) {
         // dynamic scaling and FXAA are part of the post-process phase and can't happen if
         // it's disabled.
@@ -392,10 +393,10 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             input = ppm.fxaa(fg, input, ldrFormat, !toneMapping || translucent);
         }
         if (scaled) {
-            if (UTILS_LIKELY(!blending)) {
+            if (UTILS_LIKELY(!blending && upscalingQuality == View::QualityLevel::LOW)) {
                 input = ppm.opaqueBlit(fg, input, { .format = ldrFormat });
             } else {
-                input = ppm.blendBlit(fg, input, { .format = ldrFormat });
+                input = ppm.blendBlit(fg, true, upscalingQuality, input, { .format = ldrFormat });
             }
         }
     }
@@ -412,10 +413,10 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     const bool outputIsInput = fg.equal(input, colorPassOutput);
     if ((outputIsInput && viewRenderTarget == mRenderTarget && msaa > 1) ||
         (!outputIsInput && blending)) {
-        if (UTILS_LIKELY(!blending)) {
+        if (UTILS_LIKELY(!blending && upscalingQuality == View::QualityLevel::LOW)) {
             input = ppm.opaqueBlit(fg, input, { .format = ldrFormat });
         } else {
-            input = ppm.blendBlit(fg, input, { .format = ldrFormat });
+            input = ppm.blendBlit(fg, true, upscalingQuality, input, { .format = ldrFormat });
         }
     }
 

@@ -56,9 +56,9 @@ public:
     FrameGraphId<FrameGraphTexture> opaqueBlit(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, FrameGraphTexture::Descriptor outDesc) noexcept;
 
-    FrameGraphId <FrameGraphTexture> blendBlit(FrameGraph& fg,
-            FrameGraphId <FrameGraphTexture> input,
-            FrameGraphTexture::Descriptor outDesc) noexcept;
+    FrameGraphId<FrameGraphTexture> blendBlit(
+            FrameGraph& fg, bool translucent, View::QualityLevel quality,
+            FrameGraphId<FrameGraphTexture> input, FrameGraphTexture::Descriptor outDesc) noexcept;
 
     FrameGraphId<FrameGraphTexture> resolve(FrameGraph& fg,
             const char* outputBufferName, FrameGraphId<FrameGraphTexture> input) noexcept;
@@ -132,7 +132,7 @@ private:
     PostProcessMaterial mSeparableGaussianBlur;
     PostProcessMaterial mBloomDownsample;
     PostProcessMaterial mBloomUpsample;
-    PostProcessMaterial mBlit;
+    PostProcessMaterial mBlit[3];
     PostProcessMaterial mTonemapping;
     PostProcessMaterial mFxaa;
 

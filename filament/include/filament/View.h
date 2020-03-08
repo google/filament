@@ -94,6 +94,8 @@ public:
      * history:   History size. higher values, tend to filter more (clamped to 30)
      * minScale:  the minimum scale in X and Y this View should use
      * maxScale:  the maximum scale in X and Y this View should use
+     * quality:   upscaling quality.
+     *            LOW: 1 bilinear tap, Medium: 4 bilinear taps, High: 9 bilinear taps (tent)
      *
      * \note
      * Dynamic resolution is only supported on platforms where the time to render
@@ -120,6 +122,7 @@ public:
         uint8_t history = 9;                            //!< history size
         bool enabled = false;                           //!< enable or disable dynamic resolution
         bool homogeneousScaling = false;                //!< set to true to force homogeneous scaling
+        QualityLevel quality = QualityLevel::LOW;       //!< Upscaling quality
     };
 
     /**
