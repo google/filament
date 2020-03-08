@@ -36,8 +36,8 @@ fragment {
         highp vec2 uv = variable_vertex.xy;
 
 #if defined(TARGET_MOBILE)
-        highp float du = materialParams.resolution.z;
-        highp float dv = materialParams.resolution.w;
+        highp float du = 0.5 * materialParams.resolution.z;
+        highp float dv = 0.5 * materialParams.resolution.w;
         vec3 c;
         c  = textureLod(materialParams_source, uv + vec2(-du, -dv), lod).rgb;
         c += textureLod(materialParams_source, uv + vec2( du, -dv), lod).rgb;
@@ -45,8 +45,8 @@ fragment {
         c += textureLod(materialParams_source, uv + vec2(-du,  dv), lod).rgb;
         postProcess.color.rgb = c * 0.25;
 #else
-        highp float du = 2.0 * materialParams.resolution.z;
-        highp float dv = 2.0 * materialParams.resolution.w;
+        highp float du = materialParams.resolution.z;
+        highp float dv = materialParams.resolution.w;
         vec3 c0, c1;
         c0  = textureLod(materialParams_source, uv + vec2(-du, -dv), lod).rgb;
         c0 += textureLod(materialParams_source, uv + vec2( du, -dv), lod).rgb;
