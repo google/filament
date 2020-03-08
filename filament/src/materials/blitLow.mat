@@ -5,6 +5,11 @@ material {
             type : sampler2d,
             name : color,
             precision: medium
+        },
+        {
+            type : float4,
+            name : resolution,
+            precision: high
         }
     ],
     variables : [
@@ -23,8 +28,7 @@ vertex {
 
 fragment {
     void postProcess(inout PostProcessInputs postProcess) {
-        highp vec2 uv = variable_vertex.xy; // interpolated to pixel center
-        postProcess.color = textureLod(materialParams_color, uv, 0.0);
+        postProcess.color = textureLod(materialParams_color, variable_vertex.xy, 0.0);
     }
 }
 

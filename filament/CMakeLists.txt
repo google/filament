@@ -141,7 +141,9 @@ set(PRIVATE_HDRS
 
 set(MATERIAL_SRCS
         src/materials/defaultMaterial.mat
-        src/materials/blit.mat
+        src/materials/blitLow.mat
+        src/materials/blitMedium.mat
+        src/materials/blitHigh.mat
         src/materials/bloomDownsample.mat
         src/materials/bloomUpsample.mat
         src/materials/bilateralBlur.mat

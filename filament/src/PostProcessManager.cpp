@@ -52,7 +52,7 @@ PostProcessManager::PostProcessMaterial::PostProcessMaterial(FEngine& engine,
     mMaterial = upcast(Material::Builder().package(data, size).build(engine));
     mMaterialInstance = mMaterial->getDefaultInstance();
     // TODO: After all materials using this class have been converted to the post-process material
-    // domain, load both OPAQUE and TRANSPARENt variants here.
+    // domain, load both OPAQUE and TRANSPARENT variants here.
     mProgram = mMaterial->getProgram(0);
 }
 
@@ -113,7 +113,9 @@ void PostProcessManager::init() noexcept {
     mSeparableGaussianBlur = PostProcessMaterial(mEngine, MATERIALS_SEPARABLEGAUSSIANBLUR_DATA, MATERIALS_SEPARABLEGAUSSIANBLUR_SIZE);
     mBloomDownsample = PostProcessMaterial(mEngine, MATERIALS_BLOOMDOWNSAMPLE_DATA, MATERIALS_BLOOMDOWNSAMPLE_SIZE);
     mBloomUpsample = PostProcessMaterial(mEngine, MATERIALS_BLOOMUPSAMPLE_DATA, MATERIALS_BLOOMUPSAMPLE_SIZE);
-    mBlit = PostProcessMaterial(mEngine, MATERIALS_BLIT_DATA, MATERIALS_BLIT_SIZE);
+    mBlit[0] = PostProcessMaterial(mEngine, MATERIALS_BLITLOW_DATA, MATERIALS_BLITLOW_SIZE);
+    mBlit[1] = PostProcessMaterial(mEngine, MATERIALS_BLITMEDIUM_DATA, MATERIALS_BLITMEDIUM_SIZE);
+    mBlit[2] = PostProcessMaterial(mEngine, MATERIALS_BLITHIGH_DATA, MATERIALS_BLITHIGH_SIZE);
     mTonemapping = PostProcessMaterial(mEngine, MATERIALS_TONEMAPPING_DATA, MATERIALS_TONEMAPPING_SIZE);
     mFxaa = PostProcessMaterial(mEngine, MATERIALS_FXAA_DATA, MATERIALS_FXAA_SIZE);
 
@@ -150,7 +152,9 @@ void PostProcessManager::terminate(DriverApi& driver) noexcept {
     mSeparableGaussianBlur.terminate(engine);
     mBloomDownsample.terminate(engine);
     mBloomUpsample.terminate(engine);
-    mBlit.terminate(engine);
+    mBlit[0].terminate(engine);
+    mBlit[1].terminate(engine);
+    mBlit[2].terminate(engine);
     mTonemapping.terminate(engine);
     mFxaa.terminate(engine);
 }
@@ -364,7 +368,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::opaqueBlit(FrameGraph& fg,
     return ppBlit.getData().output;
 }
 
-FrameGraphId<FrameGraphTexture> PostProcessManager::blendBlit(FrameGraph& fg,
+FrameGraphId<FrameGraphTexture> PostProcessManager::blendBlit(
+        FrameGraph& fg, bool translucent, View::QualityLevel quality,
         FrameGraphId<FrameGraphTexture> input,
         FrameGraphTexture::Descriptor outDesc) noexcept {
 
@@ -389,20 +394,27 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blendBlit(FrameGraph& fg,
 
                 auto color = resources.getTexture(data.input);
                 auto out = resources.get(data.drt);
+                auto const& desc = resources.getDescriptor(data.input);
 
-                FMaterialInstance* const mi = mBlit.getMaterialInstance();
+                unsigned index = std::min(2u, (unsigned)quality);
+                PostProcessMaterial& material = mBlit[index];
+                FMaterialInstance* const mi = material.getMaterialInstance();
                 mi->setParameter("color", color, {
                         .filterMag = SamplerMagFilter::LINEAR,
                         .filterMin = SamplerMinFilter::LINEAR
                 });
+                mi->setParameter("resolution",
+                        float4{ desc.width, desc.height, 1.0f / desc.width, 1.0f / desc.height });
                 mi->commit(driver);
                 mi->use(driver);
 
-                PipelineState pipeline(mBlit.getPipelineState());
-                pipeline.rasterState.blendFunctionSrcRGB   = BlendFunction::ONE;
-                pipeline.rasterState.blendFunctionSrcAlpha = BlendFunction::ONE;
-                pipeline.rasterState.blendFunctionDstRGB   = BlendFunction::ONE_MINUS_SRC_ALPHA;
-                pipeline.rasterState.blendFunctionDstAlpha = BlendFunction::ONE_MINUS_SRC_ALPHA;
+                PipelineState pipeline(material.getPipelineState());
+                if (translucent) {
+                    pipeline.rasterState.blendFunctionSrcRGB   = BlendFunction::ONE;
+                    pipeline.rasterState.blendFunctionSrcAlpha = BlendFunction::ONE;
+                    pipeline.rasterState.blendFunctionDstRGB   = BlendFunction::ONE_MINUS_SRC_ALPHA;
+                    pipeline.rasterState.blendFunctionDstAlpha = BlendFunction::ONE_MINUS_SRC_ALPHA;
+                }
                 driver.beginRenderPass(out.target, out.params);
                 driver.draw(pipeline, fullScreenRenderPrimitive);
                 driver.endRenderPass();
