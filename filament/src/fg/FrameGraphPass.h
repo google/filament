@@ -46,7 +46,7 @@ class FrameGraphPass final : private FrameGraphPassExecutor {
     friend class utils::Arena;
 
     explicit FrameGraphPass(Execute&& execute) noexcept
-            : FrameGraphPassExecutor(), mExecute(std::forward<Execute>(execute)) {
+            : FrameGraphPassExecutor(), mExecute(std::move(execute)) {
     }
     void execute(FrameGraphPassResources const& resources, backend::DriverApi& driver) noexcept final {
         mExecute(resources, mData, driver);
