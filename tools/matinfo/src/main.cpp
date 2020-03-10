@@ -18,6 +18,9 @@
 
 #include <utils/Path.h>
 
+#include <filaflat/BlobDictionary.h>
+#include <filaflat/ChunkContainer.h>
+
 #include <matdbg/DebugServer.h>
 #include <matdbg/ShaderExtractor.h>
 #include <matdbg/ShaderInfo.h>
@@ -38,6 +41,7 @@
 
 using namespace filament::matdbg;
 
+using filaflat::BlobDictionary;
 using filaflat::ChunkContainer;
 using filament::backend::Backend;
 using utils::Path;
@@ -46,6 +50,9 @@ struct Config {
     bool printGLSL = false;
     bool printSPIRV = false;
     bool printMetal = false;
+    bool printDictionaryGLSL = false;
+    bool printDictionarySPIRV = false;
+    bool printDictionaryMetal = false;
     bool transpile = false;
     bool binary = false;
     bool analyze = false;
@@ -71,6 +78,12 @@ static void printUsage(const char* name) {
             "       Print Metal Shading Language for the nth shader (0 is the first Metal shader)\n\n"
             "   --print-vkglsl=[index], -v\n"
             "       Print the nth Vulkan shader transpiled into GLSL\n\n"
+            "   --print-dic-glsl\n"
+            "       Print the GLSL dictionary\n\n"
+            "   --print-dic-metal\n"
+            "       Print the Metal dictionary\n\n"
+            "   --print-dic-vk\n"
+            "       Print the Vulkan dictionary\n\n"
             "   --web-server=[port], -w\n"
             "       Serve a web page at the given port (e.g. 8080)\n\n"
             "   --dump-binary=[index], -b\n"
@@ -100,17 +113,20 @@ static void license() {
 }
 
 static int handleArguments(int argc, char* argv[], Config* config) {
-    static constexpr const char* OPTSTR = "hla:g:s:v:b:m:b:w:";
+    static constexpr const char* OPTSTR = "hla:g:s:v:b:m:b:w:xyz";
     static const struct option OPTIONS[] = {
-            { "help",          no_argument,       0, 'h' },
-            { "license",       no_argument,       0, 'l' },
-            { "analyze-spirv", required_argument, 0, 'a' },
-            { "print-glsl",    required_argument, 0, 'g' },
-            { "print-spirv",   required_argument, 0, 's' },
-            { "print-vkglsl",  required_argument, 0, 'v' },
-            { "print-metal",   required_argument, 0, 'm' },
-            { "dump-binary",   required_argument, 0, 'b' },
-            { "web-server",    required_argument, 0, 'w' },
+            { "help",            no_argument,       0, 'h' },
+            { "license",         no_argument,       0, 'l' },
+            { "analyze-spirv",   required_argument, 0, 'a' },
+            { "print-glsl",      required_argument, 0, 'g' },
+            { "print-spirv",     required_argument, 0, 's' },
+            { "print-vkglsl",    required_argument, 0, 'v' },
+            { "print-metal",     required_argument, 0, 'm' },
+            { "print-dic-glsl",  no_argument,       0, 'x' },
+            { "print-dic-metal", no_argument,       0, 'y' },
+            { "print-dic-vk",    no_argument,       0, 'z' },
+            { "dump-binary",     required_argument, 0, 'b' },
+            { "web-server",      required_argument, 0, 'w' },
             { 0, 0, 0, 0 }  // termination of the option list
     };
 
@@ -156,6 +172,15 @@ static int handleArguments(int argc, char* argv[], Config* config) {
                 break;
             case 'w':
                 config->serverPort = 8080;
+                break;
+            case 'x':
+                config->printDictionaryGLSL = true;
+                break;
+            case 'y':
+                config->printDictionaryMetal = true;
+                break;
+            case 'z':
+                config->printDictionarySPIRV = true;
                 break;
         }
     }
@@ -467,8 +492,30 @@ static bool parseChunks(Config config, void* data, size_t size) {
     }
 
     TextWriter writer;
+
+    if (config.printDictionaryGLSL || config.printDictionarySPIRV || config.printDictionaryMetal) {
+        ShaderExtractor parser(
+                (config.printDictionaryGLSL  ? Backend::OPENGL :
+                (config.printDictionarySPIRV ? Backend::VULKAN :
+                (config.printDictionaryMetal ? Backend::METAL  : Backend::DEFAULT))), data, size);
+
+        if (!parser.parse()) {
+            return false;
+        }
+
+        BlobDictionary dictionary;
+        if (!parser.getDictionary(dictionary)) {
+            return false;
+        }
+
+        for (size_t i = 0; i < dictionary.size(); i++) {
+            std::cout << dictionary.getString(i) << std::endl;
+        }
+
+        return true;
+    }
+
     if (!writer.writeMaterialInfo(container)) {
-        std::cerr << "The source material is invalid." << std::endl;
         return false;
     }
 

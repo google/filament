@@ -162,6 +162,7 @@ void SpvToMsl(const SpirvBlob* spirv, std::string* outMsl) {
     }
 
     *outMsl = mslCompiler.compile();
+    *outMsl = shrinkString(*outMsl);
 }
 
 bool GLSLPostProcessor::process(const std::string& inputShader,

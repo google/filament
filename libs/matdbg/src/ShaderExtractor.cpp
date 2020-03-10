@@ -68,6 +68,10 @@ bool ShaderExtractor::parse() noexcept {
     return false;
 }
 
+bool ShaderExtractor::getDictionary(BlobDictionary& dictionary) noexcept {
+    return DictionaryReader::unflatten(mChunkContainer, mDictionaryTag, dictionary);
+}
+
 bool ShaderExtractor::getShader(ShaderModel shaderModel,
         uint8_t variant, ShaderType stage, ShaderBuilder& shader) noexcept {
 
