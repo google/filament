@@ -1,8 +1,8 @@
 prefix=@CMAKE_INSTALL_PREFIX@
-exec_prefix=@CMAKE_INSTALL_PREFIX@
-libdir=@SPIRV_CROSS_INSTALL_LIB_DIR@
-sharedlibdir=@SPIRV_CROSS_INSTALL_LIB_DIR@
-includedir=@SPIRV_CROSS_INSTALL_INC_DIR@
+exec_prefix=${prefix}
+libdir=${prefix}/@CMAKE_INSTALL_LIBDIR@
+sharedlibdir=${prefix}/@CMAKE_INSTALL_LIBDIR@
+includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@/spirv_cross
 
 Name: spirv-cross-c-shared
 Description: C API for SPIRV-Cross

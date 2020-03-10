@@ -12,9 +12,10 @@ void main()
 {
     int _44;
     _44 = o.a;
-    int _48;
+    int _41;
     for (;;)
     {
+        int _48;
         bool _22_ladder_break = false;
         switch (_44)
         {
@@ -61,7 +62,8 @@ void main()
         {
             break;
         }
-        _44 = _48 + 1;
+        _41 = _48 + 1;
+        _44 = _41;
         continue;
     }
     o.b = _44;

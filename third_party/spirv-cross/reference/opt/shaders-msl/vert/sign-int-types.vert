@@ -38,7 +38,7 @@ struct main0_in
 
 // Implementation of the GLSL sign() function for integer types
 template<typename T, typename E = typename enable_if<is_integral<T>::value>::type>
-T sign(T x)
+inline T sign(T x)
 {
     return select(select(select(x, T(0), x == T(0)), T(1), x > T(0)), T(-1), x < T(0));
 }

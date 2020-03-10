@@ -12,6 +12,7 @@ struct SSBO
 
 constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(4u, 4u, 1u);
 
+static inline __attribute__((always_inline))
 void work(threadgroup float (&foo)[4][4], thread uint3& gl_LocalInvocationID, thread uint& gl_LocalInvocationIndex, device SSBO& v_67, thread uint3& gl_GlobalInvocationID)
 {
     foo[gl_LocalInvocationID.x][gl_LocalInvocationID.y] = float(gl_LocalInvocationIndex);

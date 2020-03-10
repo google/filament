@@ -14,14 +14,12 @@ struct SPIRV_Cross_Output
 #line 8 "test.frag"
 void frag_main()
 {
-    float _80;
 #line 8 "test.frag"
     FragColor = 1.0f;
 #line 9 "test.frag"
     FragColor = 2.0f;
 #line 10 "test.frag"
-    _80 = vColor;
-    if (_80 < 0.0f)
+    if (vColor < 0.0f)
     {
 #line 12 "test.frag"
         FragColor = 3.0f;
@@ -31,16 +29,16 @@ void frag_main()
 #line 16 "test.frag"
         FragColor = 4.0f;
     }
-    for (int _126 = 0; float(_126) < (40.0f + _80); )
+    for (int _126 = 0; float(_126) < (40.0f + vColor); )
     {
 #line 21 "test.frag"
         FragColor += 0.20000000298023223876953125f;
 #line 22 "test.frag"
         FragColor += 0.300000011920928955078125f;
-        _126 += (int(_80) + 5);
+        _126 += (int(vColor) + 5);
         continue;
     }
-    switch (int(_80))
+    switch (int(vColor))
     {
         case 0:
         {
@@ -66,7 +64,7 @@ void frag_main()
     }
     for (;;)
     {
-        FragColor += (10.0f + _80);
+        FragColor += (10.0f + vColor);
 #line 43 "test.frag"
         if (FragColor < 100.0f)
         {

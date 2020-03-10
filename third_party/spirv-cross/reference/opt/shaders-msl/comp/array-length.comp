@@ -14,6 +14,8 @@ struct SSBO1
     float bz[1];
 };
 
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
 kernel void main0(constant uint* spvBufferSizeConstants [[buffer(25)]], device SSBO& _14 [[buffer(0)]], device SSBO1* ssbos_0 [[buffer(1)]], device SSBO1* ssbos_1 [[buffer(2)]])
 {
     device SSBO1* ssbos[] =

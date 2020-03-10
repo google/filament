@@ -12,6 +12,7 @@ struct cb1_struct
 
 constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(16u, 16u, 1u);
 
+static inline __attribute__((always_inline))
 int2 get_texcoord(thread const int2& base, thread const int2& index, thread uint3& gl_LocalInvocationID)
 {
     return (base * int3(gl_LocalInvocationID).xy) + index;

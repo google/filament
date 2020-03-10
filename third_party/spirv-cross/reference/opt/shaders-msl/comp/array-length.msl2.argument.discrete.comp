@@ -25,6 +25,8 @@ struct SSBO3
     float bz[1];
 };
 
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
 struct spvDescriptorSetBuffer0
 {
     device SSBO* m_16 [[id(0)]];

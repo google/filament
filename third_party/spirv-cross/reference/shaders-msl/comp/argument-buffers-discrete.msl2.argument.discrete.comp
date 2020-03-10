@@ -23,6 +23,8 @@ struct SSBO2
     float4 v;
 };
 
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
 struct spvDescriptorSetBuffer0
 {
     const device SSBO0* ssbo0 [[id(0)]];

@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2019 Bradley Austin Davis
+ * Copyright 2018-2020 Bradley Austin Davis
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -61,6 +61,7 @@ public:
 	void end_json_array();
 	void emit_json_array_value(const std::string &value);
 	void emit_json_array_value(uint32_t value);
+	void emit_json_array_value(bool value);
 
 	std::string str() const
 	{
@@ -155,6 +156,16 @@ void Stream::emit_json_array_value(uint32_t value)
 	if (stack.top().second)
 		statement_inner(",\n");
 	statement_no_return(std::to_string(value));
+	stack.top().second = true;
+}
+
+void Stream::emit_json_array_value(bool value)
+{
+	if (stack.empty() || stack.top().first != Type::Array)
+		SPIRV_CROSS_THROW("Invalid JSON state");
+	if (stack.top().second)
+		statement_inner(",\n");
+	statement_no_return(value ? "true" : "false");
 	stack.top().second = true;
 }
 
@@ -285,7 +296,7 @@ void CompilerReflection::emit_type(const SPIRType &type, bool &emitted_open_tag)
 {
 	auto name = type_to_glsl(type);
 
-	if (type.type_alias != 0)
+	if (type.type_alias != TypeID(0))
 		return;
 
 	if (!emitted_open_tag)
@@ -347,15 +358,16 @@ void CompilerReflection::emit_type_array(const SPIRType &type)
 		for (const auto &value : type.array)
 			json_stream->emit_json_array_value(value);
 		json_stream->end_json_array();
+
+		json_stream->emit_json_key_array("array_size_is_literal");
+		for (const auto &value : type.array_size_literal)
+			json_stream->emit_json_array_value(value);
+		json_stream->end_json_array();
 	}
 }
 
 void CompilerReflection::emit_type_member_qualifiers(const SPIRType &type, uint32_t index)
 {
-	auto flags = combined_decoration_for_member(type, index);
-	if (flags.get(DecorationRowMajor))
-		json_stream->emit_json_key_value("row_major", true);
-
 	auto &membertype = get<SPIRType>(type.member_types[index]);
 	emit_type_array(membertype);
 	auto &memb = ir.meta[type.self].members;
@@ -366,6 +378,16 @@ void CompilerReflection::emit_type_member_qualifiers(const SPIRType &type, uint3
 			json_stream->emit_json_key_value("location", dec.location);
 		if (dec.decoration_flags.get(DecorationOffset))
 			json_stream->emit_json_key_value("offset", dec.offset);
+
+		// Array stride is a property of the array type, not the struct.
+		if (has_decoration(type.member_types[index], DecorationArrayStride))
+			json_stream->emit_json_key_value("array_stride",
+			                                 get_decoration(type.member_types[index], DecorationArrayStride));
+
+		if (dec.decoration_flags.get(DecorationMatrixStride))
+			json_stream->emit_json_key_value("matrix_stride", dec.matrix_stride);
+		if (dec.decoration_flags.get(DecorationRowMajor))
+			json_stream->emit_json_key_value("row_major", true);
 	}
 }
 
@@ -424,6 +446,28 @@ void CompilerReflection::emit_entry_points()
 			json_stream->begin_json_object();
 			json_stream->emit_json_key_value("name", e.name);
 			json_stream->emit_json_key_value("mode", execution_model_to_str(e.execution_model));
+			if (e.execution_model == ExecutionModelGLCompute)
+			{
+				const auto &spv_entry = get_entry_point(e.name, e.execution_model);
+
+				SpecializationConstant spec_x, spec_y, spec_z;
+				get_work_group_size_specialization_constants(spec_x, spec_y, spec_z);
+
+				json_stream->emit_json_key_array("workgroup_size");
+				json_stream->emit_json_array_value(spec_x.id != ID(0) ? spec_x.constant_id :
+				                                                        spv_entry.workgroup_size.x);
+				json_stream->emit_json_array_value(spec_y.id != ID(0) ? spec_y.constant_id :
+				                                                        spv_entry.workgroup_size.y);
+				json_stream->emit_json_array_value(spec_z.id != ID(0) ? spec_z.constant_id :
+				                                                        spv_entry.workgroup_size.z);
+				json_stream->end_json_array();
+
+				json_stream->emit_json_key_array("workgroup_size_is_spec_constant_id");
+				json_stream->emit_json_array_value(spec_x.id != ID(0));
+				json_stream->emit_json_array_value(spec_y.id != ID(0));
+				json_stream->emit_json_array_value(spec_z.id != ID(0));
+				json_stream->end_json_array();
+			}
 			json_stream->end_json_object();
 		}
 		json_stream->end_json_array();
@@ -468,7 +512,7 @@ void CompilerReflection::emit_resources(const char *tag, const SmallVector<Resou
 		bool is_block = get_decoration_bitset(type.self).get(DecorationBlock) ||
 		                get_decoration_bitset(type.self).get(DecorationBufferBlock);
 
-		uint32_t fallback_id = !is_push_constant && is_block ? res.base_type_id : res.id;
+		ID fallback_id = !is_push_constant && is_block ? ID(res.base_type_id) : ID(res.id);
 
 		json_stream->begin_json_object();
 
@@ -559,6 +603,7 @@ void CompilerReflection::emit_specialization_constants()
 		json_stream->begin_json_object();
 		json_stream->emit_json_key_value("id", spec_const.constant_id);
 		json_stream->emit_json_key_value("type", type_to_glsl(type));
+		json_stream->emit_json_key_value("variable_id", spec_const.id);
 		switch (type.basetype)
 		{
 		case SPIRType::UInt:

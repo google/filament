@@ -1,9 +1,48 @@
 #pragma clang diagnostic ignored "-Wmissing-prototypes"
+#pragma clang diagnostic ignored "-Wmissing-braces"
 
 #include <metal_stdlib>
 #include <simd/simd.h>
 
 using namespace metal;
+
+template<typename T, size_t Num>
+struct spvUnsafeArray
+{
+    T elements[Num ? Num : 1];
+    
+    thread T& operator [] (size_t pos) thread
+    {
+        return elements[pos];
+    }
+    constexpr const thread T& operator [] (size_t pos) const thread
+    {
+        return elements[pos];
+    }
+    
+    device T& operator [] (size_t pos) device
+    {
+        return elements[pos];
+    }
+    constexpr const device T& operator [] (size_t pos) const device
+    {
+        return elements[pos];
+    }
+    
+    constexpr const constant T& operator [] (size_t pos) const constant
+    {
+        return elements[pos];
+    }
+    
+    threadgroup T& operator [] (size_t pos) threadgroup
+    {
+        return elements[pos];
+    }
+    constexpr const threadgroup T& operator [] (size_t pos) const threadgroup
+    {
+        return elements[pos];
+    }
+};
 
 struct UBO
 {
@@ -38,13 +77,15 @@ struct main0_in
     float4 inViewMat_3 [[attribute(8)]];
 };
 
-void write_deeper_in_function(thread float4x4& outTransModel, constant UBO& ubo, thread float4& color, thread float4 (&colors)[3])
+static inline __attribute__((always_inline))
+void write_deeper_in_function(thread float4x4& outTransModel, constant UBO& ubo, thread float4& color, thread spvUnsafeArray<float4, 3> (&colors))
 {
     outTransModel[1].y = ubo.lodBias;
     color = colors[2];
 }
 
-void write_in_function(thread float4x4& outTransModel, constant UBO& ubo, thread float4& color, thread float4 (&colors)[3], thread float3& inNormal)
+static inline __attribute__((always_inline))
+void write_in_function(thread float4x4& outTransModel, constant UBO& ubo, thread float4& color, thread spvUnsafeArray<float4, 3> (&colors), thread float3& inNormal)
 {
     outTransModel[2] = float4(inNormal, 1.0);
     write_deeper_in_function(outTransModel, ubo, color, colors);
@@ -54,7 +95,7 @@ vertex main0_out main0(main0_in in [[stage_in]], constant UBO& ubo [[buffer(0)]]
 {
     main0_out out = {};
     float4x4 outTransModel = {};
-    float4 colors[3] = {};
+    spvUnsafeArray<float4, 3> colors = {};
     float4x4 inViewMat = {};
     colors[0] = in.colors_0;
     colors[1] = in.colors_1;

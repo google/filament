@@ -91,6 +91,8 @@ struct ResType_7
     int4 _m1;
 };
 
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
 kernel void main0(device SSBOUint& u [[buffer(0)]], device SSBOInt& i [[buffer(1)]])
 {
     ResType _25;

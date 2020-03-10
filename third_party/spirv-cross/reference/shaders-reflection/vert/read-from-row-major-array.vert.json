@@ -25,12 +25,18 @@
                 {
                     "name" : "var",
                     "type" : "mat2x3",
-                    "row_major" : true,
                     "array" : [
                         4,
                         3
                     ],
-                    "offset" : 0
+                    "array_size_is_literal" : [
+                        true,
+                        true
+                    ],
+                    "offset" : 0,
+                    "array_stride" : 192,
+                    "matrix_stride" : 16,
+                    "row_major" : true
                 }
             ]
         }

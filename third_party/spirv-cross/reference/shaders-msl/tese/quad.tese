@@ -16,6 +16,7 @@ struct main0_patchIn
     float4 gl_TessLevelOuter [[attribute(1)]];
 };
 
+static inline __attribute__((always_inline))
 void set_position(thread float4& gl_Position, thread float2& gl_TessCoord, thread float2& gl_TessLevelInner, thread float4& gl_TessLevelOuter)
 {
     gl_Position = float4(((gl_TessCoord.x * gl_TessLevelInner.x) * gl_TessLevelOuter.x) + (((1.0 - gl_TessCoord.x) * gl_TessLevelInner.x) * gl_TessLevelOuter.z), ((gl_TessCoord.y * gl_TessLevelInner.y) * gl_TessLevelOuter.y) + (((1.0 - gl_TessCoord.y) * gl_TessLevelInner.y) * gl_TessLevelOuter.w), 0.0, 1.0);

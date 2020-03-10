@@ -10,6 +10,7 @@ struct main0_out
     float4 gl_Position [[position]];
 };
 
+static inline __attribute__((always_inline))
 float4 _main(thread const uint& vid, thread const uint& iid)
 {
     return float4(float(vid + iid));

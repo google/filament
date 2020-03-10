@@ -27,14 +27,14 @@ matrix:
     - os: windows
       before_install:
         - choco install python3
-        - export PATH="/c/Python37:/c/Python37/Scripts:$PATH"
+        - export PATH="/c/Python38:/c/Python38/Scripts:$PATH"
       env:
         - GENERATOR="Visual Studio 15 2017"
         - ARTIFACT=vs2017-32bit
     - os: windows
       before_install:
         - choco install python3
-        - export PATH="/c/Python37:/c/Python37/Scripts:$PATH"
+        - export PATH="/c/Python38:/c/Python38/Scripts:$PATH"
       env:
         - GENERATOR="Visual Studio 15 2017 Win64"
         - ARTIFACT=vs2017-64bit
@@ -48,7 +48,7 @@ script:
   - "./build_glslang_spirv_tools.sh Release"
   - mkdir build
   - cd build
-  - cmake .. -DSPIRV_CROSS_SHARED=ON -DCMAKE_INSTALL_PREFIX=output -DCMAKE_BUILD_TYPE=Release -G "${GENERATOR}" -DPYTHON_EXECUTABLE:FILEPATH="${PYTHON3}" -DSPIRV_CROSS_ENABLE_TESTS=ON
+  - cmake .. -DSPIRV_CROSS_WERROR=ON -DSPIRV_CROSS_MISC_WARNINGS=ON -DSPIRV_CROSS_SHARED=ON -DCMAKE_INSTALL_PREFIX=output -DCMAKE_BUILD_TYPE=Release -G "${GENERATOR}" -DPYTHON_EXECUTABLE:FILEPATH="${PYTHON3}" -DSPIRV_CROSS_ENABLE_TESTS=ON
   - cmake --build . --config Release
   - cmake --build . --config Release --target install
   - ctest --verbose -C Release

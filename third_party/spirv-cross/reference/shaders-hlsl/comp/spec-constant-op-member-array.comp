@@ -28,6 +28,7 @@ static const int d = (c + 50);
 #define SPIRV_CROSS_CONSTANT_ID_3 400
 #endif
 static const int e = SPIRV_CROSS_CONSTANT_ID_3;
+static const uint3 gl_WorkGroupSize = uint3(1u, 1u, 1u);
 
 RWByteAddressBuffer _22 : register(u0);
 

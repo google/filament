@@ -7,11 +7,6 @@ layout(binding = 0, std430) readonly buffer SSBO
     vec4 in_data[];
 } _24;
 
-layout(binding = 1, std430) writeonly buffer SSBO2
-{
-    vec4 out_data[];
-} _177;
-
 void main()
 {
     uint ident = gl_GlobalInvocationID.x;
@@ -83,25 +78,5 @@ void main()
         k += 10;
         continue;
     }
-    k = 0;
-    do
-    {
-        k++;
-    } while (k > 10);
-    int l = 0;
-    for (;;)
-    {
-        if (l == 5)
-        {
-            int _172 = l;
-            l = _172 + 1;
-            continue;
-        }
-        idat += vec4(1.0);
-        int _172 = l;
-        l = _172 + 1;
-        continue;
-    }
-    _177.out_data[ident] = idat;
 }
 

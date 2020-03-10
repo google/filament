@@ -1,0 +1,81 @@
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos Glslang Reference Front End; 8
+; Bound: 48
+; Schema: 0
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main" %ssbo
+               OpExecutionMode %main LocalSize 1 1 1
+               OpSource GLSL 450
+		OpName %B1 "B1"
+		OpName %A "A"
+		OpName %C "C"
+		OpName %B2 "B2"
+		OpMemberName %A 0 "a"
+		OpMemberName %A 1 "b1"
+		OpMemberName %A 2 "b1_array"
+		OpMemberName %C 0 "c"
+		OpMemberName %C 1 "b2"
+		OpMemberName %C 2 "b2_array"
+		OpMemberName %B1 0 "elem1"
+		OpMemberName %B2 0 "elem2"
+		OpMemberName %SSBO 0 "a_block"
+		OpMemberName %SSBO 1 "c_block"
+		OpDecorate %B1Array ArrayStride 16
+		OpDecorate %B2Array ArrayStride 16
+               OpMemberDecorate %B1 0 Offset 0
+               OpMemberDecorate %A 0 Offset 0
+               OpMemberDecorate %A 1 Offset 16
+               OpMemberDecorate %A 2 Offset 32
+               OpMemberDecorate %A 3 Offset 96
+               OpMemberDecorate %B2 0 Offset 0
+               OpMemberDecorate %C 0 Offset 0
+               OpMemberDecorate %C 1 Offset 16
+               OpMemberDecorate %C 2 Offset 32
+               OpMemberDecorate %C 3 Offset 96
+               OpMemberDecorate %SSBO 0 Offset 0
+               OpMemberDecorate %SSBO 1 Offset 112
+		OpMemberDecorate %A0 0 Offset 0
+		OpMemberDecorate %C0 0 Offset 0
+		OpMemberDecorate %A0 0 RowMajor
+		OpMemberDecorate %A0 0 MatrixStride 8
+		OpMemberDecorate %C0 0 ColMajor
+		OpMemberDecorate %C0 0 MatrixStride 16
+               OpDecorate %SSBO Block
+               OpDecorate %ssbo DescriptorSet 0
+               OpDecorate %ssbo Binding 0
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+	%uint = OpTypeInt 32 0
+	%uint_4 = OpConstant %uint 4
+    %v4float = OpTypeVector %float 4
+    %v2float = OpTypeVector %float 2
+    %m2float = OpTypeMatrix %v2float 2
+        %A0 = OpTypeStruct %m2float
+        %C0 = OpTypeStruct %m2float
+         %B2 = OpTypeStruct %v4float
+	%B2Array = OpTypeArray %B2 %uint_4
+          %C = OpTypeStruct %v4float %B2 %B2Array %C0
+         %B1 = OpTypeStruct %v4float
+	%B1Array = OpTypeArray %B1 %uint_4
+          %A = OpTypeStruct %v4float %B1 %B1Array %A0
+       %SSBO = OpTypeStruct %A %C
+%_ptr_Uniform_SSBO = OpTypePointer StorageBuffer %SSBO
+       %ssbo = OpVariable %_ptr_Uniform_SSBO StorageBuffer
+        %int = OpTypeInt 32 1
+      %int_1 = OpConstant %int 1
+%_ptr_Uniform_C = OpTypePointer StorageBuffer %C
+      %int_0 = OpConstant %int 0
+%_ptr_Uniform_A = OpTypePointer StorageBuffer %A
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+         %22 = OpAccessChain %_ptr_Uniform_C %ssbo %int_1
+         %39 = OpAccessChain %_ptr_Uniform_A %ssbo %int_0
+         %23 = OpLoad %C %22
+         %24 = OpCopyLogical %A %23
+               OpStore %39 %24
+               OpReturn
+               OpFunctionEnd

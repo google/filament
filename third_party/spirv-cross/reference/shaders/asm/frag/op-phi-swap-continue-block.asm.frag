@@ -18,7 +18,6 @@ void main()
     _24 = _5.uJ;
     for (int _26 = 0; _26 < _5.uCount; _23_copy = _23, _23 = _24, _24 = _23_copy, _26++)
     {
-        continue;
     }
     FragColor = float(_24 - _23) * float(_5.uJ * _5.uK);
 }

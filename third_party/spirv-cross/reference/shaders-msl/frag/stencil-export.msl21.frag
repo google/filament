@@ -12,6 +12,7 @@ struct main0_out
     uint gl_FragStencilRefARB [[stencil]];
 };
 
+static inline __attribute__((always_inline))
 void update_stencil(thread uint& gl_FragStencilRefARB)
 {
     gl_FragStencilRefARB = uint(int(gl_FragStencilRefARB) + 10);

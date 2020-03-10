@@ -21,6 +21,7 @@ struct main0_patchIn
     patch_control_point<main0_in> gl_in;
 };
 
+static inline __attribute__((always_inline))
 void set_position(thread float4& gl_Position, thread patch_control_point<main0_in>& gl_in, thread float2& gl_TessCoord)
 {
     gl_Position = (gl_in[0].Floats * gl_TessCoord.x) + (gl_in[1].Floats2 * gl_TessCoord.y);

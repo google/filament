@@ -4,7 +4,7 @@ layout(triangles, cw, fractional_even_spacing) in;
 in gl_PerVertex
 {
     vec4 gl_Position;
-} gl_in[gl_MaxPatchVertices];
+} gl_in[];
 
 out gl_PerVertex
 {

@@ -1,3 +1,5 @@
+static const uint3 gl_WorkGroupSize = uint3(1u, 1u, 1u);
+
 RWByteAddressBuffer _10 : register(u0);
 cbuffer SPIRV_Cross_NumWorkgroups : register(b0)
 {

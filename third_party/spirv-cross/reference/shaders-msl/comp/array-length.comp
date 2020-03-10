@@ -16,6 +16,9 @@ struct SSBO1
     float bz[1];
 };
 
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
+static inline __attribute__((always_inline))
 uint get_size(device SSBO& v_14, constant uint& v_14BufferSize, device SSBO1* (&ssbos)[2], constant uint* ssbosBufferSize)
 {
     return uint(int((v_14BufferSize - 16) / 16) + int((ssbosBufferSize[1] - 0) / 4));
