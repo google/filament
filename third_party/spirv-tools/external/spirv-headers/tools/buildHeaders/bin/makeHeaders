@@ -2,4 +2,4 @@
 
 cd ../../include/spirv/unified1
 ../../../tools/buildHeaders/build/install/bin/buildSpvHeaders -H spirv.core.grammar.json
-dos2unix spirv.*
+dos2unix spirv.* SpirV.* spv.*

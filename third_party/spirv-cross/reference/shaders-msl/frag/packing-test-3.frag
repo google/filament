@@ -32,6 +32,7 @@ struct main0_out
     float4 _entryPointOutput [[color(0)]];
 };
 
+static inline __attribute__((always_inline))
 float4 _main(thread const VertexOutput& IN, constant CB0& v_26)
 {
     TestStruct st;

@@ -15,8 +15,8 @@
 #ifndef SOURCE_VAL_BASIC_BLOCK_H_
 #define SOURCE_VAL_BASIC_BLOCK_H_
 
-#include <cstdint>
 #include <bitset>
+#include <cstdint>
 #include <functional>
 #include <memory>
 #include <vector>
@@ -28,7 +28,7 @@ namespace val {
 
 enum BlockType : uint32_t {
   kBlockTypeUndefined,
-  kBlockTypeHeader,
+  kBlockTypeSelection,
   kBlockTypeLoop,
   kBlockTypeMerge,
   kBlockTypeBreak,

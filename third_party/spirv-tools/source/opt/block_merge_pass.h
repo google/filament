@@ -44,25 +44,16 @@ class BlockMergePass : public Pass {
     return IRContext::kAnalysisDefUse |
            IRContext::kAnalysisInstrToBlockMapping |
            IRContext::kAnalysisDecorations | IRContext::kAnalysisCombinators |
-           IRContext::kAnalysisNameMap;
+           IRContext::kAnalysisNameMap | IRContext::kAnalysisConstants |
+           IRContext::kAnalysisTypes;
   }
 
  private:
-  // Kill any OpName instruction referencing |inst|, then kill |inst|.
-  void KillInstAndName(Instruction* inst);
 
   // Search |func| for blocks which have a single Branch to a block
   // with no other predecessors. Merge these blocks into a single block.
   bool MergeBlocks(Function* func);
 
-  // Returns true if |block| (or |id|) contains a merge instruction.
-  bool IsHeader(BasicBlock* block);
-  bool IsHeader(uint32_t id);
-
-  // Returns true if |block| (or |id|) is the merge target of a merge
-  // instruction.
-  bool IsMerge(BasicBlock* block);
-  bool IsMerge(uint32_t id);
 };
 
 }  // namespace opt

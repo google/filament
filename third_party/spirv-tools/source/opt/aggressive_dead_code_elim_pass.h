@@ -49,7 +49,9 @@ class AggressiveDCEPass : public MemPass {
   Status Process() override;
 
   IRContext::Analysis GetPreservedAnalyses() override {
-    return IRContext::kAnalysisDefUse | IRContext::kAnalysisInstrToBlockMapping;
+    return IRContext::kAnalysisDefUse |
+           IRContext::kAnalysisInstrToBlockMapping |
+           IRContext::kAnalysisConstants | IRContext::kAnalysisTypes;
   }
 
  private:
@@ -107,8 +109,8 @@ class AggressiveDCEPass : public MemPass {
   bool IsStructuredHeader(BasicBlock* bp, Instruction** mergeInst,
                           Instruction** branchInst, uint32_t* mergeBlockId);
 
-  // Initialize block2headerBranch_ and branch2merge_ using |structuredOrder|
-  // to order blocks.
+  // Initialize block2headerBranch_,  header2nextHeaderBranch_, and
+  // branch2merge_ using |structuredOrder| to order blocks.
   void ComputeBlock2HeaderMaps(std::list<BasicBlock*>& structuredOrder);
 
   // Add branch to |labelId| to end of block |bp|.
@@ -162,6 +164,12 @@ class AggressiveDCEPass : public MemPass {
   // to its own branch instruction.  An if-selection block points to the branch
   // of an enclosing construct's header, if one exists.
   std::unordered_map<BasicBlock*, Instruction*> block2headerBranch_;
+
+  // Map from header block to the branch instruction in the header of the
+  // structured construct enclosing it.
+  // The liveness algorithm is designed to iteratively mark as live all
+  // structured constructs enclosing a live instruction.
+  std::unordered_map<BasicBlock*, Instruction*> header2nextHeaderBranch_;
 
   // Maps basic block to their index in the structured order traversal.
   std::unordered_map<BasicBlock*, uint32_t> structured_order_index_;

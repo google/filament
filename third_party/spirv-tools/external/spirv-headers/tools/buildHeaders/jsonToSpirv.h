@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 The Khronos Group Inc.
+// Copyright (c) 2014-2019 The Khronos Group Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and/or associated documentation files (the "Materials"),
@@ -38,7 +38,7 @@ namespace spv {
 std::pair<bool, std::string> ReadFile(const std::string& path);
 
 // Fill in all the parameters
-void jsonToSpirv(const std::string& jsonPath);
+void jsonToSpirv(const std::string& jsonPath, bool buildingHeaders);
 
 // For parameterizing operands.
 enum OperandClass {
@@ -47,6 +47,7 @@ enum OperandClass {
     OperandVariableIds,
     OperandOptionalLiteral,
     OperandOptionalLiteralString,
+    OperandOptionalLiteralStrings,
     OperandVariableLiterals,
     OperandVariableIdLiteral,
     OperandVariableLiteralId,
@@ -76,7 +77,7 @@ enum OperandClass {
     OperandLoop,
     OperandFunction,
     OperandMemorySemantics,
-    OperandMemoryAccess,
+    OperandMemoryOperands,
     OperandScope,
 	OperandGroupOperation,
     OperandKernelEnqueueFlags,
@@ -87,6 +88,13 @@ enum OperandClass {
 
     OperandCount
 };
+
+// For direct representation of the JSON grammar "instruction_printing_class".
+struct PrintingClass {
+    std::string tag;
+    std::string heading;
+};
+using PrintingClasses = std::vector<PrintingClass>;
 
 // Any specific enum can have a set of capabilities that allow it:
 typedef std::vector<std::string> EnumCaps;
@@ -145,6 +153,12 @@ public:
         assert((where != end()) && "Could not find enum in the enum list");
         return *where;
     }
+    // gets *all* entries for the value, including the first one
+    void gatherAliases(unsigned value, std::vector<EValue*>& aliases) {
+        std::for_each(begin(), end(), [&](EValue& e) {
+            if (value == e.value)
+                aliases.push_back(&e);});
+    }
     // Returns the EValue with the given name.  We assume uniqueness
     // by name.
     EValue& at(std::string name) {
@@ -167,9 +181,11 @@ private:
 class EnumValue {
 public:
     EnumValue() : value(0), desc(nullptr) {}
-    EnumValue(unsigned int the_value, const std::string& the_name, EnumCaps&& the_caps, const std::string& the_version,
-              Extensions&& the_extensions, OperandParameters&& the_operands) :
-      value(the_value), name(the_name), capabilities(std::move(the_caps)), version(std::move(the_version)),
+    EnumValue(unsigned int the_value, const std::string& the_name, EnumCaps&& the_caps,
+        const std::string& the_firstVersion, const std::string& the_lastVersion,
+        Extensions&& the_extensions, OperandParameters&& the_operands) :
+      value(the_value), name(the_name), capabilities(std::move(the_caps)),
+      firstVersion(std::move(the_firstVersion)), lastVersion(std::move(the_lastVersion)),
       extensions(std::move(the_extensions)), operands(std::move(the_operands)), desc(nullptr) { }
 
     // For ValueEnum, the value from the JSON file.
@@ -178,7 +194,8 @@ public:
     unsigned value;
     std::string name;
     EnumCaps capabilities;
-    std::string version;
+    std::string firstVersion;
+    std::string lastVersion;
     // A feature only be enabled by certain extensions.
     // An empty list means the feature does not require an extension.
     // Normally, only Capability enums are enabled by extension.  In turn,
@@ -228,28 +245,39 @@ public:
 // per OperandParameters above.
 class InstructionValue : public EnumValue {
 public:
-    InstructionValue(EnumValue&& e, bool has_type, bool has_result)
+    InstructionValue(EnumValue&& e, const std::string& printClass, bool has_type, bool has_result)
      : EnumValue(std::move(e)),
+       printingClass(printClass),
        opDesc("TBD"),
-       opClass(0),
        typePresent(has_type),
-       resultPresent(has_result) {}
+       resultPresent(has_result),
+       alias(this) { }
+    InstructionValue(const InstructionValue& v)
+    {
+        *this = v;
+        alias = this;
+    }
 
     bool hasResult() const { return resultPresent != 0; }
     bool hasType()   const { return typePresent != 0; }
+    void setAlias(const InstructionValue& a) { alias = &a; }
+    const InstructionValue& getAlias() const { return *alias; }
+    bool isAlias() const { return alias != this; }
 
+    std::string printingClass;
     const char* opDesc;
-    int opClass;
 
 protected:
     int typePresent   : 1;
     int resultPresent : 1;
+    const InstructionValue* alias;    // correct only after discovering the aliases; otherwise points to this
 };
 
 using InstructionValues = EnumValuesContainer<InstructionValue>;
 
 // Parameterization info for all instructions.
 extern InstructionValues InstructionDesc;
+extern PrintingClasses InstructionPrintingClasses;
 
 // These hold definitions of the enumerants used for operands.
 // This is indexed by OperandClass, but not including OperandOpcode.

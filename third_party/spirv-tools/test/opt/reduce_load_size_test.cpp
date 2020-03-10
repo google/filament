@@ -23,7 +23,6 @@ namespace {
 
 using ReduceLoadSizeTest = PassTest<::testing::Test>;
 
-#ifdef SPIRV_EFFCEE
 TEST_F(ReduceLoadSizeTest, cbuffer_load_extract) {
   // Originally from the following HLSL:
   //   struct S {
@@ -107,7 +106,6 @@ TEST_F(ReduceLoadSizeTest, cbuffer_load_extract) {
                         SPV_BINARY_TO_TEXT_OPTION_FRIENDLY_NAMES);
   SinglePassRunAndMatch<ReduceLoadSize>(test, false);
 }
-#endif
 
 TEST_F(ReduceLoadSizeTest, cbuffer_load_extract_vector) {
   // Originally from the following HLSL:

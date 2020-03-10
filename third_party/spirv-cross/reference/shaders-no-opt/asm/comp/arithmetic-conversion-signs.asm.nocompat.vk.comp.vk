@@ -33,8 +33,12 @@ void main()
     _4.u16 = uint16_t(_30);
     _4.f32 = float(_31);
     _4.f32 = float(int16_t(_32));
+    _4.f32 = float(_29);
+    _4.f32 = float(int(_30));
     _4.f32 = float(uint16_t(_31));
     _4.f32 = float(_32);
+    _4.f32 = float(uint(_29));
+    _4.f32 = float(_30);
     _4.s16 = int16_t(_33);
     _4.u16 = uint16_t(int16_t(_33));
     _4.u16 = uint16_t(_33);

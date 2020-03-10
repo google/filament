@@ -29,7 +29,6 @@ using ::testing::HasSubstr;
 using ::testing::MatchesRegex;
 using PrivateToLocalTest = PassTest<::testing::Test>;
 
-#ifdef SPIRV_EFFCEE
 TEST_F(PrivateToLocalTest, ChangeToLocal) {
   // Change the private variable to a local, and change the types accordingly.
   const std::string text = R"(
@@ -309,7 +308,149 @@ TEST_F(PrivateToLocalTest, CreatePointerToAmbiguousStruct2) {
   SinglePassRunAndMatch<PrivateToLocalPass>(text, false);
 }
 
-#endif
+TEST_F(PrivateToLocalTest, SPV14RemoveFromInterface) {
+  const std::string text = R"(
+; CHECK-NOT: OpEntryPoint GLCompute %foo "foo" %in %priv
+; CHECK: OpEntryPoint GLCompute %foo "foo" %in
+; CHECK: %priv = OpVariable {{%\w+}} Function
+OpCapability Shader
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %foo "foo" %in %priv
+OpExecutionMode %foo LocalSize 1 1 1
+OpName %foo "foo"
+OpName %in "in"
+OpName %priv "priv"
+%void = OpTypeVoid
+%int = OpTypeInt 32 0
+%ptr_ssbo_int = OpTypePointer StorageBuffer %int
+%ptr_private_int = OpTypePointer Private %int
+%in = OpVariable %ptr_ssbo_int StorageBuffer
+%priv = OpVariable %ptr_private_int Private
+%void_fn = OpTypeFunction %void
+%foo = OpFunction %void None %void_fn
+%entry = OpLabel
+%ld = OpLoad %int %in
+OpStore %priv %ld
+OpReturn
+OpFunctionEnd
+)";
+
+  SetTargetEnv(SPV_ENV_UNIVERSAL_1_4);
+  SinglePassRunAndMatch<PrivateToLocalPass>(text, true);
+}
+
+TEST_F(PrivateToLocalTest, SPV14RemoveFromInterfaceMultipleEntryPoints) {
+  const std::string text = R"(
+; CHECK-NOT: OpEntryPoint GLCompute %foo "foo" %in %priv
+; CHECK-NOT: OpEntryPoint GLCompute %foo "bar" %in %priv
+; CHECK: OpEntryPoint GLCompute %foo "foo" %in
+; CHECK: OpEntryPoint GLCompute %foo "bar" %in
+; CHECK: %priv = OpVariable {{%\w+}} Function
+OpCapability Shader
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %foo "foo" %in %priv
+OpEntryPoint GLCompute %foo "bar" %in %priv
+OpExecutionMode %foo LocalSize 1 1 1
+OpName %foo "foo"
+OpName %in "in"
+OpName %priv "priv"
+%void = OpTypeVoid
+%int = OpTypeInt 32 0
+%ptr_ssbo_int = OpTypePointer StorageBuffer %int
+%ptr_private_int = OpTypePointer Private %int
+%in = OpVariable %ptr_ssbo_int StorageBuffer
+%priv = OpVariable %ptr_private_int Private
+%void_fn = OpTypeFunction %void
+%foo = OpFunction %void None %void_fn
+%entry = OpLabel
+%ld = OpLoad %int %in
+OpStore %priv %ld
+OpReturn
+OpFunctionEnd
+)";
+
+  SetTargetEnv(SPV_ENV_UNIVERSAL_1_4);
+  SinglePassRunAndMatch<PrivateToLocalPass>(text, true);
+}
+
+TEST_F(PrivateToLocalTest, SPV14RemoveFromInterfaceMultipleVariables) {
+  const std::string text = R"(
+; CHECK-NOT: OpEntryPoint GLCompute %foo "foo" %in %priv1 %priv2
+; CHECK: OpEntryPoint GLCompute %foo "foo" %in
+; CHECK: %priv1 = OpVariable {{%\w+}} Function
+; CHECK: %priv2 = OpVariable {{%\w+}} Function
+OpCapability Shader
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %foo "foo" %in %priv1 %priv2
+OpExecutionMode %foo LocalSize 1 1 1
+OpName %foo "foo"
+OpName %in "in"
+OpName %priv1 "priv1"
+OpName %priv2 "priv2"
+%void = OpTypeVoid
+%int = OpTypeInt 32 0
+%ptr_ssbo_int = OpTypePointer StorageBuffer %int
+%ptr_private_int = OpTypePointer Private %int
+%in = OpVariable %ptr_ssbo_int StorageBuffer
+%priv1 = OpVariable %ptr_private_int Private
+%priv2 = OpVariable %ptr_private_int Private
+%void_fn = OpTypeFunction %void
+%foo = OpFunction %void None %void_fn
+%entry = OpLabel
+%1 = OpFunctionCall %void %bar1
+%2 = OpFunctionCall %void %bar2
+OpReturn
+OpFunctionEnd
+%bar1 = OpFunction %void None %void_fn
+%3 = OpLabel
+%ld1 = OpLoad %int %in
+OpStore %priv1 %ld1
+OpReturn
+OpFunctionEnd
+%bar2 = OpFunction %void None %void_fn
+%4 = OpLabel
+%ld2 = OpLoad %int %in
+OpStore %priv2 %ld2
+OpReturn
+OpFunctionEnd
+)";
+
+  SetTargetEnv(SPV_ENV_UNIVERSAL_1_4);
+  SinglePassRunAndMatch<PrivateToLocalPass>(text, true);
+}
+
+TEST_F(PrivateToLocalTest, IdBoundOverflow1) {
+  const std::string text = R"(
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %4 "main"
+               OpExecutionMode %4 OriginLowerLeft
+               OpSource HLSL 84
+          %2 = OpTypeVoid
+          %3 = OpTypeFunction %2
+          %6 = OpTypeFloat 32
+          %7 = OpTypeVector %6 4
+          %8 = OpTypeStruct %7
+    %4194302 = OpTypeStruct %8 %8
+          %9 = OpTypeStruct %8 %8
+         %11 = OpTypePointer Private %7
+         %18 = OpTypeStruct %6 %9
+         %12 = OpVariable %11 Private
+          %4 = OpFunction %2 None %3
+          %5 = OpLabel
+         %13 = OpLoad %7 %12
+               OpReturn
+               OpFunctionEnd
+  )";
+
+  SetAssembleOptions(SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+
+  std::vector<Message> messages = {
+      {SPV_MSG_ERROR, "", 0, 0, "ID overflow. Try running compact-ids."}};
+  SetMessageConsumer(GetTestMessageConsumer(messages));
+  auto result = SinglePassRunToBinary<PrivateToLocalPass>(text, true);
+  EXPECT_EQ(Pass::Status::Failure, std::get<1>(result));
+}
 
 }  // namespace
 }  // namespace opt

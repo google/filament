@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 The Khronos Group Inc.
+// Copyright (c) 2014-2019 The Khronos Group Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and/or associated documentation files (the "Materials"),
@@ -26,13 +26,16 @@
 // the Binary Section of the SPIR-V specification.
 
 // Enumeration tokens for SPIR-V, in various styles:
-//   C, C++, C++11, JSON, Lua, Python
+//   C, C++, C++11, JSON, Lua, Python, C#, D
 // 
 // - C will have tokens with a "Spv" prefix, e.g.: SpvSourceLanguageGLSL
 // - C++ will have tokens in the "spv" name space, e.g.: spv::SourceLanguageGLSL
 // - C++11 will use enum classes in the spv namespace, e.g.: spv::SourceLanguage::GLSL
 // - Lua will use tables, e.g.: spv.SourceLanguage.GLSL
 // - Python will use dictionaries, e.g.: spv['SourceLanguage']['GLSL']
+// - C# will use enum classes in the Specification class located in the "Spv" namespace,
+//     e.g.: Spv.Specification.SourceLanguage.GLSL
+// - D will have tokens under the "spv" module, e.g: spv.SourceLanguage.GLSL
 // 
 // Some tokens act like mask values, which can be OR'd together,
 // while others are mutually exclusive.  The mask-like ones have
@@ -46,11 +49,11 @@ namespace spv {
 
 typedef unsigned int Id;
 
-#define SPV_VERSION 0x10300
+#define SPV_VERSION 0x10500
 #define SPV_REVISION 1
 
 static const unsigned int MagicNumber = 0x07230203;
-static const unsigned int Version = 0x00010300;
+static const unsigned int Version = 0x00010500;
 static const unsigned int Revision = 1;
 static const unsigned int OpCodeMask = 0xffff;
 static const unsigned int WordCountShift = 16;
@@ -73,6 +76,14 @@ enum ExecutionModel {
     ExecutionModelFragment = 4,
     ExecutionModelGLCompute = 5,
     ExecutionModelKernel = 6,
+    ExecutionModelTaskNV = 5267,
+    ExecutionModelMeshNV = 5268,
+    ExecutionModelRayGenerationNV = 5313,
+    ExecutionModelIntersectionNV = 5314,
+    ExecutionModelAnyHitNV = 5315,
+    ExecutionModelClosestHitNV = 5316,
+    ExecutionModelMissNV = 5317,
+    ExecutionModelCallableNV = 5318,
     ExecutionModelMax = 0x7fffffff,
 };
 
@@ -80,6 +91,8 @@ enum AddressingModel {
     AddressingModelLogical = 0,
     AddressingModelPhysical32 = 1,
     AddressingModelPhysical64 = 2,
+    AddressingModelPhysicalStorageBuffer64 = 5348,
+    AddressingModelPhysicalStorageBuffer64EXT = 5348,
     AddressingModelMax = 0x7fffffff,
 };
 
@@ -87,6 +100,8 @@ enum MemoryModel {
     MemoryModelSimple = 0,
     MemoryModelGLSL450 = 1,
     MemoryModelOpenCL = 2,
+    MemoryModelVulkan = 3,
+    MemoryModelVulkanKHR = 3,
     MemoryModelMax = 0x7fffffff,
 };
 
@@ -130,7 +145,23 @@ enum ExecutionMode {
     ExecutionModeLocalSizeId = 38,
     ExecutionModeLocalSizeHintId = 39,
     ExecutionModePostDepthCoverage = 4446,
+    ExecutionModeDenormPreserve = 4459,
+    ExecutionModeDenormFlushToZero = 4460,
+    ExecutionModeSignedZeroInfNanPreserve = 4461,
+    ExecutionModeRoundingModeRTE = 4462,
+    ExecutionModeRoundingModeRTZ = 4463,
     ExecutionModeStencilRefReplacingEXT = 5027,
+    ExecutionModeOutputLinesNV = 5269,
+    ExecutionModeOutputPrimitivesNV = 5270,
+    ExecutionModeDerivativeGroupQuadsNV = 5289,
+    ExecutionModeDerivativeGroupLinearNV = 5290,
+    ExecutionModeOutputTrianglesNV = 5298,
+    ExecutionModePixelInterlockOrderedEXT = 5366,
+    ExecutionModePixelInterlockUnorderedEXT = 5367,
+    ExecutionModeSampleInterlockOrderedEXT = 5368,
+    ExecutionModeSampleInterlockUnorderedEXT = 5369,
+    ExecutionModeShadingRateInterlockOrderedEXT = 5370,
+    ExecutionModeShadingRateInterlockUnorderedEXT = 5371,
     ExecutionModeMax = 0x7fffffff,
 };
 
@@ -148,6 +179,14 @@ enum StorageClass {
     StorageClassAtomicCounter = 10,
     StorageClassImage = 11,
     StorageClassStorageBuffer = 12,
+    StorageClassCallableDataNV = 5328,
+    StorageClassIncomingCallableDataNV = 5329,
+    StorageClassRayPayloadNV = 5338,
+    StorageClassHitAttributeNV = 5339,
+    StorageClassIncomingRayPayloadNV = 5342,
+    StorageClassShaderRecordBufferNV = 5343,
+    StorageClassPhysicalStorageBuffer = 5349,
+    StorageClassPhysicalStorageBufferEXT = 5349,
     StorageClassMax = 0x7fffffff,
 };
 
@@ -275,6 +314,16 @@ enum ImageOperandsShift {
     ImageOperandsConstOffsetsShift = 5,
     ImageOperandsSampleShift = 6,
     ImageOperandsMinLodShift = 7,
+    ImageOperandsMakeTexelAvailableShift = 8,
+    ImageOperandsMakeTexelAvailableKHRShift = 8,
+    ImageOperandsMakeTexelVisibleShift = 9,
+    ImageOperandsMakeTexelVisibleKHRShift = 9,
+    ImageOperandsNonPrivateTexelShift = 10,
+    ImageOperandsNonPrivateTexelKHRShift = 10,
+    ImageOperandsVolatileTexelShift = 11,
+    ImageOperandsVolatileTexelKHRShift = 11,
+    ImageOperandsSignExtendShift = 12,
+    ImageOperandsZeroExtendShift = 13,
     ImageOperandsMax = 0x7fffffff,
 };
 
@@ -288,6 +337,16 @@ enum ImageOperandsMask {
     ImageOperandsConstOffsetsMask = 0x00000020,
     ImageOperandsSampleMask = 0x00000040,
     ImageOperandsMinLodMask = 0x00000080,
+    ImageOperandsMakeTexelAvailableMask = 0x00000100,
+    ImageOperandsMakeTexelAvailableKHRMask = 0x00000100,
+    ImageOperandsMakeTexelVisibleMask = 0x00000200,
+    ImageOperandsMakeTexelVisibleKHRMask = 0x00000200,
+    ImageOperandsNonPrivateTexelMask = 0x00000400,
+    ImageOperandsNonPrivateTexelKHRMask = 0x00000400,
+    ImageOperandsVolatileTexelMask = 0x00000800,
+    ImageOperandsVolatileTexelKHRMask = 0x00000800,
+    ImageOperandsSignExtendMask = 0x00001000,
+    ImageOperandsZeroExtendMask = 0x00002000,
 };
 
 enum FPFastMathModeShift {
@@ -368,6 +427,7 @@ enum Decoration {
     DecorationNonWritable = 24,
     DecorationNonReadable = 25,
     DecorationUniform = 26,
+    DecorationUniformId = 27,
     DecorationSaturatedConversion = 28,
     DecorationStream = 29,
     DecorationLocation = 30,
@@ -388,14 +448,28 @@ enum Decoration {
     DecorationMaxByteOffset = 45,
     DecorationAlignmentId = 46,
     DecorationMaxByteOffsetId = 47,
+    DecorationNoSignedWrap = 4469,
+    DecorationNoUnsignedWrap = 4470,
     DecorationExplicitInterpAMD = 4999,
     DecorationOverrideCoverageNV = 5248,
     DecorationPassthroughNV = 5250,
     DecorationViewportRelativeNV = 5252,
     DecorationSecondaryViewportRelativeNV = 5256,
+    DecorationPerPrimitiveNV = 5271,
+    DecorationPerViewNV = 5272,
+    DecorationPerTaskNV = 5273,
+    DecorationPerVertexNV = 5285,
+    DecorationNonUniform = 5300,
     DecorationNonUniformEXT = 5300,
+    DecorationRestrictPointer = 5355,
+    DecorationRestrictPointerEXT = 5355,
+    DecorationAliasedPointer = 5356,
+    DecorationAliasedPointerEXT = 5356,
+    DecorationCounterBuffer = 5634,
     DecorationHlslCounterBufferGOOGLE = 5634,
     DecorationHlslSemanticGOOGLE = 5635,
+    DecorationUserSemantic = 5635,
+    DecorationUserTypeGOOGLE = 5636,
     DecorationMax = 0x7fffffff,
 };
 
@@ -470,6 +544,38 @@ enum BuiltIn {
     BuiltInPositionPerViewNV = 5261,
     BuiltInViewportMaskPerViewNV = 5262,
     BuiltInFullyCoveredEXT = 5264,
+    BuiltInTaskCountNV = 5274,
+    BuiltInPrimitiveCountNV = 5275,
+    BuiltInPrimitiveIndicesNV = 5276,
+    BuiltInClipDistancePerViewNV = 5277,
+    BuiltInCullDistancePerViewNV = 5278,
+    BuiltInLayerPerViewNV = 5279,
+    BuiltInMeshViewCountNV = 5280,
+    BuiltInMeshViewIndicesNV = 5281,
+    BuiltInBaryCoordNV = 5286,
+    BuiltInBaryCoordNoPerspNV = 5287,
+    BuiltInFragSizeEXT = 5292,
+    BuiltInFragmentSizeNV = 5292,
+    BuiltInFragInvocationCountEXT = 5293,
+    BuiltInInvocationsPerPixelNV = 5293,
+    BuiltInLaunchIdNV = 5319,
+    BuiltInLaunchSizeNV = 5320,
+    BuiltInWorldRayOriginNV = 5321,
+    BuiltInWorldRayDirectionNV = 5322,
+    BuiltInObjectRayOriginNV = 5323,
+    BuiltInObjectRayDirectionNV = 5324,
+    BuiltInRayTminNV = 5325,
+    BuiltInRayTmaxNV = 5326,
+    BuiltInInstanceCustomIndexNV = 5327,
+    BuiltInObjectToWorldNV = 5330,
+    BuiltInWorldToObjectNV = 5331,
+    BuiltInHitTNV = 5332,
+    BuiltInHitKindNV = 5333,
+    BuiltInIncomingRayFlagsNV = 5351,
+    BuiltInWarpsPerSMNV = 5374,
+    BuiltInSMCountNV = 5375,
+    BuiltInWarpIDNV = 5376,
+    BuiltInSMIDNV = 5377,
     BuiltInMax = 0x7fffffff,
 };
 
@@ -490,6 +596,11 @@ enum LoopControlShift {
     LoopControlDontUnrollShift = 1,
     LoopControlDependencyInfiniteShift = 2,
     LoopControlDependencyLengthShift = 3,
+    LoopControlMinIterationsShift = 4,
+    LoopControlMaxIterationsShift = 5,
+    LoopControlIterationMultipleShift = 6,
+    LoopControlPeelCountShift = 7,
+    LoopControlPartialCountShift = 8,
     LoopControlMax = 0x7fffffff,
 };
 
@@ -499,6 +610,11 @@ enum LoopControlMask {
     LoopControlDontUnrollMask = 0x00000002,
     LoopControlDependencyInfiniteMask = 0x00000004,
     LoopControlDependencyLengthMask = 0x00000008,
+    LoopControlMinIterationsMask = 0x00000010,
+    LoopControlMaxIterationsMask = 0x00000020,
+    LoopControlIterationMultipleMask = 0x00000040,
+    LoopControlPeelCountMask = 0x00000080,
+    LoopControlPartialCountMask = 0x00000100,
 };
 
 enum FunctionControlShift {
@@ -528,6 +644,13 @@ enum MemorySemanticsShift {
     MemorySemanticsCrossWorkgroupMemoryShift = 9,
     MemorySemanticsAtomicCounterMemoryShift = 10,
     MemorySemanticsImageMemoryShift = 11,
+    MemorySemanticsOutputMemoryShift = 12,
+    MemorySemanticsOutputMemoryKHRShift = 12,
+    MemorySemanticsMakeAvailableShift = 13,
+    MemorySemanticsMakeAvailableKHRShift = 13,
+    MemorySemanticsMakeVisibleShift = 14,
+    MemorySemanticsMakeVisibleKHRShift = 14,
+    MemorySemanticsVolatileShift = 15,
     MemorySemanticsMax = 0x7fffffff,
 };
 
@@ -543,12 +666,25 @@ enum MemorySemanticsMask {
     MemorySemanticsCrossWorkgroupMemoryMask = 0x00000200,
     MemorySemanticsAtomicCounterMemoryMask = 0x00000400,
     MemorySemanticsImageMemoryMask = 0x00000800,
+    MemorySemanticsOutputMemoryMask = 0x00001000,
+    MemorySemanticsOutputMemoryKHRMask = 0x00001000,
+    MemorySemanticsMakeAvailableMask = 0x00002000,
+    MemorySemanticsMakeAvailableKHRMask = 0x00002000,
+    MemorySemanticsMakeVisibleMask = 0x00004000,
+    MemorySemanticsMakeVisibleKHRMask = 0x00004000,
+    MemorySemanticsVolatileMask = 0x00008000,
 };
 
 enum MemoryAccessShift {
     MemoryAccessVolatileShift = 0,
     MemoryAccessAlignedShift = 1,
     MemoryAccessNontemporalShift = 2,
+    MemoryAccessMakePointerAvailableShift = 3,
+    MemoryAccessMakePointerAvailableKHRShift = 3,
+    MemoryAccessMakePointerVisibleShift = 4,
+    MemoryAccessMakePointerVisibleKHRShift = 4,
+    MemoryAccessNonPrivatePointerShift = 5,
+    MemoryAccessNonPrivatePointerKHRShift = 5,
     MemoryAccessMax = 0x7fffffff,
 };
 
@@ -557,6 +693,12 @@ enum MemoryAccessMask {
     MemoryAccessVolatileMask = 0x00000001,
     MemoryAccessAlignedMask = 0x00000002,
     MemoryAccessNontemporalMask = 0x00000004,
+    MemoryAccessMakePointerAvailableMask = 0x00000008,
+    MemoryAccessMakePointerAvailableKHRMask = 0x00000008,
+    MemoryAccessMakePointerVisibleMask = 0x00000010,
+    MemoryAccessMakePointerVisibleKHRMask = 0x00000010,
+    MemoryAccessNonPrivatePointerMask = 0x00000020,
+    MemoryAccessNonPrivatePointerKHRMask = 0x00000020,
 };
 
 enum Scope {
@@ -565,6 +707,8 @@ enum Scope {
     ScopeWorkgroup = 2,
     ScopeSubgroup = 3,
     ScopeInvocation = 4,
+    ScopeQueueFamily = 5,
+    ScopeQueueFamilyKHR = 5,
     ScopeMax = 0x7fffffff,
 };
 
@@ -664,6 +808,8 @@ enum Capability {
     CapabilityGroupNonUniformShuffleRelative = 66,
     CapabilityGroupNonUniformClustered = 67,
     CapabilityGroupNonUniformQuad = 68,
+    CapabilityShaderLayer = 69,
+    CapabilityShaderViewportIndex = 70,
     CapabilitySubgroupBallotKHR = 4423,
     CapabilityDrawParameters = 4427,
     CapabilitySubgroupVoteKHR = 4431,
@@ -682,11 +828,17 @@ enum Capability {
     CapabilityStorageBuffer8BitAccess = 4448,
     CapabilityUniformAndStorageBuffer8BitAccess = 4449,
     CapabilityStoragePushConstant8 = 4450,
+    CapabilityDenormPreserve = 4464,
+    CapabilityDenormFlushToZero = 4465,
+    CapabilitySignedZeroInfNanPreserve = 4466,
+    CapabilityRoundingModeRTE = 4467,
+    CapabilityRoundingModeRTZ = 4468,
     CapabilityFloat16ImageAMD = 5008,
     CapabilityImageGatherBiasLodAMD = 5009,
     CapabilityFragmentMaskAMD = 5010,
     CapabilityStencilExportEXT = 5013,
     CapabilityImageReadWriteLodAMD = 5015,
+    CapabilityShaderClockKHR = 5055,
     CapabilitySampleMaskOverrideCoverageNV = 5249,
     CapabilityGeometryShaderPassthroughNV = 5251,
     CapabilityShaderViewportIndexLayerEXT = 5254,
@@ -695,22 +847,59 @@ enum Capability {
     CapabilityShaderStereoViewNV = 5259,
     CapabilityPerViewAttributesNV = 5260,
     CapabilityFragmentFullyCoveredEXT = 5265,
+    CapabilityMeshShadingNV = 5266,
+    CapabilityImageFootprintNV = 5282,
+    CapabilityFragmentBarycentricNV = 5284,
+    CapabilityComputeDerivativeGroupQuadsNV = 5288,
+    CapabilityFragmentDensityEXT = 5291,
+    CapabilityShadingRateNV = 5291,
     CapabilityGroupNonUniformPartitionedNV = 5297,
+    CapabilityShaderNonUniform = 5301,
     CapabilityShaderNonUniformEXT = 5301,
+    CapabilityRuntimeDescriptorArray = 5302,
     CapabilityRuntimeDescriptorArrayEXT = 5302,
+    CapabilityInputAttachmentArrayDynamicIndexing = 5303,
     CapabilityInputAttachmentArrayDynamicIndexingEXT = 5303,
+    CapabilityUniformTexelBufferArrayDynamicIndexing = 5304,
     CapabilityUniformTexelBufferArrayDynamicIndexingEXT = 5304,
+    CapabilityStorageTexelBufferArrayDynamicIndexing = 5305,
     CapabilityStorageTexelBufferArrayDynamicIndexingEXT = 5305,
+    CapabilityUniformBufferArrayNonUniformIndexing = 5306,
     CapabilityUniformBufferArrayNonUniformIndexingEXT = 5306,
+    CapabilitySampledImageArrayNonUniformIndexing = 5307,
     CapabilitySampledImageArrayNonUniformIndexingEXT = 5307,
+    CapabilityStorageBufferArrayNonUniformIndexing = 5308,
     CapabilityStorageBufferArrayNonUniformIndexingEXT = 5308,
+    CapabilityStorageImageArrayNonUniformIndexing = 5309,
     CapabilityStorageImageArrayNonUniformIndexingEXT = 5309,
+    CapabilityInputAttachmentArrayNonUniformIndexing = 5310,
     CapabilityInputAttachmentArrayNonUniformIndexingEXT = 5310,
+    CapabilityUniformTexelBufferArrayNonUniformIndexing = 5311,
     CapabilityUniformTexelBufferArrayNonUniformIndexingEXT = 5311,
+    CapabilityStorageTexelBufferArrayNonUniformIndexing = 5312,
     CapabilityStorageTexelBufferArrayNonUniformIndexingEXT = 5312,
+    CapabilityRayTracingNV = 5340,
+    CapabilityVulkanMemoryModel = 5345,
+    CapabilityVulkanMemoryModelKHR = 5345,
+    CapabilityVulkanMemoryModelDeviceScope = 5346,
+    CapabilityVulkanMemoryModelDeviceScopeKHR = 5346,
+    CapabilityPhysicalStorageBufferAddresses = 5347,
+    CapabilityPhysicalStorageBufferAddressesEXT = 5347,
+    CapabilityComputeDerivativeGroupLinearNV = 5350,
+    CapabilityCooperativeMatrixNV = 5357,
+    CapabilityFragmentShaderSampleInterlockEXT = 5363,
+    CapabilityFragmentShaderShadingRateInterlockEXT = 5372,
+    CapabilityShaderSMBuiltinsNV = 5373,
+    CapabilityFragmentShaderPixelInterlockEXT = 5378,
+    CapabilityDemoteToHelperInvocationEXT = 5379,
     CapabilitySubgroupShuffleINTEL = 5568,
     CapabilitySubgroupBufferBlockIOINTEL = 5569,
     CapabilitySubgroupImageBlockIOINTEL = 5570,
+    CapabilitySubgroupImageMediaBlockIOINTEL = 5579,
+    CapabilityIntegerFunctions2INTEL = 5584,
+    CapabilitySubgroupAvcMotionEstimationINTEL = 5696,
+    CapabilitySubgroupAvcMotionEstimationIntraINTEL = 5697,
+    CapabilitySubgroupAvcMotionEstimationChromaINTEL = 5698,
     CapabilityMax = 0x7fffffff,
 };
 
@@ -1055,6 +1244,10 @@ enum Op {
     OpGroupNonUniformLogicalXor = 364,
     OpGroupNonUniformQuadBroadcast = 365,
     OpGroupNonUniformQuadSwap = 366,
+    OpCopyLogical = 400,
+    OpPtrEqual = 401,
+    OpPtrNotEqual = 402,
+    OpPtrDiff = 403,
     OpSubgroupBallotKHR = 4421,
     OpSubgroupFirstInvocationKHR = 4422,
     OpSubgroupAllKHR = 4428,
@@ -1071,7 +1264,25 @@ enum Op {
     OpGroupSMaxNonUniformAMD = 5007,
     OpFragmentMaskFetchAMD = 5011,
     OpFragmentFetchAMD = 5012,
+    OpReadClockKHR = 5056,
+    OpImageSampleFootprintNV = 5283,
     OpGroupNonUniformPartitionNV = 5296,
+    OpWritePackedPrimitiveIndices4x8NV = 5299,
+    OpReportIntersectionNV = 5334,
+    OpIgnoreIntersectionNV = 5335,
+    OpTerminateRayNV = 5336,
+    OpTraceNV = 5337,
+    OpTypeAccelerationStructureNV = 5341,
+    OpExecuteCallableNV = 5344,
+    OpTypeCooperativeMatrixNV = 5358,
+    OpCooperativeMatrixLoadNV = 5359,
+    OpCooperativeMatrixStoreNV = 5360,
+    OpCooperativeMatrixMulAddNV = 5361,
+    OpCooperativeMatrixLengthNV = 5362,
+    OpBeginInvocationInterlockEXT = 5364,
+    OpEndInvocationInterlockEXT = 5365,
+    OpDemoteToHelperInvocationEXT = 5380,
+    OpIsHelperInvocationEXT = 5381,
     OpSubgroupShuffleINTEL = 5571,
     OpSubgroupShuffleDownINTEL = 5572,
     OpSubgroupShuffleUpINTEL = 5573,
@@ -1080,10 +1291,678 @@ enum Op {
     OpSubgroupBlockWriteINTEL = 5576,
     OpSubgroupImageBlockReadINTEL = 5577,
     OpSubgroupImageBlockWriteINTEL = 5578,
+    OpSubgroupImageMediaBlockReadINTEL = 5580,
+    OpSubgroupImageMediaBlockWriteINTEL = 5581,
+    OpUCountLeadingZerosINTEL = 5585,
+    OpUCountTrailingZerosINTEL = 5586,
+    OpAbsISubINTEL = 5587,
+    OpAbsUSubINTEL = 5588,
+    OpIAddSatINTEL = 5589,
+    OpUAddSatINTEL = 5590,
+    OpIAverageINTEL = 5591,
+    OpUAverageINTEL = 5592,
+    OpIAverageRoundedINTEL = 5593,
+    OpUAverageRoundedINTEL = 5594,
+    OpISubSatINTEL = 5595,
+    OpUSubSatINTEL = 5596,
+    OpIMul32x16INTEL = 5597,
+    OpUMul32x16INTEL = 5598,
+    OpDecorateString = 5632,
     OpDecorateStringGOOGLE = 5632,
+    OpMemberDecorateString = 5633,
     OpMemberDecorateStringGOOGLE = 5633,
+    OpVmeImageINTEL = 5699,
+    OpTypeVmeImageINTEL = 5700,
+    OpTypeAvcImePayloadINTEL = 5701,
+    OpTypeAvcRefPayloadINTEL = 5702,
+    OpTypeAvcSicPayloadINTEL = 5703,
+    OpTypeAvcMcePayloadINTEL = 5704,
+    OpTypeAvcMceResultINTEL = 5705,
+    OpTypeAvcImeResultINTEL = 5706,
+    OpTypeAvcImeResultSingleReferenceStreamoutINTEL = 5707,
+    OpTypeAvcImeResultDualReferenceStreamoutINTEL = 5708,
+    OpTypeAvcImeSingleReferenceStreaminINTEL = 5709,
+    OpTypeAvcImeDualReferenceStreaminINTEL = 5710,
+    OpTypeAvcRefResultINTEL = 5711,
+    OpTypeAvcSicResultINTEL = 5712,
+    OpSubgroupAvcMceGetDefaultInterBaseMultiReferencePenaltyINTEL = 5713,
+    OpSubgroupAvcMceSetInterBaseMultiReferencePenaltyINTEL = 5714,
+    OpSubgroupAvcMceGetDefaultInterShapePenaltyINTEL = 5715,
+    OpSubgroupAvcMceSetInterShapePenaltyINTEL = 5716,
+    OpSubgroupAvcMceGetDefaultInterDirectionPenaltyINTEL = 5717,
+    OpSubgroupAvcMceSetInterDirectionPenaltyINTEL = 5718,
+    OpSubgroupAvcMceGetDefaultIntraLumaShapePenaltyINTEL = 5719,
+    OpSubgroupAvcMceGetDefaultInterMotionVectorCostTableINTEL = 5720,
+    OpSubgroupAvcMceGetDefaultHighPenaltyCostTableINTEL = 5721,
+    OpSubgroupAvcMceGetDefaultMediumPenaltyCostTableINTEL = 5722,
+    OpSubgroupAvcMceGetDefaultLowPenaltyCostTableINTEL = 5723,
+    OpSubgroupAvcMceSetMotionVectorCostFunctionINTEL = 5724,
+    OpSubgroupAvcMceGetDefaultIntraLumaModePenaltyINTEL = 5725,
+    OpSubgroupAvcMceGetDefaultNonDcLumaIntraPenaltyINTEL = 5726,
+    OpSubgroupAvcMceGetDefaultIntraChromaModeBasePenaltyINTEL = 5727,
+    OpSubgroupAvcMceSetAcOnlyHaarINTEL = 5728,
+    OpSubgroupAvcMceSetSourceInterlacedFieldPolarityINTEL = 5729,
+    OpSubgroupAvcMceSetSingleReferenceInterlacedFieldPolarityINTEL = 5730,
+    OpSubgroupAvcMceSetDualReferenceInterlacedFieldPolaritiesINTEL = 5731,
+    OpSubgroupAvcMceConvertToImePayloadINTEL = 5732,
+    OpSubgroupAvcMceConvertToImeResultINTEL = 5733,
+    OpSubgroupAvcMceConvertToRefPayloadINTEL = 5734,
+    OpSubgroupAvcMceConvertToRefResultINTEL = 5735,
+    OpSubgroupAvcMceConvertToSicPayloadINTEL = 5736,
+    OpSubgroupAvcMceConvertToSicResultINTEL = 5737,
+    OpSubgroupAvcMceGetMotionVectorsINTEL = 5738,
+    OpSubgroupAvcMceGetInterDistortionsINTEL = 5739,
+    OpSubgroupAvcMceGetBestInterDistortionsINTEL = 5740,
+    OpSubgroupAvcMceGetInterMajorShapeINTEL = 5741,
+    OpSubgroupAvcMceGetInterMinorShapeINTEL = 5742,
+    OpSubgroupAvcMceGetInterDirectionsINTEL = 5743,
+    OpSubgroupAvcMceGetInterMotionVectorCountINTEL = 5744,
+    OpSubgroupAvcMceGetInterReferenceIdsINTEL = 5745,
+    OpSubgroupAvcMceGetInterReferenceInterlacedFieldPolaritiesINTEL = 5746,
+    OpSubgroupAvcImeInitializeINTEL = 5747,
+    OpSubgroupAvcImeSetSingleReferenceINTEL = 5748,
+    OpSubgroupAvcImeSetDualReferenceINTEL = 5749,
+    OpSubgroupAvcImeRefWindowSizeINTEL = 5750,
+    OpSubgroupAvcImeAdjustRefOffsetINTEL = 5751,
+    OpSubgroupAvcImeConvertToMcePayloadINTEL = 5752,
+    OpSubgroupAvcImeSetMaxMotionVectorCountINTEL = 5753,
+    OpSubgroupAvcImeSetUnidirectionalMixDisableINTEL = 5754,
+    OpSubgroupAvcImeSetEarlySearchTerminationThresholdINTEL = 5755,
+    OpSubgroupAvcImeSetWeightedSadINTEL = 5756,
+    OpSubgroupAvcImeEvaluateWithSingleReferenceINTEL = 5757,
+    OpSubgroupAvcImeEvaluateWithDualReferenceINTEL = 5758,
+    OpSubgroupAvcImeEvaluateWithSingleReferenceStreaminINTEL = 5759,
+    OpSubgroupAvcImeEvaluateWithDualReferenceStreaminINTEL = 5760,
+    OpSubgroupAvcImeEvaluateWithSingleReferenceStreamoutINTEL = 5761,
+    OpSubgroupAvcImeEvaluateWithDualReferenceStreamoutINTEL = 5762,
+    OpSubgroupAvcImeEvaluateWithSingleReferenceStreaminoutINTEL = 5763,
+    OpSubgroupAvcImeEvaluateWithDualReferenceStreaminoutINTEL = 5764,
+    OpSubgroupAvcImeConvertToMceResultINTEL = 5765,
+    OpSubgroupAvcImeGetSingleReferenceStreaminINTEL = 5766,
+    OpSubgroupAvcImeGetDualReferenceStreaminINTEL = 5767,
+    OpSubgroupAvcImeStripSingleReferenceStreamoutINTEL = 5768,
+    OpSubgroupAvcImeStripDualReferenceStreamoutINTEL = 5769,
+    OpSubgroupAvcImeGetStreamoutSingleReferenceMajorShapeMotionVectorsINTEL = 5770,
+    OpSubgroupAvcImeGetStreamoutSingleReferenceMajorShapeDistortionsINTEL = 5771,
+    OpSubgroupAvcImeGetStreamoutSingleReferenceMajorShapeReferenceIdsINTEL = 5772,
+    OpSubgroupAvcImeGetStreamoutDualReferenceMajorShapeMotionVectorsINTEL = 5773,
+    OpSubgroupAvcImeGetStreamoutDualReferenceMajorShapeDistortionsINTEL = 5774,
+    OpSubgroupAvcImeGetStreamoutDualReferenceMajorShapeReferenceIdsINTEL = 5775,
+    OpSubgroupAvcImeGetBorderReachedINTEL = 5776,
+    OpSubgroupAvcImeGetTruncatedSearchIndicationINTEL = 5777,
+    OpSubgroupAvcImeGetUnidirectionalEarlySearchTerminationINTEL = 5778,
+    OpSubgroupAvcImeGetWeightingPatternMinimumMotionVectorINTEL = 5779,
+    OpSubgroupAvcImeGetWeightingPatternMinimumDistortionINTEL = 5780,
+    OpSubgroupAvcFmeInitializeINTEL = 5781,
+    OpSubgroupAvcBmeInitializeINTEL = 5782,
+    OpSubgroupAvcRefConvertToMcePayloadINTEL = 5783,
+    OpSubgroupAvcRefSetBidirectionalMixDisableINTEL = 5784,
+    OpSubgroupAvcRefSetBilinearFilterEnableINTEL = 5785,
+    OpSubgroupAvcRefEvaluateWithSingleReferenceINTEL = 5786,
+    OpSubgroupAvcRefEvaluateWithDualReferenceINTEL = 5787,
+    OpSubgroupAvcRefEvaluateWithMultiReferenceINTEL = 5788,
+    OpSubgroupAvcRefEvaluateWithMultiReferenceInterlacedINTEL = 5789,
+    OpSubgroupAvcRefConvertToMceResultINTEL = 5790,
+    OpSubgroupAvcSicInitializeINTEL = 5791,
+    OpSubgroupAvcSicConfigureSkcINTEL = 5792,
+    OpSubgroupAvcSicConfigureIpeLumaINTEL = 5793,
+    OpSubgroupAvcSicConfigureIpeLumaChromaINTEL = 5794,
+    OpSubgroupAvcSicGetMotionVectorMaskINTEL = 5795,
+    OpSubgroupAvcSicConvertToMcePayloadINTEL = 5796,
+    OpSubgroupAvcSicSetIntraLumaShapePenaltyINTEL = 5797,
+    OpSubgroupAvcSicSetIntraLumaModeCostFunctionINTEL = 5798,
+    OpSubgroupAvcSicSetIntraChromaModeCostFunctionINTEL = 5799,
+    OpSubgroupAvcSicSetBilinearFilterEnableINTEL = 5800,
+    OpSubgroupAvcSicSetSkcForwardTransformEnableINTEL = 5801,
+    OpSubgroupAvcSicSetBlockBasedRawSkipSadINTEL = 5802,
+    OpSubgroupAvcSicEvaluateIpeINTEL = 5803,
+    OpSubgroupAvcSicEvaluateWithSingleReferenceINTEL = 5804,
+    OpSubgroupAvcSicEvaluateWithDualReferenceINTEL = 5805,
+    OpSubgroupAvcSicEvaluateWithMultiReferenceINTEL = 5806,
+    OpSubgroupAvcSicEvaluateWithMultiReferenceInterlacedINTEL = 5807,
+    OpSubgroupAvcSicConvertToMceResultINTEL = 5808,
+    OpSubgroupAvcSicGetIpeLumaShapeINTEL = 5809,
+    OpSubgroupAvcSicGetBestIpeLumaDistortionINTEL = 5810,
+    OpSubgroupAvcSicGetBestIpeChromaDistortionINTEL = 5811,
+    OpSubgroupAvcSicGetPackedIpeLumaModesINTEL = 5812,
+    OpSubgroupAvcSicGetIpeChromaModeINTEL = 5813,
+    OpSubgroupAvcSicGetPackedSkcLumaCountThresholdINTEL = 5814,
+    OpSubgroupAvcSicGetPackedSkcLumaSumThresholdINTEL = 5815,
+    OpSubgroupAvcSicGetInterRawSadsINTEL = 5816,
     OpMax = 0x7fffffff,
 };
+
+#ifdef SPV_ENABLE_UTILITY_CODE
+inline void HasResultAndType(Op opcode, bool *hasResult, bool *hasResultType) {
+    *hasResult = *hasResultType = false;
+    switch (opcode) {
+    default: /* unknown opcode */ break;
+    case OpNop: *hasResult = false; *hasResultType = false; break;
+    case OpUndef: *hasResult = true; *hasResultType = true; break;
+    case OpSourceContinued: *hasResult = false; *hasResultType = false; break;
+    case OpSource: *hasResult = false; *hasResultType = false; break;
+    case OpSourceExtension: *hasResult = false; *hasResultType = false; break;
+    case OpName: *hasResult = false; *hasResultType = false; break;
+    case OpMemberName: *hasResult = false; *hasResultType = false; break;
+    case OpString: *hasResult = true; *hasResultType = false; break;
+    case OpLine: *hasResult = false; *hasResultType = false; break;
+    case OpExtension: *hasResult = false; *hasResultType = false; break;
+    case OpExtInstImport: *hasResult = true; *hasResultType = false; break;
+    case OpExtInst: *hasResult = true; *hasResultType = true; break;
+    case OpMemoryModel: *hasResult = false; *hasResultType = false; break;
+    case OpEntryPoint: *hasResult = false; *hasResultType = false; break;
+    case OpExecutionMode: *hasResult = false; *hasResultType = false; break;
+    case OpCapability: *hasResult = false; *hasResultType = false; break;
+    case OpTypeVoid: *hasResult = true; *hasResultType = false; break;
+    case OpTypeBool: *hasResult = true; *hasResultType = false; break;
+    case OpTypeInt: *hasResult = true; *hasResultType = false; break;
+    case OpTypeFloat: *hasResult = true; *hasResultType = false; break;
+    case OpTypeVector: *hasResult = true; *hasResultType = false; break;
+    case OpTypeMatrix: *hasResult = true; *hasResultType = false; break;
+    case OpTypeImage: *hasResult = true; *hasResultType = false; break;
+    case OpTypeSampler: *hasResult = true; *hasResultType = false; break;
+    case OpTypeSampledImage: *hasResult = true; *hasResultType = false; break;
+    case OpTypeArray: *hasResult = true; *hasResultType = false; break;
+    case OpTypeRuntimeArray: *hasResult = true; *hasResultType = false; break;
+    case OpTypeStruct: *hasResult = true; *hasResultType = false; break;
+    case OpTypeOpaque: *hasResult = true; *hasResultType = false; break;
+    case OpTypePointer: *hasResult = true; *hasResultType = false; break;
+    case OpTypeFunction: *hasResult = true; *hasResultType = false; break;
+    case OpTypeEvent: *hasResult = true; *hasResultType = false; break;
+    case OpTypeDeviceEvent: *hasResult = true; *hasResultType = false; break;
+    case OpTypeReserveId: *hasResult = true; *hasResultType = false; break;
+    case OpTypeQueue: *hasResult = true; *hasResultType = false; break;
+    case OpTypePipe: *hasResult = true; *hasResultType = false; break;
+    case OpTypeForwardPointer: *hasResult = false; *hasResultType = false; break;
+    case OpConstantTrue: *hasResult = true; *hasResultType = true; break;
+    case OpConstantFalse: *hasResult = true; *hasResultType = true; break;
+    case OpConstant: *hasResult = true; *hasResultType = true; break;
+    case OpConstantComposite: *hasResult = true; *hasResultType = true; break;
+    case OpConstantSampler: *hasResult = true; *hasResultType = true; break;
+    case OpConstantNull: *hasResult = true; *hasResultType = true; break;
+    case OpSpecConstantTrue: *hasResult = true; *hasResultType = true; break;
+    case OpSpecConstantFalse: *hasResult = true; *hasResultType = true; break;
+    case OpSpecConstant: *hasResult = true; *hasResultType = true; break;
+    case OpSpecConstantComposite: *hasResult = true; *hasResultType = true; break;
+    case OpSpecConstantOp: *hasResult = true; *hasResultType = true; break;
+    case OpFunction: *hasResult = true; *hasResultType = true; break;
+    case OpFunctionParameter: *hasResult = true; *hasResultType = true; break;
+    case OpFunctionEnd: *hasResult = false; *hasResultType = false; break;
+    case OpFunctionCall: *hasResult = true; *hasResultType = true; break;
+    case OpVariable: *hasResult = true; *hasResultType = true; break;
+    case OpImageTexelPointer: *hasResult = true; *hasResultType = true; break;
+    case OpLoad: *hasResult = true; *hasResultType = true; break;
+    case OpStore: *hasResult = false; *hasResultType = false; break;
+    case OpCopyMemory: *hasResult = false; *hasResultType = false; break;
+    case OpCopyMemorySized: *hasResult = false; *hasResultType = false; break;
+    case OpAccessChain: *hasResult = true; *hasResultType = true; break;
+    case OpInBoundsAccessChain: *hasResult = true; *hasResultType = true; break;
+    case OpPtrAccessChain: *hasResult = true; *hasResultType = true; break;
+    case OpArrayLength: *hasResult = true; *hasResultType = true; break;
+    case OpGenericPtrMemSemantics: *hasResult = true; *hasResultType = true; break;
+    case OpInBoundsPtrAccessChain: *hasResult = true; *hasResultType = true; break;
+    case OpDecorate: *hasResult = false; *hasResultType = false; break;
+    case OpMemberDecorate: *hasResult = false; *hasResultType = false; break;
+    case OpDecorationGroup: *hasResult = true; *hasResultType = false; break;
+    case OpGroupDecorate: *hasResult = false; *hasResultType = false; break;
+    case OpGroupMemberDecorate: *hasResult = false; *hasResultType = false; break;
+    case OpVectorExtractDynamic: *hasResult = true; *hasResultType = true; break;
+    case OpVectorInsertDynamic: *hasResult = true; *hasResultType = true; break;
+    case OpVectorShuffle: *hasResult = true; *hasResultType = true; break;
+    case OpCompositeConstruct: *hasResult = true; *hasResultType = true; break;
+    case OpCompositeExtract: *hasResult = true; *hasResultType = true; break;
+    case OpCompositeInsert: *hasResult = true; *hasResultType = true; break;
+    case OpCopyObject: *hasResult = true; *hasResultType = true; break;
+    case OpTranspose: *hasResult = true; *hasResultType = true; break;
+    case OpSampledImage: *hasResult = true; *hasResultType = true; break;
+    case OpImageSampleImplicitLod: *hasResult = true; *hasResultType = true; break;
+    case OpImageSampleExplicitLod: *hasResult = true; *hasResultType = true; break;
+    case OpImageSampleDrefImplicitLod: *hasResult = true; *hasResultType = true; break;
+    case OpImageSampleDrefExplicitLod: *hasResult = true; *hasResultType = true; break;
+    case OpImageSampleProjImplicitLod: *hasResult = true; *hasResultType = true; break;
+    case OpImageSampleProjExplicitLod: *hasResult = true; *hasResultType = true; break;
+    case OpImageSampleProjDrefImplicitLod: *hasResult = true; *hasResultType = true; break;
+    case OpImageSampleProjDrefExplicitLod: *hasResult = true; *hasResultType = true; break;
+    case OpImageFetch: *hasResult = true; *hasResultType = true; break;
+    case OpImageGather: *hasResult = true; *hasResultType = true; break;
+    case OpImageDrefGather: *hasResult = true; *hasResultType = true; break;
+    case OpImageRead: *hasResult = true; *hasResultType = true; break;
+    case OpImageWrite: *hasResult = false; *hasResultType = false; break;
+    case OpImage: *hasResult = true; *hasResultType = true; break;
+    case OpImageQueryFormat: *hasResult = true; *hasResultType = true; break;
+    case OpImageQueryOrder: *hasResult = true; *hasResultType = true; break;
+    case OpImageQuerySizeLod: *hasResult = true; *hasResultType = true; break;
+    case OpImageQuerySize: *hasResult = true; *hasResultType = true; break;
+    case OpImageQueryLod: *hasResult = true; *hasResultType = true; break;
+    case OpImageQueryLevels: *hasResult = true; *hasResultType = true; break;
+    case OpImageQuerySamples: *hasResult = true; *hasResultType = true; break;
+    case OpConvertFToU: *hasResult = true; *hasResultType = true; break;
+    case OpConvertFToS: *hasResult = true; *hasResultType = true; break;
+    case OpConvertSToF: *hasResult = true; *hasResultType = true; break;
+    case OpConvertUToF: *hasResult = true; *hasResultType = true; break;
+    case OpUConvert: *hasResult = true; *hasResultType = true; break;
+    case OpSConvert: *hasResult = true; *hasResultType = true; break;
+    case OpFConvert: *hasResult = true; *hasResultType = true; break;
+    case OpQuantizeToF16: *hasResult = true; *hasResultType = true; break;
+    case OpConvertPtrToU: *hasResult = true; *hasResultType = true; break;
+    case OpSatConvertSToU: *hasResult = true; *hasResultType = true; break;
+    case OpSatConvertUToS: *hasResult = true; *hasResultType = true; break;
+    case OpConvertUToPtr: *hasResult = true; *hasResultType = true; break;
+    case OpPtrCastToGeneric: *hasResult = true; *hasResultType = true; break;
+    case OpGenericCastToPtr: *hasResult = true; *hasResultType = true; break;
+    case OpGenericCastToPtrExplicit: *hasResult = true; *hasResultType = true; break;
+    case OpBitcast: *hasResult = true; *hasResultType = true; break;
+    case OpSNegate: *hasResult = true; *hasResultType = true; break;
+    case OpFNegate: *hasResult = true; *hasResultType = true; break;
+    case OpIAdd: *hasResult = true; *hasResultType = true; break;
+    case OpFAdd: *hasResult = true; *hasResultType = true; break;
+    case OpISub: *hasResult = true; *hasResultType = true; break;
+    case OpFSub: *hasResult = true; *hasResultType = true; break;
+    case OpIMul: *hasResult = true; *hasResultType = true; break;
+    case OpFMul: *hasResult = true; *hasResultType = true; break;
+    case OpUDiv: *hasResult = true; *hasResultType = true; break;
+    case OpSDiv: *hasResult = true; *hasResultType = true; break;
+    case OpFDiv: *hasResult = true; *hasResultType = true; break;
+    case OpUMod: *hasResult = true; *hasResultType = true; break;
+    case OpSRem: *hasResult = true; *hasResultType = true; break;
+    case OpSMod: *hasResult = true; *hasResultType = true; break;
+    case OpFRem: *hasResult = true; *hasResultType = true; break;
+    case OpFMod: *hasResult = true; *hasResultType = true; break;
+    case OpVectorTimesScalar: *hasResult = true; *hasResultType = true; break;
+    case OpMatrixTimesScalar: *hasResult = true; *hasResultType = true; break;
+    case OpVectorTimesMatrix: *hasResult = true; *hasResultType = true; break;
+    case OpMatrixTimesVector: *hasResult = true; *hasResultType = true; break;
+    case OpMatrixTimesMatrix: *hasResult = true; *hasResultType = true; break;
+    case OpOuterProduct: *hasResult = true; *hasResultType = true; break;
+    case OpDot: *hasResult = true; *hasResultType = true; break;
+    case OpIAddCarry: *hasResult = true; *hasResultType = true; break;
+    case OpISubBorrow: *hasResult = true; *hasResultType = true; break;
+    case OpUMulExtended: *hasResult = true; *hasResultType = true; break;
+    case OpSMulExtended: *hasResult = true; *hasResultType = true; break;
+    case OpAny: *hasResult = true; *hasResultType = true; break;
+    case OpAll: *hasResult = true; *hasResultType = true; break;
+    case OpIsNan: *hasResult = true; *hasResultType = true; break;
+    case OpIsInf: *hasResult = true; *hasResultType = true; break;
+    case OpIsFinite: *hasResult = true; *hasResultType = true; break;
+    case OpIsNormal: *hasResult = true; *hasResultType = true; break;
+    case OpSignBitSet: *hasResult = true; *hasResultType = true; break;
+    case OpLessOrGreater: *hasResult = true; *hasResultType = true; break;
+    case OpOrdered: *hasResult = true; *hasResultType = true; break;
+    case OpUnordered: *hasResult = true; *hasResultType = true; break;
+    case OpLogicalEqual: *hasResult = true; *hasResultType = true; break;
+    case OpLogicalNotEqual: *hasResult = true; *hasResultType = true; break;
+    case OpLogicalOr: *hasResult = true; *hasResultType = true; break;
+    case OpLogicalAnd: *hasResult = true; *hasResultType = true; break;
+    case OpLogicalNot: *hasResult = true; *hasResultType = true; break;
+    case OpSelect: *hasResult = true; *hasResultType = true; break;
+    case OpIEqual: *hasResult = true; *hasResultType = true; break;
+    case OpINotEqual: *hasResult = true; *hasResultType = true; break;
+    case OpUGreaterThan: *hasResult = true; *hasResultType = true; break;
+    case OpSGreaterThan: *hasResult = true; *hasResultType = true; break;
+    case OpUGreaterThanEqual: *hasResult = true; *hasResultType = true; break;
+    case OpSGreaterThanEqual: *hasResult = true; *hasResultType = true; break;
+    case OpULessThan: *hasResult = true; *hasResultType = true; break;
+    case OpSLessThan: *hasResult = true; *hasResultType = true; break;
+    case OpULessThanEqual: *hasResult = true; *hasResultType = true; break;
+    case OpSLessThanEqual: *hasResult = true; *hasResultType = true; break;
+    case OpFOrdEqual: *hasResult = true; *hasResultType = true; break;
+    case OpFUnordEqual: *hasResult = true; *hasResultType = true; break;
+    case OpFOrdNotEqual: *hasResult = true; *hasResultType = true; break;
+    case OpFUnordNotEqual: *hasResult = true; *hasResultType = true; break;
+    case OpFOrdLessThan: *hasResult = true; *hasResultType = true; break;
+    case OpFUnordLessThan: *hasResult = true; *hasResultType = true; break;
+    case OpFOrdGreaterThan: *hasResult = true; *hasResultType = true; break;
+    case OpFUnordGreaterThan: *hasResult = true; *hasResultType = true; break;
+    case OpFOrdLessThanEqual: *hasResult = true; *hasResultType = true; break;
+    case OpFUnordLessThanEqual: *hasResult = true; *hasResultType = true; break;
+    case OpFOrdGreaterThanEqual: *hasResult = true; *hasResultType = true; break;
+    case OpFUnordGreaterThanEqual: *hasResult = true; *hasResultType = true; break;
+    case OpShiftRightLogical: *hasResult = true; *hasResultType = true; break;
+    case OpShiftRightArithmetic: *hasResult = true; *hasResultType = true; break;
+    case OpShiftLeftLogical: *hasResult = true; *hasResultType = true; break;
+    case OpBitwiseOr: *hasResult = true; *hasResultType = true; break;
+    case OpBitwiseXor: *hasResult = true; *hasResultType = true; break;
+    case OpBitwiseAnd: *hasResult = true; *hasResultType = true; break;
+    case OpNot: *hasResult = true; *hasResultType = true; break;
+    case OpBitFieldInsert: *hasResult = true; *hasResultType = true; break;
+    case OpBitFieldSExtract: *hasResult = true; *hasResultType = true; break;
+    case OpBitFieldUExtract: *hasResult = true; *hasResultType = true; break;
+    case OpBitReverse: *hasResult = true; *hasResultType = true; break;
+    case OpBitCount: *hasResult = true; *hasResultType = true; break;
+    case OpDPdx: *hasResult = true; *hasResultType = true; break;
+    case OpDPdy: *hasResult = true; *hasResultType = true; break;
+    case OpFwidth: *hasResult = true; *hasResultType = true; break;
+    case OpDPdxFine: *hasResult = true; *hasResultType = true; break;
+    case OpDPdyFine: *hasResult = true; *hasResultType = true; break;
+    case OpFwidthFine: *hasResult = true; *hasResultType = true; break;
+    case OpDPdxCoarse: *hasResult = true; *hasResultType = true; break;
+    case OpDPdyCoarse: *hasResult = true; *hasResultType = true; break;
+    case OpFwidthCoarse: *hasResult = true; *hasResultType = true; break;
+    case OpEmitVertex: *hasResult = false; *hasResultType = false; break;
+    case OpEndPrimitive: *hasResult = false; *hasResultType = false; break;
+    case OpEmitStreamVertex: *hasResult = false; *hasResultType = false; break;
+    case OpEndStreamPrimitive: *hasResult = false; *hasResultType = false; break;
+    case OpControlBarrier: *hasResult = false; *hasResultType = false; break;
+    case OpMemoryBarrier: *hasResult = false; *hasResultType = false; break;
+    case OpAtomicLoad: *hasResult = true; *hasResultType = true; break;
+    case OpAtomicStore: *hasResult = false; *hasResultType = false; break;
+    case OpAtomicExchange: *hasResult = true; *hasResultType = true; break;
+    case OpAtomicCompareExchange: *hasResult = true; *hasResultType = true; break;
+    case OpAtomicCompareExchangeWeak: *hasResult = true; *hasResultType = true; break;
+    case OpAtomicIIncrement: *hasResult = true; *hasResultType = true; break;
+    case OpAtomicIDecrement: *hasResult = true; *hasResultType = true; break;
+    case OpAtomicIAdd: *hasResult = true; *hasResultType = true; break;
+    case OpAtomicISub: *hasResult = true; *hasResultType = true; break;
+    case OpAtomicSMin: *hasResult = true; *hasResultType = true; break;
+    case OpAtomicUMin: *hasResult = true; *hasResultType = true; break;
+    case OpAtomicSMax: *hasResult = true; *hasResultType = true; break;
+    case OpAtomicUMax: *hasResult = true; *hasResultType = true; break;
+    case OpAtomicAnd: *hasResult = true; *hasResultType = true; break;
+    case OpAtomicOr: *hasResult = true; *hasResultType = true; break;
+    case OpAtomicXor: *hasResult = true; *hasResultType = true; break;
+    case OpPhi: *hasResult = true; *hasResultType = true; break;
+    case OpLoopMerge: *hasResult = false; *hasResultType = false; break;
+    case OpSelectionMerge: *hasResult = false; *hasResultType = false; break;
+    case OpLabel: *hasResult = true; *hasResultType = false; break;
+    case OpBranch: *hasResult = false; *hasResultType = false; break;
+    case OpBranchConditional: *hasResult = false; *hasResultType = false; break;
+    case OpSwitch: *hasResult = false; *hasResultType = false; break;
+    case OpKill: *hasResult = false; *hasResultType = false; break;
+    case OpReturn: *hasResult = false; *hasResultType = false; break;
+    case OpReturnValue: *hasResult = false; *hasResultType = false; break;
+    case OpUnreachable: *hasResult = false; *hasResultType = false; break;
+    case OpLifetimeStart: *hasResult = false; *hasResultType = false; break;
+    case OpLifetimeStop: *hasResult = false; *hasResultType = false; break;
+    case OpGroupAsyncCopy: *hasResult = true; *hasResultType = true; break;
+    case OpGroupWaitEvents: *hasResult = false; *hasResultType = false; break;
+    case OpGroupAll: *hasResult = true; *hasResultType = true; break;
+    case OpGroupAny: *hasResult = true; *hasResultType = true; break;
+    case OpGroupBroadcast: *hasResult = true; *hasResultType = true; break;
+    case OpGroupIAdd: *hasResult = true; *hasResultType = true; break;
+    case OpGroupFAdd: *hasResult = true; *hasResultType = true; break;
+    case OpGroupFMin: *hasResult = true; *hasResultType = true; break;
+    case OpGroupUMin: *hasResult = true; *hasResultType = true; break;
+    case OpGroupSMin: *hasResult = true; *hasResultType = true; break;
+    case OpGroupFMax: *hasResult = true; *hasResultType = true; break;
+    case OpGroupUMax: *hasResult = true; *hasResultType = true; break;
+    case OpGroupSMax: *hasResult = true; *hasResultType = true; break;
+    case OpReadPipe: *hasResult = true; *hasResultType = true; break;
+    case OpWritePipe: *hasResult = true; *hasResultType = true; break;
+    case OpReservedReadPipe: *hasResult = true; *hasResultType = true; break;
+    case OpReservedWritePipe: *hasResult = true; *hasResultType = true; break;
+    case OpReserveReadPipePackets: *hasResult = true; *hasResultType = true; break;
+    case OpReserveWritePipePackets: *hasResult = true; *hasResultType = true; break;
+    case OpCommitReadPipe: *hasResult = false; *hasResultType = false; break;
+    case OpCommitWritePipe: *hasResult = false; *hasResultType = false; break;
+    case OpIsValidReserveId: *hasResult = true; *hasResultType = true; break;
+    case OpGetNumPipePackets: *hasResult = true; *hasResultType = true; break;
+    case OpGetMaxPipePackets: *hasResult = true; *hasResultType = true; break;
+    case OpGroupReserveReadPipePackets: *hasResult = true; *hasResultType = true; break;
+    case OpGroupReserveWritePipePackets: *hasResult = true; *hasResultType = true; break;
+    case OpGroupCommitReadPipe: *hasResult = false; *hasResultType = false; break;
+    case OpGroupCommitWritePipe: *hasResult = false; *hasResultType = false; break;
+    case OpEnqueueMarker: *hasResult = true; *hasResultType = true; break;
+    case OpEnqueueKernel: *hasResult = true; *hasResultType = true; break;
+    case OpGetKernelNDrangeSubGroupCount: *hasResult = true; *hasResultType = true; break;
+    case OpGetKernelNDrangeMaxSubGroupSize: *hasResult = true; *hasResultType = true; break;
+    case OpGetKernelWorkGroupSize: *hasResult = true; *hasResultType = true; break;
+    case OpGetKernelPreferredWorkGroupSizeMultiple: *hasResult = true; *hasResultType = true; break;
+    case OpRetainEvent: *hasResult = false; *hasResultType = false; break;
+    case OpReleaseEvent: *hasResult = false; *hasResultType = false; break;
+    case OpCreateUserEvent: *hasResult = true; *hasResultType = true; break;
+    case OpIsValidEvent: *hasResult = true; *hasResultType = true; break;
+    case OpSetUserEventStatus: *hasResult = false; *hasResultType = false; break;
+    case OpCaptureEventProfilingInfo: *hasResult = false; *hasResultType = false; break;
+    case OpGetDefaultQueue: *hasResult = true; *hasResultType = true; break;
+    case OpBuildNDRange: *hasResult = true; *hasResultType = true; break;
+    case OpImageSparseSampleImplicitLod: *hasResult = true; *hasResultType = true; break;
+    case OpImageSparseSampleExplicitLod: *hasResult = true; *hasResultType = true; break;
+    case OpImageSparseSampleDrefImplicitLod: *hasResult = true; *hasResultType = true; break;
+    case OpImageSparseSampleDrefExplicitLod: *hasResult = true; *hasResultType = true; break;
+    case OpImageSparseSampleProjImplicitLod: *hasResult = true; *hasResultType = true; break;
+    case OpImageSparseSampleProjExplicitLod: *hasResult = true; *hasResultType = true; break;
+    case OpImageSparseSampleProjDrefImplicitLod: *hasResult = true; *hasResultType = true; break;
+    case OpImageSparseSampleProjDrefExplicitLod: *hasResult = true; *hasResultType = true; break;
+    case OpImageSparseFetch: *hasResult = true; *hasResultType = true; break;
+    case OpImageSparseGather: *hasResult = true; *hasResultType = true; break;
+    case OpImageSparseDrefGather: *hasResult = true; *hasResultType = true; break;
+    case OpImageSparseTexelsResident: *hasResult = true; *hasResultType = true; break;
+    case OpNoLine: *hasResult = false; *hasResultType = false; break;
+    case OpAtomicFlagTestAndSet: *hasResult = true; *hasResultType = true; break;
+    case OpAtomicFlagClear: *hasResult = false; *hasResultType = false; break;
+    case OpImageSparseRead: *hasResult = true; *hasResultType = true; break;
+    case OpSizeOf: *hasResult = true; *hasResultType = true; break;
+    case OpTypePipeStorage: *hasResult = true; *hasResultType = false; break;
+    case OpConstantPipeStorage: *hasResult = true; *hasResultType = true; break;
+    case OpCreatePipeFromPipeStorage: *hasResult = true; *hasResultType = true; break;
+    case OpGetKernelLocalSizeForSubgroupCount: *hasResult = true; *hasResultType = true; break;
+    case OpGetKernelMaxNumSubgroups: *hasResult = true; *hasResultType = true; break;
+    case OpTypeNamedBarrier: *hasResult = true; *hasResultType = false; break;
+    case OpNamedBarrierInitialize: *hasResult = true; *hasResultType = true; break;
+    case OpMemoryNamedBarrier: *hasResult = false; *hasResultType = false; break;
+    case OpModuleProcessed: *hasResult = false; *hasResultType = false; break;
+    case OpExecutionModeId: *hasResult = false; *hasResultType = false; break;
+    case OpDecorateId: *hasResult = false; *hasResultType = false; break;
+    case OpGroupNonUniformElect: *hasResult = true; *hasResultType = true; break;
+    case OpGroupNonUniformAll: *hasResult = true; *hasResultType = true; break;
+    case OpGroupNonUniformAny: *hasResult = true; *hasResultType = true; break;
+    case OpGroupNonUniformAllEqual: *hasResult = true; *hasResultType = true; break;
+    case OpGroupNonUniformBroadcast: *hasResult = true; *hasResultType = true; break;
+    case OpGroupNonUniformBroadcastFirst: *hasResult = true; *hasResultType = true; break;
+    case OpGroupNonUniformBallot: *hasResult = true; *hasResultType = true; break;
+    case OpGroupNonUniformInverseBallot: *hasResult = true; *hasResultType = true; break;
+    case OpGroupNonUniformBallotBitExtract: *hasResult = true; *hasResultType = true; break;
+    case OpGroupNonUniformBallotBitCount: *hasResult = true; *hasResultType = true; break;
+    case OpGroupNonUniformBallotFindLSB: *hasResult = true; *hasResultType = true; break;
+    case OpGroupNonUniformBallotFindMSB: *hasResult = true; *hasResultType = true; break;
+    case OpGroupNonUniformShuffle: *hasResult = true; *hasResultType = true; break;
+    case OpGroupNonUniformShuffleXor: *hasResult = true; *hasResultType = true; break;
+    case OpGroupNonUniformShuffleUp: *hasResult = true; *hasResultType = true; break;
+    case OpGroupNonUniformShuffleDown: *hasResult = true; *hasResultType = true; break;
+    case OpGroupNonUniformIAdd: *hasResult = true; *hasResultType = true; break;
+    case OpGroupNonUniformFAdd: *hasResult = true; *hasResultType = true; break;
+    case OpGroupNonUniformIMul: *hasResult = true; *hasResultType = true; break;
+    case OpGroupNonUniformFMul: *hasResult = true; *hasResultType = true; break;
+    case OpGroupNonUniformSMin: *hasResult = true; *hasResultType = true; break;
+    case OpGroupNonUniformUMin: *hasResult = true; *hasResultType = true; break;
+    case OpGroupNonUniformFMin: *hasResult = true; *hasResultType = true; break;
+    case OpGroupNonUniformSMax: *hasResult = true; *hasResultType = true; break;
+    case OpGroupNonUniformUMax: *hasResult = true; *hasResultType = true; break;
+    case OpGroupNonUniformFMax: *hasResult = true; *hasResultType = true; break;
+    case OpGroupNonUniformBitwiseAnd: *hasResult = true; *hasResultType = true; break;
+    case OpGroupNonUniformBitwiseOr: *hasResult = true; *hasResultType = true; break;
+    case OpGroupNonUniformBitwiseXor: *hasResult = true; *hasResultType = true; break;
+    case OpGroupNonUniformLogicalAnd: *hasResult = true; *hasResultType = true; break;
+    case OpGroupNonUniformLogicalOr: *hasResult = true; *hasResultType = true; break;
+    case OpGroupNonUniformLogicalXor: *hasResult = true; *hasResultType = true; break;
+    case OpGroupNonUniformQuadBroadcast: *hasResult = true; *hasResultType = true; break;
+    case OpGroupNonUniformQuadSwap: *hasResult = true; *hasResultType = true; break;
+    case OpCopyLogical: *hasResult = true; *hasResultType = true; break;
+    case OpPtrEqual: *hasResult = true; *hasResultType = true; break;
+    case OpPtrNotEqual: *hasResult = true; *hasResultType = true; break;
+    case OpPtrDiff: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupBallotKHR: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupFirstInvocationKHR: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAllKHR: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAnyKHR: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAllEqualKHR: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupReadInvocationKHR: *hasResult = true; *hasResultType = true; break;
+    case OpGroupIAddNonUniformAMD: *hasResult = true; *hasResultType = true; break;
+    case OpGroupFAddNonUniformAMD: *hasResult = true; *hasResultType = true; break;
+    case OpGroupFMinNonUniformAMD: *hasResult = true; *hasResultType = true; break;
+    case OpGroupUMinNonUniformAMD: *hasResult = true; *hasResultType = true; break;
+    case OpGroupSMinNonUniformAMD: *hasResult = true; *hasResultType = true; break;
+    case OpGroupFMaxNonUniformAMD: *hasResult = true; *hasResultType = true; break;
+    case OpGroupUMaxNonUniformAMD: *hasResult = true; *hasResultType = true; break;
+    case OpGroupSMaxNonUniformAMD: *hasResult = true; *hasResultType = true; break;
+    case OpFragmentMaskFetchAMD: *hasResult = true; *hasResultType = true; break;
+    case OpFragmentFetchAMD: *hasResult = true; *hasResultType = true; break;
+    case OpReadClockKHR: *hasResult = true; *hasResultType = true; break;
+    case OpImageSampleFootprintNV: *hasResult = true; *hasResultType = true; break;
+    case OpGroupNonUniformPartitionNV: *hasResult = true; *hasResultType = true; break;
+    case OpWritePackedPrimitiveIndices4x8NV: *hasResult = false; *hasResultType = false; break;
+    case OpReportIntersectionNV: *hasResult = true; *hasResultType = true; break;
+    case OpIgnoreIntersectionNV: *hasResult = false; *hasResultType = false; break;
+    case OpTerminateRayNV: *hasResult = false; *hasResultType = false; break;
+    case OpTraceNV: *hasResult = false; *hasResultType = false; break;
+    case OpTypeAccelerationStructureNV: *hasResult = true; *hasResultType = false; break;
+    case OpExecuteCallableNV: *hasResult = false; *hasResultType = false; break;
+    case OpTypeCooperativeMatrixNV: *hasResult = true; *hasResultType = false; break;
+    case OpCooperativeMatrixLoadNV: *hasResult = true; *hasResultType = true; break;
+    case OpCooperativeMatrixStoreNV: *hasResult = false; *hasResultType = false; break;
+    case OpCooperativeMatrixMulAddNV: *hasResult = true; *hasResultType = true; break;
+    case OpCooperativeMatrixLengthNV: *hasResult = true; *hasResultType = true; break;
+    case OpBeginInvocationInterlockEXT: *hasResult = false; *hasResultType = false; break;
+    case OpEndInvocationInterlockEXT: *hasResult = false; *hasResultType = false; break;
+    case OpDemoteToHelperInvocationEXT: *hasResult = false; *hasResultType = false; break;
+    case OpIsHelperInvocationEXT: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupShuffleINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupShuffleDownINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupShuffleUpINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupShuffleXorINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupBlockReadINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupBlockWriteINTEL: *hasResult = false; *hasResultType = false; break;
+    case OpSubgroupImageBlockReadINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupImageBlockWriteINTEL: *hasResult = false; *hasResultType = false; break;
+    case OpSubgroupImageMediaBlockReadINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupImageMediaBlockWriteINTEL: *hasResult = false; *hasResultType = false; break;
+    case OpUCountLeadingZerosINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpUCountTrailingZerosINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpAbsISubINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpAbsUSubINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpIAddSatINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpUAddSatINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpIAverageINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpUAverageINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpIAverageRoundedINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpUAverageRoundedINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpISubSatINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpUSubSatINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpIMul32x16INTEL: *hasResult = true; *hasResultType = true; break;
+    case OpUMul32x16INTEL: *hasResult = true; *hasResultType = true; break;
+    case OpDecorateString: *hasResult = false; *hasResultType = false; break;
+    case OpMemberDecorateString: *hasResult = false; *hasResultType = false; break;
+    case OpVmeImageINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpTypeVmeImageINTEL: *hasResult = true; *hasResultType = false; break;
+    case OpTypeAvcImePayloadINTEL: *hasResult = true; *hasResultType = false; break;
+    case OpTypeAvcRefPayloadINTEL: *hasResult = true; *hasResultType = false; break;
+    case OpTypeAvcSicPayloadINTEL: *hasResult = true; *hasResultType = false; break;
+    case OpTypeAvcMcePayloadINTEL: *hasResult = true; *hasResultType = false; break;
+    case OpTypeAvcMceResultINTEL: *hasResult = true; *hasResultType = false; break;
+    case OpTypeAvcImeResultINTEL: *hasResult = true; *hasResultType = false; break;
+    case OpTypeAvcImeResultSingleReferenceStreamoutINTEL: *hasResult = true; *hasResultType = false; break;
+    case OpTypeAvcImeResultDualReferenceStreamoutINTEL: *hasResult = true; *hasResultType = false; break;
+    case OpTypeAvcImeSingleReferenceStreaminINTEL: *hasResult = true; *hasResultType = false; break;
+    case OpTypeAvcImeDualReferenceStreaminINTEL: *hasResult = true; *hasResultType = false; break;
+    case OpTypeAvcRefResultINTEL: *hasResult = true; *hasResultType = false; break;
+    case OpTypeAvcSicResultINTEL: *hasResult = true; *hasResultType = false; break;
+    case OpSubgroupAvcMceGetDefaultInterBaseMultiReferencePenaltyINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcMceSetInterBaseMultiReferencePenaltyINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcMceGetDefaultInterShapePenaltyINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcMceSetInterShapePenaltyINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcMceGetDefaultInterDirectionPenaltyINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcMceSetInterDirectionPenaltyINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcMceGetDefaultIntraLumaShapePenaltyINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcMceGetDefaultInterMotionVectorCostTableINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcMceGetDefaultHighPenaltyCostTableINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcMceGetDefaultMediumPenaltyCostTableINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcMceGetDefaultLowPenaltyCostTableINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcMceSetMotionVectorCostFunctionINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcMceGetDefaultIntraLumaModePenaltyINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcMceGetDefaultNonDcLumaIntraPenaltyINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcMceGetDefaultIntraChromaModeBasePenaltyINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcMceSetAcOnlyHaarINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcMceSetSourceInterlacedFieldPolarityINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcMceSetSingleReferenceInterlacedFieldPolarityINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcMceSetDualReferenceInterlacedFieldPolaritiesINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcMceConvertToImePayloadINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcMceConvertToImeResultINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcMceConvertToRefPayloadINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcMceConvertToRefResultINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcMceConvertToSicPayloadINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcMceConvertToSicResultINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcMceGetMotionVectorsINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcMceGetInterDistortionsINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcMceGetBestInterDistortionsINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcMceGetInterMajorShapeINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcMceGetInterMinorShapeINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcMceGetInterDirectionsINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcMceGetInterMotionVectorCountINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcMceGetInterReferenceIdsINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcMceGetInterReferenceInterlacedFieldPolaritiesINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcImeInitializeINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcImeSetSingleReferenceINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcImeSetDualReferenceINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcImeRefWindowSizeINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcImeAdjustRefOffsetINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcImeConvertToMcePayloadINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcImeSetMaxMotionVectorCountINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcImeSetUnidirectionalMixDisableINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcImeSetEarlySearchTerminationThresholdINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcImeSetWeightedSadINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcImeEvaluateWithSingleReferenceINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcImeEvaluateWithDualReferenceINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcImeEvaluateWithSingleReferenceStreaminINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcImeEvaluateWithDualReferenceStreaminINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcImeEvaluateWithSingleReferenceStreamoutINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcImeEvaluateWithDualReferenceStreamoutINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcImeEvaluateWithSingleReferenceStreaminoutINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcImeEvaluateWithDualReferenceStreaminoutINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcImeConvertToMceResultINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcImeGetSingleReferenceStreaminINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcImeGetDualReferenceStreaminINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcImeStripSingleReferenceStreamoutINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcImeStripDualReferenceStreamoutINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcImeGetStreamoutSingleReferenceMajorShapeMotionVectorsINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcImeGetStreamoutSingleReferenceMajorShapeDistortionsINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcImeGetStreamoutSingleReferenceMajorShapeReferenceIdsINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcImeGetStreamoutDualReferenceMajorShapeMotionVectorsINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcImeGetStreamoutDualReferenceMajorShapeDistortionsINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcImeGetStreamoutDualReferenceMajorShapeReferenceIdsINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcImeGetBorderReachedINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcImeGetTruncatedSearchIndicationINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcImeGetUnidirectionalEarlySearchTerminationINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcImeGetWeightingPatternMinimumMotionVectorINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcImeGetWeightingPatternMinimumDistortionINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcFmeInitializeINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcBmeInitializeINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcRefConvertToMcePayloadINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcRefSetBidirectionalMixDisableINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcRefSetBilinearFilterEnableINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcRefEvaluateWithSingleReferenceINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcRefEvaluateWithDualReferenceINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcRefEvaluateWithMultiReferenceINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcRefEvaluateWithMultiReferenceInterlacedINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcRefConvertToMceResultINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcSicInitializeINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcSicConfigureSkcINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcSicConfigureIpeLumaINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcSicConfigureIpeLumaChromaINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcSicGetMotionVectorMaskINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcSicConvertToMcePayloadINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcSicSetIntraLumaShapePenaltyINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcSicSetIntraLumaModeCostFunctionINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcSicSetIntraChromaModeCostFunctionINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcSicSetBilinearFilterEnableINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcSicSetSkcForwardTransformEnableINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcSicSetBlockBasedRawSkipSadINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcSicEvaluateIpeINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcSicEvaluateWithSingleReferenceINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcSicEvaluateWithDualReferenceINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcSicEvaluateWithMultiReferenceINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcSicEvaluateWithMultiReferenceInterlacedINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcSicConvertToMceResultINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcSicGetIpeLumaShapeINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcSicGetBestIpeLumaDistortionINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcSicGetBestIpeChromaDistortionINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcSicGetPackedIpeLumaModesINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcSicGetIpeChromaModeINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcSicGetPackedSkcLumaCountThresholdINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcSicGetPackedSkcLumaSumThresholdINTEL: *hasResult = true; *hasResultType = true; break;
+    case OpSubgroupAvcSicGetInterRawSadsINTEL: *hasResult = true; *hasResultType = true; break;
+    }
+}
+#endif /* SPV_ENABLE_UTILITY_CODE */
 
 // Overload operator| for mask bit combining
 

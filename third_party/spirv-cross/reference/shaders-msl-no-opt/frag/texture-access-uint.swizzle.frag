@@ -6,21 +6,11 @@
 using namespace metal;
 
 // Returns 2D texture coords corresponding to 1D texel buffer coords
+static inline __attribute__((always_inline))
 uint2 spvTexelBufferCoord(uint tc)
 {
     return uint2(tc % 4096, tc / 4096);
 }
-
-enum class spvSwizzle : uint
-{
-    none = 0,
-    zero,
-    one,
-    red,
-    green,
-    blue,
-    alpha
-};
 
 template<typename T> struct spvRemoveReference { typedef T type; };
 template<typename T> struct spvRemoveReference<thread T&> { typedef T type; };
@@ -33,6 +23,17 @@ template<typename T> inline constexpr thread T&& spvForward(thread typename spvR
 {
     return static_cast<thread T&&>(x);
 }
+
+enum class spvSwizzle : uint
+{
+    none = 0,
+    zero,
+    one,
+    red,
+    green,
+    blue,
+    alpha
+};
 
 template<typename T>
 inline T spvGetSwizzle(vec<T, 4> x, T c, spvSwizzle s)
@@ -72,8 +73,8 @@ inline T spvTextureSwizzle(T x, uint s)
 }
 
 // Wrapper function that swizzles texture gathers.
-template<typename T, typename Tex, typename... Ts>
-inline vec<T, 4> spvGatherSwizzle(sampler s, const thread Tex& t, Ts... params, component c, uint sw) METAL_CONST_ARG(c)
+template<typename T, template<typename, access = access::sample, typename = void> class Tex, typename... Ts>
+inline vec<T, 4> spvGatherSwizzle(const thread Tex<T>& t, sampler s, uint sw, component c, Ts... params) METAL_CONST_ARG(c)
 {
     if (sw)
     {
@@ -108,29 +109,6 @@ inline vec<T, 4> spvGatherSwizzle(sampler s, const thread Tex& t, Ts... params, 
     }
 }
 
-// Wrapper function that swizzles depth texture gathers.
-template<typename T, typename Tex, typename... Ts>
-inline vec<T, 4> spvGatherCompareSwizzle(sampler s, const thread Tex& t, Ts... params, uint sw) 
-{
-    if (sw)
-    {
-        switch (spvSwizzle(sw & 0xFF))
-        {
-            case spvSwizzle::none:
-            case spvSwizzle::red:
-                break;
-            case spvSwizzle::zero:
-            case spvSwizzle::green:
-            case spvSwizzle::blue:
-            case spvSwizzle::alpha:
-                return vec<T, 4>(0, 0, 0, 0);
-            case spvSwizzle::one:
-                return vec<T, 4>(1, 1, 1, 1);
-        }
-    }
-    return t.gather_compare(s, spvForward<Ts>(params)...);
-}
-
 fragment void main0(constant uint* spvSwizzleConstants [[buffer(30)]], texture1d<uint> tex1d [[texture(0)]], texture2d<uint> tex2d [[texture(1)]], texture3d<uint> tex3d [[texture(2)]], texturecube<uint> texCube [[texture(3)]], texture2d_array<uint> tex2dArray [[texture(4)]], texturecube_array<uint> texCubeArray [[texture(5)]], texture2d<uint> texBuffer [[texture(6)]], sampler tex1dSmplr [[sampler(0)]], sampler tex2dSmplr [[sampler(1)]], sampler tex3dSmplr [[sampler(2)]], sampler texCubeSmplr [[sampler(3)]], sampler tex2dArraySmplr [[sampler(4)]], sampler texCubeArraySmplr [[sampler(5)]])
 {
     constant uint& tex1dSwzl = spvSwizzleConstants[0];
@@ -162,9 +140,9 @@ fragment void main0(constant uint* spvSwizzleConstants [[buffer(30)]], texture1d
     c = float4(spvTextureSwizzle(tex3d.read(uint3(int3(0)), 0), tex3dSwzl));
     c = float4(spvTextureSwizzle(tex2dArray.read(uint2(int3(0).xy), uint(int3(0).z), 0), tex2dArraySwzl));
     c = float4(texBuffer.read(spvTexelBufferCoord(0)));
-    c = float4(spvGatherSwizzle<uint, metal::texture2d<uint>, float2, int2>(tex2dSmplr, tex2d, float2(0.0), int2(0), component::x, tex2dSwzl));
-    c = float4(spvGatherSwizzle<uint, metal::texturecube<uint>, float3>(texCubeSmplr, texCube, float3(0.0), component::y, texCubeSwzl));
-    c = float4(spvGatherSwizzle<uint, metal::texture2d_array<uint>, float2, uint, int2>(tex2dArraySmplr, tex2dArray, float3(0.0).xy, uint(round(float3(0.0).z)), int2(0), component::z, tex2dArraySwzl));
-    c = float4(spvGatherSwizzle<uint, metal::texturecube_array<uint>, float3, uint>(texCubeArraySmplr, texCubeArray, float4(0.0).xyz, uint(round(float4(0.0).w)), component::w, texCubeArraySwzl));
+    c = float4(spvGatherSwizzle(tex2d, tex2dSmplr, tex2dSwzl, component::x, float2(0.0), int2(0)));
+    c = float4(spvGatherSwizzle(texCube, texCubeSmplr, texCubeSwzl, component::y, float3(0.0)));
+    c = float4(spvGatherSwizzle(tex2dArray, tex2dArraySmplr, tex2dArraySwzl, component::z, float3(0.0).xy, uint(round(float3(0.0).z)), int2(0)));
+    c = float4(spvGatherSwizzle(texCubeArray, texCubeArraySmplr, texCubeArraySwzl, component::w, float4(0.0).xyz, uint(round(float4(0.0).w))));
 }
 

@@ -14,6 +14,8 @@
 
 #include "source/val/validate.h"
 
+#include "source/opcode.h"
+#include "source/spirv_target_env.h"
 #include "source/val/instruction.h"
 #include "source/val/validation_state.h"
 

@@ -4,7 +4,7 @@ layout(vertices = 1) out;
 in gl_PerVertex
 {
     vec4 gl_Position;
-} gl_in[gl_MaxPatchVertices];
+} gl_in[];
 
 out gl_PerVertex
 {

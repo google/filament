@@ -32,8 +32,8 @@ TEST_P(GetTargetOpcodeTableGetTest, InvalidPointerTable) {
   ASSERT_EQ(SPV_ERROR_INVALID_POINTER, spvOpcodeTableGet(nullptr, GetParam()));
 }
 
-INSTANTIATE_TEST_CASE_P(OpcodeTableGet, GetTargetOpcodeTableGetTest,
-                        ValuesIn(spvtest::AllTargetEnvironments()));
+INSTANTIATE_TEST_SUITE_P(OpcodeTableGet, GetTargetOpcodeTableGetTest,
+                         ValuesIn(spvtest::AllTargetEnvironments()));
 
 }  // namespace
 }  // namespace spvtools

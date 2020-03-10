@@ -34,7 +34,7 @@ TEST_P(GeneratorMagicNumberTest, Single) {
               GetParam().name());
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     Registered, GeneratorMagicNumberTest,
     ::testing::ValuesIn(std::vector<EnumCase<spv_generator_t>>{
         {SPV_GENERATOR_KHRONOS, "Khronos"},
@@ -47,16 +47,16 @@ INSTANTIATE_TEST_CASE_P(
          "Khronos LLVM/SPIR-V Translator"},
         {SPV_GENERATOR_KHRONOS_ASSEMBLER, "Khronos SPIR-V Tools Assembler"},
         {SPV_GENERATOR_KHRONOS_GLSLANG, "Khronos Glslang Reference Front End"},
-    }), );
+    }));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     Unregistered, GeneratorMagicNumberTest,
     ::testing::ValuesIn(std::vector<EnumCase<spv_generator_t>>{
         // We read registered entries from the SPIR-V XML Registry file
         // which can change over time.
         {spv_generator_t(1000), "Unknown"},
         {spv_generator_t(9999), "Unknown"},
-    }), );
+    }));
 
 }  // namespace
 }  // namespace spvtools

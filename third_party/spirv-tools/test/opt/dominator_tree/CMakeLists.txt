@@ -27,4 +27,5 @@ add_spvtools_unittest(TARGET dominator_analysis
        unreachable_for.cpp
        unreachable_for_post.cpp
   LIBS SPIRV-Tools-opt
+  PCH_FILE pch_test_opt_dom
 )

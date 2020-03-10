@@ -14,15 +14,16 @@
 
 // Source code for logical layout validation as described in section 2.4
 
-#include "source/val/validate.h"
-
 #include <cassert>
 
+#include "DebugInfo.h"
+#include "OpenCLDebugInfo100.h"
 #include "source/diagnostic.h"
 #include "source/opcode.h"
 #include "source/operand.h"
 #include "source/val/function.h"
 #include "source/val/instruction.h"
+#include "source/val/validate.h"
 #include "source/val/validation_state.h"
 
 namespace spvtools {
@@ -34,6 +35,77 @@ namespace {
 // checked.
 spv_result_t ModuleScopedInstructions(ValidationState_t& _,
                                       const Instruction* inst, SpvOp opcode) {
+  switch (opcode) {
+    case SpvOpExtInst:
+      if (spvExtInstIsNonSemantic(inst->ext_inst_type())) {
+        // non-semantic extinst opcodes are allowed beginning in the types
+        // section, but since they must name a return type they cannot be the
+        // first instruction in the types section. Therefore check that we are
+        // already in it.
+        if (_.current_layout_section() < kLayoutTypes) {
+          return _.diag(SPV_ERROR_INVALID_LAYOUT, inst)
+                 << "Non-semantic OpExtInst must not appear before types "
+                 << "section";
+        }
+      } else if (spvExtInstIsDebugInfo(inst->ext_inst_type())) {
+        const uint32_t ext_inst_index = inst->word(4);
+        bool local_debug_info = false;
+        if (inst->ext_inst_type() == SPV_EXT_INST_TYPE_OPENCL_DEBUGINFO_100) {
+          const OpenCLDebugInfo100Instructions ext_inst_key =
+              OpenCLDebugInfo100Instructions(ext_inst_index);
+          if (ext_inst_key == OpenCLDebugInfo100DebugScope ||
+              ext_inst_key == OpenCLDebugInfo100DebugNoScope ||
+              ext_inst_key == OpenCLDebugInfo100DebugDeclare ||
+              ext_inst_key == OpenCLDebugInfo100DebugValue) {
+            local_debug_info = true;
+          }
+        } else {
+          const DebugInfoInstructions ext_inst_key =
+              DebugInfoInstructions(ext_inst_index);
+          if (ext_inst_key == DebugInfoDebugScope ||
+              ext_inst_key == DebugInfoDebugNoScope ||
+              ext_inst_key == DebugInfoDebugDeclare ||
+              ext_inst_key == DebugInfoDebugValue) {
+            local_debug_info = true;
+          }
+        }
+
+        if (local_debug_info) {
+          if (_.in_function_body() == false) {
+            // DebugScope, DebugNoScope, DebugDeclare, DebugValue must
+            // appear in a function body.
+            return _.diag(SPV_ERROR_INVALID_LAYOUT, inst)
+                   << "DebugScope, DebugNoScope, DebugDeclare, DebugValue "
+                   << "of debug info extension must appear in a function "
+                   << "body";
+          }
+        } else {
+          // Debug info extinst opcodes other than DebugScope, DebugNoScope,
+          // DebugDeclare, DebugValue must be placed between section 9 (types,
+          // constants, global variables) and section 10 (function
+          // declarations).
+          if (_.current_layout_section() < kLayoutTypes ||
+              _.current_layout_section() >= kLayoutFunctionDeclarations) {
+            return _.diag(SPV_ERROR_INVALID_LAYOUT, inst)
+                   << "Debug info extension instructions other than "
+                   << "DebugScope, DebugNoScope, DebugDeclare, DebugValue "
+                   << "must appear between section 9 (types, constants, "
+                   << "global variables) and section 10 (function "
+                   << "declarations)";
+          }
+        }
+      } else {
+        // otherwise they must be used in a block
+        if (_.current_layout_section() < kLayoutFunctionDefinitions) {
+          return _.diag(SPV_ERROR_INVALID_LAYOUT, inst)
+                 << spvOpcodeString(opcode) << " must appear in a block";
+        }
+      }
+      break;
+    default:
+      break;
+  }
+
   while (_.IsOpcodeInCurrentLayoutSection(opcode) == false) {
     _.ProgressToNextLayoutSectionOrder();
 
@@ -141,6 +213,76 @@ spv_result_t FunctionScopedInstructions(ValidationState_t& _,
           if (auto error = _.current_function().RegisterSetFunctionDeclType(
                   FunctionDecl::kFunctionDeclDefinition))
             return error;
+        }
+        break;
+
+      case SpvOpExtInst:
+        if (spvExtInstIsNonSemantic(inst->ext_inst_type())) {
+          // non-semantic extinst opcodes are allowed beginning in the types
+          // section, but must either be placed outside a function declaration,
+          // or inside a block.
+          if (_.current_layout_section() < kLayoutTypes) {
+            return _.diag(SPV_ERROR_INVALID_LAYOUT, inst)
+                   << "Non-semantic OpExtInst must not appear before types "
+                   << "section";
+          } else if (_.in_function_body() && _.in_block() == false) {
+            return _.diag(SPV_ERROR_INVALID_LAYOUT, inst)
+                   << "Non-semantic OpExtInst within function definition must "
+                      "appear in a block";
+          }
+        } else if (spvExtInstIsDebugInfo(inst->ext_inst_type())) {
+          const uint32_t ext_inst_index = inst->word(4);
+          bool local_debug_info = false;
+          if (inst->ext_inst_type() == SPV_EXT_INST_TYPE_OPENCL_DEBUGINFO_100) {
+            const OpenCLDebugInfo100Instructions ext_inst_key =
+                OpenCLDebugInfo100Instructions(ext_inst_index);
+            if (ext_inst_key == OpenCLDebugInfo100DebugScope ||
+                ext_inst_key == OpenCLDebugInfo100DebugNoScope ||
+                ext_inst_key == OpenCLDebugInfo100DebugDeclare ||
+                ext_inst_key == OpenCLDebugInfo100DebugValue) {
+              local_debug_info = true;
+            }
+          } else {
+            const DebugInfoInstructions ext_inst_key =
+                DebugInfoInstructions(ext_inst_index);
+            if (ext_inst_key == DebugInfoDebugScope ||
+                ext_inst_key == DebugInfoDebugNoScope ||
+                ext_inst_key == DebugInfoDebugDeclare ||
+                ext_inst_key == DebugInfoDebugValue) {
+              local_debug_info = true;
+            }
+          }
+
+          if (local_debug_info) {
+            if (_.in_function_body() == false) {
+              // DebugScope, DebugNoScope, DebugDeclare, DebugValue must
+              // appear in a function body.
+              return _.diag(SPV_ERROR_INVALID_LAYOUT, inst)
+                     << "DebugScope, DebugNoScope, DebugDeclare, DebugValue "
+                     << "of debug info extension must appear in a function "
+                     << "body";
+            }
+          } else {
+            // Debug info extinst opcodes other than DebugScope, DebugNoScope,
+            // DebugDeclare, DebugValue must be placed between section 9 (types,
+            // constants, global variables) and section 10 (function
+            // declarations).
+            if (_.current_layout_section() < kLayoutTypes ||
+                _.current_layout_section() >= kLayoutFunctionDeclarations) {
+              return _.diag(SPV_ERROR_INVALID_LAYOUT, inst)
+                     << "Debug info extension instructions other than "
+                     << "DebugScope, DebugNoScope, DebugDeclare, DebugValue "
+                     << "must appear between section 9 (types, constants, "
+                     << "global variables) and section 10 (function "
+                     << "declarations)";
+            }
+          }
+        } else {
+          // otherwise they must be used in a block
+          if (_.in_block() == false) {
+            return _.diag(SPV_ERROR_INVALID_LAYOUT, inst)
+                   << spvOpcodeString(opcode) << " must appear in a block";
+          }
         }
         break;
 

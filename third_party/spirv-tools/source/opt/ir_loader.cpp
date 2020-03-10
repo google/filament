@@ -16,6 +16,9 @@
 
 #include <utility>
 
+#include "DebugInfo.h"
+#include "OpenCLDebugInfo100.h"
+#include "source/ext_inst.h"
 #include "source/opt/log.h"
 #include "source/opt/reflect.h"
 #include "source/util/make_unique.h"
@@ -113,11 +116,19 @@ bool IrLoader::AddInstruction(const spv_parsed_instruction_t* inst) {
       } else if (IsTypeInst(opcode)) {
         module_->AddType(std::move(spv_inst));
       } else if (IsConstantInst(opcode) || opcode == SpvOpVariable ||
-                 opcode == SpvOpUndef) {
+                 opcode == SpvOpUndef ||
+                 (opcode == SpvOpExtInst &&
+                  spvExtInstIsNonSemantic(inst->ext_inst_type))) {
         module_->AddGlobalValue(std::move(spv_inst));
+      } else if (opcode == SpvOpExtInst &&
+                 spvExtInstIsDebugInfo(inst->ext_inst_type)) {
+        module_->AddExtInstDebugInfo(std::move(spv_inst));
       } else {
-        SPIRV_UNIMPLEMENTED(consumer_,
-                            "unhandled inst type outside function definition");
+        Errorf(consumer_, src, loc,
+               "Unhandled inst type (opcode: %d) found outside function "
+               "definition.",
+               opcode);
+        return false;
       }
     } else {
       if (block_ == nullptr) {  // Inside function but outside blocks
@@ -130,6 +141,39 @@ bool IrLoader::AddInstruction(const spv_parsed_instruction_t* inst) {
         }
         function_->AddParameter(std::move(spv_inst));
       } else {
+        if (opcode == SpvOpExtInst &&
+            spvExtInstIsDebugInfo(inst->ext_inst_type)) {
+          const uint32_t ext_inst_index = inst->words[4];
+          if (inst->ext_inst_type == SPV_EXT_INST_TYPE_OPENCL_DEBUGINFO_100) {
+            const OpenCLDebugInfo100Instructions ext_inst_key =
+                OpenCLDebugInfo100Instructions(ext_inst_index);
+            if (ext_inst_key != OpenCLDebugInfo100DebugScope &&
+                ext_inst_key != OpenCLDebugInfo100DebugNoScope &&
+                ext_inst_key != OpenCLDebugInfo100DebugDeclare &&
+                ext_inst_key != OpenCLDebugInfo100DebugValue) {
+              Errorf(consumer_, src, loc,
+                     "Debug info extension instruction other than DebugScope, "
+                     "DebugNoScope, DebugDeclare, and DebugValue found inside "
+                     "function",
+                     opcode);
+              return false;
+            }
+          } else {
+            const DebugInfoInstructions ext_inst_key =
+                DebugInfoInstructions(ext_inst_index);
+            if (ext_inst_key != DebugInfoDebugScope &&
+                ext_inst_key != DebugInfoDebugNoScope &&
+                ext_inst_key != DebugInfoDebugDeclare &&
+                ext_inst_key != DebugInfoDebugValue) {
+              Errorf(consumer_, src, loc,
+                     "Debug info extension instruction other than DebugScope, "
+                     "DebugNoScope, DebugDeclare, and DebugValue found inside "
+                     "function",
+                     opcode);
+              return false;
+            }
+          }
+        }
         block_->AddInstruction(std::move(spv_inst));
       }
     }
@@ -157,6 +201,9 @@ void IrLoader::EndModule() {
   for (auto& function : *module_) {
     for (auto& bb : function) bb.SetParent(&function);
   }
+
+  // Copy any trailing Op*Line instruction into the module
+  module_->SetTrailingDbgLineInfo(std::move(dbg_line_info_));
 }
 
 }  // namespace opt

@@ -31,12 +31,19 @@ void FeatureManager::Analyze(Module* module) {
 
 void FeatureManager::AddExtensions(Module* module) {
   for (auto ext : module->extensions()) {
-    const std::string name =
-        reinterpret_cast<const char*>(ext.GetInOperand(0u).words.data());
-    Extension extension;
-    if (GetExtensionFromString(name.c_str(), &extension)) {
-      extensions_.Add(extension);
-    }
+    AddExtension(&ext);
+  }
+}
+
+void FeatureManager::AddExtension(Instruction* ext) {
+  assert(ext->opcode() == SpvOpExtension &&
+         "Expecting an extension instruction.");
+
+  const std::string name =
+      reinterpret_cast<const char*>(ext->GetInOperand(0u).words.data());
+  Extension extension;
+  if (GetExtensionFromString(name.c_str(), &extension)) {
+    extensions_.Add(extension);
   }
 }
 
@@ -63,5 +70,27 @@ void FeatureManager::AddExtInstImportIds(Module* module) {
   extinst_importid_GLSLstd450_ = module->GetExtInstImportId("GLSL.std.450");
 }
 
+bool operator==(const FeatureManager& a, const FeatureManager& b) {
+  // We check that the addresses of the grammars are the same because they
+  // are large objects, and this is faster.  It can be changed if needed as a
+  // later time.
+  if (&a.grammar_ != &b.grammar_) {
+    return false;
+  }
+
+  if (a.capabilities_ != b.capabilities_) {
+    return false;
+  }
+
+  if (a.extensions_ != b.extensions_) {
+    return false;
+  }
+
+  if (a.extinst_importid_GLSLstd450_ != b.extinst_importid_GLSLstd450_) {
+    return false;
+  }
+
+  return true;
+}
 }  // namespace opt
 }  // namespace spvtools

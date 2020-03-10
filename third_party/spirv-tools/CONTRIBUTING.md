@@ -4,7 +4,7 @@
 
 We organize known future work in GitHub projects. See [Tracking SPIRV-Tools work
 with GitHub
-projects](https://github.com/KhronosGroup/SPIRV-Tools/blob/master/projects.md)
+projects](https://github.com/KhronosGroup/SPIRV-Tools/blob/master/docs/projects.md)
 for more.
 
 To report a new bug or request a new feature, please file a GitHub issue. Please

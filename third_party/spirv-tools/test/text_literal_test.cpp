@@ -106,7 +106,7 @@ TEST_P(GoodStringTest, GoodStrings) {
   EXPECT_EQ(std::get<1>(GetParam()), l.str);
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TextLiteral, GoodStringTest,
     ::testing::ValuesIn(std::vector<std::pair<const char*, const char*>>{
         {R"("-")", "-"},
@@ -121,7 +121,7 @@ INSTANTIATE_TEST_CASE_P(
         {"\"\xE4\xBA\xB2\"", "\xE4\xBA\xB2"},
         {"\"\\\xE4\xBA\xB2\"", "\xE4\xBA\xB2"},
         {"\"this \\\" and this \\\\ and \\\xE4\xBA\xB2\"",
-         "this \" and this \\ and \xE4\xBA\xB2"}}), );
+         "this \" and this \\ and \xE4\xBA\xB2"}}));
 
 TEST(TextLiteral, StringTooLong) {
   spv_literal_t l;
@@ -230,7 +230,7 @@ TextLiteralCase Make_Bad_Unsigned(uint32_t bitwidth, const char* text) {
 }
 
 // clang-format off
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     DecimalIntegers, IntegerTest,
     ::testing::ValuesIn(std::vector<TextLiteralCase>{
         // Check max value and overflow value for 1-bit numbers.
@@ -277,7 +277,7 @@ INSTANTIATE_TEST_CASE_P(
         Make_Ok__Unsigned(64, "18446744073709551615", {0xffffffff, 0xffffffff}),
         Make_Ok__Signed(64, "-9223372036854775808", {0x00000000, 0x80000000}),
 
-    }),);
+    }));
 // clang-format on
 
 using IntegerLeadingMinusTest =
@@ -290,7 +290,7 @@ TEST_P(IntegerLeadingMinusTest, CantHaveLeadingMinusOnUnsigned) {
 }
 
 // clang-format off
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     DecimalAndHexIntegers, IntegerLeadingMinusTest,
     ::testing::ValuesIn(std::vector<TextLiteralCase>{
         // Unsigned numbers never allow a leading minus sign.
@@ -303,10 +303,10 @@ INSTANTIATE_TEST_CASE_P(
         Make_Bad_Unsigned(64, "-0"),
         Make_Bad_Unsigned(64, "-0x0"),
         Make_Bad_Unsigned(64, "-0x1"),
-    }),);
+    }));
 
 // clang-format off
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     HexIntegers, IntegerTest,
     ::testing::ValuesIn(std::vector<TextLiteralCase>{
         // Check 0x and 0X prefices.
@@ -370,7 +370,7 @@ INSTANTIATE_TEST_CASE_P(
         Make_Ok__Signed(64, "0x8000000000000000", {0x00000000, 0x80000000}),
         Make_Ok__Unsigned(64, "0x7fffffffffffffff", {0xffffffff, 0x7fffffff}),
         Make_Ok__Unsigned(64, "0x8000000000000000", {0x00000000, 0x80000000}),
-    }),);
+    }));
 // clang-format on
 
 TEST(OverflowIntegerParse, Decimal) {

@@ -104,26 +104,47 @@ class Function {
     });
   }
 
-  // Runs the given function |f| on each instruction in this function, and
-  // optionally on debug line instructions that might precede them.
+  // Runs the given function |f| on instructions in this function, in order,
+  // and optionally on debug line instructions that might precede them.
   void ForEachInst(const std::function<void(Instruction*)>& f,
                    bool run_on_debug_line_insts = false);
   void ForEachInst(const std::function<void(const Instruction*)>& f,
                    bool run_on_debug_line_insts = false) const;
+  // Runs the given function |f| on instructions in this function, in order,
+  // and optionally on debug line instructions that might precede them.
+  // If |f| returns false, iteration is terminated and this function returns
+  // false.
+  bool WhileEachInst(const std::function<bool(Instruction*)>& f,
+                     bool run_on_debug_line_insts = false);
+  bool WhileEachInst(const std::function<bool(const Instruction*)>& f,
+                     bool run_on_debug_line_insts = false) const;
 
   // Runs the given function |f| on each parameter instruction in this function,
-  // and optionally on debug line instructions that might precede them.
+  // in order, and optionally on debug line instructions that might precede
+  // them.
   void ForEachParam(const std::function<void(const Instruction*)>& f,
                     bool run_on_debug_line_insts = false) const;
+  void ForEachParam(const std::function<void(Instruction*)>& f,
+                    bool run_on_debug_line_insts = false);
 
   BasicBlock* InsertBasicBlockAfter(std::unique_ptr<BasicBlock>&& new_block,
                                     BasicBlock* position);
+
+  BasicBlock* InsertBasicBlockBefore(std::unique_ptr<BasicBlock>&& new_block,
+                                     BasicBlock* position);
+
+  // Return true if the function calls itself either directly or indirectly.
+  bool IsRecursive() const;
 
   // Pretty-prints all the basic blocks in this function into a std::string.
   //
   // |options| are the disassembly options. SPV_BINARY_TO_TEXT_OPTION_NO_HEADER
   // is always added to |options|.
   std::string PrettyPrint(uint32_t options = 0u) const;
+
+  // Dump this function on stderr.  Useful when running interactive
+  // debuggers.
+  void Dump() const;
 
  private:
   // The OpFunction instruction that begins the definition of this function.

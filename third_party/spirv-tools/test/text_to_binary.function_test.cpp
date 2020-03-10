@@ -45,14 +45,14 @@ TEST_P(OpFunctionControlTest, AnySingleFunctionControlMask) {
 
 // clang-format off
 #define CASE(VALUE,NAME) { SpvFunctionControl##VALUE, NAME }
-INSTANTIATE_TEST_CASE_P(TextToBinaryFunctionTest, OpFunctionControlTest,
+INSTANTIATE_TEST_SUITE_P(TextToBinaryFunctionTest, OpFunctionControlTest,
                         ::testing::ValuesIn(std::vector<EnumCase<SpvFunctionControlMask>>{
                             CASE(MaskNone, "None"),
                             CASE(InlineMask, "Inline"),
                             CASE(DontInlineMask, "DontInline"),
                             CASE(PureMask, "Pure"),
                             CASE(ConstMask, "Const"),
-                        }),);
+                        }));
 #undef CASE
 // clang-format on
 

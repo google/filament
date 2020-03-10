@@ -37,6 +37,10 @@ std::string GenerateShaderCode(
   ss << capabilities_and_extensions << "\n";
   ss << "OpMemoryModel Logical GLSL450\n";
   ss << "OpEntryPoint " << execution_model << " %main \"main\"\n";
+  if (execution_model == "Geometry") {
+    ss << "OpExecutionMode %main InputPoints\n";
+    ss << "OpExecutionMode %main OutputPoints\n";
+  }
 
   ss << R"(
 %void = OpTypeVoid

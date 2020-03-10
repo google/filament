@@ -4,6 +4,8 @@ struct ResType
     int _m1;
 };
 
+static const uint3 gl_WorkGroupSize = uint3(1u, 1u, 1u);
+
 RWByteAddressBuffer _19 : register(u0);
 
 uint SPIRV_Cross_packHalf2x16(float2 value)

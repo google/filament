@@ -52,7 +52,7 @@
         <id value="0"   vendor="Khronos"    comment="Reserved by Khronos"/>
         <id value="1"   vendor="LunarG"     comment="Contact TBD"/>
         <id value="2"   vendor="Valve"      comment="Contact TBD"/>
-        <id value="3"   vendor="Codeplay"   comment="Contact Neil Henning, neil@codeplay.com"/>
+        <id value="3"   vendor="Codeplay"   comment="Contact Victor Lomuller, victor@codeplay.com"/>
         <id value="4"   vendor="NVIDIA"     comment="Contact Kerch Holt, kholt@nvidia.com"/>
         <id value="5"   vendor="ARM"        comment="Contact Alexander Galazin, alexander.galazin@arm.com"/>
         <id value="6"   vendor="Khronos" tool="LLVM/SPIR-V Translator" comment="Contact Yaxun (Sam) Liu, yaxun.liu@amd.com"/>
@@ -69,7 +69,10 @@
         <id value="17"  vendor="Khronos" tool="SPIR-V Tools Linker" comment="Contact David Neto, dneto@google.com"/>
         <id value="18"  vendor="Wine" tool="VKD3D Shader Compiler" comment="Contact wine-devel@winehq.org"/>
         <id value="19"  vendor="Clay" tool="Clay Shader Compiler" comment="Contact info@clayengine.com"/>
-        <unused start="20" end="0xFFFF" comment="Tool ID range reservable for future use by vendors"/>
+        <id value="20"  vendor="W3C WebGPU Group" tool="WHLSL Shader Translator" comment="https://github.com/gpuweb/WHLSL"/>
+        <id value="21"  vendor="Google" tool="Clspv" comment="Contact David Neto, dneto@google.com"/>
+        <id value="22"  vendor="Google" tool="MLIR SPIR-V Serializer" comment="Contact Lei Zhang, antiagainst@google.com"/>
+        <unused start="23" end="0xFFFF" comment="Tool ID range reservable for future use by vendors"/>
     </ids>
 
     <!-- SECTION: SPIR-V Opcodes and Enumerants -->
@@ -98,7 +101,7 @@
     <ids type="opcode" start="0" end="4095" vendor="Khronos" comment="Reserved opcodes, not available to vendors - see the SPIR-V Specification"/>
     <ids type="opcode" start="4096" end="4159" vendor="Mesa" comment="Contact TBD"/>
     <ids type="opcode" start="4160" end="4415" vendor="ARM"/>
-    <ids type="opcode" start="4416" end="4479" vendor="Khronos" comment="SPV_ARB_shader_ballot - contact Neil Henning, neil@codeplay.com"/>
+    <ids type="opcode" start="4416" end="4479" vendor="Khronos" comment="SPV_ARB_shader_ballot - contact Neil Henning, neil.henning@amd.com"/>
     <ids type="opcode" start="4480" end="4991" vendor="Qualcomm" comment="Contact weifengz@qti.qualcomm.com"/>
     <ids type="opcode" start="4992" end="5247" vendor="AMD"/>
     <ids type="opcode" start="5248" end="5503" vendor="NVIDIA"/>
@@ -106,6 +109,9 @@
     <ids type="opcode" start="5568" end="5631" vendor="Intel" comment="Contact ben.ashbaugh@intel.com"/>
     <ids type="opcode" start="5632" end="5695" vendor="Google" comment="Contact dneto@google.com"/>
     <ids type="opcode" start="5696" end="5823" vendor="Intel" comment="Contact ben.ashbaugh@intel.com"/>
+    <ids type="opcode" start="5824" end="5951" vendor="Intel" comment="Contact michael.kinsner@intel.com"/>
+    <ids type="opcode" start="5952" end="6015" vendor="Codeplay" comment="Contact victor@codeplay.com"/>
+    <ids type="opcode" start="6016" end="6079" vendor="Khronos" comment="Contact @tobski"/>
     <!-- Opcodes & enumerants reservable for future use. To get a block, allocate
          multiples of 64 starting at the lowest available point in this
          block and add a corresponding <ids> tag immediately above. Make
@@ -114,6 +120,27 @@
 
     <!-- Example new block: <ids type="opcode" start="XXXX" end="XXXX+64n-1" vendor="Add vendor" comment="Contact TBD"/> -->
 
-    <ids type="opcode" start="5824" end="4294967295" comment="Opcode range reservable for future use by vendors"/>
+    <ids type="opcode" start="6080" end="4294967295" comment="Opcode range reservable for future use by vendors"/>
+
+
+    <!-- SECTION: SPIR-V Loop Control Bit Reservations -->
+    <!-- Reserve ranges of bits in the loop control bitfield.
+
+         Each vendor determines the use of values in their own ranges.
+         Vendors are not required to disclose those uses.  If the use of a
+         value is included in an extension that is adopted by a Khronos
+         extension or specification, then that value's use may be permanently
+         fixed as if originally reserved in a Khronos range.
+
+         The SPIR Working Group strongly recommends:
+         - Each value is used for only one purpose.
+         - All values in a range should be used before allocating a new range.
+         -->
+
+    <!-- Reserved loop control bits -->
+    <ids type="LoopControl" start="0" end="15" vendor="Khronos" comment="Reserved LoopControl bits, not available to vendors - see the SPIR-V Specification"/>
+    <ids type="LoopControl" start="16" end="22" vendor="Intel" comment="Contact michael.kinsner@intel.com"/>
+    <ids type="LoopControl" start="23" end="30" comment="Unreserved bits reservable for use by vendors"/>
+    <ids type="LoopControl" start="31" end="31" vendor="Khronos" comment="Reserved LoopControl bit, not available to vendors"/>
 
 </registry>

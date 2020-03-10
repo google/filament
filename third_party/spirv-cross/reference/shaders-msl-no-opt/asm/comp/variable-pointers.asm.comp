@@ -22,16 +22,19 @@ struct baz
     int e[128];
 };
 
+static inline __attribute__((always_inline))
 device int* select_buffer(device foo& buf, device baz& buf2, constant bar& cb)
 {
     return (cb.d != 0) ? &buf.a[0u] : &buf2.e[0u];
 }
 
+static inline __attribute__((always_inline))
 device int* select_buffer_null(device foo& buf, constant bar& cb)
 {
     return (cb.d != 0) ? &buf.a[0u] : nullptr;
 }
 
+static inline __attribute__((always_inline))
 threadgroup int* select_tgsm(constant bar& cb, threadgroup int (&tgsm)[128])
 {
     return (cb.d != 0) ? &tgsm[0u] : nullptr;

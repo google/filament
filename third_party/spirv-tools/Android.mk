@@ -1,6 +1,9 @@
 LOCAL_PATH := $(call my-dir)
 SPVTOOLS_OUT_PATH=$(if $(call host-path-is-absolute,$(TARGET_OUT)),$(TARGET_OUT),$(abspath $(TARGET_OUT)))
-SPVHEADERS_LOCAL_PATH := $(LOCAL_PATH)/external/spirv-headers
+
+ifeq ($(SPVHEADERS_LOCAL_PATH),)
+	SPVHEADERS_LOCAL_PATH := $(LOCAL_PATH)/external/spirv-headers
+endif
 
 SPVTOOLS_SRC_FILES := \
 		source/assembly_grammar.cpp \
@@ -10,7 +13,6 @@ SPVTOOLS_SRC_FILES := \
 		source/ext_inst.cpp \
 		source/enum_string_mapping.cpp \
 		source/extensions.cpp \
-		source/id_descriptor.cpp \
 		source/libspirv.cpp \
 		source/name_mapper.cpp \
 		source/opcode.cpp \
@@ -19,6 +21,7 @@ SPVTOOLS_SRC_FILES := \
 		source/print.cpp \
 		source/software_version.cpp \
 		source/spirv_endian.cpp \
+		source/spirv_optimizer_options.cpp \
 		source/spirv_target_env.cpp \
 		source/spirv_validator_options.cpp \
 		source/table.cpp \
@@ -46,11 +49,10 @@ SPVTOOLS_SRC_FILES := \
 		source/val/validate_composites.cpp \
 		source/val/validate_constants.cpp \
 		source/val/validate_conversion.cpp \
-		source/val/validate_datarules.cpp \
 		source/val/validate_debug.cpp \
 		source/val/validate_decorations.cpp \
 		source/val/validate_derivatives.cpp \
-		source/val/validate_ext_inst.cpp \
+		source/val/validate_extensions.cpp \
 		source/val/validate_execution_limitations.cpp \
 		source/val/validate_function.cpp \
 		source/val/validate_id.cpp \
@@ -58,59 +60,76 @@ SPVTOOLS_SRC_FILES := \
 		source/val/validate_interfaces.cpp \
 		source/val/validate_instruction.cpp \
 		source/val/validate_memory.cpp \
+		source/val/validate_memory_semantics.cpp \
+		source/val/validate_misc.cpp \
 		source/val/validate_mode_setting.cpp \
 		source/val/validate_layout.cpp \
 		source/val/validate_literals.cpp \
 		source/val/validate_logicals.cpp \
 		source/val/validate_non_uniform.cpp \
 		source/val/validate_primitives.cpp \
+		source/val/validate_scopes.cpp \
+		source/val/validate_small_type_uses.cpp \
 		source/val/validate_type.cpp
 
 SPVTOOLS_OPT_SRC_FILES := \
 		source/opt/aggressive_dead_code_elim_pass.cpp \
+		source/opt/amd_ext_to_khr.cpp \
 		source/opt/basic_block.cpp \
 		source/opt/block_merge_pass.cpp \
+		source/opt/block_merge_util.cpp \
 		source/opt/build_module.cpp \
 		source/opt/cfg.cpp \
 		source/opt/cfg_cleanup_pass.cpp \
 		source/opt/ccp_pass.cpp \
+		source/opt/code_sink.cpp \
 		source/opt/combine_access_chains.cpp \
-		source/opt/common_uniform_elim_pass.cpp \
 		source/opt/compact_ids_pass.cpp \
 		source/opt/composite.cpp \
 		source/opt/const_folding_rules.cpp \
 		source/opt/constants.cpp \
+		source/opt/convert_to_half_pass.cpp \
 		source/opt/copy_prop_arrays.cpp \
 		source/opt/dead_branch_elim_pass.cpp \
 		source/opt/dead_insert_elim_pass.cpp \
 		source/opt/dead_variable_elimination.cpp \
+		source/opt/decompose_initialized_variables_pass.cpp \
 		source/opt/decoration_manager.cpp \
 		source/opt/def_use_manager.cpp \
+		source/opt/desc_sroa.cpp \
 		source/opt/dominator_analysis.cpp \
 		source/opt/dominator_tree.cpp \
 		source/opt/eliminate_dead_constant_pass.cpp \
 		source/opt/eliminate_dead_functions_pass.cpp \
+		source/opt/eliminate_dead_functions_util.cpp \
+		source/opt/eliminate_dead_members_pass.cpp \
 		source/opt/feature_manager.cpp \
+		source/opt/fix_storage_class.cpp \
 		source/opt/flatten_decoration_pass.cpp \
 		source/opt/fold.cpp \
 		source/opt/folding_rules.cpp \
 		source/opt/fold_spec_constant_op_and_composite_pass.cpp \
 		source/opt/freeze_spec_constant_value_pass.cpp \
 		source/opt/function.cpp \
+		source/opt/generate_webgpu_initializers_pass.cpp \
+		source/opt/graphics_robust_access_pass.cpp \
 		source/opt/if_conversion.cpp \
 		source/opt/inline_pass.cpp \
 		source/opt/inline_exhaustive_pass.cpp \
 		source/opt/inline_opaque_pass.cpp \
+		source/opt/inst_bindless_check_pass.cpp \
+		source/opt/inst_buff_addr_check_pass.cpp \
 		source/opt/instruction.cpp \
 		source/opt/instruction_list.cpp \
+		source/opt/instrument_pass.cpp \
 		source/opt/ir_context.cpp \
 		source/opt/ir_loader.cpp \
+                source/opt/legalize_vector_shuffle_pass.cpp \
 		source/opt/licm_pass.cpp \
 		source/opt/local_access_chain_convert_pass.cpp \
 		source/opt/local_redundancy_elimination.cpp \
 		source/opt/local_single_block_elim_pass.cpp \
 		source/opt/local_single_store_elim_pass.cpp \
-		source/opt/local_ssa_elim_pass.cpp \
 		source/opt/loop_dependence.cpp \
 		source/opt/loop_dependence_helpers.cpp \
 		source/opt/loop_descriptor.cpp \
@@ -128,10 +147,12 @@ SPVTOOLS_OPT_SRC_FILES := \
 		source/opt/pass.cpp \
 		source/opt/pass_manager.cpp \
 		source/opt/private_to_local_pass.cpp \
+		source/opt/process_lines_pass.cpp \
 		source/opt/propagator.cpp \
 		source/opt/reduce_load_size.cpp \
 		source/opt/redundancy_elimination.cpp \
 		source/opt/register_pressure.cpp \
+		source/opt/relax_float_ops_pass.cpp \
 		source/opt/remove_duplicates_pass.cpp \
 		source/opt/replace_invalid_opc.cpp \
 		source/opt/scalar_analysis.cpp \
@@ -139,90 +160,67 @@ SPVTOOLS_OPT_SRC_FILES := \
 		source/opt/scalar_replacement_pass.cpp \
 		source/opt/set_spec_constant_default_value_pass.cpp \
 		source/opt/simplification_pass.cpp \
+		source/opt/split_invalid_unreachable_pass.cpp \
 		source/opt/ssa_rewrite_pass.cpp \
 		source/opt/strength_reduction_pass.cpp \
+		source/opt/strip_atomic_counter_memory_pass.cpp \
 		source/opt/strip_debug_info_pass.cpp \
 		source/opt/strip_reflect_info_pass.cpp \
+		source/opt/struct_cfg_analysis.cpp \
 		source/opt/type_manager.cpp \
 		source/opt/types.cpp \
 		source/opt/unify_const_pass.cpp \
+		source/opt/upgrade_memory_model.cpp \
 		source/opt/value_number_table.cpp \
 		source/opt/vector_dce.cpp \
-		source/opt/workaround1209.cpp
+		source/opt/workaround1209.cpp \
+		source/opt/wrap_opkill.cpp
 
 # Locations of grammar files.
 #
-# TODO(dneto): Build a single set of tables that embeds versioning differences on
-# a per-item basis.  That must happen before SPIR-V 1.4, etc.
-# https://github.com/KhronosGroup/SPIRV-Tools/issues/1195
-SPV_CORE10_GRAMMAR=$(SPVHEADERS_LOCAL_PATH)/include/spirv/1.0/spirv.core.grammar.json
-SPV_CORE11_GRAMMAR=$(SPVHEADERS_LOCAL_PATH)/include/spirv/1.1/spirv.core.grammar.json
-SPV_CORE12_GRAMMAR=$(SPVHEADERS_LOCAL_PATH)/include/spirv/1.2/spirv.core.grammar.json
 SPV_COREUNIFIED1_GRAMMAR=$(SPVHEADERS_LOCAL_PATH)/include/spirv/unified1/spirv.core.grammar.json
-SPV_CORELATEST_GRAMMAR=$(SPV_COREUNIFIED1_GRAMMAR)
 SPV_GLSL_GRAMMAR=$(SPVHEADERS_LOCAL_PATH)/include/spirv/1.2/extinst.glsl.std.450.grammar.json
 SPV_OPENCL_GRAMMAR=$(SPVHEADERS_LOCAL_PATH)/include/spirv/1.2/extinst.opencl.std.100.grammar.json
 # TODO(dneto): I expect the DebugInfo grammar file to eventually migrate to SPIRV-Headers
 SPV_DEBUGINFO_GRAMMAR=$(LOCAL_PATH)/source/extinst.debuginfo.grammar.json
+SPV_CLDEBUGINFO100_GRAMMAR=$(LOCAL_PATH)/source/extinst.opencl.debuginfo.100.grammar.json
 
 define gen_spvtools_grammar_tables
-$(call generate-file-dir,$(1)/core.insts-1.0.inc)
-$(1)/core.insts-1.0.inc $(1)/operand.kinds-1.0.inc $(1)/glsl.std.450.insts.inc $(1)/opencl.std.insts.inc: \
+$(call generate-file-dir,$(1)/core.insts-unified1.inc)
+$(1)/core.insts-unified1.inc $(1)/operand.kinds-unified1.inc \
+$(1)/glsl.std.450.insts.inc \
+$(1)/opencl.std.insts.inc \
+: \
         $(LOCAL_PATH)/utils/generate_grammar_tables.py \
-        $(SPV_CORE10_GRAMMAR) \
+        $(SPV_COREUNIFIED1_GRAMMAR) \
         $(SPV_GLSL_GRAMMAR) \
-        $(SPV_OPENCL_GRAMMAR) \
-        $(SPV_DEBUGINFO_GRAMMAR)
+        $(SPV_OpenCL_GRAMMAR) \
+        $(SPV_DEBUGINFO_GRAMMAR) \
+        $(SPV_CLDEBUGINFO100_GRAMMAR)
 		@$(HOST_PYTHON) $(LOCAL_PATH)/utils/generate_grammar_tables.py \
-		                --spirv-core-grammar=$(SPV_CORE10_GRAMMAR) \
+		                --spirv-core-grammar=$(SPV_COREUNIFIED1_GRAMMAR) \
 		                --extinst-glsl-grammar=$(SPV_GLSL_GRAMMAR) \
 		                --extinst-opencl-grammar=$(SPV_OPENCL_GRAMMAR) \
 		                --extinst-debuginfo-grammar=$(SPV_DEBUGINFO_GRAMMAR) \
-		                --core-insts-output=$(1)/core.insts-1.0.inc \
+		                --extinst-cldebuginfo100-grammar=$(SPV_CLDEBUGINFO100_GRAMMAR) \
+		                --core-insts-output=$(1)/core.insts-unified1.inc \
 		                --glsl-insts-output=$(1)/glsl.std.450.insts.inc \
 		                --opencl-insts-output=$(1)/opencl.std.insts.inc \
-		                --operand-kinds-output=$(1)/operand.kinds-1.0.inc
-		@echo "[$(TARGET_ARCH_ABI)] Grammar v1.0   : instructions & operands <= grammar JSON files"
-$(1)/core.insts-1.1.inc $(1)/operand.kinds-1.1.inc: \
-        $(LOCAL_PATH)/utils/generate_grammar_tables.py \
-        $(SPV_CORE11_GRAMMAR) \
-        $(SPV_DEBUGINFO_GRAMMAR)
-		@$(HOST_PYTHON) $(LOCAL_PATH)/utils/generate_grammar_tables.py \
-		                --spirv-core-grammar=$(SPV_CORE11_GRAMMAR) \
-		                --extinst-debuginfo-grammar=$(SPV_DEBUGINFO_GRAMMAR) \
-		                --core-insts-output=$(1)/core.insts-1.1.inc \
-		                --operand-kinds-output=$(1)/operand.kinds-1.1.inc
-		@echo "[$(TARGET_ARCH_ABI)] Grammar v1.1   : instructions & operands <= grammar JSON files"
-$(1)/core.insts-1.2.inc $(1)/operand.kinds-1.2.inc: \
-        $(LOCAL_PATH)/utils/generate_grammar_tables.py \
-        $(SPV_CORE12_GRAMMAR) \
-        $(SPV_DEBUGINFO_GRAMMAR)
-		@$(HOST_PYTHON) $(LOCAL_PATH)/utils/generate_grammar_tables.py \
-		                --spirv-core-grammar=$(SPV_CORE12_GRAMMAR) \
-		                --extinst-debuginfo-grammar=$(SPV_DEBUGINFO_GRAMMAR) \
-		                --core-insts-output=$(1)/core.insts-1.2.inc \
-		                --operand-kinds-output=$(1)/operand.kinds-1.2.inc
-		@echo "[$(TARGET_ARCH_ABI)] Grammar v1.2   : instructions & operands <= grammar JSON files"
-$(1)/core.insts-unified1.inc $(1)/operand.kinds-unified1.inc: \
-        $(LOCAL_PATH)/utils/generate_grammar_tables.py \
-        $(SPV_COREUNIFIED1_GRAMMAR) \
-        $(SPV_DEBUGINFO_GRAMMAR)
-		@$(HOST_PYTHON) $(LOCAL_PATH)/utils/generate_grammar_tables.py \
-		                --spirv-core-grammar=$(SPV_COREUNIFIED1_GRAMMAR) \
-		                --extinst-debuginfo-grammar=$(SPV_DEBUGINFO_GRAMMAR) \
-		                --core-insts-output=$(1)/core.insts-unified1.inc \
 		                --operand-kinds-output=$(1)/operand.kinds-unified1.inc
-		@echo "[$(TARGET_ARCH_ABI)] Grammar v1.3 (from unified1)  : instructions & operands <= grammar JSON files"
-$(LOCAL_PATH)/source/opcode.cpp: $(1)/core.insts-1.0.inc $(1)/core.insts-1.1.inc $(1)/core.insts-1.2.inc $(1)/core.insts-unified1.inc
-$(LOCAL_PATH)/source/operand.cpp: $(1)/operand.kinds-1.0.inc $(1)/operand.kinds-1.1.inc $(1)/operand.kinds-1.2.inc $(1)/operand.kinds-unified1.inc
+		@echo "[$(TARGET_ARCH_ABI)] Grammar (from unified1)  : instructions & operands <= grammar JSON files"
+$(LOCAL_PATH)/source/opcode.cpp: $(1)/core.insts-unified1.inc
+$(LOCAL_PATH)/source/operand.cpp: $(1)/operand.kinds-unified1.inc
 $(LOCAL_PATH)/source/ext_inst.cpp: \
 	$(1)/glsl.std.450.insts.inc \
 	$(1)/opencl.std.insts.inc \
 	$(1)/debuginfo.insts.inc \
+	$(1)/opencl.debuginfo.100.insts.inc \
 	$(1)/spv-amd-gcn-shader.insts.inc \
 	$(1)/spv-amd-shader-ballot.insts.inc \
 	$(1)/spv-amd-shader-explicit-vertex-parameter.insts.inc \
 	$(1)/spv-amd-shader-trinary-minmax.insts.inc
+$(LOCAL_PATH)/source/opt/amd_ext_to_khr.cpp: \
+	$(1)/spv-amd-shader-ballot.insts.inc
 endef
 $(eval $(call gen_spvtools_grammar_tables,$(SPVTOOLS_OUT_PATH)))
 
@@ -241,10 +239,12 @@ $(1)/$(2).h : \
 		    --extinst-grammar=$(3) \
 		    --extinst-output-base=$(1)/$(2)
 		@echo "[$(TARGET_ARCH_ABI)] Generate language specific header for $(2): headers <= grammar"
-$(LOCAL_PATH)/source/ext_inst.cpp: $(1)/$(2).h
+$(foreach F,$(SPVTOOLS_SRC_FILES) $(SPVTOOLS_OPT_SRC_FILES),$(LOCAL_PATH)/$F ) \
+	: $(1)/$(2).h
 endef
-# We generate language-specific headers for DebugInfo
+# We generate language-specific headers for DebugInfo and OpenCL.DebugInfo.100
 $(eval $(call gen_spvtools_lang_headers,$(SPVTOOLS_OUT_PATH),DebugInfo,$(SPV_DEBUGINFO_GRAMMAR)))
+$(eval $(call gen_spvtools_lang_headers,$(SPVTOOLS_OUT_PATH),OpenCLDebugInfo100,$(SPV_CLDEBUGINFO100_GRAMMAR)))
 
 
 define gen_spvtools_vendor_tables
@@ -254,22 +254,28 @@ $(1)/$(2).insts.inc : \
         $(LOCAL_PATH)/source/extinst.$(2).grammar.json
 		@$(HOST_PYTHON) $(LOCAL_PATH)/utils/generate_grammar_tables.py \
 		    --extinst-vendor-grammar=$(LOCAL_PATH)/source/extinst.$(2).grammar.json \
-		    --vendor-insts-output=$(1)/$(2).insts.inc
+		    --vendor-insts-output=$(1)/$(2).insts.inc \
+		    --vendor-operand-kind-prefix=$(3)
 		@echo "[$(TARGET_ARCH_ABI)] Vendor extended instruction set: $(2) tables <= grammar"
 $(LOCAL_PATH)/source/ext_inst.cpp: $(1)/$(2).insts.inc
 endef
-# Vendor extended instruction sets, with grammars from SPIRV-Tools source tree.
-SPV_NONSTANDARD_EXTINST_GRAMMARS=$(foreach F,$(wildcard $(LOCAL_PATH)/source/extinst.*.grammar.json),$(patsubst extinst.%.grammar.json,%,$(notdir $F)))
-$(foreach E,$(SPV_NONSTANDARD_EXTINST_GRAMMARS),$(eval $(call gen_spvtools_vendor_tables,$(SPVTOOLS_OUT_PATH),$E)))
+# Vendor and debug extended instruction sets, with grammars from SPIRV-Tools source tree.
+$(eval $(call gen_spvtools_vendor_tables,$(SPVTOOLS_OUT_PATH),debuginfo,""))
+$(eval $(call gen_spvtools_vendor_tables,$(SPVTOOLS_OUT_PATH),opencl.debuginfo.100,"CLDEBUG100_"))
+$(eval $(call gen_spvtools_vendor_tables,$(SPVTOOLS_OUT_PATH),spv-amd-gcn-shader,""))
+$(eval $(call gen_spvtools_vendor_tables,$(SPVTOOLS_OUT_PATH),spv-amd-shader-ballot,""))
+$(eval $(call gen_spvtools_vendor_tables,$(SPVTOOLS_OUT_PATH),spv-amd-shader-explicit-vertex-parameter,""))
+$(eval $(call gen_spvtools_vendor_tables,$(SPVTOOLS_OUT_PATH),spv-amd-shader-trinary-minmax,""))
 
 define gen_spvtools_enum_string_mapping
 $(call generate-file-dir,$(1)/extension_enum.inc.inc)
 $(1)/extension_enum.inc $(1)/enum_string_mapping.inc: \
         $(LOCAL_PATH)/utils/generate_grammar_tables.py \
-        $(SPV_CORELATEST_GRAMMAR)
+        $(SPV_COREUNIFIED1_GRAMMAR)
 		@$(HOST_PYTHON) $(LOCAL_PATH)/utils/generate_grammar_tables.py \
-		                --spirv-core-grammar=$(SPV_CORELATEST_GRAMMAR) \
+		                --spirv-core-grammar=$(SPV_COREUNIFIED1_GRAMMAR) \
 		                --extinst-debuginfo-grammar=$(SPV_DEBUGINFO_GRAMMAR) \
+		                --extinst-cldebuginfo100-grammar=$(SPV_CLDEBUGINFO100_GRAMMAR) \
 		                --extension-enum-output=$(1)/extension_enum.inc \
 		                --enum-string-mapping-output=$(1)/enum_string_mapping.inc
 		@echo "[$(TARGET_ARCH_ABI)] Generate enum<->string mapping <= grammar JSON files"
@@ -310,7 +316,7 @@ include $(CLEAR_VARS)
 LOCAL_MODULE := SPIRV-Tools
 LOCAL_C_INCLUDES := \
 		$(LOCAL_PATH)/include \
-		$(LOCAL_PATH)/external/spirv-headers/include \
+		$(SPVHEADERS_LOCAL_PATH)/include \
 		$(SPVTOOLS_OUT_PATH)
 LOCAL_EXPORT_C_INCLUDES := \
 		$(LOCAL_PATH)/include
@@ -323,7 +329,7 @@ LOCAL_MODULE := SPIRV-Tools-opt
 LOCAL_C_INCLUDES := \
 		$(LOCAL_PATH)/include \
 		$(LOCAL_PATH)/source \
-		$(LOCAL_PATH)/external/spirv-headers/include \
+		$(SPVHEADERS_LOCAL_PATH)/include \
 		$(SPVTOOLS_OUT_PATH)
 LOCAL_CXXFLAGS:=-std=c++11 -fno-exceptions -fno-rtti -Werror
 LOCAL_STATIC_LIBRARIES:=SPIRV-Tools

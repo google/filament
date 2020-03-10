@@ -17,6 +17,7 @@
 #include <string>
 #include <vector>
 
+#include "effcee/effcee.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "source/opt/basic_block.h"
@@ -26,15 +27,9 @@
 #include "source/opt/type_manager.h"
 #include "spirv-tools/libspirv.hpp"
 
-#ifdef SPIRV_EFFCEE
-#include "effcee/effcee.h"
-#endif
-
 namespace spvtools {
 namespace opt {
 namespace {
-
-#ifdef SPIRV_EFFCEE
 
 using Analysis = IRContext::Analysis;
 using IRBuilderTest = ::testing::Test;
@@ -182,7 +177,7 @@ TEST_F(IRBuilderTest, TestCondBranchAddition) {
           %5 = OpTypeVoid
           %6 = OpTypeFunction %5
           %7 = OpTypeBool
-          %8 = OpTypePointer Function %7
+          %8 = OpTypePointer Private %7
           %9 = OpConstantTrue %7
          %10 = OpTypeFloat 32
          %11 = OpTypeVector %10 4
@@ -203,6 +198,7 @@ TEST_F(IRBuilderTest, TestCondBranchAddition) {
 
     BasicBlock& bb_merge = *fn.begin();
 
+    // TODO(1841): Handle id overflow.
     fn.begin().InsertBefore(std::unique_ptr<BasicBlock>(
         new BasicBlock(std::unique_ptr<Instruction>(new Instruction(
             context.get(), SpvOpLabel, 0, context->TakeNextId(), {})))));
@@ -212,6 +208,7 @@ TEST_F(IRBuilderTest, TestCondBranchAddition) {
       builder.AddBranch(bb_merge.id());
     }
 
+    // TODO(1841): Handle id overflow.
     fn.begin().InsertBefore(std::unique_ptr<BasicBlock>(
         new BasicBlock(std::unique_ptr<Instruction>(new Instruction(
             context.get(), SpvOpLabel, 0, context->TakeNextId(), {})))));
@@ -322,20 +319,20 @@ OpFunctionEnd
 
   InstructionBuilder builder(context.get(),
                              &*context->module()->begin()->begin()->begin());
-  EXPECT_NE(nullptr, builder.Add32BitUnsignedIntegerConstant(13));
-  EXPECT_NE(nullptr, builder.Add32BitSignedIntegerConstant(-1));
+  EXPECT_NE(nullptr, builder.GetUintConstant(13));
+  EXPECT_NE(nullptr, builder.GetSintConstant(-1));
 
   // Try adding the same constants again to make sure they aren't added.
-  EXPECT_NE(nullptr, builder.Add32BitUnsignedIntegerConstant(13));
-  EXPECT_NE(nullptr, builder.Add32BitSignedIntegerConstant(-1));
+  EXPECT_NE(nullptr, builder.GetUintConstant(13));
+  EXPECT_NE(nullptr, builder.GetSintConstant(-1));
 
   // Try adding different constants to make sure the type is reused.
-  EXPECT_NE(nullptr, builder.Add32BitUnsignedIntegerConstant(1));
-  EXPECT_NE(nullptr, builder.Add32BitSignedIntegerConstant(34));
+  EXPECT_NE(nullptr, builder.GetUintConstant(1));
+  EXPECT_NE(nullptr, builder.GetSintConstant(34));
 
   // Try adding 0 as both signed and unsigned.
-  EXPECT_NE(nullptr, builder.Add32BitUnsignedIntegerConstant(0));
-  EXPECT_NE(nullptr, builder.Add32BitSignedIntegerConstant(0));
+  EXPECT_NE(nullptr, builder.GetUintConstant(0));
+  EXPECT_NE(nullptr, builder.GetSintConstant(0));
 
   Match(text, context.get());
 }
@@ -367,25 +364,25 @@ OpFunctionEnd
 
   InstructionBuilder builder(context.get(),
                              &*context->module()->begin()->begin()->begin());
-  Instruction* const_1 = builder.Add32BitUnsignedIntegerConstant(13);
-  Instruction* const_2 = builder.Add32BitSignedIntegerConstant(-1);
+  Instruction* const_1 = builder.GetUintConstant(13);
+  Instruction* const_2 = builder.GetSintConstant(-1);
 
   EXPECT_NE(nullptr, const_1);
   EXPECT_NE(nullptr, const_2);
 
   // Try adding the same constants again to make sure they aren't added.
-  EXPECT_EQ(const_1, builder.Add32BitUnsignedIntegerConstant(13));
-  EXPECT_EQ(const_2, builder.Add32BitSignedIntegerConstant(-1));
+  EXPECT_EQ(const_1, builder.GetUintConstant(13));
+  EXPECT_EQ(const_2, builder.GetSintConstant(-1));
 
-  Instruction* const_3 = builder.Add32BitUnsignedIntegerConstant(1);
-  Instruction* const_4 = builder.Add32BitSignedIntegerConstant(34);
+  Instruction* const_3 = builder.GetUintConstant(1);
+  Instruction* const_4 = builder.GetSintConstant(34);
 
   // Try adding different constants to make sure the type is reused.
   EXPECT_NE(nullptr, const_3);
   EXPECT_NE(nullptr, const_4);
 
-  Instruction* const_5 = builder.Add32BitUnsignedIntegerConstant(0);
-  Instruction* const_6 = builder.Add32BitSignedIntegerConstant(0);
+  Instruction* const_5 = builder.GetUintConstant(0);
+  Instruction* const_6 = builder.GetSintConstant(0);
 
   // Try adding 0 as both signed and unsigned.
   EXPECT_NE(nullptr, const_5);
@@ -409,7 +406,33 @@ OpFunctionEnd
   Match(text, context.get());
 }
 
-#endif  // SPIRV_EFFCEE
+TEST_F(IRBuilderTest, AccelerationStructureNV) {
+  const std::string text = R"(
+; CHECK: OpTypeAccelerationStructureNV
+OpCapability Shader
+OpCapability RayTracingNV
+OpExtension "SPV_NV_ray_tracing"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %8 "main"
+OpExecutionMode %8 OriginUpperLeft
+%1 = OpTypeVoid
+%2 = OpTypeBool
+%3 = OpTypeAccelerationStructureNV
+%7 = OpTypeFunction %1
+%8 = OpFunction %1 None %7
+%9 = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  std::unique_ptr<IRContext> context =
+      BuildModule(SPV_ENV_UNIVERSAL_1_2, nullptr, text);
+  EXPECT_NE(nullptr, context);
+
+  InstructionBuilder builder(context.get(),
+                             &*context->module()->begin()->begin()->begin());
+  Match(text, context.get());
+}
 
 }  // namespace
 }  // namespace opt

@@ -28,41 +28,35 @@ void group_barrier()
 
 void barrier_shared_exec()
 {
-    memoryBarrierShared();
     barrier();
 }
 
 void full_barrier_exec()
 {
     memoryBarrier();
-    memoryBarrierShared();
     barrier();
 }
 
 void image_barrier_exec()
 {
     memoryBarrierImage();
-    memoryBarrierShared();
     barrier();
 }
 
 void buffer_barrier_exec()
 {
     memoryBarrierBuffer();
-    memoryBarrierShared();
     barrier();
 }
 
 void group_barrier_exec()
 {
     groupMemoryBarrier();
-    memoryBarrierShared();
     barrier();
 }
 
 void exec_barrier()
 {
-    memoryBarrierShared();
     barrier();
 }
 

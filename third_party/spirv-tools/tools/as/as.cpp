@@ -21,6 +21,7 @@
 #include "tools/io.h"
 
 void print_usage(char* argv0) {
+  std::string target_env_list = spvTargetEnvList(19, 80);
   printf(
       R"(%s - Create a SPIR-V binary module from SPIR-V assembly text
 
@@ -41,14 +42,13 @@ Options:
                   Numeric IDs in the binary will have the same values as in the
                   source. Non-numeric IDs are allocated by filling in the gaps,
                   starting with 1 and going up.
-  --target-env {vulkan1.0|vulkan1.1|spv1.0|spv1.1|spv1.2|spv1.3}
-                  Use Vulkan 1.0, Vulkan 1.1, SPIR-V 1.0, SPIR-V 1.1,
-                  SPIR-V 1.2, or SPIR-V 1.3
+  --target-env    {%s}
+                  Use specified environment.
 )",
-      argv0, argv0);
+      argv0, argv0, target_env_list.c_str());
 }
 
-static const auto kDefaultEnvironment = SPV_ENV_UNIVERSAL_1_3;
+static const auto kDefaultEnvironment = SPV_ENV_UNIVERSAL_1_5;
 
 int main(int argc, char** argv) {
   const char* inFile = nullptr;

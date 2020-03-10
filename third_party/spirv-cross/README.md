@@ -321,7 +321,7 @@ compiler.set_name(varying_resource.base_type_id, "VertexFragmentLinkage");
 ```
 
 Some platform may require identical variable name for both vertex outputs and fragment inputs. (for example MacOSX)
-to rename varaible base on location, please add
+to rename variable base on location, please add
 ```
 --rename-interface-variable <in|out> <location> <new_variable_name>
 ```

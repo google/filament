@@ -44,6 +44,7 @@ struct SSBO
 
 constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(8u, 8u, 1u);
 
+static inline __attribute__((always_inline))
 void Zero(thread Foo0& v)
 {
     v.a = 0.0;

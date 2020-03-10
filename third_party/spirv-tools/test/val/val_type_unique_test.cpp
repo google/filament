@@ -210,9 +210,11 @@ OpMemoryModel Physical32 OpenCL
 OpTypeForwardPointer %ptr Generic
 OpTypeForwardPointer %ptr2 Generic
 %intt = OpTypeInt 32 0
+%int_struct = OpTypeStruct %intt
 %floatt = OpTypeFloat 32
-%ptr = OpTypePointer Generic %intt
-%ptr2 = OpTypePointer Generic %floatt
+%ptr = OpTypePointer Generic %int_struct
+%float_struct = OpTypeStruct %floatt
+%ptr2 = OpTypePointer Generic %float_struct
 )";
   CompileSuccessfully(str.c_str());
   ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());

@@ -49,7 +49,7 @@ namespace spv {
 
 typedef unsigned int Id;
 
-#define SPV_VERSION 0x10400
+#define SPV_VERSION 0x10500
 #define SPV_REVISION 1
 
 static const unsigned int MagicNumber = 0x07230203;
@@ -91,6 +91,7 @@ enum AddressingModel {
     AddressingModelLogical = 0,
     AddressingModelPhysical32 = 1,
     AddressingModelPhysical64 = 2,
+    AddressingModelPhysicalStorageBuffer64 = 5348,
     AddressingModelPhysicalStorageBuffer64EXT = 5348,
     AddressingModelMax = 0x7fffffff,
 };
@@ -99,6 +100,7 @@ enum MemoryModel {
     MemoryModelSimple = 0,
     MemoryModelGLSL450 = 1,
     MemoryModelOpenCL = 2,
+    MemoryModelVulkan = 3,
     MemoryModelVulkanKHR = 3,
     MemoryModelMax = 0x7fffffff,
 };
@@ -183,6 +185,7 @@ enum StorageClass {
     StorageClassHitAttributeNV = 5339,
     StorageClassIncomingRayPayloadNV = 5342,
     StorageClassShaderRecordBufferNV = 5343,
+    StorageClassPhysicalStorageBuffer = 5349,
     StorageClassPhysicalStorageBufferEXT = 5349,
     StorageClassMax = 0x7fffffff,
 };
@@ -311,9 +314,13 @@ enum ImageOperandsShift {
     ImageOperandsConstOffsetsShift = 5,
     ImageOperandsSampleShift = 6,
     ImageOperandsMinLodShift = 7,
+    ImageOperandsMakeTexelAvailableShift = 8,
     ImageOperandsMakeTexelAvailableKHRShift = 8,
+    ImageOperandsMakeTexelVisibleShift = 9,
     ImageOperandsMakeTexelVisibleKHRShift = 9,
+    ImageOperandsNonPrivateTexelShift = 10,
     ImageOperandsNonPrivateTexelKHRShift = 10,
+    ImageOperandsVolatileTexelShift = 11,
     ImageOperandsVolatileTexelKHRShift = 11,
     ImageOperandsSignExtendShift = 12,
     ImageOperandsZeroExtendShift = 13,
@@ -330,9 +337,13 @@ enum ImageOperandsMask {
     ImageOperandsConstOffsetsMask = 0x00000020,
     ImageOperandsSampleMask = 0x00000040,
     ImageOperandsMinLodMask = 0x00000080,
+    ImageOperandsMakeTexelAvailableMask = 0x00000100,
     ImageOperandsMakeTexelAvailableKHRMask = 0x00000100,
+    ImageOperandsMakeTexelVisibleMask = 0x00000200,
     ImageOperandsMakeTexelVisibleKHRMask = 0x00000200,
+    ImageOperandsNonPrivateTexelMask = 0x00000400,
     ImageOperandsNonPrivateTexelKHRMask = 0x00000400,
+    ImageOperandsVolatileTexelMask = 0x00000800,
     ImageOperandsVolatileTexelKHRMask = 0x00000800,
     ImageOperandsSignExtendMask = 0x00001000,
     ImageOperandsZeroExtendMask = 0x00002000,
@@ -448,8 +459,11 @@ enum Decoration {
     DecorationPerViewNV = 5272,
     DecorationPerTaskNV = 5273,
     DecorationPerVertexNV = 5285,
+    DecorationNonUniform = 5300,
     DecorationNonUniformEXT = 5300,
+    DecorationRestrictPointer = 5355,
     DecorationRestrictPointerEXT = 5355,
+    DecorationAliasedPointer = 5356,
     DecorationAliasedPointerEXT = 5356,
     DecorationCounterBuffer = 5634,
     DecorationHlslCounterBufferGOOGLE = 5634,
@@ -630,8 +644,11 @@ enum MemorySemanticsShift {
     MemorySemanticsCrossWorkgroupMemoryShift = 9,
     MemorySemanticsAtomicCounterMemoryShift = 10,
     MemorySemanticsImageMemoryShift = 11,
+    MemorySemanticsOutputMemoryShift = 12,
     MemorySemanticsOutputMemoryKHRShift = 12,
+    MemorySemanticsMakeAvailableShift = 13,
     MemorySemanticsMakeAvailableKHRShift = 13,
+    MemorySemanticsMakeVisibleShift = 14,
     MemorySemanticsMakeVisibleKHRShift = 14,
     MemorySemanticsVolatileShift = 15,
     MemorySemanticsMax = 0x7fffffff,
@@ -649,8 +666,11 @@ enum MemorySemanticsMask {
     MemorySemanticsCrossWorkgroupMemoryMask = 0x00000200,
     MemorySemanticsAtomicCounterMemoryMask = 0x00000400,
     MemorySemanticsImageMemoryMask = 0x00000800,
+    MemorySemanticsOutputMemoryMask = 0x00001000,
     MemorySemanticsOutputMemoryKHRMask = 0x00001000,
+    MemorySemanticsMakeAvailableMask = 0x00002000,
     MemorySemanticsMakeAvailableKHRMask = 0x00002000,
+    MemorySemanticsMakeVisibleMask = 0x00004000,
     MemorySemanticsMakeVisibleKHRMask = 0x00004000,
     MemorySemanticsVolatileMask = 0x00008000,
 };
@@ -659,8 +679,11 @@ enum MemoryAccessShift {
     MemoryAccessVolatileShift = 0,
     MemoryAccessAlignedShift = 1,
     MemoryAccessNontemporalShift = 2,
+    MemoryAccessMakePointerAvailableShift = 3,
     MemoryAccessMakePointerAvailableKHRShift = 3,
+    MemoryAccessMakePointerVisibleShift = 4,
     MemoryAccessMakePointerVisibleKHRShift = 4,
+    MemoryAccessNonPrivatePointerShift = 5,
     MemoryAccessNonPrivatePointerKHRShift = 5,
     MemoryAccessMax = 0x7fffffff,
 };
@@ -670,8 +693,11 @@ enum MemoryAccessMask {
     MemoryAccessVolatileMask = 0x00000001,
     MemoryAccessAlignedMask = 0x00000002,
     MemoryAccessNontemporalMask = 0x00000004,
+    MemoryAccessMakePointerAvailableMask = 0x00000008,
     MemoryAccessMakePointerAvailableKHRMask = 0x00000008,
+    MemoryAccessMakePointerVisibleMask = 0x00000010,
     MemoryAccessMakePointerVisibleKHRMask = 0x00000010,
+    MemoryAccessNonPrivatePointerMask = 0x00000020,
     MemoryAccessNonPrivatePointerKHRMask = 0x00000020,
 };
 
@@ -681,6 +707,7 @@ enum Scope {
     ScopeWorkgroup = 2,
     ScopeSubgroup = 3,
     ScopeInvocation = 4,
+    ScopeQueueFamily = 5,
     ScopeQueueFamilyKHR = 5,
     ScopeMax = 0x7fffffff,
 };
@@ -781,6 +808,8 @@ enum Capability {
     CapabilityGroupNonUniformShuffleRelative = 66,
     CapabilityGroupNonUniformClustered = 67,
     CapabilityGroupNonUniformQuad = 68,
+    CapabilityShaderLayer = 69,
+    CapabilityShaderViewportIndex = 70,
     CapabilitySubgroupBallotKHR = 4423,
     CapabilityDrawParameters = 4427,
     CapabilitySubgroupVoteKHR = 4431,
@@ -809,6 +838,7 @@ enum Capability {
     CapabilityFragmentMaskAMD = 5010,
     CapabilityStencilExportEXT = 5013,
     CapabilityImageReadWriteLodAMD = 5015,
+    CapabilityShaderClockKHR = 5055,
     CapabilitySampleMaskOverrideCoverageNV = 5249,
     CapabilityGeometryShaderPassthroughNV = 5251,
     CapabilityShaderViewportIndexLayerEXT = 5254,
@@ -824,21 +854,36 @@ enum Capability {
     CapabilityFragmentDensityEXT = 5291,
     CapabilityShadingRateNV = 5291,
     CapabilityGroupNonUniformPartitionedNV = 5297,
+    CapabilityShaderNonUniform = 5301,
     CapabilityShaderNonUniformEXT = 5301,
+    CapabilityRuntimeDescriptorArray = 5302,
     CapabilityRuntimeDescriptorArrayEXT = 5302,
+    CapabilityInputAttachmentArrayDynamicIndexing = 5303,
     CapabilityInputAttachmentArrayDynamicIndexingEXT = 5303,
+    CapabilityUniformTexelBufferArrayDynamicIndexing = 5304,
     CapabilityUniformTexelBufferArrayDynamicIndexingEXT = 5304,
+    CapabilityStorageTexelBufferArrayDynamicIndexing = 5305,
     CapabilityStorageTexelBufferArrayDynamicIndexingEXT = 5305,
+    CapabilityUniformBufferArrayNonUniformIndexing = 5306,
     CapabilityUniformBufferArrayNonUniformIndexingEXT = 5306,
+    CapabilitySampledImageArrayNonUniformIndexing = 5307,
     CapabilitySampledImageArrayNonUniformIndexingEXT = 5307,
+    CapabilityStorageBufferArrayNonUniformIndexing = 5308,
     CapabilityStorageBufferArrayNonUniformIndexingEXT = 5308,
+    CapabilityStorageImageArrayNonUniformIndexing = 5309,
     CapabilityStorageImageArrayNonUniformIndexingEXT = 5309,
+    CapabilityInputAttachmentArrayNonUniformIndexing = 5310,
     CapabilityInputAttachmentArrayNonUniformIndexingEXT = 5310,
+    CapabilityUniformTexelBufferArrayNonUniformIndexing = 5311,
     CapabilityUniformTexelBufferArrayNonUniformIndexingEXT = 5311,
+    CapabilityStorageTexelBufferArrayNonUniformIndexing = 5312,
     CapabilityStorageTexelBufferArrayNonUniformIndexingEXT = 5312,
     CapabilityRayTracingNV = 5340,
+    CapabilityVulkanMemoryModel = 5345,
     CapabilityVulkanMemoryModelKHR = 5345,
+    CapabilityVulkanMemoryModelDeviceScope = 5346,
     CapabilityVulkanMemoryModelDeviceScopeKHR = 5346,
+    CapabilityPhysicalStorageBufferAddresses = 5347,
     CapabilityPhysicalStorageBufferAddressesEXT = 5347,
     CapabilityComputeDerivativeGroupLinearNV = 5350,
     CapabilityCooperativeMatrixNV = 5357,
@@ -1219,6 +1264,7 @@ enum Op {
     OpGroupSMaxNonUniformAMD = 5007,
     OpFragmentMaskFetchAMD = 5011,
     OpFragmentFetchAMD = 5012,
+    OpReadClockKHR = 5056,
     OpImageSampleFootprintNV = 5283,
     OpGroupNonUniformPartitionNV = 5296,
     OpWritePackedPrimitiveIndices4x8NV = 5299,
@@ -1751,6 +1797,7 @@ inline void HasResultAndType(Op opcode, bool *hasResult, bool *hasResultType) {
     case OpGroupSMaxNonUniformAMD: *hasResult = true; *hasResultType = true; break;
     case OpFragmentMaskFetchAMD: *hasResult = true; *hasResultType = true; break;
     case OpFragmentFetchAMD: *hasResult = true; *hasResultType = true; break;
+    case OpReadClockKHR: *hasResult = true; *hasResultType = true; break;
     case OpImageSampleFootprintNV: *hasResult = true; *hasResultType = true; break;
     case OpGroupNonUniformPartitionNV: *hasResult = true; *hasResultType = true; break;
     case OpWritePackedPrimitiveIndices4x8NV: *hasResult = false; *hasResultType = false; break;

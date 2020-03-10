@@ -43,7 +43,7 @@ std::string GetErrorString(const std::string& extension) {
   return "Found unrecognized extension " + extension;
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     ExpectSuccess, ValidateKnownExtensions,
     Values(
         // Match the order as published on the SPIR-V Registry.
@@ -64,9 +64,9 @@ INSTANTIATE_TEST_CASE_P(
         "SPV_GOOGLE_decorate_string", "SPV_GOOGLE_hlsl_functionality1",
         "SPV_NV_shader_subgroup_partitioned", "SPV_EXT_descriptor_indexing"));
 
-INSTANTIATE_TEST_CASE_P(FailSilently, ValidateUnknownExtensions,
-                        Values("ERROR_unknown_extension", "SPV_KHR_",
-                               "SPV_KHR_shader_ballot_ERROR"));
+INSTANTIATE_TEST_SUITE_P(FailSilently, ValidateUnknownExtensions,
+                         Values("ERROR_unknown_extension", "SPV_KHR_",
+                                "SPV_KHR_shader_ballot_ERROR"));
 
 TEST_P(ValidateKnownExtensions, ExpectSuccess) {
   const std::string extension = GetParam();
@@ -86,6 +86,29 @@ TEST_P(ValidateUnknownExtensions, FailSilently) {
   CompileSuccessfully(str.c_str());
   ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
   EXPECT_THAT(getDiagnosticString(), HasSubstr(GetErrorString(extension)));
+}
+
+TEST_F(ValidateUnknownExtensions, HitMaxNumOfWarnings) {
+  const std::string str =
+      std::string("OpCapability Shader\n") + "OpCapability Linkage\n" +
+      "OpExtension \"bad_ext\"\n" + "OpExtension \"bad_ext\"\n" +
+      "OpExtension \"bad_ext\"\n" + "OpExtension \"bad_ext\"\n" +
+      "OpExtension \"bad_ext\"\n" + "OpExtension \"bad_ext\"\n" +
+      "OpExtension \"bad_ext\"\n" + "OpExtension \"bad_ext\"\n" +
+      "OpExtension \"bad_ext\"\n" + "OpExtension \"bad_ext\"\n" +
+      "OpExtension \"bad_ext\"\n" + "OpExtension \"bad_ext\"\n" +
+      "OpExtension \"bad_ext\"\n" + "OpExtension \"bad_ext\"\n" +
+      "OpExtension \"bad_ext\"\n" + "OpExtension \"bad_ext\"\n" +
+      "OpExtension \"bad_ext\"\n" + "OpExtension \"bad_ext\"\n" +
+      "OpExtension \"bad_ext\"\n" + "OpExtension \"bad_ext\"\n" +
+      "OpExtension \"bad_ext\"\n" + "OpExtension \"bad_ext\"\n" +
+      "OpExtension \"bad_ext\"\n" + "OpExtension \"bad_ext\"\n" +
+      "OpExtension \"bad_ext\"\n" + "OpExtension \"bad_ext\"\n" +
+      "OpMemoryModel Logical GLSL450";
+  CompileSuccessfully(str.c_str());
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Other warnings have been suppressed."));
 }
 
 TEST_F(ValidateExtensionCapabilities, DeclCapabilitySuccess) {
@@ -204,8 +227,8 @@ TEST_P(ValidateAMDShaderBallotCapabilities, ExpectSuccess) {
   EXPECT_EQ(SPV_SUCCESS, ValidateInstructions()) << getDiagnosticString();
 }
 
-INSTANTIATE_TEST_CASE_P(ExpectSuccess, ValidateAMDShaderBallotCapabilities,
-                        ValuesIn(AMDShaderBallotGroupInstructions()));
+INSTANTIATE_TEST_SUITE_P(ExpectSuccess, ValidateAMDShaderBallotCapabilities,
+                         ValuesIn(AMDShaderBallotGroupInstructions()));
 
 TEST_P(ValidateAMDShaderBallotCapabilities, ExpectFailure) {
   // Fail because the module does not specify the SPV_AMD_shader_ballot
@@ -228,8 +251,8 @@ TEST_P(ValidateAMDShaderBallotCapabilities, ExpectFailure) {
                             " requires one of these capabilities: Groups")));
 }
 
-INSTANTIATE_TEST_CASE_P(ExpectFailure, ValidateAMDShaderBallotCapabilities,
-                        ValuesIn(AMDShaderBallotGroupInstructions()));
+INSTANTIATE_TEST_SUITE_P(ExpectFailure, ValidateAMDShaderBallotCapabilities,
+                         ValuesIn(AMDShaderBallotGroupInstructions()));
 
 struct ExtIntoCoreCase {
   const char* ext;
@@ -265,9 +288,12 @@ TEST_P(ValidateExtIntoCore, DoNotAskForExtensionInLaterVersion) {
 
   CompileSuccessfully(code.c_str(), GetParam().env);
   if (GetParam().success) {
-    ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(GetParam().env));
+    ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(GetParam().env))
+        << getDiagnosticString();
   } else {
-    ASSERT_NE(SPV_SUCCESS, ValidateInstructions(GetParam().env));
+    ASSERT_NE(SPV_SUCCESS, ValidateInstructions(GetParam().env))
+        << " in " << spvTargetEnvDescription(GetParam().env) << ":\n"
+        << code;
     const std::string message = getDiagnosticString();
     if (spvIsVulkanEnv(GetParam().env)) {
       EXPECT_THAT(message, HasSubstr(std::string(GetParam().cap) +
@@ -282,7 +308,7 @@ TEST_P(ValidateExtIntoCore, DoNotAskForExtensionInLaterVersion) {
 }
 
 // clang-format off
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     KHR_extensions, ValidateExtIntoCore,
     ValuesIn(std::vector<ExtIntoCoreCase>{
         // SPV_KHR_shader_draw_parameters became core SPIR-V 1.3

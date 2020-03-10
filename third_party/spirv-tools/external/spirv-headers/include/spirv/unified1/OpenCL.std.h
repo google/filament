@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2015-2017 The Khronos Group Inc.
+** Copyright (c) 2015-2019 The Khronos Group Inc.
 **
 ** Permission is hereby granted, free of charge, to any person obtaining a copy
 ** of this software and/or associated documentation files (the "Materials"),
@@ -27,6 +27,7 @@
 #ifndef OPENCLstd_H
 #define OPENCLstd_H
 
+#ifdef __cplusplus
 namespace OpenCLLIB {
 
 enum Entrypoints {
@@ -211,5 +212,190 @@ enum Entrypoints {
 };
 
 } // end namespace OpenCLLIB
+
+#else
+
+enum OpenCLstd_Entrypoints {
+
+    // Section 2.1: Math extended instructions
+    OpenCLstd_Acos = 0,
+    OpenCLstd_Acosh = 1,
+    OpenCLstd_Acospi = 2,
+    OpenCLstd_Asin = 3,
+    OpenCLstd_Asinh = 4,
+    OpenCLstd_Asinpi = 5,
+    OpenCLstd_Atan = 6,
+    OpenCLstd_Atan2 = 7,
+    OpenCLstd_Atanh = 8,
+    OpenCLstd_Atanpi = 9,
+    OpenCLstd_Atan2pi = 10,
+    OpenCLstd_Cbrt = 11,
+    OpenCLstd_Ceil = 12,
+    OpenCLstd_Copysign = 13,
+    OpenCLstd_Cos = 14,
+    OpenCLstd_Cosh = 15,
+    OpenCLstd_Cospi = 16,
+    OpenCLstd_Erfc = 17,
+    OpenCLstd_Erf = 18,
+    OpenCLstd_Exp = 19,
+    OpenCLstd_Exp2 = 20,
+    OpenCLstd_Exp10 = 21,
+    OpenCLstd_Expm1 = 22,
+    OpenCLstd_Fabs = 23,
+    OpenCLstd_Fdim = 24,
+    OpenCLstd_Floor = 25,
+    OpenCLstd_Fma = 26,
+    OpenCLstd_Fmax = 27,
+    OpenCLstd_Fmin = 28,
+    OpenCLstd_Fmod = 29,
+    OpenCLstd_Fract = 30, 
+    OpenCLstd_Frexp = 31,
+    OpenCLstd_Hypot = 32,
+    OpenCLstd_Ilogb = 33,
+    OpenCLstd_Ldexp = 34,
+    OpenCLstd_Lgamma = 35,
+    OpenCLstd_Lgamma_r = 36,
+    OpenCLstd_Log = 37,
+    OpenCLstd_Log2 = 38,
+    OpenCLstd_Log10 = 39,
+    OpenCLstd_Log1p = 40,
+    OpenCLstd_Logb = 41,
+    OpenCLstd_Mad = 42,
+    OpenCLstd_Maxmag = 43,
+    OpenCLstd_Minmag = 44,
+    OpenCLstd_Modf = 45,
+    OpenCLstd_Nan = 46,
+    OpenCLstd_Nextafter = 47,
+    OpenCLstd_Pow = 48,
+    OpenCLstd_Pown = 49,
+    OpenCLstd_Powr = 50,
+    OpenCLstd_Remainder = 51,
+    OpenCLstd_Remquo = 52,
+    OpenCLstd_Rint = 53,
+    OpenCLstd_Rootn = 54,
+    OpenCLstd_Round = 55,
+    OpenCLstd_Rsqrt = 56,
+    OpenCLstd_Sin = 57,
+    OpenCLstd_Sincos = 58,
+    OpenCLstd_Sinh = 59,
+    OpenCLstd_Sinpi = 60,
+    OpenCLstd_Sqrt = 61,
+    OpenCLstd_Tan = 62,
+    OpenCLstd_Tanh = 63,
+    OpenCLstd_Tanpi = 64,
+    OpenCLstd_Tgamma = 65,
+    OpenCLstd_Trunc = 66,
+    OpenCLstd_Half_cos = 67,
+    OpenCLstd_Half_divide = 68,
+    OpenCLstd_Half_exp = 69,
+    OpenCLstd_Half_exp2 = 70,
+    OpenCLstd_Half_exp10 = 71,
+    OpenCLstd_Half_log = 72,
+    OpenCLstd_Half_log2 = 73,
+    OpenCLstd_Half_log10 = 74,
+    OpenCLstd_Half_powr = 75,
+    OpenCLstd_Half_recip = 76,
+    OpenCLstd_Half_rsqrt = 77,
+    OpenCLstd_Half_sin = 78,
+    OpenCLstd_Half_sqrt = 79,
+    OpenCLstd_Half_tan = 80,
+    OpenCLstd_Native_cos = 81,
+    OpenCLstd_Native_divide = 82,
+    OpenCLstd_Native_exp = 83,
+    OpenCLstd_Native_exp2 = 84,
+    OpenCLstd_Native_exp10 = 85,
+    OpenCLstd_Native_log = 86,
+    OpenCLstd_Native_log2 = 87,
+    OpenCLstd_Native_log10 = 88,
+    OpenCLstd_Native_powr = 89,
+    OpenCLstd_Native_recip = 90,
+    OpenCLstd_Native_rsqrt = 91,
+    OpenCLstd_Native_sin = 92,
+    OpenCLstd_Native_sqrt = 93,
+    OpenCLstd_Native_tan = 94,
+    
+    // Section 2.2: Integer instructions
+    OpenCLstd_SAbs = 141,
+    OpenCLstd_SAbs_diff = 142,
+    OpenCLstd_SAdd_sat = 143,
+    OpenCLstd_UAdd_sat = 144,
+    OpenCLstd_SHadd = 145,
+    OpenCLstd_UHadd = 146,
+    OpenCLstd_SRhadd = 147,
+    OpenCLstd_URhadd = 148,
+    OpenCLstd_SClamp = 149,
+    OpenCLstd_UClamp = 150, 
+    OpenCLstd_Clz = 151,
+    OpenCLstd_Ctz = 152,    
+    OpenCLstd_SMad_hi = 153,
+    OpenCLstd_UMad_sat = 154,
+    OpenCLstd_SMad_sat = 155,
+    OpenCLstd_SMax = 156,
+    OpenCLstd_UMax = 157,
+    OpenCLstd_SMin = 158,
+    OpenCLstd_UMin = 159,
+    OpenCLstd_SMul_hi = 160,
+    OpenCLstd_Rotate = 161,
+    OpenCLstd_SSub_sat = 162,
+    OpenCLstd_USub_sat = 163,
+    OpenCLstd_U_Upsample = 164,
+    OpenCLstd_S_Upsample = 165,
+    OpenCLstd_Popcount = 166,
+    OpenCLstd_SMad24 = 167,
+    OpenCLstd_UMad24 = 168,
+    OpenCLstd_SMul24 = 169,
+    OpenCLstd_UMul24 = 170,
+    OpenCLstd_UAbs = 201,
+    OpenCLstd_UAbs_diff = 202,
+    OpenCLstd_UMul_hi = 203,
+    OpenCLstd_UMad_hi = 204,
+
+    // Section 2.3: Common instructions
+    OpenCLstd_FClamp = 95,
+    OpenCLstd_Degrees = 96,
+    OpenCLstd_FMax_common = 97,
+    OpenCLstd_FMin_common = 98, 
+    OpenCLstd_Mix = 99,
+    OpenCLstd_Radians = 100,
+    OpenCLstd_Step = 101,
+    OpenCLstd_Smoothstep = 102,
+    OpenCLstd_Sign = 103,
+
+    // Section 2.4: Geometric instructions
+    OpenCLstd_Cross = 104,
+    OpenCLstd_Distance = 105, 
+    OpenCLstd_Length = 106,
+    OpenCLstd_Normalize = 107,
+    OpenCLstd_Fast_distance = 108,
+    OpenCLstd_Fast_length = 109,
+    OpenCLstd_Fast_normalize = 110,
+
+    // Section 2.5: Relational instructions
+    OpenCLstd_Bitselect = 186,
+    OpenCLstd_Select = 187,
+
+    // Section 2.6: Vector Data Load and Store instructions
+    OpenCLstd_Vloadn = 171,
+    OpenCLstd_Vstoren = 172,
+    OpenCLstd_Vload_half = 173,
+    OpenCLstd_Vload_halfn = 174,
+    OpenCLstd_Vstore_half = 175,
+    OpenCLstd_Vstore_half_r = 176,
+    OpenCLstd_Vstore_halfn = 177,
+    OpenCLstd_Vstore_halfn_r = 178,
+    OpenCLstd_Vloada_halfn = 179,
+    OpenCLstd_Vstorea_halfn = 180,
+    OpenCLstd_Vstorea_halfn_r = 181,
+
+    // Section 2.7: Miscellaneous Vector instructions
+    OpenCLstd_Shuffle = 182,
+    OpenCLstd_Shuffle2 = 183,
+
+    // Section 2.8: Misc instructions 
+    OpenCLstd_Printf = 184,
+    OpenCLstd_Prefetch = 185,
+};
+
+#endif
 
 #endif  // #ifndef OPENCLstd_H

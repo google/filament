@@ -15,6 +15,6 @@ struct main0_in
 
 vertex void main0(main0_in in [[stage_in]], device _10& _12 [[buffer(0)]], uint gl_VertexIndex [[vertex_id]])
 {
-    _12._m0[gl_VertexIndex] = in.m_19;
+    _12._m0[int(gl_VertexIndex)] = in.m_19;
 }
 

@@ -23,6 +23,8 @@ struct ReadSSBO
     float4 v4;
 };
 
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
 kernel void main0(device SSBO& _21 [[buffer(0)]], const device ReadSSBO& _26 [[buffer(1)]])
 {
     _21.m22 = float2x2(_26.v2 * _26.v2.x, _26.v2 * _26.v2.y);

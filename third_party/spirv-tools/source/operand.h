@@ -131,11 +131,21 @@ spv_operand_pattern_t spvAlternatePatternFollowingImmediate(
 // Is the operand an ID?
 bool spvIsIdType(spv_operand_type_t type);
 
+// Is the operand an input ID?
+bool spvIsInIdType(spv_operand_type_t type);
+
 // Takes the opcode of an instruction and returns
 // a function object that will return true if the index
 // of the operand can be forward declared. This function will
 // used in the SSA validation stage of the pipeline
 std::function<bool(unsigned)> spvOperandCanBeForwardDeclaredFunction(
     SpvOp opcode);
+
+// Takes the instruction key of a debug info extension instruction
+// and returns a function object that will return true if the index
+// of the operand can be forward declared. This function will
+// used in the SSA validation stage of the pipeline
+std::function<bool(unsigned)> spvDbgInfoExtOperandCanBeForwardDeclaredFunction(
+    spv_ext_inst_type_t ext_type, uint32_t key);
 
 #endif  // SOURCE_OPERAND_H_

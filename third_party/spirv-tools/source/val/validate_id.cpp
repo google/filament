@@ -36,132 +36,6 @@
 
 namespace spvtools {
 namespace val {
-namespace {
-
-class idUsage {
- public:
-  idUsage(spv_const_context context, const spv_instruction_t* pInsts,
-          const uint64_t instCountArg, const SpvMemoryModel memoryModelArg,
-          const SpvAddressingModel addressingModelArg,
-          const ValidationState_t& module,
-          const std::vector<uint32_t>& entry_points, spv_position positionArg,
-          const MessageConsumer& consumer)
-      : targetEnv(context->target_env),
-        opcodeTable(context->opcode_table),
-        operandTable(context->operand_table),
-        extInstTable(context->ext_inst_table),
-        firstInst(pInsts),
-        instCount(instCountArg),
-        memoryModel(memoryModelArg),
-        addressingModel(addressingModelArg),
-        position(positionArg),
-        consumer_(consumer),
-        module_(module),
-        entry_points_(entry_points) {}
-
-  bool isValid(const spv_instruction_t* inst);
-
-  template <SpvOp>
-  bool isValid(const spv_instruction_t* inst, const spv_opcode_desc);
-
- private:
-  const spv_target_env targetEnv;
-  const spv_opcode_table opcodeTable;
-  const spv_operand_table operandTable;
-  const spv_ext_inst_table extInstTable;
-  const spv_instruction_t* const firstInst;
-  const uint64_t instCount;
-  const SpvMemoryModel memoryModel;
-  const SpvAddressingModel addressingModel;
-  spv_position position;
-  const MessageConsumer& consumer_;
-  const ValidationState_t& module_;
-  std::vector<uint32_t> entry_points_;
-};
-
-#define DIAG(inst)                                                          \
-  position->index = inst ? inst->LineNum() : -1;                            \
-  std::string disassembly;                                                  \
-  if (inst) {                                                               \
-    disassembly = module_.Disassemble(                                      \
-        inst->words().data(), static_cast<uint16_t>(inst->words().size())); \
-  }                                                                         \
-  DiagnosticStream helper(*position, consumer_, disassembly,                \
-                          SPV_ERROR_INVALID_DIAGNOSTIC);                    \
-  helper
-
-template <>
-bool idUsage::isValid<SpvOpSampledImage>(const spv_instruction_t* inst,
-                                         const spv_opcode_desc) {
-  auto resultTypeIndex = 2;
-  auto resultID = inst->words[resultTypeIndex];
-  auto sampledImageInstr = module_.FindDef(resultID);
-  // We need to validate 2 things:
-  // * All OpSampledImage instructions must be in the same block in which their
-  // Result <id> are consumed.
-  // * Result <id> from OpSampledImage instructions must not appear as operands
-  // to OpPhi instructions or OpSelect instructions, or any instructions other
-  // than the image lookup and query instructions specified to take an operand
-  // whose type is OpTypeSampledImage.
-  std::vector<uint32_t> consumers = module_.getSampledImageConsumers(resultID);
-  if (!consumers.empty()) {
-    for (auto consumer_id : consumers) {
-      auto consumer_instr = module_.FindDef(consumer_id);
-      auto consumer_opcode = consumer_instr->opcode();
-      if (consumer_instr->block() != sampledImageInstr->block()) {
-        DIAG(sampledImageInstr)
-            << "All OpSampledImage instructions must be in the same block in "
-               "which their Result <id> are consumed. OpSampledImage Result "
-               "Type <id> '"
-            << module_.getIdName(resultID)
-            << "' has a consumer in a different basic "
-               "block. The consumer instruction <id> is '"
-            << module_.getIdName(consumer_id) << "'.";
-        return false;
-      }
-      // TODO: The following check is incomplete. We should also check that the
-      // Sampled Image is not used by instructions that should not take
-      // SampledImage as an argument. We could find the list of valid
-      // instructions by scanning for "Sampled Image" in the operand description
-      // field in the grammar file.
-      if (consumer_opcode == SpvOpPhi || consumer_opcode == SpvOpSelect) {
-        DIAG(sampledImageInstr)
-            << "Result <id> from OpSampledImage instruction must not appear as "
-               "operands of Op"
-            << spvOpcodeString(static_cast<SpvOp>(consumer_opcode)) << "."
-            << " Found result <id> '" << module_.getIdName(resultID)
-            << "' as an operand of <id> '" << module_.getIdName(consumer_id)
-            << "'.";
-        return false;
-      }
-    }
-  }
-  return true;
-}
-
-bool idUsage::isValid(const spv_instruction_t* inst) {
-  spv_opcode_desc opcodeEntry = nullptr;
-  if (spvOpcodeTableValueLookup(targetEnv, opcodeTable, inst->opcode,
-                                &opcodeEntry))
-    return false;
-#define CASE(OpCode) \
-  case Spv##OpCode:  \
-    return isValid<Spv##OpCode>(inst, opcodeEntry);
-  switch (inst->opcode) {
-    CASE(OpSampledImage)
-    // Other composite opcodes are validated in validate_composites.cpp.
-    // Arithmetic opcodes are validated in validate_arithmetics.cpp.
-    // Bitwise opcodes are validated in validate_bitwise.cpp.
-    // Logical opcodes are validated in validate_logicals.cpp.
-    // Derivative opcodes are validated in validate_derivatives.cpp.
-    default:
-      return true;
-  }
-#undef TODO
-#undef CASE
-}
-
-}  // namespace
 
 spv_result_t UpdateIdUse(ValidationState_t& _, const Instruction* inst) {
   for (auto& operand : inst->operands()) {
@@ -184,14 +58,13 @@ spv_result_t UpdateIdUse(ValidationState_t& _, const Instruction* inst) {
 ///
 /// NOTE: This function does NOT check module scoped functions which are
 /// checked during the initial binary parse in the IdPass below
-spv_result_t CheckIdDefinitionDominateUse(const ValidationState_t& _) {
+spv_result_t CheckIdDefinitionDominateUse(ValidationState_t& _) {
   std::vector<const Instruction*> phi_instructions;
   std::unordered_set<uint32_t> phi_ids;
   for (const auto& inst : _.ordered_instructions()) {
     if (inst.id() == 0) continue;
     if (const Function* func = inst.function()) {
       if (const BasicBlock* block = inst.block()) {
-        if (!block->reachable()) continue;
         // If the Id is defined within a block then make sure all references to
         // that Id appear in a blocks that are dominated by the defining block
         for (auto& use_index_pair : inst.uses()) {
@@ -258,7 +131,11 @@ spv_result_t CheckIdDefinitionDominateUse(const ValidationState_t& _) {
 // instruction operand's ID can be forward referenced.
 spv_result_t IdPass(ValidationState_t& _, Instruction* inst) {
   auto can_have_forward_declared_ids =
-      spvOperandCanBeForwardDeclaredFunction(inst->opcode());
+      inst->opcode() == SpvOpExtInst &&
+              spvExtInstIsDebugInfo(inst->ext_inst_type())
+          ? spvDbgInfoExtOperandCanBeForwardDeclaredFunction(
+                inst->ext_inst_type(), inst->word(4))
+          : spvOperandCanBeForwardDeclaredFunction(inst->opcode());
 
   // Keep track of a result id defined by this instruction.  0 means it
   // does not define an id.
@@ -288,13 +165,65 @@ spv_result_t IdPass(ValidationState_t& _, Instruction* inst) {
         ret = SPV_SUCCESS;
         break;
       case SPV_OPERAND_TYPE_ID:
-      case SPV_OPERAND_TYPE_TYPE_ID:
       case SPV_OPERAND_TYPE_MEMORY_SEMANTICS_ID:
       case SPV_OPERAND_TYPE_SCOPE_ID:
-        if (_.IsDefinedId(operand_word)) {
-          ret = SPV_SUCCESS;
+        if (const auto def = _.FindDef(operand_word)) {
+          const auto opcode = inst->opcode();
+          if (spvOpcodeGeneratesType(def->opcode()) &&
+              !spvOpcodeGeneratesType(opcode) && !spvOpcodeIsDebug(opcode) &&
+              !inst->IsNonSemantic() && !spvOpcodeIsDecoration(opcode) &&
+              opcode != SpvOpFunction &&
+              opcode != SpvOpCooperativeMatrixLengthNV &&
+              !(opcode == SpvOpSpecConstantOp &&
+                inst->word(3) == SpvOpCooperativeMatrixLengthNV)) {
+            return _.diag(SPV_ERROR_INVALID_ID, inst)
+                   << "Operand " << _.getIdName(operand_word)
+                   << " cannot be a type";
+          } else if (def->type_id() == 0 && !spvOpcodeGeneratesType(opcode) &&
+                     !spvOpcodeIsDebug(opcode) && !inst->IsNonSemantic() &&
+                     !spvOpcodeIsDecoration(opcode) &&
+                     !spvOpcodeIsBranch(opcode) && opcode != SpvOpPhi &&
+                     opcode != SpvOpExtInst && opcode != SpvOpExtInstImport &&
+                     opcode != SpvOpSelectionMerge &&
+                     opcode != SpvOpLoopMerge && opcode != SpvOpFunction &&
+                     opcode != SpvOpCooperativeMatrixLengthNV &&
+                     !(opcode == SpvOpSpecConstantOp &&
+                       inst->word(3) == SpvOpCooperativeMatrixLengthNV)) {
+            return _.diag(SPV_ERROR_INVALID_ID, inst)
+                   << "Operand " << _.getIdName(operand_word)
+                   << " requires a type";
+          } else if (def->IsNonSemantic() && !inst->IsNonSemantic()) {
+            return _.diag(SPV_ERROR_INVALID_ID, inst)
+                   << "Operand " << _.getIdName(operand_word)
+                   << " in semantic instruction cannot be a non-semantic "
+                      "instruction";
+          } else {
+            ret = SPV_SUCCESS;
+          }
         } else if (can_have_forward_declared_ids(i)) {
-          ret = _.ForwardDeclareId(operand_word);
+          if (inst->opcode() == SpvOpTypeStruct &&
+              !_.IsForwardPointer(operand_word)) {
+            ret = _.diag(SPV_ERROR_INVALID_ID, inst)
+                  << "Operand " << _.getIdName(operand_word)
+                  << " requires a previous definition";
+          } else {
+            ret = _.ForwardDeclareId(operand_word);
+          }
+        } else {
+          ret = _.diag(SPV_ERROR_INVALID_ID, inst)
+                << "ID " << _.getIdName(operand_word)
+                << " has not been defined";
+        }
+        break;
+      case SPV_OPERAND_TYPE_TYPE_ID:
+        if (_.IsDefinedId(operand_word)) {
+          auto* def = _.FindDef(operand_word);
+          if (!spvOpcodeGeneratesType(def->opcode())) {
+            ret = _.diag(SPV_ERROR_INVALID_ID, inst)
+                  << "ID " << _.getIdName(operand_word) << " is not a type id";
+          } else {
+            ret = SPV_SUCCESS;
+          }
         } else {
           ret = _.diag(SPV_ERROR_INVALID_ID, inst)
                 << "ID " << _.getIdName(operand_word)
@@ -309,19 +238,6 @@ spv_result_t IdPass(ValidationState_t& _, Instruction* inst) {
   }
   if (result_id) _.RemoveIfForwardDeclared(result_id);
 
-  return SPV_SUCCESS;
-}
-
-spv_result_t spvValidateInstructionIDs(const spv_instruction_t* pInsts,
-                                       const uint64_t instCount,
-                                       const ValidationState_t& state,
-                                       spv_position position) {
-  idUsage idUsage(state.context(), pInsts, instCount, state.memory_model(),
-                  state.addressing_model(), state, state.entry_points(),
-                  position, state.context()->consumer);
-  for (uint64_t instIndex = 0; instIndex < instCount; ++instIndex) {
-    if (!idUsage.isValid(&pInsts[instIndex])) return SPV_ERROR_INVALID_ID;
-  }
   return SPV_SUCCESS;
 }
 

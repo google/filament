@@ -33,6 +33,7 @@
 #include "source/opt/ir_loader.h"
 #include "source/opt/pass_manager.h"
 #include "source/opt/remove_duplicates_pass.h"
+#include "source/opt/type_manager.h"
 #include "source/spirv_target_env.h"
 #include "source/util/make_unique.h"
 #include "spirv-tools/libspirv.hpp"
@@ -40,14 +41,15 @@
 namespace spvtools {
 namespace {
 
-using opt::IRContext;
 using opt::Instruction;
+using opt::IRContext;
 using opt::Module;
-using opt::Operand;
 using opt::PassManager;
 using opt::RemoveDuplicatesPass;
 using opt::analysis::DecorationManager;
 using opt::analysis::DefUseManager;
+using opt::analysis::Type;
+using opt::analysis::TypeManager;
 
 // Stores various information about an imported or exported symbol.
 struct LinkageSymbolInfo {
@@ -135,8 +137,6 @@ spv_result_t CheckImportExportCompatibility(const MessageConsumer& consumer,
 // TODO(pierremoreau): Linkage attributes applied by a group decoration are
 //                     currently not handled. (You could have a group being
 //                     applied to a single ID.)
-// TODO(pierremoreau): Run a pass for removing dead instructions, for example
-//                     OpName for prototypes of imported funcions.
 spv_result_t RemoveLinkageSpecificInstructions(
     const MessageConsumer& consumer, const LinkerOptions& options,
     const LinkageTable& linkings_to_do, DecorationManager* decoration_manager,
@@ -324,6 +324,11 @@ spv_result_t MergeModules(const MessageConsumer& consumer,
       linked_module->AddDebug3Inst(
           std::unique_ptr<Instruction>(inst.Clone(linked_context)));
 
+  for (const auto& module : input_modules)
+    for (const auto& inst : module->ext_inst_debuginfo())
+      linked_module->AddExtInstDebugInfo(
+          std::unique_ptr<Instruction>(inst.Clone(linked_context)));
+
   // If the generated module uses SPIR-V 1.1 or higher, add an
   // OpModuleProcessed instruction about the linking step.
   if (linked_module->version() >= 0x10100) {
@@ -472,14 +477,15 @@ spv_result_t CheckImportExportCompatibility(const MessageConsumer& consumer,
                                             opt::IRContext* context) {
   spv_position_t position = {};
 
-  // Ensure th import and export types are the same.
-  const DefUseManager& def_use_manager = *context->get_def_use_mgr();
+  // Ensure the import and export types are the same.
   const DecorationManager& decoration_manager = *context->get_decoration_mgr();
+  const TypeManager& type_manager = *context->get_type_mgr();
   for (const auto& linking_entry : linkings_to_do) {
-    if (!RemoveDuplicatesPass::AreTypesEqual(
-            *def_use_manager.GetDef(linking_entry.imported_symbol.type_id),
-            *def_use_manager.GetDef(linking_entry.exported_symbol.type_id),
-            context))
+    Type* imported_symbol_type =
+        type_manager.GetType(linking_entry.imported_symbol.type_id);
+    Type* exported_symbol_type =
+        type_manager.GetType(linking_entry.exported_symbol.type_id);
+    if (!(*imported_symbol_type == *exported_symbol_type))
       return DiagnosticStream(position, consumer, "", SPV_ERROR_INVALID_BINARY)
              << "Type mismatch on symbol \""
              << linking_entry.imported_symbol.name
@@ -527,24 +533,6 @@ spv_result_t RemoveLinkageSpecificInstructions(
 
   // TODO(pierremoreau): Remove FuncParamAttr decorations of imported
   // functions' return type.
-
-  // Remove FuncParamAttr decorations of imported functions' parameters.
-  // From the SPIR-V specification, Sec. 2.13:
-  //   When resolving imported functions, the Function Control and all Function
-  //   Parameter Attributes are taken from the function definition, and not
-  //   from the function declaration.
-  for (const auto& linking_entry : linkings_to_do) {
-    for (const auto parameter_id :
-         linking_entry.imported_symbol.parameter_ids) {
-      decoration_manager->RemoveDecorationsFrom(
-          parameter_id, [](const Instruction& inst) {
-            return (inst.opcode() == SpvOpDecorate ||
-                    inst.opcode() == SpvOpMemberDecorate) &&
-                   inst.GetSingleWordInOperand(1u) ==
-                       SpvDecorationFuncParamAttr;
-          });
-    }
-  }
 
   // Remove prototypes of imported functions
   for (const auto& linking_entry : linkings_to_do) {
@@ -743,24 +731,34 @@ spv_result_t Link(const Context& context, const uint32_t* const* binaries,
   opt::Pass::Status pass_res = manager.Run(&linked_context);
   if (pass_res == opt::Pass::Status::Failure) return SPV_ERROR_INVALID_DATA;
 
-  // Phase 7: Rematch import variables/functions to export variables/functions
-  for (const auto& linking_entry : linkings_to_do)
+  // Phase 7: Remove all names and decorations of import variables/functions
+  for (const auto& linking_entry : linkings_to_do) {
+    linked_context.KillNamesAndDecorates(linking_entry.imported_symbol.id);
+    for (const auto parameter_id :
+         linking_entry.imported_symbol.parameter_ids) {
+      linked_context.KillNamesAndDecorates(parameter_id);
+    }
+  }
+
+  // Phase 8: Rematch import variables/functions to export variables/functions
+  for (const auto& linking_entry : linkings_to_do) {
     linked_context.ReplaceAllUsesWith(linking_entry.imported_symbol.id,
                                       linking_entry.exported_symbol.id);
+  }
 
-  // Phase 8: Remove linkage specific instructions, such as import/export
+  // Phase 9: Remove linkage specific instructions, such as import/export
   // attributes, linkage capability, etc. if applicable
   res = RemoveLinkageSpecificInstructions(consumer, options, linkings_to_do,
                                           linked_context.get_decoration_mgr(),
                                           &linked_context);
   if (res != SPV_SUCCESS) return res;
 
-  // Phase 9: Compact the IDs used in the module
+  // Phase 10: Compact the IDs used in the module
   manager.AddPass<opt::CompactIdsPass>();
   pass_res = manager.Run(&linked_context);
   if (pass_res == opt::Pass::Status::Failure) return SPV_ERROR_INVALID_DATA;
 
-  // Phase 10: Output the module
+  // Phase 11: Output the module
   linked_context.module()->ToBinary(linked_binary, true);
 
   return SPV_SUCCESS;

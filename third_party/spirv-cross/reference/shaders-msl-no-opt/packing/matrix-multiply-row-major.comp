@@ -11,6 +11,8 @@ struct SSBO
     float3 v1;
 };
 
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
 kernel void main0(device SSBO& _11 [[buffer(0)]])
 {
     _11.v0 = _11.v1 * (_11.m1 * _11.m0);

@@ -9,6 +9,8 @@ struct SSBO
     int index;
 };
 
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
 kernel void main0(device SSBO& _13 [[buffer(0)]])
 {
     float4 d = _13.data;

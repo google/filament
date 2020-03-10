@@ -29,8 +29,6 @@
 #    "unknown hash".
 # The string contents are escaped as necessary.
 
-from __future__ import print_function
-
 import datetime
 import errno
 import os
@@ -88,7 +86,7 @@ def deduce_software_version(directory):
     # Linux.
     pattern = re.compile(r'^(v\d+\.\d+(-dev)?) \d\d\d\d-\d\d-\d\d\s*$')
     changes_file = os.path.join(directory, 'CHANGES')
-    with open(changes_file, mode='rU') as f:
+    with open(changes_file, mode='r') as f:
         for line in f.readlines():
             match = pattern.match(line)
             if match:
@@ -118,10 +116,10 @@ def describe(directory):
             # e.g. because the source tree might not be in a git tree.
             # In this case, usually use a timestamp.  However, to ensure
             # reproducible builds, allow the builder to override the wall
-            # clock time with enviornment variable SOURCE_DATE_EPOCH
+            # clock time with environment variable SOURCE_DATE_EPOCH
             # containing a (presumably) fixed timestamp.
             timestamp = int(os.environ.get('SOURCE_DATE_EPOCH', time.time()))
-            formatted = datetime.date.fromtimestamp(timestamp).isoformat()
+            formatted = datetime.datetime.utcfromtimestamp(timestamp).isoformat()
             return 'unknown hash, {}'.format(formatted)
 
 

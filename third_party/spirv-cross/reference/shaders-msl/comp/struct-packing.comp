@@ -118,6 +118,8 @@ struct SSBO0
     float4 array[1];
 };
 
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
 kernel void main0(device SSBO1& ssbo_430 [[buffer(0)]], device SSBO0& ssbo_140 [[buffer(1)]])
 {
     Content_1 _60 = ssbo_140.content;

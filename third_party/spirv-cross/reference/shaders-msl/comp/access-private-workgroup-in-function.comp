@@ -5,11 +5,15 @@
 
 using namespace metal;
 
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
+static inline __attribute__((always_inline))
 void set_f(thread int& f)
 {
     f = 40;
 }
 
+static inline __attribute__((always_inline))
 void set_shared_u(threadgroup int& u)
 {
     u = 50;

@@ -12,6 +12,8 @@ struct SSBO
     int i32;
 };
 
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
 kernel void main0(device SSBO& ssbo [[buffer(0)]])
 {
     threadgroup uint shared_u32;

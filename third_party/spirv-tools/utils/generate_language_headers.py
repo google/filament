@@ -14,8 +14,6 @@
 # limitations under the License.
 """Generates language headers from a JSON grammar file"""
 
-from __future__ import print_function
-
 import errno
 import json
 import os.path
@@ -181,7 +179,8 @@ def main():
                                  version = grammar_json['version'],
                                  revision = grammar_json['revision'])
         make_path_to_file(args.extinst_output_base)
-        print(CGenerator().generate(grammar), file=open(args.extinst_output_base + '.h', 'w'))
+        with open(args.extinst_output_base + '.h', 'w') as f:
+            f.write(CGenerator().generate(grammar))
 
 
 if __name__ == '__main__':

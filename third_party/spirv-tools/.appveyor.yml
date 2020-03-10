@@ -42,7 +42,7 @@ install:
   - set NINJA_URL="https://github.com/ninja-build/ninja/releases/download/v1.8.2/ninja-win.zip"
   - appveyor DownloadFile %NINJA_URL% -FileName ninja.zip
   - 7z x ninja.zip -oC:\ninja > nul
-  - set PATH=C:\ninja;%PATH%
+  - set PATH=C:\ninja;C:\Python36;%PATH%
 
 before_build:
   - git clone --depth=1 https://github.com/KhronosGroup/SPIRV-Headers.git external/spirv-headers
@@ -59,11 +59,11 @@ build:
 
 build_script:
   - mkdir build && cd build
-  - cmake -GNinja -DSPIRV_BUILD_COMPRESSION=ON -DCMAKE_BUILD_TYPE=%CONFIGURATION% -DCMAKE_INSTALL_PREFIX=install -DRE2_BUILD_TESTING=OFF ..
+  - cmake -GNinja -DCMAKE_BUILD_TYPE=%CONFIGURATION% -DCMAKE_INSTALL_PREFIX=install -DRE2_BUILD_TESTING=OFF ..
   - ninja install
 
 test_script:
-  - ctest -C %CONFIGURATION% --output-on-failure --timeout 300
+  - ctest -C %CONFIGURATION% --output-on-failure --timeout 310
 
 after_test:
   # Zip build artifacts for uploading and deploying

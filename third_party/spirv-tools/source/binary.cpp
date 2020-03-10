@@ -123,8 +123,8 @@ class Parser {
   // returned object will be propagated to the current parse's diagnostic
   // object.
   spvtools::DiagnosticStream diagnostic(spv_result_t error) {
-    return spvtools::DiagnosticStream({0, 0, _.word_index}, consumer_, "",
-                                      error);
+    return spvtools::DiagnosticStream({0, 0, _.instruction_count}, consumer_,
+                                      "", error);
   }
 
   // Returns a diagnostic stream object with the default parse error code.
@@ -179,6 +179,7 @@ class Parser {
           num_words(num_words_arg),
           diagnostic(diagnostic_arg),
           word_index(0),
+          instruction_count(0),
           endian(),
           requires_endian_conversion(false) {
       // Temporary storage for parser state within a single instruction.
@@ -192,6 +193,7 @@ class Parser {
     size_t num_words;            // Number of words in the module.
     spv_diagnostic* diagnostic;  // Where diagnostics go.
     size_t word_index;           // The current position in words.
+    size_t instruction_count;    // The count of processed instructions
     spv_endianness_t endian;     // The endianness of the binary.
     // Is the SPIR-V binary in a different endiannes from the host native
     // endianness?
@@ -269,6 +271,8 @@ spv_result_t Parser::parseModule() {
 }
 
 spv_result_t Parser::parseInstruction() {
+  _.instruction_count++;
+
   // The zero values for all members except for opcode are the
   // correct initial values.
   spv_parsed_instruction_t inst = {};
@@ -473,9 +477,22 @@ spv_result_t Parser::parseOperand(size_t inst_offset,
       assert(SpvOpExtInst == opcode);
       assert(inst->ext_inst_type != SPV_EXT_INST_TYPE_NONE);
       spv_ext_inst_desc ext_inst;
-      if (grammar_.lookupExtInst(inst->ext_inst_type, word, &ext_inst))
-        return diagnostic() << "Invalid extended instruction number: " << word;
-      spvPushOperandTypes(ext_inst->operandTypes, expected_operands);
+      if (grammar_.lookupExtInst(inst->ext_inst_type, word, &ext_inst) ==
+          SPV_SUCCESS) {
+        // if we know about this ext inst, push the expected operands
+        spvPushOperandTypes(ext_inst->operandTypes, expected_operands);
+      } else {
+        // if we don't know this extended instruction and the set isn't
+        // non-semantic, we cannot process further
+        if (!spvExtInstIsNonSemantic(inst->ext_inst_type)) {
+          return diagnostic()
+                 << "Invalid extended instruction number: " << word;
+        } else {
+          // for non-semantic instruction sets, we know the form of all such
+          // extended instructions contains a series of IDs as parameters
+          expected_operands->push_back(SPV_OPERAND_TYPE_VARIABLE_ID);
+        }
+      }
     } break;
 
     case SPV_OPERAND_TYPE_SPEC_CONSTANT_OP_NUMBER: {
@@ -619,7 +636,12 @@ spv_result_t Parser::parseOperand(size_t inst_offset,
     case SPV_OPERAND_TYPE_DEBUG_BASE_TYPE_ATTRIBUTE_ENCODING:
     case SPV_OPERAND_TYPE_DEBUG_COMPOSITE_TYPE:
     case SPV_OPERAND_TYPE_DEBUG_TYPE_QUALIFIER:
-    case SPV_OPERAND_TYPE_DEBUG_OPERATION: {
+    case SPV_OPERAND_TYPE_DEBUG_OPERATION:
+    case SPV_OPERAND_TYPE_CLDEBUG100_DEBUG_BASE_TYPE_ATTRIBUTE_ENCODING:
+    case SPV_OPERAND_TYPE_CLDEBUG100_DEBUG_COMPOSITE_TYPE:
+    case SPV_OPERAND_TYPE_CLDEBUG100_DEBUG_TYPE_QUALIFIER:
+    case SPV_OPERAND_TYPE_CLDEBUG100_DEBUG_OPERATION:
+    case SPV_OPERAND_TYPE_CLDEBUG100_DEBUG_IMPORTED_ENTITY: {
       // A single word that is a plain enum value.
 
       // Map an optional operand type to its corresponding concrete type.
@@ -643,6 +665,7 @@ spv_result_t Parser::parseOperand(size_t inst_offset,
     case SPV_OPERAND_TYPE_OPTIONAL_IMAGE:
     case SPV_OPERAND_TYPE_OPTIONAL_MEMORY_ACCESS:
     case SPV_OPERAND_TYPE_SELECTION_CONTROL:
+    case SPV_OPERAND_TYPE_CLDEBUG100_DEBUG_INFO_FLAGS:
     case SPV_OPERAND_TYPE_DEBUG_INFO_FLAGS: {
       // This operand is a mask.
 
@@ -777,9 +800,10 @@ spv_result_t spvBinaryParse(const spv_const_context context, void* user_data,
 // TODO(dneto): This probably belongs in text.cpp since that's the only place
 // that a spv_binary_t value is created.
 void spvBinaryDestroy(spv_binary binary) {
-  if (!binary) return;
-  delete[] binary->code;
-  delete binary;
+  if (binary) {
+    if (binary->code) delete[] binary->code;
+    delete binary;
+  }
 }
 
 size_t spv_strnlen_s(const char* str, size_t strsz) {

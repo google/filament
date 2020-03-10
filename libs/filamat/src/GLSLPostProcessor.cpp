@@ -356,6 +356,7 @@ void GLSLPostProcessor::fullOptimization(const TShader& tShader,
 
 void GLSLPostProcessor::registerPerformancePasses(Optimizer& optimizer) const {
     optimizer
+            .RegisterPass(CreateDeadBranchElimPass())
             .RegisterPass(CreateMergeReturnPass())
             .RegisterPass(CreateInlineExhaustivePass())
             .RegisterPass(CreateAggressiveDCEPass())
@@ -392,6 +393,7 @@ void GLSLPostProcessor::registerPerformancePasses(Optimizer& optimizer) const {
 
 void GLSLPostProcessor::registerSizePasses(Optimizer& optimizer) const {
     optimizer
+            .RegisterPass(CreateDeadBranchElimPass())
             .RegisterPass(CreateMergeReturnPass())
             .RegisterPass(CreateInlineExhaustivePass())
             .RegisterPass(CreateAggressiveDCEPass())

@@ -217,7 +217,7 @@ OpName %initializer "initializer"
 %6 = OpTypeFunction %void
 %float = OpTypeFloat 32
 %_ptr_Private_float = OpTypePointer Private %float
-%initializer = OpVariable %_ptr_Private_float Private
+%initializer = OpConstant %float 0
 %live = OpVariable %_ptr_Private_float Private %initializer
 %main = OpFunction %void None %6
 %9 = OpLabel

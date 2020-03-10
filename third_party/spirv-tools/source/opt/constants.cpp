@@ -103,6 +103,45 @@ int64_t Constant::GetS64() const {
   }
 }
 
+uint64_t Constant::GetZeroExtendedValue() const {
+  const auto* int_type = type()->AsInteger();
+  assert(int_type != nullptr);
+  const auto width = int_type->width();
+  assert(width <= 64);
+
+  uint64_t value = 0;
+  if (const IntConstant* ic = AsIntConstant()) {
+    if (width <= 32) {
+      value = ic->GetU32BitValue();
+    } else {
+      value = ic->GetU64BitValue();
+    }
+  } else {
+    assert(AsNullConstant() && "Must be an integer constant.");
+  }
+  return value;
+}
+
+int64_t Constant::GetSignExtendedValue() const {
+  const auto* int_type = type()->AsInteger();
+  assert(int_type != nullptr);
+  const auto width = int_type->width();
+  assert(width <= 64);
+
+  int64_t value = 0;
+  if (const IntConstant* ic = AsIntConstant()) {
+    if (width <= 32) {
+      // Let the C++ compiler do the sign extension.
+      value = int64_t(ic->GetS32BitValue());
+    } else {
+      value = ic->GetS64BitValue();
+    }
+  } else {
+    assert(AsNullConstant() && "Must be an integer constant.");
+  }
+  return value;
+}
+
 ConstantManager::ConstantManager(IRContext* ctx) : ctx_(ctx) {
   // Populate the constant table with values from constant declarations in the
   // module.  The values of each OpConstant declaration is the identity
@@ -117,7 +156,7 @@ Type* ConstantManager::GetType(const Instruction* inst) const {
 }
 
 std::vector<const Constant*> ConstantManager::GetOperandConstants(
-    Instruction* inst) const {
+    const Instruction* inst) const {
   std::vector<const Constant*> constants;
   for (uint32_t i = 0; i < inst->NumInOperands(); i++) {
     const Operand* operand = &inst->GetInOperand(i);
@@ -165,7 +204,12 @@ std::vector<const Constant*> ConstantManager::GetConstantsFromIds(
 
 Instruction* ConstantManager::BuildInstructionAndAddToModule(
     const Constant* new_const, Module::inst_iterator* pos, uint32_t type_id) {
+  // TODO(1841): Handle id overflow.
   uint32_t new_id = context()->TakeNextId();
+  if (new_id == 0) {
+    return nullptr;
+  }
+
   auto new_inst = CreateInstruction(new_id, new_const, type_id);
   if (!new_inst) {
     return nullptr;
@@ -180,8 +224,6 @@ Instruction* ConstantManager::BuildInstructionAndAddToModule(
 
 Instruction* ConstantManager::GetDefiningInstruction(
     const Constant* c, uint32_t type_id, Module::inst_iterator* pos) {
-  assert(type_id == 0 ||
-         context()->get_type_mgr()->GetType(type_id) == c->type());
   uint32_t decl_id = FindDeclaredConstant(c, type_id);
   if (decl_id == 0) {
     auto iter = context()->types_values_end();
@@ -196,19 +238,19 @@ Instruction* ConstantManager::GetDefiningInstruction(
   }
 }
 
-const Constant* ConstantManager::CreateConstant(
+std::unique_ptr<Constant> ConstantManager::CreateConstant(
     const Type* type, const std::vector<uint32_t>& literal_words_or_ids) const {
   if (literal_words_or_ids.size() == 0) {
     // Constant declared with OpConstantNull
-    return new NullConstant(type);
+    return MakeUnique<NullConstant>(type);
   } else if (auto* bt = type->AsBool()) {
     assert(literal_words_or_ids.size() == 1 &&
            "Bool constant should be declared with one operand");
-    return new BoolConstant(bt, literal_words_or_ids.front());
+    return MakeUnique<BoolConstant>(bt, literal_words_or_ids.front());
   } else if (auto* it = type->AsInteger()) {
-    return new IntConstant(it, literal_words_or_ids);
+    return MakeUnique<IntConstant>(it, literal_words_or_ids);
   } else if (auto* ft = type->AsFloat()) {
-    return new FloatConstant(ft, literal_words_or_ids);
+    return MakeUnique<FloatConstant>(ft, literal_words_or_ids);
   } else if (auto* vt = type->AsVector()) {
     auto components = GetConstantsFromIds(literal_words_or_ids);
     if (components.empty()) return nullptr;
@@ -231,25 +273,25 @@ const Constant* ConstantManager::CreateConstant(
                        return false;
                      }))
       return nullptr;
-    return new VectorConstant(vt, components);
+    return MakeUnique<VectorConstant>(vt, components);
   } else if (auto* mt = type->AsMatrix()) {
     auto components = GetConstantsFromIds(literal_words_or_ids);
     if (components.empty()) return nullptr;
-    return new MatrixConstant(mt, components);
+    return MakeUnique<MatrixConstant>(mt, components);
   } else if (auto* st = type->AsStruct()) {
     auto components = GetConstantsFromIds(literal_words_or_ids);
     if (components.empty()) return nullptr;
-    return new StructConstant(st, components);
+    return MakeUnique<StructConstant>(st, components);
   } else if (auto* at = type->AsArray()) {
     auto components = GetConstantsFromIds(literal_words_or_ids);
     if (components.empty()) return nullptr;
-    return new ArrayConstant(at, components);
+    return MakeUnique<ArrayConstant>(at, components);
   } else {
     return nullptr;
   }
 }
 
-const Constant* ConstantManager::GetConstantFromInst(Instruction* inst) {
+const Constant* ConstantManager::GetConstantFromInst(const Instruction* inst) {
   std::vector<uint32_t> literal_words_or_ids;
 
   // Collect the constant defining literals or component ids.
@@ -344,7 +386,14 @@ std::unique_ptr<Instruction> ConstantManager::CreateCompositeInstruction(
 const Constant* ConstantManager::GetConstant(
     const Type* type, const std::vector<uint32_t>& literal_words_or_ids) {
   auto cst = CreateConstant(type, literal_words_or_ids);
-  return cst ? RegisterConstant(cst) : nullptr;
+  return cst ? RegisterConstant(std::move(cst)) : nullptr;
+}
+
+uint32_t ConstantManager::GetFloatConst(float val) {
+  Type* float_type = context()->get_type_mgr()->GetFloatType();
+  utils::FloatProxy<float> v(val);
+  const Constant* c = GetConstant(float_type, v.GetWords());
+  return GetDefiningInstruction(c)->result_id();
 }
 
 std::vector<const analysis::Constant*> Constant::GetVectorComponents(

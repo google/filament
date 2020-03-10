@@ -13,14 +13,14 @@ struct SSBO
 
 // Implementation of the GLSL findLSB() function
 template<typename T>
-T spvFindLSB(T x)
+inline T spvFindLSB(T x)
 {
     return select(ctz(x), T(-1), x == T(0));
 }
 
 // Implementation of the signed GLSL findMSB() function
 template<typename T>
-T spvFindSMSB(T x)
+inline T spvFindSMSB(T x)
 {
     T v = select(x, T(-1) - x, x < T(0));
     return select(clz(T(0)) - (clz(v) + T(1)), T(-1), v == T(0));
@@ -28,7 +28,7 @@ T spvFindSMSB(T x)
 
 // Implementation of the unsigned GLSL findMSB() function
 template<typename T>
-T spvFindUMSB(T x)
+inline T spvFindUMSB(T x)
 {
     return select(clz(T(0)) - (clz(x) + T(1)), T(-1), x == T(0));
 }

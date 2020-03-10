@@ -1,3 +1,5 @@
+static const uint3 gl_WorkGroupSize = uint3(1u, 1u, 1u);
+
 RWTexture2D<float> uImageInF : register(u0);
 RWTexture2D<float> uImageOutF : register(u1);
 RWTexture2D<int> uImageInI : register(u2);

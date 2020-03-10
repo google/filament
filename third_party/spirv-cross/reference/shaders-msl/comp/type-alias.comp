@@ -40,11 +40,15 @@ struct SSBO2
     float4 outputs[1];
 };
 
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
+static inline __attribute__((always_inline))
 float4 overload(thread const S0& s0)
 {
     return s0.a;
 }
 
+static inline __attribute__((always_inline))
 float4 overload(thread const S1& s1)
 {
     return s1.a;
