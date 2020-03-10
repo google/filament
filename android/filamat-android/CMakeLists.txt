@@ -7,6 +7,10 @@ if(FILAMAT_LITE)
     set(FILAMAT_FLAVOR "filamat_lite")
 endif()
 
+if (FILAMENT_SUPPORTS_VULKAN)
+    message("Library filamat ignores Vulkan settings")
+endif()
+
 add_library(${FILAMAT_FLAVOR} STATIC IMPORTED)
 set_target_properties(${FILAMAT_FLAVOR} PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/lib${FILAMAT_FLAVOR}.a)
@@ -43,4 +47,3 @@ target_link_libraries(filamat-jni
         log
         smol-v
 )
-
