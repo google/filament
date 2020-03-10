@@ -1,4 +1,0 @@
-RWStructuredBuffer<uint> srt0;
-void main() {
-    RWStructuredBuffer<uint> srt0Local = srt0;
-}
