@@ -58,8 +58,8 @@ void foo23()
     b1 = mix(b2, b3, b);
     uvec3 um3 = mix(uvec3(i), uvec3(i), bvec3(b));
     ivec4 im4 = mix(ivec4(i), ivec4(i), bvec4(b));
+    1 << mix(1u, 1u, false);  // does not require folding
 }
-
 layout(binding=3) uniform sampler2D s1;
 layout(binding=3) uniform sampler2D s2; // ERROR: overlapping bindings?  Don't see that in the 310 spec.
 highp layout(binding=2) uniform writeonly image2D      i2D;
@@ -440,7 +440,7 @@ void devi()
 #extension GL_EXT_device_group : enable
 #endif
 
-#ifdef GL_EXT_device_group
+#ifdef GL_EXT_multiview
 #extension GL_EXT_multiview : enable
 #endif
 

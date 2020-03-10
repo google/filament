@@ -219,6 +219,9 @@ int init1 = gl_FrontFacing ? 1 : 2; // ERROR, non-const initializer
 
 int init2 = gl_FrontFacing ? 1 : 2;
 
+#define A__B // error
+int a__b;    // error
+
 #pragma STDGL invariant(all)
 
 #line 3000

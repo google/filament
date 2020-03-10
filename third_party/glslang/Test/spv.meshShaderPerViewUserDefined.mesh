@@ -22,17 +22,29 @@ layout(triangles) out;
 layout(location=0) out block {
     perprimitiveNV perviewNV vec4 color1[][3];  // Implicitly sized
     perprimitiveNV vec4 color2[3];
-    perviewNV vec4 color3[MAX_VIEWS][3];          // Explicitly sized
+    perviewNV vec4 color3[MAX_VIEWS][3];        // Explicitly sized
     vec4 color4;
 } b[];
 
-// per-view block
+// per-view block attributes
 perviewNV layout(location=10) out perviewBlock {
     perprimitiveNV vec4 color5[];              // Implicitly sized
     perprimitiveNV vec4 color6[MAX_VIEWS][3];  // Explicitly sized
-    vec4 color7[][3];                            // Implicitly sized
-    vec4 color8[MAX_VIEWS];                      // Explicitly sized
+    vec4 color7[][3];                          // Implicitly sized
+    vec4 color8[MAX_VIEWS];                    // Explicitly sized
 } b2[];
+
+// per-view non-block attributes
+perviewNV                layout(location=18) out vec4 nonBlk1[MAX_VER][MAX_VIEWS]; // Explicit+Explicit
+perviewNV perprimitiveNV layout(location=19) out vec4 nonBlk2[MAX_PRIM][];         // Explicit+Implicit
+perviewNV                layout(location=20) out vec4 nonBlk3[][MAX_VIEWS];        // Implicit+Explicit
+perviewNV perprimitiveNV layout(location=21) out vec4 nonBlk4[][];                 // Implicit+Implicit
+
+// per-view non-block array attributes
+perviewNV                layout(location=22) out vec4 nonBlkArr1[MAX_VER][MAX_VIEWS][2]; // Explicit+Explicit
+perviewNV perprimitiveNV layout(location=24) out vec4 nonBlkArr2[MAX_PRIM][][2];         // Explicit+Implicit
+perviewNV                layout(location=26) out vec4 nonBlkArr3[][MAX_VIEWS][2];        // Implicit+Explicit
+perviewNV perprimitiveNV layout(location=28) out vec4 nonBlkArr4[][][2];                 // Implicit+Implicit
 
 void main()
 {

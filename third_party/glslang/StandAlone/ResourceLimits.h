@@ -37,7 +37,7 @@
 
 #include <string>
 
-#include "glslang/Include/ResourceLimits.h"
+#include "../glslang/Include/ResourceLimits.h"
 
 namespace glslang {
 

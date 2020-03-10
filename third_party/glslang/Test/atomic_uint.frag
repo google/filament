@@ -1,6 +1,7 @@
 #version 420 core
 
 layout(binding = 0) uniform atomic_uint counter;
+layout(binding = 0, offset = 9) uniform atomic_uint counter;
 
 uint func(atomic_uint c)
 {
@@ -41,7 +42,7 @@ uniform atomic_uint aNoBind;                          // ERROR, no binding
 layout(binding=0, offset=32) uniform atomic_uint aOffset;
 layout(binding=0, offset=4) uniform atomic_uint;
 layout(binding=0) uniform atomic_uint bar3;           // offset is 4
-layout(binding=0) uniform atomic_uint ac[3];          // offset = 8
+layout(binding=0) uniform atomic_uint ac[2];          // offset = 8
 layout(binding=0) uniform atomic_uint ad;             // offset = 20
 layout(offset=8) uniform atomic_uint bar4;            // ERROR, no binding
 layout(binding = 0, offset = 12) uniform atomic_uint overlap;  // ERROR, overlapping offsets

@@ -47,4 +47,14 @@ void barWxyz()
 int primitiveID()
 {
    return gl_PrimitiveID;
+   gl_PerFragment; // ERROR, block name can't get reused
 }
+
+in double type1;    // ERROR
+#extension GL_ARB_gpu_shader_fp64 : enable
+double type2;
+double type3 = 2.0;
+int absTest = sqrt(type3);
+double absTest2 = sqrt(type3);
+double absTest3 = sqrt(2);
+float dk = sqrt(11);

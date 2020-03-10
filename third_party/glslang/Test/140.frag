@@ -17,6 +17,7 @@ void main()
 #error GL_ES is not set
 #endif
 
+
 in struct S { float f; } s; // ERROR
 
 float patch = 3.1;
@@ -51,3 +52,9 @@ float fooi()
 {
     return i1 + i2;
 }
+
+uniform sampler2DMS aaa1; // ERROR
+
+#extension GL_ARB_texture_multisample : enable
+
+uniform sampler2DMS aaa2;

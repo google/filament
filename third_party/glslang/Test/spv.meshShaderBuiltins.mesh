@@ -50,8 +50,9 @@ void main()
 
     BARRIER();
 
-    // should truncate 257 -> 1
-    gl_PrimitiveIndicesNV[0] = 257;
+    // check bound limits
+    gl_PrimitiveIndicesNV[0] = 257; // should truncate 257 -> 1
+    gl_PrimitiveIndicesNV[(MAX_PRIM * 3) - 1] = 2;
     gl_PrimitiveIndicesNV[gid] = gl_PrimitiveIndicesNV[gid-1];
 
     // writes 4 indices at offset gl_DrawID

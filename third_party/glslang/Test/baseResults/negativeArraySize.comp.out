@@ -1,5 +1,5 @@
 negativeArraySize.comp
-ERROR: 0:9: '' : array size must be a positive integer 
+ERROR: 0:9: '' : array size must be a positive integer
 ERROR: 1 compilation errors.  No code generated.
 
 

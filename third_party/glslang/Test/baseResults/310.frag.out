@@ -337,6 +337,16 @@ ERROR: node is still EOpNull!
 0:60              'i' ( uniform mediump int)
 0:60            Construct bvec4 ( temp 4-component vector of bool)
 0:60              'b' ( temp bool)
+0:61      left-shift ( temp int)
+0:61        Constant:
+0:61          1 (const int)
+0:61        mix ( global uint)
+0:61          Constant:
+0:61            1 (const uint)
+0:61          Constant:
+0:61            1 (const uint)
+0:61          Constant:
+0:61            false (const bool)
 0:98  Function Definition: foots( ( global void)
 0:98    Function Parameters: 
 0:100    Sequence

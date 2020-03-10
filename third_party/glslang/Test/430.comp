@@ -48,6 +48,9 @@ shared vec4 s;
 layout(location = 2) shared vec4 sl;  // ERROR
 shared float fs = 4.2;                // ERROR
 
+layout(local_size_y = 1) in;
+layout(local_size_y = 2) in;     // ERROR, changing
+layout(local_size_y = 1) in;
 layout(local_size_x = 2, local_size_y = 3, local_size_z = 4) out;  // ERROR
 
 int arrX[gl_WorkGroupSize.x];

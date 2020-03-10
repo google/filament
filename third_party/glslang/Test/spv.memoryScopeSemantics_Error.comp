@@ -24,5 +24,7 @@ void main()
     uint origu = atomicCompSwap(atomu, 10u, value, gl_ScopeDevice, gl_StorageSemanticsBuffer | gl_StorageSemanticsShared, gl_SemanticsAcquire, gl_StorageSemanticsBuffer | gl_StorageSemanticsShared, gl_SemanticsAcquireRelease);
     memoryBarrier(gl_ScopeWorkgroup, gl_StorageSemanticsBuffer, gl_SemanticsRelease | gl_SemanticsMakeVisible);
     memoryBarrier(gl_ScopeWorkgroup, gl_StorageSemanticsBuffer, gl_SemanticsAcquire | gl_SemanticsMakeAvailable);
+    memoryBarrier(gl_ScopeWorkgroup, gl_StorageSemanticsBuffer, gl_SemanticsRelease | gl_SemanticsVolatile);
+    atomicCompSwap(bufferi.x, 10u, 10u, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsAcquire | gl_SemanticsVolatile, gl_StorageSemanticsBuffer, gl_SemanticsAcquire);
 }
 

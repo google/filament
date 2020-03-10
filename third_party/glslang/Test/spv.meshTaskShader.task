@@ -1,5 +1,7 @@
 #version 450
 
+#define MAX_VIEWS gl_MaxMeshViewCountNV
+
 #define BARRIER() \
     memoryBarrierShared(); \
     barrier();
@@ -19,12 +21,14 @@ shared vec4 mem[10];
 taskNV out Task {
     vec2 dummy;
     vec2 submesh[3];
+    uint viewID;
 } mytask;
 
 void main()
 {
     uint iid = gl_LocalInvocationID.x;
     uint gid = gl_WorkGroupID.x;
+    uint viewID = gl_MeshViewIndicesNV[gl_MeshViewCountNV%MAX_VIEWS];
 
     // 1. shared memory load and stores
     for (uint i = 0; i < 10; ++i) {
@@ -41,6 +45,7 @@ void main()
     mytask.submesh[0] = vec2(32.0, 33.0);
     mytask.submesh[1] = vec2(34.0, 35.0);
     mytask.submesh[2] = mytask.submesh[gid%2];
+    mytask.viewID     = viewID;
 
     BARRIER();
 

@@ -11,7 +11,7 @@ ERROR: 8 compilation errors.  No code generated.
 
 
 Shader version: 450
-Requested GL_KHX_shader_explicit_arithmetic_types
+Requested GL_EXT_shader_explicit_arithmetic_types
 ERROR: node is still EOpNull!
 0:5  Function Definition: func(i81;i161;i161; ( global int64_t)
 0:5    Function Parameters: 
@@ -137,7 +137,7 @@ Linked fragment stage:
 
 
 Shader version: 450
-Requested GL_KHX_shader_explicit_arithmetic_types
+Requested GL_EXT_shader_explicit_arithmetic_types
 ERROR: node is still EOpNull!
 0:10  Function Definition: func(i81;i161;i1; ( global int64_t)
 0:10    Function Parameters: 

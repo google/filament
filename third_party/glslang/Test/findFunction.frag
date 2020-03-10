@@ -1,6 +1,6 @@
 #version 450
 
-#extension GL_KHX_shader_explicit_arithmetic_types: enable
+#extension GL_EXT_shader_explicit_arithmetic_types: enable
 
 int64_t func(int8_t a, int16_t b, int16_t c)
 {

@@ -15,5 +15,5 @@ layout (viewport_relative, secondary_view_offset = 1) out highp int gl_Layer;
 void main()
 {
     gl_out[gl_InvocationID].gl_SecondaryViewportMaskNV[0]            = 1;
-    gl_out[gl_InvocationID].gl_SecondaryPositionNV                   = gl_in[1].gl_Position;
+    gl_out[gl_InvocationID].gl_SecondaryPositionNV = gl_in[1].gl_Position + gl_in[1].gl_SecondaryPositionNV;
 }

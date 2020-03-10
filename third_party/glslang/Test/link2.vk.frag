@@ -8,8 +8,8 @@ int b[];
 int c[7];
 int i;
 
-buffer bnameRuntime  { float r[]; };
-buffer bnameImplicit { float m[4]; };
+layout (binding = 0) buffer bnameRuntime  { float r[]; };
+layout (binding = 1) buffer bnameImplicit { float m[4]; };
 
 vec4 getColor()
 {

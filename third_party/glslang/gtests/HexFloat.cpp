@@ -127,7 +127,7 @@ INSTANTIATE_TEST_CASE_P(
         {float(ldexp(1.0, -127) / 2.0 + (ldexp(1.0, -127) / 4.0f)),
          "0x1.8p-128"},
 
-    })),);
+    })));
 
 INSTANTIATE_TEST_CASE_P(
     Float32NanTests, HexFloatTest,
@@ -145,7 +145,7 @@ INSTANTIATE_TEST_CASE_P(
         {uint32_t(0x7f800c00), "0x1.0018p+128"},     // +nan
         {uint32_t(0x7F80F000), "0x1.01ep+128"},      // +nan
         {uint32_t(0x7FFFFFFF), "0x1.fffffep+128"},   // +nan
-    })),);
+    })));
 
 INSTANTIATE_TEST_CASE_P(
     Float64Tests, HexDoubleTest,
@@ -218,7 +218,7 @@ INSTANTIATE_TEST_CASE_P(
             {ldexp(1.0, -1023) / 2.0 + (ldexp(1.0, -1023) / 4.0),
              "0x1.8p-1024"},
 
-        })),);
+        })));
 
 INSTANTIATE_TEST_CASE_P(
     Float64NanTests, HexDoubleTest,
@@ -237,7 +237,7 @@ INSTANTIATE_TEST_CASE_P(
         {uint64_t(0x7FF0000000000001LL), "0x1.0000000000001p+1024"},   // -nan
         {uint64_t(0x7FF0000300000000LL), "0x1.00003p+1024"},           // -nan
         {uint64_t(0x7FFFFFFFFFFFFFFFLL), "0x1.fffffffffffffp+1024"},   // -nan
-    })),);
+    })));
 
 TEST(HexFloatStreamTest, OperatorLeftShiftPreservesFloatAndFill) {
   std::stringstream s;
@@ -282,7 +282,7 @@ INSTANTIATE_TEST_CASE_P(
         {"0xFFp+0", 255.f},
         {"0x0.8p+0", 0.5f},
         {"0x0.4p+0", 0.25f},
-    })),);
+    })));
 
 INSTANTIATE_TEST_CASE_P(
     Float32DecodeInfTests, DecodeHexFloatTest,
@@ -292,7 +292,7 @@ INSTANTIATE_TEST_CASE_P(
         {"0x32p+127", uint32_t(0x7F800000)},   // inf
         {"0x32p+500", uint32_t(0x7F800000)},   // inf
         {"-0x32p+127", uint32_t(0xFF800000)},  // -inf
-    })),);
+    })));
 
 INSTANTIATE_TEST_CASE_P(
     Float64DecodeTests, DecodeHexDoubleTest,
@@ -315,7 +315,7 @@ INSTANTIATE_TEST_CASE_P(
             {"0xFFp+0", 255.},
             {"0x0.8p+0", 0.5},
             {"0x0.4p+0", 0.25},
-        })),);
+        })));
 
 INSTANTIATE_TEST_CASE_P(
     Float64DecodeInfTests, DecodeHexDoubleTest,
@@ -326,7 +326,7 @@ INSTANTIATE_TEST_CASE_P(
             {"0x32p+1023", uint64_t(0x7FF0000000000000)},   // inf
             {"0x32p+5000", uint64_t(0x7FF0000000000000)},   // inf
             {"-0x32p+1023", uint64_t(0xFFF0000000000000)},  // -inf
-        })),);
+        })));
 
 TEST(FloatProxy, ValidConversion) {
   EXPECT_THAT(FloatProxy<float>(1.f).getAsFloat(), Eq(1.0f));
@@ -495,7 +495,7 @@ INSTANTIATE_TEST_CASE_P(
 
         {std::numeric_limits<float>::infinity(), "0x1p+128"},
         {-std::numeric_limits<float>::infinity(), "-0x1p+128"},
-    })),);
+    })));
 
 INSTANTIATE_TEST_CASE_P(
     Float64Tests, FloatProxyDoubleTest,
@@ -532,7 +532,7 @@ INSTANTIATE_TEST_CASE_P(
             {std::numeric_limits<double>::infinity(), "0x1p+1024"},
             {-std::numeric_limits<double>::infinity(), "-0x1p+1024"},
 
-        })),);
+        })));
 
 // double is used so that unbiased_exponent can be used with the output
 // of ldexp directly.
@@ -793,7 +793,7 @@ INSTANTIATE_TEST_CASE_P(F32ToF16, HexFloatRoundTest,
     {static_cast<float>(ldexp(float_fractions({0, 1, 11, 13}), -129)), std::make_pair(half_bits_set({0, 9}), false), spvutils::kRoundToPositiveInfinity},
     {static_cast<float>(ldexp(float_fractions({0, 1, 11, 13}), -131)), std::make_pair(half_bits_set({0}), false), spvutils::kRoundToNegativeInfinity},
     {static_cast<float>(ldexp(float_fractions({0, 1, 11, 13}), -130)), std::make_pair(half_bits_set({0, 9}), false), spvutils::kRoundToNearestEven},
-  })),);
+  })));
 // clang-format on
 
 struct UpCastSignificandCase {
@@ -837,7 +837,7 @@ INSTANTIATE_TEST_CASE_P(F16toF32, HexFloatRoundUpSignificandTest,
     {0x0F00, 0x600000},
     {0x0F01, 0x602000},
     {0x0FFF, 0x7FE000},
-  })),);
+  })));
 
 struct DownCastTest {
   float source_float;
@@ -914,7 +914,7 @@ INSTANTIATE_TEST_CASE_P(F32ToF16, HexFloatFP32To16Tests,
     {-std::numeric_limits<float>::infinity(), negative_infinity, {spvutils::kRoundToZero, spvutils::kRoundToPositiveInfinity, spvutils::kRoundToNegativeInfinity, spvutils::kRoundToNearestEven}},
 
     // Nans are below because we cannot test for equality.
-  })),);
+  })));
 
 struct UpCastCase{
   uint16_t source_half;
@@ -965,7 +965,7 @@ INSTANTIATE_TEST_CASE_P(F16ToF32, HexFloatFP16To32Tests,
     // inf
     {0x7C00, std::numeric_limits<float>::infinity()},
     {0xFC00, -std::numeric_limits<float>::infinity()},
-  })),);
+  })));
 
 TEST(HexFloatOperationTests, NanTests) {
   using HF = spvutils::HexFloat<spvutils::FloatProxy<float>>;
@@ -1071,7 +1071,7 @@ INSTANTIATE_TEST_CASE_P(
         // We can't have -1e40 and negate_value == true since
         // that represents an original case of "--1e40" which
         // is invalid.
-  }),);
+  }));
 
 using ParseNormalFloat16Test =
     ::testing::TestWithParam<FloatParseCase<Float16>>;
@@ -1114,7 +1114,7 @@ INSTANTIATE_TEST_CASE_P(
         BadFloatParseCase<Float16>("-2.0", true, uint16_t{0}),
         BadFloatParseCase<Float16>("+0.0", true, uint16_t{0}),
         BadFloatParseCase<Float16>("+2.0", true, uint16_t{0}),
-    }),);
+    }));
 
 // A test case for detecting infinities.
 template <typename T>
@@ -1149,7 +1149,7 @@ INSTANTIATE_TEST_CASE_P(
         {"-1e40", false, -FLT_MAX},
         {"1e400", false, FLT_MAX},
         {"-1e400", false, -FLT_MAX},
-    })),);
+    })));
 
 using FloatProxyParseOverflowDoubleTest =
     ::testing::TestWithParam<OverflowParseCase<double>>;
@@ -1176,7 +1176,7 @@ INSTANTIATE_TEST_CASE_P(
         {"-1e40", true, -1e40},
         {"1e400", false, DBL_MAX},
         {"-1e400", false, -DBL_MAX},
-    })),);
+    })));
 
 using FloatProxyParseOverflowFloat16Test =
     ::testing::TestWithParam<OverflowParseCase<uint16_t>>;
@@ -1207,7 +1207,7 @@ INSTANTIATE_TEST_CASE_P(
         {"-1e38", false, uint16_t{0xfbff}},
         {"-1e40", false, uint16_t{0xfbff}},
         {"-1e400", false, uint16_t{0xfbff}},
-    })),);
+    })));
 
 TEST(FloatProxy, Max) {
   EXPECT_THAT(FloatProxy<Float16>::max().getAsFloat().get_value(),

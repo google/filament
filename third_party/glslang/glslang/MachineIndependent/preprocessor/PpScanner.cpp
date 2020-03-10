@@ -2,6 +2,8 @@
 // Copyright (C) 2002-2005  3Dlabs Inc. Ltd.
 // Copyright (C) 2013 LunarG, Inc.
 // Copyright (C) 2017 ARM Limited.
+// Copyright (C) 2015-2018 Google, Inc.
+//
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -94,12 +96,19 @@ namespace glslang {
 /////////////////////////////////// Floating point constants: /////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////
 
-/*
-* lFloatConst() - Scan a single- or double-precision floating point constant.  Assumes that the scanner
-*         has seen at least one digit, followed by either a decimal '.' or the
-*         letter 'e', or a precision ending (e.g., F or LF).
-*/
-
+// 
+// Scan a single- or double-precision floating point constant.
+// Assumes that the scanner has seen at least one digit,
+// followed by either a decimal '.' or the letter 'e', or a
+// precision ending (e.g., F or LF).
+//
+// This is technically not correct, as the preprocessor should just
+// accept the numeric literal along with whatever suffix it has, but
+// currently, it stops on seeing a bad suffix, treating that as the
+// next token. This effects things like token pasting, where it is
+// relevant how many tokens something was broken into.
+//
+// See peekContinuedPasting().
 int TPpContext::lFloatConst(int len, int ch, TPpToken* ppToken)
 {
     const auto saveName = [&](int ch) {
@@ -133,6 +142,7 @@ int TPpContext::lFloatConst(int len, int ch, TPpToken* ppToken)
         ch = getChar();
         int firstDecimal = len;
 
+#ifdef ENABLE_HLSL
         // 1.#INF or -1.#INF
         if (ch == '#' && (ifdepth > 0 || parseContext.intermediate.getSource() == EShSourceHlsl)) {
             if ((len <  2) ||
@@ -160,6 +170,7 @@ int TPpContext::lFloatConst(int len, int ch, TPpToken* ppToken)
                 }
             }
         }
+#endif
 
         // Consume leading-zero digits after the decimal point
         while (ch == '0') {
@@ -248,6 +259,7 @@ int TPpContext::lFloatConst(int len, int ch, TPpToken* ppToken)
     // Suffix:
     bool isDouble = false;
     bool isFloat16 = false;
+#ifndef GLSLANG_WEB
     if (ch == 'l' || ch == 'L') {
         if (ifdepth == 0 && parseContext.intermediate.getSource() == EShSourceGlsl)
             parseContext.doubleCheck(ppToken->loc, "double floating-point suffix");
@@ -286,11 +298,15 @@ int TPpContext::lFloatConst(int len, int ch, TPpToken* ppToken)
             saveName(ch);
             isFloat16 = true;
         }
-    } else if (ch == 'f' || ch == 'F') {
+    } else
+#endif
+    if (ch == 'f' || ch == 'F') {
+#ifndef GLSLANG_WEB
         if (ifdepth == 0)
             parseContext.profileRequires(ppToken->loc,  EEsProfile, 300, nullptr, "floating-point suffix");
         if (ifdepth == 0 && !parseContext.relaxedErrors())
             parseContext.profileRequires(ppToken->loc, ~EEsProfile, 120, nullptr, "floating-point suffix");
+#endif
         if (ifdepth == 0 && !hasDecimalOrExponent)
             parseContext.ppError(ppToken->loc, "float literal needs a decimal point or exponent", "", "");
         saveName(ch);
@@ -433,6 +449,14 @@ int TPpContext::characterLiteral(TPpToken* ppToken)
 //
 // Scanner used to tokenize source stream.
 //
+// N.B. Invalid numeric suffixes are not consumed.//
+// This is technically not correct, as the preprocessor should just
+// accept the numeric literal along with whatever suffix it has, but
+// currently, it stops on seeing a bad suffix, treating that as the
+// next token. This effects things like token pasting, where it is
+// relevant how many tokens something was broken into.
+// See peekContinuedPasting().
+//
 int TPpContext::tStringInput::scan(TPpToken* ppToken)
 {
     int AlreadyComplained = 0;
@@ -446,16 +470,14 @@ int TPpContext::tStringInput::scan(TPpToken* ppToken)
 
     static const char* const Int64_Extensions[] = {
         E_GL_ARB_gpu_shader_int64,
-        E_GL_KHX_shader_explicit_arithmetic_types,
-        E_GL_KHX_shader_explicit_arithmetic_types_int64 };
+        E_GL_EXT_shader_explicit_arithmetic_types,
+        E_GL_EXT_shader_explicit_arithmetic_types_int64 };
     static const int Num_Int64_Extensions = sizeof(Int64_Extensions) / sizeof(Int64_Extensions[0]);
 
     static const char* const Int16_Extensions[] = {
-#ifdef AMD_EXTENSIONS
         E_GL_AMD_gpu_shader_int16,
-#endif
-        E_GL_KHX_shader_explicit_arithmetic_types,
-        E_GL_KHX_shader_explicit_arithmetic_types_int16 };
+        E_GL_EXT_shader_explicit_arithmetic_types,
+        E_GL_EXT_shader_explicit_arithmetic_types_int16 };
     static const int Num_Int16_Extensions = sizeof(Int16_Extensions) / sizeof(Int16_Extensions[0]);
 
     ppToken->ival = 0;
@@ -562,6 +584,7 @@ int TPpContext::tStringInput::scan(TPpToken* ppToken)
                         ppToken->name[len++] = (char)ch;
                     isUnsigned = true;
 
+#ifndef GLSLANG_WEB
                     int nextCh = getch();
                     if (nextCh == 'l' || nextCh == 'L') {
                         if (len < MaxTokenLength)
@@ -570,7 +593,6 @@ int TPpContext::tStringInput::scan(TPpToken* ppToken)
                     } else
                         ungetch();
 
-#ifdef AMD_EXTENSIONS
                     nextCh = getch();
                     if ((nextCh == 's' || nextCh == 'S') &&
                             pp->parseContext.intermediate.getSource() == EShSourceGlsl) {
@@ -579,12 +601,10 @@ int TPpContext::tStringInput::scan(TPpToken* ppToken)
                         isInt16 = true;
                     } else
                         ungetch();
-#endif
                 } else if (ch == 'l' || ch == 'L') {
                     if (len < MaxTokenLength)
                         ppToken->name[len++] = (char)ch;
                     isInt64 = true;
-#ifdef AMD_EXTENSIONS
                 } else if ((ch == 's' || ch == 'S') &&
                            pp->parseContext.intermediate.getSource() == EShSourceGlsl) {
                     if (len < MaxTokenLength)
@@ -672,6 +692,7 @@ int TPpContext::tStringInput::scan(TPpToken* ppToken)
                         ppToken->name[len++] = (char)ch;
                     isUnsigned = true;
 
+#ifndef GLSLANG_WEB
                     int nextCh = getch();
                     if (nextCh == 'l' || nextCh == 'L') {
                         if (len < MaxTokenLength)
@@ -680,7 +701,6 @@ int TPpContext::tStringInput::scan(TPpToken* ppToken)
                     } else
                         ungetch();
 
-#ifdef AMD_EXTENSIONS
                     nextCh = getch();
                     if ((nextCh == 's' || nextCh == 'S') && 
                                 pp->parseContext.intermediate.getSource() == EShSourceGlsl) {
@@ -689,12 +709,10 @@ int TPpContext::tStringInput::scan(TPpToken* ppToken)
                         isInt16 = true;
                     } else
                         ungetch();
-#endif
                 } else if (ch == 'l' || ch == 'L') {
                     if (len < MaxTokenLength)
                         ppToken->name[len++] = (char)ch;
                     isInt64 = true;
-#ifdef AMD_EXTENSIONS
                 } else if ((ch == 's' || ch == 'S') && 
                                 pp->parseContext.intermediate.getSource() == EShSourceGlsl) {
                     if (len < MaxTokenLength)
@@ -763,6 +781,7 @@ int TPpContext::tStringInput::scan(TPpToken* ppToken)
                         ppToken->name[len++] = (char)ch;
                     isUnsigned = true;
 
+#ifndef GLSLANG_WEB
                     int nextCh = getch();
                     if (nextCh == 'l' || nextCh == 'L') {
                         if (len < MaxTokenLength)
@@ -771,7 +790,6 @@ int TPpContext::tStringInput::scan(TPpToken* ppToken)
                     } else
                         ungetch();
 
-#ifdef AMD_EXTENSIONS
                     nextCh = getch();
                     if ((nextCh == 's' || nextCh == 'S') &&
                                 pp->parseContext.intermediate.getSource() == EShSourceGlsl) {
@@ -780,12 +798,10 @@ int TPpContext::tStringInput::scan(TPpToken* ppToken)
                         isInt16 = true;
                     } else
                         ungetch();
-#endif
                 } else if (ch == 'l' || ch == 'L') {
                     if (len < MaxTokenLength)
                         ppToken->name[len++] = (char)ch;
                     isInt64 = true;
-#ifdef AMD_EXTENSIONS
                 } else if ((ch == 's' || ch == 'S') &&
                                 pp->parseContext.intermediate.getSource() == EShSourceGlsl) {
                     if (len < MaxTokenLength)
@@ -1010,12 +1026,74 @@ int TPpContext::tStringInput::scan(TPpToken* ppToken)
         case '\'':
             return pp->characterLiteral(ppToken);
         case '"':
-            // TODO: If this gets enhanced to handle escape sequences, or
-            // anything that is different than what #include needs, then
-            // #include needs to use scanHeaderName() for this.
+            // #include uses scanHeaderName() to ignore these escape sequences.
             ch = getch();
             while (ch != '"' && ch != '\n' && ch != EndOfInput) {
                 if (len < MaxTokenLength) {
+                    if (ch == '\\' && !pp->disableEscapeSequences) {
+                        int nextCh = getch();
+                        switch (nextCh) {
+                        case '\'': ch = 0x27; break;
+                        case '"':  ch = 0x22; break;
+                        case '?':  ch = 0x3f; break;
+                        case '\\': ch = 0x5c; break;
+                        case 'a':  ch = 0x07; break;
+                        case 'b':  ch = 0x08; break;
+                        case 'f':  ch = 0x0c; break;
+                        case 'n':  ch = 0x0a; break;
+                        case 'r':  ch = 0x0d; break;
+                        case 't':  ch = 0x09; break;
+                        case 'v':  ch = 0x0b; break;
+                        case 'x': 
+                            // two character hex value
+                            nextCh = getch();
+                            if (nextCh >= '0' && nextCh <= '9')
+                                nextCh -= '0';
+                            else if (nextCh >= 'A' && nextCh <= 'F')
+                                nextCh -= 'A' - 10;
+                            else if (nextCh >= 'a' && nextCh <= 'f')
+                                nextCh -= 'a' - 10;
+                            else
+                                pp->parseContext.ppError(ppToken->loc, "Expected hex value in escape sequence", "string", "");
+                            ch = nextCh * 0x10;
+                            nextCh = getch();
+                            if (nextCh >= '0' && nextCh <= '9')
+                                nextCh -= '0';
+                            else if (nextCh >= 'A' && nextCh <= 'F')
+                                nextCh -= 'A' - 10;
+                            else if (nextCh >= 'a' && nextCh <= 'f')
+                                nextCh -= 'a' - 10;
+                            else
+                                pp->parseContext.ppError(ppToken->loc, "Expected hex value in escape sequence", "string", "");
+                            ch += nextCh;
+                            break;
+                        case '0':
+                        case '1':
+                        case '2':
+                        case '3':
+                        case '4':
+                        case '5':
+                        case '6':
+                        case '7':
+                            // three character octal value
+                            nextCh = getch() - '0';
+                            if (nextCh > 3)
+                                pp->parseContext.ppError(ppToken->loc, "Expected octal value in escape sequence", "string", "");
+                            ch = nextCh * 8 * 8;
+                            nextCh = getch() - '0';
+                            if (nextCh > 7)
+                                pp->parseContext.ppError(ppToken->loc, "Expected octal value in escape sequence", "string", "");
+                            ch += nextCh * 8;
+                            nextCh = getch() - '0';
+                            if (nextCh > 7)
+                                pp->parseContext.ppError(ppToken->loc, "Expected octal value in escape sequence", "string", "");
+                            ch += nextCh;
+                            break;
+                        default:
+                            pp->parseContext.ppError(ppToken->loc, "Invalid escape sequence", "string", "");
+                            break;
+                        }
+                    }
                     ppToken->name[len] = (char)ch;
                     len++;
                     ch = getch();
@@ -1104,17 +1182,19 @@ int TPpContext::tokenize(TPpToken& ppToken)
                 continue;
             break;
         case PpAtomConstString:
+            // HLSL allows string literals.
+            // GLSL allows string literals with GL_EXT_debug_printf.
             if (ifdepth == 0 && parseContext.intermediate.getSource() != EShSourceHlsl) {
-                // HLSL allows string literals.
-                parseContext.ppError(ppToken.loc, "string literals not supported", "\"\"", "");
-                continue;
+                parseContext.requireExtensions(ppToken.loc, 1, &E_GL_EXT_debug_printf, "string literal");
+                if (!parseContext.extensionTurnedOn(E_GL_EXT_debug_printf))
+                    continue;
             }
             break;
         case '\'':
             parseContext.ppError(ppToken.loc, "character literals not supported", "\'", "");
             continue;
         default:
-            strcpy(ppToken.name, atomStrings.getString(token));
+            snprintf(ppToken.name, sizeof(ppToken.name), "%s", atomStrings.getString(token));
             break;
         }
 
@@ -1151,61 +1231,69 @@ int TPpContext::tokenPaste(int token, TPpToken& ppToken)
             break;
         }
 
-        // get the token after the ##
-        token = scanToken(&pastedPpToken);
+        // Get the token(s) after the ##.
+        // Because of "space" semantics, and prior tokenization, what
+        // appeared a single token, e.g. "3A", might have been tokenized
+        // into two tokens "3" and "A", but the "A" will have 'space' set to
+        // false.  Accumulate all of these to recreate the original lexical
+        // appearing token.
+        do {
+            token = scanToken(&pastedPpToken);
 
-        // This covers end of argument expansion
-        if (token == tMarkerInput::marker) {
-            parseContext.ppError(ppToken.loc, "unexpected location; end of argument", "##", "");
-            break;
-        }
+            // This covers end of argument expansion
+            if (token == tMarkerInput::marker) {
+                parseContext.ppError(ppToken.loc, "unexpected location; end of argument", "##", "");
+                return resultToken;
+            }
 
-        // get the token text
-        switch (resultToken) {
-        case PpAtomIdentifier:
-            // already have the correct text in token.names
-            break;
-        case '=':
-        case '!':
-        case '-':
-        case '~':
-        case '+':
-        case '*':
-        case '/':
-        case '%':
-        case '<':
-        case '>':
-        case '|':
-        case '^':
-        case '&':
-        case PpAtomRight:
-        case PpAtomLeft:
-        case PpAtomAnd:
-        case PpAtomOr:
-        case PpAtomXor:
-            strcpy(ppToken.name, atomStrings.getString(resultToken));
-            strcpy(pastedPpToken.name, atomStrings.getString(token));
-            break;
-        default:
-            parseContext.ppError(ppToken.loc, "not supported for these tokens", "##", "");
-            return resultToken;
-        }
+            // get the token text
+            switch (resultToken) {
+            case PpAtomIdentifier:
+                // already have the correct text in token.names
+                break;
+            case '=':
+            case '!':
+            case '-':
+            case '~':
+            case '+':
+            case '*':
+            case '/':
+            case '%':
+            case '<':
+            case '>':
+            case '|':
+            case '^':
+            case '&':
+            case PpAtomRight:
+            case PpAtomLeft:
+            case PpAtomAnd:
+            case PpAtomOr:
+            case PpAtomXor:
+                snprintf(ppToken.name, sizeof(ppToken.name), "%s", atomStrings.getString(resultToken));
+                snprintf(pastedPpToken.name, sizeof(pastedPpToken.name), "%s", atomStrings.getString(token));
+                break;
+            default:
+                parseContext.ppError(ppToken.loc, "not supported for these tokens", "##", "");
+                return resultToken;
+            }
 
-        // combine the tokens
-        if (strlen(ppToken.name) + strlen(pastedPpToken.name) > MaxTokenLength) {
-            parseContext.ppError(ppToken.loc, "combined tokens are too long", "##", "");
-            return resultToken;
-        }
-        strncat(ppToken.name, pastedPpToken.name, MaxTokenLength - strlen(ppToken.name));
+            // combine the tokens
+            if (strlen(ppToken.name) + strlen(pastedPpToken.name) > MaxTokenLength) {
+                parseContext.ppError(ppToken.loc, "combined tokens are too long", "##", "");
+                return resultToken;
+            }
+            snprintf(&ppToken.name[0] + strlen(ppToken.name), sizeof(ppToken.name) - strlen(ppToken.name),
+                "%s", pastedPpToken.name);
 
-        // correct the kind of token we are making, if needed (identifiers stay identifiers)
-        if (resultToken != PpAtomIdentifier) {
-            int newToken = atomStrings.getAtom(ppToken.name);
-            if (newToken > 0)
-                resultToken = newToken;
-            else
-                parseContext.ppError(ppToken.loc, "combined token is invalid", "##", "");
-        }
+            // correct the kind of token we are making, if needed (identifiers stay identifiers)
+            if (resultToken != PpAtomIdentifier) {
+                int newToken = atomStrings.getAtom(ppToken.name);
+                if (newToken > 0)
+                    resultToken = newToken;
+                else
+                    parseContext.ppError(ppToken.loc, "combined token is invalid", "##", "");
+            }
+        } while (peekContinuedPasting(resultToken));
     }
 
     return resultToken;

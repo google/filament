@@ -1,5 +1,5 @@
 #version 460
-#extension GL_KHX_shader_explicit_arithmetic_types_float16 : enable
+#extension GL_EXT_shader_explicit_arithmetic_types_float16 : enable
 void main()
 {
     float w1   = 00000.000;

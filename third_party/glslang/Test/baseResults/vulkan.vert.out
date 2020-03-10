@@ -30,14 +30,30 @@ ERROR: 0:32: 'initializer' : can't use with types containing arrays sized with a
 ERROR: 0:34: '=' : can't use with types containing arrays sized with a specialization constant 
 ERROR: 0:35: '==' : can't use with types containing arrays sized with a specialization constant 
 ERROR: 0:39: 'set' : cannot be used with push_constant 
-ERROR: 0:49: '[]' : only outermost dimension of an array of arrays can be a specialization constant 
-ERROR: 0:50: '[]' : only outermost dimension of an array of arrays can be a specialization constant 
-ERROR: 0:51: '[]' : only outermost dimension of an array of arrays can be a specialization constant 
 ERROR: 0:54: '[]' : only outermost dimension of an array of arrays can be a specialization constant 
 ERROR: 0:54: 'location' : SPIR-V requires location for user input/output 
 ERROR: 0:58: 'location' : SPIR-V requires location for user input/output 
 ERROR: 0:65: 'location' : overlapping use of location 10
-ERROR: 38 compilation errors.  No code generated.
+ERROR: 0:68: 'location' : needs a literal integer 
+ERROR: 0:68: 'component' : needs a literal integer 
+ERROR: 0:69: 'binding' : needs a literal integer 
+ERROR: 0:69: 'set' : needs a literal integer 
+ERROR: 0:70: 'offset' : needs a literal integer 
+ERROR: 0:71: 'align' : must be a power of 2 
+ERROR: 0:71: 'align' : needs a literal integer 
+ERROR: 0:72: 'xfb_offset' : needs a literal integer 
+ERROR: 0:73: 'xfb_buffer' : needs a literal integer 
+ERROR: 0:74: 'xfb_stride' : needs a literal integer 
+ERROR: 0:73: 'xfb_buffer' : member cannot contradict block (or what block inherited from global) 
+ERROR: 0:72: 'xfb layout qualifier' : can only be used on an output 
+ERROR: 0:73: 'xfb layout qualifier' : can only be used on an output 
+ERROR: 0:74: 'xfb layout qualifier' : can only be used on an output 
+ERROR: 0:76: 'input_attachment_index' : needs a literal integer 
+ERROR: 0:76: 'input_attachment_index' : can only be used with a subpass 
+ERROR: 0:77: 'constant_id' : needs a literal integer 
+ERROR: 0:77: 'constant_id' : can only be applied to 'const'-qualified scalar 
+ERROR: 0:77: 'constant_id' : can only be applied to a scalar 
+ERROR: 54 compilation errors.  No code generated.
 
 
 SPIR-V is not generated for failed compile or link

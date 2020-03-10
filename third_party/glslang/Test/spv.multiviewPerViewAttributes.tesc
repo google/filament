@@ -10,5 +10,5 @@ out gl_PerVertex {
 void main()
 {
     gl_out[gl_InvocationID].gl_ViewportMaskPerViewNV[0]    = 1;
-    gl_out[gl_InvocationID].gl_PositionPerViewNV[0]        =  gl_in[1].gl_Position;
+    gl_out[gl_InvocationID].gl_PositionPerViewNV[0] = gl_in[1].gl_Position + gl_in[1].gl_PositionPerViewNV[0];
 }

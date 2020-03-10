@@ -166,8 +166,8 @@ void main()
     v.x = func2(a.x, b.x, c.x, d.x);        // precise!
     func3(a.x * b.x, c.x * d.x, v.x);       // precise!
         
-    funcA(img1);              // OK, adding "restrict" is allowed
-    funcB(img2);              // illegal, stripping "coherent" is not
+    funcA(img1);              // OK, adding "restrict" is allowed, ERROR, changing formats
+    funcB(img2);              // illegal, stripping "coherent" is not, ERROR, changing formats
 
     {
         struct light {

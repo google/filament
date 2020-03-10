@@ -37,16 +37,20 @@ GL_OES_tessellation_point_size
 ERROR: 0:105: 'gl_PointSize' : required extension not requested: Possible extensions include:
 GL_EXT_tessellation_point_size
 GL_OES_tessellation_point_size
-ERROR: 0:123: '[' :  array index out of range '2'
-ERROR: 0:126: '' : array size required 
-ERROR: 0:142: '[]' : tessellation-control per-vertex output l-value must be indexed with gl_InvocationID 
-ERROR: 0:143: '[]' : tessellation-control per-vertex output l-value must be indexed with gl_InvocationID 
-ERROR: 0:146: '[]' : tessellation-control per-vertex output l-value must be indexed with gl_InvocationID 
-ERROR: 35 compilation errors.  No code generated.
+ERROR: 0:121: 'gl_BoundingBoxEXT' : required extension not requested: GL_EXT_primitive_bounding_box
+ERROR: 0:122: 'gl_BoundingBoxOES' : required extension not requested: GL_OES_primitive_bounding_box
+ERROR: 0:125: '[' :  array index out of range '2'
+ERROR: 0:137: '' : array size required 
+ERROR: 0:153: '[]' : tessellation-control per-vertex output l-value must be indexed with gl_InvocationID 
+ERROR: 0:154: '[]' : tessellation-control per-vertex output l-value must be indexed with gl_InvocationID 
+ERROR: 0:157: '[]' : tessellation-control per-vertex output l-value must be indexed with gl_InvocationID 
+ERROR: 37 compilation errors.  No code generated.
 
 
 Shader version: 320
 Requested GL_ARB_separate_shader_objects
+Requested GL_EXT_primitive_bounding_box
+Requested GL_OES_primitive_bounding_box
 vertices = 4
 ERROR: node is still EOpNull!
 0:13  Function Definition: main( ( global void)
@@ -62,8 +66,8 @@ ERROR: node is still EOpNull!
 0:23        move second child to first child ( temp highp 4-component vector of float)
 0:23          'p' ( temp highp 4-component vector of float)
 0:23          gl_Position: direct index for structure ( in highp 4-component vector of float Position)
-0:23            direct index ( temp block{ in highp 4-component vector of float Position gl_Position,  in highp float PointSize gl_PointSize,  in highp 4-component vector of float gl_SecondaryPositionNV,  in unsized 1-element array of highp 4-component vector of float gl_PositionPerViewNV})
-0:23              'gl_in' ( in 32-element array of block{ in highp 4-component vector of float Position gl_Position,  in highp float PointSize gl_PointSize,  in highp 4-component vector of float gl_SecondaryPositionNV,  in unsized 1-element array of highp 4-component vector of float gl_PositionPerViewNV})
+0:23            direct index ( temp block{ in highp 4-component vector of float Position gl_Position,  in highp float PointSize gl_PointSize,  in highp 4-component vector of float SecondaryPositionNV gl_SecondaryPositionNV,  in unsized 1-element array of highp 4-component vector of float PositionPerViewNV gl_PositionPerViewNV})
+0:23              'gl_in' ( in 32-element array of block{ in highp 4-component vector of float Position gl_Position,  in highp float PointSize gl_PointSize,  in highp 4-component vector of float SecondaryPositionNV gl_SecondaryPositionNV,  in unsized 1-element array of highp 4-component vector of float PositionPerViewNV gl_PositionPerViewNV})
 0:23              Constant:
 0:23                1 (const int)
 0:23            Constant:
@@ -72,8 +76,8 @@ ERROR: node is still EOpNull!
 0:24        move second child to first child ( temp highp float)
 0:24          'ps' ( temp highp float)
 0:24          gl_PointSize: direct index for structure ( in highp float PointSize)
-0:24            direct index ( temp block{ in highp 4-component vector of float Position gl_Position,  in highp float PointSize gl_PointSize,  in highp 4-component vector of float gl_SecondaryPositionNV,  in unsized 1-element array of highp 4-component vector of float gl_PositionPerViewNV})
-0:24              'gl_in' ( in 32-element array of block{ in highp 4-component vector of float Position gl_Position,  in highp float PointSize gl_PointSize,  in highp 4-component vector of float gl_SecondaryPositionNV,  in unsized 1-element array of highp 4-component vector of float gl_PositionPerViewNV})
+0:24            direct index ( temp block{ in highp 4-component vector of float Position gl_Position,  in highp float PointSize gl_PointSize,  in highp 4-component vector of float SecondaryPositionNV gl_SecondaryPositionNV,  in unsized 1-element array of highp 4-component vector of float PositionPerViewNV gl_PositionPerViewNV})
+0:24              'gl_in' ( in 32-element array of block{ in highp 4-component vector of float Position gl_Position,  in highp float PointSize gl_PointSize,  in highp 4-component vector of float SecondaryPositionNV gl_SecondaryPositionNV,  in unsized 1-element array of highp 4-component vector of float PositionPerViewNV gl_PositionPerViewNV})
 0:24              Constant:
 0:24                1 (const int)
 0:24            Constant:
@@ -192,8 +196,8 @@ ERROR: node is still EOpNull!
 0:104        move second child to first child ( temp highp float)
 0:104          'ps' ( temp highp float)
 0:104          gl_PointSize: direct index for structure ( in highp float PointSize)
-0:104            direct index ( temp block{ in highp 4-component vector of float Position gl_Position,  in highp float PointSize gl_PointSize,  in highp 4-component vector of float gl_SecondaryPositionNV,  in unsized 1-element array of highp 4-component vector of float gl_PositionPerViewNV})
-0:104              'gl_in' ( in 32-element array of block{ in highp 4-component vector of float Position gl_Position,  in highp float PointSize gl_PointSize,  in highp 4-component vector of float gl_SecondaryPositionNV,  in unsized 1-element array of highp 4-component vector of float gl_PositionPerViewNV})
+0:104            direct index ( temp block{ in highp 4-component vector of float Position gl_Position,  in highp float PointSize gl_PointSize,  in highp 4-component vector of float SecondaryPositionNV gl_SecondaryPositionNV,  in unsized 1-element array of highp 4-component vector of float PositionPerViewNV gl_PositionPerViewNV})
+0:104              'gl_in' ( in 32-element array of block{ in highp 4-component vector of float Position gl_Position,  in highp float PointSize gl_PointSize,  in highp 4-component vector of float SecondaryPositionNV gl_SecondaryPositionNV,  in unsized 1-element array of highp 4-component vector of float PositionPerViewNV gl_PositionPerViewNV})
 0:104              Constant:
 0:104                1 (const int)
 0:104            Constant:
@@ -229,7 +233,7 @@ ERROR: node is still EOpNull!
 0:121    Sequence
 0:121      move second child to first child ( temp highp 4-component vector of float)
 0:121        direct index ( patch temp highp 4-component vector of float BoundingBox)
-0:121          'gl_BoundingBoxOES' ( patch out 2-element array of highp 4-component vector of float BoundingBox)
+0:121          'gl_BoundingBoxEXT' ( patch out 2-element array of highp 4-component vector of float BoundingBox)
 0:121          Constant:
 0:121            0 (const int)
 0:121        Constant:
@@ -241,92 +245,135 @@ ERROR: node is still EOpNull!
 0:122        direct index ( patch temp highp 4-component vector of float BoundingBox)
 0:122          'gl_BoundingBoxOES' ( patch out 2-element array of highp 4-component vector of float BoundingBox)
 0:122          Constant:
-0:122            1 (const int)
+0:122            0 (const int)
 0:122        Constant:
-0:122          1.000000
-0:122          1.000000
-0:122          1.000000
-0:122          1.000000
+0:122          0.000000
+0:122          0.000000
+0:122          0.000000
+0:122          0.000000
 0:123      move second child to first child ( temp highp 4-component vector of float)
 0:123        direct index ( patch temp highp 4-component vector of float BoundingBox)
-0:123          'gl_BoundingBoxOES' ( patch out 2-element array of highp 4-component vector of float BoundingBox)
+0:123          'gl_BoundingBox' ( patch out 2-element array of highp 4-component vector of float BoundingBox)
 0:123          Constant:
-0:123            2 (const int)
+0:123            0 (const int)
 0:123        Constant:
-0:123          2.000000
-0:123          2.000000
-0:123          2.000000
-0:123          2.000000
-0:134  Function Definition: outputtingOutparam(i1; ( global void)
-0:134    Function Parameters: 
-0:134      'a' ( out highp int)
-0:136    Sequence
-0:136      move second child to first child ( temp highp int)
-0:136        'a' ( out highp int)
-0:136        Constant:
-0:136          2 (const int)
-0:139  Function Definition: outputting( ( global void)
-0:139    Function Parameters: 
-0:141    Sequence
-0:141      move second child to first child ( temp highp int)
-0:141        indirect index ( temp highp int)
-0:141          'outa' ( out 4-element array of highp int)
-0:141          'gl_InvocationID' ( in highp int InvocationID)
-0:141        Constant:
-0:141          2 (const int)
-0:142      move second child to first child ( temp highp int)
-0:142        direct index ( temp highp int)
-0:142          'outa' ( out 4-element array of highp int)
-0:142          Constant:
-0:142            1 (const int)
-0:142        Constant:
-0:142          2 (const int)
-0:143      move second child to first child ( temp highp 4-component vector of float)
-0:143        gl_Position: direct index for structure ( out highp 4-component vector of float Position)
-0:143          direct index ( temp block{ out highp 4-component vector of float Position gl_Position,  out highp float PointSize gl_PointSize})
-0:143            'gl_out' ( out 4-element array of block{ out highp 4-component vector of float Position gl_Position,  out highp float PointSize gl_PointSize})
-0:143            Constant:
-0:143              0 (const int)
-0:143          Constant:
-0:143            0 (const int)
-0:143        Constant:
-0:143          1.000000
-0:143          1.000000
-0:143          1.000000
-0:143          1.000000
-0:144      direct index ( temp highp int)
-0:144        'outa' ( out 4-element array of highp int)
-0:144        Constant:
-0:144          1 (const int)
-0:145      direct index ( temp block{ out highp 4-component vector of float Position gl_Position,  out highp float PointSize gl_PointSize})
-0:145        'gl_out' ( out 4-element array of block{ out highp 4-component vector of float Position gl_Position,  out highp float PointSize gl_PointSize})
-0:145        Constant:
-0:145          0 (const int)
-0:146      Function Call: outputtingOutparam(i1; ( global void)
-0:146        direct index ( temp highp int)
-0:146          'outa' ( out 4-element array of highp int)
-0:146          Constant:
-0:146            0 (const int)
-0:147      Function Call: outputtingOutparam(i1; ( global void)
-0:147        indirect index ( temp highp int)
-0:147          'outa' ( out 4-element array of highp int)
-0:147          'gl_InvocationID' ( in highp int InvocationID)
-0:148      move second child to first child ( temp highp float)
-0:148        f: direct index for structure ( out highp float)
-0:148          direct index ( patch temp block{ out highp float f})
-0:148            'patchIName' ( patch out 4-element array of block{ out highp float f})
-0:148            Constant:
-0:148              1 (const int)
-0:148          Constant:
-0:148            0 (const int)
-0:148        Constant:
-0:148          3.140000
-0:149      move second child to first child ( temp highp int)
-0:149        indirect index ( temp highp int)
-0:149          'outa' ( out 4-element array of highp int)
-0:149          'gl_InvocationID' ( in highp int InvocationID)
-0:149        Constant:
-0:149          2 (const int)
+0:123          1.000000
+0:123          1.000000
+0:123          1.000000
+0:123          1.000000
+0:124      move second child to first child ( temp highp 4-component vector of float)
+0:124        direct index ( patch temp highp 4-component vector of float BoundingBox)
+0:124          'gl_BoundingBox' ( patch out 2-element array of highp 4-component vector of float BoundingBox)
+0:124          Constant:
+0:124            1 (const int)
+0:124        Constant:
+0:124          1.000000
+0:124          1.000000
+0:124          1.000000
+0:124          1.000000
+0:125      move second child to first child ( temp highp 4-component vector of float)
+0:125        direct index ( patch temp highp 4-component vector of float BoundingBox)
+0:125          'gl_BoundingBox' ( patch out 2-element array of highp 4-component vector of float BoundingBox)
+0:125          Constant:
+0:125            2 (const int)
+0:125        Constant:
+0:125          2.000000
+0:125          2.000000
+0:125          2.000000
+0:125          2.000000
+0:131  Function Definition: bbext( ( global void)
+0:131    Function Parameters: 
+0:133    Sequence
+0:133      move second child to first child ( temp highp 4-component vector of float)
+0:133        direct index ( patch temp highp 4-component vector of float BoundingBox)
+0:133          'gl_BoundingBoxEXT' ( patch out 2-element array of highp 4-component vector of float BoundingBox)
+0:133          Constant:
+0:133            1 (const int)
+0:133        Constant:
+0:133          0.000000
+0:133          0.000000
+0:133          0.000000
+0:133          0.000000
+0:134      move second child to first child ( temp highp 4-component vector of float)
+0:134        direct index ( patch temp highp 4-component vector of float BoundingBox)
+0:134          'gl_BoundingBoxOES' ( patch out 2-element array of highp 4-component vector of float BoundingBox)
+0:134          Constant:
+0:134            1 (const int)
+0:134        Constant:
+0:134          0.000000
+0:134          0.000000
+0:134          0.000000
+0:134          0.000000
+0:145  Function Definition: outputtingOutparam(i1; ( global void)
+0:145    Function Parameters: 
+0:145      'a' ( out highp int)
+0:147    Sequence
+0:147      move second child to first child ( temp highp int)
+0:147        'a' ( out highp int)
+0:147        Constant:
+0:147          2 (const int)
+0:150  Function Definition: outputting( ( global void)
+0:150    Function Parameters: 
+0:152    Sequence
+0:152      move second child to first child ( temp highp int)
+0:152        indirect index ( temp highp int)
+0:152          'outa' ( out 4-element array of highp int)
+0:152          'gl_InvocationID' ( in highp int InvocationID)
+0:152        Constant:
+0:152          2 (const int)
+0:153      move second child to first child ( temp highp int)
+0:153        direct index ( temp highp int)
+0:153          'outa' ( out 4-element array of highp int)
+0:153          Constant:
+0:153            1 (const int)
+0:153        Constant:
+0:153          2 (const int)
+0:154      move second child to first child ( temp highp 4-component vector of float)
+0:154        gl_Position: direct index for structure ( out highp 4-component vector of float Position)
+0:154          direct index ( temp block{ out highp 4-component vector of float Position gl_Position,  out highp float PointSize gl_PointSize})
+0:154            'gl_out' ( out 4-element array of block{ out highp 4-component vector of float Position gl_Position,  out highp float PointSize gl_PointSize})
+0:154            Constant:
+0:154              0 (const int)
+0:154          Constant:
+0:154            0 (const int)
+0:154        Constant:
+0:154          1.000000
+0:154          1.000000
+0:154          1.000000
+0:154          1.000000
+0:155      direct index ( temp highp int)
+0:155        'outa' ( out 4-element array of highp int)
+0:155        Constant:
+0:155          1 (const int)
+0:156      direct index ( temp block{ out highp 4-component vector of float Position gl_Position,  out highp float PointSize gl_PointSize})
+0:156        'gl_out' ( out 4-element array of block{ out highp 4-component vector of float Position gl_Position,  out highp float PointSize gl_PointSize})
+0:156        Constant:
+0:156          0 (const int)
+0:157      Function Call: outputtingOutparam(i1; ( global void)
+0:157        direct index ( temp highp int)
+0:157          'outa' ( out 4-element array of highp int)
+0:157          Constant:
+0:157            0 (const int)
+0:158      Function Call: outputtingOutparam(i1; ( global void)
+0:158        indirect index ( temp highp int)
+0:158          'outa' ( out 4-element array of highp int)
+0:158          'gl_InvocationID' ( in highp int InvocationID)
+0:159      move second child to first child ( temp highp float)
+0:159        f: direct index for structure ( out highp float)
+0:159          direct index ( patch temp block{ out highp float f})
+0:159            'patchIName' ( patch out 4-element array of block{ out highp float f})
+0:159            Constant:
+0:159              1 (const int)
+0:159          Constant:
+0:159            0 (const int)
+0:159        Constant:
+0:159          3.140000
+0:160      move second child to first child ( temp highp int)
+0:160        indirect index ( temp highp int)
+0:160          'outa' ( out 4-element array of highp int)
+0:160          'gl_InvocationID' ( in highp int InvocationID)
+0:160        Constant:
+0:160          2 (const int)
 0:?   Linker Objects
 0:?     'gl_out' ( out 4-element array of block{ out highp 4-component vector of float Position gl_Position,  out highp float PointSize gl_PointSize})
 0:?     'outa' ( out 4-element array of highp int)
@@ -360,6 +407,8 @@ Linked tessellation control stage:
 
 Shader version: 320
 Requested GL_ARB_separate_shader_objects
+Requested GL_EXT_primitive_bounding_box
+Requested GL_OES_primitive_bounding_box
 vertices = 4
 ERROR: node is still EOpNull!
 0:13  Function Definition: main( ( global void)
@@ -375,8 +424,8 @@ ERROR: node is still EOpNull!
 0:23        move second child to first child ( temp highp 4-component vector of float)
 0:23          'p' ( temp highp 4-component vector of float)
 0:23          gl_Position: direct index for structure ( in highp 4-component vector of float Position)
-0:23            direct index ( temp block{ in highp 4-component vector of float Position gl_Position,  in highp float PointSize gl_PointSize,  in highp 4-component vector of float gl_SecondaryPositionNV,  in 1-element array of highp 4-component vector of float gl_PositionPerViewNV})
-0:23              'gl_in' ( in 32-element array of block{ in highp 4-component vector of float Position gl_Position,  in highp float PointSize gl_PointSize,  in highp 4-component vector of float gl_SecondaryPositionNV,  in 1-element array of highp 4-component vector of float gl_PositionPerViewNV})
+0:23            direct index ( temp block{ in highp 4-component vector of float Position gl_Position,  in highp float PointSize gl_PointSize,  in highp 4-component vector of float SecondaryPositionNV gl_SecondaryPositionNV,  in 1-element array of highp 4-component vector of float PositionPerViewNV gl_PositionPerViewNV})
+0:23              'gl_in' ( in 32-element array of block{ in highp 4-component vector of float Position gl_Position,  in highp float PointSize gl_PointSize,  in highp 4-component vector of float SecondaryPositionNV gl_SecondaryPositionNV,  in 1-element array of highp 4-component vector of float PositionPerViewNV gl_PositionPerViewNV})
 0:23              Constant:
 0:23                1 (const int)
 0:23            Constant:
@@ -385,8 +434,8 @@ ERROR: node is still EOpNull!
 0:24        move second child to first child ( temp highp float)
 0:24          'ps' ( temp highp float)
 0:24          gl_PointSize: direct index for structure ( in highp float PointSize)
-0:24            direct index ( temp block{ in highp 4-component vector of float Position gl_Position,  in highp float PointSize gl_PointSize,  in highp 4-component vector of float gl_SecondaryPositionNV,  in 1-element array of highp 4-component vector of float gl_PositionPerViewNV})
-0:24              'gl_in' ( in 32-element array of block{ in highp 4-component vector of float Position gl_Position,  in highp float PointSize gl_PointSize,  in highp 4-component vector of float gl_SecondaryPositionNV,  in 1-element array of highp 4-component vector of float gl_PositionPerViewNV})
+0:24            direct index ( temp block{ in highp 4-component vector of float Position gl_Position,  in highp float PointSize gl_PointSize,  in highp 4-component vector of float SecondaryPositionNV gl_SecondaryPositionNV,  in 1-element array of highp 4-component vector of float PositionPerViewNV gl_PositionPerViewNV})
+0:24              'gl_in' ( in 32-element array of block{ in highp 4-component vector of float Position gl_Position,  in highp float PointSize gl_PointSize,  in highp 4-component vector of float SecondaryPositionNV gl_SecondaryPositionNV,  in 1-element array of highp 4-component vector of float PositionPerViewNV gl_PositionPerViewNV})
 0:24              Constant:
 0:24                1 (const int)
 0:24            Constant:

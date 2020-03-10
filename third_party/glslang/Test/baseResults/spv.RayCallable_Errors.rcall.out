@@ -24,10 +24,12 @@ ERROR: 0:19: 'gl_WorldToObjectNV' : undeclared identifier
 ERROR: 0:19: '=' :  cannot convert from ' temp float' to ' temp highp 4X3 matrix of float'
 ERROR: 0:20: 'gl_HitTNV' : undeclared identifier 
 ERROR: 0:21: 'gl_HitKindNV' : undeclared identifier 
-ERROR: 0:22: 'reportIntersectionNV' : no matching overloaded function found 
-ERROR: 0:23: 'ignoreIntersectionNV' : no matching overloaded function found 
-ERROR: 0:24: 'terminateRayNV' : no matching overloaded function found 
-ERROR: 28 compilation errors.  No code generated.
+ERROR: 0:22: 'gl_IncomingRayFlagsNV' : undeclared identifier 
+ERROR: 0:22: '=' :  cannot convert from ' temp float' to ' temp highp uint'
+ERROR: 0:23: 'reportIntersectionNV' : no matching overloaded function found 
+ERROR: 0:24: 'ignoreIntersectionNV' : no matching overloaded function found 
+ERROR: 0:25: 'terminateRayNV' : no matching overloaded function found 
+ERROR: 30 compilation errors.  No code generated.
 
 
 SPIR-V is not generated for failed compile or link

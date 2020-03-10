@@ -38,12 +38,12 @@ ERROR: node is still EOpNull!
 0:30              0 (const int)
 0:31      move second child to first child ( temp float)
 0:31        gl_PointSize: direct index for structure (layout( stream=0) gl_PointSize float PointSize)
-0:31          'anon@0' (layout( stream=0) out block{layout( stream=0) gl_PointSize float PointSize gl_PointSize, })
+0:31          'anon@0' (layout( stream=0) out block{layout( stream=0) gl_PointSize float PointSize gl_PointSize})
 0:31          Constant:
 0:31            1 (const uint)
 0:31        'p' ( temp float)
 0:33      gl_Position: direct index for structure (layout( stream=0) gl_Position void Position)
-0:33        'anon@0' (layout( stream=0) out block{layout( stream=0) gl_PointSize float PointSize gl_PointSize, })
+0:33        'anon@0' (layout( stream=0) out block{layout( stream=0) gl_PointSize float PointSize gl_PointSize})
 0:33        Constant:
 0:33          0 (const uint)
 0:36  Function Definition: foo5( ( global float)
@@ -54,7 +54,7 @@ ERROR: node is still EOpNull!
 0:38          4.000000
 0:?   Linker Objects
 0:?     'gl_in' ( in unsized 2-element array of block{ in float PointSize gl_PointSize})
-0:?     'anon@0' (layout( stream=0) out block{layout( stream=0) gl_PointSize float PointSize gl_PointSize, })
+0:?     'anon@0' (layout( stream=0) out block{layout( stream=0) gl_PointSize float PointSize gl_PointSize})
 
 
 Linked geometry stage:
@@ -78,5 +78,5 @@ ERROR: node is still EOpNull!
 0:5          7 (const int)
 0:?   Linker Objects
 0:?     'gl_in' ( in 2-element array of block{ in float PointSize gl_PointSize})
-0:?     'anon@0' (layout( stream=0) out block{layout( stream=0) gl_PointSize float PointSize gl_PointSize, })
+0:?     'anon@0' (layout( stream=0) out block{layout( stream=0) gl_PointSize float PointSize gl_PointSize})
 

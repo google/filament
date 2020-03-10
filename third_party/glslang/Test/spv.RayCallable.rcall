@@ -8,8 +8,6 @@ void main()
 {
 	uvec3 id = gl_LaunchIDNV;
 	uvec3 size = gl_LaunchSizeNV;
-    uint curFlags = gl_IncomingRayFlagsNV;
-	curFlags = curFlags & gl_RayFlagsOpaqueNV;
 	data1 = 256U;
 	executeCallableNV(2,1);
 }

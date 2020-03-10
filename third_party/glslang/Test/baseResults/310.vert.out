@@ -269,7 +269,7 @@ ERROR: node is still EOpNull!
 0:117            'gl_InstanceID' ( gl_InstanceId highp int InstanceId)
 0:118      move second child to first child ( temp highp 4-component vector of float)
 0:118        gl_Position: direct index for structure ( gl_Position highp 4-component vector of float Position)
-0:118          'anon@1' ( out block{ gl_Position highp 4-component vector of float Position gl_Position, })
+0:118          'anon@1' ( out block{ gl_Position highp 4-component vector of float Position gl_Position})
 0:118          Constant:
 0:118            0 (const uint)
 0:118        Constant:
@@ -278,7 +278,7 @@ ERROR: node is still EOpNull!
 0:118          1.000000
 0:118          1.000000
 0:119      gl_PointSize: direct index for structure ( gl_PointSize highp void PointSize)
-0:119        'anon@1' ( out block{ gl_Position highp 4-component vector of float Position gl_Position, })
+0:119        'anon@1' ( out block{ gl_Position highp 4-component vector of float Position gl_Position})
 0:119        Constant:
 0:119          1 (const uint)
 0:153  Function Definition: pfooBad( ( global void)
@@ -940,7 +940,7 @@ ERROR: node is still EOpNull!
 0:?     'anon@0' ( out block{layout( location=12) out highp int aAnon, layout( location=13) out highp 4-component vector of float vAnon})
 0:?     'aliased' (layout( location=12) smooth out highp int)
 0:?     'inbinst' ( in block{ in highp int a})
-0:?     'anon@1' ( out block{ gl_Position highp 4-component vector of float Position gl_Position, })
+0:?     'anon@1' ( out block{ gl_Position highp 4-component vector of float Position gl_Position})
 0:?     'smon' ( smooth out block{ out highp int i})
 0:?     'fmon' ( flat out block{ out highp int i})
 0:?     'cmon' ( centroid out block{ out highp int i})
@@ -1184,7 +1184,7 @@ ERROR: node is still EOpNull!
 0:?     'anon@0' ( out block{layout( location=12) out highp int aAnon, layout( location=13) out highp 4-component vector of float vAnon})
 0:?     'aliased' (layout( location=12) smooth out highp int)
 0:?     'inbinst' ( in block{ in highp int a})
-0:?     'anon@1' ( out block{ gl_Position highp 4-component vector of float Position gl_Position, })
+0:?     'anon@1' ( out block{ gl_Position highp 4-component vector of float Position gl_Position})
 0:?     'smon' ( smooth out block{ out highp int i})
 0:?     'fmon' ( flat out block{ out highp int i})
 0:?     'cmon' ( centroid out block{ out highp int i})

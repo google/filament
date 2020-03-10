@@ -11,7 +11,9 @@ ERROR: 0:23: 'atomicAdd' : Semantics must not include multiple of gl_SemanticsRe
 ERROR: 0:24: 'atomicCompSwap' : semUnequal must not be gl_SemanticsRelease or gl_SemanticsAcquireRelease 
 ERROR: 0:25: 'memoryBarrier' : gl_SemanticsMakeVisible requires gl_SemanticsAcquire or gl_SemanticsAcquireRelease 
 ERROR: 0:26: 'memoryBarrier' : gl_SemanticsMakeAvailable requires gl_SemanticsRelease or gl_SemanticsAcquireRelease 
-ERROR: 12 compilation errors.  No code generated.
+ERROR: 0:27: 'memoryBarrier' : gl_SemanticsVolatile must not be used with memoryBarrier or controlBarrier 
+ERROR: 0:28: 'atomicCompSwap' : semEqual and semUnequal must either both include gl_SemanticsVolatile or neither 
+ERROR: 14 compilation errors.  No code generated.
 
 
 SPIR-V is not generated for failed compile or link

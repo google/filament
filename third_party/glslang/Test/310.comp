@@ -106,9 +106,9 @@ layout(r32i) coherent restrict readonly uniform iimage2D qualim2;
 
 void passrc()
 {
-    passr(qualim1);
-    passr(qualim2);   // ERROR, drops restrict
-    passr(iimg2D);
+    passr(qualim1);   // ERROR, changing formats
+    passr(qualim2);   // ERROR, drops restrict, ERROR, changing formats
+    passr(iimg2D);    // ERROR, changing formats
 }
 
 highp layout(rg8i)     uniform readonly uimage2D i1bad; // ERROR, type mismatch

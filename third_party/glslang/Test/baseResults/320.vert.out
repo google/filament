@@ -49,7 +49,7 @@ ERROR: node is still EOpNull!
 0:26            'gl_InstanceID' ( gl_InstanceId highp int InstanceId)
 0:27      move second child to first child ( temp highp 4-component vector of float)
 0:27        gl_Position: direct index for structure ( gl_Position highp 4-component vector of float Position)
-0:27          'anon@1' ( out block{ gl_Position highp 4-component vector of float Position gl_Position, })
+0:27          'anon@1' ( out block{ gl_Position highp 4-component vector of float Position gl_Position})
 0:27          Constant:
 0:27            0 (const uint)
 0:27        Constant:
@@ -58,7 +58,7 @@ ERROR: node is still EOpNull!
 0:27          1.000000
 0:27          1.000000
 0:28      gl_PointSize: direct index for structure ( gl_PointSize highp void PointSize)
-0:28        'anon@1' ( out block{ gl_Position highp 4-component vector of float Position gl_Position, })
+0:28        'anon@1' ( out block{ gl_Position highp 4-component vector of float Position gl_Position})
 0:28        Constant:
 0:28          1 (const uint)
 0:62  Function Definition: pfoo( ( global void)
@@ -623,7 +623,7 @@ ERROR: node is still EOpNull!
 0:?     'anon@0' ( out block{layout( location=12) out highp int aAnon, layout( location=13) out highp 4-component vector of float vAnon})
 0:?     'aliased' (layout( location=12) smooth out highp int)
 0:?     'inbinst' ( in block{ in highp int a})
-0:?     'anon@1' ( out block{ gl_Position highp 4-component vector of float Position gl_Position, })
+0:?     'anon@1' ( out block{ gl_Position highp 4-component vector of float Position gl_Position})
 0:?     'smon' ( smooth out block{ out highp int i})
 0:?     'fmon' ( flat out block{ out highp int i})
 0:?     'cmon' ( centroid out block{ out highp int i})
@@ -709,7 +709,7 @@ ERROR: node is still EOpNull!
 0:26            'gl_InstanceID' ( gl_InstanceId highp int InstanceId)
 0:27      move second child to first child ( temp highp 4-component vector of float)
 0:27        gl_Position: direct index for structure ( gl_Position highp 4-component vector of float Position)
-0:27          'anon@1' ( out block{ gl_Position highp 4-component vector of float Position gl_Position, })
+0:27          'anon@1' ( out block{ gl_Position highp 4-component vector of float Position gl_Position})
 0:27          Constant:
 0:27            0 (const uint)
 0:27        Constant:
@@ -718,7 +718,7 @@ ERROR: node is still EOpNull!
 0:27          1.000000
 0:27          1.000000
 0:28      gl_PointSize: direct index for structure ( gl_PointSize highp void PointSize)
-0:28        'anon@1' ( out block{ gl_Position highp 4-component vector of float Position gl_Position, })
+0:28        'anon@1' ( out block{ gl_Position highp 4-component vector of float Position gl_Position})
 0:28        Constant:
 0:28          1 (const uint)
 0:?   Linker Objects
@@ -726,7 +726,7 @@ ERROR: node is still EOpNull!
 0:?     'anon@0' ( out block{layout( location=12) out highp int aAnon, layout( location=13) out highp 4-component vector of float vAnon})
 0:?     'aliased' (layout( location=12) smooth out highp int)
 0:?     'inbinst' ( in block{ in highp int a})
-0:?     'anon@1' ( out block{ gl_Position highp 4-component vector of float Position gl_Position, })
+0:?     'anon@1' ( out block{ gl_Position highp 4-component vector of float Position gl_Position})
 0:?     'smon' ( smooth out block{ out highp int i})
 0:?     'fmon' ( flat out block{ out highp int i})
 0:?     'cmon' ( centroid out block{ out highp int i})

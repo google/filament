@@ -1,6 +1,7 @@
 cppBad2.vert
 ERROR: 0:3: 'macro expansion' : End of input in macro b
-ERROR: 1 compilation errors.  No code generated.
+ERROR: 0:3: '' : compilation terminated 
+ERROR: 2 compilation errors.  No code generated.
 
 
 Shader version: 100

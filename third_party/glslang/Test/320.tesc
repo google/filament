@@ -118,9 +118,20 @@ void goodfoop()
 
 void bb()
 {
-    gl_BoundingBoxOES[0] = vec4(0.0);
-    gl_BoundingBoxOES[1] = vec4(1.0);
-    gl_BoundingBoxOES[2] = vec4(2.0);  // ERROR, overflow
+    gl_BoundingBoxEXT[0] = vec4(0.0); // ERROR without GL_EXT_primitive_bounding_box 
+    gl_BoundingBoxOES[0] = vec4(0.0); // ERROR without GL_OES_primitive_bounding_box 
+    gl_BoundingBox[0] = vec4(1.0);
+    gl_BoundingBox[1] = vec4(1.0);
+    gl_BoundingBox[2] = vec4(2.0);  // ERROR, overflow
+}
+
+#extension GL_EXT_primitive_bounding_box : enable
+#extension GL_OES_primitive_bounding_box : enable
+
+void bbext()
+{
+    gl_BoundingBoxEXT[1] = vec4(0.0);
+    gl_BoundingBoxOES[1] = vec4(0.0);
 }
 
 out patch badpatchBName {  // ERROR, array size required

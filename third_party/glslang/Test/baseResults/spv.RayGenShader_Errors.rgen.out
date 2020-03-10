@@ -31,7 +31,8 @@ ERROR: 0:36: 'gl_HitKindNV' : undeclared identifier
 ERROR: 0:37: 'reportIntersectionNV' : no matching overloaded function found 
 ERROR: 0:38: 'ignoreIntersectionNV' : no matching overloaded function found 
 ERROR: 0:39: 'terminateRayNV' : no matching overloaded function found 
-ERROR: 32 compilation errors.  No code generated.
+ERROR: 0:40: 'assign' :  l-value required "anon@3" (can't modify a shaderrecordnv qualified buffer)
+ERROR: 33 compilation errors.  No code generated.
 
 
 ERROR: Linking ray-generation stage: Only one shaderRecordNV buffer block is allowed per stage

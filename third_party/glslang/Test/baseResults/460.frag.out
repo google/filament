@@ -56,7 +56,7 @@ ERROR: node is still EOpNull!
 0:28  Function Definition: attExt( ( global void)
 0:28    Function Parameters: 
 0:30    Sequence
-0:30      Loop with condition not tested first: Dependency -3
+0:30      Loop with condition not tested first
 0:30        Loop Condition
 0:30        Constant:
 0:30          true (const bool)

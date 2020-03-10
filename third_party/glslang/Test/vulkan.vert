@@ -21,8 +21,8 @@ void main()
 }
 
 layout(binding = 0) uniform atomic_uint aui;   // ERROR, no atomics in Vulkan
-layout(shared) uniform ub1n { int a; } ub1i;   // ERROR, no shared
-layout(packed) uniform ub2n { int a; } ub2i;   // ERROR, no packed
+layout(shared, binding = 1) uniform ub1n { int a; } ub1i;   // ERROR, no shared
+layout(packed, binding = 2) uniform ub2n { int a; } ub2i;   // ERROR, no packed
 
 layout(constant_id=222) const int arraySize = 4;
 
@@ -46,9 +46,9 @@ layout(set = 1, push_constant) uniform badpc { int a; } badpcI;  // ERROR, no de
 #error VULKAN should be 100
 #endif
 
-float AofA0[2][arraySize];              // ERROR, only outer dimension
-float AofA1[arraySize][arraySize];      // ERROR, only outer dimension
-float AofA2[arraySize][2 + arraySize];  // ERROR, only outer dimension
+float AofA0[2][arraySize];
+float AofA1[arraySize][arraySize];
+float AofA2[arraySize][2 + arraySize];
 float AofA3[arraySize][2];
 
 out ban1 {                              // ERROR, only outer dimension
@@ -63,3 +63,15 @@ layout(binding = 3000) uniform sampler2D s3000;
 layout(binding = 3001) uniform b3001 { int a; };
 layout(location = 10) in vec4 in1;
 layout(location = 10) in vec4 in2;  // ERROR, no location aliasing
+
+layout(constant_id = 400) const int nonLit = 1;
+layout(location = nonLit, component = nonLit) in vec4 nonLit1;  // ERROR, non literal
+layout(binding = nonLit, set = nonLit) uniform nonLitBN {       // ERROR, non literal
+    layout(offset = nonLit) vec4 nonLit1;                       // ERROR, non literal
+    layout(align = nonLit) vec4 nonLit3;                        // ERROR, non literal
+    layout(xfb_offset = nonLit) vec4 nonLit4;                   // ERROR, non literal
+    layout(xfb_buffer = nonLit) vec4 nonLit5;                   // ERROR, non literal
+    layout(xfb_stride = nonLit) vec4 nonLit6;                   // ERROR, non literal
+} nonLitBI;
+layout(input_attachment_index = nonLit) vec4 nonLit3;           // ERROR, non literal
+layout(constant_id = nonLit) vec4 nonLit4;                      // ERROR, non literal

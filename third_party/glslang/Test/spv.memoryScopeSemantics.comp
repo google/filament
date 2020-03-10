@@ -18,6 +18,9 @@ layout (binding = 6) nonprivate uniform sampler2D samp[2];
 layout (binding = 7) nonprivate uniform BufferK { uint x; } bufferk;
 shared uint64_t atomu64;
 shared int64_t atomi64;
+layout (binding = 8) volatile buffer BufferL { uint x; } bufferl;
+layout (binding = 9) buffer BufferM { volatile uint x; } bufferm;
+layout(binding = 10, r32i) volatile coherent uniform iimage2DMS imageMS;
 
 
 void main()
@@ -57,5 +60,15 @@ void main()
 
     atomu64 = atomicMax(atomu64, uint64_t(7), gl_ScopeDevice, 0, 0);
     atomicCompSwap(atomi64, int64_t(10), int64_t(atomu64), gl_ScopeDevice, gl_StorageSemanticsBuffer | gl_StorageSemanticsShared, gl_SemanticsAcquire, gl_StorageSemanticsBuffer | gl_StorageSemanticsShared, gl_SemanticsAcquire);
+
+    y = bufferl.x;
+    atomicAdd(bufferl.x, 1);
+    atomicOr(bufferm.x, 2);
+    imageAtomicAdd(imagei, ivec2(0,0), 3);
+    atomicAdd(bufferu.x, 4u, gl_ScopeDevice, 0, 0);
+    atomicAdd(bufferu.x, 5u, gl_ScopeDevice, 0, gl_SemanticsVolatile);
+
+    imageAtomicStore(imageMS, ivec2(0,0), 1, 4, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsRelease);
+    imageAtomicStore(imagei, ivec2(0,0), -7, gl_ScopeDevice, gl_StorageSemanticsBuffer, gl_SemanticsRelease);
 }
 

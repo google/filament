@@ -1,12 +1,24 @@
+float4 f0(float4 input) {
+    if (all(input == input))
+        return input;
+    else
+        return -input;
+}
+
+float4 f1(float4 input) {
+    if (all(input == input)) {
+        return input;
+    } else {
+        return -input;
+    }
+}
+
 float4 PixelShaderFunction(float4 input) : COLOR0
 {
     if (all(input == input))
         return input;
 
-    if (all(input == input))
-        return input;
-    else
-        return -input;
+    f0(input);
 
     if (all(input == input))
         ;
@@ -20,11 +32,7 @@ float4 PixelShaderFunction(float4 input) : COLOR0
         return input;
     }
 
-    if (all(input == input)) {
-        return input;
-    } else {
-        return -input;
-    }
+    f1(input);
 
 	int ii;
 	if (float ii = input.z)

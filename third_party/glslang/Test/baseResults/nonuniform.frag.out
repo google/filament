@@ -31,13 +31,22 @@ ERROR: node is still EOpNull!
 0:27      move second child to first child ( temp int)
 0:27        'nu_li' ( nonuniform temp int)
 0:27        add ( nonuniform temp int)
-0:27          'a' ( nonuniform temp int)
-0:27          component-wise multiply ( nonuniform temp int)
+0:27          copy object ( nonuniform temp int)
 0:27            'a' ( temp int)
-0:27            Constant:
-0:27              2 (const int)
+0:27          copy object ( nonuniform temp int)
+0:27            component-wise multiply ( temp int)
+0:27              'a' ( temp int)
+0:27              Constant:
+0:27                2 (const int)
 0:28      'nu_li' ( nonuniform temp int)
 0:29      'nu_li' ( nonuniform temp int)
+0:30      move second child to first child ( temp int)
+0:30        'nu_li' ( nonuniform temp int)
+0:30        indirect index ( nonuniform temp int)
+0:30          'table' ( temp 5-element array of int)
+0:30          copy object ( nonuniform temp int)
+0:30            Constant:
+0:30              3 (const int)
 0:?   Linker Objects
 0:?     'nonuniformEXT' ( global int)
 0:?     'nu_inv4' ( smooth nonuniform in 4-component vector of float)
@@ -72,13 +81,22 @@ ERROR: node is still EOpNull!
 0:27      move second child to first child ( temp int)
 0:27        'nu_li' ( nonuniform temp int)
 0:27        add ( nonuniform temp int)
-0:27          'a' ( nonuniform temp int)
-0:27          component-wise multiply ( nonuniform temp int)
+0:27          copy object ( nonuniform temp int)
 0:27            'a' ( temp int)
-0:27            Constant:
-0:27              2 (const int)
+0:27          copy object ( nonuniform temp int)
+0:27            component-wise multiply ( temp int)
+0:27              'a' ( temp int)
+0:27              Constant:
+0:27                2 (const int)
 0:28      'nu_li' ( nonuniform temp int)
 0:29      'nu_li' ( nonuniform temp int)
+0:30      move second child to first child ( temp int)
+0:30        'nu_li' ( nonuniform temp int)
+0:30        indirect index ( nonuniform temp int)
+0:30          'table' ( temp 5-element array of int)
+0:30          copy object ( nonuniform temp int)
+0:30            Constant:
+0:30              3 (const int)
 0:?   Linker Objects
 0:?     'nonuniformEXT' ( global int)
 0:?     'nu_inv4' ( smooth nonuniform in 4-component vector of float)

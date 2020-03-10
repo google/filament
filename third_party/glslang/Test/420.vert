@@ -131,9 +131,9 @@ layout(r32i) coherent volatile readonly uniform iimage2D qualim2;
 
 void passrc()
 {
-    passr(qualim1);
-    passr(qualim2);   // ERROR, drops volatile
-    passr(iimg2D);
+    passr(qualim1);   // ERROR, changing formats
+    passr(qualim2);   // ERROR, drops volatile, ERROR, changing formats
+    passr(iimg2D);    // ERROR, changing formats
 }
 
 layout(rg8i) uniform uimage2D i1bad;     // ERROR, type mismatch

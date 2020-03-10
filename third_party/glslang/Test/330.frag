@@ -150,3 +150,16 @@ void fooKeyMem()
 }
 
 layout(location=28, index=2) out vec4 outIndex2; // ERROR index out of range
+
+layout(location=4) uniform vec4 ucolor0; // ERROR: extension is not enabled
+
+#extension GL_ARB_explicit_uniform_location : enable
+
+layout(location=5) uniform vec4 ucolor1;
+
+layout(location=6) uniform ColorsBuffer // ERROR: location cannot be applied in uniform buffer block
+{
+    vec4 colors[128];
+} colorsBuffer;
+
+

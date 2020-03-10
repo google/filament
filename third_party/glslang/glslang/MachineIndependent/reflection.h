@@ -33,6 +33,8 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#ifndef GLSLANG_WEB
+
 #ifndef _REFLECTION_INCLUDED
 #define _REFLECTION_INCLUDED
 
@@ -52,50 +54,11 @@ class TIntermediate;
 class TIntermAggregate;
 class TReflectionTraverser;
 
-// Data needed for just a single object at the granularity exchanged by the reflection API
-class TObjectReflection {
-public:
-    TObjectReflection(const TString& pName, const TType& pType, int pOffset, int pGLDefineType, int pSize, int pIndex) :
-        name(pName), offset(pOffset),
-        glDefineType(pGLDefineType), size(pSize), index(pIndex), counterIndex(-1), stages(EShLanguageMask(0)), type(pType.clone()) { }
-
-    const TType* getType() const { return type; }
-    int getBinding() const
-    {
-        if (type == nullptr || !type->getQualifier().hasBinding())
-            return -1;
-        return type->getQualifier().layoutBinding;
-    }
-    void dump() const
-    {
-        printf("%s: offset %d, type %x, size %d, index %d, binding %d, stages %d",
-               name.c_str(), offset, glDefineType, size, index, getBinding(), stages );
-
-        if (counterIndex != -1)
-            printf(", counter %d", counterIndex);
-
-        printf("\n");
-    }
-    static TObjectReflection badReflection() { return TObjectReflection(); }
-
-    TString name;
-    int offset;
-    int glDefineType;
-    int size;         // data size in bytes for a block, array size for a (non-block) object that's an array
-    int index;
-    int counterIndex;
-    EShLanguageMask stages;
-
-protected:
-    TObjectReflection() : offset(-1), glDefineType(-1), size(-1), index(-1), type(nullptr) { }
-
-    const TType* type;
-};
-
 // The full reflection database
 class TReflection {
 public:
-    TReflection() : badReflection(TObjectReflection::badReflection())
+    TReflection(EShReflectionOptions opts, EShLanguage first, EShLanguage last)
+        : options(opts), firstStage(first), lastStage(last), badReflection(TObjectReflection::badReflection())
     { 
         for (int dim=0; dim<3; ++dim)
             localSize[dim] = 0;
@@ -126,17 +89,57 @@ public:
             return badReflection;
     }
 
-    // for mapping an attribute index to the attribute's description
-    int getNumAttributes() { return (int)indexToAttribute.size(); }
-    const TObjectReflection& getAttribute(int i) const
+    // for mapping an pipeline input index to the input's description
+    int getNumPipeInputs() { return (int)indexToPipeInput.size(); }
+    const TObjectReflection& getPipeInput(int i) const
     {
-        if (i >= 0 && i < (int)indexToAttribute.size())
-            return indexToAttribute[i];
+        if (i >= 0 && i < (int)indexToPipeInput.size())
+            return indexToPipeInput[i];
         else
             return badReflection;
     }
 
-    // for mapping any name to its index (block names, uniform names and attribute names)
+    // for mapping an pipeline output index to the output's description
+    int getNumPipeOutputs() { return (int)indexToPipeOutput.size(); }
+    const TObjectReflection& getPipeOutput(int i) const
+    {
+        if (i >= 0 && i < (int)indexToPipeOutput.size())
+            return indexToPipeOutput[i];
+        else
+            return badReflection;
+    }
+
+    // for mapping from an atomic counter to the uniform index
+    int getNumAtomicCounters() const { return (int)atomicCounterUniformIndices.size(); }
+    const TObjectReflection& getAtomicCounter(int i) const
+    {
+        if (i >= 0 && i < (int)atomicCounterUniformIndices.size())
+            return getUniform(atomicCounterUniformIndices[i]);
+        else
+            return badReflection;
+    }
+
+    // for mapping a buffer variable index to a buffer variable object's description
+    int getNumBufferVariables() { return (int)indexToBufferVariable.size(); }
+    const TObjectReflection& getBufferVariable(int i) const
+    {
+        if (i >= 0 && i < (int)indexToBufferVariable.size())
+            return indexToBufferVariable[i];
+        else
+            return badReflection;
+    }
+    
+    // for mapping a storage block index to the storage block's description
+    int getNumStorageBuffers() const { return (int)indexToBufferBlock.size(); }
+    const TObjectReflection&  getStorageBufferBlock(int i) const
+    {
+        if (i >= 0 && i < (int)indexToBufferBlock.size())
+            return indexToBufferBlock[i];
+        else
+            return badReflection;
+    }
+
+    // for mapping any name to its index (block names, uniform names and input/output names)
     int getIndex(const char* name) const
     {
         TNameToIndex::const_iterator it = nameToIndex.find(name);
@@ -148,6 +151,20 @@ public:
 
     // see getIndex(const char*)
     int getIndex(const TString& name) const { return getIndex(name.c_str()); }
+
+
+    // for mapping any name to its index (only pipe input/output names)
+    int getPipeIOIndex(const char* name, const bool inOrOut) const
+    {
+        TNameToIndex::const_iterator it = inOrOut ? pipeInNameToIndex.find(name) : pipeOutNameToIndex.find(name);
+        if (it == (inOrOut ? pipeInNameToIndex.end() : pipeOutNameToIndex.end()))
+            return -1;
+        else
+            return it->second;
+    }
+
+    // see gePipeIOIndex(const char*, const bool)
+    int getPipeIOIndex(const TString& name, const bool inOrOut) const { return getPipeIOIndex(name.c_str(), inOrOut); }
 
     // Thread local size
     unsigned getLocalSize(int dim) const { return dim <= 2 ? localSize[dim] : 0; }
@@ -162,14 +179,39 @@ protected:
     void buildAttributeReflection(EShLanguage, const TIntermediate&);
 
     // Need a TString hash: typedef std::unordered_map<TString, int> TNameToIndex;
-    typedef std::map<TString, int> TNameToIndex;
+    typedef std::map<std::string, int> TNameToIndex;
     typedef std::vector<TObjectReflection> TMapIndexToReflection;
+    typedef std::vector<int> TIndices;
+
+    TMapIndexToReflection& GetBlockMapForStorage(TStorageQualifier storage)
+    {
+        if ((options & EShReflectionSeparateBuffers) && storage == EvqBuffer)
+            return indexToBufferBlock;
+        return indexToUniformBlock;
+    }
+    TMapIndexToReflection& GetVariableMapForStorage(TStorageQualifier storage)
+    {
+        if ((options & EShReflectionSeparateBuffers) && storage == EvqBuffer)
+            return indexToBufferVariable;
+        return indexToUniform;
+    }
+
+    EShReflectionOptions options;
+
+    EShLanguage firstStage;
+    EShLanguage lastStage;
 
     TObjectReflection badReflection; // return for queries of -1 or generally out of range; has expected descriptions with in it for this
     TNameToIndex nameToIndex;        // maps names to indexes; can hold all types of data: uniform/buffer and which function names have been processed
+    TNameToIndex pipeInNameToIndex;  // maps pipe in names to indexes, this is a fix to seperate pipe I/O from uniforms and buffers.
+    TNameToIndex pipeOutNameToIndex; // maps pipe out names to indexes, this is a fix to seperate pipe I/O from uniforms and buffers.
     TMapIndexToReflection indexToUniform;
     TMapIndexToReflection indexToUniformBlock;
-    TMapIndexToReflection indexToAttribute;
+    TMapIndexToReflection indexToBufferVariable;
+    TMapIndexToReflection indexToBufferBlock;
+    TMapIndexToReflection indexToPipeInput;
+    TMapIndexToReflection indexToPipeOutput;
+    TIndices atomicCounterUniformIndices;
 
     unsigned int localSize[3];
 };
@@ -177,3 +219,5 @@ protected:
 } // end namespace glslang
 
 #endif // _REFLECTION_INCLUDED
+
+#endif // GLSLANG_WEB

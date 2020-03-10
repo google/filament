@@ -28,6 +28,9 @@ ERROR: 0:90: 'imageAtomicMax' : no matching overloaded function found
 ERROR: 0:94: 'writeonly' : argument cannot drop memory qualifier when passed to formal parameter 
 ERROR: 0:97: '' : memory qualifiers cannot be used on this type 
 ERROR: 0:98: '' : memory qualifiers cannot be used on this type 
+ERROR: 0:109: 'format' : image formats must match 
+ERROR: 0:110: 'format' : image formats must match 
+ERROR: 0:111: 'format' : image formats must match 
 ERROR: 0:114: 'image load-store format' : not supported with this profile: es
 ERROR: 0:114: 'rg8i' : does not apply to unsigned integer images 
 ERROR: 0:115: 'rgba32i' : does not apply to floating point images 
@@ -83,7 +86,7 @@ WARNING: 0:238: '#define' : names containing consecutive underscores are reserve
 ERROR: 0:244: 'gl_DeviceIndex' : required extension not requested: GL_EXT_device_group
 ERROR: 0:245: 'gl_ViewIndex' : undeclared identifier 
 ERROR: 0:255: 'gl_ViewIndex' : undeclared identifier 
-ERROR: 82 compilation errors.  No code generated.
+ERROR: 85 compilation errors.  No code generated.
 
 
 Shader version: 310
@@ -116,9 +119,9 @@ ERROR: node is still EOpNull!
 0:59    Function Parameters: 
 0:61    Sequence
 0:61      move second child to first child ( temp highp float)
-0:61        direct index (layout( column_major shared) temp highp float)
-0:61          values: direct index for structure (layout( column_major shared) buffer unsized 3-element array of highp float)
-0:61            'ro' (layout( column_major shared) readonly buffer block{layout( column_major shared) buffer highp int value, layout( column_major shared) buffer unsized 3-element array of highp float values})
+0:61        direct index (layout( column_major shared) readonly temp highp float)
+0:61          values: direct index for structure (layout( column_major shared) readonly buffer unsized 3-element array of highp float)
+0:61            'ro' (layout( column_major shared) readonly buffer block{layout( column_major shared) readonly buffer highp int value, layout( column_major shared) readonly buffer unsized 3-element array of highp float values})
 0:61            Constant:
 0:61              1 (const int)
 0:61          Constant:
@@ -126,8 +129,8 @@ ERROR: node is still EOpNull!
 0:61        Constant:
 0:61          4.700000
 0:62      array length ( temp int)
-0:62        values: direct index for structure (layout( column_major shared) buffer unsized 3-element array of highp float)
-0:62          'ro' (layout( column_major shared) readonly buffer block{layout( column_major shared) buffer highp int value, layout( column_major shared) buffer unsized 3-element array of highp float values})
+0:62        values: direct index for structure (layout( column_major shared) readonly buffer unsized 3-element array of highp float)
+0:62          'ro' (layout( column_major shared) readonly buffer block{layout( column_major shared) readonly buffer highp int value, layout( column_major shared) readonly buffer unsized 3-element array of highp float values})
 0:62          Constant:
 0:62            1 (const int)
 0:63      Pre-Increment ( temp highp 4-component vector of float)
@@ -279,9 +282,9 @@ ERROR: node is still EOpNull!
 0:?     Sequence
 0:194      move second child to first child ( temp highp float)
 0:194        'g' ( temp highp float)
-0:194        direct index (layout( column_major shared) temp highp float)
-0:194          values: direct index for structure (layout( column_major shared) buffer unsized 3-element array of highp float)
-0:194            'wo' (layout( column_major shared) writeonly buffer block{layout( column_major shared) buffer highp int value, layout( column_major shared) buffer unsized 3-element array of highp float values})
+0:194        direct index (layout( column_major shared) writeonly temp highp float)
+0:194          values: direct index for structure (layout( column_major shared) writeonly buffer unsized 3-element array of highp float)
+0:194            'wo' (layout( column_major shared) writeonly buffer block{layout( column_major shared) writeonly buffer highp int value, layout( column_major shared) writeonly buffer unsized 3-element array of highp float values})
 0:194            Constant:
 0:194              1 (const int)
 0:194          Constant:
@@ -289,42 +292,42 @@ ERROR: node is still EOpNull!
 0:195      Sequence
 0:195        move second child to first child ( temp highp float)
 0:195          'f' ( temp highp float)
-0:195          direct index (layout( column_major shared) temp highp float)
-0:195            values: direct index for structure (layout( column_major shared) buffer unsized 3-element array of highp float)
-0:195              'wo' (layout( column_major shared) writeonly buffer block{layout( column_major shared) buffer highp int value, layout( column_major shared) buffer unsized 3-element array of highp float values})
+0:195          direct index (layout( column_major shared) writeonly temp highp float)
+0:195            values: direct index for structure (layout( column_major shared) writeonly buffer unsized 3-element array of highp float)
+0:195              'wo' (layout( column_major shared) writeonly buffer block{layout( column_major shared) writeonly buffer highp int value, layout( column_major shared) writeonly buffer unsized 3-element array of highp float values})
 0:195              Constant:
 0:195                1 (const int)
 0:195            Constant:
 0:195              2 (const int)
 0:196      Pre-Increment ( temp highp float)
-0:196        direct index (layout( column_major shared) temp highp float)
-0:196          values: direct index for structure (layout( column_major shared) buffer unsized 3-element array of highp float)
-0:196            'wo' (layout( column_major shared) writeonly buffer block{layout( column_major shared) buffer highp int value, layout( column_major shared) buffer unsized 3-element array of highp float values})
+0:196        direct index (layout( column_major shared) writeonly temp highp float)
+0:196          values: direct index for structure (layout( column_major shared) writeonly buffer unsized 3-element array of highp float)
+0:196            'wo' (layout( column_major shared) writeonly buffer block{layout( column_major shared) writeonly buffer highp int value, layout( column_major shared) writeonly buffer unsized 3-element array of highp float values})
 0:196            Constant:
 0:196              1 (const int)
 0:196          Constant:
 0:196            2 (const int)
 0:197      Post-Decrement ( temp highp float)
-0:197        direct index (layout( column_major shared) temp highp float)
-0:197          values: direct index for structure (layout( column_major shared) buffer unsized 3-element array of highp float)
-0:197            'wo' (layout( column_major shared) writeonly buffer block{layout( column_major shared) buffer highp int value, layout( column_major shared) buffer unsized 3-element array of highp float values})
+0:197        direct index (layout( column_major shared) writeonly temp highp float)
+0:197          values: direct index for structure (layout( column_major shared) writeonly buffer unsized 3-element array of highp float)
+0:197            'wo' (layout( column_major shared) writeonly buffer block{layout( column_major shared) writeonly buffer highp int value, layout( column_major shared) writeonly buffer unsized 3-element array of highp float values})
 0:197            Constant:
 0:197              1 (const int)
 0:197          Constant:
 0:197            2 (const int)
 0:198      add ( temp highp float)
 0:198        'f' ( temp highp float)
-0:198        direct index (layout( column_major shared) temp highp float)
-0:198          values: direct index for structure (layout( column_major shared) buffer unsized 3-element array of highp float)
-0:198            'wo' (layout( column_major shared) writeonly buffer block{layout( column_major shared) buffer highp int value, layout( column_major shared) buffer unsized 3-element array of highp float values})
+0:198        direct index (layout( column_major shared) writeonly temp highp float)
+0:198          values: direct index for structure (layout( column_major shared) writeonly buffer unsized 3-element array of highp float)
+0:198            'wo' (layout( column_major shared) writeonly buffer block{layout( column_major shared) writeonly buffer highp int value, layout( column_major shared) writeonly buffer unsized 3-element array of highp float values})
 0:198            Constant:
 0:198              1 (const int)
 0:198          Constant:
 0:198            2 (const int)
 0:199      subtract ( temp highp float)
-0:199        direct index (layout( column_major shared) temp highp float)
-0:199          values: direct index for structure (layout( column_major shared) buffer unsized 3-element array of highp float)
-0:199            'wo' (layout( column_major shared) writeonly buffer block{layout( column_major shared) buffer highp int value, layout( column_major shared) buffer unsized 3-element array of highp float values})
+0:199        direct index (layout( column_major shared) writeonly temp highp float)
+0:199          values: direct index for structure (layout( column_major shared) writeonly buffer unsized 3-element array of highp float)
+0:199            'wo' (layout( column_major shared) writeonly buffer block{layout( column_major shared) writeonly buffer highp int value, layout( column_major shared) writeonly buffer unsized 3-element array of highp float values})
 0:199            Constant:
 0:199              1 (const int)
 0:199          Constant:
@@ -336,9 +339,9 @@ ERROR: node is still EOpNull!
 0:201        true case
 0:201        'f' ( temp highp float)
 0:201        false case
-0:201        direct index (layout( column_major shared) temp highp float)
-0:201          values: direct index for structure (layout( column_major shared) buffer unsized 3-element array of highp float)
-0:201            'wo' (layout( column_major shared) writeonly buffer block{layout( column_major shared) buffer highp int value, layout( column_major shared) buffer unsized 3-element array of highp float values})
+0:201        direct index (layout( column_major shared) writeonly temp highp float)
+0:201          values: direct index for structure (layout( column_major shared) writeonly buffer unsized 3-element array of highp float)
+0:201            'wo' (layout( column_major shared) writeonly buffer block{layout( column_major shared) writeonly buffer highp int value, layout( column_major shared) writeonly buffer unsized 3-element array of highp float values})
 0:201            Constant:
 0:201              1 (const int)
 0:201          Constant:
@@ -347,9 +350,9 @@ ERROR: node is still EOpNull!
 0:202        Condition
 0:202        'b' ( temp bool)
 0:202        true case
-0:202        direct index (layout( column_major shared) temp highp float)
-0:202          values: direct index for structure (layout( column_major shared) buffer unsized 3-element array of highp float)
-0:202            'wo' (layout( column_major shared) writeonly buffer block{layout( column_major shared) buffer highp int value, layout( column_major shared) buffer unsized 3-element array of highp float values})
+0:202        direct index (layout( column_major shared) writeonly temp highp float)
+0:202          values: direct index for structure (layout( column_major shared) writeonly buffer unsized 3-element array of highp float)
+0:202            'wo' (layout( column_major shared) writeonly buffer block{layout( column_major shared) writeonly buffer highp int value, layout( column_major shared) writeonly buffer unsized 3-element array of highp float values})
 0:202            Constant:
 0:202              1 (const int)
 0:202          Constant:
@@ -360,9 +363,9 @@ ERROR: node is still EOpNull!
 0:203        Condition
 0:203        Compare Equal ( temp bool)
 0:203          'f' ( temp highp float)
-0:203          direct index (layout( column_major shared) temp highp float)
-0:203            values: direct index for structure (layout( column_major shared) buffer unsized 3-element array of highp float)
-0:203              'wo' (layout( column_major shared) writeonly buffer block{layout( column_major shared) buffer highp int value, layout( column_major shared) buffer unsized 3-element array of highp float values})
+0:203          direct index (layout( column_major shared) writeonly temp highp float)
+0:203            values: direct index for structure (layout( column_major shared) writeonly buffer unsized 3-element array of highp float)
+0:203              'wo' (layout( column_major shared) writeonly buffer block{layout( column_major shared) writeonly buffer highp int value, layout( column_major shared) writeonly buffer unsized 3-element array of highp float values})
 0:203              Constant:
 0:203                1 (const int)
 0:203            Constant:
@@ -374,9 +377,9 @@ ERROR: node is still EOpNull!
 0:205        Condition
 0:205        Compare Greater Than or Equal ( temp bool)
 0:205          'f' ( temp highp float)
-0:205          direct index (layout( column_major shared) temp highp float)
-0:205            values: direct index for structure (layout( column_major shared) buffer unsized 3-element array of highp float)
-0:205              'wo' (layout( column_major shared) writeonly buffer block{layout( column_major shared) buffer highp int value, layout( column_major shared) buffer unsized 3-element array of highp float values})
+0:205          direct index (layout( column_major shared) writeonly temp highp float)
+0:205            values: direct index for structure (layout( column_major shared) writeonly buffer unsized 3-element array of highp float)
+0:205              'wo' (layout( column_major shared) writeonly buffer block{layout( column_major shared) writeonly buffer highp int value, layout( column_major shared) writeonly buffer unsized 3-element array of highp float values})
 0:205              Constant:
 0:205                1 (const int)
 0:205            Constant:
@@ -388,9 +391,9 @@ ERROR: node is still EOpNull!
 0:207        'f' ( temp highp float)
 0:207        direct index ( temp highp float)
 0:207          Construct vec3 ( temp highp 3-component vector of float)
-0:207            direct index (layout( column_major shared) temp highp float)
-0:207              values: direct index for structure (layout( column_major shared) buffer unsized 3-element array of highp float)
-0:207                'wo' (layout( column_major shared) writeonly buffer block{layout( column_major shared) buffer highp int value, layout( column_major shared) buffer unsized 3-element array of highp float values})
+0:207            direct index (layout( column_major shared) writeonly temp highp float)
+0:207              values: direct index for structure (layout( column_major shared) writeonly buffer unsized 3-element array of highp float)
+0:207                'wo' (layout( column_major shared) writeonly buffer block{layout( column_major shared) writeonly buffer highp int value, layout( column_major shared) writeonly buffer unsized 3-element array of highp float values})
 0:207                Constant:
 0:207                  1 (const int)
 0:207              Constant:
@@ -398,14 +401,14 @@ ERROR: node is still EOpNull!
 0:207          Constant:
 0:207            0 (const int)
 0:208      Bitwise not ( temp highp int)
-0:208        value: direct index for structure (layout( column_major shared) buffer highp int)
-0:208          'wo' (layout( column_major shared) writeonly buffer block{layout( column_major shared) buffer highp int value, layout( column_major shared) buffer unsized 3-element array of highp float values})
+0:208        value: direct index for structure (layout( column_major shared) writeonly buffer highp int)
+0:208          'wo' (layout( column_major shared) writeonly buffer block{layout( column_major shared) writeonly buffer highp int value, layout( column_major shared) writeonly buffer unsized 3-element array of highp float values})
 0:208          Constant:
 0:208            0 (const int)
 0:209      move second child to first child ( temp highp float)
-0:209        direct index (layout( column_major shared) temp highp float)
-0:209          values: direct index for structure (layout( column_major shared) buffer unsized 3-element array of highp float)
-0:209            'wo' (layout( column_major shared) writeonly buffer block{layout( column_major shared) buffer highp int value, layout( column_major shared) buffer unsized 3-element array of highp float values})
+0:209        direct index (layout( column_major shared) writeonly temp highp float)
+0:209          values: direct index for structure (layout( column_major shared) writeonly buffer unsized 3-element array of highp float)
+0:209            'wo' (layout( column_major shared) writeonly buffer block{layout( column_major shared) writeonly buffer highp int value, layout( column_major shared) writeonly buffer unsized 3-element array of highp float values})
 0:209            Constant:
 0:209              1 (const int)
 0:209          Constant:
@@ -417,22 +420,22 @@ ERROR: node is still EOpNull!
 0:?     Sequence
 0:221      move second child to first child ( temp highp float)
 0:221        'g' ( temp highp float)
-0:221        direct index (layout( column_major shared) temp highp float)
-0:221          values: direct index for structure (layout( column_major shared) buffer unsized 3-element array of highp float)
-0:221            'wo' (layout( column_major shared) writeonly buffer block{layout( column_major shared) buffer highp int value, layout( column_major shared) buffer unsized 3-element array of highp float values})
+0:221        direct index (layout( column_major shared) writeonly temp highp float)
+0:221          values: direct index for structure (layout( column_major shared) writeonly buffer unsized 3-element array of highp float)
+0:221            'wo' (layout( column_major shared) writeonly buffer block{layout( column_major shared) writeonly buffer highp int value, layout( column_major shared) writeonly buffer unsized 3-element array of highp float values})
 0:221            Constant:
 0:221              1 (const int)
 0:221          Constant:
 0:221            2 (const int)
 0:222      Bitwise not ( temp highp int)
-0:222        value: direct index for structure (layout( column_major shared) buffer highp int)
-0:222          'wo' (layout( column_major shared) writeonly buffer block{layout( column_major shared) buffer highp int value, layout( column_major shared) buffer unsized 3-element array of highp float values})
+0:222        value: direct index for structure (layout( column_major shared) writeonly buffer highp int)
+0:222          'wo' (layout( column_major shared) writeonly buffer block{layout( column_major shared) writeonly buffer highp int value, layout( column_major shared) writeonly buffer unsized 3-element array of highp float values})
 0:222          Constant:
 0:222            0 (const int)
 0:223      move second child to first child ( temp highp float)
-0:223        direct index (layout( column_major shared) temp highp float)
-0:223          values: direct index for structure (layout( column_major shared) buffer unsized 3-element array of highp float)
-0:223            'wo' (layout( column_major shared) writeonly buffer block{layout( column_major shared) buffer highp int value, layout( column_major shared) buffer unsized 3-element array of highp float values})
+0:223        direct index (layout( column_major shared) writeonly temp highp float)
+0:223          values: direct index for structure (layout( column_major shared) writeonly buffer unsized 3-element array of highp float)
+0:223            'wo' (layout( column_major shared) writeonly buffer block{layout( column_major shared) writeonly buffer highp int value, layout( column_major shared) writeonly buffer unsized 3-element array of highp float values})
 0:223            Constant:
 0:223              1 (const int)
 0:223          Constant:
@@ -440,8 +443,8 @@ ERROR: node is still EOpNull!
 0:223        Constant:
 0:223          3.400000
 0:224      move second child to first child ( temp highp int)
-0:224        value: direct index for structure (layout( column_major shared) buffer highp int)
-0:224          'wo' (layout( column_major shared) writeonly buffer block{layout( column_major shared) buffer highp int value, layout( column_major shared) buffer unsized 3-element array of highp float values})
+0:224        value: direct index for structure (layout( column_major shared) writeonly buffer highp int)
+0:224          'wo' (layout( column_major shared) writeonly buffer block{layout( column_major shared) writeonly buffer highp int value, layout( column_major shared) writeonly buffer unsized 3-element array of highp float values})
 0:224          Constant:
 0:224            0 (const int)
 0:224        Constant:
@@ -474,7 +477,7 @@ ERROR: node is still EOpNull!
 0:?     'arrX' ( global 2-element array of highp int)
 0:?     'arrY' ( global 1-element array of highp int)
 0:?     'arrZ' ( global 4096-element array of highp int)
-0:?     'ro' (layout( column_major shared) readonly buffer block{layout( column_major shared) buffer highp int value, layout( column_major shared) buffer unsized 3-element array of highp float values})
+0:?     'ro' (layout( column_major shared) readonly buffer block{layout( column_major shared) readonly buffer highp int value, layout( column_major shared) readonly buffer unsized 3-element array of highp float values})
 0:?     'v' ( buffer highp 4-component vector of float)
 0:?     'us2dbad' ( uniform mediump usampler2D)
 0:?     'us2d' ( uniform highp usampler2D)
@@ -513,7 +516,7 @@ ERROR: node is still EOpNull!
 0:?     'badQ1' (layout( rgba32f) coherent volatile restrict uniform highp image2D)
 0:?     'badQ2' (layout( rgba8i) coherent volatile restrict uniform highp iimage2D)
 0:?     'badQ3' (layout( rgba16ui) coherent volatile restrict uniform highp uimage2D)
-0:?     'wo' (layout( column_major shared) writeonly buffer block{layout( column_major shared) buffer highp int value, layout( column_major shared) buffer unsized 3-element array of highp float values})
+0:?     'wo' (layout( column_major shared) writeonly buffer block{layout( column_major shared) writeonly buffer highp int value, layout( column_major shared) writeonly buffer unsized 3-element array of highp float values})
 0:?     'multio' (layout( column_major shared) buffer block{layout( column_major shared) readonly buffer highp int value, layout( column_major shared) writeonly buffer unsized 1-element array of highp float values})
 0:?     'inbi' ( in block{ in highp int a})
 0:?     'outbi' ( out block{ out highp int a})
@@ -568,7 +571,7 @@ ERROR: node is still EOpNull!
 0:?     'arrX' ( global 2-element array of highp int)
 0:?     'arrY' ( global 1-element array of highp int)
 0:?     'arrZ' ( global 4096-element array of highp int)
-0:?     'ro' (layout( column_major shared) readonly buffer block{layout( column_major shared) buffer highp int value, layout( column_major shared) buffer unsized 3-element array of highp float values})
+0:?     'ro' (layout( column_major shared) readonly buffer block{layout( column_major shared) readonly buffer highp int value, layout( column_major shared) readonly buffer unsized 3-element array of highp float values})
 0:?     'v' ( buffer highp 4-component vector of float)
 0:?     'us2dbad' ( uniform mediump usampler2D)
 0:?     'us2d' ( uniform highp usampler2D)
@@ -607,7 +610,7 @@ ERROR: node is still EOpNull!
 0:?     'badQ1' (layout( rgba32f) coherent volatile restrict uniform highp image2D)
 0:?     'badQ2' (layout( rgba8i) coherent volatile restrict uniform highp iimage2D)
 0:?     'badQ3' (layout( rgba16ui) coherent volatile restrict uniform highp uimage2D)
-0:?     'wo' (layout( column_major shared) writeonly buffer block{layout( column_major shared) buffer highp int value, layout( column_major shared) buffer unsized 3-element array of highp float values})
+0:?     'wo' (layout( column_major shared) writeonly buffer block{layout( column_major shared) writeonly buffer highp int value, layout( column_major shared) writeonly buffer unsized 3-element array of highp float values})
 0:?     'multio' (layout( column_major shared) buffer block{layout( column_major shared) readonly buffer highp int value, layout( column_major shared) writeonly buffer unsized 1-element array of highp float values})
 0:?     'inbi' ( in block{ in highp int a})
 0:?     'outbi' ( out block{ out highp int a})

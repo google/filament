@@ -14,3 +14,11 @@ void main(triangle in uint VertexID[3] : VertexID,
     S s;
     OutputStream.Append(s);
 }
+
+[maxvertexcount(4)]
+void notmain(line in uint VertexID[2] : VertexID,
+       inout LineStream<S> OutputStream)
+{
+    S s;
+    OutputStream.Append(s);
+}

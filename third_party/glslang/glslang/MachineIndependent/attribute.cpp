@@ -34,6 +34,8 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#ifndef GLSLANG_WEB
+
 #include "attribute.h"
 #include "../Include/intermediate.h"
 #include "ParseHelper.h"
@@ -51,6 +53,7 @@ bool TAttributeArgs::getInt(int& value, int argNum) const
     value = intConst->getIConst();
     return true;
 }
+
 
 // extract strings out of attribute arguments stored in attribute aggregate.
 // convert to lower case if converToLower is true (for case-insensitive compare convenience)
@@ -85,6 +88,9 @@ const TConstUnion* TAttributeArgs::getConstUnion(TBasicType basicType, int argNu
     if (argNum >= (int)args->getSequence().size())
         return nullptr;
 
+    if (args->getSequence()[argNum]->getAsConstantUnion() == nullptr)
+        return nullptr;
+
     const TConstUnion* constVal = &args->getSequence()[argNum]->getAsConstantUnion()->getConstArray()[0];
     if (constVal == nullptr || constVal->getType() != basicType)
         return nullptr;
@@ -107,6 +113,16 @@ TAttributeType TParseContext::attributeFromName(const TString& name) const
         return EatDependencyInfinite;
     else if (name == "dependency_length")
         return EatDependencyLength;
+    else if (name == "min_iterations")
+        return EatMinIterations;
+    else if (name == "max_iterations")
+        return EatMaxIterations;
+    else if (name == "iteration_multiple")
+        return EatIterationMultiple;
+    else if (name == "peel_count")
+        return EatPeelCount;
+    else if (name == "partial_count")
+        return EatPartialCount;
     else
         return EatNone;
 }
@@ -222,29 +238,101 @@ void TParseContext::handleLoopAttributes(const TAttributes& attributes, TIntermN
     }
 
     for (auto it = attributes.begin(); it != attributes.end(); ++it) {
-        if (it->name != EatDependencyLength && it->size() > 0) {
-            warn(node->getLoc(), "attribute with arguments not recognized, skipping", "", "");
-            continue;
-        }
 
-        int value;
+        const auto noArgument = [&](const char* feature) {
+            if (it->size() > 0) {
+                warn(node->getLoc(), "expected no arguments", feature, "");
+                return false;
+            }
+            return true;
+        };
+
+        const auto positiveSignedArgument = [&](const char* feature, int& value) {
+            if (it->size() == 1 && it->getInt(value)) {
+                if (value <= 0) {
+                    error(node->getLoc(), "must be positive", feature, "");
+                    return false;
+                }
+            } else {
+                warn(node->getLoc(), "expected a single integer argument", feature, "");
+                return false;
+            }
+            return true;
+        };
+
+        const auto unsignedArgument = [&](const char* feature, unsigned int& uiValue) {
+            int value;
+            if (!(it->size() == 1 && it->getInt(value))) {
+                warn(node->getLoc(), "expected a single integer argument", feature, "");
+                return false;
+            }
+            uiValue = (unsigned int)value;
+            return true;
+        };
+
+        const auto positiveUnsignedArgument = [&](const char* feature, unsigned int& uiValue) {
+            int value;
+            if (it->size() == 1 && it->getInt(value)) {
+                if (value == 0) {
+                    error(node->getLoc(), "must be greater than or equal to 1", feature, "");
+                    return false;
+                }
+            } else {
+                warn(node->getLoc(), "expected a single integer argument", feature, "");
+                return false;
+            }
+            uiValue = (unsigned int)value;
+            return true;
+        };
+
+        const auto spirv14 = [&](const char* feature) {
+            if (spvVersion.spv > 0 && spvVersion.spv < EShTargetSpv_1_4)
+                warn(node->getLoc(), "attribute requires a SPIR-V 1.4 target-env", feature, "");
+        };
+
+        int value = 0;
+        unsigned uiValue = 0;
         switch (it->name) {
         case EatUnroll:
-            loop->setUnroll();
+            if (noArgument("unroll"))
+                loop->setUnroll();
             break;
         case EatLoop:
-            loop->setDontUnroll();
+            if (noArgument("dont_unroll"))
+                loop->setDontUnroll();
             break;
         case EatDependencyInfinite:
-            loop->setLoopDependency(TIntermLoop::dependencyInfinite);
+            if (noArgument("dependency_infinite"))
+                loop->setLoopDependency(TIntermLoop::dependencyInfinite);
             break;
         case EatDependencyLength:
-            if (it->size() == 1 && it->getInt(value)) {
-                if (value <= 0)
-                    error(node->getLoc(), "must be positive", "dependency_length", "");
+            if (positiveSignedArgument("dependency_length", value))
                 loop->setLoopDependency(value);
-            } else
-                warn(node->getLoc(), "expected a single integer argument", "dependency_length", "");
+            break;
+        case EatMinIterations:
+            spirv14("min_iterations");
+            if (unsignedArgument("min_iterations", uiValue))
+                loop->setMinIterations(uiValue);
+            break;
+        case EatMaxIterations:
+            spirv14("max_iterations");
+            if (unsignedArgument("max_iterations", uiValue))
+                loop->setMaxIterations(uiValue);
+            break;
+        case EatIterationMultiple:
+            spirv14("iteration_multiple");
+            if (positiveUnsignedArgument("iteration_multiple", uiValue))
+                loop->setIterationMultiple(uiValue);
+            break;
+        case EatPeelCount:
+            spirv14("peel_count");
+            if (unsignedArgument("peel_count", uiValue))
+                loop->setPeelCount(uiValue);
+            break;
+        case EatPartialCount:
+            spirv14("partial_count");
+            if (unsignedArgument("partial_count", uiValue))
+                loop->setPartialCount(uiValue);
             break;
         default:
             warn(node->getLoc(), "attribute does not apply to a loop", "", "");
@@ -253,5 +341,6 @@ void TParseContext::handleLoopAttributes(const TAttributes& attributes, TIntermN
     }
 }
 
-
 } // end namespace glslang
+
+#endif // GLSLANG_WEB

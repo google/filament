@@ -19,6 +19,7 @@ void main()
     mat4x3 e11 = gl_WorldToObjectNV;                        // ERROR, unsupported builtin in stage
     float e12 = gl_HitTNV;                                  // ERROR, unsupported builtin in stage
     float e13 = gl_HitKindNV;                               // ERROR, unsupported builtin in stage
+    uint curFlags = gl_IncomingRayFlagsNV;                  // ERROR, unsupported builtin in stage
     reportIntersectionNV(1.0, 1U);                          // ERROR, unsupported builtin in stage
     ignoreIntersectionNV();                                 // ERROR, unsupported builtin in stage
     terminateRayNV();                                       // ERROR, unsupported builtin in stage

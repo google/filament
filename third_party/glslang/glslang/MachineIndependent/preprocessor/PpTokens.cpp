@@ -1,6 +1,8 @@
 //
 // Copyright (C) 2002-2005  3Dlabs Inc. Ltd.
 // Copyright (C) 2013 LunarG, Inc.
+// Copyright (C) 2015-2018 Google, Inc.
+//
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -97,150 +99,34 @@ NVIDIA HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace glslang {
 
-
-namespace {
-
-    // When recording (and playing back) should the backing name string
-    // be saved (restored)?
-    bool SaveName(int atom)
-    {
-        switch (atom) {
-        case PpAtomIdentifier:
-        case PpAtomConstString:
-        case PpAtomConstInt:
-        case PpAtomConstUint:
-        case PpAtomConstInt64:
-        case PpAtomConstUint64:
-    #ifdef AMD_EXTENSIONS
-        case PpAtomConstInt16:
-        case PpAtomConstUint16:
-    #endif
-        case PpAtomConstFloat:
-        case PpAtomConstDouble:
-        case PpAtomConstFloat16:
-            return true;
-        default:
-            return false;
-        }
-    }
-
-    // When recording (and playing back) should the numeric value
-    // be saved (restored)?
-    bool SaveValue(int atom)
-    {
-        switch (atom) {
-        case PpAtomConstInt:
-        case PpAtomConstUint:
-        case PpAtomConstInt64:
-        case PpAtomConstUint64:
-    #ifdef AMD_EXTENSIONS
-        case PpAtomConstInt16:
-        case PpAtomConstUint16:
-    #endif
-        case PpAtomConstFloat:
-        case PpAtomConstDouble:
-        case PpAtomConstFloat16:
-            return true;
-        default:
-            return false;
-        }
-    }
-}
-
-// push onto back of stream
-void TPpContext::TokenStream::putSubtoken(char subtoken)
-{
-    data.push_back(static_cast<unsigned char>(subtoken));
-}
-
-// get the next token in stream
-int TPpContext::TokenStream::getSubtoken()
-{
-    if (current < data.size())
-        return data[current++];
-    else
-        return EndOfInput;
-}
-
-// back up one position in the stream
-void TPpContext::TokenStream::ungetSubtoken()
-{
-    if (current > 0)
-        --current;
-}
-
-// Add a complete token (including backing string) to the end of a list
-// for later playback.
+// Add a token (including backing string) to the end of a macro
+// token stream, for later playback.
 void TPpContext::TokenStream::putToken(int atom, TPpToken* ppToken)
 {
-    // save the atom
-    assert((atom & ~0xff) == 0);
-    putSubtoken(static_cast<char>(atom));
-
-    // save the backing name string
-    if (SaveName(atom)) {
-        const char* s = ppToken->name;
-        while (*s)
-            putSubtoken(*s++);
-        putSubtoken(0);
-    }
-
-    // save the numeric value
-    if (SaveValue(atom)) {
-        const char* n = reinterpret_cast<const char*>(&ppToken->i64val);
-        for (size_t i = 0; i < sizeof(ppToken->i64val); ++i)
-            putSubtoken(*n++);
-    }
+    TokenStream::Token streamToken(atom, *ppToken);
+    stream.push_back(streamToken);
 }
 
-// Read the next token from a token stream.
-// (Not the source stream, but a stream used to hold a tokenized macro).
+// Read the next token from a macro token stream.
 int TPpContext::TokenStream::getToken(TParseContextBase& parseContext, TPpToken *ppToken)
 {
-    // get the atom
-    int atom = getSubtoken();
-    if (atom == EndOfInput)
-        return atom;
+    if (atEnd())
+        return EndOfInput;
 
-    // init the token
-    ppToken->clear();
+    int atom = stream[currentPos++].get(*ppToken);
     ppToken->loc = parseContext.getCurrentLoc();
 
-    // get the backing name string
-    if (SaveName(atom)) {
-        int ch = getSubtoken();
-        int len = 0;
-        while (ch != 0 && ch != EndOfInput) {
-            if (len < MaxTokenLength) {
-                ppToken->name[len] = (char)ch;
-                len++;
-                ch = getSubtoken();
-            } else {
-                parseContext.error(ppToken->loc, "token too long", "", "");
-                break;
-            }
-        }
-        ppToken->name[len] = 0;
-    }
-
+#ifndef GLSLANG_WEB
     // Check for ##, unless the current # is the last character
     if (atom == '#') {
-        if (current < data.size()) {
-            if (getSubtoken() == '#') {
-                parseContext.requireProfile(ppToken->loc, ~EEsProfile, "token pasting (##)");
-                parseContext.profileRequires(ppToken->loc, ~EEsProfile, 130, 0, "token pasting (##)");
-                atom = PpAtomPaste;
-            } else
-                ungetSubtoken();
+        if (peekToken('#')) {
+            parseContext.requireProfile(ppToken->loc, ~EEsProfile, "token pasting (##)");
+            parseContext.profileRequires(ppToken->loc, ~EEsProfile, 130, 0, "token pasting (##)");
+            currentPos++;
+            atom = PpAtomPaste;
         }
     }
-
-    // get the numeric value
-    if (SaveValue(atom)) {
-        char* n = reinterpret_cast<char*>(&ppToken->i64val);
-        for (size_t i = 0; i < sizeof(ppToken->i64val); ++i)
-            *n++ = (char)getSubtoken();
-    }
+#endif
 
     return atom;
 }
@@ -254,15 +140,14 @@ bool TPpContext::TokenStream::peekTokenizedPasting(bool lastTokenPastes)
 {
     // 1. preceding ##?
 
-    size_t savePos = current;
-    int subtoken;
+    size_t savePos = currentPos;
     // skip white space
-    do {
-        subtoken = getSubtoken();
-    } while (subtoken == ' ');
-    current = savePos;
-    if (subtoken == PpAtomPaste)
+    while (peekToken(' '))
+        ++currentPos;
+    if (peekToken(PpAtomPaste)) {
+        currentPos = savePos;
         return true;
+    }
 
     // 2. last token and we've been told after this there will be a ##
 
@@ -271,18 +156,18 @@ bool TPpContext::TokenStream::peekTokenizedPasting(bool lastTokenPastes)
     // Getting here means the last token will be pasted, after this
 
     // Are we at the last non-whitespace token?
-    savePos = current;
+    savePos = currentPos;
     bool moreTokens = false;
     do {
-        subtoken = getSubtoken();
-        if (subtoken == EndOfInput)
+        if (atEnd())
             break;
-        if (subtoken != ' ') {
+        if (!peekToken(' ')) {
             moreTokens = true;
             break;
         }
+        ++currentPos;
     } while (true);
-    current = savePos;
+    currentPos = savePos;
 
     return !moreTokens;
 }
@@ -291,23 +176,21 @@ bool TPpContext::TokenStream::peekTokenizedPasting(bool lastTokenPastes)
 bool TPpContext::TokenStream::peekUntokenizedPasting()
 {
     // don't return early, have to restore this
-    size_t savePos = current;
+    size_t savePos = currentPos;
 
     // skip white-space
-    int subtoken;
-    do {
-        subtoken = getSubtoken();
-    } while (subtoken == ' ');
+    while (peekToken(' '))
+        ++currentPos;
 
     // check for ##
     bool pasting = false;
-    if (subtoken == '#') {
-        subtoken = getSubtoken();
-        if (subtoken == '#')
+    if (peekToken('#')) {
+        ++currentPos;
+        if (peekToken('#'))
             pasting = true;
     }
 
-    current = savePos;
+    currentPos = savePos;
 
     return pasting;
 }

@@ -1,6 +1,6 @@
 #version 450
 
-buffer block {
+layout(binding = 0) buffer block {
     float m0;
     vec3 m4;
     //////

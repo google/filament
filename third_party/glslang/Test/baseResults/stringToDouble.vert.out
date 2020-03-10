@@ -1,6 +1,6 @@
 stringToDouble.vert
 Shader version: 460
-Requested GL_KHX_shader_explicit_arithmetic_types_float16
+Requested GL_EXT_shader_explicit_arithmetic_types_float16
 0:? Sequence
 0:3  Function Definition: main( ( global void)
 0:3    Function Parameters: 
@@ -524,7 +524,7 @@ Linked vertex stage:
 
 
 Shader version: 460
-Requested GL_KHX_shader_explicit_arithmetic_types_float16
+Requested GL_EXT_shader_explicit_arithmetic_types_float16
 0:? Sequence
 0:3  Function Definition: main( ( global void)
 0:3    Function Parameters: 

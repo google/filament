@@ -2,6 +2,7 @@
 // Copyright (C) 2002-2005  3Dlabs Inc. Ltd.
 // Copyright (C) 2012-2013 LunarG, Inc.
 // Copyright (C) 2017 ARM Limited.
+// Copyright (C) 2015-2018 Google, Inc.
 //
 // All rights reserved.
 //
@@ -37,6 +38,8 @@
 #ifndef _VERSIONS_INCLUDED_
 #define _VERSIONS_INCLUDED_
 
+#define LAST_ELEMENT_MARKER(x) x
+
 //
 // Help manage multiple profiles, versions, extensions etc.
 //
@@ -53,7 +56,8 @@ typedef enum {
     ENoProfile            = (1 << 0), // only for desktop, before profiles showed up
     ECoreProfile          = (1 << 1),
     ECompatibilityProfile = (1 << 2),
-    EEsProfile            = (1 << 3)
+    EEsProfile            = (1 << 3),
+    LAST_ELEMENT_MARKER(EProfileCount),
 } EProfile;
 
 namespace glslang {
@@ -73,7 +77,7 @@ inline const char* ProfileName(EProfile profile)
 }
 
 //
-// What source rules, validation rules, target language, etc. are needed
+// What source rules, validation rules, target language, etc. are needed or
 // desired for SPIR-V?
 //
 // 0 means a target or rule set is not enabled (ignore rules from that entity).
@@ -109,6 +113,7 @@ const char* const E_GL_OES_standard_derivatives         = "GL_OES_standard_deriv
 const char* const E_GL_EXT_frag_depth                   = "GL_EXT_frag_depth";
 const char* const E_GL_OES_EGL_image_external           = "GL_OES_EGL_image_external";
 const char* const E_GL_OES_EGL_image_external_essl3     = "GL_OES_EGL_image_external_essl3";
+const char* const E_GL_EXT_YUV_target                   = "GL_EXT_YUV_target";
 const char* const E_GL_EXT_shader_texture_lod           = "GL_EXT_shader_texture_lod";
 const char* const E_GL_EXT_shadow_samplers              = "GL_EXT_shadow_samplers";
 
@@ -122,8 +127,10 @@ const char* const E_GL_ARB_compute_shader               = "GL_ARB_compute_shader
 const char* const E_GL_ARB_tessellation_shader          = "GL_ARB_tessellation_shader";
 const char* const E_GL_ARB_enhanced_layouts             = "GL_ARB_enhanced_layouts";
 const char* const E_GL_ARB_texture_cube_map_array       = "GL_ARB_texture_cube_map_array";
+const char* const E_GL_ARB_texture_multisample          = "GL_ARB_texture_multisample";
 const char* const E_GL_ARB_shader_texture_lod           = "GL_ARB_shader_texture_lod";
 const char* const E_GL_ARB_explicit_attrib_location     = "GL_ARB_explicit_attrib_location";
+const char* const E_GL_ARB_explicit_uniform_location    = "GL_ARB_explicit_uniform_location";
 const char* const E_GL_ARB_shader_image_load_store      = "GL_ARB_shader_image_load_store";
 const char* const E_GL_ARB_shader_atomic_counters       = "GL_ARB_shader_atomic_counters";
 const char* const E_GL_ARB_shader_draw_parameters       = "GL_ARB_shader_draw_parameters";
@@ -132,6 +139,7 @@ const char* const E_GL_ARB_derivative_control           = "GL_ARB_derivative_con
 const char* const E_GL_ARB_shader_texture_image_samples = "GL_ARB_shader_texture_image_samples";
 const char* const E_GL_ARB_viewport_array               = "GL_ARB_viewport_array";
 const char* const E_GL_ARB_gpu_shader_int64             = "GL_ARB_gpu_shader_int64";
+const char* const E_GL_ARB_gpu_shader_fp64              = "GL_ARB_gpu_shader_fp64";
 const char* const E_GL_ARB_shader_ballot                = "GL_ARB_shader_ballot";
 const char* const E_GL_ARB_sparse_texture2              = "GL_ARB_sparse_texture2";
 const char* const E_GL_ARB_sparse_texture_clamp         = "GL_ARB_sparse_texture_clamp";
@@ -139,6 +147,10 @@ const char* const E_GL_ARB_shader_stencil_export        = "GL_ARB_shader_stencil
 // const char* const E_GL_ARB_cull_distance            = "GL_ARB_cull_distance";  // present for 4.5, but need extension control over block members
 const char* const E_GL_ARB_post_depth_coverage          = "GL_ARB_post_depth_coverage";
 const char* const E_GL_ARB_shader_viewport_layer_array  = "GL_ARB_shader_viewport_layer_array";
+const char* const E_GL_ARB_fragment_shader_interlock    = "GL_ARB_fragment_shader_interlock";
+const char* const E_GL_ARB_shader_clock                 = "GL_ARB_shader_clock";
+const char* const E_GL_ARB_uniform_buffer_object        = "GL_ARB_uniform_buffer_object";
+const char* const E_GL_ARB_sample_shading               = "GL_ARB_sample_shading";
 
 const char* const E_GL_KHR_shader_subgroup_basic            = "GL_KHR_shader_subgroup_basic";
 const char* const E_GL_KHR_shader_subgroup_vote             = "GL_KHR_shader_subgroup_vote";
@@ -167,6 +179,13 @@ const char* const E_GL_EXT_control_flow_attributes          = "GL_EXT_control_fl
 const char* const E_GL_EXT_nonuniform_qualifier             = "GL_EXT_nonuniform_qualifier";
 const char* const E_GL_EXT_samplerless_texture_functions    = "GL_EXT_samplerless_texture_functions";
 const char* const E_GL_EXT_scalar_block_layout              = "GL_EXT_scalar_block_layout";
+const char* const E_GL_EXT_fragment_invocation_density      = "GL_EXT_fragment_invocation_density";
+const char* const E_GL_EXT_buffer_reference                 = "GL_EXT_buffer_reference";
+const char* const E_GL_EXT_buffer_reference2                = "GL_EXT_buffer_reference2";
+const char* const E_GL_EXT_buffer_reference_uvec2           = "GL_EXT_buffer_reference_uvec2";
+const char* const E_GL_EXT_demote_to_helper_invocation      = "GL_EXT_demote_to_helper_invocation";
+const char* const E_GL_EXT_shader_realtime_clock            = "GL_EXT_shader_realtime_clock";
+const char* const E_GL_EXT_debug_printf                     = "GL_EXT_debug_printf";
 
 // Arrays of extensions for the above viewportEXTs duplications
 
@@ -184,7 +203,6 @@ const int Num_OVR_multiview_EXTs = sizeof(OVR_multiview_EXTs) / sizeof(OVR_multi
 const char* const E_GL_GOOGLE_cpp_style_line_directive          = "GL_GOOGLE_cpp_style_line_directive";
 const char* const E_GL_GOOGLE_include_directive                 = "GL_GOOGLE_include_directive";
 
-#ifdef AMD_EXTENSIONS
 const char* const E_GL_AMD_shader_ballot                        = "GL_AMD_shader_ballot";
 const char* const E_GL_AMD_shader_trinary_minmax                = "GL_AMD_shader_trinary_minmax";
 const char* const E_GL_AMD_shader_explicit_vertex_parameter     = "GL_AMD_shader_explicit_vertex_parameter";
@@ -195,9 +213,8 @@ const char* const E_GL_AMD_gpu_shader_int16                     = "GL_AMD_gpu_sh
 const char* const E_GL_AMD_shader_image_load_store_lod          = "GL_AMD_shader_image_load_store_lod";
 const char* const E_GL_AMD_shader_fragment_mask                 = "GL_AMD_shader_fragment_mask";
 const char* const E_GL_AMD_gpu_shader_half_float_fetch          = "GL_AMD_gpu_shader_half_float_fetch";
-#endif
 
-#ifdef NV_EXTENSIONS
+const char* const E_GL_INTEL_shader_integer_functions2          = "GL_INTEL_shader_integer_functions2";
 
 const char* const E_GL_NV_sample_mask_override_coverage         = "GL_NV_sample_mask_override_coverage";
 const char* const E_SPV_NV_geometry_shader_passthrough          = "GL_NV_geometry_shader_passthrough";
@@ -219,7 +236,10 @@ const char* const E_GL_NV_mesh_shader                           = "GL_NV_mesh_sh
 
 const char* const viewportEXTs[] = { E_GL_ARB_shader_viewport_layer_array, E_GL_NV_viewport_array2 };
 const int Num_viewportEXTs = sizeof(viewportEXTs) / sizeof(viewportEXTs[0]);
-#endif
+
+const char* const E_GL_NV_cooperative_matrix                    = "GL_NV_cooperative_matrix";
+const char* const E_GL_NV_shader_sm_builtins                    = "GL_NV_shader_sm_builtins";
+const char* const E_GL_NV_integer_cooperative_matrix            = "GL_NV_integer_cooperative_matrix";
 
 // AEP
 const char* const E_GL_ANDROID_extension_pack_es31a             = "GL_ANDROID_extension_pack_es31a";
@@ -249,15 +269,20 @@ const char* const E_GL_OES_tessellation_point_size              = "GL_OES_tessel
 const char* const E_GL_OES_texture_buffer                       = "GL_OES_texture_buffer";
 const char* const E_GL_OES_texture_cube_map_array               = "GL_OES_texture_cube_map_array";
 
-// KHX
-const char* const E_GL_KHX_shader_explicit_arithmetic_types          = "GL_KHX_shader_explicit_arithmetic_types";
-const char* const E_GL_KHX_shader_explicit_arithmetic_types_int8     = "GL_KHX_shader_explicit_arithmetic_types_int8";
-const char* const E_GL_KHX_shader_explicit_arithmetic_types_int16    = "GL_KHX_shader_explicit_arithmetic_types_int16";
-const char* const E_GL_KHX_shader_explicit_arithmetic_types_int32    = "GL_KHX_shader_explicit_arithmetic_types_int32";
-const char* const E_GL_KHX_shader_explicit_arithmetic_types_int64    = "GL_KHX_shader_explicit_arithmetic_types_int64";
-const char* const E_GL_KHX_shader_explicit_arithmetic_types_float16  = "GL_KHX_shader_explicit_arithmetic_types_float16";
-const char* const E_GL_KHX_shader_explicit_arithmetic_types_float32  = "GL_KHX_shader_explicit_arithmetic_types_float32";
-const char* const E_GL_KHX_shader_explicit_arithmetic_types_float64  = "GL_KHX_shader_explicit_arithmetic_types_float64";
+// EXT
+const char* const E_GL_EXT_shader_explicit_arithmetic_types          = "GL_EXT_shader_explicit_arithmetic_types";
+const char* const E_GL_EXT_shader_explicit_arithmetic_types_int8     = "GL_EXT_shader_explicit_arithmetic_types_int8";
+const char* const E_GL_EXT_shader_explicit_arithmetic_types_int16    = "GL_EXT_shader_explicit_arithmetic_types_int16";
+const char* const E_GL_EXT_shader_explicit_arithmetic_types_int32    = "GL_EXT_shader_explicit_arithmetic_types_int32";
+const char* const E_GL_EXT_shader_explicit_arithmetic_types_int64    = "GL_EXT_shader_explicit_arithmetic_types_int64";
+const char* const E_GL_EXT_shader_explicit_arithmetic_types_float16  = "GL_EXT_shader_explicit_arithmetic_types_float16";
+const char* const E_GL_EXT_shader_explicit_arithmetic_types_float32  = "GL_EXT_shader_explicit_arithmetic_types_float32";
+const char* const E_GL_EXT_shader_explicit_arithmetic_types_float64  = "GL_EXT_shader_explicit_arithmetic_types_float64";
+
+const char* const E_GL_EXT_shader_subgroup_extended_types_int8    = "GL_EXT_shader_subgroup_extended_types_int8";
+const char* const E_GL_EXT_shader_subgroup_extended_types_int16   = "GL_EXT_shader_subgroup_extended_types_int16";
+const char* const E_GL_EXT_shader_subgroup_extended_types_int64   = "GL_EXT_shader_subgroup_extended_types_int64";
+const char* const E_GL_EXT_shader_subgroup_extended_types_float16 = "GL_EXT_shader_subgroup_extended_types_float16";
 
 // Arrays of extensions for the above AEP duplications
 

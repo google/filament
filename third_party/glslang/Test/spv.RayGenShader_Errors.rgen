@@ -37,4 +37,5 @@ void main()
     reportIntersectionNV(1.0, 1U);                          // ERROR, unsupported builtin in stage
     ignoreIntersectionNV();                                 // ERROR, unsupported builtin in stage
     terminateRayNV();                                       // ERROR, unsupported builtin in stage
+    d = 1.0f;                                               // ERROR, can't modify shaderRecordNV block
 }

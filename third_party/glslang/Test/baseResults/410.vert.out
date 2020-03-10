@@ -3,6 +3,12 @@ Shader version: 410
 0:? Sequence
 0:7  Function Definition: main( ( global void)
 0:7    Function Parameters: 
+0:9    Sequence
+0:9      Sequence
+0:9        move second child to first child ( temp int)
+0:9          'test' ( temp int)
+0:9          Constant:
+0:9            16 (const int)
 0:?   Linker Objects
 0:?     'd' ( in double)
 0:?     'd3' ( in 3-component vector of double)
@@ -18,6 +24,12 @@ Shader version: 410
 0:? Sequence
 0:7  Function Definition: main( ( global void)
 0:7    Function Parameters: 
+0:9    Sequence
+0:9      Sequence
+0:9        move second child to first child ( temp int)
+0:9          'test' ( temp int)
+0:9          Constant:
+0:9            16 (const int)
 0:?   Linker Objects
 0:?     'd' ( in double)
 0:?     'd3' ( in 3-component vector of double)

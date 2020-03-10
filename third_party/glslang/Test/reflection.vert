@@ -60,6 +60,14 @@ layout(std140) uniform nested {
     N3 foo;
 } nest;
 
+layout(std140) uniform nested2 {
+    vec4 padding; // offset 0, size 16
+    N3 a;       // offset 16, size 32
+    N1 b[4];    // offset 48, size 64
+    N1 c[2];    // offset 112, size 32
+    N1 d[4];    // offset 144, size 64
+} nest2;
+
 struct TS {
     int a;
     int dead;
@@ -99,6 +107,7 @@ layout(location = 2) in vec2 attributeFloat2;
 in vec3 attributeFloat3;
 in vec4 attributeFloat4;
 in mat4 attributeMat4;
+in float attributeFloatArray[3];
 
 uniform deep3 deepA[2], deepB[2], deepC[3], deepD[2];
 
@@ -153,6 +162,22 @@ buffer buf4 {
     N2 runtimeArray[];
 } buf4i;
 
+struct VertexInfo {
+    float position[3];
+    float normal[3];
+};
+
+struct TriangleInfo {
+    VertexInfo v[3];
+};
+
+buffer VertexCollection {
+    TriangleInfo t[5];
+    uint padding[10];
+};
+
+out float outval;
+
 void main()
 {
     liveFunction1(image_ui2D, sampler_2D, sampler_2DMSArray);
@@ -188,6 +213,7 @@ void main()
         f += deepB[i].d2.d1[i].va[1].x;
         deep3 d = deepC[1];
         deep3 da[2] = deepD;
+        deep1 db = deepA[i].d2.d1[i];
     } else
         f = ufDead3;
 
@@ -199,8 +225,21 @@ void main()
     f += attributeFloat3.x;
     f += attributeFloat4.x;
     f += attributeMat4[0][1];
+    f += attributeFloatArray[2];
     f += buf1i.runtimeArray[3];
     f += buf2i.runtimeArray[3].c;
     f += buf3i.runtimeArray[gl_InstanceID];
     f += buf4i.runtimeArray[gl_InstanceID].c;
+
+    N3 n = nest2.a;
+    N1 b[4] = nest2.b;
+    f += nest2.c[1].a;
+    f += nest2.d[gl_InstanceID].a;
+
+    f += t[0].v[0].position[0];
+    f += t[gl_InstanceID].v[gl_InstanceID].position[gl_InstanceID];
+    f += t[gl_InstanceID].v[gl_InstanceID].normal[gl_InstanceID];
+    TriangleInfo tlocal[5] = t;
+
+    outval = f;
 }

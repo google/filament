@@ -53,6 +53,7 @@ float PixelShaderFunctionS(float inF0, float inF1, float inF2, uint inU0, int in
     float r031 = floor(inF0);
     // TODO: fma(inD0, inD1, inD2);
     float r033 = fmod(inF0, inF1);
+    float r033i = fmod(inF0, 2);
     float r034 = frac(inF0);
     float r036 = fwidth(inF0);
     bool r037 = isinf(inF0);

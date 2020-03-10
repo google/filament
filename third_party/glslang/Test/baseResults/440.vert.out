@@ -39,9 +39,9 @@ ERROR: 0:131: 'xfb_stride' : all stride settings must match for xfb buffer 3
 ERROR: 0:152: 'xfb_offset' : overlapping offsets at offset 64 in buffer 0
 ERROR: 0:157: 'xfb_buffer' : buffer is too large: gl_MaxTransformFeedbackBuffers is 4
 ERROR: 0:158: 'xfb_offset' : must be a multiple of size of first component 
-ERROR: 0:159: 'xfb_offset' : type contains double; xfb_offset must be a multiple of 8 
+ERROR: 0:159: 'xfb_offset' : type contains double or 64-bit integer; xfb_offset must be a multiple of 8 
 ERROR: 0:161: 'xfb_offset' : must be a multiple of size of first component 
-ERROR: 0:162: 'xfb_offset' : type contains double; xfb_offset must be a multiple of 8 
+ERROR: 0:162: 'xfb_offset' : type contains double or 64-bit integer; xfb_offset must be a multiple of 8 
 ERROR: 0:166: 'xfb_buffer' : buffer is too large: gl_MaxTransformFeedbackBuffers is 4
 ERROR: 0:169: 'xfb_buffer' : buffer is too large: gl_MaxTransformFeedbackBuffers is 4
 ERROR: 0:169: 'xfb_stride' : 1/4 stride is too large: gl_MaxTransformFeedbackInterleavedComponents is 64
@@ -156,7 +156,7 @@ ERROR: node is still EOpNull!
 0:?     'bbinst9' ( out block{layout( xfb_buffer=4 xfb_offset=1) out bool b, layout( xfb_buffer=4 xfb_offset=12) out structure{ global bool b,  global structure{ global int i,  global double d,  global float f} s,  global 2-component vector of float v2} t, layout( xfb_buffer=4 xfb_offset=52) out 3X3 matrix of float m3, layout( xfb_buffer=4 xfb_offset=90) out int i, layout( xfb_buffer=4 xfb_offset=98) out double d, layout( xfb_buffer=4 xfb_offset=108) out structure{ global int a} s})
 0:?     'bm' (layout( xfb_buffer=5 xfb_offset=0) smooth out float)
 0:?     'bbinst10' ( out block{layout( xfb_buffer=7 xfb_offset=0) out 4X4 matrix of double m1, layout( xfb_buffer=7 xfb_offset=128) out 4X4 matrix of double m2, layout( xfb_buffer=7 xfb_offset=256) out float f})
-0:?     'anon@0' ( out block{layout( xfb_buffer=3 xfb_offset=36) gl_Position 4-component vector of float Position gl_Position, layout( xfb_buffer=3 xfb_offset=32) gl_PointSize float PointSize gl_PointSize, })
+0:?     'anon@0' ( out block{layout( xfb_buffer=3 xfb_offset=36) gl_Position 4-component vector of float Position gl_Position, layout( xfb_buffer=3 xfb_offset=32) gl_PointSize float PointSize gl_PointSize})
 0:?     'gl_VertexID' ( gl_VertexId int VertexId)
 0:?     'gl_InstanceID' ( gl_InstanceId int InstanceId)
 
@@ -166,7 +166,7 @@ Linked vertex stage:
 ERROR: Linking vertex stage: Missing entry point: Each stage requires one entry point
 ERROR: Linking vertex stage: xfb_stride is too small to hold all buffer entries:
 ERROR:     xfb_buffer 0, xfb_stride 92, minimum stride needed: 96
-ERROR: Linking vertex stage: xfb_stride must be multiple of 8 for buffer holding a double:
+ERROR: Linking vertex stage: xfb_stride must be multiple of 8 for buffer holding a double or 64-bit integer:
 ERROR:     xfb_buffer 0, xfb_stride 92
 ERROR: Linking vertex stage: xfb_stride must be multiple of 4:
 ERROR:     xfb_buffer 5, xfb_stride 6
@@ -241,7 +241,7 @@ ERROR: node is still EOpNull!
 0:?     'bbinst9' ( out block{layout( xfb_buffer=4 xfb_offset=1) out bool b, layout( xfb_buffer=4 xfb_offset=12) out structure{ global bool b,  global structure{ global int i,  global double d,  global float f} s,  global 2-component vector of float v2} t, layout( xfb_buffer=4 xfb_offset=52) out 3X3 matrix of float m3, layout( xfb_buffer=4 xfb_offset=90) out int i, layout( xfb_buffer=4 xfb_offset=98) out double d, layout( xfb_buffer=4 xfb_offset=108) out structure{ global int a} s})
 0:?     'bm' (layout( xfb_buffer=5 xfb_offset=0) smooth out float)
 0:?     'bbinst10' ( out block{layout( xfb_buffer=7 xfb_offset=0) out 4X4 matrix of double m1, layout( xfb_buffer=7 xfb_offset=128) out 4X4 matrix of double m2, layout( xfb_buffer=7 xfb_offset=256) out float f})
-0:?     'anon@0' ( out block{layout( xfb_buffer=3 xfb_offset=36) gl_Position 4-component vector of float Position gl_Position, layout( xfb_buffer=3 xfb_offset=32) gl_PointSize float PointSize gl_PointSize, })
+0:?     'anon@0' ( out block{layout( xfb_buffer=3 xfb_offset=36) gl_Position 4-component vector of float Position gl_Position, layout( xfb_buffer=3 xfb_offset=32) gl_PointSize float PointSize gl_PointSize})
 0:?     'gl_VertexID' ( gl_VertexId int VertexId)
 0:?     'gl_InstanceID' ( gl_InstanceId int InstanceId)
 

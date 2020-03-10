@@ -128,6 +128,21 @@ void goodfoop()
     d = fma(d, d, d);
 }
 
+void bbextBad()
+{
+    gl_BoundingBoxEXT;  // ERROR without GL_EXT_primitive_bounding_box
+    gl_BoundingBox;  // ERROR, version < 320
+}
+
+#extension GL_EXT_primitive_bounding_box : enable
+
+void bbext()
+{
+    gl_BoundingBoxEXT[0] = vec4(0.0);
+    gl_BoundingBoxEXT[1] = vec4(1.0);
+    gl_BoundingBoxEXT[2] = vec4(2.0);  // ERROR, overflow
+}
+
 void bbBad()
 {
     gl_BoundingBoxOES;  // ERROR without GL_OES_primitive_bounding_box 

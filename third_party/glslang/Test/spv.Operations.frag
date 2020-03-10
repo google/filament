@@ -55,9 +55,10 @@ void main()
     v += ceil(v);
     v += fract(v);
     v += mod(v, v);
-	v += mod(v, v.x);
+    v += mod(v, v.x);
 
     v += modf(v, v);
+    v += modf(v, v.yzxw);
 
     v += min(v, uv4);
     v += max(v, uv4);

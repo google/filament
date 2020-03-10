@@ -40,11 +40,14 @@ ERROR: 0:140: 'assign' :  cannot convert from ' const float' to ' temp 2-compone
 ERROR: 0:141: 'textureQueryLod' : no matching overloaded function found 
 ERROR: 0:141: 'assign' :  cannot convert from ' const float' to ' temp 2-component vector of float'
 ERROR: 0:152: 'index' : value must be 0 or 1 
-ERROR: 41 compilation errors.  No code generated.
+ERROR: 0:154: 'location qualifier on uniform or buffer' : not supported for this version or the enabled extensions 
+ERROR: 0:160: 'location' : cannot apply to uniform or buffer block 
+ERROR: 43 compilation errors.  No code generated.
 
 
 Shader version: 330
 Requested GL_ARB_enhanced_layouts
+Requested GL_ARB_explicit_uniform_location
 Requested GL_ARB_separate_shader_objects
 ERROR: node is still EOpNull!
 0:8  Function Definition: main( ( global void)
@@ -71,7 +74,7 @@ ERROR: node is still EOpNull!
 0:23        move second child to first child ( temp 4-component vector of float)
 0:23          'c' ( temp 4-component vector of float)
 0:23          gl_Color: direct index for structure ( in 4-component vector of float Color)
-0:23            'anon@0' ( in block{ in 4-component vector of float Color gl_Color, })
+0:23            'anon@0' ( in block{ in 4-component vector of float Color gl_Color})
 0:23            Constant:
 0:23              2 (const uint)
 0:24      move second child to first child ( temp 4-component vector of float)
@@ -93,7 +96,7 @@ ERROR: node is still EOpNull!
 0:?     'inVar' ( smooth in 4-component vector of float)
 0:?     'outVar' (layout( location=0 index=0) out 4-component vector of float)
 0:?     'varyingVar' ( smooth in 4-component vector of float)
-0:?     'anon@0' ( in block{ in 4-component vector of float Color gl_Color, })
+0:?     'anon@0' ( in block{ in 4-component vector of float Color gl_Color})
 0:?     'gl_name' ( in block{ in int gl_i})
 0:?     'start' ( const int)
 0:?       6 (const int)
@@ -126,6 +129,9 @@ ERROR: node is still EOpNull!
 0:?     'precise' ( global int)
 0:?     'KeyMem' ( global structure{ global int precise})
 0:?     'outIndex2' (layout( location=28 index=0) out 4-component vector of float)
+0:?     'ucolor0' (layout( location=4) uniform 4-component vector of float)
+0:?     'ucolor1' (layout( location=5) uniform 4-component vector of float)
+0:?     'colorsBuffer' (layout( location=6 column_major shared) uniform block{layout( column_major shared) uniform 128-element array of 4-component vector of float colors})
 
 
 Linked fragment stage:
@@ -135,6 +141,7 @@ ERROR: Linking fragment stage: Cannot use both gl_FragColor and gl_FragData
 
 Shader version: 330
 Requested GL_ARB_enhanced_layouts
+Requested GL_ARB_explicit_uniform_location
 Requested GL_ARB_separate_shader_objects
 ERROR: node is still EOpNull!
 0:8  Function Definition: main( ( global void)
@@ -158,7 +165,7 @@ ERROR: node is still EOpNull!
 0:?     'inVar' ( smooth in 4-component vector of float)
 0:?     'outVar' (layout( location=0 index=0) out 4-component vector of float)
 0:?     'varyingVar' ( smooth in 4-component vector of float)
-0:?     'anon@0' ( in block{ in 4-component vector of float Color gl_Color, })
+0:?     'anon@0' ( in block{ in 4-component vector of float Color gl_Color})
 0:?     'gl_name' ( in block{ in int gl_i})
 0:?     'start' ( const int)
 0:?       6 (const int)
@@ -191,4 +198,7 @@ ERROR: node is still EOpNull!
 0:?     'precise' ( global int)
 0:?     'KeyMem' ( global structure{ global int precise})
 0:?     'outIndex2' (layout( location=28 index=0) out 4-component vector of float)
+0:?     'ucolor0' (layout( location=4) uniform 4-component vector of float)
+0:?     'ucolor1' (layout( location=5) uniform 4-component vector of float)
+0:?     'colorsBuffer' (layout( location=6 column_major shared) uniform block{layout( column_major shared) uniform 128-element array of 4-component vector of float colors})
 

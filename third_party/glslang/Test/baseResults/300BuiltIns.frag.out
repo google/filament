@@ -1,9 +1,9 @@
 300BuiltIns.frag
 ERROR: 0:6: 'float' : type requires declaration of default precision qualifier 
 ERROR: 0:70: 'noise2' : no matching overloaded function found 
-ERROR: 0:72: 't__' : identifiers containing consecutive underscores ("__") are reserved, and an error if version <= 300 
-ERROR: 0:75: '#define' : names containing consecutive underscores are reserved, and an error if version <= 300: __D
-ERROR: 4 compilation errors.  No code generated.
+WARNING: 0:72: 't__' : identifiers containing consecutive underscores ("__") are reserved 
+WARNING: 0:75: '#define' : names containing consecutive underscores are reserved: __D
+ERROR: 2 compilation errors.  No code generated.
 
 
 Shader version: 300

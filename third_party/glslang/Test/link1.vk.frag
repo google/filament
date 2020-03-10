@@ -10,8 +10,8 @@ int b[5];
 int c[];
 int i;
 
-buffer bnameRuntime  { float r[]; };
-buffer bnameImplicit { float m[]; };
+layout (binding = 0) buffer bnameRuntime  { float r[]; };
+layout (binding = 1) buffer bnameImplicit { float m[]; };
 
 void main()
 {

@@ -17,6 +17,20 @@ branches:
   only:
     - master
 
+# changes to these files don't need to trigger testing
+skip_commits:
+  files:
+    - README.md
+    - README-spirv-remap.txt
+    - LICENSE.txt
+    - CODE_OF_CONDUCT.md
+    - BUILD.*
+    - WORKSPACE
+    - kokoro/*
+    - make-revision
+    - Android.mk
+    - _config.yml
+
 # Travis advances the master-tot tag to current top of the tree after
 # each push into the master branch, because it relies on that tag to
 # upload build artifacts to the master-tot release. This will cause
@@ -32,6 +46,7 @@ matrix:
 # scripts that run after cloning repository
 install:
   - C:/Python27/python.exe update_glslang_sources.py
+  - set PATH=C:\ninja;C:\Python36;%PATH%
   - git clone https://github.com/google/googletest.git External/googletest
   - cd External/googletest
   - git checkout 440527a61e1c91188195f7de212c63c77e8f0a45
@@ -65,7 +80,6 @@ after_test:
     bin\glslangValidator.exe
     bin\spirv-remap.exe
     include\glslang\*
-    include\SPIRV\*
     lib\glslang%SUFFIX%.lib
     lib\HLSL%SUFFIX%.lib
     lib\OGLCompiler%SUFFIX%.lib

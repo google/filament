@@ -83,9 +83,11 @@ ERROR: 0:193: '.length' : not supported for this version or the enabled extensio
 ERROR: 0:194: '.' : cannot apply to an array: method
 ERROR: 0:194: 'a' : can't use function syntax on variable 
 ERROR: 0:214: 'non-constant global initializer (needs GL_EXT_shader_non_constant_global_initializers)' : not supported for this version or the enabled extensions 
+ERROR: 0:222: '#define' : names containing consecutive underscores are reserved, and an error if version < 300: A__B
+ERROR: 0:223: 'a__b' : identifiers containing consecutive underscores ("__") are reserved, and an error if version < 300 
 ERROR: 0:3000: '#error' : line of this error should be 3000  
 ERROR: 0:3002: '' :  syntax error, unexpected IDENTIFIER, expecting LEFT_BRACE or COMMA or SEMICOLON
-ERROR: 77 compilation errors.  No code generated.
+ERROR: 79 compilation errors.  No code generated.
 
 
 Shader version: 100
@@ -421,6 +423,7 @@ ERROR: node is still EOpNull!
 0:?       5.000000
 0:?     'init1' ( global mediump int)
 0:?     'init2' ( global mediump int)
+0:?     'a__b' ( global mediump int)
 
 
 Linked fragment stage:
@@ -573,4 +576,5 @@ ERROR: node is still EOpNull!
 0:?       5.000000
 0:?     'init1' ( global mediump int)
 0:?     'init2' ( global mediump int)
+0:?     'a__b' ( global mediump int)
 

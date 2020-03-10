@@ -22,12 +22,12 @@ void main()
     nonuniformEXT const int nu_ci = 2; // ERROR, const
 
     foo(nu_li, nu_li);
-
+    int table[5];
     int a;
     nu_li = nonuniformEXT(a) + nonuniformEXT(a * 2);
     nu_li = nonuniformEXT(a, a);       // ERROR, too many arguments
     nu_li = nonuniformEXT();           // ERROR, no arguments
+    nu_li = table[nonuniformEXT(3)];
 }
-
 layout(location=1) in struct S { float a; nonuniformEXT float b; } ins;  // ERROR, not on member
 layout(location=3) in inbName { float a; nonuniformEXT float b; } inb;   // ERROR, not on member
