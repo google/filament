@@ -135,7 +135,7 @@ public:
     // The "x" symbols represent dummy words.
     template <typename T, typename = typename is_supported_type<T>::type>
     void setUniformArray(size_t offset, T const* UTILS_RESTRICT begin, size_t count) noexcept {
-        constexpr size_t stride = (sizeof(T) + 0xF) & ~0xF;
+        constexpr size_t stride = (sizeof(T) + 0xFu) & ~0xFu;
         size_t arraySize = stride * count - stride + sizeof(T);
         T* UTILS_RESTRICT p = static_cast<T*>(invalidateUniforms(offset, arraySize));
         for (size_t i = 0; i < count; i++) {
@@ -144,6 +144,7 @@ public:
         }
     }
 
+    // (see specialization for mat3f below)
     template <typename T, typename = typename is_supported_type<T>::type>
     static void setUniform(void* addr, size_t offset, const T& v) noexcept {
         addr = static_cast<char*>(addr) + offset;
@@ -152,7 +153,6 @@ public:
     }
 
     // set uniform of known types to the proper offset (e.g.: use offsetof())
-    // (see specialization for mat3f below)
     template <typename T, typename = typename is_supported_type<T>::type>
     void setUniform(size_t offset, const T& v) noexcept {
         setUniform(invalidateUniforms(offset, sizeof(T)), 0, v);
@@ -225,6 +225,13 @@ inline void UniformBuffer::setUniform(void* addr, size_t offset, const math::mat
     temp.v[2][1] = v[2][1];
     temp.v[2][2] = v[2][2];
     temp.v[2][3] = 0; // not needed, but doesn't cost anything
+}
+
+template<>
+inline void UniformBuffer::setUniformArray(
+        size_t offset, math::mat3f const* UTILS_RESTRICT begin, size_t count) noexcept {
+    // pretend each mat3 is an array of 3 float3
+    setUniformArray(offset, reinterpret_cast<math::float3 const*>(begin), count * 3);
 }
 
 } // namespace filament
