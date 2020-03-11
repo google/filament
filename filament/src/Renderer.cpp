@@ -258,12 +258,17 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     FrameGraph fg(engine.getResourceAllocator());
 
-    // FIXME: when the view doesn't ask for a clear, but it's drawn in an intermediate buffer
-    //        that buffer needs to be cleared with transparent pixels if blending is enabled
-    const TargetBufferFlags clearFlags = (view.getClearFlags() & TargetBufferFlags::COLOR)
-                                   | TargetBufferFlags::DEPTH;
-
     const TargetBufferFlags discardedFlags = view.getDiscardedTargetBuffers();
+
+    TargetBufferFlags clearFlags = (view.getClearFlags() & TargetBufferFlags::COLOR);
+
+    // if the depth-buffer is discarded, then we clear it -- the corollary is that if the user
+    // doesn't ask for the depth buffer to be discarded, then we keep it. This is needed if
+    // the user wants to keep the depth buffer between two calls to render(). This of course
+    // only works when post-processing is disabled.
+    if (any(discardedFlags & TargetBufferFlags::DEPTH)) {
+        clearFlags |= TargetBufferFlags::DEPTH;
+    }
 
     const float4 clearColor = view.getClearColor();
 
@@ -575,6 +580,8 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
     auto& colorPass = fg.addPass<ColorPassData>(name,
             [&](FrameGraph::Builder& builder, ColorPassData& data) {
 
+                TargetBufferFlags clearDepthFlags = TargetBufferFlags::NONE;
+                TargetBufferFlags clearColorFlags = TargetBufferFlags::NONE;
                 Blackboard& blackboard = fg.getBlackboard();
 
                 data.ssr  = blackboard.get<FrameGraphTexture>("ssr");
@@ -591,10 +598,18 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 }
 
                 if (!data.color.isValid()) {
+                    clearColorFlags = TargetBufferFlags::COLOR;
+                    if (!(clearFlags &  TargetBufferFlags::COLOR)) {
+                        // the View doesn't ask for a clear, but we're creating a new color
+                        // intermediate buffer, so it must be cleared with transparent pixels.
+                        clearColor = {};
+                    }
                     data.color = builder.createTexture("Color Buffer", colorBufferDesc);
                 }
 
                 if (!data.depth.isValid()) {
+                    // clear newly allocated depth buffers, regardless of given clear flags
+                    clearDepthFlags = TargetBufferFlags::DEPTH;
                     data.depth = builder.createTexture("Depth Buffer", {
                             .width = colorBufferDesc.width,
                             .height = colorBufferDesc.height,
@@ -611,7 +626,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 data.rt = builder.createRenderTarget("Color Pass Target", {
                         .attachments = { data.color, data.depth },
                         .samples = config.msaa,
-                        .clearFlags = clearFlags });
+                        .clearFlags = clearFlags | clearColorFlags | clearDepthFlags });
             },
             [pass, clearColor]
                     (FrameGraphPassResources const& resources,
