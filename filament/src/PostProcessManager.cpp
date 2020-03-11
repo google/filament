@@ -52,7 +52,7 @@ PostProcessManager::PostProcessMaterial::PostProcessMaterial(FEngine& engine,
     mMaterial = upcast(Material::Builder().package(data, size).build(engine));
     mMaterialInstance = mMaterial->getDefaultInstance();
     // TODO: After all materials using this class have been converted to the post-process material
-    // domain, load both OPAQUE and TRANSPARENT variants here.
+    //       domain, load both OPAQUE and TRANSPARENT variants here.
     mProgram = mMaterial->getProgram(0);
 }
 
@@ -870,7 +870,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
                 mi->commit(driver);
                 mi->use(driver);
 
-                // FIXME: see if the framegraph could figure this out
+                // The framegraph only computes discard flags at FrameGraphPass boundaries
                 hwTempRT.params.flags.discardEnd = TargetBufferFlags::NONE;
 
                 driver.beginRenderPass(hwTempRT.target, hwTempRT.params);
@@ -908,7 +908,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
     Handle<HwRenderPrimitive> fullScreenRenderPrimitive = mEngine.getFullScreenRenderPrimitive();
 
     // Figure out a good size for the bloom buffer. We pick the major axis lower
-    // power of two, and scale the minor axis accordingly.
+    // power of two, and scale the minor axis accordingly taking dynamic scaling into account.
     auto const& desc = fg.getDescriptor(input);
     uint32_t width = desc.width / scale.x;
     uint32_t height = desc.height / scale.y;
@@ -917,7 +917,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
     } else if (bloomOptions.anamorphism < 1.0) {
         width *= 1.0f / std::max(bloomOptions.anamorphism, 1.0f / 4096.0f);
     }
-    // FIXME: compensate for dynamic scaling
     uint32_t& major = width > height ? width : height;
     uint32_t& minor = width < height ? width : height;
     uint32_t newMinor = clamp(bloomOptions.resolution,

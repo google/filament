@@ -218,8 +218,10 @@ public:
 
     template<>
     FrameGraphId<FrameGraphRenderTarget> import(const char* name,
-            typename FrameGraphRenderTarget::Descriptor const& desc, const FrameGraphRenderTarget& resource) noexcept {
-        fg::ResourceEntryBase* pBase = mArena.make<fg::RenderTargetResourceEntry>(name, desc, resource, mId++, 1);
+            typename FrameGraphRenderTarget::Descriptor const& desc,
+            const FrameGraphRenderTarget& resource) noexcept {
+        fg::ResourceEntryBase* pBase = mArena.make<fg::RenderTargetResourceEntry>(
+                name, desc, resource, mId++, 1);
         return FrameGraphId<FrameGraphRenderTarget>(create(pBase));
     }
 

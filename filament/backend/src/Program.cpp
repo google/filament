@@ -63,7 +63,6 @@ Program& Program::setSamplerGroup(size_t bindingPoint,
 
 #if !defined(NDEBUG)
 io::ostream& operator<<(io::ostream& out, const Program& builder) {
-    // FIXME: maybe do better here!
     return out << "Program(" << builder.mName.c_str_safe() << ")";
 }
 
