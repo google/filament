@@ -295,7 +295,7 @@ int main(int argc, char** argv) {
         }
 
         // Consume the glTF file.
-        std::ifstream in(filename.c_str(), std::ifstream::in);
+        std::ifstream in(filename.c_str(), std::ifstream::binary | std::ifstream::in);
         std::vector<uint8_t> buffer(static_cast<unsigned long>(contentSize));
         if (!in.read((char*) buffer.data(), contentSize)) {
             std::cerr << "Unable to read " << filename << std::endl;
@@ -439,8 +439,10 @@ int main(int argc, char** argv) {
         app.scene.groundMaterial->setDefaultParameter(
                 "strength", app.viewOptions.groundShadowStrength);
 
-        FilamentApp::get().getIBL()->getSkybox()->setLayerMask(
-                0xff, app.viewOptions.skyboxEnabled ? 0xff : 0x00);
+        auto ibl = FilamentApp::get().getIBL();
+        if (ibl) {
+            ibl->getSkybox()->setLayerMask(0xff, app.viewOptions.skyboxEnabled ? 0xff : 0x00);
+        }
         view->setClearColor(
                 LinearColorA{ inverseTonemapSRGB(app.viewOptions.backgroundColor), 1.0f });
     };
