@@ -30,7 +30,7 @@ namespace utils {
 // ------------------------------------------------------------------------------------------------
 
 LinearAllocator::LinearAllocator(void* begin, void* end) noexcept
-    : mBegin(begin), mEnd(end), mCurrent(begin) {
+    : mBegin(begin), mSize(uintptr_t(end) - uintptr_t(begin)) {
 }
 
 LinearAllocator::LinearAllocator(LinearAllocator&& rhs) noexcept {
@@ -47,8 +47,8 @@ LinearAllocator& LinearAllocator::operator=(LinearAllocator&& rhs) noexcept {
 
 void LinearAllocator::swap(LinearAllocator& rhs) noexcept {
     std::swap(mBegin, rhs.mBegin);
-    std::swap(mEnd, rhs.mEnd);
-    std::swap(mCurrent, rhs.mCurrent);
+    std::swap(mSize, rhs.mSize);
+    std::swap(mCur, rhs.mCur);
 }
 
 // ------------------------------------------------------------------------------------------------
