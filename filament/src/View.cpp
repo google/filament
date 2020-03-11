@@ -61,6 +61,10 @@ FView::FView(FEngine& engine)
       mDirectionalShadowMap(engine) {
     DriverApi& driver = engine.getDriverApi();
 
+    for (size_t i = 0; i < CONFIG_MAX_SHADOW_CASTING_SPOTS; i++) {
+        mSpotShadowMap[i] = std::make_unique<ShadowMap>(engine);
+    }
+
     FDebugRegistry& debugRegistry = engine.getDebugRegistry();
     debugRegistry.registerProperty("d.view.camera_at_origin",
             &engine.debug.view.camera_at_origin);
@@ -93,7 +97,8 @@ void FView::terminate(FEngine& engine) {
     driver.destroyUniformBuffer(mShadowUbh);
     driver.destroySamplerGroup(mPerViewSbh);
     driver.destroyUniformBuffer(mRenderableUbh);
-    mDirectionalShadowMap.terminate(driver);
+
+    mShadowMapManager.terminate(driver);
     mFroxelizer.terminate(driver);
 }
 
@@ -280,39 +285,51 @@ bool FView::isSkyboxVisible() const noexcept {
 }
 
 void FView::prepareShadowing(FEngine& engine, backend::DriverApi& driver,
-        FScene::RenderableSoa& renderableData, FScene::LightSoa const& lightData) noexcept {
+        FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData) noexcept {
     SYSTRACE_CALL();
 
-    // setup shadow mapping
-    // TODO: for now we only consider THE directional light
+    mHasShadowing = false;
+
+    if (!mShadowingEnabled) {
+        return;
+    }
+
+    mShadowMapManager.reset();
 
     auto& lcm = engine.getLightManager();
 
     // dominant directional light is always as index 0
     FLightManager::Instance directionalLight = lightData.elementAt<FScene::LIGHT_INSTANCE>(0);
-    mHasShadowing = mShadowingEnabled && directionalLight && lcm.isShadowCaster(directionalLight);
-    if (UTILS_UNLIKELY(mHasShadowing)) {
-        // compute the frustum for this light
-        ShadowMap& shadowMap = mDirectionalShadowMap;
-        shadowMap.update(lightData, 0, mScene, mViewingCameraInfo, mVisibleLayers);
-        if (shadowMap.hasVisibleShadows()) {
-            // Cull shadow casters
-            UniformBuffer& u = mPerViewUb;
-            Frustum const& frustum = shadowMap.getCamera().getFrustum();
-            FView::prepareVisibleShadowCasters(engine.getJobSystem(), frustum, renderableData);
+    const bool hasDirectionalShadows = directionalLight && lcm.isShadowCaster(directionalLight);
+    if (UTILS_UNLIKELY(hasDirectionalShadows)) {
+        mShadowMapManager.setDirectionalShadowMap(mDirectionalShadowMap, 0);
+    }
 
-            // allocates shadowmap driver resources
-            shadowMap.prepare(driver, mPerViewSb);
+    // Find all shadow-casting spot lights.
+    size_t shadowCastingSpotCount = 0;
 
-            mat4f const& lightFromWorldMatrix = shadowMap.getLightSpaceMatrix();
-            u.setUniform(offsetof(PerViewUib, lightFromWorldMatrix), lightFromWorldMatrix);
+    // We allow a max of CONFIG_MAX_SHADOW_CASTING_SPOTS spot light shadows. Any additional
+    // shadow-casting spot lights are ignored.
+    for (size_t l = 1; l < lightData.size(); l++) {
+        FLightManager::Instance light = lightData.elementAt<FScene::LIGHT_INSTANCE>(l);
+        if (UTILS_LIKELY(!(light && lcm.isSpotLight(light) && lcm.isShadowCaster(light)))) {
+            continue;
+        }
 
-            const float texelSizeWorldSpace = shadowMap.getTexelSizeWorldSpace();
-            const float normalBias = lcm.getShadowNormalBias(directionalLight);
-            u.setUniform(offsetof(PerViewUib, shadowBias),
-                    float3{ 0, normalBias * texelSizeWorldSpace, 0 });
+        ShadowMap& shadowMap = *mSpotShadowMap[shadowCastingSpotCount];
+        mShadowMapManager.addSpotShadowMap(shadowMap, l);
+
+        shadowCastingSpotCount++;
+        if (shadowCastingSpotCount > CONFIG_MAX_SHADOW_CASTING_SPOTS - 1) {
+            break;
         }
     }
+
+    // allocates shadowmap driver resources
+    mShadowMapManager.prepare(engine, driver, mPerViewSb, lightData);
+
+    mHasShadowing = mShadowMapManager.update(engine, *this, mPerViewUb, mShadowUb, renderableData,
+            lightData);
 }
 
 void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaScope& arena,
@@ -741,19 +758,12 @@ void FView::prepareVisibleRenderables(JobSystem& js,
     }
 }
 
-UTILS_NOINLINE
-void FView::prepareVisibleShadowCasters(JobSystem& js,
-        Frustum const& lightFrustum, FScene::RenderableSoa& renderableData) noexcept {
-    SYSTRACE_CALL();
-    FView::cullRenderables(js, renderableData, lightFrustum, VISIBLE_DIR_SHADOW_CASTER_BIT);
-}
-
 void FView::cullRenderables(JobSystem& js,
         FScene::RenderableSoa& renderableData, Frustum const& frustum, size_t bit) noexcept {
 
     float3 const* worldAABBCenter = renderableData.data<FScene::WORLD_AABB_CENTER>();
     float3 const* worldAABBExtent = renderableData.data<FScene::WORLD_AABB_EXTENT>();
-    uint8_t     * visibleArray    = renderableData.data<FScene::VISIBLE_MASK>();
+    FScene::VisibleMaskType* visibleArray = renderableData.data<FScene::VISIBLE_MASK>();
 
     // culling job (this runs on multiple threads)
     auto functor = [&frustum, worldAABBCenter, worldAABBExtent, visibleArray, bit]
@@ -836,6 +846,10 @@ void FView::updatePrimitivesLod(FEngine& engine, const CameraInfo&,
         auto ri = renderableData.elementAt<FScene::RENDERABLE_INSTANCE>(index);
         renderableData.elementAt<FScene::PRIMITIVES>(index) = rcm.getRenderPrimitives(ri, level);
     }
+}
+
+void FView::renderShadowMaps(FEngine& engine, FEngine::DriverApi& driver, RenderPass& pass) noexcept {
+    mShadowMapManager.render(engine, *this, driver, pass);
 }
 
 } // namespace details

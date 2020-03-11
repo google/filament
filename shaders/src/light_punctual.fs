@@ -213,12 +213,19 @@ void evaluatePunctualLights(const PixelParams pixel, inout vec3 color) {
     // Iterate spotlights
     for ( ; index < end; index++) {
         Light light = getSpotLight(index);
+        float visibility = 1.0;
+#if defined(HAS_SHADOWING)
+        if (light.castsShadows && light.NoL > 0.0) {
+            visibility = shadow(light_shadowMap, light.shadowLayer,
+                    getSpotLightSpacePosition(light.shadowIndex));
+        }
+#endif
 #if defined(MATERIAL_CAN_SKIP_LIGHTING)
         if (light.NoL > 0.0) {
-            color.rgb += surfaceShading(pixel, light, 1.0);
+            color.rgb += surfaceShading(pixel, light, visibility);
         }
 #else
-        color.rgb += surfaceShading(pixel, light, 1.0);
+        color.rgb += surfaceShading(pixel, light, visibility);
 #endif
     }
 }

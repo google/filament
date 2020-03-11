@@ -65,102 +65,11 @@ ShadowMap::~ShadowMap() {
     mEngine.destroy(mDebugCamera->getEntity());
 }
 
-UTILS_NOINLINE
-void ShadowMap::fillWithDebugPattern(backend::DriverApi& driverApi) const noexcept {
-    const size_t dim = mShadowMapDimension;
-    size_t size = dim * dim;
-    uint8_t* ptr = (uint8_t*)malloc(size);
-    driverApi.update2DImage(mShadowMapHandle, 0, 0, 0, dim, dim, {
-        ptr, size, PixelDataFormat::DEPTH_COMPONENT, PixelDataType::UBYTE,
-        [] (void* buffer, size_t, void*) { free(buffer); }
-    });
-    for (size_t y = 0; y < dim; ++y) {
-        for (size_t x = 0; x < dim; ++x) {
-            ptr[x + y * dim] = ((x ^ y) & 0x8u) ? 0u : 0xFFu;
-        }
-    }
-}
-
-void ShadowMap::prepare(DriverApi& driver, SamplerGroup& sb) noexcept {
-    assert(mShadowMapDimension);
-
-    uint32_t dim = mShadowMapDimension;
-    uint32_t currentDimension = mViewport.width + 2;
-    if (currentDimension == dim) {
-        // nothing to do here.
-        assert(mShadowMapHandle);
-        return;
-    }
-
-    // destroy the current rendertarget and texture
-    if (mShadowMapRenderTarget) {
-        driver.destroyRenderTarget(mShadowMapRenderTarget);
-    }
-    if (mShadowMapHandle) {
-        driver.destroyTexture(mShadowMapHandle);
-    }
-
-    // allocate new ones...
-    // we set a viewport with a 1-texel border for when we index outside of the texture
-    // DON'T CHANGE this unless computeLightSpaceMatrix() is updated too.
-    // see: computeLightSpaceMatrix()
-    // For floating-point depth textures, the 1-texel border could be set to FLOAT_MAX to avoid
-    // clamping in the shadow shader (see sampleDepth inside shadowing.fs). Unfortunately, the APIs
-    // don't seem let us clear depth attachments to anything greater than 1.0, so we'd need a way to
-    // do this other than clearing.
-    mViewport = { 1, 1, dim - 2, dim - 2 };
-
-    // TODO: this will be passed into ShadowMap during update() for spot light shadows.
-    mShadowMapLayout = ShadowMapLayout {
-        .atlasDimension = dim,
-        .textureDimension = dim,
-        .shadowDimension = dim - 2
-    };
-
-    // 16-bits seems enough. TODO: make it an option.
-    TextureFormat format = TextureFormat::DEPTH16;
-    switch (format) {
-        default:
-            // this should not happen
-        case TextureFormat::DEPTH16:
-            mShadowMapLayout.zResolution = 1.0f / (1u << 16u);
-            break;
-        case TextureFormat::DEPTH32F:
-            // for 32-bits float assume 24-bits resolution. we shouldn't use that for shadow-maps.
-        case TextureFormat::DEPTH24:
-        case TextureFormat::DEPTH24_STENCIL8:
-            mShadowMapLayout.zResolution = 1.0f / (1u << 24u);;
-            break;
-    }
-
-    mShadowMapHandle = driver.createTexture(
-            SamplerType::SAMPLER_2D_ARRAY, 1, format, 1, dim, dim, 1,
-            TextureUsage::DEPTH_ATTACHMENT | TextureUsage::SAMPLEABLE);
-
-    mShadowMapRenderTarget = driver.createRenderTarget(
-            TargetBufferFlags::DEPTH, dim, dim, 1,
-            {}, { mShadowMapHandle }, {});
-
-    sb.setSampler(PerViewSib::SHADOW_MAP, {
-        mShadowMapHandle, {
-                    .filterMag = SamplerMagFilter::LINEAR,
-                    .filterMin = SamplerMinFilter::LINEAR,
-                    .compareMode = SamplerCompareMode::COMPARE_TO_TEXTURE,
-                    .compareFunc = SamplerCompareFunc::LE
-            }});
-}
-
-void ShadowMap::render(DriverApi& driver, RenderPass& pass, FView& view) noexcept {
+void ShadowMap::render(DriverApi& driver, Handle<HwRenderTarget> rt,
+        filament::Viewport const& viewport, FView::Range const& range, RenderPass& pass, FView& view) noexcept {
     FEngine& engine = mEngine;
 
-    if (UTILS_UNLIKELY(engine.debug.shadowmap.checkerboard)) {
-        // TODO: eventually this will be handled as a optional pass in the framefraph
-        fillWithDebugPattern(driver);
-        return;
-    }
-
     FScene& scene = *view.getScene();
-    filament::Viewport const& viewport = mViewport;
 
     // FIXME: in the future this will come from the framegraph
     RenderPassParams params = {};
@@ -181,37 +90,27 @@ void ShadowMap::render(DriverApi& driver, RenderPass& pass, FView& view) noexcep
     };
     pass.setCamera(cameraInfo);
 
-    FView::Range visibleRenderables = view.getVisibleDirectionalShadowCasters();
-    pass.setGeometry(scene.getRenderableData(), visibleRenderables, scene.getRenderableUBO());
+    pass.setGeometry(scene.getRenderableData(), range, scene.getRenderableUBO());
 
-    view.updatePrimitivesLod(engine, cameraInfo, scene.getRenderableData(), visibleRenderables);
+    view.updatePrimitivesLod(engine, cameraInfo, scene.getRenderableData(), range);
     view.prepareCamera(cameraInfo, viewport);
     view.commitUniforms(driver);
 
     pass.overridePolygonOffset(&mPolygonOffset);
+    pass.newCommandBuffer();
     pass.appendCommands(RenderPass::SHADOW);
     pass.sortCommands();
-    pass.execute("Shadow map Pass", getRenderTarget(), params);
+    pass.execute("Shadow map Pass", rt, params);
 }
 
-void ShadowMap::terminate(DriverApi& driverApi) noexcept {
-    if (mShadowMapRenderTarget) {
-        driverApi.destroyRenderTarget(mShadowMapRenderTarget);
-    }
-    if (mShadowMapHandle) {
-        driverApi.destroyTexture(mShadowMapHandle);
-    }
-}
-
-void ShadowMap::update(
-        const FScene::LightSoa& lightData, size_t index, FScene const* scene,
-        details::CameraInfo const& camera, uint8_t visibleLayers) noexcept {
+void ShadowMap::update(const FScene::LightSoa& lightData, size_t index, FScene const* scene,
+        details::CameraInfo const& camera, uint8_t visibleLayers, ShadowMapLayout layout) noexcept {
     // this is the hard part here, find a good frustum for our camera
 
     auto& lcm = mEngine.getLightManager();
 
     FLightManager::Instance li = lightData.elementAt<FScene::LIGHT_INSTANCE>(index);
-    mShadowMapDimension = std::max(1u, lcm.getShadowMapSize(li));
+    mShadowMapLayout = layout;
 
     FLightManager::ShadowParams params = lcm.getShadowParams(li);
     mPolygonOffset = {

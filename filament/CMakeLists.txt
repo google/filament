@@ -79,6 +79,7 @@ set(SRCS
         src/RenderTarget.cpp
         src/Scene.cpp
         src/ShadowMap.cpp
+        src/ShadowMapManager.cpp
         src/Skybox.cpp
         src/SwapChain.cpp
         src/Stream.cpp
@@ -123,6 +124,7 @@ set(PRIVATE_HDRS
         src/details/ResourceList.h
         src/details/Scene.h
         src/details/ShadowMap.h
+        src/details/ShadowMapManager.h
         src/details/Skybox.h
         src/details/Stream.h
         src/details/SwapChain.h

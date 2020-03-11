@@ -44,7 +44,7 @@ namespace filament {
         //       Vertex depth            1     X     0     0     0
         //     Fragment depth            1     0     0     0     0
         //           Reserved            1     X     X     X     X
-        //           Reserved            0     X     1     X     0
+        //           Reserved            0     X     1     0     0
         //
         // Standard variants:
         //      Vertex shader            0     X     X     0     X
@@ -99,13 +99,14 @@ namespace filament {
         static constexpr bool isReserved(uint8_t variantKey) noexcept {
             // reserved variants that should just be skipped
             return (variantKey & DEPTH_MASK) > DEPTH ||
-                    (!(variantKey & DIRECTIONAL_LIGHTING) && (variantKey & SHADOW_RECEIVER));
+                    variantKey == 0b00100 ||
+                    variantKey == 0b01100;
         }
 
         static constexpr uint8_t filterVariantVertex(uint8_t variantKey) noexcept {
             // filter out vertex variants that are not needed. For e.g. dynamic lighting
             // doesn't affect the vertex shader.
-            return variantKey & VERTEX_MASK;
+            return variantKey;
         }
 
         static constexpr uint8_t filterVariantFragment(uint8_t variantKey) noexcept {

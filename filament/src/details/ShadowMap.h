@@ -58,25 +58,18 @@ public:
         size_t shadowDimension = 0;
     };
 
-    void terminate(backend::DriverApi& driverApi) noexcept;
-
     // Call once per frame if the light, scene (or visible layers) or camera changes.
     // This computes the light's camera.
     void update(const FScene::LightSoa& lightData, size_t index, FScene const* scene,
-            details::CameraInfo const& camera, uint8_t visibleLayers) noexcept;
+            details::CameraInfo const& camera, uint8_t visibleLayers,
+            ShadowMapLayout layout) noexcept;
 
-    void render(backend::DriverApi& driver, RenderPass& pass, FView& view) noexcept;
+    void render(backend::DriverApi& driver, backend::Handle<backend::HwRenderTarget> rt,
+            filament::Viewport const& viewport, utils::Range<uint32_t> const& range,
+            RenderPass& pass, FView& view) noexcept;
 
     // Do we have visible shadows. Valid after calling update().
     bool hasVisibleShadows() const noexcept { return mHasVisibleShadows; }
-
-    // Allocates shadow texture based on user parameters (e.g. dimensions)
-    void prepare(backend::DriverApi& driver, backend::SamplerGroup& buffer) noexcept;
-
-    // Returns the shadow map's viewport. Valid after prepare().
-    Viewport const& getViewport() const noexcept { return mViewport; }
-
-    backend::Handle<backend::HwRenderTarget> getRenderTarget() const { return mShadowMapRenderTarget; }
 
     // Computes the transform to use in the shader to access the shadow map.
     // Valid after calling update().
@@ -192,8 +185,6 @@ private:
     float texelSizeWorldSpace(const math::mat3f& worldToShadowTexture) const noexcept;
     float texelSizeWorldSpace(const math::mat4f& W, const math::mat4f& MbMtF) const noexcept;
 
-    void fillWithDebugPattern(backend::DriverApi& driverApi) const noexcept;
-
     static constexpr const Segment sBoxSegments[12] = {
             { 0, 1 }, { 1, 3 }, { 3, 2 }, { 2, 0 },
             { 4, 5 }, { 5, 7 }, { 7, 6 }, { 6, 4 },
@@ -213,13 +204,7 @@ private:
     math::mat4f mLightSpace;
     float mTexelSizeWs = 0.0f;
 
-    // set-up in prepare()
-    Viewport mViewport;
-    backend::Handle<backend::HwTexture> mShadowMapHandle;
-    backend::Handle<backend::HwRenderTarget> mShadowMapRenderTarget;
-
     // set-up in update()
-    uint32_t mShadowMapDimension = 0;
     ShadowMapLayout mShadowMapLayout;
     bool mHasVisibleShadows = false;
     backend::PolygonOffset mPolygonOffset{};
