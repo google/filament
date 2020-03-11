@@ -45,7 +45,7 @@ namespace spv {
 
 // MSVC defines __cplusplus as an older value, even when it supports almost all of 11.
 // We handle that here by making our own symbol.
-#if __cplusplus >= 201103L || _MSC_VER >= 1700
+#if __cplusplus >= 201103L || (defined(_MSC_VER) && _MSC_VER >= 1700)
 #   define use_cpp11 1
 #endif
 
@@ -195,7 +195,7 @@ private:
    // Header access & set methods
    spirword_t  magic()    const       { return spv[0]; } // return magic number
    spirword_t  bound()    const       { return spv[3]; } // return Id bound from header
-   spirword_t  bound(spirword_t b)    { return spv[3] = b; };
+   spirword_t  bound(spirword_t b)    { return spv[3] = b; }
    spirword_t  genmagic() const       { return spv[2]; } // generator magic
    spirword_t  genmagic(spirword_t m) { return spv[2] = m; }
    spirword_t  schemaNum() const      { return spv[4]; } // schema number from header

@@ -33,10 +33,25 @@
 
 import("//build_overrides/glslang.gni")
 
+# Both Chromium and Fuchsia use by default a set of warning errors
+# that is far too strict to compile this project. These are also
+# typically appended after |cflags|, overriding target-specific
+# definitions. To work around this, determine which configs to
+# add and remove in order to succesfully build the project.
+if (defined(is_fuchsia_tree) && is_fuchsia_tree) {
+  _configs_to_remove = [ "//build/config:default_warnings" ]
+  _configs_to_add = []
+} else {
+  _configs_to_remove = [ "//build/config/compiler:chromium_code" ]
+  _configs_to_add = [ "//build/config/compiler:no_chromium_code" ]
+}
+
 spirv_tools_dir = glslang_spirv_tools_dir
 
 config("glslang_public") {
   include_dirs = [ "." ]
+
+  defines = [ "ENABLE_HLSL=1" ]
 }
 
 source_set("glslang_sources") {
@@ -45,19 +60,24 @@ source_set("glslang_sources") {
   sources = [
     "OGLCompilersDLL/InitializeDll.cpp",
     "OGLCompilersDLL/InitializeDll.h",
+    "SPIRV/GLSL.ext.AMD.h",
     "SPIRV/GLSL.ext.EXT.h",
     "SPIRV/GLSL.ext.KHR.h",
+    "SPIRV/GLSL.ext.NV.h",
     "SPIRV/GLSL.std.450.h",
     "SPIRV/GlslangToSpv.cpp",
     "SPIRV/GlslangToSpv.h",
     "SPIRV/InReadableOrder.cpp",
     "SPIRV/Logger.cpp",
     "SPIRV/Logger.h",
+    "SPIRV/NonSemanticDebugPrintf.h",
     "SPIRV/SPVRemapper.cpp",
     "SPIRV/SPVRemapper.h",
     "SPIRV/SpvBuilder.cpp",
     "SPIRV/SpvBuilder.h",
     "SPIRV/SpvPostProcess.cpp",
+    "SPIRV/SpvTools.cpp",
+    "SPIRV/SpvTools.h",
     "SPIRV/bitutils.h",
     "SPIRV/disassemble.cpp",
     "SPIRV/disassemble.h",
@@ -104,7 +124,6 @@ source_set("glslang_sources") {
     "glslang/MachineIndependent/attribute.cpp",
     "glslang/MachineIndependent/attribute.h",
     "glslang/MachineIndependent/gl_types.h",
-    "glslang/MachineIndependent/glslang.y",
     "glslang/MachineIndependent/glslang_tab.cpp",
     "glslang/MachineIndependent/glslang_tab.cpp.h",
     "glslang/MachineIndependent/intermOut.cpp",
@@ -128,9 +147,25 @@ source_set("glslang_sources") {
     "glslang/MachineIndependent/reflection.h",
     "glslang/OSDependent/osinclude.h",
     "glslang/Public/ShaderLang.h",
+    "hlsl/hlslAttributes.cpp",
+    "hlsl/hlslAttributes.h",
+    "hlsl/hlslGrammar.cpp",
+    "hlsl/hlslGrammar.h",
+    "hlsl/hlslOpMap.cpp",
+    "hlsl/hlslOpMap.h",
+    "hlsl/hlslParseHelper.cpp",
+    "hlsl/hlslParseHelper.h",
+    "hlsl/hlslParseables.cpp",
+    "hlsl/hlslParseables.h",
+    "hlsl/hlslScanContext.cpp",
+    "hlsl/hlslScanContext.h",
+    "hlsl/hlslTokenStream.cpp",
+    "hlsl/hlslTokenStream.h",
+    "hlsl/hlslTokens.h",
   ]
 
-  defines = []
+  defines = [ "ENABLE_OPT=1" ]
+
   if (is_win) {
     sources += [ "glslang/OSDependent/Windows/ossource.cpp" ]
     defines += [ "GLSLANG_OSINCLUDE_WIN32" ]
@@ -140,14 +175,74 @@ source_set("glslang_sources") {
   }
 
   if (is_clang) {
-    cflags_cc = [
-      "-Wno-implicit-fallthrough",
+    cflags = [
+      "-Wno-extra-semi",
       "-Wno-ignored-qualifiers",
+      "-Wno-implicit-fallthrough",
+      "-Wno-inconsistent-missing-override",
+      "-Wno-sign-compare",
       "-Wno-unused-variable",
+      "-Wno-missing-field-initializers",
+      "-Wno-newline-eof",
+    ]
+  }
+  if (is_win && !is_clang) {
+    cflags = [
+      "/wd4018",  # signed/unsigned mismatch
+      "/wd4189",  # local variable is initialized but not referenced
     ]
   }
 
   deps = [
     "${spirv_tools_dir}:spvtools_opt",
+    "${spirv_tools_dir}:spvtools_val",
   ]
+
+  configs -= _configs_to_remove
+  configs += _configs_to_add
+}
+
+source_set("glslang_default_resource_limits_sources") {
+  sources = [
+    "StandAlone/ResourceLimits.cpp",
+    "StandAlone/ResourceLimits.h",
+  ]
+  deps = [
+    ":glslang_sources",
+  ]
+  public_configs = [ ":glslang_public" ]
+
+  configs -= _configs_to_remove
+  configs += _configs_to_add
+}
+
+executable("glslang_validator") {
+  sources = [
+    "StandAlone/DirStackFileIncluder.h",
+    "StandAlone/StandAlone.cpp",
+  ]
+  if (!is_win) {
+    cflags = [ "-Woverflow" ]
+  }
+  defines = [ "ENABLE_OPT=1" ]
+  deps = [
+    ":glslang_default_resource_limits_sources",
+    ":glslang_sources",
+  ]
+
+  configs -= _configs_to_remove
+  configs += _configs_to_add
+}
+
+executable("spirv-remap") {
+  sources = [
+    "StandAlone/spirv-remap.cpp",
+  ]
+  defines = [ "ENABLE_OPT=1" ]
+  deps = [
+    ":glslang_sources",
+  ]
+
+  configs -= _configs_to_remove
+  configs += _configs_to_add
 }

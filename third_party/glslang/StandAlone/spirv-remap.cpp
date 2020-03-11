@@ -227,7 +227,7 @@ namespace {
                 }
             }
             else if (arg == "--version" || arg == "-V") {
-                std::cout << basename(argv[0]) << " version 0.97 " << __DATE__ << " " << __TIME__ << std::endl;
+                std::cout << basename(argv[0]) << " version 0.97" << std::endl;
                 exit(0);
             } else if (arg == "--input" || arg == "-i") {
                 // Collect input files

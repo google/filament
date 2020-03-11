@@ -50,6 +50,7 @@ TEST_P(LinkTest, FromFile)
     const size_t fileCount = fileNames.size();
     const EShMessages controls = DeriveOptions(Source::GLSL, Semantics::OpenGL, Target::AST);
     GlslangResult result;
+    result.validationResult = true;
 
     // Compile each input shader file.
     std::vector<std::unique_ptr<glslang::TShader>> shaders;
@@ -100,7 +101,7 @@ INSTANTIATE_TEST_CASE_P(
         {"max_vertices_0.geom"},
         {"es-link1.frag", "es-link2.frag"},
         {"missingBodies.vert"}
-    })),
+    }))
 );
 // clang-format on
 

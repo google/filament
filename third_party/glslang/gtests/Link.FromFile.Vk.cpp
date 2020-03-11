@@ -77,17 +77,16 @@ TEST_P(LinkTestVulkan, FromFile)
     if (success && (controls & EShMsgSpvRules)) {
         spv::SpvBuildLogger logger;
         std::vector<uint32_t> spirv_binary;
-        glslang::SpvOptions options;
-        options.disableOptimizer = true;
-        options.validate = true;
+        options().disableOptimizer = true;
         glslang::GlslangToSpv(*program.getIntermediate(shaders.front()->getStage()),
-                                spirv_binary, &logger, &options);
+                                spirv_binary, &logger, &options());
 
         std::ostringstream disassembly_stream;
         spv::Parameterize();
         spv::Disassemble(disassembly_stream, spirv_binary);
         result.spirvWarningsErrors = logger.getAllMessages();
         result.spirv = disassembly_stream.str();
+        result.validationResult = !options().validate || logger.getAllMessages().empty();
     }
 
     std::ostringstream stream;
@@ -99,7 +98,8 @@ TEST_P(LinkTestVulkan, FromFile)
     std::string expectedOutput;
     tryLoadFile(expectedOutputFname, "expected output", &expectedOutput);
 
-    checkEqAndUpdateIfRequested(expectedOutput, stream.str(), expectedOutputFname);
+    checkEqAndUpdateIfRequested(expectedOutput, stream.str(), expectedOutputFname,
+                                result.spirvWarningsErrors);
 }
 
 // clang-format off
@@ -108,7 +108,7 @@ INSTANTIATE_TEST_CASE_P(
     ::testing::ValuesIn(std::vector<std::vector<std::string>>({
         {"link1.vk.frag", "link2.vk.frag"},
         {"spv.unit1.frag", "spv.unit2.frag", "spv.unit3.frag"},
-    })),
+    }))
 );
 // clang-format on
 

@@ -38,7 +38,7 @@
 #define _COMMON_INCLUDED_
 
 
-#if defined(__ANDROID__) || _MSC_VER < 1700
+#if defined(__ANDROID__) || (defined(_MSC_VER) && _MSC_VER < 1700)
 #include <sstream>
 namespace std {
 template<typename T>
@@ -102,6 +102,7 @@ std::string to_string(const T& val) {
 #include <algorithm>
 #include <string>
 #include <cstdio>
+#include <cstdlib>
 #include <cassert>
 
 #include "PoolAlloc.h"
@@ -229,16 +230,29 @@ inline const TString String(const int i, const int /*base*/ = 10)
 #endif
 
 struct TSourceLoc {
-    void init() { name = nullptr; string = 0; line = 0; column = 0; }
+    void init()
+    {
+        name = nullptr; string = 0; line = 0; column = 0;
+    }
     void init(int stringNum) { init(); string = stringNum; }
     // Returns the name if it exists. Otherwise, returns the string number.
     std::string getStringNameOrNum(bool quoteStringName = true) const
     {
-        if (name != nullptr)
-            return quoteStringName ? ("\"" + std::string(name) + "\"") : name;
+        if (name != nullptr) {
+            TString qstr = quoteStringName ? ("\"" + *name + "\"") : *name;
+            std::string ret_str(qstr.c_str());
+            return ret_str;
+        }
         return std::to_string((long long)string);
     }
-    const char* name; // descriptive name for this string
+    const char* getFilename() const
+    {
+        if (name == nullptr)
+            return nullptr;
+        return name->c_str();
+    }
+    const char* getFilenameStr() const { return name == nullptr ? "" : name->c_str(); }
+    TString* name; // descriptive name for this string, when a textual name is available, otherwise nullptr
     int string;
     int line;
     int column;

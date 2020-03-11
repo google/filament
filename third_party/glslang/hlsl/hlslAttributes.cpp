@@ -58,6 +58,49 @@ namespace glslang {
                 return EatConstantId;
             else if (name == "push_constant")
                 return EatPushConstant;
+        } else if (nameSpace == "spv") {
+            if (name == "format_rgba32f")       return EatFormatRgba32f;
+            if (name == "format_rgba16f")       return EatFormatRgba16f;
+            if (name == "format_r32f")          return EatFormatR32f;
+            if (name == "format_rgba8")         return EatFormatRgba8;
+            if (name == "format_rgba8snorm")    return EatFormatRgba8Snorm;
+            if (name == "format_rg32f")         return EatFormatRg32f;
+            if (name == "format_rg16f")         return EatFormatRg16f;
+            if (name == "format_r11fg11fb10f")  return EatFormatR11fG11fB10f;
+            if (name == "format_r16f")          return EatFormatR16f;
+            if (name == "format_rgba16")        return EatFormatRgba16;
+            if (name == "format_rgb10a2")       return EatFormatRgb10A2;
+            if (name == "format_rg16")          return EatFormatRg16;
+            if (name == "format_rg8")           return EatFormatRg8;
+            if (name == "format_r16")           return EatFormatR16;
+            if (name == "format_r8")            return EatFormatR8;
+            if (name == "format_rgba16snorm")   return EatFormatRgba16Snorm;
+            if (name == "format_rg16snorm")     return EatFormatRg16Snorm;
+            if (name == "format_rg8snorm")      return EatFormatRg8Snorm;
+            if (name == "format_r16snorm")      return EatFormatR16Snorm;
+            if (name == "format_r8snorm")       return EatFormatR8Snorm;
+            if (name == "format_rgba32i")       return EatFormatRgba32i;
+            if (name == "format_rgba16i")       return EatFormatRgba16i;
+            if (name == "format_rgba8i")        return EatFormatRgba8i;
+            if (name == "format_r32i")          return EatFormatR32i;
+            if (name == "format_rg32i")         return EatFormatRg32i;
+            if (name == "format_rg16i")         return EatFormatRg16i;
+            if (name == "format_rg8i")          return EatFormatRg8i;
+            if (name == "format_r16i")          return EatFormatR16i;
+            if (name == "format_r8i")           return EatFormatR8i;
+            if (name == "format_rgba32ui")      return EatFormatRgba32ui;
+            if (name == "format_rgba16ui")      return EatFormatRgba16ui;
+            if (name == "format_rgba8ui")       return EatFormatRgba8ui;
+            if (name == "format_r32ui")         return EatFormatR32ui;
+            if (name == "format_rgb10a2ui")     return EatFormatRgb10a2ui;
+            if (name == "format_rg32ui")        return EatFormatRg32ui;
+            if (name == "format_rg16ui")        return EatFormatRg16ui;
+            if (name == "format_rg8ui")         return EatFormatRg8ui;
+            if (name == "format_r16ui")         return EatFormatR16ui;
+            if (name == "format_r8ui")          return EatFormatR8ui;
+
+            if (name == "nonwritable")    return EatNonWritable;
+            if (name == "nonreadable")    return EatNonReadable;
         } else if (nameSpace.size() > 0)
             return EatNone;
 
