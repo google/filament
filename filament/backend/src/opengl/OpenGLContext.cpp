@@ -122,7 +122,8 @@ OpenGLContext::OpenGLContext() noexcept {
 #endif
 
     // TODO: Don't enable scissor when it is not necessary. This optimization could be done here in
-    // the driver by simply deferring the enable until the scissor rect is smaller than the window.
+    //       the driver by simply deferring the enable until the scissor rect is smaller than the
+    //       window.
     enable(GL_SCISSOR_TEST);
 
 #ifdef GL_ARB_seamless_cube_map
@@ -145,21 +146,46 @@ OpenGLContext::OpenGLContext() noexcept {
                 const GLchar* message, const void *userParam) {
             io::LogStream* stream;
             switch (severity) {
-                case GL_DEBUG_SEVERITY_HIGH: stream = &slog.e; break;
-                case GL_DEBUG_SEVERITY_MEDIUM: stream = &slog.w; break;
-                case GL_DEBUG_SEVERITY_LOW: stream = &slog.d; break;
-                case GL_DEBUG_SEVERITY_NOTIFICATION: stream = &slog.i; break;
+                case GL_DEBUG_SEVERITY_HIGH:
+                    stream = &slog.e;
+                    break;
+                case GL_DEBUG_SEVERITY_MEDIUM:
+                    stream = &slog.w;
+                    break;
+                case GL_DEBUG_SEVERITY_LOW:
+                    stream = &slog.d;
+                    break;
+                case GL_DEBUG_SEVERITY_NOTIFICATION:
+                default:
+                    stream = &slog.i;
+                    break;
             }
             io::LogStream& out = *stream;
             out << "KHR_debug ";
             switch (type) {
-                case GL_DEBUG_TYPE_ERROR: out << "ERROR"; break;
-                case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR: out << "DEPRECATED_BEHAVIOR"; break;
-                case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR: out << "UNDEFINED_BEHAVIOR"; break;
-                case GL_DEBUG_TYPE_PORTABILITY: out << "PORTABILITY"; break;
-                case GL_DEBUG_TYPE_PERFORMANCE: out << "PERFORMANCE"; break;
-                case GL_DEBUG_TYPE_OTHER: out << "OTHER"; break;
-                case GL_DEBUG_TYPE_MARKER: out << "MARKER"; break;
+                case GL_DEBUG_TYPE_ERROR:
+                    out << "ERROR";
+                    break;
+                case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR:
+                    out << "DEPRECATED_BEHAVIOR";
+                    break;
+                case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:
+                    out << "UNDEFINED_BEHAVIOR";
+                    break;
+                case GL_DEBUG_TYPE_PORTABILITY:
+                    out << "PORTABILITY";
+                    break;
+                case GL_DEBUG_TYPE_PERFORMANCE:
+                    out << "PERFORMANCE";
+                    break;
+                case GL_DEBUG_TYPE_OTHER:
+                    out << "OTHER";
+                    break;
+                case GL_DEBUG_TYPE_MARKER:
+                    out << "MARKER";
+                    break;
+                default:
+                    break;
             }
             out << ": " << message << io::endl;
         };

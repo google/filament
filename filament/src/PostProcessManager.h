@@ -115,7 +115,6 @@ private:
 
         details::FMaterial* getMaterial() const { return mMaterial; }
         details::FMaterialInstance* getMaterialInstance() const { return mMaterialInstance; }
-        backend::Handle<backend::HwProgram> const& getProgram() const { return mProgram; }
 
         backend::PipelineState getPipelineState(uint8_t variant) const noexcept;
         backend::PipelineState getPipelineState() const noexcept;

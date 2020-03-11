@@ -211,7 +211,6 @@ void OpenGLProgram::updateSamplers(OpenGLDriver* gl) noexcept {
 
             gl->bindTexture(tmu, t);
 
-            // FIXME: getSampler() is expensive because it's a hashmap lookup
             GLuint sampler = gl->getSampler(samplers[index].s);
             gl->getContext().bindSampler(tmu, sampler);
         }

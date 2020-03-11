@@ -152,13 +152,6 @@ void RenderTargetResourceEntry::update(FrameGraph& fg, PassNode const& pass) noe
         // clear implies discarding the content of the buffer
         resource.params.flags.discardStart |= resource.params.flags.clear;
 
-// FIXME
-//        if (imported) {
-//            // we never discard more than the user flags
-//            resource.params.flags.discardStart &= disrenderTarget.cache->discardStart;
-//            resource.params.flags.discardEnd   &= renderTarget.cache->discardEnd;
-//        }
-
         // check that this FrameGraphRenderTarget is indeed declared by this pass
         ASSERT_POSTCONDITION_NON_FATAL(resource.target,
                 "Pass \"%s\" doesn't declare rendertarget \"%s\" -- expect graphic corruptions",

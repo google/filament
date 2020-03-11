@@ -623,9 +623,6 @@ void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     colorAttachment.slice = renderTarget->getColorInfo().layer;
     mContext->currentSurfacePixelFormat = colorAttachment.texture.pixelFormat;
 
-    // Metal clears the entire attachment without respect to viewport or scissor.
-    // TODO: Might need to clear the scissor area manually via a draw if we need that functionality.
-
     colorAttachment.loadAction = renderTarget->getLoadAction(params, TargetBufferFlags::COLOR);
     colorAttachment.storeAction = renderTarget->getStoreAction(params, TargetBufferFlags::COLOR);
     colorAttachment.clearColor = MTLClearColorMake(

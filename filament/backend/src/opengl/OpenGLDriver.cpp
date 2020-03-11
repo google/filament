@@ -535,8 +535,7 @@ void OpenGLDriver::textureStorage(OpenGLDriver::GLTexture* t,
                 glTexStorage2DMultisample(t->gl.target, t->samples, t->gl.internalFormat,
                         GLsizei(width), GLsizei(height), GL_TRUE);
 #elif GL41_HEADERS
-                // only supported in GL (never in GLES)
-                // TODO: use glTexStorage2DMultisample() on GL 4.3 and above
+                // only supported in GL (GL4.1 doesn't support glTexStorage2DMultisample)
                 glTexImage2DMultisample(t->gl.target, t->samples, t->gl.internalFormat,
                         GLsizei(width), GLsizei(height), GL_TRUE);
 #endif
@@ -1462,7 +1461,7 @@ void OpenGLDriver::updateBuffer(GLenum target,
                     // According to the spec, UnmapBuffer can return FALSE in rare conditions (e.g.
                     // during a screen mode change). Note that is not a GL error, and we can handle
                     // it by simply making a second attempt.
-                    goto retry;
+                    goto retry; // NOLINT(cppcoreguidelines-avoid-goto,hicpp-avoid-goto)
                 }
             } else {
                 // handle mapping error, revert to glBufferSubData()
@@ -1480,9 +1479,8 @@ void OpenGLDriver::updateBuffer(GLenum target,
         glBufferData(target, buffer->capacity, p.buffer, getBufferUsage(buffer->usage));
     } else {
         // when loading less that the buffer size, it's okay to assume the back of the buffer
-        // is undefined.
-        // glBufferSubData() could be catastrophically inefficient if several are issued
-        // during the same frame. Currently, we're not doing that though.
+        // is undefined. glBufferSubData() could be catastrophically inefficient if several are
+        // issued during the same frame. Currently, we're not doing that though.
         // TODO: investigate if it'll be faster to use glBufferData().
         glBufferSubData(target, 0, p.size, p.buffer);
     }
@@ -1634,11 +1632,10 @@ void OpenGLDriver::setTextureData(GLTexture* t,
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-void OpenGLDriver::setCompressedTextureData(GLTexture* t,
-                                            uint32_t level,
-                                            uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
-                                            uint32_t width, uint32_t height, uint32_t depth,
-                                            PixelBufferDescriptor&& p, FaceOffsets const* faceOffsets) {
+void OpenGLDriver::setCompressedTextureData(GLTexture* t,  uint32_t level,
+        uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
+        uint32_t width, uint32_t height, uint32_t depth,
+        PixelBufferDescriptor&& p, FaceOffsets const* faceOffsets) {
     DEBUG_MARKER()
     auto& gl = mContext;
 
@@ -2458,9 +2455,6 @@ void OpenGLDriver::readPixels(Handle<HwRenderTarget> src,
 
     GLRenderTarget const* s = handle_cast<GLRenderTarget const*>(src);
     gl.bindFramebuffer(GL_READ_FRAMEBUFFER, s->gl.fbo);
-
-    // TODO: we could use a PBO to make this asynchronous
-    //glReadPixels(GLint(x), GLint(y), GLint(width), GLint(height), glFormat, glType, p.buffer);
 
     GLuint pbo;
     glGenBuffers(1, &pbo);
