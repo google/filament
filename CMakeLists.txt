@@ -247,8 +247,8 @@ endif()
 # ==================================================================================================
 # ASAN is deactivated for now because:
 #  -fsanitize=undefined causes extremely long link times
-#  -fsanitize=address causes a crash with assimp, which we can't explain for now
 #set(EXTRA_SANITIZE_OPTIONS "-fsanitize=undefined -fsanitize=address")
+set(EXTRA_SANITIZE_OPTIONS "-fsanitize=address")
 # clang-cl.exe on Windows does not support -fstack-protector.
 if (NOT CLANG_CL AND NOT MSVC AND NOT WEBGL)
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fstack-protector")
