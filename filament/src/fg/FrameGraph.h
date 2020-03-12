@@ -189,7 +189,7 @@ public:
         addPass<Empty>(name, [](FrameGraph::Builder& builder, auto&) { builder.sideEffect(); },
                 [execute](FrameGraphPassResources const&, auto const&,
                         backend::DriverApi& driver) {
-                    execute();
+                    execute(driver);
                 });
     }
 
