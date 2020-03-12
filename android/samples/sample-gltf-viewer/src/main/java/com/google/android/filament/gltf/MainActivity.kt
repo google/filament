@@ -115,9 +115,11 @@ class MainActivity : Activity() {
             choreographer.postFrameCallback(this)
 
             modelViewer.animator?.apply {
-                val elapsedTimeSeconds = (frameTimeNanos - startTime).toDouble() / 1_000_000_000
-                this.applyAnimation(0, elapsedTimeSeconds.toFloat())
-                this.updateBoneMatrices()
+                if (animationCount > 0) {
+                    val elapsedTimeSeconds = (frameTimeNanos - startTime).toDouble() / 1_000_000_000
+                    applyAnimation(0, elapsedTimeSeconds.toFloat())
+                    updateBoneMatrices()
+                }
             }
 
             modelViewer.render()
