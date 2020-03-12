@@ -160,9 +160,7 @@ public:
 
     // get uniform of known types from the proper offset (e.g.: use offsetof())
     template<typename T, typename = typename is_supported_type<T>::type>
-    T const& getUniform(size_t offset) const noexcept {
-        // we don't support mat3f because a specialization would force us to return by value.
-        static_assert(!std::is_same<math::mat3f, T>::value, "mat3f not supported");
+    T getUniform(size_t offset) const noexcept {
         return *reinterpret_cast<T const*>(static_cast<char const*>(mBuffer) + offset);
     }
 
@@ -225,6 +223,13 @@ inline void UniformBuffer::setUniform(void* addr, size_t offset, const math::mat
     temp.v[2][1] = v[2][1];
     temp.v[2][2] = v[2][2];
     temp.v[2][3] = 0; // not needed, but doesn't cost anything
+}
+
+template<>
+inline math::mat3f UniformBuffer::getUniform(size_t offset) const noexcept {
+    math::float4 const* p = reinterpret_cast<math::float4 const*>(
+            static_cast<char const*>(mBuffer) + offset);
+    return { p[0].xyz, p[1].xyz, p[2].xyz };
 }
 
 template<>

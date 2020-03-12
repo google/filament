@@ -463,28 +463,18 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(FrameGraph& fg,
     return ppResolve.getData().output;
 }
 
-FrameGraphId<FrameGraphTexture> PostProcessManager::ssao(FrameGraph& fg, RenderPass& pass,
-        filament::Viewport const& svp, CameraInfo const& cameraInfo,
+FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOclusion(
+        FrameGraph& fg, RenderPass& pass,
+        filament::Viewport const& svp, const CameraInfo& cameraInfo,
         View::AmbientOcclusionOptions const& options) noexcept {
 
     FEngine& engine = mEngine;
     Handle<HwRenderPrimitive> fullScreenRenderPrimitive = engine.getFullScreenRenderPrimitive();
 
-    /*
-     * SSAO depth pass -- automatically culled if not used
-     */
+    FrameGraphId<FrameGraphTexture> depth = fg.getBlackboard().get<FrameGraphTexture>("structure");
+    assert(depth.isValid());
 
-    FrameGraphId<FrameGraphTexture> depth = depthPass(fg, pass, svp.width, svp.height, options);
-
-    /*
-     * create depth mipmap chain
-     */
-
-    // The first mip already exists, so we process n-1 lods
     const size_t levelCount = fg.getDescriptor(depth).levels;
-    for (size_t level = 0; level < levelCount - 1; level++) {
-        depth = mipmapPass(fg, depth, level);
-    }
 
     /*
      * Our main SSAO pass
@@ -604,20 +594,23 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssao(FrameGraph& fg, RenderP
      */
     ssao = bilateralBlurPass(fg, ssao, { 2, 0 }, cameraInfo.zf, TextureFormat::RGB8);
     ssao = bilateralBlurPass(fg, ssao, { 0, 2 }, cameraInfo.zf, TextureFormat::R8);
+
+    fg.getBlackboard().put("ssao", ssao);
     return ssao;
 }
 
-FrameGraphId<FrameGraphTexture> PostProcessManager::depthPass(FrameGraph& fg, RenderPass const& pass,
-        uint32_t width, uint32_t height, View::AmbientOcclusionOptions const& options) noexcept {
+FrameGraphId<FrameGraphTexture> PostProcessManager::structure(FrameGraph& fg,
+        const RenderPass& pass, uint32_t width, uint32_t height, float scale) noexcept {
 
-    // SSAO depth pass -- automatically culled if not used
+    // structure pass -- automatically culled if not used
+    // used for SSAO currently. It consists of a mipmapped depth path
+    // mipmapping is tunned for SSAO
     struct DepthPassData {
         FrameGraphId<FrameGraphTexture> depth;
         FrameGraphRenderTargetHandle rt;
     };
 
     // sanitize a bit the user provided scaling factor
-    const float scale = options.resolution;
     width  = std::max(32u, (uint32_t)std::ceil(width * scale));
     height = std::max(32u, (uint32_t)std::ceil(height * scale));
 
@@ -645,7 +638,19 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::depthPass(FrameGraph& fg, Re
                 pass.execute(resources.getPassName(), out.target, out.params);
             });
 
-    return ssaoDepthPass.getData().depth;
+    auto depth = ssaoDepthPass.getData().depth;
+
+    /*
+     * create depth mipmap chain
+    */
+
+    // The first mip already exists, so we process n-1 lods
+    for (size_t level = 0; level < levelCount - 1; level++) {
+        depth = mipmapPass(fg, depth, level);
+    }
+
+    fg.getBlackboard().put("structure", depth);
+    return depth;
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::mipmapPass(FrameGraph& fg,

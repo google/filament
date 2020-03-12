@@ -163,9 +163,8 @@ public:
     void prepareLighting(FEngine& engine, FEngine::DriverApi& driver,
             ArenaScope& arena, Viewport const& viewport) noexcept;
     void prepareSSAO(backend::Handle<backend::HwTexture> ssao) const noexcept;
-    void cleanupSSAO() const noexcept;
+    void cleanupRenderPasses() const noexcept;
     void prepareSSR(backend::Handle<backend::HwTexture> ssr, float refractionLodOffset) const noexcept;
-    void cleanupSSR() const noexcept;
     void froxelize(FEngine& engine) const noexcept;
     void commitUniforms(backend::DriverApi& driver) const noexcept;
     void commitFroxels(backend::DriverApi& driverApi) const noexcept;
@@ -322,6 +321,10 @@ public:
     static void cullRenderables(utils::JobSystem& js, FScene::RenderableSoa& renderableData,
             Frustum const& frustum, size_t bit) noexcept;
 
+    UniformBuffer& getViewUniforms() const { return mPerViewUb; }
+    backend::SamplerGroup& getViewSamplers() const { return mPerViewSb; }
+    UniformBuffer& getShadowUniforms() const { return mShadowUb; }
+
 private:
     static constexpr size_t MAX_FRAMETIME_HISTORY = 32u;
 
@@ -355,10 +358,6 @@ private:
     backend::Handle<backend::HwUniformBuffer> mLightUbh;
     backend::Handle<backend::HwUniformBuffer> mShadowUbh;
     backend::Handle<backend::HwUniformBuffer> mRenderableUbh;
-
-    backend::Handle<backend::HwSamplerGroup> getUsh() const noexcept { return mPerViewSbh; }
-    backend::Handle<backend::HwUniformBuffer> getUbh() const noexcept { return mPerViewUbh; }
-    backend::Handle<backend::HwUniformBuffer> getLightUbh() const noexcept { return mLightUbh; }
 
     FScene* mScene = nullptr;
     FCamera* mCullingCamera = nullptr;

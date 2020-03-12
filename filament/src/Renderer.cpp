@@ -41,6 +41,7 @@
 #include <utils/vector.h>
 
 #include <assert.h>
+#include <private/filament/SibGenerator.h>
 
 
 using namespace filament::math;
@@ -200,6 +201,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     uint8_t msaa = view.getSampleCount();
     float2 scale = view.updateScale(mFrameInfoManager.getLastFrameTime());
     const View::QualityLevel upscalingQuality = view.getDynamicResolutionOptions().quality;
+    auto aoOptions = view.getAmbientOcclusionOptions();
     if (!hasPostProcess) {
         // dynamic scaling and FXAA are part of the post-process phase and can't happen if
         // it's disabled.
@@ -308,21 +310,27 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     view.prepareCamera(cameraInfo, svp);
     view.commitUniforms(driver);
 
+
+    // --------------------------------------------------------------------------------------------
+    // structure pass -- automatically culled if not used
+    // Currently it consists of a simple depth pass.
+    // This is normally used by SSAO
+
+    // TODO: this should be a FrameGraph pass to participate to automatic culling
+    pass.newCommandBuffer();
+    pass.appendCommands(RenderPass::CommandTypeFlags::SSAO);
+    pass.sortCommands();
+
+    ppm.structure(fg, pass, svp.width, svp.height, aoOptions.resolution);
+
     // --------------------------------------------------------------------------------------------
     // SSAO pass
 
     const bool useSSAO = view.getAmbientOcclusion() != View::AmbientOcclusion::NONE;
     if (useSSAO) {
-        // don't generate commands if we don't have SSAO
-        // TODO: ideally this should be a FrameGraph pass to participate to automatic culling
-        pass.newCommandBuffer();
-        pass.appendCommands(RenderPass::CommandTypeFlags::SSAO);
-        pass.sortCommands();
+        // we could rely on FrameGraph culling, but this creates unnecessary CPU work
+        ppm.screenSpaceAmbientOclusion(fg, pass, svp, cameraInfo, aoOptions);
     }
-
-    // SSAO pass -- automatically culled if not used
-    FrameGraphId<FrameGraphTexture> ssao = ppm.ssao(fg, pass, svp, cameraInfo,
-            view.getAmbientOcclusionOptions());
 
     // --------------------------------------------------------------------------------------------
     // Color passes
@@ -337,26 +345,14 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             .svp = svp,
             .scale = scale,
             .hdrFormat = hdrFormat,
-            .msaa = msaa
+            .msaa = msaa,
+            .clearFlags = clearFlags,
+            .clearColor = clearColor
     };
 
-    // We use a framegraph pass to commit the View's uniforms and wait for froxelization to finish
-    struct PrepareColorPassesData {
-        FrameGraphId<FrameGraphTexture> ssao;
-    };
-    fg.addPass<PrepareColorPassesData>("Prepare Color Passes",
-            [&fg, useSSAO, ssao](FrameGraph::Builder& builder, auto& data) {
-                if (useSSAO) {
-                    data.ssao = builder.sample(ssao);
-                }
-                fg.getBlackboard().put("ssao", data.ssao);
-                builder.sideEffect();
-            },
-            [&ppm, &js, &view, jobFroxelize]
-                    (FrameGraphPassResources const& resources, auto const& data, DriverApi& driver) {
-                view.prepareSSAO(data.ssao.isValid() ? resources.getTexture(data.ssao)
-                                                     : ppm.getOneTexture());
-                view.commitUniforms(driver);
+    // We use a framegraph pass to wait for froxelization to finish (so it can be done
+    // in parallel with .compile()
+    fg.addTrivialSideEffectPass("Prepare Color Passes", [=, &js, &view](DriverApi& driver) {
                 if (jobFroxelize) {
                     auto sync = jobFroxelize;
                     js.waitAndRelease(sync);
@@ -369,18 +365,16 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             .height = config.svp.height,
             .format = config.hdrFormat
     };
-    colorPass(fg, "Color Pass", desc, config, pass, clearFlags, clearColor);
+    colorPass(fg, "Color Pass", desc, config, pass, view);
 
     // TODO: look for refraction draw calls only if screen-space refraction is enabled
-    FrameGraphId<FrameGraphTexture> colorPassOutput =
-            refractionPass(fg, config, pass, view, clearFlags);
-
+    FrameGraphId<FrameGraphTexture> colorPassOutput = refractionPass(fg, config, pass, view);
     FrameGraphId<FrameGraphTexture> input = colorPassOutput;
 
-    fg.addTrivialSideEffectPass("Finish Color Passes", [&view]() {
+    fg.addTrivialSideEffectPass("Finish Color Passes", [&view](DriverApi& driver) {
         // Unbind SSAO sampler, b/c the FrameGraph will delete the texture at the end of the pass.
-        view.cleanupSSAO();
-        view.cleanupSSR();
+        view.cleanupRenderPasses();
+        view.commitUniforms(driver);
     });
 
     // --------------------------------------------------------------------------------------------
@@ -436,8 +430,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 }
 
 FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
-        ColorPassConfig const& config, RenderPass const& pass,
-        FView const& view, TargetBufferFlags clearFlags) const noexcept {
+        ColorPassConfig config, RenderPass const& pass,
+        FView const& view) const noexcept {
 
     auto& blackboard = fg.getBlackboard();
     auto input = blackboard.get<FrameGraphTexture>("color");
@@ -470,8 +464,9 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
                 .samples = config.msaa,  // we need to conserve the sample buffer
                 .format = config.hdrFormat
         };
-        input = colorPass(fg, "Color Pass (opaque)", desc,
-                config, opaquePass, clearFlags, view.getClearColor());
+        input = colorPass(fg, "Color Pass (opaque)", desc, config, opaquePass, view);
+
+        // vvv the actual bloom pass starts below vvv
 
         // scale factor for the gaussian so it matches our resolution / FOV
         const float verticalFieldOfView = view.getCameraUser().getFieldOfView(Camera::Fov::VERTICAL);
@@ -484,8 +479,8 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
         //  ... | 6 | 5 | 4 | 3 | 2 | 1 | 0 | 1 | 2 | 3 | 4 | 5 | 6 | ...
         //      +-------+-------+-------*===*-------+-------+-------+
         const size_t kernelSize = 21;   // requires only 6 stored coefficients and 11 tap/pass
-        static_assert(kernelSize & 1, "kernel size must be odd");
-        static_assert((((kernelSize - 1) / 2) & 1) == 0, "kernel positive side size must be even");
+        static_assert(kernelSize & 1u, "kernel size must be odd");
+        static_assert((((kernelSize - 1u) / 2u) & 1u) == 0, "kernel positive side size must be even");
 
         // The relation between n and sigma (variance) is 6*sigma - 1 = N
         const float sigma0 = (kernelSize + 1) / 6.0f;
@@ -526,21 +521,9 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
         });
 
         input = ppm.generateGaussianMipmap(fg, input, roughnessLodCount, true, kernelSize);
+        blackboard["ssr"] = input;
 
-        struct PrepareSSRData {
-            FrameGraphId<FrameGraphTexture> ssr;
-        };
-        fg.addPass<PrepareSSRData>("Prepare SSR",
-                [&](FrameGraph::Builder& builder, auto& data) {
-                    data.ssr = builder.sample(input);
-                    blackboard["ssr"] = data.ssr;
-                    builder.sideEffect();
-                },
-                [&view, refractionLodOffset]
-                (FrameGraphPassResources const& resources, auto const& data, DriverApi& driver) {
-                    view.prepareSSR(resources.getTexture(data.ssr), refractionLodOffset);
-                    view.commitUniforms(driver);
-                });
+        // ^^^ the actual bloom pass ends above ^^^
 
         // set-up the refraction pass
         RenderPass translucentPass(pass);
@@ -548,8 +531,9 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
                 const_cast<Command*>(refraction),
                 const_cast<Command*>(pass.end()));
 
-        output = colorPass(fg, "Color Pass (transparent)", desc,
-                config, translucentPass, TargetBufferFlags::NONE);
+        config.refractionLodOffset = refractionLodOffset;
+        config.clearFlags = TargetBufferFlags::NONE;
+        output = colorPass(fg, "Color Pass (transparent)", desc, config, translucentPass, view);
 
         if (config.msaa > 1) {
             // We need to do a resolve here because later passes (such as tonemapping) will need
@@ -566,8 +550,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
 
 FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char* name,
         FrameGraphTexture::Descriptor const& colorBufferDesc, ColorPassConfig const& config,
-        RenderPass const& pass, backend::TargetBufferFlags clearFlags,
-        math::float4 clearColor) noexcept {
+        RenderPass const& pass, FView const& view) const noexcept {
 
     struct ColorPassData {
         FrameGraphId<FrameGraphTexture> color;
@@ -576,6 +559,8 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
         FrameGraphId<FrameGraphTexture> ssr;
         FrameGraphRenderTargetHandle rt{};
     };
+
+    float4 clearColor = config.clearColor;
 
     auto& colorPass = fg.addPass<ColorPassData>(name,
             [&](FrameGraph::Builder& builder, ColorPassData& data) {
@@ -599,7 +584,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
 
                 if (!data.color.isValid()) {
                     clearColorFlags = TargetBufferFlags::COLOR;
-                    if (!(clearFlags &  TargetBufferFlags::COLOR)) {
+                    if (!(config.clearFlags &  TargetBufferFlags::COLOR)) {
                         // the View doesn't ask for a clear, but we're creating a new color
                         // intermediate buffer, so it must be cleared with transparent pixels.
                         clearColor = {};
@@ -626,14 +611,21 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 data.rt = builder.createRenderTarget("Color Pass Target", {
                         .attachments = { data.color, data.depth },
                         .samples = config.msaa,
-                        .clearFlags = clearFlags | clearColorFlags | clearDepthFlags });
+                        .clearFlags = config.clearFlags | clearColorFlags | clearDepthFlags });
             },
-            [pass, clearColor]
-                    (FrameGraphPassResources const& resources,
+            [=, &view](FrameGraphPassResources const& resources,
                             ColorPassData const& data, DriverApi& driver) {
+
+                // set samplers and uniforms
+                PostProcessManager& ppm = getEngine().getPostProcessManager();
+                view.prepareSSAO(data.ssao.isValid() ? resources.getTexture(data.ssao) : ppm.getOneTexture());
+                if (data.ssr.isValid()) {
+                    view.prepareSSR(resources.getTexture(data.ssr), config.refractionLodOffset);
+                }
+                view.commitUniforms(driver);
+
                 auto out = resources.get(data.rt);
                 out.params.clearColor = clearColor;
-
                 pass.execute(resources.getPassName(), out.target, out.params);
             });
 

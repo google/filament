@@ -63,8 +63,11 @@ public:
     FrameGraphId<FrameGraphTexture> resolve(FrameGraph& fg,
             const char* outputBufferName, FrameGraphId<FrameGraphTexture> input) noexcept;
 
-    FrameGraphId<FrameGraphTexture> ssao(FrameGraph& fg, details::RenderPass& pass,
-            filament::Viewport const& svp,
+    FrameGraphId<FrameGraphTexture> structure(FrameGraph& fg, details::RenderPass const& pass,
+            uint32_t width, uint32_t height, float scale) noexcept;
+
+    FrameGraphId<FrameGraphTexture> screenSpaceAmbientOclusion(FrameGraph& fg,
+            details::RenderPass& pass, filament::Viewport const& svp,
             details::CameraInfo const& cameraInfo,
             View::AmbientOcclusionOptions const& options) noexcept;
 
@@ -82,9 +85,6 @@ public:
 
 private:
     details::FEngine& mEngine;
-
-    FrameGraphId<FrameGraphTexture> depthPass(FrameGraph& fg, details::RenderPass const& pass,
-            uint32_t width, uint32_t height, View::AmbientOcclusionOptions const& options) noexcept;
 
     FrameGraphId<FrameGraphTexture> mipmapPass(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, size_t level) noexcept;
