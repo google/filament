@@ -199,7 +199,14 @@ void RenderTargetResourceEntry::preExecuteDevirtualize(FrameGraph& fg) noexcept 
                 { infos[0], infos[1], infos[2], infos[3] },
                 infos[4], infos[5]);
     }
+}
 
+void RenderTargetResourceEntry::preExecuteDestroy(FrameGraph& fg) noexcept {
+    // FIXME: (workaround: see postExecuteDevirtualize) technically we need
+    //        to clear discardEnd here (in case the RT is reused), but save
+    //        its original value, to be restored in postExecuteDevirtualize()
+    //        we don't do that right now, because it's not needed in our current
+    //        use case.
 }
 
 void RenderTargetResourceEntry::postExecuteDestroy(FrameGraph& fg) noexcept {
@@ -217,8 +224,16 @@ void RenderTargetResourceEntry::postExecuteDevirtualize(FrameGraph& fg) noexcept
     // (otherwise it wouldn't be possible to meaningfully reuse it)
     auto& resource = getResource();
     resource.params.flags.clear = TargetBufferFlags::NONE;
-}
 
+    if (imported) {
+        // FIXME: (workaround) imported targets currently don't have attachments associated to
+        //        them, so the discard flags can't be calculated. So if the target is used
+        //        several times, discardStart must be cleared after the first time.
+        //        (technically, discardEnd should be reset to it's inital value -- we don't do
+        //        this here, because we never modified it in the first place)
+        resource.params.flags.discardStart = TargetBufferFlags::NONE;
+    }
+}
 
 } // namespace fg
 } // namespace filament
