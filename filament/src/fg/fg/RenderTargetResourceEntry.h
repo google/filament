@@ -39,7 +39,7 @@ private:
     void resolve(FrameGraph& fg) noexcept override;
     void preExecuteDevirtualize(FrameGraph& fg) noexcept override;
     void postExecuteDestroy(FrameGraph& fg) noexcept override;
-    void preExecuteDestroy(FrameGraph& fg) noexcept override { }
+    void preExecuteDestroy(FrameGraph& fg) noexcept override;
     void postExecuteDevirtualize(FrameGraph& fg) noexcept override;
     RenderTargetResourceEntry* asRenderTargetResourceEntry() noexcept override { return this; }
 
