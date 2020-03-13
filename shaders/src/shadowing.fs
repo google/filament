@@ -232,6 +232,81 @@ float ShadowSample_PCF_High(const lowp sampler2DArrayShadow map, const uint laye
 #endif
 
 //------------------------------------------------------------------------------
+// Screen-space Contact Shadows
+//------------------------------------------------------------------------------
+
+struct ScreenSpaceRay {
+    highp vec3 ssRayStart;
+    highp vec3 ssRayEnd;
+    highp vec3 ssViewRayEnd;
+    highp vec3 uvRayStart;
+    highp vec3 uvRay;
+};
+
+void initScreenSpaceRay(out ScreenSpaceRay ray, highp vec3 wsRayStart, vec3 wsRayDirection, float wsRayLength) {
+    highp mat4 worldToClip = getClipFromWorldMatrix();
+    highp mat4 viewToClip = getClipFromViewMatrix();
+
+    // ray end in world space
+    highp vec3 wsRayEnd = wsRayStart + wsRayDirection * wsRayLength;
+
+    // ray start/end in clip space
+    highp vec4 csRayStart = worldToClip * vec4(wsRayStart, 1.0);
+    highp vec4 csRayEnd = worldToClip * vec4(wsRayEnd, 1.0);
+    highp vec4 csViewRayEnd = csRayStart + viewToClip * vec4(0.0, 0.0, wsRayLength, 0.0);
+
+    // ray start/end in screen space
+    ray.ssRayStart = csRayStart.xyz * 1.0 / csRayStart.w;
+    ray.ssRayEnd = csRayEnd.xyz * 1.0 / csRayEnd.w;
+    ray.ssViewRayEnd = csViewRayEnd.xyz * 1.0 / csViewRayEnd.w;
+
+    // convert all to uv (texture) space
+    highp vec3 uvRayEnd = ray.ssRayEnd.xyz * 0.5 + 0.5;
+    ray.uvRayStart = ray.ssRayStart.xyz * 0.5 + 0.5;
+    ray.uvRay = uvRayEnd - ray.uvRayStart;
+}
+
+float screenSpaceContactShadow(vec3 lightDirection) {
+    // cast a ray in the direction of the light
+    float occlusion = 0.0;
+    const uint STEP_COUNT = 8u;
+    const float MAX_DISTANCE = 0.30f;   // 30cm
+
+    ScreenSpaceRay rayData;
+    initScreenSpaceRay(rayData, shading_position, lightDirection, MAX_DISTANCE);
+
+    // step
+    highp float dt = 1.0 / float(STEP_COUNT);
+
+    // tolerance
+    float tolerance = abs(rayData.ssViewRayEnd.z - rayData.ssRayStart.z) * dt * 0.5;
+
+    // dithter the ray with interleaved grandient noise
+    const vec3 m = vec3(0.06711056, 0.00583715, 52.9829189);
+    float dither = fract(m.z * fract(dot(gl_FragCoord.xy, m.xy))) - 0.5;
+
+    // normalized postion on the ray (0 to 1)
+    float t = dt * dither + dt;
+
+    highp vec3 ray;
+    for (uint i = 0 ; i < STEP_COUNT ; i++, t += dt) {
+        ray = rayData.uvRayStart + rayData.uvRay * t;
+        float z = textureLod(light_structure, uvToRenderTargetUV(ray.xy), 0.0).r;
+        float dz = ray.z - z;
+        if (abs(tolerance - dz) < tolerance) {
+            occlusion = 1.0;
+            break;
+        }
+    }
+
+    // we fade out the contribution of contact shadows towards the edge of the screen
+    // because we don't have depth data there
+    vec2 fade = max(12.0 * abs(ray.xy - 0.5) - 5.0, 0.0);
+    occlusion *= saturate(1.0 - dot(fade, fade));
+    return occlusion;
+}
+
+//------------------------------------------------------------------------------
 // Shadow sampling dispatch
 //------------------------------------------------------------------------------
 

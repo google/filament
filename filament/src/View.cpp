@@ -709,10 +709,16 @@ void FView::prepareSSR(backend::Handle<backend::HwTexture> ssr, float refraction
     mPerViewUb.setUniform(offsetof(PerViewUib, refractionLodOffset), refractionLodOffset);
 }
 
+void FView::prepareStructure(backend::Handle<backend::HwTexture> structure) const noexcept {
+    // sampler must be NEAREST
+    mPerViewSb.setSampler(PerViewSib::STRUCTURE, structure, {});
+}
+
 void FView::cleanupRenderPasses() const noexcept {
     auto& samplerGroup = mPerViewSb;
     samplerGroup.setSampler(PerViewSib::SSAO, {}, {});
     samplerGroup.setSampler(PerViewSib::SSR, {}, {});
+    samplerGroup.setSampler(PerViewSib::STRUCTURE, {}, {});
 }
 
 void FView::froxelize(FEngine& engine) const noexcept {

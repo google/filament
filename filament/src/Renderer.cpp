@@ -557,6 +557,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
         FrameGraphId<FrameGraphTexture> depth;
         FrameGraphId<FrameGraphTexture> ssao;
         FrameGraphId<FrameGraphTexture> ssr;
+        FrameGraphId<FrameGraphTexture> structure;
         FrameGraphRenderTargetHandle rt{};
     };
 
@@ -572,7 +573,11 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 data.ssr  = blackboard.get<FrameGraphTexture>("ssr");
                 data.ssao = blackboard.get<FrameGraphTexture>("ssao");
                 data.color = blackboard.get<FrameGraphTexture>("color");
-                data.depth = blackboard.get<FrameGraphTexture>("depth");
+                data.structure = blackboard.get<FrameGraphTexture>("structure");
+
+                if (data.structure.isValid()) {
+                    data.structure = builder.sample(data.structure);
+                }
 
                 if (data.ssr.isValid()) {
                     data.ssr = builder.sample(data.ssr);
@@ -619,6 +624,9 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 // set samplers and uniforms
                 PostProcessManager& ppm = getEngine().getPostProcessManager();
                 view.prepareSSAO(data.ssao.isValid() ? resources.getTexture(data.ssao) : ppm.getOneTexture());
+                if (data.structure.isValid()) {
+                    view.prepareStructure(resources.getTexture(data.structure));
+                }
                 if (data.ssr.isValid()) {
                     view.prepareSSR(resources.getTexture(data.ssr), config.refractionLodOffset);
                 }

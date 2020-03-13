@@ -280,12 +280,14 @@ FrameGraph& FrameGraph::compile() noexcept {
 
         // compute resources reference counts (i.e. resources we're reading from)
         for (FrameGraphHandle resource : pass.reads) {
+            assert(resource.isValid());
             // add a reference for each pass that reads from this resource
             resourceNodes[resource.index]->readerCount++;
         }
 
 #ifndef NDEBUG
         for (FrameGraphHandle resource : pass.writes) {
+            assert(resource.isValid());
             assert(resourceNodes[resource.index]->writer == &pass);
         }
 #endif
