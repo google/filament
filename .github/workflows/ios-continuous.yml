@@ -21,4 +21,4 @@ jobs:
           path: out/filament-release-ios.tgz
       - name: Build iOS samples
         run: |
-          cd build/ios && ./build-samples.sh
+          cd build/ios && ./build-samples.sh continuous
