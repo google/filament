@@ -278,16 +278,13 @@ list(APPEND APP_LIBS sample-app)
 # Compiler flags
 # ==================================================================================================
 
-if (NOT MSVC_NATIVE)
+if (MSVC)
+    set(COMPILER_FLAGS $<$<CONFIG:Release>:/fp:fast>)
+else()
     set(COMPILER_FLAGS
             -Wno-extern-c-compat
-            $<$<NOT:$<PLATFORM_ID:Linux>>:-Wno-address-of-packed-member>)
-endif()
-
-if (MSVC OR CLANG_CL)
-    set(COMPILER_FLAGS ${COMPILER_FLAGS} $<$<CONFIG:Release>:/fp:fast>)
-else()
-    set(COMPILER_FLAGS ${COMPILER_FLAGS} $<$<CONFIG:Release>:-ffast-math>)
+            $<$<NOT:$<PLATFORM_ID:Linux>>:-Wno-address-of-packed-member>
+            $<$<CONFIG:Release>:-ffast-math>)
 endif()
 
 # ==================================================================================================

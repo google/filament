@@ -87,7 +87,7 @@ target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 # ==================================================================================================
 # Compiler flags
 # ==================================================================================================
-if (NOT MSVC_NATIVE)
+if (NOT MSVC)
     target_compile_options(${TARGET} PRIVATE
             -Wno-deprecated-register
             $<$<CONFIG:Release>:-ffast-math>

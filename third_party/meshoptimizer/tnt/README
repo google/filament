@@ -8,14 +8,7 @@ This folder was created as follows:
     rm -rf demo tools
     mv LICENSE.md LICENSE
 
-Also added this to the CMakeLists.txt:
-
-    if(CLANG_CL)
-        # Clang for Windows needs an additional flag for SSSE3 instructions.
-        target_compile_options(meshoptimizer PRIVATE -mssse3)
-    endif()
-
-And commented-out the following:
+Comment-out the following:
 
     # option(BUILD_DEMO "Build demo" OFF)
 

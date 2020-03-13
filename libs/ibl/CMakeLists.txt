@@ -41,7 +41,7 @@ target_link_libraries(${TARGET} math utils)
 # ==================================================================================================
 # Compile options and optimizations
 # ==================================================================================================
-if (MSVC OR CLANG_CL)
+if (MSVC)
     target_compile_options(${TARGET} PRIVATE /fp:fast)
 else()
     target_compile_options(${TARGET} PRIVATE -ffast-math $<$<PLATFORM_ID:Linux>:-fPIC>)
