@@ -50,7 +50,7 @@ jobs:
           cd build/ios && ./build.sh presubmit
       - name: Build iOS samples
         run: |
-          cd build/ios && ./build-samples.sh
+          cd build/ios && ./build-samples.sh presubmit
 
   build-web:
     name: build-web
