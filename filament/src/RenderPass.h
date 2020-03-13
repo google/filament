@@ -115,7 +115,7 @@ public:
         // generate commands for shadow map
         SHADOW = DEPTH | DEPTH_CONTAINS_SHADOW_CASTERS,
         // generate commands for SSAO
-        SSAO = DEPTH | DEPTH_FILTER_TRANSLUCENT_OBJECTS | DEPTH_FILTER_ALPHA_MASKED_OBJECTS,
+        SSAO = DEPTH | DEPTH_FILTER_TRANSLUCENT_OBJECTS,
     };
 
 
