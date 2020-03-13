@@ -15,6 +15,7 @@ A new header is inserted each time a *tag* is created.
 - Unlit materials now apply emissive in the same way as lit materials.
 - Screen-space refraction is now supported.
 - Support for HDR Bloom as a post-process effect.
+- Alpha masked objects are now part of the SSAO pass.
 - Added Java bindings for geometry::SurfaceOrientation.
 - Fixed bug rendering transparent objects with Metal backend.
 - Fixed crash on macOS Catalina when rendering with Metal backend.
