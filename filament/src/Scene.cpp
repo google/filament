@@ -184,8 +184,7 @@ void FScene::updateUBOs(utils::Range<uint32_t> visibleRenderables, backend::Hand
         const size_t offset = i * sizeof(PerRenderableUib);
 
         UniformBuffer::setUniform(buffer,
-                offset + offsetof(PerRenderableUib, worldFromModelMatrix),
-                model);
+                offset + offsetof(PerRenderableUib, worldFromModelMatrix), model);
 
         // Using mat3f::getTransformForNormals handles non-uniform scaling, but DOESN'T guarantee that
         // the transformed normals will have unit-length, therefore they need to be normalized
@@ -212,6 +211,9 @@ void FScene::updateUBOs(utils::Range<uint32_t> visibleRenderables, backend::Hand
 
         UniformBuffer::setUniform(buffer, offset + offsetof(PerRenderableUib, morphingEnabled),
                 uint32_t(sceneData.elementAt<VISIBILITY_STATE>(i).morphing));
+
+        UniformBuffer::setUniform(buffer, offset + offsetof(PerRenderableUib, screenSpaceContactShadows),
+                uint32_t(sceneData.elementAt<VISIBILITY_STATE>(i).screenSpaceContactShadows));
 
         UniformBuffer::setUniform(buffer,
                 offset + offsetof(PerRenderableUib, morphWeights), sceneData.elementAt<MORPH_WEIGHTS>(i));

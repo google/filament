@@ -132,6 +132,9 @@ bool ShadowMapManager::update(FEngine& engine, FView& view, UniformBuffer& perVi
     uint8_t visibleLayers = view.getVisibleLayers();
     const uint16_t textureSize = mTextureState.size;
 
+    uint32_t directionalShadows = 0;
+    float screenSpaceShadowDistance = 0.0;
+
     auto& lcm = engine.getLightManager();
     if (mDirectionalShadowMap) {
         // Compute the frustum for the directional light.
@@ -166,22 +169,30 @@ bool ShadowMapManager::update(FEngine& engine, FView& view, UniformBuffer& perVi
                     float3{0, normalBias * texelSizeWorldSpace, 0});
 
             hasShadowing = true;
+            directionalShadows |= 0x1u;
+
+            // screen-space contact shadows
+            LightManager::ShadowOptions const& options = lcm.getShadowOptions(light);
+            if (options.screenSpaceContactShadows) {
+                directionalShadows |= std::min(uint8_t(255u), options.stepCount) << 8u;
+                screenSpaceShadowDistance = options.maxShadowDistance;
+            }
         }
     }
 
-    perViewUb.setUniform(offsetof(PerViewUib, directionalShadows),
-            mDirectionalShadowMap && mDirectionalShadowMap.getShadowMap()->hasVisibleShadows());
+    perViewUb.setUniform(offsetof(PerViewUib, directionalShadows), directionalShadows);
+    perViewUb.setUniform(offsetof(PerViewUib, ssContactShadowDistance), screenSpaceShadowDistance);
 
     FScene::ShadowInfo* const shadowInfo = lightData.data<FScene::SHADOW_INFO>();
 
-    for (size_t i = 0; i < mSpotShadowMaps.size(); i++) {
+    for (size_t i = 0, c = mSpotShadowMaps.size(); i < c; i++) {
         auto& entry = mSpotShadowMaps[i];
 
         // compute the frustum for this light
         ShadowMap& shadowMap = *entry.getShadowMap();
-        size_t l = mSpotShadowMaps[i].getLightIndex();
+        size_t l = entry.getLightIndex();
 
-        const size_t textureDimension = mSpotShadowMaps[i].getLayout().size;
+        const size_t textureDimension = entry.getLayout().size;
         const ShadowMap::ShadowMapLayout layout{
                 .zResolution = mTextureZResolution,
                 .atlasDimension = textureSize,

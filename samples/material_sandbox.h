@@ -109,6 +109,9 @@ struct SandboxParameters {
     bool ssao = false;
     filament::View::AmbientOcclusionOptions ssaoOptions;
     filament::View::BloomOptions bloomOptions;
+    bool screenSpaceContactShadows = false;
+    int stepCount = 8;
+    float maxShadowDistance = 0.3;
 };
 
 inline void createInstances(SandboxParameters& params, filament::Engine& engine) {

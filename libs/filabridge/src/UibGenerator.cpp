@@ -76,11 +76,11 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             // ibl max mip level
             .add("iblMaxMipLevel",          1, UniformInterfaceBlock::Type::FLOAT2)
             .add("refractionLodOffset",     1, UniformInterfaceBlock::Type::FLOAT)
-            .add("directionalShadows",      1, UniformInterfaceBlock::Type::BOOL)
+            .add("directionalShadows",      1, UniformInterfaceBlock::Type::UINT)
             // view
             .add("worldOffset",             1, UniformInterfaceBlock::Type::FLOAT3)
+            .add("ssContactShadowDistance", 1, UniformInterfaceBlock::Type::FLOAT)
             // bring size to 1 KiB
-            .add("padding1",                1, UniformInterfaceBlock::Type::FLOAT)
             .add("padding2",                15, UniformInterfaceBlock::Type::FLOAT4)
             .build();
     return uib;
@@ -94,7 +94,8 @@ UniformInterfaceBlock const& UibGenerator::getPerRenderableUib() noexcept {
             .add("morphWeights", 1, UniformInterfaceBlock::Type::FLOAT4, Precision::HIGH)
             .add("skinningEnabled", 1, UniformInterfaceBlock::Type::INT)
             .add("morphingEnabled", 1, UniformInterfaceBlock::Type::INT)
-            .add("padding0", 1, UniformInterfaceBlock::Type::FLOAT2)
+            .add("screenSpaceContactShadows", 1, UniformInterfaceBlock::Type::INT)
+            .add("padding0", 1, UniformInterfaceBlock::Type::FLOAT)
             .build();
     return uib;
 }

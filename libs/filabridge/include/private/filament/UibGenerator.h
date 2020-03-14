@@ -84,10 +84,13 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
 
     filament::math::float2 iblMaxMipLevel; // maxlevel, float(1<<maxlevel)
     float refractionLodOffset;
-    uint32_t directionalShadows; // whether the directional light (sun) casts shadows
+
+    // bit 0: directional (sun) shadow enabled
+    // bit 8-15: screen-space contact shadows ray casting steps
+    uint32_t directionalShadows;
 
     filament::math::float3 worldOffset; // this is (0,0,0) when camera_at_origin is disabled
-    float padding1;
+    float ssContactShadowDistance;
 
     // bring PerViewUib to 1 KiB
     filament::math::float4 padding2[15];
@@ -99,9 +102,11 @@ struct alignas(256) PerRenderableUib {
     filament::math::mat4f worldFromModelMatrix;
     filament::math::mat3f worldFromModelNormalMatrix; // this gets expanded to 48 bytes during the copy to the UBO
     alignas(16) filament::math::float4 morphWeights;
+    // TODO: we can pack all the boolean bellow
     uint32_t skinningEnabled; // 0=disabled, 1=enabled, ignored unless variant & SKINNING_OR_MORPHING
     uint32_t morphingEnabled; // 0=disabled, 1=enabled, ignored unless variant & SKINNING_OR_MORPHING
-    filament::math::float2 padding0;
+    uint32_t screenSpaceContactShadows; // 0=disabled, 1=enabled, ignored unless variant & SKINNING_OR_MORPHING
+    float padding0;
 };
 
 struct LightsUib {

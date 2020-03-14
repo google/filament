@@ -269,14 +269,14 @@ void initScreenSpaceRay(out ScreenSpaceRay ray, highp vec3 wsRayStart, vec3 wsRa
 float screenSpaceContactShadow(vec3 lightDirection) {
     // cast a ray in the direction of the light
     float occlusion = 0.0;
-    const uint STEP_COUNT = 8u;
-    const float MAX_DISTANCE = 0.30f;   // 30cm
+    uint kStepCount = (frameUniforms.directionalShadows >> 8u) & 0xFFu;
+    float kDistanceMax = frameUniforms.ssContactShadowDistance;
 
     ScreenSpaceRay rayData;
-    initScreenSpaceRay(rayData, shading_position, lightDirection, MAX_DISTANCE);
+    initScreenSpaceRay(rayData, shading_position, lightDirection, kDistanceMax);
 
     // step
-    highp float dt = 1.0 / float(STEP_COUNT);
+    highp float dt = 1.0 / float(kStepCount);
 
     // tolerance
     float tolerance = abs(rayData.ssViewRayEnd.z - rayData.ssRayStart.z) * dt * 0.5;
@@ -289,7 +289,7 @@ float screenSpaceContactShadow(vec3 lightDirection) {
     float t = dt * dither + dt;
 
     highp vec3 ray;
-    for (uint i = 0 ; i < STEP_COUNT ; i++, t += dt) {
+    for (uint i = 0 ; i < kStepCount ; i++, t += dt) {
         ray = rayData.uvRayStart + rayData.uvRay * t;
         float z = textureLod(light_structure, uvToRenderTargetUV(ray.xy), 0.0).r;
         float dz = ray.z - z;

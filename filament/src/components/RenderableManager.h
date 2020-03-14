@@ -52,13 +52,16 @@ public:
 
     // TODO: consider renaming, this pertains to material variants, not strictly visibility.
     struct Visibility {
-        uint8_t priority    : 3;
-        bool castShadows    : 1;
-        bool receiveShadows : 1;
-        bool culling        : 1;
-        bool skinning       : 1;
-        bool morphing       : 1;
+        uint8_t priority                : 3;
+        bool castShadows                : 1;
+        bool receiveShadows             : 1;
+        bool culling                    : 1;
+        bool skinning                   : 1;
+        bool morphing                   : 1;
+        bool screenSpaceContactShadows  : 1;
     };
+
+    static_assert(sizeof(Visibility) == sizeof(uint16_t), "Visibility should be 16 bits");
 
     explicit FRenderableManager(FEngine& engine) noexcept;
     ~FRenderableManager();
@@ -103,6 +106,7 @@ public:
 
     inline void setLayerMask(Instance instance, uint8_t layerMask) noexcept;
     inline void setReceiveShadows(Instance instance, bool enable) noexcept;
+    inline void setScreenSpaceContactShadows(Instance instance, bool enable) noexcept;
     inline void setCulling(Instance instance, bool enable) noexcept;
     inline void setSkinning(Instance instance, bool enable) noexcept;
     inline void setMorphing(Instance instance, bool enable) noexcept;
@@ -249,6 +253,13 @@ void FRenderableManager::setReceiveShadows(Instance instance, bool enable) noexc
     if (instance) {
         Visibility& visibility = mManager[instance].visibility;
         visibility.receiveShadows = enable;
+    }
+}
+
+void FRenderableManager::setScreenSpaceContactShadows(Instance instance, bool enable) noexcept {
+    if (instance) {
+        Visibility& visibility = mManager[instance].visibility;
+        visibility.screenSpaceContactShadows = enable;
     }
 }
 
