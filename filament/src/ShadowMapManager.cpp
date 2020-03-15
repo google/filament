@@ -142,6 +142,8 @@ bool ShadowMapManager::update(FEngine& engine, FView& view, UniformBuffer& perVi
         size_t l = mDirectionalShadowMap.getLightIndex();
         assert(l == 0);
 
+        FLightManager::Instance light = lightData.elementAt<FScene::LIGHT_INSTANCE>(l);
+
         const size_t textureDimension = mDirectionalShadowMap.getLayout().size;
         const ShadowMap::ShadowMapLayout layout{
                 .zResolution = mTextureZResolution,
@@ -162,7 +164,6 @@ bool ShadowMapManager::update(FEngine& engine, FView& view, UniformBuffer& perVi
             mat4f const& lightFromWorldMatrix = shadowMap.getLightSpaceMatrix();
             u.setUniform(offsetof(PerViewUib, lightFromWorldMatrix), lightFromWorldMatrix);
 
-            FLightManager::Instance light = lightData.elementAt<FScene::LIGHT_INSTANCE>(l);
             const float texelSizeWorldSpace = shadowMap.getTexelSizeWorldSpace();
             const float normalBias = lcm.getShadowNormalBias(light);
             u.setUniform(offsetof(PerViewUib, shadowBias),
@@ -170,13 +171,14 @@ bool ShadowMapManager::update(FEngine& engine, FView& view, UniformBuffer& perVi
 
             hasShadowing = true;
             directionalShadows |= 0x1u;
+        }
 
-            // screen-space contact shadows
-            LightManager::ShadowOptions const& options = lcm.getShadowOptions(light);
-            if (options.screenSpaceContactShadows) {
-                directionalShadows |= std::min(uint8_t(255u), options.stepCount) << 8u;
-                screenSpaceShadowDistance = options.maxShadowDistance;
-            }
+        // screen-space contact shadows
+        LightManager::ShadowOptions const& options = lcm.getShadowOptions(light);
+        if (options.screenSpaceContactShadows) {
+            hasShadowing = true;
+            directionalShadows |= std::min(uint8_t(255u), options.stepCount) << 8u;
+            screenSpaceShadowDistance = options.maxShadowDistance;
         }
     }
 
