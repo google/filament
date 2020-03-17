@@ -28,6 +28,17 @@ void main() {
 
     fragColor = evaluateMaterial(inputs);
 
+#if defined(HAS_FOG)
+    // we need the real world position, which is obtained by adding the world-offset
+    vec3 wsCameraPostion = getWorldCameraPosition() + getWorldOffset();
+    vec3 wsFragPosition = getWorldPosition() + getWorldOffset();
+
+    // now we need the world-space vector from camera to the shaded fragment
+    vec3 cameraToWorld = wsFragPosition - wsCameraPostion;
+
+    fragColor.rgb = fog(fragColor.rgb, cameraToWorld, wsCameraPostion, vec3(0, 1, 0));
+#endif
+
 #if defined(MATERIAL_HAS_POST_LIGHTING_COLOR)
     blendPostLightingColor(inputs, fragColor);
 #endif

@@ -602,10 +602,22 @@ void FView::prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& are
      * Update driver state
      */
 
+    auto& u = mPerViewUb;
+
     const uint64_t oneSecondRemainder = engine.getEngineTime().count() % 1000000000;
     const float fraction = float(double(oneSecondRemainder) / 1000000000.0);
-    mPerViewUb.setUniform(offsetof(PerViewUib, time), fraction);
-    mPerViewUb.setUniform(offsetof(PerViewUib, userTime), userTime);
+    u.setUniform(offsetof(PerViewUib, time), fraction);
+    u.setUniform(offsetof(PerViewUib, userTime), userTime);
+
+    auto const& fogOptions = mFogOptions;
+    u.setUniform(offsetof(PerViewUib, fogStart),             fogOptions.distance);
+    u.setUniform(offsetof(PerViewUib, fogMinOpacity),        fogOptions.minimumOpacity);
+    u.setUniform(offsetof(PerViewUib, fogHeight),            fogOptions.height);
+    u.setUniform(offsetof(PerViewUib, fogHeightFalloff),     fogOptions.heightFalloff);
+    u.setUniform(offsetof(PerViewUib, fogColor),             fogOptions.color);
+    u.setUniform(offsetof(PerViewUib, fogDensity),           fogOptions.density);
+    u.setUniform(offsetof(PerViewUib, fogInscatteringStart), fogOptions.inScatteringStart);
+    u.setUniform(offsetof(PerViewUib, fogInscatteringSize),  fogOptions.inScatteringSize);
 
     // upload the renderables's dirty UBOs
     engine.getRenderableManager().prepare(driver,
@@ -693,6 +705,8 @@ void FView::prepareCamera(const CameraInfo& camera, const filament::Viewport& vi
 
     u.setUniform(offsetof(PerViewUib, cameraPosition), float3{camera.getPosition()});
     u.setUniform(offsetof(PerViewUib, worldOffset), camera.worldOffset);
+    u.setUniform(offsetof(PerViewUib, cameraNear), camera.zn);
+    u.setUniform(offsetof(PerViewUib, cameraFar), camera.zf);
 }
 
 void FView::prepareSSAO(Handle<HwTexture> ssao) const noexcept {
@@ -1033,6 +1047,10 @@ View::AmbientOcclusionOptions const& View::getAmbientOcclusionOptions() const no
 
 void View::setBloomOptions(View::BloomOptions options) noexcept {
     upcast(this)->setBloomOptions(options);
+}
+
+void View::setFogOptions(View::FogOptions options) noexcept {
+    upcast(this)->setFogOptions(options);
 }
 
 View::BloomOptions View::getBloomOptions() const noexcept {

@@ -696,7 +696,7 @@ void FilamentApp::Window::configureCamerasForWindow() {
     const uint32_t mainWidth = std::max(1, (int) width - sidebar);
 
     double near = 0.1;
-    double far = 50;
+    double far = 100;
     mMainCamera->setLensProjection(mFilamentApp->mCameraFocalLength, double(mainWidth) / height, near, far);
     mDebugCamera->setProjection(45.0, double(width) / height, 0.0625, 4096, Camera::Fov::VERTICAL);
     mOrthoCamera->setProjection(Camera::Projection::ORTHO, -3, 3, -3 * ratio, 3 * ratio, near, far);

@@ -173,6 +173,7 @@ public:
     bool hasDirectionalLight() const noexcept { return mHasDirectionalLight; }
     bool hasDynamicLighting() const noexcept { return mHasDynamicLighting; }
     bool hasShadowing() const noexcept { return mHasShadowing; }
+    bool hasFog() const noexcept { return mFogOptions.enabled && mFogOptions.density > 0.0f; }
 
     void renderShadowMaps(FEngine& engine, FEngine::DriverApi& driver, RenderPass& pass) noexcept;
 
@@ -286,6 +287,10 @@ public:
         mBloomOptions = options;
     }
 
+    void setFogOptions(FogOptions options) noexcept {
+        mFogOptions = options;
+    }
+
     BloomOptions getBloomOptions() const noexcept {
         return mBloomOptions;
     }
@@ -390,6 +395,7 @@ private:
     AmbientOcclusion mAmbientOcclusion = AmbientOcclusion::NONE;
     AmbientOcclusionOptions mAmbientOcclusionOptions{};
     BloomOptions mBloomOptions;
+    FogOptions mFogOptions;
 
     using duration = std::chrono::duration<float, std::milli>;
     DynamicResolutionOptions mDynamicResolution;

@@ -150,7 +150,7 @@ ShaderGenerator::ShaderGenerator(
     }
 }
 
-const std::string ShaderGenerator::createVertexProgram(filament::backend::ShaderModel shaderModel,
+std::string ShaderGenerator::createVertexProgram(filament::backend::ShaderModel shaderModel,
         MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
         MaterialInfo const& material, uint8_t variantKey, filament::Interpolation interpolation,
         filament::VertexDomain vertexDomain) const noexcept {
@@ -267,7 +267,7 @@ static bool isMobileTarget(filament::backend::ShaderModel model) {
     }
 }
 
-const std::string ShaderGenerator::createFragmentProgram(filament::backend::ShaderModel shaderModel,
+std::string ShaderGenerator::createFragmentProgram(filament::backend::ShaderModel shaderModel,
         MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
         MaterialInfo const& material, uint8_t variantKey,
         filament::Interpolation interpolation) const noexcept {
@@ -330,6 +330,7 @@ const std::string ShaderGenerator::createFragmentProgram(filament::backend::Shad
     cg.generateDefine(fs, "HAS_DYNAMIC_LIGHTING", litVariants && variant.hasDynamicLighting());
     cg.generateDefine(fs, "HAS_SHADOWING", litVariants && variant.hasShadowReceiver());
     cg.generateDefine(fs, "HAS_SHADOW_MULTIPLIER", material.hasShadowMultiplier);
+    cg.generateDefine(fs, "HAS_FOG", variant.hasFog());
 
     // material defines
     cg.generateDefine(fs, "MATERIAL_HAS_DOUBLE_SIDED_CAPABILITY", material.hasDoubleSidedCapability);
@@ -444,7 +445,7 @@ void ShaderGenerator::fixupExternalSamplers(filament::backend::ShaderModel sm,
     }
 }
 
-const std::string ShaderGenerator::createPostProcessVertexProgram(
+std::string ShaderGenerator::createPostProcessVertexProgram(
         filament::backend::ShaderModel sm, MaterialBuilder::TargetApi targetApi,
         MaterialBuilder::TargetLanguage targetLanguage, MaterialInfo const& material,
         uint8_t variant, const filament::SamplerBindingMap& samplerBindingMap) const noexcept {
@@ -485,7 +486,7 @@ const std::string ShaderGenerator::createPostProcessVertexProgram(
     return vs.c_str();
 }
 
-const std::string ShaderGenerator::createPostProcessFragmentProgram(
+std::string ShaderGenerator::createPostProcessFragmentProgram(
         filament::backend::ShaderModel sm, MaterialBuilder::TargetApi targetApi,
         MaterialBuilder::TargetLanguage targetLanguage, MaterialInfo const& material,
         uint8_t variant, const filament::SamplerBindingMap& samplerBindingMap) const noexcept {

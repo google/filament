@@ -55,7 +55,10 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
 
     filament::math::float4 resolution; // viewport width, height, 1/width, 1/height
 
-    filament::math::float3 cameraPosition; // this is (0,0,0) when camera_at_origin is enabled
+    // camera position in view space (when camera_at_origin is enabled), i.e. it's (0,0,0).
+    // Always add worldOffset in the shader to get the true world-space position of the camera.
+    filament::math::float3 cameraPosition;
+
     float time; // time in seconds, with a 1 second period
 
     filament::math::float4 lightColorIntensity; // directional light
@@ -92,8 +95,21 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     filament::math::float3 worldOffset; // this is (0,0,0) when camera_at_origin is disabled
     float ssContactShadowDistance;
 
+    // fog
+    float fogStart;
+    float fogMinOpacity;
+    float fogHeight;
+    float fogHeightFalloff;
+    math::float3 fogColor;
+    float fogDensity;
+    float fogInscatteringStart;
+    float fogInscatteringSize;
+
+    float cameraNear;       // camera near-plane distance (positive value)
+    float cameraFar;        // camera *culling* far-plane distance (projection far is at +inf)
+
     // bring PerViewUib to 1 KiB
-    filament::math::float4 padding2[15];
+    filament::math::float4 padding2[12];
 };
 
 

@@ -201,6 +201,7 @@ private:
     bool mEnableMsaa = true;
     bool mEnableSsao = true;
     filament::View::BloomOptions mBloomOptions = { .enabled = true };
+    filament::View::FogOptions mFogOptions = {};
     int mSidebarWidth;
     uint32_t mFlags;
 };
@@ -444,13 +445,6 @@ void SimpleViewer::updateUserInterface() {
         ImGui::Checkbox("Bloom", &mBloomOptions.enabled);
     }
 
-    mView->setDithering(mEnableDithering ? View::Dithering::TEMPORAL : View::Dithering::NONE);
-    mView->setAntiAliasing(mEnableFxaa ? View::AntiAliasing::FXAA : View::AntiAliasing::NONE);
-    mView->setSampleCount(mEnableMsaa ? 4 : 1);
-    mView->setAmbientOcclusion(
-            mEnableSsao ? View::AmbientOcclusion::SSAO : View::AmbientOcclusion::NONE);
-    mView->setBloomOptions(mBloomOptions);
-
     if (ImGui::CollapsingHeader("Light", headerFlags)) {
         ImGui::SliderFloat("IBL intensity", &mIblIntensity, 0.0f, 100000.0f);
         ImGui::SliderAngle("IBL rotation", &mIblRotation);
@@ -460,6 +454,25 @@ void SimpleViewer::updateUserInterface() {
         ImGui::Checkbox("Enable shadows", &mEnableShadows);
         ImGui::Checkbox("Enable contact shadows", &mEnableContactShadows);
     }
+
+    if (ImGui::CollapsingHeader("Fog")) {
+        ImGui::Checkbox("Enable Fog", &mFogOptions.enabled);
+        ImGui::SliderFloat("Start", &mFogOptions.distance, 0.0f, 100.0f);
+        ImGui::SliderFloat("Density", &mFogOptions.density, 0.0f, 1.0f);
+        ImGui::SliderFloat("Height", &mFogOptions.height, 0.0f, 100.0f);
+        ImGui::SliderFloat("Height Falloff", &mFogOptions.heightFalloff, 0.0f, 10.0f);
+        ImGui::SliderFloat("Scattering Start", &mFogOptions.inScatteringStart, 0.0f, 100.0f);
+        ImGui::SliderFloat("Scattering Size", &mFogOptions.inScatteringSize, 0.0f, 1.0f);
+        ImGui::ColorPicker3("Color", mFogOptions.color.v);
+    }
+
+    mView->setDithering(mEnableDithering ? View::Dithering::TEMPORAL : View::Dithering::NONE);
+    mView->setAntiAliasing(mEnableFxaa ? View::AntiAliasing::FXAA : View::AntiAliasing::NONE);
+    mView->setSampleCount(mEnableMsaa ? 4 : 1);
+    mView->setAmbientOcclusion(
+            mEnableSsao ? View::AmbientOcclusion::SSAO : View::AmbientOcclusion::NONE);
+    mView->setBloomOptions(mBloomOptions);
+    mView->setFogOptions(mFogOptions);
 
     if (mEnableSunlight) {
         mScene->addEntity(mSunlight);

@@ -239,6 +239,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     if (view.hasShadowing())               renderFlags |= RenderPass::HAS_SHADOWING;
     if (view.hasDirectionalLight())        renderFlags |= RenderPass::HAS_DIRECTIONAL_LIGHT;
     if (view.hasDynamicLighting())         renderFlags |= RenderPass::HAS_DYNAMIC_LIGHTING;
+    if (view.hasFog())                     renderFlags |= RenderPass::HAS_FOG;
     if (view.isFrontFaceWindingInverted()) renderFlags |= RenderPass::HAS_INVERSE_FRONT_FACES;
     pass.setRenderFlags(renderFlags);
 
