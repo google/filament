@@ -140,8 +140,8 @@ vec4 computeWorldPosition() {
     vec3 position = getPosition().xyz;
     return mulMat4x4Float3(transform, position);
 #else
-    mat4 transform = getWorldFromViewMatrix() * getViewFromClipMatrix();
-    vec3 position = getPosition().xyz;
-    return mulMat4x4Float3(transform, position);
+    mat4 transform = getWorldFromClipMatrix();
+    vec4 position = transform * getPosition();
+    return position * (1.0 / position.w);
 #endif
 }
