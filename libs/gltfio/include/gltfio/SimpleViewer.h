@@ -195,6 +195,7 @@ private:
     bool mEnableWireframe = false;
     bool mEnableSunlight = true;
     bool mEnableShadows = true;
+    bool mEnableContactShadows = true;
     bool mEnableDithering = true;
     bool mEnableFxaa = true;
     bool mEnableMsaa = true;
@@ -282,9 +283,15 @@ void SimpleViewer::populateScene(FilamentAsset* asset, bool scale) {
         }
     }
 
+    auto& tcm = mEngine->getRenderableManager();
+
     static constexpr int kNumAvailable = 128;
     utils::Entity renderables[kNumAvailable];
     while (size_t numWritten = mAsset->popRenderables(renderables, kNumAvailable)) {
+        for (size_t i = 0; i < numWritten; i++) {
+            auto ri = tcm.getInstance(renderables[i]);
+            tcm.setScreenSpaceContactShadows(ri, true);
+        }
         mScene->addEntities(renderables, numWritten);
     }
 }
@@ -451,6 +458,7 @@ void SimpleViewer::updateUserInterface() {
         ImGuiExt::DirectionWidget("Sun direction", mSunlightDirection.v);
         ImGui::Checkbox("Enable sunlight", &mEnableSunlight);
         ImGui::Checkbox("Enable shadows", &mEnableShadows);
+        ImGui::Checkbox("Enable contact shadows", &mEnableContactShadows);
     }
 
     if (mEnableSunlight) {
@@ -460,6 +468,9 @@ void SimpleViewer::updateUserInterface() {
         lm.setDirection(sun, normalize(mSunlightDirection));
         lm.setColor(sun, mSunlightColor);
         lm.setShadowCaster(sun, mEnableShadows);
+        auto options = lm.getShadowOptions(sun);
+        options.screenSpaceContactShadows = mEnableContactShadows;
+        lm.setShadowOptions(sun, options);
     } else {
         mScene->remove(mSunlight);
     }

@@ -204,6 +204,7 @@ static void setup(Engine* engine, View*, Scene* scene) {
         if (!instance) continue;
 
         rcm.setCastShadows(instance, g_params.castShadows);
+        rcm.setScreenSpaceContactShadows(instance, true);
 
         if (!g_singleMode || count == 0) {
             for (size_t i = 0; i < rcm.getPrimitiveCount(instance); i++) {
@@ -476,6 +477,12 @@ static void gui(filament::Engine* engine, filament::View*) {
             ImGui::SliderAngle("ibl rotation", &params.iblRotation);
             ImGuiExt::DirectionWidget("direction", params.lightDirection.v);
             ImGui::Indent();
+            if (ImGui::CollapsingHeader("Contact Shadows")) {
+                DebugRegistry& debug = engine->getDebugRegistry();
+                ImGui::Checkbox("enabled###contactShadows", &params.screenSpaceContactShadows);
+                ImGui::SliderInt("steps", &params.stepCount, 0, 255);
+                ImGui::SliderFloat("distance", &params.maxShadowDistance, 0.0f, 10.0f);
+            }
             if (ImGui::CollapsingHeader("SSAO")) {
                 DebugRegistry& debug = engine->getDebugRegistry();
                 ImGui::Checkbox("enabled###ssao", &params.ssao);
@@ -578,6 +585,9 @@ static void gui(filament::Engine* engine, filament::View*) {
     options.constantBias = params.constantBias;
     options.polygonOffsetConstant = params.polygonOffsetConstant;
     options.polygonOffsetSlope = params.polygonOffsetSlope;
+    options.screenSpaceContactShadows = params.screenSpaceContactShadows;
+    options.stepCount = params.stepCount;
+    options.maxShadowDistance = params.maxShadowDistance;
     lcm.setShadowOptions(lightInstance, options);
 }
 

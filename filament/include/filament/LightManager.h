@@ -233,6 +233,27 @@ public:
          * Setting this value correctly is essential for LISPSM shadow-maps.
          */
         float polygonOffsetSlope = 2.0f;
+
+        /**
+         * Whether screen-space contact shadows are used. This applies regardless of whether a
+         * Renderable is a shadow caster. This setting is currently only used for directional
+         * lights, ignored otherwise.
+         * Screen-space contact shadows are typically useful in large scenes.
+         * (off by default)
+         */
+        bool screenSpaceContactShadows = false;
+
+        /**
+         * Number of ray-marching steps for screen-space contact shadows.
+         * (8 by default)
+         */
+        uint8_t stepCount = 8;
+
+        /**
+         * Maximum shadow-occluder distance for screen-space contact shadows (world units).
+         * (30 cm by default)
+         */
+        float maxShadowDistance = 0.3;
     };
 
     //! Use Builder to construct a Light object instance

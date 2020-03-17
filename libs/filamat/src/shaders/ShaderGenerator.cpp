@@ -392,6 +392,8 @@ const std::string ShaderGenerator::createFragmentProgram(filament::backend::Shad
     cg.generateUniforms(fs, ShaderType::FRAGMENT,
             BindingPoints::PER_VIEW, UibGenerator::getPerViewUib());
     cg.generateUniforms(fs, ShaderType::FRAGMENT,
+            BindingPoints::PER_RENDERABLE, UibGenerator::getPerRenderableUib());
+    cg.generateUniforms(fs, ShaderType::FRAGMENT,
             BindingPoints::LIGHTS, UibGenerator::getLightsUib());
     cg.generateUniforms(fs, ShaderType::FRAGMENT,
             BindingPoints::PER_MATERIAL_INSTANCE, material.uib);

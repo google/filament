@@ -66,7 +66,8 @@ Java_com_google_android_filament_LightManager_nBuilderCastShadows(JNIEnv*, jclas
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_LightManager_nBuilderShadowOptions(JNIEnv*, jclass,
         jlong nativeBuilder, jint mapSize, jfloat constantBias, jfloat normalBias, jfloat shadowFar,
-        jfloat shadowNearHint, jfloat shadowFarHint, jboolean stable) {
+        jfloat shadowNearHint, jfloat shadowFarHint, jboolean stable,
+        jboolean screenSpaceContactShadows, jint stepCount, jfloat maxShadowDistance) {
     LightManager::Builder *builder = (LightManager::Builder *) nativeBuilder;
     builder->shadowOptions(
             LightManager::ShadowOptions{.mapSize = (uint32_t)mapSize,
@@ -75,7 +76,10 @@ Java_com_google_android_filament_LightManager_nBuilderShadowOptions(JNIEnv*, jcl
                                         .shadowFar = shadowFar,
                                         .shadowNearHint = shadowNearHint,
                                         .shadowFarHint = shadowFarHint,
-                                        .stable = (bool)stable});
+                                        .stable = (bool)stable,
+                                        .screenSpaceContactShadows = (bool)screenSpaceContactShadows,
+                                        .stepCount = uint8_t(stepCount),
+                                        .maxShadowDistance = maxShadowDistance});
 }
 
 extern "C" JNIEXPORT void JNICALL
