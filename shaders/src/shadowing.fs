@@ -289,7 +289,7 @@ float screenSpaceContactShadow(vec3 lightDirection) {
     float t = dt * dither + dt;
 
     highp vec3 ray;
-    for (uint i = 0 ; i < kStepCount ; i++, t += dt) {
+    for (uint i = 0u ; i < kStepCount ; i++, t += dt) {
         ray = rayData.uvRayStart + rayData.uvRay * t;
         float z = textureLod(light_structure, uvToRenderTargetUV(ray.xy), 0.0).r;
         float dz = ray.z - z;
