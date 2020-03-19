@@ -36,7 +36,16 @@ vec4 evaluateMaterial(const MaterialInputs material) {
 
 #if defined(HAS_DIRECTIONAL_LIGHTING)
 #if defined(HAS_SHADOWING)
-    color *= 1.0 - shadow(light_shadowMap, 0u, getLightSpacePosition());
+    float visibility = 1.0;
+    if ((frameUniforms.directionalShadows & 1u) != 0u) {
+        visibility = shadow(light_shadowMap, 0u, getLightSpacePosition());
+    }
+    if (visibility > 0.0 && frameUniforms.ssContactShadowDistance != 0.0) {
+        if (objectUniforms.screenSpaceContactShadows != 0) {
+            visibility *= (1.0 - screenSpaceContactShadow(frameUniforms.lightDirection));
+        }
+    }
+    color *= 1.0 - visibility;
 #else
     color = vec4(0.0);
 #endif
