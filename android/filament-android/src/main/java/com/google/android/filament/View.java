@@ -276,9 +276,9 @@ public class View {
         public float distance = 1.0f;
 
         /**
-         * fog's minimum opacity between 0 and 1
+         * fog's maximum opacity between 0 and 1
          */
-        public float minimumOpacity = 0.0f;
+        public float maximumOpacity = 1.0f;
 
         /**
          * fog's floor in world units
@@ -903,7 +903,7 @@ public class View {
      */
     public void setFogOptions(@NonNull FogOptions options) {
         mFogOptions = options;
-        nSetFogOptions(getNativeObject(), options.distance, options.minimumOpacity, options.height,
+        nSetFogOptions(getNativeObject(), options.distance, options.maximumOpacity, options.height,
                 options.heightFalloff, options.color[0], options.color[1], options.color[2],
                 options.density, options.inScatteringStart, options.inScatteringSize,
                 options.enabled);
@@ -965,6 +965,6 @@ public class View {
     private static native int nGetAmbientOcclusion(long nativeView);
     private static native void nSetAmbientOcclusionOptions(long nativeView, float radius, float bias, float power, float resolution, float intensity, int quality);
     private static native void nSetBloomOptions(long nativeView, long dirtNativeObject, float dirtStrength, float strength, int resolution, float anamorphism, int levels, int blendMode, boolean threshold, boolean enabled);
-    private static native void nSetFogOptions(long nativeView, float distance, float minimumOpacity, float height, float heightFalloff, float v, float v1, float v2, float density, float inScatteringStart, float inScatteringSize, boolean enabled);
+    private static native void nSetFogOptions(long nativeView, float distance, float maximumOpacity, float height, float heightFalloff, float v, float v1, float v2, float density, float inScatteringStart, float inScatteringSize, boolean enabled);
 
 }

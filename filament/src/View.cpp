@@ -611,7 +611,7 @@ void FView::prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& are
 
     auto const& fogOptions = mFogOptions;
     u.setUniform(offsetof(PerViewUib, fogStart),             fogOptions.distance);
-    u.setUniform(offsetof(PerViewUib, fogMinOpacity),        fogOptions.minimumOpacity);
+    u.setUniform(offsetof(PerViewUib, fogMaxOpacity),        fogOptions.maximumOpacity);
     u.setUniform(offsetof(PerViewUib, fogHeight),            fogOptions.height);
     u.setUniform(offsetof(PerViewUib, fogHeightFalloff),     fogOptions.heightFalloff);
     u.setUniform(offsetof(PerViewUib, fogColor),             fogOptions.color);

@@ -82,7 +82,7 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             .add("ssContactShadowDistance", 1, UniformInterfaceBlock::Type::FLOAT)
             // fog
             .add("fogStart",                1, UniformInterfaceBlock::Type::FLOAT)
-            .add("fogMinOpacity",           1, UniformInterfaceBlock::Type::FLOAT)
+            .add("fogMaxOpacity",           1, UniformInterfaceBlock::Type::FLOAT)
             .add("fogHeight",               1, UniformInterfaceBlock::Type::FLOAT)
             .add("fogHeightFalloff",        1, UniformInterfaceBlock::Type::FLOAT)
             .add("fogColor",                1, UniformInterfaceBlock::Type::FLOAT3)
