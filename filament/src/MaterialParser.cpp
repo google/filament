@@ -49,11 +49,11 @@ MaterialParser::MaterialParserDetails::MaterialParserDetails(Backend backend, co
     switch (backend) {
         case Backend::OPENGL:
             mMaterialTag = ChunkType::MaterialGlsl;
-            mDictionaryTag = ChunkType::DictionaryGlsl;
+            mDictionaryTag = ChunkType::DictionaryText;
             break;
         case Backend::METAL:
             mMaterialTag = ChunkType::MaterialMetal;
-            mDictionaryTag = ChunkType::DictionaryMetal;
+            mDictionaryTag = ChunkType::DictionaryText;
             break;
         case Backend::VULKAN:
             mMaterialTag = ChunkType::MaterialSpirv;
@@ -62,7 +62,7 @@ MaterialParser::MaterialParserDetails::MaterialParserDetails(Backend backend, co
         default:
             // this is for testing purpose -- for e.g.: with the NoopDriver
             mMaterialTag = ChunkType::MaterialGlsl;
-            mDictionaryTag = ChunkType::DictionaryGlsl;
+            mDictionaryTag = ChunkType::DictionaryText;
             break;
     }
 }

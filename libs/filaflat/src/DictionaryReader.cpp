@@ -76,8 +76,7 @@ bool DictionaryReader::unflatten(ChunkContainer const& container,
 
         }
         return true;
-    } else if (dictionaryTag == ChunkType::DictionaryGlsl
-               || dictionaryTag == ChunkType::DictionaryMetal) {
+    } else if (dictionaryTag == ChunkType::DictionaryText) {
         uint32_t stringCount = 0;
         if (!unflattener.read(&stringCount)) {
             return false;
