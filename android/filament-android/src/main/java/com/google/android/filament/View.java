@@ -64,6 +64,7 @@ public class View {
     private RenderQuality mRenderQuality;
     private AmbientOcclusionOptions mAmbientOcclusionOptions;
     private BloomOptions mBloomOptions;
+    private FogOptions mFogOptions;
     private RenderTarget mRenderTarget;
 
     /**
@@ -259,6 +260,59 @@ public class View {
 
         /**
          * enable or disable bloom
+         */
+        public boolean enabled = false;
+    }
+
+    /**
+     * Options to control fog in the scene
+     *
+     * @see setFogOptions
+     */
+    public static class FogOptions {
+        /**
+         * distance in world units from the camera where the fog starts ( >= 0.0 )
+         */
+        public float distance = 1.0f;
+
+        /**
+         * fog's maximum opacity between 0 and 1
+         */
+        public float maximumOpacity = 1.0f;
+
+        /**
+         * fog's floor in world units
+         */
+        public float height = 0.0f;
+
+        /**
+         * how fast fog dissipates with altitude
+         */
+        public float heightFalloff = 1.0f;
+
+        /**
+         * fog's color (linear)
+         */
+        @NonNull
+        public float[] color = { 0.5f, 0.5f, 0.5f };
+
+        /**
+         * fog's density at altitude given by 'height'
+         */
+        public float density = 0.1f;
+
+        /**
+         * distance in world units from the camera where in-scattering starts
+         */
+        public float inScatteringStart = 0.0f;
+
+        /**
+         * size of in-scattering (>0 to activate)
+         */
+        public float inScatteringSize = 0.0f;
+
+        /**
+         * enable or disable fog
          */
         public boolean enabled = false;
     }
@@ -843,6 +897,19 @@ public class View {
     }
 
     /**
+     * Sets fog options.
+     *
+     * @param options Options for fog.
+     */
+    public void setFogOptions(@NonNull FogOptions options) {
+        mFogOptions = options;
+        nSetFogOptions(getNativeObject(), options.distance, options.maximumOpacity, options.height,
+                options.heightFalloff, options.color[0], options.color[1], options.color[2],
+                options.density, options.inScatteringStart, options.inScatteringSize,
+                options.enabled);
+    }
+
+    /**
      * Gets the bloom options
      *
      * @return bloom options currently set.
@@ -898,4 +965,6 @@ public class View {
     private static native int nGetAmbientOcclusion(long nativeView);
     private static native void nSetAmbientOcclusionOptions(long nativeView, float radius, float bias, float power, float resolution, float intensity, int quality);
     private static native void nSetBloomOptions(long nativeView, long dirtNativeObject, float dirtStrength, float strength, int resolution, float anamorphism, int levels, int blendMode, boolean threshold, boolean enabled);
+    private static native void nSetFogOptions(long nativeView, float distance, float maximumOpacity, float height, float heightFalloff, float v, float v1, float v2, float density, float inScatteringStart, float inScatteringSize, boolean enabled);
+
 }

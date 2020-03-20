@@ -494,6 +494,17 @@ static void gui(filament::Engine* engine, filament::View*) {
             ImGui::Unindent();
         }
 
+        if (ImGui::CollapsingHeader("Fog")) {
+            ImGui::Checkbox("Enable Fog", &params.fogOptions.enabled);
+            ImGui::SliderFloat("Start", &params.fogOptions.distance, 0.0f, 100.0f);
+            ImGui::SliderFloat("Density", &params.fogOptions.density, 0.0f, 1.0f);
+            ImGui::SliderFloat("Height", &params.fogOptions.height, 0.0f, 100.0f);
+            ImGui::SliderFloat("Height Falloff", &params.fogOptions.heightFalloff, 0.0f, 10.0f);
+            ImGui::SliderFloat("Scattering Start", &params.fogOptions.inScatteringStart, 0.0f, 100.0f);
+            ImGui::SliderFloat("Scattering Size", &params.fogOptions.inScatteringSize, 0.0f, 1.0f);
+            ImGui::ColorPicker3("Color", params.fogOptions.color.v);
+        }
+
         if (ImGui::CollapsingHeader("Post-processing")) {
             ImGui::Checkbox("msaa 4x", &params.msaa);
             ImGui::Checkbox("tone-mapping", &params.tonemapping);
@@ -596,6 +607,7 @@ static void preRender(filament::Engine*, filament::View* view, filament::Scene*,
     view->setToneMapping(g_params.tonemapping ? View::ToneMapping::ACES : View::ToneMapping::LINEAR);
     view->setDithering(g_params.dithering ? View::Dithering::TEMPORAL : View::Dithering::NONE);
     view->setBloomOptions(g_params.bloomOptions);
+    view->setFogOptions(g_params.fogOptions);
     view->setSampleCount((uint8_t) (g_params.msaa ? 4 : 1));
     view->setAmbientOcclusion(
             g_params.ssao ? View::AmbientOcclusion::SSAO : View::AmbientOcclusion::NONE);

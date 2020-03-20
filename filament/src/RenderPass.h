@@ -50,14 +50,14 @@ public:
     static constexpr uint64_t BLEND_TWO_PASS_MASK           = 0x1llu;
     static constexpr unsigned BLEND_TWO_PASS_SHIFT          = 0;
 
-    static constexpr uint64_t MATERIAL_INSTANCE_ID_MASK     = 0x0000FFFFllu;
+    static constexpr uint64_t MATERIAL_INSTANCE_ID_MASK     = 0x00000FFFllu;
     static constexpr unsigned MATERIAL_INSTANCE_ID_SHIFT    = 0;
 
-    static constexpr uint64_t MATERIAL_VARIANT_KEY_MASK     = 0x001F0000llu;
-    static constexpr unsigned MATERIAL_VARIANT_KEY_SHIFT    = 16;
+    static constexpr uint64_t MATERIAL_VARIANT_KEY_MASK     = 0x000FF000llu;
+    static constexpr unsigned MATERIAL_VARIANT_KEY_SHIFT    = 12;
 
-    static constexpr uint64_t MATERIAL_ID_MASK              = 0xFFE00000llu;
-    static constexpr unsigned MATERIAL_ID_SHIFT             = 21;
+    static constexpr uint64_t MATERIAL_ID_MASK              = 0xFFF00000llu;
+    static constexpr unsigned MATERIAL_ID_SHIFT             = 20;
 
     static constexpr uint64_t BLEND_DISTANCE_MASK           = 0xFFFFFFFF0000llu;
     static constexpr unsigned BLEND_DISTANCE_SHIFT          = 16;
@@ -180,10 +180,10 @@ public:
 
     // The sorting material key is 32 bits and encoded as:
     //
-    // |    11     |  5  |       16       |
-    // +-----------+-----+----------------+
-    // | material  | var |   instance     |
-    // +-----------+-----+----------------+
+    // |     12     |   8    |     12     |
+    // +------------+--------+------------+
+    // |  material  |variant |  instance  |
+    // +------------+--------+------------+
     //
     // The variant is inserted while building the commands, because we don't know it before that
     //
@@ -238,6 +238,7 @@ public:
     static constexpr RenderFlags HAS_DIRECTIONAL_LIGHT   = 0x02;
     static constexpr RenderFlags HAS_DYNAMIC_LIGHTING    = 0x04;
     static constexpr RenderFlags HAS_INVERSE_FRONT_FACES = 0x08;
+    static constexpr RenderFlags HAS_FOG                 = 0x10;
 
 
     RenderPass(FEngine& engine, utils::GrowingSlice<Command> commands) noexcept;

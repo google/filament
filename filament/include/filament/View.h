@@ -154,15 +154,30 @@ public:
             ADD,           //!< Bloom is modulated by the strength parameter and added to the scene
             INTERPOLATE    //!< Bloom is interpolated with the scene using the strength parameter
         };
-        Texture* dirt = nullptr;                //!< User provided dirt texture
+        Texture* dirt = nullptr;                //!< user provided dirt texture
         float dirtStrength = 0.2f;              //!< strength of the dirt texture
-        float strength = 0.10f;                 //!< Between 0.0 and 1.0
-        uint32_t resolution = 360;              //!< Resolution of minor axis (2^levels to 4096)
-        float anamorphism = 1.0f;               //!< Bloom x/y aspect-ratio (1/32 to 32)
+        float strength = 0.10f;                 //!< bloom's strength between 0.0 and 1.0
+        uint32_t resolution = 360;              //!< resolution of minor axis (2^levels to 4096)
+        float anamorphism = 1.0f;               //!< bloom x/y aspect-ratio (1/32 to 32)
         uint8_t levels = 6;                     //!< number of blur levels (3 to 12)
-        BlendMode blendMode = BlendMode::ADD;   //!< How the bloom effect is applied
-        bool threshold = true;                  //!< Whether to threshold the source
+        BlendMode blendMode = BlendMode::ADD;   //!< how the bloom effect is applied
+        bool threshold = true;                  //!< whether to threshold the source
         bool enabled = false;                   //!< enable or disable bloom
+    };
+
+    /**
+     * Options to control fog in the scene
+     */
+    struct FogOptions {
+        float distance = 1.0f;              //!< distance in world units from the camera where the fog starts ( >= 0.0 )
+        float maximumOpacity = 1.0f;        //!< fog's maximum opacity between 0 and 1
+        float height = 0.0f;                //!< fog's floor in world units
+        float heightFalloff = 1.0f;         //!< how fast fog dissipates with altitude
+        math::float3 color{ 0.5f };         //!< fog's color (linear)
+        float density = 0.1f;               //!< fog's density at altitude given by 'height'
+        float inScatteringStart = 0.0f;     //!< distance in world units from the camera where in-scattering starts
+        float inScatteringSize = 0.0f;      //!< size of in-scattering (>0 to activate)
+        bool enabled = false;               //!< enable or disable fog
     };
 
     /**
@@ -497,9 +512,16 @@ public:
     /**
      * Enables or disables bloom in the post-processing stage. Disabled by default.
      *
-     * @param bloom options
+     * @param options options
      */
     void setBloomOptions(BloomOptions options) noexcept;
+
+    /**
+     * Enables or disables fog. Disabled by default.
+     *
+     * @param options options
+     */
+    void setFogOptions(FogOptions options) noexcept;
 
     /**
      * Queries the bloom options.

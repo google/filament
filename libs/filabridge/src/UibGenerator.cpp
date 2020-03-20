@@ -80,8 +80,21 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             // view
             .add("worldOffset",             1, UniformInterfaceBlock::Type::FLOAT3)
             .add("ssContactShadowDistance", 1, UniformInterfaceBlock::Type::FLOAT)
+            // fog
+            .add("fogStart",                1, UniformInterfaceBlock::Type::FLOAT)
+            .add("fogMaxOpacity",           1, UniformInterfaceBlock::Type::FLOAT)
+            .add("fogHeight",               1, UniformInterfaceBlock::Type::FLOAT)
+            .add("fogHeightFalloff",        1, UniformInterfaceBlock::Type::FLOAT)
+            .add("fogColor",                1, UniformInterfaceBlock::Type::FLOAT3)
+            .add("fogDensity",              1, UniformInterfaceBlock::Type::FLOAT)
+            .add("fogInscatteringStart",    1, UniformInterfaceBlock::Type::FLOAT)
+            .add("fogInscatteringSize",     1, UniformInterfaceBlock::Type::FLOAT)
+            // more camera stuff
+            .add("cameraNear",              1, UniformInterfaceBlock::Type::FLOAT)
+            .add("cameraFar",               1, UniformInterfaceBlock::Type::FLOAT)
+
             // bring size to 1 KiB
-            .add("padding2",                15, UniformInterfaceBlock::Type::FLOAT4)
+            .add("padding2",                12, UniformInterfaceBlock::Type::FLOAT4)
             .build();
     return uib;
 }

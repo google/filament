@@ -270,3 +270,23 @@ Java_com_google_android_filament_View_nSetBloomOptions(JNIEnv*, jclass,
     };
     view->setBloomOptions(options);
 }
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_View_nSetFogOptions(JNIEnv *, jclass , jlong nativeView,
+        jfloat distance, jfloat maximumOpacity, jfloat height, jfloat heightFalloff, jfloat r,
+        jfloat g, jfloat b, jfloat density, jfloat inScatteringStart,
+        jfloat inScatteringSize, jboolean enabled) {
+    View* view = (View*) nativeView;
+    View::FogOptions options = {
+             .distance = distance,
+             .maximumOpacity = maximumOpacity,
+             .height = height,
+             .heightFalloff = heightFalloff,
+             .color = math::float3{r, g, b},
+             .density = density,
+             .inScatteringStart = inScatteringStart,
+             .inScatteringSize = inScatteringSize,
+             .enabled = (bool)enabled
+    };
+    view->setFogOptions(options);
+}
