@@ -156,6 +156,10 @@ public:
 		remap_pls_variables();
 	}
 
+	// Redirect a subpassInput reading from input_attachment_index to instead load its value from
+	// the color attachment at location = color_location. Requires ESSL.
+	void remap_ext_framebuffer_fetch(uint32_t input_attachment_index, uint32_t color_location);
+
 	explicit CompilerGLSL(std::vector<uint32_t> spirv_)
 	    : Compiler(std::move(spirv_))
 	{
@@ -662,6 +666,14 @@ protected:
 	const char *to_pls_qualifiers_glsl(const SPIRVariable &variable);
 	void emit_pls();
 	void remap_pls_variables();
+
+	// GL_EXT_shader_framebuffer_fetch support.
+	std::vector<std::pair<uint32_t, uint32_t>> subpass_to_framebuffer_fetch_attachment;
+	std::unordered_set<uint32_t> inout_color_attachments;
+	bool subpass_input_is_framebuffer_fetch(uint32_t id) const;
+	void emit_inout_fragment_outputs_copy_to_subpass_inputs();
+	const SPIRVariable *find_subpass_input_by_attachment_index(uint32_t index) const;
+	const SPIRVariable *find_color_output_by_location(uint32_t location) const;
 
 	// A variant which takes two sets of name. The secondary is only used to verify there are no collisions,
 	// but the set is not updated when we have found a new name.
