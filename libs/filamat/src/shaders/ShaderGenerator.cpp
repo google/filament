@@ -411,6 +411,7 @@ std::string ShaderGenerator::createFragmentProgram(filament::backend::ShaderMode
     cg.generateGetters(fs, ShaderType::FRAGMENT);
     cg.generateCommonMaterial(fs, ShaderType::FRAGMENT);
     cg.generateParameters(fs, ShaderType::FRAGMENT);
+    cg.generateFog(fs, ShaderType::FRAGMENT);
 
     // shading model
     if (variant.isDepthPass()) {
