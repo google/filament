@@ -202,8 +202,7 @@ public:
 		buffer_capacity = N;
 	}
 
-	SmallVector(const T *arg_list_begin, const T *arg_list_end) SPIRV_CROSS_NOEXCEPT
-	    : SmallVector()
+	SmallVector(const T *arg_list_begin, const T *arg_list_end) SPIRV_CROSS_NOEXCEPT : SmallVector()
 	{
 		auto count = size_t(arg_list_end - arg_list_begin);
 		reserve(count);
@@ -247,8 +246,7 @@ public:
 		return *this;
 	}
 
-	SmallVector(const SmallVector &other) SPIRV_CROSS_NOEXCEPT
-	    : SmallVector()
+	SmallVector(const SmallVector &other) SPIRV_CROSS_NOEXCEPT : SmallVector()
 	{
 		*this = other;
 	}
@@ -266,8 +264,7 @@ public:
 		return *this;
 	}
 
-	explicit SmallVector(size_t count) SPIRV_CROSS_NOEXCEPT
-	    : SmallVector()
+	explicit SmallVector(size_t count) SPIRV_CROSS_NOEXCEPT : SmallVector()
 	{
 		resize(count);
 	}

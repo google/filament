@@ -440,13 +440,19 @@ def cross_compile(shader, vulkan, spirv, invalid_spirv, eliminate, is_legacy, fl
         extra_args += ['--vulkan-glsl-disable-ext-samplerless-texture-functions']
     if '.no-qualifier-deduction.' in shader:
         extra_args += ['--disable-storage-image-qualifier-deduction']
+    if '.framebuffer-fetch.' in shader:
+        extra_args += ['--glsl-remap-ext-framebuffer-fetch', '0', '0']
+        extra_args += ['--glsl-remap-ext-framebuffer-fetch', '1', '1']
+        extra_args += ['--glsl-remap-ext-framebuffer-fetch', '2', '2']
+        extra_args += ['--glsl-remap-ext-framebuffer-fetch', '3', '3']
 
     spirv_cross_path = paths.spirv_cross
 
     # A shader might not be possible to make valid GLSL from, skip validation for this case.
-    if not ('nocompat' in glsl_path):
+    if (not ('nocompat' in glsl_path)) or (not vulkan):
         subprocess.check_call([spirv_cross_path, '--entry', 'main', '--output', glsl_path, spirv_path] + extra_args)
-        validate_shader(glsl_path, False, paths)
+        if not 'nocompat' in glsl_path:
+            validate_shader(glsl_path, False, paths)
     else:
         remove_file(glsl_path)
         glsl_path = None

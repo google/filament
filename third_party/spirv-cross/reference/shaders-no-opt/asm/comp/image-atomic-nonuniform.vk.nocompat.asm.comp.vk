@@ -1,0 +1,12 @@
+#version 450
+#extension GL_EXT_nonuniform_qualifier : require
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(set = 0, binding = 0, r32ui) uniform uimage2D uImage[];
+
+void main()
+{
+    uint _26 = gl_GlobalInvocationID.z;
+    uint _31 = imageAtomicAdd(uImage[nonuniformEXT(_26)], ivec2(gl_GlobalInvocationID.xy), 1u);
+}
+

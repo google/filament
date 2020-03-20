@@ -525,6 +525,7 @@ struct CLIArguments
 	bool msl_force_native_arrays = false;
 	bool glsl_emit_push_constant_as_ubo = false;
 	bool glsl_emit_ubo_as_plain_uniforms = false;
+	SmallVector<pair<uint32_t, uint32_t>> glsl_ext_framebuffer_fetch;
 	bool vulkan_glsl_disable_ext_samplerless_texture_functions = false;
 	bool emit_line_directives = false;
 	bool enable_storage_image_qualifier_deduction = true;
@@ -599,6 +600,7 @@ static void print_help()
 	                "\t[--disable-storage-image-qualifier-deduction]\n"
 	                "\t[--glsl-emit-push-constant-as-ubo]\n"
 	                "\t[--glsl-emit-ubo-as-plain-uniforms]\n"
+	                "\t[--glsl-remap-ext-framebuffer-fetch input-attachment color-location]\n"
 	                "\t[--vulkan-glsl-disable-ext-samplerless-texture-functions]\n"
 	                "\t[--msl]\n"
 	                "\t[--msl-version <MMmmpp>]\n"
@@ -949,6 +951,9 @@ static string compile_iteration(const CLIArguments &args, std::vector<uint32_t> 
 	opts.enable_storage_image_qualifier_deduction = args.enable_storage_image_qualifier_deduction;
 	compiler->set_common_options(opts);
 
+	for (auto &fetch : args.glsl_ext_framebuffer_fetch)
+		compiler->remap_ext_framebuffer_fetch(fetch.first, fetch.second);
+
 	// Set HLSL specific options.
 	if (args.hlsl)
 	{
@@ -1125,9 +1130,15 @@ static int main_inner(int argc, char *argv[])
 	cbs.add("--metal", [&args](CLIParser &) { args.msl = true; }); // Legacy compatibility
 	cbs.add("--glsl-emit-push-constant-as-ubo", [&args](CLIParser &) { args.glsl_emit_push_constant_as_ubo = true; });
 	cbs.add("--glsl-emit-ubo-as-plain-uniforms", [&args](CLIParser &) { args.glsl_emit_ubo_as_plain_uniforms = true; });
+	cbs.add("--glsl-remap-ext-framebuffer-fetch", [&args](CLIParser &parser) {
+		uint32_t input_index = parser.next_uint();
+		uint32_t color_attachment = parser.next_uint();
+		args.glsl_ext_framebuffer_fetch.push_back({ input_index, color_attachment });
+	});
 	cbs.add("--vulkan-glsl-disable-ext-samplerless-texture-functions",
 	        [&args](CLIParser &) { args.vulkan_glsl_disable_ext_samplerless_texture_functions = true; });
-	cbs.add("--disable-storage-image-qualifier-deduction", [&args](CLIParser &) { args.enable_storage_image_qualifier_deduction = false; });
+	cbs.add("--disable-storage-image-qualifier-deduction",
+	        [&args](CLIParser &) { args.enable_storage_image_qualifier_deduction = false; });
 	cbs.add("--msl", [&args](CLIParser &) { args.msl = true; });
 	cbs.add("--hlsl", [&args](CLIParser &) { args.hlsl = true; });
 	cbs.add("--hlsl-enable-compat", [&args](CLIParser &) { args.hlsl_compat = true; });
@@ -1136,9 +1147,8 @@ static int main_inner(int argc, char *argv[])
 	cbs.add("--hlsl-auto-binding", [&args](CLIParser &parser) {
 		args.hlsl_binding_flags |= hlsl_resource_type_to_flag(parser.next_string());
 	});
-	cbs.add("--hlsl-force-storage-buffer-as-uav", [&args](CLIParser &) {
-		args.hlsl_force_storage_buffer_as_uav = true;
-	});
+	cbs.add("--hlsl-force-storage-buffer-as-uav",
+	        [&args](CLIParser &) { args.hlsl_force_storage_buffer_as_uav = true; });
 	cbs.add("--vulkan-semantics", [&args](CLIParser &) { args.vulkan_semantics = true; });
 	cbs.add("-V", [&args](CLIParser &) { args.vulkan_semantics = true; });
 	cbs.add("--flatten-multidimensional-arrays", [&args](CLIParser &) { args.flatten_multidimensional_arrays = true; });
@@ -1178,9 +1188,7 @@ static int main_inner(int argc, char *argv[])
 		uint32_t binding = parser.next_uint();
 		args.msl_inline_uniform_blocks.push_back(make_pair(desc_set, binding));
 	});
-	cbs.add("--msl-force-native-arrays", [&args](CLIParser &) {
-		args.msl_force_native_arrays = true;
-	});
+	cbs.add("--msl-force-native-arrays", [&args](CLIParser &) { args.msl_force_native_arrays = true; });
 	cbs.add("--extension", [&args](CLIParser &parser) { args.extensions.push_back(parser.next_string()); });
 	cbs.add("--rename-entry-point", [&args](CLIParser &parser) {
 		auto old_name = parser.next_string();
