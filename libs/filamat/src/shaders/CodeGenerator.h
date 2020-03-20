@@ -65,6 +65,8 @@ public:
     utils::io::sstream& generateCommon(utils::io::sstream& out, ShaderType type) const;
     utils::io::sstream& generateCommonMaterial(utils::io::sstream& out, ShaderType type) const;
 
+    utils::io::sstream& generateFog(utils::io::sstream& out, ShaderType type) const;
+
     // generate the shader's main()
     utils::io::sstream& generateShaderMain(utils::io::sstream& out, ShaderType type) const;
     utils::io::sstream& generatePostProcessMain(utils::io::sstream& out, ShaderType type) const;
