@@ -782,6 +782,7 @@ size_t ShadowMap::intersectFrustumWithBox(
             vertexCount++;
         }
     }
+    const bool someFrustumVerticesAreInTheBox = vertexCount > 0;
     constexpr const float EPSILON = 1.0f / 8192.0f; // ~0.012 mm
 
     // at this point if we have 8 vertices, we can skip the rest
@@ -809,8 +810,31 @@ size_t ShadowMap::intersectFrustumWithBox(
             }
         }
 
-        // at this point if we have 8 vertices, we can skip the segments intersection tests
-        if (vertexCount < 8) {
+        /*
+         * It's not enough here to have all 8 vertices, consider this:
+         *
+         *                     +
+         *                   / |
+         *                 /   |
+         *    +---------C/--B  |
+         *    |       A/    |  |
+         *    |       |     |  |
+         *    |       A\    |  |
+         *    +----------\--B  |
+         *                 \   |
+         *                   \ |
+         *                     +
+         *
+         * A vertices will be selected by step (a)
+         * B vertices will be selected by step (b)
+         *
+         * if we stop here, the segment (A,B) is inside the intersection of the box and the
+         * frustum.  We do need step (c) and (d) to compute the actual intersection C.
+         *
+         * However, a special case is if all the vertices of the box are inside the frustum.
+         */
+
+        if (someFrustumVerticesAreInTheBox || vertexCount < 8) {
             // c) intersect scene's volume edges with frustum planes
             vertexCount = intersectFrustum(outVertices.data(), vertexCount,
                     wsSceneReceiversCorners.vertices, wsFrustumCorners, frustum);
