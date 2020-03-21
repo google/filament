@@ -74,7 +74,8 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             // user time
             .add("userTime",                1, UniformInterfaceBlock::Type::FLOAT4)
             // ibl max mip level
-            .add("iblMaxMipLevel",          1, UniformInterfaceBlock::Type::FLOAT2)
+            .add("iblRoughnessOneLevel",    1, UniformInterfaceBlock::Type::FLOAT)
+            .add("padding0",                1, UniformInterfaceBlock::Type::FLOAT)
             .add("refractionLodOffset",     1, UniformInterfaceBlock::Type::FLOAT)
             .add("directionalShadows",      1, UniformInterfaceBlock::Type::UINT)
             // view
