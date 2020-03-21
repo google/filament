@@ -209,7 +209,7 @@ void FTexture::generateMipmaps(FEngine& engine) const noexcept {
         return;
     }
 
-    if (mLevelCount == 1 || (mWidth == 1 && mHeight == 1)) {
+    if (mLevelCount < 2 || (mWidth == 1 && mHeight == 1)) {
         return;
     }
 
