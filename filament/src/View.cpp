@@ -312,7 +312,12 @@ void FView::prepareShadowing(FEngine& engine, backend::DriverApi& driver,
     // shadow-casting spot lights are ignored.
     for (size_t l = 1; l < lightData.size(); l++) {
         FLightManager::Instance light = lightData.elementAt<FScene::LIGHT_INSTANCE>(l);
-        if (UTILS_LIKELY(!(light && lcm.isSpotLight(light) && lcm.isShadowCaster(light)))) {
+
+        // Invisible lights get culled and should not count towards the spot limit.
+        bool visible = lightData.elementAt<FScene::VISIBILITY>(l) != 0;
+
+        if (UTILS_LIKELY(!(light && lcm.isSpotLight(light) &&
+                lcm.isShadowCaster(light) && visible))) {
             continue;
         }
 
