@@ -180,7 +180,7 @@ namespace details {
 FIndirectLight::FIndirectLight(FEngine& engine, const Builder& builder) noexcept {
     if (builder->mReflectionsMap) {
         mReflectionsMapHandle = upcast(builder->mReflectionsMap)->getHwHandle();
-        mMaxMipLevel = builder->mReflectionsMap->getLevels();
+        mLevelCount = builder->mReflectionsMap->getLevels();
     }
 
     std::copy(

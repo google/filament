@@ -85,7 +85,8 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
 
     filament::math::float4 userTime;  // time(s), (double)time - (float)time, 0, 0
 
-    filament::math::float2 iblMaxMipLevel; // maxlevel, float(1<<maxlevel)
+    float iblRoughnessOneLevel;       // level for roughness == 1
+    float padding0;
     float refractionLodOffset;
 
     // bit 0: directional (sun) shadow enabled

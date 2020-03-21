@@ -367,8 +367,8 @@ void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaSc
     }
 
     // Set up uniforms and sampler for the IBL, guaranteed to be non-null at this point.
-    float2 iblMaxMipLevel{ ibl->getMaxMipLevel(), 1u << ibl->getMaxMipLevel() };
-    u.setUniform(offsetof(PerViewUib, iblMaxMipLevel), iblMaxMipLevel);
+    float iblRoughnessOneLevel = ibl->getLevelCount() - 1.0f;
+    u.setUniform(offsetof(PerViewUib, iblRoughnessOneLevel), iblRoughnessOneLevel);
     u.setUniform(offsetof(PerViewUib, iblLuminance), intensity * exposure);
     u.setUniformArray(offsetof(PerViewUib, iblSH), ibl->getSH(), 9);
     if (ibl->getReflectionMap()) {
