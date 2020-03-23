@@ -307,9 +307,14 @@ public class View {
         public float inScatteringStart = 0.0f;
 
         /**
-         * size of in-scattering (>0 to activate)
+         * size of in-scattering (>=0 to activate). Good values are >> 1 (e.g. ~10 - 100)
          */
         public float inScatteringSize = 0.0f;
+
+        /**
+         * fog color will be modulated by the IBL color in the view direction
+         */
+        public boolean fogColorFromIbl = false;
 
         /**
          * enable or disable fog
@@ -906,6 +911,7 @@ public class View {
         nSetFogOptions(getNativeObject(), options.distance, options.maximumOpacity, options.height,
                 options.heightFalloff, options.color[0], options.color[1], options.color[2],
                 options.density, options.inScatteringStart, options.inScatteringSize,
+                options.fogColorFromIbl,
                 options.enabled);
     }
 
@@ -965,6 +971,6 @@ public class View {
     private static native int nGetAmbientOcclusion(long nativeView);
     private static native void nSetAmbientOcclusionOptions(long nativeView, float radius, float bias, float power, float resolution, float intensity, int quality);
     private static native void nSetBloomOptions(long nativeView, long dirtNativeObject, float dirtStrength, float strength, int resolution, float anamorphism, int levels, int blendMode, boolean threshold, boolean enabled);
-    private static native void nSetFogOptions(long nativeView, float distance, float maximumOpacity, float height, float heightFalloff, float v, float v1, float v2, float density, float inScatteringStart, float inScatteringSize, boolean enabled);
+    private static native void nSetFogOptions(long nativeView, float distance, float maximumOpacity, float height, float heightFalloff, float v, float v1, float v2, float density, float inScatteringStart, float inScatteringSize, boolean fogColorFromIbl, boolean enabled);
 
 }

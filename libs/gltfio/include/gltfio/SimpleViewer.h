@@ -312,6 +312,7 @@ void SimpleViewer::removeAsset() {
 void SimpleViewer::setIndirectLight(filament::IndirectLight* ibl,
         filament::math::float3 const* sh3) {
     using namespace filament::math;
+    mFogOptions.color = sh3[0];
     mIndirectLight = ibl;
     if (ibl) {
         float3 d = filament::IndirectLight::getDirectionEstimate(sh3);
@@ -462,7 +463,8 @@ void SimpleViewer::updateUserInterface() {
         ImGui::SliderFloat("Height", &mFogOptions.height, 0.0f, 100.0f);
         ImGui::SliderFloat("Height Falloff", &mFogOptions.heightFalloff, 0.0f, 10.0f);
         ImGui::SliderFloat("Scattering Start", &mFogOptions.inScatteringStart, 0.0f, 100.0f);
-        ImGui::SliderFloat("Scattering Size", &mFogOptions.inScatteringSize, 0.0f, 1.0f);
+        ImGui::SliderFloat("Scattering Size", &mFogOptions.inScatteringSize, 0.0f, 10.0f);
+        ImGui::Checkbox("Color from IBL", &mFogOptions.fogColorFromIbl);
         ImGui::ColorPicker3("Color", mFogOptions.color.v);
     }
 

@@ -173,10 +173,11 @@ public:
         float maximumOpacity = 1.0f;        //!< fog's maximum opacity between 0 and 1
         float height = 0.0f;                //!< fog's floor in world units
         float heightFalloff = 1.0f;         //!< how fast fog dissipates with altitude
-        math::float3 color{ 0.5f };         //!< fog's color (linear)
+        math::float3 color{ 0.5f };         //!< fog's color (linear), see fogColorFromIbl
         float density = 0.1f;               //!< fog's density at altitude given by 'height'
         float inScatteringStart = 0.0f;     //!< distance in world units from the camera where in-scattering starts
-        float inScatteringSize = 0.0f;      //!< size of in-scattering (>0 to activate)
+        float inScatteringSize = -1.0f;     //!< size of in-scattering (>=0 to activate). Good values are >> 1 (e.g. ~10 - 100).
+        bool fogColorFromIbl = false;       //!< Fog color will be modulated by the IBL color in the view direction.
         bool enabled = false;               //!< enable or disable fog
     };
 

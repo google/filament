@@ -86,7 +86,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     filament::math::float4 userTime;  // time(s), (double)time - (float)time, 0, 0
 
     float iblRoughnessOneLevel;       // level for roughness == 1
-    float padding0;
+    float cameraFar;                  // camera *culling* far-plane distance (projection far is at +inf)
     float refractionLodOffset;
 
     // bit 0: directional (sun) shadow enabled
@@ -100,14 +100,13 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     float fogStart;
     float fogMaxOpacity;
     float fogHeight;
-    float fogHeightFalloff;
+    float fogHeightFalloff;         // falloff * 1.44269
     math::float3 fogColor;
-    float fogDensity;
+    float fogDensity;               // (density/falloff)*exp(-falloff*(camera.y - fogHeight))
     float fogInscatteringStart;
     float fogInscatteringSize;
-
-    float cameraNear;       // camera near-plane distance (positive value)
-    float cameraFar;        // camera *culling* far-plane distance (projection far is at +inf)
+    float fogColorFromIbl;
+    float padding1;
 
     // bring PerViewUib to 1 KiB
     filament::math::float4 padding2[12];

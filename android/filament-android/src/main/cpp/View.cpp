@@ -275,7 +275,7 @@ extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_View_nSetFogOptions(JNIEnv *, jclass , jlong nativeView,
         jfloat distance, jfloat maximumOpacity, jfloat height, jfloat heightFalloff, jfloat r,
         jfloat g, jfloat b, jfloat density, jfloat inScatteringStart,
-        jfloat inScatteringSize, jboolean enabled) {
+        jfloat inScatteringSize, jboolean fogColorFromIbl, jboolean enabled) {
     View* view = (View*) nativeView;
     View::FogOptions options = {
              .distance = distance,
@@ -286,6 +286,7 @@ Java_com_google_android_filament_View_nSetFogOptions(JNIEnv *, jclass , jlong na
              .density = density,
              .inScatteringStart = inScatteringStart,
              .inScatteringSize = inScatteringSize,
+             .fogColorFromIbl = (bool)fogColorFromIbl,
              .enabled = (bool)enabled
     };
     view->setFogOptions(options);
