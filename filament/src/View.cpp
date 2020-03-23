@@ -312,7 +312,12 @@ void FView::prepareShadowing(FEngine& engine, backend::DriverApi& driver,
     // shadow-casting spot lights are ignored.
     for (size_t l = 1; l < lightData.size(); l++) {
         FLightManager::Instance light = lightData.elementAt<FScene::LIGHT_INSTANCE>(l);
-        if (UTILS_LIKELY(!(light && lcm.isSpotLight(light) && lcm.isShadowCaster(light)))) {
+
+        // Invisible lights get culled and should not count towards the spot limit.
+        bool visible = lightData.elementAt<FScene::VISIBILITY>(l) != 0;
+
+        if (UTILS_LIKELY(!(light && lcm.isSpotLight(light) &&
+                lcm.isShadowCaster(light) && visible))) {
             continue;
         }
 
@@ -528,6 +533,8 @@ void FView::prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& are
          * (this will set the VISIBLE_DIR_SHADOW_CASTER bit and VISIBLE_SPOT_SHADOW_CASTER bits)
          */
 
+        // prepareShadowing relies on prepareVisibleLights().
+        js.waitAndRelease(prepareVisibleLightsJob);
         prepareShadowing(engine, driver, renderableData, scene->getLightData());
 
         /*
@@ -595,7 +602,6 @@ void FView::prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& are
      * Relies on FScene::prepare() and prepareVisibleLights()
      */
 
-    js.waitAndRelease(prepareVisibleLightsJob);
     prepareLighting(engine, driver, arena, viewport);
 
     /*
