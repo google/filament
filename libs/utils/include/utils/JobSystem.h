@@ -26,6 +26,7 @@
 
 #include <utils/Allocator.h>
 #include <utils/architecture.h>
+#include <utils/compiler.h>
 #include <utils/Condition.h>
 #include <utils/Log.h>
 #include <utils/memalign.h>
@@ -36,7 +37,7 @@
 
 namespace utils {
 
-class JobSystem {
+class UTILS_PUBLIC JobSystem {
     static constexpr size_t MAX_JOB_COUNT = 4096;
     static_assert(MAX_JOB_COUNT <= 0x7FFE, "MAX_JOB_COUNT must be <= 0x7FFE");
     using WorkQueue = WorkStealingDequeue<uint16_t, MAX_JOB_COUNT>;

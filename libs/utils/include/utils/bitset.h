@@ -18,6 +18,7 @@
 #define TNT_UTILS_BITSET_H
 
 #include <utils/algorithm.h>
+#include <utils/compiler.h>
 
 #include <assert.h>
 #include <stddef.h>
@@ -44,7 +45,7 @@ namespace utils {
 template<typename T, size_t N = 1,
         typename = typename std::enable_if<std::is_integral<T>::value &&
                                            std::is_unsigned<T>::value>::type>
-class bitset {
+class UTILS_PUBLIC bitset {
     T storage[N];
 
 public:
