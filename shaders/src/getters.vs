@@ -142,6 +142,9 @@ vec4 computeWorldPosition() {
 #else
     mat4 transform = getWorldFromClipMatrix();
     vec4 position = transform * getPosition();
+    if (abs(position.w) < MEDIUMP_FLT_MIN) {
+        position.w = position.w < 0.0 ? -MEDIUMP_FLT_MIN : MEDIUMP_FLT_MIN;
+    }
     return position * (1.0 / position.w);
 #endif
 }

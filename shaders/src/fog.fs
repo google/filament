@@ -2,43 +2,49 @@
 // Fog
 //------------------------------------------------------------------------------
 
-vec3 fog(vec3 color, vec3 view, vec3 wsCameraPosition, vec3 up) {
+vec3 fog(vec3 color, vec3 view) {
     if (frameUniforms.fogDensity > 0.0) {
-        float wsCameraHeight = dot(up, wsCameraPosition);
+        float A = frameUniforms.fogDensity;
+        float B = frameUniforms.fogHeightFalloff;
 
-        // v can have infinites (usually due to the skybox)
-        float cameraToWorldDistance = min(MEDIUMP_FLT_MAX, length(view));
+        float d = length(view);
+        float h = abs(view.y) < FLT_EPS ? FLT_EPS : view.y;   // avoid divide-by-zero
 
-        // clamp to camera far plane so the skybox participates to the fog
-        float cameraToWorldDistanceClamped = min(frameUniforms.cameraFar, cameraToWorldDistance);
+        float fogIntegralFunctionOfDistance = A * (1.0 - exp2(-B * h)) / h;
+        float fogIntegral = fogIntegralFunctionOfDistance * max(d - frameUniforms.fogStart, 0.0);
 
-        // fog density with respect to camera's altitude
-        float density = frameUniforms.fogDensity * exp2(-frameUniforms.fogHeightFalloff * (wsCameraHeight - frameUniforms.fogHeight));
+        // remap fogIntegral to an opacity between 0 and 1. saturate(fogIntegral) is too harsh.
+        float fogOpacity = max(1.0 - exp2(-fogIntegral), 0.0);
+        //float fogOpacity = clamp(fogIntegral, 0.0, 1.0);
 
-        // falloff due to height of the shaded fragment w.r.t. the camera
-        float h = dot(view, up);
-        h = abs(h) > 0.01 ? h : 0.01;
-        float falloff = max(frameUniforms.fogHeightFalloff * h, -127.0);
+        // don't go above requested max opacity
+        fogOpacity = min(fogOpacity, frameUniforms.fogMaxOpacity);
 
-        // fog density at shaded fragment w.r.t. camera's altitude
-        float densityFalloff = density * (1.0 - exp2(-falloff)) / falloff;
+        // compute fog color
+        vec3 fogColor = frameUniforms.fogColor;
 
-        // take fog start distance into account
-        float lineIntegral = densityFalloff * max(cameraToWorldDistanceClamped - frameUniforms.fogStart, 0.0);
-        float fogFactor = max(clamp(exp2(-lineIntegral), 0.0, 1.0), 1.0 - frameUniforms.fogMaxOpacity);
-
-        vec3 foggedColor = frameUniforms.fogColor * (1.0 - fogFactor);
-        if (frameUniforms.fogInscatteringSize > 0.0) {
-            vec3 lightDirectionNorm = -normalize(frameUniforms.lightDirection);
-            vec3 cameraToWorldUnit = view * (1.0 / cameraToWorldDistance);
-            float lightInscatteringFactor = max(dot(cameraToWorldUnit, lightDirectionNorm), 0.0);
-            vec3 lightInscattering = frameUniforms.lightColorIntensity.rgb * frameUniforms.lightColorIntensity.w * pow(lightInscatteringFactor, frameUniforms.fogInscatteringSize);
-            float lightInscatteringIntegral = densityFalloff * max(cameraToWorldDistanceClamped - frameUniforms.fogInscatteringStart, 0.0);
-            float inscatteringFactor = clamp(exp2(-lightInscatteringIntegral), 0.0, 1.0);
-            foggedColor += lightInscattering * (1.0 - inscatteringFactor);
+        if (frameUniforms.fogColorFromIbl > 0.0) {
+            // get fog color from envmap
+            float lod = frameUniforms.iblRoughnessOneLevel;
+            fogColor *= textureLod(light_iblSpecular, view, lod).rgb * frameUniforms.iblLuminance;
         }
 
-        return color * fogFactor + foggedColor;
+        fogColor *= fogOpacity;
+        if (frameUniforms.fogInscatteringSize >= 0.0) {
+            // compute a new line-integral for a different start distance
+            float inscatteringIntegral = fogIntegralFunctionOfDistance * max(d - frameUniforms.fogInscatteringStart, 0.0);
+            float inscatteringOpacity = max(1.0 - exp2(-inscatteringIntegral), 0.0);
+            //float inscatteringOpacity = clamp(inscatteringIntegral, 0.0, 1.0);
+
+            // Add sun colored fog when looking towards the sun
+            vec3 sunColor = frameUniforms.lightColorIntensity.rgb * frameUniforms.lightColorIntensity.w;
+            float sunAmount = max(dot(view, frameUniforms.lightDirection) / d, 0.0); // between 0 and 1
+            float sunInscattering = pow(sunAmount, frameUniforms.fogInscatteringSize);
+
+            fogColor += sunColor * (sunInscattering * inscatteringOpacity);
+        }
+
+        return color * (1.0 - fogOpacity) + fogColor;
     }
     return color;
 }

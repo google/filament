@@ -616,14 +616,23 @@ void FView::prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& are
     u.setUniform(offsetof(PerViewUib, userTime), userTime);
 
     auto const& fogOptions = mFogOptions;
+
+    // shader uses exp2() instead of exp() so we correct that here
+    float heightFalloffExp2 = fogOptions.heightFalloff * 1.44269f;
+
+    // precalculate the constant part of density  integral
+    float density = (fogOptions.density / fogOptions.heightFalloff) *
+            std::exp(-fogOptions.heightFalloff * (camera->getPosition().y - fogOptions.height));
+
     u.setUniform(offsetof(PerViewUib, fogStart),             fogOptions.distance);
     u.setUniform(offsetof(PerViewUib, fogMaxOpacity),        fogOptions.maximumOpacity);
     u.setUniform(offsetof(PerViewUib, fogHeight),            fogOptions.height);
-    u.setUniform(offsetof(PerViewUib, fogHeightFalloff),     fogOptions.heightFalloff);
+    u.setUniform(offsetof(PerViewUib, fogHeightFalloff),     heightFalloffExp2);
     u.setUniform(offsetof(PerViewUib, fogColor),             fogOptions.color);
-    u.setUniform(offsetof(PerViewUib, fogDensity),           fogOptions.density);
+    u.setUniform(offsetof(PerViewUib, fogDensity),           density);
     u.setUniform(offsetof(PerViewUib, fogInscatteringStart), fogOptions.inScatteringStart);
     u.setUniform(offsetof(PerViewUib, fogInscatteringSize),  fogOptions.inScatteringSize);
+    u.setUniform(offsetof(PerViewUib, fogColorFromIbl),      fogOptions.fogColorFromIbl ? 1.0f : 0.0f);
 
     // upload the renderables's dirty UBOs
     engine.getRenderableManager().prepare(driver,
@@ -711,7 +720,6 @@ void FView::prepareCamera(const CameraInfo& camera, const filament::Viewport& vi
 
     u.setUniform(offsetof(PerViewUib, cameraPosition), float3{camera.getPosition()});
     u.setUniform(offsetof(PerViewUib, worldOffset), camera.worldOffset);
-    u.setUniform(offsetof(PerViewUib, cameraNear), camera.zn);
     u.setUniform(offsetof(PerViewUib, cameraFar), camera.zf);
 }
 

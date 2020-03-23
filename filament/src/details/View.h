@@ -292,7 +292,7 @@ public:
         options.maximumOpacity = math::clamp(options.maximumOpacity, 0.0f, 1.0f);
         options.density = std::max(0.0f, options.density);
         options.heightFalloff = std::max(0.0f, options.heightFalloff);
-        options.inScatteringSize = std::max(0.0f, options.inScatteringSize);
+        options.inScatteringSize = options.inScatteringSize;
         options.inScatteringStart = std::max(0.0f, options.inScatteringStart);
         mFogOptions = options;
     }

@@ -75,7 +75,7 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             .add("userTime",                1, UniformInterfaceBlock::Type::FLOAT4)
             // ibl max mip level
             .add("iblRoughnessOneLevel",    1, UniformInterfaceBlock::Type::FLOAT)
-            .add("padding0",                1, UniformInterfaceBlock::Type::FLOAT)
+            .add("cameraFar",               1, UniformInterfaceBlock::Type::FLOAT)
             .add("refractionLodOffset",     1, UniformInterfaceBlock::Type::FLOAT)
             .add("directionalShadows",      1, UniformInterfaceBlock::Type::UINT)
             // view
@@ -91,8 +91,8 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             .add("fogInscatteringStart",    1, UniformInterfaceBlock::Type::FLOAT)
             .add("fogInscatteringSize",     1, UniformInterfaceBlock::Type::FLOAT)
             // more camera stuff
-            .add("cameraNear",              1, UniformInterfaceBlock::Type::FLOAT)
-            .add("cameraFar",               1, UniformInterfaceBlock::Type::FLOAT)
+            .add("fogColorFromIbl",         1, UniformInterfaceBlock::Type::FLOAT)
+            .add("padding1",                1, UniformInterfaceBlock::Type::FLOAT)
 
             // bring size to 1 KiB
             .add("padding2",                12, UniformInterfaceBlock::Type::FLOAT4)

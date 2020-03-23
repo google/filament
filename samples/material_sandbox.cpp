@@ -502,6 +502,7 @@ static void gui(filament::Engine* engine, filament::View*) {
             ImGui::SliderFloat("Height Falloff", &params.fogOptions.heightFalloff, 0.0f, 10.0f);
             ImGui::SliderFloat("Scattering Start", &params.fogOptions.inScatteringStart, 0.0f, 100.0f);
             ImGui::SliderFloat("Scattering Size", &params.fogOptions.inScatteringSize, 0.0f, 1.0f);
+            ImGui::Checkbox("Color from IBL", &params.fogOptions.fogColorFromIbl);
             ImGui::ColorPicker3("Color", params.fogOptions.color.v);
         }
 
