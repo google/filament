@@ -37,7 +37,7 @@
 
 namespace utils {
 
-class UTILS_PUBLIC JobSystem {
+class JobSystem {
     static constexpr size_t MAX_JOB_COUNT = 4096;
     static_assert(MAX_JOB_COUNT <= 0x7FFE, "MAX_JOB_COUNT must be <= 0x7FFE");
     using WorkQueue = WorkStealingDequeue<uint16_t, MAX_JOB_COUNT>;
