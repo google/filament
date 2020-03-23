@@ -222,6 +222,10 @@ static void setup(Engine* engine, View*, Scene* scene) {
 
     scene->addEntity(g_params.light);
 
+    // Parent the spot light to the root renderable in the mesh.
+    tcm.create(g_params.spotLight, tcm.getInstance(g_meshSet->getRenderables()[0]));
+    g_params.spotLightPosition = float3{0.0, 1.0, 0.0f};
+
     if (g_shadowPlane) {
         EntityManager& em = EntityManager::get();
         Material* shadowMaterial = Material::Builder()
@@ -466,7 +470,7 @@ static void gui(filament::Engine* engine, filament::View*) {
             ImGui::Checkbox("castShadows", &params.castShadows);
         }
 
-        if (ImGui::CollapsingHeader("Light")) {
+        if (ImGui::CollapsingHeader("Directional Light")) {
             ImGui::Checkbox("enabled", &params.directionalLightEnabled);
             ImGui::ColorEdit3("color", &params.lightColor.r);
             ImGui::SliderFloat("lux", &params.lightIntensity, 0.0f, 150000.0f);
@@ -492,6 +496,16 @@ static void gui(filament::Engine* engine, filament::View*) {
                 ImGui::SliderFloat("power", &params.ssaoOptions.power, 0.0f, 4.0f);
             }
             ImGui::Unindent();
+        }
+
+        if (ImGui::CollapsingHeader("Spot Light")) {
+            ImGui::Checkbox("enabled", &params.spotLightEnabled);
+            ImGui::SliderFloat3("position", &params.spotLightPosition.x, -5.0f, 5.0f);
+            ImGui::ColorEdit3("color", &params.spotLightColor.r);
+            ImGui::Checkbox("cast shadows", &params.spotLightCastShadows);
+            ImGui::SliderFloat("intensity", &params.spotLightIntensity, 0.0, 1000000.f);
+            ImGui::SliderAngle("cone angle", &params.spotLightConeAngle, 0.0f, 90.0f);
+            ImGui::SliderFloat("cone fade", &params.spotLightConeFade, 0.0f, 1.0f);
         }
 
         if (ImGui::CollapsingHeader("Fog")) {
@@ -600,6 +614,23 @@ static void gui(filament::Engine* engine, filament::View*) {
     options.stepCount = params.stepCount;
     options.maxShadowDistance = params.maxShadowDistance;
     lcm.setShadowOptions(lightInstance, options);
+
+    if (params.spotLightEnabled && !params.hasSpotLight) {
+        g_scene->addEntity(params.spotLight);
+        params.hasSpotLight = true;
+    } else if (!params.spotLightEnabled && params.hasSpotLight) {
+        g_scene->remove(params.spotLight);
+        params.hasSpotLight = false;
+    }
+    auto spotLightInstance = lcm.getInstance(params.spotLight);
+    auto& tcm = engine->getTransformManager();
+    tcm.setTransform(tcm.getInstance(params.spotLight),
+            mat4f::translation(params.spotLightPosition));
+    lcm.setColor(spotLightInstance, params.spotLightColor);
+    lcm.setShadowCaster(spotLightInstance, params.spotLightCastShadows);
+    lcm.setIntensity(spotLightInstance, params.spotLightIntensity);
+    lcm.setSpotLightCone(spotLightInstance, params.spotLightConeAngle * params.spotLightConeFade,
+            params.spotLightConeAngle);
 }
 
 static void preRender(filament::Engine*, filament::View* view, filament::Scene*, filament::Renderer*) {
