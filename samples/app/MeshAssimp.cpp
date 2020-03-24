@@ -584,6 +584,7 @@ void MeshAssimp::addFromFile(const Path& path,
     for (auto& mesh : asset.meshes) {
         RenderableManager::Builder builder(mesh.parts.size());
         builder.boundingBox(mesh.aabb);
+        builder.screenSpaceContactShadows(true);
 
         size_t partIndex = 0;
         for (auto& part : mesh.parts) {
