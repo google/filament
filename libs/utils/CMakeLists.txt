@@ -14,11 +14,13 @@ set(DIST_HDRS
         ${PUBLIC_HDR_DIR}/${TARGET}/bitset.h
         ${PUBLIC_HDR_DIR}/${TARGET}/BitmaskEnum.h
         ${PUBLIC_HDR_DIR}/${TARGET}/compiler.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/CString.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Entity.h
         ${PUBLIC_HDR_DIR}/${TARGET}/EntityInstance.h
         ${PUBLIC_HDR_DIR}/${TARGET}/EntityManager.h
-        ${PUBLIC_HDR_DIR}/${TARGET}/CString.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/NameComponentManager.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Path.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/SingleInstanceComponentManager.h
         ${PUBLIC_HDR_DIR}/${TARGET}/unwindows.h
 )
 
@@ -41,7 +43,8 @@ set(SRCS
         src/Profiler.cpp
         src/sstream.cpp
         src/Systrace.cpp
-        )
+)
+
 if (WIN32)
     list(APPEND SRCS src/win32/Path.cpp)
 endif()
