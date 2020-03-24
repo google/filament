@@ -248,7 +248,7 @@ namespace utils {
  * The Panic class provides the std::exception protocol, it is the base exception object
  * used for all thrown exceptions.
  */
-class Panic {
+class UTILS_PUBLIC Panic {
 public:
     virtual ~Panic() noexcept;
 
@@ -299,7 +299,7 @@ public:
  * interface common to all exceptions thrown by the framework.
  */
 template <typename T>
-class TPanic : public Panic {
+class UTILS_PUBLIC TPanic : public Panic {
 public:
     // std::exception protocol
     const char* what() const noexcept override;
@@ -386,7 +386,7 @@ void logAndPanic(
  * ASSERT_PRECONDITION uses this Panic to report a precondition failure.
  * @see ASSERT_PRECONDITION
  */
-class PreconditionPanic : public TPanic<PreconditionPanic> {
+class UTILS_PUBLIC PreconditionPanic : public TPanic<PreconditionPanic> {
     // Programming error, can be avoided
     // e.g.: invalid arguments
     using TPanic<PreconditionPanic>::TPanic;
@@ -399,7 +399,7 @@ class PreconditionPanic : public TPanic<PreconditionPanic> {
  * ASSERT_POSTCONDITION uses this Panic to report a postcondition failure.
  * @see ASSERT_POSTCONDITION
  */
-class PostconditionPanic : public TPanic<PostconditionPanic> {
+class UTILS_PUBLIC PostconditionPanic : public TPanic<PostconditionPanic> {
     // Usually only detectable at runtime
     // e.g.: dead-lock would occur, arithmetic errors
     using TPanic<PostconditionPanic>::TPanic;
@@ -412,7 +412,7 @@ class PostconditionPanic : public TPanic<PostconditionPanic> {
  * ASSERT_ARITHMETIC uses this Panic to report an arithmetic (postcondition) failure.
  * @see ASSERT_ARITHMETIC
  */
-class ArithmeticPanic : public TPanic<ArithmeticPanic> {
+class UTILS_PUBLIC ArithmeticPanic : public TPanic<ArithmeticPanic> {
     // A common case of post-condition error
     // e.g.: underflow, overflow, internal computations errors
     using TPanic<ArithmeticPanic>::TPanic;

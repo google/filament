@@ -26,6 +26,7 @@
 
 #include <utils/Allocator.h>
 #include <utils/architecture.h>
+#include <utils/compiler.h>
 #include <utils/Condition.h>
 #include <utils/Log.h>
 #include <utils/memalign.h>

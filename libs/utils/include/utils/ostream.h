@@ -25,7 +25,7 @@
 namespace utils {
 namespace io {
 
-class ostream {
+class UTILS_PUBLIC  ostream {
 public:
 
     virtual ~ostream();
