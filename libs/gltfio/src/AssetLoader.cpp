@@ -203,6 +203,7 @@ FilamentAsset* FAssetLoader::createAssetFromBinary(const uint8_t* bytes, uint32_
 }
 
 void FAssetLoader::createAsset(const cgltf_data* srcAsset) {
+    #if !GLTFIO_DRACO_SUPPORTED
     for (cgltf_size i = 0; i < srcAsset->extensions_required_count; i++) {
         if (!strcmp(srcAsset->extensions_required[i], "KHR_draco_mesh_compression")) {
             slog.e << "KHR_draco_mesh_compression is not supported." << io::endl;
@@ -210,6 +211,7 @@ void FAssetLoader::createAsset(const cgltf_data* srcAsset) {
             return;
         }
     }
+    #endif
 
     mResult = new FFilamentAsset(mEngine, mNameManager);
     mResult->mSourceAsset = srcAsset;
@@ -927,7 +929,7 @@ void FAssetLoader::addTextureBinding(MaterialInstance* materialInstance, const c
         dstSampler.setMagFilter(TextureSampler::MagFilter::LINEAR);
         dstSampler.setMinFilter(TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR);
     }
-    // auto bv = srcTexture->image->buffer_view;
+
     mResult->mTextureSlots.push_back({
         .texture = srcTexture,
         .materialInstance = materialInstance,
@@ -945,7 +947,16 @@ void FAssetLoader::importSkinningData(Skin& dstSkin, const cgltf_skin& srcSkin) 
     dstSkin.joints.resize(srcSkin.joints_count);
     const auto& nodeMap = mResult->mNodeMap;
     for (cgltf_size i = 0, len = srcSkin.joints_count; i < len; ++i) {
-        dstSkin.joints[i] = nodeMap.at(srcSkin.joints[i]);
+        // TODO: We've seen models with joint nodes that do not belong to the scene's node graph.
+        // e.g. BrainStem after Draco compression. That's why we have a fallback here. We should
+        // probably simply create an Entity for every glTF node, period. (regardless of hierarchy)
+        // https://github.com/CesiumGS/gltf-pipeline/issues/532
+        auto iter = nodeMap.find(srcSkin.joints[i]);
+        if (iter == nodeMap.end()) {
+            dstSkin.joints[i] = nodeMap.begin()->second;
+        } else {
+            dstSkin.joints[i] = iter->second;
+        }
     }
 }
 

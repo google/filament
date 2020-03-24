@@ -58,12 +58,6 @@ option(BUILD_FOR_GLTF "" OFF)
 option(BUILD_MAYA_PLUGIN "Build plugin library for Maya." OFF)
 option(BUILD_USD_PLUGIN "Build plugin library for USD." OFF)
 
-if(${CMAKE_CXX_COMPILER_ID} MATCHES GNU
-   AND ${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS 5)
-  message(WARNING "GNU/GCC VERSION LESS THAN 5, ENABLING COMPATIBILITY MODE.")
-  draco_enable_feature(FEATURE "DRACO_OLD_GCC")
-endif()
-
 if(BUILD_FOR_GLTF)
   # Override settings when building for GLTF.
   draco_enable_feature(FEATURE "DRACO_MESH_COMPRESSION_SUPPORTED")
