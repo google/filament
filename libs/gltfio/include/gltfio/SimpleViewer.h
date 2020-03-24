@@ -195,7 +195,7 @@ private:
     bool mEnableWireframe = false;
     bool mEnableSunlight = true;
     bool mEnableShadows = true;
-    bool mEnableContactShadows = true;
+    bool mEnableContactShadows = false;
     bool mEnableDithering = true;
     bool mEnableFxaa = true;
     bool mEnableMsaa = true;
