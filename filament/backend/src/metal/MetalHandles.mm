@@ -370,8 +370,12 @@ void MetalTexture::loadSlice(uint32_t level, uint32_t xoffset, uint32_t yoffset,
                           destinationSlice:slice
                           destinationLevel:level
                          destinationOrigin:MTLOriginMake(xoffset, yoffset, 0)];
+        // We must ensure we only capture a pointer to bufferPool, not "this", as this texture could
+        // be deallocated before the completion handler runs. The MetalBufferPool is guaranteed to
+        // outlive the completion handler.
+        MetalBufferPool* bufferPool = this->context.bufferPool;
         [blitCommandBuffer addCompletedHandler:^(id<MTLCommandBuffer> cb) {
-            context.bufferPool->releaseBuffer(entry);
+            bufferPool->releaseBuffer(entry);
         }];
     } else {
        // The texture is too large to fit into a single buffer, create a staging texture instead.
