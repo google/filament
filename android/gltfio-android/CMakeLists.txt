@@ -30,6 +30,8 @@ set(GLTFIO_SRCS
 
         ${GLTFIO_DIR}/src/Animator.cpp
         ${GLTFIO_DIR}/src/AssetLoader.cpp
+        ${GLTFIO_DIR}/src/DracoCache.cpp
+        ${GLTFIO_DIR}/src/DracoCache.h
         ${GLTFIO_DIR}/src/DependencyGraph.cpp
         ${GLTFIO_DIR}/src/DependencyGraph.h
         ${GLTFIO_DIR}/src/FFilamentAsset.h

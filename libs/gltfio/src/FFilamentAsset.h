@@ -39,6 +39,7 @@
 #include "upcast.h"
 #include "Wireframe.h"
 #include "DependencyGraph.h"
+#include "DracoCache.h"
 
 #include <tsl/robin_map.h>
 
@@ -188,8 +189,12 @@ struct FFilamentAsset : public FilamentAsset {
 
     void releaseSourceAsset() {
         if (--mSourceAssetRefCount == 0) {
-            mGlbData.clear();
-            mGlbData.shrink_to_fit();
+            // At this point, all vertex buffers have been uploaded to the GPU and we can finally
+            // release all remaining CPU-side source data, such as aggregated GLB buffers and Draco
+            // meshes. Note that sidecar bin data is already released, because external resources
+            // are released eagerly via BufferDescriptor callbacks.
+            mDracoCache = {};
+            mGlbData = {};
             if (!mSharedSourceAsset) {
                 cgltf_free((cgltf_data*) mSourceAsset);
             }
@@ -223,6 +228,7 @@ struct FFilamentAsset : public FilamentAsset {
     bool mResourcesLoaded = false;
     bool mSharedSourceAsset = false;
     DependencyGraph mDependencyGraph;
+    DracoCache mDracoCache;
 
     // Sentinels for situations where ResourceLoader needs to generate data.
     const cgltf_accessor mGenerateNormals = {};

@@ -173,6 +173,63 @@ static void convertBytesToShorts(uint16_t* dst, const uint8_t* src, size_t count
     }
 }
 
+static void decodeDracoMeshes(FFilamentAsset* asset) {
+    DracoCache* dracoCache = &asset->mDracoCache;
+
+    // For a given primitive and attribute, find the corresponding accessor.
+    auto findAccessor = [](const cgltf_primitive* prim, cgltf_attribute_type type, cgltf_int idx) {
+        for (cgltf_size i = 0; i < prim->attributes_count; i++) {
+            const cgltf_attribute& attr = prim->attributes[i];
+            if (attr.type == type && attr.index == idx) {
+                return attr.data;
+            }
+        }
+        return (cgltf_accessor*) nullptr;
+    };
+
+    // Go through every primitive and check if it has a Draco mesh.
+    for (auto pair : asset->mPrimitives) {
+        const cgltf_primitive* prim = pair.first;
+        VertexBuffer* vb = pair.second;
+        if (!prim->has_draco_mesh_compression) {
+            continue;
+        }
+
+        const cgltf_draco_mesh_compression& draco = prim->draco_mesh_compression;
+
+        // Check if we have already decoded this mesh.
+        DracoMesh* mesh = dracoCache->findOrCreateMesh(draco.buffer_view);
+        if (!mesh) {
+            slog.w << "Cannot decompress mesh, Draco decoding error." << io::endl;
+            continue;
+        }
+
+        // Copy over the decompressed data, converting the data type if necessary.
+        if (prim->indices) {
+            mesh->getFaceIndices(prim->indices);
+        }
+
+        // Go through each attribute in the decompressed mesh.
+        for (cgltf_size i = 0; i < draco.attributes_count; i++) {
+
+            // In cgltf, each Draco attribute's data pointer is an attribute id, not an accessor.
+            const uint32_t id = draco.attributes[i].data - asset->mSourceAsset->accessors;
+
+            // Find the destination accessor; this contains the desired component type, etc.
+            const cgltf_attribute_type type = draco.attributes[i].type;
+            const cgltf_int index = draco.attributes[i].index;
+            cgltf_accessor* accessor = findAccessor(prim, type, index);
+            if (!accessor) {
+                slog.w << "Cannot find matching accessor for Draco id " << id << io::endl;
+                continue;
+            }
+
+            // Copy over the decompressed data, converting the data type if necessary.
+            mesh->getVertexAttributes(id, accessor);
+        }
+    }
+}
+
 ResourceLoader::ResourceLoader(const ResourceConfiguration& config) :
         mPool(new AssetPool), pImpl(new Impl(config)) { }
 
@@ -279,6 +336,10 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
     }
     #endif
 
+    // Decompress Draco meshes early on, which allows us to exploit subsequent processing such as
+    // tangent generation.
+    decodeDracoMeshes(asset);
+
     // To be robust against the glTF conformance suite, we optionally ensure that skinning weights
     // sum to 1.0 at every vertex. Note that if the same weights buffer is shared in multiple
     // places, this will needlessly repeat the work. In the future we would like to remove this
@@ -295,7 +356,6 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
     Engine& engine = *pImpl->mEngine;
 
     // Upload VertexBuffer and IndexBuffer data to the GPU.
-
     for (auto slot : asset->mBufferSlots) {
         const cgltf_accessor* accessor = slot.accessor;
         if (!accessor->buffer_view) {
@@ -323,6 +383,7 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
         IndexBuffer::BufferDescriptor bd(data, size, AssetPool::onLoadedResource, mPool);
         slot.indexBuffer->setBuffer(engine, std::move(bd));
     }
+
     // Copy over the inverse bind matrices.
     for (cgltf_size i = 0, len = gltf->skins_count; i < len; ++i) {
         importSkinningData(asset->mSkins[i], gltf->skins[i]);
@@ -335,7 +396,7 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
     // we need to generate the contents of a GPU buffer by processing one or more CPU buffer(s).
     computeTangents(asset);
 
-    // Non-textured renderables are now considered ready, so notify the dep graph.
+    // Non-textured renderables are now considered ready, so notify the dependency graph.
     asset->mDependencyGraph.finalize();
     pImpl->mCurrentAsset = asset;
 
@@ -748,7 +809,7 @@ void ResourceLoader::computeTangents(FFilamentAsset* asset) const {
         auto texcoordsInfo = accessors[cgltf_attribute_type_texcoord];
         if (texcoordsInfo) {
             if (texcoordsInfo->count != vertexCount || texcoordsInfo->type != cgltf_type_vec2) {
-                slog.e << "Bad texcoord count or type." << io::endl;
+                slog.e << "Bad texture coordinate count or type." << io::endl;
                 return;
             }
             fp32TexCoords.resize(vertexCount);

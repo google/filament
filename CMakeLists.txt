@@ -551,6 +551,7 @@ if (NOT ANDROID AND NOT WEBGL AND NOT IOS)
     add_subdirectory(${EXTERNAL}/libz/tnt)
     add_subdirectory(${EXTERNAL}/skylight/tnt)
     add_subdirectory(${EXTERNAL}/tinyexr/tnt)
+    add_subdirectory(${EXTERNAL}/draco/tnt)
 
     add_subdirectory(${TOOLS}/cmgen)
     add_subdirectory(${TOOLS}/filamesh)
