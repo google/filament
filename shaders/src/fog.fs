@@ -2,7 +2,7 @@
 // Fog
 //------------------------------------------------------------------------------
 
-vec3 fog(vec3 color, vec3 view) {
+vec4 fog(vec4 color, vec3 view) {
     if (frameUniforms.fogDensity > 0.0) {
         float A = frameUniforms.fogDensity;
         float B = frameUniforms.fogHeightFalloff;
@@ -44,7 +44,21 @@ vec3 fog(vec3 color, vec3 view) {
             fogColor += sunColor * (sunInscattering * inscatteringOpacity);
         }
 
-        return color * (1.0 - fogOpacity) + fogColor;
+#if   defined(BLEND_MODE_OPAQUE)
+        // nothing to do here
+#elif defined(BLEND_MODE_TRANSPARENT)
+        fogColor *= color.a;
+#elif defined(BLEND_MODE_ADD)
+        fogColor = vec3(0.0);
+#elif defined(BLEND_MODE_MASKED)
+        // nothing to do here
+#elif defined(BLEND_MODE_MULTIPLY)
+        // FIXME: unclear what to do here
+#elif defined(BLEND_MODE_SCREEN)
+        // FIXME: unclear what to do here
+#endif
+
+        color.rgb = color.rgb * (1.0 - fogOpacity) + fogColor;
     }
     return color;
 }
