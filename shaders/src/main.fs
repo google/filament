@@ -30,7 +30,7 @@ void main() {
 
 #if defined(HAS_FOG)
     vec3 view = getWorldPosition() - getWorldCameraPosition();
-    fragColor.rgb = fog(fragColor.rgb, view);
+    fragColor = fog(fragColor, view);
 #endif
 
 #if defined(MATERIAL_HAS_POST_LIGHTING_COLOR)
