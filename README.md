@@ -74,13 +74,13 @@ steps:
 
 Here are a few sample materials rendered with Filament:
 
-![Damaged Helmet](docs/images/samples/model_damaged_helmet.jpg)
-![Helmet](docs/images/samples/model_helmet.jpg)
-![Brushed copper](docs/images/samples/brushed_copper_2.jpg)
-![Material 1](docs/images/samples/material_01.jpg)
-![Material 2](docs/images/samples/material_02.jpg)
-![Material 6](docs/images/samples/material_06.jpg)
-![Material 8](docs/images/samples/material_08.jpg)
+![Materials](docs/images/samples/example_materials1.jpg)
+![Materials](docs/images/samples/example_materials2.jpg)
+![Helmet](docs/images/samples/example_helmet.jpg)
+![Car](docs/images/samples/example_car1.jpg)
+![Car](docs/images/samples/example_car2.jpg)
+![Screen-space refraction](docs/images/samples/example_ssr.jpg)
+
 
 ### Applications
 
