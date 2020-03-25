@@ -72,7 +72,23 @@ vec3 Irradiance_RoughnessOne(const vec3 n) {
 
 vec3 diffuseIrradiance(const vec3 n) {
     if (frameUniforms.iblSH[0].x == 65504.0) {
+#if defined(TARGET_MOBILE)
         return Irradiance_RoughnessOne(n);
+#else
+        ivec2 s = textureSize(light_iblSpecular, int(frameUniforms.iblRoughnessOneLevel));
+        float du = 1.0 / float(s.x);
+        float dv = 1.0 / float(s.y);
+        vec3 m0 = normalize(cross(n, vec3(0.0, 1.0, 0.0)));
+        vec3 m1 = cross(m0, n);
+        vec3 m0du = m0 * du;
+        vec3 m1dv = m1 * dv;
+        vec3 c;
+        c  = Irradiance_RoughnessOne(n - m0du - m1dv);
+        c += Irradiance_RoughnessOne(n + m0du - m1dv);
+        c += Irradiance_RoughnessOne(n + m0du + m1dv);
+        c += Irradiance_RoughnessOne(n - m0du + m1dv);
+        return c * 0.25;
+#endif
     } else {
         return Irradiance_SphericalHarmonics(n);
     }
