@@ -108,6 +108,14 @@ struct FFilamentAsset : public FilamentAsset {
         return mEntities.empty() ? nullptr : mEntities.data();
     }
 
+    const utils::Entity* getLightEntities() const noexcept {
+        return mLightEntities.empty() ? nullptr : mLightEntities.data();
+    }
+
+    size_t getLightEntityCount() const noexcept {
+        return mLightEntities.size();
+    }
+
     utils::Entity getRoot() const noexcept {
         return mRoot;
     }
@@ -210,6 +218,7 @@ struct FFilamentAsset : public FilamentAsset {
     utils::NameComponentManager* mNameManager;
     std::vector<uint8_t> mGlbData;
     std::vector<utils::Entity> mEntities;
+    std::vector<utils::Entity> mLightEntities;
     std::vector<filament::MaterialInstance*> mMaterialInstances;
     std::vector<filament::VertexBuffer*> mVertexBuffers;
     std::vector<filament::IndexBuffer*> mIndexBuffers;

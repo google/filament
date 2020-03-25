@@ -282,6 +282,8 @@ void SimpleViewer::populateScene(FilamentAsset* asset, bool scale) {
             filament::math::mat4f transform = fitIntoUnitCube(mAsset->getBoundingBox());
             tcm.setTransform(root, transform);
         }
+
+        mScene->addEntities(asset->getLightEntities(), asset->getLightEntityCount());
     }
 
     auto& tcm = mEngine->getRenderableManager();
@@ -381,22 +383,54 @@ void SimpleViewer::updateUserInterface() {
         }
     };
 
+    auto lightTreeItem = [this, &lm](utils::Entity entity) {
+        bool lvis = mScene->hasEntity(entity);
+        ImGui::Checkbox("visible", &lvis);
+
+        if (lvis) {
+            mScene->addEntity(entity);
+        } else {
+            mScene->remove(entity);
+        }
+
+        auto instance = lm.getInstance(entity);
+        bool lcaster = lm.isShadowCaster(instance);
+        ImGui::Checkbox("shadow caster", &lcaster);
+        lm.setShadowCaster(instance, lcaster);
+    };
+
     // Declare a std::function for tree nodes, it's an easy way to make a recursive lambda.
     std::function<void(utils::Entity)> treeNode;
 
     treeNode = [&](utils::Entity entity) {
         auto tinstance = tm.getInstance(entity);
         auto rinstance = rm.getInstance(entity);
+        auto linstance = lm.getInstance(entity);
         intptr_t treeNodeId = 1 + entity.getId();
 
         const char* name = mAsset->getName(entity);
-        const char* label = name ? name : (rinstance ? "Mesh" : "Node");
+        auto getLabel = [&name, &rinstance, &linstance]() {
+            if (name) {
+                return name;
+            }
+            if (rinstance) {
+                return "Mesh";
+            }
+            if (linstance) {
+                return "Light";
+            }
+            return "Node";
+        };
+        const char* label = getLabel();
 
         ImGuiTreeNodeFlags flags = 0; // rinstance ? 0 : ImGuiTreeNodeFlags_DefaultOpen;
         std::vector<utils::Entity> children(tm.getChildCount(tinstance));
         if (ImGui::TreeNodeEx((const void*) treeNodeId, flags, "%s", label)) {
             if (rinstance) {
                 renderableTreeItem(entity);
+            }
+            if (linstance) {
+                lightTreeItem(entity);
             }
             tm.getChildren(tinstance, children.data(), children.size());
             for (auto ce : children) {

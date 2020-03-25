@@ -137,12 +137,15 @@ struct FAssetLoader : public AssetLoader {
     void createRenderable(const cgltf_node* node, Entity entity);
     bool createPrimitive(const cgltf_primitive* inPrim, Primitive* outPrim, const UvMap& uvmap,
             const char* name);
+    void createLight(const cgltf_node* node, Entity entity);
     MaterialInstance* createMaterialInstance(const cgltf_material* inputMat, UvMap* uvmap,
             bool vertexColor);
     void addTextureBinding(MaterialInstance* materialInstance, const char* parameterName,
             const cgltf_texture* srcTexture, bool srgb);
     void importSkinningData(Skin& dstSkin, const cgltf_skin& srcSkin);
     bool primitiveHasVertexColor(const cgltf_primitive* inPrim) const;
+
+    static LightManager::Type getLightType(const cgltf_light_type type);
 
     EntityManager& mEntityManager;
     RenderableManager& mRenderableManager;
@@ -304,7 +307,11 @@ void FAssetLoader::createEntity(const cgltf_node* node, Entity parent) {
     // If the node has a mesh, then create a renderable component.
     if (node->mesh) {
         createRenderable(node, entity);
-     }
+    }
+
+    if (node->light) {
+        createLight(node, entity);
+    }
 
     for (cgltf_size i = 0, len = node->children_count; i < len; ++i) {
         createEntity(node->children[i], entity);
@@ -687,6 +694,46 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
     return true;
 }
 
+void FAssetLoader::createLight(const cgltf_node* node, Entity entity) {
+    const cgltf_light* light = node->light;
+
+    // Create a name component using the light label if it exists, otherwise use the node label.
+    const char* name = light->name ? light->name : node->name;
+    if (mNameManager && name) {
+        mNameManager->addComponent(entity);
+        mNameManager->setName(mNameManager->getInstance(entity), name);
+    }
+
+    LightManager::Type type = getLightType(light->type);
+    LightManager::Builder builder(type);
+
+    builder.direction({0.0f, 0.0f, -1.0f});
+    builder.color({light->color[0], light->color[1], light->color[2]});
+
+    if (type == LightManager::Type::DIRECTIONAL) {
+        builder.intensity(light->intensity);
+    } else if (type == LightManager::Type::SPOT) {
+        builder.spotLightCone(light->spot_inner_cone_angle, light->spot_outer_cone_angle);
+        // Convert from candelas (luminous intensity) to lumens (luminous power).
+        // lp = li * pi
+        builder.intensity(F_PI * light->intensity);
+    } else if (type == LightManager::Type::POINT) {
+        // Convert from candelas (luminous intensity) to lumens (luminous power).
+        // lp = 4 * pi * li
+        builder.intensity(4.0f * F_PI * light->intensity);
+    }
+
+    if (light->range == 0.0f) {
+        // Use 10.0f units as a resonable default falloff value.
+        builder.falloff(10.0f);
+    } else {
+        builder.falloff(light->range);
+    }
+
+    builder.build(*mEngine, entity);
+    mResult->mLightEntities.push_back(entity);
+}
+
 MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inputMat,
         UvMap* uvmap, bool vertexColor) {
     intptr_t key = ((intptr_t) inputMat) ^ (vertexColor ? 1 : 0);
@@ -957,6 +1004,18 @@ bool FAssetLoader::primitiveHasVertexColor(const cgltf_primitive* inPrim) const 
         }
     }
     return false;
+}
+
+LightManager::Type FAssetLoader::getLightType(const cgltf_light_type light) {
+    switch (light) {
+        case cgltf_light_type_invalid:
+        case cgltf_light_type_directional:
+            return LightManager::Type::DIRECTIONAL;
+        case cgltf_light_type_point:
+            return LightManager::Type::POINT;
+        case cgltf_light_type_spot:
+            return LightManager::Type::SPOT;
+    }
 }
 
 AssetLoader* AssetLoader::create(const AssetConfiguration& config) {
