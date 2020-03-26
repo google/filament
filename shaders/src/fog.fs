@@ -8,9 +8,11 @@ vec4 fog(vec4 color, vec3 view) {
         float B = frameUniforms.fogHeightFalloff;
 
         float d = length(view);
-        float h = abs(view.y) < FLT_EPS ? FLT_EPS : view.y;   // avoid divide-by-zero
 
-        float fogIntegralFunctionOfDistance = A * (1.0 - exp2(-B * h)) / h;
+        float h = view.y;
+        // The function below is continuous at h=0, so to avoid a divide-by-zero, we use the
+        // constant approximation 'B'. A better approximation would be B * (1 - 0.5 * B * h)
+        float fogIntegralFunctionOfDistance = A * ((abs(h) < 0.001) ? B : ((1.0 - exp(-B * h)) / h));
         float fogIntegral = fogIntegralFunctionOfDistance * max(d - frameUniforms.fogStart, 0.0);
 
         // remap fogIntegral to an opacity between 0 and 1. saturate(fogIntegral) is too harsh.

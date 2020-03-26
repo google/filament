@@ -273,7 +273,7 @@ public class View {
         /**
          * distance in world units from the camera where the fog starts ( >= 0.0 )
          */
-        public float distance = 1.0f;
+        public float distance = 0.0f;
 
         /**
          * fog's maximum opacity between 0 and 1
