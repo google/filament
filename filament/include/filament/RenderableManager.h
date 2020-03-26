@@ -326,6 +326,7 @@ public:
      *
      * \see Builder::layerMask()
      * \see View::setVisibleLayers().
+     * \see RenderableManager::getLayerMask()
      */
     void setLayerMask(Instance instance, uint8_t select, uint8_t values) noexcept;
 
@@ -395,6 +396,15 @@ public:
      * \see RenderableManager::setAxisAlignedBoundingBox()
      */
     const Box& getAxisAlignedBoundingBox(Instance instance) const noexcept;
+
+    /**
+     * Get the visibility bits.
+     *
+     * \see Builder::layerMask()
+     * \see View::setVisibleLayers().
+     * \see RenderableManager::getLayerMask()
+     */
+    uint8_t getLayerMask(Instance instance) const noexcept;
 
     /**
      * Gets the immutable number of primitives in the given renderable.
