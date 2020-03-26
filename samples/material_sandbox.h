@@ -96,6 +96,15 @@ struct SandboxParameters {
     float sunAngularRadius = 1.9f;
     bool directionalLightEnabled = true;
     utils::Entity light;
+    utils::Entity spotLight;
+    bool hasSpotLight = false;
+    bool spotLightEnabled = false;
+    filament::sRGBColor spotLightColor = {1.0f, 1.0f, 1.0f};
+    float spotLightIntensity = 200000.0f;
+    bool spotLightCastShadows = true;
+    filament::math::float3 spotLightPosition;
+    float spotLightConeAngle = 3.14159 / 4.0f;
+    float spotLightConeFade = 0.9f;
     bool hasDirectionalLight = true;
     bool fxaa = true;
     bool tonemapping = true;
@@ -194,6 +203,17 @@ inline void createInstances(SandboxParameters& params, filament::Engine& engine)
             .sunHaloSize(params.sunHaloSize)
             .sunHaloFalloff(params.sunHaloFalloff)
             .build(engine, params.light);
+
+    params.spotLight = EntityManager::get().create();
+    LightManager::Builder(LightManager::Type::SPOT)
+            .color(Color::toLinear<ACCURATE>(params.spotLightColor))
+            .intensity(params.spotLightIntensity)
+            .direction({0.0f, -1.0f, 0.0f})
+            .spotLightCone(params.spotLightConeAngle * params.spotLightConeFade,
+                    params.spotLightConeAngle)
+            .castShadows(params.spotLightCastShadows)
+            .falloff(10.0f)
+            .build(engine, params.spotLight);
 }
 
 #endif // TNT_FILAMENT_SAMPLES_MATERIAL_SANDBOX_H
