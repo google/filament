@@ -177,6 +177,7 @@ public:
             mutable backend::TargetBufferFlags resolve = backend::TargetBufferFlags::NONE; // attachments in fbo_draw to resolve
             uint8_t samples : 4;
         } gl;
+        backend::TargetBufferFlags targets;
     };
 
     OpenGLDriver(OpenGLDriver const&) = delete;
@@ -337,8 +338,8 @@ private:
         return mSamplerBindings;
     }
 
-    GLsizei getAttachments(std::array<GLenum, 6>& attachments,
-            GLRenderTarget const* rt, backend::TargetBufferFlags buffers) const noexcept;
+    static GLsizei getAttachments(std::array<GLenum, 6>& attachments,
+            GLRenderTarget const* rt, backend::TargetBufferFlags buffers) noexcept;
 
     backend::RasterState mRasterState;
 

@@ -912,6 +912,7 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
      */
 
     rt->gl.samples = samples;
+    rt->targets = targets;
 
     if (any(targets & TargetBufferFlags::COLOR_ALL)) {
         GLenum bufs[4] = { GL_NONE };
@@ -1861,10 +1862,12 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
 
     mRenderPassTarget = rth;
     mRenderPassParams = params;
-    const TargetBufferFlags clearFlags = params.flags.clear;
-    TargetBufferFlags discardFlags = params.flags.discardStart;
 
     GLRenderTarget* rt = handle_cast<GLRenderTarget*>(rth);
+
+    const TargetBufferFlags clearFlags = params.flags.clear & rt->targets;
+    TargetBufferFlags discardFlags = params.flags.discardStart & rt->targets;
+
     gl.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
 
     // glInvalidateFramebuffer appeared on GLES 3.0 and GL4.3, for simplicity we just
@@ -1923,7 +1926,7 @@ void OpenGLDriver::endRenderPass(int) {
 
     GLRenderTarget const* const rt = handle_cast<GLRenderTarget*>(mRenderPassTarget);
 
-    const TargetBufferFlags discardFlags = mRenderPassParams.flags.discardEnd;
+    const TargetBufferFlags discardFlags = mRenderPassParams.flags.discardEnd & rt->targets;
     if (rt->gl.fbo_read) {
         resolvePass(ResolveAction::STORE, rt, discardFlags);
     }
@@ -1977,7 +1980,9 @@ void OpenGLDriver::resolvePass(ResolveAction action, GLRenderTarget const* rt,
 }
 
 GLsizei OpenGLDriver::getAttachments(std::array<GLenum, 6>& attachments,
-        GLRenderTarget const* rt, TargetBufferFlags buffers) const noexcept {
+        GLRenderTarget const* rt, TargetBufferFlags buffers) noexcept {
+    assert(buffers <= rt->targets);
+
     GLsizei attachmentCount = 0;
     // the default framebuffer uses different constants!!!
     const bool defaultFramebuffer = (rt->gl.fbo == 0);
