@@ -4,7 +4,7 @@ project(draco C CXX)
 
 set(draco_root "${CMAKE_CURRENT_SOURCE_DIR}/..")
 set(draco_src_root "${draco_root}/src/draco")
-set(draco_build_dir "${CMAKE_BINARY_DIR}")
+set(draco_build_dir "${CMAKE_CURRENT_BINARY_DIR}")
 
 include(CMakePackageConfigHelpers)
 include("${draco_root}/cmake/compiler_flags.cmake")
@@ -654,3 +654,7 @@ endforeach()
 
 # Generate $draco_build_dir/draco/draco_features.h.
 draco_generate_features_h()
+
+target_include_directories(dracodec
+    PUBLIC "${draco_build_dir}"
+    PUBLIC "${draco_root}/src")
