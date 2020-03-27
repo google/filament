@@ -75,7 +75,7 @@ function print_help {
 
 # Requirements
 CMAKE_MAJOR=3
-CMAKE_MINOR=10
+CMAKE_MINOR=12
 ANDROID_NDK_VERSION=21
 
 # Internal variables
