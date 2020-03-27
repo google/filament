@@ -21,6 +21,7 @@ set(DIST_HDRS
         ${PUBLIC_HDR_DIR}/${TARGET}/Entity.h
         ${PUBLIC_HDR_DIR}/${TARGET}/EntityInstance.h
         ${PUBLIC_HDR_DIR}/${TARGET}/EntityManager.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/memalign.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Mutex.h
         ${PUBLIC_HDR_DIR}/${TARGET}/NameComponentManager.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Path.h
@@ -112,7 +113,7 @@ target_compile_options(${TARGET} PRIVATE
 set(INSTALL_TYPE ARCHIVE)
 install(TARGETS ${TARGET} ${INSTALL_TYPE} DESTINATION lib/${DIST_DIR})
 install(FILES ${DIST_HDRS} DESTINATION include/${TARGET})
-if (LINUX)
+if (LINUX OR ANDROID)
 install(FILES ${DIST_LINUX_HDRS} DESTINATION include/${TARGET_LINUX})
 else()
 install(FILES ${DIST_GENERIC_HDRS} DESTINATION include/${TARGET_GENERIC})
