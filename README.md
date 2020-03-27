@@ -130,6 +130,7 @@ Here are a few screenshots of applications that use Filament in production:
 - Contact shadows
 - Screen-space ambient occlusion
 - Screen-space refraction
+- Global fog
 - HDR bloom
 - ACES-like tone-mapping
 - Temporal dithering

@@ -595,6 +595,10 @@ const Box& RenderableManager::getAxisAlignedBoundingBox(Instance instance) const
     return upcast(this)->getAxisAlignedBoundingBox(instance);
 }
 
+uint8_t RenderableManager::getLayerMask(Instance instance) const noexcept {
+    return upcast(this)->getLayerMask(instance);
+}
+
 size_t RenderableManager::getPrimitiveCount(Instance instance) const noexcept {
     return upcast(this)->getPrimitiveCount(instance, 0);
 }

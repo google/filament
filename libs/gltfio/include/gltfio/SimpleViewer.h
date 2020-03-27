@@ -463,7 +463,7 @@ void SimpleViewer::updateUserInterface() {
         ImGui::SliderFloat("Height", &mFogOptions.height, 0.0f, 100.0f);
         ImGui::SliderFloat("Height Falloff", &mFogOptions.heightFalloff, 0.0f, 10.0f);
         ImGui::SliderFloat("Scattering Start", &mFogOptions.inScatteringStart, 0.0f, 100.0f);
-        ImGui::SliderFloat("Scattering Size", &mFogOptions.inScatteringSize, 0.0f, 10.0f);
+        ImGui::SliderFloat("Scattering Size", &mFogOptions.inScatteringSize, 0.0f, 100.0f);
         ImGui::Checkbox("Color from IBL", &mFogOptions.fogColorFromIbl);
         ImGui::ColorPicker3("Color", mFogOptions.color.v);
     }

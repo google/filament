@@ -169,7 +169,7 @@ public:
      * Options to control fog in the scene
      */
     struct FogOptions {
-        float distance = 1.0f;              //!< distance in world units from the camera where the fog starts ( >= 0.0 )
+        float distance = 0.0f;              //!< distance in world units from the camera where the fog starts ( >= 0.0 )
         float maximumOpacity = 1.0f;        //!< fog's maximum opacity between 0 and 1
         float height = 0.0f;                //!< fog's floor in world units
         float heightFalloff = 1.0f;         //!< how fast fog dissipates with altitude

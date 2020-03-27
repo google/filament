@@ -617,17 +617,19 @@ void FView::prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& are
 
     auto const& fogOptions = mFogOptions;
 
-    // shader uses exp2() instead of exp() so we correct that here
-    float heightFalloffExp2 = fogOptions.heightFalloff * 1.44269f;
+    // this can't be too high because we need density / heightFalloff to produce something
+    // close to fogOptions.density in the fragment shader which use 16-bits floats.
+    constexpr float epsilon = 0.001f;
+    const float heightFalloff = std::max(epsilon, fogOptions.heightFalloff);
 
     // precalculate the constant part of density  integral
-    float density = (fogOptions.density / fogOptions.heightFalloff) *
-            std::exp(-fogOptions.heightFalloff * (camera->getPosition().y - fogOptions.height));
+    const float density = (fogOptions.density / heightFalloff) *
+            std::exp(-heightFalloff * (camera->getPosition().y - fogOptions.height));
 
     u.setUniform(offsetof(PerViewUib, fogStart),             fogOptions.distance);
     u.setUniform(offsetof(PerViewUib, fogMaxOpacity),        fogOptions.maximumOpacity);
     u.setUniform(offsetof(PerViewUib, fogHeight),            fogOptions.height);
-    u.setUniform(offsetof(PerViewUib, fogHeightFalloff),     heightFalloffExp2);
+    u.setUniform(offsetof(PerViewUib, fogHeightFalloff),     heightFalloff);
     u.setUniform(offsetof(PerViewUib, fogColor),             fogOptions.color);
     u.setUniform(offsetof(PerViewUib, fogDensity),           density);
     u.setUniform(offsetof(PerViewUib, fogInscatteringStart), fogOptions.inScatteringStart);
