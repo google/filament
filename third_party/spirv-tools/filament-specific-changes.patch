@@ -116,3 +116,16 @@ index 6ed56a81..2392dfd8 100755
  
  # Install pkg-config file
  if (ENABLE_SPIRV_TOOLS_INSTALL)
+@@ -201,7 +201,11 @@ if(NOT COMMAND find_host_program)
+ endif()
+ 
+ # Tests require Python3
+-find_host_package(PythonInterp 3 REQUIRED)
++if(CMAKE_VERSION VERSION_LESS "3.12" OR ${CMAKE_SYSTEM_NAME} MATCHES "Windows")
++  find_host_package(PythonInterp 3 REQUIRED)
++else()
++  find_package(Python3 COMPONENTS Interpreter)
++endif()
+ 
+ # Check for symbol exports on Linux.
+ # At the moment, this check will fail on the OSX build machines for the Android NDK.
