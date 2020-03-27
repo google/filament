@@ -25,7 +25,7 @@ A new header is inserted each time a *tag* is created.
 - gltfio: Removed deprecated "Bindings" API. (⚠ API Change)
 - Add support for screen-space contact shadows
 - Add support for fog
-- gltfio: Added support for Draco on desktop platforms.
+- gltfio: Added support for Draco on desktop and Android platforms.
 
 ## v1.4.5
 
