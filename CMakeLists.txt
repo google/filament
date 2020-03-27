@@ -24,7 +24,9 @@ option(FILAMENT_SKIP_SAMPLES "Don't build samples" OFF)
 # ==================================================================================================
 # CMake policies
 # ==================================================================================================
-cmake_policy(SET CMP0074 NEW)
+if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.12")
+    cmake_policy(SET CMP0074 NEW)
+endif()
 
 # ==================================================================================================
 # Support for ccache

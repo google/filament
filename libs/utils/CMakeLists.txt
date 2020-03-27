@@ -114,9 +114,9 @@ set(INSTALL_TYPE ARCHIVE)
 install(TARGETS ${TARGET} ${INSTALL_TYPE} DESTINATION lib/${DIST_DIR})
 install(FILES ${DIST_HDRS} DESTINATION include/${TARGET})
 if (LINUX OR ANDROID)
-install(FILES ${DIST_LINUX_HDRS} DESTINATION include/${TARGET_LINUX})
+    install(FILES ${DIST_LINUX_HDRS} DESTINATION include/${TARGET_LINUX})
 else()
-install(FILES ${DIST_GENERIC_HDRS} DESTINATION include/${TARGET_GENERIC})
+    install(FILES ${DIST_GENERIC_HDRS} DESTINATION include/${TARGET_GENERIC})
 endif()
 
 # ==================================================================================================
