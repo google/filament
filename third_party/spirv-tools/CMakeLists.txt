@@ -201,7 +201,7 @@ if(NOT COMMAND find_host_program)
 endif()
 
 # Tests require Python3
-if(CMAKE_VERSION VERSION_LESS "3.12")
+if(CMAKE_VERSION VERSION_LESS "3.12" OR ${CMAKE_SYSTEM_NAME} MATCHES "Windows")
   find_host_package(PythonInterp 3 REQUIRED)
 else()
   find_package(Python3 COMPONENTS Interpreter)
