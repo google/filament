@@ -405,12 +405,12 @@ static void renderTileFromGbuffer(EmbreeContext* context, PixelRectangle rect) {
                     aoray.tfar = tfar;
                     rtcOccluded1(embreeScene, &intersector, &aoray);
                     if (aoray.tfar == -inf) {
-                        bentNormal += dir;
+                        bentNormal += normalize(dir);
                         sum += 1.0f;
                     }
                 }
                 if (bentNormals) {
-                    bentNormal = normalize(bentNormal);
+                    bentNormal = normalize(bentNormal / sum);
                     float* pBentNormal = bentNormals.getPixelRef(col, row);
                     pBentNormal[0] = bentNormal[0];
                     pBentNormal[1] = bentNormal[1];
