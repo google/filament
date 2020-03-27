@@ -13,30 +13,9 @@ include("${draco_root}/cmake/draco_tests.cmake")
 include("${draco_root}/cmake/sanitizers.cmake")
 include("${draco_root}/cmake/util.cmake")
 
-option(ENABLE_MESH_COMPRESSION "" ON)
-option(ENABLE_POINT_CLOUD_COMPRESSION "" ON)
-option(ENABLE_PREDICTIVE_EDGEBREAKER "" ON)
-option(ENABLE_STANDARD_EDGEBREAKER "" ON)
-option(ENABLE_BACKWARDS_COMPATIBILITY "" ON)
-
-if(ENABLE_POINT_CLOUD_COMPRESSION)
-  draco_enable_feature(FEATURE "DRACO_POINT_CLOUD_COMPRESSION_SUPPORTED")
-endif()
-
-if(ENABLE_MESH_COMPRESSION)
-  draco_enable_feature(FEATURE "DRACO_MESH_COMPRESSION_SUPPORTED")
-  draco_enable_feature(FEATURE "DRACO_NORMAL_ENCODING_SUPPORTED")
-  if(ENABLE_STANDARD_EDGEBREAKER)
-    draco_enable_feature(FEATURE "DRACO_STANDARD_EDGEBREAKER_SUPPORTED")
-  endif()
-  if(ENABLE_PREDICTIVE_EDGEBREAKER)
-    draco_enable_feature(FEATURE "DRACO_PREDICTIVE_EDGEBREAKER_SUPPORTED")
-  endif()
-endif()
-
-if(ENABLE_BACKWARDS_COMPATIBILITY)
-  draco_enable_feature(FEATURE "DRACO_BACKWARDS_COMPATIBILITY_SUPPORTED")
-endif()
+draco_enable_feature(FEATURE "DRACO_MESH_COMPRESSION_SUPPORTED")
+draco_enable_feature(FEATURE "DRACO_NORMAL_ENCODING_SUPPORTED")
+draco_enable_feature(FEATURE "DRACO_STANDARD_EDGEBREAKER_SUPPORTED")
 
 # Draco source file listing variables.
 set(draco_attributes_sources
