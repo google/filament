@@ -22,6 +22,11 @@ option(FILAMENT_ENABLE_LTO "Enable link-time optimizations if supported by the c
 option(FILAMENT_SKIP_SAMPLES "Don't build samples" OFF)
 
 # ==================================================================================================
+# CMake policies
+# ==================================================================================================
+cmake_policy(SET CMP0074 NEW)
+
+# ==================================================================================================
 # Support for ccache
 # ==================================================================================================
 find_program(CCACHE_PROGRAM ccache)
@@ -105,7 +110,7 @@ if (embree_FOUND AND NOT ANDROID AND NOT IOS)
     include(third_party/OpenImageDenoise/mkl-dnn/cmake/Threading.cmake)
     include(third_party/OpenImageDenoise/mkl-dnn/cmake/TBB.cmake)
     find_package(TBB QUIET)
-    if (TBB_FOUND AND "${TBB_VERSION_MAJOR}" VERSION_EQUAL 2019)
+    if (TBB_FOUND)
         message("Found TBB ${TBB_VERSION}")
         add_definitions(-DFILAMENT_HAS_EMBREE)
         set(DENOISE_LIBRARY OpenImageDenoise)

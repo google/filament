@@ -201,7 +201,8 @@ if(NOT COMMAND find_host_program)
 endif()
 
 # Tests require Python3
-find_host_package(PythonInterp 3 REQUIRED)
+#find_host_package(PythonInterp 3 REQUIRED)
+find_package (Python3 COMPONENTS Interpreter)
 
 # Check for symbol exports on Linux.
 # At the moment, this check will fail on the OSX build machines for the Android NDK.
