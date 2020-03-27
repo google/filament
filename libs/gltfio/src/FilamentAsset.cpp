@@ -31,6 +31,14 @@ const Entity* FilamentAsset::getEntities() const noexcept {
     return upcast(this)->getEntities();
 }
 
+const Entity* FilamentAsset::getLightEntities() const noexcept {
+    return upcast(this)->getLightEntities();
+}
+
+size_t FilamentAsset::getLightEntityCount() const noexcept {
+    return upcast(this)->getLightEntityCount();
+}
+
 Entity FilamentAsset::getRoot() const noexcept {
     return upcast(this)->getRoot();
 }

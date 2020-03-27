@@ -58,7 +58,7 @@ public:
 
     /**
      * Gets the list of entities, one for each glTF node. All of these have a Transform component.
-     * Some of the returned entities may also have a Renderable component.
+     * Some of the returned entities may also have a Renderable component and/or a Light component.
      */
     const utils::Entity* getEntities() const noexcept;
 
@@ -66,6 +66,16 @@ public:
      * Gets the number of entities returned by getEntities().
      */
     size_t getEntityCount() const noexcept;
+
+    /**
+     * Gets the list of entities in the scene representing lights. All of these have a Light component.
+     */
+    const utils::Entity* getLightEntities() const noexcept;
+
+    /**
+     * Gets the number of entities returned by getLightEntities().
+     */
+    size_t getLightEntityCount() const noexcept;
 
     /** Gets the transform root for the asset, which has no matching glTF node. */
     utils::Entity getRoot() const noexcept;
