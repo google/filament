@@ -142,9 +142,6 @@ if (NOT WEBGL AND NOT ANDROID AND NOT IOS)
     # Enable Draco only on desktop for now.
     target_compile_definitions(gltfio_core PUBLIC -DGLTFIO_DRACO_SUPPORTED=1)
     target_link_libraries(gltfio_core PUBLIC dracodec)
-    target_include_directories(gltfio_core
-        PRIVATE ${CMAKE_BINARY_DIR}
-        PRIVATE ../../third_party/draco/src)
 
     # ==================================================================================================
     # Link the core library with additional dependencies to create the "full" library
