@@ -590,29 +590,6 @@ if(NOT MSVC)
   file(APPEND "${pkgconfig_file}" "Cflags: -I${prefix}/include -std=c++11\n")
 endif()
 
-# Collect all of the header files in the tree, and add an install rule for
-# each.
-file(GLOB_RECURSE draco_headers RELATIVE ${draco_root}/src/draco "*.h")
-foreach(filename ${draco_headers})
-  get_filename_component(file_directory ${filename} DIRECTORY)
-  install(
-    FILES src/draco/${filename}
-    DESTINATION "${CMAKE_INSTALL_PREFIX}/include/draco/${file_directory}")
-endforeach()
-
-install(FILES "${draco_build_dir}/draco/draco_features.h"
-        DESTINATION "${CMAKE_INSTALL_PREFIX}/include/draco/")
-
-if(NOT MSVC)
-  # Install our pkg-config file.
-  install(FILES "${draco_build_dir}/draco.pc"
-          DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/pkgconfig")
-endif()
-
-# Add install rules for lib and executable targets.
-install(TARGETS dracodec dracoenc draco DESTINATION
-                "${CMAKE_INSTALL_PREFIX}/lib")
-
 # Generate a CMake config file.
 set(draco_include_install_dir "include/draco")
 set(draco_lib_install_dir "lib")
@@ -643,8 +620,6 @@ endforeach()
 set(draco_cmake_helper_scripts "${draco_root}/cmake/FindDraco.cmake"
                                 "${draco_build_dir}/DracoConfig.cmake"
                                 "${draco_build_dir}/DracoConfigVersion.cmake")
-install(FILES ${draco_cmake_helper_scripts}
-        DESTINATION "${draco_script_install_dir}")
 
 # Some generators complain about unknown link language for header only
 # targets. Silence the harmless warnings/errors with some dummy source files.
@@ -658,3 +633,5 @@ draco_generate_features_h()
 target_include_directories(dracodec
     PUBLIC "${draco_build_dir}"
     PUBLIC "${draco_root}/src")
+
+install(TARGETS dracodec ARCHIVE DESTINATION lib/${DIST_DIR})
