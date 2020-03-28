@@ -480,52 +480,6 @@ add_library(dracodec
             $<TARGET_OBJECTS:draco_animation_dec>
             $<TARGET_OBJECTS:draco_point_cloud>
             $<TARGET_OBJECTS:draco_points_dec>)
-add_library(dracoenc
-            $<TARGET_OBJECTS:draco_attributes>
-            $<TARGET_OBJECTS:draco_compression_attributes_enc>
-            $<TARGET_OBJECTS:draco_compression_entropy>
-            $<TARGET_OBJECTS:draco_compression_attributes_pred_schemes_enc>
-            $<TARGET_OBJECTS:draco_compression_bit_coders>
-            $<TARGET_OBJECTS:draco_compression_encode>
-            $<TARGET_OBJECTS:draco_compression_mesh_enc>
-            $<TARGET_OBJECTS:draco_compression_point_cloud_enc>
-            $<TARGET_OBJECTS:draco_core>
-            $<TARGET_OBJECTS:draco_enc_config>
-            $<TARGET_OBJECTS:draco_mesh>
-            $<TARGET_OBJECTS:draco_metadata>
-            $<TARGET_OBJECTS:draco_metadata_enc>
-            $<TARGET_OBJECTS:draco_animation>
-            $<TARGET_OBJECTS:draco_animation_enc>
-            $<TARGET_OBJECTS:draco_point_cloud>
-            $<TARGET_OBJECTS:draco_points_enc>)
-add_library(draco
-            $<TARGET_OBJECTS:draco_attributes>
-            $<TARGET_OBJECTS:draco_compression_attributes_dec>
-            $<TARGET_OBJECTS:draco_compression_attributes_enc>
-            $<TARGET_OBJECTS:draco_compression_attributes_pred_schemes_dec>
-            $<TARGET_OBJECTS:draco_compression_attributes_pred_schemes_enc>
-            $<TARGET_OBJECTS:draco_compression_bit_coders>
-            $<TARGET_OBJECTS:draco_compression_decode>
-            $<TARGET_OBJECTS:draco_compression_encode>
-            $<TARGET_OBJECTS:draco_compression_entropy>
-            $<TARGET_OBJECTS:draco_compression_mesh_dec>
-            $<TARGET_OBJECTS:draco_compression_mesh_enc>
-            $<TARGET_OBJECTS:draco_compression_point_cloud_dec>
-            $<TARGET_OBJECTS:draco_compression_point_cloud_enc>
-            $<TARGET_OBJECTS:draco_core>
-            $<TARGET_OBJECTS:draco_dec_config>
-            $<TARGET_OBJECTS:draco_enc_config>
-            $<TARGET_OBJECTS:draco_io>
-            $<TARGET_OBJECTS:draco_mesh>
-            $<TARGET_OBJECTS:draco_metadata>
-            $<TARGET_OBJECTS:draco_metadata_dec>
-            $<TARGET_OBJECTS:draco_metadata_enc>
-            $<TARGET_OBJECTS:draco_animation>
-            $<TARGET_OBJECTS:draco_animation_dec>
-            $<TARGET_OBJECTS:draco_animation_enc>
-            $<TARGET_OBJECTS:draco_point_cloud>
-            $<TARGET_OBJECTS:draco_points_dec>
-            $<TARGET_OBJECTS:draco_points_enc>)
 
 list(APPEND draco_header_only_targets
       draco_compression_attributes_pred_schemes_dec
@@ -539,14 +493,6 @@ draco_enable_feature(FEATURE DRACO_ATTRIBUTE_VALUES_DEDUPLICATION_SUPPORTED)
 
 if(BUILD_SHARED_LIBS)
   set_target_properties(dracodec PROPERTIES SOVERSION 1)
-  set_target_properties(dracoenc PROPERTIES SOVERSION 1)
-  set_target_properties(draco PROPERTIES SOVERSION 1)
-  if(BUILD_UNITY_PLUGIN AND (NOT APPLE))
-    set_target_properties(dracodec_unity PROPERTIES SOVERSION 1)
-  endif()
-  if(BUILD_MAYA_PLUGIN AND (NOT APPLE))
-    set_target_properties(draco_maya_wrapper PROPERTIES SOVERSION 1)
-  endif()
 endif()
 
 extract_version_string("${draco_src_root}/core/draco_version.h" draco_version)
