@@ -50,6 +50,13 @@ static void generateMaterialDefines(utils::io::sstream& os, const CodeGenerator&
     for (size_t i = 0; i < MaterialBuilder::MATERIAL_PROPERTIES_COUNT; i++) {
         cg.generateMaterialProperty(os, static_cast<MaterialBuilder::Property>(i), properties[i]);
     }
+    // synthetic defines
+    bool hasTBN =
+            properties[static_cast<int>(MaterialBuilder::Property::ANISOTROPY)]         ||
+            properties[static_cast<int>(MaterialBuilder::Property::NORMAL)]             ||
+            properties[static_cast<int>(MaterialBuilder::Property::BENT_NORMAL)]        ||
+            properties[static_cast<int>(MaterialBuilder::Property::CLEAR_COAT_NORMAL)];
+    cg.generateDefine(os, "MATERIAL_NEEDS_TBN", hasTBN);
 }
 
 static void generateVertexDomain(const CodeGenerator& cg, utils::io::sstream& vs,

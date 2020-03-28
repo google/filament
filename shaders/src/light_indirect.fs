@@ -494,9 +494,6 @@ void combineDiffuseAndSpecular(const PixelParams pixel,
 }
 
 void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout vec3 color) {
-    // Apply transform here if we wanted to rotate the IBL
-    vec3 n = shading_normal;
-
     float ssao = evaluateSSAO();
     float diffuseAO = min(material.ambientOcclusion, ssao);
     float specularAO = computeSpecularAO(shading_NoV, diffuseAO, pixel.roughness);
@@ -505,7 +502,7 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
     vec3 Fr;
 #if IBL_INTEGRATION == IBL_INTEGRATION_PREFILTERED_CUBEMAP
     vec3 E = specularDFG(pixel);
-    vec3 r = getReflectedVector(pixel, n);
+    vec3 r = getReflectedVector(pixel, shading_normal);
     Fr = E * prefilteredRadiance(r, pixel.perceptualRoughness);
 #elif IBL_INTEGRATION == IBL_INTEGRATION_IMPORTANCE_SAMPLING
     vec3 E = vec3(0.0); // TODO: fix for importance sampling
@@ -517,7 +514,13 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
     float diffuseBRDF = singleBounceAO(diffuseAO); // Fd_Lambert() is baked in the SH below
     evaluateClothIndirectDiffuseBRDF(pixel, diffuseBRDF);
 
-    vec3 diffuseIrradiance = diffuseIrradiance(n);
+#if defined(MATERIAL_HAS_BENT_NORMAL)
+    vec3 diffuseNormal = shading_bentNormal;
+#else
+    vec3 diffuseNormal = shading_normal;
+#endif
+
+    vec3 diffuseIrradiance = diffuseIrradiance(diffuseNormal);
     vec3 Fd = pixel.diffuseColor * diffuseIrradiance * (1.0 - E) * diffuseBRDF;
 
     // clear coat layer
@@ -531,5 +534,5 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
     multiBounceSpecularAO(specularAO, pixel.f0, Fr);
 
     // Note: iblLuminance is already premultiplied by the exposure
-    combineDiffuseAndSpecular(pixel, n, E, Fd, Fr, color);
+    combineDiffuseAndSpecular(pixel, shading_normal, E, Fd, Fr, color);
 }

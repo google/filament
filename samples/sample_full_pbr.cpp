@@ -45,6 +45,7 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <filament/View.h>
 
 using namespace filament::math;
 using namespace filament;
@@ -58,13 +59,14 @@ static std::unique_ptr<MeshAssimp> g_meshSet;
 static const Material* g_material;
 static Entity g_light;
 
-constexpr int MAP_COUNT     = 6;
-constexpr int MAP_COLOR     = 0;
-constexpr int MAP_AO        = 1;
-constexpr int MAP_ROUGHNESS = 2;
-constexpr int MAP_METALLIC  = 3;
-constexpr int MAP_NORMAL    = 4;
-constexpr int MAP_HEIGHT    = 5;
+constexpr int MAP_COUNT       = 7;
+constexpr int MAP_COLOR       = 0;
+constexpr int MAP_AO          = 1;
+constexpr int MAP_ROUGHNESS   = 2;
+constexpr int MAP_METALLIC    = 3;
+constexpr int MAP_NORMAL      = 4;
+constexpr int MAP_BENT_NORMAL = 5;
+constexpr int MAP_HEIGHT      = 6;
 
 struct PbrMap {
     const char* suffix;
@@ -74,12 +76,13 @@ struct PbrMap {
 };
 
 static std::array<PbrMap, MAP_COUNT> g_maps = {
-    PbrMap { "_color",     "baseColorMap", true,  nullptr },
-    PbrMap { "_ao",        "aoMap",        false, nullptr },
-    PbrMap { "_roughness", "roughnessMap", false, nullptr },
-    PbrMap { "_metallic",  "metallicMap",  false, nullptr },
-    PbrMap { "_normal",    "normalMap",    false, nullptr },
-    PbrMap { "_height",    "heightMap",    false, nullptr },
+    PbrMap { "_color",      "baseColorMap",  true,  nullptr },
+    PbrMap { "_ao",         "aoMap",         false, nullptr },
+    PbrMap { "_roughness",  "roughnessMap",  false, nullptr },
+    PbrMap { "_metallic",   "metallicMap",   false, nullptr },
+    PbrMap { "_normal",     "normalMap",     false, nullptr },
+    PbrMap { "_bentNormal", "bentNormalMap", false, nullptr },
+    PbrMap { "_height",     "heightMap",     false, nullptr },
 };
 
 static Config g_config;
@@ -110,6 +113,7 @@ static void printUsage(char* name) {
             "           - Color\n"
             "           - Metallic\n"
             "           - Normal\n"
+            "           - BentNormal\n"
             "           - Roughness\n"
             "           - Height\n"
             "       All textures are optional"
@@ -219,7 +223,7 @@ void loadTexture(Engine* engine, const std::string& filePath, Texture** map, boo
     }
 }
 
-static void setup(Engine* engine, View*, Scene* scene) {
+static void setup(Engine* engine, View* view, Scene* scene) {
     Path path(g_pbrConfig.materialDir);
     std::string name(path.getName());
 
@@ -229,12 +233,13 @@ static void setup(Engine* engine, View*, Scene* scene) {
         if (map.texture != nullptr) hasUV = true;
     }
 
-    bool hasBaseColorMap = g_maps[MAP_COLOR].texture != nullptr;
-    bool hasMetallicMap  = g_maps[MAP_METALLIC].texture != nullptr;
-    bool hasRoughnessMap = g_maps[MAP_ROUGHNESS].texture != nullptr;
-    bool hasAOMap        = g_maps[MAP_AO].texture != nullptr;
-    bool hasNormalMap    = g_maps[MAP_NORMAL].texture != nullptr;
-    bool hasHeightMap    = g_maps[MAP_HEIGHT].texture != nullptr;
+    bool hasBaseColorMap  = g_maps[MAP_COLOR].texture != nullptr;
+    bool hasMetallicMap   = g_maps[MAP_METALLIC].texture != nullptr;
+    bool hasRoughnessMap  = g_maps[MAP_ROUGHNESS].texture != nullptr;
+    bool hasAOMap         = g_maps[MAP_AO].texture != nullptr;
+    bool hasNormalMap     = g_maps[MAP_NORMAL].texture != nullptr;
+    bool hasBentNormalMap = g_maps[MAP_BENT_NORMAL].texture != nullptr;
+    bool hasHeightMap     = g_maps[MAP_HEIGHT].texture != nullptr;
 
     std::string shader = R"SHADER(
         void material(inout MaterialInputs material) {
@@ -292,6 +297,12 @@ static void setup(Engine* engine, View*, Scene* scene) {
             material.normal.y *= -1.0;
         )SHADER";
     }
+    if (hasBentNormalMap) {
+        shader += R"SHADER(
+            material.bentNormal = texture(materialParams_bentNormalMap, uv0).xyz * 2.0 - 1.0;
+            material.bentNormal.y *= -1.0;
+        )SHADER";
+    }
 
     shader += R"SHADER(
         prepareMaterial(material);
@@ -321,7 +332,7 @@ static void setup(Engine* engine, View*, Scene* scene) {
         )SHADER";
     } else {
         shader += R"SHADER(
-            material.roughness = 1.0;
+            material.roughness = 0.4;
         )SHADER";
     }
     if (hasAOMap) {
@@ -350,6 +361,8 @@ static void setup(Engine* engine, View*, Scene* scene) {
     MaterialBuilder builder = MaterialBuilder()
             .name("DefaultMaterial")
             .material(shader.c_str())
+            .multiBounceAmbientOcclusion(true)
+            .specularAmbientOcclusion(true)
             .shading(Shading::LIT);
 
     if (hasUV) {
@@ -403,7 +416,7 @@ static void setup(Engine* engine, View*, Scene* scene) {
             .direction({0.6, -1, -0.8})
             .castShadows(true)
             .build(*engine, g_light);
-    scene->addEntity(g_light);
+    //scene->addEntity(g_light);
 }
 
 int main(int argc, char* argv[]) {

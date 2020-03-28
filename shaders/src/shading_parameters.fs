@@ -9,7 +9,7 @@
 void computeShadingParams() {
 #if defined(HAS_ATTRIBUTE_TANGENTS)
     highp vec3 n = vertex_worldNormal;
-#if defined(MATERIAL_HAS_ANISOTROPY) || defined(MATERIAL_HAS_NORMAL) || defined(MATERIAL_HAS_CLEAR_COAT_NORMAL)
+#if defined(MATERIAL_NEEDS_TBN)
     highp vec3 t = vertex_worldTangent;
     highp vec3 b = vertex_worldBitangent;
 #endif
@@ -17,7 +17,7 @@ void computeShadingParams() {
 #if defined(MATERIAL_HAS_DOUBLE_SIDED_CAPABILITY)
     if (isDoubleSided()) {
         n = gl_FrontFacing ? n : -n;
-#if defined(MATERIAL_HAS_ANISOTROPY) || defined(MATERIAL_HAS_NORMAL) || defined(MATERIAL_HAS_CLEAR_COAT_NORMAL)
+#if defined(MATERIAL_NEEDS_TBN)
         t = gl_FrontFacing ? t : -t;
         b = gl_FrontFacing ? b : -b;
 #endif
@@ -26,7 +26,7 @@ void computeShadingParams() {
 
     shading_geometricNormal = normalize(n);
 
-#if defined(MATERIAL_HAS_ANISOTROPY) || defined(MATERIAL_HAS_NORMAL) || defined(MATERIAL_HAS_CLEAR_COAT_NORMAL)
+#if defined(MATERIAL_NEEDS_TBN)
     // We use unnormalized post-interpolation values, assuming mikktspace tangents
     shading_tangentToWorld = mat3(t, b, n);
 #endif
@@ -54,6 +54,10 @@ void prepareMaterial(const MaterialInputs material) {
 #endif
     shading_NoV = clampNoV(dot(shading_normal, shading_view));
     shading_reflected = reflect(-shading_view, shading_normal);
+
+#if defined(MATERIAL_HAS_BENT_NORMAL)
+    shading_bentNormal = normalize(shading_tangentToWorld * material.bentNormal);
+#endif
 
 #if defined(MATERIAL_HAS_CLEAR_COAT)
 #if defined(MATERIAL_HAS_CLEAR_COAT_NORMAL)

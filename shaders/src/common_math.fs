@@ -53,6 +53,19 @@ float max3(const vec3 v) {
 }
 
 //------------------------------------------------------------------------------
+// Trigonometry
+//------------------------------------------------------------------------------
+
+float acosFast(float x) {
+    // Lagarde 2014, "Inverse trigonometric functions GPU optimization for AMD GCN architecture"
+    // This is the approximation of degree 1, with a max absolute error of 9.0x10^-3
+    float y = abs(x);
+    float p = -0.1565827 * y + 1.570796;
+    p *= sqrt(1.0 - y);
+    return x >= 0.0 ? p : PI - p;
+}
+
+//------------------------------------------------------------------------------
 // Matrix and quaternion operations
 //------------------------------------------------------------------------------
 
