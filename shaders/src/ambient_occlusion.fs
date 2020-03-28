@@ -18,9 +18,11 @@ float sphericalCapsIntersection(float cosCap1, float cosCap2, float cosDistance)
 
     // We work with cosine angles, replace the original paper's use of
     // min(r1, r2) with max(cosCap1, cosCap2)
+    // We also remove a multiplication by 2 * PI to simplify the computation
+    // since we divide by 2 * PI in computeBentSpecularAO()
 
     if (min(r1, r2) <= max(r1, r2) - d) {
-        return 2.0 * PI - 2.0 * PI * max(cosCap1, cosCap2);
+        return 1.0 - max(cosCap1, cosCap2);
     } else if (r1 + r2 <= d) {
         return 0.0;
     }
@@ -28,13 +30,12 @@ float sphericalCapsIntersection(float cosCap1, float cosCap2, float cosDistance)
     float delta = abs(r1 - r2);
     float x = 1.0 - saturate((d - delta) / max(r1 + r2 - delta, 0.0001));
     float x2 = sq(x);
-    float area = 2.0 * PI - 2.0 * PI * max(cosCap1, cosCap2);
     // simplified smoothsteph()
-    area *= -2.0 * x2 * x + 3.0 * x2;
-
-    return area;
+    float area = -2.0 * x2 * x + 3.0 * x2;
+    return area * (1.0 - max(cosCap1, cosCap2));
 }
 
+// This function could (should?) be implemented as a 3D LUT instead, but we need to save samplers
 float computeBentSpecularAO(float visibility, float roughness) {
     // Jimenez et al. 2016, "Practical Realtime Strategies for Accurate Indirect Occlusion"
 
@@ -45,7 +46,9 @@ float computeBentSpecularAO(float visibility, float roughness) {
     // angle betwen bent normal and reflection direction
     float cosB  = dot(shading_bentNormal, shading_reflected);
 
-    return sphericalCapsIntersection(cosAv, cosAs, 0.5 * cosB + 0.5) / (2.0 * PI * (1.0 - cosAs));
+    // Remove the 2 * PI term from the denominator, it cancels out the same term from
+    // sphericalCapsIntersection()
+    return sphericalCapsIntersection(cosAv, cosAs, 0.5 * cosB + 0.5) / (1.0 - cosAs);
 }
 #endif
 

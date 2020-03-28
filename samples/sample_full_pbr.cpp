@@ -314,7 +314,7 @@ static void setup(Engine* engine, View* view, Scene* scene) {
         )SHADER";
     } else {
         shader += R"SHADER(
-            material.baseColor.rgb = float3(1.0, 0.75, 0.94);
+            material.baseColor.rgb = float3(0.5);
         )SHADER";
     }
     if (hasMetallicMap) {
