@@ -1,27 +1,28 @@
 {
   "accessors": [
     {
-      "bufferView": 0,
+      "componentType": 5123,
+      "count": 24408,
+      "type": "SCALAR"
+    },
+    {
       "componentType": 5126,
-      "count": 7165,
+      "count": 8468,
       "type": "VEC2"
     },
     {
-      "bufferView": 1,
       "componentType": 5126,
-      "count": 7165,
+      "count": 8468,
       "type": "VEC3"
     },
     {
-      "bufferView": 2,
       "componentType": 5126,
-      "count": 7165,
+      "count": 8468,
       "type": "VEC4"
     },
     {
-      "bufferView": 3,
       "componentType": 5126,
-      "count": 7165,
+      "count": 8468,
       "type": "VEC3",
       "max": [
         0.131662,
@@ -35,31 +36,26 @@
       ]
     },
     {
-      "bufferView": 4,
       "componentType": 5123,
-      "count": 24408,
+      "count": 65688,
       "type": "SCALAR"
     },
     {
-      "bufferView": 5,
       "componentType": 5126,
       "count": 12552,
       "type": "VEC2"
     },
     {
-      "bufferView": 6,
       "componentType": 5126,
       "count": 12552,
       "type": "VEC3"
     },
     {
-      "bufferView": 7,
       "componentType": 5126,
       "count": 12552,
       "type": "VEC4"
     },
     {
-      "bufferView": 8,
       "componentType": 5126,
       "count": 12552,
       "type": "VEC3",
@@ -75,31 +71,26 @@
       ]
     },
     {
-      "bufferView": 9,
       "componentType": 5123,
-      "count": 65688,
+      "count": 2208,
       "type": "SCALAR"
     },
     {
-      "bufferView": 10,
       "componentType": 5126,
       "count": 436,
       "type": "VEC2"
     },
     {
-      "bufferView": 11,
       "componentType": 5126,
       "count": 436,
       "type": "VEC3"
     },
     {
-      "bufferView": 12,
       "componentType": 5126,
       "count": 436,
       "type": "VEC4"
     },
     {
-      "bufferView": 13,
       "componentType": 5126,
       "count": 436,
       "type": "VEC3",
@@ -115,33 +106,28 @@
       ]
     },
     {
-      "bufferView": 14,
       "componentType": 5123,
-      "count": 2208,
+      "count": 60288,
       "type": "SCALAR"
     },
     {
-      "bufferView": 15,
       "componentType": 5126,
-      "count": 16077,
+      "count": 17186,
       "type": "VEC2"
     },
     {
-      "bufferView": 16,
       "componentType": 5126,
-      "count": 16077,
+      "count": 17186,
       "type": "VEC3"
     },
     {
-      "bufferView": 17,
       "componentType": 5126,
-      "count": 16077,
+      "count": 17186,
       "type": "VEC4"
     },
     {
-      "bufferView": 18,
       "componentType": 5126,
-      "count": 16077,
+      "count": 17186,
       "type": "VEC3",
       "max": [
         0.1572095,
@@ -155,33 +141,28 @@
       ]
     },
     {
-      "bufferView": 19,
       "componentType": 5123,
-      "count": 60288,
+      "count": 131574,
       "type": "SCALAR"
     },
     {
-      "bufferView": 20,
       "componentType": 5126,
-      "count": 24136,
+      "count": 24148,
       "type": "VEC2"
     },
     {
-      "bufferView": 21,
       "componentType": 5126,
-      "count": 24136,
+      "count": 24148,
       "type": "VEC3"
     },
     {
-      "bufferView": 22,
       "componentType": 5126,
-      "count": 24136,
+      "count": 24148,
       "type": "VEC4"
     },
     {
-      "bufferView": 23,
       "componentType": 5126,
-      "count": 24136,
+      "count": 24148,
       "type": "VEC3",
       "max": [
         0.1504075,
@@ -193,12 +174,6 @@
         -0.328366965,
         -0.173673
       ]
-    },
-    {
-      "bufferView": 24,
-      "componentType": 5123,
-      "count": 131574,
-      "type": "SCALAR"
     }
   ],
   "asset": {
@@ -208,179 +183,96 @@
   "bufferViews": [
     {
       "buffer": 0,
-      "byteLength": 57320
+      "byteOffset": 0,
+      "byteLength": 59806
     },
     {
       "buffer": 0,
-      "byteOffset": 57320,
-      "byteLength": 85980
+      "byteOffset": 59808,
+      "byteLength": 99674
     },
     {
       "buffer": 0,
-      "byteOffset": 143300,
-      "byteLength": 114640
+      "byteOffset": 159484,
+      "byteLength": 4875
     },
     {
       "buffer": 0,
-      "byteOffset": 257940,
-      "byteLength": 85980
+      "byteOffset": 164360,
+      "byteLength": 133545
     },
     {
       "buffer": 0,
-      "byteOffset": 343920,
-      "byteLength": 48816
-    },
-    {
-      "buffer": 0,
-      "byteOffset": 392736,
-      "byteLength": 100416
-    },
-    {
-      "buffer": 0,
-      "byteOffset": 493152,
-      "byteLength": 150624
-    },
-    {
-      "buffer": 0,
-      "byteOffset": 643776,
-      "byteLength": 200832
-    },
-    {
-      "buffer": 0,
-      "byteOffset": 844608,
-      "byteLength": 150624
-    },
-    {
-      "buffer": 0,
-      "byteOffset": 995232,
-      "byteLength": 131376
-    },
-    {
-      "buffer": 0,
-      "byteOffset": 1126608,
-      "byteLength": 3488
-    },
-    {
-      "buffer": 0,
-      "byteOffset": 1130096,
-      "byteLength": 5232
-    },
-    {
-      "buffer": 0,
-      "byteOffset": 1135328,
-      "byteLength": 6976
-    },
-    {
-      "buffer": 0,
-      "byteOffset": 1142304,
-      "byteLength": 5232
-    },
-    {
-      "buffer": 0,
-      "byteOffset": 1147536,
-      "byteLength": 4416
-    },
-    {
-      "buffer": 0,
-      "byteOffset": 1151952,
-      "byteLength": 128616
-    },
-    {
-      "buffer": 0,
-      "byteOffset": 1280568,
-      "byteLength": 192924
-    },
-    {
-      "buffer": 0,
-      "byteOffset": 1473492,
-      "byteLength": 257232
-    },
-    {
-      "buffer": 0,
-      "byteOffset": 1730724,
-      "byteLength": 192924
-    },
-    {
-      "buffer": 0,
-      "byteOffset": 1923648,
-      "byteLength": 120576
-    },
-    {
-      "buffer": 0,
-      "byteOffset": 2044224,
-      "byteLength": 193088
-    },
-    {
-      "buffer": 0,
-      "byteOffset": 2237312,
-      "byteLength": 289632
-    },
-    {
-      "buffer": 0,
-      "byteOffset": 2526944,
-      "byteLength": 386176
-    },
-    {
-      "buffer": 0,
-      "byteOffset": 2913120,
-      "byteLength": 289632
-    },
-    {
-      "buffer": 0,
-      "byteOffset": 3202752,
-      "byteLength": 263148
+      "byteOffset": 297908,
+      "byteLength": 203914
     }
   ],
   "buffers": [
     {
-      "uri": "FlightHelmet.bin",
-      "byteLength": 3465900
+      "name": "FlightHelmet",
+      "byteLength": 501824,
+      "uri": "FlightHelmet.bin"
     }
   ],
   "images": [
     {
+      "name": "FlightHelmet_baseColor",
       "uri": "FlightHelmet_baseColor.png"
     },
     {
+      "name": "FlightHelmet_occlusionRoughnessMetallic",
       "uri": "FlightHelmet_occlusionRoughnessMetallic.png"
     },
     {
+      "name": "FlightHelmet_normal",
       "uri": "FlightHelmet_normal.png"
     },
     {
+      "name": "FlightHelmet_baseColor1",
       "uri": "FlightHelmet_baseColor1.png"
     },
     {
+      "name": "FlightHelmet_occlusionRoughnessMetallic1",
       "uri": "FlightHelmet_occlusionRoughnessMetallic1.png"
     },
     {
+      "name": "FlightHelmet_normal1",
       "uri": "FlightHelmet_normal1.png"
     },
     {
+      "name": "FlightHelmet_baseColor2",
       "uri": "FlightHelmet_baseColor2.png"
     },
     {
+      "name": "FlightHelmet_occlusionRoughnessMetallic2",
       "uri": "FlightHelmet_occlusionRoughnessMetallic2.png"
     },
     {
+      "name": "FlightHelmet_normal2",
       "uri": "FlightHelmet_normal2.png"
     },
     {
+      "name": "FlightHelmet_baseColor3",
       "uri": "FlightHelmet_baseColor3.png"
     },
     {
+      "name": "FlightHelmet_occlusionRoughnessMetallic3",
       "uri": "FlightHelmet_occlusionRoughnessMetallic3.png"
     },
     {
+      "name": "FlightHelmet_normal3",
       "uri": "FlightHelmet_normal3.png"
     },
     {
+      "name": "FlightHelmet_baseColor4",
       "uri": "FlightHelmet_baseColor4.png"
     },
     {
+      "name": "FlightHelmet_occlusionRoughnessMetallic4",
       "uri": "FlightHelmet_occlusionRoughnessMetallic4.png"
     },
     {
+      "name": "FlightHelmet_normal4",
       "uri": "FlightHelmet_normal4.png"
     }
   ],
@@ -389,13 +281,25 @@
       "primitives": [
         {
           "attributes": {
-            "TEXCOORD_0": 0,
-            "NORMAL": 1,
-            "TANGENT": 2,
-            "POSITION": 3
+            "TEXCOORD_0": 1,
+            "NORMAL": 2,
+            "TANGENT": 3,
+            "POSITION": 4
           },
-          "indices": 4,
-          "material": 0
+          "indices": 0,
+          "material": 0,
+          "mode": 4,
+          "extensions": {
+            "KHR_draco_mesh_compression": {
+              "bufferView": 0,
+              "attributes": {
+                "TEXCOORD_0": 0,
+                "NORMAL": 1,
+                "TANGENT": 2,
+                "POSITION": 3
+              }
+            }
+          }
         }
       ],
       "name": "GlassPlastic_low"
@@ -404,13 +308,25 @@
       "primitives": [
         {
           "attributes": {
-            "TEXCOORD_0": 5,
-            "NORMAL": 6,
-            "TANGENT": 7,
-            "POSITION": 8
+            "TEXCOORD_0": 6,
+            "NORMAL": 7,
+            "TANGENT": 8,
+            "POSITION": 9
           },
-          "indices": 9,
-          "material": 1
+          "indices": 5,
+          "material": 1,
+          "mode": 4,
+          "extensions": {
+            "KHR_draco_mesh_compression": {
+              "bufferView": 1,
+              "attributes": {
+                "TEXCOORD_0": 0,
+                "NORMAL": 1,
+                "TANGENT": 2,
+                "POSITION": 3
+              }
+            }
+          }
         }
       ],
       "name": "LeatherParts_low"
@@ -419,13 +335,25 @@
       "primitives": [
         {
           "attributes": {
-            "TEXCOORD_0": 10,
-            "NORMAL": 11,
-            "TANGENT": 12,
-            "POSITION": 13
+            "TEXCOORD_0": 11,
+            "NORMAL": 12,
+            "TANGENT": 13,
+            "POSITION": 14
           },
-          "indices": 14,
-          "material": 2
+          "indices": 10,
+          "material": 2,
+          "mode": 4,
+          "extensions": {
+            "KHR_draco_mesh_compression": {
+              "bufferView": 2,
+              "attributes": {
+                "TEXCOORD_0": 0,
+                "NORMAL": 1,
+                "TANGENT": 2,
+                "POSITION": 3
+              }
+            }
+          }
         }
       ],
       "name": "Lenses_low"
@@ -434,13 +362,25 @@
       "primitives": [
         {
           "attributes": {
-            "TEXCOORD_0": 15,
-            "NORMAL": 16,
-            "TANGENT": 17,
-            "POSITION": 18
+            "TEXCOORD_0": 16,
+            "NORMAL": 17,
+            "TANGENT": 18,
+            "POSITION": 19
           },
-          "indices": 19,
-          "material": 3
+          "indices": 15,
+          "material": 3,
+          "mode": 4,
+          "extensions": {
+            "KHR_draco_mesh_compression": {
+              "bufferView": 3,
+              "attributes": {
+                "TEXCOORD_0": 0,
+                "NORMAL": 1,
+                "TANGENT": 2,
+                "POSITION": 3
+              }
+            }
+          }
         }
       ],
       "name": "MetalParts_low"
@@ -449,13 +389,25 @@
       "primitives": [
         {
           "attributes": {
-            "TEXCOORD_0": 20,
-            "NORMAL": 21,
-            "TANGENT": 22,
-            "POSITION": 23
+            "TEXCOORD_0": 21,
+            "NORMAL": 22,
+            "TANGENT": 23,
+            "POSITION": 24
           },
-          "indices": 24,
-          "material": 4
+          "indices": 20,
+          "material": 4,
+          "mode": 4,
+          "extensions": {
+            "KHR_draco_mesh_compression": {
+              "bufferView": 4,
+              "attributes": {
+                "TEXCOORD_0": 0,
+                "NORMAL": 1,
+                "TANGENT": 2,
+                "POSITION": 3
+              }
+            }
+          }
         }
       ],
       "name": "RubberWood_low"
@@ -465,89 +417,182 @@
     {
       "pbrMetallicRoughness": {
         "baseColorTexture": {
-          "index": 0
+          "index": 0,
+          "texCoord": 0
         },
         "metallicRoughnessTexture": {
-          "index": 1
-        }
+          "index": 1,
+          "texCoord": 0
+        },
+        "baseColorFactor": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "metallicFactor": 1,
+        "roughnessFactor": 1
       },
       "normalTexture": {
-        "index": 2
+        "index": 2,
+        "texCoord": 0
       },
       "occlusionTexture": {
-        "index": 1
+        "index": 1,
+        "texCoord": 0
       },
-      "name": "GlassPlasticMat"
+      "name": "GlassPlasticMat",
+      "emissiveFactor": [
+        0,
+        0,
+        0
+      ],
+      "alphaMode": "OPAQUE",
+      "doubleSided": false
     },
     {
       "pbrMetallicRoughness": {
         "baseColorTexture": {
-          "index": 3
+          "index": 3,
+          "texCoord": 0
         },
         "metallicRoughnessTexture": {
-          "index": 4
-        }
+          "index": 4,
+          "texCoord": 0
+        },
+        "baseColorFactor": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "metallicFactor": 1,
+        "roughnessFactor": 1
       },
       "normalTexture": {
-        "index": 5
+        "index": 5,
+        "texCoord": 0
       },
       "occlusionTexture": {
-        "index": 4
+        "index": 4,
+        "texCoord": 0
       },
-      "name": "LeatherPartsMat"
+      "name": "LeatherPartsMat",
+      "emissiveFactor": [
+        0,
+        0,
+        0
+      ],
+      "alphaMode": "OPAQUE",
+      "doubleSided": false
     },
     {
       "pbrMetallicRoughness": {
         "baseColorTexture": {
-          "index": 6
+          "index": 6,
+          "texCoord": 0
         },
         "metallicRoughnessTexture": {
-          "index": 7
-        }
+          "index": 7,
+          "texCoord": 0
+        },
+        "baseColorFactor": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "metallicFactor": 1,
+        "roughnessFactor": 1
       },
       "normalTexture": {
-        "index": 8
+        "index": 8,
+        "texCoord": 0
       },
       "occlusionTexture": {
-        "index": 7
+        "index": 7,
+        "texCoord": 0
       },
       "alphaMode": "BLEND",
-      "name": "LensesMat"
+      "name": "LensesMat",
+      "emissiveFactor": [
+        0,
+        0,
+        0
+      ],
+      "doubleSided": false
     },
     {
       "pbrMetallicRoughness": {
         "baseColorTexture": {
-          "index": 9
+          "index": 9,
+          "texCoord": 0
         },
         "metallicRoughnessTexture": {
-          "index": 10
-        }
+          "index": 10,
+          "texCoord": 0
+        },
+        "baseColorFactor": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "metallicFactor": 1,
+        "roughnessFactor": 1
       },
       "normalTexture": {
-        "index": 11
+        "index": 11,
+        "texCoord": 0
       },
       "occlusionTexture": {
-        "index": 10
+        "index": 10,
+        "texCoord": 0
       },
-      "name": "MetalPartsMat"
+      "name": "MetalPartsMat",
+      "emissiveFactor": [
+        0,
+        0,
+        0
+      ],
+      "alphaMode": "OPAQUE",
+      "doubleSided": false
     },
     {
       "doubleSided": true,
       "pbrMetallicRoughness": {
         "baseColorTexture": {
-          "index": 12
+          "index": 12,
+          "texCoord": 0
         },
         "metallicRoughnessTexture": {
-          "index": 13
-        }
+          "index": 13,
+          "texCoord": 0
+        },
+        "baseColorFactor": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "metallicFactor": 1,
+        "roughnessFactor": 1
       },
       "normalTexture": {
-        "index": 14
+        "index": 14,
+        "texCoord": 0
       },
       "occlusionTexture": {
-        "index": 13
+        "index": 13,
+        "texCoord": 0
       },
-      "name": "RubberWoodMat"
+      "name": "RubberWoodMat",
+      "emissiveFactor": [
+        0,
+        0,
+        0
+      ],
+      "alphaMode": "OPAQUE"
     }
   ],
   "nodes": [
@@ -562,7 +607,18 @@
         0.032592997,
         0.011676996
       ],
-      "name": "LeatherParts_low"
+      "name": "LeatherParts_low",
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
     },
     {
       "mesh": 2,
@@ -575,7 +631,18 @@
         -0.1488645,
         -0.0242879968
       ],
-      "name": "MetalParts_low"
+      "name": "MetalParts_low",
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
     },
     {
       "mesh": 4,
@@ -584,7 +651,18 @@
         -0.111985,
         -0.013313001
       ],
-      "name": "RubberWood_low"
+      "name": "RubberWood_low",
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
     },
     {
       "children": [
@@ -595,12 +673,22 @@
         4
       ],
       "rotation": [
-        0.0,
-        1.0,
-        0.0,
-        0.0
+        0,
+        1,
+        0,
+        0
       ],
-      "name": "FlightHelmet"
+      "name": "FlightHelmet",
+      "translation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
     }
   ],
   "scene": 0,
@@ -657,5 +745,11 @@
     {
       "source": 14
     }
+  ],
+  "extensionsRequired": [
+    "KHR_draco_mesh_compression"
+  ],
+  "extensionsUsed": [
+    "KHR_draco_mesh_compression"
   ]
 }
