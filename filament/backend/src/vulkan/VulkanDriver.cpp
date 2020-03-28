@@ -457,6 +457,9 @@ void VulkanDriver::createStreamFromTextureIdR(Handle<HwStream> sh, intptr_t exte
         uint32_t width, uint32_t height) {
 }
 
+void VulkanDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {
+}
+
 Handle<HwVertexBuffer> VulkanDriver::createVertexBufferS() noexcept {
     return alloc_handle<VulkanVertexBuffer, HwVertexBuffer>();
 }
@@ -513,6 +516,10 @@ Handle<HwStream> VulkanDriver::createStreamFromTextureIdS() noexcept {
     return {};
 }
 
+Handle<HwTimerQuery> VulkanDriver::createTimerQueryS() noexcept {
+    return {};
+}
+
 void VulkanDriver::destroySamplerGroup(Handle<HwSamplerGroup> sbh) {
     if (sbh) {
         // Unlike most of the other "Hw" handles, the sampler buffer is an abstract concept and does
@@ -557,6 +564,9 @@ void VulkanDriver::destroySwapChain(Handle<HwSwapChain> sch) {
 }
 
 void VulkanDriver::destroyStream(Handle<HwStream> sh) {
+}
+
+void VulkanDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
 }
 
 Handle<HwStream> VulkanDriver::createStreamNative(void* nativeStream) {
@@ -682,6 +692,10 @@ void VulkanDriver::setupExternalImage(void* image) {
 }
 
 void VulkanDriver::cancelExternalImage(void* image) {
+}
+
+bool VulkanDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapsedTime) {
+    return false;
 }
 
 void VulkanDriver::setExternalImage(Handle<HwTexture> th, void* image) {
@@ -1180,6 +1194,13 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
     const int32_t vertexOffset = 0;
     const uint32_t firstInstId = 1;
     vkCmdDrawIndexed(cmdbuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstId);
+}
+
+
+void VulkanDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {
+}
+
+void VulkanDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
 }
 
 #ifndef NDEBUG

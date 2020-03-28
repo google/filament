@@ -56,7 +56,9 @@ OpenGLContext::OpenGLContext() noexcept {
 #endif
 
     if (strstr(renderer, "Adreno")) {
+        bugs.dont_use_timer_query = true;   // verified
     } else if (strstr(renderer, "Mali")) {
+        bugs.dont_use_timer_query = true;   // not verified
         bugs.vao_doesnt_store_element_array_buffer_binding = true;
         if (strstr(renderer, "Mali-T")) {
             bugs.disable_glFlush = true;
@@ -213,6 +215,7 @@ void OpenGLContext::initExtensionsGLES(GLint major, GLint minor, ExtentionSet co
     ext.APPLE_color_buffer_packed_float = hasExtension(exts, "GL_APPLE_color_buffer_packed_float");
     ext.texture_compression_s3tc = hasExtension(exts, "WEBGL_compressed_texture_s3tc");
     ext.EXT_multisampled_render_to_texture = hasExtension(exts, "GL_EXT_multisampled_render_to_texture");
+    ext.EXT_disjoint_timer_query = hasExtension(exts, "GL_EXT_disjoint_timer_query");
     ext.KHR_debug = hasExtension(exts, "GL_KHR_debug");
     ext.EXT_texture_compression_s3tc_srgb = hasExtension(exts, "GL_EXT_texture_compression_s3tc_srgb");
     // ES 3.2 implies EXT_color_buffer_float

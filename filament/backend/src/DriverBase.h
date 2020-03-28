@@ -141,6 +141,9 @@ struct HwStream : public HwBase {
     uint32_t height = 0;
 };
 
+struct HwTimerQuery : public HwBase {
+};
+
 /*
  * Base class of all Driver implementations
  */

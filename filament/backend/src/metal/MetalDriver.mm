@@ -245,8 +245,11 @@ void MetalDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch,
 
 void MetalDriver::createStreamFromTextureIdR(Handle<HwStream>, intptr_t externalTextureId,
         uint32_t width, uint32_t height) {
-
 }
+
+void MetalDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {
+}
+
 
 Handle<HwVertexBuffer> MetalDriver::createVertexBufferS() noexcept {
     return alloc_handle<MetalVertexBuffer, HwVertexBuffer>();
@@ -301,6 +304,10 @@ Handle<HwSwapChain> MetalDriver::createSwapChainHeadlessS() noexcept {
 }
 
 Handle<HwStream> MetalDriver::createStreamFromTextureIdS() noexcept {
+    return {};
+}
+
+Handle<HwTimerQuery> MetalDriver::createTimerQueryS() noexcept {
     return {};
 }
 
@@ -388,6 +395,9 @@ void MetalDriver::destroySwapChain(Handle<HwSwapChain> sch) {
 
 void MetalDriver::destroyStream(Handle<HwStream> sh) {
     // no-op
+}
+
+void MetalDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
 }
 
 void MetalDriver::terminate() {
@@ -568,7 +578,10 @@ void MetalDriver::setExternalImagePlane(Handle<HwTexture> th, void* image, size_
 }
 
 void MetalDriver::setExternalStream(Handle<HwTexture> th, Handle<HwStream> sh) {
+}
 
+bool MetalDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapsedTime) {
+    return false;
 }
 
 void MetalDriver::generateMipmaps(Handle<HwTexture> th) {
@@ -1039,6 +1052,12 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
                                                     indexType:getIndexType(indexBuffer->elementSize)
                                                   indexBuffer:metalIndexBuffer
                                             indexBufferOffset:primitive->offset];
+}
+
+void MetalDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {
+}
+
+void MetalDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
 }
 
 void MetalDriver::enumerateSamplerGroups(

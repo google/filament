@@ -43,6 +43,7 @@ class TargetBufferInfo;
 
 class OpenGLProgram;
 class OpenGLBlitter;
+class TimerQueryInterface;
 
 class OpenGLDriver final : public backend::DriverBase {
     inline explicit OpenGLDriver(backend::OpenGLPlatform* platform) noexcept;
@@ -120,6 +121,18 @@ public:
     public:
         DebugMarker(OpenGLDriver& driver, const char* string) noexcept;
         ~DebugMarker() noexcept;
+    };
+
+    struct GLTimerQuery : public backend::HwTimerQuery {
+        struct {
+            GLuint query = 0;
+            struct {
+                uint64_t elapsed = 0;
+                std::atomic_bool available;
+            } emulation;
+        } gl;
+        // 0 means not available, otherwise query result in ns.
+        std::atomic<uint64_t> elapsed{};
     };
 
     struct GLStream : public backend::HwStream {
@@ -372,9 +385,19 @@ private:
 
     void setExternalTexture(GLTexture* t, void* image);
 
+    // tasks executed on the main thread after the fence signaled
     void whenGpuCommandsComplete(std::function<void()> fn) noexcept;
     void executeGpuCommandsCompleteOps() noexcept;
-    std::vector<std::pair<GLsync, std::function<void(void)>>> mGpuCommandCompleteOps;
+    std::vector<std::pair<GLsync, std::function<void()>>> mGpuCommandCompleteOps;
+
+    // tasks regularly executed on the main thread at frame begin time until they return true
+    void whenFrameBegins(std::function<bool()> fn) noexcept;
+    void executeFrameBeginsOps() noexcept;
+    std::vector<std::function<bool()>> mFrameBeginsOps;
+
+    // timer query implementation
+    TimerQueryInterface* mTimerQueryImpl = nullptr;
+    bool mFrameTimeSupported = false;
 };
 
 // ------------------------------------------------------------------------------------------------

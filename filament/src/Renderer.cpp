@@ -97,10 +97,6 @@ void FRenderer::init() noexcept {
         // this will clip all HDR data, but we don't have a choice
         mHdrQualityHigh = TextureFormat::RGB8;
     }
-
-    if (UTILS_HAS_THREADING) {
-        mFrameInfoManager.run();
-    }
 }
 
 FRenderer::~FRenderer() noexcept {
@@ -716,17 +712,16 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, backend::FrameFinishedCallback
     int64_t monotonic_clock_ns (std::chrono::steady_clock::now().time_since_epoch().count());
     driver.beginFrame(monotonic_clock_ns, mFrameId, callback, user);
 
+    if (!mFrameSkipper.beginFrame()) {
+        driver.endFrame(mFrameId);
+        engine.flush();
+        return false;
+    }
+
     // This need to occur after the backend beginFrame() because some backends need to start
     // a command buffer before creating a fence.
     if (UTILS_HAS_THREADING) {
         mFrameInfoManager.beginFrame(mFrameId);
-    }
-
-    if (!mFrameSkipper.beginFrame()) {
-        mFrameInfoManager.cancelFrame();
-        driver.endFrame(mFrameId);
-        engine.flush();
-        return false;
     }
 
     // latch the frame time
@@ -747,16 +742,15 @@ void FRenderer::endFrame() {
     FEngine& engine = getEngine();
     FEngine::DriverApi& driver = engine.getDriverApi();
 
-    FrameInfoManager& frameInfoManager = mFrameInfoManager;
-
     if (UTILS_HAS_THREADING) {
 
         // on debug builds this helps catching cases where we're writing to
         // the buffer form another thread, which is currently not allowed.
         driver.debugThreading();
 
-        frameInfoManager.endFrame();
+        mFrameInfoManager.endFrame();
     }
+
     mFrameSkipper.endFrame();
 
     if (mSwapChain) {
@@ -779,19 +773,6 @@ void FRenderer::endFrame() {
 
     // make sure we're done with the gcs
     js.waitAndRelease(job);
-
-#if EXTRA_TIMING_INFO
-    if (UTILS_UNLIKELY(frameInfoManager.isLapRecordsEnabled())) {
-        auto history = frameInfoManager.getHistory();
-        FrameInfo const& info = history.back();
-        FrameInfo::duration rendering   = info.laps[FrameInfo::LAP_0]  - info.laps[FrameInfo::START];
-        FrameInfo::duration postprocess = info.laps[FrameInfo::FINISH] - info.laps[FrameInfo::LAP_0];
-        mRendering.push(rendering.count());
-        mPostProcess.push(postprocess.count());
-        slog.d << mRendering.latest() << ", "
-               << mPostProcess.latest() << io::endl;
-    }
-#endif
 }
 
 void FRenderer::readPixels(uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,

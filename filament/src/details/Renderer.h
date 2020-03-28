@@ -156,11 +156,6 @@ private:
 
     // per-frame arena for this Renderer
     LinearAllocatorArena& mPerRenderPassArena;
-
-#if EXTRA_TIMING_INFO
-    Series<float> mRendering;
-    Series<float> mPostProcess;
-#endif
 };
 
 FILAMENT_UPCAST(Renderer)
