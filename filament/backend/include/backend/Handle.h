@@ -36,6 +36,7 @@ struct HwTexture;
 struct HwUniformBuffer;
 struct HwSwapChain;
 struct HwStream;
+struct HwTimerQuery;
 
 /*
  * A type handle to a h/w resource
@@ -110,6 +111,7 @@ using SwapChainHandle       = Handle<HwSwapChain>;
 using TextureHandle         = Handle<HwTexture>;
 using UniformBufferHandle   = Handle<HwUniformBuffer>;
 using VertexBufferHandle    = Handle<HwVertexBuffer>;
+using TimerQueryHandle      = Handle<HwTimerQuery>;
 
 } // namespace backend
 } // namespace filament

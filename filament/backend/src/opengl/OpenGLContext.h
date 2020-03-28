@@ -85,6 +85,9 @@ public:
     inline void depthMask(GLboolean flag) noexcept;
     inline void depthFunc(GLenum func) noexcept;
     inline void polygonOffset(GLfloat factor, GLfloat units) noexcept;
+    inline void beginQuery(GLenum target, GLuint query) noexcept;
+    inline void endQuery(GLenum target) noexcept;
+    inline GLuint getQuery(GLenum target) noexcept;
 
     inline void setScissor(GLint left, GLint bottom, GLsizei width, GLsizei height) noexcept;
     inline void viewport(GLint left, GLint bottom, GLsizei width, GLsizei height) noexcept;
@@ -120,6 +123,7 @@ public:
         bool KHR_debug = false;
         bool EXT_texture_sRGB = false;
         bool EXT_texture_compression_s3tc_srgb = false;
+        bool EXT_disjoint_timer_query = false;
     } ext;
 
     struct {
@@ -145,6 +149,9 @@ public:
         // Some drivers declare GL_EXT_texture_filter_anisotropic but don't support
         // calling glSamplerParameter() with GL_TEXTURE_MAX_ANISOTROPY_EXT
         bool disable_texture_filter_anisotropic = false;
+
+        // Some drivers don't implement timer queries correctly
+        bool dont_use_timer_query = false;
     } bugs;
 
     // state getters -- as needed.
@@ -239,6 +246,10 @@ private:
             vec4gli scissor { 0 };
             vec4gli viewport { 0 };
         } window;
+
+        struct {
+            GLuint timer = -1u;
+        } queries;
     } state;
 
     RenderPrimitive mDefaultVAO;
@@ -524,6 +535,40 @@ void OpenGLContext::polygonOffset(GLfloat factor, GLfloat units) noexcept {
     });
 }
 
+void OpenGLContext::beginQuery(GLenum target, GLuint query) noexcept {
+    switch (target) {
+        case GL_TIME_ELAPSED:
+            if (state.queries.timer != -1u) {
+                // this is an error
+                break;
+            }
+            state.queries.timer = query;
+            break;
+        default:
+            return;
+    }
+    glBeginQuery(target, query);
+}
+
+void OpenGLContext::endQuery(GLenum target) noexcept {
+    switch (target) {
+        case GL_TIME_ELAPSED:
+            state.queries.timer = -1u;
+            break;
+        default:
+            return;
+    }
+    glEndQuery(target);
+}
+
+GLuint OpenGLContext::getQuery(GLenum target) noexcept {
+    switch (target) {
+        case GL_TIME_ELAPSED:
+            return state.queries.timer;
+        default:
+            return 0;
+    }
+}
 } // namesapce filament
 
 #endif //TNT_FILAMENT_BACKEND_OPENGLCONTEXT_H

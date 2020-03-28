@@ -23,6 +23,8 @@
 #include "OpenGLBlitter.h"
 #include "OpenGLDriverFactory.h"
 #include "OpenGLProgram.h"
+#include "TimerQuery.h"
+#include "OpenGLContext.h"
 
 #include <utils/compiler.h>
 #include <utils/Log.h>
@@ -73,6 +75,8 @@ Driver* OpenGLDriverFactory::create(
 
 using namespace backend;
 using namespace GLUtils;
+
+// ------------------------------------------------------------------------------------------------
 
 UTILS_NOINLINE
 Driver* OpenGLDriver::create(
@@ -148,6 +152,25 @@ OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform) noexcept
         mOpenGLBlitter->init();
         mContext.resetProgram();
     }
+
+    if (mContext.ext.EXT_disjoint_timer_query || GL41_HEADERS) {
+        // timer queries are available
+        if (mContext.bugs.dont_use_timer_query && mPlatform.canCreateFence()) {
+            // however, they don't work well, revert to using fences if we can.
+            mTimerQueryImpl = new TimerQueryFence(mPlatform);
+        } else {
+            mTimerQueryImpl = new TimerQueryNative(mContext);
+        }
+        mFrameTimeSupported = true;
+    } else if (mPlatform.canCreateFence()) {
+        // no timer queries, but we can use fences
+        mTimerQueryImpl = new TimerQueryFence(mPlatform);
+        mFrameTimeSupported = true;
+    } else {
+        // no queries, no fences -- that's a problem
+        mTimerQueryImpl = new TimerQueryFallback();
+        mFrameTimeSupported = false;
+    }
 }
 
 OpenGLDriver::~OpenGLDriver() noexcept {
@@ -176,6 +199,9 @@ void OpenGLDriver::terminate() {
     if (mOpenGLBlitter) {
         mOpenGLBlitter->terminate();
     }
+
+    delete mTimerQueryImpl;
+
     mPlatform.terminate();
 }
 
@@ -416,6 +442,10 @@ Handle<HwSwapChain> OpenGLDriver::createSwapChainHeadlessS() noexcept {
 
 Handle<HwStream> OpenGLDriver::createStreamFromTextureIdS() noexcept {
     return Handle<HwStream>( allocateHandle(sizeof(GLStream)) );
+}
+
+Handle<HwTimerQuery> OpenGLDriver::createTimerQueryS() noexcept {
+    return Handle<HwTimerQuery>( allocateHandle(sizeof(GLTimerQuery)) );
 }
 
 void OpenGLDriver::createVertexBufferR(
@@ -1002,6 +1032,14 @@ void OpenGLDriver::createStreamFromTextureIdR(Handle<HwStream> sh,
     }
 }
 
+void OpenGLDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {
+    DEBUG_MARKER()
+
+    GLTimerQuery* tq = construct<GLTimerQuery>(tqh);
+    glGenQueries(1u, &tq->gl.query);
+    CHECK_GL_ERROR(utils::slog.e)
+}
+
 // ------------------------------------------------------------------------------------------------
 // Destroying driver objects
 // ------------------------------------------------------------------------------------------------
@@ -1156,6 +1194,16 @@ void OpenGLDriver::destroyStream(Handle<HwStream> sh) {
             }
         }
         destruct(sh, s);
+    }
+}
+
+void OpenGLDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
+    DEBUG_MARKER()
+
+    if (tqh) {
+        GLTimerQuery* tq = handle_cast<GLTimerQuery*>(tqh);
+        glDeleteQueries(1u, &tq->gl.query);
+        destruct(tqh, tq);
     }
 }
 
@@ -1350,8 +1398,7 @@ bool OpenGLDriver::isRenderTargetFormatSupported(TextureFormat format) {
 }
 
 bool OpenGLDriver::isFrameTimeSupported() {
-    // TODO: Measuring the frame time is currently only done using fences
-    return mPlatform.canCreateFence();
+    return mFrameTimeSupported;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -1855,6 +1902,39 @@ void OpenGLDriver::replaceStream(GLTexture* texture, GLStream* newStream) noexce
     }
 
     texture->hwStream = newStream;
+}
+
+void OpenGLDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {
+    GLTimerQuery* tq = handle_cast<GLTimerQuery*>(tqh);
+    // reset the state of the result availability
+    tq->elapsed.store(0, std::memory_order_relaxed);
+    mTimerQueryImpl->beginTimeElapsedQuery(tq);
+}
+
+void OpenGLDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
+    GLTimerQuery* tq = handle_cast<GLTimerQuery*>(tqh);
+    mTimerQueryImpl->endTimeElapsedQuery(tq);
+
+    whenFrameBegins([this, tq]() -> bool {
+        if (!mTimerQueryImpl->queryResultAvailable(tq)) {
+            // we need to try this one again later
+            return false;
+        }
+        tq->elapsed.store(mTimerQueryImpl->queryResult(tq), std::memory_order_relaxed);
+        return true;
+    });
+}
+
+bool OpenGLDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapsedTime) {
+    GLTimerQuery* tq = handle_cast<GLTimerQuery*>(tqh);
+    uint64_t d = tq->elapsed.load(std::memory_order_relaxed);
+    if (!d) {
+        return false;
+    }
+    if (elapsedTime) {
+        *elapsedTime = d;
+    }
+    return true;
 }
 
 void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
@@ -2504,10 +2584,14 @@ void OpenGLDriver::readPixels(Handle<HwRenderTarget> src,
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-void OpenGLDriver::whenGpuCommandsComplete(std::function<void(void)> fn) noexcept {
+void OpenGLDriver::whenGpuCommandsComplete(std::function<void()> fn) noexcept {
     GLsync sync = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
     mGpuCommandCompleteOps.emplace_back(sync, std::move(fn));
     CHECK_GL_ERROR(utils::slog.e)
+}
+
+void OpenGLDriver::whenFrameBegins(std::function<bool()> fn) noexcept {
+    mFrameBeginsOps.push_back(std::move(fn));
 }
 
 void OpenGLDriver::executeGpuCommandsCompleteOps() noexcept {
@@ -2530,6 +2614,18 @@ void OpenGLDriver::executeGpuCommandsCompleteOps() noexcept {
     }
 }
 
+void OpenGLDriver::executeFrameBeginsOps() noexcept {
+    auto& v = mFrameBeginsOps;
+    auto it = v.begin();
+    while (it != v.end()) {
+        if ((*it)()) {
+            it = v.erase(it);
+        } else {
+            ++it;
+        }
+    }
+}
+
 // ------------------------------------------------------------------------------------------------
 // Rendering ops
 // ------------------------------------------------------------------------------------------------
@@ -2539,6 +2635,7 @@ void OpenGLDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId,
     auto& gl = mContext;
     insertEventMarker("beginFrame");
     executeGpuCommandsCompleteOps();
+    executeFrameBeginsOps();
     if (UTILS_UNLIKELY(!mExternalStreams.empty())) {
         OpenGLPlatform& platform = mPlatform;
         for (GLTexture const* t : mExternalStreams) {
@@ -2577,6 +2674,10 @@ void OpenGLDriver::finish(int) {
     DEBUG_MARKER()
     glFinish();
     executeGpuCommandsCompleteOps();
+    executeFrameBeginsOps();
+    // since we executed a glFinish(), all pending tasks should be done
+    assert(mGpuCommandCompleteOps.empty());
+    assert(mFrameBeginsOps.empty());
 }
 
 UTILS_NOINLINE
