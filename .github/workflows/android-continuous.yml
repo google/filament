@@ -11,7 +11,7 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      - uses: actions/checkout@v1.0.0
+      - uses: actions/checkout@v2.0.0
       - name: Run build script
         run: |
           cd build/android && ./build.sh continuous

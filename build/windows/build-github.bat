@@ -38,7 +38,7 @@ if "%TARGET%" == "release" (
 
 set VISUAL_STUDIO_VERSION="Enterprise"
 if "%RUNNING_LOCALLY%" == "1" (
-    set VISUAL_STUDIO_VERSION="Professional"
+    set VISUAL_STUDIO_VERSION="Community"
     set "PATH=%PATH%;C:\Program Files\7-Zip"
 )
 
@@ -48,16 +48,8 @@ if errorlevel 1 exit /b %errorlevel%
 msbuild /version
 cmake --version
 
-if "%BUILD_RELEASE%" == "1" (
-    :: /MT
-    call :BuildVariant mt "-DUSE_STATIC_CRT=ON" Release || exit /b
-
-    if "%BUILD_RELEASE_VARIANTS%" == "1" (
-        :: /MD
-        call :BuildVariant md "-DUSE_STATIC_CRT=OFF" Release || exit /b
-    )
-)
-
+:: Important: build debug builds first, when disk space is plentiful. Debug builds require
+:: significantly more temporary space.
 if "%BUILD_DEBUG%" == "1" (
     :: MTd
     call :BuildVariant mtd "-DUSE_STATIC_CRT=ON" Debug || exit /b
@@ -65,6 +57,16 @@ if "%BUILD_DEBUG%" == "1" (
     if "%BUILD_RELEASE_VARIANTS%" == "1" (
         :: MDd
         call :BuildVariant mdd "-DUSE_STATIC_CRT=OFF" Debug || exit /b
+    )
+)
+
+if "%BUILD_RELEASE%" == "1" (
+    :: /MT
+    call :BuildVariant mt "-DUSE_STATIC_CRT=ON" Release || exit /b
+
+    if "%BUILD_RELEASE_VARIANTS%" == "1" (
+        :: /MD
+        call :BuildVariant md "-DUSE_STATIC_CRT=OFF" Release || exit /b
     )
 )
 

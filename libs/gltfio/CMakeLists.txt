@@ -137,11 +137,13 @@ add_library(gltfio_core STATIC ${PUBLIC_HDRS} ${SRCS})
 target_include_directories(gltfio_core PUBLIC ${PUBLIC_HDR_DIR})
 target_compile_options(gltfio_core PRIVATE $<$<PLATFORM_ID:Linux>:-fPIC>)
 
-if (NOT WEBGL AND NOT ANDROID AND NOT IOS)
-
-    # Enable Draco only on desktop for now.
+# We will likely enable Draco on all platforms, only including tested ones for now.
+if (NOT WEBGL AND NOT IOS)
     target_compile_definitions(gltfio_core PUBLIC -DGLTFIO_DRACO_SUPPORTED=1)
     target_link_libraries(gltfio_core PUBLIC dracodec)
+endif()
+
+if (NOT WEBGL AND NOT ANDROID AND NOT IOS)
 
     # ==================================================================================================
     # Link the core library with additional dependencies to create the "full" library

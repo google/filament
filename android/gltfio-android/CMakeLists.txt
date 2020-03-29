@@ -2,8 +2,13 @@ cmake_minimum_required(VERSION 3.6)
 
 set(FILAMENT_DIR ${FILAMENT_DIST_DIR})
 set(GLTFIO_DIR ../../libs/gltfio)
+set(DRACO_DIR ../../third_party/draco)
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../filament-android ${CMAKE_CURRENT_BINARY_DIR}/filament-android)
+
+add_library(dracodec STATIC IMPORTED)
+set_target_properties(dracodec PROPERTIES IMPORTED_LOCATION
+        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libdracodec.a)
 
 add_library(utils STATIC IMPORTED)
 set_target_properties(utils PROPERTIES IMPORTED_LOCATION
@@ -79,4 +84,10 @@ if(GLTFIO_LITE)
         target_link_libraries(gltfio-jni filament-jni utils log gltfio_resources_lite)
 else()
         target_link_libraries(gltfio-jni filament-jni utils log gltfio_resources)
+
+        # Enable Draco in the non-lite variant of gltfio.
+        target_link_libraries(gltfio-jni dracodec)
+        target_compile_definitions(gltfio-jni PUBLIC GLTFIO_DRACO_SUPPORTED=1)
+        target_include_directories(gltfio-jni PRIVATE ${DRACO_DIR}/src)
+        target_include_directories(gltfio-jni PRIVATE ${DRACO_DIR}/tnt)
 endif()

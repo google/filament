@@ -13,30 +13,9 @@ include("${draco_root}/cmake/draco_tests.cmake")
 include("${draco_root}/cmake/sanitizers.cmake")
 include("${draco_root}/cmake/util.cmake")
 
-option(ENABLE_MESH_COMPRESSION "" ON)
-option(ENABLE_POINT_CLOUD_COMPRESSION "" ON)
-option(ENABLE_PREDICTIVE_EDGEBREAKER "" ON)
-option(ENABLE_STANDARD_EDGEBREAKER "" ON)
-option(ENABLE_BACKWARDS_COMPATIBILITY "" ON)
-
-if(ENABLE_POINT_CLOUD_COMPRESSION)
-  draco_enable_feature(FEATURE "DRACO_POINT_CLOUD_COMPRESSION_SUPPORTED")
-endif()
-
-if(ENABLE_MESH_COMPRESSION)
-  draco_enable_feature(FEATURE "DRACO_MESH_COMPRESSION_SUPPORTED")
-  draco_enable_feature(FEATURE "DRACO_NORMAL_ENCODING_SUPPORTED")
-  if(ENABLE_STANDARD_EDGEBREAKER)
-    draco_enable_feature(FEATURE "DRACO_STANDARD_EDGEBREAKER_SUPPORTED")
-  endif()
-  if(ENABLE_PREDICTIVE_EDGEBREAKER)
-    draco_enable_feature(FEATURE "DRACO_PREDICTIVE_EDGEBREAKER_SUPPORTED")
-  endif()
-endif()
-
-if(ENABLE_BACKWARDS_COMPATIBILITY)
-  draco_enable_feature(FEATURE "DRACO_BACKWARDS_COMPATIBILITY_SUPPORTED")
-endif()
+draco_enable_feature(FEATURE "DRACO_MESH_COMPRESSION_SUPPORTED")
+draco_enable_feature(FEATURE "DRACO_NORMAL_ENCODING_SUPPORTED")
+draco_enable_feature(FEATURE "DRACO_STANDARD_EDGEBREAKER_SUPPORTED")
 
 # Draco source file listing variables.
 set(draco_attributes_sources
@@ -501,52 +480,6 @@ add_library(dracodec
             $<TARGET_OBJECTS:draco_animation_dec>
             $<TARGET_OBJECTS:draco_point_cloud>
             $<TARGET_OBJECTS:draco_points_dec>)
-add_library(dracoenc
-            $<TARGET_OBJECTS:draco_attributes>
-            $<TARGET_OBJECTS:draco_compression_attributes_enc>
-            $<TARGET_OBJECTS:draco_compression_entropy>
-            $<TARGET_OBJECTS:draco_compression_attributes_pred_schemes_enc>
-            $<TARGET_OBJECTS:draco_compression_bit_coders>
-            $<TARGET_OBJECTS:draco_compression_encode>
-            $<TARGET_OBJECTS:draco_compression_mesh_enc>
-            $<TARGET_OBJECTS:draco_compression_point_cloud_enc>
-            $<TARGET_OBJECTS:draco_core>
-            $<TARGET_OBJECTS:draco_enc_config>
-            $<TARGET_OBJECTS:draco_mesh>
-            $<TARGET_OBJECTS:draco_metadata>
-            $<TARGET_OBJECTS:draco_metadata_enc>
-            $<TARGET_OBJECTS:draco_animation>
-            $<TARGET_OBJECTS:draco_animation_enc>
-            $<TARGET_OBJECTS:draco_point_cloud>
-            $<TARGET_OBJECTS:draco_points_enc>)
-add_library(draco
-            $<TARGET_OBJECTS:draco_attributes>
-            $<TARGET_OBJECTS:draco_compression_attributes_dec>
-            $<TARGET_OBJECTS:draco_compression_attributes_enc>
-            $<TARGET_OBJECTS:draco_compression_attributes_pred_schemes_dec>
-            $<TARGET_OBJECTS:draco_compression_attributes_pred_schemes_enc>
-            $<TARGET_OBJECTS:draco_compression_bit_coders>
-            $<TARGET_OBJECTS:draco_compression_decode>
-            $<TARGET_OBJECTS:draco_compression_encode>
-            $<TARGET_OBJECTS:draco_compression_entropy>
-            $<TARGET_OBJECTS:draco_compression_mesh_dec>
-            $<TARGET_OBJECTS:draco_compression_mesh_enc>
-            $<TARGET_OBJECTS:draco_compression_point_cloud_dec>
-            $<TARGET_OBJECTS:draco_compression_point_cloud_enc>
-            $<TARGET_OBJECTS:draco_core>
-            $<TARGET_OBJECTS:draco_dec_config>
-            $<TARGET_OBJECTS:draco_enc_config>
-            $<TARGET_OBJECTS:draco_io>
-            $<TARGET_OBJECTS:draco_mesh>
-            $<TARGET_OBJECTS:draco_metadata>
-            $<TARGET_OBJECTS:draco_metadata_dec>
-            $<TARGET_OBJECTS:draco_metadata_enc>
-            $<TARGET_OBJECTS:draco_animation>
-            $<TARGET_OBJECTS:draco_animation_dec>
-            $<TARGET_OBJECTS:draco_animation_enc>
-            $<TARGET_OBJECTS:draco_point_cloud>
-            $<TARGET_OBJECTS:draco_points_dec>
-            $<TARGET_OBJECTS:draco_points_enc>)
 
 list(APPEND draco_header_only_targets
       draco_compression_attributes_pred_schemes_dec
@@ -560,14 +493,6 @@ draco_enable_feature(FEATURE DRACO_ATTRIBUTE_VALUES_DEDUPLICATION_SUPPORTED)
 
 if(BUILD_SHARED_LIBS)
   set_target_properties(dracodec PROPERTIES SOVERSION 1)
-  set_target_properties(dracoenc PROPERTIES SOVERSION 1)
-  set_target_properties(draco PROPERTIES SOVERSION 1)
-  if(BUILD_UNITY_PLUGIN AND (NOT APPLE))
-    set_target_properties(dracodec_unity PROPERTIES SOVERSION 1)
-  endif()
-  if(BUILD_MAYA_PLUGIN AND (NOT APPLE))
-    set_target_properties(draco_maya_wrapper PROPERTIES SOVERSION 1)
-  endif()
 endif()
 
 extract_version_string("${draco_src_root}/core/draco_version.h" draco_version)
@@ -589,29 +514,6 @@ if(NOT MSVC)
   file(APPEND "${pkgconfig_file}" "Libs: -L${prefix}/lib -ldraco\n")
   file(APPEND "${pkgconfig_file}" "Cflags: -I${prefix}/include -std=c++11\n")
 endif()
-
-# Collect all of the header files in the tree, and add an install rule for
-# each.
-file(GLOB_RECURSE draco_headers RELATIVE ${draco_root}/src/draco "*.h")
-foreach(filename ${draco_headers})
-  get_filename_component(file_directory ${filename} DIRECTORY)
-  install(
-    FILES src/draco/${filename}
-    DESTINATION "${CMAKE_INSTALL_PREFIX}/include/draco/${file_directory}")
-endforeach()
-
-install(FILES "${draco_build_dir}/draco/draco_features.h"
-        DESTINATION "${CMAKE_INSTALL_PREFIX}/include/draco/")
-
-if(NOT MSVC)
-  # Install our pkg-config file.
-  install(FILES "${draco_build_dir}/draco.pc"
-          DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/pkgconfig")
-endif()
-
-# Add install rules for lib and executable targets.
-install(TARGETS dracodec dracoenc draco DESTINATION
-                "${CMAKE_INSTALL_PREFIX}/lib")
 
 # Generate a CMake config file.
 set(draco_include_install_dir "include/draco")
@@ -643,8 +545,6 @@ endforeach()
 set(draco_cmake_helper_scripts "${draco_root}/cmake/FindDraco.cmake"
                                 "${draco_build_dir}/DracoConfig.cmake"
                                 "${draco_build_dir}/DracoConfigVersion.cmake")
-install(FILES ${draco_cmake_helper_scripts}
-        DESTINATION "${draco_script_install_dir}")
 
 # Some generators complain about unknown link language for header only
 # targets. Silence the harmless warnings/errors with some dummy source files.
@@ -658,3 +558,5 @@ draco_generate_features_h()
 target_include_directories(dracodec
     PUBLIC "${draco_build_dir}"
     PUBLIC "${draco_root}/src")
+
+install(TARGETS dracodec ARCHIVE DESTINATION lib/${DIST_DIR})
