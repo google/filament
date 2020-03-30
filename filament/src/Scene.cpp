@@ -178,6 +178,7 @@ void FScene::updateUBOs(utils::Range<uint32_t> visibleRenderables, backend::Hand
     // allocate space into the command stream directly
     void* const buffer = driver.allocate(size);
 
+    bool hasContactShadows = false;
     auto& sceneData = mRenderableData;
     for (uint32_t i : visibleRenderables) {
         mat4f const& model = sceneData.elementAt<WORLD_TRANSFORM>(i);
@@ -206,20 +207,27 @@ void FScene::updateUBOs(utils::Range<uint32_t> visibleRenderables, backend::Hand
         // Note that we cast bools to uint32. Booleans are byte-sized in C++, but we need to
         // initialize all 32 bits in the UBO field.
 
-        UniformBuffer::setUniform(buffer, offset + offsetof(PerRenderableUib, skinningEnabled),
-                uint32_t(sceneData.elementAt<VISIBILITY_STATE>(i).skinning));
-
-        UniformBuffer::setUniform(buffer, offset + offsetof(PerRenderableUib, morphingEnabled),
-                uint32_t(sceneData.elementAt<VISIBILITY_STATE>(i).morphing));
-
-        UniformBuffer::setUniform(buffer, offset + offsetof(PerRenderableUib, screenSpaceContactShadows),
-                uint32_t(sceneData.elementAt<VISIBILITY_STATE>(i).screenSpaceContactShadows));
+        FRenderableManager::Visibility visibility = sceneData.elementAt<VISIBILITY_STATE>(i);
+        hasContactShadows = hasContactShadows || visibility.screenSpaceContactShadows;
+        UniformBuffer::setUniform(buffer,
+                offset + offsetof(PerRenderableUib, skinningEnabled),
+                uint32_t(visibility.skinning));
 
         UniformBuffer::setUniform(buffer,
-                offset + offsetof(PerRenderableUib, morphWeights), sceneData.elementAt<MORPH_WEIGHTS>(i));
+                offset + offsetof(PerRenderableUib, morphingEnabled),
+                uint32_t(visibility.morphing));
+
+        UniformBuffer::setUniform(buffer,
+                offset + offsetof(PerRenderableUib, screenSpaceContactShadows),
+                uint32_t(visibility.screenSpaceContactShadows));
+
+        UniformBuffer::setUniform(buffer,
+                offset + offsetof(PerRenderableUib, morphWeights),
+                sceneData.elementAt<MORPH_WEIGHTS>(i));
     }
 
     // TODO: handle static objects separately
+    mHasContactShadows = hasContactShadows;
     mRenderableViewUbh = renderableUbh;
     driver.loadUniformBuffer(renderableUbh, { buffer, size });
 }
@@ -388,6 +396,17 @@ void FScene::setSkybox(FSkybox const* skybox) noexcept {
     if (mSkybox) {
         addEntity(mSkybox->getEntity());
     }
+}
+
+bool FScene::hasContactShadows() const noexcept {
+    bool hasContactShadows = mHasContactShadows;
+    auto& lcm = mEngine.getLightManager();
+    FLightManager::Instance directionalLight = mLightData.elementAt<LIGHT_INSTANCE>(0);
+    if (directionalLight.isValid()) {
+        auto const& shadowOoptions = lcm.getShadowOptions(directionalLight);
+        hasContactShadows = hasContactShadows && shadowOoptions.screenSpaceContactShadows;
+    }
+    return hasContactShadows;
 }
 
 } // namespace details

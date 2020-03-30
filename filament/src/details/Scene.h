@@ -194,6 +194,8 @@ public:
 
     void updateUBOs(utils::Range<uint32_t> visibleRenderables, backend::Handle<backend::HwUniformBuffer> renderableUbh) noexcept;
 
+    bool hasContactShadows() const noexcept;
+
 private:
     static inline void computeLightRanges(math::float2* zrange,
             CameraInfo const& camera, const math::float4* spheres, size_t count) noexcept;
@@ -215,13 +217,14 @@ private:
 
     /*
      * The data below is valid only during a view pass. i.e. if a scene is used in multiple
-     * views, the data below is update for each view.
+     * views, the data below is updated for each view.
      * In essence, this data should be owned by View, but it's so scene-specific, that for now
      * we store it here.
      */
     RenderableSoa mRenderableData;
     LightSoa mLightData;
     backend::Handle<backend::HwUniformBuffer> mRenderableViewUbh; // This is actually owned by the view.
+    bool mHasContactShadows = false;
 };
 
 FILAMENT_UPCAST(Scene)
