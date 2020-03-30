@@ -602,10 +602,11 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOclusion(
 FrameGraphId<FrameGraphTexture> PostProcessManager::structure(FrameGraph& fg,
         const RenderPass& pass, uint32_t width, uint32_t height, float scale) noexcept {
 
-    // structure pass -- automatically culled if not used
-    // used for SSAO currently. It consists of a mipmapped depth path
-    // mipmapping is tunned for SSAO
-    struct DepthPassData {
+    // structure pass -- automatically culled if not used, currently used by:
+    //    - ssao
+    //     - contact shadows
+    // It consists of a mipmapped depth pass, tuned for SSAO
+    struct StructurePassData {
         FrameGraphId<FrameGraphTexture> depth;
         FrameGraphRenderTargetHandle rt;
     };
@@ -618,8 +619,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::structure(FrameGraph& fg,
     const size_t levelCount = FTexture::maxLevelCount(width, height) - 5;
     assert(levelCount >= 1);
 
-    // SSAO generates its own depth pass at the requested resolution
-    auto& ssaoDepthPass = fg.addPass<DepthPassData>("SSAO Depth Pass",
+    // generate depth pass at the requested resolution
+    auto& structurePass = fg.addPass<StructurePassData>("Structure Pass",
             [&](FrameGraph::Builder& builder, auto& data) {
                 data.depth = builder.createTexture("Depth Buffer", {
                         .width = width, .height = height,
@@ -628,7 +629,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::structure(FrameGraph& fg,
 
                 data.depth = builder.write(builder.read(data.depth));
 
-                data.rt = builder.createRenderTarget("SSAO Depth Target", {
+                data.rt = builder.createRenderTarget("Structure Target", {
                         .attachments = {{}, data.depth },
                         .clearFlags = TargetBufferFlags::DEPTH
                 });
@@ -638,7 +639,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::structure(FrameGraph& fg,
                 pass.execute(resources.getPassName(), out.target, out.params);
             });
 
-    auto depth = ssaoDepthPass.getData().depth;
+    auto depth = structurePass.getData().depth;
 
     /*
      * create depth mipmap chain

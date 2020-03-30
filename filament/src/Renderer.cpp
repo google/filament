@@ -315,7 +315,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     // --------------------------------------------------------------------------------------------
     // structure pass -- automatically culled if not used
     // Currently it consists of a simple depth pass.
-    // This is normally used by SSAO
+    // This is normally used by SSAO and contact-shadows
 
     // TODO: this should be a FrameGraph pass to participate to automatic culling
     pass.newCommandBuffer();
@@ -348,7 +348,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             .hdrFormat = hdrFormat,
             .msaa = msaa,
             .clearFlags = clearFlags,
-            .clearColor = clearColor
+            .clearColor = clearColor,
+            .hasContactShadows = scene.hasContactShadows()
     };
 
     // We use a framegraph pass to wait for froxelization to finish (so it can be done
@@ -576,7 +577,8 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 data.color = blackboard.get<FrameGraphTexture>("color");
                 data.structure = blackboard.get<FrameGraphTexture>("structure");
 
-                if (data.structure.isValid()) {
+                if (config.hasContactShadows) {
+                    assert(data.structure.isValid());
                     data.structure = builder.sample(data.structure);
                 }
 

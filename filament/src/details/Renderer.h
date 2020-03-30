@@ -109,6 +109,7 @@ private:
         backend::TargetBufferFlags clearFlags;
         math::float4 clearColor = {};
         float refractionLodOffset;
+        bool hasContactShadows;
     };
 
     FrameGraphId<FrameGraphTexture> colorPass(FrameGraph& fg, const char* name,
