@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release
 
+## v1.5.0
+
 ⚠️ This release breaks compiled materials, use matc to recompile.
 
 - The Android support libraries (gltfio and filament-utils) now use dynamic linking.
