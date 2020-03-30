@@ -23,7 +23,7 @@ A new header is inserted each time a *tag* is created.
 - WebGL: Improved TypeScript annotations.
 - WebGL: Simplified callback API for glTF. (⚠ API Change)
 - gltfio: Removed deprecated "Bindings" API. (⚠ API Change)
-- gltfio: Added support for Draco on desktop platforms.
+- gltfio: Added support for Draco.
 - Added support for screen-space contact shadows.
 - Added support for global fog.
 - Added support for bent normal maps and specular occlusion from bent normal maps.
