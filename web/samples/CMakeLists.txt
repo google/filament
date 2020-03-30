@@ -195,8 +195,11 @@ set(HTML_FILES
     suzanne.html
     triangle.html)
 
+set(ASSET_FILES
+    assets/favicon.png)
+
 set(DEMO_ASSETS)
-foreach (NAME ${HTML_FILES})
+foreach (NAME ${HTML_FILES} ${ASSET_FILES})
     add_custom_command(
         OUTPUT ${SERVER_DIR}/${NAME}
         COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/${NAME} ${SERVER_DIR}
