@@ -27,6 +27,7 @@ A new header is inserted each time a *tag* is created.
 - Added support for screen-space contact shadows.
 - Added support for global fog.
 - Added support for bent normal maps and specular occlusion from bent normal maps.
+- Added support for shadow-casting spot lights.
 
 ## v1.4.5
 

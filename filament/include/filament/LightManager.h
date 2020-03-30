@@ -80,7 +80,7 @@ class FLightManager;
  * parallel and come from infinitely far away and from everywhere. Typically a directional light
  * is used to simulate the sun.
  *
- * Directional lights are able to cast shadows.
+ * Directional lights and spot lights are able to cast shadows.
  *
  * To create a directional light use Type.DIRECTIONAL or Type.SUN, both are similar, but the later
  * also draws a sun's disk in the sky and its reflection on glossy objects.
@@ -280,7 +280,7 @@ public:
          * @return This Builder, for chaining calls.
          *
          * @warning
-         * - Only a Type.DIRECTIONAL or Type.SUN light can cast shadows
+         * - Only a Type.DIRECTIONAL, Type.SUN, Type.SPOT, or Type.FOCUSED_SPOT light can cast shadows
          */
         Builder& castShadows(bool enable) noexcept;
 
@@ -711,7 +711,7 @@ public:
      * @param shadowCaster Enables or disables casting shadows from this Light.
      *
      * @warning
-     * - Only a Type.DIRECTIONAL or Type.SUN light can cast shadows
+     * - Only a Type.DIRECTIONAL, Type.SUN, Type.SPOT, or Type.FOCUSED_SPOT light can cast shadows
      */
     void setShadowCaster(Instance i, bool shadowCaster) noexcept;
 
