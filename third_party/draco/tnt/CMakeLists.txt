@@ -463,6 +463,7 @@ add_library(draco_points_enc OBJECT ${draco_points_common_sources}
 
 # Library targets that consume the object collections.
 add_library(dracodec
+            dummy.c     # needed for Xcode
             $<TARGET_OBJECTS:draco_attributes>
             $<TARGET_OBJECTS:draco_compression_attributes_dec>
             $<TARGET_OBJECTS:draco_compression_decode>
