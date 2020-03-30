@@ -103,11 +103,7 @@ public:
     utils::io::sstream& generateMaterialProperty(utils::io::sstream& out,
             MaterialBuilder::Property property, bool isSet) const;
 
-    utils::io::sstream& generateFunction(utils::io::sstream& out,
-            const char* returnType, const char* name, const char* body) const;
-
     utils::io::sstream& generateDefine(utils::io::sstream& out, const char* name, bool value) const;
-    utils::io::sstream& generateDefine(utils::io::sstream& out, const char* name, float value) const;
     utils::io::sstream& generateDefine(utils::io::sstream& out, const char* name, uint32_t value) const;
     utils::io::sstream& generateDefine(utils::io::sstream& out, const char* name, const char* string) const;
     utils::io::sstream& generateIndexedDefine(utils::io::sstream& out, const char* name,

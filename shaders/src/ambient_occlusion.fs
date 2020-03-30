@@ -8,12 +8,60 @@ float evaluateSSAO() {
     return textureLod(light_ssao, uv, 0.0).r;
 }
 
+#if defined(MATERIAL_HAS_BENT_NORMAL)
+float sphericalCapsIntersection(float cosCap1, float cosCap2, float cosDistance) {
+    // Oat and Sander 2007, "Ambient Aperture Lighting"
+    // Approximation mentioned by Jimenez et al. 2016
+    float r1 = acosFast(cosCap1);
+    float r2 = acosFast(cosCap2);
+    float d  = acosFast(cosDistance);
+
+    // We work with cosine angles, replace the original paper's use of
+    // min(r1, r2) with max(cosCap1, cosCap2)
+    // We also remove a multiplication by 2 * PI to simplify the computation
+    // since we divide by 2 * PI in computeBentSpecularAO()
+
+    if (min(r1, r2) <= max(r1, r2) - d) {
+        return 1.0 - max(cosCap1, cosCap2);
+    } else if (r1 + r2 <= d) {
+        return 0.0;
+    }
+
+    float delta = abs(r1 - r2);
+    float x = 1.0 - saturate((d - delta) / max(r1 + r2 - delta, 0.0001));
+    float x2 = sq(x);
+    // simplified smoothsteph()
+    float area = -2.0 * x2 * x + 3.0 * x2;
+    return area * (1.0 - max(cosCap1, cosCap2));
+}
+
+// This function could (should?) be implemented as a 3D LUT instead, but we need to save samplers
+float computeBentSpecularAO(float visibility, float roughness) {
+    // Jimenez et al. 2016, "Practical Realtime Strategies for Accurate Indirect Occlusion"
+
+    // aperture from ambient occlusion
+    float cosAv = sqrt(1.0 - visibility);
+    // aperture from roughness, log(10) / log(2) = 3.321928
+    float cosAs = exp2(-3.321928 * sq(roughness));
+    // angle betwen bent normal and reflection direction
+    float cosB  = dot(shading_bentNormal, shading_reflected);
+
+    // Remove the 2 * PI term from the denominator, it cancels out the same term from
+    // sphericalCapsIntersection()
+    return sphericalCapsIntersection(cosAv, cosAs, 0.5 * cosB + 0.5) / (1.0 - cosAs);
+}
+#endif
+
 /**
  * Computes a specular occlusion term from the ambient occlusion term.
  */
 float computeSpecularAO(float NoV, float visibility, float roughness) {
 #if SPECULAR_AMBIENT_OCCLUSION == 1
+#if defined(MATERIAL_HAS_BENT_NORMAL)
+    return computeBentSpecularAO(visibility, roughness);
+#else
     return saturate(pow(NoV + visibility, exp2(-16.0 * roughness - 1.0)) - 1.0 + visibility);
+#endif
 #else
     return 1.0;
 #endif

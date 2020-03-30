@@ -87,6 +87,7 @@ in table [standardProperties].
 **anisotropyDirection** | Local surface direction
 **ambientOcclusion**    | Defines how much of the ambient light is accessible to a surface point. It is a per-pixel shadowing factor between 0.0 and 1.0
 **normal**              | A detail normal used to perturb the surface using _bump mapping_ (_normal mapping_)
+**bentNormal**          | A normal pointing in the average unoccluded direction. Can be used to improve indirect lighting quality
 **clearCoatNormal**     | A detail normal used to perturb the clear coat layer using _bump mapping_ (_normal mapping_)
 **emissive**            | Additional diffuse albedo to simulate emissive surfaces (such as neons, etc.) This property is mostly useful in an HDR pipeline with a bloom pass
 **postLightingColor**   | Additional color that can be blended with the result of the lighting computations. See `postLightingBlending`
@@ -111,6 +112,7 @@ The type and range of each property is described in table [standardPropertiesTyp
 **anisotropyDirection** | float3   |  [0..1]                  | Linear RGB, encodes a direction vector in tangent space
 **ambientOcclusion**    | float    |  [0..1]                  |
 **normal**              | float3   |  [0..1]                  | Linear RGB, encodes a direction vector in tangent space
+**bentNormal**          | float3   |  [0..1]                  | Linear RGB, encodes a direction vector in tangent space
 **clearCoatNormal**     | float3   |  [0..1]                  | Linear RGB, encodes a direction vector in tangent space
 **emissive**            | float4   |  rgb=[0..1], a=[-n..n]   | Alpha is the exposure compensation
 **postLightingColor**   | float4   |  [0..1]                  | Pre-multiplied linear RGB
@@ -402,7 +404,25 @@ and with (right)](images/screenshot_normal_mapping.jpg)
 
 !!! Warning
     Using a normal map increases the runtime cost of the material model.
-    
+
+### Bent normal
+
+The `bentNormal` property defines the average unoccluded direction at a point on the surface. It is
+used to improve the accuracy of indirect lighting. Bent normals also improve the quality of
+specular ambient occlusion (see section [Lighting: specularAmbientOcclusion] about
+`specularAmbientOcclusion`).
+
+Bent normals can greatly increase the visual fidelity of an asset with various cavities and concave
+areas, as shown in figure [bentNormalMapped]. See the areas of the ears, nostrils and eyes for
+instance.
+
+![Figure [bentNormalMapped]: Example of a model rendered with and without a bent normal map. Both
+versions use the same ambient occlusion map.](images/material_bent_normal.gif)
+
+!!! Warning
+    Using a bent normal map increases the runtime cost of the material, particularly when
+    `specularAmbientOcclusion` is turned on.
+
 ### Clear coat normal
 
 The `clearCoatNormal` property defines the normal of the clear coat layer at a given point. It

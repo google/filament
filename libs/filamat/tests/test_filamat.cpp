@@ -608,6 +608,24 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerNormal) {
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
+TEST_F(MaterialCompiler, StaticCodeAnalyzerBentNormal) {
+    std::string fragmentCode(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.bentNormal = vec3(0.8);
+        }
+    )");
+
+    std::string shaderCode = shaderWithAllProperties(ShaderType::FRAGMENT, fragmentCode);
+
+    GLSLTools glslTools;
+    MaterialBuilder::PropertyList properties {false};
+    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
+    MaterialBuilder::PropertyList expected {false};
+    expected[size_t(filamat::MaterialBuilder::Property::BENT_NORMAL)] = true;
+    EXPECT_TRUE(PropertyListsMatch(expected, properties));
+}
+
 TEST_F(MaterialCompiler, StaticCodeAnalyzerOutputFactor) {
     std::string fragmentCode(R"(
         void material(inout MaterialInputs material) {

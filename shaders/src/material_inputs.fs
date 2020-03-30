@@ -52,6 +52,9 @@ struct MaterialInputs {
 #if defined(MATERIAL_HAS_NORMAL)
     vec3  normal;
 #endif
+#if defined(MATERIAL_HAS_BENT_NORMAL)
+    vec3  bentNormal;
+#endif
 #if defined(MATERIAL_HAS_CLEAR_COAT) && defined(MATERIAL_HAS_CLEAR_COAT_NORMAL)
     vec3  clearCoatNormal;
 #endif
@@ -122,6 +125,9 @@ void initMaterial(out MaterialInputs material) {
 
 #if defined(MATERIAL_HAS_NORMAL)
     material.normal = vec3(0.0, 0.0, 1.0);
+#endif
+#if defined(MATERIAL_HAS_BENT_NORMAL)
+    material.bentNormal = vec3(0.0, 0.0, 1.0);
 #endif
 #if defined(MATERIAL_HAS_CLEAR_COAT) && defined(MATERIAL_HAS_CLEAR_COAT_NORMAL)
     material.clearCoatNormal = vec3(0.0, 0.0, 1.0);

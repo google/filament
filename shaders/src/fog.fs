@@ -34,7 +34,8 @@ vec4 fog(vec4 color, vec3 view) {
         fogColor *= fogOpacity;
         if (frameUniforms.fogInscatteringSize >= 0.0) {
             // compute a new line-integral for a different start distance
-            float inscatteringIntegral = fogIntegralFunctionOfDistance * max(d - frameUniforms.fogInscatteringStart, 0.0);
+            float inscatteringIntegral = fogIntegralFunctionOfDistance *
+                    max(d - frameUniforms.fogInscatteringStart, 0.0);
             float inscatteringOpacity = max(1.0 - exp2(-inscatteringIntegral), 0.0);
             //float inscatteringOpacity = clamp(inscatteringIntegral, 0.0, 1.0);
 
