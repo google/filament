@@ -39,11 +39,12 @@ Here are all the libraries available in the group `com.google.android.filament`:
 
 - `filament-android`: the Filament rendering engine itself
 - `gltfio-android`: a glTF 2.0 loader for Filament, depends on `filament-android`
-- `gltfio-android-lite`: trimmed version of gltfio that does not support some glTF features
+- `gltfio-android-lite`: trimmed version of `gltfio` that does not support some glTF features
 - `filament-utils-android`: KTX loading, Kotlin math, and camera utilities, depends on `gltfio-android`
-- `filamat-android-full`: a runtime material builder/compiler. This library is large but contains
+- `filament-utils-lite-android`: trimmed version of `filament-utils` that does not support some glTF features
+- `filamat-android`: a runtime material builder/compiler. This library is large but contains
   a full shader compiler/validator/optimizer
-- `filamat-android-lite`: a much smaller alternative to `filamat-android-full` that can only
+- `filamat-android-lite`: a much smaller alternative to `filamat-android` that can only
   generate OpenGL shaders. It does not provide validation or optimizations
 
 ### Snapshots

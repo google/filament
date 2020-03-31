@@ -19,11 +19,15 @@ android {
         }
     }
 
-    // The gltfio library has two variants: full and lite. Here we default to the "full" variant.
-    // Replace "full" with "lite" to use the gltfio-lite variant, which has a smaller binary size
-    // but comes with certain restrictions.
-    defaultConfig {
-        missingDimensionStrategy 'functionality', 'full'
+    flavorDimensions "functionality"
+    productFlavors {
+        full {
+            dimension "functionality"
+        }
+
+        lite {
+            dimension "functionality"
+        }
     }
 
     externalNativeBuild {
@@ -54,11 +58,21 @@ android {
     }
 }
 
+configurations.all {
+    resolutionStrategy {
+        dependencySubstitution {
+            substitute(module("com.google.android.filament:gltfio-android-full")).with(project(":gltfio-android"))
+            substitute(module("com.google.android.filament:gltfio-android-lite")).with(project(":gltfio-android"))
+        }
+    }
+}
+
 dependencies {
     implementation deps.kotlin
     implementation deps.androidx.annotations
     implementation project(':filament-android')
-    implementation project(':gltfio-android')
+    fullImplementation module("com.google.android.filament:gltfio-android-full")
+    liteImplementation module("com.google.android.filament:gltfio-android-lite")
 }
 
 apply from: rootProject.file('gradle/gradle-mvn-push.gradle')
@@ -66,9 +80,14 @@ apply from: rootProject.file('gradle/gradle-mvn-push.gradle')
 afterEvaluate { project ->
     publishing {
         publications {
-            release(MavenPublication) {
-                artifactId = POM_ARTIFACT_ID
-                from components.release
+            fullRelease(MavenPublication) {
+                artifactId = POM_ARTIFACT_ID_FULL
+                from components.fullRelease
+            }
+
+            liteRelease(MavenPublication) {
+                artifactId = POM_ARTIFACT_ID_LITE
+                from components.liteRelease
             }
         }
     }
