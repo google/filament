@@ -292,11 +292,10 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     const Handle<HwRenderTarget> viewRenderTarget = getRenderTarget(view);
     FrameGraphRenderTargetHandle fgViewRenderTarget = fg.import<FrameGraphRenderTarget>(
-            "viewRenderTarget",{ .viewport = vp },{
+            "viewRenderTarget",{ .viewport = vp, .clearFlags = clearFlags },{
                     .target = viewRenderTarget,
                     .params = {
                             .flags = { .discardStart = discardedFlags },
-                            .viewport = vp
                     }});
 
     /*

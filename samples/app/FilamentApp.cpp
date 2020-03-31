@@ -123,6 +123,7 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
         mScene->addEntity(lightmapCube->getWireFrameRenderable());
         mScene->addEntity(lightmapCube->getSolidRenderable());
 
+        window->mDepthView->getView()->setVisibleLayers(0x4, 0x4);
         window->mGodView->getView()->setVisibleLayers(0x6, 0x6);
         window->mOrthoView->getView()->setVisibleLayers(0x6, 0x6);
 
