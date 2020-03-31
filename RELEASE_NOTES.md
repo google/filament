@@ -5,6 +5,13 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release
 
+## v1.5.1
+
+- Fixed "no texture bound" warning in WebGL.
+- Fixed a clearing bug with imported render targets.
+- Fixed the creation potentially invalid entities during shadow map initialization.
+- Fixed Maven dependencies for the `filament-utils` library.
+
 ## v1.5.0
 
 ⚠️ This release breaks compiled materials, use matc to recompile.
