@@ -17,6 +17,9 @@ jobs:
         run: |
           WORKFLOW_OS=`echo \`uname\` | sed "s/Darwin/mac/" | tr [:upper:] [:lower:]`
           cd build/$WORKFLOW_OS && ./build.sh presubmit
+      - name: Test material parser
+        run: |
+          out/cmake-release/filament/test/test_material_parser
 
   build-windows:
     name: build-windows
