@@ -61,7 +61,7 @@ android {
 configurations.all {
     resolutionStrategy {
         dependencySubstitution {
-            substitute(module("com.google.android.filament:gltfio-android-full")).with(project(":gltfio-android"))
+            substitute(module("com.google.android.filament:gltfio-android")).with(project(":gltfio-android"))
             substitute(module("com.google.android.filament:gltfio-android-lite")).with(project(":gltfio-android"))
         }
     }
@@ -71,7 +71,7 @@ dependencies {
     implementation deps.kotlin
     implementation deps.androidx.annotations
     implementation project(':filament-android')
-    fullImplementation module("com.google.android.filament:gltfio-android-full")
+    fullImplementation module("com.google.android.filament:gltfio-android")
     liteImplementation module("com.google.android.filament:gltfio-android-lite")
 }
 
