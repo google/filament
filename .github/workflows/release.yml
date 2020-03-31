@@ -104,7 +104,7 @@ jobs:
           pip3 install PyGithub
           DATE=`date +%Y%m%d`
           mv out/filament-android-release.aar out/filament-${DATE}-android.aar
-          mv out/filamat-android-full-release.aar out/filamat-${DATE}-android.aar
+          mv out/filamat-android-release.aar out/filamat-${DATE}-android.aar
           mv out/filamat-android-lite-release.aar out/filamat-${DATE}-lite-android.aar
           mv out/gltfio-android-release.aar out/gltfio-${DATE}-android.aar
           mv out/gltfio-android-release.aar out/gltfio-${DATE}-lite-android.aar

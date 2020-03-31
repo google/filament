@@ -22,7 +22,7 @@ jobs:
       - uses: actions/upload-artifact@v1.0.0
         with:
           name: filamat-android-full
-          path: out/filamat-android-full-release.aar
+          path: out/filamat-android-release.aar
       - uses: actions/upload-artifact@v1.0.0
         with:
           name: filamat-android-lite
