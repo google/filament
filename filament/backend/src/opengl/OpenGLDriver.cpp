@@ -861,6 +861,8 @@ void OpenGLDriver::createDefaultRenderTargetR(
     GLRenderTarget* rt = handle_cast<GLRenderTarget*>(rth);
     rt->gl.fbo = framebuffer;
     rt->gl.samples = 1;
+    // FIXME: these flags should reflect the actual attachments present
+    rt->targets = TargetBufferFlags::COLOR0 | TargetBufferFlags::DEPTH;
 }
 
 void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,

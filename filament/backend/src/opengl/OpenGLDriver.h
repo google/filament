@@ -177,7 +177,7 @@ public:
             mutable backend::TargetBufferFlags resolve = backend::TargetBufferFlags::NONE; // attachments in fbo_draw to resolve
             uint8_t samples : 4;
         } gl;
-        backend::TargetBufferFlags targets;
+        backend::TargetBufferFlags targets = {};
     };
 
     OpenGLDriver(OpenGLDriver const&) = delete;
