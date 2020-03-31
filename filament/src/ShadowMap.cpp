@@ -47,8 +47,8 @@ ShadowMap::ShadowMap(FEngine& engine) noexcept :
         mEngine(engine),
         mClipSpaceFlipped(engine.getBackend() == Backend::VULKAN),
         mTextureSpaceFlipped(engine.getBackend() == Backend::METAL) {
-    mCamera = mEngine.createCamera(EntityManager::get().create());
-    mDebugCamera = mEngine.createCamera(EntityManager::get().create());
+    mCamera = mEngine.createCamera(engine.getEntityManager().create());
+    mDebugCamera = mEngine.createCamera(engine.getEntityManager().create());
     FDebugRegistry& debugRegistry = engine.getDebugRegistry();
     debugRegistry.registerProperty("d.shadowmap.focus_shadowcasters", &engine.debug.shadowmap.focus_shadowcasters);
     debugRegistry.registerProperty("d.shadowmap.far_uses_shadowcasters", &engine.debug.shadowmap.far_uses_shadowcasters);
