@@ -320,6 +320,7 @@
 					"-lgltfio_resources",
 					"-limage",
 					"-lgeometry",
+					"-ldracodec",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.hello-gltf";
 				SDKROOT = iphoneos;
@@ -363,6 +364,7 @@
 					"-lgltfio_resources",
 					"-limage",
 					"-lgeometry",
+					"-ldracodec",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.hello-gltf";
 				SDKROOT = iphoneos;
@@ -567,6 +569,7 @@
 					"-lgltfio_resources",
 					"-limage",
 					"-lgeometry",
+					"-ldracodec",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.hello-gltf";
 				SDKROOT = iphoneos;
@@ -610,6 +613,7 @@
 					"-lgltfio_resources",
 					"-limage",
 					"-lgeometry",
+					"-ldracodec",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.hello-gltf";
 				SDKROOT = iphoneos;
