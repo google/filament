@@ -113,6 +113,10 @@ void RenderTargetResourceEntry::resolve(FrameGraph& fg) noexcept {
             resource.params.viewport.height = height;
         }
         resource.params.flags.clear = descriptor.clearFlags;
+    } else {
+        // this can happen with imported targets
+        resource.params.viewport = descriptor.viewport;
+        resource.params.flags.clear = descriptor.clearFlags;
     }
 }
 
@@ -149,14 +153,14 @@ void RenderTargetResourceEntry::update(FrameGraph& fg, PassNode const& pass) noe
             }
         }
 
-        // clear implies discarding the content of the buffer
-        resource.params.flags.discardStart |= resource.params.flags.clear;
-
         // check that this FrameGraphRenderTarget is indeed declared by this pass
         ASSERT_POSTCONDITION_NON_FATAL(resource.target,
                 "Pass \"%s\" doesn't declare rendertarget \"%s\" -- expect graphic corruptions",
                 pass.name, name);
     }
+
+    // clear implies discarding the content of the buffer
+    resource.params.flags.discardStart |= resource.params.flags.clear;
 }
 
 void RenderTargetResourceEntry::preExecuteDevirtualize(FrameGraph& fg) noexcept {
