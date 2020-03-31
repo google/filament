@@ -12,7 +12,7 @@ targets:
             - FilamentApp
         settings:
             base:
-                OTHER_LDFLAGS: ["-lgltfio_core", "-lgltfio_resources", "-limage", "-lgeometry"]
+                OTHER_LDFLAGS: ["-lgltfio_core", "-lgltfio_resources", "-limage", "-lgeometry", "-ldracodec"]
         preBuildScripts:
             - path: build-resources.sh
               name: Build Resources
