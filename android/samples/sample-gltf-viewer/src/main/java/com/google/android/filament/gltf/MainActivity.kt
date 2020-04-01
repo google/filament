@@ -60,6 +60,11 @@ class MainActivity : Activity() {
 
         createRenderables()
         createIndirectLight()
+
+        // enable dynamic resolution
+        val options = modelViewer.view.dynamicResolutionOptions
+        options.enabled = true;
+        modelViewer.view.dynamicResolutionOptions = options;
     }
 
     private fun createRenderables() {
