@@ -24,11 +24,9 @@ buildscript {
     }
     def hasVulkan = project.hasProperty("filament_supports_vulkan")
 
-    // Our minSdkVersion is actually 19, we lie and say 14 here so apps don't have
-    // to increase their minSdkVersion unnecessarily. It is however up to them to
-    // ensure they do not initialize Filament on API levels < 19.
+    // Our minSdkVersion is 19.
     ext.versions = [
-        'minSdk': 14,
+        'minSdk': 19,
         'targetSdk': 29,
         'compileSdk': 29,
         'kotlin': '1.3.61',

@@ -68,11 +68,31 @@ class PixelBufferDescriptor;
  */
 class UTILS_PUBLIC Renderer : public FilamentAPI {
 public:
-     /**
-      * Get the Engine that created this Renderer.
-      *
-      * @return A pointer to the Engine instance this Renderer is associated to.
-      */
+
+    struct DisplayInfo {
+        // refresh-rate of the display in Hz. set to 0 for offscreen or turn off frame-pacing.
+        float refreshRate = 60.0f;
+
+        // how far in advance a buffer must be queued for presentation at a given time in ns
+        uint64_t presentationDeadlineNanos = 0;
+
+        // offset by which vsyncSteadyClockTimeNano provided in beginFrame() is offset in ns
+        uint64_t vsyncOffsetNanos = 0;
+    };
+
+    /**
+     * Information about the display this Renderer is associated to. This information is needed
+     * to accurately compute dynamic-resolution scaling and for frame-pacing.
+     *
+     * @param info
+     */
+    void setDisplayInfo(const DisplayInfo& info) noexcept;
+
+    /**
+     * Get the Engine that created this Renderer.
+     *
+     * @return A pointer to the Engine instance this Renderer is associated to.
+     */
     Engine* getEngine() noexcept;
 
     /**

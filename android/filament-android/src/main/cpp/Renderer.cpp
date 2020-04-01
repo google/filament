@@ -144,3 +144,12 @@ Java_com_google_android_filament_Renderer_nResetUserTime(JNIEnv*, jclass, jlong 
     Renderer *renderer = (Renderer *) nativeRenderer;
     renderer->resetUserTime();
 }
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_Renderer_nSetDisplayInfo(JNIEnv*, jclass, jlong nativeRenderer,
+        jfloat refreshRate, jlong presentationDeadlineNanos, jlong vsyncOffsetNanos) {
+    Renderer *renderer = (Renderer *) nativeRenderer;
+    renderer->setDisplayInfo({ .refreshRate = refreshRate,
+                               .presentationDeadlineNanos = (uint64_t)presentationDeadlineNanos,
+                               .vsyncOffsetNanos = (uint64_t)vsyncOffsetNanos });
+}

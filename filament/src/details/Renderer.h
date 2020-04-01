@@ -91,6 +91,10 @@ public:
     // Clean-up everything, this is typically called when the client calls Engine::destroyRenderer()
     void terminate(FEngine& engine);
 
+    void setDisplayInfo(DisplayInfo const& info) noexcept {
+        mDisplayInfo = info;
+    }
+
 private:
     friend class Renderer;
     using Command = RenderPass::Command;
@@ -154,6 +158,7 @@ private:
     bool mIsRGB8Supported : 1;
     Epoch mUserEpoch;
     math::float4 mShaderUserTime{};
+    DisplayInfo mDisplayInfo;
 
     // per-frame arena for this Renderer
     LinearAllocatorArena& mPerRenderPassArena;
