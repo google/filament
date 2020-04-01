@@ -44,6 +44,8 @@ import java.nio.ReadOnlyBufferException;
 public class Renderer {
     private final Engine mEngine;
     private long mNativeObject;
+    private DisplayInfo mDisplayInfo;
+    private FrameRateOptions mFrameRateOptions;
 
     /**
      * Information about the display this renderer is associated to
@@ -67,6 +69,50 @@ public class Renderer {
          */
         public long vsyncOffsetNanos = 0;
     };
+
+    /**
+     * Use FrameRateOptions to set the desired frame rate and control how quickly the system
+     * reacts to GPU load changes.
+     *
+     * interval: desired frame interval in multiple of the refresh period, set in DisplayInfo
+     *           (as 1 / DisplayInfo.refreshRate)
+     *
+     * The parameters below are relevant when some Views are using dynamic resolution scaling:
+     *
+     * headRoomRatio: additional headroom for the GPU as a ratio of the targetFrameTime.
+     *                Useful for taking into account constant costs like post-processing or
+     *                GPU drivers on different platforms.
+     * history:   History size. higher values, tend to filter more (clamped to 30)
+     * scaleRate: rate at which the gpu load is adjusted to reach the target frame rate
+     *            This value can be computed as 1 / N, where N is the number of frames
+     *            needed to reach 64% of the target scale factor.
+     *            Higher values make the dynamic resolution react faster.
+     *
+     * @see View.DynamicResolutionOptions
+     * @see Renderer.DisplayInfo
+     *
+     */
+    public static class FrameRateOptions {
+        /**
+         * Desired frame interval in unit of 1 / DisplayInfo.refreshRate.
+         */
+        public float interval = 1.0f / 60.0f;
+
+        /**
+         * Additional headroom for the GPU as a ratio of the targetFrameTime.
+         */
+        public float headRoomRatio = 0.0f;
+
+        /**
+         * Rate at which the scale will change to reach the target frame rate.
+         */
+        public float scaleRate = 0.125f;
+
+        /**
+         * History size. higher values, tend to filter more (clamped to 30).
+         */
+        public int history = 9;
+    }
 
     /**
      * Indicates that the <code>dstSwapChain</code> passed into {@link #copyFrame} should be
@@ -103,7 +149,43 @@ public class Renderer {
      * to accurately compute dynamic-resolution scaling and for frame-pacing.
      */
     public void setDisplayInfo(@NonNull DisplayInfo info) {
-        nSetDisplayInfo(getNativeObject(), info.refreshRate, info.presentationDeadlineNanos, info.vsyncOffsetNanos);
+        mDisplayInfo = info;
+        nSetDisplayInfo(getNativeObject(),
+                info.refreshRate, info.presentationDeadlineNanos, info.vsyncOffsetNanos);
+    }
+
+    /**
+     * Returns the DisplayInfo object set in {@link #setDisplayInfo} or a new instance otherwise.
+     * @return a DisplayInfo instance
+     */
+    @NonNull
+    public DisplayInfo getDisplayInfo() {
+        if (mDisplayInfo == null) {
+            mDisplayInfo = new DisplayInfo();
+        }
+        return mDisplayInfo;
+    }
+
+    /**
+     * Set options controlling the desired frame-rate.
+     */
+    public void setFrameRateOptions(@NonNull FrameRateOptions options) {
+        mFrameRateOptions = options;
+        nSetFrameRateOptions(getNativeObject(),
+                options.interval, options.headRoomRatio, options.scaleRate, options.history);
+    }
+
+    /**
+     * Returns the FrameRateOptions object set in {@link #setFrameRateOptions} or a new instance
+     * otherwise.
+     * @return a FrameRateOptions instance
+     */
+    @NonNull
+    public FrameRateOptions getFrameRateOptions() {
+        if (mFrameRateOptions == null) {
+            mFrameRateOptions = new FrameRateOptions();
+        }
+        return mFrameRateOptions;
     }
 
     /**
@@ -520,4 +602,6 @@ public class Renderer {
     private static native void nResetUserTime(long nativeRenderer);
     private static native void nSetDisplayInfo(long nativeRenderer,
             float refreshRate, long presentationDeadlineNanos, long vsyncOffsetNanos);
+    private static native void nSetFrameRateOptions(long nativeRenderer,
+            float interval, float headRoomRatio, float scaleRate, int history);
 }

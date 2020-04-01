@@ -106,21 +106,6 @@ public class View {
         public boolean homogeneousScaling = false;
 
         /**
-         * Desired frame time in milliseconds.
-         */
-        public float targetFrameTimeMilli = 1000.0f / 60.0f;
-
-        /**
-         * Additional headroom for the GPU as a ratio of the targetFrameTime.
-         */
-        public float headRoomRatio = 0.0f;
-
-        /**
-         * Rate at which the scale will change to reach the target frame rate.
-         */
-        public float scaleRate = 0.125f;
-
-        /**
          * The minimum scale in X and Y this View should use.
          */
         public float minScale = 0.5f;
@@ -129,11 +114,6 @@ public class View {
          * The maximum scale in X and Y this View should use.
          */
         public float maxScale = 1.0f;
-
-        /**
-         * History size. higher values, tend to filter more (clamped to 30).
-         */
-        public int history = 9;
 
         /**
          * Upscaling quality. LOW: 1 bilinear taps, MEDIUM: 4 bilinear taps, HIGH: 9 bilinear taps.
@@ -714,12 +694,8 @@ public class View {
         nSetDynamicResolutionOptions(getNativeObject(),
                 options.enabled,
                 options.homogeneousScaling,
-                options.targetFrameTimeMilli,
-                options.headRoomRatio,
-                options.scaleRate,
                 options.minScale,
                 options.maxScale,
-                options.history,
                 options.quality.ordinal());
     }
 
@@ -957,10 +933,7 @@ public class View {
     private static native int nGetToneMapping(long nativeView);
     private static native void nSetDithering(long nativeView, int dithering);
     private static native int nGetDithering(long nativeView);
-    private static native void nSetDynamicResolutionOptions(long nativeView,
-            boolean enabled, boolean homogeneousScaling,
-            float targetFrameTimeMilli, float headRoomRatio, float scaleRate,
-            float minScale, float maxScale, int history, int quality);
+    private static native void nSetDynamicResolutionOptions(long nativeView, boolean enabled, boolean homogeneousScaling, float minScale, float maxScale, int quality);
     private static native void nSetRenderQuality(long nativeView, int hdrColorBufferQuality);
     private static native void nSetDynamicLightingOptions(long nativeView, float zLightNear, float zLightFar);
     private static native void nSetPostProcessingEnabled(long nativeView, boolean enabled);

@@ -153,3 +153,13 @@ Java_com_google_android_filament_Renderer_nSetDisplayInfo(JNIEnv*, jclass, jlong
                                .presentationDeadlineNanos = (uint64_t)presentationDeadlineNanos,
                                .vsyncOffsetNanos = (uint64_t)vsyncOffsetNanos });
 }
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_Renderer_nSetFrameRateOptions(JNIEnv*, jclass,
+    jlong nativeRenderer, jfloat interval, jfloat headRoomRatio, jfloat scaleRate, jint history) {
+    Renderer *renderer = (Renderer *) nativeRenderer;
+    renderer->setFrameRateOptions({ .headRoomRatio = headRoomRatio,
+                                     .scaleRate = scaleRate,
+                                     .history = (uint8_t)history,
+                                     .interval = (uint8_t)interval });
+}
