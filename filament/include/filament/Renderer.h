@@ -81,12 +81,48 @@ public:
     };
 
     /**
+     * Use FrameRateOptions to set the desired frame rate and control how quickly the system
+     * reacts to GPU load changes.
+     *
+     * interval: desired frame interval in multiple of the refresh period, set in DisplayInfo
+     *           (as 1 / DisplayInfo::refreshRate)
+     *
+     * The parameters below are relevant when some Views are using dynamic resolution scaling:
+     *
+     * headRoomRatio: additional headroom for the GPU as a ratio of the targetFrameTime.
+     *                Useful for taking into account constant costs like post-processing or
+     *                GPU drivers on different platforms.
+     * history:   History size. higher values, tend to filter more (clamped to 30)
+     * scaleRate: rate at which the gpu load is adjusted to reach the target frame rate
+     *            This value can be computed as 1 / N, where N is the number of frames
+     *            needed to reach 64% of the target scale factor.
+     *            Higher values make the dynamic resolution react faster.
+     *
+     * @see View::DynamicResolutionOptions
+     * @see Renderer::DisplayInfo
+     *
+     */
+    struct FrameRateOptions {
+        float headRoomRatio = 0.0f;    //!< additional headroom for the GPU
+        float scaleRate = 0.125f;      //!< rate at which the system reacts to load changes
+        uint8_t history = 9;           //!< history size
+        uint8_t interval = 1;          //!< desired frame interval in unit of 1.0 / DisplayInfo::refreshRate
+    };
+
+    /**
      * Information about the display this Renderer is associated to. This information is needed
      * to accurately compute dynamic-resolution scaling and for frame-pacing.
      *
      * @param info
      */
     void setDisplayInfo(const DisplayInfo& info) noexcept;
+
+    /**
+     * Set options controlling the desired frame-rate.
+     *
+     * @param options
+     */
+    void setFrameRateOptions(FrameRateOptions const& options) noexcept;
 
     /**
      * Get the Engine that created this Renderer.

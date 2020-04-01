@@ -58,6 +58,8 @@ class ShadowMap;
  * A concrete implementation of the Renderer Interface.
  */
 class FRenderer : public Renderer {
+    static constexpr size_t MAX_FRAMETIME_HISTORY = 32u;
+
 public:
     explicit FRenderer(FEngine& engine);
     ~FRenderer() noexcept;
@@ -93,6 +95,24 @@ public:
 
     void setDisplayInfo(DisplayInfo const& info) noexcept {
         mDisplayInfo = info;
+    }
+
+    void setFrameRateOptions(FrameRateOptions const& options) noexcept {
+        FrameRateOptions& frameRateOptions = mFrameRateOptions;
+        frameRateOptions = options;
+
+        // History can't be more than 32 frames (~0.5s)
+        frameRateOptions.history = std::min(frameRateOptions.history,
+                uint8_t(MAX_FRAMETIME_HISTORY));
+
+        // History must at least be 3 frames
+        frameRateOptions.history = std::max(frameRateOptions.history, uint8_t(3));
+
+        frameRateOptions.interval = std::max(uint8_t(1), frameRateOptions.interval);
+
+        // headroom can't be larger than frame time, or less than 0
+        frameRateOptions.headRoomRatio = std::min(frameRateOptions.headRoomRatio, 1.0f);
+        frameRateOptions.headRoomRatio = std::max(frameRateOptions.headRoomRatio, 0.0f);
     }
 
 private:
@@ -159,6 +179,7 @@ private:
     Epoch mUserEpoch;
     math::float4 mShaderUserTime{};
     DisplayInfo mDisplayInfo;
+    FrameRateOptions mFrameRateOptions;
 
     // per-frame arena for this Renderer
     LinearAllocatorArena& mPerRenderPassArena;

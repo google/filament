@@ -21,6 +21,7 @@
 
 #include "upcast.h"
 
+#include "FrameInfo.h"
 #include "UniformBuffer.h"
 
 #include "details/Allocators.h"
@@ -238,7 +239,7 @@ public:
         return mHasPostProcessPass;
     }
 
-    math::float2 updateScale(std::chrono::duration<float, std::milli> frameTime) noexcept;
+    math::float2 updateScale(FrameInfo const& info) noexcept;
 
     void setDynamicResolutionOptions(View::DynamicResolutionOptions const& options) noexcept;
 
@@ -338,8 +339,6 @@ public:
     UniformBuffer& getShadowUniforms() const { return mShadowUb; }
 
 private:
-    static constexpr size_t MAX_FRAMETIME_HISTORY = 32u;
-
     void prepareVisibleRenderables(utils::JobSystem& js,
             Frustum const& frustum, FScene::RenderableSoa& renderableData) const noexcept;
 
@@ -376,12 +375,12 @@ private:
     FCamera* mViewingCamera = nullptr;
 
     CameraInfo mViewingCameraInfo;
-    Frustum mCullingFrustum;
+    Frustum mCullingFrustum{};
 
     mutable Froxelizer mFroxelizer;
 
     Viewport mViewport;
-    LinearColorA mClearColor;
+    LinearColorA mClearColor{};
     bool mCulling = true;
     bool mFrontFaceWindingInverted = false;
     bool mClearTargetColor = true;
@@ -403,13 +402,8 @@ private:
     BloomOptions mBloomOptions;
     FogOptions mFogOptions;
 
-    using duration = std::chrono::duration<float, std::milli>;
     DynamicResolutionOptions mDynamicResolution;
-    std::array<duration, MAX_FRAMETIME_HISTORY> mFrameTimeHistory;
-    size_t mFrameTimeHistorySize = 0;
-
     math::float2 mScale = 1.0f;
-    float mDynamicWorkloadScale = 1.0f;
     bool mIsDynamicResolutionSupported = false;
 
     RenderQuality mRenderQuality;

@@ -159,20 +159,15 @@ Java_com_google_android_filament_View_nGetDithering(JNIEnv*, jclass,
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_View_nSetDynamicResolutionOptions(JNIEnv*,
-        jclass, jlong nativeView, jboolean enabled, jboolean homogeneousScaling,
-        jfloat targetFrameTimeMilli, jfloat headRoomRatio, jfloat scaleRate,
-        jfloat minScale, jfloat maxScale, jint history, jint quality) {
+Java_com_google_android_filament_View_nSetDynamicResolutionOptions(JNIEnv*, jclass, jlong nativeView,
+        jboolean enabled, jboolean homogeneousScaling,
+        jfloat minScale, jfloat maxScale, jint quality) {
     View* view = (View*)nativeView;
     View::DynamicResolutionOptions options;
     options.enabled = enabled;
     options.homogeneousScaling = homogeneousScaling;
-    options.targetFrameTimeMilli = targetFrameTimeMilli;
-    options.headRoomRatio = headRoomRatio;
-    options.scaleRate = scaleRate;
     options.minScale = filament::math::float2{ minScale };
     options.maxScale = filament::math::float2{ maxScale };
-    options.history = (uint8_t)history;
     options.quality = (View::QualityLevel)quality;
     view->setDynamicResolutionOptions(options);
 }

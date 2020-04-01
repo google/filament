@@ -195,7 +195,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     bool dithering = view.getDithering() == View::Dithering::TEMPORAL;
     bool fxaa = view.getAntiAliasing() == View::AntiAliasing::FXAA;
     uint8_t msaa = view.getSampleCount();
-    float2 scale = view.updateScale(mFrameInfoManager.getLastFrameTime());
+    float2 scale = view.updateScale(mFrameInfoManager.getLastFrameInfo());
     const View::QualityLevel upscalingQuality = view.getDynamicResolutionOptions().quality;
     auto aoOptions = view.getAmbientOcclusionOptions();
     if (!hasPostProcess) {
@@ -695,8 +695,8 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
     // get the timestamp as soon as possible
     using namespace std::chrono;
     const steady_clock::time_point now{ steady_clock::now() };
-    const steady_clock::time_point vsync{steady_clock::duration(vsyncSteadyClockTimeNano) };
-    const time_point<steady_clock> vsyncTp(vsyncSteadyClockTimeNano ? vsync : now);
+    const steady_clock::time_point userVsync{ steady_clock::duration(vsyncSteadyClockTimeNano) };
+    const time_point<steady_clock> appVsync(vsyncSteadyClockTimeNano ? userVsync : now);
 
     mFrameId++;
 
@@ -715,7 +715,7 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
     // NOTE: this makes synchronous calls to the driver
     driver.updateStreams(&driver);
 
-    driver.beginFrame(vsyncTp.time_since_epoch().count(), mFrameId, callback, user);
+    driver.beginFrame(appVsync.time_since_epoch().count(), mFrameId, callback, user);
 
     if (!mFrameSkipper.beginFrame()) {
         driver.endFrame(mFrameId);
@@ -725,10 +725,49 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
 
     // This need to occur after the backend beginFrame() because some backends need to start
     // a command buffer before creating a fence.
-    mFrameInfoManager.beginFrame(mFrameId);
+    mFrameInfoManager.beginFrame({
+            .targetFrameTime = float(mFrameRateOptions.interval) / mDisplayInfo.refreshRate,
+            .headRoomRatio = mFrameRateOptions.headRoomRatio,
+            .oneOverTau = mFrameRateOptions.scaleRate,
+            .historySize = mFrameRateOptions.history
+    }, mFrameId);
+
+#if 0 // work-in-progress
+    if (vsyncSteadyClockTimeNano) {
+        const size_t interval = mFrameRateOptions.interval; // user requested swap-interval;
+        const steady_clock::duration refreshPeriod(uint64_t(1e9 / mDisplayInfo.refreshRate));
+        const steady_clock::duration presentationDeadline(mDisplayInfo.presentationDeadlineNanos);
+        const steady_clock::duration vsyncOffset(mDisplayInfo.vsyncOffsetNanos);
+
+        // hardware vsync timestamp
+        steady_clock::time_point hwVsync = appVsync - vsyncOffset;
+
+        // compute our desired presentation time. We can't pick a desired presentation time
+        // that's too far, or we won't be able to dequeue buffers.
+        steady_clock::time_point desiredPresentationTime = hwVsync + 2 * interval * refreshPeriod;
+
+        // Compute the deadline. This deadline is when the GPU must be finished.
+        // The deadline has 1ms backed in it on Android.
+        steady_clock::time_point deadline = desiredPresentationTime - presentationDeadline;
+
+        // one important thing is to make sure that the deadline is comfortably later than
+        // when the gpu will finish, otherwise we'll have inconsistent latency/frames.
+
+        // TODO: evaluate if we can make it in time, and if not why.
+        // If the problem is cpu+gpu latency we can try to push the desired presentation time
+        // further away, but this has limits, as only 2 buffers are dequeuable.
+        // If the problem is the gpu is overwhelmed, then we need to
+        //  - see if there is more headroom in dynamic resolution
+        //  - or start skipping frames. Ideally lower the framerate too.
+
+        // presentation time is set to the middle of the period we're interested in
+        steady_clock::time_point presentationTime = desiredPresentationTime - refreshPeriod / 2;
+        driver.setPresentationTime(presentationTime.time_since_epoch().count());
+    }
+#endif
 
     // latch the frame time
-    std::chrono::duration<double> time(vsync - mUserEpoch);
+    std::chrono::duration<double> time(userVsync - mUserEpoch);
     float h = float(time.count());
     float l = float(time.count() - h);
     mShaderUserTime = { h, l, 0, 0 };
@@ -881,6 +920,10 @@ void Renderer::resetUserTime() {
 
 void Renderer::setDisplayInfo(const DisplayInfo& info) noexcept {
     upcast(this)->setDisplayInfo(info);
+}
+
+void Renderer::setFrameRateOptions(FrameRateOptions const& options) noexcept {
+    upcast(this)->setFrameRateOptions(options);
 }
 
 } // namespace filament
