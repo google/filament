@@ -29,9 +29,8 @@ float sphericalCapsIntersection(float cosCap1, float cosCap2, float cosDistance)
 
     float delta = abs(r1 - r2);
     float x = 1.0 - saturate((d - delta) / max(r1 + r2 - delta, 0.0001));
-    float x2 = sq(x);
     // simplified smoothsteph()
-    float area = -2.0 * x2 * x + 3.0 * x2;
+    float area = sq(x) * (-2.0 * x + 3.0);
     return area * (1.0 - max(cosCap1, cosCap2));
 }
 
