@@ -200,7 +200,7 @@ class ModelViewer : android.view.View.OnTouchListener {
     /**
      * Renders the model and updates the Filament camera.
      */
-    fun render() {
+    fun render(frameTimeNanos: Long) {
         if (!uiHelper.isReadyToRender) {
             return
         }
@@ -219,7 +219,7 @@ class ModelViewer : android.view.View.OnTouchListener {
                 upward[0], upward[1], upward[2])
 
         // Render the scene, unless the renderer wants to skip the frame.
-        if (renderer.beginFrame(swapChain!!)) {
+        if (renderer.beginFrame(swapChain!!, frameTimeNanos)) {
             renderer.render(view)
             renderer.endFrame()
         }

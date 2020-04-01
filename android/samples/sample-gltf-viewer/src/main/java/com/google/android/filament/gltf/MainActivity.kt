@@ -127,7 +127,7 @@ class MainActivity : Activity() {
                 updateBoneMatrices()
             }
 
-            modelViewer.render()
+            modelViewer.render(frameTimeNanos)
         }
     }
 

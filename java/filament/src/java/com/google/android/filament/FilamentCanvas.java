@@ -47,7 +47,7 @@ public class FilamentCanvas extends Canvas implements FilamentTarget  {
     }
 
     public boolean beginFrame(@NonNull Engine engine, @NonNull Renderer renderer) {
-        return renderer.beginFrame(getSwapChain(engine));
+        return renderer.beginFrame(getSwapChain(engine), 0L);
     }
 
     public void endFrame(Renderer renderer) {

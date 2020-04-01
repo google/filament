@@ -30,10 +30,10 @@ using namespace backend;
 
 extern "C" JNIEXPORT jboolean JNICALL
 Java_com_google_android_filament_Renderer_nBeginFrame(JNIEnv *, jclass, jlong nativeRenderer,
-        jlong nativeSwapChain) {
+        jlong nativeSwapChain, jlong frameTimeNanos) {
     Renderer *renderer = (Renderer *) nativeRenderer;
     SwapChain *swapChain = (SwapChain *) nativeSwapChain;
-    return (jboolean) renderer->beginFrame(swapChain);
+    return (jboolean) renderer->beginFrame(swapChain, uint64_t(frameTimeNanos));
 }
 
 extern "C" JNIEXPORT void JNICALL
