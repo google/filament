@@ -58,11 +58,14 @@ android {
     }
 }
 
-configurations.all {
-    resolutionStrategy {
-        dependencySubstitution {
-            substitute(module("com.google.android.filament:gltfio-android")).with(project(":gltfio-android"))
-            substitute(module("com.google.android.filament:gltfio-android-lite")).with(project(":gltfio-android"))
+configurations.all { config ->
+    // Hack to preserve the version of the dependencies
+    if (!config.name.endsWith('Publication')) {
+        resolutionStrategy {
+            dependencySubstitution {
+                substitute(module("com.google.android.filament:gltfio-android:${VERSION_NAME}")).with(project(":gltfio-android"))
+                substitute(module("com.google.android.filament:gltfio-android-lite:${VERSION_NAME}")).with(project(":gltfio-android"))
+            }
         }
     }
 }
@@ -71,13 +74,14 @@ dependencies {
     implementation deps.kotlin
     implementation deps.androidx.annotations
     implementation project(':filament-android')
-    fullImplementation module("com.google.android.filament:gltfio-android")
-    liteImplementation module("com.google.android.filament:gltfio-android-lite")
+
+    fullImplementation module("com.google.android.filament:gltfio-android:${VERSION_NAME}")
+    liteImplementation module("com.google.android.filament:gltfio-android-lite:${VERSION_NAME}")
 }
 
 apply from: rootProject.file('gradle/gradle-mvn-push.gradle')
 
-afterEvaluate { project ->
+afterEvaluate {
     publishing {
         publications {
             fullRelease(MavenPublication) {
