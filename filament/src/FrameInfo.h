@@ -21,6 +21,7 @@
 
 #include "backend/Handle.h"
 
+#include <array>
 #include <chrono>
 
 #include <assert.h>
@@ -31,11 +32,20 @@ namespace details {
 class FEngine;
 } // namespace details
 
+struct FrameInfo {
+    using duration = std::chrono::duration<float, std::milli>;
+    duration frameTime{};            // frame time in ms
+    duration denoisedFrameTime{};    // frame time in ms (median filter)
+    float workLoad{};               // instant workload (from denoised frame time)
+    float smoothedWorkLoad{};       // filtered workload
+};
+
 class FrameInfoManager {
     static constexpr size_t POOL_COUNT = 8;
+    static constexpr size_t MAX_FRAMETIME_HISTORY = 32u;
 
 public:
-    using duration = std::chrono::duration<float, std::milli>;
+    using duration = FrameInfo::duration;
 
     explicit FrameInfoManager(details::FEngine& engine);
     ~FrameInfoManager() noexcept;
@@ -43,16 +53,25 @@ public:
     void beginFrame(uint32_t frameId);  // call this immediately after "make current"
     void endFrame(); // call this immediately before "swap buffers"
 
+    FrameInfo const& getLastFrameInfo() const {
+        return mFrameTimeHistory[0];
+    }
+
     duration getLastFrameTime() const noexcept {
-        return mFrameTime;
+        return getLastFrameInfo().frameTime;
     }
 
 private:
+    void update(duration lastFrameTime);
+
     details::FEngine& mEngine;
     backend::Handle<backend::HwTimerQuery> mQueries[POOL_COUNT];
     duration mFrameTime{};
     uint32_t mIndex = 0;
     uint32_t mLast = 0;
+
+    std::array<FrameInfo, MAX_FRAMETIME_HISTORY> mFrameTimeHistory;
+    size_t mFrameTimeHistorySize = 0;
 };
 
 
