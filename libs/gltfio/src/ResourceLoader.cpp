@@ -99,6 +99,8 @@ struct ResourceLoader::Impl {
     int mNumDecoderTasks;
     int mNumDecoderTasksFinished;
     utils::JobSystem::Job* mDecoderRootJob = nullptr;
+    utils::JobSystem* mJobSystem;
+
     details::FFilamentAsset* mCurrentAsset;
 
     bool createTextures(bool async);
@@ -231,7 +233,13 @@ static void decodeDracoMeshes(FFilamentAsset* asset) {
 }
 
 ResourceLoader::ResourceLoader(const ResourceConfiguration& config) :
-        mPool(new AssetPool), pImpl(new Impl(config)) { }
+        mPool(new AssetPool), pImpl(new Impl(config)) {
+    pImpl->mJobSystem = JobSystem::getJobSystem();
+    if (!pImpl->mJobSystem) {
+        pImpl->mJobSystem = new JobSystem();
+        pImpl->mJobSystem->adopt();
+    }
+}
 
 ResourceLoader::~ResourceLoader() {
     mPool->onLoaderDestroyed();
@@ -563,7 +571,7 @@ void ResourceLoader::Impl::bindTextureToMaterial(const TextureSlot& tb) {
 
 bool ResourceLoader::Impl::createTextures(bool async) {
     // If any decoding jobs are still underway, wait for them to finish.
-    utils::JobSystem* js = utils::JobSystem::getJobSystem();
+    utils::JobSystem* js = mJobSystem;
     if (mDecoderRootJob) {
         js->waitAndRelease(mDecoderRootJob);
         mDecoderRootJob = nullptr;
@@ -677,9 +685,8 @@ bool ResourceLoader::Impl::createTextures(bool async) {
 }
 
 ResourceLoader::Impl::~Impl() {
-    utils::JobSystem* js = utils::JobSystem::getJobSystem();
     if (mDecoderRootJob) {
-        js->waitAndRelease(mDecoderRootJob);
+        mJobSystem->waitAndRelease(mDecoderRootJob);
     }
 }
 
