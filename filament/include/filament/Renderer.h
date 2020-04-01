@@ -329,6 +329,10 @@ public:
      * passed to the callback function. Currently this functionality is only supported by the Metal
      * backend.
      *
+     * @param vsyncSteadyClockTimeNano The time in nanosecond of when the current frame started,
+     *                                 or 0 if unknown. This value should be the timestamp of
+     *                                 the last h/w vsync. It is expressed in the
+     *                                 std::chrono::steady_clock time base.
      * @param swapChain A pointer to the SwapChain instance to use.
      * @param callback  A callback function that will be called when the backend has finished
      *                  processing the frame.
@@ -347,8 +351,9 @@ public:
      * @see
      * endFrame(), backend::PresentCallable, backend::FrameFinishedCallback
      */
-    bool beginFrame(SwapChain* swapChain, backend::FrameFinishedCallback callback = nullptr,
-            void* user = nullptr);
+    bool beginFrame(SwapChain* swapChain,
+            uint64_t vsyncSteadyClockTimeNano = 0u,
+            backend::FrameFinishedCallback callback = nullptr, void* user = nullptr);
 
     /**
      * Finishes the current frame and schedules it for display.

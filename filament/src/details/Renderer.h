@@ -75,7 +75,8 @@ public:
     void copyFrame(FSwapChain* dstSwapChain, Viewport const& dstViewport,
             Viewport const& srcViewport, CopyFrameFlag flags);
 
-    bool beginFrame(FSwapChain* swapChain, backend::FrameFinishedCallback callback, void* user);
+    bool beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano,
+            backend::FrameFinishedCallback callback, void* user);
     void endFrame();
 
     void resetUserTime();

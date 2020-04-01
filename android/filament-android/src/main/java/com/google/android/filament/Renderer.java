@@ -100,6 +100,11 @@ public class Renderer {
      * <p>All calls to render() must happen <b>after</b> beginFrame().</p>
      *
      * @param swapChain the {@link SwapChain} instance to use
+     * @param frameTimeNanos The time in nanoseconds when the frame started being rendered,
+     *                       in the {@link System#nanoTime()} timebase. Divide this value by 1000000 to
+     *                       convert it to the {@link android.os.SystemClock#uptimeMillis()}
+     *                       time base. This typically comes from
+     *                       {@link android.view.Choreographer.FrameCallback}.
      *
      * @return <code>false</code> if the current frame must be skipped<br>
      *         When skipping a frame, the whole frame is canceled, and {@link #endFrame} must not
@@ -108,8 +113,8 @@ public class Renderer {
      * @see #endFrame
      * @see #render
      */
-    public boolean beginFrame(@NonNull SwapChain swapChain) {
-        return nBeginFrame(getNativeObject(), swapChain.getNativeObject());
+    public boolean beginFrame(@NonNull SwapChain swapChain, long frameTimeNanos) {
+        return nBeginFrame(getNativeObject(), swapChain.getNativeObject(), frameTimeNanos);
     }
 
     /**
@@ -462,7 +467,7 @@ public class Renderer {
         mNativeObject = 0;
     }
 
-    private static native boolean nBeginFrame(long nativeRenderer, long nativeSwapChain);
+    private static native boolean nBeginFrame(long nativeRenderer, long nativeSwapChain, long frameTimeNanos);
     private static native void nEndFrame(long nativeRenderer);
     private static native void nRender(long nativeRenderer, long nativeView);
     private static native void nCopyFrame(long nativeRenderer, long nativeDstSwapChain,

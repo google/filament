@@ -123,12 +123,12 @@ void FRenderer::terminate(FEngine& engine) {
     // instance, e.g. Fences, Callbacks, etc...)
     if (UTILS_HAS_THREADING) {
         Fence::waitAndDestroy(engine.createFence(FFence::Type::SOFT));
-        mFrameInfoManager.terminate();
     } else {
         // In single threaded mode, allow recently-created objects (e.g. no-op fences in Skipper)
         // to initialize themselves, otherwise the engine tries to destroy invalid handles.
         engine.execute();
     }
+    mFrameInfoManager.terminate();
 }
 
 void FRenderer::resetUserTime() {
@@ -686,8 +686,8 @@ void FRenderer::copyFrame(FSwapChain* dstSwapChain, filament::Viewport const& ds
     mSwapChain->makeCurrent(driver);
 }
 
-bool FRenderer::beginFrame(FSwapChain* swapChain, backend::FrameFinishedCallback callback,
-        void* user) {
+bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano,
+        backend::FrameFinishedCallback callback, void* user) {
     SYSTRACE_CALL();
 
     assert(swapChain);
@@ -709,8 +709,9 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, backend::FrameFinishedCallback
     // NOTE: this makes synchronous calls to the driver
     driver.updateStreams(&driver);
 
-    int64_t monotonic_clock_ns (std::chrono::steady_clock::now().time_since_epoch().count());
-    driver.beginFrame(monotonic_clock_ns, mFrameId, callback, user);
+    int64_t timestamp = vsyncSteadyClockTimeNano ?
+            vsyncSteadyClockTimeNano : std::chrono::steady_clock::now().time_since_epoch().count();
+    driver.beginFrame(timestamp, mFrameId, callback, user);
 
     if (!mFrameSkipper.beginFrame()) {
         driver.endFrame(mFrameId);
@@ -720,9 +721,7 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, backend::FrameFinishedCallback
 
     // This need to occur after the backend beginFrame() because some backends need to start
     // a command buffer before creating a fence.
-    if (UTILS_HAS_THREADING) {
-        mFrameInfoManager.beginFrame(mFrameId);
-    }
+    mFrameInfoManager.beginFrame(mFrameId);
 
     // latch the frame time
     std::chrono::duration<double> time{ getUserTime() };
@@ -743,14 +742,12 @@ void FRenderer::endFrame() {
     FEngine::DriverApi& driver = engine.getDriverApi();
 
     if (UTILS_HAS_THREADING) {
-
         // on debug builds this helps catching cases where we're writing to
         // the buffer form another thread, which is currently not allowed.
         driver.debugThreading();
-
-        mFrameInfoManager.endFrame();
     }
 
+    mFrameInfoManager.endFrame();
     mFrameSkipper.endFrame();
 
     if (mSwapChain) {
@@ -844,9 +841,9 @@ void Renderer::render(View const* view) {
     upcast(this)->render(upcast(view));
 }
 
-bool Renderer::beginFrame(SwapChain* swapChain, backend::FrameFinishedCallback callback,
-        void* user) {
-    return upcast(this)->beginFrame(upcast(swapChain), callback, user);
+bool Renderer::beginFrame(SwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano,
+        backend::FrameFinishedCallback callback, void* user) {
+    return upcast(this)->beginFrame(upcast(swapChain), vsyncSteadyClockTimeNano, callback, user);
 }
 
 void Renderer::copyFrame(SwapChain* dstSwapChain, filament::Viewport const& dstViewport,
