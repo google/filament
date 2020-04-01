@@ -34,6 +34,7 @@ import java.nio.ByteOrder
 import java.nio.channels.Channels
 import android.opengl.*
 import android.view.MotionEvent
+import com.google.android.filament.android.DisplayHelper
 
 
 class MainActivity : Activity(), ActivityCompat.OnRequestPermissionsResultCallback {
@@ -362,6 +363,7 @@ class MainActivity : Activity(), ActivityCompat.OnRequestPermissionsResultCallba
         override fun onNativeWindowChanged(surface: Surface) {
             swapChain?.let { engine.destroySwapChain(it) }
             swapChain = engine.createSwapChain(surface)
+            renderer.setDisplayInfo(DisplayHelper.getDisplayInfo(surfaceView.display, Renderer.DisplayInfo()))
         }
 
         override fun onDetachedFromSurface() {
