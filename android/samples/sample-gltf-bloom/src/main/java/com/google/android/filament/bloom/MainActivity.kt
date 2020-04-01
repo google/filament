@@ -465,7 +465,7 @@ class MainActivity : Activity() {
             choreographer.postFrameCallback(this)
 
             if (uiHelper.isReadyToRender) {
-                if (renderer.beginFrame(swapChain!!)) {
+                if (renderer.beginFrame(swapChain!!, frameTimeNanos)) {
                     renderer.render(primary.view)
                     renderer.render(hblur.view)
                     renderer.render(vblur.view)

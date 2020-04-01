@@ -127,7 +127,7 @@ class MainActivity : Activity() {
                 }
             }
 
-            modelViewer.render()
+            modelViewer.render(frameTimeNanos)
         }
     }
 
