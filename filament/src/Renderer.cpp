@@ -688,9 +688,15 @@ void FRenderer::copyFrame(FSwapChain* dstSwapChain, filament::Viewport const& ds
 
 bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano,
         backend::FrameFinishedCallback callback, void* user) {
+    assert(swapChain);
+
     SYSTRACE_CALL();
 
-    assert(swapChain);
+    // get the timestamp as soon as possible
+    using namespace std::chrono;
+    const steady_clock::time_point now{ steady_clock::now() };
+    const steady_clock::time_point vsync{steady_clock::duration(vsyncSteadyClockTimeNano) };
+    const time_point<steady_clock> vsyncTp(vsyncSteadyClockTimeNano ? vsync : now);
 
     mFrameId++;
 
@@ -709,9 +715,7 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
     // NOTE: this makes synchronous calls to the driver
     driver.updateStreams(&driver);
 
-    int64_t timestamp = vsyncSteadyClockTimeNano ?
-            vsyncSteadyClockTimeNano : std::chrono::steady_clock::now().time_since_epoch().count();
-    driver.beginFrame(timestamp, mFrameId, callback, user);
+    driver.beginFrame(vsyncTp.time_since_epoch().count(), mFrameId, callback, user);
 
     if (!mFrameSkipper.beginFrame()) {
         driver.endFrame(mFrameId);
@@ -724,7 +728,7 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
     mFrameInfoManager.beginFrame(mFrameId);
 
     // latch the frame time
-    std::chrono::duration<double> time{ getUserTime() };
+    std::chrono::duration<double> time(vsync - mUserEpoch);
     float h = float(time.count());
     float l = float(time.count() - h);
     mShaderUserTime = { h, l, 0, 0 };
@@ -873,6 +877,10 @@ double Renderer::getUserTime() const {
 
 void Renderer::resetUserTime() {
     upcast(this)->resetUserTime();
+}
+
+void Renderer::setDisplayInfo(const DisplayInfo& info) noexcept {
+    upcast(this)->setDisplayInfo(info);
 }
 
 } // namespace filament

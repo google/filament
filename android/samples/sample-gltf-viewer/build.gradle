@@ -26,7 +26,7 @@ android {
     compileSdkVersion versions.compileSdk
     defaultConfig {
         applicationId "com.google.android.filament.gltf"
-        minSdkVersion 16
+        minSdkVersion 19
         targetSdkVersion versions.targetSdk
         missingDimensionStrategy 'functionality', 'full'
     }

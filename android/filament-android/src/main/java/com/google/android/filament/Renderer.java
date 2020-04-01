@@ -46,6 +46,29 @@ public class Renderer {
     private long mNativeObject;
 
     /**
+     * Information about the display this renderer is associated to
+     */
+    public static class DisplayInfo {
+        /**
+         * Refresh rate of the display in Hz. Set to 0 for offscreen or turn off frame-pacing.
+         * On Android you can use {@link android.view.Display#getRefreshRate()}.
+         */
+        public float refreshRate = 60.0f;
+
+        /**
+         * How far in advance a buffer must be queued for presentation at a given time in ns
+         * On Android you can use {@link android.view.Display#getPresentationDeadlineNanos()}.
+         */
+        public long presentationDeadlineNanos = 0;
+
+        /**
+         * Offset by which vsyncSteadyClockTimeNano provided in beginFrame() is offset in ns
+         * On Android you can use {@link android.view.Display#getAppVsyncOffsetNanos()}.
+         */
+        public long vsyncOffsetNanos = 0;
+    };
+
+    /**
      * Indicates that the <code>dstSwapChain</code> passed into {@link #copyFrame} should be
      * committed after the frame has been copied.
      *
@@ -73,6 +96,14 @@ public class Renderer {
     Renderer(@NonNull Engine engine, long nativeRenderer) {
         mEngine = engine;
         mNativeObject = nativeRenderer;
+    }
+
+    /**
+     * Information about the display this Renderer is associated to. This information is needed
+     * to accurately compute dynamic-resolution scaling and for frame-pacing.
+     */
+    public void setDisplayInfo(@NonNull DisplayInfo info) {
+        nSetDisplayInfo(getNativeObject(), info.refreshRate, info.presentationDeadlineNanos, info.vsyncOffsetNanos);
     }
 
     /**
@@ -487,4 +518,6 @@ public class Renderer {
             Object handler, Runnable callback);
     private static native double nGetUserTime(long nativeRenderer);
     private static native void nResetUserTime(long nativeRenderer);
+    private static native void nSetDisplayInfo(long nativeRenderer,
+            float refreshRate, long presentationDeadlineNanos, long vsyncOffsetNanos);
 }

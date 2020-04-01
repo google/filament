@@ -21,6 +21,7 @@ import android.view.Surface
 import android.view.SurfaceView
 import android.view.TextureView
 import com.google.android.filament.*
+import com.google.android.filament.android.DisplayHelper
 import com.google.android.filament.android.UiHelper
 import com.google.android.filament.gltfio.*
 import java.nio.Buffer
@@ -72,6 +73,7 @@ class ModelViewer : android.view.View.OnTouchListener {
     private val cameraManipulator: Manipulator
     private val gestureDetector: GestureDetector
     private val renderer: Renderer
+    private lateinit var surfaceView: SurfaceView
     private var swapChain: SwapChain? = null
     private var assetLoader: AssetLoader
     private var resourceLoader: ResourceLoader
@@ -122,6 +124,7 @@ class ModelViewer : android.view.View.OnTouchListener {
                 .viewport(surfaceView.width, surfaceView.height)
                 .build(Manipulator.Mode.ORBIT)
 
+        this.surfaceView = surfaceView
         gestureDetector = GestureDetector(surfaceView, cameraManipulator)
         uiHelper.renderCallback = SurfaceCallback()
         uiHelper.attachTo(surfaceView)
@@ -273,6 +276,7 @@ class ModelViewer : android.view.View.OnTouchListener {
         override fun onNativeWindowChanged(surface: Surface) {
             swapChain?.let { engine.destroySwapChain(it) }
             swapChain = engine.createSwapChain(surface)
+            renderer.setDisplayInfo(DisplayHelper.getDisplayInfo(surfaceView.display, Renderer.DisplayInfo()))
         }
 
         override fun onDetachedFromSurface() {
