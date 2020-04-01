@@ -107,9 +107,9 @@ jobs:
           mv out/filamat-android-release.aar out/filamat-${DATE}-android.aar
           mv out/filamat-android-lite-release.aar out/filamat-${DATE}-lite-android.aar
           mv out/gltfio-android-release.aar out/gltfio-${DATE}-android.aar
-          mv out/gltfio-android-release.aar out/gltfio-${DATE}-lite-android.aar
+          mv out/gltfio-android-lite-release.aar out/gltfio-${DATE}-lite-android.aar
           mv out/filament-utils-android-release.aar out/filament-utils-${DATE}-android.aar
-          mv out/filament-utils-android-release.aar out/filament-utils-${DATE}-lite-android.aar
+          mv out/filament-utils-android-lite-release.aar out/filament-utils-${DATE}-lite-android.aar
           python3 build/common/upload-assets.py ${TAG} out/*.aar
         env:
           TAG: ${{ steps.git_ref.outputs.tag }}
