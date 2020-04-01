@@ -113,6 +113,7 @@ if (FILAMENT_SUPPORTS_METAL)
             src/metal/MetalHandles.mm
             src/metal/MetalResourceTracker.cpp
             src/metal/MetalState.mm
+            src/metal/MetalTimerQuery.mm
             src/metal/PlatformMetal.mm
     )
 endif()
