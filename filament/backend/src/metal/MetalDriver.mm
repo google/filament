@@ -18,11 +18,13 @@
 #include "CommandStreamDispatcher.h"
 #include "metal/MetalDriver.h"
 
+#include "MetalBlitter.h"
 #include "MetalContext.h"
 #include "MetalDriverFactory.h"
 #include "MetalEnums.h"
 #include "MetalHandles.h"
 #include "MetalState.h"
+#include "MetalTimerQuery.h"
 
 #include <CoreVideo/CVMetalTexture.h>
 #include <CoreVideo/CVPixelBuffer.h>
@@ -60,6 +62,12 @@ MetalDriver::MetalDriver(backend::MetalPlatform* platform) noexcept
     mContext->bufferPool = new MetalBufferPool(*mContext);
     mContext->blitter = new MetalBlitter(*mContext);
 
+    if (@available(macOS 10.14, iOS 12, *)) {
+        mContext->timerQueryImpl = new TimerQueryFence(*mContext);
+    } else {
+        mContext->timerQueryImpl = new TimerQueryNoop();
+    }
+
     CVReturn success = CVMetalTextureCacheCreate(kCFAllocatorDefault, nullptr, mContext->device,
             nullptr, &mContext->textureCache);
     ASSERT_POSTCONDITION(success == kCVReturnSuccess, "Could not create Metal texture cache.");
@@ -76,6 +84,7 @@ MetalDriver::~MetalDriver() noexcept {
     CFRelease(mContext->textureCache);
     delete mContext->bufferPool;
     delete mContext->blitter;
+    delete mContext->timerQueryImpl;
     delete mContext;
 }
 
@@ -248,8 +257,8 @@ void MetalDriver::createStreamFromTextureIdR(Handle<HwStream>, intptr_t external
 }
 
 void MetalDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {
+    construct_handle<MetalTimerQuery>(mHandleMap, tqh);
 }
-
 
 Handle<HwVertexBuffer> MetalDriver::createVertexBufferS() noexcept {
     return alloc_handle<MetalVertexBuffer, HwVertexBuffer>();
@@ -308,7 +317,7 @@ Handle<HwStream> MetalDriver::createStreamFromTextureIdS() noexcept {
 }
 
 Handle<HwTimerQuery> MetalDriver::createTimerQueryS() noexcept {
-    return {};
+    return alloc_handle<MetalTimerQuery, HwTimerQuery>();
 }
 
 void MetalDriver::destroyVertexBuffer(Handle<HwVertexBuffer> vbh) {
@@ -398,6 +407,9 @@ void MetalDriver::destroyStream(Handle<HwStream> sh) {
 }
 
 void MetalDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
+    if (tqh) {
+        destruct_handle<MetalTimerQuery>(mHandleMap, tqh);
+    }
 }
 
 void MetalDriver::terminate() {
@@ -581,7 +593,8 @@ void MetalDriver::setExternalStream(Handle<HwTexture> th, Handle<HwStream> sh) {
 }
 
 bool MetalDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapsedTime) {
-    return false;
+    auto* tq = handle_cast<MetalTimerQuery>(mHandleMap, tqh);
+    return mContext->timerQueryImpl->getQueryResult(tq, elapsedTime);
 }
 
 void MetalDriver::generateMipmaps(Handle<HwTexture> th) {
@@ -1055,9 +1068,17 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
 }
 
 void MetalDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {
+    ASSERT_PRECONDITION(!isInRenderPass(mContext),
+            "beginTimerQuery must be called outside of a render pass.");
+    auto* tq = handle_cast<MetalTimerQuery>(mHandleMap, tqh);
+    mContext->timerQueryImpl->beginTimeElapsedQuery(tq);
 }
 
 void MetalDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
+    ASSERT_PRECONDITION(!isInRenderPass(mContext),
+            "endTimerQuery must be called outside of a render pass.");
+    auto* tq = handle_cast<MetalTimerQuery>(mHandleMap, tqh);
+    mContext->timerQueryImpl->endTimeElapsedQuery(tq);
 }
 
 void MetalDriver::enumerateSamplerGroups(

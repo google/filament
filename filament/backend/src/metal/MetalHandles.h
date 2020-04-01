@@ -32,6 +32,7 @@
 
 #include <utils/Panic.h>
 
+#include <atomic>
 #include <condition_variable>
 #include <memory>
 #include <vector>
@@ -174,7 +175,15 @@ public:
 
     FenceStatus wait(uint64_t timeoutNs);
 
+    API_AVAILABLE(macos(10.14), ios(12.0))
+    typedef void (^MetalFenceSignalBlock)(id<MTLSharedEvent>, uint64_t value);
+
+    API_AVAILABLE(macos(10.14), ios(12.0))
+    void onSignal(MetalFenceSignalBlock block);
+
 private:
+
+    MetalContext& context;
 
     std::shared_ptr<std::condition_variable> cv;
     std::mutex mutex;
@@ -185,6 +194,17 @@ private:
     id<MTLSharedEvent> event;
 
     uint64_t value;
+};
+
+struct MetalTimerQuery : public HwTimerQuery {
+    MetalTimerQuery() : status(std::make_shared<Status>()) {}
+
+    struct Status {
+        std::atomic<bool> available;
+        uint64_t elapsed;   // only valid if available is true
+    };
+
+    std::shared_ptr<Status> status;
 };
 
 } // namespace metal
