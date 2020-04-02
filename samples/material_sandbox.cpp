@@ -470,23 +470,10 @@ static void gui(filament::Engine* engine, filament::View*) {
             ImGui::Checkbox("castShadows", &params.castShadows);
         }
 
-        if (ImGui::CollapsingHeader("Directional Light")) {
-            ImGui::Checkbox("enabled", &params.directionalLightEnabled);
-            ImGui::ColorEdit3("color", &params.lightColor.r);
-            ImGui::SliderFloat("lux", &params.lightIntensity, 0.0f, 150000.0f);
-            ImGui::SliderFloat("sunSize", &params.sunAngularRadius, 0.1f, 10.0f);
-            ImGui::SliderFloat("haloSize", &params.sunHaloSize, 1.01f, 40.0f);
-            ImGui::SliderFloat("haloFalloff", &params.sunHaloFalloff, 0.0f, 2048.0f);
+        if (ImGui::CollapsingHeader("Indirect Light")) {
             ImGui::SliderFloat("ibl", &params.iblIntensity, 0.0f, 50000.0f);
             ImGui::SliderAngle("ibl rotation", &params.iblRotation);
-            ImGuiExt::DirectionWidget("direction", params.lightDirection.v);
             ImGui::Indent();
-            if (ImGui::CollapsingHeader("Contact Shadows")) {
-                DebugRegistry& debug = engine->getDebugRegistry();
-                ImGui::Checkbox("enabled###contactShadows", &params.screenSpaceContactShadows);
-                ImGui::SliderInt("steps", &params.stepCount, 0, 255);
-                ImGui::SliderFloat("distance", &params.maxShadowDistance, 0.0f, 10.0f);
-            }
             if (ImGui::CollapsingHeader("SSAO")) {
                 DebugRegistry& debug = engine->getDebugRegistry();
                 ImGui::Checkbox("enabled###ssao", &params.ssao);
@@ -494,6 +481,24 @@ static void gui(filament::Engine* engine, filament::View*) {
                 ImGui::SliderFloat("bias", &params.ssaoOptions.bias, 0.0f, 0.01f, "%.6f");
                 ImGui::SliderFloat("intensity", &params.ssaoOptions.intensity, 0.0f, 4.0f);
                 ImGui::SliderFloat("power", &params.ssaoOptions.power, 0.0f, 4.0f);
+            }
+            ImGui::Unindent();
+        }
+
+        if (ImGui::CollapsingHeader("Directional Light")) {
+            ImGui::Checkbox("enabled", &params.directionalLightEnabled);
+            ImGui::ColorEdit3("color", &params.lightColor.r);
+            ImGui::SliderFloat("lux", &params.lightIntensity, 0.0f, 150000.0f);
+            ImGui::SliderFloat("sunSize", &params.sunAngularRadius, 0.1f, 10.0f);
+            ImGui::SliderFloat("haloSize", &params.sunHaloSize, 1.01f, 40.0f);
+            ImGui::SliderFloat("haloFalloff", &params.sunHaloFalloff, 0.0f, 2048.0f);
+            ImGuiExt::DirectionWidget("direction", params.lightDirection.v);
+            ImGui::Indent();
+            if (ImGui::CollapsingHeader("Contact Shadows")) {
+                DebugRegistry& debug = engine->getDebugRegistry();
+                ImGui::Checkbox("enabled###contactShadows", &params.screenSpaceContactShadows);
+                ImGui::SliderInt("steps", &params.stepCount, 0, 255);
+                ImGui::SliderFloat("distance", &params.maxShadowDistance, 0.0f, 10.0f);
             }
             ImGui::Unindent();
         }
