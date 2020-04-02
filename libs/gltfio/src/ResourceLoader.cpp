@@ -563,7 +563,7 @@ void ResourceLoader::Impl::bindTextureToMaterial(const TextureSlot& tb) {
 
 bool ResourceLoader::Impl::createTextures(bool async) {
     // If any decoding jobs are still underway, wait for them to finish.
-    utils::JobSystem* js = utils::JobSystem::getJobSystem();
+    utils::JobSystem* js = &mEngine->getJobSystem();
     if (mDecoderRootJob) {
         js->waitAndRelease(mDecoderRootJob);
         mDecoderRootJob = nullptr;
@@ -677,9 +677,8 @@ bool ResourceLoader::Impl::createTextures(bool async) {
 }
 
 ResourceLoader::Impl::~Impl() {
-    utils::JobSystem* js = utils::JobSystem::getJobSystem();
     if (mDecoderRootJob) {
-        js->waitAndRelease(mDecoderRootJob);
+        mEngine->getJobSystem().waitAndRelease(mDecoderRootJob);
     }
 }
 
