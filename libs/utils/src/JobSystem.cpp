@@ -66,15 +66,13 @@
 
 namespace utils {
 
-UTILS_DEFINE_TLS(JobSystem::ThreadState *) JobSystem::sThreadState(nullptr);
-
 void JobSystem::setThreadName(const char* name) noexcept {
 #if defined(__linux__)
     pthread_setname_np(pthread_self(), name);
 #elif defined(__APPLE__)
     pthread_setname_np(name);
 #else
-// TODO: implement setting thread name on WIN32 
+// TODO: implement setting thread name on WIN32
 #endif
 }
 
@@ -190,11 +188,6 @@ void JobSystem::decRef(Job const* job) noexcept {
     }
 }
 
-JobSystem* JobSystem::getJobSystem() noexcept {
-    ThreadState* const state = sThreadState;
-    return state ? state->js : nullptr;
-}
-
 void JobSystem::requestExit() noexcept {
     mExitRequested.store(true);
     { std::lock_guard<Mutex> lock(mWaiterLock); }
@@ -230,9 +223,9 @@ void JobSystem::wake() noexcept {
 }
 
 inline JobSystem::ThreadState& JobSystem::getState() noexcept {
-    // check we're not using a thread not owned by the thread pool
-    assert(sThreadState);
-    return *sThreadState;
+    auto iter = mThreadMap.find(std::this_thread::get_id());
+    ASSERT_PRECONDITION(iter != mThreadMap.end(), "This thread has not been adopted.");
+    return *iter->second;
 }
 
 JobSystem::Job* JobSystem::allocateJob() noexcept {
@@ -307,8 +300,9 @@ void JobSystem::loop(ThreadState* state) noexcept {
     // to core. On Android, it looks like the affinity needs to be reset from time to time.
     setThreadAffinityById(state->id);
 
-    // record our work queue to thread-local storage
-    sThreadState = state;
+    // record our work queue
+    bool inserted = mThreadMap.emplace(std::this_thread::get_id(), state).second;
+    ASSERT_PRECONDITION(inserted, "This thread is already in a loop.");
 
     // run our main loop...
     do {
@@ -474,7 +468,9 @@ void JobSystem::runAndWait(JobSystem::Job*& job) noexcept {
 }
 
 void JobSystem::adopt() {
-    ThreadState* const state = sThreadState;
+    const auto tid = std::this_thread::get_id();
+    auto iter = mThreadMap.find(tid);
+    ThreadState* const state = iter ==  mThreadMap.end() ? nullptr : iter->second;
     if (state) {
         // we're already part of a JobSystem, do nothing.
         ASSERT_PRECONDITION(this == state->js,
@@ -497,14 +493,16 @@ void JobSystem::adopt() {
     // however, it's not a problem since mThreadState is pre-initialized and valid
     // (e.g.: the queue is empty).
 
-    sThreadState = &mThreadStates[index];
+    mThreadMap[tid] = &mThreadStates[index];
 }
 
 void JobSystem::emancipate() {
-    ThreadState* const state = sThreadState;
+    const auto tid = std::this_thread::get_id();
+    auto iter = mThreadMap.find(tid);
+    ThreadState* const state = iter ==  mThreadMap.end() ? nullptr : iter->second;
     ASSERT_PRECONDITION(state, "this thread is not an adopted thread");
     ASSERT_PRECONDITION(state->js == this, "this thread is not adopted by us");
-    sThreadState = nullptr;
+    mThreadMap.erase(iter);
 }
 
 io::ostream& operator<<(io::ostream& out, JobSystem const& js) {
