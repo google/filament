@@ -26,7 +26,7 @@ TimerQueryInterface::~TimerQueryInterface() = default;
 
 void TimerQueryFence::beginTimeElapsedQuery(MetalTimerQuery* query) {
     auto* fence = new MetalFence(mContext);
-    query->status->elapsed.store(0);
+    query->status->elapsed = 0;
     query->status->available.store(false);
 
     // Capture the timer query status via a weak_ptr because the MetalTimerQuery could be destroyed
@@ -56,10 +56,12 @@ void TimerQueryFence::endTimeElapsedQuery(MetalTimerQuery* query) {
 }
 
 bool TimerQueryFence::getQueryResult(MetalTimerQuery* query, uint64_t* outElapsedTime) {
-    if (!query->status->available) {
+    if (!query->status->available.load()) {
         return false;
     }
-    *outElapsedTime = query->status->elapsed.load(std::memory_order_relaxed);
+    if (outElapsedTime) {
+        *outElapsedTime = query->status->elapsed;
+    }
     return true;
 }
 
