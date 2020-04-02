@@ -34,13 +34,11 @@ add_mesh("assets/models/monkey/monkey.obj" "suzanne.filamesh")
 # ==================================================================================================
 
 set(MATERIAL_SRCS
+        materials/aiDefaultMat.mat
         materials/bakedColor.mat
         materials/bakedTexture.mat
         materials/pointSprites.mat
         materials/aoPreview.mat
-        materials/aiDefaultMat.mat
-        materials/aiDefaultTrans.mat
-        materials/depthVisualizer.mat
         materials/groundShadow.mat
         materials/heightfield.mat
         materials/sandboxCloth.mat
@@ -54,8 +52,7 @@ set(MATERIAL_SRCS
         materials/sandboxSpecGloss.mat
         materials/sandboxSubsurface.mat
         materials/sandboxUnlit.mat
-        materials/texturedLit.mat
-        materials/transparentColor.mat)
+        materials/texturedLit.mat)
 
 if (CMAKE_CROSSCOMPILING)
     include(${IMPORT_EXECUTABLES})
@@ -78,7 +75,7 @@ foreach (mat_src ${MATERIAL_SRCS})
 endforeach()
 
 # ==================================================================================================
-# Build common resources
+# Build sample resources
 # ==================================================================================================
 
 file(MAKE_DIRECTORY ${RESOURCE_DIR})
@@ -100,7 +97,7 @@ endif()
 set(DUMMY_SRC "${RESOURCE_DIR}/dummy.c")
 add_custom_command(OUTPUT ${DUMMY_SRC} COMMAND echo "//" > ${DUMMY_SRC})
 
-add_library(common-resources ${DUMMY_SRC} ${RESGEN_SOURCE})
+add_library(sample-resources ${DUMMY_SRC} ${RESGEN_SOURCE})
 
 # ==================================================================================================
 # Invoke cmgen to build KTX files for the default IBL and skybox
@@ -172,7 +169,6 @@ endif()
 
 add_library(suzanne-resources ${DUMMY_SRC} ${RESGEN_SOURCE})
 
-
 # ==================================================================================================
 # Resources for gltf_viewer
 # ==================================================================================================
@@ -199,56 +195,6 @@ endif()
 target_sources(gltf-resources PRIVATE ${RESGEN_SOURCE})
 
 # ==================================================================================================
-# Common library
-# ==================================================================================================
-
-set(APP_LIBS filament sdl2 stb math filamat utils getopt imgui filagui image camutils common-resources)
-if (WIN32)
-    list(APPEND APP_LIBS sdl2main)
-endif()
-
-set(APP_SRCS
-        app/Cube.cpp
-        app/FilamentApp.cpp
-        app/IBL.cpp
-        app/IcoSphere.cpp
-        app/Sphere.cpp
-        app/Image.cpp
-        )
-
-if (APPLE)
-    list(APPEND APP_SRCS app/NativeWindowHelperCocoa.mm)
-    list(APPEND APP_LIBS "-framework Cocoa -framework QuartzCore")
-endif()
-
-if (LINUX)
-    list(APPEND APP_SRCS app/NativeWindowHelperLinux.cpp)
-endif()
-
-if (WIN32)
-    list(APPEND APP_SRCS app/NativeWindowHelperWindows.cpp)
-endif()
-
-include_directories(app)
-
-add_library(sample-app ${APP_SRCS})
-target_include_directories(sample-app PUBLIC app)
-
-# Multi-configuration generators, like Visual Studio or Xcode, place executable binaries in a
-# sub-directory named after the configuration, like "Debug" or "Release".
-# For these generators, in order to find assets, we must "walk" up an additional directory.
-get_property(_isMultiConfig GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
-if (_isMultiConfig)
-    target_compile_definitions(sample-app PRIVATE RELATIVE_ASSET_PATH="..")
-else()
-    target_compile_definitions(sample-app PRIVATE RELATIVE_ASSET_PATH=".")
-endif()
-
-target_link_libraries(sample-app PRIVATE ${APP_LIBS})
-
-list(APPEND APP_LIBS sample-app)
-
-# ==================================================================================================
 # Compiler flags
 # ==================================================================================================
 
@@ -265,36 +211,35 @@ endif()
 # Test apps
 # ==================================================================================================
 
-function(add_assimp_demo NAME)
+# Multi-configuration generators, like Visual Studio or Xcode, place executable binaries in a
+# sub-directory named after the configuration, like "Debug" or "Release".
+# For these generators, in order to find assets, we must "walk" up an additional directory.
+get_property(_isMultiConfig GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+
+function(add_demo NAME)
     include_directories(${GENERATION_ROOT})
-    add_executable(
-            ${NAME}
-            ${NAME}.cpp
-            app/MeshAssimp.cpp)
-    target_link_libraries(${NAME} PRIVATE ${APP_LIBS} assimp)
+    add_executable(${NAME} ${NAME}.cpp)
+    target_link_libraries(${NAME} PRIVATE sample-resources filamentapp filameshio)
     target_compile_options(${NAME} PRIVATE ${COMPILER_FLAGS})
+    if (_isMultiConfig)
+        target_compile_definitions(${NAME} PRIVATE RELATIVE_ASSET_PATH="..")
+    else()
+        target_compile_definitions(${NAME} PRIVATE RELATIVE_ASSET_PATH=".")
+    endif()
 endfunction()
 
-function(add_filamesh_demo NAME)
-    include_directories(${GENERATION_ROOT})
-    add_executable(
-            ${NAME}
-            ${NAME}.cpp)
-    target_link_libraries(${NAME} PRIVATE ${APP_LIBS} filameshio)
-    target_compile_options(${NAME} PRIVATE ${COMPILER_FLAGS})
-endfunction()
 
 if (NOT ANDROID)
-    add_assimp_demo(frame_generator)
-    add_assimp_demo(lightbulb)
-    add_assimp_demo(material_sandbox)
-    add_assimp_demo(sample_full_pbr)
-
-    add_filamesh_demo(point_sprites)
-    add_filamesh_demo(sample_cloth)
-    add_filamesh_demo(sample_normal_map)
-    add_filamesh_demo(suzanne)
-    add_filamesh_demo(gltf_viewer)
+    add_demo(frame_generator)
+    add_demo(gltf_viewer)
+    add_demo(heightfield)
+    add_demo(lightbulb)
+    add_demo(material_sandbox)
+    add_demo(point_sprites)
+    add_demo(sample_cloth)
+    add_demo(sample_full_pbr)
+    add_demo(sample_normal_map)
+    add_demo(suzanne)
 
     # Sample app specific
     target_link_libraries(frame_generator PRIVATE imageio)
@@ -303,9 +248,21 @@ if (NOT ANDROID)
 
 endif()
 
-add_executable(heightfield heightfield.cpp)
-target_link_libraries(heightfield PRIVATE ${APP_LIBS})
-target_compile_options(heightfield PRIVATE ${COMPILER_FLAGS})
+# ==================================================================================================
+# Build Vulkan Executables
+# ==================================================================================================
+
+if (FILAMENT_SUPPORTS_VULKAN)
+    add_demo(animation)
+    add_demo(depthtesting)
+    add_demo(hellopbr)
+    add_demo(hellotriangle)
+    add_demo(shadowtest)
+    add_demo(strobecolor)
+    add_demo(texturedquad)
+    add_demo(vbotest)
+    add_demo(viewtest)
+endif()
 
 # ==================================================================================================
 # Copy the MoltenVK dylibs and JSON on MacOS
@@ -327,22 +284,6 @@ if (APPLE AND NOT Vulkan_LIBRARY)
             ${PROJECT_BINARY_DIR}/libvulkan.1.dylib
             ${PROJECT_BINARY_DIR}/MoltenVK_icd.json
             ${PROJECT_BINARY_DIR}/libMoltenVK.dylib)
-endif()
-
-# ==================================================================================================
-# Build Vulkan Executables
-# ==================================================================================================
-
-if (FILAMENT_SUPPORTS_VULKAN)
-    add_assimp_demo(shadowtest)
-    add_filamesh_demo(animation)
-    add_filamesh_demo(depthtesting)
-    add_filamesh_demo(hellopbr)
-    add_filamesh_demo(hellotriangle)
-    add_filamesh_demo(strobecolor)
-    add_filamesh_demo(texturedquad)
-    add_filamesh_demo(vbotest)
-    add_filamesh_demo(viewtest)
 endif()
 
 # ==================================================================================================

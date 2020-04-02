@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-#include "FilamentApp.h"
+#include <filamentapp/FilamentApp.h>
 
 #if !defined(WIN32)
 #    include <unistd.h>
@@ -43,12 +43,12 @@
 
 #include <filagui/ImGuiHelper.h>
 
-#include "Cube.h"
-#include "NativeWindowHelper.h"
+#include <filamentapp/Cube.h>
+#include <filamentapp/NativeWindowHelper.h>
 
 #include <stb_image.h>
 
-#include "generated/resources/resources.h"
+#include "generated/resources/filamentapp.h"
 
 using namespace filament;
 using namespace filagui;
@@ -81,17 +81,17 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
             new FilamentApp::Window(this, config, config.title, width, height));
 
     mDepthMaterial = Material::Builder()
-            .package(RESOURCES_DEPTHVISUALIZER_DATA, RESOURCES_DEPTHVISUALIZER_SIZE)
+            .package(FILAMENTAPP_DEPTHVISUALIZER_DATA, FILAMENTAPP_DEPTHVISUALIZER_SIZE)
             .build(*mEngine);
 
     mDepthMI = mDepthMaterial->createInstance();
 
     mDefaultMaterial = Material::Builder()
-            .package(RESOURCES_AIDEFAULTMAT_DATA, RESOURCES_AIDEFAULTMAT_SIZE)
+            .package(FILAMENTAPP_AIDEFAULTMAT_DATA, FILAMENTAPP_AIDEFAULTMAT_SIZE)
             .build(*mEngine);
 
     mTransparentMaterial = Material::Builder()
-            .package(RESOURCES_TRANSPARENTCOLOR_DATA, RESOURCES_TRANSPARENTCOLOR_SIZE)
+            .package(FILAMENTAPP_TRANSPARENTCOLOR_DATA, FILAMENTAPP_TRANSPARENTCOLOR_SIZE)
             .build(*mEngine);
 
     std::unique_ptr<Cube> cameraCube(new Cube(*mEngine, mTransparentMaterial, {1,0,0}));

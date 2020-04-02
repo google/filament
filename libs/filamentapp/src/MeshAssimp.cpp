@@ -25,7 +25,7 @@
 #define GL_TEXTURE_WRAP_S                 0x2802
 #define GL_TEXTURE_WRAP_T                 0x2803
 
-#include "MeshAssimp.h"
+#include <filamentapp/MeshAssimp.h>
 
 #include <stdlib.h>
 #include <string.h>
@@ -57,7 +57,7 @@
 
 #include <backend/DriverEnums.h>
 
-#include "generated/resources/resources.h"
+#include "generated/resources/filamentapp.h"
 
 using namespace filament;
 using namespace filamat;
@@ -261,7 +261,7 @@ MeshAssimp::MeshAssimp(Engine& engine) : mEngine(engine) {
     mDefaultNormalMap = createOneByOneTexture(0xffff8080);
 
     mDefaultColorMaterial = Material::Builder()
-            .package(RESOURCES_AIDEFAULTMAT_DATA, RESOURCES_AIDEFAULTMAT_SIZE)
+            .package(FILAMENTAPP_AIDEFAULTMAT_DATA, FILAMENTAPP_AIDEFAULTMAT_SIZE)
             .build(mEngine);
 
     mDefaultColorMaterial->setDefaultParameter("baseColor",   RgbType::LINEAR, float3{0.8});
@@ -270,7 +270,7 @@ MeshAssimp::MeshAssimp(Engine& engine) : mEngine(engine) {
     mDefaultColorMaterial->setDefaultParameter("reflectance", 0.5f);
 
     mDefaultTransparentColorMaterial = Material::Builder()
-            .package(RESOURCES_AIDEFAULTTRANS_DATA, RESOURCES_AIDEFAULTTRANS_SIZE)
+            .package(FILAMENTAPP_AIDEFAULTTRANS_DATA, FILAMENTAPP_AIDEFAULTTRANS_SIZE)
             .build(mEngine);
 
     mDefaultTransparentColorMaterial->setDefaultParameter("baseColor", RgbType::LINEAR, float3{0.8});

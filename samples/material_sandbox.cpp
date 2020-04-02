@@ -44,10 +44,10 @@
 #include <math/vec4.h>
 #include <math/norm.h>
 
-#include "app/Config.h"
-#include "app/IBL.h"
-#include "app/FilamentApp.h"
-#include "app/MeshAssimp.h"
+#include "filamentapp/Config.h"
+#include "filamentapp/IBL.h"
+#include "filamentapp/FilamentApp.h"
+#include "filamentapp/MeshAssimp.h"
 
 #include "material_sandbox.h"
 

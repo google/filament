@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "Cube.h"
+#include <filamentapp/Cube.h>
 
 #include <utils/EntityManager.h>
 #include <filament/VertexBuffer.h>
