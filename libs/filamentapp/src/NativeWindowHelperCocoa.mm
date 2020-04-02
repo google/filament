@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "NativeWindowHelper.h"
+#include <filamentapp/NativeWindowHelper.h>
 
 #include <utils/Panic.h>
 

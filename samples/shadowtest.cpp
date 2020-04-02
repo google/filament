@@ -28,9 +28,9 @@
 
 #include <math/norm.h>
 
-#include "../samples/app/Config.h"
-#include "../samples/app/FilamentApp.h"
-#include "../samples/app/MeshAssimp.h"
+#include "filamentapp/Config.h"
+#include "filamentapp/FilamentApp.h"
+#include "filamentapp/MeshAssimp.h"
 
 #include "generated/resources/resources.h"
 

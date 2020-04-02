@@ -15,7 +15,7 @@
  */
 
 
-#include "Sphere.h"
+#include <filamentapp/Sphere.h>
 
 #include <filament/Engine.h>
 #include <filament/IndexBuffer.h>
@@ -26,7 +26,7 @@
 #include <utils/EntityManager.h>
 #include <math/norm.h>
 
-#include "IcoSphere.h"
+#include <filamentapp/IcoSphere.h>
 
 using namespace filament;
 using namespace filament::math;
