@@ -52,12 +52,6 @@ Demonstrates how to load glTF models and use the camera manipulator:
 
 ![glTF Viewer](../../docs/images/samples/sample_gltf_viewer.jpg)
 
-### `gltf-bloom`
-
-Demonstrates how to load glb models and use the RenderTarget API:
-
-![glTF Bloom](../../docs/images/samples/sample_gltf_bloom.jpg)
-
 ### `hello-camera`
 
 Demonstrates how to use `Stream` with Android's Camera2 API:

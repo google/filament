@@ -199,32 +199,6 @@ endif()
 target_sources(gltf-resources PRIVATE ${RESGEN_SOURCE})
 
 # ==================================================================================================
-# Resources for lucy demo
-# ==================================================================================================
-
-set(GLTF_LUCY_RESOURCE_FILES
-    ${ROOT_DIR}/third_party/models/lucy/lucy.glb
-    ${ROOT_DIR}/third_party/textures/Blue_tiles_01/Blue_tiles_01_AO.png
-    ${ROOT_DIR}/third_party/textures/Blue_tiles_01/Blue_tiles_01_Color.png
-    ${ROOT_DIR}/third_party/textures/Blue_tiles_01/Blue_tiles_01_Normal.png
-    ${ROOT_DIR}/third_party/textures/Blue_tiles_01/Blue_tiles_01_Roughness.png
-)
-
-get_resgen_vars(${RESOURCE_DIR} gltf_lucy)
-
-add_custom_command(
-        OUTPUT ${RESGEN_OUTPUTS}
-        COMMAND resgen ${RESGEN_FLAGS} ${GLTF_LUCY_RESOURCE_FILES}
-        DEPENDS resgen ${GLTF_LUCY_RESOURCE_FILES}
-)
-
-if (DEFINED RESGEN_SOURCE_FLAGS)
-    set_source_files_properties(${RESGEN_SOURCE} PROPERTIES COMPILE_FLAGS ${RESGEN_SOURCE_FLAGS})
-endif()
-
-target_sources(gltf-resources PRIVATE ${RESGEN_SOURCE})
-
-# ==================================================================================================
 # Common library
 # ==================================================================================================
 
@@ -329,9 +303,6 @@ if (NOT ANDROID)
     target_link_libraries(gltf_viewer PRIVATE gltf-resources gltfio)
     target_link_libraries(gltf_baker PRIVATE gltf-resources gltfio_pipeline imageio)
 
-    add_executable(lucy_bloom lucy_bloom.cpp lucy_utils.h lucy_utils.cpp)
-    target_compile_options(lucy_bloom PRIVATE ${COMPILER_FLAGS})
-    target_link_libraries(lucy_bloom PRIVATE ${APP_LIBS} gltf-resources gltfio)
 endif()
 
 add_executable(heightfield heightfield.cpp)
