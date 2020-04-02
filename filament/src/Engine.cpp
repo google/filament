@@ -968,6 +968,10 @@ void Engine::execute() {
     upcast(this)->execute();
 }
 
+utils::JobSystem& Engine::getJobSystem() noexcept {
+    return upcast(this)->getJobSystem();
+}
+
 DebugRegistry& Engine::getDebugRegistry() noexcept {
     return upcast(this)->getDebugRegistry();
 }
