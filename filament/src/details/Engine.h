@@ -210,9 +210,6 @@ public:
 
     void* streamAlloc(size_t size, size_t alignment) noexcept;
 
-    utils::JobSystem& getJobSystem() noexcept { return mJobSystem; }
-
-
     Epoch getEngineEpoch() const { return mEngineEpoch; }
     duration getEngineTime() const noexcept {
         return clock::now() - getEngineEpoch();
@@ -292,6 +289,10 @@ public:
     }
 
     bool execute();
+
+    utils::JobSystem& getJobSystem() noexcept {
+        return mJobSystem;
+    }
 
 private:
     FEngine(Backend backend, Platform* platform, void* sharedGLContext);
