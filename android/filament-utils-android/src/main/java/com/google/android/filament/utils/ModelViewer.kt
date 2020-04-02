@@ -146,7 +146,7 @@ class ModelViewer : android.view.View.OnTouchListener {
      */
     fun loadModelGlb(buffer: Buffer) {
         destroyModel()
-        asset = assetLoader.createAssetFromJson(buffer)
+        asset = assetLoader.createAssetFromBinary(buffer)
         asset?.let { asset ->
             resourceLoader.asyncBeginLoad(asset)
             animator = asset.animator

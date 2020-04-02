@@ -123,8 +123,8 @@ class MainActivity : Activity() {
                 if (animationCount > 0) {
                     val elapsedTimeSeconds = (frameTimeNanos - startTime).toDouble() / 1_000_000_000
                     applyAnimation(0, elapsedTimeSeconds.toFloat())
-                    updateBoneMatrices()
                 }
+                updateBoneMatrices()
             }
 
             modelViewer.render()
