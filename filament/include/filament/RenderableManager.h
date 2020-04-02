@@ -338,6 +338,13 @@ public:
     void setPriority(Instance instance, uint8_t priority) noexcept;
 
     /**
+     * Changes whether or not frustum culling is on.
+     *
+     * \see Builder::culling()
+     */
+    void setCulling(Instance instance, bool enable) noexcept;
+
+    /**
      * Changes whether or not the renderable casts shadows.
      *
      * \see Builder::castShadows()
