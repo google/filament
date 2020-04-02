@@ -1,9 +1,0 @@
---batch=conv_1d
---batch=conv_1d_wavenet
---batch=conv_3d_unet
---batch=conv_alexnet
---batch=conv_vgg_19
---batch=conv_resnet_50
---batch=conv_googlenet_v1
---batch=conv_googlenet_v2
---batch=conv_googlenet_v3

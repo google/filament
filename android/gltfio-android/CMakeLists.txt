@@ -28,7 +28,6 @@ set(GLTFIO_SRCS
         ${GLTFIO_DIR}/include/gltfio/Animator.h
         ${GLTFIO_DIR}/include/gltfio/AssetLoader.h
         ${GLTFIO_DIR}/include/gltfio/MaterialProvider.h
-        ${GLTFIO_DIR}/include/gltfio/AssetPipeline.h
         ${GLTFIO_DIR}/include/gltfio/ResourceLoader.h
         ${GLTFIO_DIR}/include/gltfio/SimpleViewer.h
         ${GLTFIO_DIR}/include/gltfio/FilamentAsset.h

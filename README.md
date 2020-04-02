@@ -279,13 +279,12 @@ and tools.
   - `filamat`:             Material generation library
   - `filameshio`:          Tiny filamesh parsing library (see also `tools/filamesh`)
   - `geometry`:            Mesh-related utilities
-  - `gltfio`:              Loader and optional pipeline for glTF 2.0
+  - `gltfio`:              Loader for glTF 2.0
   - `ibl`:                 IBL generation tools
   - `image`:               Image filtering and simple transforms
   - `imageio`:             Image file reading / writing, only intended for internal use
   - `matdbg`:              DebugServer for inspecting shaders at run-time (debug builds only)
   - `math`:                Math library
-  - `rays`:                Simple path tracer used for baking ambient occlusion, etc.
   - `utils`:               Utility library (threads, memory, data structures, etc.)
 - `samples`:               Sample desktop applications
 - `shaders`:               Shaders used by `filamat` and `matc`

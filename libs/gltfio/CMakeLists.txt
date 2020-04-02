@@ -11,7 +11,6 @@ set(PUBLIC_HDRS
         include/gltfio/Animator.h
         include/gltfio/AssetLoader.h
         include/gltfio/MaterialProvider.h
-        include/gltfio/AssetPipeline.h
         include/gltfio/ResourceLoader.h
         include/gltfio/SimpleViewer.h
         include/gltfio/FilamentAsset.h
@@ -126,7 +125,7 @@ add_custom_command(OUTPUT ${DUMMY_SRC} COMMAND echo "//" > ${DUMMY_SRC})
 add_library(gltfio_resources_lite ${DUMMY_SRC} ${RESGEN_SOURCE})
 
 # ==================================================================================================
-# Build the "core" library (no filamat or pipeline)
+# Build the "core" library (no filamat)
 # ==================================================================================================
 
 include_directories(${PUBLIC_HDR_DIR} ${RESOURCE_DIR})
@@ -174,11 +173,3 @@ else()
     install(FILES ${RESOURCE_DIR}/gltfresources_lite.h DESTINATION include/gltfio/resources)
 
 endif()
-
-# ==================================================================================================
-# Create the glTF pipeline library (used by gltf_baker)
-# ==================================================================================================
-
-add_library(gltfio_pipeline STATIC ${PUBLIC_HDRS} src/AssetPipeline.cpp)
-target_link_libraries(gltfio_pipeline PUBLIC xatlas meshoptimizer gltfio rays)
-target_include_directories(gltfio_pipeline PUBLIC ${PUBLIC_HDR_DIR})

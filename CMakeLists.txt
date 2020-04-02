@@ -101,29 +101,6 @@ if (WIN32)
 endif()
 
 # ==================================================================================================
-# Check if embree is available.
-# This is an optional dependency and can be installed with homebrew, apt-get, etc.
-# ==================================================================================================
-find_package(embree 3.0 QUIET PATHS /usr/lib64/cmake)
-if (embree_FOUND AND NOT ANDROID AND NOT IOS)
-    message("Found embree in ${embree_DIR}")
-    set(MKLDNN_THREADING "TBB")
-    include(third_party/OpenImageDenoise/cmake/resource.cmake)
-    include(third_party/OpenImageDenoise/mkl-dnn/cmake/Threading.cmake)
-    include(third_party/OpenImageDenoise/mkl-dnn/cmake/TBB.cmake)
-    find_package(TBB QUIET)
-    if (TBB_FOUND)
-        message("Found TBB ${TBB_VERSION}")
-        add_definitions(-DFILAMENT_HAS_EMBREE)
-        set(DENOISE_LIBRARY OpenImageDenoise)
-    else()
-        message("TBB 2019 not found.")
-    endif()
-else()
-    message("Embree not found, pipeline features are disabled.")
-endif()
-
-# ==================================================================================================
 #  Paths
 # ==================================================================================================
 # Where our external libs are
@@ -491,7 +468,6 @@ add_subdirectory(${LIBRARIES}/geometry)
 add_subdirectory(${LIBRARIES}/gltfio)
 add_subdirectory(${LIBRARIES}/ibl)
 add_subdirectory(${LIBRARIES}/image)
-add_subdirectory(${LIBRARIES}/rays)
 add_subdirectory(${LIBRARIES}/math)
 add_subdirectory(${LIBRARIES}/mathio)
 add_subdirectory(${LIBRARIES}/utils)
@@ -503,7 +479,6 @@ add_subdirectory(${EXTERNAL}/benchmark/tnt)
 add_subdirectory(${EXTERNAL}/meshoptimizer)
 add_subdirectory(${EXTERNAL}/cgltf/tnt)
 add_subdirectory(${EXTERNAL}/draco/tnt)
-add_subdirectory(${EXTERNAL}/xatlas/tnt)
 add_subdirectory(${EXTERNAL}/stb/tnt)
 add_subdirectory(${EXTERNAL}/getopt)
 
@@ -571,11 +546,6 @@ if (NOT ANDROID AND NOT WEBGL AND NOT IOS)
     add_subdirectory(${TOOLS}/roughness-prefilter)
     add_subdirectory(${TOOLS}/skygen)
     add_subdirectory(${TOOLS}/specular-color)
-
-    if (DENOISE_LIBRARY)
-        add_subdirectory(${EXTERNAL}/OpenImageDenoise/tnt)
-    endif()
-
 endif()
 
 # Generate exported executables for cross-compiled builds (Android, WebGL, and iOS)
