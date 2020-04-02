@@ -44,7 +44,7 @@ void TimerQueryNative::beginTimeElapsedQuery(GLTimerQuery* query) {
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-void TimerQueryNative::endTimeElapsedQuery(GLTimerQuery* query) {
+void TimerQueryNative::endTimeElapsedQuery(GLTimerQuery*) {
     gl.endQuery(GL_TIME_ELAPSED);
     CHECK_GL_ERROR(utils::slog.e)
 }
@@ -109,30 +109,41 @@ void TimerQueryFence::enqueue(TimerQueryFence::Job&& job) {
 
 void TimerQueryFence::beginTimeElapsedQuery(GLTimerQuery* query) {
     Platform::Fence* fence = mPlatform.createFence();
-    query->gl.emulation.available.store(false);
-    push([this, fence, query]() {
-        mPlatform.waitFence(fence, FENCE_WAIT_FOR_EVER);
-        query->gl.emulation.elapsed = clock::now().time_since_epoch().count();
-        mPlatform.destroyFence(fence);
+    if (!query->gl.emulation) {
+        query->gl.emulation = std::make_shared<GLTimerQuery::State>();
+    }
+    query->gl.emulation->available.store(false);
+    std::weak_ptr<GLTimerQuery::State> weak = query->gl.emulation;
+    push([&platform = mPlatform, fence, weak]() {
+        auto emulation = weak.lock();
+        if (emulation) {
+            platform.waitFence(fence, FENCE_WAIT_FOR_EVER);
+            emulation->elapsed = clock::now().time_since_epoch().count();
+        }
+        platform.destroyFence(fence);
     });
 }
 
 void TimerQueryFence::endTimeElapsedQuery(GLTimerQuery* query) {
     Platform::Fence* fence = mPlatform.createFence();
-    push([this, fence, query]() {
-        mPlatform.waitFence(fence, FENCE_WAIT_FOR_EVER);
-        query->gl.emulation.elapsed = clock::now().time_since_epoch().count() - query->gl.emulation.elapsed;
-        query->gl.emulation.available.store(true);
-        mPlatform.destroyFence(fence);
+    std::weak_ptr<GLTimerQuery::State> weak = query->gl.emulation;
+    push([&platform = mPlatform, fence, weak]() {
+        auto emulation = weak.lock();
+        if (emulation) {
+            platform.waitFence(fence, FENCE_WAIT_FOR_EVER);
+            emulation->elapsed = clock::now().time_since_epoch().count() - emulation->elapsed;
+            emulation->available.store(true);
+        }
+        platform.destroyFence(fence);
     });
 }
 
 bool TimerQueryFence::queryResultAvailable(GLTimerQuery* query) {
-    return query->gl.emulation.available.load();
+    return query->gl.emulation->available.load();
 }
 
 uint64_t TimerQueryFence::queryResult(GLTimerQuery* query) {
-    return query->gl.emulation.elapsed;
+    return query->gl.emulation->elapsed;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -142,23 +153,26 @@ TimerQueryFallback::TimerQueryFallback() = default;
 TimerQueryFallback::~TimerQueryFallback() = default;
 
 void TimerQueryFallback::beginTimeElapsedQuery(TimerQueryInterface::GLTimerQuery* query) {
+    if (!query->gl.emulation) {
+        query->gl.emulation = std::make_shared<GLTimerQuery::State>();
+    }
     // this implementation clearly doesn't work at all, but we have no h/w support
-    query->gl.emulation.available.store(false, std::memory_order_relaxed);
-    query->gl.emulation.elapsed = clock::now().time_since_epoch().count();
+    query->gl.emulation->available.store(false, std::memory_order_relaxed);
+    query->gl.emulation->elapsed = clock::now().time_since_epoch().count();
 }
 
 void TimerQueryFallback::endTimeElapsedQuery(TimerQueryInterface::GLTimerQuery* query) {
     // this implementation clearly doesn't work at all, but we have no h/w support
-    query->gl.emulation.elapsed = clock::now().time_since_epoch().count() - query->gl.emulation.elapsed;
-    query->gl.emulation.available.store(true, std::memory_order_relaxed);
+    query->gl.emulation->elapsed = clock::now().time_since_epoch().count() - query->gl.emulation->elapsed;
+    query->gl.emulation->available.store(true, std::memory_order_relaxed);
 }
 
 bool TimerQueryFallback::queryResultAvailable(TimerQueryInterface::GLTimerQuery* query) {
-    return query->gl.emulation.available.load(std::memory_order_relaxed);
+    return query->gl.emulation->available.load(std::memory_order_relaxed);
 }
 
 uint64_t TimerQueryFallback::queryResult(TimerQueryInterface::GLTimerQuery* query) {
-    return query->gl.emulation.elapsed;
+    return query->gl.emulation->elapsed;
 }
 
 } // namespace filament

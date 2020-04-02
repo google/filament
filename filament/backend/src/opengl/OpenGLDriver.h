@@ -124,12 +124,13 @@ public:
     };
 
     struct GLTimerQuery : public backend::HwTimerQuery {
+        struct State {
+            uint64_t elapsed = 0;
+            std::atomic_bool available;
+        };
         struct {
             GLuint query = 0;
-            struct {
-                uint64_t elapsed = 0;
-                std::atomic_bool available;
-            } emulation;
+            std::shared_ptr<State> emulation;
         } gl;
         // 0 means not available, otherwise query result in ns.
         std::atomic<uint64_t> elapsed{};
