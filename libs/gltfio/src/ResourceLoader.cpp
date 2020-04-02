@@ -99,7 +99,6 @@ struct ResourceLoader::Impl {
     int mNumDecoderTasks;
     int mNumDecoderTasksFinished;
     utils::JobSystem::Job* mDecoderRootJob = nullptr;
-    utils::JobSystem* mJobSystem;
 
     details::FFilamentAsset* mCurrentAsset;
 
@@ -234,11 +233,7 @@ static void decodeDracoMeshes(FFilamentAsset* asset) {
 
 ResourceLoader::ResourceLoader(const ResourceConfiguration& config) :
         mPool(new AssetPool), pImpl(new Impl(config)) {
-    pImpl->mJobSystem = JobSystem::getJobSystem();
-    if (!pImpl->mJobSystem) {
-        pImpl->mJobSystem = new JobSystem();
-        pImpl->mJobSystem->adopt();
-    }
+    config.engine->getJobSystem().adopt();
 }
 
 ResourceLoader::~ResourceLoader() {
@@ -571,9 +566,9 @@ void ResourceLoader::Impl::bindTextureToMaterial(const TextureSlot& tb) {
 
 bool ResourceLoader::Impl::createTextures(bool async) {
     // If any decoding jobs are still underway, wait for them to finish.
-    utils::JobSystem* js = mJobSystem;
+    utils::JobSystem& js = mEngine->getJobSystem();
     if (mDecoderRootJob) {
-        js->waitAndRelease(mDecoderRootJob);
+        js.waitAndRelease(mDecoderRootJob);
         mDecoderRootJob = nullptr;
     }
 
@@ -623,18 +618,18 @@ bool ResourceLoader::Impl::createTextures(bool async) {
         return true;
     }
 
-    utils::JobSystem::Job* parent = js->createJob();
+    utils::JobSystem::Job* parent = js.createJob();
 
     // Kick off jobs that decode texels from buffer pointers.
     for (auto& pair : mBufferTextureCache) {
         const uint8_t* sourceData = (const uint8_t*) pair.first;
         TextureCacheEntry* entry = pair.second.get();
-        utils::JobSystem::Job* decode = utils::jobs::createJob(*js, parent, [=] {
+        utils::JobSystem::Job* decode = utils::jobs::createJob(js, parent, [=] {
             int width, height, comp;
             entry->texels = stbi_load_from_memory(sourceData, entry->bufferSize,
                     &width, &height, &comp, 4);
         });
-        js->run(decode);
+        js.run(decode);
     }
 
     // Kick off jobs that decode texels from URI strings.
@@ -646,12 +641,12 @@ bool ResourceLoader::Impl::createTextures(bool async) {
         auto iter = mUriDataCache.find(uri);
         if (iter != mUriDataCache.end()) {
             const uint8_t* sourceData = (const uint8_t*) iter->second.buffer;
-            utils::JobSystem::Job* decode = utils::jobs::createJob(*js, parent, [=] {
+            utils::JobSystem::Job* decode = utils::jobs::createJob(js, parent, [=] {
                 int width, height, comp;
                 entry->texels = stbi_load_from_memory(sourceData, iter->second.size, &width,
                         &height, &comp, 4);
             });
-            js->run(decode);
+            js.run(decode);
             continue;
         }
 
@@ -661,21 +656,21 @@ bool ResourceLoader::Impl::createTextures(bool async) {
             return false;
         #else
             utils::Path fullpath = utils::Path(mGltfPath).getParent() + uri;
-            utils::JobSystem::Job* decode = utils::jobs::createJob(*js, parent, [=] {
+            utils::JobSystem::Job* decode = utils::jobs::createJob(js, parent, [=] {
                 int width, height, comp;
                 entry->texels = stbi_load(fullpath.c_str(), &width, &height, &comp, 4);
             });
-            js->run(decode);
+            js.run(decode);
         #endif
     }
 
     if (async) {
-        mDecoderRootJob = js->runAndRetain(parent);
+        mDecoderRootJob = js.runAndRetain(parent);
         return true;
     }
 
     // Wait for decoding to finish.
-    js->runAndWait(parent);
+    js.runAndWait(parent);
 
     // Finally, upload texels to the GPU and generate mipmaps.
     mCurrentAsset = asset;
@@ -686,8 +681,9 @@ bool ResourceLoader::Impl::createTextures(bool async) {
 
 ResourceLoader::Impl::~Impl() {
     if (mDecoderRootJob) {
-        mJobSystem->waitAndRelease(mDecoderRootJob);
+        mEngine->getJobSystem().waitAndRelease(mDecoderRootJob);
     }
+    mEngine->getJobSystem().emancipate();
 }
 
 void ResourceLoader::applySparseData(FFilamentAsset* asset) const {

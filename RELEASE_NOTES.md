@@ -5,6 +5,9 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release
 
+- gltfio: fixed null pointer exception seen with some Android clients.
+- Engine now exposes its JobSystem to C++ clients.
+
 ## v1.5.1
 
 - Fixed "no texture bound" warning in WebGL.

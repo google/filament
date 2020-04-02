@@ -175,6 +175,7 @@ FEngine::FEngine(Backend backend, Platform* platform, void* sharedGLContext) :
         mCameraManager(*this),
         mCommandBufferQueue(CONFIG_MIN_COMMAND_BUFFERS_SIZE, CONFIG_COMMAND_BUFFERS_SIZE),
         mPerRenderPassAllocator("per-renderpass allocator", CONFIG_PER_RENDER_PASS_ARENA_SIZE),
+        mJobSystem(0, 2),
         mEngineEpoch(std::chrono::steady_clock::now()),
         mDriverBarrier(1)
 {
@@ -966,6 +967,10 @@ void Engine::execute() {
     ASSERT_PRECONDITION(!UTILS_HAS_THREADING, "Execute is meant for single-threaded platforms.");
     upcast(this)->flush();
     upcast(this)->execute();
+}
+
+utils::JobSystem& Engine::getJobSystem() noexcept {
+    return upcast(this)->getJobSystem();
 }
 
 DebugRegistry& Engine::getDebugRegistry() noexcept {
