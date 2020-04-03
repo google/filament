@@ -154,7 +154,7 @@ Filament.loadClassExtensions = function() {
             bias: 0.0005,
             resolution: 0.5,
             intensity: 1.0,
-            quality: Filament.View$QualityLevel.Low
+            quality: Filament.View$QualityLevel.LOW
         };
         Object.assign(options, overrides);
         this._setAmbientOcclusionOptions(options);
