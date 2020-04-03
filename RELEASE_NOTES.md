@@ -5,8 +5,11 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release
 
+## v1.5.2
+
 - gltfio: fixed null pointer exception seen with some Android clients.
 - Engine now exposes its JobSystem to C++ clients.
+- Expose setCulling() in public RenderableManager API.
 
 ## v1.5.1
 
