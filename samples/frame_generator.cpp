@@ -51,10 +51,10 @@
 #include <math/vec4.h>
 #include <math/norm.h>
 
-#include "filamentapp/Config.h"
-#include "filamentapp/IBL.h"
-#include "filamentapp/FilamentApp.h"
-#include "filamentapp/MeshAssimp.h"
+#include <filamentapp/Config.h>
+#include <filamentapp/IBL.h>
+#include <filamentapp/FilamentApp.h>
+#include <filamentapp/MeshAssimp.h>
 
 using namespace filament::math;
 using namespace filament;

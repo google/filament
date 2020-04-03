@@ -30,8 +30,8 @@
 
 #include <utils/Path.h>
 
-#include "filamentapp/Config.h"
-#include "filamentapp/FilamentApp.h"
+#include <filamentapp/Config.h>
+#include <filamentapp/FilamentApp.h>
 
 #include <stb_image.h>
 

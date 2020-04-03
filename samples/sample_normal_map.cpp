@@ -37,8 +37,8 @@
 #include <math/mat4.h>
 #include <math/vec4.h>
 
-#include "filamentapp/Config.h"
-#include "filamentapp/FilamentApp.h"
+#include <filamentapp/Config.h>
+#include <filamentapp/FilamentApp.h>
 #include <stb_image.h>
 
 #include <utils/EntityManager.h>

@@ -31,8 +31,8 @@
 #include <image/ImageSampler.h>
 #include <image/LinearImage.h>
 
-#include "filamentapp/Config.h"
-#include "filamentapp/FilamentApp.h"
+#include <filamentapp/Config.h>
+#include <filamentapp/FilamentApp.h>
 
 #include <cmath>
 

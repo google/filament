@@ -27,8 +27,8 @@
 
 #include <utils/EntityManager.h>
 
-#include "filamentapp/Config.h"
-#include "filamentapp/FilamentApp.h"
+#include <filamentapp/Config.h>
+#include <filamentapp/FilamentApp.h>
 
 #include <cmath>
 
