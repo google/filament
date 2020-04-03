@@ -454,6 +454,15 @@ public class RenderableManager {
     }
 
     /**
+     * Changes whether or not frustum culling is on.
+     *
+     * @see Builder#culling
+     */
+    public void setCulling(@EntityInstance int i, boolean enabled) {
+        nSetCulling(mNativeObject, i, enabled);
+    }
+
+    /**
      * Changes whether or not the renderable casts shadows.
      *
      * @see Builder#castShadows
@@ -646,6 +655,7 @@ public class RenderableManager {
     private static native void nSetAxisAlignedBoundingBox(long nativeRenderableManager, int i, float cx, float cy, float cz, float ex, float ey, float ez);
     private static native void nSetLayerMask(long nativeRenderableManager, int i, int select, int value);
     private static native void nSetPriority(long nativeRenderableManager, int i, int priority);
+    private static native void nSetCulling(long nativeRenderableManager, int i, boolean enabled);
     private static native void nSetCastShadows(long nativeRenderableManager, int i, boolean enabled);
     private static native void nSetReceiveShadows(long nativeRenderableManager, int i, boolean enabled);
     private static native void nSetScreenSpaceContactShadows(long nativeRenderableManager, int i, boolean enabled);

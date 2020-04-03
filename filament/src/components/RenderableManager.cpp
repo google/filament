@@ -571,6 +571,10 @@ void RenderableManager::setPriority(Instance instance, uint8_t priority) noexcep
     upcast(this)->setPriority(instance, priority);
 }
 
+void RenderableManager::setCulling(Instance instance, bool enable) noexcept {
+    upcast(this)->setCulling(instance, enable);
+}
+
 void RenderableManager::setCastShadows(Instance instance, bool enable) noexcept {
     upcast(this)->setCastShadows(instance, enable);
 }

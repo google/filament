@@ -269,6 +269,13 @@ Java_com_google_android_filament_RenderableManager_nSetPriority(JNIEnv*, jclass,
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_RenderableManager_nSetCulling(JNIEnv*, jclass,
+        jlong nativeRenderableManager, jint i, jboolean enabled) {
+    RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
+    rm->setCulling((RenderableManager::Instance) i, enabled);
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_RenderableManager_nSetCastShadows(JNIEnv*, jclass,
         jlong nativeRenderableManager, jint i, jboolean enabled) {
     RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
