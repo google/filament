@@ -641,6 +641,15 @@ class_<RenderableBuilder>("RenderableManager$Builder")
             IndexBuffer* indices), {
         return &builder->geometry(index, type, vertices, indices); })
 
+    .BUILDER_FUNCTION("geometryOffset", RenderableBuilder, (RenderableBuilder* builder,
+            size_t index,
+            RenderableManager::PrimitiveType type,
+            VertexBuffer* vertices,
+            IndexBuffer* indices,
+            size_t offset,
+            size_t count), {
+        return &builder->geometry(index, type, vertices, indices, offset, count); })
+
     .BUILDER_FUNCTION("material", RenderableBuilder, (RenderableBuilder* builder,
             size_t index, MaterialInstance* mi), {
         return &builder->material(index, mi); })
@@ -934,8 +943,8 @@ class_<VertexBuilder>("VertexBuffer$Builder")
 class_<VertexBuffer>("VertexBuffer")
     .class_function("Builder", (VertexBuilder (*)()) [] { return VertexBuilder(); })
     .function("_setBufferAt", EMBIND_LAMBDA(void, (VertexBuffer* self,
-            Engine* engine, uint8_t bufferIndex, BufferDescriptor vbd), {
-        self->setBufferAt(*engine, bufferIndex, std::move(*vbd.bd));
+            Engine* engine, uint8_t bufferIndex, BufferDescriptor vbd, uint32_t byteOffset), {
+        self->setBufferAt(*engine, bufferIndex, std::move(*vbd.bd), byteOffset);
     }), allow_raw_pointers());
 
 class_<IndexBuilder>("IndexBuffer$Builder")
@@ -952,8 +961,8 @@ class_<IndexBuilder>("IndexBuffer$Builder")
 class_<IndexBuffer>("IndexBuffer")
     .class_function("Builder", (IndexBuilder (*)()) [] { return IndexBuilder(); })
     .function("_setBuffer", EMBIND_LAMBDA(void, (IndexBuffer* self,
-            Engine* engine, BufferDescriptor ibd), {
-        self->setBuffer(*engine, std::move(*ibd.bd));
+            Engine* engine, BufferDescriptor ibd, uint32_t byteOffset), {
+        self->setBuffer(*engine, std::move(*ibd.bd), byteOffset);
     }), allow_raw_pointers());
 
 class_<Material>("Material")
@@ -1377,6 +1386,7 @@ class_<SurfaceBuilder>("SurfaceOrientation$Builder")
     }), allow_raw_pointers());
 
 class_<SurfaceOrientation>("SurfaceOrientation")
+
     .function("getQuats", EMBIND_LAMBDA(void, (SurfaceOrientation* self,
             intptr_t out, size_t quatCount, VertexBuffer::AttributeType attrtype), {
         switch (attrtype) {

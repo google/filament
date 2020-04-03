@@ -141,6 +141,8 @@ export class IndexBuffer$Builder {
 export class RenderableManager$Builder {
     public geometry(slot: number, ptype: RenderableManager$PrimitiveType, vb: VertexBuffer,
             ib: IndexBuffer): RenderableManager$Builder;
+    public geometryOffset(slot: number, ptype: RenderableManager$PrimitiveType, vb: VertexBuffer,
+            ib: IndexBuffer, offset: number, count: number): RenderableManager$Builder;
     public material(geo: number, minstance: MaterialInstance): RenderableManager$Builder;
     public boundingBox(box: Box): RenderableManager$Builder;
     public layerMask(select: number, values: number): RenderableManager$Builder;
@@ -245,12 +247,12 @@ export class RenderableManager {
 
 export class VertexBuffer {
     public static Builder(): VertexBuffer$Builder;
-    public setBufferAt(engine: Engine, bufindex: number, f32array: any): void;
+    public setBufferAt(engine: Engine, bufindex: number, f32array: any, byteOffset?: number): void;
 }
 
 export class IndexBuffer {
     public static Builder(): IndexBuffer$Builder;
-    public setBuffer(engine: Engine, u16array: any): void;
+    public setBuffer(engine: Engine, u16array: any, byteOffset?: number): void;
 }
 
 export class Renderer {
@@ -300,6 +302,7 @@ export class Camera {
 }
 
 export class IndirectLight {
+    public static Builder(): IndirectLight$Builder;
     public setIntensity(intensity: number): void;
     public getIntensity(): number;
     public setRotation(value: mat3): void;
@@ -383,6 +386,7 @@ export class Engine {
     public createSwapChain(): SwapChain;
     public createTextureFromJpeg(url: string): Texture;
     public createTextureFromPng(url: string): Texture;
+    public createTextureFromKtx(url: string, options?: object): Texture;
     public createView(): View;
 
     public createAssetLoader(): gltfio$AssetLoader;
@@ -806,7 +810,18 @@ interface HeapInterface {
 export const HEAPU8 : HeapInterface;
 
 export class SurfaceOrientation$Builder {
+    public constructor();
     public vertexCount(count: number): SurfaceOrientation$Builder;
     public normals(count: number, stride: number): SurfaceOrientation$Builder;
-    public build(): any;
+    public uvs(uvs: number, stride: number): SurfaceOrientation$Builder;
+    public positions(positions: number, stride: number): SurfaceOrientation$Builder;
+    public triangleCount(count: number): SurfaceOrientation$Builder;
+    public triangles16(triangles: number): SurfaceOrientation$Builder;
+    public triangles32(triangles: number): SurfaceOrientation$Builder;
+    public build(): SurfaceOrientation;
+}
+
+export class SurfaceOrientation {
+    public getQuats(out: number, quatCount: number, attrType: VertexBuffer$AttributeType);
+    public delete();
 }
