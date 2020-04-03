@@ -31,9 +31,9 @@
 #include <image/KtxBundle.h>
 #include <image/KtxUtility.h>
 
-#include "filamentapp/Config.h"
-#include "filamentapp/FilamentApp.h"
-#include "filamentapp/IBL.h"
+#include <filamentapp/Config.h>
+#include <filamentapp/FilamentApp.h>
+#include <filamentapp/IBL.h>
 
 #include <stb_image.h>
 

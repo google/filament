@@ -18,8 +18,8 @@
 #include <filament/View.h>
 #include <filament/Scene.h>
 
-#include "filamentapp/Config.h"
-#include "filamentapp/FilamentApp.h"
+#include <filamentapp/Config.h>
+#include <filamentapp/FilamentApp.h>
 
 #include <cmath>
 

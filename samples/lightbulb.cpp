@@ -37,12 +37,12 @@
 #include <utils/Log.h>
 #include <filament/View.h>
 
-#include "filamentapp/Config.h"
-#include "filamentapp/FilamentApp.h"
-#include "filamentapp/MeshAssimp.h"
-#include "filamentapp/Cube.h"
-#include "filamentapp/IcoSphere.h"
-#include "filamentapp/Sphere.h"
+#include <filamentapp/Config.h>
+#include <filamentapp/FilamentApp.h>
+#include <filamentapp/MeshAssimp.h>
+#include <filamentapp/Cube.h>
+#include <filamentapp/IcoSphere.h>
+#include <filamentapp/Sphere.h>
 
 #include "generated/resources/resources.h"
 

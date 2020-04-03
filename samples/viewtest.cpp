@@ -20,7 +20,7 @@
 #include <filament/VertexBuffer.h>
 #include <filament/View.h>
 
-#include "filamentapp/FilamentApp.h"
+#include <filamentapp/FilamentApp.h>
 
 #include <utils/EntityManager.h>
 
