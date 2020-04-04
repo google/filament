@@ -94,6 +94,9 @@ void NoopDriver::destroyStream(Handle<HwStream> sh) {
 void NoopDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
 }
 
+void NoopDriver::destroySync(Handle<HwSync> fh) {
+}
+
 Handle<HwStream> NoopDriver::createStreamNative(void* nativeStream) {
     return {};
 }
@@ -170,6 +173,10 @@ void NoopDriver::cancelExternalImage(void* image) {
 
 bool NoopDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapsedTime) {
     return false;
+}
+
+SyncStatus NoopDriver::getSyncStatus(Handle<HwSync> sh) {
+    return SyncStatus::SIGNALED;
 }
 
 void NoopDriver::setExternalImage(Handle<HwTexture> th, void* image) {

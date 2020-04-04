@@ -116,6 +116,15 @@ enum class FenceStatus : int8_t {
     TIMEOUT_EXPIRED = 1,        //!< wait()'s timeout expired. The Fence condition is not satisfied.
 };
 
+/**
+ * Status codes for sync objects
+ */
+enum class SyncStatus : int8_t {
+    ERROR = -1,          //!< An error occured. The Sync is not signaled.
+    SIGNALED = 0,        //!< The Sync is signaled.
+    NOT_SIGNALED = 1,    //!< The Sync is not signaled yet
+};
+
 static constexpr uint64_t FENCE_WAIT_FOR_EVER = uint64_t(-1);
 
 /**

@@ -242,6 +242,10 @@ void MetalDriver::createFenceR(Handle<HwFence> fh, int dummy) {
     construct_handle<MetalFence>(mHandleMap, fh, *mContext);
 }
 
+void MetalDriver::createSyncR(Handle<HwSync> sh, int) {
+    // TODO: implement Sync objects
+}
+
 void MetalDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
     auto* metalLayer = (__bridge CAMetalLayer*) nativeWindow;
     construct_handle<MetalSwapChain>(mHandleMap, sch, mContext->device, metalLayer);
@@ -302,6 +306,11 @@ Handle<HwRenderTarget> MetalDriver::createRenderTargetS() noexcept {
 
 Handle<HwFence> MetalDriver::createFenceS() noexcept {
     return alloc_handle<MetalFence, HwFence>();
+}
+
+Handle<HwSync> MetalDriver::createSyncS() noexcept {
+    // TODO: implement Sync objects
+    return {};
 }
 
 Handle<HwSwapChain> MetalDriver::createSwapChainS() noexcept {
@@ -411,6 +420,11 @@ void MetalDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
         destruct_handle<MetalTimerQuery>(mHandleMap, tqh);
     }
 }
+
+void MetalDriver::destroySync(Handle<HwSync> sh) {
+    // TODO: implement Sync objects
+}
+
 
 void MetalDriver::terminate() {
     // Wait for all frames to finish by submitting and waiting on a dummy command buffer.
@@ -595,6 +609,11 @@ void MetalDriver::setExternalStream(Handle<HwTexture> th, Handle<HwStream> sh) {
 bool MetalDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapsedTime) {
     auto* tq = handle_cast<MetalTimerQuery>(mHandleMap, tqh);
     return mContext->timerQueryImpl->getQueryResult(tq, elapsedTime);
+}
+
+SyncStatus MetalDriver::getSyncStatus(Handle<HwSync> sh) {
+    // TODO: implement Sync objects
+    return SyncStatus::SIGNALED;
 }
 
 void MetalDriver::generateMipmaps(Handle<HwTexture> th) {

@@ -25,18 +25,19 @@
 namespace filament {
 namespace backend {
 
-struct HwVertexBuffer;
 struct HwFence;
 struct HwIndexBuffer;
 struct HwProgram;
 struct HwRenderPrimitive;
 struct HwRenderTarget;
 struct HwSamplerGroup;
-struct HwTexture;
-struct HwUniformBuffer;
-struct HwSwapChain;
 struct HwStream;
+struct HwSwapChain;
+struct HwSync;
+struct HwTexture;
 struct HwTimerQuery;
+struct HwUniformBuffer;
+struct HwVertexBuffer;
 
 /*
  * A type handle to a h/w resource
@@ -113,10 +114,11 @@ using RenderTargetHandle    = Handle<HwRenderTarget>;
 using SamplerGroupHandle    = Handle<HwSamplerGroup>;
 using StreamHandle          = Handle<HwStream>;
 using SwapChainHandle       = Handle<HwSwapChain>;
+using SyncHandle            = Handle<HwSync>;
 using TextureHandle         = Handle<HwTexture>;
+using TimerQueryHandle      = Handle<HwTimerQuery>;
 using UniformBufferHandle   = Handle<HwUniformBuffer>;
 using VertexBufferHandle    = Handle<HwVertexBuffer>;
-using TimerQueryHandle      = Handle<HwTimerQuery>;
 
 } // namespace backend
 } // namespace filament

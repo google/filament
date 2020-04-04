@@ -14,11 +14,15 @@
  * limitations under the License.
  */
 
+#include <utils/Log.h>
 #include "details/FrameSkipper.h"
 #include "details/Engine.h"
 
 namespace filament {
 namespace details {
+
+using namespace utils;
+using namespace backend;
 
 FrameSkipper::FrameSkipper(FEngine& engine, size_t latency) noexcept
         : mEngine(engine), mLast((uint32_t)std::max(latency, size_t(1)) - 1) {
@@ -26,32 +30,36 @@ FrameSkipper::FrameSkipper(FEngine& engine, size_t latency) noexcept
 }
 
 FrameSkipper::~FrameSkipper() noexcept {
-    for (FFence* fence : mDelayedFences) {
-        if (fence) {
-            mEngine.destroy(fence);
+    auto& driver = mEngine.getDriverApi();
+    for (auto sync : mDelayedSyncs) {
+        if (sync) {
+            driver.destroySync(sync);
         }
     }
 }
 
 bool FrameSkipper::beginFrame() noexcept {
-    auto& fences = mDelayedFences;
-    FFence* const fence = fences.front();
-    if (fence) {
-        auto status = fence->wait(Fence::Mode::DONT_FLUSH, 0);
-        if (status == Fence::FenceStatus::TIMEOUT_EXPIRED) {
-            // fence not ready, skip frame
+    auto& driver = mEngine.getDriverApi();
+    auto& syncs = mDelayedSyncs;
+    auto sync = syncs.front();
+    if (sync) {
+        auto status = driver.getSyncStatus(sync);
+        if (status == SyncStatus::NOT_SIGNALED) {
+            // Sync not ready, skip frame
             return false;
         }
-        mEngine.destroy(fence);
+        driver.destroySync(sync);
     }
     // shift all fences down by 1
-    std::move(fences.begin() + 1, fences.end(), fences.begin());
-    fences.back() = nullptr;
+    std::move(syncs.begin() + 1, syncs.end(), syncs.begin());
+    syncs.back() = {};
     return true;
 }
 
 void FrameSkipper::endFrame() noexcept {
-    mDelayedFences[mLast] = mEngine.createFence(FFence::Type::HARD);
+    auto& driver = mEngine.getDriverApi();
+    auto sync = driver.createSync();
+    mDelayedSyncs[mLast] = sync;
 }
 
 

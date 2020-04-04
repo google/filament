@@ -135,6 +135,9 @@ struct HwFence : public HwBase {
     Platform::Fence* fence = nullptr;
 };
 
+struct HwSync : public HwBase {
+};
+
 struct HwSwapChain : public HwBase {
     Platform::SwapChain* swapChain = nullptr;
 };
