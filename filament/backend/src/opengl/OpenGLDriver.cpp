@@ -320,6 +320,7 @@ OpenGLDriver::HandleAllocator::HandleAllocator(const utils::HeapArea& area)
 #if 0
     // this is useful for development, but too verbose even for debug builds
     slog.d << "HwFence: " << sizeof(HwFence) << io::endl;
+    slog.d << "HwSync: " << sizeof(HwSync) << io::endl;
     slog.d << "GLIndexBuffer: " << sizeof(GLIndexBuffer) << io::endl;
     slog.d << "GLSamplerGroup: " << sizeof(GLSamplerGroup) << io::endl;
     slog.d << "GLRenderPrimitive: " << sizeof(GLRenderPrimitive) << io::endl;
@@ -447,6 +448,10 @@ Handle<HwRenderTarget> OpenGLDriver::createRenderTargetS() noexcept {
 
 Handle<HwFence> OpenGLDriver::createFenceS() noexcept {
     return initHandle<HwFence>();
+}
+
+Handle<HwSync> OpenGLDriver::createSyncS() noexcept {
+    return initHandle<GLSync>();
 }
 
 Handle<HwSwapChain> OpenGLDriver::createSwapChainS() noexcept {
@@ -1016,6 +1021,26 @@ void OpenGLDriver::createFenceR(Handle<HwFence> fh, int) {
     f->fence = mPlatform.createFence();
 }
 
+void OpenGLDriver::createSyncR(Handle<HwSync> fh, int) {
+    DEBUG_MARKER()
+
+    GLSync* f = handle_cast<GLSync *>(fh);
+    f->gl.sync = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+    CHECK_GL_ERROR(utils::slog.e)
+
+    // check the status of the sync once a frame, since we must do this from our thread
+    std::weak_ptr<GLSync::State> weak = f->result;
+    whenFrameBegins([sync = f->gl.sync, weak]() -> bool {
+        auto result = weak.lock();
+        if (result) {
+            GLenum status = glClientWaitSync(sync, 0, 0u);
+            result->status.store(status, std::memory_order_relaxed);
+            return (status != GL_TIMEOUT_EXPIRED);
+        }
+        return true; // we're done
+    });
+}
+
 void OpenGLDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
     DEBUG_MARKER()
 
@@ -1221,6 +1246,16 @@ void OpenGLDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
         GLTimerQuery* tq = handle_cast<GLTimerQuery*>(tqh);
         glDeleteQueries(1u, &tq->gl.query);
         destruct(tqh, tq);
+    }
+}
+
+void OpenGLDriver::destroySync(Handle<HwSync> sh) {
+    DEBUG_MARKER()
+
+    if (sh) {
+        GLSync* s = handle_cast<GLSync*>(sh);
+        glDeleteSync(s->gl.sync);
+        destruct(sh, s);
     }
 }
 
@@ -1956,6 +1991,23 @@ bool OpenGLDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapse
         *elapsedTime = d;
     }
     return true;
+}
+
+SyncStatus OpenGLDriver::getSyncStatus(Handle<HwSync> sh) {
+    GLSync* s = handle_cast<GLSync*>(sh);
+    if (!s->result) {
+        return SyncStatus::NOT_SIGNALED;
+    }
+    switch (s->result->status.load(std::memory_order_relaxed)) {
+        case GL_CONDITION_SATISFIED:
+        case GL_ALREADY_SIGNALED:
+            return SyncStatus::SIGNALED;
+        case GL_TIMEOUT_EXPIRED:
+            return SyncStatus::NOT_SIGNALED;
+        case GL_WAIT_FAILED:
+        default:
+            return SyncStatus::ERROR;
+    }
 }
 
 void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
