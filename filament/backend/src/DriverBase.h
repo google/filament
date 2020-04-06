@@ -51,12 +51,13 @@ struct HwBase {
 };
 
 struct HwVertexBuffer : public HwBase {
-    AttributeArray attributes;            // 8 * MAX_VERTEX_ATTRIBUTE_COUNT
-    uint32_t vertexCount;                 //   4
-    uint8_t bufferCount;                  //   1
-    uint8_t attributeCount;               //   1
+    AttributeArray attributes{};          // 8 * MAX_VERTEX_ATTRIBUTE_COUNT
+    uint32_t vertexCount{};               //   4
+    uint8_t bufferCount{};                //   1
+    uint8_t attributeCount{};             //   1
     uint8_t padding[2]{};                 //   2 -> total struct is 136 bytes
 
+    HwVertexBuffer() noexcept = default;
     HwVertexBuffer(uint8_t bufferCount, uint8_t attributeCount, uint32_t elementCount,
             AttributeArray const& attributes) noexcept
             : attributes(attributes),
@@ -67,61 +68,67 @@ struct HwVertexBuffer : public HwBase {
 };
 
 struct HwIndexBuffer : public HwBase {
+    uint32_t count{};
+    uint8_t elementSize{};
+
+    HwIndexBuffer() noexcept = default;
     HwIndexBuffer(uint8_t elementSize, uint32_t indexCount) noexcept :
             count(indexCount), elementSize(elementSize) {
     }
-    uint32_t count;
-    uint8_t elementSize;
 };
 
 struct HwRenderPrimitive : public HwBase {
-    HwRenderPrimitive() noexcept = default;
-    uint32_t offset = 0;
-    uint32_t minIndex = 0;
-    uint32_t maxIndex = 0;
-    uint32_t count = 0;
-    uint32_t maxVertexCount = 0;
+    uint32_t offset{};
+    uint32_t minIndex{};
+    uint32_t maxIndex{};
+    uint32_t count{};
+    uint32_t maxVertexCount{};
     PrimitiveType type = PrimitiveType::TRIANGLES;
 };
 
 struct HwProgram : public HwBase {
 #ifndef NDEBUG
-    explicit HwProgram(utils::CString name) noexcept : name(std::move(name)) { }
     utils::CString name;
+    explicit HwProgram(utils::CString name) noexcept : name(std::move(name)) { }
 #else
     explicit HwProgram(const utils::CString&) noexcept { }
 #endif
+    HwProgram() noexcept = default;
 };
 
 struct HwSamplerGroup : public HwBase {
-    explicit HwSamplerGroup(size_t size) noexcept : sb(new SamplerGroup(size)) { }
     // NOTE: we have to use out-of-line allocation here because the size of a Handle<> is limited
     std::unique_ptr<SamplerGroup> sb; // FIXME: this shouldn't depend on filament::SamplerGroup
+    HwSamplerGroup() noexcept = default;
+    explicit HwSamplerGroup(size_t size) noexcept : sb(new SamplerGroup(size)) { }
 };
 
 struct HwUniformBuffer : public HwBase {
 };
 
 struct HwTexture : public HwBase {
+    uint32_t width{};
+    uint32_t height{};
+    uint32_t depth{};
+    SamplerType target{};
+    uint8_t levels : 4;  // This allows up to 15 levels (max texture size of 32768 x 32768)
+    uint8_t samples : 4; // In practice this is always 1.
+    TextureFormat format{};
+    TextureUsage usage{};
+    HwStream* hwStream = nullptr;
+
+    HwTexture() noexcept : levels{}, samples{} {}
     HwTexture(backend::SamplerType target, uint8_t levels, uint8_t samples,
               uint32_t width, uint32_t height, uint32_t depth, TextureFormat fmt, TextureUsage usage) noexcept
             : width(width), height(height), depth(depth),
               target(target), levels(levels), samples(samples), format(fmt), usage(usage) { }
-    uint32_t width;
-    uint32_t height;
-    uint32_t depth;
-    SamplerType target;
-    uint8_t levels : 4;  // This allows up to 15 levels (max texture size of 32768 x 32768)
-    uint8_t samples : 4; // In practice this is always 1.
-    TextureFormat format;
-    TextureUsage usage;
-    HwStream* hwStream = nullptr;
 };
 
 struct HwRenderTarget : public HwBase {
+    uint32_t width{};
+    uint32_t height{};
+    HwRenderTarget() noexcept = default;
     HwRenderTarget(uint32_t w, uint32_t h) : width(w), height(h) { }
-    uint32_t width;
-    uint32_t height;
 };
 
 struct HwFence : public HwBase {
@@ -133,12 +140,15 @@ struct HwSwapChain : public HwBase {
 };
 
 struct HwStream : public HwBase {
-    HwStream() = default;
-    explicit HwStream(Platform::Stream* stream) : stream(stream), streamType(StreamType::NATIVE) { }
     Platform::Stream* stream = nullptr;
     StreamType streamType = StreamType::ACQUIRED;
-    uint32_t width = 0;
-    uint32_t height = 0;
+    uint32_t width{};
+    uint32_t height{};
+
+    HwStream() noexcept = default;
+    explicit HwStream(Platform::Stream* stream) noexcept
+            : stream(stream), streamType(StreamType::NATIVE) {
+    }
 };
 
 struct HwTimerQuery : public HwBase {

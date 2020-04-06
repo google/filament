@@ -358,13 +358,30 @@ HandleBase::HandleId OpenGLDriver::allocateHandle(size_t size) noexcept {
     return HandleBase::HandleId(offset >> HandleAllocator::MIN_ALIGNMENT_SHIFT);
 }
 
+template<typename D, typename ... ARGS>
+backend::Handle<D> OpenGLDriver::initHandle(ARGS&& ... args) noexcept {
+    static_assert(sizeof(D) <= 208, "Handle<> too large");
+    backend::Handle<D> h{ allocateHandle(sizeof(D)) };
+    D* addr = handle_cast<D *>(h);
+    new(addr) D(std::forward<ARGS>(args)...);
+#if !defined(NDEBUG) && UTILS_HAS_RTTI
+    addr->typeId = typeid(D).name();
+#endif
+    return h;
+}
+
+
 template<typename D, typename B, typename ... ARGS>
 typename std::enable_if<std::is_base_of<B, D>::value, D>::type*
 OpenGLDriver::construct(Handle<B> const& handle, ARGS&& ... args) noexcept {
     assert(handle);
-    static_assert(sizeof(D) <= 208, "Handle<> too large");
     D* addr = handle_cast<D *>(const_cast<Handle<B>&>(handle));
+
+    // currently we implement construct<> with dtor+ctor, we could use operator= also
+    // but all our dtors are trivial, ~D() is actually a noop.
+    addr->~D();
     new(addr) D(std::forward<ARGS>(args)...);
+
 #if !defined(NDEBUG) && UTILS_HAS_RTTI
     addr->typeId = typeid(D).name();
 #endif
@@ -389,63 +406,63 @@ void OpenGLDriver::destruct(Handle<B>& handle, D const* p) noexcept {
 }
 
 Handle<HwVertexBuffer> OpenGLDriver::createVertexBufferS() noexcept {
-    return Handle<HwVertexBuffer>( allocateHandle(sizeof(GLVertexBuffer)) );
+    return initHandle<GLVertexBuffer>();
 }
 
 Handle<HwIndexBuffer> OpenGLDriver::createIndexBufferS() noexcept {
-    return Handle<HwIndexBuffer>( allocateHandle(sizeof(GLIndexBuffer)) );
+    return initHandle<GLIndexBuffer>();
 }
 
 Handle<HwRenderPrimitive> OpenGLDriver::createRenderPrimitiveS() noexcept {
-    return Handle<HwRenderPrimitive>( allocateHandle(sizeof(GLRenderPrimitive)) );
+    return initHandle<GLRenderPrimitive>();
 }
 
 Handle<HwProgram> OpenGLDriver::createProgramS() noexcept {
-    return Handle<HwProgram>( allocateHandle(sizeof(OpenGLProgram)) );
+    return initHandle<OpenGLProgram>();
 }
 
 Handle<HwSamplerGroup> OpenGLDriver::createSamplerGroupS() noexcept {
-    return Handle<HwSamplerGroup>( allocateHandle(sizeof(GLSamplerGroup)) );
+    return initHandle<GLSamplerGroup>();
 }
 
 Handle<HwUniformBuffer> OpenGLDriver::createUniformBufferS() noexcept {
-    return Handle<HwUniformBuffer>( allocateHandle(sizeof(GLUniformBuffer)) );
+    return initHandle<GLUniformBuffer>();
 }
 
 Handle<HwTexture> OpenGLDriver::createTextureS() noexcept {
-    return Handle<HwTexture>( allocateHandle(sizeof(GLTexture)) );
+    return initHandle<GLTexture>();
 }
 
 Handle<HwTexture> OpenGLDriver::importTextureS() noexcept {
-    return Handle<HwTexture>( allocateHandle(sizeof(GLTexture)) );
+    return initHandle<GLTexture>();
 }
 
 Handle<HwRenderTarget> OpenGLDriver::createDefaultRenderTargetS() noexcept {
-    return Handle<HwRenderTarget>( allocateHandle(sizeof(GLRenderTarget)) );
+    return initHandle<GLRenderTarget>();
 }
 
 Handle<HwRenderTarget> OpenGLDriver::createRenderTargetS() noexcept {
-    return Handle<HwRenderTarget>( allocateHandle(sizeof(GLRenderTarget)) );
+    return initHandle<GLRenderTarget>();
 }
 
 Handle<HwFence> OpenGLDriver::createFenceS() noexcept {
-    return Handle<HwFence>( allocateHandle(sizeof(HwFence)) );
+    return initHandle<HwFence>();
 }
 
 Handle<HwSwapChain> OpenGLDriver::createSwapChainS() noexcept {
-    return Handle<HwSwapChain>( allocateHandle(sizeof(HwSwapChain)) );
+    return initHandle<HwSwapChain>();
 }
 
 Handle<HwSwapChain> OpenGLDriver::createSwapChainHeadlessS() noexcept {
-    return Handle<HwSwapChain>( allocateHandle(sizeof(HwSwapChain)) );
+    return initHandle<HwSwapChain>();
 }
 
 Handle<HwStream> OpenGLDriver::createStreamFromTextureIdS() noexcept {
-    return Handle<HwStream>( allocateHandle(sizeof(GLStream)) );
+    return initHandle<GLStream>();
 }
 
 Handle<HwTimerQuery> OpenGLDriver::createTimerQueryS() noexcept {
-    return Handle<HwTimerQuery>( allocateHandle(sizeof(GLTimerQuery)) );
+    return initHandle<GLTimerQuery>();
 }
 
 void OpenGLDriver::createVertexBufferR(
@@ -503,7 +520,7 @@ void OpenGLDriver::createIndexBufferR(
 void OpenGLDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph, int) {
     DEBUG_MARKER()
 
-    GLRenderPrimitive* rp = construct<GLRenderPrimitive>(rph);
+    GLRenderPrimitive* rp = handle_cast<GLRenderPrimitive*>(rph);
     glGenVertexArrays(1, &rp->gl.vao);
     CHECK_GL_ERROR(utils::slog.e)
 }
@@ -995,14 +1012,14 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
 void OpenGLDriver::createFenceR(Handle<HwFence> fh, int) {
     DEBUG_MARKER()
 
-    HwFence* f = construct<HwFence>(fh);
+    HwFence* f = handle_cast<HwFence*>(fh);
     f->fence = mPlatform.createFence();
 }
 
 void OpenGLDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
     DEBUG_MARKER()
 
-    HwSwapChain* sc = construct<HwSwapChain>(sch);
+    HwSwapChain* sc = handle_cast<HwSwapChain*>(sch);
     sc->swapChain = mPlatform.createSwapChain(nativeWindow, flags);
 }
 
@@ -1010,7 +1027,7 @@ void OpenGLDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch,
         uint32_t width, uint32_t height, uint64_t flags) {
     DEBUG_MARKER()
 
-    HwSwapChain* sc = construct<HwSwapChain>(sch);
+    HwSwapChain* sc = handle_cast<HwSwapChain*>(sch);
     sc->swapChain = mPlatform.createSwapChain(width, height, flags);
 }
 
@@ -1018,7 +1035,7 @@ void OpenGLDriver::createStreamFromTextureIdR(Handle<HwStream> sh,
         intptr_t externalTextureId, uint32_t width, uint32_t height) {
     DEBUG_MARKER()
 
-    GLStream* s = construct<GLStream>(sh);
+    GLStream* s = handle_cast<GLStream*>(sh);
     // It would be better if we could query the externalTextureId size, unfortunately
     // this is not supported in GL for GL_TEXTURE_EXTERNAL_OES targets
     s->width = width;
@@ -1035,7 +1052,7 @@ void OpenGLDriver::createStreamFromTextureIdR(Handle<HwStream> sh,
 void OpenGLDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {
     DEBUG_MARKER()
 
-    GLTimerQuery* tq = construct<GLTimerQuery>(tqh);
+    GLTimerQuery* tq = handle_cast<GLTimerQuery*>(tqh);
     glGenQueries(1u, &tq->gl.query);
     CHECK_GL_ERROR(utils::slog.e)
 }
@@ -1213,16 +1230,12 @@ void OpenGLDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
 // ------------------------------------------------------------------------------------------------
 
 Handle<HwStream> OpenGLDriver::createStreamNative(void* nativeStream) {
-    Handle<HwStream> sh( allocateHandle(sizeof(GLStream)) );
     Platform::Stream* stream = mPlatform.createStream(nativeStream);
-    construct<GLStream>(sh, stream);
-    return sh;
+    return initHandle<GLStream>(stream);
 }
 
 Handle<HwStream> OpenGLDriver::createStreamAcquired() {
-    Handle<HwStream> sh(allocateHandle(sizeof(GLStream)));
-    construct<GLStream>(sh);
-    return sh;
+    return initHandle<GLStream>();
 }
 
 // Stashes an acquired external image and a release callback. The image is not bound to OpenGL until
@@ -1293,6 +1306,14 @@ void OpenGLDriver::destroyFence(Handle<HwFence> fh) {
 FenceStatus OpenGLDriver::wait(Handle<HwFence> fh, uint64_t timeout) {
     if (fh) {
         HwFence* f = handle_cast<HwFence*>(fh);
+        if (f->fence == nullptr) {
+            // we can end-up here if:
+            // - the platform doesn't support h/w fences
+            // - wait() was called before the fence was asynchronously created.
+            //   This case is not handled in OpenGLDriver but is handle by FFence.
+            //   TODO: move FFence logic into the backend.
+            return FenceStatus::ERROR;
+        }
         return mPlatform.waitFence(f->fence, timeout);
     }
     return FenceStatus::ERROR;
