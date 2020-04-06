@@ -11,6 +11,7 @@ endif()
 
 set(GENERATION_ROOT ${CMAKE_CURRENT_BINARY_DIR})
 set(RESOURCE_DIR  "${GENERATION_ROOT}/resources")
+file(MAKE_DIRECTORY ${RESOURCE_DIR})
 
 get_resgen_vars(${RESOURCE_DIR} filament_test_resources)
 
