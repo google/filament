@@ -91,6 +91,11 @@ template <typename T>
 struct Handle : public HandleBase {
     using HandleBase::HandleBase;
 
+    template<typename B, typename = std::enable_if_t<std::is_base_of<T, B>::value> >
+    Handle(Handle<B> const& base) noexcept
+            : HandleBase(base) {
+    }
+
 private:
 #if !defined(NDEBUG)
     template <typename U>
