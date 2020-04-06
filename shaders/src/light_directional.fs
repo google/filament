@@ -50,7 +50,7 @@ void evaluateDirectionalLight(const MaterialInputs material,
             }
         }
 
-        visibility = visibility * (1.0 - ssContactShadowOcclusion);
+        visibility *= 1.0 - ssContactShadowOcclusion;
 
         #if defined(MATERIAL_HAS_AMBIENT_OCCLUSION)
         visibility *= computeMicroShadowing(light.NoL, material.ambientOcclusion);
