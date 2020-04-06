@@ -292,7 +292,9 @@ enum_<backend::PixelDataType>("PixelDataType")
     .value("UINT", backend::PixelDataType::UINT)
     .value("INT", backend::PixelDataType::INT)
     .value("HALF", backend::PixelDataType::HALF)
-    .value("FLOAT", backend::PixelDataType::FLOAT);
+    .value("FLOAT", backend::PixelDataType::FLOAT)
+    .value("UINT_10F_11F_11F_REV", backend::PixelDataType::UINT_10F_11F_11F_REV)
+    .value("USHORT_565", backend::PixelDataType::USHORT_565);
 
 enum_<backend::CompressedPixelDataType>("CompressedPixelDataType")
     .value("EAC_R11", backend::CompressedPixelDataType::EAC_R11)
