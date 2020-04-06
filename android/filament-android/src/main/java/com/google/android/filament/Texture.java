@@ -273,26 +273,28 @@ public class Texture {
      * Pixel data type
      */
     public enum Type {
-        /** unsigned byte, 8-bits */
+        /** unsigned byte, 8-bit */
         UBYTE,
-        /** signed byte, 8-bits */
+        /** signed byte, 8-bit */
         BYTE,
-        /** unsigned short, 16-bits */
+        /** unsigned short, 16-bits*/
         USHORT,
-        /** signed short, 16-bits */
+        /** signed short, 16-bit */
         SHORT,
-        /** unsigned int, 32-bits */
+        /** unsigned int, 32-bit */
         UINT,
-        /** signed int, 32-bits */
+        /** signed int, 32-bit */
         INT,
-        /** half-float, 16-bits float with 10 bits mantissa */
+        /** half-float, 16-bit float with 10 bits mantissa */
         HALF,
-        /** float, 32-bits float, with 24 bits mantissa */
+        /** float, 32-bit float, with 24 bits mantissa */
         FLOAT,
-        /** a compessed type */
+        /** a compressed type */
         COMPRESSED,
-        /** unsigned 5.6 (5.5 for blue) float packed in 32-bits */
-        UINT_10F_11F_11F_REV
+        /** unsigned 5.6 (5.5 for blue) float packed in a 32-bit integer. */
+        UINT_10F_11F_11F_REV,
+        /** unsigned 5/6 bit integers packed in a 16-bit short. */
+        USHORT_565,
     }
 
     /**
@@ -342,7 +344,6 @@ public class Texture {
          * </p>
          */
         @Nullable public Runnable callback;
-
 
         /**
          * Creates a <code>PixelBufferDescriptor</code>
