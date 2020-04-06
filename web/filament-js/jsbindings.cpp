@@ -1386,7 +1386,6 @@ class_<SurfaceBuilder>("SurfaceOrientation$Builder")
     }), allow_raw_pointers());
 
 class_<SurfaceOrientation>("SurfaceOrientation")
-
     .function("getQuats", EMBIND_LAMBDA(void, (SurfaceOrientation* self,
             intptr_t out, size_t quatCount, VertexBuffer::AttributeType attrtype), {
         switch (attrtype) {

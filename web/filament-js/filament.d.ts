@@ -302,7 +302,6 @@ export class Camera {
 }
 
 export class IndirectLight {
-    public static Builder(): IndirectLight$Builder;
     public setIntensity(intensity: number): void;
     public getIntensity(): number;
     public setRotation(value: mat3): void;
