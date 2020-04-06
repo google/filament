@@ -8,6 +8,12 @@ float evaluateSSAO() {
     return textureLod(light_ssao, uv, 0.0).r;
 }
 
+#if SPECULAR_AMBIENT_OCCLUSION == 1
+float SpecularAO_Lagarde(float NoV, float visibility, float roughness) {
+    // Lagarde and de Rousiers 2014, "Moving Frostbite to PBR"
+    return saturate(pow(NoV + visibility, exp2(-16.0 * roughness - 1.0)) - 1.0 + visibility);
+}
+
 #if defined(MATERIAL_HAS_BENT_NORMAL)
 float sphericalCapsIntersection(float cosCap1, float cosCap2, float cosDistance) {
     // Oat and Sander 2007, "Ambient Aperture Lighting"
@@ -35,8 +41,8 @@ float sphericalCapsIntersection(float cosCap1, float cosCap2, float cosDistance)
 }
 
 // This function could (should?) be implemented as a 3D LUT instead, but we need to save samplers
-float computeBentSpecularAO(float visibility, float roughness) {
-    // Jimenez et al. 2016, "Practical Realtime Strategies for Accurate Indirect Occlusion"
+float SpecularAO_Cones(float visibility, float roughness) {
+    // Jimenez et al. 2016, "Practical Realtime Strategies for Accurate Indirect Occlusion"
 
     // aperture from ambient occlusion
     float cosAv = sqrt(1.0 - visibility);
@@ -47,8 +53,13 @@ float computeBentSpecularAO(float visibility, float roughness) {
 
     // Remove the 2 * PI term from the denominator, it cancels out the same term from
     // sphericalCapsIntersection()
-    return sphericalCapsIntersection(cosAv, cosAs, 0.5 * cosB + 0.5) / (1.0 - cosAs);
+    float ao = sphericalCapsIntersection(cosAv, cosAs, 0.5 * cosB + 0.5) / (1.0 - cosAs);
+    // Smoothly kill specular AO when entering the perceptual roughness range [0.1..0.3]
+    // Without this, specular AO can remove all reflections, which looks bad on metals
+    return mix(1.0, ao, smoothstep(0.01, 0.09, roughness));
 }
+#endif
+
 #endif
 
 /**
@@ -57,9 +68,9 @@ float computeBentSpecularAO(float visibility, float roughness) {
 float computeSpecularAO(float NoV, float visibility, float roughness) {
 #if SPECULAR_AMBIENT_OCCLUSION == 1
 #if defined(MATERIAL_HAS_BENT_NORMAL)
-    return computeBentSpecularAO(visibility, roughness);
+    return SpecularAO_Cones(visibility, roughness);
 #else
-    return saturate(pow(NoV + visibility, exp2(-16.0 * roughness - 1.0)) - 1.0 + visibility);
+    return SpecularAO_Lagarde(NoV, visibility, roughness);
 #endif
 #else
     return 1.0;
