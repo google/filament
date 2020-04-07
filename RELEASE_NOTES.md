@@ -16,6 +16,13 @@ A new header is inserted each time a *tag* is created.
 - Refraction mode and type can now be set by calling `MaterialBuilder::refractionMode()`.
   and `MaterialBuilder::refractionType()` instad of `materialRefraction()` and
   `materialRefractionType()` (️⚠ API change).
+- Fixed documentation confusion about focused spot vs spot lights.
+- Fixed a race condition in the job system.
+- Fixed support for 565 bitmaps on Android.
+- Added support for timer queries in the Metal backend.
+- Improved dynamic resolution implementation to be more accurate and target more platforms.
+- `beginFrame()` now accepts a v-sync timestamp for accurate frame time measurement (used for
+  frame skipping and dynamic resolution). You can pass `0` to get the old behavior (️⚠ API change).
 
 ## v1.5.2
 
