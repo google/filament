@@ -296,32 +296,33 @@ std::string ShaderGenerator::createFragmentProgram(filament::backend::ShaderMode
 
     cg.generateDefine(fs, "MAX_SHADOW_CASTING_SPOTS", uint32_t(CONFIG_MAX_SHADOW_CASTING_SPOTS));
 
-    bool specularAO = material.specularAOSet ?
-            material.specularAO : !isMobileTarget(shaderModel);
-    cg.generateDefine(fs, "SPECULAR_AMBIENT_OCCLUSION", specularAO ? 1u : 0u);
+    auto defaultSpecularAO = isMobileTarget(shaderModel) ?
+            SpecularAmbientOcclusion::NONE : SpecularAmbientOcclusion::SIMPLE;
+    auto specularAO = material.specularAOSet ? material.specularAO : defaultSpecularAO;
+    cg.generateDefine(fs, "SPECULAR_AMBIENT_OCCLUSION", uint32_t(specularAO));
 
     cg.generateDefine(fs, "HAS_REFRACTION", material.refractionMode != RefractionMode::NONE);
     if (material.refractionMode != RefractionMode::NONE) {
         cg.generateDefine(fs, "REFRACTION_MODE_CUBEMAP", uint32_t(RefractionMode::CUBEMAP));
         cg.generateDefine(fs, "REFRACTION_MODE_SCREEN_SPACE", uint32_t(RefractionMode::SCREEN_SPACE));
         switch (material.refractionMode) {
-            case NONE:
+            case RefractionMode::NONE:
                 // can't be here
                 break;
-            case CUBEMAP:
+            case RefractionMode::CUBEMAP:
                 cg.generateDefine(fs, "REFRACTION_MODE", "REFRACTION_MODE_CUBEMAP");
                 break;
-            case SCREEN_SPACE:
+            case RefractionMode::SCREEN_SPACE:
                 cg.generateDefine(fs, "REFRACTION_MODE", "REFRACTION_MODE_SCREEN_SPACE");
                 break;
         }
         cg.generateDefine(fs, "REFRACTION_TYPE_SOLID", uint32_t(RefractionType::SOLID));
         cg.generateDefine(fs, "REFRACTION_TYPE_THIN", uint32_t(RefractionType::THIN));
         switch (material.refractionType) {
-            case SOLID:
+            case RefractionType::SOLID:
                 cg.generateDefine(fs, "REFRACTION_TYPE", "REFRACTION_TYPE_SOLID");
                 break;
-            case THIN:
+            case RefractionType::THIN:
                 cg.generateDefine(fs, "REFRACTION_TYPE", "REFRACTION_TYPE_THIN");
                 break;
         }

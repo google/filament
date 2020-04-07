@@ -54,7 +54,7 @@ std::string shaderWithAllProperties(ShaderType type,
     builder.optimization(filamat::MaterialBuilder::Optimization::NONE);
     builder.shading(shadingModel);
     builder.includeCallback(includer);
-    builder.materialRefraction(refractionMode);
+    builder.refractionMode(refractionMode);
 
     MaterialBuilder::PropertyList allProperties;
     std::fill_n(allProperties, MaterialBuilder::MATERIAL_PROPERTIES_COUNT, true);

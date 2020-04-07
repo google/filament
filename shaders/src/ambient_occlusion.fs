@@ -1,4 +1,13 @@
 //------------------------------------------------------------------------------
+// Ambient occlusion configuration
+//------------------------------------------------------------------------------
+
+// Diffuse BRDFs
+#define SPECULAR_AO_OFF             0
+#define SPECULAR_AO_SIMPLE          1
+#define SPECULAR_AO_BENT_NORMALS    2
+
+//------------------------------------------------------------------------------
 // Ambient occlusion helpers
 //------------------------------------------------------------------------------
 
@@ -8,7 +17,6 @@ float evaluateSSAO() {
     return textureLod(light_ssao, uv, 0.0).r;
 }
 
-#if SPECULAR_AMBIENT_OCCLUSION == 1
 float SpecularAO_Lagarde(float NoV, float visibility, float roughness) {
     // Lagarde and de Rousiers 2014, "Moving Frostbite to PBR"
     return saturate(pow(NoV + visibility, exp2(-16.0 * roughness - 1.0)) - 1.0 + visibility);
@@ -39,9 +47,11 @@ float sphericalCapsIntersection(float cosCap1, float cosCap2, float cosDistance)
     float area = sq(x) * (-2.0 * x + 3.0);
     return area * (1.0 - max(cosCap1, cosCap2));
 }
+#endif
 
 // This function could (should?) be implemented as a 3D LUT instead, but we need to save samplers
-float SpecularAO_Cones(float visibility, float roughness) {
+float SpecularAO_Cones(float NoV, float visibility, float roughness) {
+#if defined(MATERIAL_HAS_BENT_NORMAL)
     // Jimenez et al. 2016, "Practical Realtime Strategies for Accurate Indirect Occlusion"
 
     // aperture from ambient occlusion
@@ -56,22 +66,23 @@ float SpecularAO_Cones(float visibility, float roughness) {
     float ao = sphericalCapsIntersection(cosAv, cosAs, 0.5 * cosB + 0.5) / (1.0 - cosAs);
     // Smoothly kill specular AO when entering the perceptual roughness range [0.1..0.3]
     // Without this, specular AO can remove all reflections, which looks bad on metals
+    if (fract(getUserTime().x) < 0.5)
+    return SpecularAO_Lagarde(NoV, visibility, roughness);
+    else
     return mix(1.0, ao, smoothstep(0.01, 0.09, roughness));
+#else
+    return SpecularAO_Lagarde(NoV, visibility, roughness);
+#endif
 }
-#endif
-
-#endif
 
 /**
  * Computes a specular occlusion term from the ambient occlusion term.
  */
 float computeSpecularAO(float NoV, float visibility, float roughness) {
-#if SPECULAR_AMBIENT_OCCLUSION == 1
-#if defined(MATERIAL_HAS_BENT_NORMAL)
-    return SpecularAO_Cones(visibility, roughness);
-#else
+#if SPECULAR_AMBIENT_OCCLUSION == SPECULAR_AO_SIMPLE
     return SpecularAO_Lagarde(NoV, visibility, roughness);
-#endif
+#elif SPECULAR_AMBIENT_OCCLUSION == SPECULAR_AO_BENT_NORMALS
+    return SpecularAO_Cones(NoV, visibility, roughness);
 #else
     return 1.0;
 #endif
@@ -100,7 +111,7 @@ void multiBounceAO(float visibility, const vec3 albedo, inout vec3 color) {
 }
 
 void multiBounceSpecularAO(float visibility, const vec3 albedo, inout vec3 color) {
-#if MULTI_BOUNCE_AMBIENT_OCCLUSION == 1 && SPECULAR_AMBIENT_OCCLUSION == 1
+#if MULTI_BOUNCE_AMBIENT_OCCLUSION == 1 && SPECULAR_AMBIENT_OCCLUSION != SPECULAR_AO_OFF
     color *= gtaoMultiBounce(visibility, albedo);
 #endif
 }
