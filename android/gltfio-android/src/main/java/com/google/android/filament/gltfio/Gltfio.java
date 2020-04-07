@@ -16,11 +16,15 @@
 
 package com.google.android.filament.gltfio;
 
+import com.google.android.filament.Filament;
+
 public class Gltfio {
     /**
      * Initializes the gltfio JNI layer. Must be called before using any gltfio functionality.
      */
     public static void init() {
+        // Load Filament first to ensure that the NioUtils Java class is available in the JNIEnv.
+        Filament.init();
         System.loadLibrary("gltfio-jni");
     }
 }
