@@ -28,6 +28,7 @@ import com.google.android.filament.*
 import com.google.android.filament.RenderableManager.PrimitiveType
 import com.google.android.filament.VertexBuffer.AttributeType
 import com.google.android.filament.VertexBuffer.VertexAttribute
+import com.google.android.filament.android.DisplayHelper
 import com.google.android.filament.android.UiHelper
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -290,7 +291,7 @@ class MainActivity : Activity() {
             if (uiHelper.isReadyToRender) {
                 // If beginFrame() returns false you should skip the frame
                 // This means you are sending frames too quickly to the GPU
-                if (renderer.beginFrame(swapChain!!)) {
+                if (renderer.beginFrame(swapChain!!, frameTimeNanos)) {
                     renderer.render(view)
                     renderer.endFrame()
                 }
@@ -302,6 +303,7 @@ class MainActivity : Activity() {
         override fun onNativeWindowChanged(surface: Surface) {
             swapChain?.let { engine.destroySwapChain(it) }
             swapChain = engine.createSwapChain(surface, uiHelper.swapChainFlags)
+            renderer.setDisplayInfo(DisplayHelper.getDisplayInfo(surfaceView.display, Renderer.DisplayInfo()))
         }
 
         override fun onDetachedFromSurface() {

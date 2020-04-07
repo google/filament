@@ -110,11 +110,8 @@ FenceStatus FFence::wait(Mode mode, uint64_t timeout) noexcept {
     }
 
     if (fs->mType == Type::HARD) {
-        // mFenceHandle could be invalid if the driver doesn't support h/w fences
-        status = FenceStatus::ERROR;
-        if (mFenceHandle) {
-            status = engine.getDriverApi().wait(mFenceHandle, timeout);
-        }
+        // note: even if the driver doesn't support h/w fences, mFenceHandle will be valid
+        status = engine.getDriverApi().wait(mFenceHandle, timeout);
     }
     return status;
 }

@@ -116,7 +116,7 @@ class FLightManager;
  * changing volume. The coupling of illumination and the outer cone means that an artist cannot
  * tweak the influence cone of a spot light without also changing the perceived illumination.
  * It therefore makes sense to provide artists with a parameter to disable this coupling. This
- * is the difference between Type.SPOT and Type.FOCUSED_SPOT.
+ * is the difference between Type.FOCUSED_SPOT and Type.SPOT.
  *
  * @see Builder.position(), Builder.direction(), Builder.falloff(), Builder.spotLightCone()
  *
@@ -169,8 +169,8 @@ public:
         SUN,            //!< Directional light that also draws a sun's disk in the sky.
         DIRECTIONAL,    //!< Directional light, emits light in a given direction.
         POINT,          //!< Point light, emits light from a position, in all directions.
-        FOCUSED_SPOT,   //!< Spot light with coupling of outer cone and illumination disabled.
-        SPOT,           //!< Physically correct spot light.
+        FOCUSED_SPOT,   //!< Physically correct spot light.
+        SPOT,           //!< Spot light with coupling of outer cone and illumination disabled.
     };
 
     /**

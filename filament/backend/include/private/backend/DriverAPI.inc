@@ -205,6 +205,8 @@ DECL_DRIVER_API_R_N(backend::RenderTargetHandle, createRenderTarget,
 
 DECL_DRIVER_API_R_0(backend::FenceHandle, createFence)
 
+DECL_DRIVER_API_R_0(backend::SyncHandle, createSync)
+
 DECL_DRIVER_API_R_N(backend::SwapChainHandle, createSwapChain,
         void*, nativeWindow,
         uint64_t, flags)
@@ -238,6 +240,7 @@ DECL_DRIVER_API_N(destroyRenderTarget,    backend::RenderTargetHandle, rth)
 DECL_DRIVER_API_N(destroySwapChain,       backend::SwapChainHandle, sch)
 DECL_DRIVER_API_N(destroyStream,          backend::StreamHandle, sh)
 DECL_DRIVER_API_N(destroyTimerQuery,      backend::TimerQueryHandle, sh)
+DECL_DRIVER_API_N(destroySync,            backend::SyncHandle, sh)
 
 /*
  * Synchronous APIs
@@ -261,6 +264,7 @@ DECL_DRIVER_API_SYNCHRONOUS_0(bool, canGenerateMipmaps)
 DECL_DRIVER_API_SYNCHRONOUS_N(void, setupExternalImage, void*, image)
 DECL_DRIVER_API_SYNCHRONOUS_N(void, cancelExternalImage, void*, image)
 DECL_DRIVER_API_SYNCHRONOUS_N(bool, getTimerQueryValue, backend::TimerQueryHandle, query, uint64_t*, elapsedTime)
+DECL_DRIVER_API_SYNCHRONOUS_N(backend::SyncStatus, getSyncStatus, backend::SyncHandle, sh)
 
 /*
  * Updating driver objects

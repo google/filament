@@ -16,9 +16,9 @@
 
 #define GLTFIO_SIMPLEVIEWER_IMPLEMENTATION
 
-#include "app/Config.h"
-#include "app/FilamentApp.h"
-#include "app/IBL.h"
+#include <filamentapp/Config.h>
+#include <filamentapp/FilamentApp.h>
+#include <filamentapp/IBL.h>
 
 #include <filament/Camera.h>
 #include <filament/Engine.h>

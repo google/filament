@@ -549,7 +549,7 @@ id<MTLTexture> MetalRenderTarget::createMultisampledTexture(id<MTLDevice> device
     return [device newTextureWithDescriptor:descriptor];
 }
 
-MetalFence::MetalFence(MetalContext& context) {
+MetalFence::MetalFence(MetalContext& context) : context(context) {
     if (@available(macOS 10.14, iOS 12, *)) {
         cv = std::make_shared<std::condition_variable>();
         event = [context.device newSharedEvent];
@@ -559,12 +559,16 @@ MetalFence::MetalFence(MetalContext& context) {
         // Using a weak_ptr here because the Fence could be deleted before the block executes.
         std::weak_ptr<std::condition_variable> weakCv = cv;
         [event notifyListener:context.eventListener atValue:value block:^(id <MTLSharedEvent> o,
-                                                                          uint64_t value) {
+                uint64_t value) {
             if (auto cv = weakCv.lock()) {
                 cv->notify_all();
             }
         }];
     }
+}
+
+void MetalFence::onSignal(MetalFenceSignalBlock block) {
+    [event notifyListener:context.eventListener atValue:value block:block];
 }
 
 FenceStatus MetalFence::wait(uint64_t timeoutNs) {

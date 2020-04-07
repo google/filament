@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release
 
+- gltfio: fixed incorrect cone angles with lights
+
 ## v1.5.2
 
 - gltfio: fixed null pointer exception seen with some Android clients.

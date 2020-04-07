@@ -18,12 +18,11 @@ material {
 
 fragment {
     void material(inout MaterialInputs material) {
-        prepareMaterial(material);
+	prepareMaterial(material);
         vec2 uv = getUV0();
         uv.y = 1.0 - uv.y;
-        float alpha = texture(materialParams_albedo, uv).r;
-        material.baseColor = getColor();
-        material.baseColor.a *= alpha;
+        vec4 albedo = texture(materialParams_albedo, uv);
+        material.baseColor = getColor() * albedo;
         material.baseColor.rgb *= material.baseColor.a;
     }
 }

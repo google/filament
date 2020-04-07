@@ -223,6 +223,7 @@ void JobSystem::wake() noexcept {
 }
 
 inline JobSystem::ThreadState& JobSystem::getState() noexcept {
+    std::lock_guard<utils::SpinLock> lock(mThreadMapLock);
     auto iter = mThreadMap.find(std::this_thread::get_id());
     ASSERT_PRECONDITION(iter != mThreadMap.end(), "This thread has not been adopted.");
     return *iter->second;
@@ -301,7 +302,9 @@ void JobSystem::loop(ThreadState* state) noexcept {
     setThreadAffinityById(state->id);
 
     // record our work queue
+    mThreadMapLock.lock();
     bool inserted = mThreadMap.emplace(std::this_thread::get_id(), state).second;
+    mThreadMapLock.unlock();
     ASSERT_PRECONDITION(inserted, "This thread is already in a loop.");
 
     // run our main loop...
@@ -469,8 +472,12 @@ void JobSystem::runAndWait(JobSystem::Job*& job) noexcept {
 
 void JobSystem::adopt() {
     const auto tid = std::this_thread::get_id();
+
+    std::unique_lock<utils::SpinLock> lock(mThreadMapLock);
     auto iter = mThreadMap.find(tid);
     ThreadState* const state = iter ==  mThreadMap.end() ? nullptr : iter->second;
+    lock.unlock();
+
     if (state) {
         // we're already part of a JobSystem, do nothing.
         ASSERT_PRECONDITION(this == state->js,
@@ -493,11 +500,13 @@ void JobSystem::adopt() {
     // however, it's not a problem since mThreadState is pre-initialized and valid
     // (e.g.: the queue is empty).
 
+    lock.lock();
     mThreadMap[tid] = &mThreadStates[index];
 }
 
 void JobSystem::emancipate() {
     const auto tid = std::this_thread::get_id();
+    std::lock_guard<utils::SpinLock> lock(mThreadMapLock);
     auto iter = mThreadMap.find(tid);
     ThreadState* const state = iter ==  mThreadMap.end() ? nullptr : iter->second;
     ASSERT_PRECONDITION(state, "this thread is not an adopted thread");

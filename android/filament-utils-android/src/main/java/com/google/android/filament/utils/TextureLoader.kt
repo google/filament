@@ -90,8 +90,8 @@ private fun format(bitmap: Bitmap) = when (bitmap.config.name) {
 
 // Not required when SKIP_BITMAP_COPY is true
 private fun type(bitmap: Bitmap) = when (bitmap.config.name) {
-    "ALPHA_8"   -> Texture.Type.UBYTE
-    "RGB_565"   -> Texture.Type.UBYTE
+    "ALPHA_8"   -> Texture.Type.USHORT
+    "RGB_565"   -> Texture.Type.USHORT_565
     "ARGB_8888" -> Texture.Type.UBYTE
     "RGBA_F16"  -> Texture.Type.HALF
     else -> throw IllegalArgumentException("Unsupported bitmap configuration")

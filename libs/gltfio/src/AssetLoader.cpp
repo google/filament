@@ -715,7 +715,9 @@ void FAssetLoader::createLight(const cgltf_node* node, Entity entity) {
     if (type == LightManager::Type::DIRECTIONAL) {
         builder.intensity(light->intensity);
     } else if (type == LightManager::Type::SPOT) {
-        builder.spotLightCone(light->spot_inner_cone_angle, light->spot_outer_cone_angle);
+        // glTF specifies half angles, but Filament expects full angles.
+        builder.spotLightCone(light->spot_inner_cone_angle * 2.0f,
+                light->spot_outer_cone_angle * 2.0f);
         // Convert from candelas (luminous intensity) to lumens (luminous power).
         // lp = li * pi
         builder.intensity(F_PI * light->intensity);

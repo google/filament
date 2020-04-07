@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include "app/Config.h"
-#include "app/FilamentApp.h"
-#include "app/MeshAssimp.h"
+#include <filamentapp/Config.h>
+#include <filamentapp/FilamentApp.h>
+#include <filamentapp/MeshAssimp.h>
 
 #include <filament/Engine.h>
 #include <filament/LightManager.h>

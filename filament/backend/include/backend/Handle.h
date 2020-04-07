@@ -25,18 +25,19 @@
 namespace filament {
 namespace backend {
 
-struct HwVertexBuffer;
 struct HwFence;
 struct HwIndexBuffer;
 struct HwProgram;
 struct HwRenderPrimitive;
 struct HwRenderTarget;
 struct HwSamplerGroup;
-struct HwTexture;
-struct HwUniformBuffer;
-struct HwSwapChain;
 struct HwStream;
+struct HwSwapChain;
+struct HwSync;
+struct HwTexture;
 struct HwTimerQuery;
+struct HwUniformBuffer;
+struct HwVertexBuffer;
 
 /*
  * A type handle to a h/w resource
@@ -91,6 +92,11 @@ template <typename T>
 struct Handle : public HandleBase {
     using HandleBase::HandleBase;
 
+    template<typename B, typename = std::enable_if_t<std::is_base_of<T, B>::value> >
+    Handle(Handle<B> const& base) noexcept
+            : HandleBase(base) {
+    }
+
 private:
 #if !defined(NDEBUG)
     template <typename U>
@@ -108,10 +114,11 @@ using RenderTargetHandle    = Handle<HwRenderTarget>;
 using SamplerGroupHandle    = Handle<HwSamplerGroup>;
 using StreamHandle          = Handle<HwStream>;
 using SwapChainHandle       = Handle<HwSwapChain>;
+using SyncHandle            = Handle<HwSync>;
 using TextureHandle         = Handle<HwTexture>;
+using TimerQueryHandle      = Handle<HwTimerQuery>;
 using UniformBufferHandle   = Handle<HwUniformBuffer>;
 using VertexBufferHandle    = Handle<HwVertexBuffer>;
-using TimerQueryHandle      = Handle<HwTimerQuery>;
 
 } // namespace backend
 } // namespace filament

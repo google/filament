@@ -25,6 +25,7 @@ import android.view.SurfaceView
 import android.view.animation.LinearInterpolator
 
 import com.google.android.filament.*
+import com.google.android.filament.android.DisplayHelper
 import com.google.android.filament.android.UiHelper
 import com.google.android.filament.filamat.MaterialBuilder
 
@@ -308,7 +309,7 @@ class MainActivity : Activity() {
             if (uiHelper.isReadyToRender) {
                 // If beginFrame() returns false you should skip the frame
                 // This means you are sending frames too quickly to the GPU
-                if (renderer.beginFrame(swapChain!!)) {
+                if (renderer.beginFrame(swapChain!!, frameTimeNanos)) {
                     renderer.render(view)
                     renderer.endFrame()
                 }
@@ -320,6 +321,7 @@ class MainActivity : Activity() {
         override fun onNativeWindowChanged(surface: Surface) {
             swapChain?.let { engine.destroySwapChain(it) }
             swapChain = engine.createSwapChain(surface)
+            renderer.setDisplayInfo(DisplayHelper.getDisplayInfo(surfaceView.display, Renderer.DisplayInfo()))
         }
 
         override fun onDetachedFromSurface() {

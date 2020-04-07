@@ -565,6 +565,8 @@ export enum PixelDataType {
     INT,
     HALF,
     FLOAT,
+    UINT_10F_11F_11F_REV,
+    USHORT_565,
 }
 
 export enum RenderableManager$PrimitiveType {

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "IBL.h"
+#include <filamentapp/IBL.h>
 
 #include <fstream>
 #include <iostream>

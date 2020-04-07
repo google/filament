@@ -75,16 +75,16 @@ void ImGuiHelper::createAtlasTexture(Engine* engine) {
     // Create the grayscale texture that ImGui uses for its glyph atlas.
     static unsigned char* pixels;
     int width, height;
-    io.Fonts->GetTexDataAsAlpha8(&pixels, &width, &height);
+    io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
     size_t size = (size_t) (width * height);
     Texture::PixelBufferDescriptor pb(
             pixels, size,
-            Texture::Format::R, Texture::Type::UBYTE);
+            Texture::Format::RGBA, Texture::Type::UBYTE);
     mTexture = Texture::Builder()
             .width((uint32_t) width)
             .height((uint32_t) height)
             .levels((uint8_t) 1)
-            .format(Texture::InternalFormat::R8)
+            .format(Texture::InternalFormat::RGBA8)
             .sampler(Texture::Sampler::SAMPLER_2D)
             .build(*engine);
     mTexture->setImage(*engine, 0, std::move(pb));
@@ -131,20 +131,6 @@ void ImGuiHelper::render(float timeStepInSeconds, Callback imguiCommands) {
     renderDrawData(ImGui::GetDrawData());
 }
 
-// To help with mapping unique scissor rectangles to material instances, we create a 64-bit
-// key from a 4-tuple that defines an AABB in screen space.
-static uint64_t makeScissorKey(int fbheight, const ImVec4& clipRect) {
-    uint16_t left = (uint16_t) clipRect.x;
-    uint16_t bottom = (uint16_t) (fbheight - clipRect.w);
-    uint16_t width = (uint16_t) (clipRect.z - clipRect.x);
-    uint16_t height = (uint16_t) (clipRect.w - clipRect.y);
-    return
-            ((uint64_t)left << 0ull) |
-            ((uint64_t)bottom << 16ull) |
-            ((uint64_t)width << 32ull) |
-            ((uint64_t)height << 48ull);
-}
-
 void ImGuiHelper::renderDrawData(ImDrawData* imguiData) {
     mHasSynced = false;
     auto& rcm = mEngine->getRenderableManager();
@@ -161,38 +147,24 @@ void ImGuiHelper::renderDrawData(ImDrawData* imguiData) {
     createBuffers(imguiData->CmdListsCount);
 
     // Count how many primitives we'll need, then create a Renderable builder.
-    // Also count how many unique scissor rectangles are required.
     size_t nPrims = 0;
     std::unordered_map<uint64_t, filament::MaterialInstance*> scissorRects;
     for (int cmdListIndex = 0; cmdListIndex < imguiData->CmdListsCount; cmdListIndex++) {
         const ImDrawList* cmds = imguiData->CmdLists[cmdListIndex];
         nPrims += cmds->CmdBuffer.size();
-        for (const auto& pcmd : cmds->CmdBuffer) {
-            scissorRects[makeScissorKey(fbheight, pcmd.ClipRect)] = nullptr;
-        }
     }
     auto rbuilder = RenderableManager::Builder(nPrims);
     rbuilder.boundingBox({{ 0, 0, 0 }, { 10000, 10000, 10000 }}).culling(false);
 
-    // Ensure that we have a material instance for each scissor rectangle.
+    // Ensure that we have a material instance for each primitive.
     size_t previousSize = mMaterialInstances.size();
-    if (scissorRects.size() > mMaterialInstances.size()) {
-        mMaterialInstances.resize(scissorRects.size());
+    if (nPrims > mMaterialInstances.size()) {
+        mMaterialInstances.resize(nPrims);
         for (size_t i = previousSize; i < mMaterialInstances.size(); i++) {
             mMaterialInstances[i] = mMaterial->createInstance();
         }
     }
 
-    // Push each unique scissor rectangle to a MaterialInstance.
-    size_t matIndex = 0;
-    for (auto& pair : scissorRects) {
-        pair.second = mMaterialInstances[matIndex++];
-        uint32_t left = (pair.first >> 0ull) & 0xffffull;
-        uint32_t bottom = (pair.first >> 16ull) & 0xffffull;
-        uint32_t width = (pair.first >> 32ull) & 0xffffull;
-        uint32_t height = (pair.first >> 48ull) & 0xffffull;
-        pair.second->setScissor(left, bottom, width, height);
-    }
 
     // Recreate the Renderable component and point it to the vertex buffers.
     rcm.destroy(mRenderable);
@@ -208,15 +180,20 @@ void ImGuiHelper::renderDrawData(ImDrawData* imguiData) {
             if (pcmd.UserCallback) {
                 pcmd.UserCallback(cmds, &pcmd);
             } else {
-                uint64_t skey = makeScissorKey(fbheight, pcmd.ClipRect);
-                auto miter = scissorRects.find(skey);
-                assert(miter != scissorRects.end());
+                MaterialInstance* materialInstance = mMaterialInstances[primIndex];
+                materialInstance->setScissor( pcmd.ClipRect.x, fbheight - pcmd.ClipRect.w,
+                        (uint16_t) (pcmd.ClipRect.z - pcmd.ClipRect.x),
+                        (uint16_t) (pcmd.ClipRect.w - pcmd.ClipRect.y));
+                if (pcmd.TextureId) {
+                    TextureSampler sampler(TextureSampler::MinFilter::LINEAR, TextureSampler::MagFilter::LINEAR);
+                    materialInstance->setParameter("albedo", (Texture const*)pcmd.TextureId, sampler);
+                }
                 rbuilder
                         .geometry(primIndex, RenderableManager::PrimitiveType::TRIANGLES,
                                 mVertexBuffers[bufferIndex], mIndexBuffers[bufferIndex],
                                 indexOffset, pcmd.ElemCount)
                         .blendOrder(primIndex, primIndex)
-                        .material(primIndex, miter->second);
+                        .material(primIndex, materialInstance);
                 primIndex++;
             }
             indexOffset += pcmd.ElemCount;

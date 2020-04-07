@@ -21,7 +21,7 @@
 #include <filament/VertexBuffer.h>
 #include <filament/View.h>
 
-#include "../samples/app/FilamentApp.h"
+#include <filamentapp/FilamentApp.h>
 
 #include <utils/EntityManager.h>
 

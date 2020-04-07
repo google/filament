@@ -83,15 +83,6 @@ public:
      * enabled:   enable or disables dynamic resolution on a View
      * homogeneousScaling: by default the system scales the major axis first. Set this to true
      *                     to force homogeneous scaling.
-     * scaleRate: rate at which the scale will change to reach the target frame rate
-     *            This value can be computed as 1 / N, where N is the number of frames
-     *            needed to reach 64% of the target scale factor.
-     *            Higher values make the dynamic resolution react faster.
-     * targetFrameTimeMilli: desired frame time in milliseconds
-     * headRoomRatio: additional headroom for the GPU as a ratio of the targetFrameTime.
-     *                Useful for taking into account constant costs like post-processing or
-     *                GPU drivers on different platforms.
-     * history:   History size. higher values, tend to filter more (clamped to 30)
      * minScale:  the minimum scale in X and Y this View should use
      * maxScale:  the maximum scale in X and Y this View should use
      * quality:   upscaling quality.
@@ -101,25 +92,13 @@ public:
      * Dynamic resolution is only supported on platforms where the time to render
      * a frame can be measured accurately. Dynamic resolution is currently only
      * supported on Android.
+     *
+     * @see Renderer::FrameRateOptions
+     *
      */
     struct DynamicResolutionOptions {
-        DynamicResolutionOptions() = default;
-
-        DynamicResolutionOptions(bool enabled, float scaleRate,
-                math::float2 minScale, math::float2 maxScale)
-                : minScale(minScale), maxScale(maxScale),
-                  scaleRate(scaleRate), enabled(enabled) {
-            // this one exists for backward compatibility
-        }
-
-        explicit DynamicResolutionOptions(bool enabled) : enabled(enabled) { }
-
         math::float2 minScale = math::float2(0.5f);     //!< minimum scale factors in x and y
         math::float2 maxScale = math::float2(1.0f);     //!< maximum scale factors in x and y
-        float scaleRate = 0.125f;                       //!< rate at which the scale will change
-        float targetFrameTimeMilli = 1000.0f / 60.0f;   //!< desired frame time, or budget.
-        float headRoomRatio = 0.0f;                     //!< additional headroom for the GPU
-        uint8_t history = 9;                            //!< history size
         bool enabled = false;                           //!< enable or disable dynamic resolution
         bool homogeneousScaling = false;                //!< set to true to force homogeneous scaling
         QualityLevel quality = QualityLevel::LOW;       //!< Upscaling quality

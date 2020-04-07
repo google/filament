@@ -26,8 +26,8 @@
 
 #include <filameshio/MeshReader.h>
 
-#include "app/Config.h"
-#include "app/FilamentApp.h"
+#include <filamentapp/Config.h>
+#include <filamentapp/FilamentApp.h>
 
 #include "generated/resources/resources.h"
 

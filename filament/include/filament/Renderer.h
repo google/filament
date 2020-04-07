@@ -68,11 +68,67 @@ class PixelBufferDescriptor;
  */
 class UTILS_PUBLIC Renderer : public FilamentAPI {
 public:
-     /**
-      * Get the Engine that created this Renderer.
-      *
-      * @return A pointer to the Engine instance this Renderer is associated to.
-      */
+
+    struct DisplayInfo {
+        // refresh-rate of the display in Hz. set to 0 for offscreen or turn off frame-pacing.
+        float refreshRate = 60.0f;
+
+        // how far in advance a buffer must be queued for presentation at a given time in ns
+        uint64_t presentationDeadlineNanos = 0;
+
+        // offset by which vsyncSteadyClockTimeNano provided in beginFrame() is offset in ns
+        uint64_t vsyncOffsetNanos = 0;
+    };
+
+    /**
+     * Use FrameRateOptions to set the desired frame rate and control how quickly the system
+     * reacts to GPU load changes.
+     *
+     * interval: desired frame interval in multiple of the refresh period, set in DisplayInfo
+     *           (as 1 / DisplayInfo::refreshRate)
+     *
+     * The parameters below are relevant when some Views are using dynamic resolution scaling:
+     *
+     * headRoomRatio: additional headroom for the GPU as a ratio of the targetFrameTime.
+     *                Useful for taking into account constant costs like post-processing or
+     *                GPU drivers on different platforms.
+     * history:   History size. higher values, tend to filter more (clamped to 30)
+     * scaleRate: rate at which the gpu load is adjusted to reach the target frame rate
+     *            This value can be computed as 1 / N, where N is the number of frames
+     *            needed to reach 64% of the target scale factor.
+     *            Higher values make the dynamic resolution react faster.
+     *
+     * @see View::DynamicResolutionOptions
+     * @see Renderer::DisplayInfo
+     *
+     */
+    struct FrameRateOptions {
+        float headRoomRatio = 0.0f;    //!< additional headroom for the GPU
+        float scaleRate = 0.125f;      //!< rate at which the system reacts to load changes
+        uint8_t history = 9;           //!< history size
+        uint8_t interval = 1;          //!< desired frame interval in unit of 1.0 / DisplayInfo::refreshRate
+    };
+
+    /**
+     * Information about the display this Renderer is associated to. This information is needed
+     * to accurately compute dynamic-resolution scaling and for frame-pacing.
+     *
+     * @param info
+     */
+    void setDisplayInfo(const DisplayInfo& info) noexcept;
+
+    /**
+     * Set options controlling the desired frame-rate.
+     *
+     * @param options
+     */
+    void setFrameRateOptions(FrameRateOptions const& options) noexcept;
+
+    /**
+     * Get the Engine that created this Renderer.
+     *
+     * @return A pointer to the Engine instance this Renderer is associated to.
+     */
     Engine* getEngine() noexcept;
 
     /**
@@ -329,6 +385,10 @@ public:
      * passed to the callback function. Currently this functionality is only supported by the Metal
      * backend.
      *
+     * @param vsyncSteadyClockTimeNano The time in nanosecond of when the current frame started,
+     *                                 or 0 if unknown. This value should be the timestamp of
+     *                                 the last h/w vsync. It is expressed in the
+     *                                 std::chrono::steady_clock time base.
      * @param swapChain A pointer to the SwapChain instance to use.
      * @param callback  A callback function that will be called when the backend has finished
      *                  processing the frame.
@@ -347,8 +407,9 @@ public:
      * @see
      * endFrame(), backend::PresentCallable, backend::FrameFinishedCallback
      */
-    bool beginFrame(SwapChain* swapChain, backend::FrameFinishedCallback callback = nullptr,
-            void* user = nullptr);
+    bool beginFrame(SwapChain* swapChain,
+            uint64_t vsyncSteadyClockTimeNano = 0u,
+            backend::FrameFinishedCallback callback = nullptr, void* user = nullptr);
 
     /**
      * Finishes the current frame and schedules it for display.

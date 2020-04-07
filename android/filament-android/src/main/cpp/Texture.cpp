@@ -430,6 +430,7 @@ public:
 
     PixelDataType getType(int format) const noexcept {
         switch (format) {
+            case BITMAP_CONFIG_RGB_565:  return PixelDataType::USHORT_565;
             case BITMAP_CONFIG_RGBA_F16: return PixelDataType::HALF;
             default:                     return PixelDataType::UBYTE;
         }

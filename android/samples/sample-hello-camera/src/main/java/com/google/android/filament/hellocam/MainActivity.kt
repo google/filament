@@ -29,6 +29,7 @@ import androidx.core.app.ActivityCompat
 import com.google.android.filament.*
 import com.google.android.filament.RenderableManager.*
 import com.google.android.filament.VertexBuffer.*
+import com.google.android.filament.android.DisplayHelper
 import com.google.android.filament.android.UiHelper
 
 import java.nio.ByteBuffer
@@ -363,7 +364,7 @@ class MainActivity : Activity(), ActivityCompat.OnRequestPermissionsResultCallba
 
                 // If beginFrame() returns false you should skip the frame
                 // This means you are sending frames too quickly to the GPU
-                if (renderer.beginFrame(swapChain!!)) {
+                if (renderer.beginFrame(swapChain!!, frameTimeNanos)) {
                     renderer.render(view)
                     renderer.endFrame()
                 }
@@ -375,6 +376,7 @@ class MainActivity : Activity(), ActivityCompat.OnRequestPermissionsResultCallba
         override fun onNativeWindowChanged(surface: Surface) {
             swapChain?.let { engine.destroySwapChain(it) }
             swapChain = engine.createSwapChain(surface)
+            renderer.setDisplayInfo(DisplayHelper.getDisplayInfo(surfaceView.display, Renderer.DisplayInfo()))
         }
 
         override fun onDetachedFromSurface() {

@@ -118,24 +118,6 @@ void FView::setDynamicResolutionOptions(DynamicResolutionOptions const& options)
     if (dynamicResolution.enabled) {
         // if enabled, sanitize the parameters
 
-        // History can't be more than 32 frames (~0.5s)
-        dynamicResolution.history = std::min(dynamicResolution.history, uint8_t(MAX_FRAMETIME_HISTORY));
-
-        // History must at least be 3 frames
-        dynamicResolution.history = std::max(dynamicResolution.history, uint8_t(3));
-
-        // can't ask more 240 fps
-        dynamicResolution.targetFrameTimeMilli =
-                std::max(dynamicResolution.targetFrameTimeMilli, 1000.0f / 240.0f);
-
-        // can't ask less than 1 fps
-        dynamicResolution.targetFrameTimeMilli =
-                std::min(dynamicResolution.targetFrameTimeMilli, 1000.0f);
-
-        // headroom can't be larger than frame time, or less than 0
-        dynamicResolution.headRoomRatio = std::min(dynamicResolution.headRoomRatio, 1.0f);
-        dynamicResolution.headRoomRatio = std::max(dynamicResolution.headRoomRatio, 0.0f);
-
         // minScale cannot be 0 or negative
         dynamicResolution.minScale = max(dynamicResolution.minScale, float2(1.0f / 1024.0f));
 
@@ -145,11 +127,6 @@ void FView::setDynamicResolutionOptions(DynamicResolutionOptions const& options)
         // clamp maxScale to 2x because we're doing bilinear filtering, so super-sampling
         // is not useful above that.
         dynamicResolution.maxScale = min(dynamicResolution.maxScale, float2(2.0f));
-
-        // reset the history, so we start from a known (and current) state
-        mFrameTimeHistorySize = 0;
-        mScale = 1.0f;
-        mDynamicWorkloadScale = 1.0f;
     }
 }
 
@@ -157,58 +134,16 @@ void FView::setDynamicLightingOptions(float zLightNear, float zLightFar) noexcep
     mFroxelizer.setOptions(zLightNear, zLightFar);
 }
 
-// this is to avoid a call to memmove
-template<class InputIterator, class OutputIterator>
-static inline
-void move_backward(InputIterator first, InputIterator last, OutputIterator result) {
-    while (first != last) {
-        *--result = *--last;
-    }
-}
-
-float2 FView::updateScale(duration frameTime) noexcept {
+float2 FView::updateScale(FrameInfo const& info) noexcept {
     DynamicResolutionOptions const& options = mDynamicResolution;
     if (options.enabled) {
-
-        if (UTILS_UNLIKELY(frameTime.count() <= std::numeric_limits<float>::epsilon())) {
+        if (!UTILS_UNLIKELY(info.valid)) {
             mScale = 1.0f;
             return mScale;
         }
-
-        // keep an history of frame times
-        auto& history = mFrameTimeHistory;
-
-        // this is like doing { pop_back(); push_front(); }
-        details::move_backward(history.begin(), history.end() - 1, history.end());
-        history.front() = frameTime;
-        mFrameTimeHistorySize = std::min(++mFrameTimeHistorySize, size_t(MAX_FRAMETIME_HISTORY));
-
-        if (UTILS_UNLIKELY(mFrameTimeHistorySize < 3)) {
-            // don't make any decision if we don't have enough data
-            mScale = 1.0f;
-            return mScale;
-        }
-
-        // apply a median filter to get a good representation of the frame time of the last
-        // N frames.
-        std::array<duration, MAX_FRAMETIME_HISTORY> median; // NOLINT -- it's initialized below
-        size_t size = std::min(mFrameTimeHistorySize, median.size());
-        std::uninitialized_copy_n(history.begin(), size, median.begin());
-        std::sort(median.begin(), median.begin() + size);
-        duration filteredFrameTime = median[size / 2];
-
-        // how much we need to scale the current workload to fit in our target, at this instant
-        const float targetWithHeadroom = options.targetFrameTimeMilli * (1 - options.headRoomRatio);
-        const float workloadScale = targetWithHeadroom / filteredFrameTime.count();
-
-        // low-pass: y += b * (x - y)
-        const float oneOverTau = options.scaleRate;
-        const float x = mScale.x * mScale.y * workloadScale;
-        mDynamicWorkloadScale += (1.0f - std::exp(-oneOverTau)) * (x - mDynamicWorkloadScale);
 
         // scaling factor we need to apply on the whole surface
-        const float scale = mDynamicWorkloadScale;
-
+        const float scale = (mScale.x * mScale.y) / info.smoothedWorkLoad;
         const float w = mViewport.width;
         const float h = mViewport.height;
         if (scale < 1.0f && !options.homogeneousScaling) {
@@ -236,24 +171,22 @@ float2 FView::updateScale(duration frameTime) noexcept {
             mScale = std::sqrt(scale);
         }
 
-        // now tweak the scaling factor to get multiples of 4 (to help quad-shading)
-        mScale = (floor(mScale * float2{ w, h } / 4) * 4) / float2{ w, h };
+        // now tweak the scaling factor to get multiples of 8 (to help quad-shading)
+        // i.e. 8x8=64 fragments, to try to help with warp sizes.
+        mScale = (floor(mScale * float2{ w, h } / 8) * 8) / float2{ w, h };
 
         // always clamp to the min/max scale range
         mScale = clamp(mScale, options.minScale, options.maxScale);
 
 //#define DEBUG_DYNAMIC_RESOLUTION
-#if !defined(NDEBUG) && defined(DEBUG_DYNAMIC_RESOLUTION)
+#if defined(DEBUG_DYNAMIC_RESOLUTION)
         static int sLogCounter = 15;
         if (!--sLogCounter) {
             sLogCounter = 15;
-            slog.d << frameTime.count()
-                   << ", " << filteredFrameTime.count()
-                   << ", " << workloadScale
-                   << ", " << mDynamicWorkloadScale
+            slog.d << info.denoisedFrameTime.count() * 1000.0f << " ms"
+                   << ", " << info.smoothedWorkLoad
                    << ", " << mScale.x
                    << ", " << mScale.y
-                   << ", " << mScale.x * mScale.y
                    << ", " << mViewport.width  * mScale.x
                    << ", " << mViewport.height * mScale.y
                    << io::endl;
@@ -262,6 +195,7 @@ float2 FView::updateScale(duration frameTime) noexcept {
     } else {
         mScale = 1.0f;
     }
+
     return mScale;
 }
 

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "IcoSphere.h"
+#include <filamentapp/IcoSphere.h>
 
 #include <array>
 

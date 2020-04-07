@@ -64,18 +64,20 @@ public:
     struct GLVertexBuffer : public backend::HwVertexBuffer {
         using HwVertexBuffer::HwVertexBuffer;
         struct {
-            std::array<GLuint, backend::MAX_VERTEX_ATTRIBUTE_COUNT> buffers;  // 4 * MAX_VERTEX_ATTRIBUTE_COUNT bytes
+            // 4 * MAX_VERTEX_ATTRIBUTE_COUNT bytes
+            std::array<GLuint, backend::MAX_VERTEX_ATTRIBUTE_COUNT> buffers{};
         } gl;
     };
 
     struct GLIndexBuffer : public backend::HwIndexBuffer {
         using HwIndexBuffer::HwIndexBuffer;
         struct {
-            GLuint buffer;
+            GLuint buffer{};
         } gl;
     };
 
     struct GLUniformBuffer : public backend::HwUniformBuffer {
+        using HwUniformBuffer::HwUniformBuffer;
         GLUniformBuffer(uint32_t capacity, backend::BufferUsage usage) noexcept {
             gl.ubo.capacity = capacity;
             gl.ubo.usage = usage;
@@ -87,8 +89,6 @@ public:
 
     struct GLSamplerGroup : public backend::HwSamplerGroup {
         using HwSamplerGroup::HwSamplerGroup;
-        struct {
-        } gl;
     };
 
     struct GLRenderPrimitive : public backend::HwRenderPrimitive {
@@ -99,10 +99,10 @@ public:
     struct GLTexture : public backend::HwTexture {
         using HwTexture::HwTexture;
         struct {
-            GLuint id;              // texture or renderbuffer id
+            GLuint id = 0;          // texture or renderbuffer id
             mutable GLuint rb = 0;  // multi-sample sidecar renderbuffer
-            GLenum target;
-            GLenum internalFormat;
+            GLenum target = 0;
+            GLenum internalFormat = 0;
             mutable GLsync fence = nullptr;
 
             // texture parameters go here too
@@ -125,8 +125,8 @@ public:
 
     struct GLTimerQuery : public backend::HwTimerQuery {
         struct State {
-            uint64_t elapsed = 0;
-            std::atomic_bool available;
+            std::atomic<uint64_t> elapsed{};
+            std::atomic_bool available{};
         };
         struct {
             GLuint query = 0;
@@ -194,6 +194,17 @@ public:
         backend::TargetBufferFlags targets = {};
     };
 
+struct GLSync : public backend::HwSync {
+    using HwSync::HwSync;
+    struct State {
+        std::atomic<GLenum> status{ GL_TIMEOUT_EXPIRED };
+    };
+    struct {
+        GLsync sync;
+    } gl;
+    std::shared_ptr<State> result{ std::make_shared<GLSync::State>() };
+};
+
     OpenGLDriver(OpenGLDriver const&) = delete;
     OpenGLDriver& operator=(OpenGLDriver const&) = delete;
 
@@ -251,6 +262,9 @@ private:
     HandleArena mHandleArena;
 
     backend::HandleBase::HandleId allocateHandle(size_t size) noexcept;
+
+    template<typename D, typename ... ARGS>
+    backend::Handle<D> initHandle(ARGS&& ... args) noexcept;
 
     template<typename D, typename B, typename ... ARGS>
     typename std::enable_if<std::is_base_of<B, D>::value, D>::type*

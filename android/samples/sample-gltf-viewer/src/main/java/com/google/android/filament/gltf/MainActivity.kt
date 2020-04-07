@@ -23,6 +23,7 @@ import android.view.Choreographer
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.SurfaceView
+import com.google.android.filament.View
 import com.google.android.filament.utils.KtxLoader
 import com.google.android.filament.utils.ModelViewer
 import com.google.android.filament.utils.Utils
@@ -65,6 +66,12 @@ class MainActivity : Activity() {
         val options = modelViewer.view.dynamicResolutionOptions
         options.enabled = true;
         modelViewer.view.dynamicResolutionOptions = options;
+
+        modelViewer.view.ambientOcclusion = View.AmbientOcclusion.SSAO
+
+        val bloom = modelViewer.view.bloomOptions
+        bloom.enabled = true;
+        modelViewer.view.bloomOptions = bloom
     }
 
     private fun createRenderables() {
@@ -127,7 +134,7 @@ class MainActivity : Activity() {
                 updateBoneMatrices()
             }
 
-            modelViewer.render()
+            modelViewer.render(frameTimeNanos)
         }
     }
 

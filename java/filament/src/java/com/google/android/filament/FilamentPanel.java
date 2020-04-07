@@ -136,7 +136,7 @@ public class FilamentPanel extends JPanel implements FilamentTarget {
      */
     public boolean beginFrame(@NonNull Engine engine, @NonNull Renderer renderer) {
         ensureSurface(engine);
-        return renderer.beginFrame(mSwapChain);
+        return renderer.beginFrame(mSwapChain, 0L);
     }
 
 
