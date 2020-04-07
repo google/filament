@@ -247,7 +247,6 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         // TODO: use the framegraph for the shadow passes
         RenderPass shadowMapPass = pass;
         view.renderShadowMaps(engine, driver, shadowMapPass);
-        driver.flush(); // Kick the GPU since we're done with this render target
         engine.flush(); // Wake-up the driver thread
     }
 

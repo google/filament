@@ -39,6 +39,9 @@ TimerQueryNative::TimerQueryNative(OpenGLContext& context)
 
 TimerQueryNative::~TimerQueryNative() = default;
 
+void TimerQueryNative::flush() {
+}
+
 void TimerQueryNative::beginTimeElapsedQuery(GLTimerQuery* query) {
     gl.beginQuery(GL_TIME_ELAPSED, query->gl.query);
     CHECK_GL_ERROR(utils::slog.e)
@@ -107,32 +110,44 @@ void TimerQueryFence::enqueue(TimerQueryFence::Job&& job) {
     mCondition.notify_one();
 }
 
+void TimerQueryFence::flush() {
+    // Use calls to flush() as a proxy for when the GPU work started.
+    GLTimerQuery* query = mActiveQuery;
+    if (query) {
+        auto now = clock::now().time_since_epoch().count();
+        query->gl.emulation->elapsed.store(now, std::memory_order_relaxed);
+        //SYSTRACE_CONTEXT();
+        //SYSTRACE_ASYNC_BEGIN("gpu", query->gl.query);
+    }
+}
+
 void TimerQueryFence::beginTimeElapsedQuery(GLTimerQuery* query) {
-    Platform::Fence* fence = mPlatform.createFence();
-    if (!query->gl.emulation) {
+    assert(!mActiveQuery);
+    // We can't use a fence to figure out when a GPU operation starts (only when it finishes)
+    // so instead, we use when glFlush() was issued as a proxy.
+    if (UTILS_UNLIKELY(!query->gl.emulation)) {
         query->gl.emulation = std::make_shared<GLTimerQuery::State>();
     }
     query->gl.emulation->available.store(false);
-    std::weak_ptr<GLTimerQuery::State> weak = query->gl.emulation;
-    push([&platform = mPlatform, fence, weak]() {
-        auto emulation = weak.lock();
-        if (emulation) {
-            platform.waitFence(fence, FENCE_WAIT_FOR_EVER);
-            emulation->elapsed = clock::now().time_since_epoch().count();
-        }
-        platform.destroyFence(fence);
-    });
+    mActiveQuery = query;
 }
 
 void TimerQueryFence::endTimeElapsedQuery(GLTimerQuery* query) {
+    assert(mActiveQuery);
     Platform::Fence* fence = mPlatform.createFence();
     std::weak_ptr<GLTimerQuery::State> weak = query->gl.emulation;
+    mActiveQuery = nullptr;
+    //uint32_t cookie = cookie = query->gl.query;
     push([&platform = mPlatform, fence, weak]() {
         auto emulation = weak.lock();
         if (emulation) {
             platform.waitFence(fence, FENCE_WAIT_FOR_EVER);
-            emulation->elapsed = clock::now().time_since_epoch().count() - emulation->elapsed;
+            auto now = clock::now().time_since_epoch().count();
+            auto then = emulation->elapsed.load(std::memory_order_relaxed);
+            emulation->elapsed.store(now - then, std::memory_order_relaxed);
             emulation->available.store(true);
+            //SYSTRACE_CONTEXT();
+            //SYSTRACE_ASYNC_END("gpu", cookie);
         }
         platform.destroyFence(fence);
     });
@@ -151,6 +166,9 @@ uint64_t TimerQueryFence::queryResult(GLTimerQuery* query) {
 TimerQueryFallback::TimerQueryFallback() = default;
 
 TimerQueryFallback::~TimerQueryFallback() = default;
+
+void TimerQueryFallback::flush() {
+}
 
 void TimerQueryFallback::beginTimeElapsedQuery(TimerQueryInterface::GLTimerQuery* query) {
     if (!query->gl.emulation) {
