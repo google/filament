@@ -55,7 +55,7 @@ namespace details {
 
 FRenderer::FRenderer(FEngine& engine) :
         mEngine(engine),
-        mFrameSkipper(engine, 2),
+        mFrameSkipper(engine, 1u),
         mFrameInfoManager(engine),
         mIsRGB8Supported(false),
         mPerRenderPassArena(engine.getPerRenderPassAllocator())

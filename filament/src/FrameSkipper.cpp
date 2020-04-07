@@ -25,7 +25,7 @@ using namespace utils;
 using namespace backend;
 
 FrameSkipper::FrameSkipper(FEngine& engine, size_t latency) noexcept
-        : mEngine(engine), mLast((uint32_t)std::max(latency, size_t(1)) - 1) {
+        : mEngine(engine), mLast(latency) {
     assert(latency <= MAX_FRAME_LATENCY);
 }
 
@@ -57,9 +57,7 @@ bool FrameSkipper::beginFrame() noexcept {
 }
 
 void FrameSkipper::endFrame() noexcept {
-    auto& driver = mEngine.getDriverApi();
-    auto sync = driver.createSync();
-    mDelayedSyncs[mLast] = sync;
+    mDelayedSyncs[mLast] = mEngine.getDriverApi().createSync();
 }
 
 

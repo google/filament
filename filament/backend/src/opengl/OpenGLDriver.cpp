@@ -1030,7 +1030,7 @@ void OpenGLDriver::createSyncR(Handle<HwSync> fh, int) {
 
     // check the status of the sync once a frame, since we must do this from our thread
     std::weak_ptr<GLSync::State> weak = f->result;
-    whenFrameBegins([sync = f->gl.sync, weak]() -> bool {
+    runEveryNowAndThen([sync = f->gl.sync, weak]() -> bool {
         auto result = weak.lock();
         if (result) {
             GLenum status = glClientWaitSync(sync, 0, 0u);
@@ -1971,7 +1971,7 @@ void OpenGLDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
     GLTimerQuery* tq = handle_cast<GLTimerQuery*>(tqh);
     mTimerQueryImpl->endTimeElapsedQuery(tq);
 
-    whenFrameBegins([this, tq]() -> bool {
+    runEveryNowAndThen([this, tq]() -> bool {
         if (!mTimerQueryImpl->queryResultAvailable(tq)) {
             // we need to try this one again later
             return false;
@@ -1998,7 +1998,8 @@ SyncStatus OpenGLDriver::getSyncStatus(Handle<HwSync> sh) {
     if (!s->result) {
         return SyncStatus::NOT_SIGNALED;
     }
-    switch (s->result->status.load(std::memory_order_relaxed)) {
+    auto status = s->result->status.load(std::memory_order_relaxed);
+    switch (status) {
         case GL_CONDITION_SATISFIED:
         case GL_ALREADY_SIGNALED:
             return SyncStatus::SIGNALED;
@@ -2663,8 +2664,8 @@ void OpenGLDriver::whenGpuCommandsComplete(std::function<void()> fn) noexcept {
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-void OpenGLDriver::whenFrameBegins(std::function<bool()> fn) noexcept {
-    mFrameBeginsOps.push_back(std::move(fn));
+void OpenGLDriver::runEveryNowAndThen(std::function<bool()> fn) noexcept {
+    mEveryNowAndThenOps.push_back(std::move(fn));
 }
 
 void OpenGLDriver::executeGpuCommandsCompleteOps() noexcept {
@@ -2687,8 +2688,8 @@ void OpenGLDriver::executeGpuCommandsCompleteOps() noexcept {
     }
 }
 
-void OpenGLDriver::executeFrameBeginsOps() noexcept {
-    auto& v = mFrameBeginsOps;
+void OpenGLDriver::executeEveryNowAndThenOps() noexcept {
+    auto& v = mEveryNowAndThenOps;
     auto it = v.begin();
     while (it != v.end()) {
         if ((*it)()) {
@@ -2708,7 +2709,7 @@ void OpenGLDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId,
     auto& gl = mContext;
     insertEventMarker("beginFrame");
     executeGpuCommandsCompleteOps();
-    executeFrameBeginsOps();
+    executeEveryNowAndThenOps();
     if (UTILS_UNLIKELY(!mExternalStreams.empty())) {
         OpenGLPlatform& platform = mPlatform;
         for (GLTexture const* t : mExternalStreams) {
@@ -2732,6 +2733,7 @@ void OpenGLDriver::endFrame(uint32_t frameId) {
     //SYSTRACE_NAME("glFinish");
     //glFinish();
     //executeGpuCommandsCompleteOps();
+    executeEveryNowAndThenOps();
     insertEventMarker("endFrame");
 }
 
@@ -2749,10 +2751,10 @@ void OpenGLDriver::finish(int) {
     glFinish();
     mTimerQueryImpl->flush();
     executeGpuCommandsCompleteOps();
-    executeFrameBeginsOps();
+    executeEveryNowAndThenOps();
     // since we executed a glFinish(), all pending tasks should be done
     assert(mGpuCommandCompleteOps.empty());
-    assert(mFrameBeginsOps.empty());
+    assert(mEveryNowAndThenOps.empty());
 }
 
 UTILS_NOINLINE
