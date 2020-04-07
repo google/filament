@@ -66,9 +66,6 @@ float SpecularAO_Cones(float NoV, float visibility, float roughness) {
     float ao = sphericalCapsIntersection(cosAv, cosAs, 0.5 * cosB + 0.5) / (1.0 - cosAs);
     // Smoothly kill specular AO when entering the perceptual roughness range [0.1..0.3]
     // Without this, specular AO can remove all reflections, which looks bad on metals
-    if (fract(getUserTime().x) < 0.5)
-    return SpecularAO_Lagarde(NoV, visibility, roughness);
-    else
     return mix(1.0, ao, smoothstep(0.01, 0.09, roughness));
 #else
     return SpecularAO_Lagarde(NoV, visibility, roughness);
