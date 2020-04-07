@@ -143,6 +143,8 @@ export class RenderableManager$Builder {
             ib: IndexBuffer): RenderableManager$Builder;
     public geometryOffset(slot: number, ptype: RenderableManager$PrimitiveType, vb: VertexBuffer,
             ib: IndexBuffer, offset: number, count: number): RenderableManager$Builder;
+    public geometryMinMax(slot: number, ptype: RenderableManager$PrimitiveType, vb: VertexBuffer,
+            ib: IndexBuffer, offset: number, minIndex: number, maxIndex: number, count: number): RenderableManager$Builder;
     public material(geo: number, minstance: MaterialInstance): RenderableManager$Builder;
     public boundingBox(box: Box): RenderableManager$Builder;
     public layerMask(select: number, values: number): RenderableManager$Builder;
