@@ -353,7 +353,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::opaqueBlit(FrameGraph& fg,
 
                 data.output = builder.createTexture("scaled output", outDesc);
                 data.output = builder.write(data.output);
-                data.drt = builder.createRenderTarget("Scaled Targed", {
+                data.drt = builder.createRenderTarget("Scaled Target", {
                         .attachments = { data.output } });
             },
             [=](FrameGraphPassResources const& resources, auto const& data, DriverApi& driver) {

@@ -36,9 +36,12 @@ struct FrameInfo {
     using duration = std::chrono::duration<float>;
     duration frameTime{};            // frame period
     duration denoisedFrameTime{};    // frame period (median filter)
-    float workLoad{};               // instant workload (from denoised frame time)
-    float smoothedWorkLoad{};       // filtered workload
     bool valid = false;
+    float scale = 1.0f;
+    struct {
+        float integral{};
+        float error{};
+    } pid;
 };
 
 class FrameInfoManager {
@@ -49,10 +52,10 @@ public:
     using duration = FrameInfo::duration;
 
     struct Config {
-        float targetFrameTime;
+        duration targetFrameTime;
         float headRoomRatio;
         float oneOverTau;
-        size_t historySize;
+        uint32_t historySize;
     };
 
     explicit FrameInfoManager(details::FEngine& engine);
@@ -79,7 +82,7 @@ private:
     uint32_t mLast = 0;
 
     std::array<FrameInfo, MAX_FRAMETIME_HISTORY> mFrameTimeHistory;
-    size_t mFrameTimeHistorySize = 0;
+    uint32_t mFrameTimeHistorySize = 0;
 };
 
 
