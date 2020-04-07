@@ -38,8 +38,13 @@ bool loadLibrary() {
     // executable lives in. This allows MacOS users to run Vulkan-based Filament apps from anywhere.
     const Path executableFolder = Path::getCurrentExecutable().getParent();
     const Path dylibPath = executableFolder.concat(VKLIBRARY_PATH);
-    const Path jsonPath = executableFolder.concat("MoltenVK_icd.json");
-    setenv("VK_ICD_FILENAMES", jsonPath.c_str(), 1);
+
+    // Provide a value for VK_ICD_FILENAMES only if it has not already been set.
+    const char* icd = getenv("VK_ICD_FILENAMES");
+    if (icd == nullptr) {
+        const Path jsonPath = executableFolder.concat("MoltenVK_icd.json");
+        setenv("VK_ICD_FILENAMES", jsonPath.c_str(), 1);
+    }
 #else
     const Path dylibPath = FILAMENT_VKLIBRARY_PATH;
 #endif
