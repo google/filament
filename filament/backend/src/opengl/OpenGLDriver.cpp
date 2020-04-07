@@ -2741,11 +2741,13 @@ void OpenGLDriver::flush(int) {
     if (!gl.bugs.disable_glFlush) {
         glFlush();
     }
+    mTimerQueryImpl->flush();
 }
 
 void OpenGLDriver::finish(int) {
     DEBUG_MARKER()
     glFinish();
+    mTimerQueryImpl->flush();
     executeGpuCommandsCompleteOps();
     executeFrameBeginsOps();
     // since we executed a glFinish(), all pending tasks should be done

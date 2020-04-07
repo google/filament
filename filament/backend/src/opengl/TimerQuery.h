@@ -41,6 +41,7 @@ protected:
 
 public:
     virtual ~TimerQueryInterface();
+    virtual void flush() = 0;
     virtual void beginTimeElapsedQuery(GLTimerQuery* query) = 0;
     virtual void endTimeElapsedQuery(GLTimerQuery* query) = 0;
     virtual bool queryResultAvailable(GLTimerQuery* query) = 0;
@@ -52,6 +53,7 @@ public:
     explicit TimerQueryNative(OpenGLContext& context);
     ~TimerQueryNative() override;
 private:
+    void flush() override;
     void beginTimeElapsedQuery(GLTimerQuery* query) override;
     void endTimeElapsedQuery(GLTimerQuery* query) override;
     bool queryResultAvailable(GLTimerQuery* query) override;
@@ -65,6 +67,7 @@ public:
     ~TimerQueryFence() override;
 private:
     using Job = std::function<void()>;
+    void flush() override;
     void beginTimeElapsedQuery(GLTimerQuery* query) override;
     void endTimeElapsedQuery(GLTimerQuery* query) override;
     bool queryResultAvailable(GLTimerQuery* query) override;
@@ -82,6 +85,7 @@ private:
     mutable utils::Condition mCondition;
     std::vector<Job> mQueue;
     bool mExitRequested = false;
+    GLTimerQuery* mActiveQuery = nullptr;
 };
 
 class TimerQueryFallback : public TimerQueryInterface {
@@ -89,6 +93,7 @@ public:
     explicit TimerQueryFallback();
     ~TimerQueryFallback() override;
 private:
+    void flush() override;
     void beginTimeElapsedQuery(GLTimerQuery* query) override;
     void endTimeElapsedQuery(GLTimerQuery* query) override;
     bool queryResultAvailable(GLTimerQuery* query) override;

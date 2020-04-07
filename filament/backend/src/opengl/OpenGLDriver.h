@@ -125,7 +125,7 @@ public:
 
     struct GLTimerQuery : public backend::HwTimerQuery {
         struct State {
-            uint64_t elapsed = 0;
+            std::atomic<uint64_t> elapsed{};
             std::atomic_bool available{};
         };
         struct {
