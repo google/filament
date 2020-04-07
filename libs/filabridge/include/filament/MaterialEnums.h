@@ -145,15 +145,24 @@ static constexpr size_t MAX_CUSTOM_ATTRIBUTES = 8;
 /**
  * Material domains
  */
-enum MaterialDomain : uint8_t {
+enum class MaterialDomain : uint8_t {
     SURFACE         = 0, //!< shaders applied to renderables
     POST_PROCESS    = 1, //!< shaders applied to rendered buffers
 };
 
 /**
+ * Specular occlusion
+ */
+enum class SpecularAmbientOcclusion : uint8_t {
+    NONE            = 0, //!< no specular occlusion
+    SIMPLE          = 1, //!< simple specular occlusion
+    BENT_NORMALS    = 2, //!< more accurate specular occlusion, requires bent normals
+};
+
+/**
  * Refraction
  */
-enum RefractionMode : uint8_t {
+enum class RefractionMode : uint8_t {
     NONE            = 0, //!< no refraction
     CUBEMAP         = 1, //!< refracted rays go to the ibl cubemap
     SCREEN_SPACE    = 2, //!< refracted rays go to screen space
@@ -162,7 +171,7 @@ enum RefractionMode : uint8_t {
 /**
  * Refraction type
  */
-enum RefractionType : uint8_t {
+enum class RefractionType : uint8_t {
     SOLID           = 0, //!< refraction through solid objects (e.g. a sphere)
     THIN            = 1, //!< refraction through thin objects (e.g. window)
 };

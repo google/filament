@@ -210,12 +210,12 @@ MaterialBuilder& MaterialBuilder::materialDomain(MaterialDomain materialDomain) 
     return *this;
 }
 
-MaterialBuilder& MaterialBuilder::materialRefraction(RefractionMode refraction) noexcept {
+MaterialBuilder& MaterialBuilder::refractionMode(RefractionMode refraction) noexcept {
     mRefractionMode = refraction;
     return *this;
 }
 
-MaterialBuilder& MaterialBuilder::materialRefractionType(RefractionType refractionType) noexcept {
+MaterialBuilder& MaterialBuilder::refractionType(RefractionType refractionType) noexcept {
     mRefractionType = refractionType;
     return *this;
 }
@@ -303,7 +303,7 @@ MaterialBuilder& MaterialBuilder::multiBounceAmbientOcclusion(bool multiBounceAO
     return *this;
 }
 
-MaterialBuilder& MaterialBuilder::specularAmbientOcclusion(bool specularAO) noexcept {
+MaterialBuilder& MaterialBuilder::specularAmbientOcclusion(SpecularAmbientOcclusion specularAO) noexcept {
     mSpecularAO = specularAO;
     mSpecularAOSet = true;
     return *this;

@@ -84,7 +84,6 @@ public:
      */
     void setIndirectLight(IndirectLight const* ibl) noexcept;
 
-
     /**
      * Adds an Entity to the Scene.
      *
