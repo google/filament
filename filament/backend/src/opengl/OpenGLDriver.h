@@ -405,10 +405,10 @@ private:
     void executeGpuCommandsCompleteOps() noexcept;
     std::vector<std::pair<GLsync, std::function<void()>>> mGpuCommandCompleteOps;
 
-    // tasks regularly executed on the main thread at frame begin time until they return true
-    void whenFrameBegins(std::function<bool()> fn) noexcept;
-    void executeFrameBeginsOps() noexcept;
-    std::vector<std::function<bool()>> mFrameBeginsOps;
+    // tasks regularly executed on the main thread at until they return true
+    void runEveryNowAndThen(std::function<bool()> fn) noexcept;
+    void executeEveryNowAndThenOps() noexcept;
+    std::vector<std::function<bool()>> mEveryNowAndThenOps;
 
     // timer query implementation
     TimerQueryInterface* mTimerQueryImpl = nullptr;
