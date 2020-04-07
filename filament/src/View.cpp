@@ -143,7 +143,7 @@ float2 FView::updateScale(FrameInfo const& info) noexcept {
         }
 
         // scaling factor we need to apply on the whole surface
-        const float scale = (mScale.x * mScale.y) / info.smoothedWorkLoad;
+        const float scale = info.scale;
         const float w = mViewport.width;
         const float h = mViewport.height;
         if (scale < 1.0f && !options.homogeneousScaling) {

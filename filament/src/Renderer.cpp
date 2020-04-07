@@ -43,6 +43,8 @@
 #include <assert.h>
 #include <private/filament/SibGenerator.h>
 
+// this helps visualize what dynamic-scaling is doing
+#define DEBUG_DYNAMIC_SCALING false
 
 using namespace filament::math;
 using namespace utils;
@@ -287,7 +289,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     const Handle<HwRenderTarget> viewRenderTarget = getRenderTarget(view);
     FrameGraphRenderTargetHandle fgViewRenderTarget = fg.import<FrameGraphRenderTarget>(
-            "viewRenderTarget",{ .viewport = vp, .clearFlags = clearFlags },{
+            "viewRenderTarget", {
+                .viewport = DEBUG_DYNAMIC_SCALING ? svp : vp, .clearFlags = clearFlags }, {
                     .target = viewRenderTarget,
                     .params = {
                             .flags = { .discardStart = discardedFlags },
@@ -725,7 +728,7 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
     // This need to occur after the backend beginFrame() because some backends need to start
     // a command buffer before creating a fence.
     mFrameInfoManager.beginFrame({
-            .targetFrameTime = float(mFrameRateOptions.interval) / mDisplayInfo.refreshRate,
+            .targetFrameTime = FrameInfo::duration{ float(mFrameRateOptions.interval) / mDisplayInfo.refreshRate },
             .headRoomRatio = mFrameRateOptions.headRoomRatio,
             .oneOverTau = mFrameRateOptions.scaleRate,
             .historySize = mFrameRateOptions.history
