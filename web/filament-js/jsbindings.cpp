@@ -650,6 +650,17 @@ class_<RenderableBuilder>("RenderableManager$Builder")
             size_t count), {
         return &builder->geometry(index, type, vertices, indices, offset, count); })
 
+    .BUILDER_FUNCTION("geometryMinMax", RenderableBuilder, (RenderableBuilder* builder,
+            size_t index,
+            RenderableManager::PrimitiveType type,
+            VertexBuffer* vertices,
+            IndexBuffer* indices,
+            size_t offset,
+            size_t minIndex,
+            size_t maxIndex,
+            size_t count), {
+        return &builder->geometry(index, type, vertices, indices, offset, minIndex, maxIndex, count); })
+
     .BUILDER_FUNCTION("material", RenderableBuilder, (RenderableBuilder* builder,
             size_t index, MaterialInstance* mi), {
         return &builder->material(index, mi); })
