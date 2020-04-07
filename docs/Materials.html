@@ -696,7 +696,7 @@ and with (right)</div></div></center>
 
 
 The <code>bentNormal</code> property defines the average unoccluded direction at a point on the surface. It is
-used to improve the accuracy of indirect lighting. Bent normals also improve the quality of
+used to improve the accuracy of indirect lighting. Bent normals can also improve the quality of
 specular ambient occlusion (see section  <a href="#toc4.2.24">4.2.24</a> about
 <code>specularAmbientOcclusion</code>).
 
@@ -710,11 +710,6 @@ instance.
 
 </p><center><div class="image" style><a href="images/material_bent_normal.gif" target="_blank"><img class="markdeep" src="images/material_bent_normal.gif"></a><div class="imagecaption"><a class="target" name="figure_bentnormalmapped">&#xA0;</a><b style="font-style:normal;">Figure&#xA0;17:</b> Example of a model rendered with and without a bent normal map. Both
 versions use the same ambient occlusion map.</div></div></center>
-
-<p></p><p>
-
-</p><div class="admonition warning">Using a bent normal map increases the runtime cost of the material, particularly when
-    <code>specularAmbientOcclusion</code> is turned on.</div>
 
 <p></p>
 <a class="target" name="clearcoatnormal">&#xA0;</a><a class="target" name="materialmodels/litmodel/clearcoatnormal">&#xA0;</a><a class="target" name="toc3.1.15">&#xA0;</a><h3>Clear coat normal</h3>
@@ -1952,17 +1947,24 @@ occclusion enabled and disabled.</div></div></center>
 <p>
 
 
-</p><dl><dt>Type</dt><dd><p>     <code>boolean</code>
+</p><dl><dt>Type</dt><dd><p>     <code>string</code>
 
-</p></dd><dt>Value</dt><dd><p>      <code>true</code> or <code>false</code>. Defaults to <code>false</code> on mobile, <code>true</code> on desktop.
+</p></dd><dt>Value</dt><dd><p>      <code>none</code>, <code>simple</code> or <code>bentNormals</code>. Defaults to <code>none</code> on mobile, <code>simple</code> on desktop. For
+      compatibility reasons, <code>true</code> and <code>false</code> are also accepted and map respectively to <code>simple</code>
+      and <code>none</code>.
 
 </p></dd><dt>Description</dt><dd><p>     Static ambient occlusion maps and dynamic ambient occlusion (SSAO, etc.) apply to diffuse
-     indirect lighting. When setting this property to true, a new ambient occlusion term is
-     derived from the surface roughness and applied to specular indirec lighting. This effect
-     helps remove unwanted specular reflections as shown in <a href="#figure_specularao">figure&#xA0;37</a>.
+     indirect lighting. When setting this property to other than <code>none</code>, a new ambient occlusion
+     term is derived from the surface roughness and applied to specular indirect lighting.
+     This effect helps remove unwanted specular reflections as shown in <a href="#figure_specularao">figure&#xA0;37</a>.
+     When this value is set to <code>simple</code>, Filament uses a cheap but approximate method of computing
+     the specular ambient occlusion term. If this value is set to <code>bentNormals</code>, Filament will use
+     a much more accurate but much more expensive method. <code>bentNormals</code> only works if the material
+     sets the <code>bentNormal</code> property inside the fragment shader. If that property isn&apos;t set,
+     <code>bentNormals</code> will behave like <code>simple</code>.
 
 </p></dd></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
-<span class="line">    specularAmbientOcclusion : true</span>
+<span class="line">    specularAmbientOcclusion : simple</span>
 <span class="line">}</span></code></pre><p>
 
 </p><center><div class="image" style><a href="images/screenshot_specular_ao.gif" target="_blank"><img class="markdeep" src="images/screenshot_specular_ao.gif"></a><div class="imagecaption"><a class="target" name="figure_specularao">&#xA0;</a><b style="font-style:normal;">Figure&#xA0;37:</b> Comparison of specular ambient occlusion on and off. The effect is
@@ -1979,7 +1981,7 @@ particularly visible under the hose.</div></div></center>
 
 </p></dd><dt>Description</dt><dd><p>     Reduces specular aliasing and preserves the shape of specular highlights as an object moves
      away from the camera. This anti-aliasing solution is particularly effective on glossy materials
-     (low roughness) but increases the cost of the material. The strengthf of the anti-aliasing
+     (low roughness) but increases the cost of the material. The strength of the anti-aliasing
      effect can be controlled using two other properties: <code>specularAntiAliasingVariance</code> and
      <code>specularAntiAliasingThreshold</code>.
 

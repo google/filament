@@ -362,7 +362,7 @@ static void setup(Engine* engine, View* view, Scene* scene) {
             .name("DefaultMaterial")
             .material(shader.c_str())
             .multiBounceAmbientOcclusion(true)
-            .specularAmbientOcclusion(true)
+            .specularAmbientOcclusion(MaterialBuilder::SpecularAmbientOcclusion::BENT_NORMALS)
             .shading(Shading::LIT);
 
     if (hasUV) {

@@ -84,6 +84,13 @@ Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderName(JN
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderMaterialDomain(JNIEnv* env,
+        jclass, jlong nativeBuilder, jint domain) {
+    auto builder = (MaterialBuilder*) nativeBuilder;
+    builder->materialDomain((MaterialBuilder::MaterialDomain) domain);
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderShading(JNIEnv*,
         jclass, jlong nativeBuilder, jint shading) {
     auto builder = (MaterialBuilder*) nativeBuilder;
@@ -246,6 +253,7 @@ Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderSpecula
     builder->specularAntiAliasingThreshold(threshold);
 }
 
+
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderClearCoatIorChange(
         JNIEnv*, jclass, jlong nativeBuilder, jboolean clearCoatIorChange) {
@@ -269,9 +277,23 @@ Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderMultiBo
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderSpecularAmbientOcclusion(
-        JNIEnv*, jclass, jlong nativeBuilder, jboolean specularAO) {
+        JNIEnv*, jclass, jlong nativeBuilder, jint specularAO) {
     auto builder = (MaterialBuilder*) nativeBuilder;
-    builder->specularAmbientOcclusion(specularAO);
+    builder->specularAmbientOcclusion((MaterialBuilder::SpecularAmbientOcclusion) specularAO);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderRefractionMode(JNIEnv* env,
+        jclass, jlong nativeBuilder, jint mode) {
+    auto builder = (MaterialBuilder*) nativeBuilder;
+    builder->refractionMode((MaterialBuilder::RefractionMode) mode);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderRefractionType(JNIEnv* env,
+        jclass, jlong nativeBuilder, jint type) {
+    auto builder = (MaterialBuilder*) nativeBuilder;
+    builder->refractionType((MaterialBuilder::RefractionType) type);
 }
 
 extern "C" JNIEXPORT void JNICALL

@@ -408,7 +408,7 @@ and with (right)](images/screenshot_normal_mapping.jpg)
 ### Bent normal
 
 The `bentNormal` property defines the average unoccluded direction at a point on the surface. It is
-used to improve the accuracy of indirect lighting. Bent normals also improve the quality of
+used to improve the accuracy of indirect lighting. Bent normals can also improve the quality of
 specular ambient occlusion (see section [Lighting: specularAmbientOcclusion] about
 `specularAmbientOcclusion`).
 
@@ -418,10 +418,6 @@ instance.
 
 ![Figure [bentNormalMapped]: Example of a model rendered with and without a bent normal map. Both
 versions use the same ambient occlusion map.](images/material_bent_normal.gif)
-
-!!! Warning
-    Using a bent normal map increases the runtime cost of the material, particularly when
-    `specularAmbientOcclusion` is turned on.
 
 ### Clear coat normal
 
@@ -1537,20 +1533,27 @@ occclusion enabled and disabled.](images/screenshot_multi_bounce_ao.gif)
 ### Lighting: specularAmbientOcclusion
 
 Type
-:    `boolean`
+:    `string`
 
 Value
-:     `true` or `false`. Defaults to `false` on mobile, `true` on desktop.
+:     `none`, `simple` or `bentNormals`. Defaults to `none` on mobile, `simple` on desktop. For
+      compatibility reasons, `true` and `false` are also accepted and map respectively to `simple`
+      and `none`.
 
 Description
 :    Static ambient occlusion maps and dynamic ambient occlusion (SSAO, etc.) apply to diffuse
-     indirect lighting. When setting this property to true, a new ambient occlusion term is
-     derived from the surface roughness and applied to specular indirec lighting. This effect
-     helps remove unwanted specular reflections as shown in figure [specularAO].
+     indirect lighting. When setting this property to other than `none`, a new ambient occlusion
+     term is derived from the surface roughness and applied to specular indirect lighting.
+     This effect helps remove unwanted specular reflections as shown in figure [specularAO].
+     When this value is set to `simple`, Filament uses a cheap but approximate method of computing
+     the specular ambient occlusion term. If this value is set to `bentNormals`, Filament will use
+     a much more accurate but much more expensive method. `bentNormals` only works if the material
+     sets the `bentNormal` property inside the fragment shader. If that property isn't set,
+     `bentNormals` will behave like `simple`.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
 material {
-    specularAmbientOcclusion : true
+    specularAmbientOcclusion : simple
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -1568,7 +1571,7 @@ Value
 Description
 :    Reduces specular aliasing and preserves the shape of specular highlights as an object moves
      away from the camera. This anti-aliasing solution is particularly effective on glossy materials
-     (low roughness) but increases the cost of the material. The strengthf of the anti-aliasing
+     (low roughness) but increases the cost of the material. The strength of the anti-aliasing
      effect can be controlled using two other properties: `specularAntiAliasingVariance` and
      `specularAntiAliasingThreshold`.
 

@@ -5,7 +5,17 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release
 
-- gltfio: fixed incorrect cone angles with lights
+- gltfio: fixed incorrect cone angles with lights.
+- Specular ambient occlusion now offers 3 modes: off, simple (default on desktop) and bent normals.
+  The latter is more accurate but more expensive and requires a bent normal to be specified in the
+  material. If selected and not bent normal is specified, Filament falls back to the simple mode.
+- Specular ambient occlusion from bent normals now smoothly disappears as roughness goes from 0.3
+  to 0.1. Specular ambient occlusion can completely remove specular light which looks bad on glossy
+  metals. Use the simple specular occlusion mode for glossy metals instead.
+- Refraction can now be set on `MaterialBuilder` from Java.
+- Refraction mode and type can now be set by calling `MaterialBuilder::refractionMode()`.
+  and `MaterialBuilder::refractionType()` instad of `materialRefraction()` and
+  `materialRefractionType()` (️⚠ API change).
 
 ## v1.5.2
 
