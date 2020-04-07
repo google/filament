@@ -142,7 +142,6 @@ struct FAssetLoader : public AssetLoader {
             bool vertexColor);
     void addTextureBinding(MaterialInstance* materialInstance, const char* parameterName,
             const cgltf_texture* srcTexture, bool srgb);
-    void importSkinningData(Skin& dstSkin, const cgltf_skin& srcSkin);
     bool primitiveHasVertexColor(const cgltf_primitive* inPrim) const;
 
     static LightManager::Type getLightType(const cgltf_light_type type);
@@ -241,23 +240,6 @@ void FAssetLoader::createAsset(const cgltf_data* srcAsset) {
     if (mError) {
         delete mResult;
         mResult = nullptr;
-    }
-
-    // Copy over joint lists (references to TransformManager components) and create buffer bindings
-    // for inverseBindMatrices.
-    mResult->mSkins.resize(srcAsset->skins_count);
-    for (cgltf_size i = 0, len = srcAsset->skins_count; i < len; ++i) {
-        importSkinningData(mResult->mSkins[i], srcAsset->skins[i]);
-    }
-
-    // For each skin, build a list of renderables that it affects.
-    for (cgltf_size i = 0, len = srcAsset->nodes_count; i < len; ++i) {
-        const cgltf_node& node = srcAsset->nodes[i];
-        if (node.skin) {
-            int skinIndex = node.skin - &srcAsset->skins[0];
-            Entity entity = mResult->mNodeMap[&node];
-            mResult->mSkins[skinIndex].targets.push_back(entity);
-        }
     }
 
     // Find every unique resource URI and store a pointer to any of the cgltf-owned cstrings
@@ -987,26 +969,6 @@ void FAssetLoader::addTextureBinding(MaterialInstance* materialInstance, const c
         .srgb = srgb
     });
     mResult->mDependencyGraph.addEdge(materialInstance, parameterName);
-}
-
-void FAssetLoader::importSkinningData(Skin& dstSkin, const cgltf_skin& srcSkin) {
-    if (srcSkin.name) {
-        dstSkin.name = srcSkin.name;
-    }
-    dstSkin.joints.resize(srcSkin.joints_count);
-    const auto& nodeMap = mResult->mNodeMap;
-    for (cgltf_size i = 0, len = srcSkin.joints_count; i < len; ++i) {
-        // TODO: We've seen models with joint nodes that do not belong to the scene's node graph.
-        // e.g. BrainStem after Draco compression. That's why we have a fallback here. We should
-        // probably simply create an Entity for every glTF node, period. (regardless of hierarchy)
-        // https://github.com/CesiumGS/gltf-pipeline/issues/532
-        auto iter = nodeMap.find(srcSkin.joints[i]);
-        if (iter == nodeMap.end()) {
-            dstSkin.joints[i] = nodeMap.begin()->second;
-        } else {
-            dstSkin.joints[i] = iter->second;
-        }
-    }
 }
 
 bool FAssetLoader::primitiveHasVertexColor(const cgltf_primitive* inPrim) const {
