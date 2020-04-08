@@ -70,6 +70,7 @@ class ModelViewer : android.view.View.OnTouchListener {
     @Entity val light: Int
 
     private val uiHelper: UiHelper = UiHelper(UiHelper.ContextErrorPolicy.DONT_CHECK)
+    private lateinit var displayHelper: DisplayHelper
     private val cameraManipulator: Manipulator
     private val gestureDetector: GestureDetector
     private val renderer: Renderer
@@ -126,6 +127,7 @@ class ModelViewer : android.view.View.OnTouchListener {
 
         this.surfaceView = surfaceView
         gestureDetector = GestureDetector(surfaceView, cameraManipulator)
+        displayHelper = DisplayHelper(surfaceView.context)
         uiHelper.renderCallback = SurfaceCallback()
         uiHelper.attachTo(surfaceView)
         addDetachListener(surfaceView)
@@ -276,10 +278,11 @@ class ModelViewer : android.view.View.OnTouchListener {
         override fun onNativeWindowChanged(surface: Surface) {
             swapChain?.let { engine.destroySwapChain(it) }
             swapChain = engine.createSwapChain(surface)
-            renderer.setDisplayInfo(DisplayHelper.getDisplayInfo(surfaceView.display, Renderer.DisplayInfo()))
+            displayHelper.attach(renderer, surfaceView.display)
         }
 
         override fun onDetachedFromSurface() {
+            displayHelper.detach()
             swapChain?.let {
                 engine.destroySwapChain(it)
                 engine.flushAndWait()
