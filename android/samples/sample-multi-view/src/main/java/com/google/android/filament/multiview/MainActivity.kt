@@ -127,11 +127,13 @@ class MainActivity : Activity() {
         view2.setRenderTarget(null, View.TargetBufferFlags.NONE)
         view3.setRenderTarget(null, View.TargetBufferFlags.NONE)
 
-        // We create 4 views that show the same scene, but each has a different background color
+        // Clears are not restricted by the scissor so we want to disable clear targets
+        // except for the first view we render
+        view1.setClearTargets(false, false, false)
+        view2.setClearTargets(false, false, false)
+        view3.setClearTargets(false, false, false)
+
         view0.setClearColor(0.035f, 0.035f, 0.035f, 1.0f)
-        view1.setClearColor(0.135f, 0.035f, 0.035f, 1.0f)
-        view2.setClearColor(0.035f, 1.035f, 0.035f, 1.0f)
-        view3.setClearColor(0.035f, 0.035f, 1.035f, 1.0f)
 
         view0.camera = camera
         view1.camera = camera
