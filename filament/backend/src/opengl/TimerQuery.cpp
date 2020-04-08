@@ -114,10 +114,13 @@ void TimerQueryFence::flush() {
     // Use calls to flush() as a proxy for when the GPU work started.
     GLTimerQuery* query = mActiveQuery;
     if (query) {
-        auto now = clock::now().time_since_epoch().count();
-        query->gl.emulation->elapsed.store(now, std::memory_order_relaxed);
-        //SYSTRACE_CONTEXT();
-        //SYSTRACE_ASYNC_BEGIN("gpu", query->gl.query);
+        uint64_t elapsed = query->gl.emulation->elapsed.load(std::memory_order_relaxed);
+        if (!elapsed) {
+            uint64_t now = clock::now().time_since_epoch().count();
+            query->gl.emulation->elapsed.store(now, std::memory_order_relaxed);
+            //SYSTRACE_CONTEXT();
+            //SYSTRACE_ASYNC_BEGIN("gpu", query->gl.query);
+        }
     }
 }
 
@@ -128,6 +131,7 @@ void TimerQueryFence::beginTimeElapsedQuery(GLTimerQuery* query) {
     if (UTILS_UNLIKELY(!query->gl.emulation)) {
         query->gl.emulation = std::make_shared<GLTimerQuery::State>();
     }
+    query->gl.emulation->elapsed.store(0, std::memory_order_relaxed);
     query->gl.emulation->available.store(false);
     mActiveQuery = query;
 }
