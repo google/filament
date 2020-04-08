@@ -103,11 +103,37 @@ add_library(gltfio_resources ${DUMMY_SRC} ${RESGEN_SOURCE})
 # Build "lite" resources library, which contains only a few materials
 # ==================================================================================================
 
-set(RESOURCE_BINS
-    "${RESOURCE_DIR}/lit_opaque.filamat"
-    "${RESOURCE_DIR}/lit_fade.filamat")
+set(LITE_DIR ${CMAKE_CURRENT_BINARY_DIR}/lite)
 
-get_resgen_vars(${RESOURCE_DIR} gltfresources_lite)
+function(generate_lite_mat BLENDING)
+    set(DOUBLESIDED false)
+    set(SHADINGMODEL lit)
+    set(GENERATED_MAT "${LITE_DIR}/${SHADINGMODEL}_${BLENDING}.mat")
+    configure_file(materials/gltflite.mat.in ${GENERATED_MAT})
+    set(MATERIAL_SRCS ${MATERIAL_SRCS} ${GENERATED_MAT} PARENT_SCOPE)
+endfunction()
+
+set(MATERIAL_SRCS)
+generate_lite_mat(fade)
+generate_lite_mat(opaque)
+
+foreach (input_path ${MATERIAL_SRCS})
+    get_filename_component(basename "${input_path}" NAME_WE)
+    set(output_path "${LITE_DIR}/${basename}.filamat")
+    add_custom_command(
+            OUTPUT ${output_path}
+            COMMAND matc ${MATC_BASE_FLAGS} -o ${output_path} ${input_path}
+            MAIN_DEPENDENCY ${input_path}
+            DEPENDS matc
+            COMMENT "Compiling material ${input_path} to ${output_path}"
+    )
+endforeach()
+
+set(RESOURCE_BINS
+    "${LITE_DIR}/lit_opaque.filamat"
+    "${LITE_DIR}/lit_fade.filamat")
+
+get_resgen_vars(${LITE_DIR} gltfresources_lite)
 
 add_custom_command(
         OUTPUT ${RESGEN_OUTPUTS}
@@ -119,7 +145,7 @@ if (DEFINED RESGEN_SOURCE_FLAGS)
     set_source_files_properties(${RESGEN_SOURCE} PROPERTIES COMPILE_FLAGS ${RESGEN_SOURCE_FLAGS})
 endif()
 
-set(DUMMY_SRC "${RESOURCE_DIR}/dummy.c")
+set(DUMMY_SRC "${LITE_DIR}/dummy.c")
 add_custom_command(OUTPUT ${DUMMY_SRC} COMMAND echo "//" > ${DUMMY_SRC})
 
 add_library(gltfio_resources_lite ${DUMMY_SRC} ${RESGEN_SOURCE})
@@ -170,6 +196,6 @@ else()
     install(TARGETS gltfio_core gltfio_resources gltfio_resources_lite ARCHIVE DESTINATION lib/${DIST_DIR})
     install(DIRECTORY ${PUBLIC_HDR_DIR}/gltfio DESTINATION include)
     install(FILES ${RESOURCE_DIR}/gltfresources.h DESTINATION include/gltfio/resources)
-    install(FILES ${RESOURCE_DIR}/gltfresources_lite.h DESTINATION include/gltfio/resources)
+    install(FILES ${LITE_DIR}/gltfresources_lite.h DESTINATION include/gltfio/resources)
 
 endif()
