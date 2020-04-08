@@ -14,22 +14,36 @@
 // filament_skip_samples
 //     Exclude samples from the project. Useful to speed up compilation.
 //
+// filament_abis
+//     List of supported ABIs to build as a comma separated list. Available options are:
+//         arm64-v8a, armeabi-v7a, x86_64, x86, all
+//     Defaults to all.
+//
 // Example:
-//     ./gradlew -Pfilament_dist_dir=../dist-android-release assembleRelease
+//     ./gradlew -Pfilament_dist_dir=../dist-android-release assembleRelease -Pfilament_abis=x86
 
 buildscript {
     def filamentPath = file("../out/android-release/filament").absolutePath
     if (project.hasProperty("filament_dist_dir")) {
         filamentPath = file(project.property("filament_dist_dir")).absolutePath
     }
+
     def hasVulkan = project.hasProperty("filament_supports_vulkan")
+
+    def abis = ["arm64-v8a", "armeabi-v7a", "x86_64", "x86"]
+    if (project.hasProperty("filament_abis")) {
+        def newAbis = project.property("filament_abis").split(',')
+        if (!newAbis.contains("all")) {
+            abis = newAbis
+        }
+    }
 
     // Our minSdkVersion is 19.
     ext.versions = [
         'minSdk': 19,
         'targetSdk': 29,
         'compileSdk': 29,
-        'kotlin': '1.3.61',
+        'kotlin': '1.3.71',
         'buildTools': '29.0.3',
         'ndk': '21.0.6113669'
     ]
@@ -76,6 +90,8 @@ buildscript {
         "-Wl,-Bsymbolic-functions",
     ]
 
+    ext.abis = abis
+
     repositories {
         mavenCentral()
         google()
@@ -83,7 +99,7 @@ buildscript {
     }
 }
 
-subprojects { project ->
+subprojects {
     group = GROUP
     version = VERSION_NAME
 
@@ -91,6 +107,50 @@ subprojects { project ->
         mavenCentral()
         google()
         jcenter()
+    }
+
+    if (!name.startsWith("sample")) {
+        apply plugin: 'com.android.library'
+
+        android {
+            buildToolsVersion versions.buildTools
+            compileSdkVersion versions.compileSdk
+            ndkVersion versions.ndk
+
+            defaultConfig {
+                minSdkVersion versions.minSdk
+                targetSdkVersion versions.targetSdk
+
+                externalNativeBuild {
+                    cmake {
+                        arguments.addAll(rootProject.ext.cmakeArgs)
+                        cppFlags.addAll(rootProject.ext.cppFlags)
+                    }
+                }
+
+                ndk {
+                    abiFilters(*rootProject.ext.abis)
+                }
+            }
+
+
+            externalNativeBuild {
+                cmake {
+                    path "CMakeLists.txt"
+                }
+            }
+
+            sourceSets {
+                main {
+                    jni.srcDirs "src/main/cpp"
+                }
+            }
+
+            compileOptions {
+                sourceCompatibility JavaVersion.VERSION_1_8
+                targetCompatibility JavaVersion.VERSION_1_8
+            }
+        }
     }
 }
 

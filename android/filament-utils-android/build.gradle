@@ -1,24 +1,7 @@
-apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
 
 android {
-    buildToolsVersion versions.buildTools
-    compileSdkVersion versions.compileSdk
-    ndkVersion versions.ndk
-
-    defaultConfig {
-        minSdkVersion versions.minSdk
-        targetSdkVersion versions.targetSdk
-
-        externalNativeBuild {
-            cmake {
-                arguments.addAll(rootProject.ext.cmakeArgs)
-                cppFlags.addAll(rootProject.ext.cppFlags)
-            }
-        }
-    }
-
     flavorDimensions "functionality"
     productFlavors {
         full {
@@ -30,22 +13,10 @@ android {
         }
     }
 
-    externalNativeBuild {
-        cmake {
-            path "CMakeLists.txt"
-        }
-    }
-
     sourceSets {
         main {
-            jni.srcDirs "src/main/cpp"
             kotlin.srcDirs += "src/main/java"
         }
-    }
-
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
     }
 
     // No need to package up the following shared libs, which arise as a side effect of our

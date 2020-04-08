@@ -31,6 +31,9 @@ function print_help {
     echo "        Platform(s) to build, defaults to desktop."
     echo "        Building for iOS will automatically generate / download"
     echo "        the toolchains if needed and perform a partial desktop build."
+    echo "    -q abi1,abi2,..."
+    echo "        Where platformN is [armeabi-v7a|arm64-v8a|x86|x86_64|all]."
+    echo "        ABIs to build when the platform is Android. Defaults to all."
     echo "    -u"
     echo "        Run all unit tests, will trigger a debug build if needed."
     echo "    -v"
@@ -92,6 +95,13 @@ ISSUE_IOS_BUILD=false
 ISSUE_DESKTOP_BUILD=true
 ISSUE_WEBGL_BUILD=false
 
+# Default: all
+ABI_ARMEABI_V7A=true
+ABI_ARM64_V8A=true
+ABI_X86=true
+ABI_X86_64=true
+ABI_GRADLE_OPTION=""
+
 ISSUE_ARCHIVES=false
 BUILD_JS_DOCS=false
 
@@ -134,25 +144,25 @@ function build_desktop_target {
     local lc_target=`echo $1 | tr '[:upper:]' '[:lower:]'`
     local build_targets=$2
 
-    if [[ ! "$build_targets" ]]; then
+    if [[ ! "${build_targets}" ]]; then
         build_targets=${BUILD_CUSTOM_TARGETS}
     fi
 
-    echo "Building $lc_target in out/cmake-${lc_target}..."
+    echo "Building ${lc_target} in out/cmake-${lc_target}..."
     mkdir -p out/cmake-${lc_target}
 
     cd out/cmake-${lc_target}
 
     # On macOS, set the deployment target to 10.14.
     local name=`echo $(uname)`
-    local lc_name=`echo $name | tr '[:upper:]' '[:lower:]'`
-    if [[ "$lc_name" == "darwin" ]]; then
+    local lc_name=`echo ${name} | tr '[:upper:]' '[:lower:]'`
+    if [[ "${lc_name}" == "darwin" ]]; then
         local deployment_target="-DCMAKE_OSX_DEPLOYMENT_TARGET=10.14"
     fi
 
-    if [[ ! -d "CMakeFiles" ]] || [[ "$ISSUE_CMAKE_ALWAYS" == "true" ]]; then
+    if [[ ! -d "CMakeFiles" ]] || [[ "${ISSUE_CMAKE_ALWAYS}" == "true" ]]; then
         cmake \
-            -G "$BUILD_GENERATOR" \
+            -G "${BUILD_GENERATOR}" \
             -DIMPORT_EXECUTABLES_DIR=out \
             -DCMAKE_BUILD_TYPE=$1 \
             -DCMAKE_INSTALL_PREFIX=../${lc_target}/filament \
@@ -162,13 +172,13 @@ function build_desktop_target {
     fi
     ${BUILD_COMMAND} ${build_targets}
 
-    if [[ "$INSTALL_COMMAND" ]]; then
+    if [[ "${INSTALL_COMMAND}" ]]; then
         echo "Installing ${lc_target} in out/${lc_target}/filament..."
         ${BUILD_COMMAND} ${INSTALL_COMMAND}
     fi
 
     if [[ -d "../${lc_target}/filament" ]]; then
-        if [[ "$ISSUE_ARCHIVES" == "true" ]]; then
+        if [[ "${ISSUE_ARCHIVES}" == "true" ]]; then
             echo "Generating out/filament-${lc_target}-${LC_UNAME}.tgz..."
             cd ../${lc_target}
             tar -czvf ../filament-${lc_target}-${LC_UNAME}.tgz filament
@@ -179,11 +189,11 @@ function build_desktop_target {
 }
 
 function build_desktop {
-    if [[ "$ISSUE_DEBUG_BUILD" == "true" ]]; then
+    if [[ "${ISSUE_DEBUG_BUILD}" == "true" ]]; then
         build_desktop_target "Debug" "$1"
     fi
 
-    if [[ "$ISSUE_RELEASE_BUILD" == "true" ]]; then
+    if [[ "${ISSUE_RELEASE_BUILD}" == "true" ]]; then
         build_desktop_target "Release" "$1"
     fi
 }
@@ -191,21 +201,21 @@ function build_desktop {
 function build_webgl_with_target {
     local lc_target=`echo $1 | tr '[:upper:]' '[:lower:]'`
 
-    echo "Building WebGL $lc_target..."
+    echo "Building WebGL ${lc_target}..."
     mkdir -p out/cmake-webgl-${lc_target}
     cd out/cmake-webgl-${lc_target}
 
-    if [[ ! "$BUILD_TARGETS" ]]; then
+    if [[ ! "${BUILD_TARGETS}" ]]; then
         BUILD_TARGETS=${BUILD_CUSTOM_TARGETS}
         ISSUE_CMAKE_ALWAYS=true
     fi
 
-    if [[ ! -d "CMakeFiles" ]] || [[ "$ISSUE_CMAKE_ALWAYS" == "true" ]]; then
+    if [[ ! -d "CMakeFiles" ]] || [[ "${ISSUE_CMAKE_ALWAYS}" == "true" ]]; then
         # Apply the emscripten environment within a subshell.
         (
         source ${EMSDK}/emsdk_env.sh
         cmake \
-            -G "$BUILD_GENERATOR" \
+            -G "${BUILD_GENERATOR}" \
             -DIMPORT_EXECUTABLES_DIR=out \
             -DCMAKE_TOOLCHAIN_FILE=${EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake \
             -DCMAKE_BUILD_TYPE=$1 \
@@ -219,7 +229,7 @@ function build_webgl_with_target {
 
     if [[ -d "web/filament-js" ]]; then
 
-        if [[ "$BUILD_JS_DOCS" == "true" ]]; then
+        if [[ "${BUILD_JS_DOCS}" == "true" ]]; then
             echo "Generating JavaScript documentation..."
             local DOCS_FOLDER="web/docs"
             local DOCS_SCRIPT="../../web/docs/build.py"
@@ -228,7 +238,7 @@ function build_webgl_with_target {
                 --build-folder ${PWD}
         fi
 
-        if [[ "$ISSUE_ARCHIVES" == "true" ]]; then
+        if [[ "${ISSUE_ARCHIVES}" == "true" ]]; then
             echo "Generating out/filament-${lc_target}-web.tgz..."
             # The web archive has the following subfolders:
             # dist...core WASM module and accompanying JS file.
@@ -259,31 +269,31 @@ function build_webgl {
     ISSUE_DEBUG_BUILD=${old_issue_debug_build}
     ISSUE_RELEASE_BUILD=${old_issue_release_build}
 
-    if [[ "$ISSUE_DEBUG_BUILD" == "true" ]]; then
+    if [[ "${ISSUE_DEBUG_BUILD}" == "true" ]]; then
         build_webgl_with_target "Debug"
     fi
 
-    if [[ "$ISSUE_RELEASE_BUILD" == "true" ]]; then
+    if [[ "${ISSUE_RELEASE_BUILD}" == "true" ]]; then
         build_webgl_with_target "Release"
     fi
 }
 
 function build_android_target {
-    local LC_TARGET=`echo $1 | tr '[:upper:]' '[:lower:]'`
-    local ARCH=$2
+    local lc_target=`echo $1 | tr '[:upper:]' '[:lower:]'`
+    local arch=$2
 
-    echo "Building Android $LC_TARGET ($ARCH)..."
-    mkdir -p out/cmake-android-${LC_TARGET}-${ARCH}
+    echo "Building Android ${lc_target} (${arch})..."
+    mkdir -p out/cmake-android-${lc_target}-${arch}
 
-    cd out/cmake-android-${LC_TARGET}-${ARCH}
+    cd out/cmake-android-${lc_target}-${arch}
 
-    if [[ ! -d "CMakeFiles" ]] || [[ "$ISSUE_CMAKE_ALWAYS" == "true" ]]; then
+    if [[ ! -d "CMakeFiles" ]] || [[ "${ISSUE_CMAKE_ALWAYS}" == "true" ]]; then
         cmake \
-            -G "$BUILD_GENERATOR" \
+            -G "${BUILD_GENERATOR}" \
             -DIMPORT_EXECUTABLES_DIR=out \
             -DCMAKE_BUILD_TYPE=$1 \
-            -DCMAKE_INSTALL_PREFIX=../android-${LC_TARGET}/filament \
-            -DCMAKE_TOOLCHAIN_FILE=../../build/toolchain-${ARCH}-linux-android.cmake \
+            -DCMAKE_INSTALL_PREFIX=../android-${lc_target}/filament \
+            -DCMAKE_TOOLCHAIN_FILE=../../build/toolchain-${arch}-linux-android.cmake \
             ${VULKAN_ANDROID_OPTION} \
             ../..
     fi
@@ -298,12 +308,12 @@ function build_android_arch {
     local arch=$1
     local arch_name=$2
 
-    if [[ "$ISSUE_DEBUG_BUILD" == "true" ]]; then
-        build_android_target "Debug" "$arch"
+    if [[ "${ISSUE_DEBUG_BUILD}" == "true" ]]; then
+        build_android_target "Debug" "${arch}"
     fi
 
-    if [[ "$ISSUE_RELEASE_BUILD" == "true" ]]; then
-        build_android_target "Release" "$arch"
+    if [[ "${ISSUE_RELEASE_BUILD}" == "true" ]]; then
+        build_android_target "Release" "${arch}"
     fi
 }
 
@@ -311,7 +321,7 @@ function archive_android {
     local lc_target=`echo $1 | tr '[:upper:]' '[:lower:]'`
 
     if [[ -d "out/android-${lc_target}/filament" ]]; then
-        if [[ "$ISSUE_ARCHIVES" == "true" ]]; then
+        if [[ "${ISSUE_ARCHIVES}" == "true" ]]; then
             echo "Generating out/filament-android-${lc_target}-${LC_UNAME}.tgz..."
             cd out/android-${lc_target}
             tar -czvf ../filament-android-${lc_target}-${LC_UNAME}.tgz filament
@@ -321,13 +331,13 @@ function archive_android {
 }
 
 function ensure_android_build {
-    if [[ "$ANDROID_HOME" == "" ]]; then
+    if [[ "${ANDROID_HOME}" == "" ]]; then
         echo "Error: ANDROID_HOME is not set, exiting"
         exit 1
     fi
 
     local ndk_side_by_side="${ANDROID_HOME}/ndk/"
-    if [[ -d $ndk_side_by_side ]]; then
+    if [[ -d ${ndk_side_by_side} ]]; then
         local ndk_version=`ls ${ndk_side_by_side} | sort -V | tail -n 1 | cut -f 1 -d "."`
         if [[ ${ndk_version} -lt ${ANDROID_NDK_VERSION} ]]; then
             echo "Error: Android NDK side-by-side version ${ANDROID_NDK_VERSION} or higher must be installed, exiting"
@@ -339,7 +349,7 @@ function ensure_android_build {
     fi
 
     local cmake_version=`cmake --version`
-    if [[ "$cmake_version" =~ ([0-9]+)\.([0-9]+)\.[0-9]+ ]]; then
+    if [[ "${cmake_version}" =~ ([0-9]+)\.([0-9]+)\.[0-9]+ ]]; then
         if [[ "${BASH_REMATCH[1]}" -lt "${CMAKE_MAJOR}" ]] || \
            [[ "${BASH_REMATCH[2]}" -lt "${CMAKE_MINOR}" ]]; then
             echo "Error: cmake version ${CMAKE_MAJOR}.${CMAKE_MINOR}+ is required," \
@@ -360,24 +370,33 @@ function build_android {
 
     INSTALL_COMMAND=${old_install_command}
 
-    build_android_arch "aarch64" "aarch64-linux-android"
-    build_android_arch "arm7" "arm-linux-androideabi"
-    build_android_arch "x86_64" "x86_64-linux-android"
-    build_android_arch "x86" "i686-linux-android"
+    if [[ "${ABI_ARM64_V8A}" == "true" ]]; then
+        build_android_arch "aarch64" "aarch64-linux-android"
+    fi
+    if [[ "${ABI_ARMEABI_V7A}" == "true" ]]; then
+        build_android_arch "arm7" "arm-linux-androideabi"
+    fi
+    if [[ "${ABI_X86_64}" == "true" ]]; then
+        build_android_arch "x86_64" "x86_64-linux-android"
+    fi
+    if [[ "${ABI_X86}" == "true" ]]; then
+        build_android_arch "x86" "i686-linux-android"
+    fi
 
-    if [[ "$ISSUE_DEBUG_BUILD" == "true" ]]; then
+    if [[ "${ISSUE_DEBUG_BUILD}" == "true" ]]; then
         archive_android "Debug"
     fi
 
-    if [[ "$ISSUE_RELEASE_BUILD" == "true" ]]; then
+    if [[ "${ISSUE_RELEASE_BUILD}" == "true" ]]; then
         archive_android "Release"
     fi
 
     cd android
 
-    if [[ "$ISSUE_DEBUG_BUILD" == "true" ]]; then
+    if [[ "${ISSUE_DEBUG_BUILD}" == "true" ]]; then
         ./gradlew \
             -Pfilament_dist_dir=../out/android-debug/filament \
+            -Pfilament_abis=${ABI_GRADLE_OPTION} \
             ${VULKAN_ANDROID_GRADLE_OPTION} \
             :filament-android:assembleDebug \
             :gltfio-android:assembleDebug \
@@ -385,9 +404,10 @@ function build_android {
 
         ./gradlew \
             -Pfilament_dist_dir=../out/android-debug/filament \
+            -Pfilament_abis=${ABI_GRADLE_OPTION} \
             :filamat-android:assembleDebug
 
-        if [[ "$INSTALL_COMMAND" ]]; then
+        if [[ "${INSTALL_COMMAND}" ]]; then
             echo "Installing out/filamat-android-debug.aar..."
             cp filamat-android/build/outputs/aar/filamat-android-lite-debug.aar ../out/
             cp filamat-android/build/outputs/aar/filamat-android-full-debug.aar ../out/filamat-android-debug.aar
@@ -405,9 +425,10 @@ function build_android {
         fi
     fi
 
-    if [[ "$ISSUE_RELEASE_BUILD" == "true" ]]; then
+    if [[ "${ISSUE_RELEASE_BUILD}" == "true" ]]; then
         ./gradlew \
             -Pfilament_dist_dir=../out/android-release/filament \
+            -Pfilament_abis=${ABI_GRADLE_OPTION} \
             ${VULKAN_ANDROID_GRADLE_OPTION} \
             :filament-android:assembleRelease \
             :gltfio-android:assembleRelease \
@@ -415,9 +436,10 @@ function build_android {
 
         ./gradlew \
             -Pfilament_dist_dir=../out/android-release/filament \
+            -Pfilament_abis=${ABI_GRADLE_OPTION} \
             :filamat-android:assembleRelease
 
-        if [[ "$INSTALL_COMMAND" ]]; then
+        if [[ "${INSTALL_COMMAND}" ]]; then
             echo "Installing out/filamat-android-release.aar..."
             cp filamat-android/build/outputs/aar/filamat-android-lite-release.aar ../out/
             cp filamat-android/build/outputs/aar/filamat-android-full-release.aar ../out/filamat-android-release.aar
@@ -449,14 +471,14 @@ function ensure_ios_toolchain {
     echo "iOS toolchain file does not exist."
     echo "It will automatically be downloaded from http://opensource.apple.com."
 
-    if [[ "$GITHUB_WORKFLOW" ]]; then
+    if [[ "${GITHUB_WORKFLOW}" ]]; then
         REPLY=y
     else
         read -p "Continue? (y/n) " -n 1 -r
         echo
     fi
 
-    if [[ ! "$REPLY" =~ ^[Yy]$ ]]; then
+    if [[ ! "${REPLY}" =~ ^[Yy]$ ]]; then
         echo "Toolchain file must be downloaded to continue."
         exit 1
     fi
@@ -490,14 +512,14 @@ function build_ios_target {
     local arch=$2
     local platform=$3
 
-    echo "Building iOS $lc_target ($arch) for $platform..."
+    echo "Building iOS ${lc_target} (${arch}) for ${platform}..."
     mkdir -p out/cmake-ios-${lc_target}-${arch}
 
     cd out/cmake-ios-${lc_target}-${arch}
 
-    if [[ ! -d "CMakeFiles" ]] || [[ "$ISSUE_CMAKE_ALWAYS" == "true" ]]; then
+    if [[ ! -d "CMakeFiles" ]] || [[ "${ISSUE_CMAKE_ALWAYS}" == "true" ]]; then
         cmake \
-            -G "$BUILD_GENERATOR" \
+            -G "${BUILD_GENERATOR}" \
             -DIMPORT_EXECUTABLES_DIR=out \
             -DCMAKE_BUILD_TYPE=$1 \
             -DCMAKE_INSTALL_PREFIX=../ios-${lc_target}/filament \
@@ -511,13 +533,13 @@ function build_ios_target {
 
     ${BUILD_COMMAND}
 
-    if [[ "$INSTALL_COMMAND" ]]; then
+    if [[ "${INSTALL_COMMAND}" ]]; then
         echo "Installing ${lc_target} in out/${lc_target}/filament..."
         ${BUILD_COMMAND} ${INSTALL_COMMAND}
     fi
 
     if [[ -d "../ios-${lc_target}/filament" ]]; then
-        if [[ "$ISSUE_ARCHIVES" == "true" ]]; then
+        if [[ "${ISSUE_ARCHIVES}" == "true" ]]; then
             echo "Generating out/filament-${lc_target}-ios.tgz..."
             cd ../ios-${lc_target}
             tar -czvf ../filament-${lc_target}-ios.tgz filament
@@ -541,16 +563,16 @@ function build_ios {
     # In theory, we could support iPhone architectures older than arm64, but
     # only arm64 devices support OpenGL 3.0 / Metal
 
-    if [[ "$ISSUE_DEBUG_BUILD" == "true" ]]; then
+    if [[ "${ISSUE_DEBUG_BUILD}" == "true" ]]; then
         build_ios_target "Debug" "arm64" "iphoneos"
-        if [[ "$IOS_BUILD_SIMULATOR" == "true" ]]; then
+        if [[ "${IOS_BUILD_SIMULATOR}" == "true" ]]; then
             build_ios_target "Debug" "x86_64" "iphonesimulator"
         fi
     fi
 
-    if [[ "$ISSUE_RELEASE_BUILD" == "true" ]]; then
+    if [[ "${ISSUE_RELEASE_BUILD}" == "true" ]]; then
         build_ios_target "Release" "arm64" "iphoneos"
-        if [[ "$IOS_BUILD_SIMULATOR" == "true" ]]; then
+        if [[ "${IOS_BUILD_SIMULATOR}" == "true" ]]; then
             build_ios_target "Release" "x86_64" "iphonesimulator"
         fi
     fi
@@ -576,45 +598,45 @@ function validate_build_command {
     set +e
     # Make sure CMake is installed
     local cmake_binary=`which cmake`
-    if [[ ! "$cmake_binary" ]]; then
+    if [[ ! "${cmake_binary}" ]]; then
         echo "Error: could not find cmake, exiting"
         exit 1
     fi
 
     # Make sure Ninja is installed
-    if [[ "$BUILD_COMMAND" == "ninja" ]]; then
+    if [[ "${BUILD_COMMAND}" == "ninja" ]]; then
         local ninja_binary=`which ninja`
-        if [[ ! "$ninja_binary" ]]; then
+        if [[ ! "${ninja_binary}" ]]; then
             echo "Warning: could not find ninja, using make instead"
             BUILD_GENERATOR="Unix Makefiles"
             BUILD_COMMAND="make"
         fi
     fi
     # Make sure Make is installed
-    if [[ "$BUILD_COMMAND" == "make" ]]; then
+    if [[ "${BUILD_COMMAND}" == "make" ]]; then
         local make_binary=`which make`
-        if [[ ! "$make_binary" ]]; then
+        if [[ ! "${make_binary}" ]]; then
             echo "Error: could not find make, exiting"
             exit 1
         fi
     fi
     # Make sure we have Java
     local javac_binary=`which javac`
-    if [[ "$JAVA_HOME" == "" ]] || [[ ! "$javac_binary" ]]; then
+    if [[ "${JAVA_HOME}" == "" ]] || [[ ! "${javac_binary}" ]]; then
         echo "Warning: JAVA_HOME is not set, skipping Java projects"
         FILAMENT_ENABLE_JAVA=OFF
     fi
     # If building a WebAssembly module, ensure we know where Emscripten lives.
-    if [[ "$EMSDK" == "" ]] && [[ "$ISSUE_WEBGL_BUILD" == "true" ]]; then
+    if [[ "${EMSDK}" == "" ]] && [[ "${ISSUE_WEBGL_BUILD}" == "true" ]]; then
         echo "Error: EMSDK is not set, exiting"
         exit 1
     fi
     # Web documents require node and npm for processing
-    if [[ "$ISSUE_WEB_DOCS" == "true" ]]; then
+    if [[ "${ISSUE_WEB_DOCS}" == "true" ]]; then
         local node_binary=`which node`
         local npm_binary=`which npm`
         local npx_binary=`which npx`
-        if [[ ! "$node_binary" ]] || [[ ! "$npm_binary" ]] || [[ ! "$npx_binary" ]]; then
+        if [[ ! "${node_binary}" ]] || [[ ! "${npm_binary}" ]] || [[ ! "${npx_binary}" ]]; then
             echo "Error: Web documents require node, npm and npx to be installed"
             exit 1
         fi
@@ -628,11 +650,11 @@ function run_test {
     # first whitespace-separated token in the string.
     set -- ${test}
     local test_name=`basename $1`
-    ./out/cmake-debug/${test} --gtest_output="xml:out/test-results/$test_name/sponge_log.xml"
+    ./out/cmake-debug/${test} --gtest_output="xml:out/test-results/${test_name}/sponge_log.xml"
 }
 
 function run_tests {
-    if [[ "$ISSUE_WEBGL_BUILD" == "true" ]]; then
+    if [[ "${ISSUE_WEBGL_BUILD}" == "true" ]]; then
         if ! echo "TypeScript `tsc --version`" ; then
             tsc --noEmit \
                 third_party/gl-matrix/gl-matrix.d.ts \
@@ -641,7 +663,7 @@ function run_tests {
         fi
     else
         while read test; do
-            run_test "$test"
+            run_test "${test}"
         done < build/common/test_list.txt
     fi
 }
@@ -650,7 +672,7 @@ function run_tests {
 
 pushd `dirname $0` > /dev/null
 
-while getopts ":hacfijmp:tuvslw" opt; do
+while getopts ":hacfijmp:q:tuvslw" opt; do
     case ${opt} in
         h)
             print_help
@@ -678,7 +700,7 @@ while getopts ":hacfijmp:tuvslw" opt; do
             ;;
         p)
             ISSUE_DESKTOP_BUILD=false
-            platforms=$(echo "$OPTARG" | tr ',' '\n')
+            platforms=$(echo "${OPTARG}" | tr ',' '\n')
             for platform in ${platforms}
             do
                 case ${platform} in
@@ -703,6 +725,37 @@ while getopts ":hacfijmp:tuvslw" opt; do
                 esac
             done
             ;;
+        q)
+            ABI_ARMEABI_V7A=false
+            ABI_ARM64_V8A=false
+            ABI_X86=false
+            ABI_X86_64=false
+            abis=$(echo "${OPTARG}" | tr ',' '\n')
+            for abi in ${abis}
+            do
+                case ${abi} in
+                    armeabi-v7a)
+                        ABI_ARMEABI_V7A=true
+                    ;;
+                    arm64-v8a)
+                        ABI_ARM64_V8A=true
+                    ;;
+                    x86)
+                        ABI_X86=true
+                    ;;
+                    x86_64)
+                        ABI_X86_64=true
+                    ;;
+                    all)
+                        ABI_ARMEABI_V7A=true
+                        ABI_ARM64_V8A=true
+                        ABI_X86=true
+                        ABI_X86_64=true
+                    ;;
+                esac
+            done
+            ABI_GRADLE_OPTION="${abis}"
+            ;;
         u)
             ISSUE_DEBUG_BUILD=true
             RUN_TESTS=true
@@ -721,13 +774,13 @@ while getopts ":hacfijmp:tuvslw" opt; do
             ISSUE_WEB_DOCS=true
             ;;
         \?)
-            echo "Invalid option: -$OPTARG" >&2
+            echo "Invalid option: -${OPTARG}" >&2
             echo ""
             print_help
             exit 1
             ;;
         :)
-            echo "Option -$OPTARG requires an argument." >&2
+            echo "Option -${OPTARG} requires an argument." >&2
             echo ""
             print_help
             exit 1
@@ -743,41 +796,41 @@ fi
 shift $(($OPTIND - 1))
 
 for arg; do
-    if [[ "$arg" == "release" ]]; then
+    if [[ "${arg}" == "release" ]]; then
         ISSUE_RELEASE_BUILD=true
-    elif [[ "$arg" == "debug" ]]; then
+    elif [[ "${arg}" == "debug" ]]; then
         ISSUE_DEBUG_BUILD=true
     else
-        BUILD_CUSTOM_TARGETS="$BUILD_CUSTOM_TARGETS $arg"
+        BUILD_CUSTOM_TARGETS="${BUILD_CUSTOM_TARGETS} ${arg}"
     fi
 done
 
 validate_build_command
 
-if [[ "$ISSUE_CLEAN" == "true" ]]; then
+if [[ "${ISSUE_CLEAN}" == "true" ]]; then
     build_clean
 fi
 
-if [[ "$ISSUE_DESKTOP_BUILD" == "true" ]]; then
+if [[ "${ISSUE_DESKTOP_BUILD}" == "true" ]]; then
     build_desktop
 fi
 
-if [[ "$ISSUE_ANDROID_BUILD" == "true" ]]; then
+if [[ "${ISSUE_ANDROID_BUILD}" == "true" ]]; then
     build_android
 fi
 
-if [[ "$ISSUE_IOS_BUILD" == "true" ]]; then
+if [[ "${ISSUE_IOS_BUILD}" == "true" ]]; then
     build_ios
 fi
 
-if [[ "$ISSUE_WEBGL_BUILD" == "true" ]]; then
+if [[ "${ISSUE_WEBGL_BUILD}" == "true" ]]; then
     build_webgl
 fi
 
-if [[ "$ISSUE_WEB_DOCS" == "true" ]]; then
+if [[ "${ISSUE_WEB_DOCS}" == "true" ]]; then
     build_web_docs
 fi
 
-if [[ "$RUN_TESTS" == "true" ]]; then
+if [[ "${RUN_TESTS}" == "true" ]]; then
     run_tests
 fi
