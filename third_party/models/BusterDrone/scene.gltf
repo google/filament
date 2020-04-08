@@ -9072,7 +9072,6 @@
   ],
   "materials": [
     {
-      "alphaMode": "BLEND",
       "doubleSided": false,
       "name": "Boden",
       "normalTexture": {
@@ -9105,7 +9104,6 @@
       ]
     },
     {
-      "alphaMode": "BLEND",
       "doubleSided": false,
       "emissiveFactor": [
         1,
