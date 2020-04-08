@@ -632,6 +632,11 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 auto out = resources.get(data.rt);
                 out.params.clearColor = clearColor;
                 pass.execute(resources.getPassName(), out.target, out.params);
+
+                // color pass is typically heavy and we don't have much CPU work left after
+                // this point, so flushing now allows us to start the GPU earlier and reduce
+                // latency, without creating bubbles.
+                driver.flush();
             });
 
     return colorPass.getData().color;
