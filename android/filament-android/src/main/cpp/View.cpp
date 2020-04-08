@@ -22,8 +22,7 @@
 using namespace filament;
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_View_nSetName(JNIEnv* env, jclass,
-        jlong nativeView, jstring name_) {
+Java_com_google_android_filament_View_nSetName(JNIEnv* env, jclass, jlong nativeView, jstring name_) {
     View* view = (View*) nativeView;
     const char* name = env->GetStringUTFChars(name_, 0);
     view->setName(name);
@@ -31,16 +30,14 @@ Java_com_google_android_filament_View_nSetName(JNIEnv* env, jclass,
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_View_nSetScene(JNIEnv*, jclass,
-        jlong nativeView, jlong nativeScene) {
+Java_com_google_android_filament_View_nSetScene(JNIEnv*, jclass, jlong nativeView, jlong nativeScene) {
     View* view = (View*) nativeView;
     Scene* scene = (Scene*) nativeScene;
     view->setScene(scene);
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_View_nSetCamera(JNIEnv*, jclass,
-        jlong nativeView, jlong nativeCamera) {
+Java_com_google_android_filament_View_nSetCamera(JNIEnv*, jclass, jlong nativeView, jlong nativeCamera) {
     View* view = (View*) nativeView;
     Camera* camera = (Camera*) nativeCamera;
     view->setCamera(camera);
@@ -54,16 +51,14 @@ Java_com_google_android_filament_View_nSetViewport(JNIEnv*, jclass,
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_View_nSetClearColor(JNIEnv*, jclass,
-        jlong nativeView,
+Java_com_google_android_filament_View_nSetClearColor(JNIEnv*, jclass, jlong nativeView,
         jfloat linearR, jfloat linearG, jfloat linearB, jfloat linearA) {
     View* view = (View*) nativeView;
     view->setClearColor({linearR, linearG, linearB, linearA});
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_View_nGetClearColor(JNIEnv* env, jclass,
-        jlong nativeView, jfloatArray out_) {
+Java_com_google_android_filament_View_nGetClearColor(JNIEnv* env, jclass, jlong nativeView, jfloatArray out_) {
     View* view = (View*) nativeView;
     jfloat* out = env->GetFloatArrayElements(out_, NULL);
     auto linearColor = view->getClearColor();
@@ -82,71 +77,62 @@ Java_com_google_android_filament_View_nSetClearTargets(JNIEnv*, jclass,
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_View_nSetVisibleLayers(JNIEnv*, jclass,
-        jlong nativeView, jint select, jint value) {
+Java_com_google_android_filament_View_nSetVisibleLayers(JNIEnv*, jclass, jlong nativeView, jint select, jint value) {
     View* view = (View*) nativeView;
     view->setVisibleLayers((uint8_t) select, (uint8_t) value);
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_View_nSetShadowsEnabled(JNIEnv*, jclass,
-        jlong nativeView, jboolean enabled) {
+Java_com_google_android_filament_View_nSetShadowsEnabled(JNIEnv*, jclass, jlong nativeView, jboolean enabled) {
     View* view = (View*) nativeView;
     view->setShadowsEnabled(enabled);
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_View_nSetRenderTarget(JNIEnv*, jclass,
-        jlong nativeView, jlong nativeTarget) {
+        jlong nativeView, jlong nativeTarget, jint flags) {
     View* view = (View*) nativeView;
-    view->setRenderTarget((RenderTarget*) nativeTarget);
+    view->setRenderTarget((RenderTarget*) nativeTarget, (View::TargetBufferFlags) flags);
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_View_nSetSampleCount(JNIEnv*, jclass,
-        jlong nativeView, jint count) {
+Java_com_google_android_filament_View_nSetSampleCount(JNIEnv*, jclass, jlong nativeView, jint count) {
     View* view = (View*) nativeView;
     view->setSampleCount((uint8_t) count);
 }
 
 extern "C" JNIEXPORT jint JNICALL
-Java_com_google_android_filament_View_nGetSampleCount(JNIEnv*, jclass,
-        jlong nativeView) {
+Java_com_google_android_filament_View_nGetSampleCount(JNIEnv*, jclass, jlong nativeView) {
     View* view = (View*) nativeView;
     return view->getSampleCount();
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_View_nSetAntiAliasing(JNIEnv*, jclass,
-        jlong nativeView, jint type) {
+Java_com_google_android_filament_View_nSetAntiAliasing(JNIEnv*, jclass, jlong nativeView, jint type) {
     View* view = (View*) nativeView;
     view->setAntiAliasing(View::AntiAliasing(type));
 }
 
 extern "C" JNIEXPORT jint JNICALL
-Java_com_google_android_filament_View_nGetAntiAliasing(JNIEnv*, jclass,
-        jlong nativeView) {
+Java_com_google_android_filament_View_nGetAntiAliasing(JNIEnv*, jclass, jlong nativeView) {
     View* view = (View*) nativeView;
     return (jint) view->getAntiAliasing();
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_View_nSetToneMapping(JNIEnv*, jclass,
-        jlong nativeView, jint type) {
+Java_com_google_android_filament_View_nSetToneMapping(JNIEnv*, jclass, jlong nativeView, jint type) {
     View* view = (View*) nativeView;
     view->setToneMapping(View::ToneMapping(type));
 }
 
 extern "C" JNIEXPORT jint JNICALL
-Java_com_google_android_filament_View_nGetToneMapping(JNIEnv*, jclass,
-        jlong nativeView) {
+Java_com_google_android_filament_View_nGetToneMapping(JNIEnv*, jclass, jlong nativeView) {
     View* view = (View*) nativeView;
     return (jint) view->getToneMapping();
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_View_nSetDithering(JNIEnv*, jclass,
-        jlong nativeView, jint dithering) {
+Java_com_google_android_filament_View_nSetDithering(JNIEnv*, jclass, jlong nativeView, jint dithering) {
     View* view = (View*) nativeView;
     view->setDithering((View::Dithering) dithering);
 }
@@ -220,7 +206,7 @@ Java_com_google_android_filament_View_nIsFrontFaceWindingInverted(JNIEnv*,
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_View_nSetAmbientOcclusion(JNIEnv*, jclass, jlong nativeView, jint ordinal) {
     View* view = (View*) nativeView;
-    view->setAmbientOcclusion((View::AmbientOcclusion)ordinal);
+    view->setAmbientOcclusion((View::AmbientOcclusion) ordinal);
 }
 
 extern "C" JNIEXPORT jint JNICALL

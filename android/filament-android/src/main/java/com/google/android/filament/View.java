@@ -21,6 +21,8 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.Size;
 
+import java.util.EnumSet;
+
 import static com.google.android.filament.Colors.LinearColor;
 
 /**
@@ -247,7 +249,7 @@ public class View {
     /**
      * Options to control fog in the scene
      *
-     * @see setFogOptions
+     * @see View#setFogOptions
      */
     public static class FogOptions {
         /**
@@ -375,6 +377,69 @@ public class View {
     public enum Dithering {
         NONE,
         TEMPORAL
+    }
+
+    /**
+     * Used to select buffers.
+     */
+    public enum TargetBufferFlags {
+        /**
+         * Color 0 buffer selected.
+         */
+        COLOR0(0x1),
+        /**
+         * Color 1 buffer selected.
+         */
+        COLOR1(0x2),
+        /**
+         * Color 2 buffer selected.
+         */
+        COLOR2(0x4),
+        /**
+         * Color 3 buffer selected.
+         */
+        COLOR3(0x8),
+        /**
+         * Depth buffer selected.
+         */
+        DEPTH(0x10),
+        /**
+         * Stencil buffer selected.
+         */
+        STENCIL(0x20);
+
+        /*
+         * No buffer selected
+         */
+        public static EnumSet<TargetBufferFlags> NONE = EnumSet.noneOf(TargetBufferFlags.class);
+
+        /*
+         * All color buffers selected
+         */
+        public static EnumSet<TargetBufferFlags> ALL_COLOR =
+                EnumSet.of(COLOR0, COLOR1, COLOR2, COLOR3);
+        /**
+         * Depth and stencil buffer selected.
+         */
+        public static EnumSet<TargetBufferFlags> DEPTH_STENCIL = EnumSet.of(DEPTH, STENCIL);
+        /**
+         * All buffers are selected.
+         */
+        public static EnumSet<TargetBufferFlags> ALL = EnumSet.range(COLOR0, STENCIL);
+
+        private int mFlags;
+
+        TargetBufferFlags(int flags) {
+            mFlags = flags;
+        }
+
+        static int flags(EnumSet<TargetBufferFlags> flags) {
+            int result = 0;
+            for (TargetBufferFlags flag : flags) {
+                result |= flag.mFlags;
+            }
+            return result;
+        }
     }
 
     View(long nativeView) {
@@ -565,12 +630,33 @@ public class View {
      * By default, the view's associated render target is null, which corresponds to the
      * SwapChain associated with the engine.
      * </p>
+     * <p>
+     * This method discards the content of all the buffers in the render target. See
+     * {@link #setRenderTarget(RenderTarget, EnumSet)} if you need more precise control.
+     * </p>
      *
      * @param target render target associated with view, or null for the swap chain
      */
     public void setRenderTarget(@Nullable RenderTarget target) {
+        setRenderTarget(target, TargetBufferFlags.ALL);
+    }
+
+    /**
+     * Specifies an offscreen render target to render into.
+     *
+     * <p>
+     * By default, the view's associated render target is null, which corresponds to the
+     * SwapChain associated with the engine.
+     * </p>
+     *
+     * @param target render target associated with view, or null for the swap chain
+     * @param flags buffers that need to be discarded before rendering.
+     */
+    public void setRenderTarget(@Nullable RenderTarget target,
+            @NonNull EnumSet<TargetBufferFlags> flags) {
         mRenderTarget = target;
-        nSetRenderTarget(getNativeObject(), target != null ? target.getNativeObject() : 0);
+        nSetRenderTarget(getNativeObject(), target != null ? target.getNativeObject() : 0,
+                TargetBufferFlags.flags(flags));
     }
 
     /**
@@ -924,7 +1010,7 @@ public class View {
     private static native void nSetClearTargets(long nativeView, boolean color, boolean depth, boolean stencil);
     private static native void nSetVisibleLayers(long nativeView, int select, int value);
     private static native void nSetShadowsEnabled(long nativeView, boolean enabled);
-    private static native void nSetRenderTarget(long nativeView, long nativeRenderTarget);
+    private static native void nSetRenderTarget(long nativeView, long nativeRenderTarget, int flags);
     private static native void nSetSampleCount(long nativeView, int count);
     private static native int nGetSampleCount(long nativeView);
     private static native void nSetAntiAliasing(long nativeView, int type);
