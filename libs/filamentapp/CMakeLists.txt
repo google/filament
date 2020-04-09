@@ -143,6 +143,16 @@ else()
     target_compile_options(${TARGET} PRIVATE -Wno-deprecated-register)
 endif()
 
+# Multi-configuration generators, like Visual Studio or Xcode, place executable binaries in a
+# sub-directory named after the configuration, like "Debug" or "Release".
+# For these generators, in order to find assets, we must "walk" up an additional directory.
+get_property(_isMultiConfig GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+if (_isMultiConfig)
+    target_compile_definitions(${TARGET} PRIVATE RELATIVE_ASSET_PATH="..")
+else()
+    target_compile_definitions(${TARGET} PRIVATE RELATIVE_ASSET_PATH=".")
+endif()
+
 if (LINUX)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
 endif()
