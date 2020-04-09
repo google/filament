@@ -117,6 +117,12 @@ class MainActivity : Activity() {
         view1 = engine.createView()
         view2 = engine.createView()
         view3 = engine.createView()
+
+        view0.setName("view0");
+        view1.setName("view1");
+        view2.setName("view2");
+        view3.setName("view3");
+
         camera = engine.createCamera()
     }
 
