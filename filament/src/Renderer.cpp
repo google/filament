@@ -558,12 +558,12 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
         FrameGraphId<FrameGraphTexture> ssr;
         FrameGraphId<FrameGraphTexture> structure;
         FrameGraphRenderTargetHandle rt{};
+        float4 clearColor;
     };
-
-    float4 clearColor = config.clearColor;
 
     auto& colorPass = fg.addPass<ColorPassData>(name,
             [&](FrameGraph::Builder& builder, ColorPassData& data) {
+                data.clearColor = config.clearColor;
 
                 TargetBufferFlags clearDepthFlags = TargetBufferFlags::NONE;
                 TargetBufferFlags clearColorFlags = TargetBufferFlags::NONE;
@@ -589,10 +589,10 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
 
                 if (!data.color.isValid()) {
                     clearColorFlags = TargetBufferFlags::COLOR;
-                    if (!(config.clearFlags &  TargetBufferFlags::COLOR)) {
+                    if (!(config.clearFlags & TargetBufferFlags::COLOR)) {
                         // the View doesn't ask for a clear, but we're creating a new color
                         // intermediate buffer, so it must be cleared with transparent pixels.
-                        clearColor = {};
+                        data.clearColor = {};
                     }
                     data.color = builder.createTexture("Color Buffer", colorBufferDesc);
                 }
@@ -633,7 +633,8 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 view.commitUniforms(driver);
 
                 auto out = resources.get(data.rt);
-                out.params.clearColor = clearColor;
+                out.params.clearColor = data.clearColor;
+
                 pass.execute(resources.getPassName(), out.target, out.params);
 
                 // color pass is typically heavy and we don't have much CPU work left after
