@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.6)
 
+option(FILAMENT_SUPPORTS_VULKAN "Enables Vulkan on Android" OFF)
+
 set(FILAMENT_DIR ${FILAMENT_DIST_DIR})
 
 add_library(filament STATIC IMPORTED)
@@ -88,6 +90,8 @@ target_link_libraries(filament-jni
     PRIVATE android
     PRIVATE jnigraphics
     PRIVATE utils
+    $<$<STREQUAL:${FILAMENT_SUPPORTS_VULKAN},ON>:bluevk>
+    $<$<STREQUAL:${FILAMENT_SUPPORTS_VULKAN},ON>:smol-v>
 )
 
 target_include_directories(filament-jni PRIVATE
@@ -98,9 +102,3 @@ target_include_directories(filament-jni PRIVATE
 
 # Force a relink when the version script is changed:
 set_target_properties(filament-jni PROPERTIES LINK_DEPENDS ${VERSION_SCRIPT})
-
-option(FILAMENT_SUPPORTS_VULKAN "Enables Vulkan on Android" OFF)
-
-if (FILAMENT_SUPPORTS_VULKAN)
-    target_link_libraries(filament-jni bluevk smol-v)
-endif()
