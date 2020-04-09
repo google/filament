@@ -51,7 +51,7 @@ public class DisplayHelper {
     }
 
     /**
-     * Creates a DisplayHelper which helps managing a {@link Display} and provides a Handler
+     * Creates a DisplayHelper which helps manage a {@link Display} and provides a Handler
      * where callbacks can execute filament code. Use this method if filament is executing
      * on another thread.
      *
