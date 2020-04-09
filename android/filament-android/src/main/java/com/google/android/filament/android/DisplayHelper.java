@@ -174,7 +174,7 @@ public class DisplayHelper {
     }
 
     /**
-     * @return the {@link Display} presentation deadline before the h/w vsync event is nanosecond
+     * @return the {@link Display} presentation deadline before the h/w vsync event in nanoseconds
      * @see Display#getPresentationDeadlineNanos
      */
     public static long getPresentationDeadlineNanos(@NonNull Display display) {
