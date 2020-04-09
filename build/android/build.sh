@@ -50,4 +50,4 @@ if [[ "$TARGET" == "presubmit" ]]; then
 fi
 
 pushd `dirname $0`/../.. > /dev/null
-./build.sh -p android -c $GENERATE_ARCHIVES $BUILD_DEBUG $BUILD_RELEASE
+./build.sh -p android $ANDROID_ABIS -c $GENERATE_ARCHIVES $BUILD_DEBUG $BUILD_RELEASE
