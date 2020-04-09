@@ -42,5 +42,12 @@ else
     ${ANDROID_HOME}/tools/bin/sdkmanager "${NDK_VERSION}" > /dev/null
 fi
 
+# Only build 1 32 bit and 1 64 bit target during presubmit to cut down build times
+# Continuous builds will build everything
+ANDROID_ABIS=
+if [[ "$TARGET" == "presubmit" ]]; then
+  ANDROID_ABIS="-q arm64-v8a,x86"
+fi
+
 pushd `dirname $0`/../.. > /dev/null
-./build.sh -p android -c $GENERATE_ARCHIVES $BUILD_DEBUG $BUILD_RELEASE
+./build.sh -p android $ANDROID_ABIS -c $GENERATE_ARCHIVES $BUILD_DEBUG $BUILD_RELEASE

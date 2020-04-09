@@ -730,6 +730,7 @@ while getopts ":hacfijmp:q:tuvslw" opt; do
             ABI_ARM64_V8A=false
             ABI_X86=false
             ABI_X86_64=false
+            ABI_GRADLE_OPTION="${OPTARG}"
             abis=$(echo "${OPTARG}" | tr ',' '\n')
             for abi in ${abis}
             do
@@ -754,7 +755,6 @@ while getopts ":hacfijmp:q:tuvslw" opt; do
                     ;;
                 esac
             done
-            ABI_GRADLE_OPTION="${abis}"
             ;;
         u)
             ISSUE_DEBUG_BUILD=true
