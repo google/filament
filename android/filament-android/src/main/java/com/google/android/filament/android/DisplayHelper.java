@@ -76,7 +76,7 @@ public class DisplayHelper {
     /**
      * Sets the filament {@link Renderer} associated to the {@link Display}, from this point
      * on, {@link Renderer.DisplayInfo} will be automatically updated when the {@link Display}
-     * properties changes.
+     * properties change.
      *
      * This is typically called from {@link UiHelper.RendererCallback#onNativeWindowChanged}.
      *
