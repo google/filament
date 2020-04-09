@@ -183,8 +183,22 @@ Platform::SwapChain* PlatformWGL::createSwapChain(void* nativeWindow, uint64_t& 
 }
 
 Platform::SwapChain* PlatformWGL::createSwapChain(uint32_t width, uint32_t height, uint64_t& flags) noexcept {
-    // TODO: implement headless SwapChain
-    return nullptr;
+    // WS_POPUP was chosen for the window style here after some experimentation.
+    // For some reason, using other window styles resulted in corrupted pixel buffers when using
+    // readPixels.
+    RECT rect = {0, 0, width, height};
+    AdjustWindowRect(&rect, WS_POPUP, FALSE);
+    width = rect.right - rect.left;
+    height = rect.bottom - rect.top;
+
+    // TODO: this window never gets destroyed.
+    HWND hWnd = CreateWindowA("STATIC", "headless", WS_POPUP, 0, 0,
+            width, height, NULL, NULL, NULL, NULL);
+    HDC hdc = GetDC(hWnd);
+    int pixelFormat = ChoosePixelFormat(hdc, &mPfd);
+    SetPixelFormat(hdc, pixelFormat, &mPfd);
+
+    return (SwapChain*) hdc;
 }
 
 void PlatformWGL::destroySwapChain(Platform::SwapChain* swapChain) noexcept {
