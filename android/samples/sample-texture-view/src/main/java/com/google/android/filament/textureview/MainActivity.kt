@@ -50,6 +50,8 @@ class MainActivity : Activity() {
     private lateinit var textureView: TextureView
     // UiHelper is provided by Filament to manage SurfaceView and SurfaceTexture
     private lateinit var uiHelper: UiHelper
+    // DisplayHelper is provided by Filament to manage the display
+    private lateinit var displayHelper: DisplayHelper
     // Choreographer is used to schedule new frames
     private lateinit var choreographer: Choreographer
 
@@ -88,6 +90,8 @@ class MainActivity : Activity() {
         setContentView(textureView)
 
         choreographer = Choreographer.getInstance()
+
+        displayHelper = DisplayHelper(this)
 
         setupSurfaceView()
         setupFilament()
@@ -303,10 +307,11 @@ class MainActivity : Activity() {
         override fun onNativeWindowChanged(surface: Surface) {
             swapChain?.let { engine.destroySwapChain(it) }
             swapChain = engine.createSwapChain(surface, uiHelper.swapChainFlags)
-            renderer.setDisplayInfo(DisplayHelper.getDisplayInfo(textureView.display, Renderer.DisplayInfo()))
+            displayHelper.attach(renderer, textureView.display)
         }
 
         override fun onDetachedFromSurface() {
+            displayHelper.detach()
             swapChain?.let {
                 engine.destroySwapChain(it)
                 // Required to ensure we don't return before Filament is done executing the
