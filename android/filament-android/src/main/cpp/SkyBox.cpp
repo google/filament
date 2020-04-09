@@ -18,6 +18,8 @@
 
 #include <filament/Skybox.h>
 
+#include <math/vec4.h>
+
 using namespace filament;
 
 extern "C" JNIEXPORT jlong JNICALL
@@ -52,6 +54,13 @@ Java_com_google_android_filament_Skybox_nBuilderIntensity(JNIEnv *env, jclass cl
         jlong nativeSkyBoxBuilder, jfloat intensity) {
     Skybox::Builder *builder = (Skybox::Builder *) nativeSkyBoxBuilder;
     builder->intensity(intensity);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_Skybox_nBuilderColor(JNIEnv *,  jclass,
+        jlong nativeSkyBoxBuilder, jfloat r, jfloat g, jfloat b, jfloat a) {
+    Skybox::Builder *builder = (Skybox::Builder *) nativeSkyBoxBuilder;
+    builder->color({r, g, b, a});
 }
 
 extern "C" JNIEXPORT jlong JNICALL

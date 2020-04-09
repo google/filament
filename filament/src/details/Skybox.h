@@ -49,6 +49,8 @@ public:
 
     float getIntensity() const noexcept { return mIntensity; }
 
+    void setColor(math::float4 color) noexcept;
+
 private:
     // we don't own these
     FTexture const* mSkyboxTexture = nullptr;

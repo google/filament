@@ -102,8 +102,7 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
 
     window->mMainView->getView()->setVisibleLayers(0x4, 0x4);
 
-    window->mUiView->getView()->setClearTargets(false, false, false);
-    window->mUiView->getView()->setRenderTarget(View::TargetBufferFlags::DEPTH_AND_STENCIL);
+    window->mUiView->getView()->setBlendMode(View::BlendMode::TRANSLUCENT);
     window->mUiView->getView()->setPostProcessingEnabled(false);
     window->mUiView->getView()->setShadowsEnabled(false);
 
@@ -128,16 +127,9 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
         window->mOrthoView->getView()->setVisibleLayers(0x6, 0x6);
 
         // only preserve the color buffer for additional views; depth and stencil can be discarded.
-        window->mDepthView->getView()->setRenderTarget(View::TargetBufferFlags::DEPTH_AND_STENCIL);
-        window->mGodView->getView()->setRenderTarget(View::TargetBufferFlags::DEPTH_AND_STENCIL);
-        window->mOrthoView->getView()->setRenderTarget(View::TargetBufferFlags::DEPTH_AND_STENCIL);
-
         window->mDepthView->getView()->setShadowsEnabled(false);
         window->mGodView->getView()->setShadowsEnabled(false);
         window->mOrthoView->getView()->setShadowsEnabled(false);
-
-        // the depthview doesn't draw the background (ibl), so we must clear it
-        window->mDepthView->getView()->setClearColor({0, 0, 0, 1});
     }
 
     loadDirt(config);
@@ -726,7 +718,6 @@ void FilamentApp::Window::configureCamerasForWindow() {
 FilamentApp::CView::CView(Renderer& renderer, std::string name)
         : engine(*renderer.getEngine()), mName(name) {
     view = engine.createView();
-    view->setClearColor(LinearColorA{ 0 });
     view->setName(name.c_str());
 }
 

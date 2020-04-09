@@ -112,12 +112,12 @@ void RenderTargetResourceEntry::resolve(FrameGraph& fg) noexcept {
             resource.params.viewport.width = width;
             resource.params.viewport.height = height;
         }
-        resource.params.flags.clear = descriptor.clearFlags;
     } else {
         // this can happen with imported targets
         resource.params.viewport = descriptor.viewport;
-        resource.params.flags.clear = descriptor.clearFlags;
     }
+    resource.params.clearColor = descriptor.clearColor;
+    resource.params.flags.clear = descriptor.clearFlags;
 }
 
 void RenderTargetResourceEntry::update(FrameGraph& fg, PassNode const& pass) noexcept {

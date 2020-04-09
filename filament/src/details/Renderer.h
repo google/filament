@@ -115,6 +115,10 @@ public:
         frameRateOptions.headRoomRatio = std::max(frameRateOptions.headRoomRatio, 0.0f);
     }
 
+    void setClearOptions(const ClearOptions& options) {
+        mClearOptions = options;
+    }
+
 private:
     friend class Renderer;
     using Command = RenderPass::Command;
@@ -180,6 +184,9 @@ private:
     math::float4 mShaderUserTime{};
     DisplayInfo mDisplayInfo;
     FrameRateOptions mFrameRateOptions;
+    ClearOptions mClearOptions;
+    backend::TargetBufferFlags mDiscardedFlags;
+    backend::TargetBufferFlags mClearFlags;
 
     // per-frame arena for this Renderer
     LinearAllocatorArena& mPerRenderPassArena;

@@ -119,21 +119,9 @@ public:
         return mViewport;
     }
 
-    void setClearColor(LinearColorA const& clearColor) noexcept;
-    LinearColorA const& getClearColor() const noexcept {
-        return mClearColor;
-    }
-
-    void setClearTargets(bool color, bool depth, bool stencil) noexcept;
     bool getClearTargetColor() const noexcept {
         // don't clear the color buffer if we have a skybox
-        return mClearTargetColor && !isSkyboxVisible();
-    }
-    bool getClearTargetDepth() const noexcept {
-        return mClearTargetDepth;
-    }
-    bool getClearTargetStencil() const noexcept {
-        return mClearTargetStencil;
+        return !isSkyboxVisible();
     }
     bool isSkyboxVisible() const noexcept;
 
@@ -188,13 +176,8 @@ public:
         return &mDirectionalShadowMap.getDebugCamera();
     }
 
-    void setRenderTarget(FRenderTarget* renderTarget, TargetBufferFlags discard) noexcept {
+    void setRenderTarget(FRenderTarget* renderTarget) noexcept {
         mRenderTarget = renderTarget;
-        mDiscardedTargetBuffers = discard;
-    }
-
-    void setRenderTarget(TargetBufferFlags discard) noexcept {
-        mDiscardedTargetBuffers = discard;
     }
 
     FRenderTarget* getRenderTarget() const noexcept {
@@ -232,8 +215,6 @@ public:
     Dithering getDithering() const noexcept {
         return mDithering;
     }
-
-    TargetBufferFlags getDiscardedTargetBuffers() const noexcept { return mDiscardedTargetBuffers; }
 
     bool hasPostProcessPass() const noexcept {
         return mHasPostProcessPass;
@@ -302,6 +283,14 @@ public:
         return mBloomOptions;
     }
 
+    void setBlendMode(BlendMode blendMode) noexcept {
+        mBlendMode = blendMode;
+    }
+
+    BlendMode getBlendMode() const noexcept {
+        return mBlendMode;
+    }
+
     Range const& getVisibleRenderables() const noexcept {
         return mVisibleRenderables;
     }
@@ -312,14 +301,6 @@ public:
 
     Range const& getVisibleSpotShadowCasters() const noexcept {
         return mSpotLightShadowCasters;
-    }
-
-    TargetBufferFlags getClearFlags() const noexcept {
-        TargetBufferFlags clearFlags = {};
-        if (getClearTargetColor())     clearFlags |= TargetBufferFlags::COLOR;
-        if (getClearTargetDepth())     clearFlags |= TargetBufferFlags::DEPTH;
-        if (getClearTargetStencil())   clearFlags |= TargetBufferFlags::STENCIL;
-        return clearFlags;
     }
 
     FCamera const& getCameraUser() const noexcept { return *mCullingCamera; }
@@ -380,14 +361,9 @@ private:
     mutable Froxelizer mFroxelizer;
 
     Viewport mViewport;
-    LinearColorA mClearColor{};
     bool mCulling = true;
     bool mFrontFaceWindingInverted = false;
-    bool mClearTargetColor = true;
-    bool mClearTargetDepth = true;
-    bool mClearTargetStencil = false;
 
-    TargetBufferFlags mDiscardedTargetBuffers = TargetBufferFlags::ALL;
     FRenderTarget* mRenderTarget = nullptr;
 
     uint8_t mVisibleLayers = 0x1;
@@ -401,6 +377,7 @@ private:
     AmbientOcclusionOptions mAmbientOcclusionOptions{};
     BloomOptions mBloomOptions;
     FogOptions mFogOptions;
+    BlendMode mBlendMode = BlendMode::OPAQUE;
 
     DynamicResolutionOptions mDynamicResolution;
     math::float2 mScale = 1.0f;

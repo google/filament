@@ -46,6 +46,7 @@ public class Renderer {
     private long mNativeObject;
     private DisplayInfo mDisplayInfo;
     private FrameRateOptions mFrameRateOptions;
+    private ClearOptions mClearOptions;
 
     /**
      * Information about the display this renderer is associated to
@@ -113,6 +114,30 @@ public class Renderer {
          */
         public int history = 9;
     }
+
+    /**
+     * ClearOptions are used at the beginning of a frame to clear or retain the SwapChain content.
+     */
+    public static class ClearOptions {
+        /**
+         * Color to use to clear the SwapChain
+         */
+        @NonNull
+        float[] clearColor = { 0.0f, 0.0f, 0.0f, 0.0f };
+
+        /**
+         * Whether the SwapChain should be cleared using the clearColor. Use this if translucent
+         * View will be drawn, for instance.
+         */
+        boolean clear = false;
+
+        /**
+         * Whether the SwapChain content should be discarded. clear implies discard. Set this
+         * to false (along with clear to false as well) if the SwapChain already has content that
+         * needs to be preserved
+         */
+        boolean discard = true;
+    };
 
     /**
      * Indicates that the <code>dstSwapChain</code> passed into {@link #copyFrame} should be
@@ -186,6 +211,30 @@ public class Renderer {
             mFrameRateOptions = new FrameRateOptions();
         }
         return mFrameRateOptions;
+    }
+
+    /**
+     * Set ClearOptions which are used at the beginning of a frame to clear or retain the
+     * SwapChain content.
+     */
+    public void setClearOptions(@NonNull ClearOptions options) {
+        mClearOptions = options;
+        nSetClearOptions(getNativeObject(),
+                options.clearColor[0], options.clearColor[1], options.clearColor[2], options.clearColor[3],
+                options.clear, options.discard);
+    }
+
+    /**
+     * Returns the ClearOptions object set in {@link #setClearOptions} or a new instance
+     * otherwise.
+     * @return a ClearOptions instance
+     */
+    @NonNull
+    public ClearOptions getClearOptions() {
+        if (mClearOptions == null) {
+            mClearOptions = new ClearOptions();
+        }
+        return mClearOptions;
     }
 
     /**
@@ -604,4 +653,6 @@ public class Renderer {
             float refreshRate, long presentationDeadlineNanos, long vsyncOffsetNanos);
     private static native void nSetFrameRateOptions(long nativeRenderer,
             float interval, float headRoomRatio, float scaleRate, int history);
+    private static native void nSetClearOptions(long nativeRenderer,
+            float r, float g, float b, float a, boolean clear, boolean discard);
 }

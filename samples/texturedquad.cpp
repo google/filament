@@ -21,6 +21,7 @@
 #include <filament/MaterialInstance.h>
 #include <filament/RenderableManager.h>
 #include <filament/Scene.h>
+#include <filament/Skybox.h>
 #include <filament/Texture.h>
 #include <filament/TextureSampler.h>
 #include <filament/VertexBuffer.h>
@@ -52,6 +53,7 @@ struct App {
     Material* mat;
     MaterialInstance* matInstance;
     Camera* cam;
+    Skybox* skybox;
     Texture* tex;
     Entity renderable;
 };
@@ -108,7 +110,9 @@ int main(int argc, char** argv) {
         TextureSampler sampler(MinFilter::LINEAR, MagFilter::LINEAR);
 
         // Set up view
-        view->setClearColor({0.1, 0.125, 0.25, 1.0});
+        app.skybox = Skybox::Builder().color({0.1, 0.125, 0.25, 1.0}).build(*engine);
+        scene->setSkybox(app.skybox);
+
         view->setPostProcessingEnabled(false);
         app.cam = engine->createCamera();
         view->setCamera(app.cam);
@@ -147,6 +151,7 @@ int main(int argc, char** argv) {
     };
 
     auto cleanup = [&app](Engine* engine, View*, Scene*) {
+        engine->destroy(app.skybox);
         engine->destroy(app.renderable);
         engine->destroy(app.matInstance);
         engine->destroy(app.mat);

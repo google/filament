@@ -42,6 +42,7 @@
 #include <math/fast.h>
 
 #include <memory>
+#include <filament/View.h>
 
 
 using namespace filament::math;
@@ -197,16 +198,6 @@ float2 FView::updateScale(FrameInfo const& info) noexcept {
     }
 
     return mScale;
-}
-
-void FView::setClearColor(float4 const& clearColor) noexcept {
-    mClearColor = clearColor;
-}
-
-void FView::setClearTargets(bool color, bool depth, bool stencil) noexcept {
-    mClearTargetColor = color;
-    mClearTargetDepth = depth;
-    mClearTargetStencil = stencil;
 }
 
 void FView::setVisibleLayers(uint8_t select, uint8_t values) noexcept {
@@ -854,19 +845,6 @@ filament::Viewport const& View::getViewport() const noexcept {
     return upcast(this)->getViewport();
 }
 
-
-void View::setClearColor(float4 const& clearColor) noexcept {
-    upcast(this)->setClearColor(clearColor);
-}
-
-float4 const& View::getClearColor() const noexcept {
-    return upcast(this)->getClearColor();
-}
-
-void View::setClearTargets(bool color, bool depth, bool stencil) noexcept {
-    return upcast(this)->setClearTargets(color, depth, stencil);
-}
-
 void View::setFrustumCullingEnabled(bool culling) noexcept {
     upcast(this)->setFrustumCullingEnabled(culling);
 }
@@ -899,12 +877,8 @@ void View::setShadowsEnabled(bool enabled) noexcept {
     upcast(this)->setShadowsEnabled(enabled);
 }
 
-void View::setRenderTarget(RenderTarget* renderTarget, TargetBufferFlags discard) noexcept {
-    upcast(this)->setRenderTarget(upcast(renderTarget), discard);
-}
-
-void View::setRenderTarget(TargetBufferFlags discard) noexcept {
-    upcast(this)->setRenderTarget(discard);
+void View::setRenderTarget(RenderTarget* renderTarget) noexcept {
+    upcast(this)->setRenderTarget(upcast(renderTarget));
 }
 
 RenderTarget* View::getRenderTarget() const noexcept {
@@ -1005,6 +979,14 @@ void View::setFogOptions(View::FogOptions options) noexcept {
 
 View::BloomOptions View::getBloomOptions() const noexcept {
     return upcast(this)->getBloomOptions();
+}
+
+void View::setBlendMode(BlendMode blendMode) noexcept {
+    upcast(this)->setBlendMode(blendMode);
+}
+
+View::BlendMode View::getBlendMode() const noexcept {
+    return upcast(this)->getBlendMode();
 }
 
 
