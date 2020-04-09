@@ -211,23 +211,12 @@ endif()
 # Test apps
 # ==================================================================================================
 
-# Multi-configuration generators, like Visual Studio or Xcode, place executable binaries in a
-# sub-directory named after the configuration, like "Debug" or "Release".
-# For these generators, in order to find assets, we must "walk" up an additional directory.
-get_property(_isMultiConfig GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
-
 function(add_demo NAME)
     include_directories(${GENERATION_ROOT})
     add_executable(${NAME} ${NAME}.cpp)
     target_link_libraries(${NAME} PRIVATE sample-resources filamentapp filameshio)
     target_compile_options(${NAME} PRIVATE ${COMPILER_FLAGS})
-    if (_isMultiConfig)
-        target_compile_definitions(${NAME} PRIVATE RELATIVE_ASSET_PATH="..")
-    else()
-        target_compile_definitions(${NAME} PRIVATE RELATIVE_ASSET_PATH=".")
-    endif()
 endfunction()
-
 
 if (NOT ANDROID)
     add_demo(frame_generator)
