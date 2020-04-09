@@ -44,7 +44,7 @@ public class DisplayHelper {
      *
      * The {@link Display} to manage is specified with {@link #attach}
      *
-     * @param context a {@link Context} to used to retrieve teh {@link DisplayManager}
+     * @param context a {@link Context} to used to retrieve the {@link DisplayManager}
      */
     public DisplayHelper(@NonNull Context context) {
         mDisplayManager = (DisplayManager) context.getSystemService(Context.DISPLAY_SERVICE);
