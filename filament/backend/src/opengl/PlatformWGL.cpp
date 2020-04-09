@@ -70,6 +70,12 @@ namespace filament {
 
 using namespace backend;
 
+struct WGLSwapChain {
+    HDC hDc = NULL;
+    HWND hWnd = NULL;
+    bool isHeadless = false;
+};
+
 Driver* PlatformWGL::createDriver(void* const sharedGLContext) noexcept {
     mPfd = {
         sizeof(PIXELFORMATDESCRIPTOR),
@@ -167,22 +173,28 @@ void PlatformWGL::terminate() noexcept {
 }
 
 Platform::SwapChain* PlatformWGL::createSwapChain(void* nativeWindow, uint64_t& flags) noexcept {
+    auto* swapChain = new WGLSwapChain();
+    swapChain->isHeadless = false;
+
     // on Windows, the nativeWindow maps to a HWND
-    HDC hdc = GetDC((HWND) nativeWindow);
-    if (!ASSERT_POSTCONDITION_NON_FATAL(hdc,
+    swapChain->hWnd = (HWND) nativeWindow;
+    swapChain->hDc = GetDC(swapChain->hWnd);
+    if (!ASSERT_POSTCONDITION_NON_FATAL(swapChain->hDc,
             "Unable to create the SwapChain (nativeWindow = %p)", nativeWindow)) {
         reportLastWindowsError();
     }
 
 	// We have to match pixel formats across the HDC and HGLRC (mContext)
-    int pixelFormat = ChoosePixelFormat(hdc, &mPfd);
-    SetPixelFormat(hdc, pixelFormat, &mPfd);
+    int pixelFormat = ChoosePixelFormat(swapChain->hDc, &mPfd);
+    SetPixelFormat(swapChain->hDc, pixelFormat, &mPfd);
 
-    SwapChain* swapChain = (SwapChain*) hdc;
-    return swapChain;
+    return (Platform::SwapChain*) swapChain;
 }
 
 Platform::SwapChain* PlatformWGL::createSwapChain(uint32_t width, uint32_t height, uint64_t& flags) noexcept {
+    auto* swapChain = new WGLSwapChain();
+    swapChain->isHeadless = true;
+
     // WS_POPUP was chosen for the window style here after some experimentation.
     // For some reason, using other window styles resulted in corrupted pixel buffers when using
     // readPixels.
@@ -191,20 +203,28 @@ Platform::SwapChain* PlatformWGL::createSwapChain(uint32_t width, uint32_t heigh
     width = rect.right - rect.left;
     height = rect.bottom - rect.top;
 
-    // TODO: this window never gets destroyed.
-    HWND hWnd = CreateWindowA("STATIC", "headless", WS_POPUP, 0, 0,
+    swapChain->hWnd = CreateWindowA("STATIC", "headless", WS_POPUP, 0, 0,
             width, height, NULL, NULL, NULL, NULL);
-    HDC hdc = GetDC(hWnd);
-    int pixelFormat = ChoosePixelFormat(hdc, &mPfd);
-    SetPixelFormat(hdc, pixelFormat, &mPfd);
+    swapChain->hDc = GetDC(swapChain->hWnd);
+    int pixelFormat = ChoosePixelFormat(swapChain->hDc, &mPfd);
+    SetPixelFormat(swapChain->hDc, pixelFormat, &mPfd);
 
-    return (SwapChain*) hdc;
+    return (Platform::SwapChain*) swapChain;
 }
 
 void PlatformWGL::destroySwapChain(Platform::SwapChain* swapChain) noexcept {
-    HDC dc = (HDC) swapChain;
-    HWND window = WindowFromDC(dc);
+    auto* wglSwapChain = (WGLSwapChain*) swapChain;
+
+    HDC dc = wglSwapChain->hDc;
+    HWND window = wglSwapChain->hWnd;
     ReleaseDC(window, dc);
+
+    if (wglSwapChain->isHeadless) {
+        DestroyWindow(window);
+    }
+
+    delete wglSwapChain;
+
     // make this swapChain not current (by making a dummy one current)
     wglMakeCurrent(mWhdc, mContext);
 }
@@ -213,7 +233,9 @@ void PlatformWGL::makeCurrent(Platform::SwapChain* drawSwapChain,
                               Platform::SwapChain* readSwapChain) noexcept {
     ASSERT_PRECONDITION_NON_FATAL(drawSwapChain == readSwapChain,
                                   "PlatformWGL does not support distinct draw/read swap chains.");
-    HDC hdc = (HDC)(drawSwapChain);
+
+    auto* wglSwapChain = (WGLSwapChain*) drawSwapChain;
+    HDC hdc = wglSwapChain->hDc;
     if (hdc != NULL) {
         BOOL success = wglMakeCurrent(hdc, mContext);
         if (!ASSERT_POSTCONDITION_NON_FATAL(success, "wglMakeCurrent() failed. hdc = %p", hdc)) {
@@ -224,7 +246,8 @@ void PlatformWGL::makeCurrent(Platform::SwapChain* drawSwapChain,
 }
 
 void PlatformWGL::commit(Platform::SwapChain* swapChain) noexcept {
-    HDC hdc = (HDC)(swapChain);
+    auto* wglSwapChain = (WGLSwapChain*) swapChain;
+    HDC hdc = wglSwapChain->hDc;
     if (hdc != NULL) {
         SwapBuffers(hdc);
     }
