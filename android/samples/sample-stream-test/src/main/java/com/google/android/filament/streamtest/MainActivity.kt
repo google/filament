@@ -125,7 +125,7 @@ class MainActivity : Activity(), ActivityCompat.OnRequestPermissionsResultCallba
     }
 
     private fun setupView() {
-        view.setClearColor(0.035f, 0.035f, 0.035f, 1.0f)
+        scene.skybox = Skybox.Builder().color(0.035f, 0.035f, 0.035f, 1.0f).build(engine)
         view.camera = camera
         view.scene = scene
     }

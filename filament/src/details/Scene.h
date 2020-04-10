@@ -55,8 +55,9 @@ public:
      * User Public API
      */
 
-    void setSkybox(FSkybox const* skybox) noexcept;
+    void setSkybox(FSkybox* skybox) noexcept;
     FSkybox const* getSkybox() const noexcept { return mSkybox; }
+    FSkybox* getSkybox() noexcept { return mSkybox; }
 
     void setIndirectLight(FIndirectLight const* ibl) noexcept { mIndirectLight = ibl; }
     FIndirectLight const* getIndirectLight() const noexcept { return mIndirectLight; }
@@ -204,7 +205,7 @@ private:
             const CameraInfo& camera, const math::float4* spheres, size_t count) noexcept;
 
     FEngine& mEngine;
-    FSkybox const* mSkybox = nullptr;
+    FSkybox* mSkybox = nullptr;
     FIndirectLight const* mIndirectLight = nullptr;
 
     /*

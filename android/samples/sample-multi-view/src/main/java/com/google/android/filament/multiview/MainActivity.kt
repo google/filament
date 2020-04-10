@@ -65,11 +65,8 @@ class MainActivity : Activity() {
     private lateinit var view1: View
     private lateinit var view2: View
     private lateinit var view3: View
-    // We need skyboxes to set the background color
-    private lateinit var skybox0: Skybox
-    private lateinit var skybox1: Skybox
-    private lateinit var skybox2: Skybox
-    private lateinit var skybox3: Skybox
+    // We need skybox to set the background color
+    private lateinit var skybox: Skybox
     // Should be pretty obvious :)
     private lateinit var camera: Camera
 
@@ -128,15 +125,13 @@ class MainActivity : Activity() {
         view2.setName("view2");
         view3.setName("view3");
 
+        skybox =  Skybox.Builder().build(engine);
+        scene.skybox = skybox
+
         camera = engine.createCamera()
     }
 
     private fun setupViews() {
-        skybox0 =  Skybox.Builder().color(0.035f, 0.035f, 0.035f, 1.0f).build(engine);
-        skybox1 =  Skybox.Builder().color(1.0f, 0.0f, 0.0f, 1.0f).build(engine);
-        skybox2 =  Skybox.Builder().color(0.0f, 1.0f, 0.0f, 1.0f).build(engine);
-        skybox3 =  Skybox.Builder().color(0.0f, 0.0f, 1.0f, 1.0f).build(engine);
-
         view0.camera = camera
         view1.camera = camera
         view2.camera = camera
@@ -378,10 +373,7 @@ class MainActivity : Activity() {
         engine.destroyView(view1)
         engine.destroyView(view2)
         engine.destroyView(view3)
-        engine.destroySkybox(skybox0)
-        engine.destroySkybox(skybox1)
-        engine.destroySkybox(skybox2)
-        engine.destroySkybox(skybox3)
+        engine.destroySkybox(skybox)
         engine.destroyScene(scene)
         engine.destroyCamera(camera)
 
@@ -406,16 +398,16 @@ class MainActivity : Activity() {
                 // If beginFrame() returns false you should skip the frame
                 // This means you are sending frames too quickly to the GPU
                 if (renderer.beginFrame(swapChain!!, frameTimeNanos)) {
-                    scene.skybox = skybox0
+                    skybox.setColor(0.035f, 0.035f, 0.035f, 1.0f);
                     renderer.render(view0)
 
-                    scene.skybox = skybox1
+                    skybox.setColor(1.0f, 0.0f, 0.0f, 1.0f);
                     renderer.render(view1)
 
-                    scene.skybox = skybox2
+                    skybox.setColor(0.0f, 1.0f, 0.0f, 1.0f);
                     renderer.render(view2)
 
-                    scene.skybox = skybox3
+                    skybox.setColor(0.0f, 0.0f, 1.0f, 1.0f);
                     renderer.render(view3)
 
                     renderer.endFrame()

@@ -164,7 +164,7 @@ static constexpr uint8_t BAKED_COLOR_PACKAGE[] = {
     filaView = engine->createView();
 
     // Set a transparent clear color.
-    filaView->setClearColor({0.0f, 0.0f, 0.0f, 0.0f});
+    renderer->setClearOptions({.clear = true});
 
     filaView->setPostProcessingEnabled(false);
 

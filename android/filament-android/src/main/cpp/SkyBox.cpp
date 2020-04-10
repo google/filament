@@ -91,3 +91,10 @@ Java_com_google_android_filament_Skybox_nGetIntensity(JNIEnv *env, jclass clazz,
     Skybox *skybox = (Skybox *) nativeSkybox;
     return static_cast<jint>(skybox->getIntensity());
 }
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_Skybox_nSetColor(JNIEnv *, jclass,
+        jlong nativeSkybox, jfloat r, jfloat g, jfloat b, jfloat a) {
+    Skybox *skybox = (Skybox *) nativeSkybox;
+    skybox->setColor({r, g, b, a});
+}

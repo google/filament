@@ -123,20 +123,20 @@ public class Renderer {
          * Color to use to clear the SwapChain
          */
         @NonNull
-        float[] clearColor = { 0.0f, 0.0f, 0.0f, 0.0f };
+        public float[] clearColor = { 0.0f, 0.0f, 0.0f, 0.0f };
 
         /**
          * Whether the SwapChain should be cleared using the clearColor. Use this if translucent
          * View will be drawn, for instance.
          */
-        boolean clear = false;
+        public boolean clear = false;
 
         /**
          * Whether the SwapChain content should be discarded. clear implies discard. Set this
          * to false (along with clear to false as well) if the SwapChain already has content that
          * needs to be preserved
          */
-        boolean discard = true;
+        public boolean discard = true;
     };
 
     /**

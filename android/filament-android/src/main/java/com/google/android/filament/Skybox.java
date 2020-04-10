@@ -18,6 +18,7 @@ package com.google.android.filament;
 
 import androidx.annotation.IntRange;
 import androidx.annotation.NonNull;
+import androidx.annotation.Size;
 
 import static com.google.android.filament.Colors.LinearColor;
 
@@ -142,6 +143,20 @@ public class Skybox {
         }
 
         /**
+         * Sets the <code>Skybox</code> to a constant color. Default is opaque black.
+         *
+         * Ignored if an environment is set.
+         *
+         * @param color an array of 4 floats
+         * @return This Builder, for chaining calls.
+         */
+        @NonNull
+        public Builder color(@NonNull @Size(min = 4) float[] color) {
+            nBuilderColor(mNativeBuilder, color[0], color[1], color[2], color[3]);
+            return this;
+        }
+
+        /**
          * Creates a <code>Skybox</code> object
          *
          * @param engine the {@link Engine} to associate this <code>Skybox</code> with.
@@ -172,6 +187,25 @@ public class Skybox {
                 }
             }
         }
+    }
+
+    /**
+     * Mutates the <code>Skybox</code>'s constant color.
+     *
+     * Ignored if an environment is set.
+     */
+    public void setColor(@LinearColor float r, @LinearColor float g, @LinearColor float b, float a) {
+        nSetColor(getNativeObject(), r, g, b, a);
+    }
+
+    /**
+     * Mutates the <code>Skybox</code>'s constant color.
+     * Ignored if an environment is set.
+     *
+     * @param color an array of 4 floats
+     */
+    public void setColor(@NonNull @Size(min = 4) float[] color) {
+        nSetColor(getNativeObject(), color[0], color[1], color[2], color[3]);
     }
 
     /**
@@ -224,4 +258,5 @@ public class Skybox {
     private static native void nSetLayerMask(long nativeSkybox, int select, int value);
     private static native int  nGetLayerMask(long nativeSkybox);
     private static native float nGetIntensity(long nativeSkybox);
+    private static native void nSetColor(long nativeSkybox, float r, float g, float b, float a);
 }

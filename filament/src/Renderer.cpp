@@ -262,7 +262,10 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     const TargetBufferFlags clearFlags = mClearFlags;
     const float4 clearColor = mClearOptions.clearColor;
 
-    // once we've done the first View, we don't discard or clear the color buffer for the next ones
+    // Renderer's ClearOptions apply once at the beginning of the frame (not for each View),
+    // however, it's implemented as part of executing a render pass on the current render target,
+    // and that happens for each View. So we need to disable clearing after the 1st View has
+    // been processed.
     mDiscardedFlags &= ~TargetBufferFlags::COLOR;
     mClearFlags &= ~TargetBufferFlags::COLOR;
 
@@ -580,8 +583,8 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 }
 
                 if (!data.color.isValid()) {
-                    clearColorFlags = TargetBufferFlags::COLOR;
-                    if (!(config.clearFlags & TargetBufferFlags::COLOR)) {
+                    if (!mClearOptions.clear && !view.isSkyboxVisible()) {
+                        clearColorFlags = TargetBufferFlags::COLOR;
                         data.clearColor = {};
                     }
                     data.color = builder.createTexture("Color Buffer", colorBufferDesc);

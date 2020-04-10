@@ -153,6 +153,10 @@ void FSkybox::setColor(math::float4 color) noexcept {
     mSkyboxMaterialInstance->setParameter("color", color);
 }
 
+void FSkybox::commit(backend::DriverApi& driver) noexcept {
+    mSkyboxMaterialInstance->commit(driver);
+}
+
 } // namespace details
 
 // ------------------------------------------------------------------------------------------------
