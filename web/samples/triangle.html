@@ -68,11 +68,14 @@ class App {
         this.swapChain = engine.createSwapChain();
         this.renderer = engine.createRenderer();
         this.camera = engine.createCamera();
+
         this.view = engine.createView();
         this.view.setSampleCount(4);
         this.view.setCamera(this.camera);
         this.view.setScene(this.scene);
-        this.view.setClearColor([0.0, 0.1, 0.2, 1.0]);
+
+        this.renderer.setClearOptions({clearColor: [0.0, 0.1, 0.2, 1.0], clear: true});
+
         this.resize();
         this.render = this.render.bind(this);
         this.resize = this.resize.bind(this);

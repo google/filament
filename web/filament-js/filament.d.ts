@@ -38,7 +38,6 @@ export type mat3 = glm.mat3|number[];
 export type mat4 = glm.mat4|number[];
 export type quat = glm.quat|number[];
 
-export class Skybox {}
 export class Texture {}
 export class SwapChain {}
 
@@ -50,6 +49,12 @@ export interface Box {
 export interface Aabb {
     min: float3;
     max: float3;
+}
+
+export interface Renderer$ClearOptions {
+    clearColor?: float4;
+    clear?: boolean;
+    discard?: boolean;
 }
 
 export interface View$AmbientOcclusionOptions {
@@ -81,6 +86,10 @@ export class Entity {
 export class EntityVector {
     public get(index: number): Entity;
     public size(): number;
+}
+
+export class Skybox {
+    public setColor(color: float4): void;
 }
 
 export class LightManager$Instance {
@@ -177,6 +186,13 @@ export class LightManager$Builder {
     public position(value: float3): LightManager$Builder;
 }
 
+export class Skybox$Builder {
+    public build(engine: Engine): Skybox;
+    public color(rgba: float4): Skybox$Builder;
+    public environment(envmap: Texture): Skybox$Builder;
+    public showSun(show: boolean): Skybox$Builder;
+}
+
 export class LightManager {
     public hasComponent(entity: Entity): boolean;
     public getInstance(entity: Entity): LightManager$Instance;
@@ -259,6 +275,10 @@ export class IndexBuffer {
 
 export class Renderer {
     public render(swapChain: SwapChain, view: View): void;
+    public setClearOptions(options: Renderer$ClearOptions): void;
+    public renderView(view: View): void;
+    public beginFrame(swapChain: SwapChain, vsyncSteadyClockTimeNano: number): boolean;
+    public endFrame(): void;
 }
 
 export class Material {
@@ -347,7 +367,6 @@ export class RenderTarget {
 
 export class View {
     public setCamera(camera: Camera): void;
-    public setClearColor(color: float4): void;
     public setScene(scene: Scene): void;
     public setViewport(viewport: float4): void;
     public setRenderTarget(renderTarget: RenderTarget): void;
@@ -355,6 +374,8 @@ export class View {
     public setBloomOptions(options: View$BloomOptions): void;
     public setAmbientOcclusion(enable: boolean): void;
     public getAmbientOcclusion(): boolean;
+    public setBlendMode(mode: View$BlendMode): void;
+    public getBlendMode(): View$BlendMode;
 }
 
 export class TransformManager {
@@ -775,6 +796,11 @@ export enum VertexBuffer$AttributeType {
 export enum View$AntiAliasing {
     NONE,
     FXAA,
+}
+
+export enum View$BlendMode {
+    OPAQUE,
+    TRANSLUCENT,
 }
 
 export enum View$QualityLevel {
