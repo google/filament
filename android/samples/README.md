@@ -41,8 +41,8 @@ Demonstrates how to render into a `TextureView` instead of a `SurfaceView`:
 
 ### `material-builder`
 
-Demonstrates how to programatically generate Filament materials, as opposed to compiling them on the
-host machine:
+Demonstrates how to programmatically generate Filament materials, as opposed to compiling them on
+the host machine:
 
 ![Material Builder](../../docs/images/samples/sample_image_based_lighting.jpg)
 
@@ -57,6 +57,14 @@ Demonstrates how to load glTF models and use the camera manipulator:
 Demonstrates how to use `Stream` with Android's Camera2 API:
 
 ![Hello Camera](../../docs/images/samples/sample_hello_camera.jpg)
+
+### `page-curl`
+
+Pure Java app that demonstrates custom vertex shader animation and two-sided texturing.
+Applies the deformation described in "Deforming Pages of Electronic Books" by Hong et al.
+Users can drag horizontally to turn the page.
+
+![Page Curl](../../docs/images/samples/sample_page_curl.jpg)
 
 ### `stream-test`
 
