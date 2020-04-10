@@ -283,6 +283,11 @@ value_object<filament::Aabb>("Aabb")
     .field("min", &filament::Aabb::min)
     .field("max", &filament::Aabb::max);
 
+value_object<filament::Renderer::ClearOptions>("Renderer$ClearOptions")
+    .field("clearColor", &filament::Renderer::ClearOptions::clearColor)
+    .field("clear", &filament::Renderer::ClearOptions::clear)
+    .field("discard", &filament::Renderer::ClearOptions::discard);
+
 value_object<filament::View::AmbientOcclusionOptions>("View$AmbientOcclusionOptions")
     .field("radius", &filament::View::AmbientOcclusionOptions::radius)
     .field("power", &filament::View::AmbientOcclusionOptions::power)
@@ -478,6 +483,7 @@ class_<Renderer>("Renderer")
         }
         engine->execute();
     }), allow_raw_pointers())
+    .function("_setClearOptions", &Renderer::setClearOptions, allow_raw_pointers())
     .function("beginFrame", &Renderer::beginFrame, allow_raw_pointers())
     .function("endFrame", &Renderer::endFrame, allow_raw_pointers());
 
@@ -487,6 +493,8 @@ class_<Renderer>("Renderer")
 class_<View>("View")
     .function("setScene", &View::setScene, allow_raw_pointers())
     .function("setCamera", &View::setCamera, allow_raw_pointers())
+    .function("setBlendMode", &View::setBlendMode)
+    .function("getBlendMode", &View::getBlendMode)
     .function("getViewport", &View::getViewport)
     .function("setViewport", &View::setViewport)
     .function("setPostProcessingEnabled", &View::setPostProcessingEnabled)
@@ -1108,12 +1116,15 @@ class_<IblBuilder>("IndirectLight$Builder")
         return &builder->rotation(value.m); });
 
 class_<Skybox>("Skybox")
-    .class_function("Builder", (SkyBuilder (*)()) [] { return SkyBuilder(); });
+    .class_function("Builder", (SkyBuilder (*)()) [] { return SkyBuilder(); })
+    .function("setColor", &Skybox::setColor);
 
 class_<SkyBuilder>("Skybox$Builder")
     .function("_build", EMBIND_LAMBDA(Skybox*, (SkyBuilder* builder, Engine* engine), {
         return builder->build(*engine);
     }), allow_raw_pointers())
+    .BUILDER_FUNCTION("color", SkyBuilder, (SkyBuilder* builder, filament::math::float4 color), {
+        return &builder->color(color); })
     .BUILDER_FUNCTION("environment", SkyBuilder, (SkyBuilder* builder, Texture* cubemap), {
         return &builder->environment(cubemap); })
     .BUILDER_FUNCTION("showSun", SkyBuilder, (SkyBuilder* builder, bool show), {

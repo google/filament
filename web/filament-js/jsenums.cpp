@@ -123,6 +123,10 @@ enum_<View::AmbientOcclusion>("View$AmbientOcclusion")
     .value("NONE", View::AmbientOcclusion::NONE)
     .value("SSAO", View::AmbientOcclusion::SSAO);
 
+enum_<View::BlendMode>("View$BlendMode")
+    .value("OPAQUE", View::BlendMode::OPAQUE)
+    .value("TRANSLUCENT", View::BlendMode::TRANSLUCENT);
+
 enum_<View::BloomOptions::BlendMode>("View$BloomOptions$BlendMode")
     .value("ADD", View::BloomOptions::BlendMode::ADD)
     .value("INTERPOLATE", View::BloomOptions::BlendMode::INTERPOLATE);

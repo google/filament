@@ -144,6 +144,19 @@ Filament.loadClassExtensions = function() {
         return new Filament.gltfio$AssetLoader(this, materials);
     };
 
+    /// setClearOptions ::method::
+    /// overrides ::argument:: Dictionary with one or more of the following properties: \
+    /// clearColor, clear, discard.
+    Filament.Renderer.prototype.setClearOptions = function(overrides) {
+        const options = {
+            clearColor: [0, 0, 0, 0],
+            clear: false,
+            discard: true
+        };
+        Object.assign(options, overrides);
+        this._setClearOptions(options);
+    };
+
     /// setAmbientOcclusionOptions ::method::
     /// overrides ::argument:: Dictionary with one or more of the following properties: \
     /// radius, power, bias, resolution, intensity, quality.
