@@ -51,32 +51,6 @@ Java_com_google_android_filament_View_nSetViewport(JNIEnv*, jclass,
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_View_nSetClearColor(JNIEnv*, jclass, jlong nativeView,
-        jfloat linearR, jfloat linearG, jfloat linearB, jfloat linearA) {
-    View* view = (View*) nativeView;
-    view->setClearColor({linearR, linearG, linearB, linearA});
-}
-
-extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_View_nGetClearColor(JNIEnv* env, jclass, jlong nativeView, jfloatArray out_) {
-    View* view = (View*) nativeView;
-    jfloat* out = env->GetFloatArrayElements(out_, NULL);
-    auto linearColor = view->getClearColor();
-    out[0] = linearColor[0];
-    out[1] = linearColor[1];
-    out[2] = linearColor[2];
-    out[3] = linearColor[3];
-    env->ReleaseFloatArrayElements(out_, out, 0);
-}
-
-extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_View_nSetClearTargets(JNIEnv*, jclass,
-        jlong nativeView, jboolean color, jboolean depth, jboolean stencil) {
-    View* view = (View*) nativeView;
-    view->setClearTargets(color, depth, stencil);
-}
-
-extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_View_nSetVisibleLayers(JNIEnv*, jclass, jlong nativeView, jint select, jint value) {
     View* view = (View*) nativeView;
     view->setVisibleLayers((uint8_t) select, (uint8_t) value);
@@ -90,9 +64,9 @@ Java_com_google_android_filament_View_nSetShadowsEnabled(JNIEnv*, jclass, jlong 
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_View_nSetRenderTarget(JNIEnv*, jclass,
-        jlong nativeView, jlong nativeTarget, jint flags) {
+        jlong nativeView, jlong nativeTarget) {
     View* view = (View*) nativeView;
-    view->setRenderTarget((RenderTarget*) nativeTarget, (View::TargetBufferFlags) flags);
+    view->setRenderTarget((RenderTarget*) nativeTarget);
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -271,4 +245,10 @@ Java_com_google_android_filament_View_nSetFogOptions(JNIEnv *, jclass , jlong na
              .enabled = (bool)enabled
     };
     view->setFogOptions(options);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_View_nSetBlendMode(JNIEnv *, jclass , jlong nativeView, jint blendMode) {
+    View* view = (View*) nativeView;
+    view->setBlendMode((View::BlendMode)blendMode);
 }

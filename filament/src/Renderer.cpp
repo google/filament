@@ -258,43 +258,47 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     FrameGraph fg(engine.getResourceAllocator());
 
-    const TargetBufferFlags discardedFlags = view.getDiscardedTargetBuffers();
+    const TargetBufferFlags discardedFlags = mDiscardedFlags;
+    const TargetBufferFlags clearFlags = mClearFlags;
+    const float4 clearColor = mClearOptions.clearColor;
 
-    TargetBufferFlags clearFlags = (view.getClearFlags() & TargetBufferFlags::COLOR);
-
-    // if the depth-buffer is discarded, then we clear it -- the corollary is that if the user
-    // doesn't ask for the depth buffer to be discarded, then we keep it. This is needed if
-    // the user wants to keep the depth buffer between two calls to render(). This of course
-    // only works when post-processing is disabled.
-    if (any(discardedFlags & TargetBufferFlags::DEPTH)) {
-        clearFlags |= TargetBufferFlags::DEPTH;
-    }
-
-    const float4 clearColor = view.getClearColor();
-
-    // Figure out if we need to blend this view into the framebuffer. Maybe this should be
-    // explicit, but since we don't have an API right now, we use heuristics:
-    // - we are keeping the color buffer before rendering, and
-    // - we are not clearing or clearing with alpha
-    // FIXME: make this an explicit API
-    const bool blending = !(discardedFlags & TargetBufferFlags::COLOR)
-            && (!(clearFlags & TargetBufferFlags::COLOR) || clearColor.a < 1.0);
-
-    // If the swapchain is transparent or if we blend into it, we need to allocate our intermediate
-    // buffers with an alpha channel.
-    // FIXME: this doesn't work when the target is a user provided rendertarget
-    const bool translucent = mSwapChain->isTransparent() || blending;
-
-    const TextureFormat hdrFormat = getHdrFormat(view, translucent);
+    // Renderer's ClearOptions apply once at the beginning of the frame (not for each View),
+    // however, it's implemented as part of executing a render pass on the current render target,
+    // and that happens for each View. So we need to disable clearing after the 1st View has
+    // been processed.
+    mDiscardedFlags &= ~TargetBufferFlags::COLOR;
+    mClearFlags &= ~TargetBufferFlags::COLOR;
 
     const Handle<HwRenderTarget> viewRenderTarget = getRenderTarget(view);
     FrameGraphRenderTargetHandle fgViewRenderTarget = fg.import<FrameGraphRenderTarget>(
             "viewRenderTarget", {
-                .viewport = DEBUG_DYNAMIC_SCALING ? svp : vp, .clearFlags = clearFlags }, {
+                    .viewport = DEBUG_DYNAMIC_SCALING ? svp : vp,
+                    .clearColor = clearColor,
+                    .clearFlags = clearFlags
+            }, {
                     .target = viewRenderTarget,
                     .params = {
                             .flags = { .discardStart = discardedFlags },
                     }});
+
+
+    const bool blending = view.getBlendMode() == View::BlendMode::TRANSLUCENT;
+    // If the swapchain is transparent or if we blend into it, we need to allocate our intermediate
+    // buffers with an alpha channel.
+    // FIXME: this doesn't work when the target is a user provided rendertarget
+    const bool translucent = mSwapChain->isTransparent() || blending;
+    const TextureFormat hdrFormat = getHdrFormat(view, translucent);
+
+    const ColorPassConfig config {
+            .vp = vp,
+            .svp = svp,
+            .scale = scale,
+            .hdrFormat = hdrFormat,
+            .msaa = msaa,
+            .clearFlags = clearFlags,
+            .clearColor = clearColor,
+            .hasContactShadows = scene.hasContactShadows()
+    };
 
     /*
      * Depth + Color passes
@@ -337,17 +341,6 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     pass.newCommandBuffer();
     pass.appendCommands(RenderPass::COLOR);
     pass.sortCommands();
-
-    const ColorPassConfig config {
-            .vp = vp,
-            .svp = svp,
-            .scale = scale,
-            .hdrFormat = hdrFormat,
-            .msaa = msaa,
-            .clearFlags = clearFlags,
-            .clearColor = clearColor,
-            .hasContactShadows = scene.hasContactShadows()
-    };
 
     // We use a framegraph pass to wait for froxelization to finish (so it can be done
     // in parallel with .compile()
@@ -394,7 +387,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             if (UTILS_LIKELY(!blending && upscalingQuality == View::QualityLevel::LOW)) {
                 input = ppm.opaqueBlit(fg, input, { .format = ldrFormat });
             } else {
-                input = ppm.blendBlit(fg, true, upscalingQuality, input, { .format = ldrFormat });
+                input = ppm.blendBlit(fg, true, upscalingQuality, input,
+                        { .format = ldrFormat });
             }
         }
     }
@@ -414,7 +408,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         if (UTILS_LIKELY(!blending && upscalingQuality == View::QualityLevel::LOW)) {
             input = ppm.opaqueBlit(fg, input, { .format = ldrFormat });
         } else {
-            input = ppm.blendBlit(fg, true, upscalingQuality, input, { .format = ldrFormat });
+            input = ppm.blendBlit(fg, true, upscalingQuality, input,
+                    { .format = ldrFormat });
         }
     }
 
@@ -588,10 +583,8 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 }
 
                 if (!data.color.isValid()) {
-                    clearColorFlags = TargetBufferFlags::COLOR;
-                    if (!(config.clearFlags & TargetBufferFlags::COLOR)) {
-                        // the View doesn't ask for a clear, but we're creating a new color
-                        // intermediate buffer, so it must be cleared with transparent pixels.
+                    if (!mClearOptions.clear && !view.isSkyboxVisible()) {
+                        clearColorFlags = TargetBufferFlags::COLOR;
                         data.clearColor = {};
                     }
                     data.color = builder.createTexture("Color Buffer", colorBufferDesc);
@@ -780,6 +773,19 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
     float l = float(time.count() - h);
     mShaderUserTime = { h, l, 0, 0 };
 
+
+    // We always discard and clear the depth+stencil buffers -- we don't allow sharing these
+    // across views (clear implies discard)
+
+    mDiscardedFlags = ((mClearOptions.discard || mClearOptions.clear) ?
+            TargetBufferFlags::COLOR : TargetBufferFlags::NONE)
+                    | TargetBufferFlags::DEPTH_AND_STENCIL;
+
+    mClearFlags = (mClearOptions.clear ?
+            TargetBufferFlags::COLOR : TargetBufferFlags::NONE)
+                    | TargetBufferFlags::DEPTH_AND_STENCIL;
+
+
     // ask the engine to do what it needs to (e.g. updates light buffer, materials...)
     engine.prepare();
 
@@ -932,6 +938,10 @@ void Renderer::setDisplayInfo(const DisplayInfo& info) noexcept {
 
 void Renderer::setFrameRateOptions(FrameRateOptions const& options) noexcept {
     upcast(this)->setFrameRateOptions(options);
+}
+
+void Renderer::setClearOptions(const ClearOptions& options) {
+    upcast(this)->setClearOptions(options);
 }
 
 } // namespace filament

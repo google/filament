@@ -166,8 +166,9 @@ struct FrameGraphRenderTarget {
     struct Descriptor {
         Attachments attachments;
         Viewport viewport;
+        math::float4 clearColor{};
         uint8_t samples = 0; // # of samples (0 = unset, default)
-        backend::TargetBufferFlags clearFlags = {};
+        backend::TargetBufferFlags clearFlags{};
     };
 
     backend::Handle<backend::HwRenderTarget> target;

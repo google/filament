@@ -230,6 +230,10 @@ void FScene::updateUBOs(utils::Range<uint32_t> visibleRenderables, backend::Hand
     mHasContactShadows = hasContactShadows;
     mRenderableViewUbh = renderableUbh;
     driver.loadUniformBuffer(renderableUbh, { buffer, size });
+
+    if (mSkybox) {
+        mSkybox->commit(driver);
+    }
 }
 
 void FScene::terminate(FEngine& engine) {
@@ -388,7 +392,7 @@ bool FScene::hasEntity(Entity entity) const noexcept {
     return mEntities.find(entity) != mEntities.end();
 }
 
-void FScene::setSkybox(FSkybox const* skybox) noexcept {
+void FScene::setSkybox(FSkybox* skybox) noexcept {
     std::swap(mSkybox, skybox);
     if (skybox) {
         remove(skybox->getEntity());
@@ -417,7 +421,7 @@ bool FScene::hasContactShadows() const noexcept {
 
 using namespace details;
 
-void Scene::setSkybox(Skybox const* skybox) noexcept {
+void Scene::setSkybox(Skybox* skybox) noexcept {
     upcast(this)->setSkybox(upcast(skybox));
 }
 

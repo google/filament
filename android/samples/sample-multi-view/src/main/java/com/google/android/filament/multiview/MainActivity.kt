@@ -65,6 +65,8 @@ class MainActivity : Activity() {
     private lateinit var view1: View
     private lateinit var view2: View
     private lateinit var view3: View
+    // We need skybox to set the background color
+    private lateinit var skybox: Skybox
     // Should be pretty obvious :)
     private lateinit var camera: Camera
 
@@ -123,24 +125,13 @@ class MainActivity : Activity() {
         view2.setName("view2");
         view3.setName("view3");
 
+        skybox =  Skybox.Builder().build(engine);
+        scene.skybox = skybox
+
         camera = engine.createCamera()
     }
 
     private fun setupViews() {
-        // To use multi-view properly with mobile GPUs, we need to make sure to tell
-        // Filament to not discard buffers after the first view we render
-        view1.setRenderTarget(null, View.TargetBufferFlags.NONE)
-        view2.setRenderTarget(null, View.TargetBufferFlags.NONE)
-        view3.setRenderTarget(null, View.TargetBufferFlags.NONE)
-
-        // Clears are not restricted by the scissor so we want to disable clear targets
-        // except for the first view we render
-        view1.setClearTargets(false, false, false)
-        view2.setClearTargets(false, false, false)
-        view3.setClearTargets(false, false, false)
-
-        view0.setClearColor(0.035f, 0.035f, 0.035f, 1.0f)
-
         view0.camera = camera
         view1.camera = camera
         view2.camera = camera
@@ -382,6 +373,7 @@ class MainActivity : Activity() {
         engine.destroyView(view1)
         engine.destroyView(view2)
         engine.destroyView(view3)
+        engine.destroySkybox(skybox)
         engine.destroyScene(scene)
         engine.destroyCamera(camera)
 
@@ -406,10 +398,18 @@ class MainActivity : Activity() {
                 // If beginFrame() returns false you should skip the frame
                 // This means you are sending frames too quickly to the GPU
                 if (renderer.beginFrame(swapChain!!, frameTimeNanos)) {
+                    skybox.setColor(0.035f, 0.035f, 0.035f, 1.0f);
                     renderer.render(view0)
+
+                    skybox.setColor(1.0f, 0.0f, 0.0f, 1.0f);
                     renderer.render(view1)
+
+                    skybox.setColor(0.0f, 1.0f, 0.0f, 1.0f);
                     renderer.render(view2)
+
+                    skybox.setColor(0.0f, 0.0f, 1.0f, 1.0f);
                     renderer.render(view3)
+
                     renderer.endFrame()
                 }
             }

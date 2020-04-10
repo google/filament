@@ -117,11 +117,6 @@ class MainActivity : Activity() {
     }
 
     private fun setupView() {
-        // Clear the background to middle-grey
-        // Setting up a clear color is useful for debugging but usually
-        // unnecessary when using a skybox
-        view.setClearColor(0.035f, 0.035f, 0.035f, 1.0f)
-
         view.ambientOcclusion = View.AmbientOcclusion.SSAO
 
         // NOTE: Try to disable post-processing (tone-mapping, etc.) to see the difference

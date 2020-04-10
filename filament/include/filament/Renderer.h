@@ -69,6 +69,10 @@ class PixelBufferDescriptor;
 class UTILS_PUBLIC Renderer : public FilamentAPI {
 public:
 
+    /**
+     * Use DisplayInfo to set important Display properties. This is used to achieve correct
+     * frame pacing and dynamic resolution scaling.
+     */
     struct DisplayInfo {
         // refresh-rate of the display in Hz. set to 0 for offscreen or turn off frame-pacing.
         float refreshRate = 60.0f;
@@ -110,6 +114,25 @@ public:
     };
 
     /**
+     * ClearOptions are used at the beginning of a frame to clear or retain the SwapChain content.
+     */
+    struct ClearOptions {
+        /** Color to use to clear the SwapChain */
+        math::float4 clearColor = {};
+        /**
+         * Whether the SwapChain should be cleared using the clearColor. Use this if translucent
+         * View will be drawn, for instance.
+         */
+        bool clear = false;
+        /**
+         * Whether the SwapChain content should be discarded. clear implies discard. Set this
+         * to false (along with clear to false as well) if the SwapChain already has content that
+         * needs to be preserved
+         */
+        bool discard = true;
+    };
+
+    /**
      * Information about the display this Renderer is associated to. This information is needed
      * to accurately compute dynamic-resolution scaling and for frame-pacing.
      *
@@ -123,6 +146,14 @@ public:
      * @param options
      */
     void setFrameRateOptions(FrameRateOptions const& options) noexcept;
+
+    /**
+     * Set ClearOptions which are used at the beginning of a frame to clear or retain the
+     * SwapChain content.
+     *
+     * @param options
+     */
+    void setClearOptions(const ClearOptions& options);
 
     /**
      * Get the Engine that created this Renderer.

@@ -46,6 +46,7 @@ struct GroundPlane {
 };
 
 struct App {
+    Skybox* skybox;
     utils::Entity light;
     std::map<std::string, MaterialInstance*> materials;
     MeshAssimp* meshes;
@@ -102,8 +103,8 @@ int main(int argc, char** argv) {
         scene->addEntity(app.light);
 
         // Hide skybox and add ground plane.
-        scene->setSkybox(nullptr);
-        view->setClearColor({0.5f,0.75f,1.0f,1.0f});
+        app.skybox = Skybox::Builder().color({0.5f,0.75f,1.0f,1.0f}).build(*engine);
+        scene->setSkybox(app.skybox);
         app.plane = createGroundPlane(engine);
         scene->addEntity(app.plane.renderable);
     };
@@ -114,6 +115,7 @@ int main(int argc, char** argv) {
         engine->destroy(app.plane.vb);
         engine->destroy(app.plane.ib);
         engine->destroy(app.light);
+        engine->destroy(app.skybox);
         for (auto& item : app.materials) {
             engine->destroy(item.second);
         }

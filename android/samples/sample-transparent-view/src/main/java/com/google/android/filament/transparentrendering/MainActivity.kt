@@ -137,12 +137,14 @@ class MainActivity : Activity() {
         scene = engine.createScene()
         view = engine.createView()
         camera = engine.createCamera()
+
+        // clear the swapchain with transparent pixels
+        val options = renderer.clearOptions
+        options.clear = true
+        renderer.clearOptions = options
     }
 
     private fun setupView() {
-        // Make sure to clear to a fully transparent color
-        view.setClearColor(0.0f, 0.0f, 0.0f, 0.0f)
-
         // Tell the view which camera we want to use
         view.camera = camera
 

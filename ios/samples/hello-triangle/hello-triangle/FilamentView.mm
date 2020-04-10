@@ -151,9 +151,9 @@ static constexpr uint8_t BAKED_COLOR_PACKAGE[] = {
     renderer = engine->createRenderer();
     scene = engine->createScene();
     camera = engine->createCamera();
+    renderer->setClearOptions({.clearColor={0.1, 0.125, 0.25, 1.0}, .clear = true});
 
     filaView = engine->createView();
-    filaView->setClearColor({0.1, 0.125, 0.25, 1.0});
     filaView->setPostProcessingEnabled(false);
 
     app.vb = VertexBuffer::Builder()

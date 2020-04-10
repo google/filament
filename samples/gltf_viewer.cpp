@@ -27,6 +27,7 @@
 #include <filament/Skybox.h>
 #include <filament/VertexBuffer.h>
 #include <filament/View.h>
+#include <filament/Renderer.h>
 
 #include <gltfio/AssetLoader.h>
 #include <gltfio/FilamentAsset.h>
@@ -443,8 +444,9 @@ int main(int argc, char** argv) {
         if (ibl) {
             ibl->getSkybox()->setLayerMask(0xff, app.viewOptions.skyboxEnabled ? 0xff : 0x00);
         }
-        view->setClearColor(
-                LinearColorA{ inverseTonemapSRGB(app.viewOptions.backgroundColor), 1.0f });
+        renderer->setClearOptions({
+                .clearColor = { inverseTonemapSRGB(app.viewOptions.backgroundColor), 1.0f },
+                .clear = !ibl || !app.viewOptions.skyboxEnabled  });
     };
 
     FilamentApp& filamentApp = FilamentApp::get();

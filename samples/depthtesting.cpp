@@ -21,6 +21,7 @@
 #include <filament/MaterialInstance.h>
 #include <filament/RenderableManager.h>
 #include <filament/Scene.h>
+#include <filament/Skybox.h>
 #include <filament/TransformManager.h>
 #include <filament/VertexBuffer.h>
 #include <filament/View.h>
@@ -43,6 +44,7 @@ struct App {
     IndexBuffer* ib;
     Material* mat;
     Camera* cam;
+    Skybox* skybox;
     Entity whiteTriangle;
     Entity colorTriangle;
 };
@@ -67,9 +69,11 @@ int main(int argc, char** argv) {
 
     App app;
     auto setup = [&app](Engine* engine, View* view, Scene* scene) {
+        app.skybox = Skybox::Builder().color({0.1, 0.125, 0.25, 1.0}).build(*engine);
+        scene->setSkybox(app.skybox);
+
         app.cam = engine->createCamera();
         view->setCamera(app.cam);
-        view->setClearColor({0.1, 0.125, 0.25, 1.0});
         view->setPostProcessingEnabled(false);
         app.vb = VertexBuffer::Builder()
                 .vertexCount(3)
@@ -115,6 +119,7 @@ int main(int argc, char** argv) {
     };
 
     auto cleanup = [&app](Engine* engine, View*, Scene*) {
+        engine->destroy(app.skybox);
         engine->destroy(app.whiteTriangle);
         engine->destroy(app.colorTriangle);
         engine->destroy(app.mat);
