@@ -549,19 +549,21 @@ id<MTLTexture> MetalRenderTarget::createMultisampledTexture(id<MTLDevice> device
     return [device newTextureWithDescriptor:descriptor];
 }
 
-MetalFence::MetalFence(MetalContext& context) : context(context) {
+MetalFence::MetalFence(MetalContext& context) : context(context), value(context.signalId++) { }
+
+void MetalFence::encode() {
     if (@available(macOS 10.14, iOS 12, *)) {
-        cv = std::make_shared<std::condition_variable>();
         event = [context.device newSharedEvent];
-        value = context.signalId++;
         [getPendingCommandBuffer(&context) encodeSignalEvent:event value:value];
 
         // Using a weak_ptr here because the Fence could be deleted before the block executes.
-        std::weak_ptr<std::condition_variable> weakCv = cv;
+        std::weak_ptr<State> weakState = state;
         [event notifyListener:context.eventListener atValue:value block:^(id <MTLSharedEvent> o,
                 uint64_t value) {
-            if (auto cv = weakCv.lock()) {
-                cv->notify_all();
+            if (auto s = weakState.lock()) {
+                std::unique_lock<std::mutex> guard(s->mutex);
+                s->status = FenceStatus::CONDITION_SATISFIED;
+                s->cv.notify_all();
             }
         }];
     }
@@ -573,10 +575,10 @@ void MetalFence::onSignal(MetalFenceSignalBlock block) {
 
 FenceStatus MetalFence::wait(uint64_t timeoutNs) {
     if (@available(macOS 10.14, iOS 12, *)) {
-        std::unique_lock<std::mutex> guard(mutex);
-        while (event.signaledValue != value) {
+        std::unique_lock<std::mutex> guard(state->mutex);
+        while (state->status == FenceStatus::TIMEOUT_EXPIRED) {
             if (timeoutNs == 0 ||
-                cv->wait_for(guard, std::chrono::nanoseconds(timeoutNs)) ==
+                state->cv.wait_for(guard, std::chrono::nanoseconds(timeoutNs)) ==
                         std::cv_status::timeout) {
                 return FenceStatus::TIMEOUT_EXPIRED;
             }
