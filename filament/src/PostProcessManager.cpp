@@ -716,13 +716,17 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bilateralBlurPass(
                 data.blurred = builder.createTexture("Blurred output", {
                         .width = desc.width, .height = desc.height, .format = format });
 
+                auto depth = fg.getBlackboard().get<FrameGraphTexture>("structure");
+                assert(depth.isValid());
+                builder.read(depth);
+
                 // Here we use the depth test to skip pixels at infinity (i.e. the skybox)
                 // Note that we're not clearing the SAO buffer, which will leave skipped pixels
                 // in an undefined state -- this doesn't matter because the skybox material
                 // doesn't use SSAO.
                 data.blurred = builder.write(data.blurred);
                 data.rt = builder.createRenderTarget("Blurred target", {
-                        .attachments = { data.blurred }});
+                        .attachments = { data.blurred, depth }});
             },
             [=](FrameGraphPassResources const& resources,
                 auto const& data, DriverApi& driver) {
