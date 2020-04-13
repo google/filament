@@ -410,6 +410,10 @@ public:
      * beginFrame() attempts to detect this situation and returns false in that case, indicating
      * to the caller to skip the current frame.
      *
+     * When beginFrame() returns true, it is mandatory to render the frame and call endFrame().
+     * However, when beginFrame() returns false, the caller has the choice to either skip the
+     * frame and not call endFrame(), or proceed as though true was returned.
+     *
      * Typically, Filament is responsible for scheduling the frame's presentation to the SwapChain.
      * If a backend::FrameFinishedCallback is provided, however, the application bares the
      * responsibility of scheduling a frame for presentation by calling the backend::PresentCallable
@@ -426,8 +430,8 @@ public:
      * @param user      User data to be passed to the callback function.
      *
      * @return
-     *      *false* the current frame must be skipped,
-     *      *true* the current frame can be drawn.
+     *      *false* the current frame should be skipped,
+     *      *true* the current frame must be drawn and endFrame() must be called.
      *
      * @remark
      * When skipping a frame, the whole frame is canceled, and endFrame() must not be called.
@@ -448,7 +452,9 @@ public:
      * endFrame() schedules the current frame to be displayed on the Renderer's window.
      *
      * @note
-     * All calls to render() must happen *before* endFrame().
+     * All calls to render() must happen *before* endFrame(). endFrame() must be called if
+     * beginFrame() returned true, otherwise, endFrame() must not be called unless the caller
+     * ignored beginFrame()'s return value.
      *
      * @see
      * beginFrame()

@@ -161,6 +161,11 @@ void FRenderer::render(FView const* view) {
 
     assert(mSwapChain);
 
+    if (mBeginFrameInternal) {
+        mBeginFrameInternal();
+        mBeginFrameInternal = {};
+    }
+
     if (UTILS_LIKELY(view && view->getScene())) {
         // per-renderpass data
         ArenaScope rootArena(mPerRenderPassArena);
@@ -710,90 +715,113 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
     FEngine& engine = getEngine();
     FEngine::DriverApi& driver = engine.getDriverApi();
 
-    mSwapChain = swapChain;
-    swapChain->makeCurrent(driver);
-
-    // NOTE: this makes synchronous calls to the driver
-    driver.updateStreams(&driver);
-
-    driver.beginFrame(appVsync.time_since_epoch().count(), mFrameId, callback, user);
-
-    if (!mFrameSkipper.beginFrame()) {
-        driver.endFrame(mFrameId);
-        engine.flush();
-        return false;
-    }
-
-    // This need to occur after the backend beginFrame() because some backends need to start
-    // a command buffer before creating a fence.
-    mFrameInfoManager.beginFrame({
-            .targetFrameTime = FrameInfo::duration{ float(mFrameRateOptions.interval) / mDisplayInfo.refreshRate },
-            .headRoomRatio = mFrameRateOptions.headRoomRatio,
-            .oneOverTau = mFrameRateOptions.scaleRate,
-            .historySize = mFrameRateOptions.history
-    }, mFrameId);
-
-#if 0 // work-in-progress
-    if (vsyncSteadyClockTimeNano) {
-        const size_t interval = mFrameRateOptions.interval; // user requested swap-interval;
-        const steady_clock::duration refreshPeriod(uint64_t(1e9 / mDisplayInfo.refreshRate));
-        const steady_clock::duration presentationDeadline(mDisplayInfo.presentationDeadlineNanos);
-        const steady_clock::duration vsyncOffset(mDisplayInfo.vsyncOffsetNanos);
-
-        // hardware vsync timestamp
-        steady_clock::time_point hwVsync = appVsync - vsyncOffset;
-
-        // compute our desired presentation time. We can't pick a desired presentation time
-        // that's too far, or we won't be able to dequeue buffers.
-        steady_clock::time_point desiredPresentationTime = hwVsync + 2 * interval * refreshPeriod;
-
-        // Compute the deadline. This deadline is when the GPU must be finished.
-        // The deadline has 1ms backed in it on Android.
-        steady_clock::time_point deadline = desiredPresentationTime - presentationDeadline;
-
-        // one important thing is to make sure that the deadline is comfortably later than
-        // when the gpu will finish, otherwise we'll have inconsistent latency/frames.
-
-        // TODO: evaluate if we can make it in time, and if not why.
-        // If the problem is cpu+gpu latency we can try to push the desired presentation time
-        // further away, but this has limits, as only 2 buffers are dequeuable.
-        // If the problem is the gpu is overwhelmed, then we need to
-        //  - see if there is more headroom in dynamic resolution
-        //  - or start skipping frames. Ideally lower the framerate too.
-
-        // presentation time is set to the middle of the period we're interested in
-        steady_clock::time_point presentationTime = desiredPresentationTime - refreshPeriod / 2;
-        driver.setPresentationTime(presentationTime.time_since_epoch().count());
-    }
-#endif
-
     // latch the frame time
     std::chrono::duration<double> time(appVsync - mUserEpoch);
     float h = float(time.count());
     float l = float(time.count() - h);
     mShaderUserTime = { h, l, 0, 0 };
 
-
     // We always discard and clear the depth+stencil buffers -- we don't allow sharing these
     // across views (clear implies discard)
-
     mDiscardedFlags = ((mClearOptions.discard || mClearOptions.clear) ?
-            TargetBufferFlags::COLOR : TargetBufferFlags::NONE)
-                    | TargetBufferFlags::DEPTH_AND_STENCIL;
+                       TargetBufferFlags::COLOR : TargetBufferFlags::NONE)
+                      | TargetBufferFlags::DEPTH_AND_STENCIL;
 
-    mClearFlags = (mClearOptions.clear ?
-            TargetBufferFlags::COLOR : TargetBufferFlags::NONE)
-                    | TargetBufferFlags::DEPTH_AND_STENCIL;
+    mClearFlags = (mClearOptions.clear ? TargetBufferFlags::COLOR : TargetBufferFlags::NONE)
+                  | TargetBufferFlags::DEPTH_AND_STENCIL;
 
+    mBeginFrameInternal = {};
 
-    // ask the engine to do what it needs to (e.g. updates light buffer, materials...)
-    engine.prepare();
+    mSwapChain = swapChain;
+    swapChain->makeCurrent(driver);
 
-    return true;
+    // NOTE: this makes synchronous calls to the driver
+    driver.updateStreams(&driver);
+
+    // gives the backend a chance to execute periodic tasks
+    driver.tick();
+
+    /*
+    * From this point, we can't do any more work in beginFrame() because the user could choose
+    * to ignore the return value and render the frame anyways -- which is perfectly fine.
+    * The remaining work will be done when the first render() call is made.
+    */
+    auto beginFrameInternal = [=]() {
+        FEngine& engine = getEngine();
+        FEngine::DriverApi& driver = engine.getDriverApi();
+
+        driver.beginFrame(appVsync.time_since_epoch().count(), mFrameId, callback, user);
+
+        // This need to occur after the backend beginFrame() because some backends need to start
+        // a command buffer before creating a fence.
+        mFrameInfoManager.beginFrame({
+                .targetFrameTime = FrameInfo::duration{
+                        float(mFrameRateOptions.interval) / mDisplayInfo.refreshRate },
+                .headRoomRatio = mFrameRateOptions.headRoomRatio,
+                .oneOverTau = mFrameRateOptions.scaleRate,
+                .historySize = mFrameRateOptions.history
+        }, mFrameId);
+
+        if (false && vsyncSteadyClockTimeNano) { // work in progress
+            const size_t interval = mFrameRateOptions.interval; // user requested swap-interval;
+            const steady_clock::duration refreshPeriod(uint64_t(1e9 / mDisplayInfo.refreshRate));
+            const steady_clock::duration presentationDeadline(mDisplayInfo.presentationDeadlineNanos);
+            const steady_clock::duration vsyncOffset(mDisplayInfo.vsyncOffsetNanos);
+
+            // hardware vsync timestamp
+            steady_clock::time_point hwVsync = appVsync - vsyncOffset;
+
+            // compute our desired presentation time. We can't pick a desired presentation time
+            // that's too far, or we won't be able to dequeue buffers.
+            steady_clock::time_point desiredPresentationTime = hwVsync + 2 * interval * refreshPeriod;
+
+            // Compute the deadline. This deadline is when the GPU must be finished.
+            // The deadline has 1ms backed in it on Android.
+            steady_clock::time_point deadline = desiredPresentationTime - presentationDeadline;
+
+            // one important thing is to make sure that the deadline is comfortably later than
+            // when the gpu will finish, otherwise we'll have inconsistent latency/frames.
+
+            // TODO: evaluate if we can make it in time, and if not why.
+            // If the problem is cpu+gpu latency we can try to push the desired presentation time
+            // further away, but this has limits, as only 2 buffers are dequeuable.
+            // If the problem is the gpu is overwhelmed, then we need to
+            //  - see if there is more headroom in dynamic resolution
+            //  - or start skipping frames. Ideally lower the framerate too.
+
+            // presentation time is set to the middle of the period we're interested in
+            steady_clock::time_point presentationTime = desiredPresentationTime - refreshPeriod / 2;
+            driver.setPresentationTime(presentationTime.time_since_epoch().count());
+        }
+
+        // ask the engine to do what it needs to (e.g. updates light buffer, materials...)
+        engine.prepare();
+    };
+
+    if (mFrameSkipper.beginFrame()) {
+        // if beginFrame() returns true, we are expecting a call to endFrame(),
+        // so do the beginFrame work right now, instead of requiring a call to render()
+        beginFrameInternal();
+        return true;
+    }
+
+    // however, if we return false, the user is allowed to ignore us and render a frame anyways,
+    // so we need to delay this work until that happens.
+    mBeginFrameInternal = beginFrameInternal;
+
+    // we need to flush in this case, to make sure the tick() call is executed at some point
+    engine.flush();
+
+    return false;
 }
 
 void FRenderer::endFrame() {
     SYSTRACE_CALL();
+
+    if (UTILS_UNLIKELY(mBeginFrameInternal)) {
+        mBeginFrameInternal();
+        mBeginFrameInternal = {};
+    }
 
     FEngine& engine = getEngine();
     FEngine::DriverApi& driver = engine.getDriverApi();
@@ -813,6 +841,9 @@ void FRenderer::endFrame() {
     }
 
     driver.endFrame(mFrameId);
+
+    // gives the backend a chance to execute periodic tasks
+    driver.tick();
 
     // do this before engine.flush()
     engine.getResourceAllocator().gc();

@@ -268,9 +268,12 @@ public class Renderer {
      *                       time base. This typically comes from
      *                       {@link android.view.Choreographer.FrameCallback}.
      *
-     * @return <code>false</code> if the current frame must be skipped<br>
-     *         When skipping a frame, the whole frame is canceled, and {@link #endFrame} must not
-     *         be called.
+     * @return <code>true</code>: the current frame must be drawn, and {@link #endFrame} must be called<br>
+     *         <code>false</code>: the current frame should be skipped, when skipping a frame,
+     *         the whole frame is canceled, and {@link #endFrame} must not
+     *         be called. However, the user can choose to proceed as though <code>true</code> was
+     *         returned and produce a frame anyways, by making calls to {@link #render(View)},
+     *         in which case {@link #endFrame} must be called.
      *
      * @see #endFrame
      * @see #render

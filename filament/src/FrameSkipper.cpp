@@ -57,7 +57,15 @@ bool FrameSkipper::beginFrame() noexcept {
 }
 
 void FrameSkipper::endFrame() noexcept {
-    mDelayedSyncs[mLast] = mEngine.getDriverApi().createSync();
+    // if the user produced a new frame despite the fact that the previous one wasn't finished
+    // (i.e. FrameSkipper::beginFrame() returned false), we need to make sure to replace
+    // a fence that might be here already)
+    auto& driver = mEngine.getDriverApi();
+    auto& sync = mDelayedSyncs[mLast];
+    if (sync) {
+        driver.destroySync(sync);
+    }
+    sync = driver.createSync();
 }
 
 

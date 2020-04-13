@@ -2704,12 +2704,15 @@ void OpenGLDriver::executeEveryNowAndThenOps() noexcept {
 // Rendering ops
 // ------------------------------------------------------------------------------------------------
 
+void OpenGLDriver::tick(int) {
+    executeGpuCommandsCompleteOps();
+    executeEveryNowAndThenOps();
+}
+
 void OpenGLDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId,
         backend::FrameFinishedCallback, void*) {
     auto& gl = mContext;
     insertEventMarker("beginFrame");
-    executeGpuCommandsCompleteOps();
-    executeEveryNowAndThenOps();
     if (UTILS_UNLIKELY(!mExternalStreams.empty())) {
         OpenGLPlatform& platform = mPlatform;
         for (GLTexture const* t : mExternalStreams) {
@@ -2732,8 +2735,6 @@ void OpenGLDriver::setPresentationTime(int64_t monotonic_clock_ns) {
 void OpenGLDriver::endFrame(uint32_t frameId) {
     //SYSTRACE_NAME("glFinish");
     //glFinish();
-    //executeGpuCommandsCompleteOps();
-    executeEveryNowAndThenOps();
     insertEventMarker("endFrame");
 }
 

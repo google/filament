@@ -97,6 +97,10 @@ void MetalDriver::debugCommand(const char *methodName) {
 }
 #endif
 
+
+void MetalDriver::tick(int) {
+}
+
 void MetalDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId,
         backend::FrameFinishedCallback callback, void* user) {
     // If a callback was specified, then the client is responsible for presenting the frame.
@@ -111,11 +115,10 @@ void MetalDriver::execute(std::function<void(void)> fn) noexcept {
 }
 
 void MetalDriver::setPresentationTime(int64_t monotonic_clock_ns) {
-
 }
 
 void MetalDriver::endFrame(uint32_t frameId) {
-    // If we haven't commited the command buffer (if the frame was canceled), do it now. There may
+    // If we haven't committed the command buffer (if the frame was canceled), do it now. There may
     // be commands in it (like fence signaling) that need to execute.
     submitPendingCommands(mContext);
 

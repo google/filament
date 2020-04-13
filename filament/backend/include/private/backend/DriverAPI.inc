@@ -123,6 +123,8 @@
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-parameter"
 
+DECL_DRIVER_API_0(tick)
+
 DECL_DRIVER_API_N(beginFrame,
         int64_t, monotonic_clock_ns,
         uint32_t, frameId,
