@@ -171,7 +171,12 @@ private:
 class MetalFence : public HwFence {
 public:
 
+    // MetalFence is special, as it gets constructed on the Filament thread. We must delay inserting
+    // the fence into the command stream until encode() is called (on the driver thread).
     MetalFence(MetalContext& context);
+
+    // Inserts this fence into the current command buffer. Must be called from the driver thread.
+    void encode();
 
     FenceStatus wait(uint64_t timeoutNs);
 
@@ -185,13 +190,17 @@ private:
 
     MetalContext& context;
 
-    std::shared_ptr<std::condition_variable> cv;
-    std::mutex mutex;
+    struct State {
+        FenceStatus status { FenceStatus::TIMEOUT_EXPIRED };
+        std::condition_variable cv;
+        std::mutex mutex;
+    };
+    std::shared_ptr<State> state { std::make_shared<State>() };
 
     // MTLSharedEvent is only available on macOS 10.14 and iOS 12.0 and above.
     // The availability annotation ensures we wrap all usages of event in an @availability check.
     API_AVAILABLE(macos(10.14), ios(12.0))
-    id<MTLSharedEvent> event;
+    id<MTLSharedEvent> event = nil;
 
     uint64_t value;
 };

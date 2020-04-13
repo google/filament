@@ -101,6 +101,15 @@ private:
         return Handle<B>(mNextId++);
     }
 
+    template<typename Dp, typename B, typename ... ARGS>
+    Handle<B> alloc_and_construct_handle(ARGS&& ... args) {
+        std::lock_guard<std::mutex> lock(mHandleMapMutex);
+        Blob blob = mHandleMap[mNextId] = malloc(sizeof(Dp));
+        Dp* addr = reinterpret_cast<Dp*>(blob);
+        new(addr) Dp(std::forward<ARGS>(args)...);
+        return Handle<B>(mNextId++);
+    }
+
     template<typename Dp, typename B>
     Dp* handle_cast(HandleMap& handleMap, Handle<B> handle) noexcept {
         std::lock_guard<std::mutex> lock(mHandleMapMutex);
