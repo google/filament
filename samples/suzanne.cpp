@@ -78,11 +78,6 @@ static Texture* loadNormalMap(Engine* engine, const uint8_t* normals, size_t nby
 int main(int argc, char** argv) {
     Config config;
     config.title = "suzanne";
-#ifdef _MSC_VER
-    config.backend = Engine::Backend::OPENGL;
-#else
-    config.backend = Engine::Backend::VULKAN;
-#endif
     config.iblDirectory = FilamentApp::getRootAssetsPath() + IBL_FOLDER;
 
     App app;

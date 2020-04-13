@@ -29,7 +29,6 @@ using namespace filament;
 int main(int argc, char** argv) {
     Config config;
     config.title = "strobecolor";
-    config.backend = Engine::Backend::VULKAN;
     Skybox* skybox;
 
     auto setup = [&skybox](Engine* engine, View* view, Scene* scene) {

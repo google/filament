@@ -50,7 +50,6 @@ static const char* IBL_FOLDER = "envs/pillars";
 int main(int argc, char** argv) {
     Config config;
     config.title = "hellopbr";
-    config.backend = Backend::VULKAN;
     config.iblDirectory = FilamentApp::getRootAssetsPath() + IBL_FOLDER;
 
     App app;

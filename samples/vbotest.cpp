@@ -44,7 +44,6 @@ static constexpr uint16_t TRIANGLE_INDICES[] { 0, 1, 2 };
 int main(int argc, char** argv) {
     Config config;
     config.title = "vbotest";
-    config.backend = Engine::Backend::VULKAN;
 
     // Aggregate positions and colors into a single buffer without interleaving.
     std::vector<uint8_t> vbo(sizeof(POSITIONS) + sizeof(COLORS));
