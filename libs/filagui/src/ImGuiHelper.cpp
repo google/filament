@@ -76,7 +76,7 @@ void ImGuiHelper::createAtlasTexture(Engine* engine) {
     static unsigned char* pixels;
     int width, height;
     io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
-    size_t size = (size_t) (width * height);
+    size_t size = (size_t) (width * height * 4);
     Texture::PixelBufferDescriptor pb(
             pixels, size,
             Texture::Format::RGBA, Texture::Type::UBYTE);
