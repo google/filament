@@ -31,7 +31,7 @@ float sphericalCapsIntersection(float cosCap1, float cosCap2, float cosDistance)
     float d  = acosFast(cosDistance);
 
     // We work with cosine angles, replace the original paper's use of
-    // min(r1, r2) with max(cosCap1, cosCap2)
+    // cos(min(r1, r2)) with max(cosCap1, cosCap2)
     // We also remove a multiplication by 2 * PI to simplify the computation
     // since we divide by 2 * PI in computeBentSpecularAO()
 
@@ -43,7 +43,7 @@ float sphericalCapsIntersection(float cosCap1, float cosCap2, float cosDistance)
 
     float delta = abs(r1 - r2);
     float x = 1.0 - saturate((d - delta) / max(r1 + r2 - delta, 0.0001));
-    // simplified smoothsteph()
+    // simplified smoothstep()
     float area = sq(x) * (-2.0 * x + 3.0);
     return area * (1.0 - max(cosCap1, cosCap2));
 }
