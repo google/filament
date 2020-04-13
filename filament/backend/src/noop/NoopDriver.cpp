@@ -45,6 +45,9 @@ template class backend::ConcreteDispatcher<NoopDriver>;
 void NoopDriver::terminate() {
 }
 
+void NoopDriver::tick(int) {
+}
+
 void NoopDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId,
         backend::FrameFinishedCallback, void*) {
 }

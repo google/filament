@@ -235,6 +235,9 @@ void VulkanDriver::terminate() {
     mContext.instance = nullptr;
 }
 
+void VulkanDriver::tick(int) {
+}
+
 void VulkanDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId,
         backend::FrameFinishedCallback, void*) {
     // We allow multiple beginFrame / endFrame pairs before commit(), so gracefully return early
