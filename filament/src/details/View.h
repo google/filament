@@ -146,7 +146,8 @@ public:
         return mName.c_str();
     }
 
-    void prepareCamera(const CameraInfo& camera, const Viewport& viewport) const noexcept;
+    void prepareCamera(const CameraInfo& camera) const noexcept;
+    void prepareViewport(const Viewport& viewport) const noexcept;
     void prepareShadowing(FEngine& engine, backend::DriverApi& driver,
             FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData) noexcept;
     void prepareLighting(FEngine& engine, FEngine::DriverApi& driver,

@@ -314,7 +314,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     pass.setGeometry(scene.getRenderableData(), view.getVisibleRenderables(), scene.getRenderableUBO());
 
     view.updatePrimitivesLod(engine, cameraInfo,scene.getRenderableData(), view.getVisibleRenderables());
-    view.prepareCamera(cameraInfo, svp);
+    view.prepareCamera(cameraInfo);
+    view.prepareViewport(svp);
     view.commitUniforms(driver);
 
 
@@ -618,6 +619,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
             },
             [=, &view](FrameGraphPassResources const& resources,
                             ColorPassData const& data, DriverApi& driver) {
+                auto out = resources.get(data.rt);
 
                 // set samplers and uniforms
                 PostProcessManager& ppm = getEngine().getPostProcessManager();
@@ -628,9 +630,9 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 if (data.ssr.isValid()) {
                     view.prepareSSR(resources.getTexture(data.ssr), config.refractionLodOffset);
                 }
+                view.prepareViewport(static_cast<filament::Viewport&>(out.params.viewport));
                 view.commitUniforms(driver);
 
-                auto out = resources.get(data.rt);
                 out.params.clearColor = data.clearColor;
 
                 pass.execute(resources.getPassName(), out.target, out.params);

@@ -93,7 +93,8 @@ void ShadowMap::render(DriverApi& driver, Handle<HwRenderTarget> rt,
     pass.setGeometry(scene.getRenderableData(), range, scene.getRenderableUBO());
 
     view.updatePrimitivesLod(engine, cameraInfo, scene.getRenderableData(), range);
-    view.prepareCamera(cameraInfo, viewport);
+    view.prepareCamera(cameraInfo);
+    view.prepareViewport(viewport);
     view.commitUniforms(driver);
 
     pass.overridePolygonOffset(&mPolygonOffset);
