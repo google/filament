@@ -128,7 +128,6 @@ LightManager::Builder& LightManager::Builder::sunHaloFalloff(float haloFalloff) 
 }
 
 LightManager::Builder::Result LightManager::Builder::build(Engine& engine, Entity entity) {
-    FEngine::assertValid(engine, __PRETTY_FUNCTION__);
     upcast(engine).createLight(*this, entity);
     return Success;
 }

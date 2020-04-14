@@ -69,7 +69,6 @@ Stream::Builder& Stream::Builder::height(uint32_t height) noexcept {
 }
 
 Stream* Stream::Builder::build(Engine& engine) {
-    FEngine::assertValid(engine, __PRETTY_FUNCTION__);
     if (!ASSERT_PRECONDITION_NON_FATAL(!mImpl->mStream || !mImpl->mExternalTextureId,
             "One and only one of the stream or external texture can be specified")) {
         return nullptr;
