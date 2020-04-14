@@ -47,6 +47,10 @@ struct Texture::BuilderDetails {
     Sampler mTarget = Sampler::SAMPLER_2D;
     InternalFormat mFormat = InternalFormat::RGBA8;
     Usage mUsage = Usage::DEFAULT;
+    bool mTextureIsSwizzled = false;
+    std::array<Swizzle, 4> mSwizzle = {
+           Swizzle::CHANNEL_0, Swizzle::CHANNEL_1,
+           Swizzle::CHANNEL_2, Swizzle::CHANNEL_3 };
 };
 
 using BuilderType = Texture;
@@ -99,6 +103,12 @@ Texture::Builder& Texture::Builder::import(intptr_t id) noexcept {
     return *this;
 }
 
+Texture::Builder& Texture::Builder::swizzle(Swizzle r, Swizzle g, Swizzle b, Swizzle a) noexcept {
+    mImpl->mTextureIsSwizzled = true;
+    mImpl->mSwizzle = { r, g, b, a };
+    return *this;
+}
+
 Texture* Texture::Builder::build(Engine& engine) {
     FEngine::assertValid(engine, __PRETTY_FUNCTION__);
     if (!ASSERT_POSTCONDITION_NON_FATAL(Texture::isTextureFormatSupported(engine, mImpl->mFormat),
@@ -129,6 +139,11 @@ FTexture::FTexture(FEngine& engine, const Builder& builder) {
         assert((bool)(mUsage & TextureUsage::SAMPLEABLE));
         mHandle = driver.importTexture(builder->mImportedId,
                 mTarget, mLevelCount, mFormat, mSampleCount, mWidth, mHeight, mDepth, mUsage);
+    }
+    if (UTILS_UNLIKELY(builder->mTextureIsSwizzled)) {
+        driver.setTextureSwizzle(mHandle,
+                builder->mSwizzle[0], builder->mSwizzle[1], builder->mSwizzle[2],
+                builder->mSwizzle[3]);
     }
 }
 

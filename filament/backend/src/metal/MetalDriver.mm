@@ -575,6 +575,11 @@ void MetalDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&
     ib->buffer.copyIntoBuffer(data.buffer, data.size);
 }
 
+void MetalDriver::setTextureSwizzle(Handle<HwTexture> th,
+        TextureSwizzle r, TextureSwizzle g, TextureSwizzle b, TextureSwizzle a) {
+    // TODO: implement setTextureSwizzle
+}
+
 void MetalDriver::update2DImage(Handle<HwTexture> th, uint32_t level, uint32_t xoffset,
         uint32_t yoffset, uint32_t width, uint32_t height, PixelBufferDescriptor&& data) {
     ASSERT_PRECONDITION(!isInRenderPass(mContext),

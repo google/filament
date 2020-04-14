@@ -292,6 +292,13 @@ DECL_DRIVER_API_N(updateSamplerGroup,
         backend::SamplerGroupHandle, ubh,
         backend::SamplerGroup&&, samplerGroup)
 
+DECL_DRIVER_API_N(setTextureSwizzle,
+        backend::TextureHandle, th,
+        backend::TextureSwizzle, r,
+        backend::TextureSwizzle, g,
+        backend::TextureSwizzle, b,
+        backend::TextureSwizzle, a)
+
 DECL_DRIVER_API_N(update2DImage,
         backend::TextureHandle, th,
         uint32_t, level,

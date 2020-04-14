@@ -1603,6 +1603,19 @@ void OpenGLDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh,
     *sb->sb = std::move(samplerGroup); // NOLINT(performance-move-const-arg)
 }
 
+void OpenGLDriver::setTextureSwizzle(Handle<HwTexture> th,
+        TextureSwizzle r, TextureSwizzle g, TextureSwizzle b, TextureSwizzle a) {
+    DEBUG_MARKER()
+    GLTexture* t = handle_cast<GLTexture *>(th);
+    bindTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1, t);
+    mContext.activeTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1);
+    glTexParameteri(t->gl.target, GL_TEXTURE_SWIZZLE_R, getSwizzleChannel(r));
+    glTexParameteri(t->gl.target, GL_TEXTURE_SWIZZLE_G, getSwizzleChannel(g));
+    glTexParameteri(t->gl.target, GL_TEXTURE_SWIZZLE_B, getSwizzleChannel(b));
+    glTexParameteri(t->gl.target, GL_TEXTURE_SWIZZLE_A, getSwizzleChannel(a));
+    CHECK_GL_ERROR(utils::slog.e)
+}
+
 void OpenGLDriver::update2DImage(Handle<HwTexture> th,
         uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
         PixelBufferDescriptor&& data) {

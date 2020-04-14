@@ -298,6 +298,18 @@ public class Texture {
     }
 
     /**
+     * Texture swizzling channels
+     */
+    public enum Swizzle {
+        SUBSTITUTE_ZERO,    //!< specified component is substituted with 0
+        SUBSTITUTE_ONE,     //!< specified component is substituted with 1
+        CHANNEL_0,          //!< specified component taken from channel 0
+        CHANNEL_1,          //!< specified component taken from channel 1
+        CHANNEL_2,          //!< specified component taken from channel 2
+        CHANNEL_3           //!< specified component taken from channel 3
+    }
+
+    /**
      * A descriptor to an image in main memory, typically used to transfer image data from the CPU
      * to the GPU.
      * <p>A <code>PixelBufferDescriptor</code> owns the memory buffer it references,
@@ -642,6 +654,21 @@ public class Texture {
         @NonNull
         public Builder usage(int flags) {
             nBuilderUsage(mNativeBuilder, flags);
+            return this;
+        }
+
+        /**
+         * Specifies how a texture's channels map to color components
+         *
+         * @param r  texture channel for red component
+         * @param g  texture channel for green component
+         * @param b  texture channel for blue component
+         * @param a  texture channel for alpha component
+         * @return This Builder, for chaining calls.
+         */
+        @NonNull
+        public Builder swizzle(@NonNull Swizzle r, @NonNull Swizzle g, @NonNull Swizzle b, @NonNull Swizzle a) {
+            nBuilderSwizzle(mNativeBuilder, r.ordinal(), g.ordinal(), b.ordinal(), a.ordinal());
             return this;
         }
 
@@ -1061,6 +1088,7 @@ public class Texture {
     private static native void nBuilderSampler(long nativeBuilder, int sampler);
     private static native void nBuilderFormat(long nativeBuilder, int format);
     private static native void nBuilderUsage(long nativeBuilder, int flags);
+    private static native void nBuilderSwizzle(long nativeBuilder, int r, int g, int b, int a);
     private static native long nBuilderBuild(long nativeBuilder, long nativeEngine);
 
     private static native int nGetWidth(long nativeTexture, int level);
