@@ -135,8 +135,6 @@ public:
 
     static void destroy(FEngine* engine);
 
-    static void assertValid(Engine const& engine, const char* function);
-
     ~FEngine() noexcept;
 
     backend::Driver& getDriver() const noexcept { return *mDriver; }

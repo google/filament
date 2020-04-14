@@ -78,7 +78,6 @@ Skybox::Builder& Skybox::Builder::showSun(bool show) noexcept {
 }
 
 Skybox* Skybox::Builder::build(Engine& engine) {
-    FEngine::assertValid(engine, __PRETTY_FUNCTION__);
     FTexture* cubemap = upcast(mImpl->mEnvironmentMap);
 
     if (!ASSERT_PRECONDITION_NON_FATAL(!cubemap || cubemap->isCubemap(),

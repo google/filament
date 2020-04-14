@@ -110,7 +110,6 @@ Texture::Builder& Texture::Builder::swizzle(Swizzle r, Swizzle g, Swizzle b, Swi
 }
 
 Texture* Texture::Builder::build(Engine& engine) {
-    FEngine::assertValid(engine, __PRETTY_FUNCTION__);
     if (!ASSERT_POSTCONDITION_NON_FATAL(Texture::isTextureFormatSupported(engine, mImpl->mFormat),
             "Texture format %u not supported on this platform", mImpl->mFormat)) {
         return nullptr;
