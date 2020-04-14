@@ -691,6 +691,11 @@ void VulkanDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor
     scheduleDestroy(std::move(p));
 }
 
+void VulkanDriver::setTextureSwizzle(Handle<HwTexture> th,
+        TextureSwizzle r, TextureSwizzle g, TextureSwizzle b, TextureSwizzle a) {
+    // TODO: implement setTextureSwizzle
+}
+
 void VulkanDriver::update2DImage(Handle<HwTexture> th,
         uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
         PixelBufferDescriptor&& data) {

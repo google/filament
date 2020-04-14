@@ -274,6 +274,24 @@ constexpr inline GLenum getType(backend::PixelDataType type) noexcept {
     }
 }
 
+constexpr inline GLenum getSwizzleChannel(backend::TextureSwizzle c) noexcept {
+    using TextureSwizzle = backend::TextureSwizzle;
+    switch (c) {
+        case TextureSwizzle::SUBSTITUTE_ZERO:
+            return GL_ZERO;
+        case TextureSwizzle::SUBSTITUTE_ONE:
+            return GL_ONE;
+        case TextureSwizzle::CHANNEL_0:
+            return GL_RED;
+        case TextureSwizzle::CHANNEL_1:
+            return GL_GREEN;
+        case TextureSwizzle::CHANNEL_2:
+            return GL_BLUE;
+        case TextureSwizzle::CHANNEL_3:
+            return GL_ALPHA;
+    }
+}
+
 // clang looses it on this one, and generates a huge jump table when
 // inlined. So we don't  mark it as inline (only constexpr) which solves the problem,
 // strangely, when not inlined, clang simply generates an array lookup.

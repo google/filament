@@ -26,6 +26,7 @@ A new header is inserted each time a *tag* is created.
 - Fix several issues related to multi-view support. (⚠️ **API breakage**) removed
   `View::setClearColor()`, a similar functionality is now handled by `Renderer::setClearOptions()`
   and `Skybox`, the later now can be set to a constant color.
+- Textures can now be swizzled.
 
 ## v1.5.2
 

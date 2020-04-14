@@ -477,6 +477,16 @@ enum class TextureUsage : uint8_t {
     DEFAULT = UPLOADABLE | SAMPLEABLE   //!< Default texture usage
 };
 
+//! Texture swizzle
+enum class TextureSwizzle {
+    SUBSTITUTE_ZERO,
+    SUBSTITUTE_ONE,
+    CHANNEL_0,
+    CHANNEL_1,
+    CHANNEL_2,
+    CHANNEL_3
+};
+
 //! returns whether this format a compressed format
 static constexpr bool isCompressedFormat(TextureFormat format) noexcept {
     return format >= TextureFormat::EAC_R11;

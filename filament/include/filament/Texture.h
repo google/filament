@@ -79,6 +79,7 @@ public:
     using CompressedType = backend::CompressedPixelDataType;         //!< Compressed pixel data format
     using FaceOffsets = backend::FaceOffsets;                        //!< Cube map faces offsets
     using Usage = backend::TextureUsage;                             //!< Usage affects texel layout
+    using Swizzle = backend::TextureSwizzle;                         //!< Texture swizzle
 
     static bool isTextureFormatSupported(Engine& engine, InternalFormat format) noexcept;
 
@@ -174,6 +175,17 @@ public:
          * @return This Builder, for chaining calls.
          */
         Builder& usage(Usage usage) noexcept;
+
+        /**
+         * Specifies how a texture's channels map to color components
+         *
+         * @param r  texture channel for red component
+         * @param g  texture channel for green component
+         * @param b  texture channel for blue component
+         * @param a  texture channel for alpha component
+         * @return This Builder, for chaining calls.
+         */
+        Builder& swizzle(Swizzle r, Swizzle g, Swizzle b, Swizzle a) noexcept;
 
         /**
          * Creates the Texture object and returns a pointer to it.
