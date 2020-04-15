@@ -15,6 +15,8 @@
  */
 
 #include <cmath>
+#include <cstdlib>
+#include <ctime>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -37,6 +39,7 @@ using namespace utils;
 
 static ImageEncoder::Format g_format = ImageEncoder::Format::PNG_LINEAR;
 static bool g_formatSpecified = false;
+static bool g_groundTruth = false;
 static std::string g_compression;
 
 static void printUsage(const char* name) {
@@ -51,9 +54,11 @@ static void printUsage(const char* name) {
             "\n"
             "Options:\n"
             "   --help, -h\n"
-            "       print this message\n\n"
+            "       Print this message\n\n"
             "   --license\n"
             "       Print copyright and license information\n\n"
+            "   --ground-truth, -g\n"
+            "       Uses a Monte Carlo simulation to generate the LUT\n\n"
             "   --format=[exr|hdr|psd|png|dds|inc|h|hpp|c|cpp|txt], -f [exr|hdr|psd|png|dds|inc|h|hpp|c|cpp|txt]\n"
             "       Specify output file format, inferred from file name if omitted\n\n"
             "   --compression=COMPRESSION, -c COMPRESSION\n"
@@ -84,10 +89,11 @@ static void license() {
 }
 
 static int handleArguments(int argc, char* argv[]) {
-    static constexpr const char* OPTSTR = "hc:f:";
+    static constexpr const char* OPTSTR = "hc:f:g";
     static const struct option OPTIONS[] = {
             { "help",                 no_argument, nullptr, 'h' },
             { "license",              no_argument, nullptr, 's' },
+            { "ground-truth",         no_argument, nullptr, 'g' },
             { "format",         required_argument, nullptr, 'f' },
             { "compression",    required_argument, nullptr, 'c' },
             { nullptr, 0, nullptr, 0 }  // termination of the option list
@@ -132,6 +138,9 @@ static int handleArguments(int argc, char* argv[]) {
                 break;
             case 'c':
                 g_compression = arg;
+                break;
+            case 'g':
+                g_groundTruth = true;
                 break;
         }
     }
@@ -237,6 +246,38 @@ static float conesIntersection(float cosTheta1, float cosTheta2, float cosAlpha)
     return omega1 + omega2;
 }
 
+static void generateSampleRays(float cosAngle, float3* samples, size_t sampleCount) {
+    for (size_t i = 0; i < sampleCount; i++) {
+        float r1 = rand() / float(RAND_MAX);
+        float r2 = rand() / float(RAND_MAX);
+
+        float cosTheta = r1 * (1.0f - cosAngle) + cosAngle;
+        float sinTheta = std::sqrtf(1.0f - sq(cosTheta));
+
+        float phi = 2.0f * PI_F * r2 - 1.0f;
+        float cosPhi = std::cosf(phi);
+        float sinPhi = std::sinf(phi);
+
+        samples[i] = float3{ sinTheta * cosPhi, sinTheta * sinPhi, cosTheta };
+    }
+}
+
+static float groundTruthVisibility(float cosTheta, float cosAlpha,
+        float3* samples, size_t sampleCount) {
+
+    float sinAlpha = std::sqrtf(1.0f - sq(cosAlpha));
+    float3 occluderDirection{ sinAlpha, 0.0f, cosAlpha };
+
+    size_t hits = 0;
+    for (size_t i = 0; i < sampleCount; i++) {
+        if (dot(occluderDirection, samples[i]) > cosTheta) {
+            hits++;
+        }
+    }
+
+    return 1.0f - hits / float(sampleCount);
+}
+
 int main(int argc, char* argv[]) {
     int optionIndex = handleArguments(argc, argv);
 
@@ -272,19 +313,35 @@ int main(int argc, char* argv[]) {
     std::cout << "Generating " << w << "x" << h << "x" << d << " cone/sphere occlusion LUT in " <<
             output << "..." << std::endl;
 
-    // Lay out the depth slices horizontally
+    srand(time(nullptr));
+
+    constexpr size_t sampleCount = 1024;
+    float3 samples[sampleCount];
+
     LinearImage image(w * d, h, 3);
+
     for (size_t z = 0; z < d; z++) {
         float cosTheta2 = clamp(z / (d - 1.0f), 1e-6f, 1.0f - 1e-6f);
+
+        if (g_groundTruth) {
+            generateSampleRays(cosTheta2, samples, sampleCount);
+        }
+
         for (size_t y = 0; y < h; y++) {
             float cosTheta1 = clamp(y / (h - 1.0f), 1e-6f, 1.0f - 1e-6f);
             for (size_t x = 0; x < w; x++) {
                 float cosAlpha = clamp(2.0f * (x / (w - 1.0f)) - 1.0f, -1.0f + 1e-6f, 1.0f - 1e-6f);
-                float area = conesIntersection(cosTheta1, cosTheta2, cosAlpha);
-                float occlusion = 1.0f - area / (2.0f * PI_F * max(1.0f - cosTheta2, 1e-6f));
+
+                float visibility;
+                if (g_groundTruth) {
+                    visibility = groundTruthVisibility(cosTheta1, cosAlpha, samples, sampleCount);
+                } else {
+                    float area = conesIntersection(cosTheta1, cosTheta2, cosAlpha);
+                    visibility = 1.0f - area / (2.0f * PI_F * max(1.0f - cosTheta2, 1e-6f));
+                }
 
                 float3* pixel = image.get<float3>(x + z * w, y);
-                *pixel = float3{ saturate(occlusion) };
+                *pixel = float3{ saturate(visibility) };
             }
         }
     }
