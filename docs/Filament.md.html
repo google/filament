@@ -206,7 +206,7 @@ $$\begin{equation}
 f_r(v,l) = \frac{D(h, \alpha) G(v, l, \alpha) F(v, h, f0)}{4(\NoV)(\NoL)}
 \end{equation}$$
 
-Given our real-time constraints, we must use an approximation for the three terms $D$, $G$ and $F$. [#Karis13] has compiled a great list of formulations for these three terms that can be used with the Cook-Torrance specular BRDF. The sections that follow describe the equations we picked for these terms.
+Given our real-time constraints, we must use an approximation for the three terms $D$, $G$ and $F$. [#Karis13a] has compiled a great list of formulations for these three terms that can be used with the Cook-Torrance specular BRDF. The sections that follow describe the equations we picked for these terms.
 
 ### Normal distribution function (specular D)
 
@@ -819,7 +819,7 @@ Since incoming light will traverse the clear coat layer, we must also take the l
 
 The clear coat layer will be modeled using the same Cook-Torrance microfacet BRDF used in the standard model. Since the clear coat layer is always isotropic and dielectric, with low roughness values (see section [Clear coat parameterization]), we can choose cheaper DFG terms without notably sacrificing visual quality.
 
-A survey of the terms listed in [#Karis13] and [#Burley12] shows that the Fresnel and NDF terms we already use in the standard model are not computationally more expensive than other terms. [#Kelemen01] describes a much simpler term that can replace our Smith-GGX visibility term:
+A survey of the terms listed in [#Karis13a] and [#Burley12] shows that the Fresnel and NDF terms we already use in the standard model are not computationally more expensive than other terms. [#Kelemen01] describes a much simpler term that can replace our Smith-GGX visibility term:
 
 $$\begin{equation}
 V(l,h) = \frac{1}{4(\LoH)^2}
@@ -1455,10 +1455,10 @@ E = \frac{I}{max(d^2, {0.01}^2)}
 
 We can solve the second issue by introducing an influence radius for each light. There are several advantages to this solution. Tools can quickly show artists what parts of the world will be influenced by every light (the tool just needs to draw a sphere centered on each light). The rendering engine can cull lights more aggressively using this extra piece of information and artists/developers can assist the engine by manually tweaking the influence radius of a light.
 
-Mathematically, the illuminance of a light should smoothly reach zero at the limit defined by the influence radius. [#Karis13] proposes to window the inverse square function in such a way that the majority of the light's influence remains unaffected. The proposed windowing is described in equation $\ref{attenuationWindowing}$, where $r$ is the light's radius of influence.
+Mathematically, the illuminance of a light should smoothly reach zero at the limit defined by the influence radius. [#Karis13b] proposes to window the inverse square function in such a way that the majority of the light's influence remains unaffected. The proposed windowing is described in equation $\ref{attenuationWindowing}$, where $r$ is the light's radius of influence.
 
 $$\begin{equation}\label{attenuationWindowing}
-E = \frac{I}{max(d^2, {0.01}^2)} \left< 1 - \frac{d^4}{r^2} \right>
+E = \frac{I}{max(d^2, {0.01}^2)} \left< 1 - \frac{d^4}{r^4} \right>^2
 \end{equation}$$
 
 Listing [glslPunctualLight] demonstrates how to implement physically based punctual lights in GLSL. Note that the light intensity used in this piece of code is the luminous intensity $I$ in $cd$, converted from the luminous power  CPU-side. This snippet is not optimized and some of the computations can be offloaded to the CPU (for instance the square of the light's inverse falloff radius, or the spot scale and angle).
@@ -4270,7 +4270,9 @@ in Microfacet-Based BRDFs. *Journal of Computer Graphics Techniques*, 3 (2).
 
 [#Hill12]: Colin Barré-Brisebois and Stephen Hill. 2012. Blending in Detail. http://blog.selfshadow.com/publications/blending-in-detail/
 
-[#Karis13]: Brian Karis. 2013. Specular BRDF Reference. http://graphicrants.blogspot.com/2013/08/specular-brdf-reference.html
+[#Karis13a]: Brian Karis. 2013. Specular BRDF Reference. http://graphicrants.blogspot.com/2013/08/specular-brdf-reference.html
+
+[#Karis13b]: Brian Karis, 2013. Real Shading in Unreal Engine 4. https://blog.selfshadow.com/publications/s2013-shading-course/karis/s2013_pbs_epic_notes_v2.pdf
 
 [#Karis14]: Brian Karis. 2014. Physically Based Shading on Mobile. https://www.unrealengine.com/blog/physically-based-shading-on-mobile
 
