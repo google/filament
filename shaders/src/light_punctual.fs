@@ -101,7 +101,7 @@ float getDistanceAttenuation(const highp vec3 posToLight, float falloff) {
 
 float getAngleAttenuation(const vec3 lightDir, const vec3 l, const vec2 scaleOffset) {
     float cd = dot(lightDir, l);
-    float attenuation  = saturate(cd * scaleOffset.x + scaleOffset.y);
+    float attenuation = saturate(cd * scaleOffset.x + scaleOffset.y);
     return attenuation * attenuation;
 }
 

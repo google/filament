@@ -694,19 +694,26 @@ void FAssetLoader::createLight(const cgltf_node* node, Entity entity) {
     builder.direction({0.0f, 0.0f, -1.0f});
     builder.color({light->color[0], light->color[1], light->color[2]});
 
-    if (type == LightManager::Type::DIRECTIONAL) {
-        builder.intensity(light->intensity);
-    } else if (type == LightManager::Type::SPOT) {
-        // glTF specifies half angles, but Filament expects full angles.
-        builder.spotLightCone(light->spot_inner_cone_angle * 2.0f,
-                light->spot_outer_cone_angle * 2.0f);
-        // Convert from candelas (luminous intensity) to lumens (luminous power).
-        // lp = li * pi
-        builder.intensity(F_PI * light->intensity);
-    } else if (type == LightManager::Type::POINT) {
-        // Convert from candelas (luminous intensity) to lumens (luminous power).
-        // lp = 4 * pi * li
-        builder.intensity(4.0f * F_PI * light->intensity);
+    switch (type) {
+        case LightManager::Type::SUN:
+        case LightManager::Type::DIRECTIONAL:
+            builder.intensity(light->intensity);
+            break;
+        case LightManager::Type::POINT:
+            // Convert from candelas (luminous intensity) to lumens (luminous power).
+            // lp = 4 * pi * li
+            builder.intensity(4.0f * F_PI * light->intensity);
+            break;
+        case LightManager::Type::FOCUSED_SPOT:
+        case LightManager::Type::SPOT:
+            // glTF specifies half angles, so does Filament
+            builder.spotLightCone(
+                    light->spot_inner_cone_angle,
+                    light->spot_outer_cone_angle);
+            // Convert from candelas (luminous intensity) to lumens (luminous power).
+            // lp = li * pi
+            builder.intensity(F_PI * light->intensity);
+            break;
     }
 
     if (light->range == 0.0f) {
@@ -989,7 +996,7 @@ LightManager::Type FAssetLoader::getLightType(const cgltf_light_type light) {
         case cgltf_light_type_point:
             return LightManager::Type::POINT;
         case cgltf_light_type_spot:
-            return LightManager::Type::SPOT;
+            return LightManager::Type::FOCUSED_SPOT;
     }
 }
 
