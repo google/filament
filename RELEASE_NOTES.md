@@ -27,6 +27,7 @@ A new header is inserted each time a *tag* is created.
   `View::setClearColor()`, a similar functionality is now handled by `Renderer::setClearOptions()`
   and `Skybox`, the later now can be set to a constant color.
 - Fixed spot/point lights rendering bug depending on Viewport position.
+- Textures can now be swizzled.
 
 ## v1.5.2
 
