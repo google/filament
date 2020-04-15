@@ -197,6 +197,8 @@ void createVirtualDevice(VulkanContext& context) {
         .vkFreeMemory = vkFreeMemory,
         .vkMapMemory = vkMapMemory,
         .vkUnmapMemory = vkUnmapMemory,
+        .vkFlushMappedMemoryRanges = vkFlushMappedMemoryRanges,
+        .vkInvalidateMappedMemoryRanges = vkInvalidateMappedMemoryRanges,
         .vkBindBufferMemory = vkBindBufferMemory,
         .vkBindImageMemory = vkBindImageMemory,
         .vkGetBufferMemoryRequirements = vkGetBufferMemoryRequirements,
