@@ -16,6 +16,7 @@
 
 #include <cmath>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 
 #include <math/scalar.h>
@@ -109,7 +110,7 @@ static int handleArguments(int argc, char* argv[]) {
                 // break;
             case 'f':
                 if (arg == "png") {
-                    g_format = ImageEncoder::Format::PNG;
+                    g_format = ImageEncoder::Format::PNG_LINEAR;
                     g_formatSpecified = true;
                 }
                 if (arg == "hdr") {
@@ -295,6 +296,9 @@ int main(int argc, char* argv[]) {
             exit(1);
         }
 
+        if (g_format == ImageEncoder::Format::PNG) {
+            g_format = ImageEncoder::Format::PNG_LINEAR;
+        }
         ImageEncoder::encode(outputStream, g_format, image, g_compression, output.getPath());
 
         outputStream.close();
