@@ -23,6 +23,15 @@
 
 #include <filament/Engine.h>
 
+struct CallbackJni {
+#ifdef ANDROID
+    jclass handlerClass;
+    jmethodID post;
+#endif
+    jclass executorClass;
+    jmethodID execute;
+};
+
 struct JniBufferCallback {
     static JniBufferCallback* make(filament::Engine* engine,
             JNIEnv* env, jobject handler, jobject callback, AutoBuffer&& buffer);
@@ -37,6 +46,7 @@ private:
     jobject mHandler;
     jobject mCallback;
     AutoBuffer mBuffer;
+    CallbackJni mCallbackUtils;
 };
 
 struct JniImageCallback {
@@ -53,4 +63,5 @@ private:
     jobject mHandler;
     jobject mCallback;
     long mImage;
+    CallbackJni mCallbackUtils;
 };

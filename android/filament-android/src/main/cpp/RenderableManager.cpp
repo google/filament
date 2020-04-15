@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 #include <jni.h>
 
 #include <filament/RenderableManager.h>
