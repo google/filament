@@ -402,13 +402,14 @@ public:
         /**
          * Defines a spot light'st angular falloff attenuation.
          *
-         * A spot light is defined by a position, a direction and two cone angles,
-         * \p inner and \p outer. These two angles are used to define the angular falloff
-         * attenuation of the spot light.
+         * A spot light is defined by a position, a direction and two cones, \p inner and \p outer.
+         * These two cones are used to define the angular falloff attenuation of the spot light
+         * and are defined by the angle from the center axis to where the falloff begins (i.e.
+         * cones are defined by their half-angle).
          *
-         * @param inner inner cone angle in *radians* between 0 and @f$ \pi @f$
+         * @param inner inner cone angle in *radians* between 0 and @f$ \pi/2 @f$
 
-         * @param outer outer cone angle in *radians* between 0 and @f$ \pi @f$
+         * @param outer outer cone angle in *radians* between \p inner and @f$ \pi/2 @f$
 
          * @return This Builder, for chaining calls.
          *
