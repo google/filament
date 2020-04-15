@@ -26,8 +26,8 @@ float SpecularAO_Lagarde(float NoV, float visibility, float roughness) {
 float sphericalCapsIntersection(float cosCap1, float cosCap2, float cosDistance) {
     // Oat and Sander 2007, "Ambient Aperture Lighting"
     // Approximation mentioned by Jimenez et al. 2016
-    float r1 = acosFast(cosCap1);
-    float r2 = acosFast(cosCap2);
+    float r1 = acosFastPositive(cosCap1);
+    float r2 = acosFastPositive(cosCap2);
     float d  = acosFast(cosDistance);
 
     // We work with cosine angles, replace the original paper's use of
@@ -42,7 +42,7 @@ float sphericalCapsIntersection(float cosCap1, float cosCap2, float cosDistance)
     }
 
     float delta = abs(r1 - r2);
-    float x = 1.0 - saturate((d - delta) / max(r1 + r2 - delta, 0.0001));
+    float x = 1.0 - saturate((d - delta) / max(r1 + r2 - delta, 1e-4));
     // simplified smoothstep()
     float area = sq(x) * (-2.0 * x + 3.0);
     return area * (1.0 - max(cosCap1, cosCap2));
