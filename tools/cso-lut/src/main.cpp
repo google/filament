@@ -306,9 +306,15 @@ int main(int argc, char* argv[]) {
         const bool isInclude = isIncludeFile(output);
         std::ofstream outputStream(output, std::ios::trunc);
 
-        outputStream << "// generated with: cso-lut " << w << " " << h << " " << d << " " <<
+        outputStream << "// Generated with: cso-lut " << w << " " << h << " " << d << " " <<
                 output.c_str() << std::endl;
         outputStream << "// LUT stored as a 3D R8 texture, in GL order" << std::endl;
+        outputStream << "// theta1 = angle of the first cone" << std::endl;
+        outputStream << "// theta2 = angle of the second cone" << std::endl;
+        outputStream << "// phi = angle between the two cones" << std::endl;
+        outputStream << "// X = cos(phi)    in range -1..1" << std::endl;
+        outputStream << "// Y = cos(theta1) in range 0..1" << std::endl;
+        outputStream << "// Z = cos(theta2) in range 0..1" << std::endl;
 
         if (!isInclude) {
             outputStream << "const uint8_t CSO_LUT[] = {";
