@@ -620,7 +620,7 @@ UTILS_NOINLINE
     });
 }
 
-void FView::prepareCamera(const CameraInfo& camera, const filament::Viewport& viewport) const noexcept {
+void FView::prepareCamera(const CameraInfo& camera) const noexcept {
     SYSTRACE_CALL();
 
     const mat4f viewFromWorld(camera.view);
@@ -639,15 +639,18 @@ void FView::prepareCamera(const CameraInfo& camera, const filament::Viewport& vi
     u.setUniform(offsetof(PerViewUib, viewFromClipMatrix), viewFromClip);      // 1/projection
     u.setUniform(offsetof(PerViewUib, clipFromWorldMatrix), clipFromWorld);    // projection * view
     u.setUniform(offsetof(PerViewUib, worldFromClipMatrix), worldFromClip);    // 1/(projection * view)
+    u.setUniform(offsetof(PerViewUib, cameraPosition), float3{camera.getPosition()});
+    u.setUniform(offsetof(PerViewUib, worldOffset), camera.worldOffset);
+    u.setUniform(offsetof(PerViewUib, cameraFar), camera.zf);
+}
 
+void FView::prepareViewport(const filament::Viewport &viewport) const noexcept {
+    SYSTRACE_CALL();
+    UniformBuffer& u = mPerViewUb;
     const float w = viewport.width;
     const float h = viewport.height;
     u.setUniform(offsetof(PerViewUib, resolution), float4{ w, h, 1.0f / w, 1.0f / h });
     u.setUniform(offsetof(PerViewUib, origin), float2{ viewport.left, viewport.bottom });
-
-    u.setUniform(offsetof(PerViewUib, cameraPosition), float3{camera.getPosition()});
-    u.setUniform(offsetof(PerViewUib, worldOffset), camera.worldOffset);
-    u.setUniform(offsetof(PerViewUib, cameraFar), camera.zf);
 }
 
 void FView::prepareSSAO(Handle<HwTexture> ssao) const noexcept {

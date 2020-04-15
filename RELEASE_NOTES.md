@@ -23,9 +23,10 @@ A new header is inserted each time a *tag* is created.
 - Improved dynamic resolution implementation to be more accurate and target more platforms.
 - `beginFrame()` now accepts a v-sync timestamp for accurate frame time measurement (used for
   frame skipping and dynamic resolution). You can pass `0` to get the old behavior (️⚠ API change).
-- Fix several issues related to multi-view support. (⚠️ **API breakage**) removed
+- Fixed several issues related to multi-view support. (⚠️ **API breakage**) removed
   `View::setClearColor()`, a similar functionality is now handled by `Renderer::setClearOptions()`
   and `Skybox`, the later now can be set to a constant color.
+- Fixed spot/point lights rendering bug depending on Viewport position.
 - Textures can now be swizzled.
 
 ## v1.5.2
