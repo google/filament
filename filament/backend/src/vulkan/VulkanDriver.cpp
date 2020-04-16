@@ -369,6 +369,18 @@ void VulkanDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
     });
 }
 
+void VulkanDriver::createTextureSwizzledR(Handle<HwTexture> th, SamplerType target, uint8_t levels,
+        TextureFormat format, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
+        TextureUsage usage,
+        TextureSwizzle r, TextureSwizzle g, TextureSwizzle b, TextureSwizzle a) {
+    auto vktexture = construct_handle<VulkanTexture>(mHandleMap, th, mContext, target, levels,
+            format, samples, w, h, depth, usage, mStagePool);
+    mDisposer.createDisposable(vktexture, [this, th] () {
+        destruct_handle<VulkanTexture>(mHandleMap, th);
+    });
+    // TODO: implement texture swizzling
+}
+
 void VulkanDriver::importTextureR(Handle<HwTexture> th, intptr_t id,
         SamplerType target, uint8_t levels,
         TextureFormat format, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
@@ -476,6 +488,10 @@ Handle<HwIndexBuffer> VulkanDriver::createIndexBufferS() noexcept {
 }
 
 Handle<HwTexture> VulkanDriver::createTextureS() noexcept {
+    return alloc_handle<VulkanTexture, HwTexture>();
+}
+
+Handle<HwTexture> VulkanDriver::createTextureSwizzledS() noexcept {
     return alloc_handle<VulkanTexture, HwTexture>();
 }
 
@@ -689,11 +705,6 @@ void VulkanDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor
     auto& ib = *handle_cast<VulkanIndexBuffer>(mHandleMap, ibh);
     ib.buffer->loadFromCpu(p.buffer, byteOffset, p.size);
     scheduleDestroy(std::move(p));
-}
-
-void VulkanDriver::setTextureSwizzle(Handle<HwTexture> th,
-        TextureSwizzle r, TextureSwizzle g, TextureSwizzle b, TextureSwizzle a) {
-    // TODO: implement setTextureSwizzle
 }
 
 void VulkanDriver::update2DImage(Handle<HwTexture> th,

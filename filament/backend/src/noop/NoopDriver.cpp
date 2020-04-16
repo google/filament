@@ -157,10 +157,6 @@ void NoopDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&&
     scheduleDestroy(std::move(p));
 }
 
-void NoopDriver::setTextureSwizzle(Handle<HwTexture> th,
-        TextureSwizzle r, TextureSwizzle g, TextureSwizzle b, TextureSwizzle a) {
-}
-
 void NoopDriver::update2DImage(Handle<HwTexture> th,
         uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
         PixelBufferDescriptor&& data) {

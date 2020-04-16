@@ -168,6 +168,15 @@ void MetalDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint8
             width, height, depth, usage);
 }
 
+void MetalDriver::createTextureSwizzledR(Handle<HwTexture> th, SamplerType target, uint8_t levels,
+        TextureFormat format, uint8_t samples, uint32_t width, uint32_t height,
+        uint32_t depth, TextureUsage usage,
+        TextureSwizzle r, TextureSwizzle g, TextureSwizzle b, TextureSwizzle a) {
+    construct_handle<MetalTexture>(mHandleMap, th, *mContext, target, levels, format, samples,
+            width, height, depth, usage);
+    // TODO: implement texture swizzle
+}
+
 void MetalDriver::importTextureR(Handle<HwTexture> th, intptr_t id,
         SamplerType target, uint8_t levels,
         TextureFormat format, uint8_t samples, uint32_t width, uint32_t height,
@@ -278,6 +287,10 @@ Handle<HwIndexBuffer> MetalDriver::createIndexBufferS() noexcept {
 }
 
 Handle<HwTexture> MetalDriver::createTextureS() noexcept {
+    return alloc_handle<MetalTexture, HwTexture>();
+}
+
+Handle<HwTexture> MetalDriver::createTextureSwizzledS() noexcept {
     return alloc_handle<MetalTexture, HwTexture>();
 }
 
@@ -573,11 +586,6 @@ void MetalDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&
     assert(byteOffset == 0);    // TODO: handle byteOffset for index buffers
     auto* ib = handle_cast<MetalIndexBuffer>(mHandleMap, ibh);
     ib->buffer.copyIntoBuffer(data.buffer, data.size);
-}
-
-void MetalDriver::setTextureSwizzle(Handle<HwTexture> th,
-        TextureSwizzle r, TextureSwizzle g, TextureSwizzle b, TextureSwizzle a) {
-    // TODO: implement setTextureSwizzle
 }
 
 void MetalDriver::update2DImage(Handle<HwTexture> th, uint32_t level, uint32_t xoffset,
