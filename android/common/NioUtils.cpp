@@ -18,20 +18,28 @@
 
 #include <algorithm>
 
-struct {
-    jclass jniClass;
-    jmethodID getBasePointer;
-    jmethodID getBaseArray;
-    jmethodID getBaseArrayOffset;
-    jmethodID getBufferType;
-} gNioUtils;
+#include <utils/Log.h>
 
-AutoBuffer::AutoBuffer(JNIEnv *env, jobject buffer, jint size, bool commit) noexcept : mEnv(env),
+AutoBuffer::AutoBuffer(JNIEnv *env, jobject buffer, jint size, bool commit) noexcept :
+        mEnv(env),
         mDoCommit(commit) {
+
+    mNioUtils.jniClass = env->FindClass("com/google/android/filament/NioUtils");
+    mNioUtils.jniClass = (jclass) env->NewGlobalRef(mNioUtils.jniClass);
+
+    mNioUtils.getBasePointer = env->GetStaticMethodID(mNioUtils.jniClass,
+            "getBasePointer", "(Ljava/nio/Buffer;JI)J");
+    mNioUtils.getBaseArray = env->GetStaticMethodID(mNioUtils.jniClass,
+            "getBaseArray", "(Ljava/nio/Buffer;)Ljava/lang/Object;");
+    mNioUtils.getBaseArrayOffset = env->GetStaticMethodID(mNioUtils.jniClass,
+            "getBaseArrayOffset", "(Ljava/nio/Buffer;I)I");
+    mNioUtils.getBufferType = env->GetStaticMethodID(mNioUtils.jniClass,
+            "getBufferType", "(Ljava/nio/Buffer;)I");
+
     mBuffer = env->NewGlobalRef(buffer);
 
     mType = (BufferType) env->CallStaticIntMethod(
-                gNioUtils.jniClass, gNioUtils.getBufferType, mBuffer);
+                mNioUtils.jniClass, mNioUtils.getBufferType, mBuffer);
 
     switch (mType) {
         case BufferType::BYTE:
@@ -56,16 +64,16 @@ AutoBuffer::AutoBuffer(JNIEnv *env, jobject buffer, jint size, bool commit) noex
     jlong address = (jlong) env->GetDirectBufferAddress(mBuffer);
     if (address) {
         // Direct buffer case
-        mData = reinterpret_cast<void *>(env->CallStaticLongMethod(gNioUtils.jniClass,
-                gNioUtils.getBasePointer, mBuffer, address, mShift));
+        mData = reinterpret_cast<void *>(env->CallStaticLongMethod(mNioUtils.jniClass,
+                mNioUtils.getBasePointer, mBuffer, address, mShift));
         mUserData = mData;
     } else {
         // wrapped array case
-        jarray array = (jarray) env->CallStaticObjectMethod(gNioUtils.jniClass,
-                gNioUtils.getBaseArray, mBuffer);
+        jarray array = (jarray) env->CallStaticObjectMethod(mNioUtils.jniClass,
+                mNioUtils.getBaseArray, mBuffer);
 
-        jint offset = env->CallStaticIntMethod(gNioUtils.jniClass,
-                gNioUtils.getBaseArrayOffset, mBuffer, mShift);
+        jint offset = env->CallStaticIntMethod(mNioUtils.jniClass,
+                mNioUtils.getBaseArrayOffset, mBuffer, mShift);
 
         mBaseArray = (jarray) env->NewGlobalRef(array);
         switch (mType) {
@@ -138,18 +146,5 @@ AutoBuffer::~AutoBuffer() noexcept {
     if (mBuffer) {
         env->DeleteGlobalRef(mBuffer);
     }
-}
-
-void registerNioUtils(JNIEnv *env) {
-    gNioUtils.jniClass = env->FindClass("com/google/android/filament/NioUtils");
-    gNioUtils.jniClass = (jclass) env->NewGlobalRef(gNioUtils.jniClass);
-
-    gNioUtils.getBasePointer = env->GetStaticMethodID(gNioUtils.jniClass, "getBasePointer",
-            "(Ljava/nio/Buffer;JI)J");
-    gNioUtils.getBaseArray = env->GetStaticMethodID(gNioUtils.jniClass, "getBaseArray",
-            "(Ljava/nio/Buffer;)Ljava/lang/Object;");
-    gNioUtils.getBaseArrayOffset = env->GetStaticMethodID(gNioUtils.jniClass, "getBaseArrayOffset",
-            "(Ljava/nio/Buffer;I)I");
-    gNioUtils.getBufferType = env->GetStaticMethodID(gNioUtils.jniClass, "getBufferType",
-            "(Ljava/nio/Buffer;)I");
+    mEnv->DeleteGlobalRef(mNioUtils.jniClass);
 }

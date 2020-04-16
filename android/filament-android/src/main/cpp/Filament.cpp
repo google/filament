@@ -16,23 +16,15 @@
 
 #include <jni.h>
 
-extern void registerCallbackUtils(JNIEnv*);
-extern void registerMaterial(JNIEnv*);
-extern void registerNioUtils(JNIEnv*);
-
 namespace filament {
     extern jint JNI_OnLoad(JavaVM* vm, void* reserved);
 };
 
-jint JNI_OnLoad(JavaVM* vm, void* reserved) {
+JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void* reserved) {
     JNIEnv* env;
     if (vm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6) != JNI_OK) {
         return -1;
     }
-
-    registerCallbackUtils(env);
-    registerMaterial(env);
-    registerNioUtils(env);
 
 #if ANDROID
     ::filament::JNI_OnLoad(vm, reserved);

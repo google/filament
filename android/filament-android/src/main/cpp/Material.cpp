@@ -22,12 +22,6 @@
 
 using namespace filament;
 
-struct {
-    jclass parameterClass;
-    jmethodID parameterAdd;
-    jfieldID parameterSamplerOffset;
-} gMaterial;
-
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_Material_nBuilderBuild(JNIEnv *env, jclass,
         jlong nativeEngine, jobject buffer_, jint size) {
@@ -191,15 +185,26 @@ Java_com_google_android_filament_Material_nGetParameters(JNIEnv* env, jclass,
     size_t received = material->getParameters(info, (size_t) count);
     assert(received == count);
 
-    jint offset = env->GetStaticIntField(gMaterial.parameterClass, gMaterial.parameterSamplerOffset);
+    jclass parameterClass = env->FindClass("com/google/android/filament/Material$Parameter");
+    parameterClass = (jclass) env->NewLocalRef(parameterClass);
+
+    jmethodID parameterAdd = env->GetStaticMethodID(parameterClass, "add",
+            "(Ljava/util/List;Ljava/lang/String;III)V");
+
+    jfieldID parameterSamplerOffset = env->GetStaticFieldID(parameterClass,
+            "SAMPLER_OFFSET", "I");
+
+    jint offset = env->GetStaticIntField(parameterClass, parameterSamplerOffset);
     for (size_t i = 0; i < received; i++) {
         jint type = info[i].isSampler ? (jint) info[i].samplerType + offset : (jint) info[i].type;
 
         env->CallStaticVoidMethod(
-                gMaterial.parameterClass, gMaterial.parameterAdd,
+                parameterClass, parameterAdd,
                 parameters, env->NewStringUTF(info[i].name), type, (jint) info[i].precision,
                 (jint) info[i].count);
     }
+
+    env->DeleteLocalRef(parameterClass);
 
     delete[] info;
 }
@@ -220,15 +225,4 @@ Java_com_google_android_filament_Material_nHasParameter(JNIEnv* env, jclass,
     bool hasParameter = material->hasParameter(name);
     env->ReleaseStringUTFChars(name_, name);
     return (jboolean) hasParameter;
-}
-
-void registerMaterial(JNIEnv *env) {
-    gMaterial.parameterClass = env->FindClass("com/google/android/filament/Material$Parameter");
-    gMaterial.parameterClass = (jclass) env->NewGlobalRef(gMaterial.parameterClass);
-
-    gMaterial.parameterAdd = env->GetStaticMethodID(gMaterial.parameterClass, "add",
-            "(Ljava/util/List;Ljava/lang/String;III)V");
-
-    gMaterial.parameterSamplerOffset = env->GetStaticFieldID(gMaterial.parameterClass,
-            "SAMPLER_OFFSET", "I");
 }

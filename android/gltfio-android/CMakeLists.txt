@@ -55,7 +55,6 @@ set(GLTFIO_SRCS
         src/main/cpp/FilamentAsset.cpp
         src/main/cpp/MaterialProvider.cpp
         src/main/cpp/ResourceLoader.cpp
-        src/main/cpp/Gltfio.cpp
 
         ${FILAMENT_DIR}/include/gltfio/resources/gltfresources_lite.h
         ${FILAMENT_DIR}/include/gltfio/resources/gltfresources.h
