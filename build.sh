@@ -7,7 +7,7 @@ WEB_HOST_TOOLS="${MOBILE_HOST_TOOLS} mipgen filamesh"
 IOS_TOOLCHAIN_URL="https://opensource.apple.com/source/clang/clang-800.0.38/src/cmake/platforms/iOS.cmake"
 
 function print_help {
-    local self_name=`basename $0`
+    local self_name=$(basename "$0")
     echo "Usage:"
     echo "    $self_name [options] <build_type1> [<build_type2> ...] [targets]"
     echo ""
@@ -82,8 +82,6 @@ CMAKE_MINOR=10
 ANDROID_NDK_VERSION=21
 
 # Internal variables
-TARGET=release
-
 ISSUE_CLEAN=false
 
 ISSUE_DEBUG_BUILD=false
@@ -126,8 +124,8 @@ BUILD_GENERATOR=Ninja
 BUILD_COMMAND=ninja
 BUILD_CUSTOM_TARGETS=
 
-UNAME=`echo $(uname)`
-LC_UNAME=`echo ${UNAME} | tr '[:upper:]' '[:lower:]'`
+UNAME=$(uname)
+LC_UNAME=$(echo "${UNAME}" | tr '[:upper:]' '[:lower:]')
 
 # Functions
 
@@ -141,7 +139,7 @@ function build_clean {
 }
 
 function build_desktop_target {
-    local lc_target=`echo $1 | tr '[:upper:]' '[:lower:]'`
+    local lc_target=$(echo "$1" | tr '[:upper:]' '[:lower:]')
     local build_targets=$2
 
     if [[ ! "${build_targets}" ]]; then
@@ -149,13 +147,12 @@ function build_desktop_target {
     fi
 
     echo "Building ${lc_target} in out/cmake-${lc_target}..."
-    mkdir -p out/cmake-${lc_target}
+    mkdir -p "out/cmake-${lc_target}"
 
-    cd out/cmake-${lc_target}
+    cd "out/cmake-${lc_target}"
 
     # On macOS, set the deployment target to 10.14.
-    local name=`echo $(uname)`
-    local lc_name=`echo ${name} | tr '[:upper:]' '[:lower:]'`
+    local lc_name=$(echo "${UNAME}" | tr '[:upper:]' '[:lower:]')
     if [[ "${lc_name}" == "darwin" ]]; then
         local deployment_target="-DCMAKE_OSX_DEPLOYMENT_TARGET=10.14"
     fi
@@ -164,9 +161,9 @@ function build_desktop_target {
         cmake \
             -G "${BUILD_GENERATOR}" \
             -DIMPORT_EXECUTABLES_DIR=out \
-            -DCMAKE_BUILD_TYPE=$1 \
-            -DCMAKE_INSTALL_PREFIX=../${lc_target}/filament \
-            -DFILAMENT_ENABLE_JAVA=${FILAMENT_ENABLE_JAVA} \
+            -DCMAKE_BUILD_TYPE="$1" \
+            -DCMAKE_INSTALL_PREFIX="../${lc_target}/filament" \
+            -DFILAMENT_ENABLE_JAVA="${FILAMENT_ENABLE_JAVA}" \
             ${deployment_target} \
             ../..
     fi
@@ -180,8 +177,8 @@ function build_desktop_target {
     if [[ -d "../${lc_target}/filament" ]]; then
         if [[ "${ISSUE_ARCHIVES}" == "true" ]]; then
             echo "Generating out/filament-${lc_target}-${LC_UNAME}.tgz..."
-            cd ../${lc_target}
-            tar -czvf ../filament-${lc_target}-${LC_UNAME}.tgz filament
+            cd "../${lc_target}"
+            tar -czvf "../filament-${lc_target}-${LC_UNAME}.tgz" filament
         fi
     fi
 
@@ -199,11 +196,11 @@ function build_desktop {
 }
 
 function build_webgl_with_target {
-    local lc_target=`echo $1 | tr '[:upper:]' '[:lower:]'`
+    local lc_target=$(echo "$1" | tr '[:upper:]' '[:lower:]')
 
     echo "Building WebGL ${lc_target}..."
-    mkdir -p out/cmake-webgl-${lc_target}
-    cd out/cmake-webgl-${lc_target}
+    mkdir -p "out/cmake-webgl-${lc_target}"
+    cd "out/cmake-webgl-${lc_target}"
 
     if [[ ! "${BUILD_TARGETS}" ]]; then
         BUILD_TARGETS=${BUILD_CUSTOM_TARGETS}
@@ -213,13 +210,14 @@ function build_webgl_with_target {
     if [[ ! -d "CMakeFiles" ]] || [[ "${ISSUE_CMAKE_ALWAYS}" == "true" ]]; then
         # Apply the emscripten environment within a subshell.
         (
-        source ${EMSDK}/emsdk_env.sh
+        # shellcheck disable=SC1090
+        source "${EMSDK}/emsdk_env.sh"
         cmake \
             -G "${BUILD_GENERATOR}" \
             -DIMPORT_EXECUTABLES_DIR=out \
-            -DCMAKE_TOOLCHAIN_FILE=${EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake \
-            -DCMAKE_BUILD_TYPE=$1 \
-            -DCMAKE_INSTALL_PREFIX=../webgl-${lc_target}/filament \
+            -DCMAKE_TOOLCHAIN_FILE="${EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake" \
+            -DCMAKE_BUILD_TYPE="$1" \
+            -DCMAKE_INSTALL_PREFIX="../webgl-${lc_target}/filament" \
             -DWEBGL=1 \
             ${JS_DOCS_OPTION} \
             ../..
@@ -234,8 +232,8 @@ function build_webgl_with_target {
             local DOCS_FOLDER="web/docs"
             local DOCS_SCRIPT="../../web/docs/build.py"
             python3 ${DOCS_SCRIPT} --disable-demo \
-                --output-folder ${DOCS_FOLDER} \
-                --build-folder ${PWD}
+                --output-folder "${DOCS_FOLDER}" \
+                --build-folder "${PWD}"
         fi
 
         if [[ "${ISSUE_ARCHIVES}" == "true" ]]; then
@@ -244,13 +242,13 @@ function build_webgl_with_target {
             # dist...core WASM module and accompanying JS file.
             # docs...HTML tutorials for the JS API, accompanying demos, and a reference page.
             cd web
-            tar -cvf ../../filament-${lc_target}-web.tar -s /^filament-js/dist/ \
+            tar -cvf "../../filament-${lc_target}-web.tar" -s /^filament-js/dist/ \
                     filament-js/filament.js
-            tar -rvf ../../filament-${lc_target}-web.tar -s /^filament-js/dist/ \
+            tar -rvf "../../filament-${lc_target}-web.tar" -s /^filament-js/dist/ \
                     filament-js/filament.wasm
             cd -
-            gzip -c ../filament-${lc_target}-web.tar > ../filament-${lc_target}-web.tgz
-            rm ../filament-${lc_target}-web.tar
+            gzip -c "../filament-${lc_target}-web.tar" > "../filament-${lc_target}-web.tgz"
+            rm "../filament-${lc_target}-web.tar"
         fi
     fi
 
@@ -279,21 +277,21 @@ function build_webgl {
 }
 
 function build_android_target {
-    local lc_target=`echo $1 | tr '[:upper:]' '[:lower:]'`
+    local lc_target=$(echo "$1" | tr '[:upper:]' '[:lower:]')
     local arch=$2
 
     echo "Building Android ${lc_target} (${arch})..."
-    mkdir -p out/cmake-android-${lc_target}-${arch}
+    mkdir -p "out/cmake-android-${lc_target}-${arch}"
 
-    cd out/cmake-android-${lc_target}-${arch}
+    cd "out/cmake-android-${lc_target}-${arch}"
 
     if [[ ! -d "CMakeFiles" ]] || [[ "${ISSUE_CMAKE_ALWAYS}" == "true" ]]; then
         cmake \
             -G "${BUILD_GENERATOR}" \
             -DIMPORT_EXECUTABLES_DIR=out \
-            -DCMAKE_BUILD_TYPE=$1 \
-            -DCMAKE_INSTALL_PREFIX=../android-${lc_target}/filament \
-            -DCMAKE_TOOLCHAIN_FILE=../../build/toolchain-${arch}-linux-android.cmake \
+            -DCMAKE_BUILD_TYPE="$1" \
+            -DCMAKE_INSTALL_PREFIX="../android-${lc_target}/filament" \
+            -DCMAKE_TOOLCHAIN_FILE="../../build/toolchain-${arch}-linux-android.cmake" \
             ${VULKAN_ANDROID_OPTION} \
             ../..
     fi
@@ -306,7 +304,6 @@ function build_android_target {
 
 function build_android_arch {
     local arch=$1
-    local arch_name=$2
 
     if [[ "${ISSUE_DEBUG_BUILD}" == "true" ]]; then
         build_android_target "Debug" "${arch}"
@@ -318,13 +315,13 @@ function build_android_arch {
 }
 
 function archive_android {
-    local lc_target=`echo $1 | tr '[:upper:]' '[:lower:]'`
+    local lc_target=$(echo "$1" | tr '[:upper:]' '[:lower:]')
 
     if [[ -d "out/android-${lc_target}/filament" ]]; then
         if [[ "${ISSUE_ARCHIVES}" == "true" ]]; then
             echo "Generating out/filament-android-${lc_target}-${LC_UNAME}.tgz..."
-            cd out/android-${lc_target}
-            tar -czvf ../filament-android-${lc_target}-${LC_UNAME}.tgz filament
+            cd "out/android-${lc_target}"
+            tar -czvf "../filament-android-${lc_target}-${LC_UNAME}.tgz" filament
             cd ../..
         fi
     fi
@@ -338,7 +335,8 @@ function ensure_android_build {
 
     local ndk_side_by_side="${ANDROID_HOME}/ndk/"
     if [[ -d ${ndk_side_by_side} ]]; then
-        local ndk_version=`ls ${ndk_side_by_side} | sort -V | tail -n 1 | cut -f 1 -d "."`
+        # shellcheck disable=SC2012
+        local ndk_version=$(ls "${ndk_side_by_side}" | sort -V | tail -n 1 | cut -f 1 -d ".")
         if [[ ${ndk_version} -lt ${ANDROID_NDK_VERSION} ]]; then
             echo "Error: Android NDK side-by-side version ${ANDROID_NDK_VERSION} or higher must be installed, exiting"
             exit 1
@@ -348,7 +346,7 @@ function ensure_android_build {
         exit 1
     fi
 
-    local cmake_version=`cmake --version`
+    local cmake_version=$(cmake --version)
     if [[ "${cmake_version}" =~ ([0-9]+)\.([0-9]+)\.[0-9]+ ]]; then
         if [[ "${BASH_REMATCH[1]}" -lt "${CMAKE_MAJOR}" ]] || \
            [[ "${BASH_REMATCH[2]}" -lt "${CMAKE_MINOR}" ]]; then
@@ -497,6 +495,7 @@ function ensure_ios_toolchain {
     # Apple's toolchain specifies isysroot based on an environment variable, which we don't set.
     # The toolchain doesn't need to do this, however, as isysroot is implicitly set in the toolchain
     # via CMAKE_OSX_SYSROOT.
+    # shellcheck disable=SC2016
     local FIND='SET(IOS_COMMON_FLAGS "-isysroot $ENV{SDKROOT} '
     local REPLACE='SET(IOS_COMMON_FLAGS "'
     sed -i '' "s/${FIND}/${REPLACE}/g" ./${toolchain_path}
@@ -508,23 +507,23 @@ function ensure_ios_toolchain {
 }
 
 function build_ios_target {
-    local lc_target=`echo $1 | tr '[:upper:]' '[:lower:]'`
+    local lc_target=$(echo "$1" | tr '[:upper:]' '[:lower:]')
     local arch=$2
     local platform=$3
 
     echo "Building iOS ${lc_target} (${arch}) for ${platform}..."
-    mkdir -p out/cmake-ios-${lc_target}-${arch}
+    mkdir -p "out/cmake-ios-${lc_target}-${arch}"
 
-    cd out/cmake-ios-${lc_target}-${arch}
+    cd "out/cmake-ios-${lc_target}-${arch}"
 
     if [[ ! -d "CMakeFiles" ]] || [[ "${ISSUE_CMAKE_ALWAYS}" == "true" ]]; then
         cmake \
             -G "${BUILD_GENERATOR}" \
             -DIMPORT_EXECUTABLES_DIR=out \
-            -DCMAKE_BUILD_TYPE=$1 \
-            -DCMAKE_INSTALL_PREFIX=../ios-${lc_target}/filament \
-            -DIOS_ARCH=${arch} \
-            -DPLATFORM_NAME=${platform} \
+            -DCMAKE_BUILD_TYPE="$1" \
+            -DCMAKE_INSTALL_PREFIX="../ios-${lc_target}/filament" \
+            -DIOS_ARCH="${arch}" \
+            -DPLATFORM_NAME="${platform}" \
             -DIOS_MIN_TARGET=12.0 \
             -DIOS=1 \
             -DCMAKE_TOOLCHAIN_FILE=../../build/toolchain-mac-ios.cmake \
@@ -541,8 +540,8 @@ function build_ios_target {
     if [[ -d "../ios-${lc_target}/filament" ]]; then
         if [[ "${ISSUE_ARCHIVES}" == "true" ]]; then
             echo "Generating out/filament-${lc_target}-ios.tgz..."
-            cd ../ios-${lc_target}
-            tar -czvf ../filament-${lc_target}-ios.tgz filament
+            cd "../ios-${lc_target}"
+            tar -czvf "../filament-${lc_target}-ios.tgz" filament
         fi
     fi
 
@@ -597,7 +596,7 @@ function build_web_docs {
 function validate_build_command {
     set +e
     # Make sure CMake is installed
-    local cmake_binary=`which cmake`
+    local cmake_binary=$(command -v cmake)
     if [[ ! "${cmake_binary}" ]]; then
         echo "Error: could not find cmake, exiting"
         exit 1
@@ -605,7 +604,7 @@ function validate_build_command {
 
     # Make sure Ninja is installed
     if [[ "${BUILD_COMMAND}" == "ninja" ]]; then
-        local ninja_binary=`which ninja`
+        local ninja_binary=$(command -v ninja)
         if [[ ! "${ninja_binary}" ]]; then
             echo "Warning: could not find ninja, using make instead"
             BUILD_GENERATOR="Unix Makefiles"
@@ -614,14 +613,14 @@ function validate_build_command {
     fi
     # Make sure Make is installed
     if [[ "${BUILD_COMMAND}" == "make" ]]; then
-        local make_binary=`which make`
+        local make_binary=$(command -v make)
         if [[ ! "${make_binary}" ]]; then
             echo "Error: could not find make, exiting"
             exit 1
         fi
     fi
     # Make sure we have Java
-    local javac_binary=`which javac`
+    local javac_binary=$(command -v javac)
     if [[ "${JAVA_HOME}" == "" ]] || [[ ! "${javac_binary}" ]]; then
         echo "Warning: JAVA_HOME is not set, skipping Java projects"
         FILAMENT_ENABLE_JAVA=OFF
@@ -633,9 +632,9 @@ function validate_build_command {
     fi
     # Web documents require node and npm for processing
     if [[ "${ISSUE_WEB_DOCS}" == "true" ]]; then
-        local node_binary=`which node`
-        local npm_binary=`which npm`
-        local npx_binary=`which npx`
+        local node_binary=$(command -v node)
+        local npm_binary=$(command -v npm)
+        local npx_binary=$(command -v npx)
         if [[ ! "${node_binary}" ]] || [[ ! "${npm_binary}" ]] || [[ ! "${npx_binary}" ]]; then
             echo "Error: Web documents require node, npm and npx to be installed"
             exit 1
@@ -648,21 +647,21 @@ function run_test {
     local test=$1
     # The input string might contain arguments, so we use "set -- $test" to replace $1 with the
     # first whitespace-separated token in the string.
-    set -- ${test}
-    local test_name=`basename $1`
-    ./out/cmake-debug/${test} --gtest_output="xml:out/test-results/${test_name}/sponge_log.xml"
+    set -- "${test}"
+    local test_name=$(basename "$1")
+    "./out/cmake-debug/${test}" --gtest_output="xml:out/test-results/${test_name}/sponge_log.xml"
 }
 
 function run_tests {
     if [[ "${ISSUE_WEBGL_BUILD}" == "true" ]]; then
-        if ! echo "TypeScript `tsc --version`" ; then
+        if ! echo "TypeScript $(tsc --version)" ; then
             tsc --noEmit \
                 third_party/gl-matrix/gl-matrix.d.ts \
                 web/filament-js/filament.d.ts \
                 web/filament-js/test.ts
         fi
     else
-        while read test; do
+        while read -r test; do
             run_test "${test}"
         done < build/common/test_list.txt
     fi
@@ -670,9 +669,9 @@ function run_tests {
 
 # Beginning of the script
 
-pushd `dirname $0` > /dev/null
+pushd "$(dirname "$0")" > /dev/null
 
-while getopts ":hacfijmp:q:tuvslw" opt; do
+while getopts ":hacfijmp:q:uvsw" opt; do
     case ${opt} in
         h)
             print_help
@@ -793,7 +792,7 @@ if [[ "$#" == "0" ]]; then
     exit 1
 fi
 
-shift $(($OPTIND - 1))
+shift $((OPTIND - 1))
 
 for arg; do
     if [[ "${arg}" == "release" ]]; then
