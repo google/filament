@@ -856,7 +856,9 @@ void Froxelizer::froxelizePointAndSpotLight(
                     // find the begin index (left side)
                     for (bx = x0; bx <= xcenter; ++bx) {
                         if (spherePlaneDistanceSquared(cy, planesX[bx].x, planesX[bx].z) > 0) {
-                            // intersection
+                            // intersection, if we intersect with a plane at index bx, we
+                            // actually intrude in the froxel to its left, i.e. with index bx - 1
+                            bx -= bx > 0;
                             break;
                         }
                     }
