@@ -277,9 +277,11 @@ void GLSLTools::scanSymbolForProperty(Symbol& symbol,
                 FunctionParameter& parameter = functionCallParameters.at(access.parameterIdx);
                 if (parameter.qualifier == FunctionParameter::OUT || parameter.qualifier ==
                         FunctionParameter::INOUT) {
-                    MaterialBuilder::Property p =
-                            Enums::toEnum<Property>(symbol.getDirectIndexStructName());
-                    properties[size_t(p)] = true;
+                    const std::string& propName = symbol.getDirectIndexStructName();
+                    if (Enums::isValid<Property>(propName)) {
+                        MaterialBuilder::Property p = Enums::toEnum<Property>(propName);
+                        properties[size_t(p)] = true;
+                    }
                 }
             } else {
                 findPropertyWritesOperations(access.string, access.parameterIdx, rootNode,
