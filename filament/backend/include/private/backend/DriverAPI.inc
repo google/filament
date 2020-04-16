@@ -71,8 +71,11 @@
 #define APPLY7(M, A, ...) EXPAND(M(A)), EXPAND(APPLY6(M, __VA_ARGS__))
 #define APPLY8(M, A, ...) EXPAND(M(A)), EXPAND(APPLY7(M, __VA_ARGS__))
 #define APPLY9(M, A, ...) EXPAND(M(A)), EXPAND(APPLY8(M, __VA_ARGS__))
-#define APPLY_N__(_0, _1, _2, _3, _4, _5, _6, _7, _8, _9, X, ...) APPLY##X
-#define APPLY(M, ...) EXPAND(EXPAND(APPLY_N__(M, __VA_ARGS__, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0))(M, __VA_ARGS__))
+#define APPLY10(M, A, ...) EXPAND(M(A)), EXPAND(APPLY9(M, __VA_ARGS__))
+#define APPLY11(M, A, ...) EXPAND(M(A)), EXPAND(APPLY10(M, __VA_ARGS__))
+#define APPLY12(M, A, ...) EXPAND(M(A)), EXPAND(APPLY11(M, __VA_ARGS__))
+#define APPLY_N__(_0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, X, ...) APPLY##X
+#define APPLY(M, ...) EXPAND(EXPAND(APPLY_N__(M, __VA_ARGS__, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0))(M, __VA_ARGS__))
 
 
 #define PAIR_ARGS_0(M, ...)
@@ -85,11 +88,14 @@
 #define PAIR_ARGS_7(M, X, Y, ...) M(X, Y), EXPAND(PAIR_ARGS_6(M, __VA_ARGS__))
 #define PAIR_ARGS_8(M, X, Y, ...) M(X, Y), EXPAND(PAIR_ARGS_7(M, __VA_ARGS__))
 #define PAIR_ARGS_9(M, X, Y, ...) M(X, Y), EXPAND(PAIR_ARGS_8(M, __VA_ARGS__))
+#define PAIR_ARGS_10(M, X, Y, ...) M(X, Y), EXPAND(PAIR_ARGS_9(M, __VA_ARGS__))
+#define PAIR_ARGS_11(M, X, Y, ...) M(X, Y), EXPAND(PAIR_ARGS_10(M, __VA_ARGS__))
+#define PAIR_ARGS_12(M, X, Y, ...) M(X, Y), EXPAND(PAIR_ARGS_11(M, __VA_ARGS__))
 
-#define PAIR_ARGS_N__(_0, E1, _1, E2, _2, E3, _3, E4, _4, E5, _5, E6, _6, E7, _7, E8, _8, E9, _9, X, ...) PAIR_ARGS_##X
+#define PAIR_ARGS_N__(_0, E1, _1, E2, _2, E3, _3, E4, _4, E5, _5, E6, _6, E7, _7, E8, _8, E9, _9, E10, _10, E11, _11, E12, _12, X, ...) PAIR_ARGS_##X
 
 #define PAIR_ARGS_N(M, ...) \
-    EXPAND(EXPAND(PAIR_ARGS_N__(0, ##__VA_ARGS__, 9, E, 8, E, 7, E, 6, E, 5, E, 4, E, 3, E, 2, E, 1, E, 0))(M, __VA_ARGS__))
+    EXPAND(EXPAND(PAIR_ARGS_N__(0, ##__VA_ARGS__, 12, E, 11, E, 10, E, 9, E, 8, E, 7, E, 6, E, 5, E, 4, E, 3, E, 2, E, 1, E, 0))(M, __VA_ARGS__))
 
 #define ARG(T, P) T P
 
@@ -170,6 +176,20 @@ DECL_DRIVER_API_R_N(backend::TextureHandle, createTexture,
         uint32_t, height,
         uint32_t, depth,
         backend::TextureUsage, usage)
+
+DECL_DRIVER_API_R_N(backend::TextureHandle, createTextureSwizzled,
+        backend::SamplerType, target,
+        uint8_t, levels,
+        backend::TextureFormat, format,
+        uint8_t, samples,
+        uint32_t, width,
+        uint32_t, height,
+        uint32_t, depth,
+        backend::TextureUsage, usage,
+        backend::TextureSwizzle, r,
+        backend::TextureSwizzle, g,
+        backend::TextureSwizzle, b,
+        backend::TextureSwizzle, a)
 
 DECL_DRIVER_API_R_N(backend::TextureHandle, importTexture,
         intptr_t, id,
@@ -291,13 +311,6 @@ DECL_DRIVER_API_N(loadUniformBuffer,
 DECL_DRIVER_API_N(updateSamplerGroup,
         backend::SamplerGroupHandle, ubh,
         backend::SamplerGroup&&, samplerGroup)
-
-DECL_DRIVER_API_N(setTextureSwizzle,
-        backend::TextureHandle, th,
-        backend::TextureSwizzle, r,
-        backend::TextureSwizzle, g,
-        backend::TextureSwizzle, b,
-        backend::TextureSwizzle, a)
 
 DECL_DRIVER_API_N(update2DImage,
         backend::TextureHandle, th,

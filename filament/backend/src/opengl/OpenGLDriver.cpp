@@ -434,6 +434,10 @@ Handle<HwTexture> OpenGLDriver::createTextureS() noexcept {
     return initHandle<GLTexture>();
 }
 
+Handle<HwTexture> OpenGLDriver::createTextureSwizzledS() noexcept {
+    return initHandle<GLTexture>();
+}
+
 Handle<HwTexture> OpenGLDriver::importTextureS() noexcept {
     return initHandle<GLTexture>();
 }
@@ -613,7 +617,6 @@ void OpenGLDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
     auto& gl = mContext;
     GLTexture* t = construct<GLTexture>(th, target, levels, samples, w, h, depth, format, usage);
     if (UTILS_LIKELY(usage & TextureUsage::SAMPLEABLE)) {
-
         if (UTILS_UNLIKELY(t->target == SamplerType::SAMPLER_EXTERNAL)) {
             mPlatform.createExternalImageTexture(t);
         } else {
@@ -670,6 +673,27 @@ void OpenGLDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
         glGenRenderbuffers(1, &t->gl.id);
         renderBufferStorage(t->gl.id, t->gl.internalFormat, w, h, samples);
     }
+
+    CHECK_GL_ERROR(utils::slog.e)
+}
+
+void OpenGLDriver::createTextureSwizzledR(Handle<HwTexture> th,
+        SamplerType target, uint8_t levels, TextureFormat format, uint8_t samples,
+        uint32_t w, uint32_t h, uint32_t depth, TextureUsage usage,
+        TextureSwizzle r, TextureSwizzle g, TextureSwizzle b, TextureSwizzle a) {
+    DEBUG_MARKER()
+
+    assert(usage & TextureUsage::SAMPLEABLE);
+
+    createTextureR(th, target, levels, format, samples, w, h, depth, usage);
+
+    // the texture is still bound and active from createTextureR
+    GLTexture* t = handle_cast<GLTexture *>(th);
+
+    glTexParameteri(t->gl.target, GL_TEXTURE_SWIZZLE_R, getSwizzleChannel(r));
+    glTexParameteri(t->gl.target, GL_TEXTURE_SWIZZLE_G, getSwizzleChannel(g));
+    glTexParameteri(t->gl.target, GL_TEXTURE_SWIZZLE_B, getSwizzleChannel(b));
+    glTexParameteri(t->gl.target, GL_TEXTURE_SWIZZLE_A, getSwizzleChannel(a));
 
     CHECK_GL_ERROR(utils::slog.e)
 }
@@ -1601,19 +1625,6 @@ void OpenGLDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh,
 
     GLSamplerGroup* sb = handle_cast<GLSamplerGroup *>(sbh);
     *sb->sb = std::move(samplerGroup); // NOLINT(performance-move-const-arg)
-}
-
-void OpenGLDriver::setTextureSwizzle(Handle<HwTexture> th,
-        TextureSwizzle r, TextureSwizzle g, TextureSwizzle b, TextureSwizzle a) {
-    DEBUG_MARKER()
-    GLTexture* t = handle_cast<GLTexture *>(th);
-    bindTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1, t);
-    mContext.activeTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1);
-    glTexParameteri(t->gl.target, GL_TEXTURE_SWIZZLE_R, getSwizzleChannel(r));
-    glTexParameteri(t->gl.target, GL_TEXTURE_SWIZZLE_G, getSwizzleChannel(g));
-    glTexParameteri(t->gl.target, GL_TEXTURE_SWIZZLE_B, getSwizzleChannel(b));
-    glTexParameteri(t->gl.target, GL_TEXTURE_SWIZZLE_A, getSwizzleChannel(a));
-    CHECK_GL_ERROR(utils::slog.e)
 }
 
 void OpenGLDriver::update2DImage(Handle<HwTexture> th,
