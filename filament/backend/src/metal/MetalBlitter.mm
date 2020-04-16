@@ -31,7 +31,7 @@ namespace filament {
 namespace backend {
 namespace metal {
 
-static std::string functionLibrary (R"(
+const static std::string functionLibrary (R"(
 #include <metal_stdlib>
 #include <simd/simd.h>
 

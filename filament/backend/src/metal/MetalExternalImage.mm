@@ -32,13 +32,11 @@ namespace filament {
 namespace backend {
 namespace metal {
 
-static id<MTLComputePipelineState> gComputePipelineState = nil;
-
 static const auto cvBufferDeleter = [](const void* buffer) {
     CVBufferRelease((CVMetalTextureRef) buffer);
 };
 
-static std::string kernel (R"(
+static const std::string kernel (R"(
 #include <metal_stdlib>
 #include <simd/simd.h>
 
@@ -189,8 +187,8 @@ CVMetalTextureRef MetalExternalImage::createTextureFromImage(CVPixelBufferRef im
     return texture;
 }
 
-void MetalExternalImage::shutdown() noexcept {
-    gComputePipelineState = nil;
+void MetalExternalImage::shutdown(MetalContext& context) noexcept {
+    context.externalImageComputePipelineState = nil;
 }
 
 void MetalExternalImage::unset() {
@@ -214,7 +212,7 @@ id<MTLTexture> MetalExternalImage::createRgbTexture(size_t width, size_t height)
 
 
 void MetalExternalImage::ensureComputePipelineState() {
-    if (gComputePipelineState != nil) {
+    if (mContext.externalImageComputePipelineState != nil) {
         return;
     }
 
@@ -229,8 +227,9 @@ void MetalExternalImage::ensureComputePipelineState() {
 
     id<MTLFunction> kernelFunction = [library newFunctionWithName:@"ycbcrToRgb"];
 
-    gComputePipelineState = [mContext.device newComputePipelineStateWithFunction:kernelFunction
-                                                                           error:&error];
+    mContext.externalImageComputePipelineState =
+            [mContext.device newComputePipelineStateWithFunction:kernelFunction
+                                                           error:&error];
     NSERROR_CHECK("Unable to create Metal compute pipeline state.");
 }
 
@@ -243,7 +242,7 @@ id<MTLCommandBuffer> MetalExternalImage::encodeColorConversionPass(id<MTLTexture
 
     id<MTLComputeCommandEncoder> computeEncoder = [commandBuffer computeCommandEncoder];
 
-    [computeEncoder setComputePipelineState:gComputePipelineState];
+    [computeEncoder setComputePipelineState:mContext.externalImageComputePipelineState];
     [computeEncoder setTexture:inYPlane atIndex:0];
     [computeEncoder setTexture:inCbCrTexture atIndex:1];
     [computeEncoder setTexture:outTexture atIndex:2];
