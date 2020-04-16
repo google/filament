@@ -31,7 +31,7 @@ namespace filament {
 namespace backend {
 namespace metal {
 
-const static std::string functionLibrary (R"(
+static const char* functionLibrary = R"(
 #include <metal_stdlib>
 #include <simd/simd.h>
 
@@ -112,7 +112,7 @@ blitterFrag(VertexOut in [[stage_in]],
 #endif
     return out;
 }
-)");
+)";
 
 MetalBlitter::MetalBlitter(MetalContext& context) noexcept : mContext(context) { }
 
@@ -336,7 +336,7 @@ id<MTLFunction> MetalBlitter::compileFragmentFunction(BlitFunctionKey key) {
         macros[@"MSAA_DEPTH_SOURCE"] = @"1";
     }
     options.preprocessorMacros = macros;
-    NSString* objcSource = [NSString stringWithCString:functionLibrary.data()
+    NSString* objcSource = [NSString stringWithCString:functionLibrary
                                               encoding:NSUTF8StringEncoding];
     NSError* error = nil;
     id<MTLLibrary> library = [mContext.device newLibraryWithSource:objcSource
@@ -353,7 +353,7 @@ id<MTLFunction> MetalBlitter::getBlitVertexFunction() {
         return mVertexFunction;
     }
 
-    NSString* objcSource = [NSString stringWithCString:functionLibrary.data()
+    NSString* objcSource = [NSString stringWithCString:functionLibrary
                                               encoding:NSUTF8StringEncoding];
     NSError* error = nil;
     id<MTLLibrary> library = [mContext.device newLibraryWithSource:objcSource

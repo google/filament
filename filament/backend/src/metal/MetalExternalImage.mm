@@ -36,7 +36,7 @@ static const auto cvBufferDeleter = [](const void* buffer) {
     CVBufferRelease((CVMetalTextureRef) buffer);
 };
 
-static const std::string kernel (R"(
+static const char* kernel = R"(
 #include <metal_stdlib>
 #include <simd/simd.h>
 
@@ -67,7 +67,7 @@ ycbcrToRgb(texture2d<half, access::read>  inYTexture    [[texture(0)]],
 
     outTexture.write(ycbcrToRGBTransform * ycbcr, gid);
 }
-)");
+)";
 
 MetalExternalImage::MetalExternalImage(MetalContext& context) noexcept : mContext(context) { }
 
@@ -218,7 +218,7 @@ void MetalExternalImage::ensureComputePipelineState() {
 
     NSError* error = nil;
 
-    NSString* objcSource = [NSString stringWithCString:kernel.data()
+    NSString* objcSource = [NSString stringWithCString:kernel
                                               encoding:NSUTF8StringEncoding];
     id<MTLLibrary> library = [mContext.device newLibraryWithSource:objcSource
                                                             options:nil
