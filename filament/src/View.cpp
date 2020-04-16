@@ -547,9 +547,10 @@ void FView::prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& are
     constexpr float epsilon = 0.001f;
     const float heightFalloff = std::max(epsilon, fogOptions.heightFalloff);
 
-    // precalculate the constant part of density  integral
-    const float density = (fogOptions.density / heightFalloff) *
-            std::exp(-heightFalloff * (camera->getPosition().y - fogOptions.height));
+    // precalculate the constant part of density  integral and correct for exp2() in the shader
+    const float density = ((fogOptions.density / heightFalloff) *
+            std::exp(-heightFalloff * (camera->getPosition().y - fogOptions.height)))
+                    * float(1.0f / F_LN2);
 
     u.setUniform(offsetof(PerViewUib, fogStart),             fogOptions.distance);
     u.setUniform(offsetof(PerViewUib, fogMaxOpacity),        fogOptions.maximumOpacity);
