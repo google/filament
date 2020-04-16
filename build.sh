@@ -650,7 +650,8 @@ function run_test {
     # shellcheck disable=SC2086
     set -- ${test}
     local test_name=$(basename "$1")
-    "./out/cmake-debug/${test}" --gtest_output="xml:out/test-results/${test_name}/sponge_log.xml"
+    # shellcheck disable=SC2086
+    ./out/cmake-debug/${test} --gtest_output="xml:out/test-results/${test_name}/sponge_log.xml"
 }
 
 function run_tests {
