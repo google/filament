@@ -121,7 +121,7 @@ fragment {
             #endif
 
             material.emissive.rgb = materialParams.emissiveFactor.rgb;
-            material.emissive.a = 3.0;
+            material.emissive.a = 0.0;
 
             #if defined(SHADING_MODEL_SPECULAR_GLOSSINESS)
                 material.glossiness = materialParams.glossinessFactor;

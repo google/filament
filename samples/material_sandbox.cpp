@@ -26,7 +26,9 @@
 
 #include <utils/Path.h>
 
+#include <filament/Camera.h>
 #include <filament/Engine.h>
+#include <filament/Exposure.h>
 #include <filament/DebugRegistry.h>
 #include <filament/IndirectLight.h>
 #include <filament/IndexBuffer.h>
@@ -329,7 +331,8 @@ static filament::MaterialInstance* updateInstances(
     materialInstance->setParameter("baseColor", RgbType::sRGB, params.color);
 
     if (params.currentMaterialModel != MATERIAL_MODEL_CLOTH) {
-        math::float4 emissive(Color::toLinear(params.emissiveColor), params.emissiveEC);
+        math::float4 emissive(Color::toLinear(params.emissiveColor), params.emissiveExposureWeight);
+        emissive.rgb *= Exposure::luminance(params.emissiveEV);
         materialInstance->setParameter("emissive", emissive);
     }
 
@@ -458,7 +461,8 @@ static void gui(filament::Engine* engine, filament::View*) {
             }
 
             ImGui::ColorEdit3("emissiveColor", &params.emissiveColor.r);
-            ImGui::SliderFloat("emissiveEC", &params.emissiveEC, 0.0f, 12.0f);
+            ImGui::SliderFloat("emissiveEV", &params.emissiveEV, -24.0f, 24.0f);
+            ImGui::SliderFloat("exposureWeight", &params.emissiveExposureWeight, 0.0f, 1.0f);
         }
 
         if (ImGui::CollapsingHeader("Shading AA")) {
@@ -468,6 +472,13 @@ static void gui(filament::Engine* engine, filament::View*) {
 
         if (ImGui::CollapsingHeader("Object")) {
             ImGui::Checkbox("castShadows", &params.castShadows);
+        }
+
+        if (ImGui::CollapsingHeader("Camera")) {
+            ImGui::SliderFloat("Focal length", &FilamentApp::get().getCameraFocalLength(), 16.0f, 90.0f);
+            ImGui::SliderFloat("Aperture", &params.cameraAperture, 1.0f, 32.0f);
+            ImGui::SliderFloat("Speed", &params.cameraSpeed, 800.0f, 1.0f);
+            ImGui::SliderFloat("ISO", &params.cameraISO, 25.0f, 6400.0f);
         }
 
         if (ImGui::CollapsingHeader("Indirect Light")) {
@@ -649,6 +660,9 @@ static void preRender(filament::Engine*, filament::View* view, filament::Scene*,
     view->setAmbientOcclusion(
             g_params.ssao ? View::AmbientOcclusion::SSAO : View::AmbientOcclusion::NONE);
     view->setAmbientOcclusionOptions(g_params.ssaoOptions);
+
+    Camera& camera = view->getCamera();
+    camera.setExposure(g_params.cameraAperture, 1.0f / g_params.cameraSpeed, g_params.cameraISO);
 }
 
 int main(int argc, char* argv[]) {
