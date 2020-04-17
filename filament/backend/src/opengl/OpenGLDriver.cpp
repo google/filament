@@ -683,7 +683,7 @@ void OpenGLDriver::createTextureSwizzledR(Handle<HwTexture> th,
         TextureSwizzle r, TextureSwizzle g, TextureSwizzle b, TextureSwizzle a) {
     DEBUG_MARKER()
 
-    assert(usage & TextureUsage::SAMPLEABLE);
+    assert(uint8_t(usage) & uint8_t(TextureUsage::SAMPLEABLE));
 
     createTextureR(th, target, levels, format, samples, w, h, depth, usage);
 
