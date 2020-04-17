@@ -4,6 +4,7 @@ struct Light {
     float attenuation;
     float NoL;
     bool castsShadows;
+    bool contactShadows;
     uint shadowIndex;
     uint shadowLayer;
 };

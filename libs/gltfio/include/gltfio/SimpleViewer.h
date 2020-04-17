@@ -517,12 +517,16 @@ void SimpleViewer::updateUserInterface() {
         lm.setDirection(sun, normalize(mSunlightDirection));
         lm.setColor(sun, mSunlightColor);
         lm.setShadowCaster(sun, mEnableShadows);
-        auto options = lm.getShadowOptions(sun);
-        options.screenSpaceContactShadows = mEnableContactShadows;
-        lm.setShadowOptions(sun, options);
     } else {
         mScene->remove(mSunlight);
     }
+
+    lm.forEachComponent([this, &lm](utils::Entity e, LightManager::Instance ci) {
+        auto options = lm.getShadowOptions(ci);
+        options.screenSpaceContactShadows = mEnableContactShadows;
+        lm.setShadowOptions(ci, options);
+        lm.setShadowCaster(ci, mEnableShadows);
+    });
 
     if (mAsset != nullptr) {
         if (ImGui::CollapsingHeader("Model", headerFlags)) {

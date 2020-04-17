@@ -347,12 +347,19 @@ void FLightManager::setShadowCaster(Instance i, bool shadowCaster) noexcept {
 
 using namespace details;
 
+size_t LightManager::getComponentCount() const noexcept {
+    return upcast(this)->getComponentCount();
+}
+
+utils::Entity const* LightManager::getEntities() const noexcept {
+    return upcast(this)->getEntities();
+}
+
 bool LightManager::hasComponent(Entity e) const noexcept {
     return upcast(this)->hasComponent(e);
 }
 
-LightManager::Instance
-LightManager::getInstance(Entity e) const noexcept {
+LightManager::Instance LightManager::getInstance(Entity e) const noexcept {
     return upcast(this)->getInstance(e);
 }
 

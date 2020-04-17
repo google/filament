@@ -328,10 +328,10 @@ private:
             FLightManager const& lcm, utils::JobSystem& js, Frustum const& frustum,
             FScene::LightSoa& lightData) noexcept;
 
-    void computeVisibilityMasks(
+    static void computeVisibilityMasks(
             uint8_t visibleLayers, uint8_t const* layers,
             FRenderableManager::Visibility const* visibility, uint8_t* visibleMask,
-            size_t count) const;
+            size_t count) ;
 
     void bindPerViewUniformsAndSamplers(FEngine::DriverApi& driver) const noexcept {
         driver.bindUniformBuffer(BindingPoints::PER_VIEW, mPerViewUbh);

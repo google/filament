@@ -108,7 +108,7 @@ UniformInterfaceBlock const& UibGenerator::getPerRenderableUib() noexcept {
             .add("morphWeights", 1, UniformInterfaceBlock::Type::FLOAT4, Precision::HIGH)
             .add("skinningEnabled", 1, UniformInterfaceBlock::Type::INT)
             .add("morphingEnabled", 1, UniformInterfaceBlock::Type::INT)
-            .add("screenSpaceContactShadows", 1, UniformInterfaceBlock::Type::INT)
+            .add("screenSpaceContactShadows", 1, UniformInterfaceBlock::Type::UINT)
             .add("padding0", 1, UniformInterfaceBlock::Type::FLOAT)
             .build();
     return uib;
