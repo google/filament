@@ -93,7 +93,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
 
     VkInstanceCreateInfo instanceCreateInfo = {};
 #if ENABLE_VALIDATION
-    static utils::StaticString DESIRED_LAYERS[] = {
+    const utils::StaticString DESIRED_LAYERS[] = {
 #if defined(ANDROID)
         // TODO: use VK_LAYER_KHRONOS_validation instead of these layers after it becomes available
         "VK_LAYER_GOOGLE_threading",
@@ -153,7 +153,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
 
 #if ENABLE_VALIDATION
     if (createDebugReportCallback) {
-        static VkDebugReportCallbackCreateInfoEXT cbinfo = {
+        const VkDebugReportCallbackCreateInfoEXT cbinfo = {
             VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT,
             nullptr,
             VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_ERROR_BIT_EXT,
@@ -1251,7 +1251,7 @@ void VulkanDriver::debugCommand(const char* methodName) {
     };
     static const utils::StaticString BEGIN_COMMAND = "beginRenderPass";
     static const utils::StaticString END_COMMAND = "endRenderPass";
-    static bool inRenderPass = false;
+    static bool inRenderPass = false; // for debug only
     const utils::StaticString command = utils::StaticString::make(methodName, strlen(methodName));
     if (command == BEGIN_COMMAND) {
         assert(!inRenderPass);

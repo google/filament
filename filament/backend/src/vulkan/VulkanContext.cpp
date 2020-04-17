@@ -150,7 +150,7 @@ void selectPhysicalDevice(VulkanContext& context) {
 
 void createVirtualDevice(VulkanContext& context) {
     VkDeviceQueueCreateInfo deviceQueueCreateInfo[1] = {};
-    static const float queuePriority[] = {1.0f};
+    const float queuePriority[] = {1.0f};
     VkDeviceCreateInfo deviceCreateInfo = {};
     std::vector<const char*> deviceExtensionNames = {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME,

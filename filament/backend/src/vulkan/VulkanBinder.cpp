@@ -40,7 +40,7 @@ static constexpr VkAllocationCallbacks* VKALLOC = nullptr;
 // - Allow up to 3 uniform descriptors to bind simultaneously instead of just 1.
 static constexpr uint32_t MAX_NUM_DESCRIPTORS = 1000;
 
-static const VulkanBinder::RasterState createDefaultRasterState();
+static VulkanBinder::RasterState createDefaultRasterState();
 
 VulkanBinder::VulkanBinder() : mDefaultRasterState(createDefaultRasterState()) {
     mColorBlendState = VkPipelineColorBlendStateCreateInfo{};
@@ -619,7 +619,7 @@ bool VulkanBinder::DescEqual::operator()(const VulkanBinder::DescriptorKey& k1,
     return true;
 }
 
-static const VulkanBinder::RasterState createDefaultRasterState() {
+static VulkanBinder::RasterState createDefaultRasterState() {
     VkPipelineRasterizationStateCreateInfo rasterization = {};
     rasterization.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     rasterization.polygonMode = VK_POLYGON_MODE_FILL;

@@ -32,7 +32,7 @@ using namespace backend;
 // passing in a null pointer, and we highlight the argument by using the VKALLOC constant.
 constexpr VkAllocationCallbacks* VKALLOC = nullptr;
 
-static const char* LIBRARY_X11 = "libX11.so.6";
+static constexpr const char* LIBRARY_X11 = "libX11.so.6";
 
 typedef Display* (*X11_OPEN_DISPLAY)(const char*);
 typedef Display* (*X11_CLOSE_DISPLAY)(Display*);
@@ -48,7 +48,7 @@ struct X11Functions {
 
 Driver* PlatformVkLinux::createDriver(void* const sharedContext) noexcept {
     ASSERT_PRECONDITION(sharedContext == nullptr, "Vulkan does not support shared contexts.");
-    static const char* requestedExtensions[] = {
+    const char* requestedExtensions[] = {
         "VK_KHR_surface",
         "VK_KHR_xlib_surface",
 #if !defined(NDEBUG)
