@@ -403,14 +403,23 @@ void FScene::setSkybox(FSkybox* skybox) noexcept {
 }
 
 bool FScene::hasContactShadows() const noexcept {
-    bool hasContactShadows = mHasContactShadows;
+    // find out if at least one light has contact-shadow enabled
+    // TODO: cache the the result of this Loop in the LightManager
+    bool hasContactShadows = false;
     auto& lcm = mEngine.getLightManager();
-    FLightManager::Instance directionalLight = mLightData.elementAt<LIGHT_INSTANCE>(0);
-    if (directionalLight.isValid()) {
-        auto const& shadowOoptions = lcm.getShadowOptions(directionalLight);
-        hasContactShadows = hasContactShadows && shadowOoptions.screenSpaceContactShadows;
+    auto pFirst = mLightData.begin<LIGHT_INSTANCE>();
+    auto pLast = mLightData.end<LIGHT_INSTANCE>();
+    while (pFirst != pLast && !hasContactShadows) {
+        if (pFirst->isValid()) {
+            auto const& shadowOptions = lcm.getShadowOptions(*pFirst);
+            hasContactShadows = shadowOptions.screenSpaceContactShadows;
+        }
+        ++pFirst;
     }
-    return hasContactShadows;
+
+    // at least some renderables in the scene must have contact-shadows enabled
+    // TODO: we should refine this with only the visible ones
+    return hasContactShadows && mHasContactShadows;
 }
 
 } // namespace details

@@ -27,6 +27,10 @@ public class LightManager {
         mNativeObject = nativeLightManager;
     }
 
+    public int getComponentCount() {
+        return nGetComponentCount(mNativeObject);
+    }
+
     public boolean hasComponent(@Entity int entity) {
         return nHasComponent(mNativeObject, entity);
     }
@@ -278,6 +282,7 @@ public class LightManager {
         return mNativeObject;
     }
 
+    private static native int nGetComponentCount(long nativeLightManager);
     private static native boolean nHasComponent(long nativeLightManager, int entity);
     private static native int nGetInstance(long nativeLightManager, int entity);
     private static native void nDestroy(long nativeLightManager, int entity);

@@ -23,6 +23,13 @@
 using namespace filament;
 using namespace utils;
 
+extern "C" JNIEXPORT jint JNICALL
+Java_com_google_android_filament_LightManager_nGetComponentCount(JNIEnv*, jclass,
+        jlong nativeLightManager) {
+    LightManager *lm = (LightManager *) nativeLightManager;
+    return lm->getComponentCount();
+}
+
 extern "C" JNIEXPORT jboolean JNICALL
 Java_com_google_android_filament_LightManager_nHasComponent(JNIEnv*, jclass,
         jlong nativeLightManager, jint entity) {

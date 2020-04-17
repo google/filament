@@ -155,20 +155,23 @@ public:
         // They're packed into 32 bits and stored in the Lights uniform buffer.
         // They're unpacked in the fragment shader and used to calculate punctual shadows.
         bool castsShadows = false;      // whether this light casts shadows
+        bool contactShadows = false;    // whether this light casts contact shadows
         uint8_t index = 0;              // an index into the arrays in the Shadows uniform buffer
         uint8_t layer = 0;              // which layer of the shadow texture array to sample from
 
         //  -- LSB -------------
         //  castsShadows     : 1
+        //  contactShadows   : 1
         //  index            : 4
         //  layer            : 4
         //  -- MSB -------------
         uint32_t pack() const {
             assert(index < 16);
             assert(layer < 16);
-            return uint8_t(castsShadows) << 0u    |
-                   index                 << 1u    |
-                   layer                 << 5u;
+            return uint8_t(castsShadows)   << 0u    |
+                   uint8_t(contactShadows) << 1u    |
+                   index                   << 2u    |
+                   layer                   << 6u;
         }
     };
 

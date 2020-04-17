@@ -90,6 +90,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     float refractionLodOffset;
 
     // bit 0: directional (sun) shadow enabled
+    // bit 1: directional (sun) screen-space contact shadow enabled
     // bit 8-15: screen-space contact shadows ray casting steps
     uint32_t directionalShadows;
 
@@ -119,8 +120,8 @@ struct alignas(256) PerRenderableUib {
     filament::math::mat3f worldFromModelNormalMatrix; // this gets expanded to 48 bytes during the copy to the UBO
     alignas(16) filament::math::float4 morphWeights;
     // TODO: we can pack all the boolean bellow
-    uint32_t skinningEnabled; // 0=disabled, 1=enabled, ignored unless variant & SKINNING_OR_MORPHING
-    uint32_t morphingEnabled; // 0=disabled, 1=enabled, ignored unless variant & SKINNING_OR_MORPHING
+    int32_t skinningEnabled; // 0=disabled, 1=enabled, ignored unless variant & SKINNING_OR_MORPHING
+    int32_t morphingEnabled; // 0=disabled, 1=enabled, ignored unless variant & SKINNING_OR_MORPHING
     uint32_t screenSpaceContactShadows; // 0=disabled, 1=enabled, ignored unless variant & SKINNING_OR_MORPHING
     float padding0;
 };
