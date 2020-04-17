@@ -275,7 +275,7 @@ void MetalDriver::createStreamFromTextureIdR(Handle<HwStream>, intptr_t external
 }
 
 void MetalDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {
-    construct_handle<MetalTimerQuery>(mHandleMap, tqh);
+    // nothing to do, timer query was constructed in createTimerQueryS
 }
 
 Handle<HwVertexBuffer> MetalDriver::createVertexBufferS() noexcept {
@@ -347,7 +347,9 @@ Handle<HwStream> MetalDriver::createStreamFromTextureIdS() noexcept {
 }
 
 Handle<HwTimerQuery> MetalDriver::createTimerQueryS() noexcept {
-    return alloc_handle<MetalTimerQuery, HwTimerQuery>();
+    // The handle must be constructed here, as a synchronous call to getTimerQueryValue might happen
+    // before createTimerQueryR is executed.
+    return alloc_and_construct_handle<MetalTimerQuery, HwTimerQuery>();
 }
 
 void MetalDriver::destroyVertexBuffer(Handle<HwVertexBuffer> vbh) {

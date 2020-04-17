@@ -209,8 +209,8 @@ struct MetalTimerQuery : public HwTimerQuery {
     MetalTimerQuery() : status(std::make_shared<Status>()) {}
 
     struct Status {
-        std::atomic<bool> available;
-        uint64_t elapsed;   // only valid if available is true
+        std::atomic<bool> available {false};
+        uint64_t elapsed {0};   // only valid if available is true
     };
 
     std::shared_ptr<Status> status;
