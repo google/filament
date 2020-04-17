@@ -40,7 +40,7 @@ int main(int argc, char** argv) {
     auto cleanup = [](Engine*, View*, Scene*) {
     };
 
-    FilamentApp::get().animate([skybox](Engine*, View* view, double now) {
+    FilamentApp::get().animate([&skybox](Engine*, View* view, double now) {
         constexpr float SPEED = 4;
         float r = 0.5f + 0.5f * std::sin(SPEED * now);
         float g = 0.5f + 0.5f * std::sin(SPEED * now + M_PI * 2 / 3);
