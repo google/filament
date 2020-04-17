@@ -459,7 +459,7 @@ void MetalDriver::terminate() {
     mContext->bufferPool->reset();
     mContext->commandQueue = nil;
 
-    MetalExternalImage::shutdown();
+    MetalExternalImage::shutdown(*mContext);
     mContext->blitter->shutdown();
 }
 

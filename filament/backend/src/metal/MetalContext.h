@@ -85,6 +85,7 @@ struct MetalContext {
 
     // External textures.
     CVMetalTextureCacheRef textureCache = nullptr;
+    id<MTLComputePipelineState> externalImageComputePipelineState = nil;
 
     // Empty texture used to prevent GPU errors when a sampler has been bound without a texture.
     id<MTLTexture> emptyTexture = nil;
