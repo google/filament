@@ -238,20 +238,18 @@ if (NOT ANDROID)
 endif()
 
 # ==================================================================================================
-# Build Vulkan Executables
+# Build Executables
 # ==================================================================================================
 
-if (FILAMENT_SUPPORTS_VULKAN)
-    add_demo(animation)
-    add_demo(depthtesting)
-    add_demo(hellopbr)
-    add_demo(hellotriangle)
-    add_demo(shadowtest)
-    add_demo(strobecolor)
-    add_demo(texturedquad)
-    add_demo(vbotest)
-    add_demo(viewtest)
-endif()
+add_demo(animation)
+add_demo(depthtesting)
+add_demo(hellopbr)
+add_demo(hellotriangle)
+add_demo(shadowtest)
+add_demo(strobecolor)
+add_demo(texturedquad)
+add_demo(vbotest)
+add_demo(viewtest)
 
 # ==================================================================================================
 # Copy the MoltenVK dylibs and JSON on MacOS

@@ -46,8 +46,7 @@
 //   srcDirs = ["${android.ndkDirectory}/sources/third_party/vulkan/src/build-android/jniLibs"]
 // } } }
 //
-// Validation crashes on MoltenVK, so we disable it by default on MacOS.
-#if !defined(NDEBUG) && !defined(__APPLE__)
+#if !defined(NDEBUG)
 #define ENABLE_VALIDATION 1
 #else
 #define ENABLE_VALIDATION 0
@@ -103,7 +102,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
         "VK_LAYER_LUNARG_core_validation",
         "VK_LAYER_GOOGLE_unique_objects"
 #else
-        "VK_LAYER_LUNARG_standard_validation",
+        "VK_LAYER_KHRONOS_validation",
 #endif
 #if defined(ENABLE_RENDERDOC)
         "VK_LAYER_RENDERDOC_Capture",
