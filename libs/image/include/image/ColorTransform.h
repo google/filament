@@ -159,8 +159,8 @@ inline filament::math::float3 linearToSRGB(const filament::math::float3& color) 
 }
 
 // Creates a n-channel sRGB image from a linear floating-point image.
-// The source image can have more than N channels, but only the first N are honored.
-template <typename T, int N = 3>
+// The source image can have more than N channels, but only the first N are converted to sRGB.
+template<typename T, int N = 3>
 std::unique_ptr<uint8_t[]> fromLinearTosRGB(const LinearImage& image) {
     const size_t w = image.getWidth();
     const size_t h = image.getHeight();
@@ -182,10 +182,8 @@ std::unique_ptr<uint8_t[]> fromLinearTosRGB(const LinearImage& image) {
 }
 
 // Creates a N-channel RGB u8 image from a f32 image.
-// The source image can have three or more channels, but only the first N are honored.
-template <typename T, int N = 3>
+template<typename T, int N = 3>
 std::unique_ptr<uint8_t[]> fromLinearToRGB(const LinearImage& image) {
-    using filament::math::float3;
     size_t w = image.getWidth();
     size_t h = image.getHeight();
     size_t channels = image.getChannels();
