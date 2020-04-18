@@ -71,7 +71,7 @@ private:
     bool encode(const LinearImage& image) override;
 
     int chooseColorType(const LinearImage& image) const;
-    uint32_t getChannelsCount() const;
+    uint32_t getChannelsCount(int colorType) const;
 
     static void cb_error(png_structp png, png_const_charp error);
     static void cb_stream(png_structp png, png_bytep buffer, png_size_t size);
@@ -298,8 +298,6 @@ int PNGEncoder::chooseColorType(const LinearImage& image) const {
     switch (channels) {
         case 1:
             return PNG_COLOR_TYPE_GRAY;
-        default:
-            std::cerr << "Warning: strange number of channels in PNG" << std::endl;
         case 3:
             switch (mFormat) {
                 case PixelFormat::RGBM:
@@ -308,15 +306,25 @@ int PNGEncoder::chooseColorType(const LinearImage& image) const {
                 default:
                     return PNG_COLOR_TYPE_RGB;
             }
+        case 4:
+            return PNG_COLOR_TYPE_RGBA;
+        default:
+            std::cerr << "Warning: strange number of channels in PNG" << std::endl;
+            return PNG_COLOR_TYPE_RGB;
     }
 }
 
-uint32_t PNGEncoder::getChannelsCount() const {
+uint32_t PNGEncoder::getChannelsCount(int colorType) const {
     switch (mFormat) {
         case PixelFormat::RGBM:
         case PixelFormat::RGB_10_11_11_REV:
             return 4;
         default:
+            switch (colorType) {
+                case PNG_COLOR_TYPE_GRAY: return 1;
+                case PNG_COLOR_TYPE_RGB:  return 3;
+                case PNG_COLOR_TYPE_RGBA: return 4;
+            }
             return 3;
     }
 }
@@ -333,7 +341,7 @@ bool PNGEncoder::encode(const LinearImage& image) {
             }
             break;
         default:
-            if (srcChannels != 1 && srcChannels != 3) {
+            if (srcChannels != 1 && srcChannels != 3 && srcChannels != 4) {
                 std::cerr << "Cannot encode PNG: " << srcChannels << " channels." << std::endl;
                 return false;
             }
@@ -346,9 +354,11 @@ bool PNGEncoder::encode(const LinearImage& image) {
         // Write header (8 bit colour depth)
         size_t width = image.getWidth();
         size_t height = image.getHeight();
+        int colorType = chooseColorType(image);
+
         png_set_IHDR(mPNG, mInfo, width, height,
-              8, chooseColorType(image), PNG_INTERLACE_NONE,
-              PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
+                     8, colorType, PNG_INTERLACE_NONE,
+                     PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
 
         if (mFormat == PixelFormat::LINEAR_RGB || mFormat == PixelFormat::RGB_10_11_11_REV) {
             png_set_gAMA(mPNG, mInfo, 1.0);
@@ -366,26 +376,34 @@ bool PNGEncoder::encode(const LinearImage& image) {
             dstChannels = 1;
             data = fromLinearToGrayscale<uint8_t>(image);
         } else {
-            dstChannels = getChannelsCount();
+            dstChannels = getChannelsCount(colorType);
             switch (mFormat) {
                 case PixelFormat::RGBM:
                     data = fromLinearToRGBM<uint8_t>(image);
                     break;
-                case PixelFormat::sRGB:
-                    data = fromLinearTosRGB<uint8_t>(image);
-                    break;
-                case PixelFormat::LINEAR_RGB:
-                    data = fromLinearToRGB<uint8_t>(image);
-                    break;
                 case PixelFormat::RGB_10_11_11_REV:
                     data = fromLinearToRGB_10_11_11_REV(image);
+                    break;
+                case PixelFormat::sRGB:
+                    if (dstChannels == 4) {
+                        data = fromLinearTosRGB<uint8_t, 4>(image);
+                    } else {
+                        data = fromLinearTosRGB<uint8_t, 3>(image);
+                    }
+                    break;
+                case PixelFormat::LINEAR_RGB:
+                    if (dstChannels == 4) {
+                        data = fromLinearToRGB<uint8_t, 4>(image);
+                    } else {
+                        data = fromLinearToRGB<uint8_t, 3>(image);
+                    }
                     break;
             }
         }
 
         for (size_t y = 0; y < height; y++) {
-            row_pointers[y] = reinterpret_cast<png_bytep>(&data[y * width * dstChannels *
-                    sizeof(uint8_t)]);
+            row_pointers[y] = reinterpret_cast<png_bytep>
+                    (&data[y * width * dstChannels * sizeof(uint8_t)]);
         }
 
         png_write_image(mPNG, row_pointers.get());

@@ -36,7 +36,7 @@ using namespace image;
 using namespace std;
 using namespace utils;
 
-static ImageEncoder::Format g_format = ImageEncoder::Format::PNG_LINEAR;
+static ImageEncoder::Format g_format = ImageEncoder::Format::PNG;
 static bool g_formatSpecified = false;
 static bool g_createGallery = false;
 static std::string g_compression = "";
@@ -252,7 +252,7 @@ int main(int argc, char* argv[]) {
         g_ktxContainer = true;
         g_formatSpecified = true;
     } else if (!g_formatSpecified) {
-        g_format = ImageEncoder::chooseFormat(outputPattern, !g_linearized);
+        g_format = ImageEncoder::chooseFormat(outputPattern, g_linearized);
     }
 
     puts("Reading image...");
