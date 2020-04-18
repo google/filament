@@ -151,13 +151,13 @@ std::string shaderFromKey(const MaterialKey& config) {
             shader += R"SHADER(
                 material.glossiness = materialParams.glossinessFactor;
                 material.specularColor = materialParams.specularFactor;
-                material.emissive.rgb = materialParams.emissiveFactor.rgb;
+                material.emissive = vec4(materialParams.emissiveFactor.rgb, 0.0);
             )SHADER";
         } else {
             shader += R"SHADER(
                 material.roughness = materialParams.roughnessFactor;
                 material.metallic = materialParams.metallicFactor;
-                material.emissive.rgb = materialParams.emissiveFactor.rgb;
+                material.emissive = vec4(materialParams.emissiveFactor.rgb, 0.0);
             )SHADER";
         }
         if (config.hasMetallicRoughnessTexture) {
@@ -198,7 +198,6 @@ std::string shaderFromKey(const MaterialKey& config) {
             }
             shader += R"SHADER(
                 material.emissive.rgb *= texture(materialParams_emissiveMap, emissiveUV).rgb;
-                material.emissive.a = 0.0;
             )SHADER";
         }
         if (config.hasClearCoat) {

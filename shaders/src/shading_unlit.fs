@@ -1,7 +1,7 @@
 void addEmissive(const MaterialInputs material, inout vec4 color) {
 #if defined(MATERIAL_HAS_EMISSIVE)
     highp vec4 emissive = material.emissive;
-    highp float attenuation = emissive.w * frameUniforms.exposure;
+    highp float attenuation = mix(1.0, frameUniforms.exposure, emissive.w);
     color.rgb += emissive.rgb * attenuation;
 #endif
 }

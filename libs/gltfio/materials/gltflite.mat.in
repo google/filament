@@ -72,8 +72,7 @@ fragment {
                 material.metallic = materialParams.metallicFactor;
             #endif
 
-            material.emissive.rgb = materialParams.emissiveFactor.rgb;
-            material.emissive.a = 0.0;
+            material.emissive = vec4(materialParams.emissiveFactor.rgb, 0.0);
 
             if (materialParams.metallicRoughnessIndex > -1) {
                 float2 uv = uvs[materialParams.metallicRoughnessIndex];
