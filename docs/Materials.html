@@ -265,7 +265,7 @@ The type and range of each property is described in <a href="#table_standardprop
 <tr><td style="text-align:right"> <strong class="asterisk">normal</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> Linear RGB, encodes a direction vector in tangent space </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">bentNormal</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> Linear RGB, encodes a direction vector in tangent space </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">clearCoatNormal</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> Linear RGB, encodes a direction vector in tangent space </td></tr>
-<tr><td style="text-align:right"> <strong class="asterisk">emissive</strong> </td><td style="text-align:center"> float4 </td><td style="text-align:center"> rgb=[0..1], a=[-n..n] </td><td style="text-align:left"> Alpha is the exposure compensation </td></tr>
+<tr><td style="text-align:right"> <strong class="asterisk">emissive</strong> </td><td style="text-align:center"> float4 </td><td style="text-align:center"> rgb=[0..n], a=[0..1] </td><td style="text-align:left"> Linear RGB intensity in nits, alpha encodes the exposure weight </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">postLightingColor</strong> </td><td style="text-align:center"> float4 </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> Pre-multiplied linear RGB </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">ior</strong> </td><td style="text-align:center"> float </td><td style="text-align:center"> [1..n] </td><td style="text-align:left"> Optional, usually deduced from the reflectance </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">transmission</strong> </td><td style="text-align:center"> float </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> &#xA0; </td></tr>
@@ -734,22 +734,27 @@ map and a surface normal map</div></div></center>
 
 
 The <code>emissive</code> property can be used to simulate additional light emitted by the surface. It is
-defined as a <code>float4</code> value that contains an RGB color (in linear space) as well as an exposure
-compensation value (in the alpha channel).
+defined as a <code>float4</code> value that contains an RGB intensity in nits as well as an exposure
+weight (in the alpha channel).
 
 </p><p>
 
-Even though an exposure value actually indicates combinations of camera settings, it is often used
-by photographers to describe light intensity. This is why cameras let photographers apply an
-exposure compensation to over or under-expose an image. This setting can be used for artistic
-control but also to achieve proper exposure (snow for instance will be exposed for as
-18% middle-grey).
+The intensity in nits allows an emissive surface to function as a light and can be used to recreate
+real world surfaces. For instance a computer display has an intensity between 200 and 1,000 nits.
 
 </p><p>
 
-The exposure compensation value of the emissive property can be used to force the emissive color
-to be brighter (positive values) or darker (negative values) than the current exposure. If the bloom
-effect is enabled, using a positive exposure compensation can force the surface to bloom.
+If you prefer to work in EV (or f-stops), you can simplify multiply your emissive color by the
+output of the API <code>filament::Exposure::luminance(ev)</code>. This API returns the luminance in nits of
+the specific EV. You can perform this conversion yourself using the following formula, where \(L\)
+is the final intensity in nits: \( L = 2^{EV - 3} \).
+
+</p><p>
+
+The exposure weight carried in the alpha channel can be used to undo the camera exposure, and thus
+force an emissive surface to bloom. When the exposure weight is set to 0, the emissive intensity is
+not affected by the camera exposure. When the weight is set to 1, the intensity is multiplied by
+the camera exposure like with any regular light.
 
 </p>
 <a class="target" name="post-lightingcolor">&#xA0;</a><a class="target" name="materialmodels/litmodel/post-lightingcolor">&#xA0;</a><a class="target" name="toc3.1.17">&#xA0;</a><h3>Post-lighting color</h3>
@@ -1144,16 +1149,14 @@ The type and range of each property is described in <a href="#table_unlitpropert
 </p><div class="table">
 <table class="table"><tbody><tr><th style="text-align:right"> Property </th><th style="text-align:center"> Type </th><th style="text-align:center"> Range </th><th style="text-align:left"> Note </th></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">baseColor</strong> </td><td style="text-align:center"> float4 </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> Pre-multiplied linear RGB </td></tr>
-<tr><td style="text-align:right"> <strong class="asterisk">emissive</strong> </td><td style="text-align:center"> float4 </td><td style="text-align:center"> rgb=[0..1], a=N/A </td><td style="text-align:left"> Pre-multiplied linear RGB, alpha is ignored </td></tr>
+<tr><td style="text-align:right"> <strong class="asterisk">emissive</strong> </td><td style="text-align:center"> float4 </td><td style="text-align:center"> rgb=[0..n], a=[0..1] </td><td style="text-align:left"> Linear RGB intensity in nits, alpha encodes the exposure weight </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">postLightingColor</strong> </td><td style="text-align:center"> float4 </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> Pre-multiplied linear RGB </td></tr>
 </tbody></table><div class="tablecaption"><a class="target" name="table_unlitpropertiestypes">&#xA0;</a><b style="font-style:normal;">Table&#xA0;10:</b> Range and type of the unlit model&apos;s properties</div></div>
 
 <p></p><p>
 
-The value of <code>emissive</code> is simply added to <code>baseColor</code> when present. The main use of <code>emissive</code>
-is to force an unlit surface to bloom if the HDR pipeline is configured with a bloom pass. The value
-of <code>postLightingColor</code> is blended with the sum of <code>emissive</code> and <code>baseColor</code> according to the
-blending mode specified by the <code>postLightingBlending</code> material option.
+The value of <code>postLightingColor</code> is blended with the sum of <code>emissive</code> and <code>baseColor</code> according to
+the blending mode specified by the <code>postLightingBlending</code> material option.
 
 </p><p>
 
@@ -2166,7 +2169,7 @@ plastic with bump mapping:
 <a class="target" name="materialfragmentinputs">&#xA0;</a><a class="target" name="materialdefinitions/fragmentblock/materialfragmentinputs">&#xA0;</a><a class="target" name="toc4.4.2">&#xA0;</a><h3>Material fragment inputs</h3>
 <pre class="listing tilde"><code><span class="line">struct MaterialInputs {</span>
 <span class="line">    float4 baseColor;           <span class="hljs-comment">// default: float4(1.0)</span></span>
-<span class="line">    float4 emissive;            <span class="hljs-comment">// default: float4(0.0)</span></span>
+<span class="line">    float4 emissive;            <span class="hljs-comment">// default: float4(0.0, 0.0, 0.0, 1.0)</span></span>
 <span class="line">    float4 postLightingColor;   <span class="hljs-comment">// default: float4(0.0)</span></span>
 <span class="line"></span>
 <span class="line">    <span class="hljs-comment">// no other field is available with the unlit shading model</span></span>

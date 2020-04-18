@@ -91,7 +91,7 @@ void initMaterial(out MaterialInputs material) {
 #endif
     material.ambientOcclusion = 1.0;
 #endif
-    material.emissive = vec4(0.0);
+    material.emissive = vec4(vec3(0.0), 1.0);
 
 #if defined(MATERIAL_HAS_CLEAR_COAT)
     material.clearCoat = 1.0;

@@ -147,10 +147,7 @@ std::string shaderFromConfig(MaterialConfig config) {
             material.ambientOcclusion = texture(materialParams_aoMap, aoUV).r;
             material.emissive.rgb = texture(materialParams_emissiveMap, emissiveUV).rgb;
             material.emissive.rgb *= materialParams.emissiveFactor.rgb;
-
-            // The opinionated lighting model specified by glTF does not account for energy
-            // compensation, using this value basically disables it:
-            material.emissive.a = 3.0;
+            material.emissive.a = 0.0;
         )SHADER";
     }
 

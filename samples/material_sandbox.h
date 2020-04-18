@@ -76,12 +76,13 @@ struct SandboxParameters {
     float transmission = 1.0f;
     float distance = 1.0f;
     float ior = 1.5;
-    float emissiveEC = 0.0f;
+    float emissiveExposureWeight = 1.0f;
+    float emissiveEV = 0.0f;
     filament::sRGBColor transmittanceColor =  { 1.0f };
-    filament::sRGBColor specularColor = {0.0f };
-    filament::sRGBColor subsurfaceColor = {0.0f };
-    filament::sRGBColor sheenColor = {0.83f, 0.0f, 0.0f };
-    filament::sRGBColor emissiveColor = {0.0f, 0.0f, 0.0f };
+    filament::sRGBColor specularColor = { 0.0f };
+    filament::sRGBColor subsurfaceColor = { 0.0f };
+    filament::sRGBColor sheenColor = { 0.83f, 0.0f, 0.0f };
+    filament::sRGBColor emissiveColor = { 0.0f, 0.0f, 0.0f };
     int currentMaterialModel = MATERIAL_MODEL_LIT;
     int currentBlending = BLENDING_OPAQUE;
     bool ssr = false;
@@ -122,6 +123,9 @@ struct SandboxParameters {
     bool screenSpaceContactShadows = false;
     int stepCount = 8;
     float maxShadowDistance = 0.3;
+    float cameraAperture = 16.0f;
+    float cameraSpeed = 125.0f;
+    float cameraISO = 100.0f;
 };
 
 inline void createInstances(SandboxParameters& params, filament::Engine& engine) {

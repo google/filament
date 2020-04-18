@@ -198,7 +198,7 @@ std::string shaderFromKey(const MaterialKey& config) {
             }
             shader += R"SHADER(
                 material.emissive.rgb *= texture(materialParams_emissiveMap, emissiveUV).rgb;
-                material.emissive.a = 3.0;
+                material.emissive.a = 0.0;
             )SHADER";
         }
         if (config.hasClearCoat) {
