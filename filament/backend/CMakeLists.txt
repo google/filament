@@ -10,6 +10,7 @@ set(GENERATION_ROOT ${CMAKE_CURRENT_BINARY_DIR})
 # ==================================================================================================
 set(PUBLIC_HDRS
         include/backend/BufferDescriptor.h
+        include/backend/DriverEnums.h
         include/backend/Handle.h
         include/backend/PipelineState.h
         include/backend/PixelBufferDescriptor.h
@@ -181,6 +182,13 @@ add_library(${TARGET} STATIC ${PRIVATE_HDRS} ${PUBLIC_HDRS} ${SRCS})
 
 # specify where the public headers of this library are
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
+
+# ==================================================================================================
+# Expose a header-only target to minimize dependencies.
+# ==================================================================================================
+
+add_library(${TARGET}_headers INTERFACE)
+target_include_directories(${TARGET}_headers INTERFACE ${PUBLIC_HDR_DIR})
 
 # ==================================================================================================
 # Dependencies
