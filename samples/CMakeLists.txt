@@ -13,23 +13,6 @@ set(TEXTURE_DIR "${GENERATION_ROOT}/generated/texture")
 set(RESOURCE_BINS)
 
 # ==================================================================================================
-# Convert OBJ files into filamesh files.
-# ==================================================================================================
-
-function(add_mesh SOURCE TARGET)
-    set(source_mesh "${ROOT_DIR}/${SOURCE}")
-    set(target_mesh "${RESOURCE_DIR}/${TARGET}")
-    set(RESOURCE_BINS ${RESOURCE_BINS} ${target_mesh} PARENT_SCOPE)
-    add_custom_command(
-        OUTPUT ${target_mesh}
-        COMMAND filamesh --compress ${source_mesh} ${target_mesh}
-        MAIN_DEPENDENCY ${source_mesh}
-        DEPENDS filamesh)
-endfunction()
-
-add_mesh("assets/models/monkey/monkey.obj" "suzanne.filamesh")
-
-# ==================================================================================================
 # Build materials
 # ==================================================================================================
 
@@ -129,7 +112,7 @@ add_envmap("third_party/environments/venetian_crossroads_2k.hdr" "venetian_cross
 function(add_ktxfiles SOURCE TARGET EXTRA_ARGS)
     set(source_path "${ROOT_DIR}/${SOURCE}")
     set(target_path "${TEXTURE_DIR}/${TARGET}")
-    set(TEXTURE_FILES ${TEXTURE_FILES} ${target_path} PARENT_SCOPE)
+    set(MONKEY_FILES ${MONKEY_FILES} ${target_path} PARENT_SCOPE)
     add_custom_command(
         OUTPUT ${target_path}
         COMMAND mipgen --quiet --strip-alpha ${EXTRA_ARGS} ${source_path} ${target_path}
@@ -140,12 +123,25 @@ endfunction()
 function(add_pngfile SOURCE TARGET)
     set(source_path "${ROOT_DIR}/${SOURCE}")
     set(target_path "${TEXTURE_DIR}/${TARGET}")
-    set(TEXTURE_FILES ${TEXTURE_FILES} ${target_path} PARENT_SCOPE)
+    set(MONKEY_FILES ${MONKEY_FILES} ${target_path} PARENT_SCOPE)
     add_custom_command(
         OUTPUT ${target_path}
         COMMAND ${CMAKE_COMMAND} -E copy ${source_path} ${target_path}
         MAIN_DEPENDENCY ${source_path})
 endfunction()
+
+function(add_mesh SOURCE TARGET)
+    set(source_mesh "${ROOT_DIR}/${SOURCE}")
+    set(target_mesh "${RESOURCE_DIR}/${TARGET}")
+    set(MONKEY_FILES ${MESH_BINS} ${target_mesh} PARENT_SCOPE)
+    add_custom_command(
+        OUTPUT ${target_mesh}
+        COMMAND filamesh --compress ${source_mesh} ${target_mesh}
+        MAIN_DEPENDENCY ${source_mesh}
+        DEPENDS filamesh)
+endfunction()
+
+add_mesh("assets/models/monkey/monkey.obj" "suzanne.filamesh")
 
 add_ktxfiles("assets/models/monkey/albedo.png" "albedo_s3tc.ktx" "--compression=s3tc_rgb_dxt1")
 add_ktxfiles("assets/models/monkey/roughness.png" "roughness.ktx" "--grayscale")
@@ -154,13 +150,13 @@ add_ktxfiles("assets/models/monkey/ao.png" "ao.ktx" "--grayscale")
 
 add_pngfile("assets/models/monkey/normal.png" "normal.png")
 
-get_resgen_vars(${RESOURCE_DIR} textures)
+get_resgen_vars(${RESOURCE_DIR} monkey)
 
 add_custom_command(
         OUTPUT ${RESGEN_OUTPUTS}
-        COMMAND resgen ${RESGEN_FLAGS} ${TEXTURE_FILES}
-        DEPENDS resgen ${TEXTURE_FILES}
-        COMMENT "Aggregating textures"
+        COMMAND resgen ${RESGEN_FLAGS} ${MONKEY_FILES}
+        DEPENDS resgen ${MONKEY_FILES}
+        COMMENT "Aggregating monkey resources"
 )
 
 if (DEFINED RESGEN_SOURCE_FLAGS)
@@ -242,7 +238,7 @@ if (NOT ANDROID)
     # Sample app specific
     target_link_libraries(frame_generator PRIVATE imageio)
     target_link_libraries(gltf_viewer PRIVATE gltf-resources gltfio)
-    target_link_libraries(hellopbr PRIVATE filameshio)
+    target_link_libraries(hellopbr PRIVATE filameshio suzanne-resources)
     target_link_libraries(sample_cloth PRIVATE filameshio)
     target_link_libraries(sample_normal_map PRIVATE filameshio)
     target_link_libraries(suzanne PRIVATE filameshio suzanne-resources)
