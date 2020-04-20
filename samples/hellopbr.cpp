@@ -30,6 +30,7 @@
 #include <filamentapp/FilamentApp.h>
 
 #include "generated/resources/resources.h"
+#include "generated/resources/monkey.h"
 
 using namespace filament;
 using namespace filamesh;
@@ -68,7 +69,7 @@ int main(int argc, char** argv) {
         mi->setParameter("reflectance", 0.5f);
 
         // Add geometry into the scene.
-        app.mesh = MeshReader::loadMeshFromBuffer(engine, RESOURCES_SUZANNE_DATA, nullptr, nullptr, mi);
+        app.mesh = MeshReader::loadMeshFromBuffer(engine, MONKEY_SUZANNE_DATA, nullptr, nullptr, mi);
         auto ti = tcm.getInstance(app.mesh.renderable);
         app.transform = mat4f{ mat3f(1), float3(0, 0, -4) } * tcm.getWorldTransform(ti);
         rcm.setCastShadows(rcm.getInstance(app.mesh.renderable), false);
