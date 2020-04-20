@@ -75,6 +75,8 @@ steps:
 
 Here are a few sample materials rendered with Filament:
 
+![Night scene](docs/images/samples/example_bistro1.jpg)
+![Night scene](docs/images/samples/example_bistro2.jpg)
 ![Materials](docs/images/samples/example_materials1.jpg)
 ![Materials](docs/images/samples/example_materials2.jpg)
 ![Helmet](docs/images/samples/example_helmet.jpg)
