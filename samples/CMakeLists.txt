@@ -214,42 +214,40 @@ endif()
 function(add_demo NAME)
     include_directories(${GENERATION_ROOT})
     add_executable(${NAME} ${NAME}.cpp)
-    target_link_libraries(${NAME} PRIVATE sample-resources filamentapp filameshio)
+    target_link_libraries(${NAME} PRIVATE sample-resources filamentapp)
     target_compile_options(${NAME} PRIVATE ${COMPILER_FLAGS})
 endfunction()
 
 if (NOT ANDROID)
+    add_demo(animation)
+    add_demo(depthtesting)
     add_demo(frame_generator)
     add_demo(gltf_viewer)
     add_demo(heightfield)
+    add_demo(hellopbr)
+    add_demo(hellotriangle)
     add_demo(lightbulb)
     add_demo(material_sandbox)
     add_demo(point_sprites)
     add_demo(sample_cloth)
     add_demo(sample_full_pbr)
     add_demo(sample_normal_map)
+    add_demo(shadowtest)
+    add_demo(strobecolor)
     add_demo(suzanne)
+    add_demo(texturedquad)
+    add_demo(vbotest)
+    add_demo(viewtest)
 
     # Sample app specific
     target_link_libraries(frame_generator PRIVATE imageio)
-    target_link_libraries(suzanne PRIVATE suzanne-resources)
     target_link_libraries(gltf_viewer PRIVATE gltf-resources gltfio)
+    target_link_libraries(hellopbr PRIVATE filameshio)
+    target_link_libraries(sample_cloth PRIVATE filameshio)
+    target_link_libraries(sample_normal_map PRIVATE filameshio)
+    target_link_libraries(suzanne PRIVATE filameshio suzanne-resources)
 
 endif()
-
-# ==================================================================================================
-# Build Executables
-# ==================================================================================================
-
-add_demo(animation)
-add_demo(depthtesting)
-add_demo(hellopbr)
-add_demo(hellotriangle)
-add_demo(shadowtest)
-add_demo(strobecolor)
-add_demo(texturedquad)
-add_demo(vbotest)
-add_demo(viewtest)
 
 # ==================================================================================================
 # Copy the MoltenVK dylibs and JSON on MacOS
