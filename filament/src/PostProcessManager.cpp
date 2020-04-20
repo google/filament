@@ -507,6 +507,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOclusion(
                 data.ssao = builder.write(data.ssao);
                 data.rt = builder.createRenderTarget("SSAO Target", {
                         .attachments = { data.ssao, data.depth },
+                        .clearColor = { 1.0f },
                         .clearFlags = TargetBufferFlags::COLOR
                 });
             },
@@ -578,7 +579,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOclusion(
                 PipelineState pipeline(mSSAO.getPipelineState());
                 pipeline.rasterState.depthFunc = RasterState::DepthFunc::G;
 
-                ssao.params.clearColor = 1.0f;
                 driver.beginRenderPass(ssao.target, ssao.params);
                 driver.draw(pipeline, fullScreenRenderPrimitive);
                 driver.endRenderPass();
@@ -721,12 +721,13 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bilateralBlurPass(
                 builder.read(depth);
 
                 // Here we use the depth test to skip pixels at infinity (i.e. the skybox)
-                // Note that we're not clearing the SAO buffer, which will leave skipped pixels
-                // in an undefined state -- this doesn't matter because the skybox material
-                // doesn't use SSAO.
+                // We need to clear the buffers because we are skipping pixels at infinity (skybox)
                 data.blurred = builder.write(data.blurred);
                 data.rt = builder.createRenderTarget("Blurred target", {
-                        .attachments = { data.blurred, depth }});
+                        .attachments = { data.blurred, depth },
+                        .clearColor = { 1.0f },
+                        .clearFlags = TargetBufferFlags::COLOR
+                });
             },
             [=](FrameGraphPassResources const& resources,
                 auto const& data, DriverApi& driver) {
