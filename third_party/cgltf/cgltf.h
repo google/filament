@@ -1014,6 +1014,7 @@ static void cgltf_combine_paths(char* path, const char* base, const char* uri)
 static cgltf_result cgltf_load_buffer_file(const cgltf_options* options, cgltf_size size, const char* uri, const char* gltf_path, void** out_data)
 {
 	void* (*memory_alloc)(void*, cgltf_size) = options->memory.alloc ? options->memory.alloc : &cgltf_default_alloc;
+	void (*memory_free)(void*, void*) = options->memory.free ? options->memory.free : &cgltf_default_free;
 	cgltf_result (*file_read)(const struct cgltf_memory_options*, const struct cgltf_file_options*, const char*, cgltf_size*, void**) = options->file.read ? options->file.read : &cgltf_default_file_read;
 
 	char* path = (char*)memory_alloc(options->memory.user_data, strlen(uri) + strlen(gltf_path) + 1);
@@ -1026,14 +1027,12 @@ static cgltf_result cgltf_load_buffer_file(const cgltf_options* options, cgltf_s
 
 	void* file_data = NULL;
 	cgltf_result result = file_read(&options->memory, &options->file, path, &size, &file_data);
-	if (result != cgltf_result_success)
-	{
-		return result;
-	}
 
-	*out_data = file_data;
+	memory_free(options->memory.user_data, path);
 
-	return cgltf_result_success;
+	*out_data = (result == cgltf_result_success) ? file_data : NULL;
+
+	return result;
 }
 
 cgltf_result cgltf_load_buffer_base64(const cgltf_options* options, cgltf_size size, const char* base64, void** out_data)
@@ -1477,6 +1476,16 @@ void cgltf_free(cgltf_data* data)
 			}
 
 			data->memory.free(data->memory.user_data, data->meshes[i].primitives[j].targets);
+
+			if (data->meshes[i].primitives[j].has_draco_mesh_compression)
+			{
+				for (cgltf_size k = 0; k < data->meshes[i].primitives[j].draco_mesh_compression.attributes_count; ++k)
+				{
+					data->memory.free(data->memory.user_data, data->meshes[i].primitives[j].draco_mesh_compression.attributes[k].name);
+				}
+
+				data->memory.free(data->memory.user_data, data->meshes[i].primitives[j].draco_mesh_compression.attributes);
+			}
 		}
 
 		data->memory.free(data->memory.user_data, data->meshes[i].primitives);
@@ -4710,7 +4719,8 @@ static int cgltf_fixup_pointers(cgltf_data* data)
 				}
 			}
 
-			if (data->meshes[i].primitives[j].has_draco_mesh_compression) {
+			if (data->meshes[i].primitives[j].has_draco_mesh_compression)
+			{
 				CGLTF_PTRFIXUP_REQ(data->meshes[i].primitives[j].draco_mesh_compression.buffer_view, data->buffer_views, data->buffer_views_count);
 				for (cgltf_size m = 0; m < data->meshes[i].primitives[j].draco_mesh_compression.attributes_count; ++m)
 				{
