@@ -687,6 +687,10 @@ void OpenGLDriver::createTextureSwizzledR(Handle<HwTexture> th,
 
     createTextureR(th, target, levels, format, samples, w, h, depth, usage);
 
+    // WebGL does not support swizzling. We assert for this in the Texture builder,
+    // so it is probably fine to silently ignore the swizzle state here.
+    #if !defined(__EMSCRIPTEN__)
+
     // the texture is still bound and active from createTextureR
     GLTexture* t = handle_cast<GLTexture *>(th);
 
@@ -694,6 +698,8 @@ void OpenGLDriver::createTextureSwizzledR(Handle<HwTexture> th,
     glTexParameteri(t->gl.target, GL_TEXTURE_SWIZZLE_G, getSwizzleChannel(g));
     glTexParameteri(t->gl.target, GL_TEXTURE_SWIZZLE_B, getSwizzleChannel(b));
     glTexParameteri(t->gl.target, GL_TEXTURE_SWIZZLE_A, getSwizzleChannel(a));
+
+    #endif
 
     CHECK_GL_ERROR(utils::slog.e)
 }
