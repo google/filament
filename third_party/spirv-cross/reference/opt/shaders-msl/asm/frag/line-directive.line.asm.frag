@@ -17,14 +17,12 @@ struct main0_in
 fragment main0_out main0(main0_in in [[stage_in]])
 {
     main0_out out = {};
-    float _80;
 #line 8 "test.frag"
     out.FragColor = 1.0;
 #line 9 "test.frag"
     out.FragColor = 2.0;
 #line 10 "test.frag"
-    _80 = in.vColor;
-    if (_80 < 0.0)
+    if (in.vColor < 0.0)
     {
 #line 12 "test.frag"
         out.FragColor = 3.0;
@@ -34,16 +32,16 @@ fragment main0_out main0(main0_in in [[stage_in]])
 #line 16 "test.frag"
         out.FragColor = 4.0;
     }
-    for (int _126 = 0; float(_126) < (40.0 + _80); )
+    for (int _126 = 0; float(_126) < (40.0 + in.vColor); )
     {
 #line 21 "test.frag"
         out.FragColor += 0.20000000298023223876953125;
 #line 22 "test.frag"
         out.FragColor += 0.300000011920928955078125;
-        _126 += (int(_80) + 5);
+        _126 += (int(in.vColor) + 5);
         continue;
     }
-    switch (int(_80))
+    switch (int(in.vColor))
     {
         case 0:
         {
@@ -69,7 +67,7 @@ fragment main0_out main0(main0_in in [[stage_in]])
     }
     for (;;)
     {
-        out.FragColor += (10.0 + _80);
+        out.FragColor += (10.0 + in.vColor);
 #line 43 "test.frag"
         if (out.FragColor < 100.0)
         {

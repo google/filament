@@ -56,15 +56,18 @@ public:
     FrameGraphId<FrameGraphTexture> opaqueBlit(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, FrameGraphTexture::Descriptor outDesc) noexcept;
 
-    FrameGraphId <FrameGraphTexture> blendBlit(FrameGraph& fg,
-            FrameGraphId <FrameGraphTexture> input,
-            FrameGraphTexture::Descriptor outDesc) noexcept;
+    FrameGraphId<FrameGraphTexture> blendBlit(
+            FrameGraph& fg, bool translucent, View::QualityLevel quality,
+            FrameGraphId<FrameGraphTexture> input, FrameGraphTexture::Descriptor outDesc) noexcept;
 
     FrameGraphId<FrameGraphTexture> resolve(FrameGraph& fg,
             const char* outputBufferName, FrameGraphId<FrameGraphTexture> input) noexcept;
 
-    FrameGraphId<FrameGraphTexture> ssao(FrameGraph& fg, details::RenderPass& pass,
-            filament::Viewport const& svp,
+    FrameGraphId<FrameGraphTexture> structure(FrameGraph& fg, details::RenderPass const& pass,
+            uint32_t width, uint32_t height, float scale) noexcept;
+
+    FrameGraphId<FrameGraphTexture> screenSpaceAmbientOclusion(FrameGraph& fg,
+            details::RenderPass& pass, filament::Viewport const& svp,
             details::CameraInfo const& cameraInfo,
             View::AmbientOcclusionOptions const& options) noexcept;
 
@@ -83,15 +86,12 @@ public:
 private:
     details::FEngine& mEngine;
 
-    FrameGraphId<FrameGraphTexture> depthPass(FrameGraph& fg, details::RenderPass const& pass,
-            uint32_t width, uint32_t height, View::AmbientOcclusionOptions const& options) noexcept;
-
     FrameGraphId<FrameGraphTexture> mipmapPass(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, size_t level) noexcept;
 
-    FrameGraphId<FrameGraphTexture> bilateralBlurPass(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input,
-            FrameGraphId<FrameGraphTexture> depth, math::int2 axis) noexcept;
+    FrameGraphId<FrameGraphTexture> bilateralBlurPass(
+            FrameGraph& fg, FrameGraphId<FrameGraphTexture> input, math::int2 axis, float zf,
+            backend::TextureFormat format) noexcept;
 
     FrameGraphId<FrameGraphTexture> bloomPass(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, backend::TextureFormat outFormat,
@@ -115,7 +115,9 @@ private:
 
         details::FMaterial* getMaterial() const { return mMaterial; }
         details::FMaterialInstance* getMaterialInstance() const { return mMaterialInstance; }
-        backend::Handle<backend::HwProgram> const& getProgram() const { return mProgram; }
+
+        backend::PipelineState getPipelineState(uint8_t variant) const noexcept;
+        backend::PipelineState getPipelineState() const noexcept;
 
     private:
         details::FMaterial* mMaterial = nullptr;
@@ -129,13 +131,12 @@ private:
     PostProcessMaterial mSeparableGaussianBlur;
     PostProcessMaterial mBloomDownsample;
     PostProcessMaterial mBloomUpsample;
-    PostProcessMaterial mBlit;
+    PostProcessMaterial mBlit[3];
     PostProcessMaterial mTonemapping;
     PostProcessMaterial mFxaa;
 
     backend::Handle<backend::HwTexture> mDummyOneTexture;
     backend::Handle<backend::HwTexture> mDummyZeroTexture;
-    backend::Handle<backend::HwTexture> mNoiseTexture;
 
     size_t mSeparableGaussianBlurKernelStorageSize = 0;
 };

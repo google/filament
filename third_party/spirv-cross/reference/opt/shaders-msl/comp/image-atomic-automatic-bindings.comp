@@ -1,0 +1,25 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+#pragma clang diagnostic ignored "-Wunused-variable"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+#include <metal_atomic>
+
+using namespace metal;
+
+struct SSBO
+{
+    float4 outdata;
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
+// Returns buffer coords corresponding to 2D texture coords for emulating 2D texture atomics
+#define spvImage2DAtomicCoord(tc, tex) (((tex).get_width() * (tc).x) + (tc).y)
+
+kernel void main0(device SSBO& _31 [[buffer(1)]], texture2d<uint> uImage [[texture(0)]], device atomic_uint* uImage_atomic [[buffer(0)]], texture2d<float> uTexture [[texture(1)]], sampler uTextureSmplr [[sampler(0)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]])
+{
+    uint _26 = atomic_fetch_add_explicit((device atomic_uint*)&uImage_atomic[spvImage2DAtomicCoord(int2(gl_GlobalInvocationID.xy), uImage)], 10u, memory_order_relaxed);
+    _31.outdata = uTexture.sample(uTextureSmplr, float2(gl_GlobalInvocationID.xy), level(0.0)) + float4(float(_26));
+}
+

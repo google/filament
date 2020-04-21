@@ -58,6 +58,8 @@ class ShadowMap;
  * A concrete implementation of the Renderer Interface.
  */
 class FRenderer : public Renderer {
+    static constexpr size_t MAX_FRAMETIME_HISTORY = 32u;
+
 public:
     explicit FRenderer(FEngine& engine);
     ~FRenderer() noexcept;
@@ -75,7 +77,8 @@ public:
     void copyFrame(FSwapChain* dstSwapChain, Viewport const& dstViewport,
             Viewport const& srcViewport, CopyFrameFlag flags);
 
-    bool beginFrame(FSwapChain* swapChain, backend::FrameFinishedCallback callback, void* user);
+    bool beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano,
+            backend::FrameFinishedCallback callback, void* user);
     void endFrame();
 
     void resetUserTime();
@@ -89,6 +92,32 @@ public:
 
     // Clean-up everything, this is typically called when the client calls Engine::destroyRenderer()
     void terminate(FEngine& engine);
+
+    void setDisplayInfo(DisplayInfo const& info) noexcept {
+        mDisplayInfo = info;
+    }
+
+    void setFrameRateOptions(FrameRateOptions const& options) noexcept {
+        FrameRateOptions& frameRateOptions = mFrameRateOptions;
+        frameRateOptions = options;
+
+        // History can't be more than 32 frames (~0.5s)
+        frameRateOptions.history = std::min(frameRateOptions.history,
+                uint8_t(MAX_FRAMETIME_HISTORY));
+
+        // History must at least be 3 frames
+        frameRateOptions.history = std::max(frameRateOptions.history, uint8_t(3));
+
+        frameRateOptions.interval = std::max(uint8_t(1), frameRateOptions.interval);
+
+        // headroom can't be larger than frame time, or less than 0
+        frameRateOptions.headRoomRatio = std::min(frameRateOptions.headRoomRatio, 1.0f);
+        frameRateOptions.headRoomRatio = std::max(frameRateOptions.headRoomRatio, 0.0f);
+    }
+
+    void setClearOptions(const ClearOptions& options) {
+        mClearOptions = options;
+    }
 
 private:
     friend class Renderer;
@@ -106,16 +135,18 @@ private:
         math::float2 scale;
         backend::TextureFormat hdrFormat;
         uint8_t msaa;
+        backend::TargetBufferFlags clearFlags;
+        math::float4 clearColor = {};
+        float refractionLodOffset;
+        bool hasContactShadows;
     };
 
-    static FrameGraphId<FrameGraphTexture> colorPass(FrameGraph& fg, const char* name,
-            FrameGraphTexture::Descriptor const& colorBufferDesc, ColorPassConfig const& config,
-            RenderPass const& pass, backend::TargetBufferFlags clearFlags,
-            math::float4 clearColor = {}) noexcept;
+    FrameGraphId<FrameGraphTexture> colorPass(FrameGraph& fg, const char* name,
+            FrameGraphTexture::Descriptor const& colorBufferDesc,
+            ColorPassConfig const& config, RenderPass const& pass, FView const& view) const noexcept;
 
     FrameGraphId<FrameGraphTexture> refractionPass(FrameGraph& fg,
-            ColorPassConfig const& config, RenderPass const& pass,
-            FView const& view, backend::TargetBufferFlags clearFlags) const noexcept;
+            ColorPassConfig config, RenderPass const& pass, FView const& view) const noexcept;
 
     void recordHighWatermark(size_t watermark) noexcept {
         mCommandsHighWatermark = std::max(mCommandsHighWatermark, watermark);
@@ -151,14 +182,15 @@ private:
     bool mIsRGB8Supported : 1;
     Epoch mUserEpoch;
     math::float4 mShaderUserTime{};
+    DisplayInfo mDisplayInfo;
+    FrameRateOptions mFrameRateOptions;
+    ClearOptions mClearOptions;
+    backend::TargetBufferFlags mDiscardedFlags;
+    backend::TargetBufferFlags mClearFlags;
+    std::function<void()> mBeginFrameInternal;
 
     // per-frame arena for this Renderer
     LinearAllocatorArena& mPerRenderPassArena;
-
-#if EXTRA_TIMING_INFO
-    Series<float> mRendering;
-    Series<float> mPostProcess;
-#endif
 };
 
 FILAMENT_UPCAST(Renderer)

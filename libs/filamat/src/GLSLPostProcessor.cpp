@@ -162,6 +162,7 @@ void SpvToMsl(const SpirvBlob* spirv, std::string* outMsl) {
     }
 
     *outMsl = mslCompiler.compile();
+    *outMsl = shrinkString(*outMsl);
 }
 
 bool GLSLPostProcessor::process(const std::string& inputShader,
@@ -355,7 +356,10 @@ void GLSLPostProcessor::fullOptimization(const TShader& tShader,
 
 void GLSLPostProcessor::registerPerformancePasses(Optimizer& optimizer) const {
     optimizer
-            .RegisterPass(CreateMergeReturnPass())
+            .RegisterPass(CreateWrapOpKillPass())
+            .RegisterPass(CreateDeadBranchElimPass())
+            // this triggers a segfault with AMD drivers on MacOS
+            //.RegisterPass(CreateMergeReturnPass())
             .RegisterPass(CreateInlineExhaustivePass())
             .RegisterPass(CreateAggressiveDCEPass())
             .RegisterPass(CreatePrivateToLocalPass())
@@ -391,30 +395,40 @@ void GLSLPostProcessor::registerPerformancePasses(Optimizer& optimizer) const {
 
 void GLSLPostProcessor::registerSizePasses(Optimizer& optimizer) const {
     optimizer
-            .RegisterPass(CreateMergeReturnPass())
+            .RegisterPass(CreateWrapOpKillPass())
+            .RegisterPass(CreateDeadBranchElimPass())
+            // this triggers a segfault with AMD drivers on MacOS
+            //.RegisterPass(CreateMergeReturnPass())
             .RegisterPass(CreateInlineExhaustivePass())
-            .RegisterPass(CreateAggressiveDCEPass())
+            .RegisterPass(CreateEliminateDeadFunctionsPass())
             .RegisterPass(CreatePrivateToLocalPass())
-            .RegisterPass(CreateScalarReplacementPass())
-            .RegisterPass(CreateLocalAccessChainConvertPass())
-            .RegisterPass(CreateLocalSingleBlockLoadStoreElimPass())
-            .RegisterPass(CreateLocalSingleStoreElimPass())
-            .RegisterPass(CreateAggressiveDCEPass())
-            .RegisterPass(CreateSimplificationPass())
-            .RegisterPass(CreateDeadInsertElimPass())
+            .RegisterPass(CreateScalarReplacementPass(0))
             .RegisterPass(CreateLocalMultiStoreElimPass())
-            .RegisterPass(CreateAggressiveDCEPass())
             .RegisterPass(CreateCCPPass())
+            .RegisterPass(CreateLoopUnrollPass(true))
+            .RegisterPass(CreateDeadBranchElimPass())
+            .RegisterPass(CreateSimplificationPass())
+            .RegisterPass(CreateScalarReplacementPass(0))
+            .RegisterPass(CreateLocalSingleStoreElimPass())
+            .RegisterPass(CreateIfConversionPass())
+            .RegisterPass(CreateSimplificationPass())
             .RegisterPass(CreateAggressiveDCEPass())
             .RegisterPass(CreateDeadBranchElimPass())
-            .RegisterPass(CreateIfConversionPass())
-            .RegisterPass(CreateAggressiveDCEPass())
             .RegisterPass(CreateBlockMergePass())
-            .RegisterPass(CreateSimplificationPass())
+            .RegisterPass(CreateLocalAccessChainConvertPass())
+            .RegisterPass(CreateLocalSingleBlockLoadStoreElimPass())
+            .RegisterPass(CreateAggressiveDCEPass())
+            .RegisterPass(CreateCopyPropagateArraysPass())
+            .RegisterPass(CreateVectorDCEPass())
             .RegisterPass(CreateDeadInsertElimPass())
+            .RegisterPass(CreateEliminateDeadMembersPass())
+            .RegisterPass(CreateLocalSingleStoreElimPass())
+            .RegisterPass(CreateBlockMergePass())
+            .RegisterPass(CreateLocalMultiStoreElimPass())
             .RegisterPass(CreateRedundancyEliminationPass())
-            .RegisterPass(CreateCFGCleanupPass())
-            .RegisterPass(CreateAggressiveDCEPass());
+            .RegisterPass(CreateSimplificationPass())
+            .RegisterPass(CreateAggressiveDCEPass())
+            .RegisterPass(CreateCFGCleanupPass());
 }
 
 } // namespace filamat

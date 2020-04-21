@@ -35,13 +35,14 @@
 
 #include <math/norm.h>
 #include <utils/Log.h>
+#include <filament/View.h>
 
-#include "app/Config.h"
-#include "app/FilamentApp.h"
-#include "app/MeshAssimp.h"
-#include "app/Cube.h"
-#include "app/IcoSphere.h"
-#include "app/Sphere.h"
+#include <filamentapp/Config.h>
+#include <filamentapp/FilamentApp.h>
+#include <filamentapp/MeshAssimp.h>
+#include <filamentapp/Cube.h>
+#include <filamentapp/IcoSphere.h>
+#include <filamentapp/Sphere.h>
 
 #include "generated/resources/resources.h"
 
@@ -196,6 +197,8 @@ static void setup(Engine* engine, View* view, Scene* scene) {
         g_meshSet->addFromFile(filename, g_materialLibrary);
     }
 
+    auto& lcm = engine->getLightManager();
+
     // set the transform on the root node only
     auto& tcm = engine->getTransformManager();
     auto ti = tcm.getInstance(g_meshSet->getRenderables()[0]);
@@ -225,11 +228,16 @@ static void setup(Engine* engine, View* view, Scene* scene) {
             .build(*engine, g_lights.back());
     scene->addEntity(g_lights.back());
 
+    lcm.setShadowOptions(lcm.getInstance(g_lights[0]), {
+            .screenSpaceContactShadows = true });
+
+    view->setAmbientOcclusion(View::AmbientOcclusion::SSAO);
+    view->setBloomOptions({ .enabled = true });
+    view->setFogOptions({ .density=0.2, .enabled = true });
+
+
     if (g_moreLights) {
-
-        auto& lcm = engine->getLightManager();
-
-        g_lights.push_back(em.create());
+    g_lights.push_back(em.create());
         LightManager::Builder(LightManager::Type::POINT)
                 .color(Color::toLinear<ACCURATE>(sRGBColor(0.98f, 0.92f, 0.89f)))
                 .intensity(1000.0f, LightManager::EFFICIENCY_LED)
@@ -245,6 +253,7 @@ static void setup(Engine* engine, View* view, Scene* scene) {
                 .direction({ -1.0f, 0.0f, 0.0f })
                 .spotLightCone(static_cast<float>(M_PI / 8), static_cast<float>((M_PI / 8) * 1.1))
                 .falloff(4.0f)
+                .castShadows(true)
                 .build(*engine, g_lights.back());
 
         g_lights.push_back(em.create());
@@ -271,6 +280,7 @@ static void setup(Engine* engine, View* view, Scene* scene) {
                 .direction({  1.0f, 0.0f, 0.0f })
                 .spotLightCone(static_cast<float>(M_PI / 8), static_cast<float>((M_PI / 8) * 1.1))
                 .falloff(4.0f)
+                .castShadows(true)
                 .build(*engine, g_lights.back());
 
         for (const auto& light : g_lights) {
@@ -283,7 +293,7 @@ static void setup(Engine* engine, View* view, Scene* scene) {
                          .setPosition(lcm.getPosition(instance));
 
                 auto mi = g_spheres.back().getMaterialInstance();
-                mi->setParameter("baseColor", RgbaType::LINEAR, LinearColorA{ lcm.getColor(instance), 1.0f });
+                mi->setParameter("baseColor", RgbaType::LINEAR, LinearColorA{ lcm.getColor(instance), 100.0f });
                 mi->setParameter("roughness", 0.2f);
                 mi->setParameter("metallic", 0.0f);
             }
@@ -355,6 +365,7 @@ static void setup(Engine* engine, View* view, Scene* scene) {
         Material* shadowMaterial = Material::Builder()
                 .package(RESOURCES_GROUNDSHADOW_DATA, RESOURCES_GROUNDSHADOW_SIZE)
                 .build(*engine);
+        shadowMaterial->setDefaultParameter("strength", 0.7f);
 
         const static uint32_t indices[] = {
                 0, 1, 2, 2, 3, 0
@@ -370,7 +381,8 @@ static void setup(Engine* engine, View* view, Scene* scene) {
         short4 tbn = filament::math::packSnorm16(
                 mat3f::packTangentFrame(
                         filament::math::mat3f{
-                                float3{ 1.0f, 0.0f, 0.0f }, float3{ 0.0f, 0.0f, 1.0f },
+                                float3{ 1.0f, 0.0f, 0.0f },
+                                float3{ 0.0f, 0.0f, 1.0f },
                                 float3{ 0.0f, 1.0f, 0.0f }
                         }
                 ).xyzw);

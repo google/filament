@@ -53,7 +53,7 @@ inline constexpr T MATH_PURE clamp(T v, T min, T max) noexcept {
 
 template<typename T>
 inline constexpr T MATH_PURE saturate(T v) noexcept {
-    return clamp(T(1), T(0), v);
+    return clamp(v, T(0), T(1));
 }
 
 template<typename T>

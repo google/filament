@@ -4,7 +4,7 @@
 <title>glTF Morphing</title>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,user-scalable=no,initial-scale=1">
-<link href="https://google.github.io/filament/favicon.png" rel="icon" type="image/x-icon" />
+<link href="favicon.png" rel="icon" type="image/x-icon" />
 <style>
 body { margin: 0; overflow: hidden; }
 canvas { touch-action: none; width: 100%; height: 100%; }
@@ -35,8 +35,7 @@ class App {
         const loader = engine.createAssetLoader();
         const asset = this.asset = loader.createAssetFromBinary(mesh_url);
 
-        const onDone = finalize => {
-            finalize();
+        const onDone = () => {
             loader.delete();
             scene.addEntities(asset.getEntities());
             this.animator = asset.getAnimator();
@@ -51,7 +50,8 @@ class App {
         this.view = engine.createView();
         this.view.setCamera(this.camera);
         this.view.setScene(this.scene);
-        this.view.setClearColor([0.6, 0.6, 0.6, 1.0]);
+
+        this.renderer.setClearOptions({clearColor: [0.6, 0.6, 0.6, 1.0], clear: true});
 
         this.resize();
         this.render = this.render.bind(this);

@@ -270,11 +270,8 @@ vec4 evaluateLights(const MaterialInputs material) {
 
 void addEmissive(const MaterialInputs material, inout vec4 color) {
 #if defined(MATERIAL_HAS_EMISSIVE)
-    // The emissive property applies independently of the shading model
-    // It is defined as a color + exposure compensation
     highp vec4 emissive = material.emissive;
-    highp float attenuation = computePreExposedIntensity(
-            pow(2.0, frameUniforms.ev100 + emissive.w - 3.0), frameUniforms.exposure);
+    highp float attenuation = mix(1.0, frameUniforms.exposure, emissive.w);
     color.rgb += emissive.rgb * attenuation;
 #endif
 }

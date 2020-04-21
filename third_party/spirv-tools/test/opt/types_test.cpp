@@ -12,12 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "source/opt/types.h"
+
 #include <memory>
 #include <utility>
 #include <vector>
 
 #include "gtest/gtest.h"
-#include "source/opt/types.h"
 #include "source/util/make_unique.h"
 
 namespace spvtools {
@@ -46,8 +47,8 @@ class SameTypeTest : public ::testing::Test {
   std::unique_ptr<Type> image_t_;
 };
 
-#define TestMultipleInstancesOfTheSameType(ty, ...)                       \
-  TEST_F(SameTypeTest, MultiSame##ty) {                                   \
+#define TestMultipleInstancesOfTheSameTypeQualified(ty, name, ...)        \
+  TEST_F(SameTypeTest, MultiSame##ty##name) {                             \
     std::vector<std::unique_ptr<Type>> types;                             \
     for (int i = 0; i < 10; ++i) types.emplace_back(new ty(__VA_ARGS__)); \
     for (size_t i = 0; i < types.size(); ++i) {                           \
@@ -61,36 +62,59 @@ class SameTypeTest : public ::testing::Test {
       }                                                                   \
     }                                                                     \
   }
-TestMultipleInstancesOfTheSameType(Void);
-TestMultipleInstancesOfTheSameType(Bool);
-TestMultipleInstancesOfTheSameType(Integer, 32, true);
-TestMultipleInstancesOfTheSameType(Float, 64);
-TestMultipleInstancesOfTheSameType(Vector, u32_t_.get(), 3);
-TestMultipleInstancesOfTheSameType(Matrix, v3u32_t_.get(), 4);
+#define TestMultipleInstancesOfTheSameType(ty, ...) \
+  TestMultipleInstancesOfTheSameTypeQualified(ty, Simple, __VA_ARGS__)
+
+// clang-format off
+TestMultipleInstancesOfTheSameType(Void)
+TestMultipleInstancesOfTheSameType(Bool)
+TestMultipleInstancesOfTheSameType(Integer, 32, true)
+TestMultipleInstancesOfTheSameType(Float, 64)
+TestMultipleInstancesOfTheSameType(Vector, u32_t_.get(), 3)
+TestMultipleInstancesOfTheSameType(Matrix, v3u32_t_.get(), 4)
 TestMultipleInstancesOfTheSameType(Image, f64_t_.get(), SpvDimCube, 0, 0, 1, 1,
                                    SpvImageFormatRgb10A2,
-                                   SpvAccessQualifierWriteOnly);
-TestMultipleInstancesOfTheSameType(Sampler);
-TestMultipleInstancesOfTheSameType(SampledImage, image_t_.get());
-TestMultipleInstancesOfTheSameType(Array, u32_t_.get(), 10);
-TestMultipleInstancesOfTheSameType(RuntimeArray, u32_t_.get());
+                                   SpvAccessQualifierWriteOnly)
+TestMultipleInstancesOfTheSameType(Sampler)
+TestMultipleInstancesOfTheSameType(SampledImage, image_t_.get())
+// There are three classes of arrays, based on the kinds of length information
+// they have.
+// 1. Array length is a constant or spec constant without spec ID, with literals
+// for the constant value.
+TestMultipleInstancesOfTheSameTypeQualified(Array, LenConstant, u32_t_.get(),
+                                            Array::LengthInfo{42,
+                                                              {
+                                                                  0,
+                                                                  9999,
+                                                              }})
+// 2. Array length is a spec constant with a given spec id.
+TestMultipleInstancesOfTheSameTypeQualified(Array, LenSpecId, u32_t_.get(),
+                                            Array::LengthInfo{42, {1, 99}})
+// 3. Array length is an OpSpecConstantOp expression
+TestMultipleInstancesOfTheSameTypeQualified(Array, LenDefiningId, u32_t_.get(),
+                                            Array::LengthInfo{42, {2, 42}})
+
+TestMultipleInstancesOfTheSameType(RuntimeArray, u32_t_.get())
 TestMultipleInstancesOfTheSameType(Struct, std::vector<const Type*>{
-                                               u32_t_.get(), f64_t_.get()});
-TestMultipleInstancesOfTheSameType(Opaque, "testing rocks");
-TestMultipleInstancesOfTheSameType(Pointer, u32_t_.get(), SpvStorageClassInput);
+                                               u32_t_.get(), f64_t_.get()})
+TestMultipleInstancesOfTheSameType(Opaque, "testing rocks")
+TestMultipleInstancesOfTheSameType(Pointer, u32_t_.get(), SpvStorageClassInput)
 TestMultipleInstancesOfTheSameType(Function, u32_t_.get(),
-                                   {f64_t_.get(), f64_t_.get()});
-TestMultipleInstancesOfTheSameType(Event);
-TestMultipleInstancesOfTheSameType(DeviceEvent);
-TestMultipleInstancesOfTheSameType(ReserveId);
-TestMultipleInstancesOfTheSameType(Queue);
-TestMultipleInstancesOfTheSameType(Pipe, SpvAccessQualifierReadWrite);
-TestMultipleInstancesOfTheSameType(ForwardPointer, 10, SpvStorageClassUniform);
-TestMultipleInstancesOfTheSameType(PipeStorage);
-TestMultipleInstancesOfTheSameType(NamedBarrier);
+                                   {f64_t_.get(), f64_t_.get()})
+TestMultipleInstancesOfTheSameType(Event)
+TestMultipleInstancesOfTheSameType(DeviceEvent)
+TestMultipleInstancesOfTheSameType(ReserveId)
+TestMultipleInstancesOfTheSameType(Queue)
+TestMultipleInstancesOfTheSameType(Pipe, SpvAccessQualifierReadWrite)
+TestMultipleInstancesOfTheSameType(ForwardPointer, 10, SpvStorageClassUniform)
+TestMultipleInstancesOfTheSameType(PipeStorage)
+TestMultipleInstancesOfTheSameType(NamedBarrier)
+TestMultipleInstancesOfTheSameType(AccelerationStructureNV)
 #undef TestMultipleInstanceOfTheSameType
+#undef TestMultipleInstanceOfTheSameTypeQual
 
 std::vector<std::unique_ptr<Type>> GenerateAllTypes() {
+  // clang-format on
   // Types in this test case are only equal to themselves, nothing else.
   std::vector<std::unique_ptr<Type>> types;
 
@@ -150,10 +174,31 @@ std::vector<std::unique_ptr<Type>> GenerateAllTypes() {
   types.emplace_back(new SampledImage(image2));
 
   // Array
-  types.emplace_back(new Array(f32, 100));
-  types.emplace_back(new Array(f32, 42));
+  // Length is constant with integer bit representation of 42.
+  types.emplace_back(new Array(f32, Array::LengthInfo{99u, {0, 42u}}));
   auto* a42f32 = types.back().get();
-  types.emplace_back(new Array(u64, 24));
+  // Differs from previous in length value only.
+  types.emplace_back(new Array(f32, Array::LengthInfo{99u, {0, 44u}}));
+  // Length is 64-bit constant integer value 42.
+  types.emplace_back(new Array(u64, Array::LengthInfo{100u, {0, 42u, 0u}}));
+  // Differs from previous in length value only.
+  types.emplace_back(new Array(u64, Array::LengthInfo{100u, {0, 44u, 0u}}));
+
+  // Length is spec constant with spec id 18 and default value 44.
+  types.emplace_back(new Array(f32, Array::LengthInfo{99u,
+                                                      {
+                                                          1,
+                                                          18u,
+                                                          44u,
+                                                      }}));
+  // Differs from previous in spec id only.
+  types.emplace_back(new Array(f32, Array::LengthInfo{99u, {1, 19u, 44u}}));
+  // Differs from previous in literal value only.
+  types.emplace_back(new Array(f32, Array::LengthInfo{99u, {1, 19u, 48u}}));
+  // Length is spec constant op with id 42.
+  types.emplace_back(new Array(f32, Array::LengthInfo{42u, {2, 42}}));
+  // Differs from previous in result id only.
+  types.emplace_back(new Array(f32, Array::LengthInfo{43u, {2, 43}}));
 
   // RuntimeArray
   types.emplace_back(new RuntimeArray(v3f32));
@@ -214,8 +259,8 @@ TEST(Types, AllTypes) {
             << types[j]->str() << "'";
       } else {
         EXPECT_FALSE(types[i]->IsSame(types[j].get()))
-            << "expected '" << types[i]->str() << "' is different to '"
-            << types[j]->str() << "'";
+            << "entry (" << i << "," << j << ")  expected '" << types[i]->str()
+            << "' is different to '" << types[j]->str() << "'";
       }
     }
   }

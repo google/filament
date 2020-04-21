@@ -18,6 +18,9 @@ package com.google.android.filament;
 
 import androidx.annotation.IntRange;
 import androidx.annotation.NonNull;
+import androidx.annotation.Size;
+
+import static com.google.android.filament.Colors.LinearColor;
 
 import com.google.android.filament.proguard.UsedByReflection;
 
@@ -127,6 +130,33 @@ public class Skybox {
         }
 
         /**
+         * Sets the <code>Skybox</code> to a constant color. Default is opaque black.
+         *
+         * Ignored if an environment is set.
+         *
+         * @return This Builder, for chaining calls.
+         */
+        @NonNull
+        public Builder color(@LinearColor float r, @LinearColor float g, @LinearColor float b, float a) {
+            nBuilderColor(mNativeBuilder, r, g, b, a);
+            return this;
+        }
+
+        /**
+         * Sets the <code>Skybox</code> to a constant color. Default is opaque black.
+         *
+         * Ignored if an environment is set.
+         *
+         * @param color an array of 4 floats
+         * @return This Builder, for chaining calls.
+         */
+        @NonNull
+        public Builder color(@NonNull @Size(min = 4) float[] color) {
+            nBuilderColor(mNativeBuilder, color[0], color[1], color[2], color[3]);
+            return this;
+        }
+
+        /**
          * Creates a <code>Skybox</code> object
          *
          * @param engine the {@link Engine} to associate this <code>Skybox</code> with.
@@ -157,6 +187,25 @@ public class Skybox {
                 }
             }
         }
+    }
+
+    /**
+     * Mutates the <code>Skybox</code>'s constant color.
+     *
+     * Ignored if an environment is set.
+     */
+    public void setColor(@LinearColor float r, @LinearColor float g, @LinearColor float b, float a) {
+        nSetColor(getNativeObject(), r, g, b, a);
+    }
+
+    /**
+     * Mutates the <code>Skybox</code>'s constant color.
+     * Ignored if an environment is set.
+     *
+     * @param color an array of 4 floats
+     */
+    public void setColor(@NonNull @Size(min = 4) float[] color) {
+        nSetColor(getNativeObject(), color[0], color[1], color[2], color[3]);
     }
 
     /**
@@ -204,8 +253,10 @@ public class Skybox {
     private static native void nBuilderEnvironment(long nativeSkyboxBuilder, long nativeTexture);
     private static native void nBuilderShowSun(long nativeSkyboxBuilder, boolean show);
     private static native void nBuilderIntensity(long nativeSkyboxBuilder, float intensity);
+    private static native void nBuilderColor(long nativeSkyboxBuilder, float r, float g, float b, float a);
     private static native long nBuilderBuild(long nativeSkyboxBuilder, long nativeEngine);
     private static native void nSetLayerMask(long nativeSkybox, int select, int value);
     private static native int  nGetLayerMask(long nativeSkybox);
     private static native float nGetIntensity(long nativeSkybox);
+    private static native void nSetColor(long nativeSkybox, float r, float g, float b, float a);
 }

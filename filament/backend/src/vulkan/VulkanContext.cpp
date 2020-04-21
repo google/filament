@@ -150,7 +150,7 @@ void selectPhysicalDevice(VulkanContext& context) {
 
 void createVirtualDevice(VulkanContext& context) {
     VkDeviceQueueCreateInfo deviceQueueCreateInfo[1] = {};
-    static const float queuePriority[] = {1.0f};
+    const float queuePriority[] = {1.0f};
     VkDeviceCreateInfo deviceCreateInfo = {};
     std::vector<const char*> deviceExtensionNames = {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME,
@@ -197,6 +197,8 @@ void createVirtualDevice(VulkanContext& context) {
         .vkFreeMemory = vkFreeMemory,
         .vkMapMemory = vkMapMemory,
         .vkUnmapMemory = vkUnmapMemory,
+        .vkFlushMappedMemoryRanges = vkFlushMappedMemoryRanges,
+        .vkInvalidateMappedMemoryRanges = vkInvalidateMappedMemoryRanges,
         .vkBindBufferMemory = vkBindBufferMemory,
         .vkBindImageMemory = vkBindImageMemory,
         .vkGetBufferMemoryRequirements = vkGetBufferMemoryRequirements,
@@ -632,6 +634,31 @@ void createDepthBuffer(VulkanContext& context, VulkanSurfaceContext& surfaceCont
             VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 
     flushWorkCommandBuffer(context);
+}
+
+VkImageLayout getTextureLayout(TextureUsage usage) {
+    // Filament sometimes samples from depth while it is bound to the current render target, (e.g.
+    // SSAO does this while depth writes are disabled) so let's keep it simple and use GENERAL for
+    // all depth textures.
+    if (any(usage & TextureUsage::DEPTH_ATTACHMENT)) {
+        return VK_IMAGE_LAYOUT_GENERAL;
+    }
+
+    // Filament sometimes samples from one miplevel while writing to another level in the same
+    // texture (e.g. bloom does this). Moreover we'd like to avoid lots of expensive layout
+    // transitions. So, keep it simple and use GENERAL for all color-attachable textures.
+    if (any(usage & TextureUsage::COLOR_ATTACHMENT) && any(usage & TextureUsage::SAMPLEABLE)) {
+        return VK_IMAGE_LAYOUT_GENERAL;
+    }
+
+    // This case is probably never hit, but we might as well use an optimal layout for textures
+    // that are never sampled from.
+    if (any(usage & TextureUsage::COLOR_ATTACHMENT)) {
+        return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    }
+
+    // Finally, the default layout for a texture is read-only.
+    return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 }
 
 } // namespace filament

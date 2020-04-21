@@ -87,6 +87,7 @@ in table [standardProperties].
 **anisotropyDirection** | Local surface direction
 **ambientOcclusion**    | Defines how much of the ambient light is accessible to a surface point. It is a per-pixel shadowing factor between 0.0 and 1.0
 **normal**              | A detail normal used to perturb the surface using _bump mapping_ (_normal mapping_)
+**bentNormal**          | A normal pointing in the average unoccluded direction. Can be used to improve indirect lighting quality
 **clearCoatNormal**     | A detail normal used to perturb the clear coat layer using _bump mapping_ (_normal mapping_)
 **emissive**            | Additional diffuse albedo to simulate emissive surfaces (such as neons, etc.) This property is mostly useful in an HDR pipeline with a bloom pass
 **postLightingColor**   | Additional color that can be blended with the result of the lighting computations. See `postLightingBlending`
@@ -111,8 +112,9 @@ The type and range of each property is described in table [standardPropertiesTyp
 **anisotropyDirection** | float3   |  [0..1]                  | Linear RGB, encodes a direction vector in tangent space
 **ambientOcclusion**    | float    |  [0..1]                  |
 **normal**              | float3   |  [0..1]                  | Linear RGB, encodes a direction vector in tangent space
+**bentNormal**          | float3   |  [0..1]                  | Linear RGB, encodes a direction vector in tangent space
 **clearCoatNormal**     | float3   |  [0..1]                  | Linear RGB, encodes a direction vector in tangent space
-**emissive**            | float4   |  rgb=[0..1], a=[-n..n]   | Alpha is the exposure compensation
+**emissive**            | float4   |  rgb=[0..n], a=[0..1]    | Linear RGB intensity in nits, alpha encodes the exposure weight
 **postLightingColor**   | float4   |  [0..1]                  | Pre-multiplied linear RGB
 **ior**                 | float    |  [1..n]                  | Optional, usually deduced from the reflectance
 **transmission**        | float    |  [0..1]                  |
@@ -402,7 +404,21 @@ and with (right)](images/screenshot_normal_mapping.jpg)
 
 !!! Warning
     Using a normal map increases the runtime cost of the material model.
-    
+
+### Bent normal
+
+The `bentNormal` property defines the average unoccluded direction at a point on the surface. It is
+used to improve the accuracy of indirect lighting. Bent normals can also improve the quality of
+specular ambient occlusion (see section [Lighting: specularAmbientOcclusion] about
+`specularAmbientOcclusion`).
+
+Bent normals can greatly increase the visual fidelity of an asset with various cavities and concave
+areas, as shown in figure [bentNormalMapped]. See the areas of the ears, nostrils and eyes for
+instance.
+
+![Figure [bentNormalMapped]: Example of a model rendered with and without a bent normal map. Both
+versions use the same ambient occlusion map.](images/material_bent_normal.gif)
+
 ### Clear coat normal
 
 The `clearCoatNormal` property defines the normal of the clear coat layer at a given point. It
@@ -417,18 +433,21 @@ map and a surface normal map](images/screenshot_clear_coat_normal.jpg)
 ### Emissive
 
 The `emissive` property can be used to simulate additional light emitted by the surface. It is
-defined as a `float4` value that contains an RGB color (in linear space) as well as an exposure
-compensation value (in the alpha channel).
+defined as a `float4` value that contains an RGB intensity in nits as well as an exposure
+weight (in the alpha channel).
 
-Even though an exposure value actually indicates combinations of camera settings, it is often used
-by photographers to describe light intensity. This is why cameras let photographers apply an
-exposure compensation to over or under-expose an image. This setting can be used for artistic
-control but also to achieve proper exposure (snow for instance will be exposed for as
-18% middle-grey).
+The intensity in nits allows an emissive surface to function as a light and can be used to recreate
+real world surfaces. For instance a computer display has an intensity between 200 and 1,000 nits.
 
-The exposure compensation value of the emissive property can be used to force the emissive color
-to be brighter (positive values) or darker (negative values) than the current exposure. If the bloom
-effect is enabled, using a positive exposure compensation can force the surface to bloom.
+If you prefer to work in EV (or f-stops), you can simplify multiply your emissive color by the
+output of the API `filament::Exposure::luminance(ev)`. This API returns the luminance in nits of
+the specific EV. You can perform this conversion yourself using the following formula, where $L$
+is the final intensity in nits: $ L = 2^{EV - 3} $.
+
+The exposure weight carried in the alpha channel can be used to undo the camera exposure, and thus
+force an emissive surface to bloom. When the exposure weight is set to 0, the emissive intensity is
+not affected by the camera exposure. When the weight is set to 1, the intensity is multiplied by
+the camera exposure like with any regular light.
 
 ### Post-lighting color
 
@@ -708,14 +727,12 @@ The type and range of each property is described in table [unlitPropertiesTypes]
        Property       |   Type   |            Range         |           Note
 ---------------------:|:--------:|:------------------------:|:-------------------------
 **baseColor**         | float4   |  [0..1]                  | Pre-multiplied linear RGB
-**emissive**          | float4   |  rgb=[0..1], a=N/A       | Pre-multiplied linear RGB, alpha is ignored
+**emissive**          | float4   |  rgb=[0..n], a=[0..1]    | Linear RGB intensity in nits, alpha encodes the exposure weight
 **postLightingColor** | float4   |  [0..1]                  | Pre-multiplied linear RGB
 [Table [unlitPropertiesTypes]: Range and type of the unlit model's properties]
 
-The value of `emissive` is simply added to `baseColor` when present. The main use of `emissive`
-is to force an unlit surface to bloom if the HDR pipeline is configured with a bloom pass. The value
-of `postLightingColor` is blended with the sum of `emissive` and `baseColor` according to the
-blending mode specified by the `postLightingBlending` material option.
+The value of `postLightingColor` is blended with the sum of `emissive` and `baseColor` according to
+the blending mode specified by the `postLightingBlending` material option.
 
 Figure [materialUnlit] shows an example of the unlit material model
 (click on the image to see a larger version).
@@ -1517,20 +1534,27 @@ occclusion enabled and disabled.](images/screenshot_multi_bounce_ao.gif)
 ### Lighting: specularAmbientOcclusion
 
 Type
-:    `boolean`
+:    `string`
 
 Value
-:     `true` or `false`. Defaults to `false` on mobile, `true` on desktop.
+:     `none`, `simple` or `bentNormals`. Defaults to `none` on mobile, `simple` on desktop. For
+      compatibility reasons, `true` and `false` are also accepted and map respectively to `simple`
+      and `none`.
 
 Description
 :    Static ambient occlusion maps and dynamic ambient occlusion (SSAO, etc.) apply to diffuse
-     indirect lighting. When setting this property to true, a new ambient occlusion term is
-     derived from the surface roughness and applied to specular indirec lighting. This effect
-     helps remove unwanted specular reflections as shown in figure [specularAO].
+     indirect lighting. When setting this property to other than `none`, a new ambient occlusion
+     term is derived from the surface roughness and applied to specular indirect lighting.
+     This effect helps remove unwanted specular reflections as shown in figure [specularAO].
+     When this value is set to `simple`, Filament uses a cheap but approximate method of computing
+     the specular ambient occlusion term. If this value is set to `bentNormals`, Filament will use
+     a much more accurate but much more expensive method. `bentNormals` only works if the material
+     sets the `bentNormal` property inside the fragment shader. If that property isn't set,
+     `bentNormals` will behave like `simple`.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
 material {
-    specularAmbientOcclusion : true
+    specularAmbientOcclusion : simple
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -1548,7 +1572,7 @@ Value
 Description
 :    Reduces specular aliasing and preserves the shape of specular highlights as an object moves
      away from the camera. This anti-aliasing solution is particularly effective on glossy materials
-     (low roughness) but increases the cost of the material. The strengthf of the anti-aliasing
+     (low roughness) but increases the cost of the material. The strength of the anti-aliasing
      effect can be controlled using two other properties: `specularAntiAliasingVariance` and
      `specularAntiAliasingThreshold`.
 
@@ -1737,7 +1761,7 @@ fragment {
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ GLSL
 struct MaterialInputs {
     float4 baseColor;           // default: float4(1.0)
-    float4 emissive;            // default: float4(0.0)
+    float4 emissive;            // default: float4(0.0, 0.0, 0.0, 1.0)
     float4 postLightingColor;   // default: float4(0.0)
 
     // no other field is available with the unlit shading model

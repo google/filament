@@ -1,44 +1,22 @@
-apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
 
 android {
-    buildToolsVersion versions.buildTools
-    compileSdkVersion versions.compileSdk
-    defaultConfig {
-        minSdkVersion versions.minSdk
-        targetSdkVersion versions.targetSdk
-
-        externalNativeBuild {
-            cmake {
-                arguments.add("-DANDROID_PIE=ON")
-                arguments.add("-DANDROID_PLATFORM=android-${versions.targetSdk}".toString())
-                arguments.add("-DANDROID_STL=c++_static")
-                arguments.add("-DFILAMENT_DIST_DIR=${filamentPath}".toString())
-                cppFlags.add("-std=c++14")
-                if (project.hasProperty('extra_cmake_args')) {
-                    arguments.add(extra_cmake_args)
-                }
-            }
+    flavorDimensions "functionality"
+    productFlavors {
+        full {
+            dimension "functionality"
         }
-    }
 
-    externalNativeBuild {
-        cmake {
-            path "CMakeLists.txt"
+        lite {
+            dimension "functionality"
         }
     }
 
     sourceSets {
         main {
-            jni.srcDirs "src/main/cpp"
             kotlin.srcDirs += "src/main/java"
         }
-    }
-
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
     }
 
     // No need to package up the following shared libs, which arise as a side effect of our
@@ -51,21 +29,40 @@ android {
     }
 }
 
+configurations.all { config ->
+    // Hack to preserve the version of the dependencies
+    if (!config.name.endsWith('Publication')) {
+        resolutionStrategy {
+            dependencySubstitution {
+                substitute(module("com.google.android.filament:gltfio-android:${VERSION_NAME}")).with(project(":gltfio-android"))
+                substitute(module("com.google.android.filament:gltfio-android-lite:${VERSION_NAME}")).with(project(":gltfio-android"))
+            }
+        }
+    }
+}
+
 dependencies {
     implementation deps.kotlin
     implementation deps.androidx.annotations
     implementation project(':filament-android')
-    implementation project(':gltfio-android')
+
+    fullImplementation module("com.google.android.filament:gltfio-android:${VERSION_NAME}")
+    liteImplementation module("com.google.android.filament:gltfio-android-lite:${VERSION_NAME}")
 }
 
 apply from: rootProject.file('gradle/gradle-mvn-push.gradle')
 
-afterEvaluate { project ->
+afterEvaluate {
     publishing {
         publications {
-            release(MavenPublication) {
-                artifactId = POM_ARTIFACT_ID
-                from components.release
+            fullRelease(MavenPublication) {
+                artifactId = POM_ARTIFACT_ID_FULL
+                from components.fullRelease
+            }
+
+            liteRelease(MavenPublication) {
+                artifactId = POM_ARTIFACT_ID_LITE
+                from components.liteRelease
             }
         }
     }

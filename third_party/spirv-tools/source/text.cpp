@@ -242,14 +242,37 @@ spv_result_t spvTextEncodeOperand(const spvtools::AssemblyGrammar& grammar,
       // The assembler accepts the symbolic name for an extended instruction,
       // and emits its corresponding number.
       spv_ext_inst_desc extInst;
-      if (grammar.lookupExtInst(pInst->extInstType, textValue, &extInst)) {
-        return context->diagnostic()
-               << "Invalid extended instruction name '" << textValue << "'.";
-      }
-      spvInstructionAddWord(pInst, extInst->ext_inst);
+      if (grammar.lookupExtInst(pInst->extInstType, textValue, &extInst) ==
+          SPV_SUCCESS) {
+        // if we know about this extended instruction, push the numeric value
+        spvInstructionAddWord(pInst, extInst->ext_inst);
 
-      // Prepare to parse the operands for the extended instructions.
-      spvPushOperandTypes(extInst->operandTypes, pExpectedOperands);
+        // Prepare to parse the operands for the extended instructions.
+        spvPushOperandTypes(extInst->operandTypes, pExpectedOperands);
+      } else {
+        // if we don't know this extended instruction and the set isn't
+        // non-semantic, we cannot process further
+        if (!spvExtInstIsNonSemantic(pInst->extInstType)) {
+          return context->diagnostic()
+                 << "Invalid extended instruction name '" << textValue << "'.";
+        } else {
+          // for non-semantic instruction sets, as long as the text name is an
+          // integer value we can encode it since we know the form of all such
+          // extended instructions
+          spv_literal_t extInstValue;
+          if (spvTextToLiteral(textValue, &extInstValue) ||
+              extInstValue.type != SPV_LITERAL_TYPE_UINT_32) {
+            return context->diagnostic()
+                   << "Couldn't translate unknown extended instruction name '"
+                   << textValue << "' to unsigned integer.";
+          }
+
+          spvInstructionAddWord(pInst, extInstValue.value.u32);
+
+          // opcode contains an unknown number of IDs.
+          pExpectedOperands->push_back(SPV_OPERAND_TYPE_VARIABLE_ID);
+        }
+      }
     } break;
 
     case SPV_OPERAND_TYPE_SPEC_CONSTANT_OP_NUMBER: {
@@ -377,7 +400,8 @@ spv_result_t spvTextEncodeOperand(const spvtools::AssemblyGrammar& grammar,
     case SPV_OPERAND_TYPE_OPTIONAL_IMAGE:
     case SPV_OPERAND_TYPE_OPTIONAL_MEMORY_ACCESS:
     case SPV_OPERAND_TYPE_SELECTION_CONTROL:
-    case SPV_OPERAND_TYPE_DEBUG_INFO_FLAGS: {
+    case SPV_OPERAND_TYPE_DEBUG_INFO_FLAGS:
+    case SPV_OPERAND_TYPE_CLDEBUG100_DEBUG_INFO_FLAGS: {
       uint32_t value;
       if (grammar.parseMaskOperand(type, textValue, &value)) {
         return context->diagnostic() << "Invalid " << spvOperandTypeStr(type)
@@ -545,6 +569,11 @@ spv_result_t spvTextEncodeOpcode(const spvtools::AssemblyGrammar& grammar,
     return context->diagnostic()
            << "Expected <result-id> at the beginning of an instruction, found '"
            << firstWord << "'.";
+  }
+  if (!opcodeEntry->hasResult && !result_id.empty()) {
+    return context->diagnostic()
+           << "Cannot set ID " << result_id << " because " << opcodeName
+           << " does not produce a result ID.";
   }
   pInst->opcode = opcodeEntry->opcode;
   context->setPosition(nextPosition);
@@ -778,7 +807,7 @@ spv_result_t spvTextToBinary(const spv_const_context context,
                              const size_t input_text_size, spv_binary* pBinary,
                              spv_diagnostic* pDiagnostic) {
   return spvTextToBinaryWithOptions(context, input_text, input_text_size,
-                                    SPV_BINARY_TO_TEXT_OPTION_NONE, pBinary,
+                                    SPV_TEXT_TO_BINARY_OPTION_NONE, pBinary,
                                     pDiagnostic);
 }
 
@@ -805,7 +834,8 @@ spv_result_t spvTextToBinaryWithOptions(const spv_const_context context,
 }
 
 void spvTextDestroy(spv_text text) {
-  if (!text) return;
-  delete[] text->str;
-  delete text;
+  if (text) {
+    if (text->str) delete[] text->str;
+    delete text;
+  }
 }

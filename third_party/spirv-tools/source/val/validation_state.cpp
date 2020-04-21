@@ -19,6 +19,7 @@
 #include <utility>
 
 #include "source/opcode.h"
+#include "source/spirv_constant.h"
 #include "source/spirv_target_env.h"
 #include "source/val/basic_block.h"
 #include "source/val/construct.h"
@@ -92,6 +93,9 @@ bool IsInstructionInLayoutSection(ModuleLayoutSection layout, SpvOp op) {
         case SpvOpLine:
         case SpvOpNoLine:
         case SpvOpUndef:
+        // SpvOpExtInst is only allowed here for certain extended instruction
+        // sets. This will be checked separately
+        case SpvOpExtInst:
           out = true;
           break;
         default: break;
@@ -146,12 +150,37 @@ spv_result_t CountInstructions(void* user_data,
   return SPV_SUCCESS;
 }
 
+spv_result_t setHeader(void* user_data, spv_endianness_t, uint32_t,
+                       uint32_t version, uint32_t generator, uint32_t id_bound,
+                       uint32_t) {
+  ValidationState_t& vstate =
+      *(reinterpret_cast<ValidationState_t*>(user_data));
+  vstate.setIdBound(id_bound);
+  vstate.setGenerator(generator);
+  vstate.setVersion(version);
+
+  return SPV_SUCCESS;
+}
+
+// Add features based on SPIR-V core version number.
+void UpdateFeaturesBasedOnSpirvVersion(ValidationState_t::Feature* features,
+                                       uint32_t version) {
+  assert(features);
+  if (version >= SPV_SPIRV_VERSION_WORD(1, 4)) {
+    features->select_between_composites = true;
+    features->copy_memory_permits_two_memory_accesses = true;
+    features->uconvert_spec_constant_op = true;
+    features->nonwritable_var_in_function_or_private = true;
+  }
+}
+
 }  // namespace
 
 ValidationState_t::ValidationState_t(const spv_const_context ctx,
                                      const spv_const_validator_options opt,
                                      const uint32_t* words,
-                                     const size_t num_words)
+                                     const size_t num_words,
+                                     const uint32_t max_warnings)
     : context_(ctx),
       options_(opt),
       words_(words),
@@ -167,40 +196,45 @@ ValidationState_t::ValidationState_t(const spv_const_context ctx,
       global_vars_(),
       local_vars_(),
       struct_nesting_depth_(),
+      struct_has_nested_blockorbufferblock_struct_(),
       grammar_(ctx),
       addressing_model_(SpvAddressingModelMax),
       memory_model_(SpvMemoryModelMax),
-      in_function_(false) {
+      pointer_size_and_alignment_(0),
+      in_function_(false),
+      num_of_warnings_(0),
+      max_num_of_warnings_(max_warnings) {
   assert(opt && "Validator options may not be Null.");
 
   const auto env = context_->target_env;
 
   if (spvIsVulkanEnv(env)) {
-    features_.non_monotonic_struct_member_offsets = true;
-
     // Vulkan 1.1 includes VK_KHR_relaxed_block_layout in core.
     if (env != SPV_ENV_VULKAN_1_0) {
       features_.env_relaxed_block_layout = true;
     }
   }
 
-  switch (env) {
-    case SPV_ENV_WEBGPU_0:
-      features_.bans_op_undef = true;
-      break;
-    default:
-      break;
-  }
-
   // Only attempt to count if we have words, otherwise let the other validation
   // fail and generate an error.
   if (num_words > 0) {
     // Count the number of instructions in the binary.
-    spvBinaryParse(ctx, this, words, num_words,
-                   /* parsed_header = */ nullptr, CountInstructions,
+    // This parse should not produce any error messages. Hijack the context and
+    // replace the message consumer so that we do not pollute any state in input
+    // consumer.
+    spv_context_t hijacked_context = *ctx;
+    hijacked_context.consumer = [](spv_message_level_t, const char*,
+                                   const spv_position_t&, const char*) {};
+    spvBinaryParse(&hijacked_context, this, words, num_words, setHeader,
+                   CountInstructions,
                    /* diagnostic = */ nullptr);
     preallocateStorage();
   }
+  UpdateFeaturesBasedOnSpirvVersion(&features_, version_);
+
+  friendly_mapper_ = spvtools::MakeUnique<spvtools::FriendlyNameMapper>(
+      context_, words_, num_words_);
+  name_mapper_ = friendly_mapper_->GetNameMapper();
 }
 
 void ValidationState_t::preallocateStorage() {
@@ -232,21 +266,10 @@ void ValidationState_t::AssignNameToId(uint32_t id, std::string name) {
 }
 
 std::string ValidationState_t::getIdName(uint32_t id) const {
-  std::stringstream out;
-  out << id;
-  if (operand_names_.find(id) != end(operand_names_)) {
-    out << "[" << operand_names_.at(id) << "]";
-  }
-  return out.str();
-}
+  const std::string id_name = name_mapper_(id);
 
-std::string ValidationState_t::getIdOrName(uint32_t id) const {
   std::stringstream out;
-  if (operand_names_.find(id) != std::end(operand_names_)) {
-    out << operand_names_.at(id);
-  } else {
-    out << id;
-  }
+  out << id << "[%" << id_name << "]";
   return out.str();
 }
 
@@ -293,7 +316,18 @@ bool ValidationState_t::IsOpcodeInCurrentLayoutSection(SpvOp op) {
 }
 
 DiagnosticStream ValidationState_t::diag(spv_result_t error_code,
-                                         const Instruction* inst) const {
+                                         const Instruction* inst) {
+  if (error_code == SPV_WARNING) {
+    if (num_of_warnings_ == max_num_of_warnings_) {
+      DiagnosticStream({0, 0, 0}, context_->consumer, "", error_code)
+          << "Other warnings have been suppressed.\n";
+    }
+    if (num_of_warnings_ >= max_num_of_warnings_) {
+      return DiagnosticStream({0, 0, 0}, nullptr, "", error_code);
+    }
+    ++num_of_warnings_;
+  }
+
   std::string disassembly;
   if (inst) disassembly = Disassemble(*inst);
 
@@ -353,6 +387,9 @@ void ValidationState_t::RegisterCapability(SpvCapability cap) {
       features_.group_ops_reduce_and_scans = true;
       break;
     case SpvCapabilityInt8:
+      features_.use_int8_type = true;
+      features_.declare_int8_type = true;
+      break;
     case SpvCapabilityStorageBuffer8BitAccess:
     case SpvCapabilityUniformAndStorageBuffer8BitAccess:
     case SpvCapabilityStoragePushConstant8:
@@ -392,9 +429,15 @@ void ValidationState_t::RegisterExtension(Extension ext) {
 
   switch (ext) {
     case kSPV_AMD_gpu_shader_half_float:
+    case kSPV_AMD_gpu_shader_half_float_fetch:
       // SPV_AMD_gpu_shader_half_float enables float16 type.
       // https://github.com/KhronosGroup/SPIRV-Tools/issues/1375
       features_.declare_float16_type = true;
+      break;
+    case kSPV_AMD_gpu_shader_int16:
+      // This is not yet in the extension, but it's recommended for it.
+      // See https://github.com/KhronosGroup/glslang/issues/848
+      features_.uconvert_spec_constant_op = true;
       break;
     case kSPV_AMD_shader_ballot:
       // The grammar doesn't encode the fact that SPV_AMD_shader_ballot
@@ -420,6 +463,17 @@ bool ValidationState_t::HasAnyOfExtensions(
 
 void ValidationState_t::set_addressing_model(SpvAddressingModel am) {
   addressing_model_ = am;
+  switch (am) {
+    case SpvAddressingModelPhysical32:
+      pointer_size_and_alignment_ = 4;
+      break;
+    default:
+    // fall through
+    case SpvAddressingModelPhysical64:
+    case SpvAddressingModelPhysicalStorageBuffer64EXT:
+      pointer_size_and_alignment_ = 8;
+      break;
+  }
 }
 
 SpvAddressingModel ValidationState_t::addressing_model() const {
@@ -507,15 +561,15 @@ void ValidationState_t::RegisterInstruction(Instruction* inst) {
       const uint32_t operand_word = inst->word(operand.offset);
       Instruction* operand_inst = FindDef(operand_word);
       if (operand_inst && SpvOpSampledImage == operand_inst->opcode()) {
-        RegisterSampledImageConsumer(operand_word, inst->id());
+        RegisterSampledImageConsumer(operand_word, inst);
       }
     }
   }
 }
 
-std::vector<uint32_t> ValidationState_t::getSampledImageConsumers(
+std::vector<Instruction*> ValidationState_t::getSampledImageConsumers(
     uint32_t sampled_image_id) const {
-  std::vector<uint32_t> result;
+  std::vector<Instruction*> result;
   auto iter = sampled_image_consumers_.find(sampled_image_id);
   if (iter != sampled_image_consumers_.end()) {
     result = iter->second;
@@ -524,8 +578,8 @@ std::vector<uint32_t> ValidationState_t::getSampledImageConsumers(
 }
 
 void ValidationState_t::RegisterSampledImageConsumer(uint32_t sampled_image_id,
-                                                     uint32_t consumer_id) {
-  sampled_image_consumers_[sampled_image_id].push_back(consumer_id);
+                                                     Instruction* consumer) {
+  sampled_image_consumers_[sampled_image_id].push_back(consumer);
 }
 
 uint32_t ValidationState_t::getIdBound() const { return id_bound_; }
@@ -577,6 +631,9 @@ uint32_t ValidationState_t::GetComponentType(uint32_t id) const {
     case SpvOpTypeMatrix:
       return GetComponentType(inst->word(2));
 
+    case SpvOpTypeCooperativeMatrixNV:
+      return inst->word(2);
+
     default:
       break;
   }
@@ -601,6 +658,10 @@ uint32_t ValidationState_t::GetDimension(uint32_t id) const {
     case SpvOpTypeMatrix:
       return inst->word(3);
 
+    case SpvOpTypeCooperativeMatrixNV:
+      // Actual dimension isn't known, return 0
+      return 0;
+
     default:
       break;
   }
@@ -623,6 +684,12 @@ uint32_t ValidationState_t::GetBitWidth(uint32_t id) const {
 
   assert(0);
   return 0;
+}
+
+bool ValidationState_t::IsVoidType(uint32_t id) const {
+  const Instruction* inst = FindDef(id);
+  assert(inst);
+  return inst->opcode() == SpvOpTypeVoid;
 }
 
 bool ValidationState_t::IsFloatScalarType(uint32_t id) const {
@@ -829,6 +896,86 @@ bool ValidationState_t::GetPointerTypeInfo(uint32_t id, uint32_t* data_type,
   return true;
 }
 
+bool ValidationState_t::IsCooperativeMatrixType(uint32_t id) const {
+  const Instruction* inst = FindDef(id);
+  assert(inst);
+  return inst->opcode() == SpvOpTypeCooperativeMatrixNV;
+}
+
+bool ValidationState_t::IsFloatCooperativeMatrixType(uint32_t id) const {
+  if (!IsCooperativeMatrixType(id)) return false;
+  return IsFloatScalarType(FindDef(id)->word(2));
+}
+
+bool ValidationState_t::IsIntCooperativeMatrixType(uint32_t id) const {
+  if (!IsCooperativeMatrixType(id)) return false;
+  return IsIntScalarType(FindDef(id)->word(2));
+}
+
+bool ValidationState_t::IsUnsignedIntCooperativeMatrixType(uint32_t id) const {
+  if (!IsCooperativeMatrixType(id)) return false;
+  return IsUnsignedIntScalarType(FindDef(id)->word(2));
+}
+
+spv_result_t ValidationState_t::CooperativeMatrixShapesMatch(
+    const Instruction* inst, uint32_t m1, uint32_t m2) {
+  const auto m1_type = FindDef(m1);
+  const auto m2_type = FindDef(m2);
+
+  if (m1_type->opcode() != SpvOpTypeCooperativeMatrixNV ||
+      m2_type->opcode() != SpvOpTypeCooperativeMatrixNV) {
+    return diag(SPV_ERROR_INVALID_DATA, inst)
+           << "Expected cooperative matrix types";
+  }
+
+  uint32_t m1_scope_id = m1_type->GetOperandAs<uint32_t>(2);
+  uint32_t m1_rows_id = m1_type->GetOperandAs<uint32_t>(3);
+  uint32_t m1_cols_id = m1_type->GetOperandAs<uint32_t>(4);
+
+  uint32_t m2_scope_id = m2_type->GetOperandAs<uint32_t>(2);
+  uint32_t m2_rows_id = m2_type->GetOperandAs<uint32_t>(3);
+  uint32_t m2_cols_id = m2_type->GetOperandAs<uint32_t>(4);
+
+  bool m1_is_int32 = false, m1_is_const_int32 = false, m2_is_int32 = false,
+       m2_is_const_int32 = false;
+  uint32_t m1_value = 0, m2_value = 0;
+
+  std::tie(m1_is_int32, m1_is_const_int32, m1_value) =
+      EvalInt32IfConst(m1_scope_id);
+  std::tie(m2_is_int32, m2_is_const_int32, m2_value) =
+      EvalInt32IfConst(m2_scope_id);
+
+  if (m1_is_const_int32 && m2_is_const_int32 && m1_value != m2_value) {
+    return diag(SPV_ERROR_INVALID_DATA, inst)
+           << "Expected scopes of Matrix and Result Type to be "
+           << "identical";
+  }
+
+  std::tie(m1_is_int32, m1_is_const_int32, m1_value) =
+      EvalInt32IfConst(m1_rows_id);
+  std::tie(m2_is_int32, m2_is_const_int32, m2_value) =
+      EvalInt32IfConst(m2_rows_id);
+
+  if (m1_is_const_int32 && m2_is_const_int32 && m1_value != m2_value) {
+    return diag(SPV_ERROR_INVALID_DATA, inst)
+           << "Expected rows of Matrix type and Result Type to be "
+           << "identical";
+  }
+
+  std::tie(m1_is_int32, m1_is_const_int32, m1_value) =
+      EvalInt32IfConst(m1_cols_id);
+  std::tie(m2_is_int32, m2_is_const_int32, m2_value) =
+      EvalInt32IfConst(m2_cols_id);
+
+  if (m1_is_const_int32 && m2_is_const_int32 && m1_value != m2_value) {
+    return diag(SPV_ERROR_INVALID_DATA, inst)
+           << "Expected columns of Matrix type and Result Type to be "
+           << "identical";
+  }
+
+  return SPV_SUCCESS;
+}
+
 uint32_t ValidationState_t::GetOperandTypeId(const Instruction* inst,
                                              size_t operand_index) const {
   return GetTypeId(inst->GetOperandAs<uint32_t>(operand_index));
@@ -857,7 +1004,7 @@ bool ValidationState_t::GetConstantValUint64(uint32_t id, uint64_t* val) const {
 }
 
 std::tuple<bool, bool, uint32_t> ValidationState_t::EvalInt32IfConst(
-    uint32_t id) {
+    uint32_t id) const {
   const Instruction* const inst = FindDef(id);
   assert(inst);
   const uint32_t type = inst->type_id();
@@ -866,8 +1013,15 @@ std::tuple<bool, bool, uint32_t> ValidationState_t::EvalInt32IfConst(
     return std::make_tuple(false, false, 0);
   }
 
-  if (inst->opcode() != SpvOpConstant && inst->opcode() != SpvOpSpecConstant) {
+  // Spec constant values cannot be evaluated so don't consider constant for
+  // the purpose of this method.
+  if (!spvOpcodeIsConstant(inst->opcode()) ||
+      spvOpcodeIsSpecConstant(inst->opcode())) {
     return std::make_tuple(true, false, 0);
+  }
+
+  if (inst->opcode() == SpvOpConstantNull) {
+    return std::make_tuple(true, true, 0);
   }
 
   assert(inst->words().size() == 4);
@@ -897,6 +1051,39 @@ void ValidationState_t::ComputeFunctionToEntryPointMapping() {
   }
 }
 
+void ValidationState_t::ComputeRecursiveEntryPoints() {
+  for (const Function func : functions()) {
+    std::stack<uint32_t> call_stack;
+    std::set<uint32_t> visited;
+
+    for (const uint32_t new_call : func.function_call_targets()) {
+      call_stack.push(new_call);
+    }
+
+    while (!call_stack.empty()) {
+      const uint32_t called_func_id = call_stack.top();
+      call_stack.pop();
+
+      if (!visited.insert(called_func_id).second) continue;
+
+      if (called_func_id == func.id()) {
+        for (const uint32_t entry_point :
+             function_to_entry_points_[called_func_id])
+          recursive_entry_points_.insert(entry_point);
+        break;
+      }
+
+      const Function* called_func = function(called_func_id);
+      if (called_func) {
+        // Other checks should error out on this invalid SPIR-V.
+        for (const uint32_t new_call : called_func->function_call_targets()) {
+          call_stack.push(new_call);
+        }
+      }
+    }
+  }
+}
+
 const std::vector<uint32_t>& ValidationState_t::FunctionEntryPoints(
     uint32_t func) const {
   auto iter = function_to_entry_points_.find(func);
@@ -905,6 +1092,34 @@ const std::vector<uint32_t>& ValidationState_t::FunctionEntryPoints(
   } else {
     return iter->second;
   }
+}
+
+std::set<uint32_t> ValidationState_t::EntryPointReferences(uint32_t id) const {
+  std::set<uint32_t> referenced_entry_points;
+  const auto inst = FindDef(id);
+  if (!inst) return referenced_entry_points;
+
+  std::vector<const Instruction*> stack;
+  stack.push_back(inst);
+  while (!stack.empty()) {
+    const auto current_inst = stack.back();
+    stack.pop_back();
+
+    if (const auto func = current_inst->function()) {
+      // Instruction lives in a function, we can stop searching.
+      const auto function_entry_points = FunctionEntryPoints(func->id());
+      referenced_entry_points.insert(function_entry_points.begin(),
+                                     function_entry_points.end());
+    } else {
+      // Instruction is in the global scope, keep searching its uses.
+      for (auto pair : current_inst->uses()) {
+        const auto next_inst = pair.first;
+        stack.push_back(next_inst);
+      }
+    }
+  }
+
+  return referenced_entry_points;
 }
 
 std::string ValidationState_t::Disassemble(const Instruction& inst) const {
@@ -919,6 +1134,189 @@ std::string ValidationState_t::Disassemble(const uint32_t* words,
 
   return spvInstructionBinaryToText(context()->target_env, words, num_words,
                                     words_, num_words_, disassembly_options);
+}
+
+bool ValidationState_t::LogicallyMatch(const Instruction* lhs,
+                                       const Instruction* rhs,
+                                       bool check_decorations) {
+  if (lhs->opcode() != rhs->opcode()) {
+    return false;
+  }
+
+  if (check_decorations) {
+    const auto& dec_a = id_decorations(lhs->id());
+    const auto& dec_b = id_decorations(rhs->id());
+
+    for (const auto& dec : dec_b) {
+      if (std::find(dec_a.begin(), dec_a.end(), dec) == dec_a.end()) {
+        return false;
+      }
+    }
+  }
+
+  if (lhs->opcode() == SpvOpTypeArray) {
+    // Size operands must match.
+    if (lhs->GetOperandAs<uint32_t>(2u) != rhs->GetOperandAs<uint32_t>(2u)) {
+      return false;
+    }
+
+    // Elements must match or logically match.
+    const auto lhs_ele_id = lhs->GetOperandAs<uint32_t>(1u);
+    const auto rhs_ele_id = rhs->GetOperandAs<uint32_t>(1u);
+    if (lhs_ele_id == rhs_ele_id) {
+      return true;
+    }
+
+    const auto lhs_ele = FindDef(lhs_ele_id);
+    const auto rhs_ele = FindDef(rhs_ele_id);
+    if (!lhs_ele || !rhs_ele) {
+      return false;
+    }
+    return LogicallyMatch(lhs_ele, rhs_ele, check_decorations);
+  } else if (lhs->opcode() == SpvOpTypeStruct) {
+    // Number of elements must match.
+    if (lhs->operands().size() != rhs->operands().size()) {
+      return false;
+    }
+
+    for (size_t i = 1u; i < lhs->operands().size(); ++i) {
+      const auto lhs_ele_id = lhs->GetOperandAs<uint32_t>(i);
+      const auto rhs_ele_id = rhs->GetOperandAs<uint32_t>(i);
+      // Elements must match or logically match.
+      if (lhs_ele_id == rhs_ele_id) {
+        continue;
+      }
+
+      const auto lhs_ele = FindDef(lhs_ele_id);
+      const auto rhs_ele = FindDef(rhs_ele_id);
+      if (!lhs_ele || !rhs_ele) {
+        return false;
+      }
+
+      if (!LogicallyMatch(lhs_ele, rhs_ele, check_decorations)) {
+        return false;
+      }
+    }
+
+    // All checks passed.
+    return true;
+  }
+
+  // No other opcodes are acceptable at this point. Arrays and structs are
+  // caught above and if they're elements are not arrays or structs they are
+  // required to match exactly.
+  return false;
+}
+
+const Instruction* ValidationState_t::TracePointer(
+    const Instruction* inst) const {
+  auto base_ptr = inst;
+  while (base_ptr->opcode() == SpvOpAccessChain ||
+         base_ptr->opcode() == SpvOpInBoundsAccessChain ||
+         base_ptr->opcode() == SpvOpPtrAccessChain ||
+         base_ptr->opcode() == SpvOpInBoundsPtrAccessChain ||
+         base_ptr->opcode() == SpvOpCopyObject) {
+    base_ptr = FindDef(base_ptr->GetOperandAs<uint32_t>(2u));
+  }
+  return base_ptr;
+}
+
+bool ValidationState_t::ContainsSizedIntOrFloatType(uint32_t id, SpvOp type,
+                                                    uint32_t width) const {
+  if (type != SpvOpTypeInt && type != SpvOpTypeFloat) return false;
+
+  const auto inst = FindDef(id);
+  if (!inst) return false;
+
+  if (inst->opcode() == type) {
+    return inst->GetOperandAs<uint32_t>(1u) == width;
+  }
+
+  switch (inst->opcode()) {
+    case SpvOpTypeArray:
+    case SpvOpTypeRuntimeArray:
+    case SpvOpTypeVector:
+    case SpvOpTypeMatrix:
+    case SpvOpTypeImage:
+    case SpvOpTypeSampledImage:
+    case SpvOpTypeCooperativeMatrixNV:
+      return ContainsSizedIntOrFloatType(inst->GetOperandAs<uint32_t>(1u), type,
+                                         width);
+    case SpvOpTypePointer:
+      if (IsForwardPointer(id)) return false;
+      return ContainsSizedIntOrFloatType(inst->GetOperandAs<uint32_t>(2u), type,
+                                         width);
+    case SpvOpTypeFunction:
+    case SpvOpTypeStruct: {
+      for (uint32_t i = 1; i < inst->operands().size(); ++i) {
+        if (ContainsSizedIntOrFloatType(inst->GetOperandAs<uint32_t>(i), type,
+                                        width))
+          return true;
+      }
+      return false;
+    }
+    default:
+      return false;
+  }
+}
+
+bool ValidationState_t::ContainsLimitedUseIntOrFloatType(uint32_t id) const {
+  if ((!HasCapability(SpvCapabilityInt16) &&
+       ContainsSizedIntOrFloatType(id, SpvOpTypeInt, 16)) ||
+      (!HasCapability(SpvCapabilityInt8) &&
+       ContainsSizedIntOrFloatType(id, SpvOpTypeInt, 8)) ||
+      (!HasCapability(SpvCapabilityFloat16) &&
+       ContainsSizedIntOrFloatType(id, SpvOpTypeFloat, 16))) {
+    return true;
+  }
+  return false;
+}
+
+bool ValidationState_t::IsValidStorageClass(
+    SpvStorageClass storage_class) const {
+  if (spvIsWebGPUEnv(context()->target_env)) {
+    switch (storage_class) {
+      case SpvStorageClassUniformConstant:
+      case SpvStorageClassUniform:
+      case SpvStorageClassStorageBuffer:
+      case SpvStorageClassInput:
+      case SpvStorageClassOutput:
+      case SpvStorageClassImage:
+      case SpvStorageClassWorkgroup:
+      case SpvStorageClassPrivate:
+      case SpvStorageClassFunction:
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  if (spvIsVulkanEnv(context()->target_env)) {
+    switch (storage_class) {
+      case SpvStorageClassUniformConstant:
+      case SpvStorageClassUniform:
+      case SpvStorageClassStorageBuffer:
+      case SpvStorageClassInput:
+      case SpvStorageClassOutput:
+      case SpvStorageClassImage:
+      case SpvStorageClassWorkgroup:
+      case SpvStorageClassPrivate:
+      case SpvStorageClassFunction:
+      case SpvStorageClassPushConstant:
+      case SpvStorageClassPhysicalStorageBuffer:
+      case SpvStorageClassRayPayloadNV:
+      case SpvStorageClassIncomingRayPayloadNV:
+      case SpvStorageClassHitAttributeNV:
+      case SpvStorageClassCallableDataNV:
+      case SpvStorageClassIncomingCallableDataNV:
+      case SpvStorageClassShaderRecordBufferNV:
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  return true;
 }
 
 }  // namespace val

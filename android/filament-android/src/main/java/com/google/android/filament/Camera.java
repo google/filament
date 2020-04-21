@@ -226,9 +226,11 @@ public class Camera {
     }
 
     /**
-     * Sets the projection matrix from the focal length
+     * Sets the projection matrix from the focal length.
      *
-     * @param focalLength   lense's focal length in millimeters. <code>focalLength</code> > 0
+     * @param focalLength   lens's focal length in millimeters. <code>focalLength</code> > 0
+     *
+     * @param aspect        aspect ratio width/height. <code>aspect</code> > 0
      *
      * @param near          distance in world units from the camera to the near plane.
      *                      The near plane's position in view space is z = -<code>near</code>.
@@ -245,8 +247,8 @@ public class Camera {
      *                              for {@link Projection#ORTHO}.
      *
      */
-    public void setLensProjection(double focalLength, double near, double far) {
-        nSetLensProjection(getNativeObject(), focalLength, near, far);
+    public void setLensProjection(double focalLength, double aspect, double near, double far) {
+        nSetLensProjection(getNativeObject(), focalLength, aspect, near, far);
     }
 
     /**
@@ -517,7 +519,7 @@ public class Camera {
 
     private static native void nSetProjection(long nativeCamera, int projection, double left, double right, double bottom, double top, double near, double far);
     private static native void nSetProjectionFov(long nativeCamera, double fovInDegrees, double aspect, double near, double far, int fov);
-    private static native void nSetLensProjection(long nativeCamera, double focalLength, double near, double far);
+    private static native void nSetLensProjection(long nativeCamera, double focalLength, double aspect, double near, double far);
     private static native void nSetCustomProjection(long nativeCamera, double[] inMatrix, double near, double far);
     private static native void nSetModelMatrix(long nativeCamera, float[] in);
     private static native void nLookAt(long nativeCamera, double eyeX, double eyeY, double eyeZ, double centerX, double centerY, double centerZ, double upX, double upY, double upZ);

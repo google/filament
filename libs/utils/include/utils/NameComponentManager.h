@@ -67,7 +67,7 @@ private:
  * printf("%s\n", names->getName(names->getInstance(myEntity));
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  */
-class NameComponentManager : public SingleInstanceComponentManager<details::SafeString> {
+class UTILS_PUBLIC NameComponentManager : public SingleInstanceComponentManager<details::SafeString> {
 public:
     using Instance = EntityInstance<NameComponentManager>;
 

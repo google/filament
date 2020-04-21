@@ -25,7 +25,7 @@
 namespace utils {
 namespace io {
 
-class ostream {
+class UTILS_PUBLIC  ostream {
 public:
 
     virtual ~ostream();
@@ -118,9 +118,9 @@ template<template<typename T> class VECTOR, typename T>
 inline ostream& operator<<(ostream& stream, const VECTOR<T>& v) {
     stream << "< ";
     for (size_t i = 0; i < v.size() - 1; i++) {
-        stream << T(v[i]) << ", ";
+        stream << v[i] << ", ";
     }
-    stream << T(v[v.size() - 1]) << " >";
+    stream << v[v.size() - 1] << " >";
     return stream;
 }
 

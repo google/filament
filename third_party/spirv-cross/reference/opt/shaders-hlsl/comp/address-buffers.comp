@@ -1,3 +1,5 @@
+static const uint3 gl_WorkGroupSize = uint3(1u, 1u, 1u);
+
 RWByteAddressBuffer WriteOnly : register(u2);
 ByteAddressBuffer ReadOnly : register(t0);
 RWByteAddressBuffer ReadWrite : register(u1);

@@ -1,3 +1,5 @@
+static const uint3 gl_WorkGroupSize = uint3(1u, 1u, 1u);
+
 void comp_main()
 {
 }

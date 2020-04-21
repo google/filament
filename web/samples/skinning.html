@@ -4,7 +4,7 @@
 <title>Skinning</title>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,user-scalable=no,initial-scale=1">
-<link href="https://google.github.io/filament/favicon.png" rel="icon" type="image/x-icon" />
+<link href="favicon.png" rel="icon" type="image/x-icon" />
 <style>
 body { margin: 0; overflow: hidden; }
 canvas { touch-action: none; width: 100%; height: 100%; }
@@ -111,7 +111,8 @@ class App {
         this.view = engine.createView();
         this.view.setCamera(this.camera);
         this.view.setScene(this.scene);
-        this.view.setClearColor([0.0, 0.1, 0.2, 1.0]);
+
+        this.renderer.setClearOptions({clearColor: [1.0, 1.0, 1.0, 1.0], clear: true});
 
         this.resize();
         this.render = this.render.bind(this);

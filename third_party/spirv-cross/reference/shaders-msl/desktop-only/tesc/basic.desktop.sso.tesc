@@ -20,6 +20,7 @@ struct main0_in
     float4 gl_Position [[attribute(0)]];
 };
 
+static inline __attribute__((always_inline))
 void set_position(device main0_out* thread & gl_out, thread uint& gl_InvocationID, threadgroup main0_in* thread & gl_in)
 {
     gl_out[gl_InvocationID].gl_Position = gl_in[0].gl_Position + gl_in[1].gl_Position;

@@ -16,9 +16,6 @@
 
 #include "FrameInfo.h"
 
-#include "details/Fence.h"
-
-#include <utils/JobSystem.h>
 #include <utils/Log.h>
 #include <utils/Systrace.h>
 
@@ -28,145 +25,108 @@
 
 namespace filament {
 using namespace utils;
+using namespace details;
 
-// ------------------------------------------------------------------------------------------------
+namespace details {
+// this is to avoid a call to memmove
+template<class InputIterator, class OutputIterator>
+static inline
+void move_backward(InputIterator first, InputIterator last, OutputIterator result) {
+    while (first != last) {
+        *--result = *--last;
+    }
+}
+} // namespace details
 
-FrameInfoManager::FrameInfoManager(FEngine& engine)
-        : mEngine(engine),
-          mPoolArena("FrameInfo", sizeof(FrameInfo) * POOL_COUNT) {
-    mFrameInfoHistory.resize(HISTORY_COUNT);
+FrameInfoManager::FrameInfoManager(FEngine& engine) : mEngine(engine) {
+    backend::DriverApi& driver = mEngine.getDriverApi();
+    for (auto& query : mQueries) {
+        query = driver.createTimerQuery();
+    }
 }
 
 FrameInfoManager::~FrameInfoManager() noexcept = default;
 
-void FrameInfo::beginFrame(FrameInfoManager* mgr) {
-    Fence* fence = mgr->getEngine().createFence(FFence::Type::HARD);
-    mgr->push([this, fence]() {
-        Fence::waitAndDestroy(fence, Fence::Mode::DONT_FLUSH);
-        laps[START] = clock::now();
-    });
-}
-
-void FrameInfo::lap(FrameInfoManager* mgr, lap_id id) {
-    Fence* fence = mgr->getEngine().createFence(FFence::Type::HARD);
-    mgr->push([this, fence, id]() {
-        Fence::waitAndDestroy(fence, Fence::Mode::DONT_FLUSH);
-        laps[id] = clock::now();
-    });
-}
-
-void FrameInfo::endFrame(FrameInfoManager* mgr) {
-    Fence* fence = mgr->getEngine().createFence(FFence::Type::HARD);
-    mgr->push([this, mgr, fence]() {
-        char buf[256];
-        snprintf(buf, 256, "GPU time [id=%u]", frame);
-        SYSTRACE_NAME(buf);
-
-        Fence::waitAndDestroy(fence, Fence::Mode::DONT_FLUSH);
-        laps[FINISH] = clock::now();
-        mgr->finish(this);
-    });
-}
-
-// ------------------------------------------------------------------------------------------------
-
-void FrameInfoManager::beginFrame(uint32_t frameId) {
-    SYSTRACE_CONTEXT();
-    SYSTRACE_ASYNC_BEGIN("frame latency", frameId);
-
-    FrameInfo* info = obtain();
-    mCurrentFrameInfo = info;
-    if (info) {
-        info->frame = frameId;
-        info->beginFrame(this);
+void FrameInfoManager::terminate() {
+    backend::DriverApi& driver = mEngine.getDriverApi();
+    for (auto& query : mQueries) {
+        driver.destroyTimerQuery(query);
     }
+}
+
+void FrameInfoManager::beginFrame(Config const& config, uint32_t frameId) {
+    backend::DriverApi& driver = mEngine.getDriverApi();
+    driver.beginTimerQuery(mQueries[mIndex]);
+    uint64_t elapsed = 0;
+    if (driver.getTimerQueryValue(mQueries[mLast], &elapsed)) {
+        mLast = (mLast + 1) % POOL_COUNT;
+        // convertion to our duration happens here
+        mFrameTime = std::chrono::duration<uint64_t, std::nano>(elapsed);
+    }
+    update(config,mFrameTime);
 }
 
 void FrameInfoManager::endFrame() {
-    FrameInfo* const info = mCurrentFrameInfo;
-    if (info) {
-        mCurrentFrameInfo = nullptr;
-        info->endFrame(this);
+    backend::DriverApi& driver = mEngine.getDriverApi();
+    driver.endTimerQuery(mQueries[mIndex]);
+    mIndex = (mIndex + 1) % POOL_COUNT;
+}
+
+void FrameInfoManager::update(Config const& config, FrameInfoManager::duration lastFrameTime) {
+    // keep an history of frame times
+    auto& history = mFrameTimeHistory;
+
+    // this is like doing { pop_back(); push_front(); }
+    details::move_backward(history.begin(), history.end() - 1, history.end());
+    history[0].frameTime = lastFrameTime;
+
+    mFrameTimeHistorySize = std::min(++mFrameTimeHistorySize, uint32_t(MAX_FRAMETIME_HISTORY));
+    if (UTILS_UNLIKELY(mFrameTimeHistorySize < 3)) {
+        // not enough history to do anything usefull
+        history[0].valid = false;
+        return;
     }
-}
 
-void FrameInfoManager::cancelFrame() {
-    FrameInfo* info = mCurrentFrameInfo;
-    if (info) {
-        mCurrentFrameInfo = nullptr;
-        push([this, info]() {
-            mPoolArena.free(info);
-        });
+    // apply a median filter to get a good representation of the frame time of the last
+    // N frames.
+    std::array<duration, MAX_FRAMETIME_HISTORY> median; // NOLINT -- it's initialized below
+    size_t size = std::min(mFrameTimeHistorySize, std::min(config.historySize, (uint32_t)median.size()));
+    for (size_t i = 0; i < size; ++i) {
+        median[i] = history[i].frameTime;
     }
-}
+    std::sort(median.begin(), median.begin() + size);
+    duration denoisedFrameTime = median[size / 2];
 
-UTILS_ALWAYS_INLINE
-inline FrameInfo* FrameInfoManager::obtain() noexcept {
-    return mPoolArena.alloc<FrameInfo>(1);
-}
+    history[0].denoisedFrameTime = denoisedFrameTime;
 
-void FrameInfoManager::finish(FrameInfo* info) noexcept {
+    // how much we need to scale the current workload to fit in our target, at this instant
+    const duration targetWithHeadroom = config.targetFrameTime * (1.0f - config.headRoomRatio);
+    const duration measured = denoisedFrameTime;
+
+    // We use a P.I.D. controller below to figure out the scaling factor to apply. In practice we
+    // don't use the Derivative gain (so it's really a PI controller).
+    const float Kp = (1.0f - std::exp(-config.oneOverTau));
+    const float Ki = Kp / 10.0f;
+    const float Kd = 0.0;
+
+    history[0].pid.error = (targetWithHeadroom - measured) / targetWithHeadroom;
+    history[0].pid.integral = history[1].pid.integral + Ki * history[0].pid.error;
+    history[0].pid.integral = math::clamp(history[0].pid.integral, -6.0f, 2.0f);
+
+    const float derivative = Kd * (history[0].pid.error - history[1].pid.error);
+    const float out = Kp * history[0].pid.error + history[0].pid.integral + derivative;
+
+    // maps the command to a ratio, it really doesn't mater much how the conversion is done
+    // the system will find the right value automatically
+    const float scale = std::exp2(out);
+    history[0].scale = scale;
+    history[0].valid = true;
+
     SYSTRACE_CONTEXT();
-    SYSTRACE_ASYNC_END("frame latency", info->frame);
-
-    // store the new frame info into the history array
-    std::unique_lock<std::mutex> lock(mLock);
-    auto& history = mFrameInfoHistory;
-    if (history.size() >= HISTORY_COUNT) {
-        // if the history has grown enough, remove the oldest element
-        history.erase(history.begin());
-    }
-    // add a copy of the new element to the history
-    history.push_back(*info);
-    lock.unlock();
-
-    // return the item to the pool without the lock held
-    mPoolArena.free(info);
+    SYSTRACE_VALUE32("info_e", history[0].pid.error * 100);
+    SYSTRACE_VALUE32("info_s", scale * 100);
+//    slog.d << history[0].pid.error * 100 << "%, " << scale << io::endl;
 }
 
-// ------------------------------------------------------------------------------------------------
-
-FrameInfoManager::SyncThread::~SyncThread() {
-    if (mThread.joinable()) {
-        requestExitAndWait();
-    }
-}
-
-void FrameInfoManager::SyncThread::run() {
-    mThread = std::thread(&SyncThread::loop, this);
-}
-
-void FrameInfoManager::SyncThread::requestExitAndWait() {
-    std::unique_lock<std::mutex> lock(mLock);
-    mExitRequested = true;
-    lock.unlock();
-    mCondition.notify_one();
-    mThread.join();
-}
-
-void FrameInfoManager::SyncThread::enqueue(SyncThread::Job&& job) {
-    std::unique_lock<std::mutex> lock(mLock);
-    mQueue.push_back(std::forward<SyncThread::Job>(job));
-    lock.unlock();
-    mCondition.notify_one();
-}
-
-void FrameInfoManager::SyncThread::loop() {
-    JobSystem::setThreadPriority(JobSystem::Priority::URGENT_DISPLAY);
-    JobSystem::setThreadName("SyncThread");
-    auto& queue = mQueue;
-    bool exitRequested;
-    do {
-        std::unique_lock<std::mutex> lock(mLock);
-        mCondition.wait(lock, [this, &queue]() -> bool { return mExitRequested || !queue.empty(); });
-        exitRequested = mExitRequested;
-        if (!queue.empty()) {
-            Job job(queue.front());
-            queue.pop_front();
-            lock.unlock();
-            job();
-        }
-    } while (!exitRequested);
-}
 
 } // namespace filament

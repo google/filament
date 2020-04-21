@@ -68,11 +68,98 @@ class PixelBufferDescriptor;
  */
 class UTILS_PUBLIC Renderer : public FilamentAPI {
 public:
-     /**
-      * Get the Engine that created this Renderer.
-      *
-      * @return A pointer to the Engine instance this Renderer is associated to.
-      */
+
+    /**
+     * Use DisplayInfo to set important Display properties. This is used to achieve correct
+     * frame pacing and dynamic resolution scaling.
+     */
+    struct DisplayInfo {
+        // refresh-rate of the display in Hz. set to 0 for offscreen or turn off frame-pacing.
+        float refreshRate = 60.0f;
+
+        // how far in advance a buffer must be queued for presentation at a given time in ns
+        uint64_t presentationDeadlineNanos = 0;
+
+        // offset by which vsyncSteadyClockTimeNano provided in beginFrame() is offset in ns
+        uint64_t vsyncOffsetNanos = 0;
+    };
+
+    /**
+     * Use FrameRateOptions to set the desired frame rate and control how quickly the system
+     * reacts to GPU load changes.
+     *
+     * interval: desired frame interval in multiple of the refresh period, set in DisplayInfo
+     *           (as 1 / DisplayInfo::refreshRate)
+     *
+     * The parameters below are relevant when some Views are using dynamic resolution scaling:
+     *
+     * headRoomRatio: additional headroom for the GPU as a ratio of the targetFrameTime.
+     *                Useful for taking into account constant costs like post-processing or
+     *                GPU drivers on different platforms.
+     * history:   History size. higher values, tend to filter more (clamped to 30)
+     * scaleRate: rate at which the gpu load is adjusted to reach the target frame rate
+     *            This value can be computed as 1 / N, where N is the number of frames
+     *            needed to reach 64% of the target scale factor.
+     *            Higher values make the dynamic resolution react faster.
+     *
+     * @see View::DynamicResolutionOptions
+     * @see Renderer::DisplayInfo
+     *
+     */
+    struct FrameRateOptions {
+        float headRoomRatio = 0.0f;    //!< additional headroom for the GPU
+        float scaleRate = 0.125f;      //!< rate at which the system reacts to load changes
+        uint8_t history = 3;           //!< history size
+        uint8_t interval = 1;          //!< desired frame interval in unit of 1.0 / DisplayInfo::refreshRate
+    };
+
+    /**
+     * ClearOptions are used at the beginning of a frame to clear or retain the SwapChain content.
+     */
+    struct ClearOptions {
+        /** Color to use to clear the SwapChain */
+        math::float4 clearColor = {};
+        /**
+         * Whether the SwapChain should be cleared using the clearColor. Use this if translucent
+         * View will be drawn, for instance.
+         */
+        bool clear = false;
+        /**
+         * Whether the SwapChain content should be discarded. clear implies discard. Set this
+         * to false (along with clear to false as well) if the SwapChain already has content that
+         * needs to be preserved
+         */
+        bool discard = true;
+    };
+
+    /**
+     * Information about the display this Renderer is associated to. This information is needed
+     * to accurately compute dynamic-resolution scaling and for frame-pacing.
+     *
+     * @param info
+     */
+    void setDisplayInfo(const DisplayInfo& info) noexcept;
+
+    /**
+     * Set options controlling the desired frame-rate.
+     *
+     * @param options
+     */
+    void setFrameRateOptions(FrameRateOptions const& options) noexcept;
+
+    /**
+     * Set ClearOptions which are used at the beginning of a frame to clear or retain the
+     * SwapChain content.
+     *
+     * @param options
+     */
+    void setClearOptions(const ClearOptions& options);
+
+    /**
+     * Get the Engine that created this Renderer.
+     *
+     * @return A pointer to the Engine instance this Renderer is associated to.
+     */
     Engine* getEngine() noexcept;
 
     /**
@@ -323,20 +410,28 @@ public:
      * beginFrame() attempts to detect this situation and returns false in that case, indicating
      * to the caller to skip the current frame.
      *
+     * When beginFrame() returns true, it is mandatory to render the frame and call endFrame().
+     * However, when beginFrame() returns false, the caller has the choice to either skip the
+     * frame and not call endFrame(), or proceed as though true was returned.
+     *
      * Typically, Filament is responsible for scheduling the frame's presentation to the SwapChain.
      * If a backend::FrameFinishedCallback is provided, however, the application bares the
      * responsibility of scheduling a frame for presentation by calling the backend::PresentCallable
      * passed to the callback function. Currently this functionality is only supported by the Metal
      * backend.
      *
+     * @param vsyncSteadyClockTimeNano The time in nanosecond of when the current frame started,
+     *                                 or 0 if unknown. This value should be the timestamp of
+     *                                 the last h/w vsync. It is expressed in the
+     *                                 std::chrono::steady_clock time base.
      * @param swapChain A pointer to the SwapChain instance to use.
      * @param callback  A callback function that will be called when the backend has finished
      *                  processing the frame.
      * @param user      User data to be passed to the callback function.
      *
      * @return
-     *      *false* the current frame must be skipped,
-     *      *true* the current frame can be drawn.
+     *      *false* the current frame should be skipped,
+     *      *true* the current frame must be drawn and endFrame() must be called.
      *
      * @remark
      * When skipping a frame, the whole frame is canceled, and endFrame() must not be called.
@@ -347,8 +442,9 @@ public:
      * @see
      * endFrame(), backend::PresentCallable, backend::FrameFinishedCallback
      */
-    bool beginFrame(SwapChain* swapChain, backend::FrameFinishedCallback callback = nullptr,
-            void* user = nullptr);
+    bool beginFrame(SwapChain* swapChain,
+            uint64_t vsyncSteadyClockTimeNano = 0u,
+            backend::FrameFinishedCallback callback = nullptr, void* user = nullptr);
 
     /**
      * Finishes the current frame and schedules it for display.
@@ -356,7 +452,9 @@ public:
      * endFrame() schedules the current frame to be displayed on the Renderer's window.
      *
      * @note
-     * All calls to render() must happen *before* endFrame().
+     * All calls to render() must happen *before* endFrame(). endFrame() must be called if
+     * beginFrame() returned true, otherwise, endFrame() must not be called unless the caller
+     * ignored beginFrame()'s return value.
      *
      * @see
      * beginFrame()

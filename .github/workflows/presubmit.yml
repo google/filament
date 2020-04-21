@@ -12,18 +12,21 @@ jobs:
         os: [macos-latest, ubuntu-latest]
 
     steps:
-      - uses: actions/checkout@v1.0.0
+      - uses: actions/checkout@v2.0.0
       - name: Run build script
         run: |
           WORKFLOW_OS=`echo \`uname\` | sed "s/Darwin/mac/" | tr [:upper:] [:lower:]`
           cd build/$WORKFLOW_OS && ./build.sh presubmit
+      - name: Test material parser
+        run: |
+          out/cmake-release/filament/test/test_material_parser
 
   build-windows:
     name: build-windows
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v1.0.0
+      - uses: actions/checkout@v2.0.0
       - name: Run build script
         run: |
           build\windows\build-github.bat presubmit
@@ -34,7 +37,7 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      - uses: actions/checkout@v1.0.0
+      - uses: actions/checkout@v2.0.0
       - name: Run build script
         run: |
           cd build/android && ./build.sh presubmit
@@ -44,20 +47,20 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      - uses: actions/checkout@v1.0.0
+      - uses: actions/checkout@v2.0.0
       - name: Run build script
         run: |
           cd build/ios && ./build.sh presubmit
       - name: Build iOS samples
         run: |
-          cd build/ios && ./build-samples.sh
+          cd build/ios && ./build-samples.sh presubmit
 
   build-web:
     name: build-web
     runs-on: macos-latest
 
     steps:
-      - uses: actions/checkout@v1.0.0
+      - uses: actions/checkout@v2.0.0
       - name: Run build script
         run: |
           cd build/web && ./build.sh presubmit

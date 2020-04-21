@@ -216,6 +216,16 @@ class Function {
     execution_model_limitations_.push_back(is_compatible);
   }
 
+  /// Registers limitation with an |is_compatible| functor.
+  void RegisterLimitation(std::function<bool(const ValidationState_t& _,
+                                             const Function*, std::string*)>
+                              is_compatible) {
+    limitations_.push_back(is_compatible);
+  }
+
+  bool CheckLimitations(const ValidationState_t& _, const Function* entry_point,
+                        std::string* reason) const;
+
   /// Returns true if the given execution model passes the limitations stored in
   /// execution_model_limitations_. Returns false otherwise and fills optional
   /// |reason| parameter.
@@ -230,6 +240,28 @@ class Function {
   // Returns a set with ids of all functions called from this function.
   const std::set<uint32_t> function_call_targets() const {
     return function_call_targets_;
+  }
+
+  // Returns the block containing the OpSelectionMerge or OpLoopMerge that
+  // references |merge_block|.
+  // Values of |merge_block_header_| inserted by CFGPass, so do not call before
+  // the first iteration of ordered instructions in
+  // ValidateBinaryUsingContextAndValidationState has completed.
+  BasicBlock* GetMergeHeader(BasicBlock* merge_block) {
+    return merge_block_header_[merge_block];
+  }
+
+  // Returns vector of the blocks containing a OpLoopMerge that references
+  // |continue_target|.
+  // Values of |continue_target_headers_| inserted by CFGPass, so do not call
+  // before the first iteration of ordered instructions in
+  // ValidateBinaryUsingContextAndValidationState has completed.
+  std::vector<BasicBlock*> GetContinueHeaders(BasicBlock* continue_target) {
+    if (continue_target_headers_.find(continue_target) ==
+        continue_target_headers_.end()) {
+      return {};
+    }
+    return continue_target_headers_[continue_target];
   }
 
  private:
@@ -340,6 +372,10 @@ class Function {
   /// This map provides the header block for a given merge block.
   std::unordered_map<BasicBlock*, BasicBlock*> merge_block_header_;
 
+  /// This map provides the header blocks for a given continue target.
+  std::unordered_map<BasicBlock*, std::vector<BasicBlock*>>
+      continue_target_headers_;
+
   /// Stores the control flow nesting depth of a given basic block
   std::unordered_map<BasicBlock*, int> block_depth_;
 
@@ -349,6 +385,12 @@ class Function {
   /// optionally fill the string parameter with the reason for incompatibility.
   std::list<std::function<bool(SpvExecutionModel, std::string*)>>
       execution_model_limitations_;
+
+  /// Stores limitations imposed by instructions used within the function.
+  /// Similar to execution_model_limitations_;
+  std::list<std::function<bool(const ValidationState_t& _, const Function*,
+                               std::string*)>>
+      limitations_;
 
   /// Stores ids of all functions called from this function.
   std::set<uint32_t> function_call_targets_;

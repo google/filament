@@ -113,6 +113,14 @@ Java_com_google_android_filament_Texture_nBuilderUsage(JNIEnv*, jclass,
     builder->usage((Texture::Usage) flags);
 }
 
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_Texture_nBuilderSwizzle(JNIEnv *, jclass ,
+        jlong nativeBuilder, jint r, jint g, jint b, jint a) {
+    Texture::Builder *builder = (Texture::Builder *) nativeBuilder;
+    builder->swizzle(
+            (Texture::Swizzle)r, (Texture::Swizzle)g, (Texture::Swizzle)b, (Texture::Swizzle)a);
+}
+
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_Texture_nBuilderBuild(JNIEnv*, jclass,
         jlong nativeBuilder, jlong nativeEngine) {
@@ -430,6 +438,7 @@ public:
 
     PixelDataType getType(int format) const noexcept {
         switch (format) {
+            case BITMAP_CONFIG_RGB_565:  return PixelDataType::USHORT_565;
             case BITMAP_CONFIG_RGBA_F16: return PixelDataType::HALF;
             default:                     return PixelDataType::UBYTE;
         }

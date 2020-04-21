@@ -1,3 +1,5 @@
+static const uint3 gl_WorkGroupSize = uint3(1u, 1u, 1u);
+
 RWByteAddressBuffer _9 : register(u0);
 
 void comp_main()

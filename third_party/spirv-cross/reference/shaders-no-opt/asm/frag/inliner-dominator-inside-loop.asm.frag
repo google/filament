@@ -130,7 +130,7 @@ void main()
     vec2 _166 = IN_Uv_EdgeDistance1.xy * 1.0;
     bool _173;
     vec4 _193;
-    do
+    for (;;)
     {
         _173 = 0.0 == 0.0;
         if (_173)
@@ -146,9 +146,9 @@ void main()
         }
         _193 = _192;
         break;
-    } while (false);
+    }
     vec4 _220;
-    do
+    for (;;)
     {
         if (_173)
         {
@@ -163,7 +163,7 @@ void main()
         }
         _220 = _219;
         break;
-    } while (false);
+    }
     vec2 _223 = vec2(1.0);
     vec2 _224 = (_220.wy * 2.0) - _223;
     vec3 _232 = vec3(_224, sqrt(clamp(1.0 + dot(-_224, _224), 0.0, 1.0)));
@@ -174,7 +174,7 @@ void main()
     vec3 _256 = vec3(_255.x, _255.y, _253.z);
     vec3 _271 = ((IN_Color.xyz * (_193 * 1.0).xyz) * (1.0 + (_256.x * 0.300000011920928955078125))) * (texture(SPIRV_Cross_CombinedStudsMapTextureStudsMapSampler, _156.UvStuds).x * 2.0);
     vec4 _298;
-    do
+    for (;;)
     {
         if (0.75 == 0.0)
         {
@@ -189,7 +189,7 @@ void main()
         }
         _298 = _297;
         break;
-    } while (false);
+    }
     vec2 _303 = mix(vec2(0.800000011920928955078125, 120.0), (_298.xy * vec2(2.0, 256.0)) + vec2(0.0, 0.00999999977648258209228515625), vec2(_165));
     Surface _304 = _125;
     _304.albedo = _271;

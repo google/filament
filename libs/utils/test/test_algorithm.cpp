@@ -33,25 +33,25 @@ static inline T count_trailing_zeros(T v) noexcept {
 }
 
 TEST(AlgorithmTest, details_clz) {
-    for (uint64_t i = 1, j = 63; i < 64; i *= 2, j--) {
+    for (uint64_t i = 1, j = 63; j < 64; i *= 2, j--) {
         EXPECT_EQ(j, details::clz(i));
         EXPECT_EQ(j, details::clz(i|1));
     }
-    for (uint32_t i = 1, j = 31; i < 32; i *= 2, j--) {
+    for (uint32_t i = 1, j = 31; j < 32; i *= 2, j--) {
         EXPECT_EQ(j, details::clz(i));
         EXPECT_EQ(j, details::clz(i|1));
     }
 }
 
 TEST(AlgorithmTest, clz) {
-    for (uint64_t i = 1, j = 63; i < 64; i *= 2, j--) {
+    for (uint64_t i = 1, j = 63; j < 64; i *= 2, j--) {
         EXPECT_EQ(j, clz(i));
         EXPECT_EQ(j, clz(i|1));
         EXPECT_EQ(j, details::clz(i));
         EXPECT_EQ(j, details::clz(i|1));
         EXPECT_EQ(j, count_leading_zeros(i));
     }
-    for (uint32_t i = 1, j = 31; i < 32; i *= 2, j--) {
+    for (uint32_t i = 1, j = 31; j < 32; i *= 2, j--) {
         EXPECT_EQ(j, clz(i));
         EXPECT_EQ(j, clz(i|1));
         EXPECT_EQ(j, details::clz(i));
@@ -61,21 +61,21 @@ TEST(AlgorithmTest, clz) {
 }
 
 TEST(AlgorithmTest, details_ctz) {
-    for (uint64_t i = 1, j = 0; i < 64; i *= 2, j++) {
+    for (uint64_t i = 1, j = 0; j < 64; i *= 2, j++) {
         EXPECT_EQ(j, details::ctz(i));
     }
-    for (uint32_t i = 1, j = 0; i < 32; i *= 2, j++) {
+    for (uint32_t i = 1, j = 0; j < 32; i *= 2, j++) {
         EXPECT_EQ(j, details::ctz(i));
     }
 }
 
 TEST(AlgorithmTest, ctz) {
-    for (uint64_t i = 1, j = 0; i < 64; i *= 2, j++) {
+    for (uint64_t i = 1, j = 0; j < 64; i *= 2, j++) {
         EXPECT_EQ(j, ctz(i));
         EXPECT_EQ(j, details::ctz(i));
         EXPECT_EQ(j, count_trailing_zeros(i));
     }
-    for (uint32_t i = 1, j = 0; i < 32; i *= 2, j++) {
+    for (uint32_t i = 1, j = 0; j < 32; i *= 2, j++) {
         EXPECT_EQ(j, ctz(i));
         EXPECT_EQ(j, details::ctz(i));
         EXPECT_EQ(j, count_trailing_zeros(i));
@@ -99,13 +99,13 @@ TEST(AlgorithmTest, details_popcount) {
     EXPECT_EQ(16, details::popcount(uint32_t(0x55555555)));
     EXPECT_EQ(32, details::popcount(uint64_t(0x5555555555555555)));
 
-    for (uint64_t i = 1, j = 63; i < 64; i *= 2, j--) {
+    for (uint64_t i = 1, j = 63; j < 64; i *= 2, j--) {
         EXPECT_EQ(1, details::popcount(i));
     }
-    for (uint32_t i = 1, j = 31; i < 32; i *= 2, j--) {
+    for (uint32_t i = 1, j = 31; j < 32; i *= 2, j--) {
         EXPECT_EQ(1, details::popcount(i));
     }
-    for (uint8_t i = 1, j = 7; i < 8; i *= 2, j--) {
+    for (uint8_t i = 1, j = 7; j < 8; i *= 2, j--) {
         EXPECT_EQ(1, details::popcount(i));
     }
 }
@@ -130,10 +130,10 @@ TEST(AlgorithmTest, popcount) {
     for (uint64_t i = 1, j = 63; i < 64; i *= 2, j--) {
         EXPECT_EQ(1, popcount(i));
     }
-    for (uint32_t i = 1, j = 31; i < 32; i *= 2, j--) {
+    for (uint32_t i = 1, j = 31; j < 32; i *= 2, j--) {
         EXPECT_EQ(1, popcount(i));
     }
-    for (uint8_t i = 1, j = 7; i < 8; i *= 2, j--) {
+    for (uint8_t i = 1, j = 7; j < 8; i *= 2, j--) {
         EXPECT_EQ(1, popcount(i));
     }
 }

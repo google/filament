@@ -61,6 +61,23 @@
 
 #define EXPAND(x) x
 
+#define APPLY0(M,...)
+#define APPLY1(M, A, ...) EXPAND(M(A))
+#define APPLY2(M, A, ...) EXPAND(M(A)), EXPAND(APPLY1(M, __VA_ARGS__))
+#define APPLY3(M, A, ...) EXPAND(M(A)), EXPAND(APPLY2(M, __VA_ARGS__))
+#define APPLY4(M, A, ...) EXPAND(M(A)), EXPAND(APPLY3(M, __VA_ARGS__))
+#define APPLY5(M, A, ...) EXPAND(M(A)), EXPAND(APPLY4(M, __VA_ARGS__))
+#define APPLY6(M, A, ...) EXPAND(M(A)), EXPAND(APPLY5(M, __VA_ARGS__))
+#define APPLY7(M, A, ...) EXPAND(M(A)), EXPAND(APPLY6(M, __VA_ARGS__))
+#define APPLY8(M, A, ...) EXPAND(M(A)), EXPAND(APPLY7(M, __VA_ARGS__))
+#define APPLY9(M, A, ...) EXPAND(M(A)), EXPAND(APPLY8(M, __VA_ARGS__))
+#define APPLY10(M, A, ...) EXPAND(M(A)), EXPAND(APPLY9(M, __VA_ARGS__))
+#define APPLY11(M, A, ...) EXPAND(M(A)), EXPAND(APPLY10(M, __VA_ARGS__))
+#define APPLY12(M, A, ...) EXPAND(M(A)), EXPAND(APPLY11(M, __VA_ARGS__))
+#define APPLY_N__(_0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, X, ...) APPLY##X
+#define APPLY(M, ...) EXPAND(EXPAND(APPLY_N__(M, __VA_ARGS__, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0))(M, __VA_ARGS__))
+
+
 #define PAIR_ARGS_0(M, ...)
 #define PAIR_ARGS_1(M, X, Y, ...) M(X, Y)
 #define PAIR_ARGS_2(M, X, Y, ...) M(X, Y), EXPAND(PAIR_ARGS_1(M, __VA_ARGS__))
@@ -71,11 +88,14 @@
 #define PAIR_ARGS_7(M, X, Y, ...) M(X, Y), EXPAND(PAIR_ARGS_6(M, __VA_ARGS__))
 #define PAIR_ARGS_8(M, X, Y, ...) M(X, Y), EXPAND(PAIR_ARGS_7(M, __VA_ARGS__))
 #define PAIR_ARGS_9(M, X, Y, ...) M(X, Y), EXPAND(PAIR_ARGS_8(M, __VA_ARGS__))
+#define PAIR_ARGS_10(M, X, Y, ...) M(X, Y), EXPAND(PAIR_ARGS_9(M, __VA_ARGS__))
+#define PAIR_ARGS_11(M, X, Y, ...) M(X, Y), EXPAND(PAIR_ARGS_10(M, __VA_ARGS__))
+#define PAIR_ARGS_12(M, X, Y, ...) M(X, Y), EXPAND(PAIR_ARGS_11(M, __VA_ARGS__))
 
-#define PAIR_ARGS_N__(_0, E1, _1, E2, _2, E3, _3, E4, _4, E5, _5, E6, _6, E7, _7, E8, _8, E9, _9, X, ...) PAIR_ARGS_##X
+#define PAIR_ARGS_N__(_0, E1, _1, E2, _2, E3, _3, E4, _4, E5, _5, E6, _6, E7, _7, E8, _8, E9, _9, E10, _10, E11, _11, E12, _12, X, ...) PAIR_ARGS_##X
 
 #define PAIR_ARGS_N(M, ...) \
-    EXPAND(EXPAND(PAIR_ARGS_N__(0, ##__VA_ARGS__, 9, E, 8, E, 7, E, 6, E, 5, E, 4, E, 3, E, 2, E, 1, E, 0))(M, __VA_ARGS__))
+    EXPAND(EXPAND(PAIR_ARGS_N__(0, ##__VA_ARGS__, 12, E, 11, E, 10, E, 9, E, 8, E, 7, E, 6, E, 5, E, 4, E, 3, E, 2, E, 1, E, 0))(M, __VA_ARGS__))
 
 #define ARG(T, P) T P
 
@@ -108,6 +128,8 @@
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-parameter"
+
+DECL_DRIVER_API_0(tick)
 
 DECL_DRIVER_API_N(beginFrame,
         int64_t, monotonic_clock_ns,
@@ -155,6 +177,20 @@ DECL_DRIVER_API_R_N(backend::TextureHandle, createTexture,
         uint32_t, depth,
         backend::TextureUsage, usage)
 
+DECL_DRIVER_API_R_N(backend::TextureHandle, createTextureSwizzled,
+        backend::SamplerType, target,
+        uint8_t, levels,
+        backend::TextureFormat, format,
+        uint8_t, samples,
+        uint32_t, width,
+        uint32_t, height,
+        uint32_t, depth,
+        backend::TextureUsage, usage,
+        backend::TextureSwizzle, r,
+        backend::TextureSwizzle, g,
+        backend::TextureSwizzle, b,
+        backend::TextureSwizzle, a)
+
 DECL_DRIVER_API_R_N(backend::TextureHandle, importTexture,
         intptr_t, id,
         backend::SamplerType, target,
@@ -185,11 +221,13 @@ DECL_DRIVER_API_R_N(backend::RenderTargetHandle, createRenderTarget,
         uint32_t, width,
         uint32_t, height,
         uint8_t, samples,
-        backend::TargetBufferInfo, color,
+        backend::MRT, color,
         backend::TargetBufferInfo, depth,
         backend::TargetBufferInfo, stencil)
 
 DECL_DRIVER_API_R_0(backend::FenceHandle, createFence)
+
+DECL_DRIVER_API_R_0(backend::SyncHandle, createSync)
 
 DECL_DRIVER_API_R_N(backend::SwapChainHandle, createSwapChain,
         void*, nativeWindow,
@@ -204,6 +242,9 @@ DECL_DRIVER_API_R_N(backend::StreamHandle, createStreamFromTextureId,
         intptr_t, externalTextureId,
         uint32_t, width,
         uint32_t, height)
+
+DECL_DRIVER_API_R_0(backend::TimerQueryHandle, createTimerQuery)
+
 
 /*
  * Destroying driver objects
@@ -220,6 +261,8 @@ DECL_DRIVER_API_N(destroyTexture,         backend::TextureHandle, th)
 DECL_DRIVER_API_N(destroyRenderTarget,    backend::RenderTargetHandle, rth)
 DECL_DRIVER_API_N(destroySwapChain,       backend::SwapChainHandle, sch)
 DECL_DRIVER_API_N(destroyStream,          backend::StreamHandle, sh)
+DECL_DRIVER_API_N(destroyTimerQuery,      backend::TimerQueryHandle, sh)
+DECL_DRIVER_API_N(destroySync,            backend::SyncHandle, sh)
 
 /*
  * Synchronous APIs
@@ -242,6 +285,8 @@ DECL_DRIVER_API_SYNCHRONOUS_0(bool, isFrameTimeSupported)
 DECL_DRIVER_API_SYNCHRONOUS_0(bool, canGenerateMipmaps)
 DECL_DRIVER_API_SYNCHRONOUS_N(void, setupExternalImage, void*, image)
 DECL_DRIVER_API_SYNCHRONOUS_N(void, cancelExternalImage, void*, image)
+DECL_DRIVER_API_SYNCHRONOUS_N(bool, getTimerQueryValue, backend::TimerQueryHandle, query, uint64_t*, elapsedTime)
+DECL_DRIVER_API_SYNCHRONOUS_N(backend::SyncStatus, getSyncStatus, backend::SyncHandle, sh)
 
 /*
  * Updating driver objects
@@ -304,14 +349,6 @@ DECL_DRIVER_API_N(beginRenderPass,
 
 DECL_DRIVER_API_0(endRenderPass)
 
-DECL_DRIVER_API_N(discardSubRenderTargetBuffers,
-        backend::RenderTargetHandle, rth,
-        backend::TargetBufferFlags, targetBufferFlags,
-        uint32_t, left,
-        uint32_t, bottom,
-        uint32_t, width,
-        uint32_t, height)
-
 DECL_DRIVER_API_N(setRenderPrimitiveBuffer,
         backend::RenderPrimitiveHandle, rph,
         backend::VertexBufferHandle, vbh,
@@ -325,6 +362,13 @@ DECL_DRIVER_API_N(setRenderPrimitiveRange,
         uint32_t, minIndex,
         uint32_t, maxIndex,
         uint32_t, count)
+
+DECL_DRIVER_API_N(beginTimerQuery,
+        backend::TimerQueryHandle, query)
+
+DECL_DRIVER_API_N(endTimerQuery,
+        backend::TimerQueryHandle, query)
+
 
 /*
  * Swap chain

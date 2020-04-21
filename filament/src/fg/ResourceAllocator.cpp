@@ -68,14 +68,14 @@ ResourceAllocatorInterface::~ResourceAllocatorInterface() = default;
 size_t ResourceAllocator::TextureKey::getSize() const noexcept {
     size_t pixelCount = width * height * depth;
     size_t size = pixelCount * FTexture::getFormatSize(format);
+    size_t s = std::max(uint8_t(1), samples);
+    if (s > 1) {
+        // if we have MSAA, we assume N times the storage
+        size *= s;
+    }
     if (levels > 1) {
         // if we have mip-maps we assume the full pyramid
         size += size / 3;
-    }
-    size_t s = std::max(uint8_t(1), samples);
-    if (s > 1) {
-        // if we have MSAA, we assume 8 bit extra per pixel
-        size += pixelCount;
     }
     return size;
 }
@@ -100,14 +100,14 @@ void ResourceAllocator::terminate() noexcept {
 
 RenderTargetHandle ResourceAllocator::createRenderTarget(const char* name,
         TargetBufferFlags targetBufferFlags, uint32_t width, uint32_t height,
-        uint8_t samples, TargetBufferInfo color, TargetBufferInfo depth,
+        uint8_t samples, MRT color, TargetBufferInfo depth,
         TargetBufferInfo stencil) noexcept {
     return mBackend.createRenderTarget(targetBufferFlags,
             width, height, samples ? samples : 1u, color, depth, stencil);
 }
 
 void ResourceAllocator::destroyRenderTarget(RenderTargetHandle h) noexcept {
-    return mBackend.destroyRenderTarget(h);
+    mBackend.destroyRenderTarget(h);
 }
 
 backend::TextureHandle ResourceAllocator::createTexture(const char* name,

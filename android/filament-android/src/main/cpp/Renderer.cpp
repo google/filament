@@ -30,10 +30,10 @@ using namespace backend;
 
 extern "C" JNIEXPORT jboolean JNICALL
 Java_com_google_android_filament_Renderer_nBeginFrame(JNIEnv *, jclass, jlong nativeRenderer,
-        jlong nativeSwapChain) {
+        jlong nativeSwapChain, jlong frameTimeNanos) {
     Renderer *renderer = (Renderer *) nativeRenderer;
     SwapChain *swapChain = (SwapChain *) nativeSwapChain;
-    return (jboolean) renderer->beginFrame(swapChain);
+    return (jboolean) renderer->beginFrame(swapChain, uint64_t(frameTimeNanos));
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -143,4 +143,33 @@ extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_Renderer_nResetUserTime(JNIEnv*, jclass, jlong nativeRenderer) {
     Renderer *renderer = (Renderer *) nativeRenderer;
     renderer->resetUserTime();
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_Renderer_nSetDisplayInfo(JNIEnv*, jclass, jlong nativeRenderer,
+        jfloat refreshRate, jlong presentationDeadlineNanos, jlong vsyncOffsetNanos) {
+    Renderer *renderer = (Renderer *) nativeRenderer;
+    renderer->setDisplayInfo({ .refreshRate = refreshRate,
+                               .presentationDeadlineNanos = (uint64_t)presentationDeadlineNanos,
+                               .vsyncOffsetNanos = (uint64_t)vsyncOffsetNanos });
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_Renderer_nSetFrameRateOptions(JNIEnv*, jclass,
+    jlong nativeRenderer, jfloat interval, jfloat headRoomRatio, jfloat scaleRate, jint history) {
+    Renderer *renderer = (Renderer *) nativeRenderer;
+    renderer->setFrameRateOptions({ .headRoomRatio = headRoomRatio,
+                                     .scaleRate = scaleRate,
+                                     .history = (uint8_t)history,
+                                     .interval = (uint8_t)interval });
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_Renderer_nSetClearOptions(JNIEnv *, jclass ,
+        jlong nativeRenderer, jfloat r, jfloat g, jfloat b, jfloat a,
+        jboolean clear, jboolean discard) {
+    Renderer *renderer = (Renderer *) nativeRenderer;
+    renderer->setClearOptions({ .clearColor = {r, g, b, a},
+                                .clear = (bool) clear,
+                                .discard = (bool) discard});
 }

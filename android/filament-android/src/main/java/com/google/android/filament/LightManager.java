@@ -27,6 +27,10 @@ public class LightManager {
         mNativeObject = nativeLightManager;
     }
 
+    public int getComponentCount() {
+        return nGetComponentCount(mNativeObject);
+    }
+
     public boolean hasComponent(@Entity int entity) {
         return nHasComponent(mNativeObject, entity);
     }
@@ -56,6 +60,9 @@ public class LightManager {
         public float shadowNearHint = 1.0f;
         public float shadowFarHint = 100.0f;
         public boolean stable = true;
+        public boolean screenSpaceContactShadows = false;
+        public int stepCount = 8;
+        public float maxShadowDistance = 0.3f;
     }
 
     public static final float EFFICIENCY_INCANDESCENT = 0.0220f;
@@ -83,7 +90,8 @@ public class LightManager {
         public Builder shadowOptions(@NonNull ShadowOptions options) {
             nBuilderShadowOptions(mNativeBuilder,
                     options.mapSize, options.constantBias, options.normalBias, options.shadowFar,
-                    options.shadowNearHint, options.shadowFarHint, options.stable);
+                    options.shadowNearHint, options.shadowFarHint, options.stable,
+                    options.screenSpaceContactShadows, options.stepCount, options.maxShadowDistance);
             return this;
         }
 
@@ -274,6 +282,7 @@ public class LightManager {
         return mNativeObject;
     }
 
+    private static native int nGetComponentCount(long nativeLightManager);
     private static native boolean nHasComponent(long nativeLightManager, int entity);
     private static native int nGetInstance(long nativeLightManager, int entity);
     private static native void nDestroy(long nativeLightManager, int entity);
@@ -282,7 +291,7 @@ public class LightManager {
     private static native void nDestroyBuilder(long nativeBuilder);
     private static native boolean nBuilderBuild(long nativeBuilder, long nativeEngine, int entity);
     private static native void nBuilderCastShadows(long nativeBuilder, boolean enable);
-    private static native void nBuilderShadowOptions(long nativeBuilder, int mapSize, float constantBias, float normalBias, float shadowFar, float shadowNearHint, float shadowFarhint, boolean stable);
+    private static native void nBuilderShadowOptions(long nativeBuilder, int mapSize, float constantBias, float normalBias, float shadowFar, float shadowNearHint, float shadowFarhint, boolean stable, boolean screenSpaceContactShadows, int stepCount, float maxShadowDistance);
     private static native void nBuilderCastLight(long nativeBuilder, boolean enabled);
     private static native void nBuilderPosition(long nativeBuilder, float x, float y, float z);
     private static native void nBuilderDirection(long nativeBuilder, float x, float y, float z);

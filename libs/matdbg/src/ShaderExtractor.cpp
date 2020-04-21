@@ -46,11 +46,11 @@ ShaderExtractor::ShaderExtractor(Backend backend, const void* data, size_t size)
     switch (backend) {
         case Backend::OPENGL:
             mMaterialTag = ChunkType::MaterialGlsl;
-            mDictionaryTag = ChunkType::DictionaryGlsl;
+            mDictionaryTag = ChunkType::DictionaryText;
             break;
         case Backend::METAL:
             mMaterialTag = ChunkType::MaterialMetal;
-            mDictionaryTag = ChunkType::DictionaryMetal;
+            mDictionaryTag = ChunkType::DictionaryText;
             break;
         case Backend::VULKAN:
             mMaterialTag = ChunkType::MaterialSpirv;
@@ -66,6 +66,10 @@ bool ShaderExtractor::parse() noexcept {
         return mMaterialChunk.readIndex(mMaterialTag);
     }
     return false;
+}
+
+bool ShaderExtractor::getDictionary(BlobDictionary& dictionary) noexcept {
+    return DictionaryReader::unflatten(mChunkContainer, mDictionaryTag, dictionary);
 }
 
 bool ShaderExtractor::getShader(ShaderModel shaderModel,

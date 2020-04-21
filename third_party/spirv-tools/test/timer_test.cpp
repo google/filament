@@ -97,7 +97,7 @@ class MockCumulativeTimer : public CumulativeTimer {
   long PageFault() const override { return count_stop_ * 3600L; }
 
   // Calling Stop() does nothing but just increases |count_stop_| by 1.
-  void Stop() override { ++count_stop_; };
+  void Stop() override { ++count_stop_; }
 
  private:
   unsigned int count_stop_;

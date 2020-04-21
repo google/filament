@@ -20,7 +20,3 @@ include_directories(${PUBLIC_HDR_DIR})
 add_library(${TARGET} STATIC ${PUBLIC_HDRS} ${SRCS})
 target_include_directories (${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 target_link_libraries(${TARGET} LINK_PUBLIC z)
-
-if (CLANG_CL AND NOT MSVC)
-    target_compile_options(${TARGET} PRIVATE -Wno-unused-variable)
-endif()

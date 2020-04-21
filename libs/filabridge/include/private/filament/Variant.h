@@ -21,7 +21,7 @@
 #include <cstddef>
 
 namespace filament {
-    static constexpr size_t VARIANT_COUNT = 16;
+    static constexpr size_t VARIANT_COUNT = 64;
 
     // IMPORTANT: update filterVariant() when adding more variants
     struct Variant {
@@ -33,17 +33,23 @@ namespace filament {
         // DYN: Dynamic Lighting
         // SRE: Shadow Receiver
         // SKN: Skinning
+        // DEP: Depth only
+        // FOG: Fog
         //
-        //                    ...-----+-----+-----+-----+-----+
-        // Variant                 0  | SKN | SRE | DYN | DIR |
-        //                    ...-----+-----+-----+-----+-----+
+        //   X: either 1 or 0
+        //
+        //                    ...-----+-----+-----+-----+-----+-----+-----+
+        // Variant                 0  | FOG | DEP | SKN | SRE | DYN | DIR |
+        //                    ...-----+-----+-----+-----+-----+-----+-----+
         // Reserved variants:
-        //       Depth shader            X     1     0     0
-        //           Reserved            X     1     1     0
+        //       Vertex depth             0    1     X     0     0     0
+        //     Fragment depth             0    1     0     0     0     0
+        //           Reserved             X    1     X     X     X     X
+        //           Reserved             X    0     X     1     0     0
         //
         // Standard variants:
-        //      Vertex shader            X     X     0     X
-        //    Fragment shader            0     X     X     X
+        //      Vertex shader             0    0     X     X     0     X
+        //    Fragment shader             X    0     0     X     X     X
 
         uint8_t key = 0;
 
@@ -53,52 +59,57 @@ namespace filament {
         static constexpr uint8_t DYNAMIC_LIGHTING       = 0x02; // point, spot or area present, per frame/world position
         static constexpr uint8_t SHADOW_RECEIVER        = 0x04; // receives shadows, per renderable
         static constexpr uint8_t SKINNING_OR_MORPHING   = 0x08; // GPU skinning and/or morphing
+        static constexpr uint8_t DEPTH                  = 0x10; // depth only variants
+        static constexpr uint8_t FOG                    = 0x20; // fog
 
         static constexpr uint8_t VERTEX_MASK = DIRECTIONAL_LIGHTING |
                                                SHADOW_RECEIVER |
-                                               SKINNING_OR_MORPHING;
+                                               SKINNING_OR_MORPHING |
+                                               DEPTH;
 
         static constexpr uint8_t FRAGMENT_MASK = DIRECTIONAL_LIGHTING |
                                                  DYNAMIC_LIGHTING |
-                                                 SHADOW_RECEIVER;
+                                                 SHADOW_RECEIVER |
+                                                 FOG |
+                                                 DEPTH;
 
         static constexpr uint8_t DEPTH_MASK = DIRECTIONAL_LIGHTING |
                                               DYNAMIC_LIGHTING |
-                                              SHADOW_RECEIVER;
+                                              SHADOW_RECEIVER |
+                                              DEPTH;
 
         // the depth variant deactivates all variants that make no sense when writing the depth
         // only -- essentially, all fragment-only variants.
-        static constexpr uint8_t DEPTH_VARIANT = SHADOW_RECEIVER;
+        static constexpr uint8_t DEPTH_VARIANT = DEPTH;
 
         // this mask filters out the lighting variants
-        static constexpr uint8_t UNLIT_MASK    = SKINNING_OR_MORPHING;
-
-        static_assert((VERTEX_MASK | FRAGMENT_MASK) == VARIANT_COUNT - 1,
-                "inconsistency between vertex/fragment masks and variant count");
+        static constexpr uint8_t UNLIT_MASK    = SKINNING_OR_MORPHING | FOG;
 
         inline bool hasSkinningOrMorphing() const noexcept { return key & SKINNING_OR_MORPHING; }
         inline bool hasDirectionalLighting() const noexcept { return key & DIRECTIONAL_LIGHTING; }
         inline bool hasDynamicLighting() const noexcept { return key & DYNAMIC_LIGHTING; }
         inline bool hasShadowReceiver() const noexcept { return key & SHADOW_RECEIVER; }
+        inline bool hasFog() const noexcept { return key & FOG; }
 
         inline void setSkinning(bool v) noexcept { set(v, SKINNING_OR_MORPHING); }
         inline void setDirectionalLighting(bool v) noexcept { set(v, DIRECTIONAL_LIGHTING); }
         inline void setDynamicLighting(bool v) noexcept { set(v, DYNAMIC_LIGHTING); }
         inline void setShadowReceiver(bool v) noexcept { set(v, SHADOW_RECEIVER); }
+        inline void setFog(bool v) noexcept { set(v, FOG); }
 
         inline constexpr bool isDepthPass() const noexcept {
             return (key & DEPTH_MASK) == DEPTH_VARIANT;
         }
 
         static constexpr bool isReserved(uint8_t variantKey) noexcept {
-            // reserved variants that should just be skipped.
-            return (variantKey & DEPTH_MASK) == (SHADOW_RECEIVER | DYNAMIC_LIGHTING);
+            // reserved variants that should just be skipped
+            return (variantKey & DEPTH_MASK) > DEPTH || (variantKey & 0b010111u) == 0b000100u;
         }
 
         static constexpr uint8_t filterVariantVertex(uint8_t variantKey) noexcept {
             // filter out vertex variants that are not needed. For e.g. dynamic lighting
             // doesn't affect the vertex shader.
-            return variantKey & VERTEX_MASK;
+            return variantKey;
         }
 
         static constexpr uint8_t filterVariantFragment(uint8_t variantKey) noexcept {

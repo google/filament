@@ -90,6 +90,18 @@ std::string shaderFromKey(const MaterialKey& config) {
         )SHADER";
     }
 
+    if (config.hasClearCoat && config.hasClearCoatNormalTexture && !config.unlit) {
+        shader += "float2 clearCoatNormalUV = ${clearCoatNormal};\n";
+        if (config.hasTextureTransforms) {
+            shader += "clearCoatNormalUV = (vec3(clearCoatNormalUV, 1.0) * "
+                    "materialParams.clearCoatNormalUvMatrix).xy;\n";
+        }
+        shader += R"SHADER(
+            material.clearCoatNormal = texture(materialParams_clearCoatNormalMap, clearCoatNormalUV).xyz * 2.0 - 1.0;
+            material.clearCoatNormal.xy *= materialParams.clearCoatNormalScale;
+        )SHADER";
+    }
+
     if (config.enableDiagnostics && !config.unlit) {
         shader += R"SHADER(
             if (materialParams.enableDiagnostics) {
@@ -139,13 +151,13 @@ std::string shaderFromKey(const MaterialKey& config) {
             shader += R"SHADER(
                 material.glossiness = materialParams.glossinessFactor;
                 material.specularColor = materialParams.specularFactor;
-                material.emissive.rgb = materialParams.emissiveFactor.rgb;
+                material.emissive = vec4(materialParams.emissiveFactor.rgb, 0.0);
             )SHADER";
         } else {
             shader += R"SHADER(
                 material.roughness = materialParams.roughnessFactor;
                 material.metallic = materialParams.metallicFactor;
-                material.emissive.rgb = materialParams.emissiveFactor.rgb;
+                material.emissive = vec4(materialParams.emissiveFactor.rgb, 0.0);
             )SHADER";
         }
         if (config.hasMetallicRoughnessTexture) {
@@ -186,8 +198,35 @@ std::string shaderFromKey(const MaterialKey& config) {
             }
             shader += R"SHADER(
                 material.emissive.rgb *= texture(materialParams_emissiveMap, emissiveUV).rgb;
-                material.emissive.a = 3.0;
             )SHADER";
+        }
+        if (config.hasClearCoat) {
+            shader += R"SHADER(
+                material.clearCoat = materialParams.clearCoatFactor;
+                material.clearCoatRoughness = materialParams.clearCoatRoughnessFactor;
+            )SHADER";
+
+            if (config.hasClearCoatTexture) {
+                shader += "float2 clearCoatUV = ${clearCoat};\n";
+                if (config.hasTextureTransforms) {
+                    shader += "clearCoatUV = (vec3(clearCoatUV, 1.0) * "
+                            "materialParams.clearCoatUvMatrix).xy;\n";
+                }
+                shader += R"SHADER(
+                    material.clearCoat *= texture(materialParams_clearCoatMap, clearCoatUV).r;
+                )SHADER";
+            }
+
+            if (config.hasClearCoatRoughnessTexture) {
+                shader += "float2 clearCoatRoughnessUV = ${clearCoatRoughness};\n";
+                if (config.hasTextureTransforms) {
+                    shader += "clearCoatRoughnessUV = (vec3(clearCoatRoughnessUV, 1.0) * "
+                              "materialParams.clearCoatRoughnessUvMatrix).xy;\n";
+                }
+                shader += R"SHADER(
+                    material.clearCoatRoughness *= texture(materialParams_clearCoatRoughnessMap, clearCoatRoughnessUV).g;
+                )SHADER";
+            }
         }
     }
 
@@ -202,7 +241,7 @@ Material* createMaterial(Engine* engine, const MaterialKey& config, const UvMap&
     MaterialBuilder builder = MaterialBuilder()
             .name(name)
             .flipUV(false)
-            .specularAmbientOcclusion(true)
+            .specularAmbientOcclusion(MaterialBuilder::SpecularAmbientOcclusion::SIMPLE)
             .material(shader.c_str())
             .doubleSided(config.doubleSided)
             .targetApi(filamat::targetApiFromBackend(engine->getBackend()));
@@ -278,6 +317,31 @@ Material* createMaterial(Engine* engine, const MaterialKey& config, const UvMap&
         builder.parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "emissiveMap");
         if (config.hasTextureTransforms) {
             builder.parameter(MaterialBuilder::UniformType::MAT3, "emissiveUvMatrix");
+        }
+    }
+
+    // CLEAR COAT
+    if (config.hasClearCoat) {
+        builder.parameter(MaterialBuilder::UniformType::FLOAT, "clearCoatFactor");
+        builder.parameter(MaterialBuilder::UniformType::FLOAT, "clearCoatRoughnessFactor");
+        if (config.hasClearCoatTexture) {
+            builder.parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "clearCoatMap");
+            if (config.hasTextureTransforms) {
+                builder.parameter(MaterialBuilder::UniformType::MAT3, "clearCoatUvMatrix");
+            }
+        }
+        if (config.hasClearCoatRoughnessTexture) {
+            builder.parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "clearCoatRoughnessMap");
+            if (config.hasTextureTransforms) {
+                builder.parameter(MaterialBuilder::UniformType::MAT3, "clearCoatRoughnessUvMatrix");
+            }
+        }
+        if (config.hasClearCoatNormalTexture) {
+            builder.parameter(MaterialBuilder::UniformType::FLOAT, "clearCoatNormalScale");
+            builder.parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "clearCoatNormalMap");
+            if (config.hasTextureTransforms) {
+                builder.parameter(MaterialBuilder::UniformType::MAT3, "clearCoatNormalUvMatrix");
+            }
         }
     }
 

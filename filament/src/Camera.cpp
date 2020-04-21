@@ -58,11 +58,11 @@ void UTILS_NOINLINE FCamera::setProjection(double fov, double aspect, double nea
     FCamera::setProjection(Projection::PERSPECTIVE, -w, w, -h, h, near, far);
 }
 
-void FCamera::setLensProjection(double focalLength, double near, double far) noexcept {
-    // a 35mm camera has a 36mm wide frame size
-    double theta = 2.0 * std::atan(36.0 / (2.0 * focalLength));
-    // a 35mm camera has a 24mm tall frame size
-    FCamera::setProjection(theta, 36.0 / 24.0, near, far, Fov::HORIZONTAL);
+void FCamera::setLensProjection(double focalLength, double aspect, double near, double far) noexcept {
+    // a 35mm camera has a 36x24mm wide frame size
+    double theta = 2.0 * std::atan(24.0 / (2.0 * focalLength));
+    theta *= 180.0 / math::F_PI;
+    FCamera::setProjection(theta, aspect, near, far, Fov::VERTICAL);
 }
 
 /*
@@ -246,7 +246,7 @@ using namespace details;
 mat4f Camera::inverseProjection(const mat4f& p) noexcept {
     return details::inverseProjection(p);
 }
-mat4  Camera::inverseProjection(const mat4 & p) noexcept {
+mat4 Camera::inverseProjection(const mat4 & p) noexcept {
     return details::inverseProjection(p);
 }
 
@@ -260,8 +260,8 @@ void Camera::setProjection(double fov, double aspect, double near, double far,
     upcast(this)->setProjection(fov, aspect, near, far, direction);
 }
 
-void Camera::setLensProjection(double focalLength, double near, double far) noexcept {
-    upcast(this)->setLensProjection(focalLength, near, far);
+void Camera::setLensProjection(double focalLength, double aspect, double near, double far) noexcept {
+    upcast(this)->setLensProjection(focalLength, aspect, near, far);
 }
 
 void Camera::setCustomProjection(mat4 const& projection, double near, double far) noexcept {

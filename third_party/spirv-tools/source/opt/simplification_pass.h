@@ -33,7 +33,8 @@ class SimplificationPass : public Pass {
            IRContext::kAnalysisInstrToBlockMapping |
            IRContext::kAnalysisDecorations | IRContext::kAnalysisCombinators |
            IRContext::kAnalysisCFG | IRContext::kAnalysisDominatorAnalysis |
-           IRContext::kAnalysisNameMap;
+           IRContext::kAnalysisNameMap | IRContext::kAnalysisConstants |
+           IRContext::kAnalysisTypes;
   }
 
  private:
@@ -41,6 +42,14 @@ class SimplificationPass : public Pass {
   // instruction in |function| until nothing else in the function can be
   // simplified.
   bool SimplifyFunction(Function* function);
+
+  // FactorAddMul can create |folded_inst| Mul of new Add. If Mul, push any Add
+  // operand not in |seen_inst| into |worklist|. This is heavily restricted to
+  // improve compile time but can be expanded for future simplifications which
+  // simiarly create new operations.
+  void AddNewOperands(Instruction* folded_inst,
+                      std::unordered_set<Instruction*>* inst_seen,
+                      std::vector<Instruction*>* work_list);
 };
 
 }  // namespace opt

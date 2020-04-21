@@ -3,132 +3,132 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 50;
+	objectVersion = 51;
 	objects = {
 
 /* Begin PBXBuildFile section */
-		2AB688EAD0A0298E714EF3B404C9687C /* Resources.S in Sources */ = {isa = PBXBuildFile; fileRef = DD0010D60097DEAA82DAA089D015BD1F /* Resources.S */; };
-		30B041C9C3658CE4F02EC3A051F172E0 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AFCB91D87494B7FC879A7A5E5A4BD316 /* Main.storyboard */; };
-		3D604AE2291BDBE34F37E050CC66F03E /* FilamentView.m in Sources */ = {isa = PBXBuildFile; fileRef = 53D025A0625708CC50AEA0DBEBB00EE6 /* FilamentView.m */; };
-		4F8ADB2824BB8FE500EA64C04A6844C4 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AE684A73135705C4EDAA7C5366DB6610 /* Assets.xcassets */; };
-		67A1C8160381617B0D2860B9B41C531A /* ARKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 33B2CBA1A0F654632B39A45DF60AB7C1 /* ARKit.framework */; };
-		770B96CD3256BC731F60C78034B791B4 /* FilamentArViewController.mm in Sources */ = {isa = PBXBuildFile; fileRef = AA47852B486CBD549FA6872916B552EE /* FilamentArViewController.mm */; };
-		C655352AFD3C8571A3B683D550A3C1B5 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = EC652AC3D2C91759215320C3551D7C99 /* AppDelegate.m */; };
-		D57ECCB665A104DB0550E0339CE6333D /* FilamentApp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CF21F54926F34F027F4FCEA428505A4F /* FilamentApp.cpp */; };
-		DAC411D895E17D844448ED47563C8618 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = C88A8BDFC06D144D80EC052BCCA71983 /* LaunchScreen.storyboard */; };
-		F09B6F5334C804F23C2DAE8FADF1FDC4 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = B6B92BD0FA8E6F9CFEAE17076C5EDBEE /* main.m */; };
-		F4B774B6FC0E96C633570B470E01C5F0 /* FullScreenTriangle.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 05D9AFA7CFC6498FE2A8C6A53DC9CF3F /* FullScreenTriangle.cpp */; };
+		4FAC85567A730FCCB7B3B6EC /* FilamentApp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CF21F54926F34F027F4FCEA4 /* FilamentApp.cpp */; };
+		5432120E716355C4A519ABC6 /* FilamentArViewController.mm in Sources */ = {isa = PBXBuildFile; fileRef = AA47852B486CBD549FA68729 /* FilamentArViewController.mm */; };
+		66754FE8EF26B5335C0CC9FF /* FullScreenTriangle.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 05D9AFA7CFC6498FE2A8C6A5 /* FullScreenTriangle.cpp */; };
+		99BD70EFF08A1419FE539A44 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AE684A73135705C4EDAA7C53 /* Assets.xcassets */; };
+		ACF87F0F3989EF583E90E499 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = B6B92BD0FA8E6F9CFEAE1707 /* main.m */; };
+		AEEFE325E8BDB00E30FDEC93 /* Resources.S in Sources */ = {isa = PBXBuildFile; fileRef = DD0010D60097DEAA82DAA089 /* Resources.S */; };
+		B28ED2F81785F13E0B9A3607 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = EC652AC3D2C91759215320C3 /* AppDelegate.m */; };
+		B8934FC46557424E705A2154 /* ARKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 33B2CBA1A0F654632B39A45D /* ARKit.framework */; };
+		CE6AB7B76D5EB580EFD90897 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AFCB91D87494B7FC879A7A5E /* Main.storyboard */; };
+		DEF78081F52F6A776242A599 /* FilamentView.m in Sources */ = {isa = PBXBuildFile; fileRef = 53D025A0625708CC50AEA0DB /* FilamentView.m */; };
+		F933D6701B0A0E90381E8030 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = C88A8BDFC06D144D80EC052B /* LaunchScreen.storyboard */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		05D9AFA7CFC6498FE2A8C6A53DC9CF3F /* FullScreenTriangle.cpp */ = {isa = PBXFileReference; path = FullScreenTriangle.cpp; sourceTree = "<group>"; };
-		2AFEFBF6FE91628599F708178FBB7E32 /* clear_coat.mat */ = {isa = PBXFileReference; path = clear_coat.mat; sourceTree = "<group>"; };
-		2AFF66F1228C5F1079042FE2F5FB07DB /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
-		33B2CBA1A0F654632B39A45DF60AB7C1 /* ARKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ARKit.framework; path = System/Library/Frameworks/ARKit.framework; sourceTree = SDKROOT; };
-		4F8E6B508F8C5DE284DA2E3453B69144 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
-		53D025A0625708CC50AEA0DBEBB00EE6 /* FilamentView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = FilamentView.m; sourceTree = "<group>"; };
-		5B5D3E611DCDD9CD2C13B825BAD81D8C /* FilamentApp.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FilamentApp.h; sourceTree = "<group>"; };
-		6938BE21CFB8BEB2422BD49064160490 /* FilamentArViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FilamentArViewController.h; sourceTree = "<group>"; };
-		7C5E322BA97EEB4FB7EC030F252D7D40 /* camera_feed.mat */ = {isa = PBXFileReference; path = camera_feed.mat; sourceTree = "<group>"; };
-		8832D93E678057F9940A226DBBA8C94E /* shadow_plane.mat */ = {isa = PBXFileReference; path = shadow_plane.mat; sourceTree = "<group>"; };
-		973EB840E804440B2AA0F93AF0EE86F4 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
-		A85B9D53F72DEE0374F8EBDF0C9D380D /* FullScreenTriangle.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FullScreenTriangle.h; sourceTree = "<group>"; };
-		AA47852B486CBD549FA6872916B552EE /* FilamentArViewController.mm */ = {isa = PBXFileReference; path = FilamentArViewController.mm; sourceTree = "<group>"; };
-		AE684A73135705C4EDAA7C5366DB6610 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		AF451D7D0FAAD069F916F51CC92EBC5E /* MathHelpers.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MathHelpers.h; sourceTree = "<group>"; };
-		B6B92BD0FA8E6F9CFEAE17076C5EDBEE /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
-		CF21F54926F34F027F4FCEA428505A4F /* FilamentApp.cpp */ = {isa = PBXFileReference; path = FilamentApp.cpp; sourceTree = "<group>"; };
-		D0800F9FE0C390D084082637E1F80E55 /* FilamentView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FilamentView.h; sourceTree = "<group>"; };
-		D7BA0AA38645722DCFA3490D5215C349 /* hello-ar.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "hello-ar.app"; sourceTree = BUILT_PRODUCTS_DIR; };
-		DD0010D60097DEAA82DAA089D015BD1F /* Resources.S */ = {isa = PBXFileReference; path = Resources.S; sourceTree = "<group>"; };
-		EC652AC3D2C91759215320C3551D7C99 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
-		FCF16FE1B4146DE87F2B76F38A63A0D3 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		05D9AFA7CFC6498FE2A8C6A5 /* FullScreenTriangle.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = FullScreenTriangle.cpp; sourceTree = "<group>"; };
+		2AFEFBF6FE91628599F70817 /* clear_coat.mat */ = {isa = PBXFileReference; path = clear_coat.mat; sourceTree = "<group>"; };
+		2AFF66F1228C5F1079042FE2 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
+		33B2CBA1A0F654632B39A45D /* ARKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ARKit.framework; path = System/Library/Frameworks/ARKit.framework; sourceTree = SDKROOT; };
+		4F8E6B508F8C5DE284DA2E34 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		53D025A0625708CC50AEA0DB /* FilamentView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = FilamentView.m; sourceTree = "<group>"; };
+		5B5D3E611DCDD9CD2C13B825 /* FilamentApp.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FilamentApp.h; sourceTree = "<group>"; };
+		6938BE21CFB8BEB2422BD490 /* FilamentArViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FilamentArViewController.h; sourceTree = "<group>"; };
+		7C5E322BA97EEB4FB7EC030F /* camera_feed.mat */ = {isa = PBXFileReference; path = camera_feed.mat; sourceTree = "<group>"; };
+		8832D93E678057F9940A226D /* shadow_plane.mat */ = {isa = PBXFileReference; path = shadow_plane.mat; sourceTree = "<group>"; };
+		973EB840E804440B2AA0F93A /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
+		A85B9D53F72DEE0374F8EBDF /* FullScreenTriangle.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FullScreenTriangle.h; sourceTree = "<group>"; };
+		AA47852B486CBD549FA68729 /* FilamentArViewController.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = FilamentArViewController.mm; sourceTree = "<group>"; };
+		AE684A73135705C4EDAA7C53 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		AF451D7D0FAAD069F916F51C /* MathHelpers.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MathHelpers.h; sourceTree = "<group>"; };
+		B6B92BD0FA8E6F9CFEAE1707 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		CF21F54926F34F027F4FCEA4 /* FilamentApp.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = FilamentApp.cpp; sourceTree = "<group>"; };
+		D0800F9FE0C390D084082637 /* FilamentView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FilamentView.h; sourceTree = "<group>"; };
+		D7BA0AA38645722DCFA3490D /* hello-ar.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "hello-ar.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		DD0010D60097DEAA82DAA089 /* Resources.S */ = {isa = PBXFileReference; path = Resources.S; sourceTree = "<group>"; };
+		EC652AC3D2C91759215320C3 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
+		FCF16FE1B4146DE87F2B76F3 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		FA9CC5F2D3E84FB632557A2EAB5D1929 /* Frameworks */ = {
+		FA9CC5F2D3E84FB632557A2E /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				67A1C8160381617B0D2860B9B41C531A /* ARKit.framework in Frameworks */,
+				B8934FC46557424E705A2154 /* ARKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		316A56C698744769908E6F882E394F0D = {
+		316A56C698744769908E6F88 = {
 			isa = PBXGroup;
 			children = (
-				64EC9708BC3BF5967095E27FD13900A5 /* hello-ar */,
-				4696851BF71615FF7128AFA5954A65BF /* Materials */,
-				A9AE7CB2486E4723006E178404C8A598 /* Frameworks */,
-				E2EC9706948EC07E74121EF1E7C251E0 /* Products */,
+				64EC9708BC3BF5967095E27F /* hello-ar */,
+				4696851BF71615FF7128AFA5 /* Materials */,
+				A9AE7CB2486E4723006E1784 /* Frameworks */,
+				E2EC9706948EC07E74121EF1 /* Products */,
 			);
 			sourceTree = "<group>";
 		};
-		4696851BF71615FF7128AFA5954A65BF /* Materials */ = {
+		4696851BF71615FF7128AFA5 /* Materials */ = {
 			isa = PBXGroup;
 			children = (
-				7C5E322BA97EEB4FB7EC030F252D7D40 /* camera_feed.mat */,
-				2AFEFBF6FE91628599F708178FBB7E32 /* clear_coat.mat */,
-				8832D93E678057F9940A226DBBA8C94E /* shadow_plane.mat */,
+				7C5E322BA97EEB4FB7EC030F /* camera_feed.mat */,
+				2AFEFBF6FE91628599F70817 /* clear_coat.mat */,
+				8832D93E678057F9940A226D /* shadow_plane.mat */,
 			);
 			path = Materials;
 			sourceTree = "<group>";
 		};
-		64EC9708BC3BF5967095E27FD13900A5 /* hello-ar */ = {
+		64EC9708BC3BF5967095E27F /* hello-ar */ = {
 			isa = PBXGroup;
 			children = (
-				2AFF66F1228C5F1079042FE2F5FB07DB /* AppDelegate.h */,
-				EC652AC3D2C91759215320C3551D7C99 /* AppDelegate.m */,
-				C4B733EC024C3C9FDDFAB19F12016B3C /* FilamentArView */,
-				BB5BFAE028DB5F16FB3DEADF38257A53 /* SupportFiles */,
+				2AFF66F1228C5F1079042FE2 /* AppDelegate.h */,
+				EC652AC3D2C91759215320C3 /* AppDelegate.m */,
+				C4B733EC024C3C9FDDFAB19F /* FilamentArView */,
+				BB5BFAE028DB5F16FB3DEADF /* SupportFiles */,
 			);
 			path = "hello-ar";
 			sourceTree = "<group>";
 		};
-		A9AE7CB2486E4723006E178404C8A598 /* Frameworks */ = {
+		A9AE7CB2486E4723006E1784 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				33B2CBA1A0F654632B39A45DF60AB7C1 /* ARKit.framework */,
+				33B2CBA1A0F654632B39A45D /* ARKit.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
-		BB5BFAE028DB5F16FB3DEADF38257A53 /* SupportFiles */ = {
+		BB5BFAE028DB5F16FB3DEADF /* SupportFiles */ = {
 			isa = PBXGroup;
 			children = (
-				AE684A73135705C4EDAA7C5366DB6610 /* Assets.xcassets */,
-				FCF16FE1B4146DE87F2B76F38A63A0D3 /* Info.plist */,
-				C88A8BDFC06D144D80EC052BCCA71983 /* LaunchScreen.storyboard */,
-				B6B92BD0FA8E6F9CFEAE17076C5EDBEE /* main.m */,
-				AFCB91D87494B7FC879A7A5E5A4BD316 /* Main.storyboard */,
-				DD0010D60097DEAA82DAA089D015BD1F /* Resources.S */,
+				AE684A73135705C4EDAA7C53 /* Assets.xcassets */,
+				FCF16FE1B4146DE87F2B76F3 /* Info.plist */,
+				C88A8BDFC06D144D80EC052B /* LaunchScreen.storyboard */,
+				B6B92BD0FA8E6F9CFEAE1707 /* main.m */,
+				AFCB91D87494B7FC879A7A5E /* Main.storyboard */,
+				DD0010D60097DEAA82DAA089 /* Resources.S */,
 			);
 			path = SupportFiles;
 			sourceTree = "<group>";
 		};
-		C4B733EC024C3C9FDDFAB19F12016B3C /* FilamentArView */ = {
+		C4B733EC024C3C9FDDFAB19F /* FilamentArView */ = {
 			isa = PBXGroup;
 			children = (
-				CF21F54926F34F027F4FCEA428505A4F /* FilamentApp.cpp */,
-				5B5D3E611DCDD9CD2C13B825BAD81D8C /* FilamentApp.h */,
-				6938BE21CFB8BEB2422BD49064160490 /* FilamentArViewController.h */,
-				AA47852B486CBD549FA6872916B552EE /* FilamentArViewController.mm */,
-				D0800F9FE0C390D084082637E1F80E55 /* FilamentView.h */,
-				53D025A0625708CC50AEA0DBEBB00EE6 /* FilamentView.m */,
-				05D9AFA7CFC6498FE2A8C6A53DC9CF3F /* FullScreenTriangle.cpp */,
-				A85B9D53F72DEE0374F8EBDF0C9D380D /* FullScreenTriangle.h */,
-				AF451D7D0FAAD069F916F51CC92EBC5E /* MathHelpers.h */,
+				CF21F54926F34F027F4FCEA4 /* FilamentApp.cpp */,
+				5B5D3E611DCDD9CD2C13B825 /* FilamentApp.h */,
+				6938BE21CFB8BEB2422BD490 /* FilamentArViewController.h */,
+				AA47852B486CBD549FA68729 /* FilamentArViewController.mm */,
+				D0800F9FE0C390D084082637 /* FilamentView.h */,
+				53D025A0625708CC50AEA0DB /* FilamentView.m */,
+				05D9AFA7CFC6498FE2A8C6A5 /* FullScreenTriangle.cpp */,
+				A85B9D53F72DEE0374F8EBDF /* FullScreenTriangle.h */,
+				AF451D7D0FAAD069F916F51C /* MathHelpers.h */,
 			);
 			path = FilamentArView;
 			sourceTree = "<group>";
 		};
-		E2EC9706948EC07E74121EF1E7C251E0 /* Products */ = {
+		E2EC9706948EC07E74121EF1 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				D7BA0AA38645722DCFA3490D5215C349 /* hello-ar.app */,
+				D7BA0AA38645722DCFA3490D /* hello-ar.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -136,14 +136,14 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		F06A8CFDD9D8F92512DA0ED7A5A276FE /* hello-ar */ = {
+		F06A8CFDD9D8F92512DA0ED7 /* hello-ar */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = D545B7D86B4767069C2A3E9BEB6A813C /* Build configuration list for PBXNativeTarget "hello-ar" */;
+			buildConfigurationList = D545B7D86B4767069C2A3E9B /* Build configuration list for PBXNativeTarget "hello-ar" */;
 			buildPhases = (
-				109D7489D01CBE89003014DFE6B5051A /* Build Resources */,
-				A5598850636B6208AE64E95E319543EA /* Sources */,
-				77189A28CB88A4753728F5490C6E6676 /* Resources */,
-				FA9CC5F2D3E84FB632557A2EAB5D1929 /* Frameworks */,
+				109D7489D01CBE89003014DF /* Build Resources */,
+				A5598850636B6208AE64E95E /* Sources */,
+				77189A28CB88A4753728F549 /* Resources */,
+				FA9CC5F2D3E84FB632557A2E /* Frameworks */,
 			);
 			buildRules = (
 			);
@@ -151,48 +151,50 @@
 			);
 			name = "hello-ar";
 			productName = "hello-ar";
-			productReference = D7BA0AA38645722DCFA3490D5215C349 /* hello-ar.app */;
+			productReference = D7BA0AA38645722DCFA3490D /* hello-ar.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
-		392626AFF36D607FEB6176BE74465652 /* Project object */ = {
+		392626AFF36D607FEB6176BE /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 1000;
+				LastUpgradeCheck = 1020;
+				TargetAttributes = {
+				};
 			};
-			buildConfigurationList = 281E763643B2F1F3B903864B478F7273 /* Build configuration list for PBXProject "hello-ar" */;
-			compatibilityVersion = "Xcode 9.3";
+			buildConfigurationList = 281E763643B2F1F3B903864B /* Build configuration list for PBXProject "hello-ar" */;
+			compatibilityVersion = "Xcode 10.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				Base,
 			);
-			mainGroup = 316A56C698744769908E6F882E394F0D;
+			mainGroup = 316A56C698744769908E6F88;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				F06A8CFDD9D8F92512DA0ED7A5A276FE /* hello-ar */,
+				F06A8CFDD9D8F92512DA0ED7 /* hello-ar */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		77189A28CB88A4753728F5490C6E6676 /* Resources */ = {
+		77189A28CB88A4753728F549 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4F8ADB2824BB8FE500EA64C04A6844C4 /* Assets.xcassets in Resources */,
-				DAC411D895E17D844448ED47563C8618 /* LaunchScreen.storyboard in Resources */,
-				30B041C9C3658CE4F02EC3A051F172E0 /* Main.storyboard in Resources */,
+				99BD70EFF08A1419FE539A44 /* Assets.xcassets in Resources */,
+				F933D6701B0A0E90381E8030 /* LaunchScreen.storyboard in Resources */,
+				CE6AB7B76D5EB580EFD90897 /* Main.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		109D7489D01CBE89003014DFE6B5051A /* Build Resources */ = {
+		109D7489D01CBE89003014DF /* Build Resources */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -213,35 +215,35 @@
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		A5598850636B6208AE64E95E319543EA /* Sources */ = {
+		A5598850636B6208AE64E95E /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				C655352AFD3C8571A3B683D550A3C1B5 /* AppDelegate.m in Sources */,
-				D57ECCB665A104DB0550E0339CE6333D /* FilamentApp.cpp in Sources */,
-				770B96CD3256BC731F60C78034B791B4 /* FilamentArViewController.mm in Sources */,
-				3D604AE2291BDBE34F37E050CC66F03E /* FilamentView.m in Sources */,
-				F4B774B6FC0E96C633570B470E01C5F0 /* FullScreenTriangle.cpp in Sources */,
-				2AB688EAD0A0298E714EF3B404C9687C /* Resources.S in Sources */,
-				F09B6F5334C804F23C2DAE8FADF1FDC4 /* main.m in Sources */,
+				B28ED2F81785F13E0B9A3607 /* AppDelegate.m in Sources */,
+				4FAC85567A730FCCB7B3B6EC /* FilamentApp.cpp in Sources */,
+				5432120E716355C4A519ABC6 /* FilamentArViewController.mm in Sources */,
+				DEF78081F52F6A776242A599 /* FilamentView.m in Sources */,
+				66754FE8EF26B5335C0CC9FF /* FullScreenTriangle.cpp in Sources */,
+				AEEFE325E8BDB00E30FDEC93 /* Resources.S in Sources */,
+				ACF87F0F3989EF583E90E499 /* main.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXVariantGroup section */
-		AFCB91D87494B7FC879A7A5E5A4BD316 /* Main.storyboard */ = {
+		AFCB91D87494B7FC879A7A5E /* Main.storyboard */ = {
 			isa = PBXVariantGroup;
 			children = (
-				973EB840E804440B2AA0F93AF0EE86F4 /* Base */,
+				973EB840E804440B2AA0F93A /* Base */,
 			);
 			name = Main.storyboard;
 			sourceTree = "<group>";
 		};
-		C88A8BDFC06D144D80EC052BCCA71983 /* LaunchScreen.storyboard */ = {
+		C88A8BDFC06D144D80EC052B /* LaunchScreen.storyboard */ = {
 			isa = PBXVariantGroup;
 			children = (
-				4F8E6B508F8C5DE284DA2E3453B69144 /* Base */,
+				4F8E6B508F8C5DE284DA2E34 /* Base */,
 			);
 			name = LaunchScreen.storyboard;
 			sourceTree = "<group>";
@@ -249,10 +251,9 @@
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
-		25CCBC1E7ADEECEC7B80A15741A12C59 /* Metal Debug */ = {
+		25CCBC1E7ADEECEC7B80A157 /* Metal Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				ENABLE_BITCODE = NO;
@@ -266,7 +267,10 @@
 				);
 				INFOPLIST_FILE = "hello-ar/SupportFiles/Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 12.1;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
 				LIBRARY_SEARCH_PATHS = (
 					"../../../out/ios-debug/filament/lib/$(CURRENT_ARCH)",
 				);
@@ -289,10 +293,9 @@
 			};
 			name = "Metal Debug";
 		};
-		3E34E13E60EAC9644531A64FCDD581AB /* OpenGL Release */ = {
+		3E34E13E60EAC9644531A64F /* OpenGL Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				ENABLE_BITCODE = NO;
@@ -306,7 +309,10 @@
 				);
 				INFOPLIST_FILE = "hello-ar/SupportFiles/Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 12.1;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
 				LIBRARY_SEARCH_PATHS = (
 					"../../../out/ios-release/filament/lib/$(CURRENT_ARCH)",
 				);
@@ -329,7 +335,7 @@
 			};
 			name = "OpenGL Release";
 		};
-		510CA72D57CE7F601B4877DC688597C9 /* Metal Debug */ = {
+		510CA72D57CE7F601B4877DC /* Metal Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -384,14 +390,13 @@
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				SWIFT_VERSION = 4.2;
+				SWIFT_VERSION = 5.0;
 			};
 			name = "Metal Debug";
 		};
-		522C7F662C006F36780B6201A5473C85 /* Metal Release */ = {
+		522C7F662C006F36780B6201 /* Metal Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				ENABLE_BITCODE = NO;
@@ -405,7 +410,10 @@
 				);
 				INFOPLIST_FILE = "hello-ar/SupportFiles/Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 12.1;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
 				LIBRARY_SEARCH_PATHS = (
 					"../../../out/ios-release/filament/lib/$(CURRENT_ARCH)",
 				);
@@ -428,7 +436,7 @@
 			};
 			name = "Metal Release";
 		};
-		7BBE70B18CB95075E67F6ECBE48CC21D /* OpenGL Debug */ = {
+		7BBE70B18CB95075E67F6ECB /* OpenGL Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -483,11 +491,11 @@
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				SWIFT_VERSION = 4.2;
+				SWIFT_VERSION = 5.0;
 			};
 			name = "OpenGL Debug";
 		};
-		9223CF86FC2F726304C8570201D908BA /* Metal Release */ = {
+		9223CF86FC2F726304C85702 /* Metal Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -532,16 +540,15 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
-				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
-				SWIFT_VERSION = 4.2;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_VERSION = 5.0;
 				VALIDATE_PRODUCT = YES;
 			};
 			name = "Metal Release";
 		};
-		ABBA5402E000BE1D718F54DE68F86A05 /* OpenGL Debug */ = {
+		ABBA5402E000BE1D718F54DE /* OpenGL Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				ENABLE_BITCODE = NO;
@@ -555,7 +562,10 @@
 				);
 				INFOPLIST_FILE = "hello-ar/SupportFiles/Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 12.1;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
 				LIBRARY_SEARCH_PATHS = (
 					"../../../out/ios-debug/filament/lib/$(CURRENT_ARCH)",
 				);
@@ -578,7 +588,7 @@
 			};
 			name = "OpenGL Debug";
 		};
-		FA62ABBB14EC57FFF7FF858D9B39E460 /* OpenGL Release */ = {
+		FA62ABBB14EC57FFF7FF858D /* OpenGL Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -623,8 +633,8 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
-				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
-				SWIFT_VERSION = 4.2;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_VERSION = 5.0;
 				VALIDATE_PRODUCT = YES;
 			};
 			name = "OpenGL Release";
@@ -632,29 +642,29 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		281E763643B2F1F3B903864B478F7273 /* Build configuration list for PBXProject "hello-ar" */ = {
+		281E763643B2F1F3B903864B /* Build configuration list for PBXProject "hello-ar" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				510CA72D57CE7F601B4877DC688597C9 /* Metal Debug */,
-				9223CF86FC2F726304C8570201D908BA /* Metal Release */,
-				7BBE70B18CB95075E67F6ECBE48CC21D /* OpenGL Debug */,
-				FA62ABBB14EC57FFF7FF858D9B39E460 /* OpenGL Release */,
+				510CA72D57CE7F601B4877DC /* Metal Debug */,
+				9223CF86FC2F726304C85702 /* Metal Release */,
+				7BBE70B18CB95075E67F6ECB /* OpenGL Debug */,
+				FA62ABBB14EC57FFF7FF858D /* OpenGL Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = "Metal Debug";
 		};
-		D545B7D86B4767069C2A3E9BEB6A813C /* Build configuration list for PBXNativeTarget "hello-ar" */ = {
+		D545B7D86B4767069C2A3E9B /* Build configuration list for PBXNativeTarget "hello-ar" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				25CCBC1E7ADEECEC7B80A15741A12C59 /* Metal Debug */,
-				522C7F662C006F36780B6201A5473C85 /* Metal Release */,
-				ABBA5402E000BE1D718F54DE68F86A05 /* OpenGL Debug */,
-				3E34E13E60EAC9644531A64FCDD581AB /* OpenGL Release */,
+				25CCBC1E7ADEECEC7B80A157 /* Metal Debug */,
+				522C7F662C006F36780B6201 /* Metal Release */,
+				ABBA5402E000BE1D718F54DE /* OpenGL Debug */,
+				3E34E13E60EAC9644531A64F /* OpenGL Release */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = "";
+			defaultConfigurationName = "Metal Debug";
 		};
 /* End XCConfigurationList section */
 	};
-	rootObject = 392626AFF36D607FEB6176BE74465652 /* Project object */;
+	rootObject = 392626AFF36D607FEB6176BE /* Project object */;
 }

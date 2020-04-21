@@ -72,7 +72,7 @@ TEST_P(FindAndReplaceTest, SubstringReplacement) {
       << " expected string: " << GetParam().expected_str;
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     SubstringReplacement, FindAndReplaceTest,
     ::testing::ValuesIn(std::vector<SubstringReplacementTestCase>({
         // orig string, find substring, replace substring, expected string,

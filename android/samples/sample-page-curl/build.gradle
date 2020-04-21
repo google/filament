@@ -1,0 +1,35 @@
+apply plugin: 'com.android.application'
+apply plugin: FilamentToolsPlugin
+
+project.ext.isSample = true
+
+filamentTools {
+    iblInputFile = file("../../../third_party/environments/studio_small_02_2k.hdr")
+    iblOutputDir = file("src/main/assets/envs")
+    materialInputDir = file("src/main/materials")
+    materialOutputDir = file("src/main/assets/materials")
+}
+
+clean.doFirst {
+    delete "src/main/assets"
+}
+
+android {
+    compileSdkVersion versions.compileSdk
+    defaultConfig {
+        applicationId "com.google.android.filament.pagecurl"
+        minSdkVersion versions.minSdk
+        targetSdkVersion versions.targetSdk
+    }
+
+    // We use the .filamat extension for materials compiled with matc
+    // Telling aapt to not compress them allows to load them efficiently
+    aaptOptions {
+        noCompress 'filamat'
+    }
+}
+
+dependencies {
+    implementation project(':filament-android')
+    implementation 'androidx.annotation:annotation:1.1.0'
+}

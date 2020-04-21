@@ -45,6 +45,14 @@ public:
 
     void terminate() noexcept;
 
+    size_t getComponentCount() const noexcept {
+        return mManager.getComponentCount();
+    }
+
+    utils::Entity const* getEntities() const noexcept {
+        return mManager.getEntities();
+    }
+
     bool hasComponent(utils::Entity e) const noexcept {
         return mManager.hasComponent(e);
     }
@@ -71,6 +79,7 @@ public:
 
     struct SpotParams {
         float radius = 0;
+        float outerClamped = 0;
         float cosOuterSquared = 1;
         float sinInverse = std::numeric_limits<float>::infinity();
         float luminousPower = 0;

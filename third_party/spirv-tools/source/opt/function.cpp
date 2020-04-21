@@ -17,6 +17,10 @@
 #include <ostream>
 #include <sstream>
 
+#include "function.h"
+#include "ir_context.h"
+#include "source/util/bit_vector.h"
+
 namespace spvtools {
 namespace opt {
 
@@ -43,28 +47,83 @@ Function* Function::Clone(IRContext* ctx) const {
 
 void Function::ForEachInst(const std::function<void(Instruction*)>& f,
                            bool run_on_debug_line_insts) {
-  if (def_inst_) def_inst_->ForEachInst(f, run_on_debug_line_insts);
-  for (auto& param : params_) param->ForEachInst(f, run_on_debug_line_insts);
-  for (auto& bb : blocks_) bb->ForEachInst(f, run_on_debug_line_insts);
-  if (end_inst_) end_inst_->ForEachInst(f, run_on_debug_line_insts);
+  WhileEachInst(
+      [&f](Instruction* inst) {
+        f(inst);
+        return true;
+      },
+      run_on_debug_line_insts);
 }
 
 void Function::ForEachInst(const std::function<void(const Instruction*)>& f,
                            bool run_on_debug_line_insts) const {
-  if (def_inst_)
-    static_cast<const Instruction*>(def_inst_.get())
-        ->ForEachInst(f, run_on_debug_line_insts);
+  WhileEachInst(
+      [&f](const Instruction* inst) {
+        f(inst);
+        return true;
+      },
+      run_on_debug_line_insts);
+}
 
-  for (const auto& param : params_)
-    static_cast<const Instruction*>(param.get())
-        ->ForEachInst(f, run_on_debug_line_insts);
+bool Function::WhileEachInst(const std::function<bool(Instruction*)>& f,
+                             bool run_on_debug_line_insts) {
+  if (def_inst_) {
+    if (!def_inst_->WhileEachInst(f, run_on_debug_line_insts)) {
+      return false;
+    }
+  }
 
-  for (const auto& bb : blocks_)
-    static_cast<const BasicBlock*>(bb.get())->ForEachInst(
-        f, run_on_debug_line_insts);
+  for (auto& param : params_) {
+    if (!param->WhileEachInst(f, run_on_debug_line_insts)) {
+      return false;
+    }
+  }
+
+  for (auto& bb : blocks_) {
+    if (!bb->WhileEachInst(f, run_on_debug_line_insts)) {
+      return false;
+    }
+  }
+
+  if (end_inst_) return end_inst_->WhileEachInst(f, run_on_debug_line_insts);
+
+  return true;
+}
+
+bool Function::WhileEachInst(const std::function<bool(const Instruction*)>& f,
+                             bool run_on_debug_line_insts) const {
+  if (def_inst_) {
+    if (!static_cast<const Instruction*>(def_inst_.get())
+             ->WhileEachInst(f, run_on_debug_line_insts)) {
+      return false;
+    }
+  }
+
+  for (const auto& param : params_) {
+    if (!static_cast<const Instruction*>(param.get())
+             ->WhileEachInst(f, run_on_debug_line_insts)) {
+      return false;
+    }
+  }
+
+  for (const auto& bb : blocks_) {
+    if (!static_cast<const BasicBlock*>(bb.get())->WhileEachInst(
+            f, run_on_debug_line_insts)) {
+      return false;
+    }
+  }
 
   if (end_inst_)
-    static_cast<const Instruction*>(end_inst_.get())
+    return static_cast<const Instruction*>(end_inst_.get())
+        ->WhileEachInst(f, run_on_debug_line_insts);
+
+  return true;
+}
+
+void Function::ForEachParam(const std::function<void(Instruction*)>& f,
+                            bool run_on_debug_line_insts) {
+  for (auto& param : params_)
+    static_cast<Instruction*>(param.get())
         ->ForEachInst(f, run_on_debug_line_insts);
 }
 
@@ -89,9 +148,39 @@ BasicBlock* Function::InsertBasicBlockAfter(
   return nullptr;
 }
 
+BasicBlock* Function::InsertBasicBlockBefore(
+    std::unique_ptr<BasicBlock>&& new_block, BasicBlock* position) {
+  for (auto bb_iter = begin(); bb_iter != end(); ++bb_iter) {
+    if (&*bb_iter == position) {
+      new_block->SetParent(this);
+      bb_iter = bb_iter.InsertBefore(std::move(new_block));
+      return &*bb_iter;
+    }
+  }
+  assert(false && "Could not find insertion point.");
+  return nullptr;
+}
+
+bool Function::IsRecursive() const {
+  IRContext* ctx = blocks_.front()->GetLabel()->context();
+  IRContext::ProcessFunction mark_visited = [this](Function* fp) {
+    return fp == this;
+  };
+
+  // Process the call tree from all of the function called by |this|.  If it get
+  // back to |this|, then we have a recursive function.
+  std::queue<uint32_t> roots;
+  ctx->AddCalls(this, &roots);
+  return ctx->ProcessCallTreeFromRoots(mark_visited, &roots);
+}
+
 std::ostream& operator<<(std::ostream& str, const Function& func) {
   str << func.PrettyPrint();
   return str;
+}
+
+void Function::Dump() const {
+  std::cerr << "Function #" << result_id() << "\n" << *this << "\n";
 }
 
 std::string Function::PrettyPrint(uint32_t options) const {
@@ -104,6 +193,5 @@ std::string Function::PrettyPrint(uint32_t options) const {
   });
   return str.str();
 }
-
 }  // namespace opt
 }  // namespace spvtools

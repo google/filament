@@ -27,6 +27,8 @@ struct SSBO3
     float bz[1];
 };
 
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
 struct spvDescriptorSetBuffer0
 {
     device SSBO* v_16 [[id(0)]];
@@ -39,6 +41,7 @@ struct spvDescriptorSetBuffer1
     constant uint* spvBufferSizeConstants [[id(2)]];
 };
 
+static inline __attribute__((always_inline))
 uint get_size(device SSBO& v_16, constant uint& v_16BufferSize, device SSBO1* constant (&ssbos)[2], constant uint* ssbosBufferSize, device SSBO2& v_38, constant uint& v_38BufferSize, device SSBO3* (&ssbos2)[2], constant uint* ssbos2BufferSize)
 {
     uint len = uint(int((v_16BufferSize - 16) / 16));

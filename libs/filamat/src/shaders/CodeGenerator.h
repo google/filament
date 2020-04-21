@@ -65,6 +65,8 @@ public:
     utils::io::sstream& generateCommon(utils::io::sstream& out, ShaderType type) const;
     utils::io::sstream& generateCommonMaterial(utils::io::sstream& out, ShaderType type) const;
 
+    utils::io::sstream& generateFog(utils::io::sstream& out, ShaderType type) const;
+
     // generate the shader's main()
     utils::io::sstream& generateShaderMain(utils::io::sstream& out, ShaderType type) const;
     utils::io::sstream& generatePostProcessMain(utils::io::sstream& out, ShaderType type) const;
@@ -101,11 +103,7 @@ public:
     utils::io::sstream& generateMaterialProperty(utils::io::sstream& out,
             MaterialBuilder::Property property, bool isSet) const;
 
-    utils::io::sstream& generateFunction(utils::io::sstream& out,
-            const char* returnType, const char* name, const char* body) const;
-
     utils::io::sstream& generateDefine(utils::io::sstream& out, const char* name, bool value) const;
-    utils::io::sstream& generateDefine(utils::io::sstream& out, const char* name, float value) const;
     utils::io::sstream& generateDefine(utils::io::sstream& out, const char* name, uint32_t value) const;
     utils::io::sstream& generateDefine(utils::io::sstream& out, const char* name, const char* string) const;
     utils::io::sstream& generateIndexedDefine(utils::io::sstream& out, const char* name,

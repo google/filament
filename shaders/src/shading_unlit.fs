@@ -1,3 +1,11 @@
+void addEmissive(const MaterialInputs material, inout vec4 color) {
+#if defined(MATERIAL_HAS_EMISSIVE)
+    highp vec4 emissive = material.emissive;
+    highp float attenuation = mix(1.0, frameUniforms.exposure, emissive.w);
+    color.rgb += emissive.rgb * attenuation;
+#endif
+}
+
 /**
  * Evaluates unlit materials. In this lighting model, only the base color and
  * emissive properties are taken into account:
@@ -21,13 +29,20 @@ vec4 evaluateMaterial(const MaterialInputs material) {
     }
 #endif
 
-#if defined(MATERIAL_HAS_EMISSIVE)
-    color.rgb += material.emissive.rgb;
-#endif
+    addEmissive(material, color);
 
 #if defined(HAS_DIRECTIONAL_LIGHTING)
 #if defined(HAS_SHADOWING)
-    color *= 1.0 - shadow(light_shadowMap, getLightSpacePosition());
+    float visibility = 1.0;
+    if ((frameUniforms.directionalShadows & 1u) != 0u) {
+        visibility = shadow(light_shadowMap, 0u, getLightSpacePosition());
+    }
+    if ((frameUniforms.directionalShadows & 0x2u) != 0u && visibility > 0.0) {
+        if (objectUniforms.screenSpaceContactShadows != 0u) {
+            visibility *= (1.0 - screenSpaceContactShadow(frameUniforms.lightDirection));
+        }
+    }
+    color *= 1.0 - visibility;
 #else
     color = vec4(0.0);
 #endif

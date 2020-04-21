@@ -124,15 +124,21 @@ void PlatformCocoaGL::makeCurrent(Platform::SwapChain* drawSwapChain,
         // arrival of macOS 10.15 (Catalina). If we were to call these methods from the GL thread,
         // we would see EXC_BAD_INSTRUCTION.
 
+        // NOTE: "setView" requires "clearDrawable" called first when setting
+        // to the same view. Not calling "clearDrawable" results in resizing
+        // problems, most evident when using GLFW.
+
         // Create a copy of the current GL context pointer for the closure.
         NSOpenGLContext* glContext = pImpl->mGLContext;
 
         #if UTILS_HAS_THREADING
         dispatch_sync(dispatch_get_main_queue(), ^(void) {
+            [glContext clearDrawable];
             [glContext setView:nsView];
             [glContext update];
         });
         #else
+            [glContext clearDrawable];
             [glContext setView:nsView];
             [glContext update];
         #endif
@@ -147,13 +153,7 @@ bool PlatformCocoaGL::pumpEvents() noexcept {
     if (![NSThread isMainThread]) {
         return false;
     }
-    while (true) {
-        NSEvent *event = [NSApp nextEventMatchingMask:NSEventMaskAny untilDate:[NSDate distantPast] inMode:NSDefaultRunLoopMode dequeue:YES];
-        if (event == nil) {
-            break;
-        }
-        [NSApp sendEvent:event];
-    }
+    [[NSRunLoop currentRunLoop] runUntilDate:[NSDate distantPast]];
     return true;
 }
 

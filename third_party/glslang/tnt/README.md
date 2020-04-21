@@ -10,6 +10,12 @@ rsync --remove-source-files -ra glslang-master/ ./
 rm -r glslang-master.zip glslang-master
 ```
 
+The `Test` folder can be removed, as it is not needed:
+
+```
+rm -rf glslang/Test/
+```
+
 - If necessary, update the `DefaultTBuiltInResource` definition inside `libs/filamat/src/sca/builtinResource.h` to glslang's located at
 `third_party/glslang/StandAlone/ResourceLimits.cpp`
 - Compile and test `matc`

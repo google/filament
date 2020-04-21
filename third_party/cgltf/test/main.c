@@ -13,7 +13,8 @@ int main(int argc, char** argv)
 		return -1;
 	}
 
-	cgltf_options options = {0};
+	cgltf_options options;
+	memset(&options, 0, sizeof(cgltf_options));
 	cgltf_data* data = NULL;
 	cgltf_result result = cgltf_parse_file(&options, argv[1], &data);
 
@@ -28,7 +29,7 @@ int main(int argc, char** argv)
 	if (result == cgltf_result_success)
 	{
 		printf("Type: %u\n", data->file_type);
-		printf("Meshes: %lu\n", data->meshes_count);
+		printf("Meshes: %u\n", (unsigned)data->meshes_count);
 	}
 
 	cgltf_free(data);

@@ -159,6 +159,9 @@ MaterialInstance* UbershaderLoader::createMaterialInstance(MaterialKey* config, 
             getUvIndex(config->metallicRoughnessUV, config->hasMetallicRoughnessTexture));
     mi->setParameter("aoIndex", getUvIndex(config->aoUV, config->hasOcclusionTexture));
     mi->setParameter("emissiveIndex", getUvIndex(config->emissiveUV, config->hasEmissiveTexture));
+    mi->setParameter("clearCoatIndex", getUvIndex(config->clearCoatUV, config->hasClearCoatTexture));
+    mi->setParameter("clearCoatRoughnessIndex", getUvIndex(config->clearCoatRoughnessUV, config->hasClearCoatRoughnessTexture));
+    mi->setParameter("clearCoatNormalIndex", getUvIndex(config->clearCoatNormalUV, config->hasClearCoatNormalTexture));
 
     mi->setDoubleSided(config->doubleSided);
     mi->setCullingMode(config->doubleSided ? CullingMode::NONE : CullingMode::BACK);
@@ -169,6 +172,9 @@ MaterialInstance* UbershaderLoader::createMaterialInstance(MaterialKey* config, 
     mi->setParameter("normalUvMatrix", identity);
     mi->setParameter("occlusionUvMatrix", identity);
     mi->setParameter("emissiveUvMatrix", identity);
+    mi->setParameter("clearCoatUvMatrix", identity);
+    mi->setParameter("clearCoatRoughnessUvMatrix", identity);
+    mi->setParameter("clearCoatNormalUvMatrix", identity);
 
     // Some WebGL implementations emit a warning at draw call time if the shader declares a sampler
     // that has not been bound to a texture, even if the texture lookup is conditional. Therefore we
@@ -181,6 +187,9 @@ MaterialInstance* UbershaderLoader::createMaterialInstance(MaterialKey* config, 
     mi->setParameter("metallicRoughnessMap", mDummyTexture, sampler);
     mi->setParameter("occlusionMap", mDummyTexture, sampler);
     mi->setParameter("emissiveMap", mDummyTexture, sampler);
+    mi->setParameter("clearCoatMap", mDummyTexture, sampler);
+    mi->setParameter("clearCoatRoughnessMap", mDummyTexture, sampler);
+    mi->setParameter("clearCoatNormalMap", mDummyTexture, sampler);
     #endif
 
     return mi;

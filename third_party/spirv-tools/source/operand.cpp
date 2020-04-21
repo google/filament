@@ -16,8 +16,11 @@
 
 #include <assert.h>
 #include <string.h>
+
 #include <algorithm>
 
+#include "DebugInfo.h"
+#include "OpenCLDebugInfo100.h"
 #include "source/macro.h"
 #include "source/spirv_constant.h"
 #include "source/spirv_target_env.h"
@@ -28,6 +31,7 @@
 // per-item basis. https://github.com/KhronosGroup/SPIRV-Tools/issues/1195
 
 #include "operand.kinds-unified1.inc"
+#include "spirv-tools/libspirv.h"
 
 static const spv_operand_table_t kOperandTable = {
     ARRAY_SIZE(pygen_variable_OperandInfoTable),
@@ -50,6 +54,7 @@ spv_result_t spvOperandTableNameLookup(spv_target_env env,
   if (!table) return SPV_ERROR_INVALID_TABLE;
   if (!name || !pEntry) return SPV_ERROR_INVALID_POINTER;
 
+  const auto version = spvVersionForTargetEnv(env);
   for (uint64_t typeIndex = 0; typeIndex < table->count; ++typeIndex) {
     const auto& group = table->types[typeIndex];
     if (type != group.type) continue;
@@ -64,7 +69,7 @@ spv_result_t spvOperandTableNameLookup(spv_target_env env,
       // Note that the second rule assumes the extension enabling this operand
       // is indeed requested in the SPIR-V code; checking that should be
       // validator's work.
-      if ((spvVersionForTargetEnv(env) >= entry.minVersion ||
+      if (((version >= entry.minVersion && version <= entry.lastVersion) ||
            entry.numExtensions > 0u || entry.numCapabilities > 0u) &&
           nameLength == strlen(entry.name) &&
           !strncmp(entry.name, name, nameLength)) {
@@ -85,7 +90,7 @@ spv_result_t spvOperandTableValueLookup(spv_target_env env,
   if (!table) return SPV_ERROR_INVALID_TABLE;
   if (!pEntry) return SPV_ERROR_INVALID_POINTER;
 
-  spv_operand_desc_t needle = {"", value, 0, nullptr, 0, nullptr, {}, ~0u};
+  spv_operand_desc_t needle = {"", value, 0, nullptr, 0, nullptr, {}, ~0u, ~0u};
 
   auto comp = [](const spv_operand_desc_t& lhs, const spv_operand_desc_t& rhs) {
     return lhs.value < rhs.value;
@@ -108,6 +113,7 @@ spv_result_t spvOperandTableValueLookup(spv_target_env env,
     // requirements.
     // Assumes the underlying table is already sorted ascendingly according to
     // opcode value.
+    const auto version = spvVersionForTargetEnv(env);
     for (auto it = std::lower_bound(beg, end, needle, comp);
          it != end && it->value == value; ++it) {
       // We consider the current operand as available as long as
@@ -119,7 +125,7 @@ spv_result_t spvOperandTableValueLookup(spv_target_env env,
       // Note that the second rule assumes the extension enabling this operand
       // is indeed requested in the SPIR-V code; checking that should be
       // validator's work.
-      if (spvVersionForTargetEnv(env) >= it->minVersion ||
+      if ((version >= it->minVersion && version <= it->lastVersion) ||
           it->numExtensions > 0u || it->numCapabilities > 0u) {
         *pEntry = it;
         return SPV_SUCCESS;
@@ -225,6 +231,18 @@ const char* spvOperandTypeStr(spv_operand_type_t type) {
       return "debug type qualifier";
     case SPV_OPERAND_TYPE_DEBUG_OPERATION:
       return "debug operation";
+    case SPV_OPERAND_TYPE_CLDEBUG100_DEBUG_INFO_FLAGS:
+      return "OpenCL.DebugInfo.100 debug info flags";
+    case SPV_OPERAND_TYPE_CLDEBUG100_DEBUG_BASE_TYPE_ATTRIBUTE_ENCODING:
+      return "OpenCL.DebugInfo.100 debug base type encoding";
+    case SPV_OPERAND_TYPE_CLDEBUG100_DEBUG_COMPOSITE_TYPE:
+      return "OpenCL.DebugInfo.100 debug composite type";
+    case SPV_OPERAND_TYPE_CLDEBUG100_DEBUG_TYPE_QUALIFIER:
+      return "OpenCL.DebugInfo.100 debug type qualifier";
+    case SPV_OPERAND_TYPE_CLDEBUG100_DEBUG_OPERATION:
+      return "OpenCL.DebugInfo.100 debug operation";
+    case SPV_OPERAND_TYPE_CLDEBUG100_DEBUG_IMPORTED_ENTITY:
+      return "OpenCL.DebugInfo.100 debug imported entity";
 
     // The next values are for values returned from an instruction, not actually
     // an operand.  So the specific strings don't matter.  But let's add them
@@ -309,6 +327,11 @@ bool spvOperandIsConcrete(spv_operand_type_t type) {
     case SPV_OPERAND_TYPE_DEBUG_COMPOSITE_TYPE:
     case SPV_OPERAND_TYPE_DEBUG_TYPE_QUALIFIER:
     case SPV_OPERAND_TYPE_DEBUG_OPERATION:
+    case SPV_OPERAND_TYPE_CLDEBUG100_DEBUG_BASE_TYPE_ATTRIBUTE_ENCODING:
+    case SPV_OPERAND_TYPE_CLDEBUG100_DEBUG_COMPOSITE_TYPE:
+    case SPV_OPERAND_TYPE_CLDEBUG100_DEBUG_TYPE_QUALIFIER:
+    case SPV_OPERAND_TYPE_CLDEBUG100_DEBUG_OPERATION:
+    case SPV_OPERAND_TYPE_CLDEBUG100_DEBUG_IMPORTED_ENTITY:
       return true;
     default:
       break;
@@ -325,6 +348,7 @@ bool spvOperandIsConcreteMask(spv_operand_type_t type) {
     case SPV_OPERAND_TYPE_FUNCTION_CONTROL:
     case SPV_OPERAND_TYPE_MEMORY_ACCESS:
     case SPV_OPERAND_TYPE_DEBUG_INFO_FLAGS:
+    case SPV_OPERAND_TYPE_CLDEBUG100_DEBUG_INFO_FLAGS:
       return true;
     default:
       break;
@@ -411,6 +435,21 @@ bool spvIsIdType(spv_operand_type_t type) {
   }
 }
 
+bool spvIsInIdType(spv_operand_type_t type) {
+  if (!spvIsIdType(type)) {
+    // If it is not an ID it cannot be an input ID.
+    return false;
+  }
+  switch (type) {
+    // Blacklist non-input IDs.
+    case SPV_OPERAND_TYPE_TYPE_ID:
+    case SPV_OPERAND_TYPE_RESULT_ID:
+      return false;
+    default:
+      return true;
+  }
+}
+
 std::function<bool(unsigned)> spvOperandCanBeForwardDeclaredFunction(
     SpvOp opcode) {
   std::function<bool(unsigned index)> out;
@@ -466,9 +505,46 @@ std::function<bool(unsigned)> spvOperandCanBeForwardDeclaredFunction(
     case SpvOpTypeForwardPointer:
       out = [](unsigned index) { return index == 0; };
       break;
+    case SpvOpTypeArray:
+      out = [](unsigned index) { return index == 1; };
+      break;
     default:
       out = [](unsigned) { return false; };
       break;
+  }
+  return out;
+}
+
+std::function<bool(unsigned)> spvDbgInfoExtOperandCanBeForwardDeclaredFunction(
+    spv_ext_inst_type_t ext_type, uint32_t key) {
+  // TODO(https://gitlab.khronos.org/spirv/SPIR-V/issues/532): Forward
+  // references for debug info instructions are still in discussion. We must
+  // update the following lines of code when we conclude the spec.
+  std::function<bool(unsigned index)> out;
+  if (ext_type == SPV_EXT_INST_TYPE_OPENCL_DEBUGINFO_100) {
+    switch (OpenCLDebugInfo100Instructions(key)) {
+      case OpenCLDebugInfo100DebugFunction:
+        out = [](unsigned index) { return index == 13; };
+        break;
+      case OpenCLDebugInfo100DebugTypeComposite:
+        out = [](unsigned index) { return index >= 13; };
+        break;
+      default:
+        out = [](unsigned) { return false; };
+        break;
+    }
+  } else {
+    switch (DebugInfoInstructions(key)) {
+      case DebugInfoDebugFunction:
+        out = [](unsigned index) { return index == 13; };
+        break;
+      case DebugInfoDebugTypeComposite:
+        out = [](unsigned index) { return index >= 12; };
+        break;
+      default:
+        out = [](unsigned) { return false; };
+        break;
+    }
   }
   return out;
 }

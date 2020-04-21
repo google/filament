@@ -5,15 +5,18 @@ layout(location = 0) out vec4 FragColor;
 
 void main()
 {
-    for (;;)
+    switch (0u)
     {
-        if (vIndex != 1)
+        default:
         {
-            FragColor = vec4(1.0);
+            if (vIndex != 1)
+            {
+                FragColor = vec4(1.0);
+                break;
+            }
+            FragColor = vec4(10.0);
             break;
         }
-        FragColor = vec4(10.0);
-        break;
     }
 }
 

@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Filament</title>
@@ -26,7 +26,7 @@
       <pubDate>Tue, 30 Oct 2018 13:13:14 -0700</pubDate>
       
       <guid>https://google.github.io/filament/webgl/</guid>
-      <description> tutorials  Triangle Tutorial Redball Tutorial Suzanne Tutorial  demos  parquet suzanne helmet knotess  other documentation  JavaScript API reference WebGL Meetup Slides (2018)  </description>
+      <description>tutorials  Triangle Tutorial Redball Tutorial Suzanne Tutorial  demos  parquet suzanne helmet knotess  other documentation  JavaScript API reference WebGL Meetup Slides (2018)  </description>
     </item>
     
   </channel>

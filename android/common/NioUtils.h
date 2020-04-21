@@ -65,4 +65,12 @@ private:
     jobject mBuffer = nullptr;
     jarray mBaseArray = nullptr;
     bool mDoCommit = false;
+
+    struct {
+        jclass jniClass;
+        jmethodID getBasePointer;
+        jmethodID getBaseArray;
+        jmethodID getBaseArrayOffset;
+        jmethodID getBufferType;
+    } mNioUtils;
 };

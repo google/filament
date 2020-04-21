@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2019 Arm Limited
+ * Copyright 2018-2020 Arm Limited
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -60,6 +60,7 @@ static bool is_valid_spirv_version(uint32_t version)
 	case 0x10200: // SPIR-V 1.2
 	case 0x10300: // SPIR-V 1.3
 	case 0x10400: // SPIR-V 1.4
+	case 0x10500: // SPIR-V 1.5
 		return true;
 
 	default:
@@ -85,6 +86,11 @@ void Parser::parse()
 		SPIRV_CROSS_THROW("Invalid SPIRV format.");
 
 	uint32_t bound = s[3];
+
+	const uint32_t MaximumNumberOfIDs = 0x3fffff;
+	if (bound > MaximumNumberOfIDs)
+		SPIRV_CROSS_THROW("ID bound exceeds limit of 0x3fffff.\n");
+
 	ir.set_id_bounds(bound);
 
 	uint32_t offset = 5;
@@ -278,7 +284,9 @@ void Parser::parse(const Instruction &instruction)
 
 		// Strings need nul-terminator and consume the whole word.
 		uint32_t strlen_words = uint32_t((e.name.size() + 1 + 3) >> 2);
-		e.interface_variables.insert(end(e.interface_variables), ops + strlen_words + 2, ops + instruction.length);
+
+		for (uint32_t i = strlen_words + 2; i < instruction.length; i++)
+			e.interface_variables.push_back(ops[i]);
 
 		// Set the name of the entry point in case OpName is not provided later.
 		ir.set_name(ops[1], e.name);
@@ -658,7 +666,7 @@ void Parser::parse(const Instruction &instruction)
 				}
 			}
 
-			if (type.type_alias == 0)
+			if (type.type_alias == TypeID(0))
 				global_struct_cache.push_back(id);
 		}
 		break;
@@ -700,15 +708,6 @@ void Parser::parse(const Instruction &instruction)
 		}
 
 		set<SPIRVariable>(id, type, storage, initializer);
-
-		// hlsl based shaders don't have those decorations. force them and then reset when reading/writing images
-		auto &ttype = get<SPIRType>(type);
-		if (ttype.basetype == SPIRType::BaseType::Image)
-		{
-			ir.set_decoration(id, DecorationNonWritable);
-			ir.set_decoration(id, DecorationNonReadable);
-		}
-
 		break;
 	}
 
@@ -1008,12 +1007,12 @@ void Parser::parse(const Instruction &instruction)
 		ir.block_meta[current_block->self] |= ParsedIR::BLOCK_META_LOOP_HEADER_BIT;
 		ir.block_meta[current_block->merge_block] |= ParsedIR::BLOCK_META_LOOP_MERGE_BIT;
 
-		ir.continue_block_to_loop_header[current_block->continue_block] = current_block->self;
+		ir.continue_block_to_loop_header[current_block->continue_block] = BlockID(current_block->self);
 
 		// Don't add loop headers to continue blocks,
 		// which would make it impossible branch into the loop header since
 		// they are treated as continues.
-		if (current_block->continue_block != current_block->self)
+		if (current_block->continue_block != BlockID(current_block->self))
 			ir.block_meta[current_block->continue_block] |= ParsedIR::BLOCK_META_CONTINUE_BIT;
 
 		if (length >= 3)

@@ -342,9 +342,9 @@ void generateMipmaps(const LinearImage& source, Filter filter, LinearImage* resu
     uint32_t width = source.getWidth();
     uint32_t height = source.getHeight();
     for (uint32_t n = 0; n < mips; ++n) {
-       width = std::max(width >> 1u, 1u);
-       height = std::max(height >> 1u, 1u);
-       result[n] = resampleImage(source, width, height, filter);
+        width = std::max(width >> 1u, 1u);
+        height = std::max(height >> 1u, 1u);
+        result[n] = resampleImage(source, width, height, filter);
     }
 }
 

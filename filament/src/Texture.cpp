@@ -47,6 +47,10 @@ struct Texture::BuilderDetails {
     Sampler mTarget = Sampler::SAMPLER_2D;
     InternalFormat mFormat = InternalFormat::RGBA8;
     Usage mUsage = Usage::DEFAULT;
+    bool mTextureIsSwizzled = false;
+    std::array<Swizzle, 4> mSwizzle = {
+           Swizzle::CHANNEL_0, Swizzle::CHANNEL_1,
+           Swizzle::CHANNEL_2, Swizzle::CHANNEL_3 };
 };
 
 using BuilderType = Texture;
@@ -99,12 +103,28 @@ Texture::Builder& Texture::Builder::import(intptr_t id) noexcept {
     return *this;
 }
 
+Texture::Builder& Texture::Builder::swizzle(Swizzle r, Swizzle g, Swizzle b, Swizzle a) noexcept {
+    mImpl->mTextureIsSwizzled = true;
+    mImpl->mSwizzle = { r, g, b, a };
+    return *this;
+}
+
 Texture* Texture::Builder::build(Engine& engine) {
-    FEngine::assertValid(engine, __PRETTY_FUNCTION__);
     if (!ASSERT_POSTCONDITION_NON_FATAL(Texture::isTextureFormatSupported(engine, mImpl->mFormat),
             "Texture format %u not supported on this platform", mImpl->mFormat)) {
         return nullptr;
     }
+
+    const bool sampleable = bool(mImpl->mUsage & TextureUsage::SAMPLEABLE);
+    const bool swizzled = mImpl->mTextureIsSwizzled;
+    const bool imported = mImpl->mImportedId;
+
+    ASSERT_POSTCONDITION_NON_FATAL((swizzled && sampleable) || !swizzled,
+            "Swizzled texture must be SAMPLEABLE");
+
+    ASSERT_POSTCONDITION_NON_FATAL((imported && sampleable) || !imported,
+            "Imported texture must be SAMPLEABLE");
+
     return upcast(engine).createTexture(*this);
 }
 
@@ -123,10 +143,16 @@ FTexture::FTexture(FEngine& engine, const Builder& builder) {
 
     FEngine::DriverApi& driver = engine.getDriverApi();
     if (UTILS_LIKELY(builder->mImportedId == 0)) {
-        mHandle = driver.createTexture(
-                mTarget, mLevelCount, mFormat, mSampleCount, mWidth, mHeight, mDepth, mUsage);
+        if (UTILS_LIKELY(builder->mTextureIsSwizzled)) {
+            mHandle = driver.createTexture(
+                    mTarget, mLevelCount, mFormat, mSampleCount, mWidth, mHeight, mDepth, mUsage);
+        } else {
+            mHandle = driver.createTextureSwizzled(
+                    mTarget, mLevelCount, mFormat, mSampleCount, mWidth, mHeight, mDepth, mUsage,
+                    builder->mSwizzle[0], builder->mSwizzle[1], builder->mSwizzle[2],
+                    builder->mSwizzle[3]);
+        }
     } else {
-        assert((bool)(mUsage & TextureUsage::SAMPLEABLE));
         mHandle = driver.importTexture(builder->mImportedId,
                 mTarget, mLevelCount, mFormat, mSampleCount, mWidth, mHeight, mDepth, mUsage);
     }
@@ -209,7 +235,7 @@ void FTexture::generateMipmaps(FEngine& engine) const noexcept {
         return;
     }
 
-    if (mLevelCount == 1 || (mWidth == 1 && mHeight == 1)) {
+    if (mLevelCount < 2 || (mWidth == 1 && mHeight == 1)) {
         return;
     }
 

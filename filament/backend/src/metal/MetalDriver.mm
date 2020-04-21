@@ -18,11 +18,13 @@
 #include "CommandStreamDispatcher.h"
 #include "metal/MetalDriver.h"
 
+#include "MetalBlitter.h"
 #include "MetalContext.h"
 #include "MetalDriverFactory.h"
 #include "MetalEnums.h"
 #include "MetalHandles.h"
 #include "MetalState.h"
+#include "MetalTimerQuery.h"
 
 #include <CoreVideo/CVMetalTexture.h>
 #include <CoreVideo/CVPixelBuffer.h>
@@ -60,6 +62,12 @@ MetalDriver::MetalDriver(backend::MetalPlatform* platform) noexcept
     mContext->bufferPool = new MetalBufferPool(*mContext);
     mContext->blitter = new MetalBlitter(*mContext);
 
+    if (@available(macOS 10.14, iOS 12, *)) {
+        mContext->timerQueryImpl = new TimerQueryFence(*mContext);
+    } else {
+        mContext->timerQueryImpl = new TimerQueryNoop();
+    }
+
     CVReturn success = CVMetalTextureCacheCreate(kCFAllocatorDefault, nullptr, mContext->device,
             nullptr, &mContext->textureCache);
     ASSERT_POSTCONDITION(success == kCVReturnSuccess, "Could not create Metal texture cache.");
@@ -76,6 +84,7 @@ MetalDriver::~MetalDriver() noexcept {
     CFRelease(mContext->textureCache);
     delete mContext->bufferPool;
     delete mContext->blitter;
+    delete mContext->timerQueryImpl;
     delete mContext;
 }
 
@@ -87,6 +96,10 @@ void MetalDriver::debugCommand(const char *methodName) {
 #endif
 }
 #endif
+
+
+void MetalDriver::tick(int) {
+}
 
 void MetalDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId,
         backend::FrameFinishedCallback callback, void* user) {
@@ -102,11 +115,10 @@ void MetalDriver::execute(std::function<void(void)> fn) noexcept {
 }
 
 void MetalDriver::setPresentationTime(int64_t monotonic_clock_ns) {
-
 }
 
 void MetalDriver::endFrame(uint32_t frameId) {
-    // If we haven't commited the command buffer (if the frame was canceled), do it now. There may
+    // If we haven't committed the command buffer (if the frame was canceled), do it now. There may
     // be commands in it (like fence signaling) that need to execute.
     submitPendingCommands(mContext);
 
@@ -156,6 +168,15 @@ void MetalDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint8
             width, height, depth, usage);
 }
 
+void MetalDriver::createTextureSwizzledR(Handle<HwTexture> th, SamplerType target, uint8_t levels,
+        TextureFormat format, uint8_t samples, uint32_t width, uint32_t height,
+        uint32_t depth, TextureUsage usage,
+        TextureSwizzle r, TextureSwizzle g, TextureSwizzle b, TextureSwizzle a) {
+    construct_handle<MetalTexture>(mHandleMap, th, *mContext, target, levels, format, samples,
+            width, height, depth, usage);
+    // TODO: implement texture swizzle
+}
+
 void MetalDriver::importTextureR(Handle<HwTexture> th, intptr_t id,
         SamplerType target, uint8_t levels,
         TextureFormat format, uint8_t samples, uint32_t width, uint32_t height,
@@ -185,12 +206,12 @@ void MetalDriver::createDefaultRenderTargetR(Handle<HwRenderTarget> rth, int dum
 
 void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         TargetBufferFlags targetBufferFlags, uint32_t width, uint32_t height,
-        uint8_t samples, TargetBufferInfo color,
+        uint8_t samples, backend::MRT color,
         TargetBufferInfo depth, TargetBufferInfo stencil) {
 
     auto getColorTexture = [&]() -> id<MTLTexture> {
-        if (color.handle) {
-            auto colorTexture = handle_cast<MetalTexture>(mHandleMap, color.handle);
+        if (color[0].handle) {
+            auto colorTexture = handle_cast<MetalTexture>(mHandleMap, color[0].handle);
             ASSERT_PRECONDITION(colorTexture->texture,
                     "Color texture passed to render target has no texture allocation");
             return colorTexture->texture;
@@ -212,8 +233,16 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         return nil;
     };
 
+    MetalRenderTarget::TargetInfo colorInfo;
+    colorInfo.level = color[0].level;
+    colorInfo.layer = color[0].layer;
+
+    MetalRenderTarget::TargetInfo depthInfo;
+    depthInfo.level = depth.level;
+    depthInfo.layer = depth.layer;
+
     construct_handle<MetalRenderTarget>(mHandleMap, rth, mContext, width, height, samples,
-            getColorTexture(), getDepthTexture(), color.level, depth.level);
+            getColorTexture(), colorInfo, getDepthTexture(), depthInfo);
 
     ASSERT_POSTCONDITION(
             !stencil.handle &&
@@ -222,7 +251,13 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
 }
 
 void MetalDriver::createFenceR(Handle<HwFence> fh, int dummy) {
-    construct_handle<MetalFence>(mHandleMap, fh, *mContext);
+    auto* fence = handle_cast<MetalFence>(mHandleMap, fh);
+    fence->encode();
+}
+
+void MetalDriver::createSyncR(Handle<HwSync> sh, int) {
+    auto* fence = handle_cast<MetalFence>(mHandleMap, sh);
+    fence->encode();
 }
 
 void MetalDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
@@ -237,7 +272,10 @@ void MetalDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch,
 
 void MetalDriver::createStreamFromTextureIdR(Handle<HwStream>, intptr_t externalTextureId,
         uint32_t width, uint32_t height) {
+}
 
+void MetalDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {
+    // nothing to do, timer query was constructed in createTimerQueryS
 }
 
 Handle<HwVertexBuffer> MetalDriver::createVertexBufferS() noexcept {
@@ -249,6 +287,10 @@ Handle<HwIndexBuffer> MetalDriver::createIndexBufferS() noexcept {
 }
 
 Handle<HwTexture> MetalDriver::createTextureS() noexcept {
+    return alloc_handle<MetalTexture, HwTexture>();
+}
+
+Handle<HwTexture> MetalDriver::createTextureSwizzledS() noexcept {
     return alloc_handle<MetalTexture, HwTexture>();
 }
 
@@ -281,7 +323,15 @@ Handle<HwRenderTarget> MetalDriver::createRenderTargetS() noexcept {
 }
 
 Handle<HwFence> MetalDriver::createFenceS() noexcept {
-    return alloc_handle<MetalFence, HwFence>();
+    // The handle must be constructed here, as a synchronous call to wait might happen before
+    // createFenceR is executed.
+    return alloc_and_construct_handle<MetalFence, HwFence>(*mContext);
+}
+
+Handle<HwSync> MetalDriver::createSyncS() noexcept {
+    // The handle must be constructed here, as a synchronous call to getSyncStatus might happen
+    // before createSyncR is executed.
+    return alloc_and_construct_handle<MetalFence, HwSync>(*mContext);
 }
 
 Handle<HwSwapChain> MetalDriver::createSwapChainS() noexcept {
@@ -294,6 +344,12 @@ Handle<HwSwapChain> MetalDriver::createSwapChainHeadlessS() noexcept {
 
 Handle<HwStream> MetalDriver::createStreamFromTextureIdS() noexcept {
     return {};
+}
+
+Handle<HwTimerQuery> MetalDriver::createTimerQueryS() noexcept {
+    // The handle must be constructed here, as a synchronous call to getTimerQueryValue might happen
+    // before createTimerQueryR is executed.
+    return alloc_and_construct_handle<MetalTimerQuery, HwTimerQuery>();
 }
 
 void MetalDriver::destroyVertexBuffer(Handle<HwVertexBuffer> vbh) {
@@ -382,6 +438,19 @@ void MetalDriver::destroyStream(Handle<HwStream> sh) {
     // no-op
 }
 
+void MetalDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
+    if (tqh) {
+        destruct_handle<MetalTimerQuery>(mHandleMap, tqh);
+    }
+}
+
+void MetalDriver::destroySync(Handle<HwSync> sh) {
+    if (sh) {
+        destruct_handle<MetalFence>(mHandleMap, sh);
+    }
+}
+
+
 void MetalDriver::terminate() {
     // Wait for all frames to finish by submitting and waiting on a dummy command buffer.
     // This must be done before calling bufferPool->reset() to ensure no buffers are in flight.
@@ -392,7 +461,7 @@ void MetalDriver::terminate() {
     mContext->bufferPool->reset();
     mContext->commandQueue = nil;
 
-    MetalExternalImage::shutdown();
+    MetalExternalImage::shutdown(*mContext);
     mContext->blitter->shutdown();
 }
 
@@ -560,7 +629,22 @@ void MetalDriver::setExternalImagePlane(Handle<HwTexture> th, void* image, size_
 }
 
 void MetalDriver::setExternalStream(Handle<HwTexture> th, Handle<HwStream> sh) {
+}
 
+bool MetalDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapsedTime) {
+    auto* tq = handle_cast<MetalTimerQuery>(mHandleMap, tqh);
+    return mContext->timerQueryImpl->getQueryResult(tq, elapsedTime);
+}
+
+SyncStatus MetalDriver::getSyncStatus(Handle<HwSync> sh) {
+    auto* fence = handle_cast<MetalFence>(mHandleMap, sh);
+    FenceStatus status = fence->wait(0);
+    if (status == FenceStatus::TIMEOUT_EXPIRED) {
+        return SyncStatus::NOT_SIGNALED;
+    } else if (status == FenceStatus::CONDITION_SATISFIED) {
+        return SyncStatus::SIGNALED;
+    }
+    return SyncStatus::ERROR;
 }
 
 void MetalDriver::generateMipmaps(Handle<HwTexture> th) {
@@ -611,11 +695,9 @@ void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     const auto& colorAttachment = descriptor.colorAttachments[0];
     colorAttachment.texture = renderTarget->getColor();
     colorAttachment.resolveTexture = discardColor ? nil : renderTarget->getColorResolve();
-    colorAttachment.level = renderTarget->getColorLevel();
+    colorAttachment.level = renderTarget->getColorInfo().level;
+    colorAttachment.slice = renderTarget->getColorInfo().layer;
     mContext->currentSurfacePixelFormat = colorAttachment.texture.pixelFormat;
-
-    // Metal clears the entire attachment without respect to viewport or scissor.
-    // TODO: Might need to clear the scissor area manually via a draw if we need that functionality.
 
     colorAttachment.loadAction = renderTarget->getLoadAction(params, TargetBufferFlags::COLOR);
     colorAttachment.storeAction = renderTarget->getStoreAction(params, TargetBufferFlags::COLOR);
@@ -630,7 +712,8 @@ void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     depthAttachment.loadAction = renderTarget->getLoadAction(params, TargetBufferFlags::DEPTH);
     depthAttachment.storeAction = renderTarget->getStoreAction(params, TargetBufferFlags::DEPTH);
     depthAttachment.clearDepth = params.clearDepth;
-    depthAttachment.level = renderTarget->getDepthLevel();
+    depthAttachment.level = renderTarget->getDepthInfo().level;
+    depthAttachment.slice = renderTarget->getDepthInfo().layer;
     mContext->currentDepthPixelFormat = descriptor.depthAttachment.texture.pixelFormat;
 
     mContext->currentRenderPassEncoder =
@@ -668,12 +751,6 @@ void MetalDriver::endRenderPass(int dummy) {
     // Command encoders are one time use. Set it to nil to release the encoder and ensure we don't
     // accidentally use it again.
     mContext->currentRenderPassEncoder = nil;
-}
-
-void MetalDriver::discardSubRenderTargetBuffers(Handle<HwRenderTarget> rth,
-        TargetBufferFlags targetBufferFlags, uint32_t left, uint32_t bottom, uint32_t width,
-        uint32_t height) {
-
 }
 
 void MetalDriver::setRenderPrimitiveBuffer(Handle<HwRenderPrimitive> rph,
@@ -760,7 +837,7 @@ void MetalDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y,
 
     auto srcTarget = handle_cast<MetalRenderTarget>(mHandleMap, src);
     id<MTLTexture> srcTexture = srcTarget->getColor();
-    size_t miplevel = srcTarget->getColorLevel();
+    size_t miplevel = srcTarget->getColorInfo().level;
 
     auto chooseMetalPixelFormat = [] (PixelDataFormat format, PixelDataType type) {
         // TODO: Add support for UINT and INT
@@ -865,8 +942,8 @@ void MetalDriver::blit(TargetBufferFlags buffers,
             dstTexture.height - (NSUInteger) dstRect.bottom - dstRect.height,
             dstRect.width, dstRect.height);
 
-    const uint8_t srcLevel = srcTarget->getColorLevel();
-    const uint8_t dstLevel = dstTarget->getColorLevel();
+    const uint8_t srcLevel = srcTarget->getColorInfo().level;
+    const uint8_t dstLevel = dstTarget->getColorInfo().level;
 
     auto isBlitableTextureType = [](MTLTextureType t) {
         return t == MTLTextureType2D || t == MTLTextureType2DMultisample;
@@ -1038,6 +1115,20 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
                                                     indexType:getIndexType(indexBuffer->elementSize)
                                                   indexBuffer:metalIndexBuffer
                                             indexBufferOffset:primitive->offset];
+}
+
+void MetalDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {
+    ASSERT_PRECONDITION(!isInRenderPass(mContext),
+            "beginTimerQuery must be called outside of a render pass.");
+    auto* tq = handle_cast<MetalTimerQuery>(mHandleMap, tqh);
+    mContext->timerQueryImpl->beginTimeElapsedQuery(tq);
+}
+
+void MetalDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
+    ASSERT_PRECONDITION(!isInRenderPass(mContext),
+            "endTimerQuery must be called outside of a render pass.");
+    auto* tq = handle_cast<MetalTimerQuery>(mHandleMap, tqh);
+    mContext->timerQueryImpl->endTimeElapsedQuery(tq);
 }
 
 void MetalDriver::enumerateSamplerGroups(

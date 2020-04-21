@@ -28,8 +28,11 @@ struct PassNode;
 struct VirtualResource {
     VirtualResource() noexcept = default;
     VirtualResource(VirtualResource const&) = default;
-    virtual void create(FrameGraph& fg) noexcept = 0;
-    virtual void destroy(FrameGraph& fg) noexcept = 0;
+    virtual void resolve(FrameGraph& fg) noexcept = 0;
+    virtual void preExecuteDevirtualize(FrameGraph& fg) noexcept = 0;
+    virtual void preExecuteDestroy(FrameGraph& fg) noexcept = 0;
+    virtual void postExecuteDestroy(FrameGraph& fg) noexcept = 0;
+    virtual void postExecuteDevirtualize(FrameGraph& fg) noexcept = 0;
     virtual ~VirtualResource();
 
     // computed during compile()

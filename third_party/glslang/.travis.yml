@@ -99,7 +99,6 @@ after_success:
       zip ${TARBALL}
         bin/glslangValidator
         include/glslang/*
-        include/SPIRV/*
         lib/libglslang${SUFFIX}.a
         lib/libHLSL${SUFFIX}.a
         lib/libOGLCompiler${SUFFIX}.a

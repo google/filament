@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.10)
 project(websamples)
 
+if (FILAMENT_SKIP_SAMPLES)
+    return()
+endif()
+
 set(SERVER_DIR ${PROJECT_BINARY_DIR})
 set(ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../..)
 
@@ -143,9 +147,10 @@ function(add_envmap SOURCE TARGET)
     add_custom_command(OUTPUT ${target_skybox} ${target_skybox_tiny} ${target_envmap}
 
         # Create a low-resolution skybox.
-        COMMAND cmgen -x ${TARGET}_skybox_tiny ${CMGEN_ARGS_TINY} ${source_envmap}
+        COMMAND cmgen -x ${TARGET} ${CMGEN_ARGS_TINY} ${source_envmap}
+        COMMAND mv ${target_skybox} ${target_skybox_tiny}
 
-        # Finally, create KTX files for the uncompressed envmap.
+        # Create KTX files for the full-size envmap.
         COMMAND cmgen -x ${TARGET} ${CMGEN_ARGS} ${source_envmap}
 
         MAIN_DEPENDENCY ${source_envmap}
@@ -190,8 +195,11 @@ set(HTML_FILES
     suzanne.html
     triangle.html)
 
+set(ASSET_FILES
+    assets/favicon.png)
+
 set(DEMO_ASSETS)
-foreach (NAME ${HTML_FILES})
+foreach (NAME ${HTML_FILES} ${ASSET_FILES})
     add_custom_command(
         OUTPUT ${SERVER_DIR}/${NAME}
         COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/${NAME} ${SERVER_DIR}

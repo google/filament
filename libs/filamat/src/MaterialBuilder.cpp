@@ -210,12 +210,12 @@ MaterialBuilder& MaterialBuilder::materialDomain(MaterialDomain materialDomain) 
     return *this;
 }
 
-MaterialBuilder& MaterialBuilder::materialRefraction(RefractionMode refraction) noexcept {
+MaterialBuilder& MaterialBuilder::refractionMode(RefractionMode refraction) noexcept {
     mRefractionMode = refraction;
     return *this;
 }
 
-MaterialBuilder& MaterialBuilder::materialRefractionType(RefractionType refractionType) noexcept {
+MaterialBuilder& MaterialBuilder::refractionType(RefractionType refractionType) noexcept {
     mRefractionType = refractionType;
     return *this;
 }
@@ -303,7 +303,7 @@ MaterialBuilder& MaterialBuilder::multiBounceAmbientOcclusion(bool multiBounceAO
     return *this;
 }
 
-MaterialBuilder& MaterialBuilder::specularAmbientOcclusion(bool specularAO) noexcept {
+MaterialBuilder& MaterialBuilder::specularAmbientOcclusion(SpecularAmbientOcclusion specularAO) noexcept {
     mSpecularAO = specularAO;
     mSpecularAOSet = true;
     return *this;
@@ -542,10 +542,12 @@ bool MaterialBuilder::generateShaders(const std::vector<Variant>& variants, Chun
     std::vector<TextEntry> glslEntries;
     std::vector<SpirvEntry> spirvEntries;
     std::vector<TextEntry> metalEntries;
-    LineDictionary glslDictionary;
+
+    // Dictionary used to compress text-based shading languages (GLSL and MSL).
+    LineDictionary textDictionary;
+
 #ifndef FILAMAT_LITE
     BlobDictionary spirvDictionary;
-    LineDictionary metalDictionary;
 #endif
     std::vector<uint32_t> spirv;
     std::string msl;
@@ -614,7 +616,7 @@ bool MaterialBuilder::generateShaders(const std::vector<Variant>& variants, Chun
 
                 glslEntry.stage = v.stage;
                 glslEntry.shader = shader;
-                glslDictionary.addText(glslEntry.shader);
+                textDictionary.addText(glslEntry.shader);
                 glslEntries.push_back(glslEntry);
             }
 
@@ -633,17 +635,19 @@ bool MaterialBuilder::generateShaders(const std::vector<Variant>& variants, Chun
                 metalEntry.shader = msl;
                 spirv.clear();
                 msl.clear();
-                metalDictionary.addText(metalEntry.shader);
+                textDictionary.addText(metalEntry.shader);
                 metalEntries.push_back(metalEntry);
             }
 #endif
         }
     }
 
-    // Emit GLSL chunks (TextDictionaryReader and MaterialTextChunk).
+    // Emit dictionary chunk (TextDictionaryReader and DictionaryTextChunk)
+    const auto& dictionaryChunk = container.addChild<filamat::DictionaryTextChunk>(
+            std::move(textDictionary), ChunkType::DictionaryText);
+
+    // Emit GLSL chunk (MaterialTextChunk).
     if (!glslEntries.empty()) {
-        const auto& dictionaryChunk = container.addChild<filamat::DictionaryTextChunk>(
-                std::move(glslDictionary), ChunkType::DictionaryGlsl);
         container.addChild<MaterialTextChunk>(std::move(glslEntries),
                 dictionaryChunk.getDictionary(), ChunkType::MaterialGlsl);
     }
@@ -656,10 +660,8 @@ bool MaterialBuilder::generateShaders(const std::vector<Variant>& variants, Chun
         container.addChild<MaterialSpirvChunk>(std::move(spirvEntries));
     }
 
-    // Emit Metal chunks (MetalDictionaryReader and MaterialMetalChunk).
+    // Emit Metal chunk (MaterialTextChunk).
     if (!metalEntries.empty()) {
-        const auto& dictionaryChunk = container.addChild<filamat::DictionaryTextChunk>(
-                std::move(metalDictionary), ChunkType::DictionaryMetal);
         container.addChild<MaterialTextChunk>(std::move(metalEntries),
                 dictionaryChunk.getDictionary(), ChunkType::MaterialMetal);
     }

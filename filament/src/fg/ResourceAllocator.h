@@ -41,7 +41,7 @@ public:
             uint32_t width,
             uint32_t height,
             uint8_t samples,
-            backend::TargetBufferInfo color,
+            backend::MRT color,
             backend::TargetBufferInfo depth,
             backend::TargetBufferInfo stencil) noexcept = 0;
 
@@ -71,7 +71,7 @@ public:
             uint32_t width,
             uint32_t height,
             uint8_t samples,
-            backend::TargetBufferInfo color,
+            backend::MRT color,
             backend::TargetBufferInfo depth,
             backend::TargetBufferInfo stencil) noexcept override;
 
@@ -89,7 +89,7 @@ public:
 private:
     // TODO: these should be settings of the engine
     static constexpr size_t CACHE_CAPACITY = 64u << 20u;   // 64 MiB
-    static constexpr size_t CACHE_MAX_AGE  = 30u;          // 64 MiB
+    static constexpr size_t CACHE_MAX_AGE  = 30u;
 
     struct TextureKey {
         const char* name; // doesn't participate in the hash

@@ -69,10 +69,9 @@ public:
     id<MTLTexture> getMetalTextureForDraw() const noexcept;
 
     /**
-     * Free global resources. Should be called at least once per process when no further calls to
-     * set will occur.
+     * Free resources. Should be called at least once when no further calls to set will occur.
      */
-    static void shutdown() noexcept;
+    static void shutdown(MetalContext& context) noexcept;
 
 private:
 

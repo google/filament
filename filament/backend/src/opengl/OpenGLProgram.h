@@ -37,6 +37,7 @@ namespace filament {
 class OpenGLProgram : public backend::HwProgram {
 public:
 
+    OpenGLProgram() noexcept = default;
     OpenGLProgram(OpenGLDriver* gl, const backend::Program& builder) noexcept;
     ~OpenGLProgram() noexcept;
 

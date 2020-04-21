@@ -139,7 +139,8 @@ bool ReduceLoadSize::ShouldReplaceExtract(Instruction* inst) {
 
   all_elements_used =
       !def_use_mgr->WhileEachUser(op_inst, [&elements_used](Instruction* use) {
-        if (use->opcode() != SpvOpCompositeExtract) {
+        if (use->opcode() != SpvOpCompositeExtract ||
+            use->NumInOperands() == 1) {
           return false;
         }
         elements_used.insert(use->GetSingleWordInOperand(1));

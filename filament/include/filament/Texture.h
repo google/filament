@@ -79,6 +79,7 @@ public:
     using CompressedType = backend::CompressedPixelDataType;         //!< Compressed pixel data format
     using FaceOffsets = backend::FaceOffsets;                        //!< Cube map faces offsets
     using Usage = backend::TextureUsage;                             //!< Usage affects texel layout
+    using Swizzle = backend::TextureSwizzle;                         //!< Texture swizzle
 
     static bool isTextureFormatSupported(Engine& engine, InternalFormat format) noexcept;
 
@@ -126,9 +127,11 @@ public:
 
         /**
          * Specifies the depth in texels of the texture. Doesn't need to be a power-of-two.
-         * This creates a 3D textures.
+         * The depth controls the number of layers in a 2D array texture. Values greater than 1
+         * effectively create a 3D texture.
          * @param depth Depth of the texture in texels (default: 1).
          * @return This Builder, for chaining calls.
+         * @attention This Texture instance must use Sampler::SAMPLER_2D_ARRAY or it has no effect.
          */
         Builder& depth(uint32_t depth) noexcept;
 
@@ -142,9 +145,8 @@ public:
         Builder& levels(uint8_t levels) noexcept;
 
         /**
-         * Specifies whether this texture is a cubemap
-         * @param target either Sampler::SAMPLER_2D or
-         *                      Sampler::SAMPLER_CUBEMAP
+         * Specifies the type of sampler to use.
+         * @param target Sampler type
          * @return This Builder, for chaining calls.
          * @see Sampler
          */
@@ -173,6 +175,17 @@ public:
          * @return This Builder, for chaining calls.
          */
         Builder& usage(Usage usage) noexcept;
+
+        /**
+         * Specifies how a texture's channels map to color components
+         *
+         * @param r  texture channel for red component
+         * @param g  texture channel for green component
+         * @param b  texture channel for blue component
+         * @param a  texture channel for alpha component
+         * @return This Builder, for chaining calls.
+         */
+        Builder& swizzle(Swizzle r, Swizzle g, Swizzle b, Swizzle a) noexcept;
 
         /**
          * Creates the Texture object and returns a pointer to it.

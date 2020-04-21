@@ -32,6 +32,7 @@
 
 #include <utils/Panic.h>
 
+#include <atomic>
 #include <condition_variable>
 #include <memory>
 #include <vector>
@@ -98,9 +99,9 @@ struct MetalProgram : public HwProgram {
 };
 
 struct MetalTexture : public HwTexture {
-    MetalTexture(MetalContext& context, backend::SamplerType target, uint8_t levels,
-            TextureFormat format, uint8_t samples, uint32_t width, uint32_t height, uint32_t depth,
-            TextureUsage usage) noexcept;
+    MetalTexture(MetalContext& context, SamplerType target, uint8_t levels, TextureFormat format,
+            uint8_t samples, uint32_t width, uint32_t height, uint32_t depth, TextureUsage usage)
+            noexcept;
     ~MetalTexture();
 
     void load2DImage(uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t width,
@@ -127,8 +128,14 @@ struct MetalSamplerGroup : public HwSamplerGroup {
 
 class MetalRenderTarget : public HwRenderTarget {
 public:
+
+    struct TargetInfo {
+        uint8_t level;
+        uint16_t layer;
+    };
+
     MetalRenderTarget(MetalContext* context, uint32_t width, uint32_t height, uint8_t samples,
-            id<MTLTexture> color, id<MTLTexture> depth, uint8_t colorLevel, uint8_t depthLevel);
+            id<MTLTexture> color, TargetInfo colorInfo, id<MTLTexture> depth, TargetInfo depthInfo);
     explicit MetalRenderTarget(MetalContext* context)
             : HwRenderTarget(0, 0), context(context), defaultRenderTarget(true) {}
 
@@ -143,8 +150,9 @@ public:
     id<MTLTexture> getDepthResolve();
     id<MTLTexture> getBlitColorSource();
     id<MTLTexture> getBlitDepthSource();
-    uint8_t getColorLevel() { return colorLevel; }
-    uint8_t getDepthLevel() { return depthLevel; }
+
+    const TargetInfo& getColorInfo() const { return colorInfo; }
+    const TargetInfo& getDepthInfo() const { return depthInfo; }
 
 private:
     static id<MTLTexture> createMultisampledTexture(id<MTLDevice> device, MTLPixelFormat format,
@@ -153,11 +161,9 @@ private:
     MetalContext* context;
     bool defaultRenderTarget = false;
     uint8_t samples = 1;
-    uint8_t colorLevel = 0;
-    uint8_t depthLevel = 0;
 
-    id<MTLTexture> color = nil;
-    id<MTLTexture> depth = nil;
+    id<MTLTexture> color = nil, depth = nil;
+    TargetInfo colorInfo = {}, depthInfo = {};
     id<MTLTexture> multisampledColor = nil;
     id<MTLTexture> multisampledDepth = nil;
 };
@@ -165,21 +171,49 @@ private:
 class MetalFence : public HwFence {
 public:
 
+    // MetalFence is special, as it gets constructed on the Filament thread. We must delay inserting
+    // the fence into the command stream until encode() is called (on the driver thread).
     MetalFence(MetalContext& context);
+
+    // Inserts this fence into the current command buffer. Must be called from the driver thread.
+    void encode();
 
     FenceStatus wait(uint64_t timeoutNs);
 
+    API_AVAILABLE(macos(10.14), ios(12.0))
+    typedef void (^MetalFenceSignalBlock)(id<MTLSharedEvent>, uint64_t value);
+
+    API_AVAILABLE(macos(10.14), ios(12.0))
+    void onSignal(MetalFenceSignalBlock block);
+
 private:
 
-    std::shared_ptr<std::condition_variable> cv;
-    std::mutex mutex;
+    MetalContext& context;
+
+    struct State {
+        FenceStatus status { FenceStatus::TIMEOUT_EXPIRED };
+        std::condition_variable cv;
+        std::mutex mutex;
+    };
+    std::shared_ptr<State> state { std::make_shared<State>() };
 
     // MTLSharedEvent is only available on macOS 10.14 and iOS 12.0 and above.
     // The availability annotation ensures we wrap all usages of event in an @availability check.
     API_AVAILABLE(macos(10.14), ios(12.0))
-    id<MTLSharedEvent> event;
+    id<MTLSharedEvent> event = nil;
 
     uint64_t value;
+};
+
+struct MetalTimerQuery : public HwTimerQuery {
+    MetalTimerQuery() : status(std::make_shared<Status>()) {}
+
+    struct Status {
+        std::atomic<bool> available {false};
+        uint64_t elapsed {0};   // only valid if available is true
+    };
+
+    std::shared_ptr<Status> status;
 };
 
 } // namespace metal

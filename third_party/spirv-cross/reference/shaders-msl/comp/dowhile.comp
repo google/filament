@@ -14,6 +14,8 @@ struct SSBO2
     float4 out_data[1];
 };
 
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
 kernel void main0(const device SSBO& _28 [[buffer(0)]], device SSBO2& _52 [[buffer(1)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]])
 {
     uint ident = gl_GlobalInvocationID.x;

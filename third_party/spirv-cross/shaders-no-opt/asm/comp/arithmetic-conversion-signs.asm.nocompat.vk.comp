@@ -111,10 +111,22 @@
 		OpStore %ptr_f32 %s16_to_f32_signed
 		%u16_to_f32_signed = OpConvertSToF %float %u16
 		OpStore %ptr_f32 %u16_to_f32_signed
+
+		%s32_to_f32_signed = OpConvertSToF %float %s32
+		OpStore %ptr_f32 %s32_to_f32_signed
+		%u32_to_f32_signed = OpConvertSToF %float %u32
+		OpStore %ptr_f32 %u32_to_f32_signed
+
+		; UToF
 		%s16_to_f32_unsigned = OpConvertUToF %float %s16
 		OpStore %ptr_f32 %s16_to_f32_unsigned
 		%u16_to_f32_unsigned = OpConvertUToF %float %u16
 		OpStore %ptr_f32 %u16_to_f32_unsigned
+
+		%s32_to_f32_unsigned = OpConvertUToF %float %s32
+		OpStore %ptr_f32 %s32_to_f32_unsigned
+		%u32_to_f32_unsigned = OpConvertUToF %float %u32
+		OpStore %ptr_f32 %u32_to_f32_unsigned
 
 		; FToS
 		%f32_to_s16_signed = OpConvertFToS %short %f32

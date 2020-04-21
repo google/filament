@@ -14,19 +14,19 @@ layout(binding = 1, std430) writeonly buffer SSBO2
 
 void main()
 {
-    vec4 _57;
-    int _58;
-    _58 = 0;
-    _57 = _28.in_data[gl_GlobalInvocationID.x];
+    vec4 _59;
+    int _60;
+    _60 = 0;
+    _59 = _28.in_data[gl_GlobalInvocationID.x];
     vec4 _42;
     for (;;)
     {
-        _42 = _28.mvp * _57;
-        int _44 = _58 + 1;
+        _42 = _28.mvp * _59;
+        int _44 = _60 + 1;
         if (_44 < 16)
         {
-            _58 = _44;
-            _57 = _42;
+            _60 = _44;
+            _59 = _42;
         }
         else
         {

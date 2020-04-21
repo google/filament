@@ -2,7 +2,17 @@
     "entryPoints" : [
         {
             "name" : "main",
-            "mode" : "comp"
+            "mode" : "comp",
+            "workgroup_size" : [
+                1,
+                1,
+                1
+            ],
+            "workgroup_size_is_spec_constant_id" : [
+                false,
+                false,
+                false
+            ]
         }
     ],
     "types" : {
@@ -15,7 +25,11 @@
                     "array" : [
                         1
                     ],
-                    "offset" : 0
+                    "array_size_is_literal" : [
+                        true
+                    ],
+                    "offset" : 0,
+                    "array_stride" : 8
                 },
                 {
                     "name" : "b",
@@ -48,7 +62,11 @@
                     "array" : [
                         1
                     ],
-                    "offset" : 0
+                    "array_size_is_literal" : [
+                        true
+                    ],
+                    "offset" : 0,
+                    "array_stride" : 16
                 },
                 {
                     "name" : "b",
@@ -91,7 +109,11 @@
                     "array" : [
                         1
                     ],
-                    "offset" : 0
+                    "array_size_is_literal" : [
+                        true
+                    ],
+                    "offset" : 0,
+                    "array_stride" : 16
                 },
                 {
                     "name" : "m1s",
@@ -99,7 +121,11 @@
                     "array" : [
                         1
                     ],
-                    "offset" : 16
+                    "array_size_is_literal" : [
+                        true
+                    ],
+                    "offset" : 16,
+                    "array_stride" : 16
                 },
                 {
                     "name" : "m2s",
@@ -107,7 +133,11 @@
                     "array" : [
                         1
                     ],
-                    "offset" : 32
+                    "array_size_is_literal" : [
+                        true
+                    ],
+                    "offset" : 32,
+                    "array_stride" : 32
                 },
                 {
                     "name" : "m0",
@@ -140,7 +170,11 @@
                     "array" : [
                         8
                     ],
-                    "offset" : 152
+                    "array_size_is_literal" : [
+                        true
+                    ],
+                    "offset" : 152,
+                    "array_stride" : 8
                 }
             ]
         },
@@ -158,7 +192,11 @@
                     "array" : [
                         2
                     ],
-                    "offset" : 224
+                    "array_size_is_literal" : [
+                        true
+                    ],
+                    "offset" : 224,
+                    "array_stride" : 224
                 },
                 {
                     "name" : "content2",
@@ -168,12 +206,14 @@
                 {
                     "name" : "m0",
                     "type" : "mat2",
-                    "offset" : 896
+                    "offset" : 896,
+                    "matrix_stride" : 8
                 },
                 {
                     "name" : "m1",
                     "type" : "mat2",
-                    "offset" : 912
+                    "offset" : 912,
+                    "matrix_stride" : 8
                 },
                 {
                     "name" : "m2",
@@ -181,43 +221,62 @@
                     "array" : [
                         4
                     ],
-                    "offset" : 928
+                    "array_size_is_literal" : [
+                        true
+                    ],
+                    "offset" : 928,
+                    "array_stride" : 32,
+                    "matrix_stride" : 16
                 },
                 {
                     "name" : "m3",
                     "type" : "mat3x2",
-                    "offset" : 1056
+                    "offset" : 1056,
+                    "matrix_stride" : 8
                 },
                 {
                     "name" : "m4",
                     "type" : "mat2",
-                    "row_major" : true,
-                    "offset" : 1080
+                    "offset" : 1080,
+                    "matrix_stride" : 8,
+                    "row_major" : true
                 },
                 {
                     "name" : "m5",
                     "type" : "mat2",
-                    "row_major" : true,
                     "array" : [
                         9
                     ],
-                    "offset" : 1096
+                    "array_size_is_literal" : [
+                        true
+                    ],
+                    "offset" : 1096,
+                    "array_stride" : 16,
+                    "matrix_stride" : 8,
+                    "row_major" : true
                 },
                 {
                     "name" : "m6",
                     "type" : "mat2x3",
-                    "row_major" : true,
                     "array" : [
                         2,
                         4
                     ],
-                    "offset" : 1240
+                    "array_size_is_literal" : [
+                        true,
+                        true
+                    ],
+                    "offset" : 1240,
+                    "array_stride" : 48,
+                    "matrix_stride" : 8,
+                    "row_major" : true
                 },
                 {
                     "name" : "m7",
                     "type" : "mat3x2",
-                    "row_major" : true,
-                    "offset" : 1440
+                    "offset" : 1440,
+                    "matrix_stride" : 16,
+                    "row_major" : true
                 },
                 {
                     "name" : "array",
@@ -225,7 +284,11 @@
                     "array" : [
                         0
                     ],
-                    "offset" : 1472
+                    "array_size_is_literal" : [
+                        true
+                    ],
+                    "offset" : 1472,
+                    "array_stride" : 4
                 }
             ]
         },
@@ -238,7 +301,11 @@
                     "array" : [
                         1
                     ],
-                    "offset" : 0
+                    "array_size_is_literal" : [
+                        true
+                    ],
+                    "offset" : 0,
+                    "array_stride" : 16
                 },
                 {
                     "name" : "b",
@@ -271,7 +338,11 @@
                     "array" : [
                         1
                     ],
-                    "offset" : 0
+                    "array_size_is_literal" : [
+                        true
+                    ],
+                    "offset" : 0,
+                    "array_stride" : 16
                 },
                 {
                     "name" : "b",
@@ -314,7 +385,11 @@
                     "array" : [
                         1
                     ],
-                    "offset" : 0
+                    "array_size_is_literal" : [
+                        true
+                    ],
+                    "offset" : 0,
+                    "array_stride" : 32
                 },
                 {
                     "name" : "m1s",
@@ -322,7 +397,11 @@
                     "array" : [
                         1
                     ],
-                    "offset" : 32
+                    "array_size_is_literal" : [
+                        true
+                    ],
+                    "offset" : 32,
+                    "array_stride" : 16
                 },
                 {
                     "name" : "m2s",
@@ -330,7 +409,11 @@
                     "array" : [
                         1
                     ],
-                    "offset" : 48
+                    "array_size_is_literal" : [
+                        true
+                    ],
+                    "offset" : 48,
+                    "array_stride" : 32
                 },
                 {
                     "name" : "m0",
@@ -363,7 +446,11 @@
                     "array" : [
                         8
                     ],
-                    "offset" : 192
+                    "array_size_is_literal" : [
+                        true
+                    ],
+                    "offset" : 192,
+                    "array_stride" : 16
                 }
             ]
         },
@@ -381,7 +468,11 @@
                     "array" : [
                         2
                     ],
-                    "offset" : 320
+                    "array_size_is_literal" : [
+                        true
+                    ],
+                    "offset" : 320,
+                    "array_stride" : 320
                 },
                 {
                     "name" : "content2",
@@ -391,12 +482,14 @@
                 {
                     "name" : "m0",
                     "type" : "mat2",
-                    "offset" : 1280
+                    "offset" : 1280,
+                    "matrix_stride" : 16
                 },
                 {
                     "name" : "m1",
                     "type" : "mat2",
-                    "offset" : 1312
+                    "offset" : 1312,
+                    "matrix_stride" : 16
                 },
                 {
                     "name" : "m2",
@@ -404,43 +497,62 @@
                     "array" : [
                         4
                     ],
-                    "offset" : 1344
+                    "array_size_is_literal" : [
+                        true
+                    ],
+                    "offset" : 1344,
+                    "array_stride" : 32,
+                    "matrix_stride" : 16
                 },
                 {
                     "name" : "m3",
                     "type" : "mat3x2",
-                    "offset" : 1472
+                    "offset" : 1472,
+                    "matrix_stride" : 16
                 },
                 {
                     "name" : "m4",
                     "type" : "mat2",
-                    "row_major" : true,
-                    "offset" : 1520
+                    "offset" : 1520,
+                    "matrix_stride" : 16,
+                    "row_major" : true
                 },
                 {
                     "name" : "m5",
                     "type" : "mat2",
-                    "row_major" : true,
                     "array" : [
                         9
                     ],
-                    "offset" : 1552
+                    "array_size_is_literal" : [
+                        true
+                    ],
+                    "offset" : 1552,
+                    "array_stride" : 32,
+                    "matrix_stride" : 16,
+                    "row_major" : true
                 },
                 {
                     "name" : "m6",
                     "type" : "mat2x3",
-                    "row_major" : true,
                     "array" : [
                         2,
                         4
                     ],
-                    "offset" : 1840
+                    "array_size_is_literal" : [
+                        true,
+                        true
+                    ],
+                    "offset" : 1840,
+                    "array_stride" : 96,
+                    "matrix_stride" : 16,
+                    "row_major" : true
                 },
                 {
                     "name" : "m7",
                     "type" : "mat3x2",
-                    "row_major" : true,
-                    "offset" : 2224
+                    "offset" : 2224,
+                    "matrix_stride" : 16,
+                    "row_major" : true
                 },
                 {
                     "name" : "array",
@@ -448,7 +560,11 @@
                     "array" : [
                         0
                     ],
-                    "offset" : 2256
+                    "array_size_is_literal" : [
+                        true
+                    ],
+                    "offset" : 2256,
+                    "array_stride" : 16
                 }
             ]
         }

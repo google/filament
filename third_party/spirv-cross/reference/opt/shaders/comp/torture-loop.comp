@@ -14,27 +14,27 @@ layout(binding = 1, std430) writeonly buffer SSBO2
 
 void main()
 {
-    vec4 _99;
-    _99 = _24.in_data[gl_GlobalInvocationID.x];
-    for (int _93 = 0; (_93 + 1) < 10; )
+    vec4 _101;
+    _101 = _24.in_data[gl_GlobalInvocationID.x];
+    for (int _95 = 0; (_95 + 1) < 10; )
     {
-        _99 *= 2.0;
-        _93 += 2;
+        _101 *= 2.0;
+        _95 += 2;
         continue;
     }
-    vec4 _98;
-    _98 = _99;
-    vec4 _103;
-    for (uint _94 = 0u; _94 < 16u; _98 = _103, _94++)
+    vec4 _100;
+    _100 = _101;
+    vec4 _105;
+    for (uint _96 = 0u; _96 < 16u; _100 = _105, _96++)
     {
-        _103 = _98;
-        for (uint _100 = 0u; _100 < 30u; )
+        _105 = _100;
+        for (uint _102 = 0u; _102 < 30u; )
         {
-            _103 = _24.mvp * _103;
-            _100++;
+            _105 = _24.mvp * _105;
+            _102++;
             continue;
         }
     }
-    _89.out_data[gl_GlobalInvocationID.x] = _98;
+    _89.out_data[gl_GlobalInvocationID.x] = _100;
 }
 

@@ -44,7 +44,7 @@ class EntityManager;
  *
  */
 template <typename ... Elements>
-class SingleInstanceComponentManager {
+class UTILS_PUBLIC SingleInstanceComponentManager {
 private:
 
     // this is just to avoid using std::default_random_engine, since we're in a public header.

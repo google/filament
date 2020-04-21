@@ -68,7 +68,7 @@ target_link_libraries(${TARGET} PUBLIC
         utils
         filaflat
         filabridge
-        backend
+        backend_headers
         civetweb
         utils
         SPIRV
@@ -83,16 +83,13 @@ target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 # Compiler flags
 # ==================================================================================================
 
-if (NOT MSVC_NATIVE)
-    target_compile_options(${TARGET} PRIVATE -Wno-deprecated-register)
-endif()
-
 target_compile_options(${TARGET} PRIVATE $<$<PLATFORM_ID:Linux>:-fPIC>)
 
-if (MSVC OR CLANG_CL)
+if (MSVC)
     target_compile_options(${TARGET} PRIVATE $<$<CONFIG:Release>:/fp:fast>)
 else()
     target_compile_options(${TARGET} PRIVATE $<$<CONFIG:Release>:-ffast-math>)
+    target_compile_options(${TARGET} PRIVATE -Wno-deprecated-register)
 endif()
 
 # ==================================================================================================

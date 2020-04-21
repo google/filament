@@ -74,14 +74,28 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             // user time
             .add("userTime",                1, UniformInterfaceBlock::Type::FLOAT4)
             // ibl max mip level
-            .add("iblMaxMipLevel",          1, UniformInterfaceBlock::Type::FLOAT2)
+            .add("iblRoughnessOneLevel",    1, UniformInterfaceBlock::Type::FLOAT)
+            .add("cameraFar",               1, UniformInterfaceBlock::Type::FLOAT)
             .add("refractionLodOffset",     1, UniformInterfaceBlock::Type::FLOAT)
-            .add("padding0",                1, UniformInterfaceBlock::Type::FLOAT)
+            .add("directionalShadows",      1, UniformInterfaceBlock::Type::UINT)
             // view
             .add("worldOffset",             1, UniformInterfaceBlock::Type::FLOAT3)
-            // bring size to 1 KiB
+            .add("ssContactShadowDistance", 1, UniformInterfaceBlock::Type::FLOAT)
+            // fog
+            .add("fogStart",                1, UniformInterfaceBlock::Type::FLOAT)
+            .add("fogMaxOpacity",           1, UniformInterfaceBlock::Type::FLOAT)
+            .add("fogHeight",               1, UniformInterfaceBlock::Type::FLOAT)
+            .add("fogHeightFalloff",        1, UniformInterfaceBlock::Type::FLOAT)
+            .add("fogColor",                1, UniformInterfaceBlock::Type::FLOAT3)
+            .add("fogDensity",              1, UniformInterfaceBlock::Type::FLOAT)
+            .add("fogInscatteringStart",    1, UniformInterfaceBlock::Type::FLOAT)
+            .add("fogInscatteringSize",     1, UniformInterfaceBlock::Type::FLOAT)
+            // more camera stuff
+            .add("fogColorFromIbl",         1, UniformInterfaceBlock::Type::FLOAT)
             .add("padding1",                1, UniformInterfaceBlock::Type::FLOAT)
-            .add("padding2",                15, UniformInterfaceBlock::Type::FLOAT4)
+
+            // bring size to 1 KiB
+            .add("padding2",                12, UniformInterfaceBlock::Type::FLOAT4)
             .build();
     return uib;
 }
@@ -94,7 +108,8 @@ UniformInterfaceBlock const& UibGenerator::getPerRenderableUib() noexcept {
             .add("morphWeights", 1, UniformInterfaceBlock::Type::FLOAT4, Precision::HIGH)
             .add("skinningEnabled", 1, UniformInterfaceBlock::Type::INT)
             .add("morphingEnabled", 1, UniformInterfaceBlock::Type::INT)
-            .add("padding0", 1, UniformInterfaceBlock::Type::FLOAT2)
+            .add("screenSpaceContactShadows", 1, UniformInterfaceBlock::Type::UINT)
+            .add("padding0", 1, UniformInterfaceBlock::Type::FLOAT)
             .build();
     return uib;
 }
@@ -103,6 +118,15 @@ UniformInterfaceBlock const& UibGenerator::getLightsUib() noexcept {
     static UniformInterfaceBlock uib = UniformInterfaceBlock::Builder()
             .name("LightsUniforms")
             .add("lights", CONFIG_MAX_LIGHT_COUNT, UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
+            .build();
+    return uib;
+}
+
+UniformInterfaceBlock const& UibGenerator::getShadowUib() noexcept {
+    static UniformInterfaceBlock uib = UniformInterfaceBlock::Builder()
+            .name("ShadowUniforms")
+            .add("spotLightFromWorldMatrix", CONFIG_MAX_SHADOW_CASTING_SPOTS, UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
+            .add("directionShadowBias", CONFIG_MAX_SHADOW_CASTING_SPOTS, UniformInterfaceBlock::Type::FLOAT4, Precision::HIGH)
             .build();
     return uib;
 }

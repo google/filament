@@ -41,25 +41,35 @@ public:
     explicit ShadowMap(FEngine& engine) noexcept;
     ~ShadowMap();
 
-    void terminate(backend::DriverApi& driverApi) noexcept;
+    struct ShadowMapLayout {
+        // the smallest increment in depth precision
+        // e.g., for 16 bit depth textures, is this 1 / (2^16)
+        float zResolution = 0.0f;
+
+        // the dimension of the encompassing texture atlas
+        size_t atlasDimension = 0;
+
+        // the dimension of a single shadow map texture within the atlas
+        // e.g., for at atlas size of 1024 split into 4 quadrants, textureDimension would be 512
+        size_t textureDimension = 0;
+
+        // the dimension of the actual shadow map, taking into account the 1 texel border
+        // e.g., for a texture dimension of 512, shadowDimension would be 510
+        size_t shadowDimension = 0;
+    };
 
     // Call once per frame if the light, scene (or visible layers) or camera changes.
     // This computes the light's camera.
     void update(const FScene::LightSoa& lightData, size_t index, FScene const* scene,
-            details::CameraInfo const& camera, uint8_t visibleLayers) noexcept;
+            details::CameraInfo const& camera, uint8_t visibleLayers,
+            ShadowMapLayout layout) noexcept;
 
-    void render(backend::DriverApi& driver, RenderPass& pass, FView& view) noexcept;
+    void render(backend::DriverApi& driver, backend::Handle<backend::HwRenderTarget> rt,
+            filament::Viewport const& viewport, utils::Range<uint32_t> const& range,
+            RenderPass& pass, FView& view) noexcept;
 
     // Do we have visible shadows. Valid after calling update().
     bool hasVisibleShadows() const noexcept { return mHasVisibleShadows; }
-
-    // Allocates shadow texture based on user parameters (e.g. dimensions)
-    void prepare(backend::DriverApi& driver, backend::SamplerGroup& buffer) noexcept;
-
-    // Returns the shadow map's viewport. Valid after prepare().
-    Viewport const& getViewport() const noexcept { return mViewport; }
-
-    backend::Handle<backend::HwRenderTarget> getRenderTarget() const { return mShadowMapRenderTarget; }
 
     // Computes the transform to use in the shader to access the shadow map.
     // Valid after calling update().
@@ -106,6 +116,9 @@ private:
             math::float3 const& direction, FScene const* scene,
             CameraInfo const& camera, FLightManager::ShadowParams const& params,
             uint8_t visibleLayers) noexcept;
+    void computeShadowCameraSpot(math::float3 const& position, math::float3 const& dir,
+            float outerConeAngle, float radius, CameraInfo const& camera,
+            FLightManager::ShadowParams const& params) noexcept;
 
     static math::mat4f applyLISPSM(math::mat4f& Wp,
             CameraInfo const& camera, FLightManager::ShadowParams const& params,
@@ -172,8 +185,6 @@ private:
     float texelSizeWorldSpace(const math::mat3f& worldToShadowTexture) const noexcept;
     float texelSizeWorldSpace(const math::mat4f& W, const math::mat4f& MbMtF) const noexcept;
 
-    void fillWithDebugPattern(backend::DriverApi& driverApi) const noexcept;
-
     static constexpr const Segment sBoxSegments[12] = {
             { 0, 1 }, { 1, 3 }, { 3, 2 }, { 2, 0 },
             { 4, 5 }, { 5, 7 }, { 7, 6 }, { 6, 4 },
@@ -193,14 +204,8 @@ private:
     math::mat4f mLightSpace;
     float mTexelSizeWs = 0.0f;
 
-    // set-up in prepare()
-    Viewport mViewport;
-    backend::Handle<backend::HwTexture> mShadowMapHandle;
-    backend::Handle<backend::HwRenderTarget> mShadowMapRenderTarget;
-
     // set-up in update()
-    uint32_t mShadowMapDimension = 0;
-    math::float3 mShadowMapResolution = {};     // 1 / effective resolution
+    ShadowMapLayout mShadowMapLayout;
     bool mHasVisibleShadows = false;
     backend::PolygonOffset mPolygonOffset{};
 
@@ -210,6 +215,7 @@ private:
 
     FEngine& mEngine;
     const bool mClipSpaceFlipped;
+    const bool mTextureSpaceFlipped;
 };
 
 } // namespace details

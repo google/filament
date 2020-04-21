@@ -26,6 +26,7 @@ struct main0_in
     float2 vPatchPosBase [[attribute(0)]];
 };
 
+static inline __attribute__((always_inline))
 bool frustum_cull(thread const float2& p0, constant UBO& v_41)
 {
     float2 min_xz = (p0 - float2(10.0)) * v_41.uScale.xy;
@@ -49,6 +50,7 @@ bool frustum_cull(thread const float2& p0, constant UBO& v_41)
     return !_215;
 }
 
+static inline __attribute__((always_inline))
 float lod_factor(thread const float2& pos_, constant UBO& v_41)
 {
     float2 pos = pos_ * v_41.uScale.xy;
@@ -57,16 +59,19 @@ float lod_factor(thread const float2& pos_, constant UBO& v_41)
     return fast::clamp(level, 0.0, v_41.uMaxTessLevel.x);
 }
 
+static inline __attribute__((always_inline))
 float4 tess_level(thread const float4& lod, constant UBO& v_41)
 {
     return exp2(-lod) * v_41.uMaxTessLevel.y;
 }
 
+static inline __attribute__((always_inline))
 float tess_level(thread const float& lod, constant UBO& v_41)
 {
     return v_41.uMaxTessLevel.y * exp2(-lod);
 }
 
+static inline __attribute__((always_inline))
 void compute_tess_levels(thread const float2& p0, constant UBO& v_41, device float2& vOutPatchPosBase, device float4& vPatchLods, device half (&gl_TessLevelOuter)[4], device half (&gl_TessLevelInner)[2])
 {
     vOutPatchPosBase = p0;

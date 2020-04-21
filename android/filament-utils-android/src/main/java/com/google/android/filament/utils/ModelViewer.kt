@@ -21,6 +21,7 @@ import android.view.Surface
 import android.view.SurfaceView
 import android.view.TextureView
 import com.google.android.filament.*
+import com.google.android.filament.android.DisplayHelper
 import com.google.android.filament.android.UiHelper
 import com.google.android.filament.gltfio.*
 import java.nio.Buffer
@@ -69,9 +70,11 @@ class ModelViewer : android.view.View.OnTouchListener {
     @Entity val light: Int
 
     private val uiHelper: UiHelper = UiHelper(UiHelper.ContextErrorPolicy.DONT_CHECK)
+    private lateinit var displayHelper: DisplayHelper
     private val cameraManipulator: Manipulator
     private val gestureDetector: GestureDetector
     private val renderer: Renderer
+    private lateinit var surfaceView: SurfaceView
     private var swapChain: SwapChain? = null
     private var assetLoader: AssetLoader
     private var resourceLoader: ResourceLoader
@@ -122,7 +125,9 @@ class ModelViewer : android.view.View.OnTouchListener {
                 .viewport(surfaceView.width, surfaceView.height)
                 .build(Manipulator.Mode.ORBIT)
 
+        this.surfaceView = surfaceView
         gestureDetector = GestureDetector(surfaceView, cameraManipulator)
+        displayHelper = DisplayHelper(surfaceView.context)
         uiHelper.renderCallback = SurfaceCallback()
         uiHelper.attachTo(surfaceView)
         addDetachListener(surfaceView)
@@ -146,7 +151,7 @@ class ModelViewer : android.view.View.OnTouchListener {
      */
     fun loadModelGlb(buffer: Buffer) {
         destroyModel()
-        asset = assetLoader.createAssetFromJson(buffer)
+        asset = assetLoader.createAssetFromBinary(buffer)
         asset?.let { asset ->
             resourceLoader.asyncBeginLoad(asset)
             animator = asset.animator
@@ -200,7 +205,7 @@ class ModelViewer : android.view.View.OnTouchListener {
     /**
      * Renders the model and updates the Filament camera.
      */
-    fun render() {
+    fun render(frameTimeNanos: Long) {
         if (!uiHelper.isReadyToRender) {
             return
         }
@@ -219,7 +224,7 @@ class ModelViewer : android.view.View.OnTouchListener {
                 upward[0], upward[1], upward[2])
 
         // Render the scene, unless the renderer wants to skip the frame.
-        if (renderer.beginFrame(swapChain!!)) {
+        if (renderer.beginFrame(swapChain!!, frameTimeNanos)) {
             renderer.render(view)
             renderer.endFrame()
         }
@@ -273,9 +278,11 @@ class ModelViewer : android.view.View.OnTouchListener {
         override fun onNativeWindowChanged(surface: Surface) {
             swapChain?.let { engine.destroySwapChain(it) }
             swapChain = engine.createSwapChain(surface)
+            displayHelper.attach(renderer, surfaceView.display)
         }
 
         override fun onDetachedFromSurface() {
+            displayHelper.detach()
             swapChain?.let {
                 engine.destroySwapChain(it)
                 engine.flushAndWait()

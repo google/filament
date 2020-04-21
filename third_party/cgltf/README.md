@@ -105,6 +105,7 @@ cgltf also supports some glTF extensions:
 - KHR_materials_pbrSpecularGlossiness
 - KHR_materials_unlit
 - KHR_texture_transform
+- KHR_draco_mesh_compression (requires a library like [Google's Draco](https://github.com/google/draco) for decompression though)
 
 cgltf does **not** yet support unlisted extensions.
 

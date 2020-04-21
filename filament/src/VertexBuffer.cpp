@@ -111,7 +111,6 @@ VertexBuffer::Builder& VertexBuffer::Builder::normalized(VertexAttribute attribu
 }
 
 VertexBuffer* VertexBuffer::Builder::build(Engine& engine) {
-    FEngine::assertValid(engine, __PRETTY_FUNCTION__);
     if (!ASSERT_PRECONDITION_NON_FATAL(mImpl->mVertexCount > 0, "vertexCount cannot be 0")) {
         return nullptr;
     }

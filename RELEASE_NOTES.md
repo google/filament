@@ -5,15 +5,73 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release
 
+- gltfio: fixed incorrect cone angles with lights.
+- Specular ambient occlusion now offers 3 modes: off, simple (default on desktop) and bent normals.
+  The latter is more accurate but more expensive and requires a bent normal to be specified in the
+  material. If selected and not bent normal is specified, Filament falls back to the simple mode.
+- Specular ambient occlusion from bent normals now smoothly disappears as roughness goes from 0.3
+  to 0.1. Specular ambient occlusion can completely remove specular light which looks bad on glossy
+  metals. Use the simple specular occlusion mode for glossy metals instead.
+- Refraction can now be set on `MaterialBuilder` from Java.
+- Refraction mode and type can now be set by calling `MaterialBuilder::refractionMode()`.
+  and `MaterialBuilder::refractionType()` instad of `materialRefraction()` and
+  `materialRefractionType()` (️⚠️ **API change**).
+- Fixed documentation confusion about focused spot vs spot lights.
+- Fixed a race condition in the job system.
+- Fixed support for 565 bitmaps on Android.
+- Added support for timer queries in the Metal backend.
+- Improved dynamic resolution implementation to be more accurate and target more platforms.
+- `beginFrame()` now accepts a v-sync timestamp for accurate frame time measurement (used for
+  frame skipping and dynamic resolution). You can pass `0` to get the old behavior (⚠️ **API change**).
+- Fixed several issues related to multi-view support: removed
+  `View::setClearColor()`, a similar functionality is now handled by `Renderer::setClearOptions()`
+  and `Skybox`, the later now can be set to a constant color (⚠️ **API breakage**).
+- Fixed spot/point lights rendering bug depending on Viewport position.
+- Textures can now be swizzled.
+- The emissive property of materials is now expressed in nits and the alpha channel contains the
+  exposure weight (at 0.0 the exposure is not applied to the emissive component of a surface, at
+  1.0 the exposure is applied just like with any regular light) (⚠️ **API breakage**).
+
+## v1.5.2
+
+- gltfio: fixed null pointer exception seen with some Android clients.
+- Engine now exposes its JobSystem to C++ clients.
+- Expose setCulling() in public RenderableManager API.
+
+## v1.5.1
+
+- Fixed "no texture bound" warning in WebGL.
+- Fixed a clearing bug with imported render targets.
+- Fixed the creation potentially invalid entities during shadow map initialization.
+- Fixed Maven dependencies for the `filament-utils` library.
+
+## v1.5.0
+
+⚠️ This release breaks compiled materials, use matc to recompile.
+
 - The Android support libraries (gltfio and filament-utils) now use dynamic linking.
-- Screen-space refraction is now supported.
-- Removed depth-prepass related APIs.
+- Removed depth-prepass related APIs. (⚠ API Change)
 - gltfio: add asynchronous API to ResourceLoader.
 - gltfio: generate normals for flat-shaded models that do not have normals.
 - Material instances now allow dynamic depth testing and other rasterization state.
-- Support for Bloom as a post-process effect.
+- Unlit materials now apply emissive in the same way as lit materials.
+- Screen-space refraction is now supported.
+- Support for HDR Bloom as a post-process effect.
+- Alpha masked objects are now part of the SSAO pass.
 - Added Java bindings for geometry::SurfaceOrientation.
 - Fixed bug rendering transparent objects with Metal backend.
+- Fixed crash on macOS Catalina when rendering with Metal backend.
+- Fixed bug in Camera::setLensProjection() and added the aspect ratio parameter. (⚠ API Change)
+- WebGL: Improved TypeScript annotations.
+- WebGL: Simplified callback API for glTF. (⚠ API Change)
+- gltfio: Removed deprecated "Bindings" API. (⚠ API Change)
+- gltfio: Added support for Draco.
+- gltfio: Reduced the size of the library.
+- Improved performance of SSAO.
+- Added support for screen-space contact shadows.
+- Added support for global fog.
+- Added support for bent normal maps and specular occlusion from bent normal maps.
+- Added support for shadow-casting spot lights.
 
 ## v1.4.5
 

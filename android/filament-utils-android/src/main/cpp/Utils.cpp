@@ -28,29 +28,7 @@ using namespace filament;
 using namespace filament::math;
 using namespace image;
 
-extern void registerCallbackUtils(JNIEnv*);
-extern void registerNioUtils(JNIEnv*);
-
-namespace gltfio {
-    void JNI_OnLoad(JNIEnv* env);
-}
-
-jint JNI_OnLoad(JavaVM* vm, void*) {
-    JNIEnv* env;
-    if (vm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6) != JNI_OK) {
-        return -1;
-    }
-
-    gltfio::JNI_OnLoad(env);
-
-    registerCallbackUtils(env);
-    registerNioUtils(env);
-
-    return JNI_VERSION_1_6;
-}
-
-extern "C" JNIEXPORT jlong JNICALL
-Java_com_google_android_filament_utils_KtxLoader_nCreateTexture(JNIEnv* env, jclass,
+static jlong nCreateTexture(JNIEnv* env, jclass,
         jlong nativeEngine, jobject javaBuffer, jint remaining, jboolean srgb) {
     Engine* engine = (Engine*) nativeEngine;
     AutoBuffer buffer(env, javaBuffer, remaining);
@@ -61,8 +39,7 @@ Java_com_google_android_filament_utils_KtxLoader_nCreateTexture(JNIEnv* env, jcl
     }, bundle);
 }
 
-extern "C" JNIEXPORT jlong JNICALL
-Java_com_google_android_filament_utils_KtxLoader_nCreateIndirectLight(JNIEnv* env, jclass,
+static jlong nCreateIndirectLight(JNIEnv* env, jclass,
         jlong nativeEngine, jobject javaBuffer, jint remaining, jboolean srgb) {
     Engine* engine = (Engine*) nativeEngine;
     AutoBuffer buffer(env, javaBuffer, remaining);
@@ -84,8 +61,7 @@ Java_com_google_android_filament_utils_KtxLoader_nCreateIndirectLight(JNIEnv* en
     return (jlong) indirectLight;
 }
 
-extern "C" JNIEXPORT jlong JNICALL
-Java_com_google_android_filament_utils_KtxLoader_nCreateSkybox(JNIEnv* env, jclass,
+static jlong nCreateSkybox(JNIEnv* env, jclass,
         jlong nativeEngine, jobject javaBuffer, jint remaining, jboolean srgb) {
     Engine* engine = (Engine*) nativeEngine;
     AutoBuffer buffer(env, javaBuffer, remaining);
@@ -95,4 +71,25 @@ Java_com_google_android_filament_utils_KtxLoader_nCreateSkybox(JNIEnv* env, jcla
         delete bundle;
     }, bundle);
     return (jlong) Skybox::Builder().environment(cubemap).showSun(true).build(*engine);
+}
+
+
+JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void*) {
+    JNIEnv* env;
+    if (vm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6) != JNI_OK) {
+        return -1;
+    }
+
+    jclass c = env->FindClass("com/google/android/filament/utils/KtxLoader");
+    if (c == nullptr) return JNI_ERR;
+
+    static const JNINativeMethod methods[] = {
+        {"nCreateTexture", "(JLjava/nio/Buffer;IZ)J", reinterpret_cast<void*>(nCreateTexture)},
+        {"nCreateIndirectLight", "(JLjava/nio/Buffer;IZ)J", reinterpret_cast<void*>(nCreateIndirectLight)},
+        {"nCreateSkybox", "(JLjava/nio/Buffer;IZ)J", reinterpret_cast<void*>(nCreateSkybox)},
+    };
+    int rc = env->RegisterNatives(c, methods, sizeof(methods) / sizeof(JNINativeMethod));
+    if (rc != JNI_OK) return rc;
+
+    return JNI_VERSION_1_6;
 }

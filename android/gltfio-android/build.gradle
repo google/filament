@@ -1,41 +1,19 @@
-apply plugin: 'com.android.library'
-
 android {
-    buildToolsVersion versions.buildTools
-    compileSdkVersion versions.compileSdk
-    defaultConfig {
-        minSdkVersion versions.minSdk
-        targetSdkVersion versions.targetSdk
+    flavorDimensions "functionality"
+    productFlavors {
+        full {
+            dimension "functionality"
+        }
 
-        externalNativeBuild {
-            cmake {
-                arguments.add("-DANDROID_PIE=ON")
-                arguments.add("-DANDROID_PLATFORM=android-${versions.targetSdk}".toString())
-                arguments.add("-DANDROID_STL=c++_static")
-                arguments.add("-DFILAMENT_DIST_DIR=${filamentPath}".toString())
-                cppFlags.add("-std=c++14")
-                if (project.hasProperty('extra_cmake_args')) {
-                    arguments.add(extra_cmake_args)
+        lite {
+            dimension "functionality"
+
+            externalNativeBuild {
+                cmake {
+                    arguments.add("-DGLTFIO_LITE=ON")
                 }
             }
         }
-    }
-
-    externalNativeBuild {
-        cmake {
-            path "CMakeLists.txt"
-        }
-    }
-
-    sourceSets {
-        main {
-            jni.srcDirs "src/main/cpp"
-        }
-    }
-
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
     }
 
     // No need to package up the following shared libs, which arise as a side effect of our
@@ -57,9 +35,14 @@ apply from: rootProject.file('gradle/gradle-mvn-push.gradle')
 afterEvaluate { project ->
     publishing {
         publications {
-            release(MavenPublication) {
-                artifactId = POM_ARTIFACT_ID
-                from components.release
+            fullRelease(MavenPublication) {
+                artifactId = POM_ARTIFACT_ID_FULL
+                from components.fullRelease
+            }
+
+            liteRelease(MavenPublication) {
+                artifactId = POM_ARTIFACT_ID_LITE
+                from components.liteRelease
             }
         }
     }

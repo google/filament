@@ -52,6 +52,40 @@ public:
     TargetBufferInfo() noexcept { }
 };
 
+class MRT {
+    TargetBufferInfo mInfos[4];
+
+public:
+    TargetBufferInfo operator[](size_t i) const noexcept {
+        return mInfos[i];
+    }
+
+    MRT() noexcept = default;
+
+    MRT(TargetBufferInfo const& color) noexcept // NOLINT(hicpp-explicit-conversions)
+            : mInfos{ color } {
+    }
+
+    MRT(TargetBufferInfo const& color0, TargetBufferInfo const& color1) noexcept
+            : mInfos{ color0, color1 } {
+    }
+
+    MRT(TargetBufferInfo const& color0, TargetBufferInfo const& color1,
+        TargetBufferInfo const& color2) noexcept
+            : mInfos{ color0, color1, color2 } {
+    }
+
+    MRT(TargetBufferInfo const& color0, TargetBufferInfo const& color1,
+        TargetBufferInfo const& color2, TargetBufferInfo const& color3) noexcept
+            : mInfos{ color0, color1, color2, color3 } {
+    }
+
+    // this is here for backward compatibility
+    MRT(Handle<HwTexture> h, uint8_t level, uint16_t layer) noexcept
+            : mInfos{{ h, level, layer }} {
+    }
+};
+
 } // namespace backend
 } // namespace filament
 

@@ -101,7 +101,7 @@ float getDistanceAttenuation(const highp vec3 posToLight, float falloff) {
 
 float getAngleAttenuation(const vec3 lightDir, const vec3 l, const vec2 scaleOffset) {
     float cd = dot(lightDir, l);
-    float attenuation  = saturate(cd * scaleOffset.x + scaleOffset.y);
+    float attenuation = saturate(cd * scaleOffset.x + scaleOffset.y);
     return attenuation * attenuation;
 }
 
@@ -132,17 +132,24 @@ Light getSpotLight(uint index) {
     ivec2 texCoord = getRecordTexCoord(index);
     uint lightIndex = texelFetch(light_records, texCoord, 0).r;
 
-    highp vec4 positionFalloff = lightsUniforms.lights[lightIndex][0];
-    highp vec4 colorIntensity  = lightsUniforms.lights[lightIndex][1];
-          vec4 directionIES    = lightsUniforms.lights[lightIndex][2];
-          vec2 scaleOffset     = lightsUniforms.lights[lightIndex][3].xy;
+    highp vec4 positionFalloff       = lightsUniforms.lights[lightIndex][0];
+    highp vec4 colorIntensity        = lightsUniforms.lights[lightIndex][1];
+          vec4 directionIES          = lightsUniforms.lights[lightIndex][2];
+    highp vec4 scaleOffsetShadow     = lightsUniforms.lights[lightIndex][3];
 
     light.colorIntensity.rgb = colorIntensity.rgb;
     light.colorIntensity.w = computePreExposedIntensity(colorIntensity.w, frameUniforms.exposure);
 
     setupPunctualLight(light, positionFalloff);
 
-    light.attenuation *= getAngleAttenuation(-directionIES.xyz, light.l, scaleOffset);
+    light.attenuation *= getAngleAttenuation(-directionIES.xyz, light.l, scaleOffsetShadow.xy);
+
+    uint shadowBits = floatBitsToUint(scaleOffsetShadow.z);
+
+    light.castsShadows = bool(shadowBits & 0x1u);
+    light.contactShadows = bool((shadowBits >> 1u) & 0x1u);
+    light.shadowIndex = (shadowBits >> 2u) & 0xFu;
+    light.shadowLayer = (shadowBits >> 6u) & 0xFu;
 
     return light;
 }
@@ -193,13 +200,22 @@ void evaluatePunctualLights(const PixelParams pixel, inout vec3 color) {
     // Iterate point lights
     for ( ; index < end; index++) {
         Light light = getPointLight(index);
-#if defined(MATERIAL_CAN_SKIP_LIGHTING)
-        if (light.NoL > 0.0) {
-            color.rgb += surfaceShading(pixel, light, 1.0);
+        float visibility = 1.0;
+#if defined(HAS_SHADOWING)
+        if (light.NoL > 0.0){
+            if (light.contactShadows) {
+                if (objectUniforms.screenSpaceContactShadows != 0u) {
+                    visibility -= screenSpaceContactShadow(light.l);
+                }
+            }
         }
-#else
-        color.rgb += surfaceShading(pixel, light, 1.0);
 #endif
+#if defined(MATERIAL_CAN_SKIP_LIGHTING)
+        if (light.NoL <= 0.0) {
+            continue;
+        }
+#endif
+        color.rgb += surfaceShading(pixel, light, visibility);
     }
 
     end += froxel.spotCount;
@@ -207,12 +223,25 @@ void evaluatePunctualLights(const PixelParams pixel, inout vec3 color) {
     // Iterate spotlights
     for ( ; index < end; index++) {
         Light light = getSpotLight(index);
-#if defined(MATERIAL_CAN_SKIP_LIGHTING)
-        if (light.NoL > 0.0) {
-            color.rgb += surfaceShading(pixel, light, 1.0);
+        float visibility = 1.0;
+#if defined(HAS_SHADOWING)
+        if (light.NoL > 0.0){
+            if (light.castsShadows) {
+                visibility = shadow(light_shadowMap, light.shadowLayer,
+                getSpotLightSpacePosition(light.shadowIndex));
+            }
+            if (light.contactShadows && visibility > 0.0) {
+                if (objectUniforms.screenSpaceContactShadows != 0u) {
+                    visibility *= 1.0 - screenSpaceContactShadow(light.l);
+                }
+            }
         }
-#else
-        color.rgb += surfaceShading(pixel, light, 1.0);
 #endif
+#if defined(MATERIAL_CAN_SKIP_LIGHTING)
+        if (light.NoL <= 0.0) {
+            continue;
+        }
+#endif
+        color.rgb += surfaceShading(pixel, light, visibility);
     }
 }

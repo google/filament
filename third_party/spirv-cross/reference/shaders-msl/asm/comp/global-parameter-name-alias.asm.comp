@@ -10,12 +10,14 @@ struct ssbo
     uint _data[1];
 };
 
+static inline __attribute__((always_inline))
 void Load(thread const uint& size, const device ssbo& ssbo_1)
 {
     int byteAddrTemp = int(size >> uint(2));
     uint4 data = uint4(ssbo_1._data[byteAddrTemp], ssbo_1._data[byteAddrTemp + 1], ssbo_1._data[byteAddrTemp + 2], ssbo_1._data[byteAddrTemp + 3]);
 }
 
+static inline __attribute__((always_inline))
 void _main(thread const uint3& id, const device ssbo& ssbo_1)
 {
     uint param = 4u;

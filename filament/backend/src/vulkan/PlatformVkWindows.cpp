@@ -28,7 +28,7 @@ using namespace backend;
 
 Driver* PlatformVkWindows::createDriver(void* const sharedContext) noexcept {
     ASSERT_PRECONDITION(sharedContext == nullptr, "Vulkan does not support shared contexts.");
-    static const char* requestedExtensions[] = {
+    const char* requestedExtensions[] = {
         "VK_KHR_surface",
         "VK_KHR_win32_surface",
 #if !defined(NDEBUG)

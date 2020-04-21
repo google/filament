@@ -5,6 +5,7 @@
 
 using namespace metal;
 
+static inline __attribute__((always_inline))
 void myfunc(threadgroup int (&foo)[1337])
 {
     foo[0] = 13;

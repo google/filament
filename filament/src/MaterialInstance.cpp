@@ -42,6 +42,47 @@ namespace details {
 FMaterialInstance::FMaterialInstance() noexcept = default;
 
 FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material) {
+    FEngine::DriverApi& driver = engine.getDriverApi();
+
+    if (!material->getUniformInterfaceBlock().isEmpty()) {
+        mUniforms.setUniforms(material->getDefaultInstance()->getUniformBuffer());
+        mUbHandle = driver.createUniformBuffer(mUniforms.getSize(), backend::BufferUsage::DYNAMIC);
+    }
+
+    if (!material->getSamplerInterfaceBlock().isEmpty()) {
+        mSamplers.setSamplers(material->getDefaultInstance()->getSamplerGroup());
+        mSbHandle = driver.createSamplerGroup(mSamplers.getSize());
+    }
+
+    initialize(material);
+}
+
+// This version is used to initialize the default material instance
+void FMaterialInstance::initDefaultInstance(FEngine& engine, FMaterial const* material) {
+    FEngine::DriverApi& driver = engine.getDriverApi();
+
+    if (!material->getUniformInterfaceBlock().isEmpty()) {
+        mUniforms = UniformBuffer(material->getUniformInterfaceBlock().getSize());
+        mUbHandle = driver.createUniformBuffer(mUniforms.getSize(), backend::BufferUsage::STATIC);
+    }
+
+    if (!material->getSamplerInterfaceBlock().isEmpty()) {
+        mSamplers = SamplerGroup(material->getSamplerInterfaceBlock().getSize());
+        mSbHandle = driver.createSamplerGroup(mSamplers.getSize());
+    }
+
+    initialize(material);
+}
+
+FMaterialInstance::~FMaterialInstance() noexcept = default;
+
+void FMaterialInstance::terminate(FEngine& engine) {
+    FEngine::DriverApi& driver = engine.getDriverApi();
+    driver.destroyUniformBuffer(mUbHandle);
+    driver.destroySamplerGroup(mSbHandle);
+}
+
+void FMaterialInstance::initialize(FMaterial const* material) {
     mMaterial = material;
 
     const RasterState& rasterState = mMaterial->getRasterState();
@@ -56,57 +97,6 @@ FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material)
 
     mMaterialSortingKey = RenderPass::makeMaterialSortingKey(
             material->getId(), material->generateMaterialInstanceId());
-
-    FEngine::DriverApi& driver = engine.getDriverApi();
-
-    if (!material->getUniformInterfaceBlock().isEmpty()) {
-        mUniforms.setUniforms(material->getDefaultInstance()->getUniformBuffer());
-        mUbHandle = driver.createUniformBuffer(mUniforms.getSize(), backend::BufferUsage::DYNAMIC);
-    }
-
-    if (!material->getSamplerInterfaceBlock().isEmpty()) {
-        mSamplers.setSamplers(material->getDefaultInstance()->getSamplerGroup());
-        mSbHandle = driver.createSamplerGroup(mSamplers.getSize());
-    }
-
-    initParameters(material);
-}
-
-// This version is used to initialize the default material instance
-void FMaterialInstance::initDefaultInstance(FEngine& engine, FMaterial const* material) {
-    mMaterial = material;
-
-    // We inherit the resolved culling mode rather than the builder-set culling mode.
-    // This preserves the property whereby double-sidedness automatically disables culling.
-    mCulling = mMaterial->getRasterState().culling;
-
-    mMaterialSortingKey = RenderPass::makeMaterialSortingKey(
-            material->getId(), material->generateMaterialInstanceId());
-
-    FEngine::DriverApi& driver = engine.getDriverApi();
-
-    if (!material->getUniformInterfaceBlock().isEmpty()) {
-        mUniforms = UniformBuffer(material->getUniformInterfaceBlock().getSize());
-        mUbHandle = driver.createUniformBuffer(mUniforms.getSize(), backend::BufferUsage::STATIC);
-    }
-
-    if (!material->getSamplerInterfaceBlock().isEmpty()) {
-        mSamplers = SamplerGroup(material->getSamplerInterfaceBlock().getSize());
-        mSbHandle = driver.createSamplerGroup(mSamplers.getSize());
-    }
-
-    initParameters(material);
-}
-
-FMaterialInstance::~FMaterialInstance() noexcept = default;
-
-void FMaterialInstance::terminate(FEngine& engine) {
-    FEngine::DriverApi& driver = engine.getDriverApi();
-    driver.destroyUniformBuffer(mUbHandle);
-    driver.destroySamplerGroup(mSbHandle);
-}
-
-void FMaterialInstance::initParameters(FMaterial const* material) {
 
     if (material->getBlendingMode() == BlendingMode::MASKED) {
         static_cast<MaterialInstance*>(this)->setParameter(

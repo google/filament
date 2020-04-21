@@ -50,7 +50,7 @@ public:
     void setIntensity(float intensity) noexcept { mIntensity = intensity; }
     void setRotation(math::mat3f const& rotation) noexcept { mRotation = rotation; }
     const math::mat3f& getRotation() const noexcept { return mRotation; }
-    size_t getMaxMipLevel() const noexcept { return mMaxMipLevel; }
+    size_t getLevelCount() const noexcept { return mLevelCount; }
     math::float3 getDirectionEstimate() const noexcept;
     math::float4 getColorEstimate(math::float3 direction) const noexcept;
     static math::float3 getDirectionEstimate(const math::float3 sh[9]) noexcept;
@@ -62,7 +62,7 @@ private:
     std::array<math::float3, 9> mIrradianceCoefs;
     float mIntensity = DEFAULT_INTENSITY;
     math::mat3f mRotation;
-    uint8_t mMaxMipLevel = 0;
+    uint8_t mLevelCount = 0;
 };
 
 FILAMENT_UPCAST(IndirectLight)

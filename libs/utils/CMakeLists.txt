@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.10)
 project(utils)
 
 set(TARGET utils)
+set(TARGET_LINUX ${TARGET}/linux)
+set(TARGET_GENERIC ${TARGET}/generic)
 set(PUBLIC_HDR_DIR include)
 
 # ==================================================================================================
@@ -12,14 +14,30 @@ file(GLOB_RECURSE PUBLIC_HDRS ${PUBLIC_HDR_DIR}/${TARGET}/*.h)
 set(DIST_HDRS
         ${PUBLIC_HDR_DIR}/${TARGET}/algorithm.h
         ${PUBLIC_HDR_DIR}/${TARGET}/bitset.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/Allocator.h
         ${PUBLIC_HDR_DIR}/${TARGET}/BitmaskEnum.h
         ${PUBLIC_HDR_DIR}/${TARGET}/compiler.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/CString.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Entity.h
         ${PUBLIC_HDR_DIR}/${TARGET}/EntityInstance.h
         ${PUBLIC_HDR_DIR}/${TARGET}/EntityManager.h
-        ${PUBLIC_HDR_DIR}/${TARGET}/CString.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/memalign.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/Mutex.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/NameComponentManager.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Path.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/SingleInstanceComponentManager.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/Slice.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/SpinLock.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/StructureOfArrays.h
         ${PUBLIC_HDR_DIR}/${TARGET}/unwindows.h
+)
+
+set(DIST_LINUX_HDRS
+        ${PUBLIC_HDR_DIR}/${TARGET_LINUX}/Mutex.h
+)
+
+set(DIST_GENERIC_HDRS
+        ${PUBLIC_HDR_DIR}/${TARGET_GENERIC}/Mutex.h
 )
 
 set(SRCS
@@ -41,7 +59,8 @@ set(SRCS
         src/Profiler.cpp
         src/sstream.cpp
         src/Systrace.cpp
-        )
+)
+
 if (WIN32)
     list(APPEND SRCS src/win32/Path.cpp)
 endif()
@@ -94,6 +113,11 @@ target_compile_options(${TARGET} PRIVATE
 set(INSTALL_TYPE ARCHIVE)
 install(TARGETS ${TARGET} ${INSTALL_TYPE} DESTINATION lib/${DIST_DIR})
 install(FILES ${DIST_HDRS} DESTINATION include/${TARGET})
+if (LINUX OR ANDROID)
+    install(FILES ${DIST_LINUX_HDRS} DESTINATION include/${TARGET_LINUX})
+else()
+    install(FILES ${DIST_GENERIC_HDRS} DESTINATION include/${TARGET_GENERIC})
+endif()
 
 # ==================================================================================================
 # Test executables

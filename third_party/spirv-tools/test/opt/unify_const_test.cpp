@@ -354,8 +354,14 @@ TEST_P(UnifyFrontEndConstantParamTest, TestCase) {
   Check(expected_builder, test_builder);
 }
 
-INSTANTIATE_TEST_CASE_P(Case, UnifyFrontEndConstantParamTest,
-                        ::testing::ValuesIn(std::vector<UnifyConstantTestCase>({
+INSTANTIATE_TEST_SUITE_P(
+    Case, UnifyFrontEndConstantParamTest,
+    ::
+        testing::
+            ValuesIn(
+                std::
+                    vector<UnifyConstantTestCase>(
+                        {
                             // clang-format off
         // basic tests for scalar constants
         {

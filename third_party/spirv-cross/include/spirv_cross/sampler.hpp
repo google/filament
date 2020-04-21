@@ -85,7 +85,7 @@ struct sampler2DBase : spirv_cross_sampler_2d
 	std::vector<spirv_cross_miplevel> mips;
 	spirv_cross_format format;
 	spirv_cross_wrap wrap_s;
-	spirv_cross_format wrap_t;
+	spirv_cross_wrap wrap_t;
 	spirv_cross_filter min_filter;
 	spirv_cross_filter mag_filter;
 	spirv_cross_mipfilter mip_filter;

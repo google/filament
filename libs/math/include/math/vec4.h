@@ -35,8 +35,7 @@ class MATH_EMPTY_BASES TVec4 :
         public TVecAddOperators<TVec4, T>,
         public TVecUnaryOperators<TVec4, T>,
         public TVecComparisonOperators<TVec4, T>,
-        public TVecFunctions<TVec4, T>,
-        public TVecDebug<TVec4, T> {
+        public TVecFunctions<TVec4, T> {
 public:
     typedef T value_type;
     typedef T& reference;

@@ -1,3 +1,16 @@
-#!/usr/bin/env bash
+#!/bin/bash
+
+if [ "$1" = 'web' ]
+then
+    m4 -P -DGLSLANG_WEB MachineIndependent/glslang.m4 > MachineIndependent/glslang.y
+elif [ "$#" -eq 0 ]
+then
+    m4 -P MachineIndependent/glslang.m4 > MachineIndependent/glslang.y
+else
+    echo usage:
+    echo $0 web
+    echo $0
+    exit
+fi
 
 bison --defines=MachineIndependent/glslang_tab.cpp.h -t MachineIndependent/glslang.y -o MachineIndependent/glslang_tab.cpp

@@ -1,0 +1,96 @@
+material {
+    name : gltflite_${SHADINGMODEL}_${BLENDING},
+    requires : [ uv0, uv1, color ],
+    shadingModel : ${SHADINGMODEL},
+    blending : ${BLENDING},
+    depthWrite : true,
+    doubleSided : ${DOUBLESIDED},
+    flipUV : false,
+    specularAmbientOcclusion: simple,
+    parameters : [
+
+        // Base Color
+        { type : int, name : baseColorIndex },
+        { type : float4, name : baseColorFactor },
+        { type : sampler2d, name : baseColorMap },
+
+        // Metallic-Roughness Map
+        { type : int, name : metallicRoughnessIndex },
+        { type : float, name : metallicFactor },
+        { type : float, name : roughnessFactor },
+        { type : sampler2d, name : metallicRoughnessMap },
+
+        // Normal Map
+        { type : int, name : normalIndex },
+        { type : float, name : normalScale },
+        { type : sampler2d, name : normalMap },
+
+        // Ambient Occlusion
+        { type : int, name : aoIndex },
+        { type : float, name : aoStrength },
+        { type : sampler2d, name : occlusionMap },
+
+        // Emissive Map
+        { type : int, name : emissiveIndex },
+        { type : float3, name : emissiveFactor },
+        { type : sampler2d, name : emissiveMap }
+    ],
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        float2 uvs[2];
+        uvs[0] = getUV0();
+        uvs[1] = getUV1();
+
+        #if !defined(SHADING_MODEL_UNLIT)
+            if (materialParams.normalIndex > -1) {
+                float2 uv = uvs[materialParams.normalIndex];
+                material.normal = texture(materialParams_normalMap, uv).xyz * 2.0 - 1.0;
+                material.normal.xy *= materialParams.normalScale;
+            }
+        #endif
+
+        prepareMaterial(material);
+        material.baseColor = materialParams.baseColorFactor;
+
+        if (materialParams.baseColorIndex > -1) {
+            float2 uv = uvs[materialParams.baseColorIndex];
+            material.baseColor *= texture(materialParams_baseColorMap, uv);
+        }
+
+        #if defined(BLEND_MODE_TRANSPARENT)
+            material.baseColor.rgb *= material.baseColor.a;
+        #endif
+
+        material.baseColor *= getColor();
+
+        #if !defined(SHADING_MODEL_UNLIT)
+
+            #if defined(SHADING_MODEL_LIT)
+                material.roughness = materialParams.roughnessFactor;
+                material.metallic = materialParams.metallicFactor;
+            #endif
+
+            material.emissive = vec4(materialParams.emissiveFactor.rgb, 0.0);
+
+            if (materialParams.metallicRoughnessIndex > -1) {
+                float2 uv = uvs[materialParams.metallicRoughnessIndex];
+
+                vec4 mr = texture(materialParams_metallicRoughnessMap, uv);
+                material.roughness *= mr.g;
+                material.metallic *= mr.b;
+            }
+
+            if (materialParams.aoIndex > -1) {
+                float2 uv = uvs[materialParams.aoIndex];
+                material.ambientOcclusion = texture(materialParams_occlusionMap, uv).r *
+                        materialParams.aoStrength;
+            }
+            if (materialParams.emissiveIndex > -1) {
+                float2 uv = uvs[materialParams.emissiveIndex];
+                material.emissive.rgb *= texture(materialParams_emissiveMap, uv).rgb;
+            }
+        #endif
+    }
+}

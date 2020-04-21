@@ -60,43 +60,6 @@ using namespace filaflat;
 
 namespace details {
 
-// Global list of engines used for diagnostic purposes only.
-// This console output in the constructor helps catch situations where the Filament library is
-// loaded twice, or not at all. Note that we avoid using slog due to static initialization.
-class EngineList {
-public:
-    EngineList() {
-        io::LogStream cinfo(io::LogStream::Priority::INFO);
-        cinfo << "Filament library loaded." << io::endl;
-    }
-    void add(FEngine* instance) {
-        std::unique_ptr<FEngine> engine(instance);
-        std::lock_guard<std::mutex> guard(mLock);
-        Engine* handle = engine.get();
-        mEngines[handle] = std::move(engine);
-    }
-    std::unique_ptr<FEngine> remove(FEngine* instance) {
-        std::unique_ptr<FEngine> filamentEngine;
-        std::lock_guard<std::mutex> guard(mLock);
-        auto const& pos = mEngines.find(instance);
-        if (pos != mEngines.end()) {
-            std::swap(filamentEngine, pos->second);
-            mEngines.erase(pos);
-        }
-        return filamentEngine;
-    }
-    bool isValid(Engine const& engine, const char* function)  {
-        std::lock_guard<std::mutex> guard(mLock);
-        auto const& pos = mEngines.find(&engine);
-        return pos != mEngines.end();
-    }
-private:
-    std::unordered_map<Engine const*, std::unique_ptr<FEngine>> mEngines;
-    std::mutex mLock;
-};
-
-static EngineList sEngines;
-
 FEngine* FEngine::create(Backend backend, Platform* platform, void* sharedGLContext) {
     FEngine* instance = new FEngine(backend, platform, sharedGLContext);
 
@@ -133,8 +96,6 @@ FEngine* FEngine::create(Backend backend, Platform* platform, void* sharedGLCont
         }
     }
 
-    sEngines.add(instance);
-
     // now we can initialize the largest part of the engine
     instance->init();
 
@@ -145,19 +106,13 @@ FEngine* FEngine::create(Backend backend, Platform* platform, void* sharedGLCont
     return instance;
 }
 
-void FEngine::assertValid(Engine const& engine, const char* function) {
-    bool valid = sEngines.isValid(engine, function);
-    ASSERT_POSTCONDITION(valid,
-            "Using an invalid Engine instance (@ %p) from %s.", &engine, function);
-}
-
 // these must be static because only a pointer is copied to the render stream
 // Note that these coordinates are specified in OpenGL clip space. Other backends can transform
 // these in the vertex shader as needed.
-static const half4 sFullScreenTriangleVertices[3] = {
-        { -1.0_h, -1.0_h, 1.0_h, 1.0_h },
-        {  3.0_h, -1.0_h, 1.0_h, 1.0_h },
-        { -1.0_h,  3.0_h, 1.0_h, 1.0_h }
+static constexpr float4 sFullScreenTriangleVertices[3] = {
+        { -1.0f, -1.0f, 1.0f, 1.0f },
+        {  3.0f, -1.0f, 1.0f, 1.0f },
+        { -1.0f,  3.0f, 1.0f, 1.0f }
 };
 
 // these must be static because only a pointer is copied to the render stream
@@ -200,7 +155,7 @@ void FEngine::init() {
     mFullScreenTriangleVb = upcast(VertexBuffer::Builder()
             .vertexCount(3)
             .bufferCount(1)
-            .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::HALF4, 0)
+            .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT4, 0)
             .build(*this));
 
     mFullScreenTriangleVb->setBufferAt(*this, 0,
@@ -801,10 +756,8 @@ bool FEngine::execute() {
 
 void FEngine::destroy(FEngine* engine) {
     if (engine) {
-        std::unique_ptr<FEngine> filamentEngine = sEngines.remove(engine);
-        if (filamentEngine) {
-            filamentEngine->shutdown();
-        }
+        engine->shutdown();
+        delete engine;
     }
 }
 
@@ -966,6 +919,10 @@ void Engine::execute() {
     ASSERT_PRECONDITION(!UTILS_HAS_THREADING, "Execute is meant for single-threaded platforms.");
     upcast(this)->flush();
     upcast(this)->execute();
+}
+
+utils::JobSystem& Engine::getJobSystem() noexcept {
+    return upcast(this)->getJobSystem();
 }
 
 DebugRegistry& Engine::getDebugRegistry() noexcept {

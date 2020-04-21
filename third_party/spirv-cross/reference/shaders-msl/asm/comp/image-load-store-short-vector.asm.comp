@@ -5,6 +5,7 @@
 
 using namespace metal;
 
+static inline __attribute__((always_inline))
 void _main(thread const uint3& id, thread texture2d<float, access::read_write> TargetTexture)
 {
     float2 loaded = TargetTexture.read(uint2(id.xy)).xy;

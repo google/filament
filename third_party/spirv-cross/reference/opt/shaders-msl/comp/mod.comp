@@ -15,9 +15,11 @@ struct SSBO2
     float4 out_data[1];
 };
 
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
 // Implementation of the GLSL mod() function, which is slightly different than Metal fmod()
 template<typename Tx, typename Ty>
-Tx mod(Tx x, Ty y)
+inline Tx mod(Tx x, Ty y)
 {
     return x - y * floor(x / y);
 }

@@ -1,0 +1,34 @@
+material {
+    name : blit,
+    parameters : [
+        {
+            type : sampler2d,
+            name : color,
+            precision: medium
+        },
+        {
+            type : float4,
+            name : resolution,
+            precision: high
+        }
+    ],
+    variables : [
+        vertex
+    ],
+    depthWrite : false,
+    depthCulling : false,
+    domain: postprocess
+}
+
+vertex {
+    void postProcessVertex(inout PostProcessVertexInputs postProcess) {
+        postProcess.vertex.xy = postProcess.normalizedUV;
+    }
+}
+
+fragment {
+    void postProcess(inout PostProcessInputs postProcess) {
+        postProcess.color = textureLod(materialParams_color, variable_vertex.xy, 0.0);
+    }
+}
+

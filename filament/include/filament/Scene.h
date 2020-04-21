@@ -72,7 +72,7 @@ public:
      *
      * @param skybox The Skybox to use to fill untouched pixels, or nullptr to unset the Skybox.
      */
-    void setSkybox(Skybox const* skybox) noexcept;
+    void setSkybox(Skybox* skybox) noexcept;
 
     /**
      * Set the IndirectLight to use when rendering the Scene.
@@ -83,7 +83,6 @@ public:
      * @param ibl The IndirectLight to use when rendering the Scene or nullptr to unset.
      */
     void setIndirectLight(IndirectLight const* ibl) noexcept;
-
 
     /**
      * Adds an Entity to the Scene.

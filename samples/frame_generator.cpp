@@ -51,10 +51,10 @@
 #include <math/vec4.h>
 #include <math/norm.h>
 
-#include "app/Config.h"
-#include "app/IBL.h"
-#include "app/FilamentApp.h"
-#include "app/MeshAssimp.h"
+#include <filamentapp/Config.h>
+#include <filamentapp/IBL.h>
+#include <filamentapp/FilamentApp.h>
+#include <filamentapp/MeshAssimp.h>
 
 using namespace filament::math;
 using namespace filament;
@@ -76,6 +76,7 @@ static Path g_materialPath;
 static Path g_paramsPath;
 static bool g_lightOn = false;
 static bool g_skyboxOn = true;
+static Skybox* g_skybox = nullptr;
 static int g_materialVariantCount = 1;
 static int g_currentFrame = 0;
 static std::atomic_int g_savedFrames(0);
@@ -228,6 +229,10 @@ static void cleanup(Engine* engine, View*, Scene*) {
         engine->destroy(material.second);
     }
 
+    if (g_skybox) {
+        engine->destroy(g_skybox);
+    }
+
     engine->destroy(g_materialInstance);
     engine->destroy(g_material);
 
@@ -329,14 +334,15 @@ static void setup(Engine* engine, View* view, Scene* scene) {
     if (!g_skyboxOn) {
         auto ibl = FilamentApp::get().getIBL();
         if (ibl) ibl->getSkybox()->setLayerMask(0xff, 0x00);
+    } else {
+        g_skybox = Skybox::Builder().color({
+                ((g_clearColor >> 16) & 0xFF) / 255.0f,
+                ((g_clearColor >>  8) & 0xFF) / 255.0f,
+                ((g_clearColor      ) & 0xFF) / 255.0f,
+                1.0f
+        }).build(*engine);
+        scene->setSkybox(g_skybox);
     }
-
-    view->setClearColor(Color::toLinear({
-        ((g_clearColor >> 16) & 0xFF) / 255.0f,
-        ((g_clearColor >>  8) & 0xFF) / 255.0f,
-        ((g_clearColor      ) & 0xFF) / 255.0f,
-        1.0f
-    }));
 }
 
 template<typename T>

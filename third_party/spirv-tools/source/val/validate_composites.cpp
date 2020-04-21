@@ -18,6 +18,7 @@
 
 #include "source/diagnostic.h"
 #include "source/opcode.h"
+#include "source/spirv_target_env.h"
 #include "source/val/instruction.h"
 #include "source/val/validation_state.h"
 
@@ -29,8 +30,8 @@ namespace {
 // OpCompositeInsert instruction. The function traverses the hierarchy of
 // nested data structures (structs, arrays, vectors, matrices) as directed by
 // the sequence of indices in the instruction. May return error if traversal
-// fails (encountered non-composite, out of bounds, nesting too deep).
-// Returns the type of Composite operand if the instruction has no indices.
+// fails (encountered non-composite, out of bounds, no indices, nesting too
+// deep).
 spv_result_t GetExtractInsertValueType(ValidationState_t& _,
                                        const Instruction* inst,
                                        uint32_t* member_type) {
@@ -39,10 +40,15 @@ spv_result_t GetExtractInsertValueType(ValidationState_t& _,
   uint32_t word_index = opcode == SpvOpCompositeExtract ? 4 : 5;
   const uint32_t num_words = static_cast<uint32_t>(inst->words().size());
   const uint32_t composite_id_index = word_index - 1;
-
   const uint32_t num_indices = num_words - word_index;
   const uint32_t kCompositeExtractInsertMaxNumIndices = 255;
-  if (num_indices > kCompositeExtractInsertMaxNumIndices) {
+
+  if (num_indices == 0) {
+    return _.diag(SPV_ERROR_INVALID_DATA, inst)
+           << "Expected at least one index to Op"
+           << spvOpcodeString(inst->opcode()) << ", zero found";
+
+  } else if (num_indices > kCompositeExtractInsertMaxNumIndices) {
     return _.diag(SPV_ERROR_INVALID_DATA, inst)
            << "The number of indexes in Op" << spvOpcodeString(opcode)
            << " may not exceed " << kCompositeExtractInsertMaxNumIndices
@@ -117,6 +123,10 @@ spv_result_t GetExtractInsertValueType(ValidationState_t& _,
         *member_type = type_inst->word(component_index + 2);
         break;
       }
+      case SpvOpTypeCooperativeMatrixNV: {
+        *member_type = type_inst->word(2);
+        break;
+      }
       default:
         return _.diag(SPV_ERROR_INVALID_DATA, inst)
                << "Reached non-composite type while indexes still remain to "
@@ -148,10 +158,16 @@ spv_result_t ValidateVectorExtractDynamic(ValidationState_t& _,
            << "Expected Vector component type to be equal to Result Type";
   }
 
-  const uint32_t index_type = _.GetOperandTypeId(inst, 3);
-  if (!_.IsIntScalarType(index_type)) {
+  const auto index = _.FindDef(inst->GetOperandAs<uint32_t>(3));
+  if (!index || index->type_id() == 0 || !_.IsIntScalarType(index->type_id())) {
     return _.diag(SPV_ERROR_INVALID_DATA, inst)
            << "Expected Index to be int scalar";
+  }
+
+  if (_.HasCapability(SpvCapabilityShader) &&
+      _.ContainsLimitedUseIntOrFloatType(inst->type_id())) {
+    return _.diag(SPV_ERROR_INVALID_DATA, inst)
+           << "Cannot extract from a vector of 8- or 16-bit types";
   }
   return SPV_SUCCESS;
 }
@@ -182,6 +198,12 @@ spv_result_t ValidateVectorInsertDyanmic(ValidationState_t& _,
   if (!_.IsIntScalarType(index_type)) {
     return _.diag(SPV_ERROR_INVALID_DATA, inst)
            << "Expected Index to be int scalar";
+  }
+
+  if (_.HasCapability(SpvCapabilityShader) &&
+      _.ContainsLimitedUseIntOrFloatType(inst->type_id())) {
+    return _.diag(SPV_ERROR_INVALID_DATA, inst)
+           << "Cannot insert into a vector of 8- or 16-bit types";
   }
   return SPV_SUCCESS;
 }
@@ -314,10 +336,36 @@ spv_result_t ValidateCompositeConstruct(ValidationState_t& _,
 
       break;
     }
+    case SpvOpTypeCooperativeMatrixNV: {
+      const auto result_type_inst = _.FindDef(result_type);
+      assert(result_type_inst);
+      const auto component_type_id =
+          result_type_inst->GetOperandAs<uint32_t>(1);
+
+      if (3 != num_operands) {
+        return _.diag(SPV_ERROR_INVALID_DATA, inst)
+               << "Expected single constituent";
+      }
+
+      const uint32_t operand_type_id = _.GetOperandTypeId(inst, 2);
+
+      if (operand_type_id != component_type_id) {
+        return _.diag(SPV_ERROR_INVALID_DATA, inst)
+               << "Expected Constituent type to be equal to the component type";
+      }
+
+      break;
+    }
     default: {
       return _.diag(SPV_ERROR_INVALID_DATA, inst)
              << "Expected Result Type to be a composite type";
     }
+  }
+
+  if (_.HasCapability(SpvCapabilityShader) &&
+      _.ContainsLimitedUseIntOrFloatType(inst->type_id())) {
+    return _.diag(SPV_ERROR_INVALID_DATA, inst)
+           << "Cannot create a composite containing 8- or 16-bit types";
   }
   return SPV_SUCCESS;
 }
@@ -337,20 +385,26 @@ spv_result_t ValidateCompositeExtract(ValidationState_t& _,
               "the composite (Op"
            << spvOpcodeString(_.GetIdOpcode(member_type)) << ").";
   }
+
+  if (_.HasCapability(SpvCapabilityShader) &&
+      _.ContainsLimitedUseIntOrFloatType(inst->type_id())) {
+    return _.diag(SPV_ERROR_INVALID_DATA, inst)
+           << "Cannot extract from a composite of 8- or 16-bit types";
+  }
+
   return SPV_SUCCESS;
 }
 
 spv_result_t ValidateCompositeInsert(ValidationState_t& _,
                                      const Instruction* inst) {
-  const SpvOp opcode = inst->opcode();
   const uint32_t object_type = _.GetOperandTypeId(inst, 2);
   const uint32_t composite_type = _.GetOperandTypeId(inst, 3);
   const uint32_t result_type = inst->type_id();
   if (result_type != composite_type) {
     return _.diag(SPV_ERROR_INVALID_DATA, inst)
            << "The Result Type must be the same as Composite type in Op"
-           << spvOpcodeString(opcode) << " yielding Result Id " << result_type
-           << ".";
+           << spvOpcodeString(inst->opcode()) << " yielding Result Id "
+           << result_type << ".";
   }
 
   uint32_t member_type = 0;
@@ -366,16 +420,18 @@ spv_result_t ValidateCompositeInsert(ValidationState_t& _,
               "Composite (Op"
            << spvOpcodeString(_.GetIdOpcode(member_type)) << ").";
   }
+
+  if (_.HasCapability(SpvCapabilityShader) &&
+      _.ContainsLimitedUseIntOrFloatType(inst->type_id())) {
+    return _.diag(SPV_ERROR_INVALID_DATA, inst)
+           << "Cannot insert into a composite of 8- or 16-bit types";
+  }
+
   return SPV_SUCCESS;
 }
 
 spv_result_t ValidateCopyObject(ValidationState_t& _, const Instruction* inst) {
   const uint32_t result_type = inst->type_id();
-  if (!spvOpcodeGeneratesType(_.GetIdOpcode(result_type))) {
-    return _.diag(SPV_ERROR_INVALID_DATA, inst)
-           << "Expected Result Type to be a type";
-  }
-
   const uint32_t operand_type = _.GetOperandTypeId(inst, 2);
   if (operand_type != result_type) {
     return _.diag(SPV_ERROR_INVALID_DATA, inst)
@@ -418,6 +474,12 @@ spv_result_t ValidateTranspose(ValidationState_t& _, const Instruction* inst) {
     return _.diag(SPV_ERROR_INVALID_DATA, inst)
            << "Expected number of columns and the column size of Matrix "
            << "to be the reverse of those of Result Type";
+  }
+
+  if (_.HasCapability(SpvCapabilityShader) &&
+      _.ContainsLimitedUseIntOrFloatType(inst->type_id())) {
+    return _.diag(SPV_ERROR_INVALID_DATA, inst)
+           << "Cannot transpose matrices of 16-bit floats";
   }
   return SPV_SUCCESS;
 }
@@ -469,10 +531,12 @@ spv_result_t ValidateVectorShuffle(ValidationState_t& _,
   }
 
   // All Component literals must either be FFFFFFFF or in [0, N - 1].
+  // For WebGPU specifically, Component literals cannot be FFFFFFFF.
   auto vector1ComponentCount = vector1Type->GetOperandAs<uint32_t>(2);
   auto vector2ComponentCount = vector2Type->GetOperandAs<uint32_t>(2);
   auto N = vector1ComponentCount + vector2ComponentCount;
   auto firstLiteralIndex = 4;
+  const auto is_webgpu_env = spvIsWebGPUEnv(_.context()->target_env);
   for (size_t i = firstLiteralIndex; i < inst->operands().size(); ++i) {
     auto literal = inst->GetOperandAs<uint32_t>(i);
     if (literal != 0xFFFFFFFF && literal >= N) {
@@ -480,6 +544,42 @@ spv_result_t ValidateVectorShuffle(ValidationState_t& _,
              << "Component index " << literal << " is out of bounds for "
              << "combined (Vector1 + Vector2) size of " << N << ".";
     }
+
+    if (is_webgpu_env && literal == 0xFFFFFFFF) {
+      return _.diag(SPV_ERROR_INVALID_ID, inst)
+             << "Component literal at operand " << i - firstLiteralIndex
+             << " cannot be 0xFFFFFFFF in WebGPU execution environment.";
+    }
+  }
+
+  if (_.HasCapability(SpvCapabilityShader) &&
+      _.ContainsLimitedUseIntOrFloatType(inst->type_id())) {
+    return _.diag(SPV_ERROR_INVALID_DATA, inst)
+           << "Cannot shuffle a vector of 8- or 16-bit types";
+  }
+
+  return SPV_SUCCESS;
+}
+
+spv_result_t ValidateCopyLogical(ValidationState_t& _,
+                                 const Instruction* inst) {
+  const auto result_type = _.FindDef(inst->type_id());
+  const auto source = _.FindDef(inst->GetOperandAs<uint32_t>(2u));
+  const auto source_type = _.FindDef(source->type_id());
+  if (!source_type || !result_type || source_type == result_type) {
+    return _.diag(SPV_ERROR_INVALID_ID, inst)
+           << "Result Type must not equal the Operand type";
+  }
+
+  if (!_.LogicallyMatch(source_type, result_type, false)) {
+    return _.diag(SPV_ERROR_INVALID_ID, inst)
+           << "Result Type does not logically match the Operand type";
+  }
+
+  if (_.HasCapability(SpvCapabilityShader) &&
+      _.ContainsLimitedUseIntOrFloatType(inst->type_id())) {
+    return _.diag(SPV_ERROR_INVALID_DATA, inst)
+           << "Cannot copy composites of 8- or 16-bit types";
   }
 
   return SPV_SUCCESS;
@@ -506,6 +606,8 @@ spv_result_t CompositesPass(ValidationState_t& _, const Instruction* inst) {
       return ValidateCopyObject(_, inst);
     case SpvOpTranspose:
       return ValidateTranspose(_, inst);
+    case SpvOpCopyLogical:
+      return ValidateCopyLogical(_, inst);
     default:
       break;
   }

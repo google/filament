@@ -45,10 +45,10 @@ static constexpr bool ENABLE_LISPSM = true;
 
 ShadowMap::ShadowMap(FEngine& engine) noexcept :
         mEngine(engine),
-        mClipSpaceFlipped(engine.getBackend() == Backend::VULKAN ||
-                          engine.getBackend() == Backend::METAL) {
-    mCamera = mEngine.createCamera(EntityManager::get().create());
-    mDebugCamera = mEngine.createCamera(EntityManager::get().create());
+        mClipSpaceFlipped(engine.getBackend() == Backend::VULKAN),
+        mTextureSpaceFlipped(engine.getBackend() == Backend::METAL) {
+    mCamera = mEngine.createCamera(engine.getEntityManager().create());
+    mDebugCamera = mEngine.createCamera(engine.getEntityManager().create());
     FDebugRegistry& debugRegistry = engine.getDebugRegistry();
     debugRegistry.registerProperty("d.shadowmap.focus_shadowcasters", &engine.debug.shadowmap.focus_shadowcasters);
     debugRegistry.registerProperty("d.shadowmap.far_uses_shadowcasters", &engine.debug.shadowmap.far_uses_shadowcasters);
@@ -65,107 +65,19 @@ ShadowMap::~ShadowMap() {
     mEngine.destroy(mDebugCamera->getEntity());
 }
 
-UTILS_NOINLINE
-void ShadowMap::fillWithDebugPattern(backend::DriverApi& driverApi) const noexcept {
-    const size_t dim = mShadowMapDimension;
-    size_t size = dim * dim;
-    uint8_t* ptr = (uint8_t*)malloc(size);
-    driverApi.update2DImage(mShadowMapHandle, 0, 0, 0, dim, dim, {
-        ptr, size, PixelDataFormat::DEPTH_COMPONENT, PixelDataType::UBYTE,
-        [] (void* buffer, size_t, void*) { free(buffer); }
-    });
-    for (size_t y = 0; y < dim; ++y) {
-        for (size_t x = 0; x < dim; ++x) {
-            ptr[x + y * dim] = ((x ^ y) & 0x8u) ? 0u : 0xFFu;
-        }
-    }
-}
-
-void ShadowMap::prepare(DriverApi& driver, SamplerGroup& sb) noexcept {
-    assert(mShadowMapDimension);
-
-    uint32_t dim = mShadowMapDimension;
-    uint32_t currentDimension = mViewport.width + 2;
-    if (currentDimension == dim) {
-        // nothing to do here.
-        assert(mShadowMapHandle);
-        return;
-    }
-
-    // destroy the current rendertarget and texture
-    if (mShadowMapRenderTarget) {
-        driver.destroyRenderTarget(mShadowMapRenderTarget);
-    }
-    if (mShadowMapHandle) {
-        driver.destroyTexture(mShadowMapHandle);
-    }
-
-    // allocate new ones...
-    // we set a viewport with a 1-texel border for when we index outside of the texture
-    // DON'T CHANGE this unless computeLightSpaceMatrix() is updated too.
-    // see: computeLightSpaceMatrix()
-    // For floating-point depth textures, the 1-texel border could be set to FLOAT_MAX to avoid
-    // clamping in the shadow shader (see sampleDepth inside shadowing.fs). Unfortunately, the APIs
-    // don't seem let us clear depth attachments to anything greater than 1.0, so we'd need a way to
-    // do this other than clearing.
-    mViewport = { 1, 1, dim - 2, dim - 2 };
-    mShadowMapResolution.xy = 1.0f / (dim - 2);
-
-    // 16-bits seems enough. TODO: make it an option.
-    TextureFormat format = TextureFormat::DEPTH16;
-    switch (format) {
-        default:
-            // this should not happen
-        case TextureFormat::DEPTH16:
-            mShadowMapResolution.z = 1.0f / (1u << 16u);
-            break;
-        case TextureFormat::DEPTH32F:
-            // for 32-bits float assume 24-bits resolution. we shouldn't use that for shadow-maps.
-        case TextureFormat::DEPTH24:
-        case TextureFormat::DEPTH24_STENCIL8:
-            mShadowMapResolution.z = 1.0f / (1u << 24u);
-            break;
-    }
-
-    mShadowMapHandle = driver.createTexture(
-            SamplerType::SAMPLER_2D, 1, format, 1, dim, dim, 1,
-            TextureUsage::DEPTH_ATTACHMENT | TextureUsage::SAMPLEABLE);
-
-    mShadowMapRenderTarget = driver.createRenderTarget(
-            TargetBufferFlags::DEPTH, dim, dim, 1,
-            {}, { mShadowMapHandle }, {});
-
-    sb.setSampler(PerViewSib::SHADOW_MAP, {
-        mShadowMapHandle, {
-                    .filterMag = SamplerMagFilter::LINEAR,
-                    .filterMin = SamplerMinFilter::LINEAR,
-                    .compareMode = SamplerCompareMode::COMPARE_TO_TEXTURE,
-                    .compareFunc = SamplerCompareFunc::LE
-            }});
-}
-
-void ShadowMap::render(DriverApi& driver, RenderPass& pass, FView& view) noexcept {
+void ShadowMap::render(DriverApi& driver, Handle<HwRenderTarget> rt,
+        filament::Viewport const& viewport, FView::Range const& range, RenderPass& pass, FView& view) noexcept {
     FEngine& engine = mEngine;
 
-    if (UTILS_UNLIKELY(engine.debug.shadowmap.checkerboard)) {
-        // TODO: eventually this will be handled as a optional pass in the framefraph
-        fillWithDebugPattern(driver);
-        return;
-    }
-
     FScene& scene = *view.getScene();
-    filament::Viewport const& viewport = mViewport;
 
     // FIXME: in the future this will come from the framegraph
     RenderPassParams params = {};
     params.flags.clear = TargetBufferFlags::DEPTH;
     params.flags.discardStart = TargetBufferFlags::DEPTH;
-    params.flags.discardEnd = TargetBufferFlags::COLOR_AND_STENCIL;
+    params.flags.discardEnd = TargetBufferFlags::COLOR0 | TargetBufferFlags::STENCIL;
     params.clearDepth = 1.0;
     params.viewport = viewport;
-    // disable scissor for clearing so the whole surface, but set the viewport to the
-    // the inset-by-1 rectangle.
-    params.flags.ignoreScissor = true;
 
     FCamera const& camera = getCamera();
     details::CameraInfo cameraInfo = {
@@ -178,37 +90,28 @@ void ShadowMap::render(DriverApi& driver, RenderPass& pass, FView& view) noexcep
     };
     pass.setCamera(cameraInfo);
 
-    FView::Range visibleRenderables = view.getVisibleShadowCasters();
-    pass.setGeometry(scene.getRenderableData(), visibleRenderables, scene.getRenderableUBO());
+    pass.setGeometry(scene.getRenderableData(), range, scene.getRenderableUBO());
 
-    view.updatePrimitivesLod(engine, cameraInfo, scene.getRenderableData(), visibleRenderables);
-    view.prepareCamera(cameraInfo, viewport);
+    view.updatePrimitivesLod(engine, cameraInfo, scene.getRenderableData(), range);
+    view.prepareCamera(cameraInfo);
+    view.prepareViewport(viewport);
     view.commitUniforms(driver);
 
     pass.overridePolygonOffset(&mPolygonOffset);
+    pass.newCommandBuffer();
     pass.appendCommands(RenderPass::SHADOW);
     pass.sortCommands();
-    pass.execute("Shadow map Pass", getRenderTarget(), params);
+    pass.execute("Shadow map Pass", rt, params);
 }
 
-void ShadowMap::terminate(DriverApi& driverApi) noexcept {
-    if (mShadowMapRenderTarget) {
-        driverApi.destroyRenderTarget(mShadowMapRenderTarget);
-    }
-    if (mShadowMapHandle) {
-        driverApi.destroyTexture(mShadowMapHandle);
-    }
-}
-
-void ShadowMap::update(
-        const FScene::LightSoa& lightData, size_t index, FScene const* scene,
-        details::CameraInfo const& camera, uint8_t visibleLayers) noexcept {
+void ShadowMap::update(const FScene::LightSoa& lightData, size_t index, FScene const* scene,
+        details::CameraInfo const& camera, uint8_t visibleLayers, ShadowMapLayout layout) noexcept {
     // this is the hard part here, find a good frustum for our camera
 
     auto& lcm = mEngine.getLightManager();
 
     FLightManager::Instance li = lightData.elementAt<FScene::LIGHT_INSTANCE>(index);
-    mShadowMapDimension = std::max(1u, lcm.getShadowMapSize(li));
+    mShadowMapLayout = layout;
 
     FLightManager::ShadowParams params = lcm.getShadowParams(li);
     mPolygonOffset = {
@@ -260,6 +163,9 @@ void ShadowMap::update(
             break;
         case Type::FOCUSED_SPOT:
         case Type::SPOT:
+            computeShadowCameraSpot(lightData.elementAt<FScene::POSITION_RADIUS>(index).xyz,
+                    lightData.elementAt<FScene::DIRECTION>(index), lcm.getSpotLightOuterCone(li),
+                    lightData.elementAt<FScene::POSITION_RADIUS>(index).w, cameraInfo, params);
             break;
         case Type::POINT:
             break;
@@ -478,7 +384,7 @@ void ShadowMap::computeShadowCameraDirectional(
 
         if (params.options.stable) {
             // Use the world origin as reference point, fixed w.r.t. the camera
-            snapLightFrustum(s, o, Mv, camera.worldOrigin[3].xyz, mShadowMapResolution.xy);
+            snapLightFrustum(s, o, Mv, camera.worldOrigin[3].xyz, 1.0f / mShadowMapLayout.shadowDimension);
         }
 
         const mat4f F(mat4f::row_major_init {
@@ -521,6 +427,44 @@ void ShadowMap::computeShadowCameraDirectional(
         // for the debug camera, we need to undo the world origin
         mDebugCamera->setCustomProjection(mat4(Sb * camera.worldOrigin), znear, zfar);
     }
+}
+
+void ShadowMap::computeShadowCameraSpot(math::float3 const& position, math::float3 const& dir,
+        float outerConeAngle, float radius, CameraInfo const& camera, FLightManager::ShadowParams const& params) noexcept {
+
+    // TODO: correctly compute if this spot light has any visible shadows.
+    mHasVisibleShadows = true;
+
+    /*
+     * Compute the light models matrix.
+     */
+
+    // Choose a reasonable value for the near plane.
+    const float nearPlane = 0.1f;
+
+    const float3 lightPosition = position;
+    const mat4f M = mat4f::lookAt(lightPosition, lightPosition + dir, float3{0, 1, 0});
+    const mat4f Mv = FCamera::rigidTransformInverse(M);
+
+    float outerConeAngleDegrees = outerConeAngle / (2.0f * F_PI) * 360.0f;
+    const mat4f Mp = mat4f::perspective(outerConeAngleDegrees * 2, 1.0f, nearPlane, radius,
+            mat4f::Fov::HORIZONTAL);
+
+    const mat4f MpMv(Mp * Mv);
+
+    // Final shadow transform
+    const mat4f S = MpMv;
+
+    const mat4f MbMt = getTextureCoordsMapping();
+    const mat4f St = MbMt * S;
+    mTexelSizeWs = texelSizeWorldSpace(Mp, MbMt);
+    mLightSpace = St;
+
+    const mat4f Sb = S * mat4f::translation(dir * params.options.constantBias);
+    mCamera->setCustomProjection(mat4(Sb), nearPlane, radius);
+
+    // for the debug camera, we need to undo the world origin
+    mDebugCamera->setCustomProjection(mat4(Sb * camera.worldOrigin), nearPlane, radius);
 }
 
 mat4f ShadowMap::applyLISPSM(math::mat4f& Wp,
@@ -614,9 +558,19 @@ mat4f ShadowMap::getTextureCoordsMapping() const noexcept {
               0,    0,    0,    1
     });
 
+    // the shadow map texture might be larger than the shadow map dimension, so we add a scaling
+    // factor
+    const float v = (float) mShadowMapLayout.textureDimension / mShadowMapLayout.atlasDimension;
+    const mat4f Mv(mat4f::row_major_init{
+            v, 0, 0, 0,
+            0, v, 0, 0,
+            0, 0, 1, 0,
+            0, 0, 0, 1
+    });
+
     // apply the 1-texel border viewport transform
-    const float o = 1.0f / mShadowMapDimension;
-    const float s = 1.0f - 2.0f * o;
+    const float o = 1.0f / mShadowMapLayout.atlasDimension;
+    const float s = 1.0f - 2.0f * (1.0f / mShadowMapLayout.textureDimension);
     const mat4f Mb(mat4f::row_major_init{
              s, 0, 0, o,
              0, s, 0, o,
@@ -624,8 +578,15 @@ mat4f ShadowMap::getTextureCoordsMapping() const noexcept {
              0, 0, 0, 1
     });
 
+    const mat4f Mf = mTextureSpaceFlipped ? mat4f(mat4f::row_major_init{
+            1,  0,  0,  0,
+            0, -1,  0,  1,
+            0,  0,  1,  0,
+            0,  0,  0,  1
+    }) : mat4f();
+
     // Compute shadow-map texture access transform
-    return Mb * Mt;
+    return Mf * Mb * Mv * Mt;
 }
 
 // This construct a frustum (similar to glFrustum or frustum), except
@@ -822,6 +783,7 @@ size_t ShadowMap::intersectFrustumWithBox(
             vertexCount++;
         }
     }
+    const bool someFrustumVerticesAreInTheBox = vertexCount > 0;
     constexpr const float EPSILON = 1.0f / 8192.0f; // ~0.012 mm
 
     // at this point if we have 8 vertices, we can skip the rest
@@ -849,8 +811,31 @@ size_t ShadowMap::intersectFrustumWithBox(
             }
         }
 
-        // at this point if we have 8 vertices, we can skip the segments intersection tests
-        if (vertexCount < 8) {
+        /*
+         * It's not enough here to have all 8 vertices, consider this:
+         *
+         *                     +
+         *                   / |
+         *                 /   |
+         *    +---------C/--B  |
+         *    |       A/    |  |
+         *    |       |     |  |
+         *    |       A\    |  |
+         *    +----------\--B  |
+         *                 \   |
+         *                   \ |
+         *                     +
+         *
+         * A vertices will be selected by step (a)
+         * B vertices will be selected by step (b)
+         *
+         * if we stop here, the segment (A,B) is inside the intersection of the box and the
+         * frustum.  We do need step (c) and (d) to compute the actual intersection C.
+         *
+         * However, a special case is if all the vertices of the box are inside the frustum.
+         */
+
+        if (someFrustumVerticesAreInTheBox || vertexCount < 8) {
             // c) intersect scene's volume edges with frustum planes
             vertexCount = intersectFrustum(outVertices.data(), vertexCount,
                     wsSceneReceiversCorners.vertices, wsFrustumCorners, frustum);
@@ -947,8 +932,8 @@ float ShadowMap::texelSizeWorldSpace(const mat3f& worldToShadowTexture) const no
     // orthographic projections. We just need to inverse worldToShadowTexture,
     // which is guaranteed to be orthographic.
     // The two first columns give us the how a texel maps in world-space.
-    const float ures = mShadowMapResolution.x;
-    const float vres = mShadowMapResolution.y;
+    const float ures = 1.0f / mShadowMapLayout.shadowDimension;
+    const float vres = 1.0f / mShadowMapLayout.shadowDimension;
     const mat3f shadowTextureToWorld(inverse(worldToShadowTexture));
     const float3 Jx = shadowTextureToWorld[0];
     const float3 Jy = shadowTextureToWorld[1];
@@ -971,9 +956,9 @@ float ShadowMap::texelSizeWorldSpace(const mat4f& Wp, const mat4f& MbMtF) const 
     // It might be better to do this computation in the vertex shader.
     float3 p = {0.5, 0.5, 0.0};
 
-    const float ures = mShadowMapResolution.x;
-    const float vres = mShadowMapResolution.y;
-    const float dres = mShadowMapResolution.z;
+    const float ures = 1.0f / mShadowMapLayout.shadowDimension;
+    const float vres = 1.0f / mShadowMapLayout.shadowDimension;
+    const float dres = mShadowMapLayout.zResolution;
 
     constexpr bool JACOBIAN_ESTIMATE = false;
     if (JACOBIAN_ESTIMATE) {

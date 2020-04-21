@@ -25,7 +25,7 @@ cmake ^
     -DCMAKE_C_COMPILER:PATH="C:\Program Files\LLVM\bin\clang-cl.exe" ^
     -DCMAKE_LINKER:PATH="C:\Program Files\LLVM\bin\lld-link.exe" ^
     -DCMAKE_INSTALL_PREFIX=..\release\filament ^
-    -DENABLE_JAVA=NO ^
+    -DFILAMENT_ENABLE_JAVA=NO ^
     -DCMAKE_BUILD_TYPE=Release ^
     ..\..
 ```
@@ -96,12 +96,12 @@ ninja install
 
 ## Generate AAR
 
-The Gradle project used to generate the AAR is located at `<filament>\android\filament-android`.
+The Gradle project used to generate the AAR is located at `<filament>\android`.
 
 ```
-cd android\filament-android
-gradlew -Pfilament_dist_dir=..\..\out\android-release\filament assembleRelease
-copy build\outputs\aar\filament-android-release.aar ..\..\out\
+cd android
+gradlew -Pfilament_dist_dir=..\out\android-release\filament assembleRelease
+copy filament-android\build\outputs\aar\filament-android-release.aar ..\..\out\
 ```
 
 If you're only interested in building for a single ABI, you'll need to add an `abiFilters` override
@@ -119,5 +119,5 @@ for more information.
 
 `filament-android-release.aar` should now be present at `<filament>\out\filament-android-release.aar`.
 
-See [Using Filament's AAR](../README.md#using-filaments-aar) for usage instructions.
+See [Using Filament's AAR](../README.md) for usage instructions.
 

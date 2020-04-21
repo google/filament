@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 #include <jni.h>
 
 #include <filament/RenderableManager.h>
@@ -165,6 +164,13 @@ Java_com_google_android_filament_RenderableManager_nBuilderReceiveShadows(JNIEnv
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_RenderableManager_nBuilderScreenSpaceContactShadows(JNIEnv*, jclass,
+        jlong nativeBuilder, jboolean enabled) {
+    RenderableManager::Builder *builder = (RenderableManager::Builder *) nativeBuilder;
+    builder->screenSpaceContactShadows(enabled);
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_RenderableManager_nBuilderSkinning(JNIEnv*, jclass,
         jlong nativeBuilder, jint boneCount) {
     RenderableManager::Builder *builder = (RenderableManager::Builder *) nativeBuilder;
@@ -262,6 +268,13 @@ Java_com_google_android_filament_RenderableManager_nSetPriority(JNIEnv*, jclass,
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_RenderableManager_nSetCulling(JNIEnv*, jclass,
+        jlong nativeRenderableManager, jint i, jboolean enabled) {
+    RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
+    rm->setCulling((RenderableManager::Instance) i, enabled);
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_RenderableManager_nSetCastShadows(JNIEnv*, jclass,
         jlong nativeRenderableManager, jint i, jboolean enabled) {
     RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
@@ -273,6 +286,13 @@ Java_com_google_android_filament_RenderableManager_nSetReceiveShadows(JNIEnv*, j
         jlong nativeRenderableManager, jint i, jboolean enabled) {
     RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
     rm->setReceiveShadows((RenderableManager::Instance) i, enabled);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_RenderableManager_nSetScreenSpaceContactShadows(JNIEnv*, jclass,
+        jlong nativeRenderableManager, jint i, jboolean enabled) {
+    RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
+    rm->setScreenSpaceContactShadows((RenderableManager::Instance) i, enabled);
 }
 
 extern "C" JNIEXPORT jboolean JNICALL

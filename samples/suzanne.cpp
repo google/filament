@@ -31,14 +31,14 @@
 #include <image/KtxBundle.h>
 #include <image/KtxUtility.h>
 
-#include "app/Config.h"
-#include "app/FilamentApp.h"
-#include "app/IBL.h"
+#include <filamentapp/Config.h>
+#include <filamentapp/FilamentApp.h>
+#include <filamentapp/IBL.h>
 
 #include <stb_image.h>
 
 #include "generated/resources/resources.h"
-#include "generated/resources/textures.h"
+#include "generated/resources/monkey.h"
 
 using namespace filament;
 using namespace image;
@@ -78,11 +78,6 @@ static Texture* loadNormalMap(Engine* engine, const uint8_t* normals, size_t nby
 int main(int argc, char** argv) {
     Config config;
     config.title = "suzanne";
-#ifdef _MSC_VER
-    config.backend = Engine::Backend::OPENGL;
-#else
-    config.backend = Engine::Backend::VULKAN;
-#endif
     config.iblDirectory = FilamentApp::getRootAssetsPath() + IBL_FOLDER;
 
     App app;
@@ -92,15 +87,15 @@ int main(int argc, char** argv) {
         auto& em = utils::EntityManager::get();
 
         // Create textures. The KTX bundles are freed by KtxUtility.
-        auto albedo = new image::KtxBundle(TEXTURES_ALBEDO_S3TC_DATA, TEXTURES_ALBEDO_S3TC_SIZE);
-        auto ao = new image::KtxBundle(TEXTURES_AO_DATA, TEXTURES_AO_SIZE);
-        auto metallic = new image::KtxBundle(TEXTURES_METALLIC_DATA, TEXTURES_METALLIC_SIZE);
-        auto roughness = new image::KtxBundle(TEXTURES_ROUGHNESS_DATA, TEXTURES_ROUGHNESS_SIZE);
+        auto albedo = new image::KtxBundle(MONKEY_ALBEDO_S3TC_DATA, MONKEY_ALBEDO_S3TC_SIZE);
+        auto ao = new image::KtxBundle(MONKEY_AO_DATA, MONKEY_AO_SIZE);
+        auto metallic = new image::KtxBundle(MONKEY_METALLIC_DATA, MONKEY_METALLIC_SIZE);
+        auto roughness = new image::KtxBundle(MONKEY_ROUGHNESS_DATA, MONKEY_ROUGHNESS_SIZE);
         app.albedo = ktx::createTexture(engine, albedo, true);
         app.ao = ktx::createTexture(engine, ao, false);
         app.metallic = ktx::createTexture(engine, metallic, false);
         app.roughness = ktx::createTexture(engine, roughness, false);
-        app.normal = loadNormalMap(engine, TEXTURES_NORMAL_DATA, TEXTURES_NORMAL_SIZE);
+        app.normal = loadNormalMap(engine, MONKEY_NORMAL_DATA, MONKEY_NORMAL_SIZE);
         TextureSampler sampler(TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR,
                 TextureSampler::MagFilter::LINEAR);
 
@@ -119,7 +114,7 @@ int main(int argc, char** argv) {
         ibl->setRotation(mat3f::rotation(0.5f, float3{ 0, 1, 0 }));
 
         // Add geometry into the scene.
-        app.mesh = filamesh::MeshReader::loadMeshFromBuffer(engine, RESOURCES_SUZANNE_DATA, nullptr,
+        app.mesh = filamesh::MeshReader::loadMeshFromBuffer(engine, MONKEY_SUZANNE_DATA, nullptr,
                 nullptr, app.materialInstance);
         auto ti = tcm.getInstance(app.mesh.renderable);
         app.transform = mat4f{ mat3f(1), float3(0, 0, -4) } * tcm.getWorldTransform(ti);

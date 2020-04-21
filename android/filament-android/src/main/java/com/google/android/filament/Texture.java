@@ -83,6 +83,8 @@ public class Texture {
     public enum Sampler {
         /** 2D sampler */
         SAMPLER_2D,
+        /** 2D array sampler  */
+        SAMPLER_2D_ARRAY,
         /** Cubemap sampler */
         SAMPLER_CUBEMAP,
         /** External texture sampler */
@@ -271,26 +273,40 @@ public class Texture {
      * Pixel data type
      */
     public enum Type {
-        /** unsigned byte, 8-bits */
+        /** unsigned byte, 8-bit */
         UBYTE,
-        /** signed byte, 8-bits */
+        /** signed byte, 8-bit */
         BYTE,
-        /** unsigned short, 16-bits */
+        /** unsigned short, 16-bits*/
         USHORT,
-        /** signed short, 16-bits */
+        /** signed short, 16-bit */
         SHORT,
-        /** unsigned int, 32-bits */
+        /** unsigned int, 32-bit */
         UINT,
-        /** signed int, 32-bits */
+        /** signed int, 32-bit */
         INT,
-        /** half-float, 16-bits float with 10 bits mantissa */
+        /** half-float, 16-bit float with 10 bits mantissa */
         HALF,
-        /** float, 32-bits float, with 24 bits mantissa */
+        /** float, 32-bit float, with 24 bits mantissa */
         FLOAT,
-        /** a compessed type */
+        /** a compressed type */
         COMPRESSED,
-        /** unsigned 5.6 (5.5 for blue) float packed in 32-bits */
-        UINT_10F_11F_11F_REV
+        /** unsigned 5.6 (5.5 for blue) float packed in a 32-bit integer. */
+        UINT_10F_11F_11F_REV,
+        /** unsigned 5/6 bit integers packed in a 16-bit short. */
+        USHORT_565,
+    }
+
+    /**
+     * Texture swizzling channels
+     */
+    public enum Swizzle {
+        SUBSTITUTE_ZERO,    //!< specified component is substituted with 0
+        SUBSTITUTE_ONE,     //!< specified component is substituted with 1
+        CHANNEL_0,          //!< specified component taken from channel 0
+        CHANNEL_1,          //!< specified component taken from channel 1
+        CHANNEL_2,          //!< specified component taken from channel 2
+        CHANNEL_3           //!< specified component taken from channel 3
     }
 
     /**
@@ -340,7 +356,6 @@ public class Texture {
          * </p>
          */
         @Nullable public Runnable callback;
-
 
         /**
          * Creates a <code>PixelBufferDescriptor</code>
@@ -581,8 +596,12 @@ public class Texture {
         }
 
         /**
-         * Specifies the texture's number of layers. This creates a 3D texture.
-         * @param depth texture number of layer, must be at least 1. Default is 1.
+         * Specifies the texture's number of layers. Values greater than 1 create a 3D texture.
+         *
+         * <p>This <code>Texture</code> instance must use
+         * {@link Sampler#SAMPLER_2D_ARRAY SAMPLER_2D_ARRAY} or it has no effect.</p>
+         *
+         * @param depth texture number of layers. Default is 1.
          * @return This Builder, for chaining calls.
          */
         @NonNull
@@ -635,6 +654,21 @@ public class Texture {
         @NonNull
         public Builder usage(int flags) {
             nBuilderUsage(mNativeBuilder, flags);
+            return this;
+        }
+
+        /**
+         * Specifies how a texture's channels map to color components
+         *
+         * @param r  texture channel for red component
+         * @param g  texture channel for green component
+         * @param b  texture channel for blue component
+         * @param a  texture channel for alpha component
+         * @return This Builder, for chaining calls.
+         */
+        @NonNull
+        public Builder swizzle(@NonNull Swizzle r, @NonNull Swizzle g, @NonNull Swizzle b, @NonNull Swizzle a) {
+            nBuilderSwizzle(mNativeBuilder, r.ordinal(), g.ordinal(), b.ordinal(), a.ordinal());
             return this;
         }
 
@@ -1054,6 +1088,7 @@ public class Texture {
     private static native void nBuilderSampler(long nativeBuilder, int sampler);
     private static native void nBuilderFormat(long nativeBuilder, int format);
     private static native void nBuilderUsage(long nativeBuilder, int flags);
+    private static native void nBuilderSwizzle(long nativeBuilder, int r, int g, int b, int a);
     private static native long nBuilderBuild(long nativeBuilder, long nativeEngine);
 
     private static native int nGetWidth(long nativeTexture, int level);

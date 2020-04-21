@@ -10,7 +10,7 @@ html, body { height: 100%; }
 body       { margin: 0; overflow: hidden; }
 #container { position: relative; height: 100%; }
 canvas     { position: absolute; width: 100%; height: 100%; }
-#messages  { position: absolute; width: 100%; height: 100%; padding-left: 10px; }
+#messages  { position: absolute; width: 100%; height: 100%; padding-left: 10px; color:white; }
 </style>
 </head>
 <body>
@@ -23,15 +23,16 @@ canvas     { position: absolute; width: 100%; height: 100%; }
 <script src="https://unpkg.com/gltumble"></script>
 <script>
 
-const env = 'syferfontein_18d_clear_2k';
+const env = 'venetian_crossroads_2k';
 const ibl_url = `${env}/${env}_ibl.ktx`;
 const sky_url = `${env}/${env}_skybox.ktx`;
-const mesh_url = 'helmet.gltf';
+const mesh_url = 'FlightHelmet.gltf';
 
 Filament.init([mesh_url, ibl_url, sky_url], () => {
     window.gltfio = Filament.gltfio;
     window.Fov = Filament.Camera$Fov;
     window.LightType = Filament.LightManager$Type;
+    window.IndirectLight = Filament.IndirectLight;
     window.app = new App(document.getElementsByTagName('canvas')[0]);
 });
 
@@ -42,48 +43,58 @@ class App {
         const scene = this.scene = engine.createScene();
         this.trackball = new Trackball(canvas, {startSpin: 0.035});
 
+        const indirectLight = this.ibl = engine.createIblFromKtx(ibl_url);
+        this.scene.setIndirectLight(indirectLight);
+
+        const iblDirection = IndirectLight.getDirectionEstimate(indirectLight.shfloats);
+        const iblColor = IndirectLight.getColorEstimate(indirectLight.shfloats, iblDirection);
+
+        indirectLight.setIntensity(50000);
+
+        const skybox = engine.createSkyFromKtx(sky_url);
+        this.scene.setSkybox(skybox);
+
         const sunlight = Filament.EntityManager.get().create();
         Filament.LightManager.Builder(LightType.SUN)
-            .color([0.98, 0.92, 0.89])
-            .intensity(100000.0)
-            .direction([0.6, -1.0, -0.8])
+            .color(iblColor.slice(0, 3))
+            .intensity(150000)
+            .direction(iblDirection)
             .sunAngularRadius(1.9)
+            .castShadows(true)
             .sunHaloSize(10.0)
             .sunHaloFalloff(80.0)
             .build(engine, sunlight);
         this.scene.addEntity(sunlight);
-
-        const indirectLight = this.ibl = engine.createIblFromKtx(ibl_url);
-        this.scene.setIndirectLight(indirectLight);
-        indirectLight.setIntensity(100000);
-
-        const skybox = engine.createSkyFromKtx(sky_url);
-        this.scene.setSkybox(skybox);
 
         const loader = engine.createAssetLoader();
         const asset = this.asset = loader.createAssetFromJson(mesh_url);
 
         const messages = document.getElementById('messages');
 
-        // Crudely indicate progress by printing the URL of each resource as it is loaded.
-        // Note that we wait 1 ms after the last asset has downloaded, but before finalization.
-        // This gives the browser time to display the latest status.
+        // Crudely indicate progress by printing the URI of each resource as it is loaded.
         const onFetched = (uri) => messages.innerText += `Downloaded ${uri}\n`;
-        const onDone = (finalize) => {
-            messages.innerText += 'Finalizing...\n'
-            setTimeout(() => {
-                finalize();
-                loader.delete();
-                const entities = asset.getEntities();
-                scene.addEntities(entities);
-                messages.remove();
-            }, 1);
+        const onDone = () => {
+            // Destroy the asset loader.
+            loader.delete();
+
+            // Enable shadows on every renderable.
+            const entities = asset.getEntities();
+            const rm = engine.getRenderableManager();
+            for (let i = 0; i < entities.size(); i++) {
+                const instance = rm.getInstance(entities.get(i));
+                rm.setCastShadows(instance, true);
+                instance.delete();
+            }
+
+            // Hide the HUD.
+            messages.remove();
         };
         asset.loadResources(onDone, onFetched);
 
         this.swapChain = engine.createSwapChain();
         this.renderer = engine.createRenderer();
         this.camera = engine.createCamera();
+        this.camera.setExposure(32, 1/125.0, 100);
         this.view = engine.createView();
         this.view.setCamera(this.camera);
         this.view.setScene(this.scene);
@@ -95,10 +106,23 @@ class App {
     }
 
     render() {
+        // Spin the model according to the trackball controller.
         const tcm = this.engine.getTransformManager();
         const inst = tcm.getInstance(this.asset.getRoot());
         tcm.setTransform(inst, this.trackball.getMatrix());
         inst.delete();
+
+        // Add renderable entities to the scene as they become ready.
+        let entity;
+        const popRenderable = () => {
+            entity = this.asset.popRenderable();
+            return entity.getId() != 0;
+        }
+        while (popRenderable()) {
+            this.scene.addEntity(entity);
+        }
+
+        // Render the scene and request the next animation frame.
         this.renderer.render(this.swapChain, this.view);
         window.requestAnimationFrame(this.render);
     }

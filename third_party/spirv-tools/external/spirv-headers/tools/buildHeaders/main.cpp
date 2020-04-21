@@ -1,19 +1,19 @@
-// Copyright (c) 2014-2018 The Khronos Group Inc.
-// 
+// Copyright (c) 2014-2019 The Khronos Group Inc.
+//
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and/or associated documentation files (the "Materials"),
 // to deal in the Materials without restriction, including without limitation
 // the rights to use, copy, modify, merge, publish, distribute, sublicense,
 // and/or sell copies of the Materials, and to permit persons to whom the
 // Materials are furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Materials.
-// 
+//
 // MODIFICATIONS TO THIS FILE MAY MEAN IT NO LONGER ACCURATELY REFLECTS KHRONOS
 // STANDARDS. THE UNMODIFIED, NORMATIVE VERSIONS OF KHRONOS SPECIFICATIONS AND
-// HEADER INFORMATION ARE LOCATED AT https://www.khronos.org/registry/ 
-// 
+// HEADER INFORMATION ARE LOCATED AT https://www.khronos.org/registry/
+//
 // THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
 // OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
@@ -50,6 +50,8 @@ void Usage()
            "     JSON   - JSON format data\n"
            "     Lua    - Lua module\n"
            "     Python - Python module (also accepts Py)\n"
+           "     C#     - C# module (also accepts CSharp)\n"
+           "     D      - D module\n"
            "  -H print header in all supported languages to files in current directory\n"
            );
 }
@@ -90,6 +92,10 @@ bool ProcessArguments(int argc, char* argv[])
                     Language = spv::ELangLua;
                 } else if (language == "python" || language == "py") {
                     Language = spv::ELangPython;
+                } else if (language == "c#" || language == "csharp") {
+                    Language = spv::ELangCSharp;
+                } else if (language == "d") {
+                    Language = spv::ELangD;
                 } else
                     return false;
 
@@ -113,7 +119,7 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    spv::jsonToSpirv(jsonPath);
+    spv::jsonToSpirv(jsonPath, (Options & EOptionPrintHeader) != 0);
     if (Options & EOptionPrintHeader)
         spv::PrintHeader(Language, std::cout);
 

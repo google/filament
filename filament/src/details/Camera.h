@@ -54,8 +54,7 @@ public:
                        Fov direction = Fov::VERTICAL) noexcept;
 
     // sets the projection matrix
-    void setLensProjection(double focalLength, double near, double far) noexcept;
-
+    void setLensProjection(double focalLength, double aspect, double near, double far) noexcept;
 
     // Sets a custom projection matrix (sets both the viewing and culling projections).
     void setCustomProjection(math::mat4 const& projection, double near, double far) noexcept;

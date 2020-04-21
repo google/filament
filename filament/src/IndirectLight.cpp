@@ -149,7 +149,6 @@ IndirectLight::Builder& IndirectLight::Builder::rotation(mat3f const& rotation) 
 }
 
 IndirectLight* IndirectLight::Builder::build(Engine& engine) {
-    FEngine::assertValid(engine, __PRETTY_FUNCTION__);
     if (mImpl->mReflectionsMap) {
         if (!ASSERT_POSTCONDITION_NON_FATAL(
                 mImpl->mReflectionsMap->getTarget() == Texture::Sampler::SAMPLER_CUBEMAP,
@@ -180,7 +179,7 @@ namespace details {
 FIndirectLight::FIndirectLight(FEngine& engine, const Builder& builder) noexcept {
     if (builder->mReflectionsMap) {
         mReflectionsMapHandle = upcast(builder->mReflectionsMap)->getHwHandle();
-        mMaxMipLevel = builder->mReflectionsMap->getLevels();
+        mLevelCount = builder->mReflectionsMap->getLevels();
     }
 
     std::copy(

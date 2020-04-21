@@ -20,10 +20,12 @@ if(BUILD_TESTING)
             ${CMAKE_CURRENT_SOURCE_DIR}/Link.FromFile.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/Link.FromFile.Vk.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/Pp.FromFile.cpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/Spv.FromFile.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/Spv.FromFile.cpp)
 
-            # -- Remapper tests
-            ${CMAKE_CURRENT_SOURCE_DIR}/Remap.FromFile.cpp)
+        if(ENABLE_SPVREMAPPER)
+            set(TEST_SOURCES ${TEST_SOURCES}
+                ${CMAKE_CURRENT_SOURCE_DIR}/Remap.FromFile.cpp)
+        endif()
 
         glslang_pch(TEST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/pch.cpp)
 
@@ -31,8 +33,9 @@ if(BUILD_TESTING)
         set_property(TARGET glslangtests PROPERTY FOLDER tests)
         glslang_set_link_args(glslangtests)
         if(ENABLE_GLSLANG_INSTALL)
-            install(TARGETS glslangtests
+            install(TARGETS glslangtests EXPORT glslangtestsTargets
                     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+			install(EXPORT glslangtestsTargets DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake)
         endif(ENABLE_GLSLANG_INSTALL)
 
         set(GLSLANG_TEST_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../Test")
@@ -48,8 +51,13 @@ if(BUILD_TESTING)
                                    ${gtest_SOURCE_DIR}/include)
 
         set(LIBRARIES
-            SPVRemapper glslang OSDependent OGLCompiler glslang
+            glslang OSDependent OGLCompiler glslang
             SPIRV glslang-default-resource-limits)
+
+        if(ENABLE_SPVREMAPPER)
+            set(LIBRARIES ${LIBRARIES} SPVRemapper)
+        endif()
+
         if(ENABLE_HLSL)
             set(LIBRARIES ${LIBRARIES} HLSL)
         endif(ENABLE_HLSL)

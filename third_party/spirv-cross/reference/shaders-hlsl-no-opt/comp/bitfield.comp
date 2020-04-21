@@ -90,7 +90,7 @@ void comp_main()
     u = SPIRV_Cross_bitfieldInsert(u, 60u, 5, 4);
     u = reversebits(u);
     s = reversebits(s);
-    int v0 = countbits(u);
+    int v0 = int(countbits(u));
     int v1 = countbits(s);
     int v2 = int(firstbithigh(u));
     int v3 = firstbitlow(s);
@@ -100,7 +100,7 @@ void comp_main()
     u_1 = SPIRV_Cross_bitfieldInsert(u_1, uint3(60u, 60u, 60u), 5, 4);
     u_1 = reversebits(u_1);
     s_1 = reversebits(s_1);
-    int3 v0_1 = countbits(u_1);
+    int3 v0_1 = int3(countbits(u_1));
     int3 v1_1 = countbits(s_1);
     int3 v2_1 = int3(firstbithigh(u_1));
     int3 v3_1 = firstbitlow(s_1);

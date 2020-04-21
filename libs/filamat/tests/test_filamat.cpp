@@ -54,7 +54,7 @@ std::string shaderWithAllProperties(ShaderType type,
     builder.optimization(filamat::MaterialBuilder::Optimization::NONE);
     builder.shading(shadingModel);
     builder.includeCallback(includer);
-    builder.materialRefraction(refractionMode);
+    builder.refractionMode(refractionMode);
 
     MaterialBuilder::PropertyList allProperties;
     std::fill_n(allProperties, MaterialBuilder::MATERIAL_PROPERTIES_COUNT, true);
@@ -605,6 +605,24 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerNormal) {
     glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected {false};
     expected[size_t(filamat::MaterialBuilder::Property::NORMAL)] = true;
+    EXPECT_TRUE(PropertyListsMatch(expected, properties));
+}
+
+TEST_F(MaterialCompiler, StaticCodeAnalyzerBentNormal) {
+    std::string fragmentCode(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.bentNormal = vec3(0.8);
+        }
+    )");
+
+    std::string shaderCode = shaderWithAllProperties(ShaderType::FRAGMENT, fragmentCode);
+
+    GLSLTools glslTools;
+    MaterialBuilder::PropertyList properties {false};
+    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
+    MaterialBuilder::PropertyList expected {false};
+    expected[size_t(filamat::MaterialBuilder::Property::BENT_NORMAL)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 

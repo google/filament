@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.6)
 
+option(FILAMENT_SUPPORTS_VULKAN "Enables Vulkan on Android" OFF)
+
 set(FILAMENT_DIR ${FILAMENT_DIST_DIR})
 
 add_library(filament STATIC IMPORTED)
@@ -37,17 +39,6 @@ set_target_properties(bluevk PROPERTIES IMPORTED_LOCATION
 add_library(smol-v STATIC IMPORTED)
 set_target_properties(smol-v PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libsmol-v.a)
-
-
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fno-stack-protector")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fno-exceptions -fno-unwind-tables -fno-asynchronous-unwind-tables -fno-rtti")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -ffast-math -ffp-contract=fast")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fvisibility-inlines-hidden")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fvisibility=hidden")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fomit-frame-pointer -ffunction-sections -fdata-sections")
-
-set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--gc-sections")
-set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-Bsymbolic-functions")
 
 set(VERSION_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/libfilament-jni.map")
 set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} -Wl,--version-script=${VERSION_SCRIPT}")
@@ -99,6 +90,8 @@ target_link_libraries(filament-jni
     PRIVATE android
     PRIVATE jnigraphics
     PRIVATE utils
+    $<$<STREQUAL:${FILAMENT_SUPPORTS_VULKAN},ON>:bluevk>
+    $<$<STREQUAL:${FILAMENT_SUPPORTS_VULKAN},ON>:smol-v>
 )
 
 target_include_directories(filament-jni PRIVATE
@@ -109,9 +102,3 @@ target_include_directories(filament-jni PRIVATE
 
 # Force a relink when the version script is changed:
 set_target_properties(filament-jni PROPERTIES LINK_DEPENDS ${VERSION_SCRIPT})
-
-option(FILAMENT_SUPPORTS_VULKAN "Enables Vulkan on Android" OFF)
-
-if (FILAMENT_SUPPORTS_VULKAN)
-    target_link_libraries(filament-jni bluevk smol-v)
-endif()

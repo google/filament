@@ -87,23 +87,23 @@ public:
     // our allocator concept
     void* alloc(size_t size, size_t alignment = alignof(std::max_align_t), size_t extra = 0) UTILS_RESTRICT {
         // branch-less allocation
-        void* const p = pointermath::align(mCurrent, alignment, extra);
+        void* const p = pointermath::align(current(), alignment, extra);
         void* const c = pointermath::add(p, size);
-        bool success = c <= mEnd;
-        mCurrent = success ? c : mCurrent;
+        bool success = c <= end();
+        set_current(success ? c : current());
         return success ? p : nullptr;
     }
 
     // API specific to this allocator
 
     void *getCurrent() UTILS_RESTRICT noexcept {
-        return mCurrent;
+        return current();
     }
 
     // free memory back to the specified point
     void rewind(void* p) UTILS_RESTRICT noexcept {
-        assert(p>=mBegin && p<mEnd);
-        mCurrent = p;
+        assert(p>=mBegin && p<end());
+        set_current(p);
     }
 
     // frees all allocated blocks
@@ -112,25 +112,27 @@ public:
     }
 
     size_t allocated() const UTILS_RESTRICT noexcept {
-        return uintptr_t(mCurrent) - uintptr_t(mBegin);
+        return mSize;
     }
 
     size_t available() const UTILS_RESTRICT noexcept {
-        return uintptr_t(mEnd) - uintptr_t(mCurrent);
+        return mSize - mCur;
     }
 
     void swap(LinearAllocator& rhs) noexcept;
 
     void *base() noexcept { return mBegin; }
 
-    // LinearAllocator shouldn't have a free() method
-    // it's only needed to be compatible with STLAllocator<> below
     void free(void*, size_t) UTILS_RESTRICT noexcept { }
 
 private:
+    void* end() UTILS_RESTRICT noexcept { return pointermath::add(mBegin, mSize); }
+    void* current() UTILS_RESTRICT noexcept { return pointermath::add(mBegin, mCur); }
+    void set_current(void* p) UTILS_RESTRICT noexcept { mCur = uintptr_t(p) - uintptr_t(mBegin); }
+
     void* mBegin = nullptr;
-    void* mEnd = nullptr;
-    void* mCurrent = nullptr;
+    uint32_t mSize = 0;
+    uint32_t mCur = 0;
 };
 
 /* ------------------------------------------------------------------------------------------------
@@ -431,8 +433,11 @@ struct NoLock {
     void unlock() noexcept { }
 };
 
-// Unfortunately TSAN doesn't support homegrown synchronization primitives
 #if defined(__SANITIZE_THREAD__)
+// Unfortunately TSAN doesn't support homegrown synchronization primitives
+using SpinLock = utils::Mutex;
+#elif defined(__ARM_ARCH_7A__)
+// We've had problems with  "wfe" on some ARM-V7 devices, causing spurious SIGILL
 using SpinLock = utils::Mutex;
 #else
 using SpinLock = utils::SpinLock;

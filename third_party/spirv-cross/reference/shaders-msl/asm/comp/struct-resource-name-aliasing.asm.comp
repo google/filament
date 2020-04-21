@@ -10,6 +10,7 @@ struct bufA
     uint _data[1];
 };
 
+static inline __attribute__((always_inline))
 void _main(device bufA& bufA_1, device bufA& bufB)
 {
     bufA_1._data[0] = 0u;

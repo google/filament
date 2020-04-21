@@ -74,7 +74,6 @@ Material::Builder& Material::Builder::package(const void* payload, size_t size) 
 }
 
 Material* Material::Builder::build(Engine& engine) {
-    FEngine::assertValid(engine, __PRETTY_FUNCTION__);
     MaterialParser* materialParser = FMaterial::createParser(
             upcast(engine).getBackend(), mImpl->mPayload, mImpl->mSize);
 
@@ -332,6 +331,7 @@ backend::Handle<backend::HwProgram> FMaterial::getSurfaceProgramSlow(uint8_t var
     pb
         .setUniformBlock(BindingPoints::PER_VIEW, UibGenerator::getPerViewUib().getName())
         .setUniformBlock(BindingPoints::LIGHTS, UibGenerator::getLightsUib().getName())
+        .setUniformBlock(BindingPoints::SHADOW, UibGenerator::getShadowUib().getName())
         .setUniformBlock(BindingPoints::PER_RENDERABLE, UibGenerator::getPerRenderableUib().getName())
         .setUniformBlock(BindingPoints::PER_MATERIAL_INSTANCE, mUniformInterfaceBlock.getName());
 

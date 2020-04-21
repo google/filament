@@ -490,6 +490,7 @@ OpDecorate %OutColor Location 0
 %_ptr_Output_v4float = OpTypePointer Output %v4float
 %OutColor = OpVariable %_ptr_Output_v4float Output
 %27 = OpUndef %v4float
+%55 = OpUndef %v4float
 )";
 
   const std::string before =
@@ -536,25 +537,31 @@ OpFunctionEnd
       R"(%main = OpFunction %void None %10
 %28 = OpLabel
 %29 = OpLoad %v4float %In0
+%30 = OpLoad %float %In1
+%31 = OpLoad %float %In2
+%32 = OpFAdd %float %30 %31
+%33 = OpCompositeInsert %v4float %32 %29 1
 %34 = OpAccessChain %_ptr_Uniform_uint %_ %int_0
 %35 = OpLoad %uint %34
 %36 = OpINotEqual %bool %35 %uint_0
 OpSelectionMerge %37 None
 OpBranchConditional %36 %38 %37
 %38 = OpLabel
-%39 = OpCompositeInsert %v4float %float_1 %29 0
+%39 = OpCompositeInsert %v4float %float_1 %55 0
 OpBranch %37
 %37 = OpLabel
 %40 = OpPhi %v4float %29 %28 %39 %38
 %41 = OpCompositeExtract %float %40 0
-%42 = OpCompositeInsert %v4float %41 %27 0
+%42 = OpCompositeInsert %v4float %41 %55 0
+%43 = OpCompositeExtract %float %40 1
+%44 = OpCompositeInsert %v4float %43 %42 1
 %45 = OpAccessChain %_ptr_Uniform_uint %_ %int_1
 %46 = OpLoad %uint %45
 %47 = OpINotEqual %bool %46 %uint_0
 OpSelectionMerge %48 None
 OpBranchConditional %47 %49 %48
 %49 = OpLabel
-%50 = OpCompositeInsert %v4float %float_0 %42 0
+%50 = OpCompositeInsert %v4float %float_0 %55 0
 OpBranch %48
 %48 = OpLabel
 %51 = OpPhi %v4float %42 %37 %50 %49
@@ -566,8 +573,8 @@ OpReturn
 OpFunctionEnd
 )";
 
-  SinglePassRunAndCheck<DeadInsertElimPass>(before_predefs + before,
-                                            after_predefs + after, true, true);
+  SinglePassRunAndCheck<VectorDCE>(before_predefs + before,
+                                   after_predefs + after, true, true);
 }
 
 TEST_F(VectorDCETest, InsertObjectLive) {
@@ -608,10 +615,9 @@ OpFunctionEnd
 )";
 
   SetAssembleOptions(SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
-  SinglePassRunAndCheck<DeadInsertElimPass>(before, before, true, true);
+  SinglePassRunAndCheck<VectorDCE>(before, before, true, true);
 }
 
-#ifdef SPIRV_EFFCEE
 TEST_F(VectorDCETest, DeadInsertInCycle) {
   // Dead insert in chain with cycle. Demonstrates analysis can handle
   // cycles in chains going through scalars intermediate values.
@@ -1078,13 +1084,12 @@ TEST_F(VectorDCETest, DeadInsertThroughOtherInst) {
 
   SinglePassRunAndMatch<VectorDCE>(assembly, true);
 }
-#endif
 
 TEST_F(VectorDCETest, VectorIntoCompositeConstruct) {
   const std::string text = R"(OpCapability Linkage
 OpCapability Shader
 OpMemoryModel Logical GLSL450
-OpEntryPoint Vertex %1 "EntryPoint_Main" %2 %3
+OpEntryPoint Fragment %1 "EntryPoint_Main" %2 %3
 OpExecutionMode %1 OriginUpperLeft
 OpDecorate %2 Location 0
 OpDecorate %_struct_4 Block
@@ -1150,7 +1155,7 @@ OpReturn
 OpFunctionEnd
 )";
 
-  SinglePassRunAndCheck<DeadInsertElimPass>(text, text, true, true);
+  SinglePassRunAndCheck<VectorDCE>(text, text, true, true);
 }
 
 }  // namespace

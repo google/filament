@@ -17,6 +17,7 @@
 
 #include "gmock/gmock.h"
 #include "test/unit_spirv.h"
+#include "test/val/val_code_generator.h"
 #include "test/val/val_fixtures.h"
 
 namespace spvtools {
@@ -25,6 +26,7 @@ namespace {
 
 using ::testing::HasSubstr;
 using ::testing::Not;
+using ::testing::Values;
 
 using ValidateComposites = spvtest::ValidateBase<bool>;
 
@@ -41,6 +43,9 @@ OpCapability Float64
   ss << capabilities_and_extensions;
   ss << "OpMemoryModel Logical GLSL450\n";
   ss << "OpEntryPoint " << execution_model << " %main \"main\"\n";
+  if (execution_model == "Fragment") {
+    ss << "OpExecutionMode %main OriginUpperLeft\n";
+  }
 
   ss << R"(
 %void = OpTypeVoid
@@ -149,15 +154,14 @@ OpMemoryModel Logical GLSL450
 ; }
 
 %f32arr = OpTypeRuntimeArray %float
-%bool = OpTypeBool
 %v4float = OpTypeVector %float 4
 %array5_mat4x3 = OpTypeArray %mat4x3 %int_5
 %array5_vec4 = OpTypeArray %v4float %int_5
 %_ptr_Uniform_float = OpTypePointer Uniform %float
 %_ptr_Function_vec4 = OpTypePointer Function %v4float
 %_ptr_Uniform_vec4 = OpTypePointer Uniform %v4float
-%struct_s = OpTypeStruct %bool %array5_vec4 %int %array5_mat4x3
-%struct_blockName = OpTypeStruct %struct_s %bool %f32arr
+%struct_s = OpTypeStruct %int %array5_vec4 %int %array5_mat4x3
+%struct_blockName = OpTypeStruct %struct_s %int %f32arr
 %_ptr_Uniform_blockName = OpTypePointer Uniform %struct_blockName
 %_ptr_Uniform_struct_s = OpTypePointer Uniform %struct_s
 %_ptr_Uniform_array5_mat4x3 = OpTypePointer Uniform %array5_mat4x3
@@ -318,11 +322,9 @@ TEST_F(ValidateComposites, CompositeConstructVectorWrongConsituent1) {
 )";
 
   CompileSuccessfully(GenerateShaderCode(body).c_str());
-  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
-  EXPECT_THAT(
-      getDiagnosticString(),
-      HasSubstr("Expected Constituents to be scalars or vectors of the same "
-                "type as Result Type components"));
+  ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(), HasSubstr("Operand 5[%float] cannot be a "
+                                               "type"));
 }
 
 TEST_F(ValidateComposites, CompositeConstructVectorWrongConsituent2) {
@@ -537,9 +539,9 @@ TEST_F(ValidateComposites, CopyObjectResultTypeNotType) {
 )";
 
   CompileSuccessfully(GenerateShaderCode(body).c_str());
-  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
   EXPECT_THAT(getDiagnosticString(),
-              HasSubstr("Expected Result Type to be a type"));
+              HasSubstr("ID 19[%float_0] is not a type id"));
 }
 
 TEST_F(ValidateComposites, CopyObjectWrongOperandType) {
@@ -646,7 +648,6 @@ TEST_F(ValidateComposites, CompositeExtractSuccess) {
 %val16 = OpCompositeExtract %f32 %struct 4 1000 1
 %val17 = OpCompositeExtract %f32 %struct 5 0
 %val18 = OpCompositeExtract %u32 %struct 5 1
-%val19 = OpCompositeExtract %big_struct %struct
 )";
 
   CompileSuccessfully(GenerateShaderCode(body));
@@ -659,10 +660,9 @@ TEST_F(ValidateComposites, CompositeExtractNotObject) {
 )";
 
   CompileSuccessfully(GenerateShaderCode(body));
-  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
-  EXPECT_THAT(getDiagnosticString(),
-              HasSubstr("Expected Composite to be an object "
-                        "of composite type"));
+  ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(), HasSubstr("Operand 11[%v4float] cannot "
+                                               "be a type"));
 }
 
 TEST_F(ValidateComposites, CompositeExtractNotComposite) {
@@ -766,6 +766,18 @@ TEST_F(ValidateComposites, CompositeExtractTooManyIndices) {
                         "indexes still remain to be traversed."));
 }
 
+TEST_F(ValidateComposites, CompositeExtractNoIndices) {
+  const std::string body = R"(
+%struct = OpLoad %big_struct %var_big_struct
+%val1 = OpCompositeExtract %big_struct %struct
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body));
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Expected at least one index to OpCompositeExtract"));
+}
+
 TEST_F(ValidateComposites, CompositeExtractWrongType1) {
   const std::string body = R"(
 %struct = OpLoad %big_struct %var_big_struct
@@ -860,7 +872,6 @@ TEST_F(ValidateComposites, CompositeInsertSuccess) {
 %val16 = OpCompositeInsert %big_struct %f32_3 %struct 4 1000 1
 %val17 = OpCompositeInsert %big_struct %f32_3 %struct 5 0
 %val18 = OpCompositeInsert %big_struct %u32_3 %struct 5 1
-%val19 = OpCompositeInsert %big_struct %struct %struct
 )";
 
   CompileSuccessfully(GenerateShaderCode(body));
@@ -1156,9 +1167,8 @@ TEST_F(ValidateComposites, CompositeInsertWrongResultTypeBad) {
               HasSubstr("The Result Type must be the same as Composite type"));
 }
 
-// Valid: No Indexes were passed to OpCompositeExtract, and the Result Type is
-// the same as the Base Composite type.
-TEST_F(ValidateComposites, CompositeExtractNoIndexesGood) {
+// Invalid: No Indexes were passed to OpCompositeExtract.
+TEST_F(ValidateComposites, CompositeExtractNoIndices2) {
   std::ostringstream spirv;
   spirv << GetHeaderForTestsFromValId() << std::endl;
   spirv << "%matrix = OpLoad %mat4x3 %my_matrix" << std::endl;
@@ -1166,29 +1176,32 @@ TEST_F(ValidateComposites, CompositeExtractNoIndexesGood) {
   spirv << R"(OpReturn
               OpFunctionEnd)";
   CompileSuccessfully(spirv.str());
-  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions());
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr(
+          "Expected at least one index to OpCompositeExtract, zero found"));
 }
 
-// Invalid: No Indexes were passed to OpCompositeExtract, but the Result Type is
-// different from the Base Composite type.
-TEST_F(ValidateComposites, CompositeExtractNoIndexesBad) {
+// Invalid: No Indexes were passed to OpCompositeExtract.
+TEST_F(ValidateComposites, CompositeExtractNoIndicesWrongResultType) {
   std::ostringstream spirv;
   spirv << GetHeaderForTestsFromValId() << std::endl;
   spirv << "%matrix = OpLoad %mat4x3 %my_matrix" << std::endl;
-  spirv << "%float_entry = OpCompositeExtract  %float %matrix" << std::endl;
+  spirv << "%float_entry = OpCompositeExtract %float %matrix" << std::endl;
   spirv << R"(OpReturn
               OpFunctionEnd)";
   CompileSuccessfully(spirv.str());
   EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
-  EXPECT_THAT(getDiagnosticString(),
-              HasSubstr("Result type (OpTypeFloat) does not match the type "
-                        "that results from indexing into the composite "
-                        "(OpTypeMatrix)."));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr(
+          "Expected at least one index to OpCompositeExtract, zero found"));
 }
 
-// Valid: No Indexes were passed to OpCompositeInsert, and the type of the
+// Invalid: No Indices were passed to OpCompositeInsert, and the type of the
 // Object<id> argument matches the Composite type.
-TEST_F(ValidateComposites, CompositeInsertMissingIndexesGood) {
+TEST_F(ValidateComposites, CompositeInsertMissingIndices) {
   std::ostringstream spirv;
   spirv << GetHeaderForTestsFromValId() << std::endl;
   spirv << "%matrix   = OpLoad %mat4x3 %my_matrix" << std::endl;
@@ -1198,12 +1211,16 @@ TEST_F(ValidateComposites, CompositeInsertMissingIndexesGood) {
               OpReturn
               OpFunctionEnd)";
   CompileSuccessfully(spirv.str());
-  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions());
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr(
+          "Expected at least one index to OpCompositeInsert, zero found"));
 }
 
-// Invalid: No Indexes were passed to OpCompositeInsert, but the type of the
+// Invalid: No Indices were passed to OpCompositeInsert, but the type of the
 // Object<id> argument does not match the Composite type.
-TEST_F(ValidateComposites, CompositeInsertMissingIndexesBad) {
+TEST_F(ValidateComposites, CompositeInsertMissingIndices2) {
   std::ostringstream spirv;
   spirv << GetHeaderForTestsFromValId() << std::endl;
   spirv << "%matrix = OpLoad %mat4x3 %my_matrix" << std::endl;
@@ -1213,10 +1230,10 @@ TEST_F(ValidateComposites, CompositeInsertMissingIndexesBad) {
               OpFunctionEnd)";
   CompileSuccessfully(spirv.str());
   EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
-  EXPECT_THAT(getDiagnosticString(),
-              HasSubstr("The Object type (OpTypeInt) does not match the type "
-                        "that results from indexing into the Composite "
-                        "(OpTypeMatrix)."));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr(
+          "Expected at least one index to OpCompositeInsert, zero found"));
 }
 
 // Valid: Tests that we can index into Struct, Array, Matrix, and Vector!
@@ -1365,7 +1382,7 @@ TEST_F(ValidateComposites, CompositeExtractStructIndexOutOfBoundBad) {
   EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
   EXPECT_THAT(getDiagnosticString(),
               HasSubstr("Index is out of bounds, can not find index 3 in the "
-                        "structure <id> '26'. This structure has 3 members. "
+                        "structure <id> '25'. This structure has 3 members. "
                         "Largest valid index is 2."));
 }
 
@@ -1386,7 +1403,7 @@ TEST_F(ValidateComposites, CompositeInsertStructIndexOutOfBoundBad) {
   EXPECT_THAT(
       getDiagnosticString(),
       HasSubstr("Index is out of bounds, can not find index 3 in the structure "
-                "<id> '26'. This structure has 3 members. Largest valid index "
+                "<id> '25'. This structure has 3 members. Largest valid index "
                 "is 2."));
 }
 
@@ -1466,6 +1483,515 @@ OpFunctionEnd
 
   CompileSuccessfully(spirv);
   EXPECT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
+TEST_F(ValidateComposites, CoopMatConstantCompositeMismatchFail) {
+  const std::string body =
+      R"(
+OpCapability Shader
+OpCapability Float16
+OpCapability CooperativeMatrixNV
+OpExtension "SPV_NV_cooperative_matrix"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+%void = OpTypeVoid
+%func = OpTypeFunction %void
+%bool = OpTypeBool
+%f16 = OpTypeFloat 16
+%f32 = OpTypeFloat 32
+%u32 = OpTypeInt 32 0
+
+%u32_8 = OpConstant %u32 8
+%subgroup = OpConstant %u32 3
+
+%f16mat = OpTypeCooperativeMatrixNV %f16 %subgroup %u32_8 %u32_8
+
+%f32_1 = OpConstant %f32 1
+
+%f16mat_1 = OpConstantComposite %f16mat %f32_1
+
+%main = OpFunction %void None %func
+%main_entry = OpLabel
+
+OpReturn
+OpFunctionEnd)";
+
+  CompileSuccessfully(body.c_str());
+  ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("OpConstantComposite Constituent <id> '11[%float_1]' type does "
+                "not match the Result Type <id> '10[%10]'s component type."));
+}
+
+TEST_F(ValidateComposites, CoopMatCompositeConstructMismatchFail) {
+  const std::string body =
+      R"(
+OpCapability Shader
+OpCapability Float16
+OpCapability CooperativeMatrixNV
+OpExtension "SPV_NV_cooperative_matrix"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+%void = OpTypeVoid
+%func = OpTypeFunction %void
+%bool = OpTypeBool
+%f16 = OpTypeFloat 16
+%f32 = OpTypeFloat 32
+%u32 = OpTypeInt 32 0
+
+%u32_8 = OpConstant %u32 8
+%subgroup = OpConstant %u32 3
+
+%f16mat = OpTypeCooperativeMatrixNV %f16 %subgroup %u32_8 %u32_8
+
+%f32_1 = OpConstant %f32 1
+
+%main = OpFunction %void None %func
+%main_entry = OpLabel
+
+%f16mat_1 = OpCompositeConstruct %f16mat %f32_1
+
+OpReturn
+OpFunctionEnd)";
+
+  CompileSuccessfully(body.c_str());
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("Expected Constituent type to be equal to the component type"));
+}
+
+TEST_F(ValidateComposites, ExtractDynamicLabelIndex) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+%void = OpTypeVoid
+%float = OpTypeFloat 32
+%v4float = OpTypeVector %float 4
+%void_fn = OpTypeFunction %void
+%float_0 = OpConstant %float 0
+%v4float_0 = OpConstantComposite %v4float %float_0 %float_0 %float_0 %float_0
+%func = OpFunction %void None %void_fn
+%1 = OpLabel
+%ex = OpVectorExtractDynamic %float %v4float_0 %v4float_0
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Expected Index to be int scalar"));
+}
+
+TEST_F(ValidateComposites, CopyLogicalSameType) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+%void = OpTypeVoid
+%struct = OpTypeStruct
+%const_struct = OpConstantComposite %struct
+%void_fn = OpTypeFunction %void
+%func = OpFunction %void None %void_fn
+%1 = OpLabel
+%copy = OpCopyLogical %struct %const_struct
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_UNIVERSAL_1_4);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_UNIVERSAL_1_4));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Result Type must not equal the Operand type"));
+}
+
+TEST_F(ValidateComposites, CopyLogicalSameStructDifferentId) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+%void = OpTypeVoid
+%struct1 = OpTypeStruct
+%struct2 = OpTypeStruct
+%const_struct = OpConstantComposite %struct1
+%void_fn = OpTypeFunction %void
+%func = OpFunction %void None %void_fn
+%1 = OpLabel
+%copy = OpCopyLogical %struct2 %const_struct
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_UNIVERSAL_1_4);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_4));
+}
+
+TEST_F(ValidateComposites, CopyLogicalArrayDifferentLength) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+%void = OpTypeVoid
+%int = OpTypeInt 32 0
+%int_4 = OpConstant %int 4
+%int_5 = OpConstant %int 5
+%array1 = OpTypeArray %int %int_4
+%array2 = OpTypeArray %int %int_5
+%const_array = OpConstantComposite %array1 %int_4 %int_4 %int_4 %int_4
+%void_fn = OpTypeFunction %void
+%func = OpFunction %void None %void_fn
+%1 = OpLabel
+%copy = OpCopyLogical %array2 %const_array
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_UNIVERSAL_1_4);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_UNIVERSAL_1_4));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("Result Type does not logically match the Operand type"));
+}
+
+TEST_F(ValidateComposites, CopyLogicalArrayDifferentElement) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+%void = OpTypeVoid
+%float = OpTypeFloat 32
+%int = OpTypeInt 32 0
+%int_4 = OpConstant %int 4
+%array1 = OpTypeArray %int %int_4
+%array2 = OpTypeArray %float %int_4
+%const_array = OpConstantComposite %array1 %int_4 %int_4 %int_4 %int_4
+%void_fn = OpTypeFunction %void
+%func = OpFunction %void None %void_fn
+%1 = OpLabel
+%copy = OpCopyLogical %array2 %const_array
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_UNIVERSAL_1_4);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_UNIVERSAL_1_4));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("Result Type does not logically match the Operand type"));
+}
+
+TEST_F(ValidateComposites, CopyLogicalArrayLogicallyMatchedElement) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+%void = OpTypeVoid
+%float = OpTypeFloat 32
+%int = OpTypeInt 32 0
+%int_1 = OpConstant %int 1
+%inner1 = OpTypeArray %int %int_1
+%inner2 = OpTypeArray %int %int_1
+%array1 = OpTypeArray %inner1 %int_1
+%array2 = OpTypeArray %inner2 %int_1
+%const_inner = OpConstantComposite %inner1 %int_1
+%const_array = OpConstantComposite %array1 %const_inner
+%void_fn = OpTypeFunction %void
+%func = OpFunction %void None %void_fn
+%1 = OpLabel
+%copy = OpCopyLogical %array2 %const_array
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_UNIVERSAL_1_4);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_4));
+}
+
+TEST_F(ValidateComposites, CopyLogicalStructDifferentNumberElements) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+%void = OpTypeVoid
+%int = OpTypeInt 32 0
+%struct1 = OpTypeStruct
+%struct2 = OpTypeStruct %int
+%const_struct = OpConstantComposite %struct1
+%void_fn = OpTypeFunction %void
+%func = OpFunction %void None %void_fn
+%1 = OpLabel
+%copy = OpCopyLogical %struct2 %const_struct
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_UNIVERSAL_1_4);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_UNIVERSAL_1_4));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("Result Type does not logically match the Operand type"));
+}
+
+TEST_F(ValidateComposites, CopyLogicalStructDifferentElement) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+%void = OpTypeVoid
+%uint = OpTypeInt 32 0
+%int = OpTypeInt 32 1
+%int_0 = OpConstant %int 0
+%uint_0 = OpConstant %uint 0
+%struct1 = OpTypeStruct %int %uint
+%struct2 = OpTypeStruct %int %int
+%const_struct = OpConstantComposite %struct1 %int_0 %uint_0
+%void_fn = OpTypeFunction %void
+%func = OpFunction %void None %void_fn
+%1 = OpLabel
+%copy = OpCopyLogical %struct2 %const_struct
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_UNIVERSAL_1_4);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_UNIVERSAL_1_4));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("Result Type does not logically match the Operand type"));
+}
+
+TEST_F(ValidateComposites, CopyLogicalStructLogicallyMatch) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+%void = OpTypeVoid
+%int = OpTypeInt 32 0
+%int_1 = OpConstant %int 1
+%array1 = OpTypeArray %int %int_1
+%array2 = OpTypeArray %int %int_1
+%struct1 = OpTypeStruct %int %array1
+%struct2 = OpTypeStruct %int %array2
+%const_array = OpConstantComposite %array1 %int_1
+%const_struct = OpConstantComposite %struct1 %int_1 %const_array
+%void_fn = OpTypeFunction %void
+%func = OpFunction %void None %void_fn
+%1 = OpLabel
+%copy = OpCopyLogical %struct2 %const_struct
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_UNIVERSAL_1_4);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_4));
+}
+
+using ValidateSmallComposites = spvtest::ValidateBase<std::string>;
+
+CodeGenerator GetSmallCompositesCodeGenerator() {
+  CodeGenerator generator;
+  generator.capabilities_ = R"(
+OpCapability Shader
+OpCapability Linkage
+OpCapability UniformAndStorageBuffer16BitAccess
+OpCapability UniformAndStorageBuffer8BitAccess
+)";
+  generator.extensions_ = R"(
+OpExtension "SPV_KHR_16bit_storage"
+OpExtension "SPV_KHR_8bit_storage"
+)";
+  generator.memory_model_ = "OpMemoryModel Logical GLSL450\n";
+  generator.before_types_ = R"(
+OpDecorate %char_block Block
+OpMemberDecorate %char_block 0 Offset 0
+OpDecorate %short_block Block
+OpMemberDecorate %short_block 0 Offset 0
+OpDecorate %half_block Block
+OpMemberDecorate %half_block 0 Offset 0
+)";
+  generator.types_ = R"(
+%void = OpTypeVoid
+%int = OpTypeInt 32 0
+%int_0 = OpConstant %int 0
+%int_1 = OpConstant %int 1
+%char = OpTypeInt 8 0
+%char2 = OpTypeVector %char 2
+%short = OpTypeInt 16 0
+%short2 = OpTypeVector %short 2
+%half = OpTypeFloat 16
+%half2 = OpTypeVector %half 2
+%char_block = OpTypeStruct %char2
+%short_block = OpTypeStruct %short2
+%half_block = OpTypeStruct %half2
+%ptr_ssbo_char_block = OpTypePointer StorageBuffer %char_block
+%ptr_ssbo_char2 = OpTypePointer StorageBuffer %char2
+%ptr_ssbo_char = OpTypePointer StorageBuffer %char
+%ptr_ssbo_short_block = OpTypePointer StorageBuffer %short_block
+%ptr_ssbo_short2 = OpTypePointer StorageBuffer %short2
+%ptr_ssbo_short = OpTypePointer StorageBuffer %short
+%ptr_ssbo_half_block = OpTypePointer StorageBuffer %half_block
+%ptr_ssbo_half2 = OpTypePointer StorageBuffer %half2
+%ptr_ssbo_half = OpTypePointer StorageBuffer %half
+%void_fn = OpTypeFunction %void
+%char_var = OpVariable %ptr_ssbo_char_block StorageBuffer
+%short_var = OpVariable %ptr_ssbo_short_block StorageBuffer
+%half_var = OpVariable %ptr_ssbo_half_block StorageBuffer
+)";
+  generator.after_types_ = R"(
+%func = OpFunction %void None %void_fn
+%entry = OpLabel
+%char2_gep = OpAccessChain %ptr_ssbo_char2 %char_var %int_0
+%ld_char2 = OpLoad %char2 %char2_gep
+%char_gep = OpAccessChain %ptr_ssbo_char %char_var %int_0 %int_0
+%ld_char = OpLoad %char %char_gep
+%short2_gep = OpAccessChain %ptr_ssbo_short2 %short_var %int_0
+%ld_short2 = OpLoad %short2 %short2_gep
+%short_gep = OpAccessChain %ptr_ssbo_short %short_var %int_0 %int_0
+%ld_short = OpLoad %short %short_gep
+%half2_gep = OpAccessChain %ptr_ssbo_half2 %half_var %int_0
+%ld_half2 = OpLoad %half2 %half2_gep
+%half_gep = OpAccessChain %ptr_ssbo_half %half_var %int_0 %int_0
+%ld_half = OpLoad %half %half_gep
+)";
+  generator.add_at_the_end_ = R"(
+OpReturn
+OpFunctionEnd
+)";
+  return generator;
+}
+
+TEST_P(ValidateSmallComposites, VectorExtractDynamic) {
+  std::string type = GetParam();
+  CodeGenerator generator = GetSmallCompositesCodeGenerator();
+  std::string inst =
+      "%inst = OpVectorExtractDynamic %" + type + " %ld_" + type + "2 %int_0\n";
+  generator.after_types_ += inst;
+  CompileSuccessfully(generator.Build(), SPV_ENV_UNIVERSAL_1_3);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA,
+            ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Cannot extract from a vector of 8- or 16-bit types"));
+}
+
+TEST_P(ValidateSmallComposites, VectorInsertDynamic) {
+  std::string type = GetParam();
+  CodeGenerator generator = GetSmallCompositesCodeGenerator();
+  std::string inst = "%inst = OpVectorInsertDynamic %" + type + "2 %ld_" +
+                     type + "2 %ld_" + type + " %int_0\n";
+  generator.after_types_ += inst;
+  CompileSuccessfully(generator.Build(), SPV_ENV_UNIVERSAL_1_3);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA,
+            ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Cannot insert into a vector of 8- or 16-bit types"));
+}
+
+TEST_P(ValidateSmallComposites, VectorShuffle) {
+  std::string type = GetParam();
+  CodeGenerator generator = GetSmallCompositesCodeGenerator();
+  std::string inst = "%inst = OpVectorShuffle %" + type + "2 %ld_" + type +
+                     "2 %ld_" + type + "2 0 0\n";
+  generator.after_types_ += inst;
+  CompileSuccessfully(generator.Build(), SPV_ENV_UNIVERSAL_1_3);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA,
+            ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Cannot shuffle a vector of 8- or 16-bit types"));
+}
+
+TEST_P(ValidateSmallComposites, CompositeConstruct) {
+  std::string type = GetParam();
+  CodeGenerator generator = GetSmallCompositesCodeGenerator();
+  std::string inst = "%inst = OpCompositeConstruct %" + type + "2 %ld_" + type +
+                     " %ld_" + type + "\n";
+  generator.after_types_ += inst;
+  CompileSuccessfully(generator.Build(), SPV_ENV_UNIVERSAL_1_3);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA,
+            ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("Cannot create a composite containing 8- or 16-bit types"));
+}
+
+TEST_P(ValidateSmallComposites, CompositeExtract) {
+  std::string type = GetParam();
+  CodeGenerator generator = GetSmallCompositesCodeGenerator();
+  std::string inst =
+      "%inst = OpCompositeExtract %" + type + " %ld_" + type + "2 0\n";
+  generator.after_types_ += inst;
+  CompileSuccessfully(generator.Build(), SPV_ENV_UNIVERSAL_1_3);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA,
+            ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("Cannot extract from a composite of 8- or 16-bit types"));
+}
+
+TEST_P(ValidateSmallComposites, CompositeInsert) {
+  std::string type = GetParam();
+  CodeGenerator generator = GetSmallCompositesCodeGenerator();
+  std::string inst = "%inst = OpCompositeInsert %" + type + "2 %ld_" + type +
+                     " %ld_" + type + "2 0\n";
+  generator.after_types_ += inst;
+  CompileSuccessfully(generator.Build(), SPV_ENV_UNIVERSAL_1_3);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA,
+            ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("Cannot insert into a composite of 8- or 16-bit types"));
+}
+
+TEST_P(ValidateSmallComposites, CopyObject) {
+  std::string type = GetParam();
+  CodeGenerator generator = GetSmallCompositesCodeGenerator();
+  std::string inst = "%inst = OpCopyObject %" + type + "2 %ld_" + type + "2\n";
+  generator.after_types_ += inst;
+  CompileSuccessfully(generator.Build(), SPV_ENV_UNIVERSAL_1_3);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
+}
+
+INSTANTIATE_TEST_SUITE_P(SmallCompositeInstructions, ValidateSmallComposites,
+                         Values("char", "short", "half"));
+
+TEST_F(ValidateComposites, HalfMatrixCannotTranspose) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability Linkage
+OpCapability UniformAndStorageBuffer16BitAccess
+OpExtension "SPV_KHR_16bit_storage"
+OpMemoryModel Logical GLSL450
+OpDecorate %block Block
+OpMemberDecorate %block 0 Offset 0
+OpMemberDecorate %block 0 RowMajor
+OpMemberDecorate %block 0 MatrixStride 8
+%void = OpTypeVoid
+%int = OpTypeInt 32 0
+%int_0 = OpConstant %int 0
+%float = OpTypeFloat 16
+%float2 = OpTypeVector %float 2
+%mat2x2 = OpTypeMatrix %float2 2
+%block = OpTypeStruct %mat2x2
+%ptr_ssbo_block = OpTypePointer StorageBuffer %block
+%ptr_ssbo_mat2x2 = OpTypePointer StorageBuffer %mat2x2
+%var = OpVariable %ptr_ssbo_block StorageBuffer
+%void_fn = OpTypeFunction %void
+%func = OpFunction %void None %void_fn
+%entry = OpLabel
+%gep = OpAccessChain %ptr_ssbo_mat2x2 %var %int_0
+%ld = OpLoad %mat2x2 %gep
+%inst = OpTranspose %mat2x2 %ld
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_UNIVERSAL_1_3);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA,
+            ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Cannot transpose matrices of 16-bit floats"));
 }
 
 }  // namespace

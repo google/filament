@@ -84,8 +84,7 @@ class MATH_EMPTY_BASES TMat44 :
         public TMatProductOperators<TMat44, T, TVec4>,
         public TMatSquareFunctions<TMat44, T>,
         public TMatTransform<TMat44, T>,
-        public TMatHelpers<TMat44, T>,
-        public TMatDebug<TMat44, T> {
+        public TMatHelpers<TMat44, T> {
 public:
     enum no_init {
         NO_INIT

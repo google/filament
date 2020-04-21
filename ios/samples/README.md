@@ -84,9 +84,10 @@ from scratch.
 
 ## XcodeGen
 
-[XcodeGen](https://github.com/yonaskolb/XcodeGen) is used to generate the Xcode projects. While not
-required to run the samples, XcodeGen makes modifying them easier. Each sample folder contains the
-`project.yml` file used for the sample, which includes a global `app-template.yml` file. Simply run
+[XcodeGen](https://github.com/yonaskolb/XcodeGen) version 2.14.0 is used to generate the Xcode
+projects. While not required to run the samples, XcodeGen makes modifying them easier. Each sample
+folder contains the `project.yml` file used for the sample, which includes a global
+`app-template.yml` file. Simply run
 
 ```
 $ xcodegen

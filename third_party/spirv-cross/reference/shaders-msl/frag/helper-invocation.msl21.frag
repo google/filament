@@ -15,6 +15,7 @@ struct main0_in
     float2 vUV [[user(locn0)]];
 };
 
+static inline __attribute__((always_inline))
 float4 foo(thread bool& gl_HelperInvocation, thread texture2d<float> uSampler, thread const sampler uSamplerSmplr, thread float2& vUV)
 {
     float4 color;

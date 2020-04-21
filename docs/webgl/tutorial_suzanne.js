@@ -1,8 +1,7 @@
-const ibl_suffix = Filament.getSupportedFormatSuffix('etc s3tc');
 const albedo_suffix = Filament.getSupportedFormatSuffix('astc s3tc');
 const texture_suffix = Filament.getSupportedFormatSuffix('etc');
-const environ = 'syferfontein_18d_clear_2k'
-const ibl_url = `${environ}/${environ}_ibl${ibl_suffix}.ktx`;
+const environ = 'venetian_crossroads_2k'
+const ibl_url = `${environ}/${environ}_ibl.ktx`;
 const sky_small_url = `${environ}/${environ}_skybox_tiny.ktx`;
 const sky_large_url = `${environ}/${environ}_skybox.ktx`;
 const albedo_url = `albedo${albedo_suffix}.ktx`;

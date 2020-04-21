@@ -28,6 +28,11 @@ void main() {
 
     fragColor = evaluateMaterial(inputs);
 
+#if defined(HAS_FOG)
+    vec3 view = getWorldPosition() - getWorldCameraPosition();
+    fragColor = fog(fragColor, view);
+#endif
+
 #if defined(MATERIAL_HAS_POST_LIGHTING_COLOR)
     blendPostLightingColor(inputs, fragColor);
 #endif

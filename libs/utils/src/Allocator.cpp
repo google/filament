@@ -30,7 +30,7 @@ namespace utils {
 // ------------------------------------------------------------------------------------------------
 
 LinearAllocator::LinearAllocator(void* begin, void* end) noexcept
-    : mBegin(begin), mEnd(end), mCurrent(begin) {
+    : mBegin(begin), mSize(uintptr_t(end) - uintptr_t(begin)) {
 }
 
 LinearAllocator::LinearAllocator(LinearAllocator&& rhs) noexcept {
@@ -47,8 +47,8 @@ LinearAllocator& LinearAllocator::operator=(LinearAllocator&& rhs) noexcept {
 
 void LinearAllocator::swap(LinearAllocator& rhs) noexcept {
     std::swap(mBegin, rhs.mBegin);
-    std::swap(mEnd, rhs.mEnd);
-    std::swap(mCurrent, rhs.mCurrent);
+    std::swap(mSize, rhs.mSize);
+    std::swap(mCur, rhs.mCur);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -166,11 +166,15 @@ void TrackingPolicy::HighWatermark::onRewind(void const* addr) noexcept {
 // ------------------------------------------------------------------------------------------------
 
 void TrackingPolicy::Debug::onAlloc(void* p, size_t size, size_t alignment, size_t extra) noexcept {
-    memset(p, 0xeb, size);
+    if (p) {
+        memset(p, 0xeb, size);
+    }
 }
 
 void TrackingPolicy::Debug::onFree(void* p, size_t size) noexcept {
-    memset(p, 0xef, size);
+    if (p) {
+        memset(p, 0xef, size);
+    }
 }
 
 void TrackingPolicy::Debug::onReset() noexcept {

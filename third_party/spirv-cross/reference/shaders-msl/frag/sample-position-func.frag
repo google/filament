@@ -15,6 +15,7 @@ struct main0_in
     int index [[user(locn0)]];
 };
 
+static inline __attribute__((always_inline))
 float4 getColor(thread const int& i, thread float2& gl_SamplePosition)
 {
     return float4(gl_SamplePosition, float(i), 1.0);

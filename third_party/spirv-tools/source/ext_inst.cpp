@@ -14,7 +14,6 @@
 
 #include "source/ext_inst.h"
 
-#include <cassert>
 #include <cstring>
 
 // DebugInfo extended instruction set.
@@ -29,8 +28,10 @@
 
 #include "debuginfo.insts.inc"
 #include "glsl.std.450.insts.inc"
+#include "opencl.debuginfo.100.insts.inc"
 #include "opencl.std.insts.inc"
 
+#include "spirv-tools/libspirv.h"
 #include "spv-amd-gcn-shader.insts.inc"
 #include "spv-amd-shader-ballot.insts.inc"
 #include "spv-amd-shader-explicit-vertex-parameter.insts.inc"
@@ -51,6 +52,8 @@ static const spv_ext_inst_group_t kGroups_1_0[] = {
      ARRAY_SIZE(spv_amd_shader_ballot_entries), spv_amd_shader_ballot_entries},
     {SPV_EXT_INST_TYPE_DEBUGINFO, ARRAY_SIZE(debuginfo_entries),
      debuginfo_entries},
+    {SPV_EXT_INST_TYPE_OPENCL_DEBUGINFO_100,
+     ARRAY_SIZE(opencl_debuginfo_100_entries), opencl_debuginfo_100_entries},
 };
 
 static const spv_ext_inst_table_t kTable_1_0 = {ARRAY_SIZE(kGroups_1_0),
@@ -81,11 +84,14 @@ spv_result_t spvExtInstTableGet(spv_ext_inst_table* pExtInstTable,
     case SPV_ENV_OPENGL_4_5:
     case SPV_ENV_UNIVERSAL_1_3:
     case SPV_ENV_VULKAN_1_1:
+    case SPV_ENV_VULKAN_1_1_SPIRV_1_4:
     case SPV_ENV_WEBGPU_0:
+    case SPV_ENV_UNIVERSAL_1_4:
+    case SPV_ENV_UNIVERSAL_1_5:
+    case SPV_ENV_VULKAN_1_2:
       *pExtInstTable = &kTable_1_0;
       return SPV_SUCCESS;
     default:
-      assert(0 && "Unknown spv_target_env in spvExtInstTableGet()");
       return SPV_ERROR_INVALID_TABLE;
   }
 }
@@ -114,7 +120,30 @@ spv_ext_inst_type_t spvExtInstImportTypeGet(const char* name) {
   if (!strcmp("DebugInfo", name)) {
     return SPV_EXT_INST_TYPE_DEBUGINFO;
   }
+  if (!strcmp("OpenCL.DebugInfo.100", name)) {
+    return SPV_EXT_INST_TYPE_OPENCL_DEBUGINFO_100;
+  }
+  // ensure to add any known non-semantic extended instruction sets
+  // above this point, and update spvExtInstIsNonSemantic()
+  if (!strncmp("NonSemantic.", name, 12)) {
+    return SPV_EXT_INST_TYPE_NONSEMANTIC_UNKNOWN;
+  }
   return SPV_EXT_INST_TYPE_NONE;
+}
+
+bool spvExtInstIsNonSemantic(const spv_ext_inst_type_t type) {
+  if (type == SPV_EXT_INST_TYPE_NONSEMANTIC_UNKNOWN) {
+    return true;
+  }
+  return false;
+}
+
+bool spvExtInstIsDebugInfo(const spv_ext_inst_type_t type) {
+  if (type == SPV_EXT_INST_TYPE_OPENCL_DEBUGINFO_100 ||
+      type == SPV_EXT_INST_TYPE_DEBUGINFO) {
+    return true;
+  }
+  return false;
 }
 
 spv_result_t spvExtInstTableNameLookup(const spv_ext_inst_table table,

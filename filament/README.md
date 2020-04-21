@@ -44,7 +44,7 @@ To link against debug builds of Filament, you must also link against:
 To use the Vulkan backend on macOS you must also make the following libraries available at runtime:
 - `MoltenVK_icd.json`
 - `libMoltenVK.dylib`
-- `vulkan.1.dylib`
+- `libvulkan.1.dylib`
 
 ## Linking against Filament
 

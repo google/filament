@@ -87,6 +87,13 @@ highp vec3 getLightSpacePosition() {
 }
 #endif
 
+#if defined(HAS_SHADOWING) && defined(HAS_DYNAMIC_LIGHTING)
+highp vec3 getSpotLightSpacePosition(uint index) {
+    vec4 position = vertex_spotLightSpacePosition[index];
+    return position.xyz * (1.0 / position.w);
+}
+#endif
+
 #if defined(MATERIAL_HAS_DOUBLE_SIDED_CAPABILITY)
 bool isDoubleSided() {
     return materialParams._doubleSided;

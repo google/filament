@@ -14,13 +14,17 @@
  * limitations under the License.
  */
 
-package com.google.android.filament.utils;
+package com.google.android.filament.utils
+
+import com.google.android.filament.Filament
 
 object Utils {
     /**
      * Initializes the utils JNI layer. Must be called before using any utils functionality.
      */
     fun init() {
+        // Load Filament first to ensure that the NioUtils Java class is available in the JNIEnv.
+        Filament.init()
         System.loadLibrary("filament-utils-jni")
     }
 }

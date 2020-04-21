@@ -61,7 +61,6 @@ RenderTarget::Builder& RenderTarget::Builder::layer(AttachmentPoint pt, uint32_t
 }
 
 RenderTarget* RenderTarget::Builder::build(Engine& engine) {
-    FEngine::assertValid(engine, __PRETTY_FUNCTION__);
     using backend::TextureUsage;
     const FRenderTarget::Attachment& color = mImpl->mAttachments[COLOR];
     const FRenderTarget::Attachment& depth = mImpl->mAttachments[DEPTH];
@@ -99,8 +98,8 @@ FRenderTarget::HwHandle FRenderTarget::createHandle(FEngine& engine, const Build
     FEngine::DriverApi& driver = engine.getDriverApi();
     const Attachment& color = builder.mImpl->mAttachments[COLOR];
     const Attachment& depth = builder.mImpl->mAttachments[DEPTH];
-    const TargetBufferFlags flags =
-            depth.texture ? TargetBufferFlags::COLOR_AND_DEPTH : TargetBufferFlags::COLOR;
+    const TargetBufferFlags flags = depth.texture ?
+            (TargetBufferFlags::COLOR0 | TargetBufferFlags::DEPTH) : TargetBufferFlags::COLOR0;
 
     // For now we do not support multisampled render targets in the public-facing API, but please
     // note that post-processing includes FXAA by default.

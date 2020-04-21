@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2019 Arm Limited
+ * Copyright 2015-2020 Arm Limited
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,18 +27,18 @@ struct Resource
 {
 	// Resources are identified with their SPIR-V ID.
 	// This is the ID of the OpVariable.
-	uint32_t id;
+	ID id;
 
 	// The type ID of the variable which includes arrays and all type modifications.
 	// This type ID is not suitable for parsing OpMemberDecoration of a struct and other decorations in general
 	// since these modifications typically happen on the base_type_id.
-	uint32_t type_id;
+	TypeID type_id;
 
 	// The base type of the declared resource.
 	// This type is the base type which ignores pointers and arrays of the type_id.
 	// This is mostly useful to parse decorations of the underlying type.
 	// base_type_id can also be obtained with get_type(get_type(type_id).self).
-	uint32_t base_type_id;
+	TypeID base_type_id;
 
 	// The declared name (OpName) of the resource.
 	// For Buffer blocks, the name actually reflects the externally
@@ -77,17 +77,17 @@ struct ShaderResources
 struct CombinedImageSampler
 {
 	// The ID of the sampler2D variable.
-	uint32_t combined_id;
+	VariableID combined_id;
 	// The ID of the texture2D variable.
-	uint32_t image_id;
+	VariableID image_id;
 	// The ID of the sampler variable.
-	uint32_t sampler_id;
+	VariableID sampler_id;
 };
 
 struct SpecializationConstant
 {
 	// The ID of the specialization constant.
-	uint32_t id;
+	ConstantID id;
 	// The constant ID of the constant, used in Vulkan during pipeline creation.
 	uint32_t constant_id;
 };
@@ -142,81 +142,81 @@ public:
 	virtual std::string compile();
 
 	// Gets the identifier (OpName) of an ID. If not defined, an empty string will be returned.
-	const std::string &get_name(uint32_t id) const;
+	const std::string &get_name(ID id) const;
 
 	// Applies a decoration to an ID. Effectively injects OpDecorate.
-	void set_decoration(uint32_t id, spv::Decoration decoration, uint32_t argument = 0);
-	void set_decoration_string(uint32_t id, spv::Decoration decoration, const std::string &argument);
+	void set_decoration(ID id, spv::Decoration decoration, uint32_t argument = 0);
+	void set_decoration_string(ID id, spv::Decoration decoration, const std::string &argument);
 
 	// Overrides the identifier OpName of an ID.
 	// Identifiers beginning with underscores or identifiers which contain double underscores
 	// are reserved by the implementation.
-	void set_name(uint32_t id, const std::string &name);
+	void set_name(ID id, const std::string &name);
 
 	// Gets a bitmask for the decorations which are applied to ID.
 	// I.e. (1ull << spv::DecorationFoo) | (1ull << spv::DecorationBar)
-	const Bitset &get_decoration_bitset(uint32_t id) const;
+	const Bitset &get_decoration_bitset(ID id) const;
 
 	// Returns whether the decoration has been applied to the ID.
-	bool has_decoration(uint32_t id, spv::Decoration decoration) const;
+	bool has_decoration(ID id, spv::Decoration decoration) const;
 
 	// Gets the value for decorations which take arguments.
 	// If the decoration is a boolean (i.e. spv::DecorationNonWritable),
 	// 1 will be returned.
 	// If decoration doesn't exist or decoration is not recognized,
 	// 0 will be returned.
-	uint32_t get_decoration(uint32_t id, spv::Decoration decoration) const;
-	const std::string &get_decoration_string(uint32_t id, spv::Decoration decoration) const;
+	uint32_t get_decoration(ID id, spv::Decoration decoration) const;
+	const std::string &get_decoration_string(ID id, spv::Decoration decoration) const;
 
 	// Removes the decoration for an ID.
-	void unset_decoration(uint32_t id, spv::Decoration decoration);
+	void unset_decoration(ID id, spv::Decoration decoration);
 
 	// Gets the SPIR-V type associated with ID.
 	// Mostly used with Resource::type_id and Resource::base_type_id to parse the underlying type of a resource.
-	const SPIRType &get_type(uint32_t id) const;
+	const SPIRType &get_type(TypeID id) const;
 
 	// Gets the SPIR-V type of a variable.
-	const SPIRType &get_type_from_variable(uint32_t id) const;
+	const SPIRType &get_type_from_variable(VariableID id) const;
 
 	// Gets the underlying storage class for an OpVariable.
-	spv::StorageClass get_storage_class(uint32_t id) const;
+	spv::StorageClass get_storage_class(VariableID id) const;
 
 	// If get_name() is an empty string, get the fallback name which will be used
 	// instead in the disassembled source.
-	virtual const std::string get_fallback_name(uint32_t id) const;
+	virtual const std::string get_fallback_name(ID id) const;
 
 	// If get_name() of a Block struct is an empty string, get the fallback name.
 	// This needs to be per-variable as multiple variables can use the same block type.
-	virtual const std::string get_block_fallback_name(uint32_t id) const;
+	virtual const std::string get_block_fallback_name(VariableID id) const;
 
 	// Given an OpTypeStruct in ID, obtain the identifier for member number "index".
 	// This may be an empty string.
-	const std::string &get_member_name(uint32_t id, uint32_t index) const;
+	const std::string &get_member_name(TypeID id, uint32_t index) const;
 
 	// Given an OpTypeStruct in ID, obtain the OpMemberDecoration for member number "index".
-	uint32_t get_member_decoration(uint32_t id, uint32_t index, spv::Decoration decoration) const;
-	const std::string &get_member_decoration_string(uint32_t id, uint32_t index, spv::Decoration decoration) const;
+	uint32_t get_member_decoration(TypeID id, uint32_t index, spv::Decoration decoration) const;
+	const std::string &get_member_decoration_string(TypeID id, uint32_t index, spv::Decoration decoration) const;
 
 	// Sets the member identifier for OpTypeStruct ID, member number "index".
-	void set_member_name(uint32_t id, uint32_t index, const std::string &name);
+	void set_member_name(TypeID id, uint32_t index, const std::string &name);
 
 	// Returns the qualified member identifier for OpTypeStruct ID, member number "index",
 	// or an empty string if no qualified alias exists
-	const std::string &get_member_qualified_name(uint32_t type_id, uint32_t index) const;
+	const std::string &get_member_qualified_name(TypeID type_id, uint32_t index) const;
 
 	// Gets the decoration mask for a member of a struct, similar to get_decoration_mask.
-	const Bitset &get_member_decoration_bitset(uint32_t id, uint32_t index) const;
+	const Bitset &get_member_decoration_bitset(TypeID id, uint32_t index) const;
 
 	// Returns whether the decoration has been applied to a member of a struct.
-	bool has_member_decoration(uint32_t id, uint32_t index, spv::Decoration decoration) const;
+	bool has_member_decoration(TypeID id, uint32_t index, spv::Decoration decoration) const;
 
 	// Similar to set_decoration, but for struct members.
-	void set_member_decoration(uint32_t id, uint32_t index, spv::Decoration decoration, uint32_t argument = 0);
-	void set_member_decoration_string(uint32_t id, uint32_t index, spv::Decoration decoration,
+	void set_member_decoration(TypeID id, uint32_t index, spv::Decoration decoration, uint32_t argument = 0);
+	void set_member_decoration_string(TypeID id, uint32_t index, spv::Decoration decoration,
 	                                  const std::string &argument);
 
 	// Unsets a member decoration, similar to unset_decoration.
-	void unset_member_decoration(uint32_t id, uint32_t index, spv::Decoration decoration);
+	void unset_member_decoration(TypeID id, uint32_t index, spv::Decoration decoration);
 
 	// Gets the fallback name for a member, similar to get_fallback_name.
 	virtual const std::string get_fallback_member_name(uint32_t index) const
@@ -228,7 +228,7 @@ public:
 	// SPIR-V shader. The granularity of this analysis is per-member of a struct.
 	// This can be used for Buffer (UBO), BufferBlock/StorageBuffer (SSBO) and PushConstant blocks.
 	// ID is the Resource::id obtained from get_shader_resources().
-	SmallVector<BufferRange> get_active_buffer_ranges(uint32_t id) const;
+	SmallVector<BufferRange> get_active_buffer_ranges(VariableID id) const;
 
 	// Returns the effective size of a buffer block.
 	size_t get_declared_struct_size(const SPIRType &struct_type) const;
@@ -256,12 +256,12 @@ public:
 	//
 	// To use the returned set as the filter for which variables are used during compilation,
 	// this set can be moved to set_enabled_interface_variables().
-	std::unordered_set<uint32_t> get_active_interface_variables() const;
+	std::unordered_set<VariableID> get_active_interface_variables() const;
 
 	// Sets the interface variables which are used during compilation.
 	// By default, all variables are used.
 	// Once set, compile() will only consider the set in active_variables.
-	void set_enabled_interface_variables(std::unordered_set<uint32_t> active_variables);
+	void set_enabled_interface_variables(std::unordered_set<VariableID> active_variables);
 
 	// Query shader resources, use ids with reflection interface to modify or query binding points, etc.
 	ShaderResources get_shader_resources() const;
@@ -269,19 +269,19 @@ public:
 	// Query shader resources, but only return the variables which are part of active_variables.
 	// E.g.: get_shader_resources(get_active_variables()) to only return the variables which are statically
 	// accessed.
-	ShaderResources get_shader_resources(const std::unordered_set<uint32_t> &active_variables) const;
+	ShaderResources get_shader_resources(const std::unordered_set<VariableID> &active_variables) const;
 
 	// Remapped variables are considered built-in variables and a backend will
 	// not emit a declaration for this variable.
 	// This is mostly useful for making use of builtins which are dependent on extensions.
-	void set_remapped_variable_state(uint32_t id, bool remap_enable);
-	bool get_remapped_variable_state(uint32_t id) const;
+	void set_remapped_variable_state(VariableID id, bool remap_enable);
+	bool get_remapped_variable_state(VariableID id) const;
 
 	// For subpassInput variables which are remapped to plain variables,
 	// the number of components in the remapped
 	// variable must be specified as the backing type of subpass inputs are opaque.
-	void set_subpass_input_remapped_components(uint32_t id, uint32_t components);
-	uint32_t get_subpass_input_remapped_components(uint32_t id) const;
+	void set_subpass_input_remapped_components(VariableID id, uint32_t components);
+	uint32_t get_subpass_input_remapped_components(VariableID id) const;
 
 	// All operations work on the current entry point.
 	// Entry points can be swapped out with set_entry_point().
@@ -314,6 +314,10 @@ public:
 	SPIREntryPoint &get_entry_point(const std::string &name, spv::ExecutionModel execution_model);
 	const std::string &get_cleansed_entry_point_name(const std::string &name,
 	                                                 spv::ExecutionModel execution_model) const;
+
+	// Traverses all reachable opcodes and sets active_builtins to a bitmask of all builtin variables which are accessed in the shader.
+	void update_active_builtins();
+	bool has_active_builtin(spv::BuiltIn builtin, spv::StorageClass storage);
 
 	// Query and modify OpExecutionMode.
 	const Bitset &get_execution_mode_bitset() const;
@@ -362,7 +366,7 @@ public:
 	// If the returned ID is non-zero, it can be decorated with set/bindings as desired before calling compile().
 	// Calling this function also invalidates get_active_interface_variables(), so this should be called
 	// before that function.
-	uint32_t build_dummy_sampler_for_combined_images();
+	VariableID build_dummy_sampler_for_combined_images();
 
 	// Analyzes all separate image and samplers used from the currently selected entry point,
 	// and re-routes them all to a combined image sampler instead.
@@ -411,8 +415,8 @@ public:
 	// constant_type is the SPIRType for the specialization constant,
 	// which can be queried to determine which fields in the unions should be poked at.
 	SmallVector<SpecializationConstant> get_specialization_constants() const;
-	SPIRConstant &get_constant(uint32_t id);
-	const SPIRConstant &get_constant(uint32_t id) const;
+	SPIRConstant &get_constant(ConstantID id);
+	const SPIRConstant &get_constant(ConstantID id) const;
 
 	uint32_t get_current_id_bound() const
 	{
@@ -435,7 +439,7 @@ public:
 	// If the decoration was declared, sets the word_offset to an offset into the provided SPIR-V binary buffer and returns true,
 	// otherwise, returns false.
 	// If the decoration does not have any value attached to it (e.g. DecorationRelaxedPrecision), this function will also return false.
-	bool get_binary_offset_for_decoration(uint32_t id, spv::Decoration decoration, uint32_t &word_offset) const;
+	bool get_binary_offset_for_decoration(VariableID id, spv::Decoration decoration, uint32_t &word_offset) const;
 
 	// HLSL counter buffer reflection interface.
 	// Append/Consume/Increment/Decrement in HLSL is implemented as two "neighbor" buffer objects where
@@ -450,7 +454,7 @@ public:
 	// only return true if OpSource was reported HLSL.
 	// To rely on this functionality, ensure that the SPIR-V module is not stripped.
 
-	bool buffer_is_hlsl_counter_buffer(uint32_t id) const;
+	bool buffer_is_hlsl_counter_buffer(VariableID id) const;
 
 	// Queries if a buffer object has a neighbor "counter" buffer.
 	// If so, the ID of that counter buffer will be returned in counter_id.
@@ -458,7 +462,7 @@ public:
 	// Otherwise, this query is purely based on OpName identifiers as found in the SPIR-V module, and will
 	// only return true if OpSource was reported HLSL.
 	// To rely on this functionality, ensure that the SPIR-V module is not stripped.
-	bool buffer_get_hlsl_counter_buffer(uint32_t id, uint32_t &counter_id) const;
+	bool buffer_get_hlsl_counter_buffer(VariableID id, uint32_t &counter_id) const;
 
 	// Gets the list of all SPIR-V Capabilities which were declared in the SPIR-V module.
 	const SmallVector<spv::Capability> &get_declared_capabilities() const;
@@ -479,13 +483,13 @@ public:
 	// ID is the name of a variable as returned by Resource::id, and must be a variable with a Block-like type.
 	//
 	// This also applies to HLSL cbuffers.
-	std::string get_remapped_declared_block_name(uint32_t id) const;
+	std::string get_remapped_declared_block_name(VariableID id) const;
 
 	// For buffer block variables, get the decorations for that variable.
 	// Sometimes, decorations for buffer blocks are found in member decorations instead
 	// of direct decorations on the variable itself.
 	// The most common use here is to check if a buffer is readonly or writeonly.
-	Bitset get_buffer_block_flags(uint32_t id) const;
+	Bitset get_buffer_block_flags(VariableID id) const;
 
 protected:
 	const uint32_t *stream(const Instruction &instr) const
@@ -509,7 +513,7 @@ protected:
 
 	SPIRFunction *current_function = nullptr;
 	SPIRBlock *current_block = nullptr;
-	std::unordered_set<uint32_t> active_interface_variables;
+	std::unordered_set<VariableID> active_interface_variables;
 	bool check_active_interface_variables = false;
 
 	// If our IDs are out of range here as part of opcodes, throw instead of
@@ -549,7 +553,9 @@ protected:
 	template <typename T>
 	const T *maybe_get(uint32_t id) const
 	{
-		if (ir.ids[id].get_type() == static_cast<Types>(T::type))
+		if (id >= ir.ids.size())
+			return nullptr;
+		else if (ir.ids[id].get_type() == static_cast<Types>(T::type))
 			return &get<T>(id);
 		else
 			return nullptr;
@@ -605,6 +611,7 @@ protected:
 	bool expression_is_lvalue(uint32_t id) const;
 	bool variable_storage_is_aliased(const SPIRVariable &var);
 	SPIRVariable *maybe_get_backing_variable(uint32_t chain);
+	spv::StorageClass get_backing_variable_storage(uint32_t ptr);
 
 	void register_read(uint32_t expr, uint32_t chain, bool forwarded);
 	void register_write(uint32_t chain);
@@ -617,7 +624,7 @@ protected:
 	inline bool is_single_block_loop(uint32_t next) const
 	{
 		auto &block = get<SPIRBlock>(next);
-		return block.merge == SPIRBlock::MergeLoop && block.continue_block == next;
+		return block.merge == SPIRBlock::MergeLoop && block.continue_block == ID(next);
 	}
 
 	inline bool is_break(uint32_t next) const
@@ -657,7 +664,6 @@ protected:
 
 	bool function_is_pure(const SPIRFunction &func);
 	bool block_is_pure(const SPIRBlock &block);
-	bool block_is_outside_flow_control_from_block(const SPIRBlock &from, const SPIRBlock &to);
 
 	bool execution_is_branchless(const SPIRBlock &from, const SPIRBlock &to) const;
 	bool execution_is_direct_branch(const SPIRBlock &from, const SPIRBlock &to) const;
@@ -710,6 +716,13 @@ protected:
 		{
 		}
 
+		// Called after returning from a function or when entering a block,
+		// can be called multiple times per block,
+		// while set_current_block is only called on block entry.
+		virtual void rearm_current_block(const SPIRBlock &)
+		{
+		}
+
 		virtual bool begin_function_scope(const uint32_t *, uint32_t)
 		{
 			return true;
@@ -741,7 +754,7 @@ protected:
 
 	struct InterfaceVariableAccessHandler : OpcodeHandler
 	{
-		InterfaceVariableAccessHandler(const Compiler &compiler_, std::unordered_set<uint32_t> &variables_)
+		InterfaceVariableAccessHandler(const Compiler &compiler_, std::unordered_set<VariableID> &variables_)
 		    : compiler(compiler_)
 		    , variables(variables_)
 		{
@@ -750,7 +763,7 @@ protected:
 		bool handle(spv::Op opcode, const uint32_t *args, uint32_t length) override;
 
 		const Compiler &compiler;
-		std::unordered_set<uint32_t> &variables;
+		std::unordered_set<VariableID> &variables;
 	};
 
 	struct CombinedImageSamplerHandler : OpcodeHandler
@@ -772,8 +785,8 @@ protected:
 		uint32_t remap_parameter(uint32_t id);
 		void push_remap_parameters(const SPIRFunction &func, const uint32_t *args, uint32_t length);
 		void pop_remap_parameters();
-		void register_combined_image_sampler(SPIRFunction &caller, uint32_t texture_id, uint32_t sampler_id,
-		                                     bool depth);
+		void register_combined_image_sampler(SPIRFunction &caller, VariableID combined_id, VariableID texture_id,
+		                                     VariableID sampler_id, bool depth);
 	};
 
 	struct DummySamplerForCombinedImageHandler : OpcodeHandler
@@ -806,7 +819,7 @@ protected:
 	// This must be an ordered data structure so we always pick the same type aliases.
 	SmallVector<uint32_t> global_struct_cache;
 
-	ShaderResources get_shader_resources(const std::unordered_set<uint32_t> *active_variables) const;
+	ShaderResources get_shader_resources(const std::unordered_set<VariableID> *active_variables) const;
 
 	VariableTypeRemapCallback variable_remap_callback;
 
@@ -816,16 +829,13 @@ protected:
 	std::unordered_set<uint32_t> forwarded_temporaries;
 	std::unordered_set<uint32_t> suppressed_usage_tracking;
 	std::unordered_set<uint32_t> hoisted_temporaries;
+	std::unordered_set<uint32_t> forced_invariant_temporaries;
 
 	Bitset active_input_builtins;
 	Bitset active_output_builtins;
 	uint32_t clip_distance_count = 0;
 	uint32_t cull_distance_count = 0;
 	bool position_invariant = false;
-
-	// Traverses all reachable opcodes and sets active_builtins to a bitmask of all builtin variables which are accessed in the shader.
-	void update_active_builtins();
-	bool has_active_builtin(spv::BuiltIn builtin, spv::StorageClass storage);
 
 	void analyze_parameter_preservation(
 	    SPIRFunction &entry, const CFG &cfg,
@@ -878,13 +888,17 @@ protected:
 
 		void add_hierarchy_to_comparison_ids(uint32_t ids);
 		bool need_subpass_input = false;
+		void add_dependency(uint32_t dst, uint32_t src);
 	};
 
 	void build_function_control_flow_graphs_and_analyze();
 	std::unordered_map<uint32_t, std::unique_ptr<CFG>> function_cfgs;
+	const CFG &get_cfg_for_current_function() const;
+	const CFG &get_cfg_for_function(uint32_t id) const;
+
 	struct CFGBuilder : OpcodeHandler
 	{
-		CFGBuilder(Compiler &compiler_);
+		explicit CFGBuilder(Compiler &compiler_);
 
 		bool follow_function_call(const SPIRFunction &func) override;
 		bool handle(spv::Op op, const uint32_t *args, uint32_t length) override;
@@ -912,6 +926,8 @@ protected:
 		std::unordered_map<uint32_t, std::unordered_set<uint32_t>> complete_write_variables_to_block;
 		std::unordered_map<uint32_t, std::unordered_set<uint32_t>> partial_write_variables_to_block;
 		std::unordered_set<uint32_t> access_chain_expressions;
+		// Access chains used in multiple blocks mean hoisting all the variables used to construct the access chain as not all backends can use pointers.
+		std::unordered_map<uint32_t, std::unordered_set<uint32_t>> access_chain_children;
 		const SPIRBlock *current_block = nullptr;
 	};
 
@@ -929,7 +945,7 @@ protected:
 
 	struct PhysicalStorageBufferPointerHandler : OpcodeHandler
 	{
-		PhysicalStorageBufferPointerHandler(Compiler &compiler_);
+		explicit PhysicalStorageBufferPointerHandler(Compiler &compiler_);
 		bool handle(spv::Op op, const uint32_t *args, uint32_t length) override;
 		Compiler &compiler;
 		std::unordered_set<uint32_t> types;
@@ -941,6 +957,61 @@ protected:
 	void find_function_local_luts(SPIRFunction &function, const AnalyzeVariableScopeAccessHandler &handler,
 	                              bool single_function);
 	bool may_read_undefined_variable_in_block(const SPIRBlock &block, uint32_t var);
+
+	// Finds all resources that are written to from inside the critical section, if present.
+	// The critical section is delimited by OpBeginInvocationInterlockEXT and
+	// OpEndInvocationInterlockEXT instructions. In MSL and HLSL, any resources written
+	// while inside the critical section must be placed in a raster order group.
+	struct InterlockedResourceAccessHandler : OpcodeHandler
+	{
+		InterlockedResourceAccessHandler(Compiler &compiler_, uint32_t entry_point_id)
+		    : compiler(compiler_)
+		{
+			call_stack.push_back(entry_point_id);
+		}
+
+		bool handle(spv::Op op, const uint32_t *args, uint32_t length) override;
+		bool begin_function_scope(const uint32_t *args, uint32_t length) override;
+		bool end_function_scope(const uint32_t *args, uint32_t length) override;
+
+		Compiler &compiler;
+		bool in_crit_sec = false;
+
+		uint32_t interlock_function_id = 0;
+		bool split_function_case = false;
+		bool control_flow_interlock = false;
+		bool use_critical_section = false;
+		bool call_stack_is_interlocked = false;
+		SmallVector<uint32_t> call_stack;
+
+		void access_potential_resource(uint32_t id);
+	};
+
+	struct InterlockedResourceAccessPrepassHandler : OpcodeHandler
+	{
+		InterlockedResourceAccessPrepassHandler(Compiler &compiler_, uint32_t entry_point_id)
+		    : compiler(compiler_)
+		{
+			call_stack.push_back(entry_point_id);
+		}
+
+		void rearm_current_block(const SPIRBlock &block) override;
+		bool handle(spv::Op op, const uint32_t *args, uint32_t length) override;
+		bool begin_function_scope(const uint32_t *args, uint32_t length) override;
+		bool end_function_scope(const uint32_t *args, uint32_t length) override;
+
+		Compiler &compiler;
+		uint32_t interlock_function_id = 0;
+		uint32_t current_block_id = 0;
+		bool split_function_case = false;
+		bool control_flow_interlock = false;
+		SmallVector<uint32_t> call_stack;
+	};
+
+	void analyze_interlocked_resource_usage();
+	// The set of all resources written while inside the critical section, if present.
+	std::unordered_set<uint32_t> interlocked_resources;
+	bool interlocked_is_complex = false;
 
 	void make_constant_null(uint32_t id, uint32_t type);
 
@@ -971,6 +1042,8 @@ protected:
 
 	bool reflection_ssbo_instance_name_is_significant() const;
 	std::string get_remapped_declared_block_name(uint32_t id, bool fallback_prefer_instance_name) const;
+
+	bool flush_phi_required(BlockID from, BlockID to) const;
 
 private:
 	// Used only to implement the old deprecated get_entry_point() interface.

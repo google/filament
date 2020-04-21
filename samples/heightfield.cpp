@@ -21,6 +21,7 @@
 #include <filament/MaterialInstance.h>
 #include <filament/RenderableManager.h>
 #include <filament/Scene.h>
+#include <filament/Skybox.h>
 #include <filament/Texture.h>
 #include <filament/TextureSampler.h>
 #include <filament/TransformManager.h>
@@ -33,7 +34,7 @@
 
 #include <getopt/getopt.h>
 
-#include "app/FilamentApp.h"
+#include <filamentapp/FilamentApp.h>
 
 #define STB_PERLIN_IMPLEMENTATION
 #include <stb_perlin.h>
@@ -58,6 +59,7 @@ using MinFilter = TextureSampler::MinFilter;
 using MagFilter = TextureSampler::MagFilter;
 
 struct App {
+    Skybox* skybox = nullptr;
     VertexBuffer* vb = nullptr;
     IndexBuffer* ib = nullptr;
     Material* mat = nullptr;
@@ -173,7 +175,7 @@ void populateTextureWithPerlin(Texture* texture, Engine& engine, float time, Par
     const size_t imageBufferSize = dimensionWithPadding * dimensionWithPadding * sizeof(T);
     T* imageData = (T*) malloc(imageBufferSize);
 
-    JobSystem* js = JobSystem::getJobSystem();
+    JobSystem* js = &engine.getJobSystem();
 
     typedef float (*NoiseFunc)(float, float, float, float, float, int);
 
@@ -296,7 +298,8 @@ int main(int argc, char** argv) {
         TextureSampler sampler(MinFilter::LINEAR, MagFilter::LINEAR);
 
         // Set up view
-        view->setClearColor({0.03f, 0.04f, 0.36f, 1.0f});
+        app.skybox = Skybox::Builder().color({0.03f, 0.04f, 0.36f, 1.0f}).build(*engine);
+        scene->setSkybox(app.skybox);
         view->setPostProcessingEnabled(false);
 
         // Generate heightfield vertices.
@@ -380,6 +383,7 @@ int main(int argc, char** argv) {
     };
 
     auto cleanup = [&app](Engine* engine, View*, Scene*) {
+        engine->destroy(app.skybox);
         engine->destroy(app.renderable);
         engine->destroy(app.matInstance);
         engine->destroy(app.mat);

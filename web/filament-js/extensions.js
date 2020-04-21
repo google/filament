@@ -135,8 +135,7 @@ Filament.loadClassExtensions = function() {
         return result;
     };
 
-    /// createAssetLoader ::static method::
-    /// engine ::argument:: an instance of [Engine]
+    /// createAssetLoader ::method::
     /// ::retval:: an instance of [AssetLoader]
     /// Clients should create only one asset loader for the lifetime of their app, this prevents
     /// memory leaks and duplication of Material objects.
@@ -145,15 +144,64 @@ Filament.loadClassExtensions = function() {
         return new Filament.gltfio$AssetLoader(this, materials);
     };
 
+    /// setClearOptions ::method::
+    /// overrides ::argument:: Dictionary with one or more of the following properties: \
+    /// clearColor, clear, discard.
+    Filament.Renderer.prototype.setClearOptions = function(overrides) {
+        const options = {
+            clearColor: [0, 0, 0, 0],
+            clear: false,
+            discard: true
+        };
+        Object.assign(options, overrides);
+        this._setClearOptions(options);
+    };
+
+    /// setAmbientOcclusionOptions ::method::
+    /// overrides ::argument:: Dictionary with one or more of the following properties: \
+    /// radius, power, bias, resolution, intensity, quality.
+    Filament.View.prototype.setAmbientOcclusionOptions = function(overrides) {
+        const options = {
+            radius: 0.3,
+            power: 1.0,
+            bias: 0.0005,
+            resolution: 0.5,
+            intensity: 1.0,
+            quality: Filament.View$QualityLevel.LOW
+        };
+        Object.assign(options, overrides);
+        this._setAmbientOcclusionOptions(options);
+    };
+
+    /// setBloomOptions ::method::
+    /// overrides ::argument:: Dictionary with one or more of the following properties: \
+    /// dirtStrength, strength, resolution, anomorphism, levels, blendMode, threshold, enabled, dirt.
+    Filament.View.prototype.setBloomOptions = function(overrides) {
+        const options = {
+            dirtStrength: 0.2,
+            strength: 0.10,
+            resolution: 360,
+            anamorphism: 1.0,
+            levels: 6,
+            blendMode: Filament.View$BloomOptions$BloomMode.ADD,
+            threshold: true,
+            enabled: false,
+            dirt: null
+        };
+        Object.assign(options, overrides);
+        this._setBloomOptions(options);
+    };
+
     /// VertexBuffer ::core class::
 
     /// setBufferAt ::method::
     /// engine ::argument:: [Engine]
     /// bufferIndex ::argument:: non-negative integer
     /// buffer ::argument:: asset string, or Uint8Array, or [Buffer]
-    Filament.VertexBuffer.prototype.setBufferAt = function(engine, bufferIndex, buffer) {
+    /// byteOffset ::argument:: non-negative integer
+    Filament.VertexBuffer.prototype.setBufferAt = function(engine, bufferIndex, buffer, byteOffset = 0) {
         buffer = getBufferDescriptor(buffer);
-        this._setBufferAt(engine, bufferIndex, buffer);
+        this._setBufferAt(engine, bufferIndex, buffer, byteOffset);
         buffer.delete();
     };
 
@@ -162,9 +210,10 @@ Filament.loadClassExtensions = function() {
     /// setBuffer ::method::
     /// engine ::argument:: [Engine]
     /// buffer ::argument:: asset string, or Uint8Array, or [Buffer]
-    Filament.IndexBuffer.prototype.setBuffer = function(engine, buffer) {
+    /// byteOffset ::argument:: non-negative integer
+    Filament.IndexBuffer.prototype.setBuffer = function(engine, buffer, byteOffset = 0) {
         buffer = getBufferDescriptor(buffer);
-        this._setBuffer(engine, buffer);
+        this._setBuffer(engine, buffer, byteOffset);
         buffer.delete();
     };
 
@@ -241,13 +290,8 @@ Filament.loadClassExtensions = function() {
     // See the C++ documentation for ResourceLoader and AssetLoader. The JavaScript API differs in
     // that it takes two optional callbacks:
     //
-    // - onDone is called after all resources have been downloaded, but before the
-    //   asset has been finalized. The onDone callback is passed the finalize function.
-    //
+    // - onDone is called after all resources have been downloaded and decoded.
     // - onFetched is called after each resource has finished downloading.
-    //
-    // "Finalization" refers to decoding texture data, converting the format of the
-    // vertex data if needed, and potentially computing tangents.
     //
     // Takes an optional base path for resolving the URI strings in the glTF file, which is
     // typically the path to the parent glTF file. The given base path cannot itself be a relative
@@ -255,19 +299,22 @@ Filament.loadClassExtensions = function() {
     //    const basePath = '' + new URL(myRelativeUrl, document.location);
     // If the given base path is null, document.location is used as the base.
     //
-    // The optional asyncInterval argument allows clients to control how finalization is amortized
+    // The optional asyncInterval argument allows clients to control how decoding is amortized
     // over time. It represents the number of milliseconds between each texture decoding task.
     Filament.gltfio$FilamentAsset.prototype.loadResources = function(onDone, onFetched, basePath,
             asyncInterval) {
         const asset = this;
         const engine = this.getEngine();
         const names = this.getResourceUris();
-        const urlset = new Set();
-        const urlToName = {};
         const interval = asyncInterval || 30;
 
         basePath = basePath || document.location;
+        onFetched = onFetched || ((name) => {});
+        onDone = onDone || (() => {});
 
+        // Construct the set of URI strings to fetch.
+        const urlset = new Set();
+        const urlToName = {};
         for (var i = 0; i < names.size(); i++) {
             const name = names.get(i);
             if (name) {
@@ -276,31 +323,26 @@ Filament.loadClassExtensions = function() {
                 urlset.add(url);
             }
         }
+
+        // Construct a resource loader and start decoding after all textures are fetched.
         const resourceLoader = new Filament.gltfio$ResourceLoader(engine);
+        const onComplete = () => {
+            resourceLoader.asyncBeginLoad(asset);
 
-        const onComplete = function() {
-            const finalize = function() {
-                resourceLoader.asyncBeginLoad(asset);
+            // NOTE: This decodes in the wasm layer instead of using Canvas2D, which allows Filament
+            // to have more control (handling of alpha, srgb, etc) and improves parity with native
+            // platforms. In the future we may wish to offload this to web workers.
 
-                // Decode a PNG or JPEG every 100 milliseconds. This is slow but it's useful to
-                // decode in the native layer instead of using Canvas2D. This allows us to have more
-                // control (handling of alpha, srgb, etc) and better parity with Filament on native
-                // platforms. In the future we may wish to offload this to web workers.
-                const timer = setInterval(() => {
-                    resourceLoader.asyncUpdateLoad();
-                    const progress = resourceLoader.asyncGetLoadProgress();
-                    if (progress >= 1) {
-                        clearInterval(timer);
-                        resourceLoader.delete();
-                    }
-                }, interval);
-
-            };
-            if (onDone) {
-                onDone(finalize);
-            } else {
-                finalize();
-            }
+            // Decode a single PNG or JPG every 30 milliseconds, or at the specified interval.
+            const timer = setInterval(() => {
+                resourceLoader.asyncUpdateLoad();
+                const progress = resourceLoader.asyncGetLoadProgress();
+                if (progress >= 1) {
+                    clearInterval(timer);
+                    resourceLoader.delete();
+                    onDone();
+                }
+            }, interval);
         };
 
         if (urlset.size == 0) {
@@ -308,14 +350,13 @@ Filament.loadClassExtensions = function() {
             return;
         }
 
+        // Begin downloading all external resources.
         Filament.fetch(Array.from(urlset), onComplete, function(url) {
             const buffer = getBufferDescriptor(url);
             const name = urlToName[url];
             resourceLoader.addResourceData(name, buffer);
             buffer.delete();
-            if (onFetched) {
-                onFetched(name);
-            }
+            onFetched(name);
         });
     };
 };

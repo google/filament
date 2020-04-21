@@ -244,8 +244,14 @@ LinearImage PNGDecoder::decode() {
         if (colorType == PNG_COLOR_TYPE_PALETTE) {
             png_set_palette_to_rgb(mPNG);
         }
-        if (colorType == PNG_COLOR_TYPE_GRAY) {
+        if (colorType == PNG_COLOR_TYPE_GRAY || colorType == PNG_COLOR_TYPE_GRAY_ALPHA) {
+            if (bitDepth < 8) {
+                png_set_expand_gray_1_2_4_to_8(mPNG);
+            }
             png_set_gray_to_rgb(mPNG);
+        }
+        if (png_get_valid(mPNG, mInfo, PNG_INFO_tRNS)) {
+            png_set_tRNS_to_alpha(mPNG);
         }
         if (getColorSpace() == ImageDecoder::ColorSpace::SRGB) {
             png_set_alpha_mode(mPNG, PNG_ALPHA_PNG, PNG_DEFAULT_sRGB);
@@ -257,6 +263,10 @@ LinearImage PNGDecoder::decode() {
         }
 
         png_read_update_info(mPNG, mInfo);
+
+        // Read updated color type since we may have asked for a conversion before
+        colorType = png_get_color_type(mPNG, mInfo);
+
         uint32_t width  = png_get_image_width(mPNG, mInfo);
         uint32_t height = png_get_image_height(mPNG, mInfo);
         size_t rowBytes = png_get_rowbytes(mPNG, mInfo);
@@ -272,23 +282,23 @@ LinearImage PNGDecoder::decode() {
         if (colorType == PNG_COLOR_TYPE_RGBA) {
             if (getColorSpace() == ImageDecoder::ColorSpace::SRGB) {
                 return toLinearWithAlpha<uint16_t>(width, height, rowBytes, imageData,
-                        [ ](uint16_t v) -> uint16_t { return ntohs(v); },
-                        sRGBToLinear< filament::math::float4>);
+                        [](uint16_t v) -> uint16_t { return ntohs(v); },
+                        sRGBToLinear<filament::math::float4>);
             } else {
                 return toLinearWithAlpha<uint16_t>(width, height, rowBytes, imageData,
-                        [ ](uint16_t v) -> uint16_t { return ntohs(v); },
-                        [ ](const filament::math::float4& color) ->  filament::math::float4 { return color; });
+                        [](uint16_t v) -> uint16_t { return ntohs(v); },
+                        [](const filament::math::float4& color) ->  filament::math::float4 { return color; });
             }
         } else {
             // Convert to linear float (PNG 16 stores data in network order (big endian).
             if (getColorSpace() == ImageDecoder::ColorSpace::SRGB) {
                 return toLinear<uint16_t>(width, height, rowBytes, imageData,
-                        [ ](uint16_t v) -> uint16_t { return ntohs(v); },
+                        [](uint16_t v) -> uint16_t { return ntohs(v); },
                         sRGBToLinear< filament::math::float3>);
             } else {
                 return toLinear<uint16_t>(width, height, rowBytes, imageData,
-                        [ ](uint16_t v) -> uint16_t { return ntohs(v); },
-                        [ ](const filament::math::float3& color) ->  filament::math::float3 { return color; });
+                        [](uint16_t v) -> uint16_t { return ntohs(v); },
+                        [](const filament::math::float3& color) ->  filament::math::float3 { return color; });
             }
         }
     } catch(std::runtime_error& e) {

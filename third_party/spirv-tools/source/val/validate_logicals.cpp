@@ -151,10 +151,19 @@ spv_result_t LogicalsPass(ValidationState_t& _, const Instruction* inst) {
         const Instruction* type_inst = _.FindDef(result_type);
         assert(type_inst);
 
+        const auto composites = _.features().select_between_composites;
+        auto fail = [&_, composites, inst, opcode]() -> spv_result_t {
+          return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                 << "Expected scalar or "
+                 << (composites ? "composite" : "vector")
+                 << " type as Result Type: " << spvOpcodeString(opcode);
+        };
+
         const SpvOp type_opcode = type_inst->opcode();
         switch (type_opcode) {
           case SpvOpTypePointer: {
-            if (!_.features().variable_pointers &&
+            if (_.addressing_model() == SpvAddressingModelLogical &&
+                !_.features().variable_pointers &&
                 !_.features().variable_pointers_storage_buffer)
               return _.diag(SPV_ERROR_INVALID_DATA, inst)
                      << "Using pointers with OpSelect requires capability "
@@ -173,35 +182,48 @@ spv_result_t LogicalsPass(ValidationState_t& _, const Instruction* inst) {
             break;
           }
 
-          default: {
+          // Not RuntimeArray because of other rules.
+          case SpvOpTypeArray:
+          case SpvOpTypeMatrix:
+          case SpvOpTypeStruct: {
+            if (!composites) return fail();
+            break;
+          };
+
+          default:
+            return fail();
+        }
+
+        const uint32_t condition_type = _.GetOperandTypeId(inst, 2);
+        const uint32_t left_type = _.GetOperandTypeId(inst, 3);
+        const uint32_t right_type = _.GetOperandTypeId(inst, 4);
+
+        if (!condition_type || (!_.IsBoolScalarType(condition_type) &&
+                                !_.IsBoolVectorType(condition_type)))
+          return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                 << "Expected bool scalar or vector type as condition: "
+                 << spvOpcodeString(opcode);
+
+        if (_.GetDimension(condition_type) != dimension) {
+          // If the condition is a vector type, then the result must also be a
+          // vector with matching dimensions. In SPIR-V 1.4, a scalar condition
+          // can be used to select between vector types. |composites| is a
+          // proxy for SPIR-V 1.4 functionality.
+          if (!composites || _.IsBoolVectorType(condition_type)) {
             return _.diag(SPV_ERROR_INVALID_DATA, inst)
-                   << "Expected scalar or vector type as Result Type: "
+                   << "Expected vector sizes of Result Type and the condition "
+                      "to be equal: "
                    << spvOpcodeString(opcode);
           }
         }
+
+        if (result_type != left_type || result_type != right_type)
+          return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                 << "Expected both objects to be of Result Type: "
+                 << spvOpcodeString(opcode);
+
+        break;
       }
-
-      const uint32_t condition_type = _.GetOperandTypeId(inst, 2);
-      const uint32_t left_type = _.GetOperandTypeId(inst, 3);
-      const uint32_t right_type = _.GetOperandTypeId(inst, 4);
-
-      if (!condition_type || (!_.IsBoolScalarType(condition_type) &&
-                              !_.IsBoolVectorType(condition_type)))
-        return _.diag(SPV_ERROR_INVALID_DATA, inst)
-               << "Expected bool scalar or vector type as condition: "
-               << spvOpcodeString(opcode);
-
-      if (_.GetDimension(condition_type) != dimension)
-        return _.diag(SPV_ERROR_INVALID_DATA, inst)
-               << "Expected vector sizes of Result Type and the condition to be"
-               << " equal: " << spvOpcodeString(opcode);
-
-      if (result_type != left_type || result_type != right_type)
-        return _.diag(SPV_ERROR_INVALID_DATA, inst)
-               << "Expected both objects to be of Result Type: "
-               << spvOpcodeString(opcode);
-
-      break;
     }
 
     case SpvOpIEqual:

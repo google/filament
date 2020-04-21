@@ -24,7 +24,6 @@ namespace metal {
 
 MetalBuffer::MetalBuffer(MetalContext& context, size_t size, bool forceGpuBuffer)
         : mBufferSize(size), mContext(context) {
-    assert(size > 0);
     // If the buffer is less than 4K in size, we don't use an explicit buffer and instead use
     // immediate command encoder methods like setVertexBytes:length:atIndex:.
     // TODO: we shouldn't do this if the data persists for multiple uses.

@@ -1,0 +1,112 @@
+---
+---
+/*
+ * style.sass
+ */
+@import url('https://fonts.googleapis.com/css?family=Inconsolata')
+
+$monofont: 'Inconsolata'
+$gridcolor: #ddd
+$gridweight: 2px
+
+table
+  border-collapse: collapse
+  min-width: 50%
+  margin-left: 1em
+
+th, td
+  border: 1px solid #ccc
+  padding: .5em
+
+th
+  background-color: #333
+  border: 1px solid #333
+  color: #fff
+
+table.terms th
+  text-align: center
+
+div.draco-syntax pre
+  background-color: #fff
+  background-image: linear-gradient(90deg, transparent 600px, #abced4 600px, #abced4 602px, transparent 602px), linear-gradient($gridcolor .1em, transparent .1em)
+  background-size: 100% 1.3em
+  border-left: $gridweight solid $gridcolor
+  border-right: $gridweight solid $gridcolor
+  border-bottom: $gridweight solid $gridcolor
+  white-space: pre
+  font-family: $monofont
+  font-size: 1em
+  padding: 0 1em
+  line-height: 1.3
+  margin-left: 1em
+  width: 740px
+  // Generate a "Type" heading above 2nd column.
+  &:before
+    content: "Type\A"
+    font-weight: bold
+    padding-left: 594px
+
+// Specifically override Bootstrap defaults
+code, kbd, pre, samp
+  font-family: $monofont
+  font-size: 1em
+  line-height: 1.3
+
+ol.breadcrumb
+  background-color: #fff
+  padding-left: 0
+  font-size: 12px
+
+figure
+  display: block
+  text-align: center
+  font-style: italic
+  font-size: smaller
+  text-indent: 0
+  margin: 1em auto
+  padding: 1em
+  img
+    max-width: 80%
+    height: auto
+  figcaption
+
+// Auto heading-number styles
+
+body
+  counter-reset: h2
+
+h2
+  counter-reset: h3
+
+h3
+  counter-reset: h4
+
+h4
+  counter-reset: h5
+
+h5
+  counter-reset: h6
+
+h2:before
+  counter-increment: h2
+  content: counter(h2) ". "
+
+h3:before
+  counter-increment: h3
+  content: counter(h2) "." counter(h3) ". "
+
+h4:before
+  counter-increment: h4
+  content: counter(h2) "." counter(h3) "." counter(h4) ". "
+
+h5:before
+  counter-increment: h5
+  content: counter(h2) "." counter(h3) "." counter(h4) "." counter(h5) ". "
+
+h6:before
+  counter-increment: h6
+  content: counter(h2) "." counter(h3) "." counter(h4) "." counter(h5) "." counter(h6) ". "
+
+h2.nocount:before, h3.nocount:before, h4.nocount:before, h5.nocount:before, h6.nocount:before
+  content: ""
+  counter-increment: none

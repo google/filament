@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_DRIVER_GL_HEADERS_H
 #define TNT_FILAMENT_DRIVER_GL_HEADERS_H
 
-#if defined(ANDROID) || defined(USE_EXTERNAL_GLES3) || defined(__EMSCRIPTEN__)
+#if defined(ANDROID) || defined(FILAMENT_USE_EXTERNAL_GLES3) || defined(__EMSCRIPTEN__)
 
     #include <GLES3/gl31.h>
     #include <GLES2/gl2ext.h>
@@ -47,6 +47,10 @@
 #ifdef GL_KHR_debug
         extern PFNGLDEBUGMESSAGECALLBACKKHRPROC glDebugMessageCallbackKHR;
         extern PFNGLGETDEBUGMESSAGELOGKHRPROC glGetDebugMessageLogKHR;
+#endif
+#ifdef GL_EXT_disjoint_timer_query
+        extern PFNGLGETQUERYOBJECTUI64VEXTPROC glGetQueryObjectui64v;
+        #define GL_TIME_ELAPSED               0x88BF
 #endif
     }
 
@@ -82,6 +86,7 @@
      * requires the following 3.1 define in order to compile. */
 
     #define GL_TEXTURE_2D_MULTISAMPLE         0x9100
+    #define GL_TIME_ELAPSED                   0x88BF
 
 #else
     #include <bluegl/BlueGL.h>

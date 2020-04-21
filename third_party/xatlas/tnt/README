@@ -1,9 +1,0 @@
-This folder was last updated as follows:
-
-    export sha=9e29a35
-    cd third_party
-    curl -L -O https://github.com/jpcy/xatlas/archive/${sha}.zip
-    unzip ${sha}.zip
-    mv xatlas-* xatlas
-    cd xatlas
-    rm -rf bin extra models

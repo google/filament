@@ -113,6 +113,24 @@ enum_<RenderableManager::PrimitiveType>("RenderableManager$PrimitiveType")
     .value("TRIANGLES", RenderableManager::PrimitiveType::TRIANGLES)
     .value("NONE", RenderableManager::PrimitiveType::NONE);
 
+enum_<View::QualityLevel>("View$QualityLevel")
+    .value("LOW", View::QualityLevel::LOW)
+    .value("MEDIUM", View::QualityLevel::MEDIUM)
+    .value("HIGH", View::QualityLevel::HIGH)
+    .value("ULTRA", View::QualityLevel::ULTRA);
+
+enum_<View::AmbientOcclusion>("View$AmbientOcclusion")
+    .value("NONE", View::AmbientOcclusion::NONE)
+    .value("SSAO", View::AmbientOcclusion::SSAO);
+
+enum_<View::BlendMode>("View$BlendMode")
+    .value("OPAQUE", View::BlendMode::OPAQUE)
+    .value("TRANSLUCENT", View::BlendMode::TRANSLUCENT);
+
+enum_<View::BloomOptions::BlendMode>("View$BloomOptions$BlendMode")
+    .value("ADD", View::BloomOptions::BlendMode::ADD)
+    .value("INTERPOLATE", View::BloomOptions::BlendMode::INTERPOLATE);
+
 enum_<View::AntiAliasing>("View$AntiAliasing")
     .value("NONE", View::AntiAliasing::NONE)
     .value("FXAA", View::AntiAliasing::FXAA);
@@ -278,7 +296,9 @@ enum_<backend::PixelDataType>("PixelDataType")
     .value("UINT", backend::PixelDataType::UINT)
     .value("INT", backend::PixelDataType::INT)
     .value("HALF", backend::PixelDataType::HALF)
-    .value("FLOAT", backend::PixelDataType::FLOAT);
+    .value("FLOAT", backend::PixelDataType::FLOAT)
+    .value("UINT_10F_11F_11F_REV", backend::PixelDataType::UINT_10F_11F_11F_REV)
+    .value("USHORT_565", backend::PixelDataType::USHORT_565);
 
 enum_<backend::CompressedPixelDataType>("CompressedPixelDataType")
     .value("EAC_R11", backend::CompressedPixelDataType::EAC_R11)

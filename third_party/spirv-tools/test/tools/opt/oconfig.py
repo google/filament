@@ -56,3 +56,18 @@ class TestOconfigComments(expect.SuccessfulReturn):
 --loop-unroll
 """, '.cfg')
   spirv_args = [shader, '-o', placeholder.TempFileName('output.spv'), config]
+
+@inside_spirv_testsuite('SpirvOptConfigFile')
+class TestOconfigComments(expect.SuccessfulReturn):
+  """Tests empty config files are accepted.
+
+  https://github.com/KhronosGroup/SPIRV-Tools/issues/1778
+  """
+
+  shader = placeholder.FileSPIRVShader(empty_main_assembly(), '.spvasm')
+  config = placeholder.ConfigFlagsFile("""
+# This is a comment.
+-O
+--relax-struct-store
+""", '.cfg')
+  spirv_args = [shader, '-o', placeholder.TempFileName('output.spv'), config]

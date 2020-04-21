@@ -6,6 +6,12 @@ mat4 getLightFromWorldMatrix() {
     return frameUniforms.lightFromWorldMatrix;
 }
 
+#if defined(HAS_SHADOWING)
+mat4 getSpotLightFromWorldMatrix(uint index) {
+    return shadowUniforms.spotLightFromWorldMatrix[index];
+}
+#endif
+
 /** @public-api */
 mat4 getWorldFromModelMatrix() {
     return objectUniforms.worldFromModelMatrix;
@@ -134,8 +140,11 @@ vec4 computeWorldPosition() {
     vec3 position = getPosition().xyz;
     return mulMat4x4Float3(transform, position);
 #else
-    mat4 transform = getWorldFromViewMatrix() * getViewFromClipMatrix();
-    vec3 position = getPosition().xyz;
-    return mulMat4x4Float3(transform, position);
+    mat4 transform = getWorldFromClipMatrix();
+    vec4 position = transform * getPosition();
+    if (abs(position.w) < MEDIUMP_FLT_MIN) {
+        position.w = position.w < 0.0 ? -MEDIUMP_FLT_MIN : MEDIUMP_FLT_MIN;
+    }
+    return position * (1.0 / position.w);
 #endif
 }

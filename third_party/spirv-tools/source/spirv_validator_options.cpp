@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "source/spirv_validator_options.h"
+
 #include <cassert>
 #include <cstring>
-
-#include "source/spirv_validator_options.h"
 
 bool spvParseUniversalLimitsOptions(const char* s, spv_validator_limit* type) {
   auto match = [s](const char* b) {
@@ -37,6 +37,8 @@ bool spvParseUniversalLimitsOptions(const char* s, spv_validator_limit* type) {
     *type = spv_validator_limit_max_control_flow_nesting_depth;
   } else if (match("--max-access-chain-indexes")) {
     *type = spv_validator_limit_max_access_chain_indexes;
+  } else if (match("--max-id-bound")) {
+    *type = spv_validator_limit_max_id_bound;
   } else {
     // The command line option for this validator limit has not been added.
     // Therefore we return false.
@@ -73,6 +75,7 @@ void spvValidatorOptionsSetUniversalLimit(spv_validator_options options,
           max_control_flow_nesting_depth)
     LIMIT(spv_validator_limit_max_access_chain_indexes,
           max_access_chain_indexes)
+    LIMIT(spv_validator_limit_max_id_bound, max_id_bound)
 #undef LIMIT
   }
 }
@@ -87,9 +90,25 @@ void spvValidatorOptionsSetRelaxLogicalPointer(spv_validator_options options,
   options->relax_logical_pointer = val;
 }
 
+void spvValidatorOptionsSetBeforeHlslLegalization(spv_validator_options options,
+                                                  bool val) {
+  options->before_hlsl_legalization = val;
+  options->relax_logical_pointer = val;
+}
+
 void spvValidatorOptionsSetRelaxBlockLayout(spv_validator_options options,
                                             bool val) {
   options->relax_block_layout = val;
+}
+
+void spvValidatorOptionsSetUniformBufferStandardLayout(
+    spv_validator_options options, bool val) {
+  options->uniform_buffer_standard_layout = val;
+}
+
+void spvValidatorOptionsSetScalarBlockLayout(spv_validator_options options,
+                                             bool val) {
+  options->scalar_block_layout = val;
 }
 
 void spvValidatorOptionsSetSkipBlockLayout(spv_validator_options options,

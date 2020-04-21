@@ -27,7 +27,7 @@ export as namespace Filament;
 
 export function getSupportedFormatSuffix(desired: string): void;
 export function init(assets: string[], onready: () => void): void;
-export function fetch(assets: string[], onready: () => void): void;
+export function fetch(assets: string[], onready: () => void, onfetched: (name: string) => void): void;
 
 export const assets: {[url: string]: Uint8Array};
 
@@ -38,7 +38,6 @@ export type mat3 = glm.mat3|number[];
 export type mat4 = glm.mat4|number[];
 export type quat = glm.quat|number[];
 
-export class Skybox {}
 export class Texture {}
 export class SwapChain {}
 
@@ -52,8 +51,45 @@ export interface Aabb {
     max: float3;
 }
 
+export interface Renderer$ClearOptions {
+    clearColor?: float4;
+    clear?: boolean;
+    discard?: boolean;
+}
+
+export interface View$AmbientOcclusionOptions {
+    radius?: number;
+    power?: number;
+    bias?: number;
+    resolution?: number;
+    intensity?: number;
+    quality?: View$QualityLevel;
+}
+
+export interface View$BloomOptions {
+    dirtStrength?: number;
+    strength?: number;
+    resolution?: number;
+    anamorphism?: number;
+    levels?: number;
+    blendMode?: View$BloomOptions$BlendMode;
+    threshold?: boolean;
+    enabled?: boolean;
+    dirt?: Texture|null;
+}
+
+// TODO: Remove the entity type and just use integers for parity with Filament's Java bindings.
 export class Entity {
     public getId(): number;
+}
+
+export class EntityVector {
+    public get(index: number): Entity;
+    public size(): number;
+}
+
+export class Skybox {
+    public setColor(color: float4): void;
 }
 
 export class LightManager$Instance {
@@ -98,10 +134,8 @@ export class EntityManager {
 export class VertexBuffer$Builder {
     public vertexCount(count: number): VertexBuffer$Builder;
     public bufferCount(count: number): VertexBuffer$Builder;
-    public attribute(attrib: VertexAttribute,
-                        bufindex: number,
-                        atype: VertexBuffer$AttributeType,
-                        offset: number, stride: number): VertexBuffer$Builder;
+    public attribute(attrib: VertexAttribute, bufindex: number, atype: VertexBuffer$AttributeType,
+            offset: number, stride: number): VertexBuffer$Builder;
     public normalized(attrib: VertexAttribute): VertexBuffer$Builder;
     public normalizedIf(attrib: VertexAttribute, normalized: boolean): VertexBuffer$Builder;
     public build(engine: Engine): VertexBuffer;
@@ -109,15 +143,17 @@ export class VertexBuffer$Builder {
 
 export class IndexBuffer$Builder {
     public indexCount(count: number): IndexBuffer$Builder;
-    public bufferType(IndexBuffer$IndexType): IndexBuffer$Builder;
+    public bufferType(type: IndexBuffer$IndexType): IndexBuffer$Builder;
     public build(engine: Engine): IndexBuffer;
 }
 
 export class RenderableManager$Builder {
-    public geometry(slot: number,
-        ptype: RenderableManager$PrimitiveType,
-        vb: VertexBuffer,
-        ib: IndexBuffer): RenderableManager$Builder;
+    public geometry(slot: number, ptype: RenderableManager$PrimitiveType, vb: VertexBuffer,
+            ib: IndexBuffer): RenderableManager$Builder;
+    public geometryOffset(slot: number, ptype: RenderableManager$PrimitiveType, vb: VertexBuffer,
+            ib: IndexBuffer, offset: number, count: number): RenderableManager$Builder;
+    public geometryMinMax(slot: number, ptype: RenderableManager$PrimitiveType, vb: VertexBuffer,
+            ib: IndexBuffer, offset: number, minIndex: number, maxIndex: number, count: number): RenderableManager$Builder;
     public material(geo: number, minstance: MaterialInstance): RenderableManager$Builder;
     public boundingBox(box: Box): RenderableManager$Builder;
     public layerMask(select: number, values: number): RenderableManager$Builder;
@@ -148,6 +184,13 @@ export class LightManager$Builder {
     public direction(value: float3): LightManager$Builder;
     public intensity(value: number): LightManager$Builder;
     public position(value: float3): LightManager$Builder;
+}
+
+export class Skybox$Builder {
+    public build(engine: Engine): Skybox;
+    public color(rgba: float4): Skybox$Builder;
+    public environment(envmap: Texture): Skybox$Builder;
+    public showSun(show: boolean): Skybox$Builder;
 }
 
 export class LightManager {
@@ -189,7 +232,7 @@ export class RenderableManager {
     public hasComponent(entity: Entity): boolean;
     public getInstance(entity: Entity): RenderableManager$Instance;
     public static Builder(ngeos: number): RenderableManager$Builder;
-    public destroy(entity: Entity);
+    public destroy(entity: Entity): void;
     public setAxisAlignedBoundingBox(instance: RenderableManager$Instance, aabb: Box): void;
     public setLayerMask(instance: RenderableManager$Instance, select: number, values: number): void;
     public setPriority(instance: RenderableManager$Instance, priority: number): void;
@@ -202,7 +245,7 @@ export class RenderableManager {
     public setBonesFromMatrices(instance: RenderableManager$Instance, transforms: mat4[],
             offset: number): void
     public setMorphWeights(instance: RenderableManager$Instance, a: number, b: number, c: number,
-            d: number);
+            d: number): void;
     public getAxisAlignedBoundingBox(instance: RenderableManager$Instance): Box;
     public getPrimitiveCount(instance: RenderableManager$Instance): number;
     public setMaterialInstanceAt(instance: RenderableManager$Instance,
@@ -222,16 +265,20 @@ export class RenderableManager {
 
 export class VertexBuffer {
     public static Builder(): VertexBuffer$Builder;
-    public setBufferAt(engine: Engine, bufindex: number, f32array: any): void;
+    public setBufferAt(engine: Engine, bufindex: number, f32array: any, byteOffset?: number): void;
 }
 
 export class IndexBuffer {
     public static Builder(): IndexBuffer$Builder;
-    public setBuffer(engine: Engine, u16array: any): void;
+    public setBuffer(engine: Engine, u16array: any, byteOffset?: number): void;
 }
 
 export class Renderer {
     public render(swapChain: SwapChain, view: View): void;
+    public setClearOptions(options: Renderer$ClearOptions): void;
+    public renderView(view: View): void;
+    public beginFrame(swapChain: SwapChain, vsyncSteadyClockTimeNano: number): boolean;
+    public endFrame(): void;
 }
 
 export class Material {
@@ -249,11 +296,11 @@ export class Frustum {
 }
 
 export class Camera {
-    public setProjection(Camera$Projection, left: number, right: number, bottom: number,
-        top: number, near: number, far: number): void;
+    public setProjection(proj: Camera$Projection, left: number, right: number, bottom: number,
+            top: number, near: number, far: number): void;
     public setProjectionFov(fovInDegrees: number, aspect: number,
-        near: number, far: number, fov: Camera$Fov): void;
-    public setLensProjection(focalLength: number, near: number, far: number): void;
+            near: number, far: number, fov: Camera$Fov): void;
+    public setLensProjection(focalLength: number, aspect: number, near: number, far: number): void;
     public setCustomProjection(projection: mat4, near: number, far: number): void;
     public getProjectionMatrix(): mat4;
     public getCullingProjectionMatrix(): mat4;
@@ -277,9 +324,9 @@ export class Camera {
 }
 
 export class IndirectLight {
-    public setIntensity(intensity: number);
+    public setIntensity(intensity: number): void;
     public getIntensity(): number;
-    public setRotation(value: mat3);
+    public setRotation(value: mat3): void;
     public getRotation(): mat3;
     public static getDirectionEstimate(f32array: any): float3;
     public static getColorEstimate(f32array: any, direction: float3): float4;
@@ -303,12 +350,13 @@ export class IcoSphere {
 }
 
 export class Scene {
-    public addEntity(entity: Entity);
+    public addEntity(entity: Entity): void;
+    public addEntities(entities: EntityVector): void;
     public getLightCount(): number;
     public getRenderableCount(): number;
-    public remove(entity: Entity);
-    public setIndirectLight(ibl: IndirectLight);
-    public setSkybox(sky: Skybox);
+    public remove(entity: Entity): void;
+    public setIndirectLight(ibl: IndirectLight|null): void;
+    public setSkybox(sky: Skybox|null): void;
 }
 
 export class RenderTarget {
@@ -318,11 +366,16 @@ export class RenderTarget {
 }
 
 export class View {
-    public setCamera(camera: Camera);
-    public setClearColor(color: float4);
-    public setScene(scene: Scene);
-    public setViewport(viewport: float4);
-    public setRenderTarget(renderTarget: RenderTarget);
+    public setCamera(camera: Camera): void;
+    public setScene(scene: Scene): void;
+    public setViewport(viewport: float4): void;
+    public setRenderTarget(renderTarget: RenderTarget): void;
+    public setAmbientOcclusionOptions(options: View$AmbientOcclusionOptions): void;
+    public setBloomOptions(options: View$BloomOptions): void;
+    public setAmbientOcclusion(enable: boolean): void;
+    public getAmbientOcclusion(): boolean;
+    public setBlendMode(mode: View$BlendMode): void;
+    public getBlendMode(): View$BlendMode;
 }
 
 export class TransformManager {
@@ -355,7 +408,10 @@ export class Engine {
     public createSwapChain(): SwapChain;
     public createTextureFromJpeg(url: string): Texture;
     public createTextureFromPng(url: string): Texture;
+    public createTextureFromKtx(url: string, options?: object): Texture;
     public createView(): View;
+
+    public createAssetLoader(): gltfio$AssetLoader;
 
     public destroySwapChain(swapChain: SwapChain): void;
     public destroyRenderer(renderer: Renderer): void;
@@ -378,6 +434,36 @@ export class Engine {
     public getTransformManager(): TransformManager;
     public init(assets: string[], onready: () => void): void;
     public loadFilamesh(url: string, definstance: MaterialInstance, matinstances: object): Filamesh;
+}
+
+export class gltfio$AssetLoader {
+    public createAssetFromJson(buffer: any): gltfio$FilamentAsset;
+    public createAssetFromBinary(buffer: any): gltfio$FilamentAsset;
+    public delete(): void;
+}
+
+export class gltfio$FilamentAsset {
+    public loadResources(onDone: () => void|null, onFetched: (s: string) => void|null,
+            basePath: string|null, asyncInterval: number|null): void;
+    public getEntities(): EntityVector;
+    public getRoot(): Entity;
+    public popRenderable(): Entity;
+    public getMaterialInstances(): MaterialInstance[];
+    public getResourceUris(): string[];
+    public getBoundingBox(): Aabb;
+    public getName(entity: Entity): string;
+    public getAnimator(): gltfio$Animator;
+    public getWireframe(): Entity;
+    public getEngine(): Engine;
+    public releaseSourceData(): void;
+}
+
+export class gltfio$Animator {
+    public applyAnimation(index: number): void;
+    public updateBoneMatrices(): void;
+    public getAnimationCount(): number;
+    public getAnimationDuration(index: number): number;
+    public getAnimationName(index: number): string;
 }
 
 export enum Frustum$Plane {
@@ -502,6 +588,8 @@ export enum PixelDataType {
     INT,
     HALF,
     FLOAT,
+    UINT_10F_11F_11F_REV,
+    USHORT_565,
 }
 
 export enum RenderableManager$PrimitiveType {
@@ -710,6 +798,28 @@ export enum View$AntiAliasing {
     FXAA,
 }
 
+export enum View$BlendMode {
+    OPAQUE,
+    TRANSLUCENT,
+}
+
+export enum View$QualityLevel {
+    LOW,
+    MEDIUM,
+    HIGH,
+    ULTRA,
+}
+
+export enum View$AmbientOcclusion {
+    NONE,
+    SSAO,
+}
+
+export enum View$BloomOptions$BlendMode {
+    ADD,
+    INTERPOLATE,
+}
+
 export enum WrapMode {
     CLAMP_TO_EDGE,
     REPEAT,
@@ -717,7 +827,7 @@ export enum WrapMode {
 }
 
 export function _malloc(size: number): number;
-export function _free(size: number);
+export function _free(size: number): void;
 
 interface HeapInterface {
     set(buffer: any, pointer: number): any;
@@ -727,7 +837,18 @@ interface HeapInterface {
 export const HEAPU8 : HeapInterface;
 
 export class SurfaceOrientation$Builder {
+    public constructor();
     public vertexCount(count: number): SurfaceOrientation$Builder;
     public normals(count: number, stride: number): SurfaceOrientation$Builder;
-    public build(): any;
+    public uvs(uvs: number, stride: number): SurfaceOrientation$Builder;
+    public positions(positions: number, stride: number): SurfaceOrientation$Builder;
+    public triangleCount(count: number): SurfaceOrientation$Builder;
+    public triangles16(triangles: number): SurfaceOrientation$Builder;
+    public triangles32(triangles: number): SurfaceOrientation$Builder;
+    public build(): SurfaceOrientation;
+}
+
+export class SurfaceOrientation {
+    public getQuats(out: number, quatCount: number, attrType: VertexBuffer$AttributeType);
+    public delete();
 }

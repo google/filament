@@ -28,7 +28,7 @@
 namespace utils {
 namespace io {
 
-class LogStream : public ostream {
+class UTILS_PUBLIC LogStream : public ostream {
 public:
 
     enum Priority {
@@ -45,7 +45,7 @@ private:
 
 } // namespace io
 
-struct Loggers {
+struct UTILS_PUBLIC Loggers {
     // DEBUG level logging stream
     io::LogStream& d;
 
@@ -59,7 +59,7 @@ struct Loggers {
     io::LogStream& i;
 };
 
-extern Loggers slog;
+extern UTILS_PUBLIC Loggers slog;
 
 } // namespace utils
 

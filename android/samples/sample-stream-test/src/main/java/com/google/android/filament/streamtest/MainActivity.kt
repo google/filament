@@ -34,6 +34,7 @@ import java.nio.ByteOrder
 import java.nio.channels.Channels
 import android.opengl.*
 import android.view.MotionEvent
+import com.google.android.filament.android.DisplayHelper
 
 
 class MainActivity : Activity(), ActivityCompat.OnRequestPermissionsResultCallback {
@@ -45,6 +46,7 @@ class MainActivity : Activity(), ActivityCompat.OnRequestPermissionsResultCallba
 
     private lateinit var surfaceView: SurfaceView
     private lateinit var uiHelper: UiHelper
+    private lateinit var displayHelper: DisplayHelper
     private lateinit var choreographer: Choreographer
 
     private lateinit var engine: Engine
@@ -84,6 +86,8 @@ class MainActivity : Activity(), ActivityCompat.OnRequestPermissionsResultCallba
 
         choreographer = Choreographer.getInstance()
 
+        displayHelper = DisplayHelper(this)
+
         setupSurfaceView()
         setupFilament()
         setupView()
@@ -121,7 +125,7 @@ class MainActivity : Activity(), ActivityCompat.OnRequestPermissionsResultCallba
     }
 
     private fun setupView() {
-        view.setClearColor(0.035f, 0.035f, 0.035f, 1.0f)
+        scene.skybox = Skybox.Builder().color(0.035f, 0.035f, 0.035f, 1.0f).build(engine)
         view.camera = camera
         view.scene = scene
     }
@@ -347,7 +351,7 @@ class MainActivity : Activity(), ActivityCompat.OnRequestPermissionsResultCallba
 
                 // If beginFrame() returns false you should skip the frame
                 // This means you are sending frames too quickly to the GPU
-                if (renderer.beginFrame(swapChain!!)) {
+                if (renderer.beginFrame(swapChain!!, frameTimeNanos)) {
                     streamHelper.repaintCanvas()
                     materialInstance.setParameter("uvOffset", streamHelper.uvOffset)
 
@@ -362,9 +366,11 @@ class MainActivity : Activity(), ActivityCompat.OnRequestPermissionsResultCallba
         override fun onNativeWindowChanged(surface: Surface) {
             swapChain?.let { engine.destroySwapChain(it) }
             swapChain = engine.createSwapChain(surface)
+            displayHelper.attach(renderer, surfaceView.display)
         }
 
         override fun onDetachedFromSurface() {
+            displayHelper.detach()
             swapChain?.let {
                 engine.destroySwapChain(it)
                 // Required to ensure we don't return before Filament is done executing the

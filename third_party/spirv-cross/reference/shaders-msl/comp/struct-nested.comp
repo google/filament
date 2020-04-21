@@ -28,6 +28,8 @@ struct dstbuffer
     s2_1 test[1];
 };
 
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
 kernel void main0(device dstbuffer& _19 [[buffer(0)]])
 {
     s2 testVal;

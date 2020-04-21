@@ -23,16 +23,16 @@ import android.view.Choreographer
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.SurfaceView
+import com.google.android.filament.View
 import com.google.android.filament.utils.KtxLoader
 import com.google.android.filament.utils.ModelViewer
 import com.google.android.filament.utils.Utils
 import java.nio.ByteBuffer
-import java.nio.channels.Channels
 
 class MainActivity : Activity() {
 
     companion object {
-        // Load the library for the utility layer,  which includes gltfio and the Filament core.
+        // Load the library for the utility layer, which in turn loads gltfio and the Filament core.
         init { Utils.init() }
     }
 
@@ -61,6 +61,17 @@ class MainActivity : Activity() {
 
         createRenderables()
         createIndirectLight()
+
+        // enable dynamic resolution
+        val options = modelViewer.view.dynamicResolutionOptions
+        options.enabled = true;
+        modelViewer.view.dynamicResolutionOptions = options;
+
+        modelViewer.view.ambientOcclusion = View.AmbientOcclusion.SSAO
+
+        val bloom = modelViewer.view.bloomOptions
+        bloom.enabled = true;
+        modelViewer.view.bloomOptions = bloom
     }
 
     private fun createRenderables() {
@@ -116,12 +127,14 @@ class MainActivity : Activity() {
             choreographer.postFrameCallback(this)
 
             modelViewer.animator?.apply {
-                val elapsedTimeSeconds = (frameTimeNanos - startTime).toDouble() / 1_000_000_000
-                this.applyAnimation(0, elapsedTimeSeconds.toFloat())
-                this.updateBoneMatrices()
+                if (animationCount > 0) {
+                    val elapsedTimeSeconds = (frameTimeNanos - startTime).toDouble() / 1_000_000_000
+                    applyAnimation(0, elapsedTimeSeconds.toFloat())
+                }
+                updateBoneMatrices()
             }
 
-            modelViewer.render()
+            modelViewer.render(frameTimeNanos)
         }
     }
 

@@ -1,3 +1,5 @@
+static const uint3 gl_WorkGroupSize = uint3(1u, 1u, 1u);
+
 globallycoherent RWByteAddressBuffer _29 : register(u3);
 ByteAddressBuffer _33 : register(t2);
 RWTexture2D<float> uImageIn : register(u0);

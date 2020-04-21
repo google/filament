@@ -11,7 +11,7 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      - uses: actions/checkout@v1.0.0
+      - uses: actions/checkout@v2.0.0
       - name: Run build script
         run: |
           cd build/android && ./build.sh continuous
@@ -22,7 +22,7 @@ jobs:
       - uses: actions/upload-artifact@v1.0.0
         with:
           name: filamat-android-full
-          path: out/filamat-android-full-release.aar
+          path: out/filamat-android-release.aar
       - uses: actions/upload-artifact@v1.0.0
         with:
           name: filamat-android-lite
@@ -31,6 +31,10 @@ jobs:
         with:
           name: gltfio-android-release
           path: out/gltfio-android-release.aar
+      - uses: actions/upload-artifact@v1.0.0
+        with:
+          name: gltfio-android-lite-release
+          path: out/gltfio-android-lite-release.aar
       - uses: actions/upload-artifact@v1.0.0
         with:
           name: filament-utils-android-release

@@ -55,8 +55,9 @@ public:
      * User Public API
      */
 
-    void setSkybox(FSkybox const* skybox) noexcept;
+    void setSkybox(FSkybox* skybox) noexcept;
     FSkybox const* getSkybox() const noexcept { return mSkybox; }
+    FSkybox* getSkybox() noexcept { return mSkybox; }
 
     void setIndirectLight(FIndirectLight const* ibl) noexcept { mIndirectLight = ibl; }
     FIndirectLight const* getIndirectLight() const noexcept { return mIndirectLight; }
@@ -94,6 +95,8 @@ public:
      * Storage for per-frame renderable data
      */
 
+    using VisibleMaskType = Culler::result_type;
+
     enum {
         RENDERABLE_INSTANCE,    //  4 | instance of the Renderable component
         WORLD_TRANSFORM,        // 16 | instance of the Transform component
@@ -120,7 +123,7 @@ public:
             FRenderableManager::Visibility,             // VISIBILITY_STATE
             backend::Handle<backend::HwUniformBuffer>,  // BONES_UBH
             math::float3,                               // WORLD_AABB_CENTER
-            Culler::result_type,                        // VISIBLE_MASK
+            VisibleMaskType,                            // VISIBLE_MASK
             math::float4,                               // MORPH_WEIGHTS
             uint8_t,                                    // LAYERS
             math::float3,                               // WORLD_AABB_EXTENT
@@ -147,12 +150,38 @@ public:
      * Storage for per-frame light data
      */
 
+    struct ShadowInfo {
+        // These are per-light values.
+        // They're packed into 32 bits and stored in the Lights uniform buffer.
+        // They're unpacked in the fragment shader and used to calculate punctual shadows.
+        bool castsShadows = false;      // whether this light casts shadows
+        bool contactShadows = false;    // whether this light casts contact shadows
+        uint8_t index = 0;              // an index into the arrays in the Shadows uniform buffer
+        uint8_t layer = 0;              // which layer of the shadow texture array to sample from
+
+        //  -- LSB -------------
+        //  castsShadows     : 1
+        //  contactShadows   : 1
+        //  index            : 4
+        //  layer            : 4
+        //  -- MSB -------------
+        uint32_t pack() const {
+            assert(index < 16);
+            assert(layer < 16);
+            return uint8_t(castsShadows)   << 0u    |
+                   uint8_t(contactShadows) << 1u    |
+                   index                   << 2u    |
+                   layer                   << 6u;
+        }
+    };
+
     enum {
         POSITION_RADIUS,
         DIRECTION,
         LIGHT_INSTANCE,
         VISIBILITY,
-        SCREEN_SPACE_Z_RANGE
+        SCREEN_SPACE_Z_RANGE,
+        SHADOW_INFO
     };
 
     using LightSoa = utils::StructureOfArrays<
@@ -160,13 +189,16 @@ public:
             math::float3,
             FLightManager::Instance,
             Culler::result_type,
-            math::float2
+            math::float2,
+            ShadowInfo
     >;
 
     LightSoa const& getLightData() const noexcept { return mLightData; }
     LightSoa& getLightData() noexcept { return mLightData; }
 
     void updateUBOs(utils::Range<uint32_t> visibleRenderables, backend::Handle<backend::HwUniformBuffer> renderableUbh) noexcept;
+
+    bool hasContactShadows() const noexcept;
 
 private:
     static inline void computeLightRanges(math::float2* zrange,
@@ -176,7 +208,7 @@ private:
             const CameraInfo& camera, const math::float4* spheres, size_t count) noexcept;
 
     FEngine& mEngine;
-    FSkybox const* mSkybox = nullptr;
+    FSkybox* mSkybox = nullptr;
     FIndirectLight const* mIndirectLight = nullptr;
 
     /*
@@ -189,13 +221,14 @@ private:
 
     /*
      * The data below is valid only during a view pass. i.e. if a scene is used in multiple
-     * views, the data below is update for each view.
+     * views, the data below is updated for each view.
      * In essence, this data should be owned by View, but it's so scene-specific, that for now
      * we store it here.
      */
     RenderableSoa mRenderableData;
     LightSoa mLightData;
     backend::Handle<backend::HwUniformBuffer> mRenderableViewUbh; // This is actually owned by the view.
+    bool mHasContactShadows = false;
 };
 
 FILAMENT_UPCAST(Scene)

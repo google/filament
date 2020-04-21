@@ -18,6 +18,8 @@
 
 #include <filament/Skybox.h>
 
+#include <private/backend/DriverApi.h>
+
 #include <utils/compiler.h>
 #include <utils/Entity.h>
 
@@ -44,10 +46,14 @@ public:
     utils::Entity getEntity() const noexcept { return mSkybox; }
 
     void setLayerMask(uint8_t select, uint8_t values) noexcept;
-
     uint8_t getLayerMask() const noexcept { return mLayerMask; }
 
     float getIntensity() const noexcept { return mIntensity; }
+
+    void setColor(math::float4 color) noexcept;
+
+    // commits UBOs
+    void commit(backend::DriverApi& driver) noexcept;
 
 private:
     // we don't own these

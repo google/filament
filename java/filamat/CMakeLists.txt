@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 project(filament-java)
 
-if (NOT ENABLE_JAVA)
+if (NOT FILAMENT_ENABLE_JAVA)
     return()
 endif()
 

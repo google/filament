@@ -39,6 +39,7 @@
 #include "upcast.h"
 #include "Wireframe.h"
 #include "DependencyGraph.h"
+#include "DracoCache.h"
 
 #include <tsl/robin_map.h>
 
@@ -53,6 +54,25 @@ struct Skin {
     std::vector<filament::math::mat4f> inverseBindMatrices;
     std::vector<utils::Entity> joints;
     std::vector<utils::Entity> targets;
+};
+
+// Encapsulates VertexBuffer::setBufferAt() or IndexBuffer::setBuffer().
+struct BufferSlot {
+    const cgltf_accessor* accessor;
+    cgltf_attribute_type attribute;
+    int bufferIndex; // for vertex buffers only
+    int morphTarget; // 0 if no morphing, otherwise 1-based index
+    filament::VertexBuffer* vertexBuffer;
+    filament::IndexBuffer* indexBuffer;
+};
+
+// Encapsulates a connection between Texture and MaterialInstance.
+struct TextureSlot {
+    const cgltf_texture* texture;
+    filament::MaterialInstance* materialInstance;
+    const char* materialParameter;
+    filament::TextureSampler sampler;
+    bool srgb;
 };
 
 struct FFilamentAsset : public FilamentAsset {
@@ -89,6 +109,14 @@ struct FFilamentAsset : public FilamentAsset {
         return mEntities.empty() ? nullptr : mEntities.data();
     }
 
+    const utils::Entity* getLightEntities() const noexcept {
+        return mLightEntities.empty() ? nullptr : mLightEntities.data();
+    }
+
+    size_t getLightEntityCount() const noexcept {
+        return mLightEntities.size();
+    }
+
     utils::Entity getRoot() const noexcept {
         return mRoot;
     }
@@ -107,22 +135,6 @@ struct FFilamentAsset : public FilamentAsset {
 
     filament::MaterialInstance* const* getMaterialInstances() noexcept {
         return mMaterialInstances.data();
-    }
-
-    size_t getBufferBindingCount() const noexcept {
-        return mBufferBindings.size();
-    }
-
-    const BufferBinding* getBufferBindings() const noexcept {
-        return mBufferBindings.data();
-    }
-
-    size_t getTextureBindingCount() const noexcept {
-        return mTextureBindings.size();
-    }
-
-    const TextureBinding* getTextureBindings() const noexcept {
-        return mTextureBindings.data();
     }
 
     size_t getResourceUriCount() const noexcept {
@@ -167,13 +179,11 @@ struct FFilamentAsset : public FilamentAsset {
         // To ensure that all possible memory is freed, we reassign to new containers rather than
         // calling clear(). With many container types (such as robin_map), clearing is a fast
         // operation that merely frees the storage for the items.
-        // TODO: bundle all these transient items into a "SourceData" struct.
-        mBufferBindings = {};
-        mTextureBindings = {};
         mResourceUris = {};
         mNodeMap = {};
-        mPrimMap = {};
-        mAccessorMap = {};
+        mPrimitives = {};
+        mBufferSlots = {};
+        mTextureSlots = {};
         releaseSourceAsset();
     }
 
@@ -187,8 +197,12 @@ struct FFilamentAsset : public FilamentAsset {
 
     void releaseSourceAsset() {
         if (--mSourceAssetRefCount == 0) {
-            mGlbData.clear();
-            mGlbData.shrink_to_fit();
+            // At this point, all vertex buffers have been uploaded to the GPU and we can finally
+            // release all remaining CPU-side source data, such as aggregated GLB buffers and Draco
+            // meshes. Note that sidecar bin data is already released, because external resources
+            // are released eagerly via BufferDescriptor callbacks.
+            mDracoCache = {};
+            mGlbData = {};
             if (!mSharedSourceAsset) {
                 cgltf_free((cgltf_data*) mSourceAsset);
             }
@@ -200,7 +214,7 @@ struct FFilamentAsset : public FilamentAsset {
         mTextures.push_back(texture);
     }
 
-    void bindTexture(const TextureBinding& tb, filament::Texture* texture) {
+    void bindTexture(const TextureSlot& tb, filament::Texture* texture) {
         tb.materialInstance->setParameter(tb.materialParameter, texture, tb.sampler);
         mDependencyGraph.addEdge(texture, tb.materialInstance, tb.materialParameter);
     }
@@ -209,6 +223,7 @@ struct FFilamentAsset : public FilamentAsset {
     utils::NameComponentManager* mNameManager;
     std::vector<uint8_t> mGlbData;
     std::vector<utils::Entity> mEntities;
+    std::vector<utils::Entity> mLightEntities;
     std::vector<filament::MaterialInstance*> mMaterialInstances;
     std::vector<filament::VertexBuffer*> mVertexBuffers;
     std::vector<filament::IndexBuffer*> mIndexBuffers;
@@ -222,15 +237,19 @@ struct FFilamentAsset : public FilamentAsset {
     bool mResourcesLoaded = false;
     bool mSharedSourceAsset = false;
     DependencyGraph mDependencyGraph;
+    DracoCache mDracoCache;
+
+    // Sentinels for situations where ResourceLoader needs to generate data.
+    const cgltf_accessor mGenerateNormals = {};
+    const cgltf_accessor mGenerateTangents = {};
 
     // Transient source data that can freed via releaseSourceData:
-    std::vector<BufferBinding> mBufferBindings;
-    std::vector<TextureBinding> mTextureBindings;
+    std::vector<BufferSlot> mBufferSlots;
+    std::vector<TextureSlot> mTextureSlots;
     std::vector<const char*> mResourceUris;
     const cgltf_data* mSourceAsset = nullptr;
     tsl::robin_map<const cgltf_node*, utils::Entity> mNodeMap;
-    tsl::robin_map<const cgltf_primitive*, filament::VertexBuffer*> mPrimMap;
-    tsl::robin_map<const cgltf_accessor*, std::vector<filament::VertexBuffer*>> mAccessorMap;
+    std::vector<std::pair<const cgltf_primitive*, filament::VertexBuffer*> > mPrimitives;
 };
 
 FILAMENT_UPCAST(FilamentAsset)

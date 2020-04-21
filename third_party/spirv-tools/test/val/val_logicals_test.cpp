@@ -24,6 +24,7 @@ namespace spvtools {
 namespace val {
 namespace {
 
+using ::testing::Eq;
 using ::testing::HasSubstr;
 using ::testing::Not;
 
@@ -43,6 +44,7 @@ OpCapability Float64)";
 %ext_inst = OpExtInstImport "GLSL.std.450"
 OpMemoryModel Logical GLSL450
 OpEntryPoint Fragment %main "main"
+OpExecutionMode %main OriginUpperLeft
 %void = OpTypeVoid
 %func = OpTypeFunction %void
 %bool = OpTypeBool
@@ -142,6 +144,18 @@ OpEntryPoint Fragment %main "main"
 %boolvec2_tf = OpConstantComposite %boolvec2 %true %false
 %boolvec3_tft = OpConstantComposite %boolvec3 %true %false %true
 %boolvec4_tftf = OpConstantComposite %boolvec4 %true %false %true %false
+
+%arr_u32_2 = OpTypeArray %u32 %u32_2
+%st_u32_u32 = OpTypeStruct %u32 %u32
+%mat_f32_2_2 = OpTypeMatrix %f32vec2 2
+
+%nul_arr_u32_2 = OpConstantNull %arr_u32_2
+%nul_st_u32_u32 = OpConstantNull %st_u32_u32
+%nul_mat_f32_2_2 = OpConstantNull %mat_f32_2_2
+
+%arr_u32_2_1_2 = OpConstantComposite %arr_u32_2 %u32_1 %u32_2
+%st_u32_u32_1_2 = OpConstantComposite %st_u32_u32 %u32_1 %u32_2
+%mat_f32_2_2_01_12 = OpConstantComposite %mat_f32_2_2 %f32vec2_01 %f32vec2_12
 
 %f32vec4ptr = OpTypePointer Function %f32vec4
 
@@ -584,6 +598,20 @@ TEST_F(ValidateLogicals, OpSelectWrongTypeId) {
       HasSubstr("Expected scalar or vector type as Result Type: Select"));
 }
 
+TEST_F(ValidateLogicals, OpSelectWrongTypeIdV14) {
+  // In 1.4, the message changes to allow composites.
+  const std::string body = R"(
+%val1 = OpSelect %void %true %u32_0 %u32_1
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body).c_str(), SPV_ENV_UNIVERSAL_1_4);
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA,
+            ValidateInstructions(SPV_ENV_UNIVERSAL_1_4));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("Expected scalar or composite type as Result Type: Select"));
+}
+
 TEST_F(ValidateLogicals, OpSelectPointerNoCapability) {
   const std::string body = R"(
 %x = OpVariable %f32vec4ptr Function
@@ -684,6 +712,111 @@ TEST_F(ValidateLogicals, OpSelectWrongRightObject) {
   ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
   EXPECT_THAT(getDiagnosticString(),
               HasSubstr("Expected both objects to be of Result Type: Select"));
+}
+
+TEST_F(ValidateLogicals, OpSelectArrayV13Bad) {
+  const std::string body = R"(
+%val1 = OpSelect %arr_u32_2 %true %nul_arr_u32_2 %arr_u32_2_1_2
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body).c_str());
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA,
+            ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("Expected scalar or vector type as Result Type: Select"));
+}
+
+TEST_F(ValidateLogicals, OpSelectArrayV13TargetV14Bad) {
+  const std::string body = R"(
+%val1 = OpSelect %arr_u32_2 %true %nul_arr_u32_2 %arr_u32_2_1_2
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body).c_str());
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA,
+            ValidateInstructions(SPV_ENV_UNIVERSAL_1_4));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Expected scalar or vector type as Result Type"));
+}
+
+TEST_F(ValidateLogicals, OpSelectArrayV14Good) {
+  const std::string body = R"(
+%val1 = OpSelect %arr_u32_2 %true %nul_arr_u32_2 %arr_u32_2_1_2
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body).c_str(), SPV_ENV_UNIVERSAL_1_4);
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_4));
+  EXPECT_THAT(getDiagnosticString(), Eq(""));
+}
+
+TEST_F(ValidateLogicals, OpSelectStructV13Bad) {
+  const std::string body = R"(
+%val1 = OpSelect %st_u32_u32 %true %nul_st_u32_u32 %st_u32_u32_1_2
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body).c_str());
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA,
+            ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("Expected scalar or vector type as Result Type: Select"));
+}
+
+TEST_F(ValidateLogicals, OpSelectStructV13TargetV14Bad) {
+  const std::string body = R"(
+%val1 = OpSelect %st_u32_u32 %true %nul_st_u32_u32 %st_u32_u32_1_2
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body).c_str());
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA,
+            ValidateInstructions(SPV_ENV_UNIVERSAL_1_4));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Expected scalar or vector type as Result Type"));
+}
+
+TEST_F(ValidateLogicals, OpSelectStructV14Good) {
+  const std::string body = R"(
+%val1 = OpSelect %st_u32_u32 %true %nul_st_u32_u32 %st_u32_u32_1_2
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body).c_str(), SPV_ENV_UNIVERSAL_1_4);
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_4));
+  EXPECT_THAT(getDiagnosticString(), Eq(""));
+}
+
+TEST_F(ValidateLogicals, OpSelectMatrixV13Bad) {
+  const std::string body = R"(
+%val1 = OpSelect %mat_f32_2_2 %true %nul_mat_f32_2_2 %mat_f32_2_2_01_12
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body).c_str());
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA,
+            ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("Expected scalar or vector type as Result Type: Select"));
+}
+
+TEST_F(ValidateLogicals, OpSelectMatrixV13TargetV14Bad) {
+  const std::string body = R"(
+%val1 = OpSelect %mat_f32_2_2 %true %nul_mat_f32_2_2 %mat_f32_2_2_01_12
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body).c_str());
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA,
+            ValidateInstructions(SPV_ENV_UNIVERSAL_1_4));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Expected scalar or vector type as Result Type"));
+}
+
+TEST_F(ValidateLogicals, OpSelectMatrixV14Good) {
+  const std::string body = R"(
+%val1 = OpSelect %mat_f32_2_2 %true %nul_mat_f32_2_2 %mat_f32_2_2_01_12
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body).c_str(), SPV_ENV_UNIVERSAL_1_4);
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_4));
+  EXPECT_THAT(getDiagnosticString(), Eq(""));
 }
 
 TEST_F(ValidateLogicals, OpIEqualSuccess) {
@@ -916,6 +1049,114 @@ TEST_F(ValidateLogicals, OpSGreaterThanDifferentBitWidth) {
   EXPECT_THAT(getDiagnosticString(),
               HasSubstr("Expected both operands to have the same component bit "
                         "width: SGreaterThan"));
+}
+
+TEST_F(ValidateLogicals, PSBSelectSuccess) {
+  const std::string body = R"(
+OpCapability PhysicalStorageBufferAddressesEXT
+OpCapability Int64
+OpCapability Shader
+OpExtension "SPV_EXT_physical_storage_buffer"
+OpMemoryModel PhysicalStorageBuffer64EXT GLSL450
+OpEntryPoint Fragment %main "main"
+OpExecutionMode %main OriginUpperLeft
+OpDecorate %val1 AliasedPointerEXT
+%uint64 = OpTypeInt 64 0
+%bool = OpTypeBool
+%true = OpConstantTrue %bool
+%ptr = OpTypePointer PhysicalStorageBufferEXT %uint64
+%pptr_f = OpTypePointer Function %ptr
+%void = OpTypeVoid
+%voidfn = OpTypeFunction %void
+%main = OpFunction %void None %voidfn
+%entry = OpLabel
+%val1 = OpVariable %pptr_f Function
+%val2 = OpLoad %ptr %val1
+%val3 = OpSelect %ptr %true %val2 %val2
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(body.c_str());
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
+TEST_F(ValidateLogicals, SelectVectorsScalarCondition) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+%void = OpTypeVoid
+%bool = OpTypeBool
+%int = OpTypeInt 32 0
+%int4 = OpTypeVector %int 4
+%int4_0 = OpConstantNull %int4
+%true = OpConstantTrue %bool
+%void_fn = OpTypeFunction %void
+%func = OpFunction %void None %void_fn
+%1 = OpLabel
+%select = OpSelect %int4 %true %int4_0 %int4_0
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_UNIVERSAL_1_3);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA,
+            ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Expected vector sizes of Result Type and the "
+                        "condition to be equal: Select"));
+}
+
+TEST_F(ValidateLogicals, SelectVectorsScalarCondition1p4) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+%void = OpTypeVoid
+%bool = OpTypeBool
+%int = OpTypeInt 32 0
+%int4 = OpTypeVector %int 4
+%int4_0 = OpConstantNull %int4
+%true = OpConstantTrue %bool
+%void_fn = OpTypeFunction %void
+%func = OpFunction %void None %void_fn
+%1 = OpLabel
+%select = OpSelect %int4 %true %int4_0 %int4_0
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_UNIVERSAL_1_4);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_4));
+}
+
+TEST_F(ValidateLogicals, SelectVectorsVectorConditionMismatchedDimensions1p4) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+%void = OpTypeVoid
+%bool = OpTypeBool
+%bool3 = OpTypeVector %bool 3
+%int = OpTypeInt 32 0
+%int4 = OpTypeVector %int 4
+%int4_0 = OpConstantNull %int4
+%bool3_null = OpConstantNull %bool3
+%void_fn = OpTypeFunction %void
+%func = OpFunction %void None %void_fn
+%1 = OpLabel
+%select = OpSelect %int4 %bool3_null %int4_0 %int4_0
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_UNIVERSAL_1_4);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA,
+            ValidateInstructions(SPV_ENV_UNIVERSAL_1_4));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Expected vector sizes of Result Type and the "
+                        "condition to be equal: Select"));
 }
 
 }  // namespace

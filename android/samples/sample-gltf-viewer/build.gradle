@@ -3,6 +3,8 @@ apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
 apply plugin: FilamentToolsPlugin
 
+project.ext.isSample = true
+
 filamentTools {
     cmgenArgs = "-q --format=ktx --size=256 --extract-blur=0.1 --deploy=src/main/assets/envs/venetian_crossroads_2k"
     iblInputFile = file("../../../third_party/environments/venetian_crossroads_2k.hdr")
@@ -24,8 +26,9 @@ android {
     compileSdkVersion versions.compileSdk
     defaultConfig {
         applicationId "com.google.android.filament.gltf"
-        minSdkVersion 16
+        minSdkVersion 19
         targetSdkVersion versions.targetSdk
+        missingDimensionStrategy 'functionality', 'full'
     }
 }
 

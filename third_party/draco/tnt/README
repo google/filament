@@ -1,0 +1,7 @@
+This folder was created as follows:
+
+    cd third_party
+    curl -L https://github.com/google/draco/archive/1.3.6.zip > draco.zip
+    unzip draco.zip ; rm -rf draco draco.zip ; mv draco-1.3.6 draco ; cd draco
+    rm -rf testdata unity maya
+    git checkout tnt/README

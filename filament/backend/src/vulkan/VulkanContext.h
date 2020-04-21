@@ -139,6 +139,7 @@ VkFormat findSupportedFormat(VulkanContext& context, const std::vector<VkFormat>
 VkCommandBuffer acquireWorkCommandBuffer(VulkanContext& context);
 void flushWorkCommandBuffer(VulkanContext& context);
 void createDepthBuffer(VulkanContext& context, VulkanSurfaceContext& sc, VkFormat depthFormat);
+VkImageLayout getTextureLayout(TextureUsage usage);
 
 } // namespace filament
 } // namespace backend

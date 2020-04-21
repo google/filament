@@ -2,8 +2,13 @@ cmake_minimum_required(VERSION 3.6)
 
 set(FILAMENT_DIR ${FILAMENT_DIST_DIR})
 set(GLTFIO_DIR ../../libs/gltfio)
+set(DRACO_DIR ../../third_party/draco)
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../filament-android ${CMAKE_CURRENT_BINARY_DIR}/filament-android)
+
+add_library(dracodec STATIC IMPORTED)
+set_target_properties(dracodec PROPERTIES IMPORTED_LOCATION
+        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libdracodec.a)
 
 add_library(utils STATIC IMPORTED)
 set_target_properties(utils PROPERTIES IMPORTED_LOCATION
@@ -17,29 +22,20 @@ add_library(gltfio_resources_lite STATIC IMPORTED)
 set_target_properties(gltfio_resources_lite PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libgltfio_resources_lite.a)
 
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fno-stack-protector")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fno-exceptions -fno-unwind-tables -fno-asynchronous-unwind-tables -fno-rtti")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -ffast-math -ffp-contract=fast")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fvisibility-inlines-hidden")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fvisibility=hidden")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fomit-frame-pointer -ffunction-sections -fdata-sections")
-
-set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--gc-sections")
-set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-Bsymbolic-functions")
-
 set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/libgltfio-jni.map")
 
 set(GLTFIO_SRCS
         ${GLTFIO_DIR}/include/gltfio/Animator.h
         ${GLTFIO_DIR}/include/gltfio/AssetLoader.h
         ${GLTFIO_DIR}/include/gltfio/MaterialProvider.h
-        ${GLTFIO_DIR}/include/gltfio/AssetPipeline.h
         ${GLTFIO_DIR}/include/gltfio/ResourceLoader.h
         ${GLTFIO_DIR}/include/gltfio/SimpleViewer.h
         ${GLTFIO_DIR}/include/gltfio/FilamentAsset.h
 
         ${GLTFIO_DIR}/src/Animator.cpp
         ${GLTFIO_DIR}/src/AssetLoader.cpp
+        ${GLTFIO_DIR}/src/DracoCache.cpp
+        ${GLTFIO_DIR}/src/DracoCache.h
         ${GLTFIO_DIR}/src/DependencyGraph.cpp
         ${GLTFIO_DIR}/src/DependencyGraph.h
         ${GLTFIO_DIR}/src/FFilamentAsset.h
@@ -59,7 +55,6 @@ set(GLTFIO_SRCS
         src/main/cpp/FilamentAsset.cpp
         src/main/cpp/MaterialProvider.cpp
         src/main/cpp/ResourceLoader.cpp
-        src/main/cpp/Gltfio.cpp
 
         ${FILAMENT_DIR}/include/gltfio/resources/gltfresources_lite.h
         ${FILAMENT_DIR}/include/gltfio/resources/gltfresources.h
@@ -81,11 +76,16 @@ add_library(gltfio-jni SHARED ${GLTFIO_SRCS})
 target_include_directories(gltfio-jni PRIVATE ${GLTFIO_INCLUDE_DIRS})
 set_target_properties(gltfio-jni PROPERTIES LINK_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/libgltfio-jni.symbols)
 set_target_properties(gltfio-jni PROPERTIES LINK_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/libgltfio-jni.map)
-target_link_libraries(gltfio-jni filament-jni utils gltfio_resources log)
 
-add_library(gltfio-jni-lite SHARED ${GLTFIO_SRCS})
-target_include_directories(gltfio-jni-lite PRIVATE ${GLTFIO_INCLUDE_DIRS})
-set_target_properties(gltfio-jni-lite PROPERTIES LINK_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/libgltfio-jni.symbols)
-set_target_properties(gltfio-jni-lite PROPERTIES LINK_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/libgltfio-jni.map)
-target_link_libraries(gltfio-jni-lite filament-jni utils gltfio_resources_lite log)
-target_compile_definitions(gltfio-jni-lite PUBLIC GLTFIO_LITE=1)
+if(GLTFIO_LITE)
+        target_compile_definitions(gltfio-jni PUBLIC GLTFIO_LITE=1)
+        target_link_libraries(gltfio-jni filament-jni utils log gltfio_resources_lite)
+else()
+        target_link_libraries(gltfio-jni filament-jni utils log gltfio_resources)
+
+        # Enable Draco in the non-lite variant of gltfio.
+        target_link_libraries(gltfio-jni dracodec)
+        target_compile_definitions(gltfio-jni PUBLIC GLTFIO_DRACO_SUPPORTED=1)
+        target_include_directories(gltfio-jni PRIVATE ${DRACO_DIR}/src)
+        target_include_directories(gltfio-jni PRIVATE ${DRACO_DIR}/tnt)
+endif()

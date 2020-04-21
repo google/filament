@@ -39,7 +39,7 @@ Java_com_google_android_filament_RenderTarget_nDestroyBuilder(JNIEnv *env, jclas
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_RenderTarget_nBuilderTexture(JNIEnv *env, jclass type,
-        jlong nativeBuilder, jlong attachment, jlong nativeTexture) {
+        jlong nativeBuilder, jint attachment, jlong nativeTexture) {
     RenderTarget::Builder* builder = (RenderTarget::Builder*) nativeBuilder;
     Texture* texture = (Texture*) nativeTexture;
     builder->texture(RenderTarget::AttachmentPoint(attachment), texture);
@@ -47,14 +47,14 @@ Java_com_google_android_filament_RenderTarget_nBuilderTexture(JNIEnv *env, jclas
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_RenderTarget_nBuilderMipLevel(JNIEnv *env, jclass type,
-        jlong nativeBuilder, jlong attachment, jint level) {
+        jlong nativeBuilder, jint attachment, jint level) {
     RenderTarget::Builder* builder = (RenderTarget::Builder*) nativeBuilder;
     builder->mipLevel(RenderTarget::AttachmentPoint(attachment), level);
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_RenderTarget_nBuilderFace(JNIEnv *env, jclass type,
-        jlong nativeBuilder, jlong attachment, jint face) {
+        jlong nativeBuilder, jint attachment, jint face) {
     RenderTarget::Builder* builder = (RenderTarget::Builder*) nativeBuilder;
     RenderTarget::CubemapFace cubeface = (RenderTarget::CubemapFace) face;
     builder->face(RenderTarget::AttachmentPoint(attachment), cubeface);
@@ -62,7 +62,7 @@ Java_com_google_android_filament_RenderTarget_nBuilderFace(JNIEnv *env, jclass t
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_RenderTarget_nBuilderLayer(JNIEnv *env, jclass type,
-        jlong nativeBuilder, jlong attachment, jint layer) {
+        jlong nativeBuilder, jint attachment, jint layer) {
     RenderTarget::Builder* builder = (RenderTarget::Builder*) nativeBuilder;
     builder->layer(RenderTarget::AttachmentPoint(attachment), layer);
 }
@@ -77,7 +77,21 @@ Java_com_google_android_filament_RenderTarget_nBuilderBuild(JNIEnv *env, jclass 
 
 extern "C" JNIEXPORT jint JNICALL
 Java_com_google_android_filament_RenderTarget_nGetMipLevel(JNIEnv *env, jclass type,
-        jlong nativeTarget, jlong attachment) {
+        jlong nativeTarget, jint attachment) {
     RenderTarget* target = (RenderTarget*) nativeTarget;
     return (jint) target->getMipLevel(RenderTarget::AttachmentPoint(attachment));
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_google_android_filament_RenderTarget_nGetFace(JNIEnv *env, jclass type,
+        long nativeTarget, int attachment) {
+    RenderTarget* target = (RenderTarget*) nativeTarget;
+    return (jint) target->getFace(RenderTarget::AttachmentPoint(attachment));
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_google_android_filament_RenderTarget_nGetLayer(JNIEnv *env, jclass type,
+        long nativeTarget, int attachment) {
+    RenderTarget* target = (RenderTarget*) nativeTarget;
+    return (jint) target->getLayer(RenderTarget::AttachmentPoint(attachment));
 }

@@ -21,6 +21,7 @@
 #include <filament/Color.h>
 
 #include <utils/compiler.h>
+#include <utils/Entity.h>
 #include <utils/EntityInstance.h>
 
 #include <math/mathfwd.h>
@@ -80,7 +81,7 @@ class FLightManager;
  * parallel and come from infinitely far away and from everywhere. Typically a directional light
  * is used to simulate the sun.
  *
- * Directional lights are able to cast shadows.
+ * Directional lights and spot lights are able to cast shadows.
  *
  * To create a directional light use Type.DIRECTIONAL or Type.SUN, both are similar, but the later
  * also draws a sun's disk in the sky and its reflection on glossy objects.
@@ -116,7 +117,7 @@ class FLightManager;
  * changing volume. The coupling of illumination and the outer cone means that an artist cannot
  * tweak the influence cone of a spot light without also changing the perceived illumination.
  * It therefore makes sense to provide artists with a parameter to disable this coupling. This
- * is the difference between Type.SPOT and Type.FOCUSED_SPOT.
+ * is the difference between Type.FOCUSED_SPOT and Type.SPOT.
  *
  * @see Builder.position(), Builder.direction(), Builder.falloff(), Builder.spotLightCone()
  *
@@ -145,6 +146,21 @@ public:
     using Instance = utils::EntityInstance<LightManager>;
 
     /**
+     * Returns the number of component in the LightManager, not that component are not
+     * guaranteed to be active. Use the EntityManager::isAlive() before use if needed.
+     *
+     * @return number of component in the LightManager
+     */
+    size_t getComponentCount() const noexcept;
+
+    /**
+     * Returns the list of Entity for all components. Use getComponentCount() to know the size
+     * of the list.
+     * @return a pointer to Entity
+     */
+    utils::Entity const* getEntities() const noexcept;
+
+    /**
      * Returns whether a particular Entity is associated with a component of this LightManager
      * @param e An Entity.
      * @return true if this Entity has a component associated with this manager.
@@ -169,8 +185,8 @@ public:
         SUN,            //!< Directional light that also draws a sun's disk in the sky.
         DIRECTIONAL,    //!< Directional light, emits light in a given direction.
         POINT,          //!< Point light, emits light from a position, in all directions.
-        FOCUSED_SPOT,   //!< Spot light with coupling of outer cone and illumination disabled.
-        SPOT,           //!< Physically correct spot light.
+        FOCUSED_SPOT,   //!< Physically correct spot light.
+        SPOT,           //!< Spot light with coupling of outer cone and illumination disabled.
     };
 
     /**
@@ -233,6 +249,33 @@ public:
          * Setting this value correctly is essential for LISPSM shadow-maps.
          */
         float polygonOffsetSlope = 2.0f;
+
+        /**
+         * Whether screen-space contact shadows are used. This applies regardless of whether a
+         * Renderable is a shadow caster.
+         * Screen-space contact shadows are typically useful in large scenes.
+         * (off by default)
+         */
+        bool screenSpaceContactShadows = false;
+
+        /**
+         * Number of ray-marching steps for screen-space contact shadows (8 by default).
+         *
+         * CAUTION: this parameter is ignored for all lights except the directional/sun light,
+         *          all other lights use the same value set for the directional/sun light.
+         *
+         */
+        uint8_t stepCount = 8;
+
+        /**
+         * Maximum shadow-occluder distance for screen-space contact shadows (world units).
+         * (30 cm by default)
+         *
+         * CAUTION: this parameter is ignored for all lights except the directional/sun light,
+         *          all other lights use the same value set for the directional/sun light.
+         *
+         */
+        float maxShadowDistance = 0.3;
     };
 
     //! Use Builder to construct a Light object instance
@@ -259,7 +302,7 @@ public:
          * @return This Builder, for chaining calls.
          *
          * @warning
-         * - Only a Type.DIRECTIONAL or Type.SUN light can cast shadows
+         * - Only a Type.DIRECTIONAL, Type.SUN, Type.SPOT, or Type.FOCUSED_SPOT light can cast shadows
          */
         Builder& castShadows(bool enable) noexcept;
 
@@ -381,13 +424,14 @@ public:
         /**
          * Defines a spot light'st angular falloff attenuation.
          *
-         * A spot light is defined by a position, a direction and two cone angles,
-         * \p inner and \p outer. These two angles are used to define the angular falloff
-         * attenuation of the spot light.
+         * A spot light is defined by a position, a direction and two cones, \p inner and \p outer.
+         * These two cones are used to define the angular falloff attenuation of the spot light
+         * and are defined by the angle from the center axis to where the falloff begins (i.e.
+         * cones are defined by their half-angle).
          *
-         * @param inner inner cone angle in *radians* between 0 and @f$ \pi @f$
+         * @param inner inner cone angle in *radians* between 0 and @f$ \pi/2 @f$
 
-         * @param outer outer cone angle in *radians* between 0 and @f$ \pi @f$
+         * @param outer outer cone angle in *radians* between \p inner and @f$ \pi/2 @f$
 
          * @return This Builder, for chaining calls.
          *
@@ -617,6 +661,8 @@ public:
      */
     void setSpotLightCone(Instance i, float inner, float outer) noexcept;
 
+    float getSpotLightOuterCone(Instance i) const noexcept;
+
     /**
      * Dynamically updates the angular radius of a Type.SUN light
      *
@@ -688,7 +734,7 @@ public:
      * @param shadowCaster Enables or disables casting shadows from this Light.
      *
      * @warning
-     * - Only a Type.DIRECTIONAL or Type.SUN light can cast shadows
+     * - Only a Type.DIRECTIONAL, Type.SUN, Type.SPOT, or Type.FOCUSED_SPOT light can cast shadows
      */
     void setShadowCaster(Instance i, bool shadowCaster) noexcept;
 
@@ -697,6 +743,19 @@ public:
      * @param i     Instance of the component obtained from getInstance().
      */
     bool isShadowCaster(Instance i) const noexcept;
+
+    /**
+     * Helper to process all components with a given function
+     * @tparam F    a void(Entity entity, Instance instance)
+     * @param func  a function of type F
+     */
+    template<typename F>
+    void forEachComponent(F func) noexcept {
+        utils::Entity const* const pEntity = getEntities();
+        for (size_t i = 0, c = getComponentCount(); i < c; i++) {
+            func(pEntity[i], Instance(i));
+        }
+    }
 };
 
 } // namespace filament

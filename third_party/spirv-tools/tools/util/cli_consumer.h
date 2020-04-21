@@ -15,7 +15,7 @@
 #ifndef SOURCE_UTIL_CLI_CONSUMMER_H_
 #define SOURCE_UTIL_CLI_CONSUMMER_H_
 
-#include <include/spirv-tools/libspirv.h>
+#include "include/spirv-tools/libspirv.h"
 
 namespace spvtools {
 namespace utils {

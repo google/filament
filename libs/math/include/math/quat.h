@@ -38,8 +38,7 @@ class MATH_EMPTY_BASES TQuaternion :
         public TVecUnaryOperators<TQuaternion, T>,
         public TVecComparisonOperators<TQuaternion, T>,
         public TQuatProductOperators<TQuaternion, T>,
-        public TQuatFunctions<TQuaternion, T>,
-        public TQuatDebug<TQuaternion, T> {
+        public TQuatFunctions<TQuaternion, T> {
 public:
     enum no_init {
         NO_INIT

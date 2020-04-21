@@ -63,7 +63,7 @@ vec3 Irradiance_SphericalHarmonics(const vec3 n) {
 
 vec3 Irradiance_RoughnessOne(const vec3 n) {
     // note: lod used is always integer, hopefully the hardware skips tri-linear filtering
-    return decodeDataForIBL(textureLod(light_iblSpecular, n, frameUniforms.iblMaxMipLevel.x));
+    return decodeDataForIBL(textureLod(light_iblSpecular, n, frameUniforms.iblRoughnessOneLevel));
 }
 
 //------------------------------------------------------------------------------
@@ -72,7 +72,23 @@ vec3 Irradiance_RoughnessOne(const vec3 n) {
 
 vec3 diffuseIrradiance(const vec3 n) {
     if (frameUniforms.iblSH[0].x == 65504.0) {
+#if defined(TARGET_MOBILE)
         return Irradiance_RoughnessOne(n);
+#else
+        ivec2 s = textureSize(light_iblSpecular, int(frameUniforms.iblRoughnessOneLevel));
+        float du = 1.0 / float(s.x);
+        float dv = 1.0 / float(s.y);
+        vec3 m0 = normalize(cross(n, vec3(0.0, 1.0, 0.0)));
+        vec3 m1 = cross(m0, n);
+        vec3 m0du = m0 * du;
+        vec3 m1dv = m1 * dv;
+        vec3 c;
+        c  = Irradiance_RoughnessOne(n - m0du - m1dv);
+        c += Irradiance_RoughnessOne(n + m0du - m1dv);
+        c += Irradiance_RoughnessOne(n + m0du + m1dv);
+        c += Irradiance_RoughnessOne(n - m0du + m1dv);
+        return c * 0.25;
+#endif
     } else {
         return Irradiance_SphericalHarmonics(n);
     }
@@ -83,10 +99,10 @@ vec3 diffuseIrradiance(const vec3 n) {
 //------------------------------------------------------------------------------
 
 float perceptualRoughnessToLod(float perceptualRoughness) {
-    // The mapping below is a quadratic fit for log2(perceptualRoughness)+iblMaxMipLevel when
-    // iblMaxMipLevel is 4. We found empirically that this mapping works very well for
-    // a 256 cubemap with 5 levels used. But also scales well for other iblMaxMipLevel values.
-    return frameUniforms.iblMaxMipLevel.x * perceptualRoughness * (2.0 - perceptualRoughness);
+    // The mapping below is a quadratic fit for log2(perceptualRoughness)+iblRoughnessOneLevel when
+    // iblRoughnessOneLevel is 4. We found empirically that this mapping works very well for
+    // a 256 cubemap with 5 levels used. But also scales well for other iblRoughnessOneLevel values.
+    return frameUniforms.iblRoughnessOneLevel * perceptualRoughness * (2.0 - perceptualRoughness);
 }
 
 vec3 prefilteredRadiance(const vec3 r, float perceptualRoughness) {
@@ -95,7 +111,7 @@ vec3 prefilteredRadiance(const vec3 r, float perceptualRoughness) {
 }
 
 vec3 prefilteredRadiance(const vec3 r, float roughness, float offset) {
-    float lod = frameUniforms.iblMaxMipLevel.x * roughness;
+    float lod = frameUniforms.iblRoughnessOneLevel * roughness;
     return decodeDataForIBL(textureLod(light_iblSpecular, r, lod + offset));
 }
 
@@ -203,17 +219,17 @@ vec3 importanceSamplingVNdfDggx(vec2 u, float roughness, vec3 v) {
     return h;
 }
 
-float prefilteredImportanceSampling(float ipdf, vec2 iblMaxMipLevel) {
+float prefilteredImportanceSampling(float ipdf, float iblRoughnessOneLevel) {
     // See: "Real-time Shading with Filtered Importance Sampling", Jaroslav Krivanek
     // Prefiltering doesn't work with anisotropy
     const float numSamples = float(IBL_INTEGRATION_IMPORTANCE_SAMPLING_COUNT);
     const float invNumSamples = 1.0 / float(numSamples);
-    const float dim = iblMaxMipLevel.y;
+    const float dim = float(textureSize(light_iblSpecular, 0).x);
     const float omegaP = (4.0 * PI) / (6.0 * dim * dim);
     const float invOmegaP = 1.0 / omegaP;
     const float K = 4.0;
     float omegaS = invNumSamples * ipdf;
-    float mipLevel = clamp(log2(K * omegaS * invOmegaP) * 0.5, 0.0, iblMaxMipLevel.x);
+    float mipLevel = clamp(log2(K * omegaS * invOmegaP) * 0.5, 0.0, iblRoughnessOneLevel);
     return mipLevel;
 }
 
@@ -229,7 +245,7 @@ vec3 isEvaluateIBL(const PixelParams pixel, vec3 n, vec3 v, float NoV) {
     float roughness = pixel.roughness;
     float a2 = roughness * roughness;
 
-    vec2 iblMaxMipLevel = frameUniforms.iblMaxMipLevel;
+    float iblRoughnessOneLevel = frameUniforms.iblRoughnessOneLevel;
     const uint numSamples = uint(IBL_INTEGRATION_IMPORTANCE_SAMPLING_COUNT);
     const float invNumSamples = 1.0 / float(numSamples);
 
@@ -251,7 +267,7 @@ vec3 isEvaluateIBL(const PixelParams pixel, vec3 n, vec3 v, float NoV) {
             // PDF inverse (we must use D_GGX() here, which is used to generate samples)
             float ipdf = (4.0 * LoH) / (D_GGX(roughness, NoH, h) * NoH);
 
-            float mipLevel = prefilteredImportanceSampling(ipdf, iblMaxMipLevel);
+            float mipLevel = prefilteredImportanceSampling(ipdf, iblRoughnessOneLevel);
 
             // we use texture() instead of textureLod() to take advantage of mipmapping
             vec3 L = decodeDataForIBL(texture(light_iblSpecular, l, mipLevel));
@@ -407,7 +423,7 @@ void applyRefraction(const PixelParams pixel,
 #elif REFRACTION_TYPE == REFRACTION_TYPE_THIN
     refractionThinSphere(pixel, n0, -shading_view, ray);
 #else
-#error "invalid REFRACTION_TYPE"
+#error invalid REFRACTION_TYPE
 #endif
 
     /* compute transmission T */
@@ -478,9 +494,6 @@ void combineDiffuseAndSpecular(const PixelParams pixel,
 }
 
 void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout vec3 color) {
-    // Apply transform here if we wanted to rotate the IBL
-    vec3 n = shading_normal;
-
     float ssao = evaluateSSAO();
     float diffuseAO = min(material.ambientOcclusion, ssao);
     float specularAO = computeSpecularAO(shading_NoV, diffuseAO, pixel.roughness);
@@ -489,7 +502,7 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
     vec3 Fr;
 #if IBL_INTEGRATION == IBL_INTEGRATION_PREFILTERED_CUBEMAP
     vec3 E = specularDFG(pixel);
-    vec3 r = getReflectedVector(pixel, n);
+    vec3 r = getReflectedVector(pixel, shading_normal);
     Fr = E * prefilteredRadiance(r, pixel.perceptualRoughness);
 #elif IBL_INTEGRATION == IBL_INTEGRATION_IMPORTANCE_SAMPLING
     vec3 E = vec3(0.0); // TODO: fix for importance sampling
@@ -501,7 +514,13 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
     float diffuseBRDF = singleBounceAO(diffuseAO); // Fd_Lambert() is baked in the SH below
     evaluateClothIndirectDiffuseBRDF(pixel, diffuseBRDF);
 
-    vec3 diffuseIrradiance = diffuseIrradiance(n);
+#if defined(MATERIAL_HAS_BENT_NORMAL)
+    vec3 diffuseNormal = shading_bentNormal;
+#else
+    vec3 diffuseNormal = shading_normal;
+#endif
+
+    vec3 diffuseIrradiance = diffuseIrradiance(diffuseNormal);
     vec3 Fd = pixel.diffuseColor * diffuseIrradiance * (1.0 - E) * diffuseBRDF;
 
     // clear coat layer
@@ -515,5 +534,5 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
     multiBounceSpecularAO(specularAO, pixel.f0, Fr);
 
     // Note: iblLuminance is already premultiplied by the exposure
-    combineDiffuseAndSpecular(pixel, n, E, Fd, Fr, color);
+    combineDiffuseAndSpecular(pixel, shading_normal, E, Fd, Fr, color);
 }

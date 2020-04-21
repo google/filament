@@ -255,4 +255,4 @@ const char* AccessQualifierString(int attr);
 
 void PrintOperands(const OperandParameters& operands, int reservedOperands);
 
-};  // end namespace spv
+}  // end namespace spv

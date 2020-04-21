@@ -473,7 +473,7 @@ f_r(v,l) = \frac{D(h, \alpha) G(v, l, \alpha) F(v, h, f0)}{4(\NoV)(\NoL)}
 
 </p><p>
 
-Given our real-time constraints, we must use an approximation for the three terms \(D\), \(G\) and \(F\). [<a href="#citation-karis13">Karis13</a>] has compiled a great list of formulations for these three terms that can be used with the Cook-Torrance specular BRDF. The sections that follow describe the equations we picked for these terms.
+Given our real-time constraints, we must use an approximation for the three terms \(D\), \(G\) and \(F\). [<a href="#citation-karis13a">Karis13a</a>] has compiled a great list of formulations for these three terms that can be used with the Cook-Torrance specular BRDF. The sections that follow describe the equations we picked for these terms.
 
 </p>
 <a class="target" name="normaldistributionfunction(speculard)">&#xA0;</a><a class="target" name="materialsystem/specularbrdf/normaldistributionfunction(speculard)">&#xA0;</a><a class="target" name="toc4.4.1">&#xA0;</a><h3>Normal distribution function (specular D)</h3>
@@ -1367,7 +1367,7 @@ The clear coat layer will be modeled using the same Cook-Torrance microfacet BRD
 
 </p><p>
 
-A survey of the terms listed in [<a href="#citation-karis13">Karis13</a>] and [<a href="#citation-burley12">Burley12</a>] shows that the Fresnel and NDF terms we already use in the standard model are not computationally more expensive than other terms. [<a href="#citation-kelemen01">Kelemen01</a>] describes a much simpler term that can replace our Smith-GGX visibility term:
+A survey of the terms listed in [<a href="#citation-karis13a">Karis13a</a>] and [<a href="#citation-burley12">Burley12</a>] shows that the Fresnel and NDF terms we already use in the standard model are not computationally more expensive than other terms. [<a href="#citation-kelemen01">Kelemen01</a>] describes a much simpler term that can replace our Smith-GGX visibility term:
 
 </p><p>
 
@@ -2324,12 +2324,12 @@ We can solve the second issue by introducing an influence radius for each light.
 
 </p><p>
 
-Mathematically, the illuminance of a light should smoothly reach zero at the limit defined by the influence radius. [<a href="#citation-karis13">Karis13</a>] proposes to window the inverse square function in such a way that the majority of the light&apos;s influence remains unaffected. The proposed windowing is described in equation \(\ref{attenuationWindowing}\), where \(r\) is the light&apos;s radius of influence.
+Mathematically, the illuminance of a light should smoothly reach zero at the limit defined by the influence radius. [<a href="#citation-karis13b">Karis13b</a>] proposes to window the inverse square function in such a way that the majority of the light&apos;s influence remains unaffected. The proposed windowing is described in equation \(\ref{attenuationWindowing}\), where \(r\) is the light&apos;s radius of influence.
 
 </p><p>
 
 $$\begin{equation}\label{attenuationWindowing}
-E = \frac{I}{max(d^2, {0.01}^2)} \left&lt; 1 - \frac{d^4}{r^2} \right&gt;
+E = \frac{I}{max(d^2, {0.01}^2)} \left&lt; 1 - \frac{d^4}{r^4} \right&gt;^2
 \end{equation}$$
 
 </p><p>
@@ -6261,7 +6261,8 @@ The second compute shader, shown in <a href="#listing_froxelevaluation">listing&
 in Microfacet-Based BRDFs. <em class="asterisk">Journal of Computer Graphics Techniques</em>, 3 (2).
 </div><div class="bib">[<a class="target" name="citation-heitz16">&#xA0;</a><b>Heitz16</b>] Eric Heitz et al. 2016. Multiple-Scattering Microfacet BSDFs with the Smith Model. <em class="asterisk">ACM SIGGRAPH 2016</em>.
 </div><div class="bib">[<a class="target" name="citation-hill12">&#xA0;</a><b>Hill12</b>] Colin Barr&#xE9;-Brisebois and Stephen Hill. 2012. Blending in Detail. <a href="http://blog.selfshadow.com/publications/blending-in-detail/" class="url">http://blog.selfshadow.com/publications/blending-in-detail/</a>
-</div><div class="bib">[<a class="target" name="citation-karis13">&#xA0;</a><b>Karis13</b>] Brian Karis. 2013. Specular BRDF Reference. <a href="http://graphicrants.blogspot.com/2013/08/specular-brdf-reference.html" class="url">http://graphicrants.blogspot.com/2013/08/specular-brdf-reference.html</a>
+</div><div class="bib">[<a class="target" name="citation-karis13a">&#xA0;</a><b>Karis13a</b>] Brian Karis. 2013. Specular BRDF Reference. <a href="http://graphicrants.blogspot.com/2013/08/specular-brdf-reference.html" class="url">http://graphicrants.blogspot.com/2013/08/specular-brdf-reference.html</a>
+</div><div class="bib">[<a class="target" name="citation-karis13b">&#xA0;</a><b>Karis13b</b>] Brian Karis, 2013. Real Shading in Unreal Engine 4. <a href="https://blog.selfshadow.com/publications/s2013-shading-course/karis/s2013_pbs_epic_notes_v2.pdf" class="url">https://blog.selfshadow.com/publications/s2013-shading-course/karis/s2013_pbs_epic_notes_v2.pdf</a>
 </div><div class="bib">[<a class="target" name="citation-karis14">&#xA0;</a><b>Karis14</b>] Brian Karis. 2014. Physically Based Shading on Mobile. <a href="https://www.unrealengine.com/blog/physically-based-shading-on-mobile" class="url">https://www.unrealengine.com/blog/physically-based-shading-on-mobile</a>
 </div><div class="bib">[<a class="target" name="citation-kelemen01">&#xA0;</a><b>Kelemen01</b>] Csaba Kelemen et al. 2001. A Microfacet Based Coupled Specular-Matte BRDF Model with Importance Sampling. <em class="asterisk">Eurographics Short Presentations</em>.
 </div><div class="bib">[<a class="target" name="citation-krystek85">&#xA0;</a><b>Krystek85</b>] M. Krystek. 1985. An algorithm to calculate correlated color temperature. <em class="asterisk">Color Research &amp; Application</em>, 10 (1), 38&#x2013;40.

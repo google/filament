@@ -40,5 +40,10 @@ static const char* const E_SPV_KHR_8bit_storage                 = "SPV_KHR_8bit_
 static const char* const E_SPV_KHR_storage_buffer_storage_class = "SPV_KHR_storage_buffer_storage_class";
 static const char* const E_SPV_KHR_post_depth_coverage          = "SPV_KHR_post_depth_coverage";
 static const char* const E_SPV_KHR_vulkan_memory_model          = "SPV_KHR_vulkan_memory_model";
+static const char* const E_SPV_EXT_physical_storage_buffer      = "SPV_EXT_physical_storage_buffer";
+static const char* const E_SPV_KHR_physical_storage_buffer      = "SPV_KHR_physical_storage_buffer";
+static const char* const E_SPV_EXT_fragment_shader_interlock    = "SPV_EXT_fragment_shader_interlock";
+static const char* const E_SPV_KHR_shader_clock                 = "SPV_KHR_shader_clock";
+static const char* const E_SPV_KHR_non_semantic_info            = "SPV_KHR_non_semantic_info";
 
 #endif  // #ifndef GLSLextKHR_H

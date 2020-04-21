@@ -56,6 +56,8 @@ using namespace utils;
 namespace gltfio {
 namespace details {
 
+static const auto FREE_CALLBACK = [](void* mem, size_t, void*) { free(mem); };
+
 // MeshCache
 // ---------
 // If a given glTF mesh is referenced by multiple glTF nodes, then it generates a separate Filament
@@ -89,14 +91,14 @@ using MatInstanceCache = tsl::robin_map<intptr_t, MaterialEntry>;
 // expected to avoid uploading data blobs that exceed this size. Since this information doesn't
 // exist in the glTF we need to compute it manually. This is a bit of a cheat, cgltf_calc_size is
 // private but its implementation file is available in this cpp file.
-static uint32_t computeBindingSize(const cgltf_accessor* accessor){
+uint32_t computeBindingSize(const cgltf_accessor* accessor) {
     cgltf_size element_size = cgltf_calc_size(accessor->type, accessor->component_type);
     return uint32_t(accessor->stride * (accessor->count - 1) + element_size);
-};
+}
 
-static uint32_t computeBindingOffset(const cgltf_accessor* accessor) {
+uint32_t computeBindingOffset(const cgltf_accessor* accessor) {
     return uint32_t(accessor->offset + accessor->buffer_view->offset);
-};
+}
 
 struct FAssetLoader : public AssetLoader {
     FAssetLoader(const AssetConfiguration& config) :
@@ -135,12 +137,14 @@ struct FAssetLoader : public AssetLoader {
     void createRenderable(const cgltf_node* node, Entity entity);
     bool createPrimitive(const cgltf_primitive* inPrim, Primitive* outPrim, const UvMap& uvmap,
             const char* name);
+    void createLight(const cgltf_node* node, Entity entity);
     MaterialInstance* createMaterialInstance(const cgltf_material* inputMat, UvMap* uvmap,
             bool vertexColor);
     void addTextureBinding(MaterialInstance* materialInstance, const char* parameterName,
             const cgltf_texture* srcTexture, bool srgb);
-    void importSkinningData(Skin& dstSkin, const cgltf_skin& srcSkin);
     bool primitiveHasVertexColor(const cgltf_primitive* inPrim) const;
+
+    static LightManager::Type getLightType(const cgltf_light_type type);
 
     EntityManager& mEntityManager;
     RenderableManager& mRenderableManager;
@@ -201,6 +205,7 @@ FilamentAsset* FAssetLoader::createAssetFromBinary(const uint8_t* bytes, uint32_
 }
 
 void FAssetLoader::createAsset(const cgltf_data* srcAsset) {
+    #if !GLTFIO_DRACO_SUPPORTED
     for (cgltf_size i = 0; i < srcAsset->extensions_required_count; i++) {
         if (!strcmp(srcAsset->extensions_required[i], "KHR_draco_mesh_compression")) {
             slog.e << "KHR_draco_mesh_compression is not supported." << io::endl;
@@ -208,6 +213,7 @@ void FAssetLoader::createAsset(const cgltf_data* srcAsset) {
             return;
         }
     }
+    #endif
 
     mResult = new FFilamentAsset(mEngine, mNameManager);
     mResult->mSourceAsset = srcAsset;
@@ -234,23 +240,6 @@ void FAssetLoader::createAsset(const cgltf_data* srcAsset) {
     if (mError) {
         delete mResult;
         mResult = nullptr;
-    }
-
-    // Copy over joint lists (references to TransformManager components) and create buffer bindings
-    // for inverseBindMatrices.
-    mResult->mSkins.resize(srcAsset->skins_count);
-    for (cgltf_size i = 0, len = srcAsset->skins_count; i < len; ++i) {
-        importSkinningData(mResult->mSkins[i], srcAsset->skins[i]);
-    }
-
-    // For each skin, build a list of renderables that it affects.
-    for (cgltf_size i = 0, len = srcAsset->nodes_count; i < len; ++i) {
-        const cgltf_node& node = srcAsset->nodes[i];
-        if (node.skin) {
-            int skinIndex = node.skin - &srcAsset->skins[0];
-            Entity entity = mResult->mNodeMap[&node];
-            mResult->mSkins[skinIndex].targets.push_back(entity);
-        }
     }
 
     // Find every unique resource URI and store a pointer to any of the cgltf-owned cstrings
@@ -302,7 +291,11 @@ void FAssetLoader::createEntity(const cgltf_node* node, Entity parent) {
     // If the node has a mesh, then create a renderable component.
     if (node->mesh) {
         createRenderable(node, entity);
-     }
+    }
+
+    if (node->light) {
+        createLight(node, entity);
+    }
 
     for (cgltf_size i = 0, len = node->children_count; i < len; ++i) {
         createEntity(node->children[i], entity);
@@ -435,86 +428,95 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity entity) {
 
 bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* outPrim,
         const UvMap& uvmap, const char* name) {
+    // Create a little lambda that appends to the asset's vertex buffer slots.
+    auto slots = &mResult->mBufferSlots;
+    auto addBufferSlot = [slots](BufferSlot entry) {
+        slots->push_back(entry);
+    };
 
-    // In glTF, each primitive may or may not have an index buffer. If a primitive does not have an
-    // index buffer, we ask the ResourceLoader to generate a trivial index buffer.
+    // In glTF, each primitive may or may not have an index buffer.
     IndexBuffer* indices;
-    const cgltf_accessor* indicesAccessor = inPrim->indices;
-    if (indicesAccessor) {
-        IndexBuffer::Builder ibb;
-        ibb.indexCount(indicesAccessor->count);
+    const cgltf_accessor* accessor = inPrim->indices;
+    if (accessor) {
         IndexBuffer::IndexType indexType;
-        if (!getIndexType(indicesAccessor->component_type, &indexType)) {
+        if (!getIndexType(accessor->component_type, &indexType)) {
             utils::slog.e << "Unrecognized index type in " << name << utils::io::endl;
             return false;
         }
-        ibb.bufferType(indexType);
-        indices = ibb.build(*mEngine);
-        const cgltf_buffer_view* bv = indicesAccessor->buffer_view;
-        mResult->mBufferBindings.emplace_back(BufferBinding {
-            .uri = bv->buffer->uri,
-            .totalSize = uint32_t(bv->buffer->size),
-            .offset = computeBindingOffset(indicesAccessor),
-            .size = computeBindingSize(indicesAccessor),
-            .data = &bv->buffer->data,
-            .indexBuffer = indices,
-            .convertBytesToShorts = indicesAccessor->component_type == cgltf_component_type_r_8u,
-            .generateTrivialIndices = false
-        });
+
+        indices = IndexBuffer::Builder()
+            .indexCount(accessor->count)
+            .bufferType(indexType)
+            .build(*mEngine);
+
+        BufferSlot slot = { accessor };
+        slot.indexBuffer = indices;
+        addBufferSlot(slot);
     } else {
-        const cgltf_size vertexCount = inPrim->attributes[0].data->count;
+        // If a primitive does not have an index buffer, generate a trivial one now.
+        const uint32_t vertexCount = inPrim->attributes[0].data->count;
+
         indices = IndexBuffer::Builder()
             .indexCount(vertexCount)
             .bufferType(IndexBuffer::IndexType::UINT)
             .build(*mEngine);
-        mResult->mBufferBindings.emplace_back(BufferBinding{
-            .size = uint32_t(vertexCount * sizeof(uint32_t)),
-            .indexBuffer = indices,
-            .generateTrivialIndices = true
-        });
+
+        const size_t indexDataSize = vertexCount * sizeof(uint32_t);
+        uint32_t* indexData = (uint32_t*) malloc(indexDataSize);
+        for (size_t i = 0; i < vertexCount; ++i) {
+            indexData[i] = i;
+        }
+        IndexBuffer::BufferDescriptor bd(indexData, indexDataSize, FREE_CALLBACK);
+        indices->setBuffer(*mEngine, std::move(bd));
     }
     mResult->mIndexBuffers.push_back(indices);
 
     VertexBuffer::Builder vbb;
 
-    int slot = 0;
     bool hasUv0 = false, hasUv1 = false, hasVertexColor = false, hasNormals = false;
     uint32_t vertexCount = 0;
+
+    const size_t firstSlot = mResult->mBufferSlots.size();
+    int slot = 0;
+
     for (cgltf_size aindex = 0; aindex < inPrim->attributes_count; aindex++) {
-        const cgltf_attribute& inputAttribute = inPrim->attributes[aindex];
-        const cgltf_accessor* inputAccessor = inputAttribute.data;
+        const cgltf_attribute& attribute = inPrim->attributes[aindex];
+        const int index = attribute.index;
+        const cgltf_attribute_type atype = attribute.type;
+        const cgltf_accessor* accessor = attribute.data;
+
+        // The glTF tangent data is ignored here, but honored in ResourceLoader.
+        if (atype == cgltf_attribute_type_tangent) {
+            continue;
+        }
 
         // At a minimum, surface orientation requires normals to be present in the source data.
         // Here we re-purpose the normals slot to point to the quats that get computed later.
-        if (inputAttribute.type == cgltf_attribute_type_normal) {
-            vbb.attribute(VertexAttribute::TANGENTS, slot++, VertexBuffer::AttributeType::SHORT4);
+        if (atype == cgltf_attribute_type_normal) {
+            vbb.attribute(VertexAttribute::TANGENTS, slot, VertexBuffer::AttributeType::SHORT4);
             vbb.normalized(VertexAttribute::TANGENTS);
             hasNormals = true;
+            addBufferSlot({&mResult->mGenerateTangents, atype, slot++});
             continue;
         }
 
-        // The glTF tangent data is ignored here, but honored in ResourceLoader.
-        if (inputAttribute.type == cgltf_attribute_type_tangent) {
-            continue;
-        }
-
-        if (inputAttribute.type == cgltf_attribute_type_color) {
+        if (atype == cgltf_attribute_type_color) {
             hasVertexColor = true;
         }
 
         // Translate the cgltf attribute enum into a Filament enum and ignore all uv sets
         // that do not have entries in the mapping table.
         VertexAttribute semantic;
-        if (!getVertexAttrType(inputAttribute.type, &semantic)) {
+        if (!getVertexAttrType(atype, &semantic)) {
             utils::slog.e << "Unrecognized vertex semantic in " << name << utils::io::endl;
             return false;
         }
-        if (inputAttribute.type == cgltf_attribute_type_texcoord) {
-            if (inputAttribute.index >= sizeof(uvmap) / sizeof(uvmap[0])) {
+        if (atype == cgltf_attribute_type_texcoord) {
+            if (index >= UvMapSize) {
                 utils::slog.e << "Too many texture coordinate sets in " << name << utils::io::endl;
                 continue;
             }
-            UvSet uvset = uvmap[inputAttribute.index];
+            UvSet uvset = uvmap[index];
             switch (uvset) {
                 case UV0:
                     semantic = VertexAttribute::UV0;
@@ -531,19 +533,19 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
             }
         }
 
-        vertexCount = inputAccessor->count;
+        vertexCount = accessor->count;
 
         // The positions accessor is required to have min/max properties, use them to expand
         // the bounding box for this primitive.
-        if (inputAttribute.type == cgltf_attribute_type_position) {
-            const float* minp = &inputAccessor->min[0];
-            const float* maxp = &inputAccessor->max[0];
+        if (atype == cgltf_attribute_type_position) {
+            const float* minp = &accessor->min[0];
+            const float* maxp = &accessor->max[0];
             outPrim->aabb.min = min(outPrim->aabb.min, float3(minp[0], minp[1], minp[2]));
             outPrim->aabb.max = max(outPrim->aabb.max, float3(maxp[0], maxp[1], maxp[2]));
         }
 
-        VertexBuffer::AttributeType atype;
-        if (!getElementType(inputAccessor->type, inputAccessor->component_type, &atype)) {
+        VertexBuffer::AttributeType fatype;
+        if (!getElementType(accessor->type, accessor->component_type, &fatype)) {
             slog.e << "Unsupported accessor type in " << name << io::endl;
             return false;
         }
@@ -551,14 +553,17 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
         // The cgltf library provides a stride value for all accessors, even though they do not
         // exist in the glTF file. It is computed from the type and the stride of the buffer view.
         // As a convenience, cgltf also replaces zero (default) stride with the actual stride.
-        vbb.attribute(semantic, slot++, atype, 0, inputAccessor->stride);
-        vbb.normalized(semantic, inputAccessor->normalized);
+        vbb.attribute(semantic, slot, fatype, 0, accessor->stride);
+        vbb.normalized(semantic, accessor->normalized);
+        addBufferSlot({accessor, atype, slot++});
     }
 
     // If the model is lit but does not have normals, we'll need to generate flat normals.
     if (inPrim->material && !inPrim->material->unlit && !hasNormals) {
-        vbb.attribute(VertexAttribute::TANGENTS, slot++, VertexBuffer::AttributeType::SHORT4);
+        vbb.attribute(VertexAttribute::TANGENTS, slot, VertexBuffer::AttributeType::SHORT4);
         vbb.normalized(VertexAttribute::TANGENTS);
+        cgltf_attribute_type atype = cgltf_attribute_type_normal;
+        addBufferSlot({&mResult->mGenerateNormals, atype, slot++});
     }
 
     cgltf_size targetsCount = inPrim->targets_count;
@@ -573,40 +578,45 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
     for (cgltf_size targetIndex = 0; targetIndex < targetsCount; targetIndex++) {
         const cgltf_morph_target& morphTarget = inPrim->targets[targetIndex];
         for (cgltf_size aindex = 0; aindex < morphTarget.attributes_count; aindex++) {
-            const cgltf_attribute& inputAttribute = morphTarget.attributes[aindex];
-            const cgltf_accessor* inputAccessor = inputAttribute.data;
+            const cgltf_attribute& attribute = morphTarget.attributes[aindex];
+            const cgltf_accessor* accessor = attribute.data;
+            const cgltf_attribute_type atype = attribute.type;
+            const int morphId = targetIndex + 1;
 
-            if (inputAttribute.type == cgltf_attribute_type_normal) {
+            // The glTF tangent data is ignored here, but honored in ResourceLoader.
+            if (atype == cgltf_attribute_type_tangent) {
+                continue;
+            }
+
+            if (atype == cgltf_attribute_type_normal) {
                 VertexAttribute attr = (VertexAttribute) (baseTangentsAttr + targetIndex);
-                vbb.attribute(attr, slot++, VertexBuffer::AttributeType::SHORT4);
+                vbb.attribute(attr, slot, VertexBuffer::AttributeType::SHORT4);
                 vbb.normalized(attr);
+                addBufferSlot({&mResult->mGenerateTangents, atype, slot++, morphId});
                 continue;
             }
 
-            if (inputAttribute.type == cgltf_attribute_type_tangent) {
-                continue;
-            }
-
-            if (inputAttribute.type != cgltf_attribute_type_position) {
+            if (atype != cgltf_attribute_type_position) {
                 utils::slog.e << "Only positions, normals, and tangents can be morphed."
                         << utils::io::endl;
                 return false;
             }
 
-            const float* minp = &inputAccessor->min[0];
-            const float* maxp = &inputAccessor->max[0];
+            const float* minp = &accessor->min[0];
+            const float* maxp = &accessor->max[0];
             outPrim->aabb.min = min(outPrim->aabb.min, float3(minp[0], minp[1], minp[2]));
             outPrim->aabb.max = max(outPrim->aabb.max, float3(maxp[0], maxp[1], maxp[2]));
 
-            VertexBuffer::AttributeType atype;
-            if (!getElementType(inputAccessor->type, inputAccessor->component_type, &atype)) {
+            VertexBuffer::AttributeType fatype;
+            if (!getElementType(accessor->type, accessor->component_type, &fatype)) {
                 slog.e << "Unsupported accessor type in " << name << io::endl;
                 return false;
             }
 
             VertexAttribute attr = (VertexAttribute) (basePositionAttr + targetIndex);
-            vbb.attribute(attr, slot++, atype, 0, inputAccessor->stride);
-            vbb.normalized(attr, inputAccessor->normalized);
+            vbb.attribute(attr, slot, fatype, 0, accessor->stride);
+            vbb.normalized(attr, accessor->normalized);
+            addBufferSlot({accessor, atype, slot++, morphId});
         }
     }
 
@@ -644,147 +654,77 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
         }
     }
 
-    if (needsDummyData) {
-        slot++;
-    }
+    vbb.bufferCount(needsDummyData ? slot + 1 : slot);
 
-    int bufferCount = slot;
-    vbb.bufferCount(bufferCount);
-
-    VertexBuffer* vertices = mResult->mPrimMap[inPrim] = vbb.build(*mEngine);
-    mResult->mVertexBuffers.push_back(vertices);
-
-    slot = 0;
-    for (cgltf_size aindex = 0; aindex < inPrim->attributes_count; aindex++) {
-        const cgltf_attribute& inputAttribute = inPrim->attributes[aindex];
-        const cgltf_accessor* inputAccessor = inputAttribute.data;
-        const cgltf_buffer_view* bv = inputAccessor->buffer_view;
-        mResult->mAccessorMap[inputAccessor].push_back(vertices);
-        if (inputAttribute.type == cgltf_attribute_type_tangent ||
-                (inputAttribute.type == cgltf_attribute_type_texcoord &&
-                uvmap[inputAttribute.index] == UNUSED)) {
-            continue;
-        }
-        if (inputAttribute.type == cgltf_attribute_type_texcoord &&
-                inputAttribute.index >= sizeof(uvmap) / sizeof(uvmap[0])) {
-            continue;
-        }
-
-        if (inputAttribute.type == cgltf_attribute_type_normal) {
-            mResult->mBufferBindings.push_back({
-                .uri = bv->buffer->uri,
-                .totalSize = uint32_t(bv->buffer->size),
-                .bufferIndex = uint8_t(slot++),
-                .vertexBuffer = vertices,
-                .indexBuffer = nullptr,
-                .convertBytesToShorts = false,
-                .generateTrivialIndices = false,
-                .generateDummyData = false,
-                .generateTangents = true,
-                .sparseAccessor = (bool) inputAccessor->is_sparse,
-            });
-            continue;
-        }
-        mResult->mBufferBindings.push_back({
-            .uri = bv->buffer->uri,
-            .totalSize = uint32_t(bv->buffer->size),
-            .bufferIndex = uint8_t(slot++),
-            .offset = computeBindingOffset(inputAccessor),
-            .size = computeBindingSize(inputAccessor),
-            .data = &bv->buffer->data,
-            .vertexBuffer = vertices,
-            .indexBuffer = nullptr,
-            .convertBytesToShorts = false,
-            .generateTrivialIndices = false,
-            .generateDummyData = false,
-            .generateTangents = false,
-            .sparseAccessor = (bool) inputAccessor->is_sparse,
-        });
-    }
-
-    // If the model is lit but does not have normals, we'll need to generate flat normals.
-    if (inPrim->material && !inPrim->material->unlit && !hasNormals) {
-            mResult->mBufferBindings.push_back({
-                .uri = "",
-                .totalSize = 0,
-                .bufferIndex = uint8_t(slot++),
-                .vertexBuffer = vertices,
-                .indexBuffer = nullptr,
-                .convertBytesToShorts = false,
-                .generateTrivialIndices = false,
-                .generateDummyData = false,
-                .generateTangents = true,
-                .sparseAccessor = false,
-            });
-    }
-
-    for (cgltf_size targetIndex = 0; targetIndex < targetsCount; targetIndex++) {
-        const cgltf_morph_target& morphTarget = inPrim->targets[targetIndex];
-        for (cgltf_size aindex = 0; aindex < morphTarget.attributes_count; aindex++) {
-            const cgltf_attribute& inputAttribute = morphTarget.attributes[aindex];
-            const cgltf_accessor* inputAccessor = inputAttribute.data;
-            const cgltf_buffer_view* bv = inputAccessor->buffer_view;
-            if (inputAttribute.type == cgltf_attribute_type_normal) {
-                mResult->mBufferBindings.push_back({
-                    .uri = bv->buffer->uri,
-                    .totalSize = uint32_t(bv->buffer->size),
-                    .bufferIndex = uint8_t(slot++),
-                    .vertexBuffer = vertices,
-                    .indexBuffer = nullptr,
-                    .convertBytesToShorts = false,
-                    .generateTrivialIndices = false,
-                    .generateDummyData = false,
-                    .generateTangents = true,
-                    .sparseAccessor = (bool) inputAccessor->is_sparse,
-                    .isMorphTarget = true,
-                    .morphTargetIndex = (uint8_t) targetIndex,
-                });
-                continue;
-            }
-
-            if (inputAttribute.type == cgltf_attribute_type_tangent) {
-                continue;
-            }
-
-            mResult->mBufferBindings.push_back({
-                .uri = bv->buffer->uri,
-                .totalSize = uint32_t(bv->buffer->size),
-                .bufferIndex = uint8_t(slot++),
-                .offset = computeBindingOffset(inputAccessor),
-                .size = computeBindingSize(inputAccessor),
-                .data = &bv->buffer->data,
-                .vertexBuffer = vertices,
-                .indexBuffer = nullptr,
-                .convertBytesToShorts = false,
-                .generateTrivialIndices = false,
-                .generateDummyData = false,
-                .generateTangents = false,
-                .sparseAccessor = (bool) inputAccessor->is_sparse,
-            });
-        }
-    }
-
-    if (needsDummyData) {
-        mResult->mBufferBindings.push_back({
-            .uri = "",
-            .totalSize = uint32_t(sizeof(ubyte4) * vertexCount),
-            .bufferIndex = uint8_t(slot++),
-            .offset = 0,
-            .size = uint32_t(sizeof(ubyte4) * vertexCount),
-            .data = nullptr,
-            .vertexBuffer = vertices,
-            .indexBuffer = nullptr,
-            .convertBytesToShorts = false,
-            .generateTrivialIndices = false,
-            .generateDummyData = true
-        });
-    }
-
-    assert(bufferCount == slot);
+    VertexBuffer* vertices = vbb.build(*mEngine);
 
     outPrim->indices = indices;
     outPrim->vertices = vertices;
+    mResult->mPrimitives.push_back({inPrim, vertices});
+    mResult->mVertexBuffers.push_back(vertices);
+
+    for (size_t i = firstSlot; i < mResult->mBufferSlots.size(); ++i) {
+        mResult->mBufferSlots[i].vertexBuffer = vertices;
+    }
+
+    if (needsDummyData) {
+        uint32_t size = sizeof(ubyte4) * vertexCount;
+        uint32_t* dummyData = (uint32_t*) malloc(size);
+        memset(dummyData, 0xff, size);
+        VertexBuffer::BufferDescriptor bd(dummyData, size, FREE_CALLBACK);
+        vertices->setBufferAt(*mEngine, slot, std::move(bd));
+    }
+
     return true;
+}
+
+void FAssetLoader::createLight(const cgltf_node* node, Entity entity) {
+    const cgltf_light* light = node->light;
+
+    // Create a name component using the light label if it exists, otherwise use the node label.
+    const char* name = light->name ? light->name : node->name;
+    if (mNameManager && name) {
+        mNameManager->addComponent(entity);
+        mNameManager->setName(mNameManager->getInstance(entity), name);
+    }
+
+    LightManager::Type type = getLightType(light->type);
+    LightManager::Builder builder(type);
+
+    builder.direction({0.0f, 0.0f, -1.0f});
+    builder.color({light->color[0], light->color[1], light->color[2]});
+
+    switch (type) {
+        case LightManager::Type::SUN:
+        case LightManager::Type::DIRECTIONAL:
+            builder.intensity(light->intensity);
+            break;
+        case LightManager::Type::POINT:
+            // Convert from candelas (luminous intensity) to lumens (luminous power).
+            // lp = 4 * pi * li
+            builder.intensity(4.0f * F_PI * light->intensity);
+            break;
+        case LightManager::Type::FOCUSED_SPOT:
+        case LightManager::Type::SPOT:
+            // glTF specifies half angles, so does Filament
+            builder.spotLightCone(
+                    light->spot_inner_cone_angle,
+                    light->spot_outer_cone_angle);
+            // Convert from candelas (luminous intensity) to lumens (luminous power).
+            // lp = li * pi
+            builder.intensity(F_PI * light->intensity);
+            break;
+    }
+
+    if (light->range == 0.0f) {
+        // Use 10.0f units as a resonable default falloff value.
+        builder.falloff(10.0f);
+    } else {
+        builder.falloff(light->range);
+    }
+
+    builder.build(*mEngine, entity);
+    mResult->mLightEntities.push_back(entity);
 }
 
 MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inputMat,
@@ -801,6 +741,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
         .name = (char*) "Default GLTF material",
         .has_pbr_metallic_roughness = true,
         .has_pbr_specular_glossiness = false,
+        .has_clearcoat = false,
         .pbr_metallic_roughness = {
 	        .base_color_factor = {1.0, 1.0, 1.0, 1.0},
 	        .metallic_factor = 1.0,
@@ -811,6 +752,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
 
     auto mrConfig = inputMat->pbr_metallic_roughness;
     auto sgConfig = inputMat->pbr_specular_glossiness;
+    auto ccConfig = inputMat->clearcoat;
 
     bool hasTextureTransforms =
         sgConfig.diffuse_texture.has_transform ||
@@ -819,7 +761,10 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
         mrConfig.metallic_roughness_texture.has_transform ||
         inputMat->normal_texture.has_transform ||
         inputMat->occlusion_texture.has_transform ||
-        inputMat->emissive_texture.has_transform;
+        inputMat->emissive_texture.has_transform ||
+        ccConfig.clearcoat_texture.has_transform ||
+        ccConfig.clearcoat_roughness_texture.has_transform ||
+        ccConfig.clearcoat_normal_texture.has_transform;
 
     cgltf_texture_view baseColorTexture = mrConfig.base_color_texture;
     cgltf_texture_view metallicRoughnessTexture = mrConfig.metallic_roughness_texture;
@@ -838,10 +783,17 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
         .hasMetallicRoughnessTexture = !!metallicRoughnessTexture.texture,
         .metallicRoughnessUV = (uint8_t) metallicRoughnessTexture.texcoord,
         .baseColorUV = (uint8_t) baseColorTexture.texcoord,
+        .hasClearCoatTexture = !!ccConfig.clearcoat_texture.texture,
+        .clearCoatUV = (uint8_t) ccConfig.clearcoat_texture.texcoord,
+        .hasClearCoatRoughnessTexture = !!ccConfig.clearcoat_roughness_texture.texture,
+        .clearCoatRoughnessUV = (uint8_t) ccConfig.clearcoat_roughness_texture.texcoord,
+        .hasClearCoatNormalTexture = !!ccConfig.clearcoat_normal_texture.texture,
+        .clearCoatNormalUV = (uint8_t) ccConfig.clearcoat_normal_texture.texcoord,
+        .hasClearCoat = (bool) inputMat->has_clearcoat,
+        .hasTextureTransforms = hasTextureTransforms,
         .emissiveUV = (uint8_t) inputMat->emissive_texture.texcoord,
         .aoUV = (uint8_t) inputMat->occlusion_texture.texcoord,
         .normalUV = (uint8_t) inputMat->normal_texture.texcoord,
-        .hasTextureTransforms = hasTextureTransforms,
     };
 
     if (inputMat->has_pbr_specular_glossiness) {
@@ -956,6 +908,37 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
         }
     }
 
+    if (matkey.hasClearCoat) {
+        mi->setParameter("clearCoatFactor", ccConfig.clearcoat_factor);
+        mi->setParameter("clearCoatRoughnessFactor", ccConfig.clearcoat_roughness_factor);
+
+        if (matkey.hasClearCoatTexture) {
+            addTextureBinding(mi, "clearCoatMap", ccConfig.clearcoat_texture.texture, false);
+            if (matkey.hasTextureTransforms) {
+                const cgltf_texture_transform& uvt = ccConfig.clearcoat_texture.transform;
+                auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
+                mi->setParameter("clearCoatUvMatrix", uvmat);
+            }
+        }
+        if (matkey.hasClearCoatRoughnessTexture) {
+            addTextureBinding(mi, "clearCoatRoughnessMap", ccConfig.clearcoat_roughness_texture.texture, false);
+            if (matkey.hasTextureTransforms) {
+                const cgltf_texture_transform& uvt = ccConfig.clearcoat_roughness_texture.transform;
+                auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
+                mi->setParameter("clearCoatRoughnessUvMatrix", uvmat);
+            }
+        }
+        if (matkey.hasClearCoatNormalTexture) {
+            addTextureBinding(mi, "clearCoatNormalMap", ccConfig.clearcoat_normal_texture.texture, false);
+            if (matkey.hasTextureTransforms) {
+                const cgltf_texture_transform& uvt = ccConfig.clearcoat_normal_texture.transform;
+                auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
+                mi->setParameter("clearCoatNormalUvMatrix", uvmat);
+            }
+            mi->setParameter("clearCoatNormalScale", ccConfig.clearcoat_normal_texture.scale);
+        }
+    }
+
     mMatInstanceCache[key] = {mi, *uvmap};
     return mi;
 }
@@ -984,30 +967,15 @@ void FAssetLoader::addTextureBinding(MaterialInstance* materialInstance, const c
         dstSampler.setMagFilter(TextureSampler::MagFilter::LINEAR);
         dstSampler.setMinFilter(TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR);
     }
-    auto bv = srcTexture->image->buffer_view;
-    mResult->mTextureBindings.push_back(TextureBinding {
-        .uri = srcTexture->image->uri,
-        .totalSize = uint32_t(bv ? bv->size : 0),
-        .mimeType = srcTexture->image->mime_type,
-        .data = bv ? &bv->buffer->data : nullptr,
-        .offset = bv ? bv->offset : 0,
+
+    mResult->mTextureSlots.push_back({
+        .texture = srcTexture,
         .materialInstance = materialInstance,
         .materialParameter = parameterName,
         .sampler = dstSampler,
         .srgb = srgb
     });
     mResult->mDependencyGraph.addEdge(materialInstance, parameterName);
-}
-
-void FAssetLoader::importSkinningData(Skin& dstSkin, const cgltf_skin& srcSkin) {
-    if (srcSkin.name) {
-        dstSkin.name = srcSkin.name;
-    }
-    dstSkin.joints.resize(srcSkin.joints_count);
-    const auto& nodeMap = mResult->mNodeMap;
-    for (cgltf_size i = 0, len = srcSkin.joints_count; i < len; ++i) {
-        dstSkin.joints[i] = nodeMap.at(srcSkin.joints[i]);
-    }
 }
 
 bool FAssetLoader::primitiveHasVertexColor(const cgltf_primitive* inPrim) const {
@@ -1018,6 +986,18 @@ bool FAssetLoader::primitiveHasVertexColor(const cgltf_primitive* inPrim) const 
         }
     }
     return false;
+}
+
+LightManager::Type FAssetLoader::getLightType(const cgltf_light_type light) {
+    switch (light) {
+        case cgltf_light_type_invalid:
+        case cgltf_light_type_directional:
+            return LightManager::Type::DIRECTIONAL;
+        case cgltf_light_type_point:
+            return LightManager::Type::POINT;
+        case cgltf_light_type_spot:
+            return LightManager::Type::FOCUSED_SPOT;
+    }
 }
 
 AssetLoader* AssetLoader::create(const AssetConfiguration& config) {

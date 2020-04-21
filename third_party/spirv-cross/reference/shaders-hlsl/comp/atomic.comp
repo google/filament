@@ -1,3 +1,5 @@
+static const uint3 gl_WorkGroupSize = uint3(1u, 1u, 1u);
+
 RWByteAddressBuffer ssbo : register(u2);
 RWTexture2D<uint> uImage : register(u0);
 RWTexture2D<int> iImage : register(u1);

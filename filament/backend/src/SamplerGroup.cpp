@@ -64,8 +64,11 @@ SamplerGroup& SamplerGroup::setSamplers(SamplerGroup const& rhs) noexcept {
 
 void SamplerGroup::setSampler(size_t index, Sampler const& sampler) noexcept {
     if (index < mBuffer.size()) {
-        mBuffer[index] = sampler;
-        mDirty.set(index);
+        auto& cur = mBuffer[index];
+        if (cur.t != sampler.t || cur.s.u != sampler.s.u) {
+            cur = sampler;
+            mDirty.set(index);
+        }
     }
 }
 

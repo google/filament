@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#if defined(ANDROID) || defined(USE_EXTERNAL_GLES3) || defined(__EMSCRIPTEN__)
+#if defined(ANDROID) || defined(FILAMENT_USE_EXTERNAL_GLES3) || defined(__EMSCRIPTEN__)
 
 #include <EGL/egl.h>
 #include <GLES3/gl31.h>
@@ -41,6 +41,9 @@ PFNGLFRAMEBUFFERTEXTURE2DMULTISAMPLEEXTPROC glFramebufferTexture2DMultisampleEXT
 #ifdef GL_KHR_debug
 PFNGLDEBUGMESSAGECALLBACKKHRPROC glDebugMessageCallbackKHR;
 PFNGLGETDEBUGMESSAGELOGKHRPROC glGetDebugMessageLogKHR;
+#endif
+#ifdef GL_EXT_disjoint_timer_query
+PFNGLGETQUERYOBJECTUI64VEXTPROC glGetQueryObjectui64v;
 #endif
 
 static std::once_flag sGlExtInitialized;
@@ -91,6 +94,11 @@ void importGLESExtensionsEntryPoints() {
         glGetDebugMessageLogKHR =
                 (PFNGLGETDEBUGMESSAGELOGKHRPROC)eglGetProcAddress(
                         "glGetDebugMessageLogKHR");
+#endif
+#ifdef GL_EXT_disjoint_timer_query
+        glGetQueryObjectui64v =
+                (PFNGLGETQUERYOBJECTUI64VEXTPROC)eglGetProcAddress(
+                        "glGetQueryObjectui64vEXT");
 #endif
     });
 }

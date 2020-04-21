@@ -20,6 +20,8 @@
 #include <ibl/Cubemap.h>
 #include <ibl/Image.h>
 
+#include <functional>
+
 namespace utils {
 class JobSystem;
 } // namespace utils

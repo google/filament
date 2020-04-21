@@ -128,7 +128,6 @@ LightManager::Builder& LightManager::Builder::sunHaloFalloff(float haloFalloff) 
 }
 
 LightManager::Builder::Result LightManager::Builder::build(Engine& engine, Entity entity) {
-    FEngine::assertValid(engine, __PRETTY_FUNCTION__);
     upcast(engine).createLight(*this, entity);
     return Success;
 }
@@ -254,13 +253,11 @@ void FLightManager::setIntensity(Instance i, float intensity) noexcept {
                 break;
 
             case Type::FOCUSED_SPOT: {
-                // li = lp / (2*pi*(1-cos(outer/2)))
+                // li = lp / (2 * pi * (1 - cos(cone_outer / 2)))
                 SpotParams& spotParams = manager[i].spotParams;
-                float2 scaleOffset = spotParams.scaleOffset;
-                float cosOuter = -scaleOffset.y / scaleOffset.x;
-                float cosHalfOuter = std::sqrt((1.0f + cosOuter) * 0.5f); // half-angle identities
-                luminousIntensity = luminousPower / (2.0f * float(F_PI) * (1.0f - cosHalfOuter));
                 spotParams.luminousPower = luminousPower;
+                float cosOuter = std::sqrt(spotParams.cosOuterSquared);
+                luminousIntensity = luminousPower / (2.0f * float(F_PI) * (1.0f - cosOuter));
                 break;
             }
             case Type::SPOT:
@@ -286,11 +283,11 @@ void FLightManager::setSpotLightCone(Instance i, float inner, float outer) noexc
     auto& manager = mManager;
     if (i && isSpotLight(i)) {
         // clamp the inner/outer angles to pi
-        float outerClamped = std::min(std::abs(outer), float(F_PI));
-        float innerClamped = std::min(std::abs(inner), float(F_PI));
+        float innerClamped = std::min(std::abs(inner), float(F_PI_2));
+        float outerClamped = std::min(std::abs(outer), float(F_PI_2));
 
-        // inner must always be smaller than outer
-        innerClamped = std::min(innerClamped, outerClamped);
+        // outer must always be bigger than inner
+        outerClamped = std::max(innerClamped, outerClamped);
 
         float cosOuter = fast::cos(outerClamped);
         float cosInner = fast::cos(innerClamped);
@@ -299,6 +296,7 @@ void FLightManager::setSpotLightCone(Instance i, float inner, float outer) noexc
         float offset = -cosOuter * scale;
 
         SpotParams& spotParams = manager[i].spotParams;
+        spotParams.outerClamped = outerClamped;
         spotParams.cosOuterSquared = cosOuterSquared;
         spotParams.sinInverse = 1 / std::sqrt(1 - cosOuterSquared);
         spotParams.scaleOffset = { scale, offset };
@@ -306,9 +304,9 @@ void FLightManager::setSpotLightCone(Instance i, float inner, float outer) noexc
         // we need to recompute the luminous intensity
         Type type = getLightType(i).type;
         if (type == Type::FOCUSED_SPOT) {
+            // li = lp / (2 * pi * (1 - cos(cone_outer / 2)))
             float luminousPower = spotParams.luminousPower;
-            float cosHalfOuter = std::sqrt((1.0f + cosOuter) * 0.5f); // half-angle identities
-            float luminousIntensity = luminousPower / (2.0f * float(F_PI) * (1.0f - cosHalfOuter));
+            float luminousIntensity = luminousPower / (2.0f * float(F_PI) * (1.0f - cosOuter));
             manager[i].intensity = luminousIntensity;
         }
     }
@@ -349,12 +347,19 @@ void FLightManager::setShadowCaster(Instance i, bool shadowCaster) noexcept {
 
 using namespace details;
 
+size_t LightManager::getComponentCount() const noexcept {
+    return upcast(this)->getComponentCount();
+}
+
+utils::Entity const* LightManager::getEntities() const noexcept {
+    return upcast(this)->getEntities();
+}
+
 bool LightManager::hasComponent(Entity e) const noexcept {
     return upcast(this)->hasComponent(e);
 }
 
-LightManager::Instance
-LightManager::getInstance(Entity e) const noexcept {
+LightManager::Instance LightManager::getInstance(Entity e) const noexcept {
     return upcast(this)->getInstance(e);
 }
 
@@ -404,6 +409,10 @@ float LightManager::getFalloff(Instance i) const noexcept {
 
 void LightManager::setSpotLightCone(Instance i, float inner, float outer) noexcept {
     upcast(this)->setSpotLightCone(i, inner, outer);
+}
+
+float LightManager::getSpotLightOuterCone(Instance i) const noexcept {
+    return upcast(this)->getSpotParams(i).outerClamped;
 }
 
 void LightManager::setSunAngularRadius(Instance i, float angularRadius) noexcept {

@@ -4,7 +4,7 @@
 <title>FlightHelmet</title>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,user-scalable=no,initial-scale=1">
-<link href="https://google.github.io/filament/favicon.png" rel="icon" type="image/x-icon" />
+<link href="favicon.png" rel="icon" type="image/x-icon" />
 <style>
 html, body { height: 100%; }
 body       { margin: 0; overflow: hidden; }
@@ -72,29 +72,22 @@ class App {
         const messages = document.getElementById('messages');
 
         // Crudely indicate progress by printing the URI of each resource as it is loaded.
-        // Note that we wait 1 ms after the last asset has downloaded, but before finalization.
-        // This gives the browser time to display the latest status.
         const onFetched = (uri) => messages.innerText += `Downloaded ${uri}\n`;
-        const onDone = (finalize) => {
-            messages.innerText += 'Finalizing...\n'
-            setTimeout(() => {
+        const onDone = () => {
+            // Destroy the asset loader.
+            loader.delete();
 
-                // Decode the textures using stb.
-                finalize();
-                loader.delete();
+            // Enable shadows on every renderable.
+            const entities = asset.getEntities();
+            const rm = engine.getRenderableManager();
+            for (let i = 0; i < entities.size(); i++) {
+                const instance = rm.getInstance(entities.get(i));
+                rm.setCastShadows(instance, true);
+                instance.delete();
+            }
 
-                // Enable shadows on every renderable.
-                const entities = asset.getEntities();
-                const rm = engine.getRenderableManager();
-                for (let i = 0; i < entities.size(); i++) {
-                    const instance = rm.getInstance(entities.get(i));
-                    rm.setCastShadows(instance, true);
-                    instance.delete();
-                }
-
-                // Hide the HUD.
-                messages.remove();
-            }, 1);
+            // Hide the HUD.
+            messages.remove();
         };
         asset.loadResources(onDone, onFetched);
 

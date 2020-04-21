@@ -3,106 +3,106 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 50;
+	objectVersion = 51;
 	objects = {
 
 /* Begin PBXBuildFile section */
-		29DBA07A216DA05EBD75955B8579161B /* App.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3AF77884F45974610F79F92F60E904A8 /* App.cpp */; };
-		2BC971729D1F77FDA2244102239C4BF7 /* CameraManipulator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6238AED51F5F46CCFBE6892D356D457C /* CameraManipulator.cpp */; };
-		32A5FA52FFDCC30B869907B21CAFC592 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 59032D070D1641AA60F6CC2D2119D7F9 /* Main.storyboard */; };
-		653502530FCA420A8CD7FECC8FDAC2F8 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = F534BD31E8FB84B3925B0402BFA17214 /* AppDelegate.m */; };
-		818EC58CFCBCFB09887972CD899DEFD8 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 47B161015D23D464253ABAF119052C4F /* main.m */; };
-		99620AF86A273BBD9CD12987999C26FD /* DamagedHelmet.glb in Resources */ = {isa = PBXBuildFile; fileRef = B299B19218E1CF7B2D13ABB8ABAF2009 /* DamagedHelmet.glb */; };
-		C4AB67A4CDD020573710FAAEBA275609 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3F8FDA2F8F0B257A1364E302157B220A /* Assets.xcassets */; };
-		CB9BD467EDE891C189AB4D660E2B5B9E /* FilamentViewController.mm in Sources */ = {isa = PBXBuildFile; fileRef = 4544E7FD3EC9BC5C5E4487B731D42B4E /* FilamentViewController.mm */; };
-		E2D98B5F98D4D34F53FA4CAB95DDE467 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = FEA341C442B210CFD35E466361EFABCE /* LaunchScreen.storyboard */; };
-		EC80D62EC06655C23D67190CEB453E0F /* Resources.S in Sources */ = {isa = PBXBuildFile; fileRef = B1B470F3CDEE0D4A60B11C721201C160 /* Resources.S */; };
-		F9C81136BF68753BF8B18FADC3BCE4B6 /* FilamentView.m in Sources */ = {isa = PBXBuildFile; fileRef = 84D7269DBC8441140F7F89051274495A /* FilamentView.m */; };
+		032FA0177E5B258A6EFC10FB /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3F8FDA2F8F0B257A1364E302 /* Assets.xcassets */; };
+		3DA39FBD408D7B6F50822939 /* FilamentViewController.mm in Sources */ = {isa = PBXBuildFile; fileRef = 4544E7FD3EC9BC5C5E4487B7 /* FilamentViewController.mm */; };
+		4474017EFFC53567F2369DB8 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = FEA341C442B210CFD35E4663 /* LaunchScreen.storyboard */; };
+		4F555B8114838AF666F39CD1 /* App.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3AF77884F45974610F79F92F /* App.cpp */; };
+		899A92E0F0148A9BAE3E7B1A /* Resources.S in Sources */ = {isa = PBXBuildFile; fileRef = B1B470F3CDEE0D4A60B11C72 /* Resources.S */; };
+		8D82323C866A8429A29903A8 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = F534BD31E8FB84B3925B0402 /* AppDelegate.m */; };
+		ADE1F0D02BA65C77C6B109AB /* FilamentView.m in Sources */ = {isa = PBXBuildFile; fileRef = 84D7269DBC8441140F7F8905 /* FilamentView.m */; };
+		B766A23145C9D58BB09CB068 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 47B161015D23D464253ABAF1 /* main.m */; };
+		BFD25191C0BF9804FF3C1B19 /* DamagedHelmet.glb in Resources */ = {isa = PBXBuildFile; fileRef = B299B19218E1CF7B2D13ABB8 /* DamagedHelmet.glb */; };
+		D1174ECF9CDDC1EA7DE95840 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 59032D070D1641AA60F6CC2D /* Main.storyboard */; };
+		DB90B94FBBD5F819ED9D1685 /* CameraManipulator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6238AED51F5F46CCFBE6892D /* CameraManipulator.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		07D735319AF2DC69DB8981FEA8B0791E /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
-		0AF0F63216DE40C526ABFABF57BA198D /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
-		31A71C869E24044EA5F802D5B1931BD3 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
-		3259514676E5E799670D0F867723B263 /* CameraManipulator.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CameraManipulator.h; sourceTree = "<group>"; };
-		3AF77884F45974610F79F92F60E904A8 /* App.cpp */ = {isa = PBXFileReference; path = App.cpp; sourceTree = "<group>"; };
-		3F8FDA2F8F0B257A1364E302157B220A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		4544E7FD3EC9BC5C5E4487B731D42B4E /* FilamentViewController.mm */ = {isa = PBXFileReference; path = FilamentViewController.mm; sourceTree = "<group>"; };
-		47B161015D23D464253ABAF119052C4F /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
-		6238AED51F5F46CCFBE6892D356D457C /* CameraManipulator.cpp */ = {isa = PBXFileReference; path = CameraManipulator.cpp; sourceTree = "<group>"; };
-		84D7269DBC8441140F7F89051274495A /* FilamentView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = FilamentView.m; sourceTree = "<group>"; };
-		A37B936423E3B1BF1CA137E0AC1ABBCF /* hello-gltf.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "hello-gltf.app"; sourceTree = BUILT_PRODUCTS_DIR; };
-		A52D063A6C24A885D52E2F79A44646DA /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		B1B470F3CDEE0D4A60B11C721201C160 /* Resources.S */ = {isa = PBXFileReference; path = Resources.S; sourceTree = "<group>"; };
-		B299B19218E1CF7B2D13ABB8ABAF2009 /* DamagedHelmet.glb */ = {isa = PBXFileReference; path = DamagedHelmet.glb; sourceTree = "<group>"; };
-		BAEAC7786B3EA7E47855A56B9D83BC15 /* FilamentViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FilamentViewController.h; sourceTree = "<group>"; };
-		D3A6F9906B0647549CF53196820A456B /* FilamentView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FilamentView.h; sourceTree = "<group>"; };
-		EC3FAC405D5790391F3AE4FBABECB9CE /* App.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = App.h; sourceTree = "<group>"; };
-		F534BD31E8FB84B3925B0402BFA17214 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
+		07D735319AF2DC69DB8981FE /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
+		0AF0F63216DE40C526ABFABF /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
+		31A71C869E24044EA5F802D5 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		3259514676E5E799670D0F86 /* CameraManipulator.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CameraManipulator.h; sourceTree = "<group>"; };
+		3AF77884F45974610F79F92F /* App.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = App.cpp; sourceTree = "<group>"; };
+		3F8FDA2F8F0B257A1364E302 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		4544E7FD3EC9BC5C5E4487B7 /* FilamentViewController.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = FilamentViewController.mm; sourceTree = "<group>"; };
+		47B161015D23D464253ABAF1 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		6238AED51F5F46CCFBE6892D /* CameraManipulator.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = CameraManipulator.cpp; sourceTree = "<group>"; };
+		84D7269DBC8441140F7F8905 /* FilamentView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = FilamentView.m; sourceTree = "<group>"; };
+		A37B936423E3B1BF1CA137E0 /* hello-gltf.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "hello-gltf.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		A52D063A6C24A885D52E2F79 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		B1B470F3CDEE0D4A60B11C72 /* Resources.S */ = {isa = PBXFileReference; path = Resources.S; sourceTree = "<group>"; };
+		B299B19218E1CF7B2D13ABB8 /* DamagedHelmet.glb */ = {isa = PBXFileReference; path = DamagedHelmet.glb; sourceTree = "<group>"; };
+		BAEAC7786B3EA7E47855A56B /* FilamentViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FilamentViewController.h; sourceTree = "<group>"; };
+		D3A6F9906B0647549CF53196 /* FilamentView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FilamentView.h; sourceTree = "<group>"; };
+		EC3FAC405D5790391F3AE4FB /* App.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = App.h; sourceTree = "<group>"; };
+		F534BD31E8FB84B3925B0402 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
-		213197BBE06FB8316C6A730F99E884AC /* DamagedHelmet */ = {
+		213197BBE06FB8316C6A730F /* DamagedHelmet */ = {
 			isa = PBXGroup;
 			children = (
-				B299B19218E1CF7B2D13ABB8ABAF2009 /* DamagedHelmet.glb */,
+				B299B19218E1CF7B2D13ABB8 /* DamagedHelmet.glb */,
 			);
 			name = DamagedHelmet;
 			path = ../../../third_party/models/DamagedHelmet;
 			sourceTree = "<group>";
 		};
-		74FBC1573C79190CC198A0308FB40050 = {
+		74FBC1573C79190CC198A030 = {
 			isa = PBXGroup;
 			children = (
-				213197BBE06FB8316C6A730F99E884AC /* DamagedHelmet */,
-				A57096EADC8A05A97A275513964A3F88 /* hello-gltf */,
-				E24AFBD404D0689AD84371D612E5035A /* Products */,
+				213197BBE06FB8316C6A730F /* DamagedHelmet */,
+				A57096EADC8A05A97A275513 /* hello-gltf */,
+				E24AFBD404D0689AD84371D6 /* Products */,
 			);
 			sourceTree = "<group>";
 		};
-		A57096EADC8A05A97A275513964A3F88 /* hello-gltf */ = {
+		A57096EADC8A05A97A275513 /* hello-gltf */ = {
 			isa = PBXGroup;
 			children = (
-				0AF0F63216DE40C526ABFABF57BA198D /* AppDelegate.h */,
-				F534BD31E8FB84B3925B0402BFA17214 /* AppDelegate.m */,
-				6238AED51F5F46CCFBE6892D356D457C /* CameraManipulator.cpp */,
-				3259514676E5E799670D0F867723B263 /* CameraManipulator.h */,
-				D192952467BDC89262858B1E59BF69E1 /* FilamentView */,
-				AB372FE319A13B1FD8573A52016C270B /* SupportFiles */,
+				0AF0F63216DE40C526ABFABF /* AppDelegate.h */,
+				F534BD31E8FB84B3925B0402 /* AppDelegate.m */,
+				6238AED51F5F46CCFBE6892D /* CameraManipulator.cpp */,
+				3259514676E5E799670D0F86 /* CameraManipulator.h */,
+				D192952467BDC89262858B1E /* FilamentView */,
+				AB372FE319A13B1FD8573A52 /* SupportFiles */,
 			);
 			path = "hello-gltf";
 			sourceTree = "<group>";
 		};
-		AB372FE319A13B1FD8573A52016C270B /* SupportFiles */ = {
+		AB372FE319A13B1FD8573A52 /* SupportFiles */ = {
 			isa = PBXGroup;
 			children = (
-				3F8FDA2F8F0B257A1364E302157B220A /* Assets.xcassets */,
-				A52D063A6C24A885D52E2F79A44646DA /* Info.plist */,
-				FEA341C442B210CFD35E466361EFABCE /* LaunchScreen.storyboard */,
-				47B161015D23D464253ABAF119052C4F /* main.m */,
-				59032D070D1641AA60F6CC2D2119D7F9 /* Main.storyboard */,
-				B1B470F3CDEE0D4A60B11C721201C160 /* Resources.S */,
+				3F8FDA2F8F0B257A1364E302 /* Assets.xcassets */,
+				A52D063A6C24A885D52E2F79 /* Info.plist */,
+				FEA341C442B210CFD35E4663 /* LaunchScreen.storyboard */,
+				47B161015D23D464253ABAF1 /* main.m */,
+				59032D070D1641AA60F6CC2D /* Main.storyboard */,
+				B1B470F3CDEE0D4A60B11C72 /* Resources.S */,
 			);
 			path = SupportFiles;
 			sourceTree = "<group>";
 		};
-		D192952467BDC89262858B1E59BF69E1 /* FilamentView */ = {
+		D192952467BDC89262858B1E /* FilamentView */ = {
 			isa = PBXGroup;
 			children = (
-				3AF77884F45974610F79F92F60E904A8 /* App.cpp */,
-				EC3FAC405D5790391F3AE4FBABECB9CE /* App.h */,
-				D3A6F9906B0647549CF53196820A456B /* FilamentView.h */,
-				84D7269DBC8441140F7F89051274495A /* FilamentView.m */,
-				BAEAC7786B3EA7E47855A56B9D83BC15 /* FilamentViewController.h */,
-				4544E7FD3EC9BC5C5E4487B731D42B4E /* FilamentViewController.mm */,
+				3AF77884F45974610F79F92F /* App.cpp */,
+				EC3FAC405D5790391F3AE4FB /* App.h */,
+				D3A6F9906B0647549CF53196 /* FilamentView.h */,
+				84D7269DBC8441140F7F8905 /* FilamentView.m */,
+				BAEAC7786B3EA7E47855A56B /* FilamentViewController.h */,
+				4544E7FD3EC9BC5C5E4487B7 /* FilamentViewController.mm */,
 			);
 			path = FilamentView;
 			sourceTree = "<group>";
 		};
-		E24AFBD404D0689AD84371D612E5035A /* Products */ = {
+		E24AFBD404D0689AD84371D6 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				A37B936423E3B1BF1CA137E0AC1ABBCF /* hello-gltf.app */,
+				A37B936423E3B1BF1CA137E0 /* hello-gltf.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -110,13 +110,13 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		BDE1BF085B3CF7972F0866814CF93465 /* hello-gltf */ = {
+		BDE1BF085B3CF7972F086681 /* hello-gltf */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = B4AB9DA259CE43EB677725C9E8355571 /* Build configuration list for PBXNativeTarget "hello-gltf" */;
+			buildConfigurationList = B4AB9DA259CE43EB677725C9 /* Build configuration list for PBXNativeTarget "hello-gltf" */;
 			buildPhases = (
-				434C630C7F01B07ABD7545B4B27CEB1C /* Build Resources */,
-				30FFFB72D409D092136A7E0935462811 /* Sources */,
-				143100B2FF97ACD9B03A078A47392383 /* Resources */,
+				434C630C7F01B07ABD7545B4 /* Build Resources */,
+				30FFFB72D409D092136A7E09 /* Sources */,
+				143100B2FF97ACD9B03A078A /* Resources */,
 			);
 			buildRules = (
 			);
@@ -124,49 +124,51 @@
 			);
 			name = "hello-gltf";
 			productName = "hello-gltf";
-			productReference = A37B936423E3B1BF1CA137E0AC1ABBCF /* hello-gltf.app */;
+			productReference = A37B936423E3B1BF1CA137E0 /* hello-gltf.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
-		690D846B2164EA54ABAD02A48744C966 /* Project object */ = {
+		690D846B2164EA54ABAD02A4 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 1000;
+				LastUpgradeCheck = 1020;
+				TargetAttributes = {
+				};
 			};
-			buildConfigurationList = C7514DDCFDA3C5F803E239F91465CEC7 /* Build configuration list for PBXProject "hello-gltf" */;
-			compatibilityVersion = "Xcode 9.3";
+			buildConfigurationList = C7514DDCFDA3C5F803E239F9 /* Build configuration list for PBXProject "hello-gltf" */;
+			compatibilityVersion = "Xcode 10.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				Base,
 			);
-			mainGroup = 74FBC1573C79190CC198A0308FB40050;
+			mainGroup = 74FBC1573C79190CC198A030;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				BDE1BF085B3CF7972F0866814CF93465 /* hello-gltf */,
+				BDE1BF085B3CF7972F086681 /* hello-gltf */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		143100B2FF97ACD9B03A078A47392383 /* Resources */ = {
+		143100B2FF97ACD9B03A078A /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				C4AB67A4CDD020573710FAAEBA275609 /* Assets.xcassets in Resources */,
-				99620AF86A273BBD9CD12987999C26FD /* DamagedHelmet.glb in Resources */,
-				E2D98B5F98D4D34F53FA4CAB95DDE467 /* LaunchScreen.storyboard in Resources */,
-				32A5FA52FFDCC30B869907B21CAFC592 /* Main.storyboard in Resources */,
+				032FA0177E5B258A6EFC10FB /* Assets.xcassets in Resources */,
+				BFD25191C0BF9804FF3C1B19 /* DamagedHelmet.glb in Resources */,
+				4474017EFFC53567F2369DB8 /* LaunchScreen.storyboard in Resources */,
+				D1174ECF9CDDC1EA7DE95840 /* Main.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		434C630C7F01B07ABD7545B4B27CEB1C /* Build Resources */ = {
+		434C630C7F01B07ABD7545B4 /* Build Resources */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -187,35 +189,35 @@
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		30FFFB72D409D092136A7E0935462811 /* Sources */ = {
+		30FFFB72D409D092136A7E09 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				29DBA07A216DA05EBD75955B8579161B /* App.cpp in Sources */,
-				653502530FCA420A8CD7FECC8FDAC2F8 /* AppDelegate.m in Sources */,
-				2BC971729D1F77FDA2244102239C4BF7 /* CameraManipulator.cpp in Sources */,
-				F9C81136BF68753BF8B18FADC3BCE4B6 /* FilamentView.m in Sources */,
-				CB9BD467EDE891C189AB4D660E2B5B9E /* FilamentViewController.mm in Sources */,
-				EC80D62EC06655C23D67190CEB453E0F /* Resources.S in Sources */,
-				818EC58CFCBCFB09887972CD899DEFD8 /* main.m in Sources */,
+				4F555B8114838AF666F39CD1 /* App.cpp in Sources */,
+				8D82323C866A8429A29903A8 /* AppDelegate.m in Sources */,
+				DB90B94FBBD5F819ED9D1685 /* CameraManipulator.cpp in Sources */,
+				ADE1F0D02BA65C77C6B109AB /* FilamentView.m in Sources */,
+				3DA39FBD408D7B6F50822939 /* FilamentViewController.mm in Sources */,
+				899A92E0F0148A9BAE3E7B1A /* Resources.S in Sources */,
+				B766A23145C9D58BB09CB068 /* main.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXVariantGroup section */
-		59032D070D1641AA60F6CC2D2119D7F9 /* Main.storyboard */ = {
+		59032D070D1641AA60F6CC2D /* Main.storyboard */ = {
 			isa = PBXVariantGroup;
 			children = (
-				07D735319AF2DC69DB8981FEA8B0791E /* Base */,
+				07D735319AF2DC69DB8981FE /* Base */,
 			);
 			name = Main.storyboard;
 			sourceTree = "<group>";
 		};
-		FEA341C442B210CFD35E466361EFABCE /* LaunchScreen.storyboard */ = {
+		FEA341C442B210CFD35E4663 /* LaunchScreen.storyboard */ = {
 			isa = PBXVariantGroup;
 			children = (
-				31A71C869E24044EA5F802D5B1931BD3 /* Base */,
+				31A71C869E24044EA5F802D5 /* Base */,
 			);
 			name = LaunchScreen.storyboard;
 			sourceTree = "<group>";
@@ -223,7 +225,7 @@
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
-		161A6B16FC9965670B83726EC49D80CD /* Metal Debug */ = {
+		161A6B16FC9965670B83726E /* Metal Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -278,14 +280,13 @@
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				SWIFT_VERSION = 4.2;
+				SWIFT_VERSION = 5.0;
 			};
 			name = "Metal Debug";
 		};
-		27C4D8D0780B95190F6A4D3C49DFD25F /* OpenGL Release */ = {
+		27C4D8D0780B95190F6A4D3C /* OpenGL Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				ENABLE_BITCODE = NO;
@@ -299,7 +300,10 @@
 				);
 				INFOPLIST_FILE = "hello-gltf/SupportFiles/Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 12.1;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
 				LIBRARY_SEARCH_PATHS = (
 					"../../../out/ios-release/filament/lib/$(CURRENT_ARCH)",
 				);
@@ -316,6 +320,7 @@
 					"-lgltfio_resources",
 					"-limage",
 					"-lgeometry",
+					"-ldracodec",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.hello-gltf";
 				SDKROOT = iphoneos;
@@ -323,10 +328,9 @@
 			};
 			name = "OpenGL Release";
 		};
-		509C947919BED377E97944A3AF57ACFF /* OpenGL Debug */ = {
+		509C947919BED377E97944A3 /* OpenGL Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				ENABLE_BITCODE = NO;
@@ -340,7 +344,10 @@
 				);
 				INFOPLIST_FILE = "hello-gltf/SupportFiles/Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 12.1;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
 				LIBRARY_SEARCH_PATHS = (
 					"../../../out/ios-debug/filament/lib/$(CURRENT_ARCH)",
 				);
@@ -357,6 +364,7 @@
 					"-lgltfio_resources",
 					"-limage",
 					"-lgeometry",
+					"-ldracodec",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.hello-gltf";
 				SDKROOT = iphoneos;
@@ -364,7 +372,7 @@
 			};
 			name = "OpenGL Debug";
 		};
-		72A5169BBB2C5E7E023552905B42D2C9 /* OpenGL Debug */ = {
+		72A5169BBB2C5E7E02355290 /* OpenGL Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -419,11 +427,11 @@
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				SWIFT_VERSION = 4.2;
+				SWIFT_VERSION = 5.0;
 			};
 			name = "OpenGL Debug";
 		};
-		895443529C80ABBB9B75881FEAFDE850 /* Metal Release */ = {
+		895443529C80ABBB9B75881F /* Metal Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -468,13 +476,13 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
-				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
-				SWIFT_VERSION = 4.2;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_VERSION = 5.0;
 				VALIDATE_PRODUCT = YES;
 			};
 			name = "Metal Release";
 		};
-		98EF694A111236D70B23EDE5D84A4EFC /* OpenGL Release */ = {
+		98EF694A111236D70B23EDE5 /* OpenGL Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -519,16 +527,15 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
-				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
-				SWIFT_VERSION = 4.2;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_VERSION = 5.0;
 				VALIDATE_PRODUCT = YES;
 			};
 			name = "OpenGL Release";
 		};
-		C5157048F1B290D39761ED4F4930FA18 /* Metal Release */ = {
+		C5157048F1B290D39761ED4F /* Metal Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				ENABLE_BITCODE = NO;
@@ -542,7 +549,10 @@
 				);
 				INFOPLIST_FILE = "hello-gltf/SupportFiles/Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 12.1;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
 				LIBRARY_SEARCH_PATHS = (
 					"../../../out/ios-release/filament/lib/$(CURRENT_ARCH)",
 				);
@@ -559,6 +569,7 @@
 					"-lgltfio_resources",
 					"-limage",
 					"-lgeometry",
+					"-ldracodec",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.hello-gltf";
 				SDKROOT = iphoneos;
@@ -566,10 +577,9 @@
 			};
 			name = "Metal Release";
 		};
-		E31F4FA2C21C14838BEB5751F340DAC8 /* Metal Debug */ = {
+		E31F4FA2C21C14838BEB5751 /* Metal Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				ENABLE_BITCODE = NO;
@@ -583,7 +593,10 @@
 				);
 				INFOPLIST_FILE = "hello-gltf/SupportFiles/Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 12.1;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
 				LIBRARY_SEARCH_PATHS = (
 					"../../../out/ios-debug/filament/lib/$(CURRENT_ARCH)",
 				);
@@ -600,6 +613,7 @@
 					"-lgltfio_resources",
 					"-limage",
 					"-lgeometry",
+					"-ldracodec",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.hello-gltf";
 				SDKROOT = iphoneos;
@@ -610,29 +624,29 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		B4AB9DA259CE43EB677725C9E8355571 /* Build configuration list for PBXNativeTarget "hello-gltf" */ = {
+		B4AB9DA259CE43EB677725C9 /* Build configuration list for PBXNativeTarget "hello-gltf" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				E31F4FA2C21C14838BEB5751F340DAC8 /* Metal Debug */,
-				C5157048F1B290D39761ED4F4930FA18 /* Metal Release */,
-				509C947919BED377E97944A3AF57ACFF /* OpenGL Debug */,
-				27C4D8D0780B95190F6A4D3C49DFD25F /* OpenGL Release */,
+				E31F4FA2C21C14838BEB5751 /* Metal Debug */,
+				C5157048F1B290D39761ED4F /* Metal Release */,
+				509C947919BED377E97944A3 /* OpenGL Debug */,
+				27C4D8D0780B95190F6A4D3C /* OpenGL Release */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = "";
+			defaultConfigurationName = "Metal Debug";
 		};
-		C7514DDCFDA3C5F803E239F91465CEC7 /* Build configuration list for PBXProject "hello-gltf" */ = {
+		C7514DDCFDA3C5F803E239F9 /* Build configuration list for PBXProject "hello-gltf" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				161A6B16FC9965670B83726EC49D80CD /* Metal Debug */,
-				895443529C80ABBB9B75881FEAFDE850 /* Metal Release */,
-				72A5169BBB2C5E7E023552905B42D2C9 /* OpenGL Debug */,
-				98EF694A111236D70B23EDE5D84A4EFC /* OpenGL Release */,
+				161A6B16FC9965670B83726E /* Metal Debug */,
+				895443529C80ABBB9B75881F /* Metal Release */,
+				72A5169BBB2C5E7E02355290 /* OpenGL Debug */,
+				98EF694A111236D70B23EDE5 /* OpenGL Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = "Metal Debug";
 		};
 /* End XCConfigurationList section */
 	};
-	rootObject = 690D846B2164EA54ABAD02A48744C966 /* Project object */;
+	rootObject = 690D846B2164EA54ABAD02A4 /* Project object */;
 }

@@ -68,6 +68,10 @@
 <td align="left">Property accessor for KTX header.</td>
 </tr>
 <tr>
+<td align="left"><a href="#LightManager%24Instance">LightManager$Instance</a></td>
+<td align="left">Component instance returned by <a href="#LightManager">LightManager</a></td>
+</tr>
+<tr>
 <td align="left"><a href="#PixelBufferDescriptor">PixelBufferDescriptor</a></td>
 <td align="left">Low level pixel buffer wrapper.</td>
 </tr>
@@ -182,6 +186,10 @@
 <td align="left"></td>
 </tr>
 <tr>
+<td align="left"><a href="#CullingMode">CullingMode</a></td>
+<td align="left"></td>
+</tr>
+<tr>
 <td align="left"><a href="#Frustum%24Plane">Frustum$Plane</a></td>
 <td align="left"></td>
 </tr>
@@ -254,10 +262,6 @@
 <td align="left"></td>
 </tr>
 <tr>
-<td align="left"><a href="#View%24DepthPrepass">View$DepthPrepass</a></td>
-<td align="left"></td>
-</tr>
-<tr>
 <td align="left"><a href="#WrapMode">WrapMode</a></td>
 <td align="left"></td>
 </tr>
@@ -294,9 +298,8 @@
 <li><em>returns</em> an instance of <a href="#Engine">Engine</a></li>
 </ul>
 </li>
-<li><strong>Engine.createAssetLoader(engine)</strong>
+<li><strong>engine.createAssetLoader()</strong>
 <ul>
-<li><em>engine</em> an instance of <a href="#Engine">Engine</a></li>
 <li><em>returns</em> an instance of <a href="#AssetLoader">AssetLoader</a></li>
 </ul>
 </li>
@@ -342,10 +345,10 @@
 <li><em>returns</em> an instance of <a href="#SwapChain">SwapChain</a></li>
 </ul>
 </li>
-<li><strong>engine.createTextureFromJpeg(image, options)</strong>
+<li><strong>engine.createTextureFromJpeg(buffer, options)</strong>
 <ul>
-<li>Creates a 2D [Texture] from a JPEG image.</li>
-<li><em>image</em> asset string or DOM Image that has already been loaded</li>
+<li>Creates a 2D [Texture] from the contents of a JPEG file.</li>
+<li><em>buffer</em> asset string, or Uint8Array, or <a href="#Buffer">Buffer</a> with JPEG file contents</li>
 <li><em>options</em> JavaScript object with optional <code>srgb</code> and <code>nomips</code> keys.</li>
 <li><em>returns</em> <a href="#Texture">Texture</a></li>
 </ul>
@@ -604,6 +607,18 @@ wrapper rather than interacting with <code>KtxBundle</code> directly.</p>
 properties.</p>
 </div>
 <div class='classdoc'>
+<h2>class <a id='LightManager$Instance' href='#LightManager$Instance'>LightManager$Instance</a></h2>
+<p>Component instance returned by <a href="#LightManager">LightManager</a></p>
+<ul>
+<li><strong>lightManager$Instance.delete()</strong>
+<ul>
+<li>Frees an instance obtained via <code>getInstance</code></li>
+</ul>
+</li>
+</ul>
+<p>Be sure to call the instance's <code>delete</code> method when you're done with it.</p>
+</div>
+<div class='classdoc'>
 <h2>class <a id='PixelBufferDescriptor' href='#PixelBufferDescriptor'>PixelBufferDescriptor</a></h2>
 <p>Low level pixel buffer wrapper.</p>
 <ul>
@@ -696,6 +711,13 @@ properties.</p>
 <li><strong>transformManager$Instance.delete()</strong>
 <ul>
 <li>Frees an instance obtained via <code>getInstance</code></li>
+</ul>
+</li>
+<li><strong>transformManager$Instance.getInstance(entity)</strong>
+<ul>
+<li>Gets an instance of the light component for an entity.</li>
+<li><em>entity</em> an <a href="#Entity">Entity</a></li>
+<li><em>returns</em> a light source component</li>
 </ul>
 </li>
 </ul>
@@ -809,6 +831,12 @@ See also the <a href="#Engine">Engine</a> methods <code>createView</code> and <c
 </ul>
 </li>
 </ul>
+<p>This utility consumes an array of URI strings and invokes callbacks after each asset is
+downloaded. Additionally, each downloaded asset becomes available in the <code>Filament.assets</code>
+global object, which is a mapping from URI strings to <code>Uint8Array</code>. If desired, clients can
+pre-populate entries in <code>Filament.assets</code> to circumvent HTTP requests (this should be done after
+calling <code>Filament.init</code>).
+This function is used internally by <code>Filament.init</code> and <code>gltfio$FilamentAsset.loadResources</code>.</p>
 </div>
 <div class='funcdoc'>
 <h2>function <a id='getSupportedFormatSuffix' href='#getSupportedFormatSuffix'>getSupportedFormatSuffix</a>(desiredFormats)</h2>
@@ -948,6 +976,15 @@ This defines the following functions:</p>
 <li>SRGB8_ALPHA8_ASTC_10x10</li>
 <li>SRGB8_ALPHA8_ASTC_12x10</li>
 <li>SRGB8_ALPHA8_ASTC_12x12</li>
+</ul>
+</div>
+<div class='enumdoc'>
+<h2>enum <a id='CullingMode' href='#CullingMode'>CullingMode</a></h2>
+<ul>
+<li>NONE</li>
+<li>FRONT</li>
+<li>BACK</li>
+<li>FRONT_AND_BACK</li>
 </ul>
 </div>
 <div class='enumdoc'>
@@ -1207,6 +1244,14 @@ This defines the following functions:</p>
 <li>CUSTOM5</li>
 <li>CUSTOM6</li>
 <li>CUSTOM7</li>
+<li>MORPH_POSITION_0</li>
+<li>MORPH_POSITION_1</li>
+<li>MORPH_POSITION_2</li>
+<li>MORPH_POSITION_3</li>
+<li>MORPH_TANGENTS_0</li>
+<li>MORPH_TANGENTS_1</li>
+<li>MORPH_TANGENTS_2</li>
+<li>MORPH_TANGENTS_3</li>
 </ul>
 </div>
 <div class='enumdoc'>
@@ -1245,14 +1290,6 @@ This defines the following functions:</p>
 <ul>
 <li>NONE</li>
 <li>FXAA</li>
-</ul>
-</div>
-<div class='enumdoc'>
-<h2>enum <a id='View$DepthPrepass' href='#View$DepthPrepass'>View$DepthPrepass</a></h2>
-<ul>
-<li>DEFAULT</li>
-<li>DISABLED</li>
-<li>ENABLED</li>
 </ul>
 </div>
 <div class='enumdoc'>

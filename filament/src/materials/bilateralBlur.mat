@@ -7,21 +7,13 @@ material {
             precision: medium
         },
         {
-            type : sampler2d,
-            name : depth,
-            precision: medium
-        },
-        {
-            type : float4,
-            name : resolution
-        },
-        {
-            type : int2,
-            name : axis
+            type : float2,
+            name : axis,
+            precision: high
         },
         {
             type : float,
-            name : oneOverEdgeDistance
+            name : farPlaneOverEdgeDistance
         }
     ],
     variables : [
@@ -29,71 +21,67 @@ material {
     ],
     domain : postprocess,
     depthWrite : false,
-    depthCulling : true
+    depthCulling : false
 }
 
 vertex {
     void postProcessVertex(inout PostProcessVertexInputs postProcess) {
-        postProcess.vertex.xy = postProcess.normalizedUV * materialParams.resolution.xy;
+        postProcess.vertex.xy = postProcess.normalizedUV;
     }
 }
 
 fragment {
-    const int kGaussianCount = 8;
+    const int kGaussianCount = 4;
     const float kGaussianSamples[] = float[](
-        0.149603, 0.139446, 0.112927, 0.079454, 0.048569, 0.025795, 0.011902, 0.004772
+        0.199471, 0.176033, 0.120985, 0.064759, 0.026995, 0.008764, 0.002216, 0.000436  // stdev = 2.0
     );
-    const float kGaussianWeightSum = 0.995331;
 
-    ivec2 clampToEdge(const sampler2D s, ivec2 uv) {
-        ivec2 size = textureSize(s, 0);
-        return clamp(uv, ivec2(0), size - ivec2(1));
+    float unpack(vec2 depth) {
+        // this is equivalent to (x8 * 256 + y8) / 65535, which gives a value between 0 and 1
+        return (depth.x * (256.0 / 257.0) + depth.y * (1.0 / 257.0));
     }
 
-    float linearizeDepthDifference(float d0, float d1) {
-        mat4 projection = getClipFromViewMatrix();
-        float A = -projection[3].z;
-        float B =  projection[2].z;
-        float K = (2.0 * A) / (d0 * 2.0 + (B - 1.0)); // actually a constant for this fragment
-        float d = K * (d0 - d1) / (d1 * 2.0 + (B - 1.0));
-        return d;
-    }
-
-    float bilateralWeight(const ivec2 p, in float depth) {
-        float sampleDepth = texelFetch(materialParams_depth, p, 0).r;
-        float ddepth = linearizeDepthDifference(depth, sampleDepth);
-        float diff = materialParams.oneOverEdgeDistance * ddepth;
+    float bilateralWeight(in float depth, in float sampleDepth) {
+        float diff = (sampleDepth - depth) * materialParams.farPlaneOverEdgeDistance;
         return max(0.0, 1.0 - diff * diff);
     }
 
-    void tap(inout float sum, inout float totalWeight, float weight, float depth, ivec2 position) {
-        position = clampToEdge(materialParams_ssao, position);
+    void tap(inout float sum, inout float totalWeight, float weight, float depth, vec2 position) {
         // ambient occlusion sample
-        float ao = texelFetch(materialParams_ssao, position, 0).r;
+        vec3 data = textureLod(materialParams_ssao, position, 0.0).rgb;
+
         // bilateral sample
-        float bilateral = bilateralWeight(position, depth);
+        float bilateral = bilateralWeight(depth, unpack(data.gb));
         bilateral *= weight;
-        sum += ao * bilateral;
+        sum += data.r * bilateral;
         totalWeight += bilateral;
     }
 
     void postProcess(inout PostProcessInputs postProcess) {
-        highp ivec2 uv = ivec2(variable_vertex.xy);
+        highp vec2 uv = variable_vertex.xy; // interpolated at pixel's center
 
-        float depth = texelFetch(materialParams_depth, uv, 0).r;
+        vec3 data = textureLod(materialParams_ssao, uv, 0.0).rgb;
+        if (data.g * data.b == 1.0) {
+            // This is the skybox, skip
+            postProcess.color.rgb = data;
+            return;
+        }
 
         // we handle the center pixel separately because it doesn't participate in
         // bilateral filtering
+        float depth = unpack(data.gb);
         float totalWeight = kGaussianSamples[0];
-        float sum = texelFetch(materialParams_ssao, uv, 0).r * totalWeight;
+        float sum = data.r * totalWeight;
 
+        vec2 offset = materialParams.axis;
         for (int i = 1; i < kGaussianCount; i++) {
             float weight = kGaussianSamples[i];
-            ivec2 offset = i * materialParams.axis;
             tap(sum, totalWeight, weight, depth, uv + offset);
             tap(sum, totalWeight, weight, depth, uv - offset);
+            offset += materialParams.axis;
         }
 
         postProcess.color.r = sum * (1.0 / totalWeight);
+        postProcess.color.gb = data.gb;
     }
 }

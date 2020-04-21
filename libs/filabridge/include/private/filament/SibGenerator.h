@@ -42,8 +42,9 @@ struct PerViewSib {
     static constexpr size_t IBL_SPECULAR   = 4;
     static constexpr size_t SSAO           = 5;
     static constexpr size_t SSR            = 6;
+    static constexpr size_t STRUCTURE      = 7;
 
-    static constexpr size_t SAMPLER_COUNT = 7;
+    static constexpr size_t SAMPLER_COUNT  = 8;
 };
 
 }

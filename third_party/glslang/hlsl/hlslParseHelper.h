@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2016 Google, Inc.
+// Copyright (C) 2016-2018 Google, Inc.
 // Copyright (C) 2016 LunarG, Inc.
 //
 // All rights reserved.
@@ -183,6 +183,11 @@ public:
     void getFullNamespaceName(TString*&) const;
     void addScopeMangler(TString&);
 
+    void beginParameterParsing(TFunction& function)
+    {
+        parsingEntrypointParameters = isEntrypointName(function.getName());
+    }
+
     void pushSwitchSequence(TIntermSequence* sequence) { switchSequenceStack.push_back(sequence); }
     void popSwitchSequence() { switchSequenceStack.pop_back(); }
 
@@ -241,6 +246,7 @@ protected:
     TIntermTyped* convertInitializerList(const TSourceLoc&, const TType&, TIntermTyped* initializer, TIntermTyped* scalarInit);
     bool isScalarConstructor(const TIntermNode*);
     TOperator mapAtomicOp(const TSourceLoc& loc, TOperator op, bool isImage);
+    bool isEntrypointName(const TString& name) { return name.compare(intermediate.getEntryPointName().c_str()) == 0; }
 
     // Return true if this node requires L-value conversion (e.g, to an imageStore).
     bool shouldConvertLValue(const TIntermNode*) const;
@@ -494,6 +500,7 @@ protected:
     };
 
     TMap<int, tShadowTextureSymbols*> textureShadowVariant;
+    bool parsingEntrypointParameters;
 };
 
 // This is the prefix we use for built-in methods to avoid namespace collisions with

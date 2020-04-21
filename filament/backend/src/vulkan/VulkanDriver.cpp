@@ -46,8 +46,7 @@
 //   srcDirs = ["${android.ndkDirectory}/sources/third_party/vulkan/src/build-android/jniLibs"]
 // } } }
 //
-// Validation crashes on MoltenVK, so we disable it by default on MacOS.
-#if !defined(NDEBUG) && !defined(__APPLE__)
+#if !defined(NDEBUG)
 #define ENABLE_VALIDATION 1
 #else
 #define ENABLE_VALIDATION 0
@@ -94,7 +93,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
 
     VkInstanceCreateInfo instanceCreateInfo = {};
 #if ENABLE_VALIDATION
-    static utils::StaticString DESIRED_LAYERS[] = {
+    const utils::StaticString DESIRED_LAYERS[] = {
 #if defined(ANDROID)
         // TODO: use VK_LAYER_KHRONOS_validation instead of these layers after it becomes available
         "VK_LAYER_GOOGLE_threading",
@@ -103,7 +102,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
         "VK_LAYER_LUNARG_core_validation",
         "VK_LAYER_GOOGLE_unique_objects"
 #else
-        "VK_LAYER_LUNARG_standard_validation",
+        "VK_LAYER_KHRONOS_validation",
 #endif
 #if defined(ENABLE_RENDERDOC)
         "VK_LAYER_RENDERDOC_Capture",
@@ -154,7 +153,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
 
 #if ENABLE_VALIDATION
     if (createDebugReportCallback) {
-        static VkDebugReportCallbackCreateInfoEXT cbinfo = {
+        const VkDebugReportCallbackCreateInfoEXT cbinfo = {
             VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT,
             nullptr,
             VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_ERROR_BIT_EXT,
@@ -233,6 +232,9 @@ void VulkanDriver::terminate() {
     vkDestroyInstance(mContext.instance, VKALLOC);
     mContext.device = nullptr;
     mContext.instance = nullptr;
+}
+
+void VulkanDriver::tick(int) {
 }
 
 void VulkanDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId,
@@ -366,6 +368,18 @@ void VulkanDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
     });
 }
 
+void VulkanDriver::createTextureSwizzledR(Handle<HwTexture> th, SamplerType target, uint8_t levels,
+        TextureFormat format, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
+        TextureUsage usage,
+        TextureSwizzle r, TextureSwizzle g, TextureSwizzle b, TextureSwizzle a) {
+    auto vktexture = construct_handle<VulkanTexture>(mHandleMap, th, mContext, target, levels,
+            format, samples, w, h, depth, usage, mStagePool);
+    mDisposer.createDisposable(vktexture, [this, th] () {
+        destruct_handle<VulkanTexture>(mHandleMap, th);
+    });
+    // TODO: implement texture swizzling
+}
+
 void VulkanDriver::importTextureR(Handle<HwTexture> th, intptr_t id,
         SamplerType target, uint8_t levels,
         TextureFormat format, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
@@ -403,12 +417,12 @@ void VulkanDriver::createDefaultRenderTargetR(Handle<HwRenderTarget> rth, int) {
 
 void VulkanDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         TargetBufferFlags targets, uint32_t width, uint32_t height, uint8_t samples,
-        TargetBufferInfo color, TargetBufferInfo depth,
+        backend::MRT color, TargetBufferInfo depth,
         TargetBufferInfo stencil) {
-    auto colorTexture = color.handle ? handle_cast<VulkanTexture>(mHandleMap, color.handle) : nullptr;
+    auto colorTexture = color[0].handle ? handle_cast<VulkanTexture>(mHandleMap, color[0].handle) : nullptr;
     auto depthTexture = depth.handle ? handle_cast<VulkanTexture>(mHandleMap, depth.handle) : nullptr;
     auto renderTarget = construct_handle<VulkanRenderTarget>(mHandleMap, rth, mContext,
-            width, height, color.level, colorTexture, depth.level, depthTexture);
+            width, height, color[0].level, colorTexture, depth.level, depthTexture);
     mDisposer.createDisposable(renderTarget, [this, rth] () {
         destruct_handle<VulkanRenderTarget>(mHandleMap, rth);
     });
@@ -431,6 +445,10 @@ void VulkanDriver::createFenceR(Handle<HwFence> fh, int) {
     }
 
      construct_handle<VulkanFence>(mHandleMap, fh, *mContext.currentCommands);
+}
+
+void VulkanDriver::createSyncR(Handle<HwSync> sh, int) {
+    // TODO: implement sync objects
 }
 
 void VulkanDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
@@ -457,6 +475,9 @@ void VulkanDriver::createStreamFromTextureIdR(Handle<HwStream> sh, intptr_t exte
         uint32_t width, uint32_t height) {
 }
 
+void VulkanDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {
+}
+
 Handle<HwVertexBuffer> VulkanDriver::createVertexBufferS() noexcept {
     return alloc_handle<VulkanVertexBuffer, HwVertexBuffer>();
 }
@@ -466,6 +487,10 @@ Handle<HwIndexBuffer> VulkanDriver::createIndexBufferS() noexcept {
 }
 
 Handle<HwTexture> VulkanDriver::createTextureS() noexcept {
+    return alloc_handle<VulkanTexture, HwTexture>();
+}
+
+Handle<HwTexture> VulkanDriver::createTextureSwizzledS() noexcept {
     return alloc_handle<VulkanTexture, HwTexture>();
 }
 
@@ -501,6 +526,11 @@ Handle<HwFence> VulkanDriver::createFenceS() noexcept {
     return alloc_handle<VulkanFence, HwFence>();
 }
 
+Handle<HwSync> VulkanDriver::createSyncS() noexcept {
+    // TODO: implement Sync ojbects
+    return {};
+}
+
 Handle<HwSwapChain> VulkanDriver::createSwapChainS() noexcept {
     return alloc_handle<VulkanSwapChain, HwSwapChain>();
 }
@@ -510,6 +540,10 @@ Handle<HwSwapChain> VulkanDriver::createSwapChainHeadlessS() noexcept {
 }
 
 Handle<HwStream> VulkanDriver::createStreamFromTextureIdS() noexcept {
+    return {};
+}
+
+Handle<HwTimerQuery> VulkanDriver::createTimerQueryS() noexcept {
     return {};
 }
 
@@ -558,6 +592,14 @@ void VulkanDriver::destroySwapChain(Handle<HwSwapChain> sch) {
 
 void VulkanDriver::destroyStream(Handle<HwStream> sh) {
 }
+
+void VulkanDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
+}
+
+void VulkanDriver::destroySync(Handle<HwSync> sh) {
+    // TODO: implement Sync objects
+}
+
 
 Handle<HwStream> VulkanDriver::createStreamNative(void* nativeStream) {
     return {};
@@ -684,6 +726,15 @@ void VulkanDriver::setupExternalImage(void* image) {
 void VulkanDriver::cancelExternalImage(void* image) {
 }
 
+bool VulkanDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapsedTime) {
+    return false;
+}
+
+SyncStatus VulkanDriver::getSyncStatus(Handle<HwSync> sh) {
+    // TODO: implement Sync objects
+    return SyncStatus::SIGNALED;
+}
+
 void VulkanDriver::setExternalImage(Handle<HwTexture> th, void* image) {
 }
 
@@ -723,8 +774,8 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     const VkExtent2D extent = rt->getExtent();
     assert(extent.width > 0 && extent.height > 0);
 
-    const auto color = rt->getColor();
-    const auto depth = rt->getDepth();
+    const VulkanAttachment color = rt->getColor();
+    const VulkanAttachment depth = rt->getDepth();
     const bool hasColor = color.format != VK_FORMAT_UNDEFINED;
     const bool hasDepth = depth.format != VK_FORMAT_UNDEFINED;
 
@@ -736,15 +787,8 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     VkImageLayout finalDepthLayout;
 
     if (rt->isOffscreen()) {
-
-        // If we're discarding the contents of the color buffer after the render pass, it's safe to
-        // assume that we will not be sampling from it.
-        finalColorLayout = any(params.flags.discardEnd & TargetBufferFlags::COLOR) ?
-                VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL :
-                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
+        finalColorLayout = VK_IMAGE_LAYOUT_GENERAL;
         finalDepthLayout = VK_IMAGE_LAYOUT_GENERAL;
-
     } else {
         finalColorLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
         finalDepthLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
@@ -830,11 +874,6 @@ void VulkanDriver::endRenderPass(int) {
     vkCmdEndRenderPass(mContext.currentCommands->cmdbuffer);
     mCurrentRenderTarget = VK_NULL_HANDLE;
     mContext.currentRenderPass.renderPass = VK_NULL_HANDLE;
-}
-
-void VulkanDriver::discardSubRenderTargetBuffers(Handle<HwRenderTarget> rth,
-        TargetBufferFlags buffers,
-        uint32_t left, uint32_t bottom, uint32_t width, uint32_t height) {
 }
 
 void VulkanDriver::setRenderPrimitiveBuffer(Handle<HwRenderPrimitive> rph,
@@ -1032,7 +1071,7 @@ void VulkanDriver::blit(TargetBufferFlags buffers,
                 filter == SamplerMagFilter::NEAREST ? VK_FILTER_NEAREST : VK_FILTER_LINEAR);
 
         VulkanTexture::transitionImageLayout(cmdbuffer, dstImage, VK_IMAGE_LAYOUT_UNDEFINED,
-                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, dstLevel, 1);
+                VK_IMAGE_LAYOUT_GENERAL, dstLevel, 1);
     };
 
     if (!mContext.currentCommands) {
@@ -1139,20 +1178,10 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
             const auto* texture = handle_const_cast<VulkanTexture>(mHandleMap, boundSampler->t);
             mDisposer.acquire(texture, commands->resources);
 
-            // Check that we do not sample from the current color attachment. It's fine to sample
-            // from the current depth attachment when depth writes are disabled, which is useful in
-            // some SSAO implementations.
-            ASSERT_POSTCONDITION_NON_FATAL(
-                    mCurrentRenderTarget->getColor().image != texture->textureImage,
-                    "Attempting to sample color from the current render target");
-
-            VkImageLayout layout = any(texture->usage & TextureUsage::DEPTH_ATTACHMENT) ?
-                        VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
             mBinder.bindSampler(bindingPoint, {
                 .sampler = vksampler,
                 .imageView = texture->imageView,
-                .imageLayout = layout
+                .imageLayout = getTextureLayout(texture->usage)
             });
         }
     }
@@ -1204,6 +1233,13 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
     vkCmdDrawIndexed(cmdbuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstId);
 }
 
+
+void VulkanDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {
+}
+
+void VulkanDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
+}
+
 #ifndef NDEBUG
 void VulkanDriver::debugCommand(const char* methodName) {
     static const std::set<utils::StaticString> OUTSIDE_COMMANDS = {
@@ -1215,7 +1251,7 @@ void VulkanDriver::debugCommand(const char* methodName) {
     };
     static const utils::StaticString BEGIN_COMMAND = "beginRenderPass";
     static const utils::StaticString END_COMMAND = "endRenderPass";
-    static bool inRenderPass = false;
+    static bool inRenderPass = false; // for debug only
     const utils::StaticString command = utils::StaticString::make(methodName, strlen(methodName));
     if (command == BEGIN_COMMAND) {
         assert(!inRenderPass);

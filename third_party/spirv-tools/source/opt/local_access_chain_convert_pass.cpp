@@ -46,6 +46,10 @@ uint32_t LocalAccessChainConvertPass::BuildAndAppendVarLoad(
     const Instruction* ptrInst, uint32_t* varId, uint32_t* varPteTypeId,
     std::vector<std::unique_ptr<Instruction>>* newInsts) {
   const uint32_t ldResultId = TakeNextId();
+  if (ldResultId == 0) {
+    return 0;
+  }
+
   *varId = ptrInst->GetSingleWordInOperand(kAccessChainPtrIdInIdx);
   const Instruction* varInst = get_def_use_mgr()->GetDef(*varId);
   assert(varInst->opcode() == SpvOpVariable);
@@ -70,7 +74,7 @@ void LocalAccessChainConvertPass::AppendConstantOperands(
   });
 }
 
-void LocalAccessChainConvertPass::ReplaceAccessChainLoad(
+bool LocalAccessChainConvertPass::ReplaceAccessChainLoad(
     const Instruction* address_inst, Instruction* original_load) {
   // Build and append load of variable in ptrInst
   std::vector<std::unique_ptr<Instruction>> new_inst;
@@ -78,6 +82,10 @@ void LocalAccessChainConvertPass::ReplaceAccessChainLoad(
   uint32_t varPteTypeId;
   const uint32_t ldResultId =
       BuildAndAppendVarLoad(address_inst, &varId, &varPteTypeId, &new_inst);
+  if (ldResultId == 0) {
+    return false;
+  }
+
   context()->get_decoration_mgr()->CloneDecorations(
       original_load->result_id(), ldResultId, {SpvDecorationRelaxedPrecision});
   original_load->InsertBefore(std::move(new_inst));
@@ -95,9 +103,10 @@ void LocalAccessChainConvertPass::ReplaceAccessChainLoad(
   original_load->SetOpcode(SpvOpCompositeExtract);
   original_load->ReplaceOperands(new_operands);
   context()->UpdateDefUse(original_load);
+  return true;
 }
 
-void LocalAccessChainConvertPass::GenAccessChainStoreReplacement(
+bool LocalAccessChainConvertPass::GenAccessChainStoreReplacement(
     const Instruction* ptrInst, uint32_t valId,
     std::vector<std::unique_ptr<Instruction>>* newInsts) {
   // Build and append load of variable in ptrInst
@@ -105,11 +114,18 @@ void LocalAccessChainConvertPass::GenAccessChainStoreReplacement(
   uint32_t varPteTypeId;
   const uint32_t ldResultId =
       BuildAndAppendVarLoad(ptrInst, &varId, &varPteTypeId, newInsts);
+  if (ldResultId == 0) {
+    return false;
+  }
+
   context()->get_decoration_mgr()->CloneDecorations(
       varId, ldResultId, {SpvDecorationRelaxedPrecision});
 
   // Build and append Insert
   const uint32_t insResultId = TakeNextId();
+  if (insResultId == 0) {
+    return false;
+  }
   std::vector<Operand> ins_in_opnds = {
       {spv_operand_type_t::SPV_OPERAND_TYPE_ID, {valId}},
       {spv_operand_type_t::SPV_OPERAND_TYPE_ID, {ldResultId}}};
@@ -125,6 +141,7 @@ void LocalAccessChainConvertPass::GenAccessChainStoreReplacement(
                      {{spv_operand_type_t::SPV_OPERAND_TYPE_ID, {varId}},
                       {spv_operand_type_t::SPV_OPERAND_TYPE_ID, {insResultId}}},
                      newInsts);
+  return true;
 }
 
 bool LocalAccessChainConvertPass::IsConstantIndexAccessChain(
@@ -198,7 +215,8 @@ void LocalAccessChainConvertPass::FindTargetVars(Function* func) {
   }
 }
 
-bool LocalAccessChainConvertPass::ConvertLocalAccessChains(Function* func) {
+Pass::Status LocalAccessChainConvertPass::ConvertLocalAccessChains(
+    Function* func) {
   FindTargetVars(func);
   // Replace access chains of all targeted variables with equivalent
   // extract and insert sequences
@@ -213,7 +231,9 @@ bool LocalAccessChainConvertPass::ConvertLocalAccessChains(Function* func) {
           if (!IsNonPtrAccessChain(ptrInst->opcode())) break;
           if (!IsTargetVar(varId)) break;
           std::vector<std::unique_ptr<Instruction>> newInsts;
-          ReplaceAccessChainLoad(ptrInst, &*ii);
+          if (!ReplaceAccessChainLoad(ptrInst, &*ii)) {
+            return Status::Failure;
+          }
           modified = true;
         } break;
         case SpvOpStore: {
@@ -223,7 +243,9 @@ bool LocalAccessChainConvertPass::ConvertLocalAccessChains(Function* func) {
           if (!IsTargetVar(varId)) break;
           std::vector<std::unique_ptr<Instruction>> newInsts;
           uint32_t valId = ii->GetSingleWordInOperand(kStoreValIdInIdx);
-          GenAccessChainStoreReplacement(ptrInst, valId, &newInsts);
+          if (!GenAccessChainStoreReplacement(ptrInst, valId, &newInsts)) {
+            return Status::Failure;
+          }
           dead_instructions.push_back(&*ii);
           ++ii;
           ii = ii.InsertBefore(std::move(newInsts));
@@ -248,7 +270,7 @@ bool LocalAccessChainConvertPass::ConvertLocalAccessChains(Function* func) {
       });
     }
   }
-  return modified;
+  return (modified ? Status::SuccessWithChange : Status::SuccessWithoutChange);
 }
 
 void LocalAccessChainConvertPass::Initialize() {
@@ -264,6 +286,12 @@ void LocalAccessChainConvertPass::Initialize() {
 }
 
 bool LocalAccessChainConvertPass::AllExtensionsSupported() const {
+  // This capability can now exist without the extension, so we have to check
+  // for the capability.  This pass is only looking at function scope symbols,
+  // so we do not care if there are variable pointers on storage buffers.
+  if (context()->get_feature_mgr()->HasCapability(
+          SpvCapabilityVariablePointers))
+    return false;
   // If any extension not in whitelist, return false
   for (auto& ei : get_module()->extensions()) {
     const char* extName =
@@ -288,12 +316,16 @@ Pass::Status LocalAccessChainConvertPass::ProcessImpl() {
     if (ai.opcode() == SpvOpGroupDecorate) return Status::SuccessWithoutChange;
   // Do not process if any disallowed extensions are enabled
   if (!AllExtensionsSupported()) return Status::SuccessWithoutChange;
-  // Process all entry point functions.
-  ProcessFunction pfn = [this](Function* fp) {
-    return ConvertLocalAccessChains(fp);
-  };
-  bool modified = ProcessEntryPointCallTree(pfn, get_module());
-  return modified ? Status::SuccessWithChange : Status::SuccessWithoutChange;
+
+  // Process all functions in the module.
+  Status status = Status::SuccessWithoutChange;
+  for (Function& func : *get_module()) {
+    status = CombineStatus(status, ConvertLocalAccessChains(&func));
+    if (status == Status::Failure) {
+      break;
+    }
+  }
+  return status;
 }
 
 LocalAccessChainConvertPass::LocalAccessChainConvertPass() {}
@@ -337,8 +369,16 @@ void LocalAccessChainConvertPass::InitExtensions() {
       "SPV_AMD_gpu_shader_half_float_fetch",
       "SPV_GOOGLE_decorate_string",
       "SPV_GOOGLE_hlsl_functionality1",
+      "SPV_GOOGLE_user_type",
       "SPV_NV_shader_subgroup_partitioned",
       "SPV_EXT_descriptor_indexing",
+      "SPV_NV_fragment_shader_barycentric",
+      "SPV_NV_compute_shader_derivatives",
+      "SPV_NV_shader_image_footprint",
+      "SPV_NV_shading_rate",
+      "SPV_NV_mesh_shader",
+      "SPV_NV_ray_tracing",
+      "SPV_EXT_fragment_invocation_density",
   });
 }
 

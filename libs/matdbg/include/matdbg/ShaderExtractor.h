@@ -25,6 +25,10 @@
 
 #include <utils/CString.h>
 
+namespace filaflat {
+class BlobDictionary;
+}
+
 namespace filament {
 namespace matdbg {
 
@@ -36,6 +40,7 @@ public:
     bool parse() noexcept;
     bool getShader(backend::ShaderModel shaderModel,
             uint8_t variant, backend::ShaderType stage, filaflat::ShaderBuilder& shader) noexcept;
+    bool getDictionary(filaflat::BlobDictionary& dictionary) noexcept;
 
     static utils::CString spirvToGLSL(const uint32_t* data, size_t wordCount);
     static utils::CString spirvToText(const uint32_t* data, size_t wordCount);

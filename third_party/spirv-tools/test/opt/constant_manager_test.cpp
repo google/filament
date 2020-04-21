@@ -82,6 +82,28 @@ TEST_F(ConstantManagerTest, GetDefiningInstruction2) {
   EXPECT_EQ(const_inst_2->result_id(), 4);
 }
 
+TEST_F(ConstantManagerTest, GetDefiningInstructionIdOverflow) {
+  const std::string text = R"(
+%1 = OpTypeInt 32 0
+%3 = OpConstant %1 1
+%4 = OpConstant %1 2
+  )";
+
+  std::unique_ptr<IRContext> context =
+      BuildModule(SPV_ENV_UNIVERSAL_1_2, nullptr, text,
+                  SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+  ASSERT_NE(context, nullptr);
+
+  // Set the id bound to the max, so the new constant cannot be generated.
+  context->module()->SetIdBound(context->max_id_bound());
+
+  Type* int_type = context->get_type_mgr()->GetType(1);
+  IntConstant int_constant(int_type->AsInteger(), {3});
+  Instruction* inst =
+      context->get_constant_mgr()->GetDefiningInstruction(&int_constant, 1);
+  EXPECT_EQ(inst, nullptr);
+}
+
 }  // namespace
 }  // namespace analysis
 }  // namespace opt

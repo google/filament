@@ -135,8 +135,6 @@ public:
 
     static void destroy(FEngine* engine);
 
-    static void assertValid(Engine const& engine, const char* function);
-
     ~FEngine() noexcept;
 
     backend::Driver& getDriver() const noexcept { return *mDriver; }
@@ -209,9 +207,6 @@ public:
     }
 
     void* streamAlloc(size_t size, size_t alignment) noexcept;
-
-    utils::JobSystem& getJobSystem() noexcept { return mJobSystem; }
-
 
     Epoch getEngineEpoch() const { return mEngineEpoch; }
     duration getEngineTime() const noexcept {
@@ -292,6 +287,10 @@ public:
     }
 
     bool execute();
+
+    utils::JobSystem& getJobSystem() noexcept {
+        return mJobSystem;
+    }
 
 private:
     FEngine(Backend backend, Platform* platform, void* sharedGLContext);

@@ -22,8 +22,7 @@
 using namespace filament;
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_View_nSetName(JNIEnv* env, jclass,
-        jlong nativeView, jstring name_) {
+Java_com_google_android_filament_View_nSetName(JNIEnv* env, jclass, jlong nativeView, jstring name_) {
     View* view = (View*) nativeView;
     const char* name = env->GetStringUTFChars(name_, 0);
     view->setName(name);
@@ -31,16 +30,14 @@ Java_com_google_android_filament_View_nSetName(JNIEnv* env, jclass,
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_View_nSetScene(JNIEnv*, jclass,
-        jlong nativeView, jlong nativeScene) {
+Java_com_google_android_filament_View_nSetScene(JNIEnv*, jclass, jlong nativeView, jlong nativeScene) {
     View* view = (View*) nativeView;
     Scene* scene = (Scene*) nativeScene;
     view->setScene(scene);
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_View_nSetCamera(JNIEnv*, jclass,
-        jlong nativeView, jlong nativeCamera) {
+Java_com_google_android_filament_View_nSetCamera(JNIEnv*, jclass, jlong nativeView, jlong nativeCamera) {
     View* view = (View*) nativeView;
     Camera* camera = (Camera*) nativeCamera;
     view->setCamera(camera);
@@ -54,43 +51,13 @@ Java_com_google_android_filament_View_nSetViewport(JNIEnv*, jclass,
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_View_nSetClearColor(JNIEnv*, jclass,
-        jlong nativeView,
-        jfloat linearR, jfloat linearG, jfloat linearB, jfloat linearA) {
-    View* view = (View*) nativeView;
-    view->setClearColor({linearR, linearG, linearB, linearA});
-}
-
-extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_View_nGetClearColor(JNIEnv* env, jclass,
-        jlong nativeView, jfloatArray out_) {
-    View* view = (View*) nativeView;
-    jfloat* out = env->GetFloatArrayElements(out_, NULL);
-    auto linearColor = view->getClearColor();
-    out[0] = linearColor[0];
-    out[1] = linearColor[1];
-    out[2] = linearColor[2];
-    out[3] = linearColor[3];
-    env->ReleaseFloatArrayElements(out_, out, 0);
-}
-
-extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_View_nSetClearTargets(JNIEnv*, jclass,
-        jlong nativeView, jboolean color, jboolean depth, jboolean stencil) {
-    View* view = (View*) nativeView;
-    view->setClearTargets(color, depth, stencil);
-}
-
-extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_View_nSetVisibleLayers(JNIEnv*, jclass,
-        jlong nativeView, jint select, jint value) {
+Java_com_google_android_filament_View_nSetVisibleLayers(JNIEnv*, jclass, jlong nativeView, jint select, jint value) {
     View* view = (View*) nativeView;
     view->setVisibleLayers((uint8_t) select, (uint8_t) value);
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_View_nSetShadowsEnabled(JNIEnv*, jclass,
-        jlong nativeView, jboolean enabled) {
+Java_com_google_android_filament_View_nSetShadowsEnabled(JNIEnv*, jclass, jlong nativeView, jboolean enabled) {
     View* view = (View*) nativeView;
     view->setShadowsEnabled(enabled);
 }
@@ -103,50 +70,43 @@ Java_com_google_android_filament_View_nSetRenderTarget(JNIEnv*, jclass,
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_View_nSetSampleCount(JNIEnv*, jclass,
-        jlong nativeView, jint count) {
+Java_com_google_android_filament_View_nSetSampleCount(JNIEnv*, jclass, jlong nativeView, jint count) {
     View* view = (View*) nativeView;
     view->setSampleCount((uint8_t) count);
 }
 
 extern "C" JNIEXPORT jint JNICALL
-Java_com_google_android_filament_View_nGetSampleCount(JNIEnv*, jclass,
-        jlong nativeView) {
+Java_com_google_android_filament_View_nGetSampleCount(JNIEnv*, jclass, jlong nativeView) {
     View* view = (View*) nativeView;
     return view->getSampleCount();
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_View_nSetAntiAliasing(JNIEnv*, jclass,
-        jlong nativeView, jint type) {
+Java_com_google_android_filament_View_nSetAntiAliasing(JNIEnv*, jclass, jlong nativeView, jint type) {
     View* view = (View*) nativeView;
     view->setAntiAliasing(View::AntiAliasing(type));
 }
 
 extern "C" JNIEXPORT jint JNICALL
-Java_com_google_android_filament_View_nGetAntiAliasing(JNIEnv*, jclass,
-        jlong nativeView) {
+Java_com_google_android_filament_View_nGetAntiAliasing(JNIEnv*, jclass, jlong nativeView) {
     View* view = (View*) nativeView;
     return (jint) view->getAntiAliasing();
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_View_nSetToneMapping(JNIEnv*, jclass,
-        jlong nativeView, jint type) {
+Java_com_google_android_filament_View_nSetToneMapping(JNIEnv*, jclass, jlong nativeView, jint type) {
     View* view = (View*) nativeView;
     view->setToneMapping(View::ToneMapping(type));
 }
 
 extern "C" JNIEXPORT jint JNICALL
-Java_com_google_android_filament_View_nGetToneMapping(JNIEnv*, jclass,
-        jlong nativeView) {
+Java_com_google_android_filament_View_nGetToneMapping(JNIEnv*, jclass, jlong nativeView) {
     View* view = (View*) nativeView;
     return (jint) view->getToneMapping();
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_View_nSetDithering(JNIEnv*, jclass,
-        jlong nativeView, jint dithering) {
+Java_com_google_android_filament_View_nSetDithering(JNIEnv*, jclass, jlong nativeView, jint dithering) {
     View* view = (View*) nativeView;
     view->setDithering((View::Dithering) dithering);
 }
@@ -159,20 +119,16 @@ Java_com_google_android_filament_View_nGetDithering(JNIEnv*, jclass,
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_View_nSetDynamicResolutionOptions(JNIEnv*,
-        jclass, jlong nativeView, jboolean enabled, jboolean homogeneousScaling,
-        jfloat targetFrameTimeMilli, jfloat headRoomRatio, jfloat scaleRate,
-        jfloat minScale, jfloat maxScale, jint history) {
-    View* view = (View*) nativeView;
+Java_com_google_android_filament_View_nSetDynamicResolutionOptions(JNIEnv*, jclass, jlong nativeView,
+        jboolean enabled, jboolean homogeneousScaling,
+        jfloat minScale, jfloat maxScale, jint quality) {
+    View* view = (View*)nativeView;
     View::DynamicResolutionOptions options;
     options.enabled = enabled;
     options.homogeneousScaling = homogeneousScaling;
-    options.targetFrameTimeMilli = targetFrameTimeMilli;
-    options.headRoomRatio = headRoomRatio;
-    options.scaleRate = scaleRate;
-    options.minScale = filament::math::float2{minScale};
-    options.maxScale = filament::math::float2{maxScale};
-    options.history = (uint8_t) history;
+    options.minScale = filament::math::float2{ minScale };
+    options.maxScale = filament::math::float2{ maxScale };
+    options.quality = (View::QualityLevel)quality;
     view->setDynamicResolutionOptions(options);
 }
 
@@ -224,7 +180,7 @@ Java_com_google_android_filament_View_nIsFrontFaceWindingInverted(JNIEnv*,
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_View_nSetAmbientOcclusion(JNIEnv*, jclass, jlong nativeView, jint ordinal) {
     View* view = (View*) nativeView;
-    view->setAmbientOcclusion((View::AmbientOcclusion)ordinal);
+    view->setAmbientOcclusion((View::AmbientOcclusion) ordinal);
 }
 
 extern "C" JNIEXPORT jint JNICALL
@@ -235,14 +191,16 @@ Java_com_google_android_filament_View_nGetAmbientOcclusion(JNIEnv*, jclass, jlon
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_View_nSetAmbientOcclusionOptions(JNIEnv*, jclass,
-    jlong nativeView, jfloat radius, jfloat bias, jfloat power, jfloat resolution, jfloat intensity) {
+    jlong nativeView, jfloat radius, jfloat bias, jfloat power, jfloat resolution, jfloat intensity,
+    jint quality) {
     View* view = (View*) nativeView;
     View::AmbientOcclusionOptions options = {
             .radius = radius,
-            .bias = bias,
             .power = power,
+            .bias = bias,
             .resolution = resolution,
-            .intensity = intensity
+            .intensity = intensity,
+            .quality = (View::QualityLevel)quality
     };
     view->setAmbientOcclusionOptions(options);
 }
@@ -266,4 +224,31 @@ Java_com_google_android_filament_View_nSetBloomOptions(JNIEnv*, jclass,
             .enabled = (bool)enabled
     };
     view->setBloomOptions(options);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_View_nSetFogOptions(JNIEnv *, jclass , jlong nativeView,
+        jfloat distance, jfloat maximumOpacity, jfloat height, jfloat heightFalloff, jfloat r,
+        jfloat g, jfloat b, jfloat density, jfloat inScatteringStart,
+        jfloat inScatteringSize, jboolean fogColorFromIbl, jboolean enabled) {
+    View* view = (View*) nativeView;
+    View::FogOptions options = {
+             .distance = distance,
+             .maximumOpacity = maximumOpacity,
+             .height = height,
+             .heightFalloff = heightFalloff,
+             .color = math::float3{r, g, b},
+             .density = density,
+             .inScatteringStart = inScatteringStart,
+             .inScatteringSize = inScatteringSize,
+             .fogColorFromIbl = (bool)fogColorFromIbl,
+             .enabled = (bool)enabled
+    };
+    view->setFogOptions(options);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_View_nSetBlendMode(JNIEnv *, jclass , jlong nativeView, jint blendMode) {
+    View* view = (View*) nativeView;
+    view->setBlendMode((View::BlendMode)blendMode);
 }
