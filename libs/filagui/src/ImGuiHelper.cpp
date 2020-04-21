@@ -61,6 +61,11 @@ ImGuiHelper::ImGuiHelper(Engine* engine, filament::View* view, const Path& fontP
 
     // Create a scene solely for our one and only Renderable.
     Scene* scene = engine->createScene();
+
+    view->setPostProcessingEnabled(false);
+    view->setBlendMode(View::BlendMode::TRANSLUCENT);
+    view->setShadowsEnabled(false);
+
     view->setScene(scene);
     EntityManager& em = utils::EntityManager::get();
     mRenderable = em.create();
