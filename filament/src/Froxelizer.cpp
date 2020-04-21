@@ -206,6 +206,9 @@ void Froxelizer::computeFroxelLayout(
         filament::Viewport const& viewport) noexcept {
 
     if (SUPPORTS_NON_SQUARE_FROXELS == false) {
+        const uint32_t width  = std::max(16u, viewport.width);
+        const uint32_t height = std::max(16u, viewport.height);
+
         // calculate froxel dimension from FROXEL_BUFFER_ENTRY_COUNT_MAX and viewport
         // - Start from the maximum number of froxels we can use in the x-y plane
         size_t froxelSliceCount = FEngine::CONFIG_FROXEL_SLICE_COUNT;
@@ -213,18 +216,22 @@ void Froxelizer::computeFroxelLayout(
         // - compute the number of square froxels we need in width and height, rounded down
         //   solving: |  froxelCountX * froxelCountY == froxelPlaneCount
         //            |  froxelCountX / froxelCountY == width / height
-        size_t froxelCountX = size_t(std::sqrt(froxelPlaneCount * viewport.width  / viewport.height));
-        size_t froxelCountY = size_t(std::sqrt(froxelPlaneCount * viewport.height / viewport.width));
+        size_t froxelCountX = size_t(std::sqrt(froxelPlaneCount * width  / height));
+        size_t froxelCountY = size_t(std::sqrt(froxelPlaneCount * height / width));
         // - copmute the froxels dimensions, rounded up
-        size_t froxelSizeX = (viewport.width  + froxelCountX - 1) / froxelCountX;
-        size_t froxelSizeY = (viewport.height + froxelCountY - 1) / froxelCountY;
+        size_t froxelSizeX = (width  + froxelCountX - 1) / froxelCountX;
+        size_t froxelSizeY = (height + froxelCountY - 1) / froxelCountY;
         // - and since our froxels must be square, only keep the largest dimension
         size_t froxelDimension = std::max(froxelSizeX, froxelSizeY);
 
         // Here we recompute the froxel counts which may have changed a little due to the rounding
         // and the squareness requirement of froxels
-        froxelCountX = (viewport.width  + froxelDimension - 1) / froxelDimension;
-        froxelCountY = (viewport.height + froxelDimension - 1) / froxelDimension;
+        froxelCountX = (width  + froxelDimension - 1) / froxelDimension;
+        froxelCountY = (height + froxelDimension - 1) / froxelDimension;
+
+        assert(froxelCountX);
+        assert(froxelCountY);
+        assert(froxelCountX * froxelCountY <= froxelPlaneCount);
 
         *dim = froxelDimension;
         *countX = uint16_t(froxelCountX);
