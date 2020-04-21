@@ -564,11 +564,11 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
 
     auto& colorPass = fg.addPass<ColorPassData>(name,
             [&](FrameGraph::Builder& builder, ColorPassData& data) {
-                data.clearColor = config.clearColor;
 
-                TargetBufferFlags clearDepthFlags = TargetBufferFlags::NONE;
-                TargetBufferFlags clearColorFlags = TargetBufferFlags::NONE;
                 Blackboard& blackboard = fg.getBlackboard();
+                TargetBufferFlags clearDepthFlags = TargetBufferFlags::NONE;
+                TargetBufferFlags clearColorFlags = config.clearFlags & TargetBufferFlags::COLOR;
+                data.clearColor = config.clearColor;
 
                 data.ssr  = blackboard.get<FrameGraphTexture>("ssr");
                 data.ssao = blackboard.get<FrameGraphTexture>("ssao");
@@ -589,10 +589,20 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 }
 
                 if (!data.color.isValid()) {
-                    if (!mClearOptions.clear && !view.isSkyboxVisible()) {
-                        clearColorFlags = TargetBufferFlags::COLOR;
+                    // we're allocating a new buffer, so its content is undefined and we might need
+                    // to clear it.
+
+                    if (view.getBlendMode() == View::BlendMode::TRANSLUCENT) {
+                        // if the View is going to be blended in, then always clear to transparent
+                        clearColorFlags |= TargetBufferFlags::COLOR;
                         data.clearColor = {};
                     }
+
+                    if (view.isSkyboxVisible()) {
+                        // if the skybox is visible, then we don't need to clear at all
+                        clearColorFlags &= ~TargetBufferFlags::COLOR;
+                    }
+
                     data.color = builder.createTexture("Color Buffer", colorBufferDesc);
                 }
 
@@ -615,7 +625,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 data.rt = builder.createRenderTarget("Color Pass Target", {
                         .attachments = { data.color, data.depth },
                         .samples = config.msaa,
-                        .clearFlags = config.clearFlags | clearColorFlags | clearDepthFlags });
+                        .clearFlags = clearColorFlags | clearDepthFlags });
             },
             [=, &view](FrameGraphPassResources const& resources,
                             ColorPassData const& data, DriverApi& driver) {

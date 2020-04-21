@@ -102,10 +102,6 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
 
     window->mMainView->getView()->setVisibleLayers(0x4, 0x4);
 
-    window->mUiView->getView()->setBlendMode(View::BlendMode::TRANSLUCENT);
-    window->mUiView->getView()->setPostProcessingEnabled(false);
-    window->mUiView->getView()->setShadowsEnabled(false);
-
     if (config.splitView) {
         auto& rcm = mEngine->getRenderableManager();
 
