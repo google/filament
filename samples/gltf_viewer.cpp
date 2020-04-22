@@ -34,6 +34,8 @@
 #include <gltfio/ResourceLoader.h>
 #include <gltfio/SimpleViewer.h>
 
+#include <camutils/Manipulator.h>
+
 #include <getopt/getopt.h>
 
 #include <utils/NameComponentManager.h>
@@ -123,6 +125,7 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
         { "ibl",          required_argument, nullptr, 'i' },
         { "ubershader",   no_argument,       nullptr, 'u' },
         { "actual-size",  no_argument,       nullptr, 's' },
+        { "camera",       required_argument, nullptr, 'c' },
         { nullptr, 0, nullptr, 0 }
     };
     int opt;
@@ -143,6 +146,15 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
                     app->config.backend = Engine::Backend::METAL;
                 } else {
                     std::cerr << "Unrecognized backend. Must be 'opengl'|'vulkan'|'metal'.\n";
+                }
+                break;
+            case 'c':
+                if (arg == "flight") {
+                    app->config.cameraMode = camutils::Mode::FREE_FLIGHT;
+                } else if (arg == "orbit") {
+                    app->config.cameraMode = camutils::Mode::ORBIT;
+                } else {
+                    std::cerr << "Unrecognized camera mode. Must be 'flight'|'orbit'.\n";
                 }
                 break;
             case 'i':

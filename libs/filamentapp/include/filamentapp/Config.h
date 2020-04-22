@@ -21,6 +21,8 @@
 
 #include <filament/Engine.h>
 
+#include <camutils/Manipulator.h>
+
 struct Config {
     std::string title;
     std::string iblDirectory;
@@ -28,6 +30,7 @@ struct Config {
     float scale = 1.0f;
     bool splitView = false;
     filament::Engine::Backend backend = filament::Engine::Backend::OPENGL;
+    filament::camutils::Mode cameraMode = filament::camutils::Mode::ORBIT;
     bool resizeable = true;
 };
 

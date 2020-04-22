@@ -558,9 +558,13 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
     mViews.emplace_back(mUiView = new CView(*mRenderer, "UI View"));
 
     // set-up the camera manipulators
-    camutils::Mode mode = camutils::Mode::ORBIT;
-    mMainCameraMan = CameraManipulator::Builder().targetPosition(0, 0, -4).build(mode);
-    mDebugCameraMan = CameraManipulator::Builder().targetPosition(0, 0, -4).build(mode);
+    mMainCameraMan = CameraManipulator::Builder()
+            .targetPosition(0, 0, -4)
+            .flightMoveDamping(15.0)
+            .build(config.cameraMode);
+    mDebugCameraMan = CameraManipulator::Builder()
+            .targetPosition(0, 0, -4)
+            .build(camutils::Mode::ORBIT);
 
     mMainView->setCamera(mMainCamera);
     mMainView->setCameraManipulator(mMainCameraMan);

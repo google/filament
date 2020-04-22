@@ -111,6 +111,7 @@ static int handleCommandLineArgments(int argc, char* argv[], Config* config) {
             { "shadow-plane", no_argument,       nullptr, 'p' },
             { "single",       no_argument,       nullptr, 'n' },
             { "dirt",         required_argument, nullptr, 'd' },
+            { "camera",       required_argument, nullptr, 'c' },
             { nullptr, 0, nullptr, 0 }  // termination of the option list
     };
     int opt;
@@ -131,6 +132,15 @@ static int handleCommandLineArgments(int argc, char* argv[], Config* config) {
                     config->backend = Engine::Backend::METAL;
                 } else {
                     std::cerr << "Unrecognized backend. Must be 'opengl'|'vulkan'|'metal'." << std::endl;
+                }
+                break;
+            case 'c':
+                if (arg == "flight") {
+                    config->cameraMode = camutils::Mode::FREE_FLIGHT;
+                } else if (arg == "orbit") {
+                    config->cameraMode = camutils::Mode::ORBIT;
+                } else {
+                    std::cerr << "Unrecognized camera mode. Must be 'flight'|'orbit'.\n";
                 }
                 break;
             case 'i':
