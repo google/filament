@@ -818,8 +818,9 @@ bool FilamentApp::manipulatorKeyFromKeycode(SDL_Scancode scancode, CameraManipul
         case SDL_SCANCODE_D:
             key = CameraManipulator::Key::RIGHT;
             return true;
+        default:
+            return false;
     }
-    return false;
 }
 
 void FilamentApp::CView::keyUp(SDL_Scancode scancode) {
