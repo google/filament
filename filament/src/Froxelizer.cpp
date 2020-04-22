@@ -241,10 +241,10 @@ void Froxelizer::computeFroxelLayout(
         // TODO: don't hardcode this
         *countX = uint16_t(32);
         *countY = uint16_t(16);
+        *countZ = uint16_t(FEngine::CONFIG_FROXEL_SLICE_COUNT);
         if (viewport.height > viewport.width) {
             std::swap(*countX, *countY);
         }
-        *countZ = uint16_t(FEngine::CONFIG_FROXEL_SLICE_COUNT);
          dim->x = (viewport.width  + *countX - 1) / *countX;
          dim->y = (viewport.height + *countY - 1) / *countY;
     }
@@ -350,7 +350,7 @@ bool Froxelizer::update() noexcept {
             // clip-space
             float4 p0 = { x, -1, -1, 1 };
             float4 p1 = { x,  1, -1, 1 };
-            // view-space
+            // view-space, corners on the near plane
             p0 = mat4f::project(invProjection, p0);
             p1 = mat4f::project(invProjection, p1);
             mPlanesX[i] = float4(normalize(cross(p1.xyz, p0.xyz)), 0);
@@ -361,7 +361,7 @@ bool Froxelizer::update() noexcept {
             // clip-space
             float4 p0 = { -1, y, -1, 1 };
             float4 p1 = {  1, y, -1, 1 };
-            // view-space
+            // view-space, corners on the near plane
             p0 = mat4f::project(invProjection, p0);
             p1 = mat4f::project(invProjection, p1);
             mPlanesY[i] = float4(normalize(cross(p1.xyz, p0.xyz)), 0);
@@ -838,44 +838,56 @@ void Froxelizer::froxelizePointAndSpotLight(
     float4 const * const UTILS_RESTRICT boundingSpheres = mBoundingSpheres;
     for (size_t iz = z0 ; iz <= z1; ++iz) {
         float4 cz(s);
+        // froxel that contain the center if ths sphere is special, we don't even need to do the
+        // intersection check, it's always true.
         if (UTILS_LIKELY(iz != zcenter)) {
             cz = spherePlaneIntersection(s, (iz < zcenter) ? planesZ[iz + 1] : planesZ[iz]);
         }
 
-        // find x & y slices that contain the sphere's center
-        // (note: this changes with the Z slices
-        const float2 clip = project(p, cz.xyz);
-        const auto indices = clipToIndices(clip);
-        const size_t xcenter = indices.first;
-        const size_t ycenter = indices.second;
-
         if (cz.w > 0) { // intersection of light with this plane (slice)
+            // the sphere (light) intersects this slice's plane and we now have a new, smaller
+            // sphere centered there. Now, find x & y slices that contain the sphere's center
+            // (note: this changes with the Z slices)
+            const float2 clip = project(p, cz.xyz);
+            const auto indices = clipToIndices(clip);
+            const size_t xcenter = indices.first;
+            const size_t ycenter = indices.second;
+
             for (size_t iy = y0; iy <= y1; ++iy) {
                 float4 cy(cz);
+                // froxel that contain the center if ths sphere is special, we don't even need to
+                // do the intersection check, it's always true.
                 if (UTILS_LIKELY(iy != ycenter)) {
                     float4 const& plane = iy < ycenter ? planesY[iy + 1] : planesY[iy];
                     cy = spherePlaneIntersection(cz, plane.y, plane.z);
                 }
-                if (cy.w > 0) { // intersection of light with this horizontal plane
-                    size_t bx, ex; // horizontal begin/end indices
-                    // find the begin index (left side)
-                    for (bx = x0; bx <= xcenter; ++bx) {
-                        if (spherePlaneDistanceSquared(cy, planesX[bx].x, planesX[bx].z) > 0) {
-                            // intersection, if we intersect with a plane at index bx, we
-                            // actually intrude in the froxel to its left, i.e. with index bx - 1
-                            bx -= bx > 0;
-                            break;
-                        }
-                    }
 
-                    // find the end index (right side), x1 is past the end
-                    for (ex = x1; --ex > xcenter;) {
-                        if (spherePlaneDistanceSquared(cy, planesX[ex].x, planesX[ex].z) > 0) {
-                            // intersection
-                            break;
+                if (cy.w > 0) {
+                    // The reduced sphere from the previous stage intersects this horizontal plane
+                    // and we now have new smaller sphere centered on these two previous planes
+                    size_t bx = std::numeric_limits<size_t>::max(); // horizontal begin index
+                    size_t ex = 0; // horizontal end index
+
+                    // find the begin index (left side)
+                    for (size_t ix = x0; ix <= x1; ++ix) {
+                        // froxel that contain the center if ths sphere is special, we don't even
+                        // need to do the intersection check, it's always true.
+                        if (UTILS_LIKELY(ix != xcenter)) {
+                            float4 const& plane = ix < xcenter ? planesX[ix + 1] : planesX[ix];
+                            if (spherePlaneDistanceSquared(cy, plane.x, plane.z) > 0) {
+                                // The reduced sphere from the previous stage intersects this
+                                // vertical plane, we record the min/max froxel indices
+                                bx = std::min(bx, ix);
+                                ex = std::max(ex, ix);
+                            }
+                        } else {
+                            // this is the froxel containing the center of the sphere, it is
+                            // definitely participating
+                            bx = std::min(bx, ix);
+                            assert(ix + 1 >= ex);
+                            ex = ix + 1;
                         }
                     }
-                    ++ex;
 
                     if (UTILS_UNLIKELY(bx >= ex)) {
                         continue;
