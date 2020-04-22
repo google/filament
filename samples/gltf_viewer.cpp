@@ -120,7 +120,7 @@ static void printUsage(char* name) {
 }
 
 static int handleCommandLineArguments(int argc, char* argv[], App* app) {
-    static constexpr const char* OPTSTR = "ha:i:us";
+    static constexpr const char* OPTSTR = "ha:i:usc:";
     static const struct option OPTIONS[] = {
         { "help",         no_argument,       nullptr, 'h' },
         { "api",          required_argument, nullptr, 'a' },

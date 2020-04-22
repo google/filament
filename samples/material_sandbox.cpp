@@ -103,7 +103,7 @@ static void printUsage(char* name) {
 }
 
 static int handleCommandLineArgments(int argc, char* argv[], Config* config) {
-    static constexpr const char* OPTSTR = "ha:vps:i:d:";
+    static constexpr const char* OPTSTR = "ha:vps:i:d:c:";
     static const struct option OPTIONS[] = {
             { "help",         no_argument,       nullptr, 'h' },
             { "api",          required_argument, nullptr, 'a' },
