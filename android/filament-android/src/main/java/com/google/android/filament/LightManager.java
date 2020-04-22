@@ -480,7 +480,7 @@ public class LightManager {
         }
 
         /**
-         * Defines a spot light'st angular falloff attenuation.
+         * Defines a spot light's angular falloff attenuation.
          * <p>
          * A spot light is defined by a position, a direction and two cones, inner and outer.
          * These two cones are used to define the angular falloff attenuation of the spot light
