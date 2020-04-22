@@ -14,6 +14,7 @@ set(PUBLIC_HDRS
 
 set(SRCS
         src/Bookmark.cpp
+        src/FreeFlightManipulator.h
         src/Manipulator.cpp
         src/MapManipulator.h
         src/OrbitManipulator.h
