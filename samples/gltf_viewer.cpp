@@ -34,6 +34,8 @@
 #include <gltfio/ResourceLoader.h>
 #include <gltfio/SimpleViewer.h>
 
+#include <camutils/Manipulator.h>
+
 #include <getopt/getopt.h>
 
 #include <utils/NameComponentManager.h>
@@ -107,6 +109,8 @@ static void printUsage(char* name) {
         "       Do not scale the model to fit into a unit cube\n\n"
         "   --ubershader, -u\n"
         "       Enable ubershaders (improves load time, adds shader complexity)\n\n"
+        "   --camera=<camera mode>, -c <camera mode>\n"
+        "       Set the camera mode: orbit (default) or flight\n\n"
     );
     const std::string from("SHOWCASE");
     for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
@@ -123,6 +127,7 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
         { "ibl",          required_argument, nullptr, 'i' },
         { "ubershader",   no_argument,       nullptr, 'u' },
         { "actual-size",  no_argument,       nullptr, 's' },
+        { "camera",       required_argument, nullptr, 'c' },
         { nullptr, 0, nullptr, 0 }
     };
     int opt;
@@ -143,6 +148,15 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
                     app->config.backend = Engine::Backend::METAL;
                 } else {
                     std::cerr << "Unrecognized backend. Must be 'opengl'|'vulkan'|'metal'.\n";
+                }
+                break;
+            case 'c':
+                if (arg == "flight") {
+                    app->config.cameraMode = camutils::Mode::FREE_FLIGHT;
+                } else if (arg == "orbit") {
+                    app->config.cameraMode = camutils::Mode::ORBIT;
+                } else {
+                    std::cerr << "Unrecognized camera mode. Must be 'flight'|'orbit'.\n";
                 }
                 break;
             case 'i':
