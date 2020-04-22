@@ -123,7 +123,7 @@ public class LightManager {
     }
 
     /**
-     * Returns the number of component in the LightManager, note that component are not
+     * Returns the number of components in the LightManager, note that components are not
      * guaranteed to be active. Use the {@link EntityManager#isAlive} before use if needed.
      *
      * @return number of component in the LightManager
