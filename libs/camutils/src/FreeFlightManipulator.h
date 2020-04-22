@@ -105,11 +105,11 @@ public:
         mGrabbing = false;
     }
 
-    void keyDown(Key key) override {
+    void keyDown(typename Base::Key key) override {
         mKeyDown[(int) key] = true;
     }
 
-    void keyUp(Key key) override {
+    void keyUp(typename Base::Key key) override {
         mKeyDown[(int) key] = false;
     }
 
@@ -125,16 +125,16 @@ public:
     void update(FLOAT deltaTime) override {
         vec3 forceLocal { 0.0, 0.0, 0.0 };
 
-        if (mKeyDown[(int) Key::UP]) {
+        if (mKeyDown[(int) Base::Key::UP]) {
             forceLocal += vec3{  0.0,  0.0, -1.0 };
         }
-        if (mKeyDown[(int) Key::LEFT]) {
+        if (mKeyDown[(int) Base::Key::LEFT]) {
             forceLocal += vec3{ -1.0,  0.0,  0.0 };
         }
-        if (mKeyDown[(int) Key::DOWN]) {
+        if (mKeyDown[(int) Base::Key::DOWN]) {
             forceLocal += vec3{  0.0,  0.0,  1.0 };
         }
-        if (mKeyDown[(int) Key::RIGHT]) {
+        if (mKeyDown[(int) Base::Key::RIGHT]) {
             forceLocal += vec3{  1.0,  0.0,  0.0 };
         }
 
@@ -187,7 +187,7 @@ private:
     vec2 mGrabWin;
     vec2 mTargetEuler;  // (pitch, yaw)
     vec2 mGrabEuler;    // (pitch, yaw)
-    bool mKeyDown[Key::COUNT] = {false};
+    bool mKeyDown[(int) Base::Key::COUNT] = {false};
     bool mGrabbing = false;
     FLOAT mScrollWheel = 0.0f;
     FLOAT mScrollPositionNormalized = 0.0f;
