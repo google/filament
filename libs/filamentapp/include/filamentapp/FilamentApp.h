@@ -19,8 +19,8 @@
 
 #include <functional>
 #include <memory>
-#include <map>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include <SDL.h>
@@ -109,6 +109,8 @@ private:
 
     using CameraManipulator = filament::camutils::Manipulator<float>;
 
+    static bool manipulatorKeyFromKeycode(SDL_Scancode scancode, CameraManipulator::Key& key);
+
     class CView {
     public:
         CView(filament::Renderer& renderer, std::string name);
@@ -123,9 +125,12 @@ private:
         virtual void mouseUp(ssize_t x, ssize_t y);
         virtual void mouseMoved(ssize_t x, ssize_t y);
         virtual void mouseWheel(ssize_t x);
+        virtual void keyDown(SDL_Scancode scancode);
+        virtual void keyUp(SDL_Scancode scancode);
 
         filament::View const* getView() const { return view; }
         filament::View* getView() { return view; }
+        CameraManipulator* getCameraManipulator() { return mCameraManipulator; }
 
     private:
         enum class Mode : uint8_t {
@@ -156,6 +161,8 @@ private:
         void mouseUp(ssize_t x, ssize_t y);
         void mouseMoved(ssize_t x, ssize_t y);
         void mouseWheel(ssize_t x);
+        void keyDown(SDL_Scancode scancode);
+        void keyUp(SDL_Scancode scancode);
         void resize();
 
         filament::Renderer* getRenderer() { return mRenderer; }
@@ -195,7 +202,11 @@ private:
         size_t mHeight = 0;
         ssize_t mLastX = 0;
         ssize_t mLastY = 0;
-        CView* mEventTarget = nullptr;
+
+        CView* mMouseEventTarget = nullptr;
+
+        // Keep track of which view should receive a key's keyUp event.
+        std::unordered_map<SDL_Scancode, CView*> mKeyEventTarget;
     };
 
     friend class Window;

@@ -71,7 +71,7 @@ public:
         mGrabbing = false;
     }
 
-    void zoom(int x, int y, FLOAT scrolldelta) override {
+    void scroll(int x, int y, FLOAT scrolldelta) override {
         vec3 grabScene;
         if (!Base::raycast(x, y, &grabScene)) {
             return;

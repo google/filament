@@ -18,6 +18,7 @@
 
 #include <math/scalar.h>
 
+#include "FreeFlightManipulator.h"
 #include "MapManipulator.h"
 #include "OrbitManipulator.h"
 
@@ -94,6 +95,43 @@ Manipulator<FLOAT>::Builder& Manipulator<FLOAT>::Builder::mapMinDistance(FLOAT m
 }
 
 template <typename FLOAT> typename
+Manipulator<FLOAT>::Builder& Manipulator<FLOAT>::Builder::flightStartPosition(FLOAT x, FLOAT y, FLOAT z) {
+    details.flightStartPosition = {x, y, z};
+    return *this;
+}
+
+template <typename FLOAT> typename
+Manipulator<FLOAT>::Builder& Manipulator<FLOAT>::Builder::flightStartOrientation(FLOAT pitch, FLOAT yaw) {
+    details.flightStartPitch = pitch;
+    details.flightStartYaw = yaw;
+    return *this;
+}
+
+template <typename FLOAT> typename
+Manipulator<FLOAT>::Builder& Manipulator<FLOAT>::Builder::flightMaxMoveSpeed(FLOAT maxSpeed) {
+    details.flightMaxSpeed = maxSpeed;
+    return *this;
+}
+
+template <typename FLOAT> typename
+Manipulator<FLOAT>::Builder& Manipulator<FLOAT>::Builder::flightSpeedSteps(int steps) {
+    details.flightSpeedSteps = steps;
+    return *this;
+}
+
+template <typename FLOAT> typename
+Manipulator<FLOAT>::Builder& Manipulator<FLOAT>::Builder::flightPanSpeed(FLOAT x, FLOAT y) {
+    details.flightPanSpeed = {x, y};
+    return *this;
+}
+
+template <typename FLOAT> typename
+Manipulator<FLOAT>::Builder& Manipulator<FLOAT>::Builder::flightMoveDamping(FLOAT damping) {
+    details.flightMoveDamping = damping;
+    return *this;
+}
+
+template <typename FLOAT> typename
 Manipulator<FLOAT>::Builder& Manipulator<FLOAT>::Builder::groundPlane(FLOAT a, FLOAT b, FLOAT c, FLOAT d) {
     details.groundPlane = {a, b, c, d};
     return *this;
@@ -106,13 +144,16 @@ Manipulator<FLOAT>::Builder& Manipulator<FLOAT>::Builder::raycastCallback(RayCal
     return *this;
 }
 
-
 template <typename FLOAT>
 Manipulator<FLOAT>* Manipulator<FLOAT>::Builder::build(Mode mode) {
-    if (mode == Mode::MAP) {
-        return new MapManipulator<FLOAT>(mode, details);
+    switch (mode) {
+        case Mode::FREE_FLIGHT:
+            return new FreeFlightManipulator<FLOAT>(mode, details);
+        case Mode::MAP:
+            return new MapManipulator<FLOAT>(mode, details);
+        case Mode::ORBIT:
+            return new OrbitManipulator<FLOAT>(mode, details);
     }
-    return new OrbitManipulator<FLOAT>(mode, details);
 }
 
 template <typename FLOAT>
@@ -266,6 +307,15 @@ filament::math::vec3<FLOAT> Manipulator<FLOAT>::raycastFarPlane(int x, int y) co
     }
     return mEye + dir * mProps.farPlane;
 }
+
+template <typename FLOAT>
+void Manipulator<FLOAT>::keyDown(Manipulator<FLOAT>::Key key) { }
+
+template <typename FLOAT>
+void Manipulator<FLOAT>::keyUp(Manipulator<FLOAT>::Key key) { }
+
+template <typename FLOAT>
+void Manipulator<FLOAT>::update(FLOAT deltaTime) { }
 
 template class Manipulator<float>;
 
