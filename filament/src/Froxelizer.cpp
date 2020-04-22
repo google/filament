@@ -343,29 +343,34 @@ bool Froxelizer::update() noexcept {
         // clip-space dimensions
         const float froxelWidthInClipSpace  = (2.0f * mFroxelDimension.x) / mViewport.width;
         const float froxelHeightInClipSpace = (2.0f * mFroxelDimension.y) / mViewport.height;
-        const mat4f invProjection(Camera::inverseProjection(mProjection));
+        float4 * const UTILS_RESTRICT planesX = mPlanesX;
+        float4 * const UTILS_RESTRICT planesY = mPlanesY;
 
+        // Planes are transformed from clip to camera space by using the transpose of the
+        // projection matrix
+        const mat4f trProjection(transpose(mProjection));
+
+        // generate the horizontal planes from their clip-space equation
         for (size_t i = 0, n = mFroxelCountX; i <= n; ++i) {
             float x = (i * froxelWidthInClipSpace) - 1.0f;
-            // clip-space
-            float4 p0 = { x, -1, -1, 1 };
-            float4 p1 = { x,  1, -1, 1 };
-            // view-space, corners on the near plane
-            p0 = mat4f::project(invProjection, p0);
-            p1 = mat4f::project(invProjection, p1);
-            mPlanesX[i] = float4(normalize(cross(p1.xyz, p0.xyz)), 0);
+            float4 p = trProjection * float4{ -1, 0, 0, x };
+            planesX[i] = float4{ normalize(p.xyz), 0 };
         }
 
+        // generate the vertical planes from their clip-space equation
         for (size_t i = 0, n = mFroxelCountY; i <= n; ++i) {
             float y = (i * froxelHeightInClipSpace) - 1.0f;
-            // clip-space
-            float4 p0 = { -1, y, -1, 1 };
-            float4 p1 = {  1, y, -1, 1 };
-            // view-space, corners on the near plane
-            p0 = mat4f::project(invProjection, p0);
-            p1 = mat4f::project(invProjection, p1);
-            mPlanesY[i] = float4(normalize(cross(p1.xyz, p0.xyz)), 0);
+            float4 p = trProjection * float4{ 0, 1, 0, -y };
+            planesY[i] = float4{ normalize(p.xyz), 0 };
         }
+
+
+        /*
+         * Now compute the bounding sphere of each froxel, which is needed for spot-lights
+         * We intersect 3 planes of the frustum to find each 8 corners.
+         * Currently the bounding sphere is computed from the bounding-box, which is probably,
+         * not the best.
+         */
 
         // 3-planes intersection:
         //      -d0.(n1 x n2) - d1.(n2 x n0) - d2.(n0 x n1)
@@ -378,8 +383,6 @@ bool Froxelizer::update() noexcept {
         float2* const UTILS_RESTRICT minMaxX = reinterpret_cast<float2*>(stack);
 
         float4* const        UTILS_RESTRICT boundingSpheres = mBoundingSpheres;
-        float4  const* const UTILS_RESTRICT planesX = mPlanesX;
-        float4  const* const UTILS_RESTRICT planesY = mPlanesY;
         float   const* const UTILS_RESTRICT planesZ = mDistancesZ;
         const size_t froxelCountX = mFroxelCountX;
         const size_t froxelCountY = mFroxelCountY;
@@ -409,8 +412,8 @@ bool Froxelizer::update() noexcept {
                 maxp.x = std::numeric_limits<float>::lowest();
                 // min/max for x is calculated by intersecting the near/far and left/right planes
                 for (size_t c = 0; c < 4; ++c) {
-                    float4 const& p0 = planes[0 + (c  & 1u)];    // {x,0,z,0}
-                    float4 const& p2 = planes[4 + (c >> 1u)];    // {0,0,+/-1,d}
+                    float4 const p0 = planes[0 + (c  & 1u)];    // {x,0,z,0}
+                    float4 const p2 = planes[4 + (c >> 1u)];    // {0,0,+/-1,d}
                     float px = (p2.z * p2.w * p0.z) / p0.x;
                     minp.x = std::min(minp.x, px);
                     maxp.x = std::max(maxp.x, px);
@@ -427,8 +430,8 @@ bool Froxelizer::update() noexcept {
                 maxp.y = std::numeric_limits<float>::lowest();
                 // min/max for y is calculated by intersecting the near/far and bottom/top planes
                 for (size_t c = 0; c < 4; ++c) {
-                    float4 const& p1 = planes[2 + (c &  1u)];    // {0,y,z,0}
-                    float4 const& p2 = planes[4 + (c >> 1u)];    // {0,0,+/-1,d}
+                    float4 const p1 = planes[2 + (c &  1u)];    // {0,y,z,0}
+                    float4 const p2 = planes[4 + (c >> 1u)];    // {0,0,+/-1,d}
                     float py = (p2.z * p2.w * p1.z) / p1.y;
                     minp.y = std::min(minp.y, py);
                     maxp.y = std::max(maxp.y, py);
