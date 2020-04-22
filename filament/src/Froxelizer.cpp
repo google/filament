@@ -45,11 +45,11 @@ using namespace backend;
 namespace details {
 
 /*
- * This enables froxels to be rectangular which allows us to use a but more froxel
+ * This enables froxels to be rectangular which allows us to use a bit more froxel
  * with the same amount of memory in the GPU.
- * This requires backward compatibility breaking changes in the shaders.
+ * Currently not enabled because not enough tested.
  */
-static constexpr bool SUPPORTS_NON_SQUARE_FROXELS = false;
+static constexpr bool USE_NON_SQUARE_FROXELS = false;
 
 /*
  * This changes the layout of the froxel info on the GPU such that it is more cache friendly,
@@ -205,7 +205,7 @@ void Froxelizer::computeFroxelLayout(
         uint2* dim, uint16_t* countX, uint16_t* countY, uint16_t* countZ,
         filament::Viewport const& viewport) noexcept {
 
-    if (SUPPORTS_NON_SQUARE_FROXELS == false) {
+    if (USE_NON_SQUARE_FROXELS == false) {
         const uint32_t width  = std::max(16u, viewport.width);
         const uint32_t height = std::max(16u, viewport.height);
 
@@ -268,12 +268,11 @@ bool Froxelizer::update() noexcept {
         uniformsNeedUpdating = true;
 
 #ifndef NDEBUG
-        size_t froxelSliceCount = FEngine::CONFIG_FROXEL_SLICE_COUNT;
         slog.d << "Froxel: " << viewport.width << "x" << viewport.height << " / "
                << froxelDimension.x << "x" << froxelDimension.y << io::endl
-               << "Froxel: " << froxelCountX << "x" << froxelCountY << "x" << froxelSliceCount
-               << " = " << (froxelCountX * froxelCountY * froxelSliceCount)
-               << " (" << FROXEL_BUFFER_ENTRY_COUNT_MAX - froxelCountX * froxelCountY * froxelSliceCount << " lost)"
+               << "Froxel: " << froxelCountX << "x" << froxelCountY << "x" << froxelCountZ
+               << " = " << (froxelCountX * froxelCountY * froxelCountZ)
+               << " (" << FROXEL_BUFFER_ENTRY_COUNT_MAX - froxelCountX * froxelCountY * froxelCountZ << " lost)"
                << io::endl;
 #endif
 
@@ -307,12 +306,12 @@ bool Froxelizer::update() noexcept {
         mDistancesZ[0] = 0.0f;
         const float zLightNear = mZLightNear;
         const float zLightFar = mZLightFar;
-        const float linearizer = std::log2(zLightFar / zLightNear) / (mFroxelCountZ - 1);
+        const float linearizer = std::log2(zLightFar / zLightNear) / float(std::max(1u, mFroxelCountZ - 1u));
         // for a strange reason when, vectorizing this loop, clang does some math in double
         // and generates conversions to float. not worth it for so little iterations.
         #pragma clang loop vectorize(disable) unroll(disable)
         for (ssize_t i = 1, n = mFroxelCountZ; i <= n; i++) {
-            mDistancesZ[i] = zLightFar * std::exp2f((i - n) * linearizer);
+            mDistancesZ[i] = zLightFar * std::exp2(float(i - n) * linearizer);
         }
 
         // for the inverse-transformation (view-space z to z-slice)
@@ -410,8 +409,8 @@ bool Froxelizer::update() noexcept {
                 maxp.x = std::numeric_limits<float>::lowest();
                 // min/max for x is calculated by intersecting the near/far and left/right planes
                 for (size_t c = 0; c < 4; ++c) {
-                    float4 const& p0 = planes[0 + (c  & 1)];    // {x,0,z,0}
-                    float4 const& p2 = planes[4 + (c >> 1)];    // {0,0,+/-1,d}
+                    float4 const& p0 = planes[0 + (c  & 1u)];    // {x,0,z,0}
+                    float4 const& p2 = planes[4 + (c >> 1u)];    // {0,0,+/-1,d}
                     float px = (p2.z * p2.w * p0.z) / p0.x;
                     minp.x = std::min(minp.x, px);
                     maxp.x = std::max(maxp.x, px);
@@ -428,8 +427,8 @@ bool Froxelizer::update() noexcept {
                 maxp.y = std::numeric_limits<float>::lowest();
                 // min/max for y is calculated by intersecting the near/far and bottom/top planes
                 for (size_t c = 0; c < 4; ++c) {
-                    float4 const& p1 = planes[2 + (c &  1)];    // {0,y,z,0}
-                    float4 const& p2 = planes[4 + (c >> 1)];    // {0,0,+/-1,d}
+                    float4 const& p1 = planes[2 + (c &  1u)];    // {0,y,z,0}
+                    float4 const& p2 = planes[4 + (c >> 1u)];    // {0,0,+/-1,d}
                     float py = (p2.z * p2.w * p1.z) / p1.y;
                     minp.y = std::min(minp.y, py);
                     maxp.y = std::max(maxp.y, py);
@@ -517,9 +516,8 @@ size_t Froxelizer::findSliceZ(float z) const noexcept {
 
 std::pair<size_t, size_t> Froxelizer::clipToIndices(float2 const& clip) const noexcept {
     // clip coordinates between [-1, 1], conversion to index between [0, count[
-    //  = floor((clip + 1) * ((0.5 * dimension) / froxelsize))
-    //  = floor((clip + 1) * constant
-    //  = floor(clip * constant + constant)
+    // (clip + 1) * 0.5 * dimension / froxelsize
+    // clip * 0.5 * dimension / froxelsize + 0.5 * dimension / froxelsize
     const size_t xi = size_t(clamp(int(clip.x * mClipToFroxelX + mClipToFroxelX), 0, mFroxelCountX - 1));
     const size_t yi = size_t(clamp(int(clip.y * mClipToFroxelY + mClipToFroxelY), 0, mFroxelCountY - 1));
     return { xi, yi };
