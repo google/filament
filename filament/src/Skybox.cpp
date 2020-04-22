@@ -102,9 +102,8 @@ FSkybox::FSkybox(FEngine& engine, const Builder& builder) noexcept
 
     TextureSampler sampler(TextureSampler::MagFilter::LINEAR, TextureSampler::WrapMode::REPEAT);
     auto pInstance = static_cast<MaterialInstance*>(mSkyboxMaterialInstance);
-    if (mSkyboxTexture != nullptr) {
-        pInstance->setParameter("skybox", mSkyboxTexture, sampler);
-    }
+    FTexture const* texture = mSkyboxTexture ? mSkyboxTexture : engine.getDummyCubemap();
+    pInstance->setParameter("skybox", texture, sampler);
     pInstance->setParameter("showSun", builder->mShowSun);
     pInstance->setParameter("constantColor", mSkyboxTexture == nullptr);
     pInstance->setParameter("color", builder->mColor);
