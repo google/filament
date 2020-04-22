@@ -804,7 +804,7 @@ void FilamentApp::CView::mouseMoved(ssize_t x, ssize_t y) {
 
 void FilamentApp::CView::mouseWheel(ssize_t x) {
     if (mCameraManipulator) {
-        mCameraManipulator->zoom(0, 0, x);
+        mCameraManipulator->scroll(0, 0, x);
     }
 }
 

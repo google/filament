@@ -113,7 +113,7 @@ public:
         mKeyDown[(int) key] = false;
     }
 
-    void zoom(int x, int y, FLOAT scrolldelta) override {
+    void scroll(int x, int y, FLOAT scrolldelta) override {
         const FLOAT halfSpeedSteps = Base::mProps.flightSpeedSteps / 2;
         mScrollWheel = clamp(mScrollWheel + scrolldelta, -halfSpeedSteps, halfSpeedSteps);
         // Normalize the scroll position from -1 to 1 and calculate the move speed, in world

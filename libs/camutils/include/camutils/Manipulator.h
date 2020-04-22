@@ -132,10 +132,10 @@ public:
         Builder& flightStartPosition(FLOAT x, FLOAT y, FLOAT z);     //! Initial eye position in world space, defaults to (0,0,0)
         Builder& flightStartOrientation(FLOAT pitch, FLOAT yaw);     //! Initial orientation in pitch and yaw, defaults to (0,0)
         Builder& flightMaxMoveSpeed(FLOAT maxSpeed);                 //! The maximum camera speed in world units per second, defaults to 10
-        Builder& flightSpeedSteps(int steps);                        //! The number of speed steps adjustable with zoom wheel, defaults to 80
+        Builder& flightSpeedSteps(int steps);                        //! The number of speed steps adjustable with scroll wheel, defaults to 80
         Builder& flightPanSpeed(FLOAT x, FLOAT y);                   //! Multiplied with viewport delta, defaults to 0.01,0.01
         Builder& flightMoveDamping(FLOAT damping);                   //! Applies a deceleration to camera movement, defaults to 0 (no damping)
-                                                                     //! Lower values give slower damping times, a good defaut is 15
+                                                                     //! Lower values give slower damping times, a good default is 15
                                                                      //! Too high a value may lead to instability
 
         // Raycast properties
@@ -238,11 +238,12 @@ public:
      * In MAP and ORBIT modes, dollys the camera along the viewing direction.
      * In FREE_FLIGHT mode, adjusts the move speed of the camera.
      *
-     * @param x X-coordinate for point of interest in viewport space
-     * @param y Y-coordinate for point of interest in viewport space
-     * @param scrolldelta Negative means "zoom in", positive means "zoom out"
+     * @param x X-coordinate for point of interest in viewport space, ignored in FREE_FLIGHT mode
+     * @param y Y-coordinate for point of interest in viewport space, ignored in FREE_FLIGHT mode
+     * @param scrolldelta In MAP and ORBIT modes, negative means "zoom in", positive means "zoom out"
+     *                    In FREE_FLIGHT mode, negative means "slower", positive means "faster"
      */
-    virtual void zoom(int x, int y, FLOAT scrolldelta) = 0;
+    virtual void scroll(int x, int y, FLOAT scrolldelta) = 0;
 
     /**
      * Processes input and updates internal state.
