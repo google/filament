@@ -21,7 +21,7 @@ import androidx.annotation.Nullable;
 import androidx.annotation.Size;
 
 /**
- * LightManager allows to create a light source in the scene, such as a sun or street lights.
+ * LightManager allows you to create a light source in the scene, such as a sun or street lights.
  * <p>
  * At least one light must be added to a scene in order to see anything
  * (unless the {@link Material.Shading#UNLIT} is used).
