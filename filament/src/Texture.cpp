@@ -119,6 +119,10 @@ Texture* Texture::Builder::build(Engine& engine) {
     const bool swizzled = mImpl->mTextureIsSwizzled;
     const bool imported = mImpl->mImportedId;
 
+    #if defined(__EMSCRIPTEN__)
+    ASSERT_POSTCONDITION_NON_FATAL(!swizzled, "WebGL does not support texture swizzling.");
+    #endif
+
     ASSERT_POSTCONDITION_NON_FATAL((swizzled && sampleable) || !swizzled,
             "Swizzled texture must be SAMPLEABLE");
 

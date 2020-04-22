@@ -232,11 +232,12 @@ creating the swap chain in the `onNativeWindowChanged()` callback.
 
 ### iOS
 
-See `ios/samples` for examples of using Filament on iOS.
+Filament is supported on iOS 12.0 and above. See `ios/samples` for examples of using Filament on
+iOS.
 
 Filament on iOS is largely the same as native rendering with C++. A `CAEAGLLayer` or `CAMetalLayer`
-is passed to the `createSwapChain` method. Filament for iOS supports both OpenGL ES and Vulkan via
-MoltenVK.
+is passed to the `createSwapChain` method. Filament for iOS supports both Metal (preferred) and
+OpenGL ES.
 
 ## Assets
 
