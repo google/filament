@@ -763,7 +763,7 @@ public class LightManager {
     }
 
     /**
-     * returns the light's luminous intensity in lumen.
+     * returns the light's luminous intensity in <i>lumens</i>.
      *<p>
      * <b>note:</b> for {@link Type#FOCUSED_SPOT} lights, the returned value depends on the outer cone angle.
      *</p>
