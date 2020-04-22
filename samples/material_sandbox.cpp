@@ -92,6 +92,8 @@ static void printUsage(char* name) {
             "       Only apply the edited material to the first renderable in the scene\n\n"
             "   --dirt\n"
             "       Specify a dirt texture\n\n"
+            "   --camera=<camera mode>, -c <camera mode>\n"
+            "       Set the camera mode: orbit (default) or flight\n\n"
     );
     const std::string from("SAMPLE_MATERIAL");
     for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
