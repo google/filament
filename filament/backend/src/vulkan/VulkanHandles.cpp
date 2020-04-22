@@ -208,7 +208,7 @@ VulkanAttachment VulkanRenderTarget::getColor() const {
 }
 
 VulkanAttachment VulkanRenderTarget::getDepth() const {
-    return mOffscreen ? mDepth : VulkanAttachment {};
+    return mOffscreen ? mDepth : mContext.currentSurface->depth;
 }
 
 VulkanVertexBuffer::VulkanVertexBuffer(VulkanContext& context, VulkanStagePool& stagePool,
