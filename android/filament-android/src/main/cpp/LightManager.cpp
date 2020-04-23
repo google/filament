@@ -293,7 +293,7 @@ Java_com_google_android_filament_LightManager_nSetSunHaloSize(JNIEnv*, jclass,
 }
 
 extern "C" JNIEXPORT jfloat JNICALL
-Java_com_google_android_filament_LightManager_nGetHaloSize(JNIEnv*, jclass,
+Java_com_google_android_filament_LightManager_nGetSunHaloSize(JNIEnv*, jclass,
         jlong nativeLightManager, jint i) {
     LightManager *lm = (LightManager *) nativeLightManager;
     return lm->getSunHaloSize((LightManager::Instance) i);
@@ -307,7 +307,7 @@ Java_com_google_android_filament_LightManager_nSetSunHaloFalloff(JNIEnv*, jclass
 }
 
 extern "C" JNIEXPORT jfloat JNICALL
-Java_com_google_android_filament_LightManager_nGetHaloFalloff(JNIEnv*, jclass,
+Java_com_google_android_filament_LightManager_nGetSunHaloFalloff(JNIEnv*, jclass,
         jlong nativeLightManager, jint i) {
     LightManager *lm = (LightManager *) nativeLightManager;
     return lm->getSunHaloFalloff((LightManager::Instance) i);
@@ -315,7 +315,7 @@ Java_com_google_android_filament_LightManager_nGetHaloFalloff(JNIEnv*, jclass,
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_LightManager_nSetShadowCaster(JNIEnv*, jclass,
-        jlong nativeLightManager, jint i, jfloat shadowCaster) {
+        jlong nativeLightManager, jint i, jboolean shadowCaster) {
     LightManager *lm = (LightManager *) nativeLightManager;
     lm->setShadowCaster((LightManager::Instance) i, shadowCaster);
 }
@@ -324,5 +324,5 @@ extern "C" JNIEXPORT jboolean JNICALL
 Java_com_google_android_filament_LightManager_nIsShadowCaster(JNIEnv*, jclass,
         jlong nativeLightManager, jint i) {
     LightManager *lm = (LightManager *) nativeLightManager;
-    return lm->isShadowCaster((LightManager::Instance) i);
+    return (jboolean)lm->isShadowCaster((LightManager::Instance) i);
 }
