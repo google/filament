@@ -95,9 +95,9 @@ static VulkanAttachment createOffscreenAttachment(VulkanTexture* tex) {
 }
 
 VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context, uint32_t width, uint32_t height,
-        uint32_t colorLevel, VulkanTexture* color, uint32_t depthLevel, VulkanTexture* depth) :
-        HwRenderTarget(width, height), mContext(context), mOffscreen(true), mColorLevel(colorLevel),
-        mDepthLevel(depthLevel) {
+        TargetBufferInfo colorInfo, VulkanTexture* color, TargetBufferInfo depthInfo,
+        VulkanTexture* depth) : HwRenderTarget(width, height), mContext(context), mOffscreen(true),
+        mColorLevel(colorInfo.level), mDepthLevel(depthInfo.level) {
     mColor = createOffscreenAttachment(color);
     mDepth = createOffscreenAttachment(depth);
 
@@ -109,13 +109,17 @@ VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context, uint32_t width, u
             .format = mColor.format,
             .subresourceRange = {
                 .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                .baseMipLevel = colorLevel,
+                .baseMipLevel = colorInfo.level,
                 .levelCount = 1
             }
         };
         if (color->target == SamplerType::SAMPLER_CUBEMAP) {
             viewInfo.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
             viewInfo.subresourceRange.layerCount = 6;
+        } else if (color->target == SamplerType::SAMPLER_2D_ARRAY) {
+            viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+            viewInfo.subresourceRange.layerCount = color->depth;
+            viewInfo.subresourceRange.baseArrayLayer = colorInfo.layer;
         } else {
             viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
             viewInfo.subresourceRange.layerCount = 1;
@@ -129,13 +133,17 @@ VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context, uint32_t width, u
             .format = mDepth.format,
             .subresourceRange = {
                 .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
-                .baseMipLevel = depthLevel,
+                .baseMipLevel = depthInfo.level,
                 .levelCount = 1
             }
         };
         if (depth->target == SamplerType::SAMPLER_CUBEMAP) {
             viewInfo.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
             viewInfo.subresourceRange.layerCount = 6;
+        } else if (depth->target == SamplerType::SAMPLER_2D_ARRAY) {
+            viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+            viewInfo.subresourceRange.layerCount = depth->depth;
+            viewInfo.subresourceRange.baseArrayLayer = depthInfo.layer;
         } else {
             viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
             viewInfo.subresourceRange.layerCount = 1;
@@ -312,6 +320,16 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
         imageInfo.arrayLayers = 6;
         imageInfo.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
     }
+    if (target == SamplerType::SAMPLER_2D_ARRAY) {
+        imageInfo.arrayLayers = depth;
+        // NOTE: We do not use VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT here because:
+        //
+        //  (a) MoltenVK does not support it, and
+        //  (b) it is necessary only when 3D textures need to support array-style access
+        //
+        // In other words, the "arrayness" of the texture is an aspect of the VkImageView,
+        // not the VkImage.
+    }
     if (any(usage & TextureUsage::SAMPLEABLE)) {
         imageInfo.usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
     }
@@ -367,6 +385,9 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
     if (target == SamplerType::SAMPLER_CUBEMAP) {
         viewInfo.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
         viewInfo.subresourceRange.layerCount = 6;
+    } else if (target == SamplerType::SAMPLER_2D_ARRAY) {
+        viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+        viewInfo.subresourceRange.layerCount = depth;
     } else {
         viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
         viewInfo.subresourceRange.layerCount = 1;
