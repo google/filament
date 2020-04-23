@@ -698,9 +698,8 @@ TEST(FilamentTest, FroxelData) {
         // light straddles the "light near" plane
         size_t pointCount = 0;
         for (const auto& entry : froxelBuffer) {
-            EXPECT_LE(entry.pointLightCount, 1);
-            EXPECT_EQ(entry.spotLightCount, 0);
-            pointCount += entry.pointLightCount;
+            EXPECT_LE(entry.count, 1);
+            pointCount += entry.count;
         }
         EXPECT_GT(pointCount, 0);
     }
@@ -717,9 +716,8 @@ TEST(FilamentTest, FroxelData) {
         auto const& recordBuffer = froxelData.getRecordBufferUser();
         size_t pointCount = 0;
         for (const auto& entry : froxelBuffer) {
-            EXPECT_LE(entry.pointLightCount, 1);
-            EXPECT_EQ(entry.spotLightCount, 0);
-            pointCount += entry.pointLightCount;
+            EXPECT_LE(entry.count, 1);
+            pointCount += entry.count;
         }
         EXPECT_GT(pointCount, 0);
     }

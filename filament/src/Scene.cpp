@@ -292,9 +292,10 @@ void FScene::prepareDynamicLights(const CameraInfo& camera, ArenaScope& rootAren
         auto li = instances[i];
         lp[gpuIndex].positionFalloff      = { spheres[i].xyz, lcm.getSquaredFalloffInv(li) };
         lp[gpuIndex].colorIntensity       = { lcm.getColor(li), lcm.getIntensity(li) };
-        lp[gpuIndex].directionIES         = { directions[i], 0 };
+        lp[gpuIndex].directionIES         = { directions[i], 0.0f };
         lp[gpuIndex].spotScaleOffset      = lcm.getSpotParams(li).scaleOffset;
-        lp[gpuIndex].shadow               = { shadowInfo[i].pack(), 0 };
+        lp[gpuIndex].shadow               = { shadowInfo[i].pack() };
+        lp[gpuIndex].type                 = lcm.isPointLight(li) ? 0u : 1u;
     }
 
     driver.loadUniformBuffer(lightUbh, { lp, positionalLightCount * sizeof(LightsUib) });

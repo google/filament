@@ -148,13 +148,8 @@ public:
             uint32_t u32 = 0;
             struct {
                 uint16_t offset;
-                union {
-                    uint8_t count[2];
-                    struct {
-                        uint8_t pointLightCount;
-                        uint8_t spotLightCount;
-                    };
-                };
+                uint8_t count;
+                uint8_t reserved;
             };
         };
     };
@@ -196,8 +191,7 @@ private:
         uint16_t reserved;
     };
 
-    // The first entry always encodes the type of light, i.e. point/spot
-    using FroxelThreadData = std::array<LightGroupType, FROXEL_BUFFER_ENTRY_COUNT_MAX + 1>;
+    using FroxelThreadData = std::array<LightGroupType, FROXEL_BUFFER_ENTRY_COUNT_MAX>;
 
     void setViewport(Viewport const& viewport) noexcept;
     void setProjection(const math::mat4f& projection, float near, float far) noexcept;
