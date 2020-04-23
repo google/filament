@@ -154,7 +154,7 @@ public class LightManager {
     }
 
     /**
-     * destroys this component from the given entity
+     * Destroys this component from the given entity
      * @param entity An Entity.
      */
     public void destroy(@Entity int entity) {
