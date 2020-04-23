@@ -1069,20 +1069,16 @@ void VulkanDriver::blit(TargetBufferFlags buffers,
                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, blitRegions,
                 filter == SamplerMagFilter::NEAREST ? VK_FILTER_NEAREST : VK_FILTER_LINEAR);
 
-        // Filament's Vulkan backend expects color images to be in a SHADER_READ_ONLY layout unless
-        // they are being used as a render target. Therefore we need to change the layout of both
-        // images after blitting. TODO: can we get a "future usage" hint from the framegraph?
+        VulkanTexture::transitionImageLayout(cmdbuffer, srcImage, VK_IMAGE_LAYOUT_UNDEFINED,
+                getTextureLayout(srcTarget->getColor().offscreen->usage), srcLevel, 1);
 
         VulkanTexture::transitionImageLayout(cmdbuffer, dstImage, VK_IMAGE_LAYOUT_UNDEFINED,
-                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, dstLevel, 1);
-
-        VulkanTexture::transitionImageLayout(cmdbuffer, srcImage, VK_IMAGE_LAYOUT_UNDEFINED,
-                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, srcLevel, 1);
+                getTextureLayout(dstTarget->getColor().offscreen->usage), dstLevel, 1);
     };
 
     if (!mContext.currentCommands) {
-        // TODO: note that we do not call flushWorkCommandBuffer here. The pipeline barriers
-        // pushed by "transitionImageLayout" is hopefully sufficient for proper synchronization.
+        // NOTE: We do not call flushWorkCommandBuffer here. The pipeline barriers pushed by
+        // "transitionImageLayout" is hopefully sufficient for proper synchronization.
         vkblit(acquireWorkCommandBuffer(mContext));
     } else {
         vkblit(mContext.currentCommands->cmdbuffer);

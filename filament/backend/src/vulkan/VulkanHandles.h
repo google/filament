@@ -122,7 +122,8 @@ struct VulkanTexture : public HwTexture {
     // Issues a barrier that transforms the layout of the image, e.g. from a CPU-writeable
     // layout to a GPU-readable layout.
     static void transitionImageLayout(VkCommandBuffer cmdbuffer, VkImage image,
-            VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t miplevel, uint32_t layers);
+            VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t miplevel,
+            uint32_t layers, uint32_t levels = 1);
 
     VkFormat vkformat;
     VkImageView imageView = VK_NULL_HANDLE;

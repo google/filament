@@ -647,17 +647,11 @@ VkImageLayout getTextureLayout(TextureUsage usage) {
     // Filament sometimes samples from one miplevel while writing to another level in the same
     // texture (e.g. bloom does this). Moreover we'd like to avoid lots of expensive layout
     // transitions. So, keep it simple and use GENERAL for all color-attachable textures.
-    if (any(usage & TextureUsage::COLOR_ATTACHMENT) && any(usage & TextureUsage::SAMPLEABLE)) {
+    if (any(usage & TextureUsage::COLOR_ATTACHMENT)) {
         return VK_IMAGE_LAYOUT_GENERAL;
     }
 
-    // This case is probably never hit, but we might as well use an optimal layout for textures
-    // that are never sampled from.
-    if (any(usage & TextureUsage::COLOR_ATTACHMENT)) {
-        return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    }
-
-    // Finally, the default layout for a texture is read-only.
+    // Finally, the layout for an immutable texture is optimal read-only.
     return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 }
 
