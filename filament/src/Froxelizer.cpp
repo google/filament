@@ -51,14 +51,6 @@ namespace details {
  */
 static constexpr bool USE_NON_SQUARE_FROXELS = false;
 
-/*
- * This changes the layout of the froxel info on the GPU such that it is more cache friendly,
- * i.e. the major axis is Z instead of X, because in a given froxel there is more chance to
- * hit another froxel at the same x,y coordinate.
- * This requires backward compatibility breaking changes in the shaders.
- */
-static constexpr bool SUPPORTS_REMAPPED_FROXELS   = false;
-
 // The Froxel buffer is set to FROXEL_BUFFER_WIDTH x n
 // With n limited by the supported texture dimension, which is guaranteed to be at least 2048
 // in all version of GLES.
@@ -323,15 +315,9 @@ bool Froxelizer::update() noexcept {
         mParamsZ[1] = 0; // updated when camera changes
         mParamsZ[2] = -mLinearizer;
         mParamsZ[3] = mFroxelCountZ;
-        if (SUPPORTS_REMAPPED_FROXELS) {
-            mParamsF.x = uint32_t(mFroxelCountZ);
-            mParamsF.y = uint32_t(mFroxelCountX * mFroxelCountZ);
-            mParamsF.z = 1;
-        } else {
-            mParamsF[0] = 1;
-            mParamsF[1] = uint32_t(mFroxelCountX);
-            mParamsF[2] = uint32_t(mFroxelCountX * mFroxelCountY);
-        }
+        mParamsF[0] = 1;
+        mParamsF[1] = uint32_t(mFroxelCountX);
+        mParamsF[2] = uint32_t(mFroxelCountX * mFroxelCountY);
     }
 
     if (UTILS_UNLIKELY(mDirtyFlags & (PROJECTION_CHANGED | VIEWPORT_CHANGED))) {
@@ -669,14 +655,6 @@ void Froxelizer::froxelizeAssignRecordsCompress() noexcept {
     FroxelEntry* const UTILS_RESTRICT froxels = mFroxelBufferUser.data();
 
     const size_t froxelCountX = mFroxelCountX;
-    auto remap = [stride = size_t(froxelCountX * mFroxelCountY)](size_t i) -> size_t {
-        if (SUPPORTS_REMAPPED_FROXELS) {
-            // TODO: with the non-square froxel change these would be mask ops instead of divide.
-            i = (i % stride) * FEngine::CONFIG_FROXEL_SLICE_COUNT + (i / stride);
-        }
-        return i;
-    };
-
     RecordBufferType* const UTILS_RESTRICT froxelRecords = mRecordBufferUser.data();
 
     // how many froxel record entries were reused (for debugging)
@@ -685,7 +663,7 @@ void Froxelizer::froxelizeAssignRecordsCompress() noexcept {
     for (size_t i = 0, c = getFroxelCount(); i < c;) {
         LightRecord b = records[i];
         if (b.lights.none()) {
-            froxels[remap(i++)].u32 = 0;
+            froxels[i++].u32 = 0;
             continue;
         }
 
@@ -704,15 +682,15 @@ void Froxelizer::froxelizeAssignRecordsCompress() noexcept {
 #endif
             // note: instead of dropping froxels we could look for similar records we've already
             // filed up.
-            do { // this compiles to memset() when remap() is identity
-                froxels[remap(i++)].u32 = 0;
+            do { // this compiles to memset()
+                froxels[i++].u32 = 0;
             } while(i < c);
             goto out_of_memory;
         }
 
         // iterate the bitfield
-        auto beginPoint = froxelRecords + offset;
-        auto beginSpot  = froxelRecords + offset + entry.count[0];
+        auto * const beginPoint = froxelRecords + offset;
+        auto * const beginSpot  = froxelRecords + offset + entry.count[0];
         b.lights.forEachSetBit([&spotLights,
                 point = beginPoint, spot = beginSpot, beginPoint, beginSpot]
                 (size_t l) mutable {
@@ -720,7 +698,7 @@ void Froxelizer::froxelizeAssignRecordsCompress() noexcept {
             // make sure to keep this code branch-less
             const bool isSpot = spotLights[l];
             auto& p = isSpot ? spot      : point;
-            auto  s = isSpot ? beginSpot : beginPoint;
+            auto *s = isSpot ? beginSpot : beginPoint;
 
             const size_t word = l / LIGHT_PER_GROUP;
             const size_t bit  = l % LIGHT_PER_GROUP;
@@ -741,7 +719,7 @@ void Froxelizer::froxelizeAssignRecordsCompress() noexcept {
 #ifndef NDEBUG
             if (lightCount) { reused++; }
 #endif
-            froxels[remap(i++)].u32 = entry.u32;
+            froxels[i++].u32 = entry.u32;
             if (i >= c) break;
 
             if (records[i].lights != b.lights && i >= froxelCountX) {
@@ -749,7 +727,7 @@ void Froxelizer::froxelizeAssignRecordsCompress() noexcept {
                 // we re-try with the record above it, which saves many froxel records
                 // (north of 10% in practice).
                 b = records[i - froxelCountX];
-                entry.u32 = froxels[remap(i - froxelCountX)].u32;
+                entry.u32 = froxels[i - froxelCountX].u32;
             }
         } while(records[i].lights == b.lights);
     }
