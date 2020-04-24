@@ -102,10 +102,6 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
 
     window->mMainView->getView()->setVisibleLayers(0x4, 0x4);
 
-    window->mUiView->getView()->setBlendMode(View::BlendMode::TRANSLUCENT);
-    window->mUiView->getView()->setPostProcessingEnabled(false);
-    window->mUiView->getView()->setShadowsEnabled(false);
-
     if (config.splitView) {
         auto& rcm = mEngine->getRenderableManager();
 
@@ -273,6 +269,10 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
                     if (event.key.keysym.scancode == SDL_SCANCODE_ESCAPE) {
                         mClosed = true;
                     }
+                    window->keyDown(event.key.keysym.scancode);
+                    break;
+                case SDL_KEYUP:
+                    window->keyUp(event.key.keysym.scancode);
                     break;
                 case SDL_MOUSEWHEEL:
                     if (!io || !io->WantCaptureMouse)
@@ -310,6 +310,13 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
             }
         }
 
+        // Calculate the time step.
+        static Uint64 frequency = SDL_GetPerformanceFrequency();
+        Uint64 now = SDL_GetPerformanceCounter();
+        const float timeStep = mTime > 0 ? (float)((double)(now - mTime) / frequency) :
+                (float)(1.0f / 60.0f);
+        mTime = now;
+
         // Populate the UI scene, regardless of whether Filament wants to a skip frame. We should
         // always let ImGui generate a command list; if it skips a frame it'll destroy its widgets.
         if (mImGuiHelper) {
@@ -341,12 +348,15 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
             }
 
             // Populate the UI Scene.
-            static Uint64 frequency = SDL_GetPerformanceFrequency();
-            Uint64 now = SDL_GetPerformanceCounter();
-            float timeStep = mTime > 0 ? (float)((double)(now - mTime) / frequency) :
-                    (float)(1.0f / 60.0f);
-            mTime = now;
             mImGuiHelper->render(timeStep, imguiCallback);
+        }
+
+        // Update the camera manipulators for each view.
+        for (auto const& view : window->mViews) {
+            auto* cm = view->getCameraManipulator();
+            if (cm) {
+                cm->update(timeStep);
+            }
         }
 
         // Update the position and orientation of the two cameras.
@@ -548,9 +558,13 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
     mViews.emplace_back(mUiView = new CView(*mRenderer, "UI View"));
 
     // set-up the camera manipulators
-    camutils::Mode mode = camutils::Mode::ORBIT;
-    mMainCameraMan = CameraManipulator::Builder().targetPosition(0, 0, -4).build(mode);
-    mDebugCameraMan = CameraManipulator::Builder().targetPosition(0, 0, -4).build(mode);
+    mMainCameraMan = CameraManipulator::Builder()
+            .targetPosition(0, 0, -4)
+            .flightMoveDamping(15.0)
+            .build(config.cameraMode);
+    mDebugCameraMan = CameraManipulator::Builder()
+            .targetPosition(0, 0, -4)
+            .build(camutils::Mode::ORBIT);
 
     mMainView->setCamera(mMainCamera);
     mMainView->setCameraManipulator(mMainCameraMan);
@@ -593,7 +607,7 @@ void FilamentApp::Window::mouseDown(int button, ssize_t x, ssize_t y) {
     y = mHeight - y;
     for (auto const& view : mViews) {
         if (view->intersects(x, y)) {
-            mEventTarget = view.get();
+            mMouseEventTarget = view.get();
             view->mouseDown(button, x, y);
             break;
         }
@@ -601,8 +615,8 @@ void FilamentApp::Window::mouseDown(int button, ssize_t x, ssize_t y) {
 }
 
 void FilamentApp::Window::mouseWheel(ssize_t x) {
-    if (mEventTarget) {
-        mEventTarget->mouseWheel(x);
+    if (mMouseEventTarget) {
+        mMouseEventTarget->mouseWheel(x);
     } else {
         for (auto const& view : mViews) {
             if (view->intersects(mLastX, mLastY)) {
@@ -615,21 +629,58 @@ void FilamentApp::Window::mouseWheel(ssize_t x) {
 
 void FilamentApp::Window::mouseUp(ssize_t x, ssize_t y) {
     fixupMouseCoordinatesForHdpi(x, y);
-    if (mEventTarget) {
+    if (mMouseEventTarget) {
         y = mHeight - y;
-        mEventTarget->mouseUp(x, y);
-        mEventTarget = nullptr;
+        mMouseEventTarget->mouseUp(x, y);
+        mMouseEventTarget = nullptr;
     }
 }
 
 void FilamentApp::Window::mouseMoved(ssize_t x, ssize_t y) {
     fixupMouseCoordinatesForHdpi(x, y);
     y = mHeight - y;
-    if (mEventTarget) {
-        mEventTarget->mouseMoved(x, y);
+    if (mMouseEventTarget) {
+        mMouseEventTarget->mouseMoved(x, y);
     }
     mLastX = x;
     mLastY = y;
+}
+
+void FilamentApp::Window::keyDown(SDL_Scancode key) {
+    auto& eventTarget = mKeyEventTarget[key];
+
+    // keyDown events can be sent multiple times per key (for key repeat)
+    // If this key is already down, do nothing.
+    if (eventTarget) {
+        return;
+    }
+
+    // Decide which view will get this key's corresponding keyUp event.
+    // If we're currently in a mouse grap session, it should be the mouse grap's target view.
+    // Otherwise, it should be whichever view we're currently hovering over.
+    CView* targetView = nullptr;
+    if (mMouseEventTarget) {
+        targetView = mMouseEventTarget;
+    } else {
+        for (auto const& view : mViews) {
+            if (view->intersects(mLastX, mLastY)) {
+                targetView = view.get();
+                break;
+            }
+        }
+    }
+
+    targetView->keyDown(key);
+    eventTarget = targetView;
+}
+
+void FilamentApp::Window::keyUp(SDL_Scancode key) {
+    auto& eventTarget = mKeyEventTarget[key];
+    if (!eventTarget) {
+        return;
+    }
+    eventTarget->keyUp(key);
+    eventTarget = nullptr;
 }
 
 void FilamentApp::Window::fixupMouseCoordinatesForHdpi(ssize_t& x, ssize_t& y) const {
@@ -753,7 +804,44 @@ void FilamentApp::CView::mouseMoved(ssize_t x, ssize_t y) {
 
 void FilamentApp::CView::mouseWheel(ssize_t x) {
     if (mCameraManipulator) {
-        mCameraManipulator->zoom(0, 0, x);
+        mCameraManipulator->scroll(0, 0, x);
+    }
+}
+
+bool FilamentApp::manipulatorKeyFromKeycode(SDL_Scancode scancode, CameraManipulator::Key& key) {
+    switch (scancode) {
+        case SDL_SCANCODE_W:
+            key = CameraManipulator::Key::UP;
+            return true;
+        case SDL_SCANCODE_A:
+            key = CameraManipulator::Key::LEFT;
+            return true;
+        case SDL_SCANCODE_S:
+            key = CameraManipulator::Key::DOWN;
+            return true;
+        case SDL_SCANCODE_D:
+            key = CameraManipulator::Key::RIGHT;
+            return true;
+        default:
+            return false;
+    }
+}
+
+void FilamentApp::CView::keyUp(SDL_Scancode scancode) {
+    if (mCameraManipulator) {
+        CameraManipulator::Key key;
+        if (manipulatorKeyFromKeycode(scancode, key)) {
+            mCameraManipulator->keyUp(key);
+        }
+    }
+}
+
+void FilamentApp::CView::keyDown(SDL_Scancode scancode) {
+    if (mCameraManipulator) {
+        CameraManipulator::Key key;
+        if (manipulatorKeyFromKeycode(scancode, key)) {
+            mCameraManipulator->keyDown(key);
+        }
     }
 }
 

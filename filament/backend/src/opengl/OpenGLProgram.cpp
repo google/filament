@@ -199,7 +199,8 @@ void OpenGLProgram::updateSamplers(OpenGLDriver* gl) noexcept {
 
             Handle<HwTexture> th = samplers[index].t;
             if (UTILS_UNLIKELY(!th)) {
-                continue; // this can happen if the SamplerGroup isn't initialized
+                slog.w << "no texture bound to unit " << +index << io::endl;
+                continue;
             }
 
             const GLTexture* const UTILS_RESTRICT t = gl->handle_cast<const GLTexture*>(th);

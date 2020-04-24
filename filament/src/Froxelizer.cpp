@@ -45,11 +45,11 @@ using namespace backend;
 namespace details {
 
 /*
- * This enables froxels to be rectangular which allows us to use a but more froxel
+ * This enables froxels to be rectangular which allows us to use a bit more froxel
  * with the same amount of memory in the GPU.
- * This requires backward compatibility breaking changes in the shaders.
+ * Currently not enabled because not enough tested.
  */
-static constexpr bool SUPPORTS_NON_SQUARE_FROXELS = false;
+static constexpr bool USE_NON_SQUARE_FROXELS = false;
 
 /*
  * This changes the layout of the froxel info on the GPU such that it is more cache friendly,
@@ -205,7 +205,10 @@ void Froxelizer::computeFroxelLayout(
         uint2* dim, uint16_t* countX, uint16_t* countY, uint16_t* countZ,
         filament::Viewport const& viewport) noexcept {
 
-    if (SUPPORTS_NON_SQUARE_FROXELS == false) {
+    if (USE_NON_SQUARE_FROXELS == false) {
+        const uint32_t width  = std::max(16u, viewport.width);
+        const uint32_t height = std::max(16u, viewport.height);
+
         // calculate froxel dimension from FROXEL_BUFFER_ENTRY_COUNT_MAX and viewport
         // - Start from the maximum number of froxels we can use in the x-y plane
         size_t froxelSliceCount = FEngine::CONFIG_FROXEL_SLICE_COUNT;
@@ -213,18 +216,22 @@ void Froxelizer::computeFroxelLayout(
         // - compute the number of square froxels we need in width and height, rounded down
         //   solving: |  froxelCountX * froxelCountY == froxelPlaneCount
         //            |  froxelCountX / froxelCountY == width / height
-        size_t froxelCountX = size_t(std::sqrt(froxelPlaneCount * viewport.width  / viewport.height));
-        size_t froxelCountY = size_t(std::sqrt(froxelPlaneCount * viewport.height / viewport.width));
+        size_t froxelCountX = size_t(std::sqrt(froxelPlaneCount * width  / height));
+        size_t froxelCountY = size_t(std::sqrt(froxelPlaneCount * height / width));
         // - copmute the froxels dimensions, rounded up
-        size_t froxelSizeX = (viewport.width  + froxelCountX - 1) / froxelCountX;
-        size_t froxelSizeY = (viewport.height + froxelCountY - 1) / froxelCountY;
+        size_t froxelSizeX = (width  + froxelCountX - 1) / froxelCountX;
+        size_t froxelSizeY = (height + froxelCountY - 1) / froxelCountY;
         // - and since our froxels must be square, only keep the largest dimension
         size_t froxelDimension = std::max(froxelSizeX, froxelSizeY);
 
         // Here we recompute the froxel counts which may have changed a little due to the rounding
         // and the squareness requirement of froxels
-        froxelCountX = (viewport.width  + froxelDimension - 1) / froxelDimension;
-        froxelCountY = (viewport.height + froxelDimension - 1) / froxelDimension;
+        froxelCountX = (width  + froxelDimension - 1) / froxelDimension;
+        froxelCountY = (height + froxelDimension - 1) / froxelDimension;
+
+        assert(froxelCountX);
+        assert(froxelCountY);
+        assert(froxelCountX * froxelCountY <= froxelPlaneCount);
 
         *dim = froxelDimension;
         *countX = uint16_t(froxelCountX);
@@ -234,10 +241,10 @@ void Froxelizer::computeFroxelLayout(
         // TODO: don't hardcode this
         *countX = uint16_t(32);
         *countY = uint16_t(16);
+        *countZ = uint16_t(FEngine::CONFIG_FROXEL_SLICE_COUNT);
         if (viewport.height > viewport.width) {
             std::swap(*countX, *countY);
         }
-        *countZ = uint16_t(FEngine::CONFIG_FROXEL_SLICE_COUNT);
          dim->x = (viewport.width  + *countX - 1) / *countX;
          dim->y = (viewport.height + *countY - 1) / *countY;
     }
@@ -261,12 +268,11 @@ bool Froxelizer::update() noexcept {
         uniformsNeedUpdating = true;
 
 #ifndef NDEBUG
-        size_t froxelSliceCount = FEngine::CONFIG_FROXEL_SLICE_COUNT;
         slog.d << "Froxel: " << viewport.width << "x" << viewport.height << " / "
                << froxelDimension.x << "x" << froxelDimension.y << io::endl
-               << "Froxel: " << froxelCountX << "x" << froxelCountY << "x" << froxelSliceCount
-               << " = " << (froxelCountX * froxelCountY * froxelSliceCount)
-               << " (" << FROXEL_BUFFER_ENTRY_COUNT_MAX - froxelCountX * froxelCountY * froxelSliceCount << " lost)"
+               << "Froxel: " << froxelCountX << "x" << froxelCountY << "x" << froxelCountZ
+               << " = " << (froxelCountX * froxelCountY * froxelCountZ)
+               << " (" << FROXEL_BUFFER_ENTRY_COUNT_MAX - froxelCountX * froxelCountY * froxelCountZ << " lost)"
                << io::endl;
 #endif
 
@@ -300,12 +306,12 @@ bool Froxelizer::update() noexcept {
         mDistancesZ[0] = 0.0f;
         const float zLightNear = mZLightNear;
         const float zLightFar = mZLightFar;
-        const float linearizer = std::log2(zLightFar / zLightNear) / (mFroxelCountZ - 1);
+        const float linearizer = std::log2(zLightFar / zLightNear) / float(std::max(1u, mFroxelCountZ - 1u));
         // for a strange reason when, vectorizing this loop, clang does some math in double
         // and generates conversions to float. not worth it for so little iterations.
         #pragma clang loop vectorize(disable) unroll(disable)
         for (ssize_t i = 1, n = mFroxelCountZ; i <= n; i++) {
-            mDistancesZ[i] = zLightFar * std::exp2f((i - n) * linearizer);
+            mDistancesZ[i] = zLightFar * std::exp2(float(i - n) * linearizer);
         }
 
         // for the inverse-transformation (view-space z to z-slice)
@@ -337,29 +343,34 @@ bool Froxelizer::update() noexcept {
         // clip-space dimensions
         const float froxelWidthInClipSpace  = (2.0f * mFroxelDimension.x) / mViewport.width;
         const float froxelHeightInClipSpace = (2.0f * mFroxelDimension.y) / mViewport.height;
-        const mat4f invProjection(Camera::inverseProjection(mProjection));
+        float4 * const UTILS_RESTRICT planesX = mPlanesX;
+        float4 * const UTILS_RESTRICT planesY = mPlanesY;
 
+        // Planes are transformed from clip to camera space by using the transpose of the
+        // projection matrix
+        const mat4f trProjection(transpose(mProjection));
+
+        // generate the horizontal planes from their clip-space equation
         for (size_t i = 0, n = mFroxelCountX; i <= n; ++i) {
             float x = (i * froxelWidthInClipSpace) - 1.0f;
-            // clip-space
-            float4 p0 = { x, -1, -1, 1 };
-            float4 p1 = { x,  1, -1, 1 };
-            // view-space
-            p0 = mat4f::project(invProjection, p0);
-            p1 = mat4f::project(invProjection, p1);
-            mPlanesX[i] = float4(normalize(cross(p1.xyz, p0.xyz)), 0);
+            float4 p = trProjection * float4{ -1, 0, 0, x };
+            planesX[i] = float4{ normalize(p.xyz), 0 };
         }
 
+        // generate the vertical planes from their clip-space equation
         for (size_t i = 0, n = mFroxelCountY; i <= n; ++i) {
             float y = (i * froxelHeightInClipSpace) - 1.0f;
-            // clip-space
-            float4 p0 = { -1, y, -1, 1 };
-            float4 p1 = {  1, y, -1, 1 };
-            // view-space
-            p0 = mat4f::project(invProjection, p0);
-            p1 = mat4f::project(invProjection, p1);
-            mPlanesY[i] = float4(normalize(cross(p1.xyz, p0.xyz)), 0);
+            float4 p = trProjection * float4{ 0, 1, 0, -y };
+            planesY[i] = float4{ normalize(p.xyz), 0 };
         }
+
+
+        /*
+         * Now compute the bounding sphere of each froxel, which is needed for spot-lights
+         * We intersect 3 planes of the frustum to find each 8 corners.
+         * Currently the bounding sphere is computed from the bounding-box, which is probably,
+         * not the best.
+         */
 
         // 3-planes intersection:
         //      -d0.(n1 x n2) - d1.(n2 x n0) - d2.(n0 x n1)
@@ -372,8 +383,6 @@ bool Froxelizer::update() noexcept {
         float2* const UTILS_RESTRICT minMaxX = reinterpret_cast<float2*>(stack);
 
         float4* const        UTILS_RESTRICT boundingSpheres = mBoundingSpheres;
-        float4  const* const UTILS_RESTRICT planesX = mPlanesX;
-        float4  const* const UTILS_RESTRICT planesY = mPlanesY;
         float   const* const UTILS_RESTRICT planesZ = mDistancesZ;
         const size_t froxelCountX = mFroxelCountX;
         const size_t froxelCountY = mFroxelCountY;
@@ -403,8 +412,8 @@ bool Froxelizer::update() noexcept {
                 maxp.x = std::numeric_limits<float>::lowest();
                 // min/max for x is calculated by intersecting the near/far and left/right planes
                 for (size_t c = 0; c < 4; ++c) {
-                    float4 const& p0 = planes[0 + (c  & 1)];    // {x,0,z,0}
-                    float4 const& p2 = planes[4 + (c >> 1)];    // {0,0,+/-1,d}
+                    float4 const p0 = planes[0 + (c  & 1u)];    // {x,0,z,0}
+                    float4 const p2 = planes[4 + (c >> 1u)];    // {0,0,+/-1,d}
                     float px = (p2.z * p2.w * p0.z) / p0.x;
                     minp.x = std::min(minp.x, px);
                     maxp.x = std::max(maxp.x, px);
@@ -421,8 +430,8 @@ bool Froxelizer::update() noexcept {
                 maxp.y = std::numeric_limits<float>::lowest();
                 // min/max for y is calculated by intersecting the near/far and bottom/top planes
                 for (size_t c = 0; c < 4; ++c) {
-                    float4 const& p1 = planes[2 + (c &  1)];    // {0,y,z,0}
-                    float4 const& p2 = planes[4 + (c >> 1)];    // {0,0,+/-1,d}
+                    float4 const p1 = planes[2 + (c &  1u)];    // {0,y,z,0}
+                    float4 const p2 = planes[4 + (c >> 1u)];    // {0,0,+/-1,d}
                     float py = (p2.z * p2.w * p1.z) / p1.y;
                     minp.y = std::min(minp.y, py);
                     maxp.y = std::max(maxp.y, py);
@@ -510,9 +519,8 @@ size_t Froxelizer::findSliceZ(float z) const noexcept {
 
 std::pair<size_t, size_t> Froxelizer::clipToIndices(float2 const& clip) const noexcept {
     // clip coordinates between [-1, 1], conversion to index between [0, count[
-    //  = floor((clip + 1) * ((0.5 * dimension) / froxelsize))
-    //  = floor((clip + 1) * constant
-    //  = floor(clip * constant + constant)
+    // (clip + 1) * 0.5 * dimension / froxelsize
+    // clip * 0.5 * dimension / froxelsize + 0.5 * dimension / froxelsize
     const size_t xi = size_t(clamp(int(clip.x * mClipToFroxelX + mClipToFroxelX), 0, mFroxelCountX - 1));
     const size_t yi = size_t(clamp(int(clip.y * mClipToFroxelY + mClipToFroxelY), 0, mFroxelCountY - 1));
     return { xi, yi };
@@ -833,44 +841,56 @@ void Froxelizer::froxelizePointAndSpotLight(
     float4 const * const UTILS_RESTRICT boundingSpheres = mBoundingSpheres;
     for (size_t iz = z0 ; iz <= z1; ++iz) {
         float4 cz(s);
+        // froxel that contain the center if ths sphere is special, we don't even need to do the
+        // intersection check, it's always true.
         if (UTILS_LIKELY(iz != zcenter)) {
             cz = spherePlaneIntersection(s, (iz < zcenter) ? planesZ[iz + 1] : planesZ[iz]);
         }
 
-        // find x & y slices that contain the sphere's center
-        // (note: this changes with the Z slices
-        const float2 clip = project(p, cz.xyz);
-        const auto indices = clipToIndices(clip);
-        const size_t xcenter = indices.first;
-        const size_t ycenter = indices.second;
-
         if (cz.w > 0) { // intersection of light with this plane (slice)
+            // the sphere (light) intersects this slice's plane and we now have a new, smaller
+            // sphere centered there. Now, find x & y slices that contain the sphere's center
+            // (note: this changes with the Z slices)
+            const float2 clip = project(p, cz.xyz);
+            const auto indices = clipToIndices(clip);
+            const size_t xcenter = indices.first;
+            const size_t ycenter = indices.second;
+
             for (size_t iy = y0; iy <= y1; ++iy) {
                 float4 cy(cz);
+                // froxel that contain the center if ths sphere is special, we don't even need to
+                // do the intersection check, it's always true.
                 if (UTILS_LIKELY(iy != ycenter)) {
                     float4 const& plane = iy < ycenter ? planesY[iy + 1] : planesY[iy];
                     cy = spherePlaneIntersection(cz, plane.y, plane.z);
                 }
-                if (cy.w > 0) { // intersection of light with this horizontal plane
-                    size_t bx, ex; // horizontal begin/end indices
-                    // find the begin index (left side)
-                    for (bx = x0; bx <= xcenter; ++bx) {
-                        if (spherePlaneDistanceSquared(cy, planesX[bx].x, planesX[bx].z) > 0) {
-                            // intersection, if we intersect with a plane at index bx, we
-                            // actually intrude in the froxel to its left, i.e. with index bx - 1
-                            bx -= bx > 0;
-                            break;
-                        }
-                    }
 
-                    // find the end index (right side), x1 is past the end
-                    for (ex = x1; --ex > xcenter;) {
-                        if (spherePlaneDistanceSquared(cy, planesX[ex].x, planesX[ex].z) > 0) {
-                            // intersection
-                            break;
+                if (cy.w > 0) {
+                    // The reduced sphere from the previous stage intersects this horizontal plane
+                    // and we now have new smaller sphere centered on these two previous planes
+                    size_t bx = std::numeric_limits<size_t>::max(); // horizontal begin index
+                    size_t ex = 0; // horizontal end index
+
+                    // find the begin index (left side)
+                    for (size_t ix = x0; ix <= x1; ++ix) {
+                        // froxel that contain the center if ths sphere is special, we don't even
+                        // need to do the intersection check, it's always true.
+                        if (UTILS_LIKELY(ix != xcenter)) {
+                            float4 const& plane = ix < xcenter ? planesX[ix + 1] : planesX[ix];
+                            if (spherePlaneDistanceSquared(cy, plane.x, plane.z) > 0) {
+                                // The reduced sphere from the previous stage intersects this
+                                // vertical plane, we record the min/max froxel indices
+                                bx = std::min(bx, ix);
+                                ex = std::max(ex, ix);
+                            }
+                        } else {
+                            // this is the froxel containing the center of the sphere, it is
+                            // definitely participating
+                            bx = std::min(bx, ix);
+                            assert(ix + 1 >= ex);
+                            ex = ix + 1;
                         }
                     }
-                    ++ex;
 
                     if (UTILS_UNLIKELY(bx >= ex)) {
                         continue;

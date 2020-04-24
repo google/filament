@@ -23,11 +23,12 @@
 namespace filament {
 namespace camutils {
 
+template <typename FLOAT> class FreeFlightManipulator;
 template <typename FLOAT> class OrbitManipulator;
 template <typename FLOAT> class MapManipulator;
 template <typename FLOAT> class Manipulator;
 
-enum class Mode { ORBIT, MAP };
+enum class Mode { ORBIT, MAP, FREE_FLIGHT };
 
 /**
  * Opaque memento to a viewing position and orientation (e.g. the "home" camera position).
@@ -62,9 +63,16 @@ private:
         FLOAT distance;
         filament::math::vec3<FLOAT> pivot;
     };
+    struct FlightParams {
+        FLOAT pitch;
+        FLOAT yaw;
+        filament::math::vec3<FLOAT> position;
+    };
     Mode mode;
     MapParams map;
     OrbitParams orbit;
+    FlightParams flight;
+    friend class FreeFlightManipulator<FLOAT>;
     friend class OrbitManipulator<FLOAT>;
     friend class MapManipulator<FLOAT>;
 };

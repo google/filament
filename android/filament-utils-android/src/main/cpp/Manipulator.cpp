@@ -90,6 +90,36 @@ extern "C" JNIEXPORT void Java_com_google_android_filament_utils_Manipulator_nBu
     builder->mapMinDistance(arg);
 }
 
+extern "C" JNIEXPORT void Java_com_google_android_filament_utils_Manipulator_nBuilderFlightStartPosition(JNIEnv*, jclass, jlong nativeBuilder, jfloat x, jfloat y, jfloat z) {
+    Builder* builder = (Builder*) nativeBuilder;
+    builder->flightStartPosition(x, y, z);
+}
+
+extern "C" JNIEXPORT void Java_com_google_android_filament_utils_Manipulator_nBuilderFlightStartOrientation(JNIEnv*, jclass, jlong nativeBuilder, jfloat pitch, jfloat yaw) {
+    Builder* builder = (Builder*) nativeBuilder;
+    builder->flightStartOrientation(pitch, yaw);
+}
+
+extern "C" JNIEXPORT void Java_com_google_android_filament_utils_Manipulator_nBuilderFlightMaxMoveSpeed(JNIEnv*, jclass, jlong nativeBuilder, jfloat maxSpeed) {
+    Builder* builder = (Builder*) nativeBuilder;
+    builder->flightMaxMoveSpeed(maxSpeed);
+}
+
+extern "C" JNIEXPORT void Java_com_google_android_filament_utils_Manipulator_nBuilderFlightSpeedSteps(JNIEnv*, jclass, jlong nativeBuilder, jint steps) {
+    Builder* builder = (Builder*) nativeBuilder;
+    builder->flightSpeedSteps(steps);
+}
+
+extern "C" JNIEXPORT void Java_com_google_android_filament_utils_Manipulator_nBuilderFlightPanSpeed(JNIEnv*, jclass, jlong nativeBuilder, jfloat x, jfloat y) {
+    Builder* builder = (Builder*) nativeBuilder;
+    builder->flightPanSpeed(x, y);
+}
+
+extern "C" JNIEXPORT void Java_com_google_android_filament_utils_Manipulator_nBuilderFlightMoveDamping(JNIEnv*, jclass, jlong nativeBuilder, jfloat damping) {
+    Builder* builder = (Builder*) nativeBuilder;
+    builder->flightMoveDamping(damping);
+}
+
 extern "C" JNIEXPORT void Java_com_google_android_filament_utils_Manipulator_nBuilderGroundPlane(JNIEnv*, jclass, jlong nativeBuilder, jfloat a, jfloat b, jfloat c, jfloat d) {
     Builder* builder = (Builder*) nativeBuilder;
     builder->groundPlane(a, b, c, d);
@@ -170,9 +200,24 @@ extern "C" JNIEXPORT void JNICALL Java_com_google_android_filament_utils_Manipul
     manip->grabEnd();
 }
 
-extern "C" JNIEXPORT void JNICALL Java_com_google_android_filament_utils_Manipulator_nZoom(JNIEnv*, jclass, jlong nativeManip, jint x, jint y, jfloat scrolldelta) {
+extern "C" JNIEXPORT void JNICALL Java_com_google_android_filament_utils_Manipulator_nKeyDown(JNIEnv*, jclass, jlong nativeManip, jint key) {
     auto manip = (Manipulator<float>*) nativeManip;
-    manip->zoom(x, y, scrolldelta);
+    manip->keyDown((Manipulator<float>::Key) key);
+}
+
+extern "C" JNIEXPORT void JNICALL Java_com_google_android_filament_utils_Manipulator_nKeyUp(JNIEnv*, jclass, jlong nativeManip, jint key) {
+    auto manip = (Manipulator<float>*) nativeManip;
+    manip->keyUp((Manipulator<float>::Key) key);
+}
+
+extern "C" JNIEXPORT void JNICALL Java_com_google_android_filament_utils_Manipulator_nScroll(JNIEnv*, jclass, jlong nativeManip, jint x, jint y, jfloat scrolldelta) {
+    auto manip = (Manipulator<float>*) nativeManip;
+    manip->scroll(x, y, scrolldelta);
+}
+
+extern "C" JNIEXPORT void JNICALL Java_com_google_android_filament_utils_Manipulator_nUpdate(JNIEnv*, jclass, jlong nativeManip, jfloat deltaTime) {
+    auto manip = (Manipulator<float>*) nativeManip;
+    manip->update(deltaTime);
 }
 
 extern "C" JNIEXPORT jlong JNICALL Java_com_google_android_filament_utils_Manipulator_nGetCurrentBookmark(JNIEnv*, jclass, jlong nativeManip) {

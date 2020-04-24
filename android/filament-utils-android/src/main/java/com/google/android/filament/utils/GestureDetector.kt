@@ -77,7 +77,7 @@ class GestureDetector(private val view: View, private val manipulator: Manipulat
                 if (currentGesture == Gesture.ZOOM) {
                     val d0 = previousTouch.separation
                     val d1 = touch.separation
-                    manipulator.zoom(touch.x, touch.y, (d0 - d1) * kZoomSpeed)
+                    manipulator.scroll(touch.x, touch.y, (d0 - d1) * kZoomSpeed)
                     previousTouch = touch
                     return
                 }

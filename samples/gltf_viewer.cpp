@@ -34,6 +34,8 @@
 #include <gltfio/ResourceLoader.h>
 #include <gltfio/SimpleViewer.h>
 
+#include <camutils/Manipulator.h>
+
 #include <getopt/getopt.h>
 
 #include <utils/NameComponentManager.h>
@@ -107,6 +109,8 @@ static void printUsage(char* name) {
         "       Do not scale the model to fit into a unit cube\n\n"
         "   --ubershader, -u\n"
         "       Enable ubershaders (improves load time, adds shader complexity)\n\n"
+        "   --camera=<camera mode>, -c <camera mode>\n"
+        "       Set the camera mode: orbit (default) or flight\n\n"
     );
     const std::string from("SHOWCASE");
     for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
@@ -116,13 +120,14 @@ static void printUsage(char* name) {
 }
 
 static int handleCommandLineArguments(int argc, char* argv[], App* app) {
-    static constexpr const char* OPTSTR = "ha:i:us";
+    static constexpr const char* OPTSTR = "ha:i:usc:";
     static const struct option OPTIONS[] = {
         { "help",         no_argument,       nullptr, 'h' },
         { "api",          required_argument, nullptr, 'a' },
         { "ibl",          required_argument, nullptr, 'i' },
         { "ubershader",   no_argument,       nullptr, 'u' },
         { "actual-size",  no_argument,       nullptr, 's' },
+        { "camera",       required_argument, nullptr, 'c' },
         { nullptr, 0, nullptr, 0 }
     };
     int opt;
@@ -143,6 +148,15 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
                     app->config.backend = Engine::Backend::METAL;
                 } else {
                     std::cerr << "Unrecognized backend. Must be 'opengl'|'vulkan'|'metal'.\n";
+                }
+                break;
+            case 'c':
+                if (arg == "flight") {
+                    app->config.cameraMode = camutils::Mode::FREE_FLIGHT;
+                } else if (arg == "orbit") {
+                    app->config.cameraMode = camutils::Mode::ORBIT;
+                } else {
+                    std::cerr << "Unrecognized camera mode. Must be 'flight'|'orbit'.\n";
                 }
                 break;
             case 'i':
@@ -444,9 +458,12 @@ int main(int argc, char** argv) {
         if (ibl) {
             ibl->getSkybox()->setLayerMask(0xff, app.viewOptions.skyboxEnabled ? 0xff : 0x00);
         }
+
+        // we have to clear because the side-bar doesn't have a background, we cannot use
+        // a skybox on the ui scene, because the ui view is always full screen.
         renderer->setClearOptions({
                 .clearColor = { inverseTonemapSRGB(app.viewOptions.backgroundColor), 1.0f },
-                .clear = !ibl || !app.viewOptions.skyboxEnabled  });
+                .clear = true  });
     };
 
     FilamentApp& filamentApp = FilamentApp::get();

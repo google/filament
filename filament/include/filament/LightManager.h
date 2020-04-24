@@ -430,9 +430,9 @@ public:
          * cones are defined by their half-angle).
          *
          * @param inner inner cone angle in *radians* between 0 and @f$ \pi/2 @f$
-
+         *
          * @param outer outer cone angle in *radians* between \p inner and @f$ \pi/2 @f$
-
+         *
          * @return This Builder, for chaining calls.
          *
          * @note
@@ -448,7 +448,7 @@ public:
          * The Sun as seen from Earth has an angular size of 0.526° to 0.545°
          *
          * @param angularRadius sun's radius in degree. Default is 0.545°.
-
+         *
          * @return This Builder, for chaining calls.
          */
         Builder& sunAngularRadius(float angularRadius) noexcept;
@@ -654,8 +654,8 @@ public:
      * Dynamically updates a spot light's cone as angles
      *
      * @param i     Instance of the component obtained from getInstance().
-     * @param inner inner cone angle in *radians* between 0 and @f$ \pi @f$
-     * @param outer outer cone angle in *radians* between 0 and @f$ \pi @f$
+     * @param inner inner cone angle in *radians* between 0 and pi/2
+     * @param outer outer cone angle in *radians* between inner and pi/2
      *
      * @see Builder.spotLightCone()
      */

@@ -34,8 +34,9 @@ enum class Fov { VERTICAL, HORIZONTAL };
  * Helper that enables camera interaction similar to sketchfab or Google Maps.
  *
  * Clients notify the camera manipulator of various mouse or touch events, then periodically call
- * its getLookAt() method so that they can adjust their camera(s). Two modes are supported: ORBIT
- * and MAP. To construct a manipulator instance, the desired mode is passed into the create method.
+ * its getLookAt() method so that they can adjust their camera(s). Three modes are supported: ORBIT,
+ * MAP, and FREE_FLIGHT. To construct a manipulator instance, the desired mode is passed into the
+ * create method.
  *
  * Usage example:
  *
@@ -97,6 +98,13 @@ public:
         FLOAT farPlane;
         vec2 mapExtent;
         FLOAT mapMinDistance;
+        vec3 flightStartPosition;
+        FLOAT flightStartPitch;
+        FLOAT flightStartYaw;
+        FLOAT flightMaxSpeed;
+        FLOAT flightSpeedSteps;
+        vec2 flightPanSpeed;
+        FLOAT flightMoveDamping;
         vec4 groundPlane;
         RayCallback raycastCallback;
         void* raycastUserdata;
@@ -120,12 +128,22 @@ public:
         Builder& mapExtent(FLOAT worldWidth, FLOAT worldHeight); //! The ground size for computing home position
         Builder& mapMinDistance(FLOAT mindist);                  //! Constrains the zoom-in level
 
+        // Free flight properties
+        Builder& flightStartPosition(FLOAT x, FLOAT y, FLOAT z);     //! Initial eye position in world space, defaults to (0,0,0)
+        Builder& flightStartOrientation(FLOAT pitch, FLOAT yaw);     //! Initial orientation in pitch and yaw, defaults to (0,0)
+        Builder& flightMaxMoveSpeed(FLOAT maxSpeed);                 //! The maximum camera speed in world units per second, defaults to 10
+        Builder& flightSpeedSteps(int steps);                        //! The number of speed steps adjustable with scroll wheel, defaults to 80
+        Builder& flightPanSpeed(FLOAT x, FLOAT y);                   //! Multiplied with viewport delta, defaults to 0.01,0.01
+        Builder& flightMoveDamping(FLOAT damping);                   //! Applies a deceleration to camera movement, defaults to 0 (no damping)
+                                                                     //! Lower values give slower damping times, a good default is 15
+                                                                     //! Too high a value may lead to instability
+
         // Raycast properties
         Builder& groundPlane(FLOAT a, FLOAT b, FLOAT c, FLOAT d);  //! Plane equation used as a raycast fallback
         Builder& raycastCallback(RayCallback cb, void* userdata);  //! Raycast function for accurate grab-and-pan
 
         /**
-         * Creates a new camera manipulator, either ORBIT or MAP.
+         * Creates a new camera manipulator, either ORBIT, MAP, or FREE_FLIGHT.
          *
          * Clients can simply use "delete" to destroy the manipulator.
          */
@@ -165,7 +183,9 @@ public:
     /**
      * Starts a grabbing session (i.e. the user is dragging around in the viewport).
      *
-     * This starts a panning session in MAP mode, and starts either rotating or strafing in ORBIT.
+     * In MAP mode, this starts a panning session.
+     * In ORBIT mode, this starts either rotating or strafing.
+     * In FREE_FLIGHT mode, this starts a nodal panning session.
      *
      * @param x X-coordinate for point of interest in viewport space
      * @param y Y-coordinate for point of interest in viewport space
@@ -186,13 +206,53 @@ public:
     virtual void grabEnd() = 0;
 
     /**
-     * Dollys the camera along the viewing direction.
-     *
-     * @param x X-coordinate for point of interest in viewport space
-     * @param y Y-coordinate for point of interest in viewport space
-     * @param scrolldelta Negative means "zoom in", positive means "zoom out"
+     * Keys used to translate the camera in FREE_FLIGHT mode.
+     * UP and DOWN dolly the camera forwards and backwards.
+     * LEFT and RIGHT strafe the camera left and right.
      */
-    virtual void zoom(int x, int y, FLOAT scrolldelta) = 0;
+    enum class Key {
+        UP,
+        LEFT,
+        DOWN,
+        RIGHT,
+
+        COUNT
+    };
+
+    /**
+     * Signals that a key is now in the down state.
+     *
+     * In FREE_FLIGHT mode, the camera is translated forward and backward and strafed left and right
+     * depending on the depressed keys. This allows WASD-style movement.
+     */
+    virtual void keyDown(Key key);
+
+    /**
+     * Signals that a key is now in the up state.
+     *
+     * @see keyDown
+     */
+    virtual void keyUp(Key key);
+
+    /**
+     * In MAP and ORBIT modes, dollys the camera along the viewing direction.
+     * In FREE_FLIGHT mode, adjusts the move speed of the camera.
+     *
+     * @param x X-coordinate for point of interest in viewport space, ignored in FREE_FLIGHT mode
+     * @param y Y-coordinate for point of interest in viewport space, ignored in FREE_FLIGHT mode
+     * @param scrolldelta In MAP and ORBIT modes, negative means "zoom in", positive means "zoom out"
+     *                    In FREE_FLIGHT mode, negative means "slower", positive means "faster"
+     */
+    virtual void scroll(int x, int y, FLOAT scrolldelta) = 0;
+
+    /**
+     * Processes input and updates internal state.
+     *
+     * This must be called once every frame before getLookAt is valid.
+     *
+     * @param deltaTime The amount of time, in seconds, passed since the previous call to update.
+     */
+    virtual void update(FLOAT deltaTime);
 
     /**
      * Gets a handle that can be used to reset the manipulator back to its current position.

@@ -25,8 +25,9 @@ import androidx.annotation.Size;
  * Helper that enables camera interaction similar to sketchfab or Google Maps.
  *
  * Clients notify the camera manipulator of various mouse or touch events, then periodically call
- * its getLookAt() method so that they can adjust their camera(s). Two modes are supported: ORBIT
- * and MAP. To construct a manipulator instance, the desired mode is passed into the create method.
+ * its getLookAt() method so that they can adjust their camera(s). Three modes are supported: ORBIT,
+ * MAP, and FREE_FLIGHT. To construct a manipulator instance, the desired mode is passed into the
+ * create method.
  *
  * @see Bookmark
  */
@@ -37,9 +38,21 @@ public class Manipulator {
         mNativeObject = nativeIndexBuffer;
     }
 
-    public enum Mode { ORBIT, MAP };
+    public enum Mode { ORBIT, MAP, FREE_FLIGHT };
 
     public enum Fov { VERTICAL, HORIZONTAL };
+
+    /**
+     * Keys used to translate the camera in FREE_FLIGHT mode.
+     * UP and DOWN dolly the camera forwards and backwards.
+     * LEFT and RIGHT strafe the camera left and right.
+     */
+    public enum Key {
+        UP,
+        LEFT,
+        DOWN,
+        RIGHT
+    }
 
     public static class Builder {
         @SuppressWarnings({"FieldCanBeLocal", "UnusedDeclaration"})
@@ -179,6 +192,72 @@ public class Manipulator {
         }
 
         /**
+         * Sets the initial eye position in world space for FREE_FLIGHT mode. Defaults to (0,0,0).
+         *
+         * @return this <code>Builder</code> object for chaining calls
+         */
+        public Builder flightStartPosition(float x, float y, float z) {
+            nFlightStartPosition(mNativeBuilder, x, y, z);
+            return this;
+        }
+
+        /**
+         * Sets the initial orientation in pitch and yaw for FREE_FLIGHT mode. Defaults to (0,0).
+         *
+         * @return this <code>Builder</code> object for chaining calls
+         */
+        public Builder flightStartOrientation(float pitch, float yaw) {
+            nFlightStartOrientation(mNativeBuilder, pitch, yaw);
+            return this;
+        }
+
+        /**
+         * Sets the maximum camera translation speed in world units per second for FREE_FLIGHT mode.
+         * Defaults to 10.
+         *
+         * @return this <code>Builder</code> object for chaining calls
+         */
+        public Builder flightMaxMoveSpeed(float maxSpeed) {
+            nFlightMaxMoveSpeed(mNativeBuilder, maxSpeed);
+            return this;
+        }
+
+        /**
+         * Sets the number of speed steps adjustable with scroll wheel for FREE_FLIGHT mode.
+         * Defaults to 80.
+         *
+         * @return this <code>Builder</code> object for chaining calls
+         */
+        public Builder flightSpeedSteps(int steps) {
+            nFlightSpeedSteps(mNativeBuilder, steps);
+            return this;
+        }
+
+       /**
+        * Sets the multiplier with viewport delta for FREE_FLIGHT mode.
+        * This defaults to 0.01.
+        *
+        * @return this <code>Builder</code> object for chaining calls
+        */
+        public Builder flightPanSpeed(float x, float y) {
+            nFlightPanSpeed(mNativeBuilder, x, y);
+            return this;
+        }
+
+       /**
+        * Applies a deceleration to camera movement in FREE_FLIGHT mode. Defaults to 0 (no damping).
+        *
+        * Lower values give slower damping times. A good default is 15.0. Too high a value may lead
+        * to instability.
+        *
+        * @return this <code>Builder</code> object for chaining calls
+        */
+        public Builder flightMoveDamping(float damping) {
+            nFlightMoveDamping(mNativeBuilder, damping);
+            return this;
+        }
+
+        /**
          * Sets the ground plane equation used for ray casts.
          * This is a plane equation as in Ax + By + Cz + D = 0.
          * Defaults to (0, 0, 1, 0).
@@ -281,11 +360,13 @@ public class Manipulator {
     /**
      * Starts a grabbing session (i.e. the user is dragging around in the viewport).
      *
-     * This starts a panning session in MAP mode, and start either rotating or strafing in ORBIT.
+     * In MAP mode, this starts a panning session.
+     * In ORBIT mode, this starts either rotating or strafing.
+     * In FREE_FLIGHT mode, this starts a nodal panning session.
      *
      * @param x X-coordinate for point of interest in viewport space
      * @param y Y-coordinate for point of interest in viewport space
-     * @param strafe ORBIT mode only; if true, starts a translation rather than a rotation.
+     * @param strafe ORBIT mode only; if true, starts a translation rather than a rotation
      */
     public void grabBegin(int x, int y, boolean strafe) {
         nGrabBegin(mNativeObject, x, y, strafe);
@@ -308,14 +389,45 @@ public class Manipulator {
     }
 
     /**
-     * Dollys the camera along the viewing direction.
-     *
-     * @param x X-coordinate for point of interest in viewport space
-     * @param y Y-coordinate for point of interest in viewport space
-     * @param scrolldelta Positive means "zoom in", negative means "zoom out"
+     * Keys used to translate the camera in FREE_FLIGHT mode.
+     * UP and DOWN dolly the camera forwards and backwards.
+     * LEFT and RIGHT strafe the camera left and right.
      */
-    public void zoom(int x, int y, float scrolldelta) {
-        nZoom(mNativeObject, x, y, scrolldelta);
+    public void keyDown(Key key) {
+        nKeyDown(mNativeObject, key.ordinal());
+    }
+
+    /**
+     * Signals that a key is now in the up state.
+     *
+     * @see keyDown
+     */
+    public void keyUp(Key key) {
+        nKeyUp(mNativeObject, key.ordinal());
+    }
+
+    /**
+     * In MAP and ORBIT modes, dollys the camera along the viewing direction.
+     * In FREE_FLIGHT mode, adjusts the move speed of the camera.
+     *
+     * @param x X-coordinate for point of interest in viewport space, ignored in FREE_FLIGHT mode
+     * @param y Y-coordinate for point of interest in viewport space, ignored in FREE_FLIGHT mode
+     * @param scrolldelta In MAP and ORBIT modes, negative means "zoom in", positive means "zoom out"
+     *                    In FREE_FLIGHT mode, negative means "slower", positive means "faster"
+     */
+    public void scroll(int x, int y, float scrolldelta) {
+        nScroll(mNativeObject, x, y, scrolldelta);
+    }
+
+    /**
+     * Processes input and updates internal state.
+     *
+     * This must be called once every frame before getLookAt is valid.
+     *
+     * @param deltaTime The amount of time, in seconds, passed since the previous call to update.
+     */
+    public void update(float deltaTime) {
+        nUpdate(mNativeObject, deltaTime);
     }
 
     /**
@@ -359,6 +471,12 @@ public class Manipulator {
     private static native void nBuilderFarPlane(long nativeBuilder, float distance);
     private static native void nBuilderMapExtent(long nativeBuilder, float width, float height);
     private static native void nBuilderMapMinDistance(long nativeBuilder, float arg);
+    private static native void nFlightStartPosition(long nativeBuilder, float x, float y, float z);
+    private static native void nFlightStartOrientation(long nativeBuilder, float pitch, float yaw);
+    private static native void nFlightMaxMoveSpeed(long nativeBuilder, float maxSpeed);
+    private static native void nFlightSpeedSteps(long nativeBuilder, int steps);
+    private static native void nFlightPanSpeed(long nativeBuilder, float x, float y);
+    private static native void nFlightMoveDamping(long nativeBuilder, float damping);
     private static native void nBuilderGroundPlane(long nativeBuilder, float a, float b, float c, float d);
     private static native long nBuilderBuild(long nativeBuilder, int mode);
 
@@ -371,7 +489,10 @@ public class Manipulator {
     private static native void nGrabBegin(long nativeManip, int x, int y, boolean strafe);
     private static native void nGrabUpdate(long nativeManip, int x, int y);
     private static native void nGrabEnd(long nativeManip);
-    private static native void nZoom(long nativeManip, int x, int y, float scrolldelta);
+    private static native void nKeyDown(long nativeManip, int key);
+    private static native void nKeyUp(long nativeManip, int key);
+    private static native void nScroll(long nativeManip, int x, int y, float scrolldelta);
+    private static native void nUpdate(long nativeManip, float deltaTime);
     private static native long nGetCurrentBookmark(long nativeManip);
     private static native long nGetHomeBookmark(long nativeManip);
     private static native void nJumpToBookmark(long nativeManip, long nativeBookmark);
