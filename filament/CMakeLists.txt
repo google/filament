@@ -143,6 +143,8 @@ set(PRIVATE_HDRS
 
 set(MATERIAL_SRCS
         src/materials/defaultMaterial.mat
+        src/materials/dof.mat
+        src/materials/dofBlur.mat
         src/materials/blitLow.mat
         src/materials/blitMedium.mat
         src/materials/blitHigh.mat
@@ -223,6 +225,18 @@ add_custom_command(
 add_custom_command(
     OUTPUT "${MATERIAL_DIR}/fxaa.filamat"
     DEPENDS ../shaders/src/fxaa.fs
+    APPEND
+)
+
+add_custom_command(
+    OUTPUT "${MATERIAL_DIR}/dof.filamat"
+    DEPENDS src/materials/dofUtils.fs
+    APPEND
+)
+
+add_custom_command(
+    OUTPUT "${MATERIAL_DIR}/dofBlur.filamat"
+    DEPENDS src/materials/dofUtils.fs
     APPEND
 )
 

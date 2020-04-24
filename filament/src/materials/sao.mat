@@ -94,7 +94,7 @@ fragment {
     }
 
     // random number between 0 and 1, using interleaved gradient noise
-    float random(vec2 w) {
+    float random(const highp vec2 w) {
         const vec3 m = vec3(0.06711056, 0.00583715, 52.9829189);
         return fract(m.z * fract(dot(w, m.xy)));
     }

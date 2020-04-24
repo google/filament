@@ -270,6 +270,10 @@ public:
         mBloomOptions = options;
     }
 
+    BloomOptions getBloomOptions() const noexcept {
+        return mBloomOptions;
+    }
+
     void setFogOptions(FogOptions options) noexcept {
         options.distance = std::max(0.0f, options.distance);
         options.maximumOpacity = math::clamp(options.maximumOpacity, 0.0f, 1.0f);
@@ -280,8 +284,14 @@ public:
         mFogOptions = options;
     }
 
-    BloomOptions getBloomOptions() const noexcept {
-        return mBloomOptions;
+    void setDepthOfFieldOptions(DepthOfFieldOptions options) noexcept {
+        options.focusDistance = std::max(0.0f, options.focusDistance);
+        options.blurScale = std::max(0.0f, options.blurScale);
+        mDepthOfFieldOptions = options;
+    }
+
+    DepthOfFieldOptions getDepthOfFieldOptions() const noexcept {
+        return mDepthOfFieldOptions;
     }
 
     void setBlendMode(BlendMode blendMode) noexcept {
@@ -378,6 +388,7 @@ private:
     AmbientOcclusionOptions mAmbientOcclusionOptions{};
     BloomOptions mBloomOptions;
     FogOptions mFogOptions;
+    DepthOfFieldOptions mDepthOfFieldOptions;
     BlendMode mBlendMode = BlendMode::OPAQUE;
 
     DynamicResolutionOptions mDynamicResolution;

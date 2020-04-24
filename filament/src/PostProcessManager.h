@@ -53,6 +53,11 @@ public:
             FrameGraphId<FrameGraphTexture> input, backend::TextureFormat outFormat,
             bool translucent) noexcept;
 
+    FrameGraphId<FrameGraphTexture> dof(FrameGraph& fg,
+            FrameGraphId<FrameGraphTexture> input,
+            const View::DepthOfFieldOptions& dofOptions,
+            const details::CameraInfo& cameraInfo) noexcept;
+
     FrameGraphId<FrameGraphTexture> opaqueBlit(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, FrameGraphTexture::Descriptor outDesc) noexcept;
 
@@ -134,6 +139,8 @@ private:
     PostProcessMaterial mBlit[3];
     PostProcessMaterial mTonemapping;
     PostProcessMaterial mFxaa;
+    PostProcessMaterial mDoFBlur;
+    PostProcessMaterial mDoF;
 
     backend::Handle<backend::HwTexture> mDummyOneTexture;
     backend::Handle<backend::HwTexture> mDummyZeroTexture;

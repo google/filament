@@ -166,6 +166,15 @@ public:
     };
 
     /**
+     * Options to control Depth of Field (DoF) effect in the scene
+     */
+    struct DepthOfFieldOptions {
+        float focusDistance = 10.0f;        //!< focus distance in world units
+        float blurScale = 1.0f;             //!< a scale factor for the amount of blur
+        bool enabled = false;               //!< enable or disable Depth of field effect
+    };
+
+    /**
      * Structure used to set the precision of the color buffer and related quality settings.
      *
      * @see setRenderQuality, getRenderQuality
@@ -484,6 +493,13 @@ public:
      * @param options options
      */
     void setFogOptions(FogOptions options) noexcept;
+
+    /**
+     * Enables or disables Depth of Field. Disabled by default.
+     *
+     * @param options options
+     */
+    void setDepthOfFieldOptions(DepthOfFieldOptions options) noexcept;
 
     /**
      * Queries the bloom options.

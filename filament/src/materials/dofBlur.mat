@@ -1,0 +1,75 @@
+material {
+    name : DepthOfFieldBlur,
+    parameters : [
+        {
+            type : sampler2d,
+            name : color,
+            precision: medium
+        },
+        {
+            type : sampler2d,
+            name : depth,
+            precision: medium
+        },
+        {
+            type : float4,
+            name : resolution,
+            precision: high
+        },
+        {
+            type : float2,
+            name : cocParams
+        }
+    ],
+    variables : [
+        vertex
+    ],
+    domain : postprocess,
+    depthWrite : false,
+    depthCulling : false
+}
+
+vertex {
+    void postProcessVertex(inout PostProcessVertexInputs postProcess) {
+        postProcess.vertex.xy = postProcess.normalizedUV;
+    }
+}
+
+fragment {
+
+/*
+ * Separable octogonal blur
+ *
+ * This uses a lot of ideas from
+ *   "Hexagonal Bokeh Blur Revisited" by Colin Barré-Brisebois
+ *   (https://colinbarrebrisebois.com/2017/04/18/hexagonal-bokeh-blur-revisited-part-1-basic-3-pass-version/)
+ *
+ *   "Efficiently Simulating the Bokeh of Polygonal Apertures in a Post-Process Depth of Field Shader"
+ *   by L. McIntosh, B. E. Riecke and S. DiPaola
+ */
+
+layout(location = 1) out vec4 fragColor1;
+
+#include "dofUtils.fs"
+
+const vec2 kDirHorizontal = unitvec(0.0 + BOKEH_ROTATION_ANGLE);
+const vec2 kDirDiagonal   = unitvec(PI / 4.0 + BOKEH_ROTATION_ANGLE);
+
+void postProcess(inout PostProcessInputs postProcess) {
+    highp vec2 uv = variable_vertex.xy;
+
+    float depth = textureLod(materialParams_depth,  uv, 0.0).r;
+    float coc = getCOC(depth, materialParams.cocParams);
+
+    vec4 horizontal = blurTexture(materialParams_color, uv, kDirHorizontal, depth, coc);
+    vec4 diagonal   = blurTexture(materialParams_color, uv, kDirDiagonal,   depth, coc);
+
+    // Output to MRTs
+    postProcess.color = horizontal;
+#if defined(TARGET_MOBILE)
+    diagonal = clamp(diagonal, 0.0, MEDIUMP_FLT_MAX);
+#endif
+    fragColor1 = diagonal;
+}
+
+}
