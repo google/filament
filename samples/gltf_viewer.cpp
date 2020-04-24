@@ -82,6 +82,8 @@ struct App {
         sRGBColor backgroundColor = { 0.0f };
     } viewOptions;
 
+    View::DepthOfFieldOptions dofOptions;
+
     struct Scene {
         Entity groundPlane;
         VertexBuffer* groundVertexBuffer;
@@ -396,10 +398,13 @@ int main(int argc, char** argv) {
             }
 
             if (ImGui::CollapsingHeader("Camera")) {
-                ImGui::SliderFloat("Focal length", &FilamentApp::get().getCameraFocalLength(), 16.0f, 90.0f);
+                ImGui::SliderFloat("Focal length (mm)", &FilamentApp::get().getCameraFocalLength(), 16.0f, 90.0f);
                 ImGui::SliderFloat("Aperture", &app.viewOptions.cameraAperture, 1.0f, 32.0f);
-                ImGui::SliderFloat("Speed", &app.viewOptions.cameraSpeed, 800.0f, 1.0f);
+                ImGui::SliderFloat("Speed (1/s)", &app.viewOptions.cameraSpeed, 1000.0f, 1.0f);
                 ImGui::SliderFloat("ISO", &app.viewOptions.cameraISO, 25.0f, 6400.0f);
+                ImGui::Checkbox("DoF", &app.dofOptions.enabled);
+                ImGui::SliderFloat("Focus distance", &app.dofOptions.focusDistance, 0.0f, 30.0f);
+                ImGui::SliderFloat("Blur scale", &app.dofOptions.blurScale, 0.1f, 10.0f);
             }
         });
 
@@ -450,6 +455,8 @@ int main(int argc, char** argv) {
                 app.viewOptions.cameraAperture,
                 1.0f / app.viewOptions.cameraSpeed,
                 app.viewOptions.cameraISO);
+
+        view->setDepthOfFieldOptions(app.dofOptions);
 
         app.scene.groundMaterial->setDefaultParameter(
                 "strength", app.viewOptions.groundShadowStrength);

@@ -25,6 +25,7 @@
 #include <utils/Panic.h>
 
 #include <math/scalar.h>
+#include <filament/Exposure.h>
 
 using namespace filament::math;
 using namespace utils;
@@ -60,7 +61,7 @@ void UTILS_NOINLINE FCamera::setProjection(double fov, double aspect, double nea
 
 void FCamera::setLensProjection(double focalLength, double aspect, double near, double far) noexcept {
     // a 35mm camera has a 36x24mm wide frame size
-    double theta = 2.0 * std::atan(24.0 / (2.0 * focalLength));
+    double theta = 2.0 * std::atan(SENSOR_SIZE * 1000.0f / (2.0 * focalLength));
     theta *= 180.0 / math::F_PI;
     FCamera::setProjection(theta, aspect, near, far, Fov::VERTICAL);
 }
@@ -234,6 +235,34 @@ Frustum FCamera::getFrustum(mat4 const& projection, mat4f const& viewMatrix) noe
     return Frustum(mat4f{ projection * viewMatrix });
 }
 
+// ------------------------------------------------------------------------------------------------
+
+CameraInfo::CameraInfo(FCamera const& camera) noexcept {
+    projection         = mat4f{ camera.getProjectionMatrix() };
+    cullingProjection  = mat4f{ camera.getCullingProjectionMatrix() };
+    model              = camera.getModelMatrix();
+    view               = camera.getViewMatrix();
+    zn                 = camera.getNear();
+    zf                 = camera.getCullingFar();
+    ev100              = Exposure::ev100(camera);
+    f                  = (FCamera::SENSOR_SIZE * (float)projection[1][1]) * 0.5f;
+    A                  = f / camera.getAperture();
+}
+
+CameraInfo::CameraInfo(FCamera const& camera, const math::mat4f& worldOriginCamera) noexcept {
+    const mat4f modelMatrix{ worldOriginCamera * camera.getModelMatrix() };
+    projection         = mat4f{ camera.getProjectionMatrix() };
+    cullingProjection  = mat4f{ camera.getCullingProjectionMatrix() };
+    model              = modelMatrix;
+    view               = FCamera::getViewMatrix(model);
+    zn                 = camera.getNear();
+    zf                 = camera.getCullingFar();
+    ev100              = Exposure::ev100(camera);
+    f                  = (FCamera::SENSOR_SIZE * (float)projection[1][1]) * 0.5f;
+    A                  = f / camera.getAperture();
+    worldOffset        = camera.getPosition();
+    worldOrigin        = worldOriginCamera;
+}
 
 } // namespace details
 

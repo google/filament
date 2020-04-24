@@ -204,14 +204,17 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     uint8_t msaa = view.getSampleCount();
     float2 scale = view.updateScale(mFrameInfoManager.getLastFrameInfo());
     const View::QualityLevel upscalingQuality = view.getDynamicResolutionOptions().quality;
+    auto bloomOptions = view.getBloomOptions();
+    auto dofOptions = view.getDepthOfFieldOptions();
     auto aoOptions = view.getAmbientOcclusionOptions();
     if (!hasPostProcess) {
-        // dynamic scaling and FXAA are part of the post-process phase and can't happen if
-        // it's disabled.
-        fxaa = false;
-        dithering = false;
-        scale = 1.0f;
+        // disable all effects that are part of post-processing
         msaa = 1;
+        dofOptions.enabled = false;
+        bloomOptions.enabled = false;
+        dithering = false;
+        fxaa = false;
+        scale = 1.0f;
     }
 
     const bool scaled = any(notEqual(scale, float2(1.0f)));
@@ -382,9 +385,12 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             TextureFormat::RGBA8 : getLdrFormat(translucent); // e.g. RGB8 or RGBA8
 
     if (hasPostProcess) {
+        if (dofOptions.enabled) {
+            input = ppm.dof(fg, input, dofOptions, cameraInfo);
+        }
         if (toneMapping) {
             input = ppm.toneMapping(fg, input, ldrFormat, translucent, fxaa, scale,
-                    view.getBloomOptions(), dithering);
+                    bloomOptions, dithering);
         }
         if (fxaa) {
             input = ppm.fxaa(fg, input, ldrFormat, !toneMapping || translucent);

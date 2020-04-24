@@ -39,6 +39,8 @@ class FEngine;
  */
 class FCamera : public Camera {
 public:
+    // a 35mm camera has a 36x24mm wide frame size
+    static constexpr const float SENSOR_SIZE = 0.024f;    // 24mm
 
     FCamera(FEngine& engine, utils::Entity e);
 
@@ -169,14 +171,20 @@ private:
 };
 
 struct CameraInfo {
-    math::mat4f projection;
-    math::mat4f cullingProjection;
-    math::mat4f model;
-    math::mat4f view;
-    float zn;
-    float zf;
-    float ev100 = 0.0f;
-    math::float3 worldOffset;
+    CameraInfo() noexcept = default;
+    explicit CameraInfo(FCamera const& camera) noexcept;
+    CameraInfo(FCamera const& camera, const math::mat4f& worldOriginCamera) noexcept;
+
+    math::mat4f projection;         // projection matrix for drawing (infinite zfar)
+    math::mat4f cullingProjection;  // projection matrix for culling
+    math::mat4f model;              // camera model matrix
+    math::mat4f view;               // camera view matrix
+    float zn{};                     // distance (positive) to the near plane
+    float zf{};                     // distance (positive) to the far plane
+    float ev100{};                  // exposure
+    float f{};                      // focal length (in m)
+    float A{};                      // aperture diameter (in m)
+    math::float3 worldOffset{};     // world offset, API-level camera position
     math::float3 const& getPosition() const noexcept { return model[3].xyz; }
     math::float3 getForwardVector() const noexcept { return normalize(-model[2].xyz); }
 

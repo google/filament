@@ -1,0 +1,63 @@
+material {
+    name : DepthOfField,
+    parameters : [
+        {
+           type : sampler2d,
+           name : buffer0,
+           precision: medium
+        },
+        {
+           type : sampler2d,
+           name : buffer1,
+           precision: medium
+        },
+        {
+           type : sampler2d,
+           name : depth,
+           precision: medium
+        },
+        {
+            type : float4,
+            name : resolution,
+            precision: high
+        },
+        {
+           type : float2,
+           name : cocParams
+        }
+    ],
+    variables : [
+        vertex
+    ],
+    domain : postprocess,
+    depthWrite : false,
+    depthCulling : false
+}
+
+vertex {
+    void postProcessVertex(inout PostProcessVertexInputs postProcess) {
+        postProcess.vertex.xy = postProcess.normalizedUV;
+    }
+}
+
+fragment {
+
+#include "dofUtils.fs"
+
+const vec2 kDirVertical= unitvec(PI / 2.0 + BOKEH_ROTATION_ANGLE);
+const vec2 kDirDiamond = unitvec(3.0 * PI / 4.0 + BOKEH_ROTATION_ANGLE);
+
+void postProcess(inout PostProcessInputs postProcess) {
+    highp vec2 uv = variable_vertex.xy;
+
+    float depth = textureLod(materialParams_depth, uv, 0.0).r;
+    float coc = getCOC(depth, materialParams.cocParams);
+
+    vec4 box     = blurTexture(materialParams_buffer0, uv, kDirVertical, depth, coc);
+    vec4 diamond = blurTexture(materialParams_buffer1, uv, kDirDiamond,  depth, coc);
+    vec4 dof = min(box, diamond);
+
+    postProcess.color = dof;
+}
+
+}

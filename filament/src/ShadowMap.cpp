@@ -80,16 +80,9 @@ void ShadowMap::render(DriverApi& driver, Handle<HwRenderTarget> rt,
     params.viewport = viewport;
 
     FCamera const& camera = getCamera();
-    details::CameraInfo cameraInfo = {
-            .projection         = mat4f{ camera.getProjectionMatrix() },
-            .cullingProjection  = mat4f{ camera.getCullingProjectionMatrix() },
-            .model              = camera.getModelMatrix(),
-            .view               = camera.getViewMatrix(),
-            .zn                 = camera.getNear(),
-            .zf                 = camera.getCullingFar(),
-    };
-    pass.setCamera(cameraInfo);
+    details::CameraInfo cameraInfo(camera);
 
+    pass.setCamera(cameraInfo);
     pass.setGeometry(scene.getRenderableData(), range, scene.getRenderableUBO());
 
     view.updatePrimitivesLod(engine, cameraInfo, scene.getRenderableData(), range);

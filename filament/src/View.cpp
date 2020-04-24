@@ -391,32 +391,10 @@ void FView::prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& are
     }
 
     // Note: for debugging (i.e. visualize what the camera / objects are doing, using
-    // the viewing camera), we can set worldOriginCamera to identity when mViewingCamera
-    // is set: e.g.
-    //      worldOriginCamera = mViewingCamera ? mat4f{} : worldOriginScene
+    // the viewing camera), we can set worldOriginScene to identity when mViewingCamera
+    // is set
+    mViewingCameraInfo = CameraInfo(*camera, worldOriginScene);
 
-    const mat4f worldOriginCamera = worldOriginScene;
-    const mat4f model{ worldOriginCamera * camera->getModelMatrix() };
-    mViewingCameraInfo = CameraInfo{
-            // projection with infinite z-far
-            .projection         = mat4f{ camera->getProjectionMatrix() },
-            // projection used for culling, with finite z-far
-            .cullingProjection  = mat4f{ camera->getCullingProjectionMatrix() },
-            // camera model matrix -- apply the world origin to it
-            .model              = model,
-            // camera view matrix
-            .view               = FCamera::getViewMatrix(model),
-            // near plane
-            .zn                 = camera->getNear(),
-            // far plane
-            .zf                 = camera->getCullingFar(),
-            // exposure
-            .ev100              = Exposure::ev100(*camera),
-            // world offset to allow users to determine the API-level camera position
-            .worldOffset        = camera->getPosition(),
-            // world origin transform, use only for debugging
-            .worldOrigin        = worldOriginCamera
-    };
     mCullingFrustum = FCamera::getFrustum(
             mCullingCamera->getCullingProjectionMatrix(),
             FCamera::getViewMatrix(worldOriginScene * mCullingCamera->getModelMatrix()));
@@ -431,7 +409,7 @@ void FView::prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& are
      * Light culling: runs in parallel with Renderable culling (below)
      */
 
-    auto prepareVisibleLightsJob = js.runAndRetain(js.createJob(nullptr,
+    auto *prepareVisibleLightsJob = js.runAndRetain(js.createJob(nullptr,
             [&frustum = mCullingFrustum, &engine, scene](JobSystem& js, JobSystem::Job*) {
                 FView::prepareVisibleLights(
                         engine.getLightManager(), js, frustum, scene->getLightData());
@@ -981,6 +959,10 @@ void View::setFogOptions(View::FogOptions options) noexcept {
     upcast(this)->setFogOptions(options);
 }
 
+void View::setDepthOfFieldOptions(DepthOfFieldOptions options) noexcept {
+    upcast(this)->setDepthOfFieldOptions(options);
+}
+
 View::BloomOptions View::getBloomOptions() const noexcept {
     return upcast(this)->getBloomOptions();
 }
@@ -992,6 +974,5 @@ void View::setBlendMode(BlendMode blendMode) noexcept {
 View::BlendMode View::getBlendMode() const noexcept {
     return upcast(this)->getBlendMode();
 }
-
 
 } // namespace filament
