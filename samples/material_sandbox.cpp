@@ -486,7 +486,7 @@ static void gui(filament::Engine* engine, filament::View*) {
         }
 
         if (ImGui::CollapsingHeader("Object")) {
-            ImGui::Checkbox("Cast shadows###object", &params.castShadows);
+            ImGui::Checkbox("Cast shadows##object", &params.castShadows);
         }
 
         if (ImGui::CollapsingHeader("Camera")) {
@@ -502,7 +502,7 @@ static void gui(filament::Engine* engine, filament::View*) {
             ImGui::Indent();
             if (ImGui::CollapsingHeader("SSAO")) {
                 DebugRegistry& debug = engine->getDebugRegistry();
-                ImGui::Checkbox("Enabled###ssao", &params.ssao);
+                ImGui::Checkbox("Enabled##ssao", &params.ssao);
                 ImGui::SliderFloat("Radius", &params.ssaoOptions.radius, 0.05f, 5.0f);
                 ImGui::SliderFloat("Bias", &params.ssaoOptions.bias, 0.0f, 0.01f, "%.6f");
                 ImGui::SliderFloat("Intensity", &params.ssaoOptions.intensity, 0.0f, 4.0f);
@@ -512,8 +512,8 @@ static void gui(filament::Engine* engine, filament::View*) {
         }
 
         if (ImGui::CollapsingHeader("Directional Light")) {
-            ImGui::Checkbox("Enabled###directionalLight", &params.directionalLightEnabled);
-            ImGui::ColorEdit3("Color###directionalLight", &params.lightColor.r);
+            ImGui::Checkbox("Enabled##directionalLight", &params.directionalLightEnabled);
+            ImGui::ColorEdit3("Color##directionalLight", &params.lightColor.r);
             ImGui::SliderFloat("Lux", &params.lightIntensity, 0.0f, 150000.0f);
             ImGui::SliderFloat("Sun size", &params.sunAngularRadius, 0.1f, 10.0f);
             ImGui::SliderFloat("Halo size", &params.sunHaloSize, 1.01f, 40.0f);
@@ -522,7 +522,7 @@ static void gui(filament::Engine* engine, filament::View*) {
             ImGui::Indent();
             if (ImGui::CollapsingHeader("Contact Shadows")) {
                 DebugRegistry& debug = engine->getDebugRegistry();
-                ImGui::Checkbox("Enabled###contactShadows", &params.screenSpaceContactShadows);
+                ImGui::Checkbox("Enabled##contactShadows", &params.screenSpaceContactShadows);
                 ImGui::SliderInt("Steps", &params.stepCount, 0, 255);
                 ImGui::SliderFloat("Distance", &params.maxShadowDistance, 0.0f, 10.0f);
             }
@@ -530,10 +530,10 @@ static void gui(filament::Engine* engine, filament::View*) {
         }
 
         if (ImGui::CollapsingHeader("Spot Light")) {
-            ImGui::Checkbox("Enabled###spotLight", &params.spotLightEnabled);
+            ImGui::Checkbox("Enabled##spotLight", &params.spotLightEnabled);
             ImGui::SliderFloat3("Position", &params.spotLightPosition.x, -5.0f, 5.0f);
-            ImGui::ColorEdit3("Color###spotLight", &params.spotLightColor.r);
-            ImGui::Checkbox("Cast shadows###spotLight", &params.spotLightCastShadows);
+            ImGui::ColorEdit3("Color##spotLight", &params.spotLightColor.r);
+            ImGui::Checkbox("Cast shadows##spotLight", &params.spotLightCastShadows);
             ImGui::SliderFloat("Lumens", &params.spotLightIntensity, 0.0, 1000000.f);
             ImGui::SliderAngle("Cone angle", &params.spotLightConeAngle, 0.0f, 90.0f);
             ImGui::SliderFloat("Cone fade", &params.spotLightConeFade, 0.0f, 1.0f);
