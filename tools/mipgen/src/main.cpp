@@ -267,7 +267,10 @@ int main(int argc, char* argv[]) {
         g_format = ImageEncoder::chooseFormat(outputPattern, g_linearized);
     }
 
-    puts("Reading image...");
+    if (!g_quietMode) {
+        puts("Reading image...");
+    }
+
     ifstream inputStream(inputPath.getPath(), ios::binary);
     LinearImage sourceImage = ImageDecoder::decode(inputStream, inputPath.getPath(),
             g_linearized ? ImageDecoder::ColorSpace::LINEAR : ImageDecoder::ColorSpace::SRGB);
@@ -297,14 +300,20 @@ int main(int argc, char* argv[]) {
         sourceImage = colorsToVectors(sourceImage);
     }
 
-    puts("Generating miplevels...");
+    if (!g_quietMode) {
+        puts("Generating miplevels...");
+    }
+
     uint32_t count = getMipmapCount(sourceImage);
     count = g_mipLevelCount == 0 ? count : min(g_mipLevelCount - 1, count);
     vector<LinearImage> miplevels(count);
     generateMipmaps(sourceImage, g_filter, miplevels.data(), count);
 
     if (g_ktxContainer) {
-        puts("Writing KTX file to disk...");
+        if (!g_quietMode) {
+            puts("Writing KTX file to disk...");
+        }
+
         // The libimage API does not include the original image in the mip array,
         // which might make sense when generating individual files, but for a KTX
         // bundle, we want to include level 0, so add 1 to the KTX level count.
@@ -396,7 +405,10 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
-    puts("Writing image files to disk...");
+    if (!g_quietMode) {
+        puts("Writing image files to disk...");
+    }
+
     char path[256];
     uint32_t mip = 1; // start at 1 because 0 is the original image
     for (auto image : miplevels) {
@@ -423,7 +435,10 @@ int main(int argc, char* argv[]) {
     }
 
     if (g_createGallery) {
-        puts("Generating mipmaps.html...");
+        if (!g_quietMode) {
+            puts("Generating mipmaps.html...");
+        }
+
         char tag[256];
         mip = 1;
         const char* pattern = R"(<image src="%s" width="%dpx" height="%dpx">)";
@@ -449,5 +464,7 @@ int main(int argc, char* argv[]) {
         html << HTML_SUFFIX;
     }
 
-    puts("Done.");
+    if (!g_quietMode) {
+        puts("Done.");
+    }
 }

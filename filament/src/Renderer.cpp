@@ -789,6 +789,7 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
 
             // Compute the deadline. This deadline is when the GPU must be finished.
             // The deadline has 1ms backed in it on Android.
+            UTILS_UNUSED_IN_RELEASE
             steady_clock::time_point deadline = desiredPresentationTime - presentationDeadline;
 
             // one important thing is to make sure that the deadline is comfortably later than
