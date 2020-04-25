@@ -36,7 +36,7 @@ jobs:
       - name: Run build script
         run: |
           WORKFLOW_OS=`echo \`uname\` | sed "s/Darwin/mac/" | tr [:upper:] [:lower:]`
-          cd build/$WORKFLOW_OS && yes | ./build.sh release 
+          cd build/$WORKFLOW_OS && printf "y" | ./build.sh release
       - name: Upload release assets
         run: |
           pip3 install setuptools
@@ -67,7 +67,7 @@ jobs:
           ref: ${{ steps.git_ref.outputs.ref }}
       - name: Run build script
         run: |
-          cd build/web && yes | ./build.sh release 
+          cd build/web && printf "y" | ./build.sh release
       - name: Upload release assets
         run: |
           pip3 install setuptools
@@ -97,7 +97,7 @@ jobs:
           ref: ${{ steps.git_ref.outputs.ref }}
       - name: Run build script
         run: |
-          cd build/android && yes | ./build.sh release 
+          cd build/android && printf "y" | ./build.sh release
       - name: Upload release assets
         run: |
           pip3 install setuptools
@@ -133,7 +133,7 @@ jobs:
           ref: ${{ steps.git_ref.outputs.ref }}
       - name: Run build script
         run: |
-          cd build/ios && yes | ./build.sh release 
+          cd build/ios && printf "y" | ./build.sh release
       - name: Upload release assets
         run: |
           pip3 install setuptools
