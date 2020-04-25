@@ -15,11 +15,6 @@ To build the Java based components of the project you can optionally install (re
 Additional dependencies may be required for your operating system. Please refer to the appropriate
 section below.
 
-Building the `rays` library (used for light baking) is optional and requires the following packages:
-
-- embree 3.0+
-- libtbb-dev
-
 To build Filament for Android you must also install the following:
 
 - Android Studio 3.6 or more recent
