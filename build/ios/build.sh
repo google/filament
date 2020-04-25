@@ -9,7 +9,7 @@
 # The default is release
 
 echo "This script is intended to run in a CI environment and may modify your current environment."
-echo "Please refer to ./BUILDING.md for more information."
+echo "Please refer to BUILDING.md for more information."
 
 read -r -p "Do you wish to proceed (y/n)? " choice
 case "${choice}" in
