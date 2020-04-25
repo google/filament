@@ -633,13 +633,17 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
 
                 // set samplers and uniforms
                 PostProcessManager& ppm = getEngine().getPostProcessManager();
-                view.prepareSSAO(data.ssao.isValid() ? resources.getTexture(data.ssao) : ppm.getOneTexture());
-                if (data.structure.isValid()) {
-                    view.prepareStructure(resources.getTexture(data.structure));
-                }
+                view.prepareSSAO(data.ssao.isValid() ?
+                        resources.getTexture(data.ssao) : ppm.getOneTexture());
+
+                const auto& structure = resources.getTexture(data.structure);
+                view.prepareStructure(data.structure.isValid() && structure ?
+                        structure : ppm.getOneTexture());
+
                 if (data.ssr.isValid()) {
                     view.prepareSSR(resources.getTexture(data.ssr), config.refractionLodOffset);
                 }
+
                 view.prepareViewport(static_cast<filament::Viewport&>(out.params.viewport));
                 view.commitUniforms(driver);
 
