@@ -35,7 +35,7 @@
 #include "fg/FrameGraphPassResources.h"
 #include "fg/ResourceAllocator.h"
 
-
+#include <utils/compiler.h>
 #include <utils/Panic.h>
 #include <utils/Systrace.h>
 #include <utils/vector.h>
