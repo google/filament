@@ -16,7 +16,7 @@ jobs:
       - name: Run build script
         run: |
           WORKFLOW_OS=`echo \`uname\` | sed "s/Darwin/mac/" | tr [:upper:] [:lower:]`
-          cd build/$WORKFLOW_OS && ./build.sh presubmit
+          cd build/$WORKFLOW_OS && yes | ./build.sh presubmit 
       - name: Test material parser
         run: |
           out/cmake-release/filament/test/test_material_parser
@@ -40,7 +40,7 @@ jobs:
       - uses: actions/checkout@v2.0.0
       - name: Run build script
         run: |
-          cd build/android && ./build.sh presubmit
+          cd build/android && yes | ./build.sh presubmit 
 
   build-ios:
     name: build-iOS
@@ -50,7 +50,7 @@ jobs:
       - uses: actions/checkout@v2.0.0
       - name: Run build script
         run: |
-          cd build/ios && ./build.sh presubmit
+          cd build/ios && yes | ./build.sh presubmit 
       - name: Build iOS samples
         run: |
           cd build/ios && ./build-samples.sh presubmit
@@ -63,4 +63,4 @@ jobs:
       - uses: actions/checkout@v2.0.0
       - name: Run build script
         run: |
-          cd build/web && ./build.sh presubmit
+          cd build/web && yes | ./build.sh presubmit 
