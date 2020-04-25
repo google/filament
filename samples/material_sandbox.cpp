@@ -513,7 +513,7 @@ static void gui(filament::Engine* engine, filament::View*) {
 
         if (ImGui::CollapsingHeader("Directional Light")) {
             ImGui::Checkbox("Enabled###directionalLight", &params.directionalLightEnabled);
-            ImGui::ColorEdit3("Color", &params.lightColor.r);
+            ImGui::ColorEdit3("Color###directionalLight", &params.lightColor.r);
             ImGui::SliderFloat("Lux", &params.lightIntensity, 0.0f, 150000.0f);
             ImGui::SliderFloat("Sun size", &params.sunAngularRadius, 0.1f, 10.0f);
             ImGui::SliderFloat("Halo size", &params.sunHaloSize, 1.01f, 40.0f);
@@ -532,8 +532,8 @@ static void gui(filament::Engine* engine, filament::View*) {
         if (ImGui::CollapsingHeader("Spot Light")) {
             ImGui::Checkbox("Enabled###spotLight", &params.spotLightEnabled);
             ImGui::SliderFloat3("Position", &params.spotLightPosition.x, -5.0f, 5.0f);
-            ImGui::ColorEdit3("Color", &params.spotLightColor.r);
-            ImGui::Checkbox("Cast shadows", &params.spotLightCastShadows);
+            ImGui::ColorEdit3("Color###spotLight", &params.spotLightColor.r);
+            ImGui::Checkbox("Cast shadows###spotLight", &params.spotLightCastShadows);
             ImGui::SliderFloat("Lumens", &params.spotLightIntensity, 0.0, 1000000.f);
             ImGui::SliderAngle("Cone angle", &params.spotLightConeAngle, 0.0f, 90.0f);
             ImGui::SliderFloat("Cone fade", &params.spotLightConeFade, 0.0f, 1.0f);
