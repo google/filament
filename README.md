@@ -76,8 +76,6 @@ steps:
 ![Materials](docs/images/samples/example_materials1.jpg)
 ![Materials](docs/images/samples/example_materials2.jpg)
 ![Helmet](docs/images/samples/example_helmet.jpg)
-![Car](docs/images/samples/example_car1.jpg)
-![Car](docs/images/samples/example_car2.jpg)
 ![Screen-space refraction](docs/images/samples/example_ssr.jpg)
 
 
