@@ -191,8 +191,11 @@ static void cleanup(Engine* engine, View*, Scene*) {
     g_meshSet.reset(nullptr);
 
     engine->destroy(g_params.light);
+    engine->destroy(g_params.spotLight);
+
     EntityManager& em = EntityManager::get();
     em.destroy(g_params.light);
+    em.destroy(g_params.spotLight);
 }
 
 static void setup(Engine* engine, View*, Scene* scene) {
