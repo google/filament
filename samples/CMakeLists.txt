@@ -100,7 +100,8 @@ function(add_envmap SOURCE TARGET)
     add_custom_command(OUTPUT ${target_skybox} ${target_envmap}
         COMMAND cmgen -x ${TARGET} ${CMGEN_ARGS} ${source_envmap}
         MAIN_DEPENDENCY ${source_envmap}
-        DEPENDS cmgen)
+        DEPENDS cmgen
+        COMMENT "Generating environment map ${target_envmap}")
 endfunction()
 
 add_envmap("third_party/environments/venetian_crossroads_2k.hdr" "venetian_crossroads_2k")
@@ -117,7 +118,8 @@ function(add_ktxfiles SOURCE TARGET EXTRA_ARGS)
         OUTPUT ${target_path}
         COMMAND mipgen --quiet --strip-alpha ${EXTRA_ARGS} ${source_path} ${target_path}
         MAIN_DEPENDENCY ${source_path}
-        DEPENDS mipgen)
+        DEPENDS mipgen
+        COMMENT "Generating mip levels for ${source_path}")
 endfunction()
 
 function(add_pngfile SOURCE TARGET)

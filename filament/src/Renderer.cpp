@@ -642,7 +642,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                     view.prepareStructure(structure ? structure : ppm.getOneTexture());
                 }
 
-                assert(data.ssr.isValid());
+                // TODO: check what getTexture() returns
                 if (data.ssr.isValid()) {
                     view.prepareSSR(resources.getTexture(data.ssr), config.refractionLodOffset);
                 }
