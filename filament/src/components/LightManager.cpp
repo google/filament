@@ -167,12 +167,18 @@ void FLightManager::create(const FLightManager::Builder& builder, utils::Entity 
         lightType.lightCaster = builder->mCastLight;
 
         ShadowParams& shadowParams = manager[i].shadowParams;
-        shadowParams.options.mapSize        = clamp(builder->mShadowOptions.mapSize, 0u, 2048u);
-        shadowParams.options.constantBias   = clamp(builder->mShadowOptions.constantBias, 0.0f, 2.0f);
-        shadowParams.options.normalBias     = clamp(builder->mShadowOptions.normalBias, 0.0f, 3.0f);
-        shadowParams.options.shadowFar      = std::max(builder->mShadowOptions.shadowFar, 0.0f);
+        shadowParams.options.mapSize = clamp(builder->mShadowOptions.mapSize, 0u, 2048u);
+        shadowParams.options.constantBias = clamp(builder->mShadowOptions.constantBias, 0.0f, 2.0f);
+        shadowParams.options.normalBias = clamp(builder->mShadowOptions.normalBias, 0.0f, 3.0f);
+        shadowParams.options.shadowFar = std::max(builder->mShadowOptions.shadowFar, 0.0f);
         shadowParams.options.shadowNearHint = std::max(builder->mShadowOptions.shadowNearHint, 0.0f);
-        shadowParams.options.shadowFarHint  = std::max(builder->mShadowOptions.shadowFarHint, 0.0f);
+        shadowParams.options.shadowFarHint = std::max(builder->mShadowOptions.shadowFarHint, 0.0f);
+        shadowParams.options.stable = builder->mShadowOptions.stable;
+        shadowParams.options.polygonOffsetConstant = builder->mShadowOptions.polygonOffsetConstant;
+        shadowParams.options.polygonOffsetSlope = builder->mShadowOptions.polygonOffsetSlope;
+        shadowParams.options.screenSpaceContactShadows = builder->mShadowOptions.screenSpaceContactShadows;
+        shadowParams.options.stepCount = builder->mShadowOptions.stepCount;
+        shadowParams.options.maxShadowDistance = builder->mShadowOptions.maxShadowDistance;
 
         // set default values by calling the setters
         setLocalPosition(i, builder->mPosition);
