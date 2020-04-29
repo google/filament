@@ -677,5 +677,26 @@ void VulkanRenderPrimitive::setBuffers(VulkanVertexBuffer* vertexBuffer,
     }
 }
 
+VulkanTimerQuery::VulkanTimerQuery(VulkanContext& context) : mContext(context) {
+    auto& bitset = context.timestamps.used;
+    const size_t maxTimers = bitset.size();
+    assert(bitset.count() < maxTimers);
+    for (size_t timerIndex = 0; timerIndex < maxTimers; ++timerIndex) {
+        if (!bitset.test(timerIndex)) {
+            bitset.set(timerIndex);
+            startingQueryIndex = timerIndex * 2;
+            stoppingQueryIndex = timerIndex * 2 + 1;
+            return;
+        }
+    }
+    utils::slog.e << "More than " << maxTimers << " timers are not supported." << utils::io::endl;
+    startingQueryIndex = 0;
+    stoppingQueryIndex = 1;
+}
+
+VulkanTimerQuery::~VulkanTimerQuery() {
+    mContext.timestamps.used.unset(startingQueryIndex / 2);
+}
+
 } // namespace filament
 } // namespace backend
