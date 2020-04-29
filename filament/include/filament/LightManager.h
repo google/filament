@@ -377,6 +377,19 @@ public:
         Builder& intensity(float intensity) noexcept;
 
         /**
+         * Sets the initial intensity of a spot or point light in candela.
+         *
+         * @param intensity Luminous intensity in *candela*.
+         *
+         * @return This Builder, for chaining calls.
+         *
+         * @note
+         * This method is equivalent to calling intensity(float intensity) for directional lights
+         * (Type.DIRECTIONAL or Type.SUN).
+         */
+        Builder& intensityCandela(float intensity) noexcept;
+
+        /**
          * Sets the initial intensity of a light in watts.
          *
          * @param watts         Energy consumed by a lightbulb. It is related to the energy produced
@@ -621,6 +634,20 @@ public:
     void setIntensity(Instance i, float watts, float efficiency) noexcept {
         setIntensity(i, watts * 683.0f * efficiency);
     }
+
+    /**
+     * Dynamically updates the light's intensity in candela. The intensity can be negative.
+     *
+     * @param i         Instance of the component obtained from getInstance().
+     * @param intensity Luminous intensity in *candela*.
+     *
+     * @note
+     * This method is equivalent to calling setIntensity(float intensity) for directional lights
+     * (Type.DIRECTIONAL or Type.SUN).
+     *
+     * @see Builder.intensityCandela(float intensity)
+     */
+    void setIntensityCandela(Instance i, float intensity) noexcept;
 
     /**
      * returns the light's luminous intensity in lumen.
