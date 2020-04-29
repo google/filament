@@ -373,6 +373,8 @@ public:
          *
          * For example, the sun's illuminance is about 100,000 lux.
          *
+         * This method overrides any prior calls to intensity or intensityCandela.
+         *
          */
         Builder& intensity(float intensity) noexcept;
 
@@ -386,6 +388,8 @@ public:
          * @note
          * This method is equivalent to calling intensity(float intensity) for directional lights
          * (Type.DIRECTIONAL or Type.SUN).
+         *
+         * This method overrides any prior calls to intensity or intensityCandela.
          */
         Builder& intensityCandela(float intensity) noexcept;
 
@@ -411,6 +415,8 @@ public:
          *
          * @note
          * This call is equivalent to `Builder::intensity(efficiency * 683 * watts);`
+         *
+         * This method overrides any prior calls to intensity or intensityCandela.
          */
         Builder& intensity(float watts, float efficiency) noexcept;
 
