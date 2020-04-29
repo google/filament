@@ -401,6 +401,8 @@ public class LightManager {
         /**
          * Sets the initial intensity of a light.
          *
+         * This method overrides any prior calls to #intensity or #intensityCandela.
+         *
          * @param intensity This parameter depends on the {@link Type}, for directional lights,
          *                  it specifies the illuminance in <i>lux</i> (or <i>lumen/m^2</i>).
          *                  For point lights and spot lights, it specifies the luminous power
@@ -435,6 +437,8 @@ public class LightManager {
          * Builder.intensity(efficiency * 683 * watts);
          *</pre>
          *
+         * This method overrides any prior calls to #intensity or #intensityCandela.
+         *
          * @param watts         Energy consumed by a lightbulb. It is related to the energy produced
          *                      and ultimately the brightness by the efficiency parameter.
          *                      This value is often available on the packaging of commercial
@@ -457,6 +461,8 @@ public class LightManager {
          *
          * This method is equivalent to calling the plain intensity method for directional lights
          * (Type.DIRECTIONAL or Type.SUN).
+         *
+         * This method overrides any prior calls to #intensity or #intensityCandela.
          *
          * @return This Builder, for chaining calls.
          */
