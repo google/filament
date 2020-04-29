@@ -35,6 +35,7 @@
 #include <filament/LightManager.h>
 #include <filament/Material.h>
 #include <filament/MaterialInstance.h>
+#include <filament/Renderer.h>
 #include <filament/RenderableManager.h>
 #include <filament/Scene.h>
 #include <filament/TransformManager.h>
@@ -665,7 +666,7 @@ static void gui(filament::Engine* engine, filament::View*) {
             params.spotLightConeAngle);
 }
 
-static void preRender(filament::Engine*, filament::View* view, filament::Scene*, filament::Renderer*) {
+static void preRender(filament::Engine*, filament::View* view, filament::Scene*, filament::Renderer* renderer) {
     view->setAntiAliasing(g_params.fxaa ? View::AntiAliasing::FXAA : View::AntiAliasing::NONE);
     view->setToneMapping(g_params.tonemapping ? View::ToneMapping::ACES : View::ToneMapping::LINEAR);
     view->setDithering(g_params.dithering ? View::Dithering::TEMPORAL : View::Dithering::NONE);
@@ -675,6 +676,11 @@ static void preRender(filament::Engine*, filament::View* view, filament::Scene*,
     view->setAmbientOcclusion(
             g_params.ssao ? View::AmbientOcclusion::SSAO : View::AmbientOcclusion::NONE);
     view->setAmbientOcclusionOptions(g_params.ssaoOptions);
+
+    // Without an IBL, we must clear the swapchain to black before each frame.
+    renderer->setClearOptions({
+            .clearColor = { 0.0f, 0.0f, 0.0f, 1.0f },
+            .clear = !FilamentApp::get().getIBL()  });
 
     Camera& camera = view->getCamera();
     camera.setExposure(g_params.cameraAperture, 1.0f / g_params.cameraSpeed, g_params.cameraISO);
