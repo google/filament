@@ -161,6 +161,14 @@ struct VulkanFence : public HwFence {
     std::shared_ptr<VulkanCmdFence> fence;
 };
 
+struct VulkanTimerQuery : public HwTimerQuery {
+    VulkanTimerQuery(VulkanContext& context);
+    ~VulkanTimerQuery();
+    uint32_t startingQueryIndex;
+    uint32_t stoppingQueryIndex;
+    VulkanContext& mContext;
+};
+
 } // namespace filament
 } // namespace backend
 

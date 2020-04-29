@@ -84,6 +84,7 @@ void selectPhysicalDevice(VulkanContext& context) {
                 continue;
             }
             if (props.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+                assert(props.timestampValidBits > 0);
                 context.graphicsQueueFamilyIndex = j;
             }
         }
@@ -182,6 +183,7 @@ void createVirtualDevice(VulkanContext& context) {
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateDevice error.");
     vkGetDeviceQueue(context.device, context.graphicsQueueFamilyIndex, 0,
             &context.graphicsQueue);
+
     VkCommandPoolCreateInfo createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     createInfo.flags =
@@ -189,6 +191,15 @@ void createVirtualDevice(VulkanContext& context) {
     createInfo.queueFamilyIndex = context.graphicsQueueFamilyIndex;
     result = vkCreateCommandPool(context.device, &createInfo, VKALLOC, &context.commandPool);
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateCommandPool error.");
+
+    // Create a timestamp pool large enough to hold a pair of queries for each timer.
+    VkQueryPoolCreateInfo tqpCreateInfo = {};
+    tqpCreateInfo.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
+    tqpCreateInfo.queryType = VK_QUERY_TYPE_TIMESTAMP;
+    tqpCreateInfo.queryCount = context.timestamps.used.size() * 2;
+    result = vkCreateQueryPool(context.device, &tqpCreateInfo, VKALLOC, &context.timestamps.pool);
+    ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateQueryPool error.");
+    context.timestamps.used.reset();
 
     const VmaVulkanFunctions funcs {
         .vkGetPhysicalDeviceProperties = vkGetPhysicalDeviceProperties,

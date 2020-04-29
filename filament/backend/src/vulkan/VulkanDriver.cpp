@@ -224,6 +224,7 @@ void VulkanDriver::terminate() {
     mSamplerCache.reset();
 
     vmaDestroyAllocator(mContext.allocator);
+    vkDestroyQueryPool(mContext.device, mContext.timestamps.pool, VKALLOC);
     vkDestroyCommandPool(mContext.device, mContext.commandPool, VKALLOC);
     vkDestroyDevice(mContext.device, VKALLOC);
     if (mDebugCallback) {
@@ -475,6 +476,10 @@ void VulkanDriver::createStreamFromTextureIdR(Handle<HwStream> sh, intptr_t exte
 }
 
 void VulkanDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {
+    auto renderTarget = construct_handle<VulkanTimerQuery>(mHandleMap, tqh, mContext);
+    mDisposer.createDisposable(renderTarget, [this, tqh] () {
+        destruct_handle<VulkanTimerQuery>(mHandleMap, tqh);
+    });
 }
 
 Handle<HwVertexBuffer> VulkanDriver::createVertexBufferS() noexcept {
@@ -543,7 +548,7 @@ Handle<HwStream> VulkanDriver::createStreamFromTextureIdS() noexcept {
 }
 
 Handle<HwTimerQuery> VulkanDriver::createTimerQueryS() noexcept {
-    return {};
+    return alloc_handle<VulkanTimerQuery, HwTimerQuery>();
 }
 
 void VulkanDriver::destroySamplerGroup(Handle<HwSamplerGroup> sbh) {
@@ -593,6 +598,9 @@ void VulkanDriver::destroyStream(Handle<HwStream> sh) {
 }
 
 void VulkanDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
+    if (tqh) {
+        mDisposer.removeReference(handle_cast<VulkanTimerQuery>(mHandleMap, tqh));
+    }
 }
 
 void VulkanDriver::destroySync(Handle<HwSync> sh) {
@@ -726,7 +734,30 @@ void VulkanDriver::cancelExternalImage(void* image) {
 }
 
 bool VulkanDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapsedTime) {
-    return false;
+    VulkanTimerQuery* vtq = handle_cast<VulkanTimerQuery>(mHandleMap, tqh);
+
+    uint64_t results[2] = {};
+    size_t dataSize = sizeof(results);
+    VkDeviceSize stride = sizeof(uint64_t);
+
+    VkResult result = vkGetQueryPoolResults(mContext.device, mContext.timestamps.pool,
+            vtq->startingQueryIndex, 2, dataSize, (void*) results, stride,
+            VK_QUERY_RESULT_64_BIT);
+
+    if (result == VK_NOT_READY) {
+        return false;
+    }
+
+    ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkGetQueryPoolResults error.");
+    ASSERT_POSTCONDITION(results[1] >= results[0], "Timestamps are not monotonically increasing.");
+
+    // NOTE: MoltenVK currently writes system time so the following delta will always be zero.
+    // However there are plans for implementing this properly. See the following GitHub ticket.
+    // https://github.com/KhronosGroup/MoltenVK/issues/773
+
+    uint64_t delta = results[1] - results[0];
+    *elapsedTime = delta;
+    return true;
 }
 
 SyncStatus VulkanDriver::getSyncStatus(Handle<HwSync> sh) {
@@ -1237,11 +1268,26 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
     vkCmdDrawIndexed(cmdbuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstId);
 }
 
-
 void VulkanDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {
+    VulkanCommandBuffer* commands = mContext.currentCommands;
+    ASSERT_POSTCONDITION(commands, "Timer queries can occur only within a beginFrame / endFrame.");
+
+    VulkanTimerQuery* vtq = handle_cast<VulkanTimerQuery>(mHandleMap, tqh);
+    const uint32_t index = vtq->startingQueryIndex;
+    const VkPipelineStageFlagBits stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+
+    vkCmdResetQueryPool(commands->cmdbuffer, mContext.timestamps.pool, index, 2);
+    vkCmdWriteTimestamp(commands->cmdbuffer, stage, mContext.timestamps.pool, index);
 }
 
 void VulkanDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
+    VulkanCommandBuffer* commands = mContext.currentCommands;
+    ASSERT_POSTCONDITION(commands, "Timer queries can occur only within a beginFrame / endFrame.");
+
+    VulkanTimerQuery* vtq = handle_cast<VulkanTimerQuery>(mHandleMap, tqh);
+    const uint32_t index = vtq->stoppingQueryIndex;
+    const VkPipelineStageFlagBits stage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    vkCmdWriteTimestamp(commands->cmdbuffer, stage, mContext.timestamps.pool, index);
 }
 
 #ifndef NDEBUG

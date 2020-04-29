@@ -65,6 +65,11 @@ struct VulkanCommandBuffer {
     VulkanDisposer::Set resources;
 };
 
+struct VulkanTimestamps {
+    VkQueryPool pool;
+    utils::bitset32 used;
+};
+
 // For now we only support a single-device, single-instance scenario. Our concept of "context" is a
 // bundle of state containing the Device, the Instance, and various globally-useful Vulkan objects.
 struct VulkanContext {
@@ -75,6 +80,7 @@ struct VulkanContext {
     VkPhysicalDeviceMemoryProperties memoryProperties;
     VkDevice device;
     VkCommandPool commandPool;
+    VulkanTimestamps timestamps;
     uint32_t graphicsQueueFamilyIndex;
     VkQueue graphicsQueue;
     bool debugMarkersSupported;
@@ -85,6 +91,7 @@ struct VulkanContext {
     VkViewport viewport;
     VkFormat depthFormat;
     VmaAllocator allocator;
+
 
     // The work context is used for activities unrelated to the swap chain or draw calls, such as
     // uploads, blits, and transitions.
