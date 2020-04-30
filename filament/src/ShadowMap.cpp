@@ -349,7 +349,7 @@ void ShadowMap::computeShadowCameraDirectional(
 
         Aabb bounds;
         if (params.options.stable && viewVolumeBoundingSphere.w > 0) {
-            bounds = compute2DBounds(MpMv, wsViewFrustumVertices, 8);
+            bounds = compute2DBounds(Mv, viewVolumeBoundingSphere);
         } else {
             bounds = compute2DBounds(WLMpMv, mWsClippedShadowReceiverVolume.data(), vertexCount);
         }
@@ -667,6 +667,14 @@ Aabb ShadowMap::compute2DBounds(const mat4f& lightView,
         bounds.max.xy = max(bounds.max.xy, v.xy);
     }
     return bounds;
+}
+
+Aabb ShadowMap::compute2DBounds(const mat4f& lightView, float4 const& sphere) noexcept {
+    // this assumes a rotation + translate only
+    float4 s;
+    s.xyz = (lightView * float4{sphere.xyz, 1.0f}).xyz;
+    s.w = sphere.w;
+    return Aabb{s.xyz - s.w, s.xyz + s.w};
 }
 
 void ShadowMap::intersectWithShadowCasters(Aabb& UTILS_RESTRICT lightFrustum,
