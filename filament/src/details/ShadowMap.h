@@ -148,9 +148,6 @@ private:
     static inline Aabb compute2DBounds(const math::mat4f& lightView,
             math::float3 const* wsVertices, size_t count) noexcept;
 
-    static inline Aabb compute2DBounds(const math::mat4f& lightView,
-            math::float4 const& sphere) noexcept;
-
     static inline void intersectWithShadowCasters(Aabb& lightFrustum, const math::mat4f& lightView,
             Aabb const& wsShadowCastersVolume) noexcept;
 
