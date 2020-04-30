@@ -753,7 +753,8 @@ public:
     void forEachComponent(F func) noexcept {
         utils::Entity const* const pEntity = getEntities();
         for (size_t i = 0, c = getComponentCount(); i < c; i++) {
-            func(pEntity[i], Instance(i));
+            // Instance 0 is the invalid instance
+            func(pEntity[i], Instance(i + 1));
         }
     }
 };
