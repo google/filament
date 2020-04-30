@@ -33,6 +33,8 @@ A new header is inserted each time a *tag* is created.
   1.0 the exposure is applied just like with any regular light) (⚠️ **API breakage**).
 - Added new `intensityCandela` and `setIntensityCandela` API to `LightManager` for setting a punctual
   light's intensity in candela.
+- Fixed an issue where some `ShadowOptions` were not being respected when passed to
+  `LightManager::Builder`.
 
 ## v1.5.2
 
