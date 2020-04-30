@@ -59,12 +59,8 @@ FView::FView(FEngine& engine)
       mPerViewUb(PerViewUib::getUib().getSize()),
       mShadowUb(ShadowUib::getUib().getSize()),
       mPerViewSb(PerViewSib::SAMPLER_COUNT),
-      mDirectionalShadowMap(engine) {
+      mShadowMapManager(engine) {
     DriverApi& driver = engine.getDriverApi();
-
-    for (size_t i = 0; i < CONFIG_MAX_SHADOW_CASTING_SPOTS; i++) {
-        mSpotShadowMap[i] = std::make_unique<ShadowMap>(engine);
-    }
 
     FDebugRegistry& debugRegistry = engine.getDebugRegistry();
     debugRegistry.registerProperty("d.view.camera_at_origin",
@@ -227,7 +223,9 @@ void FView::prepareShadowing(FEngine& engine, backend::DriverApi& driver,
     FLightManager::Instance directionalLight = lightData.elementAt<FScene::LIGHT_INSTANCE>(0);
     const bool hasDirectionalShadows = directionalLight && lcm.isShadowCaster(directionalLight);
     if (UTILS_UNLIKELY(hasDirectionalShadows)) {
-        mShadowMapManager.setDirectionalShadowMap(mDirectionalShadowMap, 0);
+        const auto& shadowOptions = lcm.getShadowOptions(directionalLight);
+        uint8_t cascades = clamp<uint8_t>(shadowOptions.shadowCascades, 1, CONFIG_MAX_SHADOW_CASCADES);
+        mShadowMapManager.setShadowCascades(0, cascades);
     }
 
     // Find all shadow-casting spot lights.
@@ -246,8 +244,7 @@ void FView::prepareShadowing(FEngine& engine, backend::DriverApi& driver,
             continue;
         }
 
-        ShadowMap& shadowMap = *mSpotShadowMap[shadowCastingSpotCount];
-        mShadowMapManager.addSpotShadowMap(shadowMap, l);
+        mShadowMapManager.addSpotShadowMap(l);
 
         shadowCastingSpotCount++;
         if (shadowCastingSpotCount > CONFIG_MAX_SHADOW_CASTING_SPOTS - 1) {

@@ -55,6 +55,9 @@ constexpr size_t CONFIG_MAX_LIGHT_INDEX = CONFIG_MAX_LIGHT_COUNT - 1;
 // values may cause the number of varyings to exceed the driver limit.
 constexpr size_t CONFIG_MAX_SHADOW_CASTING_SPOTS = 2;
 
+// The maximum number of shadow cascades that can be used for directional lights.
+constexpr size_t CONFIG_MAX_SHADOW_CASCADES = 4;
+
 // This value is also limited by UBO size, ES3.0 only guarantees 16 KiB.
 // We store 64 bytes per bone.
 constexpr size_t CONFIG_MAX_BONE_COUNT = 256;
