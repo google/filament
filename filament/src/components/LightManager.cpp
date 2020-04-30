@@ -42,6 +42,7 @@ struct LightManager::BuilderDetails {
     float mFalloff = 1.0f;
     LinearColor mColor = LinearColor{ 1.0f };
     float mIntensity = 100000.0f;
+    FLightManager::IntensityUnit mIntensityUnit = FLightManager::IntensityUnit::LUMEN_LUX;
     float3 mDirection = { 0.0f, -1.0f, 0.0f };
     float2 mSpotInnerOuter = { (float) F_PI, (float) F_PI };
     float mSunAngle = 0.00951f; // 0.545° in radians
@@ -94,11 +95,19 @@ LightManager::Builder& LightManager::Builder::color(const LinearColor& color) no
 
 LightManager::Builder& LightManager::Builder::intensity(float intensity) noexcept {
     mImpl->mIntensity = intensity;
+    mImpl->mIntensityUnit = FLightManager::IntensityUnit::LUMEN_LUX;
+    return *this;
+}
+
+LightManager::Builder& LightManager::Builder::intensityCandela(float intensity) noexcept {
+    mImpl->mIntensity = intensity;
+    mImpl->mIntensityUnit = FLightManager::IntensityUnit::CANDELA;
     return *this;
 }
 
 LightManager::Builder& LightManager::Builder::intensity(float watts, float efficiency) noexcept {
     mImpl->mIntensity = efficiency * 683.0f * watts;
+    mImpl->mIntensityUnit = FLightManager::IntensityUnit::LUMEN_LUX;
     return *this;
 }
 
@@ -187,7 +196,7 @@ void FLightManager::create(const FLightManager::Builder& builder, utils::Entity 
 
         // this must be set before intensity
         setSpotLightCone(i, builder->mSpotInnerOuter.x, builder->mSpotInnerOuter.y);
-        setIntensity(i, builder->mIntensity);
+        setIntensity(i, builder->mIntensity, builder->mIntensityUnit);
 
         setFalloff(i, builder->mCastLight ? builder->mFalloff : 0);
         setSunAngularRadius(i, builder->mSunAngle);
@@ -240,7 +249,7 @@ void FLightManager::setColor(Instance i, const LinearColor& color) noexcept {
     }
 }
 
-void FLightManager::setIntensity(Instance i, float intensity) noexcept {
+void FLightManager::setIntensity(Instance i, float intensity, IntensityUnit unit) noexcept {
     auto& manager = mManager;
     if (i) {
         Type type = getLightType(i).type;
@@ -254,21 +263,41 @@ void FLightManager::setIntensity(Instance i, float intensity) noexcept {
                 break;
 
             case Type::POINT:
-                // li = lp / (4*pi)
-                luminousIntensity = luminousPower * float(F_1_PI) * 0.25f;
+                if (unit == IntensityUnit::LUMEN_LUX) {
+                    // li = lp / (4 * pi)
+                    luminousIntensity = luminousPower * float(F_1_PI) * 0.25f;
+                } else {
+                    assert(unit == IntensityUnit::CANDELA);
+                    // intensity specified directly in candela, no conversion needed
+                    luminousIntensity = luminousPower;
+                }
                 break;
 
             case Type::FOCUSED_SPOT: {
-                // li = lp / (2 * pi * (1 - cos(cone_outer / 2)))
                 SpotParams& spotParams = manager[i].spotParams;
-                spotParams.luminousPower = luminousPower;
                 float cosOuter = std::sqrt(spotParams.cosOuterSquared);
-                luminousIntensity = luminousPower / (2.0f * float(F_PI) * (1.0f - cosOuter));
+                if (unit == IntensityUnit::LUMEN_LUX) {
+                    // li = lp / (2 * pi * (1 - cos(cone_outer / 2)))
+                    luminousIntensity = luminousPower / (2.0f * float(F_PI) * (1.0f - cosOuter));
+                } else {
+                    assert(unit == IntensityUnit::CANDELA);
+                    // intensity specified directly in candela, no conversion needed
+                    luminousIntensity = luminousPower;
+                    // lp = li * (2 * pi * (1 - cos(cone_outer / 2)))
+                    luminousPower = luminousIntensity * (2.0f * float(F_PI) * (1.0f - cosOuter));
+                }
+                spotParams.luminousPower = luminousPower;
                 break;
             }
             case Type::SPOT:
-                // li = lp / pi
-                luminousIntensity = luminousPower * float(F_1_PI);
+                if (unit == IntensityUnit::LUMEN_LUX) {
+                    // li = lp / pi
+                    luminousIntensity = luminousPower * float(F_1_PI);
+                } else {
+                    assert(unit == IntensityUnit::CANDELA);
+                    // intensity specified directly in candela, no conversion needed
+                    luminousIntensity = luminousPower;
+                }
                 break;
         }
         manager[i].intensity = luminousIntensity;
@@ -398,7 +427,11 @@ const float3& LightManager::getColor(Instance i) const noexcept {
 }
 
 void LightManager::setIntensity(Instance i, float intensity) noexcept {
-    upcast(this)->setIntensity(i, intensity);
+    upcast(this)->setIntensity(i, intensity, FLightManager::IntensityUnit::LUMEN_LUX);
+}
+
+void LightManager::setIntensityCandela(Instance i, float intensity) noexcept {
+    upcast(this)->setIntensity(i, intensity, FLightManager::IntensityUnit::CANDELA);
 }
 
 float LightManager::getIntensity(Instance i) const noexcept {

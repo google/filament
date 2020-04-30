@@ -373,8 +373,25 @@ public:
          *
          * For example, the sun's illuminance is about 100,000 lux.
          *
+         * This method overrides any prior calls to intensity or intensityCandela.
+         *
          */
         Builder& intensity(float intensity) noexcept;
+
+        /**
+         * Sets the initial intensity of a spot or point light in candela.
+         *
+         * @param intensity Luminous intensity in *candela*.
+         *
+         * @return This Builder, for chaining calls.
+         *
+         * @note
+         * This method is equivalent to calling intensity(float intensity) for directional lights
+         * (Type.DIRECTIONAL or Type.SUN).
+         *
+         * This method overrides any prior calls to intensity or intensityCandela.
+         */
+        Builder& intensityCandela(float intensity) noexcept;
 
         /**
          * Sets the initial intensity of a light in watts.
@@ -398,6 +415,8 @@ public:
          *
          * @note
          * This call is equivalent to `Builder::intensity(efficiency * 683 * watts);`
+         *
+         * This method overrides any prior calls to intensity or intensityCandela.
          */
         Builder& intensity(float watts, float efficiency) noexcept;
 
@@ -621,6 +640,20 @@ public:
     void setIntensity(Instance i, float watts, float efficiency) noexcept {
         setIntensity(i, watts * 683.0f * efficiency);
     }
+
+    /**
+     * Dynamically updates the light's intensity in candela. The intensity can be negative.
+     *
+     * @param i         Instance of the component obtained from getInstance().
+     * @param intensity Luminous intensity in *candela*.
+     *
+     * @note
+     * This method is equivalent to calling setIntensity(float intensity) for directional lights
+     * (Type.DIRECTIONAL or Type.SUN).
+     *
+     * @see Builder.intensityCandela(float intensity)
+     */
+    void setIntensityCandela(Instance i, float intensity) noexcept;
 
     /**
      * returns the light's luminous intensity in lumen.

@@ -700,9 +700,7 @@ void FAssetLoader::createLight(const cgltf_node* node, Entity entity) {
             builder.intensity(light->intensity);
             break;
         case LightManager::Type::POINT:
-            // Convert from candelas (luminous intensity) to lumens (luminous power).
-            // lp = 4 * pi * li
-            builder.intensity(4.0f * F_PI * light->intensity);
+            builder.intensityCandela(light->intensity);
             break;
         case LightManager::Type::FOCUSED_SPOT:
         case LightManager::Type::SPOT:
@@ -710,9 +708,7 @@ void FAssetLoader::createLight(const cgltf_node* node, Entity entity) {
             builder.spotLightCone(
                     light->spot_inner_cone_angle,
                     light->spot_outer_cone_angle);
-            // Convert from candelas (luminous intensity) to lumens (luminous power).
-            // lp = li * pi
-            builder.intensity(F_PI * light->intensity);
+            builder.intensityCandela(light->intensity);
             break;
     }
 

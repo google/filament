@@ -118,6 +118,13 @@ Java_com_google_android_filament_LightManager_nBuilderColor(JNIEnv*, jclass,
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_LightManager_nBuilderIntensityCandela(JNIEnv*, jclass,
+        jlong nativeBuilder, jfloat intensity) {
+    LightManager::Builder *builder = (LightManager::Builder *) nativeBuilder;
+    builder->intensityCandela(intensity);
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_LightManager_nBuilderIntensity__JF(JNIEnv*, jclass,
         jlong nativeBuilder, jfloat intensity) {
     LightManager::Builder *builder = (LightManager::Builder *) nativeBuilder;
@@ -241,6 +248,13 @@ Java_com_google_android_filament_LightManager_nSetIntensity__JIFF(JNIEnv*, jclas
         jlong nativeLightManager, jint i, jfloat watts, jfloat efficiency) {
     LightManager *lm = (LightManager *) nativeLightManager;
     lm->setIntensity((LightManager::Instance) i, watts, efficiency);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_LightManager_nSetIntensityCandela(JNIEnv*, jclass,
+        jlong nativeLightManager, jint i, jfloat intensity) {
+    LightManager *lm = (LightManager *) nativeLightManager;
+    lm->setIntensityCandela((LightManager::Instance) i, intensity);
 }
 
 extern "C" JNIEXPORT jfloat JNICALL

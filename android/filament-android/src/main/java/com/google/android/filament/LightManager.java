@@ -401,6 +401,8 @@ public class LightManager {
         /**
          * Sets the initial intensity of a light.
          *
+         * This method overrides any prior calls to #intensity or #intensityCandela.
+         *
          * @param intensity This parameter depends on the {@link Type}, for directional lights,
          *                  it specifies the illuminance in <i>lux</i> (or <i>lumen/m^2</i>).
          *                  For point lights and spot lights, it specifies the luminous power
@@ -435,6 +437,8 @@ public class LightManager {
          * Builder.intensity(efficiency * 683 * watts);
          *</pre>
          *
+         * This method overrides any prior calls to #intensity or #intensityCandela.
+         *
          * @param watts         Energy consumed by a lightbulb. It is related to the energy produced
          *                      and ultimately the brightness by the efficiency parameter.
          *                      This value is often available on the packaging of commercial
@@ -447,6 +451,24 @@ public class LightManager {
         @NonNull
         public Builder intensity(float watts, float efficiency) {
             nBuilderIntensity(mNativeBuilder, watts, efficiency);
+            return this;
+        }
+
+        /**
+         * Sets the initial intensity of a spot or point light in candela.
+         *
+         * @param intensity Luminous intensity in <i>candela</i>.
+         *
+         * This method is equivalent to calling the plain intensity method for directional lights
+         * (Type.DIRECTIONAL or Type.SUN).
+         *
+         * This method overrides any prior calls to #intensity or #intensityCandela.
+         *
+         * @return This Builder, for chaining calls.
+         */
+        @NonNull
+        public Builder intensityCandela(float intensity) {
+            nBuilderIntensityCandela(mNativeBuilder, intensity);
             return this;
         }
 
@@ -726,7 +748,22 @@ public class LightManager {
      * @see Builder#intensity
      */
     public void setIntensity(@EntityInstance int i, float intensity) {
-        nSetIntensity(mNativeObject, i , intensity);
+        nSetIntensity(mNativeObject, i, intensity);
+    }
+
+    /**
+     * Dynamically updates the light's intensity in candela. The intensity can be negative.
+     *
+     * This method is equivalent to calling setIntensity for directional lights (Type.DIRECTIONAL
+     * or Type.SUN).
+     *
+     * @param i         Instance of the component obtained from getInstance().
+     * @param intensity Luminous intensity in <i>candela</i>.
+     *
+     * @see Builder#intensityCandela
+     */
+    public void setIntensityCandela(@EntityInstance int i, float intensity) {
+        nSetIntensityCandela(mNativeObject, i, intensity);
     }
 
     /**
@@ -914,6 +951,7 @@ public class LightManager {
     private static native void nBuilderColor(long nativeBuilder, float linearR, float linearG, float linearB);
     private static native void nBuilderIntensity(long nativeBuilder, float intensity);
     private static native void nBuilderIntensity(long nativeBuilder, float watts, float efficiency);
+    private static native void nBuilderIntensityCandela(long nativeBuilder, float intensity);
     private static native void nBuilderFalloff(long nativeBuilder, float radius);
     private static native void nBuilderSpotLightCone(long nativeBuilder, float inner, float outer);
     private static native void nBuilderAngularRadius(long nativeBuilder, float angularRadius);
@@ -929,6 +967,7 @@ public class LightManager {
     private static native void nGetColor(long nativeLightManager, int i, float[] out);
     private static native void nSetIntensity(long nativeLightManager, int i, float intensity);
     private static native void nSetIntensity(long nativeLightManager, int i, float watts, float efficiency);
+    private static native void nSetIntensityCandela(long nativeLightManager, int i, float intensity);
     private static native float nGetIntensity(long nativeLightManager, int i);
     private static native void nSetFalloff(long nativeLightManager, int i, float falloff);
     private static native float nGetFalloff(long nativeLightManager, int i);
