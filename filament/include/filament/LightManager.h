@@ -196,6 +196,22 @@ public:
         /** Size of the shadow map in texels. Must be a power-of-two. */
         uint32_t mapSize = 1024;
 
+        /**
+         * Number of shadow cascades to use for this light. Must be between 1 and 4 (inclusive).
+         * A value greater than 1 turns on cascaded shadow mapping (CSM).
+         * Only applicable to Type.SUN or Type.DIRECTIONAL lights.
+         *
+         * @warning This API is still experimental and subject to change.
+         */
+        uint8_t shadowCascades = 1;
+
+        /**
+         * Visualize the shadow cascades through different colors.
+         *
+         * @warning This API is still experimental and subject to change.
+         */
+        bool debugVisualizeCascades = false;
+
         /** Constant bias in world units (e.g. meters) by which shadows are moved away from the
          * light. 1mm by default.
          */

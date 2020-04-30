@@ -58,11 +58,16 @@ public:
         size_t shadowDimension = 0;
     };
 
+    struct CascadeParameters {
+        // the near and far planes, in clip space, to use for this shadow map
+        float csNear = -1.0f, csFar = 1.0f;
+    };
+
     // Call once per frame if the light, scene (or visible layers) or camera changes.
     // This computes the light's camera.
     void update(const FScene::LightSoa& lightData, size_t index, FScene const* scene,
             details::CameraInfo const& camera, uint8_t visibleLayers,
-            ShadowMapLayout layout) noexcept;
+            ShadowMapLayout layout, CascadeParameters cascadeParams) noexcept;
 
     void render(backend::DriverApi& driver, backend::Handle<backend::HwRenderTarget> rt,
             filament::Viewport const& viewport, utils::Range<uint32_t> const& range,
@@ -115,7 +120,7 @@ private:
     void computeShadowCameraDirectional(
             math::float3 const& direction, FScene const* scene,
             CameraInfo const& camera, FLightManager::ShadowParams const& params,
-            uint8_t visibleLayers) noexcept;
+            uint8_t visibleLayers, CascadeParameters cascadeParams) noexcept;
     void computeShadowCameraSpot(math::float3 const& position, math::float3 const& dir,
             float outerConeAngle, float radius, CameraInfo const& camera,
             FLightManager::ShadowParams const& params) noexcept;
@@ -130,7 +135,7 @@ private:
             math::mat4f const& Mv, math::float3 worldOrigin, math::float2 shadowMapResolution) noexcept;
 
     static inline void computeFrustumCorners(math::float3* out,
-            const math::mat4f& projectionViewInverse) noexcept;
+            const math::mat4f& projectionViewInverse, float csNear = -1.0f, float csFar = 1.0f) noexcept;
 
     static inline math::float2 computeNearFar(math::mat4f const& view,
             Aabb const& wsShadowCastersVolume) noexcept;
@@ -167,12 +172,10 @@ private:
             math::float3 t0, math::float3 t1, math::float3 t2) noexcept;
 
     static size_t intersectFrustum(math::float3* out, size_t vertexCount,
-            math::float3 const* segmentsVertices, math::float3 const* quadsVertices,
-            Frustum const& frustum) noexcept;
+            math::float3 const* segmentsVertices, math::float3 const* quadsVertices) noexcept;
 
     static size_t intersectFrustumWithBox(
             FrustumBoxIntersection& outVertices,
-            const Frustum& frustum,
             const math::float3* wsFrustumCorners,
             Aabb const& wsBox);
 

@@ -3,7 +3,7 @@
 //------------------------------------------------------------------------------
 
 mat4 getLightFromWorldMatrix() {
-    return frameUniforms.lightFromWorldMatrix;
+    return frameUniforms.lightFromWorldMatrix[0];
 }
 
 #if defined(HAS_SHADOWING)

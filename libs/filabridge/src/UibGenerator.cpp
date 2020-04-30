@@ -43,7 +43,8 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             .add("viewFromClipMatrix",      1, UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
             .add("clipFromWorldMatrix",     1, UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
             .add("worldFromClipMatrix",     1, UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
-            .add("lightFromWorldMatrix",    1, UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
+            .add("lightFromWorldMatrix",    CONFIG_MAX_SHADOW_CASCADES, UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
+            .add("cascadeSplits",           1, UniformInterfaceBlock::Type::FLOAT4, Precision::HIGH)
             // view
             .add("resolution",              1, UniformInterfaceBlock::Type::FLOAT4, Precision::HIGH)
             // camera
@@ -92,7 +93,9 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             .add("fogInscatteringSize",     1, UniformInterfaceBlock::Type::FLOAT)
             // more camera stuff
             .add("fogColorFromIbl",         1, UniformInterfaceBlock::Type::FLOAT)
-            .add("padding1",                1, UniformInterfaceBlock::Type::FLOAT)
+
+            // CSM information
+            .add("cascades",                1, UniformInterfaceBlock::Type::UINT)
 
             // bring size to 1 KiB
             .add("padding2",                12, UniformInterfaceBlock::Type::FLOAT4)

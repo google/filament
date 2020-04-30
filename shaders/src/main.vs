@@ -88,7 +88,7 @@ void main() {
 #endif
 
 #if defined(HAS_SHADOWING) && defined(HAS_DIRECTIONAL_LIGHTING)
-    vertex_lightSpacePosition = getLightSpacePosition(vertex_worldPosition, vertex_worldNormal,
+    vertex_lightSpacePosition = computeLightSpacePosition(vertex_worldPosition, vertex_worldNormal,
             frameUniforms.lightDirection, frameUniforms.shadowBias.y, getLightFromWorldMatrix());
 #endif
 
@@ -96,7 +96,7 @@ void main() {
     for (uint l = 0u; l < uint(MAX_SHADOW_CASTING_SPOTS); l++) {
         vec3 dir = shadowUniforms.directionShadowBias[l].xyz;
         float bias = shadowUniforms.directionShadowBias[l].w;
-        vertex_spotLightSpacePosition[l] = getLightSpacePosition(vertex_worldPosition,
+        vertex_spotLightSpacePosition[l] = computeLightSpacePosition(vertex_worldPosition,
                 vertex_worldNormal, dir, bias, getSpotLightFromWorldMatrix(l));
     }
 #endif
