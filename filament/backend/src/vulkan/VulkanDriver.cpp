@@ -476,10 +476,7 @@ void VulkanDriver::createStreamFromTextureIdR(Handle<HwStream> sh, intptr_t exte
 }
 
 void VulkanDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {
-    auto renderTarget = construct_handle<VulkanTimerQuery>(mHandleMap, tqh, mContext);
-    mDisposer.createDisposable(renderTarget, [this, tqh] () {
-        destruct_handle<VulkanTimerQuery>(mHandleMap, tqh);
-    });
+    // nothing to do, timer query was constructed in createTimerQueryS
 }
 
 Handle<HwVertexBuffer> VulkanDriver::createVertexBufferS() noexcept {
@@ -548,7 +545,14 @@ Handle<HwStream> VulkanDriver::createStreamFromTextureIdS() noexcept {
 }
 
 Handle<HwTimerQuery> VulkanDriver::createTimerQueryS() noexcept {
-    return alloc_handle<VulkanTimerQuery, HwTimerQuery>();
+    // The handle must be constructed here, as a synchronous call to getTimerQueryValue might happen
+    // before createTimerQueryR is executed.
+    Handle<HwTimerQuery> tqh = alloc_handle<VulkanTimerQuery, HwTimerQuery>();
+    auto query = construct_handle<VulkanTimerQuery>(mHandleMap, tqh, mContext);
+    mDisposer.createDisposable(query, [this, tqh] () {
+        destruct_handle<VulkanTimerQuery>(mHandleMap, tqh);
+    });
+    return tqh;
 }
 
 void VulkanDriver::destroySamplerGroup(Handle<HwSamplerGroup> sbh) {
