@@ -92,7 +92,6 @@ struct VulkanContext {
     VkFormat depthFormat;
     VmaAllocator allocator;
 
-
     // The work context is used for activities unrelated to the swap chain or draw calls, such as
     // uploads, blits, and transitions.
     VulkanCommandBuffer work;
