@@ -31,6 +31,8 @@ A new header is inserted each time a *tag* is created.
 - The emissive property of materials is now expressed in nits and the alpha channel contains the
   exposure weight (at 0.0 the exposure is not applied to the emissive component of a surface, at
   1.0 the exposure is applied just like with any regular light) (⚠️ **API breakage**).
+- Added new `intensityCandela` and `setIntensityCandela` API to `LightManager` for setting a punctual
+  light's intensity in candela.
 
 ## v1.5.2
 
