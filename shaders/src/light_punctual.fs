@@ -27,17 +27,11 @@ struct FroxelParams {
 uvec3 getFroxelCoords(const highp vec3 fragCoords) {
     uvec3 froxelCoord;
 
-    highp vec3 adjustedFragCoords = fragCoords;
-// In Vulkan and Metal, texture coords are Y-down. In OpenGL, texture coords are Y-up.
-#if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
-    adjustedFragCoords.y = frameUniforms.resolution.y - adjustedFragCoords.y;
-#endif
-
-    froxelCoord.xy = uvec2((adjustedFragCoords.xy - frameUniforms.origin.xy) *
+    froxelCoord.xy = uvec2(fragCoords.xy * frameUniforms.resolution.xy *
             vec2(frameUniforms.oneOverFroxelDimension, frameUniforms.oneOverFroxelDimensionY));
 
     froxelCoord.z = uint(max(0.0,
-            log2(frameUniforms.zParams.x * adjustedFragCoords.z + frameUniforms.zParams.y) *
+            log2(frameUniforms.zParams.x * fragCoords.z + frameUniforms.zParams.y) *
                     frameUniforms.zParams.z + frameUniforms.zParams.w));
 
     return froxelCoord;
@@ -158,7 +152,7 @@ Light getLight(const uint index) {
 void evaluatePunctualLights(const PixelParams pixel, inout vec3 color) {
     // Fetch the light information stored in the froxel that contains the
     // current fragment
-    FroxelParams froxel = getFroxelParams(getFroxelIndex(gl_FragCoord.xyz));
+    FroxelParams froxel = getFroxelParams(getFroxelIndex(getNormalizedViewportCoord()));
 
     // Each froxel contains how many lights can influence
     // the current fragment. A froxel also contains a record offset that

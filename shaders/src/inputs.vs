@@ -64,6 +64,8 @@ LAYOUT_LOCATION(6) SHADING_INTERPOLATION out mediump vec4 vertex_worldTangent;
 #endif
 #endif
 
+LAYOUT_LOCATION(7) out highp vec4 vertex_position;
+
 #if defined(HAS_ATTRIBUTE_COLOR)
 LAYOUT_LOCATION(9) out mediump vec4 vertex_color;
 #endif
