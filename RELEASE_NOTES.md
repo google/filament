@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release
 
+## v1.6.0
+
 - gltfio: fixed incorrect cone angles with lights.
 - Specular ambient occlusion now offers 3 modes: off, simple (default on desktop) and bent normals.
   The latter is more accurate but more expensive and requires a bent normal to be specified in the
