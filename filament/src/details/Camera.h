@@ -114,12 +114,13 @@ public:
     }
 
     float getFieldOfView(Camera::Fov direction) const noexcept {
+        // note: this is meaning less for an orthographic projection
         auto const& p = getProjectionMatrix();
         switch (direction) {
             case Fov::VERTICAL:
-                return 2.0f * std::atan(1.0f / float(p[1][1]));
+                return std::abs(2.0f * std::atan(1.0f / float(p[1][1])));
             case Fov::HORIZONTAL:
-                return 2.0f * std::atan(1.0f / float(p[0][0]));
+                return std::abs(2.0f * std::atan(1.0f / float(p[0][0])));
         }
     }
 
