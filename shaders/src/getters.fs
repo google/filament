@@ -87,6 +87,15 @@ highp vec3 getLightSpacePosition() {
 }
 #endif
 
+/**
+ * Returns the normalized [0, 1] viewport coordinates with the origin at the viewport's bottom-left.
+ *
+ * @public-api
+ */
+highp vec3 getNormalizedViewportCoord() {
+    return vec3(shading_normalizedViewportCoord, gl_FragCoord.z);
+}
+
 #if defined(HAS_SHADOWING) && defined(HAS_DYNAMIC_LIGHTING)
 highp vec3 getSpotLightSpacePosition(uint index) {
     highp vec4 position = vertex_spotLightSpacePosition[index];
