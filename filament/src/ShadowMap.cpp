@@ -342,7 +342,7 @@ void ShadowMap::computeShadowCameraDirectional(
 
         Aabb bounds;
         if (params.options.stable && viewVolumeBoundingSphere.w > 0) {
-            bounds = compute2DBounds(MpMv, viewVolumeBoundingSphere);
+            bounds = compute2DBounds(Mv, viewVolumeBoundingSphere);
         } else {
             bounds = compute2DBounds(WLMpMv, mWsClippedShadowReceiverVolume.data(), vertexCount);
         }
@@ -663,11 +663,10 @@ Aabb ShadowMap::compute2DBounds(const mat4f& lightView,
 }
 
 Aabb ShadowMap::compute2DBounds(const mat4f& lightView, float4 const& sphere) noexcept {
-    // this assumes a uniform scale + rotation + translate only
-    // TODO: we need to handle perspective projections
+    // this assumes a rigid body transform
     float4 s;
     s.xyz = (lightView * float4{sphere.xyz, 1.0f}).xyz;
-    s.w = std::abs(sphere.w * lightView[0][0]);
+    s.w = sphere.w;
     return Aabb{s.xyz - s.w, s.xyz + s.w};
 }
 
