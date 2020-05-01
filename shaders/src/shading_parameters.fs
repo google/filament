@@ -10,8 +10,8 @@ void computeShadingParams() {
 #if defined(HAS_ATTRIBUTE_TANGENTS)
     highp vec3 n = vertex_worldNormal;
 #if defined(MATERIAL_NEEDS_TBN)
-    highp vec3 t = vertex_worldTangent;
-    highp vec3 b = vertex_worldBitangent;
+    highp vec3 t = vertex_worldTangent.xyz;
+    highp vec3 b = cross(n, t) * sign(vertex_worldTangent.w);
 #endif
 
 #if defined(MATERIAL_HAS_DOUBLE_SIDED_CAPABILITY)
