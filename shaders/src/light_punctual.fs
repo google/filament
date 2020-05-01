@@ -24,10 +24,10 @@ struct FroxelParams {
  * Returns the coordinates of the froxel at the specified fragment coordinates.
  * The coordinates are a 3D position in the froxel grid.
  */
-uvec3 getFroxelCoords(const vec3 fragCoords) {
+uvec3 getFroxelCoords(const highp vec3 fragCoords) {
     uvec3 froxelCoord;
 
-    vec3 adjustedFragCoords = fragCoords;
+    highp vec3 adjustedFragCoords = fragCoords;
 // In Vulkan and Metal, texture coords are Y-down. In OpenGL, texture coords are Y-up.
 #if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
     adjustedFragCoords.y = frameUniforms.resolution.y - adjustedFragCoords.y;
@@ -49,7 +49,7 @@ uvec3 getFroxelCoords(const vec3 fragCoords) {
  * froxel grid and later used to fetch from the froxel data texture
  * (light_froxels).
  */
-uint getFroxelIndex(const vec3 fragCoords) {
+uint getFroxelIndex(const highp vec3 fragCoords) {
     uvec3 froxelCoord = getFroxelCoords(fragCoords);
     return froxelCoord.x * frameUniforms.fParamsX +
            froxelCoord.y * frameUniforms.fParams.x +

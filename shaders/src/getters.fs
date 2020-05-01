@@ -74,7 +74,7 @@ float getNdotV() {
  *
  * @public-api
  */
-vec2 uvToRenderTargetUV(vec2 uv) {
+highp vec2 uvToRenderTargetUV(highp vec2 uv) {
 #if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
     uv.y = 1.0 - uv.y;
 #endif
@@ -89,7 +89,7 @@ highp vec3 getLightSpacePosition() {
 
 #if defined(HAS_SHADOWING) && defined(HAS_DYNAMIC_LIGHTING)
 highp vec3 getSpotLightSpacePosition(uint index) {
-    vec4 position = vertex_spotLightSpacePosition[index];
+    highp vec4 position = vertex_spotLightSpacePosition[index];
     return position.xyz * (1.0 / position.w);
 }
 #endif
