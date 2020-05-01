@@ -670,7 +670,7 @@ Aabb ShadowMap::compute2DBounds(const mat4f& lightView,
 }
 
 Aabb ShadowMap::compute2DBounds(const mat4f& lightView, float4 const& sphere) noexcept {
-    // this assumes a rotation + translate only
+    // this assumes a rigid body transform
     float4 s;
     s.xyz = (lightView * float4{sphere.xyz, 1.0f}).xyz;
     s.w = sphere.w;
