@@ -14,21 +14,12 @@
 
 // Filter sample count, prefer odd values
 // (keep in sync with PostProcessManager.cpp:dof())
-const float SAMPLE_COUNT = 25.0;
-
-// A value > 1.0 allows a larger blur w/ dithering
-const float BLUR_SCALE = 1.0;
+const float SAMPLE_COUNT = 11.0;
 
 // This is here just for aesthetic reasons
 const float BOKEH_ROTATION_ANGLE = PI / 6.0;
 
 #define unitvec(angle) vec2(cos(angle), sin(angle))
-
-// random number between 0 and 1, using interleaved gradient noise
-float random(const highp vec2 w) {
-    const vec3 m = vec3(0.06711056, 0.00583715, 52.9829189);
-    return fract(m.z * fract(dot(w, m.xy)));
-}
 
 float getCOC(float depth, vec2 cocParams) {
     float CoC = abs(depth * cocParams.x + cocParams.y);
@@ -46,7 +37,7 @@ void tap(inout vec4 finalColor, inout float blurAmount, float radius,
         coc = clamp(coc, 0.0, centerCoc * 2.0);
     }
 
-    float m = step(radius * BLUR_SCALE, coc * (SAMPLE_COUNT * BLUR_SCALE));
+    float m = step(radius, coc * SAMPLE_COUNT);
     finalColor += mix(finalColor * (1.0 / blurAmount), color, m);
     blurAmount += 1.0;
 }
@@ -56,20 +47,14 @@ vec4 blurTexture(sampler2D colorBuffer, highp vec2 uv, highp vec2 direction, flo
     vec4 finalColor = textureLod(colorBuffer, uv, 0.0);
 
     highp vec2 unit = materialParams.resolution.zw;
-    direction *= unit * BLUR_SCALE;
+    direction *= unit;
 
-    float noise = 0.0;
-    if (BLUR_SCALE != 1.0) {
-        // we span 2 samples because the first sample is always fixed (no noise added)
-        noise = (random(gl_FragCoord.xy) - 0.5) * 2.0;
-        uv += direction * noise;
-    }
-
-    vec4 tc = uv.xyxy;
+    vec4 tc = uv.xyxy + vec4(direction * 0.5, -direction * 0.5) + vec4(direction, -direction);
+    direction *= 2.0;
     for (float radius = 1.0 ; radius < (SAMPLE_COUNT * 0.5); radius += 1.0) {
+        tap(finalColor, blurAmount, radius, tc.xy, colorBuffer, centerDepth, centerCoc);
+        tap(finalColor, blurAmount, radius, tc.zw, colorBuffer, centerDepth, centerCoc);
         tc += vec4(direction, -direction);
-        tap(finalColor, blurAmount, radius + noise, tc.xy, colorBuffer, centerDepth, centerCoc);
-        tap(finalColor, blurAmount, radius - noise, tc.zw, colorBuffer, centerDepth, centerCoc);
     }
     return finalColor * (1.0 / blurAmount);
 }
