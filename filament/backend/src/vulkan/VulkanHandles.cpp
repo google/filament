@@ -118,7 +118,7 @@ VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context, uint32_t width, u
             viewInfo.subresourceRange.layerCount = 6;
         } else if (color->target == SamplerType::SAMPLER_2D_ARRAY) {
             viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
-            viewInfo.subresourceRange.layerCount = color->depth;
+            viewInfo.subresourceRange.layerCount = 1;
             viewInfo.subresourceRange.baseArrayLayer = colorInfo.layer;
         } else {
             viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
@@ -142,7 +142,7 @@ VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context, uint32_t width, u
             viewInfo.subresourceRange.layerCount = 6;
         } else if (depth->target == SamplerType::SAMPLER_2D_ARRAY) {
             viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
-            viewInfo.subresourceRange.layerCount = depth->depth;
+            viewInfo.subresourceRange.layerCount = 1;
             viewInfo.subresourceRange.baseArrayLayer = depthInfo.layer;
         } else {
             viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
@@ -310,7 +310,7 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
         .imageType = VK_IMAGE_TYPE_2D,
         .format = vkformat,
-        .extent = { w, h, depth },
+        .extent = { w, h, 1 },
         .mipLevels = levels,
         .arrayLayers = 1,
         .samples = VK_SAMPLE_COUNT_1_BIT,
