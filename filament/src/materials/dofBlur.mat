@@ -17,6 +17,11 @@ material {
             precision: high
         },
         {
+            type : float4,
+            name : blurDirections,
+            precision: medium
+        },
+        {
             type : float2,
             name : cocParams
         }
@@ -52,17 +57,14 @@ layout(location = 1) out vec4 fragColor1;
 
 #include "dofUtils.fs"
 
-const vec2 kDirHorizontal = unitvec(0.0 + BOKEH_ROTATION_ANGLE);
-const vec2 kDirDiagonal   = unitvec(PI / 4.0 + BOKEH_ROTATION_ANGLE);
-
 void postProcess(inout PostProcessInputs postProcess) {
     highp vec2 uv = variable_vertex.xy;
 
     float depth = textureLod(materialParams_depth,  uv, 0.0).r;
     float coc = getCOC(depth, materialParams.cocParams);
 
-    vec4 horizontal = blurTexture(materialParams_color, uv, kDirHorizontal, depth, coc);
-    vec4 diagonal   = blurTexture(materialParams_color, uv, kDirDiagonal,   depth, coc);
+    vec4 horizontal = blurTexture(materialParams_color, uv, materialParams.blurDirections.xy, depth, coc);
+    vec4 diagonal   = blurTexture(materialParams_color, uv, materialParams.blurDirections.zw,   depth, coc);
 
     // Output to MRTs
     postProcess.color = horizontal;

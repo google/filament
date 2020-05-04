@@ -22,6 +22,11 @@ material {
             precision: high
         },
         {
+            type : float4,
+            name : blurDirections,
+            precision: medium
+        },
+        {
            type : float2,
            name : cocParams
         }
@@ -44,17 +49,14 @@ fragment {
 
 #include "dofUtils.fs"
 
-const vec2 kDirVertical= unitvec(PI / 2.0 + BOKEH_ROTATION_ANGLE);
-const vec2 kDirDiamond = unitvec(3.0 * PI / 4.0 + BOKEH_ROTATION_ANGLE);
-
 void postProcess(inout PostProcessInputs postProcess) {
     highp vec2 uv = variable_vertex.xy;
 
     float depth = textureLod(materialParams_depth, uv, 0.0).r;
     float coc = getCOC(depth, materialParams.cocParams);
 
-    vec4 box     = blurTexture(materialParams_buffer0, uv, kDirVertical, depth, coc);
-    vec4 diamond = blurTexture(materialParams_buffer1, uv, kDirDiamond,  depth, coc);
+    vec4 box     = blurTexture(materialParams_buffer0, uv, materialParams.blurDirections.xy, depth, coc);
+    vec4 diamond = blurTexture(materialParams_buffer1, uv, materialParams.blurDirections.zw,  depth, coc);
     vec4 dof = min(box, diamond);
 
     postProcess.color = dof;

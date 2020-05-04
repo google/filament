@@ -171,6 +171,7 @@ public:
     struct DepthOfFieldOptions {
         float focusDistance = 10.0f;        //!< focus distance in world units
         float blurScale = 1.0f;             //!< a scale factor for the amount of blur
+        float maxApertureDiameter = 0.01f;  //!< maximum aperture diameter in meters (zero to disable rotation)
         bool enabled = false;               //!< enable or disable Depth of field effect
     };
 
