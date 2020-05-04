@@ -347,12 +347,32 @@ void FEngine::flush() {
 }
 
 void FEngine::flushAndWait() {
+
+    // first make sure we've not terminated filament
+    ASSERT_PRECONDITION(!mCommandBufferQueue.isExitRequested(),
+            "calling Engine::flushAndWait() after Engine::shutdown()!");
+
     // enqueue finish command -- this will stall in the driver until the GPU is done
     getDriverApi().finish();
 
     // then create a fence that will trigger when we're past the finish() above
-    FFence::waitAndDestroy(
-            FEngine::createFence(FFence::Type::SOFT), FFence::Mode::FLUSH);
+    size_t tryCount = 8;
+    FFence* fence = FEngine::createFence(FFence::Type::SOFT);
+    do {
+        FenceStatus status = fence->wait(FFence::Mode::FLUSH,250000000u);
+        // if the fence didn't trigger after 250ms, check that the command queue thread is still
+        // running (otherwise indicating a precondition violation).
+        if (UTILS_UNLIKELY(status == FenceStatus::TIMEOUT_EXPIRED)) {
+            ASSERT_PRECONDITION(!mCommandBufferQueue.isExitRequested(),
+                    "called Engine::shutdown() WHILE in Engine::flushAndWait()!");
+            tryCount--;
+            ASSERT_POSTCONDITION(tryCount, "flushAndWait() failed inexplicably after 2s");
+            // if the thread is still running, maybe we just need to give it more time
+            continue;
+        }
+        break;
+    } while (true);
+    destroy(fence);
 
     // finally, execute callbacks that might have been scheduled
     getDriver().purge();
