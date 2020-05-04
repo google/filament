@@ -16,11 +16,6 @@
 // (keep in sync with PostProcessManager.cpp:dof())
 const float SAMPLE_COUNT = 11.0;
 
-// This is here just for aesthetic reasons
-const float BOKEH_ROTATION_ANGLE = PI / 6.0;
-
-#define unitvec(angle) vec2(cos(angle), sin(angle))
-
 float getCOC(float depth, vec2 cocParams) {
     float CoC = abs(depth * cocParams.x + cocParams.y);
     return saturate(CoC);
@@ -37,7 +32,7 @@ void tap(inout vec4 finalColor, inout float blurAmount, float radius,
         coc = clamp(coc, 0.0, centerCoc * 2.0);
     }
 
-    float m = step(radius, coc * SAMPLE_COUNT);
+    float m = smoothstep(radius - 0.5, radius + 0.5, coc * SAMPLE_COUNT);
     finalColor += mix(finalColor * (1.0 / blurAmount), color, m);
     blurAmount += 1.0;
 }

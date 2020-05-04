@@ -331,11 +331,18 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
     FrameGraphId<FrameGraphTexture> depth = fg.getBlackboard().get<FrameGraphTexture>("structure");
     assert(depth.isValid());
 
-    const size_t sampleCount = 25;  // (keep in sync with dofUtils.fs)
+    // rotate the bokeh based on the aperture diameter (i.e. angle of the blades)
+    float bokehAngle = float(F_PI) / 6.0f;
+    if (dofOptions.maxApertureDiameter > 0.0f) {
+        bokehAngle += float(F_PI_2) * saturate(cameraInfo.A / dofOptions.maxApertureDiameter);
+    }
+
+    const float SAMPLE_COUNT = 11.0; // (keep in sync with dofUtils.fs)
+    const size_t effectiveSampleCount = 1 + (SAMPLE_COUNT - 1) * 2;
     const float focusDistance = std::max(cameraInfo.zn, dofOptions.focusDistance);
     auto const& desc = fg.getDescriptor<FrameGraphTexture>(input);
     const float Kc = (cameraInfo.A * cameraInfo.f) / (focusDistance - cameraInfo.f);
-    const float Ks = ((float)desc.height / sampleCount) / FCamera::SENSOR_SIZE;
+    const float Ks = ((float)desc.height / effectiveSampleCount) / FCamera::SENSOR_SIZE;
     const float2 cocParams{
             // we use 1/zn instead of (zf - zn) / (zf * zn), because in reality we're using
             // a projection with an infinite far plane
@@ -392,6 +399,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                 });
                 mi->setParameter("resolution", float4{
                         desc.width, desc.height, 1.0f / desc.width, 1.0f / desc.height });
+                mi->setParameter("blurDirections", float4{
+                        std::cos(0.0f + bokehAngle), std::sin(0.0f + bokehAngle),
+                        std::cos(F_PI_4 + bokehAngle), std::sin(F_PI_4 + bokehAngle) });
                 mi->setParameter("cocParams", cocParams);
                 mi->commit(driver);
                 mi->use(driver);
@@ -449,6 +459,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                 });
                 mi->setParameter("resolution", float4{
                         desc.width, desc.height, 1.0f / desc.width, 1.0f / desc.height });
+                mi->setParameter("blurDirections", float4{
+                        std::cos(F_PI_2 + bokehAngle), std::sin(F_PI_2 + bokehAngle),
+                        std::cos(3.0f * F_PI_4 + bokehAngle), std::sin(3.0f * F_PI_4 + bokehAngle) });
                 mi->setParameter("cocParams", cocParams);
                 mi->commit(driver);
                 mi->use(driver);
