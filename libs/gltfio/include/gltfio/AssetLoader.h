@@ -54,6 +54,9 @@ struct AssetConfiguration {
     //! specified, AssetLoader will use the singleton EntityManager associated with the current
     //! process.
     utils::EntityManager* entities = nullptr;
+
+    //! Optional default node name for anonymous nodes
+    char* defaultNodeName = nullptr;
 };
 
 /**
