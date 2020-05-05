@@ -295,6 +295,8 @@ void getSurfaceCaps(VulkanContext& context, VulkanSurfaceContext& sc) {
 }
 
 void createSwapChain(VulkanContext& context, VulkanSurfaceContext& surfaceContext) {
+    getSurfaceCaps(context, surfaceContext);
+
     // The general advice is to require one more than the minimum swap chain length, since the
     // absolute minimum could easily require waiting for a driver or presentation layer to release
     // the previous frame's buffer. The only situation in which we'd ask for the minimum length is
@@ -399,8 +401,27 @@ void createSwapChain(VulkanContext& context, VulkanSurfaceContext& surfaceContex
     for (uint32_t i = 0; i < allocateInfo.commandBufferCount; ++i) {
         surfaceContext.swapContexts[i].commands.cmdbuffer = cmdbufs[i];
     }
+}
 
-    createDepthBuffer(context, surfaceContext, context.depthFormat);
+void destroySwapChain(VulkanContext& context, VulkanSurfaceContext& surfaceContext,
+        VulkanDisposer& disposer) {
+    waitForIdle(context);
+    for (SwapContext& swapContext : surfaceContext.swapContexts) {
+        disposer.release(swapContext.commands.resources);
+        vkFreeCommandBuffers(context.device, context.commandPool, 1,
+                &swapContext.commands.cmdbuffer);
+        swapContext.commands.fence.reset();
+        vkDestroyImageView(context.device, swapContext.attachment.view, VKALLOC);
+        swapContext.commands.fence = VK_NULL_HANDLE;
+        swapContext.attachment.view = VK_NULL_HANDLE;
+    }
+    vkDestroySwapchainKHR(context.device, surfaceContext.swapchain, VKALLOC);
+    vkDestroySemaphore(context.device, surfaceContext.imageAvailable, VKALLOC);
+    vkDestroySemaphore(context.device, surfaceContext.renderingFinished, VKALLOC);
+    vkDestroySurfaceKHR(context.instance, surfaceContext.surface, VKALLOC);
+    if (context.currentSurface == &surfaceContext) {
+        context.currentSurface = nullptr;
+    }
 }
 
 uint32_t selectMemoryType(VulkanContext& context, uint32_t flags, VkFlags reqs) {
