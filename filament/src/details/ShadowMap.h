@@ -60,7 +60,8 @@ public:
 
     struct CascadeParameters {
         // the near and far planes, in clip space, to use for this shadow map
-        float csNear = -1.0f, csFar = 1.0f;
+        float csNear = -1.0f;
+        float csFar = 1.0f;
     };
 
     // Call once per frame if the light, scene (or visible layers) or camera changes.

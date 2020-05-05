@@ -53,6 +53,8 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     filament::math::mat4f worldFromClipMatrix;
     filament::math::mat4f lightFromWorldMatrix[CONFIG_MAX_SHADOW_CASCADES];
 
+    // position of cascade splits, in world space (not including the near plane)
+    // -Inf stored in unused components
     filament::math::float4 cascadeSplits;
 
     filament::math::float4 resolution; // viewport width, height, 1/width, 1/height

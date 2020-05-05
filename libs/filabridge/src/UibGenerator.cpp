@@ -31,6 +31,8 @@ static_assert(sizeof(PerRenderableUib) % 256 == 0,
 static_assert(CONFIG_MAX_BONE_COUNT * sizeof(PerRenderableUibBone) <= 16384,
         "Bones exceed max UBO size");
 
+static_assert(CONFIG_MAX_SHADOW_CASCADES == 4,
+        "Changing CONFIG_MAX_SHADOW_CASCADES affects PerView size and breaks materials.");
 
 UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
     // IMPORTANT NOTE: Respect std140 layout, don't update without updating Engine::PerViewUib
@@ -43,7 +45,7 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             .add("viewFromClipMatrix",      1, UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
             .add("clipFromWorldMatrix",     1, UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
             .add("worldFromClipMatrix",     1, UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
-            .add("lightFromWorldMatrix",    CONFIG_MAX_SHADOW_CASCADES, UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
+            .add("lightFromWorldMatrix",    4, UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
             .add("cascadeSplits",           1, UniformInterfaceBlock::Type::FLOAT4, Precision::HIGH)
             // view
             .add("resolution",              1, UniformInterfaceBlock::Type::FLOAT4, Precision::HIGH)
