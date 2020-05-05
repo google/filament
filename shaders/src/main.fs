@@ -28,7 +28,7 @@ void main() {
 
     fragColor = evaluateMaterial(inputs);
 
-    bool visualizeCascades = bool(frameUniforms.cascades & 0x10);
+    bool visualizeCascades = bool(frameUniforms.cascades & 0x10u);
     if (visualizeCascades) {
         fragColor.rgb *= uintToColorDebug(getShadowCascade());
     }

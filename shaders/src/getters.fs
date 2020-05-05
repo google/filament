@@ -115,7 +115,7 @@ bool isDoubleSided() {
 uint getShadowCascade() {
     vec3 viewPos = mulMat4x4Float3(getViewFromWorldMatrix(), getWorldPosition()).xyz;
     bvec4 greaterZ = greaterThan(frameUniforms.cascadeSplits, vec4(viewPos.z));
-    uint cascadeCount = frameUniforms.cascades & 0xF;
+    uint cascadeCount = frameUniforms.cascades & 0xFu;
     return clamp(uint(dot(vec4(greaterZ), vec4(1.0))), 0u, cascadeCount - 1u);
 }
 
@@ -125,7 +125,7 @@ highp vec3 getCascadeLightSpacePosition(uint cascade) {
     // For the first cascade, return the interpolated light space position.
     // This branch will be coherent (mostly) for neighboring fragments, and it's worth avoiding
     // the matrix multiply inside computeLightSpacePosition.
-    if (cascade == 0) {
+    if (cascade == 0u) {
         return getLightSpacePosition();
     }
 
