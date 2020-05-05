@@ -241,6 +241,8 @@ bool ShadowMapManager::updateCascadeShadowMaps(FEngine& engine, FView& view,
 
     // The split positions uniform is a float4. To save space, we chop off the first split position
     // (which is the near plane, and doesn't need to be communicated to the shaders).
+    static_assert(CONFIG_MAX_SHADOW_CASCADES <= 5,
+            "At most, a float4 can fit 4 split positions for 5 shadow cascades");
     float4 wsSplitPositionUniform;
     std::fill_n(&wsSplitPositionUniform[0], 4, -std::numeric_limits<float>::infinity());
     std::copy(splits.beginWs() + 1, splits.endWs(), &wsSplitPositionUniform[0]);

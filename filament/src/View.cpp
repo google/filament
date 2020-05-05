@@ -224,8 +224,9 @@ void FView::prepareShadowing(FEngine& engine, backend::DriverApi& driver,
     const bool hasDirectionalShadows = directionalLight && lcm.isShadowCaster(directionalLight);
     if (UTILS_UNLIKELY(hasDirectionalShadows)) {
         const auto& shadowOptions = lcm.getShadowOptions(directionalLight);
-        uint8_t cascades = clamp<uint8_t>(shadowOptions.shadowCascades, 1, CONFIG_MAX_SHADOW_CASCADES);
-        mShadowMapManager.setShadowCascades(0, cascades);
+        assert(shadowOptions.shadowCascades >= 1 &&
+                shadowOptions.shadowCascades <= CONFIG_MAX_SHADOW_CASCADES);
+        mShadowMapManager.setShadowCascades(0, shadowOptions.shadowCascades);
     }
 
     // Find all shadow-casting spot lights.
