@@ -26,6 +26,13 @@ import com.google.android.filament.android.UiHelper
 import com.google.android.filament.gltfio.*
 import java.nio.Buffer
 
+private const val kNearPlane = 0.5
+private const val kFarPlane = 10000.0
+private const val kFovDegrees = 45.0
+private const val kAperture = 16f
+private const val kShutterSpeed = 1f / 125f
+private const val kSensitivity = 100f
+
 /**
  * Helps render glTF models into a [SurfaceView] or [TextureView] with an orbit controller.
  *
@@ -84,13 +91,6 @@ class ModelViewer : android.view.View.OnTouchListener {
     private val target = DoubleArray(3)
     private val upward = DoubleArray(3)
 
-    private val kNearPlane = 0.5
-    private val kFarPlane = 10000.0
-    private val kFovDegrees = 45.0
-    private val kAperture = 16f
-    private val kShutterSpeed = 1f / 125f
-    private val kSensitivity = 100f
-
     init {
         engine = Engine.create()
         renderer = engine.createRenderer()
@@ -111,7 +111,7 @@ class ModelViewer : android.view.View.OnTouchListener {
         val (r, g, b) = Colors.cct(6_500.0f)
         LightManager.Builder(LightManager.Type.DIRECTIONAL)
                 .color(r, g, b)
-                .intensity(300_000.0f)
+                .intensity(100_000.0f)
                 .direction(0.0f, -1.0f, 0.0f)
                 .castShadows(true)
                 .build(engine, light)
