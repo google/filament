@@ -45,8 +45,7 @@ Driver* PlatformVkAndroid::createDriver(void* const sharedContext) noexcept {
             sizeof(requestedExtensions) / sizeof(requestedExtensions[0]));
 }
 
-void* PlatformVkAndroid::createVkSurfaceKHR(void* nativeWindow, void* vkinstance,
-        uint32_t* width, uint32_t* height) noexcept {
+void* PlatformVkAndroid::createVkSurfaceKHR(void* nativeWindow, void* vkinstance) noexcept {
     const VkInstance instance = (VkInstance) vkinstance;
     ANativeWindow* aNativeWindow = (ANativeWindow*) nativeWindow;
     VkAndroidSurfaceCreateInfoKHR createInfo {
@@ -56,9 +55,13 @@ void* PlatformVkAndroid::createVkSurfaceKHR(void* nativeWindow, void* vkinstance
     VkSurfaceKHR surface = VK_NULL_HANDLE;
     VkResult result = vkCreateAndroidSurfaceKHR(instance, &createInfo, VKALLOC, &surface);
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateAndroidSurfaceKHR error.");
+    return (void*) surface;
+}
+
+void PlatformVkAndroid::getClientExtent(void* window, uint32_t* width, uint32_t* height) noexcept {
+    ANativeWindow* aNativeWindow = (ANativeWindow*) window;
     *width = ANativeWindow_getWidth(aNativeWindow);
     *height = ANativeWindow_getHeight(aNativeWindow);
-    return (void*) surface;
 }
 
 } // namespace filament

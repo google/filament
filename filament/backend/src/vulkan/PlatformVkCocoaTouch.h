@@ -27,8 +27,8 @@ namespace filament {
 class PlatformVkCocoaTouch final : public backend::VulkanPlatform {
 public:
     backend::Driver* createDriver(void* const sharedContext) noexcept override;
-    void* createVkSurfaceKHR(void* nativeWindow, void* instance,
-            uint32_t* width, uint32_t* height) noexcept override;
+    void* createVkSurfaceKHR(void* nativeWindow, void* instance) noexcept override;
+    void getClientExtent(void* nativeWindow,  uint32_t* width, uint32_t* height) noexcept override;
     int getOSVersion() const noexcept override { return 0; }
 };
 

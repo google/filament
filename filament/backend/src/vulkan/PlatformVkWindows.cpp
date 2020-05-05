@@ -39,8 +39,7 @@ Driver* PlatformVkWindows::createDriver(void* const sharedContext) noexcept {
         sizeof(requestedExtensions) / sizeof(requestedExtensions[0]));
 }
 
-void* PlatformVkWindows::createVkSurfaceKHR(void* nativeWindow, void* instance,
-        uint32_t* width, uint32_t* height) noexcept {
+void* PlatformVkWindows::createVkSurfaceKHR(void* nativeWindow, void* instance) noexcept {
     VkSurfaceKHR surface = nullptr;
 
     HWND window = (HWND) nativeWindow;
@@ -53,13 +52,16 @@ void* PlatformVkWindows::createVkSurfaceKHR(void* nativeWindow, void* instance,
     VkResult result = vkCreateWin32SurfaceKHR((VkInstance) instance, &createInfo, nullptr, &surface);
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateWin32SurfaceKHR error.");
 
+    return surface;
+}
+
+void PlatformVkWindows::createVkSurfaceKHR(void* win, uint32_t* width, uint32_t* height) noexcept {
+    HWND window = (HWND) win;
     RECT rect;
     BOOL success = GetClientRect(window, &rect);
     ASSERT_POSTCONDITION(success, "GetWindowRect error.");
     *width = rect.right - rect.left;
     *height = rect.bottom - rect.top;
-
-    return surface;
 }
 
 } // namespace filament
