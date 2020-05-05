@@ -205,13 +205,6 @@ public:
          */
         uint8_t shadowCascades = 1;
 
-        /**
-         * Visualize the shadow cascades through different colors.
-         *
-         * @warning This API is still experimental and subject to change.
-         */
-        bool debugVisualizeCascades = false;
-
         /** Constant bias in world units (e.g. meters) by which shadows are moved away from the
          * light. 1mm by default.
          */
