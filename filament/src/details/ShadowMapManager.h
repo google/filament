@@ -142,7 +142,8 @@ private:
             }
         };
 
-        CascadeSplits(Params p = {});
+        CascadeSplits() : CascadeSplits(Params {}) {}
+        CascadeSplits(Params p);
 
         const float* beginWs() const { return mSplitsWs; }
         const float* endWs() const { return mSplitsWs + mSplitCount; }

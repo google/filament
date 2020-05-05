@@ -119,7 +119,8 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
 };
 
 // 2 KiB == 128 float4s
-static_assert(sizeof(PerViewUib) == sizeof(filament::math::float4) * 128);
+static_assert(sizeof(PerViewUib) == sizeof(filament::math::float4) * 128,
+        "PerViewUib should be exactly 2KiB");
 
 // PerRenderableUib must have an alignment of 256 to be compatible with all versions of GLES.
 struct alignas(256) PerRenderableUib {
