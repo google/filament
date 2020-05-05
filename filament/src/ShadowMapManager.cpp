@@ -36,6 +36,9 @@ ShadowMapManager::ShadowMapManager(FEngine& engine) : mTextureState(0, 0) {
     for (size_t i = 0; i < mSpotShadowMapCache.size(); i++) {
         mSpotShadowMapCache[i] = std::make_unique<ShadowMap>(engine);
     }
+    FDebugRegistry& debugRegistry = engine.getDebugRegistry();
+    debugRegistry.registerProperty("d.shadowmap.visualize_cascades",
+            &engine.debug.shadowmap.visualize_cascades);
 }
 
 ShadowMapManager::~ShadowMapManager() {
@@ -303,7 +306,7 @@ bool ShadowMapManager::updateCascadeShadowMaps(FEngine& engine, FView& view,
     perViewUb.setUniform(offsetof(PerViewUib, ssContactShadowDistance), screenSpaceShadowDistance);
 
     uint32_t cascades = 0;
-    if (options.debugVisualizeCascades) {
+    if (engine.debug.shadowmap.visualize_cascades) {
         cascades |= 0x10u;
     }
     cascades |= uint32_t(mCascadeShadowMaps.size());
