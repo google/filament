@@ -203,8 +203,12 @@ this.camera = engine.createCamera();
 this.view = engine.createView();
 this.view.setCamera(this.camera);
 this.view.setScene(this.scene);
-this.view.setClearColor([0.1, 0.2, 0.3, 1.0]); // blue-green background
-this.resize(); // adjust the initial viewport
+
+// Set up a blue-green background:
+this.renderer.setClearOptions({clearColor: [0.0, 0.1, 0.2, 1.0], clear: true});
+
+// Adjust the initial viewport:
+this.resize();
 ```
 
 At this point, we're done creating all Filament entities, and the code should run without errors.

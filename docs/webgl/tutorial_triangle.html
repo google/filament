@@ -184,8 +184,12 @@ view.</p>
 <span style="color: #008000; font-weight: bold">this</span>.view <span style="color: #666666">=</span> engine.createView();
 <span style="color: #008000; font-weight: bold">this</span>.view.setCamera(<span style="color: #008000; font-weight: bold">this</span>.camera);
 <span style="color: #008000; font-weight: bold">this</span>.view.setScene(<span style="color: #008000; font-weight: bold">this</span>.scene);
-<span style="color: #008000; font-weight: bold">this</span>.view.setClearColor([<span style="color: #666666">0.1</span>, <span style="color: #666666">0.2</span>, <span style="color: #666666">0.3</span>, <span style="color: #666666">1.0</span>]); <span style="color: #408080; font-style: italic">// blue-green background</span>
-<span style="color: #008000; font-weight: bold">this</span>.resize(); <span style="color: #408080; font-style: italic">// adjust the initial viewport</span>
+
+<span style="color: #408080; font-style: italic">// Set up a blue-green background:</span>
+<span style="color: #008000; font-weight: bold">this</span>.renderer.setClearOptions({clearColor<span style="color: #666666">:</span> [<span style="color: #666666">0.0</span>, <span style="color: #666666">0.1</span>, <span style="color: #666666">0.2</span>, <span style="color: #666666">1.0</span>], clear<span style="color: #666666">:</span> <span style="color: #008000; font-weight: bold">true</span>});
+
+<span style="color: #408080; font-style: italic">// Adjust the initial viewport:</span>
+<span style="color: #008000; font-weight: bold">this</span>.resize();
 </pre></div>
 
 <p>At this point, we're done creating all Filament entities, and the code should run without errors.

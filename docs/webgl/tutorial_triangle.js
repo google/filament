@@ -44,8 +44,13 @@ class App {
     this.view = engine.createView();
     this.view.setCamera(this.camera);
     this.view.setScene(this.scene);
-    this.view.setClearColor([0.1, 0.2, 0.3, 1.0]); // blue-green background
-    this.resize(); // adjust the initial viewport
+    // Set up a blue-green background:
+    this.renderer.setClearOptions({
+      clearColor: [0.0, 0.1, 0.2, 1.0],
+      clear: true
+    });
+    // Adjust the initial viewport:
+    this.resize();
     this.render = this.render.bind(this);
     this.resize = this.resize.bind(this);
     window.addEventListener('resize', this.resize);
