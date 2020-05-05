@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 
-# To run this script, you may need to do the following on Ubuntu:
-#     sudo apt-get install python3-pip
-#     pip3 install -r requirements.txt
+# To run this script, I recommend using pipenv to create an isolated Python environment with the
+# correct packages so that you do not interfere with other Python projects in your system.
+# After installing pipenv, run the following commands from the current folder:
 #
-# If CMake is choosing /usr/bin/python3, then do this instead:
-#     /usr/bin/python3 -m pip requirements.txt
+#  pipenv --python 3.7
+#  pipenv shell
+#  pipenv install
+#  ./build.py
 
 """Converts markdown into HTML and extracts JavaScript code blocks.
 
@@ -516,6 +518,7 @@ if __name__ == "__main__":
 
     # Copy resources from "samples" to "docs"
     copy_built_file('web/samples/suzanne.filamesh')
+    copy_built_file('web/samples/parquet.filamat')
     copy_built_file('web/samples/metallic*.ktx')
     copy_built_file('web/samples/normal*.ktx')
     copy_built_file('web/samples/roughness*.ktx')

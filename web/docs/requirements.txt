@@ -1,4 +1,0 @@
-jsbeautifier==1.8.8
-mistletoe==0.7.1
-Pygments==2.2.0
-future-fstrings
