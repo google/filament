@@ -456,8 +456,8 @@ void VulkanDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
         uint64_t flags) {
     auto* swapChain = construct_handle<VulkanSwapChain>(mHandleMap, sch);
     VulkanSurfaceContext& sc = swapChain->surfaceContext;
-    sc.surface = (VkSurfaceKHR) mContextManager.createVkSurfaceKHR(nativeWindow,
-            mContext.instance, &sc.clientSize.width, &sc.clientSize.height);
+    sc.surface = (VkSurfaceKHR) mContextManager.createVkSurfaceKHR(nativeWindow, mContext.instance);
+    mContextManager.getClientExtent(nativeWindow, &sc.clientSize.width, &sc.clientSize.height);
     getPresentationQueue(mContext, sc);
     getSurfaceCaps(mContext, sc);
     createSwapChain(mContext, sc);

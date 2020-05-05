@@ -50,20 +50,27 @@ Driver* PlatformVkCocoa::createDriver(void* sharedContext) noexcept {
             sizeof(requestedExtensions) / sizeof(requestedExtensions[0]));
 }
 
-void* PlatformVkCocoa::createVkSurfaceKHR(void* nativeWindow, void* instance,
-        uint32_t* width, uint32_t* height) noexcept {
+void* PlatformVkCocoa::createVkSurfaceKHR(void* nativeWindow, void* instance) noexcept {
     // Obtain the CAMetalLayer-backed view.
     NSView* nsview = (__bridge NSView*) nativeWindow;
     ASSERT_POSTCONDITION(nsview, "Unable to obtain Metal-backed NSView.");
 
     // Create the VkSurface.
-    ASSERT_POSTCONDITION(vkCreateMacOSSurfaceMVK, "Unable to load vkCreateMacOSSurfaceMVK function.");
+    ASSERT_POSTCONDITION(vkCreateMacOSSurfaceMVK, "Unable to load vkCreateMacOSSurfaceMVK.");
     VkSurfaceKHR surface = nullptr;
     VkMacOSSurfaceCreateInfoMVK createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_MACOS_SURFACE_CREATE_INFO_MVK;
     createInfo.pView = (__bridge void*) nsview;
     VkResult result = vkCreateMacOSSurfaceMVK((VkInstance) instance, &createInfo, VKALLOC, &surface);
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateMacOSSurfaceMVK error.");
+
+    return surface;
+}
+
+void PlatformVkCocoa::getClientExtent(void* window,  uint32_t* width, uint32_t* height) noexcept {
+    // Obtain the CAMetalLayer-backed view.
+    NSView* nsview = (__bridge NSView*) window;
+    ASSERT_POSTCONDITION(nsview, "Unable to obtain Metal-backed NSView.");
 
     // The size that we return to VulkanDriver is consistent with what the macOS client sees for the
     // view size, but it's not necessarily consistent with the surface caps currentExtent. We've
@@ -73,7 +80,6 @@ void* PlatformVkCocoa::createVkSurfaceKHR(void* nativeWindow, void* instance,
     NSSize sz = [nsview convertSizeToBacking: nsview.frame.size];
     *width = sz.width;
     *height = sz.height;
-    return surface;
 }
 
 } // namespace filament
