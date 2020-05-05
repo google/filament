@@ -459,8 +459,8 @@ void VulkanDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
     sc.surface = (VkSurfaceKHR) mContextManager.createVkSurfaceKHR(nativeWindow, mContext.instance);
     mContextManager.getClientExtent(nativeWindow, &sc.clientSize.width, &sc.clientSize.height);
     getPresentationQueue(mContext, sc);
-    getSurfaceCaps(mContext, sc);
     createSwapChain(mContext, sc);
+    createDepthBuffer(mContext, sc, mContext.depthFormat);
 
     // TODO: move the following line into makeCurrent.
     mContext.currentSurface = &sc;
@@ -575,26 +575,12 @@ void VulkanDriver::destroySamplerGroup(Handle<HwSamplerGroup> sbh) {
 void VulkanDriver::destroySwapChain(Handle<HwSwapChain> sch) {
     if (sch) {
         VulkanSurfaceContext& surfaceContext = handle_cast<VulkanSwapChain>(mHandleMap, sch)->surfaceContext;
-        waitForIdle(mContext);
-        for (SwapContext& swapContext : surfaceContext.swapContexts) {
-            mDisposer.release(swapContext.commands.resources);
-            vkFreeCommandBuffers(mContext.device, mContext.commandPool, 1,
-                    &swapContext.commands.cmdbuffer);
-            swapContext.commands.fence.reset();
-            vkDestroyImageView(mContext.device, swapContext.attachment.view, VKALLOC);
-            swapContext.commands.fence = VK_NULL_HANDLE;
-            swapContext.attachment.view = VK_NULL_HANDLE;
-        }
-        vkDestroySwapchainKHR(mContext.device, surfaceContext.swapchain, VKALLOC);
-        vkDestroySemaphore(mContext.device, surfaceContext.imageAvailable, VKALLOC);
-        vkDestroySemaphore(mContext.device, surfaceContext.renderingFinished, VKALLOC);
-        vkDestroySurfaceKHR(mContext.instance, surfaceContext.surface, VKALLOC);
+        backend::destroySwapChain(mContext, surfaceContext, mDisposer);
+
         vkDestroyImageView(mContext.device, surfaceContext.depth.view, VKALLOC);
         vkDestroyImage(mContext.device, surfaceContext.depth.image, VKALLOC);
         vkFreeMemory(mContext.device, surfaceContext.depth.memory, VKALLOC);
-        if (mContext.currentSurface == &surfaceContext) {
-            mContext.currentSurface = nullptr;
-        }
+
         destruct_handle<VulkanSwapChain>(mHandleMap, sch);
     }
 }
