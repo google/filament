@@ -138,10 +138,17 @@ public:
             forceLocal += vec3{  1.0,  0.0,  0.0 };
         }
 
-        forceLocal *= mMoveSpeed;
-
         const mat4 orientation = mat4::lookAt(Base::mEye, Base::mTarget, Base::mProps.upVector);
-        const vec3 forceWorld = (orientation * vec4{ forceLocal, 0.0f }).xyz;
+        vec3 forceWorld = (orientation * vec4{ forceLocal, 0.0f }).xyz;
+
+        if (mKeyDown[(int) Base::Key::UP]) {
+            forceWorld += vec3{  0.0,  1.0,  0.0 };
+        }
+        if (mKeyDown[(int) Base::Key::DOWN]) {
+            forceWorld += vec3{  0.0, -1.0,  0.0 };
+        }
+
+        forceWorld *= mMoveSpeed;
 
         const auto dampingFactor = Base::mProps.flightMoveDamping;
         if (dampingFactor == 0.0) {
