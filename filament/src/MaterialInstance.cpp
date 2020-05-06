@@ -41,7 +41,8 @@ namespace details {
 
 FMaterialInstance::FMaterialInstance() noexcept = default;
 
-FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material) {
+FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material, const char* name) :
+        mName(name) {
     FEngine::DriverApi& driver = engine.getDriverApi();
 
     if (!material->getUniformInterfaceBlock().isEmpty()) {
@@ -223,7 +224,11 @@ template UTILS_NOINLINE void FMaterialInstance::setParameter<mat4f>   (const cha
 using namespace details;
 
 Material const* MaterialInstance::getMaterial() const noexcept {
-    return upcast(this)->mMaterial;
+    return upcast(this)->getMaterial();
+}
+
+const char* MaterialInstance::getName() const noexcept {
+    return upcast(this)->getName();
 }
 
 template <typename T, typename>

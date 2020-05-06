@@ -47,6 +47,16 @@ Java_com_google_android_filament_Material_nCreateInstance(JNIEnv*, jclass,
     return (jlong) material->createInstance();
 }
 
+extern "C" JNIEXPORT jlong JNICALL
+Java_com_google_android_filament_Material_nCreateInstanceWithName(JNIEnv* env, jclass,
+        jlong nativeMaterial, jstring name_) {
+    Material* material = (Material*) nativeMaterial;
+    const char *name = env->GetStringUTFChars(name_, 0);
+    jlong instance = (jlong) material->createInstance(name);
+    env->ReleaseStringUTFChars(name_, name);
+    return instance;
+}
+
 extern "C"
 JNIEXPORT jstring JNICALL
 Java_com_google_android_filament_Material_nGetName(JNIEnv* env, jclass, jlong nativeMaterial) {

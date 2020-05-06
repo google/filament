@@ -24,6 +24,7 @@ public class MaterialInstance {
     private Material mMaterial;
     private long mNativeObject;
     private long mNativeMaterial;
+    private String mName;
 
     public enum BooleanElement {
         BOOL,
@@ -53,6 +54,12 @@ public class MaterialInstance {
         mNativeObject = nativeMaterialInstance;
     }
 
+    MaterialInstance(@NonNull Material material, long nativeMaterialInstance, String name) {
+        mMaterial = material;
+        mNativeObject = nativeMaterialInstance;
+        mName = name;
+    }
+
     MaterialInstance(long nativeMaterial, long nativeMaterialInstance) {
         mNativeMaterial = nativeMaterial;
         mNativeObject = nativeMaterialInstance;
@@ -65,6 +72,11 @@ public class MaterialInstance {
             mMaterial = new Material(mNativeMaterial);
         }
         return mMaterial;
+    }
+
+    /** @return the name associated with this instance if one exists, otherwise null */
+    public String getName() {
+        return mName;
     }
 
     /**
