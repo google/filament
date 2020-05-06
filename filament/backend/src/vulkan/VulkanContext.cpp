@@ -401,6 +401,8 @@ void createSwapChain(VulkanContext& context, VulkanSurfaceContext& surfaceContex
     for (uint32_t i = 0; i < allocateInfo.commandBufferCount; ++i) {
         surfaceContext.swapContexts[i].commands.cmdbuffer = cmdbufs[i];
     }
+
+    createDepthBuffer(context, surfaceContext, context.depthFormat);
 }
 
 void destroySwapChain(VulkanContext& context, VulkanSurfaceContext& surfaceContext,
@@ -418,10 +420,10 @@ void destroySwapChain(VulkanContext& context, VulkanSurfaceContext& surfaceConte
     vkDestroySwapchainKHR(context.device, surfaceContext.swapchain, VKALLOC);
     vkDestroySemaphore(context.device, surfaceContext.imageAvailable, VKALLOC);
     vkDestroySemaphore(context.device, surfaceContext.renderingFinished, VKALLOC);
-    vkDestroySurfaceKHR(context.instance, surfaceContext.surface, VKALLOC);
-    if (context.currentSurface == &surfaceContext) {
-        context.currentSurface = nullptr;
-    }
+
+    vkDestroyImageView(context.device, surfaceContext.depth.view, VKALLOC);
+    vkDestroyImage(context.device, surfaceContext.depth.image, VKALLOC);
+    vkFreeMemory(context.device, surfaceContext.depth.memory, VKALLOC);
 }
 
 uint32_t selectMemoryType(VulkanContext& context, uint32_t flags, VkFlags reqs) {
@@ -475,15 +477,15 @@ void waitForIdle(VulkanContext& context) {
     }
 }
 
-void acquireSwapCommandBuffer(VulkanContext& context) {
+bool acquireSwapCommandBuffer(VulkanContext& context) {
     // Ask Vulkan for the next image in the swap chain and update the currentSwapIndex.
     VulkanSurfaceContext& surface = *context.currentSurface;
     VkResult result = vkAcquireNextImageKHR(context.device, surface.swapchain,
             UINT64_MAX, surface.imageAvailable, VK_NULL_HANDLE, &surface.currentSwapIndex);
-    ASSERT_POSTCONDITION(result != VK_ERROR_OUT_OF_DATE_KHR,
-            "Stale / resized swap chain not yet supported.");
-    ASSERT_POSTCONDITION(result == VK_SUBOPTIMAL_KHR || result == VK_SUCCESS,
-            "vkAcquireNextImageKHR error.");
+    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+        return false;
+    }
+    ASSERT_POSTCONDITION(result == VK_SUCCESS, "Unable to acquire image from swap chain.");
     SwapContext& swap = getSwapContext(context);
 
     // Ensure that the previous submission of this command buffer has finished.
@@ -506,6 +508,7 @@ void acquireSwapCommandBuffer(VulkanContext& context) {
     error = vkBeginCommandBuffer(cmdbuffer, &beginInfo);
     ASSERT_POSTCONDITION(!error, "vkBeginCommandBuffer error.");
     context.currentCommands = &swap.commands;
+    return true;
 }
 
 // Flushes the current command buffer and waits for it to finish executing.
@@ -664,8 +667,6 @@ void createDepthBuffer(VulkanContext& context, VulkanSurfaceContext& surfaceCont
     };
     vkCmdPipelineBarrier(cmdbuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
             VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
-
-    flushWorkCommandBuffer(context);
 }
 
 VkImageLayout getTextureLayout(TextureUsage usage) {

@@ -72,7 +72,6 @@ void PlatformVkCocoaTouch::getClientExtent(void* window,  uint32_t* width, uint3
     CAMetalLayer* metalLayer = (CAMetalLayer*) nativeWindow;
     *width = metalLayer.drawableSize.width;
     *height = metalLayer.drawableSize.height;
-    return surface;
 #endif
 }
 

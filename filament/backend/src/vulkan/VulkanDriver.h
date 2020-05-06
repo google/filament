@@ -141,6 +141,8 @@ private:
         handleMap.erase(handle.getId());
     }
 
+    void refreshSwapChain();
+
     VulkanContext mContext = {};
     VulkanBinder mBinder;
     VulkanDisposer mDisposer;
