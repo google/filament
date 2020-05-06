@@ -22,9 +22,9 @@ import androidx.annotation.Size;
 
 public class MaterialInstance {
     private Material mMaterial;
+    private String mName;
     private long mNativeObject;
     private long mNativeMaterial;
-    private String mName;
 
     public enum BooleanElement {
         BOOL,
@@ -54,12 +54,6 @@ public class MaterialInstance {
         mNativeObject = nativeMaterialInstance;
     }
 
-    MaterialInstance(@NonNull Material material, long nativeMaterialInstance, String name) {
-        mMaterial = material;
-        mNativeObject = nativeMaterialInstance;
-        mName = name;
-    }
-
     MaterialInstance(long nativeMaterial, long nativeMaterialInstance) {
         mNativeMaterial = nativeMaterial;
         mNativeObject = nativeMaterialInstance;
@@ -75,8 +69,12 @@ public class MaterialInstance {
     }
 
     /** @return the name associated with this instance */
+    @NonNull
     public String getName() {
-        return mName == null ? mMaterial.getName() : mName;
+        if (mName == null) {
+            mName = nGetName(getNativeObject());
+        }
+        return mName;
     }
 
     /**
@@ -548,4 +546,6 @@ public class MaterialInstance {
     private static native void nSetColorWrite(long nativeMaterialInstance, boolean enable);
     private static native void nSetDepthWrite(long nativeMaterialInstance, boolean enable);
     private static native void nSetDepthCulling(long nativeMaterialInstance, boolean enable);
+
+    private static native String nGetName(long nativeMaterialInstance);
 }

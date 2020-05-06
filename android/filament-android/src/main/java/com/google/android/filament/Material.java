@@ -338,7 +338,7 @@ public class Material {
     public MaterialInstance createInstance(@NonNull String name) {
         long nativeInstance = nCreateInstanceWithName(getNativeObject(), name);
         if (nativeInstance == 0) throw new IllegalStateException("Couldn't create MaterialInstance");
-        return new MaterialInstance(this, nativeInstance, name);
+        return new MaterialInstance(this, nativeInstance);
     }
 
     /** Returns the material's default instance. */
