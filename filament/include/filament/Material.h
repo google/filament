@@ -124,7 +124,7 @@ public:
      * Engine::destroy(const MaterialInstance*).
      *
      * @param name Optional name to associate with the given material instance. If this is null,
-     * then there is no associated name (note that the material's name does not get inherited).
+     * then the instance inherits the material's name.
      *
      * @return A pointer to the new instance.
      */

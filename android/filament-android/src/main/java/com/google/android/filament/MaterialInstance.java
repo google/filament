@@ -74,9 +74,9 @@ public class MaterialInstance {
         return mMaterial;
     }
 
-    /** @return the name associated with this instance if one exists, otherwise null */
+    /** @return the name associated with this instance */
     public String getName() {
-        return mName;
+        return mName == null ? mMaterial.getName() : mName;
     }
 
     /**

@@ -997,8 +997,7 @@ class_<Material>("Material")
 
 class_<MaterialInstance>("MaterialInstance")
     .function("getName", EMBIND_LAMBDA(std::string, (MaterialInstance* self), {
-        const char* name = self->getName();
-        return std::string(name ? name : "");
+        return std::string(self->getName());
     }), allow_raw_pointers())
     .function("setBoolParameter", EMBIND_LAMBDA(void,
             (MaterialInstance* self, std::string name, bool value), {

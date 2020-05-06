@@ -132,7 +132,7 @@ public:
 
     void setDepthCulling(bool enable) noexcept;
 
-    const char* getName() const noexcept { return mName.c_str(); }
+    const char* getName() const noexcept;
 
 private:
     friend class FMaterial;

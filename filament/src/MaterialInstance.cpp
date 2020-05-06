@@ -181,6 +181,16 @@ void FMaterialInstance::setDepthCulling(bool enable) noexcept {
     mDepthFunc = enable ? RasterState::DepthFunc::LE : RasterState::DepthFunc::A;
 }
 
+const char* FMaterialInstance::getName() const noexcept {
+    // To decide whether to use the parent material name as a fallback, we check for the nullness of
+    // the instance's CString rather than calling empty(). This allows instances to override the
+    // parent material's name with a blank string.
+    if (mName.data() == nullptr) {
+        return mMaterial->getName().c_str();
+    }
+    return mName.c_str();
+}
+
 // explicit template instantiation of our supported types
 template UTILS_NOINLINE void FMaterialInstance::setParameter<bool>    (const char* name, bool     v) noexcept;
 template UTILS_NOINLINE void FMaterialInstance::setParameter<float>   (const char* name, float    v) noexcept;
