@@ -93,7 +93,7 @@ public:
     /**
      * Returns the plane equation parameters with normalized normals
      * @param plane Identifier of the plane to retrieve the equation of
-     * @return A plane equation encoded a float4 R such as R.x*x + R.y*y + R.z*z = R.w
+     * @return A plane equation encoded a float4 R such as R.x*x + R.y*y + R.z*z + R.w = 0
      */
     math::float4 getNormalizedPlane(Plane plane) const noexcept;
 

@@ -50,8 +50,8 @@ Frustum::Frustum(const float3 corners[8]) {
     auto plane = [](float3 p1, float3 p2, float3 p3) {
         auto v12 = p2 - p1;
         auto v23 = p3 - p2;
-        auto n = cross(v12, v23);
-        return float4{normalize(n), dot(n, p1)};
+        auto n = normalize(cross(v12, v23));
+        return float4{n, -dot(n, p1)};
     };
 
     mPlanes[0] = plane(a, e, g);   // left
