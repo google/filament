@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-In addition to the requirements for [building Filament on Windows](../README.md#windows), you'll
+In addition to the requirements for [building Filament on Windows](../BUILDING.md#windows), you'll
 need the Android SDK and NDK. See [Getting Started with the
 NDK](https://developer.android.com/ndk/guides/) for detailed installation instructions.
 
@@ -21,9 +21,6 @@ mkdir out\cmake-release
 cd out\cmake-release
 cmake ^
     -G Ninja ^
-    -DCMAKE_CXX_COMPILER:PATH="C:\Program Files\LLVM\bin\clang-cl.exe" ^
-    -DCMAKE_C_COMPILER:PATH="C:\Program Files\LLVM\bin\clang-cl.exe" ^
-    -DCMAKE_LINKER:PATH="C:\Program Files\LLVM\bin\lld-link.exe" ^
     -DCMAKE_INSTALL_PREFIX=..\release\filament ^
     -DFILAMENT_ENABLE_JAVA=NO ^
     -DCMAKE_BUILD_TYPE=Release ^
