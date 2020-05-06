@@ -380,8 +380,7 @@ void SimpleViewer::updateUserInterface() {
         rm.setCastShadows(instance, scaster);
         size_t numPrims = rm.getPrimitiveCount(instance);
         for (size_t prim = 0; prim < numPrims; ++prim) {
-            const Material* mat = rm.getMaterialInstanceAt(instance, prim)->getMaterial();
-            const char* mname = mat->getName();
+            const char* mname = rm.getMaterialInstanceAt(instance, prim)->getName();
             if (mname) {
                 ImGui::Text("prim %zu: material %s", prim, mname);
             } else {

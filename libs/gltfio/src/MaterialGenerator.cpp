@@ -381,9 +381,9 @@ MaterialInstance* MaterialGenerator::createMaterialInstance(MaterialKey* config,
         Material* mat = createMaterial(mEngine, *config, *uvmap, label);
         mCache.emplace(std::make_pair(*config, mat));
         mMaterials.push_back(mat);
-        return mat->createInstance();
+        return mat->createInstance(label);
     }
-    return iter->second->createInstance();
+    return iter->second->createInstance(label);
 }
 
 } // anonymous namespace

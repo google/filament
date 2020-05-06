@@ -149,7 +149,7 @@ MaterialInstance* UbershaderLoader::createMaterialInstance(MaterialKey* config, 
         return hasTexture ? int(uvmap->at(srcIndex)) - 1 : -1;
     };
     Material* material = getMaterial(*config);
-    MaterialInstance* mi = material->createInstance();
+    MaterialInstance* mi = material->createInstance(label);
     mi->setParameter("baseColorIndex",
             getUvIndex(config->baseColorUV, config->hasBaseColorTexture));
     mi->setParameter("normalIndex", getUvIndex(config->normalUV, config->hasNormalTexture));
