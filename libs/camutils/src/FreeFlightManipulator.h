@@ -125,13 +125,13 @@ public:
     void update(FLOAT deltaTime) override {
         vec3 forceLocal { 0.0, 0.0, 0.0 };
 
-        if (mKeyDown[(int) Base::Key::UP]) {
+        if (mKeyDown[(int) Base::Key::FORWARD]) {
             forceLocal += vec3{  0.0,  0.0, -1.0 };
         }
         if (mKeyDown[(int) Base::Key::LEFT]) {
             forceLocal += vec3{ -1.0,  0.0,  0.0 };
         }
-        if (mKeyDown[(int) Base::Key::DOWN]) {
+        if (mKeyDown[(int) Base::Key::BACKWARD]) {
             forceLocal += vec3{  0.0,  0.0,  1.0 };
         }
         if (mKeyDown[(int) Base::Key::RIGHT]) {
