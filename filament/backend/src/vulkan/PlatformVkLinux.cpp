@@ -82,9 +82,10 @@ void PlatformVkLinux::getClientExtent(void* window, uint32_t* width, uint32_t* h
     Window root;
     int x = 0;
     int y = 0;
-    unsigned int border = 0;
+    unsigned int border_width = 0;
     unsigned int depth = 0;
-    g_x11.getGeometry(mDisplay, (Window) window, &root, &x, &y, width, height, &border, &depth);
+    g_x11.getGeometry(mDisplay, (Window) window, &root, &x, &y, width, height, &border_width,
+            &depth);
  }
 
 } // namespace filament

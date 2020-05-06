@@ -127,6 +127,7 @@ struct VulkanSurfaceContext {
     VkSemaphore imageAvailable;
     VkSemaphore renderingFinished;
     VulkanAttachment depth;
+    void* nativeWindow;
 };
 
 void selectPhysicalDevice(VulkanContext& context);
@@ -140,7 +141,7 @@ void destroySwapChain(VulkanContext& context, VulkanSurfaceContext& sc, VulkanDi
 uint32_t selectMemoryType(VulkanContext& context, uint32_t flags, VkFlags reqs);
 SwapContext& getSwapContext(VulkanContext& context);
 void waitForIdle(VulkanContext& context);
-void acquireSwapCommandBuffer(VulkanContext& context);
+bool acquireSwapCommandBuffer(VulkanContext& context);
 void releaseCommandBuffer(VulkanContext& context);
 void flushCommandBuffer(VulkanContext& context);
 VkFormat findSupportedFormat(VulkanContext& context, const std::vector<VkFormat>& candidates,
