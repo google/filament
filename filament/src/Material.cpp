@@ -286,8 +286,8 @@ void FMaterial::terminate(FEngine& engine) {
     mDefaultInstance.terminate(engine);
 }
 
-FMaterialInstance* FMaterial::createInstance() const noexcept {
-    return mEngine.createMaterialInstance(this);
+FMaterialInstance* FMaterial::createInstance(const char* name) const noexcept {
+    return mEngine.createMaterialInstance(this, name);
 }
 
 bool FMaterial::hasParameter(const char* name) const noexcept {
@@ -529,8 +529,8 @@ void FMaterial::destroyPrograms(FEngine& engine) {
 
 using namespace details;
 
-MaterialInstance* Material::createInstance() const noexcept {
-    return upcast(this)->createInstance();
+MaterialInstance* Material::createInstance(const char* name) const noexcept {
+    return upcast(this)->createInstance(name);
 }
 
 const char* Material::getName() const noexcept {

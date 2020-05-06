@@ -109,6 +109,7 @@ export class TextureSampler {
 }
 
 export class MaterialInstance {
+    public getName(): string;
     public setBoolParameter(name: string, value: boolean): void;
     public setFloatParameter(name: string, value: number): void;
     public setFloat2Parameter(name: string, value: float2): void;
@@ -283,6 +284,7 @@ export class Renderer {
 
 export class Material {
     public createInstance(): MaterialInstance;
+    public createNamedInstance(name: string): MaterialInstance;
     public getDefaultInstance(): MaterialInstance;
     public getName(): string;
 }

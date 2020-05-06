@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release
 
+- MaterialInstances now have optional names.
+
 ## v1.6.0
 
 - gltfio: fixed incorrect cone angles with lights.

@@ -65,7 +65,7 @@ public:
     }
 
     // Create an instance of this material
-    FMaterialInstance* createInstance() const noexcept;
+    FMaterialInstance* createInstance(const char* name) const noexcept;
 
     bool hasParameter(const char* name) const noexcept;
 
