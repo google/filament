@@ -446,12 +446,11 @@ public:
 
     static void invoke(void* buffer, size_t n, void* user) {
         AutoBitmap* data = reinterpret_cast<AutoBitmap*>(user);
-        data->~AutoBitmap();
+        delete data;
     }
 
     static AutoBitmap* make(Engine* engine, JNIEnv* env, jobject bitmap) {
-        void* that = engine->streamAlloc(sizeof(AutoBitmap), alignof(AutoBitmap));
-        return new (that) AutoBitmap(env, bitmap);
+        return new AutoBitmap(env, bitmap);
     }
 
 private:

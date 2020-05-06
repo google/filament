@@ -112,6 +112,7 @@ AutoBuffer::AutoBuffer(AutoBuffer &&rhs) noexcept {
     std::swap(mShift, rhs.mShift);
     std::swap(mBuffer, rhs.mBuffer);
     std::swap(mBaseArray, rhs.mBaseArray);
+    std::swap(mNioUtils, rhs.mNioUtils);
 }
 
 AutoBuffer::~AutoBuffer() noexcept {

@@ -72,5 +72,5 @@ private:
         jmethodID getBaseArray;
         jmethodID getBaseArrayOffset;
         jmethodID getBufferType;
-    } mNioUtils;
+    } mNioUtils{};
 };

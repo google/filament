@@ -34,8 +34,7 @@ static void initCallbackJni(JNIEnv* env, CallbackJni& callbackUtils) {
 
 JniBufferCallback* JniBufferCallback::make(filament::Engine* engine,
         JNIEnv* env, jobject handler, jobject callback, AutoBuffer&& buffer) {
-    void* that = engine->streamAlloc(sizeof(JniBufferCallback), alignof(JniBufferCallback));
-    return new (that) JniBufferCallback(env, handler, callback, std::move(buffer));
+    return new JniBufferCallback(env, handler, callback, std::move(buffer));
 }
 
 JniBufferCallback::JniBufferCallback(JNIEnv* env, jobject handler, jobject callback,
@@ -68,14 +67,14 @@ JniBufferCallback::~JniBufferCallback() {
 
 void JniBufferCallback::invoke(void*, size_t, void* user) {
     JniBufferCallback* data = reinterpret_cast<JniBufferCallback*>(user);
-    // don't call delete here, because we don't own the storage
-    data->~JniBufferCallback();
+    delete data;
 }
+
+// -----------------------------------------------------------------------------------------------
 
 JniImageCallback* JniImageCallback::make(filament::Engine* engine,
         JNIEnv* env, jobject handler, jobject callback, long image) {
-    void* that = engine->streamAlloc(sizeof(JniImageCallback), alignof(JniImageCallback));
-    return new (that) JniImageCallback(env, handler, callback, image);
+    return new JniImageCallback(env, handler, callback, image);
 }
 
 JniImageCallback::JniImageCallback(JNIEnv* env, jobject handler, jobject callback, long image)
@@ -106,5 +105,6 @@ JniImageCallback::~JniImageCallback() {
 }
 
 void JniImageCallback::invoke(void*, void* user) {
-    reinterpret_cast<JniImageCallback*>(user)->~JniImageCallback();
+    JniImageCallback* data = reinterpret_cast<JniImageCallback*>(user);
+    delete data;
 }
