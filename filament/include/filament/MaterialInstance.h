@@ -66,7 +66,7 @@ public:
     Material const* getMaterial() const noexcept;
 
     /**
-     * @return the name associated with this instance if one exists, otherwise null
+     * @return the name associated with this instance
      */
     const char* getName() const noexcept;
 
