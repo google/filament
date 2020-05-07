@@ -177,6 +177,7 @@ void FLightManager::create(const FLightManager::Builder& builder, utils::Entity 
 
         ShadowParams& shadowParams = manager[i].shadowParams;
         shadowParams.options.mapSize = clamp(builder->mShadowOptions.mapSize, 0u, 2048u);
+        shadowParams.options.shadowCascades = clamp<uint8_t>(builder->mShadowOptions.shadowCascades, 1, CONFIG_MAX_SHADOW_CASCADES);
         shadowParams.options.constantBias = clamp(builder->mShadowOptions.constantBias, 0.0f, 2.0f);
         shadowParams.options.normalBias = clamp(builder->mShadowOptions.normalBias, 0.0f, 3.0f);
         shadowParams.options.shadowFar = std::max(builder->mShadowOptions.shadowFar, 0.0f);

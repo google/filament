@@ -379,6 +379,7 @@ public:
             bool focus_shadowcasters = true;
             bool checkerboard = false;
             bool lispsm = true;
+            bool visualize_cascades = false;
             float dzn = -1.0f;
             float dzf =  1.0f;
         } shadowmap;

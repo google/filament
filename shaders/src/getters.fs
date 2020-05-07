@@ -108,3 +108,31 @@ bool isDoubleSided() {
     return materialParams._doubleSided;
 }
 #endif
+
+/**
+ * Returns the cascade index for this fragment (between 0 and CONFIG_MAX_SHADOW_CASCADES - 1).
+ */
+uint getShadowCascade() {
+    vec3 viewPos = mulMat4x4Float3(getViewFromWorldMatrix(), getWorldPosition()).xyz;
+    bvec4 greaterZ = greaterThan(frameUniforms.cascadeSplits, vec4(viewPos.z));
+    uint cascadeCount = frameUniforms.cascades & 0xFu;
+    return clamp(uint(dot(vec4(greaterZ), vec4(1.0))), 0u, cascadeCount - 1u);
+}
+
+#if defined(HAS_SHADOWING) && defined(HAS_DIRECTIONAL_LIGHTING)
+
+highp vec3 getCascadeLightSpacePosition(uint cascade) {
+    // For the first cascade, return the interpolated light space position.
+    // This branch will be coherent (mostly) for neighboring fragments, and it's worth avoiding
+    // the matrix multiply inside computeLightSpacePosition.
+    if (cascade == 0u) {
+        return getLightSpacePosition();
+    }
+
+    highp vec4 pos = computeLightSpacePosition(getWorldPosition(), getWorldNormalVector(),
+        frameUniforms.lightDirection, frameUniforms.shadowBias.y,
+        frameUniforms.lightFromWorldMatrix[cascade]);
+    return pos.xyz * (1.0 / pos.w);
+}
+
+#endif

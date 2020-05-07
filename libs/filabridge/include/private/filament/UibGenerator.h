@@ -51,7 +51,11 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     filament::math::mat4f viewFromClipMatrix;
     filament::math::mat4f clipFromWorldMatrix;
     filament::math::mat4f worldFromClipMatrix;
-    filament::math::mat4f lightFromWorldMatrix;
+    filament::math::mat4f lightFromWorldMatrix[CONFIG_MAX_SHADOW_CASCADES];
+
+    // position of cascade splits, in world space (not including the near plane)
+    // -Inf stored in unused components
+    filament::math::float4 cascadeSplits;
 
     filament::math::float4 resolution; // viewport width, height, 1/width, 1/height
 
@@ -107,12 +111,18 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     float fogInscatteringStart;
     float fogInscatteringSize;
     float fogColorFromIbl;
-    float padding1;
 
-    // bring PerViewUib to 1 KiB
-    filament::math::float4 padding2[12];
+    // bit 0-4: cascade count
+    // bit 8: visualize cascades
+    uint32_t cascades;
+
+    // bring PerViewUib to 2 KiB
+    filament::math::float4 padding2[63];
 };
 
+// 2 KiB == 128 float4s
+static_assert(sizeof(PerViewUib) == sizeof(filament::math::float4) * 128,
+        "PerViewUib should be exactly 2KiB");
 
 // PerRenderableUib must have an alignment of 256 to be compatible with all versions of GLES.
 struct alignas(256) PerRenderableUib {

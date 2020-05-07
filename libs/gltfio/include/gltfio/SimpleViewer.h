@@ -25,6 +25,7 @@
 // to one of your CPP source files to create the implementation. See gltf_viewer.cpp for an example.
 
 #include <filament/Box.h>
+#include <filament/DebugRegistry.h>
 #include <filament/Engine.h>
 #include <filament/IndirectLight.h>
 #include <filament/Scene.h>
@@ -195,6 +196,7 @@ private:
     bool mEnableWireframe = false;
     bool mEnableSunlight = true;
     bool mEnableShadows = true;
+    int mShadowCascades = 1;
     bool mEnableContactShadows = false;
     bool mEnableDithering = true;
     bool mEnableFxaa = true;
@@ -472,6 +474,8 @@ void SimpleViewer::updateUserInterface() {
         mCustomUI();
     }
 
+    DebugRegistry& debug = mEngine->getDebugRegistry();
+
     if (ImGui::CollapsingHeader("View")) {
         ImGui::Checkbox("Dithering", &mEnableDithering);
         ImGui::Checkbox("FXAA", &mEnableFxaa);
@@ -487,6 +491,8 @@ void SimpleViewer::updateUserInterface() {
         ImGuiExt::DirectionWidget("Sun direction", mSunlightDirection.v);
         ImGui::Checkbox("Enable sunlight", &mEnableSunlight);
         ImGui::Checkbox("Enable shadows", &mEnableShadows);
+        ImGui::SliderInt("Cascades", &mShadowCascades, 1, 4);
+        ImGui::Checkbox("Debug Cascades", debug.getPropertyAddress<bool>("d.shadowmap.visualize_cascades"));
         ImGui::Checkbox("Enable contact shadows", &mEnableContactShadows);
     }
 
@@ -524,6 +530,7 @@ void SimpleViewer::updateUserInterface() {
     lm.forEachComponent([this, &lm](utils::Entity e, LightManager::Instance ci) {
         auto options = lm.getShadowOptions(ci);
         options.screenSpaceContactShadows = mEnableContactShadows;
+        options.shadowCascades = mShadowCascades;
         lm.setShadowOptions(ci, options);
         lm.setShadowCaster(ci, mEnableShadows);
     });

@@ -46,9 +46,6 @@
 
 #include <math/scalar.h>
 
-#include <array>
-#include <memory>
-
 namespace utils {
 class JobSystem;
 } // namespace utils;
@@ -174,7 +171,7 @@ public:
     void setShadowsEnabled(bool enabled) noexcept { mShadowingEnabled = enabled; }
 
     FCamera const* getDirectionalLightCamera() const noexcept {
-        return &mDirectionalShadowMap.getDebugCamera();
+        return &mShadowMapManager.getCascadeShadowMap(0)->getDebugCamera();
     }
 
     void setRenderTarget(FRenderTarget* renderTarget) noexcept {
@@ -412,9 +409,8 @@ private:
     mutable bool mHasDirectionalLight = false;
     mutable bool mHasDynamicLighting = false;
     mutable bool mHasShadowing = false;
+
     ShadowMapManager mShadowMapManager;
-    mutable ShadowMap mDirectionalShadowMap;
-    mutable std::array<std::unique_ptr<ShadowMap>, CONFIG_MAX_SHADOW_CASTING_SPOTS> mSpotShadowMap;
 };
 
 FILAMENT_UPCAST(View)

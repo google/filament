@@ -22,6 +22,7 @@
 #include <utils/compiler.h>
 
 #include <math/mat4.h>
+#include <math/vec3.h>
 
 #include <utils/unwindows.h> // Because we define NEAR and FAR in the Plane enum.
 
@@ -60,6 +61,30 @@ public:
     explicit Frustum(const math::mat4f& pv);
 
     /**
+     * Creates a frustum from 8 corner coordinates.
+     * @param corners the corners of the frustum
+     *
+     * The corners should be specified in this order:
+     * 0. far bottom left
+     * 1. far bottom right
+     * 2. far top left
+     * 3. far top right
+     * 4. near bottom left
+     * 5. near bottom right
+     * 6. near top left
+     * 7. near top right
+     *
+     *     2----3
+     *    /|   /|
+     *   6----7 |
+     *   | 0--|-1      far
+     *   |/   |/       /
+     *   4----5      near
+     *
+     */
+    explicit Frustum(const math::float3 corners[8]);
+
+    /**
      * Sets the frustum from the given projection matrix
      * @param pv a 4x4 projection matrix
      */
@@ -68,7 +93,7 @@ public:
     /**
      * Returns the plane equation parameters with normalized normals
      * @param plane Identifier of the plane to retrieve the equation of
-     * @return A plane equation encoded a float4 R such as R.x*x + R.y*y + R.z*z = R.w
+     * @return A plane equation encoded a float4 R such as R.x*x + R.y*y + R.z*z + R.w = 0
      */
     math::float4 getNormalizedPlane(Plane plane) const noexcept;
 

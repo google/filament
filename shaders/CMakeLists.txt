@@ -19,6 +19,7 @@ set(SHADERS
         src/common_material.fs
         src/common_math.fs
         src/common_shading.fs
+        src/common_shadowing.fs
         src/common_types.fs
         src/depth_main.fs
         src/depth_main.vs
@@ -45,8 +46,7 @@ set(SHADERS
         src/shading_model_subsurface.fs
         src/shading_parameters.fs
         src/shading_unlit.fs
-        src/shadowing.fs
-        src/shadowing.vs)
+        src/shadowing.fs)
 
 # These files aren't part of libshaders, but are included by materials inside
 # filament/src/materials:
