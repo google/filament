@@ -348,12 +348,18 @@ void FEngine::flush() {
 
 void FEngine::flushAndWait() {
 
+#if defined(ANDROID)
+
     // first make sure we've not terminated filament
     ASSERT_PRECONDITION(!mCommandBufferQueue.isExitRequested(),
             "calling Engine::flushAndWait() after Engine::shutdown()!");
 
+#endif
+
     // enqueue finish command -- this will stall in the driver until the GPU is done
     getDriverApi().finish();
+
+#if defined(ANDROID)
 
     // then create a fence that will trigger when we're past the finish() above
     size_t tryCount = 8;
@@ -373,6 +379,13 @@ void FEngine::flushAndWait() {
         break;
     } while (true);
     destroy(fence);
+
+#else
+
+    FFence::waitAndDestroy(
+            FEngine::createFence(FFence::Type::SOFT), FFence::Mode::FLUSH);
+
+#endif
 
     // finally, execute callbacks that might have been scheduled
     getDriver().purge();
