@@ -24,6 +24,8 @@ If you'd rather build Filament yourself, please refer to our [build manual](BUIL
 
 Android projects can simply declare Filament libraries as Maven dependencies:
 
+[![filament-android](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filament-android/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filament-android)
+
 ```gradle
 repositories {
     // ...
