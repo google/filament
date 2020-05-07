@@ -112,8 +112,9 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     float fogInscatteringSize;
     float fogColorFromIbl;
 
-    // bit 0-4: cascade count
-    // bit 8: visualize cascades
+    // bit 0-3: cascade count
+    // bit 4: visualize cascades
+    // bit 8-11: cascade has visible shadows
     uint32_t cascades;
 
     // bring PerViewUib to 2 KiB
