@@ -266,8 +266,6 @@ bool ShadowMapManager::updateCascadeShadowMaps(FEngine& engine, FView& view,
         size_t l = entry.getLightIndex();
         assert(l == 0);
 
-        FLightManager::Instance light = lightData.elementAt<FScene::LIGHT_INSTANCE>(l);
-
         const size_t textureDimension = entry.getLayout().size;
         const ShadowMap::ShadowMapLayout layout{
                 .zResolution = mTextureZResolution,
