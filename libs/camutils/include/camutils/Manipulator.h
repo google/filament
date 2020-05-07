@@ -207,14 +207,17 @@ public:
 
     /**
      * Keys used to translate the camera in FREE_FLIGHT mode.
-     * UP and DOWN dolly the camera forwards and backwards.
+     * FORWARD and BACKWARD dolly the camera forwards and backwards.
      * LEFT and RIGHT strafe the camera left and right.
+     * UP and DOWN boom the camera upwards and downwards.
      */
     enum class Key {
-        UP,
+        FORWARD,
         LEFT,
-        DOWN,
+        BACKWARD,
         RIGHT,
+        UP,
+        DOWN,
 
         COUNT
     };

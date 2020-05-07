@@ -112,7 +112,13 @@ static void printUsage(char* name) {
         "   --ubershader, -u\n"
         "       Enable ubershaders (improves load time, adds shader complexity)\n\n"
         "   --camera=<camera mode>, -c <camera mode>\n"
-        "       Set the camera mode: orbit (default) or flight\n\n"
+        "       Set the camera mode: orbit (default) or flight\n"
+        "       Flight mode uses the following controls:\n"
+        "           Click and drag the mouse to pan the camera\n"
+        "           Use the scroll weel to adjust movement speed\n"
+        "           W / S: forward / backward\n"
+        "           A / D: left / right\n"
+        "           E / Q: up / down\n"
     );
     const std::string from("SHOWCASE");
     for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {

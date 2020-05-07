@@ -813,16 +813,22 @@ void FilamentApp::CView::mouseWheel(ssize_t x) {
 bool FilamentApp::manipulatorKeyFromKeycode(SDL_Scancode scancode, CameraManipulator::Key& key) {
     switch (scancode) {
         case SDL_SCANCODE_W:
-            key = CameraManipulator::Key::UP;
+            key = CameraManipulator::Key::FORWARD;
             return true;
         case SDL_SCANCODE_A:
             key = CameraManipulator::Key::LEFT;
             return true;
         case SDL_SCANCODE_S:
-            key = CameraManipulator::Key::DOWN;
+            key = CameraManipulator::Key::BACKWARD;
             return true;
         case SDL_SCANCODE_D:
             key = CameraManipulator::Key::RIGHT;
+            return true;
+        case SDL_SCANCODE_E:
+            key = CameraManipulator::Key::UP;
+            return true;
+        case SDL_SCANCODE_Q:
+            key = CameraManipulator::Key::DOWN;
             return true;
         default:
             return false;
