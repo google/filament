@@ -257,6 +257,7 @@ bool ShadowMapManager::updateCascadeShadowMaps(FEngine& engine, FView& view,
     perViewUb.setUniform(offsetof(PerViewUib, cascadeSplits), wsSplitPositionUniform);
 
     uint32_t directionalShadows = 0;
+    uint32_t cascadeHasVisibleShadows = 0;
     float screenSpaceShadowDistance = 0.0;
     for (size_t i = 0; i < mCascadeShadowMaps.size(); i++) {
         auto& entry = mCascadeShadowMaps[i];
@@ -289,6 +290,7 @@ bool ShadowMapManager::updateCascadeShadowMaps(FEngine& engine, FView& view,
 
             hasShadowing = true;
             directionalShadows |= 0x1u;
+            cascadeHasVisibleShadows |= 0x1u << i;
         }
     }
 
@@ -310,6 +312,7 @@ bool ShadowMapManager::updateCascadeShadowMaps(FEngine& engine, FView& view,
         cascades |= 0x10u;
     }
     cascades |= uint32_t(mCascadeShadowMaps.size());
+    cascades |= cascadeHasVisibleShadows << 8u;
     perViewUb.setUniform(offsetof(PerViewUib, cascades), cascades);
 
     return hasShadowing;

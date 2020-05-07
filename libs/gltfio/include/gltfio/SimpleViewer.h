@@ -295,6 +295,7 @@ void SimpleViewer::populateScene(FilamentAsset* asset, bool scale) {
     while (size_t numWritten = mAsset->popRenderables(renderables, kNumAvailable)) {
         for (size_t i = 0; i < numWritten; i++) {
             auto ri = tcm.getInstance(renderables[i]);
+            tcm.setCastShadows(ri, false);
             tcm.setScreenSpaceContactShadows(ri, true);
         }
         mScene->addEntities(renderables, numWritten);
@@ -374,6 +375,9 @@ void SimpleViewer::updateUserInterface() {
             mScene->remove(entity);
         }
         auto instance = rm.getInstance(entity);
+        bool scaster = rm.isShadowCaster(instance);
+        ImGui::Checkbox("casts shadows", &scaster);
+        rm.setCastShadows(instance, scaster);
         size_t numPrims = rm.getPrimitiveCount(instance);
         for (size_t prim = 0; prim < numPrims; ++prim) {
             const Material* mat = rm.getMaterialInstanceAt(instance, prim)->getMaterial();
