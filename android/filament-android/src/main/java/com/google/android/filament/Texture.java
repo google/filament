@@ -73,7 +73,13 @@ import static com.google.android.filament.Texture.Type.COMPRESSED;
 public class Texture {
     private long mNativeObject;
 
+    /** @deprecated use {@link #Texture(Engine, long)} instead  */
+    @Deprecated
     public Texture(long nativeTexture) {
+        mNativeObject = nativeTexture;
+    }
+
+    public Texture(Engine engine, long nativeTexture) {
         mNativeObject = nativeTexture;
     }
 
