@@ -763,8 +763,6 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
     };
 #endif
 
-    assert(binfo.handle);
-
     GLTexture* t = handle_cast<GLTexture*>(binfo.handle);
 
     assert(t->target != SamplerType::SAMPLER_EXTERNAL);
@@ -937,7 +935,9 @@ void OpenGLDriver::createDefaultRenderTargetR(
 
     construct<GLRenderTarget>(rth, 0, 0);  // FIXME: we don't know the width/height
 
-    uint32_t framebuffer, colorbuffer, depthbuffer;
+    uint32_t framebuffer = 0;
+    uint32_t colorbuffer = 0;
+    uint32_t depthbuffer = 0;
     mPlatform.createDefaultRenderTarget(framebuffer, colorbuffer, depthbuffer);
 
     GLRenderTarget* rt = handle_cast<GLRenderTarget*>(rth);
@@ -1015,7 +1015,6 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
     // handle special cases first (where depth/stencil are packed)
     bool specialCased = false;
     if ((targets & TargetBufferFlags::DEPTH_AND_STENCIL) == TargetBufferFlags::DEPTH_AND_STENCIL) {
-        assert(depth.handle);
         assert(!stencil.handle || stencil.handle == depth.handle);
         rt->gl.depth.texture = handle_cast<GLTexture*>(depth.handle);
         rt->gl.depth.level = depth.level;
@@ -1495,20 +1494,16 @@ bool OpenGLDriver::isFrameTimeSupported() {
 void OpenGLDriver::commit(Handle<HwSwapChain> sch) {
     DEBUG_MARKER()
 
-    if (sch) {
-        HwSwapChain* sc = handle_cast<HwSwapChain*>(sch);
-        mPlatform.commit(sc->swapChain);
-    }
+    HwSwapChain* sc = handle_cast<HwSwapChain*>(sch);
+    mPlatform.commit(sc->swapChain);
 }
 
 void OpenGLDriver::makeCurrent(Handle<HwSwapChain> schDraw, Handle<HwSwapChain> schRead) {
     DEBUG_MARKER()
 
-    if (schDraw && schRead) {
-        HwSwapChain* scDraw = handle_cast<HwSwapChain*>(schDraw);
-        HwSwapChain* scRead = handle_cast<HwSwapChain*>(schRead);
-        mPlatform.makeCurrent(scDraw->swapChain, scRead->swapChain);
-    }
+    HwSwapChain* scDraw = handle_cast<HwSwapChain*>(schDraw);
+    HwSwapChain* scRead = handle_cast<HwSwapChain*>(schRead);
+    mPlatform.makeCurrent(scDraw->swapChain, scRead->swapChain);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -1551,7 +1546,6 @@ void OpenGLDriver::loadUniformBuffer(Handle<HwUniformBuffer> ubh, BufferDescript
     DEBUG_MARKER()
 
     GLUniformBuffer* ub = handle_cast<GLUniformBuffer *>(ubh);
-    assert(ub);
 
     auto& gl = mContext;
     if (p.size > 0) {
@@ -2112,7 +2106,7 @@ void OpenGLDriver::endRenderPass(int) {
     DEBUG_MARKER()
     auto& gl = mContext;
 
-    assert(mRenderPassTarget);
+    assert(mRenderPassTarget); // endRenderPass() called without beginRenderPass()?
 
     GLRenderTarget const* const rt = handle_cast<GLRenderTarget*>(mRenderPassTarget);
 
@@ -2271,14 +2265,12 @@ void OpenGLDriver::setRenderPrimitiveRange(Handle<HwRenderPrimitive> rph,
         uint32_t minIndex, uint32_t maxIndex, uint32_t count) {
     DEBUG_MARKER()
 
-    if (rph) {
-        GLRenderPrimitive* const rp = handle_cast<GLRenderPrimitive*>(rph);
-        rp->type = pt;
-        rp->offset = offset * ((rp->gl.indicesType == GL_UNSIGNED_INT) ? 4 : 2);
-        rp->count = count;
-        rp->minIndex = minIndex;
-        rp->maxIndex = maxIndex > minIndex ? maxIndex : rp->maxVertexCount - 1; // sanitize max index
-    }
+    GLRenderPrimitive* const rp = handle_cast<GLRenderPrimitive*>(rph);
+    rp->type = pt;
+    rp->offset = offset * ((rp->gl.indicesType == GL_UNSIGNED_INT) ? 4 : 2);
+    rp->count = count;
+    rp->minIndex = minIndex;
+    rp->maxIndex = maxIndex > minIndex ? maxIndex : rp->maxVertexCount - 1; // sanitize max index
 }
 
 // Sets up a scissor rectangle that automatically gets clipped against the viewport.
