@@ -2794,9 +2794,13 @@ void OpenGLDriver::finish(int) {
     mTimerQueryImpl->flush();
     executeGpuCommandsCompleteOps();
     executeEveryNowAndThenOps();
-    // since we executed a glFinish(), all pending tasks should be done
+    // Note: since we executed a glFinish(), all pending tasks should be done
     assert(mGpuCommandCompleteOps.empty());
-    assert(mEveryNowAndThenOps.empty());
+
+    // however, some tasks rely on a separated thread to publish their result (e.g.
+    // endTimerQuery), so the result could very well not be ready, and the task will
+    // linger a bit longer, this is only true for mEveryNowAndThenOps tasks.
+    // The fallout of this is that we can't assert that mEveryNowAndThenOps is empty.
 }
 
 UTILS_NOINLINE
