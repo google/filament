@@ -27,9 +27,9 @@ buildscript {
     if (project.hasProperty("filament_dist_dir")) {
         filamentPath = file(project.property("filament_dist_dir")).absolutePath
     }
-    if (System.properties['os.name'] != null && System.properties['os.name'].toLowerCase().contains('windows')) {
-        filamentPath = filamentPath.replaceAll("\\\\", "/")
-    }
+    // CMake scripts require a forward-slash path for the FILAMENT_DIST_DIR
+    // variable, so here we convert the native path to a forward-slash path.
+    filamentPath = filamentPath.replace(File.separator, "/")
 
     def hasVulkan = project.hasProperty("filament_supports_vulkan")
 
