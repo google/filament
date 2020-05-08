@@ -65,6 +65,27 @@ Java_com_google_android_filament_gltfio_FilamentAsset_nGetEntities(JNIEnv* env, 
     env->ReleaseIntArrayElements(result, (jint*) entities, 0);
 }
 
+extern "C" JNIEXPORT jint JNICALL
+Java_com_google_android_filament_gltfio_FilamentAsset_nGetMaterialInstanceCount(JNIEnv*, jclass,
+        jlong nativeAsset) {
+    FilamentAsset* asset = (FilamentAsset*) nativeAsset;
+    return asset->getMaterialInstanceCount();
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_gltfio_FilamentAsset_nGetMaterialInstances(JNIEnv* env, jclass,
+        jlong nativeAsset, jlongArray result) {
+    FilamentAsset* asset = (FilamentAsset*) nativeAsset;
+    jsize available = env->GetArrayLength(result);
+    jsize count = std::min(available, (jsize) asset->getMaterialInstanceCount());
+    jlong* dst = env->GetLongArrayElements(result, nullptr);
+    const MaterialInstance * const* src = asset->getMaterialInstances();
+    for (jsize i = 0; i < count; i++) {
+        dst[i] = (jlong) src[i];
+    }
+    env->ReleaseLongArrayElements(result, dst, 0);
+}
+
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_gltfio_FilamentAsset_nGetBoundingBox(JNIEnv* env, jclass,
         jlong nativeAsset, jfloatArray result) {
