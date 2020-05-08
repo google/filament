@@ -243,20 +243,21 @@ public:
     void destroyCameraComponent(utils::Entity entity) noexcept;
 
 
-    void destroy(const FVertexBuffer* p);
-    void destroy(const FFence* p);
-    void destroy(const FIndexBuffer* p);
-    void destroy(const FIndirectLight* p);
-    void destroy(const FMaterial* p);
-    void destroy(const FMaterialInstance* p);
-    void destroy(const FRenderer* p);
-    void destroy(const FScene* p);
-    void destroy(const FSkybox* p);
-    void destroy(const FStream* p);
-    void destroy(const FTexture* p);
-    void destroy(const FRenderTarget* p);
-    void destroy(const FSwapChain* p);
-    void destroy(const FView* p);
+    bool destroy(const FVertexBuffer* p);
+    bool destroy(const FFence* p);
+    bool destroy(const FIndexBuffer* p);
+    bool destroy(const FIndirectLight* p);
+    bool destroy(const FMaterial* p);
+    bool destroy(const FMaterialInstance* p);
+    bool destroy(const FRenderer* p);
+    bool destroy(const FScene* p);
+    bool destroy(const FSkybox* p);
+    bool destroy(const FStream* p);
+    bool destroy(const FTexture* p);
+    bool destroy(const FRenderTarget* p);
+    bool destroy(const FSwapChain* p);
+    bool destroy(const FView* p);
+
     void destroy(utils::Entity e);
 
     void flushAndWait();
@@ -302,7 +303,7 @@ private:
     void flushCommandBuffer(backend::CommandBufferQueue& commandBufferQueue);
 
     template<typename T, typename L>
-    void terminateAndDestroy(const T* p, ResourceList<T, L>& list);
+    bool terminateAndDestroy(const T* p, ResourceList<T, L>& list);
 
     template<typename T, typename L>
     void cleanupResourceList(ResourceList<T, L>& list);
