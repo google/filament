@@ -54,9 +54,10 @@ public class MaterialInstance {
         mNativeObject = nativeMaterialInstance;
     }
 
-    MaterialInstance(long nativeMaterial, long nativeMaterialInstance) {
-        mNativeMaterial = nativeMaterial;
+    // public so that the gltfio Java layer can use this
+    public MaterialInstance(long nativeMaterialInstance) {
         mNativeObject = nativeMaterialInstance;
+        mNativeMaterial = nGetMaterial(mNativeObject);
     }
 
     /** @return the {@link Material} associated with this instance */
@@ -548,4 +549,5 @@ public class MaterialInstance {
     private static native void nSetDepthCulling(long nativeMaterialInstance, boolean enable);
 
     private static native String nGetName(long nativeMaterialInstance);
+    private static native long nGetMaterial(long nativeMaterialInstance);
 }
