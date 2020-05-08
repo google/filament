@@ -287,8 +287,12 @@ private:
             std::is_pointer<Dp>::value &&
             std::is_base_of<B, typename std::remove_pointer<Dp>::type>::value, Dp>::type
     handle_cast(backend::Handle<B>& handle) noexcept {
+        assert(handle);
+        if (!handle) return nullptr; // better to get a NPE than random behavior/corruption
         char* const base = (char *)mHandleArena.getArea().begin();
         size_t offset = handle.getId() << HandleAllocator::MIN_ALIGNMENT_SHIFT;
+        // assert that this handle is even a valid one
+        assert(base + offset + sizeof(typename std::remove_pointer<Dp>::type) <= (char *)mHandleArena.getArea().end());
         return static_cast<Dp>(static_cast<void *>(base + offset));
     }
 
