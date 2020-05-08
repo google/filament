@@ -27,6 +27,9 @@ buildscript {
     if (project.hasProperty("filament_dist_dir")) {
         filamentPath = file(project.property("filament_dist_dir")).absolutePath
     }
+    if (System.properties['os.name'] != null && System.properties['os.name'].toLowerCase().contains('windows')) {
+        filamentPath = filamentPath.replaceAll("\\\\", "/")
+    }
 
     def hasVulkan = project.hasProperty("filament_supports_vulkan")
 
