@@ -36,6 +36,12 @@ ninja matc resgen cmgen
 The build should succeed and a `ImportExecutables-Release.cmake` file should automatically be
 created at Filament's root directory.
 
+If you are going to build Filament samples you should install desktop host tools:
+
+```
+ninja install
+```
+
 ## Build
 
 1. Create the build directories.
@@ -101,18 +107,18 @@ gradlew -Pfilament_dist_dir=..\out\android-release\filament assembleRelease
 copy filament-android\build\outputs\aar\filament-android-release.aar ..\..\out\
 ```
 
-If you're only interested in building for a single ABI, you'll need to add an `abiFilters` override
-inside the `build.gradle` file underneath `defaultConfig`:
+If you're only interested in building for a single ABI, you'll need to pass a `filament_abis` parameter:
 
 ```
-ndk {
-    abiFilters 'arm64-v8a'
-}
+gradlew -Pfilament_dist_dir=..\out\android-release\filament assembleRelease -Pfilament_abis=x86
 ```
 
-See
-[NdkOptions](https://google.github.io/android-gradle-dsl/current/com.android.build.gradle.internal.dsl.NdkOptions.html#com.android.build.gradle.internal.dsl.NdkOptions:abiFilters)
-for more information.
+If you're only interested in building SDK, you may skip samples build by passing a `filament_skip_samples` flag:
+
+```
+gradlew -Pfilament_dist_dir=..\out\android-release\filament assembleRelease -Pfilament_skip_samples
+```
+
 
 `filament-android-release.aar` should now be present at `<filament>\out\filament-android-release.aar`.
 
