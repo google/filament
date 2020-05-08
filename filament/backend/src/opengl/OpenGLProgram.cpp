@@ -199,7 +199,9 @@ void OpenGLProgram::updateSamplers(OpenGLDriver* gl) noexcept {
 
             Handle<HwTexture> th = samplers[index].t;
             if (UTILS_UNLIKELY(!th)) {
+#ifndef NDEBUG
                 slog.w << "no texture bound to unit " << +index << io::endl;
+#endif
                 continue;
             }
 
