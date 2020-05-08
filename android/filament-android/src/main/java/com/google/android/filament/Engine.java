@@ -344,7 +344,7 @@ public class Engine {
      * @param swapChain the {@link SwapChain} to destroy
      */
     public void destroySwapChain(@NonNull SwapChain swapChain) {
-        nDestroySwapChain(getNativeObject(), swapChain.getNativeObject());
+        assertDestroy(nDestroySwapChain(getNativeObject(), swapChain.getNativeObject()));
         swapChain.clearNativeObject();
     }
 
@@ -367,7 +367,7 @@ public class Engine {
      * @param view the {@link View} to destroy
      */
     public void destroyView(@NonNull View view) {
-        nDestroyView(getNativeObject(), view.getNativeObject());
+        assertDestroy(nDestroyView(getNativeObject(), view.getNativeObject()));
         view.clearNativeObject();
     }
 
@@ -390,7 +390,7 @@ public class Engine {
      * @param renderer the {@link Renderer} to destroy
      */
     public void destroyRenderer(@NonNull Renderer renderer) {
-        nDestroyRenderer(getNativeObject(), renderer.getNativeObject());
+        assertDestroy(nDestroyRenderer(getNativeObject(), renderer.getNativeObject()));
         renderer.clearNativeObject();
     }
 
@@ -451,7 +451,7 @@ public class Engine {
      * @param scene the {@link Scene} to destroy
      */
     public void destroyScene(@NonNull Scene scene) {
-        nDestroyScene(getNativeObject(), scene.getNativeObject());
+        assertDestroy(nDestroyScene(getNativeObject(), scene.getNativeObject()));
         scene.clearNativeObject();
     }
 
@@ -462,7 +462,7 @@ public class Engine {
      * @param stream the {@link Stream} to destroy
      */
     public void destroyStream(@NonNull Stream stream) {
-        nDestroyStream(getNativeObject(), stream.getNativeObject());
+        assertDestroy(nDestroyStream(getNativeObject(), stream.getNativeObject()));
         stream.clearNativeObject();
     }
 
@@ -485,7 +485,7 @@ public class Engine {
      * @param fence the {@link Fence} to destroy
      */
     public void destroyFence(@NonNull Fence fence) {
-        nDestroyFence(getNativeObject(), fence.getNativeObject());
+        assertDestroy(nDestroyFence(getNativeObject(), fence.getNativeObject()));
         fence.clearNativeObject();
     }
 
@@ -496,7 +496,7 @@ public class Engine {
      * @param indexBuffer the {@link IndexBuffer} to destroy
      */
     public void destroyIndexBuffer(@NonNull IndexBuffer indexBuffer) {
-        nDestroyIndexBuffer(getNativeObject(), indexBuffer.getNativeObject());
+        assertDestroy(nDestroyIndexBuffer(getNativeObject(), indexBuffer.getNativeObject()));
         indexBuffer.clearNativeObject();
     }
 
@@ -505,7 +505,7 @@ public class Engine {
      * @param vertexBuffer the {@link VertexBuffer} to destroy
      */
     public void destroyVertexBuffer(@NonNull VertexBuffer vertexBuffer) {
-        nDestroyVertexBuffer(getNativeObject(), vertexBuffer.getNativeObject());
+        assertDestroy(nDestroyVertexBuffer(getNativeObject(), vertexBuffer.getNativeObject()));
         vertexBuffer.clearNativeObject();
     }
 
@@ -514,7 +514,7 @@ public class Engine {
      * @param ibl the {@link IndirectLight} to destroy
      */
     public void destroyIndirectLight(@NonNull IndirectLight ibl) {
-        nDestroyIndirectLight(getNativeObject(), ibl.getNativeObject());
+        assertDestroy(nDestroyIndirectLight(getNativeObject(), ibl.getNativeObject()));
         ibl.clearNativeObject();
     }
 
@@ -527,7 +527,7 @@ public class Engine {
      * @param material the {@link Material} to destroy
      */
     public void destroyMaterial(@NonNull Material material) {
-        nDestroyMaterial(getNativeObject(), material.getNativeObject());
+        assertDestroy(nDestroyMaterial(getNativeObject(), material.getNativeObject()));
         material.clearNativeObject();
     }
 
@@ -536,7 +536,7 @@ public class Engine {
      * @param materialInstance the {@link MaterialInstance} to destroy
      */
     public void destroyMaterialInstance(@NonNull MaterialInstance materialInstance) {
-        nDestroyMaterialInstance(getNativeObject(), materialInstance.getNativeObject());
+        assertDestroy(nDestroyMaterialInstance(getNativeObject(), materialInstance.getNativeObject()));
         materialInstance.clearNativeObject();
     }
 
@@ -545,7 +545,7 @@ public class Engine {
      * @param skybox the {@link Skybox} to destroy
      */
     public void destroySkybox(@NonNull Skybox skybox) {
-        nDestroySkybox(getNativeObject(), skybox.getNativeObject());
+        assertDestroy(nDestroySkybox(getNativeObject(), skybox.getNativeObject()));
         skybox.clearNativeObject();
     }
 
@@ -554,7 +554,7 @@ public class Engine {
      * @param texture the {@link Texture} to destroy
      */
     public void destroyTexture(@NonNull Texture texture) {
-        nDestroyTexture(getNativeObject(), texture.getNativeObject());
+        assertDestroy(nDestroyTexture(getNativeObject(), texture.getNativeObject()));
         texture.clearNativeObject();
     }
 
@@ -634,33 +634,39 @@ public class Engine {
         mNativeObject = 0;
     }
 
+    private static void assertDestroy(boolean success) {
+        if (!success) {
+            throw new IllegalStateException("Object couldn't be destoyed (double destroy()?)");
+        }
+    }
+
     private static native long nCreateEngine(long backend, long sharedContext);
     private static native void nDestroyEngine(long nativeEngine);
     private static native long nGetBackend(long nativeEngine);
     private static native long nCreateSwapChain(long nativeEngine, Object nativeWindow, long flags);
     private static native long nCreateSwapChainHeadless(long nativeEngine, int width, int height, long flags);
     private static native long nCreateSwapChainFromRawPointer(long nativeEngine, long pointer, long flags);
-    private static native void nDestroySwapChain(long nativeEngine, long nativeSwapChain);
+    private static native boolean nDestroySwapChain(long nativeEngine, long nativeSwapChain);
     private static native long nCreateView(long nativeEngine);
-    private static native void nDestroyView(long nativeEngine, long nativeView);
+    private static native boolean nDestroyView(long nativeEngine, long nativeView);
     private static native long nCreateRenderer(long nativeEngine);
-    private static native void nDestroyRenderer(long nativeEngine, long nativeRenderer);
+    private static native boolean nDestroyRenderer(long nativeEngine, long nativeRenderer);
     private static native long nCreateCamera(long nativeEngine);
     private static native long nCreateCameraWithEntity(long nativeEngine, int entity);
     private static native void nDestroyCamera(long nativeEngine, long nativeCamera);
     private static native long nCreateScene(long nativeEngine);
-    private static native void nDestroyScene(long nativeEngine, long nativeScene);
+    private static native boolean nDestroyScene(long nativeEngine, long nativeScene);
     private static native long nCreateFence(long nativeEngine);
-    private static native void nDestroyFence(long nativeEngine, long nativeFence);
-    private static native void nDestroyStream(long nativeEngine, long nativeStream);
-    private static native void nDestroyIndexBuffer(long nativeEngine, long nativeIndexBuffer);
-    private static native void nDestroyVertexBuffer(long nativeEngine, long nativeVertexBuffer);
-    private static native void nDestroyIndirectLight(long nativeEngine, long nativeIndirectLight);
-    private static native void nDestroyMaterial(long nativeEngine, long nativeMaterial);
-    private static native void nDestroyMaterialInstance(long nativeEngine, long nativeMaterialInstance);
-    private static native void nDestroySkybox(long nativeEngine, long nativeSkybox);
-    private static native void nDestroyTexture(long nativeEngine, long nativeTexture);
-    private static native void nDestroyRenderTarget(long nativeEngine, long nativeTarget);
+    private static native boolean nDestroyFence(long nativeEngine, long nativeFence);
+    private static native boolean nDestroyStream(long nativeEngine, long nativeStream);
+    private static native boolean nDestroyIndexBuffer(long nativeEngine, long nativeIndexBuffer);
+    private static native boolean nDestroyVertexBuffer(long nativeEngine, long nativeVertexBuffer);
+    private static native boolean nDestroyIndirectLight(long nativeEngine, long nativeIndirectLight);
+    private static native boolean nDestroyMaterial(long nativeEngine, long nativeMaterial);
+    private static native boolean nDestroyMaterialInstance(long nativeEngine, long nativeMaterialInstance);
+    private static native boolean nDestroySkybox(long nativeEngine, long nativeSkybox);
+    private static native boolean nDestroyTexture(long nativeEngine, long nativeTexture);
+    private static native boolean nDestroyRenderTarget(long nativeEngine, long nativeTarget);
     private static native void nDestroyEntity(long nativeEngine, int entity);
     private static native void nFlushAndWait(long nativeEngine);
     private static native long nGetTransformManager(long nativeEngine);
