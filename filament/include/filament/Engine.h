@@ -329,10 +329,10 @@ public:
      */
     Fence* createFence() noexcept;
 
-    void destroy(const VertexBuffer* p);        //!< Destroys an VertexBuffer object.
-    void destroy(const Fence* p);               //!< Destroys a Fence object.
-    void destroy(const IndexBuffer* p);         //!< Destroys an IndexBuffer object.
-    void destroy(const IndirectLight* p);       //!< Destroys an IndirectLight object.
+    bool destroy(const VertexBuffer* p);        //!< Destroys an VertexBuffer object.
+    bool destroy(const Fence* p);               //!< Destroys a Fence object.
+    bool destroy(const IndexBuffer* p);         //!< Destroys an IndexBuffer object.
+    bool destroy(const IndirectLight* p);       //!< Destroys an IndirectLight object.
 
     /**
      * Destroys a Material object
@@ -342,16 +342,16 @@ public:
      * @exception utils::PreConditionPanic is thrown if some MaterialInstances remain.
      * no-op if exceptions are disabled and some MaterialInstances remain.
      */
-    void destroy(const Material* p);
-    void destroy(const MaterialInstance* p);    //!< Destroys a MaterialInstance object.
-    void destroy(const Renderer* p);            //!< Destroys a Renderer object.
-    void destroy(const Scene* p);               //!< Destroys a Scene object.
-    void destroy(const Skybox* p);              //!< Destroys a SkyBox object.
-    void destroy(const SwapChain* p);           //!< Destroys a SwapChain object.
-    void destroy(const Stream* p);              //!< Destroys a Stream object.
-    void destroy(const Texture* p);             //!< Destroys a Texture object.
-    void destroy(const RenderTarget* p);        //!< Destroys a RenderTarget object.
-    void destroy(const View* p);                //!< Destroys a View object.
+    bool destroy(const Material* p);
+    bool destroy(const MaterialInstance* p);    //!< Destroys a MaterialInstance object.
+    bool destroy(const Renderer* p);            //!< Destroys a Renderer object.
+    bool destroy(const Scene* p);               //!< Destroys a Scene object.
+    bool destroy(const Skybox* p);              //!< Destroys a SkyBox object.
+    bool destroy(const SwapChain* p);           //!< Destroys a SwapChain object.
+    bool destroy(const Stream* p);              //!< Destroys a Stream object.
+    bool destroy(const Texture* p);             //!< Destroys a Texture object.
+    bool destroy(const RenderTarget* p);        //!< Destroys a RenderTarget object.
+    bool destroy(const View* p);                //!< Destroys a View object.
     void destroy(utils::Entity e);              //!< Destroys all filament-known components from this entity
 
     /**
