@@ -364,8 +364,8 @@ F_{Schlick}(v,h,\fNormal,\fGrazing) = \fNormal + (\fGrazing - \fNormal)(1 - \VoH
 The constant $\fNormal$ represents the specular reflectance at normal incidence and is achromatic for dielectrics, and chromatic for metals. The actual value depends on the index of refraction of the interface. The GLSL implementation of this term requires the use of a `pow`, as shown in listing [specularF], which can be replaced by a few multiplications.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-vec3 F_Schlick(float VoH, vec3 f0, float f90) {
-    return f0 + (vec3(f90) - f0) * pow(1.0 - VoH, 5.0);
+vec3 F_Schlick(float u, vec3 f0, float f90) {
+    return f0 + (vec3(f90) - f0) * pow(1.0 - u, 5.0);
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 [Listing [specularF]: Implementation of the specular F term in GLSL]
@@ -375,8 +375,8 @@ This Fresnel function can be seen as interpolating between the incident specular
 Using $\fGrazing$ set to 1, the Schlick approximation for the Fresnel term can be optimized for scalar operations by refactoring the code slightly. The result is shown in listing [scalarSpecularF].
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-vec3 F_Schlick(float VoH, vec3 f0) {
-    float f = pow(1.0 - VoH, 5.0);
+vec3 F_Schlick(float u, vec3 f0) {
+    float f = pow(1.0 - u, 5.0);
     return f + f0 * (1.0 - f);
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -425,8 +425,8 @@ $$\begin{equation}
 \end{equation}$$
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-float F_Schlick(float VoH, float f0, float f90) {
-    return f0 + (f90 - f0) * pow(1.0 - VoH, 5.0);
+float F_Schlick(float u, float f0, float f90) {
+    return f0 + (f90 - f0) * pow(1.0 - u, 5.0);
 }
 
 float Fd_Burley(float NoV, float NoL, float LoH, float roughness) {
@@ -459,8 +459,8 @@ float D_GGX(float NoH, float a) {
     return a2 / (PI * f * f);
 }
 
-vec3 F_Schlick(float VoH, vec3 f0) {
-    return f0 + (vec3(1.0) - f0) * pow(1.0 - VoH, 5.0);
+vec3 F_Schlick(float u, vec3 f0) {
+    return f0 + (vec3(1.0) - f0) * pow(1.0 - u, 5.0);
 }
 
 float V_SmithGGXCorrelated(float NoV, float NoL, float a) {
