@@ -15,6 +15,8 @@ option(FILAMENT_ENABLE_JAVA "Compile Java projects, requires a JDK and the JAVA_
 
 option(FILAMENT_USE_EXTERNAL_GLES3 "Experimental: Compile Filament against OpenGL ES 3" OFF)
 
+option(FILAMENT_USE_SWIFTSHADER "Experimental: Compile Filament against SwiftShader" OFF)
+
 option(FILAMENT_GENERATE_JS_DOCS "Build WebGL documentation and tutorials" OFF)
 
 option(FILAMENT_ENABLE_LTO "Enable link-time optimizations if supported by the compiler" OFF)
@@ -67,7 +69,7 @@ if (UNIX AND NOT APPLE AND NOT ANDROID AND NOT WEBGL)
     set(LINUX TRUE)
 endif()
 
-if (ANDROID OR WEBGL OR IOS)
+if (ANDROID OR WEBGL OR IOS OR FILAMENT_USE_SWIFTSHADER)
     set(IS_MOBILE_TARGET TRUE)
 endif()
 
@@ -181,6 +183,11 @@ if (FILAMENT_USE_EXTERNAL_GLES3)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_EXTERNAL_GLES3")
 endif()
 
+if (FILAMENT_USE_SWIFTSHADER)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DSWIFTSHADER")
+    set(EGL TRUE)
+endif()
+
 if (WIN32)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_USE_MATH_DEFINES=1")
 endif()
@@ -290,7 +297,7 @@ endif()
 # By default, build with Vulkan support on desktop platforms, although clients must request to use
 # it at run time. On Android, the build does not include Vulkan support unless CMake is invoked
 # with -DFILAMENT_SUPPORTS_VULKAN=ON.
-if (ANDROID OR WIN32 OR WEBGL OR IOS)
+if (ANDROID OR WIN32 OR WEBGL OR IOS OR FILAMENT_USE_SWIFTSHADER)
     option(FILAMENT_SUPPORTS_VULKAN "Include the Vulkan backend" OFF)
 else()
     option(FILAMENT_SUPPORTS_VULKAN "Include the Vulkan backend" ON)
@@ -426,6 +433,13 @@ if (FILAMENT_SUPPORTS_VULKAN AND APPLE)
     endif()
 endif()
 
+if (FILAMENT_USE_SWIFTSHADER)
+    find_library(SWIFTSHADER_EGL NAMES EGL HINTS "$ENV{SWIFTSHADER_LD_LIBRARY_PATH}")
+    find_library(SWIFTSHADER_GLES NAMES GLESv3 GLESv2 HINTS "$ENV{SWIFTSHADER_LD_LIBRARY_PATH}")
+    message(STATUS "Found SwiftShader EGL library in: ${SWIFTSHADER_EGL}.")
+    message(STATUS "Found SwiftShader GLES library in: ${SWIFTSHADER_GLES}.")
+endif()
+
 # ==================================================================================================
 # Common Functions
 # ==================================================================================================
@@ -556,6 +570,10 @@ if (NOT ANDROID AND NOT WEBGL AND NOT IOS)
     add_subdirectory(${TOOLS}/roughness-prefilter)
     add_subdirectory(${TOOLS}/skygen)
     add_subdirectory(${TOOLS}/specular-color)
+endif()
+
+if (FILAMENT_USE_SWIFTSHADER)
+    add_subdirectory(${EXTERNAL}/swiftshader)
 endif()
 
 # Generate exported executables for cross-compiled builds (Android, WebGL, and iOS)

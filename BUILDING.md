@@ -89,6 +89,7 @@ The following CMake options are boolean options specific to Filament:
 - `FILAMENT_GENERATE_JS_DOCS`:     Build WebGL documentation and tutorials
 - `FILAMENT_INSTALL_BACKEND_TEST`: Install the backend test library so it can be consumed on iOS
 - `FILAMENT_USE_EXTERNAL_GLES3`:   Experimental: Compile Filament against OpenGL ES 3
+- `FILAMENT_USE_SWIFTSHADER`:      Experimental: Compile Filament against SwiftShader
 - `FILAMENT_SKIP_SAMPLES`:         Don't build sample apps
 
 To turn an option on or off:
