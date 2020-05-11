@@ -8,7 +8,8 @@ NDK](https://developer.android.com/ndk/guides/) for detailed installation instru
 
 Ensure the `%ANDROID_HOME%` environment variable is set to your Android SDK installation location.
 
-All of the following commands should be executed in a Visual Studio x64 Native Tools Command Prompt.
+On Windows, we require VS2019 for building the host tools. All of the following commands should be
+executed in a *Visual Studio x64 Native Tools Command Prompt for VS 2019*.
 
 ## Desktop Tools
 
