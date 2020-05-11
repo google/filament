@@ -264,7 +264,7 @@ bool ShadowMapManager::updateCascadeShadowMaps(FEngine& engine, FView& view,
 
         // Compute the frustum for the directional light.
         ShadowMap& shadowMap = *entry.getShadowMap();
-        size_t l = entry.getLightIndex();
+        UTILS_UNUSED_IN_RELEASE size_t l = entry.getLightIndex();
         assert(l == 0);
 
         const size_t textureDimension = entry.getLayout().size;
