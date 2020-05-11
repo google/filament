@@ -2,10 +2,13 @@ cmake_minimum_required(VERSION 3.10)
 
 project(filament-js)
 
-set(JAVASCRIPT_SRC
+set(EXTERN_POSTJS_SRC
   ${CMAKE_CURRENT_SOURCE_DIR}/wasmloader.js
   ${CMAKE_CURRENT_SOURCE_DIR}/extensions.js
   ${CMAKE_CURRENT_SOURCE_DIR}/utilities.js)
+
+set(POSTJS_SRC
+  ${CMAKE_CURRENT_SOURCE_DIR}/createContext.js)
 
 set(CPP_SRC
   jsenums.cpp
@@ -22,11 +25,15 @@ set(COPTS "${COPTS} -DEMSCRIPTEN_HAS_UNBOUND_TYPE_NAMES=0")
 
 set(LOPTS "${LOPTS} --bind")
 set(LOPTS "${LOPTS} -s ALLOW_MEMORY_GROWTH=1")
-set(LOPTS "${LOPTS} -s MODULARIZE_INSTANCE=1")
+set(LOPTS "${LOPTS} -s MODULARIZE=1")
 set(LOPTS "${LOPTS} -s EXPORT_NAME=Filament")
 set(LOPTS "${LOPTS} -s ERROR_ON_UNDEFINED_SYMBOLS=0")
-foreach (JS_FILENAME ${JAVASCRIPT_SRC})
-  set(LOPTS "${LOPTS} --post-js ${JS_FILENAME}")
+set(LOPTS "${LOPTS} -s MIN_WEBGL_VERSION=2")
+set(LOPTS "${LOPTS} -s MAX_WEBGL_VERSION=2")
+set(LOPTS "${LOPTS} --post-js ${POSTJS_SRC}")
+
+foreach (JS_FILENAME ${EXTERN_POSTJS_SRC})
+  set(LOPTS "${LOPTS} --extern-post-js ${JS_FILENAME}")
 endforeach()
 
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${LOPTS}")
@@ -35,7 +42,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COPTS}")
 add_executable(filament-js ${CPP_SRC})
 
 set_target_properties(filament-js PROPERTIES
-    LINK_DEPENDS "${JAVASCRIPT_SRC}"
+    LINK_DEPENDS "${EXTERN_POSTJS_SRC};${POSTJS_SRC}"
     OUTPUT_NAME filament)
 
 target_link_libraries(filament-js PRIVATE filament math utils image filameshio gltfio_core stb)

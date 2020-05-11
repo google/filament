@@ -45,9 +45,7 @@ Filament.loadClassExtensions = function() {
         options = Object.assign(defaults, options);
 
         // Create the WebGL 2.0 context and register it with emscripten.
-        const ctx = canvas.getContext("webgl2", options);
-        const handle = GL.registerContext(ctx, options);
-        GL.makeContextCurrent(handle);
+        const ctx = Filament.createContext(canvas, options);
 
         // Enable all desired extensions by calling getExtension on each one.
         ctx.getExtension('WEBGL_compressed_texture_s3tc');
@@ -315,7 +313,7 @@ Filament.loadClassExtensions = function() {
         // Construct the set of URI strings to fetch.
         const urlset = new Set();
         const urlToName = {};
-        for (var i = 0; i < names.size(); i++) {
+        for (let i = 0; i < names.size(); i++) {
             const name = names.get(i);
             if (name) {
                 const url = '' + new URL(name, basePath);

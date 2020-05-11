@@ -14,18 +14,9 @@
  * limitations under the License.
  */
 
- /*
- * WHY DOES THIS FILE EXIST?
- * -------------------------
- *
- * For each generated wasm file, emscripten generates a corollary JS file that is used to load the
- * wasm and set up its imports / exports. This file is a hand-authored addendum to the JS file that
- * emscripten generates, and we use it to store JavaScript-side utilities such as the asset
- * downloader and BufferDescriptor wrapper.
- *
- * Note that we should avoid certain modern JavaScript features in this file (e.g., for-of loops)
- * because emscripten uses a fairly rusty minifier.
- */
+// Emscripten creates a global function called "Filament" but our TypeScript bindings assume that
+// Filament is a namespace not a function. Here we replace the function with the namespace.
+Filament = Filament();
 
 // Keep a counter of remaining asynchronous tasks (e.g., downloading assets) that must occur before
 // allowing the app to initialize. As soon as the counter hits zero, we know it is time to call the
@@ -89,7 +80,7 @@ Filament.postRun = function() {
 /// onDone ::argument:: callback that gets invoked after all assets have been downloaded.
 /// onFetch ::argument:: optional callback that's invoked after each asset is downloaded.
 Filament.fetch = function(assets, onDone, onFetched) {
-    var remainingAssets = assets.length;
+    let remainingAssets = assets.length;
     assets.forEach(function(name) {
 
         // Check if a buffer already exists in case the client wishes

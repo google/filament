@@ -82,7 +82,7 @@ Filament.CompressedPixelBuffer = function(typedarray, cdatatype, faceSize) {
 Filament._loadFilamesh = function(engine, buffer, definstance, matinstances) {
     matinstances = matinstances || {};
     const registry = new Filament.MeshReader$MaterialRegistry();
-    for (var key in matinstances) {
+    for (let key in matinstances) {
         registry.set(key, matinstances[key]);
     }
     if (definstance) {
@@ -90,7 +90,7 @@ Filament._loadFilamesh = function(engine, buffer, definstance, matinstances) {
     }
     const mesh = Filament.MeshReader.loadMeshFromBuffer(engine, buffer, registry);
     const keys = registry.keys();
-    for (var i = 0; i < keys.size(); i++) {
+    for (let i = 0; i < keys.size(); i++) {
         const key = keys.get(i);
         const minstance = registry.get(key);
         matinstances[key] = minstance;
@@ -175,8 +175,8 @@ Filament.IcoSphere.prototype.subdivide = function() {
     const dsttris = new Uint16Array(ndsttris * 3);
     const dstverts = new Float32Array(ndstverts * 3);
     dstverts.set(srcverts);
-    var srcind = 0, dstind = 0, i3 = nsrcverts * 3, i4 = i3 + 3, i5 = i4 + 3;
-    for (var tri = 0; tri < nsrctris; tri++, i3 += 9, i4 += 9, i5 += 9) {
+    let srcind = 0, dstind = 0, i3 = nsrcverts * 3, i4 = i3 + 3, i5 = i4 + 3;
+    for (let tri = 0; tri < nsrctris; tri++, i3 += 9, i4 += 9, i5 += 9) {
         const i0 = srctris[srcind++] * 3;
         const i1 = srctris[srcind++] * 3;
         const i2 = srctris[srcind++] * 3;
@@ -288,7 +288,7 @@ Filament._createTextureFromImageFile = function(fileContents, engine, options) {
 
     const decodedImage = Filament.decodeImage(fileContents, noalpha ? 3 : 4);
 
-    var texformat, pbformat, pbtype;
+    let texformat, pbformat, pbtype;
     if (noalpha) {
         texformat = srgb ? TextureFormat.SRGB8 : TextureFormat.RGB8;
         pbformat = PixelDataFormat.RGB;
@@ -322,15 +322,15 @@ Filament.getSupportedFormats = function() {
         return Filament.supportedFormats;
     }
     const options = { majorVersion: 2, minorVersion: 0 };
-    var ctx = document.createElement('canvas').getContext('webgl2', options);
+    let ctx = document.createElement('canvas').getContext('webgl2', options);
     const result = {
         s3tc: false,
         astc: false,
         etc: false,
     }
-    var exts = ctx.getSupportedExtensions(), nexts = exts.length, i;
+    let exts = ctx.getSupportedExtensions(), nexts = exts.length, i;
     for (i = 0; i < nexts; i++) {
-        var ext = exts[i];
+        let ext = exts[i];
         if (ext == "WEBGL_compressed_texture_s3tc") {
             result.s3tc = true;
         } else if (ext == "WEBGL_compressed_texture_astc") {
@@ -350,8 +350,8 @@ Filament.getSupportedFormats = function() {
 /// ::retval:: empty string if there is no intersection of supported and desired formats.
 Filament.getSupportedFormatSuffix = function(desiredFormats) {
     desiredFormats = desiredFormats.split(' ');
-    var exts = Filament.getSupportedFormats();
-    for (var key in exts) {
+    let exts = Filament.getSupportedFormats();
+    for (let key in exts) {
         if (exts[key] && desiredFormats.includes(key)) {
             return '_' + key;
         }
