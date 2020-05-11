@@ -987,7 +987,8 @@ class_<Material>("Material")
     .function("getDefaultInstance",
             select_overload<MaterialInstance*(void)>(&Material::getDefaultInstance),
             allow_raw_pointers())
-    .function("createInstance", &Material::createInstance, allow_raw_pointers())
+    .function("createInstance", EMBIND_LAMBDA(MaterialInstance*, (Material* self), {
+        return self->createInstance(); }), allow_raw_pointers())
     .function("createNamedInstance", EMBIND_LAMBDA(MaterialInstance*,
             (Material* self, std::string name), {
         return self->createInstance(name.c_str()); }), allow_raw_pointers())
