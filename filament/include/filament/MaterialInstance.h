@@ -66,6 +66,11 @@ public:
     Material const* getMaterial() const noexcept;
 
     /**
+     * @return the name associated with this instance
+     */
+    const char* getName() const noexcept;
+
+    /**
      * Set a uniform by name
      *
      * @param name      Name of the parameter as defined by Material. Cannot be nullptr.

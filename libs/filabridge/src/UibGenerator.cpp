@@ -31,6 +31,8 @@ static_assert(sizeof(PerRenderableUib) % 256 == 0,
 static_assert(CONFIG_MAX_BONE_COUNT * sizeof(PerRenderableUibBone) <= 16384,
         "Bones exceed max UBO size");
 
+static_assert(CONFIG_MAX_SHADOW_CASCADES == 4,
+        "Changing CONFIG_MAX_SHADOW_CASCADES affects PerView size and breaks materials.");
 
 UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
     // IMPORTANT NOTE: Respect std140 layout, don't update without updating Engine::PerViewUib
@@ -43,7 +45,8 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             .add("viewFromClipMatrix",      1, UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
             .add("clipFromWorldMatrix",     1, UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
             .add("worldFromClipMatrix",     1, UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
-            .add("lightFromWorldMatrix",    1, UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
+            .add("lightFromWorldMatrix",    4, UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
+            .add("cascadeSplits",           1, UniformInterfaceBlock::Type::FLOAT4, Precision::HIGH)
             // view
             .add("resolution",              1, UniformInterfaceBlock::Type::FLOAT4, Precision::HIGH)
             // camera
@@ -92,7 +95,9 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             .add("fogInscatteringSize",     1, UniformInterfaceBlock::Type::FLOAT)
             // more camera stuff
             .add("fogColorFromIbl",         1, UniformInterfaceBlock::Type::FLOAT)
-            .add("padding1",                1, UniformInterfaceBlock::Type::FLOAT)
+
+            // CSM information
+            .add("cascades",                1, UniformInterfaceBlock::Type::UINT)
 
             // bring size to 1 KiB
             .add("padding2",                12, UniformInterfaceBlock::Type::FLOAT4)

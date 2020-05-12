@@ -59,12 +59,8 @@ FView::FView(FEngine& engine)
       mPerViewUb(PerViewUib::getUib().getSize()),
       mShadowUb(ShadowUib::getUib().getSize()),
       mPerViewSb(PerViewSib::SAMPLER_COUNT),
-      mDirectionalShadowMap(engine) {
+      mShadowMapManager(engine) {
     DriverApi& driver = engine.getDriverApi();
-
-    for (size_t i = 0; i < CONFIG_MAX_SHADOW_CASTING_SPOTS; i++) {
-        mSpotShadowMap[i] = std::make_unique<ShadowMap>(engine);
-    }
 
     FDebugRegistry& debugRegistry = engine.getDebugRegistry();
     debugRegistry.registerProperty("d.view.camera_at_origin",
@@ -227,7 +223,10 @@ void FView::prepareShadowing(FEngine& engine, backend::DriverApi& driver,
     FLightManager::Instance directionalLight = lightData.elementAt<FScene::LIGHT_INSTANCE>(0);
     const bool hasDirectionalShadows = directionalLight && lcm.isShadowCaster(directionalLight);
     if (UTILS_UNLIKELY(hasDirectionalShadows)) {
-        mShadowMapManager.setDirectionalShadowMap(mDirectionalShadowMap, 0);
+        const auto& shadowOptions = lcm.getShadowOptions(directionalLight);
+        assert(shadowOptions.shadowCascades >= 1 &&
+                shadowOptions.shadowCascades <= CONFIG_MAX_SHADOW_CASCADES);
+        mShadowMapManager.setShadowCascades(0, shadowOptions.shadowCascades);
     }
 
     // Find all shadow-casting spot lights.
@@ -246,8 +245,7 @@ void FView::prepareShadowing(FEngine& engine, backend::DriverApi& driver,
             continue;
         }
 
-        ShadowMap& shadowMap = *mSpotShadowMap[shadowCastingSpotCount];
-        mShadowMapManager.addSpotShadowMap(shadowMap, l);
+        mShadowMapManager.addSpotShadowMap(l);
 
         shadowCastingSpotCount++;
         if (shadowCastingSpotCount > CONFIG_MAX_SHADOW_CASTING_SPOTS - 1) {
@@ -391,32 +389,10 @@ void FView::prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& are
     }
 
     // Note: for debugging (i.e. visualize what the camera / objects are doing, using
-    // the viewing camera), we can set worldOriginCamera to identity when mViewingCamera
-    // is set: e.g.
-    //      worldOriginCamera = mViewingCamera ? mat4f{} : worldOriginScene
+    // the viewing camera), we can set worldOriginScene to identity when mViewingCamera
+    // is set
+    mViewingCameraInfo = CameraInfo(*camera, worldOriginScene);
 
-    const mat4f worldOriginCamera = worldOriginScene;
-    const mat4f model{ worldOriginCamera * camera->getModelMatrix() };
-    mViewingCameraInfo = CameraInfo{
-            // projection with infinite z-far
-            .projection         = mat4f{ camera->getProjectionMatrix() },
-            // projection used for culling, with finite z-far
-            .cullingProjection  = mat4f{ camera->getCullingProjectionMatrix() },
-            // camera model matrix -- apply the world origin to it
-            .model              = model,
-            // camera view matrix
-            .view               = FCamera::getViewMatrix(model),
-            // near plane
-            .zn                 = camera->getNear(),
-            // far plane
-            .zf                 = camera->getCullingFar(),
-            // exposure
-            .ev100              = Exposure::ev100(*camera),
-            // world offset to allow users to determine the API-level camera position
-            .worldOffset        = camera->getPosition(),
-            // world origin transform, use only for debugging
-            .worldOrigin        = worldOriginCamera
-    };
     mCullingFrustum = FCamera::getFrustum(
             mCullingCamera->getCullingProjectionMatrix(),
             FCamera::getViewMatrix(worldOriginScene * mCullingCamera->getModelMatrix()));
@@ -431,7 +407,7 @@ void FView::prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& are
      * Light culling: runs in parallel with Renderable culling (below)
      */
 
-    auto prepareVisibleLightsJob = js.runAndRetain(js.createJob(nullptr,
+    auto *prepareVisibleLightsJob = js.runAndRetain(js.createJob(nullptr,
             [&frustum = mCullingFrustum, &engine, scene](JobSystem& js, JobSystem::Job*) {
                 FView::prepareVisibleLights(
                         engine.getLightManager(), js, frustum, scene->getLightData());
@@ -508,17 +484,20 @@ void FView::prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& are
 
         // update those UBOs
         const size_t size = merged.size() * sizeof(PerRenderableUib);
-        if (mRenderableUBOSize < size) {
-            // allocate 1/3 extra, with a minimum of 16 objects
-            const size_t count = std::max(size_t(16u), (4u * merged.size() + 2u) / 3u);
-            mRenderableUBOSize = uint32_t(count * sizeof(PerRenderableUib));
-            driver.destroyUniformBuffer(mRenderableUbh);
-            mRenderableUbh = driver.createUniformBuffer(mRenderableUBOSize,
-                    backend::BufferUsage::STREAM);
-        } else {
-            // TODO: should we shrink the underlying UBO at some point?
+        if (size) {
+            if (mRenderableUBOSize < size) {
+                // allocate 1/3 extra, with a minimum of 16 objects
+                const size_t count = std::max(size_t(16u), (4u * merged.size() + 2u) / 3u);
+                mRenderableUBOSize = uint32_t(count * sizeof(PerRenderableUib));
+                driver.destroyUniformBuffer(mRenderableUbh);
+                mRenderableUbh = driver.createUniformBuffer(mRenderableUBOSize,
+                        backend::BufferUsage::STREAM);
+            } else {
+                // TODO: should we shrink the underlying UBO at some point?
+            }
+            assert(mRenderableUbh);
+            scene->updateUBOs(merged, mRenderableUbh);
         }
-        scene->updateUBOs(merged, mRenderableUbh);
     }
 
     /*
@@ -981,6 +960,10 @@ void View::setFogOptions(View::FogOptions options) noexcept {
     upcast(this)->setFogOptions(options);
 }
 
+void View::setDepthOfFieldOptions(DepthOfFieldOptions options) noexcept {
+    upcast(this)->setDepthOfFieldOptions(options);
+}
+
 View::BloomOptions View::getBloomOptions() const noexcept {
     return upcast(this)->getBloomOptions();
 }
@@ -992,6 +975,5 @@ void View::setBlendMode(BlendMode blendMode) noexcept {
 View::BlendMode View::getBlendMode() const noexcept {
     return upcast(this)->getBlendMode();
 }
-
 
 } // namespace filament

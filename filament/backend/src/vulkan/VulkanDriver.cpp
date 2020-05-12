@@ -52,6 +52,8 @@
 #define ENABLE_VALIDATION 0
 #endif
 
+static constexpr int SWAP_CHAIN_MAX_ATTEMPTS = 16;
+
 #if ENABLE_VALIDATION
 
 namespace {
@@ -61,6 +63,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugReportCallback(VkDebugReportFlagsEXT flags,
         int32_t messageCode, const char* pLayerPrefix, const char* pMessage, void* pUserData) {
     if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT) {
         utils::slog.e << "VULKAN ERROR: (" << pLayerPrefix << ") " << pMessage << utils::io::endl;
+        utils::debug_trap();
     } else {
         utils::slog.w << "VULKAN WARNING: (" << pLayerPrefix << ") "
                 << pMessage << utils::io::endl;
@@ -224,6 +227,7 @@ void VulkanDriver::terminate() {
     mSamplerCache.reset();
 
     vmaDestroyAllocator(mContext.allocator);
+    vkDestroyQueryPool(mContext.device, mContext.timestamps.pool, VKALLOC);
     vkDestroyCommandPool(mContext.device, mContext.commandPool, VKALLOC);
     vkDestroyDevice(mContext.device, VKALLOC);
     if (mDebugCallback) {
@@ -252,7 +256,15 @@ void VulkanDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId,
     acquireWorkCommandBuffer(mContext);
     mDisposer.release(mContext.work.resources);
 
-    acquireSwapCommandBuffer(mContext);
+    // It might take several attempts to acquire a swap chain that is not marked as "out of date".
+    int attempts = 0;
+    while (!acquireSwapCommandBuffer(mContext)) {
+        refreshSwapChain();
+        if (attempts++ > SWAP_CHAIN_MAX_ATTEMPTS) {
+            PANIC_POSTCONDITION("Unable to acquire optimal image from swap chain.");
+        }
+    }
+
     mDisposer.release(mContext.currentCommands->resources);
 
     // vkCmdBindPipeline and vkCmdBindDescriptorSets establish bindings to a specific command
@@ -450,14 +462,13 @@ void VulkanDriver::createSyncR(Handle<HwSync> sh, int) {
     // TODO: implement sync objects
 }
 
-void VulkanDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
-        uint64_t flags) {
+void VulkanDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
     auto* swapChain = construct_handle<VulkanSwapChain>(mHandleMap, sch);
     VulkanSurfaceContext& sc = swapChain->surfaceContext;
-    sc.surface = (VkSurfaceKHR) mContextManager.createVkSurfaceKHR(nativeWindow,
-            mContext.instance, &sc.clientSize.width, &sc.clientSize.height);
+    sc.surface = (VkSurfaceKHR) mContextManager.createVkSurfaceKHR(nativeWindow, mContext.instance);
+    sc.nativeWindow = nativeWindow;
+    mContextManager.getClientExtent(nativeWindow, &sc.clientSize.width, &sc.clientSize.height);
     getPresentationQueue(mContext, sc);
-    getSurfaceCaps(mContext, sc);
     createSwapChain(mContext, sc);
 
     // TODO: move the following line into makeCurrent.
@@ -475,6 +486,7 @@ void VulkanDriver::createStreamFromTextureIdR(Handle<HwStream> sh, intptr_t exte
 }
 
 void VulkanDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {
+    // nothing to do, timer query was constructed in createTimerQueryS
 }
 
 Handle<HwVertexBuffer> VulkanDriver::createVertexBufferS() noexcept {
@@ -543,7 +555,14 @@ Handle<HwStream> VulkanDriver::createStreamFromTextureIdS() noexcept {
 }
 
 Handle<HwTimerQuery> VulkanDriver::createTimerQueryS() noexcept {
-    return {};
+    // The handle must be constructed here, as a synchronous call to getTimerQueryValue might happen
+    // before createTimerQueryR is executed.
+    Handle<HwTimerQuery> tqh = alloc_handle<VulkanTimerQuery, HwTimerQuery>();
+    auto query = construct_handle<VulkanTimerQuery>(mHandleMap, tqh, mContext);
+    mDisposer.createDisposable(query, [this, tqh] () {
+        destruct_handle<VulkanTimerQuery>(mHandleMap, tqh);
+    });
+    return tqh;
 }
 
 void VulkanDriver::destroySamplerGroup(Handle<HwSamplerGroup> sbh) {
@@ -565,26 +584,13 @@ void VulkanDriver::destroySamplerGroup(Handle<HwSamplerGroup> sbh) {
 void VulkanDriver::destroySwapChain(Handle<HwSwapChain> sch) {
     if (sch) {
         VulkanSurfaceContext& surfaceContext = handle_cast<VulkanSwapChain>(mHandleMap, sch)->surfaceContext;
-        waitForIdle(mContext);
-        for (SwapContext& swapContext : surfaceContext.swapContexts) {
-            mDisposer.release(swapContext.commands.resources);
-            vkFreeCommandBuffers(mContext.device, mContext.commandPool, 1,
-                    &swapContext.commands.cmdbuffer);
-            swapContext.commands.fence.reset();
-            vkDestroyImageView(mContext.device, swapContext.attachment.view, VKALLOC);
-            swapContext.commands.fence = VK_NULL_HANDLE;
-            swapContext.attachment.view = VK_NULL_HANDLE;
-        }
-        vkDestroySwapchainKHR(mContext.device, surfaceContext.swapchain, VKALLOC);
-        vkDestroySemaphore(mContext.device, surfaceContext.imageAvailable, VKALLOC);
-        vkDestroySemaphore(mContext.device, surfaceContext.renderingFinished, VKALLOC);
+        backend::destroySwapChain(mContext, surfaceContext, mDisposer);
+
         vkDestroySurfaceKHR(mContext.instance, surfaceContext.surface, VKALLOC);
-        vkDestroyImageView(mContext.device, surfaceContext.depth.view, VKALLOC);
-        vkDestroyImage(mContext.device, surfaceContext.depth.image, VKALLOC);
-        vkFreeMemory(mContext.device, surfaceContext.depth.memory, VKALLOC);
         if (mContext.currentSurface == &surfaceContext) {
             mContext.currentSurface = nullptr;
         }
+
         destruct_handle<VulkanSwapChain>(mHandleMap, sch);
     }
 }
@@ -593,6 +599,9 @@ void VulkanDriver::destroyStream(Handle<HwStream> sh) {
 }
 
 void VulkanDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
+    if (tqh) {
+        mDisposer.removeReference(handle_cast<VulkanTimerQuery>(mHandleMap, tqh));
+    }
 }
 
 void VulkanDriver::destroySync(Handle<HwSync> sh) {
@@ -726,7 +735,30 @@ void VulkanDriver::cancelExternalImage(void* image) {
 }
 
 bool VulkanDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapsedTime) {
-    return false;
+    VulkanTimerQuery* vtq = handle_cast<VulkanTimerQuery>(mHandleMap, tqh);
+
+    uint64_t results[2] = {};
+    size_t dataSize = sizeof(results);
+    VkDeviceSize stride = sizeof(uint64_t);
+
+    VkResult result = vkGetQueryPoolResults(mContext.device, mContext.timestamps.pool,
+            vtq->startingQueryIndex, 2, dataSize, (void*) results, stride,
+            VK_QUERY_RESULT_64_BIT);
+
+    if (result == VK_NOT_READY) {
+        return false;
+    }
+
+    ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkGetQueryPoolResults error.");
+    ASSERT_POSTCONDITION(results[1] >= results[0], "Timestamps are not monotonically increasing.");
+
+    // NOTE: MoltenVK currently writes system time so the following delta will always be zero.
+    // However there are plans for implementing this properly. See the following GitHub ticket.
+    // https://github.com/KhronosGroup/MoltenVK/issues/773
+
+    uint64_t delta = results[1] - results[0];
+    *elapsedTime = delta;
+    return true;
 }
 
 SyncStatus VulkanDriver::getSyncStatus(Handle<HwSync> sh) {
@@ -767,9 +799,9 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     assert(mContext.currentCommands);
     assert(mContext.currentSurface);
     VulkanSurfaceContext& surface = *mContext.currentSurface;
-    const SwapContext& swapContext = surface.swapContexts[surface.currentSwapIndex];
     mCurrentRenderTarget = handle_cast<VulkanRenderTarget>(mHandleMap, rth);
     VulkanRenderTarget* rt = mCurrentRenderTarget;
+
     const VkExtent2D extent = rt->getExtent();
     assert(extent.width > 0 && extent.height > 0);
 
@@ -840,6 +872,8 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
         clearValue.depthStencil = {(float) params.clearDepth, 0};
     }
     renderPassInfo.pClearValues = &clearValues[0];
+
+    const SwapContext& swapContext = surface.swapContexts[surface.currentSwapIndex];
 
     vkCmdBeginRenderPass(swapContext.commands.cmdbuffer, &renderPassInfo,
             VK_SUBPASS_CONTENTS_INLINE);
@@ -945,8 +979,10 @@ void VulkanDriver::commit(Handle<HwSwapChain> sch) {
         .pImageIndices = &surface.currentSwapIndex,
     };
     result = vkQueuePresentKHR(surface.presentQueue, &presentInfo);
-    ASSERT_POSTCONDITION(result != VK_ERROR_OUT_OF_DATE_KHR && result != VK_SUBOPTIMAL_KHR,
-            "Stale / resized swap chain not yet supported.");
+    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+        refreshSwapChain();
+        return;
+    }
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkQueuePresentKHR error.");
 }
 
@@ -1069,11 +1105,16 @@ void VulkanDriver::blit(TargetBufferFlags buffers,
                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, blitRegions,
                 filter == SamplerMagFilter::NEAREST ? VK_FILTER_NEAREST : VK_FILTER_LINEAR);
 
+        VulkanTexture::transitionImageLayout(cmdbuffer, srcImage, VK_IMAGE_LAYOUT_UNDEFINED,
+                getTextureLayout(srcTarget->getColor().offscreen->usage), srcLevel, 1);
+
         VulkanTexture::transitionImageLayout(cmdbuffer, dstImage, VK_IMAGE_LAYOUT_UNDEFINED,
-                VK_IMAGE_LAYOUT_GENERAL, dstLevel, 1);
+                getTextureLayout(dstTarget->getColor().offscreen->usage), dstLevel, 1);
     };
 
     if (!mContext.currentCommands) {
+        // NOTE: We do not call flushWorkCommandBuffer here. The pipeline barriers pushed by
+        // "transitionImageLayout" is hopefully sufficient for proper synchronization.
         vkblit(acquireWorkCommandBuffer(mContext));
     } else {
         vkblit(mContext.currentCommands->cmdbuffer);
@@ -1232,11 +1273,41 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
     vkCmdDrawIndexed(cmdbuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstId);
 }
 
-
 void VulkanDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {
+    VulkanCommandBuffer* commands = mContext.currentCommands;
+    ASSERT_POSTCONDITION(commands, "Timer queries can occur only within a beginFrame / endFrame.");
+
+    VulkanTimerQuery* vtq = handle_cast<VulkanTimerQuery>(mHandleMap, tqh);
+    const uint32_t index = vtq->startingQueryIndex;
+    const VkPipelineStageFlagBits stage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+
+    vkCmdResetQueryPool(commands->cmdbuffer, mContext.timestamps.pool, index, 2);
+    vkCmdWriteTimestamp(commands->cmdbuffer, stage, mContext.timestamps.pool, index);
 }
 
 void VulkanDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
+    VulkanCommandBuffer* commands = mContext.currentCommands;
+    ASSERT_POSTCONDITION(commands, "Timer queries can occur only within a beginFrame / endFrame.");
+
+    VulkanTimerQuery* vtq = handle_cast<VulkanTimerQuery>(mHandleMap, tqh);
+    const uint32_t index = vtq->stoppingQueryIndex;
+    const VkPipelineStageFlagBits stage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    vkCmdWriteTimestamp(commands->cmdbuffer, stage, mContext.timestamps.pool, index);
+}
+
+void VulkanDriver::refreshSwapChain() {
+    VulkanSurfaceContext& surface = *mContext.currentSurface;
+    getSurfaceCaps(mContext, surface);
+
+    backend::destroySwapChain(mContext, surface, mDisposer);
+    createSwapChain(mContext, surface);
+
+    void* nativeWindow = surface.nativeWindow;
+    VkExtent2D size;
+    mContextManager.getClientExtent(nativeWindow, &size.width, &size.height);
+    surface.clientSize = size;
+
+    mFramebufferCache.reset();
 }
 
 #ifndef NDEBUG

@@ -65,6 +65,11 @@ struct VulkanCommandBuffer {
     VulkanDisposer::Set resources;
 };
 
+struct VulkanTimestamps {
+    VkQueryPool pool;
+    utils::bitset32 used;
+};
+
 // For now we only support a single-device, single-instance scenario. Our concept of "context" is a
 // bundle of state containing the Device, the Instance, and various globally-useful Vulkan objects.
 struct VulkanContext {
@@ -75,6 +80,7 @@ struct VulkanContext {
     VkPhysicalDeviceMemoryProperties memoryProperties;
     VkDevice device;
     VkCommandPool commandPool;
+    VulkanTimestamps timestamps;
     uint32_t graphicsQueueFamilyIndex;
     VkQueue graphicsQueue;
     bool debugMarkersSupported;
@@ -121,17 +127,21 @@ struct VulkanSurfaceContext {
     VkSemaphore imageAvailable;
     VkSemaphore renderingFinished;
     VulkanAttachment depth;
+    void* nativeWindow;
 };
 
 void selectPhysicalDevice(VulkanContext& context);
 void createVirtualDevice(VulkanContext& context);
 void getPresentationQueue(VulkanContext& context, VulkanSurfaceContext& sc);
 void getSurfaceCaps(VulkanContext& context, VulkanSurfaceContext& sc);
+
 void createSwapChain(VulkanContext& context, VulkanSurfaceContext& sc);
+void destroySwapChain(VulkanContext& context, VulkanSurfaceContext& sc, VulkanDisposer& disposer);
+
 uint32_t selectMemoryType(VulkanContext& context, uint32_t flags, VkFlags reqs);
 SwapContext& getSwapContext(VulkanContext& context);
 void waitForIdle(VulkanContext& context);
-void acquireSwapCommandBuffer(VulkanContext& context);
+bool acquireSwapCommandBuffer(VulkanContext& context);
 void releaseCommandBuffer(VulkanContext& context);
 void flushCommandBuffer(VulkanContext& context);
 VkFormat findSupportedFormat(VulkanContext& context, const std::vector<VkFormat>& candidates,

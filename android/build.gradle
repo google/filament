@@ -27,6 +27,9 @@ buildscript {
     if (project.hasProperty("filament_dist_dir")) {
         filamentPath = file(project.property("filament_dist_dir")).absolutePath
     }
+    // Our CMake scripts require a forward-slash path for the FILAMENT_DIST_DIR
+    // variable, so here we convert the native path to a forward-slash path.
+    filamentPath = filamentPath.replace(File.separator, '/')
 
     def hasVulkan = project.hasProperty("filament_supports_vulkan")
 
@@ -43,7 +46,7 @@ buildscript {
         'minSdk': 19,
         'targetSdk': 29,
         'compileSdk': 29,
-        'kotlin': '1.3.71',
+        'kotlin': '1.3.72',
         'buildTools': '29.0.3',
         'ndk': '21.0.6113669'
     ]
@@ -57,7 +60,7 @@ buildscript {
     ]
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:3.6.2'
+        classpath 'com.android.tools.build:gradle:3.6.3'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${versions.kotlin}"
     }
 

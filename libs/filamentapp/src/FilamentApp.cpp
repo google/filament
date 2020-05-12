@@ -656,7 +656,7 @@ void FilamentApp::Window::keyDown(SDL_Scancode key) {
     }
 
     // Decide which view will get this key's corresponding keyUp event.
-    // If we're currently in a mouse grap session, it should be the mouse grap's target view.
+    // If we're currently in a mouse grap session, it should be the mouse grab's target view.
     // Otherwise, it should be whichever view we're currently hovering over.
     CView* targetView = nullptr;
     if (mMouseEventTarget) {
@@ -670,8 +670,10 @@ void FilamentApp::Window::keyDown(SDL_Scancode key) {
         }
     }
 
-    targetView->keyDown(key);
-    eventTarget = targetView;
+    if (targetView) {
+        targetView->keyDown(key);
+        eventTarget = targetView;
+    }
 }
 
 void FilamentApp::Window::keyUp(SDL_Scancode key) {
@@ -811,16 +813,22 @@ void FilamentApp::CView::mouseWheel(ssize_t x) {
 bool FilamentApp::manipulatorKeyFromKeycode(SDL_Scancode scancode, CameraManipulator::Key& key) {
     switch (scancode) {
         case SDL_SCANCODE_W:
-            key = CameraManipulator::Key::UP;
+            key = CameraManipulator::Key::FORWARD;
             return true;
         case SDL_SCANCODE_A:
             key = CameraManipulator::Key::LEFT;
             return true;
         case SDL_SCANCODE_S:
-            key = CameraManipulator::Key::DOWN;
+            key = CameraManipulator::Key::BACKWARD;
             return true;
         case SDL_SCANCODE_D:
             key = CameraManipulator::Key::RIGHT;
+            return true;
+        case SDL_SCANCODE_E:
+            key = CameraManipulator::Key::UP;
+            return true;
+        case SDL_SCANCODE_Q:
+            key = CameraManipulator::Key::DOWN;
             return true;
         default:
             return false;

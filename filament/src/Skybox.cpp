@@ -98,7 +98,7 @@ FSkybox::FSkybox(FEngine& engine, const Builder& builder) noexcept
           mIntensity(builder->mIntensity) {
 
     FMaterial const* material = engine.getSkyboxMaterial();
-    mSkyboxMaterialInstance = material->createInstance();
+    mSkyboxMaterialInstance = material->createInstance("Skybox");
 
     TextureSampler sampler(TextureSampler::MagFilter::LINEAR, TextureSampler::WrapMode::REPEAT);
     auto pInstance = static_cast<MaterialInstance*>(mSkyboxMaterialInstance);

@@ -258,7 +258,23 @@
 <td align="left"></td>
 </tr>
 <tr>
+<td align="left"><a href="#View%24AmbientOcclusion">View$AmbientOcclusion</a></td>
+<td align="left"></td>
+</tr>
+<tr>
 <td align="left"><a href="#View%24AntiAliasing">View$AntiAliasing</a></td>
+<td align="left"></td>
+</tr>
+<tr>
+<td align="left"><a href="#View%24BlendMode">View$BlendMode</a></td>
+<td align="left"></td>
+</tr>
+<tr>
+<td align="left"><a href="#View%24BloomOptions%24BlendMode">View$BloomOptions$BlendMode</a></td>
+<td align="left"></td>
+</tr>
+<tr>
+<td align="left"><a href="#View%24QualityLevel">View$QualityLevel</a></td>
 <td align="left"></td>
 </tr>
 <tr>
@@ -474,6 +490,21 @@
 <li><em>returns</em> JavaScript object with keys <code>renderable</code>, <code>vertexBuffer</code>, and <code>indexBuffer</code>. These are of type <a href="#Entity">Entity</a>, <a href="#VertexBuffer">VertexBuffer</a>, and <a href="#IndexBuffer">IndexBuffer</a>.</li>
 </ul>
 </li>
+<li><strong>engine.setAmbientOcclusionOptions(overrides)</strong>
+<ul>
+<li><em>overrides</em> Dictionary with one or more of the following properties: radius, power, bias, resolution, intensity, quality.</li>
+</ul>
+</li>
+<li><strong>engine.setBloomOptions(overrides)</strong>
+<ul>
+<li><em>overrides</em> Dictionary with one or more of the following properties: dirtStrength, strength, resolution, anomorphism, levels, blendMode, threshold, enabled, dirt.</li>
+</ul>
+</li>
+<li><strong>engine.setClearOptions(overrides)</strong>
+<ul>
+<li><em>overrides</em> Dictionary with one or more of the following properties: clearColor, clear, discard.</li>
+</ul>
+</li>
 </ul>
 </div>
 <div class='classdoc'>
@@ -518,10 +549,11 @@ as quaternions.</li>
 <h2>class <a id='IndexBuffer' href='#IndexBuffer'>IndexBuffer</a></h2>
 <p>Array of 16-bit or 32-bit unsigned integers consumed by the GPU.</p>
 <ul>
-<li><strong>indexBuffer.setBuffer(engine, buffer)</strong>
+<li><strong>indexBuffer.setBuffer(engine, buffer, byteOffset)</strong>
 <ul>
 <li><em>engine</em> <a href="#Engine">Engine</a></li>
 <li><em>buffer</em> asset string, or Uint8Array, or <a href="#Buffer">Buffer</a></li>
+<li><em>byteOffset</em> non-negative integer</li>
 </ul>
 </li>
 </ul>
@@ -727,11 +759,12 @@ properties.</p>
 <h2>class <a id='VertexBuffer' href='#VertexBuffer'>VertexBuffer</a></h2>
 <p>Bundle of buffers and associated vertex attributes.</p>
 <ul>
-<li><strong>vertexBuffer.setBufferAt(engine, bufferIndex, buffer)</strong>
+<li><strong>vertexBuffer.setBufferAt(engine, bufferIndex, buffer, byteOffset)</strong>
 <ul>
 <li><em>engine</em> <a href="#Engine">Engine</a></li>
 <li><em>bufferIndex</em> non-negative integer</li>
 <li><em>buffer</em> asset string, or Uint8Array, or <a href="#Buffer">Buffer</a></li>
+<li><em>byteOffset</em> non-negative integer</li>
 </ul>
 </li>
 </ul>
@@ -1060,6 +1093,8 @@ This defines the following functions:</p>
 <li>INT</li>
 <li>HALF</li>
 <li>FLOAT</li>
+<li>UINT_10F_11F_11F_REV</li>
+<li>USHORT_565</li>
 </ul>
 </div>
 <div class='enumdoc'>
@@ -1286,10 +1321,40 @@ This defines the following functions:</p>
 </ul>
 </div>
 <div class='enumdoc'>
+<h2>enum <a id='View$AmbientOcclusion' href='#View$AmbientOcclusion'>View$AmbientOcclusion</a></h2>
+<ul>
+<li>NONE</li>
+<li>SSAO</li>
+</ul>
+</div>
+<div class='enumdoc'>
 <h2>enum <a id='View$AntiAliasing' href='#View$AntiAliasing'>View$AntiAliasing</a></h2>
 <ul>
 <li>NONE</li>
 <li>FXAA</li>
+</ul>
+</div>
+<div class='enumdoc'>
+<h2>enum <a id='View$BlendMode' href='#View$BlendMode'>View$BlendMode</a></h2>
+<ul>
+<li>OPAQUE</li>
+<li>TRANSLUCENT</li>
+</ul>
+</div>
+<div class='enumdoc'>
+<h2>enum <a id='View$BloomOptions$BlendMode' href='#View$BloomOptions$BlendMode'>View$BloomOptions$BlendMode</a></h2>
+<ul>
+<li>ADD</li>
+<li>INTERPOLATE</li>
+</ul>
+</div>
+<div class='enumdoc'>
+<h2>enum <a id='View$QualityLevel' href='#View$QualityLevel'>View$QualityLevel</a></h2>
+<ul>
+<li>LOW</li>
+<li>MEDIUM</li>
+<li>HIGH</li>
+<li>ULTRA</li>
 </ul>
 </div>
 <div class='enumdoc'>

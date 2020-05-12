@@ -607,7 +607,7 @@ $$\begin{equation}
 
 </p><p>
 
-Replacing \(\theta_m\) by \(\NoV\), we obtain:
+Replacing \(cos(\theta_m)\) by \(\NoV\), we obtain:
 
 </p><p>
 
@@ -696,8 +696,8 @@ F_{Schlick}(v,h,\fNormal,\fGrazing) = \fNormal + (\fGrazing - \fNormal)(1 - \VoH
 
 The constant \(\fNormal\) represents the specular reflectance at normal incidence and is achromatic for dielectrics, and chromatic for metals. The actual value depends on the index of refraction of the interface. The GLSL implementation of this term requires the use of a <code>pow</code>, as shown in <a href="#listing_specularf">listing&#xA0;5</a>, which can be replaced by a few multiplications.
 
-</p><pre class="listing tilde"><code><span class="line"><span class="hljs-type">vec3</span> F_Schlick(<span class="hljs-type">float</span> VoH, <span class="hljs-type">vec3</span> f0, <span class="hljs-type">float</span> f90) {</span>
-<span class="line">    <span class="hljs-keyword">return</span> f0 + (<span class="hljs-type">vec3</span>(f90) - f0) * <span class="hljs-built_in">pow</span>(<span class="hljs-number">1.0</span> - VoH, <span class="hljs-number">5.0</span>);</span>
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-type">vec3</span> F_Schlick(<span class="hljs-type">float</span> u, <span class="hljs-type">vec3</span> f0, <span class="hljs-type">float</span> f90) {</span>
+<span class="line">    <span class="hljs-keyword">return</span> f0 + (<span class="hljs-type">vec3</span>(f90) - f0) * <span class="hljs-built_in">pow</span>(<span class="hljs-number">1.0</span> - u, <span class="hljs-number">5.0</span>);</span>
 <span class="line">}</span></code></pre><div class="listingcaption tilde"><a class="target" name="listing_specularf">&#xA0;</a><b style="font-style:normal;">Listing&#xA0;5:</b> Implementation of the specular F term in GLSL</div>
 <p>
 
@@ -708,8 +708,8 @@ This Fresnel function can be seen as interpolating between the incident specular
 
 Using \(\fGrazing\) set to 1, the Schlick approximation for the Fresnel term can be optimized for scalar operations by refactoring the code slightly. The result is shown in <a href="#listing_scalarspecularf">listing&#xA0;6</a>.
 
-</p><pre class="listing tilde"><code><span class="line"><span class="hljs-type">vec3</span> F_Schlick(<span class="hljs-type">float</span> VoH, <span class="hljs-type">vec3</span> f0) {</span>
-<span class="line">    <span class="hljs-type">float</span> f = <span class="hljs-built_in">pow</span>(<span class="hljs-number">1.0</span> - VoH, <span class="hljs-number">5.0</span>);</span>
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-type">vec3</span> F_Schlick(<span class="hljs-type">float</span> u, <span class="hljs-type">vec3</span> f0) {</span>
+<span class="line">    <span class="hljs-type">float</span> f = <span class="hljs-built_in">pow</span>(<span class="hljs-number">1.0</span> - u, <span class="hljs-number">5.0</span>);</span>
 <span class="line">    <span class="hljs-keyword">return</span> f + f0 * (<span class="hljs-number">1.0</span> - f);</span>
 <span class="line">}</span></code></pre><div class="listingcaption tilde"><a class="target" name="listing_scalarspecularf">&#xA0;</a><b style="font-style:normal;">Listing&#xA0;6:</b> Scalar optimization of the specular F term in GLSL</div>
 
@@ -774,8 +774,8 @@ $$\begin{equation}
 \fGrazing=0.5 + 2 \cdot \alpha cos^2(\theta_d)
 \end{equation}$$
 
-</p><pre class="listing tilde"><code><span class="line"><span class="hljs-function"><span class="hljs-keyword">float</span> <span class="hljs-title">F_Schlick</span><span class="hljs-params">(<span class="hljs-keyword">float</span> VoH, <span class="hljs-keyword">float</span> f0, <span class="hljs-keyword">float</span> f90)</span> </span>{</span>
-<span class="line">    <span class="hljs-keyword">return</span> f0 + (f90 - f0) * <span class="hljs-built_in">pow</span>(<span class="hljs-number">1.0</span> - VoH, <span class="hljs-number">5.0</span>);</span>
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-function"><span class="hljs-keyword">float</span> <span class="hljs-title">F_Schlick</span><span class="hljs-params">(<span class="hljs-keyword">float</span> u, <span class="hljs-keyword">float</span> f0, <span class="hljs-keyword">float</span> f90)</span> </span>{</span>
+<span class="line">    <span class="hljs-keyword">return</span> f0 + (f90 - f0) * <span class="hljs-built_in">pow</span>(<span class="hljs-number">1.0</span> - u, <span class="hljs-number">5.0</span>);</span>
 <span class="line">}</span>
 <span class="line"></span>
 <span class="line"><span class="hljs-function"><span class="hljs-keyword">float</span> <span class="hljs-title">Fd_Burley</span><span class="hljs-params">(<span class="hljs-keyword">float</span> NoV, <span class="hljs-keyword">float</span> NoL, <span class="hljs-keyword">float</span> LoH, <span class="hljs-keyword">float</span> roughness)</span> </span>{</span>
@@ -818,8 +818,8 @@ The full GLSL implementation of the standard model is shown in <a href="#listing
 <span class="line">    <span class="hljs-keyword">return</span> a2 / (PI * f * f);</span>
 <span class="line">}</span>
 <span class="line"></span>
-<span class="line"><span class="hljs-type">vec3</span> F_Schlick(<span class="hljs-type">float</span> VoH, <span class="hljs-type">vec3</span> f0) {</span>
-<span class="line">    <span class="hljs-keyword">return</span> f0 + (<span class="hljs-type">vec3</span>(<span class="hljs-number">1.0</span>) - f0) * <span class="hljs-built_in">pow</span>(<span class="hljs-number">1.0</span> - VoH, <span class="hljs-number">5.0</span>);</span>
+<span class="line"><span class="hljs-type">vec3</span> F_Schlick(<span class="hljs-type">float</span> u, <span class="hljs-type">vec3</span> f0) {</span>
+<span class="line">    <span class="hljs-keyword">return</span> f0 + (<span class="hljs-type">vec3</span>(<span class="hljs-number">1.0</span>) - f0) * <span class="hljs-built_in">pow</span>(<span class="hljs-number">1.0</span> - u, <span class="hljs-number">5.0</span>);</span>
 <span class="line">}</span>
 <span class="line"></span>
 <span class="line"><span class="hljs-type">float</span> V_SmithGGXCorrelated(<span class="hljs-type">float</span> NoV, <span class="hljs-type">float</span> NoL, <span class="hljs-type">float</span> a) {</span>

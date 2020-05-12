@@ -348,3 +348,19 @@ Java_com_google_android_filament_MaterialInstance_nSetDepthCulling(JNIEnv*,
     MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
     instance->setDepthCulling(enable);
 }
+
+extern "C"
+JNIEXPORT jstring JNICALL
+Java_com_google_android_filament_MaterialInstance_nGetName(JNIEnv* env, jclass,
+        jlong nativeMaterialInstance) {
+    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+    return env->NewStringUTF(instance->getName());
+}
+
+extern "C"
+JNIEXPORT jlong JNICALL
+Java_com_google_android_filament_MaterialInstance_nGetMaterial(JNIEnv* env, jclass,
+        jlong nativeMaterialInstance) {
+    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+    return (jlong) instance->getMaterial();
+}

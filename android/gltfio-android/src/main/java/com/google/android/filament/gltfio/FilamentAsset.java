@@ -21,6 +21,7 @@ import androidx.annotation.Nullable;
 
 import com.google.android.filament.Box;
 import com.google.android.filament.Entity;
+import com.google.android.filament.MaterialInstance;
 
 /**
  * Owns a bundle of Filament objects that have been created by <code>AssetLoader</code>.
@@ -99,6 +100,17 @@ public class FilamentAsset {
         return result;
     }
 
+    public @NonNull MaterialInstance[] getMaterialInstances() {
+        final int count = nGetMaterialInstanceCount(mNativeObject);
+        MaterialInstance[] result = new MaterialInstance[count];
+        long[] natives = new long[count];
+        nGetMaterialInstances(mNativeObject, natives);
+        for (int i = 0; i < count; i++) {
+            result[i] = new MaterialInstance(natives[i]);
+        }
+        return result;
+    }
+
     /**
      * Gets the bounding box computed from the supplied min / max values in glTF accessors.
      */
@@ -155,8 +167,13 @@ public class FilamentAsset {
     private static native int nGetRoot(long nativeAsset);
     private static native int nPopRenderable(long nativeAsset);
     private static native int nPopRenderables(long nativeAsset, int[] result);
+
     private static native int nGetEntityCount(long nativeAsset);
     private static native void nGetEntities(long nativeAsset, int[] result);
+
+    private static native int nGetMaterialInstanceCount(long nativeAsset);
+    private static native void nGetMaterialInstances(long nativeAsset, long[] nativeResults);
+
     private static native void nGetBoundingBox(long nativeAsset, float[] box);
     private static native String nGetName(long nativeAsset, int entity);
     private static native long nGetAnimator(long nativeAsset);

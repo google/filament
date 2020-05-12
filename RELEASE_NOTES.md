@@ -5,6 +5,10 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release
 
+- MaterialInstances now have optional names.
+
+## v1.6.0
+
 - gltfio: fixed incorrect cone angles with lights.
 - Specular ambient occlusion now offers 3 modes: off, simple (default on desktop) and bent normals.
   The latter is more accurate but more expensive and requires a bent normal to be specified in the
@@ -31,6 +35,11 @@ A new header is inserted each time a *tag* is created.
 - The emissive property of materials is now expressed in nits and the alpha channel contains the
   exposure weight (at 0.0 the exposure is not applied to the emissive component of a surface, at
   1.0 the exposure is applied just like with any regular light) (⚠️ **API breakage**).
+- Added new `intensityCandela` and `setIntensityCandela` API to `LightManager` for setting a punctual
+  light's intensity in candela.
+- Fixed an issue where some `ShadowOptions` were not being respected when passed to
+  `LightManager::Builder`.
+- Added a Depth of Field post-processing effect
 
 ## v1.5.2
 

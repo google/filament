@@ -46,8 +46,7 @@ Driver* PlatformVkCocoaTouch::createDriver(void* const sharedContext) noexcept {
             sizeof(requestedExtensions) / sizeof(requestedExtensions[0]));
 }
 
-void* PlatformVkCocoaTouch::createVkSurfaceKHR(void* nativeWindow, void* instance,
-        uint32_t* width, uint32_t* height) noexcept {
+void* PlatformVkCocoaTouch::createVkSurfaceKHR(void* nativeWindow, void* instance) noexcept {
 #if METAL_AVAILABLE
     CAMetalLayer* metalLayer = (CAMetalLayer*) nativeWindow;
 
@@ -62,12 +61,17 @@ void* PlatformVkCocoaTouch::createVkSurfaceKHR(void* nativeWindow, void* instanc
     VkResult result = vkCreateIOSSurfaceMVK((VkInstance) instance, &createInfo, VKALLOC, &surface);
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateIOSSurfaceMVK error.");
 
-    *width = metalLayer.drawableSize.width;
-    *height = metalLayer.drawableSize.height;
-
     return surface;
 #else
     return nullptr;
+#endif
+}
+
+void PlatformVkCocoaTouch::getClientExtent(void* window,  uint32_t* width, uint32_t* height) {
+#if METAL_AVAILABLE
+    CAMetalLayer* metalLayer = (CAMetalLayer*) nativeWindow;
+    *width = metalLayer.drawableSize.width;
+    *height = metalLayer.drawableSize.height;
 #endif
 }
 

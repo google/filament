@@ -100,6 +100,13 @@ uint32_t computeBindingOffset(const cgltf_accessor* accessor) {
     return uint32_t(accessor->offset + accessor->buffer_view->offset);
 }
 
+static const char* getNodeName(const cgltf_node* node, const char* defaultNodeName) {
+    if (node->name) return node->name;
+    if (node->mesh && node->mesh->name) return node->mesh->name;
+    if (node->light && node->light->name) return node->light->name;
+    return defaultNodeName;
+}
+
 struct FAssetLoader : public AssetLoader {
     FAssetLoader(const AssetConfiguration& config) :
             mEntityManager(config.entities ? *config.entities : EntityManager::get()),
@@ -107,7 +114,8 @@ struct FAssetLoader : public AssetLoader {
             mNameManager(config.names),
             mTransformManager(config.engine->getTransformManager()),
             mMaterials(config.materials),
-            mEngine(config.engine) {}
+            mEngine(config.engine),
+            mDefaultNodeName(config.defaultNodeName) {}
 
     FFilamentAsset* createAssetFromJson(const uint8_t* bytes, uint32_t nbytes);
     FilamentAsset* createAssetFromBinary(const uint8_t* bytes, uint32_t nbytes);
@@ -134,7 +142,7 @@ struct FAssetLoader : public AssetLoader {
 
     void createAsset(const cgltf_data* srcAsset);
     void createEntity(const cgltf_node* node, Entity parent);
-    void createRenderable(const cgltf_node* node, Entity entity);
+    void createRenderable(const cgltf_node* node, Entity entity, const char* name);
     bool createPrimitive(const cgltf_primitive* inPrim, Primitive* outPrim, const UvMap& uvmap,
             const char* name);
     void createLight(const cgltf_node* node, Entity entity);
@@ -157,6 +165,7 @@ struct FAssetLoader : public AssetLoader {
     FFilamentAsset* mResult;
     MatInstanceCache mMatInstanceCache;
     MeshCache mMeshCache;
+    const char* mDefaultNodeName;
     bool mError = false;
     bool mDiagnosticsEnabled = false;
 };
@@ -288,9 +297,19 @@ void FAssetLoader::createEntity(const cgltf_node* node, Entity parent) {
     mResult->mEntities.push_back(entity);
     mResult->mNodeMap[node] = entity;
 
+    const char* name = getNodeName(node, mDefaultNodeName);
+
+    if (mNameManager && name) {
+        mNameManager->addComponent(entity);
+        mNameManager->setName(mNameManager->getInstance(entity), name);
+    }
+
+    // If no name is provided in the glTF or AssetConfiguration, use "node" for error messages.
+    name = name ? name : "node";
+
     // If the node has a mesh, then create a renderable component.
     if (node->mesh) {
-        createRenderable(node, entity);
+        createRenderable(node, entity, name);
     }
 
     if (node->light) {
@@ -302,7 +321,7 @@ void FAssetLoader::createEntity(const cgltf_node* node, Entity parent) {
     }
 }
 
-void FAssetLoader::createRenderable(const cgltf_node* node, Entity entity) {
+void FAssetLoader::createRenderable(const cgltf_node* node, Entity entity, const char* name) {
     const cgltf_mesh* mesh = node->mesh;
 
     // Compute the transform relative to the root.
@@ -321,16 +340,6 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity entity) {
     }
     Primitive* outputPrim = mMeshCache[mesh].data();
     const cgltf_primitive* inputPrim = &mesh->primitives[0];
-
-    // Create a name component using the node label if it exists, otherwise use the mesh label.
-    const char* name = node->name ? node->name : mesh->name;
-    if (mNameManager && name) {
-        mNameManager->addComponent(entity);
-        mNameManager->setName(mNameManager->getInstance(entity), name);
-    }
-
-    // If neither a node or mesh name is provided in the glTF, use "node" for error messages.
-    name = name ? name : "node";
 
     Aabb aabb;
 
@@ -681,13 +690,6 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
 void FAssetLoader::createLight(const cgltf_node* node, Entity entity) {
     const cgltf_light* light = node->light;
 
-    // Create a name component using the light label if it exists, otherwise use the node label.
-    const char* name = light->name ? light->name : node->name;
-    if (mNameManager && name) {
-        mNameManager->addComponent(entity);
-        mNameManager->setName(mNameManager->getInstance(entity), name);
-    }
-
     LightManager::Type type = getLightType(light->type);
     LightManager::Builder builder(type);
 
@@ -700,9 +702,7 @@ void FAssetLoader::createLight(const cgltf_node* node, Entity entity) {
             builder.intensity(light->intensity);
             break;
         case LightManager::Type::POINT:
-            // Convert from candelas (luminous intensity) to lumens (luminous power).
-            // lp = 4 * pi * li
-            builder.intensity(4.0f * F_PI * light->intensity);
+            builder.intensityCandela(light->intensity);
             break;
         case LightManager::Type::FOCUSED_SPOT:
         case LightManager::Type::SPOT:
@@ -710,9 +710,7 @@ void FAssetLoader::createLight(const cgltf_node* node, Entity entity) {
             builder.spotLightCone(
                     light->spot_inner_cone_angle,
                     light->spot_outer_cone_angle);
-            // Convert from candelas (luminous intensity) to lumens (luminous power).
-            // lp = li * pi
-            builder.intensity(F_PI * light->intensity);
+            builder.intensityCandela(light->intensity);
             break;
     }
 

@@ -41,7 +41,8 @@ namespace details {
 
 FMaterialInstance::FMaterialInstance() noexcept = default;
 
-FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material) {
+FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material, const char* name) :
+        mName(name) {
     FEngine::DriverApi& driver = engine.getDriverApi();
 
     if (!material->getUniformInterfaceBlock().isEmpty()) {
@@ -180,6 +181,16 @@ void FMaterialInstance::setDepthCulling(bool enable) noexcept {
     mDepthFunc = enable ? RasterState::DepthFunc::LE : RasterState::DepthFunc::A;
 }
 
+const char* FMaterialInstance::getName() const noexcept {
+    // To decide whether to use the parent material name as a fallback, we check for the nullness of
+    // the instance's CString rather than calling empty(). This allows instances to override the
+    // parent material's name with a blank string.
+    if (mName.data() == nullptr) {
+        return mMaterial->getName().c_str();
+    }
+    return mName.c_str();
+}
+
 // explicit template instantiation of our supported types
 template UTILS_NOINLINE void FMaterialInstance::setParameter<bool>    (const char* name, bool     v) noexcept;
 template UTILS_NOINLINE void FMaterialInstance::setParameter<float>   (const char* name, float    v) noexcept;
@@ -223,7 +234,11 @@ template UTILS_NOINLINE void FMaterialInstance::setParameter<mat4f>   (const cha
 using namespace details;
 
 Material const* MaterialInstance::getMaterial() const noexcept {
-    return upcast(this)->mMaterial;
+    return upcast(this)->getMaterial();
+}
+
+const char* MaterialInstance::getName() const noexcept {
+    return upcast(this)->getName();
 }
 
 template <typename T, typename>

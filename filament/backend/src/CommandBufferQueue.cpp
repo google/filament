@@ -45,6 +45,12 @@ void CommandBufferQueue::requestExit() {
     mCondition.notify_one();
 }
 
+bool CommandBufferQueue::isExitRequested() const {
+    std::unique_lock<utils::Mutex> lock(mLock);
+    return mExitRequested;
+}
+
+
 void CommandBufferQueue::flush() noexcept {
     SYSTRACE_CALL();
 

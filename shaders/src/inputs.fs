@@ -9,10 +9,11 @@ LAYOUT_LOCATION(4) in highp vec3 vertex_worldPosition;
 #if defined(HAS_ATTRIBUTE_TANGENTS)
 LAYOUT_LOCATION(5) SHADING_INTERPOLATION in mediump vec3 vertex_worldNormal;
 #if defined(MATERIAL_NEEDS_TBN)
-LAYOUT_LOCATION(6) SHADING_INTERPOLATION in mediump vec3 vertex_worldTangent;
-LAYOUT_LOCATION(7) SHADING_INTERPOLATION in mediump vec3 vertex_worldBitangent;
+LAYOUT_LOCATION(6) SHADING_INTERPOLATION in mediump vec4 vertex_worldTangent;
 #endif
 #endif
+
+LAYOUT_LOCATION(7) in highp vec4 vertex_position;
 
 #if defined(HAS_ATTRIBUTE_COLOR)
 LAYOUT_LOCATION(9) in mediump vec4 vertex_color;

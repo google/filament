@@ -15,11 +15,6 @@ To build the Java based components of the project you can optionally install (re
 Additional dependencies may be required for your operating system. Please refer to the appropriate
 section below.
 
-Building the `rays` library (used for light baking) is optional and requires the following packages:
-
-- embree 3.0+
-- libtbb-dev
-
 To build Filament for Android you must also install the following:
 
 - Android Studio 3.6 or more recent
@@ -370,7 +365,7 @@ same version that our continuous builds use.
 
 ```
 cd <your chosen parent folder for the emscripten SDK>
-curl -L https://github.com/emscripten-core/emsdk/archive/1b1f08f.zip > emsdk.zip
+curl -L https://github.com/emscripten-core/emsdk/archive/f5e21de.zip > emsdk.zip
 unzip emsdk.zip ; mv emsdk-* emsdk ; cd emsdk
 python ./emsdk.py install latest
 python ./emsdk.py activate latest

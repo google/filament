@@ -123,9 +123,12 @@ public:
      * Creates a new instance of this material. Material instances should be freed using
      * Engine::destroy(const MaterialInstance*).
      *
+     * @param name Optional name to associate with the given material instance. If this is null,
+     * then the instance inherits the material's name.
+     *
      * @return A pointer to the new instance.
      */
-    MaterialInstance* createInstance() const noexcept;
+    MaterialInstance* createInstance(const char* name = nullptr) const noexcept;
 
     //! Returns the name of this material as a null-terminated string.
     const char* getName() const noexcept;

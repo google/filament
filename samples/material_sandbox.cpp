@@ -35,6 +35,7 @@
 #include <filament/LightManager.h>
 #include <filament/Material.h>
 #include <filament/MaterialInstance.h>
+#include <filament/Renderer.h>
 #include <filament/RenderableManager.h>
 #include <filament/Scene.h>
 #include <filament/TransformManager.h>
@@ -93,7 +94,13 @@ static void printUsage(char* name) {
             "   --dirt\n"
             "       Specify a dirt texture\n\n"
             "   --camera=<camera mode>, -c <camera mode>\n"
-            "       Set the camera mode: orbit (default) or flight\n\n"
+            "       Set the camera mode: orbit (default) or flight\n"
+            "       Flight mode uses the following controls:\n"
+            "           Click and drag the mouse to pan the camera\n"
+            "           Use the scroll weel to adjust movement speed\n"
+            "           W / S: forward / backward\n"
+            "           A / D: left / right\n"
+            "           E / Q: up / down\n"
     );
     const std::string from("SAMPLE_MATERIAL");
     for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
@@ -191,8 +198,11 @@ static void cleanup(Engine* engine, View*, Scene*) {
     g_meshSet.reset(nullptr);
 
     engine->destroy(g_params.light);
+    engine->destroy(g_params.spotLight);
+
     EntityManager& em = EntityManager::get();
     em.destroy(g_params.light);
+    em.destroy(g_params.spotLight);
 }
 
 static void setup(Engine* engine, View*, Scene* scene) {
@@ -410,15 +420,15 @@ static void gui(filament::Engine* engine, filament::View*) {
     ImGui::Begin("Parameters");
     {
         if (ImGui::CollapsingHeader("Material", ImGuiTreeNodeFlags_DefaultOpen)) {
-            ImGui::Combo("model", &params.currentMaterialModel,
-                    "unlit\0lit\0subsurface\0cloth\0specularGlossiness\0\0");
+            ImGui::Combo("Model", &params.currentMaterialModel,
+                    "Unlit\0Lit\0Subsurface\0Cloth\0Specular glossiness\0\0");
 
             if (params.currentMaterialModel == MATERIAL_MODEL_LIT) {
-                ImGui::Combo("blending", &params.currentBlending,
-                        "opaque\0transparent\0fade\0thin refraction\0solid refraction\0\0");
+                ImGui::Combo("Blending", &params.currentBlending,
+                        "Opaque\0Transparent\0Fade\0Thin refraction\0Solid refraction\0\0");
             }
 
-            ImGui::ColorEdit3("baseColor", &params.color.r);
+            ImGui::ColorEdit3("Base color", &params.color.r);
 
             bool hasRefraction = params.currentBlending == BLENDING_THIN_REFRACTION ||
                     params.currentBlending == BLENDING_SOLID_REFRACTION;
@@ -426,64 +436,64 @@ static void gui(filament::Engine* engine, filament::View*) {
             if (params.currentMaterialModel > MATERIAL_MODEL_UNLIT) {
                 if (params.currentBlending == BLENDING_TRANSPARENT ||
                         params.currentBlending == BLENDING_FADE) {
-                    ImGui::SliderFloat("alpha", &params.alpha, 0.0f, 1.0f);
+                    ImGui::SliderFloat("Alpha", &params.alpha, 0.0f, 1.0f);
                 }
 
                 if (params.currentMaterialModel != MATERIAL_MODEL_SPECGLOSS) {
-                    ImGui::SliderFloat("roughness", &params.roughness, 0.0f, 1.0f);
+                    ImGui::SliderFloat("Roughness", &params.roughness, 0.0f, 1.0f);
                 } else {
-                    ImGui::SliderFloat("glossiness", &params.glossiness, 0.0f, 1.0f);
-                    ImGui::ColorEdit3("specularColor", &params.specularColor.r);
+                    ImGui::SliderFloat("Glossiness", &params.glossiness, 0.0f, 1.0f);
+                    ImGui::ColorEdit3("Specular color", &params.specularColor.r);
                 }
 
                 if (params.currentMaterialModel != MATERIAL_MODEL_CLOTH &&
                         params.currentMaterialModel != MATERIAL_MODEL_SPECGLOSS) {
                     if (!hasRefraction) {
-                        ImGui::SliderFloat("metallic", &params.metallic, 0.0f, 1.0f);
-                        ImGui::SliderFloat("reflectance", &params.reflectance, 0.0f, 1.0f);
+                        ImGui::SliderFloat("Metallic", &params.metallic, 0.0f, 1.0f);
+                        ImGui::SliderFloat("Reflectance", &params.reflectance, 0.0f, 1.0f);
                     }
                 }
 
                 if (params.currentMaterialModel != MATERIAL_MODEL_CLOTH &&
                         params.currentMaterialModel != MATERIAL_MODEL_SUBSURFACE) {
-                    ImGui::SliderFloat("clearCoat", &params.clearCoat, 0.0f, 1.0f);
-                    ImGui::SliderFloat("clearCoatRoughness", &params.clearCoatRoughness, 0.0f, 1.0f);
-                    ImGui::SliderFloat("anisotropy", &params.anisotropy, -1.0f, 1.0f);
+                    ImGui::SliderFloat("Clear coat", &params.clearCoat, 0.0f, 1.0f);
+                    ImGui::SliderFloat("Clear coat roughness", &params.clearCoatRoughness, 0.0f, 1.0f);
+                    ImGui::SliderFloat("Anisotropy", &params.anisotropy, -1.0f, 1.0f);
                 }
 
                 if (params.currentMaterialModel == MATERIAL_MODEL_SUBSURFACE) {
-                    ImGui::SliderFloat("thickness", &params.thickness, 0.0f, 1.0f);
-                    ImGui::SliderFloat("subsurfacePower", &params.subsurfacePower, 1.0f, 24.0f);
-                    ImGui::ColorEdit3("subsurfaceColor", &params.subsurfaceColor.r);
+                    ImGui::SliderFloat("Thickness", &params.thickness, 0.0f, 1.0f);
+                    ImGui::SliderFloat("Subsurface power", &params.subsurfacePower, 1.0f, 24.0f);
+                    ImGui::ColorEdit3("Subsurface color", &params.subsurfaceColor.r);
                 }
 
                 if (params.currentMaterialModel == MATERIAL_MODEL_CLOTH) {
-                    ImGui::ColorEdit3("sheenColor", &params.sheenColor.r);
-                    ImGui::ColorEdit3("subsurfaceColor", &params.subsurfaceColor.r);
+                    ImGui::ColorEdit3("Sheen color", &params.sheenColor.r);
+                    ImGui::ColorEdit3("Subsurface color", &params.subsurfaceColor.r);
                 }
 
                 if (hasRefraction) {
-                    ImGui::SliderFloat("ior", &params.ior, 1.0f, 3.0f);
-                    ImGui::SliderFloat("transmission", &params.transmission, 0.0f, 1.0f);
-                    ImGui::SliderFloat("thickness", &params.thickness, 0.0f, 1.0f);
-                    ImGui::ColorEdit3("transmittance", &params.transmittanceColor.r);
-                    ImGui::SliderFloat("distance", &params.distance, 0.0f, 4.0f);
-                    ImGui::Checkbox("Screen Space Refraction", &params.ssr);
+                    ImGui::SliderFloat("IOR", &params.ior, 1.0f, 3.0f);
+                    ImGui::SliderFloat("Transmission", &params.transmission, 0.0f, 1.0f);
+                    ImGui::SliderFloat("Thickness", &params.thickness, 0.0f, 1.0f);
+                    ImGui::ColorEdit3("Transmittance", &params.transmittanceColor.r);
+                    ImGui::SliderFloat("Distance", &params.distance, 0.0f, 4.0f);
+                    ImGui::Checkbox("Screen space refraction", &params.ssr);
                 }
             }
 
-            ImGui::ColorEdit3("emissiveColor", &params.emissiveColor.r);
-            ImGui::SliderFloat("emissiveEV", &params.emissiveEV, -24.0f, 24.0f);
-            ImGui::SliderFloat("exposureWeight", &params.emissiveExposureWeight, 0.0f, 1.0f);
+            ImGui::ColorEdit3("Emissive color", &params.emissiveColor.r);
+            ImGui::SliderFloat("Emissive EV", &params.emissiveEV, -24.0f, 24.0f);
+            ImGui::SliderFloat("Exposure weight", &params.emissiveExposureWeight, 0.0f, 1.0f);
         }
 
         if (ImGui::CollapsingHeader("Shading AA")) {
-            ImGui::SliderFloat("variance", &params.specularAntiAliasingVariance, 0.0f, 1.0f);
-            ImGui::SliderFloat("threshold", &params.specularAntiAliasingThreshold, 0.0f, 1.0f);
+            ImGui::SliderFloat("Variance", &params.specularAntiAliasingVariance, 0.0f, 1.0f);
+            ImGui::SliderFloat("Threshold", &params.specularAntiAliasingThreshold, 0.0f, 1.0f);
         }
 
         if (ImGui::CollapsingHeader("Object")) {
-            ImGui::Checkbox("castShadows", &params.castShadows);
+            ImGui::Checkbox("Cast shadows##object", &params.castShadows);
         }
 
         if (ImGui::CollapsingHeader("Camera")) {
@@ -494,46 +504,46 @@ static void gui(filament::Engine* engine, filament::View*) {
         }
 
         if (ImGui::CollapsingHeader("Indirect Light")) {
-            ImGui::SliderFloat("ibl", &params.iblIntensity, 0.0f, 50000.0f);
-            ImGui::SliderAngle("ibl rotation", &params.iblRotation);
+            ImGui::SliderFloat("IBL", &params.iblIntensity, 0.0f, 50000.0f);
+            ImGui::SliderAngle("Rotation", &params.iblRotation);
             ImGui::Indent();
             if (ImGui::CollapsingHeader("SSAO")) {
                 DebugRegistry& debug = engine->getDebugRegistry();
-                ImGui::Checkbox("enabled###ssao", &params.ssao);
-                ImGui::SliderFloat("radius", &params.ssaoOptions.radius, 0.05f, 5.0f);
-                ImGui::SliderFloat("bias", &params.ssaoOptions.bias, 0.0f, 0.01f, "%.6f");
-                ImGui::SliderFloat("intensity", &params.ssaoOptions.intensity, 0.0f, 4.0f);
-                ImGui::SliderFloat("power", &params.ssaoOptions.power, 0.0f, 4.0f);
+                ImGui::Checkbox("Enabled##ssao", &params.ssao);
+                ImGui::SliderFloat("Radius", &params.ssaoOptions.radius, 0.05f, 5.0f);
+                ImGui::SliderFloat("Bias", &params.ssaoOptions.bias, 0.0f, 0.01f, "%.6f");
+                ImGui::SliderFloat("Intensity", &params.ssaoOptions.intensity, 0.0f, 4.0f);
+                ImGui::SliderFloat("Power", &params.ssaoOptions.power, 0.0f, 4.0f);
             }
             ImGui::Unindent();
         }
 
         if (ImGui::CollapsingHeader("Directional Light")) {
-            ImGui::Checkbox("enabled", &params.directionalLightEnabled);
-            ImGui::ColorEdit3("color", &params.lightColor.r);
-            ImGui::SliderFloat("lux", &params.lightIntensity, 0.0f, 150000.0f);
-            ImGui::SliderFloat("sunSize", &params.sunAngularRadius, 0.1f, 10.0f);
-            ImGui::SliderFloat("haloSize", &params.sunHaloSize, 1.01f, 40.0f);
-            ImGui::SliderFloat("haloFalloff", &params.sunHaloFalloff, 0.0f, 2048.0f);
-            ImGuiExt::DirectionWidget("direction", params.lightDirection.v);
+            ImGui::Checkbox("Enabled##directionalLight", &params.directionalLightEnabled);
+            ImGui::ColorEdit3("Color##directionalLight", &params.lightColor.r);
+            ImGui::SliderFloat("Lux", &params.lightIntensity, 0.0f, 150000.0f);
+            ImGui::SliderFloat("Sun size", &params.sunAngularRadius, 0.1f, 10.0f);
+            ImGui::SliderFloat("Halo size", &params.sunHaloSize, 1.01f, 40.0f);
+            ImGui::SliderFloat("Halo falloff", &params.sunHaloFalloff, 0.0f, 2048.0f);
+            ImGuiExt::DirectionWidget("Direction", params.lightDirection.v);
             ImGui::Indent();
             if (ImGui::CollapsingHeader("Contact Shadows")) {
                 DebugRegistry& debug = engine->getDebugRegistry();
-                ImGui::Checkbox("enabled###contactShadows", &params.screenSpaceContactShadows);
-                ImGui::SliderInt("steps", &params.stepCount, 0, 255);
-                ImGui::SliderFloat("distance", &params.maxShadowDistance, 0.0f, 10.0f);
+                ImGui::Checkbox("Enabled##contactShadows", &params.screenSpaceContactShadows);
+                ImGui::SliderInt("Steps", &params.stepCount, 0, 255);
+                ImGui::SliderFloat("Distance", &params.maxShadowDistance, 0.0f, 10.0f);
             }
             ImGui::Unindent();
         }
 
         if (ImGui::CollapsingHeader("Spot Light")) {
-            ImGui::Checkbox("enabled", &params.spotLightEnabled);
-            ImGui::SliderFloat3("position", &params.spotLightPosition.x, -5.0f, 5.0f);
-            ImGui::ColorEdit3("color", &params.spotLightColor.r);
-            ImGui::Checkbox("cast shadows", &params.spotLightCastShadows);
-            ImGui::SliderFloat("intensity", &params.spotLightIntensity, 0.0, 1000000.f);
-            ImGui::SliderAngle("cone angle", &params.spotLightConeAngle, 0.0f, 90.0f);
-            ImGui::SliderFloat("cone fade", &params.spotLightConeFade, 0.0f, 1.0f);
+            ImGui::Checkbox("Enabled##spotLight", &params.spotLightEnabled);
+            ImGui::SliderFloat3("Position", &params.spotLightPosition.x, -5.0f, 5.0f);
+            ImGui::ColorEdit3("Color##spotLight", &params.spotLightColor.r);
+            ImGui::Checkbox("Cast shadows##spotLight", &params.spotLightCastShadows);
+            ImGui::SliderFloat("Lumens", &params.spotLightIntensity, 0.0, 1000000.f);
+            ImGui::SliderAngle("Cone angle", &params.spotLightConeAngle, 0.0f, 90.0f);
+            ImGui::SliderFloat("Cone fade", &params.spotLightConeFade, 0.0f, 1.0f);
         }
 
         if (ImGui::CollapsingHeader("Fog")) {
@@ -549,17 +559,17 @@ static void gui(filament::Engine* engine, filament::View*) {
         }
 
         if (ImGui::CollapsingHeader("Post-processing")) {
-            ImGui::Checkbox("msaa 4x", &params.msaa);
-            ImGui::Checkbox("tone-mapping", &params.tonemapping);
+            ImGui::Checkbox("MSAA 4x", &params.msaa);
+            ImGui::Checkbox("Tone mapping", &params.tonemapping);
             ImGui::Indent();
-                ImGui::Checkbox("bloom", &params.bloomOptions.enabled);
+                ImGui::Checkbox("Bloom", &params.bloomOptions.enabled);
                 if (params.bloomOptions.enabled) {
-                    ImGui::SliderFloat("strength", &params.bloomOptions.strength, 0.0f, 1.0f);
-                    ImGui::SliderFloat("dirt", &params.bloomOptions.dirtStrength, 0.0f, 1.0f);
+                    ImGui::SliderFloat("Strength", &params.bloomOptions.strength, 0.0f, 1.0f);
+                    ImGui::SliderFloat("Dirt", &params.bloomOptions.dirtStrength, 0.0f, 1.0f);
                 }
-                ImGui::Checkbox("dithering", &params.dithering);
+                ImGui::Checkbox("Dithering", &params.dithering);
                 ImGui::Unindent();
-            ImGui::Checkbox("fxaa", &params.fxaa);
+            ImGui::Checkbox("FXAA", &params.fxaa);
         }
 
         if (ImGui::CollapsingHeader("Debug")) {
@@ -662,7 +672,7 @@ static void gui(filament::Engine* engine, filament::View*) {
             params.spotLightConeAngle);
 }
 
-static void preRender(filament::Engine*, filament::View* view, filament::Scene*, filament::Renderer*) {
+static void preRender(filament::Engine*, filament::View* view, filament::Scene*, filament::Renderer* renderer) {
     view->setAntiAliasing(g_params.fxaa ? View::AntiAliasing::FXAA : View::AntiAliasing::NONE);
     view->setToneMapping(g_params.tonemapping ? View::ToneMapping::ACES : View::ToneMapping::LINEAR);
     view->setDithering(g_params.dithering ? View::Dithering::TEMPORAL : View::Dithering::NONE);
@@ -672,6 +682,11 @@ static void preRender(filament::Engine*, filament::View* view, filament::Scene*,
     view->setAmbientOcclusion(
             g_params.ssao ? View::AmbientOcclusion::SSAO : View::AmbientOcclusion::NONE);
     view->setAmbientOcclusionOptions(g_params.ssaoOptions);
+
+    // Without an IBL, we must clear the swapchain to black before each frame.
+    renderer->setClearOptions({
+            .clearColor = { 0.0f, 0.0f, 0.0f, 1.0f },
+            .clear = !FilamentApp::get().getIBL()  });
 
     Camera& camera = view->getCamera();
     camera.setExposure(g_params.cameraAperture, 1.0f / g_params.cameraSpeed, g_params.cameraISO);

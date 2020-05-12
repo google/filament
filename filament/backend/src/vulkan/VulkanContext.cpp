@@ -84,6 +84,7 @@ void selectPhysicalDevice(VulkanContext& context) {
                 continue;
             }
             if (props.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+                assert(props.timestampValidBits > 0);
                 context.graphicsQueueFamilyIndex = j;
             }
         }
@@ -182,6 +183,7 @@ void createVirtualDevice(VulkanContext& context) {
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateDevice error.");
     vkGetDeviceQueue(context.device, context.graphicsQueueFamilyIndex, 0,
             &context.graphicsQueue);
+
     VkCommandPoolCreateInfo createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     createInfo.flags =
@@ -189,6 +191,15 @@ void createVirtualDevice(VulkanContext& context) {
     createInfo.queueFamilyIndex = context.graphicsQueueFamilyIndex;
     result = vkCreateCommandPool(context.device, &createInfo, VKALLOC, &context.commandPool);
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateCommandPool error.");
+
+    // Create a timestamp pool large enough to hold a pair of queries for each timer.
+    VkQueryPoolCreateInfo tqpCreateInfo = {};
+    tqpCreateInfo.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
+    tqpCreateInfo.queryType = VK_QUERY_TYPE_TIMESTAMP;
+    tqpCreateInfo.queryCount = context.timestamps.used.size() * 2;
+    result = vkCreateQueryPool(context.device, &tqpCreateInfo, VKALLOC, &context.timestamps.pool);
+    ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateQueryPool error.");
+    context.timestamps.used.reset();
 
     const VmaVulkanFunctions funcs {
         .vkGetPhysicalDeviceProperties = vkGetPhysicalDeviceProperties,
@@ -284,6 +295,8 @@ void getSurfaceCaps(VulkanContext& context, VulkanSurfaceContext& sc) {
 }
 
 void createSwapChain(VulkanContext& context, VulkanSurfaceContext& surfaceContext) {
+    getSurfaceCaps(context, surfaceContext);
+
     // The general advice is to require one more than the minimum swap chain length, since the
     // absolute minimum could easily require waiting for a driver or presentation layer to release
     // the previous frame's buffer. The only situation in which we'd ask for the minimum length is
@@ -392,6 +405,27 @@ void createSwapChain(VulkanContext& context, VulkanSurfaceContext& surfaceContex
     createDepthBuffer(context, surfaceContext, context.depthFormat);
 }
 
+void destroySwapChain(VulkanContext& context, VulkanSurfaceContext& surfaceContext,
+        VulkanDisposer& disposer) {
+    waitForIdle(context);
+    for (SwapContext& swapContext : surfaceContext.swapContexts) {
+        disposer.release(swapContext.commands.resources);
+        vkFreeCommandBuffers(context.device, context.commandPool, 1,
+                &swapContext.commands.cmdbuffer);
+        swapContext.commands.fence.reset();
+        vkDestroyImageView(context.device, swapContext.attachment.view, VKALLOC);
+        swapContext.commands.fence = VK_NULL_HANDLE;
+        swapContext.attachment.view = VK_NULL_HANDLE;
+    }
+    vkDestroySwapchainKHR(context.device, surfaceContext.swapchain, VKALLOC);
+    vkDestroySemaphore(context.device, surfaceContext.imageAvailable, VKALLOC);
+    vkDestroySemaphore(context.device, surfaceContext.renderingFinished, VKALLOC);
+
+    vkDestroyImageView(context.device, surfaceContext.depth.view, VKALLOC);
+    vkDestroyImage(context.device, surfaceContext.depth.image, VKALLOC);
+    vkFreeMemory(context.device, surfaceContext.depth.memory, VKALLOC);
+}
+
 uint32_t selectMemoryType(VulkanContext& context, uint32_t flags, VkFlags reqs) {
     for (uint32_t i = 0; i < VK_MAX_MEMORY_TYPES; i++) {
         if (flags & 1) {
@@ -443,15 +477,15 @@ void waitForIdle(VulkanContext& context) {
     }
 }
 
-void acquireSwapCommandBuffer(VulkanContext& context) {
+bool acquireSwapCommandBuffer(VulkanContext& context) {
     // Ask Vulkan for the next image in the swap chain and update the currentSwapIndex.
     VulkanSurfaceContext& surface = *context.currentSurface;
     VkResult result = vkAcquireNextImageKHR(context.device, surface.swapchain,
             UINT64_MAX, surface.imageAvailable, VK_NULL_HANDLE, &surface.currentSwapIndex);
-    ASSERT_POSTCONDITION(result != VK_ERROR_OUT_OF_DATE_KHR,
-            "Stale / resized swap chain not yet supported.");
-    ASSERT_POSTCONDITION(result == VK_SUBOPTIMAL_KHR || result == VK_SUCCESS,
-            "vkAcquireNextImageKHR error.");
+    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+        return false;
+    }
+    ASSERT_POSTCONDITION(result == VK_SUCCESS, "Unable to acquire image from swap chain.");
     SwapContext& swap = getSwapContext(context);
 
     // Ensure that the previous submission of this command buffer has finished.
@@ -474,6 +508,7 @@ void acquireSwapCommandBuffer(VulkanContext& context) {
     error = vkBeginCommandBuffer(cmdbuffer, &beginInfo);
     ASSERT_POSTCONDITION(!error, "vkBeginCommandBuffer error.");
     context.currentCommands = &swap.commands;
+    return true;
 }
 
 // Flushes the current command buffer and waits for it to finish executing.
@@ -632,8 +667,6 @@ void createDepthBuffer(VulkanContext& context, VulkanSurfaceContext& surfaceCont
     };
     vkCmdPipelineBarrier(cmdbuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
             VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
-
-    flushWorkCommandBuffer(context);
 }
 
 VkImageLayout getTextureLayout(TextureUsage usage) {
@@ -647,17 +680,11 @@ VkImageLayout getTextureLayout(TextureUsage usage) {
     // Filament sometimes samples from one miplevel while writing to another level in the same
     // texture (e.g. bloom does this). Moreover we'd like to avoid lots of expensive layout
     // transitions. So, keep it simple and use GENERAL for all color-attachable textures.
-    if (any(usage & TextureUsage::COLOR_ATTACHMENT) && any(usage & TextureUsage::SAMPLEABLE)) {
+    if (any(usage & TextureUsage::COLOR_ATTACHMENT)) {
         return VK_IMAGE_LAYOUT_GENERAL;
     }
 
-    // This case is probably never hit, but we might as well use an optimal layout for textures
-    // that are never sampled from.
-    if (any(usage & TextureUsage::COLOR_ATTACHMENT)) {
-        return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    }
-
-    // Finally, the default layout for a texture is read-only.
+    // Finally, the layout for an immutable texture is optimal read-only.
     return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 }
 

@@ -46,9 +46,6 @@
 
 #include <math/scalar.h>
 
-#include <array>
-#include <memory>
-
 namespace utils {
 class JobSystem;
 } // namespace utils;
@@ -174,7 +171,7 @@ public:
     void setShadowsEnabled(bool enabled) noexcept { mShadowingEnabled = enabled; }
 
     FCamera const* getDirectionalLightCamera() const noexcept {
-        return &mDirectionalShadowMap.getDebugCamera();
+        return &mShadowMapManager.getCascadeShadowMap(0)->getDebugCamera();
     }
 
     void setRenderTarget(FRenderTarget* renderTarget) noexcept {
@@ -270,6 +267,10 @@ public:
         mBloomOptions = options;
     }
 
+    BloomOptions getBloomOptions() const noexcept {
+        return mBloomOptions;
+    }
+
     void setFogOptions(FogOptions options) noexcept {
         options.distance = std::max(0.0f, options.distance);
         options.maximumOpacity = math::clamp(options.maximumOpacity, 0.0f, 1.0f);
@@ -280,8 +281,15 @@ public:
         mFogOptions = options;
     }
 
-    BloomOptions getBloomOptions() const noexcept {
-        return mBloomOptions;
+    void setDepthOfFieldOptions(DepthOfFieldOptions options) noexcept {
+        options.focusDistance = std::max(0.0f, options.focusDistance);
+        options.blurScale = std::max(0.0f, options.blurScale);
+        options.maxApertureDiameter = std::max(0.0f, options.maxApertureDiameter);
+        mDepthOfFieldOptions = options;
+    }
+
+    DepthOfFieldOptions getDepthOfFieldOptions() const noexcept {
+        return mDepthOfFieldOptions;
     }
 
     void setBlendMode(BlendMode blendMode) noexcept {
@@ -378,6 +386,7 @@ private:
     AmbientOcclusionOptions mAmbientOcclusionOptions{};
     BloomOptions mBloomOptions;
     FogOptions mFogOptions;
+    DepthOfFieldOptions mDepthOfFieldOptions;
     BlendMode mBlendMode = BlendMode::OPAQUE;
 
     DynamicResolutionOptions mDynamicResolution;
@@ -400,9 +409,8 @@ private:
     mutable bool mHasDirectionalLight = false;
     mutable bool mHasDynamicLighting = false;
     mutable bool mHasShadowing = false;
+
     ShadowMapManager mShadowMapManager;
-    mutable ShadowMap mDirectionalShadowMap;
-    mutable std::array<std::unique_ptr<ShadowMap>, CONFIG_MAX_SHADOW_CASTING_SPOTS> mSpotShadowMap;
 };
 
 FILAMENT_UPCAST(View)

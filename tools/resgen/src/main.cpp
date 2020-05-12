@@ -34,6 +34,7 @@ static const char* g_deployDir = ".";
 static bool g_keepExtension = false;
 static bool g_appendNull = false;
 static bool g_generateC = false;
+static bool g_quietMode = false;
 
 static const char* USAGE = R"TXT(
 RESGEN aggregates a sequence of binary blobs, each of which becomes a "resource" whose id
@@ -63,6 +64,8 @@ Options:
        Append a null terminator to each data blob
    --cfile, -c
        Generate xxd-style C file (useful for WebAssembly)
+    --quiet, -q
+        Suppress console output
 
 Examples:
     RESGEN -cp textures jungle.png beach.png
@@ -107,7 +110,7 @@ static void license() {
 }
 
 static int handleArguments(int argc, char* argv[]) {
-    static constexpr const char* OPTSTR = "hLp:x:ktc";
+    static constexpr const char* OPTSTR = "hLp:x:ktcq";
     static const struct option OPTIONS[] = {
             { "help",                 no_argument, 0, 'h' },
             { "license",              no_argument, 0, 'L' },
@@ -116,6 +119,7 @@ static int handleArguments(int argc, char* argv[]) {
             { "keep",                 no_argument, 0, 'k' },
             { "text",                 no_argument, 0, 't' },
             { "cfile",                no_argument, 0, 'c' },
+            { "quiet",                no_argument, 0, 'q' },
             { 0, 0, 0, 0 }  // termination of the option list
     };
 
@@ -146,6 +150,9 @@ static int handleArguments(int argc, char* argv[]) {
                 break;
             case 'c':
                 g_generateC = true;
+                break;
+            case 'q':
+                g_quietMode = true;
                 break;
         }
     }
@@ -347,16 +354,22 @@ int main(int argc, char* argv[]) {
     appleAsmStream << aasmstr << appleDataAsmStream.str() << endl;
     appleAsmStream.close();
 
-    cout << "Generated files: "
-        << headerPath << " "
-        << asmPath << " "
-        << appleAsmPath << " "
-        << binPath;
+    if (!g_quietMode) {
+        cout << "Generated files: "
+            << headerPath << " "
+            << asmPath << " "
+            << appleAsmPath << " "
+            << binPath;
+    }
 
     if (g_generateC) {
         xxdStream << "};\n\n" << xxdDefinitions.str();
-        cout << " " << xxdPath;
+        if (!g_quietMode) {
+            cout << " " << xxdPath;
+        }
     }
 
-    cout << endl;
+    if (!g_quietMode) {
+        cout << endl;
+    }
 }

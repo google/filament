@@ -64,13 +64,13 @@ class MainActivity : Activity() {
 
         // enable dynamic resolution
         val options = modelViewer.view.dynamicResolutionOptions
-        options.enabled = true;
-        modelViewer.view.dynamicResolutionOptions = options;
+        options.enabled = true
+        modelViewer.view.dynamicResolutionOptions = options
 
         modelViewer.view.ambientOcclusion = View.AmbientOcclusion.SSAO
 
         val bloom = modelViewer.view.bloomOptions
-        bloom.enabled = true;
+        bloom.enabled = true
         modelViewer.view.bloomOptions = bloom
     }
 
@@ -92,7 +92,7 @@ class MainActivity : Activity() {
         val ibl = "venetian_crossroads_2k"
         readCompressedAsset("envs/$ibl/${ibl}_ibl.ktx").let {
             scene.indirectLight = KtxLoader.createIndirectLight(engine, it)
-            scene.indirectLight!!.intensity = 50_000.0f
+            scene.indirectLight!!.intensity = 30_000.0f
         }
         readCompressedAsset("envs/$ibl/${ibl}_skybox.ktx").let {
             scene.skybox = KtxLoader.createSkybox(engine, it)

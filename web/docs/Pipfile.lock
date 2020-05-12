@@ -1,0 +1,58 @@
+{
+    "_meta": {
+        "hash": {
+            "sha256": "64fb040f71095c2ee61210e3b1cab5dfde8866fcc1121829f2106ea38abbd125"
+        },
+        "pipfile-spec": 6,
+        "requires": {
+            "python_version": "3.8"
+        },
+        "sources": [
+            {
+                "name": "pypi",
+                "url": "https://pypi.org/simple",
+                "verify_ssl": true
+            }
+        ]
+    },
+    "default": {
+        "editorconfig": {
+            "hashes": [
+                "sha256:1b0ef345f9c3a673e492cfe608ed644b236139f7fceab5c6f513a71bcaf8a56c",
+                "sha256:60d6f10b87d2572ac1581cb8c9f018163e2b13a9e49588f9fb6dc8c715a1744c"
+            ],
+            "version": "==0.12.2"
+        },
+        "jsbeautifier": {
+            "hashes": [
+                "sha256:4f670c6f4f8d4caca9a348271010742f494becb96fe0a9be6ffac8b3d46350ca"
+            ],
+            "index": "pypi",
+            "version": "==1.11.0"
+        },
+        "mistletoe": {
+            "hashes": [
+                "sha256:24d0f18cc5f0381c2cfb8a24ef3de83eb9f7929cb7d0e71ecb164b671d86e6a3",
+                "sha256:3e2d31b2fa6231ea2ee46981274ebac8d5e5736e3aad2d1cd449e2c053b7023b"
+            ],
+            "index": "pypi",
+            "version": "==0.7.2"
+        },
+        "pygments": {
+            "hashes": [
+                "sha256:647344a061c249a3b74e230c739f434d7ea4d8b1d5f3721bc0f3558049b38f44",
+                "sha256:ff7a40b4860b727ab48fad6360eb351cc1b33cbf9b15a0f689ca5353e9463324"
+            ],
+            "index": "pypi",
+            "version": "==2.6.1"
+        },
+        "six": {
+            "hashes": [
+                "sha256:236bdbdce46e6e6a3d61a337c0f8b763ca1e8717c03b369e87a7ec7ce1319c0a",
+                "sha256:8f3cd2e254d8f793e7f3d6d9df77b92252b52637291d0f0da013c76ea2724b6c"
+            ],
+            "version": "==1.14.0"
+        }
+    },
+    "develop": {}
+}

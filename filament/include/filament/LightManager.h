@@ -196,6 +196,15 @@ public:
         /** Size of the shadow map in texels. Must be a power-of-two. */
         uint32_t mapSize = 1024;
 
+        /**
+         * Number of shadow cascades to use for this light. Must be between 1 and 4 (inclusive).
+         * A value greater than 1 turns on cascaded shadow mapping (CSM).
+         * Only applicable to Type.SUN or Type.DIRECTIONAL lights.
+         *
+         * @warning This API is still experimental and subject to change.
+         */
+        uint8_t shadowCascades = 1;
+
         /** Constant bias in world units (e.g. meters) by which shadows are moved away from the
          * light. 1mm by default.
          */
@@ -373,8 +382,25 @@ public:
          *
          * For example, the sun's illuminance is about 100,000 lux.
          *
+         * This method overrides any prior calls to intensity or intensityCandela.
+         *
          */
         Builder& intensity(float intensity) noexcept;
+
+        /**
+         * Sets the initial intensity of a spot or point light in candela.
+         *
+         * @param intensity Luminous intensity in *candela*.
+         *
+         * @return This Builder, for chaining calls.
+         *
+         * @note
+         * This method is equivalent to calling intensity(float intensity) for directional lights
+         * (Type.DIRECTIONAL or Type.SUN).
+         *
+         * This method overrides any prior calls to intensity or intensityCandela.
+         */
+        Builder& intensityCandela(float intensity) noexcept;
 
         /**
          * Sets the initial intensity of a light in watts.
@@ -398,6 +424,8 @@ public:
          *
          * @note
          * This call is equivalent to `Builder::intensity(efficiency * 683 * watts);`
+         *
+         * This method overrides any prior calls to intensity or intensityCandela.
          */
         Builder& intensity(float watts, float efficiency) noexcept;
 
@@ -623,6 +651,20 @@ public:
     }
 
     /**
+     * Dynamically updates the light's intensity in candela. The intensity can be negative.
+     *
+     * @param i         Instance of the component obtained from getInstance().
+     * @param intensity Luminous intensity in *candela*.
+     *
+     * @note
+     * This method is equivalent to calling setIntensity(float intensity) for directional lights
+     * (Type.DIRECTIONAL or Type.SUN).
+     *
+     * @see Builder.intensityCandela(float intensity)
+     */
+    void setIntensityCandela(Instance i, float intensity) noexcept;
+
+    /**
      * returns the light's luminous intensity in lumen.
      *
      * @param i     Instance of the component obtained from getInstance().
@@ -753,7 +795,8 @@ public:
     void forEachComponent(F func) noexcept {
         utils::Entity const* const pEntity = getEntities();
         for (size_t i = 0, c = getComponentCount(); i < c; i++) {
-            func(pEntity[i], Instance(i));
+            // Instance 0 is the invalid instance
+            func(pEntity[i], Instance(i + 1));
         }
     }
 };

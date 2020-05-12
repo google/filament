@@ -553,8 +553,7 @@ public class RenderableManager {
     public @NonNull MaterialInstance getMaterialInstanceAt(@EntityInstance int i,
             @IntRange(from = 0) int primitiveIndex) {
         long nativeMatInstance = nGetMaterialInstanceAt(mNativeObject, i, primitiveIndex);
-        long nativeMaterial = nGetMaterialAt(mNativeObject, i, primitiveIndex);
-        return new MaterialInstance(nativeMaterial, nativeMatInstance);
+        return new MaterialInstance(nativeMatInstance);
     }
 
     /**

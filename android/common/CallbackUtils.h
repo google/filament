@@ -40,6 +40,8 @@ struct JniBufferCallback {
 
 private:
     JniBufferCallback(JNIEnv* env, jobject handler, jobject callback, AutoBuffer&& buffer);
+    JniBufferCallback(JniBufferCallback const &) = delete;
+    JniBufferCallback(JniBufferCallback&&) = delete;
     ~JniBufferCallback();
 
     JNIEnv* mEnv;
@@ -57,6 +59,8 @@ struct JniImageCallback {
 
 private:
     JniImageCallback(JNIEnv* env, jobject handler, jobject runnable, long image);
+    JniImageCallback(JniBufferCallback const &) = delete;
+    JniImageCallback(JniBufferCallback&&) = delete;
     ~JniImageCallback();
 
     JNIEnv* mEnv;

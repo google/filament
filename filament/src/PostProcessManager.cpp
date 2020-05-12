@@ -118,6 +118,8 @@ void PostProcessManager::init() noexcept {
     mBlit[2] = PostProcessMaterial(mEngine, MATERIALS_BLITHIGH_DATA, MATERIALS_BLITHIGH_SIZE);
     mTonemapping = PostProcessMaterial(mEngine, MATERIALS_TONEMAPPING_DATA, MATERIALS_TONEMAPPING_SIZE);
     mFxaa = PostProcessMaterial(mEngine, MATERIALS_FXAA_DATA, MATERIALS_FXAA_SIZE);
+    mDoFBlur = PostProcessMaterial(mEngine, MATERIALS_DOFBLUR_DATA, MATERIALS_DOFBLUR_SIZE);
+    mDoF = PostProcessMaterial(mEngine, MATERIALS_DOF_DATA, MATERIALS_DOF_SIZE);
 
     // UBO storage size.
     // The effective kernel size is (kMaxPositiveKernelSize - 1) * 4 + 1.
@@ -157,6 +159,8 @@ void PostProcessManager::terminate(DriverApi& driver) noexcept {
     mBlit[2].terminate(engine);
     mTonemapping.terminate(engine);
     mFxaa.terminate(engine);
+    mDoFBlur.terminate(engine);
+    mDoF.terminate(engine);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -314,6 +318,161 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::fxaa(FrameGraph& fg,
             });
 
     return ppFXAA.getData().output;
+}
+
+FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
+        FrameGraphId<FrameGraphTexture> input,
+        const View::DepthOfFieldOptions& dofOptions,
+        const CameraInfo& cameraInfo) noexcept {
+
+    FEngine& engine = mEngine;
+    Handle<HwRenderPrimitive> const& fullScreenRenderPrimitive = engine.getFullScreenRenderPrimitive();
+
+    FrameGraphId<FrameGraphTexture> depth = fg.getBlackboard().get<FrameGraphTexture>("structure");
+    assert(depth.isValid());
+
+    // rotate the bokeh based on the aperture diameter (i.e. angle of the blades)
+    float bokehAngle = float(F_PI) / 6.0f;
+    if (dofOptions.maxApertureDiameter > 0.0f) {
+        bokehAngle += float(F_PI_2) * saturate(cameraInfo.A / dofOptions.maxApertureDiameter);
+    }
+
+    const float SAMPLE_COUNT = 11.0; // (keep in sync with dofUtils.fs)
+    const size_t effectiveSampleCount = 1 + (SAMPLE_COUNT - 1) * 2;
+    const float focusDistance = std::max(cameraInfo.zn, dofOptions.focusDistance);
+    auto const& desc = fg.getDescriptor<FrameGraphTexture>(input);
+    const float Kc = (cameraInfo.A * cameraInfo.f) / (focusDistance - cameraInfo.f);
+    const float Ks = ((float)desc.height / effectiveSampleCount) / FCamera::SENSOR_SIZE;
+    const float2 cocParams{
+            // we use 1/zn instead of (zf - zn) / (zf * zn), because in reality we're using
+            // a projection with an infinite far plane
+            (dofOptions.blurScale * Ks * Kc) * focusDistance / cameraInfo.zn,
+            (dofOptions.blurScale * Ks * Kc) * (1.0f - focusDistance / cameraInfo.zn)
+    };
+
+    struct PostProcessDoFBlur {
+        FrameGraphId<FrameGraphTexture> color;
+        FrameGraphId<FrameGraphTexture> depth;
+        FrameGraphId<FrameGraphTexture> vertical;
+        FrameGraphId<FrameGraphTexture> diagonal;
+        FrameGraphRenderTargetHandle rt;
+    };
+
+    auto& ppDoFBlur = fg.addPass<PostProcessDoFBlur>("dofblur",
+            [&](FrameGraph::Builder& builder, auto& data) {
+                auto const& inputDesc = fg.getDescriptor(input);
+                data.color = builder.sample(input);
+                data.depth = builder.sample(depth);
+                data.vertical = builder.createTexture("dof vertical output", {
+                        .width = inputDesc.width,
+                        .height = inputDesc.height,
+                        .format = inputDesc.format
+                });
+                data.vertical = builder.write(data.vertical);
+                data.diagonal = builder.createTexture("dof diagonal output", {
+                        .width = inputDesc.width,
+                        .height = inputDesc.height,
+                        .format = inputDesc.format
+                });
+                data.diagonal = builder.write(data.diagonal);
+                data.rt = builder.createRenderTarget("DoF Target", {
+                        .attachments = {
+                                { data.vertical, data.diagonal }, {}, {}
+                        }
+                });
+            },
+            [=](FrameGraphPassResources const& resources,
+                auto const& data, DriverApi& driver) {
+                auto const& desc = resources.getDescriptor(data.color);
+                auto const& color = resources.getTexture(data.color);
+                auto const& depth = resources.getTexture(data.depth);
+                auto const& out = resources.get(data.rt);
+
+                PostProcessMaterial& material = mDoFBlur;
+                FMaterialInstance* const mi = material.getMaterialInstance();
+                mi->setParameter("color", color, {
+                        .filterMag = SamplerMagFilter::LINEAR,
+                        .filterMin = SamplerMinFilter::LINEAR
+                });
+                mi->setParameter("depth", depth, {
+                        .filterMin = SamplerMinFilter::NEAREST
+                });
+                mi->setParameter("resolution", float4{
+                        desc.width, desc.height, 1.0f / desc.width, 1.0f / desc.height });
+                mi->setParameter("blurDirections", float4{
+                        std::cos(0.0f + bokehAngle), std::sin(0.0f + bokehAngle),
+                        std::cos(F_PI_4 + bokehAngle), std::sin(F_PI_4 + bokehAngle) });
+                mi->setParameter("cocParams", cocParams);
+                mi->commit(driver);
+                mi->use(driver);
+
+                PipelineState pipeline(material.getPipelineState());
+                driver.beginRenderPass(out.target, out.params);
+                driver.draw(pipeline, fullScreenRenderPrimitive);
+                driver.endRenderPass();
+            });
+
+    struct PostProcessDoF {
+        FrameGraphId<FrameGraphTexture> vertical;
+        FrameGraphId<FrameGraphTexture> diagonal;
+        FrameGraphId<FrameGraphTexture> depth;
+        FrameGraphId<FrameGraphTexture> output;
+        FrameGraphRenderTargetHandle rt;
+    };
+
+    auto& ppDoF = fg.addPass<PostProcessDoF>("dof",
+            [&](FrameGraph::Builder& builder, auto& data) {
+                auto const& inputDesc = fg.getDescriptor(input);
+                data.vertical = builder.sample(ppDoFBlur.getData().vertical);
+                data.diagonal = builder.sample(ppDoFBlur.getData().diagonal);
+                data.depth = builder.sample(depth);
+                data.output = builder.createTexture("dof output", {
+                        .width = inputDesc.width,
+                        .height = inputDesc.height,
+                        .format = inputDesc.format
+                });
+                data.output = builder.write(data.output);
+                data.rt = builder.createRenderTarget("DoF Target", {
+                        .attachments = { data.output }
+                });
+            },
+            [=](FrameGraphPassResources const& resources,
+                auto const& data, DriverApi& driver) {
+                auto const& desc = resources.getDescriptor(data.vertical);
+                auto const& vertical = resources.getTexture(data.vertical);
+                auto const& diagonal = resources.getTexture(data.diagonal);
+                auto const& depth = resources.getTexture(data.depth);
+                auto const& out = resources.get(data.rt);
+
+                PostProcessMaterial& material = mDoF;
+                FMaterialInstance* const mi = material.getMaterialInstance();
+                mi->setParameter("buffer0", vertical, {
+                        .filterMag = SamplerMagFilter::LINEAR,
+                        .filterMin = SamplerMinFilter::LINEAR
+                });
+                mi->setParameter("buffer1", diagonal, {
+                        .filterMag = SamplerMagFilter::LINEAR,
+                        .filterMin = SamplerMinFilter::LINEAR
+                });
+                mi->setParameter("depth", depth, {
+                        .filterMin = SamplerMinFilter::NEAREST
+                });
+                mi->setParameter("resolution", float4{
+                        desc.width, desc.height, 1.0f / desc.width, 1.0f / desc.height });
+                mi->setParameter("blurDirections", float4{
+                        std::cos(F_PI_2 + bokehAngle), std::sin(F_PI_2 + bokehAngle),
+                        std::cos(3.0f * F_PI_4 + bokehAngle), std::sin(3.0f * F_PI_4 + bokehAngle) });
+                mi->setParameter("cocParams", cocParams);
+                mi->commit(driver);
+                mi->use(driver);
+
+                PipelineState pipeline(material.getPipelineState());
+                driver.beginRenderPass(out.target, out.params);
+                driver.draw(pipeline, fullScreenRenderPrimitive);
+                driver.endRenderPass();
+            });
+
+    return ppDoF.getData().output;
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::opaqueBlit(FrameGraph& fg,
@@ -770,7 +929,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
         FrameGraphId<FrameGraphTexture> output, uint8_t dstLevel,
         bool reinhard, size_t kernelWidth, float sigmaRatio) noexcept {
 
-    const float sigma = (kernelWidth + 1) / sigmaRatio;
+    const float sigma = (kernelWidth + 1.0f) / sigmaRatio;
 
     Handle<HwRenderPrimitive> fullScreenRenderPrimitive = mEngine.getFullScreenRenderPrimitive();
 

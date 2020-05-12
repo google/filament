@@ -12,9 +12,7 @@
 //------------------------------------------------------------------------------
 
 float evaluateSSAO() {
-    // TODO: Don't use gl_FragCoord.xy, use the view bounds
-    vec2 uv = gl_FragCoord.xy * frameUniforms.resolution.zw;
-    return textureLod(light_ssao, uv, 0.0).r;
+    return textureLod(light_ssao, uvToRenderTargetUV(getNormalizedViewportCoord().xy), 0.0).r;
 }
 
 float SpecularAO_Lagarde(float NoV, float visibility, float roughness) {

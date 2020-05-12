@@ -48,10 +48,12 @@ public class Manipulator {
      * LEFT and RIGHT strafe the camera left and right.
      */
     public enum Key {
-        UP,
+        FORWARD,
         LEFT,
-        DOWN,
-        RIGHT
+        BACKWARD,
+        RIGHT,
+        UP,
+        DOWN
     }
 
     public static class Builder {
@@ -392,6 +394,7 @@ public class Manipulator {
      * Keys used to translate the camera in FREE_FLIGHT mode.
      * UP and DOWN dolly the camera forwards and backwards.
      * LEFT and RIGHT strafe the camera left and right.
+     * UP and DOWN boom the camera upwards and downwards.
      */
     public void keyDown(Key key) {
         nKeyDown(mNativeObject, key.ordinal());

@@ -69,6 +69,7 @@ public class View {
     private FogOptions mFogOptions;
     private RenderTarget mRenderTarget;
     private BlendMode mBlendMode;
+    private DepthOfFieldOptions mDepthOfFieldOptions;
 
     /**
      * Generic Quality Level
@@ -309,6 +310,26 @@ public class View {
          */
         public boolean enabled = false;
     }
+
+    /**
+     * Options to control Depth of Field (DoF) effect in the scene
+     *
+     * @see View#setDepthOfFieldOptions
+     */
+    public static class DepthOfFieldOptions {
+
+        /** focus distance in world units */
+        public float focusDistance = 10.0f;
+
+        /** scale factor controlling the amount of blur (values other than 1.0 are not physically correct)*/
+        public float blurScale = 1.0f;
+
+        /** maximum aperture diameter in meters (zero to disable bokeh rotation) */
+        public float maxApertureDiameter = 0.01f;
+
+        /** enable or disable Depth of field effect */
+        public boolean enabled = false;
+    };
 
     /**
      * Structure used to set the color precision for the rendering of a <code>View</code>.
@@ -977,6 +998,32 @@ public class View {
     }
 
 
+    /**
+     * Sets Depth of Field options.
+     *
+     * @param options Options for depth of field effect.
+     * @see #getDepthOfFieldOptions
+     */
+    public void setDepthOfFieldOptions(@NonNull DepthOfFieldOptions options) {
+        mDepthOfFieldOptions = options;
+        nSetDepthOfFieldOptions(getNativeObject(), options.focusDistance, options.blurScale, options.maxApertureDiameter, options.enabled);
+    }
+
+    /**
+     * Gets the Depth of Field options
+     *
+     * @return Depth of Field options currently set.
+     * @see #setDepthOfFieldOptions
+     */
+    @NonNull
+    public DepthOfFieldOptions getDepthOfFieldOptions() {
+        if (mDepthOfFieldOptions == null) {
+            mDepthOfFieldOptions = new DepthOfFieldOptions();
+        }
+        return mDepthOfFieldOptions;
+    }
+
+
     public long getNativeObject() {
         if (mNativeObject == 0) {
             throw new IllegalStateException("Calling method on destroyed View");
@@ -1016,4 +1063,5 @@ public class View {
     private static native void nSetBloomOptions(long nativeView, long dirtNativeObject, float dirtStrength, float strength, int resolution, float anamorphism, int levels, int blendMode, boolean threshold, boolean enabled);
     private static native void nSetFogOptions(long nativeView, float distance, float maximumOpacity, float height, float heightFalloff, float v, float v1, float v2, float density, float inScatteringStart, float inScatteringSize, boolean fogColorFromIbl, boolean enabled);
     private static native void nSetBlendMode(long nativeView, int blendMode);
+    private static native void nSetDepthOfFieldOptions(long nativeView, float focusDistance, float blurScale, float maxApertureDiameter, boolean enabled);
 }

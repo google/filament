@@ -113,7 +113,6 @@ io::sstream& CodeGenerator::generateEpilog(io::sstream& out) const {
 
 io::sstream& CodeGenerator::generateShaderMain(io::sstream& out, ShaderType type) const {
     if (type == ShaderType::VERTEX) {
-        out << SHADERS_SHADOWING_VS_DATA;
         out << SHADERS_MAIN_VS_DATA;
     } else if (type == ShaderType::FRAGMENT) {
         out << SHADERS_MAIN_FS_DATA;
@@ -391,6 +390,7 @@ io::sstream& CodeGenerator::generateMaterialProperty(io::sstream& out,
 
 io::sstream& CodeGenerator::generateCommon(io::sstream& out, ShaderType type) const {
     out << SHADERS_COMMON_MATH_FS_DATA;
+    out << SHADERS_COMMON_SHADOWING_FS_DATA;
     if (type == ShaderType::VERTEX) {
     } else if (type == ShaderType::FRAGMENT) {
         out << SHADERS_COMMON_SHADING_FS_DATA;

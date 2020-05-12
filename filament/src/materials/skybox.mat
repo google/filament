@@ -2,11 +2,11 @@ material {
     name : Skybox,
     parameters : [
         {
-           type : bool,
+           type : int,
            name : showSun
         },
         {
-           type : bool,
+           type : int,
            name : constantColor
         },
         {
@@ -32,13 +32,13 @@ fragment {
     void material(inout MaterialInputs material) {
         prepareMaterial(material);
         vec4 sky;
-        if (materialParams.constantColor) {
+        if (materialParams.constantColor != 0) {
             sky = materialParams.color;
         } else {
             sky = vec4(texture(materialParams_skybox, variable_eyeDirection.xyz).rgb, 1.0);
             sky.rgb *= frameUniforms.iblLuminance;
         }
-        if (materialParams.showSun && frameUniforms.sun.w >= 0.0f) {
+        if (materialParams.showSun != 0 && frameUniforms.sun.w >= 0.0f) {
             vec3 direction = normalize(variable_eyeDirection.xyz);
             // Assume the sun is a sphere
             vec3 sun = frameUniforms.lightColorIntensity.rgb *

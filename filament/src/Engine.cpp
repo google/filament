@@ -347,12 +347,45 @@ void FEngine::flush() {
 }
 
 void FEngine::flushAndWait() {
+
+#if defined(ANDROID)
+
+    // first make sure we've not terminated filament
+    ASSERT_PRECONDITION(!mCommandBufferQueue.isExitRequested(),
+            "calling Engine::flushAndWait() after Engine::shutdown()!");
+
+#endif
+
     // enqueue finish command -- this will stall in the driver until the GPU is done
     getDriverApi().finish();
 
+#if defined(ANDROID)
+
     // then create a fence that will trigger when we're past the finish() above
+    size_t tryCount = 8;
+    FFence* fence = FEngine::createFence(FFence::Type::SOFT);
+    do {
+        FenceStatus status = fence->wait(FFence::Mode::FLUSH,250000000u);
+        // if the fence didn't trigger after 250ms, check that the command queue thread is still
+        // running (otherwise indicating a precondition violation).
+        if (UTILS_UNLIKELY(status == FenceStatus::TIMEOUT_EXPIRED)) {
+            ASSERT_PRECONDITION(!mCommandBufferQueue.isExitRequested(),
+                    "called Engine::shutdown() WHILE in Engine::flushAndWait()!");
+            tryCount--;
+            ASSERT_POSTCONDITION(tryCount, "flushAndWait() failed inexplicably after 2s");
+            // if the thread is still running, maybe we just need to give it more time
+            continue;
+        }
+        break;
+    } while (true);
+    destroy(fence);
+
+#else
+
     FFence::waitAndDestroy(
             FEngine::createFence(FFence::Type::SOFT), FFence::Mode::FLUSH);
+
+#endif
 
     // finally, execute callbacks that might have been scheduled
     getDriver().purge();
@@ -518,8 +551,9 @@ FRenderer* FEngine::createRenderer() noexcept {
     return p;
 }
 
-FMaterialInstance* FEngine::createMaterialInstance(const FMaterial* material) noexcept {
-    FMaterialInstance* p = mHeapAllocator.make<FMaterialInstance>(*this, material);
+FMaterialInstance* FEngine::createMaterialInstance(const FMaterial* material,
+        const char* name) noexcept {
+    FMaterialInstance* p = mHeapAllocator.make<FMaterialInstance>(*this, material, name);
     if (p) {
         auto pos = mMaterialInstances.emplace(material, "MaterialInstance");
         pos.first->second.insert(p);
@@ -625,99 +659,95 @@ void FEngine::cleanupResourceList(ResourceList<T, L>& list) {
 // -----------------------------------------------------------------------------------------------
 
 template<typename T, typename L>
-void FEngine::terminateAndDestroy(const T* ptr, ResourceList<T, L>& list) {
-    if (ptr != nullptr) {
-        if (list.remove(ptr)) {
-            const_cast<T*>(ptr)->terminate(*this);
-            mHeapAllocator.destroy(const_cast<T*>(ptr));
-        } else {
-            // object not found, do nothing and log an error on DEBUG builds.
-#ifndef NDEBUG
-            slog.d << "object "
-                   << CallStack::typeName<T>().c_str()
-                   << " at " << ptr << " doesn't exist!"
-                   << io::endl;
-#endif
-        }
+bool FEngine::terminateAndDestroy(const T* ptr, ResourceList<T, L>& list) {
+    if (ptr == nullptr) return true;
+    bool success = list.remove(ptr);
+    if (ASSERT_PRECONDITION_NON_FATAL(success,
+            "Object %s at %p doesn't exist (double free?)",
+            CallStack::typeName<T>().c_str(), ptr)) {
+        const_cast<T*>(ptr)->terminate(*this);
+        mHeapAllocator.destroy(const_cast<T*>(ptr));
     }
+    return success;
 }
 
 // -----------------------------------------------------------------------------------------------
 
-void FEngine::destroy(const FVertexBuffer* p) {
-    terminateAndDestroy(p, mVertexBuffers);
+bool FEngine::destroy(const FVertexBuffer* p) {
+    return terminateAndDestroy(p, mVertexBuffers);
 }
 
-void FEngine::destroy(const FIndexBuffer* p) {
-    terminateAndDestroy(p, mIndexBuffers);
+bool FEngine::destroy(const FIndexBuffer* p) {
+    return terminateAndDestroy(p, mIndexBuffers);
 }
 
-inline void FEngine::destroy(const FRenderer* p) {
-    terminateAndDestroy(p, mRenderers);
+inline bool FEngine::destroy(const FRenderer* p) {
+    return terminateAndDestroy(p, mRenderers);
 }
 
-inline void FEngine::destroy(const FScene* p) {
-    terminateAndDestroy(p, mScenes);
+inline bool FEngine::destroy(const FScene* p) {
+    return terminateAndDestroy(p, mScenes);
 }
 
-inline void FEngine::destroy(const FSkybox* p) {
-    terminateAndDestroy(p, mSkyboxes);
-}
-
-UTILS_NOINLINE
-void FEngine::destroy(const FTexture* p) {
-    terminateAndDestroy(p, mTextures);
-}
-
-void FEngine::destroy(const FRenderTarget* p) {
-    terminateAndDestroy(p, mRenderTargets);
-}
-
-inline void FEngine::destroy(const FView* p) {
-    terminateAndDestroy(p, mViews);
-}
-
-inline void FEngine::destroy(const FIndirectLight* p) {
-    terminateAndDestroy(p, mIndirectLights);
+inline bool FEngine::destroy(const FSkybox* p) {
+    return terminateAndDestroy(p, mSkyboxes);
 }
 
 UTILS_NOINLINE
-void FEngine::destroy(const FFence* p) {
-    terminateAndDestroy(p, mFences);
+bool FEngine::destroy(const FTexture* p) {
+    return terminateAndDestroy(p, mTextures);
 }
 
-void FEngine::destroy(const FSwapChain* p) {
-    terminateAndDestroy(p, mSwapChains);
+bool FEngine::destroy(const FRenderTarget* p) {
+    return terminateAndDestroy(p, mRenderTargets);
 }
 
-void FEngine::destroy(const FStream* p) {
-    terminateAndDestroy(p, mStreams);
+inline bool FEngine::destroy(const FView* p) {
+    return terminateAndDestroy(p, mViews);
+}
+
+inline bool FEngine::destroy(const FIndirectLight* p) {
+    return terminateAndDestroy(p, mIndirectLights);
+}
+
+UTILS_NOINLINE
+bool FEngine::destroy(const FFence* p) {
+    return terminateAndDestroy(p, mFences);
+}
+
+bool FEngine::destroy(const FSwapChain* p) {
+    return terminateAndDestroy(p, mSwapChains);
+}
+
+bool FEngine::destroy(const FStream* p) {
+    return terminateAndDestroy(p, mStreams);
 }
 
 
-void FEngine::destroy(const FMaterial* ptr) {
-    if (ptr != nullptr) {
-        auto pos = mMaterialInstances.find(ptr);
-        if (pos != mMaterialInstances.cend()) {
-            // ensure we've destroyed all instances before destroying the material
-            if (!ASSERT_PRECONDITION_NON_FATAL(pos->second.empty(),
-                    "destroying material \"%s\" but %u instances still alive",
-                    ptr->getName().c_str(), (*pos).second.size())) {
-                return;
-            }
+bool FEngine::destroy(const FMaterial* ptr) {
+    if (ptr == nullptr) return true;
+    auto pos = mMaterialInstances.find(ptr);
+    if (pos != mMaterialInstances.cend()) {
+        // ensure we've destroyed all instances before destroying the material
+        if (!ASSERT_PRECONDITION_NON_FATAL(pos->second.empty(),
+                "destroying material \"%s\" but %u instances still alive",
+                ptr->getName().c_str(), (*pos).second.size())) {
+            return false;
         }
-        terminateAndDestroy(ptr, mMaterials);
     }
+    return terminateAndDestroy(ptr, mMaterials);
 }
 
-void FEngine::destroy(const FMaterialInstance* ptr) {
-    if (ptr != nullptr) {
-        auto pos = mMaterialInstances.find(ptr->getMaterial());
-        assert(pos != mMaterialInstances.cend());
-        if (pos != mMaterialInstances.cend()) {
-            terminateAndDestroy(ptr, pos->second);
-        }
+bool FEngine::destroy(const FMaterialInstance* ptr) {
+    if (ptr == nullptr) return true;
+    auto pos = mMaterialInstances.find(ptr->getMaterial());
+    assert(pos != mMaterialInstances.cend());
+    if (pos != mMaterialInstances.cend()) {
+        return terminateAndDestroy(ptr, pos->second);
     }
+    // if we don't find this instance's material it might be because it's the default instance
+    // in which case it fine to ignore.
+    return true;
 }
 
 void FEngine::destroy(Entity e) {
@@ -833,60 +863,60 @@ SwapChain* Engine::createSwapChain(uint32_t width, uint32_t height, uint64_t fla
     return upcast(this)->createSwapChain(width, height, flags);
 }
 
-void Engine::destroy(const VertexBuffer* p) {
-    upcast(this)->destroy(upcast(p));
+bool Engine::destroy(const VertexBuffer* p) {
+    return upcast(this)->destroy(upcast(p));
 }
 
-void Engine::destroy(const IndexBuffer* p) {
-    upcast(this)->destroy(upcast(p));
+bool Engine::destroy(const IndexBuffer* p) {
+    return upcast(this)->destroy(upcast(p));
 }
 
-void Engine::destroy(const IndirectLight* p) {
-    upcast(this)->destroy(upcast(p));
+bool Engine::destroy(const IndirectLight* p) {
+    return upcast(this)->destroy(upcast(p));
 }
 
-void Engine::destroy(const Material* p) {
-    upcast(this)->destroy(upcast(p));
+bool Engine::destroy(const Material* p) {
+    return upcast(this)->destroy(upcast(p));
 }
 
-void Engine::destroy(const MaterialInstance* p) {
-    upcast(this)->destroy(upcast(p));
+bool Engine::destroy(const MaterialInstance* p) {
+    return upcast(this)->destroy(upcast(p));
 }
 
-void Engine::destroy(const Renderer* p) {
-    upcast(this)->destroy(upcast(p));
+bool Engine::destroy(const Renderer* p) {
+    return upcast(this)->destroy(upcast(p));
 }
 
-void Engine::destroy(const View* p) {
-    upcast(this)->destroy(upcast(p));
+bool Engine::destroy(const View* p) {
+    return upcast(this)->destroy(upcast(p));
 }
 
-void Engine::destroy(const Scene* p) {
-    upcast(this)->destroy(upcast(p));
+bool Engine::destroy(const Scene* p) {
+    return upcast(this)->destroy(upcast(p));
 }
 
-void Engine::destroy(const Skybox* p) {
-    upcast(this)->destroy(upcast(p));
+bool Engine::destroy(const Skybox* p) {
+    return upcast(this)->destroy(upcast(p));
 }
 
-void Engine::destroy(const Stream* p) {
-    upcast(this)->destroy(upcast(p));
+bool Engine::destroy(const Stream* p) {
+    return upcast(this)->destroy(upcast(p));
 }
 
-void Engine::destroy(const Texture* p) {
-    upcast(this)->destroy(upcast(p));
+bool Engine::destroy(const Texture* p) {
+    return upcast(this)->destroy(upcast(p));
 }
 
-void Engine::destroy(const RenderTarget* p) {
-    upcast(this)->destroy(upcast(p));
+bool Engine::destroy(const RenderTarget* p) {
+    return upcast(this)->destroy(upcast(p));
 }
 
-void Engine::destroy(const Fence* p) {
-    upcast(this)->destroy(upcast(p));
+bool Engine::destroy(const Fence* p) {
+    return upcast(this)->destroy(upcast(p));
 }
 
-void Engine::destroy(const SwapChain* p) {
-    upcast(this)->destroy(upcast(p));
+bool Engine::destroy(const SwapChain* p) {
+    return upcast(this)->destroy(upcast(p));
 }
 
 void Engine::destroy(Entity e) {

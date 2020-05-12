@@ -66,8 +66,7 @@ Driver* PlatformVkLinux::createDriver(void* const sharedContext) noexcept {
             sizeof(requestedExtensions) / sizeof(requestedExtensions[0]));
 }
 
-void* PlatformVkLinux::createVkSurfaceKHR(void* nativeWindow, void* instance,
-        uint32_t* width, uint32_t* height) noexcept {
+void* PlatformVkLinux::createVkSurfaceKHR(void* nativeWindow, void* instance) noexcept {
     ASSERT_POSTCONDITION(vkCreateXlibSurfaceKHR, "Unable to load vkCreateXlibSurfaceKHR function.");
     VkSurfaceKHR surface = nullptr;
     VkXlibSurfaceCreateInfoKHR createInfo = {};
@@ -76,14 +75,17 @@ void* PlatformVkLinux::createVkSurfaceKHR(void* nativeWindow, void* instance,
     createInfo.window = (Window) nativeWindow;
     VkResult result = vkCreateXlibSurfaceKHR((VkInstance) instance, &createInfo, VKALLOC, &surface);
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateXlibSurfaceKHR error.");
+    return surface;
+}
+
+void PlatformVkLinux::getClientExtent(void* window, uint32_t* width, uint32_t* height) noexcept {
     Window root;
     int x = 0;
     int y = 0;
     unsigned int border_width = 0;
     unsigned int depth = 0;
-    g_x11.getGeometry(mDisplay, createInfo.window, &root, &x, &y, width, height, &border_width,
+    g_x11.getGeometry(mDisplay, (Window) window, &root, &x, &y, width, height, &border_width,
             &depth);
-    return surface;
-}
+ }
 
 } // namespace filament

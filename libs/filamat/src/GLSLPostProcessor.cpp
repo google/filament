@@ -421,7 +421,8 @@ void GLSLPostProcessor::registerSizePasses(Optimizer& optimizer) const {
             .RegisterPass(CreateCopyPropagateArraysPass())
             .RegisterPass(CreateVectorDCEPass())
             .RegisterPass(CreateDeadInsertElimPass())
-            .RegisterPass(CreateEliminateDeadMembersPass())
+            // this breaks UBO layout
+            //.RegisterPass(CreateEliminateDeadMembersPass())
             .RegisterPass(CreateLocalSingleStoreElimPass())
             .RegisterPass(CreateBlockMergePass())
             .RegisterPass(CreateLocalMultiStoreElimPass())

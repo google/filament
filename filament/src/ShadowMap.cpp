@@ -80,16 +80,9 @@ void ShadowMap::render(DriverApi& driver, Handle<HwRenderTarget> rt,
     params.viewport = viewport;
 
     FCamera const& camera = getCamera();
-    details::CameraInfo cameraInfo = {
-            .projection         = mat4f{ camera.getProjectionMatrix() },
-            .cullingProjection  = mat4f{ camera.getCullingProjectionMatrix() },
-            .model              = camera.getModelMatrix(),
-            .view               = camera.getViewMatrix(),
-            .zn                 = camera.getNear(),
-            .zf                 = camera.getCullingFar(),
-    };
-    pass.setCamera(cameraInfo);
+    details::CameraInfo cameraInfo(camera);
 
+    pass.setCamera(cameraInfo);
     pass.setGeometry(scene.getRenderableData(), range, scene.getRenderableUBO());
 
     view.updatePrimitivesLod(engine, cameraInfo, scene.getRenderableData(), range);
@@ -105,7 +98,8 @@ void ShadowMap::render(DriverApi& driver, Handle<HwRenderTarget> rt,
 }
 
 void ShadowMap::update(const FScene::LightSoa& lightData, size_t index, FScene const* scene,
-        details::CameraInfo const& camera, uint8_t visibleLayers, ShadowMapLayout layout) noexcept {
+        details::CameraInfo const& camera, uint8_t visibleLayers, ShadowMapLayout layout,
+        CascadeParameters cascadeParams) noexcept {
     // this is the hard part here, find a good frustum for our camera
 
     auto& lcm = mEngine.getLightManager();
@@ -151,15 +145,13 @@ void ShadowMap::update(const FScene::LightSoa& lightData, size_t index, FScene c
     else            params.options.shadowNearHint = dzn * dz - camera.zn;
     if (dzf > 0)    dzf =-std::max(0.0f, camera.zf - params.options.shadowFarHint) / dz;
     else            params.options.shadowFarHint = dzf * dz + camera.zf;
-
-
     using Type = FLightManager::Type;
     switch (lcm.getType(li)) {
         case Type::SUN:
         case Type::DIRECTIONAL:
             computeShadowCameraDirectional(
                     lightData.elementAt<FScene::DIRECTION>(index), scene, cameraInfo, params,
-                    visibleLayers);
+                    visibleLayers, cascadeParams);
             break;
         case Type::FOCUSED_SPOT:
         case Type::SPOT:
@@ -175,7 +167,7 @@ void ShadowMap::update(const FScene::LightSoa& lightData, size_t index, FScene c
 void ShadowMap::computeShadowCameraDirectional(
         float3 const& dir, FScene const* scene, CameraInfo const& camera,
         FLightManager::ShadowParams const& params,
-        uint8_t visibleLayers) noexcept {
+        uint8_t visibleLayers, CascadeParameters cascadeParams) noexcept {
 
     /*
      * Compute the light's model matrix
@@ -190,8 +182,8 @@ void ShadowMap::computeShadowCameraDirectional(
     const mat4f M = mat4f::lookAt(lightPosition, lightPosition + dir, float3{ 0, 1, 0 });
     const mat4f Mv = FCamera::rigidTransformInverse(M);
 
-
     // Compute scene bounds in world space, as well as the light-space near/far planes
+    // TODO: this is recalculated for each cascade, but doesn't need to be.
     float2 nearFar = { std::numeric_limits<float>::lowest(), std::numeric_limits<float>::max() };
     Aabb wsShadowCastersVolume, wsShadowReceiversVolume;
     visitScene(*scene, visibleLayers,
@@ -216,12 +208,13 @@ void ShadowMap::computeShadowCameraDirectional(
     // view frustum vertices in world-space
     float3 wsViewFrustumVertices[8];
     computeFrustumCorners(wsViewFrustumVertices,
-            camera.model * FCamera::inverseProjection(camera.projection));
+            camera.model * FCamera::inverseProjection(camera.projection),
+            cascadeParams.csNear, cascadeParams.csFar);
 
     // compute the intersection of the shadow receivers volume with the view volume
     // in world space. This returns a set of points on the convex-hull of the intersection.
     size_t vertexCount = intersectFrustumWithBox(mWsClippedShadowReceiverVolume,
-            camera.frustum, wsViewFrustumVertices, wsShadowReceiversVolume);
+            wsViewFrustumVertices, wsShadowReceiversVolume);
 
     /*
      *  compute scene zmax (i.e. Near plane) and zmin (i.e. Far plane) in light space.
@@ -349,7 +342,7 @@ void ShadowMap::computeShadowCameraDirectional(
 
         Aabb bounds;
         if (params.options.stable && viewVolumeBoundingSphere.w > 0) {
-            bounds = compute2DBounds(MpMv, viewVolumeBoundingSphere);
+            bounds = compute2DBounds(Mv, viewVolumeBoundingSphere);
         } else {
             bounds = compute2DBounds(WLMpMv, mWsClippedShadowReceiverVolume.data(), vertexCount);
         }
@@ -670,11 +663,10 @@ Aabb ShadowMap::compute2DBounds(const mat4f& lightView,
 }
 
 Aabb ShadowMap::compute2DBounds(const mat4f& lightView, float4 const& sphere) noexcept {
-    // this assumes a uniform scale + rotation + translate only
-    // TODO: we need to handle perspective projections
+    // this assumes a rigid body transform
     float4 s;
     s.xyz = (lightView * float4{sphere.xyz, 1.0f}).xyz;
-    s.w = std::abs(sphere.w * lightView[0][0]);
+    s.w = sphere.w;
     return Aabb{s.xyz - s.w, s.xyz + s.w};
 }
 
@@ -702,7 +694,7 @@ void ShadowMap::intersectWithShadowCasters(Aabb& UTILS_RESTRICT lightFrustum,
     // transforming vertices that are "outside" the frustum, and that's forbidden.
     FrustumBoxIntersection wsClippedShadowCasterVolumeVertices;
     size_t vertexCount = intersectFrustumWithBox(wsClippedShadowCasterVolumeVertices,
-            Frustum(projection), wsLightFrustumCorners, wsShadowCastersVolume);
+            wsLightFrustumCorners, wsShadowCastersVolume);
 
     // compute shadow-caster bounds in light space
     Aabb box = compute2DBounds(lightView, wsClippedShadowCasterVolumeVertices.data(), vertexCount);
@@ -713,19 +705,19 @@ void ShadowMap::intersectWithShadowCasters(Aabb& UTILS_RESTRICT lightFrustum,
 }
 
 void ShadowMap::computeFrustumCorners(float3* UTILS_RESTRICT out,
-        const mat4f& UTILS_RESTRICT projectionViewInverse) noexcept {
+        const mat4f& UTILS_RESTRICT projectionViewInverse, float csNear, float csFar) noexcept {
 
     // compute view frustum in world space (from its NDC)
     // matrix to convert: ndc -> camera -> world
-    constexpr float3 csViewFrustumCorners[8] = {
-            { -1, -1,  1 },
-            {  1, -1,  1 },
-            { -1,  1,  1 },
-            {  1,  1,  1 },
-            { -1, -1, -1 },
-            {  1, -1, -1 },
-            { -1,  1, -1 },
-            {  1,  1, -1 },
+    float3 csViewFrustumCorners[8] = {
+            { -1, -1,  csFar },
+            {  1, -1,  csFar },
+            { -1,  1,  csFar },
+            {  1,  1,  csFar },
+            { -1, -1,  csNear },
+            {  1, -1,  csNear },
+            { -1,  1,  csNear },
+            {  1,  1,  csNear },
     };
     for (float3 c : csViewFrustumCorners) {
         *out++ = mat4f::project(projectionViewInverse, c);
@@ -752,7 +744,7 @@ void ShadowMap::snapLightFrustum(float2& s, float2& o,
 
 size_t ShadowMap::intersectFrustumWithBox(
         FrustumBoxIntersection& UTILS_RESTRICT outVertices,
-        const Frustum& UTILS_RESTRICT frustum, const float3* UTILS_RESTRICT wsFrustumCorners,
+        const float3* UTILS_RESTRICT wsFrustumCorners,
         Aabb const& UTILS_RESTRICT wsBox)
 {
     size_t vertexCount = 0;
@@ -788,6 +780,7 @@ size_t ShadowMap::intersectFrustumWithBox(
 
     // at this point if we have 8 vertices, we can skip the rest
     if (vertexCount < 8) {
+        Frustum frustum(wsFrustumCorners);
         float4 const* wsFrustumPlanes = frustum.getNormalizedPlanes();
 
         // b) add the scene's vertices that are known to be inside the view frustum
@@ -838,11 +831,11 @@ size_t ShadowMap::intersectFrustumWithBox(
         if (someFrustumVerticesAreInTheBox || vertexCount < 8) {
             // c) intersect scene's volume edges with frustum planes
             vertexCount = intersectFrustum(outVertices.data(), vertexCount,
-                    wsSceneReceiversCorners.vertices, wsFrustumCorners, frustum);
+                    wsSceneReceiversCorners.vertices, wsFrustumCorners);
 
             // d) intersect frustum edges with the scene's volume planes
             vertexCount = intersectFrustum(outVertices.data(), vertexCount,
-                    wsFrustumCorners, wsSceneReceiversCorners.vertices, frustum);
+                    wsFrustumCorners, wsSceneReceiversCorners.vertices);
         }
     }
 
@@ -859,8 +852,7 @@ size_t ShadowMap::intersectFrustum(
         float3* UTILS_RESTRICT out,
         size_t vertexCount,
         float3 const* segmentsVertices,
-        float3 const* quadsVertices,
-        Frustum const& frustum) noexcept {
+        float3 const* quadsVertices) noexcept {
 
     #pragma nounroll
     for (const Segment segment : sBoxSegments) {

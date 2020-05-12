@@ -987,12 +987,19 @@ class_<Material>("Material")
     .function("getDefaultInstance",
             select_overload<MaterialInstance*(void)>(&Material::getDefaultInstance),
             allow_raw_pointers())
-    .function("createInstance", &Material::createInstance, allow_raw_pointers())
+    .function("createInstance", EMBIND_LAMBDA(MaterialInstance*, (Material* self), {
+        return self->createInstance(); }), allow_raw_pointers())
+    .function("createNamedInstance", EMBIND_LAMBDA(MaterialInstance*,
+            (Material* self, std::string name), {
+        return self->createInstance(name.c_str()); }), allow_raw_pointers())
     .function("getName", EMBIND_LAMBDA(std::string, (Material* self), {
         return std::string(self->getName());
     }), allow_raw_pointers());
 
 class_<MaterialInstance>("MaterialInstance")
+    .function("getName", EMBIND_LAMBDA(std::string, (MaterialInstance* self), {
+        return std::string(self->getName());
+    }), allow_raw_pointers())
     .function("setBoolParameter", EMBIND_LAMBDA(void,
             (MaterialInstance* self, std::string name, bool value), {
         self->setParameter(name.c_str(), value); }), allow_raw_pointers())

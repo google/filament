@@ -56,6 +56,11 @@ if (CCACHE_PROGRAM)
 endif()
 
 # ==================================================================================================
+# Support Vim and Visual Studio Code by generating compile_commands.json
+# ==================================================================================================
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# ==================================================================================================
 # OS specific
 # ==================================================================================================
 if (UNIX AND NOT APPLE AND NOT ANDROID AND NOT WEBGL)
@@ -447,11 +452,11 @@ function(get_resgen_vars ARCHIVE_DIR ARCHIVE_NAME)
     # the equivalent of .incbin, so on Windows we'll just tell resgen to output a C file.
     if (WEBGL OR WIN32 OR ANDROID_ON_WINDOWS)
         set(RESGEN_OUTPUTS "${OUTPUTS};${ARCHIVE_DIR}/${ARCHIVE_NAME}.c" PARENT_SCOPE)
-        set(RESGEN_FLAGS -cx ${ARCHIVE_DIR} -p ${ARCHIVE_NAME} PARENT_SCOPE)
+        set(RESGEN_FLAGS -qcx ${ARCHIVE_DIR} -p ${ARCHIVE_NAME} PARENT_SCOPE)
         set(RESGEN_SOURCE "${ARCHIVE_DIR}/${ARCHIVE_NAME}.c" PARENT_SCOPE)
     else()
         set(RESGEN_OUTPUTS "${OUTPUTS}" PARENT_SCOPE)
-        set(RESGEN_FLAGS -x ${ARCHIVE_DIR} -p ${ARCHIVE_NAME} PARENT_SCOPE)
+        set(RESGEN_FLAGS -qx ${ARCHIVE_DIR} -p ${ARCHIVE_NAME} PARENT_SCOPE)
         set(RESGEN_SOURCE "${ARCHIVE_DIR}/${ARCHIVE_NAME}${ASM_SUFFIX}.S" PARENT_SCOPE)
         set(RESGEN_SOURCE_FLAGS "-I${ARCHIVE_DIR} ${ASM_ARCH_FLAG}" PARENT_SCOPE)
     endif()

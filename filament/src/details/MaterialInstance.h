@@ -38,7 +38,7 @@ class FMaterial;
 
 class FMaterialInstance : public MaterialInstance {
 public:
-    FMaterialInstance(FEngine& engine, FMaterial const* material);
+    FMaterialInstance(FEngine& engine, FMaterial const* material, const char* name);
     FMaterialInstance(const FMaterialInstance& rhs) = delete;
     FMaterialInstance& operator=(const FMaterialInstance& rhs) = delete;
 
@@ -132,6 +132,8 @@ public:
 
     void setDepthCulling(bool enable) noexcept;
 
+    const char* getName() const noexcept;
+
 private:
     friend class FMaterial;
     friend class MaterialInstance;
@@ -162,6 +164,8 @@ private:
             (uint32_t)std::numeric_limits<int32_t>::max(),
             (uint32_t)std::numeric_limits<int32_t>::max()
     };
+
+    utils::CString mName;
 };
 
 FILAMENT_UPCAST(MaterialInstance)

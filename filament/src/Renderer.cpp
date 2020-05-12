@@ -35,7 +35,7 @@
 #include "fg/FrameGraphPassResources.h"
 #include "fg/ResourceAllocator.h"
 
-
+#include <utils/compiler.h>
 #include <utils/Panic.h>
 #include <utils/Systrace.h>
 #include <utils/vector.h>
@@ -204,14 +204,17 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     uint8_t msaa = view.getSampleCount();
     float2 scale = view.updateScale(mFrameInfoManager.getLastFrameInfo());
     const View::QualityLevel upscalingQuality = view.getDynamicResolutionOptions().quality;
+    auto bloomOptions = view.getBloomOptions();
+    auto dofOptions = view.getDepthOfFieldOptions();
     auto aoOptions = view.getAmbientOcclusionOptions();
     if (!hasPostProcess) {
-        // dynamic scaling and FXAA are part of the post-process phase and can't happen if
-        // it's disabled.
-        fxaa = false;
-        dithering = false;
-        scale = 1.0f;
+        // disable all effects that are part of post-processing
         msaa = 1;
+        dofOptions.enabled = false;
+        bloomOptions.enabled = false;
+        dithering = false;
+        fxaa = false;
+        scale = 1.0f;
     }
 
     const bool scaled = any(notEqual(scale, float2(1.0f)));
@@ -382,9 +385,12 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             TextureFormat::RGBA8 : getLdrFormat(translucent); // e.g. RGB8 or RGBA8
 
     if (hasPostProcess) {
+        if (dofOptions.enabled) {
+            input = ppm.dof(fg, input, dofOptions, cameraInfo);
+        }
         if (toneMapping) {
             input = ppm.toneMapping(fg, input, ldrFormat, translucent, fxaa, scale,
-                    view.getBloomOptions(), dithering);
+                    bloomOptions, dithering);
         }
         if (fxaa) {
             input = ppm.fxaa(fg, input, ldrFormat, !toneMapping || translucent);
@@ -633,13 +639,20 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
 
                 // set samplers and uniforms
                 PostProcessManager& ppm = getEngine().getPostProcessManager();
-                view.prepareSSAO(data.ssao.isValid() ? resources.getTexture(data.ssao) : ppm.getOneTexture());
+                view.prepareSSAO(data.ssao.isValid() ?
+                        resources.getTexture(data.ssao) : ppm.getOneTexture());
+
+                assert(data.structure.isValid());
                 if (data.structure.isValid()) {
-                    view.prepareStructure(resources.getTexture(data.structure));
+                    const auto& structure = resources.getTexture(data.structure);
+                    view.prepareStructure(structure ? structure : ppm.getOneTexture());
                 }
+
+                // TODO: check what getTexture() returns
                 if (data.ssr.isValid()) {
                     view.prepareSSR(resources.getTexture(data.ssr), config.refractionLodOffset);
                 }
+
                 view.prepareViewport(static_cast<filament::Viewport&>(out.params.viewport));
                 view.commitUniforms(driver);
 
@@ -789,6 +802,7 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
 
             // Compute the deadline. This deadline is when the GPU must be finished.
             // The deadline has 1ms backed in it on Android.
+            UTILS_UNUSED_IN_RELEASE
             steady_clock::time_point deadline = desiredPresentationTime - presentationDeadline;
 
             // one important thing is to make sure that the deadline is comfortably later than

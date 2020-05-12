@@ -22,6 +22,7 @@ import androidx.annotation.Size;
 
 public class MaterialInstance {
     private Material mMaterial;
+    private String mName;
     private long mNativeObject;
     private long mNativeMaterial;
 
@@ -53,9 +54,10 @@ public class MaterialInstance {
         mNativeObject = nativeMaterialInstance;
     }
 
-    MaterialInstance(long nativeMaterial, long nativeMaterialInstance) {
-        mNativeMaterial = nativeMaterial;
+    // public so that the gltfio Java layer can use this
+    public MaterialInstance(long nativeMaterialInstance) {
         mNativeObject = nativeMaterialInstance;
+        mNativeMaterial = nGetMaterial(mNativeObject);
     }
 
     /** @return the {@link Material} associated with this instance */
@@ -65,6 +67,15 @@ public class MaterialInstance {
             mMaterial = new Material(mNativeMaterial);
         }
         return mMaterial;
+    }
+
+    /** @return the name associated with this instance */
+    @NonNull
+    public String getName() {
+        if (mName == null) {
+            mName = nGetName(getNativeObject());
+        }
+        return mName;
     }
 
     /**
@@ -536,4 +547,7 @@ public class MaterialInstance {
     private static native void nSetColorWrite(long nativeMaterialInstance, boolean enable);
     private static native void nSetDepthWrite(long nativeMaterialInstance, boolean enable);
     private static native void nSetDepthCulling(long nativeMaterialInstance, boolean enable);
+
+    private static native String nGetName(long nativeMaterialInstance);
+    private static native long nGetMaterial(long nativeMaterialInstance);
 }
