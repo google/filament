@@ -281,14 +281,6 @@ target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 # Dependencies
 # ==================================================================================================
 
-if (ANDROID)
-    target_link_libraries(${TARGET} PUBLIC GLESv3 EGL android)
-endif()
-
-if (APPLE AND NOT IOS)
-    target_link_libraries(${TARGET} PRIVATE "-framework Cocoa")
-endif()
-
 target_link_libraries(${TARGET} PUBLIC backend)
 target_link_libraries(${TARGET} PUBLIC math)
 target_link_libraries(${TARGET} PUBLIC utils)
@@ -304,19 +296,6 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug" AND NOT IOS AND NOT ANDROID AND NOT WEBGL)
     add_definitions(-DFILAMENT_ENABLE_MATDBG=1)
 else()
     add_definitions(-DFILAMENT_ENABLE_MATDBG=0)
-endif()
-
-# Android, iOS, and WebGL do not use bluegl.
-if(NOT IOS AND NOT ANDROID AND NOT WEBGL)
-    target_link_libraries(${TARGET} PRIVATE bluegl)
-endif()
-
-if (FILAMENT_SUPPORTS_VULKAN)
-    target_link_libraries(${TARGET} PUBLIC bluevk vkmemalloc)
-endif()
-
-if (FILAMENT_SUPPORTS_METAL)
-    target_link_libraries(${TARGET} PUBLIC "-framework Metal -framework CoreVideo")
 endif()
 
 if (LINUX)
