@@ -77,6 +77,7 @@ import java.nio.Buffer;
  */
 public class AssetLoader {
     private long mNativeObject;
+    private Engine mEngine;
 
     /**
      * Constructs an <code>AssetLoader </code>that can be used to create and destroy instances of
@@ -97,6 +98,8 @@ public class AssetLoader {
         if (mNativeObject == 0) {
             throw new IllegalStateException("Unable to parse glTF asset.");
         }
+
+        mEngine = engine;
     }
 
     /**
@@ -113,7 +116,7 @@ public class AssetLoader {
     @Nullable
     public FilamentAsset createAssetFromBinary(@NonNull Buffer buffer) {
         long nativeAsset = nCreateAssetFromBinary(mNativeObject, buffer, buffer.remaining());
-        return nativeAsset != 0 ? new FilamentAsset(nativeAsset) : null;
+        return nativeAsset != 0 ? new FilamentAsset(mEngine, nativeAsset) : null;
     }
 
     /**
@@ -122,7 +125,7 @@ public class AssetLoader {
     @Nullable
     public FilamentAsset createAssetFromJson(@NonNull Buffer buffer) {
         long nativeAsset = nCreateAssetFromJson(mNativeObject, buffer, buffer.remaining());
-        return nativeAsset != 0 ? new FilamentAsset(nativeAsset) : null;
+        return nativeAsset != 0 ? new FilamentAsset(mEngine, nativeAsset) : null;
     }
 
     /**

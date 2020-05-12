@@ -49,13 +49,17 @@ public class MaterialInstance {
         MAT4
     }
 
+    public MaterialInstance(Engine engine, long nativeMaterialInstance) {
+        mNativeObject = nativeMaterialInstance;
+        mNativeMaterial = nGetMaterial(mNativeObject);
+    }
+
     MaterialInstance(@NonNull Material material, long nativeMaterialInstance) {
         mMaterial = material;
         mNativeObject = nativeMaterialInstance;
     }
 
-    // public so that the gltfio Java layer can use this
-    public MaterialInstance(long nativeMaterialInstance) {
+    MaterialInstance(long nativeMaterialInstance) {
         mNativeObject = nativeMaterialInstance;
         mNativeMaterial = nGetMaterial(mNativeObject);
     }

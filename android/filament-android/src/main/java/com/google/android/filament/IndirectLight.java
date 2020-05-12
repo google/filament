@@ -86,7 +86,11 @@ import com.google.android.filament.proguard.UsedByReflection;
 public class IndirectLight {
     long mNativeObject;
 
-    public IndirectLight(long indirectLight) {
+    public IndirectLight(Engine engine, long indirectLight) {
+        mNativeObject = indirectLight;
+    }
+
+    IndirectLight(long indirectLight) {
         mNativeObject = indirectLight;
     }
 

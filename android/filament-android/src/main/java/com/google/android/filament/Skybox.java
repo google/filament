@@ -52,10 +52,13 @@ import com.google.android.filament.proguard.UsedByReflection;
 public class Skybox {
     private long mNativeObject;
 
-    public Skybox(long nativeSkybox) {
+    public Skybox(Engine engine, long nativeSkybox) {
         mNativeObject = nativeSkybox;
     }
 
+    Skybox(long nativeSkybox) {
+        mNativeObject = nativeSkybox;
+    }
 
     /**
      * Use <code>Builder</code> to construct a <code>Skybox</code> object instance.
