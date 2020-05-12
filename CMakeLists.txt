@@ -573,7 +573,7 @@ if (NOT ANDROID AND NOT WEBGL AND NOT IOS)
 endif()
 
 if (FILAMENT_USE_SWIFTSHADER)
-    add_subdirectory(${EXTERNAL}/swiftshader)
+    add_subdirectory(${EXTERNAL}/swiftshader/tnt)
 endif()
 
 # Generate exported executables for cross-compiled builds (Android, WebGL, and iOS)
