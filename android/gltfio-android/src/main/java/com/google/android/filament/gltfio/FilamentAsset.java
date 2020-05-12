@@ -20,6 +20,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.google.android.filament.Box;
+import com.google.android.filament.Engine;
 import com.google.android.filament.Entity;
 import com.google.android.filament.MaterialInstance;
 
@@ -46,8 +47,10 @@ import com.google.android.filament.MaterialInstance;
 public class FilamentAsset {
     private long mNativeObject;
     private Animator mAnimator;
+    private Engine mEngine;
 
-    FilamentAsset(long nativeObject) {
+    FilamentAsset(Engine engine, long nativeObject) {
+        mEngine = engine;
         mNativeObject = nativeObject;
         mAnimator = null;
     }
@@ -106,7 +109,7 @@ public class FilamentAsset {
         long[] natives = new long[count];
         nGetMaterialInstances(mNativeObject, natives);
         for (int i = 0; i < count; i++) {
-            result[i] = new MaterialInstance(natives[i]);
+            result[i] = new MaterialInstance(mEngine, natives[i]);
         }
         return result;
     }
