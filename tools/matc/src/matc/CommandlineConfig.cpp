@@ -72,7 +72,7 @@ static void usage(char* name) {
             "       Specify output format: blob (default) or header\n\n"
             "   --debug, -d\n"
             "       Generate extra data for debugging\n\n"
-            "   --print\n"
+            "   --print, -t\n"
             "       Print generated shaders for debugging\n\n"
     );
     const std::string from("MATC");
@@ -116,7 +116,7 @@ CommandlineConfig::CommandlineConfig(int argc, char** argv) : Config(), mArgc(ar
 }
 
 bool CommandlineConfig::parse() {
-    static constexpr const char* OPTSTR = "hlxo:f:dm:a:p:OSEr:vV:g";
+    static constexpr const char* OPTSTR = "hlxo:f:dm:a:p:OSEr:vV:gt";
     static const struct option OPTIONS[] = {
             { "help",                    no_argument, nullptr, 'h' },
             { "license",                 no_argument, nullptr, 'l' },
