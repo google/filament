@@ -28,7 +28,7 @@
 #endif
 
 #if FILAMENT_UTILS_TRACK_ENTITIES
-#include <utils/Log.h>
+#include <utils/ostream.h>
 #include <vector>
 #endif
 
