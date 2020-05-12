@@ -47,8 +47,10 @@ ShadowMap::ShadowMap(FEngine& engine) noexcept :
         mEngine(engine),
         mClipSpaceFlipped(engine.getBackend() == Backend::VULKAN),
         mTextureSpaceFlipped(engine.getBackend() == Backend::METAL) {
-    mCamera = mEngine.createCamera(engine.getEntityManager().create());
-    mDebugCamera = mEngine.createCamera(engine.getEntityManager().create());
+    Entity entities[2];
+    engine.getEntityManager().create(2, entities);
+    mCamera = mEngine.createCamera(entities[0]);
+    mDebugCamera = mEngine.createCamera((entities[1]));
     FDebugRegistry& debugRegistry = engine.getDebugRegistry();
     debugRegistry.registerProperty("d.shadowmap.focus_shadowcasters", &engine.debug.shadowmap.focus_shadowcasters);
     debugRegistry.registerProperty("d.shadowmap.far_uses_shadowcasters", &engine.debug.shadowmap.far_uses_shadowcasters);
@@ -61,8 +63,12 @@ ShadowMap::ShadowMap(FEngine& engine) noexcept :
 }
 
 ShadowMap::~ShadowMap() {
-    mEngine.destroy(mCamera->getEntity());
-    mEngine.destroy(mDebugCamera->getEntity());
+    FEngine& engine = mEngine;
+    Entity entities[] = { mCamera->getEntity(), mDebugCamera->getEntity() };
+    for (Entity e : entities) {
+        engine.destroyCameraComponent(e);
+    }
+    engine.getEntityManager().destroy(sizeof(entities) / sizeof(Entity), entities);
 }
 
 void ShadowMap::render(DriverApi& driver, Handle<HwRenderTarget> rt,

@@ -397,6 +397,8 @@ public:
     /**
      * helper for creating an Entity and Camera component in one call
      *
+     * @deprecated use createCamera(Entity) instead
+     *
      * @return A camera component
      */
     Camera* createCamera() noexcept;
@@ -404,8 +406,7 @@ public:
     /**
      * helper for destroying the Camera component and its Entity in one call
      *
-     * @param camera Camera component to destroy. The associated entity as well as all its
-     *               components managed by filament are destroyed.
+     * @param camera Camera component to destroy. The associated entity is also destroyed.
      * @deprecated use destroyCameraComponent(Entity) instead
      */
     void destroy(const Camera* camera);
