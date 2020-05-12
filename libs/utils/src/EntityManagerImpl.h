@@ -22,8 +22,13 @@
 #include <utils/compiler.h>
 #include <utils/Entity.h>
 #include <utils/Mutex.h>
+#include <utils/CallStack.h>
 
 #include <tsl/robin_set.h>
+
+#if FILAMENT_UTILS_TRACK_ENTITIES
+#include <tsl/robin_map.h>
+#endif
 
 #include <deque>
 #include <mutex> // for std::lock_guard
@@ -73,6 +78,9 @@ public:
                 index = currentIndex++;
             }
             entities[i] = Entity{ makeIdentity(gens[index], index) };
+#if FILAMENT_UTILS_TRACK_ENTITIES
+            mDebugActiveEntities.emplace(entities[i], CallStack::unwind(5));
+#endif
         }
         mCurrentIndex = currentIndex;
     }
@@ -103,6 +111,10 @@ public:
                 // true a little longer than expected in some other threads.
                 // We do need a memory fence though, it is provided by the mFreeListLock.unlock() below.
                 gens[index]++;
+
+#if FILAMENT_UTILS_TRACK_ENTITIES
+                mDebugActiveEntities.erase(entities[i]);
+#endif
             }
         }
         lock.unlock();
@@ -135,6 +147,25 @@ public:
         return result; // the c++ standard guarantees a move
     }
 
+#if FILAMENT_UTILS_TRACK_ENTITIES
+    std::vector<Entity> getActiveEntities() const {
+        std::vector<Entity> result(mDebugActiveEntities.size());
+        auto p = result.begin();
+        for (auto i : mDebugActiveEntities) {
+            *p++ = i.first;
+        }
+        return result;
+    }
+
+    void dumpActiveEntities(utils::io::ostream& out) const {
+        for (auto i : mDebugActiveEntities) {
+            out << "*** Entity " << i.first.getId() << " was allocated at:\n";
+            out << i.second;
+            out << io::endl;
+        }
+    }
+#endif
+
 private:
     uint32_t mCurrentIndex = 1;
 
@@ -144,6 +175,10 @@ private:
 
     mutable Mutex mListenerLock;
     tsl::robin_set<Listener*> mListeners;
+
+#if FILAMENT_UTILS_TRACK_ENTITIES
+    tsl::robin_map<Entity, CallStack> mDebugActiveEntities;
+#endif
 };
 
 } // namespace utils
