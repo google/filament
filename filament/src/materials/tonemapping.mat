@@ -85,7 +85,12 @@ fragment {
     void postProcess(inout PostProcessInputs postProcess) {
         postProcess.color = resolve();
         if (materialParams.dithering > 0) {
-            postProcess.color = dither(postProcess.color);
+            vec4 dithered = dither(postProcess.color);
+#if POST_PROCESS_OPAQUE
+            postProcess.color.rgb = dithered.rgb;
+#else
+            postProcess.color = dithered;
+#endif
         }
     }
 
