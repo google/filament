@@ -694,17 +694,12 @@ void FilamentApp::Window::fixupMouseCoordinatesForHdpi(ssize_t& x, ssize_t& y) c
 }
 
 void FilamentApp::Window::resize() {
-    mFilamentApp->mEngine->destroy(mSwapChain);
     void* nativeWindow = ::getNativeWindow(mWindow);
-    void* nativeSwapChain = nativeWindow;
 
 #if defined(__APPLE__)
 
-    void* metalLayer = nullptr;
     if (mBackend == filament::Engine::Backend::METAL) {
-        metalLayer = resizeMetalLayer(nativeWindow);
-        // The swap chain on Metal is a CAMetalLayer.
-        nativeSwapChain = metalLayer;
+        resizeMetalLayer(nativeWindow);
     }
 
 #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
@@ -715,7 +710,6 @@ void FilamentApp::Window::resize() {
 
 #endif
 
-    mSwapChain = mFilamentApp->mEngine->createSwapChain(nativeSwapChain);
     configureCamerasForWindow();
 }
 

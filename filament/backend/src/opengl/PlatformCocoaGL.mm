@@ -38,6 +38,8 @@ struct PlatformCocoaGLImpl {
     NSOpenGLContext* mGLContext = nullptr;
     NSView* mCurrentView = nullptr;
     std::vector<NSView*> mHeadlessSwapChains;
+    NSRect mPreviousBounds = {};
+    void updateOpenGLContext(NSView *nsView, bool resetView);
 };
 
 PlatformCocoaGL::PlatformCocoaGL()
@@ -116,33 +118,18 @@ void PlatformCocoaGL::makeCurrent(Platform::SwapChain* drawSwapChain,
     ASSERT_PRECONDITION_NON_FATAL(drawSwapChain == readSwapChain,
             "ContextManagerCocoa does not support using distinct draw/read swap chains.");
     NSView *nsView = (__bridge NSView*) drawSwapChain;
+
+    NSRect currentBounds = [nsView convertRectToBacking:nsView.bounds];
+
+    // Check if the view has been swapped out or resized.
     if (pImpl->mCurrentView != nsView) {
         pImpl->mCurrentView = nsView;
-
-        // NOTE: This is not documented well (if at all) but NSOpenGLContext requires "setView"
-        // and "update" to be called from the UI thread. This became a hard requirement with the
-        // arrival of macOS 10.15 (Catalina). If we were to call these methods from the GL thread,
-        // we would see EXC_BAD_INSTRUCTION.
-
-        // NOTE: "setView" requires "clearDrawable" called first when setting
-        // to the same view. Not calling "clearDrawable" results in resizing
-        // problems, most evident when using GLFW.
-
-        // Create a copy of the current GL context pointer for the closure.
-        NSOpenGLContext* glContext = pImpl->mGLContext;
-
-        #if UTILS_HAS_THREADING
-        dispatch_sync(dispatch_get_main_queue(), ^(void) {
-            [glContext clearDrawable];
-            [glContext setView:nsView];
-            [glContext update];
-        });
-        #else
-            [glContext clearDrawable];
-            [glContext setView:nsView];
-            [glContext update];
-        #endif
+        pImpl->updateOpenGLContext(nsView, true);
+    } else if (!CGRectEqualToRect(currentBounds, pImpl->mPreviousBounds)) {
+        pImpl->updateOpenGLContext(nsView, false);
     }
+
+    pImpl->mPreviousBounds = currentBounds;
 }
 
 void PlatformCocoaGL::commit(Platform::SwapChain* swapChain) noexcept {
@@ -157,6 +144,29 @@ bool PlatformCocoaGL::pumpEvents() noexcept {
     return true;
 }
 
+void PlatformCocoaGLImpl::updateOpenGLContext(NSView *nsView, bool resetView) {
+    NSOpenGLContext* glContext = mGLContext;
+
+    // NOTE: This is not documented well (if at all) but NSOpenGLContext requires "setView" and
+    // "update" to be called from the UI thread. This became a hard requirement with the arrival
+    // of macOS 10.15 (Catalina). If we were to call these methods from the GL thread, we would
+    // see EXC_BAD_INSTRUCTION.
+    #if UTILS_HAS_THREADING
+    dispatch_sync(dispatch_get_main_queue(), ^(void) {
+        if (resetView) {
+            [glContext clearDrawable];
+            [glContext setView:nsView];
+        }
+        [glContext update];
+    });
+    #else
+        if (resetView) {
+            [glContext clearDrawable];
+            [glContext setView:nsView];
+        }
+        [glContext update];
+    #endif
+}
 
 } // namespace filament
 
