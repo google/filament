@@ -32,6 +32,7 @@ struct Config {
     filament::Engine::Backend backend = filament::Engine::Backend::OPENGL;
     filament::camutils::Mode cameraMode = filament::camutils::Mode::ORBIT;
     bool resizeable = true;
+    bool headless = false;
 };
 
 #endif // TNT_FILAMENT_SAMPLE_CONFIG_H

@@ -505,36 +505,46 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
     if (config.resizeable) {
         windowFlags |= SDL_WINDOW_RESIZABLE;
     }
-    mWindow = SDL_CreateWindow(title.c_str(), x, y, (int) w, (int) h, windowFlags);
 
-    // Create the Engine after the window in case this happens to be a single-threaded platform.
-    // For single-threaded platforms, we need to ensure that Filament's OpenGL context is current,
-    // rather than the one created by SDL.
-    mFilamentApp->mEngine = Engine::create(config.backend);
     mBackend = config.backend;
 
-    void* nativeWindow = ::getNativeWindow(mWindow);
-    void* nativeSwapChain = nativeWindow;
+    if (config.headless) {
+        mWindow = nullptr;
+        mFilamentApp->mEngine = Engine::create(config.backend);
+        mSwapChain = mFilamentApp->mEngine->createSwapChain((uint32_t) w, (uint32_t) h);
+        mWidth = w;
+        mHeight = h;
+    } else {
+        mWindow = SDL_CreateWindow(title.c_str(), x, y, (int) w, (int) h, windowFlags);
+
+        // Create the Engine after the window in case this happens to be a single-threaded platform.
+        // For single-threaded platforms, we need to ensure that Filament's OpenGL context is
+        // current, rather than the one created by SDL.
+        mFilamentApp->mEngine = Engine::create(config.backend);
+
+        void* nativeWindow = ::getNativeWindow(mWindow);
+        void* nativeSwapChain = nativeWindow;
 
 #if defined(__APPLE__)
 
-    void* metalLayer = nullptr;
-    if (config.backend == filament::Engine::Backend::METAL) {
-        metalLayer = setUpMetalLayer(nativeWindow);
-        // The swap chain on Metal is a CAMetalLayer.
-        nativeSwapChain = metalLayer;
-    }
+        void* metalLayer = nullptr;
+        if (config.backend == filament::Engine::Backend::METAL) {
+            metalLayer = setUpMetalLayer(nativeWindow);
+            // The swap chain on Metal is a CAMetalLayer.
+            nativeSwapChain = metalLayer;
+        }
 
 #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
-    if (config.backend == filament::Engine::Backend::VULKAN) {
-        // We request a Metal layer for rendering via MoltenVK.
-        setUpMetalLayer(nativeWindow);
+        if (config.backend == filament::Engine::Backend::VULKAN) {
+            // We request a Metal layer for rendering via MoltenVK.
+            setUpMetalLayer(nativeWindow);
+        }
+#endif
+
+#endif
+
+        mSwapChain = mFilamentApp->mEngine->createSwapChain(nativeSwapChain);
     }
-#endif
-
-#endif
-
-    mSwapChain = mFilamentApp->mEngine->createSwapChain(nativeSwapChain);
     mRenderer = mFilamentApp->mEngine->createRenderer();
 
     // create cameras
@@ -714,18 +724,24 @@ void FilamentApp::Window::resize() {
 }
 
 void FilamentApp::Window::configureCamerasForWindow() {
-    // Determine the current size of the window in physical pixels.
-    uint32_t width, height;
-    SDL_GL_GetDrawableSize(mWindow, (int*) &width, (int*) &height);
-    mWidth = (size_t) width;
-    mHeight = (size_t) height;
+    float dpiScaleX = 1.0f;
+    float dpiScaleY = 1.0f;
 
-    // Compute the "virtual pixels to physical pixels" scale factor that the
-    // the platform uses for UI elements.
-    int virtualWidth, virtualHeight;
-    SDL_GetWindowSize(mWindow, &virtualWidth, &virtualHeight);
-    float dpiScaleX = (float) width / virtualWidth;
-    float dpiScaleY = (float) height / virtualHeight;
+    // If the app is not headless, query the window for its physical & virtual sizes.
+    if (mWindow) {
+        uint32_t width, height;
+        SDL_GL_GetDrawableSize(mWindow, (int*) &width, (int*) &height);
+        mWidth = (size_t) width;
+        mHeight = (size_t) height;
+
+        int virtualWidth, virtualHeight;
+        SDL_GetWindowSize(mWindow, &virtualWidth, &virtualHeight);
+        dpiScaleX = (float) width / virtualWidth;
+        dpiScaleY = (float) height / virtualHeight;
+    }
+
+    const uint32_t width = mWidth;
+    const uint32_t height = mHeight;
 
     const float3 at(0, 0, -4);
     const double ratio = double(height) / double(width);

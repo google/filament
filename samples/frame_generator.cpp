@@ -445,6 +445,7 @@ int main(int argc, char* argv[]) {
     }
 
     g_config.title = "Frame Generator";
+    g_config.headless = true;
     FilamentApp& filamentApp = FilamentApp::get();
     filamentApp.run(g_config,
             setup, cleanup, FilamentApp::ImGuiCallback(), render, postRender, 512, 512);
