@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include <utils/EntityManager.h>
+
 #include "EntityManagerImpl.h"
 
 namespace utils {
@@ -27,6 +29,8 @@ EntityManager::EntityManager()
 EntityManager::~EntityManager() {
     delete [] mGens;
 }
+
+EntityManager::Listener::~Listener() noexcept = default;
 
 EntityManager& EntityManager::get() noexcept {
     // note: we leak the EntityManager because it's more important that it survives everything else
@@ -50,5 +54,16 @@ void EntityManager::registerListener(EntityManager::Listener* l) noexcept {
 void EntityManager::unregisterListener(EntityManager::Listener* l) noexcept {
     static_cast<EntityManagerImpl *>(this)->unregisterListener(l);
 }
+
+#if FILAMENT_UTILS_TRACK_ENTITIES
+std::vector<Entity> EntityManager::getActiveEntities() const {
+    return static_cast<EntityManagerImpl const *>(this)->getActiveEntities();
+}
+
+void EntityManager::dumpActiveEntities(utils::io::ostream& out) const {
+    static_cast<EntityManagerImpl const *>(this)->dumpActiveEntities(out);
+}
+
+#endif
 
 } // namespace utils
