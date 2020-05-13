@@ -23,6 +23,8 @@
     #if defined (FILAMENT_DRIVER_SUPPORTS_VULKAN)
         #include "vulkan/PlatformVkAndroid.h"
     #endif
+#elif defined(SWIFTSHADER)
+    #include "opengl/PlatformEGL.h"
 #elif defined(IOS)
     #ifndef FILAMENT_USE_EXTERNAL_GLES3
         #include "opengl/PlatformCocoaTouchGL.h"
@@ -110,7 +112,7 @@ DefaultPlatform* DefaultPlatform::create(Backend* backend) noexcept {
     }
     #if defined(FILAMENT_USE_EXTERNAL_GLES3)
         return nullptr;
-    #elif defined(EGL) && !defined(ANDROID)
+    #elif defined(SWIFTSHADER)
         return new PlatformEGL();
     #elif defined(ANDROID)
         return new PlatformEGLAndroid();

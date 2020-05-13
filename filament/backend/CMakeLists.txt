@@ -83,6 +83,8 @@ if (NOT FILAMENT_USE_EXTERNAL_GLES3)
         list(APPEND SRCS src/android/ExternalTextureManagerAndroid.cpp)
         list(APPEND SRCS src/android/VirtualMachineEnv.cpp)
         list(APPEND SRCS src/opengl/PlatformEGLAndroid.cpp)
+    elseif (FILAMENT_USE_SWIFTSHADER)
+        # no extra sources for SwiftShader, PlatformEGL is enough
     elseif (IOS)
         list(APPEND SRCS src/opengl/PlatformCocoaTouchGL.mm)
         list(APPEND SRCS src/opengl/CocoaTouchExternalImage.mm)
@@ -196,6 +198,10 @@ target_include_directories(${TARGET}_headers INTERFACE ${PUBLIC_HDR_DIR})
 
 if (ANDROID)
     target_link_libraries(${TARGET} PUBLIC GLESv3 EGL android)
+endif()
+
+if (FILAMENT_USE_SWIFTSHADER)
+    target_link_libraries(${TARGET} PRIVATE swiftshader PUBLIC ${SWIFTSHADER_EGL} ${SWIFTSHADER_GLES})
 endif()
 
 if (APPLE AND NOT IOS)
@@ -337,7 +343,7 @@ if (APPLE)
     endif()
 endif()
 
-if (APPLE AND NOT IOS)
+if (APPLE AND NOT IOS AND NOT FILAMENT_USE_SWIFTSHADER)
     add_executable(backend_test_mac test/mac_runner.mm)
     target_link_libraries(backend_test_mac PRIVATE "-framework Metal -framework AppKit -framework QuartzCore")
     # Because each test case is a separate file, the -force_load flag is necessary to prevent the
