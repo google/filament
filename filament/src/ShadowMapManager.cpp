@@ -39,6 +39,8 @@ ShadowMapManager::ShadowMapManager(FEngine& engine) : mTextureState(0, 0) {
     FDebugRegistry& debugRegistry = engine.getDebugRegistry();
     debugRegistry.registerProperty("d.shadowmap.visualize_cascades",
             &engine.debug.shadowmap.visualize_cascades);
+    debugRegistry.registerProperty("d.shadowmap.tightly_bound_scene",
+            &engine.debug.shadowmap.tightly_bound_scene);
 }
 
 ShadowMapManager::~ShadowMapManager() {
@@ -203,7 +205,13 @@ bool ShadowMapManager::updateCascadeShadowMaps(FEngine& engine, FView& view,
     const uint16_t textureSize = mTextureState.size;
     auto& lcm = engine.getLightManager();
 
+    ShadowMap::CascadeParameters cascadeParams;
+
     if (mCascadeShadowMaps.size() > 0) {
+        // Compute scene-dependent values shared across all cascades.
+        ShadowMap::computeSceneCascadeParams(lightData, 0, scene, viewingCameraInfo, visibleLayers,
+                cascadeParams);
+
         // Even if we have more than one cascade, we cull directional shadow casters against the
         // entire camera frustum, as if we only had a single cascade.
         ShadowMap& map = *mCascadeShadowMaps[0].getShadowMap();
@@ -215,7 +223,7 @@ bool ShadowMapManager::updateCascadeShadowMaps(FEngine& engine, FView& view,
                 .shadowDimension = textureDimension - 2
         };
         map.update(lightData, 0, scene, viewingCameraInfo, visibleLayers,
-                layout, {});
+                layout, cascadeParams);
         Frustum const& frustum = map.getCamera().getFrustum();
         FView::cullRenderables(engine.getJobSystem(), renderableData, frustum,
                 VISIBLE_DIR_SHADOW_CASTER_BIT);
@@ -227,12 +235,20 @@ bool ShadowMapManager::updateCascadeShadowMaps(FEngine& engine, FView& view,
                 float3{0, normalBias * texelSizeWorldSpace, 0});
     }
 
+    // Adjust the near and far planes to tighly bound the scene.
+    float near = -viewingCameraInfo.zn;
+    float far = -viewingCameraInfo.zf;
+    if (engine.debug.shadowmap.tightly_bound_scene) {
+        near = std::min(near, cascadeParams.vsNearFar.x);
+        far = std::max(far, cascadeParams.vsNearFar.y);
+    }
+
     // We divide the camera frustum into N cascades. This gives us N + 1 split positions.
     // The first split position is the near plane; the last split position is the far plane.
     const CascadeSplits::Params p {
         .proj = viewingCameraInfo.cullingProjection,
-        .near = -viewingCameraInfo.zn,
-        .far = -viewingCameraInfo.zf,
+        .near = near,
+        .far = far,
         .cascadeCount = mCascadeShadowMaps.size()
     };
     if (p != mCascadeSplitParams) {
@@ -274,10 +290,7 @@ bool ShadowMapManager::updateCascadeShadowMaps(FEngine& engine, FView& view,
                 .textureDimension = textureDimension,
                 .shadowDimension = textureDimension - 2
         };
-        ShadowMap::CascadeParameters cascadeParams {
-            .csNear = csSplitPosition[i],
-            .csFar = csSplitPosition[i + 1]
-        };
+        cascadeParams.csNearFar = { csSplitPosition[i], csSplitPosition[i + 1] };
         shadowMap.update(lightData, 0, scene, viewingCameraInfo, visibleLayers, layout, cascadeParams);
         if (shadowMap.hasVisibleShadows()) {
             entry.setHasVisibleShadows(true);
