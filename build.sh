@@ -765,6 +765,9 @@ while getopts ":hacfijmp:q:uvsw" opt; do
             VULKAN_ANDROID_OPTION="-DFILAMENT_SUPPORTS_VULKAN=ON"
             VULKAN_ANDROID_GRADLE_OPTION="-Pfilament_supports_vulkan"
             echo "Enabling support for Vulkan in the core Filament library."
+            echo "To use Vulkan, pass Engine.Backend.VULKAN into Engine.create()."
+            echo ""
+            echo "If using Android Studio, add ${VULKAN_ANDROID_GRADLE_OPTION} to Preferences > Build > Compiler."
             echo ""
             ;;
         s)

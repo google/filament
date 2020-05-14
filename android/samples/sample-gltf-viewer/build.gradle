@@ -24,6 +24,16 @@ clean.doFirst {
 
 android {
     compileSdkVersion versions.compileSdk
+
+    // The following lines enable validation layers with the Vulkan backend by copying
+    // the appropriate files from the NDK to the device. To trap validation errors, be
+    // sure to also use a debug build of Filament.
+    if (project.hasProperty("filament_supports_vulkan")) {
+        sourceSets.main.jniLibs {
+            srcDirs = ["${android.ndkDirectory}/sources/third_party/vulkan/src/build-android/jniLibs"]
+        }
+    }
+
     defaultConfig {
         applicationId "com.google.android.filament.gltf"
         minSdkVersion 19
