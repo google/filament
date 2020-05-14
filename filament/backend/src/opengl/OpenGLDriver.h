@@ -52,6 +52,13 @@ class OpenGLDriver final : public backend::DriverBase {
 public:
     static backend::Driver* create(backend::OpenGLPlatform* platform, void* sharedGLContext) noexcept;
 
+    class DebugMarker {
+        OpenGLDriver& driver;
+    public:
+        DebugMarker(OpenGLDriver& driver, const char* string) noexcept;
+        ~DebugMarker() noexcept;
+    };
+
     // OpenGLDriver specific fields
     struct GLBuffer {
         GLuint id = 0;
@@ -114,13 +121,6 @@ public:
         } gl;
 
         void* platformPImpl = nullptr;
-    };
-
-    class DebugMarker {
-        OpenGLDriver& driver;
-    public:
-        DebugMarker(OpenGLDriver& driver, const char* string) noexcept;
-        ~DebugMarker() noexcept;
     };
 
     struct GLTimerQuery : public backend::HwTimerQuery {
@@ -194,20 +194,19 @@ public:
         backend::TargetBufferFlags targets = {};
     };
 
-struct GLSync : public backend::HwSync {
-    using HwSync::HwSync;
-    struct State {
-        std::atomic<GLenum> status{ GL_TIMEOUT_EXPIRED };
+    struct GLSync : public backend::HwSync {
+        using HwSync::HwSync;
+        struct State {
+            std::atomic<GLenum> status{ GL_TIMEOUT_EXPIRED };
+        };
+        struct {
+            GLsync sync;
+        } gl;
+        std::shared_ptr<State> result{ std::make_shared<GLSync::State>() };
     };
-    struct {
-        GLsync sync;
-    } gl;
-    std::shared_ptr<State> result{ std::make_shared<GLSync::State>() };
-};
 
     OpenGLDriver(OpenGLDriver const&) = delete;
     OpenGLDriver& operator=(OpenGLDriver const&) = delete;
-
 
 private:
     OpenGLContext mContext;
