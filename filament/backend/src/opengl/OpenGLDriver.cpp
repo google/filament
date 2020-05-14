@@ -2581,27 +2581,33 @@ void OpenGLDriver::insertEventMarker(char const* string, size_t len) {
 void OpenGLDriver::pushGroupMarker(char const* string,  size_t len) {
 #ifdef GL_EXT_debug_marker
     auto& gl = mContext;
-    if (gl.ext.EXT_debug_marker) {
+    if (UTILS_LIKELY(gl.ext.EXT_debug_marker)) {
         glPushGroupMarkerEXT(GLsizei(len ? len : strlen(string)), string);
-    }
+    } else
 #endif
-}
-
-void OpenGLDriver::startCapture(int) {
-
-}
-
-void OpenGLDriver::stopCapture(int) {
-
+    {
+        SYSTRACE_CONTEXT();
+        SYSTRACE_NAME_BEGIN(string);
+    }
 }
 
 void OpenGLDriver::popGroupMarker(int) {
 #ifdef GL_EXT_debug_marker
     auto& gl = mContext;
-    if (gl.ext.EXT_debug_marker) {
+    if (UTILS_LIKELY(gl.ext.EXT_debug_marker)) {
         glPopGroupMarkerEXT();
-    }
+    } else
 #endif
+    {
+        SYSTRACE_CONTEXT();
+        SYSTRACE_NAME_END();
+    }
+}
+
+void OpenGLDriver::startCapture(int) {
+}
+
+void OpenGLDriver::stopCapture(int) {
 }
 
 // ------------------------------------------------------------------------------------------------

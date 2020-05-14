@@ -99,8 +99,8 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             // CSM information
             .add("cascades",                1, UniformInterfaceBlock::Type::UINT)
 
-            // bring size to 1 KiB
-            .add("padding2",                12, UniformInterfaceBlock::Type::FLOAT4)
+                    // bring PerViewUib to 2 KiB
+            .add("padding2", 63, UniformInterfaceBlock::Type::FLOAT4)
             .build();
     return uib;
 }

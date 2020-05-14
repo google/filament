@@ -45,8 +45,8 @@ id<MTLTexture> acquireDrawable(MetalContext* context) {
         // texture.
         MTLTextureDescriptor* textureDescriptor = [MTLTextureDescriptor new];
         textureDescriptor.pixelFormat = MTLPixelFormatBGRA8Unorm;
-        textureDescriptor.width = context->currentSurface->surfaceWidth;
-        textureDescriptor.height = context->currentSurface->surfaceHeight;
+        textureDescriptor.width = context->currentSurface->getSurfaceWidth();
+        textureDescriptor.height = context->currentSurface->getSurfaceHeight();
         // Specify MTLTextureUsageShaderRead so the headless surface can be blitted from.
         textureDescriptor.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
 #if defined(IOS)
@@ -58,7 +58,7 @@ id<MTLTexture> acquireDrawable(MetalContext* context) {
         return context->headlessDrawable;
     }
 
-    context->currentDrawable = [context->currentSurface->layer nextDrawable];
+    context->currentDrawable = [context->currentSurface->getLayer() nextDrawable];
 
     if (context->frameFinishedCallback) {
         id<CAMetalDrawable> drawable = context->currentDrawable;
@@ -81,8 +81,8 @@ id<MTLTexture> acquireDrawable(MetalContext* context) {
 id<MTLTexture> acquireDepthTexture(MetalContext* context) {
     if (context->currentDepthTexture) {
         // If the surface size has changed, we'll need to allocate a new depth texture.
-        if (context->currentDepthTexture.width != context->currentSurface->surfaceWidth ||
-            context->currentDepthTexture.height != context->currentSurface->surfaceHeight) {
+        if (context->currentDepthTexture.width != context->currentSurface->getSurfaceWidth() ||
+            context->currentDepthTexture.height != context->currentSurface->getSurfaceHeight()) {
             context->currentDepthTexture = nil;
         } else {
             return context->currentDepthTexture;
@@ -97,8 +97,8 @@ id<MTLTexture> acquireDepthTexture(MetalContext* context) {
             MTLPixelFormatDepth24Unorm_Stencil8 : MTLPixelFormatDepth32Float;
 #endif
 
-    const NSUInteger width = context->currentSurface->surfaceWidth;
-    const NSUInteger height = context->currentSurface->surfaceHeight;
+    const NSUInteger width = context->currentSurface->getSurfaceWidth();
+    const NSUInteger height = context->currentSurface->getSurfaceHeight();
     MTLTextureDescriptor* descriptor =
             [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:depthFormat
                                                                width:width

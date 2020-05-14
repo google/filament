@@ -10,18 +10,18 @@
 #define DITHERING_TRIANGLE_NOISE_RGB   4
 
 #if defined(TARGET_MOBILE)
-    #define DITHERING_OPERATOR         DITHERING_INTERLEAVED_NOISE
+    #define DITHERING_OPERATOR         DITHERING_TRIANGLE_NOISE
 #else
-    #define DITHERING_OPERATOR         DITHERING_VLACHOS
+    #define DITHERING_OPERATOR         DITHERING_TRIANGLE_NOISE
 #endif
 
 //------------------------------------------------------------------------------
 // Noise
 //------------------------------------------------------------------------------
 
+// n must be normalized in [0..1] (e.g. texture coordinates)
 float triangleNoise(highp vec2 n) {
     // triangle noise, in [-1.0..1.0[ range
-    n += vec2(0.07 * fract(frameUniforms.time));
     n  = fract(n * vec2(5.3987, 5.4421));
     n += dot(n.yx, n.xy + vec2(21.5351, 14.3137));
 
@@ -30,7 +30,8 @@ float triangleNoise(highp vec2 n) {
     return fract(xy * 95.4307) + fract(xy * 75.04961) - 1.0;
 }
 
-float interleavedGradientNoise(const highp vec2 n) {
+// n must not be normalize (e.g. window coordinates)
+float interleavedGradientNoise(highp vec2 n) {
     return fract(52.982919 * fract(dot(vec2(0.06711, 0.00584), n)));
 }
 
@@ -40,37 +41,55 @@ float interleavedGradientNoise(const highp vec2 n) {
 
 vec4 Dither_InterleavedGradientNoise(vec4 rgba) {
     // Jimenez 2014, "Next Generation Post-Processing in Call of Duty"
+    highp vec2 uv = gl_FragCoord.xy;
+    uv += frameUniforms.time;
 
     // The noise variable must be highp to workaround Adreno bug #1096.
-    highp float noise = interleavedGradientNoise(gl_FragCoord.xy + frameUniforms.time);
+    highp float noise = interleavedGradientNoise(uv);
 
-    // remap from [0..1[ to [-1..1[
-    noise = (noise * 2.0) - 1.0;
-    return vec4(rgba.rgb + noise / 255.0, rgba.a);
-}
+    // remap from [0..1[ to [-0.5..0.5[
+    noise -= 0.5;
 
-vec4 Dither_Vlachos(vec4 rgba) {
-    // Vlachos 2016, "Advanced VR Rendering"
-    highp vec3 noise = vec3(dot(vec2(171.0, 231.0), gl_FragCoord.xy + frameUniforms.time));
-    noise = fract(noise / vec3(103.0, 71.0, 97.0));
-    // remap from [0..1[ to [-1..1[
-    noise = (noise * 2.0) - 1.0;
-    return vec4(rgba.rgb + (noise / 255.0), rgba.a);
+    return rgba + vec4(noise / 255.0);
 }
 
 vec4 Dither_TriangleNoise(vec4 rgba) {
     // Gjøl 2016, "Banding in Games: A Noisy Rant"
-    return rgba + triangleNoise(gl_FragCoord.xy * frameUniforms.resolution.zw) / 255.0;
+    highp vec2 uv = gl_FragCoord.xy * frameUniforms.resolution.zw;
+    uv += vec2(0.07 * fract(frameUniforms.time));
+
+    // The noise variable must be highp to workaround Adreno bug #1096.
+    highp float noise = triangleNoise(uv);
+
+    // noise is in [-1..1[
+
+    return rgba + vec4(noise / 255.0);
+}
+
+vec4 Dither_Vlachos(vec4 rgba) {
+    // Vlachos 2016, "Advanced VR Rendering"
+    float noise = dot(vec2(171.0, 231.0), gl_FragCoord.xy + frameUniforms.time);
+    vec3 noiseRGB = fract(vec3(noise) / vec3(103.0, 71.0, 97.0));
+
+    // remap from [0..1[ to [-0.5..0.5[
+    noiseRGB -= 0.5;
+
+    return vec4(rgba.rgb + (noiseRGB / 255.0), rgba.a);
 }
 
 vec4 Dither_TriangleNoiseRGB(vec4 rgba) {
     // Gjøl 2016, "Banding in Games: A Noisy Rant"
-    vec2 uv = gl_FragCoord.xy * frameUniforms.resolution.zw;
-    vec3 dither = vec3(
+    highp vec2 uv = gl_FragCoord.xy * frameUniforms.resolution.zw;
+    uv += vec2(0.07 * fract(frameUniforms.time));
+
+    vec3 noiseRGB = vec3(
             triangleNoise(uv),
             triangleNoise(uv + 0.1337),
-            triangleNoise(uv + 0.3141)) / 255.0;
-    return vec4(rgba.rgb + dither, rgba.a + dither.x);
+            triangleNoise(uv + 0.3141));
+
+    // noise is in [-1..1[
+
+    return rgba + noiseRGB.xyzx / 255.0;
 }
 
 //------------------------------------------------------------------------------
@@ -78,7 +97,7 @@ vec4 Dither_TriangleNoiseRGB(vec4 rgba) {
 //------------------------------------------------------------------------------
 
 /**
- * Dithers the specified RGB color based on the current time and fragment
+ * Dithers the specified RGBA color based on the current time and fragment
  * coordinates the input must be in the final color space (including OECF).
  * This dithering function assumes we are dithering to an 8-bit target.
  * This function dithers the alpha channel assuming premultiplied output

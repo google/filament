@@ -66,6 +66,12 @@
 // SYSTRACE_CALL is an SYSTRACE_NAME that uses the current function name.
 #define SYSTRACE_CALL() SYSTRACE_NAME(__FUNCTION__)
 
+#define SYSTRACE_NAME_BEGIN(name) \
+        ___tracer.traceBegin(SYSTRACE_TAG, name)
+
+#define SYSTRACE_NAME_END() \
+        ___tracer.traceEnd(SYSTRACE_TAG)
+
 
 /**
  * Trace the beginning of an asynchronous event. Unlike ATRACE_BEGIN/ATRACE_END
@@ -143,9 +149,6 @@ public:
         }
     }
 
-private:
-    friend class ScopedTrace;
-
     inline void traceBegin(uint32_t tag, const char* name) noexcept {
         if (tag && UTILS_UNLIKELY(mIsTracingEnabled)) {
             begin_body(mMarkerFd, mPid, name);
@@ -158,6 +161,9 @@ private:
             write(mMarkerFd, &END_TAG, 1);
         }
     }
+
+private:
+    friend class ScopedTrace;
 
     static inline void init() noexcept {
         if (UTILS_UNLIKELY(!std::atomic_load_explicit(&sIsTracingReady, std::memory_order_acquire))) {
@@ -226,6 +232,8 @@ private:
 #define SYSTRACE_DISABLE()
 #define SYSTRACE_CONTEXT()
 #define SYSTRACE_NAME(name)
+#define SYSTRACE_NAME_BEGIN(name)
+#define SYSTRACE_NAME_END()
 #define SYSTRACE_CALL()
 #define SYSTRACE_ASYNC_BEGIN(name, cookie)
 #define SYSTRACE_ASYNC_END(name, cookie)

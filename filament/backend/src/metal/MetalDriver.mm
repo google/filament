@@ -725,7 +725,7 @@ void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     // Flip the viewport, because Metal's screen space is vertically flipped that of Filament's.
     NSInteger renderTargetHeight =
             mContext->currentRenderTarget->isDefaultRenderTarget() ?
-            mContext->currentSurface->surfaceHeight : mContext->currentRenderTarget->height;
+            mContext->currentSurface->getSurfaceHeight() : mContext->currentRenderTarget->height;
     MTLViewport metalViewport {
             .originX = static_cast<double>(params.viewport.left),
             .originY = renderTargetHeight - static_cast<double>(params.viewport.bottom) -

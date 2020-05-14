@@ -50,13 +50,10 @@ static inline MTLTextureUsage getMetalTextureUsage(TextureUsage usage) {
 MetalSwapChain::MetalSwapChain(id<MTLDevice> device, CAMetalLayer* nativeWindow)
         : layer(nativeWindow) {
     layer.device = device;
-    CGSize size = layer.drawableSize;
-    surfaceHeight = (NSUInteger) (size.height);
-    surfaceWidth = (NSUInteger) (size.width);
 }
 
-MetalSwapChain::MetalSwapChain(int32_t width, int32_t height) : surfaceWidth(width),
-        surfaceHeight(height) { }
+MetalSwapChain::MetalSwapChain(int32_t width, int32_t height) : headlessWidth(width),
+        headlessHeight(height) { }
 
 MetalVertexBuffer::MetalVertexBuffer(MetalContext& context, uint8_t bufferCount,
             uint8_t attributeCount, uint32_t vertexCount, AttributeArray const& attributes)
