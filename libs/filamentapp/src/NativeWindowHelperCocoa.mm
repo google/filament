@@ -54,7 +54,9 @@ void* setUpMetalLayer(void* nativeView) {
 
 void* resizeMetalLayer(void* nativeView) {
     NSView* view = (NSView*) nativeView;
-    CAMetalLayer* metalLayer = (CAMetalLayer*)view.layer;
-    metalLayer.drawableSize = [view convertSizeToBacking:view.bounds.size];
+    CAMetalLayer* metalLayer = (CAMetalLayer*) view.layer;
+    CGSize viewSize = view.bounds.size;
+    NSSize newDrawableSize = [view convertSizeToBacking:view.bounds.size];
+    metalLayer.drawableSize = newDrawableSize;
     return metalLayer;
 }
