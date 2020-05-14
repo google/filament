@@ -31,11 +31,11 @@ namespace metal {
 class MetalBlitter;
 class MetalBufferPool;
 class MetalRenderTarget;
+class MetalSwapChain;
 class TimerQueryInterface;
 struct MetalUniformBuffer;
 struct MetalIndexBuffer;
 struct MetalSamplerGroup;
-struct MetalSwapChain;
 struct MetalVertexBuffer;
 
 struct MetalContext {

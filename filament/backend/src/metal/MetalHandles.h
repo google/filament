@@ -41,17 +41,36 @@ namespace filament {
 namespace backend {
 namespace metal {
 
-struct MetalSwapChain : public HwSwapChain {
+class MetalSwapChain : public HwSwapChain {
+public:
+
     MetalSwapChain(id<MTLDevice> device, CAMetalLayer* nativeWindow);
 
     // Instantiate a headless SwapChain.
     MetalSwapChain(int32_t width, int32_t height);
 
-    bool isHeadless() { return layer == nullptr; }
+    bool isHeadless() const { return layer == nullptr; }
+    CAMetalLayer* getLayer() const { return layer; }
 
+    NSUInteger getSurfaceWidth() const {
+        if (isHeadless()) {
+            return headlessWidth;
+        }
+        return (NSUInteger) layer.drawableSize.width;
+    }
+
+    NSUInteger getSurfaceHeight() const {
+        if (isHeadless()) {
+            return headlessHeight;
+        }
+        return (NSUInteger) layer.drawableSize.height;
+    }
+
+private:
+
+    NSUInteger headlessWidth;
+    NSUInteger headlessHeight;
     CAMetalLayer* layer = nullptr;
-    NSUInteger surfaceWidth = 0;
-    NSUInteger surfaceHeight = 0;
 };
 
 struct MetalVertexBuffer : public HwVertexBuffer {
