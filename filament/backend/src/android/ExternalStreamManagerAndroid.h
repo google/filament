@@ -33,20 +33,25 @@ namespace filament {
 
 class ExternalStreamManagerAndroid {
 public:
-    using EGLStream = backend::Platform::Stream;
+    using Stream = backend::Platform::Stream;
 
     ExternalStreamManagerAndroid() noexcept;
     static ExternalStreamManagerAndroid& get() noexcept;
 
-    EGLStream* acquire(jobject surfaceTexture) noexcept;
-    void release(EGLStream* stream) noexcept;
-    void attach(EGLStream* stream, intptr_t tname) noexcept;
-    void detach(EGLStream* stream) noexcept;
-    void updateTexImage(EGLStream* stream, int64_t* timestamp) noexcept;
+    Stream* acquire(jobject surfaceTexture) noexcept;
+    void release(Stream* stream) noexcept;
+    void attach(Stream* stream, intptr_t tname) noexcept;
+    void detach(Stream* stream) noexcept;
+    void updateTexImage(Stream* stream, int64_t* timestamp) noexcept;
 
 private:
     VirtualMachineEnv& mVm;
     JNIEnv* mJniEnv = nullptr;
+
+    struct EGLStream : public Stream {
+        jobject             jSurfaceTexture = nullptr;
+        ASurfaceTexture*    nSurfaceTexture = nullptr;
+    };
 
     inline JNIEnv* getEnvironment() noexcept {
         JNIEnv* env = mJniEnv;
@@ -69,7 +74,6 @@ private:
     int  (*ASurfaceTexture_detachFromGLContext)(ASurfaceTexture*);
     int  (*ASurfaceTexture_updateTexImage)(ASurfaceTexture*);
     int64_t (*ASurfaceTexture_getTimestamp)(ASurfaceTexture*);   // available since api 28
-
 };
 
 } // namespace filament
