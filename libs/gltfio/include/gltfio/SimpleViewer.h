@@ -295,7 +295,6 @@ void SimpleViewer::populateScene(FilamentAsset* asset, bool scale) {
     while (size_t numWritten = mAsset->popRenderables(renderables, kNumAvailable)) {
         for (size_t i = 0; i < numWritten; i++) {
             auto ri = tcm.getInstance(renderables[i]);
-            tcm.setCastShadows(ri, false);
             tcm.setScreenSpaceContactShadows(ri, true);
         }
         mScene->addEntities(renderables, numWritten);
