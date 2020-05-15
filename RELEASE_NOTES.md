@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release
 
+## v1.7.0
+
 - MaterialInstances now have optional names.
 - JNI constructors are now "package private" unless they take an Engine.
 
