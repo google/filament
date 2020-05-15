@@ -91,7 +91,7 @@ public:
 
 protected:
     // Looks at platform and target API, then decides on shader models and output formats.
-    void prepare();
+    void prepare(bool vulkanSemantics);
 
     using ShaderModel = filament::backend::ShaderModel;
     Platform mPlatform = Platform::DESKTOP;
@@ -427,6 +427,10 @@ public:
     //! Specifies a list of variants that should be filtered out during code generation.
     MaterialBuilder& variantFilter(uint8_t variantFilter) noexcept;
 
+
+    MaterialBuilder& enableFramebufferFetch() noexcept;
+
+
     //! Build the material.
     Package build() noexcept;
 
@@ -577,6 +581,8 @@ private:
 
     SpecularAmbientOcclusion mSpecularAO = SpecularAmbientOcclusion::NONE;
     bool mSpecularAOSet = false;
+
+    bool mEnableFramebufferFetch = false;
 };
 
 } // namespace filamat

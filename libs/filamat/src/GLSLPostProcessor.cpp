@@ -165,8 +165,7 @@ void SpvToMsl(const SpirvBlob* spirv, std::string* outMsl) {
     *outMsl = shrinkString(*outMsl);
 }
 
-bool GLSLPostProcessor::process(const std::string& inputShader,
-        filament::backend::ShaderType shaderType, filament::backend::ShaderModel shaderModel,
+bool GLSLPostProcessor::process(const std::string& inputShader, Config const& config,
         std::string* outputGlsl, SpirvBlob* outputSpirv, std::string* outputMsl) {
 
     // If TargetApi is Vulkan, then we need post-processing even if there's no optimization.
@@ -184,7 +183,7 @@ bool GLSLPostProcessor::process(const std::string& inputShader,
     mSpirvOutput = outputSpirv;
     mMslOutput = outputMsl;
 
-    if (shaderType == filament::backend::VERTEX) {
+    if (config.shaderType == filament::backend::VERTEX) {
         mShLang = EShLangVertex;
     } else {
         mShLang = EShLangFragment;
@@ -199,7 +198,7 @@ bool GLSLPostProcessor::process(const std::string& inputShader,
     const char* shaderCString = inputShader.c_str();
     tShader.setStrings(&shaderCString, 1);
 
-    mLangVersion = GLSLTools::glslangVersionFromShaderModel(shaderModel);
+    mLangVersion = GLSLTools::glslangVersionFromShaderModel(config.shaderModel);
     GLSLTools::prepareShaderParser(tShader, mShLang, mLangVersion, mOptimization);
     EShMessages msg = GLSLTools::glslangFlagsFromTargetApi(targetApi);
     bool ok = tShader.parse(&DefaultTBuiltInResource, mLangVersion, false, msg);
@@ -232,11 +231,11 @@ bool GLSLPostProcessor::process(const std::string& inputShader,
             }
             break;
         case MaterialBuilder::Optimization::PREPROCESSOR:
-            preprocessOptimization(tShader, shaderModel);
+            preprocessOptimization(tShader, config);
             break;
         case MaterialBuilder::Optimization::SIZE:
         case MaterialBuilder::Optimization::PERFORMANCE:
-            fullOptimization(tShader, shaderModel);
+            fullOptimization(tShader, config);
             break;
     }
 
@@ -250,13 +249,13 @@ bool GLSLPostProcessor::process(const std::string& inputShader,
 }
 
 void GLSLPostProcessor::preprocessOptimization(glslang::TShader& tShader,
-        filament::backend::ShaderModel shaderModel) const {
+        GLSLPostProcessor::Config const& config) const {
     using TargetApi = MaterialBuilder::TargetApi;
 
     std::string glsl;
     TShader::ForbidIncluder forbidIncluder;
 
-    int version = GLSLTools::glslangVersionFromShaderModel(shaderModel);
+    int version = GLSLTools::glslangVersionFromShaderModel(config.shaderModel);
     const TargetApi targetApi = mSpirvOutput ? TargetApi::VULKAN : TargetApi::OPENGL;
     EShMessages msg = GLSLTools::glslangFlagsFromTargetApi(targetApi);
     bool ok = tShader.preprocess(&DefaultTBuiltInResource, version, ENoProfile, false, false,
@@ -296,7 +295,7 @@ void GLSLPostProcessor::preprocessOptimization(glslang::TShader& tShader,
 }
 
 void GLSLPostProcessor::fullOptimization(const TShader& tShader,
-        filament::backend::ShaderModel shaderModel) const {
+        GLSLPostProcessor::Config const& config) const {
     SpirvBlob spirv;
 
     // Compile GLSL to to SPIR-V
@@ -339,8 +338,8 @@ void GLSLPostProcessor::fullOptimization(const TShader& tShader,
     // Transpile back to GLSL
     if (mGlslOutput) {
         CompilerGLSL::Options glslOptions;
-        glslOptions.es = shaderModel == filament::backend::ShaderModel::GL_ES_30;
-        glslOptions.version = shaderVersionFromModel(shaderModel);
+        glslOptions.es = config.shaderModel == filament::backend::ShaderModel::GL_ES_30;
+        glslOptions.version = shaderVersionFromModel(config.shaderModel);
         glslOptions.enable_420pack_extension = glslOptions.version >= 420;
         glslOptions.fragment.default_float_precision = glslOptions.es ?
                 CompilerGLSL::Options::Precision::Mediump : CompilerGLSL::Options::Precision::Highp;
@@ -349,6 +348,12 @@ void GLSLPostProcessor::fullOptimization(const TShader& tShader,
 
         CompilerGLSL glslCompiler(move(spirv));
         glslCompiler.set_common_options(glslOptions);
+
+        if (tShader.getStage() == EShLangFragment && glslOptions.es) {
+            for (auto i : config.glsl.subpassInputToColorLocation) {
+                glslCompiler.remap_ext_framebuffer_fetch(i.first, i.second);
+            }
+        }
 
         *mGlslOutput = glslCompiler.compile();
     }
