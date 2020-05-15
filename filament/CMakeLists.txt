@@ -156,6 +156,7 @@ set(MATERIAL_SRCS
         src/materials/sao.mat
         src/materials/separableGaussianBlur.mat
         src/materials/tonemapping.mat
+        src/materials/tonemappingWithSubpass.mat
         src/materials/fxaa.mat
 )
 

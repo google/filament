@@ -139,12 +139,22 @@ private:
         bool hasContactShadows;
     };
 
+    struct ToneMappingConfig {
+        bool toneMappingAsSubpass = false;
+        bool translucent{};
+        bool fxaa{};
+        bool dithering{};
+        backend::TextureFormat ldrFormat{};
+    };
+
     FrameGraphId<FrameGraphTexture> colorPass(FrameGraph& fg, const char* name,
             FrameGraphTexture::Descriptor const& colorBufferDesc,
-            ColorPassConfig const& config, RenderPass const& pass, FView const& view) const noexcept;
+            ColorPassConfig const& config, ToneMappingConfig const& toneMappingConfig,
+            RenderPass const& pass, FView const& view) const noexcept;
 
     FrameGraphId<FrameGraphTexture> refractionPass(FrameGraph& fg,
-            ColorPassConfig config, RenderPass const& pass, FView const& view) const noexcept;
+            ColorPassConfig config, ToneMappingConfig const& toneMappingConfig,
+            RenderPass const& pass, FView const& view) const noexcept;
 
     void recordHighWatermark(size_t watermark) noexcept {
         mCommandsHighWatermark = std::max(mCommandsHighWatermark, watermark);
