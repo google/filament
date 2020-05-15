@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release
 
+- Add missing JavaScript API for View::setVisibleLayers().
+
 ## v1.7.0
 
 - MaterialInstances now have optional names.

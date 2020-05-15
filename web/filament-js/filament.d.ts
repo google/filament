@@ -371,6 +371,7 @@ export class View {
     public setCamera(camera: Camera): void;
     public setScene(scene: Scene): void;
     public setViewport(viewport: float4): void;
+    public setVisibleLayers(select: number, values: number): void;
     public setRenderTarget(renderTarget: RenderTarget): void;
     public setAmbientOcclusionOptions(options: View$AmbientOcclusionOptions): void;
     public setBloomOptions(options: View$BloomOptions): void;
