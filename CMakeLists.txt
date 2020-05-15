@@ -295,9 +295,8 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebIn
 endif()
 
 # By default, build with Vulkan support on desktop platforms, although clients must request to use
-# it at run time. On Android, the build does not include Vulkan support unless CMake is invoked
-# with -DFILAMENT_SUPPORTS_VULKAN=ON.
-if (ANDROID OR WIN32 OR WEBGL OR IOS OR FILAMENT_USE_SWIFTSHADER)
+# it at run time.
+if (WIN32 OR WEBGL OR IOS OR FILAMENT_USE_SWIFTSHADER)
     option(FILAMENT_SUPPORTS_VULKAN "Include the Vulkan backend" OFF)
 else()
     option(FILAMENT_SUPPORTS_VULKAN "Include the Vulkan backend" ON)

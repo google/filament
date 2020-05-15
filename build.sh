@@ -37,7 +37,7 @@ function print_help {
     echo "    -u"
     echo "        Run all unit tests, will trigger a debug build if needed."
     echo "    -v"
-    echo "        Add Vulkan support to the Android build."
+    echo "        Exclude Vulkan support from the Android build."
     echo "    -s"
     echo "        Add iOS simulator support to the iOS build."
     echo "    -w"
@@ -115,7 +115,7 @@ FILAMENT_ENABLE_JAVA=ON
 
 INSTALL_COMMAND=
 
-VULKAN_ANDROID_OPTION="-DFILAMENT_SUPPORTS_VULKAN=OFF"
+VULKAN_ANDROID_OPTION="-DFILAMENT_SUPPORTS_VULKAN=ON"
 VULKAN_ANDROID_GRADLE_OPTION=""
 
 IOS_BUILD_SIMULATOR=false
@@ -762,10 +762,10 @@ while getopts ":hacfijmp:q:uvsw" opt; do
             RUN_TESTS=true
             ;;
         v)
-            VULKAN_ANDROID_OPTION="-DFILAMENT_SUPPORTS_VULKAN=ON"
-            VULKAN_ANDROID_GRADLE_OPTION="-Pfilament_supports_vulkan"
-            echo "Enabling support for Vulkan in the core Filament library."
-            echo ""
+            VULKAN_ANDROID_OPTION="-DFILAMENT_SUPPORTS_VULKAN=OFF"
+            VULKAN_ANDROID_GRADLE_OPTION="-Pfilament_exclude_vulkan"
+            echo "Disabling support for Vulkan in the core Filament library."
+            echo "Consider using -c after changing this option to clear the Gradle cache."
             ;;
         s)
             IOS_BUILD_SIMULATOR=true
