@@ -11,6 +11,9 @@
 NDK_VERSION="ndk;21.0.6113669"
 ANDROID_NDK_VERSION=21
 
+# Exclude Vulkan from CI builds for Android. (It is enabled for other platforms.)
+EXCLUDE_VULKAN=-v
+
 echo "This script is intended to run in a CI environment and may modify your current environment."
 echo "Please refer to BUILDING.md for more information."
 
@@ -66,4 +69,4 @@ if [[ "$TARGET" == "presubmit" ]]; then
 fi
 
 pushd `dirname $0`/../.. > /dev/null
-./build.sh -p android $ANDROID_ABIS -c $GENERATE_ARCHIVES $BUILD_DEBUG $BUILD_RELEASE
+./build.sh -p android $EXCLUDE_VULKAN $ANDROID_ABIS -c $GENERATE_ARCHIVES $BUILD_DEBUG $BUILD_RELEASE
