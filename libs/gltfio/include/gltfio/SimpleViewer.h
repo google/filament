@@ -202,6 +202,7 @@ private:
     // ShadowProperties are A/B-able.
     struct ShadowProperties {
         int cascades = 1;
+        int shadowMapSizeExponent = 10;    // Shadow map size: 2^n
         std::array<float, 3> splitPositions = {0.25f, 0.50f, 0.75f};
     };
     ShadowProperties mShadowPropertiesA;
@@ -499,6 +500,10 @@ void SimpleViewer::updateUserInterface() {
             ImGui::SliderFloat("Split pos 1", &o.splitPositions[1], 0.0f, 1.0f);
             ImGui::SliderFloat("Split pos 2", &o.splitPositions[2], 0.0f, 1.0f);
             ImGui::SliderInt("Cascades", &o.cascades, 1, 4);
+
+            char label[32];
+            sprintf(label, "%d", 1 << o.shadowMapSizeExponent);
+            ImGui::SliderInt("Shadow map size", &o.shadowMapSizeExponent, 5, 13, label);
         };
 
         if (ImGui::BeginTabBar("Shadow options")) {
@@ -554,11 +559,17 @@ void SimpleViewer::updateUserInterface() {
     lm.forEachComponent([this, &lm](utils::Entity e, LightManager::Instance ci) {
         auto options = lm.getShadowOptions(ci);
         options.screenSpaceContactShadows = mEnableContactShadows;
-        options.shadowCascades = mShadowProperties->cascades;
-        std::copy_n(mShadowProperties->splitPositions.begin(), 3, options.cascadeSplitPositions);
         lm.setShadowOptions(ci, options);
         lm.setShadowCaster(ci, mEnableShadows);
     });
+
+    // Adjust sun shadow settings.
+    auto sun = lm.getInstance(mSunlight);
+    LightManager::ShadowOptions options = lm.getShadowOptions(sun);
+    options.mapSize = 1 << mShadowProperties->shadowMapSizeExponent;
+    options.shadowCascades = mShadowProperties->cascades;
+    std::copy_n(mShadowProperties->splitPositions.begin(), 3, options.cascadeSplitPositions);
+    lm.setShadowOptions(sun, options);
 
     if (mAsset != nullptr) {
         if (ImGui::CollapsingHeader("Hierarchy")) {
