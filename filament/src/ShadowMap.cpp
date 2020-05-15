@@ -113,30 +113,29 @@ void ShadowMap::computeSceneCascadeParams(const FScene::LightSoa& lightData, siz
     const mat4f Mv = FCamera::rigidTransformInverse(M);
     const mat4f V = camera.view;
 
-    float2& lsNearFar = cascadeParams.lsNearFar;
-    float2& vsNearFar = cascadeParams.vsNearFar;
-    Aabb& wsShadowCastersVolume = cascadeParams.wsShadowCastersVolume;
-    Aabb& wsShadowReceiversVolume = cascadeParams.wsShadowReceiversVolume;
-
     // Compute scene bounds in world space, as well as the light-space and view-space near/far planes
-    lsNearFar = { std::numeric_limits<float>::lowest(), std::numeric_limits<float>::max() };
-    vsNearFar = { std::numeric_limits<float>::lowest(), std::numeric_limits<float>::max() };
-    wsShadowCastersVolume = {};
-    wsShadowReceiversVolume = {};
+    cascadeParams.lsNearFar = { std::numeric_limits<float>::lowest(), std::numeric_limits<float>::max() };
+    cascadeParams.vsNearFar = { std::numeric_limits<float>::lowest(), std::numeric_limits<float>::max() };
+    cascadeParams.wsShadowCastersVolume = {};
+    cascadeParams.wsShadowReceiversVolume = {};
     visitScene(*scene, visibleLayers,
-            [&wsShadowCastersVolume, &Mv, &lsNearFar](Aabb caster) {
-                wsShadowCastersVolume.min = min(wsShadowCastersVolume.min, caster.min);
-                wsShadowCastersVolume.max = max(wsShadowCastersVolume.max, caster.max);
+            [&](Aabb caster) {
+                cascadeParams.wsShadowCastersVolume.min =
+                        min(cascadeParams.wsShadowCastersVolume.min, caster.min);
+                cascadeParams.wsShadowCastersVolume.max =
+                        max(cascadeParams.wsShadowCastersVolume.max, caster.max);
                 float2 nf = computeNearFar(Mv, caster);
-                lsNearFar.x = std::max(lsNearFar.x, nf.x);  // near
-                lsNearFar.y = std::min(lsNearFar.y, nf.y);  // far
+                cascadeParams.lsNearFar.x = std::max(cascadeParams.lsNearFar.x, nf.x);  // near
+                cascadeParams.lsNearFar.y = std::min(cascadeParams.lsNearFar.y, nf.y);  // far
             },
-            [&wsShadowReceiversVolume, &V, &vsNearFar](Aabb receiver) {
-                wsShadowReceiversVolume.min = min(wsShadowReceiversVolume.min, receiver.min);
-                wsShadowReceiversVolume.max = max(wsShadowReceiversVolume.max, receiver.max);
+            [&](Aabb receiver) {
+                cascadeParams.wsShadowReceiversVolume.min =
+                        min(cascadeParams.wsShadowReceiversVolume.min, receiver.min);
+                cascadeParams.wsShadowReceiversVolume.max =
+                        max(cascadeParams.wsShadowReceiversVolume.max, receiver.max);
                 float2 nf = computeNearFar(V, receiver);
-                vsNearFar.x = std::max(vsNearFar.x, nf.x);
-                vsNearFar.y = std::min(vsNearFar.y, nf.y);
+                cascadeParams.vsNearFar.x = std::max(cascadeParams.vsNearFar.x, nf.x);
+                cascadeParams.vsNearFar.y = std::min(cascadeParams.vsNearFar.y, nf.y);
             }
     );
 }
@@ -226,9 +225,8 @@ void ShadowMap::computeShadowCameraDirectional(
     const mat4f M = mat4f::lookAt(lightPosition, lightPosition + dir, float3{ 0, 1, 0 });
     const mat4f Mv = FCamera::rigidTransformInverse(M);
 
-    Aabb& wsShadowCastersVolume = cascadeParams.wsShadowCastersVolume;
-    Aabb& wsShadowReceiversVolume = cascadeParams.wsShadowReceiversVolume;
-    float2& nearFar = cascadeParams.lsNearFar;
+    const Aabb& wsShadowCastersVolume = cascadeParams.wsShadowCastersVolume;
+    const Aabb& wsShadowReceiversVolume = cascadeParams.wsShadowReceiversVolume;
 
     if (wsShadowCastersVolume.isEmpty() || wsShadowReceiversVolume.isEmpty()) {
         mHasVisibleShadows = false;
@@ -263,7 +261,7 @@ void ShadowMap::computeShadowCameraDirectional(
     Aabb lsLightFrustumBounds;
     if (!USE_DEPTH_CLAMP) {
         // near plane from shadow caster volume
-        lsLightFrustumBounds.max.z = nearFar[0];
+        lsLightFrustumBounds.max.z = cascadeParams.lsNearFar[0];
     }
     for (size_t i = 0; i < vertexCount; ++i) {
         // far: figure out farthest shadow receivers
@@ -276,7 +274,7 @@ void ShadowMap::computeShadowCameraDirectional(
     }
     if (mEngine.debug.shadowmap.far_uses_shadowcasters) {
         // far: closest of the farthest shadow casters and receivers
-        lsLightFrustumBounds.min.z = std::max(lsLightFrustumBounds.min.z, nearFar[1]);
+        lsLightFrustumBounds.min.z = std::max(lsLightFrustumBounds.min.z, cascadeParams.lsNearFar[1]);
     }
 
     // near / far planes are specified relative to the direction the eye is looking at
@@ -739,8 +737,8 @@ void ShadowMap::computeFrustumCorners(float3* UTILS_RESTRICT out,
 
     // compute view frustum in world space (from its NDC)
     // matrix to convert: ndc -> camera -> world
-    float& near = csNearFar.x;
-    float& far = csNearFar.y;
+    float near = csNearFar.x;
+    float far = csNearFar.y;
     float3 csViewFrustumCorners[8] = {
             { -1, -1,  far },
             {  1, -1,  far },

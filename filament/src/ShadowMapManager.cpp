@@ -236,19 +236,19 @@ bool ShadowMapManager::updateCascadeShadowMaps(FEngine& engine, FView& view,
     }
 
     // Adjust the near and far planes to tighly bound the scene.
-    float near = -viewingCameraInfo.zn;
-    float far = -viewingCameraInfo.zf;
+    float vsNear = -viewingCameraInfo.zn;
+    float vsFar = -viewingCameraInfo.zf;
     if (engine.debug.shadowmap.tightly_bound_scene) {
-        near = std::min(near, cascadeParams.vsNearFar.x);
-        far = std::max(far, cascadeParams.vsNearFar.y);
+        vsNear = std::min(vsNear, cascadeParams.vsNearFar.x);
+        vsFar = std::max(vsFar, cascadeParams.vsNearFar.y);
     }
 
     // We divide the camera frustum into N cascades. This gives us N + 1 split positions.
     // The first split position is the near plane; the last split position is the far plane.
     const CascadeSplits::Params p {
         .proj = viewingCameraInfo.cullingProjection,
-        .near = near,
-        .far = far,
+        .near = vsNear,
+        .far = vsFar,
         .cascadeCount = mCascadeShadowMaps.size()
     };
     if (p != mCascadeSplitParams) {
