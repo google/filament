@@ -140,6 +140,7 @@ Here are a few screenshots of applications that use Filament in production:
 - Screen-space refraction
 - Global fog
 - HDR bloom
+- Depth of field bokeh
 - ACES-like tone-mapping
 - Temporal dithering
 - FXAA, MSAA and specular anti-aliasing
