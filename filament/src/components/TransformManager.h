@@ -29,7 +29,6 @@
 #include <math/mat4.h>
 
 namespace filament {
-namespace details {
 
 class UTILS_PRIVATE FTransformManager : public TransformManager {
 public:
@@ -160,7 +159,6 @@ private:
 
 FILAMENT_UPCAST(TransformManager)
 
-} // namespace details
 } // namespace filament
 
 #endif // TNT_FILAMENT_DETAILS_TRANSFORMMANAGER_H

@@ -22,7 +22,6 @@
 #include <array>
 
 namespace filament {
-namespace details {
 
 class FEngine;
 
@@ -46,7 +45,6 @@ private:
     size_t mLast;
 };
 
-} // namespace details
 } // namespace filament
 
 #endif // TNT_FILAMENT_DETAILS_FRAMESKIPPER_H

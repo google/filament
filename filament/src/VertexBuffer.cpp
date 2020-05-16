@@ -30,7 +30,6 @@
 
 namespace filament {
 
-using namespace details;
 using namespace backend;
 using namespace filament::math;
 
@@ -142,8 +141,6 @@ VertexBuffer* VertexBuffer::Builder::build(Engine& engine) {
 
 // ------------------------------------------------------------------------------------------------
 
-namespace details {
-
 FVertexBuffer::FVertexBuffer(FEngine& engine, const VertexBuffer::Builder& builder)
         : mVertexCount(builder->mVertexCount), mBufferCount(builder->mBufferCount) {
     std::copy(std::begin(builder->mAttributes), std::end(builder->mAttributes), mAttributes.begin());
@@ -202,13 +199,9 @@ void FVertexBuffer::setBufferAt(FEngine& engine, uint8_t bufferIndex,
     }
 }
 
-} // namespace details
-
 // ------------------------------------------------------------------------------------------------
 // Trampoline calling into private implementation
 // ------------------------------------------------------------------------------------------------
-
-using namespace filament::details;
 
 size_t VertexBuffer::getVertexCount() const noexcept {
     return upcast(this)->getVertexCount();

@@ -27,7 +27,6 @@
 #include <mutex>
 
 namespace filament {
-namespace details {
 
 class ResourceListBase {
 public:
@@ -165,7 +164,6 @@ private:
     mutable LockingPolicy mLock;
 };
 
-} // namespace details
 } // namespace filament
 
 #endif // TNT_FILAMENT_DETAILS_RESOURCELIST_H

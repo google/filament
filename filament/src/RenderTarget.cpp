@@ -26,7 +26,6 @@
 namespace filament {
 
 using namespace backend;
-using namespace details;
 
 struct RenderTarget::BuilderDetails {
     FRenderTarget::Attachment mAttachments[RenderTarget::ATTACHMENT_COUNT];
@@ -92,8 +91,6 @@ RenderTarget* RenderTarget::Builder::build(Engine& engine) {
 
 // ------------------------------------------------------------------------------------------------
 
-namespace details {
-
 FRenderTarget::HwHandle FRenderTarget::createHandle(FEngine& engine, const Builder& builder) {
     FEngine::DriverApi& driver = engine.getDriverApi();
     const Attachment& color = builder.mImpl->mAttachments[COLOR];
@@ -129,12 +126,8 @@ void FRenderTarget::terminate(FEngine& engine) {
     driver.destroyRenderTarget(mHandle);
 }
 
-} // namespace details
-
 // Trampoline calling into private implementation
 // ------------------------------------------------------------------------------------------------
-
-using namespace details;
 
 Texture* RenderTarget::getTexture(AttachmentPoint attachment) const noexcept {
     return upcast(this)->getAttachment(attachment).texture;

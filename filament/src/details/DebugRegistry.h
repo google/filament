@@ -27,7 +27,6 @@
 #include <tsl/robin_map.h>
 
 namespace filament {
-namespace details {
 
 class FEngine;
 
@@ -67,7 +66,6 @@ private:
 
 FILAMENT_UPCAST(DebugRegistry)
 
-} // namespace details
 } // namespace filament
 
 #endif // TNT_FILAMENT_DETAILS_DEBUG_H

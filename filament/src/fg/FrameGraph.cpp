@@ -37,7 +37,6 @@ namespace filament {
 
 using namespace backend;
 using namespace fg;
-using namespace details;
 
 // ------------------------------------------------------------------------------------------------
 

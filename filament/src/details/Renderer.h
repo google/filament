@@ -48,8 +48,6 @@ class Driver;
 
 class View;
 
-namespace details {
-
 class FEngine;
 class FView;
 class ShadowMap;
@@ -195,7 +193,6 @@ private:
 
 FILAMENT_UPCAST(Renderer)
 
-} // namespace details
 } // namespace filament
 
 #endif // TNT_FILAMENT_DETAILS_RENDERER_H

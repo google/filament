@@ -26,9 +26,6 @@ namespace filament {
 
 using namespace backend;
 
-namespace details {
-
-
 utils::Mutex FFence::sLock;
 utils::Condition FFence::sCondition;
 
@@ -144,13 +141,8 @@ Fence::FenceStatus FFence::FenceSignal::wait(uint64_t timeout) noexcept {
 }
 
 // ------------------------------------------------------------------------------------------------
-} // namespace details
-
-// ------------------------------------------------------------------------------------------------
 // Trampoline calling into private implementation
 // ------------------------------------------------------------------------------------------------
-
-using namespace details;
 
 FenceStatus Fence::waitAndDestroy(Fence* fence, Mode mode) {
     return FFence::waitAndDestroy(upcast(fence), mode);

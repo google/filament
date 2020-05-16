@@ -42,8 +42,6 @@ namespace filament {
 
 using namespace backend;
 
-namespace details {
-
 /*
  * This enables froxels to be rectangular which allows us to use a bit more froxel
  * with the same amount of memory in the GPU.
@@ -926,5 +924,4 @@ void Froxelizer::computeLightTree(
             });
 }
 
-} // namespace details
 } // namespace filament

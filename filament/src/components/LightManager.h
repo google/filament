@@ -29,7 +29,6 @@
 #include <math/mat4.h>
 
 namespace filament {
-namespace details {
 
 class FEngine;
 class FScene;
@@ -292,7 +291,6 @@ private:
 FILAMENT_UPCAST(LightManager)
 
 
-} // namespace details
 } // namespace filament
 
 #endif // TNT_FILAMENT_DETAILS_LIGHTMANAGER_H

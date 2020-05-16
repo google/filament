@@ -22,7 +22,6 @@ using namespace utils;
 using namespace filament::math;
 
 namespace filament {
-namespace details {
 
 FTransformManager::FTransformManager() noexcept = default;
 
@@ -378,10 +377,6 @@ void FTransformManager::gc(utils::EntityManager& em) noexcept {
                 destroy(e);
             });
 }
-
-} // namespace details
-
-using namespace details;
 
 TransformManager::children_iterator& TransformManager::children_iterator::operator++() {
     FTransformManager const& that = upcast(mManager);

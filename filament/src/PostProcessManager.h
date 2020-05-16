@@ -28,18 +28,16 @@
 
 namespace filament {
 
-namespace details {
 class FMaterial;
 class FMaterialInstance;
 class FEngine;
 class FView;
 class RenderPass;
 struct CameraInfo;
-} // namespace details
 
 class PostProcessManager {
 public:
-    explicit PostProcessManager(details::FEngine& engine) noexcept;
+    explicit PostProcessManager(FEngine& engine) noexcept;
 
     void init() noexcept;
     void terminate(backend::DriverApi& driver) noexcept;
@@ -56,7 +54,7 @@ public:
     FrameGraphId<FrameGraphTexture> dof(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input,
             const View::DepthOfFieldOptions& dofOptions,
-            const details::CameraInfo& cameraInfo) noexcept;
+            const CameraInfo& cameraInfo) noexcept;
 
     FrameGraphId<FrameGraphTexture> opaqueBlit(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, FrameGraphTexture::Descriptor outDesc) noexcept;
@@ -68,12 +66,12 @@ public:
     FrameGraphId<FrameGraphTexture> resolve(FrameGraph& fg,
             const char* outputBufferName, FrameGraphId<FrameGraphTexture> input) noexcept;
 
-    FrameGraphId<FrameGraphTexture> structure(FrameGraph& fg, details::RenderPass const& pass,
+    FrameGraphId<FrameGraphTexture> structure(FrameGraph& fg, RenderPass const& pass,
             uint32_t width, uint32_t height, float scale) noexcept;
 
     FrameGraphId<FrameGraphTexture> screenSpaceAmbientOclusion(FrameGraph& fg,
-            details::RenderPass& pass, filament::Viewport const& svp,
-            details::CameraInfo const& cameraInfo,
+            RenderPass& pass, filament::Viewport const& svp,
+            CameraInfo const& cameraInfo,
             View::AmbientOcclusionOptions const& options) noexcept;
 
     FrameGraphId<FrameGraphTexture> generateGaussianMipmap(FrameGraph& fg,
@@ -89,7 +87,7 @@ public:
     backend::Handle<backend::HwTexture> getZeroTexture() const { return mDummyZeroTexture; }
 
 private:
-    details::FEngine& mEngine;
+    FEngine& mEngine;
 
     FrameGraphId<FrameGraphTexture> mipmapPass(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, size_t level) noexcept;
@@ -106,7 +104,7 @@ private:
     class PostProcessMaterial {
     public:
         PostProcessMaterial() noexcept = default;
-        PostProcessMaterial(details::FEngine& engine, uint8_t const* data, size_t size) noexcept;
+        PostProcessMaterial(FEngine& engine, uint8_t const* data, size_t size) noexcept;
 
         PostProcessMaterial(PostProcessMaterial const& rhs) = delete;
         PostProcessMaterial& operator=(PostProcessMaterial const& rhs) = delete;
@@ -116,17 +114,17 @@ private:
 
         ~PostProcessMaterial();
 
-        void terminate(details::FEngine& engine) noexcept;
+        void terminate(FEngine& engine) noexcept;
 
-        details::FMaterial* getMaterial() const { return mMaterial; }
-        details::FMaterialInstance* getMaterialInstance() const { return mMaterialInstance; }
+        FMaterial* getMaterial() const { return mMaterial; }
+        FMaterialInstance* getMaterialInstance() const { return mMaterialInstance; }
 
         backend::PipelineState getPipelineState(uint8_t variant) const noexcept;
         backend::PipelineState getPipelineState() const noexcept;
 
     private:
-        details::FMaterial* mMaterial = nullptr;
-        details::FMaterialInstance* mMaterialInstance = nullptr;
+        FMaterial* mMaterial = nullptr;
+        FMaterialInstance* mMaterialInstance = nullptr;
         backend::Handle<backend::HwProgram> mProgram;
     };
 

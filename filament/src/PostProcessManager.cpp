@@ -40,7 +40,6 @@ namespace filament {
 using namespace utils;
 using namespace math;
 using namespace backend;
-using namespace filament::details;
 
 static constexpr uint8_t kMaxBloomLevels = 12u;
 static_assert(kMaxBloomLevels >= 3, "We require at least 3 bloom levels");

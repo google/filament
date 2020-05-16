@@ -19,7 +19,6 @@
 #include "details/Engine.h"
 
 namespace filament {
-namespace details {
 
 using namespace utils;
 using namespace backend;
@@ -68,6 +67,4 @@ void FrameSkipper::endFrame() noexcept {
     sync = driver.createSync();
 }
 
-
-} // namespace details
 } // namespace filament

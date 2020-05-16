@@ -39,7 +39,6 @@
 #include <tsl/robin_set.h>
 
 namespace filament {
-namespace details {
 
 struct CameraInfo;
 class FEngine;
@@ -233,7 +232,6 @@ private:
 
 FILAMENT_UPCAST(Scene)
 
-} // namespace details
 } // namespace filament
 
 #endif // TNT_FILAMENT_DETAILS_SCENE_H
