@@ -43,11 +43,9 @@ class MaterialInstance;
 class Renderer;
 class VertexBuffer;
 
-namespace details {
 class FEngine;
 class FRenderPrimitive;
 class FRenderableManager;
-} // namespace details
 
 /**
  * Factory and manager for \em renderables, which are entities that can be drawn.
@@ -292,9 +290,9 @@ public:
         Result build(Engine& engine, utils::Entity entity);
 
     private:
-        friend class details::FEngine;
-        friend class details::FRenderPrimitive;
-        friend class details::FRenderableManager;
+        friend class FEngine;
+        friend class FRenderPrimitive;
+        friend class FRenderableManager;
         struct Entry {
             VertexBuffer* vertices = nullptr;
             IndexBuffer* indices = nullptr;

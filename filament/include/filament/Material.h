@@ -39,10 +39,8 @@ namespace filament {
 class Texture;
 class TextureSampler;
 
-namespace details {
 class FEngine;
 class FMaterial;
-} // namespace details
 
 class Engine;
 
@@ -116,7 +114,7 @@ public:
          */
         Material* build(Engine& engine);
     private:
-        friend class details::FMaterial;
+        friend class FMaterial;
     };
 
     /**

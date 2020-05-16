@@ -37,8 +37,6 @@ namespace filament {
 
 using namespace backend;
 
-namespace details {
-
 FMaterialInstance::FMaterialInstance() noexcept = default;
 
 FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material, const char* name) :
@@ -228,10 +226,6 @@ template UTILS_NOINLINE void FMaterialInstance::setParameter<float3>  (const cha
 template UTILS_NOINLINE void FMaterialInstance::setParameter<float4>  (const char* name, const float4   *v, size_t c) noexcept;
 template UTILS_NOINLINE void FMaterialInstance::setParameter<mat3f>   (const char* name, const mat3f    *v, size_t c) noexcept;
 template UTILS_NOINLINE void FMaterialInstance::setParameter<mat4f>   (const char* name, const mat4f    *v, size_t c) noexcept;
-
-} // namespace details
-
-using namespace details;
 
 Material const* MaterialInstance::getMaterial() const noexcept {
     return upcast(this)->getMaterial();

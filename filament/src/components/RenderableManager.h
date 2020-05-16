@@ -39,7 +39,6 @@
 class FilamentTest_Bones_Test;
 
 namespace filament {
-namespace details {
 
 class FMaterialInstance;
 class FRenderPrimitive;
@@ -348,7 +347,6 @@ size_t FRenderableManager::getPrimitiveCount(Instance instance, uint8_t level) c
     return getRenderPrimitives(instance, level).size();
 }
 
-} // namespace details
 } // namespace filament
 
 #endif // TNT_FILAMENT_DETAILS_RENDERABLECOMPONENTMANAGER_H

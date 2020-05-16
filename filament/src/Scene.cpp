@@ -37,7 +37,6 @@ using namespace filament::math;
 using namespace utils;
 
 namespace filament {
-namespace details {
 
 // ------------------------------------------------------------------------------------------------
 
@@ -423,13 +422,9 @@ bool FScene::hasContactShadows() const noexcept {
     return hasContactShadows && mHasContactShadows;
 }
 
-} // namespace details
-
 // ------------------------------------------------------------------------------------------------
 // Trampoline calling into private implementation
 // ------------------------------------------------------------------------------------------------
-
-using namespace details;
 
 void Scene::setSkybox(Skybox* skybox) noexcept {
     upcast(this)->setSkybox(upcast(skybox));

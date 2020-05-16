@@ -31,7 +31,6 @@ namespace filament {
 
 using namespace backend;
 using namespace fg;
-using namespace details;
 
 FrameGraphPassResources::FrameGraphPassResources(FrameGraph& fg, fg::PassNode const& pass) noexcept
         : mFrameGraph(fg), mPass(pass) {

@@ -19,7 +19,6 @@
 #include "details/Engine.h"
 
 namespace filament {
-namespace details {
 
 FSwapChain::FSwapChain(FEngine& engine, void* nativeWindow, uint64_t flags)
         : mNativeWindow(nativeWindow), mConfigFlags(flags) {
@@ -34,10 +33,6 @@ FSwapChain::FSwapChain(FEngine& engine, uint32_t width, uint32_t height, uint64_
 void FSwapChain::terminate(FEngine& engine) noexcept {
     engine.getDriverApi().destroySwapChain(mSwapChain);
 }
-
-} // namespace details
-
-using namespace details;
 
 void* SwapChain::getNativeWindow() const noexcept {
     return upcast(this)->getNativeWindow();

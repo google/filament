@@ -29,9 +29,7 @@
 
 namespace filament {
 
-namespace details {
 class FVertexBuffer;
-} // namespace details
 
 class Engine;
 
@@ -144,7 +142,7 @@ public:
         VertexBuffer* build(Engine& engine);
 
     private:
-        friend class details::FVertexBuffer;
+        friend class FVertexBuffer;
     };
 
     /**

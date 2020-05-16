@@ -31,9 +31,7 @@
 
 namespace filament {
 
-namespace details {
 class FIndexBuffer;
-} // namespace details
 
 class Engine;
 
@@ -101,7 +99,7 @@ public:
          */
         IndexBuffer* build(Engine& engine);
     private:
-        friend class details::FIndexBuffer;
+        friend class FIndexBuffer;
     };
 
     /**

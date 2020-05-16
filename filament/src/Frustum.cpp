@@ -24,8 +24,6 @@ using namespace filament::math;
 
 namespace filament {
 
-using namespace details;
-
 Frustum::Frustum(const mat4f& pv) {
     Frustum::setProjection(pv);
 }

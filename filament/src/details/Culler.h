@@ -26,7 +26,6 @@
 #include <math/vec2.h>
 
 namespace filament {
-namespace details {
 
 /*
  * This is where culling is implemented.
@@ -95,7 +94,6 @@ public:
     };
 };
 
-} // namespace details
 } // namespace filament
 
 #endif // TNT_FILAMENT_DETAILS_CULLER_H

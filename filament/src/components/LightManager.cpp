@@ -30,8 +30,6 @@ using namespace utils;
 
 namespace filament {
 
-using namespace details;
-
 // ------------------------------------------------------------------------------------------------
 
 struct LightManager::BuilderDetails {
@@ -142,8 +140,6 @@ LightManager::Builder::Result LightManager::Builder::build(Engine& engine, Entit
 }
 
 // ------------------------------------------------------------------------------------------------
-
-namespace details {
 
 FLightManager::FLightManager(FEngine& engine) noexcept : mEngine(engine) {
     // DON'T use engine here in the ctor, because it's not fully constructed yet.
@@ -374,14 +370,9 @@ void FLightManager::setShadowCaster(Instance i, bool shadowCaster) noexcept {
     }
 }
 
-
-} // namespace details
-
 // ------------------------------------------------------------------------------------------------
 // Trampoline calling into private implementation
 // ------------------------------------------------------------------------------------------------
-
-using namespace details;
 
 size_t LightManager::getComponentCount() const noexcept {
     return upcast(this)->getComponentCount();

@@ -21,9 +21,6 @@
 #include <cmath>
 
 namespace filament {
-
-using namespace details;
-
 namespace Exposure {
 
 float ev100(const Camera& c) noexcept {

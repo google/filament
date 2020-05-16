@@ -22,7 +22,6 @@
 #include "details/Material.h"
 
 namespace filament {
-namespace details {
 
 void FRenderPrimitive::init(backend::DriverApi& driver,
         const RenderableManager::Builder::Entry& entry) noexcept {
@@ -82,5 +81,4 @@ void FRenderPrimitive::set(FEngine& engine, RenderableManager::PrimitiveType typ
     mPrimitiveType = type;
 }
 
-} // namespace details
 } // namespace filament

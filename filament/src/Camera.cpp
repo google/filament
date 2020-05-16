@@ -31,7 +31,6 @@ using namespace filament::math;
 using namespace utils;
 
 namespace filament {
-namespace details {
 
 static constexpr const float MIN_APERTURE = 0.5f;
 static constexpr const float MAX_APERTURE = 64.0f;
@@ -225,7 +224,6 @@ math::details::TMat44<T> inverseProjection(const math::details::TMat44<T>& p) no
     return r;
 }
 
-
 UTILS_NOINLINE
 mat4f FCamera::getViewMatrix(mat4f const& model) noexcept {
     return FCamera::rigidTransformInverse(model);
@@ -264,19 +262,15 @@ CameraInfo::CameraInfo(FCamera const& camera, const math::mat4f& worldOriginCame
     worldOrigin        = worldOriginCamera;
 }
 
-} // namespace details
-
 // ------------------------------------------------------------------------------------------------
 // Trampoline calling into private implementation
 // ------------------------------------------------------------------------------------------------
 
-using namespace details;
-
 mat4f Camera::inverseProjection(const mat4f& p) noexcept {
-    return details::inverseProjection(p);
+    return filament::inverseProjection(p);
 }
 mat4 Camera::inverseProjection(const mat4 & p) noexcept {
-    return details::inverseProjection(p);
+    return filament::inverseProjection(p);
 }
 
 void Camera::setProjection(Camera::Projection projection, double left, double right, double bottom,

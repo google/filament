@@ -51,7 +51,6 @@ class JobSystem;
 } // namespace utils;
 
 namespace filament {
-namespace details {
 
 class FEngine;
 class FMaterialInstance;
@@ -415,7 +414,6 @@ private:
 
 FILAMENT_UPCAST(View)
 
-} // namespace details
 } // namespace filament
 
 #endif // TNT_FILAMENT_DETAILS_VIEW_H

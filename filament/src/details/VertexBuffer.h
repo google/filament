@@ -31,7 +31,6 @@
 #include <type_traits>
 
 namespace filament {
-namespace details {
 
 class FEngine;
 
@@ -70,7 +69,6 @@ private:
 
 FILAMENT_UPCAST(VertexBuffer)
 
-} // namespace details
 } // namespace filament
 
 #endif // TNT_FILAMENT_DETAILS_VERTEXBUFFER_H

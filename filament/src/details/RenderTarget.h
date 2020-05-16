@@ -26,7 +26,6 @@
 #include <utils/compiler.h>
 
 namespace filament {
-namespace details {
 
 class FEngine;
 class FTexture;
@@ -63,7 +62,6 @@ private:
 
 FILAMENT_UPCAST(RenderTarget)
 
-} // namespace details
 } // namespace filament
 
 #endif // TNT_FILAMENT_DETAILS_RENDERTARGET_H

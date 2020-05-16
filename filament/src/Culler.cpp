@@ -23,7 +23,6 @@
 using namespace filament::math;
 
 namespace filament {
-namespace details {
 
 void Culler::intersects(
         result_type* UTILS_RESTRICT results,
@@ -137,5 +136,4 @@ void Culler::Test::intersects(
     Culler::intersects(results, frustum, b, count);
 }
 
-} // namespace details
 } // namespace filament

@@ -20,7 +20,6 @@
 #include "details/Texture.h"
 
 namespace filament {
-namespace details {
 
 const uint16_t DFG::DFG_LUT[] = {
 #include "generated/data/dfg.inc"
@@ -52,5 +51,4 @@ void DFG::terminate() {
     }
 }
 
-} // namespace details
 } // namespace filament

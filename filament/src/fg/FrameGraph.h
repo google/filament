@@ -46,9 +46,7 @@
 
 namespace filament {
 
-namespace details {
 class FEngine;
-} // namespace details
 
 namespace fg {
 struct ResourceNode;
@@ -242,7 +240,7 @@ public:
     FrameGraph& compile() noexcept;
 
     // execute all referenced passes and flush the command queue after each pass
-    void execute(details::FEngine& engine, backend::DriverApi& driver) noexcept;
+    void execute(FEngine& engine, backend::DriverApi& driver) noexcept;
 
 
     /*
@@ -270,10 +268,10 @@ private:
     };
 
     template<typename T> using UniquePtr = std::unique_ptr<T, Deleter<T>>;
-    template<typename T> using Allocator = utils::STLAllocator<T, details::LinearAllocatorArena>;
+    template<typename T> using Allocator = utils::STLAllocator<T, LinearAllocatorArena>;
     template<typename T> using Vector = std::vector<T, Allocator<T>>; // 32 bytes
 
-    details::LinearAllocatorArena& getArena() noexcept { return mArena; }
+    LinearAllocatorArena& getArena() noexcept { return mArena; }
 
     fg::PassNode& createPass(const char* name, FrameGraphPassExecutor* base) noexcept;
 
@@ -322,7 +320,7 @@ private:
 
     Blackboard mBlackboard;
     fg::ResourceAllocatorInterface& mResourceAllocator;
-    details::LinearAllocatorArena mArena;
+    LinearAllocatorArena mArena;
     Vector<fg::PassNode> mPassNodes;                    // list of frame graph passes
     Vector<fg::ResourceNode *> mResourceNodes;          // list of resource nodes
     Vector<UniquePtr<fg::ResourceNode>> mResourceNodeEntries;

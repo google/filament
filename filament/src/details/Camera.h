@@ -30,7 +30,6 @@
 #include <math/scalar.h>
 
 namespace filament {
-namespace details {
 
 class FEngine;
 
@@ -195,7 +194,6 @@ struct CameraInfo {
 
 FILAMENT_UPCAST(Camera)
 
-} // namespace details
 } // namespace filament
 
 #endif // TNT_FILAMENT_DETAILS_CAMERA_H

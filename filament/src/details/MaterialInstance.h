@@ -32,7 +32,6 @@
 #include <filament/MaterialInstance.h>
 
 namespace filament {
-namespace details {
 
 class FMaterial;
 
@@ -170,7 +169,6 @@ private:
 
 FILAMENT_UPCAST(MaterialInstance)
 
-} // namespace details
 } // namespace filament
 
 #endif // TNT_FILAMENT_DETAILS_MATERIALINSTANCE_H

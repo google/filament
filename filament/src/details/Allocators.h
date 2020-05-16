@@ -20,7 +20,6 @@
 #include <utils/Allocator.h>
 
 namespace filament {
-namespace details {
 
 // per render pass allocations
 // Froxelization needs about 1 MiB. Command buffer needs about 1 MiB.
@@ -63,7 +62,6 @@ using LinearAllocatorArena = utils::Arena<
 
 using ArenaScope = utils::ArenaScope<LinearAllocatorArena>;
 
-} // namespace details
 } // namespace filament
 
 #endif // TNT_FILAMENT_DETAILS_ALLOCATORS_H
