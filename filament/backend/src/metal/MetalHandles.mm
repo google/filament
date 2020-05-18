@@ -49,6 +49,8 @@ static inline MTLTextureUsage getMetalTextureUsage(TextureUsage usage) {
 
 MetalSwapChain::MetalSwapChain(id<MTLDevice> device, CAMetalLayer* nativeWindow)
         : layer(nativeWindow) {
+    // Needed so we can use the SwapChain as a blit source.
+    nativeWindow.framebufferOnly = NO;
     layer.device = device;
 }
 
