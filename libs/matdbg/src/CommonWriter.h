@@ -43,12 +43,8 @@ static bool read(const filaflat::ChunkContainer& container, filamat::ChunkType t
     return unflattener.read(value);
 }
 
-
-template<typename T>
-static const char* toString(T value);
-
-template<>
-const char* toString(Shading shadingModel) {
+inline
+const char* toString(Shading shadingModel) noexcept {
     switch (shadingModel) {
         case Shading::UNLIT: return "unlit";
         case Shading::LIT: return "lit";
@@ -58,8 +54,8 @@ const char* toString(Shading shadingModel) {
     }
 }
 
-template<>
-const char* toString(BlendingMode blendingMode) {
+inline
+const char* toString(BlendingMode blendingMode) noexcept {
     switch (blendingMode) {
         case BlendingMode::OPAQUE: return "opaque";
         case BlendingMode::TRANSPARENT: return "transparent";
@@ -71,16 +67,16 @@ const char* toString(BlendingMode blendingMode) {
     }
 }
 
-template<>
-const char* toString(Interpolation interpolation) {
+inline
+const char* toString(Interpolation interpolation) noexcept {
     switch (interpolation) {
         case Interpolation::SMOOTH: return "smooth";
         case Interpolation::FLAT: return "flat";
     }
 }
 
-template<>
-const char* toString(VertexDomain domain) {
+inline
+const char* toString(VertexDomain domain) noexcept {
     switch (domain) {
         case VertexDomain::OBJECT: return "object";
         case VertexDomain::WORLD: return "world";
@@ -89,8 +85,8 @@ const char* toString(VertexDomain domain) {
     }
 }
 
-template<>
-const char* toString(backend::CullingMode cullingMode) {
+inline
+const char* toString(backend::CullingMode cullingMode) noexcept {
     switch (cullingMode) {
         case backend::CullingMode::NONE: return "none";
         case backend::CullingMode::FRONT: return "front";
@@ -99,8 +95,8 @@ const char* toString(backend::CullingMode cullingMode) {
     }
 }
 
-template<>
-const char* toString(TransparencyMode transparencyMode) {
+inline
+const char* toString(TransparencyMode transparencyMode) noexcept {
     switch (transparencyMode) {
         case TransparencyMode::DEFAULT: return "default";
         case TransparencyMode::TWO_PASSES_ONE_SIDE: return "two passes, one side";
@@ -108,8 +104,8 @@ const char* toString(TransparencyMode transparencyMode) {
     }
 }
 
-template<>
-const char* toString(VertexAttribute attribute) {
+inline
+const char* toString(VertexAttribute attribute) noexcept {
     switch (attribute) {
         case VertexAttribute::POSITION: return "position";
         case VertexAttribute::TANGENTS: return "tangents";
@@ -130,13 +126,13 @@ const char* toString(VertexAttribute attribute) {
     return "--";
 }
 
-template<>
+inline
 const char* toString(bool value) {
     return value ? "true" : "false";
 }
 
-template<>
-const char* toString(backend::ShaderType stage) {
+inline
+const char* toString(backend::ShaderType stage) noexcept {
     switch (stage) {
         case backend::ShaderType::VERTEX: return "vs";
         case backend::ShaderType::FRAGMENT: return "fs";
@@ -145,8 +141,8 @@ const char* toString(backend::ShaderType stage) {
     return "--";
 }
 
-template<>
-const char* toString(backend::ShaderModel model) {
+inline
+const char* toString(backend::ShaderModel model) noexcept {
     switch (model) {
         case backend::ShaderModel::UNKNOWN: return "--";
         case backend::ShaderModel::GL_ES_30: return "gles30";
@@ -154,8 +150,8 @@ const char* toString(backend::ShaderModel model) {
     }
 }
 
-template<>
-const char* toString(backend::UniformType type) {
+inline
+const char* toString(backend::UniformType type) noexcept {
     switch (type) {
         case backend::UniformType::BOOL:   return "bool";
         case backend::UniformType::BOOL2:  return "bool2";
@@ -178,18 +174,19 @@ const char* toString(backend::UniformType type) {
     }
 }
 
-template<>
-const char* toString(backend::SamplerType type) {
+inline
+const char* toString(backend::SamplerType type) noexcept {
     switch (type) {
         case backend::SamplerType::SAMPLER_2D: return "sampler2D";
+        case backend::SamplerType::SAMPLER_3D: return "sampler3D";
         case backend::SamplerType::SAMPLER_2D_ARRAY: return "sampler2DArray";
         case backend::SamplerType::SAMPLER_CUBEMAP: return "samplerCubemap";
         case backend::SamplerType::SAMPLER_EXTERNAL: return "samplerExternal";
     }
 }
 
-template<>
-const char* toString(backend::Precision precision) {
+inline
+const char* toString(backend::Precision precision) noexcept {
     switch (precision) {
         case backend::Precision::LOW: return "lowp";
         case backend::Precision::MEDIUM: return "mediump";
@@ -198,8 +195,8 @@ const char* toString(backend::Precision precision) {
     }
 }
 
-template<>
-const char* toString(backend::SamplerFormat format) {
+inline
+const char* toString(backend::SamplerFormat format) noexcept {
     switch (format) {
         case backend::SamplerFormat::INT: return "int";
         case backend::SamplerFormat::UINT: return "uint";

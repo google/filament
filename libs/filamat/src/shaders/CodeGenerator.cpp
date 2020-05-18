@@ -576,6 +576,14 @@ char const* CodeGenerator::getSamplerTypeName(SamplerType type, SamplerFormat fo
                 case SamplerFormat::FLOAT:  return "sampler2D";
                 case SamplerFormat::SHADOW: return "sampler2DShadow";
             }
+        case SamplerType::SAMPLER_3D:
+            assert(format != SamplerFormat::SHADOW);
+            switch (format) {
+                case SamplerFormat::INT:    return "isampler3D";
+                case SamplerFormat::UINT:   return "usampler3D";
+                case SamplerFormat::FLOAT:  return "sampler3D";
+                case SamplerFormat::SHADOW: return nullptr;
+            }
         case SamplerType::SAMPLER_2D_ARRAY:
             switch (format) {
                 case SamplerFormat::INT:    return "isampler2DArray";

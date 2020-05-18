@@ -602,6 +602,12 @@ void MetalDriver::update2DImage(Handle<HwTexture> th, uint32_t level, uint32_t x
     tex->load2DImage(level, xoffset, yoffset, width, height, std::move(data));
 }
 
+void MetalDriver::update3DImage(Handle<HwTexture> th, uint32_t level,
+        uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
+        uint32_t width, uint32_t height, uint32_t depth,
+        PixelBufferDescriptor&& data) {
+}
+
 void MetalDriver::updateCubeImage(Handle<HwTexture> th, uint32_t level,
         PixelBufferDescriptor&& data, FaceOffsets faceOffsets) {
     ASSERT_PRECONDITION(!isInRenderPass(mContext),
