@@ -163,6 +163,13 @@ void NoopDriver::update2DImage(Handle<HwTexture> th,
     scheduleDestroy(std::move(data));
 }
 
+void NoopDriver::update3DImage(Handle<HwTexture> th,
+        uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
+        uint32_t width, uint32_t height, uint32_t depth,
+        PixelBufferDescriptor&& data) {
+    scheduleDestroy(std::move(data));
+}
+
 void NoopDriver::updateCubeImage(Handle<HwTexture> th, uint32_t level,
         PixelBufferDescriptor&& data, FaceOffsets faceOffsets) {
     scheduleDestroy(std::move(data));

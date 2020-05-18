@@ -577,6 +577,7 @@ void OpenGLDriver::textureStorage(OpenGLDriver::GLTexture* t,
             glTexStorage2D(t->gl.target, GLsizei(t->levels), t->gl.internalFormat,
                     GLsizei(width), GLsizei(height));
             break;
+        case GL_TEXTURE_3D:
         case GL_TEXTURE_2D_ARRAY: {
             glTexStorage3D(t->gl.target, GLsizei(t->levels), t->gl.internalFormat,
                     GLsizei(width), GLsizei(height), GLsizei(depth));
@@ -632,18 +633,19 @@ void OpenGLDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
                     // we can't be here -- doesn't mater what we do
                 case SamplerType::SAMPLER_2D:
                     t->gl.target = GL_TEXTURE_2D;
-                    t->gl.targetIndex = (uint8_t)
-                            gl.getIndexForTextureTarget(GL_TEXTURE_2D);
+                    t->gl.targetIndex = (uint8_t)gl.getIndexForTextureTarget(GL_TEXTURE_2D);
+                    break;
+                case SamplerType::SAMPLER_3D:
+                    t->gl.target = GL_TEXTURE_3D;
+                    t->gl.targetIndex = (uint8_t)gl.getIndexForTextureTarget(GL_TEXTURE_3D);
                     break;
                 case SamplerType::SAMPLER_2D_ARRAY:
                     t->gl.target = GL_TEXTURE_2D_ARRAY;
-                    t->gl.targetIndex = (uint8_t)
-                            gl.getIndexForTextureTarget(GL_TEXTURE_2D_ARRAY);
+                    t->gl.targetIndex = (uint8_t)gl.getIndexForTextureTarget(GL_TEXTURE_2D_ARRAY);
                     break;
                 case SamplerType::SAMPLER_CUBEMAP:
                     t->gl.target = GL_TEXTURE_CUBE_MAP;
-                    t->gl.targetIndex = (uint8_t)
-                            gl.getIndexForTextureTarget(GL_TEXTURE_CUBE_MAP);
+                    t->gl.targetIndex = (uint8_t)gl.getIndexForTextureTarget(GL_TEXTURE_CUBE_MAP);
                     break;
             }
 
@@ -727,6 +729,10 @@ void OpenGLDriver::importTextureR(Handle<HwTexture> th, intptr_t id,
         case SamplerType::SAMPLER_2D:
             t->gl.target = GL_TEXTURE_2D;
             t->gl.targetIndex = (uint8_t)gl.getIndexForTextureTarget(GL_TEXTURE_2D);
+            break;
+        case SamplerType::SAMPLER_3D:
+            t->gl.target = GL_TEXTURE_3D;
+            t->gl.targetIndex = (uint8_t)gl.getIndexForTextureTarget(GL_TEXTURE_3D);
             break;
         case SamplerType::SAMPLER_2D_ARRAY:
             t->gl.target = GL_TEXTURE_2D_ARRAY;
@@ -1642,6 +1648,22 @@ void OpenGLDriver::update2DImage(Handle<HwTexture> th,
     }
 }
 
+void OpenGLDriver::update3DImage(Handle<HwTexture> th,
+        uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
+        uint32_t width, uint32_t height, uint32_t depth,
+        PixelBufferDescriptor&& data) {
+    DEBUG_MARKER()
+
+    GLTexture* t = handle_cast<GLTexture *>(th);
+    if (data.type == PixelDataType::COMPRESSED) {
+        setCompressedTextureData(t,
+                level, xoffset, yoffset, zoffset, width, height, depth, std::move(data), nullptr);
+    } else {
+        setTextureData(t,
+                level, xoffset, yoffset, zoffset, width, height, depth, std::move(data), nullptr);
+    }
+}
+
 void OpenGLDriver::updateCubeImage(Handle<HwTexture> th, uint32_t level,
         PixelBufferDescriptor&& data, FaceOffsets faceOffsets) {
     DEBUG_MARKER()
@@ -1719,6 +1741,14 @@ void OpenGLDriver::setTextureData(GLTexture* t,
             glTexSubImage2D(t->gl.target, GLint(level),
                     GLint(xoffset), GLint(yoffset),
                     width, height, glFormat, glType, p.buffer);
+            break;
+        case SamplerType::SAMPLER_3D:
+            bindTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1, t);
+            gl.activeTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1);
+            assert(t->gl.target == GL_TEXTURE_3D);
+            glTexSubImage3D(t->gl.target, GLint(level),
+                    GLint(xoffset), GLint(yoffset), GLint(zoffset),
+                    width, height, depth, glFormat, glType, p.buffer);
             break;
         case SamplerType::SAMPLER_2D_ARRAY:
             // NOTE: GL_TEXTURE_2D_MULTISAMPLE is not allowed
@@ -1798,6 +1828,14 @@ void OpenGLDriver::setCompressedTextureData(GLTexture* t,  uint32_t level,
             glCompressedTexSubImage2D(t->gl.target, GLint(level),
                     GLint(xoffset), GLint(yoffset),
                     width, height, t->gl.internalFormat, imageSize, p.buffer);
+            break;
+        case SamplerType::SAMPLER_3D:
+            bindTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1, t);
+            gl.activeTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1);
+            assert(t->gl.target == GL_TEXTURE_3D);
+            glCompressedTexSubImage3D(t->gl.target, GLint(level),
+                    GLint(xoffset), GLint(yoffset), GLint(zoffset),
+                    width, height, depth, t->gl.internalFormat, imageSize, p.buffer);
             break;
         case SamplerType::SAMPLER_2D_ARRAY:
             assert(t->gl.target == GL_TEXTURE_2D_ARRAY);
