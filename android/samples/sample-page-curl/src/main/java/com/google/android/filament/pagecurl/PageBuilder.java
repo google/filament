@@ -57,7 +57,7 @@ public class PageBuilder {
         FloatBuffer positions = FloatBuffer.allocate(numVertices * 3);
         FloatBuffer uvs = FloatBuffer.allocate(numVertices * 2);
         FloatBuffer tangents = FloatBuffer.allocate(numVertices * 4);
-        ShortBuffer indices = ShortBuffer.allocate(numIndices * 2);
+        ShortBuffer indices = ShortBuffer.allocate(numIndices);
 
         Page page = new Page();
 
