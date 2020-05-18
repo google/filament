@@ -26,6 +26,7 @@ TimerQueryInterface::~TimerQueryInterface() = default;
 
 void TimerQueryFence::beginTimeElapsedQuery(MetalTimerQuery* query) {
     auto* fence = new MetalFence(mContext);
+    fence->encode();
     query->status->elapsed = 0;
     query->status->available.store(false);
 
@@ -42,6 +43,7 @@ void TimerQueryFence::beginTimeElapsedQuery(MetalTimerQuery* query) {
 
 void TimerQueryFence::endTimeElapsedQuery(MetalTimerQuery* query) {
     auto* fence = new MetalFence(mContext);
+    fence->encode();
 
     // Capture the timer query status via a weak_ptr because the MetalTimerQuery could be destroyed
     // before the block executes.
