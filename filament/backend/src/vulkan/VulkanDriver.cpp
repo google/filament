@@ -737,26 +737,31 @@ void VulkanDriver::cancelExternalImage(void* image) {
 bool VulkanDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapsedTime) {
     VulkanTimerQuery* vtq = handle_cast<VulkanTimerQuery>(mHandleMap, tqh);
 
-    uint64_t results[2] = {};
+    uint64_t results[4] = {};
     size_t dataSize = sizeof(results);
     VkDeviceSize stride = sizeof(uint64_t);
 
     VkResult result = vkGetQueryPoolResults(mContext.device, mContext.timestamps.pool,
             vtq->startingQueryIndex, 2, dataSize, (void*) results, stride,
-            VK_QUERY_RESULT_64_BIT);
+            VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT);
 
-    if (result == VK_NOT_READY) {
+    uint64_t timestamp0 = results[0];
+    uint64_t available0 = results[1];
+    uint64_t timestamp1 = results[2];
+    uint64_t available1 = results[3];
+
+    if (result == VK_NOT_READY || available0 == 0 || available1 == 0) {
         return false;
     }
 
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkGetQueryPoolResults error.");
-    ASSERT_POSTCONDITION(results[1] >= results[0], "Timestamps are not monotonically increasing.");
+    ASSERT_POSTCONDITION(timestamp1 >= timestamp0, "Timestamps are not monotonically increasing.");
 
     // NOTE: MoltenVK currently writes system time so the following delta will always be zero.
     // However there are plans for implementing this properly. See the following GitHub ticket.
     // https://github.com/KhronosGroup/MoltenVK/issues/773
 
-    uint64_t delta = results[1] - results[0];
+    uint64_t delta = timestamp1 - timestamp0;
     *elapsedTime = delta;
     return true;
 }
