@@ -245,7 +245,9 @@ public class MainActivity extends Activity
                 mPageAnimationValue = Math.min(+0.5f, Math.max(-0.5f, mTouchDownValue + dx));
 
                 // In this demo, we only care about dragging the right hand page leftwards.
-                mPageAnimationRadians = mPage.updateVertices(mEngine, -mPageAnimationValue * 3.0f);
+                final float t = -mPageAnimationValue * 3.0f;
+                final float rigidity = 0.1f;
+                mPageAnimationRadians = mPage.updateVertices(mEngine, t, rigidity);
                 return true;
             }
             case MotionEvent.ACTION_UP: {
