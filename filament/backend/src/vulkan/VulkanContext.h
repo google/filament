@@ -53,6 +53,7 @@ struct VulkanCmdFence {
     VkFence fence;
     utils::Condition condition;
     utils::Mutex mutex;
+    std::atomic<VkResult> status;
     bool submitted = false;
 };
 
