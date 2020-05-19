@@ -99,18 +99,21 @@ id<MTLDepthStencilState> DepthStateCreator::operator()(id<MTLDevice> device,
 }
 
 id<MTLSamplerState> SamplerStateCreator::operator()(id<MTLDevice> device,
-        const backend::SamplerParams& state) noexcept {
+        const SamplerState& state) noexcept {
+    backend::SamplerParams params = state.samplerParams;
     MTLSamplerDescriptor* samplerDescriptor = [MTLSamplerDescriptor new];
-    samplerDescriptor.minFilter = getFilter(state.filterMin);
-    samplerDescriptor.magFilter = getFilter(state.filterMag);
-    samplerDescriptor.mipFilter = getMipFilter(state.filterMin);
-    samplerDescriptor.sAddressMode = getAddressMode(state.wrapS);
-    samplerDescriptor.tAddressMode = getAddressMode(state.wrapT);
-    samplerDescriptor.rAddressMode = getAddressMode(state.wrapR);
-    samplerDescriptor.maxAnisotropy = 1u << state.anisotropyLog2;
+    samplerDescriptor.minFilter = getFilter(params.filterMin);
+    samplerDescriptor.magFilter = getFilter(params.filterMag);
+    samplerDescriptor.mipFilter = getMipFilter(params.filterMin);
+    samplerDescriptor.sAddressMode = getAddressMode(params.wrapS);
+    samplerDescriptor.tAddressMode = getAddressMode(params.wrapT);
+    samplerDescriptor.rAddressMode = getAddressMode(params.wrapR);
+    samplerDescriptor.maxAnisotropy = 1u << params.anisotropyLog2;
+    samplerDescriptor.lodMaxClamp = (float) state.maxLod;
+    samplerDescriptor.lodMinClamp = (float) state.minLod;
     samplerDescriptor.compareFunction =
-            state.compareMode == SamplerCompareMode::NONE ?
-                MTLCompareFunctionNever : getCompareFunction(state.compareFunc);
+            params.compareMode == SamplerCompareMode::NONE ?
+                MTLCompareFunctionNever : getCompareFunction(params.compareFunc);
     return [device newSamplerStateWithDescriptor:samplerDescriptor];
 }
 
