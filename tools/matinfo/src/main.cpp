@@ -73,7 +73,7 @@ static void printUsage(const char* name) {
             "   --print-glsl=[index], -g\n"
             "       Print GLSL for the nth shader (0 is the first OpenGL shader)\n\n"
             "   --print-spirv=[index], -s\n"
-            "       Print disasm for the nth shader (0 is the first Vulkan shader)\n\n"
+            "       Validate and print disasm for the nth shader (0 is the first Vulkan shader)\n\n"
             "   --print-metal=[index], -m\n"
             "       Print Metal Shading Language for the nth shader (0 is the first Metal shader)\n\n"
             "   --print-vkglsl=[index], -v\n"
