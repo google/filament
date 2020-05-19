@@ -143,7 +143,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
     // Create the Vulkan instance.
     VkApplicationInfo appInfo = {};
     appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    appInfo.apiVersion = VK_API_VERSION_1_0;
+    appInfo.apiVersion = VK_MAKE_VERSION(VK_REQUIRED_VERSION_MAJOR, VK_REQUIRED_VERSION_MINOR, 0);
     instanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     instanceCreateInfo.pApplicationInfo = &appInfo;
     instanceCreateInfo.enabledExtensionCount = enabledExtensionCount;
@@ -189,9 +189,7 @@ UTILS_NOINLINE
 Driver* VulkanDriver::create(VulkanPlatform* const platform,
         const char* const* ppEnabledExtensions, uint32_t enabledExtensionCount) noexcept {
     assert(platform);
-    auto* const driver = new VulkanDriver(platform, ppEnabledExtensions,
-            enabledExtensionCount);
-    return driver;
+    return new VulkanDriver(platform, ppEnabledExtensions, enabledExtensionCount);
 }
 
 ShaderModel VulkanDriver::getShaderModel() const noexcept {

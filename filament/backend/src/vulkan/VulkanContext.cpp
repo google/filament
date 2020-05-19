@@ -61,8 +61,14 @@ void selectPhysicalDevice(VulkanContext& context) {
         VkPhysicalDevice physicalDevice = physicalDevices[i];
         vkGetPhysicalDeviceProperties(physicalDevice, &context.physicalDeviceProperties);
 
-        // Does the device support Vulkan?
-        if (VK_VERSION_MAJOR(context.physicalDeviceProperties.apiVersion) < 1) {
+        const int major = VK_VERSION_MAJOR(context.physicalDeviceProperties.apiVersion);
+        const int minor = VK_VERSION_MINOR(context.physicalDeviceProperties.apiVersion);
+
+        // Does the device support the required Vulkan level?
+        if (major < VK_REQUIRED_VERSION_MAJOR) {
+            continue;
+        }
+        if (major == VK_REQUIRED_VERSION_MAJOR && minor < VK_REQUIRED_VERSION_MINOR) {
             continue;
         }
 
@@ -133,7 +139,6 @@ void selectPhysicalDevice(VulkanContext& context) {
         // Since we don't have any vendor-specific workarounds yet, there's no need to make this
         // mapping in code. The "deviceName" string informally reveals the marketing name for the
         // GPU. (e.g., Quadro)
-        const uint32_t apiVersion = context.physicalDeviceProperties.apiVersion;
         const uint32_t driverVersion = context.physicalDeviceProperties.driverVersion;
         const uint32_t vendorID = context.physicalDeviceProperties.vendorID;
         const uint32_t deviceID = context.physicalDeviceProperties.deviceID;
@@ -142,11 +147,12 @@ void selectPhysicalDevice(VulkanContext& context) {
                 << "' from " << physicalDeviceCount << " physical devices. "
                 << "(vendor 0x" << utils::io::hex << vendorID << ", "
                 << "device 0x" << deviceID << ", "
-                << "api 0x" << apiVersion << ", "
-                << "driver 0x" << driverVersion << ")"
-                << utils::io::dec << utils::io::endl;
-        break;
+                << "driver 0x" << driverVersion << ", "
+                << utils::io::dec << "api " << major << "." << minor << ")"
+                << utils::io::endl;
+        return;
     }
+    PANIC_POSTCONDITION("Unable to find suitable device.");
 }
 
 void createVirtualDevice(VulkanContext& context) {
