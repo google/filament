@@ -42,10 +42,13 @@ public:
     void init() noexcept;
     void terminate(backend::DriverApi& driver) noexcept;
 
-    FrameGraphId <FrameGraphTexture> toneMapping(FrameGraph& fg,
-            FrameGraphId <FrameGraphTexture> input,
+    FrameGraphId<FrameGraphTexture> toneMapping(FrameGraph& fg,
+            FrameGraphId<FrameGraphTexture> input,
             backend::TextureFormat outFormat, bool translucent, bool fxaa, math::float2 scale,
             View::BloomOptions bloomOptions, bool dithering) noexcept;
+
+    void toneMappingSubpass(backend::DriverApi& driver,
+            bool translucent, bool fxaa, bool dithering) noexcept;
 
     FrameGraphId<FrameGraphTexture> fxaa(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, backend::TextureFormat outFormat,
@@ -136,6 +139,7 @@ private:
     PostProcessMaterial mBloomUpsample;
     PostProcessMaterial mBlit[3];
     PostProcessMaterial mTonemapping;
+    PostProcessMaterial mTonemappingWithSubpass;
     PostProcessMaterial mFxaa;
     PostProcessMaterial mDoFBlur;
     PostProcessMaterial mDoF;

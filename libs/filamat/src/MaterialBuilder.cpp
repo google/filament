@@ -62,7 +62,7 @@ inline void assertSingleTargetApi(MaterialBuilderBase::TargetApi api) {
     assert(bits && !(bits & bits - 1u));
 }
 
-void MaterialBuilderBase::prepare() {
+void MaterialBuilderBase::prepare(bool vulkanSemantics) {
     mCodeGenPermutations.clear();
     mShaderModels.reset();
 
@@ -78,6 +78,12 @@ void MaterialBuilderBase::prepare() {
     // OpenGL is a special case. If we're doing any optimization, then we need to go to Spir-V.
     TargetLanguage glTargetLanguage = mOptimization > MaterialBuilder::Optimization::PREPROCESSOR ?
             TargetLanguage::SPIRV : TargetLanguage::GLSL;
+    if (vulkanSemantics) {
+        // Currently GLSLPostProcessor.cpp is incapable of compiling SPIRV to GLSL without
+        // running the optimizer. For now we just activate the optimizer in that case.
+        mOptimization = MaterialBuilder::Optimization::PERFORMANCE;
+        glTargetLanguage = TargetLanguage::SPIRV;
+    }
 
     // Select OpenGL as the default TargetApi if none was specified.
     if (none(mTargetApi)) {
@@ -355,7 +361,7 @@ bool MaterialBuilder::hasExternalSampler() const noexcept {
 }
 
 void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
-    MaterialBuilderBase::prepare();
+    MaterialBuilderBase::prepare(mEnableFramebufferFetch);
 
     // Build the per-material sampler block and uniform block.
     filament::SamplerInterfaceBlock::Builder sbb;
@@ -468,8 +474,13 @@ bool MaterialBuilder::runSemanticAnalysis() noexcept {
 
     TargetApi targetApi = params.targetApi;
     assertSingleTargetApi(targetApi);
-    ShaderModel model = static_cast<ShaderModel>(params.shaderModel);
 
+    if (mEnableFramebufferFetch) {
+        // framebuffer fetch is only available with vulkan semantics
+        targetApi = TargetApi::VULKAN;
+    }
+
+    ShaderModel model = static_cast<ShaderModel>(params.shaderModel);
     std::string shaderCode = peek(ShaderType::VERTEX, params, mProperties);
     bool result = glslTools.analyzeVertexShader(shaderCode, model, mMaterialDomain, targetApi);
     if (!result) return false;
@@ -600,7 +611,18 @@ bool MaterialBuilder::generateShaders(const std::vector<Variant>& variants, Chun
             }
 
 #ifndef FILAMAT_LITE
-            bool ok = postProcessor.process(shader, v.stage, shaderModel, &shader, pSpirv, pMsl);
+
+            GLSLPostProcessor::Config config{
+                    .shaderType = v.stage,
+                    .shaderModel = shaderModel,
+                    .glsl = {}
+            };
+
+            if (mEnableFramebufferFetch) {
+                config.glsl.subpassInputToColorLocation.emplace_back(0, 0);
+            }
+
+            bool ok = postProcessor.process(shader, config, &shader, pSpirv, pMsl);
 #else
             bool ok = true;
 #endif
@@ -668,6 +690,13 @@ bool MaterialBuilder::generateShaders(const std::vector<Variant>& variants, Chun
 #endif
 
     return true;
+}
+
+MaterialBuilder& MaterialBuilder::enableFramebufferFetch() noexcept {
+    // This API is temporary, it is used to enable EXT_framebuffer_fetch for GLSL shaders,
+    // this is used sparingly by filament's post-processing stage.
+    mEnableFramebufferFetch = true;
+    return *this;
 }
 
 Package MaterialBuilder::build() noexcept {

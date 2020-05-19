@@ -116,6 +116,7 @@ void PostProcessManager::init() noexcept {
     mBlit[1] = PostProcessMaterial(mEngine, MATERIALS_BLITMEDIUM_DATA, MATERIALS_BLITMEDIUM_SIZE);
     mBlit[2] = PostProcessMaterial(mEngine, MATERIALS_BLITHIGH_DATA, MATERIALS_BLITHIGH_SIZE);
     mTonemapping = PostProcessMaterial(mEngine, MATERIALS_TONEMAPPING_DATA, MATERIALS_TONEMAPPING_SIZE);
+    mTonemappingWithSubpass = PostProcessMaterial(mEngine, MATERIALS_TONEMAPPINGWITHSUBPASS_DATA, MATERIALS_TONEMAPPINGWITHSUBPASS_SIZE);
     mFxaa = PostProcessMaterial(mEngine, MATERIALS_FXAA_DATA, MATERIALS_FXAA_SIZE);
     mDoFBlur = PostProcessMaterial(mEngine, MATERIALS_DOFBLUR_DATA, MATERIALS_DOFBLUR_SIZE);
     mDoF = PostProcessMaterial(mEngine, MATERIALS_DOF_DATA, MATERIALS_DOF_SIZE);
@@ -157,6 +158,7 @@ void PostProcessManager::terminate(DriverApi& driver) noexcept {
     mBlit[1].terminate(engine);
     mBlit[2].terminate(engine);
     mTonemapping.terminate(engine);
+    mTonemappingWithSubpass.terminate(engine);
     mFxaa.terminate(engine);
     mDoFBlur.terminate(engine);
     mDoF.terminate(engine);
@@ -267,6 +269,24 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::toneMapping(FrameGraph& fg,
 
     return ppToneMapping.getData().output;
 }
+
+void PostProcessManager::toneMappingSubpass(DriverApi& driver,
+        bool translucent, bool fxaa, bool dithering) noexcept {
+
+    FEngine& engine = mEngine;
+    Handle<HwRenderPrimitive> const& fullScreenRenderPrimitive = engine.getFullScreenRenderPrimitive();
+
+    FMaterialInstance* mi = mTonemappingWithSubpass.getMaterialInstance();
+    mi->setParameter("dithering", dithering);
+    mi->setParameter("fxaa", fxaa);
+    mi->commit(driver);
+    mi->use(driver);
+    const uint8_t variant = uint8_t(translucent ?
+            PostProcessVariant::TRANSLUCENT : PostProcessVariant::OPAQUE);
+
+    driver.draw(mTonemappingWithSubpass.getPipelineState(variant), fullScreenRenderPrimitive);
+}
+
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::fxaa(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> input,

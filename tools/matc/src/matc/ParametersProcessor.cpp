@@ -428,6 +428,13 @@ static bool processMultiBounceAO(MaterialBuilder& builder, const JsonishValue& v
     return true;
 }
 
+static bool processFramebufferFetch(MaterialBuilder& builder, const JsonishValue& value) {
+    if (value.toJsonBool()->getBool()) {
+        builder.enableFramebufferFetch();
+    }
+    return true;
+}
+
 static bool processSpecularAmbientOcclusion(MaterialBuilder& builder, const JsonishValue& value) {
     static const std::unordered_map<std::string, MaterialBuilder::SpecularAmbientOcclusion> strToEnum {
             { "none",        MaterialBuilder::SpecularAmbientOcclusion::NONE },
@@ -573,6 +580,7 @@ ParametersProcessor::ParametersProcessor() {
     mParameters["domain"]                        = { &processDomain, Type::STRING };
     mParameters["refractionMode"]                = { &processRefractionMode, Type::STRING };
     mParameters["refractionType"]                = { &processRefractionType, Type::STRING };
+    mParameters["framebufferFetch"]              = { &processFramebufferFetch, Type::BOOL };
 }
 
 bool ParametersProcessor::process(MaterialBuilder& builder, const JsonishObject& jsonObject) {

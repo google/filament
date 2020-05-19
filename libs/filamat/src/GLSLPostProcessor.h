@@ -44,16 +44,25 @@ public:
 
     ~GLSLPostProcessor();
 
-    bool process(const std::string& inputShader, filament::backend::ShaderType shaderType,
-            filament::backend::ShaderModel shaderModel, std::string* outputGlsl,
-            SpirvBlob* outputSpirv, std::string* outputMsl);
+    struct Config {
+        filament::backend::ShaderType shaderType;
+        filament::backend::ShaderModel shaderModel;
+        struct {
+            std::vector<std::pair<uint32_t, uint32_t>> subpassInputToColorLocation;
+        } glsl;
+    };
+
+    bool process(const std::string& inputShader, Config const& config,
+            std::string* outputGlsl,
+            SpirvBlob* outputSpirv,
+            std::string* outputMsl);
 
 private:
 
     void fullOptimization(const glslang::TShader& tShader,
-            filament::backend::ShaderModel shaderModel) const;
+            GLSLPostProcessor::Config const& config) const;
     void preprocessOptimization(glslang::TShader& tShader,
-            filament::backend::ShaderModel shaderModel) const;
+            GLSLPostProcessor::Config const& config) const;
 
     void registerSizePasses(spvtools::Optimizer& optimizer) const;
     void registerPerformancePasses(spvtools::Optimizer& optimizer) const;

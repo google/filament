@@ -280,6 +280,8 @@ public:
             backend::Handle<backend::HwRenderTarget> renderTarget,
             backend::RenderPassParams params) const noexcept;
 
+    void executeCommands(const char* name) const noexcept;
+
     utils::GrowingSlice<Command>& getCommands() { return mCommands; }
     utils::Slice<Command> const& getCommands() const { return mCommands; }
 
