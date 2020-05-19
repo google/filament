@@ -239,6 +239,16 @@ void VulkanDriver::terminate() {
 }
 
 void VulkanDriver::tick(int) {
+    if (!mContext.currentSurface) {
+        return;
+    }
+    for (SwapContext& sc : mContext.currentSurface->swapContexts) {
+        VulkanCmdFence* fence = sc.commands.fence.get();
+        if (fence) {
+            VkResult status = vkGetFenceStatus(mContext.device, fence->fence);
+            fence->status.store(status, std::memory_order_relaxed);
+        }
+    }
 }
 
 void VulkanDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId,
@@ -459,7 +469,8 @@ void VulkanDriver::createFenceR(Handle<HwFence> fh, int) {
 }
 
 void VulkanDriver::createSyncR(Handle<HwSync> sh, int) {
-    // TODO: implement sync objects
+    ASSERT_PRECONDITION(mContext.currentCommands, "Syncs must be created within a frame.");
+    construct_handle<VulkanSync>(mHandleMap, sh, *mContext.currentCommands);
 }
 
 void VulkanDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
@@ -538,8 +549,7 @@ Handle<HwFence> VulkanDriver::createFenceS() noexcept {
 }
 
 Handle<HwSync> VulkanDriver::createSyncS() noexcept {
-    // TODO: implement Sync ojbects
-    return {};
+    return alloc_handle<VulkanSync, HwSync>();
 }
 
 Handle<HwSwapChain> VulkanDriver::createSwapChainS() noexcept {
@@ -605,7 +615,7 @@ void VulkanDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
 }
 
 void VulkanDriver::destroySync(Handle<HwSync> sh) {
-    // TODO: implement Sync objects
+    destruct_handle<VulkanSync>(mHandleMap, sh);
 }
 
 
@@ -773,8 +783,16 @@ bool VulkanDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapse
 }
 
 SyncStatus VulkanDriver::getSyncStatus(Handle<HwSync> sh) {
-    // TODO: implement Sync objects
-    return SyncStatus::SIGNALED;
+    VulkanSync* sync = handle_cast<VulkanSync>(mHandleMap, sh);
+    if (sync->fence == nullptr) {
+        return SyncStatus::NOT_SIGNALED;
+    }
+    VkResult status = sync->fence->status.load(std::memory_order_relaxed);
+    switch (status) {
+        case VK_SUCCESS: return SyncStatus::SIGNALED;
+        case VK_NOT_READY: return SyncStatus::NOT_SIGNALED;
+        default: return SyncStatus::ERROR;
+    }
 }
 
 void VulkanDriver::setExternalImage(Handle<HwTexture> th, void* image) {
