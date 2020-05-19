@@ -33,12 +33,8 @@ namespace utils {
 namespace filament {
 
 class Engine;
-
-namespace details {
 class FEngine;
 class FLightManager;
-} // namespace details
-
 
 /**
  * LightManager allows to create a light source in the scene, such as a sun or street lights.
@@ -526,8 +522,8 @@ public:
         Result build(Engine& engine, utils::Entity entity);
 
     private:
-        friend class details::FEngine;
-        friend class details::FLightManager;
+        friend class FEngine;
+        friend class FLightManager;
     };
 
     static constexpr float EFFICIENCY_INCANDESCENT = 0.0220f;   //!< Typical efficiency of an incandescent light bulb (2.2%)

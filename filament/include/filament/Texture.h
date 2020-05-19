@@ -29,9 +29,7 @@
 
 namespace filament {
 
-namespace details {
 class FTexture;
-} // namespace details
 
 class Engine;
 class Stream;
@@ -206,7 +204,7 @@ public:
         Builder& import(intptr_t id) noexcept;
 
     private:
-        friend class details::FTexture;
+        friend class FTexture;
     };
 
     /**

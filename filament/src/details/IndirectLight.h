@@ -31,7 +31,6 @@
 #include <array>
 
 namespace filament {
-namespace details {
 
 class FEngine;
 
@@ -67,7 +66,6 @@ private:
 
 FILAMENT_UPCAST(IndirectLight)
 
-} // namespace details
 } // namespace filament
 
 #endif // TNT_FILAMENT_DETAILS_INDIRECT_LIGHT_H

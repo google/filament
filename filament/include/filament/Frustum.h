@@ -29,10 +29,7 @@
 namespace filament {
 
 class Box;
-
-namespace details {
 class Culler;
-} // namespace details;
 
 /**
  * A frustum defined by six planes
@@ -137,7 +134,7 @@ public:
     float contains(math::float3 p) const noexcept;
 
 private:
-    friend class details::Culler;
+    friend class Culler;
     math::float4 mPlanes[6];
 };
 

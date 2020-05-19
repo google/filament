@@ -34,8 +34,6 @@ using namespace utils;
 
 namespace filament {
 
-using namespace details;
-
 struct RenderableManager::BuilderDetails {
     using Entry = RenderableManager::Builder::Entry;
     std::vector<Entry> mEntries;
@@ -244,9 +242,6 @@ RenderableManager::Builder::Result RenderableManager::Builder::build(Engine& eng
 }
 
 // ------------------------------------------------------------------------------------------------
-
-
-namespace details {
 
 FRenderableManager::FRenderableManager(FEngine& engine) noexcept : mEngine(engine) {
     // DON'T use engine here in the ctor, because it's not fully constructed yet.
@@ -536,14 +531,9 @@ void FRenderableManager::makeBone(PerRenderableUibBone* UTILS_RESTRICT out, mat4
     out->ns = is / max(abs(is));
 }
 
-} // namespace details
-
-
 // ------------------------------------------------------------------------------------------------
 // Trampoline calling into private implementation
 // ------------------------------------------------------------------------------------------------
-
-using namespace details;
 
 bool RenderableManager::hasComponent(utils::Entity e) const noexcept {
     return upcast(this)->hasComponent(e);

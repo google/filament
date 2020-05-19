@@ -26,7 +26,6 @@
 #include <utils/compiler.h>
 
 namespace filament {
-namespace details {
 
 class FEngine;
 class FVertexBuffer;
@@ -68,7 +67,6 @@ private:
     uint16_t mBlendOrder = 0;
 };
 
-} // namespace details
 } // namespace filament
 
 #endif // TNT_FILAMENT_DETAILS_RENDERPRIMITIVE_H

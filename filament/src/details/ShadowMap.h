@@ -31,7 +31,6 @@
 #include <math/vec4.h>
 
 namespace filament {
-namespace details {
 
 class FView;
 class RenderPass;
@@ -83,7 +82,7 @@ public:
     // Call once per frame if the light, scene (or visible layers) or camera changes.
     // This computes the light's camera.
     void update(const FScene::LightSoa& lightData, size_t index, FScene const* scene,
-            details::CameraInfo const& camera, uint8_t visibleLayers,
+            filament::CameraInfo const& camera, uint8_t visibleLayers,
             ShadowMapLayout layout, const CascadeParameters& cascadeParams) noexcept;
 
     void render(backend::DriverApi& driver, backend::Handle<backend::HwRenderTarget> rt,
@@ -238,7 +237,6 @@ private:
     const bool mTextureSpaceFlipped;
 };
 
-} // namespace details
 } // namespace filament
 
 #endif // TNT_FILAMENT_DETAILS_SHADOWMAP_H

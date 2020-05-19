@@ -41,7 +41,6 @@
 #include <vector>
 
 namespace filament {
-namespace details {
 
 class FEngine;
 class FCamera;
@@ -267,7 +266,6 @@ private:
     };
 };
 
-} // namespace details
 } // namespace filament
 
 #endif // TNT_FILAMENT_DETAILS_FROXEL_H

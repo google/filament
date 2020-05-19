@@ -88,8 +88,8 @@ void RenderTargetResourceEntry::resolve(FrameGraph& fg) noexcept {
 
             // figure out the min/max dimensions across all attachments
             const size_t level = attachment.getLevel();
-            const uint32_t w = details::FTexture::valueForLevel(level, entry.descriptor.width);
-            const uint32_t h = details::FTexture::valueForLevel(level, entry.descriptor.height);
+            const uint32_t w = FTexture::valueForLevel(level, entry.descriptor.width);
+            const uint32_t h = FTexture::valueForLevel(level, entry.descriptor.height);
             minWidth = std::min(minWidth, w);
             maxWidth = std::max(maxWidth, w);
             minHeight = std::min(minHeight, h);

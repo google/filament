@@ -28,9 +28,7 @@
 
 namespace filament {
 
-namespace details {
 class FSkybox;
-} // namespace details
 
 class Engine;
 class Texture;
@@ -143,7 +141,7 @@ public:
         Skybox* build(Engine& engine);
 
     private:
-        friend class details::FSkybox;
+        friend class FSkybox;
     };
 
     void setColor(math::float4 color) noexcept;

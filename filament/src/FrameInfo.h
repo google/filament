@@ -28,9 +28,7 @@
 #include <stdint.h>
 
 namespace filament {
-namespace details {
 class FEngine;
-} // namespace details
 
 struct FrameInfo {
     using duration = std::chrono::duration<float>;
@@ -58,7 +56,7 @@ public:
         uint32_t historySize;
     };
 
-    explicit FrameInfoManager(details::FEngine& engine);
+    explicit FrameInfoManager(FEngine& engine);
     ~FrameInfoManager() noexcept;
     void terminate();
     void beginFrame(Config const& config, uint32_t frameId);  // call this immediately after "make current"
@@ -75,7 +73,7 @@ public:
 
 private:
     void update(Config const& config, duration lastFrameTime);
-    details::FEngine& mEngine;
+    FEngine& mEngine;
     backend::Handle<backend::HwTimerQuery> mQueries[POOL_COUNT];
     duration mFrameTime{};
     uint32_t mIndex = 0;

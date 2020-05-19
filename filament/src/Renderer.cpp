@@ -53,8 +53,6 @@ namespace filament {
 
 using namespace backend;
 
-namespace details {
-
 FRenderer::FRenderer(FEngine& engine) :
         mEngine(engine),
         mFrameSkipper(engine, 1u),
@@ -939,13 +937,9 @@ Handle<HwRenderTarget> FRenderer::getRenderTarget(FView& view) const noexcept {
     return viewRenderTarget ? viewRenderTarget : mRenderTarget;
 }
 
-} // namespace details
-
 // ------------------------------------------------------------------------------------------------
 // Trampoline calling into private implementation
 // ------------------------------------------------------------------------------------------------
-
-using namespace details;
 
 Engine* Renderer::getEngine() noexcept {
     return &upcast(this)->getEngine();

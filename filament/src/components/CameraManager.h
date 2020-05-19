@@ -32,8 +32,6 @@ public:
     using Instance = utils::EntityInstance<CameraManager>;
 };
 
-namespace details {
-
 class FEngine;
 class FCamera;
 
@@ -87,7 +85,6 @@ private:
     FEngine& mEngine;
 };
 
-} // namespace details
 } // namespace filament
 
 #endif // TNT_FILAMENT_CAMERAMANAGER_H

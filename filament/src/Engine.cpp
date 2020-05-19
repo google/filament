@@ -58,8 +58,6 @@ namespace filament {
 using namespace backend;
 using namespace filaflat;
 
-namespace details {
-
 FEngine* FEngine::create(Backend backend, Platform* platform, void* sharedGLContext) {
     FEngine* instance = new FEngine(backend, platform, sharedGLContext);
 
@@ -791,13 +789,9 @@ void FEngine::destroy(FEngine* engine) {
     }
 }
 
-} // namespace details
-
 // ------------------------------------------------------------------------------------------------
 // Trampoline calling into private implementation
 // ------------------------------------------------------------------------------------------------
-
-using namespace details;
 
 Engine* Engine::create(Backend backend, Platform* platform, void* sharedGLContext) {
     return FEngine::create(backend, platform, sharedGLContext);

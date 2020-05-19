@@ -39,8 +39,6 @@ namespace filament {
 
 using namespace backend;
 
-namespace details {
-
 RenderPass::RenderPass(FEngine& engine,
         GrowingSlice<RenderPass::Command> commands) noexcept
         : mEngine(engine), mCommands(commands),
@@ -582,5 +580,4 @@ void RenderPass::updateSummedPrimitiveCounts(
     summedPrimitiveCount[vr.last] = count;
 }
 
-} // namespace details
 } // namespace filament

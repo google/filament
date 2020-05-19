@@ -61,7 +61,7 @@ public:
     // Helper method called after resolving fontPath; public so fonts can be added by caller.
     void createAtlasTexture(filament::Engine* engine);
 
-    // Return the ImGui view, useful for drawing 2D overlays.
+    // Returns the client-owned view, useful for drawing 2D overlays.
     filament::View* getView() const { return mView; }
 
   private:
@@ -73,7 +73,8 @@ public:
       void createIndexBuffer(size_t bufferIndex, size_t capacity);
       void syncThreads();
       filament::Engine* mEngine;
-      filament::View* mView;
+      filament::View* mView; // The view is owned by the client.
+      filament::Scene* mScene;
       filament::Material* mMaterial = nullptr;
       std::vector<filament::VertexBuffer*> mVertexBuffers;
       std::vector<filament::IndexBuffer*> mIndexBuffers;

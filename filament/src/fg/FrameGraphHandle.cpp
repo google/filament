@@ -51,7 +51,7 @@ void FrameGraphTexture::create(FrameGraph& fg, const char* name,
     if (!(desc.usage & TextureUsage::SAMPLEABLE)) {
         levels = 1;
     }
-    assert(levels <= details::FTexture::maxLevelCount(desc.width, desc.height));
+    assert(levels <= FTexture::maxLevelCount(desc.width, desc.height));
 
     uint8_t samples = desc.samples;
     assert(samples <= 1 || none(desc.usage & TextureUsage::SAMPLEABLE));

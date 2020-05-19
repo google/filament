@@ -86,9 +86,6 @@ namespace fg {
 class ResourceAllocator;
 } // namespace fg
 
-
-namespace details {
-
 class FFence;
 class FMaterialInstance;
 class FRenderer;
@@ -124,10 +121,10 @@ public:
     static constexpr size_t CONFIG_FROXEL_SLICE_COUNT      = 16;
     static constexpr bool   CONFIG_IBL_USE_IRRADIANCE_MAP  = false;
 
-    static constexpr size_t CONFIG_PER_RENDER_PASS_ARENA_SIZE   = details::CONFIG_PER_RENDER_PASS_ARENA_SIZE;
-    static constexpr size_t CONFIG_PER_FRAME_COMMANDS_SIZE      = details::CONFIG_PER_FRAME_COMMANDS_SIZE;
-    static constexpr size_t CONFIG_MIN_COMMAND_BUFFERS_SIZE     = details::CONFIG_MIN_COMMAND_BUFFERS_SIZE;
-    static constexpr size_t CONFIG_COMMAND_BUFFERS_SIZE         = details::CONFIG_COMMAND_BUFFERS_SIZE;
+    static constexpr size_t CONFIG_PER_RENDER_PASS_ARENA_SIZE   = filament::CONFIG_PER_RENDER_PASS_ARENA_SIZE;
+    static constexpr size_t CONFIG_PER_FRAME_COMMANDS_SIZE      = filament::CONFIG_PER_FRAME_COMMANDS_SIZE;
+    static constexpr size_t CONFIG_MIN_COMMAND_BUFFERS_SIZE     = filament::CONFIG_MIN_COMMAND_BUFFERS_SIZE;
+    static constexpr size_t CONFIG_COMMAND_BUFFERS_SIZE         = filament::CONFIG_COMMAND_BUFFERS_SIZE;
 
 public:
     static FEngine* create(Backend backend = Backend::DEFAULT,
@@ -397,7 +394,6 @@ public:
 
 FILAMENT_UPCAST(Engine)
 
-} // namespace details
 } // namespace filament
 
 #endif // TNT_FILAMENT_DETAILS_ENGINE_H

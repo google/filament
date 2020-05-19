@@ -26,7 +26,6 @@
 #include <utils/compiler.h>
 
 namespace filament {
-namespace details {
 
 class FEngine;
 
@@ -68,7 +67,6 @@ private:
 
 FILAMENT_UPCAST(SwapChain)
 
-} // namespace details
 } // namespace filament
 
 #endif // TNT_FILAMENT_DETAILS_SWAPCHAIN_H

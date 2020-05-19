@@ -37,7 +37,6 @@ class JobSystem;
 }
 
 namespace filament {
-namespace details {
 
 class RenderPass {
 public:
@@ -352,7 +351,6 @@ private:
     size_t mCommandsHighWatermark = 0;
 };
 
-} // namespace details
 } // namespace filament
 
 #endif // TNT_UTILS_RENDERPASS_H

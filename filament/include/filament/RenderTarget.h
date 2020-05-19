@@ -27,9 +27,7 @@
 
 namespace filament {
 
-namespace details {
 class FRenderTarget;
-} // namespace details
 
 class Engine;
 class Texture;
@@ -116,7 +114,7 @@ public:
         RenderTarget* build(Engine& engine);
 
     private:
-        friend class details::FRenderTarget;
+        friend class FRenderTarget;
     };
 
     /**

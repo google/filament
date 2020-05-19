@@ -35,7 +35,6 @@ using namespace utils;
 
 namespace filament {
 
-using namespace details;
 using namespace backend;
 
 struct Texture::BuilderDetails {
@@ -133,8 +132,6 @@ Texture* Texture::Builder::build(Engine& engine) {
 }
 
 // ------------------------------------------------------------------------------------------------
-
-namespace details {
 
 FTexture::FTexture(FEngine& engine, const Builder& builder) {
     mWidth  = static_cast<uint32_t>(builder->mWidth);
@@ -498,15 +495,9 @@ void FTexture::generatePrefilterMipmap(FEngine& engine,
     // by the caller (without being move()d here).
 }
 
-
-} // namespace details
-
 // ------------------------------------------------------------------------------------------------
 // Trampoline calling into private implementation
 // ------------------------------------------------------------------------------------------------
-
-using namespace details;
-
 
 size_t Texture::getWidth(size_t level) const noexcept {
     return upcast(this)->getWidth(level);

@@ -5,9 +5,23 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release
 
+- Add missing JavaScript API for View::setVisibleLayers().
+
 ## v1.7.0
 
 - MaterialInstances now have optional names.
+- Improved Depth of Field effect: bokeh rotates with the aperture diameter, improved CoC calculation, feather blur radius.
+- Introduced `getNormalizedViewportCoord` shader API.
+- Added basic SwiftShader support.
+- Fixed SwapChain resizing issues in Vulkan.
+- Added debug option to track `Entities`.
+- Fixed `Camera` entity leaks.
+- Removed problematic `CreateEliminateDeadMembersPass`, which broke UBO layout.
+- Added assert that the engine is not terminated in `flushAndWait()`.
+- Added several fixes and improvements around objects lifetime management
+- `gltfio`: AssetLoader now loads names for mesh-free nodes
+- `gltfio`: Material names are now preserved in ubershader mode
+- Fixed JNI objects allocation and memory corruption
 - JNI constructors are now "package private" unless they take an Engine.
 
 ## v1.6.0

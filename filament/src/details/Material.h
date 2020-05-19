@@ -37,8 +37,6 @@ namespace filament {
 
 class MaterialParser;
 
-namespace details {
-
 class  FEngine;
 
 class FMaterial : public Material {
@@ -205,7 +203,6 @@ private:
 
 FILAMENT_UPCAST(Material)
 
-} // namespace details
 } // namespace filament
 
 #endif // TNT_FILAMENT_DETAILS_MATERIAL_H
