@@ -311,13 +311,29 @@ using UniformBufferStateTracker = StateTracker<UniformBufferState>;
 
 // Sampler states
 
-struct SamplerStateCreator {
-    id<MTLSamplerState> operator()(id<MTLDevice> device, const backend::SamplerParams& state)
-            noexcept;
+struct SamplerState {
+    backend::SamplerParams samplerParams;
+    uint32_t minLod = 0;
+    uint32_t maxLod = UINT_MAX;
+
+    bool operator==(const SamplerState& rhs) const noexcept {
+        return this->samplerParams == rhs.samplerParams &&
+               this->minLod == rhs.minLod &&
+               this->maxLod == rhs.maxLod;
+    }
+
+    bool operator!=(const SamplerState& rhs) const noexcept {
+        return !operator==(rhs);
+    }
 };
 
-using SamplerStateCache = StateCache<backend::SamplerParams, id<MTLSamplerState>,
-        SamplerStateCreator>;
+static_assert(sizeof(SamplerState) == 12, "SamplerState unexpected size.");
+
+struct SamplerStateCreator {
+    id<MTLSamplerState> operator()(id<MTLDevice> device, const SamplerState& state) noexcept;
+};
+
+using SamplerStateCache = StateCache<SamplerState, id<MTLSamplerState>, SamplerStateCreator>;
 
 // Raster-related state
 

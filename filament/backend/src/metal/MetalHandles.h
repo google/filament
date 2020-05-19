@@ -130,6 +130,7 @@ struct MetalTexture : public HwTexture {
             uint32_t height, uint32_t byteOffset, uint32_t slice,
             PixelBufferDescriptor& data, id<MTLBlitCommandEncoder> blitCommandEncoder,
             id<MTLCommandBuffer> blitCommandBuffer) noexcept;
+    void updateLodRange(uint32_t level);
 
     MetalContext& context;
     MetalExternalImage externalImage;
@@ -139,6 +140,8 @@ struct MetalTexture : public HwTexture {
     uint8_t blockHeight; // The number of vertical pixels per block (only for compressed texture formats).
     TextureReshaper reshaper;
     MTLPixelFormat metalPixelFormat;
+    uint32_t minLod = UINT_MAX;
+    uint32_t maxLod = 0;
 };
 
 struct MetalSamplerGroup : public HwSamplerGroup {
