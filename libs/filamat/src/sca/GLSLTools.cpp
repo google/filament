@@ -339,8 +339,8 @@ void GLSLTools::prepareShaderParser(glslang::TShader& shader, EShLanguage langua
             optimization == filamat::MaterialBuilder::Optimization::PERFORMANCE) {
         shader.setAutoMapBindings(true);
         shader.setEnvInput(EShSourceGlsl, language, EShClientVulkan, version);
-        shader.setEnvClient(EShClientVulkan, EShTargetVulkan_1_1);
-        shader.setEnvTarget(EShTargetSpv, EShTargetSpv_1_3);
+        shader.setEnvClient(EShClientVulkan, EShTargetVulkan_1_0);
+        shader.setEnvTarget(EShTargetSpv, EShTargetSpv_1_0);
     }
 }
 

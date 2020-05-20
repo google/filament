@@ -278,7 +278,7 @@ public:
             mg_printf(conn, kSuccessHeader.c_str(), "application/text");
 
             if (true) {
-                auto context = spvContextCreate(SPV_ENV_UNIVERSAL_1_1);
+                auto context = spvContextCreate(SPV_ENV_UNIVERSAL_1_0);
                 spv_text text = nullptr;
                 const uint32_t options = SPV_BINARY_TO_TEXT_OPTION_INDENT |
                         SPV_BINARY_TO_TEXT_OPTION_FRIENDLY_NAMES;
