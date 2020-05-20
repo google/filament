@@ -58,16 +58,32 @@ public:
     };
 
     struct CascadeParameters {
-        // the near and far planes, in clip space, to use for this shadow map
-        float csNear = -1.0f;
-        float csFar = 1.0f;
+        // The near and far planes, in clip space, to use for this shadow map
+        math::float2 csNearFar = { -1.0f, 1.0f };
+
+        // The following fields are set by computeSceneCascadeParams.
+
+        // Light-space near/far planes for the scene.
+        math::float2 lsNearFar;
+
+        // View-space near/far planes for the scene.
+        math::float2 vsNearFar;
+
+        Aabb wsShadowCastersVolume;
+        Aabb wsShadowReceiversVolume;
     };
+
+    // Call once per frame to populate the CascadeParameters struct, then pass to update().
+    // This computes values constant across all cascades.
+    static void computeSceneCascadeParams(const FScene::LightSoa& lightData, size_t index,
+            FScene const* scene, filament::CameraInfo const& camera, uint8_t visibleLayers,
+            CascadeParameters& cascadeParams);
 
     // Call once per frame if the light, scene (or visible layers) or camera changes.
     // This computes the light's camera.
     void update(const FScene::LightSoa& lightData, size_t index, FScene const* scene,
             filament::CameraInfo const& camera, uint8_t visibleLayers,
-            ShadowMapLayout layout, CascadeParameters cascadeParams) noexcept;
+            ShadowMapLayout layout, const CascadeParameters& cascadeParams) noexcept;
 
     void render(backend::DriverApi& driver, backend::Handle<backend::HwRenderTarget> rt,
             filament::Viewport const& viewport, utils::Range<uint32_t> const& range,
@@ -135,7 +151,7 @@ private:
             math::mat4f const& Mv, math::float3 worldOrigin, math::float2 shadowMapResolution) noexcept;
 
     static inline void computeFrustumCorners(math::float3* out,
-            const math::mat4f& projectionViewInverse, float csNear = -1.0f, float csFar = 1.0f) noexcept;
+            const math::mat4f& projectionViewInverse, math::float2 csNearFar = { -1.0f, 1.0f }) noexcept;
 
     static inline math::float2 computeNearFar(math::mat4f const& view,
             Aabb const& wsShadowCastersVolume) noexcept;
