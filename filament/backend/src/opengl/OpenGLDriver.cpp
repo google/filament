@@ -823,7 +823,7 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
             }
             CHECK_GL_ERROR(utils::slog.e)
         } else
-#if GLES31_HEADERS
+#if GLES30_HEADERS
             if (gl.ext.EXT_multisampled_render_to_texture && t->depth <= 1) {
                 assert(rt->gl.samples > 1);
                 // We have a multi-sample rendertarget and we have EXT_multisampled_render_to_texture,
