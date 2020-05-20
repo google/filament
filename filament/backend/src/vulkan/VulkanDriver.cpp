@@ -46,15 +46,10 @@
 //   srcDirs = ["${android.ndkDirectory}/sources/third_party/vulkan/src/build-android/jniLibs"]
 // } } }
 //
-#if !defined(NDEBUG)
-#define ENABLE_VALIDATION 1
-#else
-#define ENABLE_VALIDATION 0
-#endif
 
 static constexpr int SWAP_CHAIN_MAX_ATTEMPTS = 16;
 
-#if ENABLE_VALIDATION
+#if VK_ENABLE_VALIDATION
 
 namespace {
 
@@ -95,7 +90,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
     ASSERT_POSTCONDITION(bluevk::initialize(), "BlueVK is unable to load entry points.");
 
     VkInstanceCreateInfo instanceCreateInfo = {};
-#if ENABLE_VALIDATION
+#if VK_ENABLE_VALIDATION
     const utils::StaticString DESIRED_LAYERS[] = {
 #if defined(ANDROID)
         // TODO: use VK_LAYER_KHRONOS_validation instead of these layers after it becomes available
@@ -138,7 +133,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
                 << "Please ensure that VK_LAYER_PATH is set correctly." << utils::io::endl;
 #endif
     }
-#endif // ENABLE_VALIDATION
+#endif // VK_ENABLE_VALIDATION
 
     // Create the Vulkan instance.
     VkApplicationInfo appInfo = {};
@@ -154,7 +149,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
     UTILS_UNUSED const PFN_vkCreateDebugReportCallbackEXT createDebugReportCallback =
             vkCreateDebugReportCallbackEXT;
 
-#if ENABLE_VALIDATION
+#if VK_ENABLE_VALIDATION
     if (createDebugReportCallback) {
         const VkDebugReportCallbackCreateInfoEXT cbinfo = {
             VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT,

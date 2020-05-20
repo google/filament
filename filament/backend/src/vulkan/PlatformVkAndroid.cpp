@@ -37,7 +37,7 @@ Driver* PlatformVkAndroid::createDriver(void* const sharedContext) noexcept {
     static const char* requestedExtensions[] = {
         "VK_KHR_surface",
         "VK_KHR_android_surface",
-#if !defined(NDEBUG)
+#if VK_ENABLE_VALIDATION
         "VK_EXT_debug_report",
 #endif
     };

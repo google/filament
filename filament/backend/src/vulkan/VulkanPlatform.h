@@ -19,12 +19,13 @@
 
 #include <backend/Platform.h>
 
+#if !defined(NDEBUG)
+#define VK_ENABLE_VALIDATION 1
+#else
+#define VK_ENABLE_VALIDATION 0
+#endif
+
 namespace filament {
-
-namespace backend {
-class Driver;
-} // namespace backend
-
 namespace backend {
 
 class VulkanPlatform : public DefaultPlatform {

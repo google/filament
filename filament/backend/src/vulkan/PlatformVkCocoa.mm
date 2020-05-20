@@ -42,7 +42,7 @@ Driver* PlatformVkCocoa::createDriver(void* sharedContext) noexcept {
     static const char* requestedExtensions[] = {
         "VK_KHR_surface",
         "VK_MVK_macos_surface",
-#if !defined(NDEBUG)
+#if VK_ENABLE_VALIDATION
         "VK_EXT_debug_report",
 #endif
     };
