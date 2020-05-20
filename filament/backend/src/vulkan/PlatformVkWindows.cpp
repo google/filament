@@ -31,7 +31,7 @@ Driver* PlatformVkWindows::createDriver(void* const sharedContext) noexcept {
     const char* requestedExtensions[] = {
         "VK_KHR_surface",
         "VK_KHR_win32_surface",
-#if !defined(NDEBUG)
+#if VK_ENABLE_VALIDATION
         "VK_EXT_debug_report",
 #endif
     };

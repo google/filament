@@ -579,7 +579,7 @@ void VulkanBinder::destroyLayoutsAndDescriptors() noexcept {
     // Our current descriptor set strategy can cause the # of descriptor sets to explode in certain
     // situations, so it's interesting to report the number that get stuffed into the cache.
     #ifndef NDEBUG
-    utils::slog.i << "Destroying " << mDescriptorSets.size() << " descriptor sets."
+    utils::slog.d << "Destroying " << mDescriptorSets.size() << " descriptor sets."
             << utils::io::endl;
     #endif
 
