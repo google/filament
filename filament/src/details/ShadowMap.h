@@ -76,7 +76,7 @@ public:
     // Call once per frame to populate the CascadeParameters struct, then pass to update().
     // This computes values constant across all cascades.
     static void computeSceneCascadeParams(const FScene::LightSoa& lightData, size_t index,
-            FScene const* scene, details::CameraInfo const& camera, uint8_t visibleLayers,
+            FScene const* scene, filament::CameraInfo const& camera, uint8_t visibleLayers,
             CascadeParameters& cascadeParams);
 
     // Call once per frame if the light, scene (or visible layers) or camera changes.

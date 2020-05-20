@@ -102,7 +102,7 @@ void ShadowMap::render(DriverApi& driver, Handle<HwRenderTarget> rt,
 }
 
 void ShadowMap::computeSceneCascadeParams(const FScene::LightSoa& lightData, size_t index,
-        FScene const* scene, details::CameraInfo const& camera, uint8_t visibleLayers,
+        FScene const* scene, filament::CameraInfo const& camera, uint8_t visibleLayers,
         CascadeParameters& cascadeParams) {
     // Compute the light's model matrix.
     const float3 lightPosition = camera.getPosition();
