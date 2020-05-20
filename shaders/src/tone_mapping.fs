@@ -3,22 +3,27 @@
 //------------------------------------------------------------------------------
 
 // Operators for LDR output
+
+// Operators with built-in sRGB
 #define TONE_MAPPING_UNREAL           0
 #define TONE_MAPPING_FILMIC_ALU       1
-#define TONE_MAPPING_LINEAR           2 // Operators with built-in sRGB go above
-#define TONE_MAPPING_REINHARD         3
-#define TONE_MAPPING_ACES             4
+#define TONE_MAPPING_LUT              2
+
+// Operators without built-in sRGB
+#define TONE_MAPPING_LINEAR           3
+#define TONE_MAPPING_REINHARD         4
+#define TONE_MAPPING_ACES             5
 
 // Operators for HDR output
-#define TONE_MAPPING_ACES_REC2020_1K  5
+#define TONE_MAPPING_ACES_REC2020_1K  6
 
 // Debug operators
 #define TONE_MAPPING_DISPLAY_RANGE    9
 
 #ifdef TARGET_MOBILE
-    #define TONE_MAPPING_OPERATOR     TONE_MAPPING_UNREAL
+    #define TONE_MAPPING_OPERATOR     TONE_MAPPING_LUT
 #else
-    #define TONE_MAPPING_OPERATOR     TONE_MAPPING_ACES
+    #define TONE_MAPPING_OPERATOR     TONE_MAPPING_LUT
 #endif
 
 //------------------------------------------------------------------------------
@@ -57,6 +62,16 @@ vec3 Tonemap_ACES(const vec3 x) {
     const float d = 0.59;
     const float e = 0.14;
     return (x * (a * x + b)) / (x * (c * x + d) + e);
+}
+
+vec3 Tonemap_LUT(mediump sampler3D lut, const vec3 x) {
+    // Alexa LogC EI 1000
+    const float a = 5.555556;
+    const float b = 0.047996;
+    const float c = 0.244161 / log2(10.0);
+    const float d = 0.386036;
+    vec3 logc = c * log2(a * x + b) + d;
+    return textureLod(lut, logc, 0.0).rgb;
 }
 
 //------------------------------------------------------------------------------
@@ -145,7 +160,7 @@ vec3 Tonemap_DisplayRange(const vec3 x) {
  * pre-exposed. Our HDR to LDR tone mapping operators are designed to tone-map
  * the range [0..~8] to [0..1].
  */
-vec3 tonemap(const vec3 x) {
+vec3 tonemap(mediump sampler3D lut, const vec3 x) {
 #if TONE_MAPPING_OPERATOR == TONE_MAPPING_UNREAL
     return Tonemap_Unreal(x);
 #elif TONE_MAPPING_OPERATOR == TONE_MAPPING_FILMIC_ALU
@@ -160,6 +175,8 @@ vec3 tonemap(const vec3 x) {
     return Tonemap_ACES_Rec2020_1k(x);
 #elif TONE_MAPPING_OPERATOR == TONE_MAPPING_DISPLAY_RANGE
     return Tonemap_DisplayRange(x);
+#elif TONE_MAPPING_OPERATOR == TONE_MAPPING_LUT
+    return Tonemap_LUT(lut, x);
 #endif
 }
 

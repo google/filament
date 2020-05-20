@@ -84,6 +84,7 @@ set(SRCS
         src/SwapChain.cpp
         src/Stream.cpp
         src/Texture.cpp
+        src/Tonemapper.cpp
         src/UniformBuffer.cpp
         src/View.cpp
         src/Viewport.cpp
@@ -129,6 +130,7 @@ set(PRIVATE_HDRS
         src/details/Stream.h
         src/details/SwapChain.h
         src/details/Texture.h
+        src/details/Tonemapper.h
         src/details/VertexBuffer.h
         src/details/View.h
         src/FilamentAPI-impl.h
