@@ -27,9 +27,7 @@
 
 namespace filament {
 
-namespace details {
 class FStream;
-} // namespace details
 
 class Engine;
 
@@ -114,7 +112,7 @@ public:
         Stream* build(Engine& engine);
 
     private:
-        friend class details::FStream;
+        friend class FStream;
     };
 
     /**

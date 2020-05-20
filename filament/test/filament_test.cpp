@@ -179,7 +179,7 @@ TEST(FilamentTest, SkinningMath) {
 }
 
 TEST(FilamentTest, TransformManager) {
-    filament::details::FTransformManager tcm;
+    filament::FTransformManager tcm;
     EntityManager& em = EntityManager::get();
     std::array<Entity, 3> entities;
     em.create(entities.size(), entities.data());
@@ -624,7 +624,6 @@ TEST(FilamentTest, ColorConversion) {
 
 TEST(FilamentTest, FroxelData) {
     using namespace filament;
-    using namespace filament::details;
 
     FEngine* engine = FEngine::create();
 
@@ -728,7 +727,6 @@ TEST(FilamentTest, FroxelData) {
 }
 
 TEST(FilamentTest, Bones) {
-    using namespace ::filament::details;
 
     struct Shader {
         static mat3f normal(PerRenderableUibBone const& bone) noexcept {

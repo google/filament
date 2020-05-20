@@ -37,8 +37,6 @@ using namespace filament::math;
 
 namespace filament {
 
-using namespace details;
-
 // ------------------------------------------------------------------------------------------------
 
 struct IndirectLight::BuilderDetails {
@@ -174,8 +172,6 @@ IndirectLight* IndirectLight::Builder::build(Engine& engine) {
 
 // ------------------------------------------------------------------------------------------------
 
-namespace details {
-
 FIndirectLight::FIndirectLight(FEngine& engine, const Builder& builder) noexcept {
     if (builder->mReflectionsMap) {
         mReflectionsMapHandle = upcast(builder->mReflectionsMap)->getHwHandle();
@@ -265,8 +261,6 @@ math::float3 FIndirectLight::getDirectionEstimate() const noexcept {
 float4 FIndirectLight::getColorEstimate(float3 direction) const noexcept {
    return getColorEstimate(mIrradianceCoefs.data(), direction);
 }
-
-} // namespace details
 
 // ------------------------------------------------------------------------------------------------
 // Trampoline calling into private implementation

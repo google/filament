@@ -27,7 +27,6 @@
 #define TNT_FILAMENT_DETAILS_SKYBOX_H
 
 namespace filament {
-namespace details {
 
 class FEngine;
 class FTexture;
@@ -69,7 +68,6 @@ private:
 
 FILAMENT_UPCAST(Skybox)
 
-} // namespace details
 } // namespace filament
 
 

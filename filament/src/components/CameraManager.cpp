@@ -28,7 +28,6 @@ using namespace utils;
 using namespace filament::math;
 
 namespace filament {
-namespace details {
 
 FCameraManager::FCameraManager(FEngine& engine) noexcept
         : mEngine(engine) {
@@ -89,14 +88,5 @@ void FCameraManager::destroy(Entity e) noexcept {
         manager.removeComponent(e);
     }
 }
-
-} // namespace details
-
-
-// ------------------------------------------------------------------------------------------------
-// Trampoline calling into private implementation
-// ------------------------------------------------------------------------------------------------
-
-using namespace details;
 
 } // namespace filament

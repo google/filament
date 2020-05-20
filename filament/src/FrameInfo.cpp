@@ -25,9 +25,7 @@
 
 namespace filament {
 using namespace utils;
-using namespace details;
 
-namespace details {
 // this is to avoid a call to memmove
 template<class InputIterator, class OutputIterator>
 static inline
@@ -36,7 +34,6 @@ void move_backward(InputIterator first, InputIterator last, OutputIterator resul
         *--result = *--last;
     }
 }
-} // namespace details
 
 FrameInfoManager::FrameInfoManager(FEngine& engine) : mEngine(engine) {
     backend::DriverApi& driver = mEngine.getDriverApi();
@@ -77,7 +74,7 @@ void FrameInfoManager::update(Config const& config, FrameInfoManager::duration l
     auto& history = mFrameTimeHistory;
 
     // this is like doing { pop_back(); push_front(); }
-    details::move_backward(history.begin(), history.end() - 1, history.end());
+    filament::move_backward(history.begin(), history.end() - 1, history.end());
     history[0].frameTime = lastFrameTime;
 
     mFrameTimeHistorySize = std::min(++mFrameTimeHistorySize, uint32_t(MAX_FRAMETIME_HISTORY));

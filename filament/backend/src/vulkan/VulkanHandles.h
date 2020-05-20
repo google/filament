@@ -161,6 +161,11 @@ struct VulkanFence : public HwFence {
     std::shared_ptr<VulkanCmdFence> fence;
 };
 
+struct VulkanSync : public HwSync {
+    VulkanSync(const VulkanCommandBuffer& commands) : fence(commands.fence) {}
+    std::shared_ptr<VulkanCmdFence> fence;
+};
+
 struct VulkanTimerQuery : public HwTimerQuery {
     VulkanTimerQuery(VulkanContext& context);
     ~VulkanTimerQuery();

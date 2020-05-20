@@ -43,7 +43,7 @@ namespace filagui {
 #include "generated/resources/filagui_resources.h"
 
 ImGuiHelper::ImGuiHelper(Engine* engine, filament::View* view, const Path& fontPath) :
-        mEngine(engine), mView(view) {
+        mEngine(engine), mView(view), mScene(engine->createScene()) {
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
 
@@ -59,17 +59,16 @@ ImGuiHelper::ImGuiHelper(Engine* engine, filament::View* view, const Path& fontP
         createAtlasTexture(engine);
     }
 
-    // Create a scene solely for our one and only Renderable.
-    Scene* scene = engine->createScene();
-
     view->setPostProcessingEnabled(false);
     view->setBlendMode(View::BlendMode::TRANSLUCENT);
     view->setShadowsEnabled(false);
 
-    view->setScene(scene);
+    // Attach a scene for our one and only Renderable.
+    view->setScene(mScene);
+
     EntityManager& em = utils::EntityManager::get();
     mRenderable = em.create();
-    scene->addEntity(mRenderable);
+    mScene->addEntity(mRenderable);
 
     ImGui::StyleColorsDark();
 }
@@ -99,6 +98,7 @@ void ImGuiHelper::createAtlasTexture(Engine* engine) {
 }
 
 ImGuiHelper::~ImGuiHelper() {
+    mEngine->destroy(mScene);
     mEngine->destroy(mRenderable);
     for (auto& mi : mMaterialInstances) {
         mEngine->destroy(mi);

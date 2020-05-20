@@ -49,20 +49,29 @@ public class Page {
     // Takes an animation value in [0,1] and either updates the vertex buffer or the vertex shader,
     // depending on USE_CPU. Returns a rotation value that should be applied to the entire page.
     //
-    // NOTE: This routine generated values for two artist-controlled time-varying
+    // The rigidity parameter in [0,1] can be used to reduce the curling effect.
+    // Use a rigidity value of 1.0 for a hard cover or 0.0 for paper with default curl.
+    //
+    // NOTE: This routine generates reasonable values for two artist-controlled time-varying
     // parameters: theta and apex. Feel free to modify according to taste.
-    public float updateVertices(Engine engine, float t) {
+    public float updateVertices(Engine engine, float t, float rigidity) {
         t = Math.min(1.0f, Math.max(0.0f, t));
-        final float D0 = 0.15f;
-        final float D1 = 1.0f - D0;
-        double deformation = D0 + (1.0 + Math.cos(8.0 * Math.PI * t)) * D1 / 2.0;
-        if (t > 0.125) {
+        rigidity = Math.min(1.0f, Math.max(0.0f, rigidity));
+
+        float D0 = 0.15f;
+        D0 += D0 * rigidity;
+
+        double deformation;
+        if (t <= 0.125) {
+            deformation = D0 + (1.0 + Math.cos(8.0 * Math.PI * t)) * (1.0f - D0) / 2.0;
+        } else if (t <= 0.5) {
             deformation = D0;
+        } else {
+            final float invt = t - 0.5f;
+            final double t1 = Math.max(0.0, invt / 0.5 - 0.125);
+            deformation = D0 + (1.0f - D0) * Math.pow(t1, 3.0);
         }
-        if (t > 0.5) {
-            final double t1 = Math.max(0.0, (t - 0.5) / 0.5 - 0.125);
-            deformation = D0 + D1 * Math.pow(t1, 3.0);
-        }
+
         final double apex = -15 * deformation;
         final double theta = deformation * Math.PI / 2.0;
 

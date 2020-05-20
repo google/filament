@@ -27,7 +27,6 @@ using namespace utils;
 namespace filament {
 
 using namespace backend;
-using namespace details;
 
 namespace fg {
 

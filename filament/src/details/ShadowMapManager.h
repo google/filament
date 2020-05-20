@@ -39,8 +39,6 @@ namespace filament {
 
 class FView;
 
-namespace details {
-
 class ShadowMap;
 class RenderPass;
 
@@ -173,7 +171,6 @@ private:
     std::array<std::unique_ptr<ShadowMap>, CONFIG_MAX_SHADOW_CASTING_SPOTS> mSpotShadowMapCache;
 };
 
-}
-}
+} // namespace filament
 
 #endif //TNT_FILAMENT_DETAILS_SHADOWMAPMANAGER_H

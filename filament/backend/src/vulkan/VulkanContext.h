@@ -41,6 +41,10 @@ namespace backend {
 // passing in a null pointer, and we highlight the argument by using the VKALLOC constant.
 constexpr VkAllocationCallbacks* VKALLOC = nullptr;
 
+// At the time of this writing, our copy of MoltenVK supports Vulkan 1.0 only.
+constexpr static const int VK_REQUIRED_VERSION_MAJOR = 1;
+constexpr static const int VK_REQUIRED_VERSION_MINOR = 0;
+
 struct VulkanSurfaceContext;
 struct VulkanTexture;
 
@@ -53,6 +57,7 @@ struct VulkanCmdFence {
     VkFence fence;
     utils::Condition condition;
     utils::Mutex mutex;
+    std::atomic<VkResult> status;
     bool submitted = false;
 };
 

@@ -52,8 +52,6 @@ namespace filament {
 
 using namespace backend;
 
-namespace details {
-
 FView::FView(FEngine& engine)
     : mFroxelizer(engine),
       mPerViewUb(PerViewUib::getUib().getSize()),
@@ -794,13 +792,9 @@ void FView::renderShadowMaps(FEngine& engine, FEngine::DriverApi& driver, Render
     mShadowMapManager.render(engine, *this, driver, pass);
 }
 
-} // namespace details
-
 // ------------------------------------------------------------------------------------------------
 // Trampoline calling into private implementation
 // ------------------------------------------------------------------------------------------------
-
-using namespace details;
 
 void View::setScene(Scene* scene) {
     return upcast(this)->setScene(upcast(scene));

@@ -39,8 +39,6 @@ namespace filament {
 
 using namespace backend;
 
-namespace details {
-
 RenderPass::RenderPass(FEngine& engine,
         GrowingSlice<RenderPass::Command> commands) noexcept
         : mEngine(engine), mCommands(commands),
@@ -173,18 +171,16 @@ RenderPass::Command* RenderPass::sortCommands() noexcept {
 void RenderPass::execute(const char* name,
         backend::Handle<backend::HwRenderTarget> renderTarget,
         backend::RenderPassParams params) const noexcept {
-
     FEngine& engine = mEngine;
-    Command const* const first = mCommands.begin();
-    Command const* const last = mCommands.end();
-
-    // Take care not to upload data within the render pass (synchronize can commit froxel data)
     DriverApi& driver = engine.getDriverApi();
-
-    // Now, execute all commands
     driver.beginRenderPass(renderTarget, params);
-    RenderPass::recordDriverCommands(driver, first, last);
+    executeCommands(name);
     driver.endRenderPass();
+}
+
+void RenderPass::executeCommands(const char* name) const noexcept {
+    DriverApi& driver = mEngine.getDriverApi();
+    RenderPass::recordDriverCommands(driver, mCommands.begin(), mCommands.end());
 }
 
 UTILS_NOINLINE // no need to be inlined
@@ -582,5 +578,4 @@ void RenderPass::updateSummedPrimitiveCounts(
     summedPrimitiveCount[vr.last] = count;
 }
 
-} // namespace details
 } // namespace filament

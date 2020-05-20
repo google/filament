@@ -49,6 +49,8 @@ static inline MTLTextureUsage getMetalTextureUsage(TextureUsage usage) {
 
 MetalSwapChain::MetalSwapChain(id<MTLDevice> device, CAMetalLayer* nativeWindow)
         : layer(nativeWindow) {
+    // Needed so we can use the SwapChain as a blit source.
+    nativeWindow.framebufferOnly = NO;
     layer.device = device;
 }
 
@@ -301,6 +303,8 @@ void MetalTexture::load2DImage(uint32_t level, uint32_t xoffset, uint32_t yoffse
     loadSlice(level, xoffset, yoffset, width, height, 0, 0, data, blitCommandEncoder,
             blitCommandBuffer);
 
+    updateLodRange(level);
+
     [blitCommandEncoder endEncoding];
 }
 
@@ -318,6 +322,8 @@ void MetalTexture::loadCubeImage(const FaceOffsets& faceOffsets, int miplevel,
         loadSlice(miplevel, 0, 0, faceWidth, faceWidth, faceOffset, slice, data, blitCommandEncoder,
                 blitCommandBuffer);
     }
+
+    updateLodRange((uint32_t) miplevel);
 
     [blitCommandEncoder endEncoding];
 }
@@ -403,6 +409,11 @@ void MetalTexture::loadSlice(uint32_t level, uint32_t xoffset, uint32_t yoffset,
                           destinationLevel:level
                          destinationOrigin:MTLOriginMake(xoffset, yoffset, 0)];
     }
+}
+
+void MetalTexture::updateLodRange(uint32_t level) {
+    minLod = std::min(minLod, level);
+    maxLod = std::max(maxLod, level);
 }
 
 MetalRenderTarget::MetalRenderTarget(MetalContext* context, uint32_t width, uint32_t height,

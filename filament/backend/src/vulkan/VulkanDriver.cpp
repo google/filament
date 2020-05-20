@@ -143,7 +143,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
     // Create the Vulkan instance.
     VkApplicationInfo appInfo = {};
     appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    appInfo.apiVersion = VK_API_VERSION_1_0;
+    appInfo.apiVersion = VK_MAKE_VERSION(VK_REQUIRED_VERSION_MAJOR, VK_REQUIRED_VERSION_MINOR, 0);
     instanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     instanceCreateInfo.pApplicationInfo = &appInfo;
     instanceCreateInfo.enabledExtensionCount = enabledExtensionCount;
@@ -189,9 +189,7 @@ UTILS_NOINLINE
 Driver* VulkanDriver::create(VulkanPlatform* const platform,
         const char* const* ppEnabledExtensions, uint32_t enabledExtensionCount) noexcept {
     assert(platform);
-    auto* const driver = new VulkanDriver(platform, ppEnabledExtensions,
-            enabledExtensionCount);
-    return driver;
+    return new VulkanDriver(platform, ppEnabledExtensions, enabledExtensionCount);
 }
 
 ShaderModel VulkanDriver::getShaderModel() const noexcept {
@@ -239,6 +237,16 @@ void VulkanDriver::terminate() {
 }
 
 void VulkanDriver::tick(int) {
+    if (!mContext.currentSurface) {
+        return;
+    }
+    for (SwapContext& sc : mContext.currentSurface->swapContexts) {
+        VulkanCmdFence* fence = sc.commands.fence.get();
+        if (fence) {
+            VkResult status = vkGetFenceStatus(mContext.device, fence->fence);
+            fence->status.store(status, std::memory_order_relaxed);
+        }
+    }
 }
 
 void VulkanDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId,
@@ -459,7 +467,8 @@ void VulkanDriver::createFenceR(Handle<HwFence> fh, int) {
 }
 
 void VulkanDriver::createSyncR(Handle<HwSync> sh, int) {
-    // TODO: implement sync objects
+    ASSERT_PRECONDITION(mContext.currentCommands, "Syncs must be created within a frame.");
+    construct_handle<VulkanSync>(mHandleMap, sh, *mContext.currentCommands);
 }
 
 void VulkanDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
@@ -538,8 +547,7 @@ Handle<HwFence> VulkanDriver::createFenceS() noexcept {
 }
 
 Handle<HwSync> VulkanDriver::createSyncS() noexcept {
-    // TODO: implement Sync ojbects
-    return {};
+    return alloc_handle<VulkanSync, HwSync>();
 }
 
 Handle<HwSwapChain> VulkanDriver::createSwapChainS() noexcept {
@@ -605,7 +613,7 @@ void VulkanDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
 }
 
 void VulkanDriver::destroySync(Handle<HwSync> sh) {
-    // TODO: implement Sync objects
+    destruct_handle<VulkanSync>(mHandleMap, sh);
 }
 
 
@@ -696,6 +704,10 @@ bool VulkanDriver::isRenderTargetFormatSupported(TextureFormat format) {
     return (info.optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) != 0;
 }
 
+bool VulkanDriver::isFrameBufferFetchSupported() {
+    return false;
+}
+
 bool VulkanDriver::isFrameTimeSupported() {
     return true;
 }
@@ -722,6 +734,13 @@ void VulkanDriver::update2DImage(Handle<HwTexture> th,
     scheduleDestroy(std::move(data));
 }
 
+void VulkanDriver::update3DImage(
+        Handle<HwTexture> th,
+        uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
+        uint32_t width, uint32_t height, uint32_t depth,
+        PixelBufferDescriptor&& data) {
+}
+
 void VulkanDriver::updateCubeImage(Handle<HwTexture> th, uint32_t level,
         PixelBufferDescriptor&& data, FaceOffsets faceOffsets) {
     handle_cast<VulkanTexture>(mHandleMap, th)->updateCubeImage(data, faceOffsets, level);
@@ -737,33 +756,46 @@ void VulkanDriver::cancelExternalImage(void* image) {
 bool VulkanDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapsedTime) {
     VulkanTimerQuery* vtq = handle_cast<VulkanTimerQuery>(mHandleMap, tqh);
 
-    uint64_t results[2] = {};
+    uint64_t results[4] = {};
     size_t dataSize = sizeof(results);
     VkDeviceSize stride = sizeof(uint64_t);
 
     VkResult result = vkGetQueryPoolResults(mContext.device, mContext.timestamps.pool,
             vtq->startingQueryIndex, 2, dataSize, (void*) results, stride,
-            VK_QUERY_RESULT_64_BIT);
+            VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT);
 
-    if (result == VK_NOT_READY) {
+    uint64_t timestamp0 = results[0];
+    uint64_t available0 = results[1];
+    uint64_t timestamp1 = results[2];
+    uint64_t available1 = results[3];
+
+    if (result == VK_NOT_READY || available0 == 0 || available1 == 0) {
         return false;
     }
 
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkGetQueryPoolResults error.");
-    ASSERT_POSTCONDITION(results[1] >= results[0], "Timestamps are not monotonically increasing.");
+    ASSERT_POSTCONDITION(timestamp1 >= timestamp0, "Timestamps are not monotonically increasing.");
 
     // NOTE: MoltenVK currently writes system time so the following delta will always be zero.
     // However there are plans for implementing this properly. See the following GitHub ticket.
     // https://github.com/KhronosGroup/MoltenVK/issues/773
 
-    uint64_t delta = results[1] - results[0];
+    uint64_t delta = timestamp1 - timestamp0;
     *elapsedTime = delta;
     return true;
 }
 
 SyncStatus VulkanDriver::getSyncStatus(Handle<HwSync> sh) {
-    // TODO: implement Sync objects
-    return SyncStatus::SIGNALED;
+    VulkanSync* sync = handle_cast<VulkanSync>(mHandleMap, sh);
+    if (sync->fence == nullptr) {
+        return SyncStatus::NOT_SIGNALED;
+    }
+    VkResult status = sync->fence->status.load(std::memory_order_relaxed);
+    switch (status) {
+        case VK_SUCCESS: return SyncStatus::SIGNALED;
+        case VK_NOT_READY: return SyncStatus::NOT_SIGNALED;
+        default: return SyncStatus::ERROR;
+    }
 }
 
 void VulkanDriver::setExternalImage(Handle<HwTexture> th, void* image) {

@@ -27,8 +27,6 @@ namespace filament {
 using namespace backend;
 using namespace math;
 
-namespace details {
-
 ShadowMapManager::ShadowMapManager(FEngine& engine) : mTextureState(0, 0) {
     for (size_t i = 0; i < mCascadeShadowMapCache.size(); i++) {
         mCascadeShadowMapCache[i] = std::make_unique<ShadowMap>(engine);
@@ -431,5 +429,4 @@ ShadowMapManager::CascadeSplits::CascadeSplits(Params p) : mSplitCount(p.cascade
     }
 }
 
-}
-}
+} // namespace filament

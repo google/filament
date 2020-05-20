@@ -30,9 +30,7 @@ namespace filament {
 class Engine;
 class Texture;
 
-namespace details {
 class FIndirectLight;
-} // namespace details
 
 /**
  * IndirectLight is used to simulate environment lighting, a form of global illumination.
@@ -252,7 +250,7 @@ public:
         IndirectLight* build(Engine& engine);
 
     private:
-        friend class details::FIndirectLight;
+        friend class FIndirectLight;
     };
 
     /**

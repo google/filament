@@ -214,6 +214,7 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
             auto colorTexture = handle_cast<MetalTexture>(mHandleMap, color[0].handle);
             ASSERT_PRECONDITION(colorTexture->texture,
                     "Color texture passed to render target has no texture allocation");
+            colorTexture->updateLodRange(color[0].level);
             return colorTexture->texture;
         } else if (any(targetBufferFlags & TargetBufferFlags::COLOR)) {
             ASSERT_POSTCONDITION(false, "The COLOR flag was specified, but no color texture provided.");
@@ -226,6 +227,7 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
             auto depthTexture = handle_cast<MetalTexture>(mHandleMap, depth.handle);
             ASSERT_PRECONDITION(depthTexture->texture,
                     "Depth texture passed to render target has no texture allocation.");
+            depthTexture->updateLodRange(depth.level);
             return depthTexture->texture;
         } else if (any(targetBufferFlags & TargetBufferFlags::DEPTH)) {
             ASSERT_POSTCONDITION(false, "The DEPTH flag was specified, but no depth texture provided.");
@@ -568,6 +570,10 @@ bool MetalDriver::isRenderTargetFormatSupported(TextureFormat format) {
     return mtlFormat != MTLPixelFormatInvalid && mtlFormat != MTLPixelFormatRGB9E5Float;
 }
 
+bool MetalDriver::isFrameBufferFetchSupported() {
+    return false;
+}
+
 bool MetalDriver::isFrameTimeSupported() {
     // Frame time is calculated via hard fences, which are only available on iOS 12 and above.
     if (@available(macOS 10.14, iOS 12, *)) {
@@ -596,6 +602,12 @@ void MetalDriver::update2DImage(Handle<HwTexture> th, uint32_t level, uint32_t x
             "update2DImage must be called outside of a render pass.");
     auto tex = handle_cast<MetalTexture>(mHandleMap, th);
     tex->load2DImage(level, xoffset, yoffset, width, height, std::move(data));
+}
+
+void MetalDriver::update3DImage(Handle<HwTexture> th, uint32_t level,
+        uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
+        uint32_t width, uint32_t height, uint32_t depth,
+        PixelBufferDescriptor&& data) {
 }
 
 void MetalDriver::updateCubeImage(Handle<HwTexture> th, uint32_t level,
@@ -654,6 +666,8 @@ void MetalDriver::generateMipmaps(Handle<HwTexture> th) {
     id <MTLBlitCommandEncoder> blitEncoder = [getPendingCommandBuffer(mContext) blitCommandEncoder];
     [blitEncoder generateMipmapsForTexture:tex->texture];
     [blitEncoder endEncoding];
+    tex->minLod = 0;
+    tex->maxLod = tex->texture.mipmapLevelCount - 1;
 }
 
 bool MetalDriver::canGenerateMipmaps() {
@@ -1070,7 +1084,12 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
             texturesToBind[binding] = getOrCreateEmptyTexture(mContext);
         }
 
-        id <MTLSamplerState> samplerState = mContext->samplerStateCache.getOrCreateState(sampler->s);
+        SamplerState s {
+            .samplerParams = sampler->s,
+            .minLod = metalTexture->minLod,
+            .maxLod = metalTexture->maxLod
+        };
+        id <MTLSamplerState> samplerState = mContext->samplerStateCache.getOrCreateState(s);
         samplersToBind[binding] = samplerState;
     });
 

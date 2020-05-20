@@ -36,8 +36,6 @@ using namespace utils;
 namespace filament {
 using namespace backend;
 
-namespace details {
-
 // do this only if depth-clamp is available
 static constexpr bool USE_DEPTH_CLAMP = false;
 
@@ -86,7 +84,7 @@ void ShadowMap::render(DriverApi& driver, Handle<HwRenderTarget> rt,
     params.viewport = viewport;
 
     FCamera const& camera = getCamera();
-    details::CameraInfo cameraInfo(camera);
+    filament::CameraInfo cameraInfo(camera);
 
     pass.setCamera(cameraInfo);
     pass.setGeometry(scene.getRenderableData(), range, scene.getRenderableUBO());
@@ -104,7 +102,7 @@ void ShadowMap::render(DriverApi& driver, Handle<HwRenderTarget> rt,
 }
 
 void ShadowMap::update(const FScene::LightSoa& lightData, size_t index, FScene const* scene,
-        details::CameraInfo const& camera, uint8_t visibleLayers, ShadowMapLayout layout,
+        filament::CameraInfo const& camera, uint8_t visibleLayers, ShadowMapLayout layout,
         CascadeParameters cascadeParams) noexcept {
     // this is the hard part here, find a good frustum for our camera
 
@@ -1029,5 +1027,4 @@ void ShadowMap::visitScene(const FScene& scene, uint32_t visibleLayers,
     }
 }
 
-} // namespace details
 } // namespace filament

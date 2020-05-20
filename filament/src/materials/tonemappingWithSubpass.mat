@@ -1,0 +1,81 @@
+material {
+    name : tonemap,
+    parameters : [
+        {
+            type : int,
+            name : dithering
+        },
+        {
+            type : int,
+            name : fxaa
+        },
+        {
+            type : float4,
+            name : bloom
+        }
+    ],
+    variables : [
+        vertex
+    ],
+    depthWrite : false,
+    depthCulling : false,
+    domain: postprocess,
+    framebufferFetch: true
+}
+
+vertex {
+    void postProcessVertex(inout PostProcessVertexInputs postProcess) {
+        postProcess.vertex.xy = postProcess.normalizedUV;
+    }
+}
+
+fragment {
+
+    // TODO: this should be specified as a parameter
+    layout (input_attachment_index = 0, set = 0, binding = 0) uniform mediump subpassInput colorBuffer;
+    layout(location = 1) out vec4 tonemappedOutput;
+
+#include "../../../shaders/src/tone_mapping.fs"
+#include "../../../shaders/src/conversion_functions.fs"
+#include "../../../shaders/src/dithering.fs"
+
+    vec3 resolveFragment(const ivec2 uv) {
+        return subpassLoad(colorBuffer).rgb;
+    }
+
+    vec4 resolveAlphaFragment(const ivec2 uv) {
+        return subpassLoad(colorBuffer);
+    }
+
+    vec4 resolve() {
+#if POST_PROCESS_OPAQUE
+        vec4 color = vec4(resolveFragment(ivec2(getUV())), 1.0);
+        color.rgb  = tonemap(color.rgb);
+        color.rgb  = OECF(color.rgb);
+        if (materialParams.fxaa > 0) {
+            color.a = luminance(color.rgb);
+        }
+#else
+        vec4 color = resolveAlphaFragment(ivec2(getUV()));
+        color.rgb /= color.a + FLT_EPS;
+        color.rgb  = tonemap(color.rgb);
+        color.rgb  = OECF(color.rgb);
+        color.rgb *= color.a + FLT_EPS;
+#endif
+        return color;
+    }
+
+    void postProcess(inout PostProcessInputs postProcess) {
+        postProcess.color = resolve();
+        if (materialParams.dithering > 0) {
+            vec4 dithered = dither(postProcess.color);
+#if POST_PROCESS_OPAQUE
+            postProcess.color.rgb = dithered.rgb;
+#else
+            postProcess.color = dithered;
+#endif
+        }
+        tonemappedOutput = postProcess.color;
+    }
+
+}

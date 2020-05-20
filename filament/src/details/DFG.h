@@ -24,7 +24,6 @@
 #include <utils/compiler.h>
 
 namespace filament {
-namespace details {
 
 class FEngine;
 class FTexture;
@@ -69,7 +68,6 @@ private:
 
 #undef FILAMENT_DFG_LUT_SIZE
 
-} // namespace details
 } // namespace filament
 
 #endif // TNT_FILAMENT_DETAILS_DFG_H

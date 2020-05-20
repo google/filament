@@ -44,7 +44,6 @@ using namespace filaflat;
 
 namespace filament {
 
-using namespace details;
 using namespace backend;
 
 
@@ -112,8 +111,6 @@ Material* Material::Builder::build(Engine& engine) {
 
     return result;
 }
-
-namespace details {
 
 static void addSamplerGroup(Program& pb, uint8_t bindingPoint, SamplerInterfaceBlock const& sib,
         SamplerBindingMap const& map) {
@@ -521,13 +518,9 @@ void FMaterial::destroyPrograms(FEngine& engine) {
     }
 }
 
-} // namespace details
-
 // ------------------------------------------------------------------------------------------------
 // Trampoline calling into private implementation
 // ------------------------------------------------------------------------------------------------
-
-using namespace details;
 
 MaterialInstance* Material::createInstance(const char* name) const noexcept {
     return upcast(this)->createInstance(name);

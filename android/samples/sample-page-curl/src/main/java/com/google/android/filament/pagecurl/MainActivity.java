@@ -33,7 +33,6 @@ import android.view.View;
 import android.view.Window;
 
 import com.google.android.filament.Camera;
-import com.google.android.filament.Colors;
 import com.google.android.filament.Engine;
 import com.google.android.filament.Entity;
 import com.google.android.filament.EntityManager;
@@ -152,19 +151,21 @@ public class MainActivity extends Activity
 
         mCamera.lookAt(0, 0, 3, 0, 0, 0, 0, 1, 0);
 
+        // Use unit-less light intensities since this is UI-style rendering, not physically based.
+        mCamera.setExposure(1.0f);
+
         mLight = EntityManager.get().create();
 
-        float[] col = Colors.cct(5_500.0f);
         new LightManager.Builder(LightManager.Type.DIRECTIONAL)
-                .color(col[0], col[1], col[2])
-                .intensity(50_000.0f)
-                .direction(0.0f, -0.5f, -1.0f)
+                .color(1.0f, 1.0f, 1.0f)
+                .intensity(15f)
+                .direction(0.0f, -0.54f, -0.89f) // should be a unit vector
                 .castShadows(false)
                 .build(mEngine, mLight);
 
         mIndirectLight = IblLoader.loadIndirectLight(getAssets(), "envs/studio_small_02_2k",
                 mEngine);
-        mIndirectLight.setIntensity(10_000);
+        mIndirectLight.setIntensity(1.0f);
         mScene.setIndirectLight(mIndirectLight);
 
         mScene.addEntity(mLight);
@@ -244,7 +245,9 @@ public class MainActivity extends Activity
                 mPageAnimationValue = Math.min(+0.5f, Math.max(-0.5f, mTouchDownValue + dx));
 
                 // In this demo, we only care about dragging the right hand page leftwards.
-                mPageAnimationRadians = mPage.updateVertices(mEngine, -mPageAnimationValue * 3.0f);
+                final float t = -mPageAnimationValue * 3.0f;
+                final float rigidity = 0.1f;
+                mPageAnimationRadians = mPage.updateVertices(mEngine, t, rigidity);
                 return true;
             }
             case MotionEvent.ACTION_UP: {
@@ -267,7 +270,7 @@ public class MainActivity extends Activity
                 .width(bitmap.getWidth())
                 .height(bitmap.getHeight())
                 .sampler(Texture.Sampler.SAMPLER_2D)
-                .format(Texture.InternalFormat.SRGB8_A8)
+                .format(Texture.InternalFormat.SRGB8_A8) // It is crucial to use an SRGB format.
                 .levels(0xff) // tells Filament to figure out the number of mip levels
                 .build(engine);
 

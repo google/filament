@@ -30,7 +30,6 @@ using namespace filament::math;
 using namespace utils;
 
 namespace filament {
-namespace details {
 
 FDebugRegistry::FDebugRegistry() noexcept {
     mProperties.reserve(8);
@@ -84,13 +83,9 @@ inline bool FDebugRegistry::getProperty(const char* name, T* UTILS_RESTRICT p) c
     return false;
 }
 
-} // namespace details
-
 // ------------------------------------------------------------------------------------------------
 // Trampoline calling into private implementation
 // ------------------------------------------------------------------------------------------------
-
-using namespace details;
 
 std::pair<DebugRegistry::Property const*, size_t> DebugRegistry::getProperties() const noexcept {
     return upcast(this)->getProperties();

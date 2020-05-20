@@ -179,11 +179,13 @@ void MetalBlitter::blit(id<MTLCommandBuffer> cmdBuffer, const BlitArgs& args) {
         [encoder setFragmentTexture:args.source.depth atIndex:1];
     }
 
-    SamplerParams samplerState{
+    SamplerState s {
+        .samplerParams = {
             .filterMag = args.filter,
             .filterMin = static_cast<SamplerMinFilter>(args.filter)
+        }
     };
-    id<MTLSamplerState> sampler = mContext.samplerStateCache.getOrCreateState(samplerState);
+    id<MTLSamplerState> sampler = mContext.samplerStateCache.getOrCreateState(s);
     [encoder setFragmentSamplerState:sampler atIndex:0];
 
     MTLViewport viewport;

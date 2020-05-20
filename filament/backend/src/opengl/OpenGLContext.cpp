@@ -218,6 +218,7 @@ void OpenGLContext::initExtensionsGLES(GLint major, GLint minor, ExtentionSet co
     ext.EXT_disjoint_timer_query = hasExtension(exts, "GL_EXT_disjoint_timer_query");
     ext.KHR_debug = hasExtension(exts, "GL_KHR_debug");
     ext.EXT_texture_compression_s3tc_srgb = hasExtension(exts, "GL_EXT_texture_compression_s3tc_srgb");
+    ext.EXT_shader_framebuffer_fetch = hasExtension(exts, "GL_EXT_shader_framebuffer_fetch");
     // ES 3.2 implies EXT_color_buffer_float
     if (major >= 3 && minor >= 2) {
         ext.EXT_color_buffer_float = true;
@@ -235,6 +236,7 @@ void OpenGLContext::initExtensionsGL(GLint major, GLint minor, ExtentionSet cons
     ext.APPLE_color_buffer_packed_float = true;  // Assumes core profile.
     ext.KHR_debug = major >= 4 && minor >= 3;
     ext.EXT_texture_sRGB = hasExtension(exts, "GL_EXT_texture_sRGB");
+    ext.EXT_shader_framebuffer_fetch = hasExtension(exts, "GL_EXT_shader_framebuffer_fetch");
 }
 
 void OpenGLContext::bindBuffer(GLenum target, GLuint buffer) noexcept {
