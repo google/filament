@@ -19,6 +19,7 @@
 #endif
 
 #define saturate(x)        clamp(x, 0.0, 1.0)
+#define atan2(x, y)        atan(y, x)
 
 //------------------------------------------------------------------------------
 // Scalar operations
@@ -43,6 +44,10 @@ float sq(float x) {
     return x * x;
 }
 
+//------------------------------------------------------------------------------
+// Vector operations
+//------------------------------------------------------------------------------
+
 /**
  * Returns the maximum component of the specified vector.
  *
@@ -50,6 +55,15 @@ float sq(float x) {
  */
 float max3(const vec3 v) {
     return max(v.x, max(v.y, v.z));
+}
+
+/**
+ * Returns the minimum component of the specified vector.
+ *
+ * @public-api
+ */
+float min3(const vec3 v) {
+    return min(v.x, min(v.y, v.z));
 }
 
 //------------------------------------------------------------------------------

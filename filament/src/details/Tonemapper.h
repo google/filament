@@ -36,9 +36,18 @@ public:
     backend::TextureHandle getHwHandle() const noexcept { return mLutHandle; }
 
 private:
-    static math::float3 tonemap_ACES(math::float3 x) noexcept;
-    static float lutToLinear(float x) noexcept;
-    static float linearToLut(float x) noexcept;
+    static inline math::float3 tonemap_Reinhard(math::float3 x) noexcept;
+    static inline math::float3 Tonemap_ACES_sRGB(math::float3 x) noexcept;
+    static inline math::float3 tonemap_ACES(math::float3 x) noexcept;
+
+    // Operators for HDR output
+    static inline math::float3 tonemap_ACES_Rec2020_1k(math::float3 x) noexcept;
+
+    // Operators for debugging
+    static inline math::float3 tonemap_DisplayRange(math::float3 x) noexcept;
+
+    static inline float lutToLinear(float x) noexcept;
+    static inline float linearToLut(float x) noexcept;
 
     backend::TextureHandle mLutHandle;
 };

@@ -133,6 +133,7 @@ set(PRIVATE_HDRS
         src/details/Tonemapper.h
         src/details/VertexBuffer.h
         src/details/View.h
+        src/ACES.h
         src/FilamentAPI-impl.h
         src/FrameInfo.h
         src/GPUBuffer.h

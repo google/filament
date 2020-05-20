@@ -533,6 +533,13 @@ private:
         return r;
     }
 
+    friend inline constexpr VECTOR<T> MATH_PURE mix(const VECTOR<T>& u, VECTOR<T> v, T a) {
+        for (size_t i = 0; i < v.size(); i++) {
+            v[i] = u[i] * (T(1) - a) + v[i] * a;
+        }
+        return v;
+    }
+
     friend inline constexpr bool MATH_PURE any(const VECTOR<T>& v) {
         for (size_t i = 0; i < v.size(); i++) {
             if (v[i] != T(0)) return true;
