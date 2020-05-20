@@ -67,6 +67,12 @@ inline constexpr T MATH_PURE lerp(T x, T y, T a) noexcept {
 }
 
 template<typename T>
+inline constexpr T MATH_PURE smoothstep(T e0, T e1, T x) noexcept {
+    T t = clamp((x - e0) / (e1 - e0), T(0), T(1));
+    return t * t * (T(3) - T(2) * t);
+}
+
+template<typename T>
 inline constexpr T sign(T x) noexcept {
     return x < T(0) ? T(-1) : T(1);
 }
