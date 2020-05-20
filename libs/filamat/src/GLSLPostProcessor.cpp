@@ -304,7 +304,7 @@ void GLSLPostProcessor::fullOptimization(const TShader& tShader,
     GlslangToSpv(*tShader.getIntermediate(), spirv, &options);
 
     // Run the SPIR-V optimizer
-    Optimizer optimizer(SPV_ENV_UNIVERSAL_1_3);
+    Optimizer optimizer(SPV_ENV_UNIVERSAL_1_0);
     optimizer.SetMessageConsumer([](spv_message_level_t level,
             const char* source, const spv_position_t& position, const char* message) {
         utils::slog.e << stringifySpvOptimizerMessage(level, source, position, message)
