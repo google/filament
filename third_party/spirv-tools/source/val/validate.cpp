@@ -142,7 +142,7 @@ spv_result_t ValidateEntryPointNameUnique(ValidationState_t& _,
   for (const auto other_id : _.entry_points()) {
     if (other_id == id) continue;
     const auto other_id_names = CalculateNamesForEntryPoint(_, other_id);
-    for (const auto other_id_name : other_id_names) {
+    for (const auto &other_id_name : other_id_names) {
       if (names.find(other_id_name) != names.end()) {
         return _.diag(SPV_ERROR_INVALID_BINARY, _.FindDef(id))
                << "Entry point name \"" << other_id_name
@@ -431,7 +431,7 @@ spv_result_t ValidateBinaryUsingContextAndValidationState(
   if (auto error = ValidateBuiltIns(*vstate)) return error;
   // These checks must be performed after individual opcode checks because
   // those checks register the limitation checked here.
-  for (const auto inst : vstate->ordered_instructions()) {
+  for (const auto &inst : vstate->ordered_instructions()) {
     if (auto error = ValidateExecutionLimitations(*vstate, &inst)) return error;
     if (auto error = ValidateSmallTypeUses(*vstate, &inst)) return error;
   }
