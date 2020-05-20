@@ -2,16 +2,17 @@ material {
     name : tonemap,
     parameters : [
         {
+            type : sampler3d,
+            name : lut,
+            precision: medium
+        },
+        {
             type : int,
             name : dithering
         },
         {
             type : int,
             name : fxaa
-        },
-        {
-            type : float4,
-            name : bloom
         }
     ],
     variables : [
@@ -50,7 +51,7 @@ fragment {
     vec4 resolve() {
 #if POST_PROCESS_OPAQUE
         vec4 color = vec4(resolveFragment(ivec2(getUV())), 1.0);
-        color.rgb  = tonemap(color.rgb);
+        color.rgb  = tonemap(materialParams_lut, color.rgb);
         color.rgb  = OECF(color.rgb);
         if (materialParams.fxaa > 0) {
             color.a = luminance(color.rgb);
@@ -58,7 +59,7 @@ fragment {
 #else
         vec4 color = resolveAlphaFragment(ivec2(getUV()));
         color.rgb /= color.a + FLT_EPS;
-        color.rgb  = tonemap(color.rgb);
+        color.rgb  = tonemap(materialParams_lut, color.rgb);
         color.rgb  = OECF(color.rgb);
         color.rgb *= color.a + FLT_EPS;
 #endif

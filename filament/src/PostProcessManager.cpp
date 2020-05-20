@@ -27,6 +27,7 @@
 #include "details/Material.h"
 #include "details/MaterialInstance.h"
 #include "details/Texture.h"
+#include "details/Tonemapper.h"
 #include "generated/resources/materials.h"
 
 #include <private/filament/SibGenerator.h>
@@ -145,6 +146,8 @@ void PostProcessManager::init() noexcept {
     *static_cast<uint32_t *>(dataZero.buffer) = 0;
     driver.update2DImage(mDummyOneTexture, 0, 0, 0, 1, 1, std::move(dataOne));
     driver.update2DImage(mDummyZeroTexture, 0, 0, 0, 1, 1, std::move(dataZero));
+
+    mTonemapper = new Tonemapper(mEngine);
 }
 
 void PostProcessManager::terminate(DriverApi& driver) noexcept {
@@ -165,6 +168,7 @@ void PostProcessManager::terminate(DriverApi& driver) noexcept {
     mFxaa.terminate(engine);
     mDoFBlur.terminate(engine);
     mDoF.terminate(engine);
+    mTonemapper->terminate(engine);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -235,6 +239,10 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::toneMapping(FrameGraph& fg,
                         data.dirt.isValid() ? resources.getTexture(data.dirt) : getOneTexture();
 
                 FMaterialInstance* mi = mTonemapping.getMaterialInstance();
+                mi->setParameter("lut", mTonemapper->getHwHandle(), {
+                        .filterMag = SamplerMagFilter::LINEAR,
+                        .filterMin = SamplerMinFilter::LINEAR
+                });
                 mi->setParameter("colorBuffer", colorTexture, { /* shader uses texelFetch */ });
                 mi->setParameter("bloomBuffer", bloomTexture, {
                         .filterMag = SamplerMagFilter::LINEAR,
@@ -280,6 +288,10 @@ void PostProcessManager::toneMappingSubpass(DriverApi& driver,
     Handle<HwRenderPrimitive> const& fullScreenRenderPrimitive = engine.getFullScreenRenderPrimitive();
 
     FMaterialInstance* mi = mTonemappingWithSubpass.getMaterialInstance();
+    mi->setParameter("lut", mTonemapper->getHwHandle(), {
+            .filterMag = SamplerMagFilter::LINEAR,
+            .filterMin = SamplerMinFilter::LINEAR
+    });
     mi->setParameter("dithering", dithering);
     mi->setParameter("fxaa", fxaa);
     mi->commit(driver);
