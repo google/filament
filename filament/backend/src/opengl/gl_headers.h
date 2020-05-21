@@ -40,7 +40,7 @@
         extern PFNGLPUSHGROUPMARKEREXTPROC glPushGroupMarkerEXT;
         extern PFNGLPOPGROUPMARKEREXTPROC glPopGroupMarkerEXT;
 #endif
-#if GL_EXT_multisampled_render_to_texture
+#ifdef GL_EXT_multisampled_render_to_texture
         extern PFNGLRENDERBUFFERSTORAGEMULTISAMPLEEXTPROC glRenderbufferStorageMultisampleEXT;
         extern PFNGLFRAMEBUFFERTEXTURE2DMULTISAMPLEEXTPROC glFramebufferTexture2DMultisampleEXT;
 #endif
@@ -83,10 +83,15 @@
     #include <OpenGLES/ES3/glext.h>
 
     /* The iOS SDK only provides OpenGL ES headers up to 3.0. Filament works with OpenGL 3.0, but
-     * requires the following 3.1 define in order to compile. */
+     * requires the following 3.1 declarations in order to compile. */
 
     #define GL_TEXTURE_2D_MULTISAMPLE         0x9100
     #define GL_TIME_ELAPSED                   0x88BF
+
+#ifdef GL_EXT_multisampled_render_to_texture
+    extern PFNGLRENDERBUFFERSTORAGEMULTISAMPLEEXTPROC glRenderbufferStorageMultisampleEXT;
+    extern PFNGLFRAMEBUFFERTEXTURE2DMULTISAMPLEEXTPROC glFramebufferTexture2DMultisampleEXT;
+#endif
 
 #else
     #include <bluegl/BlueGL.h>
