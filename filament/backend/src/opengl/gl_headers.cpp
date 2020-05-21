@@ -105,4 +105,18 @@ void importGLESExtensionsEntryPoints() {
 
 } // namespace glext
 
+#elif defined(IOS)
+
+#include <OpenGLES/ES3/gl.h>
+#include <OpenGLES/ES3/glext.h>
+
+#include <utils/Panic.h>
+
+namespace glext {
+    void glFramebufferTexture2DMultisampleEXT (GLenum target, GLenum attachment,
+            GLenum textarget, GLuint texture, GLint level, GLsizei samples) {
+        PANIC_PRECONDITION("glFramebufferTexture2DMultisampleEXT should not be called on iOS.");
+    }
+}
+
 #endif

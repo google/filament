@@ -88,11 +88,9 @@
     #define GL_TEXTURE_2D_MULTISAMPLE         0x9100
     #define GL_TIME_ELAPSED                   0x88BF
 
-    typedef void (GL_APIENTRYP PFNGLFRAMEBUFFERTEXTURE2DMULTISAMPLEEXTPROC) (GLenum target,
-            GLenum attachment, GLenum textarget, GLuint texture, GLint level, GLsizei samples);
-
     namespace glext {
-        extern PFNGLFRAMEBUFFERTEXTURE2DMULTISAMPLEEXTPROC glFramebufferTexture2DMultisampleEXT;
+        void glFramebufferTexture2DMultisampleEXT (GLenum target, GLenum attachment,
+                GLenum textarget, GLuint texture, GLint level, GLsizei samples);
     }
 
 #else
