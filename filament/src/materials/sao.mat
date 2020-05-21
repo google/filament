@@ -197,14 +197,11 @@ fragment {
         float ao = max(0.0, 1.0 - occlusion * (materialParams.intensity * materialParams.sampleCount.y));
         ao = pow(ao, materialParams.power);
 
-        // Apply a 2x2 bilateral box filter, taking advantage of quad shading. If we were not
-        // applying the bilateral filter, this would be equivalent to downsampling the AO buffer
-        // using a 2x2 box. Thanks to the bilateral filter, we keep some sharp edges.
-        // mod2() below will return either 0.5 or 1.5
-        // This assumes full derivatives are supported.
-        ivec2 coords = ivec2(gl_FragCoord.xy);
-        ao += (1.0 - step(kEdgeDistance, abs(dFdx(origin.z)))) * dFdx(ao) * (0.5 - float(coords.x & 1));
-        ao += (1.0 - step(kEdgeDistance, abs(dFdy(origin.z)))) * dFdy(ao) * (0.5 - float(coords.y & 1));
+#if defined(TARGET_MOBILE)
+        // this line is needed to workaround what seems to be a bug on qualcomm hardware
+        ao += gl_FragCoord.x * MEDIUMP_FLT_MIN;
+#endif
+
         postProcess.color.rgb = vec3(ao, pack(origin.z));
     }
 }

@@ -31,9 +31,9 @@ vertex {
 }
 
 fragment {
-    const int kGaussianCount = 4;
+    const int kGaussianCount = 6;
     const float kGaussianSamples[] = float[](
-        0.199471, 0.176033, 0.120985, 0.064759, 0.026995, 0.008764, 0.002216, 0.000436  // stdev = 2.0
+            0.099736, 0.096667, 0.088016, 0.075284, 0.060493, 0.045662  // stdev = 4.0
     );
 
     float unpack(vec2 depth) {

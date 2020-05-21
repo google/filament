@@ -766,12 +766,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOclusion(
 
     /*
      * Final separable bilateral blur pass
-     *
-     * Since we apply a 2x2 box filter to the output of the AO -- effectively downsampling it
-     * (except at edges), we can widen the blur by skipping every other sample.
      */
-    ssao = bilateralBlurPass(fg, ssao, { 2, 0 }, cameraInfo.zf, TextureFormat::RGB8);
-    ssao = bilateralBlurPass(fg, ssao, { 0, 2 }, cameraInfo.zf, TextureFormat::R8);
+    ssao = bilateralBlurPass(fg, ssao, { 1, 0 }, cameraInfo.zf, TextureFormat::RGB8);
+    ssao = bilateralBlurPass(fg, ssao, { 0, 1 }, cameraInfo.zf, TextureFormat::R8);
 
     fg.getBlackboard().put("ssao", ssao);
     return ssao;
