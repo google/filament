@@ -35,18 +35,6 @@
 #pragma clang diagnostic ignored "-Wreturn-stack-address"
 #pragma clang diagnostic ignored "-Wunused-parameter"
 
-// In debug builds, we enable validation layers and set up a debug callback if the extension is
-// available. Caution: the debug callback causes a null pointer dereference with optimized builds.
-//
-// To enable validation layers in Android, also be sure to set the jniLibs property in the gradle
-// file for filament-android as follows. This copies the appropriate libraries from the NDK to the
-// device. This makes the aar much larger, so it should be avoided in release builds.
-//
-// sourceSets { main { jniLibs {
-//   srcDirs = ["${android.ndkDirectory}/sources/third_party/vulkan/src/build-android/jniLibs"]
-// } } }
-//
-
 static constexpr int SWAP_CHAIN_MAX_ATTEMPTS = 16;
 
 #if VK_ENABLE_VALIDATION
