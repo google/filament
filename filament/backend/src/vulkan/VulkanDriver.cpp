@@ -740,6 +740,14 @@ void VulkanDriver::cancelExternalImage(void* image) {
 bool VulkanDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapsedTime) {
     VulkanTimerQuery* vtq = handle_cast<VulkanTimerQuery>(mHandleMap, tqh);
 
+    // This is a synchronous call and might occur before beginTimerQuery has written anything into
+    // the command buffer, which is an error according to the validation layer that ships in the
+    // Android NDK.  Even when AVAILABILITY_BIT is set, validation seems to require that the
+    // timestamp has at least been written into the command buffer.
+    if (!vtq->ready.load()) {
+        return false;
+    }
+
     uint64_t results[4] = {};
     size_t dataSize = sizeof(results);
     VkDeviceSize stride = sizeof(uint64_t);
@@ -1309,6 +1317,7 @@ void VulkanDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {
 
     vkCmdResetQueryPool(commands->cmdbuffer, mContext.timestamps.pool, index, 2);
     vkCmdWriteTimestamp(commands->cmdbuffer, stage, mContext.timestamps.pool, index);
+    vtq->ready.store(true);
 }
 
 void VulkanDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
