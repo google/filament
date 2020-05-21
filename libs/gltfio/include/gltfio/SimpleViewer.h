@@ -263,6 +263,7 @@ SimpleViewer::SimpleViewer(filament::Engine* engine, filament::Scene* scene, fil
     if (mEnableSunlight) {
         mScene->addEntity(mSunlight);
     }
+    view->setAmbientOcclusionOptions({ .upsampling = View::QualityLevel::HIGH });
 }
 
 SimpleViewer::~SimpleViewer() {
@@ -303,9 +304,9 @@ void SimpleViewer::populateScene(FilamentAsset* asset, bool scale) {
 
 void SimpleViewer::removeAsset() {
     if (mAsset) {
-        const auto begin = mAsset->getEntities();
-        const auto end = begin + mAsset->getEntityCount();
-        for (auto entity = begin; entity != end; ++entity) {
+        const auto *const begin = mAsset->getEntities();
+        const auto *const end = begin + mAsset->getEntityCount();
+        for (const auto *entity = begin; entity != end; ++entity) {
             mScene->remove(*entity);
         }
     }

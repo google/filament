@@ -99,8 +99,14 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             // CSM information
             .add("cascades",                1, UniformInterfaceBlock::Type::UINT)
 
-                    // bring PerViewUib to 2 KiB
-            .add("padding2", 63, UniformInterfaceBlock::Type::FLOAT4)
+            // SSAO sampling parameters
+            .add("aoSamplingQuality",       1, UniformInterfaceBlock::Type::FLOAT)
+            .add("aoReserved1",             1, UniformInterfaceBlock::Type::FLOAT)
+            .add("aoReserved2",             1, UniformInterfaceBlock::Type::FLOAT)
+            .add("aoReserved3",             1, UniformInterfaceBlock::Type::FLOAT)
+
+            // bring PerViewUib to 2 KiB
+            .add("padding2", 62, UniformInterfaceBlock::Type::FLOAT4)
             .build();
     return uib;
 }
