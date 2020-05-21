@@ -767,8 +767,15 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOclusion(
     /*
      * Final separable bilateral blur pass
      */
-    ssao = bilateralBlurPass(fg, ssao, { 1, 0 }, cameraInfo.zf, TextureFormat::RGB8);
-    ssao = bilateralBlurPass(fg, ssao, { 0, 1 }, cameraInfo.zf, TextureFormat::R8);
+
+    const bool highQualitySampling =
+            options.upsampling >= View::QualityLevel::HIGH && options.resolution < 1.0f;
+
+    ssao = bilateralBlurPass(fg, ssao, { 1, 0 }, cameraInfo.zf,
+            TextureFormat::RGB8);
+
+    ssao = bilateralBlurPass(fg, ssao, { 0, 1 }, cameraInfo.zf,
+            highQualitySampling ? TextureFormat::RGB8 : TextureFormat::R8);
 
     fg.getBlackboard().put("ssao", ssao);
     return ssao;

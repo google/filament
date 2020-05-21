@@ -117,8 +117,13 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     // bit 8-11: cascade has visible shadows
     uint32_t cascades;
 
+    float aoSamplingQuality;     // 0: bilinear, !0: bilateral
+    float aoReserved1;
+    float aoReserved2;
+    float aoReserved3;
+
     // bring PerViewUib to 2 KiB
-    filament::math::float4 padding2[63];
+    filament::math::float4 padding2[62];
 };
 
 // 2 KiB == 128 float4s

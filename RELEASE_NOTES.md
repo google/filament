@@ -6,6 +6,7 @@ A new header is inserted each time a *tag* is created.
 ## Next release
 
 - Add missing JavaScript API for View::setVisibleLayers().
+- SSAO now has an optional high(er) quality upsampler.
 
 ## v1.7.0
 
