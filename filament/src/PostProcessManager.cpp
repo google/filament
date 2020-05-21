@@ -702,7 +702,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOclusion(
 
 
                 // Where the falloff function peaks
-                const float peak = 0.1 * options.radius;
+                const float peak = 0.1f * options.radius;
                 // We further scale the user intensity by 3, for a better default at intensity=1
                 const float intensity = (2.0f * F_PI * peak) * data.options.intensity * 3.0f;
                 // always square AO result, as it looks much better
@@ -782,7 +782,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::structure(FrameGraph& fg,
 
     // structure pass -- automatically culled if not used, currently used by:
     //    - ssao
-    //     - contact shadows
+    //    - contact shadows
+    //    - depth-of-field
     // It consists of a mipmapped depth pass, tuned for SSAO
     struct StructurePassData {
         FrameGraphId<FrameGraphTexture> depth;

@@ -342,6 +342,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     pass.appendCommands(RenderPass::CommandTypeFlags::SSAO);
     pass.sortCommands();
 
+    // TODO: the scaling should depends on all passes that need the structure pass
     ppm.structure(fg, pass, svp.width, svp.height, aoOptions.resolution);
 
     // --------------------------------------------------------------------------------------------

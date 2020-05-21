@@ -155,7 +155,7 @@ public class View {
         public float power = 1.0f;
 
         /**
-         * How each dimension of the AO buffer is scaled. Must be positive and <= 1.
+         * How each dimension of the AO buffer is scaled. Must be either 0.5 or 1.0.
          */
         public float resolution = 0.5f;
 
