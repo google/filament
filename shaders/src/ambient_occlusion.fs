@@ -12,6 +12,9 @@
 //------------------------------------------------------------------------------
 
 float evaluateSSAO() {
+    // Note: Here we are essentially upscalling the SSAO buffer using a bilinear filter,
+    // but it would be better to apply a bilateral filter. It's a bit too expensive on mobile
+    // though.
     return textureLod(light_ssao, uvToRenderTargetUV(getNormalizedViewportCoord().xy), 0.0).r;
 }
 
