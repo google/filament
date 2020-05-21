@@ -202,10 +202,13 @@ void createVirtualDevice(VulkanContext& context) {
     VkQueryPoolCreateInfo tqpCreateInfo = {};
     tqpCreateInfo.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
     tqpCreateInfo.queryType = VK_QUERY_TYPE_TIMESTAMP;
+
+    std::unique_lock<utils::Mutex> timestamps_lock(context.timestamps.mutex);
     tqpCreateInfo.queryCount = context.timestamps.used.size() * 2;
     result = vkCreateQueryPool(context.device, &tqpCreateInfo, VKALLOC, &context.timestamps.pool);
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateQueryPool error.");
     context.timestamps.used.reset();
+    timestamps_lock.unlock();
 
     const VmaVulkanFunctions funcs {
         .vkGetPhysicalDeviceProperties = vkGetPhysicalDeviceProperties,

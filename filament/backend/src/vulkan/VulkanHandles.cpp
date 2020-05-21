@@ -678,7 +678,8 @@ void VulkanRenderPrimitive::setBuffers(VulkanVertexBuffer* vertexBuffer,
 }
 
 VulkanTimerQuery::VulkanTimerQuery(VulkanContext& context) : mContext(context) {
-    auto& bitset = context.timestamps.used;
+    std::unique_lock<utils::Mutex> lock(context.timestamps.mutex);
+    utils::bitset32& bitset = context.timestamps.used;
     const size_t maxTimers = bitset.size();
     assert(bitset.count() < maxTimers);
     for (size_t timerIndex = 0; timerIndex < maxTimers; ++timerIndex) {
@@ -695,6 +696,7 @@ VulkanTimerQuery::VulkanTimerQuery(VulkanContext& context) : mContext(context) {
 }
 
 VulkanTimerQuery::~VulkanTimerQuery() {
+    std::unique_lock<utils::Mutex> lock(mContext.timestamps.mutex);
     mContext.timestamps.used.unset(startingQueryIndex / 2);
 }
 
