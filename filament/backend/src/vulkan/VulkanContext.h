@@ -132,6 +132,7 @@ struct VulkanSurfaceContext {
     VkSemaphore imageAvailable;
     VkSemaphore renderingFinished;
     VulkanAttachment depth;
+    bool suboptimal;
     void* nativeWindow;
 };
 

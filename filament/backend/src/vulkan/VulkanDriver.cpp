@@ -457,6 +457,7 @@ void VulkanDriver::createSyncR(Handle<HwSync> sh, int) {
 void VulkanDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
     auto* swapChain = construct_handle<VulkanSwapChain>(mHandleMap, sch);
     VulkanSurfaceContext& sc = swapChain->surfaceContext;
+    sc.suboptimal = false;
     sc.surface = (VkSurfaceKHR) mContextManager.createVkSurfaceKHR(nativeWindow, mContext.instance);
     sc.nativeWindow = nativeWindow;
     mContextManager.getClientExtent(nativeWindow, &sc.clientSize.width, &sc.clientSize.height);
@@ -994,11 +995,21 @@ void VulkanDriver::commit(Handle<HwSwapChain> sch) {
         .pImageIndices = &surface.currentSwapIndex,
     };
     result = vkQueuePresentKHR(surface.presentQueue, &presentInfo);
-    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+
+    // We should be notified of a suboptimal surface, but it should not cause a cascade of
+    // log messages, or a loop of re-creations.
+    if (result == VK_SUBOPTIMAL_KHR && !surface.suboptimal) {
+        utils::slog.w << "Vulkan Driver: Suboptimal swap chain." << utils::io::endl;
+        surface.suboptimal = true;
+    }
+
+    // The surface can be "out of date" when it has been resized, which is not an error.
+    if (result == VK_ERROR_OUT_OF_DATE_KHR) {
         refreshSwapChain();
         return;
     }
-    ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkQueuePresentKHR error.");
+
+    assert(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR);
 }
 
 void VulkanDriver::bindUniformBuffer(size_t index, Handle<HwUniformBuffer> ubh) {
