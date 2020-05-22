@@ -4,8 +4,8 @@
 //     Path to the Filament distribution/install directory for desktop.
 //     This directory must contain bin/matc.
 //
-// filament_supports_vulkan
-//     When set, support for Vulkan will be enabled
+// filament_exclude_vulkan
+//     When set, support for Vulkan will be excluded.
 //
 // Example:
 //     ./gradlew -Pfilament_tools_dir=../../dist-release assembleDebug
@@ -121,7 +121,7 @@ abstract class MaterialCompiler extends TaskWithBinary {
                 }
 
                 def matcArgs = []
-                if (project.hasProperty("filament_supports_vulkan")) {
+                if (!project.hasProperty("filament_exclude_vulkan")) {
                     matcArgs += ['-a', 'vulkan']
                 }
                 matcArgs += ['-a', 'opengl', '-p', 'mobile', '-o', getOutputFile(file), file]
