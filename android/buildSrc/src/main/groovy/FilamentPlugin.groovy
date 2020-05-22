@@ -10,12 +10,26 @@
 // Example:
 //     ./gradlew -Pfilament_tools_dir=../../dist-release assembleDebug
 
-import java.nio.file.Paths
+import org.gradle.api.DefaultTask
+import org.gradle.api.GradleException
+import org.gradle.api.Plugin
+import org.gradle.api.Project
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.FileType
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.logging.LogLevel
+import org.gradle.api.logging.Logger
+import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.incremental.InputFileDetails
 import org.gradle.internal.os.OperatingSystem
-import org.gradle.api.*
-import org.gradle.api.logging.*
-import org.gradle.api.tasks.*
-import org.gradle.api.tasks.incremental.*
+import org.gradle.work.ChangeType
+import org.gradle.work.Incremental
+import org.gradle.work.InputChanges
+
+import java.nio.file.Paths
 
 class TaskWithBinary extends DefaultTask {
     private final String binaryName
@@ -68,62 +82,62 @@ class LogOutputStream extends ByteArrayOutputStream {
 
 // Custom task to compile material files using matc
 // This task handles incremental builds
-class MaterialCompiler extends TaskWithBinary {
-    @SuppressWarnings("GroovyUnusedDeclaration")
+abstract class MaterialCompiler extends TaskWithBinary {
+    @Incremental
     @InputDirectory
-    File inputDir
+    final DirectoryProperty inputDir = project.objects.directoryProperty()
 
     @OutputDirectory
-    File outputDir
+    final DirectoryProperty outputDir = project.objects.directoryProperty()
 
     MaterialCompiler() {
         super("matc")
     }
 
-    @SuppressWarnings("GroovyUnusedDeclaration")
     @TaskAction
-    void execute(IncrementalTaskInputs inputs) {
+    void execute(InputChanges inputs) {
         if (!inputs.incremental) {
-            project.delete(project.fileTree(outputDir).matching { include '*.filamat' })
+            project.delete(project.fileTree(outputDir.asFile.get()).matching { include '*.filamat' })
         }
 
-        inputs.outOfDate { InputFileDetails outOfDate ->
-            if (outOfDate.file.directory) return
-            def file = outOfDate.file
+        inputs.getFileChanges(inputDir).each { InputFileDetails change ->
+            if (change.fileType == FileType.DIRECTORY) return
 
-            def out = new LogOutputStream(logger, LogLevel.LIFECYCLE)
-            def err = new LogOutputStream(logger, LogLevel.ERROR)
+            def file = change.file
 
-            def header = ("Compiling material " + file + "\n").getBytes()
-            out.write(header)
-            out.flush()
+            if (change.changeType == ChangeType.REMOVED) {
+                getOutputFile(file).delete()
+            } else {
+                def out = new LogOutputStream(logger, LogLevel.LIFECYCLE)
+                def err = new LogOutputStream(logger, LogLevel.ERROR)
 
-            if (!getBinary().exists()) {
-                throw new GradleException("Could not find ${getBinary()}." +
-                        " Ensure Filament has been built/installed before building this app.")
+                def header = ("Compiling material " + file + "\n").getBytes()
+                out.write(header)
+                out.flush()
+
+                if (!getBinary().exists()) {
+                    throw new GradleException("Could not find ${getBinary()}." +
+                            " Ensure Filament has been built/installed before building this app.")
+                }
+
+                def matcArgs = []
+                if (project.hasProperty("filament_supports_vulkan")) {
+                    matcArgs += ['-a', 'vulkan']
+                }
+                matcArgs += ['-a', 'opengl', '-p', 'mobile', '-o', getOutputFile(file), file]
+
+                project.exec {
+                    standardOutput out
+                    errorOutput err
+                    executable "${getBinary()}"
+                    args matcArgs
+                }
             }
-
-            def matcArgs = []
-            if (project.hasProperty("filament_supports_vulkan")) {
-                matcArgs += ['-a', 'vulkan']
-            }
-            matcArgs += ['-a', 'opengl', '-p', 'mobile', '-o', getOutputFile(file), file]
-
-            project.exec {
-                standardOutput out
-                errorOutput err
-                executable "${getBinary()}"
-                args matcArgs
-            }
-        }
-
-        inputs.removed { InputFileDetails removed ->
-            getOutputFile(removed.file).delete()
         }
     }
 
     File getOutputFile(final File file) {
-        return new File(outputDir, file.name[0..file.name.lastIndexOf('.')] + 'filamat')
+        return outputDir.file(file.name[0..file.name.lastIndexOf('.')] + 'filamat').get().asFile
     }
 }
 
@@ -132,131 +146,141 @@ class MaterialCompiler extends TaskWithBinary {
 class IblGenerator extends TaskWithBinary {
     String cmgenArgs = null
 
-    @SuppressWarnings("GroovyUnusedDeclaration")
+    @Incremental
     @InputFile
-    File inputFile
+    final RegularFileProperty inputFile = project.objects.fileProperty()
 
     @OutputDirectory
-    File outputDir
+    final DirectoryProperty outputDir = project.objects.directoryProperty()
 
     IblGenerator() {
         super("cmgen")
     }
 
-    @SuppressWarnings("GroovyUnusedDeclaration")
     @TaskAction
-    void execute(IncrementalTaskInputs inputs) {
+    void execute(InputChanges inputs) {
         if (!inputs.incremental) {
-            project.delete(project.fileTree(outputDir).matching { include '*' })
+            project.delete(project.fileTree(outputDir.asFile.get()).matching { include '*' })
         }
 
-        inputs.outOfDate { InputFileDetails outOfDate ->
-            def file = outOfDate.file
+        inputs.getFileChanges(inputFile).each { InputFileDetails change ->
+            if (change.fileType == FileType.DIRECTORY) return
 
-            def out = new LogOutputStream(logger, LogLevel.LIFECYCLE)
-            def err = new LogOutputStream(logger, LogLevel.ERROR)
+            def file = change.file
 
-            def header = ("Generating IBL " + file + "\n").getBytes()
-            out.write(header)
-            out.flush()
+            if (change.changeType == ChangeType.REMOVED) {
+                getOutputFile(file).delete()
+            } else {
+                def out = new LogOutputStream(logger, LogLevel.LIFECYCLE)
+                def err = new LogOutputStream(logger, LogLevel.ERROR)
 
-            if (!getBinary().exists()) {
-                throw new GradleException("Could not find ${getBinary()}." +
-                        " Ensure Filament has been built/installed before building this app.")
-            }
+                def header = ("Generating IBL " + file + "\n").getBytes()
+                out.write(header)
+                out.flush()
 
-            project.exec {
-                standardOutput out
-                if (!cmgenArgs) {
-                    cmgenArgs = '-q -x ' + outputDir +
-                            ' --format=rgb32f --extract-blur=0.08 --extract=' + outputDir.absolutePath
+                if (!getBinary().exists()) {
+                    throw new GradleException("Could not find ${getBinary()}." +
+                            " Ensure Filament has been built/installed before building this app.")
                 }
-                cmgenArgs = cmgenArgs + " " + file
-                errorOutput err
-                executable "${getBinary()}"
-                args(cmgenArgs.split())
-            }
-        }
 
-        inputs.removed { InputFileDetails removed ->
-            getOutputFile(removed.file).delete()
+                def outputPath = outputDir.get().asFile
+                project.exec {
+                    standardOutput out
+                    if (!cmgenArgs) {
+                        cmgenArgs =
+                                '-q -x ' + outputPath + ' --format=rgb32f ' +
+                                '--extract-blur=0.08 --extract=' + outputPath.absolutePath
+                    }
+                    cmgenArgs = cmgenArgs + " " + file
+                    errorOutput err
+                    executable "${getBinary()}"
+                    args(cmgenArgs.split())
+                }
+            }
         }
     }
 
     File getOutputFile(final File file) {
-        return new File(outputDir, file.name[0..file.name.lastIndexOf('.') - 1])
+        return outputDir.file(file.name[0..file.name.lastIndexOf('.') - 1]).get().asFile
     }
 }
 
 // Custom task to compile mesh files using filamesh
 // This task handles incremental builds
 class MeshCompiler extends TaskWithBinary {
-    @SuppressWarnings("GroovyUnusedDeclaration")
+    @Incremental
     @InputFile
-    File inputFile
+    final RegularFileProperty inputFile = project.objects.fileProperty()
 
     @OutputDirectory
-    File outputDir
+    final DirectoryProperty outputDir = project.objects.directoryProperty()
 
     MeshCompiler() {
         super("filamesh")
     }
 
-    @SuppressWarnings("GroovyUnusedDeclaration")
     @TaskAction
-    void execute(IncrementalTaskInputs inputs) {
+    void execute(InputChanges inputs) {
         if (!inputs.incremental) {
-            project.delete(project.fileTree(outputDir).matching { include '*.filamesh' })
+            project.delete(project.fileTree(outputDir.asFile.get()).matching { include '*.filamesh' })
         }
 
-        inputs.outOfDate { InputFileDetails outOfDate ->
-            def file = outOfDate.file
+        inputs.getFileChanges(inputFile).each { InputFileDetails change ->
+            if (change.fileType == FileType.DIRECTORY) return
 
-            def out = new LogOutputStream(logger, LogLevel.LIFECYCLE)
-            def err = new LogOutputStream(logger, LogLevel.ERROR)
+            def file = change.file
 
-            def header = ("Compiling mesh " + file + "\n").getBytes()
-            out.write(header)
-            out.flush()
+            if (change.changeType == ChangeType.REMOVED) {
+                getOutputFile(file).delete()
+            } else {
+                def out = new LogOutputStream(logger, LogLevel.LIFECYCLE)
+                def err = new LogOutputStream(logger, LogLevel.ERROR)
 
-            if (!getBinary().exists()) {
-                throw new GradleException("Could not find ${getBinary()}." +
-                        " Ensure Filament has been built/installed before building this app.")
+                def header = ("Compiling mesh " + file + "\n").getBytes()
+                out.write(header)
+                out.flush()
+
+                if (!getBinary().exists()) {
+                    throw new GradleException("Could not find ${getBinary()}." +
+                            " Ensure Filament has been built/installed before building this app.")
+                }
+
+                project.exec {
+                    standardOutput out
+                    errorOutput err
+                    executable "${getBinary()}"
+                    args(file, getOutputFile(file))
+                }
             }
-
-            project.exec {
-                standardOutput out
-                errorOutput err
-                executable "${getBinary()}"
-                args(file, getOutputFile(file))
-            }
-        }
-
-        inputs.removed { InputFileDetails removed ->
-            getOutputFile(removed.file).delete()
         }
     }
 
     File getOutputFile(final File file) {
-        return new File(outputDir, file.name[0..file.name.lastIndexOf('.')] + 'filamesh')
+        return outputDir.file(file.name[0..file.name.lastIndexOf('.')] + 'filamesh').get().asFile
     }
 }
 
 class FilamentToolsPluginExtension {
-    File materialInputDir
-    File materialOutputDir
+    DirectoryProperty materialInputDir
+    DirectoryProperty materialOutputDir
 
     String cmgenArgs
-    File iblInputFile
-    File iblOutputDir
+    RegularFileProperty iblInputFile
+    DirectoryProperty iblOutputDir
 
-    File meshInputFile
-    File meshOutputDir
+    RegularFileProperty meshInputFile
+    DirectoryProperty meshOutputDir
 }
 
 class FilamentToolsPlugin implements Plugin<Project> {
     void apply(Project project) {
         def extension = project.extensions.create('filamentTools', FilamentToolsPluginExtension)
+        extension.materialInputDir = project.objects.directoryProperty()
+        extension.materialOutputDir = project.objects.directoryProperty()
+        extension.iblInputFile = project.objects.fileProperty()
+        extension.iblOutputDir = project.objects.directoryProperty()
+        extension.meshInputFile = project.objects.fileProperty()
+        extension.meshOutputDir = project.objects.directoryProperty()
 
         project.ext.filamentToolsPath = project.file("../../../out/release/filament")
         if (project.hasProperty("filament_tools_dir")) {
@@ -264,26 +288,28 @@ class FilamentToolsPlugin implements Plugin<Project> {
         }
 
         project.tasks.register("filamentCompileMaterials", MaterialCompiler) {
-            enabled = extension.materialInputDir != null && extension.materialOutputDir != null
-            inputDir = extension.materialInputDir
-            outputDir = extension.materialOutputDir
+            enabled =
+                    extension.materialInputDir.isPresent() &&
+                    extension.materialOutputDir.isPresent()
+            inputDir = extension.materialInputDir.getOrNull()
+            outputDir = extension.materialOutputDir.getOrNull()
         }
 
         project.preBuild.dependsOn "filamentCompileMaterials"
 
         project.tasks.register("filamentGenerateIbl", IblGenerator) {
-            enabled = extension.iblInputFile != null && extension.iblOutputDir != null
+            enabled = extension.iblInputFile.isPresent() && extension.iblOutputDir.isPresent()
             cmgenArgs = extension.cmgenArgs
-            inputFile = extension.iblInputFile
-            outputDir = extension.iblOutputDir
+            inputFile = extension.iblInputFile.getOrNull()
+            outputDir = extension.iblOutputDir.getOrNull()
         }
 
         project.preBuild.dependsOn "filamentGenerateIbl"
 
         project.tasks.register("filamentCompileMesh", MeshCompiler) {
-            enabled = extension.meshInputFile != null && extension.meshOutputDir != null
-            inputFile = extension.meshInputFile
-            outputDir = extension.meshOutputDir
+            enabled = extension.meshInputFile.isPresent() && extension.meshOutputDir.isPresent()
+            inputFile = extension.meshInputFile.getOrNull()
+            outputDir = extension.meshOutputDir.getOrNull()
         }
 
         project.preBuild.dependsOn "filamentCompileMesh"

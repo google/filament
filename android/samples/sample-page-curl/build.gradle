@@ -4,10 +4,10 @@ apply plugin: FilamentToolsPlugin
 project.ext.isSample = true
 
 filamentTools {
-    iblInputFile = file("../../../third_party/environments/studio_small_02_2k.hdr")
-    iblOutputDir = file("src/main/assets/envs")
-    materialInputDir = file("src/main/materials")
-    materialOutputDir = file("src/main/assets/materials")
+    iblInputFile = project.layout.projectDirectory.file("../../../third_party/environments/studio_small_02_2k.hdr")
+    iblOutputDir = project.layout.projectDirectory.dir("src/main/assets/envs")
+    materialInputDir = project.layout.projectDirectory.dir("src/main/materials")
+    materialOutputDir = project.layout.projectDirectory.dir("src/main/assets/materials")
 }
 
 clean.doFirst {
