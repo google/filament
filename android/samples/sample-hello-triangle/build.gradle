@@ -6,8 +6,8 @@ apply plugin: FilamentToolsPlugin
 project.ext.isSample = true
 
 filamentTools {
-    materialInputDir = file("src/main/materials")
-    materialOutputDir = file("src/main/assets/materials")
+    materialInputDir = project.layout.projectDirectory.dir("src/main/materials")
+    materialOutputDir = project.layout.projectDirectory.dir("src/main/assets/materials")
 }
 
 clean.doFirst {

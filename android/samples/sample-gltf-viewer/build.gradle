@@ -7,8 +7,8 @@ project.ext.isSample = true
 
 filamentTools {
     cmgenArgs = "-q --format=ktx --size=256 --extract-blur=0.1 --deploy=src/main/assets/envs/venetian_crossroads_2k"
-    iblInputFile = file("../../../third_party/environments/venetian_crossroads_2k.hdr")
-    iblOutputDir = file("src/main/assets/envs")
+    iblInputFile = project.layout.projectDirectory.file("../../../third_party/environments/venetian_crossroads_2k.hdr")
+    iblOutputDir = project.layout.projectDirectory.dir("src/main/assets/envs")
 }
 
 task copyMesh(type: Copy) {
