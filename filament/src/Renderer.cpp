@@ -599,6 +599,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 data.ssr  = blackboard.get<FrameGraphTexture>("ssr");
                 data.ssao = blackboard.get<FrameGraphTexture>("ssao");
                 data.color = blackboard.get<FrameGraphTexture>("color");
+                data.depth = blackboard.get<FrameGraphTexture>("depth");
                 data.structure = blackboard.get<FrameGraphTexture>("structure");
 
                 if (config.hasContactShadows) {
