@@ -1052,7 +1052,7 @@ void ValidationState_t::ComputeFunctionToEntryPointMapping() {
 }
 
 void ValidationState_t::ComputeRecursiveEntryPoints() {
-  for (const Function func : functions()) {
+  for (const Function &func : functions()) {
     std::stack<uint32_t> call_stack;
     std::set<uint32_t> visited;
 
