@@ -639,10 +639,12 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
         if (!hasUv0) {
             needsDummyData = true;
             vbb.attribute(VertexAttribute::UV0, slot, VertexBuffer::AttributeType::USHORT2);
+            vbb.normalized(VertexAttribute::UV0);
         }
         if (!hasUv1) {
             needsDummyData = true;
             vbb.attribute(VertexAttribute::UV1, slot, VertexBuffer::AttributeType::USHORT2);
+            vbb.normalized(VertexAttribute::UV1);
         }
         if (!hasVertexColor) {
             needsDummyData = true;
@@ -654,11 +656,13 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
         if (!hasUv0 && numUvSets > 0) {
             needsDummyData = true;
             vbb.attribute(VertexAttribute::UV0, slot, VertexBuffer::AttributeType::USHORT2);
+            vbb.normalized(VertexAttribute::UV0);
             slog.w << "Missing UV0 data in " << name << io::endl;
         }
         if (!hasUv1 && numUvSets > 1) {
             needsDummyData = true;
             vbb.attribute(VertexAttribute::UV1, slot, VertexBuffer::AttributeType::USHORT2);
+            vbb.normalized(VertexAttribute::UV1);
             slog.w << "Missing UV1 data in " << name << io::endl;
         }
     }
