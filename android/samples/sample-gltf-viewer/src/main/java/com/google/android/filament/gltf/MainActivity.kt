@@ -75,7 +75,7 @@ class MainActivity : Activity() {
     }
 
     private fun createRenderables() {
-        val buffer = assets.open("models/scene.gltf").use { input ->
+        val buffer = assets.open("models/bistro.gltf").use { input ->
             val bytes = ByteArray(input.available())
             input.read(bytes)
             ByteBuffer.wrap(bytes)
@@ -83,7 +83,7 @@ class MainActivity : Activity() {
         modelViewer.loadModelGltf(buffer) { uri ->
             readCompressedAsset("models/$uri")
         }
-        modelViewer.transformToUnitCube()
+        //modelViewer.transformToUnitCube()
     }
 
     private fun createIndirectLight() {

@@ -12,7 +12,7 @@ filamentTools {
 }
 
 task copyMesh(type: Copy) {
-    from "../../../third_party/models/BusterDrone"
+    from "/Users/mathias/Desktop/filament/models/bistro"
     into "src/main/assets/models"
 }
 
