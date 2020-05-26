@@ -646,12 +646,16 @@ void VulkanRenderPrimitive::setBuffers(VulkanVertexBuffer* vertexBuffer,
         Attribute attrib = vertexBuffer->attributes[attribIndex];
         VkFormat vkformat = getVkFormat(attrib.type, attrib.flags & Attribute::FLAG_NORMALIZED);
 
-        // We re-use the positions buffer as a dummy buffer for any disabled attribute that might
-        // be consumed by the shader.
+        // HACK: Re-use the positions buffer as a dummy buffer for disabled attributes.
+        // We know that position exists (see earlier assert)
         if (!(enabledAttributes & (1U << attribIndex))) {
 
+            // HACK: Presently, Filament's vertex shaders declare all attributes as either vec4 or
+            // uvec4 (the latter is for bone indices), and positions are always at least 32 bits per
+            // element. Therefore we can assign a dummy type of either R8G8B8A8_UINT or
+            // R8G8B8A8_SNORM, depending on whether the shader expects to receive floats or ints.
             const bool isInteger = attrib.flags & Attribute::FLAG_INTEGER_TARGET;
-            vkformat = isInteger ? VK_FORMAT_R8G8B8A8_UINT : vkformat;
+            vkformat = isInteger ? VK_FORMAT_R8G8B8A8_UINT : VK_FORMAT_R8G8B8A8_SNORM;
 
             if (UTILS_LIKELY(enabledAttributes & 1)) {
                 attrib = vertexBuffer->attributes[0];
