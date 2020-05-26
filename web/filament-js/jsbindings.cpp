@@ -296,6 +296,12 @@ value_object<filament::View::AmbientOcclusionOptions>("View$AmbientOcclusionOpti
     .field("intensity", &filament::View::AmbientOcclusionOptions::intensity)
     .field("quality", &filament::View::AmbientOcclusionOptions::quality);
 
+value_object<filament::View::DepthOfFieldOptions>("View$DepthOfFieldOptions")
+    .field("focusDistance", &filament::View::DepthOfFieldOptions::focusDistance)
+    .field("blurScale", &filament::View::DepthOfFieldOptions::blurScale)
+    .field("maxApertureDiameter", &filament::View::DepthOfFieldOptions::maxApertureDiameter)
+    .field("enabled", &filament::View::DepthOfFieldOptions::enabled);
+
 value_object<filament::View::BloomOptions>("View$BloomOptions")
     .field("dirtStrength", &filament::View::BloomOptions::dirtStrength)
     .field("strength", &filament::View::BloomOptions::strength)
@@ -500,6 +506,7 @@ class_<View>("View")
     .function("setVisibleLayers", &View::setVisibleLayers)
     .function("setPostProcessingEnabled", &View::setPostProcessingEnabled)
     .function("_setAmbientOcclusionOptions", &View::setAmbientOcclusionOptions)
+    .function("_setDepthOfFieldOptions", &View::setDepthOfFieldOptions)
     .function("_setBloomOptions", &View::setBloomOptions)
     .function("setAmbientOcclusion", &View::setAmbientOcclusion)
     .function("getAmbientOcclusion", &View::getAmbientOcclusion)

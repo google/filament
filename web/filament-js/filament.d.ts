@@ -66,6 +66,13 @@ export interface View$AmbientOcclusionOptions {
     quality?: View$QualityLevel;
 }
 
+export interface View$DepthOfFieldOptions {
+    focusDistance?: number;
+    blurScale?: number;
+    maxApertureDiameter?: number;
+    enabled?: boolean;
+}
+
 export interface View$BloomOptions {
     dirtStrength?: number;
     strength?: number;
@@ -374,6 +381,7 @@ export class View {
     public setVisibleLayers(select: number, values: number): void;
     public setRenderTarget(renderTarget: RenderTarget): void;
     public setAmbientOcclusionOptions(options: View$AmbientOcclusionOptions): void;
+    public setDepthOfFieldOptions(options: View$DepthOfFieldOptions): void;
     public setBloomOptions(options: View$BloomOptions): void;
     public setAmbientOcclusion(enable: boolean): void;
     public getAmbientOcclusion(): boolean;
