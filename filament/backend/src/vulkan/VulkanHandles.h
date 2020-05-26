@@ -116,6 +116,8 @@ struct VulkanTexture : public HwTexture {
     ~VulkanTexture();
     void update2DImage(const PixelBufferDescriptor& data, uint32_t width, uint32_t height,
             int miplevel);
+    void update3DImage(const PixelBufferDescriptor& data, uint32_t width, uint32_t height,
+            uint32_t depth, int miplevel);
     void updateCubeImage(const PixelBufferDescriptor& data, const FaceOffsets& faceOffsets,
             int miplevel);
 
@@ -134,7 +136,8 @@ private:
     // Issues a copy from a VkBuffer to a specified miplevel in a VkImage. The given width and
     // height define a subregion within the miplevel.
     void copyBufferToImage(VkCommandBuffer cmdbuffer, VkBuffer buffer, VkImage image,
-            uint32_t width, uint32_t height, FaceOffsets const* faceOffsets, uint32_t miplevel);
+            uint32_t width, uint32_t height, uint32_t depth,
+            FaceOffsets const* faceOffsets, uint32_t miplevel);
 
     VulkanContext& mContext;
     VulkanStagePool& mStagePool;
