@@ -723,6 +723,9 @@ void VulkanDriver::update3DImage(
         uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
         uint32_t width, uint32_t height, uint32_t depth,
         PixelBufferDescriptor&& data) {
+    assert(xoffset == 0 && yoffset == 0 && zoffset == 0 && "Offsets not yet supported.");
+    handle_cast<VulkanTexture>(mHandleMap, th)->update3DImage(data, width, height, depth, level);
+    scheduleDestroy(std::move(data));
 }
 
 void VulkanDriver::updateCubeImage(Handle<HwTexture> th, uint32_t level,
