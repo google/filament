@@ -171,6 +171,20 @@ Filament.loadClassExtensions = function() {
         this._setAmbientOcclusionOptions(options);
     };
 
+    /// setDepthOfFieldOptions ::method::
+    /// overrides ::argument:: Dictionary with one or more of the following properties: \
+    /// focusDistance, blurScale, maxApertureDiameter, enabled.
+    Filament.View.prototype.setDepthOfFieldOptions = function(overrides) {
+        const options = {
+            focusDistance: 10.0,
+            blurScale: 1.0,
+            maxApertureDiameter: 0.01,
+            enabled: false
+        };
+        Object.assign(options, overrides);
+        this._setDepthOfFieldOptions(options);
+    };
+
     /// setBloomOptions ::method::
     /// overrides ::argument:: Dictionary with one or more of the following properties: \
     /// dirtStrength, strength, resolution, anomorphism, levels, blendMode, threshold, enabled, dirt.
