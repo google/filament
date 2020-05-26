@@ -107,14 +107,14 @@ Driver* PlatformEGL::createDriver(void* sharedContext) noexcept {
 
     EGLint configsCount;
     EGLint configAttribs[] = {
-            EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT_KHR,
-            EGL_RED_SIZE,    8,
-            EGL_GREEN_SIZE,  8,
-            EGL_BLUE_SIZE,   8,
-            EGL_ALPHA_SIZE,  0, // reserved to set ALPHA_SIZE below
-            EGL_DEPTH_SIZE, 24,
-            EGL_RECORDABLE_ANDROID, 1,
-            EGL_NONE
+            EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT_KHR,        //  0
+            EGL_RED_SIZE,    8,                                 //  2
+            EGL_GREEN_SIZE,  8,                                 //  4
+            EGL_BLUE_SIZE,   8,                                 //  6
+            EGL_ALPHA_SIZE,  0,                                 //  8 : reserved to set ALPHA_SIZE below
+            EGL_DEPTH_SIZE, 24,                                 // 10
+            EGL_RECORDABLE_ANDROID, 1,                          // 12
+            EGL_NONE                                            // 14
     };
 
     EGLint contextAttribs[] = {
@@ -149,8 +149,8 @@ Driver* PlatformEGL::createDriver(void* sharedContext) noexcept {
     if (configsCount == 0) {
       // warn and retry without EGL_RECORDABLE_ANDROID
       logEglError("eglChooseConfig(..., EGL_RECORDABLE_ANDROID) failed. Continuing without it.");
-      configAttribs[10] = EGL_RECORDABLE_ANDROID;
-      configAttribs[11] = EGL_DONT_CARE;
+      configAttribs[12] = EGL_RECORDABLE_ANDROID;
+      configAttribs[13] = EGL_DONT_CARE;
       if (!eglChooseConfig(mEGLDisplay, configAttribs, &mEGLConfig, 1, &configsCount) ||
               configsCount == 0) {
           logEglError("eglChooseConfig");
@@ -162,7 +162,7 @@ Driver* PlatformEGL::createDriver(void* sharedContext) noexcept {
     configAttribs[8] = EGL_ALPHA_SIZE;
     configAttribs[9] = 8;
     if (!eglChooseConfig(mEGLDisplay, configAttribs, &mEGLTransparentConfig, 1, &configsCount) ||
-            (configAttribs[11] == EGL_DONT_CARE && configsCount == 0)) {
+            (configAttribs[13] == EGL_DONT_CARE && configsCount == 0)) {
         logEglError("eglChooseConfig");
         goto error;
     }
@@ -171,8 +171,8 @@ Driver* PlatformEGL::createDriver(void* sharedContext) noexcept {
       // warn and retry without EGL_RECORDABLE_ANDROID
         logEglError("eglChooseConfig(..., EGL_RECORDABLE_ANDROID) failed. Continuing without it.");
       // this is not fatal
-      configAttribs[10] = EGL_RECORDABLE_ANDROID;
-      configAttribs[11] = EGL_DONT_CARE;
+      configAttribs[12] = EGL_RECORDABLE_ANDROID;
+      configAttribs[13] = EGL_DONT_CARE;
       if (!eglChooseConfig(mEGLDisplay, configAttribs, &mEGLTransparentConfig, 1, &configsCount) ||
               configsCount == 0) {
           logEglError("eglChooseConfig");
