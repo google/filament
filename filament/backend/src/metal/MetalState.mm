@@ -58,19 +58,24 @@ id<MTLRenderPipelineState> PipelineStateCreator::operator()(id<MTLDevice> device
     descriptor.vertexDescriptor = vertex;
 
     // Color attachments
-    descriptor.colorAttachments[0].pixelFormat = state.colorAttachmentPixelFormat;
+    for (size_t i = 0; i < 4; i++) {
+        if (state.colorAttachmentPixelFormat[i] == MTLPixelFormatInvalid) {
+            continue;
+        }
 
-    descriptor.colorAttachments[0].writeMask =
-            state.colorWrite ? MTLColorWriteMaskAll : MTLColorWriteMaskNone;
+        descriptor.colorAttachments[i].pixelFormat = state.colorAttachmentPixelFormat[i];
+        descriptor.colorAttachments[i].writeMask =
+                state.colorWrite ? MTLColorWriteMaskAll : MTLColorWriteMaskNone;
 
-    const auto& bs = state.blendState;
-    descriptor.colorAttachments[0].blendingEnabled = bs.blendingEnabled;
-    descriptor.colorAttachments[0].alphaBlendOperation = bs.alphaBlendOperation;
-    descriptor.colorAttachments[0].rgbBlendOperation = bs.rgbBlendOperation;
-    descriptor.colorAttachments[0].destinationAlphaBlendFactor = bs.destinationAlphaBlendFactor;
-    descriptor.colorAttachments[0].destinationRGBBlendFactor = bs.destinationRGBBlendFactor;
-    descriptor.colorAttachments[0].sourceAlphaBlendFactor = bs.sourceAlphaBlendFactor;
-    descriptor.colorAttachments[0].sourceRGBBlendFactor = bs.sourceRGBBlendFactor;
+        const auto& bs = state.blendState;
+        descriptor.colorAttachments[i].blendingEnabled = bs.blendingEnabled;
+        descriptor.colorAttachments[i].alphaBlendOperation = bs.alphaBlendOperation;
+        descriptor.colorAttachments[i].rgbBlendOperation = bs.rgbBlendOperation;
+        descriptor.colorAttachments[i].destinationAlphaBlendFactor = bs.destinationAlphaBlendFactor;
+        descriptor.colorAttachments[i].destinationRGBBlendFactor = bs.destinationRGBBlendFactor;
+        descriptor.colorAttachments[i].sourceAlphaBlendFactor = bs.sourceAlphaBlendFactor;
+        descriptor.colorAttachments[i].sourceRGBBlendFactor = bs.sourceRGBBlendFactor;
+    }
 
     // Depth attachment
     descriptor.depthAttachmentPixelFormat = state.depthAttachmentPixelFormat;

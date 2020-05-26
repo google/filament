@@ -80,7 +80,7 @@ private:
         bool operator==(const BlitFunctionKey& rhs) const noexcept {
             return blitColor == rhs.blitColor &&
                    blitDepth == rhs.blitDepth &&
-                   msaaColorSource == rhs.msaaDepthSource &&
+                   msaaColorSource == rhs.msaaColorSource &&
                    msaaDepthSource == rhs.msaaDepthSource;
         }
 
