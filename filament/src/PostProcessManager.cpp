@@ -105,6 +105,8 @@ PostProcessManager::PostProcessManager(FEngine& engine) noexcept : mEngine(engin
 }
 
 void PostProcessManager::init() noexcept {
+    DriverApi& driver = mEngine.getDriverApi();
+
     // TODO: load materials lazily as to reduce start-up time and memory usage
     mSSAO = PostProcessMaterial(mEngine, MATERIALS_SAO_DATA, MATERIALS_SAO_SIZE);
     mMipmapDepth = PostProcessMaterial(mEngine, MATERIALS_MIPMAPDEPTH_DATA, MATERIALS_MIPMAPDEPTH_SIZE);
@@ -116,7 +118,9 @@ void PostProcessManager::init() noexcept {
     mBlit[1] = PostProcessMaterial(mEngine, MATERIALS_BLITMEDIUM_DATA, MATERIALS_BLITMEDIUM_SIZE);
     mBlit[2] = PostProcessMaterial(mEngine, MATERIALS_BLITHIGH_DATA, MATERIALS_BLITHIGH_SIZE);
     mTonemapping = PostProcessMaterial(mEngine, MATERIALS_TONEMAPPING_DATA, MATERIALS_TONEMAPPING_SIZE);
-    mTonemappingWithSubpass = PostProcessMaterial(mEngine, MATERIALS_TONEMAPPINGWITHSUBPASS_DATA, MATERIALS_TONEMAPPINGWITHSUBPASS_SIZE);
+    if (driver.isFrameBufferFetchSupported()) {
+        mTonemappingWithSubpass = PostProcessMaterial(mEngine, MATERIALS_TONEMAPPINGWITHSUBPASS_DATA, MATERIALS_TONEMAPPINGWITHSUBPASS_SIZE);
+    }
     mFxaa = PostProcessMaterial(mEngine, MATERIALS_FXAA_DATA, MATERIALS_FXAA_SIZE);
     mDoFBlur = PostProcessMaterial(mEngine, MATERIALS_DOFBLUR_DATA, MATERIALS_DOFBLUR_SIZE);
     mDoF = PostProcessMaterial(mEngine, MATERIALS_DOF_DATA, MATERIALS_DOF_SIZE);
@@ -129,7 +133,6 @@ void PostProcessManager::init() noexcept {
     // The total number of samples needed over the two passes is 18.
     mSeparableGaussianBlurKernelStorageSize = mSeparableGaussianBlur.getMaterial()->reflect("kernel")->size;
 
-    DriverApi& driver = mEngine.getDriverApi();
     mDummyOneTexture = driver.createTexture(SamplerType::SAMPLER_2D, 1,
             TextureFormat::RGBA8, 0, 1, 1, 1, TextureUsage::DEFAULT);
 
