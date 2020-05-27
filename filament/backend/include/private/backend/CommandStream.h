@@ -297,6 +297,8 @@ private:
     std::thread::id mThreadId;
 #endif
 
+    bool mUsePerformanceCounter = false;
+
     inline void* allocateCommand(size_t size) {
         assert(mThreadId == std::this_thread::get_id());
         return mCurrentBuffer->allocate(size);
