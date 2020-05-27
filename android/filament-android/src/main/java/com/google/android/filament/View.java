@@ -155,7 +155,7 @@ public class View {
         public float power = 1.0f;
 
         /**
-         * How each dimension of the AO buffer is scaled. Must be positive and <= 1.
+         * How each dimension of the AO buffer is scaled. Must be either 0.5 or 1.0.
          */
         public float resolution = 0.5f;
 
@@ -171,6 +171,14 @@ public class View {
          */
         @NonNull
         public QualityLevel quality = QualityLevel.LOW;
+
+        /**
+         * The upsampling setting controls the quality of the ambient occlusion buffer upsampling.
+         * The default is QualityLevel.LOW and uses bilinear filtering, a value of
+         * QualityLevel.HIGH or more enables a better bilateral filter.
+         */
+        @NonNull
+        public QualityLevel upsampling = QualityLevel.LOW;
     }
 
     /**
@@ -924,7 +932,7 @@ public class View {
     public void setAmbientOcclusionOptions(@NonNull AmbientOcclusionOptions options) {
         mAmbientOcclusionOptions = options;
         nSetAmbientOcclusionOptions(getNativeObject(), options.radius, options.bias, options.power,
-                options.resolution, options.intensity, options.quality.ordinal());
+                options.resolution, options.intensity, options.quality.ordinal(), options.upsampling.ordinal());
     }
 
     /**
@@ -1059,7 +1067,7 @@ public class View {
     private static native boolean nIsFrontFaceWindingInverted(long nativeView);
     private static native void nSetAmbientOcclusion(long nativeView, int ordinal);
     private static native int nGetAmbientOcclusion(long nativeView);
-    private static native void nSetAmbientOcclusionOptions(long nativeView, float radius, float bias, float power, float resolution, float intensity, int quality);
+    private static native void nSetAmbientOcclusionOptions(long nativeView, float radius, float bias, float power, float resolution, float intensity, int quality, int upsampling);
     private static native void nSetBloomOptions(long nativeView, long dirtNativeObject, float dirtStrength, float strength, int resolution, float anamorphism, int levels, int blendMode, boolean threshold, boolean enabled);
     private static native void nSetFogOptions(long nativeView, float distance, float maximumOpacity, float height, float heightFalloff, float v, float v1, float v2, float density, float inScatteringStart, float inScatteringSize, boolean fogColorFromIbl, boolean enabled);
     private static native void nSetBlendMode(long nativeView, int blendMode);

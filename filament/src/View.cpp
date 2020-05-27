@@ -632,9 +632,18 @@ void FView::prepareViewport(const filament::Viewport &viewport) const noexcept {
 }
 
 void FView::prepareSSAO(Handle<HwTexture> ssao) const noexcept {
+    // High quality sampling is enabled only if AO itself is enabled and upsampling quality is at
+    // least set to high and of course only if upsampling is needed.
+    const bool highQualitySampling = mAmbientOcclusionOptions.upsampling >= QualityLevel::HIGH
+            && mAmbientOcclusionOptions.resolution < 1.0f;
+
+    // LINEAR filtering is only needed when AO is enabled and low-quality upsampling is used.
     mPerViewSb.setSampler(PerViewSib::SSAO, ssao, {
-            .filterMag = SamplerMagFilter::LINEAR
+            .filterMag = mAmbientOcclusion != AmbientOcclusion::NONE && !highQualitySampling ?
+                         SamplerMagFilter::LINEAR : SamplerMagFilter::NEAREST
     });
+    mPerViewUb.setUniform(offsetof(PerViewUib, aoSamplingQuality),
+            mAmbientOcclusion != AmbientOcclusion::NONE && highQualitySampling ? 1.0f : 0.0f);
 }
 
 void FView::prepareSSR(backend::Handle<backend::HwTexture> ssr, float refractionLodOffset) const noexcept {

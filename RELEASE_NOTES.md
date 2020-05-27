@@ -7,6 +7,7 @@ A new header is inserted each time a *tag* is created.
 
 - Add missing JavaScript API for View::setVisibleLayers().
 - Add support for DOF with Metal backend.
+- SSAO now has an optional high(er) quality upsampler.
 
 ## v1.7.0
 

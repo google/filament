@@ -11,8 +11,61 @@
 // Ambient occlusion helpers
 //------------------------------------------------------------------------------
 
+float unpack(vec2 depth) {
+    // this is equivalent to (x8 * 256 + y8) / 65535, which gives a value between 0 and 1
+    return (depth.x * (256.0 / 257.0) + depth.y * (1.0 / 257.0));
+}
+
 float evaluateSSAO() {
-    return textureLod(light_ssao, uvToRenderTargetUV(getNormalizedViewportCoord().xy), 0.0).r;
+    highp vec2 uv = uvToRenderTargetUV(getNormalizedViewportCoord().xy);
+
+    // Upscale the SSAO buffer in real-time, in high quality mode we use a custom bilinear
+    // filter. This adds about 2.0ms @ 250MHz on Pixel 4.
+
+    if (frameUniforms.aoSamplingQuality > 0.0) {
+        highp vec2 size = vec2(textureSize(light_ssao, 0));
+
+        // Read four AO samples and their depths values
+#if defined(TRGET_MOBILE)
+        // on mobile we can't use textureGather() because we're limited to ES3.0,
+        // so we emulate it with  texelFetch(), on Pixel 4 this doesn't seem to have any
+        // significant impact on performance.
+        ivec2 i = ivec2(uv * size - 0.5);
+        vec3 s01 = texelFetch(light_ssao, i + ivec2(0, 1), 0).rgb;
+        vec3 s11 = texelFetch(light_ssao, i + ivec2(1, 1), 0).rgb;
+        vec3 s10 = texelFetch(light_ssao, i + ivec2(1, 0), 0).rgb;
+        vec3 s00 = texelFetch(light_ssao, i,               0).rgb;
+        vec4 ao = vec4(s01.r, s11.r, s10.r, s00.r);
+        vec4 dg = vec4(s01.g, s11.g, s10.g, s00.g);
+        vec4 db = vec4(s01.b, s11.b, s10.b, s00.b);
+#else
+        vec4 ao = textureGather(light_ssao, uv, 0); // 01, 11, 10, 00
+        vec4 dg = textureGather(light_ssao, uv, 1); // 01, 11, 10, 00
+        vec4 db = textureGather(light_ssao, uv, 2); // 01, 11, 10, 00
+#endif
+        // bilinear weights
+        vec2 f = fract(uv * size - 0.5);
+        vec4 b;
+        b.x = (1.0 - f.x) * f.y;
+        b.y = f.x * f.y;
+        b.z = f.x * (1.0 - f.y);
+        b.w = (1.0 - f.x) * (1.0 - f.y);
+
+        // bilateral weights
+        vec4 depths;
+        depths.x = unpack(vec2(dg.x, db.x));
+        depths.y = unpack(vec2(dg.y, db.y));
+        depths.z = unpack(vec2(dg.z, db.z));
+        depths.w = unpack(vec2(dg.w, db.w));
+        depths *= -frameUniforms.cameraFar;
+        float d = (getViewFromWorldMatrix() * vec4(getWorldPosition(), 1.0)).z;
+        const float oneOverEdgeDistance = 1.0 / 0.0625;// TODO: don't hardcode this
+        vec4 w = (vec4(d) - depths) * oneOverEdgeDistance;
+        w = max(vec4(MEDIUMP_FLT_MIN), 1.0 - w * w) * b;
+        return dot(ao, w) * (1.0 / (w.x + w.y + w.z + w.w));
+    } else {
+        return textureLod(light_ssao, uv, 0.0).r;
+    }
 }
 
 float SpecularAO_Lagarde(float NoV, float visibility, float roughness) {
