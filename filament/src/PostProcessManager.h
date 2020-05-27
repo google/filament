@@ -43,23 +43,44 @@ public:
     void init() noexcept;
     void terminate(backend::DriverApi& driver) noexcept;
 
-    FrameGraphId<FrameGraphTexture> toneMapping(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input,
-            backend::TextureFormat outFormat, bool translucent, bool fxaa, math::float2 scale,
-            View::BloomOptions bloomOptions, bool dithering) noexcept;
+    // methods below are ordered relative to their position in the pipeline (as much as possible)
 
-    void toneMappingSubpass(backend::DriverApi& driver,
-            bool translucent, bool fxaa, bool dithering) noexcept;
+    // structure (depth) pass
+    FrameGraphId<FrameGraphTexture> structure(FrameGraph& fg, RenderPass const& pass,
+            uint32_t width, uint32_t height, float scale) noexcept;
 
-    FrameGraphId<FrameGraphTexture> fxaa(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, backend::TextureFormat outFormat,
-            bool translucent) noexcept;
+    // SSAO
+    FrameGraphId<FrameGraphTexture> screenSpaceAmbientOclusion(FrameGraph& fg,
+            RenderPass& pass, filament::Viewport const& svp,
+            CameraInfo const& cameraInfo,
+            View::AmbientOcclusionOptions const& options) noexcept;
 
+    // Used in refraction pass
+    FrameGraphId<FrameGraphTexture> generateGaussianMipmap(FrameGraph& fg,
+            FrameGraphId<FrameGraphTexture> input, size_t roughnessLodCount, bool reinhard,
+            size_t kernelWidth, float sigmaRatio = 6.0f) noexcept;
+
+    // Depth-of-field
     FrameGraphId<FrameGraphTexture> dof(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input,
             const View::DepthOfFieldOptions& dofOptions,
             const CameraInfo& cameraInfo) noexcept;
 
+    // Tone mapping
+    void toneMappingSubpass(backend::DriverApi& driver,
+            bool translucent, bool fxaa, bool dithering) noexcept;
+
+    FrameGraphId<FrameGraphTexture> toneMapping(FrameGraph& fg,
+            FrameGraphId<FrameGraphTexture> input,
+            backend::TextureFormat outFormat, bool translucent, bool fxaa, math::float2 scale,
+            View::BloomOptions bloomOptions, bool dithering) noexcept;
+
+    // Anti-aliasing
+    FrameGraphId<FrameGraphTexture> fxaa(FrameGraph& fg,
+            FrameGraphId<FrameGraphTexture> input, backend::TextureFormat outFormat,
+            bool translucent) noexcept;
+
+    // Blit/rescaling/resolves
     FrameGraphId<FrameGraphTexture> opaqueBlit(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, FrameGraphTexture::Descriptor outDesc) noexcept;
 
@@ -69,23 +90,6 @@ public:
 
     FrameGraphId<FrameGraphTexture> resolve(FrameGraph& fg,
             const char* outputBufferName, FrameGraphId<FrameGraphTexture> input) noexcept;
-
-    FrameGraphId<FrameGraphTexture> structure(FrameGraph& fg, RenderPass const& pass,
-            uint32_t width, uint32_t height, float scale) noexcept;
-
-    FrameGraphId<FrameGraphTexture> screenSpaceAmbientOclusion(FrameGraph& fg,
-            RenderPass& pass, filament::Viewport const& svp,
-            CameraInfo const& cameraInfo,
-            View::AmbientOcclusionOptions const& options) noexcept;
-
-    FrameGraphId<FrameGraphTexture> generateGaussianMipmap(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, size_t roughnessLodCount, bool reinhard,
-            size_t kernelWidth, float sigmaRatio = 6.0f) noexcept;
-
-    FrameGraphId<FrameGraphTexture> gaussianBlurPass(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, uint8_t srcLevel,
-            FrameGraphId<FrameGraphTexture> output, uint8_t dstLevel,
-            bool reinhard, size_t kernelWidth, float sigma = 6.0f) noexcept;
 
     backend::Handle<backend::HwTexture> getOneTexture() const { return mDummyOneTexture; }
     backend::Handle<backend::HwTexture> getZeroTexture() const { return mDummyZeroTexture; }
@@ -100,6 +104,11 @@ private:
             FrameGraph& fg, FrameGraphId<FrameGraphTexture> input, math::int2 axis, float zf,
             backend::TextureFormat format) noexcept;
 
+    FrameGraphId<FrameGraphTexture> gaussianBlurPass(FrameGraph& fg,
+            FrameGraphId<FrameGraphTexture> input, uint8_t srcLevel,
+            FrameGraphId<FrameGraphTexture> output, uint8_t dstLevel,
+            bool reinhard, size_t kernelWidth, float sigma = 6.0f) noexcept;
+
     FrameGraphId<FrameGraphTexture> bloomPass(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, backend::TextureFormat outFormat,
             View::BloomOptions& bloomOptions, math::float2 scale) noexcept;
@@ -108,7 +117,7 @@ private:
     class PostProcessMaterial {
     public:
         PostProcessMaterial() noexcept = default;
-        PostProcessMaterial(FEngine& engine, uint8_t const* data, size_t size) noexcept;
+        PostProcessMaterial(FEngine& engine, uint8_t const* data, int size) noexcept;
 
         PostProcessMaterial(PostProcessMaterial const& rhs) = delete;
         PostProcessMaterial& operator=(PostProcessMaterial const& rhs) = delete;
@@ -132,18 +141,19 @@ private:
         backend::Handle<backend::HwProgram> mProgram;
     };
 
-    PostProcessMaterial mSSAO;
     PostProcessMaterial mMipmapDepth;
+
+    PostProcessMaterial mSSAO;
     PostProcessMaterial mBilateralBlur;
     PostProcessMaterial mSeparableGaussianBlur;
-    PostProcessMaterial mBloomDownsample;
-    PostProcessMaterial mBloomUpsample;
-    PostProcessMaterial mBlit[3];
-    PostProcessMaterial mTonemapping;
-    PostProcessMaterial mTonemappingWithSubpass;
-    PostProcessMaterial mFxaa;
     PostProcessMaterial mDoFBlur;
     PostProcessMaterial mDoF;
+    PostProcessMaterial mBloomDownsample;
+    PostProcessMaterial mBloomUpsample;
+    PostProcessMaterial mTonemappingWithSubpass;
+    PostProcessMaterial mTonemapping;
+    PostProcessMaterial mFxaa;
+    PostProcessMaterial mBlit[3];
 
     backend::Handle<backend::HwTexture> mDummyOneTexture;
     backend::Handle<backend::HwTexture> mDummyZeroTexture;
