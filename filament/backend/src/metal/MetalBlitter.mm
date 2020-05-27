@@ -127,15 +127,15 @@ void MetalBlitter::blit(id<MTLCommandBuffer> cmdBuffer, const BlitArgs& args) {
     // necessary for that attachment.
     blitFastPath(cmdBuffer, blitColor, blitDepth, args);
 
+    if (!blitColor && !blitDepth) {
+        return;
+    }
+
     // If the destination is MSAA and we weren't able to use the fast path, report an error, as
     // blitting to a MSAA texture isn't supported through the "slow path" yet.
     ASSERT_PRECONDITION(args.destination.color.textureType != MTLTextureType2DMultisample &&
         args.destination.depth.textureType != MTLTextureType2DMultisample,
         "Blitting between MSAA render targets with differing pixel formats and/or regions is not supported.");
-
-    if (!blitColor && !blitDepth) {
-        return;
-    }
 
     MTLRenderPassDescriptor* descriptor = [MTLRenderPassDescriptor renderPassDescriptor];
 
@@ -161,8 +161,12 @@ void MetalBlitter::blit(id<MTLCommandBuffer> cmdBuffer, const BlitArgs& args) {
         .vertexFunction = getBlitVertexFunction(),
         .fragmentFunction = fragmentFunction,
         .vertexDescription = {},
-        .colorAttachmentPixelFormat =
-                blitColor ? args.destination.color.pixelFormat : MTLPixelFormatInvalid,
+        .colorAttachmentPixelFormat = {
+            blitColor ? args.destination.color.pixelFormat : MTLPixelFormatInvalid,
+            MTLPixelFormatInvalid,
+            MTLPixelFormatInvalid,
+            MTLPixelFormatInvalid
+        },
         .depthAttachmentPixelFormat =
                 blitDepth ? args.destination.depth.pixelFormat : MTLPixelFormatInvalid,
         .sampleCount = 1,

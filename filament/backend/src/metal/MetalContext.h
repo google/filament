@@ -80,8 +80,6 @@ struct MetalContext {
     id<CAMetalDrawable> currentDrawable = nil;
     id<MTLTexture> currentDepthTexture = nil;
     id<MTLTexture> headlessDrawable = nil;
-    MTLPixelFormat currentSurfacePixelFormat = MTLPixelFormatInvalid;
-    MTLPixelFormat currentDepthPixelFormat = MTLPixelFormatInvalid;
 
     // External textures.
     CVMetalTextureCacheRef textureCache = nullptr;

@@ -417,95 +417,110 @@ void MetalTexture::updateLodRange(uint32_t level) {
 }
 
 MetalRenderTarget::MetalRenderTarget(MetalContext* context, uint32_t width, uint32_t height,
-        uint8_t samples, id<MTLTexture> color, TargetInfo colorInfo, id<MTLTexture> depth,
-        TargetInfo depthInfo) : HwRenderTarget(width, height), context(context), samples(samples),
-        colorInfo(colorInfo), depthInfo(depthInfo) {
-    ASSERT_PRECONDITION(color || depth, "Must provide either a color or depth texture.");
+        uint8_t samples, Attachment colorAttachments[4], Attachment depthAttachment) :
+        HwRenderTarget(width, height), context(context), samples(samples) {
+    // If we were given a single-sampled texture but the samples parameter is > 1, we create
+    // multisampled sidecar textures and do a resolve automatically.
+    const bool msaaResolve = samples > 1;
 
-    if (color) {
-        if (color.textureType == MTLTextureType2DMultisample) {
-            this->multisampledColor = color;
-        } else {
-            this->color = color;
+    for (size_t i = 0; i < 4; i++) {
+        if (!colorAttachments[i]) {
+            continue;
+        }
+        this->color[i] = colorAttachments[i];
+
+        const auto textureSampleCount = this->color[i].texture.sampleCount;
+
+        ASSERT_PRECONDITION(textureSampleCount <= samples,
+                "MetalRenderTarget was initialized with a MSAA COLOR%d texture, but sample count is %d.",
+                i, samples);
+
+        if (msaaResolve && textureSampleCount == 1) {
+            multisampledColor[i] =
+                    createMultisampledTexture(context->device, color[0].texture.pixelFormat,
+                            width, height, samples);
         }
     }
 
-    if (depth) {
-        if (depth.textureType == MTLTextureType2DMultisample) {
-            this->multisampledDepth = depth;
-        } else {
-            this->depth = depth;
-        }
-    }
+    if (depthAttachment) {
+        this->depth = depthAttachment;
 
-    ASSERT_PRECONDITION(samples > 1 || (!multisampledDepth && !multisampledColor),
-            "MetalRenderTarget was initialized with a MSAA texture, but sample count is %d.", samples);
+        const auto textureSampleCount = this->depth.texture.sampleCount;
 
-    // Handle special cases. If we were given a single-sampled texture but the samples parameter
-    // is > 1, we create multisampled textures and do a resolve automatically.
-    if (samples > 1) {
-        if (color && !multisampledColor) {
-            multisampledColor =
-                    createMultisampledTexture(context->device, color.pixelFormat, width, height,
-                            samples);
-        }
+        ASSERT_PRECONDITION(textureSampleCount <= samples,
+                "MetalRenderTarget was initialized with a MSAA DEPTH texture, but sample count is %d.",
+                samples);
 
-        if (depth && !multisampledDepth) {
+        if (msaaResolve && this->depth.texture.sampleCount == 1) {
             // TODO: we only need to resolve depth if the depth texture is not SAMPLEABLE.
-            multisampledDepth = createMultisampledTexture(context->device, depth.pixelFormat, width,
-                    height, samples);
+            multisampledDepth = createMultisampledTexture(context->device, depth.texture.pixelFormat,
+                    width, height, samples);
         }
     }
 }
 
-id<MTLTexture> MetalRenderTarget::getColor() {
-    if (defaultRenderTarget) {
-        return acquireDrawable(context);
+void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* descriptor,
+        const RenderPassParams& params) {
+
+    const auto discardFlags = params.flags.discardEnd;
+
+    for (size_t i = 0; i < 4; i++) {
+        Attachment attachment = getColorAttachment(i);
+        if (!attachment) {
+            continue;
+        }
+
+        descriptor.colorAttachments[i].texture = attachment.texture;
+        descriptor.colorAttachments[i].level = attachment.level;
+        descriptor.colorAttachments[i].slice = attachment.layer;
+        descriptor.colorAttachments[i].loadAction = getLoadAction(params, getMRTColorFlag(i));
+        descriptor.colorAttachments[i].storeAction = getStoreAction(params, getMRTColorFlag(i));
+        descriptor.colorAttachments[i].clearColor = MTLClearColorMake(
+                params.clearColor.r, params.clearColor.g, params.clearColor.b, params.clearColor.a);
+
+        if (multisampledColor[i]) {
+            descriptor.colorAttachments[i].texture = multisampledColor[i];
+            const bool discard = any(discardFlags & getMRTColorFlag(i));
+            if (!discard) {
+                descriptor.colorAttachments[i].resolveTexture = attachment.texture;
+                descriptor.colorAttachments[i].storeAction = MTLStoreActionMultisampleResolve;
+            }
+        }
     }
-    if (multisampledColor) {
-        return multisampledColor;
+
+    Attachment depthAttachment = getDepthAttachment();
+    descriptor.depthAttachment.texture = depthAttachment.texture;
+    descriptor.depthAttachment.level = depthAttachment.level;
+    descriptor.depthAttachment.slice = depthAttachment.layer;
+    descriptor.depthAttachment.loadAction = getLoadAction(params, TargetBufferFlags::DEPTH);
+    descriptor.depthAttachment.storeAction = getStoreAction(params, TargetBufferFlags::DEPTH);
+    descriptor.depthAttachment.clearDepth = params.clearDepth;
+
+    if (multisampledDepth) {
+        descriptor.depthAttachment.texture = multisampledDepth;
+        const bool discard = any(discardFlags & TargetBufferFlags::DEPTH);
+        if (!discard) {
+            descriptor.depthAttachment.resolveTexture = depthAttachment.texture;
+            descriptor.depthAttachment.storeAction = MTLStoreActionMultisampleResolve;
+        }
     }
-    return color;
 }
 
-id<MTLTexture> MetalRenderTarget::getDepth() {
-    if (defaultRenderTarget) {
-        return acquireDepthTexture(context);
+MetalRenderTarget::Attachment MetalRenderTarget::getColorAttachment(size_t index) {
+    assert(index < 4);
+    Attachment result = color[index];
+    if (index == 0 && defaultRenderTarget) {
+        result.texture = acquireDrawable(context);
     }
-    if (multisampledDepth) {
-        return multisampledDepth;
+    return result;
+}
+
+MetalRenderTarget::Attachment MetalRenderTarget::getDepthAttachment() {
+    Attachment result = depth;
+    if (defaultRenderTarget) {
+        result.texture = acquireDepthTexture(context);
     }
     return depth;
-}
-
-id<MTLTexture> MetalRenderTarget::getColorResolve() {
-    const bool shouldResolveColor = (multisampledColor && color);
-    return shouldResolveColor ? color : nil;
-}
-
-id<MTLTexture> MetalRenderTarget::getDepthResolve() {
-    const bool shouldResolveDepth = (multisampledDepth && depth);
-    return shouldResolveDepth ? depth : nil;
-}
-
-id<MTLTexture> MetalRenderTarget::getBlitColorSource() {
-    if (defaultRenderTarget) {
-        return acquireDrawable(context);
-    }
-    if (color) {
-        return color;
-    }
-    return multisampledColor;
-}
-
-id<MTLTexture> MetalRenderTarget::getBlitDepthSource() {
-    if (defaultRenderTarget) {
-        return acquireDepthTexture(context);
-    }
-    if (depth) {
-        return depth;
-    }
-    return multisampledDepth;
 }
 
 MTLLoadAction MetalRenderTarget::getLoadAction(const RenderPassParams& params,
@@ -526,15 +541,6 @@ MTLStoreAction MetalRenderTarget::getStoreAction(const RenderPassParams& params,
     if (any(discardEndFlags & buffer)) {
         return MTLStoreActionDontCare;
     }
-    if (any(buffer & TargetBufferFlags::COLOR)) {
-        const bool shouldResolveColor = (multisampledColor && color);
-        return shouldResolveColor ? MTLStoreActionMultisampleResolve : MTLStoreActionStore;
-    }
-    if (any(buffer & TargetBufferFlags::DEPTH)) {
-        const bool shouldResolveDepth = (multisampledDepth && depth);
-        return shouldResolveDepth ? MTLStoreActionMultisampleResolve : MTLStoreActionStore;
-    }
-    // Shouldn't get here.
     return MTLStoreActionStore;
 }
 
