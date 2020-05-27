@@ -5,9 +5,11 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release
 
-- Add missing JavaScript API for View::setVisibleLayers().
+- Add missing JavaScript API for `View::setVisibleLayers()`.
 - Add support for DOF with Metal backend.
 - SSAO now has an optional high(er) quality upsampler.
+- Tone mappping now uses the real ACES tone mapper, applied in the proper color space.
+- Tone mapping is now applied via a LUT, which will later enable color grading capabilities.
 
 ## v1.7.0
 
