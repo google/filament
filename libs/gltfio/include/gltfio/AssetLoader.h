@@ -21,6 +21,7 @@
 #include <filament/Material.h>
 
 #include <gltfio/FilamentAsset.h>
+#include <gltfio/FilamentInstance.h>
 #include <gltfio/MaterialProvider.h>
 
 namespace utils {
@@ -149,6 +150,32 @@ public:
      * of Filament objects. Returns null on failure.
      */
     FilamentAsset* createAssetFromBinary(const uint8_t* bytes, uint32_t nbytes);
+
+    /**
+     * Consumes the contents of a glTF 2.0 file and produces a master asset with one or more
+     * instances.
+     *
+     * The returned instances share their textures, material instances, and vertex buffers with the
+     * master asset. However each instance has its own unique set of entities, transform components,
+     * and renderable components. Instances are automatically freed when the master asset is freed.
+     *
+     * Light components are not instanced, they belong only to the master asset.
+     *
+     * Clients must use ResourceLoader to load resources on the master asset.
+     *
+     * The entity accessors and renderable stack in the returned FilamentAsset represent the union
+     * of all entities across all instances. Use the individual FilamentInstance objects to access
+     * each partition of entities.  Similarly, the Animator in the master asset controls all
+     * instances. To animate instances individually, use FilamentInstance::getAnimator().
+     *
+     * @param bytes the contents of a glTF 2.0 file (JSON or GLB)
+     * @param numBytes the number of bytes in "bytes"
+     * @param instances destination pointer, to be populated by the requested number of instances
+     * @param numInstances requested number of instances
+     * @return the master asset that has ownership over all instances
+     */
+    FilamentAsset* createInstancedAsset(const uint8_t* bytes, uint32_t numBytes,
+            FilamentInstance** instances, size_t numInstances);
 
     /**
      * Takes a pointer to an opaque pipeline object and returns a bundle of Filament objects.

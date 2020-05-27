@@ -17,6 +17,7 @@
 #include <gltfio/Animator.h>
 
 #include "FFilamentAsset.h"
+#include "FFilamentInstance.h"
 #include "math.h"
 #include "upcast.h"
 
@@ -69,7 +70,8 @@ struct Animation {
 struct AnimatorImpl {
     vector<Animation> animations;
     vector<mat4f> boneMatrices;
-    FFilamentAsset* asset;
+    FFilamentAsset* asset = nullptr;
+    FFilamentInstance* instance = nullptr;
     RenderableManager* renderableManager;
     TransformManager* transformManager;
 };
@@ -136,6 +138,12 @@ static void setTransformType(const cgltf_animation_channel& src, Channel& dst) {
             break;
     }
 }
+
+Animator::Animator(FilamentInstance* publicInstance) {
+    mImpl = new AnimatorImpl();
+    FFilamentInstance* instance = mImpl->instance = upcast(publicInstance);
+    // TODO
+ }
 
 Animator::Animator(FilamentAsset* publicAsset) {
     mImpl = new AnimatorImpl();
