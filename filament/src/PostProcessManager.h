@@ -116,7 +116,7 @@ private:
 
     class PostProcessMaterial {
     public:
-        PostProcessMaterial() noexcept = default;
+        PostProcessMaterial() noexcept;
         PostProcessMaterial(FEngine& engine, uint8_t const* data, int size) noexcept;
 
         PostProcessMaterial(PostProcessMaterial const& rhs) = delete;
@@ -129,16 +129,27 @@ private:
 
         void terminate(FEngine& engine) noexcept;
 
-        FMaterial* getMaterial() const { return mMaterial; }
-        FMaterialInstance* getMaterialInstance() const { return mMaterialInstance; }
+        FMaterial* getMaterial() const;
+        FMaterialInstance* getMaterialInstance() const;
 
         backend::PipelineState getPipelineState(uint8_t variant) const noexcept;
         backend::PipelineState getPipelineState() const noexcept;
 
     private:
-        FMaterial* mMaterial = nullptr;
-        FMaterialInstance* mMaterialInstance = nullptr;
-        backend::Handle<backend::HwProgram> mProgram;
+        void assertMaterial() const noexcept;
+
+        union {
+            struct {
+                mutable FMaterial* mMaterial;
+                mutable FMaterialInstance* mMaterialInstance;
+            };
+            struct {
+                FEngine* mEngine;
+                uint8_t const* mData;
+            };
+        };
+        mutable backend::Handle<backend::HwProgram> mProgram{};
+        uint32_t mSize{};
     };
 
     PostProcessMaterial mMipmapDepth;
