@@ -40,6 +40,7 @@
 #include "Wireframe.h"
 #include "DependencyGraph.h"
 #include "DracoCache.h"
+#include "FFilamentInstance.h"
 
 #include <tsl/robin_map.h>
 
@@ -81,6 +82,14 @@ struct FFilamentAsset : public FilamentAsset {
 
     ~FFilamentAsset() {
         releaseSourceData();
+
+        // The only things we need to free in the instances are their animators.
+        // The union of all instance entities will be destroyed below.
+        for (FFilamentInstance* instance : mInstances) {
+            delete instance->animator;
+            delete instance;
+        }
+
         delete mAnimator;
         delete mWireframe;
         mEngine->destroy(mRoot);
@@ -230,6 +239,7 @@ struct FFilamentAsset : public FilamentAsset {
     std::vector<filament::Texture*> mTextures;
     filament::Aabb mBoundingBox;
     utils::Entity mRoot;
+    std::vector<FFilamentInstance*> mInstances;
     std::vector<Skin> mSkins;
     Animator* mAnimator = nullptr;
     Wireframe* mWireframe = nullptr;

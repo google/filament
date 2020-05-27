@@ -14,6 +14,7 @@ set(PUBLIC_HDRS
         include/gltfio/ResourceLoader.h
         include/gltfio/SimpleViewer.h
         include/gltfio/FilamentAsset.h
+        include/gltfio/FilamentInstance.h
 )
 
 set(SRCS
@@ -25,6 +26,8 @@ set(SRCS
         src/DracoCache.cpp
         src/FFilamentAsset.h
         src/FilamentAsset.cpp
+        src/FFilamentInstance.h
+        src/FilamentInstance.cpp
         src/GltfEnums.h
         src/MaterialProvider.cpp
         src/ResourceLoader.cpp
