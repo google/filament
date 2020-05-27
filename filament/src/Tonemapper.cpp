@@ -43,7 +43,7 @@ Tonemapper::Tonemapper(FEngine& engine) {
     constexpr size_t elementSize = sizeof(half4);
     void* const data = malloc(lutElementCount * elementSize);
 
-    auto now = std::chrono::steady_clock::now();
+    //auto now = std::chrono::steady_clock::now();
 
     // Multithreadedly generate the tone mapping 3D look-up table using 32 jobs
     // Slices are 8 KiB (128 cache lines) apart.
