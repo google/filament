@@ -125,9 +125,11 @@ struct MetalTexture : public HwTexture {
 
     void load2DImage(uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t width,
             uint32_t height, PixelBufferDescriptor&& p) noexcept;
+    void load3DImage(uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
+            uint32_t width, uint32_t height, uint32_t depth, PixelBufferDescriptor&& p) noexcept;
     void loadCubeImage(const FaceOffsets& faceOffsets, int miplevel, PixelBufferDescriptor&& p);
-    void loadSlice(uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t width,
-            uint32_t height, uint32_t byteOffset, uint32_t slice,
+    void loadSlice(uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
+            uint32_t width, uint32_t height, uint32_t depth, uint32_t byteOffset, uint32_t slice,
             PixelBufferDescriptor& data, id<MTLBlitCommandEncoder> blitCommandEncoder,
             id<MTLCommandBuffer> blitCommandBuffer) noexcept;
     void updateLodRange(uint32_t level);

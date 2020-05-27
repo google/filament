@@ -608,6 +608,10 @@ void MetalDriver::update3DImage(Handle<HwTexture> th, uint32_t level,
         uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
         uint32_t width, uint32_t height, uint32_t depth,
         PixelBufferDescriptor&& data) {
+    ASSERT_PRECONDITION(!isInRenderPass(mContext),
+            "update3DImage must be called outside of a render pass.");
+    auto tex = handle_cast<MetalTexture>(mHandleMap, th);
+    tex->load3DImage(level, xoffset, yoffset, zoffset, width, height, depth, std::move(data));
 }
 
 void MetalDriver::updateCubeImage(Handle<HwTexture> th, uint32_t level,

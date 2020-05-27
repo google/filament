@@ -226,7 +226,7 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
             "iOS does not support multisampled texture arrays.");
 #endif
 
-    const auto getTextureType = [](bool isArray, bool isMultisampled) {
+    const auto get2DTextureType = [](bool isArray, bool isMultisampled) {
         uint8_t value = 0;
         if (isMultisampled) {
             value |= 0b10u;
@@ -258,7 +258,7 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
         case SamplerType::SAMPLER_2D_ARRAY:
             descriptor = [MTLTextureDescriptor new];
             descriptor.pixelFormat = metalPixelFormat;
-            descriptor.textureType = getTextureType(textureArray, multisampled);
+            descriptor.textureType = get2DTextureType(textureArray, multisampled);
             descriptor.width = width;
             descriptor.height = height;
             descriptor.arrayLength = depth;
@@ -275,6 +275,19 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
             descriptor = [MTLTextureDescriptor textureCubeDescriptorWithPixelFormat:metalPixelFormat
                                                                                size:width
                                                                           mipmapped:mipmapped];
+            descriptor.mipmapLevelCount = levels;
+            descriptor.usage = getMetalTextureUsage(usage);
+            descriptor.storageMode = MTLStorageModePrivate;
+            texture = [context.device newTextureWithDescriptor:descriptor];
+            ASSERT_POSTCONDITION(texture != nil, "Could not create Metal texture. Out of memory?");
+            break;
+        case SamplerType::SAMPLER_3D:
+            descriptor = [MTLTextureDescriptor new];
+            descriptor.pixelFormat = metalPixelFormat;
+            descriptor.textureType = MTLTextureType3D;
+            descriptor.width = width;
+            descriptor.height = height;
+            descriptor.depth = depth;
             descriptor.mipmapLevelCount = levels;
             descriptor.usage = getMetalTextureUsage(usage);
             descriptor.storageMode = MTLStorageModePrivate;
@@ -300,8 +313,23 @@ void MetalTexture::load2DImage(uint32_t level, uint32_t xoffset, uint32_t yoffse
     id<MTLCommandBuffer> blitCommandBuffer = getPendingCommandBuffer(&context);
     id<MTLBlitCommandEncoder> blitCommandEncoder = [blitCommandBuffer blitCommandEncoder];
 
-    loadSlice(level, xoffset, yoffset, width, height, 0, 0, data, blitCommandEncoder,
+    loadSlice(level, xoffset, yoffset, 0, width, height, 1, 0, 0, data, blitCommandEncoder,
             blitCommandBuffer);
+
+    updateLodRange(level);
+
+    [blitCommandEncoder endEncoding];
+}
+
+void MetalTexture::load3DImage(uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
+        uint32_t width, uint32_t height, uint32_t depth, PixelBufferDescriptor&& p) noexcept {
+    // TODO: support texture reshaping for 3D textures.
+
+    id<MTLCommandBuffer> blitCommandBuffer = getPendingCommandBuffer(&context);
+    id<MTLBlitCommandEncoder> blitCommandEncoder = [blitCommandBuffer blitCommandEncoder];
+
+    loadSlice(level, xoffset, yoffset, zoffset, width, height, depth, 0, 0, p,
+            blitCommandEncoder, blitCommandBuffer);
 
     updateLodRange(level);
 
@@ -319,8 +347,8 @@ void MetalTexture::loadCubeImage(const FaceOffsets& faceOffsets, int miplevel,
 
     for (NSUInteger slice = 0; slice < 6; slice++) {
         FaceOffsets::size_type faceOffset = faceOffsets.offsets[slice];
-        loadSlice(miplevel, 0, 0, faceWidth, faceWidth, faceOffset, slice, data, blitCommandEncoder,
-                blitCommandBuffer);
+        loadSlice(miplevel, 0, 0, 0, faceWidth, faceWidth, 1, faceOffset, slice, data,
+                blitCommandEncoder, blitCommandBuffer);
     }
 
     updateLodRange((uint32_t) miplevel);
@@ -328,8 +356,8 @@ void MetalTexture::loadCubeImage(const FaceOffsets& faceOffsets, int miplevel,
     [blitCommandEncoder endEncoding];
 }
 
-void MetalTexture::loadSlice(uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t width,
-        uint32_t height, uint32_t byteOffset, uint32_t slice,
+void MetalTexture::loadSlice(uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
+        uint32_t width, uint32_t height, uint32_t depth, uint32_t byteOffset, uint32_t slice,
         PixelBufferDescriptor& data, id<MTLBlitCommandEncoder> blitCommandEncoder,
         id<MTLCommandBuffer> blitCommandBuffer) noexcept {
     const size_t stride = data.stride ? data.stride : width;
@@ -358,7 +386,7 @@ void MetalTexture::loadSlice(uint32_t level, uint32_t xoffset, uint32_t yoffset,
 
     // Depending on the size of the required buffer, we either allocate a staging buffer or a
     // staging texture. Then the texture data is blited to the "real" texture.
-    const size_t stagingBufferSize = bytesPerSlice;
+    const size_t stagingBufferSize = bytesPerSlice * depth;
     if (UTILS_LIKELY(stagingBufferSize <= context.device.maxBufferLength)) {
         auto entry = context.bufferPool->acquireBuffer(stagingBufferSize);
         memcpy(entry->buffer.contents,
@@ -367,12 +395,12 @@ void MetalTexture::loadSlice(uint32_t level, uint32_t xoffset, uint32_t yoffset,
         [blitCommandEncoder copyFromBuffer:entry->buffer
                               sourceOffset:0
                          sourceBytesPerRow:bytesPerRow
-                       sourceBytesPerImage:0
-                                sourceSize:MTLSizeMake(width, height, 1)
+                       sourceBytesPerImage:bytesPerSlice
+                                sourceSize:MTLSizeMake(width, height, depth)
                                  toTexture:texture
                           destinationSlice:slice
                           destinationLevel:level
-                         destinationOrigin:MTLOriginMake(xoffset, yoffset, 0)];
+                         destinationOrigin:MTLOriginMake(xoffset, yoffset, zoffset)];
         // We must ensure we only capture a pointer to bufferPool, not "this", as this texture could
         // be deallocated before the completion handler runs. The MetalBufferPool is guaranteed to
         // outlive the completion handler.
@@ -381,33 +409,37 @@ void MetalTexture::loadSlice(uint32_t level, uint32_t xoffset, uint32_t yoffset,
             bufferPool->releaseBuffer(entry);
         }];
     } else {
-       // The texture is too large to fit into a single buffer, create a staging texture instead.
-       MTLTextureDescriptor* descriptor =
-               [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:metalPixelFormat
-                                                                  width:width
-                                                                 height:height
-                                                              mipmapped:NO];
+        // The texture is too large to fit into a single buffer, create a staging texture instead.
+        MTLTextureDescriptor* descriptor =
+                [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:metalPixelFormat
+                                                                   width:width
+                                                                  height:height
+                                                               mipmapped:NO];
+        if (depth > 1) {
+            descriptor.textureType = MTLTextureType3D;
+            descriptor.depth = depth;
+        }
 #if defined(IOS)
-       descriptor.storageMode = MTLStorageModeShared;
+        descriptor.storageMode = MTLStorageModeShared;
 #else
-       descriptor.storageMode = MTLStorageModeManaged;
+        descriptor.storageMode = MTLStorageModeManaged;
 #endif
-       id<MTLTexture> stagingTexture = [context.device newTextureWithDescriptor:descriptor];
-       [stagingTexture replaceRegion:MTLRegionMake2D(0, 0, width, height)
-                         mipmapLevel:0
-                               slice:0
-                           withBytes:static_cast<uint8_t*>(data.buffer) + sourceOffset
-                         bytesPerRow:bytesPerRow
-                       bytesPerImage:0];
-       [blitCommandEncoder copyFromTexture:stagingTexture
-                               sourceSlice:0
-                               sourceLevel:0
-                              sourceOrigin:MTLOriginMake(0, 0, 0)
-                                sourceSize:MTLSizeMake(width, height, 1)
-                                 toTexture:texture
-                          destinationSlice:slice
-                          destinationLevel:level
-                         destinationOrigin:MTLOriginMake(xoffset, yoffset, 0)];
+        id<MTLTexture> stagingTexture = [context.device newTextureWithDescriptor:descriptor];
+        [stagingTexture replaceRegion:MTLRegionMake3D(0, 0, 0, width, height, depth)
+                          mipmapLevel:0
+                                slice:0
+                            withBytes:static_cast<uint8_t*>(data.buffer) + sourceOffset
+                          bytesPerRow:bytesPerRow
+                        bytesPerImage:bytesPerSlice];
+        [blitCommandEncoder copyFromTexture:stagingTexture
+                                sourceSlice:0
+                                sourceLevel:0
+                               sourceOrigin:MTLOriginMake(0, 0, 0)
+                                 sourceSize:MTLSizeMake(width, height, depth)
+                                  toTexture:texture
+                           destinationSlice:slice
+                           destinationLevel:level
+                          destinationOrigin:MTLOriginMake(xoffset, yoffset, zoffset)];
     }
 }
 
