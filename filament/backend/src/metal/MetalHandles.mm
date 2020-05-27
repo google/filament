@@ -307,13 +307,18 @@ MetalTexture::~MetalTexture() {
 }
 
 void MetalTexture::load2DImage(uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t width,
-        uint32_t height, PixelBufferDescriptor&& p) noexcept {
-    PixelBufferDescriptor data = reshaper.reshape(std::move(p));
+        uint32_t height, PixelBufferDescriptor& p) noexcept {
+    PixelBufferDescriptor* data = &p;
+    PixelBufferDescriptor reshapedData;
+    if (UTILS_UNLIKELY(reshaper.needsReshaping())) {
+        reshapedData = reshaper.reshape(p);
+        data = &reshapedData;
+    }
 
     id<MTLCommandBuffer> blitCommandBuffer = getPendingCommandBuffer(&context);
     id<MTLBlitCommandEncoder> blitCommandEncoder = [blitCommandBuffer blitCommandEncoder];
 
-    loadSlice(level, xoffset, yoffset, 0, width, height, 1, 0, 0, data, blitCommandEncoder,
+    loadSlice(level, xoffset, yoffset, 0, width, height, 1, 0, 0, *data, blitCommandEncoder,
             blitCommandBuffer);
 
     updateLodRange(level);
@@ -322,7 +327,7 @@ void MetalTexture::load2DImage(uint32_t level, uint32_t xoffset, uint32_t yoffse
 }
 
 void MetalTexture::load3DImage(uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
-        uint32_t width, uint32_t height, uint32_t depth, PixelBufferDescriptor&& p) noexcept {
+        uint32_t width, uint32_t height, uint32_t depth, PixelBufferDescriptor& p) noexcept {
     // TODO: support texture reshaping for 3D textures.
 
     id<MTLCommandBuffer> blitCommandBuffer = getPendingCommandBuffer(&context);
@@ -337,8 +342,13 @@ void MetalTexture::load3DImage(uint32_t level, uint32_t xoffset, uint32_t yoffse
 }
 
 void MetalTexture::loadCubeImage(const FaceOffsets& faceOffsets, int miplevel,
-        PixelBufferDescriptor&& p) {
-    PixelBufferDescriptor data = reshaper.reshape(std::move(p));
+        PixelBufferDescriptor& p) {
+    PixelBufferDescriptor* data = &p;
+    PixelBufferDescriptor reshapedData;
+    if (UTILS_UNLIKELY(reshaper.needsReshaping())) {
+        reshapedData = reshaper.reshape(p);
+        data = &reshapedData;
+    }
 
     id<MTLCommandBuffer> blitCommandBuffer = getPendingCommandBuffer(&context);
     id<MTLBlitCommandEncoder> blitCommandEncoder = [blitCommandBuffer blitCommandEncoder];
@@ -347,7 +357,7 @@ void MetalTexture::loadCubeImage(const FaceOffsets& faceOffsets, int miplevel,
 
     for (NSUInteger slice = 0; slice < 6; slice++) {
         FaceOffsets::size_type faceOffset = faceOffsets.offsets[slice];
-        loadSlice(miplevel, 0, 0, 0, faceWidth, faceWidth, 1, faceOffset, slice, data,
+        loadSlice(miplevel, 0, 0, 0, faceWidth, faceWidth, 1, faceOffset, slice, *data,
                 blitCommandEncoder, blitCommandBuffer);
     }
 
