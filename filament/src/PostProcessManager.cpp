@@ -47,44 +47,65 @@ static_assert(kMaxBloomLevels >= 3, "We require at least 3 bloom levels");
 
 // ------------------------------------------------------------------------------------------------
 
+PostProcessManager::PostProcessMaterial::PostProcessMaterial() noexcept {
+    mEngine = nullptr;
+    mData = 0u;
+}
+
 PostProcessManager::PostProcessMaterial::PostProcessMaterial(FEngine& engine,
         uint8_t const* data, int size) noexcept {
-    mMaterial = upcast(Material::Builder().package(data, size).build(engine));
-    mMaterialInstance = mMaterial->getDefaultInstance();
-    // TODO: After all materials using this class have been converted to the post-process material
-    //       domain, load both OPAQUE and TRANSPARENT variants here.
-    mProgram = mMaterial->getProgram(0);
+    mEngine = &engine;
+    mData = data;
+    mSize = size;
 }
 
 PostProcessManager::PostProcessMaterial::PostProcessMaterial(
         PostProcessManager::PostProcessMaterial&& rhs) noexcept {
     using namespace std;
-    swap(mMaterial, rhs.mMaterial);
-    swap(mMaterialInstance, rhs.mMaterialInstance);
+    swap(mEngine, rhs.mEngine);
+    swap(mData, rhs.mData);
     swap(mProgram, rhs.mProgram);
+    swap(mSize, rhs.mSize);
 }
 
 PostProcessManager::PostProcessMaterial& PostProcessManager::PostProcessMaterial::operator=(
         PostProcessManager::PostProcessMaterial&& rhs) noexcept {
     using namespace std;
-    swap(mMaterial, rhs.mMaterial);
-    swap(mMaterialInstance, rhs.mMaterialInstance);
+    swap(mEngine, rhs.mEngine);
+    swap(mData, rhs.mData);
     swap(mProgram, rhs.mProgram);
+    swap(mSize, rhs.mSize);
     return *this;
 }
 
 PostProcessManager::PostProcessMaterial::~PostProcessMaterial() {
-    assert(mMaterial == nullptr);
+    assert(!mProgram || mMaterial == nullptr);
 }
 
 void PostProcessManager::PostProcessMaterial::terminate(FEngine& engine) noexcept {
-    engine.destroy(mMaterial);
-    mMaterial = nullptr;
-    mMaterialInstance = nullptr;
-    mProgram.clear();
+    if (mProgram) {
+        engine.destroy(mMaterial);
+        mMaterial = nullptr;
+        mMaterialInstance = nullptr;
+        mProgram.clear();
+    } else {
+        mEngine = nullptr;
+        mData = nullptr;
+    }
+}
+
+void PostProcessManager::PostProcessMaterial::assertMaterial() const noexcept {
+    if (UTILS_UNLIKELY(!mProgram)) {
+        // TODO: After all materials using this class have been converted to the post-process material
+        //       domain, load both OPAQUE and TRANSPARENT variants here.
+        mMaterial = upcast(Material::Builder().package(mData, mSize).build(*mEngine));
+        mMaterialInstance = mMaterial->getDefaultInstance();
+        mProgram = mMaterial->getProgram(0);
+    }
 }
 
 PipelineState PostProcessManager::PostProcessMaterial::getPipelineState(uint8_t variant) const noexcept {
+    assertMaterial();
     return {
             .program = mMaterial->getProgram(variant),
             .rasterState = mMaterial->getRasterState(),
@@ -93,11 +114,22 @@ PipelineState PostProcessManager::PostProcessMaterial::getPipelineState(uint8_t 
 }
 
 PipelineState PostProcessManager::PostProcessMaterial::getPipelineState() const noexcept {
+    assertMaterial();
     return {
             .program = mProgram,
             .rasterState = mMaterial->getRasterState(),
             .scissor = mMaterialInstance->getScissor()
     };
+}
+
+FMaterial* PostProcessManager::PostProcessMaterial::getMaterial() const {
+    assertMaterial();
+    return mMaterial;
+}
+
+FMaterialInstance* PostProcessManager::PostProcessMaterial::getMaterialInstance() const {
+    assertMaterial();
+    return mMaterialInstance;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -111,7 +143,6 @@ void PostProcessManager::init() noexcept {
     auto& engine = mEngine;
     DriverApi& driver = engine.getDriverApi();
 
-    // TODO: load materials lazily as to reduce start-up time and memory usage
     mSSAO                   = { engine, MATERIAL(SAO) };
     mMipmapDepth            = { engine, MATERIAL(MIPMAPDEPTH) };
     mBilateralBlur          = { engine, MATERIAL(BILATERALBLUR) };
