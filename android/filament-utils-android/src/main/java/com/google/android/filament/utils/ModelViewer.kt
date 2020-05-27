@@ -141,6 +141,7 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
 
         this.textureView = textureView
         gestureDetector = GestureDetector(textureView, cameraManipulator)
+        displayHelper = DisplayHelper(textureView.context)
         uiHelper.renderCallback = SurfaceCallback()
         uiHelper.attachTo(textureView)
         addDetachListener(textureView)
