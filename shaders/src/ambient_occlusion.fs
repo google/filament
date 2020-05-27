@@ -26,7 +26,7 @@ float evaluateSSAO() {
         highp vec2 size = vec2(textureSize(light_ssao, 0));
 
         // Read four AO samples and their depths values
-#if defined(TRGET_MOBILE)
+#if defined(TARGET_MOBILE)
         // on mobile we can't use textureGather() because we're limited to ES3.0,
         // so we emulate it with  texelFetch(), on Pixel 4 this doesn't seem to have any
         // significant impact on performance.
