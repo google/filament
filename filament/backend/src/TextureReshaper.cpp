@@ -28,11 +28,13 @@ static void freeDeleter(void* buffer, size_t, void*) {
 }
 
 TextureReshaper::TextureReshaper(TextureFormat requestedFormat) noexcept {
-    reshapedFormat = requestedFormat;
+    mReshapedFormat = requestedFormat;
+    mNeedsReshaping = false;
 
     if (requestedFormat == TextureFormat::RGB16F) {
-        reshapedFormat = TextureFormat::RGBA16F;
-        reshapeFunction = [](PixelBufferDescriptor&& p) {
+        mReshapedFormat = TextureFormat::RGBA16F;
+        mNeedsReshaping = true;
+        mReshapeFunction = [](PixelBufferDescriptor& p) {
             const size_t reshapedSize = p.size / 6 * 8;     // reshaping from 6 to 8 bytes per pixel
             void* reshapeBuffer = malloc(reshapedSize);
             ASSERT_POSTCONDITION(reshapeBuffer, "Could not allocate memory to reshape pixels.");
@@ -48,8 +50,9 @@ TextureReshaper::TextureReshaper(TextureFormat requestedFormat) noexcept {
     };
 
     if (requestedFormat == TextureFormat::RGB8) {
-        reshapedFormat = TextureFormat::RGBA8;
-        reshapeFunction = [](PixelBufferDescriptor&& p) {
+        mReshapedFormat = TextureFormat::RGBA8;
+        mNeedsReshaping = true;
+        mReshapeFunction = [](PixelBufferDescriptor& p) {
             const size_t reshapedSize = p.size / 3 * 4;     // reshaping from 3 to 4 bytes per pixel
             void* reshapeBuffer = malloc(reshapedSize);
             ASSERT_POSTCONDITION(reshapeBuffer, "Could not allocate memory to reshape pixels.");
@@ -65,11 +68,12 @@ TextureReshaper::TextureReshaper(TextureFormat requestedFormat) noexcept {
 }
 
 TextureFormat TextureReshaper::getReshapedFormat() const noexcept {
-    return reshapedFormat;
+    return mReshapedFormat;
 }
 
-PixelBufferDescriptor TextureReshaper::reshape(PixelBufferDescriptor&& p) const {
-    return reshapeFunction(std::move(p));
+PixelBufferDescriptor TextureReshaper::reshape(PixelBufferDescriptor& p) const {
+    assert(mReshapeFunction);
+    return mReshapeFunction(p);
 }
 
 bool TextureReshaper::canReshapeTextureFormat(TextureFormat format) noexcept {
