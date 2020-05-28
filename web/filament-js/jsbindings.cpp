@@ -59,6 +59,7 @@
 #include <gltfio/Animator.h>
 #include <gltfio/AssetLoader.h>
 #include <gltfio/FilamentAsset.h>
+#include <gltfio/FilamentInstance.h>
 #include <gltfio/Image.h>
 #include <gltfio/MaterialProvider.h>
 #include <gltfio/ResourceLoader.h>
@@ -110,6 +111,7 @@ namespace emscripten {
         BIND(Camera)
         BIND(Engine)
         BIND(FilamentAsset)
+        BIND(FilamentInstance)
         BIND(IndexBuffer)
         BIND(IndirectLight)
         BIND(LightManager)
@@ -1305,6 +1307,8 @@ class_<KtxInfo>("KtxInfo")
 
 register_vector<std::string>("RegistryKeys");
 register_vector<utils::Entity>("EntityVector");
+register_vector<FilamentInstance*>("AssetInstanceVector");
+register_vector<const MaterialInstance*>("MaterialInstanceVector");
 
 class_<MeshReader::MaterialRegistry>("MeshReader$MaterialRegistry")
     .constructor<>()
@@ -1477,6 +1481,12 @@ class_<FilamentAsset>("gltfio$FilamentAsset")
         return std::vector<const MaterialInstance*>(ptr, ptr + self->getMaterialInstanceCount());
     }), allow_raw_pointers())
 
+    .function("_getAssetInstances", EMBIND_LAMBDA(std::vector<FilamentInstance*>,
+            (FilamentAsset* self), {
+        FilamentInstance** ptr = self->getAssetInstances();
+        return std::vector<FilamentInstance*>(ptr, ptr + self->getAssetInstanceCount());
+    }), allow_raw_pointers())
+
     .function("getResourceUris", EMBIND_LAMBDA(std::vector<std::string>, (FilamentAsset* self), {
         std::vector<std::string> retval;
         auto uris = self->getResourceUris();
@@ -1494,6 +1504,15 @@ class_<FilamentAsset>("gltfio$FilamentAsset")
     .function("getWireframe", &FilamentAsset::getWireframe)
     .function("getEngine", &FilamentAsset::getEngine, allow_raw_pointers())
     .function("releaseSourceData", &FilamentAsset::releaseSourceData);
+
+class_<FilamentInstance>("gltfio$FilamentInstance")
+    .function("getEntities", EMBIND_LAMBDA(std::vector<utils::Entity>, (FilamentInstance* self), {
+        const utils::Entity* ptr = self->getEntities();
+        return std::vector<utils::Entity>(ptr, ptr + self->getEntityCount());
+    }), allow_raw_pointers())
+
+    .function("getRoot", &FilamentInstance::getRoot)
+    .function("getAnimator", &FilamentInstance::getAnimator, allow_raw_pointers());
 
 // This little wrapper exists to get around RTTI requirements in embind.
 struct UbershaderLoader {
@@ -1522,12 +1541,23 @@ class_<AssetLoader>("gltfio$AssetLoader")
         return self->createAssetFromJson((const uint8_t*) buffer.bd->buffer, buffer.bd->size);
     }), allow_raw_pointers())
 
-    /// createAssetFroBinary ::static method::
+    /// createAssetFromBinary ::static method::
     /// buffer ::argument:: asset string, or Uint8Array, or [Buffer]
     /// ::retval:: an instance of [FilamentAsset]
     .function("_createAssetFromBinary", EMBIND_LAMBDA(FilamentAsset*,
             (AssetLoader* self, BufferDescriptor buffer), {
         return self->createAssetFromBinary((const uint8_t*) buffer.bd->buffer, buffer.bd->size);
+    }), allow_raw_pointers())
+
+    /// createInstancedAsset ::static method::
+    /// buffer ::argument:: asset string, or Uint8Array, or [Buffer]
+    /// ::retval:: an instance of [FilamentAsset]
+    .function("_createInstancedAsset", EMBIND_LAMBDA(FilamentAsset*,
+            (AssetLoader* self, BufferDescriptor buffer, int numInstances), {
+        // Ignore the returned instances, they can be extracted from the asset.
+        std::vector<FilamentInstance*> instances;
+        return self->createInstancedAsset((const uint8_t*) buffer.bd->buffer,
+                buffer.bd->size, instances.data(), numInstances);
     }), allow_raw_pointers());
 
 class_<ResourceLoader>("gltfio$ResourceLoader")

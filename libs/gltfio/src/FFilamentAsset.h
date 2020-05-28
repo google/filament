@@ -196,6 +196,14 @@ struct FFilamentAsset : public FilamentAsset {
         return mSourceAsset;
     }
 
+    FilamentInstance** getAssetInstances() noexcept {
+        return (FilamentInstance**) mInstances.data();
+    }
+
+    size_t getAssetInstanceCount() const noexcept {
+        return mInstances.size();
+    }
+
     void acquireSourceAsset() {
         ++mSourceAssetRefCount;
     }

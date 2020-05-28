@@ -302,6 +302,17 @@ Filament.loadClassExtensions = function() {
         return result;
     };
 
+    Filament.gltfio$AssetLoader.prototype.createInstancedAsset = function(buffer, instances) {
+        buffer = getBufferDescriptor(buffer);
+        const asset = this._createInstancedAsset(buffer, instances.length);
+        buffer.delete();
+        const instancesVector = asset._getAssetInstances();
+        for (let i = 0; i < instancesVector.size(); i++) {
+            instances[i] = instancesVector.get(i);
+        }
+        return asset;
+    };
+
     // See the C++ documentation for ResourceLoader and AssetLoader. The JavaScript API differs in
     // that it takes two optional callbacks:
     //
