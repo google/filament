@@ -16,6 +16,8 @@
 
 #include <backend/Platform.h>
 
+#include <utils/Systrace.h>
+
 #if defined(ANDROID)
     #ifndef FILAMENT_USE_EXTERNAL_GLES3
         #include "opengl/PlatformEGLAndroid.h"
@@ -77,6 +79,7 @@ Platform::~Platform() noexcept = default;
 // responsible for destroying it. Initialization of the backend API is deferred until
 // createDriver(). The passed-in backend hint is replaced with the resolved backend.
 DefaultPlatform* DefaultPlatform::create(Backend* backend) noexcept {
+    SYSTRACE_CALL();
     assert(backend);
     if (*backend == Backend::DEFAULT) {
         *backend = Backend::OPENGL;
