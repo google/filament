@@ -1457,6 +1457,11 @@ class_<FilamentAsset>("gltfio$FilamentAsset")
         return std::vector<utils::Entity>(ptr, ptr + self->getEntityCount());
     }), allow_raw_pointers())
 
+    .function("getLightEntities", EMBIND_LAMBDA(std::vector<utils::Entity>, (FilamentAsset* self), {
+        const utils::Entity* ptr = self->getLightEntities();
+        return std::vector<utils::Entity>(ptr, ptr + self->getLightEntityCount());
+    }), allow_raw_pointers())
+
     .function("getRoot", &FilamentAsset::getRoot)
 
     .function("popRenderable", &FilamentAsset::popRenderable)
