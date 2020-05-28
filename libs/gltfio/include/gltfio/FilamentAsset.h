@@ -32,6 +32,7 @@ namespace filament {
 namespace gltfio {
 
 class Animator;
+class FilamentInstance;
 
 /**
  * \class FilamentAsset FilamentAsset.h gltfio/FilamentAsset.h
@@ -172,6 +173,10 @@ public:
     const void* getSourceAsset() noexcept;
 
     /*! \cond PRIVATE */
+
+    FilamentInstance** getAssetInstances() noexcept;
+    size_t getAssetInstanceCount() const noexcept;
+
 protected:
     FilamentAsset() noexcept = default;
     ~FilamentAsset() = default;

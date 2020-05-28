@@ -101,4 +101,12 @@ const void* FilamentAsset::getSourceAsset() noexcept {
     return upcast(this)->getSourceAsset();
 }
 
+FilamentInstance** FilamentAsset::getAssetInstances() noexcept {
+    return upcast(this)->getAssetInstances();
+}
+
+size_t FilamentAsset::getAssetInstanceCount() const noexcept {
+    return upcast(this)->getAssetInstanceCount();
+}
+
 } // namespace gltfio
