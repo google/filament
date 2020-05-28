@@ -22,24 +22,45 @@
 
 #include <utils/Entity.h>
 
+#include <math/mat4.h>
+
+#include <tsl/robin_map.h>
+
+#include <string>
 #include <vector>
 
 #include "upcast.h"
+
+struct cgltf_node;
 
 namespace gltfio {
 namespace details {
 
 struct FFilamentAsset;
 
+struct Skin {
+    std::string name;
+    std::vector<filament::math::mat4f> inverseBindMatrices;
+    std::vector<utils::Entity> joints;
+    std::vector<utils::Entity> targets;
+};
+
+using SkinVector = std::vector<Skin>;
+using NodeMap = tsl::robin_map<const cgltf_node*, utils::Entity>;
+using BoneVector = std::vector<filament::math::mat4f>;
+
 struct FFilamentInstance : public FilamentInstance {
     std::vector<utils::Entity> entities;
     utils::Entity root;
     Animator* animator;
     FFilamentAsset* owner;
+    SkinVector skins;
+    NodeMap nodeMap;
+    BoneVector boneMatrices;
 
     Animator* getAnimator() noexcept {
         if (!animator) {
-            animator = new Animator(this);
+            animator = new Animator(owner, this);
         }
         return animator;
     }

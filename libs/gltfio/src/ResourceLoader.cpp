@@ -156,35 +156,47 @@ private:
 
 using namespace details;
 
-static void importSkinningData(Skin& dstSkin, const cgltf_skin& srcSkin, FFilamentAsset* asset) {
-    if (srcSkin.name) {
-        dstSkin.name = srcSkin.name;
-    }
-    const auto& nodeMap = asset->mNodeMap;
-
-    // Build a list of transformables for this skin, one for each joint.
-    // TODO: We've seen models with joint nodes that do not belong to the scene's node graph.
-    // e.g. BrainStem after Draco compression. That's why we have a fallback here. AssetManager
-    // should maybe create an Entity for every glTF node, period. (regardless of hierarchy)
-    // https://github.com/CesiumGS/gltf-pipeline/issues/532
-    dstSkin.joints.resize(srcSkin.joints_count);
-    for (cgltf_size i = 0, len = srcSkin.joints_count; i < len; ++i) {
-        auto iter = nodeMap.find(srcSkin.joints[i]);
-        if (iter == nodeMap.end()) {
-            dstSkin.joints[i] = nodeMap.begin()->second;
-        } else {
-            dstSkin.joints[i] = iter->second;
+static void importSkins(const cgltf_data* gltf, const NodeMap& nodeMap, SkinVector& dstSkins) {
+    dstSkins.resize(gltf->skins_count);
+    for (cgltf_size i = 0, len = gltf->nodes_count; i < len; ++i) {
+        const cgltf_node& node = gltf->nodes[i];
+        if (node.skin) {
+            int skinIndex = node.skin - &gltf->skins[0];
+            Entity entity = nodeMap.at(&node);
+            dstSkins[skinIndex].targets.push_back(entity);
         }
     }
+    for (cgltf_size i = 0, len = gltf->skins_count; i < len; ++i) {
+        Skin& dstSkin = dstSkins[i];
+        const cgltf_skin& srcSkin = gltf->skins[i];
+        if (srcSkin.name) {
+            dstSkin.name = srcSkin.name;
+        }
 
-    // Retain a copy of the inverse bind matrices because the source blob could be evicted later.
-    const cgltf_accessor* srcMatrices = srcSkin.inverse_bind_matrices;
-    dstSkin.inverseBindMatrices.resize(srcSkin.joints_count);
-    if (srcMatrices) {
-        auto dstMatrices = (uint8_t*) dstSkin.inverseBindMatrices.data();
-        uint8_t* bytes = (uint8_t*) srcMatrices->buffer_view->buffer->data;
-        auto srcBuffer = (void*) (bytes + srcMatrices->offset + srcMatrices->buffer_view->offset);
-        memcpy(dstMatrices, srcBuffer, srcSkin.joints_count * sizeof(mat4f));
+        // Build a list of transformables for this skin, one for each joint.
+        // TODO: We've seen models with joint nodes that do not belong to the scene's node graph.
+        // e.g. BrainStem after Draco compression. That's why we have a fallback here. AssetManager
+        // should maybe create an Entity for every glTF node, period. (regardless of hierarchy)
+        // https://github.com/CesiumGS/gltf-pipeline/issues/532
+        dstSkin.joints.resize(srcSkin.joints_count);
+        for (cgltf_size i = 0, len = srcSkin.joints_count; i < len; ++i) {
+            auto iter = nodeMap.find(srcSkin.joints[i]);
+            if (iter == nodeMap.end()) {
+                dstSkin.joints[i] = nodeMap.begin()->second;
+            } else {
+                dstSkin.joints[i] = iter->second;
+            }
+        }
+
+        // Retain a copy of the inverse bind matrices because the source blob could be evicted later.
+        const cgltf_accessor* srcMatrices = srcSkin.inverse_bind_matrices;
+        dstSkin.inverseBindMatrices.resize(srcSkin.joints_count);
+        if (srcMatrices) {
+            auto dstMatrices = (uint8_t*) dstSkin.inverseBindMatrices.data();
+            uint8_t* bytes = (uint8_t*) srcMatrices->buffer_view->buffer->data;
+            auto srcBuffer = (void*) (bytes + srcMatrices->offset + srcMatrices->buffer_view->offset);
+            memcpy(dstMatrices, srcBuffer, srcSkin.joints_count * sizeof(mat4f));
+        }
     }
 }
 
@@ -406,17 +418,13 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
     }
 
     // For each skin, build a list of renderables that it affects.
-    asset->mSkins.resize(gltf->skins_count);
-    for (cgltf_size i = 0, len = gltf->nodes_count; i < len; ++i) {
-        const cgltf_node& node = gltf->nodes[i];
-        if (node.skin) {
-            int skinIndex = node.skin - &gltf->skins[0];
-            Entity entity = asset->mNodeMap[&node];
-            asset->mSkins[skinIndex].targets.push_back(entity);
+    const cgltf_data* const_gltf = gltf;
+    if (asset->mInstances.empty()) {
+        importSkins(const_gltf, asset->mNodeMap, asset->mSkins);
+    } else {
+        for (FFilamentInstance* instance : asset->mInstances) {
+            importSkins(const_gltf, instance->nodeMap, instance->skins);
         }
-    }
-    for (cgltf_size i = 0, len = gltf->skins_count; i < len; ++i) {
-        importSkinningData(asset->mSkins[i], gltf->skins[i], asset);
     }
 
     // Apply sparse data modifications to base arrays, then upload the result.

@@ -148,7 +148,7 @@ struct FAssetLoader : public AssetLoader {
 
     void createAsset(const cgltf_data* srcAsset, size_t numInstances);
     void createEntity(const cgltf_node* node, Entity parent, bool enableLight,
-            std::vector<Entity>* instance);
+            FFilamentInstance* instance);
     void createRenderable(const cgltf_node* node, Entity entity, const char* name);
     bool createPrimitive(const cgltf_primitive* inPrim, Primitive* outPrim, const UvMap& uvmap,
             const char* name);
@@ -300,7 +300,7 @@ void FAssetLoader::createAsset(const cgltf_data* srcAsset, size_t numInstances) 
             // For each scene root, recursively create all entities.
             for (cgltf_size i = 0, len = scene->nodes_count; i < len; ++i) {
                 cgltf_node** nodes = scene->nodes;
-                createEntity(nodes[i], instanceRoot, index == 0, &instance->entities);
+                createEntity(nodes[i], instanceRoot, index == 0, instance);
             }
         }
     }
@@ -336,7 +336,7 @@ void FAssetLoader::createAsset(const cgltf_data* srcAsset, size_t numInstances) 
 }
 
 void FAssetLoader::createEntity(const cgltf_node* node, Entity parent, bool enableLight,
-        std::vector<Entity>* instance) {
+        FFilamentInstance* instance) {
     Entity entity = mEntityManager.create();
 
     // Always create a transform component to reflect the original hierarchy.
@@ -355,9 +355,11 @@ void FAssetLoader::createEntity(const cgltf_node* node, Entity parent, bool enab
 
     // Update the asset's entity list and private node mapping.
     mResult->mEntities.push_back(entity);
-    mResult->mNodeMap[node] = entity;
     if (instance) {
-        instance->push_back(entity);
+        instance->entities.push_back(entity);
+        instance->nodeMap[node] = entity;
+    } else {
+        mResult->mNodeMap[node] = entity;
     }
 
     const char* name = getNodeName(node, mDefaultNodeName);

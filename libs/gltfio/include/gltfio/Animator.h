@@ -78,8 +78,7 @@ private:
     friend struct details::FFilamentInstance;
     /*! \endcond */
 
-    Animator(FilamentAsset* asset);
-    Animator(FilamentInstance* instance);
+    Animator(details::FFilamentAsset* asset, details::FFilamentInstance* instance);
     ~Animator();
     AnimatorImpl* mImpl;
 };

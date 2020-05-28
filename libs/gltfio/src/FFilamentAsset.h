@@ -50,13 +50,6 @@
 namespace gltfio {
 namespace details {
 
-struct Skin {
-    std::string name;
-    std::vector<filament::math::mat4f> inverseBindMatrices;
-    std::vector<utils::Entity> joints;
-    std::vector<utils::Entity> targets;
-};
-
 // Encapsulates VertexBuffer::setBufferAt() or IndexBuffer::setBuffer().
 struct BufferSlot {
     const cgltf_accessor* accessor;
@@ -168,7 +161,7 @@ struct FFilamentAsset : public FilamentAsset {
 
     Animator* getAnimator() noexcept {
         if (!mAnimator) {
-            mAnimator = new Animator(this);
+            mAnimator = new Animator(this, nullptr);
         }
         return mAnimator;
     }
@@ -240,7 +233,7 @@ struct FFilamentAsset : public FilamentAsset {
     filament::Aabb mBoundingBox;
     utils::Entity mRoot;
     std::vector<FFilamentInstance*> mInstances;
-    std::vector<Skin> mSkins;
+    SkinVector mSkins; // unused for instanced assets
     Animator* mAnimator = nullptr;
     Wireframe* mWireframe = nullptr;
     int mSourceAssetRefCount = 0;
@@ -258,7 +251,7 @@ struct FFilamentAsset : public FilamentAsset {
     std::vector<TextureSlot> mTextureSlots;
     std::vector<const char*> mResourceUris;
     const cgltf_data* mSourceAsset = nullptr;
-    tsl::robin_map<const cgltf_node*, utils::Entity> mNodeMap;
+    NodeMap mNodeMap; // unused for instanced assets
     std::vector<std::pair<const cgltf_primitive*, filament::VertexBuffer*> > mPrimitives;
 };
 
