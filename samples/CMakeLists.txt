@@ -221,6 +221,7 @@ if (NOT ANDROID)
     add_demo(depthtesting)
     add_demo(frame_generator)
     add_demo(gltf_viewer)
+    add_demo(gltf_instances)
     add_demo(heightfield)
     add_demo(hellopbr)
     add_demo(hellotriangle)
@@ -240,6 +241,7 @@ if (NOT ANDROID)
     # Sample app specific
     target_link_libraries(frame_generator PRIVATE imageio)
     target_link_libraries(gltf_viewer PRIVATE gltf-resources gltfio)
+    target_link_libraries(gltf_instances PRIVATE gltf-resources gltfio)
     target_link_libraries(hellopbr PRIVATE filameshio suzanne-resources)
     target_link_libraries(sample_cloth PRIVATE filameshio)
     target_link_libraries(sample_normal_map PRIVATE filameshio)
@@ -293,9 +295,3 @@ add_dependencies(filament assets)
 
 add_custom_target(envs DEPENDS ${target_envmaps})
 add_dependencies(filament envs)
-
-add_custom_target(run_gltf_viewer DEPENDS gltf_viewer assets
-        COMMAND gltf_viewer)
-
-add_custom_target(run_material_sandbox DEPENDS material_sandbox assets
-        COMMAND material_sandbox --ibl=venetian_crossroads_2k assets/models/material_sphere/material_sphere.obj)

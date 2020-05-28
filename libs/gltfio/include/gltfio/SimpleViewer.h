@@ -78,8 +78,10 @@ public:
      *
      * @param asset The asset to view.
      * @param scale Adds a transform to the root to fit the asset into a unit cube at the origin.
+     * @param instanceToAnimate Optional instance from which to get the animator.
      */
-    void populateScene(FilamentAsset* asset, bool scale);
+    void populateScene(FilamentAsset* asset, bool scale,
+            FilamentInstance* instanceToAnimate = nullptr);
 
     /**
      * Removes the current asset from the viewer.
@@ -270,7 +272,8 @@ SimpleViewer::~SimpleViewer() {
     mEngine->destroy(mSunlight);
 }
 
-void SimpleViewer::populateScene(FilamentAsset* asset, bool scale) {
+void SimpleViewer::populateScene(FilamentAsset* asset, bool scale,
+        FilamentInstance* instanceToAnimate) {
     if (mAsset != asset) {
         removeAsset();
         mAsset = asset;
@@ -278,7 +281,7 @@ void SimpleViewer::populateScene(FilamentAsset* asset, bool scale) {
             mAnimator = nullptr;
             return;
         }
-        mAnimator = asset->getAnimator();
+        mAnimator = instanceToAnimate ? instanceToAnimate->getAnimator() : asset->getAnimator();
         if (scale) {
             auto& tcm = mEngine->getTransformManager();
             auto root = tcm.getInstance(mAsset->getRoot());
