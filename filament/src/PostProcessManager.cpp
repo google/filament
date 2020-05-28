@@ -49,18 +49,22 @@ static_assert(kMaxBloomLevels >= 3, "We require at least 3 bloom levels");
 
 PostProcessManager::PostProcessMaterial::PostProcessMaterial() noexcept {
     mEngine = nullptr;
-    mData = 0u;
+    mData = nullptr;
+    mMaterial = nullptr;            // aliased to mEngine
+    mMaterialInstance = nullptr;    // aliased to mData
 }
 
 PostProcessManager::PostProcessMaterial::PostProcessMaterial(FEngine& engine,
-        uint8_t const* data, int size) noexcept {
+        uint8_t const* data, int size) noexcept
+        : PostProcessMaterial() {
     mEngine = &engine;
     mData = data;
     mSize = size;
 }
 
 PostProcessManager::PostProcessMaterial::PostProcessMaterial(
-        PostProcessManager::PostProcessMaterial&& rhs) noexcept {
+        PostProcessManager::PostProcessMaterial&& rhs) noexcept
+        : PostProcessMaterial() {
     using namespace std;
     swap(mEngine, rhs.mEngine);
     swap(mData, rhs.mData);
