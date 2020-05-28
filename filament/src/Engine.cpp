@@ -59,6 +59,9 @@ using namespace backend;
 using namespace filaflat;
 
 FEngine* FEngine::create(Backend backend, Platform* platform, void* sharedGLContext) {
+    SYSTRACE_ENABLE();
+    SYSTRACE_CALL();
+
     FEngine* instance = new FEngine(backend, platform, sharedGLContext);
 
     slog.i << "FEngine (" << sizeof(void*) * 8 << " bits) created at " << instance << " "
@@ -131,8 +134,6 @@ FEngine::FEngine(Backend backend, Platform* platform, void* sharedGLContext) :
         mEngineEpoch(std::chrono::steady_clock::now()),
         mDriverBarrier(1)
 {
-    SYSTRACE_ENABLE();
-
     // we're assuming we're on the main thread here.
     // (it may not be the case)
     mJobSystem.adopt();
@@ -144,6 +145,8 @@ FEngine::FEngine(Backend backend, Platform* platform, void* sharedGLContext) :
  */
 
 void FEngine::init() {
+    SYSTRACE_CALL();
+
     // this must be first.
     mCommandStream = CommandStream(*mDriver, mCommandBufferQueue.getCircularBuffer());
     DriverApi& driverApi = getDriverApi();
@@ -205,6 +208,8 @@ void FEngine::init() {
 }
 
 FEngine::~FEngine() noexcept {
+    SYSTRACE_CALL();
+
     ASSERT_DESTRUCTOR(mTerminated, "Engine destroyed but not terminated!");
     delete mResourceAllocator;
     delete mDriver;
@@ -214,6 +219,8 @@ FEngine::~FEngine() noexcept {
 }
 
 void FEngine::shutdown() {
+    SYSTRACE_CALL();
+
 #ifndef NDEBUG
     // print out some statistics about this run
     size_t wm = mCommandBufferQueue.getHigWatermark();
@@ -397,29 +404,25 @@ int FEngine::loop() {
     if (mPlatform == nullptr) {
         mPlatform = DefaultPlatform::create(&mBackend);
         mOwnPlatform = true;
-        slog.d << "FEngine resolved backend: ";
+        const char* backend = nullptr;
         switch (mBackend) {
             case backend::Backend::NOOP:
-                slog.d << "Noop";
+                backend = "Noop";
                 break;
-
             case backend::Backend::OPENGL:
-                slog.d << "OpenGL";
+                backend = "OpenGL";
                 break;
-
             case backend::Backend::VULKAN:
-                slog.d << "Vulkan";
+                backend = "Vulkan";
                 break;
-
             case backend::Backend::METAL:
-                slog.d << "Metal";
+                backend = "Metal";
                 break;
-
             default:
-                slog.d << "Unknown";
+                backend = "Unknown";
                 break;
         }
-        slog.d << io::endl;
+        slog.d << "FEngine resolved backend: " << backend << io::endl;
         if (mPlatform == nullptr) {
             slog.e << "Selected backend not supported in this build." << io::endl;
             mDriverBarrier.latch();
