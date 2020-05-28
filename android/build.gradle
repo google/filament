@@ -61,6 +61,7 @@ buildscript {
     ]
 
     dependencies {
+        // NOTE: Do not update to 4.0.0, there is a bug breaking our build, 4.0.1 will have a fix
         classpath 'com.android.tools.build:gradle:3.6.3'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${versions.kotlin}"
     }
