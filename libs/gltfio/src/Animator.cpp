@@ -47,6 +47,7 @@ using namespace details;
 
 using TimeValues = std::map<float, size_t>;
 using SourceValues = std::vector<float>;
+using BoneVector = std::vector<filament::math::mat4f>;
 
 struct Sampler {
     TimeValues times;
@@ -370,12 +371,12 @@ void Animator::updateBoneMatrices() {
     };
 
     if (mImpl->instance) {
-        update(mImpl->instance->skins, mImpl->instance->boneMatrices);
+        update(mImpl->instance->skins, mImpl->boneMatrices);
     } else if (mImpl->asset->mInstances.empty()) {
         update(mImpl->asset->mSkins, mImpl->boneMatrices);
     } else {
         for (FFilamentInstance* instance : mImpl->asset->mInstances) {
-            update(instance->skins, instance->boneMatrices);
+            update(instance->skins, mImpl->boneMatrices);
         }
     }
 }
