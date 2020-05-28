@@ -67,6 +67,27 @@ Java_com_google_android_filament_gltfio_AssetLoader_nCreateAssetFromJson(JNIEnv*
             buffer.getSize());
 }
 
+extern "C" JNIEXPORT jlong JNICALL
+Java_com_google_android_filament_gltfio_AssetLoader_nCreateInstancedAsset(JNIEnv* env, jclass,
+        jlong nativeLoader, jobject javaBuffer, jint remaining, jlongArray instances) {
+    AssetLoader* loader = (AssetLoader*) nativeLoader;
+    AutoBuffer buffer(env, javaBuffer, remaining);
+    jsize numInstances = env->GetArrayLength(instances);
+    using Handle = FilamentInstance*;
+    Handle* ptrInstances = new Handle[numInstances];
+    jlong asset = (jlong) loader->createInstancedAsset((const uint8_t *) buffer.getData(),
+            buffer.getSize(), ptrInstances, numInstances);
+    if (asset) {
+        jlong* longInstances = env->GetLongArrayElements(instances, nullptr);
+        for (jsize i = 0; i < numInstances; i++) {
+            longInstances[i] = (jlong) ptrInstances[i];
+        }
+        env->ReleaseLongArrayElements(instances, longInstances, 0);
+    }
+    delete[] ptrInstances;
+    return asset;
+}
+
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_gltfio_AssetLoader_nEnableDiagnostics(JNIEnv*, jclass,
         jlong nativeLoader, jboolean enable) {

@@ -129,8 +129,33 @@ public class AssetLoader {
     }
 
     /**
+     * Consumes the contents of a glTF 2.0 file and produces a master asset with one or more
+     * instances.
+     *
+     * The given instance array must be sized to the desired number of instances. If successful,
+     * this method will populate the array with slave instances whose resources are shared with
+     * the master asset.
+     */
+    @Nullable
+    @SuppressWarnings("unused")
+    public FilamentAsset createInstancedAsset(@NonNull Buffer buffer,
+            @NonNull FilamentInstance[] instances) {
+        long[] nativeInstances = new long[instances.length];
+        long nativeAsset = nCreateInstancedAsset(mNativeObject, buffer, buffer.remaining(),
+                nativeInstances);
+        if (nativeAsset == 0) {
+            return null;
+        }
+        for (int i = 0; i < nativeInstances.length; i++) {
+            instances[i] = new FilamentInstance(nativeInstances[i]);
+        }
+        return new FilamentAsset(mEngine, nativeAsset);
+    }
+
+    /**
      * Allows clients to enable diagnostic shading on newly-loaded assets.
      */
+    @SuppressWarnings("unused")
     public void enableDiagnostics(boolean enable) {
         nEnableDiagnostics(mNativeObject, enable);
     }
@@ -148,6 +173,8 @@ public class AssetLoader {
     private static native void nDestroyAssetLoader(long nativeLoader);
     private static native long nCreateAssetFromBinary(long nativeLoader, Buffer buffer, int remaining);
     private static native long nCreateAssetFromJson(long nativeLoader, Buffer buffer, int remaining);
+    private static native long nCreateInstancedAsset(long nativeLoader, Buffer buffer, int remaining,
+            long[] nativeInstances);
     private static native void nEnableDiagnostics(long nativeLoader, boolean enable);
     private static native void nDestroyAsset(long nativeLoader, long nativeAsset);
 }
