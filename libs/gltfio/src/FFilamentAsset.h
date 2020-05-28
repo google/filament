@@ -187,6 +187,9 @@ struct FFilamentAsset : public FilamentAsset {
         mBufferSlots = {};
         mTextureSlots = {};
         releaseSourceAsset();
+        for (FFilamentInstance* instance : mInstances) {
+            instance->nodeMap = {};
+        }
     }
 
     const void* getSourceAsset() noexcept {
