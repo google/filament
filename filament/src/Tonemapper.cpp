@@ -89,7 +89,8 @@ Tonemapper::Tonemapper(FEngine& engine) {
                     data, lutElementCount * elementSize,
                     PixelDataFormat::RGBA, PixelDataType::HALF,
                     [](void* buffer, size_t, void*) { free(buffer); }
-            });
+            }
+    );
 }
 
 Tonemapper::~Tonemapper() noexcept = default;

@@ -139,8 +139,8 @@ private:
         bool hasContactShadows;
     };
 
-    struct ToneMappingConfig {
-        bool toneMappingAsSubpass = false;
+    struct ColorGradingConfig {
+        bool asSubpass = false;
         bool translucent{};
         bool fxaa{};
         bool dithering{};
@@ -149,11 +149,11 @@ private:
 
     FrameGraphId<FrameGraphTexture> colorPass(FrameGraph& fg, const char* name,
             FrameGraphTexture::Descriptor const& colorBufferDesc,
-            ColorPassConfig const& config, ToneMappingConfig const& toneMappingConfig,
+            ColorPassConfig const& config, ColorGradingConfig const& colorGradingConfig,
             RenderPass const& pass, FView const& view) const noexcept;
 
     FrameGraphId<FrameGraphTexture> refractionPass(FrameGraph& fg,
-            ColorPassConfig config, ToneMappingConfig const& toneMappingConfig,
+            ColorPassConfig config, ColorGradingConfig const& colorGradingConfig,
             RenderPass const& pass, FView const& view) const noexcept;
 
     void recordHighWatermark(size_t watermark) noexcept {

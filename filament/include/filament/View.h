@@ -234,6 +234,8 @@ public:
 
     /**
      * List of available tone-mapping operators
+     *
+     * @deprecated See ColorGrading
      */
     enum class ToneMapping : uint8_t {
         LINEAR = 0,     //!< Linear tone mapping (i.e. no tone mapping)
@@ -473,12 +475,16 @@ public:
      * Enables or disables tone-mapping in the post-processing stage. Enabled by default.
      *
      * @param type Tone-mapping function.
+     *
+     * @deprecated Use setColorGrading instead
      */
     void setToneMapping(ToneMapping type) noexcept;
 
     /**
      * Returns the tone-mapping function.
      * @return tone-mapping function.
+     *
+     * @deprecated use getColorGrading instead
      */
     ToneMapping getToneMapping() const noexcept;
 
