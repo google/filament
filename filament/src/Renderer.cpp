@@ -196,6 +196,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     filament::Viewport const& vp = view.getViewport();
     const bool hasPostProcess = view.hasPostProcessPass();
+    bool colorGrading = hasPostProcess;
     bool dithering = view.getDithering() == View::Dithering::TEMPORAL;
     bool fxaa = view.getAntiAliasing() == View::AntiAliasing::FXAA;
     uint8_t msaa = view.getSampleCount();
@@ -209,6 +210,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         msaa = 1;
         dofOptions.enabled = false;
         bloomOptions.enabled = false;
+        colorGrading = false;
         dithering = false;
         fxaa = false;
         scale = 1.0f;
@@ -314,7 +316,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             .translucent = translucent,
             .fxaa = fxaa,
             .dithering = dithering,
-            .ldrFormat = fxaa ? TextureFormat::RGBA8 : getLdrFormat(translucent)
+            .ldrFormat = (colorGrading && fxaa) ? TextureFormat::RGBA8 : getLdrFormat(translucent)
     };
 
     /*
@@ -395,16 +397,18 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         if (dofOptions.enabled) {
             input = ppm.dof(fg, input, dofOptions, cameraInfo);
         }
-        if (!colorGradingConfig.asSubpass) {
-            input = ppm.colorGrading(fg, input,
-                                     colorGradingConfig.ldrFormat,
-                                     colorGradingConfig.translucent,
-                                     colorGradingConfig.fxaa,
-                                     scale, bloomOptions,
-                                     colorGradingConfig.dithering);
+        if (colorGrading) {
+            if (!colorGradingConfig.asSubpass) {
+                input = ppm.colorGrading(fg, input,
+                                         colorGradingConfig.ldrFormat,
+                                         colorGradingConfig.translucent,
+                                         colorGradingConfig.fxaa,
+                                         scale, bloomOptions,
+                                         colorGradingConfig.dithering);
+            }
         }
         if (fxaa) {
-            input = ppm.fxaa(fg, input, colorGradingConfig.ldrFormat, translucent);
+            input = ppm.fxaa(fg, input, colorGradingConfig.ldrFormat, colorGrading || translucent);
         }
         if (scaled) {
             if (UTILS_LIKELY(!blending && upscalingQuality == View::QualityLevel::LOW)) {
