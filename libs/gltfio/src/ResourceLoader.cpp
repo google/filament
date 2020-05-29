@@ -985,10 +985,10 @@ void ResourceLoader::updateBoundingBoxes(FFilamentAsset* asset) const {
         tm.setParent(tm.getInstance(e), 0);
     }
 
-    auto computeBoundingBox = [&](const cgltf_primitive& prim) {
+    auto computeBoundingBox = [](const cgltf_primitive* prim, Aabb* result) {
         Aabb aabb;
-        for (cgltf_size slot = 0; slot < prim.attributes_count; slot++) {
-            const cgltf_attribute& attr = prim.attributes[slot];
+        for (cgltf_size slot = 0; slot < prim->attributes_count; slot++) {
+            const cgltf_attribute& attr = prim->attributes[slot];
             const cgltf_accessor* accessor = attr.data;
             const size_t dim = cgltf_num_components(accessor->type);
             if (attr.type == cgltf_attribute_type_position && dim >= 3) {
@@ -1002,9 +1002,35 @@ void ResourceLoader::updateBoundingBoxes(FFilamentAsset* asset) const {
                 break;
             }
         }
-        return aabb;
+        *result = aabb;
     };
 
+    // Collect all mesh primitives that we wish to find bounds for.
+    std::vector<cgltf_primitive const*> prims;
+    for (auto iter : asset->mNodeMap) {
+        const cgltf_mesh* mesh = iter.first->mesh;
+        if (mesh) {
+            for (cgltf_size index = 0, nprims = mesh->primitives_count; index < nprims; ++index) {
+                prims.push_back(&mesh->primitives[index]);
+            }
+        }
+    }
+
+    // Kick off a bounding box job for every primitive.
+    std::vector<Aabb> bounds(prims.size());
+    JobSystem* js = &pImpl->mEngine->getJobSystem();
+    JobSystem::Job* parent = js->createJob();
+    for (size_t i = 0; i < prims.size(); ++i) {
+        cgltf_primitive const* prim = prims[i];
+        Aabb* result = &bounds[i];
+        js->run(jobs::createJob(*js, parent, [prim, result, computeBoundingBox] {
+            computeBoundingBox(prim, result);
+        }));
+    }
+    js->runAndWait(parent);
+
+    // Compute the asset-level bounding box.
+    size_t primIndex = 0;
     Aabb assetBounds;
     for (auto iter : asset->mNodeMap) {
         const cgltf_mesh* mesh = iter.first->mesh;
@@ -1012,7 +1038,7 @@ void ResourceLoader::updateBoundingBoxes(FFilamentAsset* asset) const {
             // Find the object-space bounds for the renderable by unioning the bounds of each prim.
             Aabb aabb;
             for (cgltf_size index = 0, nprims = mesh->primitives_count; index < nprims; ++index) {
-                Aabb primBounds = computeBoundingBox(mesh->primitives[index]);
+                Aabb primBounds = bounds[primIndex++];
                 aabb.min = min(aabb.min, primBounds.min);
                 aabb.max = max(aabb.max, primBounds.max);
             }
