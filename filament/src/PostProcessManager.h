@@ -64,6 +64,7 @@ public:
     FrameGraphId<FrameGraphTexture> dof(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input,
             const View::DepthOfFieldOptions& dofOptions,
+            bool translucent,
             const CameraInfo& cameraInfo) noexcept;
 
     // Tone mapping
@@ -82,7 +83,8 @@ public:
 
     // Blit/rescaling/resolves
     FrameGraphId<FrameGraphTexture> opaqueBlit(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, FrameGraphTexture::Descriptor outDesc) noexcept;
+            FrameGraphId<FrameGraphTexture> input, FrameGraphTexture::Descriptor outDesc,
+            backend::SamplerMagFilter filter = backend::SamplerMagFilter::LINEAR) noexcept;
 
     FrameGraphId<FrameGraphTexture> blendBlit(
             FrameGraph& fg, bool translucent, View::QualityLevel quality,
@@ -157,8 +159,12 @@ private:
     PostProcessMaterial mSSAO;
     PostProcessMaterial mBilateralBlur;
     PostProcessMaterial mSeparableGaussianBlur;
-    PostProcessMaterial mDoFBlur;
+    PostProcessMaterial mDoFDownsample;
+    PostProcessMaterial mDoFMipmap;
     PostProcessMaterial mDoF;
+    PostProcessMaterial mDoFTiles;
+    PostProcessMaterial mDoFDilate;
+    PostProcessMaterial mDoFCombine;
     PostProcessMaterial mBloomDownsample;
     PostProcessMaterial mBloomUpsample;
     PostProcessMaterial mColorGradingAsSubpass;

@@ -26,6 +26,8 @@ A new header is inserted each time a *tag* is created.
 - Fixed bug in the Metal backend when SSR and MSAA were turned on.
 - Fixed Metal issue with `BufferDescriptor` and `PixelBufferDescriptor`s not being called on
   the application thread.
+- New Depth-of-Field (Dof) algorithm, which is more plausible and about an order of magnitude faster
+  (about 4ms on Pixel4)
 
 ## v1.7.0
 

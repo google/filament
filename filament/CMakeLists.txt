@@ -150,7 +150,11 @@ set(MATERIAL_SRCS
         src/materials/colorGradingAsSubpass.mat
         src/materials/defaultMaterial.mat
         src/materials/dof.mat
-        src/materials/dofBlur.mat
+        src/materials/dofDownsample.mat
+        src/materials/dofCombine.mat
+        src/materials/dofTiles.mat
+        src/materials/dofDilate.mat
+        src/materials/dofMipmap.mat
         src/materials/blitLow.mat
         src/materials/blitMedium.mat
         src/materials/blitHigh.mat
@@ -238,13 +242,31 @@ add_custom_command(
 )
 
 add_custom_command(
+        OUTPUT "${MATERIAL_DIR}/dofDownsample.filamat"
+        DEPENDS src/materials/dofUtils.fs
+        APPEND
+)
+
+add_custom_command(
+        OUTPUT "${MATERIAL_DIR}/dofMipmap.filamat"
+        DEPENDS src/materials/dofUtils.fs
+        APPEND
+)
+
+add_custom_command(
+        OUTPUT "${MATERIAL_DIR}/dofDilate.filamat"
+        DEPENDS src/materials/dofUtils.fs
+        APPEND
+)
+
+add_custom_command(
         OUTPUT "${MATERIAL_DIR}/dof.filamat"
         DEPENDS src/materials/dofUtils.fs
         APPEND
 )
 
 add_custom_command(
-        OUTPUT "${MATERIAL_DIR}/dofBlur.filamat"
+        OUTPUT "${MATERIAL_DIR}/dofCombine.filamat"
         DEPENDS src/materials/dofUtils.fs
         APPEND
 )

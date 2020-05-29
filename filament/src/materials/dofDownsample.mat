@@ -1,0 +1,107 @@
+material {
+    name : DepthOfFieldDownsample,
+    parameters : [
+        {
+            type : sampler2d,
+            name : color,
+            precision: medium
+        },
+        {
+            type : sampler2d,
+            name : depth,
+            precision: medium
+        },
+        {
+            type : float2,
+            name : cocParams
+        }
+    ],
+    variables : [
+        vertex
+    ],
+    domain : postprocess,
+    depthWrite : false,
+    depthCulling : false
+}
+
+vertex {
+    void postProcessVertex(inout PostProcessVertexInputs postProcess) {
+        postProcess.vertex.xy = postProcess.normalizedUV;
+    }
+}
+
+fragment {
+
+layout(location = 1) out vec4 outBackground;
+layout(location = 2) out vec2 outCocFgBg;
+
+#include "dofUtils.fs"
+
+void dummy(){}
+
+void postProcess(inout PostProcessInputs postProcess) {
+    highp vec2 uv = variable_vertex.xy;
+    highp vec2 size = vec2(textureSize(materialParams_color, 0));
+
+    ivec2 i = ivec2(uv * size - 0.5);
+    vec4 s01 = texelFetch(materialParams_color, i + ivec2(0, 1), 0);
+    vec4 s11 = texelFetch(materialParams_color, i + ivec2(1, 1), 0);
+    vec4 s10 = texelFetch(materialParams_color, i + ivec2(1, 0), 0);
+    vec4 s00 = texelFetch(materialParams_color, i,               0);
+
+    vec4 d;
+#if defined(TARGET_VULKAN_ENVIRONMENT) || !defined(TARGET_MOBILE)
+    d = textureGather(materialParams_depth, uv, 0); // 01, 11, 10, 00
+#else
+    d.x = texelFetch(materialParams_depth, i + ivec2(0, 1), 0).r;
+    d.y = texelFetch(materialParams_depth, i + ivec2(1, 1), 0).r;
+    d.z = texelFetch(materialParams_depth, i + ivec2(1, 0), 0).r;
+    d.w = texelFetch(materialParams_depth, i,               0).r;
+#endif
+
+    // Get the CoC radius of each four samples to downsample.
+    // We multiply by 0.5 to convert from diameter to radius.
+    vec4 w = getCOC(d, materialParams.cocParams) * 0.5;
+
+    // We calculates the downsampled CoC to be conservative, that is if any
+    // of the 4 texels are foreground or background, then the whole new texel is too.
+    float fgCoc = min2(min(w.xy, w.zw));
+
+    // The forground bilateral weight is calculated as saturate(1.0 - (fgCoc - w)), which always
+    // yields 1.0. Note the "missing" abs(), this is because we want to let the background layer
+    // leak into the foreground layer, to avoid aliasing artifacts.
+    vec4 foreground = (s01 + s11 + s10 + s00) * 0.25;
+
+    // the background bilateral weight is calculated as saturate(1.0 - abs(bgCoc - w)), but the
+    // abs() is not needed since bgCoc - w is guaranteed to be >= 0.
+    float bgCoc = max2(max(w.xy, w.zw));
+    vec4 bw = saturate(1.0 - (bgCoc - w));
+    float bgScale = 1.0 / (bw.x + bw.y + bw.z + bw.w);
+    vec4 background = (s01 * bw.x + s11 * bw.y + s10 * bw.z + s00 * bw.w) * bgScale;
+
+    // If CoC is less that 0.5 full resolution pixel, we clamp to 0, this will reduce
+    // artifacts in the "in focus" area and allow us to skip more tiles trivially.
+    if (abs(fgCoc) < MAX_IN_FOCUS_COC) {
+        fgCoc = 0.0;
+    }
+    if (abs(bgCoc) < MAX_IN_FOCUS_COC){
+        bgCoc = 0.0;
+    }
+
+    // Clamp to maximum allowable CoC radius.
+    fgCoc = clamp(fgCoc, -MAX_COC_RADIUS, MAX_COC_RADIUS);
+    bgCoc = clamp(bgCoc, -MAX_COC_RADIUS, MAX_COC_RADIUS);
+
+#if POST_PROCESS_OPAQUE
+    // kill the work performed above
+    foreground.a = 1.0;
+    background.a = 1.0;
+#endif
+
+    // Output to MRTs
+    postProcess.color   = foreground;
+    outBackground       = background;
+    outCocFgBg          = vec2(fgCoc, bgCoc);
+}
+
+}
