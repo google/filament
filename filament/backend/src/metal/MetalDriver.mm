@@ -926,12 +926,12 @@ void MetalDriver::blit(TargetBufferFlags buffers,
     // coordinates have (0, 0) at bottom-left.
     MTLRegion srcRegion = MTLRegionMake2D(
             (NSUInteger) srcRect.left,
-            srcTexture.height - (NSUInteger) srcRect.bottom - srcRect.height,
+            srcTarget->height - (NSUInteger) srcRect.bottom - srcRect.height,
             srcRect.width, srcRect.height);
 
     MTLRegion dstRegion = MTLRegionMake2D(
             (NSUInteger) dstRect.left,
-            dstTexture.height - (NSUInteger) dstRect.bottom - dstRect.height,
+            dstTarget->height - (NSUInteger) dstRect.bottom - dstRect.height,
             dstRect.width, dstRect.height);
 
     const uint8_t srcLevel = srcColorAttachment.level;
