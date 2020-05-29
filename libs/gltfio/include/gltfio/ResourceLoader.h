@@ -135,7 +135,6 @@ public:
 private:
     bool loadResources(details::FFilamentAsset* asset, bool async);
     void applySparseData(details::FFilamentAsset* asset) const;
-    void computeTangents(details::FFilamentAsset* asset) const;
     void normalizeSkinningWeights(details::FFilamentAsset* asset) const;
     void updateBoundingBoxes(details::FFilamentAsset* asset) const;
     details::AssetPool* mPool;
