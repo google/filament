@@ -311,6 +311,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     const ColorGradingConfig colorGradingConfig{
             .asSubpass =
+                    colorGrading &&
                     msaa <= 1 && !bloomOptions.enabled && !dofOptions.enabled &&
                     driver.isFrameBufferFetchSupported(),
             .translucent = translucent,
