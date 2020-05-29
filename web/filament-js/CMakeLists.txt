@@ -7,9 +7,6 @@ set(EXTERN_POSTJS_SRC
   ${CMAKE_CURRENT_SOURCE_DIR}/extensions.js
   ${CMAKE_CURRENT_SOURCE_DIR}/utilities.js)
 
-set(POSTJS_SRC
-  ${CMAKE_CURRENT_SOURCE_DIR}/createContext.js)
-
 set(CPP_SRC
   jsenums.cpp
   jsbindings.cpp)
@@ -30,7 +27,6 @@ set(LOPTS "${LOPTS} -s EXPORT_NAME=Filament")
 set(LOPTS "${LOPTS} -s FULL_ES3")
 set(LOPTS "${LOPTS} -s MIN_WEBGL_VERSION=2")
 set(LOPTS "${LOPTS} -s MAX_WEBGL_VERSION=2")
-set(LOPTS "${LOPTS} --post-js ${POSTJS_SRC}")
 
 foreach (JS_FILENAME ${EXTERN_POSTJS_SRC})
   set(LOPTS "${LOPTS} --extern-post-js ${JS_FILENAME}")
