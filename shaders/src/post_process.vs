@@ -8,7 +8,7 @@ void main() {
 
 // In Vulkan and Metal, texture coords are Y-down. In OpenGL, texture coords are Y-up.
 #if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
-    inputs.texelCoords.y = frameUniforms.resolution.y - 1.0 - inputs.texelCoords.y;
+    inputs.texelCoords.y = frameUniforms.resolution.y - inputs.texelCoords.y;
     inputs.normalizedUV.y = 1.0 - inputs.normalizedUV.y;
 #endif
 
