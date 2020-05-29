@@ -152,12 +152,12 @@ void PostProcessManager::init() noexcept {
     mBlit[0]                = { engine, MATERIAL(BLITLOW) };
     mBlit[1]                = { engine, MATERIAL(BLITMEDIUM) };
     mBlit[2]                = { engine, MATERIAL(BLITHIGH) };
-    mTonemapping            = { engine, MATERIAL(TONEMAPPING) };
+    mColorGrading           = { engine, MATERIAL(COLORGRADING) };
     mFxaa                   = { engine, MATERIAL(FXAA) };
     mDoFBlur                = { engine, MATERIAL(DOFBLUR) };
     mDoF                    = { engine, MATERIAL(DOF) };
     if (driver.isFrameBufferFetchSupported()) {
-        mTonemappingWithSubpass = { engine, MATERIAL(TONEMAPPINGWITHSUBPASS) };
+        mColorGradingAsSubpass = { engine, MATERIAL(COLORGRADINGASSUBPASS) };
     }
 
     // UBO storage size.
@@ -197,12 +197,13 @@ void PostProcessManager::terminate(DriverApi& driver) noexcept {
     mBlit[0].terminate(engine);
     mBlit[1].terminate(engine);
     mBlit[2].terminate(engine);
-    mTonemapping.terminate(engine);
-    mTonemappingWithSubpass.terminate(engine);
+    mColorGrading.terminate(engine);
+    mColorGradingAsSubpass.terminate(engine);
     mFxaa.terminate(engine);
     mDoFBlur.terminate(engine);
     mDoF.terminate(engine);
     mTonemapper->terminate(engine);
+    delete mTonemapper;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -971,13 +972,13 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
     return bloomUpsamplePass.getData().out;
 }
 
-void PostProcessManager::toneMappingSubpass(DriverApi& driver,
+void PostProcessManager::colorGradingSubpass(DriverApi& driver,
         bool translucent, bool fxaa, bool dithering) noexcept {
 
     FEngine& engine = mEngine;
     Handle<HwRenderPrimitive> const& fullScreenRenderPrimitive = engine.getFullScreenRenderPrimitive();
 
-    FMaterialInstance* mi = mTonemappingWithSubpass.getMaterialInstance();
+    FMaterialInstance* mi = mColorGradingAsSubpass.getMaterialInstance();
     mi->setParameter("lut", mTonemapper->getHwHandle(), {
             .filterMag = SamplerMagFilter::LINEAR,
             .filterMin = SamplerMinFilter::LINEAR
@@ -989,10 +990,10 @@ void PostProcessManager::toneMappingSubpass(DriverApi& driver,
     const uint8_t variant = uint8_t(translucent ?
                                     PostProcessVariant::TRANSLUCENT : PostProcessVariant::OPAQUE);
 
-    driver.draw(mTonemappingWithSubpass.getPipelineState(variant), fullScreenRenderPrimitive);
+    driver.draw(mColorGradingAsSubpass.getPipelineState(variant), fullScreenRenderPrimitive);
 }
 
-FrameGraphId<FrameGraphTexture> PostProcessManager::toneMapping(FrameGraph& fg,
+FrameGraphId<FrameGraphTexture> PostProcessManager::colorGrading(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> input,
         TextureFormat outFormat, bool translucent, bool fxaa, float2 scale,
         View::BloomOptions bloomOptions, bool dithering) noexcept {
@@ -1057,7 +1058,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::toneMapping(FrameGraph& fg,
                 Handle<HwTexture> dirtTexture =
                         data.dirt.isValid() ? resources.getTexture(data.dirt) : getOneTexture();
 
-                FMaterialInstance* mi = mTonemapping.getMaterialInstance();
+                FMaterialInstance* mi = mColorGrading.getMaterialInstance();
                 mi->setParameter("lut", mTonemapper->getHwHandle(), {
                         .filterMag = SamplerMagFilter::LINEAR,
                         .filterMin = SamplerMinFilter::LINEAR
@@ -1093,7 +1094,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::toneMapping(FrameGraph& fg,
 
                 auto const& target = resources.get(data.rt);
                 driver.beginRenderPass(target.target, target.params);
-                driver.draw(mTonemapping.getPipelineState(variant), fullScreenRenderPrimitive);
+                driver.draw(mColorGrading.getPipelineState(variant), fullScreenRenderPrimitive);
                 driver.endRenderPass();
             });
 

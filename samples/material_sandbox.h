@@ -82,7 +82,7 @@ struct SandboxParameters {
     filament::sRGBColor specularColor = { 0.0f };
     filament::sRGBColor subsurfaceColor = { 0.0f };
     filament::sRGBColor sheenColor = { 0.83f, 0.0f, 0.0f };
-    filament::sRGBColor emissiveColor = { 0.0f, 0.0f, 0.0f };
+    filament::sRGBColor emissiveColor = { 0.0f };
     int currentMaterialModel = MATERIAL_MODEL_LIT;
     int currentBlending = BLENDING_OPAQUE;
     bool ssr = false;
@@ -108,7 +108,6 @@ struct SandboxParameters {
     float spotLightConeFade = 0.9f;
     bool hasDirectionalLight = true;
     bool fxaa = true;
-    bool tonemapping = true;
     bool msaa = false;
     bool dithering = true;
     bool stableShadowMap = false;

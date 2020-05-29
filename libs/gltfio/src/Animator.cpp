@@ -17,6 +17,7 @@
 #include <gltfio/Animator.h>
 
 #include "FFilamentAsset.h"
+#include "FFilamentInstance.h"
 #include "math.h"
 #include "upcast.h"
 
@@ -46,6 +47,7 @@ using namespace details;
 
 using TimeValues = std::map<float, size_t>;
 using SourceValues = std::vector<float>;
+using BoneVector = std::vector<filament::math::mat4f>;
 
 struct Sampler {
     TimeValues times;
@@ -68,8 +70,9 @@ struct Animation {
 
 struct AnimatorImpl {
     vector<Animation> animations;
-    vector<mat4f> boneMatrices;
-    FFilamentAsset* asset;
+    BoneVector boneMatrices;
+    FFilamentAsset* asset = nullptr;
+    FFilamentInstance* instance = nullptr;
     RenderableManager* renderableManager;
     TransformManager* transformManager;
 };
@@ -137,11 +140,27 @@ static void setTransformType(const cgltf_animation_channel& src, Channel& dst) {
     }
 }
 
-Animator::Animator(FilamentAsset* publicAsset) {
+Animator::Animator(FFilamentAsset* asset, FFilamentInstance* instance) {
     mImpl = new AnimatorImpl();
-    FFilamentAsset* asset = mImpl->asset = upcast(publicAsset);
+    mImpl->asset = asset;
+    mImpl->instance = instance;
     mImpl->renderableManager = &asset->mEngine->getRenderableManager();
     mImpl->transformManager = &asset->mEngine->getTransformManager();
+
+    auto addChannels = [](const NodeMap& nodeMap, const cgltf_animation& srcAnim, Animation& dst) {
+        cgltf_animation_channel* srcChannels = srcAnim.channels;
+        cgltf_animation_sampler* srcSamplers = srcAnim.samplers;
+        const Sampler* samplers = dst.samplers.data();
+        for (cgltf_size j = 0, nchans = srcAnim.channels_count; j < nchans; ++j) {
+            const cgltf_animation_channel& srcChannel = srcChannels[j];
+            utils::Entity targetEntity = nodeMap.at(srcChannel.target_node);
+            Channel dstChannel;
+            dstChannel.sourceData = samplers + (srcChannel.sampler - srcSamplers);
+            dstChannel.targetEntity = targetEntity;
+            setTransformType(srcChannel, dstChannel);
+            dst.channels.push_back(dstChannel);
+        }
+    };
 
     // Loop over the glTF animation definitions.
     const cgltf_data* srcAsset = asset->mSourceAsset;
@@ -169,15 +188,14 @@ Animator::Animator(FilamentAsset* publicAsset) {
         }
 
         // Import each glTF channel into a custom data structure.
-        cgltf_animation_channel* srcChannels = srcAnim.channels;
-        dstAnim.channels.resize(srcAnim.channels_count);
-        for (cgltf_size j = 0, nchans = srcAnim.channels_count; j < nchans; ++j) {
-            const cgltf_animation_channel& srcChannel = srcChannels[j];
-            utils::Entity targetEntity = asset->mNodeMap[srcChannel.target_node];
-            Channel& dstChannel = dstAnim.channels[j];
-            dstChannel.sourceData = &dstAnim.samplers[srcChannel.sampler - srcSamplers];
-            dstChannel.targetEntity = targetEntity;
-            setTransformType(srcChannel, dstChannel);
+        if (instance) {
+            addChannels(instance->nodeMap, srcAnim, dstAnim);
+        } else if (asset->mInstances.empty()) {
+            addChannels(asset->mNodeMap, srcAnim, dstAnim);
+        } else {
+            for (FFilamentInstance* instance : asset->mInstances) {
+                addChannels(instance->nodeMap, srcAnim, dstAnim);
+            }
         }
     }
 }
@@ -321,33 +339,44 @@ void Animator::applyAnimation(size_t animationIndex, float time) const {
 }
 
 void Animator::updateBoneMatrices() {
-    vector<mat4f>& boneMatrices = mImpl->boneMatrices;
-    FFilamentAsset* asset = mImpl->asset;
     auto renderableManager = mImpl->renderableManager;
     auto transformManager = mImpl->transformManager;
-    for (const auto& skin : asset->mSkins) {
-        size_t njoints = skin.joints.size();
-        boneMatrices.resize(njoints);
-        for (const auto& entity : skin.targets) {
-            auto renderable = renderableManager->getInstance(entity);
-            if (!renderable) {
-                continue;
+
+    auto update = [=](const SkinVector& skins, BoneVector& boneVector) {
+        for (const auto& skin : skins) {
+            size_t njoints = skin.joints.size();
+            boneVector.resize(njoints);
+            for (const auto& entity : skin.targets) {
+                auto renderable = renderableManager->getInstance(entity);
+                if (!renderable) {
+                    continue;
+                }
+                mat4f inverseGlobalTransform;
+                auto xformable = transformManager->getInstance(entity);
+                if (xformable) {
+                    inverseGlobalTransform = inverse(transformManager->getWorldTransform(xformable));
+                }
+                for (size_t boneIndex = 0; boneIndex < njoints; ++boneIndex) {
+                    const auto& joint = skin.joints[boneIndex];
+                    TransformManager::Instance jointInstance = transformManager->getInstance(joint);
+                    mat4f globalJointTransform = transformManager->getWorldTransform(jointInstance);
+                    boneVector[boneIndex] =
+                            inverseGlobalTransform *
+                            globalJointTransform *
+                            skin.inverseBindMatrices[boneIndex];
+                }
+                renderableManager->setBones(renderable, boneVector.data(), boneVector.size());
             }
-            mat4f inverseGlobalTransform;
-            auto xformable = transformManager->getInstance(entity);
-            if (xformable) {
-                inverseGlobalTransform = inverse(transformManager->getWorldTransform(xformable));
-            }
-            for (size_t boneIndex = 0; boneIndex < njoints; ++boneIndex) {
-                const auto& joint = skin.joints[boneIndex];
-                TransformManager::Instance jointInstance = transformManager->getInstance(joint);
-                mat4f globalJointTransform = transformManager->getWorldTransform(jointInstance);
-                boneMatrices[boneIndex] =
-                        inverseGlobalTransform *
-                        globalJointTransform *
-                        skin.inverseBindMatrices[boneIndex];
-            }
-            renderableManager->setBones(renderable, boneMatrices.data(), boneMatrices.size());
+        }
+    };
+
+    if (mImpl->instance) {
+        update(mImpl->instance->skins, mImpl->boneMatrices);
+    } else if (mImpl->asset->mInstances.empty()) {
+        update(mImpl->asset->mSkins, mImpl->boneMatrices);
+    } else {
+        for (FFilamentInstance* instance : mImpl->asset->mInstances) {
+            update(instance->skins, mImpl->boneMatrices);
         }
     }
 }

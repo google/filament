@@ -23,6 +23,10 @@
 
 #include <functional>
 
+#ifdef ANDROID
+#include <sys/system_properties.h>
+#endif
+
 using namespace utils;
 
 namespace filament {
@@ -60,6 +64,11 @@ CommandStream::CommandStream(Driver& driver, CircularBuffer& buffer) noexcept
           , mThreadId(std::this_thread::get_id())
 #endif
 {
+#ifdef ANDROID
+    char property[PROP_VALUE_MAX];
+    __system_property_get("filament.perfcounters", property);
+    mUsePerformanceCounter = bool(atoi(property));
+#endif
 }
 
 void CommandStream::execute(void* buffer) {
@@ -68,9 +77,11 @@ void CommandStream::execute(void* buffer) {
     Profiler profiler;
 
     if (SYSTRACE_TAG) {
-        // we want to remove all this when tracing is completely disabled
-        profiler.resetEvents(Profiler::EV_CPU_CYCLES | Profiler::EV_L1D_RATES  | Profiler::EV_BPU_RATES);
-        profiler.start();
+        if (UTILS_UNLIKELY(mUsePerformanceCounter)) {
+            // we want to remove all this when tracing is completely disabled
+            profiler.resetEvents(Profiler::EV_CPU_CYCLES  | Profiler::EV_BPU_MISSES);
+            profiler.start();
+        }
     }
 
     mDriver->execute([this, buffer]() {
@@ -82,16 +93,16 @@ void CommandStream::execute(void* buffer) {
     });
 
     if (SYSTRACE_TAG) {
-        // we want to remove all this when tracing is completely disabled
-        UTILS_UNUSED Profiler::Counters counters = profiler.readCounters();
-        SYSTRACE_VALUE32("GLThread (I)", counters.getInstructions());
-        SYSTRACE_VALUE32("GLThread (C)", counters.getCpuCycles());
-        SYSTRACE_VALUE32("GLThread (CPI x10)", counters.getCPI() * 10);
-        SYSTRACE_VALUE32("GLThread (L1D HR%)", counters.getL1DHitRate() * 100);
-        if (profiler.hasBranchRates()) {
-            SYSTRACE_VALUE32("GLThread (BHR%)", counters.getBranchHitRate() * 100);
-        } else {
+        if (UTILS_UNLIKELY(mUsePerformanceCounter)) {
+            // we want to remove all this when tracing is completely disabled
+            profiler.stop();
+            UTILS_UNUSED Profiler::Counters counters = profiler.readCounters();
+            SYSTRACE_VALUE32("GLThread (I)", counters.getInstructions());
+            SYSTRACE_VALUE32("GLThread (C)", counters.getCpuCycles());
+            SYSTRACE_VALUE32("GLThread (CPI x10)", counters.getCPI() * 10);
             SYSTRACE_VALUE32("GLThread (BPU miss)", counters.getBranchMisses());
+            SYSTRACE_VALUE32("GLThread (I / BPU miss)",
+                    counters.getInstructions() / counters.getBranchMisses());
         }
     }
 }

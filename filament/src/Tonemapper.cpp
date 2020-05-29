@@ -21,6 +21,7 @@
 #include <image/ColorTransform.h>
 
 #include <utils/JobSystem.h>
+#include <utils/Systrace.h>
 
 // When defined, the ACES tone mapper will match the brightness of the "ACES sRGB" tone mapper
 // It is *not* correct, but it helps for compatibility
@@ -37,6 +38,8 @@ using namespace backend;
 static constexpr size_t LUT_DIMENSION = 32u;
 
 Tonemapper::Tonemapper(FEngine& engine) {
+    SYSTRACE_CALL();
+
     DriverApi& driver = engine.getDriverApi();
 
     constexpr size_t lutElementCount = LUT_DIMENSION * LUT_DIMENSION * LUT_DIMENSION;
@@ -86,7 +89,8 @@ Tonemapper::Tonemapper(FEngine& engine) {
                     data, lutElementCount * elementSize,
                     PixelDataFormat::RGBA, PixelDataType::HALF,
                     [](void* buffer, size_t, void*) { free(buffer); }
-            });
+            }
+    );
 }
 
 Tonemapper::~Tonemapper() noexcept = default;

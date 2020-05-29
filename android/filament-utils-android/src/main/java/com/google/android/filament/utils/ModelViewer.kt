@@ -242,6 +242,7 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
         while (popRenderables()) {
             scene.addEntities(readyRenderables.take(count).toIntArray())
         }
+        scene.addEntities(asset.lightEntities)
     }
 
     private fun addDetachListener(view: android.view.View) {

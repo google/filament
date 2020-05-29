@@ -95,11 +95,20 @@ public class FilamentAsset {
      * Gets the list of entities, one for each glTF node.
      *
      * <p>All of these have a transform component. Some of the returned entities may also have a
-     * renderable component.</p>
+     * renderable or light component.</p>
      */
     public @NonNull @Entity int[] getEntities() {
         int[] result = new int[nGetEntityCount(mNativeObject)];
         nGetEntities(mNativeObject, result);
+        return result;
+    }
+
+    /**
+     * Gets only the entities that have light components.
+     */
+    public @NonNull @Entity int[] getLightEntities() {
+        int[] result = new int[nGetLightEntityCount(mNativeObject)];
+        nGetLightEntities(mNativeObject, result);
         return result;
     }
 
@@ -173,6 +182,9 @@ public class FilamentAsset {
 
     private static native int nGetEntityCount(long nativeAsset);
     private static native void nGetEntities(long nativeAsset, int[] result);
+
+    private static native int nGetLightEntityCount(long nativeAsset);
+    private static native void nGetLightEntities(long nativeAsset, int[] result);
 
     private static native int nGetMaterialInstanceCount(long nativeAsset);
     private static native void nGetMaterialInstances(long nativeAsset, long[] nativeResults);

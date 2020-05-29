@@ -5,12 +5,14 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release
 
+- gltfio now supports simple instancing of entire assets.
 - Add missing JavaScript API for `View::setVisibleLayers()`.
 - Add support for DOF with Metal backend.
 - SSAO now has an optional high(er) quality upsampler.
 - Tone mappping now uses the real ACES tone mapper, applied in the proper color space.
 - Tone mapping is now applied via a LUT, which will later enable color grading capabilities.
 - Fixed bug in the Metal backend when SSR and MSAA were turned on
+- Fixed Metal issue with `BufferDescriptor` and `PixelBufferDescriptor`s not being called on application thread.
 
 ## v1.7.0
 

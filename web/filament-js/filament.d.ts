@@ -95,6 +95,11 @@ export class EntityVector {
     public size(): number;
 }
 
+export class MaterialInstanceVector {
+    public get(index: number): MaterialInstance;
+    public size(): number;
+}
+
 export class Skybox {
     public setColor(color: float4): void;
 }
@@ -450,6 +455,8 @@ export class Engine {
 export class gltfio$AssetLoader {
     public createAssetFromJson(buffer: any): gltfio$FilamentAsset;
     public createAssetFromBinary(buffer: any): gltfio$FilamentAsset;
+    public createInstancedAsset(buffer: any,
+            instances: (gltfio$FilamentInstance | null)[]): gltfio$FilamentAsset;
     public delete(): void;
 }
 
@@ -457,9 +464,10 @@ export class gltfio$FilamentAsset {
     public loadResources(onDone: () => void|null, onFetched: (s: string) => void|null,
             basePath: string|null, asyncInterval: number|null): void;
     public getEntities(): EntityVector;
+    public getLightEntities(): EntityVector;
     public getRoot(): Entity;
     public popRenderable(): Entity;
-    public getMaterialInstances(): MaterialInstance[];
+    public getMaterialInstances(): MaterialInstanceVector;
     public getResourceUris(): string[];
     public getBoundingBox(): Aabb;
     public getName(entity: Entity): string;
@@ -467,6 +475,12 @@ export class gltfio$FilamentAsset {
     public getWireframe(): Entity;
     public getEngine(): Engine;
     public releaseSourceData(): void;
+}
+
+export class gltfio$FilamentInstance {
+    public getEntities(): EntityVector;
+    public getRoot(): Entity;
+    public getAnimator(): gltfio$Animator;
 }
 
 export class gltfio$Animator {

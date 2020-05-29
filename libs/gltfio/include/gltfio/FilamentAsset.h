@@ -32,6 +32,7 @@ namespace filament {
 namespace gltfio {
 
 class Animator;
+class FilamentInstance;
 
 /**
  * \class FilamentAsset FilamentAsset.h gltfio/FilamentAsset.h
@@ -40,8 +41,8 @@ class Animator;
  * For usage instructions, see the documentation for AssetLoader.
  *
  * This class owns a hierarchy of entities that have been loaded from a glTF asset. Every entity has
- * a filament::TransformManager component, and some entities also have \c Name and/or \c Renderable
- * components.
+ * a filament::TransformManager component, and some entities also have \c Name, \c Renderable, or
+ * \c Light components.
  *
  * In addition to the aforementioned entities, an asset has strong ownership over a list of
  * filament::VertexBuffer, filament::IndexBuffer, filament::MaterialInstance, filament::Texture,
@@ -77,7 +78,13 @@ public:
      */
     size_t getLightEntityCount() const noexcept;
 
-    /** Gets the transform root for the asset, which has no matching glTF node. */
+    /**
+     * Gets the transform root for the asset, which has no matching glTF node.
+     *
+     * This node exists for convenience, allowing users to transform the entire asset. For instanced
+     * assets, this is a "super root" where each of its children is a root in a particular instance.
+     * This allows users to transform all instances en masse if they wish to do so.
+     */
     utils::Entity getRoot() const noexcept;
 
     /**
@@ -132,7 +139,11 @@ public:
 
     /**
      * Lazily creates the animation engine or returns it from the cache.
+     *
      * The animator is owned by the asset and should not be manually deleted.
+     * The first time this is called, it must be called before FilamentAsset::releaseSourceData().
+     * If the asset is instanced, this returns a "master" animator that controls all instances.
+     * To animate each instance individually, use \see FilamentInstance.
      */
     Animator* getAnimator() noexcept;
 
@@ -162,6 +173,10 @@ public:
     const void* getSourceAsset() noexcept;
 
     /*! \cond PRIVATE */
+
+    FilamentInstance** getAssetInstances() noexcept;
+    size_t getAssetInstanceCount() const noexcept;
+
 protected:
     FilamentAsset() noexcept = default;
     ~FilamentAsset() = default;

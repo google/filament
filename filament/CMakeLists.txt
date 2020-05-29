@@ -145,6 +145,8 @@ set(PRIVATE_HDRS
         src/upcast.h)
 
 set(MATERIAL_SRCS
+        src/materials/colorGrading.mat
+        src/materials/colorGradingAsSubpass.mat
         src/materials/defaultMaterial.mat
         src/materials/dof.mat
         src/materials/dofBlur.mat
@@ -158,8 +160,6 @@ set(MATERIAL_SRCS
         src/materials/skybox.mat
         src/materials/sao.mat
         src/materials/separableGaussianBlur.mat
-        src/materials/tonemapping.mat
-        src/materials/tonemappingWithSubpass.mat
         src/materials/fxaa.mat
 )
 
@@ -215,33 +215,37 @@ foreach (mat_src ${MATERIAL_SRCS})
     list(APPEND MATERIAL_BINS ${output_path})
 endforeach()
 
-# tonemapping.mat and fxaa.mat have additional dependencies on included files
+# Additional dependencies on included files for materials
 
 add_custom_command(
-    OUTPUT "${MATERIAL_DIR}/tonemapping.filamat"
-    DEPENDS ../shaders/src/tone_mapping.fs
-    DEPENDS ../shaders/src/conversion_functions.fs
-    DEPENDS ../shaders/src/dithering.fs
-    DEPENDS ../shaders/src/bloom.fs
-    APPEND
+        OUTPUT "${MATERIAL_DIR}/colorGrading.filamat"
+        DEPENDS ../shaders/src/dithering.fs
+        DEPENDS ../shaders/src/bloom.fs
+        APPEND
 )
 
 add_custom_command(
-    OUTPUT "${MATERIAL_DIR}/fxaa.filamat"
-    DEPENDS ../shaders/src/fxaa.fs
-    APPEND
+        OUTPUT "${MATERIAL_DIR}/colorGradingAsSubpass.filamat"
+        DEPENDS ../shaders/src/dithering.fs
+        APPEND
 )
 
 add_custom_command(
-    OUTPUT "${MATERIAL_DIR}/dof.filamat"
-    DEPENDS src/materials/dofUtils.fs
-    APPEND
+        OUTPUT "${MATERIAL_DIR}/fxaa.filamat"
+        DEPENDS ../shaders/src/fxaa.fs
+        APPEND
 )
 
 add_custom_command(
-    OUTPUT "${MATERIAL_DIR}/dofBlur.filamat"
-    DEPENDS src/materials/dofUtils.fs
-    APPEND
+        OUTPUT "${MATERIAL_DIR}/dof.filamat"
+        DEPENDS src/materials/dofUtils.fs
+        APPEND
+)
+
+add_custom_command(
+        OUTPUT "${MATERIAL_DIR}/dofBlur.filamat"
+        DEPENDS src/materials/dofUtils.fs
+        APPEND
 )
 
 add_custom_command(

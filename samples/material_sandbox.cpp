@@ -560,7 +560,6 @@ static void gui(filament::Engine* engine, filament::View*) {
 
         if (ImGui::CollapsingHeader("Post-processing")) {
             ImGui::Checkbox("MSAA 4x", &params.msaa);
-            ImGui::Checkbox("Tone mapping", &params.tonemapping);
             ImGui::Indent();
                 ImGui::Checkbox("Bloom", &params.bloomOptions.enabled);
                 if (params.bloomOptions.enabled) {
@@ -674,7 +673,6 @@ static void gui(filament::Engine* engine, filament::View*) {
 
 static void preRender(filament::Engine*, filament::View* view, filament::Scene*, filament::Renderer* renderer) {
     view->setAntiAliasing(g_params.fxaa ? View::AntiAliasing::FXAA : View::AntiAliasing::NONE);
-    view->setToneMapping(g_params.tonemapping ? View::ToneMapping::ACES : View::ToneMapping::LINEAR);
     view->setDithering(g_params.dithering ? View::Dithering::TEMPORAL : View::Dithering::NONE);
     view->setBloomOptions(g_params.bloomOptions);
     view->setFogOptions(g_params.fogOptions);

@@ -31,6 +31,7 @@ set(GLTFIO_SRCS
         ${GLTFIO_DIR}/include/gltfio/ResourceLoader.h
         ${GLTFIO_DIR}/include/gltfio/SimpleViewer.h
         ${GLTFIO_DIR}/include/gltfio/FilamentAsset.h
+        ${GLTFIO_DIR}/include/gltfio/FilamentInstance.h
 
         ${GLTFIO_DIR}/src/Animator.cpp
         ${GLTFIO_DIR}/src/AssetLoader.cpp
@@ -40,6 +41,8 @@ set(GLTFIO_SRCS
         ${GLTFIO_DIR}/src/DependencyGraph.h
         ${GLTFIO_DIR}/src/FFilamentAsset.h
         ${GLTFIO_DIR}/src/FilamentAsset.cpp
+        ${GLTFIO_DIR}/src/FFilamentInstance.h
+        ${GLTFIO_DIR}/src/FilamentInstance.cpp
         ${GLTFIO_DIR}/src/GltfEnums.h
         ${GLTFIO_DIR}/src/MaterialProvider.cpp
         ${GLTFIO_DIR}/src/ResourceLoader.cpp
@@ -53,6 +56,7 @@ set(GLTFIO_SRCS
         src/main/cpp/Animator.cpp
         src/main/cpp/AssetLoader.cpp
         src/main/cpp/FilamentAsset.cpp
+        src/main/cpp/FilamentInstance.cpp
         src/main/cpp/MaterialProvider.cpp
         src/main/cpp/ResourceLoader.cpp
 

@@ -44,14 +44,17 @@ Filament.loadClassExtensions = function() {
         };
         options = Object.assign(defaults, options);
 
-        // Create the WebGL 2.0 context and register it with emscripten.
-        const ctx = Filament.createContext(canvas, options);
+        // Create the WebGL 2.0 context.
+        const ctx = canvas.getContext("webgl2", options);
+        Filament.glOptions = options;
+        Filament.glContext = ctx;
 
         // Enable all desired extensions by calling getExtension on each one.
         ctx.getExtension('WEBGL_compressed_texture_s3tc');
         ctx.getExtension('WEBGL_compressed_texture_astc');
         ctx.getExtension('WEBGL_compressed_texture_etc');
 
+        // Register the GL context with emscripten and create the Engine.
         return Filament.Engine._create();
     };
 
@@ -297,6 +300,17 @@ Filament.loadClassExtensions = function() {
         const result = this._createAssetFromBinary(buffer);
         buffer.delete();
         return result;
+    };
+
+    Filament.gltfio$AssetLoader.prototype.createInstancedAsset = function(buffer, instances) {
+        buffer = getBufferDescriptor(buffer);
+        const asset = this._createInstancedAsset(buffer, instances.length);
+        buffer.delete();
+        const instancesVector = asset._getAssetInstances();
+        for (let i = 0; i < instancesVector.size(); i++) {
+            instances[i] = instancesVector.get(i);
+        }
+        return asset;
     };
 
     // See the C++ documentation for ResourceLoader and AssetLoader. The JavaScript API differs in

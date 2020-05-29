@@ -584,6 +584,7 @@ void MetalDriver::updateVertexBuffer(Handle<HwVertexBuffer> vbh, size_t index,
     assert(byteOffset == 0);    // TODO: handle byteOffset for vertex buffers
     auto* vb = handle_cast<MetalVertexBuffer>(mHandleMap, vbh);
     vb->buffers[index]->copyIntoBuffer(data.buffer, data.size);
+    scheduleDestroy(std::move(data));
 }
 
 void MetalDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&& data,
@@ -591,6 +592,7 @@ void MetalDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&
     assert(byteOffset == 0);    // TODO: handle byteOffset for index buffers
     auto* ib = handle_cast<MetalIndexBuffer>(mHandleMap, ibh);
     ib->buffer.copyIntoBuffer(data.buffer, data.size);
+    scheduleDestroy(std::move(data));
 }
 
 void MetalDriver::update2DImage(Handle<HwTexture> th, uint32_t level, uint32_t xoffset,
@@ -598,7 +600,8 @@ void MetalDriver::update2DImage(Handle<HwTexture> th, uint32_t level, uint32_t x
     ASSERT_PRECONDITION(!isInRenderPass(mContext),
             "update2DImage must be called outside of a render pass.");
     auto tex = handle_cast<MetalTexture>(mHandleMap, th);
-    tex->load2DImage(level, xoffset, yoffset, width, height, std::move(data));
+    tex->load2DImage(level, xoffset, yoffset, width, height, data);
+    scheduleDestroy(std::move(data));
 }
 
 void MetalDriver::update3DImage(Handle<HwTexture> th, uint32_t level,
@@ -608,7 +611,8 @@ void MetalDriver::update3DImage(Handle<HwTexture> th, uint32_t level,
     ASSERT_PRECONDITION(!isInRenderPass(mContext),
             "update3DImage must be called outside of a render pass.");
     auto tex = handle_cast<MetalTexture>(mHandleMap, th);
-    tex->load3DImage(level, xoffset, yoffset, zoffset, width, height, depth, std::move(data));
+    tex->load3DImage(level, xoffset, yoffset, zoffset, width, height, depth, data);
+    scheduleDestroy(std::move(data));
 }
 
 void MetalDriver::updateCubeImage(Handle<HwTexture> th, uint32_t level,
@@ -616,7 +620,8 @@ void MetalDriver::updateCubeImage(Handle<HwTexture> th, uint32_t level,
     ASSERT_PRECONDITION(!isInRenderPass(mContext),
             "updateCubeImage must be called outside of a render pass.");
     auto tex = handle_cast<MetalTexture>(mHandleMap, th);
-    tex->loadCubeImage(faceOffsets, level, std::move(data));
+    tex->loadCubeImage(faceOffsets, level, data);
+    scheduleDestroy(std::move(data));
 }
 
 void MetalDriver::setupExternalImage(void* image) {
