@@ -372,7 +372,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                     js.waitAndRelease(sync);
                     view.commitFroxels(driver);
                 }
-            });
+            }
+    );
 
     FrameGraphTexture::Descriptor desc = {
             .width = config.svp.width,
@@ -382,7 +383,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     colorPass(fg, "Color Pass", desc, config, colorGradingConfig, pass, view);
 
     // TODO: look for refraction draw calls only if screen-space refraction is enabled
-    FrameGraphId<FrameGraphTexture> colorPassOutput = refractionPass(fg, config, colorGradingConfig, pass, view);
+    FrameGraphId<FrameGraphTexture> colorPassOutput =
+            refractionPass(fg, config, colorGradingConfig, pass, view);
     FrameGraphId<FrameGraphTexture> input = colorPassOutput;
 
     fg.addTrivialSideEffectPass("Finish Color Passes", [&view](DriverApi& driver) {
@@ -401,11 +403,11 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         if (colorGrading) {
             if (!colorGradingConfig.asSubpass) {
                 input = ppm.colorGrading(fg, input,
-                                         colorGradingConfig.ldrFormat,
-                                         colorGradingConfig.translucent,
-                                         colorGradingConfig.fxaa,
-                                         scale, bloomOptions,
-                                         colorGradingConfig.dithering);
+                        colorGradingConfig.ldrFormat,
+                        colorGradingConfig.translucent,
+                        colorGradingConfig.fxaa,
+                        scale, bloomOptions,
+                        colorGradingConfig.dithering);
             }
         }
         if (fxaa) {
@@ -707,7 +709,8 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 // this point, so flushing now allows us to start the GPU earlier and reduce
                 // latency, without creating bubbles.
                 driver.flush();
-            });
+            }
+    );
 
     // when color grading is done as a subpass, the output of the color-pass is the ldr buffer
     auto output = colorGradingConfig.asSubpass ?
@@ -797,11 +800,11 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
     // We always discard and clear the depth+stencil buffers -- we don't allow sharing these
     // across views (clear implies discard)
     mDiscardedFlags = ((mClearOptions.discard || mClearOptions.clear) ?
-                       TargetBufferFlags::COLOR : TargetBufferFlags::NONE)
-                      | TargetBufferFlags::DEPTH_AND_STENCIL;
+              TargetBufferFlags::COLOR : TargetBufferFlags::NONE)
+            | TargetBufferFlags::DEPTH_AND_STENCIL;
 
     mClearFlags = (mClearOptions.clear ? TargetBufferFlags::COLOR : TargetBufferFlags::NONE)
-                  | TargetBufferFlags::DEPTH_AND_STENCIL;
+            | TargetBufferFlags::DEPTH_AND_STENCIL;
 
     mBeginFrameInternal = {};
 
@@ -829,7 +832,8 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
         // a command buffer before creating a fence.
         mFrameInfoManager.beginFrame({
                 .targetFrameTime = FrameInfo::duration{
-                        float(mFrameRateOptions.interval) / mDisplayInfo.refreshRate },
+                        float(mFrameRateOptions.interval) / mDisplayInfo.refreshRate
+                },
                 .headRoomRatio = mFrameRateOptions.headRoomRatio,
                 .oneOverTau = mFrameRateOptions.scaleRate,
                 .historySize = mFrameRateOptions.history
