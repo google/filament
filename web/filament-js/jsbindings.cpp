@@ -346,8 +346,13 @@ value_object<RenderableManager::Bone>("RenderableManager$Bone")
 
 /// Engine ::core class:: Central manager and resource owner.
 class_<Engine>("Engine")
-    .class_function("_create", (Engine* (*)()) [] { return Engine::create(); },
-            allow_raw_pointers())
+    .class_function("_create", (Engine* (*)()) [] {
+        EM_ASM_INT({
+            const handle = GL.registerContext(Filament.glContext, Filament.glOptions);
+            GL.makeContextCurrent(handle);
+        });
+        return Engine::create();
+    }, allow_raw_pointers())
     /// destroy ::static method:: Destroys an engine instance and cleans up resources.
     /// engine ::argument:: the instance to destroy
     .class_function("destroy", (void (*)(Engine*)) []
