@@ -67,10 +67,10 @@ public:
             const CameraInfo& cameraInfo) noexcept;
 
     // Tone mapping
-    void toneMappingSubpass(backend::DriverApi& driver,
-            bool translucent, bool fxaa, bool dithering) noexcept;
+    void colorGradingSubpass(backend::DriverApi& driver,
+                             bool translucent, bool fxaa, bool dithering) noexcept;
 
-    FrameGraphId<FrameGraphTexture> toneMapping(FrameGraph& fg,
+    FrameGraphId<FrameGraphTexture> colorGrading(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input,
             backend::TextureFormat outFormat, bool translucent, bool fxaa, math::float2 scale,
             View::BloomOptions bloomOptions, bool dithering) noexcept;
@@ -161,8 +161,8 @@ private:
     PostProcessMaterial mDoF;
     PostProcessMaterial mBloomDownsample;
     PostProcessMaterial mBloomUpsample;
-    PostProcessMaterial mTonemappingWithSubpass;
-    PostProcessMaterial mTonemapping;
+    PostProcessMaterial mColorGradingAsSubpass;
+    PostProcessMaterial mColorGrading;
     PostProcessMaterial mFxaa;
     PostProcessMaterial mBlit[3];
 

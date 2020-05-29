@@ -1,24 +1,9 @@
 material {
-    name : tonemap,
+    name : colorGradingAsSubpass,
     parameters : [
-        {
-            type : sampler2d,
-            name : colorBuffer,
-            precision: medium
-        },
         {
             type : sampler3d,
             name : lut,
-            precision: medium
-        },
-        {
-            type : sampler2d,
-            name : bloomBuffer,
-            precision: medium
-        },
-        {
-            type : sampler2d,
-            name : dirtBuffer,
             precision: medium
         },
         {
@@ -28,10 +13,6 @@ material {
         {
             type : int,
             name : fxaa
-        },
-        {
-            type : float4,
-            name : bloom
         }
     ],
     variables : [
@@ -39,7 +20,8 @@ material {
     ],
     depthWrite : false,
     depthCulling : false,
-    domain: postprocess
+    domain: postprocess,
+    framebufferFetch: true
 }
 
 vertex {
@@ -50,38 +32,41 @@ vertex {
 
 fragment {
 
-#include "../../../shaders/src/tone_mapping.fs"
-#include "../../../shaders/src/conversion_functions.fs"
+    // TODO: this should be specified as a parameter
+    layout (input_attachment_index = 0, set = 0, binding = 0) uniform mediump subpassInput colorBuffer;
+    layout(location = 1) out vec4 tonemappedOutput;
+
 #include "../../../shaders/src/dithering.fs"
-#include "../../../shaders/src/bloom.fs"
+
+    vec3 colorGrade(mediump sampler3D lut, const vec3 x) {
+        // Alexa LogC EI 1000
+        const float a = 5.555556;
+        const float b = 0.047996;
+        const float c = 0.244161 / log2(10.0);
+        const float d = 0.386036;
+        vec3 logc = c * log2(a * x + b) + d;
+        return textureLod(lut, logc, 0.0).rgb;
+    }
 
     vec3 resolveFragment(const ivec2 uv) {
-        return texelFetch(materialParams_colorBuffer, uv, 0).rgb;
+        return subpassLoad(colorBuffer).rgb;
     }
 
     vec4 resolveAlphaFragment(const ivec2 uv) {
-        return texelFetch(materialParams_colorBuffer, uv, 0);
+        return subpassLoad(colorBuffer);
     }
 
     vec4 resolve() {
 #if POST_PROCESS_OPAQUE
         vec4 color = vec4(resolveFragment(ivec2(getUV())), 1.0);
-        if (materialParams.bloom.x > 0.0) {
-            color.rgb = bloom(color.rgb);
-        }
-        color.rgb  = tonemap(materialParams_lut, color.rgb);
-        color.rgb  = OECF(color.rgb);
+        color.rgb  = colorGrade(materialParams_lut, color.rgb);
         if (materialParams.fxaa > 0) {
             color.a = luminance(color.rgb);
         }
 #else
         vec4 color = resolveAlphaFragment(ivec2(getUV()));
         color.rgb /= color.a + FLT_EPS;
-        if (materialParams.bloom.x > 0.0) {
-            color.rgb = bloom(color.rgb);
-        }
-        color.rgb  = tonemap(materialParams_lut, color.rgb);
-        color.rgb  = OECF(color.rgb);
+        color.rgb  = colorGrade(materialParams_lut, color.rgb);
         color.rgb *= color.a + FLT_EPS;
 #endif
         return color;
@@ -97,6 +82,7 @@ fragment {
             postProcess.color = dithered;
 #endif
         }
+        tonemappedOutput = postProcess.color;
     }
 
 }
