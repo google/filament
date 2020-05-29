@@ -562,7 +562,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
         config.refractionLodOffset = refractionLodOffset;
         config.clearFlags = TargetBufferFlags::NONE;
         output = colorPass(fg, "Color Pass (transparent)",
-                           desc, config, colorGradingConfig, translucentPass, view);
+                desc, config, colorGradingConfig, translucentPass, view);
 
         if (config.msaa > 1 && !colorGradingConfig.asSubpass) {
             // We need to do a resolve here because later passes (such as color grading or DoF) will need
