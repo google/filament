@@ -973,7 +973,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
 }
 
 void PostProcessManager::colorGradingSubpass(DriverApi& driver,
-                                             bool translucent, bool fxaa, bool dithering) noexcept {
+        bool translucent, bool fxaa, bool dithering) noexcept {
 
     FEngine& engine = mEngine;
     Handle<HwRenderPrimitive> const& fullScreenRenderPrimitive = engine.getFullScreenRenderPrimitive();
