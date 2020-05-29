@@ -275,6 +275,13 @@ ResourceLoader::~ResourceLoader() {
 }
 
 void ResourceLoader::addResourceData(const char* uri, BufferDescriptor&& buffer) {
+    // Start an async marker the first time this is called and end it when
+    // finalization begins. This marker provides a rough indicator of how long
+    // the client is taking to load raw data blobs from storage.
+    if (pImpl->mUriDataCache.empty()) {
+        SYSTRACE_CONTEXT();
+        SYSTRACE_ASYNC_BEGIN("addResourceData", 1);
+    }
     pImpl->mUriDataCache.emplace(uri, std::move(buffer));
 }
 
@@ -288,6 +295,9 @@ bool ResourceLoader::loadResources(FilamentAsset* asset) {
 }
 
 bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
+    SYSTRACE_CONTEXT();
+    SYSTRACE_ASYNC_END("addResourceData", 1);
+
     if (asset->mResourcesLoaded) {
         return false;
     }
@@ -300,6 +310,7 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
     // looks inside a cache of externally-supplied data blobs, rather than loading from the
     // filesystem.
 
+    SYSTRACE_NAME_BEGIN("Load buffers");
     #if !USE_FILESYSTEM
 
     if (gltf->buffers_count && !gltf->buffers[0].data && !gltf->buffers[0].uri && gltf->bin) {
@@ -364,6 +375,7 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
     }
 
     #endif
+    SYSTRACE_NAME_END();
 
     #ifndef NDEBUG
     if (cgltf_validate(gltf) != cgltf_result_success) {
@@ -959,6 +971,7 @@ void ResourceLoader::normalizeSkinningWeights(FFilamentAsset* asset) const {
 }
 
 void ResourceLoader::updateBoundingBoxes(FFilamentAsset* asset) const {
+    SYSTRACE_CALL();
     auto& rm = pImpl->mEngine->getRenderableManager();
     auto& tm = pImpl->mEngine->getTransformManager();
 
