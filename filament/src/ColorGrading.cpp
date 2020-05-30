@@ -62,7 +62,9 @@ ColorGrading* ColorGrading::Builder::build(Engine& engine) {
     return upcast(engine).createColorGrading(*this);
 }
 
-std::function<float3(float3)> selectToneMapping(ColorGrading::ToneMapping toneMapping) {
+using ToneMapper = float3(*)(float3);
+
+ToneMapper selectToneMapping(ColorGrading::ToneMapping toneMapping) {
     switch(toneMapping) {
         case ColorGrading::ToneMapping::LINEAR:
             return tonemap::Linear;
@@ -87,7 +89,7 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
     constexpr size_t elementSize = sizeof(half4);
     void* const data = malloc(lutElementCount * elementSize);
 
-    auto toneMapper = selectToneMapping(builder->mToneMapping);
+    ToneMapper toneMapper = selectToneMapping(builder->mToneMapping);
 
     //auto now = std::chrono::steady_clock::now();
 
@@ -97,7 +99,7 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
     JobSystem& js = engine.getJobSystem();
     auto slices = js.createJob();
     for (size_t b = 0; b < LUT_DIMENSION; b++) {
-        auto job = js.createJob(slices, [&, data, b](JobSystem&, JobSystem::Job*) {
+        auto job = js.createJob(slices, [data, b, toneMapper](JobSystem&, JobSystem::Job*) {
             half4* UTILS_RESTRICT p = (half4*) data + b * LUT_DIMENSION * LUT_DIMENSION;
             for (size_t g = 0; g < LUT_DIMENSION; g++) {
                 for (size_t r = 0; r < LUT_DIMENSION; r++) {
