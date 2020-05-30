@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_ACES_H
-#define TNT_FILAMENT_ACES_H
+#ifndef TNT_FILAMENT_TONE_MAPPING_H
+#define TNT_FILAMENT_TONE_MAPPING_H
 
 #include <utils/compiler.h>
 
@@ -24,9 +24,14 @@
 #include <math/scalar.h>
 
 namespace filament {
-namespace aces {
 
 using namespace math;
+
+//------------------------------------------------------------------------------
+// ACES operations, from https://github.com/ampas/aces-dev
+//------------------------------------------------------------------------------
+
+namespace aces {
 
 inline float rgb_2_saturation(float3 rgb) {
     // Input:  ACES
@@ -146,7 +151,6 @@ inline float3 darkSurround_to_dimSurround(float3 linearCV) {
 
 UTILS_ALWAYS_INLINE
 inline float3 ACES(float3 color) {
-    // From https://github.com/ampas/aces-dev
     // Some bits were removed to adapt to our desired output
     // Input:  linear sRGB
     // Output: linear sRGB
@@ -233,6 +237,94 @@ inline float3 ACES(float3 color) {
 }
 
 } // namespace aces
+
+//------------------------------------------------------------------------------
+// Tone mapping operators
+//------------------------------------------------------------------------------
+
+namespace tonemap {
+
+UTILS_ALWAYS_INLINE
+float3 Linear(float3 x) noexcept {
+    return x;
+}
+
+float3 Reinhard(float3 x) noexcept {
+    return x / (1.0f + dot(x, float3{0.2126f, 0.7152f, 0.0722f}));
+}
+
+float3 Filmic(float3 x) noexcept {
+    // Narkowicz 2015, "ACES Filmic Tone Mapping Curve"
+    const float a = 2.51f;
+    const float b = 0.03f;
+    const float c = 2.43f;
+    const float d = 0.59f;
+    const float e = 0.14f;
+    return (x * (a * x + b)) / (x * (c * x + d) + e);
+}
+
+float3 ACES(float3 x) noexcept {
+    return aces::ACES(x);
+}
+
+/**
+ * Converts the input HDR RGB color into one of 16 debug colors that represent
+ * the pixel's exposure. When the output is cyan, the input color represents
+ * middle gray (18% exposure). Every exposure stop above or below middle gray
+ * causes a color shift.
+ *
+ * The relationship between exposures and colors is:
+ *
+ * -5EV  - black
+ * -4EV  - darkest blue
+ * -3EV  - darker blue
+ * -2EV  - dark blue
+ * -1EV  - blue
+ *  OEV  - cyan
+ * +1EV  - dark green
+ * +2EV  - green
+ * +3EV  - yellow
+ * +4EV  - yellow-orange
+ * +5EV  - orange
+ * +6EV  - bright red
+ * +7EV  - red
+ * +8EV  - magenta
+ * +9EV  - purple
+ * +10EV - white
+ */
+float3 DisplayRange(float3 x) noexcept {
+    // 16 debug colors + 1 duplicated at the end for easy indexing
+
+    const float3 debugColors[17] = {
+            {0.0,     0.0,     0.0},         // black
+            {0.0,     0.0,     0.1647},      // darkest blue
+            {0.0,     0.0,     0.3647},      // darker blue
+            {0.0,     0.0,     0.6647},      // dark blue
+            {0.0,     0.0,     0.9647},      // blue
+            {0.0,     0.9255,  0.9255},      // cyan
+            {0.0,     0.5647,  0.0},         // dark green
+            {0.0,     0.7843,  0.0},         // green
+            {1.0,     1.0,     0.0},         // yellow
+            {0.90588, 0.75294, 0.0},         // yellow-orange
+            {1.0,     0.5647,  0.0},         // orange
+            {1.0,     0.0,     0.0},         // bright red
+            {0.8392,  0.0,     0.0},         // red
+            {1.0,     0.0,     1.0},         // magenta
+            {0.6,     0.3333,  0.7882},      // purple
+            {1.0,     1.0,     1.0},         // white
+            {1.0,     1.0,     1.0}          // white
+    };
+
+    // The 5th color in the array (cyan) represents middle gray (18%)
+    // Every stop above or below middle gray causes a color shift
+    float v = log2(dot(x, float3{0.2126f, 0.7152f, 0.0722f}) / 0.18f);
+    v = clamp(v + 5.0f, 0.0f, 15.0f);
+    size_t index = size_t(v);
+    return mix(debugColors[index], debugColors[index + 1], v - float(index));
+}
+
+} // namespace tonemap
+
 } // namespace filament
 
-#endif //TNT_FILAMENT_ACES_H
+#endif //TNT_FILAMENT_TONE_MAPPING_H

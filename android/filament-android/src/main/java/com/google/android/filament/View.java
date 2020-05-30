@@ -393,7 +393,10 @@ public class View {
 
     /**
      * List of available tone-mapping operators
+     *
+     * @deprecated Use ColorGrading instead
      */
+    @Deprecated
     public enum ToneMapping {
         /**
          * Equivalent to disabling tone-mapping.
@@ -725,7 +728,10 @@ public class View {
      * Enables or disables tone-mapping in the post-processing stage. Enabled by default.
      *
      * @param type Tone-mapping function.
+     *
+     * @deprecated Use {@link #setColorGrading(com.google.android.filament.ColorGrading)}
      */
+    @Deprecated
     public void setToneMapping(@NonNull ToneMapping type) {
         nSetToneMapping(getNativeObject(), type.ordinal());
     }
@@ -733,7 +739,10 @@ public class View {
     /**
      * Returns the tone-mapping function.
      * @return tone-mapping function.
+     *
+     * @deprecated Use {@link #getColorGrading()}
      */
+    @Deprecated
     @NonNull
     public ToneMapping getToneMapping() {
         return ToneMapping.values()[nGetToneMapping(getNativeObject())];

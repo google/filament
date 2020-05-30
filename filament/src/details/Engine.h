@@ -32,6 +32,7 @@
 #include "details/IndexBuffer.h"
 #include "details/RenderTarget.h"
 #include "details/ResourceList.h"
+#include "details/ColorGrading.h"
 #include "details/Skybox.h"
 
 #include "private/backend/CommandStream.h"
@@ -47,6 +48,7 @@
 #include <filament/Material.h>
 #include <filament/MaterialEnums.h>
 #include <filament/Texture.h>
+#include <filament/ColorGrading.h>
 #include <filament/Skybox.h>
 
 #include <filament/Stream.h>
@@ -150,6 +152,7 @@ public:
     const FMaterial* getSkyboxMaterial() const noexcept;
     const FIndirectLight* getDefaultIndirectLight() const noexcept { return mDefaultIbl; }
     const FTexture* getDummyCubemap() const noexcept { return mDefaultIblTexture; }
+    const FColorGrading* getDefaultColorGrading() const noexcept { return mDefaultColorGrading; }
 
     backend::Handle<backend::HwRenderPrimitive> getFullScreenRenderPrimitive() const noexcept {
         return mFullScreenTriangleRph;
@@ -220,6 +223,7 @@ public:
     FMaterial* createMaterial(const Material::Builder& builder) noexcept;
     FTexture* createTexture(const Texture::Builder& builder) noexcept;
     FSkybox* createSkybox(const Skybox::Builder& builder) noexcept;
+    FColorGrading* createColorGrading(const ColorGrading::Builder& builder) noexcept;
     FStream* createStream(const Stream::Builder& builder) noexcept;
     FRenderTarget* createRenderTarget(const RenderTarget::Builder& builder) noexcept;
 
@@ -249,6 +253,7 @@ public:
     bool destroy(const FRenderer* p);
     bool destroy(const FScene* p);
     bool destroy(const FSkybox* p);
+    bool destroy(const FColorGrading* p);
     bool destroy(const FStream* p);
     bool destroy(const FTexture* p);
     bool destroy(const FRenderTarget* p);
@@ -337,6 +342,7 @@ private:
     ResourceList<FMaterial> mMaterials{ "Material" };
     ResourceList<FTexture> mTextures{ "Texture" };
     ResourceList<FSkybox> mSkyboxes{ "Skybox" };
+    ResourceList<FColorGrading> mColorGradings{ "ColorGrading" };
     ResourceList<FRenderTarget> mRenderTargets{ "RenderTarget" };
 
     mutable uint32_t mMaterialId = 0;
@@ -362,6 +368,8 @@ private:
 
     mutable FTexture* mDefaultIblTexture = nullptr;
     mutable FIndirectLight* mDefaultIbl = nullptr;
+
+    mutable FColorGrading* mDefaultColorGrading = nullptr;
 
     mutable utils::CountDownLatch mDriverBarrier;
 

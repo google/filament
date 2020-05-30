@@ -27,7 +27,7 @@
 #include "details/Material.h"
 #include "details/MaterialInstance.h"
 #include "details/Texture.h"
-#include "details/Tonemapper.h"
+#include "details/ColorGrading.h"
 #include "generated/resources/materials.h"
 
 #include <private/filament/SibGenerator.h>
@@ -180,8 +180,6 @@ void PostProcessManager::init() noexcept {
     *static_cast<uint32_t *>(dataZero.buffer) = 0;
     driver.update2DImage(mDummyOneTexture, 0, 0, 0, 1, 1, std::move(dataOne));
     driver.update2DImage(mDummyZeroTexture, 0, 0, 0, 1, 1, std::move(dataZero));
-
-    mTonemapper = new Tonemapper(mEngine);
 }
 
 void PostProcessManager::terminate(DriverApi& driver) noexcept {
@@ -202,8 +200,6 @@ void PostProcessManager::terminate(DriverApi& driver) noexcept {
     mFxaa.terminate(engine);
     mDoFBlur.terminate(engine);
     mDoF.terminate(engine);
-    mTonemapper->terminate(engine);
-    delete mTonemapper;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -979,7 +975,7 @@ void PostProcessManager::colorGradingSubpass(DriverApi& driver,
     Handle<HwRenderPrimitive> const& fullScreenRenderPrimitive = engine.getFullScreenRenderPrimitive();
 
     FMaterialInstance* mi = mColorGradingAsSubpass.getMaterialInstance();
-    mi->setParameter("lut", mTonemapper->getHwHandle(), {
+    mi->setParameter("lut", mEngine.getDefaultColorGrading()->getHwHandle(), {
             .filterMag = SamplerMagFilter::LINEAR,
             .filterMin = SamplerMinFilter::LINEAR
     });
@@ -988,7 +984,7 @@ void PostProcessManager::colorGradingSubpass(DriverApi& driver,
     mi->commit(driver);
     mi->use(driver);
     const uint8_t variant = uint8_t(translucent ?
-                                    PostProcessVariant::TRANSLUCENT : PostProcessVariant::OPAQUE);
+            PostProcessVariant::TRANSLUCENT : PostProcessVariant::OPAQUE);
 
     driver.draw(mColorGradingAsSubpass.getPipelineState(variant), fullScreenRenderPrimitive);
 }
@@ -1001,7 +997,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::colorGrading(FrameGraph& fg,
     FEngine& engine = mEngine;
     Handle<HwRenderPrimitive> const& fullScreenRenderPrimitive = engine.getFullScreenRenderPrimitive();
 
-    struct PostProcessToneMapping {
+    struct PostProcessColorGrading {
         FrameGraphId<FrameGraphTexture> input;
         FrameGraphId<FrameGraphTexture> output;
         FrameGraphId<FrameGraphTexture> bloom;
@@ -1027,17 +1023,17 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::colorGrading(FrameGraph& fg,
         }
     }
 
-    auto& ppToneMapping = fg.addPass<PostProcessToneMapping>("tonemapping",
+    auto& ppColorGrading = fg.addPass<PostProcessColorGrading>("colorGrading",
             [&](FrameGraph::Builder& builder, auto& data) {
                 auto const& inputDesc = fg.getDescriptor(input);
                 data.input = builder.sample(input);
-                data.output = builder.createTexture("tonemapping output", {
+                data.output = builder.createTexture("colorGrading output", {
                         .width = inputDesc.width,
                         .height = inputDesc.height,
                         .format = outFormat
                 });
                 data.output = builder.write(data.output);
-                data.rt = builder.createRenderTarget("ToneMapping Target", {
+                data.rt = builder.createRenderTarget("colorGrading Target", {
                         .attachments = { data.output } });
 
                 if (bloomBlur.isValid()) {
@@ -1059,7 +1055,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::colorGrading(FrameGraph& fg,
                         data.dirt.isValid() ? resources.getTexture(data.dirt) : getOneTexture();
 
                 FMaterialInstance* mi = mColorGrading.getMaterialInstance();
-                mi->setParameter("lut", mTonemapper->getHwHandle(), {
+                mi->setParameter("lut", mEngine.getDefaultColorGrading()->getHwHandle(), {
                         .filterMag = SamplerMagFilter::LINEAR,
                         .filterMin = SamplerMinFilter::LINEAR
                 });
@@ -1096,9 +1092,10 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::colorGrading(FrameGraph& fg,
                 driver.beginRenderPass(target.target, target.params);
                 driver.draw(mColorGrading.getPipelineState(variant), fullScreenRenderPrimitive);
                 driver.endRenderPass();
-            });
+            }
+    );
 
-    return ppToneMapping.getData().output;
+    return ppColorGrading.getData().output;
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::fxaa(FrameGraph& fg,
