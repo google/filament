@@ -29,6 +29,7 @@ class JobSystem;
 namespace filament {
 
 class Camera;
+class ColorGrading;
 class DebugRegistry;
 class Fence;
 class IndexBuffer;
@@ -347,6 +348,7 @@ public:
     bool destroy(const Renderer* p);            //!< Destroys a Renderer object.
     bool destroy(const Scene* p);               //!< Destroys a Scene object.
     bool destroy(const Skybox* p);              //!< Destroys a SkyBox object.
+    bool destroy(const ColorGrading* p);        //!< Destroys a ColorGrading object.
     bool destroy(const SwapChain* p);           //!< Destroys a SwapChain object.
     bool destroy(const Stream* p);              //!< Destroys a Stream object.
     bool destroy(const Texture* p);             //!< Destroys a Texture object.

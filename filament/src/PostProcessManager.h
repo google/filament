@@ -33,7 +33,6 @@ class FMaterial;
 class FMaterialInstance;
 class FView;
 class RenderPass;
-class Tonemapper;
 struct CameraInfo;
 
 class PostProcessManager {
@@ -170,9 +169,6 @@ private:
     backend::Handle<backend::HwTexture> mDummyZeroTexture;
 
     size_t mSeparableGaussianBlurKernelStorageSize = 0;
-
-    // eventually this will be a separate object
-    Tonemapper* mTonemapper = nullptr;
 };
 
 } // namespace filament

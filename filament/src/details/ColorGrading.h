@@ -14,21 +14,27 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DETAILS_TONEMAPPER_H
-#define TNT_FILAMENT_DETAILS_TONEMAPPER_H
+#ifndef TNT_FILAMENT_DETAILS_COLORGRADING_H
+#define TNT_FILAMENT_DETAILS_COLORGRADING_H
+
+#include "upcast.h"
 
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
+
+#include <filament/ColorGrading.h>
 
 namespace filament {
 
 class FEngine;
 
-class Tonemapper {
+class FColorGrading : public ColorGrading {
 public:
-    Tonemapper(FEngine& engine);
+    FColorGrading(FEngine& engine, const Builder& builder);
+    FColorGrading(const FColorGrading& rhs) = delete;
+    FColorGrading& operator=(const FColorGrading& rhs) = delete;
 
-    ~Tonemapper() noexcept;
+    ~FColorGrading() noexcept;
 
     // frees driver resources, object becomes invalid
     void terminate(FEngine& engine);
@@ -36,22 +42,14 @@ public:
     backend::TextureHandle getHwHandle() const noexcept { return mLutHandle; }
 
 private:
-    static inline math::float3 tonemap_Reinhard(math::float3 x) noexcept;
-    static inline math::float3 Tonemap_ACES_sRGB(math::float3 x) noexcept;
-    static inline math::float3 tonemap_ACES(math::float3 x) noexcept;
-
-    // Operators for HDR output
-    static inline math::float3 tonemap_ACES_Rec2020_1k(math::float3 x) noexcept;
-
-    // Operators for debugging
-    static inline math::float3 tonemap_DisplayRange(math::float3 x) noexcept;
-
     static inline float lutToLinear(float x) noexcept;
     static inline float linearToLut(float x) noexcept;
 
     backend::TextureHandle mLutHandle;
 };
 
+FILAMENT_UPCAST(ColorGrading)
+
 } // namespace filament
 
-#endif //TNT_FILAMENT_DETAILS_TONEMAPPER_H
+#endif //TNT_FILAMENT_DETAILS_COLORGRADING_H

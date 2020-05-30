@@ -14,20 +14,24 @@
  * limitations under the License.
  */
 
-#include "details/Tonemapper.h"
+#include "details/ColorGrading.h"
 
 #include "details/Engine.h"
+
+#include "FilamentAPI-impl.h"
 
 #include <image/ColorTransform.h>
 
 #include <utils/JobSystem.h>
 #include <utils/Systrace.h>
 
+#include <functional>
+
 // When defined, the ACES tone mapper will match the brightness of the "ACES sRGB" tone mapper
 // It is *not* correct, but it helps for compatibility
 #define TONEMAP_ACES_MATCH_BRIGHTNESS
 
-#include "ACES.h"
+#include "ToneMapping.h"
 
 namespace filament {
 
@@ -37,7 +41,46 @@ using namespace backend;
 
 static constexpr size_t LUT_DIMENSION = 32u;
 
-Tonemapper::Tonemapper(FEngine& engine) {
+struct ColorGrading::BuilderDetails {
+    ToneMapping mToneMapping = ToneMapping::ACES;
+};
+
+using BuilderType = ColorGrading;
+BuilderType::Builder::Builder() noexcept = default;
+BuilderType::Builder::~Builder() noexcept = default;
+BuilderType::Builder::Builder(BuilderType::Builder const& rhs) noexcept = default;
+BuilderType::Builder::Builder(BuilderType::Builder&& rhs) noexcept = default;
+BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder const& rhs) noexcept = default;
+BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder&& rhs) noexcept = default;
+
+ColorGrading::Builder& ColorGrading::Builder::toneMapping(ToneMapping toneMapping) noexcept {
+    mImpl->mToneMapping = toneMapping;
+    return *this;
+}
+
+ColorGrading* ColorGrading::Builder::build(Engine& engine) {
+    return upcast(engine).createColorGrading(*this);
+}
+
+using ToneMapper = float3(*)(float3);
+
+ToneMapper selectToneMapping(ColorGrading::ToneMapping toneMapping) {
+    switch(toneMapping) {
+        case ColorGrading::ToneMapping::LINEAR:
+            return tonemap::Linear;
+        case ColorGrading::ToneMapping::ACES:
+            return tonemap::ACES;
+        case ColorGrading::ToneMapping::FILMIC:
+            return tonemap::Filmic;
+        case ColorGrading::ToneMapping::REINHARD:
+            return tonemap::Reinhard;
+        case ColorGrading::ToneMapping::DISPLAY_RANGE:
+            return tonemap::DisplayRange;
+    }
+    return tonemap::ACES;
+}
+
+FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
     SYSTRACE_CALL();
 
     DriverApi& driver = engine.getDriverApi();
@@ -45,6 +88,8 @@ Tonemapper::Tonemapper(FEngine& engine) {
     constexpr size_t lutElementCount = LUT_DIMENSION * LUT_DIMENSION * LUT_DIMENSION;
     constexpr size_t elementSize = sizeof(half4);
     void* const data = malloc(lutElementCount * elementSize);
+
+    ToneMapper toneMapper = selectToneMapping(builder->mToneMapping);
 
     //auto now = std::chrono::steady_clock::now();
 
@@ -54,8 +99,8 @@ Tonemapper::Tonemapper(FEngine& engine) {
     JobSystem& js = engine.getJobSystem();
     auto slices = js.createJob();
     for (size_t b = 0; b < LUT_DIMENSION; b++) {
-        auto job = js.createJob(slices,[data, b](JobSystem&, JobSystem::Job*) {
-            half4* UTILS_RESTRICT p = (half4*)data + b * LUT_DIMENSION * LUT_DIMENSION;
+        auto job = js.createJob(slices, [data, b, toneMapper](JobSystem&, JobSystem::Job*) {
+            half4* UTILS_RESTRICT p = (half4*) data + b * LUT_DIMENSION * LUT_DIMENSION;
             for (size_t g = 0; g < LUT_DIMENSION; g++) {
                 for (size_t r = 0; r < LUT_DIMENSION; r++) {
                     float3 v = float3{ r, g, b } * (1.0f / (LUT_DIMENSION - 1u));
@@ -64,7 +109,7 @@ Tonemapper::Tonemapper(FEngine& engine) {
                     v.y = lutToLinear(v.y);
                     v.z = lutToLinear(v.z);
                     // ACES tone mapping
-                    v = tonemap_ACES(v);
+                    v = toneMapper(v);
                     // sRGB encoding
                     v = image::linearTosRGB(v);
                     *p++ = half4{ v, 0 };
@@ -93,99 +138,14 @@ Tonemapper::Tonemapper(FEngine& engine) {
     );
 }
 
-Tonemapper::~Tonemapper() noexcept = default;
+FColorGrading::~FColorGrading() noexcept = default;
 
-void Tonemapper::terminate(FEngine& engine) {
+void FColorGrading::terminate(FEngine& engine) {
     DriverApi& driver = engine.getDriverApi();
     driver.destroyTexture(mLutHandle);
 }
 
-float3 Tonemapper::tonemap_Reinhard(float3 x) noexcept {
-    return x / (1.0f + dot(x, float3{ 0.2126f, 0.7152f, 0.0722f }));
-}
-
-float3 Tonemapper::Tonemap_ACES_sRGB(float3 x) noexcept {
-    // Narkowicz 2015, "ACES Filmic Tone Mapping Curve"
-    const float a = 2.51f;
-    const float b = 0.03f;
-    const float c = 2.43f;
-    const float d = 0.59f;
-    const float e = 0.14f;
-    return (x * (a * x + b)) / (x * (c * x + d) + e);
-}
-
-UTILS_ALWAYS_INLINE
-float3 Tonemapper::tonemap_ACES(float3 x) noexcept {
-    return aces::ACES(x);
-}
-
-float3 Tonemapper::tonemap_ACES_Rec2020_1k(float3 x) noexcept {
-    // Narkowicz 2016, "HDR Display – First Steps"
-    const float a = 15.8f;
-    const float b = 2.12f;
-    const float c = 1.2f;
-    const float d = 5.92f;
-    const float e = 1.9f;
-    return (x * (a * x + b)) / (x * (c * x + d) + e);
-}
-
-/**
- * Converts the input HDR RGB color into one of 16 debug colors that represent
- * the pixel's exposure. When the output is cyan, the input color represents
- * middle gray (18% exposure). Every exposure stop above or below middle gray
- * causes a color shift.
- *
- * The relationship between exposures and colors is:
- *
- * -5EV  - black
- * -4EV  - darkest blue
- * -3EV  - darker blue
- * -2EV  - dark blue
- * -1EV  - blue
- *  OEV  - cyan
- * +1EV  - dark green
- * +2EV  - green
- * +3EV  - yellow
- * +4EV  - yellow-orange
- * +5EV  - orange
- * +6EV  - bright red
- * +7EV  - red
- * +8EV  - magenta
- * +9EV  - purple
- * +10EV - white
- */
-float3 Tonemapper::tonemap_DisplayRange(float3 x) noexcept {
-    // 16 debug colors + 1 duplicated at the end for easy indexing
-
-    const float3 debugColors[17] = {
-            { 0.0,     0.0,     0.0 },         // black
-            { 0.0,     0.0,     0.1647 },      // darkest blue
-            { 0.0,     0.0,     0.3647 },      // darker blue
-            { 0.0,     0.0,     0.6647 },      // dark blue
-            { 0.0,     0.0,     0.9647 },      // blue
-            { 0.0,     0.9255,  0.9255 },      // cyan
-            { 0.0,     0.5647,  0.0 },         // dark green
-            { 0.0,     0.7843,  0.0 },         // green
-            { 1.0,     1.0,     0.0 },         // yellow
-            { 0.90588, 0.75294, 0.0 },         // yellow-orange
-            { 1.0,     0.5647,  0.0 },         // orange
-            { 1.0,     0.0,     0.0 },         // bright red
-            { 0.8392,  0.0,     0.0 },         // red
-            { 1.0,     0.0,     1.0 },         // magenta
-            { 0.6,     0.3333,  0.7882 },      // purple
-            { 1.0,     1.0,     1.0 },         // white
-            { 1.0,     1.0,     1.0 }          // white
-    };
-
-    // The 5th color in the array (cyan) represents middle gray (18%)
-    // Every stop above or below middle gray causes a color shift
-    float v = log2(dot(x, float3{ 0.2126f, 0.7152f, 0.0722f }) / 0.18f);
-    v = clamp(v + 5.0f, 0.0f, 15.0f);
-    size_t index = size_t(v);
-    return mix(debugColors[index], debugColors[index + 1], v - float(index));
-}
-
-float Tonemapper::lutToLinear(float x) noexcept {
+float FColorGrading::lutToLinear(float x) noexcept {
     // Alexa LogC EI 1000 curve
     const float ia = 1.0f / 5.555556f;
     const float b = 0.047996f;
@@ -194,7 +154,7 @@ float Tonemapper::lutToLinear(float x) noexcept {
     return (std::pow(10.0f, (x - d) * ic) - b) * ia;
 }
 
-float Tonemapper::linearToLut(float x) noexcept {
+float FColorGrading::linearToLut(float x) noexcept {
     // Alexa LogC EI 1000 curve
     const float a = 5.555556f;
     const float b = 0.047996f;

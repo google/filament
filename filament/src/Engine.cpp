@@ -196,6 +196,8 @@ void FEngine::init() {
             .irradiance(3, reinterpret_cast<const float3*>(sh))
             .build(*this));
 
+    mDefaultColorGrading = upcast(ColorGrading::Builder().build(*this));
+
     // Always initialize the default material, most materials' depth shaders fallback on it.
     mDefaultMaterial = upcast(
             FMaterial::DefaultMaterialBuilder()
@@ -249,6 +251,8 @@ void FEngine::shutdown() {
     destroy(mDefaultIblTexture);
     destroy(mDefaultIbl);
 
+    destroy(mDefaultColorGrading);
+
     destroy(mDefaultMaterial);
 
     /*
@@ -262,6 +266,7 @@ void FEngine::shutdown() {
     cleanupResourceList(mViews);
     cleanupResourceList(mScenes);
     cleanupResourceList(mSkyboxes);
+    cleanupResourceList(mColorGradings);
 
     // this must be done after Skyboxes and before materials
     destroy(mSkyboxMaterial);
@@ -531,6 +536,10 @@ FSkybox* FEngine::createSkybox(const Skybox::Builder& builder) noexcept {
     return create(mSkyboxes, builder);
 }
 
+FColorGrading* FEngine::createColorGrading(const ColorGrading::Builder& builder) noexcept {
+    return create(mColorGradings, builder);
+}
+
 FStream* FEngine::createStream(const Stream::Builder& builder) noexcept {
     return create(mStreams, builder);
 }
@@ -692,6 +701,10 @@ inline bool FEngine::destroy(const FScene* p) {
 
 inline bool FEngine::destroy(const FSkybox* p) {
     return terminateAndDestroy(p, mSkyboxes);
+}
+
+inline bool FEngine::destroy(const FColorGrading* p) {
+    return terminateAndDestroy(p, mColorGradings);
 }
 
 UTILS_NOINLINE
@@ -893,6 +906,10 @@ bool Engine::destroy(const Scene* p) {
 }
 
 bool Engine::destroy(const Skybox* p) {
+    return upcast(this)->destroy(upcast(p));
+}
+
+bool Engine::destroy(const ColorGrading* p) {
     return upcast(this)->destroy(upcast(p));
 }
 

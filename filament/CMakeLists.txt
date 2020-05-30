@@ -14,6 +14,7 @@ set(PUBLIC_HDRS
         include/filament/Box.h
         include/filament/Camera.h
         include/filament/Color.h
+        include/filament/ColorGrading.h
         include/filament/DebugRegistry.h
         include/filament/Engine.h
         include/filament/Exposure.h
@@ -55,6 +56,7 @@ set(SRCS
         src/Box.cpp
         src/Camera.cpp
         src/Color.cpp
+        src/ColorGrading.cpp
         src/Culler.cpp
         src/DebugRegistry.cpp
         src/DFG.cpp
@@ -84,7 +86,6 @@ set(SRCS
         src/SwapChain.cpp
         src/Stream.cpp
         src/Texture.cpp
-        src/Tonemapper.cpp
         src/UniformBuffer.cpp
         src/View.cpp
         src/Viewport.cpp
@@ -108,6 +109,7 @@ set(PRIVATE_HDRS
         src/fg/fg/VirtualResource.h
         src/details/Allocators.h
         src/details/Camera.h
+        src/details/ColorGrading.h
         src/details/Culler.h
         src/details/DebugRegistry.h
         src/details/DFG.h
@@ -130,10 +132,8 @@ set(PRIVATE_HDRS
         src/details/Stream.h
         src/details/SwapChain.h
         src/details/Texture.h
-        src/details/Tonemapper.h
         src/details/VertexBuffer.h
         src/details/View.h
-        src/ACES.h
         src/FilamentAPI-impl.h
         src/FrameInfo.h
         src/GPUBuffer.h
@@ -141,6 +141,7 @@ set(PRIVATE_HDRS
         src/MaterialParser.h
         src/PostProcessManager.h
         src/RenderPass.h
+        src/ToneMapping.h
         src/UniformBuffer.h
         src/upcast.h)
 
