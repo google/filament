@@ -26,6 +26,7 @@
 
 #include "details/Allocators.h"
 #include "details/Camera.h"
+#include "details/ColorGrading.h"
 #include "details/Froxelizer.h"
 #include "details/RenderTarget.h"
 #include "details/ShadowMap.h"
@@ -203,6 +204,14 @@ public:
 
     ToneMapping getToneMapping() const noexcept {
         return mToneMapping;
+    }
+
+    void setColorGrading(FColorGrading* colorGrading) noexcept {
+        mColorGrading = colorGrading;
+    }
+
+    const FColorGrading* getColorGrading() const noexcept {
+        return mColorGrading;
     }
 
     void setDithering(Dithering dithering) noexcept {
@@ -389,6 +398,7 @@ private:
     FogOptions mFogOptions;
     DepthOfFieldOptions mDepthOfFieldOptions;
     BlendMode mBlendMode = BlendMode::OPAQUE;
+    const FColorGrading* mColorGrading = nullptr;
 
     DynamicResolutionOptions mDynamicResolution;
     math::float2 mScale = 1.0f;

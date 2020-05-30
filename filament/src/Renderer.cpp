@@ -41,7 +41,6 @@
 #include <utils/vector.h>
 
 #include <assert.h>
-#include <private/filament/SibGenerator.h>
 
 // this helps visualize what dynamic-scaling is doing
 #define DEBUG_DYNAMIC_SCALING false
@@ -403,6 +402,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         if (colorGrading) {
             if (!colorGradingConfig.asSubpass) {
                 input = ppm.colorGrading(fg, input,
+                        view.getColorGrading(),
                         colorGradingConfig.ldrFormat,
                         colorGradingConfig.translucent,
                         colorGradingConfig.fxaa,
@@ -698,6 +698,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 if (colorGradingConfig.asSubpass) {
                     // post-processing....
                     ppm.colorGradingSubpass(driver,
+                            view.getColorGrading(),
                             colorGradingConfig.translucent,
                             colorGradingConfig.fxaa,
                             colorGradingConfig.dithering);

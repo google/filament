@@ -28,6 +28,7 @@
 
 namespace filament {
 
+class FColorGrading;
 class FEngine;
 class FMaterial;
 class FMaterialInstance;
@@ -66,11 +67,11 @@ public:
             const CameraInfo& cameraInfo) noexcept;
 
     // Tone mapping
-    void colorGradingSubpass(backend::DriverApi& driver,
-                             bool translucent, bool fxaa, bool dithering) noexcept;
+    void colorGradingSubpass(backend::DriverApi& driver, const FColorGrading* colorGrading,
+            bool translucent, bool fxaa, bool dithering) noexcept;
 
     FrameGraphId<FrameGraphTexture> colorGrading(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input,
+            FrameGraphId<FrameGraphTexture> input, const FColorGrading* colorGrading,
             backend::TextureFormat outFormat, bool translucent, bool fxaa, math::float2 scale,
             View::BloomOptions bloomOptions, bool dithering) noexcept;
 

@@ -24,6 +24,8 @@
 
 #include <filament/ColorGrading.h>
 
+#include <math/mathfwd.h>
+
 namespace filament {
 
 class FEngine;
@@ -42,8 +44,8 @@ public:
     backend::TextureHandle getHwHandle() const noexcept { return mLutHandle; }
 
 private:
-    static inline float lutToLinear(float x) noexcept;
-    static inline float linearToLut(float x) noexcept;
+    static inline math::float3 lutToLinear(math::float3 x) noexcept;
+    static inline math::float3 linearToLut(math::float3 x) noexcept;
 
     backend::TextureHandle mLutHandle;
 };

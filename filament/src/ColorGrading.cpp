@@ -20,6 +20,9 @@
 
 #include "FilamentAPI-impl.h"
 
+#include <math/vec2.h>
+#include <math/vec3.h>
+
 #include <image/ColorTransform.h>
 
 #include <utils/JobSystem.h>
@@ -27,8 +30,9 @@
 
 #include <functional>
 
-// When defined, the ACES tone mapper will match the brightness of the "ACES sRGB" tone mapper
-// It is *not* correct, but it helps for compatibility
+// When defined, the ACES tone mapper will match the brightness of the filmic ("ACES sRGB")
+// tone mapper. It is *not* correct, but it helps for compatibility
+// TODO: Always enable this, expose a float to control this (1.0 == real ACES)
 #define TONEMAP_ACES_MATCH_BRIGHTNESS
 
 #include "ToneMapping.h"
@@ -42,7 +46,8 @@ using namespace backend;
 static constexpr size_t LUT_DIMENSION = 32u;
 
 struct ColorGrading::BuilderDetails {
-    ToneMapping mToneMapping = ToneMapping::ACES;
+    ToneMapping toneMapping = ToneMapping::ACES;
+    float2 whiteBalance = {0.0f, 0.0f};
 };
 
 using BuilderType = ColorGrading;
@@ -54,7 +59,15 @@ BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder const
 BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder&& rhs) noexcept = default;
 
 ColorGrading::Builder& ColorGrading::Builder::toneMapping(ToneMapping toneMapping) noexcept {
-    mImpl->mToneMapping = toneMapping;
+    mImpl->toneMapping = toneMapping;
+    return *this;
+}
+
+ColorGrading::Builder& ColorGrading::Builder::whiteBalance(float temperature, float tint) noexcept {
+    mImpl->whiteBalance = float2{
+        clamp(temperature, -1.0f, 1.0f),
+        clamp(tint, -1.0f, 1.0f)
+    };
     return *this;
 }
 
@@ -89,13 +102,13 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
     constexpr size_t elementSize = sizeof(half4);
     void* const data = malloc(lutElementCount * elementSize);
 
-    ToneMapper toneMapper = selectToneMapping(builder->mToneMapping);
+    ToneMapper toneMapper = selectToneMapping(builder->toneMapping);
 
     //auto now = std::chrono::steady_clock::now();
 
     // Multithreadedly generate the tone mapping 3D look-up table using 32 jobs
     // Slices are 8 KiB (128 cache lines) apart.
-    // This takes about 3-6ms on Android in Release mode
+    // This takes about 3-6ms on Android in Release mode on Pixel 4
     JobSystem& js = engine.getJobSystem();
     auto slices = js.createJob();
     for (size_t b = 0; b < LUT_DIMENSION; b++) {
@@ -104,20 +117,24 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
             for (size_t g = 0; g < LUT_DIMENSION; g++) {
                 for (size_t r = 0; r < LUT_DIMENSION; r++) {
                     float3 v = float3{ r, g, b } * (1.0f / (LUT_DIMENSION - 1u));
+
                     // LogC encoding
-                    v.x = lutToLinear(v.x);
-                    v.y = lutToLinear(v.y);
-                    v.z = lutToLinear(v.z);
-                    // ACES tone mapping
+                    v = lutToLinear(v);
+
                     v = toneMapper(v);
-                    // sRGB encoding
+
+                    // TODO: allow to customize the output color space
                     v = image::linearTosRGB(v);
+
                     *p++ = half4{ v, 0 };
                 }
             }
         });
         js.run(job);
     }
+
+    // TODO: Should we do a runAndRetain() and defer the wait() + texture creation until
+    //       getHwHandle() is invoked?
     js.runAndWait(slices);
 
     //std::chrono::duration<float, std::milli> duration = std::chrono::steady_clock::now() - now;
@@ -145,22 +162,22 @@ void FColorGrading::terminate(FEngine& engine) {
     driver.destroyTexture(mLutHandle);
 }
 
-float FColorGrading::lutToLinear(float x) noexcept {
+float3 FColorGrading::lutToLinear(float3 x) noexcept {
     // Alexa LogC EI 1000 curve
     const float ia = 1.0f / 5.555556f;
     const float b = 0.047996f;
     const float ic = 1.0f / 0.244161f;
     const float d = 0.386036f;
-    return (std::pow(10.0f, (x - d) * ic) - b) * ia;
+    return (pow(10.0f, (x - d) * ic) - b) * ia;
 }
 
-float FColorGrading::linearToLut(float x) noexcept {
+float3 FColorGrading::linearToLut(float3 x) noexcept {
     // Alexa LogC EI 1000 curve
     const float a = 5.555556f;
     const float b = 0.047996f;
     const float c = 0.244161f;
     const float d = 0.386036f;
-    return c * std::log10(a * x + b) + d;
+    return c * log10(a * x + b) + d;
 }
 
 } //namespace filament

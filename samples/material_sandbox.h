@@ -18,6 +18,7 @@
 #define TNT_FILAMENT_SAMPLES_MATERIAL_SANDBOX_H
 
 #include <filament/Color.h>
+#include <filament/ColorGrading.h>
 #include <filament/Engine.h>
 #include <filament/LightManager.h>
 #include <filament/Material.h>
@@ -56,6 +57,10 @@ constexpr uint8_t BLENDING_TRANSPARENT      = 1;
 constexpr uint8_t BLENDING_FADE             = 2;
 constexpr uint8_t BLENDING_THIN_REFRACTION  = 3;
 constexpr uint8_t BLENDING_SOLID_REFRACTION = 4;
+
+struct ColorGradingOptions {
+    filament::ColorGrading::ToneMapping toneMapping = filament::ColorGrading::ToneMapping::ACES;
+};
 
 struct SandboxParameters {
     const filament::Material* material[MATERIAL_COUNT];
@@ -125,6 +130,7 @@ struct SandboxParameters {
     float cameraAperture = 16.0f;
     float cameraSpeed = 125.0f;
     float cameraISO = 100.0f;
+    ColorGradingOptions colorGradingOptions;
 };
 
 inline void createInstances(SandboxParameters& params, filament::Engine& engine) {

@@ -320,7 +320,7 @@ float3 DisplayRange(float3 x) noexcept {
     float v = log2(dot(x, float3{0.2126f, 0.7152f, 0.0722f}) / 0.18f);
     v = clamp(v + 5.0f, 0.0f, 15.0f);
     size_t index = size_t(v);
-    return mix(debugColors[index], debugColors[index + 1], v - float(index));
+    return mix(debugColors[index], debugColors[index + 1], saturate(v - float(index)));
 }
 
 } // namespace tonemap

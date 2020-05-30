@@ -66,6 +66,8 @@ static Scene* g_scene = nullptr;
 std::unique_ptr<MeshAssimp> g_meshSet;
 static std::map<std::string, MaterialInstance*> g_meshMaterialInstances;
 static SandboxParameters g_params;
+static ColorGradingOptions g_lastColorGradingOptions;
+static ColorGrading* g_colorGrading = nullptr;
 static Config g_config;
 static bool g_shadowPlane = false;
 static bool g_singleMode = false;
@@ -199,6 +201,7 @@ static void cleanup(Engine* engine, View*, Scene*) {
 
     engine->destroy(g_params.light);
     engine->destroy(g_params.spotLight);
+    engine->destroy(g_colorGrading);
 
     EntityManager& em = EntityManager::get();
     em.destroy(g_params.light);
@@ -235,7 +238,7 @@ static void setup(Engine* engine, View*, Scene* scene) {
                 rcm.setMaterialInstanceAt(instance, i, g_params.materialInstance[MATERIAL_LIT]);
             }
         } else {
-            auto ei = tcm.getInstance(renderable);
+            ei = tcm.getInstance(renderable);
             tcm.setTransform(ei, mat4f{ mat3f(g_config.scale), float3(0.0f, 0.0f, -3.0f) } *
                     tcm.getWorldTransform(ei));
         }
@@ -560,15 +563,19 @@ static void gui(filament::Engine* engine, filament::View*) {
 
         if (ImGui::CollapsingHeader("Post-processing")) {
             ImGui::Checkbox("MSAA 4x", &params.msaa);
-            ImGui::Indent();
-                ImGui::Checkbox("Bloom", &params.bloomOptions.enabled);
-                if (params.bloomOptions.enabled) {
-                    ImGui::SliderFloat("Strength", &params.bloomOptions.strength, 0.0f, 1.0f);
-                    ImGui::SliderFloat("Dirt", &params.bloomOptions.dirtStrength, 0.0f, 1.0f);
-                }
-                ImGui::Checkbox("Dithering", &params.dithering);
-                ImGui::Unindent();
             ImGui::Checkbox("FXAA", &params.fxaa);
+            ImGui::Checkbox("Bloom", &params.bloomOptions.enabled);
+            if (params.bloomOptions.enabled) {
+                ImGui::SliderFloat("Strength", &params.bloomOptions.strength, 0.0f, 1.0f);
+                ImGui::SliderFloat("Dirt", &params.bloomOptions.dirtStrength, 0.0f, 1.0f);
+            }
+            ImGui::Checkbox("Dithering", &params.dithering);
+        }
+
+        if (ImGui::CollapsingHeader("Color grading")) {
+            ImGui::Combo("Tone-mapping",
+                    reinterpret_cast<int*>(&params.colorGradingOptions.toneMapping),
+                    "Linear\0ACES\0Filmic\0Reinhard\0Display Range\0\0");
         }
 
         if (ImGui::CollapsingHeader("Debug")) {
@@ -671,7 +678,8 @@ static void gui(filament::Engine* engine, filament::View*) {
             params.spotLightConeAngle);
 }
 
-static void preRender(filament::Engine*, filament::View* view, filament::Scene*, filament::Renderer* renderer) {
+static void preRender(filament::Engine* engine, filament::View* view, filament::Scene*,
+        filament::Renderer* renderer) {
     view->setAntiAliasing(g_params.fxaa ? View::AntiAliasing::FXAA : View::AntiAliasing::NONE);
     view->setDithering(g_params.dithering ? View::Dithering::TEMPORAL : View::Dithering::NONE);
     view->setBloomOptions(g_params.bloomOptions);
@@ -680,6 +688,20 @@ static void preRender(filament::Engine*, filament::View* view, filament::Scene*,
     view->setAmbientOcclusion(
             g_params.ssao ? View::AmbientOcclusion::SSAO : View::AmbientOcclusion::NONE);
     view->setAmbientOcclusionOptions(g_params.ssaoOptions);
+
+    if (memcmp(&g_params.colorGradingOptions, &g_lastColorGradingOptions, sizeof(ColorGradingOptions))) {
+        ColorGrading* colorGrading = ColorGrading::Builder()
+                .toneMapping(g_params.colorGradingOptions.toneMapping)
+                .build(*engine);
+        view->setColorGrading(colorGrading);
+
+        if (g_colorGrading) {
+            engine->destroy(g_colorGrading);
+        }
+
+        g_colorGrading = colorGrading;
+        g_lastColorGradingOptions = g_params.colorGradingOptions;
+    }
 
     // Without an IBL, we must clear the swapchain to black before each frame.
     renderer->setClearOptions({
