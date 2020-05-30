@@ -1028,17 +1028,17 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::colorGrading(FrameGraph& fg,
         }
     }
 
-    auto& ppColorGrading = fg.addPass<PostProcessColorGrading>("colorGradingOptions",
+    auto& ppColorGrading = fg.addPass<PostProcessColorGrading>("colorGrading",
             [&](FrameGraph::Builder& builder, auto& data) {
                 auto const& inputDesc = fg.getDescriptor(input);
                 data.input = builder.sample(input);
-                data.output = builder.createTexture("colorGradingOptions output", {
+                data.output = builder.createTexture("colorGrading output", {
                         .width = inputDesc.width,
                         .height = inputDesc.height,
                         .format = outFormat
                 });
                 data.output = builder.write(data.output);
-                data.rt = builder.createRenderTarget("colorGradingOptions Target", {
+                data.rt = builder.createRenderTarget("colorGrading Target", {
                         .attachments = { data.output } });
 
                 if (bloomBlur.isValid()) {

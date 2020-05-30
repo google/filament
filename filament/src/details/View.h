@@ -207,7 +207,7 @@ public:
     }
 
     void setColorGrading(FColorGrading* colorGrading) noexcept {
-        mColorGrading = colorGrading;
+        mColorGrading = colorGrading == nullptr ? mDefaultColorGrading : colorGrading;
     }
 
     const FColorGrading* getColorGrading() const noexcept {
@@ -399,6 +399,7 @@ private:
     DepthOfFieldOptions mDepthOfFieldOptions;
     BlendMode mBlendMode = BlendMode::OPAQUE;
     const FColorGrading* mColorGrading = nullptr;
+    const FColorGrading* mDefaultColorGrading = nullptr;
 
     DynamicResolutionOptions mDynamicResolution;
     math::float2 mScale = 1.0f;

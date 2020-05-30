@@ -78,7 +78,7 @@ FView::FView(FEngine& engine)
 
     mIsDynamicResolutionSupported = driver.isFrameTimeSupported();
 
-    mColorGrading = engine.getDefaultColorGrading();
+    mDefaultColorGrading = mColorGrading = engine.getDefaultColorGrading();
 }
 
 FView::~FView() noexcept = default;

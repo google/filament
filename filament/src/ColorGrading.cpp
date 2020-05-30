@@ -108,7 +108,7 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
 
     // Multithreadedly generate the tone mapping 3D look-up table using 32 jobs
     // Slices are 8 KiB (128 cache lines) apart.
-    // This takes about 3-6ms on Android in Release mode on Pixel 4
+    // This takes about 3-6ms on Android in Release
     JobSystem& js = engine.getJobSystem();
     auto slices = js.createJob();
     for (size_t b = 0; b < LUT_DIMENSION; b++) {
