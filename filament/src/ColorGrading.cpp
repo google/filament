@@ -18,6 +18,7 @@
 
 #include "details/Engine.h"
 
+#include "ColorSpace.h"
 #include "FilamentAPI-impl.h"
 
 #include <math/vec2.h>
@@ -44,6 +45,10 @@ using namespace math;
 using namespace backend;
 
 static constexpr size_t LUT_DIMENSION = 32u;
+
+//------------------------------------------------------------------------------
+// Builder
+//------------------------------------------------------------------------------
 
 struct ColorGrading::BuilderDetails {
     ToneMapping toneMapping = ToneMapping::ACES;
@@ -75,6 +80,10 @@ ColorGrading* ColorGrading::Builder::build(Engine& engine) {
     return upcast(engine).createColorGrading(*this);
 }
 
+//------------------------------------------------------------------------------
+// Tone mapping
+//------------------------------------------------------------------------------
+
 using ToneMapper = float3(*)(float3);
 
 ToneMapper selectToneMapping(ColorGrading::ToneMapping toneMapping) {
@@ -93,6 +102,45 @@ ToneMapper selectToneMapping(ColorGrading::ToneMapping toneMapping) {
     return tonemap::ACES;
 }
 
+//------------------------------------------------------------------------------
+// White balance
+//------------------------------------------------------------------------------
+
+// Return the chromatic adaptation coefficients in LMS space for the given
+// temperature/tint offsets. The chromatic adaption is perfomed following
+// the von Kries method, using the CIECAT02 transform.
+// See https://en.wikipedia.org/wiki/Chromatic_adaptation
+// See https://en.wikipedia.org/wiki/CIECAM02#Chromatic_adaptation
+UTILS_ALWAYS_INLINE
+inline float3 adaptationTransform(float2 whiteBalance) {
+    // See Mathematica notebook in docs/math/White Balance.nb
+    float k = whiteBalance.x; // temperature
+    float t = whiteBalance.y; // tint
+
+    float x = ILLUMINANT_D65_xyY.x - k * (k < 0.0f ? 0.0214f : 0.066f);
+    float y = illuminantD_y(x) + t * 0.066f;
+
+    float3 lms = XYZ_to_CIECAT02 * xyY_to_XYZ({x, y, 1.0f});
+    return ILLUMINANT_D65_LMS / lms;
+}
+
+UTILS_ALWAYS_INLINE
+inline float3 chromaticAdaptation(float3 v, float2 whiteBalance) {
+    v = sRGB_to_LMS * v;
+    v = adaptationTransform(whiteBalance) * v;
+    v = LMS_to_sRGB * v;
+    return v;
+}
+
+//------------------------------------------------------------------------------
+// Color grading implementation
+//------------------------------------------------------------------------------
+
+struct Config {
+    ToneMapper toneMapper;
+    float2 whiteBalance;
+};
+
 FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
     SYSTRACE_CALL();
 
@@ -102,7 +150,10 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
     constexpr size_t elementSize = sizeof(half4);
     void* const data = malloc(lutElementCount * elementSize);
 
-    ToneMapper toneMapper = selectToneMapping(builder->toneMapping);
+    Config config{
+        .toneMapper   = selectToneMapping(builder->toneMapping),
+        .whiteBalance = builder->whiteBalance
+    };
 
     //auto now = std::chrono::steady_clock::now();
 
@@ -112,7 +163,7 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
     JobSystem& js = engine.getJobSystem();
     auto slices = js.createJob();
     for (size_t b = 0; b < LUT_DIMENSION; b++) {
-        auto job = js.createJob(slices, [data, b, toneMapper](JobSystem&, JobSystem::Job*) {
+        auto job = js.createJob(slices, [data, b, config](JobSystem&, JobSystem::Job*) {
             half4* UTILS_RESTRICT p = (half4*) data + b * LUT_DIMENSION * LUT_DIMENSION;
             for (size_t g = 0; g < LUT_DIMENSION; g++) {
                 for (size_t r = 0; r < LUT_DIMENSION; r++) {
@@ -121,7 +172,11 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                     // LogC encoding
                     v = lutToLinear(v);
 
-                    v = toneMapper(v);
+                    // White balance
+                    v = chromaticAdaptation(v, config.whiteBalance);
+
+                    // Tone mapping
+                    v = config.toneMapper(v);
 
                     // TODO: allow to customize the output color space
                     v = image::linearTosRGB(v);

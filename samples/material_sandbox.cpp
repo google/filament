@@ -576,6 +576,8 @@ static void gui(filament::Engine* engine, filament::View*) {
             ImGui::Combo("Tone-mapping",
                     reinterpret_cast<int*>(&params.colorGradingOptions.toneMapping),
                     "Linear\0ACES\0Filmic\0Reinhard\0Display Range\0\0");
+            ImGui::SliderInt("Temperature", &params.colorGradingOptions.temperature, -100, 100);
+            ImGui::SliderInt("Tint", &params.colorGradingOptions.tint, -100, 100);
         }
 
         if (ImGui::CollapsingHeader("Debug")) {
@@ -690,8 +692,10 @@ static void preRender(filament::Engine* engine, filament::View* view, filament::
     view->setAmbientOcclusionOptions(g_params.ssaoOptions);
 
     if (memcmp(&g_params.colorGradingOptions, &g_lastColorGradingOptions, sizeof(ColorGradingOptions))) {
+        ColorGradingOptions& options = g_params.colorGradingOptions;
         ColorGrading* colorGrading = ColorGrading::Builder()
-                .toneMapping(g_params.colorGradingOptions.toneMapping)
+                .toneMapping(options.toneMapping)
+                .whiteBalance(options.temperature / 100.0f, options.tint / 100.0f)
                 .build(*engine);
         view->setColorGrading(colorGrading);
 
@@ -700,7 +704,7 @@ static void preRender(filament::Engine* engine, filament::View* view, filament::
         }
 
         g_colorGrading = colorGrading;
-        g_lastColorGradingOptions = g_params.colorGradingOptions;
+        g_lastColorGradingOptions = options;
     }
 
     // Without an IBL, we must clear the swapchain to black before each frame.
