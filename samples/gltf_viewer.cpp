@@ -69,6 +69,7 @@ struct App {
     MaterialSource materialSource = GENERATE_SHADERS;
 
     gltfio::ResourceLoader* resourceLoader = nullptr;
+    bool recomputeAabb = false;
 
     bool actualSize = false;
 
@@ -109,6 +110,8 @@ static void printUsage(char* name) {
         "       Override the built-in IBL\n\n"
         "   --actual-size, -s\n"
         "       Do not scale the model to fit into a unit cube\n\n"
+        "   --recompute-aabb, -r\n"
+        "       Ignore the min/max attributes in the glTF file\n\n"
         "   --ubershader, -u\n"
         "       Enable ubershaders (improves load time, adds shader complexity)\n\n"
         "   --camera=<camera mode>, -c <camera mode>\n"
@@ -128,7 +131,7 @@ static void printUsage(char* name) {
 }
 
 static int handleCommandLineArguments(int argc, char* argv[], App* app) {
-    static constexpr const char* OPTSTR = "ha:i:usc:";
+    static constexpr const char* OPTSTR = "ha:i:usc:r";
     static const struct option OPTIONS[] = {
         { "help",         no_argument,       nullptr, 'h' },
         { "api",          required_argument, nullptr, 'a' },
@@ -136,6 +139,7 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
         { "ubershader",   no_argument,       nullptr, 'u' },
         { "actual-size",  no_argument,       nullptr, 's' },
         { "camera",       required_argument, nullptr, 'c' },
+        { "recompute-aabb", no_argument,     nullptr, 'r' },
         { nullptr, 0, nullptr, 0 }
     };
     int opt;
@@ -175,6 +179,9 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
                 break;
             case 's':
                 app->actualSize = true;
+                break;
+            case 'r':
+                app->recomputeAabb = true;
                 break;
         }
     }
@@ -343,11 +350,10 @@ int main(int argc, char** argv) {
     auto loadResources = [&app] (utils::Path filename) {
         // Load external textures and buffers.
         std::string gltfPath = filename.getAbsolutePath();
-        ResourceConfiguration configuration;
+        ResourceConfiguration configuration = {};
         configuration.engine = app.engine;
         configuration.gltfPath = gltfPath.c_str();
-        configuration.normalizeSkinningWeights = true;
-        configuration.recomputeBoundingBoxes = false;
+        configuration.recomputeBoundingBoxes = app.recomputeAabb;
         if (!app.resourceLoader) {
             app.resourceLoader = new gltfio::ResourceLoader(configuration);
         }

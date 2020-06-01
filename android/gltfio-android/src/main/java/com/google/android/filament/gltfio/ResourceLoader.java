@@ -46,7 +46,23 @@ public class ResourceLoader {
      */
     public ResourceLoader(@NonNull Engine engine) {
         long nativeEngine = engine.getNativeObject();
-        mNativeObject = nCreateResourceLoader(nativeEngine);
+        mNativeObject = nCreateResourceLoader(nativeEngine, false, false);
+    }
+
+    /**
+     * Constructs a resource loader tied to the given Filament engine.
+     *
+     * @param engine the engine that gets passed to all builder methods
+     * @param normalizeSkinningWeights scale non-conformant skinning weights so they sum to 1
+     * @param recomputeBoundingBoxes use computed bounding boxes rather than the ones in the asset
+     * @throws IllegalAccessException
+     * @throws InvocationTargetException
+     */
+    public ResourceLoader(@NonNull Engine engine, boolean normalizeSkinningWeights,
+            boolean recomputeBoundingBoxes) {
+        long nativeEngine = engine.getNativeObject();
+        mNativeObject = nCreateResourceLoader(nativeEngine, normalizeSkinningWeights,
+                recomputeBoundingBoxes);
     }
 
     /**
@@ -131,7 +147,8 @@ public class ResourceLoader {
         nAsyncUpdateLoad(mNativeObject);
     }
 
-    private static native long nCreateResourceLoader(long nativeEngine);
+    private static native long nCreateResourceLoader(long nativeEngine,
+            boolean normalizeSkinningWeights, boolean recomputeBoundingBoxes);
     private static native void nDestroyResourceLoader(long nativeLoader);
     private static native void nAddResourceData(long nativeLoader, String url, Buffer buffer,
             int remaining);
