@@ -31,6 +31,7 @@
 namespace filament {
 
 class Camera;
+class ColorGrading;
 class MaterialInstance;
 class RenderTarget;
 class Scene;
@@ -477,6 +478,7 @@ public:
      * @param type Tone-mapping function.
      *
      * @deprecated Use setColorGrading instead
+     * @see setColorGrading
      */
     void setToneMapping(ToneMapping type) noexcept;
 
@@ -484,9 +486,33 @@ public:
      * Returns the tone-mapping function.
      * @return tone-mapping function.
      *
-     * @deprecated use getColorGrading instead
+     * @deprecated Use getColorGrading instead
+     * @see getColorGrading
      */
     ToneMapping getToneMapping() const noexcept;
+
+    /**
+     * Sets this View's color grading transforms.
+     *
+     * @param colorGrading Associate the specified ColorGrading to this View. A ColorGrading can be
+     *                     associated to several View instances.\n
+     *                     \p colorGradingOptions can be nullptr to dissociate the currently set
+     *                     ColorGrading from this View. Doing so will revert to the use of the
+     *                     default color grading transforms.\n
+     *                     The View doesn't take ownership of the ColorGrading pointer (which
+     *                     acts as a reference).
+     *
+     * @note
+     *  There is no reference-counting.
+     *  Make sure to dissociate a ColorGrading from all Views before destroying it.
+     */
+    void setColorGrading(ColorGrading* colorGrading) noexcept;
+
+    /**
+     * Returns the color grading transforms currently associated to this view.
+     * @return A pointer to the ColorGrading associated to this View.
+     */
+    const ColorGrading* getColorGrading() const noexcept;
 
     /**
      * Enables or disables bloom in the post-processing stage. Disabled by default.

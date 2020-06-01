@@ -10,7 +10,8 @@ A new header is inserted each time a *tag* is created.
 - Add support for DOF with Metal backend.
 - SSAO now has an optional high(er) quality upsampler.
 - Tone mappping now uses the real ACES tone mapper, applied in the proper color space.
-- Tone mapping is now applied via a LUT, which will later enable color grading capabilities.
+- Tone mapping is now applied via a LUT.
+- Color grading capabilities per View: white balance (temperature/tint).
 - Fixed bug in the Metal backend when SSR and MSAA were turned on
 - Fixed Metal issue with `BufferDescriptor` and `PixelBufferDescriptor`s not being called on application thread.
 

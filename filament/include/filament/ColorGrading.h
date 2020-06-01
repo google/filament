@@ -35,7 +35,7 @@ class UTILS_PUBLIC ColorGrading : public FilamentAPI {
 public:
     enum class ToneMapping : uint8_t {
         LINEAR        = 0,     //!< Linear tone mapping (i.e. no tone mapping)
-        ACES          = 1,     //!< ACES tone mapping (ODT+RRT in )
+        ACES          = 1,     //!< ACES tone mapping, with a brightness modifier
         FILMIC        = 2,     //!< Filmic tone mapping, modelled after ACES but applied in sRGB space
         REINHARD      = 3,     //!< Reinhard luma-based tone mapping
         DISPLAY_RANGE = 4,     //!< Debug tone mapping to validate scene exposure
@@ -52,6 +52,9 @@ public:
         Builder& operator=(Builder&& rhs) noexcept;
 
         Builder& toneMapping(ToneMapping toneMapping) noexcept;
+
+        // TODO: document: temperature from -1 to +1, tint from -1 to +1; clipped otherwise
+        Builder& whiteBalance(float temperature, float tint) noexcept;
 
         ColorGrading* build(Engine& engine);
 

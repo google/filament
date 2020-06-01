@@ -24,10 +24,11 @@
 #include "RenderPass.h"
 
 #include "details/Camera.h"
+#include "details/ColorGrading.h"
 #include "details/Material.h"
 #include "details/MaterialInstance.h"
 #include "details/Texture.h"
-#include "details/ColorGrading.h"
+
 #include "generated/resources/materials.h"
 
 #include <private/filament/SibGenerator.h>
@@ -972,14 +973,14 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
     return bloomUpsamplePass.getData().out;
 }
 
-void PostProcessManager::colorGradingSubpass(DriverApi& driver,
+void PostProcessManager::colorGradingSubpass(DriverApi& driver, const FColorGrading* colorGrading,
         bool translucent, bool fxaa, bool dithering) noexcept {
 
     FEngine& engine = mEngine;
     Handle<HwRenderPrimitive> const& fullScreenRenderPrimitive = engine.getFullScreenRenderPrimitive();
 
     FMaterialInstance* mi = mColorGradingAsSubpass.getMaterialInstance();
-    mi->setParameter("lut", mEngine.getDefaultColorGrading()->getHwHandle(), {
+    mi->setParameter("lut", colorGrading->getHwHandle(), {
             .filterMag = SamplerMagFilter::LINEAR,
             .filterMin = SamplerMinFilter::LINEAR
     });
@@ -994,7 +995,7 @@ void PostProcessManager::colorGradingSubpass(DriverApi& driver,
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::colorGrading(FrameGraph& fg,
-        FrameGraphId<FrameGraphTexture> input,
+        FrameGraphId<FrameGraphTexture> input, const FColorGrading* colorGrading,
         TextureFormat outFormat, bool translucent, bool fxaa, float2 scale,
         View::BloomOptions bloomOptions, bool dithering) noexcept {
 
@@ -1059,7 +1060,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::colorGrading(FrameGraph& fg,
                         data.dirt.isValid() ? resources.getTexture(data.dirt) : getOneTexture();
 
                 FMaterialInstance* mi = mColorGrading.getMaterialInstance();
-                mi->setParameter("lut", mEngine.getDefaultColorGrading()->getHwHandle(), {
+                mi->setParameter("lut", colorGrading->getHwHandle(), {
                         .filterMag = SamplerMagFilter::LINEAR,
                         .filterMin = SamplerMinFilter::LINEAR
                 });
