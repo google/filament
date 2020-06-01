@@ -23,8 +23,6 @@ using namespace utils;
 
 namespace gltfio {
 
-using namespace details;
-
 size_t FilamentInstance::getEntityCount() const noexcept {
     return upcast(this)->entities.size();
 }

@@ -18,9 +18,9 @@
 
 #include <string>
 
-using namespace gltfio;
+namespace gltfio {
 
-bool gltfio::operator==(const MaterialKey& k1, const MaterialKey& k2) {
+bool operator==(const MaterialKey& k1, const MaterialKey& k2) {
     return
         (k1.doubleSided == k2.doubleSided) &&
         (k1.unlit == k2.unlit) &&
@@ -49,7 +49,7 @@ bool gltfio::operator==(const MaterialKey& k1, const MaterialKey& k2) {
 // implementations to support only 2 simultaneous sets. Here we build a mapping table with 1-based
 // indices where 0 means unused. Note that the order in which we drop textures can affect the look
 // of certain assets. This "order of degradation" is stipulated by the glTF 2.0 specification.
-void details::constrainMaterial(MaterialKey* key, UvMap* uvmap) {
+void constrainMaterial(MaterialKey* key, UvMap* uvmap) {
     const int MAX_INDEX = 2;
     UvMap retval {};
     int index = 1;
@@ -105,8 +105,7 @@ void details::constrainMaterial(MaterialKey* key, UvMap* uvmap) {
     *uvmap = retval;
 }
 
-void details::processShaderString(std::string* shader, const UvMap& uvmap,
-        const MaterialKey& config) {
+void processShaderString(std::string* shader, const UvMap& uvmap, const MaterialKey& config) {
     auto replaceAll = [shader](const std::string& from, const std::string& to) {
         size_t pos = shader->find(from);
         for (; pos != std::string::npos; pos = shader->find(from, pos)) {
@@ -131,3 +130,5 @@ void details::processShaderString(std::string* shader, const UvMap& uvmap,
     replaceAll("${clearCoatRoughness}", clearCoatRoughnessUV);
     replaceAll("${clearCoatNormal}", clearCoatNormalUV);
 }
+
+} // namespace gltfio

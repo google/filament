@@ -38,7 +38,6 @@ using namespace utils;
 static const auto FREE_CALLBACK = [](void* mem, size_t, void*) { free(mem); };
 
 namespace gltfio {
-namespace details {
 
 struct FFilamentAsset;
 
@@ -164,5 +163,4 @@ Wireframe::~Wireframe() {
     engine->destroy(mIndexBuffer);
 }
 
-} // namespace details
 } // namsepace gltfio

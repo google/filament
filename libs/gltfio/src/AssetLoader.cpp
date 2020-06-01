@@ -56,7 +56,6 @@ using namespace filament::math;
 using namespace utils;
 
 namespace gltfio {
-namespace details {
 
 static const auto FREE_CALLBACK = [](void* mem, size_t, void*) { free(mem); };
 
@@ -179,10 +178,6 @@ struct FAssetLoader : public AssetLoader {
 };
 
 FILAMENT_UPCAST(AssetLoader)
-
-} // namespace details
-
-using namespace details;
 
 FFilamentAsset* FAssetLoader::createAssetFromJson(const uint8_t* bytes, uint32_t nbytes) {
     cgltf_options options { cgltf_file_type_invalid };

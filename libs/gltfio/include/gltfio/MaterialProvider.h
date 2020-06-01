@@ -146,11 +146,10 @@ public:
     virtual void destroyMaterials() = 0;
 };
 
-namespace details {
-    void constrainMaterial(MaterialKey* key, UvMap* uvmap);
-    void processShaderString(std::string* shader, const UvMap& uvmap,
-            const MaterialKey& config);
-}
+void constrainMaterial(MaterialKey* key, UvMap* uvmap);
+
+void processShaderString(std::string* shader, const UvMap& uvmap,
+        const MaterialKey& config);
 
 /**
  * Creates a material provider that builds materials on the fly, composing GLSL at run time.

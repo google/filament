@@ -34,7 +34,6 @@
 struct cgltf_node;
 
 namespace gltfio {
-namespace details {
 
 struct FFilamentAsset;
 
@@ -66,7 +65,6 @@ struct FFilamentInstance : public FilamentInstance {
 
 FILAMENT_UPCAST(FilamentInstance)
 
-} // namespace details
 } // namespace gltfio
 
 #endif // GLTFIO_FFILAMENTINSTANCE_H

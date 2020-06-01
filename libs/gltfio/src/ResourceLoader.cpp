@@ -52,7 +52,6 @@
 using namespace filament;
 using namespace filament::math;
 using namespace utils;
-using namespace gltfio::details;
 
 static const auto FREE_CALLBACK = [](void* mem, size_t, void*) { free(mem); };
 
@@ -112,8 +111,6 @@ struct ResourceLoader::Impl {
     ~Impl();
 };
 
-namespace details {
-
 uint32_t computeBindingSize(const cgltf_accessor* accessor);
 uint32_t computeBindingOffset(const cgltf_accessor* accessor);
 
@@ -154,10 +151,6 @@ private:
     bool mLoaderDestroyed = false;
     int mPendingUploads = 0;
 };
-
-} // namespace details
-
-using namespace details;
 
 static void importSkins(const cgltf_data* gltf, const NodeMap& nodeMap, SkinVector& dstSkins) {
     dstSkins.resize(gltf->skins_count);
