@@ -622,7 +622,7 @@ public:
      *
      * @param enabled true enables post processing, false disables it.
      *
-     * @see setBloomOptions, setToneMapping, setAntiAliasing, setDithering, setSampleCount
+     * @see setBloomOptions, setColorGrading, setAntiAliasing, setDithering, setSampleCount
      */
     void setPostProcessingEnabled(bool enabled) noexcept;
 
