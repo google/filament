@@ -144,7 +144,7 @@ MaterialInstance* UbershaderLoader::createMaterialInstance(MaterialKey* config, 
     if (config->enableDiagnostics) {
         return nullptr;
     }
-    gltfio::details::constrainMaterial(config, uvmap);
+    constrainMaterial(config, uvmap);
     auto getUvIndex = [uvmap](uint8_t srcIndex, bool hasTexture) -> int {
         return hasTexture ? int(uvmap->at(srcIndex)) - 1 : -1;
     };

@@ -48,7 +48,6 @@
 #include <vector>
 
 namespace gltfio {
-namespace details {
 
 // Encapsulates VertexBuffer::setBufferAt() or IndexBuffer::setBuffer().
 struct BufferSlot {
@@ -268,7 +267,6 @@ struct FFilamentAsset : public FilamentAsset {
 
 FILAMENT_UPCAST(FilamentAsset)
 
-} // namespace details
 } // namespace gltfio
 
 #endif // GLTFIO_FFILAMENTASSET_H

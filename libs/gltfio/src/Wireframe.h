@@ -23,7 +23,6 @@
 #include <utils/Entity.h>
 
 namespace gltfio {
-namespace details {
 
 struct FFilamentAsset;
 
@@ -36,7 +35,6 @@ struct Wireframe {
     filament::IndexBuffer* mIndexBuffer;
 };
 
-} // namespace details
 } // namsepace gltfio
 
 #endif // GLTFIO_WIREFRAME_H

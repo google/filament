@@ -237,7 +237,7 @@ std::string shaderFromKey(const MaterialKey& config) {
 Material* createMaterial(Engine* engine, const MaterialKey& config, const UvMap& uvmap,
         const char* name) {
     std::string shader = shaderFromKey(config);
-    gltfio::details::processShaderString(&shader, uvmap, config);
+    processShaderString(&shader, uvmap, config);
     MaterialBuilder builder = MaterialBuilder()
             .name(name)
             .flipUV(false)
@@ -375,7 +375,7 @@ Material* createMaterial(Engine* engine, const MaterialKey& config, const UvMap&
 
 MaterialInstance* MaterialGenerator::createMaterialInstance(MaterialKey* config, UvMap* uvmap,
         const char* label) {
-    gltfio::details::constrainMaterial(config, uvmap);
+    constrainMaterial(config, uvmap);
     auto iter = mCache.find(*config);
     if (iter == mCache.end()) {
         Material* mat = createMaterial(mEngine, *config, *uvmap, label);

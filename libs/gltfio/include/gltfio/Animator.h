@@ -22,11 +22,8 @@
 
 namespace gltfio {
 
-namespace details {
-    struct FFilamentAsset;
-    struct FFilamentInstance;
-}
-
+struct FFilamentAsset;
+struct FFilamentInstance;
 struct AnimatorImpl;
 
 /**
@@ -74,11 +71,11 @@ public:
 private:
 
     /*! \cond PRIVATE */
-    friend struct details::FFilamentAsset;
-    friend struct details::FFilamentInstance;
+    friend struct FFilamentAsset;
+    friend struct FFilamentInstance;
     /*! \endcond */
 
-    Animator(details::FFilamentAsset* asset, details::FFilamentInstance* instance);
+    Animator(FFilamentAsset* asset, FFilamentInstance* instance);
     ~Animator();
     AnimatorImpl* mImpl;
 };

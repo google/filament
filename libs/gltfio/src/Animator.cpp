@@ -43,8 +43,6 @@ using namespace utils;
 
 namespace gltfio {
 
-using namespace details;
-
 using TimeValues = std::map<float, size_t>;
 using SourceValues = std::vector<float>;
 using BoneVector = std::vector<filament::math::mat4f>;

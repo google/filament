@@ -27,10 +27,8 @@ namespace filament {
 
 namespace gltfio {
 
-namespace details {
-    struct FFilamentAsset;
-    class AssetPool;
-}
+struct FFilamentAsset;
+class AssetPool;
 
 /**
  * \struct ResourceConfiguration ResourceLoader.h gltfio/ResourceLoader.h
@@ -133,11 +131,11 @@ public:
     void asyncUpdateLoad();
 
 private:
-    bool loadResources(details::FFilamentAsset* asset, bool async);
-    void applySparseData(details::FFilamentAsset* asset) const;
-    void normalizeSkinningWeights(details::FFilamentAsset* asset) const;
-    void updateBoundingBoxes(details::FFilamentAsset* asset) const;
-    details::AssetPool* mPool;
+    bool loadResources(FFilamentAsset* asset, bool async);
+    void applySparseData(FFilamentAsset* asset) const;
+    void normalizeSkinningWeights(FFilamentAsset* asset) const;
+    void updateBoundingBoxes(FFilamentAsset* asset) const;
+    AssetPool* mPool;
     struct Impl;
     Impl* pImpl;
 };

@@ -21,8 +21,6 @@ using namespace utils;
 
 namespace gltfio {
 
-using namespace details;
-
 size_t FilamentAsset::getEntityCount() const noexcept {
     return upcast(this)->getEntityCount();
 }
