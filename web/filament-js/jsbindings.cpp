@@ -343,6 +343,16 @@ value_object<RenderableManager::Bone>("RenderableManager$Bone")
     .field("unitQuaternion", &RenderableManager::Bone::unitQuaternion)
     .field("translation", &RenderableManager::Bone::translation);
 
+// VECTOR TYPES
+// ------------
+
+using EntityVector = std::vector<utils::Entity>;
+
+register_vector<std::string>("RegistryKeys");
+register_vector<utils::Entity>("EntityVector");
+register_vector<FilamentInstance*>("AssetInstanceVector");
+register_vector<const MaterialInstance*>("MaterialInstanceVector");
+
 // CORE FILAMENT CLASSES
 // ---------------------
 
@@ -530,7 +540,7 @@ class_<Scene>("Scene")
     .function("addEntity", &Scene::addEntity)
 
     .function("addEntities", EMBIND_LAMBDA(void,
-            (Scene* self, std::vector<utils::Entity> entities), {
+            (Scene* self, EntityVector entities), {
         self->addEntities(entities.data(), entities.size());
     }), allow_raw_pointers())
 
@@ -839,9 +849,9 @@ class_<TransformManager>("TransformManager")
     .function("setParent", &TransformManager::setParent)
     .function("getParent", &TransformManager::getParent)
 
-    .function("getChidren", EMBIND_LAMBDA(std::vector<utils::Entity>,
+    .function("getChildren", EMBIND_LAMBDA(EntityVector,
             (TransformManager* self, TransformManager::Instance instance), {
-        std::vector<utils::Entity> result(self->getChildCount(instance));
+        EntityVector result(self->getChildCount(instance));
         self->getChildren(instance, result.data(), result.size());
         return result;
     }), allow_raw_pointers())
@@ -1157,6 +1167,8 @@ class_<SkyBuilder>("Skybox$Builder")
 
 /// Entity ::core class:: Handle to an object consisting of a set of components.
 /// To create an entity with no components, use [EntityManager].
+/// TODO: It would be better to expose these as JS numbers rather than as JS objects.
+/// This would also be more consistent with Filament's Java bindings.
 class_<utils::Entity>("Entity")
     .function("getId", &utils::Entity::getId);
 
@@ -1304,11 +1316,6 @@ class_<KtxInfo>("KtxInfo")
     .property("pixelWidth", &KtxInfo::pixelWidth)
     .property("pixelHeight", &KtxInfo::pixelHeight)
     .property("pixelDepth", &KtxInfo::pixelDepth);
-
-register_vector<std::string>("RegistryKeys");
-register_vector<utils::Entity>("EntityVector");
-register_vector<FilamentInstance*>("AssetInstanceVector");
-register_vector<const MaterialInstance*>("MaterialInstanceVector");
 
 class_<MeshReader::MaterialRegistry>("MeshReader$MaterialRegistry")
     .constructor<>()
@@ -1461,14 +1468,30 @@ class_<Animator>("gltfio$Animator")
     }), allow_raw_pointers());
 
 class_<FilamentAsset>("gltfio$FilamentAsset")
-    .function("getEntities", EMBIND_LAMBDA(std::vector<utils::Entity>, (FilamentAsset* self), {
+    .function("_getEntities", EMBIND_LAMBDA(EntityVector, (FilamentAsset* self), {
         const utils::Entity* ptr = self->getEntities();
-        return std::vector<utils::Entity>(ptr, ptr + self->getEntityCount());
+        return EntityVector(ptr, ptr + self->getEntityCount());
     }), allow_raw_pointers())
 
-    .function("getLightEntities", EMBIND_LAMBDA(std::vector<utils::Entity>, (FilamentAsset* self), {
+    .function("_getEntitiesByName", EMBIND_LAMBDA(EntityVector, (FilamentAsset* self, std::string name), {
+        EntityVector result(self->getEntitiesByName(name.c_str(), nullptr, 0));
+        self->getEntitiesByName(name.c_str(), result.data(), result.size());
+        return result;
+    }), allow_raw_pointers())
+
+    .function("_getEntitiesByPrefix", EMBIND_LAMBDA(EntityVector, (FilamentAsset* self, std::string prefix), {
+        EntityVector result(self->getEntitiesByPrefix(prefix.c_str(), nullptr, 0));
+        self->getEntitiesByPrefix(prefix.c_str(), result.data(), result.size());
+        return result;
+    }), allow_raw_pointers())
+
+    .function("getFirstEntityByName", EMBIND_LAMBDA(utils::Entity, (FilamentAsset* self, std::string name), {
+        return self->getFirstEntityByName(name.c_str());
+    }), allow_raw_pointers())
+
+    .function("_getLightEntities", EMBIND_LAMBDA(EntityVector, (FilamentAsset* self), {
         const utils::Entity* ptr = self->getLightEntities();
-        return std::vector<utils::Entity>(ptr, ptr + self->getLightEntityCount());
+        return EntityVector(ptr, ptr + self->getLightEntityCount());
     }), allow_raw_pointers())
 
     .function("getRoot", &FilamentAsset::getRoot)
@@ -1506,9 +1529,9 @@ class_<FilamentAsset>("gltfio$FilamentAsset")
     .function("releaseSourceData", &FilamentAsset::releaseSourceData);
 
 class_<FilamentInstance>("gltfio$FilamentInstance")
-    .function("getEntities", EMBIND_LAMBDA(std::vector<utils::Entity>, (FilamentInstance* self), {
+    .function("getEntities", EMBIND_LAMBDA(EntityVector, (FilamentInstance* self), {
         const utils::Entity* ptr = self->getEntities();
-        return std::vector<utils::Entity>(ptr, ptr + self->getEntityCount());
+        return EntityVector(ptr, ptr + self->getEntityCount());
     }), allow_raw_pointers())
 
     .function("getRoot", &FilamentInstance::getRoot)

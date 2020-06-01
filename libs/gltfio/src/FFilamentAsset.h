@@ -18,7 +18,6 @@
 #define GLTFIO_FFILAMENTASSET_H
 
 #include <gltfio/FilamentAsset.h>
-#include <gltfio/Animator.h>
 
 #include <filament/Engine.h>
 #include <filament/IndexBuffer.h>
@@ -32,22 +31,27 @@
 #include <math/mat4.h>
 
 #include <utils/Entity.h>
-#include <utils/NameComponentManager.h>
 
 #include <cgltf.h>
 
 #include "upcast.h"
-#include "Wireframe.h"
 #include "DependencyGraph.h"
 #include "DracoCache.h"
 #include "FFilamentInstance.h"
 
 #include <tsl/robin_map.h>
+#include <tsl/htrie_map.h>
 
-#include <string>
 #include <vector>
 
+namespace utils {
+    class NameComponentManager;
+}
+
 namespace gltfio {
+
+class Animator;
+class Wireframe;
 
 // Encapsulates VertexBuffer::setBufferAt() or IndexBuffer::setBuffer().
 struct BufferSlot {
@@ -72,35 +76,7 @@ struct FFilamentAsset : public FilamentAsset {
     FFilamentAsset(filament::Engine* engine, utils::NameComponentManager* names) :
             mEngine(engine), mNameManager(names) {}
 
-    ~FFilamentAsset() {
-        releaseSourceData();
-
-        // The only things we need to free in the instances are their animators.
-        // The union of all instance entities will be destroyed below.
-        for (FFilamentInstance* instance : mInstances) {
-            delete instance->animator;
-            delete instance;
-        }
-
-        delete mAnimator;
-        delete mWireframe;
-        mEngine->destroy(mRoot);
-        for (auto entity : mEntities) {
-            mEngine->destroy(entity);
-        }
-        for (auto mi : mMaterialInstances) {
-            mEngine->destroy(mi);
-        }
-        for (auto vb : mVertexBuffers) {
-            mEngine->destroy(vb);
-        }
-        for (auto ib : mIndexBuffers) {
-            mEngine->destroy(ib);
-        }
-        for (auto tx : mTextures) {
-            mEngine->destroy(tx);
-        }
-    }
+    ~FFilamentAsset();
 
     size_t getEntityCount() const noexcept {
         return mEntities.size();
@@ -150,46 +126,25 @@ struct FFilamentAsset : public FilamentAsset {
         return mBoundingBox;
     }
 
-    const char* getName(utils::Entity entity) const noexcept {
-        if (mNameManager == nullptr) {
-            return nullptr;
-        }
-        auto nameInstance = mNameManager->getInstance(entity);
-        return nameInstance ? mNameManager->getName(nameInstance) : nullptr;
-    }
+    const char* getName(utils::Entity entity) const noexcept;
 
-    Animator* getAnimator() noexcept {
-        if (!mAnimator) {
-            mAnimator = new Animator(this, nullptr);
-        }
-        return mAnimator;
-    }
+    utils::Entity getFirstEntityByName(const char* name) noexcept;
 
-    utils::Entity getWireframe() noexcept {
-        if (!mWireframe) {
-            mWireframe = new Wireframe(this);
-        }
-        return mWireframe->mEntity;
-    }
+    size_t getEntitiesByName(const char* name, utils::Entity* entities,
+            size_t maxCount) const noexcept;
+
+    size_t getEntitiesByPrefix(const char* prefix, utils::Entity* entities,
+            size_t maxCount) const noexcept;
+
+    Animator* getAnimator() noexcept;
+
+    utils::Entity getWireframe() noexcept;
 
     filament::Engine* getEngine() const noexcept {
         return mEngine;
     }
 
-    void releaseSourceData() noexcept {
-        // To ensure that all possible memory is freed, we reassign to new containers rather than
-        // calling clear(). With many container types (such as robin_map), clearing is a fast
-        // operation that merely frees the storage for the items.
-        mResourceUris = {};
-        mNodeMap = {};
-        mPrimitives = {};
-        mBufferSlots = {};
-        mTextureSlots = {};
-        releaseSourceAsset();
-        for (FFilamentInstance* instance : mInstances) {
-            instance->nodeMap = {};
-        }
-    }
+    void releaseSourceData() noexcept;
 
     const void* getSourceAsset() noexcept {
         return mSourceAsset;
@@ -207,20 +162,7 @@ struct FFilamentAsset : public FilamentAsset {
         ++mSourceAssetRefCount;
     }
 
-    void releaseSourceAsset() {
-        if (--mSourceAssetRefCount == 0) {
-            // At this point, all vertex buffers have been uploaded to the GPU and we can finally
-            // release all remaining CPU-side source data, such as aggregated GLB buffers and Draco
-            // meshes. Note that sidecar bin data is already released, because external resources
-            // are released eagerly via BufferDescriptor callbacks.
-            mDracoCache = {};
-            mGlbData = {};
-            if (!mSharedSourceAsset) {
-                cgltf_free((cgltf_data*) mSourceAsset);
-            }
-            mSourceAsset = nullptr;
-        }
-    }
+    void releaseSourceAsset();
 
     void takeOwnership(filament::Texture* texture) {
         mTextures.push_back(texture);
@@ -251,6 +193,7 @@ struct FFilamentAsset : public FilamentAsset {
     bool mSharedSourceAsset = false;
     DependencyGraph mDependencyGraph;
     DracoCache mDracoCache;
+    tsl::htrie_map<char, std::vector<utils::Entity>> mNameToEntity;
 
     // Sentinels for situations where ResourceLoader needs to generate data.
     const cgltf_accessor mGenerateNormals = {};
