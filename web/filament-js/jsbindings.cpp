@@ -1561,12 +1561,13 @@ class_<AssetLoader>("gltfio$AssetLoader")
     }), allow_raw_pointers());
 
 class_<ResourceLoader>("gltfio$ResourceLoader")
-    .constructor(EMBIND_LAMBDA(ResourceLoader*, (Engine* engine), {
+    .constructor(EMBIND_LAMBDA(ResourceLoader*, (Engine* engine, bool normalizeSkinningWeights,
+            bool recomputeBoundingBoxes), {
         return new ResourceLoader({
             .engine = engine,
             .gltfPath = nullptr,
-            .normalizeSkinningWeights = true,
-            .recomputeBoundingBoxes = true
+            .normalizeSkinningWeights = normalizeSkinningWeights,
+            .recomputeBoundingBoxes = recomputeBoundingBoxes
         });
     }), allow_raw_pointers())
 

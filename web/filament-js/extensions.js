@@ -351,7 +351,7 @@ Filament.loadClassExtensions = function() {
         }
 
         // Construct a resource loader and start decoding after all textures are fetched.
-        const resourceLoader = new Filament.gltfio$ResourceLoader(engine);
+        const resourceLoader = new Filament.gltfio$ResourceLoader(engine, false, false);
         const onComplete = () => {
             resourceLoader.asyncBeginLoad(asset);
 
