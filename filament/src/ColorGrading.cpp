@@ -18,8 +18,14 @@
 
 #include "details/Engine.h"
 
-#include "ColorSpace.h"
 #include "FilamentAPI-impl.h"
+
+#include "ColorSpace.h"
+// When defined, the ACES tone mapper will match the brightness of the filmic ("ACES sRGB")
+// tone mapper. It is *not* correct, but it helps for compatibility
+// TODO: Always enable this, expose a float to control this (1.0 == real ACES)
+#define TONEMAP_ACES_MATCH_BRIGHTNESS
+#include "ToneMapping.h"
 
 #include <math/vec2.h>
 #include <math/vec3.h>
@@ -30,13 +36,6 @@
 #include <utils/Systrace.h>
 
 #include <functional>
-
-// When defined, the ACES tone mapper will match the brightness of the filmic ("ACES sRGB")
-// tone mapper. It is *not* correct, but it helps for compatibility
-// TODO: Always enable this, expose a float to control this (1.0 == real ACES)
-#define TONEMAP_ACES_MATCH_BRIGHTNESS
-
-#include "ToneMapping.h"
 
 namespace filament {
 
@@ -52,7 +51,10 @@ static constexpr size_t LUT_DIMENSION = 32u;
 
 struct ColorGrading::BuilderDetails {
     ToneMapping toneMapping = ToneMapping::ACES;
-    float2 whiteBalance = {0.0f, 0.0f};
+    float2 whiteBalance     = {0.0f, 0.0f};
+    float3 outRed           = {1.0f, 0.0f, 0.0f};
+    float3 outGreen         = {0.0f, 1.0f, 0.0f};
+    float3 outBlue          = {0.0f, 0.0f, 1.0f};
 };
 
 using BuilderType = ColorGrading;
@@ -76,30 +78,16 @@ ColorGrading::Builder& ColorGrading::Builder::whiteBalance(float temperature, fl
     return *this;
 }
 
-ColorGrading* ColorGrading::Builder::build(Engine& engine) {
-    return upcast(engine).createColorGrading(*this);
+ColorGrading::Builder& ColorGrading::Builder::channelMixer(
+        float3 outRed, float3 outGreen, float3 outBlue) noexcept {
+    mImpl->outRed   = clamp(outRed,   -2.0f, 2.0f);
+    mImpl->outGreen = clamp(outGreen, -2.0f, 2.0f);
+    mImpl->outBlue  = clamp(outBlue,  -2.0f, 2.0f);
+    return *this;
 }
 
-//------------------------------------------------------------------------------
-// Tone mapping
-//------------------------------------------------------------------------------
-
-using ToneMapper = float3(*)(float3);
-
-ToneMapper selectToneMapping(ColorGrading::ToneMapping toneMapping) {
-    switch(toneMapping) {
-        case ColorGrading::ToneMapping::LINEAR:
-            return tonemap::Linear;
-        case ColorGrading::ToneMapping::ACES:
-            return tonemap::ACES;
-        case ColorGrading::ToneMapping::FILMIC:
-            return tonemap::Filmic;
-        case ColorGrading::ToneMapping::REINHARD:
-            return tonemap::Reinhard;
-        case ColorGrading::ToneMapping::DISPLAY_RANGE:
-            return tonemap::DisplayRange;
-    }
-    return tonemap::ACES;
+ColorGrading* ColorGrading::Builder::build(Engine& engine) {
+    return upcast(engine).createColorGrading(*this);
 }
 
 //------------------------------------------------------------------------------
@@ -133,12 +121,53 @@ inline float3 chromaticAdaptation(float3 v, float2 whiteBalance) {
 }
 
 //------------------------------------------------------------------------------
+// General color grading
+//------------------------------------------------------------------------------
+
+mat3f selectColorGradingTransform(ColorGrading::ToneMapping toneMapping) {
+    switch (toneMapping) {
+        case ColorGrading::ToneMapping::ACES:
+            return sRGB_to_AP1;
+        default:
+            return mat3f{};
+    }
+    return mat3f{};
+}
+
+UTILS_ALWAYS_INLINE
+inline constexpr float3 channelMixer(float3 v, float3 r, float3 g, float3 b) {
+    return {dot(v, r), dot(v, g), dot(v, b)};
+}
+
+//------------------------------------------------------------------------------
+// Tone mapping
+//------------------------------------------------------------------------------
+
+using ToneMapper = float3(*)(float3);
+
+ToneMapper selectToneMapping(ColorGrading::ToneMapping toneMapping) {
+    switch (toneMapping) {
+        case ColorGrading::ToneMapping::LINEAR:
+            return tonemap::Linear;
+        case ColorGrading::ToneMapping::ACES:
+            return tonemap::ACES;
+        case ColorGrading::ToneMapping::FILMIC:
+            return tonemap::Filmic;
+        case ColorGrading::ToneMapping::REINHARD:
+            return tonemap::Reinhard;
+        case ColorGrading::ToneMapping::DISPLAY_RANGE:
+            return tonemap::DisplayRange;
+    }
+    return tonemap::ACES;
+}
+
+//------------------------------------------------------------------------------
 // Color grading implementation
 //------------------------------------------------------------------------------
 
 struct Config {
+    mat3f colorGradingTransform;
     ToneMapper toneMapper;
-    float2 whiteBalance;
 };
 
 FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
@@ -151,8 +180,8 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
     void* const data = malloc(lutElementCount * elementSize);
 
     Config config{
-        .toneMapper   = selectToneMapping(builder->toneMapping),
-        .whiteBalance = builder->whiteBalance
+        .colorGradingTransform = selectColorGradingTransform(builder->toneMapping),
+        .toneMapper            = selectToneMapping(builder->toneMapping),
     };
 
     //auto now = std::chrono::steady_clock::now();
@@ -163,7 +192,7 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
     JobSystem& js = engine.getJobSystem();
     auto slices = js.createJob();
     for (size_t b = 0; b < LUT_DIMENSION; b++) {
-        auto job = js.createJob(slices, [data, b, config](JobSystem&, JobSystem::Job*) {
+        auto job = js.createJob(slices, [data, b, &config, builder](JobSystem&, JobSystem::Job*) {
             half4* UTILS_RESTRICT p = (half4*) data + b * LUT_DIMENSION * LUT_DIMENSION;
             for (size_t g = 0; g < LUT_DIMENSION; g++) {
                 for (size_t r = 0; r < LUT_DIMENSION; r++) {
@@ -173,15 +202,26 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                     v = lutToLinear(v);
 
                     // White balance
-                    v = chromaticAdaptation(v, config.whiteBalance);
+                    v = chromaticAdaptation(v, builder->whiteBalance);
+
+                    // Convert to color grading color space
+                    v = config.colorGradingTransform * v;
+
+                    // Channel mixer
+                    v = channelMixer(v, builder->outRed, builder->outGreen, builder->outBlue);
+
+                    // Kill negative values before tone mapping
+                    v = max(v, 0.0f);
 
                     // Tone mapping
                     v = config.toneMapper(v);
 
-                    // TODO: allow to customize the output color space
+                    // Apply OECF
+                    // TODO: allow to customize the output color space,
+                    //       here we assume we are in the sRGB gamut already
                     v = image::linearTosRGB(v);
 
-                    *p++ = half4{ v, 0 };
+                    *p++ = half4{v, 0.0f};
                 }
             }
         });

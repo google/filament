@@ -30,17 +30,62 @@ namespace filament {
 class Engine;
 class FColorGrading;
 
+/**
+ * ColorGrading is used to transform (either to modify or correct) the colors of the HDR buffer
+ * rendered by Filament. Color grading transforms are applied after lighting, and after any lens
+ * effects (bloom for instance), and include tone mapping.
+ *
+ * Creation, usage and destruction
+ * ===============================
+ *
+ * A ColorGrading object is created using the ColorGrading::Builder and destroyed by calling
+ * Engine::destroy(const ColorGrading*). A ColorGrading object is meant to be set on a View.
+ *
+ * ~~~~~~~~~~~{.cpp}
+ *  filament::Engine* engine = filament::Engine::create();
+ *
+ *  filament::ColorGrading* colorGrading = filament::ColorGrading::Builder()
+ *              .toneMapping(filament::ColorGrading::ToneMapping::ACES)
+ *              .build(*engine);
+ *
+ *  myView->setColorGrading(colorGrading);
+ *
+ *  engine->destroy(colorGrading);
+ * ~~~~~~~~~~~
+ *
+ * Performance
+ * ===========
+ *
+ * Creating a new ColorGrading object may be more expensive than other Filament objects as a
+ * 3D LUT may need to be generated. The generation of a 3D LUT, if necessary, may happen on
+ * the CPU.
+ *
+ * Defaults
+ * ========
+ *
+ * Here are the default color grading options:
+ * - Tone mapping: ACES
+ * - White balance: temperature 0, and tint 0
+ * - Channel mixer: red {1,0,0}, green {0,1,0}, blue {0,0,1}
+ *
+ * @see View
+ */
 class UTILS_PUBLIC ColorGrading : public FilamentAPI {
     struct BuilderDetails;
 public:
+
+    /**
+     * List of available tone-mapping operators.
+     */
     enum class ToneMapping : uint8_t {
         LINEAR        = 0,     //!< Linear tone mapping (i.e. no tone mapping)
         ACES          = 1,     //!< ACES tone mapping, with a brightness modifier
         FILMIC        = 2,     //!< Filmic tone mapping, modelled after ACES but applied in sRGB space
         REINHARD      = 3,     //!< Reinhard luma-based tone mapping
-        DISPLAY_RANGE = 4,     //!< Debug tone mapping to validate scene exposure
+        DISPLAY_RANGE = 4,     //!< Tone mapping used to validate/debug scene exposure
     };
 
+    //! Use Builder to construct a ColorGrading object instance
     class Builder : public BuilderBase<BuilderDetails> {
         friend struct BuilderDetails;
     public:
@@ -51,11 +96,82 @@ public:
         Builder& operator=(Builder const& rhs) noexcept;
         Builder& operator=(Builder&& rhs) noexcept;
 
+        /**
+         * Selects the tone mapping operator to apply to the HDR color buffer as the last
+         * operation of the color grading post-processing step.
+         *
+         * The default tone mapping operator is ACES.
+         *
+         * @param toneMapping The tone mapping operator to apply to the HDR color buffer
+         *
+         * @return This Builder, for chaining calls
+         */
         Builder& toneMapping(ToneMapping toneMapping) noexcept;
 
-        // TODO: document: temperature from -1 to +1, tint from -1 to +1; clipped otherwise
+        /**
+         * Adjusts the while balance of the image. This can be used to remove color casts
+         * and correct the appearance of the white point in the scene, or to alter the
+         * overall chromaticity of the image for artistic reasons (to make the image appear
+         * cooler or warmer for instance).
+         *
+         * The while balance adjustment is defined with two values:
+         * - Temperature, to modify the color temperature. This value will modify the colors
+         *   on a blue/yellow axis. Lower values apply a cool color temperature, and higher
+         *   values apply a warm color temperature. The lowest value, -1.0f, is equivalent to
+         *   a temperature of 2,000K. The highest value, 1.0f, is equivalent to a temperature
+         *   of 50,000K.
+         * - Tint, to modify the colors on a green/magenta axis. The lowest value, -1.0f, will
+         *   apply a strong green cast, and the highest value, 1.0f, will apply a strong magenta
+         *   cast.
+         *
+         * Both values are expected to be in the range [-1.0..+1.0]. Values outside of that
+         * range will be clipped to that range.
+         *
+         * @param temperature Modification on the blue/yellow axis, as a value between -1.0 and +1.0.
+         * @param tint Modification on the green/magenta axis, as a value between -1.0 and +1.0.
+         *
+         * @return This Builder, for chaining calls
+         */
         Builder& whiteBalance(float temperature, float tint) noexcept;
 
+        /**
+         * The channel mixer adjustment modifies each output color channel using the specified
+         * mix of the source color channels.
+         *
+         * By default each output color channel is set to use 100% of the corresponding source
+         * channel and 0% of the other channels. For instance, the output red channel is set to
+         * {1.0, 0.0, 1.0} or 100% red, 0% green and 0% blue.
+         *
+         * Each output channel can add or subtract data from the source channel by using values
+         * in the range [-2.0..+2.0]. Values outside of that range will be clipped to that range.
+         *
+         * Using the channel mixer adjustment you can for instance create a monochrome output
+         * by setting all 3 output channels to the same mix. For instance: {0.4, 0.4, 0.2} for
+         * all 3 output channels(40% red, 40% green and 20% blue).
+         *
+         * More complex mixes can be used to create more compelx effects. For instance, here is
+         * a mix that creates a sepia tone effect:
+         * - outRed   = {0.255, 0.858, 0.087}
+         * - outGreen = {0.213, 0.715, 0.072}
+         * - outBlue  = {0.170, 0.572, 0.058}
+         *
+         * @param outRed The mix of source RGB for the output red channel, between -2.0 and +2.0
+         * @param outGreen The mix of source RGB for the output green channel, between -2.0 and +2.0
+         * @param outBlue The mix of source RGB for the output blue channel, between -2.0 and +2.0
+         *
+         * @return This Builder, for chaining calls
+         */
+        Builder& channelMixer(
+                math::float3 outRed, math::float3 outGreen, math::float3 outBlue) noexcept;
+
+        /**
+         * Creates the ColorGrading object and returns a pointer to it.
+         *
+         * @param engine Reference to the filament::Engine to associate this ColorGrading with.
+         *
+         * @return pointer to the newly created object or nullptr if exceptions are disabled and
+         *         an error occurred.
+         */
         ColorGrading* build(Engine& engine);
 
     private:

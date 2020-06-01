@@ -578,6 +578,9 @@ static void gui(filament::Engine* engine, filament::View*) {
                     "Linear\0ACES\0Filmic\0Reinhard\0Display Range\0\0");
             ImGui::SliderInt("Temperature", &params.colorGradingOptions.temperature, -100, 100);
             ImGui::SliderInt("Tint", &params.colorGradingOptions.tint, -100, 100);
+            ImGui::SliderFloat3("Out Red", &params.colorGradingOptions.outRed.x, -2.0f, 2.0f);
+            ImGui::SliderFloat3("Out Green", &params.colorGradingOptions.outGreen.x, -2.0f, 2.0f);
+            ImGui::SliderFloat3("Out Blue", &params.colorGradingOptions.outBlue.x, -2.0f, 2.0f);
         }
 
         if (ImGui::CollapsingHeader("Debug")) {
@@ -694,8 +697,9 @@ static void preRender(filament::Engine* engine, filament::View* view, filament::
     if (memcmp(&g_params.colorGradingOptions, &g_lastColorGradingOptions, sizeof(ColorGradingOptions))) {
         ColorGradingOptions& options = g_params.colorGradingOptions;
         ColorGrading* colorGrading = ColorGrading::Builder()
-                .toneMapping(options.toneMapping)
                 .whiteBalance(options.temperature / 100.0f, options.tint / 100.0f)
+                .channelMixer(options.outRed, options.outGreen, options.outBlue)
+                .toneMapping(options.toneMapping)
                 .build(*engine);
         view->setColorGrading(colorGrading);
 

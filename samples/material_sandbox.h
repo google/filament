@@ -64,6 +64,9 @@ struct ColorGradingOptions {
     ColorGrading::ToneMapping toneMapping = ColorGrading::ToneMapping::ACES;
     int temperature = 0;
     int tint = 0;
+    math::float3 outRed{1.0f, 0.0f, 0.0f};
+    math::float3 outGreen{0.0f, 1.0f, 0.0f};
+    math::float3 outBlue{0.0f, 0.0f, 1.0f};
 };
 
 struct SandboxParameters {

@@ -17,6 +17,8 @@
 #ifndef TNT_FILAMENT_TONE_MAPPING_H
 #define TNT_FILAMENT_TONE_MAPPING_H
 
+#include "ColorSpace.h"
+
 #include <utils/compiler.h>
 
 #include <math/mat3.h>
@@ -111,67 +113,24 @@ inline float center_hue(float hue, float centerH) {
     return hueCentered;
 }
 
-inline float3 XYZ_2_xyY(float3 XYZ) {
-    float divisor = max(XYZ.x + XYZ.y + XYZ.z, 1e-5f);
-    return float3(XYZ.xy / divisor, XYZ.y);
-}
-
-inline float3 xyY_2_XYZ(float3 xyY) {
-    float a = xyY.z / max(xyY.y, 1e-5f);
-    float3 XYZ = float3(float2{ xyY.x, xyY.z }, (1.0f - xyY.x - xyY.y));
-    XYZ.x *= a;
-    XYZ.z *= a;
-    return XYZ;
-}
-
 inline float3 darkSurround_to_dimSurround(float3 linearCV) {
     const float DIM_SURROUND_GAMMA = 0.9811f;
 
-    const mat3f AP1_2_XYZ{
-            0.6624541811f, 0.2722287168f, -0.0055746495f,
-            0.1340042065f, 0.6740817658f, 0.0040607335f,
-            0.1561876870f, 0.0536895174f, 1.0103391003f
-    };
-
-    const mat3f XYZ_2_AP1{
-            1.6410233797f, -0.6636628587f, 0.0117218943f,
-            -0.3248032942f, 1.6153315917f, -0.0082844420f,
-            -0.2364246952f, 0.0167563477f, 0.9883948585f
-    };
-
-    float3 XYZ = AP1_2_XYZ * linearCV;
-    float3 xyY = XYZ_2_xyY(XYZ);
+    float3 XYZ = AP1_to_XYZ * linearCV;
+    float3 xyY = XYZ_to_xyY(XYZ);
 
     xyY.z = clamp(xyY.z, 0.0f, (float)std::numeric_limits<math::half>::max());
     xyY.z = std::pow(xyY.z, DIM_SURROUND_GAMMA);
 
-    XYZ = xyY_2_XYZ(xyY);
-    return XYZ_2_AP1 * XYZ;
+    XYZ = xyY_to_XYZ(xyY);
+    return XYZ_to_AP1 * XYZ;
 }
 
 UTILS_ALWAYS_INLINE
 inline float3 ACES(float3 color) {
     // Some bits were removed to adapt to our desired output
-    // Input:  linear sRGB
+    // Input:  ACEScg (AP1)
     // Output: linear sRGB
-
-    const mat3f sRGB_2_AP0{
-            0.439701f, 0.0897923f, 0.017544f,
-            0.382978f, 0.8134230f, 0.111544f,
-            0.177335f, 0.0967616f, 0.870704f
-    };
-
-    const mat3f AP0_2_AP1{
-            1.4514393161f, -0.0765537734f, 0.0083161484f,
-            -0.2365107469f, 1.1762296998f, -0.0060324498f,
-            -0.2149285693f, -0.0996759264f, 0.9977163014f
-    };
-
-    const mat3f AP1_2_sRGB{
-            1.70505f, -0.13026f, -0.024f,
-            -0.62179f, 1.1408f, -0.12897f,
-            -0.08326f, -0.01055f, 1.15297f
-    };
 
     // "Glow" module constants
     const float RRT_GLOW_GAIN = 0.05f;
@@ -187,8 +146,7 @@ inline float3 ACES(float3 color) {
     const float RRT_SAT_FACTOR = 0.96f;
     const float ODT_SAT_FACTOR = 0.93f;
 
-    // This assumes our working color space is sRGB
-    float3 ap0 = sRGB_2_AP0 * color;
+    float3 ap0 = AP1_to_AP0 * color;
 
     // Glow module
     float saturation = rgb_2_saturation(ap0);
@@ -206,7 +164,7 @@ inline float3 ACES(float3 color) {
     ap0.r += hueWeight * saturation * (RRT_RED_PIVOT - ap0.r) * (1.0f - RRT_RED_SCALE);
 
     // ACES to RGB rendering space
-    float3 ap1 = clamp(AP0_2_AP1 * ap0, 0.0f, (float)std::numeric_limits<math::half>::max());
+    float3 ap1 = clamp(AP0_to_AP1 * ap0, 0.0f, (float)std::numeric_limits<math::half>::max());
 
     // Global desaturation
     const float3 AP1_RGB2Y{ 0.272229f, 0.674082f, 0.0536895f };
@@ -233,7 +191,7 @@ inline float3 ACES(float3 color) {
     linearCV = mix(float3(dot(linearCV, AP1_RGB2Y)), linearCV, ODT_SAT_FACTOR);
 
     // Convert to display primary encoding (Rec.709 primaries, D65 white point)
-    return AP1_2_sRGB * linearCV;
+    return AP1_to_sRGB * linearCV;
 }
 
 } // namespace aces
