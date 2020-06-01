@@ -361,9 +361,12 @@ void FAssetLoader::createEntity(const cgltf_node* node, Entity parent, bool enab
 
     const char* name = getNodeName(node, mDefaultNodeName);
 
-    if (mNameManager && name) {
-        mNameManager->addComponent(entity);
-        mNameManager->setName(mNameManager->getInstance(entity), name);
+    if (name) {
+        mResult->mNameToEntity[name].push_back(entity);
+        if (mNameManager) {
+            mNameManager->addComponent(entity);
+            mNameManager->setName(mNameManager->getInstance(entity), name);
+        }
     }
 
     // If no name is provided in the glTF or AssetConfiguration, use "node" for error messages.

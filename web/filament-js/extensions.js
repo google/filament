@@ -26,6 +26,14 @@ function getBufferDescriptor(buffer) {
     return buffer;
 }
 
+Filament.vectorToArray = function(vector) {
+    const result = [];
+    for (let i = 0; i < vector.size(); i++) {
+        result.push(vector.get(i));
+    }
+    return result;
+};
+
 Filament.loadClassExtensions = function() {
 
     /// Engine ::core class::
@@ -384,5 +392,21 @@ Filament.loadClassExtensions = function() {
             buffer.delete();
             onFetched(name);
         });
+    };
+
+    Filament.gltfio$FilamentAsset.prototype.getEntities = function() {
+        return Filament.vectorToArray(this._getEntities());
+    };
+
+    Filament.gltfio$FilamentAsset.prototype.getEntitiesByName = function(name) {
+        return Filament.vectorToArray(this._getEntitiesByName(name));
+    };
+
+    Filament.gltfio$FilamentAsset.prototype.getEntitiesByPrefix = function(prefix) {
+        return Filament.vectorToArray(this._getEntitiesByPrefix(prefix));
+    };
+
+    Filament.gltfio$FilamentAsset.prototype.getLightEntities = function() {
+        return Filament.vectorToArray(this._getLightEntities());
     };
 };

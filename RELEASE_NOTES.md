@@ -7,6 +7,7 @@ A new header is inserted each time a *tag* is created.
 
 - gltfio now supports simple instancing of entire assets.
 - For improved performance, gltfio now threads more tasks and assumes assets are well-formed.
+- gltfio now supports name and prefix lookup for entities.
 - Add missing JavaScript API for `View::setVisibleLayers()`.
 - Add support for DOF with Metal backend.
 - SSAO now has an optional high(er) quality upsampler.

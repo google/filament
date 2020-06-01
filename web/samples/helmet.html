@@ -80,8 +80,8 @@ class App {
             // Enable shadows on every renderable.
             const entities = asset.getEntities();
             const rm = engine.getRenderableManager();
-            for (let i = 0; i < entities.size(); i++) {
-                const instance = rm.getInstance(entities.get(i));
+            for (const entity of entities) {
+                const instance = rm.getInstance(entity);
                 rm.setCastShadows(instance, true);
                 instance.delete();
             }

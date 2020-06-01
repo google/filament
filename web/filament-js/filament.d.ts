@@ -463,8 +463,11 @@ export class gltfio$AssetLoader {
 export class gltfio$FilamentAsset {
     public loadResources(onDone: () => void|null, onFetched: (s: string) => void|null,
             basePath: string|null, asyncInterval: number|null): void;
-    public getEntities(): EntityVector;
-    public getLightEntities(): EntityVector;
+    public getEntities(): Entity[];
+    public getEntitiesByName(name: string): Entity[];
+    public getEntityByName(name: string): Entity;
+    public getEntitiesByPrefix(name: string): Entity[];
+    public getLightEntities(): Entity[];
     public getRoot(): Entity;
     public popRenderable(): Entity;
     public getMaterialInstances(): MaterialInstanceVector;

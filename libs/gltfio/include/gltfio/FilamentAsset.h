@@ -24,9 +24,7 @@
 
 namespace filament {
     class Engine;
-    class IndexBuffer;
     class MaterialInstance;
-    class VertexBuffer;
 }
 
 namespace gltfio {
@@ -136,6 +134,35 @@ public:
 
     /** Gets the NameComponentManager label for the given entity, if it exists. */
     const char* getName(utils::Entity) const noexcept;
+
+    /** Returns the first entity with the given name, or 0 if none exist. */
+    utils::Entity getFirstEntityByName(const char* name) noexcept;
+
+    /**
+     * Gets a list of entities with the given name.
+     *
+     * @param name Null-terminated string to match.
+     * @param entities Pointer to an array to populate.
+     * @param maxCount Maximum number of entities to retrieve.
+     *
+     * @return If entities is non-null, the number of entities written to the entity pointer.
+     * Otherwise this returns the number of entities with the given name.
+     */
+    size_t getEntitiesByName(const char* name, utils::Entity* entities,
+            size_t maxCount) const noexcept;
+
+    /**
+     * Gets a list of entities whose names start with the given prefix.
+     *
+     * @param prefix Null-terminated prefix string to match.
+     * @param entities Pointer to an array to populate.
+     * @param maxCount Maximum number of entities to retrieve.
+     *
+     * @return If entities is non-null, the number of entities written to the entity pointer.
+     * Otherwise this returns the number of entities with the given prefix.
+     */
+    size_t getEntitiesByPrefix(const char* prefix, utils::Entity* entities,
+            size_t maxCount) const noexcept;
 
     /**
      * Lazily creates the animation engine or returns it from the cache.
