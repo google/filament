@@ -586,6 +586,7 @@ static void gui(filament::Engine* engine, filament::View*) {
         }
 
         if (ImGui::CollapsingHeader("Color grading")) {
+            ImGui::Checkbox("Enabled##colorGradin", &params.colorGrading);
             ImGui::Combo("Tone-mapping",
                     reinterpret_cast<int*>(&params.colorGradingOptions.toneMapping),
                     "Linear\0ACES\0Filmic\0Reinhard\0Display Range\0\0");
@@ -726,27 +727,32 @@ static void preRender(filament::Engine* engine, filament::View* view, filament::
             g_params.ssao ? View::AmbientOcclusion::SSAO : View::AmbientOcclusion::NONE);
     view->setAmbientOcclusionOptions(g_params.ssaoOptions);
 
-    if (memcmp(&g_params.colorGradingOptions, &g_lastColorGradingOptions, sizeof(ColorGradingOptions))) {
-        ColorGradingOptions& options = g_params.colorGradingOptions;
-        ColorGrading* colorGrading = ColorGrading::Builder()
-                .whiteBalance(options.temperature / 100.0f, options.tint / 100.0f)
-                .channelMixer(options.outRed, options.outGreen, options.outBlue)
-                .shadowsMidtonesHighlights(
-                        Color::toLinear(options.shadows),
-                        Color::toLinear(options.midtones),
-                        Color::toLinear(options.highlights),
-                        options.ranges
-                )
-                .toneMapping(options.toneMapping)
-                .build(*engine);
-        view->setColorGrading(colorGrading);
+    if (g_params.colorGrading) {
+        if (memcmp(&g_params.colorGradingOptions, &g_lastColorGradingOptions,
+                sizeof(ColorGradingOptions))) {
+            ColorGradingOptions &options = g_params.colorGradingOptions;
+            ColorGrading *colorGrading = ColorGrading::Builder()
+                    .whiteBalance(options.temperature / 100.0f, options.tint / 100.0f)
+                    .channelMixer(options.outRed, options.outGreen, options.outBlue)
+                    .shadowsMidtonesHighlights(
+                            Color::toLinear(options.shadows),
+                            Color::toLinear(options.midtones),
+                            Color::toLinear(options.highlights),
+                            options.ranges
+                    )
+                    .toneMapping(options.toneMapping)
+                    .build(*engine);
 
-        if (g_colorGrading) {
-            engine->destroy(g_colorGrading);
+            if (g_colorGrading) {
+                engine->destroy(g_colorGrading);
+            }
+
+            g_colorGrading = colorGrading;
+            g_lastColorGradingOptions = options;
         }
-
-        g_colorGrading = colorGrading;
-        g_lastColorGradingOptions = options;
+        view->setColorGrading(g_colorGrading);
+    } else {
+        view->setColorGrading(nullptr);
     }
 
     // Without an IBL, we must clear the swapchain to black before each frame.

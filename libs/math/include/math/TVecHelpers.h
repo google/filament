@@ -491,6 +491,13 @@ private:
         return v;
     }
 
+    friend inline VECTOR<T> MATH_PURE log2(VECTOR<T> v) {
+        for (size_t i = 0; i < v.size(); i++) {
+            v[i] = std::log2(v[i]);
+        }
+        return v;
+    }
+
     friend inline constexpr VECTOR<T> MATH_PURE saturate(const VECTOR<T>& lv) {
         return clamp(lv, T(0), T(1));
     }

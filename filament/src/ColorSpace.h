@@ -150,7 +150,7 @@ inline constexpr xyY XYZ_to_xyY(XYZ v) noexcept {
 //------------------------------------------------------------------------------
 
 // Decodes a linear value from LogC using the Alexa LogC EI 1000 curve
-inline float3 logCToLinear(float3 x) noexcept {
+inline float3 LogC_to_linear(float3 x) noexcept {
     const float ia = 1.0f / 5.555556f;
     const float b = 0.047996f;
     const float ic = 1.0f / 0.244161f;
@@ -159,12 +159,35 @@ inline float3 logCToLinear(float3 x) noexcept {
 }
 
 // Encodes a linear value in LogC using the Alexa LogC EI 1000 curve
-inline float3 linearToLogC(float3 x) noexcept {
+inline float3 linear_to_LogC(float3 x) noexcept {
     const float a = 5.555556f;
     const float b = 0.047996f;
     const float c = 0.244161f;
     const float d = 0.386036f;
     return c * log10(a * x + b) + d;
+}
+
+inline float3 ACEScct_to_linearAP1(float3 x) noexcept {
+    constexpr float l = 1.467996312f; // (log2(65504) + 9.72) / 17.52
+    for (size_t i = 0; i < 3; i++) {
+        if (x[i] <= 0.155251141552511f) {
+            x[i] = (x[i] - 0.0729055341958355f) / 10.5402377416545f;
+        } else if (x[i] < l) {
+            x[i] = pow(2.0f, x[i] * 17.52f - 9.72f);
+        } else {
+            x[i] = 65504.0f;
+        }
+    }
+    return x;
+}
+
+inline float3 linearAP1_to_ACEScct(float3 x) noexcept {
+    for (size_t i = 0; i < 3; i++) {
+        x[i] = x[i] < 0.0078125f ?
+                  10.5402377416545f * x[i] + 0.0729055341958355f
+                : (log2(x[i]) + 9.72f) / 17.52f;
+    }
+    return x;
 }
 
 inline float3 OECF_sRGB(float3 x) noexcept {
@@ -173,7 +196,7 @@ inline float3 OECF_sRGB(float3 x) noexcept {
     constexpr float b  = 12.92f;
     constexpr float p  = 1 / 2.4f;
     for (size_t i = 0; i < 3; i++) {
-        x[i] = x[i] <= 0.0031308f ? x[i] * b : a1 * std::pow(x[i], p) - a;
+        x[i] = x[i] <= 0.0031308f ? x[i] * b : a1 * pow(x[i], p) - a;
     }
     return x;
 }

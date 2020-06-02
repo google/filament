@@ -245,7 +245,7 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                     float3 v = float3{r, g, b} * (1.0f / (LUT_DIMENSION - 1u));
 
                     // LogC encoding
-                    v = logCToLinear(v);
+                    v = LogC_to_linear(v);
 
                     // White balance
                     v = chromaticAdaptation(v, builder->whiteBalance);

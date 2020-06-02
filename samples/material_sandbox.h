@@ -141,6 +141,7 @@ struct SandboxParameters {
     float cameraAperture = 16.0f;
     float cameraSpeed = 125.0f;
     float cameraISO = 100.0f;
+    bool colorGrading = true;
     ColorGradingOptions colorGradingOptions;
 };
 
