@@ -16,6 +16,7 @@
 
 package com.google.android.filament.utils
 
+import android.os.AsyncTask
 import android.view.MotionEvent
 import android.view.Surface
 import android.view.SurfaceView
@@ -162,6 +163,8 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
 
     /**
      * Loads a JSON-style glTF file and populates the Filament scene.
+     *
+     * The given callback is triggered for each requested resource.
      */
     fun loadModelGltf(buffer: Buffer, callback: (String) -> Buffer) {
         destroyModel()
@@ -174,6 +177,17 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
             animator = asset.animator
             asset.releaseSourceData()
         }
+    }
+
+    /**
+     * Loads a JSON-style glTF file and populates the Filament scene.
+     *
+     * The given callback is triggered from a worker thread for each requested resource.
+     */
+    fun loadModelGltfAsync(buffer: Buffer, callback: (String) -> Buffer): ResourceTask {
+        destroyModel()
+        asset = assetLoader.createAssetFromJson(buffer)
+        return ReadAssetsTask(this, callback).execute()
     }
 
     /**
@@ -281,6 +295,28 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
         return true
     }
 
+    class ReadAssetsTask(val viewer: ModelViewer, val callback: (String) -> Buffer) : ResourceTask() {
+        override fun doInBackground(vararg params: Unit?): Map<String, Buffer> {
+            val items = HashMap<String, Buffer>()
+            val resourceUris = viewer.asset!!.resourceUris
+            for (resourceUri in resourceUris) {
+                items[resourceUri] = callback(resourceUri)
+            }
+            return items
+        }
+
+        override fun onPostExecute(result: Map<String, Buffer>) {
+            for ((uri, buffer) in result) {
+                viewer.resourceLoader.addResourceData(uri, buffer)
+            }
+            viewer.asset?.let { asset ->
+                viewer.resourceLoader.asyncBeginLoad(asset)
+                viewer.animator = asset.animator
+                asset.releaseSourceData()
+            }
+        }
+    }
+
     inner class SurfaceCallback : UiHelper.RendererCallback {
         override fun onNativeWindowChanged(surface: Surface) {
             swapChain?.let { engine.destroySwapChain(it) }
@@ -310,3 +346,5 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
         private val kDefaultObjectPosition = Float3(0.0f, 0.0f, -4.0f)
     }
 }
+
+typealias ResourceTask = AsyncTask<Unit, Unit, Map<String, Buffer>>
