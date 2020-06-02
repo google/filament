@@ -81,6 +81,7 @@ Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderName(JN
     auto builder = (MaterialBuilder*) nativeBuilder;
     const char* name = env->GetStringUTFChars(name_, nullptr);
     builder->name(name);
+    env->ReleaseStringUTFChars(name_, name);
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -110,6 +111,7 @@ Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderUniform
     auto builder = (MaterialBuilder*) nativeBuilder;
     const char* name = env->GetStringUTFChars(name_, nullptr);
     builder->parameter((MaterialBuilder::UniformType) uniformType, name);
+    env->ReleaseStringUTFChars(name_, name);
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -118,6 +120,7 @@ Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderUniform
     auto builder = (MaterialBuilder*) nativeBuilder;
     const char* name = env->GetStringUTFChars(name_, nullptr);
     builder->parameter((MaterialBuilder::UniformType) uniformType, (size_t) size, name);
+    env->ReleaseStringUTFChars(name_, name);
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -129,6 +132,7 @@ Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderSampler
     builder->parameter((MaterialBuilder::SamplerType) samplerType,
             (MaterialBuilder::SamplerFormat) format, (MaterialBuilder::SamplerPrecision) precision,
             name);
+    env->ReleaseStringUTFChars(name_, name);
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -137,6 +141,7 @@ Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderVariabl
     const char* name = env->GetStringUTFChars(name_, nullptr);
     auto builder = (MaterialBuilder*) nativeBuilder;
     builder->variable((MaterialBuilder::Variable) variable, name);
+    env->ReleaseStringUTFChars(name_, name);
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -152,6 +157,7 @@ Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderMateria
     auto builder = (MaterialBuilder*) nativeBuilder;
     const char* code = env->GetStringUTFChars(code_, nullptr);
     builder->material(code);
+    env->ReleaseStringUTFChars(code_, code);
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -160,6 +166,7 @@ Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderMateria
     auto builder = (MaterialBuilder*) nativeBuilder;
     const char* code = env->GetStringUTFChars(code_, nullptr);
     builder->materialVertex(code);
+    env->ReleaseStringUTFChars(code_, code);
 }
 
 extern "C" JNIEXPORT void JNICALL
