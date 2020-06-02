@@ -75,9 +75,13 @@ class FColorGrading;
  * Here are the default color grading options:
  * - White balance: temperature 0, and tint 0
  * - Channel mixer: red {1,0,0}, green {0,1,0}, blue {0,0,1}
+<<<<<<< HEAD
  * - Shadows/mid-tones/highlights: shadows {1,1,1,0}, mid-tones {1,1,1,0}, highlights {1,1,1,0},
  *   ranges {0,0.333,0.550,1}
  * - Tone mapping: ACES
+=======
+ * - Tonal range: shadows {1,1,1,0}, mid-tones {1,1,1,0}, hilights {1,1,1,0}, ranges {0,0.333,0.550,1}
+>>>>>>> Add new color grading feature: shadows/mid-tones/highlights
  *
  * @see View
  */
