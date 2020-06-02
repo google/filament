@@ -255,6 +255,11 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                     // Convert to color grading color space
                     v = config.colorGradingTransform * v;
 
+                    // TODO: Should any of the color grading transforms be applied in ACEScc or
+                    //       ACEScct isntead of ACEScg? The primaries are the same (AP1) but
+                    //       ACEScc/cct use a log encoding which may be better suited to some kinds
+                    //       of transforms
+
                     // Channel mixer
                     v = channelMixer(v, builder->outRed, builder->outGreen, builder->outBlue);
 
