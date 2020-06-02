@@ -71,6 +71,7 @@ static ColorGrading* g_colorGrading = nullptr;
 static Config g_config;
 static bool g_shadowPlane = false;
 static bool g_singleMode = false;
+static float g_rangePlot[1024 * 3];
 
 static void printUsage(char* name) {
     std::string exec_name(Path(name).getName());
@@ -417,6 +418,18 @@ static filament::MaterialInstance* updateInstances(
     return materialInstance;
 }
 
+static void computeRangePlot(SandboxParameters &parameters) {
+    const ColorGradingOptions& options = parameters.colorGradingOptions;
+    for (size_t i = 0; i < 1024; i++) {
+        float x = i / 1024.0f;
+        float s = 1.0f - smoothstep(options.ranges.x, options.ranges.y, x);
+        float h = smoothstep(options.ranges.z, options.ranges.w, x);
+        g_rangePlot[i]        = s;
+        g_rangePlot[1024 + i] = 1.0f - s - h;
+        g_rangePlot[2048 + i] = h;
+    }
+}
+
 static void gui(filament::Engine* engine, filament::View*) {
     auto& params = g_params;
     ImGui::SetNextWindowSize(ImVec2(0.0f, 0.0f));
@@ -576,11 +589,30 @@ static void gui(filament::Engine* engine, filament::View*) {
             ImGui::Combo("Tone-mapping",
                     reinterpret_cast<int*>(&params.colorGradingOptions.toneMapping),
                     "Linear\0ACES\0Filmic\0Reinhard\0Display Range\0\0");
-            ImGui::SliderInt("Temperature", &params.colorGradingOptions.temperature, -100, 100);
-            ImGui::SliderInt("Tint", &params.colorGradingOptions.tint, -100, 100);
-            ImGui::SliderFloat3("Out Red", &params.colorGradingOptions.outRed.x, -2.0f, 2.0f);
-            ImGui::SliderFloat3("Out Green", &params.colorGradingOptions.outGreen.x, -2.0f, 2.0f);
-            ImGui::SliderFloat3("Out Blue", &params.colorGradingOptions.outBlue.x, -2.0f, 2.0f);
+            ImGui::Indent();
+            if (ImGui::CollapsingHeader("While balance")) {
+                ImGui::SliderInt("Temperature", &params.colorGradingOptions.temperature, -100, 100);
+                ImGui::SliderInt("Tint", &params.colorGradingOptions.tint, -100, 100);
+            }
+            if (ImGui::CollapsingHeader("Channel mixer")) {
+                ImGui::SliderFloat3("Out Red", &params.colorGradingOptions.outRed.x, -2.0f, 2.0f);
+                ImGui::SliderFloat3("Out Green", &params.colorGradingOptions.outGreen.x, -2.0f, 2.0f);
+                ImGui::SliderFloat3("Out Blue", &params.colorGradingOptions.outBlue.x, -2.0f, 2.0f);
+            }
+            if (ImGui::CollapsingHeader("Tonal ranges")) {
+                ImGui::ColorEdit3("Shadows", &params.colorGradingOptions.shadows.x);
+                ImGui::SliderFloat("Shadows weight", &params.colorGradingOptions.shadows.w, -2.0f, 2.0f);
+                ImGui::ColorEdit3("Mid-tones", &params.colorGradingOptions.midtones.x);
+                ImGui::SliderFloat("Mid-tones weight", &params.colorGradingOptions.midtones.w, -2.0f, 2.0f);
+                ImGui::ColorEdit3("Highlights", &params.colorGradingOptions.highlights.x);
+                ImGui::SliderFloat("Highlights weight", &params.colorGradingOptions.highlights.w, -2.0f, 2.0f);
+                ImGui::SliderFloat4("Ranges", &params.colorGradingOptions.ranges.x, 0.0f, 1.0f);
+                computeRangePlot(params);
+                ImGui::PlotLines("Shadows curve", g_rangePlot, 1024, 0);
+                ImGui::PlotLines("Mid-tones curve", g_rangePlot + 1024, 1024);
+                ImGui::PlotLines("Highlights curve", g_rangePlot + 2048, 1024);
+            }
+            ImGui::Unindent();
         }
 
         if (ImGui::CollapsingHeader("Debug")) {
@@ -699,6 +731,12 @@ static void preRender(filament::Engine* engine, filament::View* view, filament::
         ColorGrading* colorGrading = ColorGrading::Builder()
                 .whiteBalance(options.temperature / 100.0f, options.tint / 100.0f)
                 .channelMixer(options.outRed, options.outGreen, options.outBlue)
+                .tonalRange(
+                        Color::toLinear(options.shadows),
+                        Color::toLinear(options.midtones),
+                        Color::toLinear(options.highlights),
+                        options.ranges
+                )
                 .toneMapping(options.toneMapping)
                 .build(*engine);
         view->setColorGrading(colorGrading);

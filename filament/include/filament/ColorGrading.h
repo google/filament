@@ -67,6 +67,7 @@ class FColorGrading;
  * - Tone mapping: ACES
  * - White balance: temperature 0, and tint 0
  * - Channel mixer: red {1,0,0}, green {0,1,0}, blue {0,0,1}
+ * - Tonal range: shadows {1,1,1,0}, mid-tones {1,1,1,0}, hilights {1,1,1,0}, ranges {0,0.333,0.550,1}
  *
  * @see View
  */
@@ -163,6 +164,32 @@ public:
          */
         Builder& channelMixer(
                 math::float3 outRed, math::float3 outGreen, math::float3 outBlue) noexcept;
+
+        /**
+         * Adjusts the colors separately in 3 distinct tonal zones: shadows, mid-tones, and
+         * highlights.
+         *
+         * The tonal zones are by the ranges parameter: the x and y components define the beginning
+         * and end of the transition from shadows to mid-tones, and the z and w components define
+         * the beginning and end of the transition from mid-tones to highlights.
+         *
+         * A smooth transition is applied between the zones which means for instance that the
+         * correction color of the shadows range will partially apply to the mid-tones, and the
+         * other way around. This ensure smooth visual transitions in the final image.
+         *
+         * Each correction color is defined as a linear RGB color and a weight. The weight is a
+         * value (which may be positive or negative) that is added to the linear RGB color before
+         * mixing. This can be used to darken or brighten the selected tonal range.
+         *
+         * @param shadows Linear RGB color (.rgb) and weight (.w) to apply to the shadows
+         * @param midtones Linear RGB color (.rgb) and weight (.w) to apply to the mid-tones
+         * @param highlights Linear RGB color (.rgb) and weight (.w) to apply to the highlights
+         * @param ranges Range of the shadows (x and y), and range of the highlights (z and w)
+         *
+         * @return This Builder, for chaining calls
+         */
+        Builder& tonalRange(math::float4 shadows, math::float4 midtones, math::float4 highlights,
+                math::float4 ranges = math::float4{0.0f, 0.333f, 0.550f, 1.0f}) noexcept;
 
         /**
          * Creates the ColorGrading object and returns a pointer to it.

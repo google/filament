@@ -90,6 +90,10 @@ constexpr mat3f sRGB_to_AP1{
      0.04737f,  0.01345f,  0.86961f
 };
 
+constexpr mat3f sRGB_to_LMS = XYZ_to_CIECAT02 * sRGB_to_XYZ;
+
+constexpr mat3f LMS_to_sRGB = XYZ_to_sRGB * CIECAT02_to_XYZ;
+
 // Standard CIE 1931 2° illuminant D65, in xyY space
 constexpr float3 ILLUMINANT_D65_xyY{0.31271f, 0.32902f, 1.0f};
 
@@ -97,9 +101,11 @@ constexpr float3 ILLUMINANT_D65_xyY{0.31271f, 0.32902f, 1.0f};
 // Result of: XYZ_to_CIECAT02 * xyY_to_XYZ(ILLUMINANT_D65_xyY);
 constexpr float3 ILLUMINANT_D65_LMS{0.949237f, 1.03542f, 1.08728f};
 
-constexpr mat3f sRGB_to_LMS = XYZ_to_CIECAT02 * sRGB_to_XYZ;
+// RGB to luma coefficients for ACEScg (AP1), from AP1_to_XYZ
+constexpr float3 LUMA_AP1{0.272229f, 0.674082f, 0.0536895f};
 
-constexpr mat3f LMS_to_sRGB = XYZ_to_sRGB * CIECAT02_to_XYZ;
+// RGB to luma coefficients for Rec.709, from sRGB_to_XYZ
+constexpr float3 LUMA_REC709{0.2126730f, 0.7151520f, 0.0721750f};
 
 inline constexpr XYZ xyY_to_XYZ(xyY v) {
     const float a = v.z / max(v.y, 1e-5f);
