@@ -80,9 +80,8 @@ class MainActivity : Activity() {
             input.read(bytes)
             ByteBuffer.wrap(bytes)
         }
-        modelViewer.loadModelGltf(buffer) { uri ->
-            readCompressedAsset("models/$uri")
-        }
+
+        modelViewer.loadModelGltfAsync(buffer, { uri -> readCompressedAsset("models/$uri") })
         modelViewer.transformToUnitCube()
     }
 
