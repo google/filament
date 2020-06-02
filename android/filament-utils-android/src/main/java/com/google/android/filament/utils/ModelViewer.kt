@@ -16,7 +16,6 @@
 
 package com.google.android.filament.utils
 
-import android.os.AsyncTask
 import android.view.MotionEvent
 import android.view.Surface
 import android.view.SurfaceView
@@ -25,6 +24,7 @@ import com.google.android.filament.*
 import com.google.android.filament.android.DisplayHelper
 import com.google.android.filament.android.UiHelper
 import com.google.android.filament.gltfio.*
+import kotlinx.coroutines.*
 import java.nio.Buffer
 
 private const val kNearPlane = 0.5
@@ -184,10 +184,12 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
      *
      * The given callback is triggered from a worker thread for each requested resource.
      */
-    fun loadModelGltfAsync(buffer: Buffer, callback: (String) -> Buffer): ResourceTask {
+    fun loadModelGltfAsync(buffer: Buffer, callback: (String) -> Buffer) {
         destroyModel()
         asset = assetLoader.createAssetFromJson(buffer)
-        return ReadAssetsTask(this, callback).execute()
+        CoroutineScope(Dispatchers.IO).launch {
+            fetchResources(asset!!, callback)
+        }
     }
 
     /**
@@ -295,25 +297,20 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
         return true
     }
 
-    class ReadAssetsTask(val viewer: ModelViewer, val callback: (String) -> Buffer) : ResourceTask() {
-        override fun doInBackground(vararg params: Unit?): Map<String, Buffer> {
-            val items = HashMap<String, Buffer>()
-            val resourceUris = viewer.asset!!.resourceUris
-            for (resourceUri in resourceUris) {
-                items[resourceUri] = callback(resourceUri)
-            }
-            return items
+    private suspend fun fetchResources(asset: FilamentAsset, callback: (String) -> Buffer) {
+        val items = HashMap<String, Buffer>()
+        val resourceUris = asset.resourceUris
+        for (resourceUri in resourceUris) {
+            items[resourceUri] = callback(resourceUri)
         }
 
-        override fun onPostExecute(result: Map<String, Buffer>) {
-            for ((uri, buffer) in result) {
-                viewer.resourceLoader.addResourceData(uri, buffer)
+        withContext(Dispatchers.Main) {
+            for ((uri, buffer) in items) {
+                resourceLoader.addResourceData(uri, buffer)
             }
-            viewer.asset?.let { asset ->
-                viewer.resourceLoader.asyncBeginLoad(asset)
-                viewer.animator = asset.animator
-                asset.releaseSourceData()
-            }
+            resourceLoader.asyncBeginLoad(asset)
+            animator = asset.animator
+            asset.releaseSourceData()
         }
     }
 
@@ -346,5 +343,3 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
         private val kDefaultObjectPosition = Float3(0.0f, 0.0f, -4.0f)
     }
 }
-
-typealias ResourceTask = AsyncTask<Unit, Unit, Map<String, Buffer>>
