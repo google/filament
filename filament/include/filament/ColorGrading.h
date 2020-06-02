@@ -119,8 +119,8 @@ public:
          * - Temperature, to modify the color temperature. This value will modify the colors
          *   on a blue/yellow axis. Lower values apply a cool color temperature, and higher
          *   values apply a warm color temperature. The lowest value, -1.0f, is equivalent to
-         *   a temperature of 2,000K. The highest value, 1.0f, is equivalent to a temperature
-         *   of 50,000K.
+         *   a temperature of 50,000K. The highest value, 1.0f, is equivalent to a temperature
+         *   of 2,000K.
          * - Tint, to modify the colors on a green/magenta axis. The lowest value, -1.0f, will
          *   apply a strong green cast, and the highest value, 1.0f, will apply a strong magenta
          *   cast.
