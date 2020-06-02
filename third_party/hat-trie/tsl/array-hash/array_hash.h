@@ -132,13 +132,13 @@ template<typename T, typename U>
 static T numeric_cast(U value, const char* error_message = "numeric_cast() failed.") {
     T ret = static_cast<T>(value);
     if(static_cast<U>(ret) != value) {
-        throw std::runtime_error(error_message);
+        THROW(std::runtime_error, error_message);
     }
     
     const bool is_same_signedness = (std::is_unsigned<T>::value && std::is_unsigned<U>::value) ||
                                     (std::is_signed<T>::value && std::is_signed<U>::value);
     if(!is_same_signedness && (ret < T{}) != (value < U{})) {
-        throw std::runtime_error(error_message);
+        THROW(std::runtime_error, error_message);
     }
     
     return ret;
@@ -364,7 +364,7 @@ public:
         
         m_buffer = static_cast<CharT*>(std::malloc(size*sizeof(CharT) + sizeof_in_buff<decltype(END_OF_BUCKET)>()));
         if(m_buffer == nullptr) {
-            throw std::bad_alloc();
+            THROW(std::runtime_error, "Out of memory");
         }
         
         const auto end_of_bucket = END_OF_BUCKET;
@@ -384,7 +384,7 @@ public:
         const size_type other_buffer_size = other.size();
         m_buffer = static_cast<CharT*>(std::malloc(other_buffer_size*sizeof(CharT) + sizeof_in_buff<decltype(END_OF_BUCKET)>()));
         if(m_buffer == nullptr) {
-            throw std::bad_alloc();
+            THROW(std::runtime_error, "Out of memory");
         }
         
         std::memcpy(m_buffer, other.m_buffer, other_buffer_size*sizeof(CharT));
@@ -451,7 +451,7 @@ public:
                                             
             m_buffer = static_cast<CharT*>(std::malloc(buffer_size));
             if(m_buffer == nullptr) {
-                throw std::bad_alloc();
+                THROW(std::runtime_error, "Out of memory");
             }
             
             append_impl(key, key_sz, m_buffer, std::forward<ValueArgs>(value)...);
@@ -468,7 +468,7 @@ public:
             
             CharT* new_buffer = static_cast<CharT*>(std::realloc(m_buffer, new_size));
             if(new_buffer == nullptr) {
-                throw std::bad_alloc();
+                THROW(std::runtime_error, "Out of memory");
             }
             m_buffer = new_buffer;
             
@@ -581,7 +581,7 @@ public:
         const std::size_t bucket_size = numeric_cast<std::size_t>(bucket_size_ds, "Deserialized bucket_size is too big.");
         bucket.m_buffer = static_cast<CharT*>(std::malloc(bucket_size*sizeof(CharT) + sizeof_in_buff<decltype(END_OF_BUCKET)>()));
         if(bucket.m_buffer == nullptr) {
-            throw std::bad_alloc();
+            THROW(std::runtime_error, "Out of memory");
         }
         
         
@@ -598,7 +598,7 @@ public:
 private:
     key_size_type as_key_size_type(size_type key_size) const {
         if(key_size > MAX_KEY_SIZE) {
-            throw std::length_error("Key is too long.");
+            THROW(std::length_error, "Key is too long.");
         }
         
         return key_size_type(key_size);
@@ -927,7 +927,7 @@ public:
                                        Hash(hash), 
                                        GrowthPolicy(bucket_count), 
                                        m_buckets_data(bucket_count > max_bucket_count()?
-                                                      throw std::length_error("The map exceeds its maximum bucket count."):
+                                                      max_bucket_count():
                                                       bucket_count), 
                                        m_buckets(m_buckets_data.empty()?static_empty_bucket_ptr():m_buckets_data.data()), 
                                        m_nb_elements(0) 
@@ -1204,7 +1204,7 @@ public:
             return this->m_values[it_find.first.value()];
         }
         else {
-            throw std::out_of_range("Couldn't find key.");
+            THROW(std::out_of_range, "Couldn't find key.");
         }        
     }
     
@@ -1477,7 +1477,7 @@ private:
             // Try to clear old erased values lingering in m_values. Throw if it doesn't change anything.
             clear_old_erased_values();
             if(this->m_values.size() >= max_size()) {
-                throw std::length_error("Can't insert value, too much values in the map.");
+                THROW(std::length_error, "Can't insert value, too much values in the map.");
             }
         }
         
@@ -1488,16 +1488,10 @@ private:
         
         this->m_values.emplace_back(std::forward<ValueArgs>(value_args)...);
         
-        try {
-            auto it = m_buckets[ibucket].append(end_of_bucket, key, key_size, IndexSizeT(this->m_values.size() - 1));
-            m_nb_elements++;
-            
-            return std::make_pair(iterator(m_buckets_data.begin() + ibucket, it, this), true);
-        } catch(...) {
-            // Rollback
-            this->m_values.pop_back();
-            throw;
-        }
+        auto it = m_buckets[ibucket].append(end_of_bucket, key, key_size, IndexSizeT(this->m_values.size() - 1));
+        m_nb_elements++;
+        
+        return std::make_pair(iterator(m_buckets_data.begin() + ibucket, it, this), true);
     }
     
     template<class U = T, typename std::enable_if<!has_mapped_type<U>::value>::type* = nullptr>
@@ -1505,7 +1499,7 @@ private:
                                           const CharT* key, size_type key_size) 
     {
         if(m_nb_elements >= max_size()) {
-            throw std::length_error("Can't insert value, too much values in the map.");
+            THROW(std::length_error, "Can't insert value, too much values in the map.");
         }
         
         auto it = m_buckets[ibucket].append(end_of_bucket, key, key_size);
@@ -1635,7 +1629,7 @@ private:
         // For now we only have one version of the serialization protocol. 
         // If it doesn't match there is a problem with the file.
         if(version != SERIALIZATION_PROTOCOL_VERSION) {
-            throw std::runtime_error("Can't deserialize the array_map/set. The protocol version header is invalid.");
+            THROW(std::runtime_error, "Can't deserialize the array_map/set. The protocol version header is invalid.");
         }
         
         const slz_size_type bucket_count_ds = deserialize_value<slz_size_type>(deserializer);
@@ -1655,7 +1649,7 @@ private:
         
         if(hash_compatible) {
             if(bucket_count != bucket_count_ds) {
-                throw std::runtime_error("The GrowthPolicy is not the same even though hash_compatible is true.");
+                THROW(std::runtime_error, "The GrowthPolicy is not the same even though hash_compatible is true.");
             }
 
             m_buckets_data.reserve(bucket_count);
@@ -1676,7 +1670,7 @@ private:
                     
                     auto it_find = m_buckets_data[ibucket].find_or_end_of_bucket(it_val.key(), it_val.key_size());
                     if(it_find.second) {
-                        throw std::runtime_error("Error on deserialization, the same key is presents multiple times.");
+                        THROW(std::runtime_error, "Error on deserialization, the same key is presents multiple times.");
                     }
                     
                     append_array_bucket_iterator_in_bucket(m_buckets_data[ibucket], it_find.first, it_val);
@@ -1688,7 +1682,7 @@ private:
         
         
         if(load_factor() > this->max_load_factor()) {
-            throw std::runtime_error("Invalid max_load_factor. Check that the serializer and deserializer support "
+            THROW(std::runtime_error, "Invalid max_load_factor. Check that the serializer and deserializer support "
                                      "floats correctly as they can be converted implicitely to ints.");
         }
     }
