@@ -91,7 +91,7 @@ ColorGrading::Builder& ColorGrading::Builder::channelMixer(
     return *this;
 }
 
-ColorGrading::Builder& ColorGrading::Builder::tonalRange(
+ColorGrading::Builder& ColorGrading::Builder::shadowsMidtonesHighlights(
         float4 shadows, float4 midtones, float4 highlights, float4 ranges) noexcept {
     mImpl->shadows = max(shadows.rgb + shadows.w, 0.0f);
     mImpl->midtones = max(midtones.rgb + midtones.w, 0.0f);

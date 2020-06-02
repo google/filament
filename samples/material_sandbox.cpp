@@ -731,7 +731,7 @@ static void preRender(filament::Engine* engine, filament::View* view, filament::
         ColorGrading* colorGrading = ColorGrading::Builder()
                 .whiteBalance(options.temperature / 100.0f, options.tint / 100.0f)
                 .channelMixer(options.outRed, options.outGreen, options.outBlue)
-                .tonalRange(
+                .shadowsMidtonesHighlights(
                         Color::toLinear(options.shadows),
                         Color::toLinear(options.midtones),
                         Color::toLinear(options.highlights),

@@ -60,14 +60,24 @@ class FColorGrading;
  * 3D LUT may need to be generated. The generation of a 3D LUT, if necessary, may happen on
  * the CPU.
  *
+ * Ordering
+ * ========
+ *
+ * The various transforms held by ColorGrading are applied in the following order:
+ * - White balance
+ * - Channel mixer
+ * - Shadows/mid-tones/highlights
+ * - Tone mapping
+ *
  * Defaults
  * ========
  *
  * Here are the default color grading options:
- * - Tone mapping: ACES
  * - White balance: temperature 0, and tint 0
  * - Channel mixer: red {1,0,0}, green {0,1,0}, blue {0,0,1}
- * - Tonal range: shadows {1,1,1,0}, mid-tones {1,1,1,0}, hilights {1,1,1,0}, ranges {0,0.333,0.550,1}
+ * - Shadows/mid-tones/highlights: shadows {1,1,1,0}, mid-tones {1,1,1,0}, highlights {1,1,1,0},
+ *   ranges {0,0.333,0.550,1}
+ * - Tone mapping: ACES
  *
  * @see View
  */
@@ -166,8 +176,8 @@ public:
                 math::float3 outRed, math::float3 outGreen, math::float3 outBlue) noexcept;
 
         /**
-         * Adjusts the colors separately in 3 distinct tonal zones: shadows, mid-tones, and
-         * highlights.
+         * Adjusts the colors separately in 3 distinct tonal ranges or zones: shadows, mid-tones,
+         * and highlights.
          *
          * The tonal zones are by the ranges parameter: the x and y components define the beginning
          * and end of the transition from shadows to mid-tones, and the z and w components define
@@ -188,7 +198,8 @@ public:
          *
          * @return This Builder, for chaining calls
          */
-        Builder& tonalRange(math::float4 shadows, math::float4 midtones, math::float4 highlights,
+        Builder& shadowsMidtonesHighlights(
+                math::float4 shadows, math::float4 midtones, math::float4 highlights,
                 math::float4 ranges = math::float4{0.0f, 0.333f, 0.550f, 1.0f}) noexcept;
 
         /**
