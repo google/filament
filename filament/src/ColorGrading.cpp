@@ -31,8 +31,6 @@
 #include <math/vec3.h>
 #include <math/vec4.h>
 
-#include <image/ColorTransform.h>
-
 #include <utils/JobSystem.h>
 #include <utils/Systrace.h>
 
@@ -126,7 +124,7 @@ inline float3 adaptationTransform(float2 whiteBalance) {
     float t = whiteBalance.y; // tint
 
     float x = ILLUMINANT_D65_xyY.x - k * (k < 0.0f ? 0.0214f : 0.066f);
-    float y = illuminantD_y(x) + t * 0.066f;
+    float y = chromaticityCoordinateIlluminantD(x) + t * 0.066f;
 
     float3 lms = XYZ_to_CIECAT02 * xyY_to_XYZ({x, y, 1.0f});
     return ILLUMINANT_D65_LMS / lms;
@@ -247,7 +245,7 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                     float3 v = float3{r, g, b} * (1.0f / (LUT_DIMENSION - 1u));
 
                     // LogC encoding
-                    v = lutToLinear(v);
+                    v = logCToLinear(v);
 
                     // White balance
                     v = chromaticAdaptation(v, builder->whiteBalance);
@@ -255,13 +253,13 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                     // Convert to color grading color space
                     v = config.colorGradingTransform * v;
 
+                    // Channel mixer
+                    v = channelMixer(v, builder->outRed, builder->outGreen, builder->outBlue);
+
                     // TODO: Should any of the color grading transforms be applied in ACEScc or
                     //       ACEScct isntead of ACEScg? The primaries are the same (AP1) but
                     //       ACEScc/cct use a log encoding which may be better suited to some kinds
                     //       of transforms
-
-                    // Channel mixer
-                    v = channelMixer(v, builder->outRed, builder->outGreen, builder->outBlue);
 
                     // Shadows/mid-tones/highlights
                     v = tonalRanges(v, config.lumaTransform,
@@ -277,7 +275,7 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                     // Apply OECF
                     // TODO: allow to customize the output color space,
                     //       here we assume we are in the sRGB gamut already
-                    v = image::linearTosRGB(v);
+                    v = OECF_sRGB(v);
 
                     *p++ = half4{v, 0.0f};
                 }
@@ -313,24 +311,6 @@ FColorGrading::~FColorGrading() noexcept = default;
 void FColorGrading::terminate(FEngine& engine) {
     DriverApi& driver = engine.getDriverApi();
     driver.destroyTexture(mLutHandle);
-}
-
-float3 FColorGrading::lutToLinear(float3 x) noexcept {
-    // Alexa LogC EI 1000 curve
-    const float ia = 1.0f / 5.555556f;
-    const float b = 0.047996f;
-    const float ic = 1.0f / 0.244161f;
-    const float d = 0.386036f;
-    return (pow(10.0f, (x - d) * ic) - b) * ia;
-}
-
-float3 FColorGrading::linearToLut(float3 x) noexcept {
-    // Alexa LogC EI 1000 curve
-    const float a = 5.555556f;
-    const float b = 0.047996f;
-    const float c = 0.244161f;
-    const float d = 0.386036f;
-    return c * log10(a * x + b) + d;
 }
 
 } //namespace filament

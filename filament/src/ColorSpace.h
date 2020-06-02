@@ -23,12 +23,22 @@
 #include <math/vec3.h>
 #include <math/scalar.h>
 
+#include <cmath>
+
 namespace filament {
 
 using namespace math;
 
+//------------------------------------------------------------------------------
+// Types
+//------------------------------------------------------------------------------
+
 using xyY = float3;
 using XYZ = float3;
+
+//------------------------------------------------------------------------------
+// Color space conversion matrices
+//------------------------------------------------------------------------------
 
 constexpr mat3f XYZ_to_sRGB{
      3.2404542f, -0.9692660f,  0.0556434f,
@@ -94,6 +104,10 @@ constexpr mat3f sRGB_to_LMS = XYZ_to_CIECAT02 * sRGB_to_XYZ;
 
 constexpr mat3f LMS_to_sRGB = XYZ_to_sRGB * CIECAT02_to_XYZ;
 
+//------------------------------------------------------------------------------
+// Constants
+//------------------------------------------------------------------------------
+
 // Standard CIE 1931 2° illuminant D65, in xyY space
 constexpr float3 ILLUMINANT_D65_xyY{0.31271f, 0.32902f, 1.0f};
 
@@ -107,20 +121,72 @@ constexpr float3 LUMA_AP1{0.272229f, 0.674082f, 0.0536895f};
 // RGB to luma coefficients for Rec.709, from sRGB_to_XYZ
 constexpr float3 LUMA_REC709{0.2126730f, 0.7151520f, 0.0721750f};
 
-inline constexpr XYZ xyY_to_XYZ(xyY v) {
+//------------------------------------------------------------------------------
+// Chromaticity helpers
+//------------------------------------------------------------------------------
+
+// Returns the y chromaticity coordinate in xyY for an illuminant series D,
+// given its x chromaticity coordinate.
+inline constexpr float chromaticityCoordinateIlluminantD(float x) noexcept {
+    // See http://en.wikipedia.org/wiki/Standard_illuminant#Illuminant_series_D
+    return 2.87f * x - 3.0f * x * x - 0.275f;
+}
+
+//------------------------------------------------------------------------------
+// Color space conversions
+//------------------------------------------------------------------------------
+
+inline constexpr XYZ xyY_to_XYZ(xyY v) noexcept {
     const float a = v.z / max(v.y, 1e-5f);
     return XYZ{v.x * a, v.z, (1.0f - v.x - v.y) * a};
 }
 
-inline constexpr xyY XYZ_to_xyY(XYZ v) {
+inline constexpr xyY XYZ_to_xyY(XYZ v) noexcept {
     return float3(v.xy / max(v.x + v.y + v.z, 1e-5f), v.y);
 }
 
-// Returns the y chromaticity coordinate in xyY for an illuminant series D,
-// given its x chromaticity coordinate.
-inline constexpr float illuminantD_y(float x) {
-    // See http://en.wikipedia.org/wiki/Standard_illuminant#Illuminant_series_D
-    return 2.87f * x - 3.0f * x * x - 0.275f;
+//------------------------------------------------------------------------------
+// Conversion functions and encoding/decoding
+//------------------------------------------------------------------------------
+
+// Decodes a linear value from LogC using the Alexa LogC EI 1000 curve
+inline float3 logCToLinear(float3 x) noexcept {
+    const float ia = 1.0f / 5.555556f;
+    const float b = 0.047996f;
+    const float ic = 1.0f / 0.244161f;
+    const float d = 0.386036f;
+    return (pow(10.0f, (x - d) * ic) - b) * ia;
+}
+
+// Encodes a linear value in LogC using the Alexa LogC EI 1000 curve
+inline float3 linearToLogC(float3 x) noexcept {
+    const float a = 5.555556f;
+    const float b = 0.047996f;
+    const float c = 0.244161f;
+    const float d = 0.386036f;
+    return c * log10(a * x + b) + d;
+}
+
+inline float3 OECF_sRGB(float3 x) noexcept {
+    constexpr float a  = 0.055f;
+    constexpr float a1 = 1.055f;
+    constexpr float b  = 12.92f;
+    constexpr float p  = 1 / 2.4f;
+    for (size_t i = 0; i < 3; i++) {
+        x[i] = x[i] <= 0.0031308f ? x[i] * b : a1 * std::pow(x[i], p) - a;
+    }
+    return x;
+}
+
+inline float3 EOCF_sRGB(float3 x) noexcept {
+    constexpr float a  = 0.055f;
+    constexpr float a1 = 1.055f;
+    constexpr float b  = 1.0f / 12.92f;
+    constexpr float p  = 2.4f;
+    for (size_t i = 0; i < 3; i++) {
+        x[i] = x[i] <= 0.04045f ? x[i] * b : std::pow((x[i] + a) / a1, p);
+    }
+    return x;
 }
 
 } // namespace filament

@@ -44,9 +44,6 @@ public:
     backend::TextureHandle getHwHandle() const noexcept { return mLutHandle; }
 
 private:
-    static inline math::float3 lutToLinear(math::float3 x) noexcept;
-    static inline math::float3 linearToLut(math::float3 x) noexcept;
-
     backend::TextureHandle mLutHandle;
 };
 

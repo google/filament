@@ -38,14 +38,14 @@ namespace aces {
 inline float rgb_2_saturation(float3 rgb) {
     // Input:  ACES
     // Output: OCES
-    const float TINY = 1e-5f;
+    constexpr float TINY = 1e-5f;
     float mi = min(rgb);
     float ma = max(rgb);
     return (max(ma, TINY) - max(mi, TINY)) / max(ma, 1e-2f);
 }
 
 inline float rgb_2_yc(float3 rgb) {
-    const float ycRadiusWeight = 1.75f;
+    constexpr float ycRadiusWeight = 1.75f;
 
     // Converts RGB to a luminance proxy, here called YC
     // YC is ~ Y + K * Chroma
@@ -114,7 +114,7 @@ inline float center_hue(float hue, float centerH) {
 }
 
 inline float3 darkSurround_to_dimSurround(float3 linearCV) {
-    const float DIM_SURROUND_GAMMA = 0.9811f;
+    constexpr float DIM_SURROUND_GAMMA = 0.9811f;
 
     float3 XYZ = AP1_to_XYZ * linearCV;
     float3 xyY = XYZ_to_xyY(XYZ);
@@ -133,18 +133,18 @@ inline float3 ACES(float3 color) {
     // Output: linear sRGB
 
     // "Glow" module constants
-    const float RRT_GLOW_GAIN = 0.05f;
-    const float RRT_GLOW_MID = 0.08f;
+    constexpr float RRT_GLOW_GAIN = 0.05f;
+    constexpr float RRT_GLOW_MID = 0.08f;
 
     // Red modifier constants
-    const float RRT_RED_SCALE = 0.82f;
-    const float RRT_RED_PIVOT = 0.03f;
-    const float RRT_RED_HUE   = 0.0f;
-    const float RRT_RED_WIDTH = 135.0f;
+    constexpr float RRT_RED_SCALE = 0.82f;
+    constexpr float RRT_RED_PIVOT = 0.03f;
+    constexpr float RRT_RED_HUE   = 0.0f;
+    constexpr float RRT_RED_WIDTH = 135.0f;
 
     // Desaturation contants
-    const float RRT_SAT_FACTOR = 0.96f;
-    const float ODT_SAT_FACTOR = 0.93f;
+    constexpr float RRT_SAT_FACTOR = 0.96f;
+    constexpr float ODT_SAT_FACTOR = 0.93f;
 
     float3 ap0 = AP1_to_AP0 * color;
 
@@ -175,11 +175,11 @@ inline float3 ACES(float3 color) {
 
     // Fitting of RRT + ODT (RGB monitor 100 nits dim) from:
     // https://github.com/colour-science/colour-unity/blob/master/Assets/Colour/Notebooks/CIECAM02_Unity.ipynb
-    const float a = 2.785085f;
-    const float b = 0.107772f;
-    const float c = 2.936045f;
-    const float d = 0.887122f;
-    const float e = 0.806889f;
+    constexpr float a = 2.785085f;
+    constexpr float b = 0.107772f;
+    constexpr float c = 2.936045f;
+    constexpr float d = 0.887122f;
+    constexpr float e = 0.806889f;
     float3 rgbPost = (ap1 * (a * ap1 + b)) / (ap1 * (c * ap1 + d) + e);
 
     // Apply gamma adjustment to compensate for dim surround
@@ -200,22 +200,21 @@ inline float3 ACES(float3 color) {
 
 namespace tonemap {
 
-UTILS_ALWAYS_INLINE
 float3 Linear(float3 x) noexcept {
     return x;
 }
 
 float3 Reinhard(float3 x) noexcept {
-    return x / (1.0f + dot(x, float3{0.2126f, 0.7152f, 0.0722f}));
+    return x / (1.0f + dot(x, LUMA_REC709));
 }
 
 float3 Filmic(float3 x) noexcept {
     // Narkowicz 2015, "ACES Filmic Tone Mapping Curve"
-    const float a = 2.51f;
-    const float b = 0.03f;
-    const float c = 2.43f;
-    const float d = 0.59f;
-    const float e = 0.14f;
+    constexpr float a = 2.51f;
+    constexpr float b = 0.03f;
+    constexpr float c = 2.43f;
+    constexpr float d = 0.59f;
+    constexpr float e = 0.14f;
     return (x * (a * x + b)) / (x * (c * x + d) + e);
 }
 
@@ -251,7 +250,7 @@ float3 ACES(float3 x) noexcept {
 float3 DisplayRange(float3 x) noexcept {
     // 16 debug colors + 1 duplicated at the end for easy indexing
 
-    const float3 debugColors[17] = {
+    constexpr float3 debugColors[17] = {
             {0.0,     0.0,     0.0},         // black
             {0.0,     0.0,     0.1647},      // darkest blue
             {0.0,     0.0,     0.3647},      // darker blue
@@ -273,8 +272,9 @@ float3 DisplayRange(float3 x) noexcept {
 
     // The 5th color in the array (cyan) represents middle gray (18%)
     // Every stop above or below middle gray causes a color shift
-    float v = log2(dot(x, float3{0.2126f, 0.7152f, 0.0722f}) / 0.18f);
+    float v = log2(dot(x, LUMA_REC709) / 0.18f);
     v = clamp(v + 5.0f, 0.0f, 15.0f);
+
     size_t index = size_t(v);
     return mix(debugColors[index], debugColors[index + 1], saturate(v - float(index)));
 }
