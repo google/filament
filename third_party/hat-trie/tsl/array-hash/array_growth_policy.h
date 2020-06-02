@@ -36,6 +36,18 @@
 #include <stdexcept>
 
 
+#ifdef __EXCEPTIONS
+#   define THROW(_e, _m) throw _e(_m)
+#else
+#   include <stdio.h>
+#   ifndef NDEBUG
+#       define THROW(_e, _m) do { fprintf(stderr, _m); std::terminate(); } while(0)
+#   else
+#       define THROW(_e, _m) std::terminate()
+#   endif
+#endif
+
+
 namespace tsl {
 namespace ah {
     
@@ -57,7 +69,7 @@ public:
      */
     explicit power_of_two_growth_policy(std::size_t& min_bucket_count_in_out) {
         if(min_bucket_count_in_out > max_bucket_count()) {
-            throw std::length_error("The hash table exceeds its maximum size.");
+            THROW(std::length_error, "The hash table exceeds its maximum size.");
         }
         
         if(min_bucket_count_in_out > 0) {
@@ -82,7 +94,7 @@ public:
      */
     std::size_t next_bucket_count() const {
         if((m_mask + 1) > max_bucket_count() / GrowthFactor) {
-            throw std::length_error("The hash table exceeds its maximum size.");
+            THROW(std::length_error, "The hash table exceeds its maximum size.");
         }
         
         return (m_mask + 1) * GrowthFactor;
@@ -142,7 +154,7 @@ class mod_growth_policy {
 public:
     explicit mod_growth_policy(std::size_t& min_bucket_count_in_out) {
         if(min_bucket_count_in_out > max_bucket_count()) {
-            throw std::length_error("The hash table exceeds its maximum size.");
+            THROW(std::length_error, "The hash table exceeds its maximum size.");
         }
         
         if(min_bucket_count_in_out > 0) {
@@ -159,12 +171,12 @@ public:
     
     std::size_t next_bucket_count() const {
         if(m_mod == max_bucket_count()) {
-            throw std::length_error("The hash table exceeds its maximum size.");
+            THROW(std::length_error, "The hash table exceeds its maximum size.");
         }
         
         const double next_bucket_count = std::ceil(double(m_mod) * REHASH_SIZE_MULTIPLICATION_FACTOR);
         if(!std::isnormal(next_bucket_count)) {
-            throw std::length_error("The hash table exceeds its maximum size.");
+            THROW(std::length_error, "The hash table exceeds its maximum size.");
         }
         
         if(next_bucket_count > double(max_bucket_count())) {
@@ -250,7 +262,7 @@ public:
         auto it_prime = std::lower_bound(detail::PRIMES.begin(), 
                                          detail::PRIMES.end(), min_bucket_count_in_out);
         if(it_prime == detail::PRIMES.end()) {
-            throw std::length_error("The hash table exceeds its maximum size.");
+            THROW(std::length_error, "The hash table exceeds its maximum size.");
         }
         
         m_iprime = static_cast<unsigned int>(std::distance(detail::PRIMES.begin(), it_prime));
@@ -268,7 +280,7 @@ public:
     
     std::size_t next_bucket_count() const {
         if(m_iprime + 1 >= detail::PRIMES.size()) {
-            throw std::length_error("The hash table exceeds its maximum size.");
+            THROW(std::length_error, "The hash table exceeds its maximum size.");
         }
         
         return detail::PRIMES[m_iprime + 1];

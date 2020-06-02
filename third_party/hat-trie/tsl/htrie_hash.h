@@ -88,13 +88,13 @@ template<typename T, typename U>
 static T numeric_cast(U value, const char* error_message = "numeric_cast() failed.") {
     T ret = static_cast<T>(value);
     if(static_cast<U>(ret) != value) {
-        throw std::runtime_error(error_message);
+        THROW(std::runtime_error, error_message);
     }
     
     const bool is_same_signedness = (std::is_unsigned<T>::value && std::is_unsigned<U>::value) ||
                                     (std::is_signed<T>::value && std::is_signed<U>::value);
     if(!is_same_signedness && (ret < T{}) != (value < U{})) {
-        throw std::runtime_error(error_message);
+        THROW(std::runtime_error, error_message);
     }
     
     return ret;
@@ -1014,7 +1014,7 @@ public:
     template<class... ValueArgs>
     std::pair<iterator, bool> insert(const CharT* key, size_type key_size, ValueArgs&&... value_args) {
         if(key_size > max_key_size()) {
-            throw std::length_error("Key is too long.");
+            THROW(std::length_error, "Key is too long.");
         }
         
         if(m_root == nullptr) {
@@ -1135,7 +1135,7 @@ public:
             return it_find.value();
         }
         else {
-            throw std::out_of_range("Couldn't find key.");
+            THROW(std::out_of_range, "Couldn't find key.");
         }        
     }
     
@@ -1740,7 +1740,7 @@ private:
     } 
     
     /**
-     * Burst the node and use the move constructor and move assign operator if they don't throw.
+     * Burst the node and use the move constructor and move assign operator
      */
     template<class U = T, typename std::enable_if<has_value<U>::value && 
                                                   std::is_nothrow_move_constructible<U>::value &&
@@ -1756,40 +1756,27 @@ private:
         std::vector<T*> moved_values_rollback;
         moved_values_rollback.reserve(node.array_hash().size());
         
-        try {
-            const std::array<size_type, ALPHABET_SIZE> first_char_count = 
-                        get_first_char_count(node.array_hash().cbegin(), node.array_hash().cend());
-            
-                        
-            auto new_node = make_unique<trie_node>();
-            for(auto it = node.array_hash().begin(); it != node.array_hash().end(); ++it) {
-                if(it.key_size() == 0) {
-                    new_node->val_node() = make_unique<value_node>(std::move(it.value()));
-                    moved_values_rollback.push_back(std::addressof(new_node->val_node()->m_value));
-                }
-                else {
-                    hash_node& hnode = get_hash_node_for_char(first_char_count, *new_node, it.key()[0]);
-                    auto it_insert = hnode.array_hash().insert_ks(it.key() + 1, it.key_size() - 1, 
-                                                                  std::move(it.value()));
-                    moved_values_rollback.push_back(std::addressof(it_insert.first.value()));
-                }
+        const std::array<size_type, ALPHABET_SIZE> first_char_count = 
+                    get_first_char_count(node.array_hash().cbegin(), node.array_hash().cend());
+        
+                    
+        auto new_node = make_unique<trie_node>();
+        for(auto it = node.array_hash().begin(); it != node.array_hash().end(); ++it) {
+            if(it.key_size() == 0) {
+                new_node->val_node() = make_unique<value_node>(std::move(it.value()));
+                moved_values_rollback.push_back(std::addressof(new_node->val_node()->m_value));
             }
-            
-            
-            tsl_ht_assert(new_node->val_node() != nullptr || !new_node->empty());
-            return new_node;
-        }
-        catch(...) {
-            // Rollback the values
-            auto it = node.array_hash().begin();
-            for(std::size_t ivalue = 0; ivalue < moved_values_rollback.size(); ivalue++) {
-                it.value() = std::move(*moved_values_rollback[ivalue]);
-                
-                ++it;
+            else {
+                hash_node& hnode = get_hash_node_for_char(first_char_count, *new_node, it.key()[0]);
+                auto it_insert = hnode.array_hash().insert_ks(it.key() + 1, it.key_size() - 1, 
+                                                                std::move(it.value()));
+                moved_values_rollback.push_back(std::addressof(it_insert.first.value()));
             }
-            
-            throw;
         }
+        
+        
+        tsl_ht_assert(new_node->val_node() != nullptr || !new_node->empty());
+        return new_node;
     } 
     
     template<class U = T, typename std::enable_if<!has_value<U>::value>::type* = nullptr>
@@ -1958,7 +1945,7 @@ private:
         // For now we only have one version of the serialization protocol. 
         // If it doesn't match there is a problem with the file.
         if(version != SERIALIZATION_PROTOCOL_VERSION) {
-            throw std::runtime_error("Can't deserialize the htrie_map/set. The protocol version header is invalid.");
+            THROW(std::runtime_error, "Can't deserialize the htrie_map/set. The protocol version header is invalid.");
         }
 
         
@@ -2014,7 +2001,7 @@ private:
                 }
             }
             else {
-                throw std::runtime_error("Unknown deserialized node type.");
+                THROW(std::runtime_error, "Unknown deserialized node type.");
             }
         }
         
