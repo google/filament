@@ -112,6 +112,31 @@ public class FilamentAsset {
         return result;
     }
 
+    /**
+     * Returns the first entity with the given name, or 0 if none exist.
+     */
+    public @Entity int getFirstEntityByName(String name) {
+        return nGetFirstEntityByName(mNativeObject, name);
+    }
+
+    /**
+     * Gets a list of entities with the given name.
+     */
+    public @NonNull @Entity int[] getEntitiesByName(String name) {
+        int[] result = new int[nGetEntitiesByName(mNativeObject, name, null)];
+        nGetEntitiesByName(mNativeObject, name, result);
+        return result;
+    }
+
+    /**
+     * Gets a list of entities whose names start with the given prefix.
+     */
+    public @NonNull @Entity int[] getEntitiesByPrefix(String prefix) {
+        int[] result = new int[nGetEntitiesByPrefix(mNativeObject, prefix, null)];
+        nGetEntitiesByPrefix(mNativeObject, prefix, result);
+        return result;
+    }
+
     public @NonNull MaterialInstance[] getMaterialInstances() {
         final int count = nGetMaterialInstanceCount(mNativeObject);
         MaterialInstance[] result = new MaterialInstance[count];
@@ -182,6 +207,10 @@ public class FilamentAsset {
 
     private static native int nGetEntityCount(long nativeAsset);
     private static native void nGetEntities(long nativeAsset, int[] result);
+
+    private static native int nGetFirstEntityByName(long nativeAsset, String name);
+    private static native int nGetEntitiesByName(long nativeAsset, String name, int[] result);
+    private static native int nGetEntitiesByPrefix(long nativeAsset, String prefix, int[] result);
 
     private static native int nGetLightEntityCount(long nativeAsset);
     private static native void nGetLightEntities(long nativeAsset, int[] result);
