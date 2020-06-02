@@ -60,13 +60,24 @@ class FColorGrading;
  * 3D LUT may need to be generated. The generation of a 3D LUT, if necessary, may happen on
  * the CPU.
  *
+ * Ordering
+ * ========
+ *
+ * The various transforms held by ColorGrading are applied in the following order:
+ * - White balance
+ * - Channel mixer
+ * - Shadows/mid-tones/highlights
+ * - Tone mapping
+ *
  * Defaults
  * ========
  *
  * Here are the default color grading options:
- * - Tone mapping: ACES
  * - White balance: temperature 0, and tint 0
  * - Channel mixer: red {1,0,0}, green {0,1,0}, blue {0,0,1}
+ * - Shadows/mid-tones/highlights: shadows {1,1,1,0}, mid-tones {1,1,1,0}, highlights {1,1,1,0},
+ *   ranges {0,0.333,0.550,1}
+ * - Tone mapping: ACES
  *
  * @see View
  */
@@ -118,8 +129,8 @@ public:
          * - Temperature, to modify the color temperature. This value will modify the colors
          *   on a blue/yellow axis. Lower values apply a cool color temperature, and higher
          *   values apply a warm color temperature. The lowest value, -1.0f, is equivalent to
-         *   a temperature of 2,000K. The highest value, 1.0f, is equivalent to a temperature
-         *   of 50,000K.
+         *   a temperature of 50,000K. The highest value, 1.0f, is equivalent to a temperature
+         *   of 2,000K.
          * - Tint, to modify the colors on a green/magenta axis. The lowest value, -1.0f, will
          *   apply a strong green cast, and the highest value, 1.0f, will apply a strong magenta
          *   cast.
@@ -163,6 +174,33 @@ public:
          */
         Builder& channelMixer(
                 math::float3 outRed, math::float3 outGreen, math::float3 outBlue) noexcept;
+
+        /**
+         * Adjusts the colors separately in 3 distinct tonal ranges or zones: shadows, mid-tones,
+         * and highlights.
+         *
+         * The tonal zones are by the ranges parameter: the x and y components define the beginning
+         * and end of the transition from shadows to mid-tones, and the z and w components define
+         * the beginning and end of the transition from mid-tones to highlights.
+         *
+         * A smooth transition is applied between the zones which means for instance that the
+         * correction color of the shadows range will partially apply to the mid-tones, and the
+         * other way around. This ensure smooth visual transitions in the final image.
+         *
+         * Each correction color is defined as a linear RGB color and a weight. The weight is a
+         * value (which may be positive or negative) that is added to the linear RGB color before
+         * mixing. This can be used to darken or brighten the selected tonal range.
+         *
+         * @param shadows Linear RGB color (.rgb) and weight (.w) to apply to the shadows
+         * @param midtones Linear RGB color (.rgb) and weight (.w) to apply to the mid-tones
+         * @param highlights Linear RGB color (.rgb) and weight (.w) to apply to the highlights
+         * @param ranges Range of the shadows (x and y), and range of the highlights (z and w)
+         *
+         * @return This Builder, for chaining calls
+         */
+        Builder& shadowsMidtonesHighlights(
+                math::float4 shadows, math::float4 midtones, math::float4 highlights,
+                math::float4 ranges = math::float4{0.0f, 0.333f, 0.550f, 1.0f}) noexcept;
 
         /**
          * Creates the ColorGrading object and returns a pointer to it.

@@ -29,6 +29,7 @@
 
 #include <math/vec2.h>
 #include <math/vec3.h>
+#include <math/vec4.h>
 
 #include <image/ColorTransform.h>
 
@@ -55,6 +56,10 @@ struct ColorGrading::BuilderDetails {
     float3 outRed           = {1.0f, 0.0f, 0.0f};
     float3 outGreen         = {0.0f, 1.0f, 0.0f};
     float3 outBlue          = {0.0f, 0.0f, 1.0f};
+    float3 shadows          = {1.0f, 1.0f, 1.0f};
+    float3 midtones         = {1.0f, 1.0f, 1.0f};
+    float3 highlights       = {1.0f, 1.0f, 1.0f};
+    float4 tonalRanges      = {0.0f, 0.333f, 0.550f, 1.0f}; // defaults in DaVinci Resolve
 };
 
 using BuilderType = ColorGrading;
@@ -83,6 +88,21 @@ ColorGrading::Builder& ColorGrading::Builder::channelMixer(
     mImpl->outRed   = clamp(outRed,   -2.0f, 2.0f);
     mImpl->outGreen = clamp(outGreen, -2.0f, 2.0f);
     mImpl->outBlue  = clamp(outBlue,  -2.0f, 2.0f);
+    return *this;
+}
+
+ColorGrading::Builder& ColorGrading::Builder::shadowsMidtonesHighlights(
+        float4 shadows, float4 midtones, float4 highlights, float4 ranges) noexcept {
+    mImpl->shadows = max(shadows.rgb + shadows.w, 0.0f);
+    mImpl->midtones = max(midtones.rgb + midtones.w, 0.0f);
+    mImpl->highlights = max(highlights.rgb + highlights.w, 0.0f);
+
+    ranges.x = saturate(ranges.x); // shadows
+    ranges.w = saturate(ranges.w); // highlights
+    ranges.y = clamp(ranges.y, ranges.x + 1e-5f, ranges.z - 1e-5f); // darks
+    ranges.z = clamp(ranges.z, ranges.x + 1e-5f, ranges.z - 1e-5f); // lights
+    mImpl->tonalRanges = ranges;
+
     return *this;
 }
 
@@ -131,12 +151,38 @@ mat3f selectColorGradingTransform(ColorGrading::ToneMapping toneMapping) {
         default:
             return mat3f{};
     }
-    return mat3f{};
+}
+
+float3 selectLumaTransform(ColorGrading::ToneMapping toneMapping) {
+    switch (toneMapping) {
+        case ColorGrading::ToneMapping::ACES:
+            return LUMA_AP1;
+        default:
+            return LUMA_REC709;
+    }
 }
 
 UTILS_ALWAYS_INLINE
 inline constexpr float3 channelMixer(float3 v, float3 r, float3 g, float3 b) {
     return {dot(v, r), dot(v, g), dot(v, b)};
+}
+
+UTILS_ALWAYS_INLINE
+inline constexpr float3 tonalRanges(
+        float3 v, float3 luma, float3 shadows, float3 midtones, float3 highlights, float4 ranges) {
+    // See the Mathematica notebook at docs/math/Shadows Midtones Highlight.nb for
+    // details on how the curves were designed. The default curve values are based
+    // on the defaults from the "Log" color wheels in DaVinci Resolve.
+    float y = dot(v, luma);
+
+    // Shadows curve
+    float s = 1.0f - smoothstep(ranges.x, ranges.y, y);
+    // Highlights curve
+    float h = smoothstep(ranges.z, ranges.w, y);
+    // Mid-tones curves
+    float m = 1.0f - s - h;
+
+    return v * s * shadows + v * m * midtones + v * h * highlights;
 }
 
 //------------------------------------------------------------------------------
@@ -167,6 +213,7 @@ ToneMapper selectToneMapping(ColorGrading::ToneMapping toneMapping) {
 
 struct Config {
     mat3f colorGradingTransform;
+    float3 lumaTransform;
     ToneMapper toneMapper;
 };
 
@@ -181,6 +228,7 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
 
     Config config{
         .colorGradingTransform = selectColorGradingTransform(builder->toneMapping),
+        .lumaTransform         = selectLumaTransform(builder->toneMapping),
         .toneMapper            = selectToneMapping(builder->toneMapping),
     };
 
@@ -196,7 +244,7 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
             half4* UTILS_RESTRICT p = (half4*) data + b * LUT_DIMENSION * LUT_DIMENSION;
             for (size_t g = 0; g < LUT_DIMENSION; g++) {
                 for (size_t r = 0; r < LUT_DIMENSION; r++) {
-                    float3 v = float3{ r, g, b } * (1.0f / (LUT_DIMENSION - 1u));
+                    float3 v = float3{r, g, b} * (1.0f / (LUT_DIMENSION - 1u));
 
                     // LogC encoding
                     v = lutToLinear(v);
@@ -207,8 +255,18 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                     // Convert to color grading color space
                     v = config.colorGradingTransform * v;
 
+                    // TODO: Should any of the color grading transforms be applied in ACEScc or
+                    //       ACEScct isntead of ACEScg? The primaries are the same (AP1) but
+                    //       ACEScc/cct use a log encoding which may be better suited to some kinds
+                    //       of transforms
+
                     // Channel mixer
                     v = channelMixer(v, builder->outRed, builder->outGreen, builder->outBlue);
+
+                    // Shadows/mid-tones/highlights
+                    v = tonalRanges(v, config.lumaTransform,
+                            builder->shadows, builder->midtones, builder->highlights,
+                            builder->tonalRanges);
 
                     // Kill negative values before tone mapping
                     v = max(v, 0.0f);

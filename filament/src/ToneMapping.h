@@ -164,12 +164,10 @@ inline float3 ACES(float3 color) {
     ap0.r += hueWeight * saturation * (RRT_RED_PIVOT - ap0.r) * (1.0f - RRT_RED_SCALE);
 
     // ACES to RGB rendering space
-    float3 ap1 = clamp(AP0_to_AP1 * ap0, 0.0f, (float)std::numeric_limits<math::half>::max());
+    float3 ap1 = clamp(AP0_to_AP1 * ap0, 0.0f, (float) std::numeric_limits<math::half>::max());
 
     // Global desaturation
-    const float3 AP1_RGB2Y{ 0.272229f, 0.674082f, 0.0536895f };
-
-    ap1 = mix(float3(dot(ap1, AP1_RGB2Y)), ap1, RRT_SAT_FACTOR);
+    ap1 = mix(float3(dot(ap1, LUMA_AP1)), ap1, RRT_SAT_FACTOR);
 
 #if defined(TONEMAP_ACES_MATCH_BRIGHTNESS)
     ap1 *= 1.0f / 0.6f;
@@ -188,7 +186,7 @@ inline float3 ACES(float3 color) {
     float3 linearCV = darkSurround_to_dimSurround(rgbPost);
 
     // Apply desaturation to compensate for luminance difference
-    linearCV = mix(float3(dot(linearCV, AP1_RGB2Y)), linearCV, ODT_SAT_FACTOR);
+    linearCV = mix(float3(dot(linearCV, LUMA_AP1)), linearCV, ODT_SAT_FACTOR);
 
     // Convert to display primary encoding (Rec.709 primaries, D65 white point)
     return AP1_to_sRGB * linearCV;
