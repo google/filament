@@ -206,8 +206,33 @@ public:
                 math::float4 shadows, math::float4 midtones, math::float4 highlights,
                 math::float4 ranges = math::float4{0.0f, 0.333f, 0.550f, 1.0f}) noexcept;
 
-        Builder& saturation(float saturation) noexcept;
+        /**
+         * Adjusts the contrast of the image. Lower values decrease the contrast of the image
+         * (the tonal range is narrowed), and higher values increase the contrast of the image
+         * (the tonal range is widened). A value of 1.0 has no effect.
+         *
+         * The contrast is defined as a value in the range [0.0...2.0]. Values outside of that
+         * range will be clipped to that range.
+         *
+         * @param constrast Contrast expansion, between 0.0 and 2.0. 1.0 leaves contrast unaffected
+         *
+         * @return This Builder, for chaining calls
+         */
         Builder& contrast(float constrast) noexcept;
+
+        /**
+         * Adjusts the saturation of the image. Lower values decrease intensity of the colors
+         * present in the image, and higher values increase the intensity of the colors in the
+         * image. A value of 1.0 has no effect.
+         *
+         * The saturation is defined as a value in the range [0.0...2.0]. Values outside of that
+         * range will be clipped to that range.
+         *
+         * @param constrast Saturation, between 0.0 and 2.0. 1.0 leaves saturation unaffected
+         *
+         * @return This Builder, for chaining calls
+         */
+        Builder& saturation(float saturation) noexcept;
 
         /**
          * Creates the ColorGrading object and returns a pointer to it.
