@@ -1043,9 +1043,19 @@ void VulkanDriver::bindSamplers(size_t index, Handle<HwSamplerGroup> sbh) {
 }
 
 void VulkanDriver::insertEventMarker(char const* string, size_t len) {
+    constexpr float MARKER_COLOR[] = { 0.0f, 1.0f, 0.0f, 1.0f };
+    ASSERT_POSTCONDITION(mContext.currentCommands,
+            "Markers can only be inserted within a beginFrame / endFrame.");
+    if (mContext.debugMarkersSupported) {
+        VkDebugMarkerMarkerInfoEXT markerInfo = {};
+        markerInfo.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT;
+        memcpy(markerInfo.color, &MARKER_COLOR[0], sizeof(MARKER_COLOR));
+        markerInfo.pMarkerName = string;
+        vkCmdDebugMarkerInsertEXT(mContext.currentCommands->cmdbuffer, &markerInfo);
+    }
 }
 
-void VulkanDriver::pushGroupMarker(char const* string,  size_t len) {
+void VulkanDriver::pushGroupMarker(char const* string, size_t len) {
     // TODO: Add group marker color to the Driver API
     constexpr float MARKER_COLOR[] = { 0.0f, 1.0f, 0.0f, 1.0f };
     ASSERT_POSTCONDITION(mContext.currentCommands,
