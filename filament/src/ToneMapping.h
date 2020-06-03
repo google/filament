@@ -127,7 +127,7 @@ inline float3 darkSurround_to_dimSurround(float3 linearCV) {
 }
 
 UTILS_ALWAYS_INLINE
-inline float3 ACES(float3 color) {
+inline float3 ACES(float3 color, float brightness) {
     // Some bits were removed to adapt to our desired output
     // Input:  ACEScg (AP1)
     // Output: linear sRGB
@@ -169,9 +169,9 @@ inline float3 ACES(float3 color) {
     // Global desaturation
     ap1 = mix(float3(dot(ap1, LUMA_AP1)), ap1, RRT_SAT_FACTOR);
 
-#if defined(TONEMAP_ACES_MATCH_BRIGHTNESS)
-    ap1 *= 1.0f / 0.6f;
-#endif
+    // NOTE: This is specific to Filament and added only to match ACES to our legacy tone mapper
+    //       which was a fit of ACES in Rec.709 but with a brightness boost.
+    ap1 *= brightness;
 
     // Fitting of RRT + ODT (RGB monitor 100 nits dim) from:
     // https://github.com/colour-science/colour-unity/blob/master/Assets/Colour/Notebooks/CIECAM02_Unity.ipynb
@@ -219,7 +219,11 @@ float3 Filmic(float3 x) noexcept {
 }
 
 float3 ACES(float3 x) noexcept {
-    return aces::ACES(x);
+    return aces::ACES(x, 1.0f);
+}
+
+float3 ACES_Legacy(float3 x) noexcept {
+    return aces::ACES(x, 1.0f / 0.6f);
 }
 
 /**

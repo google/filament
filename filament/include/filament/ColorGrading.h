@@ -81,7 +81,7 @@ class FColorGrading;
  *   ranges {0,0.333,0.550,1}
  * - Contrast: 1.0
  * - Saturation: 1.0
- * - Tone mapping: ACES
+ * - Tone mapping: ACES_LEGACY
  *
  * @see View
  */
@@ -94,10 +94,11 @@ public:
      */
     enum class ToneMapping : uint8_t {
         LINEAR        = 0,     //!< Linear tone mapping (i.e. no tone mapping)
-        ACES          = 1,     //!< ACES tone mapping, with a brightness modifier
-        FILMIC        = 2,     //!< Filmic tone mapping, modelled after ACES but applied in sRGB space
-        REINHARD      = 3,     //!< Reinhard luma-based tone mapping
-        DISPLAY_RANGE = 4,     //!< Tone mapping used to validate/debug scene exposure
+        ACES_LEGACY   = 1,     //!< ACES tone mapping, with a brightness modifier to match Filament's legacy tone mapper
+        ACES          = 2,     //!< ACES tone mapping
+        FILMIC        = 3,     //!< Filmic tone mapping, modelled after ACES but applied in sRGB space
+        REINHARD      = 4,     //!< Reinhard luma-based tone mapping
+        DISPLAY_RANGE = 5,     //!< Tone mapping used to validate/debug scene exposure
     };
 
     //! Use Builder to construct a ColorGrading object instance
@@ -115,7 +116,7 @@ public:
          * Selects the tone mapping operator to apply to the HDR color buffer as the last
          * operation of the color grading post-processing step.
          *
-         * The default tone mapping operator is ACES.
+         * The default tone mapping operator is ACES_LEGACY.
          *
          * @param toneMapping The tone mapping operator to apply to the HDR color buffer
          *

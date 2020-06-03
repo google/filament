@@ -61,7 +61,7 @@ constexpr uint8_t BLENDING_SOLID_REFRACTION = 4;
 using namespace filament;
 
 struct ColorGradingOptions {
-    ColorGrading::ToneMapping toneMapping = ColorGrading::ToneMapping::ACES;
+    ColorGrading::ToneMapping toneMapping = ColorGrading::ToneMapping::ACES_LEGACY;
     int temperature = 0;
     int tint = 0;
     math::float3 outRed{1.0f, 0.0f, 0.0f};

@@ -21,10 +21,7 @@
 #include "FilamentAPI-impl.h"
 
 #include "ColorSpace.h"
-// When defined, the ACES tone mapper will match the brightness of the filmic ("ACES sRGB")
-// tone mapper. It is *not* correct, but it helps for compatibility
-// TODO: Always enable this, expose a float to control this (1.0 == real ACES)
-#define TONEMAP_ACES_MATCH_BRIGHTNESS
+
 #include "ToneMapping.h"
 
 #include <math/vec2.h>
@@ -49,7 +46,7 @@ static constexpr size_t LUT_DIMENSION = 32u;
 //------------------------------------------------------------------------------
 
 struct ColorGrading::BuilderDetails {
-    ToneMapping toneMapping = ToneMapping::ACES;
+    ToneMapping toneMapping = ToneMapping::ACES_LEGACY;
     float2 whiteBalance     = {0.0f, 0.0f};
     float3 outRed           = {1.0f, 0.0f, 0.0f};
     float3 outGreen         = {0.0f, 1.0f, 0.0f};
@@ -158,6 +155,7 @@ using ColorTransform = float3(*)(float3);
 
 ColorTransform selectLinearToLogTransform(ColorGrading::ToneMapping toneMapping) {
     switch (toneMapping) {
+        case ColorGrading::ToneMapping::ACES_LEGACY:
         case ColorGrading::ToneMapping::ACES:
             return linearAP1_to_ACEScct;
         default:
@@ -167,6 +165,7 @@ ColorTransform selectLinearToLogTransform(ColorGrading::ToneMapping toneMapping)
 
 ColorTransform selectLogToLinearTransform(ColorGrading::ToneMapping toneMapping) {
     switch (toneMapping) {
+        case ColorGrading::ToneMapping::ACES_LEGACY:
         case ColorGrading::ToneMapping::ACES:
             return ACEScct_to_linearAP1;
         default:
@@ -176,6 +175,7 @@ ColorTransform selectLogToLinearTransform(ColorGrading::ToneMapping toneMapping)
 
 mat3f selectColorGradingTransform(ColorGrading::ToneMapping toneMapping) {
     switch (toneMapping) {
+        case ColorGrading::ToneMapping::ACES_LEGACY:
         case ColorGrading::ToneMapping::ACES:
             return sRGB_to_AP1;
         default:
@@ -185,6 +185,7 @@ mat3f selectColorGradingTransform(ColorGrading::ToneMapping toneMapping) {
 
 float3 selectLumaTransform(ColorGrading::ToneMapping toneMapping) {
     switch (toneMapping) {
+        case ColorGrading::ToneMapping::ACES_LEGACY:
         case ColorGrading::ToneMapping::ACES:
             return LUMA_AP1;
         default:
@@ -233,6 +234,8 @@ ColorTransform selectToneMapping(ColorGrading::ToneMapping toneMapping) {
     switch (toneMapping) {
         case ColorGrading::ToneMapping::LINEAR:
             return tonemap::Linear;
+        case ColorGrading::ToneMapping::ACES_LEGACY:
+            return tonemap::ACES_Legacy;
         case ColorGrading::ToneMapping::ACES:
             return tonemap::ACES;
         case ColorGrading::ToneMapping::FILMIC:
