@@ -388,8 +388,8 @@ export class View {
     public setAmbientOcclusionOptions(options: View$AmbientOcclusionOptions): void;
     public setDepthOfFieldOptions(options: View$DepthOfFieldOptions): void;
     public setBloomOptions(options: View$BloomOptions): void;
-    public setAmbientOcclusion(enable: boolean): void;
-    public getAmbientOcclusion(): boolean;
+    public setAmbientOcclusion(ambientOcclusion: View$AmbientOcclusion): void;
+    public getAmbientOcclusion(): View$AmbientOcclusion;
     public setBlendMode(mode: View$BlendMode): void;
     public getBlendMode(): View$BlendMode;
 }
