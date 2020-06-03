@@ -613,6 +613,10 @@ static void gui(filament::Engine* engine, filament::View*) {
                 ImGui::PlotLines("Mid-tones curve", g_rangePlot + 1024, 1024);
                 ImGui::PlotLines("Highlights curve", g_rangePlot + 2048, 1024);
             }
+            if (ImGui::CollapsingHeader("Adjustments")) {
+                ImGui::SliderFloat("Contrast", &params.colorGradingOptions.contrast, 0.0f, 2.0f);
+                ImGui::SliderFloat("Saturation", &params.colorGradingOptions.saturation, 0.0f, 2.0f);
+            }
             ImGui::Unindent();
         }
 
@@ -740,6 +744,8 @@ static void preRender(filament::Engine* engine, filament::View* view, filament::
                             Color::toLinear(options.highlights),
                             options.ranges
                     )
+                    .contrast(options.contrast)
+                    .saturation(options.saturation)
                     .toneMapping(options.toneMapping)
                     .build(*engine);
 

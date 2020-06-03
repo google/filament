@@ -67,6 +67,8 @@ class FColorGrading;
  * - White balance
  * - Channel mixer
  * - Shadows/mid-tones/highlights
+ * - Contrast
+ * - Saturation
  * - Tone mapping
  *
  * Defaults
@@ -77,6 +79,8 @@ class FColorGrading;
  * - Channel mixer: red {1,0,0}, green {0,1,0}, blue {0,0,1}
  * - Shadows/mid-tones/highlights: shadows {1,1,1,0}, mid-tones {1,1,1,0}, highlights {1,1,1,0},
  *   ranges {0,0.333,0.550,1}
+ * - Contrast: 1.0
+ * - Saturation: 1.0
  * - Tone mapping: ACES
  *
  * @see View
@@ -201,6 +205,9 @@ public:
         Builder& shadowsMidtonesHighlights(
                 math::float4 shadows, math::float4 midtones, math::float4 highlights,
                 math::float4 ranges = math::float4{0.0f, 0.333f, 0.550f, 1.0f}) noexcept;
+
+        Builder& saturation(float saturation) noexcept;
+        Builder& contrast(float constrast) noexcept;
 
         /**
          * Creates the ColorGrading object and returns a pointer to it.

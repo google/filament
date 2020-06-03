@@ -121,6 +121,10 @@ constexpr float3 LUMA_AP1{0.272229f, 0.674082f, 0.0536895f};
 // RGB to luma coefficients for Rec.709, from sRGB_to_XYZ
 constexpr float3 LUMA_REC709{0.2126730f, 0.7151520f, 0.0721750f};
 
+constexpr float MIDDLE_GRAY_ACEScg = 0.18f;
+
+constexpr float MIDDLE_GRAY_ACEScct = 0.4135884f;
+
 //------------------------------------------------------------------------------
 // Chromaticity helpers
 //------------------------------------------------------------------------------
@@ -152,9 +156,9 @@ inline constexpr xyY XYZ_to_xyY(XYZ v) noexcept {
 // Decodes a linear value from LogC using the Alexa LogC EI 1000 curve
 inline float3 LogC_to_linear(float3 x) noexcept {
     const float ia = 1.0f / 5.555556f;
-    const float b = 0.047996f;
+    const float b  = 0.047996f;
     const float ic = 1.0f / 0.244161f;
-    const float d = 0.386036f;
+    const float d  = 0.386036f;
     return (pow(10.0f, (x - d) * ic) - b) * ia;
 }
 
@@ -183,8 +187,8 @@ inline float3 ACEScct_to_linearAP1(float3 x) noexcept {
 
 inline float3 linearAP1_to_ACEScct(float3 x) noexcept {
     for (size_t i = 0; i < 3; i++) {
-        x[i] = x[i] < 0.0078125f ?
-                  10.5402377416545f * x[i] + 0.0729055341958355f
+        x[i] = x[i] < 0.0078125f
+                ? 10.5402377416545f * x[i] + 0.0729055341958355f
                 : (log2(x[i]) + 9.72f) / 17.52f;
     }
     return x;
@@ -207,7 +211,7 @@ inline float3 EOCF_sRGB(float3 x) noexcept {
     constexpr float b  = 1.0f / 12.92f;
     constexpr float p  = 2.4f;
     for (size_t i = 0; i < 3; i++) {
-        x[i] = x[i] <= 0.04045f ? x[i] * b : std::pow((x[i] + a) / a1, p);
+        x[i] = x[i] <= 0.04045f ? x[i] * b : pow((x[i] + a) / a1, p);
     }
     return x;
 }

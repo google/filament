@@ -58,6 +58,8 @@ struct ColorGrading::BuilderDetails {
     float3 midtones         = {1.0f, 1.0f, 1.0f};
     float3 highlights       = {1.0f, 1.0f, 1.0f};
     float4 tonalRanges      = {0.0f, 0.333f, 0.550f, 1.0f}; // defaults in DaVinci Resolve
+    float  saturation       = 1.0f;
+    float  contrast         = 1.0f;
 };
 
 using BuilderType = ColorGrading;
@@ -104,6 +106,16 @@ ColorGrading::Builder& ColorGrading::Builder::shadowsMidtonesHighlights(
     return *this;
 }
 
+ColorGrading::Builder& ColorGrading::Builder::saturation(float saturation) noexcept {
+    mImpl->saturation = clamp(saturation, 0.0f, 2.0f);
+    return *this;
+}
+
+ColorGrading::Builder& ColorGrading::Builder::contrast(float contrast) noexcept {
+    mImpl->contrast = clamp(contrast, 0.0f, 2.0f);
+    return *this;
+}
+
 ColorGrading* ColorGrading::Builder::build(Engine& engine) {
     return upcast(engine).createColorGrading(*this);
 }
@@ -141,6 +153,26 @@ inline float3 chromaticAdaptation(float3 v, float2 whiteBalance) {
 //------------------------------------------------------------------------------
 // General color grading
 //------------------------------------------------------------------------------
+
+using ColorTransform = float3(*)(float3);
+
+ColorTransform selectLinearToLogTransform(ColorGrading::ToneMapping toneMapping) {
+    switch (toneMapping) {
+        case ColorGrading::ToneMapping::ACES:
+            return linearAP1_to_ACEScct;
+        default:
+            return linear_to_LogC;
+    }
+}
+
+ColorTransform selectLogToLinearTransform(ColorGrading::ToneMapping toneMapping) {
+    switch (toneMapping) {
+        case ColorGrading::ToneMapping::ACES:
+            return ACEScct_to_linearAP1;
+        default:
+            return LogC_to_linear;
+    }
+}
 
 mat3f selectColorGradingTransform(ColorGrading::ToneMapping toneMapping) {
     switch (toneMapping) {
@@ -183,13 +215,21 @@ inline constexpr float3 tonalRanges(
     return v * s * shadows + v * m * midtones + v * h * highlights;
 }
 
+UTILS_ALWAYS_INLINE
+inline constexpr float3 colorAdjustments(float3 v, float contrast, float saturation) {
+    // Matches contrast as applied in DaVinci Resolve
+    v = MIDDLE_GRAY_ACEScct + contrast * (v - MIDDLE_GRAY_ACEScct);
+
+    // S-2016-001 uses Rec.709 luma coefficients for the ASC CDL, including saturation
+    float3 y = dot(v, LUMA_REC709);
+    return y + saturation * (v - y);
+}
+
 //------------------------------------------------------------------------------
 // Tone mapping
 //------------------------------------------------------------------------------
 
-using ToneMapper = float3(*)(float3);
-
-ToneMapper selectToneMapping(ColorGrading::ToneMapping toneMapping) {
+ColorTransform selectToneMapping(ColorGrading::ToneMapping toneMapping) {
     switch (toneMapping) {
         case ColorGrading::ToneMapping::LINEAR:
             return tonemap::Linear;
@@ -212,7 +252,9 @@ ToneMapper selectToneMapping(ColorGrading::ToneMapping toneMapping) {
 struct Config {
     mat3f colorGradingTransform;
     float3 lumaTransform;
-    ToneMapper toneMapper;
+    ColorTransform linearToLogTransform;
+    ColorTransform logToLinearTransform;
+    ColorTransform toneMapper;
 };
 
 FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
@@ -227,7 +269,9 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
     Config config{
         .colorGradingTransform = selectColorGradingTransform(builder->toneMapping),
         .lumaTransform         = selectLumaTransform(builder->toneMapping),
-        .toneMapper            = selectToneMapping(builder->toneMapping),
+        .linearToLogTransform  = selectLinearToLogTransform(builder->toneMapping),
+        .logToLinearTransform  = selectLogToLinearTransform(builder->toneMapping),
+        .toneMapper            = selectToneMapping(builder->toneMapping)
     };
 
     //auto now = std::chrono::steady_clock::now();
@@ -256,15 +300,19 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                     // Channel mixer
                     v = channelMixer(v, builder->outRed, builder->outGreen, builder->outBlue);
 
-                    // TODO: Should any of the color grading transforms be applied in ACEScc or
-                    //       ACEScct isntead of ACEScg? The primaries are the same (AP1) but
-                    //       ACEScc/cct use a log encoding which may be better suited to some kinds
-                    //       of transforms
-
                     // Shadows/mid-tones/highlights
                     v = tonalRanges(v, config.lumaTransform,
                             builder->shadows, builder->midtones, builder->highlights,
                             builder->tonalRanges);
+
+                    // The adjustments below behave better in log space using the ACEScct
+                    // color space.
+                    v = config.linearToLogTransform(v);
+
+                    // Constrast and saturation
+                    v = colorAdjustments(v, builder->contrast, builder->saturation);
+
+                    v = config.logToLinearTransform(v);
 
                     // Kill negative values before tone mapping
                     v = max(v, 0.0f);
