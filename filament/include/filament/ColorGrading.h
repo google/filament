@@ -67,6 +67,8 @@ class FColorGrading;
  * - White balance
  * - Channel mixer
  * - Shadows/mid-tones/highlights
+ * - Contrast
+ * - Saturation
  * - Tone mapping
  *
  * Defaults
@@ -77,7 +79,9 @@ class FColorGrading;
  * - Channel mixer: red {1,0,0}, green {0,1,0}, blue {0,0,1}
  * - Shadows/mid-tones/highlights: shadows {1,1,1,0}, mid-tones {1,1,1,0}, highlights {1,1,1,0},
  *   ranges {0,0.333,0.550,1}
- * - Tone mapping: ACES
+ * - Contrast: 1.0
+ * - Saturation: 1.0
+ * - Tone mapping: ACES_LEGACY
  *
  * @see View
  */
@@ -90,10 +94,11 @@ public:
      */
     enum class ToneMapping : uint8_t {
         LINEAR        = 0,     //!< Linear tone mapping (i.e. no tone mapping)
-        ACES          = 1,     //!< ACES tone mapping, with a brightness modifier
-        FILMIC        = 2,     //!< Filmic tone mapping, modelled after ACES but applied in sRGB space
-        REINHARD      = 3,     //!< Reinhard luma-based tone mapping
-        DISPLAY_RANGE = 4,     //!< Tone mapping used to validate/debug scene exposure
+        ACES_LEGACY   = 1,     //!< ACES tone mapping, with a brightness modifier to match Filament's legacy tone mapper
+        ACES          = 2,     //!< ACES tone mapping
+        FILMIC        = 3,     //!< Filmic tone mapping, modelled after ACES but applied in sRGB space
+        REINHARD      = 4,     //!< Reinhard luma-based tone mapping
+        DISPLAY_RANGE = 5,     //!< Tone mapping used to validate/debug scene exposure
     };
 
     //! Use Builder to construct a ColorGrading object instance
@@ -111,7 +116,7 @@ public:
          * Selects the tone mapping operator to apply to the HDR color buffer as the last
          * operation of the color grading post-processing step.
          *
-         * The default tone mapping operator is ACES.
+         * The default tone mapping operator is ACES_LEGACY.
          *
          * @param toneMapping The tone mapping operator to apply to the HDR color buffer
          *
@@ -201,6 +206,34 @@ public:
         Builder& shadowsMidtonesHighlights(
                 math::float4 shadows, math::float4 midtones, math::float4 highlights,
                 math::float4 ranges = math::float4{0.0f, 0.333f, 0.550f, 1.0f}) noexcept;
+
+        /**
+         * Adjusts the contrast of the image. Lower values decrease the contrast of the image
+         * (the tonal range is narrowed), and higher values increase the contrast of the image
+         * (the tonal range is widened). A value of 1.0 has no effect.
+         *
+         * The contrast is defined as a value in the range [0.0...2.0]. Values outside of that
+         * range will be clipped to that range.
+         *
+         * @param constrast Contrast expansion, between 0.0 and 2.0. 1.0 leaves contrast unaffected
+         *
+         * @return This Builder, for chaining calls
+         */
+        Builder& contrast(float constrast) noexcept;
+
+        /**
+         * Adjusts the saturation of the image. Lower values decrease intensity of the colors
+         * present in the image, and higher values increase the intensity of the colors in the
+         * image. A value of 1.0 has no effect.
+         *
+         * The saturation is defined as a value in the range [0.0...2.0]. Values outside of that
+         * range will be clipped to that range.
+         *
+         * @param constrast Saturation, between 0.0 and 2.0. 1.0 leaves saturation unaffected
+         *
+         * @return This Builder, for chaining calls
+         */
+        Builder& saturation(float saturation) noexcept;
 
         /**
          * Creates the ColorGrading object and returns a pointer to it.

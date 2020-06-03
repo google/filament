@@ -15,7 +15,7 @@ A new header is inserted each time a *tag* is created.
 - Tone mappping now uses the real ACES tone mapper, applied in the proper color space.
 - Tone mapping is now applied via a LUT.
 - Color grading capabilities per View: white balance (temperature/tint), channel mixer,
-  tonal ranges (shadows/mid-tones/highlights).
+  tonal ranges (shadows/mid-tones/highlights), contrast, saturation.
 - Fixed bug in the Metal backend when SSR and MSAA were turned on
 - Fixed Metal issue with `BufferDescriptor` and `PixelBufferDescriptor`s not being called on application thread.
 

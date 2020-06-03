@@ -21,17 +21,12 @@
 #include "FilamentAPI-impl.h"
 
 #include "ColorSpace.h"
-// When defined, the ACES tone mapper will match the brightness of the filmic ("ACES sRGB")
-// tone mapper. It is *not* correct, but it helps for compatibility
-// TODO: Always enable this, expose a float to control this (1.0 == real ACES)
-#define TONEMAP_ACES_MATCH_BRIGHTNESS
+
 #include "ToneMapping.h"
 
 #include <math/vec2.h>
 #include <math/vec3.h>
 #include <math/vec4.h>
-
-#include <image/ColorTransform.h>
 
 #include <utils/JobSystem.h>
 #include <utils/Systrace.h>
@@ -51,7 +46,7 @@ static constexpr size_t LUT_DIMENSION = 32u;
 //------------------------------------------------------------------------------
 
 struct ColorGrading::BuilderDetails {
-    ToneMapping toneMapping = ToneMapping::ACES;
+    ToneMapping toneMapping = ToneMapping::ACES_LEGACY;
     float2 whiteBalance     = {0.0f, 0.0f};
     float3 outRed           = {1.0f, 0.0f, 0.0f};
     float3 outGreen         = {0.0f, 1.0f, 0.0f};
@@ -60,6 +55,8 @@ struct ColorGrading::BuilderDetails {
     float3 midtones         = {1.0f, 1.0f, 1.0f};
     float3 highlights       = {1.0f, 1.0f, 1.0f};
     float4 tonalRanges      = {0.0f, 0.333f, 0.550f, 1.0f}; // defaults in DaVinci Resolve
+    float  saturation       = 1.0f;
+    float  contrast         = 1.0f;
 };
 
 using BuilderType = ColorGrading;
@@ -106,6 +103,16 @@ ColorGrading::Builder& ColorGrading::Builder::shadowsMidtonesHighlights(
     return *this;
 }
 
+ColorGrading::Builder& ColorGrading::Builder::saturation(float saturation) noexcept {
+    mImpl->saturation = clamp(saturation, 0.0f, 2.0f);
+    return *this;
+}
+
+ColorGrading::Builder& ColorGrading::Builder::contrast(float contrast) noexcept {
+    mImpl->contrast = clamp(contrast, 0.0f, 2.0f);
+    return *this;
+}
+
 ColorGrading* ColorGrading::Builder::build(Engine& engine) {
     return upcast(engine).createColorGrading(*this);
 }
@@ -126,7 +133,7 @@ inline float3 adaptationTransform(float2 whiteBalance) {
     float t = whiteBalance.y; // tint
 
     float x = ILLUMINANT_D65_xyY.x - k * (k < 0.0f ? 0.0214f : 0.066f);
-    float y = illuminantD_y(x) + t * 0.066f;
+    float y = chromaticityCoordinateIlluminantD(x) + t * 0.066f;
 
     float3 lms = XYZ_to_CIECAT02 * xyY_to_XYZ({x, y, 1.0f});
     return ILLUMINANT_D65_LMS / lms;
@@ -144,8 +151,31 @@ inline float3 chromaticAdaptation(float3 v, float2 whiteBalance) {
 // General color grading
 //------------------------------------------------------------------------------
 
+using ColorTransform = float3(*)(float3);
+
+ColorTransform selectLinearToLogTransform(ColorGrading::ToneMapping toneMapping) {
+    switch (toneMapping) {
+        case ColorGrading::ToneMapping::ACES_LEGACY:
+        case ColorGrading::ToneMapping::ACES:
+            return linearAP1_to_ACEScct;
+        default:
+            return linear_to_LogC;
+    }
+}
+
+ColorTransform selectLogToLinearTransform(ColorGrading::ToneMapping toneMapping) {
+    switch (toneMapping) {
+        case ColorGrading::ToneMapping::ACES_LEGACY:
+        case ColorGrading::ToneMapping::ACES:
+            return ACEScct_to_linearAP1;
+        default:
+            return LogC_to_linear;
+    }
+}
+
 mat3f selectColorGradingTransform(ColorGrading::ToneMapping toneMapping) {
     switch (toneMapping) {
+        case ColorGrading::ToneMapping::ACES_LEGACY:
         case ColorGrading::ToneMapping::ACES:
             return sRGB_to_AP1;
         default:
@@ -155,6 +185,7 @@ mat3f selectColorGradingTransform(ColorGrading::ToneMapping toneMapping) {
 
 float3 selectLumaTransform(ColorGrading::ToneMapping toneMapping) {
     switch (toneMapping) {
+        case ColorGrading::ToneMapping::ACES_LEGACY:
         case ColorGrading::ToneMapping::ACES:
             return LUMA_AP1;
         default:
@@ -185,16 +216,26 @@ inline constexpr float3 tonalRanges(
     return v * s * shadows + v * m * midtones + v * h * highlights;
 }
 
+UTILS_ALWAYS_INLINE
+inline constexpr float3 colorAdjustments(float3 v, float contrast, float saturation) {
+    // Matches contrast as applied in DaVinci Resolve
+    v = MIDDLE_GRAY_ACEScct + contrast * (v - MIDDLE_GRAY_ACEScct);
+
+    // S-2016-001 uses Rec.709 luma coefficients for the ASC CDL, including saturation
+    float3 y = dot(v, LUMA_REC709);
+    return y + saturation * (v - y);
+}
+
 //------------------------------------------------------------------------------
 // Tone mapping
 //------------------------------------------------------------------------------
 
-using ToneMapper = float3(*)(float3);
-
-ToneMapper selectToneMapping(ColorGrading::ToneMapping toneMapping) {
+ColorTransform selectToneMapping(ColorGrading::ToneMapping toneMapping) {
     switch (toneMapping) {
         case ColorGrading::ToneMapping::LINEAR:
             return tonemap::Linear;
+        case ColorGrading::ToneMapping::ACES_LEGACY:
+            return tonemap::ACES_Legacy;
         case ColorGrading::ToneMapping::ACES:
             return tonemap::ACES;
         case ColorGrading::ToneMapping::FILMIC:
@@ -214,7 +255,9 @@ ToneMapper selectToneMapping(ColorGrading::ToneMapping toneMapping) {
 struct Config {
     mat3f colorGradingTransform;
     float3 lumaTransform;
-    ToneMapper toneMapper;
+    ColorTransform linearToLogTransform;
+    ColorTransform logToLinearTransform;
+    ColorTransform toneMapper;
 };
 
 FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
@@ -229,7 +272,9 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
     Config config{
         .colorGradingTransform = selectColorGradingTransform(builder->toneMapping),
         .lumaTransform         = selectLumaTransform(builder->toneMapping),
-        .toneMapper            = selectToneMapping(builder->toneMapping),
+        .linearToLogTransform  = selectLinearToLogTransform(builder->toneMapping),
+        .logToLinearTransform  = selectLogToLinearTransform(builder->toneMapping),
+        .toneMapper            = selectToneMapping(builder->toneMapping)
     };
 
     //auto now = std::chrono::steady_clock::now();
@@ -247,18 +292,13 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                     float3 v = float3{r, g, b} * (1.0f / (LUT_DIMENSION - 1u));
 
                     // LogC encoding
-                    v = lutToLinear(v);
+                    v = LogC_to_linear(v);
 
                     // White balance
                     v = chromaticAdaptation(v, builder->whiteBalance);
 
                     // Convert to color grading color space
                     v = config.colorGradingTransform * v;
-
-                    // TODO: Should any of the color grading transforms be applied in ACEScc or
-                    //       ACEScct isntead of ACEScg? The primaries are the same (AP1) but
-                    //       ACEScc/cct use a log encoding which may be better suited to some kinds
-                    //       of transforms
 
                     // Channel mixer
                     v = channelMixer(v, builder->outRed, builder->outGreen, builder->outBlue);
@@ -267,6 +307,15 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                     v = tonalRanges(v, config.lumaTransform,
                             builder->shadows, builder->midtones, builder->highlights,
                             builder->tonalRanges);
+
+                    // The adjustments below behave better in log space using the ACEScct
+                    // color space.
+                    v = config.linearToLogTransform(v);
+
+                    // Constrast and saturation
+                    v = colorAdjustments(v, builder->contrast, builder->saturation);
+
+                    v = config.logToLinearTransform(v);
 
                     // Kill negative values before tone mapping
                     v = max(v, 0.0f);
@@ -277,7 +326,7 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                     // Apply OECF
                     // TODO: allow to customize the output color space,
                     //       here we assume we are in the sRGB gamut already
-                    v = image::linearTosRGB(v);
+                    v = OECF_sRGB(v);
 
                     *p++ = half4{v, 0.0f};
                 }
@@ -313,24 +362,6 @@ FColorGrading::~FColorGrading() noexcept = default;
 void FColorGrading::terminate(FEngine& engine) {
     DriverApi& driver = engine.getDriverApi();
     driver.destroyTexture(mLutHandle);
-}
-
-float3 FColorGrading::lutToLinear(float3 x) noexcept {
-    // Alexa LogC EI 1000 curve
-    const float ia = 1.0f / 5.555556f;
-    const float b = 0.047996f;
-    const float ic = 1.0f / 0.244161f;
-    const float d = 0.386036f;
-    return (pow(10.0f, (x - d) * ic) - b) * ia;
-}
-
-float3 FColorGrading::linearToLut(float3 x) noexcept {
-    // Alexa LogC EI 1000 curve
-    const float a = 5.555556f;
-    const float b = 0.047996f;
-    const float c = 0.244161f;
-    const float d = 0.386036f;
-    return c * log10(a * x + b) + d;
 }
 
 } //namespace filament

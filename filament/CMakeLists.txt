@@ -296,7 +296,6 @@ target_link_libraries(${TARGET} PUBLIC utils)
 target_link_libraries(${TARGET} PUBLIC geometry) # TODO: remove this dependency after deprecating VertexBuffer::populateTangentQuaternions
 target_link_libraries(${TARGET} PUBLIC filaflat)
 target_link_libraries(${TARGET} PUBLIC filabridge)
-target_link_libraries(${TARGET} PUBLIC image_headers)
 target_link_libraries(${TARGET} PUBLIC ibl)
 
 # Link in matdbg for Desktop + Debug only since it pulls in filamat and a web server.

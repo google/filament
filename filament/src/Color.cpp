@@ -18,22 +18,19 @@
 
 #include "ColorSpace.h"
 
-#include <image/ColorTransform.h>
-
 #include <math/mat3.h>
-
-#include <cmath>
+#include <math/scalar.h>
 
 namespace filament {
 
 using namespace math;
 
 float3 Color::sRGBToLinear(float3 color) noexcept {
-    return image::sRGBToLinear(color);
+    return EOCF_sRGB(color);
 }
 
 float3 Color::linearToSRGB(float3 color) noexcept {
-    return image::linearToSRGB(color);
+    return OECF_sRGB(color);
 }
 
 LinearColor Color::cct(float K) {
@@ -47,7 +44,7 @@ LinearColor Color::cct(float K) {
     float d = 1.0f / (2.0f * u - 8.0f * v + 4.0f);
     float3 linear = XYZ_to_sRGB * xyY_to_XYZ({3.0f * u * d, 2.0f * v * d, 1.0f});
     // normalize and saturate
-    return saturate(linear / std::max(1e-5f, max(linear)));
+    return saturate(linear / max(1e-5f, max(linear)));
 }
 
 LinearColor Color::illuminantD(float K) {
@@ -61,11 +58,11 @@ LinearColor Color::illuminantD(float K) {
 
     float3 linear = XYZ_to_sRGB * xyY_to_XYZ({x, y, 1.0f});
     // normalize and saturate
-    return saturate(linear / std::max(1e-5f, max(linear)));
+    return saturate(linear / max(1e-5f, max(linear)));
 }
 
 LinearColor Color::absorptionAtDistance(LinearColor const& color, float distance) {
-    return -log(clamp(color, 1e-5f, 1.0f)) / std::max(1e-5f, distance);
+    return -log(clamp(color, 1e-5f, 1.0f)) / max(1e-5f, distance);
 }
 
 } // namespace filament
