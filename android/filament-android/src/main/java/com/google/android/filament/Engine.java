@@ -550,6 +550,15 @@ public class Engine {
     }
 
     /**
+     * Destroys a {@link ColorGrading} and frees all its associated resources.
+     * @param colorGrading the {@link ColorGrading} to destroy
+     */
+    public void destroySkybox(@NonNull ColorGrading colorGrading) {
+        assertDestroy(nDestroyColorGrading(getNativeObject(), colorGrading.getNativeObject()));
+        colorGrading.clearNativeObject();
+    }
+
+    /**
      * Destroys a {@link Texture} and frees all its associated resources.
      * @param texture the {@link Texture} to destroy
      */
@@ -665,6 +674,7 @@ public class Engine {
     private static native boolean nDestroyMaterial(long nativeEngine, long nativeMaterial);
     private static native boolean nDestroyMaterialInstance(long nativeEngine, long nativeMaterialInstance);
     private static native boolean nDestroySkybox(long nativeEngine, long nativeSkybox);
+    private static native boolean nDestroyColorGrading(long nativeEngine, long nativeColorGrading);
     private static native boolean nDestroyTexture(long nativeEngine, long nativeTexture);
     private static native boolean nDestroyRenderTarget(long nativeEngine, long nativeTarget);
     private static native void nDestroyEntity(long nativeEngine, int entity);

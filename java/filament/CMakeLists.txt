@@ -42,6 +42,7 @@ include_directories(${JNI_INCLUDE_DIRS} ${ANDROID_DIR})
 set(JNI_SOURCE_FILES
         ${FILAMENT_DIR}/src/main/cpp/Camera.cpp
         ${FILAMENT_DIR}/src/main/cpp/Colors.cpp
+        ${FILAMENT_DIR}/src/main/cpp/ColorGrading.cpp
         ${FILAMENT_DIR}/src/main/cpp/VertexBuffer.cpp
         ${FILAMENT_DIR}/src/main/cpp/Engine.cpp
         ${FILAMENT_DIR}/src/main/cpp/EntityManager.cpp
@@ -117,6 +118,7 @@ set(JAVA_SOURCE_FILES
         ${FILAMENT_JAVA_DIR}/com/google/android/filament/Box.java
         ${FILAMENT_JAVA_DIR}/com/google/android/filament/Camera.java
         ${FILAMENT_JAVA_DIR}/com/google/android/filament/Colors.java
+        ${FILAMENT_JAVA_DIR}/com/google/android/filament/ColorGrading.java
         ${FILAMENT_JAVA_DIR}/com/google/android/filament/Engine.java
         ${FILAMENT_JAVA_DIR}/com/google/android/filament/Entity.java
         ${FILAMENT_JAVA_DIR}/com/google/android/filament/EntityInstance.java

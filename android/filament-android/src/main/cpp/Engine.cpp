@@ -238,6 +238,14 @@ Java_com_google_android_filament_Engine_nDestroySkybox(JNIEnv*, jclass,
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_Engine_nDestroyColorGrading(JNIEnv*, jclass,
+        jlong nativeEngine, jlong nativeColorGrading) {
+    Engine* engine = (Engine*) nativeEngine;
+    ColorGrading* colorGrading = (ColorGrading*) nativeColorGrading;
+    return engine->destroy(colorGrading);
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
 Java_com_google_android_filament_Engine_nDestroyTexture(JNIEnv*, jclass,
         jlong nativeEngine, jlong nativeTexture) {
     Engine* engine = (Engine*) nativeEngine;

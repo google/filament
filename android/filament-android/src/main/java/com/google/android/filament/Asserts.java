@@ -78,6 +78,12 @@ final class Asserts {
         return out;
     }
 
+    static void assertFloat3In(@NonNull float[] out) {
+        if (out.length < 3) {
+            throw new ArrayIndexOutOfBoundsException("Array length must be at least 3");
+        }
+    }
+
     @NonNull @Size(min = 4)
     static float[] assertFloat4(@Nullable float[] out) {
         if (out == null) out = new float[4];
@@ -85,5 +91,11 @@ final class Asserts {
             throw new ArrayIndexOutOfBoundsException("Array length must be at least 4");
         }
         return out;
+    }
+
+    static void assertFloat4In(@NonNull float[] out) {
+        if (out.length < 4) {
+            throw new ArrayIndexOutOfBoundsException("Array length must be at least 4");
+        }
     }
 }

@@ -46,7 +46,7 @@ set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} -Wl,
 add_library(filament-jni SHARED
     src/main/cpp/Camera.cpp
     src/main/cpp/Colors.cpp
-    src/main/cpp/VertexBuffer.cpp
+    src/main/cpp/ColorGrading.cpp
     src/main/cpp/Engine.cpp
     src/main/cpp/EntityManager.cpp
     src/main/cpp/Fence.cpp
@@ -66,6 +66,7 @@ add_library(filament-jni SHARED
     src/main/cpp/Texture.cpp
     src/main/cpp/TextureSampler.cpp
     src/main/cpp/TransformManager.cpp
+    src/main/cpp/VertexBuffer.cpp
     src/main/cpp/View.cpp
     # Android specific
     src/main/cpp/nativewindow/Android.cpp
