@@ -55,6 +55,9 @@ struct ColorGrading::BuilderDetails {
     float3 midtones         = {1.0f, 1.0f, 1.0f};
     float3 highlights       = {1.0f, 1.0f, 1.0f};
     float4 tonalRanges      = {0.0f, 0.333f, 0.550f, 1.0f}; // defaults in DaVinci Resolve
+    float3 slope            = {1.0f};
+    float3 offset           = {0.0f};
+    float3 power            = {1.0f};
     float  saturation       = 1.0f;
     float  contrast         = 1.0f;
 };
@@ -100,6 +103,14 @@ ColorGrading::Builder& ColorGrading::Builder::shadowsMidtonesHighlights(
     ranges.z = clamp(ranges.z, ranges.x + 1e-5f, ranges.z - 1e-5f); // lights
     mImpl->tonalRanges = ranges;
 
+    return *this;
+}
+
+ColorGrading::Builder& ColorGrading::Builder::slopeOffsetPower(
+        float3 slope, float3 offset, float3 power) noexcept {
+    mImpl->slope = max(1e-5f, slope);
+    mImpl->offset = offset;
+    mImpl->power = max(1e-5f, power);
     return *this;
 }
 
@@ -217,6 +228,18 @@ inline constexpr float3 tonalRanges(
 }
 
 UTILS_ALWAYS_INLINE
+inline float3 colorDecisionList(float3 v, float3 slope, float3 offset, float3 power) {
+    // Apply the ASC CSL in log space, as defined in S-2016-001
+    v = v * slope + offset;
+    float3 pv = pow(v, power);
+    return float3{
+            v.r <= 0.0f ? v.r : pv.r,
+            v.g <= 0.0f ? v.g : pv.g,
+            v.b <= 0.0f ? v.b : pv.b
+    };
+}
+
+UTILS_ALWAYS_INLINE
 inline constexpr float3 colorAdjustments(float3 v, float contrast, float saturation) {
     // Matches contrast as applied in DaVinci Resolve
     v = MIDDLE_GRAY_ACEScct + contrast * (v - MIDDLE_GRAY_ACEScct);
@@ -311,6 +334,9 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                     // The adjustments below behave better in log space using the ACEScct
                     // color space.
                     v = config.linearToLogTransform(v);
+
+                    // ASC CDL
+                    v = colorDecisionList(v, builder->slope, builder->offset, builder->power);
 
                     // Constrast and saturation
                     v = colorAdjustments(v, builder->contrast, builder->saturation);

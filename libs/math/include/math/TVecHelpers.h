@@ -477,6 +477,13 @@ private:
         return p;
     }
 
+    friend inline VECTOR<T> MATH_PURE pow(VECTOR<T> v, VECTOR<T> p) {
+        for (size_t i = 0; i < v.size(); i++) {
+            v[i] = std::pow(v[i], p[i]);
+        }
+        return v;
+    }
+
     friend inline VECTOR<T> MATH_PURE log(VECTOR<T> v) {
         for (size_t i = 0; i < v.size(); i++) {
             v[i] = std::log(v[i]);

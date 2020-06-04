@@ -141,7 +141,9 @@ Here are a few screenshots of applications that use Filament in production:
 - Global fog
 - HDR bloom
 - Depth of field bokeh
-- ACES-like tone-mapping
+- Multiple tone mappers: ACES, filmic, etc.
+- Color grading: white balance, channel mixer, shadows/mid-tones/highlights, ASC CDL,
+  contrast, saturation, etc.
 - Temporal dithering
 - FXAA, MSAA and specular anti-aliasing
 - Dynamic resolution

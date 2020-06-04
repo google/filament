@@ -67,6 +67,7 @@ class FColorGrading;
  * - White balance
  * - Channel mixer
  * - Shadows/mid-tones/highlights
+ * - Slope/offset/power (CDL)
  * - Contrast
  * - Saturation
  * - Tone mapping
@@ -79,6 +80,7 @@ class FColorGrading;
  * - Channel mixer: red {1,0,0}, green {0,1,0}, blue {0,0,1}
  * - Shadows/mid-tones/highlights: shadows {1,1,1,0}, mid-tones {1,1,1,0}, highlights {1,1,1,0},
  *   ranges {0,0.333,0.550,1}
+ * - Slope/offset/power: slope 1.0, offset 0.0, and power 1.0
  * - Contrast: 1.0
  * - Saturation: 1.0
  * - Tone mapping: ACES_LEGACY
@@ -196,6 +198,8 @@ public:
          * value (which may be positive or negative) that is added to the linear RGB color before
          * mixing. This can be used to darken or brighten the selected tonal range.
          *
+         * Shadows/mid-tones/highlights adjustment are performed linear space.
+         *
          * @param shadows Linear RGB color (.rgb) and weight (.w) to apply to the shadows
          * @param midtones Linear RGB color (.rgb) and weight (.w) to apply to the mid-tones
          * @param highlights Linear RGB color (.rgb) and weight (.w) to apply to the highlights
@@ -208,12 +212,39 @@ public:
                 math::float4 ranges = math::float4{0.0f, 0.333f, 0.550f, 1.0f}) noexcept;
 
         /**
+         * Applies a slope, offset, and power, as defined by the ASC CDL (American Society of
+         * Cinematographers Color Decision List) to the image. The CDL can be used to adjust the
+         * colors of different tonal ranges in the image.
+         *
+         * The ASC CDL is similar to the lift/gamma/gain controls found in many color grading tools.
+         * Lift is equivalent to a combination of offset and slope, gain is equivalent to slope,
+         * and gamma is equivalent to power.
+         *
+         * The slope and power values must be strictly positive. Values less than or equal to 0 will
+         * be clamped to a small positive value, offset can be any positive or negative value.
+         *
+         * Version 1.2 of the ASC CDL adds saturation control, which is here provided as a separate
+         * API. See the saturation() method for more information.
+         *
+         * Slope/offset/power adjustments are performed in log space.
+         *
+         * @param slope Multiplier of the input color, must be a strictly positive number
+         * @param offset Added to the input color, can be a negative or positive number, including 0
+         * @param power Power exponent of the input color, must be a strictly positive number
+         *
+         * @return This Builder, for chaining calls
+         */
+        Builder& slopeOffsetPower(math::float3 slope, math::float3 offset, math::float3 power) noexcept;
+
+        /**
          * Adjusts the contrast of the image. Lower values decrease the contrast of the image
          * (the tonal range is narrowed), and higher values increase the contrast of the image
          * (the tonal range is widened). A value of 1.0 has no effect.
          *
          * The contrast is defined as a value in the range [0.0...2.0]. Values outside of that
          * range will be clipped to that range.
+         *
+         * Contrast adjustment is performed in log space.
          *
          * @param constrast Contrast expansion, between 0.0 and 2.0. 1.0 leaves contrast unaffected
          *
@@ -228,6 +259,8 @@ public:
          *
          * The saturation is defined as a value in the range [0.0...2.0]. Values outside of that
          * range will be clipped to that range.
+         *
+         * Saturation adjustment is performed in log space.
          *
          * @param constrast Saturation, between 0.0 and 2.0. 1.0 leaves saturation unaffected
          *
