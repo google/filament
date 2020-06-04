@@ -967,6 +967,7 @@ void ResourceLoader::updateBoundingBoxes(FFilamentAsset* asset) const {
     SYSTRACE_CALL();
     auto& rm = pImpl->mEngine->getRenderableManager();
     auto& tm = pImpl->mEngine->getTransformManager();
+    NodeMap& nodeMap = asset->mInstances.empty() ? asset->mNodeMap : asset->mInstances[0]->nodeMap;
 
     // The purpose of the root node is to give the client a place for custom transforms.
     // Since it is not part of the source model, it should be ignored when computing the
@@ -1000,7 +1001,7 @@ void ResourceLoader::updateBoundingBoxes(FFilamentAsset* asset) const {
 
     // Collect all mesh primitives that we wish to find bounds for.
     std::vector<cgltf_primitive const*> prims;
-    for (auto iter : asset->mNodeMap) {
+    for (auto iter : nodeMap) {
         const cgltf_mesh* mesh = iter.first->mesh;
         if (mesh) {
             for (cgltf_size index = 0, nprims = mesh->primitives_count; index < nprims; ++index) {
@@ -1025,7 +1026,7 @@ void ResourceLoader::updateBoundingBoxes(FFilamentAsset* asset) const {
     // Compute the asset-level bounding box.
     size_t primIndex = 0;
     Aabb assetBounds;
-    for (auto iter : asset->mNodeMap) {
+    for (auto iter : nodeMap) {
         const cgltf_mesh* mesh = iter.first->mesh;
         if (mesh) {
             // Find the object-space bounds for the renderable by unioning the bounds of each prim.
