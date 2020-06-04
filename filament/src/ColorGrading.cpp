@@ -263,12 +263,13 @@ ColorTransform selectToneMapping(ColorGrading::ToneMapping toneMapping) {
             return tonemap::ACES;
         case ColorGrading::ToneMapping::FILMIC:
             return tonemap::Filmic;
+        case ColorGrading::ToneMapping::UCHIMURA:
+            return tonemap::Uchimura;
         case ColorGrading::ToneMapping::REINHARD:
             return tonemap::Reinhard;
         case ColorGrading::ToneMapping::DISPLAY_RANGE:
             return tonemap::DisplayRange;
     }
-    return tonemap::ACES;
 }
 
 //------------------------------------------------------------------------------
@@ -322,6 +323,9 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
 
                     // Convert to color grading color space
                     v = config.colorGradingTransform * v;
+
+                    // Kill negative values before the next transforms
+                    v = max(v, 0.0f);
 
                     // Channel mixer
                     v = channelMixer(v, builder->outRed, builder->outGreen, builder->outBlue);

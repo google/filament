@@ -99,8 +99,9 @@ public:
         ACES_LEGACY   = 1,     //!< ACES tone mapping, with a brightness modifier to match Filament's legacy tone mapper
         ACES          = 2,     //!< ACES tone mapping
         FILMIC        = 3,     //!< Filmic tone mapping, modelled after ACES but applied in sRGB space
-        REINHARD      = 4,     //!< Reinhard luma-based tone mapping
-        DISPLAY_RANGE = 5,     //!< Tone mapping used to validate/debug scene exposure
+        UCHIMURA      = 4,     //!< Filmic tone mapping, with more contrast and saturation
+        REINHARD      = 5,     //!< Reinhard luma-based tone mapping
+        DISPLAY_RANGE = 6,     //!< Tone mapping used to validate/debug scene exposure
     };
 
     //! Use Builder to construct a ColorGrading object instance

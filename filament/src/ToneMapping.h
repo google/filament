@@ -200,15 +200,15 @@ inline float3 ACES(float3 color, float brightness) {
 
 namespace tonemap {
 
-float3 Linear(float3 x) noexcept {
+constexpr float3 Linear(float3 x) noexcept {
     return x;
 }
 
-float3 Reinhard(float3 x) noexcept {
+constexpr float3 Reinhard(float3 x) noexcept {
     return x / (1.0f + dot(x, LUMA_REC709));
 }
 
-float3 Filmic(float3 x) noexcept {
+constexpr float3 Filmic(float3 x) noexcept {
     // Narkowicz 2015, "ACES Filmic Tone Mapping Curve"
     constexpr float a = 2.51f;
     constexpr float b = 0.03f;
@@ -224,6 +224,35 @@ float3 ACES(float3 x) noexcept {
 
 float3 ACES_Legacy(float3 x) noexcept {
     return aces::ACES(x, 1.0f / 0.6f);
+}
+
+float3 Uchimura(float3 x) {
+    // Uchimura 2017, "HDR theory and practice"
+    // Math: https://www.desmos.com/calculator/gslcdxvipg
+    // Source: https://www.slideshare.net/nikuque/hdr-theory-and-practicce-jp
+
+    constexpr float P = 1.0;  // max display brightness
+    constexpr float a = 1.0;  // contrast
+    constexpr float m = 0.22; // linear section start
+    constexpr float l = 0.4;  // linear section length
+    constexpr float c = 1.33; // black
+    constexpr float b = 0.0;  // pedestal
+
+    constexpr float l0 = ((P - m) * l) / a;
+    constexpr float S0 = m + l0;
+    constexpr float S1 = m + a * l0;
+    constexpr float C2 = (a * P) / (P - S1);
+    constexpr float CP = -C2 / P;
+
+    float3 w0 = 1.0f - smoothstep(0.0f, m, x);
+    float3 w2 = step(m + l0, x);
+    float3 w1 = 1.0f - w0 - w2;
+
+    float3 T = m * pow(x / m, c) + b;
+    float3 S = P - (P - S1) * exp(CP * (x - S0));
+    float3 L = m + a * (x - m);
+
+    return T * w0 + L * w1 + S * w2;
 }
 
 /**

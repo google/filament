@@ -589,7 +589,7 @@ static void gui(filament::Engine* engine, filament::View*) {
             ImGui::Checkbox("Enabled##colorGradin", &params.colorGrading);
             ImGui::Combo("Tone-mapping",
                     reinterpret_cast<int*>(&params.colorGradingOptions.toneMapping),
-                    "Linear\0ACES (legacy)\0ACES\0Filmic\0Reinhard\0Display Range\0\0");
+                    "Linear\0ACES (legacy)\0ACES\0Filmic\0Uchimura\0Reinhard\0Display Range\0\0");
             ImGui::Indent();
             if (ImGui::CollapsingHeader("While balance")) {
                 ImGui::SliderInt("Temperature", &params.colorGradingOptions.temperature, -100, 100);
