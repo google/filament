@@ -167,7 +167,7 @@ public:
          * by setting all 3 output channels to the same mix. For instance: {0.4, 0.4, 0.2} for
          * all 3 output channels(40% red, 40% green and 20% blue).
          *
-         * More complex mixes can be used to create more compelx effects. For instance, here is
+         * More complex mixes can be used to create more complex effects. For instance, here is
          * a mix that creates a sepia tone effect:
          * - outRed   = {0.255, 0.858, 0.087}
          * - outGreen = {0.213, 0.715, 0.072}
@@ -209,7 +209,7 @@ public:
          */
         Builder& shadowsMidtonesHighlights(
                 math::float4 shadows, math::float4 midtones, math::float4 highlights,
-                math::float4 ranges = math::float4{0.0f, 0.333f, 0.550f, 1.0f}) noexcept;
+                math::float4 ranges) noexcept;
 
         /**
          * Applies a slope, offset, and power, as defined by the ASC CDL (American Society of
@@ -246,11 +246,11 @@ public:
          *
          * Contrast adjustment is performed in log space.
          *
-         * @param constrast Contrast expansion, between 0.0 and 2.0. 1.0 leaves contrast unaffected
+         * @param contrast Contrast expansion, between 0.0 and 2.0. 1.0 leaves contrast unaffected
          *
          * @return This Builder, for chaining calls
          */
-        Builder& contrast(float constrast) noexcept;
+        Builder& contrast(float contrast) noexcept;
 
         /**
          * Adjusts the saturation of the image. Lower values decrease intensity of the colors
@@ -262,7 +262,7 @@ public:
          *
          * Saturation adjustment is performed in log space.
          *
-         * @param constrast Saturation, between 0.0 and 2.0. 1.0 leaves saturation unaffected
+         * @param saturation Saturation, between 0.0 and 2.0. 1.0 leaves saturation unaffected
          *
          * @return This Builder, for chaining calls
          */

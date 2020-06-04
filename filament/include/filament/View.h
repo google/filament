@@ -496,7 +496,7 @@ public:
      *
      * @param colorGrading Associate the specified ColorGrading to this View. A ColorGrading can be
      *                     associated to several View instances.\n
-     *                     \p colorGradingOptions can be nullptr to dissociate the currently set
+     *                     \p colorGrading can be nullptr to dissociate the currently set
      *                     ColorGrading from this View. Doing so will revert to the use of the
      *                     default color grading transforms.\n
      *                     The View doesn't take ownership of the ColorGrading pointer (which
