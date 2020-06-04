@@ -73,6 +73,9 @@ struct ColorGradingOptions {
     math::float4 ranges{0.0f, 0.333f, 0.550f, 1.0f};
     float saturation = 1.0f;
     float contrast = 1.0f;
+    math::float3 slope{1.0f};
+    math::float3 offset{0.0f};
+    math::float3 power{1.0f};
 };
 
 struct SandboxParameters {

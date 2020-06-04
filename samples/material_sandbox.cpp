@@ -613,6 +613,11 @@ static void gui(filament::Engine* engine, filament::View*) {
                 ImGui::PlotLines("Mid-tones curve", g_rangePlot + 1024, 1024);
                 ImGui::PlotLines("Highlights curve", g_rangePlot + 2048, 1024);
             }
+            if (ImGui::CollapsingHeader("Color decision list")) {
+                ImGui::SliderFloat3("Slope", &params.colorGradingOptions.slope.x, 0.0f, 2.0f);
+                ImGui::SliderFloat3("Offset", &params.colorGradingOptions.offset.x, -0.5f, 0.5f);
+                ImGui::SliderFloat3("Power", &params.colorGradingOptions.power.x, 0.0f, 2.0f);
+            }
             if (ImGui::CollapsingHeader("Adjustments")) {
                 ImGui::SliderFloat("Contrast", &params.colorGradingOptions.contrast, 0.0f, 2.0f);
                 ImGui::SliderFloat("Saturation", &params.colorGradingOptions.saturation, 0.0f, 2.0f);
@@ -744,6 +749,7 @@ static void preRender(filament::Engine* engine, filament::View* view, filament::
                             Color::toLinear(options.highlights),
                             options.ranges
                     )
+                    .slopeOffsetPower(options.slope, options.offset, options.power)
                     .contrast(options.contrast)
                     .saturation(options.saturation)
                     .toneMapping(options.toneMapping)
