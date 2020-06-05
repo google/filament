@@ -1,18 +1,27 @@
-To update tinyexr grab the latest from [GitHub](https://github.com/syoyo/tinyexr) and remove
-the following directories to save some disk space:
+To update to the tinyexr that's currently on GitHub master, do the following:
 
-- `examples`
-- `jni`
-- `test`
+```
+cd third_party
+curl -L https://github.com/syoyo/tinyexr/archive/master.zip > master.zip
+unzip master.zip
+rsync -r tinyexr-master/ tinyexr/ --delete
+git checkout tinyexr/tnt/
+git checkout tinyexr/LICENSE
+rm -rf tinyexr-master master.zip
+```
 
-Make sure the LICENSE file remains and is up to date.
+Remove the following directories to save space:
 
-We also made a small change to `LoadEXRFromMemory` by adding this right after it calls
-`LoadEXRImageFromMemory`:
+```
+rm -rf tinyexr/examples
+rm -rf tinyexr/jni
+rm -rf tinyexr/test
+```
 
-    // This utility function does not yet support tiled images.
-    if (exr_image.tiles) {
-        ret = TINYEXR_ERROR_UNSUPPORTED_FORMAT;
-        tinyexr::SetErrorMessage("Tiled EXR images are not yet supported", err);
-        return ret;
-    }
+Commit the update:
+```
+git add tinyexr
+git commit -m "Update tinyexr to <SHA>"
+```
+
+Make sure the LICENSE file remains and is up to date (check top of tinyexr.h).

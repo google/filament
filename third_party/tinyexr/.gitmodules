@@ -1,0 +1,3 @@
+[submodule "deps/ZFP"]
+	path = deps/ZFP
+	url = https://github.com/LLNL/ZFP.git
