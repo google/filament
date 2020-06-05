@@ -377,6 +377,8 @@ private:
     mutable filaflat::ShaderBuilder mFragmentShaderBuilder;
     FDebugRegistry mDebugRegistry;
 
+    std::thread::id mMainThreadId{};
+
 public:
     // these are the debug properties used by FDebug. They're accessed directly by modules who need them.
     struct {
