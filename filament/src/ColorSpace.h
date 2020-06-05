@@ -216,6 +216,36 @@ inline float3 EOCF_sRGB(float3 x) noexcept {
     return x;
 }
 
+inline float3 OECF_PQ(float3 x, float maxPqValue) {
+    constexpr float PQ_constant_N  = 2610.0f / 4096.0f /   4.0f;
+    constexpr float PQ_constant_M  = 2523.0f / 4096.0f * 128.0f;
+    constexpr float PQ_constant_C1 = 3424.0f / 4096.0f;
+    constexpr float PQ_constant_C2 = 2413.0f / 4096.0f *  32.0f;
+    constexpr float PQ_constant_C3 = 2392.0f / 4096.0f *  32.0f;
+
+    x /= maxPqValue;
+
+    float3 g = pow(x, PQ_constant_N);
+    float3 numerator = PQ_constant_C1 + PQ_constant_C2 * g;
+    float3 denominator = 1.0f + PQ_constant_C3 * g;
+    return pow(numerator / denominator, PQ_constant_M);
+}
+
+inline float3 EOCF_PQ(float3 x, float maxPqValue) {
+    constexpr float PQ_constant_N  = 2610.0f / 4096.0f /   4.0f;
+    constexpr float PQ_constant_M  = 2523.0f / 4096.0f * 128.0f;
+    constexpr float PQ_constant_C1 = 3424.0f / 4096.0f;
+    constexpr float PQ_constant_C2 = 2413.0f / 4096.0f *  32.0f;
+    constexpr float PQ_constant_C3 = 2392.0f / 4096.0f *  32.0f;
+
+    float3 g = pow(x, 1.0f / PQ_constant_M);
+    float3 numerator = max(g - PQ_constant_C1, 0.0f);
+    float3 denominator = PQ_constant_C2 - (PQ_constant_C3 * g);
+    float3 linearColor = pow(numerator / denominator, 1.0f / PQ_constant_N);
+
+    return linearColor * maxPqValue;
+}
+
 } // namespace filament
 
 #endif //TNT_FILAMENT_COLOR_SPACE_H
