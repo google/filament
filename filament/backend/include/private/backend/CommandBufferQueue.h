@@ -48,7 +48,9 @@ class CommandBufferQueue {
     mutable std::vector<Slice> mCommandBuffersToExecute;
     size_t mFreeSpace = 0;
     size_t mHighWatermark = 0;
-    bool mExitRequested = false;
+    uint32_t mExitRequested = 0;
+
+    static constexpr uint32_t EXIT_REQUESTED = 0x31415926;
 
 public:
     // requiredSize: guaranteed available space after flush()

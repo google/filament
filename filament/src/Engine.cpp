@@ -207,6 +207,8 @@ void FEngine::init() {
     mPostProcessManager.init();
     mLightManager.init(*this);
     mDFG = std::make_unique<DFG>(*this);
+
+    mMainThreadId = std::this_thread::get_id();
 }
 
 FEngine::~FEngine() noexcept {
@@ -222,6 +224,9 @@ FEngine::~FEngine() noexcept {
 
 void FEngine::shutdown() {
     SYSTRACE_CALL();
+
+    ASSERT_PRECONDITION(std::this_thread::get_id() == mMainThreadId,
+            "Engine::shutdown() called from the wrong thread!");
 
 #ifndef NDEBUG
     // print out some statistics about this run
