@@ -129,13 +129,19 @@ static std::string shrinkString(const std::string& s) {
     return r;
 }
 
-void SpvToMsl(const SpirvBlob* spirv, std::string* outMsl) {
+void SpvToMsl(const SpirvBlob* spirv, std::string* outMsl, const GLSLPostProcessor::Config& config) {
     CompilerMSL mslCompiler(*spirv);
     CompilerGLSL::Options options;
     options.vertex.fixup_clipspace = true;
     mslCompiler.set_common_options(options);
+
+    const CompilerMSL::Options::Platform platform =
+        config.shaderModel == filament::backend::ShaderModel::GL_ES_30 ?
+            CompilerMSL::Options::Platform::iOS : CompilerMSL::Options::Platform::macOS;
     mslCompiler.set_msl_options(CompilerMSL::Options {
-        .msl_version = CompilerMSL::Options::make_msl_version(1, 1)
+        .platform = platform,
+        .msl_version = CompilerMSL::Options::make_msl_version(1, 1),
+        .ios_use_framebuffer_fetch_subpasses = true
     });
 
     auto executionModel = mslCompiler.get_execution_model();
@@ -223,7 +229,7 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
                 options.generateDebugInfo = mGenerateDebugInfo;
                 GlslangToSpv(*program.getIntermediate(mShLang), *mSpirvOutput, &options);
                 if (mMslOutput) {
-                    SpvToMsl(mSpirvOutput, mMslOutput);
+                    SpvToMsl(mSpirvOutput, mMslOutput, config);
                 }
             } else {
                 utils::slog.e << "GLSL post-processor invoked with optimization level NONE"
@@ -286,7 +292,7 @@ void GLSLPostProcessor::preprocessOptimization(glslang::TShader& tShader,
     }
 
     if (mMslOutput) {
-        SpvToMsl(mSpirvOutput, mMslOutput);
+        SpvToMsl(mSpirvOutput, mMslOutput, config);
     }
 
     if (mGlslOutput) {
@@ -332,7 +338,7 @@ void GLSLPostProcessor::fullOptimization(const TShader& tShader,
     }
 
     if (mMslOutput) {
-        SpvToMsl(mSpirvOutput, mMslOutput);
+        SpvToMsl(mSpirvOutput, mMslOutput, config);
     }
 
     // Transpile back to GLSL
