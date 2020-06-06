@@ -353,18 +353,30 @@ MeshReader::Mesh MeshReader::loadMeshFromBuffer(filament::Engine* engine,
 
     RenderableManager::Builder builder(header->parts);
     builder.boundingBox(header->aabb);
+
     const auto defaultmi = materials.getMaterialInstance(utils::CString(DEFAULT_MATERIAL));
     for (size_t i = 0; i < header->parts; i++) {
         builder.geometry(i, RenderableManager::PrimitiveType::TRIANGLES,
-                            mesh.vertexBuffer, mesh.indexBuffer, parts[i].offset,
-                            parts[i].minIndex, parts[i].maxIndex, parts[i].indexCount);
-        const utils::CString materialName(partsMaterial[i].c_str(), partsMaterial[i].size());
+                mesh.vertexBuffer, mesh.indexBuffer, parts[i].offset,
+                parts[i].minIndex, parts[i].maxIndex, parts[i].indexCount);
+
+        // It may happen that there are more parts than materials 
+        // therefore we have to use Part::material instead of i. 
+        uint32_t materialIndex = parts[i].material;
+        if (materialIndex >= partsMaterial.size()) {
+            utils::slog.e << "Material index (" << materialIndex << ") of mesh part ("
+                    << i << ") is out of bounds (" << partsMaterial.size() << ")" << utils::io::endl;
+            continue;
+        }
+        
+        const utils::CString materialName(
+                partsMaterial[materialIndex].c_str(), partsMaterial[materialIndex].size());
         const auto mat = materials.getMaterialInstance(materialName);
         if (mat == nullptr) {
-            builder.material(i, defaultmi);
+            builder.material(materialIndex, defaultmi);
             materials.registerMaterialInstance(materialName, defaultmi);
         } else {
-            builder.material(i, mat);
+            builder.material(materialIndex, mat);
         }
     }
     builder.build(*engine, mesh.renderable);
