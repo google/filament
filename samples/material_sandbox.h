@@ -76,6 +76,10 @@ struct ColorGradingOptions {
     math::float3 slope{1.0f};
     math::float3 offset{0.0f};
     math::float3 power{1.0f};
+    math::float3 gamma{1.0f};
+    math::float3 midPoint{1.0f};
+    math::float3 scale{1.0f};
+    bool linkedCurves = false;
 };
 
 struct SandboxParameters {

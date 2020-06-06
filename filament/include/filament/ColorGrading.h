@@ -70,6 +70,7 @@ class FColorGrading;
  * - Slope/offset/power (CDL)
  * - Contrast
  * - Saturation
+ * - Curves
  * - Tone mapping
  *
  * Defaults
@@ -83,6 +84,7 @@ class FColorGrading;
  * - Slope/offset/power: slope 1.0, offset 0.0, and power 1.0
  * - Contrast: 1.0
  * - Saturation: 1.0
+ * - Curves: gamma {1,1,1}, midPoint {1,1,1}, and scale {1,1,1}
  * - Tone mapping: ACES_LEGACY
  *
  * @see View
@@ -268,6 +270,24 @@ public:
          * @return This Builder, for chaining calls
          */
         Builder& saturation(float saturation) noexcept;
+
+        /**
+         * Applies a curve to each RGB channel of the image. Each curve is defined by 3 values:
+         * a gamma value applied to the shadows only, a mid-point indicating where shadows stop
+         * and highlights start, and a scale factor for the highlights.
+         *
+         * The gamma and mid-point must be strictly positive values. If they are not, they will be
+         * clamped to a small positive value. The scale can be any negative of positive value.
+         *
+         * Curves are applied in linear space.
+         *
+         * @param shadowGamma Power value to apply to the shadows, must be strictly positive
+         * @param midPoint Mid-point defining where shadows stop and highlights start, must be strictly positive
+         * @param highlightScale Scale factor for the highlights, can be any negative or positive value
+         *
+         * @return This Builder, for chaining calls
+         */
+        Builder& curves(math::float3 shadowGamma, math::float3 midPoint, math::float3 highlightScale) noexcept;
 
         /**
          * Creates the ColorGrading object and returns a pointer to it.
