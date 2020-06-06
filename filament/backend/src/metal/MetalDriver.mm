@@ -568,7 +568,11 @@ bool MetalDriver::isRenderTargetFormatSupported(TextureFormat format) {
 }
 
 bool MetalDriver::isFrameBufferFetchSupported() {
+#if defined(IOS)
+    return true;
+#else
     return false;
+#endif
 }
 
 bool MetalDriver::isFrameTimeSupported() {
@@ -917,8 +921,22 @@ void MetalDriver::blit(TargetBufferFlags buffers,
                         dstRect.left >= 0 && dstRect.bottom >= 0,
             "Source and destination rects must be positive.");
 
-    // We always blit to/from the COLOR0 attachment.
-    MetalRenderTarget::Attachment srcColorAttachment = srcTarget->getColorAttachment(0);
+    size_t srcAttachIndex = 0;
+    if (any(buffers & TargetBufferFlags::COLOR0)) {
+        srcAttachIndex = 0;
+    }
+    if (any(buffers & TargetBufferFlags::COLOR1)) {
+        srcAttachIndex = 1;
+    }
+    if (any(buffers & TargetBufferFlags::COLOR2)) {
+        srcAttachIndex = 2;
+    }
+    if (any(buffers & TargetBufferFlags::COLOR3)) {
+        srcAttachIndex = 3;
+    }
+    MetalRenderTarget::Attachment srcColorAttachment = srcTarget->getColorAttachment(srcAttachIndex);
+
+    // We always blit to the COLOR0 attachment.
     MetalRenderTarget::Attachment dstColorAttachment = dstTarget->getColorAttachment(0);
 
     id<MTLTexture> srcTexture = srcColorAttachment.texture;
@@ -934,9 +952,12 @@ void MetalDriver::blit(TargetBufferFlags buffers,
             srcTarget->height - (NSUInteger) srcRect.bottom - srcRect.height,
             srcRect.width, srcRect.height);
 
+    const NSInteger dstHeight =
+            dstTarget->isDefaultRenderTarget() ?
+            mContext->currentSurface->getSurfaceHeight() : dstTarget->height;
     MTLRegion dstRegion = MTLRegionMake2D(
             (NSUInteger) dstRect.left,
-            dstTarget->height - (NSUInteger) dstRect.bottom - dstRect.height,
+            dstHeight - (NSUInteger) dstRect.bottom - dstRect.height,
             dstRect.width, dstRect.height);
 
     const uint8_t srcLevel = srcColorAttachment.level;
