@@ -19,8 +19,9 @@
 
 #include <linux/futex.h>
 #include <sys/syscall.h>
-#include <unistd.h>
+#include <errno.h>
 #include <stdbool.h>
+#include <unistd.h>
 
 struct timespec;
 
@@ -28,8 +29,15 @@ namespace utils {
 namespace linuxutil {
 
 inline int futex(volatile void* ftx, int op, int value,
-                        const struct timespec* timeout, int bitset) {
-    return (int)syscall(__NR_futex, ftx, op, value, timeout, nullptr, bitset);
+        const struct timespec* timeout, int bitset) {
+    // from futex man pages:
+    // In the event of an error (and assuming that futex() was invoked via syscall(2)),
+    // all operations return -1 and set errno to indicate the cause of the error.
+    int err = (int)syscall(__NR_futex, ftx, op, value, timeout, nullptr, bitset);
+    if (UTILS_UNLIKELY(err == -1)) {
+        err = -errno;
+    }
+    return err;
 }
 
 inline int futex_wake(volatile void* ftx, int count) {
