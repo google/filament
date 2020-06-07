@@ -395,8 +395,12 @@ LinearImage HDRDecoder::decode() {
                 // (rgb/256) * 2^(e-128)
                 size_t pixel = 0;
                 for (size_t x = 0; x < width; x++, pixel += 4) {
-                    filament::math::float3 v(rgbe[pixel], rgbe[pixel + 1], rgbe[pixel + 2]);
-                    dst[x] = v * std::ldexp(1.0f, rgbe[pixel + 3] - (128 + 8));
+                    if (rgbe[pixel + 3] == 0.0f) {
+                        dst[x] = filament::math::float3{0.0f};
+                    } else {
+                        filament::math::float3 v(rgbe[pixel], rgbe[pixel + 1], rgbe[pixel + 2]);
+                        dst[x] = (v + 0.5f) * std::ldexp(1.0f, rgbe[pixel + 3] - (128 + 8));
+                    }
                 }
             }
         } else {
@@ -443,8 +447,12 @@ LinearImage HDRDecoder::decode() {
                 filament::math::float3* dst = reinterpret_cast<filament::math::float3*>(image.getPixelRef(0, y));
                 // (rgb/256) * 2^(e-128)
                 for (size_t x = 0; x < width; x++, r++, g++, b++, e++) {
-                    filament::math::float3 v(r[0], g[0], b[0]);
-                    dst[x] = v * std::ldexp(1.0f, e[0] - (128 + 8));
+                    if (e[0] == 0.0f) {
+                        dst[x] = filament::math::float3{0.0f};
+                    } else {
+                        filament::math::float3 v(r[0], g[0], b[0]);
+                        dst[x] = (v + 0.5f) * std::ldexp(1.0f, e[0] - (128 + 8));
+                    }
                 }
             }
         }
