@@ -60,6 +60,7 @@ import static com.google.android.filament.Asserts.assertFloat4In;
  * <li>Slope/offset/power (CDL)</li>
  * <li>Contrast</li>
  * <li>Saturation</li>
+ * <li>Curves</li>
  * <li>Tone mapping</li>
  * </ul>
  *
@@ -74,6 +75,7 @@ import static com.google.android.filament.Asserts.assertFloat4In;
  * <li>Slope/offset/power: slope <code>1.0</code>, offset <code>0.0</code>, and power <code>1.0</code></li>
  * <li>Contrast: <code>1.0</code></li>
  * <li>Saturation: <code>1.0</code></li>
+ * <li>Curves: gamma <code>{1,1,1}</code>, midPoint <code>{1,1,1}</code>, and scale <code>{1,1,1}</code></li>
  * <li>Tone mapping: {@link ToneMapping#ACES_LEGACY}</li>
  * </ul>
  *
@@ -330,6 +332,36 @@ public class ColorGrading {
         }
 
         /**
+         * Applies a curve to each RGB channel of the image. Each curve is defined by 3 values:
+         * a gamma value applied to the shadows only, a mid-point indicating where shadows stop
+         * and highlights start, and a scale factor for the highlights.
+         *
+         * The gamma and mid-point must be strictly positive values. If they are not, they will be
+         * clamped to a small positive value. The scale can be any negative of positive value.
+         *
+         * Curves are applied in linear space.
+         *
+         * @param shadowGamma Power value to apply to the shadows, must be strictly positive
+         * @param midPoint Mid-point defining where shadows stop and highlights start, must be strictly positive
+         * @param highlightScale Scale factor for the highlights, can be any negative or positive value
+         *
+         * @return This Builder, for chaining calls
+         */
+        public Builder curves(
+                @NonNull @Size(min = 3) float[] shadowGamma,
+                @NonNull @Size(min = 3) float[] midPoint,
+                @NonNull @Size(min = 3) float[] highlightScale) {
+
+            assertFloat3In(shadowGamma);
+            assertFloat3In(midPoint);
+            assertFloat3In(highlightScale);
+
+            nBuilderCurves(mNativeBuilder, shadowGamma, midPoint, highlightScale);
+
+            return this;
+        }
+
+        /**
          * Creates the IndirectLight object and returns a pointer to it.
          *
          * @param engine The {@link Engine} to associate this <code>IndirectLight</code> with.
@@ -383,6 +415,7 @@ public class ColorGrading {
     private static native void nBuilderSlopeOffsetPower(long nativeBuilder, float[] slope, float[] offset, float[] power);
     private static native void nBuilderContrast(long nativeBuilder, float contrast);
     private static native void nBuilderSaturation(long nativeBuilder, float saturation);
+    private static native void nBuilderCurves(long nativeBuilder, float[] gamma, float[] midPoint, float[] scale);
 
     private static native long nBuilderBuild(long nativeBuilder, long nativeEngine);
 }

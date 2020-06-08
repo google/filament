@@ -72,6 +72,10 @@ static Config g_config;
 static bool g_shadowPlane = false;
 static bool g_singleMode = false;
 static float g_rangePlot[1024 * 3];
+static float g_curvePlot[1024 * 3];
+
+const static ImVec2 verticalSliderSize(18.0f, 160.0f);
+const static ImVec2 plotLinesSize(160.0f, 120.0f);
 
 static void printUsage(char* name) {
     std::string exec_name(Path(name).getName());
@@ -419,16 +423,50 @@ static filament::MaterialInstance* updateInstances(
 }
 
 static void computeRangePlot(SandboxParameters &parameters) {
-    const ColorGradingOptions& options = parameters.colorGradingOptions;
+    float4& ranges = parameters.colorGradingOptions.ranges;
+    ranges.y = clamp(ranges.y, ranges.x + 1e-5f, ranges.w - 1e-5f); // darks
+    ranges.z = clamp(ranges.z, ranges.x + 1e-5f, ranges.w - 1e-5f); // lights
+
     for (size_t i = 0; i < 1024; i++) {
         float x = i / 1024.0f;
-        float s = 1.0f - smoothstep(options.ranges.x, options.ranges.y, x);
-        float h = smoothstep(options.ranges.z, options.ranges.w, x);
+        float s = 1.0f - smoothstep(ranges.x, ranges.y, x);
+        float h = smoothstep(ranges.z, ranges.w, x);
         g_rangePlot[i]        = s;
         g_rangePlot[1024 + i] = 1.0f - s - h;
         g_rangePlot[2048 + i] = h;
     }
 }
+
+inline float3 curves(float3 v, float3 shadowGamma, float3 midPoint, float3 highlightScale) {
+    float3 d = 1.0f / (pow(midPoint, shadowGamma - 1.0f));
+    float3 dark = pow(v, shadowGamma) * d;
+    float3 light = highlightScale * (v - midPoint) + midPoint;
+    return float3{
+            v.r <= midPoint.r ? dark.r : light.r,
+            v.g <= midPoint.g ? dark.g : light.g,
+            v.b <= midPoint.b ? dark.b : light.b,
+    };
+}
+
+static void computeCurvePlot(SandboxParameters &parameters) {
+    ColorGradingOptions &colorGrading = parameters.colorGradingOptions;
+    for (size_t i = 0; i < 1024; i++) {
+        float3 x{i / 1024.0f * 2.0f};
+        float3 y = curves(x, colorGrading.gamma, colorGrading.midPoint, colorGrading.scale);
+        g_curvePlot[i]        = y.r;
+        g_curvePlot[1024 + i] = y.g;
+        g_curvePlot[2048 + i] = y.b;
+    }
+}
+
+static void pushSliderColors(float hue) {
+    ImGui::PushStyleColor(ImGuiCol_FrameBg, (ImVec4) ImColor::HSV(hue, 0.5f, 0.5f));
+    ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, (ImVec4) ImColor::HSV(hue, 0.6f, 0.5f));
+    ImGui::PushStyleColor(ImGuiCol_FrameBgActive, (ImVec4) ImColor::HSV(hue, 0.7f, 0.5f));
+    ImGui::PushStyleColor(ImGuiCol_SliderGrab, (ImVec4) ImColor::HSV(hue, 0.9f, 0.9f));
+}
+
+static void popSliderColors() { ImGui::PopStyleColor(4); }
 
 static void gui(filament::Engine* engine, filament::View*) {
     auto& params = g_params;
@@ -436,6 +474,7 @@ static void gui(filament::Engine* engine, filament::View*) {
     ImGui::Begin("Parameters");
     {
         if (ImGui::CollapsingHeader("Material", ImGuiTreeNodeFlags_DefaultOpen)) {
+            ImGui::Indent();
             ImGui::Combo("Model", &params.currentMaterialModel,
                     "Unlit\0Lit\0Subsurface\0Cloth\0Specular glossiness\0\0");
 
@@ -501,28 +540,35 @@ static void gui(filament::Engine* engine, filament::View*) {
             ImGui::ColorEdit3("Emissive color", &params.emissiveColor.r);
             ImGui::SliderFloat("Emissive EV", &params.emissiveEV, -24.0f, 24.0f);
             ImGui::SliderFloat("Exposure weight", &params.emissiveExposureWeight, 0.0f, 1.0f);
+            ImGui::Unindent();
         }
 
         if (ImGui::CollapsingHeader("Shading AA")) {
+            ImGui::Indent();
             ImGui::SliderFloat("Variance", &params.specularAntiAliasingVariance, 0.0f, 1.0f);
             ImGui::SliderFloat("Threshold", &params.specularAntiAliasingThreshold, 0.0f, 1.0f);
+            ImGui::Unindent();
         }
 
         if (ImGui::CollapsingHeader("Object")) {
+            ImGui::Indent();
             ImGui::Checkbox("Cast shadows##object", &params.castShadows);
+            ImGui::Unindent();
         }
 
         if (ImGui::CollapsingHeader("Camera")) {
+            ImGui::Indent();
             ImGui::SliderFloat("Focal length", &FilamentApp::get().getCameraFocalLength(), 16.0f, 90.0f);
             ImGui::SliderFloat("Aperture", &params.cameraAperture, 1.0f, 32.0f);
             ImGui::SliderFloat("Speed", &params.cameraSpeed, 800.0f, 1.0f);
             ImGui::SliderFloat("ISO", &params.cameraISO, 25.0f, 6400.0f);
+            ImGui::Unindent();
         }
 
         if (ImGui::CollapsingHeader("Indirect Light")) {
+            ImGui::Indent();
             ImGui::SliderFloat("IBL", &params.iblIntensity, 0.0f, 50000.0f);
             ImGui::SliderAngle("Rotation", &params.iblRotation);
-            ImGui::Indent();
             if (ImGui::CollapsingHeader("SSAO")) {
                 DebugRegistry& debug = engine->getDebugRegistry();
                 ImGui::Checkbox("Enabled##ssao", &params.ssao);
@@ -535,6 +581,7 @@ static void gui(filament::Engine* engine, filament::View*) {
         }
 
         if (ImGui::CollapsingHeader("Directional Light")) {
+            ImGui::Indent();
             ImGui::Checkbox("Enabled##directionalLight", &params.directionalLightEnabled);
             ImGui::ColorEdit3("Color##directionalLight", &params.lightColor.r);
             ImGui::SliderFloat("Lux", &params.lightIntensity, 0.0f, 150000.0f);
@@ -542,7 +589,6 @@ static void gui(filament::Engine* engine, filament::View*) {
             ImGui::SliderFloat("Halo size", &params.sunHaloSize, 1.01f, 40.0f);
             ImGui::SliderFloat("Halo falloff", &params.sunHaloFalloff, 0.0f, 2048.0f);
             ImGuiExt::DirectionWidget("Direction", params.lightDirection.v);
-            ImGui::Indent();
             if (ImGui::CollapsingHeader("Contact Shadows")) {
                 DebugRegistry& debug = engine->getDebugRegistry();
                 ImGui::Checkbox("Enabled##contactShadows", &params.screenSpaceContactShadows);
@@ -553,6 +599,7 @@ static void gui(filament::Engine* engine, filament::View*) {
         }
 
         if (ImGui::CollapsingHeader("Spot Light")) {
+            ImGui::Indent();
             ImGui::Checkbox("Enabled##spotLight", &params.spotLightEnabled);
             ImGui::SliderFloat3("Position", &params.spotLightPosition.x, -5.0f, 5.0f);
             ImGui::ColorEdit3("Color##spotLight", &params.spotLightColor.r);
@@ -560,9 +607,11 @@ static void gui(filament::Engine* engine, filament::View*) {
             ImGui::SliderFloat("Lumens", &params.spotLightIntensity, 0.0, 1000000.f);
             ImGui::SliderAngle("Cone angle", &params.spotLightConeAngle, 0.0f, 90.0f);
             ImGui::SliderFloat("Cone fade", &params.spotLightConeFade, 0.0f, 1.0f);
+            ImGui::Unindent();
         }
 
         if (ImGui::CollapsingHeader("Fog")) {
+            ImGui::Indent();
             ImGui::Checkbox("Enable Fog", &params.fogOptions.enabled);
             ImGui::SliderFloat("Start", &params.fogOptions.distance, 0.0f, 100.0f);
             ImGui::SliderFloat("Density", &params.fogOptions.density, 0.0f, 1.0f);
@@ -572,9 +621,11 @@ static void gui(filament::Engine* engine, filament::View*) {
             ImGui::SliderFloat("Scattering Size", &params.fogOptions.inScatteringSize, 0.0f, 100.0f);
             ImGui::Checkbox("Color from IBL", &params.fogOptions.fogColorFromIbl);
             ImGui::ColorPicker3("Color", params.fogOptions.color.v);
+            ImGui::Unindent();
         }
 
         if (ImGui::CollapsingHeader("Post-processing")) {
+            ImGui::Indent();
             ImGui::Checkbox("MSAA 4x", &params.msaa);
             ImGui::Checkbox("FXAA", &params.fxaa);
             ImGui::Checkbox("Bloom", &params.bloomOptions.enabled);
@@ -583,50 +634,151 @@ static void gui(filament::Engine* engine, filament::View*) {
                 ImGui::SliderFloat("Dirt", &params.bloomOptions.dirtStrength, 0.0f, 1.0f);
             }
             ImGui::Checkbox("Dithering", &params.dithering);
+            ImGui::Unindent();
         }
 
         if (ImGui::CollapsingHeader("Color grading")) {
-            ImGui::Checkbox("Enabled##colorGradin", &params.colorGrading);
-            ImGui::Combo("Tone-mapping",
-                    reinterpret_cast<int*>(&params.colorGradingOptions.toneMapping),
-                    "Linear\0ACES (legacy)\0ACES\0Filmic\0Uchimura\0Reinhard\0Display Range\0\0");
+            ColorGradingOptions& colorGrading = params.colorGradingOptions;
+
             ImGui::Indent();
+            ImGui::Checkbox("Enabled##colorGrading", &params.colorGrading);
+            ImGui::Combo("Tone-mapping",
+                    reinterpret_cast<int*>(&colorGrading.toneMapping),
+                    "Linear\0ACES (legacy)\0ACES\0Filmic\0Uchimura\0Reinhard\0Display Range\0\0");
             if (ImGui::CollapsingHeader("While balance")) {
-                ImGui::SliderInt("Temperature", &params.colorGradingOptions.temperature, -100, 100);
-                ImGui::SliderInt("Tint", &params.colorGradingOptions.tint, -100, 100);
+                ImGui::SliderInt("Temperature", &colorGrading.temperature, -100, 100);
+                ImGui::SliderInt("Tint", &colorGrading.tint, -100, 100);
             }
             if (ImGui::CollapsingHeader("Channel mixer")) {
-                ImGui::SliderFloat3("Out Red", &params.colorGradingOptions.outRed.x, -2.0f, 2.0f);
-                ImGui::SliderFloat3("Out Green", &params.colorGradingOptions.outGreen.x, -2.0f, 2.0f);
-                ImGui::SliderFloat3("Out Blue", &params.colorGradingOptions.outBlue.x, -2.0f, 2.0f);
+                pushSliderColors(0.0f / 7.0f);
+                ImGui::VSliderFloat("##outRed.r", verticalSliderSize, &colorGrading.outRed.r, -2.0f, 2.0f, "");
+                ImGui::SameLine();
+                ImGui::VSliderFloat("##outRed.g", verticalSliderSize, &colorGrading.outRed.g, -2.0f, 2.0f, "");
+                ImGui::SameLine();
+                ImGui::VSliderFloat("##outRed.b", verticalSliderSize, &colorGrading.outRed.b, -2.0f, 2.0f, "");
+                ImGui::SameLine(0.0f, 18.0f);
+                popSliderColors();
+
+                pushSliderColors(2.0f / 7.0f);
+                ImGui::VSliderFloat("##outGreen.r", verticalSliderSize, &colorGrading.outGreen.r, -2.0f, 2.0f, "");
+                ImGui::SameLine();
+                ImGui::VSliderFloat("##outGreen.g", verticalSliderSize, &colorGrading.outGreen.g, -2.0f, 2.0f, "");
+                ImGui::SameLine();
+                ImGui::VSliderFloat("##outGreen.b", verticalSliderSize, &colorGrading.outGreen.b, -2.0f, 2.0f, "");
+                ImGui::SameLine(0.0f, 18.0f);
+                popSliderColors();
+
+                pushSliderColors(4.0f / 7.0f);
+                ImGui::VSliderFloat("##outBlue.r", verticalSliderSize, &colorGrading.outBlue.r, -2.0f, 2.0f, "");
+                ImGui::SameLine();
+                ImGui::VSliderFloat("##outBlue.g", verticalSliderSize, &colorGrading.outBlue.g, -2.0f, 2.0f, "");
+                ImGui::SameLine();
+                ImGui::VSliderFloat("##outBlue.b", verticalSliderSize, &colorGrading.outBlue.b, -2.0f, 2.0f, "");
+                popSliderColors();
             }
             if (ImGui::CollapsingHeader("Tonal ranges")) {
-                ImGui::ColorEdit3("Shadows", &params.colorGradingOptions.shadows.x);
-                ImGui::SliderFloat("Shadows weight", &params.colorGradingOptions.shadows.w, -2.0f, 2.0f);
-                ImGui::ColorEdit3("Mid-tones", &params.colorGradingOptions.midtones.x);
-                ImGui::SliderFloat("Mid-tones weight", &params.colorGradingOptions.midtones.w, -2.0f, 2.0f);
-                ImGui::ColorEdit3("Highlights", &params.colorGradingOptions.highlights.x);
-                ImGui::SliderFloat("Highlights weight", &params.colorGradingOptions.highlights.w, -2.0f, 2.0f);
-                ImGui::SliderFloat4("Ranges", &params.colorGradingOptions.ranges.x, 0.0f, 1.0f);
+                ImGui::ColorEdit3("Shadows", &colorGrading.shadows.x);
+                ImGui::SliderFloat("Shadows weight", &colorGrading.shadows.w, -2.0f, 2.0f);
+                ImGui::ColorEdit3("Mid-tones", &colorGrading.midtones.x);
+                ImGui::SliderFloat("Mid-tones weight", &colorGrading.midtones.w, -2.0f, 2.0f);
+                ImGui::ColorEdit3("Highlights", &colorGrading.highlights.x);
+                ImGui::SliderFloat("Highlights weight", &colorGrading.highlights.w, -2.0f, 2.0f);
+                ImGui::SliderFloat4("Ranges", &colorGrading.ranges.x, 0.0f, 1.0f);
                 computeRangePlot(params);
-                ImGui::PlotLines("Shadows curve", g_rangePlot, 1024, 0);
-                ImGui::PlotLines("Mid-tones curve", g_rangePlot + 1024, 1024);
-                ImGui::PlotLines("Highlights curve", g_rangePlot + 2048, 1024);
+                ImGui::Columns(3, NULL, false);
+                ImGui::PushStyleColor(ImGuiCol_PlotLines, (ImVec4) ImColor::HSV(0.0f, 0.7f, 0.8f));
+                ImGui::PlotLines("", g_rangePlot, 1024, 0, "Shadows", 0.0f, 1.0f, plotLinesSize);
+                ImGui::NextColumn();
+                ImGui::PushStyleColor(ImGuiCol_PlotLines, (ImVec4) ImColor::HSV(0.3f, 0.7f, 0.8f));
+                ImGui::PlotLines("", g_rangePlot + 1024, 1024, 0, "Mid-tones", 0.0f, 1.0f, plotLinesSize);
+                ImGui::NextColumn();
+                ImGui::PushStyleColor(ImGuiCol_PlotLines, (ImVec4) ImColor::HSV(0.6f, 0.7f, 0.8f));
+                ImGui::PlotLines("", g_rangePlot + 2048, 1024, 0, "Highlights", 0.0f, 1.0f, plotLinesSize);
+                ImGui::Columns(1);
+                ImGui::PopStyleColor();
             }
             if (ImGui::CollapsingHeader("Color decision list")) {
-                ImGui::SliderFloat3("Slope", &params.colorGradingOptions.slope.x, 0.0f, 2.0f);
-                ImGui::SliderFloat3("Offset", &params.colorGradingOptions.offset.x, -0.5f, 0.5f);
-                ImGui::SliderFloat3("Power", &params.colorGradingOptions.power.x, 0.0f, 2.0f);
+                ImGui::SliderFloat3("Slope", &colorGrading.slope.x, 0.0f, 2.0f);
+                ImGui::SliderFloat3("Offset", &colorGrading.offset.x, -0.5f, 0.5f);
+                ImGui::SliderFloat3("Power", &colorGrading.power.x, 0.0f, 2.0f);
             }
             if (ImGui::CollapsingHeader("Adjustments")) {
-                ImGui::SliderFloat("Contrast", &params.colorGradingOptions.contrast, 0.0f, 2.0f);
-                ImGui::SliderFloat("Saturation", &params.colorGradingOptions.saturation, 0.0f, 2.0f);
+                ImGui::SliderFloat("Contrast", &colorGrading.contrast, 0.0f, 2.0f);
+                ImGui::SliderFloat("Saturation", &colorGrading.saturation, 0.0f, 2.0f);
+            }
+            if (ImGui::CollapsingHeader("Curves")) {
+                ImGui::Checkbox("Linked curves", &colorGrading.linkedCurves);
+
+                if (!colorGrading.linkedCurves) {
+                    pushSliderColors(0.0f / 7.0f);
+                    ImGui::VSliderFloat("##curveGamma.r", verticalSliderSize, &colorGrading.gamma.r, 0.0f, 4.0f, "");
+                    ImGui::SameLine();
+                    ImGui::PopStyleColor(4);
+                    pushSliderColors(2.0f / 7.0f);
+                    ImGui::VSliderFloat("##curveGamma.g", verticalSliderSize, &colorGrading.gamma.g, 0.0f, 4.0f, "");
+                    ImGui::SameLine();
+                    ImGui::PopStyleColor(4);
+                    pushSliderColors(4.0f / 7.0f);
+                    ImGui::VSliderFloat("##curveGamma.b", verticalSliderSize, &colorGrading.gamma.b, 0.0f, 4.0f, "");
+                    ImGui::SameLine(0.0f, 18.0f);
+                    ImGui::PopStyleColor(4);
+
+                    pushSliderColors(0.0f / 7.0f);
+                    ImGui::VSliderFloat("##curveMid.r", verticalSliderSize, &colorGrading.midPoint.r, 0.0f, 2.0f, "");
+                    ImGui::SameLine();
+                    ImGui::PopStyleColor(4);
+                    pushSliderColors(2.0f / 7.0f);
+                    ImGui::VSliderFloat("##curveMid.g", verticalSliderSize, &colorGrading.midPoint.g, 0.0f, 2.0f, "");
+                    ImGui::SameLine();
+                    ImGui::PopStyleColor(4);
+                    pushSliderColors(4.0f / 7.0f);
+                    ImGui::VSliderFloat("##curveMid.b", verticalSliderSize, &colorGrading.midPoint.b, 0.0f, 2.0f, "");
+                    ImGui::SameLine(0.0f, 18.0f);
+                    ImGui::PopStyleColor(4);
+
+                    pushSliderColors(0.0f / 7.0f);
+                    ImGui::VSliderFloat("##curveScale.r", verticalSliderSize, &colorGrading.scale.r, 0.0f, 4.0f, "");
+                    ImGui::SameLine();
+                    popSliderColors();
+                    pushSliderColors(2.0f / 7.0f);
+                    ImGui::VSliderFloat("##curveScale.g", verticalSliderSize, &colorGrading.scale.g, 0.0f, 4.0f, "");
+                    ImGui::SameLine();
+                    ImGui::PopStyleColor(4);
+                    pushSliderColors(4.0f / 7.0f);
+                    ImGui::VSliderFloat("##curveScale.b", verticalSliderSize, &colorGrading.scale.b, 0.0f, 4.0f, "");
+                    ImGui::PopStyleColor(4);
+                } else {
+                    ImGui::VSliderFloat("##curveGamma", verticalSliderSize, &colorGrading.gamma.r, 0.0f, 4.0f, "");
+                    ImGui::SameLine();
+                    ImGui::VSliderFloat("##curveMid", verticalSliderSize, &colorGrading.midPoint.r, 0.0f, 2.0f, "");
+                    ImGui::SameLine();
+                    ImGui::VSliderFloat("##curveScale", verticalSliderSize, &colorGrading.scale.r, 0.0f, 4.0f, "");
+
+                    colorGrading.gamma = float3{colorGrading.gamma.r};
+                    colorGrading.midPoint = float3{colorGrading.midPoint.r};
+                    colorGrading.scale = float3{colorGrading.scale.r};
+                }
+
+                computeCurvePlot(params);
+
+                ImGui::Columns(3, NULL, false);
+                ImGui::PushStyleColor(ImGuiCol_PlotLines, (ImVec4) ImColor::HSV(0.0f, 0.7f, 0.8f));
+                ImGui::PlotLines("", g_curvePlot, 1024, 0, "Red", 0.0f, 2.0f, plotLinesSize);
+                ImGui::NextColumn();
+                ImGui::PushStyleColor(ImGuiCol_PlotLines, (ImVec4) ImColor::HSV(0.3f, 0.7f, 0.8f));
+                ImGui::PlotLines("", g_curvePlot + 1024, 1024, 0, "Green", 0.0f, 2.0f, plotLinesSize);
+                ImGui::NextColumn();
+                ImGui::PushStyleColor(ImGuiCol_PlotLines, (ImVec4) ImColor::HSV(0.6f, 0.7f, 0.8f));
+                ImGui::PlotLines("", g_curvePlot + 2048, 1024, 0, "Blue", 0.0f, 2.0f, plotLinesSize);
+                ImGui::Columns(1);
+                ImGui::PopStyleColor();
             }
             ImGui::Unindent();
         }
 
         if (ImGui::CollapsingHeader("Debug")) {
             DebugRegistry& debug = engine->getDebugRegistry();
+            ImGui::Indent();
             ImGui::Checkbox("Camera at origin",
                     debug.getPropertyAddress<bool>("d.view.camera_at_origin"));
             ImGui::Checkbox("Stable Shadow Map", &params.stableShadowMap);
@@ -652,6 +804,7 @@ static void gui(filament::Engine* engine, filament::View*) {
                             debug.getPropertyAddress<float>("d.shadowmap.dzf"),-1.0f, 0.0f);
                 }
             }
+            ImGui::Unindent();
         }
     }
     ImGui::End();
@@ -752,6 +905,7 @@ static void preRender(filament::Engine* engine, filament::View* view, filament::
                     .slopeOffsetPower(options.slope, options.offset, options.power)
                     .contrast(options.contrast)
                     .saturation(options.saturation)
+                    .curves(options.gamma, options.midPoint, options.scale)
                     .toneMapping(options.toneMapping)
                     .build(*engine);
 

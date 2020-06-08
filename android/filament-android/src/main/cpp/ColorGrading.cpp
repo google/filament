@@ -110,7 +110,7 @@ Java_com_google_android_filament_ColorGrading_nBuilderSlopeOffsetPower(JNIEnv* e
     jfloat* power = env->GetFloatArrayElements(power_, nullptr);
 
     ColorGrading::Builder* builder = (ColorGrading::Builder*) nativeBuilder;
-    builder->channelMixer(
+    builder->slopeOffsetPower(
             *reinterpret_cast<float3*>(slope),
             *reinterpret_cast<float3*>(offset),
             *reinterpret_cast<float3*>(power));
@@ -134,4 +134,23 @@ Java_com_google_android_filament_ColorGrading_nBuilderSaturation(JNIEnv*, jclass
         jlong nativeBuilder, jfloat saturation) {
     ColorGrading::Builder* builder = (ColorGrading::Builder*) nativeBuilder;
     builder->saturation(saturation);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_ColorGrading_nBuilderCurves(JNIEnv* env, jclass,
+        jlong nativeBuilder, jfloatArray gamma_, jfloatArray midPoint_, jfloatArray scale_) {
+
+    jfloat* gamma = env->GetFloatArrayElements(gamma_, nullptr);
+    jfloat* midPoint = env->GetFloatArrayElements(midPoint_, nullptr);
+    jfloat* scale = env->GetFloatArrayElements(scale_, nullptr);
+
+    ColorGrading::Builder* builder = (ColorGrading::Builder*) nativeBuilder;
+    builder->curves(
+            *reinterpret_cast<float3*>(gamma),
+            *reinterpret_cast<float3*>(midPoint),
+            *reinterpret_cast<float3*>(scale));
+
+    env->ReleaseFloatArrayElements(gamma_, gamma, JNI_ABORT);
+    env->ReleaseFloatArrayElements(midPoint_, midPoint, JNI_ABORT);
+    env->ReleaseFloatArrayElements(scale_, scale, JNI_ABORT);
 }

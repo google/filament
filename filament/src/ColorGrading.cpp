@@ -47,19 +47,28 @@ static constexpr size_t LUT_DIMENSION = 32u;
 
 struct ColorGrading::BuilderDetails {
     ToneMapping toneMapping = ToneMapping::ACES_LEGACY;
+    // White balance
     float2 whiteBalance     = {0.0f, 0.0f};
+    // Channel mixer
     float3 outRed           = {1.0f, 0.0f, 0.0f};
     float3 outGreen         = {0.0f, 1.0f, 0.0f};
     float3 outBlue          = {0.0f, 0.0f, 1.0f};
+    // Tonal ranges
     float3 shadows          = {1.0f, 1.0f, 1.0f};
     float3 midtones         = {1.0f, 1.0f, 1.0f};
     float3 highlights       = {1.0f, 1.0f, 1.0f};
     float4 tonalRanges      = {0.0f, 0.333f, 0.550f, 1.0f}; // defaults in DaVinci Resolve
+    // ASC CDL
     float3 slope            = {1.0f};
     float3 offset           = {0.0f};
     float3 power            = {1.0f};
+    // Color adjustments
     float  saturation       = 1.0f;
     float  contrast         = 1.0f;
+    // Curves
+    float3 shadowGamma      = {1.0f};
+    float3 midPoint         = {1.0f};
+    float3 highlightScale   = {1.0f};
 };
 
 using BuilderType = ColorGrading;
@@ -99,8 +108,8 @@ ColorGrading::Builder& ColorGrading::Builder::shadowsMidtonesHighlights(
 
     ranges.x = saturate(ranges.x); // shadows
     ranges.w = saturate(ranges.w); // highlights
-    ranges.y = clamp(ranges.y, ranges.x + 1e-5f, ranges.z - 1e-5f); // darks
-    ranges.z = clamp(ranges.z, ranges.x + 1e-5f, ranges.z - 1e-5f); // lights
+    ranges.y = clamp(ranges.y, ranges.x + 1e-5f, ranges.w - 1e-5f); // darks
+    ranges.z = clamp(ranges.z, ranges.x + 1e-5f, ranges.w - 1e-5f); // lights
     mImpl->tonalRanges = ranges;
 
     return *this;
@@ -121,6 +130,14 @@ ColorGrading::Builder& ColorGrading::Builder::saturation(float saturation) noexc
 
 ColorGrading::Builder& ColorGrading::Builder::contrast(float contrast) noexcept {
     mImpl->contrast = clamp(contrast, 0.0f, 2.0f);
+    return *this;
+}
+
+ColorGrading::Builder& ColorGrading::Builder::curves(
+        float3 shadowGamma, float3 midPoint, float3 highlightScale) noexcept {
+    mImpl->shadowGamma = max(1e-5f, shadowGamma);
+    mImpl->midPoint = max(1e-5f, midPoint);
+    mImpl->highlightScale = highlightScale;
     return *this;
 }
 
@@ -249,6 +266,19 @@ inline constexpr float3 colorAdjustments(float3 v, float contrast, float saturat
     return y + saturation * (v - y);
 }
 
+UTILS_ALWAYS_INLINE
+inline float3 curves(float3 v, float3 shadowGamma, float3 midPoint, float3 highlightScale) {
+    // "Practical HDR and Wide Color Techniques in Gran Turismo SPORT", Uchimura 2018
+    float3 d = 1.0f / (pow(midPoint, shadowGamma - 1.0f));
+    float3 dark = pow(v, shadowGamma) * d;
+    float3 light = highlightScale * (v - midPoint) + midPoint;
+    return float3{
+        v.r <= midPoint.r ? dark.r : light.r,
+        v.g <= midPoint.g ? dark.g : light.g,
+        v.b <= midPoint.b ? dark.b : light.b,
+    };
+}
+
 //------------------------------------------------------------------------------
 // Tone mapping
 //------------------------------------------------------------------------------
@@ -342,13 +372,16 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                     // ASC CDL
                     v = colorDecisionList(v, builder->slope, builder->offset, builder->power);
 
-                    // Constrast and saturation
+                    // Contrast and saturation
                     v = colorAdjustments(v, builder->contrast, builder->saturation);
 
                     v = config.logToLinearTransform(v);
 
                     // Kill negative values before tone mapping
                     v = max(v, 0.0f);
+
+                    // RGB curves
+                    v = curves(v, builder->shadowGamma, builder->midPoint, builder->highlightScale);
 
                     // Tone mapping
                     v = config.toneMapper(v);
