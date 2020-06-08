@@ -46,6 +46,7 @@
 
 namespace utils {
     class NameComponentManager;
+    class EntityManager;
 }
 
 namespace gltfio {
@@ -73,8 +74,9 @@ struct TextureSlot {
 };
 
 struct FFilamentAsset : public FilamentAsset {
-    FFilamentAsset(filament::Engine* engine, utils::NameComponentManager* names) :
-            mEngine(engine), mNameManager(names) {}
+    FFilamentAsset(filament::Engine* engine, utils::NameComponentManager* names,
+            utils::EntityManager* entityManager) :
+            mEngine(engine), mNameManager(names), mEntityManager(entityManager) {}
 
     ~FFilamentAsset();
 
@@ -175,6 +177,7 @@ struct FFilamentAsset : public FilamentAsset {
 
     filament::Engine* mEngine;
     utils::NameComponentManager* mNameManager;
+    utils::EntityManager* mEntityManager;
     std::vector<uint8_t> mGlbData;
     std::vector<utils::Entity> mEntities;
     std::vector<utils::Entity> mLightEntities;

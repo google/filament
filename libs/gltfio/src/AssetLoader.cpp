@@ -255,7 +255,7 @@ void FAssetLoader::createAsset(const cgltf_data* srcAsset, size_t numInstances) 
     }
     #endif
 
-    mResult = new FFilamentAsset(mEngine, mNameManager);
+    mResult = new FFilamentAsset(mEngine, mNameManager, &mEntityManager);
     mResult->mSourceAsset = srcAsset;
     mResult->acquireSourceAsset();
 
