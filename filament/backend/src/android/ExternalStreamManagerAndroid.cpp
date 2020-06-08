@@ -66,15 +66,10 @@ JNIEnv* ExternalStreamManagerAndroid::getEnvironmentSlow() noexcept {
     JNIEnv * env = mVm.getEnvironment();
     mJniEnv = env;
 
-    // we try to call directly the native version of updateTexImage() -- it's not 100% portable
-    // but we mitigate this by falling back on the correct method if we don't find it.
     jclass SurfaceTextureClass = env->FindClass("android/graphics/SurfaceTexture");
+
     mSurfaceTextureClass_updateTexImage = env->GetMethodID(
-            SurfaceTextureClass, "nativeUpdateTexImage", "()V");
-    if (!mSurfaceTextureClass_updateTexImage) {
-        mSurfaceTextureClass_updateTexImage = env->GetMethodID(
-                SurfaceTextureClass, "updateTexImage", "()V");
-    }
+            SurfaceTextureClass, "updateTexImage", "()V");
 
     mSurfaceTextureClass_attachToGLContext = env->GetMethodID(
             SurfaceTextureClass, "attachToGLContext", "(I)V");
