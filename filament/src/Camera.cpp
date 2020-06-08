@@ -157,6 +157,10 @@ void UTILS_NOINLINE FCamera::setProjection(Camera::Projection projection,
     mFar = float(far);
 }
 
+void FCamera::setScalingMatrix(math::mat4 const& scaling) noexcept {
+    mScalingMatrix = scaling;
+}
+
 void UTILS_NOINLINE FCamera::setModelMatrix(const mat4f& modelMatrix) noexcept {
     FTransformManager& transformManager = mEngine.getTransformManager();
     transformManager.setTransform(transformManager.getInstance(mEntity), modelMatrix);
@@ -177,7 +181,7 @@ mat4f UTILS_NOINLINE FCamera::getViewMatrix() const noexcept {
 
 Frustum FCamera::getFrustum() const noexcept {
     // for culling purposes we keep the far plane where it is
-    return FCamera::getFrustum(mProjectionForCulling, getViewMatrix());
+    return FCamera::getFrustum(mScalingMatrix * mProjectionForCulling, getViewMatrix());
 }
 
 void FCamera::setExposure(float aperture, float shutterSpeed, float sensitivity) noexcept {
@@ -291,11 +295,15 @@ void Camera::setCustomProjection(mat4 const& projection, double near, double far
     upcast(this)->setCustomProjection(projection, near, far);
 }
 
-const mat4& Camera::getProjectionMatrix() const noexcept {
+void Camera::setScalingMatrix(math::mat4 const& scaling) noexcept {
+    upcast(this)->setScalingMatrix(scaling);
+}
+
+const mat4 Camera::getProjectionMatrix() const noexcept {
     return upcast(this)->getProjectionMatrix();
 }
 
-const mat4& Camera::getCullingProjectionMatrix() const noexcept {
+const mat4 Camera::getCullingProjectionMatrix() const noexcept {
     return upcast(this)->getCullingProjectionMatrix();
 }
 
