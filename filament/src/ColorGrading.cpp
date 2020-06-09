@@ -277,7 +277,7 @@ inline constexpr float3 saturation(float3 v, float saturation) {
 UTILS_ALWAYS_INLINE
 inline float3 vibrance(float3 v, float vibrance) {
     float r = v.r - max(v.g, v.b);
-    float s = (vibrance - 1.0f) / (1.0f + exp(-r * 3.0f)) + 1.0f;
+    float s = (vibrance - 1.0f) / (1.0f + std::exp(-r * 3.0f)) + 1.0f;
     float3 l{(1.0f - s) * LUMA_REC709};
     return float3{
         dot(v, l + float3{s, 0.0f, 0.0f}),
