@@ -59,6 +59,7 @@ import static com.google.android.filament.Asserts.assertFloat4In;
  * <li>Shadows/mid-tones/highlights</li>
  * <li>Slope/offset/power (CDL)</li>
  * <li>Contrast</li>
+ * <li>Vibrance</li>
  * <li>Saturation</li>
  * <li>Curves</li>
  * <li>Tone mapping</li>
@@ -74,6 +75,7 @@ import static com.google.android.filament.Asserts.assertFloat4In;
  * highlights <code>{1,1,1,0}</code>, ranges <code>{0,0.333,0.550,1}</code></li>
  * <li>Slope/offset/power: slope <code>1.0</code>, offset <code>0.0</code>, and power <code>1.0</code></li>
  * <li>Contrast: <code>1.0</code></li>
+ * <li>Vibrance: <code>1.0</code></li>
  * <li>Saturation: <code>1.0</code></li>
  * <li>Curves: gamma <code>{1,1,1}</code>, midPoint <code>{1,1,1}</code>, and scale <code>{1,1,1}</code></li>
  * <li>Tone mapping: {@link ToneMapping#ACES_LEGACY}</li>
@@ -313,6 +315,29 @@ public class ColorGrading {
         }
 
         /**
+         * Adjusts the saturation of the image based on the input color's saturation level.
+         * Colors with a high level of saturation are less affected than colors with low saturation
+         * levels.
+         *
+         * Lower vibrance values decrease intensity of the colors present in the image, and
+         * higher values increase the intensity of the colors in the image. A value of 1.0 has
+         * no effect.
+         *
+         * The vibrance is defined as a value in the range <code>[0.0...2.0]</code>. Values outside
+         * of that range will be clipped to that range.
+         *
+         * Vibrance adjustment is performed in linear space.
+         *
+         * @param vibrance Vibrance, between 0.0 and 2.0. 1.0 leaves vibrance unaffected
+         *
+         * @return This Builder, for chaining calls
+         */
+        Builder vibrance(float vibrance) {
+            nBuilderVibrance(mNativeBuilder, vibrance);
+            return this;
+        }
+
+        /**
          * Adjusts the saturation of the image. Lower values decrease intensity of the colors
          * present in the image, and higher values increase the intensity of the colors in the
          * image. A value of 1.0 has no effect.
@@ -320,7 +345,7 @@ public class ColorGrading {
          * The saturation is defined as a value in the range <code>[0.0...2.0]</code>.
          * Values outside of that range will be clipped to that range.
          *
-         * Saturation adjustment is performed in log space.
+         * Saturation adjustment is performed in linear space.
          *
          * @param saturation Saturation, between 0.0 and 2.0. 1.0 leaves saturation unaffected
          *
@@ -414,6 +439,7 @@ public class ColorGrading {
     private static native void nBuilderShadowsMidtonesHighlights(long nativeBuilder, float[] shadows, float[] midtones, float[] highlights, float[] ranges);
     private static native void nBuilderSlopeOffsetPower(long nativeBuilder, float[] slope, float[] offset, float[] power);
     private static native void nBuilderContrast(long nativeBuilder, float contrast);
+    private static native void nBuilderVibrance(long nativeBuilder, float vibrance);
     private static native void nBuilderSaturation(long nativeBuilder, float saturation);
     private static native void nBuilderCurves(long nativeBuilder, float[] gamma, float[] midPoint, float[] scale);
 

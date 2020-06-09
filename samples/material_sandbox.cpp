@@ -704,6 +704,7 @@ static void gui(filament::Engine* engine, filament::View*) {
             }
             if (ImGui::CollapsingHeader("Adjustments")) {
                 ImGui::SliderFloat("Contrast", &colorGrading.contrast, 0.0f, 2.0f);
+                ImGui::SliderFloat("Vibrance", &colorGrading.vibrance, 0.0f, 2.0f);
                 ImGui::SliderFloat("Saturation", &colorGrading.saturation, 0.0f, 2.0f);
             }
             if (ImGui::CollapsingHeader("Curves")) {
@@ -904,6 +905,7 @@ static void preRender(filament::Engine* engine, filament::View* view, filament::
                     )
                     .slopeOffsetPower(options.slope, options.offset, options.power)
                     .contrast(options.contrast)
+                    .vibrance(options.vibrance)
                     .saturation(options.saturation)
                     .curves(options.gamma, options.midPoint, options.scale)
                     .toneMapping(options.toneMapping)
