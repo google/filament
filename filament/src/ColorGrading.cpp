@@ -63,8 +63,9 @@ struct ColorGrading::BuilderDetails {
     float3 offset           = {0.0f};
     float3 power            = {1.0f};
     // Color adjustments
-    float  saturation       = 1.0f;
     float  contrast         = 1.0f;
+    float  vibrance         = 1.0f;
+    float  saturation       = 1.0f;
     // Curves
     float3 shadowGamma      = {1.0f};
     float3 midPoint         = {1.0f};
@@ -123,13 +124,18 @@ ColorGrading::Builder& ColorGrading::Builder::slopeOffsetPower(
     return *this;
 }
 
-ColorGrading::Builder& ColorGrading::Builder::saturation(float saturation) noexcept {
-    mImpl->saturation = clamp(saturation, 0.0f, 2.0f);
+ColorGrading::Builder& ColorGrading::Builder::contrast(float contrast) noexcept {
+    mImpl->contrast = clamp(contrast, 0.0f, 2.0f);
     return *this;
 }
 
-ColorGrading::Builder& ColorGrading::Builder::contrast(float contrast) noexcept {
-    mImpl->contrast = clamp(contrast, 0.0f, 2.0f);
+ColorGrading::Builder& ColorGrading::Builder::vibrance(float vibrance) noexcept {
+    mImpl->vibrance = clamp(vibrance, 0.0f, 2.0f);
+    return *this;
+}
+
+ColorGrading::Builder& ColorGrading::Builder::saturation(float saturation) noexcept {
+    mImpl->saturation = clamp(saturation, 0.0f, 2.0f);
     return *this;
 }
 
@@ -257,13 +263,28 @@ inline float3 colorDecisionList(float3 v, float3 slope, float3 offset, float3 po
 }
 
 UTILS_ALWAYS_INLINE
-inline constexpr float3 colorAdjustments(float3 v, float contrast, float saturation) {
+inline constexpr float3 contrast(float3 v, float contrast) {
     // Matches contrast as applied in DaVinci Resolve
-    v = MIDDLE_GRAY_ACEScct + contrast * (v - MIDDLE_GRAY_ACEScct);
+    return MIDDLE_GRAY_ACEScct + contrast * (v - MIDDLE_GRAY_ACEScct);
+}
 
-    // S-2016-001 uses Rec.709 luma coefficients for the ASC CDL, including saturation
-    float3 y = dot(v, LUMA_REC709);
+UTILS_ALWAYS_INLINE
+inline constexpr float3 saturation(float3 v, float saturation) {
+    const float3 y = dot(v, LUMA_REC709);
     return y + saturation * (v - y);
+}
+
+UTILS_ALWAYS_INLINE
+inline float3 vibrance(float3 v, float vibrance) {
+    float r = v.r - max(v.g, v.b);
+    float s = (vibrance - 1.0f) / (1.0f + exp(-r * 3.0f)) + 1.0f;
+    float3 l{(1.0f - s) * LUMA_REC709};
+    return float3{
+        dot(v, l + float3{s, 0.0f, 0.0f}),
+        dot(v, l + float3{0.0f, s, 0.0f}),
+        dot(v, l + float3{0.0f, 0.0f, s}),
+    };
+
 }
 
 UTILS_ALWAYS_INLINE
@@ -372,10 +393,17 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                     // ASC CDL
                     v = colorDecisionList(v, builder->slope, builder->offset, builder->power);
 
-                    // Contrast and saturation
-                    v = colorAdjustments(v, builder->contrast, builder->saturation);
+                    // Contrast in log space
+                    v = contrast(v, builder->contrast);
 
+                    // Back to linear space
                     v = config.logToLinearTransform(v);
+
+                    // Vibrance in linear space
+                    v = vibrance(v, builder->vibrance);
+
+                    // Saturation in linear space
+                    v = saturation(v, builder->saturation);
 
                     // Kill negative values before tone mapping
                     v = max(v, 0.0f);

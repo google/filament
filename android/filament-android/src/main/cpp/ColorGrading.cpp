@@ -130,6 +130,14 @@ Java_com_google_android_filament_ColorGrading_nBuilderContrast(JNIEnv*, jclass,
 
 extern "C"
 JNIEXPORT void JNICALL
+Java_com_google_android_filament_ColorGrading_nBuilderVibrance(JNIEnv*, jclass,
+        jlong nativeBuilder, jfloat vibrance) {
+    ColorGrading::Builder* builder = (ColorGrading::Builder*) nativeBuilder;
+    builder->vibrance(vibrance);
+}
+
+extern "C"
+JNIEXPORT void JNICALL
 Java_com_google_android_filament_ColorGrading_nBuilderSaturation(JNIEnv*, jclass,
         jlong nativeBuilder, jfloat saturation) {
     ColorGrading::Builder* builder = (ColorGrading::Builder*) nativeBuilder;

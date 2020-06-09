@@ -69,6 +69,7 @@ class FColorGrading;
  * - Shadows/mid-tones/highlights
  * - Slope/offset/power (CDL)
  * - Contrast
+ * - Vibrance
  * - Saturation
  * - Curves
  * - Tone mapping
@@ -83,6 +84,7 @@ class FColorGrading;
  *   ranges {0,0.333,0.550,1}
  * - Slope/offset/power: slope 1.0, offset 0.0, and power 1.0
  * - Contrast: 1.0
+ * - Vibrance: 1.0
  * - Saturation: 1.0
  * - Curves: gamma {1,1,1}, midPoint {1,1,1}, and scale {1,1,1}
  * - Tone mapping: ACES_LEGACY
@@ -256,6 +258,26 @@ public:
         Builder& contrast(float contrast) noexcept;
 
         /**
+         * Adjusts the saturation of the image based on the input color's saturation level.
+         * Colors with a high level of saturation are less affected than colors with low saturation
+         * levels.
+         *
+         * Lower vibrance values decrease intensity of the colors present in the image, and
+         * higher values increase the intensity of the colors in the image. A value of 1.0 has
+         * no effect.
+         *
+         * The vibrance is defined as a value in the range [0.0...2.0]. Values outside of that
+         * range will be clipped to that range.
+         *
+         * Vibrance adjustment is performed in linear space.
+         *
+         * @param vibrance Vibrance, between 0.0 and 2.0. 1.0 leaves vibrance unaffected
+         *
+         * @return This Builder, for chaining calls
+         */
+        Builder& vibrance(float vibrance) noexcept;
+
+        /**
          * Adjusts the saturation of the image. Lower values decrease intensity of the colors
          * present in the image, and higher values increase the intensity of the colors in the
          * image. A value of 1.0 has no effect.
@@ -263,7 +285,7 @@ public:
          * The saturation is defined as a value in the range [0.0...2.0]. Values outside of that
          * range will be clipped to that range.
          *
-         * Saturation adjustment is performed in log space.
+         * Saturation adjustment is performed in linear space.
          *
          * @param saturation Saturation, between 0.0 and 2.0. 1.0 leaves saturation unaffected
          *
