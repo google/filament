@@ -69,8 +69,8 @@ PostProcessManager::PostProcessMaterial::PostProcessMaterial(
     using namespace std;
     swap(mEngine, rhs.mEngine);
     swap(mData, rhs.mData);
-    swap(mProgram, rhs.mProgram);
     swap(mSize, rhs.mSize);
+    swap(mHasMaterial, rhs.mHasMaterial);
 }
 
 PostProcessManager::PostProcessMaterial& PostProcessManager::PostProcessMaterial::operator=(
@@ -78,21 +78,20 @@ PostProcessManager::PostProcessMaterial& PostProcessManager::PostProcessMaterial
     using namespace std;
     swap(mEngine, rhs.mEngine);
     swap(mData, rhs.mData);
-    swap(mProgram, rhs.mProgram);
     swap(mSize, rhs.mSize);
     return *this;
 }
 
 PostProcessManager::PostProcessMaterial::~PostProcessMaterial() {
-    assert(!mProgram || mMaterial == nullptr);
+    assert(!mHasMaterial || mMaterial == nullptr);
 }
 
 void PostProcessManager::PostProcessMaterial::terminate(FEngine& engine) noexcept {
-    if (mProgram) {
+    if (mHasMaterial) {
         engine.destroy(mMaterial);
         mMaterial = nullptr;
         mMaterialInstance = nullptr;
-        mProgram.clear();
+        mHasMaterial = false;
     } else {
         mEngine = nullptr;
         mData = nullptr;
@@ -100,12 +99,12 @@ void PostProcessManager::PostProcessMaterial::terminate(FEngine& engine) noexcep
 }
 
 void PostProcessManager::PostProcessMaterial::assertMaterial() const noexcept {
-    if (UTILS_UNLIKELY(!mProgram)) {
+    if (UTILS_UNLIKELY(!mHasMaterial)) {
         // TODO: After all materials using this class have been converted to the post-process material
         //       domain, load both OPAQUE and TRANSPARENT variants here.
         mMaterial = upcast(Material::Builder().package(mData, mSize).build(*mEngine));
         mMaterialInstance = mMaterial->getDefaultInstance();
-        mProgram = mMaterial->getProgram(0);
+        mHasMaterial = true;
     }
 }
 
@@ -119,12 +118,7 @@ PipelineState PostProcessManager::PostProcessMaterial::getPipelineState(uint8_t 
 }
 
 PipelineState PostProcessManager::PostProcessMaterial::getPipelineState() const noexcept {
-    assertMaterial();
-    return {
-            .program = mProgram,
-            .rasterState = mMaterial->getRasterState(),
-            .scissor = mMaterialInstance->getScissor()
-    };
+    return getPipelineState(0);
 }
 
 FMaterial* PostProcessManager::PostProcessMaterial::getMaterial() const {

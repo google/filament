@@ -148,8 +148,8 @@ private:
                 uint8_t const* mData;
             };
         };
-        mutable backend::Handle<backend::HwProgram> mProgram{};
         uint32_t mSize{};
+        mutable bool mHasMaterial{};
     };
 
     PostProcessMaterial mMipmapDepth;

@@ -79,7 +79,7 @@ static void printStringChunk(ostream& json, const ChunkContainer& container,
         filamat::ChunkType type, const char* title) {
     CString value;
     if (read(container, type, &value)) {
-        json << "\"" << title << "\": \"" << value.c_str() << "\",\n";
+        json << "\"" << title << "\": \"" << value.c_str_safe() << "\",\n";
     }
 }
 
