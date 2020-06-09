@@ -60,6 +60,7 @@ struct App {
     Engine* engine;
     SimpleViewer* viewer;
     Config config;
+    Camera* mainCamera;
 
     AssetLoader* loader;
     FilamentAsset* asset = nullptr;
@@ -91,6 +92,9 @@ struct App {
         IndexBuffer* groundIndexBuffer;
         Material* groundMaterial;
     } scene;
+
+    // 0 is the default "free camera". Additional cameras come from the gltf file.
+    int currentCamera = 0;
 };
 
 static const char* DEFAULT_IBL = "venetian_crossroads_2k";
@@ -376,6 +380,7 @@ int main(int argc, char** argv) {
         app.materials = (app.materialSource == GENERATE_SHADERS) ?
                 createMaterialGenerator(engine) : createUbershaderLoader(engine);
         app.loader = AssetLoader::create({engine, app.materials, app.names });
+        app.mainCamera = &view->getCamera();
         if (filename.isEmpty()) {
             app.asset = app.loader->createAssetFromBinary(
                     GLTF_VIEWER_DAMAGEDHELMET_DATA,
@@ -417,6 +422,38 @@ int main(int argc, char** argv) {
                 ImGui::Checkbox("DoF", &app.dofOptions.enabled);
                 ImGui::SliderFloat("Focus distance", &app.dofOptions.focusDistance, 0.0f, 30.0f);
                 ImGui::SliderFloat("Blur scale", &app.dofOptions.blurScale, 0.1f, 10.0f);
+
+                const FilamentAsset::CameraInfo* cameras = app.asset->getCameras();
+                const size_t cameraCount = app.asset->getCameraCount();
+
+                std::vector<std::string> names;
+                names.reserve(cameraCount + 1);
+                names.push_back("Free camera");
+                for (size_t i = 0; i < cameraCount; i++) {
+                    if (cameras[i].name) {
+                        names.emplace_back(cameras[i].name);
+                        continue;
+                    }
+                    char buf[32];
+                    sprintf(buf, "Unnamed camera %ld", i);
+                    names.emplace_back(buf);
+                }
+
+                std::vector<const char*> cstrings;
+                cstrings.reserve(names.size());
+                for (size_t i = 0; i < names.size(); i++) {
+                    cstrings.push_back(names[i].c_str());
+                }
+
+                ImGui::ListBox("Cameras", &app.currentCamera, cstrings.data(), cstrings.size());
+
+                Camera* selectedCamera;
+                if (app.currentCamera == 0) {
+                    selectedCamera = app.mainCamera;
+                } else {
+                    const int gltfCamera = app.currentCamera - 1;
+                    selectedCamera = app.asset->getCameras()[gltfCamera].camera;
+                }
             }
         });
 
@@ -447,7 +484,39 @@ int main(int argc, char** argv) {
         // Add renderables to the scene as they become ready.
         app.viewer->populateScene(app.asset, !app.actualSize);
 
+        const size_t cameraCount = app.asset->getCameraCount();
+        if (app.currentCamera == 0) {
+            view->setCamera(app.mainCamera);
+        } else {
+            const int gltfCamera = app.currentCamera - 1;
+            if (gltfCamera < cameraCount) {
+                const FilamentAsset::CameraInfo* cameras = app.asset->getCameras();
+                const auto& cam = cameras[gltfCamera];
+                assert(cam.camera);
+                view->setCamera(cam.camera);
+
+                // Adjust the aspect ratio of this camera to the viewport.
+                const Viewport& vp = view->getViewport();
+                double aspectRatio = (double) vp.width / vp.height;
+                auto s = mat4::scaling(double3 {1.0, aspectRatio, 1.0});
+                cam.camera->setScalingMatrix(s);
+            }
+        }
+
         app.viewer->applyAnimation(now);
+    };
+
+    auto resize = [&app](Engine* engine, View* view) {
+        Camera& camera = view->getCamera();
+        if (&camera == app.mainCamera) {
+            // Don't adjut the aspect ratio of the main camera, this is done inside of
+            // FilamentApp.cpp
+            return;
+        }
+        const Viewport& vp = view->getViewport();
+        double aspectRatio = (double) vp.width / vp.height;
+        auto s = mat4::scaling(double3 {1.0, aspectRatio, 1.0});
+        camera.setScalingMatrix(s);
     };
 
     auto gui = [&app](Engine* engine, View* view) {
@@ -487,6 +556,7 @@ int main(int argc, char** argv) {
 
     FilamentApp& filamentApp = FilamentApp::get();
     filamentApp.animate(animate);
+    filamentApp.resize(resize);
 
     filamentApp.setDropHandler([&] (std::string path) {
         app.viewer->removeAsset();
