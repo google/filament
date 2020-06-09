@@ -23,6 +23,7 @@
 #include <utils/Entity.h>
 
 namespace filament {
+    class Camera;
     class Engine;
     class MaterialInstance;
 }
@@ -39,8 +40,8 @@ class FilamentInstance;
  * For usage instructions, see the documentation for AssetLoader.
  *
  * This class owns a hierarchy of entities that have been loaded from a glTF asset. Every entity has
- * a filament::TransformManager component, and some entities also have \c Name, \c Renderable, or
- * \c Light components.
+ * a filament::TransformManager component, and some entities also have \c Name, \c Renderable,
+ * \c Light, or \c Camera components.
  *
  * In addition to the aforementioned entities, an asset has strong ownership over a list of
  * filament::VertexBuffer, filament::IndexBuffer, filament::MaterialInstance, filament::Texture,
@@ -50,7 +51,6 @@ class FilamentInstance;
  * and upload data into vertex buffers and index buffers.
  *
  * \todo Only the default glTF scene is loaded, other glTF scenes are ignored.
- * \todo Cameras are ignored.
  */
 class FilamentAsset {
 public:
@@ -75,6 +75,30 @@ public:
      * Gets the number of entities returned by getLightEntities().
      */
     size_t getLightEntityCount() const noexcept;
+
+    struct CameraInfo {
+        // The Filament camera component representing this glTF camera.
+        filament::Camera* camera;
+
+        // Name of the camera node present in the glTF file. May be null.
+        char* name;
+
+        // The aspect ratio present in the glTF camera node.
+        // A value of 0 means the user should adjust the aspect ratio to match the Viewport. In this
+        // case, gltfio sets the camera projection's aspect ratio to 1.0, and allows the user to
+        // adjust it via filament::Camera::setScalingMatrix.
+        double requestedAspectRatio;
+    };
+
+    /**
+     * Gets a list of CameraInfo structs representing the cameras in the scene.
+     */
+    const CameraInfo* getCameras() const noexcept;
+
+    /**
+     * Gets the number of CameraInfo entries returned by getCameras().
+     */
+    size_t getCameraCount() const noexcept;
 
     /**
      * Gets the transform root for the asset, which has no matching glTF node.

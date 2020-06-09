@@ -96,6 +96,14 @@ struct FFilamentAsset : public FilamentAsset {
         return mLightEntities.size();
     }
 
+    const CameraInfo* getCameras() const noexcept {
+        return mCameras.empty() ? nullptr : mCameras.data();
+    }
+
+    size_t getCameraCount() const noexcept {
+        return mCameras.size();
+    }
+
     utils::Entity getRoot() const noexcept {
         return mRoot;
     }
@@ -181,6 +189,7 @@ struct FFilamentAsset : public FilamentAsset {
     std::vector<uint8_t> mGlbData;
     std::vector<utils::Entity> mEntities;
     std::vector<utils::Entity> mLightEntities;
+    std::vector<CameraInfo> mCameras;
     std::vector<filament::MaterialInstance*> mMaterialInstances;
     std::vector<filament::VertexBuffer*> mVertexBuffers;
     std::vector<filament::IndexBuffer*> mIndexBuffers;
