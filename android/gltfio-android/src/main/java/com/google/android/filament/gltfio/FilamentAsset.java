@@ -165,10 +165,11 @@ public class FilamentAsset {
     }
 
     /**
-     * Creates or retrieves the <code>Animator</code> for this asset.
+     * Creates or retrieves the <code>Animator</code> interface for this asset.
      *
      * <p>When calling this for the first time, this must be called after
-     * {@link ResourceLoader#loadResources}.</p>
+     * {@link ResourceLoader#loadResources}. When the asset is destroyed, its
+     * animator becomes invalid.</p>
      */
     public @NonNull Animator getAnimator() {
         if (mAnimator != null) {
@@ -198,6 +199,7 @@ public class FilamentAsset {
     }
 
     void clearNativeObject() {
+        mAnimator.clearNativeObject();
         mNativeObject = 0;
     }
 
