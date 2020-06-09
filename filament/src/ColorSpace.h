@@ -52,6 +52,18 @@ constexpr mat3f sRGB_to_XYZ{
      0.1804380f,  0.0721750f,  0.9503040f
 };
 
+constexpr mat3f REC2020_to_XYZ{
+     0.6369580f,  0.2627002f,  0.0000000f,
+     0.1446169f,  0.6779981f,  0.0280727f,
+     0.1688810f,  0.0593017f,  1.0609851f
+};
+
+constexpr mat3f XYZ_to_REC2020{
+     1.7166512f, -0.6666844f,  0.0176399f,
+    -0.3556708f,  1.6164812f, -0.0427706f,
+    -0.2533663f,  0.0157685f,  0.9421031f
+};
+
 constexpr mat3f XYZ_to_CIECAT02{
      0.7328000f, -0.7036000f,  0.0030000f,
      0.4296000f,  1.6975000f,  0.0136000f,
@@ -99,6 +111,10 @@ constexpr mat3f sRGB_to_AP1{
      0.33951f,  0.91634f,  0.10957f,
      0.04737f,  0.01345f,  0.86961f
 };
+
+constexpr mat3f sRGB_to_REC2020 = XYZ_to_REC2020 * sRGB_to_XYZ;
+
+constexpr mat3f REC2020_to_sRGB = XYZ_to_sRGB * REC2020_to_XYZ;
 
 constexpr mat3f sRGB_to_LMS = XYZ_to_CIECAT02 * sRGB_to_XYZ;
 

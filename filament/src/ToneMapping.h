@@ -130,7 +130,7 @@ UTILS_ALWAYS_INLINE
 inline float3 ACES(float3 color, float brightness) {
     // Some bits were removed to adapt to our desired output
     // Input:  ACEScg (AP1)
-    // Output: linear sRGB
+    // Output: ACEScg (AP1)
 
     // "Glow" module constants
     constexpr float RRT_GLOW_GAIN = 0.05f;
@@ -188,8 +188,7 @@ inline float3 ACES(float3 color, float brightness) {
     // Apply desaturation to compensate for luminance difference
     linearCV = mix(float3(dot(linearCV, LUMA_AP1)), linearCV, ODT_SAT_FACTOR);
 
-    // Convert to display primary encoding (Rec.709 primaries, D65 white point)
-    return AP1_to_sRGB * linearCV;
+    return linearCV;
 }
 
 } // namespace aces
