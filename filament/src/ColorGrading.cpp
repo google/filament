@@ -223,7 +223,7 @@ mat3f selectColorGradingTransformIn(ColorGrading::ToneMapping toneMapping) {
         case ColorGrading::ToneMapping::ACES:
             return sRGB_to_AP1;
         case ColorGrading::ToneMapping::FILMIC:
-            return mat3f{};
+            return mat3f{}; // stay in sRGB
         default:
             return sRGB_to_REC2020;
     }
@@ -235,7 +235,7 @@ mat3f selectColorGradingTransformOut(ColorGrading::ToneMapping toneMapping) {
         case ColorGrading::ToneMapping::ACES:
             return AP1_to_sRGB;
         case ColorGrading::ToneMapping::FILMIC:
-            return mat3f{};
+            return mat3f{}; // stay in sRGB
         default:
             return REC2020_to_sRGB;
     }
@@ -446,7 +446,7 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                     // Tone mapping
                     v = config.toneMapper(v);
 
-                    // Convert to color grading color space
+                    // Convert to output color space
                     // TODO: allow to customize the output color space,
                     v = config.colorGradingTransformOut * v;
 
