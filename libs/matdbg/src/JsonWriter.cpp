@@ -68,7 +68,7 @@ static void printFloatChunk(ostream& json, const ChunkContainer& container, Chun
 }
 
 static void printUint32Chunk(ostream& json, const ChunkContainer& container,
-        filamat::ChunkType type, const char* title) {
+        ChunkType type, const char* title) {
     uint32_t value;
     if (read(container, type, &value)) {
         json << "\"" << title << "\": " << value << ",\n";
@@ -76,7 +76,7 @@ static void printUint32Chunk(ostream& json, const ChunkContainer& container,
 }
 
 static void printStringChunk(ostream& json, const ChunkContainer& container,
-        filamat::ChunkType type, const char* title) {
+        ChunkType type, const char* title) {
     CString value;
     if (read(container, type, &value)) {
         json << "\"" << title << "\": \"" << value.c_str_safe() << "\",\n";
@@ -84,10 +84,11 @@ static void printStringChunk(ostream& json, const ChunkContainer& container,
 }
 
 static bool printMaterial(ostream& json, const ChunkContainer& container) {
-    printStringChunk(json, container, filamat::MaterialName, "name");
-    printUint32Chunk(json, container, filamat::MaterialVersion, "version");
+    printStringChunk(json, container, MaterialName, "name");
+    printUint32Chunk(json, container, MaterialVersion, "version");
     json << "\"shading\": {\n";
     printChunk<Shading, uint8_t>(json, container, MaterialShading, "model");
+    printChunk<MaterialDomain, uint8_t>(json, container, ChunkType::MaterialDomain, "material_domain");
     printChunk<VertexDomain, uint8_t>(json, container, MaterialVertexDomain, "vertex_domain");
     printChunk<Interpolation, uint8_t>(json, container, MaterialInterpolation, "interpolation");
     printChunk<bool, bool>(json, container, MaterialShadowMultiplier, "shadow_multiply");
