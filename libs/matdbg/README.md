@@ -54,6 +54,7 @@ couple methods that are called from the Filament engine:
 - **addMaterial** Notifies the debugger that the given material package is being loaded into the
   engine.
 - **setEditCallback** Sets up a callback that allows the Filament engine to listen for shader edits.
+- **setQueryCallback** Sets up a callback that allows the debugger to ask for current information.
 
 ## JavaScript Client
 

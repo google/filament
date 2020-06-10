@@ -85,6 +85,15 @@ const char* toString(VertexDomain domain) noexcept {
     }
 }
 
+
+inline
+const char* toString(MaterialDomain domain) noexcept {
+    switch (domain) {
+        case MaterialDomain::SURFACE: return "surface";
+        case MaterialDomain::POST_PROCESS: return "post process";
+    }
+}
+
 inline
 const char* toString(backend::CullingMode cullingMode) noexcept {
     switch (cullingMode) {
