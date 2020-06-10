@@ -80,7 +80,7 @@ inline void decomposeMatrix(const filament::math::mat4f& mat, filament::math::fl
     }
     else {
       // Set to idendity if close to zero
-      *rotation = filament::math::quatf(1);
+      *rotation = quatf(1);
     }
 }
 
