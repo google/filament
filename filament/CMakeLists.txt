@@ -298,8 +298,14 @@ target_link_libraries(${TARGET} PUBLIC filaflat)
 target_link_libraries(${TARGET} PUBLIC filabridge)
 target_link_libraries(${TARGET} PUBLIC ibl)
 
-# Link in matdbg for Desktop + Debug only since it pulls in filamat and a web server.
+# By default, link in matdbg for Desktop + Debug only since it pulls in filamat and a web server.
 if (CMAKE_BUILD_TYPE STREQUAL "Debug" AND NOT IOS AND NOT ANDROID AND NOT WEBGL)
+    option(FILAMENT_ENABLE_MATDBG "Enable the material debugger" ON)
+else()
+    option(FILAMENT_ENABLE_MATDBG "Enable the material debugger" OFF)
+endif()
+
+if (FILAMENT_ENABLE_MATDBG)
     target_link_libraries(${TARGET} PUBLIC matdbg)
     add_definitions(-DFILAMENT_ENABLE_MATDBG=1)
 else()

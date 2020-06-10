@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.6)
 
 option(FILAMENT_SUPPORTS_VULKAN "Enables Vulkan on Android" OFF)
+option(FILAMENT_ENABLE_MATDBG "Enables Material debugger" OFF)
 
 set(FILAMENT_DIR ${FILAMENT_DIST_DIR})
 
@@ -31,6 +32,10 @@ set_target_properties(geometry PROPERTIES IMPORTED_LOCATION
 add_library(filabridge STATIC IMPORTED)
 set_target_properties(filabridge PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libfilabridge.a)
+
+add_library(matdbg STATIC IMPORTED)
+set_target_properties(matdbg PROPERTIES IMPORTED_LOCATION
+        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libmatdbg.a)
 
 add_library(bluevk STATIC IMPORTED)
 set_target_properties(bluevk PROPERTIES IMPORTED_LOCATION
@@ -91,6 +96,7 @@ target_link_libraries(filament-jni
     PRIVATE android
     PRIVATE jnigraphics
     PRIVATE utils
+    $<$<STREQUAL:${FILAMENT_ENABLE_MATDBG},ON>:matdbg>
     $<$<STREQUAL:${FILAMENT_SUPPORTS_VULKAN},ON>:bluevk>
     $<$<STREQUAL:${FILAMENT_SUPPORTS_VULKAN},ON>:smol-v>
 )
