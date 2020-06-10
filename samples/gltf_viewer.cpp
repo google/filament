@@ -429,14 +429,16 @@ int main(int argc, char** argv) {
                 std::vector<std::string> names;
                 names.reserve(cameraCount + 1);
                 names.push_back("Free camera");
+                int c = 0;
                 for (size_t i = 0; i < cameraCount; i++) {
-                    if (cameras[i].name) {
-                        names.emplace_back(cameras[i].name);
-                        continue;
+                    const char* n = app.asset->getName(cameras[i].camera->getEntity());
+                    if (n) {
+                        names.emplace_back(n);
+                    } else {
+                        char buf[32];
+                        sprintf(buf, "Unnamed camera %d", c++);
+                        names.emplace_back(buf);
                     }
-                    char buf[32];
-                    sprintf(buf, "Unnamed camera %ld", i);
-                    names.emplace_back(buf);
                 }
 
                 std::vector<const char*> cstrings;

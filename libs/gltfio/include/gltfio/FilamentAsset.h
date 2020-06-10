@@ -80,9 +80,6 @@ public:
         // The Filament camera component representing this glTF camera.
         filament::Camera* camera;
 
-        // Name of the camera node present in the glTF file. May be null.
-        char* name;
-
         // The aspect ratio present in the glTF camera node.
         // A value of 0 means the user should adjust the aspect ratio to match the Viewport. In this
         // case, gltfio sets the camera projection's aspect ratio to 1.0, and allows the user to

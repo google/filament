@@ -59,11 +59,6 @@ FFilamentAsset::~FFilamentAsset() {
     for (auto tx : mTextures) {
         mEngine->destroy(tx);
     }
-    for (auto cam : mCameras) {
-        // No need to call mEngine->destroy(cam.camera) here. The camera component was destroyeed
-        // in the above call to mEngine->destroy(entity).
-        free(cam.name);
-    }
 }
 
 Animator* FFilamentAsset::getAnimator() noexcept {

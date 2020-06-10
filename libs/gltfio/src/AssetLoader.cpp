@@ -106,6 +106,7 @@ static const char* getNodeName(const cgltf_node* node, const char* defaultNodeNa
     if (node->name) return node->name;
     if (node->mesh && node->mesh->name) return node->mesh->name;
     if (node->light && node->light->name) return node->light->name;
+    if (node->camera && node->camera->name) return node->camera->name;
     return defaultNodeName;
 }
 
@@ -804,12 +805,6 @@ void FAssetLoader::createCamera(const cgltf_camera* camera, Entity entity) {
     FilamentAsset::CameraInfo caminfo;
     caminfo.camera = filamentCamera;
     caminfo.requestedAspectRatio = 0.0;
-    caminfo.name = nullptr;
-
-    if (camera->name) {
-        caminfo.name = (char*) malloc(strlen(camera->name));
-        strcpy(caminfo.name, camera->name);
-    }
 
     if (camera->type == cgltf_camera_type_perspective) {
         auto& projection = camera->data.perspective;
