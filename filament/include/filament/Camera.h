@@ -213,7 +213,7 @@ public:
      * aspect ratio:
      *     mat4::scaling(double3 {1.0, width / height, 1.0});
      *
-     * By default, this is an identiy matrix.
+     * By default, this is an identity matrix.
      *
      * @param scaling     matrix to be applied after the projection matrix.
      *
