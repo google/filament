@@ -411,7 +411,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             }
         }
         if (fxaa) {
-            input = ppm.fxaa(fg, input, colorGradingConfig.ldrFormat, colorGrading || translucent);
+            input = ppm.fxaa(fg, input, colorGradingConfig.ldrFormat, !colorGrading || translucent);
         }
         if (scaled) {
             if (UTILS_LIKELY(!blending && upscalingQuality == View::QualityLevel::LOW)) {
