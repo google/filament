@@ -31,7 +31,6 @@
 #include <utils/JobSystem.h>
 #include <utils/Systrace.h>
 
-#include <cstring>
 #include <functional>
 
 namespace filament {
@@ -73,6 +72,32 @@ struct ColorGrading::BuilderDetails {
     float3 highlightScale   = {1.0f};
     // Keep last
     bool hasAdjustments     = false;
+
+    bool operator!=(const BuilderDetails &rhs) const {
+        return !(rhs == *this);
+    }
+
+    bool operator==(const BuilderDetails &rhs) const {
+        // Note: Do NOT compare hasAdjustments
+        return toneMapping == rhs.toneMapping &&
+               whiteBalance == rhs.whiteBalance &&
+               outRed == rhs.outRed &&
+               outGreen == rhs.outGreen &&
+               outBlue == rhs.outBlue &&
+               shadows == rhs.shadows &&
+               midtones == rhs.midtones &&
+               highlights == rhs.highlights &&
+               tonalRanges == rhs.tonalRanges &&
+               slope == rhs.slope &&
+               offset == rhs.offset &&
+               power == rhs.power &&
+               contrast == rhs.contrast &&
+               vibrance == rhs.vibrance &&
+               saturation == rhs.saturation &&
+               shadowGamma == rhs.shadowGamma &&
+               midPoint == rhs.midPoint &&
+               highlightScale == rhs.highlightScale;
+    }
 };
 
 using BuilderType = ColorGrading;
@@ -155,7 +180,7 @@ ColorGrading* ColorGrading::Builder::build(Engine& engine) {
     // We skip the tonemapping operator on purpose since we always want to apply it
     BuilderDetails defaults;
     defaults.toneMapping = mImpl->toneMapping;
-    bool hasAdjustments = memcmp(&defaults, mImpl, sizeof(BuilderDetails)) != 0;
+    bool hasAdjustments = defaults != *mImpl;
     mImpl->hasAdjustments = hasAdjustments;
 
     return upcast(engine).createColorGrading(*this);
