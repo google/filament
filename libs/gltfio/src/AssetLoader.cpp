@@ -826,10 +826,10 @@ void FAssetLoader::createCamera(const cgltf_camera* camera, Entity entity) {
     } else if (camera->type == cgltf_camera_type_orthographic) {
         auto& projection = camera->data.orthographic;
 
-        const double left   = -projection.xmag / 2.0;
-        const double right  =  projection.xmag / 2.0;
-        const double bottom = -projection.ymag / 2.0;
-        const double top    =  projection.ymag / 2.0;
+        const double left   = -projection.xmag * 0.5;
+        const double right  =  projection.xmag * 0.5;
+        const double bottom = -projection.ymag * 0.5;
+        const double top    =  projection.ymag * 0.5;
 
         caminfo.requestedAspectRatio = (right - left) / (top - bottom);
 

@@ -208,18 +208,20 @@ public:
 
     /** Sets an additional matrix that scales the projection matrix.
      *
-     * This is useful to adjust the aspect ratio of the camera independent from the projection.
-     * First, pass an aspect of 1.0 to setProjection. Then set the scaling matrix with your desired
-     * aspect ratio:
-     *     mat4::scaling(double3 {1.0, width / height, 1.0});
+     * This is useful to adjust the aspect ratio of the camera independent from its projection.
+     * First, pass an aspect of 1.0 to setProjection. Then set the scaling with your desired aspect
+     * ratio:
+     *
+     *     camera->setScaling(double4 {1.0, width / height, 1.0, 1.0});
+     *
      *
      * By default, this is an identity matrix.
      *
-     * @param scaling     matrix to be applied after the projection matrix.
+     * @param scaling     diaganol of the matrix to be applied after the projection matrix.
      *
      * @see setProjection, setLensProjection, setCustomProjection
      */
-    void setScalingMatrix(math::mat4 const& scaling) noexcept;
+    void setScaling(math::double4 const& scaling) noexcept;
 
     /** Returns the projection matrix used for rendering.
      *

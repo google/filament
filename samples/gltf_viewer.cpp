@@ -500,8 +500,7 @@ int main(int argc, char** argv) {
                 // Adjust the aspect ratio of this camera to the viewport.
                 const Viewport& vp = view->getViewport();
                 double aspectRatio = (double) vp.width / vp.height;
-                auto s = mat4::scaling(double3 {1.0, aspectRatio, 1.0});
-                cam.camera->setScalingMatrix(s);
+                cam.camera->setScaling(double4 {1.0, aspectRatio, 1.0, 1.0});
             }
         }
 
@@ -517,8 +516,7 @@ int main(int argc, char** argv) {
         }
         const Viewport& vp = view->getViewport();
         double aspectRatio = (double) vp.width / vp.height;
-        auto s = mat4::scaling(double3 {1.0, aspectRatio, 1.0});
-        camera.setScalingMatrix(s);
+        camera.setScaling(double4 {1.0, aspectRatio, 1.0, 1.0});
     };
 
     auto gui = [&app](Engine* engine, View* view) {
