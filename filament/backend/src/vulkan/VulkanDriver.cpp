@@ -27,7 +27,9 @@
 #include <utils/CString.h>
 #include <utils/trap.h>
 
+#ifndef NDEBUG
 #include <set>
+#endif
 
 // Vulkan functions often immediately dereference pointers, so it's fine to pass in a pointer
 // to a stack-allocated variable.
@@ -1160,9 +1162,8 @@ void VulkanDriver::blit(TargetBufferFlags buffers,
     };
 
     if (!mContext.currentCommands) {
-        // NOTE: We do not call flushWorkCommandBuffer here. The pipeline barriers pushed by
-        // "transitionImageLayout" is hopefully sufficient for proper synchronization.
         vkblit(acquireWorkCommandBuffer(mContext));
+        flushWorkCommandBuffer(mContext);
     } else {
         vkblit(mContext.currentCommands->cmdbuffer);
     }
