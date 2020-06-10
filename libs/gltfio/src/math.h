@@ -79,8 +79,8 @@ inline void decomposeMatrix(const filament::math::mat4f& mat, filament::math::fl
         *rotation = clone.toQuaternion();
     }
     else {
-      // Set to idendity if close to zero
-      *rotation = quatf(1);
+        // Set to idendity if close to zero
+        *rotation = quatf(1);
     }
 }
 
