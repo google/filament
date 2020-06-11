@@ -568,7 +568,7 @@ bool MetalDriver::isRenderTargetFormatSupported(TextureFormat format) {
 }
 
 bool MetalDriver::isFrameBufferFetchSupported() {
-#if defined(IOS)
+#if defined(IOS) && !defined(FILAMENT_IOS_SIMULATOR)
     return true;
 #else
     return false;
@@ -818,7 +818,15 @@ void MetalDriver::popGroupMarker(int dummy) {
 }
 
 void MetalDriver::startCapture(int) {
+#if (TARGET_OS_IOS && __IPHONE_OS_VERSION_MIN_REQUIRED < 130000) || \
+    (TARGET_OS_OSX && __MAC_OS_X_VERSION_MIN_REQUIRED < 101500)
     [[MTLCaptureManager sharedCaptureManager] startCaptureWithDevice:mContext->device];
+#else
+    MTLCaptureDescriptor* descriptor = [MTLCaptureDescriptor new];
+    descriptor.captureObject = mContext->device;
+    [[MTLCaptureManager sharedCaptureManager] startCaptureWithDescriptor:descriptor
+                                                                       error:nil];
+#endif
 }
 
 void MetalDriver::stopCapture(int) {
