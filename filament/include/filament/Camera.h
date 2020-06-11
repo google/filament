@@ -217,7 +217,7 @@ public:
      *
      * By default, this is an identity matrix.
      *
-     * @param scaling     diaganol of the scaling matrix to be applied after the projection matrix.
+     * @param scaling     diagonal of the scaling matrix to be applied after the projection matrix.
      *
      * @see setProjection, setLensProjection, setCustomProjection
      */
@@ -246,7 +246,7 @@ public:
 
     /** Returns the scaling amount used to scale the projection matrix.
      *
-     * @return the diaganol of the scaling matrix applied after the projection matrix.
+     * @return the diagonal of the scaling matrix applied after the projection matrix.
      *
      * @see setScaling
      */
