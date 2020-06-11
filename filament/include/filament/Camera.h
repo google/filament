@@ -209,7 +209,7 @@ public:
     /** Sets an additional matrix that scales the projection matrix.
      *
      * This is useful to adjust the aspect ratio of the camera independent from its projection.
-     * First, pass an aspect of 1.0 to setProjection. Then set the scaling with your desired aspect
+     * First, pass an aspect of 1.0 to setProjection. Then set the scaling with the desired aspect
      * ratio:
      *
      *     camera->setScaling(double4 {1.0, width / height, 1.0, 1.0});
@@ -217,7 +217,7 @@ public:
      *
      * By default, this is an identity matrix.
      *
-     * @param scaling     diaganol of the matrix to be applied after the projection matrix.
+     * @param scaling     diaganol of the scaling matrix to be applied after the projection matrix.
      *
      * @see setProjection, setLensProjection, setCustomProjection
      */
@@ -242,6 +242,15 @@ public:
      * @see setProjection, setLensProjection, getProjectionMatrix
      */
     const math::mat4 getCullingProjectionMatrix() const noexcept;
+
+
+    /** Returns the scaling amount used to scale the projection matrix.
+     *
+     * @return the diaganol of the scaling matrix applied after the projection matrix.
+     *
+     * @see setScaling
+     */
+    const math::double4& getScaling() const noexcept;
 
 
     //! Returns the frustum's near plane

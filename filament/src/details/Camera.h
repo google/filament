@@ -71,6 +71,10 @@ public:
         return math::mat4(mScaling) * mProjectionForCulling;
     }
 
+    const math::double4& getScaling() const noexcept {
+        return mScaling;
+    }
+
     float getNear() const noexcept { return mNear; }
     float getCullingFar() const noexcept { return mFar; }
 

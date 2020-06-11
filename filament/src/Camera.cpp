@@ -307,6 +307,10 @@ const mat4 Camera::getCullingProjectionMatrix() const noexcept {
     return upcast(this)->getCullingProjectionMatrix();
 }
 
+const math::double4& Camera::getScaling() const noexcept {
+    return upcast(this)->getScaling();
+}
+
 float Camera::getNear() const noexcept {
     return upcast(this)->getNear();
 }

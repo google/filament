@@ -802,27 +802,23 @@ void FAssetLoader::createLight(const cgltf_light* light, Entity entity) {
 void FAssetLoader::createCamera(const cgltf_camera* camera, Entity entity) {
     Camera* filamentCamera = mEngine->createCamera(entity);
 
-    FilamentAsset::CameraInfo caminfo;
-    caminfo.camera = filamentCamera;
-    caminfo.requestedAspectRatio = 0.0;
-
     if (camera->type == cgltf_camera_type_perspective) {
         auto& projection = camera->data.perspective;
 
         const cgltf_float yfovDegrees = 180.0 / F_PI * projection.yfov;
 
-        // Use a default aspect ratio of 1.0 if the provided one is missing (set to 0.0).
-        // According to the glTF spec, in this scenario we should match the surface's aspect ratio.
-        // It will be up to the client to do this via camera->setScalingMatrix.
-        const double aspect = projection.aspect_ratio > 0.0 ? projection.aspect_ratio : 1.0;
-        caminfo.requestedAspectRatio = projection.aspect_ratio;
-
         // Use an "infinite" zfar plane if the provided one is missing (set to 0.0).
         const double far = projection.zfar > 0.0 ? projection.zfar : 100000000;
 
-        filamentCamera->setProjection(yfovDegrees, aspect,
+        filamentCamera->setProjection(yfovDegrees, 1.0,
                 projection.znear, far,
                 filament::Camera::Fov::VERTICAL);
+
+        // Use a default aspect ratio of 1.0 if the provided one is missing.
+        const double aspect = projection.aspect_ratio > 0.0 ? projection.aspect_ratio : 1.0;
+
+        // Use the scaling matrix to set the aspect ratio, so clients can easily change it.
+        filamentCamera->setScaling(double4 {1.0, aspect, 1.0, 1.0});
     } else if (camera->type == cgltf_camera_type_orthographic) {
         auto& projection = camera->data.orthographic;
 
@@ -831,8 +827,6 @@ void FAssetLoader::createCamera(const cgltf_camera* camera, Entity entity) {
         const double bottom = -projection.ymag * 0.5;
         const double top    =  projection.ymag * 0.5;
 
-        caminfo.requestedAspectRatio = (right - left) / (top - bottom);
-
         filamentCamera->setProjection(Camera::Projection::ORTHO,
                 left, right, bottom, top, projection.znear, projection.zfar);
     } else {
@@ -840,7 +834,7 @@ void FAssetLoader::createCamera(const cgltf_camera* camera, Entity entity) {
         return;
     }
 
-    mResult->mCameras.push_back(caminfo);
+    mResult->mCameraEntities.push_back(entity);
 }
 
 MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inputMat,

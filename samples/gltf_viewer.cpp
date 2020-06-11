@@ -423,15 +423,15 @@ int main(int argc, char** argv) {
                 ImGui::SliderFloat("Focus distance", &app.dofOptions.focusDistance, 0.0f, 30.0f);
                 ImGui::SliderFloat("Blur scale", &app.dofOptions.blurScale, 0.1f, 10.0f);
 
-                const FilamentAsset::CameraInfo* cameras = app.asset->getCameras();
-                const size_t cameraCount = app.asset->getCameraCount();
+                const utils::Entity* cameras = app.asset->getCameraEntities();
+                const size_t cameraCount = app.asset->getCameraEntityCount();
 
                 std::vector<std::string> names;
                 names.reserve(cameraCount + 1);
                 names.push_back("Free camera");
                 int c = 0;
                 for (size_t i = 0; i < cameraCount; i++) {
-                    const char* n = app.asset->getName(cameras[i].camera->getEntity());
+                    const char* n = app.asset->getName(cameras[i]);
                     if (n) {
                         names.emplace_back(n);
                     } else {
@@ -448,14 +448,6 @@ int main(int argc, char** argv) {
                 }
 
                 ImGui::ListBox("Cameras", &app.currentCamera, cstrings.data(), cstrings.size());
-
-                Camera* selectedCamera;
-                if (app.currentCamera == 0) {
-                    selectedCamera = app.mainCamera;
-                } else {
-                    const int gltfCamera = app.currentCamera - 1;
-                    selectedCamera = app.asset->getCameras()[gltfCamera].camera;
-                }
             }
         });
 
@@ -486,21 +478,22 @@ int main(int argc, char** argv) {
         // Add renderables to the scene as they become ready.
         app.viewer->populateScene(app.asset, !app.actualSize);
 
-        const size_t cameraCount = app.asset->getCameraCount();
+        const size_t cameraCount = app.asset->getCameraEntityCount();
         if (app.currentCamera == 0) {
             view->setCamera(app.mainCamera);
         } else {
             const int gltfCamera = app.currentCamera - 1;
             if (gltfCamera < cameraCount) {
-                const FilamentAsset::CameraInfo* cameras = app.asset->getCameras();
-                const auto& cam = cameras[gltfCamera];
-                assert(cam.camera);
-                view->setCamera(cam.camera);
+                const utils::Entity* cameras = app.asset->getCameraEntities();
+                Camera* c = engine->getCameraComponent(cameras[gltfCamera]);
+                assert(c);
+                view->setCamera(c);
 
-                // Adjust the aspect ratio of this camera to the viewport.
+                // Override the aspect ratio in the glTF file and adjust the aspect ratio of this
+                // camera to the viewport.
                 const Viewport& vp = view->getViewport();
                 double aspectRatio = (double) vp.width / vp.height;
-                cam.camera->setScaling(double4 {1.0, aspectRatio, 1.0, 1.0});
+                c->setScaling(double4 {1.0, aspectRatio, 1.0, 1.0});
             }
         }
 

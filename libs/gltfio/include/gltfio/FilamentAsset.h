@@ -76,26 +76,26 @@ public:
      */
     size_t getLightEntityCount() const noexcept;
 
-    struct CameraInfo {
-        // The Filament camera component representing this glTF camera.
-        filament::Camera* camera;
-
-        // The aspect ratio present in the glTF camera node.
-        // A value of 0 means the user should adjust the aspect ratio to match the Viewport. In this
-        // case, gltfio sets the camera projection's aspect ratio to 1.0, and allows the user to
-        // adjust it via filament::Camera::setScalingMatrix.
-        double requestedAspectRatio;
-    };
+    /**
+     * Gets the list of entities in the scene representing cameras. All of these have a \c Camera
+     * component.
+     *
+     * Note about aspect ratios:
+     * gltfio always uses an aspect ratio of 1.0 when setting the projection matrix for perspective
+     * cameras. gltfio then sets the camera's scaling matrix with the aspect ratio specified in the
+     * glTF file (if present).
+     *
+     * The camera's scaling matrix allows clients to adjust the aspect ratio independently from the
+     * camera's projection.
+     *
+     * @see filament::Camera::setScaling
+     */
+    const utils::Entity* getCameraEntities() const noexcept;
 
     /**
-     * Gets a list of CameraInfo structs representing the cameras in the scene.
+     * Gets the number of entities returned by getCameraEntities().
      */
-    const CameraInfo* getCameras() const noexcept;
-
-    /**
-     * Gets the number of CameraInfo entries returned by getCameras().
-     */
-    size_t getCameraCount() const noexcept;
+    size_t getCameraEntityCount() const noexcept;
 
     /**
      * Gets the transform root for the asset, which has no matching glTF node.
