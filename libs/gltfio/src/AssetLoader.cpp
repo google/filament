@@ -578,8 +578,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
             hasVertexColor = true;
         }
 
-        // Translate the cgltf attribute enum into a Filament enum and ignore all uv sets
-        // that do not have entries in the mapping table.
+        // Translate the cgltf attribute enum into a Filament enum.
         VertexAttribute semantic;
         if (!getVertexAttrType(atype, &semantic)) {
             utils::slog.e << "Unrecognized vertex semantic in " << name << utils::io::endl;
@@ -601,8 +600,18 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
                     hasUv1 = true;
                     break;
                 case UNUSED:
-                    // It is perfectly acceptable to drop unused texture coordinate sets. In fact
-                    // this can occur quite frequently, e.g. if the material has attached textures.
+                    // If we have a free slot, then include this unused UV set in the VertexBuffer.
+                    // This allows clients to swap the glTF material with a custom material.
+                    if (!hasUv0 && getNumUvSets(uvmap) == 0) {
+                        semantic = VertexAttribute::UV0;
+                        hasUv0 = true;
+                        break;
+                    }
+
+                    // If there are no free slots then drop this unused texture coordinate set.
+                    // This should not print an error or warning because the glTF spec stipulates an
+                    // order of degradation for gracefully dropping UV sets. We implement this in
+                    // constrainMaterial in MaterialProvider.
                     continue;
             }
         }
