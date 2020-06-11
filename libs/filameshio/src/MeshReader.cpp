@@ -360,23 +360,23 @@ MeshReader::Mesh MeshReader::loadMeshFromBuffer(filament::Engine* engine,
                 mesh.vertexBuffer, mesh.indexBuffer, parts[i].offset,
                 parts[i].minIndex, parts[i].maxIndex, parts[i].indexCount);
 
-        // It may happen that there are more parts than materials 
-        // therefore we have to use Part::material instead of i. 
+        // It may happen that there are more parts than materials
+        // therefore we have to use Part::material instead of i.
         uint32_t materialIndex = parts[i].material;
         if (materialIndex >= partsMaterial.size()) {
             utils::slog.e << "Material index (" << materialIndex << ") of mesh part ("
                     << i << ") is out of bounds (" << partsMaterial.size() << ")" << utils::io::endl;
             continue;
         }
-        
+
         const utils::CString materialName(
                 partsMaterial[materialIndex].c_str(), partsMaterial[materialIndex].size());
         const auto mat = materials.getMaterialInstance(materialName);
         if (mat == nullptr) {
-            builder.material(materialIndex, defaultmi);
+            builder.material(i, defaultmi);
             materials.registerMaterialInstance(materialName, defaultmi);
         } else {
-            builder.material(materialIndex, mat);
+            builder.material(i, mat);
         }
     }
     builder.build(*engine, mesh.renderable);
