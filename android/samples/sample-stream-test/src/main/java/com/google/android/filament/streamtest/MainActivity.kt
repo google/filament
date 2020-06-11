@@ -409,8 +409,8 @@ class MainActivity : Activity(), ActivityCompat.OnRequestPermissionsResultCallba
         val shareContext = EGL14.EGL_NO_CONTEXT
         val display = EGL14.eglGetDisplay(EGL14.EGL_DEFAULT_DISPLAY)
 
-        val minorMajor: IntArray? = null
-        EGL14.eglInitialize(display, minorMajor, 0, minorMajor, 0)
+        val minorMajor: IntArray = IntArray(2)
+        EGL14.eglInitialize(display, minorMajor, 0, minorMajor, 1)
         val configs = arrayOfNulls<EGLConfig>(1)
         val numConfig = intArrayOf(0)
         val attribs = intArrayOf(EGL14.EGL_RENDERABLE_TYPE, kEGLOpenGLES3Bit, EGL14.EGL_NONE)
