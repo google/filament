@@ -21,6 +21,7 @@
 #include "GltfEnums.h"
 
 #include <filament/Box.h>
+#include <filament/Camera.h>
 #include <filament/Engine.h>
 #include <filament/IndexBuffer.h>
 #include <filament/LightManager.h>
@@ -105,6 +106,7 @@ static const char* getNodeName(const cgltf_node* node, const char* defaultNodeNa
     if (node->name) return node->name;
     if (node->mesh && node->mesh->name) return node->mesh->name;
     if (node->light && node->light->name) return node->light->name;
+    if (node->camera && node->camera->name) return node->camera->name;
     return defaultNodeName;
 }
 
@@ -152,7 +154,8 @@ struct FAssetLoader : public AssetLoader {
     void createRenderable(const cgltf_node* node, Entity entity, const char* name);
     bool createPrimitive(const cgltf_primitive* inPrim, Primitive* outPrim, const UvMap& uvmap,
             const char* name);
-    void createLight(const cgltf_node* node, Entity entity);
+    void createLight(const cgltf_light* light, Entity entity);
+    void createCamera(const cgltf_camera* camera, Entity entity);
     MaterialInstance* createMaterialInstance(const cgltf_material* inputMat, UvMap* uvmap,
             bool vertexColor);
     void addTextureBinding(MaterialInstance* materialInstance, const char* parameterName,
@@ -255,7 +258,7 @@ void FAssetLoader::createAsset(const cgltf_data* srcAsset, size_t numInstances) 
     }
     #endif
 
-    mResult = new FFilamentAsset(mEngine, mNameManager);
+    mResult = new FFilamentAsset(mEngine, mNameManager, &mEntityManager);
     mResult->mSourceAsset = srcAsset;
     mResult->acquireSourceAsset();
 
@@ -378,7 +381,11 @@ void FAssetLoader::createEntity(const cgltf_node* node, Entity parent, bool enab
     }
 
     if (node->light && enableLight) {
-        createLight(node, entity);
+        createLight(node->light, entity);
+    }
+
+    if (node->camera) {
+        createCamera(node->camera, entity);
     }
 
     for (cgltf_size i = 0, len = node->children_count; i < len; ++i) {
@@ -765,9 +772,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
     return true;
 }
 
-void FAssetLoader::createLight(const cgltf_node* node, Entity entity) {
-    const cgltf_light* light = node->light;
-
+void FAssetLoader::createLight(const cgltf_light* light, Entity entity) {
     LightManager::Type type = getLightType(light->type);
     LightManager::Builder builder(type);
 
@@ -801,6 +806,44 @@ void FAssetLoader::createLight(const cgltf_node* node, Entity entity) {
 
     builder.build(*mEngine, entity);
     mResult->mLightEntities.push_back(entity);
+}
+
+void FAssetLoader::createCamera(const cgltf_camera* camera, Entity entity) {
+    Camera* filamentCamera = mEngine->createCamera(entity);
+
+    if (camera->type == cgltf_camera_type_perspective) {
+        auto& projection = camera->data.perspective;
+
+        const cgltf_float yfovDegrees = 180.0 / F_PI * projection.yfov;
+
+        // Use an "infinite" zfar plane if the provided one is missing (set to 0.0).
+        const double far = projection.zfar > 0.0 ? projection.zfar : 100000000;
+
+        filamentCamera->setProjection(yfovDegrees, 1.0,
+                projection.znear, far,
+                filament::Camera::Fov::VERTICAL);
+
+        // Use a default aspect ratio of 1.0 if the provided one is missing.
+        const double aspect = projection.aspect_ratio > 0.0 ? projection.aspect_ratio : 1.0;
+
+        // Use the scaling matrix to set the aspect ratio, so clients can easily change it.
+        filamentCamera->setScaling(double4 {1.0, aspect, 1.0, 1.0});
+    } else if (camera->type == cgltf_camera_type_orthographic) {
+        auto& projection = camera->data.orthographic;
+
+        const double left   = -projection.xmag * 0.5;
+        const double right  =  projection.xmag * 0.5;
+        const double bottom = -projection.ymag * 0.5;
+        const double top    =  projection.ymag * 0.5;
+
+        filamentCamera->setProjection(Camera::Projection::ORTHO,
+                left, right, bottom, top, projection.znear, projection.zfar);
+    } else {
+        slog.e << "Invalid GLTF camera type." << io::endl;
+        return;
+    }
+
+    mResult->mCameraEntities.push_back(entity);
 }
 
 MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inputMat,

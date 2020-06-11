@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release
 
+- gltf_viewer now supports viewing with glTF cameras.
+- gltfio now supports importing glTF cameras.
 - gltfio now supports simple instancing of entire assets.
 - gltfio has improved performance and assumes assets are well-formed.
 - gltfio now supports name and prefix lookup for entities.

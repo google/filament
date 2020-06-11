@@ -23,6 +23,7 @@
 #include <utils/Entity.h>
 
 namespace filament {
+    class Camera;
     class Engine;
     class MaterialInstance;
 }
@@ -39,8 +40,8 @@ class FilamentInstance;
  * For usage instructions, see the documentation for AssetLoader.
  *
  * This class owns a hierarchy of entities that have been loaded from a glTF asset. Every entity has
- * a filament::TransformManager component, and some entities also have \c Name, \c Renderable, or
- * \c Light components.
+ * a filament::TransformManager component, and some entities also have \c Name, \c Renderable,
+ * \c Light, or \c Camera components.
  *
  * In addition to the aforementioned entities, an asset has strong ownership over a list of
  * filament::VertexBuffer, filament::IndexBuffer, filament::MaterialInstance, filament::Texture,
@@ -50,7 +51,6 @@ class FilamentInstance;
  * and upload data into vertex buffers and index buffers.
  *
  * \todo Only the default glTF scene is loaded, other glTF scenes are ignored.
- * \todo Cameras are ignored.
  */
 class FilamentAsset {
 public:
@@ -75,6 +75,27 @@ public:
      * Gets the number of entities returned by getLightEntities().
      */
     size_t getLightEntityCount() const noexcept;
+
+    /**
+     * Gets the list of entities in the scene representing cameras. All of these have a \c Camera
+     * component.
+     *
+     * Note about aspect ratios:
+     * gltfio always uses an aspect ratio of 1.0 when setting the projection matrix for perspective
+     * cameras. gltfio then sets the camera's scaling matrix with the aspect ratio specified in the
+     * glTF file (if present).
+     *
+     * The camera's scaling matrix allows clients to adjust the aspect ratio independently from the
+     * camera's projection.
+     *
+     * @see filament::Camera::setScaling
+     */
+    const utils::Entity* getCameraEntities() const noexcept;
+
+    /**
+     * Gets the number of entities returned by getCameraEntities().
+     */
+    size_t getCameraEntityCount() const noexcept;
 
     /**
      * Gets the transform root for the asset, which has no matching glTF node.
