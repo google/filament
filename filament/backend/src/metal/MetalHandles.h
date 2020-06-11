@@ -44,10 +44,10 @@ namespace metal {
 class MetalSwapChain : public HwSwapChain {
 public:
 
-    MetalSwapChain(id<MTLDevice> device, CAMetalLayer* nativeWindow);
+    MetalSwapChain(id<MTLDevice> device, CAMetalLayer* nativeWindow, uint64_t flags);
 
     // Instantiate a headless SwapChain.
-    MetalSwapChain(int32_t width, int32_t height);
+    MetalSwapChain(int32_t width, int32_t height, uint64_t flags);
 
     bool isHeadless() const { return layer == nullptr; }
     CAMetalLayer* getLayer() const { return layer; }
