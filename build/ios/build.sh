@@ -33,5 +33,12 @@ source `dirname $0`/../common/build-common.sh
 
 pushd `dirname $0`/../.. > /dev/null
 
-./build.sh -i -p ios -c $GENERATE_ARCHIVES $BUILD_DEBUG $BUILD_RELEASE
+# If we're generating an archive for release or continuous builds, then we'll also build for the
+# simulator.
+BUILD_SIMULATOR=
+if [[ "${GENERATE_ARCHIVES}" ]]; then
+    BUILD_SIMULATOR=-s
+fi
+
+./build.sh -i -p ios -c $BUILD_SIMULATOR $GENERATE_ARCHIVES $BUILD_DEBUG $BUILD_RELEASE
 
