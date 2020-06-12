@@ -483,14 +483,17 @@ void SimpleViewer::updateUserInterface() {
     DebugRegistry& debug = mEngine->getDebugRegistry();
 
     if (ImGui::CollapsingHeader("View")) {
+        ImGui::Indent();
         ImGui::Checkbox("Dithering", &mEnableDithering);
         ImGui::Checkbox("FXAA", &mEnableFxaa);
         ImGui::Checkbox("MSAA 4x", &mEnableMsaa);
         ImGui::Checkbox("SSAO", &mEnableSsao);
         ImGui::Checkbox("Bloom", &mBloomOptions.enabled);
+        ImGui::Unindent();
     }
 
     if (ImGui::CollapsingHeader("Light", headerFlags)) {
+        ImGui::Indent();
         ImGui::SliderFloat("IBL intensity", &mIblIntensity, 0.0f, 100000.0f);
         ImGui::SliderAngle("IBL rotation", &mIblRotation);
         ImGui::SliderFloat("Sun intensity", &mSunlightIntensity, 50000.0, 150000.0f);
@@ -500,9 +503,11 @@ void SimpleViewer::updateUserInterface() {
         ImGui::SliderInt("Cascades", &mShadowCascades, 1, 4);
         ImGui::Checkbox("Debug Cascades", debug.getPropertyAddress<bool>("d.shadowmap.visualize_cascades"));
         ImGui::Checkbox("Enable contact shadows", &mEnableContactShadows);
+        ImGui::Unindent();
     }
 
     if (ImGui::CollapsingHeader("Fog")) {
+        ImGui::Indent();
         ImGui::Checkbox("Enable Fog", &mFogOptions.enabled);
         ImGui::SliderFloat("Start", &mFogOptions.distance, 0.0f, 100.0f);
         ImGui::SliderFloat("Density", &mFogOptions.density, 0.0f, 1.0f);
@@ -512,6 +517,7 @@ void SimpleViewer::updateUserInterface() {
         ImGui::SliderFloat("Scattering Size", &mFogOptions.inScatteringSize, 0.0f, 100.0f);
         ImGui::Checkbox("Color from IBL", &mFogOptions.fogColorFromIbl);
         ImGui::ColorPicker3("Color", mFogOptions.color.v);
+        ImGui::Unindent();
     }
 
     mView->setDithering(mEnableDithering ? View::Dithering::TEMPORAL : View::Dithering::NONE);

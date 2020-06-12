@@ -22,6 +22,7 @@
 #include <getopt/getopt.h>
 
 #include <imgui.h>
+
 #include <filagui/ImGuiExtensions.h>
 
 #include <utils/Path.h>
@@ -75,7 +76,8 @@ static float g_rangePlot[1024 * 3];
 static float g_curvePlot[1024 * 3];
 
 const static ImVec2 verticalSliderSize(18.0f, 160.0f);
-const static ImVec2 plotLinesSize(160.0f, 120.0f);
+const static ImVec2 plotLinesSize(320.0f, 160.0f);
+const static ImVec2 plotLinesWideSize(480.0f, 120.0f);
 
 static void printUsage(char* name) {
     std::string exec_name(Path(name).getName());
@@ -437,6 +439,30 @@ static void computeRangePlot(SandboxParameters &parameters) {
     }
 }
 
+static void rangePlotSeriesStart(int series) {
+    switch (series) {
+        case 0:
+            ImGui::PushStyleColor(ImGuiCol_PlotLines, (ImVec4) ImColor::HSV(0.4f, 0.25f, 1.0f));
+            break;
+        case 1:
+            ImGui::PushStyleColor(ImGuiCol_PlotLines, (ImVec4) ImColor::HSV(0.8f, 0.25f, 1.0f));
+            break;
+        case 2:
+            ImGui::PushStyleColor(ImGuiCol_PlotLines, (ImVec4) ImColor::HSV(0.17f, 0.21f, 1.0f));
+            break;
+    }
+}
+
+static void rangePlotSeriesEnd(int series) {
+    if (series < 3) {
+        ImGui::PopStyleColor();
+    }
+}
+
+static float getRangePlotValue(int series, void* data, int index) {
+    return ((float*) data)[series * 1024 + index];
+}
+
 inline float3 curves(float3 v, float3 shadowGamma, float3 midPoint, float3 highlightScale) {
     float3 d = 1.0f / (pow(midPoint, shadowGamma - 1.0f));
     float3 dark = pow(v, shadowGamma) * d;
@@ -456,6 +482,12 @@ static void computeCurvePlot(SandboxParameters &parameters) {
         g_curvePlot[i]        = y.r;
         g_curvePlot[1024 + i] = y.g;
         g_curvePlot[2048 + i] = y.b;
+    }
+}
+
+static void tooltipFloat(float value) {
+    if (ImGui::IsItemActive() || ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("%.2f", value);
     }
 }
 
@@ -642,8 +674,7 @@ static void gui(filament::Engine* engine, filament::View*) {
 
             ImGui::Indent();
             ImGui::Checkbox("Enabled##colorGrading", &params.colorGrading);
-            ImGui::Combo("Tone-mapping",
-                    reinterpret_cast<int*>(&colorGrading.toneMapping),
+            ImGui::Combo("Tone-mapping", &colorGrading.toneMapping,
                     "Linear\0ACES (legacy)\0ACES\0Filmic\0Uchimura\0Reinhard\0Display Range\0\0");
             if (ImGui::CollapsingHeader("While balance")) {
                 ImGui::SliderInt("Temperature", &colorGrading.temperature, -100, 100);
@@ -652,28 +683,37 @@ static void gui(filament::Engine* engine, filament::View*) {
             if (ImGui::CollapsingHeader("Channel mixer")) {
                 pushSliderColors(0.0f / 7.0f);
                 ImGui::VSliderFloat("##outRed.r", verticalSliderSize, &colorGrading.outRed.r, -2.0f, 2.0f, "");
+                tooltipFloat(colorGrading.outRed.r);
                 ImGui::SameLine();
                 ImGui::VSliderFloat("##outRed.g", verticalSliderSize, &colorGrading.outRed.g, -2.0f, 2.0f, "");
+                tooltipFloat(colorGrading.outRed.g);
                 ImGui::SameLine();
                 ImGui::VSliderFloat("##outRed.b", verticalSliderSize, &colorGrading.outRed.b, -2.0f, 2.0f, "");
+                tooltipFloat(colorGrading.outRed.b);
                 ImGui::SameLine(0.0f, 18.0f);
                 popSliderColors();
 
                 pushSliderColors(2.0f / 7.0f);
                 ImGui::VSliderFloat("##outGreen.r", verticalSliderSize, &colorGrading.outGreen.r, -2.0f, 2.0f, "");
+                tooltipFloat(colorGrading.outGreen.r);
                 ImGui::SameLine();
                 ImGui::VSliderFloat("##outGreen.g", verticalSliderSize, &colorGrading.outGreen.g, -2.0f, 2.0f, "");
+                tooltipFloat(colorGrading.outGreen.g);
                 ImGui::SameLine();
                 ImGui::VSliderFloat("##outGreen.b", verticalSliderSize, &colorGrading.outGreen.b, -2.0f, 2.0f, "");
+                tooltipFloat(colorGrading.outGreen.b);
                 ImGui::SameLine(0.0f, 18.0f);
                 popSliderColors();
 
                 pushSliderColors(4.0f / 7.0f);
                 ImGui::VSliderFloat("##outBlue.r", verticalSliderSize, &colorGrading.outBlue.r, -2.0f, 2.0f, "");
+                tooltipFloat(colorGrading.outBlue.r);
                 ImGui::SameLine();
                 ImGui::VSliderFloat("##outBlue.g", verticalSliderSize, &colorGrading.outBlue.g, -2.0f, 2.0f, "");
+                tooltipFloat(colorGrading.outBlue.g);
                 ImGui::SameLine();
                 ImGui::VSliderFloat("##outBlue.b", verticalSliderSize, &colorGrading.outBlue.b, -2.0f, 2.0f, "");
+                tooltipFloat(colorGrading.outBlue.b);
                 popSliderColors();
             }
             if (ImGui::CollapsingHeader("Tonal ranges")) {
@@ -685,17 +725,9 @@ static void gui(filament::Engine* engine, filament::View*) {
                 ImGui::SliderFloat("Highlights weight", &colorGrading.highlights.w, -2.0f, 2.0f);
                 ImGui::SliderFloat4("Ranges", &colorGrading.ranges.x, 0.0f, 1.0f);
                 computeRangePlot(params);
-                ImGui::Columns(3, NULL, false);
-                ImGui::PushStyleColor(ImGuiCol_PlotLines, (ImVec4) ImColor::HSV(0.0f, 0.7f, 0.8f));
-                ImGui::PlotLines("", g_rangePlot, 1024, 0, "Shadows", 0.0f, 1.0f, plotLinesSize);
-                ImGui::NextColumn();
-                ImGui::PushStyleColor(ImGuiCol_PlotLines, (ImVec4) ImColor::HSV(0.3f, 0.7f, 0.8f));
-                ImGui::PlotLines("", g_rangePlot + 1024, 1024, 0, "Mid-tones", 0.0f, 1.0f, plotLinesSize);
-                ImGui::NextColumn();
-                ImGui::PushStyleColor(ImGuiCol_PlotLines, (ImVec4) ImColor::HSV(0.6f, 0.7f, 0.8f));
-                ImGui::PlotLines("", g_rangePlot + 2048, 1024, 0, "Highlights", 0.0f, 1.0f, plotLinesSize);
-                ImGui::Columns(1);
-                ImGui::PopStyleColor();
+                ImGuiExt::PlotLinesSeries("", 3,
+                        rangePlotSeriesStart, getRangePlotValue, rangePlotSeriesEnd,
+                        g_rangePlot, 1024, 0, "", 0.0f, 1.0f, plotLinesWideSize);
             }
             if (ImGui::CollapsingHeader("Color decision list")) {
                 ImGui::SliderFloat3("Slope", &colorGrading.slope.x, 0.0f, 2.0f);
@@ -710,69 +742,75 @@ static void gui(filament::Engine* engine, filament::View*) {
             if (ImGui::CollapsingHeader("Curves")) {
                 ImGui::Checkbox("Linked curves", &colorGrading.linkedCurves);
 
+                computeCurvePlot(params);
+
                 if (!colorGrading.linkedCurves) {
                     pushSliderColors(0.0f / 7.0f);
                     ImGui::VSliderFloat("##curveGamma.r", verticalSliderSize, &colorGrading.gamma.r, 0.0f, 4.0f, "");
+                    tooltipFloat(colorGrading.gamma.r);
                     ImGui::SameLine();
-                    ImGui::PopStyleColor(4);
+                    ImGui::VSliderFloat("##curveMid.r", verticalSliderSize, &colorGrading.midPoint.r, 0.0f, 2.0f, "");
+                    tooltipFloat(colorGrading.midPoint.r);
+                    ImGui::SameLine();
+                    ImGui::VSliderFloat("##curveScale.r", verticalSliderSize, &colorGrading.scale.r, 0.0f, 4.0f, "");
+                    tooltipFloat(colorGrading.scale.r);
+                    ImGui::SameLine(0.0f, 18.0f);
+                    popSliderColors();
+
+                    ImGui::PushStyleColor(ImGuiCol_PlotLines, (ImVec4) ImColor::HSV(0.0f, 0.7f, 0.8f));
+                    ImGui::PlotLines("", g_curvePlot, 1024, 0, "Red", 0.0f, 2.0f, plotLinesSize);
+                    ImGui::PopStyleColor();
+
                     pushSliderColors(2.0f / 7.0f);
                     ImGui::VSliderFloat("##curveGamma.g", verticalSliderSize, &colorGrading.gamma.g, 0.0f, 4.0f, "");
+                    tooltipFloat(colorGrading.gamma.g);
                     ImGui::SameLine();
-                    ImGui::PopStyleColor(4);
+                    ImGui::VSliderFloat("##curveMid.g", verticalSliderSize, &colorGrading.midPoint.g, 0.0f, 2.0f, "");
+                    tooltipFloat(colorGrading.midPoint.g);
+                    ImGui::SameLine();
+                    ImGui::VSliderFloat("##curveScale.g", verticalSliderSize, &colorGrading.scale.g, 0.0f, 4.0f, "");
+                    tooltipFloat(colorGrading.scale.g);
+                    ImGui::SameLine(0.0f, 18.0f);
+                    popSliderColors();
+
+                    ImGui::PushStyleColor(ImGuiCol_PlotLines, (ImVec4) ImColor::HSV(0.3f, 0.7f, 0.8f));
+                    ImGui::PlotLines("", g_curvePlot + 1024, 1024, 0, "Green", 0.0f, 2.0f, plotLinesSize);
+                    ImGui::PopStyleColor();
+
                     pushSliderColors(4.0f / 7.0f);
                     ImGui::VSliderFloat("##curveGamma.b", verticalSliderSize, &colorGrading.gamma.b, 0.0f, 4.0f, "");
-                    ImGui::SameLine(0.0f, 18.0f);
-                    ImGui::PopStyleColor(4);
-
-                    pushSliderColors(0.0f / 7.0f);
-                    ImGui::VSliderFloat("##curveMid.r", verticalSliderSize, &colorGrading.midPoint.r, 0.0f, 2.0f, "");
+                    tooltipFloat(colorGrading.gamma.b);
                     ImGui::SameLine();
-                    ImGui::PopStyleColor(4);
-                    pushSliderColors(2.0f / 7.0f);
-                    ImGui::VSliderFloat("##curveMid.g", verticalSliderSize, &colorGrading.midPoint.g, 0.0f, 2.0f, "");
-                    ImGui::SameLine();
-                    ImGui::PopStyleColor(4);
-                    pushSliderColors(4.0f / 7.0f);
                     ImGui::VSliderFloat("##curveMid.b", verticalSliderSize, &colorGrading.midPoint.b, 0.0f, 2.0f, "");
-                    ImGui::SameLine(0.0f, 18.0f);
-                    ImGui::PopStyleColor(4);
-
-                    pushSliderColors(0.0f / 7.0f);
-                    ImGui::VSliderFloat("##curveScale.r", verticalSliderSize, &colorGrading.scale.r, 0.0f, 4.0f, "");
+                    tooltipFloat(colorGrading.midPoint.b);
                     ImGui::SameLine();
-                    popSliderColors();
-                    pushSliderColors(2.0f / 7.0f);
-                    ImGui::VSliderFloat("##curveScale.g", verticalSliderSize, &colorGrading.scale.g, 0.0f, 4.0f, "");
-                    ImGui::SameLine();
-                    ImGui::PopStyleColor(4);
-                    pushSliderColors(4.0f / 7.0f);
                     ImGui::VSliderFloat("##curveScale.b", verticalSliderSize, &colorGrading.scale.b, 0.0f, 4.0f, "");
-                    ImGui::PopStyleColor(4);
+                    tooltipFloat(colorGrading.scale.b);
+                    ImGui::SameLine(0.0f, 18.0f);
+                    popSliderColors();
+
+                    ImGui::PushStyleColor(ImGuiCol_PlotLines, (ImVec4) ImColor::HSV(0.6f, 0.7f, 0.8f));
+                    ImGui::PlotLines("", g_curvePlot + 2048, 1024, 0, "Blue", 0.0f, 2.0f, plotLinesSize);
+                    ImGui::PopStyleColor();
                 } else {
                     ImGui::VSliderFloat("##curveGamma", verticalSliderSize, &colorGrading.gamma.r, 0.0f, 4.0f, "");
+                    tooltipFloat(colorGrading.gamma.r);
                     ImGui::SameLine();
                     ImGui::VSliderFloat("##curveMid", verticalSliderSize, &colorGrading.midPoint.r, 0.0f, 2.0f, "");
+                    tooltipFloat(colorGrading.midPoint.r);
                     ImGui::SameLine();
                     ImGui::VSliderFloat("##curveScale", verticalSliderSize, &colorGrading.scale.r, 0.0f, 4.0f, "");
+                    tooltipFloat(colorGrading.scale.r);
+                    ImGui::SameLine(0.0f, 18.0f);
 
                     colorGrading.gamma = float3{colorGrading.gamma.r};
                     colorGrading.midPoint = float3{colorGrading.midPoint.r};
                     colorGrading.scale = float3{colorGrading.scale.r};
+
+                    ImGui::PushStyleColor(ImGuiCol_PlotLines, (ImVec4) ImColor::HSV(0.17f, 0.21f, 0.9f));
+                    ImGui::PlotLines("", g_curvePlot, 1024, 0, "RGB", 0.0f, 2.0f, plotLinesSize);
+                    ImGui::PopStyleColor();
                 }
-
-                computeCurvePlot(params);
-
-                ImGui::Columns(3, NULL, false);
-                ImGui::PushStyleColor(ImGuiCol_PlotLines, (ImVec4) ImColor::HSV(0.0f, 0.7f, 0.8f));
-                ImGui::PlotLines("", g_curvePlot, 1024, 0, "Red", 0.0f, 2.0f, plotLinesSize);
-                ImGui::NextColumn();
-                ImGui::PushStyleColor(ImGuiCol_PlotLines, (ImVec4) ImColor::HSV(0.3f, 0.7f, 0.8f));
-                ImGui::PlotLines("", g_curvePlot + 1024, 1024, 0, "Green", 0.0f, 2.0f, plotLinesSize);
-                ImGui::NextColumn();
-                ImGui::PushStyleColor(ImGuiCol_PlotLines, (ImVec4) ImColor::HSV(0.6f, 0.7f, 0.8f));
-                ImGui::PlotLines("", g_curvePlot + 2048, 1024, 0, "Blue", 0.0f, 2.0f, plotLinesSize);
-                ImGui::Columns(1);
-                ImGui::PopStyleColor();
             }
             ImGui::Unindent();
         }
@@ -908,7 +946,7 @@ static void preRender(filament::Engine* engine, filament::View* view, filament::
                     .vibrance(options.vibrance)
                     .saturation(options.saturation)
                     .curves(options.gamma, options.midPoint, options.scale)
-                    .toneMapping(options.toneMapping)
+                    .toneMapping(static_cast<ColorGrading::ToneMapping>(options.toneMapping))
                     .build(*engine);
 
             if (g_colorGrading) {
