@@ -260,6 +260,12 @@ value_array<filament::math::float4>("float4")
     .element(&filament::math::float4::z)
     .element(&filament::math::float4::w);
 
+value_array<filament::math::double4>("double4")
+    .element(&filament::math::double4::x)
+    .element(&filament::math::double4::y)
+    .element(&filament::math::double4::z)
+    .element(&filament::math::double4::w);
+
 value_array<filament::math::quat>("quat")
     .element(&filament::math::quat::x)
     .element(&filament::math::quat::y)
@@ -431,6 +437,9 @@ class_<Engine>("Engine")
     /// ::retval:: an instance of [Camera]
     .function("createCamera", select_overload<Camera*(void)>(&Engine::createCamera),
             allow_raw_pointers())
+    /// getCameraComponent ::method::
+    /// ::retval:: an instance of [Camera]
+    .function("getCameraComponent", &Engine::getCameraComponent, allow_raw_pointers())
     /// destroyCamera ::method::
     /// camera ::argument:: an instance of [Camera]
     .function("destroyCamera", (void (*)(Engine*, Camera*)) []
@@ -591,6 +600,8 @@ class_<Camera>("Camera")
         self->setCustomProjection(filament::math::mat4(m.m), near, far);
     }), allow_raw_pointers())
 
+    .function("setScaling", &Camera::setScaling)
+
     .function("getProjectionMatrix", EMBIND_LAMBDA(flatmat4, (Camera* self), {
         return flatmat4 { filament::math::mat4f(self->getProjectionMatrix()) };
     }), allow_raw_pointers())
@@ -598,6 +609,8 @@ class_<Camera>("Camera")
     .function("getCullingProjectionMatrix", EMBIND_LAMBDA(flatmat4, (Camera* self), {
         return flatmat4 { filament::math::mat4f(self->getCullingProjectionMatrix()) };
     }), allow_raw_pointers())
+
+    .function("getScaling", &Camera::getScaling)
 
     .function("getNear", &Camera::getNear)
     .function("getCullingFar", &Camera::getCullingFar)
@@ -1492,6 +1505,11 @@ class_<FilamentAsset>("gltfio$FilamentAsset")
     .function("_getLightEntities", EMBIND_LAMBDA(EntityVector, (FilamentAsset* self), {
         const utils::Entity* ptr = self->getLightEntities();
         return EntityVector(ptr, ptr + self->getLightEntityCount());
+    }), allow_raw_pointers())
+
+    .function("_getCameraEntities", EMBIND_LAMBDA(EntityVector, (FilamentAsset* self), {
+        const utils::Entity* ptr = self->getCameraEntities();
+        return EntityVector(ptr, ptr + self->getCameraEntityCount());
     }), allow_raw_pointers())
 
     .function("getRoot", &FilamentAsset::getRoot)
