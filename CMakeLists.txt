@@ -547,6 +547,7 @@ if (NOT ANDROID AND NOT WEBGL AND NOT IOS)
 
     add_subdirectory(${FILAMENT}/java/filamat)
     add_subdirectory(${FILAMENT}/java/filament)
+    add_subdirectory(${FILAMENT}/java/gltfio)
 
     add_subdirectory(${FILAMENT}/samples)
 
