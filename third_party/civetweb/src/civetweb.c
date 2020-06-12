@@ -162,6 +162,10 @@ mg_static_assert(sizeof(void *) >= sizeof(int), "data type size check");
 #define PATH_MAX FILENAME_MAX
 #endif /* __SYMBIAN32__ */
 
+#ifdef ANDROID
+#include <android/log.h>
+#endif
+
 #if defined(__ZEPHYR__)
 #include <time.h>
 
@@ -3687,7 +3691,15 @@ mg_difftimespec(const struct timespec *ts_now, const struct timespec *ts_before)
 }
 
 
-#if defined(MG_EXTERNAL_FUNCTION_mg_cry_internal_impl)
+#ifdef ANDROID
+static void mg_cry_internal_impl(const struct mg_connection *conn,
+                                 const char *func,
+                                 unsigned line,
+                                 const char *fmt,
+                                 va_list ap) {
+    __android_log_vprint(ANDROID_LOG_ERROR, "civetweb", fmt, ap);
+}
+#elif defined(MG_EXTERNAL_FUNCTION_mg_cry_internal_impl)
 static void mg_cry_internal_impl(const struct mg_connection *conn,
                                  const char *func,
                                  unsigned line,
@@ -14612,9 +14624,7 @@ set_ports_option(struct mg_context *phys_ctx)
 		if ((so.sock = socket(so.lsa.sa.sa_family, SOCK_STREAM, 6))
 		    == INVALID_SOCKET) {
 
-			mg_cry_ctx_internal(phys_ctx,
-			                    "cannot create socket (entry %i)",
-			                    portsTotal);
+			mg_cry_ctx_internal(phys_ctx, "%s", "cannot create socket, does your app have permission?");
 			continue;
 		}
 

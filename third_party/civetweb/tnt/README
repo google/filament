@@ -5,3 +5,4 @@ This is how third_party/civetweb was created:
 3. In the cpp file, removed "throw" statements from CivetServer::CivetServer.
 4. In the cpp file, replaced all other "throw" statements with abort().
 5. In the C file, replaced fseeko with fseek.
+6. In the C file, added a call to __android_log_vprint.
