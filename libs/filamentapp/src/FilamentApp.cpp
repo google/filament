@@ -721,6 +721,12 @@ void FilamentApp::Window::resize() {
 #endif
 
     configureCamerasForWindow();
+
+    // Call the resize callback, if this FilamentApp has one. This must be done after
+    // configureCamerasForWindow, so the viewports are correct.
+    if (mFilamentApp->mResize) {
+        mFilamentApp->mResize(mFilamentApp->mEngine, mMainView->getView());
+    }
 }
 
 void FilamentApp::Window::configureCamerasForWindow() {

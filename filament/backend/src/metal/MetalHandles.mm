@@ -562,7 +562,7 @@ MetalRenderTarget::Attachment MetalRenderTarget::getDepthAttachment() {
     if (defaultRenderTarget) {
         result.texture = acquireDepthTexture(context);
     }
-    return depth;
+    return result;
 }
 
 MTLLoadAction MetalRenderTarget::getLoadAction(const RenderPassParams& params,
