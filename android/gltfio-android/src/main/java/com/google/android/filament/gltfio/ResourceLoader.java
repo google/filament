@@ -17,7 +17,6 @@
 package com.google.android.filament.gltfio;
 
 import androidx.annotation.NonNull;
-import android.util.Log;
 
 import com.google.android.filament.Engine;
 
