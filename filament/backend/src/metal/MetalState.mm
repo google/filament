@@ -123,7 +123,7 @@ id<MTLSamplerState> SamplerStateCreator::operator()(id<MTLDevice> device,
 #if defined(IOS)
     // Older Apple devices (and the simulator) don't support setting a comparison function in
     // MTLSamplerDescriptor.
-    // In practice, this means shadows not supported when running in the simulator.
+    // In practice, this means shadows are not supported when running in the simulator.
     if (![device supportsFeatureSet:MTLFeatureSet_iOS_GPUFamily3_v1]) {
         utils::slog.w << "Warning: sample comparison not supported by this GPU" << utils::io::endl;
         samplerDescriptor.compareFunction = MTLCompareFunctionNever;
