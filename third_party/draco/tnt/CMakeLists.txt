@@ -2,6 +2,10 @@ cmake_minimum_required(VERSION 3.10)
 
 project(draco C CXX)
 
+if (LINUX)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+endif()
+
 set(draco_root "${CMAKE_CURRENT_SOURCE_DIR}/..")
 set(draco_src_root "${draco_root}/src/draco")
 set(draco_build_dir "${CMAKE_CURRENT_BINARY_DIR}")
