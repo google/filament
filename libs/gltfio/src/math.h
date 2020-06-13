@@ -75,10 +75,12 @@ inline void decomposeMatrix(const filament::math::mat4f& mat, filament::math::fl
         clone[0] /= s.x;
         clone[1] /= s.y;
         clone[2] /= s.z;
+        // Extract rotation
+        *rotation = clone.toQuaternion();
+    } else {
+        // Set to identity if close to zero
+        *rotation = quatf(1);
     }
-
-    // Extract rotation.
-    *rotation = clone.toQuaternion();
 }
 
 inline filament::math::mat4f composeMatrix(const filament::math::float3& translation,
