@@ -450,7 +450,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     fg.present(output);
     fg.moveResource(fgViewRenderTarget, output);
     fg.compile();
-    //fg.export_graphviz(slog.d);
+    //fg.export_graphviz(slog.d, view.getName());
     fg.execute(engine, driver);
 
     recordHighWatermark(pass.getCommandsHighWatermark());
