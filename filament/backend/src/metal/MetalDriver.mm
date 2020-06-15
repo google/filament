@@ -261,12 +261,12 @@ void MetalDriver::createSyncR(Handle<HwSync> sh, int) {
 
 void MetalDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
     auto* metalLayer = (__bridge CAMetalLayer*) nativeWindow;
-    construct_handle<MetalSwapChain>(mHandleMap, sch, mContext->device, metalLayer);
+    construct_handle<MetalSwapChain>(mHandleMap, sch, mContext->device, metalLayer, flags);
 }
 
 void MetalDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch,
         uint32_t width, uint32_t height, uint64_t flags) {
-    construct_handle<MetalSwapChain>(mHandleMap, sch, width, height);
+    construct_handle<MetalSwapChain>(mHandleMap, sch, width, height, flags);
 }
 
 void MetalDriver::createStreamFromTextureIdR(Handle<HwStream>, intptr_t externalTextureId,
