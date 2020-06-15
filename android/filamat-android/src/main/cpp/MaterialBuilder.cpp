@@ -333,7 +333,7 @@ Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderOptimiz
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderVariantFilter(JNIEnv*,
-        jclass, jlong nativeBuilder, jbyte variantFilter) {
+        jclass, jlong nativeBuilder, jint variantFilter) {
     auto builder = (MaterialBuilder*) nativeBuilder;
     builder->variantFilter((uint8_t) variantFilter);
 }
