@@ -5,6 +5,7 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release
 
+- Fixed regression in JavaScript IcoSphere that caused tutorial to fail.
 - gltf_viewer now supports viewing with glTF cameras.
 - gltfio now supports importing glTF cameras.
 - gltfio now supports simple instancing of entire assets.

@@ -4,7 +4,7 @@
 # correct packages so that you do not interfere with other Python projects in your system.
 # After installing pipenv, run the following commands from the current folder:
 #
-#  pipenv --python 3.7
+#  pipenv --python /usr/local/opt/python@3.8/bin/python3
 #  pipenv shell
 #  pipenv install
 #  ./build.py
@@ -517,13 +517,19 @@ if __name__ == "__main__":
     build_api_reference()
 
     # Copy resources from "samples" to "docs"
-    copy_built_file('web/samples/suzanne.filamesh')
+    copy_built_file('web/samples/helmet.html')
+
+    copy_built_file('web/samples/parquet.html')
     copy_built_file('web/samples/parquet.filamat')
+
+    copy_built_file('web/samples/suzanne.html')
+    copy_built_file('web/samples/suzanne.filamesh')
     copy_built_file('web/samples/metallic*.ktx')
     copy_built_file('web/samples/normal*.ktx')
     copy_built_file('web/samples/roughness*.ktx')
     copy_built_file('web/samples/ao*.ktx')
     copy_built_file('web/samples/albedo*.ktx')
+
     copy_built_file('web/samples/pillars_2k/pillars_2k_*.ktx', 'pillars_2k')
     copy_built_file('web/samples/venetian_crossroads_2k/venetian_crossroads*.ktx', 'venetian_crossroads_2k')
 

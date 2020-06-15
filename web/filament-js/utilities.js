@@ -141,7 +141,7 @@ Filament.IcoSphere = function(nsubdivs) {
 
     // Allocate room for normals in the heap, and copy position data into it (yay for unit spheres)
     const normals = Filament._malloc(this.vertices.length * this.vertices.BYTES_PER_ELEMENT);
-    Module.HEAPU8.set(new Uint8Array(this.vertices.buffer), normals);
+    Filament.HEAPU8.set(new Uint8Array(this.vertices.buffer), normals);
 
     // Perform computations, then free up the normals.
     const sob = new Filament.SurfaceOrientation$Builder();
@@ -157,7 +157,7 @@ Filament.IcoSphere = function(nsubdivs) {
     orientation.getQuats(quatsBuffer, nverts, Filament.VertexBuffer$AttributeType.SHORT4);
 
     // Create a JavaScript typed array and copy the quat data into it.
-    const tangentsMemory = Module.HEAPU8.subarray(quatsBuffer, quatsBuffer + quatsBufferSize).slice().buffer;
+    const tangentsMemory = Filament.HEAPU8.subarray(quatsBuffer, quatsBuffer + quatsBufferSize).slice().buffer;
     Filament._free(quatsBuffer);
     this.tangents = new Int16Array(tangentsMemory);
 
