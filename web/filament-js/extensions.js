@@ -409,4 +409,8 @@ Filament.loadClassExtensions = function() {
     Filament.gltfio$FilamentAsset.prototype.getLightEntities = function() {
         return Filament.vectorToArray(this._getLightEntities());
     };
+
+    Filament.gltfio$FilamentAsset.prototype.getCameraEntities = function() {
+        return Filament.vectorToArray(this._getCameraEntities());
+    };
 };

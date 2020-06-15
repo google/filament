@@ -34,6 +34,7 @@ export const assets: {[url: string]: Uint8Array};
 export type float2 = glm.vec2|number[];
 export type float3 = glm.vec3|number[];
 export type float4 = glm.vec4|number[];
+export type double4 = glm.vec4|number[];
 export type mat3 = glm.mat3|number[];
 export type mat4 = glm.mat4|number[];
 export type quat = glm.quat|number[];
@@ -316,8 +317,10 @@ export class Camera {
             near: number, far: number, fov: Camera$Fov): void;
     public setLensProjection(focalLength: number, aspect: number, near: number, far: number): void;
     public setCustomProjection(projection: mat4, near: number, far: number): void;
+    public setScaling(scale: double4): void;
     public getProjectionMatrix(): mat4;
     public getCullingProjectionMatrix(): mat4;
+    public getScaling(): double4;
     public getNear(): number;
     public getCullingFar(): number;
     public setModelMatrix(view: mat4): void;
@@ -468,6 +471,7 @@ export class gltfio$FilamentAsset {
     public getEntityByName(name: string): Entity;
     public getEntitiesByPrefix(name: string): Entity[];
     public getLightEntities(): Entity[];
+    public getCameraEntities(): Entity[];
     public getRoot(): Entity;
     public popRenderable(): Entity;
     public getMaterialInstances(): MaterialInstanceVector;
