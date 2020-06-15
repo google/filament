@@ -18,12 +18,6 @@
 
 #import "App.h"
 
-#define METAL_AVAILABLE __has_include(<QuartzCore/CAMetalLayer.h>)
-
-#if !METAL_AVAILABLE
-#error The iOS simulator does not support Metal.
-#endif
-
 @interface FilamentViewController () {
     App* app;
     CADisplayLink* displayLink;

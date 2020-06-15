@@ -306,8 +306,7 @@ if (FILAMENT_SUPPORTS_VULKAN)
 endif()
 
 # Build with Metal support on non-WebGL Apple platforms.
-# Apple's simulator does not support Metal.
-if (APPLE AND (NOT IOS OR IOS_ARCH STREQUAL "arm64") AND NOT WEBGL)
+if (APPLE AND NOT WEBGL)
     option(FILAMENT_SUPPORTS_METAL "Include the Metal backend" ON)
 else()
     option(FILAMENT_SUPPORTS_METAL "Include the Metal backend" OFF)

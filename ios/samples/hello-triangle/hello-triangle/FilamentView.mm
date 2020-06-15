@@ -36,12 +36,6 @@
 #error A valid FILAMENT_APP_USE_ backend define must be set.
 #endif
 
-#define METAL_AVAILABLE __has_include(<QuartzCore/CAMetalLayer.h>)
-
-#if !METAL_AVAILABLE && FILAMENT_APP_USE_METAL
-#error The iOS simulator does not support Metal.
-#endif
-
 using namespace filament;
 using utils::Entity;
 using utils::EntityManager;
