@@ -211,6 +211,9 @@ public:
     //! Indicates whether a parameter of the given name exists on this material.
     bool hasParameter(const char* name) const noexcept;
 
+    //! Indicates whether an existing parameter is a sampler or not.
+    bool hasSampler(const char* name) const noexcept;
+
     /**
      * Sets the value of the given parameter on this material's default instance.
      *

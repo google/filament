@@ -67,6 +67,8 @@ public:
 
     bool hasParameter(const char* name) const noexcept;
 
+    bool hasSampler(const char* name) const noexcept;
+
     UniformInterfaceBlock::UniformInfo const* reflect(utils::StaticString const& name) const noexcept;
 
     FMaterialInstance const* getDefaultInstance() const noexcept { return &mDefaultInstance; }
