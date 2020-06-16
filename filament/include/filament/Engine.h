@@ -307,7 +307,7 @@ public:
     Camera* createCamera(utils::Entity entity) noexcept;
 
     /**
-     * Returns the Camera component of the given its entity.
+     * Returns the Camera component of the given entity.
      *
      * @param entity An entity.
      * @return A pointer to the Camera component for this entity or nullptr if the entity didn't

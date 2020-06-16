@@ -98,4 +98,18 @@ final class Asserts {
             throw new ArrayIndexOutOfBoundsException("Array length must be at least 4");
         }
     }
+
+    static double[] assertDouble4(@Nullable double[] out) {
+        if (out == null) out = new double[4];
+        else if (out.length < 4) {
+            throw new ArrayIndexOutOfBoundsException("Array length must be at least 4");
+        }
+        return out;
+    }
+
+    static void assertDouble4In(@NonNull double[] in) {
+        if (in.length < 4) {
+            throw new ArrayIndexOutOfBoundsException("Array length must be at least 4");
+        }
+    }
 }

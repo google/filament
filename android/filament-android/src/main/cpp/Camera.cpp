@@ -55,6 +55,15 @@ Java_com_google_android_filament_Camera_nSetCustomProjection(JNIEnv *env, jclass
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_Camera_nSetScaling(JNIEnv* env, jclass,
+        jlong nativeCamera, jdoubleArray inScaling_) {
+    Camera *camera = (Camera *) nativeCamera;
+    jdouble *inScaling = env->GetDoubleArrayElements(inScaling_, NULL);
+    camera->setScaling(*reinterpret_cast<const filament::math::double4*>(inScaling));
+    env->ReleaseDoubleArrayElements(inScaling_, inScaling, JNI_ABORT);
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_Camera_nLookAt(JNIEnv*, jclass, jlong nativeCamera,
         jdouble eye_x, jdouble eye_y, jdouble eye_z, jdouble center_x, jdouble center_y,
         jdouble center_z, jdouble up_x, jdouble up_y, jdouble up_z) {
@@ -91,6 +100,16 @@ Java_com_google_android_filament_Camera_nGetProjectionMatrix(JNIEnv *env, jclass
     jdouble *out = env->GetDoubleArrayElements(out_, NULL);
     const filament::math::mat4& m = camera->getProjectionMatrix();
     std::copy_n(&m[0][0], 16, out);
+    env->ReleaseDoubleArrayElements(out_, out, 0);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_Camera_nGetScaling(JNIEnv *env, jclass,
+        jlong nativeCamera, jdoubleArray out_) {
+    Camera *camera = (Camera *) nativeCamera;
+    jdouble *out = env->GetDoubleArrayElements(out_, NULL);
+    const filament::math::double4& s = camera->getScaling();
+    std::copy_n(&s[0], 4, out);
     env->ReleaseDoubleArrayElements(out_, out, 0);
 }
 
