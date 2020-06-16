@@ -4,11 +4,11 @@ Filament is a mobile-first library for physically based rendering. It has a ligh
 made available to web developers via a WebAssembly module. The WASM file is bundled with a
 first-class JavaScript API.
 
-See the [web docs](https://github.com/google/filament/tree/master/web/docs) for more information.
+See the [web docs](https://github.com/google/filament/tree/main/web/docs) for more information.
 
 ## Publishing to npm
 
-See [Versioning.md](https://github.com/google/filament/blob/master/filament/docs/Versioning.md)
+See [Versioning.md](https://github.com/google/filament/blob/main/filament/docs/Versioning.md)
 for a description of Filament's three-tier versioning scheme.
 
 By pushing Filament's WebAssembly build to the npm registry, we can simplify the workflow for web

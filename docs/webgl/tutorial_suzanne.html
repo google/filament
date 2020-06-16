@@ -14,14 +14,14 @@ we'll also be using <code>filamesh</code> and <code>mipgen</code>.</p>
 <h2>Create filamesh file</h2>
 <p>Filament does not have an asset loading system, but it does provide a binary mesh format
 called <code>filamesh</code> for simple use cases. Let's create a compressed filamesh file for suzanne by
-converting <a href="https://github.com/google/filament/blob/master/assets/models/monkey/monkey.obj">this OBJ file</a>:</p>
+converting <a href="https://github.com/google/filament/blob/main/assets/models/monkey/monkey.obj">this OBJ file</a>:</p>
 <div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span>filamesh --compress monkey.obj suzanne.filamesh
 </pre></div>
 
 <h2>Create mipmapped textures</h2>
 <p>Next, let's create mipmapped KTX files using filament's <code>mipgen</code> tool. We'll create compressed and
 non-compressed variants for each texture, since not all platforms support the same compression
-formats. First copy over the PNG files from the <a href="https://github.com/google/filament/blob/master/assets/models/monkey">monkey folder</a>, then do:</p>
+formats. First copy over the PNG files from the <a href="https://github.com/google/filament/blob/main/assets/models/monkey">monkey folder</a>, then do:</p>
 <div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #408080; font-style: italic"># Create mipmaps for base color and two compressed variants.</span>
 mipgen albedo.png albedo.ktx
 mipgen --compression<span style="color: #666666">=</span>astc_fast_ldr_4x4 albedo.png albedo_astc.ktx
@@ -49,7 +49,7 @@ mipgen --grayscale --compression<span style="color: #666666">=</span>etc_r11_num
 <p>In a production setting, you'd want to invoke these commands with a script or build system.</p>
 <h2>Bake environment map</h2>
 <p>Much like the <a href="tutorial_redball.html">previous tutorial</a> we need to use Filament's <code>cmgen</code> tool to produce cubemap files.</p>
-<p>Download <a href="//github.com/google/filament/blob/master/third_party/environments/venetian_crossroads_2k.hdr">venetian_crossroads_2k.hdr</a>, then invoke the following commands in your terminal.</p>
+<p>Download <a href="//github.com/google/filament/blob/main/third_party/environments/venetian_crossroads_2k.hdr">venetian_crossroads_2k.hdr</a>, then invoke the following commands in your terminal.</p>
 <div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span>cmgen -x . --format<span style="color: #666666">=</span>ktx --size<span style="color: #666666">=64</span> --extract-blur<span style="color: #666666">=0</span>.1 venetian_crossroads_2k.hdr
 <span style="color: #008000">cd</span> venetian* ; mv venetian*_ibl.ktx venetian_crossroads_2k_skybox_tiny.ktx ; <span style="color: #008000">cd</span> -
 
