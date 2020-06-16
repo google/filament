@@ -17,6 +17,7 @@
 package com.google.android.filament;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.google.android.filament.proguard.UsedByReflection;
 
@@ -424,6 +425,20 @@ public class Engine {
     }
 
     /**
+     * Returns the Camera component of the given <code>entity</code>.
+     *
+     * @param entity An <code>entity</code>.
+     * @return the Camera component for this entity or null if the entity doesn't have a Camera
+     *         component
+     */
+    @Nullable
+    public Camera getCameraComponent(@Entity int entity) {
+        long nativeCamera = nGetCameraComponent(getNativeObject(), entity);
+        if (nativeCamera == 0) return null;
+        return new Camera(nativeCamera);
+    }
+
+    /**
      * Destroys a {@link Camera} component and frees all its associated resources.
      * @param camera the {@link Camera} to destroy
      */
@@ -662,6 +677,7 @@ public class Engine {
     private static native boolean nDestroyRenderer(long nativeEngine, long nativeRenderer);
     private static native long nCreateCamera(long nativeEngine);
     private static native long nCreateCameraWithEntity(long nativeEngine, int entity);
+    private static native long nGetCameraComponent(long nativeEngine, int entity);
     private static native void nDestroyCamera(long nativeEngine, long nativeCamera);
     private static native long nCreateScene(long nativeEngine);
     private static native boolean nDestroyScene(long nativeEngine, long nativeScene);

@@ -113,6 +113,28 @@ public class FilamentAsset {
     }
 
     /**
+     * Gets only the entities that have camera components.
+     *
+     * <p>
+     * Note about aspect ratios:<br>
+     *
+     * gltfio always uses an aspect ratio of 1.0 when setting the projection matrix for perspective
+     * cameras. gltfio then sets the camera's scaling matrix with the aspect ratio specified in the
+     * glTF file (if present).<br>
+     *
+     * The camera's scaling matrix allows clients to adjust the aspect ratio independently from the
+     * camera's projection.
+     * </p>
+     *
+     * @see com.google.android.filament.Camera#setScaling
+     */
+    public @NonNull @Entity int[] getCameraEntities() {
+        int[] result = new int[nGetCameraEntityCount(mNativeObject)];
+        nGetCameraEntities(mNativeObject, result);
+        return result;
+    }
+
+    /**
      * Returns the first entity with the given name, or 0 if none exist.
      */
     public @Entity int getFirstEntityByName(String name) {
@@ -216,6 +238,9 @@ public class FilamentAsset {
 
     private static native int nGetLightEntityCount(long nativeAsset);
     private static native void nGetLightEntities(long nativeAsset, int[] result);
+
+    private static native int nGetCameraEntityCount(long nativeAsset);
+    private static native void nGetCameraEntities(long nativeAsset, int[] result);
 
     private static native int nGetMaterialInstanceCount(long nativeAsset);
     private static native void nGetMaterialInstances(long nativeAsset, long[] nativeResults);
