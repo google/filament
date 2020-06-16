@@ -25,8 +25,7 @@ if "%TARGET%" == "presubmit" (
 )
 
 if "%TARGET%" == "continuous" (
-    :: turn off DEBUG builds for now to save space
-    set BUILD_DEBUG=0
+    set BUILD_DEBUG=1
     set BUILD_RELEASE=1
     set INSTALL=--target install
     set CREATE_ARCHIVE=1
