@@ -294,7 +294,7 @@ bool FMaterial::hasParameter(const char* name) const noexcept {
     return true;
 }
 
-bool FMaterial::hasSampler(const char* name) const noexcept {
+bool FMaterial::isSampler(const char* name) const noexcept {
     return mSamplerInterfaceBlock.hasSampler(name);
 }
 
@@ -622,8 +622,8 @@ bool Material::hasParameter(const char* name) const noexcept {
     return upcast(this)->hasParameter(name);
 }
 
-bool Material::hasSampler(const char* name) const noexcept {
-    return upcast(this)->hasSampler(name);
+bool Material::isSampler(const char* name) const noexcept {
+    return upcast(this)->isSampler(name);
 }
 
 MaterialInstance* Material::getDefaultInstance() noexcept {
