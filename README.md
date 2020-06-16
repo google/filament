@@ -63,7 +63,7 @@ A much smaller alternative to `filamat-android` that can only generate OpenGL sh
 If you prefer to live on the edge, you can download a continuous build by following the following
 steps:
 
-1. Find the [commit](https://github.com/google/filament/commits/master) you're interested in.
+1. Find the [commit](https://github.com/google/filament/commits/main) you're interested in.
 2. Click the green check mark under the commit message.
 3. Click on the _Details_ link for the platform you're interested in.
 4. On the top right, click on the _Artifacts_ dropdown and choose an artifact.
