@@ -294,6 +294,10 @@ bool FMaterial::hasParameter(const char* name) const noexcept {
     return true;
 }
 
+bool FMaterial::isSampler(const char* name) const noexcept {
+    return mSamplerInterfaceBlock.hasSampler(name);
+}
+
 UniformInterfaceBlock::UniformInfo const* FMaterial::reflect(
         utils::StaticString const& name) const noexcept {
     auto const& list = mUniformInterfaceBlock.getUniformInfoList();
@@ -616,6 +620,10 @@ RefractionType Material::getRefractionType() const noexcept {
 
 bool Material::hasParameter(const char* name) const noexcept {
     return upcast(this)->hasParameter(name);
+}
+
+bool Material::isSampler(const char* name) const noexcept {
+    return upcast(this)->isSampler(name);
 }
 
 MaterialInstance* Material::getDefaultInstance() noexcept {
