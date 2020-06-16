@@ -3,7 +3,7 @@ name: Linux
 on:
   push:
     branches:
-      - master
+      - main
 
 jobs:
   build-linux:
