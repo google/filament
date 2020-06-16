@@ -2,6 +2,9 @@
 
 setlocal
 
+echo Disk info before building:
+call :ShowDiskInfo
+
 if "%GITHUB_WORKFLOW%" == "" (set RUNNING_LOCALLY=1)
 
 if "%TARGET%" == "" (
@@ -95,6 +98,9 @@ set variant=%~1
 set flag=%~2
 set config=%~3
 
+echo Disk info before building variant: %variant%
+call :ShowDiskInfo
+
 mkdir out\cmake-%variant%
 cd out\cmake-%variant%
 if errorlevel 1 exit /b %errorlevel%
@@ -102,9 +108,19 @@ if errorlevel 1 exit /b %errorlevel%
 cmake ..\.. -G "Visual Studio 16 2019" -A x64 %flag% -DCMAKE_INSTALL_PREFIX=..\%variant% || exit /b
 cmake --build . %INSTALL% --config %config% -- /m || exit /b
 
+echo Disk info after building variant: %variant%
+call :ShowDiskInfo
+
 cd ..\..
 
 :: Delete the cmake build folder, otherwise we run out of disk space on CI when
 :: building multiple variants.
 rd /s /q out\cmake-%variant%
+exit /b 0
+
+:: Helps debugging GitHub builds that run out of space
+:ShowDiskInfo
+echo =======================================================
+wmic logicaldisk get size,freespace,caption
+echo =======================================================
 exit /b 0
