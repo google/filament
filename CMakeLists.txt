@@ -105,6 +105,23 @@ if (WIN32)
     # Instead generate debug info directly inside obj files.
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${CRT_FLAGS_DEBUG} /Z7")
     set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${CRT_FLAGS_DEBUG} /Z7")
+
+    # Special settings with building on CI.
+    if (${FILAMENT_WINDOWS_CI_BUILD})
+        set(LinkerFlags
+            CMAKE_SHARED_LINKER_FLAGS_DEBUG
+            CMAKE_EXE_LINKER_FLAGS_DEBUG
+            CMAKE_MODULE_LINKER_FLAGS_DEBUG
+            )
+        foreach(LinkerFlag ${LinkerFlags})
+            # The /debug flag outputs .pdb files, which we don't need on CI.
+            string(REPLACE "/debug" "" ${LinkerFlag} ${${LinkerFlag}})
+
+            # The /INCREMENTAL flag outputs .ilk files for incremental linking. These are huge, and
+            # we don't need them on CI.
+            string(REPLACE "/INCREMENTAL" "/INCREMENTAL:NO" ${LinkerFlag} ${${LinkerFlag}})
+        endforeach()
+    endif()
 endif()
 
 # ==================================================================================================

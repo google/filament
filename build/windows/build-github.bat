@@ -104,7 +104,13 @@ mkdir out\cmake-%variant%
 cd out\cmake-%variant%
 if errorlevel 1 exit /b %errorlevel%
 
-cmake ..\.. -G "Visual Studio 16 2019" -A x64 %flag% -DCMAKE_INSTALL_PREFIX=..\%variant% || exit /b
+cmake ..\.. ^
+    -G "Visual Studio 16 2019" ^
+    -A x64 ^
+    %flag% ^
+    -DCMAKE_INSTALL_PREFIX=..\%variant% ^
+    -DFILAMENT_WINDOW_CI_BUILD:BOOL=ON ^
+    || exit /b
 cmake --build . %INSTALL% --config %config% -- /m || exit /b
 
 echo Disk info after building variant: %variant%
