@@ -4,7 +4,6 @@ set -e
 # Host tools required by Android, WebGL, and iOS builds
 MOBILE_HOST_TOOLS="matc resgen cmgen filamesh"
 WEB_HOST_TOOLS="${MOBILE_HOST_TOOLS} mipgen filamesh"
-IOS_TOOLCHAIN_URL="https://opensource.apple.com/source/clang/clang-800.0.38/src/cmake/platforms/iOS.cmake"
 
 function print_help {
     local self_name=$(basename "$0")
@@ -29,8 +28,7 @@ function print_help {
     echo "    -p platform1,platform2,..."
     echo "        Where platformN is [desktop|android|ios|webgl|all]."
     echo "        Platform(s) to build, defaults to desktop."
-    echo "        Building for iOS will automatically generate / download"
-    echo "        the toolchains if needed and perform a partial desktop build."
+    echo "        Building for iOS will automatically perform a partial desktop build."
     echo "    -q abi1,abi2,..."
     echo "        Where platformN is [armeabi-v7a|arm64-v8a|x86|x86_64|all]."
     echo "        ABIs to build when the platform is Android. Defaults to all."
@@ -458,54 +456,6 @@ function build_android {
     cd ..
 }
 
-function ensure_ios_toolchain {
-    local toolchain_path="build/toolchain-mac-ios.cmake"
-    if [[ -e ${toolchain_path} ]]; then
-        echo "iOS toolchain file exists."
-        return 0
-    fi
-
-    echo
-    echo "iOS toolchain file does not exist."
-    echo "It will automatically be downloaded from http://opensource.apple.com."
-
-    if [[ "${GITHUB_WORKFLOW}" ]]; then
-        REPLY=y
-    else
-        read -p "Continue? (y/n) " -n 1 -r
-        echo
-    fi
-
-    if [[ ! "${REPLY}" =~ ^[Yy]$ ]]; then
-        echo "Toolchain file must be downloaded to continue."
-        exit 1
-    fi
-
-    curl -o "${toolchain_path}" "${IOS_TOOLCHAIN_URL}" || {
-        echo "Error downloading iOS toolchain file."
-        exit 1
-    }
-
-    # Apple's toolchain hard-codes the PLATFORM_NAME into the toolchain file. Instead, make this a
-    # CACHE variable that can be overriden on the command line.
-    local FIND='SET(PLATFORM_NAME iphoneos)'
-    local REPLACE='SET(PLATFORM_NAME "iphoneos" CACHE STRING "iOS platform to build for")'
-    sed -i '' "s/${FIND}/${REPLACE}/g" ./${toolchain_path}
-
-    # Apple's toolchain specifies isysroot based on an environment variable, which we don't set.
-    # The toolchain doesn't need to do this, however, as isysroot is implicitly set in the toolchain
-    # via CMAKE_OSX_SYSROOT.
-    # shellcheck disable=SC2016
-    local FIND='SET(IOS_COMMON_FLAGS "-isysroot $ENV{SDKROOT} '
-    local REPLACE='SET(IOS_COMMON_FLAGS "'
-    sed -i '' "s/${FIND}/${REPLACE}/g" ./${toolchain_path}
-
-    # Prepend Filament-specific settings.
-    (cat build/toolchain-mac-ios.filament.cmake; cat ${toolchain_path}) > tmp && mv tmp ${toolchain_path}
-
-    echo "Successfully downloaded iOS toolchain file and prepended Filament-specific settings."
-}
-
 function build_ios_target {
     local lc_target=$(echo "$1" | tr '[:upper:]' '[:lower:]')
     local arch=$2
@@ -526,7 +476,7 @@ function build_ios_target {
             -DPLATFORM_NAME="${platform}" \
             -DIOS_MIN_TARGET=12.0 \
             -DIOS=1 \
-            -DCMAKE_TOOLCHAIN_FILE=../../build/toolchain-mac-ios.cmake \
+            -DCMAKE_TOOLCHAIN_FILE=../../third_party/clang/iOS.cmake \
             ../..
     fi
 
@@ -556,8 +506,6 @@ function build_ios {
     build_desktop "${MOBILE_HOST_TOOLS}"
 
     INSTALL_COMMAND=${old_install_command}
-
-    ensure_ios_toolchain
 
     # In theory, we could support iPhone architectures older than arm64, but
     # only arm64 devices support OpenGL 3.0 / Metal

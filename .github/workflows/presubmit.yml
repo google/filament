@@ -50,7 +50,7 @@ jobs:
       - uses: actions/checkout@v2.0.0
       - name: Run build script
         run: |
-          cd build/ios && printf "y" | ./build.sh presubmit
+          cd build/ios && ./build.sh presubmit
       - name: Build iOS samples
         run: |
           cd build/ios && ./build-samples.sh presubmit
