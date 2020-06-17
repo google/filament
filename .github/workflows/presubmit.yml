@@ -29,7 +29,7 @@ jobs:
       - uses: actions/checkout@v2.0.0
       - name: Run build script
         run: |
-          build\windows\build-github.bat continuous
+          build\windows\build-github.bat presubmit
         shell: cmd
 
   build-android:
