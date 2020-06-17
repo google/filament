@@ -109,7 +109,7 @@ cmake ..\.. ^
     -A x64 ^
     %flag% ^
     -DCMAKE_INSTALL_PREFIX=..\%variant% ^
-    -DFILAMENT_WINDOW_CI_BUILD:BOOL=ON ^
+    -DFILAMENT_WINDOWS_CI_BUILD:BOOL=ON ^
     || exit /b
 cmake --build . %INSTALL% --config %config% -- /m || exit /b
 
