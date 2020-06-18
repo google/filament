@@ -548,8 +548,7 @@ class_<View>("View")
 class_<Scene>("Scene")
     .function("addEntity", &Scene::addEntity)
 
-    .function("addEntities", EMBIND_LAMBDA(void,
-            (Scene* self, EntityVector entities), {
+    .function("_addEntities", EMBIND_LAMBDA(void, (Scene* self, EntityVector entities), {
         self->addEntities(entities.data(), entities.size());
     }), allow_raw_pointers())
 
