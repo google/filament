@@ -80,7 +80,7 @@ std::string shaderFromKey(const MaterialKey& config) {
     std::string shader = "void material(inout MaterialInputs material) {\n";
 
     if (config.hasNormalTexture && !config.unlit) {
-        shader += "float2 normalUV = ${normal};\n";
+        shader += "highp float2 normalUV = ${normal};\n";
         if (config.hasTextureTransforms) {
             shader += "normalUV = (vec3(normalUV, 1.0) * materialParams.normalUvMatrix).xy;\n";
         }
@@ -91,7 +91,7 @@ std::string shaderFromKey(const MaterialKey& config) {
     }
 
     if (config.hasClearCoat && config.hasClearCoatNormalTexture && !config.unlit) {
-        shader += "float2 clearCoatNormalUV = ${clearCoatNormal};\n";
+        shader += "highp float2 clearCoatNormalUV = ${clearCoatNormal};\n";
         if (config.hasTextureTransforms) {
             shader += "clearCoatNormalUV = (vec3(clearCoatNormalUV, 1.0) * "
                     "materialParams.clearCoatNormalUvMatrix).xy;\n";
@@ -116,7 +116,7 @@ std::string shaderFromKey(const MaterialKey& config) {
     )SHADER";
 
     if (config.hasBaseColorTexture) {
-        shader += "float2 baseColorUV = ${color};\n";
+        shader += "highp float2 baseColorUV = ${color};\n";
         if (config.hasTextureTransforms) {
             shader += "baseColorUV = (vec3(baseColorUV, 1.0) * "
                     "materialParams.baseColorUvMatrix).xy;\n";
@@ -161,7 +161,7 @@ std::string shaderFromKey(const MaterialKey& config) {
             )SHADER";
         }
         if (config.hasMetallicRoughnessTexture) {
-            shader += "float2 metallicRoughnessUV = ${metallic};\n";
+            shader += "highp float2 metallicRoughnessUV = ${metallic};\n";
             if (config.hasTextureTransforms) {
                 shader += "metallicRoughnessUV = (vec3(metallicRoughnessUV, 1.0) * "
                         "materialParams.metallicRoughnessUvMatrix).xy;\n";
@@ -181,7 +181,7 @@ std::string shaderFromKey(const MaterialKey& config) {
             }
         }
         if (config.hasOcclusionTexture) {
-            shader += "float2 aoUV = ${ao};\n";
+            shader += "highp float2 aoUV = ${ao};\n";
             if (config.hasTextureTransforms) {
                 shader += "aoUV = (vec3(aoUV, 1.0) * materialParams.occlusionUvMatrix).xy;\n";
             }
@@ -191,7 +191,7 @@ std::string shaderFromKey(const MaterialKey& config) {
             )SHADER";
         }
         if (config.hasEmissiveTexture) {
-            shader += "float2 emissiveUV = ${emissive};\n";
+            shader += "highp float2 emissiveUV = ${emissive};\n";
             if (config.hasTextureTransforms) {
                 shader += "emissiveUV = (vec3(emissiveUV, 1.0) * "
                         "materialParams.emissiveUvMatrix).xy;\n";
@@ -207,7 +207,7 @@ std::string shaderFromKey(const MaterialKey& config) {
             )SHADER";
 
             if (config.hasClearCoatTexture) {
-                shader += "float2 clearCoatUV = ${clearCoat};\n";
+                shader += "highp float2 clearCoatUV = ${clearCoat};\n";
                 if (config.hasTextureTransforms) {
                     shader += "clearCoatUV = (vec3(clearCoatUV, 1.0) * "
                             "materialParams.clearCoatUvMatrix).xy;\n";
@@ -218,7 +218,7 @@ std::string shaderFromKey(const MaterialKey& config) {
             }
 
             if (config.hasClearCoatRoughnessTexture) {
-                shader += "float2 clearCoatRoughnessUV = ${clearCoatRoughness};\n";
+                shader += "highp float2 clearCoatRoughnessUV = ${clearCoatRoughness};\n";
                 if (config.hasTextureTransforms) {
                     shader += "clearCoatRoughnessUV = (vec3(clearCoatRoughnessUV, 1.0) * "
                               "materialParams.clearCoatRoughnessUvMatrix).xy;\n";
