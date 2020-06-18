@@ -8,13 +8,28 @@
 #   -DCMAKE_TOOLCHAIN_FILE=../../cmake/platforms/iOS.cmake ../..
 # make <target>
 
+set(CMAKE_OSX_ARCHITECTURES ${IOS_ARCH} CACHE STRING "Build architecture for iOS")
+
+# Necessary for correct install location
+set(DIST_ARCH ${IOS_ARCH})
+
+add_definitions(-DIOS)
+
+set(IOS_MIN_TARGET "12.0")
+
+if(PLATFORM_NAME STREQUAL "iphonesimulator")
+    add_definitions(-DFILAMENT_IOS_SIMULATOR)
+    # The simulator only supports iOS >= 13.0
+    set(IOS_MIN_TARGET "13.0")
+endif()
+
 SET(CMAKE_SYSTEM_NAME Darwin)
 SET(CMAKE_SYSTEM_VERSION 13)
 SET(CMAKE_CXX_COMPILER_WORKS True)
 SET(CMAKE_C_COMPILER_WORKS True)
 SET(DARWIN_TARGET_OS_NAME ios)
 
-SET(PLATFORM_NAME iphoneos)
+SET(PLATFORM_NAME "iphoneos" CACHE STRING "iOS platform to build for")
 SET(PLATFORM_FLAG_NAME ios)
 
 IF("$ENV{RC_APPLETV}" STREQUAL "YES")
@@ -88,7 +103,7 @@ IF (NOT DEFINED IOS_MIN_TARGET)
    OUTPUT_STRIP_TRAILING_WHITESPACE)
 ENDIF()
 
-SET(IOS_COMMON_FLAGS "-isysroot $ENV{SDKROOT} -m${PLATFORM_FLAG_NAME}-version-min=${IOS_MIN_TARGET}")
+SET(IOS_COMMON_FLAGS "-m${PLATFORM_FLAG_NAME}-version-min=${IOS_MIN_TARGET}")
 SET(CMAKE_C_FLAGS "${IOS_COMMON_FLAGS}" CACHE STRING "toolchain_cflags" FORCE)
 SET(CMAKE_CXX_FLAGS "${IOS_COMMON_FLAGS}" CACHE STRING "toolchain_cxxflags" FORCE)
 SET(CMAKE_LINK_FLAGS "${IOS_COMMON_FLAGS}" CACHE STRING "toolchain_linkflags" FORCE)
