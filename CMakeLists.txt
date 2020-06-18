@@ -73,6 +73,15 @@ if (ANDROID OR WEBGL OR IOS OR FILAMENT_USE_SWIFTSHADER)
     set(IS_MOBILE_TARGET TRUE)
 endif()
 
+if (IOS)
+    # Remove the headerpad_max_install_names linker flag on iOS. It causes warnings when linking
+    # executables with bitcode.
+    string(REPLACE "-Wl,-headerpad_max_install_names" "" CMAKE_C_LINK_FLAGS ${CMAKE_C_LINK_FLAGS})
+    string(REPLACE "-Wl,-headerpad_max_install_names" "" CMAKE_CXX_LINK_FLAGS ${CMAKE_CXX_LINK_FLAGS})
+    string(REPLACE "-Wl,-headerpad_max_install_names" "" CMAKE_SHARED_LIBRARY_CREATE_C_FLAGS ${CMAKE_SHARED_LIBRARY_CREATE_C_FLAGS})
+    string(REPLACE "-Wl,-headerpad_max_install_names" "" CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS ${CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS})
+endif()
+
 if (WIN32)
     # Link statically against c/c++ lib to avoid missing redistriburable such as
     # "VCRUNTIME140.dll not found. Try reinstalling the app.", but give users
@@ -240,7 +249,12 @@ endif()
 # Release compiler flags
 # ==================================================================================================
 if (NOT MSVC)
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fomit-frame-pointer -ffunction-sections -fdata-sections")
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fomit-frame-pointer")
+
+    # These aren't compatible with -fembed-bitcode (and seem to have no effect on Apple platforms anyway)
+    if (NOT IOS)
+        set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -ffunction-sections -fdata-sections")
+    endif()
 endif()
 
 # On Android RELEASE builds, we disable exceptions and RTTI to save some space (about 75 KiB
