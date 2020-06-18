@@ -52,7 +52,6 @@ namespace gltfio {
 class SimpleViewer {
 public:
 
-    static constexpr uint32_t FLAG_COLLAPSED = (1 << 0);
     static constexpr int DEFAULT_SIDEBAR_WIDTH = 350;
 
     /**
@@ -62,7 +61,7 @@ public:
      * light sources) that it owns.
      */
     SimpleViewer(filament::Engine* engine, filament::Scene* scene, filament::View* view,
-            uint32_t flags = 0, int sidebarWidth = DEFAULT_SIDEBAR_WIDTH);
+            int sidebarWidth = DEFAULT_SIDEBAR_WIDTH);
 
     /**
      * Destroys the SimpleViewer and any Filament entities that it owns.
@@ -247,11 +246,10 @@ filament::math::mat4f fitIntoUnitCube(const filament::Aabb& bounds) {
 }
 
 SimpleViewer::SimpleViewer(filament::Engine* engine, filament::Scene* scene, filament::View* view,
-        uint32_t flags, int sidebarWidth) :
+        int sidebarWidth) :
         mEngine(engine), mScene(scene), mView(view),
         mSunlight(utils::EntityManager::get().create()),
-        mSidebarWidth(sidebarWidth),
-        mFlags(flags) {
+        mSidebarWidth(sidebarWidth) {
     using namespace filament;
     LightManager::Builder(LightManager::Type::SUN)
         .color(mSunlightColor)
@@ -361,8 +359,6 @@ void SimpleViewer::applyAnimation(double currentTime) {
 
 void SimpleViewer::updateUserInterface() {
     using namespace filament;
-
-    ImGuiTreeNodeFlags headerFlags = (mFlags & FLAG_COLLAPSED) ? 0 : ImGuiTreeNodeFlags_DefaultOpen;
 
     auto& tm = mEngine->getTransformManager();
     auto& rm = mEngine->getRenderableManager();
@@ -492,7 +488,7 @@ void SimpleViewer::updateUserInterface() {
         ImGui::Unindent();
     }
 
-    if (ImGui::CollapsingHeader("Light", headerFlags)) {
+    if (ImGui::CollapsingHeader("Light")) {
         ImGui::Indent();
         ImGui::SliderFloat("IBL intensity", &mIblIntensity, 0.0f, 100000.0f);
         ImGui::SliderAngle("IBL rotation", &mIblRotation);
@@ -548,7 +544,7 @@ void SimpleViewer::updateUserInterface() {
     });
 
     if (mAsset != nullptr) {
-        if (ImGui::CollapsingHeader("Model", headerFlags)) {
+        if (ImGui::CollapsingHeader("Hierarchy")) {
             if (mAnimator->getAnimationCount() > 0) {
                 intptr_t animationsNodeId = -1;
                 ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen;
