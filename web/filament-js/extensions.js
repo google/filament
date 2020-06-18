@@ -153,6 +153,17 @@ Filament.loadClassExtensions = function() {
         return new Filament.gltfio$AssetLoader(this, materials);
     };
 
+    /// addEntities ::method::
+    /// entities ::argument:: array of entities
+    /// This method is equivalent to calling `addEntity` on each item in the array.
+    Filament.Scene.prototype.addEntities = function(entities) {
+        const vector = new Filament.EntityVector();
+        for (const entity of entities) {
+            vector.push_back(entity);
+        }
+        this._addEntities(vector);
+    };
+
     /// setClearOptions ::method::
     /// overrides ::argument:: Dictionary with one or more of the following properties: \
     /// clearColor, clear, discard.

@@ -368,7 +368,7 @@ export class IcoSphere {
 
 export class Scene {
     public addEntity(entity: Entity): void;
-    public addEntities(entities: EntityVector): void;
+    public addEntities(entities: Entity[]): void;
     public getLightCount(): number;
     public getRenderableCount(): number;
     public remove(entity: Entity): void;
