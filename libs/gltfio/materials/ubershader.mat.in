@@ -61,20 +61,20 @@ material {
 
 fragment {
     void material(inout MaterialInputs material) {
-        float2 uvs[2];
+        highp float2 uvs[2];
         uvs[0] = getUV0();
         uvs[1] = getUV1();
 
         #if !defined(SHADING_MODEL_UNLIT)
             if (materialParams.normalIndex > -1) {
-                float2 uv = uvs[materialParams.normalIndex];
+                highp float2 uv = uvs[materialParams.normalIndex];
                 uv = (vec3(uv, 1.0) * materialParams.normalUvMatrix).xy;
                 material.normal = texture(materialParams_normalMap, uv).xyz * 2.0 - 1.0;
                 material.normal.xy *= materialParams.normalScale;
             }
             #if defined(SHADING_MODEL_LIT)
             if (materialParams.clearCoatNormalIndex > -1) {
-                float2 uv = uvs[materialParams.clearCoatNormalIndex];
+                highp float2 uv = uvs[materialParams.clearCoatNormalIndex];
                 uv = (vec3(uv, 1.0) * materialParams.clearCoatNormalUvMatrix).xy;
                 material.clearCoatNormal = texture(materialParams_clearCoatNormalMap, uv).xyz * 2.0 - 1.0;
                 material.clearCoatNormal.xy *= materialParams.clearCoatNormalScale;
@@ -86,7 +86,7 @@ fragment {
         material.baseColor = materialParams.baseColorFactor;
 
         if (materialParams.baseColorIndex > -1) {
-            float2 uv = uvs[materialParams.baseColorIndex];
+            highp float2 uv = uvs[materialParams.baseColorIndex];
             uv = (vec3(uv, 1.0) * materialParams.baseColorUvMatrix).xy;
             material.baseColor *= texture(materialParams_baseColorMap, uv);
         }
@@ -109,12 +109,12 @@ fragment {
                 material.clearCoatRoughness = materialParams.clearCoatRoughnessFactor;
 
                 if (materialParams.clearCoatIndex > -1) {
-                    float2 uv = uvs[materialParams.clearCoatIndex];
+                    highp float2 uv = uvs[materialParams.clearCoatIndex];
                     uv = (vec3(uv, 1.0) * materialParams.clearCoatUvMatrix).xy;
                     material.clearCoat *= texture(materialParams_clearCoatMap, uv).r;
                 }
                 if (materialParams.clearCoatRoughnessIndex > -1) {
-                    float2 uv = uvs[materialParams.clearCoatRoughnessIndex];
+                    highp float2 uv = uvs[materialParams.clearCoatRoughnessIndex];
                     uv = (vec3(uv, 1.0) * materialParams.clearCoatRoughnessUvMatrix).xy;
                     material.clearCoatRoughness *= texture(materialParams_clearCoatRoughnessMap, uv).g;
                 }
@@ -128,7 +128,7 @@ fragment {
             #endif
 
             if (materialParams.metallicRoughnessIndex > -1) {
-                float2 uv = uvs[materialParams.metallicRoughnessIndex];
+                highp float2 uv = uvs[materialParams.metallicRoughnessIndex];
                 uv = (vec3(uv, 1.0) * materialParams.metallicRoughnessUvMatrix).xy;
 
                 #if defined(SHADING_MODEL_SPECULAR_GLOSSINESS)
@@ -143,13 +143,13 @@ fragment {
             }
 
             if (materialParams.aoIndex > -1) {
-                float2 uv = uvs[materialParams.aoIndex];
+                highp float2 uv = uvs[materialParams.aoIndex];
                 uv = (vec3(uv, 1.0) * materialParams.occlusionUvMatrix).xy;
                 material.ambientOcclusion = texture(materialParams_occlusionMap, uv).r *
                         materialParams.aoStrength;
             }
             if (materialParams.emissiveIndex > -1) {
-                float2 uv = uvs[materialParams.emissiveIndex];
+                highp float2 uv = uvs[materialParams.emissiveIndex];
                 uv = (vec3(uv, 1.0) * materialParams.emissiveUvMatrix).xy;
                 material.emissive.rgb *= texture(materialParams_emissiveMap, uv).rgb;
             }
