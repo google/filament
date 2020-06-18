@@ -302,7 +302,7 @@ Filament.loadClassExtensions = function() {
         buffer = new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
         this.posPointer = Filament._malloc(buffer.byteLength);
         Filament.HEAPU8.set(buffer, this.posPointer);
-        this._uvs(this.posPointer, stride);
+        this._positions(this.posPointer, stride);
     };
 
     Filament.SurfaceOrientation$Builder.prototype.triangles16 = function(buffer, stride = 0) {
