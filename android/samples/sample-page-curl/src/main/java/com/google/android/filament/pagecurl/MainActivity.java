@@ -247,7 +247,8 @@ public class MainActivity extends Activity
                 // In this demo, we only care about dragging the right hand page leftwards.
                 final float t = -mPageAnimationValue * 3.0f;
                 final float rigidity = 0.1f;
-                mPageAnimationRadians = mPage.updateVertices(mEngine, t, rigidity);
+                final Page.CurlStyle style = Page.CurlStyle.BREEZE;
+                mPageAnimationRadians = mPage.updateVertices(mEngine, t, rigidity, style);
                 return true;
             }
             case MotionEvent.ACTION_UP: {
