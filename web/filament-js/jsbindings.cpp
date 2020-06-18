@@ -1415,21 +1415,21 @@ class_<SurfaceBuilder>("SurfaceOrientation$Builder")
         return &builder->vertexCount(nverts);
     })
 
-    .BUILDER_FUNCTION("normals", SurfaceBuilder, (SurfaceBuilder* builder,
+    .BUILDER_FUNCTION("_normals", SurfaceBuilder, (SurfaceBuilder* builder,
             intptr_t data, int stride), {
         return &builder->normals((const filament::math::float3*) data, stride);
     })
 
-    .BUILDER_FUNCTION("tangents", SurfaceBuilder, (SurfaceBuilder* builder,
+    .BUILDER_FUNCTION("_tangents", SurfaceBuilder, (SurfaceBuilder* builder,
             intptr_t data, int stride), {
         return &builder->tangents((const filament::math::float4*) data, stride);
     })
 
-    .BUILDER_FUNCTION("uvs", SurfaceBuilder, (SurfaceBuilder* builder, intptr_t data, int stride), {
+    .BUILDER_FUNCTION("_uvs", SurfaceBuilder, (SurfaceBuilder* builder, intptr_t data, int stride), {
         return &builder->uvs((const filament::math::float2*) data, stride);
     })
 
-    .BUILDER_FUNCTION("positions", SurfaceBuilder, (SurfaceBuilder* builder,
+    .BUILDER_FUNCTION("_positions", SurfaceBuilder, (SurfaceBuilder* builder,
             intptr_t data, int stride), {
         return &builder->positions((const filament::math::float3*) data, stride);
     })
@@ -1438,11 +1438,11 @@ class_<SurfaceBuilder>("SurfaceOrientation$Builder")
         return &builder->triangleCount(n);
     })
 
-    .BUILDER_FUNCTION("triangles16", SurfaceBuilder, (SurfaceBuilder* builder, intptr_t data), {
+    .BUILDER_FUNCTION("_triangles16", SurfaceBuilder, (SurfaceBuilder* builder, intptr_t data), {
         return &builder->triangles((filament::math::ushort3*) data);
     })
 
-    .BUILDER_FUNCTION("triangles32", SurfaceBuilder, (SurfaceBuilder* builder, intptr_t data), {
+    .BUILDER_FUNCTION("_triangles32", SurfaceBuilder, (SurfaceBuilder* builder, intptr_t data), {
         return &builder->triangles((filament::math::uint3*) data);
     })
 
@@ -1451,7 +1451,7 @@ class_<SurfaceBuilder>("SurfaceOrientation$Builder")
     }), allow_raw_pointers());
 
 class_<SurfaceOrientation>("SurfaceOrientation")
-    .function("getQuats", EMBIND_LAMBDA(void, (SurfaceOrientation* self,
+    .function("_getQuats", EMBIND_LAMBDA(void, (SurfaceOrientation* self,
             intptr_t out, size_t quatCount, VertexBuffer::AttributeType attrtype), {
         switch (attrtype) {
             case VertexBuffer::AttributeType::FLOAT4: {

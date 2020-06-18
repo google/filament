@@ -284,10 +284,60 @@ Filament.loadClassExtensions = function() {
         pbd.delete();
     }
 
+    Filament.SurfaceOrientation$Builder.prototype.normals = function(buffer, stride = 0) {
+        buffer = new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+        this.norPointer = Filament._malloc(buffer.byteLength);
+        Filament.HEAPU8.set(buffer, this.norPointer);
+        this._normals(this.norPointer, stride);
+    };
+
+    Filament.SurfaceOrientation$Builder.prototype.uvs = function(buffer, stride = 0) {
+        buffer = new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+        this.uvsPointer = Filament._malloc(buffer.byteLength);
+        Filament.HEAPU8.set(buffer, this.uvsPointer);
+        this._uvs(this.uvsPointer, stride);
+    };
+
+    Filament.SurfaceOrientation$Builder.prototype.positions = function(buffer, stride = 0) {
+        buffer = new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+        this.posPointer = Filament._malloc(buffer.byteLength);
+        Filament.HEAPU8.set(buffer, this.posPointer);
+        this._positions(this.posPointer, stride);
+    };
+
+    Filament.SurfaceOrientation$Builder.prototype.triangles16 = function(buffer, stride = 0) {
+        buffer = new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+        this.t16Pointer = Filament._malloc(buffer.byteLength);
+        Filament.HEAPU8.set(buffer, this.t16Pointer);
+        this._triangles16(this.t16Pointer, stride);
+    };
+
+    Filament.SurfaceOrientation$Builder.prototype.triangles32 = function(buffer, stride = 0) {
+        buffer = new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+        this.t32Pointer = Filament._malloc(buffer.byteLength);
+        Filament.HEAPU8.set(buffer, this.t32Pointer);
+        this._triangles32(this.t32Pointer, stride);
+    };
+
     Filament.SurfaceOrientation$Builder.prototype.build = function() {
         const result = this._build();
         this.delete();
+        if ('norPointer' in this) Filament._free(this.norPointer);
+        if ('uvsPointer' in this) Filament._free(this.uvsPointer);
+        if ('posPointer' in this) Filament._free(this.posPointer);
+        if ('t16Pointer' in this) Filament._free(this.t16Pointer);
+        if ('t32Pointer' in this) Filament._free(this.t32Pointer);
         return result;
+    };
+
+    Filament.SurfaceOrientation.prototype.getQuats = function(nverts) {
+        const attribType = Filament.VertexBuffer$AttributeType.SHORT4;
+        const quatsBufferSize = 8 * nverts;
+        const quatsBuffer = Filament._malloc(quatsBufferSize);
+        this._getQuats(quatsBuffer, nverts, attribType);
+        const arrayBuffer = Filament.HEAPU8.subarray(quatsBuffer, quatsBuffer + quatsBufferSize).slice().buffer;
+        Filament._free(quatsBuffer);
+        return new Int16Array(arrayBuffer);
     };
 
     Filament.gltfio$AssetLoader.prototype.createAssetFromJson = function(buffer) {

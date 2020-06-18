@@ -498,6 +498,23 @@ export class gltfio$Animator {
     public getAnimationName(index: number): string;
 }
 
+export class SurfaceOrientation$Builder {
+    public constructor();
+    public vertexCount(count: number): SurfaceOrientation$Builder;
+    public normals(vec3array: Float32Array, stride: number): SurfaceOrientation$Builder;
+    public uvs(vec2array: Float32Array, stride: number): SurfaceOrientation$Builder;
+    public positions(vec3array: Float32Array, stride: number): SurfaceOrientation$Builder;
+    public triangleCount(count: number): SurfaceOrientation$Builder;
+    public triangles16(indices: Uint16Array): SurfaceOrientation$Builder;
+    public triangles32(indices: Uint32Array): SurfaceOrientation$Builder;
+    public build(): SurfaceOrientation;
+}
+
+export class SurfaceOrientation {
+    public getQuats(quatCount: number): Int16Array;
+    public delete();
+}
+
 export enum Frustum$Plane {
     LEFT,
     RIGHT,
@@ -867,20 +884,3 @@ interface HeapInterface {
 }
 
 export const HEAPU8 : HeapInterface;
-
-export class SurfaceOrientation$Builder {
-    public constructor();
-    public vertexCount(count: number): SurfaceOrientation$Builder;
-    public normals(count: number, stride: number): SurfaceOrientation$Builder;
-    public uvs(uvs: number, stride: number): SurfaceOrientation$Builder;
-    public positions(positions: number, stride: number): SurfaceOrientation$Builder;
-    public triangleCount(count: number): SurfaceOrientation$Builder;
-    public triangles16(triangles: number): SurfaceOrientation$Builder;
-    public triangles32(triangles: number): SurfaceOrientation$Builder;
-    public build(): SurfaceOrientation;
-}
-
-export class SurfaceOrientation {
-    public getQuats(out: number, quatCount: number, attrType: VertexBuffer$AttributeType);
-    public delete();
-}
