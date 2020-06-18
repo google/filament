@@ -133,7 +133,7 @@ jobs:
           ref: ${{ steps.git_ref.outputs.ref }}
       - name: Run build script
         run: |
-          cd build/ios && ./build.sh release
+          cd build/ios && printf "y" | ./build.sh release
       - name: Upload release assets
         run: |
           pip3 install setuptools
