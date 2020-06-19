@@ -102,9 +102,6 @@ public class Page {
             return;
         }
 
-        vertexBuffer.setBufferAt(engine, 0, positions);
-        vertexBuffer.setBufferAt(engine, 2, tangents);
-
         final float e = 0.01f;
         final int count = this.positions.capacity() / 3;
 
@@ -146,6 +143,9 @@ public class Page {
             this.positions.put(i * 3 + 1, p[1]);
             this.positions.put(i * 3 + 2, p[2]);
         }
+
+        vertexBuffer.setBufferAt(engine, 0, positions);
+        vertexBuffer.setBufferAt(engine, 2, tangents);
     }
 
     // Applies the deformation described in "Deforming Pages of Electronic Books" by Hong et al.
