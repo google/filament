@@ -94,7 +94,7 @@ add_jar(${TARGET}
         SOURCES ${JAVA_SOURCE_FILES}
         INCLUDE_JARS
             ../lib/annotation-1.0.0.jar
-            ${CMAKE_CURRENT_BINARY_DIR}/../filament/filament-java.jar
+            filament-java
 )
 
 install_jar(${TARGET} lib)
