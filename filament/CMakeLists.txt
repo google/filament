@@ -376,6 +376,7 @@ set(INSTALL_TYPE ARCHIVE)
 install(TARGETS ${TARGET} ${INSTALL_TYPE} DESTINATION lib/${DIST_DIR})
 install(DIRECTORY ${PUBLIC_HDR_DIR}/filament DESTINATION include)
 install(FILES "README.md" DESTINATION .)
+install(FILES "../LICENSE" DESTINATION .)
 
 # ==================================================================================================
 # Sub-projects
