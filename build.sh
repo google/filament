@@ -38,6 +38,8 @@ function print_help {
     echo "        Exclude Vulkan support from the Android build."
     echo "    -s"
     echo "        Add iOS simulator support to the iOS build."
+    echo "    -l"
+    echo "        Combine iOS arm64 and x86_64 into universal libraries (implies -s)."
     echo "    -w"
     echo "        Build Web documents (compiles .md.html files to .html)."
     echo ""
@@ -117,6 +119,7 @@ VULKAN_ANDROID_OPTION="-DFILAMENT_SUPPORTS_VULKAN=ON"
 VULKAN_ANDROID_GRADLE_OPTION=""
 
 IOS_BUILD_SIMULATOR=false
+IOS_CREATE_UNIVERSAL_LIBRARIES=false
 
 BUILD_GENERATOR=Ninja
 BUILD_COMMAND=ninja
@@ -487,15 +490,20 @@ function build_ios_target {
         ${BUILD_COMMAND} ${INSTALL_COMMAND}
     fi
 
-    if [[ -d "../ios-${lc_target}/filament" ]]; then
+    cd ../..
+}
+
+function archive_ios {
+    local lc_target=$(echo "$1" | tr '[:upper:]' '[:lower:]')
+
+    if [[ -d "out/ios-${lc_target}/filament" ]]; then
         if [[ "${ISSUE_ARCHIVES}" == "true" ]]; then
             echo "Generating out/filament-${lc_target}-ios.tgz..."
-            cd "../ios-${lc_target}"
+            cd "out/ios-${lc_target}"
             tar -czvf "../filament-${lc_target}-ios.tgz" filament
+            cd ../..
         fi
     fi
-
-    cd ../..
 }
 
 function build_ios {
@@ -515,6 +523,17 @@ function build_ios {
         if [[ "${IOS_BUILD_SIMULATOR}" == "true" ]]; then
             build_ios_target "Debug" "x86_64" "iphonesimulator"
         fi
+
+        if [[ "${IOS_CREATE_UNIVERSAL_LIBRARIES}" == "true" ]]; then
+            build/ios/create-universal-libs.sh \
+                -o out/ios-debug/filament/lib/universal \
+                out/ios-debug/filament/lib/arm64 \
+                out/ios-debug/filament/lib/x86_64
+            rm -rf out/ios-debug/filament/lib/arm64
+            rm -rf out/ios-debug/filament/lib/x86_64
+        fi
+
+        archive_ios "Debug"
     fi
 
     if [[ "${ISSUE_RELEASE_BUILD}" == "true" ]]; then
@@ -522,6 +541,17 @@ function build_ios {
         if [[ "${IOS_BUILD_SIMULATOR}" == "true" ]]; then
             build_ios_target "Release" "x86_64" "iphonesimulator"
         fi
+
+        if [[ "${IOS_CREATE_UNIVERSAL_LIBRARIES}" == "true" ]]; then
+            build/ios/create-universal-libs.sh \
+                -o out/ios-release/filament/lib/universal \
+                out/ios-release/filament/lib/arm64 \
+                out/ios-release/filament/lib/x86_64
+            rm -rf out/ios-release/filament/lib/arm64
+            rm -rf out/ios-release/filament/lib/x86_64
+        fi
+
+        archive_ios "Release"
     fi
 }
 
@@ -621,7 +651,7 @@ function run_tests {
 
 pushd "$(dirname "$0")" > /dev/null
 
-while getopts ":hacfijmp:q:uvsw" opt; do
+while getopts ":hacfijmp:q:uvslw" opt; do
     case ${opt} in
         h)
             print_help
@@ -718,6 +748,12 @@ while getopts ":hacfijmp:q:uvsw" opt; do
         s)
             IOS_BUILD_SIMULATOR=true
             echo "iOS simulator support enabled."
+            ;;
+        l)
+            IOS_BUILD_SIMULATOR=true
+            IOS_CREATE_UNIVERSAL_LIBRARIES=true
+            echo "iOS simulator support enabled."
+            echo "Creating iOS universal libraries."
             ;;
         w)
             ISSUE_WEB_DOCS=true
