@@ -445,23 +445,6 @@ void SimpleViewer::updateUserInterface() {
         }
     };
 
-    auto animationsTreeItem = [&]() {
-        size_t count = mAnimator->getAnimationCount();
-        int selectedAnimation = mCurrentAnimation;
-        ImGui::RadioButton("Disable", &selectedAnimation, 0);
-        for (size_t i = 0; i < count; ++i) {
-            std::string label = mAnimator->getAnimationName(i);
-            if (label.empty()) {
-                label = "Unnamed " + std::to_string(i);
-            }
-            ImGui::RadioButton(label.c_str(), &selectedAnimation, i + 1);
-        }
-        if (selectedAnimation != mCurrentAnimation) {
-            mCurrentAnimation = selectedAnimation;
-            mResetAnimation = true;
-        }
-    };
-
     // Disable rounding and draw a fixed-height ImGui window that looks like a sidebar.
     ImGui::GetStyle().WindowRounding = 0;
     ImGui::SetNextWindowPos(ImVec2(0, 0));
@@ -545,16 +528,28 @@ void SimpleViewer::updateUserInterface() {
 
     if (mAsset != nullptr) {
         if (ImGui::CollapsingHeader("Hierarchy")) {
-            if (mAnimator->getAnimationCount() > 0) {
-                intptr_t animationsNodeId = -1;
-                ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen;
-                if (ImGui::TreeNodeEx((const void*) animationsNodeId, flags, "Animations")) {
-                    animationsTreeItem();
-                    ImGui::TreePop();
-                }
-            }
+            ImGui::Indent();
             ImGui::Checkbox("Show bounds", &mEnableWireframe);
             treeNode(mAsset->getRoot());
+            ImGui::Unindent();
+        }
+
+        if (mAnimator->getAnimationCount() > 0 && ImGui::CollapsingHeader("Animation")) {
+            ImGui::Indent();
+            int selectedAnimation = mCurrentAnimation;
+            ImGui::RadioButton("Disable", &selectedAnimation, 0);
+            for (size_t i = 0, count = mAnimator->getAnimationCount(); i < count; ++i) {
+                std::string label = mAnimator->getAnimationName(i);
+                if (label.empty()) {
+                    label = "Unnamed " + std::to_string(i);
+                }
+                ImGui::RadioButton(label.c_str(), &selectedAnimation, i + 1);
+            }
+            if (selectedAnimation != mCurrentAnimation) {
+                mCurrentAnimation = selectedAnimation;
+                mResetAnimation = true;
+            }
+            ImGui::Unindent();
         }
 
         if (mEnableWireframe) {
