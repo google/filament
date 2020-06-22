@@ -251,7 +251,7 @@ creating the swap chain in the `onNativeWindowChanged()` callback.
 
 ### iOS
 
-Filament is supported on iOS 12.0 and above. See `ios/samples` for examples of using Filament on
+Filament is supported on iOS 11.0 and above. See `ios/samples` for examples of using Filament on
 iOS.
 
 Filament on iOS is largely the same as native rendering with C++. A `CAEAGLLayer` or `CAMetalLayer`

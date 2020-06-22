@@ -15,7 +15,7 @@ set(DIST_ARCH ${IOS_ARCH})
 
 add_definitions(-DIOS)
 
-set(IOS_MIN_TARGET "12.0")
+set(IOS_MIN_TARGET "11.0")
 
 if(PLATFORM_NAME STREQUAL "iphonesimulator")
     add_definitions(-DFILAMENT_IOS_SIMULATOR)
