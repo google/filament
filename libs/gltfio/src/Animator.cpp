@@ -238,11 +238,11 @@ void Animator::applyAnimation(size_t animationIndex, float time) const {
         // Compute the interpolant between 0 and 1.
         float prevTime = prevIter->first;
         float nextTime = nextIter->first;
-        float interval = nextTime - prevTime;
-        if (interval < 0) {
-            interval += anim.duration;
+        float deltaTime = nextTime - prevTime;
+        if (deltaTime < 0) {
+            deltaTime += anim.duration;
         }
-        float t = interval == 0 ? 0.0f : ((time - prevTime) / interval);
+        float t = deltaTime == 0 ? 0.0f : ((time - prevTime) / deltaTime);
 
         // Perform the interpolation. This is a simple but inefficient implementation; Filament
         // stores transforms as mat4's but glTF animation is based on TRS (translation rotation
@@ -304,27 +304,38 @@ void Animator::applyAnimation(size_t animationIndex, float time) const {
                 break;
             }
 
-            // We honor the first four components of the weights array, and skip over the
-            // others. The number of weight targets in the glTF file is basically a stride value
-            // in terms of floats.
             case Channel::WEIGHTS: {
-                const int weightsPerTarget = sampler->values.size() / times.size();
                 float4 weights(0, 0, 0, 0);
-                const float* srcFloat = (const float*) sampler->values.data();
-                for (int component = 0; component < std::min(4, weightsPerTarget); ++component) {
-                    if (sampler->interpolation != Sampler::CUBIC) {
-                        float previous = srcFloat[prevIndex * weightsPerTarget];
-                        float current = srcFloat[nextIndex * weightsPerTarget];
-                        weights[component] = (1 - t) * previous + t * current;
-                    } else {
-                        float vert0 = srcFloat[prevIndex * weightsPerTarget * 3 + 1];
-                        float tang0 = srcFloat[prevIndex * weightsPerTarget * 3 + 2];
-                        float tang1 = srcFloat[nextIndex * weightsPerTarget * 3];
-                        float vert1 = srcFloat[nextIndex * weightsPerTarget * 3 + 1];
-                        weights[component] = cubicSpline(vert0, tang0, vert1, tang1, t);
+                const float* const samplerValues = sampler->values.data();
+                assert(sampler->values.size() % times.size() == 0);
+                const int valuesPerKeyframe = sampler->values.size() / times.size();
+
+                if (sampler->interpolation == Sampler::CUBIC) {
+                    assert(valuesPerKeyframe % 3 == 0);
+                    const int numMorphTargets = valuesPerKeyframe / 3;
+                    const float* const inTangents = samplerValues;
+                    const float* const splineVerts = samplerValues + numMorphTargets;
+                    const float* const outTangents = samplerValues + numMorphTargets * 2;
+
+                    // Filament supports up to 4 morph targets, all others are ignored.
+                    const int numComponents = std::min(4, numMorphTargets);
+                    for (int comp = 0; comp < numComponents; ++comp) {
+                        float vert0 = splineVerts[comp + prevIndex * valuesPerKeyframe];
+                        float tang0 = outTangents[comp + prevIndex * valuesPerKeyframe];
+                        float tang1 = inTangents[comp + nextIndex * valuesPerKeyframe];
+                        float vert1 = splineVerts[comp + nextIndex * valuesPerKeyframe];
+                        weights[comp] = cubicSpline(vert0, tang0, vert1, tang1, t);
                     }
-                    ++srcFloat;
+                } else {
+                    // Filament supports up to 4 morph targets, all others are ignored.
+                    const int numComponents = std::min(4, valuesPerKeyframe);
+                    for (int comp = 0; comp < numComponents; ++comp) {
+                        float previous = samplerValues[comp + prevIndex * valuesPerKeyframe];
+                        float current = samplerValues[comp + nextIndex * valuesPerKeyframe];
+                        weights[comp] = (1 - t) * previous + t * current;
+                    }
                 }
+
                 auto renderable = renderableManager->getInstance(channel.targetEntity);
                 renderableManager->setMorphWeights(renderable, weights);
                 continue;
