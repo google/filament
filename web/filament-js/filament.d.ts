@@ -425,8 +425,8 @@ export class Engine {
     public createScene(): Scene;
     public createSkyFromKtx(url: string): Skybox;
     public createSwapChain(): SwapChain;
-    public createTextureFromJpeg(url: string): Texture;
-    public createTextureFromPng(url: string): Texture;
+    public createTextureFromJpeg(url: string, options?: object): Texture;
+    public createTextureFromPng(url: string, options?: object): Texture;
     public createTextureFromKtx(url: string, options?: object): Texture;
     public createView(): View;
 
