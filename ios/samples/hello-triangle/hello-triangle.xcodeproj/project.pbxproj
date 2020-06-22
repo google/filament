@@ -212,6 +212,7 @@
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"../../../out/ios-debug/filament/lib/$(CURRENT_ARCH)",
+					"../../../out/ios-debug/filament/lib/universal",
 				);
 				OTHER_LDFLAGS = (
 					"-lfilament",
@@ -310,6 +311,7 @@
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"../../../out/ios-release/filament/lib/$(CURRENT_ARCH)",
+					"../../../out/ios-release/filament/lib/universal",
 				);
 				OTHER_LDFLAGS = (
 					"-lfilament",
@@ -349,6 +351,7 @@
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"../../../out/ios-release/filament/lib/$(CURRENT_ARCH)",
+					"../../../out/ios-release/filament/lib/universal",
 				);
 				OTHER_LDFLAGS = (
 					"-lfilament",
@@ -490,6 +493,7 @@
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"../../../out/ios-debug/filament/lib/$(CURRENT_ARCH)",
+					"../../../out/ios-debug/filament/lib/universal",
 				);
 				OTHER_LDFLAGS = (
 					"-lfilament",
