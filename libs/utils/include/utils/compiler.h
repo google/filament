@@ -36,6 +36,12 @@
 #    define UTILS_PUBLIC  
 #endif
 
+#if __has_attribute(deprecated)
+#   define UTILS_DEPRECATED __attribute__((deprecated))
+#else
+#   define UTILS_DEPRECATED
+#endif
+
 #if __has_attribute(packed)
 #   define UTILS_PACKED __attribute__((packed))
 #else

@@ -403,6 +403,7 @@ public:
      *
      * @return A camera component
      */
+    UTILS_DEPRECATED
     Camera* createCamera() noexcept;
 
     /**
@@ -411,6 +412,7 @@ public:
      * @param camera Camera component to destroy. The associated entity is also destroyed.
      * @deprecated use destroyCameraComponent(Entity) instead
      */
+    UTILS_DEPRECATED
     void destroy(const Camera* camera);
 
    /**
