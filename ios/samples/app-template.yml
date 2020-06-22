@@ -25,10 +25,14 @@ targetTemplates:
             configs:
                 debug:
                     HEADER_SEARCH_PATHS: ["../../../out/ios-debug/filament/include", "generated"]
-                    LIBRARY_SEARCH_PATHS: ["../../../out/ios-debug/filament/lib/$(CURRENT_ARCH)"]
+                    LIBRARY_SEARCH_PATHS:
+                        - "../../../out/ios-debug/filament/lib/$(CURRENT_ARCH)"
+                        - "../../../out/ios-debug/filament/lib/universal"
                 release:
                     HEADER_SEARCH_PATHS: ["../../../out/ios-release/filament/include", "generated"]
-                    LIBRARY_SEARCH_PATHS: ["../../../out/ios-release/filament/lib/$(CURRENT_ARCH)"]
+                    LIBRARY_SEARCH_PATHS:
+                        - "../../../out/ios-release/filament/lib/$(CURRENT_ARCH)"
+                        - "../../../out/ios-release/filament/lib/universal"
                 metal:
                     GCC_PREPROCESSOR_DEFINITIONS: ["FILAMENT_APP_USE_METAL=1", "$(inherited)"]
                 opengl:
