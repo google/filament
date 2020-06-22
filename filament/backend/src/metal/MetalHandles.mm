@@ -424,7 +424,11 @@ void MetalTexture::loadSlice(uint32_t level, uint32_t xoffset, uint32_t yoffset,
     // Depending on the size of the required buffer, we either allocate a staging buffer or a
     // staging texture. Then the texture data is blited to the "real" texture.
     const size_t stagingBufferSize = bytesPerSlice * depth;
-    if (UTILS_LIKELY(stagingBufferSize <= context.device.maxBufferLength)) {
+    NSUInteger deviceMaxBufferLength = 0;
+    if (@available(macOS 10.14, iOS 12, *)) {
+        deviceMaxBufferLength = context.device.maxBufferLength;
+    }
+    if (UTILS_LIKELY(stagingBufferSize <= deviceMaxBufferLength)) {
         auto entry = context.bufferPool->acquireBuffer(stagingBufferSize);
         memcpy(entry->buffer.contents,
                 static_cast<uint8_t*>(data.buffer) + sourceOffset,
