@@ -326,9 +326,11 @@ public:
 
 
     /** @deprecated use static versions instead */
+    UTILS_DEPRECATED
     math::float3 getDirectionEstimate() const noexcept;
 
     /** @deprecated use static versions instead */
+    UTILS_DEPRECATED
     math::float4 getColorEstimate(math::float3 direction) const noexcept;
 };
 

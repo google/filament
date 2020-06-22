@@ -208,6 +208,7 @@ public:
      * has additional capabilities and a daisy-chain API. Be sure to explicitly link libgeometry
      * since its dependency might be removed in future versions of libfilament.
      */
+    UTILS_DEPRECATED
     static void populateTangentQuaternions(const QuatTangentContext& ctx);
 };
 

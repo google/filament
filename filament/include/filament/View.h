@@ -238,7 +238,7 @@ public:
      *
      * @deprecated See ColorGrading
      */
-    enum class ToneMapping : uint8_t {
+    enum class UTILS_DEPRECATED ToneMapping : uint8_t {
         LINEAR = 0,     //!< Linear tone mapping (i.e. no tone mapping)
         ACES = 1,       //!< ACES tone mapping
     };
@@ -480,6 +480,7 @@ public:
      * @deprecated Use setColorGrading instead
      * @see setColorGrading
      */
+    UTILS_DEPRECATED
     void setToneMapping(ToneMapping type) noexcept;
 
     /**
@@ -489,6 +490,7 @@ public:
      * @deprecated Use getColorGrading instead
      * @see getColorGrading
      */
+    UTILS_DEPRECATED
     ToneMapping getToneMapping() const noexcept;
 
     /**
