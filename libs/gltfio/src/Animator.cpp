@@ -21,6 +21,7 @@
 #include "math.h"
 #include "upcast.h"
 
+#include <filament/MaterialEnums.h>
 #include <filament/RenderableManager.h>
 #include <filament/TransformManager.h>
 
@@ -317,8 +318,7 @@ void Animator::applyAnimation(size_t animationIndex, float time) const {
                     const float* const splineVerts = samplerValues + numMorphTargets;
                     const float* const outTangents = samplerValues + numMorphTargets * 2;
 
-                    // Filament supports up to 4 morph targets, all others are ignored.
-                    const int numComponents = std::min(4, numMorphTargets);
+                    const int numComponents = std::min((int) MAX_MORPH_TARGETS, numMorphTargets);
                     for (int comp = 0; comp < numComponents; ++comp) {
                         float vert0 = splineVerts[comp + prevIndex * valuesPerKeyframe];
                         float tang0 = outTangents[comp + prevIndex * valuesPerKeyframe];
@@ -327,8 +327,7 @@ void Animator::applyAnimation(size_t animationIndex, float time) const {
                         weights[comp] = cubicSpline(vert0, tang0, vert1, tang1, t);
                     }
                 } else {
-                    // Filament supports up to 4 morph targets, all others are ignored.
-                    const int numComponents = std::min(4, valuesPerKeyframe);
+                    const int numComponents = std::min((int) MAX_MORPH_TARGETS, valuesPerKeyframe);
                     for (int comp = 0; comp < numComponents; ++comp) {
                         float previous = samplerValues[comp + prevIndex * valuesPerKeyframe];
                         float current = samplerValues[comp + nextIndex * valuesPerKeyframe];
