@@ -312,7 +312,6 @@ and tools.
   - `normal-blending`:     Tool to blend normal maps
   - `resgen`               Aggregates binary blobs into embeddable resources
   - `roughness-prefilter`: Pre-filters a roughness map from a normal map to reduce aliasing
-  - `skygen`:              Physically-based sky environment texture generator
   - `specular-color`:      Computes the specular color of conductors based on spectral data
 - `web`:                   JavaScript bindings, documentation, and samples
 

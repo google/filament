@@ -12,7 +12,6 @@ Filament. Latest versions are available on the [project page](https://github.com
 - `mipgen`, Generates a series of miplevels from a source image.
 - `normal-blending`, Tool to blend normal maps
 - `roughness-prefilter`, Pre-filters a roughness map from a normal map to reduce aliasing
-- `skygen`, Physically-based sky environment texture generator
 - `specular-color`, Computes the specular color of conductors based on spectral data
 
 You can refer to the individual documentation files in `docs/` for more information.
