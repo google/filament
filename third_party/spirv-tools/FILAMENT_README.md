@@ -1,5 +1,5 @@
 When updating spirv-tools to a new version, make sure to preserve all the changes marked with
-the following in `CMakeLists.txt`:
+the following in `CMakeLists.txt` and `source/CMakeLists.txt`:
 
 `# Filament specific changes`
 
