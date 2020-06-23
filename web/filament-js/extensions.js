@@ -396,12 +396,20 @@ Filament.loadClassExtensions = function() {
     //
     // The optional asyncInterval argument allows clients to control how decoding is amortized
     // over time. It represents the number of milliseconds between each texture decoding task.
+    //
+    // The optional config argument is an object with boolean fields `normalizeSkinningWeights` and
+    // `recomputeBoundingBoxes`.
     Filament.gltfio$FilamentAsset.prototype.loadResources = function(onDone, onFetched, basePath,
-            asyncInterval) {
+            asyncInterval, config) {
         const asset = this;
         const engine = this.getEngine();
         const names = this.getResourceUris();
         const interval = asyncInterval || 30;
+        const defaults = {
+            normalizeSkinningWeights: true,
+            recomputeBoundingBoxes: false
+        };
+        config = Object.assign(defaults, config || {});
 
         basePath = basePath || document.location;
         onFetched = onFetched || ((name) => {});
@@ -420,7 +428,9 @@ Filament.loadClassExtensions = function() {
         }
 
         // Construct a resource loader and start decoding after all textures are fetched.
-        const resourceLoader = new Filament.gltfio$ResourceLoader(engine, false, false);
+        const resourceLoader = new Filament.gltfio$ResourceLoader(engine,
+                config.normalizeSkinningWeights,
+                config.recomputeBoundingBoxes);
         const onComplete = () => {
             resourceLoader.asyncBeginLoad(asset);
 
