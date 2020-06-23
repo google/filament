@@ -22,9 +22,9 @@ http://localhost:8080. Skip ahead to **Debugger Usage**.
 ## Setup for Android
 
 Rebuild Filament for Android after enabling a CMake option called FILAMENT_ENABLE_MATDBG. Note that
-CMake is invoked from several places for Android (both gradle and our easy build script), so the
-most pragmatic and reliable way of doing this is to simply hack `filament/CMakeLists.txt` and
-`filament-android/CMakeLists.txt` by replacing OFF with ON.
+CMake is invoked from several places for Android (both gradle and our easy build script), so one
+pragmatic and reliable way of doing this is to simply hack `CMakeLists.txt` and
+`filament-android/CMakeLists.txt` by unconditionally setting FILAMENT_ENABLE_MATDBG to ON.
 
 After rebuilding Filament with the option enabled, ensure that internet permissions are enabled in
 your app by adding the following into your manifest as a child of the `<manifest>` element.
