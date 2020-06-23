@@ -353,6 +353,13 @@ else()
     option(FILAMENT_BUILD_FILAMAT "Build filamat and JNI buildings" OFF)
 endif()
 
+# By default, link in matdbg for Desktop + Debug only since it pulls in filamat and a web server.
+if (CMAKE_BUILD_TYPE STREQUAL "Debug" AND NOT IOS AND NOT ANDROID AND NOT WEBGL)
+    option(FILAMENT_ENABLE_MATDBG "Enable the material debugger" ON)
+else()
+    option(FILAMENT_ENABLE_MATDBG "Enable the material debugger" OFF)
+endif()
+
 # ==================================================================================================
 # Material compilation flags
 # ==================================================================================================
@@ -543,8 +550,10 @@ if (FILAMENT_BUILD_FILAMAT)
     add_subdirectory(${LIBRARIES}/filamat)
 
     # the material debugger requires filamat
-    add_subdirectory(${EXTERNAL}/civetweb/tnt)
-    add_subdirectory(${LIBRARIES}/matdbg)
+    if (FILAMENT_ENABLE_MATDBG)
+        add_subdirectory(${EXTERNAL}/civetweb/tnt)
+        add_subdirectory(${LIBRARIES}/matdbg)
+    endif()
 endif()
 
 if (FILAMENT_SUPPORTS_VULKAN)
