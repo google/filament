@@ -840,23 +840,12 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     const bool hasDepth = depth.format != VK_FORMAT_UNDEFINED;
 
     mDisposer.acquire(rt, mContext.currentCommands->resources);
-    mDisposer.acquire(color.offscreen, mContext.currentCommands->resources);
-    mDisposer.acquire(depth.offscreen, mContext.currentCommands->resources);
-
-    VkImageLayout finalColorLayout;
-    VkImageLayout finalDepthLayout;
-
-    if (rt->isOffscreen()) {
-        finalColorLayout = VK_IMAGE_LAYOUT_GENERAL;
-        finalDepthLayout = VK_IMAGE_LAYOUT_GENERAL;
-    } else {
-        finalColorLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-        finalDepthLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-    }
+    mDisposer.acquire(color.texture, mContext.currentCommands->resources);
+    mDisposer.acquire(depth.texture, mContext.currentCommands->resources);
 
     VkRenderPass renderPass = mFramebufferCache.getRenderPass({
-        .finalColorLayout = finalColorLayout,
-        .finalDepthLayout = finalDepthLayout,
+        .colorLayout = color.layout,
+        .depthLayout = depth.layout,
         .colorFormat = color.format,
         .depthFormat = depth.format,
         .flags = {
@@ -1132,21 +1121,23 @@ void VulkanDriver::blit(TargetBufferFlags buffers,
     const int32_t dstTop = dstRect.bottom + dstRect.height;
     const uint32_t dstLevel = dstTarget->getColorLevel();
 
+    const VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+
     const VkImageBlit blitRegions[1] = {{
-        .srcSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, srcLevel, 0, 1 },
+        .srcSubresource = { aspect, srcLevel, 0, 1 },
         .srcOffsets = { { srcRect.left, srcRect.bottom, 0 }, { srcRight, srcTop, 1 }},
-        .dstSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, dstLevel, 0, 1 },
+        .dstSubresource = { aspect, dstLevel, 0, 1 },
         .dstOffsets = { { dstRect.left, dstRect.bottom, 0 }, { dstRight, dstTop, 1 }}
     }};
 
     auto vkblit = [=](VkCommandBuffer cmdbuffer) {
         VkImage srcImage = srcTarget->getColor().image;
         VulkanTexture::transitionImageLayout(cmdbuffer, srcImage, VK_IMAGE_LAYOUT_UNDEFINED,
-                VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, srcLevel, 1);
+                VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, srcLevel, 1, 1, aspect);
 
         VkImage dstImage = dstTarget->getColor().image;
         VulkanTexture::transitionImageLayout(cmdbuffer, dstImage, VK_IMAGE_LAYOUT_UNDEFINED,
-                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, dstLevel, 1);
+                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, dstLevel, 1, 1, aspect);
 
         // TODO: Issue vkCmdResolveImage for MSAA targets.
 
@@ -1155,10 +1146,10 @@ void VulkanDriver::blit(TargetBufferFlags buffers,
                 filter == SamplerMagFilter::NEAREST ? VK_FILTER_NEAREST : VK_FILTER_LINEAR);
 
         VulkanTexture::transitionImageLayout(cmdbuffer, srcImage, VK_IMAGE_LAYOUT_UNDEFINED,
-                getTextureLayout(srcTarget->getColor().offscreen->usage), srcLevel, 1);
+                getTextureLayout(srcTarget->getColor().texture->usage), srcLevel, 1, 1, aspect);
 
         VulkanTexture::transitionImageLayout(cmdbuffer, dstImage, VK_IMAGE_LAYOUT_UNDEFINED,
-                getTextureLayout(dstTarget->getColor().offscreen->usage), dstLevel, 1);
+                getTextureLayout(dstTarget->getColor().texture->usage), dstLevel, 1, 1, aspect);
     };
 
     if (!mContext.currentCommands) {

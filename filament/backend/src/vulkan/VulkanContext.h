@@ -108,7 +108,8 @@ struct VulkanAttachment {
     VkImage image;
     VkImageView view;
     VkDeviceMemory memory;
-    VulkanTexture* offscreen = nullptr;
+    VulkanTexture* texture = nullptr;
+    VkImageLayout layout;
 };
 
 // The SwapContext is the set of objects that gets "swapped" at each beginFrame().
