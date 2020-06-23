@@ -31,6 +31,7 @@
 #include <camutils/Manipulator.h>
 
 #include <utils/Path.h>
+#include <utils/Entity.h>
 
 #include "Config.h"
 #include "IBL.h"
@@ -188,6 +189,7 @@ private:
         CameraManipulator* mDebugCameraMan;
         filament::SwapChain* mSwapChain = nullptr;
 
+        utils::Entity mCameraEntities[4];
         filament::Camera* mCameras[4] = { nullptr };
         filament::Camera* mUiCamera;
         filament::Camera* mMainCamera;

@@ -17,6 +17,12 @@
 #ifndef TNT_FILAMENT_DETAILS_VIEW_H
 #define TNT_FILAMENT_DETAILS_VIEW_H
 
+// Avoid warnings for using the ToneMapping API, which has been publically deprecated.
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
+
 #include <filament/View.h>
 
 #include "upcast.h"
@@ -428,5 +434,9 @@ private:
 FILAMENT_UPCAST(View)
 
 } // namespace filament
+
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
 
 #endif // TNT_FILAMENT_DETAILS_VIEW_H
