@@ -73,6 +73,10 @@ if (ANDROID OR WEBGL OR IOS OR FILAMENT_USE_SWIFTSHADER)
     set(IS_MOBILE_TARGET TRUE)
 endif()
 
+if (NOT ANDROID AND NOT WEBGL AND NOT IOS)
+    set(IS_HOST_PLATFORM TRUE)
+endif()
+
 if (IOS)
     # Remove the headerpad_max_install_names linker flag on iOS. It causes warnings when linking
     # executables with bitcode.
@@ -354,7 +358,7 @@ else()
 endif()
 
 # By default, link in matdbg for Desktop + Debug only since it pulls in filamat and a web server.
-if (CMAKE_BUILD_TYPE STREQUAL "Debug" AND NOT IOS AND NOT ANDROID AND NOT WEBGL)
+if (CMAKE_BUILD_TYPE STREQUAL "Debug" AND IS_HOST_PLATFORM)
     option(FILAMENT_ENABLE_MATDBG "Enable the material debugger" ON)
 else()
     option(FILAMENT_ENABLE_MATDBG "Enable the material debugger" OFF)
@@ -541,7 +545,7 @@ add_subdirectory(${EXTERNAL}/draco/tnt)
 add_subdirectory(${EXTERNAL}/stb/tnt)
 add_subdirectory(${EXTERNAL}/getopt)
 
-if (FILAMENT_BUILD_FILAMAT)
+if (FILAMENT_BUILD_FILAMAT OR IS_HOST_PLATFORM)
     # spirv-tools must come before filamat, as filamat relies on the presence of the
     # spirv-tools_SOURCE_DIR variable.
     add_subdirectory(${EXTERNAL}/spirv-tools)
@@ -550,7 +554,7 @@ if (FILAMENT_BUILD_FILAMAT)
     add_subdirectory(${LIBRARIES}/filamat)
 
     # the material debugger requires filamat
-    if (FILAMENT_ENABLE_MATDBG)
+    if (FILAMENT_ENABLE_MATDBG OR IS_HOST_PLATFORM)
         add_subdirectory(${EXTERNAL}/civetweb/tnt)
         add_subdirectory(${LIBRARIES}/matdbg)
     endif()
@@ -578,7 +582,7 @@ if (WEBGL)
     add_subdirectory(${EXTERNAL}/imgui/tnt)
 endif()
 
-if (NOT ANDROID AND NOT WEBGL AND NOT IOS)
+if (IS_HOST_PLATFORM)
     add_subdirectory(${LIBRARIES}/bluegl)
     add_subdirectory(${LIBRARIES}/filamentapp)
     add_subdirectory(${LIBRARIES}/filagui)
