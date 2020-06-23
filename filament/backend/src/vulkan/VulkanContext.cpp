@@ -369,7 +369,8 @@ void createSwapChain(VulkanContext& context, VulkanSurfaceContext& surfaceContex
             .image = images[i],
             .view = {},
             .memory = {},
-            .offscreen = {}
+            .texture = {},
+            .layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
         };
     }
     utils::slog.i
@@ -667,6 +668,7 @@ void createDepthBuffer(VulkanContext& context, VulkanSurfaceContext& surfaceCont
     surfaceContext.depth.view = depthView;
     surfaceContext.depth.image = depthImage;
     surfaceContext.depth.format = depthFormat;
+    surfaceContext.depth.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
     // Begin a new command buffer solely for the purpose of transitioning the image layout.
     VkCommandBuffer cmdbuffer = acquireWorkCommandBuffer(context);
@@ -675,7 +677,7 @@ void createDepthBuffer(VulkanContext& context, VulkanSurfaceContext& surfaceCont
     VkImageMemoryBarrier barrier {
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
         .dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-        .newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+        .newLayout = surfaceContext.depth.layout,
         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .image = depthImage,
