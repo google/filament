@@ -286,7 +286,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::mipmapPass(FrameGraph& fg,
                 auto out = resources.get(data.rt);
 
                 FMaterialInstance* const mi = mMipmapDepth.getMaterialInstance();
-                mi->setParameter("depth", in, { /* uses texelFetch */ });
+                mi->setParameter("depth", in, { .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
                 mi->setParameter("level", uint32_t(level));
                 mi->commit(driver);
                 mi->use(driver);
