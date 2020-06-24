@@ -26,6 +26,8 @@
 #include <utils/EntityManager.h>
 #include <math/norm.h>
 
+#include <geometry/SurfaceOrientation.h>
+
 #include <filamentapp/IcoSphere.h>
 
 using namespace filament;
@@ -59,13 +61,13 @@ Sphere::Sphere(Engine& engine, Material const* material, bool culling)
         uint32_t indexCount = (uint32_t)(indices.size() * 3);
 
         geometry->tangents.resize(vertices.size());
-        VertexBuffer::populateTangentQuaternions(VertexBuffer::QuatTangentContext {
-            .quatType = VertexBuffer::SHORT4,
-            .quatCount = vertices.size(),
-            .outBuffer = geometry->tangents.data(),
-            .outStride = sizeof(filament::math::short4),
-            .normals = vertices.data()
-        });
+        auto* quats = geometry::SurfaceOrientation::Builder()
+            .vertexCount(vertices.size())
+            .normals(vertices.data(), sizeof(float3))
+            .build();
+        quats->getQuats((short4*) geometry->tangents.data(), vertices.size(),
+                sizeof(filament::math::short4));
+        delete quats;
 
         // todo produce correct u,v
 
