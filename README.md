@@ -266,55 +266,58 @@ familiar with the [code style](/CODE_STYLE.md).
 This repository not only contains the core Filament engine, but also its supporting libraries
 and tools.
 
-- `android`:               Android libraries and projects
-  - `filamat-android`:     Filament material generation library (AAR) for Android
-  - `filament-android`:    Filament library (AAR) for Android
-  - `gltfio-android`:      Filament glTF loading library (AAR) for Android
-  - `samples`:             Android-specific Filament samples
-- `art`:                   Source for various artworks (logos, PDF manuals, etc.)
-- `assets`:                3D assets to use with sample applications
-- `build`:                 CMake build scripts
-- `docs`:                  Documentation
-  - `math`:                Mathematica notebooks used to explore BRDFs, equations, etc.
-- `filament`:              Filament rendering engine (minimal dependencies)
-- `ide`:                   Configuration files for IDEs (CLion, etc.)
-- `ios`:                   Sample projects for iOS
-- `java`:                  Java bindings for Filament libraries
-- `libs`:                  Libraries
-  - `bluegl`:              OpenGL bindings for macOS, Linux and Windows
-  - `bluevk`:              Vulkan bindings for macOS, Linux, Windows and Android
-  - `filabridge`:          Library shared by the Filament engine and host tools
-  - `filaflat`:            Serialization/deserialization library used for materials
-  - `filagui`:             Helper library for [Dear ImGui](https://github.com/ocornut/imgui)
-  - `filamat`:             Material generation library
-  - `filameshio`:          Tiny filamesh parsing library (see also `tools/filamesh`)
-  - `geometry`:            Mesh-related utilities
-  - `gltfio`:              Loader for glTF 2.0
-  - `ibl`:                 IBL generation tools
-  - `image`:               Image filtering and simple transforms
-  - `imageio`:             Image file reading / writing, only intended for internal use
-  - `matdbg`:              DebugServer for inspecting shaders at run-time (debug builds only)
-  - `math`:                Math library
-  - `utils`:               Utility library (threads, memory, data structures, etc.)
-- `samples`:               Sample desktop applications
-- `shaders`:               Shaders used by `filamat` and `matc`
-- `third_party`:           External libraries and assets
-  - `environments`:        Environment maps under CC0 license that can be used with `cmgen`
-  - `models`:              Models under permissive licenses
-  - `textures`:            Textures under CC0 license
-- `tools`:                 Host tools
-  - `cmgen`:               Image-based lighting asset generator
-  - `filamesh`:            Mesh converter
-  - `glslminifier`:        Minifies GLSL source code
-  - `matc`:                Material compiler
-  - `matinfo`              Displays information about materials compiled with `matc`
-  - `mipgen`               Generates a series of miplevels from a source image
-  - `normal-blending`:     Tool to blend normal maps
-  - `resgen`               Aggregates binary blobs into embeddable resources
-  - `roughness-prefilter`: Pre-filters a roughness map from a normal map to reduce aliasing
-  - `skygen`:              Physically-based sky environment texture generator
-  - `specular-color`:      Computes the specular color of conductors based on spectral data
-- `web`:                   JavaScript bindings, documentation, and samples
+- `android`:                  Android libraries and projects
+  - `filamat-android`:        Filament material generation library (AAR) for Android
+  - `filament-android`:       Filament library (AAR) for Android
+  - `filament-utils-android`: Extra utilities (KTX loader, math types, etc.)
+  - `gltfio-android`:         Filament glTF loading library (AAR) for Android
+  - `samples`:                Android-specific Filament samples
+- `art`:                      Source for various artworks (logos, PDF manuals, etc.)
+- `assets`:                   3D assets to use with sample applications
+- `build`:                    CMake build scripts
+- `docs`:                     Documentation
+  - `math`:                   Mathematica notebooks used to explore BRDFs, equations, etc.
+- `filament`:                 Filament rendering engine (minimal dependencies)
+- `ide`:                      Configuration files for IDEs (CLion, etc.)
+- `ios`:                      Sample projects for iOS
+- `java`:                     Java bindings for Filament libraries
+- `libs`:                     Libraries
+  - `bluegl`:                 OpenGL bindings for macOS, Linux and Windows
+  - `bluevk`:                 Vulkan bindings for macOS, Linux, Windows and Android
+  - `camutils`:               Camera manipulation utilities
+  - `filabridge`:             Library shared by the Filament engine and host tools
+  - `filaflat`:               Serialization/deserialization library used for materials
+  - `filagui`:                Helper library for [Dear ImGui](https://github.com/ocornut/imgui)
+  - `filamat`:                Material generation library
+  - `filamentapp`:            SDL2 skeleton to build sample apps
+  - `filameshio`:             Tiny filamesh parsing library (see also `tools/filamesh`)
+  - `geometry`:               Mesh-related utilities
+  - `gltfio`:                 Loader for glTF 2.0
+  - `ibl`:                    IBL generation tools
+  - `image`:                  Image filtering and simple transforms
+  - `imageio`:                Image file reading / writing, only intended for internal use
+  - `matdbg`:                 DebugServer for inspecting shaders at run-time (debug builds only)
+  - `math`:                   Math library
+  - `mathio`:                 Math types support for output streams
+  - `utils`:                  Utility library (threads, memory, data structures, etc.)
+- `samples`:                  Sample desktop applications
+- `shaders`:                  Shaders used by `filamat` and `matc`
+- `third_party`:              External libraries and assets
+  - `environments`:           Environment maps under CC0 license that can be used with `cmgen`
+  - `models`:                 Models under permissive licenses
+  - `textures`:               Textures under CC0 license
+- `tools`:                    Host tools
+  - `cmgen`:                  Image-based lighting asset generator
+  - `filamesh`:               Mesh converter
+  - `glslminifier`:           Minifies GLSL source code
+  - `matc`:                   Material compiler
+  - `matinfo`                 Displays information about materials compiled with `matc`
+  - `mipgen`                  Generates a series of miplevels from a source image
+  - `normal-blending`:        Tool to blend normal maps
+  - `resgen`                  Aggregates binary blobs into embeddable resources
+  - `roughness-prefilter`:    Pre-filters a roughness map from a normal map to reduce aliasing
+  - `specular-color`:         Computes the specular color of conductors based on spectral data
+- `web`:                      JavaScript bindings, documentation, and samples
 
 ## License
 
