@@ -193,11 +193,17 @@ export class RenderTarget$Builder {
 
 export class LightManager$Builder {
     public build(engine: Engine, entity: Entity): void;
-    public castShadows(value: boolean): LightManager$Builder;
+    public castLight(enable: boolean): LightManager$Builder;
+    public castShadows(enable: boolean): LightManager$Builder;
     public color(rgb: float3): LightManager$Builder;
     public direction(value: float3): LightManager$Builder;
     public intensity(value: number): LightManager$Builder;
+    public falloff(value: number): LightManager$Builder;
     public position(value: float3): LightManager$Builder;
+    public spotLightCone(inner: number, outer: number): LightManager$Builder;
+    public sunAngularRadius(angularRadius: number): LightManager$Builder;
+    public sunHaloFalloff(haloFalloff: number): LightManager$Builder;
+    public sunHaloSize(haloSize: number): LightManager$Builder;
 }
 
 export class Skybox$Builder {
@@ -361,8 +367,9 @@ export class IndirectLight$Builder {
 
 export class IcoSphere {
     constructor(nsubdivs: number);
+    public subdivide(): void;
     vertices: Float32Array;
-    tangents: Uint16Array;
+    tangents: Int16Array;
     triangles: Uint16Array;
 }
 
