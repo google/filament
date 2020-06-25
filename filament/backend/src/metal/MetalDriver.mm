@@ -451,11 +451,9 @@ void MetalDriver::destroySync(Handle<HwSync> sh) {
 
 
 void MetalDriver::terminate() {
-    // Wait for all frames to finish by submitting and waiting on a dummy command buffer.
+    // finish() will flush the pending command buffer and will ensure all GPU work has finished.
     // This must be done before calling bufferPool->reset() to ensure no buffers are in flight.
-    id<MTLCommandBuffer> oneOffBuffer = [mContext->commandQueue commandBuffer];
-    [oneOffBuffer commit];
-    [oneOffBuffer waitUntilCompleted];
+    finish();
 
     mContext->bufferPool->reset();
     mContext->commandQueue = nil;
