@@ -230,7 +230,9 @@ math::details::TMat44<T> inverseProjection(const math::details::TMat44<T>& p) no
 
 UTILS_NOINLINE
 mat4f FCamera::getViewMatrix(mat4f const& model) noexcept {
-    return FCamera::rigidTransformInverse(model);
+    // We can't use rigidTransformInverse here. The camera's model matrix might have scaling, which
+    // would make it non-rigid.
+    return inverse(model);
 }
 
 Frustum FCamera::getFrustum(mat4 const& projection, mat4f const& viewMatrix) noexcept {
