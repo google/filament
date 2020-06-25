@@ -6,7 +6,7 @@ void main() {
     postProcess(inputs);
 
 #if defined(TARGET_MOBILE)
-    inputs.color = clamp(inputs.color, 0.0, MEDIUMP_FLT_MAX);
+    inputs.color = clamp(inputs.color, -MEDIUMP_FLT_MAX, MEDIUMP_FLT_MAX);
 #endif
 
     fragColor = inputs.color;

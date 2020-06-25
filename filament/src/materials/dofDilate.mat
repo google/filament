@@ -1,0 +1,79 @@
+material {
+    name : DepthOfFieldDilate,
+    parameters : [
+        {
+            type : sampler2d,
+            name : tiles,
+            precision: medium
+        }
+    ],
+    variables : [
+        vertex
+    ],
+    domain : postprocess,
+    depthWrite : false,
+    depthCulling : false
+}
+
+vertex {
+    void postProcessVertex(inout PostProcessVertexInputs postProcess) {
+        postProcess.vertex.xy = postProcess.normalizedUV;
+    }
+}
+
+fragment {
+
+#include "dofUtils.fs"
+
+void dummy(){}
+
+// Tiles of 16 pixels requires two dilate rounds to accomodate our max Coc of 32 pixels
+#define TILE_SIZE   16.0
+
+vec2 tap(ivec2 uv, ivec2 offset) {
+    return texelFetch(materialParams_tiles, uv + offset, 0).rg;
+}
+
+vec2 dilate(inout vec2 center, vec2 tap) {
+    // 2.24 (sqrt(5) is the longest distance between 2 pixels of adjacent tiles).
+    const float maxDistance = max(-MAX_COC_RADIUS, -2.24 * TILE_SIZE);
+
+    // Tiles that can affect us need to transfer their CoC to us (for the foreground it's
+    // min(ourCoc, theirCoc) because CoC are negative (the min is the larger radius).
+
+    // TODO: However, if their CoC is very large, we can limit it by the distance to that
+    // tile, because we only need to reach *them*).
+    // The difficuty here is the this clamping depends on if we're negative or positive.
+    // e.g. for positive values
+    //    center.g = min(center.g, max(tap.g, maxDistance));
+    //    center.r = max(center.r, max(tap.r, maxDistance));
+
+    center.g = min(center.g, tap.g);
+    center.r = max(center.r, tap.r);
+    return center;
+}
+
+void postProcess(inout PostProcessInputs postProcess) {
+    // highp is not needed here, because we now the resolution is very low
+    vec2 uv = variable_vertex.xy;
+    vec2 size = vec2(textureSize(materialParams_tiles, 0));
+    ivec2 xy = ivec2(uv * size);
+
+    vec2 center = tap(xy, ivec2(0, 0));
+
+    const int radius = 1;
+
+    for (int j=-radius; j<=radius; j++) {
+        dilate(center, tap(xy, ivec2(-radius, j)));
+        dilate(center, tap(xy, ivec2( radius, j)));
+    }
+
+    for (int i=-radius+1; i<=radius-1; i++) {
+        dilate(center, tap(xy, ivec2(i, -radius)));
+        dilate(center, tap(xy, ivec2(i,  radius)));
+    }
+
+    postProcess.color.rg = center;
+}
+
+}
