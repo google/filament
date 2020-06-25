@@ -86,43 +86,10 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
     const bool hasDepth = config.depthFormat != VK_FORMAT_UNDEFINED;
     const bool isSwapChain = config.colorLayout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
-    // In Vulkan, the subpass desc specifies the layout to transition to at the start of the render
-    // pass, and the attachment description specifies the layout to transition to at the end.
-    // However we use render passes to cause layout transitions only when drawing directly into the
-    // swap chain. We keep our offscreen images in GENERAL layout, which is simple and prevents
-    // thrashing the layout. Note that pipeline barriers are more powerful than render passes for
-    // performing layout transitions, because they allow for per-miplevel transitions.
-
-    uint32_t numAttachments = 0;
-    VkAttachmentReference colorAttachmentRef = {};
-    if (hasColor) {
-        colorAttachmentRef.layout = isSwapChain ? VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL : config.colorLayout;
-        colorAttachmentRef.attachment = numAttachments++;
-    }
-    VkAttachmentReference depthAttachmentRef = {};
-    if (hasDepth) {
-        depthAttachmentRef.layout = config.depthLayout;
-        depthAttachmentRef.attachment = numAttachments++;
-    }
-    VkSubpassDescription subpass {
-        .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-        .colorAttachmentCount = hasColor ? 1u : 0u,
-        .pColorAttachments = hasColor ? &colorAttachmentRef : nullptr,
-        .pDepthStencilAttachment = hasDepth ? &depthAttachmentRef : nullptr
-    };
-
     // Set up some const aliases for terseness.
     const VkAttachmentLoadOp clear = VK_ATTACHMENT_LOAD_OP_CLEAR;
     const VkAttachmentLoadOp dontCare = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-
-    // TODO: For now we do not support LOAD_OP_LOAD for the swap chain due to the following
-    // complaint from validation:
-    //
-    //   Render pass has an attachment with loadOp == VK_ATTACHMENT_LOAD_OP_LOAD and
-    //   initialLayout == VK_IMAGE_LAYOUT_UNDEFINED.  This is probably not what you intended.
-    //
-    const VkAttachmentLoadOp keep = isSwapChain ? VK_ATTACHMENT_LOAD_OP_DONT_CARE :
-            VK_ATTACHMENT_LOAD_OP_LOAD;
+    const VkAttachmentLoadOp keep = VK_ATTACHMENT_LOAD_OP_LOAD;
 
     const bool clearColor = any(config.flags.clear & TargetBufferFlags::COLOR);
     const bool discardColor = any(config.flags.discardStart & TargetBufferFlags::COLOR);
@@ -132,6 +99,33 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
     const bool discardDepth = any(config.flags.discardStart & TargetBufferFlags::DEPTH);
     const VkAttachmentLoadOp depthLoadOp = clearDepth ? clear : (discardDepth ? dontCare : keep);
 
+    // In Vulkan, the subpass desc specifies the layout to transition to at the start of the render
+    // pass, and the attachment description specifies the layout to transition to at the end.
+    // However we use render passes to cause layout transitions only when drawing directly into the
+    // swap chain. We keep our offscreen images in GENERAL layout, which is simple and prevents
+    // thrashing the layout. Note that pipeline barriers are more powerful than render passes for
+    // performing layout transitions, because they allow for per-miplevel transitions.
+    struct { VkImageLayout subpass, initial, final; } colorLayouts;
+    if (isSwapChain) {
+        colorLayouts.subpass = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        colorLayouts.initial = discardColor ? VK_IMAGE_LAYOUT_UNDEFINED : colorLayouts.subpass;
+        colorLayouts.final = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    } else {
+        colorLayouts.subpass = config.colorLayout;
+        colorLayouts.initial = config.colorLayout;
+        colorLayouts.final = config.colorLayout;
+    }
+
+    VkAttachmentReference colorAttachmentRef = {};
+    VkAttachmentReference depthAttachmentRef = {};
+
+    VkSubpassDescription subpass {
+        .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+        .colorAttachmentCount = hasColor ? 1u : 0u,
+        .pColorAttachments = hasColor ? &colorAttachmentRef : nullptr,
+        .pDepthStencilAttachment = hasDepth ? &depthAttachmentRef : nullptr
+    };
+
     VkAttachmentDescription colorAttachment {
         .format = config.colorFormat,
         .samples = VK_SAMPLE_COUNT_1_BIT,
@@ -139,8 +133,8 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
         .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
         .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
         .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-        .initialLayout = isSwapChain ? VK_IMAGE_LAYOUT_UNDEFINED : config.colorLayout,
-        .finalLayout = isSwapChain ? VK_IMAGE_LAYOUT_PRESENT_SRC_KHR : config.colorLayout
+        .initialLayout = colorLayouts.initial,
+        .finalLayout = colorLayouts.final
     };
     VkAttachmentDescription depthAttachment {
         .format = config.depthFormat,
@@ -153,7 +147,6 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
         .finalLayout = config.depthLayout
     };
 
-    // Finally, create the VkRenderPass.
     VkAttachmentDescription attachments[2];
     VkRenderPassCreateInfo renderPassInfo {
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
@@ -163,12 +156,20 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
         .pSubpasses = &subpass,
         .dependencyCount = 0u
     };
+
     if (hasColor) {
+        colorAttachmentRef.layout = colorLayouts.subpass;
+        colorAttachmentRef.attachment = renderPassInfo.attachmentCount;
         attachments[renderPassInfo.attachmentCount++] = colorAttachment;
     }
+
     if (hasDepth) {
+        depthAttachmentRef.layout = config.depthLayout;
+        depthAttachmentRef.attachment = renderPassInfo.attachmentCount;
         attachments[renderPassInfo.attachmentCount++] = depthAttachment;
     }
+
+    // Finally, create the VkRenderPass.
     VkRenderPass renderPass;
     VkResult error = vkCreateRenderPass(mContext.device, &renderPassInfo, VKALLOC, &renderPass);
     ASSERT_POSTCONDITION(!error, "Unable to create render pass.");

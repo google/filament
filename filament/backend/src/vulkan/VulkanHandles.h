@@ -58,6 +58,7 @@ struct VulkanRenderTarget : private HwRenderTarget {
     VkExtent2D getExtent() const;
     VulkanAttachment getColor() const;
     VulkanAttachment getDepth() const;
+    bool invalidate();
     uint32_t getColorLevel() const { return mColorLevel; }
     uint32_t getDepthLevel() const { return mDepthLevel; }
 private:

@@ -843,6 +843,15 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     mDisposer.acquire(color.texture, mContext.currentCommands->resources);
     mDisposer.acquire(depth.texture, mContext.currentCommands->resources);
 
+    TargetBufferFlags discardStart = params.flags.discardStart;
+
+    // Filament has the expectation that the contents of the swap chain are not preserved on the
+    // first render pass. Note however that its contents are often preserved on subsequent render
+    // passes, due to multiple views.
+    if (rt->invalidate()) {
+        discardStart |= TargetBufferFlags::COLOR;
+    }
+
     VkRenderPass renderPass = mFramebufferCache.getRenderPass({
         .colorLayout = color.layout,
         .depthLayout = depth.layout,
@@ -850,7 +859,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
         .depthFormat = depth.format,
         .flags = {
             .clear = params.flags.clear,
-            .discardStart = params.flags.discardStart,
+            .discardStart = discardStart,
             .discardEnd = params.flags.discardEnd
         }
     });
@@ -984,6 +993,7 @@ void VulkanDriver::commit(Handle<HwSwapChain> sch) {
     cmdfence->submitted = true;
     lock.unlock();
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkQueueSubmit error.");
+    swapContext.invalid = true;
     cmdfence->condition.notify_all();
 
     // Present the backbuffer.

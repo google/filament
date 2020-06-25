@@ -364,6 +364,7 @@ void createSwapChain(VulkanContext& context, VulkanSurfaceContext& surfaceContex
             images.data());
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkGetSwapchainImagesKHR error.");
     for (size_t i = 0; i < images.size(); ++i) {
+        surfaceContext.swapContexts[i].invalid = true;
         surfaceContext.swapContexts[i].attachment = {
             .format = surfaceContext.surfaceFormat.format,
             .image = images[i],
@@ -535,7 +536,7 @@ bool acquireSwapCommandBuffer(VulkanContext& context) {
 // Flushes the current command buffer and waits for it to finish executing.
 void flushCommandBuffer(VulkanContext& context) {
     VulkanSurfaceContext& surface = *context.currentSurface;
-    const SwapContext& sc = surface.swapContexts[surface.currentSwapIndex];
+    SwapContext& swapContext = surface.swapContexts[surface.currentSwapIndex];
 
     // Submit the command buffer.
     VkResult error = vkEndCommandBuffer(context.currentCommands->cmdbuffer);
@@ -548,11 +549,12 @@ void flushCommandBuffer(VulkanContext& context) {
         .pCommandBuffers = &context.currentCommands->cmdbuffer,
     };
 
-    auto& cmdfence = sc.commands.fence;
+    auto& cmdfence = swapContext.commands.fence;
     std::unique_lock<utils::Mutex> lock(cmdfence->mutex);
     error = vkQueueSubmit(context.graphicsQueue, 1, &submitInfo, cmdfence->fence);
     lock.unlock();
     ASSERT_POSTCONDITION(!error, "vkQueueSubmit error.");
+    swapContext.invalid = true;
     cmdfence->condition.notify_all();
 
     // Restart the command buffer.

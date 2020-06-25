@@ -117,6 +117,7 @@ struct VulkanAttachment {
 struct SwapContext {
     VulkanAttachment attachment;
     VulkanCommandBuffer commands;
+    bool invalid;
 };
 
 // The SurfaceContext stores various state (including the swap chain) that we tightly associate
