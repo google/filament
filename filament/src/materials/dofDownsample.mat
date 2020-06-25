@@ -43,7 +43,18 @@ void postProcess(inout PostProcessInputs postProcess) {
     highp vec2 uv = variable_vertex.xy;
     highp vec2 size = vec2(textureSize(materialParams_color, 0));
 
-    ivec2 i = ivec2(uv * size - 0.5);
+    // Note: we can't assume bilinear weights of 0.25 because there is no guarantee that
+    // each level is a multiple of two.
+
+    // image coordinates
+    vec2 coords = uv * size - 0.5;
+
+    ivec2 i = ivec2(coords);    // floor
+
+    // bilinear weights
+    vec4  f = vec4(fract(coords), 1.0 - fract(coords));
+    vec4 b = vec4(f.z * f.y, f.x * f.y, f.x * f.w, f.z * f.w);
+
     vec4 s01 = texelFetch(materialParams_color, i + ivec2(0, 1), 0);
     vec4 s11 = texelFetch(materialParams_color, i + ivec2(1, 1), 0);
     vec4 s10 = texelFetch(materialParams_color, i + ivec2(1, 0), 0);
@@ -70,12 +81,14 @@ void postProcess(inout PostProcessInputs postProcess) {
     // The forground bilateral weight is calculated as saturate(1.0 - (fgCoc - w)), which always
     // yields 1.0. Note the "missing" abs(), this is because we want to let the background layer
     // leak into the foreground layer, to avoid aliasing artifacts.
-    vec4 foreground = (s01 + s11 + s10 + s00) * 0.25;
+    vec4 fw = b;
+    float fgScale = 1.0 / (fw.x + fw.y + fw.z + fw.w);
+    vec4 foreground = (s01 * fw.x + s11 * fw.y + s10 * fw.z + s00 * fw.w) * fgScale;
 
     // the background bilateral weight is calculated as saturate(1.0 - abs(bgCoc - w)), but the
     // abs() is not needed since bgCoc - w is guaranteed to be >= 0.
     float bgCoc = max2(max(w.xy, w.zw));
-    vec4 bw = saturate(1.0 - (bgCoc - w));
+    vec4 bw = saturate(1.0 - (bgCoc - w)) * b;
     float bgScale = 1.0 / (bw.x + bw.y + bw.z + bw.w);
     vec4 background = (s01 * bw.x + s11 * bw.y + s10 * bw.z + s00 * bw.w) * bgScale;
 
