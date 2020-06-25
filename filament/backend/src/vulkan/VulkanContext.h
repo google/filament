@@ -146,6 +146,7 @@ void getSurfaceCaps(VulkanContext& context, VulkanSurfaceContext& sc);
 
 void createSwapChain(VulkanContext& context, VulkanSurfaceContext& sc);
 void destroySwapChain(VulkanContext& context, VulkanSurfaceContext& sc, VulkanDisposer& disposer);
+void transitionSwapChain(VulkanContext& context);
 
 uint32_t selectMemoryType(VulkanContext& context, uint32_t flags, VkFlags reqs);
 SwapContext& getSwapContext(VulkanContext& context);
