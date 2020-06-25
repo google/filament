@@ -228,6 +228,14 @@ VulkanAttachment VulkanRenderTarget::getDepth() const {
     return mOffscreen ? mDepth : mContext.currentSurface->depth;
 }
 
+bool VulkanRenderTarget::invalidate() {
+    if (!mOffscreen && getSwapContext(mContext).invalid) {
+        getSwapContext(mContext).invalid = false;
+        return true;
+    }
+    return false;
+}
+
 VulkanVertexBuffer::VulkanVertexBuffer(VulkanContext& context, VulkanStagePool& stagePool,
         uint8_t bufferCount, uint8_t attributeCount, uint32_t elementCount,
         AttributeArray const& attributes) :
