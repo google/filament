@@ -132,6 +132,11 @@ MaterialBuilder& MaterialBuilder::name(const char* name) noexcept {
     return *this;
 }
 
+MaterialBuilder& MaterialBuilder::fileName(const char* fileName) noexcept {
+    mFileName = CString(fileName);
+    return *this;
+}
+
 MaterialBuilder& MaterialBuilder::material(const char* code, size_t line) noexcept {
     mMaterialCode.setUnresolved(CString(code));
     mMaterialCode.setLineOffset(line);
@@ -512,11 +517,23 @@ bool MaterialBuilder::checkLiteRequirements() noexcept {
     return true;
 }
 
-bool MaterialBuilder::ShaderCode::resolveIncludes(IncludeCallback callback) noexcept {
+bool MaterialBuilder::ShaderCode::resolveIncludes(IncludeCallback callback,
+        const utils::CString& fileName) noexcept {
     if (!mCode.empty()) {
-        if (!::filamat::resolveIncludes(utils::CString(""), mCode, callback)) {
+        ResolveOptions options {
+            .insertLineDirectives = true,
+            .insertLineDirectiveCheck = true
+        };
+        IncludeResult source {
+            .lineNumberOffset = getLineOffset(),
+            .includeName = fileName,
+            .text = mCode,
+            .name = utils::CString("")
+        };
+        if (!::filamat::resolveIncludes(source, callback, options)) {
             return false;
         }
+        mCode = source.text;
     }
 
     mIncludesResolved = true;
@@ -708,8 +725,8 @@ Package MaterialBuilder::build() noexcept {
     }
 
     // Resolve all the #include directives within user code.
-    if (!mMaterialCode.resolveIncludes(mIncludeCallback) ||
-        !mMaterialVertexCode.resolveIncludes(mIncludeCallback)) {
+    if (!mMaterialCode.resolveIncludes(mIncludeCallback, mFileName) ||
+        !mMaterialVertexCode.resolveIncludes(mIncludeCallback, mFileName)) {
         return Package::invalidPackage();
     }
 

@@ -260,6 +260,7 @@ public:
     const_iterator cend() const noexcept { return end(); }
 
     CString& replace(size_type pos, size_type len, const CString& str) noexcept;
+    CString& insert(size_type pos, const CString& str) noexcept { return replace(pos, 0, str); }
 
     const_reference operator[](size_type pos) const noexcept {
         assert(pos < size());

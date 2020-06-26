@@ -66,11 +66,14 @@ foreach(SHADER_FILE ${SHADERS})
     get_filename_component(SHADER_NAME ${SHADER_FILE} NAME)
     set(SHADER_RAW ${CMAKE_CURRENT_SOURCE_DIR}/${SHADER_FILE})
     set(SHADER_MIN ${MINIFIED_DIR}/${SHADER_NAME})
-    # For Debug builds, pass the "-Onone" flag to perform no minification. This is helpful for
-    # debugging shaders.
+    # For Debug builds, pass two additional flags to help with debugging:
+    # -Onone        performs no minification.
+    # -lshader_name adds a #line directive at the beginning to help identify sources of errors.
+    set(OPT_FLAG "$<$<CONFIG:DEBUG>:-Onone>")
+    set(LINE_FLAG "$<$<CONFIG:DEBUG>:-l${SHADER_NAME}>")
     add_custom_command(
         OUTPUT ${SHADER_MIN}
-        COMMAND glslminifier "$<$<CONFIG:DEBUG>:-Onone>" -o ${SHADER_MIN} ${SHADER_RAW}
+        COMMAND glslminifier ${OPT_FLAG} ${LINE_FLAG} -o ${SHADER_MIN} ${SHADER_RAW}
         DEPENDS glslminifier ${SHADER_RAW}
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
         COMMENT "Minifying shader ${SHADER_NAME}"
