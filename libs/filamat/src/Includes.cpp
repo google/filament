@@ -144,7 +144,6 @@ bool resolveIncludes(IncludeResult& root, IncludeCallback callback,
             return false;
         }
         IncludeResult resolved {
-            .lineNumberOffset = 0,
             .includeName = include.name
         };
         if (!callback(root.name, resolved)) {

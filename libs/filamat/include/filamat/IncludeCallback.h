@@ -24,9 +24,6 @@
 namespace filamat {
 
 struct IncludeResult {
-    // The line number for the first line of source (first line is 0).
-    const size_t lineNumberOffset = 0;
-
     // The include name of the root file, as if it were being included.
     // I.e., 'foobar.h' in the case of #include "foobar.h"
     const utils::CString includeName;
@@ -37,6 +34,9 @@ struct IncludeResult {
     // The full contents of the include file. This may contain additional, recursive include
     // directives.
     utils::CString text;
+
+    // The line number for the first line of text (first line is 0).
+    size_t lineNumberOffset = 0;
 
     // The name of the include file. This gets passed as "includerName" for any includes inside of
     // source. This field isn't used by the include system; it's up to the callback to give meaning
@@ -51,8 +51,9 @@ struct IncludeResult {
  *
  * For example, if a file main.h includes file.h on line 10, then IncludeCallback would be called
  * with the following:
- *     includeCallback("main.h", {.lineNumberOffset = 10, .includeName = "file.h" })
- * It's then up to the IncludeCallback to fill out the .text and .name fields.
+ *     includeCallback("main.h", {.includeName = "file.h" })
+ * It's then up to the IncludeCallback to fill out the .text, .name, and (optionally)
+ * lineNumberOffset fields.
  *
  * @param includedBy is the value that was given to IncludeResult.name for this source file, or
  *        the empty string for the root source file.

@@ -525,9 +525,9 @@ bool MaterialBuilder::ShaderCode::resolveIncludes(IncludeCallback callback,
             .insertLineDirectiveCheck = true
         };
         IncludeResult source {
-            .lineNumberOffset = getLineOffset(),
             .includeName = fileName,
             .text = mCode,
+            .lineNumberOffset = getLineOffset(),
             .name = utils::CString("")
         };
         if (!::filamat::resolveIncludes(source, callback, options)) {
