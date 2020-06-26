@@ -1,18 +1,24 @@
 # News
 
-[![Build Status](https://travis-ci.org/KhronosGroup/glslang.svg?branch=master)](https://travis-ci.org/KhronosGroup/glslang)
-[![Build status](https://ci.appveyor.com/api/projects/status/q6fi9cb0qnhkla68/branch/master?svg=true)](https://ci.appveyor.com/project/Khronoswebmaster/glslang/branch/master)
+1. The versioning scheme is being improved, and you might notice some differences.  This is currently WIP, but will be coming soon.  See, for example, PR #2277.
 
-## Planned Deprecations/Removals
+2. If you get a new **compilation error due to a missing header**, it might be caused by this planned removal:
 
-1. **SPIRV Folder, 1-May, 2020.** Glslang, when installed through CMake,
+**SPIRV Folder, 1-May, 2020.** Glslang, when installed through CMake,
 will install a `SPIRV` folder into `${CMAKE_INSTALL_INCLUDEDIR}`.
 This `SPIRV` folder is being moved to `glslang/SPIRV`.
 During the transition the `SPIRV` folder will be installed into both locations.
 The old install of `SPIRV/` will be removed as a CMake install target no sooner than May 1, 2020.
 See issue #1964.
 
-2. **Visual Studio 2013, 20-July, 2020.** Keeping code compiling for MS Visual Studio 2013 will no longer be
+If people are only using this location to get spirv.hpp, I recommend they get that from [SPIRV-Headers](https://github.com/KhronosGroup/SPIRV-Headers) instead.
+
+[![Build Status](https://travis-ci.org/KhronosGroup/glslang.svg?branch=master)](https://travis-ci.org/KhronosGroup/glslang)
+[![Build status](https://ci.appveyor.com/api/projects/status/q6fi9cb0qnhkla68/branch/master?svg=true)](https://ci.appveyor.com/project/Khronoswebmaster/glslang/branch/master)
+
+## Planned Deprecations/Removals
+
+1. **Visual Studio 2013, 20-July, 2020.** Keeping code compiling for MS Visual Studio 2013 will no longer be
 a goal as of July 20, 2020, the fifth anniversary of the release of Visual Studio 2015.
 
 # Glslang Components and Status
@@ -209,27 +215,29 @@ With no arguments it builds the full grammar, and with a "web" argument,
 the web grammar subset (see more about the web subset in the next section).
 
 ### Building to WASM for the Web and Node
+### Building a standalone JS/WASM library for the Web and Node
 
 Use the steps in [Build Steps](#build-steps), with the following notes/exceptions:
-* For building the web subset of core glslang:
+* `emsdk` needs to be present in your executable search path, *PATH* for
+  Bash-like environments:
+  + [Instructions located here](https://emscripten.org/docs/getting_started/downloads.html#sdk-download-and-install)
+* Wrap cmake call: `emcmake cmake`
+* Set `-DBUILD_TESTING=OFF -DENABLE_OPT=OFF -DINSTALL_GTEST=OFF`.
+* Set `-DENABLE_HLSL=OFF` if HLSL is not needed.
+* For a standalone JS/WASM library, turn on `-DENABLE_GLSLANG_JS=ON`.
+* For building a minimum-size web subset of core glslang:
+  + turn on `-DENABLE_GLSLANG_WEBMIN=ON` (disables HLSL)
   + execute `updateGrammar web` from the glslang subdirectory
     (or if using your own scripts, `m4` needs a `-DGLSLANG_WEB` argument)
-  + set `-DENABLE_HLSL=OFF -DBUILD_TESTING=OFF -DENABLE_OPT=OFF -DINSTALL_GTEST=OFF`
-  + turn on `-DENABLE_GLSLANG_JS=ON`
-  + optionally, for a minimum-size binary, turn on `-DENABLE_GLSLANG_WEBMIN=ON`
-  + optionally, for GLSL compilation error messages, turn on `-DENABLE_GLSLANG_WEB_DEVEL=ON`
-* `emsdk` needs to be present in your executable search path, *PATH* for
-  Bash-like environments
-  + [Instructions located
-    here](https://emscripten.org/docs/getting_started/downloads.html#sdk-download-and-install)
-* Wrap cmake call: `emcmake cmake`
+  + optionally, for GLSL compilation error messages, turn on
+    `-DENABLE_GLSLANG_WEBMIN_DEVEL=ON`
 * To get a fully minimized build, make sure to use `brotli` to compress the .js
   and .wasm files
 
 Example:
 
 ```sh
-emcmake cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_GLSLANG_WEB=ON \
+emcmake cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_GLSLANG_JS=ON \
     -DENABLE_HLSL=OFF -DBUILD_TESTING=OFF -DENABLE_OPT=OFF -DINSTALL_GTEST=OFF ..
 ```
 

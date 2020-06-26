@@ -61,17 +61,17 @@ EShLanguage GetShaderStage(const std::string& stage)
     } else if (stage == "comp") {
         return EShLangCompute;
     } else if (stage == "rgen") {
-        return EShLangRayGenNV;
+        return EShLangRayGen;
     } else if (stage == "rint") {
-        return EShLangIntersectNV;
+        return EShLangIntersect;
     } else if (stage == "rahit") {
-        return EShLangAnyHitNV;
+        return EShLangAnyHit;
     } else if (stage == "rchit") {
-        return EShLangClosestHitNV;
+        return EShLangClosestHit;
     } else if (stage == "rmiss") {
-        return EShLangMissNV;
+        return EShLangMiss;
     } else if (stage == "rcall") {
-        return EShLangCallableNV;
+        return EShLangCallable;
     } else if (stage == "task") {
         return EShLangTaskNV;
     } else if (stage == "mesh") {

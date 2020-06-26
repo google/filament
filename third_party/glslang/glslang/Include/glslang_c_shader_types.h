@@ -1,4 +1,4 @@
-﻿/**
+/**
     This code is based on the glslang_c_interface implementation by Viktor Latypov
 **/
 
@@ -164,6 +164,9 @@ typedef enum {
     GLSLANG_REFLECTION_SEPARATE_BUFFERS_BIT = (1 << 3),
     GLSLANG_REFLECTION_ALL_BLOCK_VARIABLES_BIT = (1 << 4),
     GLSLANG_REFLECTION_UNWRAP_IO_BLOCKS_BIT = (1 << 5),
+    GLSLANG_REFLECTION_ALL_IO_VARIABLES_BIT = (1 << 6),
+    GLSLANG_REFLECTION_SHARED_STD140_SSBO_BIT = (1 << 7),
+    GLSLANG_REFLECTION_SHARED_STD140_UBO_BIT = (1 << 8),
     LAST_ELEMENT_MARKER(GLSLANG_REFLECTION_COUNT),
 } glslang_reflection_options_t;
 

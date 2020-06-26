@@ -67,7 +67,7 @@ echo "Build Completed %DATE% %TIME%"
 :: Run the tests
 :: ##############
 echo "Running Tests... %DATE% %TIME%"
-bazel.exe test :all
+bazel.exe test :all --test_output=all
 if %ERRORLEVEL% NEQ 0 exit /b %ERRORLEVEL%
 echo "Tests Completed %DATE% %TIME%"
 

@@ -1,6 +1,7 @@
+#ifndef _PCH_H
+#define _PCH_H
 //
-// Copyright (C) 2016 LunarG, Inc.
-//
+// Copyright (C) 2018 The Khronos Group Inc.
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -33,32 +34,20 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#ifndef _HLSLPARSEABLES_INCLUDED_
-#define _HLSLPARSEABLES_INCLUDED_
+#include "hlslAttributes.h"
+#include "hlslGrammar.h"
+#include "hlslParseHelper.h"
+#include "hlslScanContext.h"
 
-#include "../glslang/MachineIndependent/Initialize.h"
+#include "../MachineIndependent/Scan.h"
+#include "../MachineIndependent/preprocessor/PpContext.h"
 
-namespace glslang {
+#include "../OSDependent/osinclude.h"
 
-//
-// This is an HLSL specific derivation of TBuiltInParseables.  See comment
-// above TBuiltInParseables for details.
-//
-class TBuiltInParseablesHlsl : public TBuiltInParseables {
-public:
-    POOL_ALLOCATOR_NEW_DELETE(GetThreadPoolAllocator())
-    TBuiltInParseablesHlsl();
-    void initialize(int version, EProfile, const SpvVersion& spvVersion);
-    void initialize(const TBuiltInResource& resources, int version, EProfile, const SpvVersion& spvVersion, EShLanguage);
+#include <algorithm>
+#include <array>
+#include <cctype>
+#include <functional>
+#include <set>
 
-    void identifyBuiltIns(int version, EProfile profile, const SpvVersion& spvVersion, EShLanguage language, TSymbolTable& symbolTable);
-
-    void identifyBuiltIns(int version, EProfile profile, const SpvVersion& spvVersion, EShLanguage language, TSymbolTable& symbolTable, const TBuiltInResource &resources);
-
-private:
-    void createMatTimesMat();
-};
-
-} // end namespace glslang
-
-#endif // _HLSLPARSEABLES_INCLUDED_
+#endif /* _PCH_H */

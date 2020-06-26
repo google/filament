@@ -41,7 +41,7 @@
 #ifndef HLSLSCANCONTEXT_H_
 #define HLSLSCANCONTEXT_H_
 
-#include "../glslang/MachineIndependent/ParseHelper.h"
+#include "../MachineIndependent/ParseHelper.h"
 #include "hlslTokens.h"
 
 namespace glslang {

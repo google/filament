@@ -134,6 +134,7 @@ const TBuiltInResource DefaultTBuiltInResource = {
     /* .maxTaskWorkGroupSizeY_NV = */ 1,
     /* .maxTaskWorkGroupSizeZ_NV = */ 1,
     /* .maxMeshViewCountNV = */ 4,
+    /* .maxDualSourceDrawBuffersEXT = */ 1,
 
     /* .limits = */ {
         /* .nonInductiveForLoops = */ 1,
@@ -243,6 +244,7 @@ std::string GetDefaultTBuiltInResourceString()
             << "MaxTaskWorkGroupSizeY_NV "                  << DefaultTBuiltInResource.maxTaskWorkGroupSizeY_NV << "\n"
             << "MaxTaskWorkGroupSizeZ_NV "                  << DefaultTBuiltInResource.maxTaskWorkGroupSizeZ_NV << "\n"
             << "MaxMeshViewCountNV "                        << DefaultTBuiltInResource.maxMeshViewCountNV << "\n"
+            << "MaxDualSourceDrawBuffersEXT "               << DefaultTBuiltInResource.maxDualSourceDrawBuffersEXT << "\n"
             << "nonInductiveForLoops "                      << DefaultTBuiltInResource.limits.nonInductiveForLoops << "\n"
             << "whileLoops "                                << DefaultTBuiltInResource.limits.whileLoops << "\n"
             << "doWhileLoops "                              << DefaultTBuiltInResource.limits.doWhileLoops << "\n"

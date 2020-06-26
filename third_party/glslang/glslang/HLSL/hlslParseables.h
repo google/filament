@@ -1,5 +1,6 @@
 //
-// Copyright (C) 2018 The Khronos Group Inc.
+// Copyright (C) 2016 LunarG, Inc.
+//
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -32,4 +33,32 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "pch.h"
+#ifndef _HLSLPARSEABLES_INCLUDED_
+#define _HLSLPARSEABLES_INCLUDED_
+
+#include "../MachineIndependent/Initialize.h"
+
+namespace glslang {
+
+//
+// This is an HLSL specific derivation of TBuiltInParseables.  See comment
+// above TBuiltInParseables for details.
+//
+class TBuiltInParseablesHlsl : public TBuiltInParseables {
+public:
+    POOL_ALLOCATOR_NEW_DELETE(GetThreadPoolAllocator())
+    TBuiltInParseablesHlsl();
+    void initialize(int version, EProfile, const SpvVersion& spvVersion);
+    void initialize(const TBuiltInResource& resources, int version, EProfile, const SpvVersion& spvVersion, EShLanguage);
+
+    void identifyBuiltIns(int version, EProfile profile, const SpvVersion& spvVersion, EShLanguage language, TSymbolTable& symbolTable);
+
+    void identifyBuiltIns(int version, EProfile profile, const SpvVersion& spvVersion, EShLanguage language, TSymbolTable& symbolTable, const TBuiltInResource &resources);
+
+private:
+    void createMatTimesMat();
+};
+
+} // end namespace glslang
+
+#endif // _HLSLPARSEABLES_INCLUDED_

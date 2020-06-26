@@ -56,5 +56,5 @@ echo $(date): Build everything...
 echo $(date): Build completed.
 
 echo $(date): Starting bazel test...
-./bazel-0.29.1-darwin-x86_64 test :all
+./bazel-0.29.1-darwin-x86_64 test :all --test_output=all
 echo $(date): Bazel test completed.

@@ -37,6 +37,14 @@ const glslang_resource_t* glslang_default_resource(void)
     return reinterpret_cast<const glslang_resource_t*>(&glslang::DefaultTBuiltInResource);
 }
 
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#elif defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable : 4996)
+#endif
+
 const char* glslang_default_resource_string()
 {
     std::string cpp_str = glslang::GetDefaultTBuiltInResourceString();
@@ -44,6 +52,12 @@ const char* glslang_default_resource_string()
     strcpy(c_str, cpp_str.c_str());
     return c_str;
 }
+
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC diagnostic pop
+#elif defined(_MSC_VER)
+#pragma warning(pop)
+#endif
 
 void glslang_decode_resource_limits(glslang_resource_t* resources, char* config)
 {

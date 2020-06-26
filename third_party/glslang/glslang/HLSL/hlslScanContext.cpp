@@ -42,15 +42,15 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include "../glslang/Include/Types.h"
-#include "../glslang/MachineIndependent/SymbolTable.h"
-#include "../glslang/MachineIndependent/ParseHelper.h"
+#include "../Include/Types.h"
+#include "../MachineIndependent/SymbolTable.h"
+#include "../MachineIndependent/ParseHelper.h"
 #include "hlslScanContext.h"
 #include "hlslTokens.h"
 
 // preprocessor includes
-#include "../glslang/MachineIndependent/preprocessor/PpContext.h"
-#include "../glslang/MachineIndependent/preprocessor/PpTokens.h"
+#include "../MachineIndependent/preprocessor/PpContext.h"
+#include "../MachineIndependent/preprocessor/PpTokens.h"
 
 namespace {
 
@@ -317,7 +317,7 @@ void HlslScanContext::fillInKeywordMap()
     (*KeywordMap)["sampler1D"] =               EHTokSampler1d;
     (*KeywordMap)["sampler2D"] =               EHTokSampler2d;
     (*KeywordMap)["sampler3D"] =               EHTokSampler3d;
-    (*KeywordMap)["samplerCube"] =             EHTokSamplerCube;
+    (*KeywordMap)["samplerCUBE"] =             EHTokSamplerCube;
     (*KeywordMap)["sampler_state"] =           EHTokSamplerState;
     (*KeywordMap)["SamplerState"] =            EHTokSamplerState;
     (*KeywordMap)["SamplerComparisonState"] =  EHTokSamplerComparisonState;

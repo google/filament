@@ -1,3 +1,36 @@
+# Copyright (C) 2020 The Khronos Group Inc.
+#
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+#
+#    Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#
+#    Redistributions in binary form must reproduce the above
+#    copyright notice, this list of conditions and the following
+#    disclaimer in the documentation and/or other materials provided
+#    with the distribution.
+#
+#    Neither the name of The Khronos Group Inc. nor the names of its
+#    contributors may be used to endorse or promote products derived
+#    from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+# COPYRIGHT HOLDERS OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+# ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+
 package(
     default_visibility = ["//visibility:public"],
 )
@@ -9,6 +42,20 @@ package(
 licenses(["notice"])
 
 exports_files(["LICENSE"])
+
+# Build information generation script
+py_binary(
+    name = "build_info",
+    srcs = ["build_info.py"],
+)
+
+genrule(
+    name = "gen_build_info_h",
+    srcs = ["CHANGES.md", "build_info.h.tmpl"],
+    outs = ["glslang/build_info.h"],
+    cmd = "$(location build_info) $$(dirname $(location CHANGES.md)) -i $(location build_info.h.tmpl) -o $(location glslang/build_info.h)",
+    tools = [":build_info"],
+)
 
 COMMON_COPTS = select({
     "@bazel_tools//src/conditions:windows": [""],
@@ -34,15 +81,13 @@ cc_library(
     srcs = glob(
         [
             "glslang/GenericCodeGen/*.cpp",
+            "glslang/HLSL/*.cpp",
             "glslang/MachineIndependent/*.cpp",
             "glslang/MachineIndependent/preprocessor/*.cpp",
-            "hlsl/*.cpp",
         ],
         exclude = [
-            "glslang/MachineIndependent/pch.cpp",
+            "glslang/HLSL/pch.h",
             "glslang/MachineIndependent/pch.h",
-            "hlsl/pch.cpp",
-            "hlsl/pch.h",
         ],
     ) + [
         "OGLCompilersDLL/InitializeDll.cpp",
@@ -53,15 +98,16 @@ cc_library(
             ["glslang/OSDependent/Unix/ossource.cpp"],
     }),
     hdrs = glob([
+        "glslang/HLSL/*.h",
         "glslang/Include/*.h",
         "glslang/MachineIndependent/*.h",
         "glslang/MachineIndependent/preprocessor/*.h",
-        "hlsl/*.h",
     ]) + [
         "OGLCompilersDLL/InitializeDll.h",
         "StandAlone/DirStackFileIncluder.h",
         "glslang/OSDependent/osinclude.h",
         "glslang/Public/ShaderLang.h",
+        ":gen_build_info_h",
     ],
     copts = COMMON_COPTS,
     defines = [

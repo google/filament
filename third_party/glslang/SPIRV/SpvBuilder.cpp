@@ -1,6 +1,7 @@
 //
 // Copyright (C) 2014-2015 LunarG, Inc.
 // Copyright (C) 2015-2018 Google, Inc.
+// Modifications Copyright (C) 2020 Advanced Micro Devices, Inc. All rights reserved.
 //
 // All rights reserved.
 //
@@ -602,16 +603,31 @@ Id Builder::makeSampledImageType(Id imageType)
 }
 
 #ifndef GLSLANG_WEB
-Id Builder::makeAccelerationStructureNVType()
+Id Builder::makeAccelerationStructureType()
 {
     Instruction *type;
-    if (groupedTypes[OpTypeAccelerationStructureNV].size() == 0) {
-        type = new Instruction(getUniqueId(), NoType, OpTypeAccelerationStructureNV);
-        groupedTypes[OpTypeAccelerationStructureNV].push_back(type);
+    if (groupedTypes[OpTypeAccelerationStructureKHR].size() == 0) {
+        type = new Instruction(getUniqueId(), NoType, OpTypeAccelerationStructureKHR);
+        groupedTypes[OpTypeAccelerationStructureKHR].push_back(type);
         constantsTypesGlobals.push_back(std::unique_ptr<Instruction>(type));
         module.mapInstruction(type);
     } else {
-        type = groupedTypes[OpTypeAccelerationStructureNV].back();
+        type = groupedTypes[OpTypeAccelerationStructureKHR].back();
+    }
+
+    return type->getResultId();
+}
+
+Id Builder::makeRayQueryType()
+{
+    Instruction *type;
+    if (groupedTypes[OpTypeRayQueryProvisionalKHR].size() == 0) {
+        type = new Instruction(getUniqueId(), NoType, OpTypeRayQueryProvisionalKHR);
+        groupedTypes[OpTypeRayQueryProvisionalKHR].push_back(type);
+        constantsTypesGlobals.push_back(std::unique_ptr<Instruction>(type));
+        module.mapInstruction(type);
+    } else {
+        type = groupedTypes[OpTypeRayQueryProvisionalKHR].back();
     }
 
     return type->getResultId();
@@ -1281,9 +1297,12 @@ Function* Builder::makeFunctionEntry(Decoration precision, Id returnType, const 
 
     // Set up the precisions
     setPrecision(function->getId(), precision);
+    function->setReturnPrecision(precision);
     for (unsigned p = 0; p < (unsigned)decorations.size(); ++p) {
-        for (int d = 0; d < (int)decorations[p].size(); ++d)
+        for (int d = 0; d < (int)decorations[p].size(); ++d) {
             addDecoration(firstParamId + p, decorations[p][d]);
+            function->addParamPrecision(p, decorations[p][d]);
+        }
     }
 
     // CFG
@@ -1340,7 +1359,7 @@ void Builder::makeDiscard()
 }
 
 // Comments in header
-Id Builder::createVariable(StorageClass storageClass, Id type, const char* name, Id initializer)
+Id Builder::createVariable(Decoration precision, StorageClass storageClass, Id type, const char* name, Id initializer)
 {
     Id pointerType = makePointer(storageClass, type);
     Instruction* inst = new Instruction(getUniqueId(), pointerType, OpVariable);
@@ -1362,6 +1381,7 @@ Id Builder::createVariable(StorageClass storageClass, Id type, const char* name,
 
     if (name)
         addName(inst->getResultId(), name);
+    setPrecision(inst->getResultId(), precision);
 
     return inst->getResultId();
 }
@@ -1418,7 +1438,8 @@ void Builder::createStore(Id rValue, Id lValue, spv::MemoryAccessMask memoryAcce
 }
 
 // Comments in header
-Id Builder::createLoad(Id lValue, spv::MemoryAccessMask memoryAccess, spv::Scope scope, unsigned int alignment)
+Id Builder::createLoad(Id lValue, spv::Decoration precision, spv::MemoryAccessMask memoryAccess,
+    spv::Scope scope, unsigned int alignment)
 {
     Instruction* load = new Instruction(getUniqueId(), getDerefTypeId(lValue), OpLoad);
     load->addIdOperand(lValue);
@@ -1436,6 +1457,7 @@ Id Builder::createLoad(Id lValue, spv::MemoryAccessMask memoryAccess, spv::Scope
     }
 
     buildPoint->addInstruction(std::unique_ptr<Instruction>(load));
+    setPrecision(load->getResultId(), precision);
 
     return load->getResultId();
 }
@@ -2150,7 +2172,7 @@ Id Builder::createCompositeCompare(Decoration precision, Id value1, Id value2, b
         Op op;
         switch (getMostBasicTypeClass(valueType)) {
         case OpTypeFloat:
-            op = equal ? OpFOrdEqual : OpFOrdNotEqual;
+            op = equal ? OpFOrdEqual : OpFUnordNotEqual;
             break;
         case OpTypeInt:
         default:
@@ -2658,7 +2680,7 @@ void Builder::accessChainStore(Id rvalue, spv::MemoryAccessMask memoryAccess, sp
     // If swizzle still exists, it is out-of-order or not full, we must load the target vector,
     // extract and insert elements to perform writeMask and/or swizzle.
     if (accessChain.swizzle.size() > 0) {
-        Id tempBaseId = createLoad(base);
+        Id tempBaseId = createLoad(base, spv::NoPrecision);
         source = createLvalueSwizzle(getTypeId(tempBaseId), tempBaseId, source, accessChain.swizzle);
     }
 
@@ -2697,17 +2719,19 @@ Id Builder::accessChainLoad(Decoration precision, Decoration nonUniform, Id resu
 
             if (constant) {
                 id = createCompositeExtract(accessChain.base, swizzleBase, indexes);
+                setPrecision(id, precision);
             } else {
                 Id lValue = NoResult;
-                if (spvVersion >= Spv_1_4) {
+                if (spvVersion >= Spv_1_4 && isValidInitializer(accessChain.base)) {
                     // make a new function variable for this r-value, using an initializer,
                     // and mark it as NonWritable so that downstream it can be detected as a lookup
                     // table
-                    lValue = createVariable(StorageClassFunction, getTypeId(accessChain.base), "indexable",
-                        accessChain.base);
+                    lValue = createVariable(NoPrecision, StorageClassFunction, getTypeId(accessChain.base),
+                        "indexable", accessChain.base);
                     addDecoration(lValue, DecorationNonWritable);
                 } else {
-                    lValue = createVariable(StorageClassFunction, getTypeId(accessChain.base), "indexable");
+                    lValue = createVariable(NoPrecision, StorageClassFunction, getTypeId(accessChain.base),
+                        "indexable");
                     // store into it
                     createStore(accessChain.base, lValue);
                 }
@@ -2716,9 +2740,8 @@ Id Builder::accessChainLoad(Decoration precision, Decoration nonUniform, Id resu
                 accessChain.isRValue = false;
 
                 // load through the access chain
-                id = createLoad(collapseAccessChain());
+                id = createLoad(collapseAccessChain(), precision);
             }
-            setPrecision(id, precision);
         } else
             id = accessChain.base;  // no precision, it was set when this was defined
     } else {
@@ -2737,8 +2760,7 @@ Id Builder::accessChainLoad(Decoration precision, Decoration nonUniform, Id resu
         // loaded image types get decorated. TODO: This should maybe move to
         // createImageTextureFunctionCall.
         addDecoration(id, nonUniform);
-        id = createLoad(id, memoryAccess, scope, alignment);
-        setPrecision(id, precision);
+        id = createLoad(id, precision, memoryAccess, scope, alignment);
         addDecoration(id, nonUniform);
     }
 
