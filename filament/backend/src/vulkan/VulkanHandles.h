@@ -175,7 +175,7 @@ struct VulkanTimerQuery : public HwTimerQuery {
     uint32_t startingQueryIndex;
     uint32_t stoppingQueryIndex;
     VulkanContext& mContext;
-    std::atomic<bool> ready;
+    std::atomic<VulkanCommandBuffer*> cmdbuffer;
 };
 
 } // namespace filament

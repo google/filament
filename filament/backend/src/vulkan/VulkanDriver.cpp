@@ -748,8 +748,13 @@ bool VulkanDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapse
     // This is a synchronous call and might occur before beginTimerQuery has written anything into
     // the command buffer, which is an error according to the validation layer that ships in the
     // Android NDK.  Even when AVAILABILITY_BIT is set, validation seems to require that the
-    // timestamp has at least been written into the command buffer.
-    if (!vtq->ready.load()) {
+    // timestamp has at least been written into a processed command buffer.
+    VulkanCommandBuffer* cmdbuf = vtq->cmdbuffer.load();
+    if (!cmdbuf) {
+        return false;
+    }
+    VkResult status = cmdbuf->fence->status.load(std::memory_order_relaxed);
+    if (status != VK_SUCCESS) {
         return false;
     }
 
@@ -1336,7 +1341,7 @@ void VulkanDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {
 
     vkCmdResetQueryPool(commands->cmdbuffer, mContext.timestamps.pool, index, 2);
     vkCmdWriteTimestamp(commands->cmdbuffer, stage, mContext.timestamps.pool, index);
-    vtq->ready.store(true);
+    vtq->cmdbuffer.store(commands);
 }
 
 void VulkanDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
