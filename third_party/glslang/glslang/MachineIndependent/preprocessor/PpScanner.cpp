@@ -1045,28 +1045,31 @@ int TPpContext::tStringInput::scan(TPpToken* ppToken)
                         case 't':  ch = 0x09; break;
                         case 'v':  ch = 0x0b; break;
                         case 'x': 
-                            // two character hex value
-                            nextCh = getch();
-                            if (nextCh >= '0' && nextCh <= '9')
-                                nextCh -= '0';
-                            else if (nextCh >= 'A' && nextCh <= 'F')
-                                nextCh -= 'A' - 10;
-                            else if (nextCh >= 'a' && nextCh <= 'f')
-                                nextCh -= 'a' - 10;
-                            else
-                                pp->parseContext.ppError(ppToken->loc, "Expected hex value in escape sequence", "string", "");
-                            ch = nextCh * 0x10;
-                            nextCh = getch();
-                            if (nextCh >= '0' && nextCh <= '9')
-                                nextCh -= '0';
-                            else if (nextCh >= 'A' && nextCh <= 'F')
-                                nextCh -= 'A' - 10;
-                            else if (nextCh >= 'a' && nextCh <= 'f')
-                                nextCh -= 'a' - 10;
-                            else
-                                pp->parseContext.ppError(ppToken->loc, "Expected hex value in escape sequence", "string", "");
-                            ch += nextCh;
-                            break;
+                            // Hex value, arbitrary number of characters. Terminated by the first
+                            // non-hex digit
+                            {
+                                int numDigits = 0;
+                                ch = 0;
+                                while (true) {
+                                    nextCh = getch();
+                                    if (nextCh >= '0' && nextCh <= '9')
+                                        nextCh -= '0';
+                                    else if (nextCh >= 'A' && nextCh <= 'F')
+                                        nextCh -= 'A' - 10;
+                                    else if (nextCh >= 'a' && nextCh <= 'f')
+                                        nextCh -= 'a' - 10;
+                                    else {
+                                        ungetch();
+                                        break;
+                                    }
+                                    numDigits++;
+                                    ch = ch * 0x10 + nextCh;
+                                }
+                                if (numDigits == 0) {
+                                    pp->parseContext.ppError(ppToken->loc, "Expected hex value in escape sequence", "string", "");
+                                }
+                                break;
+                            }
                         case '0':
                         case '1':
                         case '2':
@@ -1075,20 +1078,23 @@ int TPpContext::tStringInput::scan(TPpToken* ppToken)
                         case '5':
                         case '6':
                         case '7':
-                            // three character octal value
-                            nextCh = getch() - '0';
-                            if (nextCh > 3)
-                                pp->parseContext.ppError(ppToken->loc, "Expected octal value in escape sequence", "string", "");
-                            ch = nextCh * 8 * 8;
-                            nextCh = getch() - '0';
-                            if (nextCh > 7)
-                                pp->parseContext.ppError(ppToken->loc, "Expected octal value in escape sequence", "string", "");
-                            ch += nextCh * 8;
-                            nextCh = getch() - '0';
-                            if (nextCh > 7)
-                                pp->parseContext.ppError(ppToken->loc, "Expected octal value in escape sequence", "string", "");
-                            ch += nextCh;
-                            break;
+                            // Octal value, up to three octal digits
+                            {
+                                int numDigits = 1;
+                                ch = nextCh - '0';
+                                while (numDigits < 3) {
+                                    nextCh = getch();
+                                    if (nextCh >= '0' && nextCh <= '7')
+                                        nextCh -= '0';
+                                    else {
+                                        ungetch();
+                                        break;
+                                    }
+                                    numDigits++;
+                                    ch = ch * 8 + nextCh;
+                                }
+                                break;
+                            }
                         default:
                             pp->parseContext.ppError(ppToken->loc, "Invalid escape sequence", "string", "");
                             break;

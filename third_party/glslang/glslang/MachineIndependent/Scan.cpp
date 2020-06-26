@@ -3,6 +3,7 @@
 // Copyright (C) 2013 LunarG, Inc.
 // Copyright (C) 2017 ARM Limited.
 // Copyright (C) 2020 Google, Inc.
+// Modifications Copyright (C) 2020 Advanced Micro Devices, Inc. All rights reserved.
 //
 // All rights reserved.
 //
@@ -415,6 +416,7 @@ void TScanContext::fillInKeywordMap()
     (*KeywordMap)["queuefamilycoherent"] =     QUEUEFAMILYCOHERENT;
     (*KeywordMap)["workgroupcoherent"] =       WORKGROUPCOHERENT;
     (*KeywordMap)["subgroupcoherent"] =        SUBGROUPCOHERENT;
+    (*KeywordMap)["shadercallcoherent"] =      SHADERCALLCOHERENT;
     (*KeywordMap)["nonprivate"] =              NONPRIVATE;
     (*KeywordMap)["restrict"] =                RESTRICT;
     (*KeywordMap)["readonly"] =                READONLY;
@@ -703,11 +705,18 @@ void TScanContext::fillInKeywordMap()
     (*KeywordMap)["precise"] =                 PRECISE;
 
     (*KeywordMap)["rayPayloadNV"] =            PAYLOADNV;
+    (*KeywordMap)["rayPayloadEXT"] =           PAYLOADEXT;
     (*KeywordMap)["rayPayloadInNV"] =          PAYLOADINNV;
+    (*KeywordMap)["rayPayloadInEXT"] =         PAYLOADINEXT;
     (*KeywordMap)["hitAttributeNV"] =          HITATTRNV;
+    (*KeywordMap)["hitAttributeEXT"] =         HITATTREXT;
     (*KeywordMap)["callableDataNV"] =          CALLDATANV;
+    (*KeywordMap)["callableDataEXT"] =         CALLDATAEXT;
     (*KeywordMap)["callableDataInNV"] =        CALLDATAINNV;
+    (*KeywordMap)["callableDataInEXT"] =       CALLDATAINEXT;
     (*KeywordMap)["accelerationStructureNV"] = ACCSTRUCTNV;
+    (*KeywordMap)["accelerationStructureEXT"]   = ACCSTRUCTEXT;
+    (*KeywordMap)["rayQueryEXT"] =              RAYQUERYEXT;
     (*KeywordMap)["perprimitiveNV"] =          PERPRIMITIVENV;
     (*KeywordMap)["perviewNV"] =               PERVIEWNV;
     (*KeywordMap)["taskNV"] =                  PERTASKNV;
@@ -908,7 +917,8 @@ int TScanContext::tokenizeIdentifier()
     case BUFFER:
         afterBuffer = true;
         if ((parseContext.isEsProfile() && parseContext.version < 310) ||
-            (!parseContext.isEsProfile() && parseContext.version < 430))
+            (!parseContext.isEsProfile() && (parseContext.version < 430 &&
+            !parseContext.extensionTurnedOn(E_GL_ARB_shader_storage_buffer_object))))
             return identifierOrType();
         return keyword;
 
@@ -1014,6 +1024,23 @@ int TScanContext::tokenizeIdentifier()
             parseContext.extensionTurnedOn(E_GL_NV_ray_tracing))
             return keyword;
         return identifierOrType();
+    case PAYLOADEXT:
+    case PAYLOADINEXT:
+    case HITATTREXT:
+    case CALLDATAEXT:
+    case CALLDATAINEXT:
+    case ACCSTRUCTEXT:
+        if (parseContext.symbolTable.atBuiltInLevel() ||
+            parseContext.extensionTurnedOn(E_GL_EXT_ray_tracing) ||
+            parseContext.extensionTurnedOn(E_GL_EXT_ray_query))
+            return keyword;
+        return identifierOrType();
+    case RAYQUERYEXT:
+        if (parseContext.symbolTable.atBuiltInLevel() ||
+            (!parseContext.isEsProfile() && parseContext.version >= 460
+                 && parseContext.extensionTurnedOn(E_GL_EXT_ray_query)))
+            return keyword;
+        return identifierOrType();
     case ATOMIC_UINT:
         if ((parseContext.isEsProfile() && parseContext.version >= 310) ||
             parseContext.extensionTurnedOn(E_GL_ARB_shader_atomic_counters))
@@ -1025,6 +1052,7 @@ int TScanContext::tokenizeIdentifier()
     case QUEUEFAMILYCOHERENT:
     case WORKGROUPCOHERENT:
     case SUBGROUPCOHERENT:
+    case SHADERCALLCOHERENT:
     case NONPRIVATE:
     case RESTRICT:
     case READONLY:
@@ -1168,8 +1196,8 @@ int TScanContext::tokenizeIdentifier()
         afterType = true;
         if (parseContext.isEsProfile() || parseContext.version < 150 ||
             (!parseContext.symbolTable.atBuiltInLevel() &&
-              parseContext.version < 400 &&
-             !parseContext.extensionTurnedOn(E_GL_ARB_gpu_shader_fp64)))
+              (parseContext.version < 400 && !parseContext.extensionTurnedOn(E_GL_ARB_gpu_shader_fp64) &&
+              (parseContext.version < 410 && !parseContext.extensionTurnedOn(E_GL_ARB_vertex_attrib_64bit)))))
             reservedWord();
         return keyword;
 
@@ -1746,7 +1774,9 @@ int TScanContext::dMat()
 
     if (!parseContext.isEsProfile() && (parseContext.version >= 400 ||
         parseContext.symbolTable.atBuiltInLevel() ||
-        (parseContext.version >= 150 && parseContext.extensionTurnedOn(E_GL_ARB_gpu_shader_fp64))))
+        (parseContext.version >= 150 && parseContext.extensionTurnedOn(E_GL_ARB_gpu_shader_fp64)) ||
+        (parseContext.version >= 150 && parseContext.extensionTurnedOn(E_GL_ARB_vertex_attrib_64bit)
+         && parseContext.language == EShLangVertex)))
         return keyword;
 
     if (parseContext.isForwardCompatible())

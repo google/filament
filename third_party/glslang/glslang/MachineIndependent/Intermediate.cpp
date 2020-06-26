@@ -538,7 +538,7 @@ bool TIntermediate::isConversionAllowed(TOperator op, TIntermTyped* node) const
         return false;
     case EbtAtomicUint:
     case EbtSampler:
-    case EbtAccStructNV:
+    case EbtAccStruct:
         // opaque types can be passed to functions
         if (op == EOpFunction)
             break;
@@ -1620,7 +1620,7 @@ bool TIntermediate::isFPIntegralConversion(TBasicType from, TBasicType to) const
 //
 bool TIntermediate::canImplicitlyPromote(TBasicType from, TBasicType to, TOperator op) const
 {
-    if (isEsProfile() || version == 110)
+    if ((isEsProfile() && version < 310 ) || version == 110)
         return false;
 
     if (from == to)
@@ -1667,7 +1667,7 @@ bool TIntermediate::canImplicitlyPromote(TBasicType from, TBasicType to, TOperat
                                 extensionRequested(E_GL_EXT_shader_explicit_arithmetic_types_float16) ||
                                 extensionRequested(E_GL_EXT_shader_explicit_arithmetic_types_float32) ||
                                 extensionRequested(E_GL_EXT_shader_explicit_arithmetic_types_float64);
-
+    
     if (explicitTypesEnabled) {
         // integral promotions
         if (isIntegralPromotion(from, to)) {
@@ -1699,6 +1699,30 @@ bool TIntermediate::canImplicitlyPromote(TBasicType from, TBasicType to, TOperat
             if (from == EbtBool && (to == EbtInt || to == EbtUint || to == EbtFloat))
                 return true;
         }
+    } else if (isEsProfile()) {
+        switch (to) {
+            case EbtFloat:
+                switch (from) {
+                case EbtInt:
+                case EbtUint:
+                    return extensionRequested(E_GL_EXT_shader_implicit_conversions);
+                case EbtFloat:
+                    return true;
+                default:
+                    return false;
+                }
+            case EbtUint:
+                switch (from) {
+                case EbtInt:
+                    return extensionRequested(E_GL_EXT_shader_implicit_conversions);
+                case EbtUint:
+                    return true;
+                default:
+                    return false;
+                }
+            default:
+                return false;
+        }        
     } else {
         switch (to) {
         case EbtDouble:
@@ -1709,12 +1733,14 @@ bool TIntermediate::canImplicitlyPromote(TBasicType from, TBasicType to, TOperat
             case EbtUint64:
             case EbtFloat:
             case EbtDouble:
-                return true;
+                return version >= 400 || extensionRequested(E_GL_ARB_gpu_shader_fp64);
             case EbtInt16:
             case EbtUint16:
-                return extensionRequested(E_GL_AMD_gpu_shader_int16);
+                return (version >= 400 || extensionRequested(E_GL_ARB_gpu_shader_fp64)) &&
+                       extensionRequested(E_GL_AMD_gpu_shader_int16);
             case EbtFloat16:
-                return extensionRequested(E_GL_AMD_gpu_shader_half_float);
+                return (version >= 400 || extensionRequested(E_GL_ARB_gpu_shader_fp64)) &&
+                       extensionRequested(E_GL_AMD_gpu_shader_half_float);
             default:
                 return false;
            }
@@ -1731,15 +1757,14 @@ bool TIntermediate::canImplicitlyPromote(TBasicType from, TBasicType to, TOperat
                 return extensionRequested(E_GL_AMD_gpu_shader_int16);
             case EbtFloat16:
                 return 
-                    extensionRequested(E_GL_AMD_gpu_shader_half_float) ||
-                    getSource() == EShSourceHlsl;
+                    extensionRequested(E_GL_AMD_gpu_shader_half_float) || getSource() == EShSourceHlsl;
             default:
                  return false;
             }
         case EbtUint:
             switch (from) {
             case EbtInt:
-                 return version >= 400 || getSource() == EShSourceHlsl;
+                return version >= 400 || getSource() == EShSourceHlsl;
             case EbtUint:
                 return true;
             case EbtBool:
@@ -1931,7 +1956,9 @@ std::tuple<TBasicType, TBasicType> TIntermediate::getConversionDestinatonType(TB
     TBasicType res0 = EbtNumTypes;
     TBasicType res1 = EbtNumTypes;
 
-    if (isEsProfile() || version == 110)
+    if ((isEsProfile() && 
+        (version < 310 || !extensionRequested(E_GL_EXT_shader_implicit_conversions))) || 
+        version == 110)
         return std::make_tuple(res0, res1);
 
     if (getSource() == EShSourceHlsl) {

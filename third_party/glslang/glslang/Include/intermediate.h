@@ -2,6 +2,7 @@
 // Copyright (C) 2002-2005  3Dlabs Inc. Ltd.
 // Copyright (C) 2012-2016 LunarG, Inc.
 // Copyright (C) 2017 ARM Limited.
+// Modifications Copyright (C) 2020 Advanced Micro Devices, Inc. All rights reserved.
 //
 // All rights reserved.
 //
@@ -910,12 +911,41 @@ enum TOperator {
     EOpAverageRounded,
     EOpMul32x16,
 
-    EOpTraceNV,
-    EOpReportIntersectionNV,
-    EOpIgnoreIntersectionNV,
-    EOpTerminateRayNV,
-    EOpExecuteCallableNV,
+    EOpTrace,
+    EOpReportIntersection,
+    EOpIgnoreIntersection,
+    EOpTerminateRay,
+    EOpExecuteCallable,
     EOpWritePackedPrimitiveIndices4x8NV,
+
+    //
+    // GL_EXT_ray_query operations
+    //
+
+    EOpRayQueryInitialize,
+    EOpRayQueryTerminate,
+    EOpRayQueryGenerateIntersection,
+    EOpRayQueryConfirmIntersection,
+    EOpRayQueryProceed,
+    EOpRayQueryGetIntersectionType,
+    EOpRayQueryGetRayTMin,
+    EOpRayQueryGetRayFlags,
+    EOpRayQueryGetIntersectionT,
+    EOpRayQueryGetIntersectionInstanceCustomIndex,
+    EOpRayQueryGetIntersectionInstanceId,
+    EOpRayQueryGetIntersectionInstanceShaderBindingTableRecordOffset,
+    EOpRayQueryGetIntersectionGeometryIndex,
+    EOpRayQueryGetIntersectionPrimitiveIndex,
+    EOpRayQueryGetIntersectionBarycentrics,
+    EOpRayQueryGetIntersectionFrontFace,
+    EOpRayQueryGetIntersectionCandidateAABBOpaque,
+    EOpRayQueryGetIntersectionObjectRayDirection,
+    EOpRayQueryGetIntersectionObjectRayOrigin,
+    EOpRayQueryGetWorldRayDirection,
+    EOpRayQueryGetWorldRayOrigin,
+    EOpRayQueryGetIntersectionObjectToWorld,
+    EOpRayQueryGetIntersectionWorldToObject,
+
     //
     // HLSL operations
     //

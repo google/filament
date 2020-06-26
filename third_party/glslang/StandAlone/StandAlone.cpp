@@ -44,7 +44,6 @@
 #include "Worklist.h"
 #include "DirStackFileIncluder.h"
 #include "./../glslang/Include/ShHandle.h"
-#include "./../glslang/Include/revision.h"
 #include "./../glslang/Public/ShaderLang.h"
 #include "../SPIRV/GlslangToSpv.h"
 #include "../SPIRV/GLSL.std.450.h"
@@ -62,8 +61,11 @@
 
 #include "../glslang/OSDependent/osinclude.h"
 
+// Build-time generated includes
+#include "glslang/build_info.h"
+
 extern "C" {
-    SH_IMPORT_EXPORT void ShOutputHtml();
+    GLSLANG_EXPORT void ShOutputHtml();
 }
 
 // Command-line options
@@ -106,6 +108,8 @@ bool targetHlslFunctionality1 = false;
 bool SpvToolsDisassembler = false;
 bool SpvToolsValidate = false;
 bool NaNClamp = false;
+bool stripDebugInfo = false;
+bool beQuiet = false;
 
 //
 // Return codes from main/exit().
@@ -242,6 +246,7 @@ protected:
     std::string text;  // contents of preamble
 };
 
+// Track the user's #define and #undef from the command line.
 TPreamble UserPreamble;
 
 //
@@ -258,12 +263,12 @@ const char* GetBinaryName(EShLanguage stage)
         case EShLangGeometry:        name = "geom.spv";    break;
         case EShLangFragment:        name = "frag.spv";    break;
         case EShLangCompute:         name = "comp.spv";    break;
-        case EShLangRayGenNV:        name = "rgen.spv";    break;
-        case EShLangIntersectNV:     name = "rint.spv";    break;
-        case EShLangAnyHitNV:        name = "rahit.spv";   break;
-        case EShLangClosestHitNV:    name = "rchit.spv";   break;
-        case EShLangMissNV:          name = "rmiss.spv";   break;
-        case EShLangCallableNV:      name = "rcall.spv";   break;
+        case EShLangRayGen:          name = "rgen.spv";    break;
+        case EShLangIntersect:       name = "rint.spv";    break;
+        case EShLangAnyHit:          name = "rahit.spv";   break;
+        case EShLangClosestHit:      name = "rchit.spv";   break;
+        case EShLangMiss:            name = "rmiss.spv";   break;
+        case EShLangCallable:        name = "rcall.spv";   break;
         case EShLangMeshNV:          name = "mesh.spv";    break;
         case EShLangTaskNV:          name = "task.spv";    break;
         default:                     name = "unknown";     break;
@@ -554,6 +559,12 @@ void ProcessArguments(std::vector<std::unique_ptr<glslang::TWorkItem>>& workItem
                         ReflectOptions |= EShReflectionAllBlockVariables;
                     } else if (lowerword == "reflect-unwrap-io-blocks") {
                         ReflectOptions |= EShReflectionUnwrapIOBlocks;
+                    } else if (lowerword == "reflect-all-io-variables") {
+                        ReflectOptions |= EShReflectionAllIOVariables;
+                    } else if (lowerword == "reflect-shared-std140-ubo") {
+                        ReflectOptions |= EShReflectionSharedStd140UBO;
+                    } else if (lowerword == "reflect-shared-std140-ssbo") {
+                        ReflectOptions |= EShReflectionSharedStd140SSBO;
                     } else if (lowerword == "resource-set-bindings" ||  // synonyms
                                lowerword == "resource-set-binding"  ||
                                lowerword == "rsb") {
@@ -653,6 +664,8 @@ void ProcessArguments(std::vector<std::unique_ptr<glslang::TWorkItem>>& workItem
                         variableName = argv[1];
                         bumpArg();
                         break;
+                    } else if (lowerword == "quiet") {
+                        beQuiet = true;
                     } else if (lowerword == "version") {
                         Options |= EOptionDumpVersions;
                     } else if (lowerword == "help") {
@@ -743,7 +756,13 @@ void ProcessArguments(std::vector<std::unique_ptr<glslang::TWorkItem>>& workItem
                     Error("-f: expected hlsl_functionality1");
                 break;
             case 'g':
-                Options |= EOptionDebug;
+                // Override previous -g or -g0 argument
+                stripDebugInfo = false;
+                Options &= ~EOptionDebug;
+                if (argv[0][2] == '0')
+                    stripDebugInfo = true;
+                else
+                    Options |= EOptionDebug;
                 break;
             case 'h':
                 usage();
@@ -1094,7 +1113,8 @@ void CompileAndLinkShaderUnits(std::vector<ShaderCompUnit> compUnits)
 
         if (! (Options & EOptionSuppressInfolog) &&
             ! (Options & EOptionMemoryLeakMode)) {
-            PutsIfNonEmpty(compUnit.fileName[0].c_str());
+            if (!beQuiet)
+                PutsIfNonEmpty(compUnit.fileName[0].c_str());
             PutsIfNonEmpty(shader->getInfoLog());
             PutsIfNonEmpty(shader->getInfoDebugLog());
         }
@@ -1139,11 +1159,12 @@ void CompileAndLinkShaderUnits(std::vector<ShaderCompUnit> compUnits)
             for (int stage = 0; stage < EShLangCount; ++stage) {
                 if (program.getIntermediate((EShLanguage)stage)) {
                     std::vector<unsigned int> spirv;
-                    std::string warningsErrors;
                     spv::SpvBuildLogger logger;
                     glslang::SpvOptions spvOptions;
                     if (Options & EOptionDebug)
                         spvOptions.generateDebugInfo = true;
+                    else if (stripDebugInfo)
+                        spvOptions.stripDebugInfo = true;
                     spvOptions.disableOptimizer = (Options & EOptionOptimizeDisable) != 0;
                     spvOptions.optimizeSize = (Options & EOptionOptimizeSize) != 0;
                     spvOptions.disassemble = SpvToolsDisassembler;
@@ -1259,13 +1280,13 @@ int singleMain()
 #endif
 
     if (Options & EOptionDumpBareVersion) {
-        printf("%d.%d.%d\n",
-            glslang::GetSpirvGeneratorVersion(), GLSLANG_MINOR_VERSION, GLSLANG_PATCH_LEVEL);
+        printf("%d:%d.%d.%d%s\n", glslang::GetSpirvGeneratorVersion(), GLSLANG_VERSION_MAJOR, GLSLANG_VERSION_MINOR,
+                GLSLANG_VERSION_PATCH, GLSLANG_VERSION_FLAVOR);
         if (workList.empty())
             return ESuccess;
     } else if (Options & EOptionDumpVersions) {
-        printf("Glslang Version: %d.%d.%d\n",
-            glslang::GetSpirvGeneratorVersion(), GLSLANG_MINOR_VERSION, GLSLANG_PATCH_LEVEL);
+        printf("Glslang Version: %d:%d.%d.%d%s\n", glslang::GetSpirvGeneratorVersion(), GLSLANG_VERSION_MAJOR,
+                GLSLANG_VERSION_MINOR, GLSLANG_VERSION_PATCH, GLSLANG_VERSION_FLAVOR);
         printf("ESSL Version: %s\n", glslang::GetEsslVersionString());
         printf("GLSL Version: %s\n", glslang::GetGlslVersionString());
         std::string spirvVersion;
@@ -1429,17 +1450,17 @@ EShLanguage FindLanguage(const std::string& name, bool parseStageName)
     else if (stageName == "comp")
         return EShLangCompute;
     else if (stageName == "rgen")
-        return EShLangRayGenNV;
+        return EShLangRayGen;
     else if (stageName == "rint")
-        return EShLangIntersectNV;
+        return EShLangIntersect;
     else if (stageName == "rahit")
-        return EShLangAnyHitNV;
+        return EShLangAnyHit;
     else if (stageName == "rchit")
-        return EShLangClosestHitNV;
+        return EShLangClosestHit;
     else if (stageName == "rmiss")
-        return EShLangMissNV;
+        return EShLangMiss;
     else if (stageName == "rcall")
-        return EShLangCallableNV;
+        return EShLangCallable;
     else if (stageName == "mesh")
         return EShLangMeshNV;
     else if (stageName == "task")
@@ -1562,6 +1583,7 @@ void usage()
            "              'hlsl_functionality1' enables use of the\n"
            "              SPV_GOOGLE_hlsl_functionality1 extension\n"
            "  -g          generate debug information\n"
+           "  -g0         strip debug information\n"
            "  -h          print this usage message\n"
            "  -i          intermediate tree (glslang AST) is printed out\n"
            "  -l          link all input files together to form a single module\n"
@@ -1593,11 +1615,14 @@ void usage()
            "  --hlsl-iomap                      perform IO mapping in HLSL register space\n"
            "  --hlsl-enable-16bit-types         allow 16-bit types in SPIR-V for HLSL\n"
            "  --hlsl-dx9-compatible             interprets sampler declarations as a\n"
-           "                                    texture/sampler combo like DirectX9 would.\n"
+           "                                    texture/sampler combo like DirectX9 would,\n"
+           "                                    and recognizes DirectX9-specific semantics\n"
            "  --invert-y | --iy                 invert position.Y output in vertex shader\n"
            "  --keep-uncalled | --ku            don't eliminate uncalled functions\n"
            "  --nan-clamp                       favor non-NaN operand in min, max, and clamp\n"
            "  --no-storage-format | --nsf       use Unknown image format\n"
+           "  --quiet                           do not print anything to stdout, unless\n"
+           "                                    requested by another option\n"
            "  --reflect-strict-array-suffix     use strict array suffix rules when\n"
            "                                    reflecting\n"
            "  --reflect-basic-array-suffix      arrays of basic types will have trailing [0]\n"

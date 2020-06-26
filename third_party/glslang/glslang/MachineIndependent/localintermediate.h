@@ -162,7 +162,10 @@ struct TXfbBuffer {
 #endif
 
 // Track a set of strings describing how the module was processed.
-// Using the form:
+// This includes command line options, transforms, etc., ideally inclusive enough
+// to reproduce the steps used to transform the input source to the output.
+// E.g., see SPIR-V OpModuleProcessed.
+// Each "process" or "transform" uses is expressed in the form:
 //   process arg0 arg1 arg2 ...
 //   process arg0 arg1 arg2 ...
 // where everything is textual, and there can be zero or more arguments
@@ -222,6 +225,15 @@ enum ComputeDerivativeMode {
     LayoutDerivativeGroupLinear,  // derivative_group_linearNV
 };
 
+class TIdMaps {
+public:
+    TMap<TString, int>& operator[](int i) { return maps[i]; }
+    const TMap<TString, int>& operator[](int i) const { return maps[i]; }
+private:
+    TMap<TString, int> maps[EsiCount];
+};
+
+
 //
 // Set of helper functions to help parse and build the tree.
 //
@@ -244,15 +256,16 @@ public:
         inputPrimitive(ElgNone), outputPrimitive(ElgNone),
         pixelCenterInteger(false), originUpperLeft(false),
         vertexSpacing(EvsNone), vertexOrder(EvoNone), interlockOrdering(EioNone), pointMode(false), earlyFragmentTests(false),
-        postDepthCoverage(false), depthLayout(EldNone), 
+        postDepthCoverage(false), depthLayout(EldNone),
         hlslFunctionality1(false),
         blendEquations(0), xfbMode(false), multiStream(false),
         layoutOverrideCoverage(false),
         geoPassthroughEXT(false),
-        numShaderRecordNVBlocks(0),
+        numShaderRecordBlocks(0),
         computeDerivativeMode(LayoutDerivativeNone),
         primitives(TQualifier::layoutNotSet),
         numTaskNVBlocks(0),
+        layoutPrimitiveCulling(false),
         autoMapBindings(false),
         autoMapLocations(false),
         flattenUniformArrays(false),
@@ -344,8 +357,15 @@ public:
     }
     const SpvVersion& getSpv() const { return spvVersion; }
     EShLanguage getStage() const { return language; }
-    void addRequestedExtension(const char* extension) { requestedExtensions.insert(extension); }
-    const std::set<std::string>& getRequestedExtensions() const { return requestedExtensions; }
+    void updateRequestedExtension(const char* extension, TExtensionBehavior behavior) { 
+        if(requestedExtensions.find(extension) != requestedExtensions.end()) {
+            requestedExtensions[extension] = behavior; 
+        } else {
+            requestedExtensions.insert(std::make_pair(extension, behavior)); 
+        }
+    }
+
+    const std::map<std::string, TExtensionBehavior>& getRequestedExtensions() const { return requestedExtensions; }
 
     void setTreeRoot(TIntermNode* r) { treeRoot = r; }
     TIntermNode* getTreeRoot() const { return treeRoot; }
@@ -380,7 +400,7 @@ public:
     void setSource(EShSource s) { source = s; }
     EShSource getSource() const { return source; }
 #else
-    void setSource(EShSource s) { assert(s == EShSourceGlsl); }
+    void setSource(EShSource s) { assert(s == EShSourceGlsl); (void)s; }
     EShSource getSource() const { return EShSourceGlsl; }
 #endif
 
@@ -503,7 +523,7 @@ public:
     bool getAutoMapBindings() const { return false; }
     bool getAutoMapLocations() const { return false; }
     int getNumPushConstants() const { return 0; }
-    void addShaderRecordNVCount() { }
+    void addShaderRecordCount() { }
     void addTaskNVCount() { }
     void setUseVulkanMemoryModel() { }
     bool usingVulkanMemoryModel() const { return false; }
@@ -583,7 +603,7 @@ public:
             processes.addProcess("flatten-uniform-arrays");
     }
     bool getFlattenUniformArrays() const { return flattenUniformArrays; }
-#endif 
+#endif
     void setNoStorageFormat(bool b)
     {
         useUnknownFormat = b;
@@ -620,7 +640,7 @@ public:
 
     void setTextureSamplerTransformMode(EShTextureSamplerTransformMode mode) { textureSamplerTransformMode = mode; }
     int getNumPushConstants() const { return numPushConstants; }
-    void addShaderRecordNVCount() { ++numShaderRecordNVBlocks; }
+    void addShaderRecordCount() { ++numShaderRecordBlocks; }
     void addTaskNVCount() { ++numTaskNVBlocks; }
 
     bool setInvocations(int i)
@@ -723,6 +743,8 @@ public:
     void setLayoutDerivativeMode(ComputeDerivativeMode mode) { computeDerivativeMode = mode; }
     bool hasLayoutDerivativeModeNone() const { return computeDerivativeMode != LayoutDerivativeNone; }
     ComputeDerivativeMode getLayoutDerivativeModeNone() const { return computeDerivativeMode; }
+    void setLayoutPrimitiveCulling() { layoutPrimitiveCulling = true; }
+    bool getLayoutPrimitiveCulling() const { return layoutPrimitiveCulling; }
     bool setPrimitives(int m)
     {
         if (primitives != TQualifier::layoutNotSet)
@@ -859,8 +881,8 @@ protected:
     void mergeCallGraphs(TInfoSink&, TIntermediate&);
     void mergeModes(TInfoSink&, TIntermediate&);
     void mergeTrees(TInfoSink&, TIntermediate&);
-    void seedIdMap(TMap<TString, int>& idMap, int& maxId);
-    void remapIds(const TMap<TString, int>& idMap, int idShift, TIntermediate&);
+    void seedIdMap(TIdMaps& idMaps, int& maxId);
+    void remapIds(const TIdMaps& idMaps, int idShift, TIntermediate&);
     void mergeBodies(TInfoSink&, TIntermSequence& globals, const TIntermSequence& unitGlobals);
     void mergeLinkerObjects(TInfoSink&, TIntermSequence& linkerObjects, const TIntermSequence& unitLinkerObjects);
     void mergeImplicitArraySizes(TType&, const TType&);
@@ -890,7 +912,13 @@ protected:
 #ifdef GLSLANG_WEB
     bool extensionRequested(const char *extension) const { return false; }
 #else
-    bool extensionRequested(const char *extension) const {return requestedExtensions.find(extension) != requestedExtensions.end();}
+    bool extensionRequested(const char *extension) const {
+        auto it = requestedExtensions.find(extension);
+        if (it != requestedExtensions.end()) {
+            return (it->second == EBhDisable) ? false : true;
+        }
+        return false;
+    }
 #endif
 
     static const char* getResourceName(TResourceType);
@@ -905,7 +933,7 @@ protected:
     int version;                                // source version
     SpvVersion spvVersion;
     TIntermNode* treeRoot;
-    std::set<std::string> requestedExtensions;  // cumulation of all enabled or required extensions; not connected to what subset of the shader used them
+    std::map<std::string, TExtensionBehavior> requestedExtensions;  // cumulation of all enabled or required extensions; not connected to what subset of the shader used them
     TBuiltInResource resources;
     int numEntryPoints;
     int numErrors;
@@ -945,10 +973,11 @@ protected:
     bool multiStream;
     bool layoutOverrideCoverage;
     bool geoPassthroughEXT;
-    int numShaderRecordNVBlocks;
+    int numShaderRecordBlocks;
     ComputeDerivativeMode computeDerivativeMode;
     int primitives;
     int numTaskNVBlocks;
+    bool layoutPrimitiveCulling;
 
     // Base shift values
     std::array<unsigned int, EResCount> shiftBinding;

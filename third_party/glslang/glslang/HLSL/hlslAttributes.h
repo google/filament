@@ -39,8 +39,8 @@
 #include <unordered_map>
 #include <functional>
 
-#include "../glslang/MachineIndependent/attribute.h"
-#include "../glslang/MachineIndependent/SymbolTable.h"
+#include "../MachineIndependent/attribute.h"
+#include "../MachineIndependent/SymbolTable.h"
 #include "hlslScanContext.h"
 
 namespace glslang {

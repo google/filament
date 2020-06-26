@@ -51,9 +51,9 @@
 #include "ScanContext.h"
 
 #ifdef ENABLE_HLSL
-#include "../../hlsl/hlslParseHelper.h"
-#include "../../hlsl/hlslParseables.h"
-#include "../../hlsl/hlslScanContext.h"
+#include "../HLSL/hlslParseHelper.h"
+#include "../HLSL/hlslParseables.h"
+#include "../HLSL/hlslScanContext.h"
 #endif
 
 #include "../Include/ShHandle.h"
@@ -71,6 +71,9 @@
 // of printing pre-processed tokens, which requires knowing the string literal
 // token to print ", but none of that seems appropriate for this file.
 #include "preprocessor/PpTokens.h"
+
+// Build-time generated includes
+#include "glslang/build_info.h"
 
 namespace { // anonymous namespace for file-local functions and symbols
 
@@ -361,17 +364,17 @@ bool InitializeSymbolTables(TInfoSink& infoSink, TSymbolTable** commonTable,  TS
 
     // check for ray tracing stages
     if (profile != EEsProfile && version >= 450) {
-        InitializeStageSymbolTable(*builtInParseables, version, profile, spvVersion, EShLangRayGenNV, source,
+        InitializeStageSymbolTable(*builtInParseables, version, profile, spvVersion, EShLangRayGen, source,
             infoSink, commonTable, symbolTables);
-        InitializeStageSymbolTable(*builtInParseables, version, profile, spvVersion, EShLangIntersectNV, source,
+        InitializeStageSymbolTable(*builtInParseables, version, profile, spvVersion, EShLangIntersect, source,
             infoSink, commonTable, symbolTables);
-        InitializeStageSymbolTable(*builtInParseables, version, profile, spvVersion, EShLangAnyHitNV, source,
+        InitializeStageSymbolTable(*builtInParseables, version, profile, spvVersion, EShLangAnyHit, source,
             infoSink, commonTable, symbolTables);
-        InitializeStageSymbolTable(*builtInParseables, version, profile, spvVersion, EShLangClosestHitNV, source,
+        InitializeStageSymbolTable(*builtInParseables, version, profile, spvVersion, EShLangClosestHit, source,
             infoSink, commonTable, symbolTables);
-        InitializeStageSymbolTable(*builtInParseables, version, profile, spvVersion, EShLangMissNV, source,
+        InitializeStageSymbolTable(*builtInParseables, version, profile, spvVersion, EShLangMiss, source,
             infoSink, commonTable, symbolTables);
-        InitializeStageSymbolTable(*builtInParseables, version, profile, spvVersion, EShLangCallableNV, source,
+        InitializeStageSymbolTable(*builtInParseables, version, profile, spvVersion, EShLangCallable, source,
             infoSink, commonTable, symbolTables);
     }
 
@@ -623,12 +626,12 @@ bool DeduceVersionProfile(TInfoSink& infoSink, EShLanguage stage, bool versionNo
             version = profile == EEsProfile ? 310 : 420;
         }
         break;
-    case EShLangRayGenNV:
-    case EShLangIntersectNV:
-    case EShLangAnyHitNV:
-    case EShLangClosestHitNV:
-    case EShLangMissNV:
-    case EShLangCallableNV:
+    case EShLangRayGen:
+    case EShLangIntersect:
+    case EShLangAnyHit:
+    case EShLangClosestHit:
+    case EShLangMiss:
+    case EShLangCallable:
         if (profile == EEsProfile || version < 460) {
             correct = false;
             infoSink.info.message(EPrefixError, "#version: ray tracing shaders require non-es profile with version 460 or above");
@@ -1684,19 +1687,29 @@ int ShGetUniformLocation(const ShHandle handle, const char* name)
 
 namespace glslang {
 
-#include "../Include/revision.h"
+Version GetVersion()
+{
+    Version version;
+    version.major = GLSLANG_VERSION_MAJOR;
+    version.minor = GLSLANG_VERSION_MINOR;
+    version.patch = GLSLANG_VERSION_PATCH;
+    version.flavor = GLSLANG_VERSION_FLAVOR;
+    return version;
+}
 
 #define QUOTE(s) #s
 #define STR(n) QUOTE(n)
 
 const char* GetEsslVersionString()
 {
-    return "OpenGL ES GLSL 3.20 glslang Khronos. " STR(GLSLANG_MINOR_VERSION) "." STR(GLSLANG_PATCH_LEVEL);
+    return "OpenGL ES GLSL 3.20 glslang Khronos. " STR(GLSLANG_VERSION_MAJOR) "." STR(GLSLANG_VERSION_MINOR) "." STR(
+        GLSLANG_VERSION_PATCH) GLSLANG_VERSION_FLAVOR;
 }
 
 const char* GetGlslVersionString()
 {
-    return "4.60 glslang Khronos. " STR(GLSLANG_MINOR_VERSION) "." STR(GLSLANG_PATCH_LEVEL);
+    return "4.60 glslang Khronos. " STR(GLSLANG_VERSION_MAJOR) "." STR(GLSLANG_VERSION_MINOR) "." STR(
+        GLSLANG_VERSION_PATCH) GLSLANG_VERSION_FLAVOR;
 }
 
 int GetKhronosToolId()
@@ -1777,6 +1790,8 @@ void TShader::setSourceEntryPoint(const char* name)
     sourceEntryPointName = name;
 }
 
+// Log initial settings and transforms.
+// See comment for class TProcesses.
 void TShader::addProcesses(const std::vector<std::string>& p)
 {
     intermediate->addProcesses(p);

@@ -2,7 +2,8 @@
 // Copyright (C) 2002-2005  3Dlabs Inc. Ltd.
 // Copyright (C) 2012-2013 LunarG, Inc.
 // Copyright (C) 2017 ARM Limited.
-// Copyright (C) 2015-2018 Google, Inc.
+// Copyright (C) 2015-2019 Google, Inc.
+// Modifications Copyright (C) 2020 Advanced Micro Devices, Inc. All rights reserved.
 //
 // All rights reserved.
 //
@@ -204,6 +205,8 @@ extern int yylex(YYSTYPE*, TParseContext&);
 %token <lex> F64MAT4X2 F64MAT4X3 F64MAT4X4
 %token <lex> ATOMIC_UINT
 %token <lex> ACCSTRUCTNV
+%token <lex> ACCSTRUCTEXT
+%token <lex> RAYQUERYEXT
 %token <lex> FCOOPMATNV ICOOPMATNV UCOOPMATNV
 
 // combined image/sampler
@@ -286,9 +289,10 @@ extern int yylex(YYSTYPE*, TParseContext&);
 %token <lex> INT64CONSTANT UINT64CONSTANT
 %token <lex> SUBROUTINE DEMOTE
 %token <lex> PAYLOADNV PAYLOADINNV HITATTRNV CALLDATANV CALLDATAINNV
+%token <lex> PAYLOADEXT PAYLOADINEXT HITATTREXT CALLDATAEXT CALLDATAINEXT
 %token <lex> PATCH SAMPLE NONUNIFORM
 %token <lex> COHERENT VOLATILE RESTRICT READONLY WRITEONLY DEVICECOHERENT QUEUEFAMILYCOHERENT WORKGROUPCOHERENT
-%token <lex> SUBGROUPCOHERENT NONPRIVATE
+%token <lex> SUBGROUPCOHERENT NONPRIVATE SHADERCALLCOHERENT
 %token <lex> NOPERSPECTIVE EXPLICITINTERPAMD PERVERTEXNV PERPRIMITIVENV PERVIEWNV PERTASKNV
 %token <lex> PRECISE
 
@@ -1419,42 +1423,81 @@ storage_qualifier
     }
     | HITATTRNV {
         parseContext.globalCheck($1.loc, "hitAttributeNV");
-        parseContext.requireStage($1.loc, (EShLanguageMask)(EShLangIntersectNVMask | EShLangClosestHitNVMask
-            | EShLangAnyHitNVMask), "hitAttributeNV");
+        parseContext.requireStage($1.loc, (EShLanguageMask)(EShLangIntersectMask | EShLangClosestHitMask
+            | EShLangAnyHitMask), "hitAttributeNV");
         parseContext.profileRequires($1.loc, ECoreProfile, 460, E_GL_NV_ray_tracing, "hitAttributeNV");
         $$.init($1.loc);
-        $$.qualifier.storage = EvqHitAttrNV;
+        $$.qualifier.storage = EvqHitAttr;
+    }
+    | HITATTREXT {
+        parseContext.globalCheck($1.loc, "hitAttributeEXT");
+        parseContext.requireStage($1.loc, (EShLanguageMask)(EShLangIntersectMask | EShLangClosestHitMask
+            | EShLangAnyHitMask), "hitAttributeEXT");
+        parseContext.profileRequires($1.loc, ECoreProfile, 460, E_GL_EXT_ray_tracing, "hitAttributeNV");
+        $$.init($1.loc);
+        $$.qualifier.storage = EvqHitAttr;
     }
     | PAYLOADNV {
         parseContext.globalCheck($1.loc, "rayPayloadNV");
-        parseContext.requireStage($1.loc, (EShLanguageMask)(EShLangRayGenNVMask | EShLangClosestHitNVMask |
-            EShLangAnyHitNVMask | EShLangMissNVMask), "rayPayloadNV");
+        parseContext.requireStage($1.loc, (EShLanguageMask)(EShLangRayGenMask | EShLangClosestHitMask |
+            EShLangAnyHitMask | EShLangMissMask), "rayPayloadNV");
         parseContext.profileRequires($1.loc, ECoreProfile, 460, E_GL_NV_ray_tracing, "rayPayloadNV");
         $$.init($1.loc);
-        $$.qualifier.storage = EvqPayloadNV;
+        $$.qualifier.storage = EvqPayload;
+    }
+    | PAYLOADEXT {
+        parseContext.globalCheck($1.loc, "rayPayloadEXT");
+        parseContext.requireStage($1.loc, (EShLanguageMask)(EShLangRayGenMask | EShLangClosestHitMask |
+            EShLangAnyHitMask | EShLangMissMask), "rayPayloadEXT");
+        parseContext.profileRequires($1.loc, ECoreProfile, 460, E_GL_EXT_ray_tracing, "rayPayloadEXT");
+        $$.init($1.loc);
+        $$.qualifier.storage = EvqPayload;
     }
     | PAYLOADINNV {
         parseContext.globalCheck($1.loc, "rayPayloadInNV");
-        parseContext.requireStage($1.loc, (EShLanguageMask)(EShLangClosestHitNVMask |
-            EShLangAnyHitNVMask | EShLangMissNVMask), "rayPayloadInNV");
+        parseContext.requireStage($1.loc, (EShLanguageMask)(EShLangClosestHitMask |
+            EShLangAnyHitMask | EShLangMissMask), "rayPayloadInNV");
         parseContext.profileRequires($1.loc, ECoreProfile, 460, E_GL_NV_ray_tracing, "rayPayloadInNV");
         $$.init($1.loc);
-        $$.qualifier.storage = EvqPayloadInNV;
+        $$.qualifier.storage = EvqPayloadIn;
+    }
+    | PAYLOADINEXT {
+        parseContext.globalCheck($1.loc, "rayPayloadInEXT");
+        parseContext.requireStage($1.loc, (EShLanguageMask)(EShLangClosestHitMask |
+            EShLangAnyHitMask | EShLangMissMask), "rayPayloadInEXT");
+        parseContext.profileRequires($1.loc, ECoreProfile, 460, E_GL_EXT_ray_tracing, "rayPayloadInEXT");
+        $$.init($1.loc);
+        $$.qualifier.storage = EvqPayloadIn;
     }
     | CALLDATANV {
         parseContext.globalCheck($1.loc, "callableDataNV");
-        parseContext.requireStage($1.loc, (EShLanguageMask)(EShLangRayGenNVMask |
-            EShLangClosestHitNVMask | EShLangMissNVMask | EShLangCallableNVMask), "callableDataNV");
+        parseContext.requireStage($1.loc, (EShLanguageMask)(EShLangRayGenMask |
+            EShLangClosestHitMask | EShLangMissMask | EShLangCallableMask), "callableDataNV");
         parseContext.profileRequires($1.loc, ECoreProfile, 460, E_GL_NV_ray_tracing, "callableDataNV");
         $$.init($1.loc);
-        $$.qualifier.storage = EvqCallableDataNV;
+        $$.qualifier.storage = EvqCallableData;
+    }
+    | CALLDATAEXT {
+        parseContext.globalCheck($1.loc, "callableDataEXT");
+        parseContext.requireStage($1.loc, (EShLanguageMask)(EShLangRayGenMask |
+            EShLangClosestHitMask | EShLangMissMask | EShLangCallableMask), "callableDataEXT");
+        parseContext.profileRequires($1.loc, ECoreProfile, 460, E_GL_EXT_ray_tracing, "callableDataEXT");
+        $$.init($1.loc);
+        $$.qualifier.storage = EvqCallableData;
     }
     | CALLDATAINNV {
         parseContext.globalCheck($1.loc, "callableDataInNV");
-        parseContext.requireStage($1.loc, (EShLanguageMask)(EShLangCallableNVMask), "callableDataInNV");
+        parseContext.requireStage($1.loc, (EShLanguageMask)(EShLangCallableMask), "callableDataInNV");
         parseContext.profileRequires($1.loc, ECoreProfile, 460, E_GL_NV_ray_tracing, "callableDataInNV");
         $$.init($1.loc);
-        $$.qualifier.storage = EvqCallableDataInNV;
+        $$.qualifier.storage = EvqCallableDataIn;
+    }
+    | CALLDATAINEXT {
+        parseContext.globalCheck($1.loc, "callableDataInEXT");
+        parseContext.requireStage($1.loc, (EShLanguageMask)(EShLangCallableMask), "callableDataInEXT");
+        parseContext.profileRequires($1.loc, ECoreProfile, 460, E_GL_EXT_ray_tracing, "callableDataInEXT");
+        $$.init($1.loc);
+        $$.qualifier.storage = EvqCallableDataIn;
     }
     | COHERENT {
         $$.init($1.loc);
@@ -1484,6 +1527,11 @@ storage_qualifier
         $$.init($1.loc);
         parseContext.requireExtensions($1.loc, 1, &E_GL_KHR_memory_scope_semantics, "nonprivate");
         $$.qualifier.nonprivate = true;
+    }
+    | SHADERCALLCOHERENT {
+        $$.init($1.loc);
+        parseContext.requireExtensions($1.loc, 1, &E_GL_EXT_ray_tracing, "shadercallcoherent");
+        $$.qualifier.shadercallcoherent = true;
     }
     | VOLATILE {
         $$.init($1.loc);
@@ -2354,7 +2402,15 @@ type_specifier_nonarray
     }
     | ACCSTRUCTNV {
        $$.init($1.loc, parseContext.symbolTable.atGlobalLevel());
-       $$.basicType = EbtAccStructNV;
+       $$.basicType = EbtAccStruct;
+    }
+    | ACCSTRUCTEXT {
+       $$.init($1.loc, parseContext.symbolTable.atGlobalLevel());
+       $$.basicType = EbtAccStruct;
+    }
+    | RAYQUERYEXT {
+       $$.init($1.loc, parseContext.symbolTable.atGlobalLevel());
+       $$.basicType = EbtRayQuery;
     }
     | ATOMIC_UINT {
         parseContext.vulkanRemoved($1.loc, "atomic counter types");
@@ -3829,3 +3885,4 @@ single_attribute
 
 
 %%
+

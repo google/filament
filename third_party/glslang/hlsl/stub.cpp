@@ -1,5 +1,6 @@
 //
-// Copyright (C) 2018 The Khronos Group Inc.
+// Copyright (C) 2020 Google, Inc.
+//
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -14,7 +15,7 @@
 //    disclaimer in the documentation and/or other materials provided
 //    with the distribution.
 //
-//    Neither the name of 3Dlabs Inc. Ltd. nor the names of its
+//    Neither the name of Google, Inc., nor the names of its
 //    contributors may be used to endorse or promote products derived
 //    from this software without specific prior written permission.
 //
@@ -32,4 +33,9 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "pch.h"
+// The HLSL source is directly embedded into the glslang target when ENABLE_HLSL
+// is set.
+// This source now lives at: glslang/HLSL/
+// The HLSL target is now just a stub that exists for backwards compatibility
+// for projects that referenced this target. As a target requires at least one
+// source file to build, this file acts as that stub.

@@ -334,8 +334,6 @@ int main(int argc, char** argv)
     if (outputDir.empty())
         usage(argv[0], "Output directory required");
 
-    std::string errmsg;
-
     // Main operations: read, remap, and write.
     execute(inputFile, outputDir, opts, verbosity);
 
