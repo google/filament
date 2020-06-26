@@ -81,14 +81,14 @@ void dummy(){}
 
 layout(location = 1) out float outAlpha;
 
-float sampleCount(float ringCount) {
+float sampleCount(const float ringCount) {
     const float ringDensity = float(RING_DENSITY);
     return ((ringDensity * ringCount * (ringCount - 1.0) + 2.0) * 0.5);
 }
 
 
 
-float sampleWeight(float coc, float mip) {
+float sampleWeight(const float coc, const float mip) {
 #if KERNEL_USE_MIPMAP
     // When mipmaping is used this creates aliasing artifacts around geometry edges.
     // Applying the mip correction factor (as below) helps but doesn't solve the issue.
@@ -110,7 +110,7 @@ float sampleWeight(float coc, float mip) {
 #endif
 }
 
-float intersection(float border, float absCoc, float mip) {
+float intersection(const float border, const float absCoc, const float mip) {
     // there is very little visible difference, so use the cheaper version on mobile
 #if defined(TARGET_MOBILE)
     return saturate((absCoc - border) + 0.5);
@@ -119,7 +119,7 @@ float intersection(float border, float absCoc, float mip) {
 #endif
 }
 
-float rcp(float x) {
+float rcp(const float x) {
     return 1.0 / x;
 }
 
@@ -147,7 +147,7 @@ void initBucket(out Bucket ring) {
     ring.coc = 0.0;
 }
 
-void initRing(float i, float ringCount, float kernelSize, out float count, out mat2 r, out vec2 p) {
+void initRing(const float i, const float ringCount, const float kernelSize, out float count, out mat2 r, out vec2 p) {
     const float ringDensity = float(RING_DENSITY);
     float radius = (kernelSize / ringCount) * i;
     count = max(1.0, ringDensity * i);
@@ -164,7 +164,7 @@ void initRing(float i, float ringCount, float kernelSize, out float count, out m
  * Backgorund accumulator
  */
 
-void mergeRings(inout Bucket curr, inout Bucket prev, float count) {
+void mergeRings(inout Bucket curr, inout Bucket prev, const float count) {
     if (curr.cw >= MEDIUMP_FLT_MIN) {
         // "Life of a Bokeh", SIGGRAPH 2018 -- slide 32
         // How much the current ring is occluding the previous ring -- we estimate this based
@@ -178,7 +178,10 @@ void mergeRings(inout Bucket curr, inout Bucket prev, float count) {
         float currentRingOpacity = 1.0 - saturate(prev.o * rcp(count));
 
         // Opacity of previous ring
-        float previousRingWeight = (prev.cw < MEDIUMP_FLT_MIN) ? 0.0 : (1.0 - currentRingOpacity * occluded);
+        float previousRingWeight = 0.0;
+        if (prev.cw > MEDIUMP_FLT_MIN) {
+            previousRingWeight = 1.0 - currentRingOpacity * occluded;
+        }
 
         // merge current ring into previous ring
         prev.c   = prev.c   * previousRingWeight + curr.c;
@@ -187,7 +190,7 @@ void mergeRings(inout Bucket curr, inout Bucket prev, float count) {
     }
 }
 
-void accumulate(inout Bucket curr, inout Bucket prev, Sample tap, float border, float mip, const bool first) {
+void accumulate(inout Bucket curr, inout Bucket prev, const Sample tap, const float border, const float mip, const bool first) {
     float inLayer = isBackground(tap.coc);
     float coc = abs(tap.coc);
     float intersects = intersection(border, coc, mip);
@@ -219,7 +222,7 @@ void accumulate(inout Bucket curr, inout Bucket prev, Sample tap, float border, 
 }
 
 void accumulateBackground(inout Bucket curr, inout Bucket prev,
-        highp vec2 pos, float border, float mip, const bool first) {
+        const highp vec2 pos, const float border, const float mip, const bool first) {
     Sample tap;
     tap.s = textureLod(materialParams_foreground, pos, mip);
     tap.coc = textureLod(materialParams_cocFgBg, pos, mip).r;
@@ -227,24 +230,24 @@ void accumulateBackground(inout Bucket curr, inout Bucket prev,
 }
 
 void accumulateBackgroundMirror(inout Bucket curr, inout Bucket prev,
-        highp vec2 center, vec2 offset, float border, float mip, const bool first) {
+        const highp vec2 center, const vec2 offset, const float border, const float mip, const bool first) {
     accumulateBackground(curr, prev, center + offset, border, mip, first);
     accumulateBackground(curr, prev, center - offset, border, mip, first);
 }
 
 void accumulateBackgroundCenter(inout Bucket prev,
-        highp vec2 pos, float border, float mip) {
+        const highp vec2 pos, const float border, const float mip) {
     Bucket curr;
     initBucket(curr);
     accumulateBackground(curr, prev, pos, border, mip, false);
     mergeRings(curr, prev, 1.0);
 }
 
-void accumulateRing(inout Bucket prev, float i, float ringCount, float kernelSize,
-        highp vec2 uvCenter, highp vec2 fullResPixelSize, float mip, const bool first) {
+void accumulateRing(inout Bucket prev, const float index, const float ringCount, const float kernelSize,
+        const highp vec2 uvCenter, const highp vec2 fullResPixelSize, const float mip, const bool first) {
 
     // we accumulate the larger rings first
-    i = (ringCount - 1.0) - i;
+    float i = (ringCount - 1.0) - index;
 
     Bucket curr;
     initBucket(curr);
@@ -268,7 +271,7 @@ void accumulateRing(inout Bucket prev, float i, float ringCount, float kernelSiz
  */
 
 void accumulateForeground(inout vec4 foreground, inout float opacity, inout float i,
-        highp vec2 pos, float border, float mip) {
+        const highp vec2 pos, const float border, const float mip) {
     float coc = textureLod(materialParams_cocFgBg, pos, mip).r;
     vec4 s = textureLod(materialParams_foreground, pos, mip);
     float inLayer = isForeground(coc);
@@ -280,12 +283,12 @@ void accumulateForeground(inout vec4 foreground, inout float opacity, inout floa
 }
 
 void accumulateForegroundCenter(inout vec4 foreground, inout float opacity, inout float i,
-        highp vec2 pos, float border, float mip) {
+        const highp vec2 pos, const float border, const float mip) {
     accumulateForeground(foreground, opacity, i,pos, border, mip);
 }
 
 void accumulateForegroundMirror(inout vec4 foreground, inout float opacity, inout float i,
-        highp vec2 center, vec2 offset, float border, float mip) {
+        const highp vec2 center, const vec2 offset, const float border, const float mip) {
     // The code below is equivalent to:
     //      accumulateForeground(foreground, opacity, i, center + offset, border, mip);
     //      accumulateForeground(foreground, opacity, i, center - offset, border, mip);
@@ -306,7 +309,7 @@ void accumulateForegroundMirror(inout vec4 foreground, inout float opacity, inou
     i += w * 2.0;
 }
 
-float getMipLevel(float ringCount, float kernelSize) {
+float getMipLevel(const float ringCount, const float kernelSize) {
 #if KERNEL_USE_MIPMAP
     float s = 1.0 / (ringCount + 0.5);
     float mip = log2(kernelSize * s);
@@ -415,9 +418,14 @@ void postProcess(inout PostProcessInputs postProcess) {
                 p = r * p;
             }
         }
-        foreground *= c < MEDIUMP_FLT_MIN ? 0.0 : rcp(c);
-        fgOpacity  *= c < MEDIUMP_FLT_MIN ? 0.0 : rcp(sampleCount(ringCountGather));
-        //foreground.r += 0.1;
+
+        if (c < MEDIUMP_FLT_MIN) {
+            foreground *= 0.0;
+            fgOpacity  *= 0.0;
+        } else {
+            foreground *= rcp(c);
+            fgOpacity  *= rcp(sampleCount(ringCountGather));
+        }
     }
 
 
@@ -448,7 +456,11 @@ void postProcess(inout PostProcessInputs postProcess) {
         background = prev.c;
         bgOpacity = cocToAlpha(prev.coc);
 
-        background *= prev.cw < MEDIUMP_FLT_MIN ? 0.0 : rcp(prev.cw);
+        if (prev.cw < MEDIUMP_FLT_MIN) {
+            background *= 0.0;
+        } else {
+            background *= rcp(prev.cw);
+        }
         //background.g += 0.1;
     }
 

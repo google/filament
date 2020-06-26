@@ -25,12 +25,12 @@ fragment {
 
 void dummy(){}
 
-float max4(vec4 f) {
+float max4(const vec4 f) {
     vec2 t = max(f.xy, f.zw);
     return max(t.x, t.y);
 }
 
-float min4(vec4 f) {
+float min4(const vec4 f) {
     vec2 t = min(f.xy, f.zw);
     return min(t.x, t.y);
 }

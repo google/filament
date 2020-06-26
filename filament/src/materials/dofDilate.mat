@@ -30,11 +30,11 @@ void dummy(){}
 // Tiles of 16 pixels requires two dilate rounds to accomodate our max Coc of 32 pixels
 #define TILE_SIZE   16.0
 
-vec2 tap(ivec2 uv, ivec2 offset) {
+vec2 tap(const ivec2 uv, const ivec2 offset) {
     return texelFetch(materialParams_tiles, uv + offset, 0).rg;
 }
 
-vec2 dilate(inout vec2 center, vec2 tap) {
+vec2 dilate(inout vec2 center, const vec2 tap) {
     // 2.24 (sqrt(5) is the longest distance between 2 pixels of adjacent tiles).
     const float maxDistance = max(-MAX_COC_RADIUS, -2.24 * TILE_SIZE);
 
