@@ -86,6 +86,7 @@ struct App {
     } viewOptions;
 
     View::DepthOfFieldOptions dofOptions;
+    View::VignetteOptions vignetteOptions;
 
     struct Scene {
         Entity groundPlane;
@@ -691,6 +692,14 @@ int main(int argc, char** argv) {
                 ImGui::SliderFloat("Focus distance", &app.dofOptions.focusDistance, 0.0f, 30.0f);
                 ImGui::SliderFloat("Blur scale", &app.dofOptions.blurScale, 0.1f, 10.0f);
 
+                if (ImGui::CollapsingHeader("Vignette")) {
+                    ImGui::Checkbox("Enabled##vignetteEnabled", &app.vignetteOptions.enabled);
+                    ImGui::SliderFloat("Mid point", &app.vignetteOptions.midPoint, 0.0f, 1.0f);
+                    ImGui::SliderFloat("Roundness", &app.vignetteOptions.roundness, 0.0f, 1.0f);
+                    ImGui::SliderFloat("Feather", &app.vignetteOptions.feather, 0.0f, 1.0f);
+                    ImGui::ColorEdit3("Color##vignetteColor", &app.vignetteOptions.color.r);
+                }
+
                 const utils::Entity* cameras = app.asset->getCameraEntities();
                 const size_t cameraCount = app.asset->getCameraEntityCount();
 
@@ -802,6 +811,7 @@ int main(int argc, char** argv) {
                 app.viewOptions.cameraISO);
 
         view->setDepthOfFieldOptions(app.dofOptions);
+        view->setVignetteOptions(app.vignetteOptions);
 
         app.scene.groundMaterial->setDefaultParameter(
                 "strength", app.viewOptions.groundShadowStrength);

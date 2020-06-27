@@ -1202,17 +1202,50 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
     return bloomUpsamplePass.getData().out;
 }
 
+static float4 getVignetteParameters(View::VignetteOptions options, uint32_t width, uint32_t height) {
+    if (options.enabled) {
+        // Vignette params
+        // From 0.0 to 0.5 the vignette is a rounded rect that turns into an oval
+        // From 0.5 to 1.0 the vignette turns from oval to circle
+        float oval = min(options.roundness, 0.5f) * 2.0f;
+        float circle = (max(options.roundness, 0.5f) - 0.5f) * 2.0f;
+        float roundness = (1.0f - oval) * 6.0f + oval;
+
+        // Mid point varies during the oval/rounded section of roundness
+        // We also modify it to emphasize feathering
+        float midPoint = (1.0f - options.midPoint) * mix(2.2f, 3.0f, oval)
+                         * (1.0f - 0.1f * options.feather);
+
+        // Radius of the rounded corners as a param to pow()
+        float radius = roundness *
+                mix(1.0f + 4.0f * (1.0f - options.feather), 1.0f, std::sqrtf(oval));
+
+        // Factor to transform oval into circle
+        float aspect = mix(1.0f, float(width) / float(height), circle);
+
+        return float4{midPoint, radius, aspect, options.feather};
+    }
+
+    // Set half-max to show disabled
+    return float4{65504.0f};
+}
+
 void PostProcessManager::colorGradingSubpass(DriverApi& driver, const FColorGrading* colorGrading,
-        bool translucent, bool fxaa, bool dithering) noexcept {
+        View::VignetteOptions vignetteOptions, bool translucent, bool fxaa, bool dithering,
+        uint32_t width, uint32_t height) noexcept {
 
     FEngine& engine = mEngine;
     Handle<HwRenderPrimitive> const& fullScreenRenderPrimitive = engine.getFullScreenRenderPrimitive();
+
+    float4 vignetteParameters = getVignetteParameters(vignetteOptions, width, height);
 
     FMaterialInstance* mi = mColorGradingAsSubpass.getMaterialInstance();
     mi->setParameter("lut", colorGrading->getHwHandle(), {
             .filterMag = SamplerMagFilter::LINEAR,
             .filterMin = SamplerMinFilter::LINEAR
     });
+    mi->setParameter("vignette", vignetteParameters);
+    mi->setParameter("vignetteColor", vignetteOptions.color);
     mi->setParameter("dithering", dithering);
     mi->setParameter("fxaa", fxaa);
     mi->commit(driver);
@@ -1226,7 +1259,7 @@ void PostProcessManager::colorGradingSubpass(DriverApi& driver, const FColorGrad
 FrameGraphId<FrameGraphTexture> PostProcessManager::colorGrading(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> input, const FColorGrading* colorGrading,
         TextureFormat outFormat, bool translucent, bool fxaa, float2 scale,
-        View::BloomOptions bloomOptions, bool dithering) noexcept {
+        View::BloomOptions bloomOptions, View::VignetteOptions vignetteOptions, bool dithering) noexcept {
 
     FEngine& engine = mEngine;
     Handle<HwRenderPrimitive> const& fullScreenRenderPrimitive = engine.getFullScreenRenderPrimitive();
@@ -1277,9 +1310,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::colorGrading(FrameGraph& fg,
                     data.dirt = builder.sample(bloomDirt);
                 }
             },
-            [=](FrameGraphPassResources const& resources,
-                    auto const& data, DriverApi& driver) {
-
+            [=](FrameGraphPassResources const& resources, auto const& data, DriverApi& driver) {
                 Handle<HwTexture> colorTexture = resources.getTexture(data.input);
 
                 Handle<HwTexture> bloomTexture =
@@ -1303,18 +1334,25 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::colorGrading(FrameGraph& fg,
                         .filterMin = SamplerMinFilter::LINEAR
                 });
 
-                float4 bloomParameter{
+                // Bloom params
+                float4 bloomParameters{
                     bloom / float(bloomOptions.levels),
                     1.0f,
                     (bloomOptions.enabled && bloomOptions.dirt) ? bloomOptions.dirtStrength : 0.0f,
                     0.0f
                 };
                 if (bloomOptions.blendMode == View::BloomOptions::BlendMode::INTERPOLATE) {
-                    bloomParameter.y = 1.0f - bloomParameter.x;
+                    bloomParameters.y = 1.0f - bloomParameters.x;
                 }
 
+                auto const& output = resources.getDescriptor(data.output);
+                float4 vignetteParameters = getVignetteParameters(
+                        vignetteOptions, output.width, output.height);
+
                 mi->setParameter("dithering", dithering);
-                mi->setParameter("bloom", bloomParameter);
+                mi->setParameter("bloom", bloomParameters);
+                mi->setParameter("vignette", vignetteParameters);
+                mi->setParameter("vignetteColor", vignetteOptions.color);
                 mi->setParameter("fxaa", fxaa);
                 mi->commit(driver);
                 mi->use(driver);

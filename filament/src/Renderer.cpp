@@ -204,11 +204,13 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     auto bloomOptions = view.getBloomOptions();
     auto dofOptions = view.getDepthOfFieldOptions();
     auto aoOptions = view.getAmbientOcclusionOptions();
+    auto vignetteOptions = view.getVignetteOptions();
     if (!hasPostProcess) {
         // disable all effects that are part of post-processing
         msaa = 1;
         dofOptions.enabled = false;
         bloomOptions.enabled = false;
+        vignetteOptions.enabled = false;
         colorGrading = false;
         dithering = false;
         fxaa = false;
@@ -406,7 +408,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                         colorGradingConfig.ldrFormat,
                         colorGradingConfig.translucent,
                         colorGradingConfig.fxaa,
-                        scale, bloomOptions,
+                        scale, bloomOptions, vignetteOptions,
                         colorGradingConfig.dithering);
             }
         }
@@ -699,9 +701,12 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                     // post-processing....
                     ppm.colorGradingSubpass(driver,
                             view.getColorGrading(),
+                            view.getVignetteOptions(),
                             colorGradingConfig.translucent,
                             colorGradingConfig.fxaa,
-                            colorGradingConfig.dithering);
+                            colorGradingConfig.dithering,
+                            out.params.viewport.width,
+                            out.params.viewport.height);
                 }
 
                 driver.endRenderPass();

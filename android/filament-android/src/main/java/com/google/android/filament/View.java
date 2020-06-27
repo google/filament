@@ -23,6 +23,8 @@ import androidx.annotation.Size;
 
 import java.util.EnumSet;
 
+import static com.google.android.filament.Asserts.assertFloat3In;
+import static com.google.android.filament.Asserts.assertFloat4In;
 import static com.google.android.filament.Colors.LinearColor;
 
 /**
@@ -70,6 +72,7 @@ public class View {
     private RenderTarget mRenderTarget;
     private BlendMode mBlendMode;
     private DepthOfFieldOptions mDepthOfFieldOptions;
+    private VignetteOptions mVignetteOptions;
     private ColorGrading mColorGrading;
 
     /**
@@ -289,9 +292,10 @@ public class View {
         public float heightFalloff = 1.0f;
 
         /**
-         * fog's color (linear)
+         * Fog's color as a linear RGB color.
          */
         @NonNull
+        @Size(min = 3)
         public float[] color = { 0.5f, 0.5f, 0.5f };
 
         /**
@@ -339,6 +343,40 @@ public class View {
         /** enable or disable Depth of field effect */
         public boolean enabled = false;
     };
+
+    /**
+     * Options to control the vignetting effect.
+     */
+    public static class VignetteOptions {
+        /**
+          * Controls the shape of the vignette, from a rounded rectangle (0.0), to an oval (0.5),
+          * to a circle (1.0). The value must be between 0 and 1.
+          */
+        public float roundness = 0.5f;
+
+        /**
+         * High values restrict the vignette closer to the corners, between 0 and 1.
+         */
+        public float midPoint = 0.5f;
+
+        /**
+         * Softening amount of the vignette effect, between 0 and 1.
+         */
+        public float feather = 0.5f;
+
+        /**
+         * Color of the vignette effect as a linear RGBA color. The alpha channel is currently
+         * ignored.
+         */
+        @NonNull
+        @Size(min = 4)
+        public float[] color = { 0.0f, 0.0f, 0.0f, 1.0f };
+
+        /**
+         * Enables or disables the vignette effect.
+         */
+        public boolean enabled = false;
+    }
 
     /**
      * Structure used to set the color precision for the rendering of a <code>View</code>.
@@ -1009,12 +1047,42 @@ public class View {
     }
 
     /**
+     * Sets vignette options.
+     *
+     * @param options Options for vignetting.
+     * @see #getVignetteOptions
+     */
+    public void setVignetteOptions(@NonNull VignetteOptions options) {
+        assertFloat4In(options.color);
+        mVignetteOptions = options;
+        nSetVignetteOptions(getNativeObject(),
+                options.midPoint, options.roundness, options.feather,
+                options.color[0], options.color[1], options.color[2], options.color[3],
+                options.enabled);
+    }
+
+    /**
+     * Gets the vignette options
+     * @see #setVignetteOptions
+     *
+     * @return vignetting options currently set.
+     */
+    @NonNull
+    public VignetteOptions getVignetteOptions() {
+        if (mVignetteOptions == null) {
+            mVignetteOptions = new VignetteOptions();
+        }
+        return mVignetteOptions;
+    }
+
+    /**
      * Sets fog options.
      *
      * @param options Options for fog.
      * @see #getFogOptions
      */
     public void setFogOptions(@NonNull FogOptions options) {
+        assertFloat3In(options.color);
         mFogOptions = options;
         nSetFogOptions(getNativeObject(), options.distance, options.maximumOpacity, options.height,
                 options.heightFalloff, options.color[0], options.color[1], options.color[2],
@@ -1103,4 +1171,5 @@ public class View {
     private static native void nSetFogOptions(long nativeView, float distance, float maximumOpacity, float height, float heightFalloff, float v, float v1, float v2, float density, float inScatteringStart, float inScatteringSize, boolean fogColorFromIbl, boolean enabled);
     private static native void nSetBlendMode(long nativeView, int blendMode);
     private static native void nSetDepthOfFieldOptions(long nativeView, float focusDistance, float blurScale, float maxApertureDiameter, boolean enabled);
+    private static native void nSetVignetteOptions(long nativeView, float midPoint, float roundness, float feather, float r, float g, float b, float a, boolean enabled);
 }

@@ -46,7 +46,9 @@ set(SHADERS
         src/shading_model_subsurface.fs
         src/shading_parameters.fs
         src/shading_unlit.fs
-        src/shadowing.fs)
+        src/shadowing.fs
+        src/vignette.fs
+)
 
 # These files aren't part of libshaders, but are included by materials inside
 # filament/src/materials:

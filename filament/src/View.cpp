@@ -965,16 +965,32 @@ void View::setBloomOptions(View::BloomOptions options) noexcept {
     upcast(this)->setBloomOptions(options);
 }
 
+View::BloomOptions View::getBloomOptions() const noexcept {
+    return upcast(this)->getBloomOptions();
+}
+
 void View::setFogOptions(View::FogOptions options) noexcept {
     upcast(this)->setFogOptions(options);
+}
+
+View::FogOptions View::getFogOptions() const noexcept {
+    return upcast(this)->getFogOptions();
 }
 
 void View::setDepthOfFieldOptions(DepthOfFieldOptions options) noexcept {
     upcast(this)->setDepthOfFieldOptions(options);
 }
 
-View::BloomOptions View::getBloomOptions() const noexcept {
-    return upcast(this)->getBloomOptions();
+View::DepthOfFieldOptions View::getDepthOfFieldOptions() const noexcept {
+    return upcast(this)->getDepthOfFieldOptions();
+}
+
+void View::setVignetteOptions(View::VignetteOptions options) noexcept {
+    upcast(this)->setVignetteOptions(options);
+}
+
+View::VignetteOptions View::getVignetteOptions() const noexcept {
+    return upcast(this)->getVignetteOptions();
 }
 
 void View::setBlendMode(BlendMode blendMode) noexcept {
