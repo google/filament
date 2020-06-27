@@ -180,8 +180,8 @@ public:
      * Options to control the vignetting effect.
      */
     struct VignetteOptions {
-        float roundness = 0.5f;                     //!< controls the shape of the vignette, from a rounded rectangle (0.0), to an oval (0.5), to a circle (1.0)
         float midPoint = 0.5f;                      //!< high values restrict the vignette closer to the corners, between 0 and 1
+        float roundness = 0.5f;                     //!< controls the shape of the vignette, from a rounded rectangle (0.0), to an oval (0.5), to a circle (1.0)
         float feather = 0.5f;                       //!< softening amount of the vignette effect, between 0 and 1
         LinearColorA color{0.0f, 0.0f, 0.0f, 1.0f}; //!< color of the vignette effect, alpha is currently ignored
         bool enabled = false;                       //!< enables or disables the vignette effect

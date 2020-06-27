@@ -349,15 +349,15 @@ public class View {
      */
     public static class VignetteOptions {
         /**
-          * Controls the shape of the vignette, from a rounded rectangle (0.0), to an oval (0.5),
-          * to a circle (1.0). The value must be between 0 and 1.
-          */
-        public float roundness = 0.5f;
-
-        /**
          * High values restrict the vignette closer to the corners, between 0 and 1.
          */
         public float midPoint = 0.5f;
+
+        /**
+         * Controls the shape of the vignette, from a rounded rectangle (0.0), to an oval (0.5),
+         * to a circle (1.0). The value must be between 0 and 1.
+         */
+        public float roundness = 0.5f;
 
         /**
          * Softening amount of the vignette effect, between 0 and 1.
