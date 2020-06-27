@@ -35,7 +35,11 @@
 
 #include <filament/MaterialEnums.h>
 
+#include <math/half.h>
+
 #include <utils/Log.h>
+
+#include <limits>
 
 namespace filament {
 
@@ -1227,7 +1231,7 @@ static float4 getVignetteParameters(View::VignetteOptions options, uint32_t widt
     }
 
     // Set half-max to show disabled
-    return float4{65504.0f};
+    return float4{std::numeric_limits<half>::max()};
 }
 
 void PostProcessManager::colorGradingSubpass(DriverApi& driver, const FColorGrading* colorGrading,
