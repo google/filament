@@ -67,14 +67,15 @@ public:
             bool translucent,
             const CameraInfo& cameraInfo) noexcept;
 
-    // Tone mapping
+    // Color grading, tone mapping, etc.
     void colorGradingSubpass(backend::DriverApi& driver, const FColorGrading* colorGrading,
-            bool translucent, bool fxaa, bool dithering) noexcept;
+            View::VignetteOptions vignetteOptions, bool translucent, bool fxaa, bool dithering,
+            uint32_t width, uint32_t height) noexcept;
 
     FrameGraphId<FrameGraphTexture> colorGrading(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, const FColorGrading* colorGrading,
             backend::TextureFormat outFormat, bool translucent, bool fxaa, math::float2 scale,
-            View::BloomOptions bloomOptions, bool dithering) noexcept;
+            View::BloomOptions bloomOptions, View::VignetteOptions vignetteOptions, bool dithering) noexcept;
 
     // Anti-aliasing
     FrameGraphId<FrameGraphTexture> fxaa(FrameGraph& fg,

@@ -32,10 +32,10 @@ void unpremultiply(inout vec4 color) {
 vec3 ycbcrToRgb(float luminance, vec2 cbcr) {
     // Taken from https://developer.apple.com/documentation/arkit/arframe/2867984-capturedimage
     const mat4 ycbcrToRgbTransform = mat4(
-        1.0000, 1.0000, 1.0000, 0.0000,
-        0.0000, -0.3441, 1.7720, 0.0000,
-        1.4020, -0.7141, 0.0000, 0.0000,
-        -0.7010, 0.5291, -0.8860, 1.0000
+         1.0000,  1.0000,  1.0000,  0.0000,
+         0.0000, -0.3441,  1.7720,  0.0000,
+         1.4020, -0.7141,  0.0000,  0.0000,
+        -0.7010,  0.5291, -0.8860,  1.0000
     );
     return (ycbcrToRgbTransform * vec4(luminance, cbcr, 1.0)).rgb;
 }
