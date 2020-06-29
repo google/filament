@@ -143,7 +143,7 @@ struct VulkanSurfaceContext {
 };
 
 void selectPhysicalDevice(VulkanContext& context);
-void createVirtualDevice(VulkanContext& context);
+void createLogicalDevice(VulkanContext& context);
 void getPresentationQueue(VulkanContext& context, VulkanSurfaceContext& sc);
 void getSurfaceCaps(VulkanContext& context, VulkanSurfaceContext& sc);
 
