@@ -104,7 +104,7 @@ class App {
         this.swapChain = engine.createSwapChain();
         this.renderer = engine.createRenderer();
 
-        this.camera = engine.createCamera();
+        this.camera = engine.createCamera(Filament.EntityManager.get().create());
         const eye = [0, 0, 4], center = [0, 0, 0], up = [0, 1, 0];
         this.camera.lookAt(eye, center, up);
 

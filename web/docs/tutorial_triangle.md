@@ -199,7 +199,7 @@ view.
 ```js {fragment="create entities"}
 this.swapChain = engine.createSwapChain();
 this.renderer = engine.createRenderer();
-this.camera = engine.createCamera();
+this.camera = engine.createCamera(Filament.EntityManager.get().create());
 this.view = engine.createView();
 this.view.setCamera(this.camera);
 this.view.setScene(this.scene);

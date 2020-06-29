@@ -436,16 +436,17 @@ class_<Engine>("Engine")
             allow_raw_pointers())
 
     /// createCamera ::method::
+    /// entity ::argument:: the [Entity] to add the camera component to
     /// ::retval:: an instance of [Camera]
-    .function("createCamera", select_overload<Camera*(void)>(&Engine::createCamera),
+    .function("createCamera", select_overload<Camera*(utils::Entity entity)>(&Engine::createCamera),
             allow_raw_pointers())
     /// getCameraComponent ::method::
     /// ::retval:: an instance of [Camera]
     .function("getCameraComponent", &Engine::getCameraComponent, allow_raw_pointers())
-    /// destroyCamera ::method::
-    /// camera ::argument:: an instance of [Camera]
-    .function("destroyCamera", (void (*)(Engine*, Camera*)) []
-            (Engine* engine, Camera* camera) { engine->destroy(camera); },
+    /// destroyCameraComponent ::method::
+    /// camera ::argument:: an [Entity] with a camera component
+    .function("destroyCameraComponent", (void (*)(Engine*, utils::Entity)) []
+            (Engine* engine, utils::Entity camera) { engine->destroyCameraComponent(camera); },
             allow_raw_pointers())
 
     .function("_createMaterial", EMBIND_LAMBDA(Material*, (Engine* engine, BufferDescriptor mbd), {
