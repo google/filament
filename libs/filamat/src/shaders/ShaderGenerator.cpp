@@ -110,8 +110,7 @@ static void appendShader(utils::io::sstream& ss,
         const utils::CString& shader, size_t lineOffset) noexcept {
     if (!shader.empty()) {
         size_t lines = countLines(ss.c_str());
-        ss << "#line " << lineOffset;
-        if (shader[0] != '\n') ss << "\n";
+        ss << "#line " << lineOffset + 1 << '\n';
         ss << shader.c_str();
         if (shader[shader.size() - 1] != '\n') {
             ss << "\n";

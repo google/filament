@@ -32,6 +32,8 @@ static bool g_writeToStdOut = true;
 static const char* g_outputFile = "";
 static const char* g_inputFile = "";
 GlslMinifyOptions g_optimizationLevel = GlslMinifyOptions::ALL;
+static bool g_outputLineDirectives = false;
+static std::string g_lineDirectiveName;
 
 static const char* USAGE = R"TXT(
 GLSLMINIFIER minifies GLSL shader code by removing comments, blank lines and indentation.
@@ -48,6 +50,13 @@ Options:
        Specify path to output file. If none provided, writes to stdout.
    --optimization, -O [none]
        Set the level of optimization. "none" performs a simple passthrough.
+   --line, -l [name]
+       Insert a #line directive on the first line of the shader with the given name.
+       For example, --line foobar.h will insert the following:
+           #if defined(GL_GOOGLE_cpp_style_line_directive)
+           #line 0 "foobar.h"
+           #endif
+       This option is meant to be used with -Onone optimization.
 
 Example:
     GLSLMINIFIER -o output.fs.min input.fs
@@ -76,12 +85,13 @@ static void license() {
 }
 
 static int handleArguments(int argc, char* argv[]) {
-    static constexpr const char* OPTSTR = "hLo:O:";
+    static constexpr const char* OPTSTR = "hLo:O:l:";
     static const struct option OPTIONS[] = {
             { "help",                 no_argument, nullptr, 'h' },
             { "license",              no_argument, nullptr, 'L' },
             { "output",         required_argument, nullptr, 'o' },
             { "optimization",   required_argument, nullptr, 'O' },
+            { "line",           required_argument, nullptr, 'l' },
             { nullptr, 0, nullptr, 0 }  // termination of the option list
     };
 
@@ -108,6 +118,10 @@ static int handleArguments(int argc, char* argv[]) {
                 } else {
                     std::cerr << "Warning: unknown optimization level." << std::endl;
                 }
+                break;
+            case 'l':
+                g_outputLineDirectives = true;
+                g_lineDirectiveName = arg;
                 break;
         }
     }
@@ -138,6 +152,17 @@ int main(int argc, char* argv[]) {
 
     // Minify the GLSL.
     string result = minifyGlsl(inputStr, g_optimizationLevel);
+
+    // Add a #line directive at the beginning of the file, if requested.
+    if (g_outputLineDirectives) {
+        // We must check for support for the line directive, otherwise drivers may complain if they
+        // don't support it.
+        std::string lineDirective =
+            std::string("#if defined(GL_GOOGLE_cpp_style_line_directive)\n") +
+            "#line 0 \"" + g_lineDirectiveName + "\"\n" +
+            "#endif\n";
+        result.insert(0, lineDirective);
+    }
 
     if (g_writeToStdOut) {
         cout << result;

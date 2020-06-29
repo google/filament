@@ -195,6 +195,9 @@ public:
     //! Set the name of this material.
     MaterialBuilder& name(const char* name) noexcept;
 
+    //! Set the file name of this material file. Used in error reporting.
+    MaterialBuilder& fileName(const char* name) noexcept;
+
     //! Set the shading model.
     MaterialBuilder& shading(Shading shading) noexcept;
 
@@ -260,6 +263,10 @@ public:
      *     postProcess.color = float4(1.0);
      * }
      * ~~~~~
+     *
+     * @param code The source code of the material.
+     * @param line The line number offset of the material, where 0 is the first line. Used for error
+     *             reporting
      */
     MaterialBuilder& material(const char* code, size_t line = 0) noexcept;
 
@@ -291,6 +298,10 @@ public:
      *
      * }
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+     * @param code The source code of the material.
+     * @param line The line number offset of the material, where 0 is the first line. Used for error
+     *             reporting
      */
     MaterialBuilder& materialVertex(const char* code, size_t line = 0) noexcept;
 
@@ -509,6 +520,7 @@ private:
     bool isLit() const noexcept { return mShading != filament::Shading::UNLIT; }
 
     utils::CString mMaterialName;
+    utils::CString mFileName;
 
     class ShaderCode {
     public:
@@ -519,7 +531,7 @@ private:
         }
 
         // Resolve all the #include directives, returns true if successful.
-        bool resolveIncludes(IncludeCallback callback) noexcept;
+        bool resolveIncludes(IncludeCallback callback, const utils::CString& fileName) noexcept;
 
         const utils::CString& getResolved() const noexcept {
             assert(mIncludesResolved);

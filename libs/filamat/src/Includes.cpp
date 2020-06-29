@@ -17,6 +17,8 @@
 #include "Includes.h"
 
 #include <utils/Log.h>
+#include <utils/compiler.h>
+#include <utils/sstream.h>
 
 #include <string>
 
@@ -26,44 +28,150 @@ static bool isWhitespace(char c) {
     return (c == ' ' || c == '\f' || c == '\n' || c == '\r' || c == '\t' || c == '\v');
 }
 
-bool resolveIncludes(const utils::CString& rootName, utils::CString& source,
-        IncludeCallback callback, size_t depth) {
+bool resolveIncludes(IncludeResult& root, IncludeCallback callback,
+        const ResolveOptions& options, size_t depth) {
     if (depth > 30) {
         // This is probably an include cycle. Stop here and report an error so we don't overflow.
         utils::slog.e << "Include depth > 30. Include cycle?" << utils::io::endl;
         return false;
     }
 
-    std::vector<FoundInclude> includes = parseForIncludes(source);
-    while (!includes.empty()) {
+    const size_t lineNumberOffset = root.lineNumberOffset;
+    utils::CString& text = root.text;
+
+    std::vector<FoundInclude> includes = parseForIncludes(text);
+    bool sourceDirty = false;
+
+    // If we weren't given an include name, use "0", which is default when no #line directives are
+    // used.
+    const char* rootIncludeName = root.includeName.empty() ? "0" : root.includeName.c_str();
+
+    auto insertLineDirective = [&options](utils::io::ostream& stream, size_t line, const char* filename) {
+        if (options.insertLineDirectiveCheck) {
+            stream << "#if defined(GL_GOOGLE_cpp_style_line_directive)\n";
+            // The #endif itself will count as a line, so subtact 1.
+            line--;
+        }
+        stream << "#line " << line << " \"" << filename << '\"';
+        if (options.insertLineDirectiveCheck) {
+            stream << "\n#endif";
+        }
+    };
+
+    // The #line directive must be on its own line and works like so:
+    // #line 10 "file.h"
+    // any code on this line is now considered line 10 of file.h
+
+    // Add #line directives before / after each #include. We work backwards, otherwise we'd
+    // invalidate the offsets in FoundInclude.
+    for (auto it = includes.rbegin(); it < includes.rend() && options.insertLineDirectives; ++it) {
+        const auto include = *it;
+
+        // Remember that text editors consider the first line of a file to be line 1.
+        // Consider the following file, called "root.h":
+        // 1
+        // 2 #include "foo.h"
+        // 3
+
+        // We want to insert an opening and closing #line directive:
+        // 1
+        //   #line 1 "foo.h"
+        // 2 #include "foo.h"
+        //   #line 3 "root.h"
+        // 3
+
+        // We want to insert a closing directive with a line number of 3.
+        // In this example, include.line is 2 and lineNumberOffset is 0.
+        // So, the math works out as such:
+        const size_t lineDirectiveLine = include.line + lineNumberOffset + 1;
+
+        utils::io::sstream closingDirective;
+
+        // This first newline is to ensure that the #line directive falls on a fresh line.
+        closingDirective << '\n';
+
+        // If there's a newline after the include, we'll use that to terminate the #line directive.
+        const size_t newlineCharacter = include.startPosition + include.length;
+        if (text.length() > newlineCharacter && text[newlineCharacter] == '\n') {
+            insertLineDirective(closingDirective, lineDirectiveLine, rootIncludeName);
+        } else {
+            // If there isn't one, be sure to add one. The included source might not have an
+            // newline at the end of the file.
+
+            // We subtract 1 to handle additional code after the include directive.
+            // E.g., this include statement:
+            // #include "foobar.h"  more code on same line
+            //
+            // should get translated to:
+            // #line 1
+            // #include "foobar.h"
+            // #line 1
+            //  more code on same line
+
+            insertLineDirective(closingDirective, lineDirectiveLine - 1, rootIncludeName);
+            closingDirective << '\n';
+        }
+
+        text.insert(include.startPosition + include.length, utils::CString(closingDirective.c_str()));
+
+        // The included source always starts on line 1.
+        utils::io::sstream openingDirective;
+        insertLineDirective(openingDirective, 1, include.name.c_str());
+        openingDirective << '\n';
+        text.insert(include.startPosition, utils::CString(openingDirective.c_str()));
+        sourceDirty = true;
+    }
+
+    // Add a line directive on the first line for the root include.
+    if (options.insertLineDirectives && depth == 0) {
+        utils::io::sstream lineDirective;
+        insertLineDirective(lineDirective, lineNumberOffset + 1, rootIncludeName);
+        lineDirective << '\n';
+        text.insert(0, utils::CString(lineDirective.c_str()));
+        sourceDirty = true;
+    }
+
+    // Re-parse for includes. If we've inserted any #line directives, then the line numbers have
+    // changed.
+    if (UTILS_LIKELY(sourceDirty)) {
+        includes = parseForIncludes(text);
+    }
+
+    while (!includes.empty() && options.resolveIncludes) {
         const auto include = includes[0];
         // Ask the includer to resolve this include.
         if (!callback) {
             return false;
         }
-        IncludeResult result;
-        if (!callback(include.name, rootName, result)) {
+        IncludeResult resolved {
+            .includeName = include.name
+        };
+        if (!callback(root.name, resolved)) {
             utils::slog.e << "The included file \"" << include.name.c_str()
                           << "\" could not be found." << utils::io::endl;
             return false;
         }
 
         // Recursively resolve all of its includes.
-        if (!resolveIncludes(result.name, result.source, callback, depth + 1)) {
+        if (!resolveIncludes(resolved, callback, options, depth + 1)) {
             return false;
         }
 
-        source.replace(include.startPosition, include.length, result.source);
+        text.replace(include.startPosition, include.length, resolved.text);
 
-        includes = parseForIncludes(source);
+        includes = parseForIncludes(text);
     }
 
     return true;
 }
 
 std::vector<FoundInclude> parseForIncludes(const utils::CString& source) {
-    std::string sourceString = source.c_str();
     std::vector<FoundInclude> results;
+
+    if (source.empty()) {
+        return results;
+    }
+    std::string sourceString = source.c_str();
 
     size_t result = sourceString.find("#include");
 
@@ -102,7 +210,16 @@ std::vector<FoundInclude> parseForIncludes(const utils::CString& source) {
         // Grab the include name.
         const auto includeName = sourceString.substr(nameStart, nameEnd - nameStart + 1);
 
-        results.push_back({utils::CString(includeName.c_str()), includeStart, includeEnd - includeStart + 1});
+        // Calculate the line number of the include.
+        size_t lineNumber = 1;
+        for (size_t i = 0; i < includeStart; i++) {
+            if (source[i] == '\n') {
+                lineNumber++;
+            }
+        }
+
+        results.push_back({utils::CString(includeName.c_str()), includeStart,
+                includeEnd - includeStart + 1, lineNumber});
 
         // Find next occurrence.
         result = sourceString.find("#include", result);

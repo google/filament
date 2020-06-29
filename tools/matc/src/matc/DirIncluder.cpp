@@ -22,20 +22,20 @@
 
 namespace matc {
 
-bool DirIncluder::operator()(const utils::CString& headerName, const utils::CString& includerName,
-        filamat::IncludeResult& result) {
-    auto getHeaderPath = [&includerName, &headerName, this]() {
-        // If includer name is empty, then search from the root include directory.
-        if (includerName.empty()) {
-            return mIncludeDirectory.concat(headerName.c_str());
+bool DirIncluder::operator()(const utils::CString& includedBy, filamat::IncludeResult& result) {
+    auto getHeaderPath = [&result, &includedBy, this]() {
+        // includedBy is the path to the file that's including result.includeName.
+        // If it's empty, then search from the root include directory.
+        if (includedBy.empty()) {
+            return mIncludeDirectory.concat(result.includeName.c_str());
         }
 
         // Otherwise, search relative to the includer file.
-        utils::Path includer(includerName.c_str());
+        utils::Path includer(includedBy.c_str());
         // TODO: this assert was firing only in CI during DirIncluder tests. Maybe because of
         // inadequate file permissions.
         // assert(includer.isFile());
-        return includer.getParent() + headerName.c_str();
+        return includer.getParent() + result.includeName.c_str();
     };
 
     const utils::Path headerPath = getHeaderPath();
@@ -60,7 +60,7 @@ bool DirIncluder::operator()(const utils::CString& headerName, const utils::CStr
 
     stream.close();
 
-    result.source = utils::CString(contents.c_str());
+    result.text = utils::CString(contents.c_str());
     result.name = utils::CString(headerPath.c_str());
 
     return true;
