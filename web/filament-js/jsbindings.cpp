@@ -79,6 +79,10 @@
 #include <emscripten.h>
 #include <emscripten/bind.h>
 
+// Avoid warnings for deprecated Filament APIs.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+
 using namespace emscripten;
 using namespace filament;
 using namespace filamesh;
@@ -1632,3 +1636,5 @@ class_<ResourceLoader>("gltfio$ResourceLoader")
     .function("asyncUpdateLoad", &ResourceLoader::asyncUpdateLoad);
 
 } // EMSCRIPTEN_BINDINGS
+
+#pragma clang diagnostic pop
