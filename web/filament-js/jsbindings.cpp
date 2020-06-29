@@ -318,8 +318,10 @@ value_object<filament::View::BloomOptions>("View$BloomOptions")
     .field("levels", &filament::View::BloomOptions::levels)
     .field("threshold", &filament::View::BloomOptions::threshold)
     .field("enabled", &filament::View::BloomOptions::enabled)
-    .field("blendMode", &filament::View::BloomOptions::blendMode)
-    .field("dirt", &filament::View::BloomOptions::dirt);
+    .field("blendMode", &filament::View::BloomOptions::blendMode);
+
+// TODO: add support for dirt texture in BloomOptions.
+// Note that simply including the field in the above list causes binding errors for nullptr.
 
 // In JavaScript, a flat contiguous representation is best for matrices (see gl-matrix) so we
 // need to define a small wrapper here.
