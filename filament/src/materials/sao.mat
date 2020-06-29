@@ -54,6 +54,10 @@ material {
             name : spiralTurns
         },
         {
+            type : float2,
+            name : angleIncCosSin
+        },
+        {
             type : float,
             name : invFarPlane
         },
@@ -154,11 +158,23 @@ fragment {
         return vec3(cos(angle), sin(angle), radius);
     }
 
+    highp mat2 tapAngleStep() {
+        highp vec2 t = materialParams.angleIncCosSin;
+        return mat2(t.x, t.y, -t.y, t.x);
+    }
+
+    vec3 tapLocation(float i, vec2 p) {
+        float radius = (i + 0.5) * materialParams.sampleCount.y;
+        return vec3(p, radius);
+    }
+
+
     void computeAmbientOcclusionSAO(inout float occlusion, float i, float ssDiskRadius,
             const highp vec2 uv,  const highp vec3 origin, const vec3 normal,
-            const float noise) {
+            const vec2 tapPosition, const float noise) {
 
-        vec3 tap = tapLocation(i, noise);
+        vec3 tap = tapLocation(i, tapPosition);
+
         float ssRadius = max(1.0, tap.z * ssDiskRadius); // at least 1 pixel screen-space radius
 
         vec2 uvSamplePos = uv + vec2(ssRadius * tap.xy) * materialParams.resolution.zw;
@@ -184,6 +200,8 @@ fragment {
 
         vec3 normal = computeViewSpaceNormal(origin, uv);
         float noise = random(gl_FragCoord.xy);
+        highp vec2 tapPosition = tapLocation(0.0, noise).xy;
+        highp mat2 angleStep = tapAngleStep();
 
         // Choose the screen-space sample radius
         // proportional to the projected area of the sphere
@@ -191,7 +209,8 @@ fragment {
 
         float occlusion = 0.0;
         for (float i = 0.0; i < materialParams.sampleCount.x; i += 1.0) {
-            computeAmbientOcclusionSAO(occlusion, i, ssDiskRadius, uv, origin, normal, noise);
+            computeAmbientOcclusionSAO(occlusion, i, ssDiskRadius, uv, origin, normal, tapPosition, noise);
+            tapPosition = angleStep * tapPosition;
         }
 
         float ao = max(0.0, 1.0 - occlusion * (materialParams.intensity * materialParams.sampleCount.y));

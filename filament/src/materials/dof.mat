@@ -154,7 +154,7 @@ void initRing(const float i, const float ringCount, const float kernelSize, out 
 
     float inc = 2.0 * PI / count;
     vec2 t = vec2(cos(inc), sin(inc));
-    r = mat2(t.x, -t.y, t.y, t.x);
+    r = mat2(t.x, t.y, -t.y, t.x);
 
     float firstSamplePosition = mod(i, 2.0) * 0.5 * inc;
     p = radius * vec2(cos(firstSamplePosition), sin(firstSamplePosition));
