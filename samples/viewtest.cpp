@@ -30,6 +30,7 @@ using namespace filament;
 struct App {
     VertexBuffer* vb;
     IndexBuffer* ib;
+    utils::Entity camera;
     Camera* cam;
     Skybox* skybox;
     utils::Entity renderable;
@@ -63,7 +64,8 @@ int main(int argc, char** argv) {
                 .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, app.vb, app.ib, 0, 3)
                 .build(*engine, app.renderable);
         scene->addEntity(app.renderable);
-        app.cam = engine->createCamera();
+        app.camera = utils::EntityManager::get().create();
+        app.cam = engine->createCamera(app.camera);
         view->setCamera(app.cam);
     };
 
@@ -72,7 +74,9 @@ int main(int argc, char** argv) {
         engine->destroy(app.renderable);
         engine->destroy(app.vb);
         engine->destroy(app.ib);
-        engine->destroy(app.cam);
+
+        engine->destroyCameraComponent(app.camera);
+        utils::EntityManager::get().destroy(app.camera);
     };
 
     FilamentApp::get().run(config, setup, cleanup);

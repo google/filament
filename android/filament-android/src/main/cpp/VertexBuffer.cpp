@@ -115,6 +115,7 @@ Java_com_google_android_filament_VertexBuffer_nSetBufferAt(JNIEnv *env, jclass t
     return 0;
 }
 
+[[deprecated]]
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_VertexBuffer_nPopulateTangentQuaternions(JNIEnv *env,
         jclass type, jint quatType, jint quatCount, jobject outBuffer, jint outRemaining,

@@ -125,6 +125,7 @@ Java_com_google_android_filament_IndirectLight_nGetRotation(JNIEnv* env, jclass,
 
 }
 
+[[deprecated]]
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_IndirectLight_nGetDirectionEstimate(JNIEnv* env, jclass,
         jlong nativeIndirectLight, jfloatArray outDirection_) {
@@ -134,6 +135,7 @@ Java_com_google_android_filament_IndirectLight_nGetDirectionEstimate(JNIEnv* env
     env->ReleaseFloatArrayElements(outDirection_, outDirection, 0);
 }
 
+[[deprecated]]
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_IndirectLight_nGetColorEstimate(JNIEnv* env, jclass,
         jlong nativeIndirectLight, jfloatArray outColor_, jfloat x, jfloat y, jfloat z) {

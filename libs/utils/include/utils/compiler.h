@@ -37,7 +37,7 @@
 #endif
 
 #if __has_attribute(deprecated)
-#   define UTILS_DEPRECATED __attribute__((deprecated))
+#   define UTILS_DEPRECATED [[deprecated]]
 #else
 #   define UTILS_DEPRECATED
 #endif

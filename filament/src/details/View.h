@@ -17,12 +17,6 @@
 #ifndef TNT_FILAMENT_DETAILS_VIEW_H
 #define TNT_FILAMENT_DETAILS_VIEW_H
 
-// Avoid warnings for using the ToneMapping API, which has been publically deprecated.
-#if defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-#endif
-
 #include <filament/View.h>
 
 #include "upcast.h"
@@ -56,6 +50,15 @@
 namespace utils {
 class JobSystem;
 } // namespace utils;
+
+// Avoid warnings for using the ToneMapping API, which has been publically deprecated.
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#elif defined(_MSC_VER)
+#pragma warning push
+#pragma warning disable : 4996
+#endif
 
 namespace filament {
 
@@ -453,6 +456,8 @@ FILAMENT_UPCAST(View)
 
 #if defined(__clang__)
 #pragma clang diagnostic pop
+#elif defined(_MSC_VER)
+#pragma warning pop
 #endif
 
 #endif // TNT_FILAMENT_DETAILS_VIEW_H
