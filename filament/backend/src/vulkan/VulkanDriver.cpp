@@ -158,7 +158,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
     selectPhysicalDevice(mContext);
 
     // Initialize device and graphicsQueue.
-    createVirtualDevice(mContext);
+    createLogicalDevice(mContext);
     mBinder.setDevice(mContext.device);
 
     // Choose a depth format that meets our requirements. Take care not to include stencil formats

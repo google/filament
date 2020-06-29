@@ -155,7 +155,7 @@ void selectPhysicalDevice(VulkanContext& context) {
     PANIC_POSTCONDITION("Unable to find suitable device.");
 }
 
-void createVirtualDevice(VulkanContext& context) {
+void createLogicalDevice(VulkanContext& context) {
     VkDeviceQueueCreateInfo deviceQueueCreateInfo[1] = {};
     const float queuePriority[] = {1.0f};
     VkDeviceCreateInfo deviceCreateInfo = {};
@@ -279,7 +279,20 @@ void getPresentationQueue(VulkanContext& context, VulkanSurfaceContext& sc) {
     ASSERT_POSTCONDITION(presentQueueFamilyIndex != 0xffff,
             "This physical device does not support the presentation queue.");
     if (context.graphicsQueueFamilyIndex != presentQueueFamilyIndex) {
+
+        // TODO: Strictly speaking, this code path is incorrect. However it is not triggered on any
+        // Android devices that we've tested with, nor with MoltenVK.
+        //
+        // This is incorrect because we created the logical device early on, before we had a handle
+        // to the rendering surface. Therefore the device was not created with the presentation
+        // queue family index included in VkDeviceQueueCreateInfo.
+        //
+        // This is non-trivial to fix because the driver API allows clients to do certain things
+        // (e.g. upload a vertex buffer) before the swap chain is created.
+        //
+        // https://github.com/google/filament/issues/1532
         vkGetDeviceQueue(context.device, presentQueueFamilyIndex, 0, &sc.presentQueue);
+
     } else {
         sc.presentQueue = context.graphicsQueue;
     }
