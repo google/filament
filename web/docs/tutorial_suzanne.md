@@ -142,7 +142,7 @@ class App {
 
         this.swapChain = this.engine.createSwapChain();
         this.renderer = this.engine.createRenderer();
-        this.camera = this.engine.createCamera();
+        this.camera = engine.createCamera(Filament.EntityManager.get().create());
         this.view = this.engine.createView();
         this.view.setCamera(this.camera);
         this.view.setScene(this.scene);

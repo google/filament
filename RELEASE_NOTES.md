@@ -6,6 +6,7 @@ A new header is inserted each time a *tag* is created.
 ## Next release
 
 - Improved JavaScript API for SurfaceOrientation and Scene.
+- Updated JavaScript API around Camera construction / destruction (⚠️ **API change**)
 - gltfio now uses high precision for texture coordinates.
 - Fixed regression in JavaScript IcoSphere that caused tutorial to fail.
 - gltf_viewer now supports viewing with glTF cameras.
