@@ -46,7 +46,7 @@ void compressShader(const char *s, Flattener &f, const LineDictionary& dictionar
             len++;
         }
 
-        std::string newLine(s, pos, len);
+        std::string newLine(s + pos, len);
 
         size_t index = dictionary.getIndex(newLine);
         if (index > UINT16_MAX) {
