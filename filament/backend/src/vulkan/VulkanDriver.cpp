@@ -163,9 +163,29 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
 
     // Choose a depth format that meets our requirements. Take care not to include stencil formats
     // just yet, since that would require a corollary change to the "aspect" flags for the VkImage.
-    mContext.depthFormat = findSupportedFormat(mContext,
+    mContext.finalDepthFormat = findSupportedFormat(mContext,
         { VK_FORMAT_D32_SFLOAT, VK_FORMAT_X8_D24_UNORM_PACK32 },
         VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+
+    // For diagnostic purposes, print useful information about available depth formats.
+    // Note that Vulkan is more constrained than OpenGL ES 3.1 in this area.
+#if VK_ENABLE_VALIDATION
+    const VkFormatFeatureFlags required = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT |
+            VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
+    utils::slog.i << "Sampleable depth formats: ";
+    for (VkFormat format = VK_FORMAT_BEGIN_RANGE;;) {
+        VkFormatProperties props;
+        vkGetPhysicalDeviceFormatProperties(mContext.physicalDevice, format, &props);
+        if ((props.optimalTilingFeatures & required) == required) {
+            utils::slog.i << format << " ";
+        }
+        if (format == VK_FORMAT_END_RANGE) {
+            utils::slog.i << utils::io::endl;
+            break;
+        }
+        format = (VkFormat) (1 + (int) format);
+    }
+#endif
 }
 
 VulkanDriver::~VulkanDriver() noexcept = default;
@@ -652,7 +672,7 @@ bool VulkanDriver::isTextureFormatSupported(TextureFormat format) {
     VkFormat vkformat = getVkFormat(format);
     // We automatically use an alternative format when the client requests DEPTH24.
     if (format == TextureFormat::DEPTH24) {
-        vkformat = mContext.depthFormat;
+        vkformat = mContext.finalDepthFormat;
     }
     if (vkformat == VK_FORMAT_UNDEFINED) {
         return false;
@@ -680,7 +700,7 @@ bool VulkanDriver::isRenderTargetFormatSupported(TextureFormat format) {
     VkFormat vkformat = getVkFormat(format);
     // We automatically use an alternative format when the client requests DEPTH24.
     if (format == TextureFormat::DEPTH24) {
-        vkformat = mContext.depthFormat;
+        vkformat = mContext.finalDepthFormat;
     }
     if (vkformat == VK_FORMAT_UNDEFINED) {
         return false;

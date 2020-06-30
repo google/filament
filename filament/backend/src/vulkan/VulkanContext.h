@@ -99,7 +99,7 @@ struct VulkanContext {
     VulkanSurfaceContext* currentSurface;
     VkRenderPassBeginInfo currentRenderPass;
     VkViewport viewport;
-    VkFormat depthFormat;
+    VkFormat finalDepthFormat;
     VmaAllocator allocator;
 
     // The work context is used for activities unrelated to the swap chain or draw calls, such as
@@ -162,7 +162,7 @@ VkFormat findSupportedFormat(VulkanContext& context, const std::vector<VkFormat>
         VkImageTiling tiling, VkFormatFeatureFlags features);
 VkCommandBuffer acquireWorkCommandBuffer(VulkanContext& context);
 void flushWorkCommandBuffer(VulkanContext& context);
-void createDepthBuffer(VulkanContext& context, VulkanSurfaceContext& sc, VkFormat depthFormat);
+void createFinalDepthBuffer(VulkanContext& context, VulkanSurfaceContext& sc, VkFormat depthFormat);
 VkImageLayout getTextureLayout(TextureUsage usage);
 
 } // namespace filament

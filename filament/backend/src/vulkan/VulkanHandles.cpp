@@ -17,6 +17,7 @@
 #include "vulkan/VulkanHandles.h"
 
 #include "DataReshaper.h"
+#include "VulkanPlatform.h"
 
 #include <utils/Panic.h>
 
@@ -319,7 +320,7 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
 
     // Vulkan does not support 24-bit depth, use the official fallback format.
     if (tformat == TextureFormat::DEPTH24) {
-        vkformat = mContext.depthFormat;
+        vkformat = mContext.finalDepthFormat;
     }
 
     // Create an appropriately-sized device-only VkImage, but do not fill it yet.
@@ -331,6 +332,7 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
         .mipLevels = levels,
         .arrayLayers = 1,
         .samples = VK_SAMPLE_COUNT_1_BIT,
+        .tiling = VK_IMAGE_TILING_OPTIMAL,
         .usage = 0
     };
     if (target == SamplerType::SAMPLER_CUBEMAP) {
@@ -353,6 +355,17 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
             VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 
     if (any(usage & TextureUsage::SAMPLEABLE)) {
+
+#if VK_ENABLE_VALIDATION
+        // Validate that the format is actually sampleable.
+        VkFormatProperties props;
+        vkGetPhysicalDeviceFormatProperties(context.physicalDevice, vkformat, &props);
+        if (!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)) {
+            utils::slog.w << "Texture usage is SAMPLEABLE but format " << vkformat << " is not "
+                    "sampleable with optimal tiling." << utils::io::endl;
+        }
+#endif
+
         imageInfo.usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
     }
     if (any(usage & TextureUsage::COLOR_ATTACHMENT)) {
