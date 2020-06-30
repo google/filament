@@ -124,9 +124,6 @@ function fetchMaterial(matid) {
         }
         matInfo.matid = matid;
         gMaterialDatabase[matid] = matInfo;
-        for (const shader of matInfo.opengl) fetchShader({glindex: shader.index}, matInfo);
-        for (const shader of matInfo.vulkan) fetchShader({vkindex: shader.index}, matInfo);
-        for (const shader of matInfo.metal)  fetchShader({metalindex: shader.index}, matInfo);
         renderMaterialList();
     });
 }
@@ -208,15 +205,12 @@ function fetchMaterials() {
                 continue;
             }
             gMaterialDatabase[matInfo.matid] = matInfo;
-            for (const shader of matInfo.opengl) fetchShader({glindex: shader.index}, matInfo);
-            for (const shader of matInfo.vulkan) fetchShader({vkindex: shader.index}, matInfo);
-            for (const shader of matInfo.metal)  fetchShader({metalindex: shader.index}, matInfo);
         }
         selectMaterial(matJson[0].matid);
     });
 }
 
-function fetchShader(selection, matinfo) {
+function fetchShader(selection, matinfo, onDone) {
     let query, target;
     if (selection.glindex >= 0) {
         query = `type=glsl&glindex=${selection.glindex}`;
@@ -234,6 +228,7 @@ function fetchShader(selection, matinfo) {
         return response.text();
     }).then(function(shaderText) {
         target.text = shaderText;
+        onDone();
     });
 }
 
@@ -308,18 +303,26 @@ function renderShaderStatus() {
 
 function selectShader(selection) {
     const shader = getShaderRecord(selection);
-    if (!shader || !shader.text) {
-        console.error("Shader source not yet available.");
+    if (!shader) {
+        console.error("Shader not yet available.")
         return;
     }
-    gCurrentShader = selection;
-    gCurrentShader.matid = gCurrentMaterial;
-    renderMaterialDetail();
-    gEditorIsLoading = true;
-    gEditor.setValue(shader.text);
-    gEditorIsLoading = false;
-    shaderSource.style.visibility = "visible";
-    renderShaderStatus();
+    const showShaderSource = () => {
+        gCurrentShader = selection;
+        gCurrentShader.matid = gCurrentMaterial;
+        renderMaterialDetail();
+        gEditorIsLoading = true;
+        gEditor.setValue(shader.text);
+        gEditorIsLoading = false;
+        shaderSource.style.visibility = "visible";
+        renderShaderStatus();
+    };
+    if (!shader.text) {
+        const matInfo = gMaterialDatabase[gCurrentMaterial];
+        fetchShader(selection, matInfo, showShaderSource);
+    } else {
+        showShaderSource();
+    }
 }
 
 function onEdit(changes) {
