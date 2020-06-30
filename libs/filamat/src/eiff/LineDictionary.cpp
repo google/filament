@@ -55,7 +55,7 @@ void LineDictionary::addText(const std::string& line) noexcept {
             cur++;
             len++;
         }
-        std::string newLine(s, pos, len);
+        std::string newLine(s + pos, len);
         addLine(std::move(newLine));
         cur++;
     }

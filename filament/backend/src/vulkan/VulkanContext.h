@@ -31,6 +31,7 @@
 #include <utils/Condition.h>
 #include <utils/Mutex.h>
 
+#include <atomic>
 #include <memory>
 #include <vector>
 

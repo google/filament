@@ -44,6 +44,7 @@ struct App {
     IndexBuffer* ib;
     Material* mat;
     Camera* cam;
+    Entity camera;
     Skybox* skybox;
     Entity renderable;
 };
@@ -99,7 +100,8 @@ int main(int argc, char** argv) {
                 .castShadows(false)
                 .build(*engine, app.renderable);
         scene->addEntity(app.renderable);
-        app.cam = engine->createCamera();
+        app.camera = utils::EntityManager::get().create();
+        app.cam = engine->createCamera(app.camera);
         view->setCamera(app.cam);
     };
 
@@ -109,7 +111,8 @@ int main(int argc, char** argv) {
         engine->destroy(app.mat);
         engine->destroy(app.vb);
         engine->destroy(app.ib);
-        engine->destroy(app.cam);
+        engine->destroyCameraComponent(app.camera);
+        utils::EntityManager::get().destroy(app.camera);
     };
 
     FilamentApp::get().animate([&app](Engine* engine, View* view, double now) {

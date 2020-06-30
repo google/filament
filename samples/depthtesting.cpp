@@ -44,6 +44,7 @@ struct App {
     IndexBuffer* ib;
     Material* mat;
     Camera* cam;
+    Entity camera;
     Skybox* skybox;
     Entity whiteTriangle;
     Entity colorTriangle;
@@ -71,7 +72,8 @@ int main(int argc, char** argv) {
         app.skybox = Skybox::Builder().color({0.1, 0.125, 0.25, 1.0}).build(*engine);
         scene->setSkybox(app.skybox);
 
-        app.cam = engine->createCamera();
+        app.camera = utils::EntityManager::get().create();
+        app.cam = engine->createCamera(app.camera);
         view->setCamera(app.cam);
         view->setPostProcessingEnabled(false);
         app.vb = VertexBuffer::Builder()
@@ -124,7 +126,9 @@ int main(int argc, char** argv) {
         engine->destroy(app.mat);
         engine->destroy(app.vb);
         engine->destroy(app.ib);
-        engine->destroy(app.cam);
+
+        engine->destroyCameraComponent(app.camera);
+        utils::EntityManager::get().destroy(app.camera);
     };
 
     FilamentApp::get().animate([&app](Engine* engine, View* view, double now) {

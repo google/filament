@@ -217,7 +217,7 @@ Filament.loadClassExtensions = function() {
             resolution: 360,
             anamorphism: 1.0,
             levels: 6,
-            blendMode: Filament.View$BloomOptions$BloomMode.ADD,
+            blendMode: Filament.View$BloomOptions$BlendMode.ADD,
             threshold: true,
             enabled: false,
             dirt: null

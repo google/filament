@@ -425,7 +425,7 @@ interface Filamesh {
 
 export class Engine {
     public static create(canvas: HTMLCanvasElement, contextOptions?: object): Engine;
-    public createCamera(): Camera;
+    public createCamera(entity: Entity): Camera;
     public createIblFromKtx(url: string): IndirectLight;
     public createMaterial(url: string): Material;
     public createRenderer(): Renderer;
@@ -443,7 +443,7 @@ export class Engine {
     public destroyRenderer(renderer: Renderer): void;
     public destroyView(view: View): void;
     public destroyScene(scene: Scene): void;
-    public destroyCamera(camera: Camera): void;
+    public destroyCameraComponent(camera: Entity): void;
     public destroyMaterial(material: Material): void;
     public destroyEntity(entity: Entity): void;
     public destroyIndexBuffer(indexBuffer: IndexBuffer): void;
@@ -453,6 +453,7 @@ export class Engine {
     public destroySkybox(skybox: Skybox): void;
     public destroyTexture(texture: Texture): void;
 
+    public getCameraComponent(entity: Entity): Camera;
     public getLightManager(): LightManager;
     public destroyVertexBuffer(vertexBuffer: VertexBuffer): void;
     public getRenderableManager(): RenderableManager;

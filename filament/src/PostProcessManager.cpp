@@ -36,6 +36,7 @@
 #include <filament/MaterialEnums.h>
 
 #include <math/half.h>
+#include <math/mat2.h>
 
 #include <utils/Log.h>
 
@@ -400,6 +401,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOclusion(
                 }
 
                 const auto invProjection = inverse(cameraInfo.projection);
+                const float inc = (1.0f / (sampleCount - 0.5f)) * spiralTurns * 2.0f * float(math::F_PI);
 
                 FMaterialInstance* const mi = mSSAO.getMaterialInstance();
                 mi->setParameter("depth", depth, {
@@ -420,6 +422,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOclusion(
                 mi->setParameter("maxLevel", uint32_t(levelCount - 1));
                 mi->setParameter("sampleCount", float2{ sampleCount, 1.0f / (sampleCount - 0.5f) });
                 mi->setParameter("spiralTurns", spiralTurns);
+                mi->setParameter("angleIncCosSin", float2{ std::cos(inc), std::sin(inc) });
                 mi->setParameter("invFarPlane", 1.0f / -cameraInfo.zf);
                 mi->commit(driver);
                 mi->use(driver);

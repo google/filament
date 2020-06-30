@@ -79,6 +79,10 @@
 #include <emscripten.h>
 #include <emscripten/bind.h>
 
+// Avoid warnings for deprecated Filament APIs.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+
 using namespace emscripten;
 using namespace filament;
 using namespace filamesh;
@@ -318,8 +322,10 @@ value_object<filament::View::BloomOptions>("View$BloomOptions")
     .field("levels", &filament::View::BloomOptions::levels)
     .field("threshold", &filament::View::BloomOptions::threshold)
     .field("enabled", &filament::View::BloomOptions::enabled)
-    .field("blendMode", &filament::View::BloomOptions::blendMode)
-    .field("dirt", &filament::View::BloomOptions::dirt);
+    .field("blendMode", &filament::View::BloomOptions::blendMode);
+
+// TODO: add support for dirt texture in BloomOptions.
+// Note that simply including the field in the above list causes binding errors for nullptr.
 
 // In JavaScript, a flat contiguous representation is best for matrices (see gl-matrix) so we
 // need to define a small wrapper here.
@@ -434,16 +440,17 @@ class_<Engine>("Engine")
             allow_raw_pointers())
 
     /// createCamera ::method::
+    /// entity ::argument:: the [Entity] to add the camera component to
     /// ::retval:: an instance of [Camera]
-    .function("createCamera", select_overload<Camera*(void)>(&Engine::createCamera),
+    .function("createCamera", select_overload<Camera*(utils::Entity entity)>(&Engine::createCamera),
             allow_raw_pointers())
     /// getCameraComponent ::method::
     /// ::retval:: an instance of [Camera]
     .function("getCameraComponent", &Engine::getCameraComponent, allow_raw_pointers())
-    /// destroyCamera ::method::
-    /// camera ::argument:: an instance of [Camera]
-    .function("destroyCamera", (void (*)(Engine*, Camera*)) []
-            (Engine* engine, Camera* camera) { engine->destroy(camera); },
+    /// destroyCameraComponent ::method::
+    /// camera ::argument:: an [Entity] with a camera component
+    .function("destroyCameraComponent", (void (*)(Engine*, utils::Entity)) []
+            (Engine* engine, utils::Entity camera) { engine->destroyCameraComponent(camera); },
             allow_raw_pointers())
 
     .function("_createMaterial", EMBIND_LAMBDA(Material*, (Engine* engine, BufferDescriptor mbd), {
@@ -1632,3 +1639,5 @@ class_<ResourceLoader>("gltfio$ResourceLoader")
     .function("asyncUpdateLoad", &ResourceLoader::asyncUpdateLoad);
 
 } // EMSCRIPTEN_BINDINGS
+
+#pragma clang diagnostic pop
