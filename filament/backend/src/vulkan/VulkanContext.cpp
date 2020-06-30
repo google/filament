@@ -426,7 +426,7 @@ void createSwapChain(VulkanContext& context, VulkanSurfaceContext& surfaceContex
         surfaceContext.swapContexts[i].commands.cmdbuffer = cmdbufs[i];
     }
 
-    createDepthBuffer(context, surfaceContext, context.depthFormat);
+    createFinalDepthBuffer(context, surfaceContext, context.finalDepthFormat);
 }
 
 void destroySwapChain(VulkanContext& context, VulkanSurfaceContext& surfaceContext,
@@ -651,7 +651,7 @@ void flushWorkCommandBuffer(VulkanContext& context) {
     work.fence->submitted = true;
 }
 
-void createDepthBuffer(VulkanContext& context, VulkanSurfaceContext& surfaceContext,
+void createFinalDepthBuffer(VulkanContext& context, VulkanSurfaceContext& surfaceContext,
         VkFormat depthFormat) {
     // Create an appropriately-sized device-only VkImage.
     const auto size = surfaceContext.surfaceCapabilities.currentExtent;
