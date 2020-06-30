@@ -24,6 +24,10 @@ a.inactive {
     color: #aaa;
 }
 
+a.inactive.current {
+    color: #5af;
+}
+
 pre {
     font-family: Menlo, Monaco, "Courier New", monospace;
 }
