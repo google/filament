@@ -455,9 +455,10 @@ void FrameGraph::execute(DriverApi& driver) noexcept {
     reset();
 }
 
-void FrameGraph::export_graphviz(utils::io::ostream& out) {
+void FrameGraph::export_graphviz(utils::io::ostream& out, const char* viewName) {
 #ifndef NDEBUG
-    out << "digraph framegraph {\n";
+    const char* label = viewName ? viewName : "anonymousView";
+    out << "digraph \"" << label << "\" {\n";
     out << "rankdir = LR\n";
     out << "bgcolor = black\n";
     out << "node [shape=rectangle, fontname=\"helvetica\", fontsize=10]\n\n";

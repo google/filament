@@ -4,6 +4,10 @@ project(matdbg C ASM)
 set(TARGET matdbg)
 set(PUBLIC_HDR_DIR include)
 
+if (CMAKE_CROSSCOMPILING)
+    include(${IMPORT_EXECUTABLES})
+endif()
+
 # ==================================================================================================
 # Sources and headers
 # ==================================================================================================

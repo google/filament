@@ -35,9 +35,8 @@ public:
         return *this;
     }
 
-    bool operator()(const utils::CString& headerName, const utils::CString& includerName,
-            filamat::IncludeResult& result) {
-        auto key = headerName.c_str();
+    bool operator()(const utils::CString& includedBy, filamat::IncludeResult& result) {
+        auto key = result.includeName.c_str();
         auto found = mIncludeMap.find(key);
 
         if (found == mIncludeMap.end()) {
@@ -47,12 +46,12 @@ public:
         auto include = found->second;
 
         if (!include.expectedIncluder.empty()) {
-            EXPECT_STREQ(includerName.c_str_safe(), include.expectedIncluder.c_str());
+            EXPECT_STREQ(includedBy.c_str_safe(), include.expectedIncluder.c_str());
         }
 
         if (!include.source.empty()) {
-            result.source = utils::CString(include.source.c_str());
-            result.name = headerName;
+            result.text = utils::CString(include.source.c_str());
+            result.name = result.includeName;
             return true;
         }
 

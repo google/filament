@@ -441,7 +441,11 @@ int FEngine::loop() {
     }
 
 #if FILAMENT_ENABLE_MATDBG
-    const char* portString = getenv("FILAMENT_MATDBG_PORT");
+    #ifdef ANDROID
+        const char* portString = "8081";
+    #else
+        const char* portString = getenv("FILAMENT_MATDBG_PORT");
+    #endif
     if (portString != nullptr) {
         const int port = atoi(portString);
         debug.server = new matdbg::DebugServer(mBackend, port);

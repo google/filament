@@ -73,6 +73,19 @@ if (ANDROID OR WEBGL OR IOS OR FILAMENT_USE_SWIFTSHADER)
     set(IS_MOBILE_TARGET TRUE)
 endif()
 
+if (NOT ANDROID AND NOT WEBGL AND NOT IOS)
+    set(IS_HOST_PLATFORM TRUE)
+endif()
+
+if (IOS)
+    # Remove the headerpad_max_install_names linker flag on iOS. It causes warnings when linking
+    # executables with bitcode.
+    string(REPLACE "-Wl,-headerpad_max_install_names" "" CMAKE_C_LINK_FLAGS ${CMAKE_C_LINK_FLAGS})
+    string(REPLACE "-Wl,-headerpad_max_install_names" "" CMAKE_CXX_LINK_FLAGS ${CMAKE_CXX_LINK_FLAGS})
+    string(REPLACE "-Wl,-headerpad_max_install_names" "" CMAKE_SHARED_LIBRARY_CREATE_C_FLAGS ${CMAKE_SHARED_LIBRARY_CREATE_C_FLAGS})
+    string(REPLACE "-Wl,-headerpad_max_install_names" "" CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS ${CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS})
+endif()
+
 if (WIN32)
     # Link statically against c/c++ lib to avoid missing redistriburable such as
     # "VCRUNTIME140.dll not found. Try reinstalling the app.", but give users
@@ -105,6 +118,23 @@ if (WIN32)
     # Instead generate debug info directly inside obj files.
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${CRT_FLAGS_DEBUG} /Z7")
     set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${CRT_FLAGS_DEBUG} /Z7")
+
+    # Special settings when building on CI.
+    if (${FILAMENT_WINDOWS_CI_BUILD})
+        set(LinkerFlags
+            CMAKE_SHARED_LINKER_FLAGS_DEBUG
+            CMAKE_EXE_LINKER_FLAGS_DEBUG
+            CMAKE_MODULE_LINKER_FLAGS_DEBUG
+            )
+        foreach(LinkerFlag ${LinkerFlags})
+            # The /debug flag outputs .pdb files, which we don't need on CI.
+            string(REPLACE "/debug" "" ${LinkerFlag} ${${LinkerFlag}})
+
+            # The /INCREMENTAL flag outputs .ilk files for incremental linking. These are huge, and
+            # we don't need them on CI.
+            string(REPLACE "/INCREMENTAL" "/INCREMENTAL:NO" ${LinkerFlag} ${${LinkerFlag}})
+        endforeach()
+    endif()
 endif()
 
 # ==================================================================================================
@@ -223,7 +253,12 @@ endif()
 # Release compiler flags
 # ==================================================================================================
 if (NOT MSVC)
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fomit-frame-pointer -ffunction-sections -fdata-sections")
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fomit-frame-pointer")
+
+    # These aren't compatible with -fembed-bitcode (and seem to have no effect on Apple platforms anyway)
+    if (NOT IOS)
+        set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -ffunction-sections -fdata-sections")
+    endif()
 endif()
 
 # On Android RELEASE builds, we disable exceptions and RTTI to save some space (about 75 KiB
@@ -306,8 +341,7 @@ if (FILAMENT_SUPPORTS_VULKAN)
 endif()
 
 # Build with Metal support on non-WebGL Apple platforms.
-# Apple's simulator does not support Metal.
-if (APPLE AND (NOT IOS OR IOS_ARCH STREQUAL "arm64") AND NOT WEBGL)
+if (APPLE AND NOT WEBGL)
     option(FILAMENT_SUPPORTS_METAL "Include the Metal backend" ON)
 else()
     option(FILAMENT_SUPPORTS_METAL "Include the Metal backend" OFF)
@@ -321,6 +355,13 @@ if (NOT WEBGL)
     option(FILAMENT_BUILD_FILAMAT "Build filamat and JNI buildings" ON)
 else()
     option(FILAMENT_BUILD_FILAMAT "Build filamat and JNI buildings" OFF)
+endif()
+
+# By default, link in matdbg for Desktop + Debug only since it pulls in filamat and a web server.
+if (CMAKE_BUILD_TYPE STREQUAL "Debug" AND IS_HOST_PLATFORM)
+    option(FILAMENT_ENABLE_MATDBG "Enable the material debugger" ON)
+else()
+    option(FILAMENT_ENABLE_MATDBG "Enable the material debugger" OFF)
 endif()
 
 # ==================================================================================================
@@ -504,13 +545,19 @@ add_subdirectory(${EXTERNAL}/draco/tnt)
 add_subdirectory(${EXTERNAL}/stb/tnt)
 add_subdirectory(${EXTERNAL}/getopt)
 
-if (FILAMENT_BUILD_FILAMAT)
+if (FILAMENT_BUILD_FILAMAT OR IS_HOST_PLATFORM)
     # spirv-tools must come before filamat, as filamat relies on the presence of the
     # spirv-tools_SOURCE_DIR variable.
     add_subdirectory(${EXTERNAL}/spirv-tools)
     add_subdirectory(${EXTERNAL}/glslang/tnt)
     add_subdirectory(${EXTERNAL}/spirv-cross/tnt)
     add_subdirectory(${LIBRARIES}/filamat)
+
+    # the material debugger requires filamat
+    if (FILAMENT_ENABLE_MATDBG OR IS_HOST_PLATFORM)
+        add_subdirectory(${EXTERNAL}/civetweb/tnt)
+        add_subdirectory(${LIBRARIES}/matdbg)
+    endif()
 endif()
 
 if (FILAMENT_SUPPORTS_VULKAN)
@@ -535,27 +582,25 @@ if (WEBGL)
     add_subdirectory(${EXTERNAL}/imgui/tnt)
 endif()
 
-if (NOT ANDROID AND NOT WEBGL AND NOT IOS)
+if (IS_HOST_PLATFORM)
     add_subdirectory(${LIBRARIES}/bluegl)
     add_subdirectory(${LIBRARIES}/filamentapp)
     add_subdirectory(${LIBRARIES}/filagui)
     add_subdirectory(${LIBRARIES}/imageio)
-    add_subdirectory(${LIBRARIES}/matdbg)
 
     add_subdirectory(${FILAMENT}/java/filamat)
     add_subdirectory(${FILAMENT}/java/filament)
+    add_subdirectory(${FILAMENT}/java/gltfio)
 
     add_subdirectory(${FILAMENT}/samples)
 
     add_subdirectory(${EXTERNAL}/astcenc/tnt)
-    add_subdirectory(${EXTERNAL}/civetweb/tnt)
     add_subdirectory(${EXTERNAL}/etc2comp)
     add_subdirectory(${EXTERNAL}/imgui/tnt)
     add_subdirectory(${EXTERNAL}/libassimp/tnt)
     add_subdirectory(${EXTERNAL}/libpng/tnt)
     add_subdirectory(${EXTERNAL}/libsdl2/tnt)
     add_subdirectory(${EXTERNAL}/libz/tnt)
-    add_subdirectory(${EXTERNAL}/skylight/tnt)
     add_subdirectory(${EXTERNAL}/tinyexr/tnt)
 
     add_subdirectory(${TOOLS}/cmgen)
@@ -568,7 +613,6 @@ if (NOT ANDROID AND NOT WEBGL AND NOT IOS)
     add_subdirectory(${TOOLS}/normal-blending)
     add_subdirectory(${TOOLS}/resgen)
     add_subdirectory(${TOOLS}/roughness-prefilter)
-    add_subdirectory(${TOOLS}/skygen)
     add_subdirectory(${TOOLS}/specular-color)
 endif()
 

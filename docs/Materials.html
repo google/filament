@@ -2051,8 +2051,8 @@ coordinates of the vertex over time:
 <span class="line">}</span>
 <span class="line">vertex {</span>
 <span class="line">    <span class="hljs-type">void</span> materialVertex(<span class="hljs-keyword">inout</span> MaterialVertexInputs material) {</span>
-<span class="line">        material.color *= <span class="hljs-built_in">sin</span>(getTime());</span>
-<span class="line">        material.uv0 *= <span class="hljs-built_in">sin</span>(getTime());</span>
+<span class="line">        material.color *= <span class="hljs-built_in">sin</span>(getUserTime().x);</span>
+<span class="line">        material.uv0 *= <span class="hljs-built_in">sin</span>(getUserTime().x);</span>
 <span class="line">    }</span>
 <span class="line">}</span></code></pre><p>
 
@@ -2270,7 +2270,7 @@ type aliases:
 <tr><td style="text-align:left"> <strong class="asterisk">getResolution()</strong> </td><td style="text-align:center"> float4 </td><td style="text-align:left"> Resolution of the view in pixels: <code>width</code>, <code>height</code>, <code>1 / width</code>, <code>1 / height</code> </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getWorldCameraPosition()</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:left"> Position of the camera/eye in world space </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getWorldOffset()</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:left"> The shift required to obtain API-level world space </td></tr>
-<tr><td style="text-align:left"> <strong class="asterisk">getTime()</strong> </td><td style="text-align:center"> float </td><td style="text-align:left"> Current time in seconds, may be reset regularly to avoid precision loss </td></tr>
+<tr><td style="text-align:left"> <strong class="asterisk">getTime()</strong> </td><td style="text-align:center"> float </td><td style="text-align:left"> Current time as a remainder of 1 second. Yields a value between 0 and 1 </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getUserTime()</strong> </td><td style="text-align:center"> float4 </td><td style="text-align:left"> Current time in seconds: <code>time</code>, <code>(double)time - time</code>, <code>0</code>, <code>0</code> </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getUserTimeMode(float m)</strong> </td><td style="text-align:center"> float </td><td style="text-align:left"> Current time modulo m in seconds </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getExposure()</strong> </td><td style="text-align:center"> float </td><td style="text-align:left"> Photometric exposure of the camera </td></tr>

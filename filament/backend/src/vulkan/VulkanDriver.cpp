@@ -27,7 +27,9 @@
 #include <utils/CString.h>
 #include <utils/trap.h>
 
+#ifndef NDEBUG
 #include <set>
+#endif
 
 // Vulkan functions often immediately dereference pointers, so it's fine to pass in a pointer
 // to a stack-allocated variable.
@@ -156,7 +158,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
     selectPhysicalDevice(mContext);
 
     // Initialize device and graphicsQueue.
-    createVirtualDevice(mContext);
+    createLogicalDevice(mContext);
     mBinder.setDevice(mContext.device);
 
     // Choose a depth format that meets our requirements. Take care not to include stencil formats
@@ -746,8 +748,13 @@ bool VulkanDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapse
     // This is a synchronous call and might occur before beginTimerQuery has written anything into
     // the command buffer, which is an error according to the validation layer that ships in the
     // Android NDK.  Even when AVAILABILITY_BIT is set, validation seems to require that the
-    // timestamp has at least been written into the command buffer.
-    if (!vtq->ready.load()) {
+    // timestamp has at least been written into a processed command buffer.
+    VulkanCommandBuffer* cmdbuf = vtq->cmdbuffer.load();
+    if (!cmdbuf) {
+        return false;
+    }
+    VkResult status = cmdbuf->fence->status.load(std::memory_order_relaxed);
+    if (status != VK_SUCCESS) {
         return false;
     }
 
@@ -838,28 +845,26 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     const bool hasDepth = depth.format != VK_FORMAT_UNDEFINED;
 
     mDisposer.acquire(rt, mContext.currentCommands->resources);
-    mDisposer.acquire(color.offscreen, mContext.currentCommands->resources);
-    mDisposer.acquire(depth.offscreen, mContext.currentCommands->resources);
+    mDisposer.acquire(color.texture, mContext.currentCommands->resources);
+    mDisposer.acquire(depth.texture, mContext.currentCommands->resources);
 
-    VkImageLayout finalColorLayout;
-    VkImageLayout finalDepthLayout;
+    TargetBufferFlags discardStart = params.flags.discardStart;
 
-    if (rt->isOffscreen()) {
-        finalColorLayout = VK_IMAGE_LAYOUT_GENERAL;
-        finalDepthLayout = VK_IMAGE_LAYOUT_GENERAL;
-    } else {
-        finalColorLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-        finalDepthLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    // Filament has the expectation that the contents of the swap chain are not preserved on the
+    // first render pass. Note however that its contents are often preserved on subsequent render
+    // passes, due to multiple views.
+    if (rt->invalidate()) {
+        discardStart |= TargetBufferFlags::COLOR;
     }
 
     VkRenderPass renderPass = mFramebufferCache.getRenderPass({
-        .finalColorLayout = finalColorLayout,
-        .finalDepthLayout = finalDepthLayout,
+        .colorLayout = color.layout,
+        .depthLayout = depth.layout,
         .colorFormat = color.format,
         .depthFormat = depth.format,
         .flags = {
             .clear = params.flags.clear,
-            .discardStart = params.flags.discardStart,
+            .discardStart = discardStart,
             .discardEnd = params.flags.discardEnd
         }
     });
@@ -967,6 +972,10 @@ void VulkanDriver::commit(Handle<HwSwapChain> sch) {
     ASSERT_POSTCONDITION(mContext.currentCommands,
             "Vulkan driver requires at least one frame before a commit.");
 
+    // Before swapping, transition the current swap chain image to the PRESENT layout. This cannot
+    // be done as part of the render pass because it does not know if it is last pass in the frame.
+    transitionSwapChain(mContext);
+
     // Finalize the command buffer and set the cmdbuffer pointer to null.
     VkResult result = vkEndCommandBuffer(mContext.currentCommands->cmdbuffer);
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkEndCommandBuffer error.");
@@ -993,6 +1002,7 @@ void VulkanDriver::commit(Handle<HwSwapChain> sch) {
     cmdfence->submitted = true;
     lock.unlock();
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkQueueSubmit error.");
+    swapContext.invalid = true;
     cmdfence->condition.notify_all();
 
     // Present the backbuffer.
@@ -1130,21 +1140,23 @@ void VulkanDriver::blit(TargetBufferFlags buffers,
     const int32_t dstTop = dstRect.bottom + dstRect.height;
     const uint32_t dstLevel = dstTarget->getColorLevel();
 
+    const VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+
     const VkImageBlit blitRegions[1] = {{
-        .srcSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, srcLevel, 0, 1 },
+        .srcSubresource = { aspect, srcLevel, 0, 1 },
         .srcOffsets = { { srcRect.left, srcRect.bottom, 0 }, { srcRight, srcTop, 1 }},
-        .dstSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, dstLevel, 0, 1 },
+        .dstSubresource = { aspect, dstLevel, 0, 1 },
         .dstOffsets = { { dstRect.left, dstRect.bottom, 0 }, { dstRight, dstTop, 1 }}
     }};
 
     auto vkblit = [=](VkCommandBuffer cmdbuffer) {
         VkImage srcImage = srcTarget->getColor().image;
         VulkanTexture::transitionImageLayout(cmdbuffer, srcImage, VK_IMAGE_LAYOUT_UNDEFINED,
-                VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, srcLevel, 1);
+                VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, srcLevel, 1, 1, aspect);
 
         VkImage dstImage = dstTarget->getColor().image;
         VulkanTexture::transitionImageLayout(cmdbuffer, dstImage, VK_IMAGE_LAYOUT_UNDEFINED,
-                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, dstLevel, 1);
+                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, dstLevel, 1, 1, aspect);
 
         // TODO: Issue vkCmdResolveImage for MSAA targets.
 
@@ -1153,16 +1165,15 @@ void VulkanDriver::blit(TargetBufferFlags buffers,
                 filter == SamplerMagFilter::NEAREST ? VK_FILTER_NEAREST : VK_FILTER_LINEAR);
 
         VulkanTexture::transitionImageLayout(cmdbuffer, srcImage, VK_IMAGE_LAYOUT_UNDEFINED,
-                getTextureLayout(srcTarget->getColor().offscreen->usage), srcLevel, 1);
+                getTextureLayout(srcTarget->getColor().texture->usage), srcLevel, 1, 1, aspect);
 
         VulkanTexture::transitionImageLayout(cmdbuffer, dstImage, VK_IMAGE_LAYOUT_UNDEFINED,
-                getTextureLayout(dstTarget->getColor().offscreen->usage), dstLevel, 1);
+                getTextureLayout(dstTarget->getColor().texture->usage), dstLevel, 1, 1, aspect);
     };
 
     if (!mContext.currentCommands) {
-        // NOTE: We do not call flushWorkCommandBuffer here. The pipeline barriers pushed by
-        // "transitionImageLayout" is hopefully sufficient for proper synchronization.
         vkblit(acquireWorkCommandBuffer(mContext));
+        flushWorkCommandBuffer(mContext);
     } else {
         vkblit(mContext.currentCommands->cmdbuffer);
     }
@@ -1330,7 +1341,7 @@ void VulkanDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {
 
     vkCmdResetQueryPool(commands->cmdbuffer, mContext.timestamps.pool, index, 2);
     vkCmdWriteTimestamp(commands->cmdbuffer, stage, mContext.timestamps.pool, index);
-    vtq->ready.store(true);
+    vtq->cmdbuffer.store(commands);
 }
 
 void VulkanDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {

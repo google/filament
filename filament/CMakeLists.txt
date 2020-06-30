@@ -150,7 +150,11 @@ set(MATERIAL_SRCS
         src/materials/colorGradingAsSubpass.mat
         src/materials/defaultMaterial.mat
         src/materials/dof.mat
-        src/materials/dofBlur.mat
+        src/materials/dofDownsample.mat
+        src/materials/dofCombine.mat
+        src/materials/dofTiles.mat
+        src/materials/dofDilate.mat
+        src/materials/dofMipmap.mat
         src/materials/blitLow.mat
         src/materials/blitMedium.mat
         src/materials/blitHigh.mat
@@ -221,6 +225,7 @@ endforeach()
 add_custom_command(
         OUTPUT "${MATERIAL_DIR}/colorGrading.filamat"
         DEPENDS ../shaders/src/dithering.fs
+        DEPENDS ../shaders/src/vignette.fs
         DEPENDS ../shaders/src/bloom.fs
         APPEND
 )
@@ -228,6 +233,7 @@ add_custom_command(
 add_custom_command(
         OUTPUT "${MATERIAL_DIR}/colorGradingAsSubpass.filamat"
         DEPENDS ../shaders/src/dithering.fs
+        DEPENDS ../shaders/src/vignette.fs
         APPEND
 )
 
@@ -238,13 +244,31 @@ add_custom_command(
 )
 
 add_custom_command(
+        OUTPUT "${MATERIAL_DIR}/dofDownsample.filamat"
+        DEPENDS src/materials/dofUtils.fs
+        APPEND
+)
+
+add_custom_command(
+        OUTPUT "${MATERIAL_DIR}/dofMipmap.filamat"
+        DEPENDS src/materials/dofUtils.fs
+        APPEND
+)
+
+add_custom_command(
+        OUTPUT "${MATERIAL_DIR}/dofDilate.filamat"
+        DEPENDS src/materials/dofUtils.fs
+        APPEND
+)
+
+add_custom_command(
         OUTPUT "${MATERIAL_DIR}/dof.filamat"
         DEPENDS src/materials/dofUtils.fs
         APPEND
 )
 
 add_custom_command(
-        OUTPUT "${MATERIAL_DIR}/dofBlur.filamat"
+        OUTPUT "${MATERIAL_DIR}/dofCombine.filamat"
         DEPENDS src/materials/dofUtils.fs
         APPEND
 )
@@ -298,8 +322,7 @@ target_link_libraries(${TARGET} PUBLIC filaflat)
 target_link_libraries(${TARGET} PUBLIC filabridge)
 target_link_libraries(${TARGET} PUBLIC ibl)
 
-# Link in matdbg for Desktop + Debug only since it pulls in filamat and a web server.
-if (CMAKE_BUILD_TYPE STREQUAL "Debug" AND NOT IOS AND NOT ANDROID AND NOT WEBGL)
+if (FILAMENT_ENABLE_MATDBG)
     target_link_libraries(${TARGET} PUBLIC matdbg)
     add_definitions(-DFILAMENT_ENABLE_MATDBG=1)
 else()
@@ -370,6 +393,7 @@ set(INSTALL_TYPE ARCHIVE)
 install(TARGETS ${TARGET} ${INSTALL_TYPE} DESTINATION lib/${DIST_DIR})
 install(DIRECTORY ${PUBLIC_HDR_DIR}/filament DESTINATION include)
 install(FILES "README.md" DESTINATION .)
+install(FILES "../LICENSE" DESTINATION .)
 
 # ==================================================================================================
 # Sub-projects

@@ -135,23 +135,17 @@ public:
     /**
      * Information about the display this Renderer is associated to. This information is needed
      * to accurately compute dynamic-resolution scaling and for frame-pacing.
-     *
-     * @param info
      */
     void setDisplayInfo(const DisplayInfo& info) noexcept;
 
     /**
      * Set options controlling the desired frame-rate.
-     *
-     * @param options
      */
     void setFrameRateOptions(FrameRateOptions const& options) noexcept;
 
     /**
      * Set ClearOptions which are used at the beginning of a frame to clear or retain the
      * SwapChain content.
-     *
-     * @param options
      */
     void setClearOptions(const ClearOptions& options);
 

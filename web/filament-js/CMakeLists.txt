@@ -12,7 +12,7 @@ set(CPP_SRC
   jsbindings.cpp)
 
 # The emcc options are not documented well, the best place to find them is the source:
-# https://github.com/kripken/emscripten/blob/master/src/settings.js
+# https://github.com/kripken/emscripten/blob/main/src/settings.js
 
 # The following setting is required because we disable RTTI.
 set(COPTS "${COPTS} -DEMSCRIPTEN_HAS_UNBOUND_TYPE_NAMES=0")

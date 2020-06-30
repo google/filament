@@ -274,6 +274,11 @@ void GLSLPostProcessor::preprocessOptimization(glslang::TShader& tShader,
     if (mSpirvOutput) {
         TProgram program;
         TShader spirvShader(mShLang);
+
+        // The cleaner must be declared after the TShader/TProgram which are setting the current
+        // pool in the tls
+        GLSLangCleaner cleaner;
+
         const char* shaderCString = glsl.c_str();
         spirvShader.setStrings(&shaderCString, 1);
         GLSLTools::prepareShaderParser(spirvShader, mShLang, mLangVersion, mOptimization);

@@ -64,6 +64,10 @@ io::sstream& CodeGenerator::generateProlog(io::sstream& out, ShaderType type,
             break;
     }
 
+    // This allows our includer system to use the #line directive to denote the source file for
+    // #included code. This way, glslang reports errors more accurately.
+    out << "#extension GL_GOOGLE_cpp_style_line_directive : enable\n\n";
+
     if (mTargetApi == TargetApi::VULKAN) {
         out << "#define TARGET_VULKAN_ENVIRONMENT\n";
     }

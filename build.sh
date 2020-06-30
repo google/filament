@@ -4,7 +4,6 @@ set -e
 # Host tools required by Android, WebGL, and iOS builds
 MOBILE_HOST_TOOLS="matc resgen cmgen filamesh"
 WEB_HOST_TOOLS="${MOBILE_HOST_TOOLS} mipgen filamesh"
-IOS_TOOLCHAIN_URL="https://opensource.apple.com/source/clang/clang-800.0.38/src/cmake/platforms/iOS.cmake"
 
 function print_help {
     local self_name=$(basename "$0")
@@ -29,8 +28,7 @@ function print_help {
     echo "    -p platform1,platform2,..."
     echo "        Where platformN is [desktop|android|ios|webgl|all]."
     echo "        Platform(s) to build, defaults to desktop."
-    echo "        Building for iOS will automatically generate / download"
-    echo "        the toolchains if needed and perform a partial desktop build."
+    echo "        Building for iOS will automatically perform a partial desktop build."
     echo "    -q abi1,abi2,..."
     echo "        Where platformN is [armeabi-v7a|arm64-v8a|x86|x86_64|all]."
     echo "        ABIs to build when the platform is Android. Defaults to all."
@@ -40,6 +38,8 @@ function print_help {
     echo "        Exclude Vulkan support from the Android build."
     echo "    -s"
     echo "        Add iOS simulator support to the iOS build."
+    echo "    -l"
+    echo "        Combine iOS arm64 and x86_64 into universal libraries (implies -s)."
     echo "    -w"
     echo "        Build Web documents (compiles .md.html files to .html)."
     echo ""
@@ -119,6 +119,7 @@ VULKAN_ANDROID_OPTION="-DFILAMENT_SUPPORTS_VULKAN=ON"
 VULKAN_ANDROID_GRADLE_OPTION=""
 
 IOS_BUILD_SIMULATOR=false
+IOS_CREATE_UNIVERSAL_LIBRARIES=false
 
 BUILD_GENERATOR=Ninja
 BUILD_COMMAND=ninja
@@ -458,54 +459,6 @@ function build_android {
     cd ..
 }
 
-function ensure_ios_toolchain {
-    local toolchain_path="build/toolchain-mac-ios.cmake"
-    if [[ -e ${toolchain_path} ]]; then
-        echo "iOS toolchain file exists."
-        return 0
-    fi
-
-    echo
-    echo "iOS toolchain file does not exist."
-    echo "It will automatically be downloaded from http://opensource.apple.com."
-
-    if [[ "${GITHUB_WORKFLOW}" ]]; then
-        REPLY=y
-    else
-        read -p "Continue? (y/n) " -n 1 -r
-        echo
-    fi
-
-    if [[ ! "${REPLY}" =~ ^[Yy]$ ]]; then
-        echo "Toolchain file must be downloaded to continue."
-        exit 1
-    fi
-
-    curl -o "${toolchain_path}" "${IOS_TOOLCHAIN_URL}" || {
-        echo "Error downloading iOS toolchain file."
-        exit 1
-    }
-
-    # Apple's toolchain hard-codes the PLATFORM_NAME into the toolchain file. Instead, make this a
-    # CACHE variable that can be overriden on the command line.
-    local FIND='SET(PLATFORM_NAME iphoneos)'
-    local REPLACE='SET(PLATFORM_NAME "iphoneos" CACHE STRING "iOS platform to build for")'
-    sed -i '' "s/${FIND}/${REPLACE}/g" ./${toolchain_path}
-
-    # Apple's toolchain specifies isysroot based on an environment variable, which we don't set.
-    # The toolchain doesn't need to do this, however, as isysroot is implicitly set in the toolchain
-    # via CMAKE_OSX_SYSROOT.
-    # shellcheck disable=SC2016
-    local FIND='SET(IOS_COMMON_FLAGS "-isysroot $ENV{SDKROOT} '
-    local REPLACE='SET(IOS_COMMON_FLAGS "'
-    sed -i '' "s/${FIND}/${REPLACE}/g" ./${toolchain_path}
-
-    # Prepend Filament-specific settings.
-    (cat build/toolchain-mac-ios.filament.cmake; cat ${toolchain_path}) > tmp && mv tmp ${toolchain_path}
-
-    echo "Successfully downloaded iOS toolchain file and prepended Filament-specific settings."
-}
-
 function build_ios_target {
     local lc_target=$(echo "$1" | tr '[:upper:]' '[:lower:]')
     local arch=$2
@@ -526,7 +479,7 @@ function build_ios_target {
             -DPLATFORM_NAME="${platform}" \
             -DIOS_MIN_TARGET=12.0 \
             -DIOS=1 \
-            -DCMAKE_TOOLCHAIN_FILE=../../build/toolchain-mac-ios.cmake \
+            -DCMAKE_TOOLCHAIN_FILE=../../third_party/clang/iOS.cmake \
             ../..
     fi
 
@@ -537,15 +490,20 @@ function build_ios_target {
         ${BUILD_COMMAND} ${INSTALL_COMMAND}
     fi
 
-    if [[ -d "../ios-${lc_target}/filament" ]]; then
+    cd ../..
+}
+
+function archive_ios {
+    local lc_target=$(echo "$1" | tr '[:upper:]' '[:lower:]')
+
+    if [[ -d "out/ios-${lc_target}/filament" ]]; then
         if [[ "${ISSUE_ARCHIVES}" == "true" ]]; then
             echo "Generating out/filament-${lc_target}-ios.tgz..."
-            cd "../ios-${lc_target}"
+            cd "out/ios-${lc_target}"
             tar -czvf "../filament-${lc_target}-ios.tgz" filament
+            cd ../..
         fi
     fi
-
-    cd ../..
 }
 
 function build_ios {
@@ -557,8 +515,6 @@ function build_ios {
 
     INSTALL_COMMAND=${old_install_command}
 
-    ensure_ios_toolchain
-
     # In theory, we could support iPhone architectures older than arm64, but
     # only arm64 devices support OpenGL 3.0 / Metal
 
@@ -567,6 +523,17 @@ function build_ios {
         if [[ "${IOS_BUILD_SIMULATOR}" == "true" ]]; then
             build_ios_target "Debug" "x86_64" "iphonesimulator"
         fi
+
+        if [[ "${IOS_CREATE_UNIVERSAL_LIBRARIES}" == "true" ]]; then
+            build/ios/create-universal-libs.sh \
+                -o out/ios-debug/filament/lib/universal \
+                out/ios-debug/filament/lib/arm64 \
+                out/ios-debug/filament/lib/x86_64
+            rm -rf out/ios-debug/filament/lib/arm64
+            rm -rf out/ios-debug/filament/lib/x86_64
+        fi
+
+        archive_ios "Debug"
     fi
 
     if [[ "${ISSUE_RELEASE_BUILD}" == "true" ]]; then
@@ -574,6 +541,17 @@ function build_ios {
         if [[ "${IOS_BUILD_SIMULATOR}" == "true" ]]; then
             build_ios_target "Release" "x86_64" "iphonesimulator"
         fi
+
+        if [[ "${IOS_CREATE_UNIVERSAL_LIBRARIES}" == "true" ]]; then
+            build/ios/create-universal-libs.sh \
+                -o out/ios-release/filament/lib/universal \
+                out/ios-release/filament/lib/arm64 \
+                out/ios-release/filament/lib/x86_64
+            rm -rf out/ios-release/filament/lib/arm64
+            rm -rf out/ios-release/filament/lib/x86_64
+        fi
+
+        archive_ios "Release"
     fi
 }
 
@@ -673,7 +651,7 @@ function run_tests {
 
 pushd "$(dirname "$0")" > /dev/null
 
-while getopts ":hacfijmp:q:uvsw" opt; do
+while getopts ":hacfijmp:q:uvslw" opt; do
     case ${opt} in
         h)
             print_help
@@ -770,6 +748,12 @@ while getopts ":hacfijmp:q:uvsw" opt; do
         s)
             IOS_BUILD_SIMULATOR=true
             echo "iOS simulator support enabled."
+            ;;
+        l)
+            IOS_BUILD_SIMULATOR=true
+            IOS_CREATE_UNIVERSAL_LIBRARIES=true
+            echo "iOS simulator support enabled."
+            echo "Creating iOS universal libraries."
             ;;
         w)
             ISSUE_WEB_DOCS=true

@@ -28,14 +28,18 @@ const utils::Path root = utils::Path(__FILE__).getParent();
 TEST(DirIncluder, DISABLED_IncludeNonexistent) {
     matc::DirIncluder includer;
     {
-        IncludeResult _;
-        bool success = includer(CString("nonexistent.h"), CString(""), _);
+        IncludeResult i {
+            .includeName = CString("nonexistent.h")
+        };
+        bool success = includer(CString(""), i);
         EXPECT_FALSE(success);
     }
     {
         utils::CString includerFile((root + "Foo.h").getPath().c_str());
-        IncludeResult _;
-        bool success = includer(CString("nonexistent.h"), includerFile, _);
+        IncludeResult i {
+            .includeName = CString("nonexistent.h")
+        };
+        bool success = includer(includerFile, i);
         EXPECT_FALSE(success);
     }
 }
@@ -44,13 +48,15 @@ TEST(DirIncluder, DISABLED_IncludeFile) {
     matc::DirIncluder includer;
     includer.setIncludeDirectory(root);
 
-    IncludeResult result;
-    bool success = includer(CString("Foo.h"), CString(""), result);
+    IncludeResult result {
+        .includeName = CString("Foo.h")
+    };
+    bool success = includer(CString(""), result);
 
     EXPECT_TRUE(success);
 
     // The result's source should be set to the contents of the includer file.
-    EXPECT_STREQ("// test include file", result.source.c_str());
+    EXPECT_STREQ("// test include file", result.text.c_str());
 
     // The result's name should be set to the full path to the header file.
     EXPECT_STREQ((root + "Foo.h").c_str(), result.name.c_str());
@@ -62,10 +68,12 @@ TEST(DirIncluder, DISABLED_IncludeFileFromIncluder) {
 
     utils::CString includerFile((root + "Dir/Baz.h").c_str());
 
-    IncludeResult result;
-    bool success = includer(CString("Bar.h"), includerFile, result);
+    IncludeResult result {
+        .includeName = CString("Bar.h")
+    };
+    bool success = includer(includerFile, result);
 
-    EXPECT_STREQ("// Bar.h", result.source.c_str());
+    EXPECT_STREQ("// Bar.h", result.text.c_str());
 
     EXPECT_STREQ((root + "Dir/Bar.h").c_str(), result.name.c_str());
 }

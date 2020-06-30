@@ -18,6 +18,7 @@
 
 #include <gltfio/Animator.h>
 
+#include <utils/EntityManager.h>
 #include <utils/NameComponentManager.h>
 
 #include "Wireframe.h"
@@ -41,7 +42,10 @@ FFilamentAsset::~FFilamentAsset() {
     delete mWireframe;
     mEngine->destroy(mRoot);
     for (auto entity : mEntities) {
+        // Destroys the entity's renderable, light, transform, and camera components.
         mEngine->destroy(entity);
+        // Destroys the actual entity.
+        mEntityManager->destroy(entity);
     }
     for (auto mi : mMaterialInstances) {
         mEngine->destroy(mi);
@@ -182,6 +186,14 @@ const Entity* FilamentAsset::getLightEntities() const noexcept {
 
 size_t FilamentAsset::getLightEntityCount() const noexcept {
     return upcast(this)->getLightEntityCount();
+}
+
+const utils::Entity* FilamentAsset::getCameraEntities() const noexcept {
+    return upcast(this)->getCameraEntities();
+}
+
+size_t FilamentAsset::getCameraEntityCount() const noexcept {
+    return upcast(this)->getCameraEntityCount();
 }
 
 Entity FilamentAsset::getRoot() const noexcept {

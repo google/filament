@@ -1,55 +1,82 @@
 
 /*
- * DoF blur
- *
- * This uses a lot of ideas from
- *   "Bokeh depth of field in a single pass" by Dennis Gustafsson
- *   (http://blog.tuxedolabs.com/2018/05/04/bokeh-depth-of-field-in-single-pass.html)
- *
- * needs:
- *   materialParams_depth : depth texture
- *   materialParams.cocParams : coc scale and bias
- *   materialParams.resolution : screen resolution
+ * DoF Utils
  */
 
-// Filter sample count, prefer odd values
-// (keep in sync with PostProcessManager.cpp:dof())
-const float SAMPLE_COUNT = 11.0;
+// Below this value we transition to the in-focus image. This value is chosen as a compromise
+// between allowing slight out-of-focus and reducing sampling artifacts around blurry objects
+// on sharp background. Based on experiments, it should be between 1.0 and 2.0.
+#define MAX_IN_FOCUS_COC    2.0
 
-float getCOC(float depth, vec2 cocParams) {
-    float CoC = abs(depth * cocParams.x + cocParams.y);
-    return saturate(CoC);
+// The maximum circle-of-confusion radius we allow in high-resolution pixels.
+// This is limited by our tile size (hard limit) and dilate pass as well as the kernel density
+// (soft/quality limit).
+#define MAX_COC_RADIUS      32.0
+
+float random(const highp vec2 w) {
+    const vec3 m = vec3(0.06711056, 0.00583715, 52.9829189);
+    return fract(m.z * fract(dot(w, m.xy)));
 }
 
-void tap(inout vec4 finalColor, inout float blurAmount, float radius,
-        highp vec2 uv, sampler2D colorBuffer, float centerDepth, float centerCoc) {
-    float depth = textureLod(materialParams_depth,  uv, 0.0).r;
-    float coc = getCOC(depth, materialParams.cocParams);
-    vec4 color = textureLod(colorBuffer, uv, 0.0);
-
-    // prevent blurry background to bleed onto sharp foreground
-    if (depth > centerDepth) {
-        coc = clamp(coc, 0.0, centerCoc * 2.0);
-    }
-
-    float m = smoothstep(radius - 0.5, radius + 0.5, coc * SAMPLE_COUNT);
-    finalColor += mix(finalColor * (1.0 / blurAmount), color, m);
-    blurAmount += 1.0;
+float min2(const vec2 v) {
+    return min(v.x, v.y);
 }
 
-vec4 blurTexture(sampler2D colorBuffer, highp vec2 uv, highp vec2 direction, float centerDepth, float centerCoc) {
-    float blurAmount = 1.0;
-    vec4 finalColor = textureLod(colorBuffer, uv, 0.0);
+float max2(const vec2 v) {
+    return max(v.x, v.y);
+}
 
-    highp vec2 unit = materialParams.resolution.zw;
-    direction *= unit;
+float max4(const vec4 v) {
+    return max2(max(v.xy, v.zw));
+}
 
-    vec4 tc = uv.xyxy + vec4(direction * 0.5, -direction * 0.5) + vec4(direction, -direction);
-    direction *= 2.0;
-    for (float radius = 1.0 ; radius < (SAMPLE_COUNT * 0.5); radius += 1.0) {
-        tap(finalColor, blurAmount, radius, tc.xy, colorBuffer, centerDepth, centerCoc);
-        tap(finalColor, blurAmount, radius, tc.zw, colorBuffer, centerDepth, centerCoc);
-        tc += vec4(direction, -direction);
-    }
-    return finalColor * (1.0 / blurAmount);
+float min4(const vec4 v) {
+    return min2(min(v.xy, v.zw));
+}
+
+float cocToAlpha(const float coc) {
+    // CoC is positive for background field.
+    // CoC is negative for the foreground field.
+    return saturate(abs(coc) - MAX_IN_FOCUS_COC);
+}
+
+// returns circle-of-confusion diameter in pixels
+float getCOC(const float depth, const vec2 cocParams) {
+    return depth * cocParams.x + cocParams.y;
+}
+
+vec4 getCOC(const vec4 depth, const vec2 cocParams) {
+    return depth * cocParams.x + cocParams.y;
+}
+
+float isForeground(const float coc) {
+    return coc < 0.0 ? 1.0 : 0.0;
+}
+
+float isBackground(const float coc) {
+    return coc > 0.0 ? 1.0 : 0.0;
+}
+
+bool isForegroundTile(const vec2 tiles) {
+    // A foreground tile is one where the smallest CoC is negative
+    return tiles.g < 0.0;
+}
+
+bool isBackgroundTile(const vec2 tiles) {
+    // A background tile is one where the largest CoC is positive
+    return tiles.r > 0.0;
+}
+
+bool isFastTile(const vec2 tiles) {
+    // We use the distance between the min and max CoC and if the relative error is less than
+    // 5% we assume the tile contains a constant CoC.
+    // We could cannot use the absolute value of the min/mac CoC -- which would categorize more
+    // tiles as "fast" (e.g. when both the foreground and background have similar CoC), because
+    // it doesn't tell us anything about objects that could be in between.
+    return (tiles.r - tiles.g) <= abs(tiles.r) * 0.05;
+}
+
+bool isTrivialTile(const vec2 tiles) {
+    float maxCocRadius = max(abs(tiles.r), abs(tiles.g));
+    return maxCocRadius < MAX_IN_FOCUS_COC;
 }

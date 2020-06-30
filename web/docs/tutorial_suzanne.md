@@ -142,7 +142,7 @@ class App {
 
         this.swapChain = this.engine.createSwapChain();
         this.renderer = this.engine.createRenderer();
-        this.camera = this.engine.createCamera();
+        this.camera = engine.createCamera(Filament.EntityManager.get().create());
         this.view = this.engine.createView();
         this.view.setCamera(this.camera);
         this.view.setScene(this.scene);
@@ -292,8 +292,8 @@ That's it, we now have a fast-loading interactive demo. The complete JavaScript 
 [Filament release]: //github.com/google/filament/releases
 [previous tutorial]: tutorial_redball.html
 [Filament Material System]: https://google.github.io/filament/Materials.md.html
-[this OBJ file]: https://github.com/google/filament/blob/master/assets/models/monkey/monkey.obj
-[monkey folder]: https://github.com/google/filament/blob/master/assets/models/monkey
+[this OBJ file]: https://github.com/google/filament/blob/main/assets/models/monkey/monkey.obj
+[monkey folder]: https://github.com/google/filament/blob/main/assets/models/monkey
 
 [venetian_crossroads_2k.hdr]:
-//github.com/google/filament/blob/master/third_party/environments/venetian_crossroads_2k.hdr
+//github.com/google/filament/blob/main/third_party/environments/venetian_crossroads_2k.hdr

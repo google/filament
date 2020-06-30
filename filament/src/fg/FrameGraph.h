@@ -252,7 +252,7 @@ public:
     void execute(backend::DriverApi& driver) noexcept;
 
     // print the frame graph as a graphviz file in the log
-    void export_graphviz(utils::io::ostream& out);
+    void export_graphviz(utils::io::ostream& out, const char* viewName);
 
 private:
     friend class FrameGraphPassResources;

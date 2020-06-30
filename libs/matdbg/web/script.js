@@ -238,16 +238,32 @@ function fetchShader(selection, matinfo) {
 }
 
 function renderMaterialList() {
-    const materials = [];
+    const items = [];
+
     for (const matid in gMaterialDatabase) {
-        const item = gMaterialDatabase[matid];
+        const item =  Object.assign({}, gMaterialDatabase[matid]);
         item.classes = matid === gCurrentMaterial ? "current " : "";
         if (!item.active) {
             item.classes += "inactive "
         }
-        materials.push(item);
+        item.domain = item.shading.material_domain === "surface" ? "surface" : "postpro";
+        item.is_material = true;
+        items.push(item);
     }
-    materialList.innerHTML = Mustache.render(matListTemplate.innerHTML, { "material": materials } );
+
+    const label = {"is_label": true, "name": "0"};
+    items.push(Object.assign({"label": "Surface materials", "domain": "surface"}, label));
+    items.push(Object.assign({"label": "PostProcess materials", "domain": "postpro"}, label));
+
+    items.sort((a, b) => {
+        if (a.domain > b.domain) return -1;
+        if (a.domain < b.domain) return +1;
+        if (a.name < b.name) return -1;
+        if (a.name > b.name) return +1;
+        return 0;
+    });
+
+    materialList.innerHTML = Mustache.render(matListTemplate.innerHTML, { "item": items } );
 }
 
 function updateClassList(array, indexProperty, selectedIndex) {
@@ -266,7 +282,11 @@ function renderMaterialDetail() {
     updateClassList(mat.opengl, "index", ok ? parseInt(gCurrentShader.glindex) : -1);
     updateClassList(mat.vulkan, "index", ok ? parseInt(gCurrentShader.vkindex) : -1);
     updateClassList(mat.metal, "index", ok ? parseInt(gCurrentShader.metalindex) : -1);
-    materialDetail.innerHTML = Mustache.render(matDetailTemplate.innerHTML, mat);
+    const item =  Object.assign({}, mat);
+    if (item.shading.material_domain !== "surface") {
+        delete item.shading;
+    }
+    materialDetail.innerHTML = Mustache.render(matDetailTemplate.innerHTML, item);
 }
 
 function getShaderRecord(selection) {

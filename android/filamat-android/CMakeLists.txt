@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.6)
 
+option(FILAMENT_ENABLE_MATDBG "Enables Material debugger" OFF)
+
 set(FILAMENT_DIR ${FILAMENT_DIST_DIR})
 
 set(FILAMAT_FLAVOR "filamat")

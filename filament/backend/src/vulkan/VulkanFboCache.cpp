@@ -24,8 +24,8 @@ namespace backend {
 bool VulkanFboCache::RenderPassEq::operator()(const RenderPassKey& k1,
         const RenderPassKey& k2) const {
     return
-            k1.finalColorLayout == k2.finalColorLayout &&
-            k1.finalDepthLayout == k2.finalDepthLayout &&
+            k1.colorLayout == k2.colorLayout &&
+            k1.depthLayout == k2.depthLayout &&
             k1.colorFormat == k2.colorFormat &&
             k1.depthFormat == k2.depthFormat &&
             k1.flags.value == k2.flags.value;
@@ -84,19 +84,41 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
     }
     const bool hasColor = config.colorFormat != VK_FORMAT_UNDEFINED;
     const bool hasDepth = config.depthFormat != VK_FORMAT_UNDEFINED;
+    const bool isSwapChain = config.colorLayout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
-    // The subpass specifies the layout to transition to at the START of the render pass.
-    uint32_t numAttachments = 0;
+    // Set up some const aliases for terseness.
+    const VkAttachmentLoadOp clear = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    const VkAttachmentLoadOp dontCare = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    const VkAttachmentLoadOp keep = VK_ATTACHMENT_LOAD_OP_LOAD;
+
+    const bool clearColor = any(config.flags.clear & TargetBufferFlags::COLOR);
+    const bool discardColor = any(config.flags.discardStart & TargetBufferFlags::COLOR);
+    const VkAttachmentLoadOp colorLoadOp = clearColor ? clear : (discardColor ? dontCare : keep);
+
+    const bool clearDepth = any(config.flags.clear & TargetBufferFlags::DEPTH);
+    const bool discardDepth = any(config.flags.discardStart & TargetBufferFlags::DEPTH);
+    const VkAttachmentLoadOp depthLoadOp = clearDepth ? clear : (discardDepth ? dontCare : keep);
+
+    // In Vulkan, the subpass desc specifies the layout to transition to at the start of the render
+    // pass, and the attachment description specifies the layout to transition to at the end.
+    // However we use render passes to cause layout transitions only when drawing directly into the
+    // swap chain. We keep our offscreen images in GENERAL layout, which is simple and prevents
+    // thrashing the layout. Note that pipeline barriers are more powerful than render passes for
+    // performing layout transitions, because they allow for per-miplevel transitions.
+    struct { VkImageLayout subpass, initial, final; } colorLayouts;
+    if (isSwapChain) {
+        colorLayouts.subpass = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        colorLayouts.initial = discardColor ? VK_IMAGE_LAYOUT_UNDEFINED : colorLayouts.subpass;
+        colorLayouts.final = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    } else {
+        colorLayouts.subpass = config.colorLayout;
+        colorLayouts.initial = config.colorLayout;
+        colorLayouts.final = config.colorLayout;
+    }
+
     VkAttachmentReference colorAttachmentRef = {};
-    if (hasColor) {
-        colorAttachmentRef.layout = VK_IMAGE_LAYOUT_GENERAL;
-        colorAttachmentRef.attachment = numAttachments++;
-    }
     VkAttachmentReference depthAttachmentRef = {};
-    if (hasDepth) {
-        depthAttachmentRef.layout = VK_IMAGE_LAYOUT_GENERAL;
-        depthAttachmentRef.attachment = numAttachments++;
-    }
+
     VkSubpassDescription subpass {
         .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
         .colorAttachmentCount = hasColor ? 1u : 0u,
@@ -104,29 +126,27 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
         .pDepthStencilAttachment = hasDepth ? &depthAttachmentRef : nullptr
     };
 
-    // The attachment description specifies the layout to transition to at the END of the render pass.
     VkAttachmentDescription colorAttachment {
         .format = config.colorFormat,
         .samples = VK_SAMPLE_COUNT_1_BIT,
-        .loadOp = any(config.flags.clear & TargetBufferFlags::COLOR) ?
-                VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+        .loadOp = colorLoadOp,
         .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
         .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
         .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-        .finalLayout = config.finalColorLayout
+        .initialLayout = colorLayouts.initial,
+        .finalLayout = colorLayouts.final
     };
     VkAttachmentDescription depthAttachment {
         .format = config.depthFormat,
         .samples = VK_SAMPLE_COUNT_1_BIT,
-        .loadOp = any(config.flags.clear & TargetBufferFlags::DEPTH) ?
-                VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+        .loadOp = depthLoadOp,
         .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
         .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
         .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-        .finalLayout = config.finalDepthLayout
+        .initialLayout = config.depthLayout,
+        .finalLayout = config.depthLayout
     };
 
-    // Finally, create the VkRenderPass.
     VkAttachmentDescription attachments[2];
     VkRenderPassCreateInfo renderPassInfo {
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
@@ -136,12 +156,20 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
         .pSubpasses = &subpass,
         .dependencyCount = 0u
     };
+
     if (hasColor) {
+        colorAttachmentRef.layout = colorLayouts.subpass;
+        colorAttachmentRef.attachment = renderPassInfo.attachmentCount;
         attachments[renderPassInfo.attachmentCount++] = colorAttachment;
     }
+
     if (hasDepth) {
+        depthAttachmentRef.layout = config.depthLayout;
+        depthAttachmentRef.attachment = renderPassInfo.attachmentCount;
         attachments[renderPassInfo.attachmentCount++] = depthAttachment;
     }
+
+    // Finally, create the VkRenderPass.
     VkRenderPass renderPass;
     VkResult error = vkCreateRenderPass(mContext.device, &renderPassInfo, VKALLOC, &renderPass);
     ASSERT_POSTCONDITION(!error, "Unable to create render pass.");

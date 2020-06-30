@@ -31,8 +31,7 @@ public:
         mIncludeDirectory = dir;
     }
 
-    bool operator()(const utils::CString& headerName, const utils::CString& includerName,
-            filamat::IncludeResult& result);
+    bool operator()(const utils::CString& includedBy, filamat::IncludeResult& result);
 
 private:
     utils::Path mIncludeDirectory;

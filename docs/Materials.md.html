@@ -1649,8 +1649,8 @@ material {
 }
 vertex {
     void materialVertex(inout MaterialVertexInputs material) {
-        material.color *= sin(getTime());
-        material.uv0 *= sin(getTime());
+        material.color *= sin(getUserTime().x);
+        material.uv0 *= sin(getUserTime().x);
     }
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1858,7 +1858,7 @@ type aliases:
 **getResolution()**                 | float4   |  Resolution of the view in pixels: `width`, `height`, `1 / width`, `1 / height`
 **getWorldCameraPosition()**        | float3   |  Position of the camera/eye in world space
 **getWorldOffset()**                | float3   |  The shift required to obtain API-level world space
-**getTime()**                       | float    |  Current time in seconds, may be reset regularly to avoid precision loss
+**getTime()**                       | float    |  Current time as a remainder of 1 second. Yields a value between 0 and 1
 **getUserTime()**                   | float4   |  Current time in seconds: `time`, `(double)time - time`, `0`, `0`
 **getUserTimeMode(float m)**        | float    |  Current time modulo m in seconds
 **getExposure()**                   | float    |  Photometric exposure of the camera

@@ -40,6 +40,8 @@ public class Page {
 
     static boolean USE_CPU = false;
 
+    enum CurlStyle { PULL_CORNER, BREEZE };
+
     public void setTextures(Texture textureA, Texture textureB) {
         TextureSampler sampler = new TextureSampler();
         material.setParameter(PageMaterials.Parameter.IMAGE_A.name(), textureA, sampler);
@@ -54,43 +56,52 @@ public class Page {
     //
     // NOTE: This routine generates reasonable values for two artist-controlled time-varying
     // parameters: theta and apex. Feel free to modify according to taste.
-    public float updateVertices(Engine engine, float t, float rigidity) {
+    public float updateVertices(Engine engine, float t, float rigidity, CurlStyle style) {
         t = Math.min(1.0f, Math.max(0.0f, t));
         rigidity = Math.min(1.0f, Math.max(0.0f, rigidity));
+        double rigidAngle = 0;
 
-        float D0 = 0.15f;
-        D0 += D0 * rigidity;
+        switch (style) {
+            case BREEZE: {
+                double D0 = 0.15f * (1.0 + rigidity);
+                double deformation = D0 + (1.0 - Math.sin(t * Math.PI)) * (1.0 - D0);
+                double apex = -15 * deformation;
+                double theta = -deformation * Math.PI / 2.0;
+                rigidAngle = Math.PI * t;
+                this.deformMesh(engine, (float) theta, (float) apex);
+                break;
+            }
 
-        double deformation;
-        if (t <= 0.125) {
-            deformation = D0 + (1.0 + Math.cos(8.0 * Math.PI * t)) * (1.0f - D0) / 2.0;
-        } else if (t <= 0.5) {
-            deformation = D0;
-        } else {
-            final float invt = t - 0.5f;
-            final double t1 = Math.max(0.0, invt / 0.5 - 0.125);
-            deformation = D0 + (1.0f - D0) * Math.pow(t1, 3.0);
+            case PULL_CORNER: {
+                double D0 = 0.15f * (1.0 + rigidity);
+                double deformation = D0;
+                if (t <= 0.125) {
+                    deformation += (1.0 + Math.cos(8.0 * Math.PI * t)) * (1.0f - D0) / 2.0;
+                } else if (t > 0.5) {
+                    final float invt = t - 0.5f;
+                    final double t1 = Math.max(0.0, invt / 0.5 - 0.125);
+                    deformation += (1.0f - D0) * Math.pow(t1, 3.0);
+                }
+                double apex = -15 * deformation;
+                double theta = deformation * Math.PI / 2.0;
+                rigidAngle = Math.PI * Math.max(0.0, (t - 0.125) / 0.875);
+                this.deformMesh(engine, (float) theta, (float) apex);
+                break;
+            }
         }
 
-        final double apex = -15 * deformation;
-        final double theta = deformation * Math.PI / 2.0;
-
-        if (USE_CPU) {
-            this.deformMesh((float) theta, (float) apex);
-            vertexBuffer.setBufferAt(engine, 0, positions);
-            vertexBuffer.setBufferAt(engine, 2, tangents);
-            this.material.setParameter(PageMaterials.Parameter.USE_CPU.name(), true);
-        } else {
-            this.material.setParameter(PageMaterials.Parameter.APEX.name(), (float) apex);
-            this.material.setParameter(PageMaterials.Parameter.THETA.name(), (float) theta);
-            this.material.setParameter(PageMaterials.Parameter.USE_CPU.name(), false);
-        }
-
-        final double radians = Math.PI * Math.max(0.0, (t - 0.125) / 0.875);
-        return (float) radians;
+        return (float) rigidAngle;
     }
 
-    private void deformMesh(float theta, float apex) {
+    private void deformMesh(Engine engine, float theta, float apex) {
+        this.material.setParameter(PageMaterials.Parameter.USE_CPU.name(), USE_CPU);
+
+        if (!USE_CPU) {
+            this.material.setParameter(PageMaterials.Parameter.APEX.name(), apex);
+            this.material.setParameter(PageMaterials.Parameter.THETA.name(), theta);
+            return;
+        }
+
         final float e = 0.01f;
         final int count = this.positions.capacity() / 3;
 
@@ -132,6 +143,9 @@ public class Page {
             this.positions.put(i * 3 + 1, p[1]);
             this.positions.put(i * 3 + 2, p[2]);
         }
+
+        vertexBuffer.setBufferAt(engine, 0, positions);
+        vertexBuffer.setBufferAt(engine, 2, tangents);
     }
 
     // Applies the deformation described in "Deforming Pages of Electronic Books" by Hong et al.

@@ -260,6 +260,12 @@ value_array<filament::math::float4>("float4")
     .element(&filament::math::float4::z)
     .element(&filament::math::float4::w);
 
+value_array<filament::math::double4>("double4")
+    .element(&filament::math::double4::x)
+    .element(&filament::math::double4::y)
+    .element(&filament::math::double4::z)
+    .element(&filament::math::double4::w);
+
 value_array<filament::math::quat>("quat")
     .element(&filament::math::quat::x)
     .element(&filament::math::quat::y)
@@ -312,8 +318,10 @@ value_object<filament::View::BloomOptions>("View$BloomOptions")
     .field("levels", &filament::View::BloomOptions::levels)
     .field("threshold", &filament::View::BloomOptions::threshold)
     .field("enabled", &filament::View::BloomOptions::enabled)
-    .field("blendMode", &filament::View::BloomOptions::blendMode)
-    .field("dirt", &filament::View::BloomOptions::dirt);
+    .field("blendMode", &filament::View::BloomOptions::blendMode);
+
+// TODO: add support for dirt texture in BloomOptions.
+// Note that simply including the field in the above list causes binding errors for nullptr.
 
 // In JavaScript, a flat contiguous representation is best for matrices (see gl-matrix) so we
 // need to define a small wrapper here.
@@ -428,13 +436,17 @@ class_<Engine>("Engine")
             allow_raw_pointers())
 
     /// createCamera ::method::
+    /// entity ::argument:: the [Entity] to add the camera component to
     /// ::retval:: an instance of [Camera]
-    .function("createCamera", select_overload<Camera*(void)>(&Engine::createCamera),
+    .function("createCamera", select_overload<Camera*(utils::Entity entity)>(&Engine::createCamera),
             allow_raw_pointers())
-    /// destroyCamera ::method::
-    /// camera ::argument:: an instance of [Camera]
-    .function("destroyCamera", (void (*)(Engine*, Camera*)) []
-            (Engine* engine, Camera* camera) { engine->destroy(camera); },
+    /// getCameraComponent ::method::
+    /// ::retval:: an instance of [Camera]
+    .function("getCameraComponent", &Engine::getCameraComponent, allow_raw_pointers())
+    /// destroyCameraComponent ::method::
+    /// camera ::argument:: an [Entity] with a camera component
+    .function("destroyCameraComponent", (void (*)(Engine*, utils::Entity)) []
+            (Engine* engine, utils::Entity camera) { engine->destroyCameraComponent(camera); },
             allow_raw_pointers())
 
     .function("_createMaterial", EMBIND_LAMBDA(Material*, (Engine* engine, BufferDescriptor mbd), {
@@ -539,8 +551,7 @@ class_<View>("View")
 class_<Scene>("Scene")
     .function("addEntity", &Scene::addEntity)
 
-    .function("addEntities", EMBIND_LAMBDA(void,
-            (Scene* self, EntityVector entities), {
+    .function("_addEntities", EMBIND_LAMBDA(void, (Scene* self, EntityVector entities), {
         self->addEntities(entities.data(), entities.size());
     }), allow_raw_pointers())
 
@@ -591,6 +602,8 @@ class_<Camera>("Camera")
         self->setCustomProjection(filament::math::mat4(m.m), near, far);
     }), allow_raw_pointers())
 
+    .function("setScaling", &Camera::setScaling)
+
     .function("getProjectionMatrix", EMBIND_LAMBDA(flatmat4, (Camera* self), {
         return flatmat4 { filament::math::mat4f(self->getProjectionMatrix()) };
     }), allow_raw_pointers())
@@ -598,6 +611,8 @@ class_<Camera>("Camera")
     .function("getCullingProjectionMatrix", EMBIND_LAMBDA(flatmat4, (Camera* self), {
         return flatmat4 { filament::math::mat4f(self->getCullingProjectionMatrix()) };
     }), allow_raw_pointers())
+
+    .function("getScaling", &Camera::getScaling)
 
     .function("getNear", &Camera::getNear)
     .function("getCullingFar", &Camera::getCullingFar)
@@ -1402,21 +1417,21 @@ class_<SurfaceBuilder>("SurfaceOrientation$Builder")
         return &builder->vertexCount(nverts);
     })
 
-    .BUILDER_FUNCTION("normals", SurfaceBuilder, (SurfaceBuilder* builder,
+    .BUILDER_FUNCTION("_normals", SurfaceBuilder, (SurfaceBuilder* builder,
             intptr_t data, int stride), {
         return &builder->normals((const filament::math::float3*) data, stride);
     })
 
-    .BUILDER_FUNCTION("tangents", SurfaceBuilder, (SurfaceBuilder* builder,
+    .BUILDER_FUNCTION("_tangents", SurfaceBuilder, (SurfaceBuilder* builder,
             intptr_t data, int stride), {
         return &builder->tangents((const filament::math::float4*) data, stride);
     })
 
-    .BUILDER_FUNCTION("uvs", SurfaceBuilder, (SurfaceBuilder* builder, intptr_t data, int stride), {
+    .BUILDER_FUNCTION("_uvs", SurfaceBuilder, (SurfaceBuilder* builder, intptr_t data, int stride), {
         return &builder->uvs((const filament::math::float2*) data, stride);
     })
 
-    .BUILDER_FUNCTION("positions", SurfaceBuilder, (SurfaceBuilder* builder,
+    .BUILDER_FUNCTION("_positions", SurfaceBuilder, (SurfaceBuilder* builder,
             intptr_t data, int stride), {
         return &builder->positions((const filament::math::float3*) data, stride);
     })
@@ -1425,11 +1440,11 @@ class_<SurfaceBuilder>("SurfaceOrientation$Builder")
         return &builder->triangleCount(n);
     })
 
-    .BUILDER_FUNCTION("triangles16", SurfaceBuilder, (SurfaceBuilder* builder, intptr_t data), {
+    .BUILDER_FUNCTION("_triangles16", SurfaceBuilder, (SurfaceBuilder* builder, intptr_t data), {
         return &builder->triangles((filament::math::ushort3*) data);
     })
 
-    .BUILDER_FUNCTION("triangles32", SurfaceBuilder, (SurfaceBuilder* builder, intptr_t data), {
+    .BUILDER_FUNCTION("_triangles32", SurfaceBuilder, (SurfaceBuilder* builder, intptr_t data), {
         return &builder->triangles((filament::math::uint3*) data);
     })
 
@@ -1438,7 +1453,7 @@ class_<SurfaceBuilder>("SurfaceOrientation$Builder")
     }), allow_raw_pointers());
 
 class_<SurfaceOrientation>("SurfaceOrientation")
-    .function("getQuats", EMBIND_LAMBDA(void, (SurfaceOrientation* self,
+    .function("_getQuats", EMBIND_LAMBDA(void, (SurfaceOrientation* self,
             intptr_t out, size_t quatCount, VertexBuffer::AttributeType attrtype), {
         switch (attrtype) {
             case VertexBuffer::AttributeType::FLOAT4: {
@@ -1492,6 +1507,11 @@ class_<FilamentAsset>("gltfio$FilamentAsset")
     .function("_getLightEntities", EMBIND_LAMBDA(EntityVector, (FilamentAsset* self), {
         const utils::Entity* ptr = self->getLightEntities();
         return EntityVector(ptr, ptr + self->getLightEntityCount());
+    }), allow_raw_pointers())
+
+    .function("_getCameraEntities", EMBIND_LAMBDA(EntityVector, (FilamentAsset* self), {
+        const utils::Entity* ptr = self->getCameraEntities();
+        return EntityVector(ptr, ptr + self->getCameraEntityCount());
     }), allow_raw_pointers())
 
     .function("getRoot", &FilamentAsset::getRoot)

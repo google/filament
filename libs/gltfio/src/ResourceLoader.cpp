@@ -296,7 +296,7 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
     }
     asset->mResourcesLoaded = true;
     mPool->addAsset(asset);
-    auto gltf = (cgltf_data*) asset->mSourceAsset;
+    const cgltf_data* gltf = asset->mSourceAsset;
     cgltf_options options {};
 
     // For emscripten and Android builds we have a custom implementation of cgltf_load_buffers which
@@ -361,7 +361,7 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
     #else
 
     // Read data from the file system and base64 URIs.
-    cgltf_result result = cgltf_load_buffers(&options, gltf, pImpl->mGltfPath.c_str());
+    cgltf_result result = cgltf_load_buffers(&options, (cgltf_data*) gltf, pImpl->mGltfPath.c_str());
     if (result != cgltf_result_success) {
         slog.e << "Unable to load resources." << io::endl;
         return false;
@@ -371,7 +371,7 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
     SYSTRACE_NAME_END();
 
     #ifndef NDEBUG
-    if (cgltf_validate(gltf) != cgltf_result_success) {
+    if (cgltf_validate((cgltf_data*) gltf) != cgltf_result_success) {
         slog.e << "Failed cgltf validation." << io::endl;
         return false;
     }
@@ -381,13 +381,19 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
     // tangent generation.
     decodeDracoMeshes(asset);
 
-    // To be robust against the glTF conformance suite, we optionally ensure that skinning weights
-    // sum to 1.0 at every vertex. Note that if the same weights buffer is shared in multiple
-    // places, this will needlessly repeat the work. In the future we would like to remove this
-    // feature, and instead simply require correct models. See also:
-    // https://github.com/KhronosGroup/glTF-Sample-Models/issues/215
-    if (pImpl->mNormalizeSkinningWeights) {
-        normalizeSkinningWeights(asset);
+    // Normalize skinning weights, then "import" each skin into the asset by building a mapping of
+    // skins to their affected entities.
+    if (gltf->skins_count > 0) {
+        if (pImpl->mNormalizeSkinningWeights) {
+            normalizeSkinningWeights(asset);
+        }
+        if (asset->mInstances.empty()) {
+            importSkins(gltf, asset->mNodeMap, asset->mSkins);
+        } else {
+            for (FFilamentInstance* instance : asset->mInstances) {
+                importSkins(gltf, instance->nodeMap, instance->skins);
+            }
+        }
     }
 
     if (pImpl->mRecomputeBoundingBoxes) {
@@ -423,16 +429,6 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
         mPool->addPendingUpload();
         IndexBuffer::BufferDescriptor bd(data, size, AssetPool::onLoadedResource, mPool);
         slot.indexBuffer->setBuffer(engine, std::move(bd));
-    }
-
-    // For each skin, build a list of renderables that it affects.
-    const cgltf_data* const_gltf = gltf;
-    if (asset->mInstances.empty()) {
-        importSkins(const_gltf, asset->mNodeMap, asset->mSkins);
-    } else {
-        for (FFilamentInstance* instance : asset->mInstances) {
-            importSkins(const_gltf, instance->nodeMap, instance->skins);
-        }
     }
 
     // Apply sparse data modifications to base arrays, then upload the result.

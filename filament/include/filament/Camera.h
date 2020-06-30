@@ -206,6 +206,23 @@ public:
      */
     void setCustomProjection(math::mat4 const& projection, double near, double far) noexcept;
 
+    /** Sets an additional matrix that scales the projection matrix.
+     *
+     * This is useful to adjust the aspect ratio of the camera independent from its projection.
+     * First, pass an aspect of 1.0 to setProjection. Then set the scaling with the desired aspect
+     * ratio:
+     *
+     *     camera->setScaling(double4 {1.0, width / height, 1.0, 1.0});
+     *
+     *
+     * By default, this is an identity matrix.
+     *
+     * @param scaling     diagonal of the scaling matrix to be applied after the projection matrix.
+     *
+     * @see setProjection, setLensProjection, setCustomProjection
+     */
+    void setScaling(math::double4 const& scaling) noexcept;
+
     /** Returns the projection matrix used for rendering.
      *
      * The projection matrix used for rendering always has its far plane set to infinity. This
@@ -215,7 +232,7 @@ public:
      *
      * @see setProjection, setLensProjection, setCustomProjection, getCullingProjectionMatrix
      */
-    const math::mat4& getProjectionMatrix() const noexcept;
+    const math::mat4 getProjectionMatrix() const noexcept;
 
 
     /** Returns the projection matrix used for culling (far plane is finite).
@@ -224,7 +241,16 @@ public:
      *
      * @see setProjection, setLensProjection, getProjectionMatrix
      */
-    const math::mat4& getCullingProjectionMatrix() const noexcept;
+    const math::mat4 getCullingProjectionMatrix() const noexcept;
+
+
+    /** Returns the scaling amount used to scale the projection matrix.
+     *
+     * @return the diagonal of the scaling matrix applied after the projection matrix.
+     *
+     * @see setScaling
+     */
+    const math::double4& getScaling() const noexcept;
 
 
     //! Returns the frustum's near plane

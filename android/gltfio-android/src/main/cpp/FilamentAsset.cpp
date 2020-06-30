@@ -127,6 +127,24 @@ Java_com_google_android_filament_gltfio_FilamentAsset_nGetLightEntities(JNIEnv* 
     env->ReleaseIntArrayElements(result, (jint*) entities, 0);
 }
 
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_gltfio_FilamentAsset_nGetCameraEntities(JNIEnv* env, jclass,
+        jlong nativeAsset, jintArray result) {
+    FilamentAsset* asset = (FilamentAsset*) nativeAsset;
+    jsize available = env->GetArrayLength(result);
+    Entity* entities = (Entity*) env->GetIntArrayElements(result, nullptr);
+    std::copy_n(asset->getCameraEntities(),
+            std::min(available, (jsize) asset->getCameraEntityCount()), entities);
+    env->ReleaseIntArrayElements(result, (jint*) entities, 0);
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_google_android_filament_gltfio_FilamentAsset_nGetCameraEntityCount(JNIEnv*, jclass,
+        jlong nativeAsset) {
+    FilamentAsset* asset = (FilamentAsset*) nativeAsset;
+    return asset->getCameraEntityCount();
+}
+
 extern "C" JNIEXPORT jint JNICALL
 Java_com_google_android_filament_gltfio_FilamentAsset_nGetMaterialInstanceCount(JNIEnv*, jclass,
         jlong nativeAsset) {

@@ -204,11 +204,13 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     auto bloomOptions = view.getBloomOptions();
     auto dofOptions = view.getDepthOfFieldOptions();
     auto aoOptions = view.getAmbientOcclusionOptions();
+    auto vignetteOptions = view.getVignetteOptions();
     if (!hasPostProcess) {
         // disable all effects that are part of post-processing
         msaa = 1;
         dofOptions.enabled = false;
         bloomOptions.enabled = false;
+        vignetteOptions.enabled = false;
         colorGrading = false;
         dithering = false;
         fxaa = false;
@@ -397,7 +399,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     if (hasPostProcess) {
         if (dofOptions.enabled) {
-            input = ppm.dof(fg, input, dofOptions, cameraInfo);
+            input = ppm.dof(fg, input, dofOptions, translucent, cameraInfo);
         }
         if (colorGrading) {
             if (!colorGradingConfig.asSubpass) {
@@ -406,12 +408,12 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                         colorGradingConfig.ldrFormat,
                         colorGradingConfig.translucent,
                         colorGradingConfig.fxaa,
-                        scale, bloomOptions,
+                        scale, bloomOptions, vignetteOptions,
                         colorGradingConfig.dithering);
             }
         }
         if (fxaa) {
-            input = ppm.fxaa(fg, input, colorGradingConfig.ldrFormat, colorGrading || translucent);
+            input = ppm.fxaa(fg, input, colorGradingConfig.ldrFormat, !colorGrading || translucent);
         }
         if (scaled) {
             if (UTILS_LIKELY(!blending && upscalingQuality == View::QualityLevel::LOW)) {
@@ -450,7 +452,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     fg.present(output);
     fg.moveResource(fgViewRenderTarget, output);
     fg.compile();
-    //fg.export_graphviz(slog.d);
+    //fg.export_graphviz(slog.d, view.getName());
     fg.execute(engine, driver);
 
     recordHighWatermark(pass.getCommandsHighWatermark());
@@ -699,9 +701,12 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                     // post-processing....
                     ppm.colorGradingSubpass(driver,
                             view.getColorGrading(),
+                            view.getVignetteOptions(),
                             colorGradingConfig.translucent,
                             colorGradingConfig.fxaa,
-                            colorGradingConfig.dithering);
+                            colorGradingConfig.dithering,
+                            out.params.viewport.width,
+                            out.params.viewport.height);
                 }
 
                 driver.endRenderPass();

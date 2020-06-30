@@ -51,6 +51,7 @@ set(LIBS
         filagui
         image
         camutils
+        geometry
 )
 
 set(MATERIAL_SRCS

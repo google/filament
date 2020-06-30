@@ -155,7 +155,7 @@ void selectPhysicalDevice(VulkanContext& context) {
     PANIC_POSTCONDITION("Unable to find suitable device.");
 }
 
-void createVirtualDevice(VulkanContext& context) {
+void createLogicalDevice(VulkanContext& context) {
     VkDeviceQueueCreateInfo deviceQueueCreateInfo[1] = {};
     const float queuePriority[] = {1.0f};
     VkDeviceCreateInfo deviceCreateInfo = {};
@@ -279,7 +279,20 @@ void getPresentationQueue(VulkanContext& context, VulkanSurfaceContext& sc) {
     ASSERT_POSTCONDITION(presentQueueFamilyIndex != 0xffff,
             "This physical device does not support the presentation queue.");
     if (context.graphicsQueueFamilyIndex != presentQueueFamilyIndex) {
+
+        // TODO: Strictly speaking, this code path is incorrect. However it is not triggered on any
+        // Android devices that we've tested with, nor with MoltenVK.
+        //
+        // This is incorrect because we created the logical device early on, before we had a handle
+        // to the rendering surface. Therefore the device was not created with the presentation
+        // queue family index included in VkDeviceQueueCreateInfo.
+        //
+        // This is non-trivial to fix because the driver API allows clients to do certain things
+        // (e.g. upload a vertex buffer) before the swap chain is created.
+        //
+        // https://github.com/google/filament/issues/1532
         vkGetDeviceQueue(context.device, presentQueueFamilyIndex, 0, &sc.presentQueue);
+
     } else {
         sc.presentQueue = context.graphicsQueue;
     }
@@ -364,12 +377,14 @@ void createSwapChain(VulkanContext& context, VulkanSurfaceContext& surfaceContex
             images.data());
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkGetSwapchainImagesKHR error.");
     for (size_t i = 0; i < images.size(); ++i) {
+        surfaceContext.swapContexts[i].invalid = true;
         surfaceContext.swapContexts[i].attachment = {
             .format = surfaceContext.surfaceFormat.format,
             .image = images[i],
             .view = {},
             .memory = {},
-            .offscreen = {}
+            .texture = {},
+            .layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
         };
     }
     utils::slog.i
@@ -433,6 +448,26 @@ void destroySwapChain(VulkanContext& context, VulkanSurfaceContext& surfaceConte
     vkDestroyImageView(context.device, surfaceContext.depth.view, VKALLOC);
     vkDestroyImage(context.device, surfaceContext.depth.image, VKALLOC);
     vkFreeMemory(context.device, surfaceContext.depth.memory, VKALLOC);
+}
+
+void transitionSwapChain(VulkanContext& context) {
+    VulkanSurfaceContext& surface = *context.currentSurface;
+    SwapContext& swapContext = surface.swapContexts[surface.currentSwapIndex];
+    VkImageMemoryBarrier barrier {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+        .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+        .newLayout = swapContext.attachment.layout,
+        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .image = swapContext.attachment.image,
+        .subresourceRange = {
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .levelCount = 1,
+            .layerCount = 1,
+        },
+    };
+    vkCmdPipelineBarrier(context.currentCommands->cmdbuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 }
 
 uint32_t selectMemoryType(VulkanContext& context, uint32_t flags, VkFlags reqs) {
@@ -534,7 +569,9 @@ bool acquireSwapCommandBuffer(VulkanContext& context) {
 // Flushes the current command buffer and waits for it to finish executing.
 void flushCommandBuffer(VulkanContext& context) {
     VulkanSurfaceContext& surface = *context.currentSurface;
-    const SwapContext& sc = surface.swapContexts[surface.currentSwapIndex];
+    SwapContext& swapContext = surface.swapContexts[surface.currentSwapIndex];
+
+    transitionSwapChain(context);
 
     // Submit the command buffer.
     VkResult error = vkEndCommandBuffer(context.currentCommands->cmdbuffer);
@@ -547,11 +584,12 @@ void flushCommandBuffer(VulkanContext& context) {
         .pCommandBuffers = &context.currentCommands->cmdbuffer,
     };
 
-    auto& cmdfence = sc.commands.fence;
+    auto& cmdfence = swapContext.commands.fence;
     std::unique_lock<utils::Mutex> lock(cmdfence->mutex);
     error = vkQueueSubmit(context.graphicsQueue, 1, &submitInfo, cmdfence->fence);
     lock.unlock();
     ASSERT_POSTCONDITION(!error, "vkQueueSubmit error.");
+    swapContext.invalid = true;
     cmdfence->condition.notify_all();
 
     // Restart the command buffer.
@@ -667,6 +705,7 @@ void createDepthBuffer(VulkanContext& context, VulkanSurfaceContext& surfaceCont
     surfaceContext.depth.view = depthView;
     surfaceContext.depth.image = depthImage;
     surfaceContext.depth.format = depthFormat;
+    surfaceContext.depth.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
     // Begin a new command buffer solely for the purpose of transitioning the image layout.
     VkCommandBuffer cmdbuffer = acquireWorkCommandBuffer(context);
@@ -675,7 +714,7 @@ void createDepthBuffer(VulkanContext& context, VulkanSurfaceContext& surfaceCont
     VkImageMemoryBarrier barrier {
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
         .dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-        .newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+        .newLayout = surfaceContext.depth.layout,
         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .image = depthImage,
@@ -687,6 +726,8 @@ void createDepthBuffer(VulkanContext& context, VulkanSurfaceContext& surfaceCont
     };
     vkCmdPipelineBarrier(cmdbuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
             VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+
+    flushWorkCommandBuffer(context);
 }
 
 VkImageLayout getTextureLayout(TextureUsage usage) {

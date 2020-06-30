@@ -24,8 +24,6 @@
 #include <math/mat4.h>
 #include <math/quat.h>
 
-#include <utils/Log.h>
-
 #include <cmath>
 
 namespace filament {

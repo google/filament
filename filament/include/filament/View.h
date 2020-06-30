@@ -158,7 +158,7 @@ public:
         float maximumOpacity = 1.0f;        //!< fog's maximum opacity between 0 and 1
         float height = 0.0f;                //!< fog's floor in world units
         float heightFalloff = 1.0f;         //!< how fast fog dissipates with altitude
-        math::float3 color{ 0.5f };         //!< fog's color (linear), see fogColorFromIbl
+        LinearColor color{0.5f};            //!< fog's color (linear), see fogColorFromIbl
         float density = 0.1f;               //!< fog's density at altitude given by 'height'
         float inScatteringStart = 0.0f;     //!< distance in world units from the camera where in-scattering starts
         float inScatteringSize = -1.0f;     //!< size of in-scattering (>=0 to activate). Good values are >> 1 (e.g. ~10 - 100).
@@ -167,13 +167,24 @@ public:
     };
 
     /**
-     * Options to control Depth of Field (DoF) effect in the scene
+     * Options to control Depth of Field (DoF) effect in the scene.
      */
     struct DepthOfFieldOptions {
         float focusDistance = 10.0f;        //!< focus distance in world units
         float blurScale = 1.0f;             //!< a scale factor for the amount of blur
         float maxApertureDiameter = 0.01f;  //!< maximum aperture diameter in meters (zero to disable rotation)
-        bool enabled = false;               //!< enable or disable Depth of field effect
+        bool enabled = false;               //!< enable or disable depth of field effect
+    };
+
+    /**
+     * Options to control the vignetting effect.
+     */
+    struct VignetteOptions {
+        float midPoint = 0.5f;                      //!< high values restrict the vignette closer to the corners, between 0 and 1
+        float roundness = 0.5f;                     //!< controls the shape of the vignette, from a rounded rectangle (0.0), to an oval (0.5), to a circle (1.0)
+        float feather = 0.5f;                       //!< softening amount of the vignette effect, between 0 and 1
+        LinearColorA color{0.0f, 0.0f, 0.0f, 1.0f}; //!< color of the vignette effect, alpha is currently ignored
+        bool enabled = false;                       //!< enables or disables the vignette effect
     };
 
     /**
@@ -238,7 +249,7 @@ public:
      *
      * @deprecated See ColorGrading
      */
-    enum class ToneMapping : uint8_t {
+    enum class UTILS_DEPRECATED ToneMapping : uint8_t {
         LINEAR = 0,     //!< Linear tone mapping (i.e. no tone mapping)
         ACES = 1,       //!< ACES tone mapping
     };
@@ -480,6 +491,7 @@ public:
      * @deprecated Use setColorGrading instead
      * @see setColorGrading
      */
+    UTILS_DEPRECATED
     void setToneMapping(ToneMapping type) noexcept;
 
     /**
@@ -489,6 +501,7 @@ public:
      * @deprecated Use getColorGrading instead
      * @see getColorGrading
      */
+    UTILS_DEPRECATED
     ToneMapping getToneMapping() const noexcept;
 
     /**
@@ -522,11 +535,25 @@ public:
     void setBloomOptions(BloomOptions options) noexcept;
 
     /**
+     * Queries the bloom options.
+     *
+     * @return the current bloom options for this view.
+     */
+    BloomOptions getBloomOptions() const noexcept;
+
+    /**
      * Enables or disables fog. Disabled by default.
      *
      * @param options options
      */
     void setFogOptions(FogOptions options) noexcept;
+
+    /**
+     * Queries the fog options.
+     *
+     * @return the current fog options for this view.
+     */
+    FogOptions getFogOptions() const noexcept;
 
     /**
      * Enables or disables Depth of Field. Disabled by default.
@@ -536,11 +563,25 @@ public:
     void setDepthOfFieldOptions(DepthOfFieldOptions options) noexcept;
 
     /**
-     * Queries the bloom options.
+     * Queries the depth of field options.
      *
-     * @return the current bloom options for this view.
+     * @return the current depth of field options for this view.
      */
-    BloomOptions getBloomOptions() const noexcept;
+    DepthOfFieldOptions getDepthOfFieldOptions() const noexcept;
+
+    /**
+     * Enables or disables the vignetted effect in the post-processing stage. Disabled by default.
+     *
+     * @param options options
+     */
+    void setVignetteOptions(VignetteOptions options) noexcept;
+
+    /**
+     * Queries the vignette options.
+     *
+     * @return the current vignette options for this view.
+     */
+    VignetteOptions getVignetteOptions() const noexcept;
 
     /**
      * Enables or disables dithering in the post-processing stage. Enabled by default.

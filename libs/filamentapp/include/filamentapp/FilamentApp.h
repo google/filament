@@ -31,6 +31,7 @@
 #include <camutils/Manipulator.h>
 
 #include <utils/Path.h>
+#include <utils/Entity.h>
 
 #include "Config.h"
 #include "IBL.h"
@@ -59,6 +60,7 @@ public:
             filament::Scene*, filament::Renderer*)>;
     using ImGuiCallback = std::function<void(filament::Engine*, filament::View*)>;
     using AnimCallback = std::function<void(filament::Engine*, filament::View*, double now)>;
+    using ResizeCallback = std::function<void(filament::Engine*, filament::View*)>;
     using DropCallback = std::function<void(std::string)>;
 
     static FilamentApp& get();
@@ -66,6 +68,8 @@ public:
     ~FilamentApp();
 
     void animate(AnimCallback animation) { mAnimation = animation; }
+
+    void resize(ResizeCallback resize) { mResize = resize; }
 
     void setDropHandler(DropCallback handler) { mDropHandler = handler; }
 
@@ -185,6 +189,7 @@ private:
         CameraManipulator* mDebugCameraMan;
         filament::SwapChain* mSwapChain = nullptr;
 
+        utils::Entity mCameraEntities[4];
         filament::Camera* mCameras[4] = { nullptr };
         filament::Camera* mUiCamera;
         filament::Camera* mMainCamera;
@@ -228,6 +233,7 @@ private:
     filament::MaterialInstance* mDepthMI = nullptr;
     std::unique_ptr<filagui::ImGuiHelper> mImGuiHelper;
     AnimCallback mAnimation;
+    ResizeCallback mResize;
     DropCallback mDropHandler;
     int mSidebarWidth = 0;
     size_t mSkippedFrames = 0;

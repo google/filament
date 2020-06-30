@@ -32,6 +32,14 @@ material {
         {
             type : float4,
             name : bloom
+        },
+        {
+            type : float4,
+            name : vignette
+        },
+        {
+            type : float4,
+            name : vignetteColor
         }
     ],
     variables : [
@@ -51,6 +59,7 @@ vertex {
 fragment {
 
 #include "../../../shaders/src/dithering.fs"
+#include "../../../shaders/src/vignette.fs"
 #include "../../../shaders/src/bloom.fs"
 
     vec3 colorGrade(mediump sampler3D lut, const vec3 x) {
@@ -77,6 +86,10 @@ fragment {
         if (materialParams.bloom.x > 0.0) {
             color.rgb = bloom(color.rgb);
         }
+        if (materialParams.vignette.x < MEDIUMP_FLT_MAX) {
+            highp vec2 uv = getUV() * frameUniforms.resolution.zw;
+            color.rgb = vignette(color.rgb, uv, materialParams.vignette, materialParams.vignetteColor);
+        }
         color.rgb  = colorGrade(materialParams_lut, color.rgb);
         if (materialParams.fxaa > 0) {
             color.a = luminance(color.rgb);
@@ -86,6 +99,10 @@ fragment {
         color.rgb /= color.a + FLT_EPS;
         if (materialParams.bloom.x > 0.0) {
             color.rgb = bloom(color.rgb);
+        }
+        if (materialParams.vignette.x < MEDIUMP_FLT_MAX) {
+            highp vec2 uv = getUV() * frameUniforms.resolution.zw;
+            color.rgb = vignette(color.rgb, uv, materialParams.vignette, materialParams.vignetteColor);
         }
         color.rgb  = colorGrade(materialParams_lut, color.rgb);
         color.rgb *= color.a + FLT_EPS;

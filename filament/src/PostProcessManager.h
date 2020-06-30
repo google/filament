@@ -64,16 +64,18 @@ public:
     FrameGraphId<FrameGraphTexture> dof(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input,
             const View::DepthOfFieldOptions& dofOptions,
+            bool translucent,
             const CameraInfo& cameraInfo) noexcept;
 
-    // Tone mapping
+    // Color grading, tone mapping, etc.
     void colorGradingSubpass(backend::DriverApi& driver, const FColorGrading* colorGrading,
-            bool translucent, bool fxaa, bool dithering) noexcept;
+            View::VignetteOptions vignetteOptions, bool translucent, bool fxaa, bool dithering,
+            uint32_t width, uint32_t height) noexcept;
 
     FrameGraphId<FrameGraphTexture> colorGrading(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, const FColorGrading* colorGrading,
             backend::TextureFormat outFormat, bool translucent, bool fxaa, math::float2 scale,
-            View::BloomOptions bloomOptions, bool dithering) noexcept;
+            View::BloomOptions bloomOptions, View::VignetteOptions vignetteOptions, bool dithering) noexcept;
 
     // Anti-aliasing
     FrameGraphId<FrameGraphTexture> fxaa(FrameGraph& fg,
@@ -82,7 +84,8 @@ public:
 
     // Blit/rescaling/resolves
     FrameGraphId<FrameGraphTexture> opaqueBlit(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, FrameGraphTexture::Descriptor outDesc) noexcept;
+            FrameGraphId<FrameGraphTexture> input, FrameGraphTexture::Descriptor outDesc,
+            backend::SamplerMagFilter filter = backend::SamplerMagFilter::LINEAR) noexcept;
 
     FrameGraphId<FrameGraphTexture> blendBlit(
             FrameGraph& fg, bool translucent, View::QualityLevel quality,
@@ -157,8 +160,12 @@ private:
     PostProcessMaterial mSSAO;
     PostProcessMaterial mBilateralBlur;
     PostProcessMaterial mSeparableGaussianBlur;
-    PostProcessMaterial mDoFBlur;
+    PostProcessMaterial mDoFDownsample;
+    PostProcessMaterial mDoFMipmap;
     PostProcessMaterial mDoF;
+    PostProcessMaterial mDoFTiles;
+    PostProcessMaterial mDoFDilate;
+    PostProcessMaterial mDoFCombine;
     PostProcessMaterial mBloomDownsample;
     PostProcessMaterial mBloomUpsample;
     PostProcessMaterial mColorGradingAsSubpass;

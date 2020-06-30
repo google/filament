@@ -44,7 +44,7 @@ class App {
             // Dynamically enable two-sided lighting for testing purposes.
             const entities = asset.getEntities();
             const rm = engine.getRenderableManager();
-            const instance = rm.getInstance(entities.get(0));
+            const instance = rm.getInstance(entities[0]);
             rm.getMaterialInstanceAt(instance, 0).setDoubleSided(true)
             instance.delete();
 
@@ -56,7 +56,7 @@ class App {
 
         this.swapChain = engine.createSwapChain();
         this.renderer = engine.createRenderer();
-        this.camera = engine.createCamera();
+        this.camera = engine.createCamera(Filament.EntityManager.get().create());
 
         this.view = engine.createView();
         this.view.setCamera(this.camera);

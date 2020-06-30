@@ -9,28 +9,37 @@
 </head>
 <body class="vbox viewport">
 
-        <header>matdbg</header>
-        <section class="main hbox space-between">
-          <nav class="vbox">
-            <div id="material-list" class="scrollable squishy">
-            </div>
-            <div id="material-detail" class="scrollable stretchy">
-            </div>
-          </nav>
-          <article id="shader-source">
-          </article>
-        </section>
-        <footer>&nbsp;</footer>
+    <header>matdbg</header>
+
+    <section class="main hbox space-between">
+      <nav class="vbox">
+        <div id="material-list" class="scrollable squishy">
+        </div>
+        <div id="material-detail" class="scrollable stretchy">
+        </div>
+      </nav>
+      <article id="shader-source">
+      </article>
+    </section>
+
+    <footer>&nbsp;</footer>
 
     <template id="material-list-template">
-    <pre>
-{{#material}}<a class="material {{classes}}" data-matid="{{matid}}">{{matid}} {{name}}</a>
-{{/material}}
-    </pre>
+    <div style="white-space: nowrap">
+      {{#item}}
+        {{#is_label}}
+          <br/><b>{{label}}</b>
+        {{/is_label}}
+        {{#is_material}}
+          <a class="material {{classes}}" data-matid="{{matid}}">{{name}}</a>
+        {{/is_material}}
+        <br/>
+      {{/item}}
+    </div>
     </template>
 
     <template id="material-detail-template">
-    <pre>
+    <div style="white-space: pre">
 name = {{ name }}
 version = {{ version }}
 
@@ -81,7 +90,7 @@ double sided = {{double_sided}}
 culling = {{culling}}
 transparency = {{transparency}}
 {{/raster}}
-    </pre>
+    </div>
     </template>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mustache.js/3.0.1/mustache.min.js"></script>

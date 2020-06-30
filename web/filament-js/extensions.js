@@ -153,6 +153,17 @@ Filament.loadClassExtensions = function() {
         return new Filament.gltfio$AssetLoader(this, materials);
     };
 
+    /// addEntities ::method::
+    /// entities ::argument:: array of entities
+    /// This method is equivalent to calling `addEntity` on each item in the array.
+    Filament.Scene.prototype.addEntities = function(entities) {
+        const vector = new Filament.EntityVector();
+        for (const entity of entities) {
+            vector.push_back(entity);
+        }
+        this._addEntities(vector);
+    };
+
     /// setClearOptions ::method::
     /// overrides ::argument:: Dictionary with one or more of the following properties: \
     /// clearColor, clear, discard.
@@ -206,7 +217,7 @@ Filament.loadClassExtensions = function() {
             resolution: 360,
             anamorphism: 1.0,
             levels: 6,
-            blendMode: Filament.View$BloomOptions$BloomMode.ADD,
+            blendMode: Filament.View$BloomOptions$BlendMode.ADD,
             threshold: true,
             enabled: false,
             dirt: null
@@ -284,10 +295,60 @@ Filament.loadClassExtensions = function() {
         pbd.delete();
     }
 
+    Filament.SurfaceOrientation$Builder.prototype.normals = function(buffer, stride = 0) {
+        buffer = new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+        this.norPointer = Filament._malloc(buffer.byteLength);
+        Filament.HEAPU8.set(buffer, this.norPointer);
+        this._normals(this.norPointer, stride);
+    };
+
+    Filament.SurfaceOrientation$Builder.prototype.uvs = function(buffer, stride = 0) {
+        buffer = new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+        this.uvsPointer = Filament._malloc(buffer.byteLength);
+        Filament.HEAPU8.set(buffer, this.uvsPointer);
+        this._uvs(this.uvsPointer, stride);
+    };
+
+    Filament.SurfaceOrientation$Builder.prototype.positions = function(buffer, stride = 0) {
+        buffer = new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+        this.posPointer = Filament._malloc(buffer.byteLength);
+        Filament.HEAPU8.set(buffer, this.posPointer);
+        this._positions(this.posPointer, stride);
+    };
+
+    Filament.SurfaceOrientation$Builder.prototype.triangles16 = function(buffer, stride = 0) {
+        buffer = new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+        this.t16Pointer = Filament._malloc(buffer.byteLength);
+        Filament.HEAPU8.set(buffer, this.t16Pointer);
+        this._triangles16(this.t16Pointer, stride);
+    };
+
+    Filament.SurfaceOrientation$Builder.prototype.triangles32 = function(buffer, stride = 0) {
+        buffer = new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+        this.t32Pointer = Filament._malloc(buffer.byteLength);
+        Filament.HEAPU8.set(buffer, this.t32Pointer);
+        this._triangles32(this.t32Pointer, stride);
+    };
+
     Filament.SurfaceOrientation$Builder.prototype.build = function() {
         const result = this._build();
         this.delete();
+        if ('norPointer' in this) Filament._free(this.norPointer);
+        if ('uvsPointer' in this) Filament._free(this.uvsPointer);
+        if ('posPointer' in this) Filament._free(this.posPointer);
+        if ('t16Pointer' in this) Filament._free(this.t16Pointer);
+        if ('t32Pointer' in this) Filament._free(this.t32Pointer);
         return result;
+    };
+
+    Filament.SurfaceOrientation.prototype.getQuats = function(nverts) {
+        const attribType = Filament.VertexBuffer$AttributeType.SHORT4;
+        const quatsBufferSize = 8 * nverts;
+        const quatsBuffer = Filament._malloc(quatsBufferSize);
+        this._getQuats(quatsBuffer, nverts, attribType);
+        const arrayBuffer = Filament.HEAPU8.subarray(quatsBuffer, quatsBuffer + quatsBufferSize).slice().buffer;
+        Filament._free(quatsBuffer);
+        return new Int16Array(arrayBuffer);
     };
 
     Filament.gltfio$AssetLoader.prototype.createAssetFromJson = function(buffer) {
@@ -335,12 +396,20 @@ Filament.loadClassExtensions = function() {
     //
     // The optional asyncInterval argument allows clients to control how decoding is amortized
     // over time. It represents the number of milliseconds between each texture decoding task.
+    //
+    // The optional config argument is an object with boolean fields `normalizeSkinningWeights` and
+    // `recomputeBoundingBoxes`.
     Filament.gltfio$FilamentAsset.prototype.loadResources = function(onDone, onFetched, basePath,
-            asyncInterval) {
+            asyncInterval, config) {
         const asset = this;
         const engine = this.getEngine();
         const names = this.getResourceUris();
         const interval = asyncInterval || 30;
+        const defaults = {
+            normalizeSkinningWeights: true,
+            recomputeBoundingBoxes: false
+        };
+        config = Object.assign(defaults, config || {});
 
         basePath = basePath || document.location;
         onFetched = onFetched || ((name) => {});
@@ -359,7 +428,9 @@ Filament.loadClassExtensions = function() {
         }
 
         // Construct a resource loader and start decoding after all textures are fetched.
-        const resourceLoader = new Filament.gltfio$ResourceLoader(engine, false, false);
+        const resourceLoader = new Filament.gltfio$ResourceLoader(engine,
+                config.normalizeSkinningWeights,
+                config.recomputeBoundingBoxes);
         const onComplete = () => {
             resourceLoader.asyncBeginLoad(asset);
 
@@ -408,5 +479,9 @@ Filament.loadClassExtensions = function() {
 
     Filament.gltfio$FilamentAsset.prototype.getLightEntities = function() {
         return Filament.vectorToArray(this._getLightEntities());
+    };
+
+    Filament.gltfio$FilamentAsset.prototype.getCameraEntities = function() {
+        return Filament.vectorToArray(this._getCameraEntities());
     };
 };

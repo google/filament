@@ -117,7 +117,7 @@ public class PageBuilder {
                 .receiveShadows(false)
                 .build(engine, page.renderable);
 
-        page.updateVertices(engine, 0f, 0f);
+        page.updateVertices(engine, 0f, 0f, Page.CurlStyle.BREEZE);
 
         return page;
     }

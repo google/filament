@@ -307,7 +307,7 @@ public:
     Camera* createCamera(utils::Entity entity) noexcept;
 
     /**
-     * Returns the Camera component of the given its entity.
+     * Returns the Camera component of the given entity.
      *
      * @param entity An entity.
      * @return A pointer to the Camera component for this entity or nullptr if the entity didn't
@@ -403,6 +403,7 @@ public:
      *
      * @return A camera component
      */
+    UTILS_DEPRECATED
     Camera* createCamera() noexcept;
 
     /**
@@ -411,6 +412,7 @@ public:
      * @param camera Camera component to destroy. The associated entity is also destroyed.
      * @deprecated use destroyCameraComponent(Entity) instead
      */
+    UTILS_DEPRECATED
     void destroy(const Camera* camera);
 
    /**

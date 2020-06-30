@@ -49,17 +49,16 @@ struct VulkanRenderTarget : private HwRenderTarget {
             VulkanTexture* color, TargetBufferInfo depthInfo, VulkanTexture* depth);
 
     // Creates a special "default" render target (i.e. associated with the swap chain)
-    explicit VulkanRenderTarget(VulkanContext& context) : HwRenderTarget(0, 0), mContext(context),
-            mOffscreen(false), mColorLevel(0), mDepthLevel(0) {}
+    explicit VulkanRenderTarget(VulkanContext& context);
 
     ~VulkanRenderTarget();
 
-    bool isOffscreen() const { return mOffscreen; }
     void transformClientRectToPlatform(VkRect2D* bounds) const;
     void transformClientRectToPlatform(VkViewport* bounds) const;
     VkExtent2D getExtent() const;
     VulkanAttachment getColor() const;
     VulkanAttachment getDepth() const;
+    bool invalidate();
     uint32_t getColorLevel() const { return mColorLevel; }
     uint32_t getDepthLevel() const { return mDepthLevel; }
 private:
@@ -125,7 +124,7 @@ struct VulkanTexture : public HwTexture {
     // layout to a GPU-readable layout.
     static void transitionImageLayout(VkCommandBuffer cmdbuffer, VkImage image,
             VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t miplevel,
-            uint32_t layers, uint32_t levels = 1);
+            uint32_t layers, uint32_t levels, VkImageAspectFlags aspect);
 
     VkFormat vkformat;
     VkImageView imageView = VK_NULL_HANDLE;
@@ -139,6 +138,7 @@ private:
             uint32_t width, uint32_t height, uint32_t depth,
             FaceOffsets const* faceOffsets, uint32_t miplevel);
 
+    VkImageAspectFlags mAspect;
     VulkanContext& mContext;
     VulkanStagePool& mStagePool;
 };
@@ -175,7 +175,7 @@ struct VulkanTimerQuery : public HwTimerQuery {
     uint32_t startingQueryIndex;
     uint32_t stoppingQueryIndex;
     VulkanContext& mContext;
-    std::atomic<bool> ready;
+    std::atomic<VulkanCommandBuffer*> cmdbuffer;
 };
 
 } // namespace filament

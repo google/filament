@@ -1,0 +1,63 @@
+material {
+    name : DepthOfFieldTiles,
+    parameters : [
+        {
+            type : sampler2d,
+            name : cocMaxMin,
+            precision: medium
+        }
+    ],
+    variables : [
+        vertex
+    ],
+    domain : postprocess,
+    depthWrite : false,
+    depthCulling : false
+}
+
+vertex {
+    void postProcessVertex(inout PostProcessVertexInputs postProcess) {
+        postProcess.vertex.xy = postProcess.normalizedUV;
+    }
+}
+
+fragment {
+
+void dummy(){}
+
+float max4(const vec4 f) {
+    vec2 t = max(f.xy, f.zw);
+    return max(t.x, t.y);
+}
+
+float min4(const vec4 f) {
+    vec2 t = min(f.xy, f.zw);
+    return min(t.x, t.y);
+}
+
+void postProcess(inout PostProcessInputs postProcess) {
+    highp vec2 uv = variable_vertex.xy;
+    highp vec2 size = vec2(textureSize(materialParams_cocMaxMin, 0));
+
+    ivec2 i = ivec2(uv * size - 0.5);
+
+#if defined(TARGET_VULKAN_ENVIRONMENT) || !defined(TARGET_MOBILE)
+    vec4 f = textureGather(materialParams_cocMaxMin, uv, 0); // 01, 11, 10, 00
+    vec4 b = textureGather(materialParams_cocMaxMin, uv, 1); // 01, 11, 10, 00
+#else
+    vec2 s01 = texelFetch(materialParams_cocMaxMin, i + ivec2(0, 1), 0).rg;
+    vec2 s11 = texelFetch(materialParams_cocMaxMin, i + ivec2(1, 1), 0).rg;
+    vec2 s10 = texelFetch(materialParams_cocMaxMin, i + ivec2(1, 0), 0).rg;
+    vec2 s00 = texelFetch(materialParams_cocMaxMin, i,               0).rg;
+    vec4 f = vec4(s01.r, s11.r, s10.r, s00.r);
+    vec4 b = vec4(s01.g, s11.g, s10.g, s00.g);
+#endif
+
+    // compute tile's max CoC
+    postProcess.color.r = max4(max(f, b));
+
+    // compute tile's min CoC
+    postProcess.color.g = min4(min(f, b));
+}
+
+}

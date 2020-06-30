@@ -35,10 +35,11 @@ TEST(IncludeParser, NoIncludes) {
 TEST(IncludeParser, SingleInclude) {
     utils::CString code(R"(#include "foobar.h")");
     auto result = filamat::parseForIncludes(code);
-    EXPECT_EQ(result.size(), 1);
-    EXPECT_EQ(result[0].name, "foobar.h");
-    EXPECT_EQ(result[0].startPosition, 0);
-    EXPECT_EQ(result[0].length, 19);
+    EXPECT_EQ(1, result.size());
+    EXPECT_STREQ("foobar.h", result[0].name.c_str());
+    EXPECT_EQ(0, result[0].startPosition);
+    EXPECT_EQ(19, result[0].length);
+    EXPECT_EQ(1, result[0].line);
 }
 
 TEST(IncludeParser, MultipleIncludes) {
@@ -49,10 +50,12 @@ TEST(IncludeParser, MultipleIncludes) {
     EXPECT_STREQ("foobar.h", result[0].name.c_str());
     EXPECT_EQ(0, result[0].startPosition);
     EXPECT_EQ(19, result[0].length);
+    EXPECT_EQ(1, result[0].line);
 
     EXPECT_STREQ("bazbarfoo.h", result[1].name.c_str());
     EXPECT_EQ(20, result[1].startPosition);
     EXPECT_EQ(22, result[1].length);
+    EXPECT_EQ(2, result[1].line);
 }
 
 TEST(IncludeParser, EmptyInclude) {
@@ -63,6 +66,7 @@ TEST(IncludeParser, EmptyInclude) {
     EXPECT_STREQ("", result[0].name.c_str_safe());
     EXPECT_EQ(0, result[0].startPosition);
     EXPECT_EQ(11, result[0].length);
+    EXPECT_EQ(1, result[0].line);
 }
 
 TEST(IncludeParser, Whitepsace) {
@@ -73,6 +77,7 @@ TEST(IncludeParser, Whitepsace) {
     EXPECT_STREQ("foobarbaz.h", result[0].name.c_str());
     EXPECT_EQ(2, result[0].startPosition);
     EXPECT_EQ(27, result[0].length);
+    EXPECT_EQ(1, result[0].line);
 }
 
 TEST(IncludeParser, InvalidIncludes) {
@@ -89,6 +94,7 @@ TEST(IncludeParser, InvalidWithValidInclude) {
         EXPECT_STREQ("foobar.h", result[0].name.c_str());
         EXPECT_EQ(9, result[0].startPosition);
         EXPECT_EQ(19, result[0].length);
+        EXPECT_EQ(1, result[0].line);
     }
 
     {
@@ -98,7 +104,17 @@ TEST(IncludeParser, InvalidWithValidInclude) {
         EXPECT_STREQ("foo.h", result[0].name.c_str());
         EXPECT_EQ(26, result[0].startPosition);
         EXPECT_EQ(15, result[0].length);
+        EXPECT_EQ(1, result[0].line);
     }
+}
+
+TEST(IncludeParser, LineNumbers) {
+        utils::CString code("#include \"one.h\"\n#include \"two.h\"\n\n#include \"four.h\"");
+        auto result = filamat::parseForIncludes(code);
+        EXPECT_EQ(3, result.size());
+        EXPECT_EQ(1, result[0].line);
+        EXPECT_EQ(2, result[1].line);
+        EXPECT_EQ(4, result[2].line);
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -106,9 +122,12 @@ TEST(IncludeParser, InvalidWithValidInclude) {
 TEST(IncludeResolver, NoIncludes) {
     utils::CString code("no includes");
     MockIncluder includer;
-    bool result = filamat::resolveIncludes(utils::CString(""), code, includer);
+    filamat::IncludeResult source {
+        .text = code
+    };
+    bool result = filamat::resolveIncludes(source, includer, {});
     EXPECT_TRUE(result);
-    EXPECT_STREQ("no includes", code.c_str());
+    EXPECT_STREQ("no includes", source.text.c_str());
 }
 
 TEST(IncludeResolver, SingleInclude) {
@@ -116,9 +135,12 @@ TEST(IncludeResolver, SingleInclude) {
     MockIncluder includer;
     includer
         .sourceForInclude("test.h", "include");
-    bool result = filamat::resolveIncludes(utils::CString(""), code, includer);
+    filamat::IncludeResult source {
+        .text = code
+    };
+    bool result = filamat::resolveIncludes(source, includer, {});
     EXPECT_TRUE(result);
-    EXPECT_STREQ("include", code.c_str());
+    EXPECT_STREQ("include", source.text.c_str());
 }
 
 TEST(IncludeResolver, MultipleIncludes) {
@@ -134,13 +156,16 @@ TEST(IncludeResolver, MultipleIncludes) {
         .sourceForInclude("two.h", "2")
         .sourceForInclude("three.h", "3");
 
-    bool result = filamat::resolveIncludes(utils::CString(""), code, includer);
+    filamat::IncludeResult source {
+        .text = code
+    };
+    bool result = filamat::resolveIncludes(source, includer, {});
     EXPECT_TRUE(result);
     EXPECT_STREQ(utils::CString(R"(
         1
         2
         3
-    )").c_str(), code.c_str());
+    )").c_str(), source.text.c_str());
 }
 
 TEST(IncludeResolver, IncludeWithinInclude) {
@@ -156,13 +181,15 @@ TEST(IncludeResolver, IncludeWithinInclude) {
         .sourceForInclude("three.h", "3")
         .expectIncludeIncludedBy("three.h", "two.h");
 
-
-    bool result = filamat::resolveIncludes(utils::CString(""), code, includer);
+    filamat::IncludeResult source {
+        .text = code
+    };
+    bool result = filamat::resolveIncludes(source, includer, {});
     EXPECT_TRUE(result);
     EXPECT_STREQ(utils::CString(R"(
         1
         3
-    )").c_str(), code.c_str());
+    )").c_str(), source.text.c_str());
 }
 
 TEST(IncludeResolver, Includers) {
@@ -177,11 +204,14 @@ TEST(IncludeResolver, Includers) {
         .sourceForInclude("three.h", "3")
         .expectIncludeIncludedBy("two.h", "dir/one.h");
 
-    bool result = filamat::resolveIncludes(utils::CString(""), code, includer);
+    filamat::IncludeResult source {
+        .text = code
+    };
+    bool result = filamat::resolveIncludes(source, includer, {});
     EXPECT_TRUE(result);
     EXPECT_STREQ(utils::CString(R"(
         3
-    )").c_str(), code.c_str());
+    )").c_str(), source.text.c_str());
 }
 
 TEST(IncludeResolver, IncludeFailure) {
@@ -194,7 +224,10 @@ TEST(IncludeResolver, IncludeFailure) {
         includer
             .sourceForInclude("one.h", "#include \"two.h\"");
 
-        bool result = filamat::resolveIncludes(utils::CString(""), code, includer);
+        filamat::IncludeResult source {
+            .text = code
+        };
+        bool result = filamat::resolveIncludes(source, includer, {});
         EXPECT_FALSE(result);
     }
     {
@@ -204,7 +237,10 @@ TEST(IncludeResolver, IncludeFailure) {
 
         MockIncluder includer;
 
-        bool result = filamat::resolveIncludes(utils::CString(""), code, includer);
+        filamat::IncludeResult source {
+            .text = code
+        };
+        bool result = filamat::resolveIncludes(source, includer, {});
         EXPECT_FALSE(result);
     }
 }
@@ -219,9 +255,130 @@ TEST(IncludeResolver, Cycle) {
         .sourceForInclude("foo.h", "#include \"bar.h\"")
         .sourceForInclude("bar.h", "#include \"foo.h\"");
 
-    bool result = filamat::resolveIncludes(utils::CString(""), code, includer);
+    filamat::IncludeResult source {
+        .text = code
+    };
+    bool result = filamat::resolveIncludes(source, includer, {});
     // Include cycles are disallowed. We should still terminate in finite time and report false.
     EXPECT_FALSE(result);
+}
+
+// Helper function that lets us write comparison cases with line breaks.
+void EXPECT_STREQ_TRIMMARGIN(const char* expected, const char* actual) {
+    size_t len = strlen(expected);
+    char* trimmed = (char*) malloc(len);
+
+    const char* end = expected + len;
+    const char* e = expected;
+    char* t = trimmed;
+
+    while (e < end) {
+        while (e < end) {
+            if (*e == '|') {
+                e += 2; // eat | and space
+                break;
+            }
+            e++;
+        }
+        while (e < end) {
+            if (*e == '\n') {
+                *t++ = *e++;
+                break;
+            }
+            *t++ = *e++;
+        }
+    }
+
+    *t++ = 0;
+
+    EXPECT_STREQ(trimmed, actual);
+
+    free(trimmed);
+}
+
+TEST(IncludeResolver, SingleIncludeLineDirective) {
+    utils::CString code("#include \"test.h\"");
+    MockIncluder includer;
+    includer
+        .sourceForInclude("test.h", "include");
+    filamat::ResolveOptions options = {
+        .insertLineDirectives = true,
+        .insertLineDirectiveCheck = false   // makes it simplier to test
+    };
+    filamat::IncludeResult source {
+        .includeName = utils::CString("root.h"),
+        .text = code
+    };
+    bool result = filamat::resolveIncludes(source, includer, options);
+    EXPECT_TRUE(result);
+    EXPECT_STREQ_TRIMMARGIN(R"(
+        | #line 1 "root.h"
+        | #line 1 "test.h"
+        | include
+        | #line 1 "root.h"
+        | )", source.text.c_str());
+}
+
+TEST(IncludeResolver, MultipleIncludesLineDirective) {
+    utils::CString code("#include \"one.h\"\n#include \"two.h\"\n");
+
+    MockIncluder includer;
+    includer
+        .sourceForInclude("one.h", "1")
+        .sourceForInclude("two.h", "2");
+
+    filamat::ResolveOptions options = {
+        .insertLineDirectives = true,
+        .insertLineDirectiveCheck = false   // makes it simplier to test
+    };
+    filamat::IncludeResult source {
+        .includeName = utils::CString("root.h"),
+        .text = code,
+    };
+    bool result = filamat::resolveIncludes(source, includer, options);
+    EXPECT_TRUE(result);
+
+    EXPECT_STREQ_TRIMMARGIN(R"(
+        | #line 1 "root.h"
+        | #line 1 "one.h"
+        | 1
+        | #line 2 "root.h"
+        | #line 1 "two.h"
+        | 2
+        | #line 3 "root.h"
+        | )", source.text.c_str());
+}
+
+TEST(IncludeResolver, MultipleIncludesSameLineLineDirective) {
+    // includes are on the same line
+    utils::CString code("#include \"one.h\"#include \"two.h\"\n");
+
+    MockIncluder includer;
+    includer
+        .sourceForInclude("one.h", "1")
+        .sourceForInclude("two.h", "2")
+        .expectIncludeIncludedBy("three.h", "two.h");
+
+    filamat::ResolveOptions options = {
+        .insertLineDirectives = true,
+        .insertLineDirectiveCheck = false   // makes it simplier to test
+    };
+    filamat::IncludeResult source {
+        .includeName = utils::CString("root.h"),
+        .text = code
+    };
+    bool result = filamat::resolveIncludes(source, includer, options);
+    EXPECT_TRUE(result);
+
+    EXPECT_STREQ_TRIMMARGIN(R"(
+        | #line 1 "root.h"
+        | #line 1 "one.h"
+        | 1
+        | #line 1 "root.h"
+        | #line 1 "two.h"
+        | 2
+        | #line 2 "root.h"
+        | )", source.text.c_str());
 }
 
 // -------------------------------------------------------------------------------------------------

@@ -60,13 +60,19 @@ public:
     // Sets a custom projection matrix (sets both the viewing and culling projections).
     void setCustomProjection(math::mat4 const& projection, double near, double far) noexcept;
 
+    void setScaling(math::double4 const& scaling) noexcept;
+
     // returns the projection matrix
-    const math::mat4& getProjectionMatrix() const noexcept {
-        return mProjection;
+    math::mat4 getProjectionMatrix() const noexcept {
+        return math::mat4(mScaling) * mProjection;
     }
 
-    const math::mat4& getCullingProjectionMatrix() const noexcept {
-        return mProjectionForCulling;
+    math::mat4 getCullingProjectionMatrix() const noexcept {
+        return math::mat4(mScaling) * mProjectionForCulling;
+    }
+
+    const math::double4& getScaling() const noexcept {
+        return mScaling;
     }
 
     float getNear() const noexcept { return mNear; }
@@ -161,6 +167,7 @@ private:
 
     math::mat4 mProjection;            // projection matrix (infinite far)
     math::mat4 mProjectionForCulling;  // projection matrix (with far plane)
+    math::double4 mScaling = {1.0f};   // additional scaling applied to projection
 
     float mNear;
     float mFar;

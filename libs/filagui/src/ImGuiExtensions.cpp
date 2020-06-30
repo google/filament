@@ -17,6 +17,7 @@
 #include <filagui/ImGuiExtensions.h>
 
 #include <imgui.h>
+#include <imgui_internal.h>
 
 #include <math/scalar.h>
 #include <math/vec3.h>
@@ -51,6 +52,23 @@ private:
     const int WidgetSize = 100;
 };
 
+static ImVector<float3> s_ArrowTri[4];
+static ImVector<ImVec2> s_ArrowTriProj[4];
+static ImVector<float3> s_ArrowNorm[4];
+static ImVector<ImU32> s_ArrowColLight[4];
+
+inline float ImVec2Cross(const ImVec2& left, const ImVec2& right) {
+    return (left.x * right.y) - (left.y * right.x);
+}
+
+static inline ImVec2 operator+(const ImVec2& lhs, const ImVec2& rhs) {
+    return ImVec2(lhs.x+rhs.x, lhs.y+rhs.y);
+}
+
+static inline ImVec2 operator-(const ImVec2& lhs, const ImVec2& rhs) {
+    return ImVec2(lhs.x-rhs.x, lhs.y-rhs.y);
+}
+
 namespace ImGuiExt {
 
 bool DirectionWidget(const char* label, float v[3]) {
@@ -79,24 +97,121 @@ bool DirectionWidget(const char* label, float v[3]) {
     return changed;
 }
 
+static void PlotEx(ImGuiPlotType plot_type, const char* label, int series_count,
+        void (*series_start)(int series),
+        float (*values_getter)(int series, void* data, int idx),
+        void (*series_end)(int series),
+        void* data, int values_count, int values_offset, const char* overlay_text,
+        float scale_min, float scale_max, ImVec2 graph_size) {
+
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    if (window->SkipItems)return;
+
+    ImGuiContext& g = *GImGui;
+    const ImGuiStyle& style = g.Style;
+
+    const ImVec2 label_size = ImGui::CalcTextSize(label, NULL, true);
+    if (graph_size.x == 0.0f) graph_size.x = ImGui::CalcItemWidth();
+    if (graph_size.y == 0.0f) graph_size.y = label_size.y + (style.FramePadding.y * 2);
+
+    const ImRect frame_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(graph_size.x, graph_size.y));
+    const ImRect inner_bb(frame_bb.Min + style.FramePadding, frame_bb.Max - style.FramePadding);
+    const ImRect total_bb(frame_bb.Min, frame_bb.Max + ImVec2(label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f, 0));
+    ImGui::ItemSize(total_bb, style.FramePadding.y);
+    if (!ImGui::ItemAdd(total_bb, 0, &frame_bb)) return;
+    const bool hovered = ImGui::ItemHoverable(inner_bb, 0);
+
+    // Determine scale from values if not specified
+    if (scale_min == FLT_MAX || scale_max == FLT_MAX) {
+        float v_min = FLT_MAX;
+        float v_max = -FLT_MAX;
+        for (int j = 0; j < series_count; j++) {
+            for (int i = 0; i < values_count; i++) {
+                const float v = values_getter(j, data, i);
+                v_min = ImMin(v_min, v);
+                v_max = ImMax(v_max, v);
+            }
+        }
+        if (scale_min == FLT_MAX) scale_min = v_min;
+        if (scale_max == FLT_MAX) scale_max = v_max;
+    }
+
+    ImGui::RenderFrame(frame_bb.Min, frame_bb.Max, ImGui::GetColorU32(ImGuiCol_FrameBg), true, style.FrameRounding);
+
+    if (values_count > 0) {
+        int res_w = ImMin((int)graph_size.x, values_count) + ((plot_type == ImGuiPlotType_Lines) ? -1 : 0);
+        int item_count = values_count + ((plot_type == ImGuiPlotType_Lines) ? -1 : 0);
+
+        int v_hovered = -1;
+        if (hovered) {
+            const float t = ImClamp((g.IO.MousePos.x - inner_bb.Min.x) / (inner_bb.Max.x - inner_bb.Min.x), 0.0f, 0.9999f);
+            const int v_idx = (int)(t * item_count);
+            v_hovered = v_idx;
+        }
+
+        const float t_step = 1.0f / (float)res_w;
+        const float inv_scale = (scale_min == scale_max) ? 0.0f : (1.0f / (scale_max - scale_min));
+
+        for (int s = 0; s < series_count; s++) {
+            series_start(s);
+
+            float v0 = values_getter(s, data, (0 + values_offset) % values_count);
+            float t0 = 0.0f;
+            ImVec2 tp0 = ImVec2( t0, 1.0f - ImSaturate((v0 - scale_min) * inv_scale) );                       // Point in the normalized space of our target rectangle
+            float histogram_zero_line_t = (scale_min * scale_max < 0.0f) ? (-scale_min * inv_scale) : (scale_min < 0.0f ? 0.0f : 1.0f);   // Where does the zero line stands
+
+            const ImU32 col_base = ImGui::GetColorU32((plot_type == ImGuiPlotType_Lines) ? ImGuiCol_PlotLines : ImGuiCol_PlotHistogram);
+            const ImU32 col_hovered = ImGui::GetColorU32((plot_type == ImGuiPlotType_Lines) ? ImGuiCol_PlotLinesHovered : ImGuiCol_PlotHistogramHovered);
+
+            for (int n = 0; n < res_w; n++) {
+                const float t1 = t0 + t_step;
+                const int v1_idx = (int)(t0 * item_count + 0.5f);
+                const float v1 = values_getter(s, data, (v1_idx + values_offset + 1) % values_count);
+                const ImVec2 tp1 = ImVec2(t1, 1.0f - ImSaturate((v1 - scale_min) * inv_scale));
+
+                // NB: Draw calls are merged together by the DrawList system. Still, we should render our batch are lower level to save a bit of CPU.
+                ImVec2 pos0 = ImLerp(inner_bb.Min, inner_bb.Max, tp0);
+                ImVec2 pos1 = ImLerp(inner_bb.Min, inner_bb.Max,
+                        (plot_type == ImGuiPlotType_Lines) ? tp1 : ImVec2(tp1.x, histogram_zero_line_t));
+                if (plot_type == ImGuiPlotType_Lines) {
+                    window->DrawList->AddLine(pos0, pos1, v_hovered == v1_idx ? col_hovered : col_base);
+                } else if (plot_type == ImGuiPlotType_Histogram) {
+                    if (pos1.x >= pos0.x + 2.0f) {
+                        pos1.x -= 1.0f;
+                    }
+                    window->DrawList->AddRectFilled(pos0, pos1, v_hovered == v1_idx ? col_hovered : col_base);
+                }
+
+                t0 = t1;
+                tp0 = tp1;
+            }
+
+            series_end(s);
+        }
+    }
+
+    // Text overlay
+    if (overlay_text) {
+        ImGui::RenderTextClipped(ImVec2(frame_bb.Min.x, frame_bb.Min.y + style.FramePadding.y),
+                frame_bb.Max, overlay_text, NULL, NULL, ImVec2(0.5f, 0.0f));
+    }
+
+    if (label_size.x > 0.0f) {
+        ImGui::RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, inner_bb.Min.y), label);
+    }
+}
+
+void PlotLinesSeries(const char* label, int series_count,
+        void (*series_start)(int series),
+        float (*values_getter)(int series, void* data, int idx),
+        void (*series_end)(int series),
+        void* data, int values_count, int values_offset, const char* overlay_text,
+        float scale_min, float scale_max, ImVec2 graph_size) {
+    PlotEx(ImGuiPlotType_Lines, label, series_count, series_start, values_getter, series_end,
+            data, values_count, values_offset, overlay_text, scale_min, scale_max, graph_size);
+}
+
 } // namespace ImGuiExt
-
-static ImVector<float3> s_ArrowTri[4];
-static ImVector<ImVec2> s_ArrowTriProj[4];
-static ImVector<float3> s_ArrowNorm[4];
-static ImVector<ImU32> s_ArrowColLight[4];
-
-inline float ImVec2Cross(const ImVec2& left, const ImVec2& right) {
-    return (left.x * right.y) - (left.y * right.x);
-}
-
-static inline ImVec2 operator+(const ImVec2& lhs, const ImVec2& rhs) {
-    return ImVec2(lhs.x+rhs.x, lhs.y+rhs.y);
-}
-
-static inline ImVec2 operator-(const ImVec2& lhs, const ImVec2& rhs) {
-    return ImVec2(lhs.x-rhs.x, lhs.y-rhs.y);
-}
 
 ArrowWidget::ArrowWidget(float3 direction) {
     quatFromDirection(mDirectionQuat, direction);

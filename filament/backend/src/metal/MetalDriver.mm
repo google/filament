@@ -261,12 +261,12 @@ void MetalDriver::createSyncR(Handle<HwSync> sh, int) {
 
 void MetalDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
     auto* metalLayer = (__bridge CAMetalLayer*) nativeWindow;
-    construct_handle<MetalSwapChain>(mHandleMap, sch, mContext->device, metalLayer);
+    construct_handle<MetalSwapChain>(mHandleMap, sch, mContext->device, metalLayer, flags);
 }
 
 void MetalDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch,
         uint32_t width, uint32_t height, uint64_t flags) {
-    construct_handle<MetalSwapChain>(mHandleMap, sch, width, height);
+    construct_handle<MetalSwapChain>(mHandleMap, sch, width, height, flags);
 }
 
 void MetalDriver::createStreamFromTextureIdR(Handle<HwStream>, intptr_t externalTextureId,
@@ -451,11 +451,9 @@ void MetalDriver::destroySync(Handle<HwSync> sh) {
 
 
 void MetalDriver::terminate() {
-    // Wait for all frames to finish by submitting and waiting on a dummy command buffer.
+    // finish() will flush the pending command buffer and will ensure all GPU work has finished.
     // This must be done before calling bufferPool->reset() to ensure no buffers are in flight.
-    id<MTLCommandBuffer> oneOffBuffer = [mContext->commandQueue commandBuffer];
-    [oneOffBuffer commit];
-    [oneOffBuffer waitUntilCompleted];
+    finish();
 
     mContext->bufferPool->reset();
     mContext->commandQueue = nil;
@@ -568,7 +566,7 @@ bool MetalDriver::isRenderTargetFormatSupported(TextureFormat format) {
 }
 
 bool MetalDriver::isFrameBufferFetchSupported() {
-#if defined(IOS)
+#if defined(IOS) && !defined(FILAMENT_IOS_SIMULATOR)
     return true;
 #else
     return false;
@@ -818,7 +816,15 @@ void MetalDriver::popGroupMarker(int dummy) {
 }
 
 void MetalDriver::startCapture(int) {
+#if (TARGET_OS_IOS && __IPHONE_OS_VERSION_MIN_REQUIRED < 130000) || \
+    (TARGET_OS_OSX && __MAC_OS_X_VERSION_MIN_REQUIRED < 101500)
     [[MTLCaptureManager sharedCaptureManager] startCaptureWithDevice:mContext->device];
+#else
+    MTLCaptureDescriptor* descriptor = [MTLCaptureDescriptor new];
+    descriptor.captureObject = mContext->device;
+    [[MTLCaptureManager sharedCaptureManager] startCaptureWithDescriptor:descriptor
+                                                                       error:nil];
+#endif
 }
 
 void MetalDriver::stopCapture(int) {

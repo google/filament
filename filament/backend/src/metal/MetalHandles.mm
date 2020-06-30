@@ -18,6 +18,8 @@
 
 #include "MetalEnums.h"
 
+#include <filament/SwapChain.h>
+
 #include "private/backend/BackendUtils.h"
 
 #include <utils/Panic.h>
@@ -47,14 +49,29 @@ static inline MTLTextureUsage getMetalTextureUsage(TextureUsage usage) {
     return MTLTextureUsage(u);
 }
 
-MetalSwapChain::MetalSwapChain(id<MTLDevice> device, CAMetalLayer* nativeWindow)
+MetalSwapChain::MetalSwapChain(id<MTLDevice> device, CAMetalLayer* nativeWindow, uint64_t flags)
         : layer(nativeWindow) {
+
+    if (!(flags & SwapChain::CONFIG_TRANSPARENT) && !nativeWindow.opaque) {
+        utils::slog.w << "Warning: Filament SwapChain has no CONFIG_TRANSPARENT flag, "
+                         "but the CAMetaLayer(" << (__bridge void*) nativeWindow << ")"
+                         " has .opaque set to NO." << utils::io::endl;
+    }
+    if ((flags & SwapChain::CONFIG_TRANSPARENT) && nativeWindow.opaque) {
+        utils::slog.w << "Warning: Filament SwapChain has the CONFIG_TRANSPARENT flag, "
+                         "but the CAMetaLayer(" << (__bridge void*) nativeWindow << ")"
+                         " has .opaque set to YES." << utils::io::endl;
+    }
+
     // Needed so we can use the SwapChain as a blit source.
-    nativeWindow.framebufferOnly = NO;
+    if (flags & SwapChain::CONFIG_READABLE) {
+        nativeWindow.framebufferOnly = NO;
+    }
+
     layer.device = device;
 }
 
-MetalSwapChain::MetalSwapChain(int32_t width, int32_t height) : headlessWidth(width),
+MetalSwapChain::MetalSwapChain(int32_t width, int32_t height, uint64_t flags) : headlessWidth(width),
         headlessHeight(height) { }
 
 MetalVertexBuffer::MetalVertexBuffer(MetalContext& context, uint8_t bufferCount,
@@ -562,7 +579,7 @@ MetalRenderTarget::Attachment MetalRenderTarget::getDepthAttachment() {
     if (defaultRenderTarget) {
         result.texture = acquireDepthTexture(context);
     }
-    return depth;
+    return result;
 }
 
 MTLLoadAction MetalRenderTarget::getLoadAction(const RenderPassParams& params,

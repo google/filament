@@ -52,7 +52,6 @@ namespace gltfio {
 class SimpleViewer {
 public:
 
-    static constexpr uint32_t FLAG_COLLAPSED = (1 << 0);
     static constexpr int DEFAULT_SIDEBAR_WIDTH = 350;
 
     /**
@@ -62,7 +61,7 @@ public:
      * light sources) that it owns.
      */
     SimpleViewer(filament::Engine* engine, filament::Scene* scene, filament::View* view,
-            uint32_t flags = 0, int sidebarWidth = DEFAULT_SIDEBAR_WIDTH);
+            int sidebarWidth = DEFAULT_SIDEBAR_WIDTH);
 
     /**
      * Destroys the SimpleViewer and any Filament entities that it owns.
@@ -247,11 +246,10 @@ filament::math::mat4f fitIntoUnitCube(const filament::Aabb& bounds) {
 }
 
 SimpleViewer::SimpleViewer(filament::Engine* engine, filament::Scene* scene, filament::View* view,
-        uint32_t flags, int sidebarWidth) :
+        int sidebarWidth) :
         mEngine(engine), mScene(scene), mView(view),
         mSunlight(utils::EntityManager::get().create()),
-        mSidebarWidth(sidebarWidth),
-        mFlags(flags) {
+        mSidebarWidth(sidebarWidth) {
     using namespace filament;
     LightManager::Builder(LightManager::Type::SUN)
         .color(mSunlightColor)
@@ -362,8 +360,6 @@ void SimpleViewer::applyAnimation(double currentTime) {
 void SimpleViewer::updateUserInterface() {
     using namespace filament;
 
-    ImGuiTreeNodeFlags headerFlags = (mFlags & FLAG_COLLAPSED) ? 0 : ImGuiTreeNodeFlags_DefaultOpen;
-
     auto& tm = mEngine->getTransformManager();
     auto& rm = mEngine->getRenderableManager();
     auto& lm = mEngine->getLightManager();
@@ -449,23 +445,6 @@ void SimpleViewer::updateUserInterface() {
         }
     };
 
-    auto animationsTreeItem = [&]() {
-        size_t count = mAnimator->getAnimationCount();
-        int selectedAnimation = mCurrentAnimation;
-        ImGui::RadioButton("Disable", &selectedAnimation, 0);
-        for (size_t i = 0; i < count; ++i) {
-            std::string label = mAnimator->getAnimationName(i);
-            if (label.empty()) {
-                label = "Unnamed " + std::to_string(i);
-            }
-            ImGui::RadioButton(label.c_str(), &selectedAnimation, i + 1);
-        }
-        if (selectedAnimation != mCurrentAnimation) {
-            mCurrentAnimation = selectedAnimation;
-            mResetAnimation = true;
-        }
-    };
-
     // Disable rounding and draw a fixed-height ImGui window that looks like a sidebar.
     ImGui::GetStyle().WindowRounding = 0;
     ImGui::SetNextWindowPos(ImVec2(0, 0));
@@ -483,14 +462,17 @@ void SimpleViewer::updateUserInterface() {
     DebugRegistry& debug = mEngine->getDebugRegistry();
 
     if (ImGui::CollapsingHeader("View")) {
+        ImGui::Indent();
         ImGui::Checkbox("Dithering", &mEnableDithering);
         ImGui::Checkbox("FXAA", &mEnableFxaa);
         ImGui::Checkbox("MSAA 4x", &mEnableMsaa);
         ImGui::Checkbox("SSAO", &mEnableSsao);
         ImGui::Checkbox("Bloom", &mBloomOptions.enabled);
+        ImGui::Unindent();
     }
 
-    if (ImGui::CollapsingHeader("Light", headerFlags)) {
+    if (ImGui::CollapsingHeader("Light")) {
+        ImGui::Indent();
         ImGui::SliderFloat("IBL intensity", &mIblIntensity, 0.0f, 100000.0f);
         ImGui::SliderAngle("IBL rotation", &mIblRotation);
         ImGui::SliderFloat("Sun intensity", &mSunlightIntensity, 50000.0, 150000.0f);
@@ -500,9 +482,11 @@ void SimpleViewer::updateUserInterface() {
         ImGui::SliderInt("Cascades", &mShadowCascades, 1, 4);
         ImGui::Checkbox("Debug Cascades", debug.getPropertyAddress<bool>("d.shadowmap.visualize_cascades"));
         ImGui::Checkbox("Enable contact shadows", &mEnableContactShadows);
+        ImGui::Unindent();
     }
 
     if (ImGui::CollapsingHeader("Fog")) {
+        ImGui::Indent();
         ImGui::Checkbox("Enable Fog", &mFogOptions.enabled);
         ImGui::SliderFloat("Start", &mFogOptions.distance, 0.0f, 100.0f);
         ImGui::SliderFloat("Density", &mFogOptions.density, 0.0f, 1.0f);
@@ -512,6 +496,7 @@ void SimpleViewer::updateUserInterface() {
         ImGui::SliderFloat("Scattering Size", &mFogOptions.inScatteringSize, 0.0f, 100.0f);
         ImGui::Checkbox("Color from IBL", &mFogOptions.fogColorFromIbl);
         ImGui::ColorPicker3("Color", mFogOptions.color.v);
+        ImGui::Unindent();
     }
 
     mView->setDithering(mEnableDithering ? View::Dithering::TEMPORAL : View::Dithering::NONE);
@@ -542,17 +527,29 @@ void SimpleViewer::updateUserInterface() {
     });
 
     if (mAsset != nullptr) {
-        if (ImGui::CollapsingHeader("Model", headerFlags)) {
-            if (mAnimator->getAnimationCount() > 0) {
-                intptr_t animationsNodeId = -1;
-                ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen;
-                if (ImGui::TreeNodeEx((const void*) animationsNodeId, flags, "Animations")) {
-                    animationsTreeItem();
-                    ImGui::TreePop();
-                }
-            }
+        if (ImGui::CollapsingHeader("Hierarchy")) {
+            ImGui::Indent();
             ImGui::Checkbox("Show bounds", &mEnableWireframe);
             treeNode(mAsset->getRoot());
+            ImGui::Unindent();
+        }
+
+        if (mAnimator->getAnimationCount() > 0 && ImGui::CollapsingHeader("Animation")) {
+            ImGui::Indent();
+            int selectedAnimation = mCurrentAnimation;
+            ImGui::RadioButton("Disable", &selectedAnimation, 0);
+            for (size_t i = 0, count = mAnimator->getAnimationCount(); i < count; ++i) {
+                std::string label = mAnimator->getAnimationName(i);
+                if (label.empty()) {
+                    label = "Unnamed " + std::to_string(i);
+                }
+                ImGui::RadioButton(label.c_str(), &selectedAnimation, i + 1);
+            }
+            if (selectedAnimation != mCurrentAnimation) {
+                mCurrentAnimation = selectedAnimation;
+                mResetAnimation = true;
+            }
+            ImGui::Unindent();
         }
 
         if (mEnableWireframe) {

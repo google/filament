@@ -70,6 +70,9 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
     val progress
         get() = resourceLoader.asyncGetLoadProgress()
 
+    var normalizeSkinningWeights = true
+    var recomputeBoundingBoxes = false
+
     val scene: Scene
     val view: View
     val camera: Camera
@@ -101,7 +104,7 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
         view.camera = camera
 
         assetLoader = AssetLoader(engine, MaterialProvider(engine), EntityManager.get())
-        resourceLoader = ResourceLoader(engine, false, false)
+        resourceLoader = ResourceLoader(engine, normalizeSkinningWeights, recomputeBoundingBoxes)
 
         // Always add a direct light source since it is required for shadowing.
         // We highly recommend adding an indirect light as well.

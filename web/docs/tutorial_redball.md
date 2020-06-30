@@ -103,7 +103,7 @@ class App {
 
     this.swapChain = engine.createSwapChain();
     this.renderer = engine.createRenderer();
-    this.camera = engine.createCamera();
+    this.camera = engine.createCamera(Filament.EntityManager.get().create());
     this.view = engine.createView();
     this.view.setCamera(this.camera);
     this.view.setScene(scene);
@@ -309,7 +309,7 @@ available [here](tutorial_redball.js).
 In the [next tutorial], we'll take a closer look at textures and interaction.
 
 [pillars_2k.hdr]:
-//github.com/google/filament/blob/master/third_party/environments/pillars_2k.hdr
+//github.com/google/filament/blob/main/third_party/environments/pillars_2k.hdr
 
 [next tutorial]: tutorial_suzanne.html
 [previous tutorial]: tutorial_triangle.html

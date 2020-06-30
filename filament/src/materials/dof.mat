@@ -3,32 +3,32 @@ material {
     parameters : [
         {
            type : sampler2d,
-           name : buffer0,
+           name : foreground,
            precision: medium
         },
         {
            type : sampler2d,
-           name : buffer1,
+           name : background,
            precision: medium
         },
         {
            type : sampler2d,
-           name : depth,
+           name : cocFgBg,
            precision: medium
         },
         {
-            type : float4,
-            name : resolution,
-            precision: high
-        },
-        {
-            type : float4,
-            name : blurDirections,
-            precision: medium
+           type : sampler2d,
+           name : tiles,
+           precision: medium
         },
         {
            type : float2,
-           name : cocParams
+           name : fullResPixelSize,
+           precision: high
+        },
+        {
+           type : float,
+           name : bokehAngle,
         }
     ],
     variables : [
@@ -49,17 +49,435 @@ fragment {
 
 #include "dofUtils.fs"
 
+
+// # of sample w.r.t. ring count and density
+// 3 rings w/ density 6  :  19
+// 3 rings w/ density 8  :  25
+// 4 rings w/ density 6  :  37
+// 4 rings w/ density 8  :  49
+
+#if defined(TARGET_MOBILE)
+#define RING_DENSITY        8
+#define RING_COUNT_GATHER   3
+#define RING_COUNT_FAST     3
+#else
+#define RING_DENSITY        8
+#define RING_COUNT_GATHER   4
+#define RING_COUNT_FAST     4
+#endif
+
+// Enabled by default. Mipmaped taps look a lot better, but do cause some
+// aliasing issues which force us to set all sample weights to 1.0
+// This is here mostly for debugging.
+#define KERNEL_USE_MIPMAP     1
+
+// Experimentally, adding spacial noise is not necessary if KERNEL_USE_MIPMAP is enabled,
+// however, noise helps a lot otherwise.
+// This is here mostly for debugging.
+#define KERNEL_USE_NOISE      0
+
+
+void dummy(){}
+
+layout(location = 1) out float outAlpha;
+
+float sampleCount(const float ringCount) {
+    const float ringDensity = float(RING_DENSITY);
+    return ((ringDensity * ringCount * (ringCount - 1.0) + 2.0) * 0.5);
+}
+
+
+
+float sampleWeight(const float coc, const float mip) {
+#if KERNEL_USE_MIPMAP
+    // When mipmaping is used this creates aliasing artifacts around geometry edges.
+    // Applying the mip correction factor (as below) helps but doesn't solve the issue.
+    // In the end, it's better to just assume equal strength for all samples.
+    return 1.0;
+#else
+    // The contribution of sample is inversely proportional to *it's* area
+    // (the larger area, the fainter it is).
+    // In theory this factor should be 1 / pi * radius^2, however 1/pi is a constant, and
+    // because we divide by the total weight eventually, it can be ommited, in fact, any
+    // constant can be used. Here we use MAX_COC_RADIUS * MAX_COC_RADIUS instead of 1/pi,
+    // because this allows us to fit in mediump precision.
+
+    // The high resolution pixel radius is sqrt(2) * 0.5.
+    // x2 to scale to 1/4 res, x 2^mip for the current mip.
+    // ^2 for the area.
+    float pixelRadiusSquared = pow(2.0, mip);
+    return (MAX_COC_RADIUS * MAX_COC_RADIUS) / (max(coc * coc, pixelRadiusSquared));
+#endif
+}
+
+float intersection(const float border, const float absCoc, const float mip) {
+    // there is very little visible difference, so use the cheaper version on mobile
+#if defined(TARGET_MOBILE)
+    return saturate((absCoc - border) + 0.5);
+#else
+    return saturate((absCoc - border) * pow(0.5, mip) + 0.5);
+#endif
+}
+
+float rcp(const float x) {
+    return 1.0 / x;
+}
+
+/*
+ * We use a lot of techniques described in:
+ * "Life of a Bokeh" by Guillaume Abadie, SIGGRAPH 2018
+ */
+
+struct Bucket {
+    vec4 c;     // accumulated, weighted color
+    float cw;   // accumulated weight
+    float o;    // # of hits for the ring
+    float coc;  // accumulated, weighted coc
+};
+
+struct Sample {
+    vec4 s;                 // sample color
+    float coc;              // sample coc
+};
+
+void initBucket(out Bucket ring) {
+    ring.c = vec4(0.0);
+    ring.cw = 0.0;
+    ring.o = 0.0;
+    ring.coc = 0.0;
+}
+
+void initRing(const float i, const float ringCount, const float kernelSize, out float count, out mat2 r, out vec2 p) {
+    const float ringDensity = float(RING_DENSITY);
+    float radius = (kernelSize / ringCount) * i;
+    count = max(1.0, ringDensity * i);
+
+    float inc = 2.0 * PI / count;
+    vec2 t = vec2(cos(inc), sin(inc));
+    r = mat2(t.x, t.y, -t.y, t.x);
+
+    float firstSamplePosition = mod(i, 2.0) * 0.5 * inc;
+    p = radius * vec2(cos(firstSamplePosition), sin(firstSamplePosition));
+}
+
+/*
+ * Backgorund accumulator
+ */
+
+void mergeRings(inout Bucket curr, inout Bucket prev, const float count) {
+    if (curr.cw >= MEDIUMP_FLT_MIN) {
+        // "Life of a Bokeh", SIGGRAPH 2018 -- slide 32
+        // How much the current ring is occluding the previous ring -- we estimate this based
+        // on the average CoC of both rings.
+        float currCocAverage = curr.coc * rcp(curr.cw);
+        float prevCocAverage = prev.coc * rcp(prev.cw);
+        float occluded = saturate(prevCocAverage - currCocAverage);
+
+        // Average opacity of current ring is 1.0 - the average hit count for the previous ring
+        // (we track the previous hit count because it's easier)
+        float currentRingOpacity = 1.0 - saturate(prev.o * rcp(count));
+
+        // Opacity of previous ring
+        float previousRingWeight = 0.0;
+        if (prev.cw > MEDIUMP_FLT_MIN) {
+            previousRingWeight = 1.0 - currentRingOpacity * occluded;
+        }
+
+        // merge current ring into previous ring
+        prev.c   = prev.c   * previousRingWeight + curr.c;
+        prev.coc = prev.coc * previousRingWeight + curr.coc;
+        prev.cw  = prev.cw  * previousRingWeight + curr.cw;
+    }
+}
+
+void accumulate(inout Bucket curr, inout Bucket prev, const Sample tap, const float border, const float mip, const bool first) {
+    float inLayer = isBackground(tap.coc);
+    float coc = abs(tap.coc);
+    float intersects = intersection(border, coc, mip);
+    float weight = sampleWeight(coc, mip);
+    float w = intersects * weight * inLayer;
+
+    // The sample has a CoC larger than the border radius, then it belongs to the previous ring,
+    // on the other hand if its CoC is similar to the border radius, then it belongs to the
+    // current ring. This is precisely what intersection() returns.
+    float inPrevious = intersects;
+    if (first) { // (this test is always inlined)
+        // The outmost ring always accumulate to 'curr'.
+        curr.c   += w * tap.s;
+        curr.coc += w * coc;
+        curr.cw  += w;
+    } else {
+        float currWeight = w * (1.0 - inPrevious);
+        float prevWeight = w * inPrevious;
+
+        curr.c   += currWeight * tap.s;
+        curr.coc += currWeight * coc;
+        curr.cw  += currWeight;
+
+        prev.c   += prevWeight * tap.s;
+        prev.coc += prevWeight * coc;
+        prev.cw  += prevWeight;
+        prev.o   += inPrevious;
+    }
+}
+
+void accumulateBackground(inout Bucket curr, inout Bucket prev,
+        const highp vec2 pos, const float border, const float mip, const bool first) {
+    Sample tap;
+    tap.s = textureLod(materialParams_foreground, pos, mip);
+    tap.coc = textureLod(materialParams_cocFgBg, pos, mip).r;
+    accumulate(curr, prev, tap, border, mip, first);
+}
+
+void accumulateBackgroundMirror(inout Bucket curr, inout Bucket prev,
+        const highp vec2 center, const vec2 offset, const float border, const float mip, const bool first) {
+    accumulateBackground(curr, prev, center + offset, border, mip, first);
+    accumulateBackground(curr, prev, center - offset, border, mip, first);
+}
+
+void accumulateBackgroundCenter(inout Bucket prev,
+        const highp vec2 pos, const float border, const float mip) {
+    Bucket curr;
+    initBucket(curr);
+    accumulateBackground(curr, prev, pos, border, mip, false);
+    mergeRings(curr, prev, 1.0);
+}
+
+void accumulateRing(inout Bucket prev, const float index, const float ringCount, const float kernelSize,
+        const highp vec2 uvCenter, const highp vec2 fullResPixelSize, const float mip, const bool first) {
+
+    // we accumulate the larger rings first
+    float i = (ringCount - 1.0) - index;
+
+    Bucket curr;
+    initBucket(curr);
+
+    float count;
+    vec2 p;
+    mat2 r;
+    initRing(i, ringCount, kernelSize, count, r, p);
+
+    float border = (kernelSize / ringCount) * (i + 0.5);
+    for (float j = 0.0; j < count; j += 2.0) {
+        accumulateBackgroundMirror(curr, prev, uvCenter, p * fullResPixelSize, border, mip, first);
+        p = r * p;
+    }
+
+    mergeRings(curr, prev, count);
+}
+
+/*
+ * Foreground accumulator
+ */
+
+void accumulateForeground(inout vec4 foreground, inout float opacity, inout float i,
+        const highp vec2 pos, const float border, const float mip) {
+    float coc = textureLod(materialParams_cocFgBg, pos, mip).r;
+    vec4 s = textureLod(materialParams_foreground, pos, mip);
+    float inLayer = isForeground(coc);
+    float o = cocToAlpha(coc) * inLayer;
+    float w = intersection(border, abs(coc), mip) * sampleWeight(coc, mip) * inLayer;
+    foreground += s * w;
+    opacity += o;
+    i += w;
+}
+
+void accumulateForegroundCenter(inout vec4 foreground, inout float opacity, inout float i,
+        const highp vec2 pos, const float border, const float mip) {
+    accumulateForeground(foreground, opacity, i,pos, border, mip);
+}
+
+void accumulateForegroundMirror(inout vec4 foreground, inout float opacity, inout float i,
+        const highp vec2 center, const vec2 offset, const float border, const float mip) {
+    // The code below is equivalent to:
+    //      accumulateForeground(foreground, opacity, i, center + offset, border, mip);
+    //      accumulateForeground(foreground, opacity, i, center - offset, border, mip);
+    // but selects the min coc of opposite samples as a way to guess the color occluded by
+    // the geometry.
+
+    float coc0 = textureLod(materialParams_cocFgBg, center + offset, mip).r;
+    vec4 s0 = textureLod(materialParams_foreground, center + offset, mip);
+    float coc1 = textureLod(materialParams_cocFgBg, center - offset, mip).r;
+    vec4 s1 = textureLod(materialParams_foreground, center - offset, mip);
+    float coc = min(coc0, coc1);
+    float inLayer = isForeground(coc);
+    float o = cocToAlpha(coc) * inLayer * 2.0;  // we're accumulating 2 samples
+    float w = intersection(border, abs(coc), mip) * sampleWeight(coc, mip) * inLayer;
+    foreground += s0 * w;
+    foreground += s1 * w;
+    opacity += o;
+    i += w * 2.0;
+}
+
+float getMipLevel(const float ringCount, const float kernelSize) {
+#if KERNEL_USE_MIPMAP
+    float s = 1.0 / (ringCount + 0.5);
+    float mip = log2(kernelSize * s);
+    return mip;
+#else
+    return 0.0;
+#endif
+}
+
 void postProcess(inout PostProcessInputs postProcess) {
+    const float ringCountGather = float(RING_COUNT_GATHER);
+    const float ringCountFast   = float(RING_COUNT_FAST);
     highp vec2 uv = variable_vertex.xy;
+    vec2 tiles = textureLod(materialParams_tiles, uv, 0.0).rg;
 
-    float depth = textureLod(materialParams_depth, uv, 0.0).r;
-    float coc = getCOC(depth, materialParams.cocParams);
+    /*
+     * Tiles that are neither foreground or background (in focus) can be skipped
+     */
 
-    vec4 box     = blurTexture(materialParams_buffer0, uv, materialParams.blurDirections.xy, depth, coc);
-    vec4 diamond = blurTexture(materialParams_buffer1, uv, materialParams.blurDirections.zw,  depth, coc);
-    vec4 dof = min(box, diamond);
+    if (isTrivialTile(tiles)) {
+        postProcess.color = vec4(0.0);
+        outAlpha = 0.0;
+        return;
+    }
 
-    postProcess.color = dof;
+    vec4 foreground = vec4(0.0);
+    vec4 background = vec4(0.0);
+
+    // we use the full resolution pixel size because that's the unit the CoC is in
+    highp vec2 fullResPixelSize = materialParams.fullResPixelSize;
+
+#if KERNEL_USE_NOISE
+    // When using mipmaping the noise seems to hurt more than it helps
+    float randomAngle = random(gl_FragCoord.xy) * (2.0 * PI);
+    float random01 = random(gl_FragCoord.xy * vec2(7.0, 11.0));
+    vec2  randomUniformDisk = 0.5 * sqrt(random01) * vec2(cos(randomAngle), sin(randomAngle));
+#else
+    const vec2 noise = vec2(0.0);
+#endif
+
+    if (isFastTile(tiles)) {
+        // for a foreground tile, the kernel size is the largest CoC radius
+#if KERNEL_USE_NOISE
+        vec2  noise = randomUniformDisk * rcp(ringCountFast + 0.5);
+#endif
+        float coc = abs(tiles.r);
+        float kernelSize = coc;
+        float mip = getMipLevel(ringCountFast, kernelSize);
+        vec2 uvCenter = uv + noise * kernelSize * fullResPixelSize;
+
+        for (float i = 0.0; i < ringCountFast; i += 1.0) {
+            float count;
+            vec2 p;
+            mat2 r;
+            initRing(i, ringCountFast, kernelSize, count, r, p);
+            for (float j = 0.0; j < count; j += 1.0) {
+                vec2 pos = uvCenter + p * fullResPixelSize;
+                foreground += textureLod(materialParams_foreground, pos, mip);
+                p = r * p;
+            }
+        }
+        foreground *= rcp(sampleCount(ringCountFast));
+        //foreground.b += 0.1;
+#if POST_PROCESS_OPAQUE
+        // kill the work performed above
+        foreground.a = 1.0;
+#endif
+        postProcess.color  = foreground;
+        outAlpha           = 1.0;
+        return;
+    }
+
+    /*
+     * Then process the slow foreground / background tiles
+     */
+
+    float fgOpacity = 0.0;
+    float bgOpacity = 0.0;
+#if KERNEL_USE_NOISE
+    vec2  noise = randomUniformDisk * rcp(ringCountGather + 0.5);
+#endif
+
+
+    if (isForegroundTile(tiles)) {
+        // for a foreground tile, the kernel size is the largest CoC radius
+        float kernelSize = -tiles.g;
+        float mip = getMipLevel(ringCountGather, kernelSize);
+        vec2 uvCenter = uv + noise * kernelSize * fullResPixelSize;
+        float c = 0.0;
+
+        // the center sample is handled separately, since it's by itself
+        accumulateForegroundCenter(foreground, fgOpacity, c, uvCenter, 0.0, mip);
+
+        for (float i = 1.0; i < ringCountGather; i += 1.0) {
+
+            float border = (kernelSize / ringCountGather) * i;
+            float count;
+            vec2 p;
+            mat2 r;
+
+            initRing(i, ringCountGather, kernelSize, count, r, p);
+
+            for (float j = 0.0; j < count; j += 2.0) {
+                accumulateForegroundMirror(foreground, fgOpacity, c,
+                        uvCenter, p * fullResPixelSize, border, mip);
+                p = r * p;
+            }
+        }
+
+        if (c < MEDIUMP_FLT_MIN) {
+            foreground *= 0.0;
+            fgOpacity  *= 0.0;
+        } else {
+            foreground *= rcp(c);
+            fgOpacity  *= rcp(sampleCount(ringCountGather));
+        }
+    }
+
+
+    if (isBackgroundTile(tiles)) {
+        vec2 centerCoc  = textureLod(materialParams_cocFgBg, uv, 0.0).rg;
+        float kernelSize = abs(centerCoc.g);
+        float mip = getMipLevel(ringCountGather, kernelSize);
+        vec2 uvCenter = uv + noise * kernelSize * fullResPixelSize;
+
+        Bucket prev;
+        initBucket(prev);
+
+        accumulateRing(prev, 0.0, ringCountGather, kernelSize, uvCenter, fullResPixelSize, mip, true);
+
+        // the optimizer is not able to remove this loop when it has only one iteration
+#if RING_COUNT_GATHER == 3
+        accumulateRing(prev, 1.0, ringCountGather, kernelSize, uvCenter, fullResPixelSize, mip, false);
+#else
+        for (float i = 1.0; i < ringCountGather - 1.0 ; i += 1.0) {
+            accumulateRing(prev, i, ringCountGather, kernelSize, uvCenter, fullResPixelSize, mip, false);
+        }
+#endif
+
+        // the center sample is handled separately, since it's by itself
+        float border = (kernelSize / ringCountGather) * 0.5;
+        accumulateBackgroundCenter(prev, uvCenter, border, mip);
+
+        background = prev.c;
+        bgOpacity = cocToAlpha(prev.coc);
+
+        if (prev.cw < MEDIUMP_FLT_MIN) {
+            background *= 0.0;
+        } else {
+            background *= rcp(prev.cw);
+        }
+        //background.g += 0.1;
+    }
+
+#if POST_PROCESS_OPAQUE
+    // kill the work performed above
+    foreground.a = 1.0;
+    background.a = 1.0;
+#endif
+
+    // composite the foreground and background layers together.
+    // the downside of doing this is that we couldn't use a different upscaler for each
+    // layer, but this is a lot less costly
+
+    foreground *= fgOpacity;
+    background *= bgOpacity;
+    postProcess.color = foreground + (1.0 - fgOpacity) * background;
+    outAlpha          = fgOpacity  + (1.0 - fgOpacity) * bgOpacity;
 }
 
 }
