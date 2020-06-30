@@ -55,6 +55,7 @@ struct App {
     Material* mat;
     MaterialInstance* matInstance;
     Camera* cam;
+    Entity camera;
     Skybox* skybox;
     Texture* tex;
     Entity renderable;
@@ -154,7 +155,8 @@ void setup(App& app, Engine* engine, View* view, Scene* scene) {
             .build(*engine, app.renderable);
 
     scene->addEntity(app.renderable);
-    app.cam = engine->createCamera();
+    app.camera = utils::EntityManager::get().create();
+    app.cam = engine->createCamera(app.camera);
     view->setCamera(app.cam);
 
     app.skybox = Skybox::Builder().color({0.1, 0.125, 0.25, 1.0}).build(*engine);
@@ -168,7 +170,9 @@ void cleanup(App& app, Engine* engine) {
     engine->destroy(app.mat);
     engine->destroy(app.vb);
     engine->destroy(app.ib);
-    engine->destroy(app.cam);
+
+    engine->destroyCameraComponent(app.camera);
+    utils::EntityManager::get().destroy(app.camera);
 }
 
 void animate(App& app, Engine* engine, View* view, double now) {

@@ -34,6 +34,7 @@ struct App {
     IndexBuffer* ib;
     Material* mat;
     Camera* cam;
+    utils::Entity camera;
     utils::Entity renderable;
 };
 
@@ -78,7 +79,8 @@ int main(int argc, char** argv) {
         scene->addEntity(app.renderable);
 
         // Replace the FilamentApp camera with identity.
-        view->setCamera(app.cam = engine->createCamera());
+        app.camera = utils::EntityManager::get().create();
+        view->setCamera(app.cam = engine->createCamera(app.camera));
     };
 
     auto cleanup = [&app](Engine* engine, View*, Scene*) {
@@ -86,7 +88,8 @@ int main(int argc, char** argv) {
         engine->destroy(app.mat);
         engine->destroy(app.vb);
         engine->destroy(app.ib);
-        engine->destroy(app.cam);
+        engine->destroyCameraComponent(app.camera);
+        utils::EntityManager::get().destroy(app.camera);
     };
 
     FilamentApp::get().run(config, setup, cleanup);

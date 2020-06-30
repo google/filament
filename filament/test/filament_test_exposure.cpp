@@ -22,6 +22,8 @@
 #include <filament/Engine.h>
 #include <filament/Exposure.h>
 
+#include <utils/EntityManager.h>
+
 using namespace filament;
 
 class FilamentExposureWithEngineTest : public ::testing::Test {
@@ -43,7 +45,10 @@ class FilamentExposureTest : public ::testing::Test {
 TEST_F(FilamentExposureWithEngineTest, SetExposure) {
     using namespace filament;
 
-    Camera* camera = engine->createCamera();
+    auto& em = utils::EntityManager::get();
+    utils::Entity c = em.create();
+
+    Camera* camera = engine->createCamera(c);
     camera->setExposure(16.0f, 1 / 125.0f, 100.0f);
 
     EXPECT_FLOAT_EQ(16.0f, camera->getAperture());
@@ -62,13 +67,17 @@ TEST_F(FilamentExposureWithEngineTest, SetExposure) {
     EXPECT_LT(camera->getShutterSpeed(), 3600.0f);
     EXPECT_LT(camera->getSensitivity(), 1000000.0f);
 
-    engine->destroy(camera);
+    engine->destroyCameraComponent(c);
+    em.destroy(c);
 }
 
 TEST_F(FilamentExposureWithEngineTest, ComputeEV100) {
     using namespace filament;
 
-    Camera* camera = engine->createCamera();
+    auto& em = utils::EntityManager::get();
+    utils::Entity c = em.create();
+
+    Camera* camera = engine->createCamera(c);
 
     camera->setExposure(16.0f, 1 / 125.0f, 100.0f);
     int32_t ev100 = static_cast<int32_t>(roundf(Exposure::ev100(*camera)));
@@ -98,7 +107,8 @@ TEST_F(FilamentExposureWithEngineTest, ComputeEV100) {
     ev100 = static_cast<int32_t>(roundf(Exposure::ev100(*camera)));
     EXPECT_EQ(16, ev100);
 
-    engine->destroy(camera);
+    engine->destroyCameraComponent(c);
+    em.destroy(c);
 }
 
 TEST_F(FilamentExposureTest, ComputeEV100FromLuminance) {
