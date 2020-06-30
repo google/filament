@@ -1248,17 +1248,8 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
     vkraster.depthBiasConstantFactor = depthOffset.constant;
     vkraster.depthBiasSlopeFactor = depthOffset.slope;
 
-    // Remove the fragment shader from depth-only passes to avoid a validation warning.
     VulkanBinder::ProgramBundle shaderHandles = program->bundle;
     VulkanRenderTarget* rt = mCurrentRenderTarget;
-    const auto color = rt->getColor();
-    const auto depth = rt->getDepth();
-    const bool hasColor = color.format != VK_FORMAT_UNDEFINED;
-    const bool hasDepth = depth.format != VK_FORMAT_UNDEFINED;
-    const bool depthOnly = hasDepth && !hasColor;
-    if (depthOnly) {
-        shaderHandles.fragment = VK_NULL_HANDLE;
-    }
 
     // Push state changes to the VulkanBinder instance. This is fast and does not make VK calls.
     mBinder.bindProgramBundle(shaderHandles);
