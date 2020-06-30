@@ -23,6 +23,7 @@
 #include <filamat/MaterialBuilder.h>
 
 #include <memory>
+#include <unordered_map>
 #include <ostream>
 
 #include <utils/compiler.h>
@@ -109,6 +110,10 @@ public:
         return mVariantFilter;
     }
 
+    const std::unordered_map<std::string, std::string>& getDefines() const noexcept {
+        return mDefines;
+    }
+
 protected:
     bool mDebug = false;
     bool mIsValid = true;
@@ -118,6 +123,7 @@ protected:
     Platform mPlatform = Platform::ALL;
     OutputFormat mOutputFormat = OutputFormat::BLOB;
     TargetApi mTargetApi = (TargetApi) 0;
+    std::unordered_map<std::string, std::string> mDefines;
     uint8_t mVariantFilter = 0;
 };
 

@@ -46,7 +46,8 @@ static const char* getShadingDefine(filament::Shading shading) noexcept {
 }
 
 static void generateMaterialDefines(utils::io::sstream& os, const CodeGenerator& cg,
-        MaterialBuilder::PropertyList const properties) noexcept {
+        MaterialBuilder::PropertyList const properties,
+        const MaterialBuilder::PreprocessorDefineList& defines) noexcept {
     for (size_t i = 0; i < MaterialBuilder::MATERIAL_PROPERTIES_COUNT; i++) {
         cg.generateMaterialProperty(os, static_cast<MaterialBuilder::Property>(i), properties[i]);
     }
@@ -57,6 +58,11 @@ static void generateMaterialDefines(utils::io::sstream& os, const CodeGenerator&
             properties[static_cast<int>(MaterialBuilder::Property::BENT_NORMAL)]        ||
             properties[static_cast<int>(MaterialBuilder::Property::CLEAR_COAT_NORMAL)];
     cg.generateDefine(os, "MATERIAL_NEEDS_TBN", hasTBN);
+
+    // Additional, user-provided defines.
+    for (const auto& define : defines) {
+        cg.generateDefine(os, define.name.c_str(), define.value.c_str());
+    }
 }
 
 static void generateVertexDomain(const CodeGenerator& cg, utils::io::sstream& vs,
@@ -124,6 +130,7 @@ static void appendShader(utils::io::sstream& ss,
 ShaderGenerator::ShaderGenerator(
         MaterialBuilder::PropertyList const& properties,
         MaterialBuilder::VariableList const& variables,
+        MaterialBuilder::PreprocessorDefineList const& defines,
         utils::CString const& materialCode, size_t lineOffset,
         utils::CString const& materialVertexCode, size_t vertexLineOffset,
         MaterialBuilder::MaterialDomain materialDomain) noexcept {
@@ -135,6 +142,7 @@ ShaderGenerator::ShaderGenerator(
     mMaterialLineOffset = lineOffset;
     mMaterialVertexLineOffset = vertexLineOffset;
     mMaterialDomain = materialDomain;
+    mDefines = defines;
 
     if (mMaterialCode.empty()) {
         if (mMaterialDomain == MaterialBuilder::MaterialDomain::SURFACE) {
@@ -183,7 +191,7 @@ std::string ShaderGenerator::createVertexProgram(filament::backend::ShaderModel 
     cg.generateDefine(vs, "HAS_SHADOW_MULTIPLIER", material.hasShadowMultiplier);
     cg.generateDefine(vs, "HAS_SKINNING_OR_MORPHING", variant.hasSkinningOrMorphing());
     cg.generateDefine(vs, getShadingDefine(material.shading), true);
-    generateMaterialDefines(vs, cg, mProperties);
+    generateMaterialDefines(vs, cg, mProperties, mDefines);
 
     AttributeBitset attributes = material.requiredAttributes;
     if (variant.hasSkinningOrMorphing()) {
@@ -386,7 +394,7 @@ std::string ShaderGenerator::createFragmentProgram(filament::backend::ShaderMode
             break;
     }
     cg.generateDefine(fs, getShadingDefine(material.shading), true);
-    generateMaterialDefines(fs, cg, mProperties);
+    generateMaterialDefines(fs, cg, mProperties, mDefines);
 
     cg.generateShaderInputs(fs, ShaderType::FRAGMENT, material.requiredAttributes, interpolation);
 

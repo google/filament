@@ -288,6 +288,10 @@ bool MaterialCompiler::run(const Config& config) {
         .generateDebugInfo(config.isDebug())
         .variantFilter(config.getVariantFilter() | builder.getVariantFilter());
 
+    for (const auto& define : config.getDefines()) {
+        builder.shaderDefine(define.first.c_str(), define.second.c_str());
+    }
+
     // Write builder.build() to output.
     Package package = builder.build();
     MaterialBuilder::shutdown();

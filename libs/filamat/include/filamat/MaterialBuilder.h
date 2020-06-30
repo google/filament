@@ -192,6 +192,15 @@ public:
     using SamplerPrecision = filament::backend::Precision;
     using CullingMode = filament::backend::CullingMode;
 
+    struct PreprocessorDefine {
+        std::string name;
+        std::string value;
+
+        PreprocessorDefine(const std::string& name, const std::string& value) :
+            name(name), value(value) {}
+    };
+    using PreprocessorDefineList = std::vector<PreprocessorDefine>;
+
     //! Set the name of this material.
     MaterialBuilder& name(const char* name) noexcept;
 
@@ -438,6 +447,8 @@ public:
     //! Specifies a list of variants that should be filtered out during code generation.
     MaterialBuilder& variantFilter(uint8_t variantFilter) noexcept;
 
+    //! Adds a new preprocessor macro definition to the shader code. Can be called repeatedly.
+    MaterialBuilder& shaderDefine(const char* name, const char* value) noexcept;
 
     MaterialBuilder& enableFramebufferFetch() noexcept;
 
@@ -595,6 +606,8 @@ private:
     bool mSpecularAOSet = false;
 
     bool mEnableFramebufferFetch = false;
+
+    PreprocessorDefineList mDefines;
 };
 
 } // namespace filamat
