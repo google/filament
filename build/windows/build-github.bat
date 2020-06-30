@@ -110,6 +110,7 @@ cmake ..\.. ^
     %flag% ^
     -DCMAKE_INSTALL_PREFIX=..\%variant% ^
     -DFILAMENT_WINDOWS_CI_BUILD:BOOL=ON ^
+    -DFILAMENT_SUPPORTS_VULKAN=ON ^
     || exit /b
 cmake --build . %INSTALL% --config %config% -- /m || exit /b
 
