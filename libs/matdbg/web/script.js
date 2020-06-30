@@ -64,7 +64,7 @@ document.querySelector("body").addEventListener("click", (evt) => {
 
     // Handle selection of a material.
     if (anchor.classList.contains("material")) {
-        selectMaterial(anchor.dataset.matid);
+        selectMaterial(anchor.dataset.matid, true);
         return;
     }
 
@@ -206,7 +206,7 @@ function fetchMaterials() {
             }
             gMaterialDatabase[matInfo.matid] = matInfo;
         }
-        selectMaterial(matJson[0].matid);
+        selectMaterial(matJson[0].matid, true);
     });
 }
 
