@@ -33,9 +33,9 @@ using namespace filament;
 TEST(MaterialParser, Parse) {
     MaterialParser parser(backend::Backend::OPENGL,
             FILAMENT_TEST_RESOURCES_TEST_MATERIAL_DATA, FILAMENT_TEST_RESOURCES_TEST_MATERIAL_SIZE);
-    bool materialOk = parser.parse();
+    MaterialParser::ParseResult materialOk = parser.parse();
 
-    EXPECT_TRUE(materialOk) <<
+    EXPECT_TRUE(materialOk == MaterialParser::ParseResult::SUCCESS) <<
             "Material filament/test/test_material.filamat could not be parsed by MaterialParser." << std::endl <<
             "Does MATERIAL_VERSION need to be updated?" << std::endl <<
             "See instructions in filament_test_material_parser.cpp" << std::endl;
