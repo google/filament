@@ -55,6 +55,10 @@ static void usage(char* name) {
             "       Specify the target API: opengl (default), vulkan, metal, or all\n"
             "       This flag can be repeated to individually select APIs for inclusion:\n"
             "           MATC --api opengl --api metal ...\n\n"
+            "   --define, -D\n"
+            "       Add a preprocessor define macro via <macro>=<value>. <value> defaults to 1 if omitted.\n"
+            "       Can be repeated to specify multiple definitions:\n"
+            "           MATC -Dfoo=1 -Dbar -Dbuzz=100 ...\n\n"
             "   --reflect, -r\n"
             "       Reflect the specified metadata as JSON: parameters\n\n"
             "   --variant-filter=<filter>, -V <filter>\n"
@@ -115,8 +119,35 @@ CommandlineConfig::CommandlineConfig(int argc, char** argv) : Config(), mArgc(ar
     mIsValid = parse();
 }
 
+static void parseDefine(std::string defineString,
+        std::unordered_map<std::string, std::string>& defines) {
+    const char* const defineArg = defineString.c_str();
+    const size_t length = defineString.length();
+
+    const char* p = defineArg;
+    const char* end = p + length;
+
+    while (p < end && *p != '=') {
+        p++;
+    }
+
+    if (*p == '=') {
+        if (p == defineArg || p + 1 >= end) {
+            // Edge-cases, missing define name or value.
+            return;
+        }
+        std::string def(defineArg, p - defineArg);
+        defines.emplace(def, p + 1);
+        return;
+    }
+
+    // No explicit assignment, use a default value of 1.
+    std::string def(defineArg, p - defineArg);
+    defines.emplace(def, "1");
+}
+
 bool CommandlineConfig::parse() {
-    static constexpr const char* OPTSTR = "hlxo:f:dm:a:p:OSEr:vV:gt";
+    static constexpr const char* OPTSTR = "hlxo:f:dm:a:p:D:OSEr:vV:gt";
     static const struct option OPTIONS[] = {
             { "help",                    no_argument, nullptr, 'h' },
             { "license",                 no_argument, nullptr, 'l' },
@@ -131,6 +162,7 @@ bool CommandlineConfig::parse() {
             { "optimize-none",           no_argument, nullptr, 'g' },
             { "preprocessor-only",       no_argument, nullptr, 'E' },
             { "api",               required_argument, nullptr, 'a' },
+            { "define",            required_argument, nullptr, 'D' },
             { "reflect",           required_argument, nullptr, 'r' },
             { "print",                   no_argument, nullptr, 't' },
             { "version",                 no_argument, nullptr, 'v' },
@@ -196,6 +228,9 @@ bool CommandlineConfig::parse() {
                             << std::endl;
                     return false;
                 }
+                break;
+            case 'D':
+                parseDefine(arg, mDefines);
                 break;
             case 'v':
                 // Similar to --help, the --version command does an early exit in order to avoid

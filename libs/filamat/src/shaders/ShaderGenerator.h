@@ -37,6 +37,7 @@ public:
     ShaderGenerator(
             MaterialBuilder::PropertyList const& properties,
             MaterialBuilder::VariableList const& variables,
+            MaterialBuilder::PreprocessorDefineList const& defines,
             utils::CString const& materialCode,
             size_t lineOffset,
             utils::CString const& materialVertexCode,
@@ -80,6 +81,7 @@ private:
     MaterialBuilder::PropertyList mProperties;
     MaterialBuilder::VariableList mVariables;
     MaterialBuilder::MaterialDomain mMaterialDomain;
+    MaterialBuilder::PreprocessorDefineList mDefines;
     utils::CString mMaterialCode;
     utils::CString mMaterialVertexCode;
     size_t mMaterialLineOffset;
