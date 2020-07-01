@@ -92,20 +92,20 @@ ChunkContainer const& MaterialParser::getChunkContainer() const noexcept {
     return mImpl.mChunkContainer;
 }
 
-bool MaterialParser::parse() noexcept {
+MaterialParser::ParseResult MaterialParser::parse() noexcept {
     ChunkContainer& cc = getChunkContainer();
     if (cc.parse()) {
         if (!cc.hasChunk(mImpl.mMaterialTag) || !cc.hasChunk(mImpl.mDictionaryTag)) {
-            return false;
+            return ParseResult::ERROR_MISSING_BACKEND;
         }
         if (!DictionaryReader::unflatten(cc, mImpl.mDictionaryTag, mImpl.mBlobDictionary)) {
-            return false;
+            return ParseResult::ERROR_OTHER;
         }
         if (!mImpl.mMaterialChunk.readIndex(mImpl.mMaterialTag)) {
-            return false;
+            return ParseResult::ERROR_OTHER;
         }
     }
-    return true;
+    return ParseResult::SUCCESS;
 }
 
 // Accessors
