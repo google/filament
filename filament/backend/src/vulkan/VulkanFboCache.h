@@ -21,6 +21,8 @@
 
 #include <utils/Hash.h>
 
+#include <backend/TargetBufferInfo.h>
+
 #include <tsl/robin_map.h>
 
 namespace filament {
@@ -35,12 +37,11 @@ namespace backend {
 class VulkanFboCache {
 public:
     // RenderPassKey is a small POD representing the immutable state that is used to construct
-    // a VkRenderPass. It is hashed and used as a lookup key. Portions of this are extracted
-    // from backend::RenderPassParams.
+    // a VkRenderPass. It is hashed and used as a lookup key.
     struct alignas(8) RenderPassKey {
-        VkImageLayout colorLayout;  // 4 bytes
+        VkImageLayout colorLayout[MRT::TARGET_COUNT];  // 16 bytes
+        VkFormat colorFormat[MRT::TARGET_COUNT]; // 16 bytes
         VkImageLayout depthLayout;  // 4 bytes
-        VkFormat colorFormat; // 4 bytes
         VkFormat depthFormat; // 4 bytes
         union {
             struct {
@@ -57,20 +58,22 @@ public:
         VkRenderPass handle;
         uint32_t timestamp;
     };
+    static_assert(sizeof(TargetBufferFlags) == 1, "TargetBufferFlags has unexpected size.");
     static_assert(sizeof(VkFormat) == 4, "VkFormat has unexpected size.");
-    static_assert(sizeof(RenderPassKey) == 24, "RenderPassKey has unexpected size.");
+    static_assert(sizeof(RenderPassKey) == 48, "RenderPassKey has unexpected size.");
     using RenderPassHash = utils::hash::MurmurHashFn<RenderPassKey>;
     struct RenderPassEq {
         bool operator()(const RenderPassKey& k1, const RenderPassKey& k2) const;
     };
 
     // FboKey is a small POD representing the immutable state that we wish to configure
-    // in VkFramebuffer. It is hashed and used as a lookup key. There are 1-3 attachments, but
+    // in VkFramebuffer. It is hashed and used as a lookup key. There are several attachments, but
     // rather than storing a count, we simply zero out the unused slots. We do not bother storing
     // width and height in the key since they are immutable aspects of the image views.
     struct alignas(8) FboKey {
         VkRenderPass renderPass; // 8 bytes
-        VkImageView attachments[3]; // 24 bytes
+        VkImageView color[MRT::TARGET_COUNT]; // 32 bytes
+        VkImageView depth; // 8 bytes
     };
     struct FboVal {
         VkFramebuffer handle;
@@ -78,7 +81,7 @@ public:
     };
     static_assert(sizeof(VkRenderPass) == 8, "VkRenderPass has unexpected size.");
     static_assert(sizeof(VkImageView) == 8, "VkImageView has unexpected size.");
-    static_assert(sizeof(FboKey) == 32, "FboKey has unexpected size.");
+    static_assert(sizeof(FboKey) == 48, "FboKey has unexpected size.");
     using FboKeyHashFn = utils::hash::MurmurHashFn<FboKey>;
     struct FboKeyEqualFn {
         bool operator()(const FboKey& k1, const FboKey& k2) const;
@@ -87,9 +90,12 @@ public:
     explicit VulkanFboCache(VulkanContext&);
     ~VulkanFboCache();
 
-    // Retrieves or creates a VkFramebuffer handle. Width and height are used only when
-    // creating the framebuffer (they are not used for lookup),
-    VkFramebuffer getFramebuffer(FboKey config, uint32_t width, uint32_t height) noexcept;
+    // Retrieves or creates a VkFramebuffer handle.
+    //
+    // NOTE: The dimensions are used only when creating the the framebuffer. They are not used for
+    // lookup because the attachments in the FboKey already have dimensions.
+    VkFramebuffer getFramebuffer(FboKey config, uint32_t width, uint32_t height,
+            uint32_t layers) noexcept;
 
     // Retrieves or creates a VkRenderPass handle.
     VkRenderPass getRenderPass(RenderPassKey config) noexcept;

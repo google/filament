@@ -53,7 +53,11 @@ public:
 };
 
 class MRT {
-    TargetBufferInfo mInfos[4];
+public:
+    static constexpr int TARGET_COUNT = 4;
+
+private:
+    TargetBufferInfo mInfos[TARGET_COUNT];
 
 public:
     TargetBufferInfo operator[](size_t i) const noexcept {

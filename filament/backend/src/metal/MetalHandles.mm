@@ -476,13 +476,13 @@ void MetalTexture::updateLodRange(uint32_t level) {
 }
 
 MetalRenderTarget::MetalRenderTarget(MetalContext* context, uint32_t width, uint32_t height,
-        uint8_t samples, Attachment colorAttachments[4], Attachment depthAttachment) :
+        uint8_t samples, Attachment colorAttachments[MRT::TARGET_COUNT], Attachment depthAttachment) :
         HwRenderTarget(width, height), context(context), samples(samples) {
     // If we were given a single-sampled texture but the samples parameter is > 1, we create
     // multisampled sidecar textures and do a resolve automatically.
     const bool msaaResolve = samples > 1;
 
-    for (size_t i = 0; i < 4; i++) {
+    for (size_t i = 0; i < MRT::TARGET_COUNT; i++) {
         if (!colorAttachments[i]) {
             continue;
         }
@@ -523,7 +523,7 @@ void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* desc
 
     const auto discardFlags = params.flags.discardEnd;
 
-    for (size_t i = 0; i < 4; i++) {
+    for (size_t i = 0; i < MRT::TARGET_COUNT; i++) {
         Attachment attachment = getColorAttachment(i);
         if (!attachment) {
             continue;
@@ -566,7 +566,7 @@ void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* desc
 }
 
 MetalRenderTarget::Attachment MetalRenderTarget::getColorAttachment(size_t index) {
-    assert(index < 4);
+    assert(index < MRT::TARGET_COUNT);
     Attachment result = color[index];
     if (index == 0 && defaultRenderTarget) {
         result.texture = acquireDrawable(context);

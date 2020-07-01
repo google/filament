@@ -46,7 +46,7 @@ VulkanBinder::VulkanBinder() : mDefaultRasterState(createDefaultRasterState()) {
     mColorBlendState = VkPipelineColorBlendStateCreateInfo{};
     mColorBlendState.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
     mColorBlendState.attachmentCount = 1;
-    mColorBlendState.pAttachments = &mPipelineKey.rasterState.blending;
+    mColorBlendState.pAttachments = mColorBlendAttachments;
     mShaderStages[0] = VkPipelineShaderStageCreateInfo{};
     mShaderStages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     mShaderStages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
@@ -260,8 +260,17 @@ bool VulkanBinder::getOrCreatePipeline(VkPipeline* pipeline) noexcept {
     pipelineCreateInfo.pDepthStencilState = &mPipelineKey.rasterState.depthStencil;
     pipelineCreateInfo.pDynamicState = &dynamicState;
 
+    // Filament assumes consistent blend state across all color attachments.
+    mColorBlendState.attachmentCount = mPipelineKey.rasterState.getColorTargetCount;
+    for (auto& target : mColorBlendAttachments) {
+        target = mPipelineKey.rasterState.blending;
+    }
+
     // There are no color attachments if there is no bound fragment shader.  (e.g. shadow map gen)
-    mColorBlendState.attachmentCount = hasFragmentShader ? 1 : 0;
+    // TODO: This should be handled in a higher layer.
+    if (!hasFragmentShader) {
+        mColorBlendState.attachmentCount = 0;
+    }
 
     #if FILAMENT_VULKAN_VERBOSE
     utils::slog.d << "vkCreateGraphicsPipelines with shaders = ("
@@ -304,6 +313,7 @@ void VulkanBinder::bindRasterState(const RasterState& rasterState) noexcept {
     VkPipelineMultisampleStateCreateInfo& ms0 = mPipelineKey.rasterState.multisampling;
     const VkPipelineMultisampleStateCreateInfo& ms1 = rasterState.multisampling;
     if (
+            mPipelineKey.rasterState.getColorTargetCount != rasterState.getColorTargetCount ||
             raster0.polygonMode != raster1.polygonMode ||
             raster0.cullMode != raster1.cullMode ||
             raster0.frontFace != raster1.frontFace ||
@@ -659,6 +669,7 @@ static VulkanBinder::RasterState createDefaultRasterState() {
         blending,
         depthStencil,
         multisampling,
+        1,
     };
 }
 
