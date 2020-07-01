@@ -49,6 +49,9 @@ fragment {
 
 #include "dofUtils.fs"
 
+#define DOF_DIAPHRAGM_CIRCLE            0
+#define DOF_DIAPHRAGM_STRAIGHT_BLADES   1
+#define DOF_DIAPHRAGM                   DOF_DIAPHRAGM_CIRCLE
 
 // # of sample w.r.t. ring count and density
 // 3 rings w/ density 6  :  19
@@ -121,6 +124,20 @@ float intersection(const float border, const float absCoc, const float mip) {
 
 float rcp(const float x) {
     return 1.0 / x;
+}
+
+highp vec2 diaphragm(const highp vec2 center, const vec2 offset) {
+#if DOF_DIAPHRAGM == DOF_DIAPHRAGM_CIRCLE
+    return center + offset;
+#elif DOF_DIAPHRAGM == DOF_DIAPHRAGM_STRAIGHT_BLADES
+    // this could be eliminated with a LUT
+    float bladeCount = 5.0;
+    float angle = atan(offset.y, offset.x) + materialParams.bokehAngle;
+    float blade = floor(angle / (2.0 * PI) * bladeCount);
+    float bladeAngle = (blade + 0.5) / bladeCount * (2.0 * PI);
+    float s = 1.0 / cos(angle - bladeAngle);
+    return center + s * offset;
+#endif
 }
 
 /*
@@ -231,8 +248,8 @@ void accumulateBackground(inout Bucket curr, inout Bucket prev,
 
 void accumulateBackgroundMirror(inout Bucket curr, inout Bucket prev,
         const highp vec2 center, const vec2 offset, const float border, const float mip, const bool first) {
-    accumulateBackground(curr, prev, center + offset, border, mip, first);
-    accumulateBackground(curr, prev, center - offset, border, mip, first);
+    accumulateBackground(curr, prev, diaphragm(center,   offset), border, mip, first);
+    accumulateBackground(curr, prev, diaphragm(center,  -offset), border, mip, first);
 }
 
 void accumulateBackgroundCenter(inout Bucket prev,
@@ -284,7 +301,7 @@ void accumulateForeground(inout vec4 foreground, inout float opacity, inout floa
 
 void accumulateForegroundCenter(inout vec4 foreground, inout float opacity, inout float i,
         const highp vec2 pos, const float border, const float mip) {
-    accumulateForeground(foreground, opacity, i,pos, border, mip);
+    accumulateForeground(foreground, opacity, i, pos, border, mip);
 }
 
 void accumulateForegroundMirror(inout vec4 foreground, inout float opacity, inout float i,
@@ -295,10 +312,12 @@ void accumulateForegroundMirror(inout vec4 foreground, inout float opacity, inou
     // but selects the min coc of opposite samples as a way to guess the color occluded by
     // the geometry.
 
-    float coc0 = textureLod(materialParams_cocFgBg, center + offset, mip).r;
-    vec4 s0 = textureLod(materialParams_foreground, center + offset, mip);
-    float coc1 = textureLod(materialParams_cocFgBg, center - offset, mip).r;
-    vec4 s1 = textureLod(materialParams_foreground, center - offset, mip);
+    vec2 pos0 = diaphragm(center, offset);
+    float coc0 = textureLod(materialParams_cocFgBg, pos0, mip).r;
+    vec4 s0 = textureLod(materialParams_foreground, pos0, mip);
+    vec2 pos1 = diaphragm(center, -offset);
+    float coc1 = textureLod(materialParams_cocFgBg, pos1, mip).r;
+    vec4 s1 = textureLod(materialParams_foreground, pos1, mip);
     float coc = min(coc0, coc1);
     float inLayer = isForeground(coc);
     float o = cocToAlpha(coc) * inLayer * 2.0;  // we're accumulating 2 samples
@@ -345,7 +364,7 @@ void postProcess(inout PostProcessInputs postProcess) {
     // When using mipmaping the noise seems to hurt more than it helps
     float randomAngle = random(gl_FragCoord.xy) * (2.0 * PI);
     float random01 = random(gl_FragCoord.xy * vec2(7.0, 11.0));
-    vec2  randomUniformDisk = 0.5 * sqrt(random01) * vec2(cos(randomAngle), sin(randomAngle));
+    vec2  randomUniformDisk = 0.7071 * sqrt(random01) * vec2(cos(randomAngle), sin(randomAngle));
 #else
     const vec2 noise = vec2(0.0);
 #endif
@@ -366,7 +385,7 @@ void postProcess(inout PostProcessInputs postProcess) {
             mat2 r;
             initRing(i, ringCountFast, kernelSize, count, r, p);
             for (float j = 0.0; j < count; j += 1.0) {
-                vec2 pos = uvCenter + p * fullResPixelSize;
+                vec2 pos = diaphragm(uvCenter, p * fullResPixelSize);
                 foreground += textureLod(materialParams_foreground, pos, mip);
                 p = r * p;
             }
