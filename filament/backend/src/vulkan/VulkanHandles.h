@@ -32,21 +32,18 @@ struct VulkanProgram : public HwProgram {
     Program::SamplerGroupInfo samplerGroupInfo;
 };
 
-struct VulkanTexture;
-
 // The render target bundles together a set of attachments, each of which can have one of the
 // following ownership semantics:
 //
-// - The attachment's VkImage is shared and the owner is VulkanSwapChain (mOffScreen = false).
-// - The attachment's VkImage is shared and the owner is VulkanTexture   (mOffScreen = true).
+// - The attachment's VkImage is shared and the owner is VulkanSwapChain (mOffscreen = false).
+// - The attachment's VkImage is shared and the owner is VulkanTexture   (mOffscreen = true).
 //
 // We use private inheritance to shield clients from the width / height fields in HwRenderTarget,
 // which are not representative when this is the default render target.
 struct VulkanRenderTarget : private HwRenderTarget {
-
     // Creates an offscreen render target.
-    VulkanRenderTarget(VulkanContext& context, uint32_t w, uint32_t h, TargetBufferInfo colorInfo,
-            VulkanTexture* color, TargetBufferInfo depthInfo, VulkanTexture* depth);
+    VulkanRenderTarget(VulkanContext& context, uint32_t width, uint32_t height,
+            VulkanAttachment color[MRT::TARGET_COUNT], VulkanAttachment depthStencil[2]);
 
     // Creates a special "default" render target (i.e. associated with the swap chain)
     explicit VulkanRenderTarget(VulkanContext& context);
@@ -56,18 +53,15 @@ struct VulkanRenderTarget : private HwRenderTarget {
     void transformClientRectToPlatform(VkRect2D* bounds) const;
     void transformClientRectToPlatform(VkViewport* bounds) const;
     VkExtent2D getExtent() const;
-    VulkanAttachment getColor() const;
+    VulkanAttachment getColor(int target) const;
     VulkanAttachment getDepth() const;
+    int getColorTargetCount() const;
     bool invalidate();
-    uint32_t getColorLevel() const { return mColorLevel; }
-    uint32_t getDepthLevel() const { return mDepthLevel; }
 private:
-    VulkanAttachment mColor = {};
+    VulkanAttachment mColor[MRT::TARGET_COUNT] = {};
     VulkanAttachment mDepth = {};
     VulkanContext& mContext;
     bool mOffscreen;
-    uint32_t mColorLevel;
-    uint32_t mDepthLevel;
 };
 
 struct VulkanSwapChain : public HwSwapChain {

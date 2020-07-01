@@ -164,7 +164,7 @@ public:
     };
 
     MetalRenderTarget(MetalContext* context, uint32_t width, uint32_t height, uint8_t samples,
-            Attachment colorAttachments[4], Attachment depthAttachment);
+            Attachment colorAttachments[MRT::TARGET_COUNT], Attachment depthAttachment);
     explicit MetalRenderTarget(MetalContext* context)
             : HwRenderTarget(0, 0), context(context), defaultRenderTarget(true) {}
 
@@ -187,11 +187,11 @@ private:
     bool defaultRenderTarget = false;
     uint8_t samples = 1;
 
-    Attachment color[4] = {};
+    Attachment color[MRT::TARGET_COUNT] = {};
     Attachment depth = {};
 
     // "Sidecar" textures used to implement automatic MSAA resolve.
-    id<MTLTexture> multisampledColor[4] = { 0 };
+    id<MTLTexture> multisampledColor[MRT::TARGET_COUNT] = { 0 };
     id<MTLTexture> multisampledDepth = nil;
 };
 
