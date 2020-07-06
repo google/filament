@@ -126,7 +126,7 @@ struct App {
     float rangePlot[1024 * 3];
     float curvePlot[1024 * 3];
 
-  // 0 is the default "free camera". Additional cameras come from the gltf file.
+    // 0 is the default "free camera". Additional cameras come from the gltf file.
     int currentCamera = 0;
 };
 
@@ -758,25 +758,6 @@ int main(int argc, char** argv) {
         // Add renderables to the scene as they become ready.
         app.viewer->populateScene(app.asset, !app.actualSize);
 
-        const size_t cameraCount = app.asset->getCameraEntityCount();
-        if (app.currentCamera == 0) {
-            view->setCamera(app.mainCamera);
-        } else {
-            const int gltfCamera = app.currentCamera - 1;
-            if (gltfCamera < cameraCount) {
-                const utils::Entity* cameras = app.asset->getCameraEntities();
-                Camera* c = engine->getCameraComponent(cameras[gltfCamera]);
-                assert(c);
-                view->setCamera(c);
-
-                // Override the aspect ratio in the glTF file and adjust the aspect ratio of this
-                // camera to the viewport.
-                const Viewport& vp = view->getViewport();
-                double aspectRatio = (double) vp.width / vp.height;
-                c->setScaling(double4 {1.0, aspectRatio, 1.0, 1.0});
-            }
-        }
-
         app.viewer->applyAnimation(now);
     };
 
@@ -803,6 +784,27 @@ int main(int argc, char** argv) {
         auto instance = rcm.getInstance(app.scene.groundPlane);
         rcm.setLayerMask(instance,
                 0xff, app.viewOptions.groundPlaneEnabled ? 0xff : 0x00);
+
+        const size_t cameraCount = app.asset->getCameraEntityCount();
+        view->setCamera(app.mainCamera);
+        if (app.currentCamera > 0) {
+            const int gltfCamera = app.currentCamera - 1;
+            if (gltfCamera < cameraCount) {
+                const utils::Entity* cameras = app.asset->getCameraEntities();
+                Camera* c = engine->getCameraComponent(cameras[gltfCamera]);
+                assert(c);
+                view->setCamera(c);
+
+                // Override the aspect ratio in the glTF file and adjust the aspect ratio of this
+                // camera to the viewport.
+                const Viewport& vp = view->getViewport();
+                double aspectRatio = (double) vp.width / vp.height;
+                c->setScaling(double4 {1.0, aspectRatio, 1.0, 1.0});
+            } else {
+                // gltfCamera is out of bounds. Reset camera selection to main camera.
+                app.currentCamera = 0;
+            }
+        }
 
         Camera& camera = view->getCamera();
         camera.setExposure(
