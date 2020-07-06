@@ -414,24 +414,7 @@ int FEngine::loop() {
     if (mPlatform == nullptr) {
         mPlatform = DefaultPlatform::create(&mBackend);
         mOwnPlatform = true;
-        const char* backend = nullptr;
-        switch (mBackend) {
-            case backend::Backend::NOOP:
-                backend = "Noop";
-                break;
-            case backend::Backend::OPENGL:
-                backend = "OpenGL";
-                break;
-            case backend::Backend::VULKAN:
-                backend = "Vulkan";
-                break;
-            case backend::Backend::METAL:
-                backend = "Metal";
-                break;
-            default:
-                backend = "Unknown";
-                break;
-        }
+        const char* const backend = backendToString(mBackend);
         slog.d << "FEngine resolved backend: " << backend << io::endl;
         if (mPlatform == nullptr) {
             slog.e << "Selected backend not supported in this build." << io::endl;

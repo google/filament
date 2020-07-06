@@ -59,6 +59,21 @@ enum class Backend : uint8_t {
     NOOP = 4,     //!< Selects the no-op driver for testing purposes.
 };
 
+static constexpr const char* backendToString(backend::Backend backend) {
+    switch (backend) {
+        case backend::Backend::NOOP:
+            return "Noop";
+        case backend::Backend::OPENGL:
+            return "OpenGL";
+        case backend::Backend::VULKAN:
+            return "Vulkan";
+        case backend::Backend::METAL:
+            return "Metal";
+        default:
+            return "Unknown";
+    }
+}
+
 /**
  * Bitmask for selecting render buffers
  */

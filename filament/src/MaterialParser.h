@@ -48,7 +48,13 @@ public:
     MaterialParser(MaterialParser const& rhs) noexcept = delete;
     MaterialParser& operator=(MaterialParser const& rhs) noexcept = delete;
 
-    bool parse() noexcept;
+    enum class ParseResult {
+        SUCCESS,
+        ERROR_MISSING_BACKEND,
+        ERROR_OTHER
+    };
+
+    ParseResult parse() noexcept;
 
     // Accessors
     bool getMaterialVersion(uint32_t* value) const noexcept;
