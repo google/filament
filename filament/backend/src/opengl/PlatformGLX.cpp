@@ -27,8 +27,6 @@
 
 #include <dlfcn.h>
 
-#include <iostream>
-
 #define LIBRARY_GLX "libGL.so.1"
 #define LIBRARY_X11 "libX11.so.6"
 
@@ -88,7 +86,7 @@ static PFNGLXGETPROCADDRESSPROC getProcAddress;
 static bool loadLibraries() {
     g_glx.library = dlopen(LIBRARY_GLX, RTLD_LOCAL | RTLD_NOW);
     if (!g_glx.library) {
-        std::cerr << "Could not find library " << LIBRARY_GLX << std::endl;
+        utils::slog.e << "Could not find library " << LIBRARY_GLX << utils::io::endl;
         return false;
     }
 
@@ -119,7 +117,7 @@ static bool loadLibraries() {
 
     g_x11.library = dlopen(LIBRARY_X11, RTLD_LOCAL | RTLD_NOW);
     if (!g_x11.library) {
-        std::cerr << "Could not find library " << LIBRARY_X11 << std::endl;
+        utils::slog.e << "Could not find library " << LIBRARY_X11 << utils::io::endl;
         return false;
     }
 
