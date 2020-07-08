@@ -49,7 +49,7 @@ namespace backend {
 //     void Driver::draw(Geometry geo) {
 //        mBinder.bindPrimitiveTopology(geo.topology);
 //        mBinder.bindVertexArray(geo.varray);
-//        VkDescriptorSet descriptors[2];
+//        VkDescriptorSet descriptors[3];
 //        if (mBinder.getOrCreateDescriptors(descriptors, ...)) {
 //            vkCmdBindDescriptorSets(... descriptors ...);
 //        }
@@ -67,7 +67,7 @@ namespace backend {
 //
 // In the name of simplicity, VulkanBinder has the following limitations:
 // - Push constants are not supported. (if adding support, see VkPipelineLayoutCreateInfo)
-// - Only two descriptor sets are bound at a time: one for uniform buffers and one for samplers.
+// - Only three descriptor sets are bound at a time (one for each type of descriptor).
 // - Descriptor sets are never mutated using vkUpdateDescriptorSets, except upon creation.
 // - Assumes that viewport and scissor should be dynamic. (not baked into VkPipeline)
 // - Assumes that uniform buffers should be visible across all shader stages.
@@ -76,6 +76,7 @@ class VulkanBinder {
 public:
     static constexpr uint32_t UBUFFER_BINDING_COUNT = Program::UNIFORM_BINDING_COUNT;
     static constexpr uint32_t SAMPLER_BINDING_COUNT = backend::MAX_SAMPLER_COUNT;
+    static constexpr uint32_t TARGET_BINDING_COUNT = MRT::TARGET_COUNT;
     static constexpr uint32_t SHADER_MODULE_COUNT = 2;
     static constexpr uint32_t VERTEX_ATTRIBUTE_COUNT = backend::MAX_VERTEX_ATTRIBUTE_COUNT;
 
@@ -119,7 +120,7 @@ public:
     const RasterState& getDefaultRasterState() const { return mDefaultRasterState; }
 
     // Returns true if vkCmdBindDescriptorSets is required.
-    bool getOrCreateDescriptors(VkDescriptorSet descriptors[2], VkPipelineLayout* pipelineLayout)
+    bool getOrCreateDescriptors(VkDescriptorSet descriptors[3], VkPipelineLayout* pipelineLayout)
             noexcept;
 
     // Returns true if any pipeline bindings have changed. (i.e., vkCmdBindPipeline is required)
@@ -133,6 +134,7 @@ public:
     void bindUniformBuffer(uint32_t bindingIndex, VkBuffer uniformBuffer,
             VkDeviceSize offset = 0, VkDeviceSize size = VK_WHOLE_SIZE) noexcept;
     void bindSampler(uint32_t bindingIndex, VkDescriptorImageInfo imageInfo) noexcept;
+    void bindInputAttachment(uint32_t bindingIndex, VkDescriptorImageInfo imageInfo) noexcept;
     void bindVertexArray(const VertexArray& varray) noexcept;
 
     // Checks if the given uniform is bound to any slot, and if so binds "null" to that slot.
@@ -195,6 +197,7 @@ private:
     struct UTILS_PACKED DescriptorKey {
         VkBuffer uniformBuffers[UBUFFER_BINDING_COUNT];
         VkDescriptorImageInfo samplers[SAMPLER_BINDING_COUNT];
+        VkDescriptorImageInfo inputAttachments[TARGET_BINDING_COUNT];
         VkDeviceSize uniformBufferOffsets[UBUFFER_BINDING_COUNT];
         VkDeviceSize uniformBufferSizes[UBUFFER_BINDING_COUNT];
     };
@@ -208,8 +211,9 @@ private:
         bool operator()(const DescriptorKey& k1, const DescriptorKey& k2) const;
     };
 
-    struct DescriptorVal {
-        VkDescriptorSet handles[2];
+    // Represents a set of descriptor sets that are bound simultanously.
+    struct DescriptorBundle {
+        VkDescriptorSet handles[3];
         uint32_t timestamp;
         bool bound;
     };
@@ -226,7 +230,9 @@ private:
     VkPipelineColorBlendStateCreateInfo mColorBlendState;
     VkDescriptorBufferInfo mDescriptorBuffers[UBUFFER_BINDING_COUNT];
     VkDescriptorImageInfo mDescriptorSamplers[SAMPLER_BINDING_COUNT];
-    VkWriteDescriptorSet mDescriptorWrites[UBUFFER_BINDING_COUNT + SAMPLER_BINDING_COUNT];
+    VkDescriptorImageInfo mDescriptorInputAttachments[TARGET_BINDING_COUNT];
+    VkWriteDescriptorSet mDescriptorWrites[
+            UBUFFER_BINDING_COUNT + SAMPLER_BINDING_COUNT + TARGET_BINDING_COUNT];
     VkPipelineColorBlendAttachmentState mColorBlendAttachments[MRT::TARGET_COUNT];
 
     // Current bindings are divided into two "keys" which are composed of a mix of actual values
@@ -235,9 +241,9 @@ private:
     PipelineKey mPipelineKey;
     DescriptorKey mDescriptorKey;
 
-    // Weak references to the currently bound pipeline and descriptor set.
+    // Weak references to the currently bound pipeline and descriptor sets.
     PipelineVal* mCurrentPipeline = nullptr;
-    DescriptorVal* mCurrentDescriptor = nullptr;
+    DescriptorBundle* mCurrentDescriptorBundle = nullptr;
 
     // If one of these dirty flags is set, then one or more its constituent bindings have changed, so
     // a new pipeline or descriptor set needs to be retrieved from the cache or created.
@@ -245,12 +251,12 @@ private:
     bool mDirtyDescriptor = true;
 
     // Cached Vulkan objects. These objects are owned by the Binder.
-    VkDescriptorSetLayout mDescriptorSetLayouts[2] = {};
+    VkDescriptorSetLayout mDescriptorSetLayouts[3] = {};
     VkPipelineLayout mPipelineLayout = VK_NULL_HANDLE;
     tsl::robin_map<PipelineKey, PipelineVal, PipelineHashFn, PipelineEqual> mPipelines;
-    tsl::robin_map<DescriptorKey, DescriptorVal, DescHashFn, DescEqual> mDescriptorSets;
+    tsl::robin_map<DescriptorKey, DescriptorBundle, DescHashFn, DescEqual> mDescriptorBundles;
     VkDescriptorPool mDescriptorPool;
-    std::vector<DescriptorVal> mDescriptorGraveyard;
+    std::vector<DescriptorBundle> mDescriptorGraveyard;
 
     // Store the current "time" (really just a frame count) and LRU eviction parameters.
     uint32_t mCurrentTime = 0;
