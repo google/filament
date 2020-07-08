@@ -144,7 +144,7 @@ FTexture::FTexture(FEngine& engine, const Builder& builder) {
 
     FEngine::DriverApi& driver = engine.getDriverApi();
     if (UTILS_LIKELY(builder->mImportedId == 0)) {
-        if (UTILS_LIKELY(builder->mTextureIsSwizzled)) {
+        if (UTILS_LIKELY(!builder->mTextureIsSwizzled)) {
             mHandle = driver.createTexture(
                     mTarget, mLevelCount, mFormat, mSampleCount, mWidth, mHeight, mDepth, mUsage);
         } else {
