@@ -37,8 +37,8 @@ static constexpr VkAllocationCallbacks* VKALLOC = nullptr;
 // TODO: Make VulkanBinder robust against a large number of descriptors.
 // There are several approaches we could take to deal with too many descriptors:
 // - Create another pool after hitting the limit of the first pool.
-// - Allow up to 3 uniform descriptors to bind simultaneously instead of just 1.
-static constexpr uint32_t MAX_NUM_DESCRIPTORS = 1000;
+// - Allow several uniform buffer descriptors to bind simultaneously instead of just one.
+static constexpr uint32_t MAX_DESCRIPTOR_SET_COUNT = 1500;
 
 static VulkanBinder::RasterState createDefaultRasterState();
 
@@ -64,7 +64,7 @@ VulkanBinder::~VulkanBinder() {
     destroyCache();
 }
 
-bool VulkanBinder::getOrCreateDescriptors(VkDescriptorSet descriptors[2],
+bool VulkanBinder::getOrCreateDescriptors(VkDescriptorSet descriptorSets[3],
         VkPipelineLayout* pipelineLayout) noexcept {
     // If this method has never been called before, we need to create a new layout object.
     if (!mPipelineLayout) {
@@ -74,55 +74,56 @@ bool VulkanBinder::getOrCreateDescriptors(VkDescriptorSet descriptors[2],
     // If no bindings have been dirtied, update the timestamp (most recent access) and return false
     // to indicate there's no need to re-bind.
     if (!mDirtyDescriptor) {
-        assert(mCurrentDescriptor && mCurrentDescriptor->bound);
-        descriptors[0] = mCurrentDescriptor->handles[0];
-        descriptors[1] = mCurrentDescriptor->handles[1];
-        mCurrentDescriptor->timestamp = mCurrentTime;
+        assert(mCurrentDescriptorBundle && mCurrentDescriptorBundle->bound);
+        descriptorSets[0] = mCurrentDescriptorBundle->handles[0];
+        descriptorSets[1] = mCurrentDescriptorBundle->handles[1];
+        descriptorSets[2] = mCurrentDescriptorBundle->handles[2];
+        mCurrentDescriptorBundle->timestamp = mCurrentTime;
         return false;
     }
 
     // Release the previously bound descriptor and update its time stamp.
-    if (mCurrentDescriptor) {
-        mCurrentDescriptor->timestamp = mCurrentTime;
-        mCurrentDescriptor->bound = false;
+    if (mCurrentDescriptorBundle) {
+        mCurrentDescriptorBundle->timestamp = mCurrentTime;
+        mCurrentDescriptorBundle->bound = false;
     }
 
     // If a cached object exists, update the timestamp (most recent access) and return true to
     // indicate that the caller should call vmCmdBind. Note that robin_map iterators proffer a
     // value method for obtaining a stable reference.
-    auto iter = mDescriptorSets.find(mDescriptorKey);
-    if (UTILS_LIKELY(iter != mDescriptorSets.end())) {
-        mCurrentDescriptor = &iter.value();
-        descriptors[0] = mCurrentDescriptor->handles[0];
-        descriptors[1] = mCurrentDescriptor->handles[1];
-        mCurrentDescriptor->timestamp = mCurrentTime;
-        mCurrentDescriptor->bound = true;
+    auto iter = mDescriptorBundles.find(mDescriptorKey);
+    if (UTILS_LIKELY(iter != mDescriptorBundles.end())) {
+        mCurrentDescriptorBundle = &iter.value();
+        descriptorSets[0] = mCurrentDescriptorBundle->handles[0];
+        descriptorSets[1] = mCurrentDescriptorBundle->handles[1];
+        descriptorSets[2] = mCurrentDescriptorBundle->handles[2];
+        mCurrentDescriptorBundle->timestamp = mCurrentTime;
+        mCurrentDescriptorBundle->bound = true;
         mDirtyDescriptor = false;
         *pipelineLayout = mPipelineLayout;
         return true;
     }
 
-    // If we reach this point, we need to create and stash a brand new descriptor set.
-    ASSERT_POSTCONDITION(mDescriptorSets.size() < MAX_NUM_DESCRIPTORS, "Too many descriptors.");
-
-    // Allocate descriptor (does not need explicit destruction)
+    // Allocate one descriptor set for each type: uniforms, samplers, and input attachments.
     VkDescriptorSetAllocateInfo allocInfo = {};
     allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     allocInfo.descriptorPool = mDescriptorPool;
-    allocInfo.descriptorSetCount = 2;
+    allocInfo.descriptorSetCount = 3;
     allocInfo.pSetLayouts = mDescriptorSetLayouts;
-    VkResult err = vkAllocateDescriptorSets(mDevice, &allocInfo, descriptors);
+    VkResult err = vkAllocateDescriptorSets(mDevice, &allocInfo, descriptorSets);
     ASSERT_POSTCONDITION(!err, "Unable to allocate descriptor set.");
     *pipelineLayout = mPipelineLayout;
 
-    // Here we construct a DescriptorVal in place, then stash its pointer to allow fast subsequent
-    // calls to getOrCreateDescriptor when nothing has been dirtied. Note that the robin_map
-    // iterator type proffers a "value" method, which returns a stable reference.
-    mCurrentDescriptor = &mDescriptorSets.emplace(std::make_pair(mDescriptorKey, DescriptorVal {
-        .handles = { descriptors[0], descriptors[1] },
+    // Here we construct a DescriptorBundle in place, then stash its pointer to allow fast
+    // subsequent calls to getOrCreateDescriptor when nothing has been dirtied. Note that the
+    // robin_map iterator type proffers a "value" method, which returns a stable reference.
+    auto& bundle = mDescriptorBundles.emplace(std::make_pair(mDescriptorKey, DescriptorBundle {
+        .handles = { descriptorSets[0], descriptorSets[1], descriptorSets[2] },
         .timestamp = mCurrentTime,
         .bound = true
     })).first.value();
+
+    mCurrentDescriptorBundle = &bundle;
     mDirtyDescriptor = false;
 
     // Mutate the descriptor by setting all non-null bindings.
@@ -138,7 +139,7 @@ bool VulkanBinder::getOrCreateDescriptors(VkDescriptorSet descriptors[2],
             VkWriteDescriptorSet& writeInfo = writes[nwrites++];
             writeInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             writeInfo.pNext = nullptr;
-            writeInfo.dstSet = mCurrentDescriptor->handles[0];
+            writeInfo.dstSet = mCurrentDescriptorBundle->handles[0];
             writeInfo.dstBinding = binding;
             writeInfo.dstArrayElement = 0;
             writeInfo.descriptorCount = 1;
@@ -155,11 +156,28 @@ bool VulkanBinder::getOrCreateDescriptors(VkDescriptorSet descriptors[2],
             VkWriteDescriptorSet& writeInfo = writes[nwrites++];
             writeInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             writeInfo.pNext = nullptr;
-            writeInfo.dstSet = mCurrentDescriptor->handles[1];
+            writeInfo.dstSet = mCurrentDescriptorBundle->handles[1];
             writeInfo.dstBinding = binding;
             writeInfo.dstArrayElement = 0;
             writeInfo.descriptorCount = 1;
             writeInfo.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            writeInfo.pImageInfo = &imageInfo;
+            writeInfo.pBufferInfo = nullptr;
+            writeInfo.pTexelBufferView = nullptr;
+        }
+    }
+    for (uint32_t binding = 0; binding < TARGET_BINDING_COUNT; binding++) {
+        if (mDescriptorKey.inputAttachments[binding].imageView) {
+            VkDescriptorImageInfo& imageInfo = mDescriptorInputAttachments[binding];
+            imageInfo = mDescriptorKey.inputAttachments[binding];
+            VkWriteDescriptorSet& writeInfo = writes[nwrites++];
+            writeInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            writeInfo.pNext = nullptr;
+            writeInfo.dstSet = mCurrentDescriptorBundle->handles[2];
+            writeInfo.dstBinding = binding;
+            writeInfo.dstArrayElement = 0;
+            writeInfo.descriptorCount = 1;
+            writeInfo.descriptorType = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
             writeInfo.pImageInfo = &imageInfo;
             writeInfo.pBufferInfo = nullptr;
             writeInfo.pTexelBufferView = nullptr;
@@ -396,14 +414,21 @@ void VulkanBinder::unbindUniformBuffer(VkBuffer uniformBuffer) noexcept {
 void VulkanBinder::unbindImageView(VkImageView imageView) noexcept {
     for (auto& sampler : mDescriptorKey.samplers) {
         if (sampler.imageView == imageView) {
-            sampler = {
-                .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-            };
+            mDirtyDescriptor = true;
+        }
+    }
+    for (auto& target : mDescriptorKey.inputAttachments) {
+        if (target.imageView == imageView) {
             mDirtyDescriptor = true;
         }
     }
     evictDescriptors([imageView] (const DescriptorKey& key) {
         for (const auto& binding : key.samplers) {
+            if (binding.imageView == imageView) {
+                return true;
+            }
+        }
+        for (const auto& binding : key.inputAttachments) {
             if (binding.imageView == imageView) {
                 return true;
             }
@@ -416,17 +441,17 @@ void VulkanBinder::unbindImageView(VkImageView imageView) noexcept {
 // but defers calling vkFreeDescriptorSets until the next eviction cycle.
 void VulkanBinder::evictDescriptors(std::function<bool(const DescriptorKey&)> filter) noexcept {
     // Due to robin_map restrictions, we cannot use auto or a range-based loop.
-    decltype(mDescriptorSets)::const_iterator iter;
-    for (iter = mDescriptorSets.begin(); iter != mDescriptorSets.end();) {
+    decltype(mDescriptorBundles)::const_iterator iter;
+    for (iter = mDescriptorBundles.begin(); iter != mDescriptorBundles.end();) {
         auto& pair = *iter;
         if (filter(pair.first)) {
             auto& cacheEntry = iter->second;
             mDescriptorGraveyard.push_back({
-                .handles = { cacheEntry.handles[0], cacheEntry.handles[1] },
+                .handles = { cacheEntry.handles[0], cacheEntry.handles[1], cacheEntry.handles[2] },
                 .timestamp = cacheEntry.timestamp,
                 .bound = false
             });
-            iter = mDescriptorSets.erase(iter);
+            iter = mDescriptorBundles.erase(iter);
         } else {
             ++iter;
         }
@@ -461,6 +486,19 @@ void VulkanBinder::bindSampler(uint32_t bindingIndex, VkDescriptorImageInfo samp
     }
 }
 
+void VulkanBinder::bindInputAttachment(uint32_t bindingIndex,
+        VkDescriptorImageInfo targetInfo) noexcept {
+    ASSERT_POSTCONDITION(bindingIndex < TARGET_BINDING_COUNT,
+            "Input attachment bindings overflow: index = %d, capacity = %d.",
+            bindingIndex, TARGET_BINDING_COUNT);
+    VkDescriptorImageInfo& imageInfo = mDescriptorKey.inputAttachments[bindingIndex];
+    if (imageInfo.imageView != targetInfo.imageView ||
+            imageInfo.imageLayout != targetInfo.imageLayout) {
+        imageInfo = targetInfo;
+        mDirtyDescriptor = true;
+    }
+}
+
 void VulkanBinder::destroyCache() noexcept {
     // Symmetric to createLayoutsAndDescriptors.
     destroyLayoutsAndDescriptors();
@@ -489,12 +527,12 @@ void VulkanBinder::gc() noexcept {
     }
     const uint32_t evictTime = mCurrentTime - TIME_BEFORE_EVICTION;
     // Due to robin_map restrictions, we cannot use auto or a range-based loop.
-    for (decltype(mDescriptorSets)::const_iterator iter = mDescriptorSets.begin();
-            iter != mDescriptorSets.end();) {
+    for (decltype(mDescriptorBundles)::const_iterator iter = mDescriptorBundles.begin();
+            iter != mDescriptorBundles.end();) {
         auto& cacheEntry = iter->second;
         if (cacheEntry.timestamp < evictTime && !cacheEntry.bound) {
-            vkFreeDescriptorSets(mDevice, mDescriptorPool, 2, cacheEntry.handles);
-            iter = mDescriptorSets.erase(iter);
+            vkFreeDescriptorSets(mDevice, mDescriptorPool, 3, cacheEntry.handles);
+            iter = mDescriptorBundles.erase(iter);
         } else {
             ++iter;
         }
@@ -516,10 +554,10 @@ void VulkanBinder::gc() noexcept {
     graveyard.swap(mDescriptorGraveyard);
     for (auto& val : graveyard) {
         if (val.timestamp < evictTime) {
-           vkFreeDescriptorSets(mDevice, mDescriptorPool, 2, val.handles);
+           vkFreeDescriptorSets(mDevice, mDescriptorPool, 3, val.handles);
         } else {
-            mDescriptorGraveyard.emplace_back(DescriptorVal {
-                .handles = { val.handles[0], val.handles[1] },
+            mDescriptorGraveyard.emplace_back(DescriptorBundle {
+                .handles = { val.handles[0], val.handles[1], val.handles[2] },
                 .timestamp = val.timestamp
             });
         }
@@ -555,28 +593,44 @@ void VulkanBinder::createLayoutsAndDescriptors() noexcept {
     dlinfo.pBindings = sbindings;
     vkCreateDescriptorSetLayout(mDevice, &dlinfo, VKALLOC, &mDescriptorSetLayouts[1]);
 
+    // Next create the descriptor set layout for input attachments.
+    VkDescriptorSetLayoutBinding tbindings[TARGET_BINDING_COUNT];
+    binding.descriptorType = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
+    binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    for (uint32_t i = 0; i < TARGET_BINDING_COUNT; i++) {
+        binding.binding = i;
+        tbindings[i] = binding;
+    }
+    dlinfo.bindingCount = TARGET_BINDING_COUNT;
+    dlinfo.pBindings = tbindings;
+    vkCreateDescriptorSetLayout(mDevice, &dlinfo, VKALLOC, &mDescriptorSetLayouts[2]);
+
     // Create the one and only VkPipelineLayout that we'll ever use.
     VkPipelineLayoutCreateInfo pPipelineLayoutCreateInfo = {};
     pPipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pPipelineLayoutCreateInfo.setLayoutCount = 2;
+    pPipelineLayoutCreateInfo.setLayoutCount = 3;
     pPipelineLayoutCreateInfo.pSetLayouts = mDescriptorSetLayouts;
-    VkResult err = vkCreatePipelineLayout(mDevice, &pPipelineLayoutCreateInfo, VKALLOC, &mPipelineLayout);
+    VkResult err = vkCreatePipelineLayout(mDevice, &pPipelineLayoutCreateInfo, VKALLOC,
+            &mPipelineLayout);
     ASSERT_POSTCONDITION(!err, "Unable to create pipeline layout.");
 
     // Create the VkDescriptorPool.
-    VkDescriptorPoolSize poolSizes[2] = {};
+    VkDescriptorPoolSize poolSizes[3] = {};
     VkDescriptorPoolCreateInfo poolInfo {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
         .pNext = nullptr,
         .flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
-        .maxSets = MAX_NUM_DESCRIPTORS,
-        .poolSizeCount = 2,
-        .pPoolSizes = &poolSizes[0]
+        .maxSets = MAX_DESCRIPTOR_SET_COUNT,
+        .poolSizeCount = 3,
+        .pPoolSizes = poolSizes
     };
     poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     poolSizes[0].descriptorCount = poolInfo.maxSets * UBUFFER_BINDING_COUNT;
     poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     poolSizes[1].descriptorCount = poolInfo.maxSets * SAMPLER_BINDING_COUNT;
+    poolSizes[2].type = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
+    poolSizes[2].descriptorCount = poolInfo.maxSets * TARGET_BINDING_COUNT;
+
     err = vkCreateDescriptorPool(mDevice, &poolInfo, VKALLOC, &mDescriptorPool);
     ASSERT_POSTCONDITION(!err, "Unable to create descriptor pool.");
 }
@@ -589,19 +643,20 @@ void VulkanBinder::destroyLayoutsAndDescriptors() noexcept {
     // Our current descriptor set strategy can cause the # of descriptor sets to explode in certain
     // situations, so it's interesting to report the number that get stuffed into the cache.
     #ifndef NDEBUG
-    utils::slog.d << "Destroying " << mDescriptorSets.size() << " descriptor sets."
+    utils::slog.d << "Destroying " << mDescriptorBundles.size() << " bundles of descriptor sets."
             << utils::io::endl;
     #endif
 
-    mDescriptorSets.clear();
+    mDescriptorBundles.clear();
     vkDestroyPipelineLayout(mDevice, mPipelineLayout, VKALLOC);
     mPipelineLayout = VK_NULL_HANDLE;
-    vkDestroyDescriptorSetLayout(mDevice, mDescriptorSetLayouts[0], VKALLOC);
-    vkDestroyDescriptorSetLayout(mDevice, mDescriptorSetLayouts[1], VKALLOC);
-    mDescriptorSetLayouts[0] = mDescriptorSetLayouts[1] = {};
+    for (int i = 0; i < 3; i++) {
+        vkDestroyDescriptorSetLayout(mDevice, mDescriptorSetLayouts[i], VKALLOC);
+        mDescriptorSetLayouts[i] = {};
+    }
     vkDestroyDescriptorPool(mDevice, mDescriptorPool, VKALLOC);
     mDescriptorPool = VK_NULL_HANDLE;
-    mCurrentDescriptor = nullptr;
+    mCurrentDescriptorBundle = nullptr;
     mDirtyDescriptor = true;
 }
 
@@ -623,6 +678,12 @@ bool VulkanBinder::DescEqual::operator()(const VulkanBinder::DescriptorKey& k1,
         if (k1.samplers[i].sampler != k2.samplers[i].sampler ||
             k1.samplers[i].imageView != k2.samplers[i].imageView ||
             k1.samplers[i].imageLayout != k2.samplers[i].imageLayout) {
+            return false;
+        }
+    }
+    for (uint32_t i = 0; i < TARGET_BINDING_COUNT; i++) {
+        if (k1.inputAttachments[i].imageView != k2.inputAttachments[i].imageView ||
+            k1.inputAttachments[i].imageLayout != k2.inputAttachments[i].imageLayout) {
             return false;
         }
     }
