@@ -49,31 +49,22 @@ layout(location = 2) out vec2 outCocFgBg;
 void dummy(){}
 
 void postProcess(inout PostProcessInputs postProcess) {
-    int mip = materialParams.mip;
-    highp vec2 size = vec2(textureSize(materialParams_foreground, mip));
-    highp vec2 uv = variable_vertex.xy;
+    highp vec2 pixelSize = 1.0 / vec2(textureSize(materialParams_foreground, materialParams.mip));
+    highp vec2 adjusted_uv = variable_vertex.xy - pixelSize.xy * 0.5;
+    highp vec4 uv = vec4(adjusted_uv + pixelSize, adjusted_uv);
 
-    // Note: we can't assume bilinear weights of 0.25 because there is no guarantee that
-    // each level is a multiple of two.
-
-    // image coordinates
-    vec2 coords = uv * size - 0.5;
-
-    ivec2 i = ivec2(coords);    // floor
-
-    // bilinear weights
-    vec4  f = vec4(fract(coords), 1.0 - fract(coords));
-    vec4 b = vec4(f.z * f.y, f.x * f.y, f.x * f.w, f.z * f.w);
+    // the source is guaranteed to be a multiple of two, so we now the bilinear weights are 0.25
 
     // the bilateral weights need to be scaled by to match the lower resolution
     float weightScale = materialParams.weightScale;
+    float mip = float(materialParams.mip);
 
     // fetch the 4 corresponding CoC
     vec4 d0, d1;
-    d0.xy = texelFetch(materialParams_cocFgBg, i + ivec2(0, 1), mip).rg;
-    d0.zw = texelFetch(materialParams_cocFgBg, i + ivec2(1, 1), mip).rg;
-    d1.xy = texelFetch(materialParams_cocFgBg, i + ivec2(1, 0), mip).rg;
-    d1.zw = texelFetch(materialParams_cocFgBg, i,               mip).rg;
+    d0.xy = textureLod(materialParams_cocFgBg, uv.zy, mip).rg;
+    d0.zw = textureLod(materialParams_cocFgBg, uv.xy, mip).rg;
+    d1.xy = textureLod(materialParams_cocFgBg, uv.xw, mip).rg;
+    d1.zw = textureLod(materialParams_cocFgBg, uv.zw, mip).rg;
     vec4 fw = vec4(d0.xz, d1.xz);
     vec4 bw = vec4(d0.yw, d1.yw);
 
@@ -83,10 +74,10 @@ void postProcess(inout PostProcessInputs postProcess) {
      * foreground
      */
 
-    vec4 fg01 = texelFetch(materialParams_foreground, i + ivec2(0, 1), mip);
-    vec4 fg11 = texelFetch(materialParams_foreground, i + ivec2(1, 1), mip);
-    vec4 fg10 = texelFetch(materialParams_foreground, i + ivec2(1, 0), mip);
-    vec4 fg00 = texelFetch(materialParams_foreground, i,               mip);
+    vec4 fg01 = textureLod(materialParams_foreground, uv.zy, mip);
+    vec4 fg11 = textureLod(materialParams_foreground, uv.xy, mip);
+    vec4 fg10 = textureLod(materialParams_foreground, uv.xw, mip);
+    vec4 fg00 = textureLod(materialParams_foreground, uv.zw, mip);
 
     // fireflies/flickering filtering
     hdr.x = 1.0 / (1.0 + max4(fg00));
@@ -101,7 +92,7 @@ void postProcess(inout PostProcessInputs postProcess) {
     // The forground bilateral weight is calculated as saturate(1.0 - (fgCoc - w)), which always
     // yields 1.0. Note the "missing" abs(), this is because we want to let the background layer
     // leak into the foreground layer, to avoid aliasing artifacts.
-    fw = hdr * b;
+    fw = hdr;
     float fgScale = 1.0 / (fw.x + fw.y + fw.z + fw.w);
     vec4 foreground = (fg01 * fw.x + fg11 * fw.y + fg10 * fw.z + fg00 * fw.w) * fgScale;
 
@@ -109,10 +100,10 @@ void postProcess(inout PostProcessInputs postProcess) {
      * background
      */
 
-    vec4 bg01 = texelFetch(materialParams_background, i + ivec2(0, 1), mip);
-    vec4 bg11 = texelFetch(materialParams_background, i + ivec2(1, 1), mip);
-    vec4 bg10 = texelFetch(materialParams_background, i + ivec2(1, 0), mip);
-    vec4 bg00 = texelFetch(materialParams_background, i,               mip);
+    vec4 bg01 = textureLod(materialParams_background, uv.zy, mip);
+    vec4 bg11 = textureLod(materialParams_background, uv.xy, mip);
+    vec4 bg10 = textureLod(materialParams_background, uv.xw, mip);
+    vec4 bg00 = textureLod(materialParams_background, uv.zw, mip);
 
     // fireflies/flickering filtering
     hdr.x = 1.0 / (1.0 + max4(bg00));
@@ -124,7 +115,7 @@ void postProcess(inout PostProcessInputs postProcess) {
 
     // The background bilateral weight is calculated as saturate(1.0 - abs(bgCoc - w)),
     // but the abs() is not needed since bgCoc - w is guaranteed to be >= 0.
-    bw = saturate(1.0 - (bgCoc - bw) * weightScale) * hdr * b;
+    bw = saturate(1.0 - (bgCoc - bw) * weightScale) * hdr;
     float bgScale = 1.0 / (bw.x + bw.y + bw.z + bw.w);
     vec4 background = (bg01 * bw.x + bg11 * bw.y + bg10 * bw.z + bg00 * bw.w) * bgScale;
 

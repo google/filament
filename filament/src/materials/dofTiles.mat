@@ -5,6 +5,11 @@ material {
             type : sampler2d,
             name : cocMaxMin,
             precision: medium
+        },
+        {
+            type : float4,
+            name : uvscale,
+            precision: high
         }
     ],
     variables : [
@@ -17,7 +22,7 @@ material {
 
 vertex {
     void postProcessVertex(inout PostProcessVertexInputs postProcess) {
-        postProcess.vertex.xy = postProcess.normalizedUV;
+        postProcess.vertex.xy = (postProcess.normalizedUV * materialParams.uvscale.xy * 2.0 - 0.5) * materialParams.uvscale.zw;
     }
 }
 

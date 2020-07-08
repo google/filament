@@ -6,11 +6,14 @@
 // Below this value we transition to the in-focus image. This value is chosen as a compromise
 // between allowing slight out-of-focus and reducing sampling artifacts around blurry objects
 // on sharp background. Based on experiments, it should be between 1.0 and 2.0.
-#define MAX_IN_FOCUS_COC    2.0
+#define MAX_IN_FOCUS_COC    1.0
 
 // The maximum circle-of-confusion radius we allow in high-resolution pixels.
-// This is limited by our tile size (hard limit) and dilate pass as well as the kernel density
-// (soft/quality limit).
+// This is mostly limited by the kernel density and how many mips we allow -- when the CoC becomes
+// too large, the rings start to appear; but worse, the median pass will start erasing pixels
+// if the gaps between rings becomes too large. This is also limited by the dilate pass.
+// With a minimum ring count of 3 and 4 mip levels, 48 seems to be the maximum allowable.
+// Currently out dilate pass is set-up for 32 max.
 #define MAX_COC_RADIUS      32.0
 
 float random(const highp vec2 w) {

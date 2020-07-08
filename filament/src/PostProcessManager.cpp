@@ -163,6 +163,7 @@ void PostProcessManager::init() noexcept {
     mDoFTiles               = { engine, MATERIAL(DOFTILES) };
     mDoFDilate              = { engine, MATERIAL(DOFDILATE) };
     mDoF                    = { engine, MATERIAL(DOF) };
+    mDoFMedian              = { engine, MATERIAL(DOFMEDIAN) };
     mDoFCombine             = { engine, MATERIAL(DOFCOMBINE) };
     if (driver.isFrameBufferFetchSupported()) {
         mColorGradingAsSubpass = { engine, MATERIAL(COLORGRADINGASSUBPASS) };
@@ -211,6 +212,7 @@ void PostProcessManager::terminate(DriverApi& driver) noexcept {
     mDoFTiles.terminate(engine);
     mDoFDilate.terminate(engine);
     mDoF.terminate(engine);
+    mDoFMedian.terminate(engine);
     mDoFCombine.terminate(engine);
 }
 
@@ -708,11 +710,14 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
     auto depth = blackboard.get<FrameGraphTexture>("depth");
     assert(depth.isValid());
 
-    auto const& inputDesc = fg.getDescriptor(input);
-    const uint32_t width  = (inputDesc.width  + 1) / 2;
-    const uint32_t height = (inputDesc.height + 1) / 2;
+    // the downsampled target is multiple of 8, so we can have 4 clean mipmap levels
+    constexpr const uint32_t maxMipLevels = 4u;
+    constexpr const uint32_t maxMipLevelsMask = (1u << maxMipLevels) - 1u;
+    auto const& colorDesc = fg.getDescriptor(input);
+    const uint32_t width  = ((colorDesc.width  + maxMipLevelsMask) & ~maxMipLevelsMask) / 2;
+    const uint32_t height = ((colorDesc.height + maxMipLevelsMask) & ~maxMipLevelsMask) / 2;
     const uint8_t maxLevelCount = FTexture::maxLevelCount(width, height);
-    uint8_t mipmapCount = min(maxLevelCount, uint8_t(4));
+    uint8_t mipmapCount = min(maxLevelCount, uint8_t(maxMipLevels));
 
     /*
      * Setup:
@@ -772,6 +777,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                 mi->setParameter("color", color, { .filterMin = SamplerMinFilter::NEAREST });
                 mi->setParameter("depth", depth, { .filterMin = SamplerMinFilter::NEAREST });
                 mi->setParameter("cocParams", cocParams);
+                mi->setParameter("uvscale", float4{ width, height, 1.0f / colorDesc.width, 1.0f / colorDesc.height });
                 mi->commit(driver);
                 mi->use(driver);
                 PipelineState pipeline(material.getPipelineState(variant));
@@ -804,6 +810,10 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                 data.inOutBackground = builder.write(data.inOutBackground);
                 data.inOutCocFgBg    = builder.write(data.inOutCocFgBg);
                 for (size_t i = 0; i < mipmapCount - 1u; i++) {
+                    // make sure inputs are always multiple of two (should be true by construction)
+                    // (this is so that we can compute clean mip levels)
+                    assert((FTexture::valueForLevel(uint8_t(i), fg.getDescriptor(data.inOutForeground).width ) & 0x1) == 0);
+                    assert((FTexture::valueForLevel(uint8_t(i), fg.getDescriptor(data.inOutForeground).height) & 0x1) == 0);
                     using Attachment = FrameGraphRenderTarget::Attachments::AttachmentInfo;
                     data.rt[i] = builder.createRenderTarget("DoF Target", {
                             .attachments = {
@@ -853,9 +863,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
 
     // Match this with TILE_SIZE in dofDilate.mat
     const size_t tileSize = 16; // size of the tile in full resolution pixel
-    size_t tileReductionCount = std::log2(tileSize) - 1.0; // -1 because we start from half-resolution
-    tileReductionCount = min(tileReductionCount,
-            (size_t)FTexture::maxLevelCount((width + 1) / 2, (height + 1) / 2));
+    const uint32_t tileBufferWidth  = ((colorDesc.width  + (tileSize - 1u)) & ~(tileSize - 1u)) / 4u;
+    const uint32_t tileBufferHeight = ((colorDesc.height + (tileSize - 1u)) & ~(tileSize - 1u)) / 4u;
+    const size_t tileReductionCount = std::log2(tileSize) - 1.0; // -1 because we start from half-resolution
 
     struct PostProcessDofTiling1 {
         FrameGraphId<FrameGraphTexture> inCocMaxMin;
@@ -866,11 +876,12 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
     for (size_t i = 0; i < tileReductionCount; i++) {
         auto& ppDoFTiling = fg.addPass<PostProcessDofTiling1>("DoF Tiling",
                 [&](FrameGraph::Builder& builder, auto& data) {
-                    auto const& inputDesc = fg.getDescriptor(inTilesCocMaxMin);
+                    assert((tileBufferWidth  & 1u) == 0);
+                    assert((tileBufferHeight & 1u) == 0);
                     data.inCocMaxMin = builder.sample(inTilesCocMaxMin);
                     data.outTilesCocMaxMin = builder.createTexture("dof tiles output", {
-                            .width  = (inputDesc.width + 1) / 2,
-                            .height = (inputDesc.height+ 1) / 2,
+                            .width  = tileBufferWidth  >> i,
+                            .height = tileBufferHeight >> i,
                             .format = TextureFormat::RG16F
                     });
                     data.outTilesCocMaxMin = builder.write(data.outTilesCocMaxMin);
@@ -880,11 +891,14 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                 },
                 [=](FrameGraphPassResources const& resources,
                         auto const& data, DriverApi& driver) {
+                    auto const& inputDesc = resources.getDescriptor(data.inCocMaxMin);
+                    auto const& outputDesc = resources.getDescriptor(data.outTilesCocMaxMin);
                     auto const& out = resources.get(data.rt);
                     auto inCocMaxMin = resources.getTexture(data.inCocMaxMin);
                     PostProcessMaterial& material = mDoFTiles;
                     FMaterialInstance* const mi = material.getMaterialInstance();
                     mi->setParameter("cocMaxMin", inCocMaxMin, { .filterMin = SamplerMinFilter::NEAREST });
+                    mi->setParameter("uvscale", float4{ outputDesc.width, outputDesc.height, 1.0f / inputDesc.width, 1.0f / inputDesc.height });
                     mi->commit(driver);
                     mi->use(driver);
                     PipelineState pipeline(material.getPipelineState());
@@ -961,11 +975,16 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                 data.cocFgBg        = builder.sample(ppDoFMipmap.getData().inOutCocFgBg);
                 data.tilesCocMaxMin = builder.sample(dilated);
 
-                auto const& inputDesc = fg.getDescriptor(data.foreground);
-                data.outForeground = builder.createTexture("dof color output", inputDesc);
+                // The DoF buffer (output) doesn't need to be a multiple of 8 because it's not
+                // mipmapped. We just need to adjust the uv properly.
+                data.outForeground = builder.createTexture("dof color output", {
+                        .width  = (colorDesc.width  + 1) / 2,
+                        .height = (colorDesc.height + 1) / 2,
+                        .format = fg.getDescriptor(data.foreground).format
+                });
                 data.outAlpha = builder.createTexture("dof alpha output", {
-                        .width  = inputDesc.width,
-                        .height = inputDesc.height,
+                        .width  = (colorDesc.width  + 1) / 2,
+                        .height = (colorDesc.height + 1) / 2,
                         .format = TextureFormat::R8
                 });
                 data.outForeground  = builder.write(data.outForeground);
@@ -984,15 +1003,24 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                 auto cocFgBg        = resources.getTexture(data.cocFgBg);
                 auto tilesCocMaxMin = resources.getTexture(data.tilesCocMaxMin);
 
-                auto const& desc = resources.getDescriptor(data.cocFgBg);
+                auto const& inputDesc = resources.getDescriptor(data.cocFgBg);
+                auto const& outputDesc = resources.getDescriptor(data.outForeground);
+                auto const& tilesDesc = resources.getDescriptor(data.tilesCocMaxMin);
 
                 PostProcessMaterial& material = mDoF;
                 FMaterialInstance* const mi = material.getMaterialInstance();
-                mi->setParameter("foreground",  foreground,     { .filterMin = SamplerMinFilter::LINEAR_MIPMAP_LINEAR });
-                mi->setParameter("background",  background,     { .filterMin = SamplerMinFilter::LINEAR_MIPMAP_LINEAR });
-                mi->setParameter("cocFgBg",     cocFgBg,        { .filterMin = SamplerMinFilter::LINEAR_MIPMAP_LINEAR });
+                // it's not safe to use bilinear filtering in the general case (causes artifacts around edges)
+                mi->setParameter("foreground",  foreground,     { .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
+                mi->setParameter("background",  background,     { .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
+                mi->setParameter("cocFgBg",     cocFgBg,        { .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
                 mi->setParameter("tiles",       tilesCocMaxMin, { .filterMin = SamplerMinFilter::NEAREST });
-                mi->setParameter("fullResPixelSize", 0.5f / float2{ desc.width, desc.height });
+                mi->setParameter("cocToTexelOffset", 0.5f / float2{ inputDesc.width, inputDesc.height });
+                mi->setParameter("uvscale", float4{
+                    outputDesc.width  / float(inputDesc.width),
+                    outputDesc.height / float(inputDesc.height),
+                    outputDesc.width  / (tileSize * 0.5f * tilesDesc.width),
+                    outputDesc.height / (tileSize * 0.5f * tilesDesc.height)
+                });
                 mi->setParameter("bokehAngle",  bokehAngle);
                 mi->commit(driver);
                 mi->use(driver);
@@ -1001,6 +1029,65 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                 driver.draw(pipeline, fullScreenRenderPrimitive);
                 driver.endRenderPass();
             });
+
+    /*
+     * DoF median
+     */
+
+
+    struct PostProcessDofMedian {
+        FrameGraphId<FrameGraphTexture> inForeground;
+        FrameGraphId<FrameGraphTexture> inAlpha;
+        FrameGraphId<FrameGraphTexture> tilesCocMaxMin;
+        FrameGraphId<FrameGraphTexture> outForeground;
+        FrameGraphId<FrameGraphTexture> outAlpha;
+        FrameGraphRenderTargetHandle rt;
+    };
+
+    auto& ppDoFMedian = fg.addPass<PostProcessDofMedian>("DoF Median",
+            [&](FrameGraph::Builder& builder, auto& data) {
+
+                data.inForeground   = builder.sample(ppDoF.getData().outForeground);
+                data.inAlpha        = builder.sample(ppDoF.getData().outAlpha);
+                data.tilesCocMaxMin = builder.sample(dilated);
+
+                data.outForeground  = builder.createTexture("dof color output", fg.getDescriptor(data.inForeground));
+                data.outAlpha       = builder.createTexture("dof alpha output", fg.getDescriptor(data.inAlpha));
+                data.outForeground  = builder.write(data.outForeground);
+                data.outAlpha       = builder.write(data.outAlpha);
+                data.rt = builder.createRenderTarget("DoF Target", {
+                        .attachments = { { data.outForeground,
+                                                 data.outAlpha, {}, {} }, {}, {} }
+                });
+            },
+            [=](FrameGraphPassResources const& resources,
+                    auto const& data, DriverApi& driver) {
+                auto const& out = resources.get(data.rt);
+
+                auto inForeground   = resources.getTexture(data.inForeground);
+                auto inAlpha        = resources.getTexture(data.inAlpha);
+                auto tilesCocMaxMin = resources.getTexture(data.tilesCocMaxMin);
+
+                auto const& outputDesc = resources.getDescriptor(data.outForeground);
+                auto const& tilesDesc = resources.getDescriptor(data.tilesCocMaxMin);
+
+                PostProcessMaterial& material = mDoFMedian;
+                FMaterialInstance* const mi = material.getMaterialInstance();
+                mi->setParameter("dof",   inForeground,   { .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
+                mi->setParameter("alpha", inAlpha,        { .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
+                mi->setParameter("tiles", tilesCocMaxMin, { .filterMin = SamplerMinFilter::NEAREST });
+                mi->setParameter("uvscale", float2{
+                        outputDesc.width  / (tileSize * 0.5f * tilesDesc.width),
+                        outputDesc.height / (tileSize * 0.5f * tilesDesc.height)
+                });
+                mi->commit(driver);
+                mi->use(driver);
+                PipelineState pipeline(material.getPipelineState(variant));
+                driver.beginRenderPass(out.target, out.params);
+                driver.draw(pipeline, fullScreenRenderPrimitive);
+                driver.endRenderPass();
+            });
+
 
     /*
      * DoF recombine
@@ -1018,8 +1105,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
     auto& ppDoFCombine = fg.addPass<PostProcessDofCombine>("DoF combine",
             [&](FrameGraph::Builder& builder, auto& data) {
                 data.color      = builder.sample(input);
-                data.dof        = builder.sample(ppDoF.getData().outForeground);
-                data.alpha      = builder.sample(ppDoF.getData().outAlpha);
+                data.dof        = builder.sample(ppDoFMedian.getData().outForeground);
+                data.alpha      = builder.sample(ppDoFMedian.getData().outAlpha);
                 data.tilesCocMaxMin = builder.sample(dilated);
                 auto const& inputDesc = fg.getDescriptor(data.color);
                 data.output = builder.createTexture("dof output", inputDesc);
@@ -1030,6 +1117,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
             },
             [=](FrameGraphPassResources const& resources,
                     auto const& data, DriverApi& driver) {
+                auto const& dofDesc = resources.getDescriptor(data.dof);
+                auto const& tilesDesc = resources.getDescriptor(data.tilesCocMaxMin);
                 auto const& out = resources.get(data.rt);
 
                 auto color      = resources.getTexture(data.color);
@@ -1040,9 +1129,15 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                 PostProcessMaterial& material = mDoFCombine;
                 FMaterialInstance* const mi = material.getMaterialInstance();
                 mi->setParameter("color", color, { .filterMin = SamplerMinFilter::NEAREST });
-                mi->setParameter("dof",   dof,   { .filterMag = SamplerMagFilter::LINEAR });
-                mi->setParameter("alpha", alpha, { .filterMag = SamplerMagFilter::LINEAR });
+                mi->setParameter("dof",   dof,   { .filterMag = SamplerMagFilter::NEAREST });
+                mi->setParameter("alpha", alpha, { .filterMag = SamplerMagFilter::NEAREST });
                 mi->setParameter("tiles", tilesCocMaxMin, { .filterMin = SamplerMinFilter::NEAREST });
+                mi->setParameter("uvscale", float4{
+                    colorDesc.width  / (dofDesc.width    *  2.0f),
+                    colorDesc.height / (dofDesc.height   *  2.0f),
+                    colorDesc.width  / (tilesDesc.width  * float(tileSize)),
+                    colorDesc.height / (tilesDesc.height * float(tileSize))
+                });
                 mi->commit(driver);
                 mi->use(driver);
                 PipelineState pipeline(material.getPipelineState(variant));

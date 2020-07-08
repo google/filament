@@ -155,6 +155,7 @@ set(MATERIAL_SRCS
         src/materials/dofTiles.mat
         src/materials/dofDilate.mat
         src/materials/dofMipmap.mat
+        src/materials/dofMedian.mat
         src/materials/blitLow.mat
         src/materials/blitMedium.mat
         src/materials/blitHigh.mat
@@ -263,6 +264,12 @@ add_custom_command(
 
 add_custom_command(
         OUTPUT "${MATERIAL_DIR}/dof.filamat"
+        DEPENDS src/materials/dofUtils.fs
+        APPEND
+)
+
+add_custom_command(
+        OUTPUT "${MATERIAL_DIR}/dofMedian.filamat"
         DEPENDS src/materials/dofUtils.fs
         APPEND
 )

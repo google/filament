@@ -14,6 +14,11 @@ material {
         {
             type : float2,
             name : cocParams
+        },
+        {
+            type : float4,
+            name : uvscale,
+            precision: high
         }
     ],
     variables : [
@@ -25,8 +30,11 @@ material {
 }
 
 vertex {
+
+    void dummy(){}
+
     void postProcessVertex(inout PostProcessVertexInputs postProcess) {
-        postProcess.vertex.xy = postProcess.normalizedUV;
+        postProcess.vertex.xy = (postProcess.normalizedUV * materialParams.uvscale.xy * 2.0 - 0.5) * materialParams.uvscale.zw;
     }
 }
 
@@ -40,35 +48,21 @@ layout(location = 2) out vec2 outCocFgBg;
 void dummy(){}
 
 void postProcess(inout PostProcessInputs postProcess) {
-    highp vec2 uv = variable_vertex.xy;
-    highp vec2 size = vec2(textureSize(materialParams_color, 0));
+    highp vec2 pixelSize = 1.0 / vec2(textureSize(materialParams_color, 0));
+    highp vec4 uv = vec4(variable_vertex.xy + pixelSize, variable_vertex.xy);
 
-    // Note: we can't assume bilinear weights of 0.25 because there is no guarantee that
-    // each level is a multiple of two.
+    // the source is guaranteed to be a multiple of two, so we now the bilinear weights are 0.25
 
-    // image coordinates
-    vec2 coords = uv * size - 0.5;
-
-    ivec2 i = ivec2(coords);    // floor
-
-    // bilinear weights
-    vec4  f = vec4(fract(coords), 1.0 - fract(coords));
-    vec4 b = vec4(f.z * f.y, f.x * f.y, f.x * f.w, f.z * f.w);
-
-    vec4 s01 = texelFetch(materialParams_color, i + ivec2(0, 1), 0);
-    vec4 s11 = texelFetch(materialParams_color, i + ivec2(1, 1), 0);
-    vec4 s10 = texelFetch(materialParams_color, i + ivec2(1, 0), 0);
-    vec4 s00 = texelFetch(materialParams_color, i,               0);
+    vec4 s01 = textureLod(materialParams_color, uv.zy, 0.0);
+    vec4 s11 = textureLod(materialParams_color, uv.xy, 0.0);
+    vec4 s10 = textureLod(materialParams_color, uv.xw, 0.0);
+    vec4 s00 = textureLod(materialParams_color, uv.zw, 0.0);
 
     vec4 d;
-#if defined(TARGET_VULKAN_ENVIRONMENT) || !defined(TARGET_MOBILE)
-    d = textureGather(materialParams_depth, uv, 0); // 01, 11, 10, 00
-#else
-    d.x = texelFetch(materialParams_depth, i + ivec2(0, 1), 0).r;
-    d.y = texelFetch(materialParams_depth, i + ivec2(1, 1), 0).r;
-    d.z = texelFetch(materialParams_depth, i + ivec2(1, 0), 0).r;
-    d.w = texelFetch(materialParams_depth, i,               0).r;
-#endif
+    d.x = textureLod(materialParams_depth, uv.zy, 0.0).r;
+    d.y = textureLod(materialParams_depth, uv.xy, 0.0).r;
+    d.z = textureLod(materialParams_depth, uv.xw, 0.0).r;
+    d.w = textureLod(materialParams_depth, uv.zw, 0.0).r;
 
     // Get the CoC radius of each four samples to downsample.
     // We multiply by 0.5 to convert from diameter to radius.
@@ -81,14 +75,12 @@ void postProcess(inout PostProcessInputs postProcess) {
     // The forground bilateral weight is calculated as saturate(1.0 - (fgCoc - w)), which always
     // yields 1.0. Note the "missing" abs(), this is because we want to let the background layer
     // leak into the foreground layer, to avoid aliasing artifacts.
-    vec4 fw = b;
-    float fgScale = 1.0 / (fw.x + fw.y + fw.z + fw.w);
-    vec4 foreground = (s01 * fw.x + s11 * fw.y + s10 * fw.z + s00 * fw.w) * fgScale;
+    vec4 foreground = (s01 + s11 + s10 + s00) * 0.25;
 
     // the background bilateral weight is calculated as saturate(1.0 - abs(bgCoc - w)), but the
     // abs() is not needed since bgCoc - w is guaranteed to be >= 0.
     float bgCoc = max2(max(w.xy, w.zw));
-    vec4 bw = saturate(1.0 - (bgCoc - w)) * b;
+    vec4 bw = saturate(1.0 - (bgCoc - w)) * 0.25;
     float bgScale = 1.0 / (bw.x + bw.y + bw.z + bw.w);
     vec4 background = (s01 * bw.x + s11 * bw.y + s10 * bw.z + s00 * bw.w) * bgScale;
 
