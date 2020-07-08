@@ -1001,4 +1001,8 @@ View::BlendMode View::getBlendMode() const noexcept {
     return upcast(this)->getBlendMode();
 }
 
+uint8_t View::getVisibleLayers() const noexcept {
+  return upcast(this)->getVisibleLayers();
+}
+  
 } // namespace filament
