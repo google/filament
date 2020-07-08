@@ -174,13 +174,9 @@ VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context, uint32_t width, u
 
 VulkanRenderTarget::~VulkanRenderTarget() {
     for (int targetIndex = 0; targetIndex < MRT::TARGET_COUNT; targetIndex++) {
-        if (mColor[targetIndex].view) {
-            vkDestroyImageView(mContext.device, mColor[targetIndex].view, VKALLOC);
-        }
+        vkDestroyImageView(mContext.device, mColor[targetIndex].view, VKALLOC);
     }
-    if (mDepth.view) {
-        vkDestroyImageView(mContext.device, mDepth.view, VKALLOC);
-    }
+    vkDestroyImageView(mContext.device, mDepth.view, VKALLOC);
 }
 
 void VulkanRenderTarget::transformClientRectToPlatform(VkRect2D* bounds) const {
