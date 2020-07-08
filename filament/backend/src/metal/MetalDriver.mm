@@ -177,10 +177,30 @@ void MetalDriver::createTextureSwizzledR(Handle<HwTexture> th, SamplerType targe
     // TODO: implement texture swizzle
 }
 
-void MetalDriver::importTextureR(Handle<HwTexture> th, intptr_t id,
+void MetalDriver::importTextureR(Handle<HwTexture> th, intptr_t i,
         SamplerType target, uint8_t levels,
         TextureFormat format, uint8_t samples, uint32_t width, uint32_t height,
         uint32_t depth, TextureUsage usage) {
+    id<MTLTexture> metalTexture = (id<MTLTexture>) CFBridgingRelease((void*) i);
+    ASSERT_PRECONDITION(metalTexture.width == width,
+            "Imported id<MTLTexture> width (%d) != Filament texture width (%d)",
+            metalTexture.width, width);
+    ASSERT_PRECONDITION(metalTexture.height == height,
+            "Imported id<MTLTexture> height (%d) != Filament texture height (%d)",
+            metalTexture.height, height);
+    ASSERT_PRECONDITION(metalTexture.mipmapLevelCount == levels,
+            "Imported id<MTLTexture> levels (%d) != Filament texture levels (%d)",
+            metalTexture.mipmapLevelCount, levels);
+    MTLPixelFormat filamentMetalFormat = getMetalFormat(format);
+    ASSERT_PRECONDITION(metalTexture.pixelFormat == filamentMetalFormat,
+            "Imported id<MTLTexture> format (%d) != Filament texture format (%d)",
+            metalTexture.pixelFormat, filamentMetalFormat);
+    MTLTextureType filamentMetalType = getMetalType(target);
+    ASSERT_PRECONDITION(metalTexture.textureType == filamentMetalType,
+            "Imported id<MTLTexture> type (%d) != Filament texture type (%d)",
+            metalTexture.textureType, filamentMetalType);
+    construct_handle<MetalTexture>(mHandleMap, th, *mContext, target, levels, format, samples,
+        width, height, depth, usage, metalTexture);
 }
 
 void MetalDriver::createSamplerGroupR(Handle<HwSamplerGroup> sbh, size_t size) {

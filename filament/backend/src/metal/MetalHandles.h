@@ -121,6 +121,12 @@ struct MetalTexture : public HwTexture {
     MetalTexture(MetalContext& context, SamplerType target, uint8_t levels, TextureFormat format,
             uint8_t samples, uint32_t width, uint32_t height, uint32_t depth, TextureUsage usage)
             noexcept;
+
+    // Constructor for importing an id<MTLTexture> outside of Filament.
+    MetalTexture(MetalContext& context, SamplerType target, uint8_t levels, TextureFormat format,
+            uint8_t samples, uint32_t width, uint32_t height, uint32_t depth, TextureUsage usage,
+            id<MTLTexture> texture) noexcept;
+
     ~MetalTexture();
 
     void load2DImage(uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t width,

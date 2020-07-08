@@ -319,6 +319,16 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
     }
 }
 
+MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t levels, TextureFormat format,
+        uint8_t samples, uint32_t width, uint32_t height, uint32_t depth, TextureUsage usage,
+        id<MTLTexture> metalTexture) noexcept
+    : HwTexture(target, levels, samples, width, height, depth, format, usage), context(context),
+        externalImage(context), reshaper(format) {
+    texture = metalTexture;
+    minLod = 0;
+    maxLod = levels - 1;
+}
+
 MetalTexture::~MetalTexture() {
     externalImage.set(nullptr);
 }

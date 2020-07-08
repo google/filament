@@ -291,6 +291,20 @@ inline MTLPixelFormat getMetalFormat(TextureFormat format) noexcept {
     }
 }
 
+constexpr inline MTLTextureType getMetalType(SamplerType target) {
+    switch (target) {
+        case SamplerType::SAMPLER_2D:
+        case SamplerType::SAMPLER_EXTERNAL:
+            return MTLTextureType2D;
+        case SamplerType::SAMPLER_2D_ARRAY:
+            return MTLTextureType2DArray;
+        case SamplerType::SAMPLER_CUBEMAP:
+            return MTLTextureTypeCube;
+        case SamplerType::SAMPLER_3D:
+            return MTLTextureType3D;
+    }
+}
+
 constexpr inline MTLBlendOperation getMetalBlendOperation(BlendEquation equation) noexcept {
     switch (equation) {
         case BlendEquation::ADD: return MTLBlendOperationAdd;
