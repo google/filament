@@ -167,6 +167,7 @@ private:
     PostProcessMaterial mDoF;
     PostProcessMaterial mDoFTiles;
     PostProcessMaterial mDoFDilate;
+    PostProcessMaterial mDoFMedian;
     PostProcessMaterial mDoFCombine;
     PostProcessMaterial mBloomDownsample;
     PostProcessMaterial mBloomUpsample;

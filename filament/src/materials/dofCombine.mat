@@ -20,6 +20,11 @@ material {
             type : sampler2d,
             name : alpha,
             precision: medium
+        },
+        {
+            type : float4,
+            name : uvscale,
+            precision: high
         }
     ],
     variables : [
@@ -32,8 +37,9 @@ material {
 
 vertex {
     void postProcessVertex(inout PostProcessVertexInputs postProcess) {
-    postProcess.vertex.xy = postProcess.normalizedUV;
-}
+        postProcess.vertex.xy = postProcess.normalizedUV;
+        postProcess.vertex.zw = postProcess.normalizedUV * materialParams.uvscale.zw;
+    }
 }
 
 fragment {
@@ -43,21 +49,22 @@ fragment {
 void dummy(){}
 
 void postProcess(inout PostProcessInputs postProcess) {
-    highp vec2 uv = variable_vertex.xy;
-    vec2 tiles = textureLod(materialParams_tiles, uv, 0.0).rg;
-
-    // above this CoC radius, in-focus layer is not visible
-    const float opaqueCocRadiusThreshold = 1.0 + MAX_IN_FOCUS_COC;
+    highp vec2 uv2 = variable_vertex.zw;
+    vec2 tiles = textureLod(materialParams_tiles, uv2, 0.0).rg;
 
     vec4 color;
     if (isTrivialTile(tiles)) {
-        color = textureLod(materialParams_color, uv, 0.0);
-    } else if (tiles.g > opaqueCocRadiusThreshold || tiles.r < -opaqueCocRadiusThreshold) {
-        color = textureLod(materialParams_dof, uv, 0.0);
+        highp vec2 uv0 = variable_vertex.xy;
+        color = textureLod(materialParams_color, uv0, 0.0);
+    } else if (isFastTile(tiles)) {
+        highp vec2 uv1 = variable_vertex.xy * materialParams.uvscale.xy;
+        color = textureLod(materialParams_dof, uv1, 0.0);
     } else {
-        float alpha = textureLod(materialParams_alpha, uv, 0.0).r;
-        vec4 foreground = textureLod(materialParams_dof, uv, 0.0);
-        color = textureLod(materialParams_color, uv, 0.0);
+        highp vec2 uv0 = variable_vertex.xy;
+        highp vec2 uv1 = variable_vertex.xy * materialParams.uvscale.xy;
+        float alpha = textureLod(materialParams_alpha, uv1, 0.0).r;
+        vec4 foreground = textureLod(materialParams_dof, uv1, 0.0);
+        color = textureLod(materialParams_color, uv0, 0.0);
         color = foreground + (1.0 - alpha) * color;
     }
 
