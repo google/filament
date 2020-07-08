@@ -409,6 +409,13 @@ public:
     void setVisibleLayers(uint8_t select, uint8_t values) noexcept;
 
     /**
+     * Get the visible layers.
+     *
+     * @see View::setVisibleLayers()
+     */
+    uint8_t getVisibleLayers() const noexcept;
+
+    /**
      * Enables or disables shadow mapping. Enabled by default.
      *
      * @param enabled true enables shadow mapping, false disables it.
