@@ -159,6 +159,10 @@ function queryActiveShaders() {
         }
         renderMaterialList();
         renderMaterialDetail();
+    })
+    .catch((error) => {
+        // This is expected to fail when the server is hosted from matinfo instead of Engine, since
+        // there are no active shaders in that situation.
     });
 }
 

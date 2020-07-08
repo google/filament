@@ -171,7 +171,7 @@ static int handleArguments(int argc, char* argv[], Config* config) {
                 config->shaderIndex = static_cast<uint64_t>(std::stoi(arg));
                 break;
             case 'w':
-                config->serverPort = 8080;
+                config->serverPort = std::stoi(arg);
                 break;
             case 'x':
                 config->printDictionaryGLSL = true;
@@ -386,6 +386,9 @@ static bool parseChunks(Config config, void* data, size_t size) {
     if (config.serverPort) {
         // Spin up a web server on a secondary thread.
         DebugServer server(Backend::DEFAULT, config.serverPort);
+        if (!server.isReady()) {
+            return false;
+        }
 
         // Notify the server that we have a filamat file.
         utils::CString name;
