@@ -512,26 +512,27 @@ void CubemapIBL::roughnessFilter(
  * -----------------------
  *
  * We are trying to evaluate the following integral:
- * (we pre-multiply by PI to avoid a 1/PI in the shader)
  *
- *                       /
- *             Ed() = PI | L(s) <n•l> ds
- *                       /
- *                       Ω
+ *                     /
+ *             Ed() =  | L(s) <n•l> ds
+ *                     /
+ *                     Ω
  *
  * For this, we're using importance sampling:
  *
- *                    PI     L(l)
- *            Ed() = ---- ∑ ------- <n•l>
- *                    N   l   pdf
+ *                    1     L(l)
+ *            Ed() = --- ∑ ------- <n•l>
+ *                    N  l   pdf
  *
  *
  *  It results that:
  *
- *            PI           n•l
+ *             1           PI
  *    Ed() = ---- ∑ L(l) ------  <n•l>
- *            N   l        PI
+ *            N   l        n•l
  *
+ *
+ *  To avoid to multiply by 1/PI in the shader, we do it here, which simplifies to:
  *
  *  +----------------------+
  *  |          1           |
