@@ -142,7 +142,7 @@ class App {
 
         this.swapChain = this.engine.createSwapChain();
         this.renderer = this.engine.createRenderer();
-        this.camera = engine.createCamera(Filament.EntityManager.get().create());
+        this.camera = this.engine.createCamera(Filament.EntityManager.get().create());
         this.view = this.engine.createView();
         this.view.setCamera(this.camera);
         this.view.setScene(this.scene);
@@ -269,7 +269,7 @@ Add the following script tag to your HTML file. This imports a small third-party
 listens for drag events and computes a rotation matrix.
 
 ```html
-<script src="https://unpkg.com/gltumble"></script>
+<script src="//unpkg.com/gltumble"></script>
 ```
 
 Next, replace the **initialize gltumble** and **apply gltumble matrix** comments with the following
