@@ -520,7 +520,7 @@ export class SurfaceOrientation$Builder {
 
 export class SurfaceOrientation {
     public getQuats(quatCount: number): Int16Array;
-    public delete();
+    public delete(): void;
 }
 
 export enum Frustum$Plane {
