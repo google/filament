@@ -5,18 +5,22 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release
 
+## v1.8.0
+
 - Improved JavaScript API for SurfaceOrientation and Scene.
 - Updated JavaScript API around Camera construction / destruction (⚠️ **API change**)
-- gltfio now uses high precision for texture coordinates.
+- Add missing JavaScript API for `View::setVisibleLayers()`.
 - Fixed regression in JavaScript IcoSphere that caused tutorial to fail.
 - gltf_viewer now supports viewing with glTF cameras.
+- gltfio now uses high precision for texture coordinates.
 - gltfio now supports importing glTF cameras.
 - gltfio now supports simple instancing of entire assets.
 - gltfio has improved performance and assumes assets are well-formed.
 - gltfio now supports name and prefix lookup for entities.
 - ModelViewer now allows resources to be fetched off the UI thread.
-- Add missing JavaScript API for `View::setVisibleLayers()`.
 - Add support for DOF with Metal backend.
+- New Depth-of-Field (Dof) algorithm, which is more plausible and about an order of magnitude faster
+  (about 4ms on Pixel4).
 - SSAO now has an optional high(er) quality upsampler.
 - Tone mappping now uses the real ACES tone mapper, applied in the proper color space.
 - Tone mapping is now applied via a LUT.
@@ -24,11 +28,15 @@ A new header is inserted each time a *tag* is created.
 - Color grading capabilities per View: white balance (temperature/tint), channel mixer,
   tonal ranges (shadows/mid-tones/highlights), ASC CDL (slope/offset/power), contrast, vibrance,
   saturation, and curves.
+- New vignette effect.
+- Improved MSAA performance on mobile.
+- Improved performance of the post-process pass when bloom is disabled on mobile.
+- Added support for 3D textures.
+- Fixed private API access on some versions of Android.
+- Many improvements and bug fixes in Metal and Vulkan backends.
 - Fixed bug in the Metal backend when SSR and MSAA were turned on.
 - Fixed Metal issue with `BufferDescriptor` and `PixelBufferDescriptor`s not being called on
   the application thread.
-- New Depth-of-Field (Dof) algorithm, which is more plausible and about an order of magnitude faster
-  (about 4ms on Pixel4)
 
 ## v1.7.0
 
