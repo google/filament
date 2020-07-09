@@ -91,10 +91,12 @@ class App {
         };
         asset.loadResources(onDone, onFetched);
 
+        const cameraEntity = Filament.EntityManager.get().create();
+        this.camera = engine.createCamera(cameraEntity);
+        this.camera.setExposure(32, 1/125.0, 100);
+
         this.swapChain = engine.createSwapChain();
         this.renderer = engine.createRenderer();
-        this.camera = engine.createCamera();
-        this.camera.setExposure(32, 1/125.0, 100);
         this.view = engine.createView();
         this.view.setCamera(this.camera);
         this.view.setScene(this.scene);
