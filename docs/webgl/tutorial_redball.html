@@ -92,7 +92,7 @@ Filament.init([ filamat_url, ibl_url, sky_url ], () =&gt; {
 
     <span style="color: #008000; font-weight: bold">this</span>.swapChain <span style="color: #666666">=</span> engine.createSwapChain();
     <span style="color: #008000; font-weight: bold">this</span>.renderer <span style="color: #666666">=</span> engine.createRenderer();
-    <span style="color: #008000; font-weight: bold">this</span>.camera <span style="color: #666666">=</span> engine.createCamera();
+    <span style="color: #008000; font-weight: bold">this</span>.camera <span style="color: #666666">=</span> engine.createCamera(Filament.EntityManager.get().create());
     <span style="color: #008000; font-weight: bold">this</span>.view <span style="color: #666666">=</span> engine.createView();
     <span style="color: #008000; font-weight: bold">this</span>.view.setCamera(<span style="color: #008000; font-weight: bold">this</span>.camera);
     <span style="color: #008000; font-weight: bold">this</span>.view.setScene(scene);

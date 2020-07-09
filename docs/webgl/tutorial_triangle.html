@@ -30,7 +30,7 @@ a mobile-friendly page with a full-screen canvas.</p>
 &lt;<span style="color: #008000; font-weight: bold">body</span>&gt;
     &lt;<span style="color: #008000; font-weight: bold">canvas</span>&gt;&lt;/<span style="color: #008000; font-weight: bold">canvas</span>&gt;
     &lt;<span style="color: #008000; font-weight: bold">script</span> <span style="color: #7D9029">src</span><span style="color: #666666">=</span><span style="color: #BA2121">&quot;//unpkg.com/filament/filament.js&quot;</span>&gt;&lt;/<span style="color: #008000; font-weight: bold">script</span>&gt;
-    &lt;<span style="color: #008000; font-weight: bold">script</span> <span style="color: #7D9029">src</span><span style="color: #666666">=</span><span style="color: #BA2121">&quot;//unpkg.com/gl-matrix@2.8.1/dist/gl-matrix-min.js&quot;</span>&gt;&lt;/<span style="color: #008000; font-weight: bold">script</span>&gt;
+    &lt;<span style="color: #008000; font-weight: bold">script</span> <span style="color: #7D9029">src</span><span style="color: #666666">=</span><span style="color: #BA2121">&quot;//unpkg.com/gl-matrix@2.8.1&quot;</span>&gt;&lt;/<span style="color: #008000; font-weight: bold">script</span>&gt;
     &lt;<span style="color: #008000; font-weight: bold">script</span> <span style="color: #7D9029">src</span><span style="color: #666666">=</span><span style="color: #BA2121">&quot;triangle.js&quot;</span>&gt;&lt;/<span style="color: #008000; font-weight: bold">script</span>&gt;
 &lt;/<span style="color: #008000; font-weight: bold">body</span>&gt;
 &lt;/<span style="color: #008000; font-weight: bold">html</span>&gt;
@@ -180,7 +180,7 @@ Filament.RenderableManager.Builder(<span style="color: #666666">1</span>)
 view.</p>
 <div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #008000; font-weight: bold">this</span>.swapChain <span style="color: #666666">=</span> engine.createSwapChain();
 <span style="color: #008000; font-weight: bold">this</span>.renderer <span style="color: #666666">=</span> engine.createRenderer();
-<span style="color: #008000; font-weight: bold">this</span>.camera <span style="color: #666666">=</span> engine.createCamera();
+<span style="color: #008000; font-weight: bold">this</span>.camera <span style="color: #666666">=</span> engine.createCamera(Filament.EntityManager.get().create());
 <span style="color: #008000; font-weight: bold">this</span>.view <span style="color: #666666">=</span> engine.createView();
 <span style="color: #008000; font-weight: bold">this</span>.view.setCamera(<span style="color: #008000; font-weight: bold">this</span>.camera);
 <span style="color: #008000; font-weight: bold">this</span>.view.setScene(<span style="color: #008000; font-weight: bold">this</span>.scene);

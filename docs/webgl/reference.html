@@ -306,6 +306,11 @@
 <h2>class <a id='Engine' href='#Engine'>Engine</a></h2>
 <p>Central manager and resource owner.</p>
 <ul>
+<li><strong>engine.addEntities(entities)</strong>
+<ul>
+<li><em>entities</em> array of entities</li>
+</ul>
+</li>
 <li><strong>Engine.create(canvas, options)</strong>
 <ul>
 <li>Creates an Engine instance for the given canvas.</li>
@@ -319,8 +324,9 @@
 <li><em>returns</em> an instance of <a href="#AssetLoader">AssetLoader</a></li>
 </ul>
 </li>
-<li><strong>engine.createCamera()</strong>
+<li><strong>engine.createCamera(entity)</strong>
 <ul>
+<li><em>entity</em> the <a href="#Entity">Entity</a> to add the camera component to</li>
 <li><em>returns</em> an instance of <a href="#Camera">Camera</a></li>
 </ul>
 </li>
@@ -396,9 +402,9 @@
 <li><em>engine</em> the instance to destroy</li>
 </ul>
 </li>
-<li><strong>engine.destroyCamera(camera)</strong>
+<li><strong>engine.destroyCameraComponent(camera)</strong>
 <ul>
-<li><em>camera</em> an instance of <a href="#Camera">Camera</a></li>
+<li><em>camera</em> an <a href="#Entity">Entity</a> with a camera component</li>
 </ul>
 </li>
 <li><strong>engine.destroyEntity(entity)</strong>
@@ -464,6 +470,11 @@
 <li><strong>engine.destroyView(view)</strong>
 <ul>
 <li><em>view</em> an instance of <a href="#View">View</a></li>
+</ul>
+</li>
+<li><strong>engine.getCameraComponent()</strong>
+<ul>
+<li><em>returns</em> an instance of <a href="#Camera">Camera</a></li>
 </ul>
 </li>
 <li><strong>engine.getLightManager()</strong>
