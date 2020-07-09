@@ -32,6 +32,7 @@
 #include <utils/Path.h>
 
 struct ImDrawData;
+struct ImGuiIO;
 
 namespace filagui {
 
@@ -52,11 +53,16 @@ public:
     // The display size is given in terms of virtual pixels, not physical pixels.
     void setDisplaySize(int width, int height, float scaleX = 0.0f, float scaleY = 0.0f);
 
-    // This does not actually "render" in the sense of issuing OpenGL commands,
-    // instead it populates the Filament View. Clients are responsible for
-    // rendering the View. This should be called on every frame, regardless of
-    // whether the Renderer wants to skip or not.
+    // High-level utility method that takes a callback for creating all ImGui windows and widgets.
+    // Clients are responsible for rendering the View. This should be called on every frame,
+    // regardless of whether the Renderer wants to skip or not.
     void render(float timeStepInSeconds, Callback imguiCommands);
+
+    // Low-level alternative to render() that consumes an ImGui command list and translates it into
+    // various Filament calls. This includes updating the vertex buffer, setting up material
+    // instances, and rebuilding the Renderable component that encompasses the entire UI. Since this
+    // makes Filament calls, it must be called from the main thread.
+    void processImGuiCommands(ImDrawData* commands, const ImGuiIO& io);
 
     // Helper method called after resolving fontPath; public so fonts can be added by caller.
     void createAtlasTexture(filament::Engine* engine);
@@ -65,7 +71,6 @@ public:
     filament::View* getView() const { return mView; }
 
   private:
-      void renderDrawData(ImDrawData* imguiData);
       void createBuffers(int numRequiredBuffers);
       void populateVertexData(size_t bufferIndex, size_t vbSizeInBytes, void* vbData,
                   size_t ibSizeInBytes, void* ibData);
