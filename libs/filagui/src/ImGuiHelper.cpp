@@ -133,29 +133,28 @@ void ImGuiHelper::render(float timeStepInSeconds, Callback imguiCommands) {
     // Let ImGui build up its draw data.
     ImGui::Render();
     // Finally, translate the draw data into Filament objects.
-    renderDrawData(ImGui::GetDrawData());
+    processImGuiCommands(ImGui::GetDrawData(), ImGui::GetIO());
 }
 
-void ImGuiHelper::renderDrawData(ImDrawData* imguiData) {
+void ImGuiHelper::processImGuiCommands(ImDrawData* commands, const ImGuiIO& io) {
     mHasSynced = false;
     auto& rcm = mEngine->getRenderableManager();
 
     // Avoid rendering when minimized and scale coordinates for retina displays.
-    ImGuiIO& io = ImGui::GetIO();
     int fbwidth = (int)(io.DisplaySize.x * io.DisplayFramebufferScale.x);
     int fbheight = (int)(io.DisplaySize.y * io.DisplayFramebufferScale.y);
     if (fbwidth == 0 || fbheight == 0)
         return;
-    imguiData->ScaleClipRects(io.DisplayFramebufferScale);
+    commands->ScaleClipRects(io.DisplayFramebufferScale);
 
     // Ensure that we have enough vertex buffers and index buffers.
-    createBuffers(imguiData->CmdListsCount);
+    createBuffers(commands->CmdListsCount);
 
     // Count how many primitives we'll need, then create a Renderable builder.
     size_t nPrims = 0;
     std::unordered_map<uint64_t, filament::MaterialInstance*> scissorRects;
-    for (int cmdListIndex = 0; cmdListIndex < imguiData->CmdListsCount; cmdListIndex++) {
-        const ImDrawList* cmds = imguiData->CmdLists[cmdListIndex];
+    for (int cmdListIndex = 0; cmdListIndex < commands->CmdListsCount; cmdListIndex++) {
+        const ImDrawList* cmds = commands->CmdLists[cmdListIndex];
         nPrims += cmds->CmdBuffer.size();
     }
     auto rbuilder = RenderableManager::Builder(nPrims);
@@ -170,13 +169,12 @@ void ImGuiHelper::renderDrawData(ImDrawData* imguiData) {
         }
     }
 
-
     // Recreate the Renderable component and point it to the vertex buffers.
     rcm.destroy(mRenderable);
     int bufferIndex = 0;
     int primIndex = 0;
-    for (int cmdListIndex = 0; cmdListIndex < imguiData->CmdListsCount; cmdListIndex++) {
-        const ImDrawList* cmds = imguiData->CmdLists[cmdListIndex];
+    for (int cmdListIndex = 0; cmdListIndex < commands->CmdListsCount; cmdListIndex++) {
+        const ImDrawList* cmds = commands->CmdLists[cmdListIndex];
         size_t indexOffset = 0;
         populateVertexData(bufferIndex,
                 cmds->VtxBuffer.Size * sizeof(ImDrawVert), cmds->VtxBuffer.Data,
@@ -205,7 +203,7 @@ void ImGuiHelper::renderDrawData(ImDrawData* imguiData) {
         }
         bufferIndex++;
     }
-    if (imguiData->CmdListsCount > 0) {
+    if (commands->CmdListsCount > 0) {
         rbuilder.build(*mEngine, mRenderable);
     }
 }
