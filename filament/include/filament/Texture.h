@@ -201,6 +201,33 @@ public:
 
         /* no user serviceable parts below */
 
+        /**
+         * Specify a native texture to import as a Filament texture.
+         *
+         * The texture id is backend-specific:
+         *   - OpenGL: GLuint texture ID
+         *   - Metal: id<MTLTexture>
+         *
+         * With Metal, the id<MTLTexture> object should be cast to an intptr_t using
+         * CFBridgingRetain to transfer ownership to Filament. Filament will release ownership of
+         * the textue object when the Filament texture is destroyed.
+         *
+         * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.cpp}
+         *  id <MTLTexture> metalTexture = ...
+         *  filamentTexture->import((intptr_t) CFBridgingRetain(metalTexture));
+         *  // free to release metalTexture
+         *
+         *  // after using texture:
+         *  engine->destroy(filamentTexture);   // metalTexture is released
+         * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+         *
+         * @warning This method should be used as a last resort. This API is subject to change or
+         * removal.
+         *
+         * @param id a backend specific texture identifier
+         *
+         * @return This Builder, for chaining calls.
+         */
         Builder& import(intptr_t id) noexcept;
 
     private:
