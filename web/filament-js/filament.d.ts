@@ -285,12 +285,12 @@ export class RenderableManager {
 
 export class VertexBuffer {
     public static Builder(): VertexBuffer$Builder;
-    public setBufferAt(engine: Engine, bufindex: number, f32array: any, byteOffset?: number): void;
+    public setBufferAt(engine: Engine, bufindex: number, urlOrBuffer: string | ArrayBufferView, byteOffset?: number): void;
 }
 
 export class IndexBuffer {
     public static Builder(): IndexBuffer$Builder;
-    public setBuffer(engine: Engine, u16array: any, byteOffset?: number): void;
+    public setBuffer(engine: Engine, urlOrBuffer: string | ArrayBufferView, byteOffset?: number): void;
 }
 
 export class Renderer {
@@ -427,14 +427,14 @@ export class Engine {
     public static create(canvas: HTMLCanvasElement, contextOptions?: object): Engine;
     public createCamera(entity: Entity): Camera;
     public createIblFromKtx(url: string): IndirectLight;
-    public createMaterial(url: string): Material;
+    public createMaterial(urlOrBuffer: string | ArrayBufferView): Material;
     public createRenderer(): Renderer;
     public createScene(): Scene;
-    public createSkyFromKtx(url: string): Skybox;
+    public createSkyFromKtx(urlOrBuffer: string | ArrayBufferView): Skybox;
     public createSwapChain(): SwapChain;
-    public createTextureFromJpeg(url: string, options?: object): Texture;
-    public createTextureFromPng(url: string, options?: object): Texture;
-    public createTextureFromKtx(url: string, options?: object): Texture;
+    public createTextureFromJpeg(urlOrBuffer: string | ArrayBufferView, options?: object): Texture;
+    public createTextureFromPng(urlOrBuffer: string | ArrayBufferView, options?: object): Texture;
+    public createTextureFromKtx(urlOrBuffer: string | ArrayBufferView options?: object): Texture;
     public createView(): View;
 
     public createAssetLoader(): gltfio$AssetLoader;
@@ -460,13 +460,13 @@ export class Engine {
     public getSupportedFormatSuffix(suffix: string): void;
     public getTransformManager(): TransformManager;
     public init(assets: string[], onready: () => void): void;
-    public loadFilamesh(url: string, definstance: MaterialInstance, matinstances: object): Filamesh;
+    public loadFilamesh(urlOrBuffer: string | ArrayBufferView, definstance: MaterialInstance, matinstances: object): Filamesh;
 }
 
 export class gltfio$AssetLoader {
-    public createAssetFromJson(buffer: any): gltfio$FilamentAsset;
-    public createAssetFromBinary(buffer: any): gltfio$FilamentAsset;
-    public createInstancedAsset(buffer: any,
+    public createAssetFromJson(urlOrBuffer: string | ArrayBufferView): gltfio$FilamentAsset;
+    public createAssetFromBinary(urlOrBuffer: string | ArrayBufferView): gltfio$FilamentAsset;
+    public createInstancedAsset(urlOrBuffer: string | ArrayBufferView,
             instances: (gltfio$FilamentInstance | null)[]): gltfio$FilamentAsset;
     public delete(): void;
 }
