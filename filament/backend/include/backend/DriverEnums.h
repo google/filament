@@ -490,6 +490,7 @@ enum class TextureUsage : uint8_t {
     STENCIL_ATTACHMENT  = 0x4,                      //!< Texture can be used as a stencil attachment
     UPLOADABLE          = 0x8,                      //!< Data can be uploaded into this texture (default)
     SAMPLEABLE          = 0x10,                     //!< Texture can be sampled (default)
+    SUBPASS_INPUT       = 0x20,                     //!< Texture can be used as a subpass input
     DEFAULT             = UPLOADABLE | SAMPLEABLE   //!< Default texture usage
 };
 

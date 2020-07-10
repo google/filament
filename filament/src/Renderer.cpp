@@ -654,7 +654,8 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                     data.output = builder.createTexture("Tonemapped Buffer", {
                             .width = colorBufferDesc.width,
                             .height = colorBufferDesc.height,
-                            .format = colorGradingConfig.ldrFormat
+                            .format = colorGradingConfig.ldrFormat,
+                            .usage = backend::TextureUsage::SUBPASS_INPUT
                     });
                     data.output = builder.write(data.output);
                 }

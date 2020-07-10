@@ -778,6 +778,10 @@ export enum Texture$Usage {
     DEFAULT,
     COLOR_ATTACHMENT,
     DEPTH_ATTACHMENT,
+    STENCIL_ATTACHMENT,
+    UPLOADABLE,
+    SAMPLEABLE,
+    SUBPASS_INPUT,
 }
 
 export enum Texture$CubemapFace {
