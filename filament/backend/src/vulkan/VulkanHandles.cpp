@@ -391,6 +391,9 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
     }
     if (any(usage & TextureUsage::COLOR_ATTACHMENT)) {
         imageInfo.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | blittable;
+        if (any(usage & TextureUsage::SUBPASS_INPUT)) {
+            imageInfo.usage |= VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
+        }
     }
     if (any(usage & TextureUsage::STENCIL_ATTACHMENT)) {
         imageInfo.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;

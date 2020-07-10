@@ -48,7 +48,7 @@ struct FrameGraphTexture {
         uint8_t samples = 0;    // 0=auto, 1=request not multisample, >1 only for NOT SAMPLEABLE
         backend::SamplerType type = backend::SamplerType::SAMPLER_2D;     // texture target type
         backend::TextureFormat format = backend::TextureFormat::RGBA8;    // resource internal format
-        backend::TextureUsage usage = (backend::TextureUsage)0; // don't need to set this one
+        backend::TextureUsage usage = (backend::TextureUsage)0;
     };
 
     void create(FrameGraph& fg, const char* name, Descriptor const& desc) noexcept;
