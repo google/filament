@@ -221,7 +221,7 @@ public class FilamentAsset {
     }
 
     void clearNativeObject() {
-        mAnimator.clearNativeObject();
+        if (mAnimator != null) mAnimator.clearNativeObject();
         mNativeObject = 0;
     }
 
