@@ -992,6 +992,9 @@ void VulkanDriver::endRenderPass(int) {
     mContext.currentRenderPass.renderPass = VK_NULL_HANDLE;
 }
 
+void VulkanDriver::nextSubpass(int) {
+}
+
 void VulkanDriver::setRenderPrimitiveBuffer(Handle<HwRenderPrimitive> rph,
         Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh,
         uint32_t enabledAttributes) {

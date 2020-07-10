@@ -361,6 +361,8 @@ DECL_DRIVER_API_N(beginRenderPass,
 
 DECL_DRIVER_API_0(endRenderPass)
 
+DECL_DRIVER_API_0(nextSubpass)
+
 DECL_DRIVER_API_N(setRenderPrimitiveBuffer,
         backend::RenderPrimitiveHandle, rph,
         backend::VertexBufferHandle, vbh,
