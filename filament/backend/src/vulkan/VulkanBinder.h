@@ -129,7 +129,7 @@ public:
     // Each bind method is fast and does not make Vulkan calls.
     void bindProgramBundle(const ProgramBundle& bundle) noexcept;
     void bindRasterState(const RasterState& rasterState) noexcept;
-    void bindRenderPass(VkRenderPass renderPass) noexcept;
+    void bindRenderPass(VkRenderPass renderPass, int subpassIndex) noexcept;
     void bindPrimitiveTopology(VkPrimitiveTopology topology) noexcept;
     void bindUniformBuffer(uint32_t bindingIndex, VkBuffer uniformBuffer,
             VkDeviceSize offset = 0, VkDeviceSize size = VK_WHOLE_SIZE) noexcept;
@@ -170,7 +170,8 @@ private:
         VkShaderModule shaders[SHADER_MODULE_COUNT]; // 8*2 bytes
         RasterState rasterState; // 248 bytes
         VkRenderPass renderPass; // 8 bytes
-        VkPrimitiveTopology topology; // 4 bytes
+        VkPrimitiveTopology topology : 16; // 2 bytes
+        uint16_t subpassIndex; // 2 bytes
         VkVertexInputAttributeDescription vertexAttributes[VERTEX_ATTRIBUTE_COUNT]; // 16*5 bytes
         VkVertexInputBindingDescription vertexBuffers[VERTEX_ATTRIBUTE_COUNT]; // 12*5 bytes
     };
