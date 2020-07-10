@@ -58,6 +58,14 @@ A runtime material builder/compiler. This library is large but contains a full s
 [![filamat-android-lite](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filamat-android-lite/badge.svg?subject=filamat-android-lite)](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filamat-android-lite)  
 A much smaller alternative to `filamat-android` that can only generate OpenGL shaders. It does not provide validation or optimizations.
 
+### iOS
+
+iOS projects can use CocoaPods to install the latest release:
+
+```
+pod 'Filament', '~> 1.8.0'
+```
+
 ### Snapshots
 
 If you prefer to live on the edge, you can download a continuous build by following the following
