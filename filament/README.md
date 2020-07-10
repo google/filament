@@ -133,8 +133,8 @@ When building Filament from source, the `USE_STATIC_CRT` CMake option can be
 used to change the run-time library version.
 
 ```
-FILAMENT_LIBS=filament.lib backend.lib bluegl.lib filabridge.lib filaflat.lib utils.lib \
-              geometry.lib smol-v.lib ibl.lib
+FILAMENT_LIBS=filament.lib backend.lib bluegl.lib bluevk.lib filabridge.lib filaflat.lib \
+              utils.lib geometry.lib smol-v.lib ibl.lib
 CC=cl.exe
 
 main.exe: main.obj
