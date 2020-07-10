@@ -80,6 +80,12 @@ struct VulkanTimestamps {
     utils::Mutex mutex;
 };
 
+struct VulkanRenderPass {
+    VkRenderPass renderPass;
+    uint32_t subpassMask;
+    int currentSubpass;
+};
+
 // For now we only support a single-device, single-instance scenario. Our concept of "context" is a
 // bundle of state containing the Device, the Instance, and various globally-useful Vulkan objects.
 struct VulkanContext {
@@ -97,7 +103,7 @@ struct VulkanContext {
     VulkanBinder::RasterState rasterState;
     VulkanCommandBuffer* currentCommands;
     VulkanSurfaceContext* currentSurface;
-    VkRenderPassBeginInfo currentRenderPass;
+    VulkanRenderPass currentRenderPass;
     VkViewport viewport;
     VkFormat finalDepthFormat;
     VmaAllocator allocator;

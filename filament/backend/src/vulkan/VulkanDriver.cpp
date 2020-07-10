@@ -729,7 +729,7 @@ bool VulkanDriver::isRenderTargetFormatSupported(TextureFormat format) {
 }
 
 bool VulkanDriver::isFrameBufferFetchSupported() {
-    return false;
+    return true;
 }
 
 bool VulkanDriver::isFrameTimeSupported() {
@@ -901,7 +901,8 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
             .clear = params.flags.clear,
             .discardStart = discardStart,
             .discardEnd = params.flags.discardEnd
-        }
+        },
+        .subpassMask = params.subpassMask
     };
     for (int i = 0; i < MRT::TARGET_COUNT; i++) {
         rpkey.colorLayout[i] = rt->getColor(i).layout;
@@ -909,7 +910,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     }
 
     VkRenderPass renderPass = mFramebufferCache.getRenderPass(rpkey);
-    mBinder.bindRenderPass(renderPass);
+    mBinder.bindRenderPass(renderPass, 0);
 
     // Create the VkFramebuffer or fetch it from cache.
     VulkanFboCache::FboKey fbkey { .renderPass = renderPass };
@@ -980,7 +981,11 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     mCurrentRenderTarget->transformClientRectToPlatform(&viewport);
     vkCmdSetViewport(swapContext.commands.cmdbuffer, 0, 1, &viewport);
 
-    mContext.currentRenderPass = renderPassInfo;
+    mContext.currentRenderPass = {
+        .renderPass = renderPassInfo.renderPass,
+        .subpassMask = params.subpassMask,
+        .currentSubpass = 0
+    };
 }
 
 void VulkanDriver::endRenderPass(int) {
@@ -989,10 +994,39 @@ void VulkanDriver::endRenderPass(int) {
     assert(mCurrentRenderTarget);
     vkCmdEndRenderPass(mContext.currentCommands->cmdbuffer);
     mCurrentRenderTarget = VK_NULL_HANDLE;
+    if (mContext.currentRenderPass.currentSubpass > 0) {
+        for (uint32_t i = 0; i < VulkanBinder::TARGET_BINDING_COUNT; i++) {
+            mBinder.bindInputAttachment(i, {});
+        }
+        mContext.currentRenderPass.currentSubpass = 0;
+    }
     mContext.currentRenderPass.renderPass = VK_NULL_HANDLE;
 }
 
 void VulkanDriver::nextSubpass(int) {
+    ASSERT_PRECONDITION(mContext.currentRenderPass.currentSubpass == 0,
+            "Only two subpasses are currently supported.");
+
+    assert(mContext.currentCommands);
+    assert(mContext.currentSurface);
+    assert(mCurrentRenderTarget);
+    assert(mContext.currentRenderPass.subpassMask);
+
+    vkCmdNextSubpass(mContext.currentCommands->cmdbuffer, VK_SUBPASS_CONTENTS_INLINE);
+
+    mBinder.bindRenderPass(mContext.currentRenderPass.renderPass,
+            ++mContext.currentRenderPass.currentSubpass);
+
+    for (uint32_t i = 0; i < VulkanBinder::TARGET_BINDING_COUNT; i++) {
+        if ((1 << i) & mContext.currentRenderPass.subpassMask) {
+            VulkanAttachment subpassInput = mCurrentRenderTarget->getColor(i);
+            VkDescriptorImageInfo info = {
+                .imageView = subpassInput.view,
+                .imageLayout = subpassInput.layout,
+            };
+            mBinder.bindInputAttachment(i, info);
+        }
+    }
 }
 
 void VulkanDriver::setRenderPrimitiveBuffer(Handle<HwRenderPrimitive> rph,

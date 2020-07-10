@@ -52,7 +52,7 @@ public:
             };
             uint32_t value; // 4 bytes
         } flags;
-        uint32_t padding1; // 4 bytes
+        uint32_t subpassMask; // 4 bytes
     };
     struct RenderPassVal {
         VkRenderPass handle;
