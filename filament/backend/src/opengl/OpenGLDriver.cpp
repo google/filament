@@ -2192,6 +2192,9 @@ void OpenGLDriver::endRenderPass(int) {
 }
 
 
+void OpenGLDriver::nextSubpass(int) {}
+
+
 void OpenGLDriver::resolvePass(ResolveAction action, GLRenderTarget const* rt,
         backend::TargetBufferFlags discardFlags) noexcept {
     assert(rt->gl.fbo_read);

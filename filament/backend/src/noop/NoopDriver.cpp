@@ -222,6 +222,9 @@ void NoopDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassPar
 void NoopDriver::endRenderPass(int) {
 }
 
+void NoopDriver::nextSubpass(int) {
+}
+
 void NoopDriver::setRenderPrimitiveBuffer(Handle<HwRenderPrimitive> rph,
         Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh,
         uint32_t enabledAttributes) {

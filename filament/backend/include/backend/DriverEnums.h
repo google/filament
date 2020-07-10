@@ -838,8 +838,15 @@ struct RenderPassParams {
     //! Stencil value to clear the stencil buffer with
     uint32_t clearStencil = 0;
 
-    //! reserved, must be zero
-    uint32_t reserved1 = 0;
+    /**
+     * The subpass mask specifies which color attachments are designated for read-back in the second
+     * subpass. If this is zero, the render pass has only one subpass. The least significant bit
+     * specifies that the first color attachment in the render target is a subpass input.
+     *
+     * For now only 2 subpasses are supported, so only the lower 4 bits are used, one for each color
+     * attachment (see MRT::TARGET_COUNT).
+     */
+    uint32_t subpassMask = 0;
 };
 
 struct PolygonOffset {

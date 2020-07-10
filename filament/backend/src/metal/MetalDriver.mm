@@ -758,6 +758,8 @@ void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     mContext->cullModeState.invalidate();
 }
 
+void MetalDriver::nextSubpass(int dummy) {}
+
 void MetalDriver::endRenderPass(int dummy) {
     [mContext->currentRenderPassEncoder endEncoding];
 

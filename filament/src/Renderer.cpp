@@ -381,6 +381,9 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             .height = config.svp.height,
             .format = config.hdrFormat
     };
+    if (colorGradingConfig.asSubpass) {
+        desc.usage |= backend::TextureUsage::SUBPASS_INPUT;
+    }
     colorPass(fg, "Color Pass", desc, config, colorGradingConfig, pass, view);
 
     // TODO: look for refraction draw calls only if screen-space refraction is enabled
@@ -654,8 +657,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                     data.output = builder.createTexture("Tonemapped Buffer", {
                             .width = colorBufferDesc.width,
                             .height = colorBufferDesc.height,
-                            .format = colorGradingConfig.ldrFormat,
-                            .usage = backend::TextureUsage::SUBPASS_INPUT
+                            .format = colorGradingConfig.ldrFormat
                     });
                     data.output = builder.write(data.output);
                 }
@@ -695,11 +697,15 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
 
                 out.params.clearColor = data.clearColor;
 
-                driver.beginRenderPass(out.target, out.params);
-                pass.executeCommands(resources.getPassName());
-
                 if (colorGradingConfig.asSubpass) {
-                    // post-processing....
+                    // TODO: commit uniforms for the subpass material here (before beginRenderPass)
+                    // because uploading uniforms from within a render pass is illegal in Vulkan.
+                    // See #2780.
+                    out.params.subpassMask = 1;
+                    driver.beginRenderPass(out.target, out.params);
+                    pass.executeCommands(resources.getPassName());
+
+                    driver.nextSubpass();
                     ppm.colorGradingSubpass(driver,
                             view.getColorGrading(),
                             view.getVignetteOptions(),
@@ -708,6 +714,9 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                             colorGradingConfig.dithering,
                             out.params.viewport.width,
                             out.params.viewport.height);
+                } else {
+                    driver.beginRenderPass(out.target, out.params);
+                    pass.executeCommands(resources.getPassName());
                 }
 
                 driver.endRenderPass();
