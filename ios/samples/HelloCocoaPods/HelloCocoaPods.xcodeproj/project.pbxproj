@@ -15,7 +15,6 @@
 		43C0904524B7DCE9009D291E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 43C0904424B7DCE9009D291E /* Assets.xcassets */; };
 		43C0904824B7DCE9009D291E /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 43C0904624B7DCE9009D291E /* LaunchScreen.storyboard */; };
 		43C0904B24B7DCE9009D291E /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 43C0904A24B7DCE9009D291E /* main.m */; };
-		43C0905224B7DF20009D291E /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 43C0905124B7DF20009D291E /* MetalKit.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -42,7 +41,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				43C0905224B7DF20009D291E /* MetalKit.framework in Frameworks */,
 				20551D7E31AE7D51EE5C49CB /* libPods-HelloCocoaPods.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
