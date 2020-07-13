@@ -254,10 +254,6 @@ set(LINUX_LINKER_OPTIMIZATION_FLAGS
         -Wl,--exclude-libs,bluegl
 )
 
-set(LINUX_COMPILER_FLAGS
-        -fPIC
-)
-
 if (MSVC)
     set(FILAMENT_WARNINGS /W3)
 else()
@@ -279,7 +275,6 @@ target_compile_options(${TARGET} PRIVATE
         ${FILAMENT_WARNINGS}
         $<$<CONFIG:Release>:${OPTIMIZATION_FLAGS}>
         $<$<AND:$<PLATFORM_ID:Darwin>,$<CONFIG:Release>>:${DARWIN_OPTIMIZATION_FLAGS}>
-        $<$<PLATFORM_ID:Linux>:${LINUX_COMPILER_FLAGS}>
 )
 
 target_link_libraries(${TARGET} PRIVATE

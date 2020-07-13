@@ -34,13 +34,6 @@ if (NOT WIN32)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden")
 endif()
 
-# Only linux, clang doesn't want to use a shared library that is not PIC.
-# /usr/bin/ld: ../bluegl/libbluegl.a(BlueGL.cpp.o): relocation R_X86_64_32S
-# against `.bss' can not be used when making a shared object; recompile with -fPIC
-if (LINUX)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
-endif()
-
 # specify where our headers are
 include_directories(${PUBLIC_HDR_DIR})
 

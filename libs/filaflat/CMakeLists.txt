@@ -36,7 +36,6 @@ endif()
 if (NOT WIN32)
     target_compile_options(${TARGET} PRIVATE
         -fvisibility=hidden
-        $<$<PLATFORM_ID:Linux>:-fPIC>
     )
 endif()
 

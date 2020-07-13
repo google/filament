@@ -44,7 +44,7 @@ target_link_libraries(${TARGET} math utils)
 if (MSVC)
     target_compile_options(${TARGET} PRIVATE /fp:fast)
 else()
-    target_compile_options(${TARGET} PRIVATE -ffast-math $<$<PLATFORM_ID:Linux>:-fPIC>)
+    target_compile_options(${TARGET} PRIVATE -ffast-math)
 endif()
 
 
