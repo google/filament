@@ -38,7 +38,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COPTS}")
 add_executable(filament-js ${CPP_SRC})
 
 set_target_properties(filament-js PROPERTIES
-    LINK_DEPENDS "${EXTERN_POSTJS_SRC};${POSTJS_SRC}"
+    LINK_DEPENDS "${EXTERN_POSTJS_SRC}"
     OUTPUT_NAME filament)
 
 target_link_libraries(filament-js PRIVATE filament math utils image filameshio gltfio_core stb)
