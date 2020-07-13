@@ -53,8 +53,6 @@ set(JNI_SOURCE_FILES
 add_library(${TARGET} SHARED ${JNI_SOURCE_FILES})
 target_link_libraries(${TARGET} gltfio_core gltfio_resources)
 
-target_compile_options(${TARGET} PRIVATE $<$<PLATFORM_ID:Linux>:-fPIC>)
-
 set(INSTALL_TYPE LIBRARY)
 if (WIN32 OR CYGWIN)
     set(INSTALL_TYPE RUNTIME)

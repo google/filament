@@ -163,7 +163,6 @@ link_libraries(math utils filament cgltf stb geometry gltfio_resources tsl trie)
 add_library(gltfio_core STATIC ${PUBLIC_HDRS} ${SRCS})
 
 target_include_directories(gltfio_core PUBLIC ${PUBLIC_HDR_DIR})
-target_compile_options(gltfio_core PRIVATE $<$<PLATFORM_ID:Linux>:-fPIC>)
 
 target_compile_definitions(gltfio_core PUBLIC -DGLTFIO_DRACO_SUPPORTED=1)
 target_link_libraries(gltfio_core PUBLIC dracodec)
@@ -186,7 +185,6 @@ if (NOT WEBGL AND NOT ANDROID AND NOT IOS)
         target_compile_options(${TARGET} PRIVATE $<$<CONFIG:Release>:-ffast-math>)
         target_compile_options(${TARGET} PRIVATE -Wno-deprecated-register)
     endif()
-    target_compile_options(${TARGET} PRIVATE $<$<PLATFORM_ID:Linux>:-fPIC>)
 
     # ==================================================================================================
     # Installation

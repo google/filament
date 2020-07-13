@@ -114,13 +114,11 @@ target_compile_options(${TARGET} PRIVATE -DAMD_EXTENSIONS -DNV_EXTENSIONS )
 target_compile_options(${TARGET} PRIVATE
 # TODO: use hidden by default and expose what we need (we'll need to do the same in dependencies)
 #        -fvisibility=hidden
-        $<$<PLATFORM_ID:Linux>:-fPIC>
 )
 
 target_compile_options(filamat_lite PRIVATE
 # TODO: use hidden by default and expose what we need (we'll need to do the same in dependencies)
 #        -fvisibility=hidden
-        $<$<PLATFORM_ID:Linux>:-fPIC>
 )
 
 target_compile_definitions(filamat_lite PRIVATE FILAMAT_LITE)

@@ -104,7 +104,6 @@ target_compile_options(${TARGET} PRIVATE
 # TODO: use hidden by default and expose what we need
 #        -fvisibility=hidden
 #        -fvisibility-inlines-hidden
-        $<$<PLATFORM_ID:Linux>:-fPIC>
 )
 
 # ==================================================================================================
