@@ -212,7 +212,13 @@ public:
      * First, pass an aspect of 1.0 to setProjection. Then set the scaling with the desired aspect
      * ratio:
      *
-     *     camera->setScaling(double4 {1.0, width / height, 1.0, 1.0});
+     *     const double aspect = width / height;
+     *
+     *     // with Fov::HORIZONTAL passed to setProjection:
+     *     camera->setScaling(double4 {1.0, aspect, 1.0, 1.0});
+     *
+     *     // with Fov::VERTICAL passed to setProjection:
+     *     camera->setScaling(double4 {1.0 / aspect, 1.0, 1.0, 1.0});
      *
      *
      * By default, this is an identity matrix.
