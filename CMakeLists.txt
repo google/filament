@@ -17,8 +17,6 @@ option(FILAMENT_USE_EXTERNAL_GLES3 "Experimental: Compile Filament against OpenG
 
 option(FILAMENT_USE_SWIFTSHADER "Experimental: Compile Filament against SwiftShader" OFF)
 
-option(FILAMENT_GENERATE_JS_DOCS "Build WebGL documentation and tutorials" OFF)
-
 option(FILAMENT_ENABLE_LTO "Enable link-time optimizations if supported by the compiler" OFF)
 
 option(FILAMENT_SKIP_SAMPLES "Don't build samples" OFF)
@@ -574,11 +572,6 @@ set(FILAMENT_SAMPLES_BINARY_DIR ${PROJECT_BINARY_DIR}/samples)
 if (WEBGL)
     add_subdirectory(web/filament-js)
     add_subdirectory(web/samples)
-
-    if (FILAMENT_GENERATE_JS_DOCS)
-        add_subdirectory(web/docs)
-    endif()
-
     add_subdirectory(${EXTERNAL}/imgui/tnt)
 endif()
 
