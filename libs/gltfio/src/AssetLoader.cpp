@@ -827,7 +827,7 @@ void FAssetLoader::createCamera(const cgltf_camera* camera, Entity entity) {
         const double aspect = projection.aspect_ratio > 0.0 ? projection.aspect_ratio : 1.0;
 
         // Use the scaling matrix to set the aspect ratio, so clients can easily change it.
-        filamentCamera->setScaling(double4 {1.0, aspect, 1.0, 1.0});
+        filamentCamera->setScaling(double4 {1.0 / aspect, 1.0, 1.0, 1.0});
     } else if (camera->type == cgltf_camera_type_orthographic) {
         auto& projection = camera->data.orthographic;
 

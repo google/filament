@@ -88,6 +88,10 @@ public:
      * The camera's scaling matrix allows clients to adjust the aspect ratio independently from the
      * camera's projection.
      *
+     * To change the aspect ratio of the glTF camera:
+     *
+     *     camera->setScaling(double4 {1.0 / newAspectRatio, 1.0, 1.0, 1.0});
+     *
      * @see filament::Camera::setScaling
      */
     const utils::Entity* getCameraEntities() const noexcept;
