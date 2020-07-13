@@ -109,8 +109,6 @@ ISSUE_WEB_DOCS=false
 
 RUN_TESTS=false
 
-JS_DOCS_OPTION="-DGENERATE_JS_DOCS=OFF"
-
 FILAMENT_ENABLE_JAVA=ON
 
 INSTALL_COMMAND=
@@ -220,7 +218,6 @@ function build_webgl_with_target {
             -DCMAKE_BUILD_TYPE="$1" \
             -DCMAKE_INSTALL_PREFIX="../webgl-${lc_target}/filament" \
             -DWEBGL=1 \
-            ${JS_DOCS_OPTION} \
             ../..
         ${BUILD_COMMAND} ${BUILD_TARGETS}
         )

@@ -86,7 +86,6 @@ The following CMake options are boolean options specific to Filament:
 - `FILAMENT_BUILD_FILAMAT`:        Build filamat and JNI buildings
 - `FILAMENT_SUPPORTS_METAL`:       Include the Metal backend
 - `FILAMENT_SUPPORTS_VULKAN`:      Include the Vulkan backend
-- `FILAMENT_GENERATE_JS_DOCS`:     Build WebGL documentation and tutorials
 - `FILAMENT_INSTALL_BACKEND_TEST`: Install the backend test library so it can be consumed on iOS
 - `FILAMENT_USE_EXTERNAL_GLES3`:   Experimental: Compile Filament against OpenGL ES 3
 - `FILAMENT_USE_SWIFTSHADER`:      Experimental: Compile Filament against SwiftShader
