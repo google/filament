@@ -41,9 +41,8 @@ jobs:
         run: |
           pip3 install setuptools
           pip3 install PyGithub
-          DATE=`date +%Y%m%d`
-          if [ -f out/filament-release-darwin.tgz ]; then mv out/filament-release-darwin.tgz out/filament-${DATE}-mac.tgz; fi;
-          if [ -f out/filament-release-linux.tgz ]; then mv out/filament-release-linux.tgz out/filament-${DATE}-linux.tgz; fi;
+          if [ -f out/filament-release-darwin.tgz ]; then mv out/filament-release-darwin.tgz out/filament-${TAG}-mac.tgz; fi;
+          if [ -f out/filament-release-linux.tgz ]; then mv out/filament-release-linux.tgz out/filament-${TAG}-linux.tgz; fi;
           python3 build/common/upload-assets.py ${TAG} out/*.tgz
         env:
           TAG: ${{ steps.git_ref.outputs.tag }}
@@ -72,8 +71,7 @@ jobs:
         run: |
           pip3 install setuptools
           pip3 install PyGithub
-          DATE=`date +%Y%m%d`
-          mv out/filament-release-web.tgz out/filament-${DATE}-web.tgz
+          mv out/filament-release-web.tgz out/filament-${TAG}-web.tgz
           python3 build/common/upload-assets.py ${TAG} out/*.tgz
         env:
           TAG: ${{ steps.git_ref.outputs.tag }}
@@ -102,14 +100,13 @@ jobs:
         run: |
           pip3 install setuptools
           pip3 install PyGithub
-          DATE=`date +%Y%m%d`
-          mv out/filament-android-release.aar out/filament-${DATE}-android.aar
-          mv out/filamat-android-release.aar out/filamat-${DATE}-android.aar
-          mv out/filamat-android-lite-release.aar out/filamat-${DATE}-lite-android.aar
-          mv out/gltfio-android-release.aar out/gltfio-${DATE}-android.aar
-          mv out/gltfio-android-lite-release.aar out/gltfio-${DATE}-lite-android.aar
-          mv out/filament-utils-android-release.aar out/filament-utils-${DATE}-android.aar
-          mv out/filament-utils-android-lite-release.aar out/filament-utils-${DATE}-lite-android.aar
+          mv out/filament-android-release.aar out/filament-${TAG}-android.aar
+          mv out/filamat-android-release.aar out/filamat-${TAG}-android.aar
+          mv out/filamat-android-lite-release.aar out/filamat-${TAG}-lite-android.aar
+          mv out/gltfio-android-release.aar out/gltfio-${TAG}-android.aar
+          mv out/gltfio-android-lite-release.aar out/gltfio-${TAG}-lite-android.aar
+          mv out/filament-utils-android-release.aar out/filament-utils-${TAG}-android.aar
+          mv out/filament-utils-android-lite-release.aar out/filament-utils-${TAG}-lite-android.aar
           python3 build/common/upload-assets.py ${TAG} out/*.aar
         env:
           TAG: ${{ steps.git_ref.outputs.tag }}
@@ -138,8 +135,7 @@ jobs:
         run: |
           pip3 install setuptools
           pip3 install PyGithub
-          DATE=`date +%Y%m%d`
-          mv out/filament-release-ios.tgz out/filament-${DATE}-ios.tgz
+          mv out/filament-release-ios.tgz out/filament-${TAG}-ios.tgz
           python3 build/common/upload-assets.py ${TAG} out/*.tgz
         env:
           TAG: ${{ steps.git_ref.outputs.tag }}
@@ -169,8 +165,7 @@ jobs:
       - name: Upload release assets
         run: |
           pip3 install PyGithub
-          DATE=`date +%Y%m%d`
-          mv out/filament-windows.tgz out/filament-${DATE}-windows.tgz
+          mv out/filament-windows.tgz out/filament-${TAG}-windows.tgz
           python build/common/upload-assets.py ${TAG} out/*.tgz
         shell: bash
         env:
