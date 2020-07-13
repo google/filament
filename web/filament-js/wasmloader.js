@@ -14,16 +14,6 @@
  * limitations under the License.
  */
 
-// Emscripten creates a global function called "Filament" but our TypeScript bindings assume that
-// Filament is a namespace not a function. Here we replace the function with the namespace.
-Filament = Filament();
-
-// Keep a counter of remaining asynchronous tasks (e.g., downloading assets) that must occur before
-// allowing the app to initialize. As soon as the counter hits zero, we know it is time to call the
-// app's onready callback. There is always at least 1 initialization task for loading the WASM
-// module.
-Filament.remainingInitializationTasks = 1;
-
 /// init ::function:: Downloads assets, loads the Filament module, and invokes a callback when done.
 ///
 /// All JavaScript clients must call the init function, passing in a list of asset URL's and a
@@ -32,14 +22,13 @@ Filament.remainingInitializationTasks = 1;
 /// be ready at initialization time.
 ///
 /// When the callback is called, each downloaded asset is available in the `Filament.assets` global
-/// object, which contains a mapping from URL's to Uint8Array objects and DOM images.
+/// object, which contains a mapping from URL's to Uint8Array objects.
 ///
 /// assets ::argument:: Array of strings containing URL's of required assets.
 /// onready ::argument:: callback that gets invoked after all assets have been downloaded and the \
 /// Filament WebAssembly module has been loaded.
-Filament.init = function(assets, onready) {
-    Filament.onReady = onready;
-    Filament.remainingInitializationTasks += assets.length;
+Filament.init = (assets, onready) => {
+    onready = onready || (() => {});
     Filament.assets = {};
 
     // Usage of glmatrix is optional. If it exists, then go ahead and augment it with some
@@ -48,22 +37,30 @@ Filament.init = function(assets, onready) {
         Filament.loadMathExtensions();
     }
 
-    // Issue a fetch for each asset. After the last asset is downloaded, trigger the callback.
-    Filament.fetch(assets, null, function(name) {
-        if (--Filament.remainingInitializationTasks == 0 && Filament.onReady) {
-            Filament.onReady();
+    // One task for compiling & loading the wasm file, plus one task for each asset.
+    let remainingTasks = 1 + assets.length;
+    const taskFinished = () => {
+        if (--remainingTasks == 0) {
+            onready();
         }
-    });
-};
+    };
 
-// The postRun method is called by emscripten after it finishes compiling and instancing the
-// WebAssembly module. The JS classes that correspond to core Filament classes (e.g., Engine)
-// are not guaranteed to exist until this function is called.
-Filament.postRun = function() {
-    Filament.loadClassExtensions();
-    if (--Filament.remainingInitializationTasks == 0 && Filament.onReady) {
-        Filament.onReady();
-    }
+    // Issue a fetch for each asset.
+    Filament.fetch(assets, null, taskFinished);
+
+    // Emscripten creates a global function called "Filament" that returns a promise that
+    // resolves to a module. Here we replace the function with the module. Note that our
+    // TypeScript bindings assume that Filament is a namespace, not a function.
+    Filament().then(module => {
+        Filament = Object.assign(module, Filament);
+
+        // At this point, emscripten has finished compiling and instancing the WebAssembly module.
+        // The JS classes that correspond to core Filament classes (e.g., Engine) are not guaranteed
+        // to exist until now.
+
+        Filament.loadClassExtensions();
+        taskFinished();
+    });
 };
 
 /// fetch ::function:: Downloads assets and invokes a callback when done.
@@ -78,10 +75,10 @@ Filament.postRun = function() {
 ///
 /// assets ::argument:: Array of strings containing URL's of required assets.
 /// onDone ::argument:: callback that gets invoked after all assets have been downloaded.
-/// onFetch ::argument:: optional callback that's invoked after each asset is downloaded.
-Filament.fetch = function(assets, onDone, onFetched) {
+/// onFetched ::argument:: optional callback that's invoked after each asset is downloaded.
+Filament.fetch = (assets, onDone, onFetched) => {
     let remainingAssets = assets.length;
-    assets.forEach(function(name) {
+    assets.forEach(name => {
 
         // Check if a buffer already exists in case the client wishes
         // to provide its own data rather than using a HTTP request.
@@ -93,12 +90,12 @@ Filament.fetch = function(assets, onDone, onFetched) {
                 onDone();
             }
         } else {
-            fetch(name).then(function(response) {
+            fetch(name).then(response => {
                 if (!response.ok) {
                     throw new Error(name);
                 }
                 return response.arrayBuffer();
-            }).then(function(arrayBuffer) {
+            }).then(arrayBuffer => {
                 Filament.assets[name] = new Uint8Array(arrayBuffer);
                 if (onFetched) {
                     onFetched(name);

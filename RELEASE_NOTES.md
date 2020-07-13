@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release
 
+- Updated the Emscripten SDK to 1.39.19
+
 ## v1.8.0
 
 - Improved JavaScript API for SurfaceOrientation and Scene.
