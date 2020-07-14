@@ -1237,12 +1237,9 @@ static float4 getVignetteParameters(View::VignetteOptions options, uint32_t widt
     return float4{std::numeric_limits<half>::max()};
 }
 
-void PostProcessManager::colorGradingSubpass(DriverApi& driver, const FColorGrading* colorGrading,
-        View::VignetteOptions vignetteOptions, bool translucent, bool fxaa, bool dithering,
-        uint32_t width, uint32_t height) noexcept {
-
-    FEngine& engine = mEngine;
-    Handle<HwRenderPrimitive> const& fullScreenRenderPrimitive = engine.getFullScreenRenderPrimitive();
+void PostProcessManager::colorGradingPrepareSubpass(DriverApi& driver,
+        const FColorGrading* colorGrading, View::VignetteOptions vignetteOptions, bool fxaa,
+        bool dithering, uint32_t width, uint32_t height) noexcept {
 
     float4 vignetteParameters = getVignetteParameters(vignetteOptions, width, height);
 
@@ -1256,10 +1253,17 @@ void PostProcessManager::colorGradingSubpass(DriverApi& driver, const FColorGrad
     mi->setParameter("dithering", dithering);
     mi->setParameter("fxaa", fxaa);
     mi->commit(driver);
-    mi->use(driver);
+}
+
+void PostProcessManager::colorGradingSubpass(DriverApi& driver,  bool translucent) noexcept {
+    FEngine& engine = mEngine;
+    Handle<HwRenderPrimitive> const& fullScreenRenderPrimitive = engine.getFullScreenRenderPrimitive();
+
+    mColorGradingAsSubpass.getMaterialInstance()->use(driver);
     const uint8_t variant = uint8_t(translucent ?
             PostProcessVariant::TRANSLUCENT : PostProcessVariant::OPAQUE);
 
+    driver.nextSubpass();
     driver.draw(mColorGradingAsSubpass.getPipelineState(variant), fullScreenRenderPrimitive);
 }
 
