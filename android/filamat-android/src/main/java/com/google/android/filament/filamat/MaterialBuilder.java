@@ -69,6 +69,7 @@ public class MaterialBuilder {
         SAMPLER_2D_ARRAY,       // 2D array texture
         SAMPLER_CUBEMAP,        // Cube map texture
         SAMPLER_EXTERNAL,       // External texture
+        SAMPLER_3D              // 3D texture
     }
 
     public enum SamplerFormat {
