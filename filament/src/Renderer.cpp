@@ -698,22 +698,18 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 out.params.clearColor = data.clearColor;
 
                 if (colorGradingConfig.asSubpass) {
-                    // TODO: commit uniforms for the subpass material here (before beginRenderPass)
-                    // because uploading uniforms from within a render pass is illegal in Vulkan.
-                    // See #2780.
-                    out.params.subpassMask = 1;
-                    driver.beginRenderPass(out.target, out.params);
-                    pass.executeCommands(resources.getPassName());
-
-                    driver.nextSubpass();
-                    ppm.colorGradingSubpass(driver,
+                    ppm.colorGradingPrepareSubpass(driver,
                             view.getColorGrading(),
                             view.getVignetteOptions(),
-                            colorGradingConfig.translucent,
                             colorGradingConfig.fxaa,
                             colorGradingConfig.dithering,
                             out.params.viewport.width,
                             out.params.viewport.height);
+
+                    out.params.subpassMask = 1;
+                    driver.beginRenderPass(out.target, out.params);
+                    pass.executeCommands(resources.getPassName());
+                    ppm.colorGradingSubpass(driver, colorGradingConfig.translucent);
                 } else {
                     driver.beginRenderPass(out.target, out.params);
                     pass.executeCommands(resources.getPassName());
