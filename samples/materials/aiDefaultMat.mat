@@ -1,5 +1,5 @@
 material {
-    name : aiDefaultMat,
+    name : AssimpDefaultMat,
     shadingModel : lit,
     parameters : [
         {

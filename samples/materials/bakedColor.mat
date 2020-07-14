@@ -1,5 +1,5 @@
 material {
-    name : bakedColor,
+    name : BakedColor,
     requires : [
         color
     ],

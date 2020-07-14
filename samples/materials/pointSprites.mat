@@ -1,5 +1,5 @@
 material {
-    name : pointSprites,
+    name : PointSprites,
     requires : [
         custom0,
         color

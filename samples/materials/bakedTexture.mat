@@ -1,5 +1,5 @@
 material {
-    name : bakedTexture,
+    name : BakedTexture,
     parameters : [
         {
             type : sampler2d,

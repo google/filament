@@ -1,5 +1,5 @@
 material {
-    name : heightfield,
+    name : Heightfield,
     parameters : [
         {
             type : sampler2d,

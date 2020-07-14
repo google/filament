@@ -1,5 +1,5 @@
 material {
-    name : transparentColor,
+    name : TransparentColor,
     parameters : [
         {
            type : float4,

@@ -1,5 +1,5 @@
 material {
-    name : ThinRefraction,
+    name : ThinRefractionScreenSpace,
     shadingModel : lit,
     refractionType : thin,
     refractionMode : screenspace,

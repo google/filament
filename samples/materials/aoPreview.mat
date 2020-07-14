@@ -1,5 +1,5 @@
 material {
-    name : aoPreview,
+    name : AO_Preview,
     parameters : [
         {
             type : sampler2d,

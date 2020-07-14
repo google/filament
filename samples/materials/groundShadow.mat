@@ -1,5 +1,5 @@
 material {
-    name : groundShadow,
+    name : GroundShadow,
     blending : transparent,
     shadingModel : unlit,
     shadowMultiplier : true,

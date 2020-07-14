@@ -1,5 +1,5 @@
 material {
-    name : SolidRefraction,
+    name : SolidRefractionScreenSpace,
     shadingModel : lit,
     refractionType : solid,
     refractionMode : screenspace,
