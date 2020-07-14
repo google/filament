@@ -67,12 +67,14 @@ struct alignas(4) MaterialKey {
     bool hasClearCoatNormalTexture : 1;
     uint8_t clearCoatNormalUV : 7;
     bool hasClearCoat : 1;
-    bool hasTextureTransforms : 7;
+    bool hasTransmission : 1;
+    bool hasTextureTransforms : 6;
     // -- 32 bit boundary --
     uint8_t emissiveUV;
     uint8_t aoUV;
     uint8_t normalUV;
-    uint8_t UNUSED;
+    bool hasTransmissionTexture : 1;
+    uint8_t transmissionUV : 7;
 };
 
 static_assert(sizeof(MaterialKey) == 12, "MaterialKey has unexpected padding.");

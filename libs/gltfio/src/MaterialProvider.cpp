@@ -40,6 +40,8 @@ bool operator==(const MaterialKey& k1, const MaterialKey& k2) {
         (k1.hasClearCoatTexture == k2.hasClearCoatTexture) &&
         (k1.hasClearCoatRoughnessTexture == k2.hasClearCoatRoughnessTexture) &&
         (k1.hasClearCoatNormalTexture == k2.hasClearCoatNormalTexture) &&
+        (k1.hasTransmission == k2.hasTransmission) &&
+        (k1.hasTransmissionTexture == k2.hasTransmissionTexture) &&
         (k1.clearCoatUV == k2.clearCoatUV) &&
         (k1.clearCoatRoughnessUV == k2.clearCoatRoughnessUV) &&
         (k1.clearCoatNormalUV == k2.clearCoatNormalUV);
@@ -80,6 +82,13 @@ void constrainMaterial(MaterialKey* key, UvMap* uvmap) {
             retval[key->emissiveUV] = (UvSet) index++;
         }
     }
+    if (key->hasTransmissionTexture && retval[key->transmissionUV] == UNUSED) {
+        if (index > MAX_INDEX) {
+            key->hasTransmissionTexture = false;
+        } else {
+            retval[key->transmissionUV] = (UvSet) index++;
+        }
+    }
     if (key->hasClearCoatTexture && retval[key->clearCoatUV] == UNUSED) {
         if (index > MAX_INDEX) {
             key->hasClearCoatTexture = false;
@@ -117,6 +126,7 @@ void processShaderString(std::string* shader, const UvMap& uvmap, const Material
     const auto& baseColorUV = uvstrings[uvmap[config.baseColorUV]];
     const auto& metallicRoughnessUV = uvstrings[uvmap[config.metallicRoughnessUV]];
     const auto& emissiveUV = uvstrings[uvmap[config.emissiveUV]];
+    const auto& transmissionUV = uvstrings[uvmap[config.transmissionUV]];
     const auto& aoUV = uvstrings[uvmap[config.aoUV]];
     const auto& clearCoatUV = uvstrings[uvmap[config.clearCoatUV]];
     const auto& clearCoatRoughnessUV = uvstrings[uvmap[config.clearCoatRoughnessUV]];
@@ -126,6 +136,7 @@ void processShaderString(std::string* shader, const UvMap& uvmap, const Material
     replaceAll("${metallic}", metallicRoughnessUV);
     replaceAll("${ao}", aoUV);
     replaceAll("${emissive}", emissiveUV);
+    replaceAll("${transmission}", transmissionUV);
     replaceAll("${clearCoat}", clearCoatUV);
     replaceAll("${clearCoatRoughness}", clearCoatRoughnessUV);
     replaceAll("${clearCoatNormal}", clearCoatNormalUV);

@@ -200,6 +200,28 @@ std::string shaderFromKey(const MaterialKey& config) {
                 material.emissive.rgb *= texture(materialParams_emissiveMap, emissiveUV).rgb;
             )SHADER";
         }
+        if (config.hasTransmission) {
+            shader += R"SHADER(
+                material.transmission = materialParams.transmissionFactor;
+
+                // KHR_materials_transmission stipulates that baseColor be used for absorption, and
+                // it says "the transmitted light will be modulated by this color as it passes",
+                // which is inverted from Filament's notion of absorption.  Note that Filament
+                // clamps this value to [0,1].
+                material.absorption = 1.0 - material.baseColor.rgb;
+
+            )SHADER";
+            if (config.hasTransmissionTexture) {
+                shader += "highp float2 transmissionUV = ${transmission};\n";
+                if (config.hasTextureTransforms) {
+                    shader += "transmissionUV = (vec3(transmissionUV, 1.0) * "
+                            "materialParams.transmissionUvMatrix).xy;\n";
+                }
+                shader += R"SHADER(
+                    material.transmission *= texture(materialParams_transmissionMap, transmissionUV).r;
+                )SHADER";
+            }
+        }
         if (config.hasClearCoat) {
             shader += R"SHADER(
                 material.clearCoat = materialParams.clearCoatFactor;
@@ -346,20 +368,46 @@ Material* createMaterial(Engine* engine, const MaterialKey& config, const UvMap&
         }
     }
 
-    switch (config.alphaMode) {
-        case AlphaMode::OPAQUE:
-            builder.blending(MaterialBuilder::BlendingMode::OPAQUE);
-            break;
-        case AlphaMode::MASK:
-            builder.blending(MaterialBuilder::BlendingMode::MASKED);
-            break;
-        case AlphaMode::BLEND:
-            builder.blending(MaterialBuilder::BlendingMode::FADE);
-            builder.depthWrite(true);
-            break;
-        default:
-            // Ignore
-            break;
+    // TRANSMISSION
+    if (config.hasTransmission) {
+
+        // According to KHR_materials_transmission, the minimum expectation for a compliant renderer
+        // is to at least render any opaque objects that lie behind transmitting objects.
+        builder.refractionMode(RefractionMode::SCREEN_SPACE);
+
+        // Thin refraction probably makes the most sense, given the language of the transmission
+        // spec and its lack of an IOR parameter. This means that we would do a good job rendering a
+        // window pane, but a poor job of rendering a glass full of liquid.
+        builder.refractionType(RefractionType::THIN);
+
+        builder.parameter(MaterialBuilder::UniformType::FLOAT, "transmissionFactor");
+        if (config.hasTransmissionTexture) {
+            builder.parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "transmissionMap");
+            if (config.hasTextureTransforms) {
+                builder.parameter(MaterialBuilder::UniformType::MAT3, "transmissionUvMatrix");
+            }
+        }
+
+        builder.blending(MaterialBuilder::BlendingMode::TRANSPARENT);
+
+    } else {
+
+        // BLENDING
+        switch (config.alphaMode) {
+            case AlphaMode::OPAQUE:
+                builder.blending(MaterialBuilder::BlendingMode::OPAQUE);
+                break;
+            case AlphaMode::MASK:
+                builder.blending(MaterialBuilder::BlendingMode::MASKED);
+                break;
+            case AlphaMode::BLEND:
+                builder.blending(MaterialBuilder::BlendingMode::FADE);
+                builder.depthWrite(true);
+                break;
+            default:
+                // Ignore
+                break;
+        }
     }
 
     if (config.unlit) {
