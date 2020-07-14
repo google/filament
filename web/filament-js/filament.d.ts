@@ -31,6 +31,13 @@ export function fetch(assets: string[], onDone?: (() => void) | null, onFetched?
 
 export const assets: {[url: string]: Uint8Array};
 
+/**
+ * May be either a string exactly containing a URL loaded with Filament.init() or Filament.fetch(),
+ * OR any TypedArray such as Uint8Array, Float32Array, etc., all of which match the ArrayBufferView
+ * interface.
+ */
+export type BufferReference = string | ArrayBufferView;
+
 export type float2 = glm.vec2|number[];
 export type float3 = glm.vec3|number[];
 export type float4 = glm.vec4|number[];
@@ -285,12 +292,12 @@ export class RenderableManager {
 
 export class VertexBuffer {
     public static Builder(): VertexBuffer$Builder;
-    public setBufferAt(engine: Engine, bufindex: number, f32array: any, byteOffset?: number): void;
+    public setBufferAt(engine: Engine, bufindex: number, f32array: BufferReference, byteOffset?: number): void;
 }
 
 export class IndexBuffer {
     public static Builder(): IndexBuffer$Builder;
-    public setBuffer(engine: Engine, u16array: any, byteOffset?: number): void;
+    public setBuffer(engine: Engine, u16array: BufferReference, byteOffset?: number): void;
 }
 
 export class Renderer {
@@ -426,15 +433,15 @@ interface Filamesh {
 export class Engine {
     public static create(canvas: HTMLCanvasElement, contextOptions?: object): Engine;
     public createCamera(entity: Entity): Camera;
-    public createIblFromKtx(url: string): IndirectLight;
-    public createMaterial(url: string): Material;
+    public createIblFromKtx(urlOrBuffer: BufferReference): IndirectLight;
+    public createMaterial(urlOrBuffer: BufferReference): Material;
     public createRenderer(): Renderer;
     public createScene(): Scene;
-    public createSkyFromKtx(url: string): Skybox;
+    public createSkyFromKtx(urlOrBuffer: BufferReference): Skybox;
     public createSwapChain(): SwapChain;
-    public createTextureFromJpeg(url: string, options?: object): Texture;
-    public createTextureFromPng(url: string, options?: object): Texture;
-    public createTextureFromKtx(url: string, options?: object): Texture;
+    public createTextureFromJpeg(urlOrBuffer: BufferReference, options?: object): Texture;
+    public createTextureFromPng(urlOrBuffer: BufferReference, options?: object): Texture;
+    public createTextureFromKtx(urlOrBuffer: BufferReference, options?: object): Texture;
     public createView(): View;
 
     public createAssetLoader(): gltfio$AssetLoader;
@@ -460,13 +467,13 @@ export class Engine {
     public getSupportedFormatSuffix(suffix: string): void;
     public getTransformManager(): TransformManager;
     public init(assets: string[], onready: () => void): void;
-    public loadFilamesh(url: string, definstance: MaterialInstance, matinstances: object): Filamesh;
+    public loadFilamesh(urlOrBuffer: BufferReference, definstance: MaterialInstance, matinstances: object): Filamesh;
 }
 
 export class gltfio$AssetLoader {
-    public createAssetFromJson(buffer: any): gltfio$FilamentAsset;
-    public createAssetFromBinary(buffer: any): gltfio$FilamentAsset;
-    public createInstancedAsset(buffer: any,
+    public createAssetFromJson(urlOrBuffer: BufferReference): gltfio$FilamentAsset;
+    public createAssetFromBinary(urlOrBuffer: BufferReference): gltfio$FilamentAsset;
+    public createInstancedAsset(urlOrBuffer: BufferReference,
             instances: (gltfio$FilamentInstance | null)[]): gltfio$FilamentAsset;
     public delete(): void;
 }
