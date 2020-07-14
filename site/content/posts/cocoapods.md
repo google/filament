@@ -36,7 +36,7 @@ If you haven't used CocoaPods before, I recommend watching [this Route 85 video]
 Create a Podfile in the Xcode project directory with the following:
 
 ```
-platform :ios, '12.0'
+platform :ios, '11.0'
 
 target 'HelloCocoaPods' do
     pod 'Filament'

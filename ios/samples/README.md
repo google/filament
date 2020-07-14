@@ -12,7 +12,7 @@ Filament is kept up-to-date with Apple's latest SDK and thus must be built using
 Pre-built binaries can be accessed from [Filament
 releases](https://github.com/google/filament/releases).
 
-The iOS Metal backend is supported on iOS 12 and up. The OpenGL ES backend should be supported on iOS 7
+The iOS Metal backend is supported on iOS 11 and up. The OpenGL ES backend should be supported on iOS 7
 and up, though it is not regularly tested.
 
 The iOS simulator is also supported for both the OpenGL and Metal backends, but please be aware that

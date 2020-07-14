@@ -474,7 +474,6 @@ function build_ios_target {
             -DCMAKE_INSTALL_PREFIX="../ios-${lc_target}/filament" \
             -DIOS_ARCH="${arch}" \
             -DPLATFORM_NAME="${platform}" \
-            -DIOS_MIN_TARGET=12.0 \
             -DIOS=1 \
             -DCMAKE_TOOLCHAIN_FILE=../../third_party/clang/iOS.cmake \
             ../..
