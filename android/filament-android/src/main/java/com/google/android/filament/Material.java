@@ -230,8 +230,10 @@ public class Material {
             MAT3,
             MAT4,
             SAMPLER_2D,
+            SAMPLER_2D_ARRAY,
             SAMPLER_CUBEMAP,
-            SAMPLER_EXTERNAL
+            SAMPLER_EXTERNAL,
+            SAMPLER_3D
         }
 
         public enum Precision {
