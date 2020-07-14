@@ -444,7 +444,7 @@ void applyRefraction(const PixelParams pixel,
     // the reflection, effectively adding to the specular, but this process will repeat itself.
     // Each time the ray exits the surface on the front side after the first bounce,
     // it's multiplied by E^2, and we get: E + E(1-E)^2 + E^3(1-E)^2 + ...
-    // This infinite serie converges and is easy to simplify.
+    // This infinite series converges and is easy to simplify.
     // Note: we calculate these bounces only on a single component,
     // since it's a fairly subtle effect.
     E *= 1.0 + pixel.transmission * (1.0 - E.g) / (1.0 + E.g);

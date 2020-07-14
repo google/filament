@@ -872,6 +872,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
     auto mrConfig = inputMat->pbr_metallic_roughness;
     auto sgConfig = inputMat->pbr_specular_glossiness;
     auto ccConfig = inputMat->clearcoat;
+    auto trConfig = inputMat->transmission;
 
     bool hasTextureTransforms =
         sgConfig.diffuse_texture.has_transform ||
@@ -883,24 +884,21 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
         inputMat->emissive_texture.has_transform ||
         ccConfig.clearcoat_texture.has_transform ||
         ccConfig.clearcoat_roughness_texture.has_transform ||
-        ccConfig.clearcoat_normal_texture.has_transform;
+        ccConfig.clearcoat_normal_texture.has_transform ||
+        trConfig.transmission_texture.has_transform;
 
     cgltf_texture_view baseColorTexture = mrConfig.base_color_texture;
     cgltf_texture_view metallicRoughnessTexture = mrConfig.metallic_roughness_texture;
 
     MaterialKey matkey {
-        .doubleSided = (bool) inputMat->double_sided,
-        .unlit = (bool) inputMat->unlit,
+        .doubleSided = !!inputMat->double_sided,
+        .unlit = !!inputMat->unlit,
         .hasVertexColors = vertexColor,
         .hasBaseColorTexture = !!baseColorTexture.texture,
         .hasNormalTexture = !!inputMat->normal_texture.texture,
         .hasOcclusionTexture = !!inputMat->occlusion_texture.texture,
         .hasEmissiveTexture = !!inputMat->emissive_texture.texture,
-        .useSpecularGlossiness = false,
-        .alphaMode = AlphaMode::OPAQUE,
         .enableDiagnostics = mDiagnosticsEnabled,
-        .hasMetallicRoughnessTexture = !!metallicRoughnessTexture.texture,
-        .metallicRoughnessUV = (uint8_t) metallicRoughnessTexture.texcoord,
         .baseColorUV = (uint8_t) baseColorTexture.texcoord,
         .hasClearCoatTexture = !!ccConfig.clearcoat_texture.texture,
         .clearCoatUV = (uint8_t) ccConfig.clearcoat_texture.texcoord,
@@ -908,11 +906,14 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
         .clearCoatRoughnessUV = (uint8_t) ccConfig.clearcoat_roughness_texture.texcoord,
         .hasClearCoatNormalTexture = !!ccConfig.clearcoat_normal_texture.texture,
         .clearCoatNormalUV = (uint8_t) ccConfig.clearcoat_normal_texture.texcoord,
-        .hasClearCoat = (bool) inputMat->has_clearcoat,
+        .hasClearCoat = !!inputMat->has_clearcoat,
+        .hasTransmission = !!inputMat->has_transmission,
         .hasTextureTransforms = hasTextureTransforms,
         .emissiveUV = (uint8_t) inputMat->emissive_texture.texcoord,
         .aoUV = (uint8_t) inputMat->occlusion_texture.texcoord,
         .normalUV = (uint8_t) inputMat->normal_texture.texcoord,
+        .hasTransmissionTexture = !!trConfig.transmission_texture.texture,
+        .transmissionUV = (uint8_t) trConfig.transmission_texture.texcoord
     };
 
     if (inputMat->has_pbr_specular_glossiness) {
@@ -927,6 +928,9 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
             matkey.hasSpecularGlossinessTexture = true;
             matkey.specularGlossinessUV = (uint8_t) metallicRoughnessTexture.texcoord;
         }
+    } else {
+        matkey.hasMetallicRoughnessTexture = !!metallicRoughnessTexture.texture;
+        matkey.metallicRoughnessUV = (uint8_t) metallicRoughnessTexture.texcoord;
     }
 
     switch (inputMat->alpha_mode) {
@@ -1055,6 +1059,18 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
                 mi->setParameter("clearCoatNormalUvMatrix", uvmat);
             }
             mi->setParameter("clearCoatNormalScale", ccConfig.clearcoat_normal_texture.scale);
+        }
+    }
+
+    if (matkey.hasTransmission) {
+        mi->setParameter("transmissionFactor", trConfig.transmission_factor);
+        if (matkey.hasTransmissionTexture) {
+            addTextureBinding(mi, "transmissionMap", trConfig.transmission_texture.texture, false);
+            if (matkey.hasTextureTransforms) {
+                const cgltf_texture_transform& uvt = trConfig.transmission_texture.transform;
+                auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
+                mi->setParameter("transmissionUvMatrix", uvmat);
+            }
         }
     }
 
