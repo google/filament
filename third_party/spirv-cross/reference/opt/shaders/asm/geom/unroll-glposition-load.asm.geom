@@ -10,11 +10,11 @@ void main()
         _35_unrolled[i] = gl_in[i].gl_Position;
     }
     vec4 param[3] = _35_unrolled;
-    for (int _73 = 0; _73 < 3; )
+    for (int _74 = 0; _74 < 3; )
     {
-        gl_Position = param[_73];
+        gl_Position = param[_74];
         EmitVertex();
-        _73++;
+        _74++;
         continue;
     }
     EndPrimitive();

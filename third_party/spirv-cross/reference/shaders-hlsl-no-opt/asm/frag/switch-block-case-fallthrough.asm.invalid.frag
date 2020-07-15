@@ -17,14 +17,6 @@ void frag_main()
     int j;
     int _30;
     int _31;
-    if (vIndex != 0 && vIndex != 1 && vIndex != 11 && vIndex != 2 && vIndex != 3 && vIndex != 4 && vIndex != 5)
-    {
-        _30 = 2;
-    }
-    if (vIndex == 1 || vIndex == 11)
-    {
-        _31 = 1;
-    }
     switch (vIndex)
     {
         case 0:
@@ -37,6 +29,7 @@ void frag_main()
         }
         default:
         {
+            _30 = 2;
             j = _30;
             _31 = 0;
             j = _31;
@@ -45,6 +38,7 @@ void frag_main()
         case 1:
         case 11:
         {
+            _31 = 1;
             j = _31;
             break;
         }

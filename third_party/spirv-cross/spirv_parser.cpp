@@ -119,6 +119,16 @@ void Parser::parse()
 	for (auto &i : instructions)
 		parse(i);
 
+	for (auto &fixup : forward_pointer_fixups)
+	{
+		auto &target = get<SPIRType>(fixup.first);
+		auto &source = get<SPIRType>(fixup.second);
+		target.member_types = source.member_types;
+		target.basetype = source.basetype;
+		target.self = source.self;
+	}
+	forward_pointer_fixups.clear();
+
 	if (current_function)
 		SPIRV_CROSS_THROW("Function was not terminated.");
 	if (current_block)
@@ -543,6 +553,11 @@ void Parser::parse(const Instruction &instruction)
 		auto *c = maybe_get<SPIRConstant>(cid);
 		bool literal = c && !c->specialization;
 
+		// We're copying type information into Array types, so we'll need a fixup for any physical pointer
+		// references.
+		if (base.forward_pointer)
+			forward_pointer_fixups.push_back({ id, tid });
+
 		arraybase.array_size_literal.push_back(literal);
 		arraybase.array.push_back(literal ? c->scalar() : cid);
 		// Do NOT set arraybase.self!
@@ -555,6 +570,11 @@ void Parser::parse(const Instruction &instruction)
 
 		auto &base = get<SPIRType>(ops[1]);
 		auto &arraybase = set<SPIRType>(id);
+
+		// We're copying type information into Array types, so we'll need a fixup for any physical pointer
+		// references.
+		if (base.forward_pointer)
+			forward_pointer_fixups.push_back({ id, ops[1] });
 
 		arraybase = base;
 		arraybase.array.push_back(0);
@@ -614,6 +634,9 @@ void Parser::parse(const Instruction &instruction)
 		if (ptrbase.storage == StorageClassAtomicCounter)
 			ptrbase.basetype = SPIRType::AtomicCounter;
 
+		if (base.forward_pointer)
+			forward_pointer_fixups.push_back({ id, ops[2] });
+
 		ptrbase.parent_type = ops[2];
 
 		// Do NOT set ptrbase.self!
@@ -627,6 +650,7 @@ void Parser::parse(const Instruction &instruction)
 		ptrbase.pointer = true;
 		ptrbase.pointer_depth++;
 		ptrbase.storage = static_cast<StorageClass>(ops[1]);
+		ptrbase.forward_pointer = true;
 
 		if (ptrbase.storage == StorageClassAtomicCounter)
 			ptrbase.basetype = SPIRType::AtomicCounter;
@@ -683,11 +707,19 @@ void Parser::parse(const Instruction &instruction)
 		break;
 	}
 
-	case OpTypeAccelerationStructureNV:
+	case OpTypeAccelerationStructureKHR:
 	{
 		uint32_t id = ops[0];
 		auto &type = set<SPIRType>(id);
-		type.basetype = SPIRType::AccelerationStructureNV;
+		type.basetype = SPIRType::AccelerationStructure;
+		break;
+	}
+
+	case OpTypeRayQueryProvisionalKHR:
+	{
+		uint32_t id = ops[0];
+		auto &type = set<SPIRType>(id);
+		type.basetype = SPIRType::RayQuery;
 		break;
 	}
 
@@ -771,7 +803,7 @@ void Parser::parse(const Instruction &instruction)
 	{
 		uint32_t id = ops[1];
 		uint32_t type = ops[0];
-		make_constant_null(id, type);
+		ir.make_constant_null(id, type, true);
 		break;
 	}
 
@@ -1136,46 +1168,4 @@ bool Parser::variable_storage_is_aliased(const SPIRVariable &v) const
 
 	return !is_restrict && (ssbo || image || counter);
 }
-
-void Parser::make_constant_null(uint32_t id, uint32_t type)
-{
-	auto &constant_type = get<SPIRType>(type);
-
-	if (constant_type.pointer)
-	{
-		auto &constant = set<SPIRConstant>(id, type);
-		constant.make_null(constant_type);
-	}
-	else if (!constant_type.array.empty())
-	{
-		assert(constant_type.parent_type);
-		uint32_t parent_id = ir.increase_bound_by(1);
-		make_constant_null(parent_id, constant_type.parent_type);
-
-		if (!constant_type.array_size_literal.back())
-			SPIRV_CROSS_THROW("Array size of OpConstantNull must be a literal.");
-
-		SmallVector<uint32_t> elements(constant_type.array.back());
-		for (uint32_t i = 0; i < constant_type.array.back(); i++)
-			elements[i] = parent_id;
-		set<SPIRConstant>(id, type, elements.data(), uint32_t(elements.size()), false);
-	}
-	else if (!constant_type.member_types.empty())
-	{
-		uint32_t member_ids = ir.increase_bound_by(uint32_t(constant_type.member_types.size()));
-		SmallVector<uint32_t> elements(constant_type.member_types.size());
-		for (uint32_t i = 0; i < constant_type.member_types.size(); i++)
-		{
-			make_constant_null(member_ids + i, constant_type.member_types[i]);
-			elements[i] = member_ids + i;
-		}
-		set<SPIRConstant>(id, type, elements.data(), uint32_t(elements.size()), false);
-	}
-	else
-	{
-		auto &constant = set<SPIRConstant>(id, type);
-		constant.make_null(constant_type);
-	}
-}
-
 } // namespace SPIRV_CROSS_NAMESPACE

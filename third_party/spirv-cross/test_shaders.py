@@ -256,6 +256,30 @@ def cross_compile_msl(shader, spirv, opt, iterations, paths):
         msl_args.append('1')
     if '.force-native-array.' in shader:
         msl_args.append('--msl-force-native-arrays')
+    if '.zero-initialize.' in shader:
+        msl_args.append('--force-zero-initialized-variables')
+    if '.frag-output.' in shader:
+        # Arbitrary for testing purposes.
+        msl_args.append('--msl-disable-frag-depth-builtin')
+        msl_args.append('--msl-disable-frag-stencil-ref-builtin')
+        msl_args.append('--msl-enable-frag-output-mask')
+        msl_args.append('0x000000ca')
+    if '.no-user-varying.' in shader:
+        msl_args.append('--msl-no-clip-distance-user-varying')
+    if '.shader-inputs.' in shader:
+        # Arbitrary for testing purposes.
+        msl_args.append('--msl-shader-input')
+        msl_args.append('0')
+        msl_args.append('u8')
+        msl_args.append('2')
+        msl_args.append('--msl-shader-input')
+        msl_args.append('1')
+        msl_args.append('u16')
+        msl_args.append('3')
+        msl_args.append('--msl-shader-input')
+        msl_args.append('6')
+        msl_args.append('other')
+        msl_args.append('4')
 
     subprocess.check_call(msl_args)
 
@@ -302,8 +326,13 @@ def validate_shader_hlsl(shader, force_no_external_validation, paths):
     if '.fxconly.' in shader:
         test_glslang = False
 
+    hlsl_args = [paths.glslang, '--amb', '-e', 'main', '-D', '--target-env', 'vulkan1.1', '-V', shader]
+    if '.sm30.' in shader:
+        hlsl_args.append('--hlsl-dx9-compatible')
+
     if test_glslang:
-        subprocess.check_call([paths.glslang, '--amb', '-e', 'main', '-D', '--target-env', 'vulkan1.1', '-V', shader])
+        subprocess.check_call(hlsl_args)
+
     is_no_fxc = '.nofxc.' in shader
     global ignore_fxc
     if (not ignore_fxc) and (not force_no_external_validation) and (not is_no_fxc):
@@ -326,7 +355,9 @@ def validate_shader_hlsl(shader, force_no_external_validation, paths):
             raise RuntimeError('Failed compiling HLSL shader')
 
 def shader_to_sm(shader):
-    if '.sm60.' in shader:
+    if '.sm62.' in shader:
+        return '62'
+    elif '.sm60.' in shader:
         return '60'
     elif '.sm51.' in shader:
         return '51'
@@ -360,6 +391,13 @@ def cross_compile_hlsl(shader, spirv, opt, force_no_external_validation, iterati
         hlsl_args.append('--emit-line-directives')
     if '.force-uav.' in shader:
         hlsl_args.append('--hlsl-force-storage-buffer-as-uav')
+    if '.zero-initialize.' in shader:
+        hlsl_args.append('--force-zero-initialized-variables')
+    if '.nonwritable-uav-texture.' in shader:
+        hlsl_args.append('--hlsl-nonwritable-uav-texture-as-srv')
+    if '.native-16bit.' in shader:
+        hlsl_args.append('--hlsl-enable-16bit-types')
+
     subprocess.check_call(hlsl_args)
 
     if not shader_is_invalid_spirv(hlsl_path):
@@ -445,6 +483,8 @@ def cross_compile(shader, vulkan, spirv, invalid_spirv, eliminate, is_legacy, fl
         extra_args += ['--glsl-remap-ext-framebuffer-fetch', '1', '1']
         extra_args += ['--glsl-remap-ext-framebuffer-fetch', '2', '2']
         extra_args += ['--glsl-remap-ext-framebuffer-fetch', '3', '3']
+    if '.zero-initialize.' in shader:
+        extra_args += ['--force-zero-initialized-variables']
 
     spirv_cross_path = paths.spirv_cross
 
@@ -457,7 +497,7 @@ def cross_compile(shader, vulkan, spirv, invalid_spirv, eliminate, is_legacy, fl
         remove_file(glsl_path)
         glsl_path = None
 
-    if vulkan or spirv:
+    if (vulkan or spirv) and (not is_legacy):
         subprocess.check_call([spirv_cross_path, '--entry', 'main', '--vulkan-semantics', '--output', vulkan_glsl_path, spirv_path] + extra_args)
         validate_shader(vulkan_glsl_path, True, paths)
         # SPIR-V shaders might just want to validate Vulkan GLSL output, we don't always care about the output.
@@ -704,20 +744,21 @@ def test_shaders_helper(stats, backend, args):
     # The child processes in parallel execution mode don't have the proper state for the global args variable, so
     # at this point we need to switch to explicit arguments
     if args.parallel:
-        pool = multiprocessing.Pool(multiprocessing.cpu_count())
+        with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
+            results = []
+            for f in all_files:
+                results.append(pool.apply_async(test_shader_file,
+                    args = (f, stats, args, backend)))
 
-        results = []
-        for f in all_files:
-            results.append(pool.apply_async(test_shader_file,
-                args = (f, stats, args, backend)))
+            pool.close()
+            pool.join()
+            results_completed = [res.get() for res in results]
 
-        for res in results:
-            error = res.get()
-            if error is not None:
-                pool.close()
-                pool.join()
-                print('Error:', error)
-                sys.exit(1)
+            for error in results_completed:
+                if error is not None:
+                    print('Error:', error)
+                    sys.exit(1)
+
     else:
         for i in all_files:
             e = test_shader_file(i, stats, args, backend)

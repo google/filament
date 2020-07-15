@@ -84,6 +84,7 @@ fragment main0_out main0(main0_in in [[stage_in]], const device type_StructuredB
     uint _107 = _103 + 1u;
     if (all(CulledObjectBoxBounds._m0[_107].xy > _96.xy) && all(CulledObjectBoxBounds._m0[_103].xyz < _102))
     {
+        float3 _121 = float3(0.5) * (CulledObjectBoxBounds._m0[_103].xyz + CulledObjectBoxBounds._m0[_107].xyz);
         float _122 = _96.x;
         float _123 = _96.y;
         spvUnsafeArray<float3, 8> _73;
@@ -103,7 +104,7 @@ fragment main0_out main0(main0_in in [[stage_in]], const device type_StructuredB
         _158 = float3(500000.0);
         for (int _160 = 0; _160 < 8; )
         {
-            float3 _166 = _73[_160] - (float3(0.5) * (CulledObjectBoxBounds._m0[_103].xyz + CulledObjectBoxBounds._m0[_107].xyz));
+            float3 _166 = _73[_160] - _121;
             float3 _170 = float3(dot(_166, CulledObjectBoxBounds._m0[_103 + 2u].xyz), dot(_166, CulledObjectBoxBounds._m0[_103 + 3u].xyz), dot(_166, CulledObjectBoxBounds._m0[_103 + 4u].xyz));
             _155 = fast::max(_155, _170);
             _158 = fast::min(_158, _170);

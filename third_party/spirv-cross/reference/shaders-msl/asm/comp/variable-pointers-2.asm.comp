@@ -33,6 +33,7 @@ kernel void main0(device foo& buf [[buffer(0)]], constant bar& cb [[buffer(1)]],
 {
     device foo* _46 = select_buffer(buf, cb);
     device foo* _45 = _46;
+    thread uint3* _47 = select_input(gl_GlobalInvocationID, gl_LocalInvocationID, cb);
     device foo* _48 = _45;
     device int* _52;
     device int* _55;
@@ -46,7 +47,7 @@ kernel void main0(device foo& buf [[buffer(0)]], constant bar& cb [[buffer(1)]],
         _58 = *_55;
         if (_57 != _58)
         {
-            int _66 = (_57 + _58) + int((*select_input(gl_GlobalInvocationID, gl_LocalInvocationID, cb)).x);
+            int _66 = (_57 + _58) + int((*_47).x);
             *_52 = _66;
             *_55 = _66;
             _52 = &_52[1u];

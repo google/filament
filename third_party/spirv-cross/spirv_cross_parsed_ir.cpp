@@ -854,4 +854,57 @@ ParsedIR::LoopLock &ParsedIR::LoopLock::operator=(LoopLock &&other) SPIRV_CROSS_
 	return *this;
 }
 
+void ParsedIR::make_constant_null(uint32_t id, uint32_t type, bool add_to_typed_id_set)
+{
+	auto &constant_type = get<SPIRType>(type);
+
+	if (constant_type.pointer)
+	{
+		if (add_to_typed_id_set)
+			add_typed_id(TypeConstant, id);
+		auto &constant = variant_set<SPIRConstant>(ids[id], type);
+		constant.self = id;
+		constant.make_null(constant_type);
+	}
+	else if (!constant_type.array.empty())
+	{
+		assert(constant_type.parent_type);
+		uint32_t parent_id = increase_bound_by(1);
+		make_constant_null(parent_id, constant_type.parent_type, add_to_typed_id_set);
+
+		if (!constant_type.array_size_literal.back())
+			SPIRV_CROSS_THROW("Array size of OpConstantNull must be a literal.");
+
+		SmallVector<uint32_t> elements(constant_type.array.back());
+		for (uint32_t i = 0; i < constant_type.array.back(); i++)
+			elements[i] = parent_id;
+
+		if (add_to_typed_id_set)
+			add_typed_id(TypeConstant, id);
+		variant_set<SPIRConstant>(ids[id], type, elements.data(), uint32_t(elements.size()), false).self = id;
+	}
+	else if (!constant_type.member_types.empty())
+	{
+		uint32_t member_ids = increase_bound_by(uint32_t(constant_type.member_types.size()));
+		SmallVector<uint32_t> elements(constant_type.member_types.size());
+		for (uint32_t i = 0; i < constant_type.member_types.size(); i++)
+		{
+			make_constant_null(member_ids + i, constant_type.member_types[i], add_to_typed_id_set);
+			elements[i] = member_ids + i;
+		}
+
+		if (add_to_typed_id_set)
+			add_typed_id(TypeConstant, id);
+		variant_set<SPIRConstant>(ids[id], type, elements.data(), uint32_t(elements.size()), false).self = id;
+	}
+	else
+	{
+		if (add_to_typed_id_set)
+			add_typed_id(TypeConstant, id);
+		auto &constant = variant_set<SPIRConstant>(ids[id], type);
+		constant.self = id;
+		constant.make_null(constant_type);
+	}
+}
+
 } // namespace SPIRV_CROSS_NAMESPACE

@@ -23,10 +23,10 @@ static inline __attribute__((always_inline))
 void load_store_to_variable_col_major(device SSBOCol& v_29)
 {
     float4x2 loaded = float4x2(v_29.col_major0[0].xy, v_29.col_major0[1].xy, v_29.col_major0[2].xy, v_29.col_major0[3].xy);
-    v_29.col_major1[0].xy = loaded[0];
-    v_29.col_major1[1].xy = loaded[1];
-    v_29.col_major1[2].xy = loaded[2];
-    v_29.col_major1[3].xy = loaded[3];
+    (device float2&)v_29.col_major1[0] = loaded[0];
+    (device float2&)v_29.col_major1[1] = loaded[1];
+    (device float2&)v_29.col_major1[2] = loaded[2];
+    (device float2&)v_29.col_major1[3] = loaded[3];
 }
 
 static inline __attribute__((always_inline))
@@ -39,10 +39,10 @@ void load_store_to_variable_row_major(device SSBORow& v_41)
 static inline __attribute__((always_inline))
 void copy_col_major_to_col_major(device SSBOCol& v_29)
 {
-    v_29.col_major0[0].xy = float4x2(v_29.col_major1[0].xy, v_29.col_major1[1].xy, v_29.col_major1[2].xy, v_29.col_major1[3].xy)[0];
-    v_29.col_major0[1].xy = float4x2(v_29.col_major1[0].xy, v_29.col_major1[1].xy, v_29.col_major1[2].xy, v_29.col_major1[3].xy)[1];
-    v_29.col_major0[2].xy = float4x2(v_29.col_major1[0].xy, v_29.col_major1[1].xy, v_29.col_major1[2].xy, v_29.col_major1[3].xy)[2];
-    v_29.col_major0[3].xy = float4x2(v_29.col_major1[0].xy, v_29.col_major1[1].xy, v_29.col_major1[2].xy, v_29.col_major1[3].xy)[3];
+    (device float2&)v_29.col_major0[0] = float4x2(v_29.col_major1[0].xy, v_29.col_major1[1].xy, v_29.col_major1[2].xy, v_29.col_major1[3].xy)[0];
+    (device float2&)v_29.col_major0[1] = float4x2(v_29.col_major1[0].xy, v_29.col_major1[1].xy, v_29.col_major1[2].xy, v_29.col_major1[3].xy)[1];
+    (device float2&)v_29.col_major0[2] = float4x2(v_29.col_major1[0].xy, v_29.col_major1[1].xy, v_29.col_major1[2].xy, v_29.col_major1[3].xy)[2];
+    (device float2&)v_29.col_major0[3] = float4x2(v_29.col_major1[0].xy, v_29.col_major1[1].xy, v_29.col_major1[2].xy, v_29.col_major1[3].xy)[3];
 }
 
 static inline __attribute__((always_inline))
@@ -54,10 +54,10 @@ void copy_col_major_to_row_major(device SSBOCol& v_29, device SSBORow& v_41)
 static inline __attribute__((always_inline))
 void copy_row_major_to_col_major(device SSBOCol& v_29, device SSBORow& v_41)
 {
-    v_29.col_major0[0].xy = float2(v_41.row_major0[0][0], v_41.row_major0[1][0]);
-    v_29.col_major0[1].xy = float2(v_41.row_major0[0][1], v_41.row_major0[1][1]);
-    v_29.col_major0[2].xy = float2(v_41.row_major0[0][2], v_41.row_major0[1][2]);
-    v_29.col_major0[3].xy = float2(v_41.row_major0[0][3], v_41.row_major0[1][3]);
+    (device float2&)v_29.col_major0[0] = float2(v_41.row_major0[0][0], v_41.row_major0[1][0]);
+    (device float2&)v_29.col_major0[1] = float2(v_41.row_major0[0][1], v_41.row_major0[1][1]);
+    (device float2&)v_29.col_major0[2] = float2(v_41.row_major0[0][2], v_41.row_major0[1][2]);
+    (device float2&)v_29.col_major0[3] = float2(v_41.row_major0[0][3], v_41.row_major0[1][3]);
 }
 
 static inline __attribute__((always_inline))
@@ -69,7 +69,7 @@ void copy_row_major_to_row_major(device SSBORow& v_41)
 static inline __attribute__((always_inline))
 void copy_columns(device SSBOCol& v_29, device SSBORow& v_41)
 {
-    v_29.col_major0[1].xy = float2(v_41.row_major0[0][1], v_41.row_major0[1][1]);
+    (device float2&)v_29.col_major0[1] = float2(v_41.row_major0[0][1], v_41.row_major0[1][1]);
     v_41.row_major0[0][1] = v_29.col_major0[1].x;
     v_41.row_major0[1][1] = v_29.col_major0[1].y;
 }
@@ -77,8 +77,8 @@ void copy_columns(device SSBOCol& v_29, device SSBORow& v_41)
 static inline __attribute__((always_inline))
 void copy_elements(device SSBOCol& v_29, device SSBORow& v_41)
 {
-    v_29.col_major0[0].y = v_41.row_major0[1u][0];
-    v_41.row_major0[1u][0] = v_29.col_major0[0].y;
+    ((device float*)&v_29.col_major0[0])[1u] = ((device float*)&v_41.row_major0[1u])[0];
+    ((device float*)&v_41.row_major0[1u])[0] = ((device float*)&v_29.col_major0[0])[1u];
 }
 
 kernel void main0(device SSBOCol& v_29 [[buffer(0)]], device SSBORow& v_41 [[buffer(1)]])

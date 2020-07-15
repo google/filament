@@ -17,16 +17,16 @@ fragment main0_out main0(main0_in in [[stage_in]], texture2d<float> uSampler [[t
 {
     main0_out out = {};
     bool gl_HelperInvocation = simd_is_helper_thread();
-    float4 _51;
+    float4 _52;
     if (!gl_HelperInvocation)
     {
-        _51 = uSampler.sample(uSamplerSmplr, in.vUV, level(0.0));
+        _52 = uSampler.sample(uSamplerSmplr, in.vUV, level(0.0));
     }
     else
     {
-        _51 = float4(1.0);
+        _52 = float4(1.0);
     }
-    out.FragColor = _51;
+    out.FragColor = _52;
     return out;
 }
 

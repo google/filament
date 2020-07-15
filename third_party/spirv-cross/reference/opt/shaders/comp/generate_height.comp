@@ -18,39 +18,39 @@ layout(binding = 1, std430) writeonly buffer HeightmapFFT
 
 void main()
 {
-    uvec2 _264 = uvec2(64u, 1u) * gl_NumWorkGroups.xy;
-    uvec2 _269 = _264 - gl_GlobalInvocationID.xy;
-    bvec2 _271 = equal(gl_GlobalInvocationID.xy, uvec2(0u));
-    uint _454;
-    if (_271.x)
+    uvec2 _265 = uvec2(64u, 1u) * gl_NumWorkGroups.xy;
+    uvec2 _270 = _265 - gl_GlobalInvocationID.xy;
+    bvec2 _272 = equal(gl_GlobalInvocationID.xy, uvec2(0u));
+    uint _460;
+    if (_272.x)
     {
-        _454 = 0u;
+        _460 = 0u;
     }
     else
     {
-        _454 = _269.x;
+        _460 = _270.x;
     }
-    uint _455;
-    if (_271.y)
+    uint _461;
+    if (_272.y)
     {
-        _455 = 0u;
+        _461 = 0u;
     }
     else
     {
-        _455 = _269.y;
+        _461 = _270.y;
     }
-    uint _276 = _264.x;
-    uint _280 = (gl_GlobalInvocationID.y * _276) + gl_GlobalInvocationID.x;
-    uint _290 = (_455 * _276) + _454;
-    vec2 _297 = vec2(gl_GlobalInvocationID.xy);
-    vec2 _299 = vec2(_264);
-    float _309 = sqrt(9.81000041961669921875 * length(_166.uModTime.xy * mix(_297, _297 - _299, greaterThan(_297, _299 * 0.5)))) * _166.uModTime.z;
-    vec2 _316 = vec2(cos(_309), sin(_309));
-    vec2 _387 = _316.xx;
-    vec2 _392 = _316.yy;
-    vec2 _395 = _392 * _137.distribution[_280].yx;
-    vec2 _421 = _392 * _137.distribution[_290].yx;
-    vec2 _429 = (_137.distribution[_290] * _387) + vec2(-_421.x, _421.y);
-    _225.heights[_280] = packHalf2x16(((_137.distribution[_280] * _387) + vec2(-_395.x, _395.y)) + vec2(_429.x, -_429.y));
+    uint _277 = _265.x;
+    uint _281 = (gl_GlobalInvocationID.y * _277) + gl_GlobalInvocationID.x;
+    uint _291 = (_461 * _277) + _460;
+    vec2 _298 = vec2(gl_GlobalInvocationID.xy);
+    vec2 _300 = vec2(_265);
+    float _310 = sqrt(9.81000041961669921875 * length(_166.uModTime.xy * mix(_298, _298 - _300, greaterThan(_298, _300 * 0.5)))) * _166.uModTime.z;
+    vec2 _317 = vec2(cos(_310), sin(_310));
+    vec2 _391 = _317.xx;
+    vec2 _396 = _317.yy;
+    vec2 _399 = _396 * _137.distribution[_281].yx;
+    vec2 _426 = _396 * _137.distribution[_291].yx;
+    vec2 _434 = (_137.distribution[_291] * _391) + vec2(-_426.x, _426.y);
+    _225.heights[_281] = packHalf2x16(((_137.distribution[_281] * _391) + vec2(-_399.x, _399.y)) + vec2(_434.x, -_434.y));
 }
 

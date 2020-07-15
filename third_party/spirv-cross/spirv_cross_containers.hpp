@@ -63,7 +63,8 @@ public:
 private:
 #if defined(_MSC_VER) && _MSC_VER < 1900
 	// MSVC 2013 workarounds, sigh ...
-	union {
+	union
+	{
 		char aligned_char[sizeof(T) * N];
 		double dummy_aligner;
 	} u;

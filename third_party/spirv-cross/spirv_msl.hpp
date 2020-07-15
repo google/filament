@@ -27,28 +27,33 @@
 namespace SPIRV_CROSS_NAMESPACE
 {
 
-// Indicates the format of the vertex attribute. Currently limited to specifying
-// if the attribute is an 8-bit unsigned integer, 16-bit unsigned integer, or
+// Indicates the format of a shader input. Currently limited to specifying
+// if the input is an 8-bit unsigned integer, 16-bit unsigned integer, or
 // some other format.
-enum MSLVertexFormat
+enum MSLShaderInputFormat
 {
-	MSL_VERTEX_FORMAT_OTHER = 0,
-	MSL_VERTEX_FORMAT_UINT8 = 1,
-	MSL_VERTEX_FORMAT_UINT16 = 2,
-	MSL_VERTEX_FORMAT_INT_MAX = 0x7fffffff
+	MSL_SHADER_INPUT_FORMAT_OTHER = 0,
+	MSL_SHADER_INPUT_FORMAT_UINT8 = 1,
+	MSL_SHADER_INPUT_FORMAT_UINT16 = 2,
+
+	// Deprecated aliases.
+	MSL_VERTEX_FORMAT_OTHER = MSL_SHADER_INPUT_FORMAT_OTHER,
+	MSL_VERTEX_FORMAT_UINT8 = MSL_SHADER_INPUT_FORMAT_UINT8,
+	MSL_VERTEX_FORMAT_UINT16 = MSL_SHADER_INPUT_FORMAT_UINT16,
+
+	MSL_SHADER_INPUT_FORMAT_INT_MAX = 0x7fffffff
 };
 
-// Defines MSL characteristics of a vertex attribute at a particular location.
+// Defines MSL characteristics of an input variable at a particular location.
 // After compilation, it is possible to query whether or not this location was used.
-struct MSLVertexAttr
+// If vecsize is nonzero, it must be greater than or equal to the vecsize declared in the shader,
+// or behavior is undefined.
+struct MSLShaderInput
 {
 	uint32_t location = 0;
-	uint32_t msl_buffer = 0;
-	uint32_t msl_offset = 0;
-	uint32_t msl_stride = 0;
-	bool per_instance = false;
-	MSLVertexFormat format = MSL_VERTEX_FORMAT_OTHER;
+	MSLShaderInputFormat format = MSL_SHADER_INPUT_FORMAT_OTHER;
 	spv::BuiltIn builtin = spv::BuiltInMax;
+	uint32_t vecsize = 0;
 };
 
 // Matches the binding index of a MSL resource for a binding within a descriptor set.
@@ -268,7 +273,10 @@ public:
 		uint32_t dynamic_offsets_buffer_index = 23;
 		uint32_t shader_input_wg_index = 0;
 		uint32_t device_index = 0;
+		uint32_t enable_frag_output_mask = 0xffffffff;
 		bool enable_point_size_builtin = true;
+		bool enable_frag_depth_builtin = true;
+		bool enable_frag_stencil_ref_builtin = true;
 		bool disable_rasterization = false;
 		bool capture_output_to_buffer = false;
 		bool swizzle_texture_samples = false;
@@ -317,12 +325,16 @@ public:
 		// May reduce performance in scenarios where arrays are copied around as value-types.
 		bool force_native_arrays = false;
 
-		bool is_ios()
+		// If a shader writes clip distance, also emit user varyings which
+		// can be read in subsequent stages.
+		bool enable_clip_distance_user_varying = true;
+
+		bool is_ios() const
 		{
 			return platform == iOS;
 		}
 
-		bool is_macos()
+		bool is_macos() const
 		{
 			return platform == macOS;
 		}
@@ -416,11 +428,10 @@ public:
 	explicit CompilerMSL(const ParsedIR &ir);
 	explicit CompilerMSL(ParsedIR &&ir);
 
-	// attr is a vertex attribute binding used to match
-	// vertex content locations to MSL attributes. If vertex attributes are provided,
-	// is_msl_vertex_attribute_used() will return true after calling ::compile() if
-	// the location was used by the MSL code.
-	void add_msl_vertex_attribute(const MSLVertexAttr &attr);
+	// input is a shader input description used to fix up shader input variables.
+	// If shader inputs are provided, is_msl_shader_input_used() will return true after
+	// calling ::compile() if the location was used by the MSL code.
+	void add_msl_shader_input(const MSLShaderInput &attr);
 
 	// resource is a resource binding to indicate the MSL buffer,
 	// texture or sampler index to use for a particular SPIR-V description set
@@ -452,8 +463,8 @@ public:
 	// constant. Opt-in to this behavior here on a per set basis.
 	void set_argument_buffer_device_address_space(uint32_t desc_set, bool device_storage);
 
-	// Query after compilation is done. This allows you to check if a location or set/binding combination was used by the shader.
-	bool is_msl_vertex_attribute_used(uint32_t location);
+	// Query after compilation is done. This allows you to check if an input location was used by the shader.
+	bool is_msl_shader_input_used(uint32_t location);
 
 	// NOTE: Only resources which are remapped using add_msl_resource_binding will be reported here.
 	// Constexpr samplers are always assumed to be emitted.
@@ -576,7 +587,7 @@ protected:
 
 	// If the underlying resource has been used for comparison then duplicate loads of that resource must be too
 	// Use Metal's native frame-buffer fetch API for subpass inputs.
-	void emit_texture_op(const Instruction &i) override;
+	void emit_texture_op(const Instruction &i, bool sparse) override;
 	void emit_binary_unord_op(uint32_t result_type, uint32_t result_id, uint32_t op0, uint32_t op1, const char *op);
 	void emit_instruction(const Instruction &instr) override;
 	void emit_glsl_op(uint32_t result_type, uint32_t result_id, uint32_t op, const uint32_t *args,
@@ -587,7 +598,7 @@ protected:
 	void emit_function_prototype(SPIRFunction &func, const Bitset &return_flags) override;
 	void emit_sampled_image_op(uint32_t result_type, uint32_t result_id, uint32_t image_id, uint32_t samp_id) override;
 	void emit_subgroup_op(const Instruction &i) override;
-	std::string to_texture_op(const Instruction &i, bool *forward,
+	std::string to_texture_op(const Instruction &i, bool sparse, bool *forward,
 	                          SmallVector<uint32_t> &inherited_expressions) override;
 	void emit_fixup() override;
 	std::string to_struct_member(const SPIRType &type, uint32_t member_type_id, uint32_t index,
@@ -611,14 +622,10 @@ protected:
 	std::string builtin_to_glsl(spv::BuiltIn builtin, spv::StorageClass storage) override;
 	std::string to_func_call_arg(const SPIRFunction::Parameter &arg, uint32_t id) override;
 	std::string to_name(uint32_t id, bool allow_alias = true) const override;
-	std::string to_function_name(VariableID img, const SPIRType &imgtype, bool is_fetch, bool is_gather, bool is_proj,
-	                             bool has_array_offsets, bool has_offset, bool has_grad, bool has_dref, uint32_t lod,
-	                             uint32_t minlod) override;
-	std::string to_function_args(VariableID img, const SPIRType &imgtype, bool is_fetch, bool is_gather, bool is_proj,
-	                             uint32_t coord, uint32_t coord_components, uint32_t dref, uint32_t grad_x,
-	                             uint32_t grad_y, uint32_t lod, uint32_t coffset, uint32_t offset, uint32_t bias,
-	                             uint32_t comp, uint32_t sample, uint32_t minlod, bool *p_forward) override;
+	std::string to_function_name(const TextureFunctionNameArguments &args) override;
+	std::string to_function_args(const TextureFunctionArguments &args, bool *p_forward) override;
 	std::string to_initializer_expression(const SPIRVariable &var) override;
+	std::string to_zero_initialized_expression(uint32_t type_id) override;
 
 	std::string unpack_expression_type(std::string expr_str, const SPIRType &type, uint32_t physical_type_id,
 	                                   bool is_packed, bool row_major) override;
@@ -627,6 +634,7 @@ protected:
 	bool builtin_translates_to_nonarray(spv::BuiltIn builtin) const override;
 
 	std::string bitcast_glsl_op(const SPIRType &result_type, const SPIRType &argument_type) override;
+	bool emit_complex_bitcast(uint32_t result_id, uint32_t id, uint32_t op0) override;
 	bool skip_argument(uint32_t id) const override;
 	std::string to_member_reference(uint32_t base, const SPIRType &type, uint32_t index, bool ptr_chain) override;
 	std::string to_qualifiers_glsl(uint32_t id) override;
@@ -686,7 +694,7 @@ protected:
 
 	void mark_location_as_used_by_shader(uint32_t location, spv::StorageClass storage);
 	uint32_t ensure_correct_builtin_type(uint32_t type_id, spv::BuiltIn builtin);
-	uint32_t ensure_correct_attribute_type(uint32_t type_id, uint32_t location, uint32_t num_components = 0);
+	uint32_t ensure_correct_input_type(uint32_t type_id, uint32_t location, uint32_t num_components = 0);
 
 	void emit_custom_templates();
 	void emit_custom_functions();
@@ -785,6 +793,8 @@ protected:
 
 	void analyze_sampled_image_usage();
 
+	void prepare_access_chain_for_scalar_access(std::string &expr, const SPIRType &type, spv::StorageClass storage,
+	                                            bool &is_packed) override;
 	bool emit_tessellation_access_chain(const uint32_t *ops, uint32_t length);
 	bool emit_tessellation_io_load(uint32_t result_type, uint32_t id, uint32_t ptr);
 	bool is_out_of_bounds_tessellation_level(uint32_t id_lhs);
@@ -797,9 +807,9 @@ protected:
 
 	Options msl_options;
 	std::set<SPVFuncImpl> spv_function_implementations;
-	std::unordered_map<uint32_t, MSLVertexAttr> vtx_attrs_by_location;
-	std::unordered_map<uint32_t, MSLVertexAttr> vtx_attrs_by_builtin;
-	std::unordered_set<uint32_t> vtx_attrs_in_use;
+	std::unordered_map<uint32_t, MSLShaderInput> inputs_by_location;
+	std::unordered_map<uint32_t, MSLShaderInput> inputs_by_builtin;
+	std::unordered_set<uint32_t> inputs_in_use;
 	std::unordered_map<uint32_t, uint32_t> fragment_output_components;
 	std::set<std::string> pragma_lines;
 	std::set<std::string> typedef_lines;
@@ -869,6 +879,8 @@ protected:
 	// Must be ordered since array is in a specific order.
 	std::map<SetBindingPair, std::pair<uint32_t, uint32_t>> buffers_requiring_dynamic_offset;
 
+	SmallVector<uint32_t> disabled_frag_outputs;
+
 	std::unordered_set<SetBindingPair, InternalHasher> inline_uniform_blocks;
 
 	uint32_t argument_buffer_ids[kMaxArgumentBuffers];
@@ -879,13 +891,16 @@ protected:
 	bool descriptor_set_is_argument_buffer(uint32_t desc_set) const;
 
 	uint32_t get_target_components_for_fragment_location(uint32_t location) const;
-	uint32_t build_extended_vector_type(uint32_t type_id, uint32_t components);
+	uint32_t build_extended_vector_type(uint32_t type_id, uint32_t components,
+	                                    SPIRType::BaseType basetype = SPIRType::Unknown);
 
 	bool suppress_missing_prototypes = false;
 
 	void add_spv_func_and_recompile(SPVFuncImpl spv_func);
 
 	void activate_argument_buffer_resources();
+
+	bool type_is_msl_framebuffer_fetch(const SPIRType &type) const;
 
 	// OpcodeHandler that handles several MSL preprocessing operations.
 	struct OpCodePreprocessor : OpcodeHandler

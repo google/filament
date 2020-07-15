@@ -72,6 +72,60 @@ inline void spvArrayCopyFromThreadGroupToThreadGroup1(threadgroup T (&dst)[A], t
     }
 }
 
+template<typename T, uint A>
+inline void spvArrayCopyFromDeviceToDevice1(device T (&dst)[A], device const T (&src)[A])
+{
+    for (uint i = 0; i < A; i++)
+    {
+        dst[i] = src[i];
+    }
+}
+
+template<typename T, uint A>
+inline void spvArrayCopyFromConstantToDevice1(device T (&dst)[A], constant T (&src)[A])
+{
+    for (uint i = 0; i < A; i++)
+    {
+        dst[i] = src[i];
+    }
+}
+
+template<typename T, uint A>
+inline void spvArrayCopyFromStackToDevice1(device T (&dst)[A], thread const T (&src)[A])
+{
+    for (uint i = 0; i < A; i++)
+    {
+        dst[i] = src[i];
+    }
+}
+
+template<typename T, uint A>
+inline void spvArrayCopyFromThreadGroupToDevice1(device T (&dst)[A], threadgroup const T (&src)[A])
+{
+    for (uint i = 0; i < A; i++)
+    {
+        dst[i] = src[i];
+    }
+}
+
+template<typename T, uint A>
+inline void spvArrayCopyFromDeviceToStack1(thread T (&dst)[A], device const T (&src)[A])
+{
+    for (uint i = 0; i < A; i++)
+    {
+        dst[i] = src[i];
+    }
+}
+
+template<typename T, uint A>
+inline void spvArrayCopyFromDeviceToThreadGroup1(threadgroup T (&dst)[A], device const T (&src)[A])
+{
+    for (uint i = 0; i < A; i++)
+    {
+        dst[i] = src[i];
+    }
+}
+
 static inline __attribute__((always_inline))
 void test(thread float4 (&SPIRV_Cross_return_value)[2])
 {

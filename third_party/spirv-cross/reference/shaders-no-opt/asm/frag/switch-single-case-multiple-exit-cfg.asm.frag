@@ -9,21 +9,18 @@ vec2 _19;
 void main()
 {
     highp vec2 _30;
-    switch (0)
+    do
     {
-        default:
+        if (gl_FragCoord.x != gl_FragCoord.x)
         {
-            if (gl_FragCoord.x != gl_FragCoord.x)
-            {
-                _30 = _19;
-                break;
-            }
-            highp vec2 _29 = _19;
-            _29.y = _19.y;
-            _30 = _29;
+            _30 = _19;
             break;
         }
-    }
+        highp vec2 _29 = _19;
+        _29.y = _19.y;
+        _30 = _29;
+        break;
+    } while(false);
     _GLF_color = vec4(_30, 1.0, 1.0);
 }
 

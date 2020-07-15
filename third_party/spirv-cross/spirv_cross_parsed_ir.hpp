@@ -206,6 +206,8 @@ public:
 		return empty_string;
 	}
 
+	void make_constant_null(uint32_t id, uint32_t type, bool add_to_typed_id_set);
+
 private:
 	template <typename T>
 	T &get(uint32_t id)

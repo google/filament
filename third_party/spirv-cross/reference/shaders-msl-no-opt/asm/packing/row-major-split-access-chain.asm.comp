@@ -11,6 +11,6 @@ struct SSBORow
 
 kernel void main0(device SSBORow& _4 [[buffer(0)]])
 {
-    _4.v = _4.row_major0[2u][1];
+    _4.v = ((device float*)&_4.row_major0[2u])[1];
 }
 

@@ -12,7 +12,8 @@ layout(location = 0) out vec4 FragColor;
 
 vec4 sample_dual(mediump sampler2D SPIRV_Cross_Combinedtexsamp)
 {
-    return texture(SPIRV_Cross_Combinedtexsamp, vTex);
+    vec4 _38 = texture(SPIRV_Cross_Combinedtexsamp, vTex);
+    return _38;
 }
 
 vec4 sample_duals()

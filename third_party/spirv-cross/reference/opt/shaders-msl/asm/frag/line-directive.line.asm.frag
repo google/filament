@@ -32,13 +32,13 @@ fragment main0_out main0(main0_in in [[stage_in]])
 #line 16 "test.frag"
         out.FragColor = 4.0;
     }
-    for (int _126 = 0; float(_126) < (40.0 + in.vColor); )
+    for (int _127 = 0; float(_127) < (40.0 + in.vColor); )
     {
 #line 21 "test.frag"
         out.FragColor += 0.20000000298023223876953125;
 #line 22 "test.frag"
         out.FragColor += 0.300000011920928955078125;
-        _126 += (int(in.vColor) + 5);
+        _127 += (int(in.vColor) + 5);
         continue;
     }
     switch (int(in.vColor))

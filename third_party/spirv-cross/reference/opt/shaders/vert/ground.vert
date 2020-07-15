@@ -1,4 +1,7 @@
 #version 310 es
+#ifdef GL_ARB_shader_draw_parameters
+#extension GL_ARB_shader_draw_parameters : enable
+#endif
 
 struct PatchData
 {
@@ -44,42 +47,46 @@ layout(binding = 1) uniform mediump sampler2D TexLOD;
 layout(binding = 0) uniform mediump sampler2D TexHeightmap;
 
 layout(location = 1) in vec4 LODWeights;
+#ifdef GL_ARB_shader_draw_parameters
+#define SPIRV_Cross_BaseInstance gl_BaseInstanceARB
+#else
 uniform int SPIRV_Cross_BaseInstance;
+#endif
 layout(location = 0) in vec2 Position;
 layout(location = 1) out vec3 EyeVec;
 layout(location = 0) out vec2 TexCoord;
 
 void main()
 {
-    float _300 = all(equal(LODWeights, vec4(0.0))) ? _53.Patches[(gl_InstanceID + SPIRV_Cross_BaseInstance)].Position.w : dot(LODWeights, _53.Patches[(gl_InstanceID + SPIRV_Cross_BaseInstance)].LODs);
-    float _302 = floor(_300);
-    uint _307 = uint(_302);
-    uvec2 _309 = uvec2(Position);
-    uvec2 _316 = (uvec2(1u) << uvec2(_307, _307 + 1u)) - uvec2(1u);
-    uint _382;
-    if (_309.x < 32u)
+    float _301 = all(equal(LODWeights, vec4(0.0))) ? _53.Patches[(gl_InstanceID + SPIRV_Cross_BaseInstance)].Position.w : dot(LODWeights, _53.Patches[(gl_InstanceID + SPIRV_Cross_BaseInstance)].LODs);
+    float _303 = floor(_301);
+    uint _308 = uint(_303);
+    uvec2 _310 = uvec2(Position);
+    uvec2 _317 = (uvec2(1u) << uvec2(_308, _308 + 1u)) - uvec2(1u);
+    uint _384;
+    if (_310.x < 32u)
     {
-        _382 = _316.x;
+        _384 = _317.x;
     }
     else
     {
-        _382 = 0u;
+        _384 = 0u;
     }
-    uint _383;
-    if (_309.y < 32u)
+    uint _385;
+    if (_310.y < 32u)
     {
-        _383 = _316.y;
+        _385 = _317.y;
     }
     else
     {
-        _383 = 0u;
+        _385 = 0u;
     }
-    vec4 _344 = vec4((_309 + uvec2(_382, _383)).xyxy & (~_316).xxyy);
-    vec2 _173 = ((_53.Patches[(gl_InstanceID + SPIRV_Cross_BaseInstance)].Position.xz * _156.InvGroundSize_PatchScale.zw) + mix(_344.xy, _344.zw, vec2(_300 - _302))) * _156.InvGroundSize_PatchScale.xy;
-    mediump float _360 = textureLod(TexLOD, _173, 0.0).x * 7.96875;
-    float _362 = floor(_360);
-    vec2 _185 = _156.InvGroundSize_PatchScale.xy * exp2(_362);
-    vec3 _230 = (vec3(_173.x, mix(textureLod(TexHeightmap, _173 + (_185 * 0.5), _362).x, textureLod(TexHeightmap, _173 + (_185 * 1.0), _362 + 1.0).x, _360 - _362), _173.y) * _156.GroundScale.xyz) + _156.GroundPosition.xyz;
+    vec4 _345 = vec4((_310 + uvec2(_384, _385)).xyxy & (~_317).xxyy);
+    vec2 _173 = ((_53.Patches[(gl_InstanceID + SPIRV_Cross_BaseInstance)].Position.xz * _156.InvGroundSize_PatchScale.zw) + mix(_345.xy, _345.zw, vec2(_301 - _303))) * _156.InvGroundSize_PatchScale.xy;
+    mediump float _362 = textureLod(TexLOD, _173, 0.0).x * 7.96875;
+    float _364 = floor(_362);
+    vec2 _185 = _156.InvGroundSize_PatchScale.xy * exp2(_364);
+    vec3 _230 = (vec3(_173.x, mix(textureLod(TexHeightmap, _173 + (_185 * 0.5), _364).x, textureLod(TexHeightmap, _173 + (_185 * 1.0), _364 + 1.0).x, _362 - _364), _173.y) * _156.GroundScale.xyz) + _156.GroundPosition.xyz;
     EyeVec = _230 - _236.g_CamPos.xyz;
     TexCoord = _173 + (_156.InvGroundSize_PatchScale.xy * 0.5);
     gl_Position = (((_236.g_ViewProj_Row0 * _230.x) + (_236.g_ViewProj_Row1 * _230.y)) + (_236.g_ViewProj_Row2 * _230.z)) + _236.g_ViewProj_Row3;

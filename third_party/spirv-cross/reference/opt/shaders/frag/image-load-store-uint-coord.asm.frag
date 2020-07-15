@@ -10,8 +10,8 @@ layout(location = 0) out vec4 _entryPointOutput;
 void main()
 {
     imageStore(RWIm, ivec2(uvec2(10u)), vec4(10.0, 0.5, 8.0, 2.0));
-    vec4 _69 = imageLoad(RWIm, ivec2(uvec2(30u)));
-    imageStore(RWBuf, int(80u), _69);
-    _entryPointOutput = (_69 + texelFetch(ROIm, ivec2(uvec2(50u, 60u)), 0)) + texelFetch(ROBuf, int(80u));
+    vec4 _70 = imageLoad(RWIm, ivec2(uvec2(30u)));
+    imageStore(RWBuf, int(80u), _70);
+    _entryPointOutput = (_70 + texelFetch(ROIm, ivec2(uvec2(50u, 60u)), 0)) + texelFetch(ROBuf, int(80u));
 }
 

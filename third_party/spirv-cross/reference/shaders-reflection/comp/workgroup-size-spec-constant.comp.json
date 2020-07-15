@@ -38,18 +38,21 @@
     ],
     "specialization_constants" : [
         {
+            "name" : "",
             "id" : 10,
             "type" : "uint",
             "variable_id" : 18,
             "default_value" : 1
         },
         {
+            "name" : "",
             "id" : 40,
             "type" : "uint",
             "variable_id" : 19,
             "default_value" : 1
         },
         {
+            "name" : "",
             "id" : 60,
             "type" : "uint",
             "variable_id" : 20,

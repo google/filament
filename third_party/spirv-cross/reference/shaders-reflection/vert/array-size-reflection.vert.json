@@ -68,6 +68,7 @@
     ],
     "specialization_constants" : [
         {
+            "name" : "ARR_SIZE",
             "id" : 0,
             "type" : "int",
             "variable_id" : 16,

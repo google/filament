@@ -23,6 +23,6 @@ kernel void main0(device SSBO& _27 [[buffer(0)]], uint3 gl_GlobalInvocationID [[
     float4 _52 = _50;
     _52.w = 90.0;
     _27.out_data[gl_GlobalInvocationID.x] = _52;
-    _27.out_data[gl_GlobalInvocationID.x].y = 20.0;
+    ((device float*)&_27.out_data[gl_GlobalInvocationID.x])[1u] = 20.0;
 }
 

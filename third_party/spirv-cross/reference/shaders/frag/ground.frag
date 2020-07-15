@@ -38,7 +38,7 @@ void main()
 {
     vec3 Normal = (texture(TexNormalmap, TexCoord).xyz * 2.0) - vec3(1.0);
     Normal = normalize(Normal);
-    highp float param = length(EyeVec) / 1000.0;
+    float param = length(EyeVec) / 1000.0;
     vec2 scatter_uv;
     scatter_uv.x = saturate(param);
     vec3 nEye = normalize(EyeVec);
@@ -53,10 +53,10 @@ void main()
     Color = mix(dirt, base, vec3(edge));
     Color *= Color;
     float Roughness = 1.0 - (edge * grass_snow);
-    highp vec3 param_1 = Color;
-    highp vec3 param_2 = Normal;
-    highp float param_3 = Roughness;
-    highp float param_4 = 0.0;
+    vec3 param_1 = Color;
+    vec3 param_2 = Normal;
+    float param_3 = Roughness;
+    float param_4 = 0.0;
     Resolve(param_1, param_2, param_3, param_4);
 }
 

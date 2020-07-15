@@ -1,0 +1,10 @@
+#version 460
+#extension GL_NV_ray_tracing : require
+
+layout(set = 0, binding = 0) uniform writeonly image2D uImage;
+
+void main()
+{
+    imageStore(uImage, ivec2(gl_LaunchSizeNV.xy) - ivec2(1), vec4(1.0));
+}
+

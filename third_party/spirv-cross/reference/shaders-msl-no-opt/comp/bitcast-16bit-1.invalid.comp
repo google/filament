@@ -19,8 +19,8 @@ kernel void main0(device SSBO0& _25 [[buffer(0)]], device SSBO1& _39 [[buffer(1)
 {
     uint ident = gl_GlobalInvocationID.x;
     half2 a = as_type<half2>(_25.inputs[ident].xy);
-    _39.outputs[ident].x = int(as_type<uint>(a + half2(half(1.0))));
-    _39.outputs[ident].y = as_type<int>(_25.inputs[ident].zw);
-    _39.outputs[ident].z = int(as_type<uint>(ushort2(_25.inputs[ident].xy)));
+    ((device int*)&_39.outputs[ident])[0u] = int(as_type<uint>(a + half2(half(1.0))));
+    ((device int*)&_39.outputs[ident])[1u] = as_type<int>(_25.inputs[ident].zw);
+    ((device int*)&_39.outputs[ident])[2u] = int(as_type<uint>(ushort2(_25.inputs[ident].xy)));
 }
 

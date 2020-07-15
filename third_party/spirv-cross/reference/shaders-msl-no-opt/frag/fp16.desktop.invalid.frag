@@ -77,7 +77,7 @@ void test_conversions()
     half one = test_result();
     int a = int(one);
     uint b = uint(one);
-    bool c = one != half(0.0);
+    bool c = (isunordered(one, half(0.0)) || one != half(0.0));
     float d = float(one);
     half a2 = half(a);
     half b2 = half(b);
@@ -152,7 +152,7 @@ void test_builtins(thread half4& v4, thread half3& v3, thread half& v1)
     btmp = v4 > v4;
     btmp = v4 >= v4;
     btmp = v4 == v4;
-    btmp = v4 != v4;
+    btmp = (isunordered(v4, v4) || v4 != v4);
     res = dfdx(v4);
     res = dfdy(v4);
     res = dfdx(v4);

@@ -1,0 +1,54 @@
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+			   OpName %Block "Block"
+			   OpName %SSBO "SSBO"
+			   OpName %SSBO_Var "ssbo"
+			   OpName %UBO_Var "ubo"
+			   OpDecorate %SSBO_Var Binding 0
+			   OpDecorate %SSBO_Var DescriptorSet 0
+			   OpDecorate %UBO_Var Binding 1
+			   OpDecorate %UBO_Var DescriptorSet 0
+			   OpMemberDecorate %SSBO 0 Offset 0
+			   OpMemberDecorate %Block 0 Offset 0
+			   OpMemberDecorate %Block 1 Offset 16
+			   OpDecorate %BlockArray ArrayStride 32
+			   OpDecorate %arr_uvec2_2 ArrayStride 8
+			   OpDecorate %SSBO Block
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+     %uint_1 = OpConstant %uint 1
+     %uint_2 = OpConstant %uint 2
+     %uint_3 = OpConstant %uint 3
+     %uvec2 = OpTypeVector %uint 2
+     %arr_uvec2_2 = OpTypeArray %uvec2 %uint_2
+	 %arr_uvec2_2_ptr = OpTypePointer StorageBuffer %arr_uvec2_2
+	 %arr_uvec2_2_ptr_const = OpTypePointer Uniform %arr_uvec2_2
+	 %arr_uvec2_2_ptr_func = OpTypePointer Function %arr_uvec2_2
+	 %arr_uvec2_2_ptr_workgroup = OpTypePointer Workgroup %arr_uvec2_2
+	 %wg = OpVariable %arr_uvec2_2_ptr_workgroup Workgroup
+   %Block = OpTypeStruct %arr_uvec2_2 %arr_uvec2_2
+   %Block_ptr = OpTypePointer StorageBuffer %Block
+%BlockArray = OpTypeArray %Block %uint_3
+%SSBO = OpTypeStruct %BlockArray
+%SSBO_Ptr = OpTypePointer StorageBuffer %SSBO
+%SSBO_Var = OpVariable %SSBO_Ptr StorageBuffer
+%UBO_Ptr = OpTypePointer Uniform %SSBO
+%UBO_Var = OpVariable %UBO_Ptr Uniform
+%void = OpTypeVoid
+%func_type = OpTypeFunction %void
+
+    %main = OpFunction %void None %func_type
+         %25 = OpLabel
+		 %func = OpVariable %arr_uvec2_2_ptr_func Function
+
+		; Copy device array to temporary.
+		 %ptr = OpAccessChain %Block_ptr %SSBO_Var %uint_0 %uint_0
+		 %ptr_arr_1 = OpAccessChain %arr_uvec2_2_ptr %SSBO_Var %uint_0 %uint_0 %uint_1
+		 %loaded_array = OpLoad %arr_uvec2_2 %ptr_arr_1
+		 %constructed = OpCompositeConstruct %Block %loaded_array %loaded_array
+		 OpStore %ptr %constructed
+
+               OpReturn
+               OpFunctionEnd
