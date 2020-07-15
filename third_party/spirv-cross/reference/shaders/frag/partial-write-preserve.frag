@@ -80,16 +80,16 @@ void branchy_inout_2(out B b)
 void main()
 {
     vec4 a = vec4(10.0);
-    highp vec4 param = a;
+    vec4 param = a;
     partial_inout(param);
     a = param;
-    highp vec4 param_1;
+    vec4 param_1;
     complete_inout(param_1);
     a = param_1;
-    highp vec4 param_2 = a;
+    vec4 param_2 = a;
     branchy_inout(param_2);
     a = param_2;
-    highp vec4 param_3;
+    vec4 param_3;
     branchy_inout_2(param_3);
     a = param_3;
     B b = B(10.0, 20.0);

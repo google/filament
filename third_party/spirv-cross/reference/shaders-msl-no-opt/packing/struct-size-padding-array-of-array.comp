@@ -48,7 +48,7 @@ kernel void main0(device SSBO& _32 [[buffer(0)]])
 {
     _32.f[0].a = float4(2.0);
     float2x2 tmp = float2x2(_32.e[0][1][0].xy, _32.e[0][1][1].xy);
-    _32.e[1][2][0].xy = tmp[0];
-    _32.e[1][2][1].xy = tmp[1];
+    (device float2&)_32.e[1][2][0] = tmp[0];
+    (device float2&)_32.e[1][2][1] = tmp[1];
 }
 

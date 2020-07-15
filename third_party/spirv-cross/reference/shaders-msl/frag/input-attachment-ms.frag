@@ -13,7 +13,8 @@ struct main0_out
 static inline __attribute__((always_inline))
 float4 load_subpasses(thread const texture2d_ms<float> uInput, thread uint& gl_SampleID, thread float4& gl_FragCoord)
 {
-    return uInput.read(uint2(gl_FragCoord.xy), gl_SampleID);
+    float4 _24 = uInput.read(uint2(gl_FragCoord.xy), gl_SampleID);
+    return _24;
 }
 
 fragment main0_out main0(texture2d_ms<float> uSubpass0 [[texture(0)]], texture2d_ms<float> uSubpass1 [[texture(1)]], uint gl_SampleID [[sample_id]], float4 gl_FragCoord [[position]])

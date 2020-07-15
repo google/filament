@@ -29,16 +29,16 @@ struct main0_patchIn
 [[ patch(quad, 0) ]] vertex main0_out main0(main0_patchIn patchIn [[stage_in]], constant UBO& _31 [[buffer(0)]], texture2d<float> uHeightmapDisplacement [[texture(0)]], sampler uHeightmapDisplacementSmplr [[sampler(0)]], float2 gl_TessCoord [[position_in_patch]])
 {
     main0_out out = {};
-    float2 _201 = patchIn.vOutPatchPosBase + (float3(gl_TessCoord, 0).xy * _31.uPatchSize);
-    float2 _214 = mix(patchIn.vPatchLods.yx, patchIn.vPatchLods.zw, float2(float3(gl_TessCoord, 0).x));
-    float _221 = mix(_214.x, _214.y, float3(gl_TessCoord, 0).y);
-    float _223 = floor(_221);
-    float2 _125 = _201 * _31.uInvHeightmapSize;
-    float2 _141 = _31.uInvHeightmapSize * exp2(_223);
-    out.vGradNormalTex = float4(_125 + (_31.uInvHeightmapSize * 0.5), _125 * _31.uScale.zw);
-    float3 _253 = mix(uHeightmapDisplacement.sample(uHeightmapDisplacementSmplr, (_125 + (_141 * 0.5)), level(_223)).xyz, uHeightmapDisplacement.sample(uHeightmapDisplacementSmplr, (_125 + (_141 * 1.0)), level(_223 + 1.0)).xyz, float3(_221 - _223));
-    float2 _171 = (_201 * _31.uScale.xy) + _253.yz;
-    out.vWorld = float3(_171.x, _253.x, _171.y);
+    float2 _204 = patchIn.vOutPatchPosBase + (float3(gl_TessCoord, 0).xy * _31.uPatchSize);
+    float2 _219 = mix(patchIn.vPatchLods.yx, patchIn.vPatchLods.zw, float2(float3(gl_TessCoord, 0).x));
+    float _226 = mix(_219.x, _219.y, float3(gl_TessCoord, 0).y);
+    float _228 = floor(_226);
+    float2 _127 = _204 * _31.uInvHeightmapSize;
+    float2 _143 = _31.uInvHeightmapSize * exp2(_228);
+    out.vGradNormalTex = float4(_127 + (_31.uInvHeightmapSize * 0.5), _127 * _31.uScale.zw);
+    float3 _260 = mix(uHeightmapDisplacement.sample(uHeightmapDisplacementSmplr, (_127 + (_143 * 0.5)), level(_228)).xyz, uHeightmapDisplacement.sample(uHeightmapDisplacementSmplr, (_127 + (_143 * 1.0)), level(_228 + 1.0)).xyz, float3(_226 - _228));
+    float2 _173 = (_204 * _31.uScale.xy) + _260.yz;
+    out.vWorld = float3(_173.x, _260.x, _173.y);
     out.gl_Position = _31.uMVP * float4(out.vWorld, 1.0);
     return out;
 }

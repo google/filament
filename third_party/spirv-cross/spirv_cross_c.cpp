@@ -423,6 +423,9 @@ spvc_result spvc_compiler_options_set_uint(spvc_compiler_options options, spvc_c
 	case SPVC_COMPILER_OPTION_ENABLE_STORAGE_IMAGE_QUALIFIER_DEDUCTION:
 		options->glsl.enable_storage_image_qualifier_deduction = value != 0;
 		break;
+	case SPVC_COMPILER_OPTION_FORCE_ZERO_INITIALIZED_VARIABLES:
+		options->glsl.force_zero_initialized_variables = value != 0;
+		break;
 
 	case SPVC_COMPILER_OPTION_GLSL_SUPPORT_NONZERO_BASE_INSTANCE:
 		options->glsl.vertex.support_nonzero_base_instance = value != 0;
@@ -477,6 +480,14 @@ spvc_result spvc_compiler_options_set_uint(spvc_compiler_options options, spvc_c
 
 	case SPVC_COMPILER_OPTION_HLSL_FORCE_STORAGE_BUFFER_AS_UAV:
 		options->hlsl.force_storage_buffer_as_uav = value != 0;
+		break;
+
+	case SPVC_COMPILER_OPTION_HLSL_NONWRITABLE_UAV_TEXTURE_AS_SRV:
+		options->hlsl.nonwritable_uav_texture_as_srv = value != 0;
+		break;
+
+	case SPVC_COMPILER_OPTION_HLSL_ENABLE_16BIT_TYPES:
+		options->hlsl.enable_16bit_types = value != 0;
 		break;
 #endif
 
@@ -608,6 +619,22 @@ spvc_result spvc_compiler_options_set_uint(spvc_compiler_options options, spvc_c
 	case SPVC_COMPILER_OPTION_MSL_FORCE_NATIVE_ARRAYS:
 		options->msl.force_native_arrays = value != 0;
 		break;
+
+	case SPVC_COMPILER_OPTION_MSL_ENABLE_FRAG_OUTPUT_MASK:
+		options->msl.enable_frag_output_mask = value;
+		break;
+
+	case SPVC_COMPILER_OPTION_MSL_ENABLE_FRAG_DEPTH_BUILTIN:
+		options->msl.enable_frag_depth_builtin = value != 0;
+		break;
+
+	case SPVC_COMPILER_OPTION_MSL_ENABLE_FRAG_STENCIL_REF_BUILTIN:
+		options->msl.enable_frag_stencil_ref_builtin = value != 0;
+		break;
+
+	case SPVC_COMPILER_OPTION_MSL_ENABLE_CLIP_DISTANCE_USER_VARYING:
+		options->msl.enable_clip_distance_user_varying = value != 0;
+		break;
 #endif
 
 	default:
@@ -701,6 +728,23 @@ spvc_result spvc_compiler_flatten_buffer_block(spvc_compiler compiler, spvc_vari
 	(void)id;
 	compiler->context->report_error("Cross-compilation related option used on NONE backend which only supports reflection.");
 	return SPVC_ERROR_INVALID_ARGUMENT;
+#endif
+}
+
+spvc_bool spvc_compiler_variable_is_depth_or_compare(spvc_compiler compiler, spvc_variable_id id)
+{
+#if SPIRV_CROSS_C_API_GLSL
+	if (compiler->backend == SPVC_BACKEND_NONE)
+	{
+		compiler->context->report_error("Cross-compilation related option used on NONE backend which only supports reflection.");
+		return SPVC_ERROR_INVALID_ARGUMENT;
+	}
+
+	return static_cast<CompilerGLSL *>(compiler->compiler.get())->variable_is_depth_or_compare(id) ? SPVC_TRUE : SPVC_FALSE;
+#else
+	(void)id;
+	compiler->context->report_error("Cross-compilation related option used on NONE backend which only supports reflection.");
+	return SPVC_FALSE;
 #endif
 }
 
@@ -975,18 +1019,38 @@ spvc_result spvc_compiler_msl_add_vertex_attribute(spvc_compiler compiler, const
 	}
 
 	auto &msl = *static_cast<CompilerMSL *>(compiler->compiler.get());
-	MSLVertexAttr attr;
+	MSLShaderInput attr;
 	attr.location = va->location;
-	attr.msl_buffer = va->msl_buffer;
-	attr.msl_offset = va->msl_offset;
-	attr.msl_stride = va->msl_stride;
-	attr.format = static_cast<MSLVertexFormat>(va->format);
+	attr.format = static_cast<MSLShaderInputFormat>(va->format);
 	attr.builtin = static_cast<spv::BuiltIn>(va->builtin);
-	attr.per_instance = va->per_instance != 0;
-	msl.add_msl_vertex_attribute(attr);
+	msl.add_msl_shader_input(attr);
 	return SPVC_SUCCESS;
 #else
 	(void)va;
+	compiler->context->report_error("MSL function used on a non-MSL backend.");
+	return SPVC_ERROR_INVALID_ARGUMENT;
+#endif
+}
+
+spvc_result spvc_compiler_msl_add_shader_input(spvc_compiler compiler, const spvc_msl_shader_input *si)
+{
+#if SPIRV_CROSS_C_API_MSL
+	if (compiler->backend != SPVC_BACKEND_MSL)
+	{
+		compiler->context->report_error("MSL function used on a non-MSL backend.");
+		return SPVC_ERROR_INVALID_ARGUMENT;
+	}
+
+	auto &msl = *static_cast<CompilerMSL *>(compiler->compiler.get());
+	MSLShaderInput input;
+	input.location = si->location;
+	input.format = static_cast<MSLShaderInputFormat>(si->format);
+	input.builtin = static_cast<spv::BuiltIn>(si->builtin);
+	input.vecsize = si->vecsize;
+	msl.add_msl_shader_input(input);
+	return SPVC_SUCCESS;
+#else
+	(void)si;
 	compiler->context->report_error("MSL function used on a non-MSL backend.");
 	return SPVC_ERROR_INVALID_ARGUMENT;
 #endif
@@ -1099,7 +1163,7 @@ spvc_result spvc_compiler_msl_set_argument_buffer_device_address_space(spvc_comp
 #endif
 }
 
-spvc_bool spvc_compiler_msl_is_vertex_attribute_used(spvc_compiler compiler, unsigned location)
+spvc_bool spvc_compiler_msl_is_shader_input_used(spvc_compiler compiler, unsigned location)
 {
 #if SPIRV_CROSS_C_API_MSL
 	if (compiler->backend != SPVC_BACKEND_MSL)
@@ -1109,12 +1173,17 @@ spvc_bool spvc_compiler_msl_is_vertex_attribute_used(spvc_compiler compiler, uns
 	}
 
 	auto &msl = *static_cast<CompilerMSL *>(compiler->compiler.get());
-	return msl.is_msl_vertex_attribute_used(location) ? SPVC_TRUE : SPVC_FALSE;
+	return msl.is_msl_shader_input_used(location) ? SPVC_TRUE : SPVC_FALSE;
 #else
 	(void)location;
 	compiler->context->report_error("MSL function used on a non-MSL backend.");
 	return SPVC_FALSE;
 #endif
+}
+
+spvc_bool spvc_compiler_msl_is_vertex_attribute_used(spvc_compiler compiler, unsigned location)
+{
+	return spvc_compiler_msl_is_shader_input_used(compiler, location);
 }
 
 spvc_bool spvc_compiler_msl_is_resource_used(spvc_compiler compiler, SpvExecutionModel model, unsigned set,
@@ -2218,16 +2287,25 @@ void spvc_msl_vertex_attribute_init(spvc_msl_vertex_attribute *attr)
 {
 #if SPIRV_CROSS_C_API_MSL
 	// Crude, but works.
-	MSLVertexAttr attr_default;
+	MSLShaderInput attr_default;
 	attr->location = attr_default.location;
-	attr->per_instance = attr_default.per_instance ? SPVC_TRUE : SPVC_FALSE;
 	attr->format = static_cast<spvc_msl_vertex_format>(attr_default.format);
 	attr->builtin = static_cast<SpvBuiltIn>(attr_default.builtin);
-	attr->msl_buffer = attr_default.msl_buffer;
-	attr->msl_offset = attr_default.msl_offset;
-	attr->msl_stride = attr_default.msl_stride;
 #else
 	memset(attr, 0, sizeof(*attr));
+#endif
+}
+
+void spvc_msl_shader_input_init(spvc_msl_shader_input *input)
+{
+#if SPIRV_CROSS_C_API_MSL
+	MSLShaderInput input_default;
+	input->location = input_default.location;
+	input->format = static_cast<spvc_msl_shader_input_format>(input_default.format);
+	input->builtin = static_cast<SpvBuiltIn>(input_default.builtin);
+	input->vecsize = input_default.vecsize;
+#else
+	memset(input, 0, sizeof(*input));
 #endif
 }
 

@@ -82,15 +82,15 @@ kernel void main0(device SSBO& _27 [[buffer(0)]], uint3 gl_WorkGroupID [[threadg
     foo.f2[gl_GlobalInvocationID.x] += float2(2.0);
     foo.f3[gl_GlobalInvocationID.x] += float3(3.0);
     foo.f4[gl_GlobalInvocationID.x] += float4(4.0);
-    _27.sub[gl_WorkGroupID.x].f[0].x = foo.f[0];
-    _27.sub[gl_WorkGroupID.x].f[1].x = foo.f[1];
-    _27.sub[gl_WorkGroupID.x].f2[0].xy = foo.f2[0];
-    _27.sub[gl_WorkGroupID.x].f2[1].xy = foo.f2[1];
+    (device float&)_27.sub[gl_WorkGroupID.x].f[0] = foo.f[0];
+    (device float&)_27.sub[gl_WorkGroupID.x].f[1] = foo.f[1];
+    (device float2&)_27.sub[gl_WorkGroupID.x].f2[0] = foo.f2[0];
+    (device float2&)_27.sub[gl_WorkGroupID.x].f2[1] = foo.f2[1];
     _27.sub[gl_WorkGroupID.x].f3[0] = foo.f3[0];
     _27.sub[gl_WorkGroupID.x].f3[1] = foo.f3[1];
     _27.sub[gl_WorkGroupID.x].f4[0] = foo.f4[0];
     _27.sub[gl_WorkGroupID.x].f4[1] = foo.f4[1];
-    _27.sub[0].f[0].x += 5.0;
-    _27.sub[0].f2[1].xy += float2(5.0);
+    (device float&)_27.sub[0].f[0] = _27.sub[0].f[0].x + 5.0;
+    (device float2&)_27.sub[0].f2[1] = _27.sub[0].f2[1].xy + float2(5.0);
 }
 

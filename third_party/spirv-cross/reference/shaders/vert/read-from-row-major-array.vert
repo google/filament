@@ -3,14 +3,15 @@
 layout(binding = 0, std140) uniform Block
 {
     layout(row_major) mat2x3 var[3][4];
-} _104;
+} _106;
 
 layout(location = 0) in vec4 a_position;
 layout(location = 0) out mediump float v_vtxResult;
 
 mediump float compare_float(float a, float b)
 {
-    return float(abs(a - b) < 0.0500000007450580596923828125);
+    mediump float _37 = float(abs(a - b) < 0.0500000007450580596923828125);
+    return _37;
 }
 
 mediump float compare_vec3(vec3 a, vec3 b)
@@ -37,7 +38,7 @@ void main()
 {
     gl_Position = a_position;
     mediump float result = 1.0;
-    mat2x3 param = _104.var[0][0];
+    mat2x3 param = _106.var[0][0];
     mat2x3 param_1 = mat2x3(vec3(2.0, 6.0, -6.0), vec3(0.0, 5.0, 5.0));
     result *= compare_mat2x3(param, param_1);
     v_vtxResult = result;

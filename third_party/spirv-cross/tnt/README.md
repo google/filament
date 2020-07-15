@@ -3,6 +3,7 @@
 To update to the spirv-cross that's currently on GitHub master, do the following.
 
 ```
+cd third_party
 curl -L https://github.com/KhronosGroup/SPIRV-Cross/archive/master.zip > master.zip
 unzip master.zip
 rsync -r SPIRV-Cross-master/ spirv-cross/ --delete

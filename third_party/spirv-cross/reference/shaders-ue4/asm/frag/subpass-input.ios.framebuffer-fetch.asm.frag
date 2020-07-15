@@ -197,7 +197,7 @@ struct main0_out
     float4 out_var_SV_Target0 [[color(0)]];
 };
 
-fragment main0_out main0(constant type_View& View [[buffer(0)]], constant type_Globals& _Globals [[buffer(1)]], float4 _gl_LastFragData [[color(0)]], texture2d<float> ShadowDepthTexture [[texture(1)]], sampler ShadowDepthTextureSampler [[sampler(0)]], float4 gl_FragCoord [[position]])
+fragment main0_out main0(constant type_View& View [[buffer(0)]], constant type_Globals& _Globals [[buffer(1)]], float4 _gl_LastFragData [[color(0)]], texture2d<float> ShadowDepthTexture [[texture(0)]], sampler ShadowDepthTextureSampler [[sampler(0)]], float4 gl_FragCoord [[position]])
 {
     main0_out out = {};
     float4 _67 = _gl_LastFragData;

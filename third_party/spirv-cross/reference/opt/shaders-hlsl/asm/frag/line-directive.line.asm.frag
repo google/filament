@@ -29,13 +29,13 @@ void frag_main()
 #line 16 "test.frag"
         FragColor = 4.0f;
     }
-    for (int _126 = 0; float(_126) < (40.0f + vColor); )
+    for (int _127 = 0; float(_127) < (40.0f + vColor); )
     {
 #line 21 "test.frag"
         FragColor += 0.20000000298023223876953125f;
 #line 22 "test.frag"
         FragColor += 0.300000011920928955078125f;
-        _126 += (int(vColor) + 5);
+        _127 += (int(vColor) + 5);
         continue;
     }
     switch (int(vColor))

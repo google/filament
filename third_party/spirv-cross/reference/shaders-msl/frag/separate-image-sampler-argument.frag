@@ -13,7 +13,8 @@ struct main0_out
 static inline __attribute__((always_inline))
 float4 samp(thread const texture2d<float> t, thread const sampler s)
 {
-    return t.sample(s, float2(0.5));
+    float4 _26 = t.sample(s, float2(0.5));
+    return _26;
 }
 
 fragment main0_out main0(texture2d<float> uDepth [[texture(0)]], sampler uSampler [[sampler(0)]])

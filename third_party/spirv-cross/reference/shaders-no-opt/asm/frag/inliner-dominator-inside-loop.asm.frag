@@ -125,6 +125,7 @@ void main()
     _151.UvStuds = IN_UvStuds_EdgeDistance2.xy;
     SurfaceInput _156 = _151;
     _156.UvStuds.y = (fract(_151.UvStuds.y) + IN_studIndex) * 0.25;
+    float _160 = clamp(1.0 - (_146.View_Depth.w * 0.00333332992158830165863037109375), 0.0, 1.0);
     float _163 = _146.View_Depth.w * _19.CB0.RefractionBias_FadeDistance_GlowFactor.y;
     float _165 = clamp(1.0 - _163, 0.0, 1.0);
     vec2 _166 = IN_Uv_EdgeDistance1.xy * 1.0;
@@ -141,7 +142,7 @@ void main()
         else
         {
             float _180 = 1.0 / (1.0 - 0.0);
-            _193 = mix(texture(SPIRV_Cross_CombinedDiffuseMapTextureDiffuseMapSampler, _166 * 0.25), texture(SPIRV_Cross_CombinedDiffuseMapTextureDiffuseMapSampler, _166), vec4(clamp((clamp(1.0 - (_146.View_Depth.w * 0.00333332992158830165863037109375), 0.0, 1.0) * _180) - (0.0 * _180), 0.0, 1.0)));
+            _193 = mix(texture(SPIRV_Cross_CombinedDiffuseMapTextureDiffuseMapSampler, _166 * 0.25), texture(SPIRV_Cross_CombinedDiffuseMapTextureDiffuseMapSampler, _166), vec4(clamp((_160 * _180) - (0.0 * _180), 0.0, 1.0)));
             break;
         }
         _193 = _192;
@@ -167,12 +168,14 @@ void main()
     vec2 _223 = vec2(1.0);
     vec2 _224 = (_220.wy * 2.0) - _223;
     vec3 _232 = vec3(_224, sqrt(clamp(1.0 + dot(-_224, _224), 0.0, 1.0)));
-    vec2 _240 = (texture(SPIRV_Cross_CombinedNormalDetailMapTextureNormalDetailMapSampler, _166 * 0.0).wy * 2.0) - _223;
+    vec4 _237 = texture(SPIRV_Cross_CombinedNormalDetailMapTextureNormalDetailMapSampler, _166 * 0.0);
+    vec2 _240 = (_237.wy * 2.0) - _223;
     vec2 _252 = _232.xy + (vec3(_240, sqrt(clamp(1.0 + dot(-_240, _240), 0.0, 1.0))).xy * 0.0);
     vec3 _253 = vec3(_252.x, _252.y, _232.z);
     vec2 _255 = _253.xy * _165;
     vec3 _256 = vec3(_255.x, _255.y, _253.z);
-    vec3 _271 = ((IN_Color.xyz * (_193 * 1.0).xyz) * (1.0 + (_256.x * 0.300000011920928955078125))) * (texture(SPIRV_Cross_CombinedStudsMapTextureStudsMapSampler, _156.UvStuds).x * 2.0);
+    vec4 _268 = texture(SPIRV_Cross_CombinedStudsMapTextureStudsMapSampler, _156.UvStuds);
+    vec3 _271 = ((IN_Color.xyz * (_193 * 1.0).xyz) * (1.0 + (_256.x * 0.300000011920928955078125))) * (_268.x * 2.0);
     vec4 _298;
     for (;;)
     {

@@ -23,8 +23,8 @@ struct main0_out
 fragment main0_out main0(constant buf& _11 [[buffer(0)]], float4 gl_FragCoord [[position]])
 {
     main0_out out = {};
-    int _67 = int(gl_FragCoord.x) % 16;
-    out._entryPointOutput = float4(dot(float3(_11.results[_67].a), _11.bar.xyz), _11.results[_67].b, 0.0, 0.0);
+    int _68 = int(gl_FragCoord.x) % 16;
+    out._entryPointOutput = float4(dot(float3(_11.results[_68].a), _11.bar.xyz), _11.results[_68].b, 0.0, 0.0);
     return out;
 }
 

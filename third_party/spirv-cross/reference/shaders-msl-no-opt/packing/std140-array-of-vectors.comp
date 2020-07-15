@@ -21,22 +21,22 @@ constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
 kernel void main0(device SSBO& _29 [[buffer(0)]])
 {
     float loaded1 = _29.v1[1].x;
-    _29.v1[2].x = loaded1;
+    (device float&)_29.v1[2] = loaded1;
     float2 loaded2 = _29.v2[1].xy;
-    _29.v2[2].xy = loaded2;
+    (device float2&)_29.v2[2] = loaded2;
     float3 loaded3 = _29.v3[1];
     _29.v3[2] = loaded3;
     float4 loaded4 = _29.v4[1];
     _29.v4[2] = loaded4;
     loaded1 = _29.v1_array_of_array[1][2].x;
-    _29.v1_array_of_array[2][3].x = loaded1;
+    (device float&)_29.v1_array_of_array[2][3] = loaded1;
     loaded2 = _29.v2_array_of_array[1][2].xy;
-    _29.v2_array_of_array[2][3].xy = loaded2;
+    (device float2&)_29.v2_array_of_array[2][3] = loaded2;
     loaded3 = _29.v3_array_of_array[1][2];
     _29.v3_array_of_array[2][3] = loaded3;
     loaded4 = _29.v4_array_of_array[1][2];
     _29.v4_array_of_array[2][3] = loaded4;
     loaded1 = _29.v_unsized[1].x;
-    _29.v_unsized[2].x = loaded1;
+    (device float&)_29.v_unsized[2] = loaded1;
 }
 

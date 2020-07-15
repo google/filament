@@ -216,11 +216,14 @@ fragment main0_out main0(main0_in in [[stage_in]], constant type_View& View [[bu
 {
     main0_out out = {};
     float4 _177 = float4((((gl_FragCoord.xy - View.View_ViewRectMin.xy) * View.View_ViewSizeAndInvSize.zw) - float2(0.5)) * float2(2.0, -2.0), _138, 1.0) * float4(gl_FragCoord.w);
+    float3 _179 = in.in_var_TEXCOORD8.xyz - float3(View.View_PreViewTranslation);
     float3 _181 = normalize(-in.in_var_TEXCOORD8.xyz);
-    float2 _190 = (Material_Texture2D_0.sample(Material_Texture2D_0Sampler, (in.in_var_TEXCOORD0 * float2(10.0))).xy * float2(2.0)) - float2(1.0);
+    float4 _187 = Material_Texture2D_0.sample(Material_Texture2D_0Sampler, (in.in_var_TEXCOORD0 * float2(10.0)));
+    float2 _190 = (_187.xy * float2(2.0)) - float2(1.0);
     float3 _206 = normalize(float3x3(float3(1.0, 0.0, 0.0), float3(0.0, 1.0, 0.0), float3(0.0, 0.0, 1.0)) * (((float4(_190, sqrt(fast::clamp(1.0 - dot(_190, _190), 0.0, 1.0)), 1.0).xyz * float3(0.300000011920928955078125, 0.300000011920928955078125, 1.0)) * float3(View.View_NormalOverrideParameter.w)) + View.View_NormalOverrideParameter.xyz));
     float _208 = dot(_206, _181);
-    float _219 = mix(0.4000000059604644775390625, 1.0, Material_Texture2D_1.sample(Material_Texture2D_1Sampler, (in.in_var_TEXCOORD0 * float2(20.0))).x);
+    float4 _217 = Material_Texture2D_1.sample(Material_Texture2D_1Sampler, (in.in_var_TEXCOORD0 * float2(20.0)));
+    float _219 = mix(0.4000000059604644775390625, 1.0, _217.x);
     float4 _223 = Material_Texture2D_1.sample(Material_Texture2D_1Sampler, (in.in_var_TEXCOORD0 * float2(5.0)));
     float _224 = _177.w;
     float _228 = fast::min(fast::max((_224 - 24.0) * 0.000666666659526526927947998046875, 0.0), 1.0);
@@ -328,7 +331,7 @@ fragment main0_out main0(main0_in in [[stage_in]], constant type_View& View [[bu
     {
         if (_491 < _Globals.NumDynamicPointLights)
         {
-            float3 _501 = _Globals.LightPositionAndInvRadius[_491].xyz - (in.in_var_TEXCOORD8.xyz - float3(View.View_PreViewTranslation));
+            float3 _501 = _Globals.LightPositionAndInvRadius[_491].xyz - _179;
             float _502 = dot(_501, _501);
             float3 _505 = _501 * float3(rsqrt(_502));
             _507 = normalize(_181 + _505);

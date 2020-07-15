@@ -30,7 +30,8 @@ mediump vec2 lod_factor(vec2 tess_coord)
     mediump float level = mix(x.x, x.y, tess_coord.y);
     mediump float floor_level = floor(level);
     mediump float fract_level = level - floor_level;
-    return vec2(floor_level, fract_level);
+    mediump vec2 _74 = vec2(floor_level, fract_level);
+    return _74;
 }
 
 mediump vec3 sample_height_displacement(vec2 uv, vec2 off, mediump vec2 lod)
@@ -52,7 +53,7 @@ void main()
     vGradNormalTex = vec4(tex + (_31.uInvHeightmapSize * 0.5), tex * _31.uScale.zw);
     vec2 param_2 = tex;
     vec2 param_3 = off;
-    vec2 param_4 = lod;
+    mediump vec2 param_4 = lod;
     vec3 height_displacement = sample_height_displacement(param_2, param_3, param_4);
     pos += height_displacement.yz;
     vWorld = vec3(pos.x, height_displacement.x, pos.y);

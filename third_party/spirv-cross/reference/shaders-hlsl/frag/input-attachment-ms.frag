@@ -18,7 +18,8 @@ struct SPIRV_Cross_Output
 
 float4 load_subpasses(Texture2DMS<float4> uInput)
 {
-    return uInput.Load(int2(gl_FragCoord.xy), gl_SampleID);
+    float4 _24 = uInput.Load(int2(gl_FragCoord.xy), gl_SampleID);
+    return _24;
 }
 
 void frag_main()

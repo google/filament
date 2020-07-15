@@ -19,16 +19,16 @@ layout(set = 0, binding = 0, std430) restrict buffer LinkedList
 
 void main()
 {
-    Node _112;
+    Node _114;
     if (gl_WorkGroupID.x < 4u)
     {
-        _112 = _50.head1;
+        _114 = _50.head1;
     }
     else
     {
-        _112 = _50.head2;
+        _114 = _50.head2;
     }
-    _112.next.value = _50.head1.value + _50.head2.value;
+    _114.next.value = _50.head1.value + _50.head2.value;
     _50.head1.value = 20;
     _50.head1.value = _50.head2.value * 10;
 }

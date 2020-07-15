@@ -209,9 +209,12 @@ inline std::string convert_to_string(const T &t)
 #define SPIRV_CROSS_FLT_FMT "%.32g"
 #endif
 
-#ifdef _MSC_VER
-// sprintf warning.
-// We cannot rely on snprintf existing because, ..., MSVC.
+// Disable sprintf and strcat warnings.
+// We cannot rely on snprintf and family existing because, ..., MSVC.
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#elif defined(_MSC_VER)
 #pragma warning(push)
 #pragma warning(disable : 4996)
 #endif
@@ -259,7 +262,32 @@ inline std::string convert_to_string(double t, char locale_radix_point)
 	return buf;
 }
 
-#ifdef _MSC_VER
+template <typename T>
+struct ValueSaver
+{
+	explicit ValueSaver(T &current_)
+	    : current(current_)
+	    , saved(current_)
+	{
+	}
+
+	void release()
+	{
+		current = saved;
+	}
+
+	~ValueSaver()
+	{
+		release();
+	}
+
+	T &current;
+	T saved;
+};
+
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC diagnostic pop
+#elif defined(_MSC_VER)
 #pragma warning(pop)
 #endif
 
@@ -525,7 +553,8 @@ struct SPIRType : IVariant
 		Image,
 		SampledImage,
 		Sampler,
-		AccelerationStructureNV,
+		AccelerationStructure,
+		RayQuery,
 
 		// Keep internal types at the end.
 		ControlPointArray,
@@ -552,10 +581,15 @@ struct SPIRType : IVariant
 	// Keep track of how many pointer layers we have.
 	uint32_t pointer_depth = 0;
 	bool pointer = false;
+	bool forward_pointer = false;
 
 	spv::StorageClass storage = spv::StorageClassGeneric;
 
 	SmallVector<TypeID> member_types;
+
+	// If member order has been rewritten to handle certain scenarios with Offset,
+	// allow codegen to rewrite the index.
+	SmallVector<uint32_t> member_type_index_redirection;
 
 	struct ImageType
 	{
@@ -630,7 +664,7 @@ struct SPIREntryPoint
 	SmallVector<VariableID> interface_variables;
 
 	Bitset flags;
-	struct
+	struct WorkgroupSize
 	{
 		uint32_t x = 0, y = 0, z = 0;
 		uint32_t constant = 0; // Workgroup size can be expressed as a constant/spec-constant instead.
@@ -687,6 +721,9 @@ struct SPIRExpression : IVariant
 	// By reading this expression, we implicitly read these expressions as well.
 	// Used by access chain Store and Load since we read multiple expressions in this case.
 	SmallVector<ID> implied_read_expressions;
+
+	// The expression was emitted at a certain scope. Lets us track when an expression read means multiple reads.
+	uint32_t emitted_loop_level = 0;
 
 	SPIRV_CROSS_DECLARE_CLONE(SPIRExpression)
 };
@@ -770,7 +807,7 @@ struct SPIRBlock : IVariant
 		ComplexLoop
 	};
 
-	enum
+	enum : uint32_t
 	{
 		NoDominator = 0xffffffffu
 	};
@@ -1058,7 +1095,8 @@ struct SPIRConstant : IVariant
 		type = TypeConstant
 	};
 
-	union Constant {
+	union Constant
+	{
 		uint32_t u32;
 		int32_t i32;
 		float f32;
@@ -1096,7 +1134,8 @@ struct SPIRConstant : IVariant
 		int e = (u16_value >> 10) & 0x1f;
 		int m = (u16_value >> 0) & 0x3ff;
 
-		union {
+		union
+		{
 			float f32;
 			uint32_t u32;
 		} u;
@@ -1515,6 +1554,7 @@ struct AccessChainMeta
 	bool need_transpose = false;
 	bool storage_is_packed = false;
 	bool storage_is_invariant = false;
+	bool flattened_struct = false;
 };
 
 enum ExtendedDecorations

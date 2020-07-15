@@ -6,11 +6,11 @@ layout(binding = 0, std430) buffer SSBO
     float data;
 } _11;
 
-float _187;
+float _188;
 
 void main()
 {
-    if (_11.data != 0.0)
+    if (!(_11.data == 0.0))
     {
         _11.data = 10.0;
     }
@@ -31,14 +31,14 @@ void main()
             break;
         }
     }
-    float _184;
-    _184 = _187;
-    for (int _183 = 0; _183 < 20; )
+    float _185;
+    _185 = _188;
+    for (int _184 = 0; _184 < 20; )
     {
-        _184 += 10.0;
-        _183++;
+        _185 += 10.0;
+        _184++;
         continue;
     }
-    _11.data = _184;
+    _11.data = _185;
 }
 

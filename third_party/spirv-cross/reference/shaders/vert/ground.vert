@@ -1,4 +1,7 @@
 #version 310 es
+#ifdef GL_ARB_shader_draw_parameters
+#extension GL_ARB_shader_draw_parameters : enable
+#endif
 
 struct PatchData
 {
@@ -44,7 +47,11 @@ layout(binding = 1) uniform mediump sampler2D TexLOD;
 layout(binding = 0) uniform mediump sampler2D TexHeightmap;
 
 layout(location = 1) in vec4 LODWeights;
+#ifdef GL_ARB_shader_draw_parameters
+#define SPIRV_Cross_BaseInstance gl_BaseInstanceARB
+#else
 uniform int SPIRV_Cross_BaseInstance;
+#endif
 layout(location = 0) in vec2 Position;
 layout(location = 1) out vec3 EyeVec;
 layout(location = 0) out vec2 TexCoord;

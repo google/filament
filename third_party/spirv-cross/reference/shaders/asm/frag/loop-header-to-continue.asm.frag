@@ -22,8 +22,10 @@ layout(location = 0) out vec4 _entryPointOutput;
 
 void main()
 {
+    vec2 _45 = vec2(0.0, _8.CB1.TextureSize.w);
     vec4 _49 = texture(SPIRV_Cross_CombinedmapTexturemapSampler, IN_uv);
     float _50 = _49.y;
+    float _53 = clamp((_50 * 80.0) * 0.0007999999797903001308441162109375, 7.999999797903001308441162109375e-05, 0.008000000379979610443115234375);
     float _55;
     float _58;
     _55 = 0.0;
@@ -31,8 +33,8 @@ void main()
     for (int _60 = -3; _60 <= 3; )
     {
         float _64 = float(_60);
-        vec4 _72 = texture(SPIRV_Cross_CombinedmapTexturemapSampler, IN_uv + (vec2(0.0, _8.CB1.TextureSize.w) * _64));
-        float _78 = exp(((-_64) * _64) * 0.2222220003604888916015625) * float(abs(_72.y - _50) < clamp((_50 * 80.0) * 0.0007999999797903001308441162109375, 7.999999797903001308441162109375e-05, 0.008000000379979610443115234375));
+        vec4 _72 = texture(SPIRV_Cross_CombinedmapTexturemapSampler, IN_uv + (_45 * _64));
+        float _78 = exp(((-_64) * _64) * 0.2222220003604888916015625) * float(abs(_72.y - _50) < _53);
         _55 += (_72.x * _78);
         _58 += _78;
         _60++;

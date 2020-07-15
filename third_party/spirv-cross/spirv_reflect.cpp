@@ -277,14 +277,44 @@ string CompilerReflection::compile()
 	return json_stream->str();
 }
 
+static bool naturally_emit_type(const SPIRType &type)
+{
+	return type.basetype == SPIRType::Struct && !type.pointer && type.array.empty();
+}
+
+bool CompilerReflection::type_is_reference(const SPIRType &type) const
+{
+	// Physical pointers and arrays of physical pointers need to refer to the pointee's type.
+	return type_is_top_level_physical_pointer(type) ||
+	       (!type.array.empty() && type_is_top_level_physical_pointer(get<SPIRType>(type.parent_type)));
+}
+
 void CompilerReflection::emit_types()
 {
 	bool emitted_open_tag = false;
 
-	ir.for_each_typed_id<SPIRType>([&](uint32_t, SPIRType &type) {
-		if (type.basetype == SPIRType::Struct && !type.pointer && type.array.empty())
-			emit_type(type, emitted_open_tag);
+	SmallVector<uint32_t> physical_pointee_types;
+
+	// If we have physical pointers or arrays of physical pointers, it's also helpful to emit the pointee type
+	// and chain the type hierarchy. For POD, arrays can emit the entire type in-place.
+	ir.for_each_typed_id<SPIRType>([&](uint32_t self, SPIRType &type) {
+		if (naturally_emit_type(type))
+		{
+			emit_type(self, emitted_open_tag);
+		}
+		else if (type_is_reference(type))
+		{
+			if (!naturally_emit_type(this->get<SPIRType>(type.parent_type)) &&
+			    find(physical_pointee_types.begin(), physical_pointee_types.end(), type.parent_type) ==
+			        physical_pointee_types.end())
+			{
+				physical_pointee_types.push_back(type.parent_type);
+			}
+		}
 	});
+
+	for (uint32_t pointee_type : physical_pointee_types)
+		emit_type(pointee_type, emitted_open_tag);
 
 	if (emitted_open_tag)
 	{
@@ -292,8 +322,9 @@ void CompilerReflection::emit_types()
 	}
 }
 
-void CompilerReflection::emit_type(const SPIRType &type, bool &emitted_open_tag)
+void CompilerReflection::emit_type(uint32_t type_id, bool &emitted_open_tag)
 {
+	auto &type = get<SPIRType>(type_id);
 	auto name = type_to_glsl(type);
 
 	if (type.type_alias != TypeID(0))
@@ -304,26 +335,42 @@ void CompilerReflection::emit_type(const SPIRType &type, bool &emitted_open_tag)
 		json_stream->emit_json_key_object("types");
 		emitted_open_tag = true;
 	}
-	json_stream->emit_json_key_object("_" + std::to_string(type.self));
+	json_stream->emit_json_key_object("_" + std::to_string(type_id));
 	json_stream->emit_json_key_value("name", name);
-	json_stream->emit_json_key_array("members");
-	// FIXME ideally we'd like to emit the size of a structure as a
-	// convenience to people parsing the reflected JSON.  The problem
-	// is that there's no implicit size for a type.  It's final size
-	// will be determined by the top level declaration in which it's
-	// included.  So there might be one size for the struct if it's
-	// included in a std140 uniform block and another if it's included
-	// in a std430 uniform block.
-	// The solution is to include *all* potential sizes as a map of
-	// layout type name to integer, but that will probably require
-	// some additional logic being written in this class, or in the
-	// parent CompilerGLSL class.
-	auto size = type.member_types.size();
-	for (uint32_t i = 0; i < size; ++i)
+
+	if (type_is_top_level_physical_pointer(type))
 	{
-		emit_type_member(type, i);
+		json_stream->emit_json_key_value("type", "_" + std::to_string(type.parent_type));
+		json_stream->emit_json_key_value("physical_pointer", true);
 	}
-	json_stream->end_json_array();
+	else if (!type.array.empty())
+	{
+		emit_type_array(type);
+		json_stream->emit_json_key_value("type", "_" + std::to_string(type.parent_type));
+		json_stream->emit_json_key_value("array_stride", get_decoration(type_id, DecorationArrayStride));
+	}
+	else
+	{
+		json_stream->emit_json_key_array("members");
+		// FIXME ideally we'd like to emit the size of a structure as a
+		// convenience to people parsing the reflected JSON.  The problem
+		// is that there's no implicit size for a type.  It's final size
+		// will be determined by the top level declaration in which it's
+		// included.  So there might be one size for the struct if it's
+		// included in a std140 uniform block and another if it's included
+		// in a std430 uniform block.
+		// The solution is to include *all* potential sizes as a map of
+		// layout type name to integer, but that will probably require
+		// some additional logic being written in this class, or in the
+		// parent CompilerGLSL class.
+		auto size = type.member_types.size();
+		for (uint32_t i = 0; i < size; ++i)
+		{
+			emit_type_member(type, i);
+		}
+		json_stream->end_json_array();
+	}
+
 	json_stream->end_json_object();
 }
 
@@ -335,7 +382,12 @@ void CompilerReflection::emit_type_member(const SPIRType &type, uint32_t index)
 	// FIXME we'd like to emit the offset of each member, but such offsets are
 	// context dependent.  See the comment above regarding structure sizes
 	json_stream->emit_json_key_value("name", name);
-	if (membertype.basetype == SPIRType::Struct)
+
+	if (type_is_reference(membertype))
+	{
+		json_stream->emit_json_key_value("type", "_" + std::to_string(membertype.parent_type));
+	}
+	else if (membertype.basetype == SPIRType::Struct)
 	{
 		json_stream->emit_json_key_value("type", "_" + std::to_string(membertype.self));
 	}
@@ -349,7 +401,7 @@ void CompilerReflection::emit_type_member(const SPIRType &type, uint32_t index)
 
 void CompilerReflection::emit_type_array(const SPIRType &type)
 {
-	if (!type.array.empty())
+	if (!type_is_top_level_physical_pointer(type) && !type.array.empty())
 	{
 		json_stream->emit_json_key_array("array");
 		// Note that we emit the zeros here as a means of identifying
@@ -388,6 +440,9 @@ void CompilerReflection::emit_type_member_qualifiers(const SPIRType &type, uint3
 			json_stream->emit_json_key_value("matrix_stride", dec.matrix_stride);
 		if (dec.decoration_flags.get(DecorationRowMajor))
 			json_stream->emit_json_key_value("row_major", true);
+
+		if (type_is_top_level_physical_pointer(membertype))
+			json_stream->emit_json_key_value("physical_pointer", true);
 	}
 }
 
@@ -601,6 +656,7 @@ void CompilerReflection::emit_specialization_constants()
 		auto &c = get<SPIRConstant>(spec_const.id);
 		auto type = get<SPIRType>(c.constant_type);
 		json_stream->begin_json_object();
+		json_stream->emit_json_key_value("name", get_name(spec_const.id));
 		json_stream->emit_json_key_value("id", spec_const.constant_id);
 		json_stream->emit_json_key_value("type", type_to_glsl(type));
 		json_stream->emit_json_key_value("variable_id", spec_const.id);

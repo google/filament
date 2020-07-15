@@ -29,8 +29,8 @@ void main()
     vec2 displacement = textureLod(uDisplacement, uv.zw, 0.0).xy * 1.2000000476837158203125;
     vec2 dDdx = (textureLodOffset(uDisplacement, uv.zw, 0.0, ivec2(1, 0)).xy - textureLodOffset(uDisplacement, uv.zw, 0.0, ivec2(-1, 0)).xy) * 0.60000002384185791015625;
     vec2 dDdy = (textureLodOffset(uDisplacement, uv.zw, 0.0, ivec2(0, 1)).xy - textureLodOffset(uDisplacement, uv.zw, 0.0, ivec2(0, -1)).xy) * 0.60000002384185791015625;
-    vec2 param = dDdx * _46.uScale.z;
-    vec2 param_1 = dDdy * _46.uScale.z;
+    mediump vec2 param = dDdx * _46.uScale.z;
+    mediump vec2 param_1 = dDdy * _46.uScale.z;
     float j = jacobian(param, param_1);
     displacement = vec2(0.0);
     imageStore(iHeightDisplacement, ivec2(gl_GlobalInvocationID.xy), vec4(h, displacement, 0.0));

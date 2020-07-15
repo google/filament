@@ -1,0 +1,63 @@
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos Glslang Reference Front End; 8
+; Bound: 33
+; Schema: 0
+               OpCapability Shader
+               OpCapability Float16
+               OpCapability StorageBuffer16BitAccess
+               OpExtension "SPV_KHR_16bit_storage"
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpSource GLSL 450
+               OpSourceExtension "GL_EXT_shader_explicit_arithmetic_types"
+               OpName %main "main"
+               OpName %SSBO "SSBO"
+               OpMemberName %SSBO 0 "a"
+               OpMemberName %SSBO 1 "b"
+               OpMemberName %SSBO 2 "c"
+               OpMemberName %SSBO 3 "d"
+               OpName %_ ""
+               OpMemberDecorate %SSBO 0 Offset 0
+               OpMemberDecorate %SSBO 1 Offset 4
+               OpMemberDecorate %SSBO 2 Offset 8
+               OpMemberDecorate %SSBO 3 Offset 12
+               OpDecorate %SSBO BufferBlock
+               OpDecorate %_ DescriptorSet 0
+               OpDecorate %_ Binding 0
+               OpDecorate %gl_WorkGroupSize BuiltIn WorkgroupSize
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+       %half = OpTypeFloat 16
+     %v2half = OpTypeVector %half 2
+      %float = OpTypeFloat 32
+       %SSBO = OpTypeStruct %v2half %float %float %v2half
+%_ptr_Uniform_SSBO = OpTypePointer Uniform %SSBO
+          %_ = OpVariable %_ptr_Uniform_SSBO Uniform
+        %int = OpTypeInt 32 1
+      %int_1 = OpConstant %int 1
+      %int_0 = OpConstant %int 0
+%_ptr_Uniform_v2half = OpTypePointer Uniform %v2half
+       %uint = OpTypeInt 32 0
+%_ptr_Uniform_float = OpTypePointer Uniform %float
+      %int_3 = OpConstant %int 3
+      %int_2 = OpConstant %int 2
+     %v3uint = OpTypeVector %uint 3
+     %uint_1 = OpConstant %uint 1
+%gl_WorkGroupSize = OpConstantComposite %v3uint %uint_1 %uint_1 %uint_1
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+         %16 = OpAccessChain %_ptr_Uniform_v2half %_ %int_0
+         %17 = OpLoad %v2half %16
+         %20 = OpBitcast %float %17
+         %22 = OpAccessChain %_ptr_Uniform_float %_ %int_1
+               OpStore %22 %20
+         %25 = OpAccessChain %_ptr_Uniform_float %_ %int_2
+         %26 = OpLoad %float %25
+         %28 = OpBitcast %v2half %26
+         %29 = OpAccessChain %_ptr_Uniform_v2half %_ %int_3
+               OpStore %29 %28
+               OpReturn
+               OpFunctionEnd

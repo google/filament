@@ -1,0 +1,26 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct SSBO
+{
+    float4 v;
+    float4x4 cm;
+    float4x4 rm;
+    packed_float3 v3;
+    float f;
+};
+
+kernel void main0(device SSBO& _12 [[buffer(0)]])
+{
+    threadgroup float4 shared_vec4;
+    threadgroup float3 shared_vec3;
+    ((device float*)&_12.v)[0u] = 10.0;
+    _12.v3[1u] = 40.0;
+    ((device float*)&_12.cm[1])[2u] = 20.0;
+    ((device float*)&_12.rm[1u])[3] = 30.0;
+    ((threadgroup float*)&shared_vec4)[2u] = 40.0;
+    ((threadgroup float*)&shared_vec3)[1u] = 1.0;
+}
+

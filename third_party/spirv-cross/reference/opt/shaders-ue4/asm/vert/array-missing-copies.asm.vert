@@ -323,13 +323,6 @@ vertex main0_out main0(main0_in in [[stage_in]], constant type_View& View [[buff
     spvUnsafeArray<float4, 2> in_var_ATTRIBUTE1 = {};
     in_var_ATTRIBUTE1[0] = in.in_var_ATTRIBUTE1_0;
     in_var_ATTRIBUTE1[1] = in.in_var_ATTRIBUTE1_1;
-    spvUnsafeArray<float4, 1> _97;
-    for (int _107 = 0; _107 < 1; )
-    {
-        _97[_107] = float4(0.0);
-        _107++;
-        continue;
-    }
     float4 _115 = in.in_var_ATTRIBUTE0 * float4(255.0);
     float2 _116 = _115.zw;
     float2 _119 = fract(_116 * float2(0.5)) * float2(2.0);
@@ -450,13 +443,13 @@ vertex main0_out main0(main0_in in [[stage_in]], constant type_View& View [[buff
     }
     bool _468 = (MobileBasePass.MobileBasePass_Fog_ExponentialFogParameters3.w > 0.0) && (_347 > MobileBasePass.MobileBasePass_Fog_ExponentialFogParameters3.w);
     float _471 = _468 ? 1.0 : fast::max(fast::clamp(exp2(-(_428 * _393)), 0.0, 1.0), MobileBasePass.MobileBasePass_Fog_ExponentialFogColorParameter.w);
-    _97[0] = float4((MobileBasePass.MobileBasePass_Fog_ExponentialFogColorParameter.xyz * float3(1.0 - _471)) + select(_459, float3(0.0), bool3(_468)), _471);
+    float4 _479 = float4((MobileBasePass.MobileBasePass_Fog_ExponentialFogColorParameter.xyz * float3(1.0 - _471)) + select(_459, float3(0.0), bool3(_468)), _471);
     float4 _482 = _338;
     _482.w = _339.w;
     out.out_var_TEXCOORD0 = ((_323 + LandscapeParameters.LandscapeParameters_SubsectionSizeVertsLayerUVPan.zw) + _292).xy;
     out.out_var_TEXCOORD1 = ((_323 * LandscapeParameters.LandscapeParameters_WeightmapUVScaleBias.xy) + LandscapeParameters.LandscapeParameters_WeightmapUVScaleBias.zw) + (_288 * LandscapeParameters.LandscapeParameters_SubsectionOffsetParams.zz);
-    out.out_var_TEXCOORD2 = float4(float4(0.0).x, float4(0.0).y, _97[0].x, _97[0].y);
-    out.out_var_TEXCOORD3 = float4(float4(0.0).x, float4(0.0).y, _97[0].z, _97[0].w);
+    out.out_var_TEXCOORD2 = float4(float4(0.0).x, float4(0.0).y, _479.x, _479.y);
+    out.out_var_TEXCOORD3 = float4(float4(0.0).x, float4(0.0).y, _479.z, _479.w);
     out.out_var_TEXCOORD8 = _482;
     out.gl_Position = _339;
     return out;
