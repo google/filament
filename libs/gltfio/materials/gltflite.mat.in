@@ -6,7 +6,8 @@ material {
     depthWrite : true,
     doubleSided : ${DOUBLESIDED},
     flipUV : false,
-    specularAmbientOcclusion: simple,
+    specularAmbientOcclusion : simple,
+    specularAntiAliasing : true,
     parameters : [
 
         // Base Color
