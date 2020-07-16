@@ -19,6 +19,23 @@ material {
     variables : [
         vertex
     ],
+    outputs : [
+        {
+            name : color,
+            target : color,
+            type : float4
+        },
+        {
+            name : background,
+            target : color,
+            type : float4
+        },
+        {
+            name : cocFgBg,
+            target : color,
+            type : float2
+        }
+    ],
     domain : postprocess,
     depthWrite : false,
     depthCulling : false
@@ -31,9 +48,6 @@ vertex {
 }
 
 fragment {
-
-layout(location = 1) out vec4 outBackground;
-layout(location = 2) out vec2 outCocFgBg;
 
 #include "dofUtils.fs"
 
@@ -112,9 +126,9 @@ void postProcess(inout PostProcessInputs postProcess) {
 #endif
 
     // Output to MRTs
-    postProcess.color   = foreground;
-    outBackground       = background;
-    outCocFgBg          = vec2(fgCoc, bgCoc);
+    postProcess.color       = foreground;
+    postProcess.background  = background;
+    postProcess.cocFgBg     = vec2(fgCoc, bgCoc);
 }
 
 }

@@ -88,6 +88,12 @@ public:
         const filament::AttributeBitset& attributes, filament::Interpolation interpolation) const;
     utils::io::sstream& generatePostProcessInputs(utils::io::sstream& out, ShaderType type) const;
 
+    // generate declarations for custom output variables
+    utils::io::sstream& generateOutput(utils::io::sstream& out, ShaderType type,
+            const utils::CString& name, size_t index,
+            MaterialBuilder::VariableQualifier qualifier,
+            MaterialBuilder::OutputType outputType) const;
+
     // generate no-op shader for depth prepass
     utils::io::sstream& generateDepthShaderMain(utils::io::sstream& out, ShaderType type) const;
 
@@ -141,6 +147,9 @@ private:
 
     // return type name of uniform  (e.g.: "vec3", "vec4", "float")
     static char const* getUniformTypeName(filament::UniformInterfaceBlock::Type uniformType) noexcept;
+
+    // return type name of output  (e.g.: "vec3", "vec4", "float")
+    static char const* getOutputTypeName(MaterialBuilder::OutputType type) noexcept;
 
     // return qualifier for the specified interpolation mode
     static char const* getInterpolationQualifier(filament::Interpolation interpolation) noexcept;

@@ -13,6 +13,13 @@ material {
     ],
     variables : [
     ],
+    outputs : [
+        {
+            name : depth,
+            target : depth,
+            type : float
+        }
+    ],
     domain : postprocess,
     depthWrite : true,
     depthCulling : false,
@@ -25,7 +32,7 @@ fragment {
     void postProcess(inout PostProcessInputs postProcess) {
         int level = materialParams.level;
         ivec2 icoord = ivec2(gl_FragCoord.xy);
-        gl_FragDepth = texelFetch(materialParams_depth,
+        postProcess.depth = texelFetch(materialParams_depth,
                 2 * icoord + ivec2(icoord.y & 1, icoord.x & 1), level).r;
     }
 }

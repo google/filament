@@ -130,12 +130,14 @@ static void appendShader(utils::io::sstream& ss,
 ShaderGenerator::ShaderGenerator(
         MaterialBuilder::PropertyList const& properties,
         MaterialBuilder::VariableList const& variables,
+        MaterialBuilder::OutputList const& outputs,
         MaterialBuilder::PreprocessorDefineList const& defines,
         utils::CString const& materialCode, size_t lineOffset,
         utils::CString const& materialVertexCode, size_t vertexLineOffset,
         MaterialBuilder::MaterialDomain materialDomain) noexcept {
     std::copy(std::begin(properties), std::end(properties), std::begin(mProperties));
     std::copy(std::begin(variables), std::end(variables), std::begin(mVariables));
+    std::copy(std::begin(outputs), std::end(outputs), std::back_inserter(mOutputs));
 
     mMaterialCode = materialCode;
     mMaterialVertexCode = materialVertexCode;
@@ -532,6 +534,19 @@ std::string ShaderGenerator::createPostProcessFragmentProgram(
 
     cg.generateCommon(fs, ShaderType::FRAGMENT);
     cg.generatePostProcessGetters(fs, ShaderType::FRAGMENT);
+
+    // Generate post-process outputs.
+    size_t outputIndex = 0;
+    for (const auto& output : mOutputs) {
+        if (output.target == MaterialBuilder::OutputTarget::COLOR) {
+            cg.generateOutput(fs, ShaderType::FRAGMENT, output.name, outputIndex++,
+                    output.qualifier, output.type);
+        }
+        if (output.target == MaterialBuilder::OutputTarget::DEPTH) {
+            cg.generateDefine(fs, "OUTPUT_DEPTH", 1u);
+        }
+    }
+
     cg.generatePostProcessInputs(fs, ShaderType::FRAGMENT);
 
     appendShader(fs, mMaterialCode, mMaterialLineOffset);

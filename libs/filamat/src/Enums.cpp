@@ -105,6 +105,37 @@ std::unordered_map<std::string, SamplerPrecision>& Enums::getMap<SamplerPrecisio
     return mStringToSamplerPrecision;
 };
 
+std::unordered_map<std::string, OutputTarget> Enums::mStringToOutputTarget = {
+        { "color",   OutputTarget::COLOR },
+        { "depth",   OutputTarget::DEPTH }
+};
+
+template <>
+std::unordered_map<std::string, OutputTarget>& Enums::getMap<OutputTarget>() noexcept {
+    return mStringToOutputTarget;
+};
+
+std::unordered_map<std::string, OutputQualifier> Enums::mStringToOutputQualifier = {
+        { "out",     OutputQualifier::OUT }
+};
+
+template <>
+std::unordered_map<std::string, OutputQualifier>& Enums::getMap<OutputQualifier>() noexcept {
+    return mStringToOutputQualifier;
+};
+
+std::unordered_map<std::string, OutputType> Enums::mStringToOutputType = {
+        { "float",   OutputType::FLOAT },
+        { "float2",  OutputType::FLOAT2 },
+        { "float3",  OutputType::FLOAT3 },
+        { "float4",  OutputType::FLOAT4 },
+};
+
+template <>
+std::unordered_map<std::string, OutputType>& Enums::getMap<OutputType>() noexcept {
+    return mStringToOutputType;
+};
+
 std::unordered_map<std::string, SamplerFormat> Enums::mStringToSamplerFormat = {
         { "int",    SamplerFormat::INT },
         { "uint",   SamplerFormat::UINT },
