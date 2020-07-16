@@ -1231,6 +1231,7 @@ public:
     TOperator getFlowOp() const { return flowOp; }
     TIntermTyped* getExpression() const { return expression; }
     void setExpression(TIntermTyped* pExpression) { expression = pExpression; }
+    void updatePrecision(TPrecisionQualifier parentPrecision);
 protected:
     TOperator flowOp;
     TIntermTyped* expression;

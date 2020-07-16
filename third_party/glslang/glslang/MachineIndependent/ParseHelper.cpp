@@ -1415,23 +1415,28 @@ TIntermNode* TParseContext::handleReturnValue(const TSourceLoc& loc, TIntermType
 #endif
 
     functionReturnsValue = true;
+    TIntermBranch* branch = nullptr;
     if (currentFunctionType->getBasicType() == EbtVoid) {
         error(loc, "void function cannot return a value", "return", "");
-        return intermediate.addBranch(EOpReturn, loc);
+        branch = intermediate.addBranch(EOpReturn, loc);
     } else if (*currentFunctionType != value->getType()) {
         TIntermTyped* converted = intermediate.addConversion(EOpReturn, *currentFunctionType, value);
         if (converted) {
             if (*currentFunctionType != converted->getType())
                 error(loc, "cannot convert return value to function return type", "return", "");
             if (version < 420)
-                warn(loc, "type conversion on return values was not explicitly allowed until version 420", "return", "");
-            return intermediate.addBranch(EOpReturn, converted, loc);
+                warn(loc, "type conversion on return values was not explicitly allowed until version 420",
+                     "return", "");
+            branch = intermediate.addBranch(EOpReturn, converted, loc);
         } else {
             error(loc, "type does not match, or is not convertible to, the function's return type", "return", "");
-            return intermediate.addBranch(EOpReturn, value, loc);
+            branch = intermediate.addBranch(EOpReturn, value, loc);
         }
     } else
-        return intermediate.addBranch(EOpReturn, value, loc);
+        branch = intermediate.addBranch(EOpReturn, value, loc);
+
+    branch->updatePrecision(currentFunctionType->getQualifier().precision);
+    return branch;
 }
 
 // See if the operation is being done in an illegal location.
