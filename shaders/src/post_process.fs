@@ -6,16 +6,16 @@ void main() {
 
 #if defined(TARGET_MOBILE)
 #if defined(OUTPUT0)
-    inputs.OUTPUT0 = clamp(inputs.OUTPUT0 -MEDIUMP_FLT_MAX, MEDIUMP_FLT_MAX);
+    inputs.OUTPUT0 = clamp(inputs.OUTPUT0, -MEDIUMP_FLT_MAX, MEDIUMP_FLT_MAX);
 #endif
 #if defined(OUTPUT1)
-    inputs.OUTPUT1 = clamp(inputs.OUTPUT1 -MEDIUMP_FLT_MAX, MEDIUMP_FLT_MAX);
+    inputs.OUTPUT1 = clamp(inputs.OUTPUT1, -MEDIUMP_FLT_MAX, MEDIUMP_FLT_MAX);
 #endif
 #if defined(OUTPUT2)
-    inputs.OUTPUT2 = clamp(inputs.OUTPUT2 -MEDIUMP_FLT_MAX, MEDIUMP_FLT_MAX);
+    inputs.OUTPUT2 = clamp(inputs.OUTPUT2, -MEDIUMP_FLT_MAX, MEDIUMP_FLT_MAX);
 #endif
 #if defined(OUTPUT3)
-    inputs.OUTPUT3 = clamp(inputs.OUTPUT3 -MEDIUMP_FLT_MAX, MEDIUMP_FLT_MAX);
+    inputs.OUTPUT3 = clamp(inputs.OUTPUT3, -MEDIUMP_FLT_MAX, MEDIUMP_FLT_MAX);
 #endif
 #endif
 
