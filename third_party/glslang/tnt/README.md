@@ -4,16 +4,15 @@ To update glslang use the following steps:
 - Run the following commands (on Mac) to unzip and copy the new source files:
 
 ```
-cd third_party/glslang
-unzip glslang-master.zip
-rsync --remove-source-files -ra glslang-master/ ./
-rm -r glslang-master.zip glslang-master
-```
-
-The `Test` folder can be removed, as it is not needed:
-
-```
+cd third_party
+curl -L https://github.com/KhronosGroup/glslang/archive/master.zip > main.zip
+unzip main.zip
+rsync -r glslang-master/ glslang/ --delete
+rm -r main.zip glslang-master
 rm -rf glslang/Test/
+git checkout glslang/*/tnt/*
+git restore glslang/LICENSE
+git add glslang
 ```
 
 - If necessary, update the `DefaultTBuiltInResource` definition inside `libs/filamat/src/sca/builtinResource.h` to glslang's located at
