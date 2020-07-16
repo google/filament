@@ -229,9 +229,9 @@ utils::io::sstream& CodeGenerator::generateOutput(utils::io::sstream& out, Shade
 
     const char* typeString = getOutputTypeName(outputType);
 
-    out << "\n#define OUTPUT" << index << " " << name.c_str() << "\n";
-    out << "\n#define OUTPUT_AT" << index << " output_" << name.c_str() << "\n";
-    out << "\n#define OUTPUT_TYPE" << index << " " << typeString << "\n";
+    out << "\n#define FRAG_OUTPUT" << index << " " << name.c_str() << "\n";
+    out << "\n#define FRAG_OUTPUT_AT" << index << " output_" << name.c_str() << "\n";
+    out << "\n#define FRAG_OUTPUT_TYPE" << index << " " << typeString << "\n";
     out << "LAYOUT_LOCATION(" << index << ") out " << typeString <<
         " output_" << name.c_str() << ";\n";
 

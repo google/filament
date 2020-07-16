@@ -6,19 +6,19 @@ highp vec2 getUV() {
 }
 
 struct PostProcessInputs {
-#if defined(OUTPUT0)
-    OUTPUT_TYPE0 OUTPUT0;
+#if defined(FRAG_OUTPUT0)
+    FRAG_OUTPUT_TYPE0 FRAG_OUTPUT0;
 #endif
-#if defined(OUTPUT1)
-    OUTPUT_TYPE1 OUTPUT1;
+#if defined(FRAG_OUTPUT1)
+    FRAG_OUTPUT_TYPE1 FRAG_OUTPUT1;
 #endif
-#if defined(OUTPUT2)
-    OUTPUT_TYPE2 OUTPUT2;
+#if defined(FRAG_OUTPUT2)
+    FRAG_OUTPUT_TYPE2 FRAG_OUTPUT2;
 #endif
-#if defined(OUTPUT3)
-    OUTPUT_TYPE3 OUTPUT3;
+#if defined(FRAG_OUTPUT3)
+    FRAG_OUTPUT_TYPE3 FRAG_OUTPUT3;
 #endif
-#if defined(OUTPUT_DEPTH)
+#if defined(FRAG_OUTPUT_DEPTH)
     float depth;
 #endif
 };

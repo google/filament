@@ -543,7 +543,7 @@ std::string ShaderGenerator::createPostProcessFragmentProgram(
                     output.qualifier, output.type);
         }
         if (output.target == MaterialBuilder::OutputTarget::DEPTH) {
-            cg.generateDefine(fs, "OUTPUT_DEPTH", 1u);
+            cg.generateDefine(fs, "FRAG_OUTPUT_DEPTH", 1u);
         }
     }
 
