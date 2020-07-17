@@ -197,9 +197,17 @@ private:
     bool mEnableWireframe = false;
     bool mEnableSunlight = true;
     bool mEnableShadows = true;
-    int mShadowCascades = 1;
     bool mEnableContactShadows = false;
-    std::array<float, 3> mSplitPositions = {0.25f, 0.50f, 0.75f};
+
+    // ShadowProperties are A/B-able.
+    struct ShadowProperties {
+        int cascades = 1;
+        std::array<float, 3> splitPositions = {0.25f, 0.50f, 0.75f};
+    };
+    ShadowProperties mShadowPropertiesA;
+    ShadowProperties mShadowPropertiesB;
+    ShadowProperties* mShadowProperties = &mShadowPropertiesA;
+
     bool mEnableDithering = true;
     bool mEnableFxaa = true;
     bool mEnableMsaa = true;
@@ -483,12 +491,30 @@ void SimpleViewer::updateUserInterface() {
         ImGuiExt::DirectionWidget("Sun direction", mSunlightDirection.v);
         ImGui::Checkbox("Enable sunlight", &mEnableSunlight);
         ImGui::Checkbox("Enable shadows", &mEnableShadows);
-        ImGui::SliderInt("Cascades", &mShadowCascades, 1, 4);
         ImGui::Checkbox("Debug Cascades", debug.getPropertyAddress<bool>("d.shadowmap.visualize_cascades"));
         ImGui::Checkbox("Enable contact shadows", &mEnableContactShadows);
-        ImGui::SliderFloat("Split pos 0", &mSplitPositions[0], 0.0f, 1.0f);
-        ImGui::SliderFloat("Split pos 1", &mSplitPositions[1], 0.0f, 1.0f);
-        ImGui::SliderFloat("Split pos 2", &mSplitPositions[2], 0.0f, 1.0f);
+
+        auto shadowProperties = [] (ShadowProperties& o) {
+            ImGui::SliderFloat("Split pos 0", &o.splitPositions[0], 0.0f, 1.0f);
+            ImGui::SliderFloat("Split pos 1", &o.splitPositions[1], 0.0f, 1.0f);
+            ImGui::SliderFloat("Split pos 2", &o.splitPositions[2], 0.0f, 1.0f);
+            ImGui::SliderInt("Cascades", &o.cascades, 1, 4);
+        };
+
+        if (ImGui::BeginTabBar("Shadow options")) {
+            if (ImGui::BeginTabItem("A")) {
+                shadowProperties(mShadowPropertiesA);
+                mShadowProperties = &mShadowPropertiesA;
+                ImGui::EndTabItem();
+            }
+            if (ImGui::BeginTabItem("B")) {
+                shadowProperties(mShadowPropertiesB);
+                mShadowProperties = &mShadowPropertiesB;
+                ImGui::EndTabItem();
+            }
+            ImGui::EndTabBar();
+        }
+
         ImGui::Unindent();
     }
 
@@ -528,8 +554,8 @@ void SimpleViewer::updateUserInterface() {
     lm.forEachComponent([this, &lm](utils::Entity e, LightManager::Instance ci) {
         auto options = lm.getShadowOptions(ci);
         options.screenSpaceContactShadows = mEnableContactShadows;
-        options.shadowCascades = mShadowCascades;
-        std::copy_n(mSplitPositions.begin(), 3, options.cascadeSplitPositions);
+        options.shadowCascades = mShadowProperties->cascades;
+        std::copy_n(mShadowProperties->splitPositions.begin(), 3, options.cascadeSplitPositions);
         lm.setShadowOptions(ci, options);
         lm.setShadowCaster(ci, mEnableShadows);
     });
