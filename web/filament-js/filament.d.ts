@@ -46,6 +46,14 @@ export type mat3 = glm.mat3|number[];
 export type mat4 = glm.mat4|number[];
 export type quat = glm.quat|number[];
 
+/** A C++ std::vector. */
+export interface Vector<T> {
+    size(): number;
+    get(i: number): T;
+}
+
+export function vectorToArray<T>(vector: Vector<T>): T[];
+
 export class Texture {}
 export class SwapChain {}
 
@@ -96,16 +104,6 @@ export interface View$BloomOptions {
 // TODO: Remove the entity type and just use integers for parity with Filament's Java bindings.
 export class Entity {
     public getId(): number;
-}
-
-export class EntityVector {
-    public get(index: number): Entity;
-    public size(): number;
-}
-
-export class MaterialInstanceVector {
-    public get(index: number): MaterialInstance;
-    public size(): number;
 }
 
 export class Skybox {
@@ -489,8 +487,8 @@ export class gltfio$FilamentAsset {
     public getCameraEntities(): Entity[];
     public getRoot(): Entity;
     public popRenderable(): Entity;
-    public getMaterialInstances(): MaterialInstanceVector;
-    public getResourceUris(): string[];
+    public getMaterialInstances(): Vector<MaterialInstance>;
+    public getResourceUris(): Vector<string>;
     public getBoundingBox(): Aabb;
     public getName(entity: Entity): string;
     public getAnimator(): gltfio$Animator;
@@ -500,7 +498,7 @@ export class gltfio$FilamentAsset {
 }
 
 export class gltfio$FilamentInstance {
-    public getEntities(): EntityVector;
+    public getEntities(): Vector<Entity>;
     public getRoot(): Entity;
     public getAnimator(): gltfio$Animator;
 }
