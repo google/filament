@@ -321,10 +321,11 @@ public:
          *
          * @warning This API is still experimental and subject to change.
          *
-         * @param splitPositions    a float array to write the split positions into
-         * @param cascades          the number of shadow cascades
+         * @param splitPositions    a float array of at least size (cascades - 1) to write the split
+         *                          positions into
+         * @param cascades          the number of shadow cascades, at most 4
          */
-        static void computeUniformSplits(float splitPositions[3], uint8_t cascades);
+        static void computeUniformSplits(float* splitPositions, uint8_t cascades);
 
         /**
          * Utility method to compute ShadowOptions::cascadeSplitPositions according to a logarithmic
@@ -332,12 +333,13 @@ public:
          *
          * @warning This API is still experimental and subject to change.
          *
-         * @param splitPositions    a float array to write the split positions into
-         * @param cascades          the number of shadow cascades
+         * @param splitPositions    a float array of at least size (cascades - 1) to write the split
+         *                          positions into
+         * @param cascades          the number of shadow cascades, at most 4
          * @param near              the camera near plane
          * @param far               the camera far plane
          */
-        static void computeLogSplits(float splitPositions[3], uint8_t cascades,
+        static void computeLogSplits(float* splitPositions, uint8_t cascades,
                 float near, float far);
 
         /**
@@ -351,14 +353,15 @@ public:
          *
          * @warning This API is still experimental and subject to change.
          *
-         * @param splitPositions    a float array to write the split positions into
-         * @param cascades          the number of shadow cascades
+         * @param splitPositions    a float array of at least size (cascades - 1) to write the split
+         *                          positions into
+         * @param cascades          the number of shadow cascades, at most 4
          * @param near              the camera near plane
          * @param far               the camera far plane
          * @param lambda            a float in the range [0, 1] that interpolates between log and
          *                          uniform split schemes
          */
-        static void computePracticalSplits(float splitPositions[3], uint8_t cascades,
+        static void computePracticalSplits(float* splitPositions, uint8_t cascades,
                 float near, float far, float lambda);
     };
 
