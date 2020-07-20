@@ -324,12 +324,7 @@ public:
          * @param splitPositions    a float array to write the split positions into
          * @param cascades          the number of shadow cascades
          */
-        static void computeUniformSplits(float splitPositions[3], uint8_t cascades) {
-            size_t s = 0;
-            for (size_t c = 1; c < cascades; c++) {
-                splitPositions[s++] = (float) c / cascades;
-            }
-        }
+        static void computeUniformSplits(float splitPositions[3], uint8_t cascades);
 
         /**
          * Utility method to compute ShadowOptions::cascadeSplitPositions according to a logarithmic
@@ -343,13 +338,7 @@ public:
          * @param far               the camera far plane
          */
         static void computeLogSplits(float splitPositions[3], uint8_t cascades,
-                float near, float far) {
-            size_t s = 0;
-            for (size_t c = 1; c < cascades; c++) {
-                splitPositions[s++] =
-                    (near * std::powf(far / near, (float) c / cascades) - near) / (far - near);
-            }
-        }
+                float near, float far);
 
         /**
          * Utility method to compute ShadowOptions::cascadeSplitPositions according to a practical
@@ -370,17 +359,7 @@ public:
          *                          uniform split schemes
          */
         static void computePracticalSplits(float splitPositions[3], uint8_t cascades,
-                float near, float far, float lambda) {
-            float uniformSplits[3];
-            float logSplits[3];
-            computeUniformSplits(uniformSplits, cascades);
-            computeLogSplits(logSplits, cascades, near, far);
-            size_t s = 0;
-            for (size_t c = 1; c < cascades; c++) {
-                splitPositions[s] = lambda * logSplits[s] + (1.0f - lambda) * uniformSplits[s];
-                s++;
-            }
-        }
+                float near, float far, float lambda);
     };
 
     //! Use Builder to construct a Light object instance
