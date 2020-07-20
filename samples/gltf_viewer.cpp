@@ -117,6 +117,33 @@ struct App {
         math::float3 midPoint{1.0f};
         math::float3 scale{1.0f};
         bool linkedCurves = false;
+
+        bool operator!=(const ColorGradingOptions &rhs) const {
+            return !(rhs == *this);
+        }
+
+        bool operator==(const ColorGradingOptions &rhs) const {
+            // Note: Do NOT compare hasAdjustments
+            return enabled == rhs.enabled &&
+                   toneMapping == rhs.toneMapping &&
+                   temperature == rhs.temperature &&
+                   outRed == rhs.outRed &&
+                   outGreen == rhs.outGreen &&
+                   outBlue == rhs.outBlue &&
+                   shadows == rhs.shadows &&
+                   midtones == rhs.midtones &&
+                   highlights == rhs.highlights &&
+                   ranges == rhs.ranges &&
+                   slope == rhs.slope &&
+                   offset == rhs.offset &&
+                   power == rhs.power &&
+                   contrast == rhs.contrast &&
+                   vibrance == rhs.vibrance &&
+                   saturation == rhs.saturation &&
+                   gamma == rhs.gamma &&
+                   midPoint == rhs.midPoint &&
+                   scale == rhs.scale;
+        }
     } colorGradingOptions;
 
     ColorGradingOptions lastColorGradingOptions;
@@ -831,10 +858,9 @@ int main(int argc, char** argv) {
         });
 
         if (app.colorGradingOptions.enabled) {
-            if (memcmp(&app.colorGradingOptions, &app.lastColorGradingOptions,
-                    sizeof(App::ColorGradingOptions))) {
-                App::ColorGradingOptions& options = app.colorGradingOptions;
-                ColorGrading* colorGrading = ColorGrading::Builder()
+            if (app.colorGradingOptions != app.lastColorGradingOptions) {
+                App::ColorGradingOptions &options = app.colorGradingOptions;
+                ColorGrading *colorGrading = ColorGrading::Builder()
                         .whiteBalance(options.temperature / 100.0f, options.tint / 100.0f)
                         .channelMixer(options.outRed, options.outGreen, options.outBlue)
                         .shadowsMidtonesHighlights(
@@ -856,7 +882,7 @@ int main(int argc, char** argv) {
                 }
 
                 app.colorGrading = colorGrading;
-                app.lastColorGradingOptions = options;
+                app.lastColorGradingOptions = app.colorGradingOptions;
             }
             view->setColorGrading(app.colorGrading);
         } else {
