@@ -30,6 +30,9 @@ using UniformType = MaterialBuilder::UniformType;
 using SamplerType = MaterialBuilder::SamplerType;
 using SamplerFormat = MaterialBuilder::SamplerFormat;
 using SamplerPrecision = MaterialBuilder::SamplerPrecision;
+using OutputTarget = MaterialBuilder::OutputTarget;
+using OutputQualifier = MaterialBuilder::VariableQualifier;
+using OutputType = MaterialBuilder::OutputType;
 
 // Convenience methods to convert std::string to Enum and also iterate over Enum values.
 class Enums {
@@ -69,6 +72,9 @@ private:
     static std::unordered_map<std::string, SamplerType> mStringToSamplerType;
     static std::unordered_map<std::string, SamplerFormat> mStringToSamplerFormat;
     static std::unordered_map<std::string, SamplerPrecision> mStringToSamplerPrecision;
+    static std::unordered_map<std::string, OutputTarget> mStringToOutputTarget;
+    static std::unordered_map<std::string, OutputQualifier> mStringToOutputQualifier;
+    static std::unordered_map<std::string, OutputType> mStringToOutputType;
 };
 
 template<typename T>

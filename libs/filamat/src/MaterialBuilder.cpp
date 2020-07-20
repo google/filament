@@ -585,7 +585,7 @@ bool MaterialBuilder::generateShaders(const std::vector<Variant>& variants, Chun
     std::vector<uint32_t> spirv;
     std::string msl;
 
-    ShaderGenerator sg(mProperties, mVariables, mDefines, mMaterialCode.getResolved(),
+    ShaderGenerator sg(mProperties, mVariables, mOutputs, mDefines, mMaterialCode.getResolved(),
             mMaterialCode.getLineOffset(), mMaterialVertexCode.getResolved(),
             mMaterialVertexCode.getLineOffset(), mMaterialDomain);
 
@@ -714,6 +714,38 @@ bool MaterialBuilder::generateShaders(const std::vector<Variant>& variants, Chun
     return true;
 }
 
+MaterialBuilder& MaterialBuilder::output(VariableQualifier qualifier, OutputTarget target,
+        OutputType type, const char* name) noexcept {
+
+    ASSERT_PRECONDITION(target != OutputTarget::DEPTH || type == OutputType::FLOAT,
+            "Depth outputs must be of type FLOAT.");
+    ASSERT_PRECONDITION(target != OutputTarget::DEPTH || qualifier == VariableQualifier::OUT,
+            "Depth outputs must use OUT qualifier.");
+
+    // Unconditionally add this output, then we'll check if we've maxed on on any particular target.
+    mOutputs.emplace_back(name, qualifier, target, type);
+
+    uint8_t colorOutputCount = 0;
+    uint8_t depthOutputCount = 0;
+    for (const auto& output : mOutputs) {
+        if (output.target == OutputTarget::COLOR) {
+            colorOutputCount++;
+        }
+        if (output.target == OutputTarget::DEPTH) {
+            depthOutputCount++;
+        }
+    }
+
+    ASSERT_PRECONDITION(colorOutputCount <= MAX_COLOR_OUTPUT,
+            "A maximum of %d COLOR outputs is allowed.", MAX_COLOR_OUTPUT);
+    ASSERT_PRECONDITION(depthOutputCount <= MAX_DEPTH_OUTPUT,
+            "A maximum of %d DEPTH output is allowed.", MAX_DEPTH_OUTPUT);
+
+    assert(mOutputs.size() <= MAX_COLOR_OUTPUT + MAX_DEPTH_OUTPUT);
+
+    return *this;
+}
+
 MaterialBuilder& MaterialBuilder::enableFramebufferFetch() noexcept {
     // This API is temporary, it is used to enable EXT_framebuffer_fetch for GLSL shaders,
     // this is used sparingly by filament's post-processing stage.
@@ -727,6 +759,11 @@ Package MaterialBuilder::build() noexcept {
             << utils::io::endl;
         // Return an empty package to signal a failure to build the material.
         return Package::invalidPackage();
+    }
+
+    // Add a default color output.
+    if (mMaterialDomain == MaterialDomain::POST_PROCESS && mOutputs.empty()) {
+        output(VariableQualifier::OUT, OutputTarget::COLOR, OutputType::FLOAT4, "color");
     }
 
     // Resolve all the #include directives within user code.
@@ -776,7 +813,7 @@ Package MaterialBuilder::build() noexcept {
 
 const std::string MaterialBuilder::peek(filament::backend::ShaderType type,
         const CodeGenParams& params, const PropertyList& properties) noexcept {
-    ShaderGenerator sg(properties, mVariables, mDefines, mMaterialCode.getResolved(),
+    ShaderGenerator sg(properties, mVariables, mOutputs, mDefines, mMaterialCode.getResolved(),
             mMaterialCode.getLineOffset(), mMaterialVertexCode.getResolved(),
             mMaterialVertexCode.getLineOffset(), mMaterialDomain);
 

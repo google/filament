@@ -353,6 +353,98 @@ static bool processCulling(MaterialBuilder& builder, const JsonishValue& value) 
     return true;
 }
 
+static bool processOutput(MaterialBuilder& builder, const JsonishObject& jsonObject) noexcept {
+
+    const JsonishValue* nameValue = jsonObject.getValue("name");
+    if (!nameValue) {
+        std::cerr << "outputs: entry without 'name' key." << std::endl;
+        return false;
+    }
+    if (nameValue->getType() != JsonishValue::STRING) {
+        std::cerr << "outputs: name value must be STRING." << std::endl;
+        return false;
+    }
+
+    const JsonishValue* targetValue = jsonObject.getValue("target");
+    if (targetValue) {
+        if (targetValue->getType() != JsonishValue::STRING) {
+            std::cerr << "outputs: target must be a STRING." << std::endl;
+            return false;
+        }
+
+        auto targetString = targetValue->toJsonString();
+        if (!Enums::isValid<OutputTarget>(targetString->getString())) {
+            return logEnumIssue("target", *targetString, Enums::map<OutputTarget>());
+        }
+    }
+
+    const JsonishValue* typeValue = jsonObject.getValue("type");
+    if (typeValue) {
+        if (typeValue->getType() != JsonishValue::STRING) {
+            std::cerr << "outputs: type must be a STRING." << std::endl;
+            return false;
+        }
+
+        auto typeString = typeValue->toJsonString();
+        if (!Enums::isValid<OutputType>(typeString->getString())) {
+            return logEnumIssue("type", *typeString, Enums::map<OutputType>());
+        }
+    }
+
+    const JsonishValue* qualifierValue = jsonObject.getValue("qualifier");
+    if (qualifierValue) {
+        if (qualifierValue->getType() != JsonishValue::STRING) {
+            std::cerr << "outputs: qualifier must be a STRING." << std::endl;
+            return false;
+        }
+
+        auto qualifierString = qualifierValue->toJsonString();
+        if (!Enums::isValid<OutputQualifier>(qualifierString->getString())) {
+            return logEnumIssue("qualifier", *qualifierString, Enums::map<OutputQualifier>());
+        }
+    }
+
+    const char* name = nameValue->toJsonString()->getString().c_str();
+
+    OutputTarget target = OutputTarget::COLOR;
+    if (targetValue) {
+        target = Enums::toEnum<OutputTarget>(targetValue->toJsonString()->getString());
+    }
+
+    OutputType type = OutputType::FLOAT4;
+    if (target == OutputTarget::DEPTH) {
+        // The default type for depth targets is float.
+        type = OutputType::FLOAT;
+    }
+    if (typeValue) {
+        type = Enums::toEnum<OutputType>(typeValue->toJsonString()->getString());
+    }
+
+    OutputQualifier qualifier = OutputQualifier::OUT;
+    if (qualifierValue) {
+        qualifier = Enums::toEnum<OutputQualifier>(qualifierValue->toJsonString()->getString());
+    }
+
+    builder.output(qualifier, target, type, name);
+
+    return true;
+}
+
+static bool processOutputs(MaterialBuilder& builder, const JsonishValue& v) {
+    auto jsonArray = v.toJsonArray();
+
+    bool ok = true;
+    for (auto value : jsonArray->getElements()) {
+        if (value->getType() == JsonishValue::Type::OBJECT) {
+            ok |= processOutput(builder, *value->toJsonObject());
+            continue;
+        }
+        std::cerr << "outputs must be an array of OBJECTs." << std::endl;
+        return false;
+    }
+    return ok;
+}
+
 static bool processColorWrite(MaterialBuilder& builder, const JsonishValue& value) {
     builder.colorWrite(value.toJsonBool()->getBool());
     return true;
@@ -581,6 +673,7 @@ ParametersProcessor::ParametersProcessor() {
     mParameters["refractionMode"]                = { &processRefractionMode, Type::STRING };
     mParameters["refractionType"]                = { &processRefractionType, Type::STRING };
     mParameters["framebufferFetch"]              = { &processFramebufferFetch, Type::BOOL };
+    mParameters["outputs"]                       = { &processOutputs, Type::ARRAY };
 }
 
 bool ParametersProcessor::process(MaterialBuilder& builder, const JsonishObject& jsonObject) {

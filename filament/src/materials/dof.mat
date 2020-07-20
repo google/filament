@@ -36,6 +36,18 @@ material {
            name : bokehAngle,
         }
     ],
+    outputs : [
+        {
+            name : color,
+            target : color,
+            type : float4
+        },
+        {
+            name : alpha,
+            target : color,
+            type : float
+        }
+    ],
     variables : [
         vertex
     ],
@@ -85,8 +97,6 @@ fragment {
 
 
 void dummy(){}
-
-layout(location = 1) out float outAlpha;
 
 float sampleCount(const float ringCount) {
     const float ringDensity = float(RING_DENSITY);
@@ -369,7 +379,7 @@ void postProcess(inout PostProcessInputs postProcess) {
 
     if (isTrivialTile(tiles)) {
         postProcess.color = vec4(0.0);
-        outAlpha = 0.0;
+        postProcess.alpha = 0.0;
         return;
     }
 
@@ -420,8 +430,8 @@ void postProcess(inout PostProcessInputs postProcess) {
         // kill the work performed above
         foreground.a = 1.0;
 #endif
-        postProcess.color  = foreground;
-        outAlpha           = 1.0;
+        postProcess.color = foreground;
+        postProcess.alpha = 1.0;
         return;
     }
 
@@ -519,7 +529,7 @@ void postProcess(inout PostProcessInputs postProcess) {
     foreground *= fgOpacity;
     background *= bgOpacity;
     postProcess.color = foreground + (1.0 - fgOpacity) * background;
-    outAlpha          = fgOpacity  + (1.0 - fgOpacity) * bgOpacity;
+    postProcess.alpha = fgOpacity  + (1.0 - fgOpacity) * bgOpacity;
 }
 
 }
