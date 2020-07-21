@@ -123,7 +123,6 @@ struct App {
         }
 
         bool operator==(const ColorGradingOptions &rhs) const {
-            // Note: Do NOT compare hasAdjustments
             return enabled == rhs.enabled &&
                    toneMapping == rhs.toneMapping &&
                    temperature == rhs.temperature &&

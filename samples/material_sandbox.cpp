@@ -929,8 +929,7 @@ static void preRender(filament::Engine* engine, filament::View* view, filament::
     view->setAmbientOcclusionOptions(g_params.ssaoOptions);
 
     if (g_params.colorGrading) {
-        if (memcmp(&g_params.colorGradingOptions, &g_lastColorGradingOptions,
-                sizeof(ColorGradingOptions))) {
+        if (g_params.colorGradingOptions != g_lastColorGradingOptions) {
             ColorGradingOptions &options = g_params.colorGradingOptions;
             ColorGrading *colorGrading = ColorGrading::Builder()
                     .whiteBalance(options.temperature / 100.0f, options.tint / 100.0f)
