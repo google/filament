@@ -1010,10 +1010,16 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                 PostProcessMaterial& material = mDoF;
                 FMaterialInstance* const mi = material.getMaterialInstance();
                 // it's not safe to use bilinear filtering in the general case (causes artifacts around edges)
-                mi->setParameter("foreground",  foreground,     { .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
-                mi->setParameter("background",  background,     { .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
-                mi->setParameter("cocFgBg",     cocFgBg,        { .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
-                mi->setParameter("tiles",       tilesCocMaxMin, { .filterMin = SamplerMinFilter::NEAREST });
+                mi->setParameter("foreground", foreground,
+                        { .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
+                mi->setParameter("foregroundLinear", foreground,
+                        { .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST });
+                mi->setParameter("background", background,
+                        { .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
+                mi->setParameter("cocFgBg", cocFgBg,
+                        { .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
+                mi->setParameter("tiles", tilesCocMaxMin,
+                        { .filterMin = SamplerMinFilter::NEAREST });
                 mi->setParameter("cocToTexelOffset", 0.5f / float2{ inputDesc.width, inputDesc.height });
                 mi->setParameter("uvscale", float4{
                     outputDesc.width  / float(inputDesc.width),
@@ -1093,6 +1099,13 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
      * DoF recombine
      */
 
+    auto outForeground = ppDoFMedian.getData().outForeground;
+    auto outAlpha = ppDoFMedian.getData().outAlpha;
+    if (false) { // TODO: make this a quality setting
+        outForeground = ppDoF.getData().outForeground;
+        outAlpha = ppDoF.getData().outAlpha;
+    }
+
     struct PostProcessDofCombine {
         FrameGraphId<FrameGraphTexture> color;
         FrameGraphId<FrameGraphTexture> dof;
@@ -1105,8 +1118,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
     auto& ppDoFCombine = fg.addPass<PostProcessDofCombine>("DoF combine",
             [&](FrameGraph::Builder& builder, auto& data) {
                 data.color      = builder.sample(input);
-                data.dof        = builder.sample(ppDoFMedian.getData().outForeground);
-                data.alpha      = builder.sample(ppDoFMedian.getData().outAlpha);
+                data.dof        = builder.sample(outForeground);
+                data.alpha      = builder.sample(outAlpha);
                 data.tilesCocMaxMin = builder.sample(dilated);
                 auto const& inputDesc = fg.getDescriptor(data.color);
                 data.output = builder.createTexture("dof output", inputDesc);
