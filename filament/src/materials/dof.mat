@@ -8,6 +8,11 @@ material {
         },
         {
            type : sampler2d,
+           name : foregroundLinear,
+           precision: medium
+        },
+        {
+           type : sampler2d,
            name : background,
            precision: medium
         },
@@ -414,17 +419,16 @@ void postProcess(inout PostProcessInputs postProcess) {
 #endif
 
     if (isFastTile(tiles)) {
-        // for a foreground tile, the kernel size is the largest CoC radius
+        float kernelSize = (abs(tiles.r) + abs(tiles.g)) * 0.5;
+        float mip = getMipLevel(ringCountFast, kernelSize);
+
 #if KERNEL_USE_NOISE
         float noiseRadius = randomUniformDiskRadius * rcp(ringCountFast - 0.5);
         vec2  noise = noiseRadius * randomDisk;
 #endif
-        float coc = abs(tiles.r);
-        float kernelSize = coc;
-        float mip = getMipLevel(ringCountFast, kernelSize);
         vec2 uvCenter = uv + noise * kernelSize * cocToTexelOffset;
 
-        foreground = textureLod(materialParams_foreground, uvCenter, mip);
+        foreground = textureLod(materialParams_foregroundLinear, uvCenter, mip);
         for (float i = 1.0; i < ringCountFast; i += 1.0) {
             float radius;
             float count;
@@ -432,9 +436,9 @@ void postProcess(inout PostProcessInputs postProcess) {
             mat2 r;
             initRing(i, ringCountFast, kernelSize, noise, radius, count, r, p);
             for (float j = 0.0; j < count; j += 2.0) {
-                foreground += textureLod(materialParams_foreground,
+                foreground += textureLod(materialParams_foregroundLinear,
                         diaphragm(uvCenter,  p * cocToTexelOffset), mip);
-                foreground += textureLod(materialParams_foreground,
+                foreground += textureLod(materialParams_foregroundLinear,
                         diaphragm(uvCenter, -p * cocToTexelOffset), mip);
                 p = r * p;
             }
