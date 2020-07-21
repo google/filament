@@ -364,6 +364,12 @@ void FScene::remove(Entity entity) {
     mEntities.erase(entity);
 }
 
+void FScene::removeEntities(const Entity* entities, size_t count) {
+    for (size_t i = 0; i < count; ++i, ++entities) {
+        remove(*entities);
+    }
+}
+
 size_t FScene::getRenderableCount() const noexcept {
     FEngine& engine = mEngine;
     EntityManager& em = engine.getEntityManager();
@@ -444,6 +450,10 @@ void Scene::addEntities(const Entity* entities, size_t count) {
 
 void Scene::remove(Entity entity) {
     upcast(this)->remove(entity);
+}
+
+void Scene::removeEntities(const Entity* entities, size_t count) {
+    upcast(this)->removeEntities(entities, count);
 }
 
 size_t Scene::getRenderableCount() const noexcept {

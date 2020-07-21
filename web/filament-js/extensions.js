@@ -164,6 +164,17 @@ Filament.loadClassExtensions = function() {
         this._addEntities(vector);
     };
 
+    /// removeEntities ::method::
+    /// entities ::argument:: array of entities
+    /// This method is equivalent to calling `remove` on each item in the array.
+    Filament.Scene.prototype.removeEntities = function(entities) {
+        const vector = new Filament.EntityVector();
+        for (const entity of entities) {
+            vector.push_back(entity);
+        }
+        this._removeEntities(vector);
+    };
+
     /// setClearOptions ::method::
     /// overrides ::argument:: Dictionary with one or more of the following properties: \
     /// clearColor, clear, discard.
