@@ -305,11 +305,7 @@ void SimpleViewer::populateScene(FilamentAsset* asset, bool scale,
 
 void SimpleViewer::removeAsset() {
     if (mAsset) {
-        const auto *const begin = mAsset->getEntities();
-        const auto *const end = begin + mAsset->getEntityCount();
-        for (const auto *entity = begin; entity != end; ++entity) {
-            mScene->remove(*entity);
-        }
+        mScene->removeEntities(mAsset->getEntities(), mAsset->getEntityCount());
     }
     mAsset = nullptr;
     mAnimator = nullptr;

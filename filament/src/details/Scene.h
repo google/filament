@@ -64,6 +64,7 @@ public:
     void addEntity(utils::Entity entity);
     void addEntities(const utils::Entity* entities, size_t count);
     void remove(utils::Entity entity);
+    void removeEntities(const utils::Entity* entities, size_t count);
 
     size_t getRenderableCount() const noexcept;
     size_t getLightCount() const noexcept;

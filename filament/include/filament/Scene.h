@@ -96,7 +96,7 @@ public:
     void addEntity(utils::Entity entity);
 
     /**
-     * Adds a contiguous list of entities to the Scene.
+     * Adds a list of entities to the Scene.
      *
      * @param entities Array containing entities to add to the scene.
      * @param count Size of the entity array.
@@ -110,6 +110,17 @@ public:
      *                   \p entity doesn't exist, this call is ignored.
      */
     void remove(utils::Entity entity);
+
+    /**
+     * Removes a list of entities to the Scene.
+     *
+     * This is equivalent to calling remove in a loop.
+     * If any of the specified entities do not exist in the scene, they are skipped.
+     *
+     * @param entities Array containing entities to remove from the scene.
+     * @param count Size of the entity array.
+     */
+    void removeEntities(const utils::Entity* entities, size_t count);
 
     /**
      * Returns the number of Renderable objects in the Scene.

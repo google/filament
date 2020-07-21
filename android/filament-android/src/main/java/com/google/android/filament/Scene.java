@@ -133,6 +133,18 @@ public class Scene {
     }
 
     /**
+     * Removes a list of entities from the <code>Scene</code>.
+     *
+     * This is equivalent to calling remove in a loop.
+     * If any of the specified entities do not exist in the scene, they are skipped.
+     *
+     * @param entities array containing entities to remove from the <code>Scene</code>.
+     */
+    public void removeEntities(@Entity int[] entities) {
+        nRemoveEntities(getNativeObject(), entities);
+    }
+
+    /**
      * Returns the number of {@link RenderableManager} components in the <code>Scene</code>.
      *
      * @return number of {@link RenderableManager} components in the <code>Scene</code>..
@@ -166,6 +178,7 @@ public class Scene {
     private static native void nAddEntity(long nativeScene, int entity);
     private static native void nAddEntities(long nativeScene, int[] entities);
     private static native void nRemove(long nativeScene, int entity);
+    private static native void nRemoveEntities(long nativeScene, int[] entities);
     private static native int nGetRenderableCount(long nativeScene);
     private static native int nGetLightCount(long nativeScene);
 }

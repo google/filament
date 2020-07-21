@@ -559,6 +559,10 @@ class_<Scene>("Scene")
         self->addEntities(entities.data(), entities.size());
     }), allow_raw_pointers())
 
+    .function("_removeEntities", EMBIND_LAMBDA(void, (Scene* self, EntityVector entities), {
+        self->removeEntities(entities.data(), entities.size());
+    }), allow_raw_pointers())
+
     .function("hasEntity", &Scene::hasEntity)
     .function("remove", &Scene::remove)
     .function("setSkybox", &Scene::setSkybox, allow_raw_pointers())

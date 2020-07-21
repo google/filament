@@ -111,6 +111,7 @@ struct AssetConfiguration {
  *      }
  * } while (!quit);
  *
+ * scene->removeEntities(asset->getEntities(), asset->getEntityCount());
  * loader->destroyAsset(asset);
  * materials->destroyMaterials();
  * delete materials;

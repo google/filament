@@ -384,6 +384,7 @@ export class Scene {
     public getLightCount(): number;
     public getRenderableCount(): number;
     public remove(entity: Entity): void;
+    public removeEntities(entities: Entity[]): void;
     public setIndirectLight(ibl: IndirectLight|null): void;
     public setSkybox(sky: Skybox|null): void;
 }
