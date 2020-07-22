@@ -355,7 +355,7 @@ void JobSystem::finish(Job* job) noexcept {
 
 
 JobSystem::Job* JobSystem::create(JobSystem::Job* parent, JobFunc func) noexcept {
-    parent = (parent == nullptr) ? mMasterJob : parent;
+    parent = (parent == nullptr) ? mRootJob : parent;
     Job* const job = allocateJob();
     if (UTILS_LIKELY(job)) {
         size_t index = 0x7FFF;
@@ -458,8 +458,8 @@ void JobSystem::waitAndRelease(Job*& job) noexcept {
         }
     } while (!hasJobCompleted(job) && !exitRequested());
 
-    if (job == mMasterJob) {
-        mMasterJob = nullptr;
+    if (job == mRootJob) {
+        mRootJob = nullptr;
     }
 
     release(job);

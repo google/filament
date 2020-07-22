@@ -170,8 +170,8 @@ void FRenderer::render(FView const* view) {
         FEngine& engine = mEngine;
         JobSystem& js = engine.getJobSystem();
 
-        // create a master job so no other job can escape
-        auto masterJob = js.setMasterJob(js.createJob());
+        // create a root job so no other job can escape
+        auto rootJob = js.setRootJob(js.createJob());
 
         // execute the render pass
         renderJob(rootArena, const_cast<FView&>(*view));
@@ -180,7 +180,7 @@ void FRenderer::render(FView const* view) {
         engine.flush();
 
         // and wait for all jobs to finish as a safety (this should be a no-op)
-        js.runAndWait(masterJob);
+        js.runAndWait(rootJob);
     }
 }
 

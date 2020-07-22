@@ -284,7 +284,7 @@ void FAssetLoader::createAsset(const cgltf_data* srcAsset, size_t numInstances) 
         // buffers and index buffers) and mMatInstanceCache (materials and textures) help avoid
         // needless duplication of resources.
         for (size_t index = 0; index < numInstances; ++index) {
-            // Create a root node within each instance that is a child of the master root.
+            // Create a root node within each instance that is a child of the primary root.
             auto rootTransform = mTransformManager.getInstance(mResult->mRoot);
             Entity instanceRoot = mEntityManager.create();
             mTransformManager.create(instanceRoot, rootTransform);
