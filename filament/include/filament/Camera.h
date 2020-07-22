@@ -232,7 +232,7 @@ public:
     /** Returns the projection matrix used for rendering.
      *
      * The projection matrix used for rendering always has its far plane set to infinity. This
-     * it why it may differ from the matrix set through setProjection() or setLensProjection().
+     * is why it may differ from the matrix set through setProjection() or setLensProjection().
      *
      * @return The projection matrix used for rendering
      *

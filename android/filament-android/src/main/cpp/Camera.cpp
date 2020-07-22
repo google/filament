@@ -104,6 +104,16 @@ Java_com_google_android_filament_Camera_nGetProjectionMatrix(JNIEnv *env, jclass
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_Camera_nGetCullingProjectionMatrix(JNIEnv *env, jclass,
+        jlong nativeCamera, jdoubleArray out_) {
+    Camera *camera = (Camera *) nativeCamera;
+    jdouble *out = env->GetDoubleArrayElements(out_, NULL);
+    const filament::math::mat4& m = camera->getCullingProjectionMatrix();
+    std::copy_n(&m[0][0], 16, out);
+    env->ReleaseDoubleArrayElements(out_, out, 0);
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_Camera_nGetScaling(JNIEnv *env, jclass,
         jlong nativeCamera, jdoubleArray out_) {
     Camera *camera = (Camera *) nativeCamera;

@@ -284,7 +284,15 @@ public class Camera {
      * ratio:<br>
      *
      * <code>
-     *     camera->setScaling(double4 {1.0, width / height, 1.0, 1.0});
+     *     double aspect = width / height;
+     *
+     *     // with Fov.HORIZONTAL passed to setProjection:
+     *     double[] s = {1.0, aspect, 1.0, 1.0};
+     *     camera.setScaling(s);
+     *
+     *     // with Fov.VERTICAL passed to setProjection:
+     *     double[] s = {1.0 / aspect, 1.0, 1.0, 1.0};
+     *     camera.setScaling(s);
      * </code>
      *
      * By default, this is an identity matrix.
@@ -354,7 +362,9 @@ public class Camera {
     }
 
     /**
-     * Retrieves the camera's projection matrix.
+     * Retrieves the camera's projection matrix. The projection matrix used for rendering always has
+     * its far plane set to infinity. This is why it may differ from the matrix set through
+     * setProjection() or setLensProjection().
      *
      * @param out A 16-float array where the projection matrix will be stored, or null in which
      *            case a new array is allocated.
@@ -365,6 +375,22 @@ public class Camera {
     public double[] getProjectionMatrix(@Nullable @Size(min = 16) double[] out) {
         out = Asserts.assertMat4d(out);
         nGetProjectionMatrix(getNativeObject(), out);
+        return out;
+    }
+
+    /**
+     * Retrieves the camera's culling matrix. The culling matrix is the same as the projection
+     * matrix, except the far plane is finite.
+     *
+     * @param out A 16-float array where the projection matrix will be stored, or null in which
+     *            case a new array is allocated.
+     *
+     * @return A 16-float array containing the camera's projection as a column-major matrix.
+     */
+    @NonNull @Size(min = 16)
+    public double[] getCullingProjectionMatrix(@Nullable @Size(min = 16) double[] out) {
+        out = Asserts.assertMat4d(out);
+        nGetCullingProjectionMatrix(getNativeObject(), out);
         return out;
     }
 
@@ -566,6 +592,7 @@ public class Camera {
     private static native float nGetNear(long nativeCamera);
     private static native float nGetCullingFar(long nativeCamera);
     private static native void nGetProjectionMatrix(long nativeCamera, double[] out);
+    private static native void nGetCullingProjectionMatrix(long nativeCamera, double[] out);
     private static native void nGetScaling(long nativeCamera, double[] out);
     private static native void nGetModelMatrix(long nativeCamera, float[] out);
     private static native void nGetViewMatrix(long nativeCamera, float[] out);
