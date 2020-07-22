@@ -1580,7 +1580,7 @@ class_<AssetLoader>("gltfio$AssetLoader")
         return AssetLoader::create({ engine, materials.provider, names });
     }), allow_raw_pointers())
 
-    /// createAssetFromJson ::static method::
+    /// createAssetFromJson ::method::
     /// buffer ::argument:: asset string, or Uint8Array, or [Buffer]
     /// ::retval:: an instance of [FilamentAsset]
     .function("_createAssetFromJson", EMBIND_LAMBDA(FilamentAsset*,
@@ -1588,7 +1588,7 @@ class_<AssetLoader>("gltfio$AssetLoader")
         return self->createAssetFromJson((const uint8_t*) buffer.bd->buffer, buffer.bd->size);
     }), allow_raw_pointers())
 
-    /// createAssetFromBinary ::static method::
+    /// createAssetFromBinary ::method::
     /// buffer ::argument:: asset string, or Uint8Array, or [Buffer]
     /// ::retval:: an instance of [FilamentAsset]
     .function("_createAssetFromBinary", EMBIND_LAMBDA(FilamentAsset*,
@@ -1596,7 +1596,7 @@ class_<AssetLoader>("gltfio$AssetLoader")
         return self->createAssetFromBinary((const uint8_t*) buffer.bd->buffer, buffer.bd->size);
     }), allow_raw_pointers())
 
-    /// createInstancedAsset ::static method::
+    /// createInstancedAsset ::method::
     /// buffer ::argument:: asset string, or Uint8Array, or [Buffer]
     /// ::retval:: an instance of [FilamentAsset]
     .function("_createInstancedAsset", EMBIND_LAMBDA(FilamentAsset*,
@@ -1605,7 +1605,13 @@ class_<AssetLoader>("gltfio$AssetLoader")
         std::vector<FilamentInstance*> instances;
         return self->createInstancedAsset((const uint8_t*) buffer.bd->buffer,
                 buffer.bd->size, instances.data(), numInstances);
-    }), allow_raw_pointers());
+    }), allow_raw_pointers())
+
+    // destroyAsset ::method::
+    // Destroys the given asset and all of its associated Filament objects. This includes
+    // components, material instances, vertex buffers, index buffers, and textures.
+    // asset ::argument:: the Filament asset created using AssetLoader
+    .function("destroyAsset", &AssetLoader::destroyAsset, allow_raw_pointers());
 
 class_<ResourceLoader>("gltfio$ResourceLoader")
     .constructor(EMBIND_LAMBDA(ResourceLoader*, (Engine* engine, bool normalizeSkinningWeights,
