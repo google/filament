@@ -66,16 +66,18 @@ class App {
             .build(engine, sunlight);
         this.scene.addEntity(sunlight);
 
-        const loader = engine.createAssetLoader();
+        const loader = this.loader = engine.createAssetLoader();
+
+        this.allowRefresh = false;
         const asset = this.asset = loader.createAssetFromJson(mesh_url);
 
         const messages = document.getElementById('messages');
 
         // Crudely indicate progress by printing the URI of each resource as it is loaded.
         const onFetched = (uri) => messages.innerText += `Downloaded ${uri}\n`;
+
         const onDone = () => {
-            // Destroy the asset loader.
-            loader.delete();
+            this.allowRefresh = true;
 
             // Enable shadows on every renderable.
             const entities = asset.getEntities();
@@ -103,8 +105,25 @@ class App {
         this.resize();
         this.render = this.render.bind(this);
         this.resize = this.resize.bind(this);
+        this.refresh = this.refresh.bind(this);
         window.addEventListener('resize', this.resize);
+        window.addEventListener('dblclick', this.refresh);
         window.requestAnimationFrame(this.render);
+    }
+
+    // Test for memory leaks by destroying and recreating the asset.
+    refresh() {
+        if (!this.allowRefresh) {
+            console.warn('Refresh not allowed while the model is still loading.');
+            return;
+        }
+        console.info('Refreshing...');
+        this.allowRefresh = false;
+        this.scene.removeEntities(this.asset.getEntities());
+        this.loader.destroyAsset(this.asset);
+        this.asset = this.loader.createAssetFromJson(mesh_url);
+        const onDone = () => { this.allowRefresh = true; }
+        this.asset.loadResources(onDone);
     }
 
     render() {

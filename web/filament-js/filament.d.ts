@@ -474,6 +474,7 @@ export class gltfio$AssetLoader {
     public createAssetFromBinary(urlOrBuffer: BufferReference): gltfio$FilamentAsset;
     public createInstancedAsset(urlOrBuffer: BufferReference,
             instances: (gltfio$FilamentInstance | null)[]): gltfio$FilamentAsset;
+    public destroyAsset(asset: gltfio$FilamentAsset): void;
     public delete(): void;
 }
 

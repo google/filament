@@ -191,7 +191,12 @@ public:
      */
     void enableDiagnostics(bool enable = true);
 
-    /** Destroys the given asset and all of its associated Filament objects. */
+    /**
+     * Destroys the given asset and all of its associated Filament objects.
+     *
+     * This destroys entities, components, material instances, vertex buffers, index buffers,
+     * and textures.
+     */
     void destroyAsset(const FilamentAsset* asset);
 
     /**
