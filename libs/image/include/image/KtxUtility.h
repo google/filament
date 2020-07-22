@@ -227,6 +227,10 @@ namespace ktx {
             case KtxBundle::RG: return PixelDataFormat::RG;
             case KtxBundle::RGB: return PixelDataFormat::RGB;
             case KtxBundle::RGBA: return PixelDataFormat::RGBA;
+            // glFormat should NOT be a sized format according to the spec
+            // however cmgen was generating incorrect files until after Filament 1.8.0
+            // so we keep this line here to preserve compatibility with older assets
+            case KtxBundle::R11F_G11F_B10F: return PixelDataFormat::RGB;
         }
         return (PixelDataFormat) 0xff;
     }
