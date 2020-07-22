@@ -227,7 +227,6 @@ namespace ktx {
             case KtxBundle::RG: return PixelDataFormat::RG;
             case KtxBundle::RGB: return PixelDataFormat::RGB;
             case KtxBundle::RGBA: return PixelDataFormat::RGBA;
-            case KtxBundle::R11F_G11F_B10F: return PixelDataFormat::RGB;
         }
         return (PixelDataFormat) 0xff;
     }
