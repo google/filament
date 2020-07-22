@@ -376,7 +376,7 @@ void OpenGLContext::bindVertexArray(RenderPrimitive const* p) noexcept {
 void OpenGLContext::bindBufferRange(GLenum target, GLuint index, GLuint buffer,
         GLintptr offset, GLsizeiptr size) noexcept {
     size_t targetIndex = getIndexForBufferTarget(target);
-    assert(targetIndex <= 1); // sanity check
+    assert(targetIndex <= 1); // validity check
 
     // this ALSO sets the generic binding
     if (   state.buffers.targets[targetIndex].buffers[index].name != buffer

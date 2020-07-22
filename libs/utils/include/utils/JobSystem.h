@@ -90,9 +90,13 @@ public:
 
 
     // If a parent is not specified when creating a job, that job will automatically take the
-    // master job as a parent.
-    // The master job is reset when waited on.
-    Job* setMasterJob(Job* job) noexcept { return mMasterJob = job; }
+    // root job as a parent.
+    // The root job is reset when waited on.
+    Job* setRootJob(Job* job) noexcept { return mRootJob = job; }
+
+     // use setRootJob() instead
+    UTILS_DEPRECATED
+    Job* setMasterJob(Job* job) noexcept { return setRootJob(job); }
 
 
     Job* create(Job* parent, JobFunc func) noexcept;
@@ -401,7 +405,7 @@ private:
     Job* const mJobStorageBase;                         // Base for conversion to indices
     uint16_t mThreadCount = 0;                          // total # of threads in the pool
     uint8_t mParallelSplitCount = 0;                    // # of split allowable in parallel_for
-    Job* mMasterJob = nullptr;
+    Job* mRootJob = nullptr;
 
     utils::SpinLock mThreadMapLock; // this should have very little contention
     tsl::robin_map<std::thread::id, ThreadState *> mThreadMap;
