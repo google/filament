@@ -18,4 +18,3 @@ git add imgui
 Make any necessary changes to tnt/CMakeLists.txt to get Filament to compile.
 
 Please be sure to test Filament before uploading your CL.
-
