@@ -45,6 +45,14 @@ Java_com_google_android_filament_ColorGrading_nBuilderBuild(JNIEnv*, jclass,
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_ColorGrading_nBuilderQuality(JNIEnv*, jclass,
+        jlong nativeBuilder, jint quality_) {
+    ColorGrading::Builder* builder = (ColorGrading::Builder*) nativeBuilder;
+    ColorGrading::QualityLevel quality = (ColorGrading::QualityLevel) quality_;
+    builder->quality(quality);
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_ColorGrading_nBuilderToneMapping(JNIEnv*, jclass,
         jlong nativeBuilder, jint toneMapping_) {
     ColorGrading::Builder* builder = (ColorGrading::Builder*) nativeBuilder;

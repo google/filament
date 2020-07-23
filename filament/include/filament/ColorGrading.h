@@ -94,6 +94,12 @@ class FColorGrading;
 class UTILS_PUBLIC ColorGrading : public FilamentAPI {
     struct BuilderDetails;
 public:
+    enum class QualityLevel : uint8_t {
+        LOW,
+        MEDIUM,
+        HIGH,
+        ULTRA
+    };
 
     /**
      * List of available tone-mapping operators.
@@ -118,6 +124,21 @@ public:
         ~Builder() noexcept;
         Builder& operator=(Builder const& rhs) noexcept;
         Builder& operator=(Builder&& rhs) noexcept;
+
+        /**
+         * Sets the quality level of the color grading. When color grading is implemented using
+         * a 3D LUT, the quality level may impact the resolution and bit depth of the backing
+         * 3D texture. For instance, a low quality level will use a 16x16x16 10 bit LUT, a medium
+         * quality level will use a 32x32x32 10 bit LUT, a high quality will use a 32x32x32 16 bit
+         * LUT, and a ultra quality will use a 64x64x64 16 bit LUT.
+         *
+         * The default quality is medium.
+         *
+         * @param qualityLevel The desired quality of the color grading process
+         *
+         * @return This Builder, for chaining calls
+         */
+        Builder& quality(QualityLevel qualityLevel) noexcept;
 
         /**
          * Selects the tone mapping operator to apply to the HDR color buffer as the last

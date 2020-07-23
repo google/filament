@@ -97,6 +97,7 @@ struct App {
 
     struct ColorGradingOptions {
         bool enabled = false;
+        int quality = static_cast<int>(ColorGrading::QualityLevel::MEDIUM);
         int toneMapping = static_cast<int>(ColorGrading::ToneMapping::ACES_LEGACY);
         int temperature = 0;
         int tint = 0;
@@ -124,6 +125,7 @@ struct App {
 
         bool operator==(const ColorGradingOptions &rhs) const {
             return enabled == rhs.enabled &&
+                   quality == rhs.quality &&
                    toneMapping == rhs.toneMapping &&
                    temperature == rhs.temperature &&
                    outRed == rhs.outRed &&
@@ -433,6 +435,8 @@ static void colorGradingUI(App& app) {
 
         ImGui::Indent();
         ImGui::Checkbox("Enabled##colorGrading", &colorGrading.enabled);
+        ImGui::Combo("Quality##colorGradingQuality", &colorGrading.quality,
+                "Low\0Medium\0High\0Ultra\0\0");
         ImGui::Combo("Tone-mapping", &colorGrading.toneMapping,
                 "Linear\0ACES (legacy)\0ACES\0Filmic\0Uchimura\0Reinhard\0Display Range\0\0");
         if (ImGui::CollapsingHeader("While balance")) {
@@ -860,6 +864,7 @@ int main(int argc, char** argv) {
             if (app.colorGradingOptions != app.lastColorGradingOptions) {
                 App::ColorGradingOptions &options = app.colorGradingOptions;
                 ColorGrading *colorGrading = ColorGrading::Builder()
+                        .quality(static_cast<ColorGrading::QualityLevel>(options.quality))
                         .whiteBalance(options.temperature / 100.0f, options.tint / 100.0f)
                         .channelMixer(options.outRed, options.outGreen, options.outBlue)
                         .shadowsMidtonesHighlights(
