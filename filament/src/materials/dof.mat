@@ -70,13 +70,13 @@ fragment {
 #define DOF_DIAPHRAGM_STRAIGHT_BLADES   1
 #define DOF_DIAPHRAGM                   DOF_DIAPHRAGM_CIRCLE
 
-// # of sample w.r.t. ring count and density of 4
-// 3 rings : 21
-// 4 rings : 37
-// 5 rings : 57
+// # of sample w.r.t. ring count and density of 8
+// 3 rings : 25
+// 4 rings : 49
+// 5 rings : 81
 
 // don't change density
-#define RING_DENSITY        4
+#define RING_DENSITY        8
 
 #if defined(TARGET_MOBILE)
 #define RING_COUNT_GATHER   3
@@ -100,7 +100,7 @@ void dummy(){}
 
 float sampleCount(const float ringCount) {
     const float ringDensity = float(RING_DENSITY);
-    return (ringDensity * ringCount * (ringCount + 1.0) - 6.0) * 0.5;
+    return (ringDensity * ringCount * (ringCount - 1.0)) * 0.5 + 1.0;
 }
 
 float sampleWeight(const float coc, const float mip) {
@@ -185,7 +185,7 @@ void initRing(const float i, const float ringCount, const float kernelSize, cons
     float radius = (kernelSize / (ringCount - 0.5)) * i;
 
     // this is never called with i == 0
-    count = ringDensity * (i + 1.0);
+    count = ringDensity * i;
 
     float inc = 2.0 * PI / count;
     vec2 t = vec2(cos(inc), sin(inc));
@@ -362,12 +362,18 @@ float getMipLevel(const float ringCount, const float kernelSize) {
     // note: the 0.5 is to convert from highres to our downslampled texture
     float ringDistanceInTexels = 0.5 * kernelSize * rcp(ringCount - 0.5);
     float mip = log2(ringDistanceInTexels);
+
+    // We should round-up to avoid too large gaps in the kernel. Small gaps are filled by the
+    // median pass. With round() below + noise, most gaps are handled by the median pass,
+    // and the quality is much better overall.
+
 #if defined(TARGET_MOBILE)
     // on mobile, the mip level is not used in computations in the shader,
     // so we just let the texture unit pick the the "nearest" mipmap level.
 #else
-    mip = floor(mip + 0.5);
+    mip = max(0.0, floor(mip + 0.5));
 #endif
+
     return mip;
 #else
     return 0.0;
