@@ -21,6 +21,8 @@
 
 #include <filamat/MaterialBuilder.h>
 
+#include <string>
+
 namespace filamat {
 
 class GLSLToolsLite {
@@ -41,6 +43,13 @@ public:
             filament::backend::ShaderType type,
             const utils::CString& material,
             MaterialBuilder::PropertyList& properties) const noexcept;
+
+    /* Remove Google-style #line directives from the source string.
+     *
+     * Google-style #line directives use quotes to specify file names. For example:
+     * #line 100 "foobar.h"
+     */
+    void removeGoogleLineDirectives(std::string& text) const noexcept;
 };
 
 } // namespace filamat

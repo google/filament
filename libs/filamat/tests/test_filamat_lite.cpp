@@ -236,6 +236,43 @@ TEST_F(FilamatLite, StaticCodeAnalyzerMultilineComments) {
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
+TEST_F(FilamatLite, RemoveLineDirectivesOneLine) {
+    {
+        std::string shaderCode("#line 10 \"foobar\"");
+        GLSLToolsLite glslTools;
+        glslTools.removeGoogleLineDirectives(shaderCode);
+        EXPECT_STREQ("", shaderCode.c_str());
+    }
+    {
+        // Ignore non-Google extension line directives
+        std::string shaderCode("#line 100");
+        GLSLToolsLite glslTools;
+        glslTools.removeGoogleLineDirectives(shaderCode);
+        EXPECT_STREQ("#line 100", shaderCode.c_str());
+    }
+}
+
+TEST_F(FilamatLite, RemoveLineDirectives) {
+    std::string shaderCode(R"(
+aaa
+#line 10 "foobar"
+bbb
+ccc
+#line 100
+    )");
+
+    std::string expected(R"(
+aaa
+bbb
+ccc
+#line 100
+    )");
+
+    GLSLToolsLite glslTools;
+    glslTools.removeGoogleLineDirectives(shaderCode);
+    EXPECT_STREQ(expected.c_str(), shaderCode.c_str());
+}
+
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();

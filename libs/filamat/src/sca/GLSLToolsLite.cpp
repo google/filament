@@ -134,4 +134,36 @@ bool GLSLToolsLite::findProperties(
     return true;
 }
 
+void GLSLToolsLite::removeGoogleLineDirectives(std::string& text) const noexcept {
+    size_t found;
+    size_t start = std::string::npos;
+    while ((found = text.rfind("#line", start)) != std::string::npos) {
+        // Eat up anything until a newline character.
+        // If we find a quote character, then this is a Google-style line directive.
+        size_t c = found + 5;
+        size_t len = 5;
+        bool googleStyleDirective = false;
+        while (c < text.length()) {
+            if (text[c] == '"') {
+                googleStyleDirective = true;
+            }
+            if (text[c] == '\n') {
+                len++;
+                break;
+            }
+            len++;
+            c++;
+        }
+
+        if (googleStyleDirective) {
+            text.replace(found, len, "");
+        }
+
+        if (found == 0) {
+            break;
+        }
+        start = found - 1;
+    }
+}
+
 } // namespace filamat
