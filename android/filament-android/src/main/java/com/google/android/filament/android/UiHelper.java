@@ -454,7 +454,12 @@ public class UiHelper {
                 public void onSurfaceTextureSizeChanged(
                         SurfaceTexture surfaceTexture, int width, int height) {
                     if (LOGGING) Log.d(LOG_TAG, "onSurfaceTextureSizeChanged()");
-                    mRenderCallback.onResized(width, height);
+                    if (mDesiredWidth > 0 && mDesiredHeight > 0) {
+                        surfaceTexture.setDefaultBufferSize(mDesiredWidth, mDesiredHeight);
+                        mRenderCallback.onResized(mDesiredWidth, mDesiredHeight);
+                    } else {
+                        mRenderCallback.onResized(width, height);
+                    }
                 }
 
                 @Override
