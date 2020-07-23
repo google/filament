@@ -39,13 +39,13 @@ using namespace utils;
 using namespace math;
 using namespace backend;
 
-static constexpr size_t LUT_DIMENSION = 32u;
-
 //------------------------------------------------------------------------------
 // Builder
 //------------------------------------------------------------------------------
 
 struct ColorGrading::BuilderDetails {
+    ColorGrading::QualityLevel quality = QualityLevel::MEDIUM;
+
     ToneMapping toneMapping = ToneMapping::ACES_LEGACY;
     // White balance
     float2 whiteBalance     = {0.0f, 0.0f};
@@ -79,7 +79,8 @@ struct ColorGrading::BuilderDetails {
 
     bool operator==(const BuilderDetails &rhs) const {
         // Note: Do NOT compare hasAdjustments
-        return toneMapping == rhs.toneMapping &&
+        return quality == rhs.quality &&
+               toneMapping == rhs.toneMapping &&
                whiteBalance == rhs.whiteBalance &&
                outRed == rhs.outRed &&
                outGreen == rhs.outGreen &&
@@ -107,6 +108,11 @@ BuilderType::Builder::Builder(BuilderType::Builder const& rhs) noexcept = defaul
 BuilderType::Builder::Builder(BuilderType::Builder&& rhs) noexcept = default;
 BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder const& rhs) noexcept = default;
 BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder&& rhs) noexcept = default;
+
+ColorGrading::Builder& ColorGrading::Builder::quality(ColorGrading::QualityLevel qualityLevel) noexcept {
+    mImpl->quality = qualityLevel;
+    return *this;
+}
 
 ColorGrading::Builder& ColorGrading::Builder::toneMapping(ToneMapping toneMapping) noexcept {
     mImpl->toneMapping = toneMapping;
@@ -350,6 +356,28 @@ inline float3 curves(float3 v, float3 shadowGamma, float3 midPoint, float3 highl
 }
 
 //------------------------------------------------------------------------------
+// Quality
+//------------------------------------------------------------------------------
+
+size_t selectLutDimension(ColorGrading::QualityLevel quality) {
+    switch (quality) {
+        case ColorGrading::QualityLevel::LOW:    return 16u;
+        case ColorGrading::QualityLevel::MEDIUM: return 32u;
+        case ColorGrading::QualityLevel::HIGH:   return 32u;
+        case ColorGrading::QualityLevel::ULTRA:  return 64u;
+    }
+}
+
+TextureFormat selectLutTextureFormat(ColorGrading::QualityLevel quality) {
+    switch (quality) {
+        case ColorGrading::QualityLevel::LOW:    return TextureFormat::RGB10_A2;
+        case ColorGrading::QualityLevel::MEDIUM: return TextureFormat::RGB10_A2;
+        case ColorGrading::QualityLevel::HIGH:   return TextureFormat::RGBA16F;
+        case ColorGrading::QualityLevel::ULTRA:  return TextureFormat::RGBA16F;
+    }
+}
+
+//------------------------------------------------------------------------------
 // Tone mapping
 //------------------------------------------------------------------------------
 
@@ -383,6 +411,7 @@ struct Config {
     ColorTransform linearToLogTransform;
     ColorTransform logToLinearTransform;
     ColorTransform toneMapper;
+    size_t lutDimension;
 };
 
 FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
@@ -390,18 +419,20 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
 
     DriverApi& driver = engine.getDriverApi();
 
-    constexpr size_t lutElementCount = LUT_DIMENSION * LUT_DIMENSION * LUT_DIMENSION;
-    constexpr size_t elementSize = sizeof(half4);
-    void* const data = malloc(lutElementCount * elementSize);
-
     Config config{
         .colorGradingTransformIn  = selectColorGradingTransformIn(builder->toneMapping),
         .colorGradingTransformOut = selectColorGradingTransformOut(builder->toneMapping),
         .lumaTransform            = selectLumaTransform(builder->toneMapping),
         .linearToLogTransform     = selectLinearToLogTransform(builder->toneMapping),
         .logToLinearTransform     = selectLogToLinearTransform(builder->toneMapping),
-        .toneMapper               = selectToneMapping(builder->toneMapping)
+        .toneMapper               = selectToneMapping(builder->toneMapping),
+        .lutDimension             = selectLutDimension(builder->quality)
     };
+
+    size_t lutElementCount = config.lutDimension * config.lutDimension * config.lutDimension;
+
+    constexpr size_t elementSize = sizeof(half4);
+    void* const data = malloc(lutElementCount * elementSize);
 
     //auto now = std::chrono::steady_clock::now();
 
@@ -410,12 +441,12 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
     // This takes about 3-6ms on Android in Release
     JobSystem& js = engine.getJobSystem();
     auto slices = js.createJob();
-    for (size_t b = 0; b < LUT_DIMENSION; b++) {
+    for (size_t b = 0; b < config.lutDimension; b++) {
         auto job = js.createJob(slices, [data, b, &config, builder](JobSystem&, JobSystem::Job*) {
-            half4* UTILS_RESTRICT p = (half4*) data + b * LUT_DIMENSION * LUT_DIMENSION;
-            for (size_t g = 0; g < LUT_DIMENSION; g++) {
-                for (size_t r = 0; r < LUT_DIMENSION; r++) {
-                    float3 v = float3{r, g, b} * (1.0f / (LUT_DIMENSION - 1u));
+            half4* UTILS_RESTRICT p = (half4*) data + b * config.lutDimension * config.lutDimension;
+            for (size_t g = 0; g < config.lutDimension; g++) {
+                for (size_t r = 0; r < config.lutDimension; r++) {
+                    float3 v = float3{r, g, b} * (1.0f / (config.lutDimension - 1u));
 
                     // LogC encoding
                     v = LogC_to_linear(v);
@@ -492,14 +523,16 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
     //std::chrono::duration<float, std::milli> duration = std::chrono::steady_clock::now() - now;
     //slog.d << "LUT generation time: " << duration.count() << " ms" << io::endl;
 
+    TextureFormat textureFormat = selectLutTextureFormat(builder->quality);
+
     // create the texture, we use RGBA16F because RGB16F is not supported everywhere
-    mLutHandle = driver.createTexture(SamplerType::SAMPLER_3D, 1,
-            TextureFormat::RGBA16F, 0,
-            LUT_DIMENSION, LUT_DIMENSION, LUT_DIMENSION, TextureUsage::DEFAULT);
+    mLutHandle = driver.createTexture(SamplerType::SAMPLER_3D, 1, textureFormat, 0,
+            config.lutDimension, config.lutDimension, config.lutDimension, TextureUsage::DEFAULT);
 
     driver.update3DImage(mLutHandle, 0,
             0, 0, 0,
-            LUT_DIMENSION, LUT_DIMENSION, LUT_DIMENSION, PixelBufferDescriptor{
+            config.lutDimension, config.lutDimension, config.lutDimension,
+            PixelBufferDescriptor{
                     data, lutElementCount * elementSize,
                     PixelDataFormat::RGBA, PixelDataType::HALF,
                     [](void* buffer, size_t, void*) { free(buffer); }
