@@ -67,14 +67,14 @@ Java_com_google_android_filament_SurfaceOrientation_nBuilderVertexCount(JNIEnv* 
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_SurfaceOrientation_mBuilderTriangleCount(JNIEnv* env, jclass,
+Java_com_google_android_filament_SurfaceOrientation_nBuilderTriangleCount(JNIEnv* env, jclass,
         jlong nativeBuilder, int triangleCount) {
     auto wrapper = (JniWrapper *) nativeBuilder;
     wrapper->builder->triangleCount(triangleCount);
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_SurfaceOrientation_mBuilderNormals(JNIEnv* env, jclass,
+Java_com_google_android_filament_SurfaceOrientation_nBuilderNormals(JNIEnv* env, jclass,
         jlong nativeBuilder, jobject javaBuffer, jint remaining, int stride) {
     auto wrapper = (JniWrapper *) nativeBuilder;
     AutoBuffer* buffer = wrapper->normals = new AutoBuffer(env, javaBuffer, remaining);
@@ -82,7 +82,7 @@ Java_com_google_android_filament_SurfaceOrientation_mBuilderNormals(JNIEnv* env,
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_SurfaceOrientation_mBuilderTangents(JNIEnv* env, jclass,
+Java_com_google_android_filament_SurfaceOrientation_nBuilderTangents(JNIEnv* env, jclass,
         jlong nativeBuilder, jobject javaBuffer, jint remaining, int stride) {
     auto wrapper = (JniWrapper *) nativeBuilder;
     AutoBuffer* buffer = wrapper->tangents = new AutoBuffer(env, javaBuffer, remaining);
@@ -90,7 +90,7 @@ Java_com_google_android_filament_SurfaceOrientation_mBuilderTangents(JNIEnv* env
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_SurfaceOrientation_mBuilderUVs(JNIEnv* env, jclass,
+Java_com_google_android_filament_SurfaceOrientation_nBuilderUVs(JNIEnv* env, jclass,
         jlong nativeBuilder, jobject javaBuffer, int remaining, int stride) {
     auto wrapper = (JniWrapper *) nativeBuilder;
     AutoBuffer* buffer = wrapper->uvs = new AutoBuffer(env, javaBuffer, remaining);
@@ -98,7 +98,7 @@ Java_com_google_android_filament_SurfaceOrientation_mBuilderUVs(JNIEnv* env, jcl
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_SurfaceOrientation_mBuilderPositions(JNIEnv* env, jclass,
+Java_com_google_android_filament_SurfaceOrientation_nBuilderPositions(JNIEnv* env, jclass,
         jlong nativeBuilder, jobject javaBuffer, int remaining, int stride) {
     auto wrapper = (JniWrapper *) nativeBuilder;
     AutoBuffer* buffer = wrapper->positions = new AutoBuffer(env, javaBuffer, remaining);
@@ -106,7 +106,7 @@ Java_com_google_android_filament_SurfaceOrientation_mBuilderPositions(JNIEnv* en
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_SurfaceOrientation_mBuilderTriangles16(JNIEnv* env, jclass,
+Java_com_google_android_filament_SurfaceOrientation_nBuilderTriangles16(JNIEnv* env, jclass,
         jlong nativeBuilder, jobject javaBuffer, int remaining) {
     auto wrapper = (JniWrapper *) nativeBuilder;
     AutoBuffer* buffer = wrapper->triangles16 = new AutoBuffer(env, javaBuffer, remaining);
@@ -114,7 +114,7 @@ Java_com_google_android_filament_SurfaceOrientation_mBuilderTriangles16(JNIEnv* 
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_SurfaceOrientation_mBuilderTriangles32(JNIEnv* env, jclass,
+Java_com_google_android_filament_SurfaceOrientation_nBuilderTriangles32(JNIEnv* env, jclass,
         jlong nativeBuilder, jobject javaBuffer, int remaining) {
     auto wrapper = (JniWrapper *) nativeBuilder;
     AutoBuffer* buffer = wrapper->triangles32 = new AutoBuffer(env, javaBuffer, remaining);
