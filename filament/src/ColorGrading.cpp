@@ -369,6 +369,8 @@ size_t selectLutDimension(ColorGrading::QualityLevel quality) {
 }
 
 TextureFormat selectLutTextureFormat(ColorGrading::QualityLevel quality) {
+    // We use RGBA16F for high quality modes instead of RGB16F because RGB16F
+    // is not supported everywhere
     switch (quality) {
         case ColorGrading::QualityLevel::LOW:    return TextureFormat::RGB10_A2;
         case ColorGrading::QualityLevel::MEDIUM: return TextureFormat::RGB10_A2;
@@ -525,7 +527,6 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
 
     TextureFormat textureFormat = selectLutTextureFormat(builder->quality);
 
-    // create the texture, we use RGBA16F because RGB16F is not supported everywhere
     mLutHandle = driver.createTexture(SamplerType::SAMPLER_3D, 1, textureFormat, 0,
             config.lutDimension, config.lutDimension, config.lutDimension, TextureUsage::DEFAULT);
 
