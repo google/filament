@@ -46,7 +46,7 @@ public class PageMaterials {
     }
 
     public PageMaterials(Engine engine, AssetManager assets) {
-        ByteBuffer asset = readAsset(assets, "materials/lit.filamat");
+        ByteBuffer asset = readAsset(assets, "materials/curl.filamat");
         assert asset != null;
         mMaterial = new Material.Builder()
                 .payload(asset, asset.remaining())
