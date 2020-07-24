@@ -105,13 +105,13 @@ public class Page {
         final float e = 0.01f;
         final int count = this.positions.capacity() / 3;
 
-        float[] p = new float[3];
-        float[] p1 = new float[3];
-        float[] p2 = new float[3];
-        float[] du = new float[3];
-        float[] dv = new float[3];
-        float[] n = new float[3];
-        float[] q = new float[4];
+        float[] p = new float[3];  // position of the current vertex
+        float[] p1 = new float[3]; // position of neighboring vertex along the U axis
+        float[] p2 = new float[3]; // position of neighboring vertex along the V axis
+        float[] du = new float[3]; // tangent vector along the U axis
+        float[] dv = new float[3]; // tangent vector along the V axis
+        float[] n = new float[3];  // normal vector (du x dv)
+        float[] q = new float[4];  // quaternion for the tangent frame
 
         for (int i = 0; i < count; i++) {
             final float u = this.uvs.get(i * 2);
