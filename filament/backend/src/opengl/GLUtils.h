@@ -270,6 +270,7 @@ constexpr inline GLenum getType(backend::PixelDataType type) noexcept {
         case PixelDataType::FLOAT:                return GL_FLOAT;
         case PixelDataType::UINT_10F_11F_11F_REV: return GL_UNSIGNED_INT_10F_11F_11F_REV;
         case PixelDataType::USHORT_565:           return GL_UNSIGNED_SHORT_5_6_5;
+        case PixelDataType::UINT_2_10_10_10_REV:  return GL_UNSIGNED_INT_2_10_10_10_REV;
         case PixelDataType::COMPRESSED:           return 0; // should never happen
     }
 }
