@@ -622,14 +622,25 @@ bool MaterialBuilder::generateShaders(const std::vector<Variant>& variants, Chun
             metalEntry.variant = v.variant;
 
             // Generate raw shader code.
+            // The quotes in Google-style line directives cause problems with certain drivers. These
+            // directives are optimized away when using the full filamat, so down below we
+            // explicitly remove them when using filamat lite.
             std::string shader;
             if (v.stage == filament::backend::ShaderType::VERTEX) {
                 shader = sg.createVertexProgram(
                         shaderModel, targetApi, targetLanguage, info, v.variant,
                         mInterpolation, mVertexDomain);
+#ifdef FILAMAT_LITE
+                GLSLToolsLite glslTools;
+                glslTools.removeGoogleLineDirectives(shader);
+#endif
             } else if (v.stage == filament::backend::ShaderType::FRAGMENT) {
                 shader = sg.createFragmentProgram(
                         shaderModel, targetApi, targetLanguage, info, v.variant, mInterpolation);
+#ifdef FILAMAT_LITE
+                GLSLToolsLite glslTools;
+                glslTools.removeGoogleLineDirectives(shader);
+#endif
             }
 
 #ifndef FILAMAT_LITE
