@@ -197,9 +197,40 @@ public:
          * A value greater than 1 turns on cascaded shadow mapping (CSM).
          * Only applicable to Type.SUN or Type.DIRECTIONAL lights.
          *
+         * When using shadow cascades, cascadeSplitPositions must also be set.
+         *
+         * @see ShadowCascades::cascadeSplitPositions
+         *
          * @warning This API is still experimental and subject to change.
          */
         uint8_t shadowCascades = 1;
+
+        /**
+         * The split positions for shadow cascades.
+         *
+         * Cascaded shadow mapping (CSM) partitions the camera frustum into cascades. These values
+         * determine the planes along the camera's Z axis to split the frustum. The camera near
+         * plane is represented by 0.0f and the far plane represented by 1.0f.
+         *
+         * For example, if using 4 cascades, these values would set a uniform split scheme:
+         * { 0.25f, 0.50f, 0.75f }
+         *
+         * For N cascades, N - 1 split positions will be read from this array.
+         *
+         * Filament provides utility methods inside LightManager::ShadowCascades to help set these
+         * values. For example, to use a uniform split scheme:
+         *
+         * ~~~~~~~~~~~{.cpp}
+         *   LightManager::ShadowCascades::computeUniformSplits(options.splitPositions, 4);
+         * ~~~~~~~~~~~
+         *
+         * @see ShadowCascades::computeUniformSplits
+         * @see ShadowCascades::computeLogSplits
+         * @see ShadowCascades::computePracticalSplits
+         *
+         * @warning This API is still experimental and subject to change.
+         */
+        float cascadeSplitPositions[3] = { 0.25f, 0.50f, 0.75f };
 
         /** Constant bias in world units (e.g. meters) by which shadows are moved away from the
          * light. 1mm by default.
@@ -281,6 +312,57 @@ public:
          *
          */
         float maxShadowDistance = 0.3;
+    };
+
+    struct ShadowCascades {
+        /**
+         * Utility method to compute ShadowOptions::cascadeSplitPositions according to a uniform
+         * split scheme.
+         *
+         * @warning This API is still experimental and subject to change.
+         *
+         * @param splitPositions    a float array of at least size (cascades - 1) to write the split
+         *                          positions into
+         * @param cascades          the number of shadow cascades, at most 4
+         */
+        static void computeUniformSplits(float* splitPositions, uint8_t cascades);
+
+        /**
+         * Utility method to compute ShadowOptions::cascadeSplitPositions according to a logarithmic
+         * split scheme.
+         *
+         * @warning This API is still experimental and subject to change.
+         *
+         * @param splitPositions    a float array of at least size (cascades - 1) to write the split
+         *                          positions into
+         * @param cascades          the number of shadow cascades, at most 4
+         * @param near              the camera near plane
+         * @param far               the camera far plane
+         */
+        static void computeLogSplits(float* splitPositions, uint8_t cascades,
+                float near, float far);
+
+        /**
+         * Utility method to compute ShadowOptions::cascadeSplitPositions according to a practical
+         * split scheme.
+         *
+         * The practical split scheme uses uses a lambda value to interpolate between the logrithmic
+         * and uniform split schemes. Start with a lambda value of 0.5f and adjust for your scene.
+         *
+         * See: Zhang et al 2006, "Parallel-split shadow maps for large-scale virtual environments"
+         *
+         * @warning This API is still experimental and subject to change.
+         *
+         * @param splitPositions    a float array of at least size (cascades - 1) to write the split
+         *                          positions into
+         * @param cascades          the number of shadow cascades, at most 4
+         * @param near              the camera near plane
+         * @param far               the camera far plane
+         * @param lambda            a float in the range [0, 1] that interpolates between log and
+         *                          uniform split schemes
+         */
+        static void computePracticalSplits(float* splitPositions, uint8_t cascades,
+                float near, float far, float lambda);
     };
 
     //! Use Builder to construct a Light object instance

@@ -199,6 +199,7 @@ private:
     bool mEnableShadows = true;
     int mShadowCascades = 1;
     bool mEnableContactShadows = false;
+    std::array<float, 3> mSplitPositions = {0.25f, 0.50f, 0.75f};
     bool mEnableDithering = true;
     bool mEnableFxaa = true;
     bool mEnableMsaa = true;
@@ -478,6 +479,9 @@ void SimpleViewer::updateUserInterface() {
         ImGui::SliderInt("Cascades", &mShadowCascades, 1, 4);
         ImGui::Checkbox("Debug Cascades", debug.getPropertyAddress<bool>("d.shadowmap.visualize_cascades"));
         ImGui::Checkbox("Enable contact shadows", &mEnableContactShadows);
+        ImGui::SliderFloat("Split pos 0", &mSplitPositions[0], 0.0f, 1.0f);
+        ImGui::SliderFloat("Split pos 1", &mSplitPositions[1], 0.0f, 1.0f);
+        ImGui::SliderFloat("Split pos 2", &mSplitPositions[2], 0.0f, 1.0f);
         ImGui::Unindent();
     }
 
@@ -518,6 +522,7 @@ void SimpleViewer::updateUserInterface() {
         auto options = lm.getShadowOptions(ci);
         options.screenSpaceContactShadows = mEnableContactShadows;
         options.shadowCascades = mShadowCascades;
+        std::copy_n(mSplitPositions.begin(), 3, options.cascadeSplitPositions);
         lm.setShadowOptions(ci, options);
         lm.setShadowCaster(ci, mEnableShadows);
     });

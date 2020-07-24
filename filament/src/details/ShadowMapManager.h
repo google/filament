@@ -126,31 +126,38 @@ private:
 
     class CascadeSplits {
     public:
+        constexpr static size_t SPLIT_COUNT = CONFIG_MAX_SHADOW_CASCADES + 1;
+
         struct Params {
             math::mat4f proj = {};
             float near = 0.0f;
             float far = 0.0f;
             size_t cascadeCount = 1;
+            std::array<float, SPLIT_COUNT> splitPositions = { 0.0f };
 
             bool operator!=(const Params& rhs) const {
                 return proj != rhs.proj ||
                        near != rhs.near ||
                        far != rhs.far ||
-                       cascadeCount != rhs.cascadeCount;
+                       cascadeCount != rhs.cascadeCount ||
+                       splitPositions != rhs.splitPositions;
             }
         };
 
         CascadeSplits() : CascadeSplits(Params {}) {}
         CascadeSplits(Params p);
 
+        // Split positions in world-space.
         const float* beginWs() const { return mSplitsWs; }
         const float* endWs() const { return mSplitsWs + mSplitCount; }
+
+        // Split positions in clip-space.
         const float* beginCs() const { return mSplitsCs; }
         const float* endCs() const { return mSplitsCs + mSplitCount; }
 
     private:
-        float mSplitsWs[CONFIG_MAX_SHADOW_CASCADES + 1];
-        float mSplitsCs[CONFIG_MAX_SHADOW_CASCADES + 1];
+        float mSplitsWs[SPLIT_COUNT];
+        float mSplitsCs[SPLIT_COUNT];
         size_t mSplitCount;
 
     } mCascadeSplits;

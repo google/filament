@@ -371,6 +371,42 @@ void FLightManager::setShadowCaster(Instance i, bool shadowCaster) noexcept {
 }
 
 // ------------------------------------------------------------------------------------------------
+// ShadowCascades utility methods
+// ------------------------------------------------------------------------------------------------
+
+void LightManager::ShadowCascades::computeUniformSplits(float splitPositions[3], uint8_t cascades) {
+    size_t s = 0;
+    cascades = max(cascades, (uint8_t) 4u);
+    for (size_t c = 1; c < cascades; c++) {
+        splitPositions[s++] = (float) c / cascades;
+    }
+}
+
+void LightManager::ShadowCascades::computeLogSplits(float splitPositions[3], uint8_t cascades,
+        float near, float far) {
+    size_t s = 0;
+    cascades = max(cascades, (uint8_t) 4u);
+    for (size_t c = 1; c < cascades; c++) {
+        splitPositions[s++] =
+            (near * std::powf(far / near, (float) c / cascades) - near) / (far - near);
+    }
+}
+
+void LightManager::ShadowCascades::computePracticalSplits(float splitPositions[3], uint8_t cascades,
+        float near, float far, float lambda) {
+    float uniformSplits[3];
+    float logSplits[3];
+    cascades = max(cascades, (uint8_t) 4u);
+    computeUniformSplits(uniformSplits, cascades);
+    computeLogSplits(logSplits, cascades, near, far);
+    size_t s = 0;
+    for (size_t c = 1; c < cascades; c++) {
+        splitPositions[s] = lambda * logSplits[s] + (1.0f - lambda) * uniformSplits[s];
+        s++;
+    }
+}
+
+// ------------------------------------------------------------------------------------------------
 // Trampoline calling into private implementation
 // ------------------------------------------------------------------------------------------------
 

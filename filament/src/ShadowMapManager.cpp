@@ -203,6 +203,9 @@ bool ShadowMapManager::updateCascadeShadowMaps(FEngine& engine, FView& view,
     const uint16_t textureSize = mTextureState.size;
     auto& lcm = engine.getLightManager();
 
+    FLightManager::Instance directionalLight = lightData.elementAt<FScene::LIGHT_INSTANCE>(0);
+    LightManager::ShadowOptions const& options = lcm.getShadowOptions(directionalLight);
+
     ShadowMap::CascadeParameters cascadeParams;
 
     if (mCascadeShadowMaps.size() > 0) {
@@ -241,13 +244,24 @@ bool ShadowMapManager::updateCascadeShadowMaps(FEngine& engine, FView& view,
         vsFar = std::max(vsFar, cascadeParams.vsNearFar.y);
     }
 
+    const size_t cascadeCount = mCascadeShadowMaps.size();
+
     // We divide the camera frustum into N cascades. This gives us N + 1 split positions.
     // The first split position is the near plane; the last split position is the far plane.
+    std::array<float, CascadeSplits::SPLIT_COUNT> splitPercentages;
+    splitPercentages[0] = 0.0f;
+    size_t i = 1;
+    for (; i < cascadeCount; i++) {
+        splitPercentages[i] = options.cascadeSplitPositions[i - 1];
+    }
+    splitPercentages[i] = 1.0f;
+
     const CascadeSplits::Params p {
         .proj = viewingCameraInfo.cullingProjection,
         .near = vsNear,
         .far = vsFar,
-        .cascadeCount = mCascadeShadowMaps.size()
+        .cascadeCount = cascadeCount,
+        .splitPositions = splitPercentages
     };
     if (p != mCascadeSplitParams) {
         mCascadeSplits = CascadeSplits(p);
@@ -304,8 +318,6 @@ bool ShadowMapManager::updateCascadeShadowMaps(FEngine& engine, FView& view,
     }
 
     // screen-space contact shadows for the directional light
-    FLightManager::Instance directionalLight = lightData.elementAt<FScene::LIGHT_INSTANCE>(0);
-    LightManager::ShadowOptions const& options = lcm.getShadowOptions(directionalLight);
     screenSpaceShadowDistance = options.maxShadowDistance;
     directionalShadows |= std::min(uint8_t(255u), options.stepCount) << 8u;
     if (options.screenSpaceContactShadows) {
@@ -427,17 +439,8 @@ void ShadowMapManager::destroyResources(DriverApi& driver) noexcept {
 }
 
 ShadowMapManager::CascadeSplits::CascadeSplits(Params p) : mSplitCount(p.cascadeCount + 1) {
-    auto uniformSplit = [](float near, float far, size_t cascades) {
-        return [near, far, cascades](size_t split) {
-            if (cascades == 0) {
-                return 0.0f;
-            }
-            return near + (far - near) * ((float) split / cascades);
-        };
-    };
-    auto uniformSplitCalculator = uniformSplit(p.near, p.far, p.cascadeCount);
     for (size_t s = 0; s < mSplitCount; s++) {
-        mSplitsWs[s] = uniformSplitCalculator(s);
+        mSplitsWs[s] = p.near + (p.far - p.near) * p.splitPositions[s];
         mSplitsCs[s] = mat4f::project(p.proj, float3(0.0f, 0.0f, mSplitsWs[s])).z;
     }
 }
