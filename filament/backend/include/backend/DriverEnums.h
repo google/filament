@@ -283,7 +283,8 @@ enum class PixelDataType : uint8_t {
     FLOAT,                //!< float (32-bits float)
     COMPRESSED,           //!< compressed pixels, @see CompressedPixelDataType
     UINT_10F_11F_11F_REV, //!< three low precision floating-point numbers
-    USHORT_565            //!< unsigned int (16-bit), encodes 3 RGB channels
+    USHORT_565,           //!< unsigned int (16-bit), encodes 3 RGB channels
+    UINT_2_10_10_10_REV,  //!< unsigned normalized 10 bits RGB, 2 bits alpha
 };
 
 //! Compressed pixel data types

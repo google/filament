@@ -33,6 +33,8 @@
 
 #include <functional>
 
+#include <math.h>
+
 namespace filament {
 
 using namespace utils;
@@ -368,16 +370,34 @@ size_t selectLutDimension(ColorGrading::QualityLevel quality) {
     }
 }
 
-TextureFormat selectLutTextureFormat(ColorGrading::QualityLevel quality) {
+void selectLutTextureParams(ColorGrading::QualityLevel quality,
+        TextureFormat& internalFormat, PixelDataFormat& format, PixelDataType& type) {
     // We use RGBA16F for high quality modes instead of RGB16F because RGB16F
     // is not supported everywhere
     switch (quality) {
-        case ColorGrading::QualityLevel::LOW:    return TextureFormat::RGB10_A2;
-        case ColorGrading::QualityLevel::MEDIUM: return TextureFormat::RGB10_A2;
-        case ColorGrading::QualityLevel::HIGH:   return TextureFormat::RGBA16F;
-        case ColorGrading::QualityLevel::ULTRA:  return TextureFormat::RGBA16F;
+        case ColorGrading::QualityLevel::LOW:
+            internalFormat = TextureFormat::RGB10_A2;
+            format = PixelDataFormat::RGBA;
+            type = PixelDataType::UINT_2_10_10_10_REV;
+            break;
+        case ColorGrading::QualityLevel::MEDIUM:
+            internalFormat = TextureFormat::RGB10_A2;
+            format = PixelDataFormat::RGBA;
+            type = PixelDataType::UINT_2_10_10_10_REV;
+            break;
+        case ColorGrading::QualityLevel::HIGH:
+            internalFormat = TextureFormat::RGBA16F;
+            format = PixelDataFormat::RGBA;
+            type = PixelDataType::HALF;
+            break;
+        case ColorGrading::QualityLevel::ULTRA:
+            internalFormat = TextureFormat::RGBA16F;
+            format = PixelDataFormat::RGBA;
+            type = PixelDataType::HALF;
+            break;
     }
 }
+
 
 //------------------------------------------------------------------------------
 // Tone mapping
@@ -433,8 +453,8 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
 
     size_t lutElementCount = config.lutDimension * config.lutDimension * config.lutDimension;
 
-    constexpr size_t elementSize = sizeof(half4);
-    void* const data = malloc(lutElementCount * elementSize);
+    size_t elementSize = sizeof(half4);
+    void* data = malloc(lutElementCount * elementSize);
 
     //auto now = std::chrono::steady_clock::now();
 
@@ -508,6 +528,8 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                     // TODO: allow to customize the output color space,
                     v = config.colorGradingTransformOut * v;
 
+                    v = saturate(v);
+
                     // Apply OECF
                     v = OECF_sRGB(v);
 
@@ -525,17 +547,41 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
     //std::chrono::duration<float, std::milli> duration = std::chrono::steady_clock::now() - now;
     //slog.d << "LUT generation time: " << duration.count() << " ms" << io::endl;
 
-    TextureFormat textureFormat = selectLutTextureFormat(builder->quality);
+    TextureFormat textureFormat;
+    PixelDataFormat format;
+    PixelDataType type;
+    selectLutTextureParams(builder->quality, textureFormat, format, type);
 
     mLutHandle = driver.createTexture(SamplerType::SAMPLER_3D, 1, textureFormat, 0,
             config.lutDimension, config.lutDimension, config.lutDimension, TextureUsage::DEFAULT);
+
+    // convert input to UINT_2_10_10_10_REV if needed
+    if (type == PixelDataType::UINT_2_10_10_10_REV) {
+        uint32_t* const UTILS_RESTRICT dst = (uint32_t*)malloc(lutElementCount * sizeof(uint32_t));
+        half4 const* UTILS_RESTRICT src = (half4*)data;
+
+        // we use a vectorize width of 8 because, on ARMv8 it allows the compiler to write eight
+        // 32-bits results in one go.
+        const size_t count = lutElementCount & ~0x7; // tell the compiler that we're a multiple of 8
+        #pragma clang loop vectorize_width(8)
+        for (size_t i = 0; i < count; ++i) {
+            float4 v{ src[i] };
+            uint32_t r = uint32_t(floorf(v.x * 1023.0f + 0.5f));
+            uint32_t g = uint32_t(floorf(v.y * 1023.0f + 0.5f));
+            uint32_t b = uint32_t(floorf(v.z * 1023.0f + 0.5f));
+            dst[i] = (b << 20u) | (g << 10u) | r;
+        }
+
+        free(data);
+        data = (void*)dst;
+        elementSize = sizeof(uint32_t);
+    }
 
     driver.update3DImage(mLutHandle, 0,
             0, 0, 0,
             config.lutDimension, config.lutDimension, config.lutDimension,
             PixelBufferDescriptor{
-                    data, lutElementCount * elementSize,
-                    PixelDataFormat::RGBA, PixelDataType::HALF,
+                    data, lutElementCount * elementSize,format, type,
                     [](void* buffer, size_t, void*) { free(buffer); }
             }
     );

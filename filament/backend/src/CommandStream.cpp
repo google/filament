@@ -302,6 +302,8 @@ io::ostream& operator<<(io::ostream& out, PixelDataType format) {
         CASE(PixelDataType, FLOAT)
         CASE(PixelDataType, COMPRESSED)
         CASE(PixelDataType, UINT_10F_11F_11F_REV)
+        CASE(PixelDataType, USHORT_565)
+        CASE(PixelDataType, UINT_2_10_10_10_REV)
     }
     return out;
 }

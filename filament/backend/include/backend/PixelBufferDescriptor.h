@@ -170,6 +170,11 @@ public:
                 assert(format == PixelDataFormat::RGB);
                 bpp = 4;
                 break;
+            case PixelDataType::UINT_2_10_10_10_REV:
+                // Special case, format must be RGBA and uses 4 bytes
+                assert(format == PixelDataFormat::RGBA);
+                bpp = 4;
+                break;
         }
 
         size_t bpr = bpp * stride;
