@@ -103,6 +103,9 @@ public:
         return std::max(1, std::ilogbf(std::max(width, height)) + 1);
     }
 
+    static bool validatePixelFormatAndType(backend::TextureFormat internalFormat,
+            backend::PixelDataFormat format, backend::PixelDataType type) noexcept;
+
 private:
     friend class Texture;
     FStream* mStream = nullptr;

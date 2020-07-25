@@ -17,6 +17,7 @@
 #include "details/ColorGrading.h"
 
 #include "details/Engine.h"
+#include "details/Texture.h"
 
 #include "FilamentAPI-impl.h"
 
@@ -551,6 +552,8 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
     PixelDataFormat format;
     PixelDataType type;
     selectLutTextureParams(builder->quality, textureFormat, format, type);
+
+    assert(FTexture::validatePixelFormatAndType(textureFormat, format, type));
 
     mLutHandle = driver.createTexture(SamplerType::SAMPLER_3D, 1, textureFormat, 0,
             config.lutDimension, config.lutDimension, config.lutDimension, TextureUsage::DEFAULT);
