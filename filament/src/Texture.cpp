@@ -184,7 +184,7 @@ void FTexture::setImage(FEngine& engine,
     if (!ASSERT_POSTCONDITION_NON_FATAL(buffer.type == PixelDataType::COMPRESSED ||
                          validatePixelFormatAndType(mFormat, buffer.format, buffer.type),
             "The combination of internal format=%u and {format=%u, type=%u} is not supported.",
-            mFormat, buffer.format, buffer.type)) {
+            unsigned(mFormat), unsigned(buffer.format), unsigned(buffer.type))) {
         return;
     }
 
@@ -202,7 +202,7 @@ void FTexture::setImage(FEngine& engine, size_t level,
     if (!ASSERT_POSTCONDITION_NON_FATAL(buffer.type == PixelDataType::COMPRESSED ||
                         validatePixelFormatAndType(mFormat, buffer.format, buffer.type),
             "The combination of internal format=%u and {format=%u, type=%u} is not supported.",
-            mFormat, buffer.format, buffer.type)) {
+            unsigned(mFormat), unsigned(buffer.format), unsigned(buffer.type))) {
         return;
     }
 
