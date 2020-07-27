@@ -1123,6 +1123,11 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
     enumerateSamplerGroups(program, [this, &texturesToBind, &samplersToBind](
             const SamplerGroup::Sampler* sampler,
             uint8_t binding) {
+        // We currently only support a max of SAMPLER_BINDING_COUNT samplers. Ignore any additional
+        // samplers that may be bound.
+        if (binding >= SAMPLER_BINDING_COUNT) {
+            return;
+        }
         const auto metalTexture = handle_const_cast<MetalTexture>(mHandleMap, sampler->t);
         texturesToBind[binding] = metalTexture->texture;
 
