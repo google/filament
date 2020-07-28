@@ -56,6 +56,7 @@ export function vectorToArray<T>(vector: Vector<T>): T[];
 
 export class Texture {}
 export class SwapChain {}
+export class ColorGrading {}
 
 export interface Box {
     center: float3;
@@ -290,7 +291,8 @@ export class RenderableManager {
 
 export class VertexBuffer {
     public static Builder(): VertexBuffer$Builder;
-    public setBufferAt(engine: Engine, bufindex: number, f32array: BufferReference, byteOffset?: number): void;
+    public setBufferAt(engine: Engine, bufindex: number, f32array: BufferReference,
+            byteOffset?: number): void;
 }
 
 export class IndexBuffer {
@@ -351,6 +353,22 @@ export class Camera {
     public static inverseProjection(p: mat4): mat4;
 }
 
+export class ColorGrading$Builder {
+    public quality(qualityLevel: ColorGrading$QualityLevel): ColorGrading$Builder;
+    public toneMapping(toneMapping: ColorGrading$ToneMapping): ColorGrading$Builder;
+    public whiteBalance(temperature: number, tint: number): ColorGrading$Builder;
+    public channelMixer(outRed: float3, outGreen: float3, outBlue: float3): ColorGrading$Builder;
+    public shadowsMidtonesHighlights(shadows: float4, midtones: float4, highlights: float4,
+            ranges: float4): ColorGrading$Builder;
+    public slopeOffsetPower(slope: float3, offset: float3, power: float3): ColorGrading$Builder;
+    public contrast(contrast: number): ColorGrading$Builder;
+    public vibrance(vibrance: number): ColorGrading$Builder;
+    public saturation(saturation: number): ColorGrading$Builder;
+    public curves(shadowGamma: float3, midPoint: float3,
+            highlightScale: float3): ColorGrading$Builder;
+    public build(engine: Engine): ColorGrading;
+}
+
 export class IndirectLight {
     public setIntensity(intensity: number): void;
     public getIntensity(): number;
@@ -397,6 +415,7 @@ export class RenderTarget {
 
 export class View {
     public setCamera(camera: Camera): void;
+    public setColorGrading(colorGrading: ColorGrading): void;
     public setScene(scene: Scene): void;
     public setViewport(viewport: float4): void;
     public setVisibleLayers(select: number, values: number): void;
@@ -547,6 +566,23 @@ export enum Camera$Fov {
 export enum Camera$Projection {
     PERSPECTIVE,
     ORTHO,
+}
+
+ export enum ColorGrading$QualityLevel {
+    LOW,
+    MEDIUM,
+    HIGH,
+    ULTRA,
+ }
+
+export enum ColorGrading$ToneMapping {
+    LINEAR,
+    ACES_LEGACY,
+    ACES,
+    FILMIC,
+    UCHIMURA,
+    REINHARD,
+    DISPLAY_RANGE,
 }
 
 export enum CompressedPixelDataType {
