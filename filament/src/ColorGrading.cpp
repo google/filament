@@ -453,9 +453,20 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
     };
 
     size_t lutElementCount = config.lutDimension * config.lutDimension * config.lutDimension;
-
     size_t elementSize = sizeof(half4);
     void* data = malloc(lutElementCount * elementSize);
+
+    TextureFormat textureFormat;
+    PixelDataFormat format;
+    PixelDataType type;
+    selectLutTextureParams(builder->quality, textureFormat, format, type);
+     assert(FTexture::validatePixelFormatAndType(textureFormat, format, type));
+
+     void* converted = nullptr;
+    if (type == PixelDataType::UINT_2_10_10_10_REV) {
+        // convert input to UINT_2_10_10_10_REV if needed
+        converted = malloc(lutElementCount * sizeof(uint32_t));
+    }
 
     //auto now = std::chrono::steady_clock::now();
 
@@ -465,7 +476,7 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
     JobSystem& js = engine.getJobSystem();
     auto slices = js.createJob();
     for (size_t b = 0; b < config.lutDimension; b++) {
-        auto job = js.createJob(slices, [data, b, &config, builder](JobSystem&, JobSystem::Job*) {
+        auto job = js.createJob(slices, [data, converted, b, &config, builder](JobSystem&, JobSystem::Job*) {
             half4* UTILS_RESTRICT p = (half4*) data + b * config.lutDimension * config.lutDimension;
             for (size_t g = 0; g < config.lutDimension; g++) {
                 for (size_t r = 0; r < config.lutDimension; r++) {
@@ -537,6 +548,23 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                     *p++ = half4{v, 0.0f};
                 }
             }
+
+            if (converted) {
+                uint32_t* const UTILS_RESTRICT dst = (uint32_t*)converted + b * config.lutDimension * config.lutDimension;
+                half4* UTILS_RESTRICT src = (half4*) data + b * config.lutDimension * config.lutDimension;
+                // we use a vectorize width of 8 because, on ARMv8 it allows the compiler to write eight
+                // 32-bits results in one go.
+                const size_t count = (config.lutDimension * config.lutDimension) & ~0x7; // tell the compiler that we're a multiple of 8
+                #pragma clang loop vectorize_width(8)
+                for (size_t i = 0; i < count; ++i) {
+                    float4 v{ src[i] };
+                    uint32_t r = uint32_t(floorf(v.x * 1023.0f + 0.5f));
+                    uint32_t g = uint32_t(floorf(v.y * 1023.0f + 0.5f));
+                    uint32_t b = uint32_t(floorf(v.z * 1023.0f + 0.5f));
+                    dst[i] = (b << 20u) | (g << 10u) | r;
+                }
+            }
+
         });
         js.run(job);
     }
@@ -548,35 +576,12 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
     //std::chrono::duration<float, std::milli> duration = std::chrono::steady_clock::now() - now;
     //slog.d << "LUT generation time: " << duration.count() << " ms" << io::endl;
 
-    TextureFormat textureFormat;
-    PixelDataFormat format;
-    PixelDataType type;
-    selectLutTextureParams(builder->quality, textureFormat, format, type);
-
-    assert(FTexture::validatePixelFormatAndType(textureFormat, format, type));
-
     mLutHandle = driver.createTexture(SamplerType::SAMPLER_3D, 1, textureFormat, 0,
             config.lutDimension, config.lutDimension, config.lutDimension, TextureUsage::DEFAULT);
 
-    // convert input to UINT_2_10_10_10_REV if needed
-    if (type == PixelDataType::UINT_2_10_10_10_REV) {
-        uint32_t* const UTILS_RESTRICT dst = (uint32_t*)malloc(lutElementCount * sizeof(uint32_t));
-        half4 const* UTILS_RESTRICT src = (half4*)data;
-
-        // we use a vectorize width of 8 because, on ARMv8 it allows the compiler to write eight
-        // 32-bits results in one go.
-        const size_t count = lutElementCount & ~0x7; // tell the compiler that we're a multiple of 8
-        #pragma clang loop vectorize_width(8)
-        for (size_t i = 0; i < count; ++i) {
-            float4 v{ src[i] };
-            uint32_t r = uint32_t(floorf(v.x * 1023.0f + 0.5f));
-            uint32_t g = uint32_t(floorf(v.y * 1023.0f + 0.5f));
-            uint32_t b = uint32_t(floorf(v.z * 1023.0f + 0.5f));
-            dst[i] = (b << 20u) | (g << 10u) | r;
-        }
-
+    if (converted) {
         free(data);
-        data = (void*)dst;
+        data = converted;
         elementSize = sizeof(uint32_t);
     }
 
