@@ -1,5 +1,5 @@
 material {
-    name : DepthOfFieldDilate,
+    name : dofDilate,
     parameters : [
         {
             type : sampler2d,

@@ -1,5 +1,5 @@
 material {
-    name : DepthOfFieldMipmap,
+    name : dofMipmap,
     parameters : [
         {
             type : sampler2d,

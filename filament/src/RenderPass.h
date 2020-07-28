@@ -241,6 +241,9 @@ public:
 
 
     RenderPass(FEngine& engine, utils::GrowingSlice<Command> commands) noexcept;
+    RenderPass(RenderPass const& rhs);
+    ~RenderPass() noexcept;
+
     void overridePolygonOffset(backend::PolygonOffset* polygonOffset) noexcept;
     void setGeometry(FScene::RenderableSoa const& soa, utils::Range<uint32_t> vr,
             backend::Handle<backend::HwUniformBuffer> uboHandle) noexcept;
