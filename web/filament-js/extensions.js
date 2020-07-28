@@ -270,6 +270,7 @@ Filament.loadClassExtensions = function() {
             return result;
         };
 
+    Filament.ColorGrading$Builder.prototype.build =
     Filament.RenderTarget$Builder.prototype.build =
     Filament.VertexBuffer$Builder.prototype.build =
     Filament.IndexBuffer$Builder.prototype.build =

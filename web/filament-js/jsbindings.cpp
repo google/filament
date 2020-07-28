@@ -35,6 +35,7 @@
 #include <filameshio/MeshReader.h>
 
 #include <filament/Camera.h>
+#include <filament/ColorGrading.h>
 #include <filament/Engine.h>
 #include <filament/Frustum.h>
 #include <filament/IndexBuffer.h>
@@ -113,6 +114,7 @@ namespace emscripten {
         BIND(Animator)
         BIND(AssetLoader)
         BIND(Camera)
+        BIND(ColorGrading)
         BIND(Engine)
         BIND(FilamentAsset)
         BIND(FilamentInstance)
@@ -148,6 +150,7 @@ namespace {
 
 // For convenience, declare terse private aliases to nested types. This lets us avoid extremely
 // verbose binding declarations.
+using ColorBuilder = ColorGrading::Builder;
 using IblBuilder = IndirectLight::Builder;
 using IndexBuilder = IndexBuffer::Builder;
 using LightBuilder = LightManager::Builder;
@@ -532,6 +535,7 @@ class_<Renderer>("Renderer")
 class_<View>("View")
     .function("setScene", &View::setScene, allow_raw_pointers())
     .function("setCamera", &View::setCamera, allow_raw_pointers())
+    .function("setColorGrading", &View::setColorGrading, allow_raw_pointers())
     .function("setBlendMode", &View::setBlendMode)
     .function("getBlendMode", &View::getBlendMode)
     .function("getViewport", &View::getViewport)
@@ -658,6 +662,66 @@ class_<Camera>("Camera")
     .class_function("inverseProjection",  (flatmat4 (*)(flatmat4)) [] (flatmat4 m) {
         return flatmat4 { filament::math::mat4f(Camera::inverseProjection(m.m)) };
     }, allow_raw_pointers());
+
+class_<ColorGrading>("ColorGrading")
+    .class_function("Builder", (ColorBuilder (*)()) [] { return ColorBuilder(); });
+
+class_<ColorBuilder>("ColorGrading$Builder")
+    .function("_build", EMBIND_LAMBDA(ColorGrading*, (ColorBuilder* builder, Engine* engine), {
+        return builder->build(*engine);
+    }), allow_raw_pointers())
+
+    .BUILDER_FUNCTION("quality", ColorBuilder, (ColorBuilder* builder,
+            ColorGrading::QualityLevel ql), {
+        return &builder->quality(ql);
+    })
+
+    .BUILDER_FUNCTION("toneMapping", ColorBuilder, (ColorBuilder* builder,
+            ColorGrading::ToneMapping tm), {
+        return &builder->toneMapping(tm);
+    })
+
+    .BUILDER_FUNCTION("whiteBalance", ColorBuilder, (ColorBuilder* builder, float temp,
+            float tint), {
+        return &builder->whiteBalance(temp, tint);
+    })
+
+    .BUILDER_FUNCTION("channelMixer", ColorBuilder, (ColorBuilder* builder,
+            filament::math::float3 red,
+            filament::math::float3 green,
+            filament::math::float3 blue), {
+        return &builder->channelMixer(red, green, blue);
+    })
+
+    .BUILDER_FUNCTION("shadowsMidtonesHighlights", ColorBuilder, (ColorBuilder* builder,
+            filament::math::float4 shadows,
+            filament::math::float4 midtones,
+            filament::math::float4 highlights,
+            filament::math::float4 ranges), {
+        return &builder->shadowsMidtonesHighlights(shadows, midtones, highlights, ranges);
+    })
+
+    .BUILDER_FUNCTION("slopeOffsetPower", ColorBuilder, (ColorBuilder* builder,
+            math::float3 slope, math::float3 offset, math::float3 power), {
+        return &builder->slopeOffsetPower(slope, offset, power);
+    })
+
+    .BUILDER_FUNCTION("contrast", ColorBuilder, (ColorBuilder* builder, float contrast), {
+        return &builder->contrast(contrast);
+    })
+
+    .BUILDER_FUNCTION("vibrance", ColorBuilder, (ColorBuilder* builder, float vibrance), {
+        return &builder->vibrance(vibrance);
+    })
+
+    .BUILDER_FUNCTION("saturation", ColorBuilder, (ColorBuilder* builder, float saturation), {
+        return &builder->saturation(saturation);
+    })
+
+    .BUILDER_FUNCTION("curves", ColorBuilder, (ColorBuilder* builder, math::float3 shadowGamma,
+            math::float3 midPoint, math::float3 highlightScale), {
+        return &builder->curves(shadowGamma, midPoint, highlightScale);
+    });
 
 class_<RenderTargetBuilder>("RenderTarget$Builder")
     .BUILDER_FUNCTION("texture", RenderTargetBuilder, (RenderTargetBuilder* builder,
