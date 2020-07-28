@@ -31,6 +31,10 @@
 #include <utils/Panic.h>
 #include <utils/Systrace.h>
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+
 // To emulate EXT_multisampled_render_to_texture properly we need to be able to copy from
 // a non-ms texture to an ms attachment. This is only allowed with OpenGL (not GLES), which
 // would be fine for us. However, this is also not trivial to implement in Metal so for now
@@ -2271,6 +2275,13 @@ void OpenGLDriver::setRenderPrimitiveBuffer(Handle<HwRenderPrimitive> rph,
                 assert(bi != 0xFF);
                 gl.bindBuffer(GL_ARRAY_BUFFER, eb->gl.buffers[bi]);
                 if (UTILS_UNLIKELY(eb->attributes[i].flags & Attribute::FLAG_INTEGER_TARGET)) {
+
+                    // Emscripten regressed at the following PR so we work around it for now.
+                    // https://github.com/emscripten-core/emscripten/pull/11225
+                    #ifdef __EMSCRIPTEN__
+                    EM_ASM_INT({ GL.currArrayBuffer = GLctx.currentArrayBufferBinding; });
+                    #endif
+
                     glVertexAttribIPointer(GLuint(i),
                             getComponentCount(eb->attributes[i].type),
                             getComponentType(eb->attributes[i].type),
