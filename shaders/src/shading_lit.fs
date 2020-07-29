@@ -162,6 +162,9 @@ void getRoughnessPixelParams(const MaterialInputs material, inout PixelParams pi
     float perceptualRoughness = material.roughness;
 #endif
 
+    // This is used by the refraction code and must be saved before we apply specular AA
+    pixel.perceptualRoughnessUnclamped = perceptualRoughness;
+
 #if defined(GEOMETRIC_SPECULAR_AA)
     perceptualRoughness = normalFiltering(perceptualRoughness, getWorldGeometricNormalVector());
 #endif
@@ -174,7 +177,6 @@ void getRoughnessPixelParams(const MaterialInputs material, inout PixelParams pi
     perceptualRoughness = mix(perceptualRoughness, basePerceptualRoughness, pixel.clearCoat);
 #endif
 
-    pixel.perceptualRoughnessUnclamped = perceptualRoughness;
     // Clamp the roughness to a minimum value to avoid divisions by 0 during lighting
     pixel.perceptualRoughness = clamp(perceptualRoughness, MIN_PERCEPTUAL_ROUGHNESS, 1.0);
     // Remaps the roughness to a perceptually linear roughness (roughness^2)
