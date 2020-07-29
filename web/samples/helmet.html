@@ -49,7 +49,7 @@ class App {
         const iblDirection = IndirectLight.getDirectionEstimate(indirectLight.shfloats);
         const iblColor = IndirectLight.getColorEstimate(indirectLight.shfloats, iblDirection);
 
-        indirectLight.setIntensity(50000);
+        indirectLight.setIntensity(20000);
 
         const skybox = engine.createSkyFromKtx(sky_url);
         this.scene.setSkybox(skybox);
@@ -57,7 +57,7 @@ class App {
         const sunlight = Filament.EntityManager.get().create();
         Filament.LightManager.Builder(LightType.SUN)
             .color(iblColor.slice(0, 3))
-            .intensity(150000)
+            .intensity(70000)
             .direction(iblDirection)
             .sunAngularRadius(1.9)
             .castShadows(true)
@@ -95,13 +95,17 @@ class App {
 
         const cameraEntity = Filament.EntityManager.get().create();
         this.camera = engine.createCamera(cameraEntity);
-        this.camera.setExposure(32, 1/125.0, 100);
+
+        const colorGrading = Filament.ColorGrading.Builder()
+            .toneMapping(Filament.ColorGrading$ToneMapping.ACES)
+            .build(engine);
 
         this.swapChain = engine.createSwapChain();
         this.renderer = engine.createRenderer();
         this.view = engine.createView();
         this.view.setCamera(this.camera);
         this.view.setScene(this.scene);
+        this.view.setColorGrading(colorGrading);
         this.resize();
         this.render = this.render.bind(this);
         this.resize = this.resize.bind(this);
