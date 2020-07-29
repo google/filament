@@ -330,6 +330,25 @@ value_object<filament::View::BloomOptions>("View$BloomOptions")
 // TODO: add support for dirt texture in BloomOptions.
 // Note that simply including the field in the above list causes binding errors for nullptr.
 
+value_object<filament::View::FogOptions>("View$FogOptions")
+    .field("distance", &filament::View::FogOptions::distance)
+    .field("maximumOpacity", &filament::View::FogOptions::maximumOpacity)
+    .field("height", &filament::View::FogOptions::height)
+    .field("heightFalloff", &filament::View::FogOptions::heightFalloff)
+    .field("color", &filament::View::FogOptions::color)
+    .field("density", &filament::View::FogOptions::density)
+    .field("inScatteringStart", &filament::View::FogOptions::inScatteringStart)
+    .field("inScatteringSize", &filament::View::FogOptions::inScatteringSize)
+    .field("fogColorFromIbl", &filament::View::FogOptions::fogColorFromIbl)
+    .field("enabled", &filament::View::FogOptions::enabled);
+
+value_object<filament::View::VignetteOptions>("View$VignetteOptions")
+    .field("midPoint", &filament::View::VignetteOptions::midPoint)
+    .field("roundness", &filament::View::VignetteOptions::roundness)
+    .field("feather", &filament::View::VignetteOptions::feather)
+    .field("color", &filament::View::VignetteOptions::color)
+    .field("enabled", &filament::View::VignetteOptions::enabled);
+
 // In JavaScript, a flat contiguous representation is best for matrices (see gl-matrix) so we
 // need to define a small wrapper here.
 
@@ -550,6 +569,8 @@ class_<View>("View")
     .function("_setAmbientOcclusionOptions", &View::setAmbientOcclusionOptions)
     .function("_setDepthOfFieldOptions", &View::setDepthOfFieldOptions)
     .function("_setBloomOptions", &View::setBloomOptions)
+    .function("_setFogOptions", &View::setFogOptions)
+    .function("_setVignetteOptions", &View::setVignetteOptions)
     .function("setAmbientOcclusion", &View::setAmbientOcclusion)
     .function("getAmbientOcclusion", &View::getAmbientOcclusion)
     .function("setAntiAliasing", &View::setAntiAliasing)
