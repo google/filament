@@ -217,7 +217,7 @@ void PostProcessManager::terminate(DriverApi& driver) noexcept {
 
 UTILS_NOINLINE
 void PostProcessManager::commitAndRender(FrameGraphRenderTarget const& out,
-        PostProcessMaterial const& material, uint8_t variant, DriverApi& driver) const noexcept{
+        PostProcessMaterial const& material, uint8_t variant, DriverApi& driver) const noexcept {
     FMaterialInstance* const mi = material.getMaterialInstance();
     mi->commit(driver);
     mi->use(driver);
