@@ -1,5 +1,5 @@
 material {
-    name : blit,
+    name : blitMedium,
     parameters : [
         {
             type : sampler2d,

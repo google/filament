@@ -1,5 +1,5 @@
 material {
-    name : DepthOfFieldMedian,
+    name : dofMedian,
     parameters : [
         {
             type : sampler2d,

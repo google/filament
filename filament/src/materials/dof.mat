@@ -1,5 +1,5 @@
 material {
-    name : DepthOfField,
+    name : dof,
     parameters : [
         {
            type : sampler2d,

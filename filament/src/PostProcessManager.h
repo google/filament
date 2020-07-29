@@ -26,6 +26,10 @@
 #include <backend/DriverEnums.h>
 #include <filament/View.h>
 
+#include <utils/CString.h>
+
+#include <tsl/robin_map.h>
+
 namespace filament {
 
 class FColorGrading;
@@ -101,6 +105,7 @@ public:
 
 private:
     FEngine& mEngine;
+    class PostProcessMaterial;
 
     FrameGraphId<FrameGraphTexture> mipmapPass(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, size_t level) noexcept;
@@ -118,6 +123,13 @@ private:
             FrameGraphId<FrameGraphTexture> input, backend::TextureFormat outFormat,
             View::BloomOptions& bloomOptions, math::float2 scale) noexcept;
 
+    void commitAndRender(FrameGraphRenderTarget const& out,
+            PostProcessMaterial const& material, uint8_t variant,
+            backend::DriverApi& driver) const noexcept;
+
+    void commitAndRender(FrameGraphRenderTarget const& out,
+            PostProcessMaterial const& material,
+            backend::DriverApi& driver) const noexcept;
 
     class PostProcessMaterial {
     public:
@@ -137,16 +149,15 @@ private:
         FMaterial* getMaterial() const;
         FMaterialInstance* getMaterialInstance() const;
 
-        backend::PipelineState getPipelineState(uint8_t variant) const noexcept;
-        backend::PipelineState getPipelineState() const noexcept;
+        backend::PipelineState getPipelineState(uint8_t variant = 0u) const noexcept;
 
     private:
-        void assertMaterial() const noexcept;
+        FMaterial* assertMaterial() const noexcept;
+        FMaterial* loadMaterial() const noexcept;
 
         union {
             struct {
                 mutable FMaterial* mMaterial;
-                mutable FMaterialInstance* mMaterialInstance;
             };
             struct {
                 FEngine* mEngine;
@@ -157,24 +168,10 @@ private:
         mutable bool mHasMaterial{};
     };
 
-    PostProcessMaterial mMipmapDepth;
+    tsl::robin_map<utils::StaticString, PostProcessMaterial> mMaterialRegistry;
 
-    PostProcessMaterial mSSAO;
-    PostProcessMaterial mBilateralBlur;
-    PostProcessMaterial mSeparableGaussianBlur;
-    PostProcessMaterial mDoFDownsample;
-    PostProcessMaterial mDoFMipmap;
-    PostProcessMaterial mDoF;
-    PostProcessMaterial mDoFTiles;
-    PostProcessMaterial mDoFDilate;
-    PostProcessMaterial mDoFMedian;
-    PostProcessMaterial mDoFCombine;
-    PostProcessMaterial mBloomDownsample;
-    PostProcessMaterial mBloomUpsample;
-    PostProcessMaterial mColorGradingAsSubpass;
-    PostProcessMaterial mColorGrading;
-    PostProcessMaterial mFxaa;
-    PostProcessMaterial mBlit[3];
+    void registerPostProcessMaterial(utils::StaticString name, uint8_t const* data, int size);
+    PostProcessMaterial& getPostProcessMaterial(utils::StaticString name) noexcept;
 
     backend::Handle<backend::HwTexture> mDummyOneTexture;
     backend::Handle<backend::HwTexture> mDummyZeroTexture;

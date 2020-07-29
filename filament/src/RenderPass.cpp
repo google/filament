@@ -46,6 +46,10 @@ RenderPass::RenderPass(FEngine& engine,
     mCustomCommands.reserve(8); // preallocate allocate a reasonable number of custom commands
 }
 
+RenderPass::RenderPass(RenderPass const& rhs) = default;
+
+RenderPass::~RenderPass() noexcept = default;
+
 void RenderPass::setGeometry(FScene::RenderableSoa const& soa, Range<uint32_t> vr,
         backend::Handle<backend::HwUniformBuffer> uboHandle) noexcept {
     mRenderableSoa = &soa;

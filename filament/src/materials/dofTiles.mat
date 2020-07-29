@@ -1,5 +1,5 @@
 material {
-    name : DepthOfFieldTiles,
+    name : dofTiles,
     parameters : [
         {
             type : sampler2d,
