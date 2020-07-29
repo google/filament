@@ -99,7 +99,28 @@ export interface View$BloomOptions {
     blendMode?: View$BloomOptions$BlendMode;
     threshold?: boolean;
     enabled?: boolean;
-    dirt?: Texture|null;
+    // TODO: add support for dirt texture in BloomOptions.
+}
+
+export interface View$FogOptions {
+    distance?: number;
+    maximumOpacity?: number;
+    height?: number;
+    heightFalloff?: number;
+    color?: float3;
+    density?: number;
+    inScatteringStart?: number;
+    inScatteringSize?: number;
+    fogColorFromIbl?: boolean;
+    enabled?: boolean;
+}
+
+export interface View$VignetteOptions {
+    midPoint?: number;
+    roundness?: number;
+    feather?: number;
+    color?: float3;
+    enabled?: boolean;
 }
 
 // TODO: Remove the entity type and just use integers for parity with Filament's Java bindings.
@@ -423,6 +444,8 @@ export class View {
     public setAmbientOcclusionOptions(options: View$AmbientOcclusionOptions): void;
     public setDepthOfFieldOptions(options: View$DepthOfFieldOptions): void;
     public setBloomOptions(options: View$BloomOptions): void;
+    public setFogOptions(options: View$FogOptions): void;
+    public setVignetteOptions(options: View$VignetteOptions): void;
     public setAmbientOcclusion(ambientOcclusion: View$AmbientOcclusion): void;
     public getAmbientOcclusion(): View$AmbientOcclusion;
     public setBlendMode(mode: View$BlendMode): void;

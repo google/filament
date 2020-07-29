@@ -220,7 +220,8 @@ Filament.loadClassExtensions = function() {
 
     /// setBloomOptions ::method::
     /// overrides ::argument:: Dictionary with one or more of the following properties: \
-    /// dirtStrength, strength, resolution, anomorphism, levels, blendMode, threshold, enabled, dirt.
+    /// dirtStrength, strength, resolution, anomorphism, levels, blendMode, threshold, enabled.
+    /// NOTE: dirt texture is not yet supported in the JavaScript API.
     Filament.View.prototype.setBloomOptions = function(overrides) {
         const options = {
             dirtStrength: 0.2,
@@ -235,6 +236,42 @@ Filament.loadClassExtensions = function() {
         };
         Object.assign(options, overrides);
         this._setBloomOptions(options);
+    };
+
+    /// setFogOptions ::method::
+    /// overrides ::argument:: Dictionary with one or more of the following properties: \
+    /// distance, maximumOpacity, height, heightFalloff, color, density, inScatteringStart,
+    /// inScatteringSize, fogColorFromIbl, enabled.
+    Filament.View.prototype.setFogOptions = function(overrides) {
+        const options = {
+            distance:  0.0,
+            maximumOpacity:  1.0,
+            height:  0.0,
+            heightFalloff:  1.0,
+            color: .5,
+            density:  0.1,
+            inScatteringStart:  0.0,
+            inScatteringSize:  -1.0,
+            fogColorFromIbl:  false,
+            enabled:  false
+        };
+        Object.assign(options, overrides);
+        this._setFogOptions(options);
+    };
+
+    /// setVignetteOptions ::method::
+    /// overrides ::argument:: Dictionary with one or more of the following properties: \
+    /// midPoint, roundness, feather, color, enabled.
+    Filament.View.prototype.setVignetteOptions = function(overrides) {
+        const options = {
+            midPoint: 0.5,
+            roundness: 0.5,
+            feather: 0.5,
+            color: [0, 0, 0, 1],
+            enabled: false
+        };
+        Object.assign(options, overrides);
+        this._setVignetteOptions(options);
     };
 
     /// VertexBuffer ::core class::
