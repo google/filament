@@ -228,7 +228,7 @@ void PostProcessManager::commitAndRender(FrameGraphRenderTarget const& out,
 
 UTILS_ALWAYS_INLINE
 void PostProcessManager::commitAndRender(FrameGraphRenderTarget const& out,
-        PostProcessMaterial const& material, DriverApi& driver) const noexcept{
+        PostProcessMaterial const& material, DriverApi& driver) const noexcept {
     commitAndRender(out, material, 0, driver);
 }
 
