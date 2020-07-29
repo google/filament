@@ -55,7 +55,7 @@ struct App {
 };
 
 static const char* MODEL_FILE = "assets/models/monkey/monkey.obj";
-static const char* IBL_FOLDER = "venetian_crossroads_2k";
+static const char* IBL_FOLDER = "default_env";
 
 static constexpr bool ENABLE_SHADOWS = true;
 

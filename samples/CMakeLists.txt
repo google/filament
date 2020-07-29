@@ -104,7 +104,7 @@ function(add_envmap SOURCE TARGET)
         COMMENT "Generating environment map ${target_envmap}")
 endfunction()
 
-add_envmap("third_party/environments/venetian_crossroads_2k.hdr" "venetian_crossroads_2k")
+add_envmap("third_party/environments/lightroom_14b.hdr" "default_env")
 
 # ==================================================================================================
 # Build suzanne resources

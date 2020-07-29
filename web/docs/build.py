@@ -530,8 +530,11 @@ if __name__ == "__main__":
     copy_built_file('web/samples/ao*.ktx')
     copy_built_file('web/samples/albedo*.ktx')
 
-    copy_built_file('web/samples/pillars_2k/pillars_2k_*.ktx', 'pillars_2k')
-    copy_built_file('web/samples/venetian_crossroads_2k/venetian_crossroads*.ktx', 'venetian_crossroads_2k')
+    copy_built_file('web/samples/default_env/default_env*.ktx', 'default_env')
+
+    # TODO: We do not normally build the following env maps so we should update the tutorials.
+    # copy_built_file('web/samples/pillars_2k/pillars_2k_*.ktx', 'pillars_2k')
+    # copy_built_file('web/samples/venetian_crossroads_2k/venetian_crossroads*.ktx', 'venetian_crossroads_2k')
 
     if args.server:
         spawn_local_server()
