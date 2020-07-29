@@ -470,6 +470,11 @@ class_<Engine>("Engine")
     .function("destroyEntity", (void (*)(Engine*, utils::Entity)) []
             (Engine* engine, utils::Entity entity) { engine->destroy(entity); },
             allow_raw_pointers())
+    /// destroyColorGrading ::method::
+    /// entity ::argument:: an [ColorGrading]
+    .function("destroyColorGrading", (void (*)(Engine*, ColorGrading*)) []
+            (Engine* engine, ColorGrading* colorGrading) { engine->destroy(colorGrading); },
+            allow_raw_pointers())
     /// destroyIndexBuffer ::method::
     /// ib ::argument:: the [IndexBuffer] to destroy
     .function("destroyIndexBuffer", (void (*)(Engine*, IndexBuffer*)) []

@@ -477,6 +477,7 @@ export class Engine {
     public destroyRenderTarget(renderTarget: RenderTarget): void;
     public destroySkybox(skybox: Skybox): void;
     public destroyTexture(texture: Texture): void;
+    public destroyColorGrading(colorGrading: ColorGrading): void;
 
     public getCameraComponent(entity: Entity): Camera;
     public getLightManager(): LightManager;
