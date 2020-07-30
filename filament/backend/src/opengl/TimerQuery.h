@@ -28,7 +28,7 @@ namespace filament {
 
 /*
  * we need two implementation of timer queries (only elapsed time), because
- * on some gpu disjoint_timer_queyr/arb_timer_query is much less accurate than
+ * on some gpu disjoint_timer_query/arb_timer_query is much less accurate than
  * using fences.
  *
  * These classes implement the various strategies...
