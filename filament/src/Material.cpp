@@ -183,11 +183,17 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     using DepthFunc = RasterState::DepthFunc;
     switch (mBlendingMode) {
         case BlendingMode::OPAQUE:
-        case BlendingMode::MASKED:
             mRasterState.blendFunctionSrcRGB   = BlendFunction::ONE;
             mRasterState.blendFunctionSrcAlpha = BlendFunction::ONE;
             mRasterState.blendFunctionDstRGB   = BlendFunction::ZERO;
             mRasterState.blendFunctionDstAlpha = BlendFunction::ZERO;
+            mRasterState.depthWrite = true;
+            break;
+        case BlendingMode::MASKED:
+            mRasterState.blendFunctionSrcRGB   = BlendFunction::ONE;
+            mRasterState.blendFunctionSrcAlpha = BlendFunction::ZERO;
+            mRasterState.blendFunctionDstRGB   = BlendFunction::ZERO;
+            mRasterState.blendFunctionDstAlpha = BlendFunction::ONE;
             mRasterState.depthWrite = true;
             break;
         case BlendingMode::TRANSPARENT:

@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release
 
+- MASKED mode now leaves destination alpha intact (useful for transparent targets).
+
 ## v1.8.1
 
 - New CocoaPods sample for iOS.
