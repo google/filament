@@ -5,7 +5,26 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release
 
-- Updated the Emscripten SDK to 1.39.19
+## v1.8.1
+
+- New CocoaPods sample for iOS.
+- Filament for iOS now supports iOS 11.
+- Updated the Emscripten SDK to 1.39.19.
+- Fixed skinning issue with Emscripten.
+- JavaScript APIs for color grading and the vignette effect.
+- Added various missing APIs to Java and JavaScript bindings.
+- Fixed camera aspect ratio when loading a camera from a glTF file.
+- gltfio now uses specular anti-aliasing by default.
+- gltfio now supports the KHR_materials_transmission extension.
+- Compiled materials do not perform unnecessary fp32 operations anymore.
+- Improved quality and performance of the depth of field effect.
+- Fixed transform hierarchy memory corruption when a node is set to be parentless.
+- Fixed crashed in some browsers and on some mobile devices caused by
+  Google-style line directives in shaders.
+- Color grading now has a quality option which affects the size and bit depth of the 3D LUT.
+- Fixed crash in the Metal backend when more than 16 samplers are bound.
+- Added validation in Texture::setImage().
+- Fixed refraction/transmission roughness when specular anti-aliasing is enabled.
 
 ## v1.8.0
 
