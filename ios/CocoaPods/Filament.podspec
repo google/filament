@@ -6,7 +6,7 @@ Pod::Spec.new do |spec|
   spec.authors = "Google LLC."
   spec.summary = "Filament is a real-time physically based rendering engine for Android, iOS, Windows, Linux, macOS, and WASM/WebGL."
   spec.platform = :ios, "11.0"
-  spec.source = { :http => "https://github.com/google/filament/releases/download/v1.8.1/filament-1.8.1-ios.tgz" }
+  spec.source = { :http => "https://github.com/google/filament/releases/download/v1.8.1/filament-v1.8.1-ios.tgz" }
 
   spec.subspec "filament" do |ss|
     ss.source_files =
