@@ -18,6 +18,10 @@
 
 #import <MetalKit/MTKView.h>
 
+// TODO: Filament public headers in the 1.8.1 release use DEBUG as a C++ identifier, but Xcode
+// defines DEBUG=1. So, we simply undefine it here. This will be fixed in the next release.
+#undef DEBUG
+
 // These are all C++ headers, so make sure the type of this file is Objective-C++ source.
 #include <filament/Engine.h>
 #include <filament/SwapChain.h>
