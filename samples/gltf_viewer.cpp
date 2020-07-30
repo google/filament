@@ -440,7 +440,7 @@ static void colorGradingUI(App& app) {
                 "Low\0Medium\0High\0Ultra\0\0");
         ImGui::Combo("Tone-mapping", &colorGrading.toneMapping,
                 "Linear\0ACES (legacy)\0ACES\0Filmic\0Uchimura\0Reinhard\0Display Range\0\0");
-        if (ImGui::CollapsingHeader("While balance")) {
+        if (ImGui::CollapsingHeader("White balance")) {
             ImGui::SliderInt("Temperature", &colorGrading.temperature, -100, 100);
             ImGui::SliderInt("Tint", &colorGrading.tint, -100, 100);
         }
