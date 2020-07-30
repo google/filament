@@ -32,7 +32,7 @@ class UTILS_PUBLIC LogStream : public ostream {
 public:
 
     enum Priority {
-        DEBUG, ERROR, WARNING, INFO
+        LOG_DEBUG, LOG_ERROR, LOG_WARNING, LOG_INFO
     };
 
     explicit LogStream(Priority p) noexcept : mPriority(p) {}
