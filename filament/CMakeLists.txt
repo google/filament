@@ -146,27 +146,27 @@ set(PRIVATE_HDRS
         src/upcast.h)
 
 set(MATERIAL_SRCS
-        src/materials/colorGrading.mat
-        src/materials/colorGradingAsSubpass.mat
+        src/materials/colorGrading/colorGrading.mat
+        src/materials/colorGrading/colorGradingAsSubpass.mat
         src/materials/defaultMaterial.mat
-        src/materials/dof.mat
-        src/materials/dofDownsample.mat
-        src/materials/dofCombine.mat
-        src/materials/dofTiles.mat
-        src/materials/dofDilate.mat
-        src/materials/dofMipmap.mat
-        src/materials/dofMedian.mat
+        src/materials/dof/dof.mat
+        src/materials/dof/dofDownsample.mat
+        src/materials/dof/dofCombine.mat
+        src/materials/dof/dofTiles.mat
+        src/materials/dof/dofDilate.mat
+        src/materials/dof/dofMipmap.mat
+        src/materials/dof/dofMedian.mat
         src/materials/blitLow.mat
         src/materials/blitMedium.mat
         src/materials/blitHigh.mat
-        src/materials/bloomDownsample.mat
-        src/materials/bloomUpsample.mat
-        src/materials/bilateralBlur.mat
-        src/materials/mipmapDepth.mat
+        src/materials/bloom/bloomDownsample.mat
+        src/materials/bloom/bloomUpsample.mat
+        src/materials/ssao/bilateralBlur.mat
+        src/materials/ssao/mipmapDepth.mat
         src/materials/skybox.mat
-        src/materials/sao.mat
+        src/materials/ssao/sao.mat
         src/materials/separableGaussianBlur.mat
-        src/materials/fxaa.mat
+        src/materials/antiAliasing/fxaa.mat
 )
 
 # Embed the binary resource blob for materials.
@@ -240,43 +240,43 @@ add_custom_command(
 
 add_custom_command(
         OUTPUT "${MATERIAL_DIR}/fxaa.filamat"
-        DEPENDS ../shaders/src/fxaa.fs
+        DEPENDS src/materials/antiAliasing/fxaa.fs
         APPEND
 )
 
 add_custom_command(
         OUTPUT "${MATERIAL_DIR}/dofDownsample.filamat"
-        DEPENDS src/materials/dofUtils.fs
+        DEPENDS src/materials/dof/dofUtils.fs
         APPEND
 )
 
 add_custom_command(
         OUTPUT "${MATERIAL_DIR}/dofMipmap.filamat"
-        DEPENDS src/materials/dofUtils.fs
+        DEPENDS src/materials/dof/dofUtils.fs
         APPEND
 )
 
 add_custom_command(
         OUTPUT "${MATERIAL_DIR}/dofDilate.filamat"
-        DEPENDS src/materials/dofUtils.fs
+        DEPENDS src/materials/dof/dofUtils.fs
         APPEND
 )
 
 add_custom_command(
         OUTPUT "${MATERIAL_DIR}/dof.filamat"
-        DEPENDS src/materials/dofUtils.fs
+        DEPENDS src/materials/dof/dofUtils.fs
         APPEND
 )
 
 add_custom_command(
         OUTPUT "${MATERIAL_DIR}/dofMedian.filamat"
-        DEPENDS src/materials/dofUtils.fs
+        DEPENDS src/materials/dof/dofUtils.fs
         APPEND
 )
 
 add_custom_command(
         OUTPUT "${MATERIAL_DIR}/dofCombine.filamat"
-        DEPENDS src/materials/dofUtils.fs
+        DEPENDS src/materials/dof/dofUtils.fs
         APPEND
 )
 

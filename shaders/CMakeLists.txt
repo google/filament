@@ -53,7 +53,6 @@ set(SHADERS
 # These files aren't part of libshaders, but are included by materials inside
 # filament/src/materials:
 #
-# fxaa.fs
 # tone_mapping.fs
 # conversion_functions.fs
 # dithering.fs
