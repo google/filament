@@ -4,7 +4,7 @@ material {
         {
             type : sampler2d,
             name : colorBuffer,
-            precision : high
+            precision : medium
         }
     ],
     depthWrite : false,
