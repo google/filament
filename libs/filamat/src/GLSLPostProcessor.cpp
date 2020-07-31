@@ -384,9 +384,14 @@ void GLSLPostProcessor::optimizeSpirv(OptimizerPtr optimizer, SpirvBlob& spirv) 
 void GLSLPostProcessor::registerPerformancePasses(Optimizer& optimizer, Config const& config) {
     optimizer
             .RegisterPass(CreateWrapOpKillPass())
-            .RegisterPass(CreateDeadBranchElimPass())
-            // this triggers a segfault with AMD drivers on MacOS
-            //.RegisterPass(CreateMergeReturnPass())
+            .RegisterPass(CreateDeadBranchElimPass());
+
+    if (config.shaderModel != filament::backend::ShaderModel::GL_CORE_41) {
+        // this triggers a segfault with AMD drivers on MacOS
+        optimizer.RegisterPass(CreateMergeReturnPass());
+    }
+
+    optimizer
             .RegisterPass(CreateInlineExhaustivePass())
             .RegisterPass(CreateAggressiveDCEPass())
             .RegisterPass(CreatePrivateToLocalPass())
@@ -423,9 +428,14 @@ void GLSLPostProcessor::registerPerformancePasses(Optimizer& optimizer, Config c
 void GLSLPostProcessor::registerSizePasses(Optimizer& optimizer, Config const& config) {
     optimizer
             .RegisterPass(CreateWrapOpKillPass())
-            .RegisterPass(CreateDeadBranchElimPass())
-            // this triggers a segfault with AMD drivers on MacOS
-            //.RegisterPass(CreateMergeReturnPass())
+            .RegisterPass(CreateDeadBranchElimPass());
+
+    if (config.shaderModel != filament::backend::ShaderModel::GL_CORE_41) {
+        // this triggers a segfault with AMD drivers on MacOS
+        optimizer.RegisterPass(CreateMergeReturnPass());
+    }
+
+    optimizer
             .RegisterPass(CreateInlineExhaustivePass())
             .RegisterPass(CreateEliminateDeadFunctionsPass())
             .RegisterPass(CreatePrivateToLocalPass())
