@@ -115,6 +115,7 @@ struct MetalProgram : public HwProgram {
     id<MTLFunction> vertexFunction;
     id<MTLFunction> fragmentFunction;
     Program::SamplerGroupInfo samplerGroupInfo;
+    bool isValid = false;
 };
 
 struct MetalTexture : public HwTexture {
