@@ -135,6 +135,7 @@ set(PRIVATE_HDRS
         src/details/View.h
         src/FilamentAPI-impl.h
         src/FrameInfo.h
+        src/FrameHistory.h
         src/GPUBuffer.h
         src/Intersections.h
         src/MaterialParser.h

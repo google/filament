@@ -458,6 +458,9 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     //fg.export_graphviz(slog.d, view.getName());
     fg.execute(engine, driver);
 
+    // save the current history entry and destroy the oldest entry
+    view.commitFrameHistory(engine);
+
     recordHighWatermark(pass.getCommandsHighWatermark());
 }
 
