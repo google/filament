@@ -54,7 +54,7 @@ public:
     // constants
     const char* const name;
     const uint16_t id;                      // for debugging and graphing
-    const bool imported;
+    mutable bool imported;
     const uint8_t priority;
 
     // updated by builder

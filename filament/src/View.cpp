@@ -93,7 +93,7 @@ void FView::terminate(FEngine& engine) {
     driver.destroyUniformBuffer(mShadowUbh);
     driver.destroySamplerGroup(mPerViewSbh);
     driver.destroyUniformBuffer(mRenderableUbh);
-
+    drainFrameHistory(engine);
     mShadowMapManager.terminate(driver);
     mFroxelizer.terminate(driver);
 }
@@ -800,6 +800,19 @@ void FView::updatePrimitivesLod(FEngine& engine, const CameraInfo&,
 
 void FView::renderShadowMaps(FEngine& engine, FEngine::DriverApi& driver, RenderPass& pass) noexcept {
     mShadowMapManager.render(engine, *this, driver, pass);
+}
+
+void FView::commitFrameHistory(FEngine& engine) noexcept {
+    // Here we need to destroy resources in mFrameHistory.back()
+    // and then push the new history entry to the history stack
+    mFrameHistory.commit();
+}
+
+void FView::drainFrameHistory(FEngine& engine) noexcept {
+    // make sure we free all resources in the history
+    for (size_t i = 0; i < mFrameHistory.size(); ++i) {
+        commitFrameHistory(engine);
+    }
 }
 
 // ------------------------------------------------------------------------------------------------

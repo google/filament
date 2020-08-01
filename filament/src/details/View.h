@@ -22,6 +22,7 @@
 #include "upcast.h"
 
 #include "FrameInfo.h"
+#include "FrameHistory.h"
 #include "UniformBuffer.h"
 
 #include "details/Allocators.h"
@@ -62,6 +63,10 @@ class JobSystem;
 
 namespace filament {
 
+namespace fg {
+class ResourceAllocator;
+} // namespace fg;
+
 class FEngine;
 class FMaterialInstance;
 class FRenderer;
@@ -90,7 +95,7 @@ static constexpr uint8_t VISIBLE_SPOT_SHADOW_CASTER_N(size_t n) {
 
 // ORing of all the VISIBLE_SPOT_SHADOW_CASTER bits
 static constexpr uint8_t VISIBLE_SPOT_SHADOW_CASTER =
-        (0xFF >> (sizeof(uint8_t) * 8u - CONFIG_MAX_SHADOW_CASTING_SPOTS)) << 2u;
+        (0xFFu >> (sizeof(uint8_t) * 8u - CONFIG_MAX_SHADOW_CASTING_SPOTS)) << 2u;
 
 // Because we're using a uint8_t for the visibility mask, we're limited to 6 spot light shadows.
 // (2 of the bits are used for visible renderables + directional light shadow casters).
@@ -362,6 +367,16 @@ public:
     backend::SamplerGroup& getViewSamplers() const { return mPerViewSb; }
     UniformBuffer& getShadowUniforms() const { return mShadowUb; }
 
+    // Returns the frame history FIFO. This is typically used by the FrameGraph to access
+    // previous frame data.
+    FrameHistory& getFrameHistory() noexcept { return mFrameHistory; }
+    FrameHistory const& getFrameHistory() const noexcept { return mFrameHistory; }
+
+    // Clean-up the oldest frame and save the current frame information.
+    // This is typically called after all operations for this View's rendering are complete.
+    // (e.g.: after the FrameFraph execution).
+    void commitFrameHistory(FEngine& engine) noexcept;
+
 private:
     void prepareVisibleRenderables(utils::JobSystem& js,
             Frustum const& frustum, FScene::RenderableSoa& renderableData) const noexcept;
@@ -373,7 +388,7 @@ private:
     static void computeVisibilityMasks(
             uint8_t visibleLayers, uint8_t const* layers,
             FRenderableManager::Visibility const* visibility, uint8_t* visibleMask,
-            size_t count) ;
+            size_t count);
 
     void bindPerViewUniformsAndSamplers(FEngine::DriverApi& driver) const noexcept {
         driver.bindUniformBuffer(BindingPoints::PER_VIEW, mPerViewUbh);
@@ -382,10 +397,16 @@ private:
         driver.bindSamplers(BindingPoints::PER_VIEW, mPerViewSbh);
     }
 
+    // Clean-up the whole history, free all resources. This is typically called when the View is
+    // being terminated.
+    void drainFrameHistory(FEngine& engine) noexcept;
+
     // we don't inline this one, because the function is quite large and there is not much to
     // gain from inlining.
     static FScene::RenderableSoa::iterator partition(
-            FScene::RenderableSoa::iterator begin, FScene::RenderableSoa::iterator end, uint8_t mask) noexcept;
+            FScene::RenderableSoa::iterator begin,
+            FScene::RenderableSoa::iterator end,
+            uint8_t mask) noexcept;
 
     // these are accessed in the render loop, keep together
     backend::Handle<backend::HwSamplerGroup> mPerViewSbh;
@@ -435,6 +456,8 @@ private:
     mutable UniformBuffer mPerViewUb;
     mutable UniformBuffer mShadowUb;
     mutable backend::SamplerGroup mPerViewSb;
+
+    mutable FrameHistory mFrameHistory{};
 
     utils::CString mName;
 
