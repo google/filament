@@ -28,6 +28,8 @@
 
 #include <spirv-tools/optimizer.hpp>
 
+#include <memory>
+
 namespace filamat {
 
 using SpirvBlob = std::vector<uint32_t>;
@@ -64,8 +66,18 @@ private:
     void preprocessOptimization(glslang::TShader& tShader,
             GLSLPostProcessor::Config const& config) const;
 
-    void registerSizePasses(spvtools::Optimizer& optimizer) const;
-    void registerPerformancePasses(spvtools::Optimizer& optimizer) const;
+    /**
+     * Retrieve an optimizer instance tuned for the given optimization level and shader configuration.
+     */
+    using OptimizerPtr = std::shared_ptr<spvtools::Optimizer>;
+    static OptimizerPtr createOptimizer(
+            MaterialBuilder::Optimization optimization,
+            Config const& config);
+
+    static void registerSizePasses(spvtools::Optimizer& optimizer, Config const& config);
+    static void registerPerformancePasses(spvtools::Optimizer& optimizer, Config const& config);
+
+    void optimizeSpirv(OptimizerPtr optimizer, SpirvBlob& spirv) const;
 
     const MaterialBuilder::Optimization mOptimization;
     const bool mPrintShaders;
