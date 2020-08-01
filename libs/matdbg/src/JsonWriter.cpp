@@ -228,7 +228,7 @@ size_t JsonWriter::getJsonSize() const {
 }
 
 bool JsonWriter::writeActiveInfo(const filaflat::ChunkContainer& package,
-        Backend backend, uint16_t activeVariants) {
+        Backend backend, uint64_t activeVariants) {
     vector<ShaderInfo> shaders;
     ostringstream json;
     json << "[\"";

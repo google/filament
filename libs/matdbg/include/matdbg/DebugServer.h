@@ -47,7 +47,7 @@ public:
             void* userdata = nullptr);
 
     using EditCallback = void(*)(void* userdata, const utils::CString& name, const void*, size_t);
-    using QueryCallback = void(*)(void* userdata, uint16_t* variants);
+    using QueryCallback = void(*)(void* userdata, uint64_t* variants);
 
     /**
      * Sets up a callback that allows the Filament engine to listen for shader edits. The callback
@@ -72,7 +72,7 @@ private:
         size_t packageSize;
         utils::CString name;
         MaterialKey key;
-        uint16_t activeVariants;
+        uint64_t activeVariants;
     };
 
     const MaterialRecord* getRecord(const MaterialKey& key) const;
