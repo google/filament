@@ -83,6 +83,14 @@ class FrameGraphHandle {
     uint16_t index = UNINITIALIZED;
 
 public:
+    FrameGraphHandle(FrameGraphHandle const& rhs) noexcept = default;
+    FrameGraphHandle(FrameGraphHandle&& rhs) noexcept : index(rhs.index) { rhs.index = UNINITIALIZED; }
+    FrameGraphHandle& operator=(FrameGraphHandle const& rhs) noexcept = default;
+    FrameGraphHandle& operator=(FrameGraphHandle&& rhs) noexcept  {
+        std::swap(rhs.index, index);
+        return *this;
+    }
+
     bool isValid() const noexcept { return index != UNINITIALIZED; }
 
     void clear() noexcept { index = UNINITIALIZED; }

@@ -212,6 +212,16 @@ public:
         return mAntiAliasing;
     }
 
+    void setTemporalAntiAliasingOptions(TemporalAntiAliasingOptions options) noexcept {
+        options.feedback = math::clamp(options.feedback, 0.0f, 1.0f);
+        options.filterWidth = std::max(0.2f, options.filterWidth); // below 0.2 causes issues
+        mTemporalAntiAliasingOptions = options;
+    }
+
+    const TemporalAntiAliasingOptions& getTemporalAntiAliasingOptions() const noexcept {
+        return mTemporalAntiAliasingOptions;
+    }
+
     void setToneMapping(ToneMapping type) noexcept {
         mToneMapping = type;
     }
@@ -443,6 +453,7 @@ private:
     FogOptions mFogOptions;
     DepthOfFieldOptions mDepthOfFieldOptions;
     VignetteOptions mVignetteOptions;
+    TemporalAntiAliasingOptions mTemporalAntiAliasingOptions;
     BlendMode mBlendMode = BlendMode::OPAQUE;
     const FColorGrading* mColorGrading = nullptr;
     const FColorGrading* mDefaultColorGrading = nullptr;

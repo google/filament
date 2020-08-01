@@ -17,11 +17,20 @@
 #ifndef TNT_FILAMENT_FRAMEHISTORY_H
 #define TNT_FILAMENT_FRAMEHISTORY_H
 
+#include <fg/FrameGraphHandle.h>
+
+#include <math/mat4.h>
+
 namespace filament {
 
 // This is where we store all the history of a frame
 struct FrameHistoryEntry {
-    // history data goes here
+    FrameGraphTexture color;
+    FrameGraphTexture::Descriptor colorDesc;
+    math::mat4f projection;
+    math::float2 jitter{};
+    uint32_t frameId = 0;
+
 };
 
 /*
@@ -46,7 +55,7 @@ public:
     T& operator[](size_t n) noexcept { return mContainer[n]; }
 
     // the current frame info, this is where we store the current frame information
-    T& current() noexcept {
+    T& getCurrent() noexcept {
         return mCurrentEntry;
     }
 
@@ -59,6 +68,7 @@ public:
             std::move_backward(container.begin(), container.end() - 1, container.end());
         }
         container.front() = std::move(mCurrentEntry);
+        mCurrentEntry = {};
     }
 
 private:
