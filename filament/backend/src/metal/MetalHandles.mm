@@ -165,7 +165,8 @@ void MetalRenderPrimitive::setBuffers(MetalVertexBuffer* vertexBuffer, MetalInde
 }
 
 MetalProgram::MetalProgram(id<MTLDevice> device, const Program& program) noexcept
-    : HwProgram(program.getName()) {
+    : HwProgram(program.getName()), vertexFunction(nil), fragmentFunction(nil), samplerGroupInfo(),
+        isValid(false) {
 
     using MetalFunctionPtr = __strong id<MTLFunction>*;
 
@@ -195,11 +196,15 @@ MetalProgram::MetalProgram(id<MTLDevice> device, const Program& program) noexcep
                         [error.localizedDescription cStringUsingEncoding:NSUTF8StringEncoding];
                 utils::slog.w << description << utils::io::endl;
             }
-            ASSERT_POSTCONDITION(false, "Unable to compile Metal shading library.");
+            PANIC_LOG("Failed to compile Metal program.");
+            return;
         }
 
         *shaderFunctions[i] = [library newFunctionWithName:@"main0"];
     }
+
+    // All stages of the program have compiled successfuly, this is a valid program.
+    isValid = true;
 
     samplerGroupInfo = program.getSamplerGroupInfo();
 }
