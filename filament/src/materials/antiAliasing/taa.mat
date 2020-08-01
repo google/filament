@@ -1,0 +1,296 @@
+material {
+    name : taa,
+    parameters : [
+        {
+            type : sampler2d,
+            name : color
+        },
+        {
+            type : sampler2d,
+            name : depth,
+            precision: high
+        },
+        {
+            type : float,
+            name : alpha
+        },
+        {
+            type : sampler2d,
+            name : history
+        },
+        {
+            type : mat4,
+            name : reprojection,
+            precision: high
+        },
+        {
+            type : float[9],
+            name : filterWeights
+        }
+    ],
+    variables : [
+        vertex
+    ],
+    domain : postprocess,
+    depthWrite : false,
+    depthCulling : false
+}
+
+vertex {
+    void postProcessVertex(inout PostProcessVertexInputs postProcess) {
+        postProcess.vertex.xy = postProcess.normalizedUV;
+    }
+}
+
+fragment {
+
+#if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
+#define TEXTURE_SPACE_UP    -1
+#define TEXTURE_SPACE_DN     1
+#else
+#define TEXTURE_SPACE_UP     1
+#define TEXTURE_SPACE_DN    -1
+#endif
+
+// accurate box clipping
+#define BOX_CLIPPING_ACCURATE   0
+// clamping instead of clipping
+#define BOX_CLIPPING_CLAMP      1
+// no clipping (for debugging only)
+#define BOX_CLIPPING_NONE       2
+
+#if defined(TARGET_MOBILE)
+#define BOX_CLIPPING            BOX_CLIPPING_ACCURATE
+#define USE_YCoCg               0
+#define PREVENT_FLICKERING      0
+#define FILTER_HISTORY          0
+#else
+#define BOX_CLIPPING            BOX_CLIPPING_ACCURATE
+#define USE_YCoCg               1
+#define PREVENT_FLICKERING      0   // FIXME: thin lines disapear
+#define FILTER_HISTORY          1
+#endif
+
+// disable for debugging only
+#define HISTORY_REPROJECTION    1
+#define FILTER_INPUT            1
+
+float luma(const vec3 color) {
+#if USE_YCoCg
+    return color.x;
+#else
+    return luminance(color);
+#endif
+}
+
+vec3 RGB_YCoCg(const vec3 c) {
+    float Y  = dot(c.rgb, vec3( 1, 2,  1) * 0.25);
+    float Co = dot(c.rgb, vec3( 2, 0, -2) * 0.25);
+    float Cg = dot(c.rgb, vec3(-1, 2, -1) * 0.25);
+    return vec3(Y, Co, Cg);
+}
+
+vec3 YCoCg_RGB(const vec3 c) {
+    float Y  = c.x;
+    float Co = c.y;
+    float Cg = c.z;
+    float r = Y + Co - Cg;
+    float g = Y + Cg;
+    float b = Y - Co - Cg;
+    return vec3(r, g, b);
+}
+
+// clip the (c, h) segment to a box
+vec4 clipToBox(const int quality,
+        const vec3 boxmin,  const vec3 boxmax, const vec4 c, const vec4 h) {
+    const float epsilon = 0.0001;
+
+    if (quality == BOX_CLIPPING_ACCURATE) {
+        vec4 r = c - h;
+        vec3 ir = 1.0 / (epsilon + r.rgb);
+        vec3 rmax = (boxmax - h.rgb) * ir;
+        vec3 rmin = (boxmin - h.rgb) * ir;
+        vec3 imin = min(rmax, rmin);
+        return h + r * saturate(max3(imin));
+    } else if (quality == BOX_CLIPPING_CLAMP) {
+        return vec4(clamp(h.rgb, boxmin, boxmax), h.a);
+    }
+    return h;
+}
+
+// Samples a texture with Catmull-Rom filtering, using 9 texture fetches instead of 16.
+//      https://therealmjp.github.io/
+// Some optimizations from here:
+//      http://vec3.ca/bicubic-filtering-in-fewer-taps/ for more details
+// Optimized to 5 taps by removing the corner samples
+// And modified for mediump support
+vec4 sampleTextureCatmullRom(const sampler2D tex, const highp vec2 uv, const highp vec2 texSize) {
+    // We're going to sample a a 4x4 grid of texels surrounding the target UV coordinate. We'll do this by rounding
+    // down the sample location to get the exact center of our "starting" texel. The starting texel will be at
+    // location [1, 1] in the grid, where [0, 0] is the top left corner.
+
+    highp vec2 samplePos = uv * texSize;
+    highp vec2 texPos1 = floor(samplePos - 0.5) + 0.5;
+
+    // Compute the fractional offset from our starting texel to our original sample location, which we'll
+    // feed into the Catmull-Rom spline function to get our filter weights.
+    highp vec2 f = samplePos - texPos1;
+    highp vec2 f2 = f * f;
+    highp vec2 f3 = f2 * f;
+
+    // Compute the Catmull-Rom weights using the fractional offset that we calculated earlier.
+    // These equations are pre-expanded based on our knowledge of where the texels will be located,
+    // which lets us avoid having to evaluate a piece-wise function.
+    vec2 w0 = f2 - 0.5 * (f3 + f);
+    vec2 w1 = 1.5 * f3 - 2.5 * f2 + 1.0;
+    vec2 w3 = 0.5 * (f3 - f2);
+    vec2 w2 = 1.0 - w0 - w1 - w3;
+
+    // Work out weighting factors and sampling offsets that will let us use bilinear filtering to
+    // simultaneously evaluate the middle 2 samples from the 4x4 grid.
+    vec2 w12 = w1 + w2;
+
+    // Compute the final UV coordinates we'll use for sampling the texture
+    highp vec2 texPos0 = texPos1 - vec2(1.0);
+    highp vec2 texPos3 = texPos1 + vec2(2.0);
+    highp vec2 texPos12 = texPos1 + w2 / w12;
+
+    highp vec2 invTexSize = 1.0 / texSize;
+    texPos0  *= invTexSize;
+    texPos3  *= invTexSize;
+    texPos12 *= invTexSize;
+
+    float k0 = w12.x * w0.y;
+    float k1 = w0.x  * w12.y;
+    float k2 = w12.x * w12.y;
+    float k3 = w3.x  * w12.y;
+    float k4 = w12.x * w3.y;
+
+    vec4 result =   textureLod(tex, vec2(texPos12.x, texPos0.y),  0.0) * k0
+                  + textureLod(tex, vec2(texPos0.x,  texPos12.y), 0.0) * k1
+                  + textureLod(tex, vec2(texPos12.x, texPos12.y), 0.0) * k2
+                  + textureLod(tex, vec2(texPos3.x,  texPos12.y), 0.0) * k3
+                  + textureLod(tex, vec2(texPos12.x, texPos3.y),  0.0) * k4;
+
+    result *= 1.0 / (k0 + k1 + k2 + k3 + k4);
+
+    return result;
+}
+
+void postProcess(inout PostProcessInputs postProcess) {
+    highp vec4 uv = variable_vertex.xyxy; // interpolated to pixel center
+
+    // read the depth buffer center sample for reprojection
+    float depth = textureLod(materialParams_depth, uv.xy, 0.0).r;
+
+#if HISTORY_REPROJECTION
+#if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
+    // on metal/vulkan postProcess.normalizedUV has its origin at the left-top, but
+    // our projection matrix screen-space's origin is left-bottom
+    uv.w = 1.0 - uv.w;
+#endif
+    // reproject history to current frame
+    highp vec4 q = materialParams.reprojection * vec4(uv.zw, depth, 1.0);
+    uv.zw = (q.xy * (1.0 / q.w)) * 0.5 + 0.5;
+#if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
+    // on metal/vulkan after we applied the reprojection, we need to correct our uv back
+    uv.w = 1.0 - uv.w;
+#endif
+#endif
+
+    // read center color and history samples
+    vec4 color = textureLodOffset(materialParams_color, uv.xy, 0.0, ivec2( 0,  0));
+#if FILTER_HISTORY
+    vec4 history = sampleTextureCatmullRom(materialParams_history, uv.zw,
+            vec2(textureSize(materialParams_history, 0)));
+#else
+    vec4 history = textureLod(materialParams_history, uv.zw, 0.0);
+#endif
+
+#if USE_YCoCg
+    history.rgb = RGB_YCoCg(history.rgb);
+#endif
+
+    // build the history clamping box
+    vec3 s[9];
+    s[0] = textureLodOffset(materialParams_color, uv.xy, 0.0, ivec2(-1, TEXTURE_SPACE_DN)).rgb;
+    s[1] = textureLodOffset(materialParams_color, uv.xy, 0.0, ivec2( 0, TEXTURE_SPACE_DN)).rgb;
+    s[2] = textureLodOffset(materialParams_color, uv.xy, 0.0, ivec2( 1, TEXTURE_SPACE_DN)).rgb;
+    s[3] = textureLodOffset(materialParams_color, uv.xy, 0.0, ivec2(-1, 0)).rgb;
+    s[4] = color.rgb;
+    s[5] = textureLodOffset(materialParams_color, uv.xy, 0.0, ivec2( 1, 0)).rgb;
+    s[6] = textureLodOffset(materialParams_color, uv.xy, 0.0, ivec2(-1, TEXTURE_SPACE_UP)).rgb;
+    s[7] = textureLodOffset(materialParams_color, uv.xy, 0.0, ivec2( 0, TEXTURE_SPACE_UP)).rgb;
+    s[8] = textureLodOffset(materialParams_color, uv.xy, 0.0, ivec2( 1, TEXTURE_SPACE_UP)).rgb;
+
+#if USE_YCoCg
+    s[0] = RGB_YCoCg(s[0]);
+    s[1] = RGB_YCoCg(s[1]);
+    s[2] = RGB_YCoCg(s[2]);
+    s[3] = RGB_YCoCg(s[3]);
+    s[4] = RGB_YCoCg(s[4]);
+    s[5] = RGB_YCoCg(s[5]);
+    s[6] = RGB_YCoCg(s[6]);
+    s[7] = RGB_YCoCg(s[7]);
+    s[8] = RGB_YCoCg(s[8]);
+    color.rgb = s[4].rgb;
+#endif
+
+#if FILTER_INPUT
+    // unjitter/filter input
+    vec4 filtered = vec4(0, 0, 0, color.a);
+    for (int i = 0 ; i < 9 ; i++) {
+        filtered.rgb += s[i] * materialParams.filterWeights[i];
+    }
+#else
+    vec4 filtered = color;
+#endif
+
+    vec3 box5min = min(s[4], min(min(s[1], s[3]), min(s[5], s[7])));
+    vec3 box5max = max(s[4], max(max(s[1], s[3]), max(s[5], s[7])));
+    vec3 box9min = min(box5min, min(min(s[0], s[2]), min(s[6], s[8])));
+    vec3 box9max = max(box5max, max(max(s[0], s[2]), max(s[6], s[8])));
+    vec3 boxmin = (box5min + box9min) * 0.5;
+    vec3 boxmax = (box5max + box9max) * 0.5;
+
+    // history clamping
+    history = clipToBox(BOX_CLIPPING, boxmin, boxmax, filtered, history);
+
+    float lumaColor   = luma(filtered.rgb);
+    float lumaHistory = luma(history.rgb);
+
+    float alpha = materialParams.alpha;
+#if PREVENT_FLICKERING
+    // [Lottes] prevents flickering by modulating the blend weight by the difference in luma
+    float diff = 1.0 - abs(lumaColor - lumaHistory) / (0.001 + max(lumaColor, lumaHistory));
+    alpha *= diff * diff;
+#endif
+
+    // tonemapping for handling HDR
+    filtered.rgb *= 1.0 / (1.0 + lumaColor);
+    history.rgb  *= 1.0 / (1.0 + lumaHistory);
+
+    // combine history and current frame
+    vec4 result = mix(history, filtered, alpha);
+
+    // untonemap result
+    result.rgb *= 1.0 / (1.0 - luma(result.rgb));
+
+#if USE_YCoCg
+    result.rgb = YCoCg_RGB(result.rgb);
+#endif
+
+    // store result (which will becomes new history)
+    // we could end-up with negative values due to the bicubic filter, which never recover on
+    // their own.
+    result = max(vec4(0), result);
+
+#if POST_PROCESS_OPAQUE
+    // kill the work performed above
+    result.a = 1.0;
+#endif
+
+    postProcess.color = result;
+}
+
+}

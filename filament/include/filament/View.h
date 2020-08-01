@@ -220,6 +220,16 @@ public:
     };
 
     /**
+     * Options for Temporal Anti-aliasing (TAA)
+     * @see setTemporalAntiAliasingOptions()
+     */
+    struct TemporalAntiAliasingOptions {
+        float filterWidth = 1.0f;   //!< reconstruction filter width typically between 0 (sharper, aliased) and 1 (smoother)
+        float feedback = 0.04f;     //!< history feedback, between 0 (maximum temporal AA) and 1 (no temporal AA).
+        bool enabled = false;       //!< enables or disables temporal anti-aliasing
+    };
+
+    /**
      * List of available ambient occlusion techniques
     */
     enum class AmbientOcclusion : uint8_t {
@@ -489,6 +499,20 @@ public:
      * @return The post-processing anti-aliasing method.
      */
     AntiAliasing getAntiAliasing() const noexcept;
+
+    /**
+     * Enables or disable temporal anti-aliasing (TAA). Disabled by default.
+     *
+     * @param options temporal anti-aliasing options
+     */
+    void setTemporalAntiAliasingOptions(TemporalAntiAliasingOptions options) noexcept;
+
+    /**
+     * Returns temporal anti-aliasing options.
+     *
+     * @return temporal anti-aliasing options
+     */
+    TemporalAntiAliasingOptions const& getTemporalAntiAliasingOptions() const noexcept;
 
     /**
      * Enables or disables tone-mapping in the post-processing stage. Enabled by default.

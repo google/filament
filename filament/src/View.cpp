@@ -804,8 +804,12 @@ void FView::renderShadowMaps(FEngine& engine, FEngine::DriverApi& driver, Render
 
 void FView::commitFrameHistory(FEngine& engine) noexcept {
     // Here we need to destroy resources in mFrameHistory.back()
+    auto& frameHistory = mFrameHistory;
+    FrameHistoryEntry& last = frameHistory.back();
+    last.color.destroy(engine.getResourceAllocator());
+
     // and then push the new history entry to the history stack
-    mFrameHistory.commit();
+    frameHistory.commit();
 }
 
 void FView::drainFrameHistory(FEngine& engine) noexcept {
@@ -898,6 +902,14 @@ void View::setAntiAliasing(AntiAliasing type) noexcept {
 
 View::AntiAliasing View::getAntiAliasing() const noexcept {
     return upcast(this)->getAntiAliasing();
+}
+
+void View::setTemporalAntiAliasingOptions(TemporalAntiAliasingOptions options) noexcept {
+    upcast(this)->setTemporalAntiAliasingOptions(options);
+}
+
+const View::TemporalAntiAliasingOptions& View::getTemporalAntiAliasingOptions() const noexcept {
+    return upcast(this)->getTemporalAntiAliasingOptions();
 }
 
 void View::setToneMapping(ToneMapping type) noexcept {

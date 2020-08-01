@@ -206,6 +206,7 @@ private:
     bool mEnableSsao = true;
     filament::View::BloomOptions mBloomOptions = { .enabled = true };
     filament::View::FogOptions mFogOptions = {};
+    filament::View::TemporalAntiAliasingOptions mTAAOptions = {};
     int mSidebarWidth;
     uint32_t mFlags;
 };
@@ -461,8 +462,14 @@ void SimpleViewer::updateUserInterface() {
     if (ImGui::CollapsingHeader("View")) {
         ImGui::Indent();
         ImGui::Checkbox("Dithering", &mEnableDithering);
-        ImGui::Checkbox("FXAA", &mEnableFxaa);
         ImGui::Checkbox("MSAA 4x", &mEnableMsaa);
+        ImGui::Checkbox("TAA", &mTAAOptions.enabled);
+        // this clutters the UI and isn't that useful (except when working on TAA)
+        //ImGui::Indent();
+        //ImGui::SliderFloat("feedback", &mTAAOptions.feedback, 0.0f, 1.0f);
+        //ImGui::SliderFloat("filter", &mTAAOptions.filterWidth, 0.0f, 2.0f);
+        //ImGui::Unindent();
+        ImGui::Checkbox("FXAA", &mEnableFxaa);
         ImGui::Checkbox("SSAO", &mEnableSsao);
         ImGui::Checkbox("Bloom", &mBloomOptions.enabled);
         ImGui::Unindent();
@@ -506,6 +513,7 @@ void SimpleViewer::updateUserInterface() {
             mEnableSsao ? View::AmbientOcclusion::SSAO : View::AmbientOcclusion::NONE);
     mView->setBloomOptions(mBloomOptions);
     mView->setFogOptions(mFogOptions);
+    mView->setTemporalAntiAliasingOptions(mTAAOptions);
 
     if (mEnableSunlight) {
         mScene->addEntity(mSunlight);
