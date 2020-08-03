@@ -37,6 +37,7 @@ class RenderTargetResourceEntry;
 class Blackboard;
 class FrameGraph;
 class FrameGraphPassResources;
+class ResourceAllocatorInterface;
 
 // ------------------------------------------------------------------------------------------------
 
@@ -52,8 +53,8 @@ struct FrameGraphTexture {
         backend::TextureUsage usage = (backend::TextureUsage)0;
     };
 
-    void create(FrameGraph& fg, const char* name, Descriptor const& desc) noexcept;
-    void destroy(FrameGraph& fg) noexcept;
+    void create(ResourceAllocatorInterface& allocator, const char* name, Descriptor const& desc) noexcept;
+    void destroy(ResourceAllocatorInterface& allocator) noexcept;
 
     backend::Handle<backend::HwTexture> texture;
 };
@@ -177,8 +178,8 @@ struct FrameGraphRenderTarget {
     backend::RenderPassParams params;
 
     // these are empty because we have custom overrides for rendertargets
-    void create(FrameGraph& fg, const char* name, Descriptor const& desc) noexcept {}
-    void destroy(FrameGraph& fg) noexcept {}
+    void create(ResourceAllocatorInterface& allocator, const char* name, Descriptor const& desc) noexcept {}
+    void destroy(ResourceAllocatorInterface& allocator) noexcept {}
 };
 
 using FrameGraphRenderTargetHandle = FrameGraphId<FrameGraphRenderTarget>;

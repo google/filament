@@ -62,10 +62,10 @@ public:
 
 struct GenericResource {
     struct Descriptor {};
-    void create(FrameGraph& fg, const char* name, Descriptor const& desc) noexcept {
+    void create(ResourceAllocatorInterface&, const char* name, Descriptor const& desc) noexcept {
         id = ++state;
     }
-    void destroy(FrameGraph& fg) noexcept {}
+    void destroy(ResourceAllocatorInterface&) noexcept {}
     int id = 0;
 private:
     static int state;
