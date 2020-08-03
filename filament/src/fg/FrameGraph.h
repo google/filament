@@ -258,6 +258,7 @@ private:
     friend class FrameGraphPassResources;
     friend struct FrameGraphTexture;
     friend struct fg::PassNode;
+    friend class fg::ResourceEntryBase;
     friend class fg::RenderTargetResourceEntry;
 
     template <typename T>

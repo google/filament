@@ -24,6 +24,7 @@
 namespace filament {
 
 class FrameGraph;
+class ResourceAllocatorInterface;
 
 namespace fg {
 
@@ -47,6 +48,8 @@ public:
     void postExecuteDevirtualize(FrameGraph& fg) noexcept override {
         discardStart = false;
     }
+
+    static ResourceAllocatorInterface& getResourceAllocator(FrameGraph& fg) noexcept;
 
     // constants
     const char* const name;
@@ -91,13 +94,13 @@ public:
 
     void preExecuteDevirtualize(FrameGraph& fg) noexcept override {
         if (!imported) {
-            resource.create(fg, name, descriptor);
+            resource.create(getResourceAllocator(fg), name, descriptor);
         }
     }
 
     void postExecuteDestroy(FrameGraph& fg) noexcept override {
         if (!imported) {
-            resource.destroy(fg);
+            resource.destroy(getResourceAllocator(fg));
         }
     }
 };
