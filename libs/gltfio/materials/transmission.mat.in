@@ -2,7 +2,7 @@ material {
     name : transmission_${SHADINGMODEL}_${BLENDING},
     requires : [ uv0, uv1, color ],
     shadingModel : ${SHADINGMODEL},
-    blending : fade,
+    blending : ${BLENDING},
     depthWrite : true,
     doubleSided : ${DOUBLESIDED},
     flipUV : false,

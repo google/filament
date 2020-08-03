@@ -135,7 +135,7 @@ Material* UbershaderLoader::getMaterial(const MaterialKey& config) const {
         case MATINDEX(SPECULAR_GLOSSINESS, AlphaMode::OPAQUE, false): mMaterials[matindex] = CREATE_MATERIAL(SPECULARGLOSSINESS_OPAQUE); break;
         case MATINDEX(SPECULAR_GLOSSINESS, AlphaMode::MASK, false): mMaterials[matindex] = CREATE_MATERIAL(SPECULARGLOSSINESS_MASKED); break;
         case MATINDEX(SPECULAR_GLOSSINESS, AlphaMode::BLEND, false): mMaterials[matindex] = CREATE_MATERIAL(SPECULARGLOSSINESS_FADE); break;
-        case MATINDEX(0, 0, true): mMaterials[matindex] = CREATE_MATERIAL(LIT_TRANSMISSION); break;
+        case MATINDEX(0, 0, true): mMaterials[matindex] = CREATE_MATERIAL(LIT_TRANSPARENT); break;
         #endif
     }
     if (mMaterials[matindex] == nullptr) {
