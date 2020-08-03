@@ -17,9 +17,9 @@
 #ifndef TNT_FILAMENT_FRAMEGRAPHPASSRESOURCES_H
 #define TNT_FILAMENT_FRAMEGRAPHPASSRESOURCES_H
 
-#include "FrameGraphHandle.h"
+#include <fg/FrameGraphHandle.h>
 
-#include <fg/fg/ResourceEntry.h>
+#include "fg/fg/ResourceEntry.h"
 
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>

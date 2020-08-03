@@ -18,12 +18,12 @@
 #define TNT_FILAMENT_FRAMEGRAPH_H
 
 
-#include "Blackboard.h"
-#include "FrameGraphPass.h"
-#include "FrameGraphHandle.h"
+#include <fg/Blackboard.h>
+#include <fg/FrameGraphPass.h>
+#include <fg/FrameGraphHandle.h>
 
-#include <fg/fg/ResourceEntry.h>
-#include <fg/fg/RenderTargetResourceEntry.h>
+#include "fg/fg/ResourceEntry.h"
+#include "fg/fg/RenderTargetResourceEntry.h"
 
 #include "details/Allocators.h"
 
@@ -47,12 +47,12 @@
 namespace filament {
 
 class FEngine;
+class ResourceAllocatorInterface;
 
 namespace fg {
 struct ResourceNode;
 struct PassNode;
 struct Alias;
-class ResourceAllocatorInterface;
 } // namespace fg
 
 class FrameGraphPassResources;
@@ -143,7 +143,7 @@ public:
         fg::PassNode& mPass;
     };
 
-    explicit FrameGraph(fg::ResourceAllocatorInterface& resourceAllocator);
+    explicit FrameGraph(ResourceAllocatorInterface& resourceAllocator);
     FrameGraph(FrameGraph const&) = delete;
     FrameGraph& operator = (FrameGraph const&) = delete;
     ~FrameGraph();
@@ -279,7 +279,7 @@ private:
 
     void executeInternal(fg::PassNode const& node, backend::DriverApi& driver) noexcept;
 
-    fg::ResourceAllocatorInterface& getResourceAllocator() noexcept { return mResourceAllocator; }
+    ResourceAllocatorInterface& getResourceAllocator() noexcept { return mResourceAllocator; }
 
     void reset() noexcept;
 
@@ -319,7 +319,7 @@ private:
     }
 
     Blackboard mBlackboard;
-    fg::ResourceAllocatorInterface& mResourceAllocator;
+    ResourceAllocatorInterface& mResourceAllocator;
     LinearAllocatorArena mArena;
     Vector<fg::PassNode> mPassNodes;                    // list of frame graph passes
     Vector<fg::ResourceNode *> mResourceNodes;          // list of resource nodes

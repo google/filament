@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-#include "FrameGraphHandle.h"
+#include <fg/FrameGraphHandle.h>
 
-#include "FrameGraph.h"
+#include "ResourceAllocator.h"
 
-#include "fg/ResourceAllocator.h"
+#include <fg/FrameGraph.h>
+
 
 #ifndef NDEBUG
 #include "details/Texture.h"    // only needed for assert()

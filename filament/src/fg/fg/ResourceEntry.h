@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_FG_RESOURCEENTRY_H
 #define TNT_FILAMENT_FG_RESOURCEENTRY_H
 
-#include "VirtualResource.h"
+#include "fg/fg/VirtualResource.h"
 
 #include <stdint.h>
 

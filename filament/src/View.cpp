@@ -16,6 +16,8 @@
 
 #include "details/View.h"
 
+#include "ResourceAllocator.h"
+
 #include "details/Engine.h"
 #include "details/Culler.h"
 #include "details/DFG.h"
