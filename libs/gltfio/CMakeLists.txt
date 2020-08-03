@@ -66,7 +66,7 @@ generate_mat(ubershader specularGlossiness masked)
 generate_mat(ubershader unlit fade)
 generate_mat(ubershader unlit opaque)
 generate_mat(ubershader unlit masked)
-generate_mat(transmission lit transparent)
+generate_mat(transmission lit transmission)
 
 set(RESOURCE_BINS)
 foreach (input_path ${MATERIAL_SRCS})
