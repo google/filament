@@ -388,7 +388,7 @@ Material* createMaterial(Engine* engine, const MaterialKey& config, const UvMap&
             }
         }
 
-        builder.blending(MaterialBuilder::BlendingMode::TRANSPARENT);
+        builder.blending(MaterialBuilder::BlendingMode::FADE);
         builder.depthWrite(true);
 
     } else {
