@@ -52,7 +52,6 @@ set(SRCS
         src/fg/fg/PassNode.cpp
         src/fg/fg/RenderTargetResourceEntry.cpp
         src/fg/fg/ResourceEntry.cpp
-        src/fg/ResourceAllocator.cpp
         src/Box.cpp
         src/Camera.cpp
         src/Color.cpp
@@ -79,6 +78,7 @@ set(SRCS
         src/RenderPass.cpp
         src/RenderPrimitive.cpp
         src/RenderTarget.cpp
+        src/ResourceAllocator.cpp
         src/Scene.cpp
         src/ShadowMap.cpp
         src/ShadowMapManager.cpp
@@ -105,7 +105,6 @@ set(PRIVATE_HDRS
         src/fg/fg/ResourceEntry.h
         src/fg/fg/RenderTargetResourceEntry.h
         src/fg/fg/ResourceNode.h
-        src/fg/ResourceAllocator.h
         src/fg/fg/VirtualResource.h
         src/details/Allocators.h
         src/details/Camera.h
@@ -141,6 +140,7 @@ set(PRIVATE_HDRS
         src/MaterialParser.h
         src/PostProcessManager.h
         src/RenderPass.h
+        src/ResourceAllocator.h
         src/ToneMapping.h
         src/UniformBuffer.h
         src/upcast.h)

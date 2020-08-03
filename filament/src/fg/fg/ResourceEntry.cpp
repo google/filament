@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "ResourceEntry.h"
+#include "fg/fg/ResourceEntry.h"
 
 namespace filament {
 namespace fg {

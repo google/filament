@@ -21,7 +21,7 @@
 
 #include "private/backend/DriverApiForward.h"
 
-#include "fg/FrameGraphHandle.h"
+#include <fg/FrameGraphHandle.h>
 
 #include <backend/DriverEnums.h>
 #include <filament/View.h>
@@ -32,6 +32,7 @@
 
 namespace filament {
 
+class FrameGraph;
 class FColorGrading;
 class FEngine;
 class FMaterial;

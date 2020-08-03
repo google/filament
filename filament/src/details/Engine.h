@@ -84,10 +84,6 @@ class Driver;
 class Program;
 } // namespace driver
 
-namespace fg {
-class ResourceAllocator;
-} // namespace fg
-
 class FFence;
 class FMaterialInstance;
 class FRenderer;
@@ -96,6 +92,7 @@ class FSwapChain;
 class FView;
 
 class DFG;
+class ResourceAllocator;
 
 /*
  * Concrete implementation of the Engine interface. This keeps track of all hardware resources
@@ -202,7 +199,7 @@ public:
         return mBackend;
     }
 
-    fg::ResourceAllocator& getResourceAllocator() noexcept {
+    ResourceAllocator& getResourceAllocator() noexcept {
         assert(mResourceAllocator);
         return *mResourceAllocator;
     }
@@ -328,7 +325,7 @@ private:
     FTransformManager mTransformManager;
     FLightManager mLightManager;
     FCameraManager mCameraManager;
-    fg::ResourceAllocator* mResourceAllocator = nullptr;
+    ResourceAllocator* mResourceAllocator = nullptr;
 
     ResourceList<FRenderer> mRenderers{ "Renderer" };
     ResourceList<FView> mViews{ "View" };

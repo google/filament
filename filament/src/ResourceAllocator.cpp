@@ -28,8 +28,6 @@ namespace filament {
 
 using namespace backend;
 
-namespace fg {
-
 // ------------------------------------------------------------------------------------------------
 
 template<typename K, typename V, typename H>
@@ -216,5 +214,4 @@ void ResourceAllocator::dump() const noexcept {
     }
 }
 
-} // namespace fg
 } // namespace filament

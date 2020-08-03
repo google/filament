@@ -17,6 +17,7 @@
 #include "details/Renderer.h"
 
 #include "RenderPass.h"
+#include "ResourceAllocator.h"
 
 #include "details/Engine.h"
 #include "details/Fence.h"
@@ -33,7 +34,6 @@
 #include "fg/FrameGraph.h"
 #include "fg/FrameGraphHandle.h"
 #include "fg/FrameGraphPassResources.h"
-#include "fg/ResourceAllocator.h"
 
 #include <utils/compiler.h>
 #include <utils/Panic.h>

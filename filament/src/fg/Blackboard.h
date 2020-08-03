@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_FG_BLACKBOARD_H
 #define TNT_FILAMENT_FG_BLACKBOARD_H
 
-#include "FrameGraphHandle.h"
+#include <fg/FrameGraphHandle.h>
 
 #include <utils/CString.h>
 

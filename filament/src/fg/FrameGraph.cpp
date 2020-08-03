@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-#include "FrameGraph.h"
+#include <fg/FrameGraph.h>
 
-#include "FrameGraphPassResources.h"
-#include "FrameGraphHandle.h"
+#include <fg/FrameGraphPassResources.h>
+#include <fg/FrameGraphHandle.h>
 
-#include "fg/ResourceNode.h"
-#include "fg/PassNode.h"
-#include "fg/VirtualResource.h"
+#include "fg/fg/ResourceNode.h"
+#include "fg/fg/PassNode.h"
+#include "fg/fg/VirtualResource.h"
 
 #include "details/Engine.h"
 
@@ -86,7 +86,7 @@ FrameGraph::Builder& FrameGraph::Builder::sideEffect() noexcept {
 
 // ------------------------------------------------------------------------------------------------
 
-FrameGraph::FrameGraph(fg::ResourceAllocatorInterface& resourceAllocator)
+FrameGraph::FrameGraph(ResourceAllocatorInterface& resourceAllocator)
         : mResourceAllocator(resourceAllocator),
           mArena("FrameGraph Arena", 65536), // TODO: the Area will eventually come from outside
           mPassNodes(mArena),
