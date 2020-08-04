@@ -34,6 +34,8 @@ struct ResourceNode { // 24
     ResourceNode(ResourceNode&&) noexcept = default;
     ResourceNode& operator=(ResourceNode const&) = delete;
 
+    FrameGraphHandle writerIndex;   // only needed by moreResource
+
     // updated during compile()
     ResourceEntryBase* resource;    // actual (aliased) resource data
     PassNode* writer = nullptr;     // writer to this node

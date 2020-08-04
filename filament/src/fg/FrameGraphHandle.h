@@ -30,6 +30,7 @@ namespace filament {
 
 namespace fg {
 struct PassNode;
+struct ResourceNode;
 class RenderTargetResourceEntry;
 } // namespace fg
 
@@ -69,6 +70,7 @@ class FrameGraphHandle {
     friend class FrameGraph;
     friend class FrameGraphPassResources;
     friend struct fg::PassNode;
+    friend struct fg::ResourceNode;
     friend class fg::RenderTargetResourceEntry;
 
     // private ctor -- this cannot be constructed by users
