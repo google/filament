@@ -32,6 +32,8 @@ struct CallbackJni {
     jmethodID execute;
 };
 
+void initCallbackJni(JNIEnv* env, CallbackJni& callbackUtils);
+
 struct JniBufferCallback {
     static JniBufferCallback* make(filament::Engine* engine,
             JNIEnv* env, jobject handler, jobject callback, AutoBuffer&& buffer);
