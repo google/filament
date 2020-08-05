@@ -410,7 +410,7 @@ public:
             , mHandler(env->NewGlobalRef(handler))
             , mCallback(env->NewGlobalRef(runnable))
     {
-        initCallbackJni(env, mCallbackUtils);
+        acquireCallbackJni(env, mCallbackUtils);
         if (mBitmap) {
             AndroidBitmap_getInfo(mEnv, mBitmap, &mInfo);
             AndroidBitmap_lockPixels(mEnv, mBitmap, &mData);
@@ -418,22 +418,7 @@ public:
     }
 
     ~AutoBitmap() noexcept {
-        if (mHandler && mCallback) {
-    #ifdef ANDROID
-            if (mEnv->IsInstanceOf(mHandler, mCallbackUtils.handlerClass)) {
-                mEnv->CallBooleanMethod(mHandler, mCallbackUtils.post, mCallback);
-            }
-    #endif
-            if (mEnv->IsInstanceOf(mHandler, mCallbackUtils.executorClass)) {
-                mEnv->CallVoidMethod(mHandler, mCallbackUtils.execute, mCallback);
-            }
-        }
-        mEnv->DeleteGlobalRef(mHandler);
-        mEnv->DeleteGlobalRef(mCallback);
-    #ifdef ANDROID
-        mEnv->DeleteGlobalRef(mCallbackUtils.handlerClass);
-    #endif
-        mEnv->DeleteGlobalRef(mCallbackUtils.executorClass);
+        releaseCallbackJni(mEnv, mCallbackUtils, mHandler, mCallback);
         if (mBitmap) {
             AndroidBitmap_unlockPixels(mEnv, mBitmap);
             mEnv->DeleteGlobalRef(mBitmap);
