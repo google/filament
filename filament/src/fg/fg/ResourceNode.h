@@ -34,6 +34,8 @@ struct ResourceNode { // 24
     ResourceNode(ResourceNode&&) noexcept = default;
     ResourceNode& operator=(ResourceNode const&) = delete;
 
+    // we use a FrameGraphHandle to store an index, because conveniently is 'invalid' when
+    // default initialized (and doesn't use 0 as the invalid state).
     FrameGraphHandle writerIndex;   // only needed by moveResource
 
     // updated during compile()
