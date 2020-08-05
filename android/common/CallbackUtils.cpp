@@ -14,11 +14,9 @@
  * limitations under the License.
  */
 
-#include <functional>
-
 #include "CallbackUtils.h"
 
-static void initCallbackJni(JNIEnv* env, CallbackJni& callbackUtils) {
+void initCallbackJni(JNIEnv* env, CallbackJni& callbackUtils) {
 #ifdef ANDROID
     callbackUtils.handlerClass = env->FindClass("android/os/Handler");
     callbackUtils.handlerClass = (jclass) env->NewGlobalRef(callbackUtils.handlerClass);
