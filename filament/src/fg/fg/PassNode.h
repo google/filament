@@ -49,7 +49,7 @@ struct PassNode {
 
     // constants
     const char* const name = nullptr;                       // our name
-    const uint32_t id = 0;                                  // a unique id (only for debugging)
+    const uint32_t id = 0;                                  // index in the mPassNodes (for debugging and moveResource)
     FrameGraph::UniquePtr<FrameGraphPassExecutor> base;     // type eraser for calling execute()
 
     // set by the builder
