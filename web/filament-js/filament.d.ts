@@ -126,6 +126,7 @@ export interface View$VignetteOptions {
 // TODO: Remove the entity type and just use integers for parity with Filament's Java bindings.
 export class Entity {
     public getId(): number;
+    public delete(): void;
 }
 
 export class Skybox {
