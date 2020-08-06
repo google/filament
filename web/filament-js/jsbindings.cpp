@@ -107,7 +107,7 @@ namespace em = emscripten;
         function(name, EMBIND_LAMBDA(btype*, arglist, impl), allow_raw_pointers())
 
 // Explicit instantiation of emscripten::internal::raw_destructor is required for binding classes
-// that have non-public destructors.
+// that have non-public destructors. To prevent leaks, do not include pass-by-value types here.
 #define BIND(T) template<> void raw_destructor<T>(T* ptr) {}
 namespace emscripten {
     namespace internal {
@@ -131,17 +131,9 @@ namespace emscripten {
         BIND(SwapChain)
         BIND(Texture)
         BIND(TransformManager)
-        BIND(utils::Entity)
         BIND(utils::EntityManager)
         BIND(VertexBuffer)
         BIND(View)
-
-        // Permit use of Texture* inside emscripten::value_object.
-        template<> struct TypeID<Texture*> {
-            static constexpr TYPEID get() {
-                return LightTypeID<Texture>::get();
-            }
-        };
     }
 }
 #undef BIND
@@ -1284,6 +1276,7 @@ class_<SkyBuilder>("Skybox$Builder")
 /// This would also be more consistent with Filament's Java bindings.
 class_<utils::Entity>("Entity")
     .function("getId", &utils::Entity::getId);
+    /// delete ::method:: Frees an entity.
 
 /// EntityManager ::core class:: Singleton used for constructing entities in Filament's ECS.
 class_<utils::EntityManager>("EntityManager")

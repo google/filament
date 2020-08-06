@@ -71,6 +71,7 @@ class App {
 
         this.allowRefresh = false;
         const asset = this.asset = loader.createAssetFromJson(mesh_url);
+        this.assetRoot = this.asset.getRoot();
 
         const messages = document.getElementById('messages');
 
@@ -135,7 +136,7 @@ class App {
     render() {
         // Spin the model according to the trackball controller.
         const tcm = this.engine.getTransformManager();
-        const inst = tcm.getInstance(this.asset.getRoot());
+        const inst = tcm.getInstance(this.assetRoot);
         tcm.setTransform(inst, this.trackball.getMatrix());
         inst.delete();
 
@@ -147,7 +148,9 @@ class App {
         }
         while (popRenderable()) {
             this.scene.addEntity(entity);
+            entity.delete();
         }
+        entity.delete();
 
         // Render the scene and request the next animation frame.
         this.renderer.render(this.swapChain, this.view);
