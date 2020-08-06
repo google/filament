@@ -28,6 +28,7 @@ export as namespace Filament;
 export function getSupportedFormatSuffix(desired: string): void;
 export function init(assets: string[], onready?: (() => void) | null): void;
 export function fetch(assets: string[], onDone?: (() => void) | null, onFetched?: ((name: string) => void) | null): void;
+export function clearAssetCache(): void;
 
 export const assets: {[url: string]: Uint8Array};
 
