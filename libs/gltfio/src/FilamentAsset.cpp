@@ -40,11 +40,18 @@ FFilamentAsset::~FFilamentAsset() {
 
     delete mAnimator;
     delete mWireframe;
+
     mEngine->destroy(mRoot);
+    mEntityManager->destroy(mRoot);
+
     for (auto entity : mEntities) {
-        // Destroys the entity's renderable, light, transform, and camera components.
+        // Destroy the entity's renderable, light, transform, and camera components.
         mEngine->destroy(entity);
-        // Destroys the actual entity.
+        // Destroy the name component.
+        if (mNameManager) {
+            mNameManager->removeComponent(entity);
+        }
+        // Destroy the actual entity.
         mEntityManager->destroy(entity);
     }
     for (auto mi : mMaterialInstances) {
