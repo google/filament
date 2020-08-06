@@ -1284,6 +1284,13 @@ class_<utils::EntityManager>("EntityManager")
     /// ::retval:: the one and only entity manager
     .class_function("get", (utils::EntityManager* (*)()) []
         { return &utils::EntityManager::get(); }, allow_raw_pointers())
+
+#if FILAMENT_UTILS_TRACK_ENTITIES
+    .function("getActiveEntityCount", EMBIND_LAMBDA(size_t, (utils::EntityManager* self), {
+        return self->getActiveEntities().size();
+    }), allow_raw_pointers())
+#endif
+
     /// create ::method::
     /// ::retval:: an [Entity] without any components
     .function("create", select_overload<utils::Entity()>(&utils::EntityManager::create))
