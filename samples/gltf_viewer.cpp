@@ -775,6 +775,7 @@ int main(int argc, char** argv) {
         engine->destroy(app.scene.groundVertexBuffer);
         engine->destroy(app.scene.groundIndexBuffer);
         engine->destroy(app.scene.groundMaterial);
+        engine->destroy(app.colorGrading);
 
         delete app.viewer;
         delete app.materials;
