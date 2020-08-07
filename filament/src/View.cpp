@@ -298,9 +298,9 @@ void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaSc
     u.setUniform(offsetof(PerViewUib, iblRoughnessOneLevel), iblRoughnessOneLevel);
     u.setUniform(offsetof(PerViewUib, iblLuminance), intensity * exposure);
     u.setUniformArray(offsetof(PerViewUib, iblSH), ibl->getSH(), 9);
-    if (ibl->getReflectionMap()) {
+    if (ibl->getReflectionHwHandle()) {
         mPerViewSb.setSampler(PerViewSib::IBL_SPECULAR, {
-                ibl->getReflectionMap(), {
+                ibl->getReflectionHwHandle(), {
                         .filterMag = SamplerMagFilter::LINEAR,
                         .filterMin = SamplerMinFilter::LINEAR_MIPMAP_LINEAR
                 }});

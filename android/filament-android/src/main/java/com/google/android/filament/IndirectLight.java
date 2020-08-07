@@ -479,6 +479,18 @@ public class IndirectLight {
         return colorIntensity;
     }
 
+    @Nullable
+    public Texture getReflectionsTexture() {
+        long nativeTexture = nGetReflectionsTexture(getNativeObject());
+        return nativeTexture == 0 ? null : new Texture(nativeTexture);
+    }
+
+    @Nullable
+    public Texture getIrradianceTexture() {
+        long nativeTexture = nGetIrradianceTexture(getNativeObject());
+        return nativeTexture == 0 ? null : new Texture(nativeTexture);
+    }
+
     public long getNativeObject() {
         if (mNativeObject == 0) {
             throw new IllegalStateException("Calling method on destroyed IndirectLight");
@@ -507,6 +519,9 @@ public class IndirectLight {
     private static native void nGetRotation(long nativeIndirectLight, float[] outRotation);
     private static native void nGetDirectionEstimate(long nativeIndirectLight, float[] outDirection);
     private static native void nGetColorEstimate(long nativeIndirectLight, float[] outColor, float x, float y, float z);
+
+    private static native long nGetReflectionsTexture(long nativeIndirectLight);
+    private static native long nGetIrradianceTexture(long nativeIndirectLight);
 
     private static native void nGetDirectionEstimateStatic(float[] sh, float[] direction);
     private static native void nGetColorEstimateStatic(float[] colorIntensity, float[] sh, float x, float y, float z);

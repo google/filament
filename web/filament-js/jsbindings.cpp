@@ -1209,6 +1209,12 @@ class_<IndirectLight>("IndirectLight")
     .function("getRotation", EMBIND_LAMBDA(flatmat3, (IndirectLight* self), {
         return flatmat3 { self->getRotation() };
     }), allow_raw_pointers())
+    .function("getReflectionsTexture", EMBIND_LAMBDA(Texture*, (IndirectLight* self), {
+        return (Texture*) self->getReflectionsTexture(); // cast away const to appease embind
+    }), allow_raw_pointers())
+    .function("getIrradianceTexture", EMBIND_LAMBDA(Texture*, (IndirectLight* self), {
+        return (Texture*) self->getIrradianceTexture(); // cast away const to appease embind
+    }), allow_raw_pointers())
    .class_function("getDirectionEstimate", EMBIND_LAMBDA(filament::math::float3, (val ta), {
         size_t nfloats = ta["length"].as<size_t>();
         std::vector<float> floats(nfloats);
@@ -1254,7 +1260,10 @@ class_<IblBuilder>("IndirectLight$Builder")
 
 class_<Skybox>("Skybox")
     .class_function("Builder", (SkyBuilder (*)()) [] { return SkyBuilder(); })
-    .function("setColor", &Skybox::setColor);
+    .function("setColor", &Skybox::setColor)
+    .function("getTexture", EMBIND_LAMBDA(Texture*, (Skybox* skybox), {
+        return (Texture*) skybox->getTexture(); // cast away const to appease embind
+    }), allow_raw_pointers());
 
 class_<SkyBuilder>("Skybox$Builder")
     .function("_build", EMBIND_LAMBDA(Skybox*, (SkyBuilder* builder, Engine* engine), {
