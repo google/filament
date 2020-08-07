@@ -37,17 +37,6 @@ if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.12")
 endif()
 
 # ==================================================================================================
-# Defines
-# ==================================================================================================
-
-add_definitions(
-  -DFILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB=${FILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB}
-  -DFILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB=${FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB}
-  -DFILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB=${FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB}
-  -DFILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB=${FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB}
-  )
-
-# ==================================================================================================
 # Support for ccache
 # ==================================================================================================
 find_program(CCACHE_PROGRAM ccache)

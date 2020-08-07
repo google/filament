@@ -33,7 +33,7 @@
 #include <assert.h>
 
 #ifndef FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB
-#  define FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB 2
+#    define FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB 2
 #endif
 
 namespace filament {
