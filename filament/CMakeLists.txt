@@ -4,12 +4,13 @@ project(filament C ASM)
 set(TARGET filament)
 set(PUBLIC_HDR_DIR include)
 set(GENERATION_ROOT ${CMAKE_CURRENT_BINARY_DIR})
-set(RESOURCE_DIR  "${GENERATION_ROOT}/generated/resources")
-set(MATERIAL_DIR  "${GENERATION_ROOT}/generated/material")
+set(RESOURCE_DIR "${GENERATION_ROOT}/generated/resources")
+set(MATERIAL_DIR "${GENERATION_ROOT}/generated/material")
 
 # ==================================================================================================
 # Sources and headers
 # ==================================================================================================
+
 set(PUBLIC_HDRS
         include/filament/Box.h
         include/filament/Camera.h
@@ -192,15 +193,16 @@ message(STATUS "DFG LUT size set to ${DFG_LUT_SIZE}x${DFG_LUT_SIZE}")
 # ==================================================================================================
 # Definitions
 # ==================================================================================================
+
 # "2" corresponds to SYSTRACE_TAG_FILEMENT (See: utils/Systrace.h)
 add_definitions(-DSYSTRACE_TAG=2)
 add_definitions(-DFILAMENT_DFG_LUT_SIZE=${DFG_LUT_SIZE})
 add_definitions(
-  -DFILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB=${FILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB}
-  -DFILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB=${FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB}
-  -DFILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB=${FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB}
-  -DFILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB=${FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB}
-  )
+    -DFILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB=${FILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB}
+    -DFILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB=${FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB}
+    -DFILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB=${FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB}
+    -DFILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB=${FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB}
+)
 
 # ==================================================================================================
 # Generate all .filamat: default material, skyboxes, and post-process
