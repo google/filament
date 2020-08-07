@@ -137,10 +137,10 @@ OpenGLDriver::DebugMarker::~DebugMarker() noexcept {
 
 OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform) noexcept
         : DriverBase(new ConcreteDispatcher<OpenGLDriver>()),
-          mHandleArena("Handles", 2U * 1024U * 1024U), // TODO: set the amount in configuration
+          mHandleArena("Handles", FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB * 1024U * 1024U), // TODO: set the amount in configuration
           mSamplerMap(32),
           mPlatform(*platform) {
-
+  
     std::fill(mSamplerBindings.begin(), mSamplerBindings.end(), nullptr);
 
     // set a reasonable default value for our stream array

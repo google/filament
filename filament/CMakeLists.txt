@@ -195,6 +195,12 @@ message(STATUS "DFG LUT size set to ${DFG_LUT_SIZE}x${DFG_LUT_SIZE}")
 # "2" corresponds to SYSTRACE_TAG_FILEMENT (See: utils/Systrace.h)
 add_definitions(-DSYSTRACE_TAG=2)
 add_definitions(-DFILAMENT_DFG_LUT_SIZE=${DFG_LUT_SIZE})
+add_definitions(
+  -DFILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB=${FILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB}
+  -DFILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB=${FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB}
+  -DFILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB=${FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB}
+  -DFILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB=${FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB}
+  )
 
 # ==================================================================================================
 # Generate all .filamat: default material, skyboxes, and post-process
