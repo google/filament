@@ -23,12 +23,31 @@ option(FILAMENT_ENABLE_LTO "Enable link-time optimizations if supported by the c
 
 option(FILAMENT_SKIP_SAMPLES "Don't build samples" OFF)
 
+set(FILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB "2" CACHE STRING "Per render pass arena size. Must be roughly 1 MB larger than FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB, default 2.")
+
+set(FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB "1" CACHE STRING "Size of the high-level draw commands buffer. Rule of thumb, 1 MB less than FILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB, default 1.")
+
+set(FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB "1" CACHE STRING "Size of the command-stream buffer. As a rule of thumb use the same value as FILAMENT_PER_FRRAME_COMMANDS_SIZE_IN_MB, default 1.")
+
+set(FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB "2" CACHE STRING "Size of the OpenGL handle arena, default 2.")
+
 # ==================================================================================================
 # CMake policies
 # ==================================================================================================
 if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.12")
     cmake_policy(SET CMP0074 NEW)
 endif()
+
+# ==================================================================================================
+# Defines
+# ==================================================================================================
+
+add_definitions(
+  -DFILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB=${FILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB}
+  -DFILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB=${FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB}
+  -DFILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB=${FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB}
+  -DFILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB=${FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB}
+  )
 
 # ==================================================================================================
 # Support for ccache
