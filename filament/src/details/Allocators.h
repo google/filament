@@ -21,17 +21,14 @@
 
 #ifndef FILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB
 #  define FILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB 2
-#error "wat"
 #endif
 
 #ifndef FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB
 #  define FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB 1
-#error "wat"
 #endif
 
 #ifndef FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB
 #  define FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB 1
-#error "wat"
 #endif 
 
 namespace filament {
