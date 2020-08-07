@@ -6,6 +6,8 @@ A new header is inserted each time a *tag* is created.
 ## Next release
 
 - MASKED mode now leaves destination alpha intact (useful for transparent targets).
+- Fixed several memory leaks in gltfio and the JavaScript bindings.
+- Added texture getters to Skybox and IndirectLight (C++, Java, JavaScript).
 
 ## v1.8.1
 

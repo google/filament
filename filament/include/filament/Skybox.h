@@ -170,6 +170,11 @@ public:
      * Returns the skybox's intensity in cd/m^2.
      */
     float getIntensity() const noexcept;
+
+    /**
+     * @return the associated texture, or null if it does not exist
+     */
+    Texture const* getTexture() const noexcept;
 };
 
 } // namespace filament

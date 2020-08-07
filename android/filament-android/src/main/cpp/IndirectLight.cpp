@@ -144,6 +144,22 @@ Java_com_google_android_filament_IndirectLight_nGetColorEstimate(JNIEnv* env, jc
     env->ReleaseFloatArrayElements(outColor_, outColor, 0);
 }
 
+extern "C" JNIEXPORT jlong JNICALL
+Java_com_google_android_filament_IndirectLight_nGetReflectionsTexture(JNIEnv* env, jclass,
+        jlong nativeIndirectLight) {
+    IndirectLight *indirectLight = (IndirectLight *) nativeIndirectLight;
+    Texture const *tex = indirectLight->getReflectionsTexture();
+    return (jlong) tex;
+}
+
+extern "C" JNIEXPORT jlong JNICALL
+Java_com_google_android_filament_IndirectLight_nGetIrradianceTexture(JNIEnv* env, jclass,
+        jlong nativeIndirectLight) {
+    IndirectLight *indirectLight = (IndirectLight *) nativeIndirectLight;
+    Texture const *tex = indirectLight->getIrradianceTexture();
+    return (jlong) tex;
+}
+
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_IndirectLight_nGetDirectionEstimateStatic(JNIEnv *env, jclass,
         jfloatArray sh_, jfloatArray outDirection_) {

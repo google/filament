@@ -132,6 +132,7 @@ export class Entity {
 
 export class Skybox {
     public setColor(color: float4): void;
+    public getTexture(): Texture;
 }
 
 export class LightManager$Instance {
@@ -397,6 +398,8 @@ export class IndirectLight {
     public getIntensity(): number;
     public setRotation(value: mat3): void;
     public getRotation(): mat3;
+    public getReflectionsTexture(): Texture;
+    public getIrradianceTexture(): Texture;
     public static getDirectionEstimate(f32array: any): float3;
     public static getColorEstimate(f32array: any, direction: float3): float4;
     shfloats: Array<number>;

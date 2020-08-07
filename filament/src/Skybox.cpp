@@ -169,7 +169,10 @@ float Skybox::getIntensity() const noexcept {
 
 void Skybox::setColor(math::float4 color) noexcept {
     upcast(this)->setColor(color);
+}
 
+Texture const* Skybox::getTexture() const noexcept {
+    return upcast(this)->getTexture();
 }
 
 } // namespace filament

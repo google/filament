@@ -88,6 +88,7 @@ Filament.loadClassExtensions = function() {
     };
 
     /// createIblFromKtx ::method:: Utility that creates an [IndirectLight] from a KTX file.
+    /// NOTE: To prevent a leak, please be sure to destroy the associated reflections texture.
     /// buffer ::argument:: asset string, or Uint8Array, or [Buffer] with KTX file contents
     /// options ::argument:: Options dictionary.
     /// ::retval:: [IndirectLight]
@@ -99,6 +100,7 @@ Filament.loadClassExtensions = function() {
     };
 
     /// createSkyFromKtx ::method:: Utility function that creates a [Skybox] from a KTX file.
+    /// NOTE: To prevent a leak, please be sure to destroy the associated texture.
     /// buffer ::argument:: asset string, or Uint8Array, or [Buffer] with KTX file contents
     /// options ::argument:: Options dictionary.
     /// ::retval:: [Skybox]
