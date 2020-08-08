@@ -330,16 +330,6 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     CameraInfo cameraInfo = view.getCameraInfo();
 
-    // offset camera for taa
-    if (taaOptions.enabled) {
-        auto& history = view.getFrameHistory();
-        ppm.prepareTaa(history, cameraInfo, taaOptions);
-        // convert the sample position to jitter in clip-space
-        float2 jitterInClipSpace = history.getCurrent().jitter * (2.0f / float2{ svp.width, svp.height });
-        // update projection matrix
-        cameraInfo.projection[2].xy -= jitterInClipSpace;
-    }
-
     pass.setCamera(cameraInfo);
     pass.setGeometry(scene.getRenderableData(), view.getVisibleRenderables(), scene.getRenderableUBO());
 
@@ -348,6 +338,28 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     view.prepareViewport(svp);
     view.commitUniforms(driver);
 
+    // offset camera for taa
+    if (taaOptions.enabled) {
+        auto& history = view.getFrameHistory();
+        ppm.prepareTaa(history, cameraInfo, taaOptions);
+        // convert the sample position to jitter in clip-space
+        float2 jitterInClipSpace =
+                history.getCurrent().jitter * (2.0f / float2{ svp.width, svp.height });
+        // update projection matrix
+        cameraInfo.projection[2].xy -= jitterInClipSpace;
+
+        // FIXME: We're relying on a very fragile behaviour (a quasi bug actually):
+        //  View uniforms have been uploaded to the GPU at this point (see previous call to
+        //  view.commitUniforms()), they will be uploaded again as a side-effect of the color
+        //  pass, which will be executed after the structure pass above.
+        //  By update the UBO content now (without uploading), we're allowing the structure pass
+        //  to take place before the TAA jitter, while still applying the jitter to everything
+        //  from the color pass.
+        //  All this should be more explicit and be part of the framegraph.
+        //  Note: if we called view.commitUniforms() here, the structure pass above would
+        //  be executed with the new values (because passes are executed much later).
+        view.prepareCamera(cameraInfo);
+    }
 
     // --------------------------------------------------------------------------------------------
     // structure pass -- automatically culled if not used
