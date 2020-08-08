@@ -275,5 +275,5 @@ Java_com_google_android_filament_View_nSetTemporalAntiAliasingOptions(JNIEnv *, 
         jlong nativeView, jfloat feedback, jfloat filterWidth, jboolean enabled) {
     View* view = (View*) nativeView;
     view->setTemporalAntiAliasingOptions({
-        .feedback = feedback, .filterWidth = filterWidth, .enabled = (bool) enabled});
+            .filterWidth = filterWidth, .feedback = feedback, .enabled = (bool) enabled});
 }
