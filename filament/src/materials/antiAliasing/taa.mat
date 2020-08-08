@@ -52,6 +52,18 @@ fragment {
 #define TEXTURE_SPACE_DN    -1
 #endif
 
+/* Clipping box type */
+
+// Neighborhood AABB
+#define BOX_TYPE_AABB           0
+// Further clip by Neighborhood Variance
+#define BOX_TYPE_VARIANCE       1
+
+// High VARIANCE_GAMMA [0.75, 1.25] increases ghosting artefact, lower values increases jittering
+#define VARIANCE_GAMMA          1.0
+
+/* Clipping algorithm */
+
 // accurate box clipping
 #define BOX_CLIPPING_ACCURATE   0
 // clamping instead of clipping
@@ -59,21 +71,27 @@ fragment {
 // no clipping (for debugging only)
 #define BOX_CLIPPING_NONE       2
 
+/* Configuration mobile/desktop */
+
 #if defined(TARGET_MOBILE)
 #define BOX_CLIPPING            BOX_CLIPPING_ACCURATE
+#define BOX_TYPE                BOX_TYPE_VARIANCE
 #define USE_YCoCg               0
 #define PREVENT_FLICKERING      0
 #define FILTER_HISTORY          0
 #else
 #define BOX_CLIPPING            BOX_CLIPPING_ACCURATE
+#define BOX_TYPE                BOX_TYPE_VARIANCE
 #define USE_YCoCg               1
 #define PREVENT_FLICKERING      0   // FIXME: thin lines disapear
 #define FILTER_HISTORY          1
 #endif
 
-// disable for debugging only
+/* debugging helper */
+
 #define HISTORY_REPROJECTION    1
 #define FILTER_INPUT            1
+
 
 float luma(const vec3 color) {
 #if USE_YCoCg
@@ -252,6 +270,22 @@ void postProcess(inout PostProcessInputs postProcess) {
     vec3 box9max = max(box5max, max(max(s[0], s[2]), max(s[6], s[8])));
     vec3 boxmin = (box5min + box9min) * 0.5;
     vec3 boxmax = (box5max + box9max) * 0.5;
+
+#if BOX_TYPE == BOX_TYPE_VARIANCE
+    // "An Excursion in Temporal Supersampling" by Marco Salvi
+    vec3 m0 = s[4];
+    vec3 m1 = s[4] * s[4];
+    // we use only 5 samples instead of all 9
+    for (int i = 1 ; i < 9 ; i+=2) {
+        m0 += s[i];
+        m1 += s[i] * s[i];
+    }
+    vec3 a0 = m0 * (1.0 / 5.0);
+    vec3 a1 = m1 * (1.0 / 5.0);
+    vec3 sigma = sqrt(a1 - a0 * a0);
+    boxmin = min(boxmin, a0 - VARIANCE_GAMMA * sigma);
+    boxmax = max(boxmax, a0 + VARIANCE_GAMMA * sigma);
+#endif
 
     // history clamping
     history = clipToBox(BOX_CLIPPING, boxmin, boxmax, filtered, history);
