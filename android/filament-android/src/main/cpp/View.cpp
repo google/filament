@@ -268,3 +268,12 @@ Java_com_google_android_filament_View_nSetVignetteOptions(JNIEnv*, jclass, jlong
     view->setVignetteOptions({.midPoint = midPoint, .roundness = roundness, .feather = feather,
             .color = LinearColorA{r, g, b, a}, .enabled = (bool)enabled});
 }
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_View_nSetTemporalAntiAliasingOptions(JNIEnv *, jclass,
+        jlong nativeView, jfloat feedback, jfloat filterWidth, jboolean enabled) {
+    View* view = (View*) nativeView;
+    view->setTemporalAntiAliasingOptions({
+        .feedback = feedback, .filterWidth = filterWidth, .enabled = (bool) enabled});
+}

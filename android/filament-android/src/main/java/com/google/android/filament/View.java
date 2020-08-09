@@ -74,6 +74,7 @@ public class View {
     private DepthOfFieldOptions mDepthOfFieldOptions;
     private VignetteOptions mVignetteOptions;
     private ColorGrading mColorGrading;
+    private TemporalAntiAliasingOptions mTemporalAntiAliasingOptions;
 
     /**
      * Generic quality level.
@@ -186,6 +187,21 @@ public class View {
     }
 
     /**
+     * Options for Temporal Anti-aliasing (TAA)
+     * @see View#setTemporalAntiAliasingOptions()
+     */
+    public static class TemporalAntiAliasingOptions {
+        /** reconstruction filter width typically between 0 (sharper, aliased) and 1 (smoother) */
+        public float filterWidth = 1.0f;
+
+        /** history feedback, between 0 (maximum temporal AA) and 1 (no temporal AA). */
+        public float feedback = 0.04f;
+
+        /** enables or disables temporal anti-aliasing */
+        public boolean enabled = false;
+    };
+
+    /**
      * Options for controlling the Bloom effect
      *
      * enabled:     Enable or disable the bloom post-processing effect. Disabled by default.
@@ -209,7 +225,7 @@ public class View {
      *              enabled for the dirt effect to work properly.
      * dirtStrength: Strength of the dirt texture.
      *
-     * @see setBloomOptions
+     * @see View#setBloomOptions
      */
     public static class BloomOptions {
 
@@ -764,6 +780,30 @@ public class View {
     }
 
     /**
+     * Enables or disable temporal anti-aliasing (TAA). Disabled by default.
+     *
+     * @param options temporal anti-aliasing options
+     */
+    public void setTemporalAntiAliasingOptions(@NonNull TemporalAntiAliasingOptions options) {
+        mTemporalAntiAliasingOptions = options;
+        nSetTemporalAntiAliasingOptions(getNativeObject(),
+                options.feedback, options.filterWidth, options.enabled);
+    }
+
+    /**
+     * Returns temporal anti-aliasing options.
+     *
+     * @return temporal anti-aliasing options
+     */
+    @NonNull
+    public TemporalAntiAliasingOptions getTemporalAntiAliasingOptions() {
+        if (mTemporalAntiAliasingOptions == null) {
+            mTemporalAntiAliasingOptions = new TemporalAntiAliasingOptions();
+        }
+        return mTemporalAntiAliasingOptions;
+    }
+
+    /**
      * Enables or disables tone-mapping in the post-processing stage. Enabled by default.
      *
      * @param type Tone-mapping function.
@@ -1172,4 +1212,5 @@ public class View {
     private static native void nSetBlendMode(long nativeView, int blendMode);
     private static native void nSetDepthOfFieldOptions(long nativeView, float focusDistance, float blurScale, float maxApertureDiameter, boolean enabled);
     private static native void nSetVignetteOptions(long nativeView, float midPoint, float roundness, float feather, float r, float g, float b, float a, boolean enabled);
+    private static native void nSetTemporalAntiAliasingOptions(long nativeView, float feedback, float filterWidth, boolean enabled);
 }
