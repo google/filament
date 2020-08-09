@@ -54,10 +54,12 @@ fragment {
 
 /* Clipping box type */
 
-// Neighborhood AABB
+// min/max neighborhood
 #define BOX_TYPE_AABB           0
-// Further clip by Neighborhood Variance
+// Variance based neighborhood
 #define BOX_TYPE_VARIANCE       1
+// uses both min/max and variance
+#define BOX_TYPE_AABB_VARIANCE  2
 
 // High VARIANCE_GAMMA [0.75, 1.25] increases ghosting artefact, lower values increases jittering
 #define VARIANCE_GAMMA          1.0
@@ -77,20 +79,20 @@ fragment {
 #define BOX_CLIPPING            BOX_CLIPPING_ACCURATE
 #define BOX_TYPE                BOX_TYPE_VARIANCE
 #define USE_YCoCg               0
-#define PREVENT_FLICKERING      0
+#define FILTER_INPUT            1
 #define FILTER_HISTORY          0
 #else
 #define BOX_CLIPPING            BOX_CLIPPING_ACCURATE
-#define BOX_TYPE                BOX_TYPE_VARIANCE
+#define BOX_TYPE                BOX_TYPE_AABB_VARIANCE
 #define USE_YCoCg               1
-#define PREVENT_FLICKERING      0   // FIXME: thin lines disapear
+#define FILTER_INPUT            1
 #define FILTER_HISTORY          1
 #endif
 
 /* debugging helper */
 
 #define HISTORY_REPROJECTION    1
-#define FILTER_INPUT            1
+#define PREVENT_FLICKERING      0   // FIXME: thin lines disapear
 
 
 float luma(const vec3 color) {
@@ -242,15 +244,9 @@ void postProcess(inout PostProcessInputs postProcess) {
     s[8] = textureLodOffset(materialParams_color, uv.xy, 0.0, ivec2( 1, TEXTURE_SPACE_UP)).rgb;
 
 #if USE_YCoCg
-    s[0] = RGB_YCoCg(s[0]);
-    s[1] = RGB_YCoCg(s[1]);
-    s[2] = RGB_YCoCg(s[2]);
-    s[3] = RGB_YCoCg(s[3]);
-    s[4] = RGB_YCoCg(s[4]);
-    s[5] = RGB_YCoCg(s[5]);
-    s[6] = RGB_YCoCg(s[6]);
-    s[7] = RGB_YCoCg(s[7]);
-    s[8] = RGB_YCoCg(s[8]);
+    for (int i = 0 ; i < 9 ; i++) {
+        s[i] = RGB_YCoCg(s[i]);
+    }
     color.rgb = s[4].rgb;
 #endif
 
@@ -264,14 +260,17 @@ void postProcess(inout PostProcessInputs postProcess) {
     vec4 filtered = color;
 #endif
 
-    vec3 box5min = min(s[4], min(min(s[1], s[3]), min(s[5], s[7])));
-    vec3 box5max = max(s[4], max(max(s[1], s[3]), max(s[5], s[7])));
-    vec3 box9min = min(box5min, min(min(s[0], s[2]), min(s[6], s[8])));
-    vec3 box9max = max(box5max, max(max(s[0], s[2]), max(s[6], s[8])));
-    vec3 boxmin = (box5min + box9min) * 0.5;
-    vec3 boxmax = (box5max + box9max) * 0.5;
+#if BOX_TYPE == BOX_TYPE_AABB || BOX_TYPE == BOX_TYPE_AABB_VARIANCE
+    vec3 boxmin = min(s[4], min(min(s[1], s[3]), min(s[5], s[7])));
+    vec3 boxmax = max(s[4], max(max(s[1], s[3]), max(s[5], s[7])));
+    vec3 box9min = min(boxmin, min(min(s[0], s[2]), min(s[6], s[8])));
+    vec3 box9max = max(boxmax, max(max(s[0], s[2]), max(s[6], s[8])));
+    // round the corners of the 3x3 box
+    boxmin = (boxmin + box9min) * 0.5;
+    boxmax = (boxmax + box9max) * 0.5;
+#endif
 
-#if BOX_TYPE == BOX_TYPE_VARIANCE
+#if BOX_TYPE == BOX_TYPE_VARIANCE || BOX_TYPE == BOX_TYPE_AABB_VARIANCE
     // "An Excursion in Temporal Supersampling" by Marco Salvi
     vec3 m0 = s[4];
     vec3 m1 = s[4] * s[4];
@@ -283,8 +282,13 @@ void postProcess(inout PostProcessInputs postProcess) {
     vec3 a0 = m0 * (1.0 / 5.0);
     vec3 a1 = m1 * (1.0 / 5.0);
     vec3 sigma = sqrt(a1 - a0 * a0);
+#if BOX_TYPE == BOX_TYPE_VARIANCE
+    vec3 boxmin = a0 - VARIANCE_GAMMA * sigma;
+    vec3 boxmax = a0 + VARIANCE_GAMMA * sigma;
+#else
     boxmin = min(boxmin, a0 - VARIANCE_GAMMA * sigma);
     boxmax = max(boxmax, a0 + VARIANCE_GAMMA * sigma);
+#endif
 #endif
 
     // history clamping
