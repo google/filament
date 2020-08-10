@@ -170,6 +170,7 @@ struct SandboxParameters {
     View::AmbientOcclusionOptions ssaoOptions;
     View::BloomOptions bloomOptions;
     View::FogOptions fogOptions;
+    View::TemporalAntiAliasingOptions taaOptions;
     bool screenSpaceContactShadows = false;
     int stepCount = 8;
     float maxShadowDistance = 0.3;

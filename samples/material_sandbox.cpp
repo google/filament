@@ -659,11 +659,20 @@ static void gui(filament::Engine* engine, filament::View*) {
         if (ImGui::CollapsingHeader("Post-processing")) {
             ImGui::Indent();
             ImGui::Checkbox("MSAA 4x", &params.msaa);
+            ImGui::Checkbox("TAA", &params.taaOptions.enabled);
+            if (params.taaOptions.enabled) {
+                ImGui::Indent();
+                ImGui::SliderFloat("feedback", &params.taaOptions.feedback, 0.0f, 1.0f);
+                ImGui::SliderFloat("filter", &params.taaOptions.filterWidth, 0.02f, 2.0f);
+                ImGui::Unindent();
+            }
             ImGui::Checkbox("FXAA", &params.fxaa);
             ImGui::Checkbox("Bloom", &params.bloomOptions.enabled);
             if (params.bloomOptions.enabled) {
+                ImGui::Indent();
                 ImGui::SliderFloat("Strength", &params.bloomOptions.strength, 0.0f, 1.0f);
                 ImGui::SliderFloat("Dirt", &params.bloomOptions.dirtStrength, 0.0f, 1.0f);
+                ImGui::Unindent();
             }
             ImGui::Checkbox("Dithering", &params.dithering);
             ImGui::Unindent();
@@ -923,6 +932,7 @@ static void preRender(filament::Engine* engine, filament::View* view, filament::
     view->setDithering(g_params.dithering ? View::Dithering::TEMPORAL : View::Dithering::NONE);
     view->setBloomOptions(g_params.bloomOptions);
     view->setFogOptions(g_params.fogOptions);
+    view->setTemporalAntiAliasingOptions(g_params.taaOptions);
     view->setSampleCount((uint8_t) (g_params.msaa ? 4 : 1));
     view->setAmbientOcclusion(
             g_params.ssao ? View::AmbientOcclusion::SSAO : View::AmbientOcclusion::NONE);
