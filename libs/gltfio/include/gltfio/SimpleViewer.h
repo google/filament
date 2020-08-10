@@ -154,7 +154,7 @@ public:
      * Enables screen-space ambient occlusion in the post-process pipeline.
      * Defaults to true.
      */
-    void enableSSAO(bool b) { mEnableSsao = b; }
+    void enableSSAO(bool b) { mSSAOOptions.enabled = b; }
 
     /**
      * Enables Bloom.
@@ -203,7 +203,7 @@ private:
     bool mEnableDithering = true;
     bool mEnableFxaa = true;
     bool mEnableMsaa = true;
-    bool mEnableSsao = true;
+    filament::View::AmbientOcclusionOptions mSSAOOptions = { .enabled = true };
     filament::View::BloomOptions mBloomOptions = { .enabled = true };
     filament::View::FogOptions mFogOptions = {};
     filament::View::TemporalAntiAliasingOptions mTAAOptions = {};
@@ -470,7 +470,7 @@ void SimpleViewer::updateUserInterface() {
         //ImGui::SliderFloat("filter", &mTAAOptions.filterWidth, 0.0f, 2.0f);
         //ImGui::Unindent();
         ImGui::Checkbox("FXAA", &mEnableFxaa);
-        ImGui::Checkbox("SSAO", &mEnableSsao);
+        ImGui::Checkbox("SSAO", &mSSAOOptions.enabled);
         ImGui::Checkbox("Bloom", &mBloomOptions.enabled);
         ImGui::Unindent();
     }
@@ -509,8 +509,7 @@ void SimpleViewer::updateUserInterface() {
     mView->setDithering(mEnableDithering ? View::Dithering::TEMPORAL : View::Dithering::NONE);
     mView->setAntiAliasing(mEnableFxaa ? View::AntiAliasing::FXAA : View::AntiAliasing::NONE);
     mView->setSampleCount(mEnableMsaa ? 4 : 1);
-    mView->setAmbientOcclusion(
-            mEnableSsao ? View::AmbientOcclusion::SSAO : View::AmbientOcclusion::NONE);
+    mView->setAmbientOcclusionOptions(mSSAOOptions);
     mView->setBloomOptions(mBloomOptions);
     mView->setFogOptions(mFogOptions);
     mView->setTemporalAntiAliasingOptions(mTAAOptions);

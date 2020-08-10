@@ -178,19 +178,25 @@ Java_com_google_android_filament_View_nIsFrontFaceWindingInverted(JNIEnv*,
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_View_nSetAmbientOcclusion(JNIEnv*, jclass, jlong nativeView, jint ordinal) {
     View* view = (View*) nativeView;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     view->setAmbientOcclusion((View::AmbientOcclusion) ordinal);
+#pragma clang diagnostic pop
 }
 
 extern "C" JNIEXPORT jint JNICALL
 Java_com_google_android_filament_View_nGetAmbientOcclusion(JNIEnv*, jclass, jlong nativeView) {
     View* view = (View*) nativeView;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     return (jint)view->getAmbientOcclusion();
+#pragma clang diagnostic pop
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_View_nSetAmbientOcclusionOptions(JNIEnv*, jclass,
     jlong nativeView, jfloat radius, jfloat bias, jfloat power, jfloat resolution, jfloat intensity,
-    jint quality, jint upsampling) {
+    jint quality, jint upsampling, jboolean enabled) {
     View* view = (View*) nativeView;
     View::AmbientOcclusionOptions options = {
             .radius = radius,
@@ -199,7 +205,8 @@ Java_com_google_android_filament_View_nSetAmbientOcclusionOptions(JNIEnv*, jclas
             .resolution = resolution,
             .intensity = intensity,
             .quality = (View::QualityLevel)quality,
-            .upsampling = (View::QualityLevel)upsampling
+            .upsampling = (View::QualityLevel)upsampling,
+            .enabled = (bool)enabled
     };
     view->setAmbientOcclusionOptions(options);
 }

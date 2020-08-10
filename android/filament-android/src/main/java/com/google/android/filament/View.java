@@ -139,8 +139,7 @@ public class View {
     }
 
     /**
-     * Options for Ambient Occlusion
-     * @see #setAmbientOcclusion
+     * Options for screen space Ambient Occlusion
      */
     public static class AmbientOcclusionOptions {
         /**
@@ -184,6 +183,11 @@ public class View {
          */
         @NonNull
         public QualityLevel upsampling = QualityLevel.LOW;
+
+        /**
+         * enable or disable screen space ambient occlusion
+         */
+        public boolean enabled = false;
     }
 
     /**
@@ -420,9 +424,10 @@ public class View {
 
     /**
      * List of available ambient occlusion techniques.
-     *
+     * @deprecated use setAmbientOcclusionOptions instead
      * @see #setAmbientOcclusion
-    */
+     */
+    @Deprecated
     public enum AmbientOcclusion {
         NONE,
         SSAO
@@ -1017,18 +1022,20 @@ public class View {
 
     /**
      * Activates or deactivates ambient occlusion.
-     *
+     * @see #setAmbientOcclusionOptions
      * @param ao Type of ambient occlusion to use.
      */
+    @Deprecated
     public void setAmbientOcclusion(@NonNull AmbientOcclusion ao) {
         nSetAmbientOcclusion(getNativeObject(), ao.ordinal());
     }
 
     /**
      * Queries the type of ambient occlusion active for this View.
-     *
+     * @see #getAmbientOcclusionOptions
      * @return ambient occlusion type.
      */
+    @Deprecated
     @NonNull
     public AmbientOcclusion getAmbientOcclusion() {
         return AmbientOcclusion.values()[nGetAmbientOcclusion(getNativeObject())];
@@ -1042,7 +1049,8 @@ public class View {
     public void setAmbientOcclusionOptions(@NonNull AmbientOcclusionOptions options) {
         mAmbientOcclusionOptions = options;
         nSetAmbientOcclusionOptions(getNativeObject(), options.radius, options.bias, options.power,
-                options.resolution, options.intensity, options.quality.ordinal(), options.upsampling.ordinal());
+                options.resolution, options.intensity, options.quality.ordinal(), options.upsampling.ordinal(),
+                options.enabled);
     }
 
     /**
@@ -1206,7 +1214,7 @@ public class View {
     private static native boolean nIsFrontFaceWindingInverted(long nativeView);
     private static native void nSetAmbientOcclusion(long nativeView, int ordinal);
     private static native int nGetAmbientOcclusion(long nativeView);
-    private static native void nSetAmbientOcclusionOptions(long nativeView, float radius, float bias, float power, float resolution, float intensity, int quality, int upsampling);
+    private static native void nSetAmbientOcclusionOptions(long nativeView, float radius, float bias, float power, float resolution, float intensity, int quality, int upsampling, boolean enabled);
     private static native void nSetBloomOptions(long nativeView, long dirtNativeObject, float dirtStrength, float strength, int resolution, float anamorphism, int levels, int blendMode, boolean threshold, boolean enabled);
     private static native void nSetFogOptions(long nativeView, float distance, float maximumOpacity, float height, float heightFalloff, float v, float v1, float v2, float density, float inScatteringStart, float inScatteringSize, boolean fogColorFromIbl, boolean enabled);
     private static native void nSetBlendMode(long nativeView, int blendMode);

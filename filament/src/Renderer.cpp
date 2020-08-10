@@ -377,7 +377,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     // --------------------------------------------------------------------------------------------
     // SSAO pass
 
-    const bool useSSAO = view.getAmbientOcclusion() != View::AmbientOcclusion::NONE;
+    const bool useSSAO = aoOptions.enabled;
     if (useSSAO) {
         // we could rely on FrameGraph culling, but this creates unnecessary CPU work
         ppm.screenSpaceAmbientOclusion(fg, pass, svp, cameraInfo, aoOptions);

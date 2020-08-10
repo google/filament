@@ -231,9 +231,9 @@ static void setup(Engine* engine, View* view, Scene* scene) {
     lcm.setShadowOptions(lcm.getInstance(g_lights[0]), {
             .screenSpaceContactShadows = true });
 
-    view->setAmbientOcclusion(View::AmbientOcclusion::SSAO);
+    view->setAmbientOcclusionOptions({ .enabled = true });
     view->setBloomOptions({ .enabled = true });
-    view->setFogOptions({ .density=0.2, .enabled = true });
+    view->setFogOptions({ .density = 0.2f, .enabled = true });
 
 
     if (g_moreLights) {
