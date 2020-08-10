@@ -230,7 +230,7 @@ void FEngine::shutdown() {
 
 #ifndef NDEBUG
     // print out some statistics about this run
-    size_t wm = mCommandBufferQueue.getHigWatermark();
+    size_t wm = mCommandBufferQueue.getHighWatermark();
     size_t wmpct = wm / (CONFIG_COMMAND_BUFFERS_SIZE / 100);
     slog.d << "CircularBuffer: High watermark "
            << wm / 1024 << " KiB (" << wmpct << "%)" << io::endl;

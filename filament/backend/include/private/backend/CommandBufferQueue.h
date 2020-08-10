@@ -59,7 +59,7 @@ public:
 
     CircularBuffer& getCircularBuffer() { return mCircularBuffer; }
 
-    size_t getHigWatermark() const noexcept { return mHighWatermark; }
+    size_t getHighWatermark() const noexcept { return mHighWatermark; }
 
     // wait for commands to be available and returns an array containing these commands
     std::vector<Slice> waitForCommands() const;
