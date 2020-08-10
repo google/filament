@@ -495,8 +495,10 @@ void waitForIdle(VulkanContext& context) {
     }
 
     // Flush the work command buffer and wait for it to finish.
-    flushWorkCommandBuffer(context);
-    acquireWorkCommandBuffer(context);
+    if (!context.work.fence->submitted) {
+        flushWorkCommandBuffer(context);
+        acquireWorkCommandBuffer(context);
+    }
 
     // Wait for submitted command buffer(s) to finish.
     if (context.currentSurface) {

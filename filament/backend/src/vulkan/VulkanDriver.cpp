@@ -788,7 +788,7 @@ bool VulkanDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapse
     // Android NDK.  Even when AVAILABILITY_BIT is set, validation seems to require that the
     // timestamp has at least been written into a processed command buffer.
     VulkanCommandBuffer* cmdbuf = vtq->cmdbuffer.load();
-    if (!cmdbuf) {
+    if (!cmdbuf || !cmdbuf->fence) {
         return false;
     }
     VkResult status = cmdbuf->fence->status.load(std::memory_order_relaxed);
@@ -1113,12 +1113,8 @@ void VulkanDriver::commit(Handle<HwSwapChain> sch) {
     }
 
     // The surface can be "out of date" when it has been resized, which is not an error.
-    if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-        refreshSwapChain();
-        return;
-    }
-
-    assert(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR);
+    assert(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR ||
+            result == VK_ERROR_OUT_OF_DATE_KHR);
 }
 
 void VulkanDriver::bindUniformBuffer(size_t index, Handle<HwUniformBuffer> ubh) {
