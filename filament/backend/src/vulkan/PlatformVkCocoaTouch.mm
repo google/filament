@@ -67,12 +67,4 @@ void* PlatformVkCocoaTouch::createVkSurfaceKHR(void* nativeWindow, void* instanc
 #endif
 }
 
-void PlatformVkCocoaTouch::getClientExtent(void* window,  uint32_t* width, uint32_t* height) {
-#if METAL_AVAILABLE
-    CAMetalLayer* metalLayer = (CAMetalLayer*) nativeWindow;
-    *width = metalLayer.drawableSize.width;
-    *height = metalLayer.drawableSize.height;
-#endif
-}
-
 } // namespace filament

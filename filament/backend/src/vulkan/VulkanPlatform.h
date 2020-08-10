@@ -44,7 +44,6 @@ class VulkanPlatform : public DefaultPlatform {
 public:
     // Given a Vulkan instance and native window handle, creates the platform-specific surface.
     virtual void* createVkSurfaceKHR(void* nativeWindow, void* instance) noexcept = 0;
-    virtual void getClientExtent(void* window,  uint32_t* width, uint32_t* height) noexcept = 0;
 
    ~VulkanPlatform() override;
 };
