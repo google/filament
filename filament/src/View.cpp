@@ -640,11 +640,11 @@ void FView::prepareSSAO(Handle<HwTexture> ssao) const noexcept {
 
     // LINEAR filtering is only needed when AO is enabled and low-quality upsampling is used.
     mPerViewSb.setSampler(PerViewSib::SSAO, ssao, {
-            .filterMag = mAmbientOcclusion != AmbientOcclusion::NONE && !highQualitySampling ?
+            .filterMag = mAmbientOcclusionOptions.enabled && !highQualitySampling ?
                          SamplerMagFilter::LINEAR : SamplerMagFilter::NEAREST
     });
     mPerViewUb.setUniform(offsetof(PerViewUib, aoSamplingQuality),
-            mAmbientOcclusion != AmbientOcclusion::NONE && highQualitySampling ? 1.0f : 0.0f);
+            mAmbientOcclusionOptions.enabled && highQualitySampling ? 1.0f : 0.0f);
 }
 
 void FView::prepareSSR(backend::Handle<backend::HwTexture> ssr, float refractionLodOffset) const noexcept {

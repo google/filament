@@ -206,7 +206,7 @@ public:
     };
 
     /**
-     * Options for Ambient Occlusion
+     * Options for screen space Ambient Occlusion (SSAO)
      * @see setAmbientOcclusion()
      */
     struct AmbientOcclusionOptions {
@@ -217,6 +217,7 @@ public:
         float intensity = 1.0f; //!< Strength of the Ambient Occlusion effect.
         QualityLevel quality = QualityLevel::LOW; //!< affects # of samples used for AO.
         QualityLevel upsampling = QualityLevel::LOW; //!< affects AO buffer upsampling quality.
+        bool enabled = false;    //!< enables or disables screen-space ambient occlusion
     };
 
     /**
@@ -227,14 +228,6 @@ public:
         float filterWidth = 1.0f;   //!< reconstruction filter width typically between 0 (sharper, aliased) and 1 (smoother)
         float feedback = 0.04f;     //!< history feedback, between 0 (maximum temporal AA) and 1 (no temporal AA).
         bool enabled = false;       //!< enables or disables temporal anti-aliasing
-    };
-
-    /**
-     * List of available ambient occlusion techniques
-    */
-    enum class AmbientOcclusion : uint8_t {
-        NONE = 0,       //!< No Ambient Occlusion
-        SSAO = 1        //!< Basic, sampling SSAO
     };
 
     /**
@@ -253,30 +246,6 @@ public:
         NONE = 0,       //!< No dithering
         TEMPORAL = 1    //!< Temporal dithering (default)
     };
-
-    /**
-     * List of available tone-mapping operators
-     *
-     * @deprecated See ColorGrading
-     */
-    enum class UTILS_DEPRECATED ToneMapping : uint8_t {
-        LINEAR = 0,     //!< Linear tone mapping (i.e. no tone mapping)
-        ACES = 1,       //!< ACES tone mapping
-    };
-
-    /**
-     * Activates or deactivates ambient occlusion.
-     *
-     * @param ambientOcclusion Type of ambient occlusion to use.
-     */
-    void setAmbientOcclusion(AmbientOcclusion ambientOcclusion) noexcept;
-
-    /**
-     * Queries the type of ambient occlusion active for this View.
-     *
-     * @return ambient occlusion type.
-     */
-    AmbientOcclusion getAmbientOcclusion() const noexcept;
 
     /**
      * Sets ambient occlusion options.
@@ -515,27 +484,6 @@ public:
     TemporalAntiAliasingOptions const& getTemporalAntiAliasingOptions() const noexcept;
 
     /**
-     * Enables or disables tone-mapping in the post-processing stage. Enabled by default.
-     *
-     * @param type Tone-mapping function.
-     *
-     * @deprecated Use setColorGrading instead
-     * @see setColorGrading
-     */
-    UTILS_DEPRECATED
-    void setToneMapping(ToneMapping type) noexcept;
-
-    /**
-     * Returns the tone-mapping function.
-     * @return tone-mapping function.
-     *
-     * @deprecated Use getColorGrading instead
-     * @see getColorGrading
-     */
-    UTILS_DEPRECATED
-    ToneMapping getToneMapping() const noexcept;
-
-    /**
      * Sets this View's color grading transforms.
      *
      * @param colorGrading Associate the specified ColorGrading to this View. A ColorGrading can be
@@ -735,6 +683,67 @@ public:
 
     //! debugging: returns a Camera from the point of view of *the* dominant directional light used for shadowing.
     Camera const* getDirectionalLightCamera() const noexcept;
+
+
+    /**
+     * List of available tone-mapping operators
+     *
+     * @deprecated See ColorGrading
+     */
+    enum class UTILS_DEPRECATED ToneMapping : uint8_t {
+        LINEAR = 0,     //!< Linear tone mapping (i.e. no tone mapping)
+        ACES = 1,       //!< ACES tone mapping
+    };
+
+    /**
+     * List of available ambient occlusion techniques
+     * @deprecated use AmbientOcclusionOptions::enabled instead
+     */
+    enum class UTILS_DEPRECATED AmbientOcclusion : uint8_t {
+        NONE = 0,       //!< No Ambient Occlusion
+        SSAO = 1        //!< Basic, sampling SSAO
+    };
+
+    /**
+      * Enables or disables tone-mapping in the post-processing stage. Enabled by default.
+      *
+      * @param type Tone-mapping function.
+      *
+      * @deprecated Use setColorGrading instead
+      * @see setColorGrading
+      */
+    UTILS_DEPRECATED
+    void setToneMapping(ToneMapping type) noexcept;
+
+    /**
+     * Returns the tone-mapping function.
+     * @return tone-mapping function.
+     *
+     * @deprecated Use getColorGrading instead
+     * @see getColorGrading
+     */
+    UTILS_DEPRECATED
+    ToneMapping getToneMapping() const noexcept;
+
+    /**
+     * Activates or deactivates ambient occlusion.
+     * @deprecated use setAmbientOcclusionOptions() instead
+     * @see setAmbientOcclusionOptions
+     *
+     * @param ambientOcclusion Type of ambient occlusion to use.
+     */
+    UTILS_DEPRECATED
+    void setAmbientOcclusion(AmbientOcclusion ambientOcclusion) noexcept;
+
+    /**
+     * Queries the type of ambient occlusion active for this View.
+     * @deprecated use getAmbientOcclusionOptions() instead
+     * @see getAmbientOcclusionOptions
+     *
+     * @return ambient occlusion type.
+     */
+    UTILS_DEPRECATED
+    AmbientOcclusion getAmbientOcclusion() const noexcept;
 };
 
 

@@ -273,11 +273,11 @@ public:
     }
 
     void setAmbientOcclusion(AmbientOcclusion ambientOcclusion) noexcept {
-        mAmbientOcclusion = ambientOcclusion;
+        mAmbientOcclusionOptions.enabled = ambientOcclusion == AmbientOcclusion::SSAO;
     }
 
     AmbientOcclusion getAmbientOcclusion() const noexcept {
-        return mAmbientOcclusion;
+        return mAmbientOcclusionOptions.enabled ? AmbientOcclusion::SSAO : AmbientOcclusion::NONE;
     }
 
     void setAmbientOcclusionOptions(AmbientOcclusionOptions options) noexcept {
@@ -447,7 +447,6 @@ private:
     Dithering mDithering = Dithering::TEMPORAL;
     bool mShadowingEnabled = true;
     bool mHasPostProcessPass = true;
-    AmbientOcclusion mAmbientOcclusion = AmbientOcclusion::NONE;
     AmbientOcclusionOptions mAmbientOcclusionOptions{};
     BloomOptions mBloomOptions;
     FogOptions mFogOptions;

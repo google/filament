@@ -23,7 +23,6 @@ import android.view.Choreographer
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.SurfaceView
-import com.google.android.filament.View
 import com.google.android.filament.utils.KtxLoader
 import com.google.android.filament.utils.ModelViewer
 import com.google.android.filament.utils.Utils
@@ -62,16 +61,17 @@ class MainActivity : Activity() {
         createRenderables()
         createIndirectLight()
 
-        // enable dynamic resolution
-        val options = modelViewer.view.dynamicResolutionOptions
-        options.enabled = true
-        modelViewer.view.dynamicResolutionOptions = options
+        val dynamicResolutionOptions = modelViewer.view.dynamicResolutionOptions
+        dynamicResolutionOptions.enabled = true
+        modelViewer.view.dynamicResolutionOptions = dynamicResolutionOptions
 
-        modelViewer.view.ambientOcclusion = View.AmbientOcclusion.SSAO
+        val ssaoOptions = modelViewer.view.ambientOcclusionOptions
+        ssaoOptions.enabled = true
+        modelViewer.view.ambientOcclusionOptions = ssaoOptions
 
-        val bloom = modelViewer.view.bloomOptions
-        bloom.enabled = true
-        modelViewer.view.bloomOptions = bloom
+        val bloomOptions = modelViewer.view.bloomOptions
+        bloomOptions.enabled = true
+        modelViewer.view.bloomOptions = bloomOptions
     }
 
     private fun createRenderables() {
