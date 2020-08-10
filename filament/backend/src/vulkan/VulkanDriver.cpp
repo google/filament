@@ -1250,13 +1250,19 @@ void VulkanDriver::blit(TargetBufferFlags buffers,
                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, blitRegions,
                 filter == SamplerMagFilter::NEAREST ? VK_FILTER_NEAREST : VK_FILTER_LINEAR);
 
+        const VulkanTexture* srcTexture = srcTarget->getColor(targetIndex).texture;
+        assert(srcTexture && "Blit source does not have an attached color texture.");
         VulkanTexture::transitionImageLayout(cmdbuffer, srcImage, VK_IMAGE_LAYOUT_UNDEFINED,
-                getTextureLayout(srcTarget->getColor(targetIndex).texture->usage), srcLevel, 1, 1,
-                aspect);
+                getTextureLayout(srcTexture->usage), srcLevel, 1, 1, aspect);
+
+        // Determine the desired texture layout for the destination while ensuring that the default
+        // render target is supported, which has no associated texture.
+        const VulkanTexture* dstTexture = dstTarget->getColor(targetIndex).texture;
+        const VkImageLayout desiredLayout = dstTexture ? getTextureLayout(dstTexture->usage) :
+                getSwapContext(mContext).attachment.layout;
 
         VulkanTexture::transitionImageLayout(cmdbuffer, dstImage, VK_IMAGE_LAYOUT_UNDEFINED,
-                getTextureLayout(dstTarget->getColor(targetIndex).texture->usage), dstLevel, 1, 1,
-                aspect);
+                desiredLayout, dstLevel, 1, 1, aspect);
     };
 
     if (!mContext.currentCommands) {
