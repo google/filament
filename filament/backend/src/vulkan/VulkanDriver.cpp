@@ -269,12 +269,13 @@ void VulkanDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId,
     acquireWorkCommandBuffer(mContext);
     mDisposer.release(mContext.work.resources);
 
-    // It might take several attempts to acquire a swap chain that is not marked as "out of date".
+    // With MoltenVK, it might take several attempts to acquire a swap chain that is not marked as
+    // "out of date" after a resize event.
     int attempts = 0;
     while (!acquireSwapCommandBuffer(mContext)) {
         refreshSwapChain();
         if (attempts++ > SWAP_CHAIN_MAX_ATTEMPTS) {
-            PANIC_POSTCONDITION("Unable to acquire optimal image from swap chain.");
+            PANIC_POSTCONDITION("Unable to acquire image from swap chain.");
         }
     }
 
@@ -500,7 +501,6 @@ void VulkanDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
     sc.suboptimal = false;
     sc.surface = (VkSurfaceKHR) mContextManager.createVkSurfaceKHR(nativeWindow, mContext.instance);
     sc.nativeWindow = nativeWindow;
-    mContextManager.getClientExtent(nativeWindow, &sc.clientSize.width, &sc.clientSize.height);
     getPresentationQueue(mContext, sc);
     createSwapChain(mContext, sc);
 
@@ -1105,8 +1105,8 @@ void VulkanDriver::commit(Handle<HwSwapChain> sch) {
     };
     result = vkQueuePresentKHR(surface.presentQueue, &presentInfo);
 
-    // We should be notified of a suboptimal surface, but it should not cause a cascade of
-    // log messages, or a loop of re-creations.
+    // On Android Q and above, a suboptimal surface is always reported after screen rotation:
+    // https://android-developers.googleblog.com/2020/02/handling-device-orientation-efficiently.html
     if (result == VK_SUBOPTIMAL_KHR && !surface.suboptimal) {
         utils::slog.w << "Vulkan Driver: Suboptimal swap chain." << utils::io::endl;
         surface.suboptimal = true;
@@ -1443,15 +1443,9 @@ void VulkanDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
 
 void VulkanDriver::refreshSwapChain() {
     VulkanSurfaceContext& surface = *mContext.currentSurface;
-    getSurfaceCaps(mContext, surface);
 
     backend::destroySwapChain(mContext, surface, mDisposer);
     createSwapChain(mContext, surface);
-
-    void* nativeWindow = surface.nativeWindow;
-    VkExtent2D size;
-    mContextManager.getClientExtent(nativeWindow, &size.width, &size.height);
-    surface.clientSize = size;
 
     mFramebufferCache.reset();
 }

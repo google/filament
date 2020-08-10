@@ -154,7 +154,6 @@ struct VulkanSurfaceContext {
 void selectPhysicalDevice(VulkanContext& context);
 void createLogicalDevice(VulkanContext& context);
 void getPresentationQueue(VulkanContext& context, VulkanSurfaceContext& sc);
-void getSurfaceCaps(VulkanContext& context, VulkanSurfaceContext& sc);
 
 void createSwapChain(VulkanContext& context, VulkanSurfaceContext& sc);
 void destroySwapChain(VulkanContext& context, VulkanSurfaceContext& sc, VulkanDisposer& disposer);

@@ -58,10 +58,4 @@ void* PlatformVkAndroid::createVkSurfaceKHR(void* nativeWindow, void* vkinstance
     return (void*) surface;
 }
 
-void PlatformVkAndroid::getClientExtent(void* window, uint32_t* width, uint32_t* height) noexcept {
-    ANativeWindow* aNativeWindow = (ANativeWindow*) window;
-    *width = ANativeWindow_getWidth(aNativeWindow);
-    *height = ANativeWindow_getHeight(aNativeWindow);
-}
-
 } // namespace filament
