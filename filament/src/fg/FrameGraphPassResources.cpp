@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-#include "FrameGraphPassResources.h"
+#include <fg/FrameGraphPassResources.h>
 
-#include "FrameGraph.h"
-#include "FrameGraphHandle.h"
+#include <fg/FrameGraph.h>
+#include <fg/FrameGraphHandle.h>
 
-#include "fg/ResourceNode.h"
-#include "fg/PassNode.h"
+#include "fg/fg/ResourceNode.h"
+#include "fg/fg/PassNode.h"
 
 #include <utils/Panic.h>
 #include <utils/Log.h>

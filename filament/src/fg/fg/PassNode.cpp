@@ -113,8 +113,8 @@ FrameGraphHandle PassNode::write(FrameGraph& fg, const FrameGraphHandle& handle)
 
     // record the write
     auto& newNode = fg.getResourceNodeUnchecked(r);
-    assert(!newNode.writer);
-    newNode.writer = this;     // needed by move resources
+    assert(!newNode.writerIndex.isValid());
+    newNode.writerIndex = FrameGraphHandle(this->id); // needed by move resources
 
     writes.push_back(r);
     return r;

@@ -157,8 +157,10 @@ function(add_envmap SOURCE TARGET)
         DEPENDS cmgen)
 endfunction()
 
-add_envmap("third_party/environments/venetian_crossroads_2k.hdr" "venetian_crossroads_2k")
-add_envmap("third_party/environments/pillars_2k.hdr" "pillars_2k")
+# The pillars envmap is used only when building new HTML for the tutorials.
+# add_envmap("third_party/environments/pillars_2k.hdr" "pillars_2k")
+
+add_envmap("third_party/environments/lightroom_14b.hdr" "default_env")
 
 add_custom_target(sample_assets DEPENDS
     ${target_textures}

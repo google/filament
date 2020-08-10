@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
-#include "RenderTargetResourceEntry.h"
+#include "fg/fg/RenderTargetResourceEntry.h"
+
+#include "ResourceAllocator.h"
 
 #include "details/Texture.h"
 
@@ -23,7 +25,6 @@
 
 #include <fg/FrameGraph.h>
 #include <fg/FrameGraphHandle.h>
-#include <fg/ResourceAllocator.h>
 
 #include <backend/TargetBufferInfo.h>
 

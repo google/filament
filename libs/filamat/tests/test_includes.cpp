@@ -117,6 +117,87 @@ TEST(IncludeParser, LineNumbers) {
         EXPECT_EQ(4, result[2].line);
 }
 
+TEST(IncludeParser, IncludeWithinStarComment) {
+    {
+        utils::CString code(R"(/* #include "foobar.h" */)");
+        auto result = filamat::parseForIncludes(code);
+        EXPECT_EQ(0, result.size());
+    }
+    {
+        utils::CString code(R"(/* */ /*#include "foobar.h"*/)");
+        auto result = filamat::parseForIncludes(code);
+        EXPECT_EQ(0, result.size());
+    }
+    {
+        utils::CString code(R"(/**/ /* /* #include "foobar.h" */ */)");
+        auto result = filamat::parseForIncludes(code);
+        EXPECT_EQ(0, result.size());
+    }
+    {
+        utils::CString code(R"(/*#include "foobar.h")");
+        auto result = filamat::parseForIncludes(code);
+        EXPECT_EQ(0, result.size());
+    }
+    {
+        utils::CString code(R"(/*   */ #include "foobar.h")");
+        auto result = filamat::parseForIncludes(code);
+        EXPECT_EQ(1, result.size());
+        EXPECT_STREQ("foobar.h", result[0].name.c_str());
+        EXPECT_EQ(8, result[0].startPosition);
+        EXPECT_EQ(19, result[0].length);
+        EXPECT_EQ(1, result[0].line);
+    }
+}
+
+TEST(IncludeParser, IncludeWithinSlashComment) {
+    {
+        utils::CString code(R"(// #include "foobar.h")");
+        auto result = filamat::parseForIncludes(code);
+        EXPECT_EQ(0, result.size());
+    }
+    {
+        utils::CString code(R"(
+        //
+        // #include "foobar.h"
+        )");
+        auto result = filamat::parseForIncludes(code);
+        EXPECT_EQ(0, result.size());
+    }
+    {
+        utils::CString code(R"(
+        //
+        // // #include "foobar.h"
+
+        )");
+        auto result = filamat::parseForIncludes(code);
+        EXPECT_EQ(0, result.size());
+    }
+    {
+        utils::CString code("// comment\n#include \"foobar.h\"");
+        auto result = filamat::parseForIncludes(code);
+        EXPECT_EQ(1, result.size());
+        EXPECT_STREQ("foobar.h", result[0].name.c_str());
+        EXPECT_EQ(11, result[0].startPosition);
+        EXPECT_EQ(19, result[0].length);
+        EXPECT_EQ(2, result[0].line);
+    }
+}
+
+TEST(IncludeParser, IncludeWithinBothSlashStarComments) {
+    {
+        utils::CString code(R"(
+        // none of these are valid includes:
+        // #include "foobar.h"
+        /* #include "foobar.h" */
+        /* // #include "foobar.h" */
+        // /* #include "foobar.h" */
+        /* #include "foobar.h"
+        )");
+        auto result = filamat::parseForIncludes(code);
+        EXPECT_EQ(0, result.size());
+    }
+}
+
 // -------------------------------------------------------------------------------------------------
 
 TEST(IncludeResolver, NoIncludes) {

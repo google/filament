@@ -17,9 +17,9 @@
 #ifndef TNT_FILAMENT_FRAMEGRAPHPASSRESOURCES_H
 #define TNT_FILAMENT_FRAMEGRAPHPASSRESOURCES_H
 
-#include "FrameGraphHandle.h"
+#include <fg/FrameGraphHandle.h>
 
-#include <fg/fg/ResourceEntry.h>
+#include "fg/fg/ResourceEntry.h"
 
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
@@ -59,6 +59,18 @@ public:
     // this is just a helper for FrameGraphTexture
     backend::Handle<backend::HwTexture> getTexture(FrameGraphId<FrameGraphTexture> handle) const noexcept {
         return get(handle).texture;
+    }
+
+    // detach() is used to detach (export) a resource from the framegraph, at which point its
+    // lifetime is no longer managed by the FrameGraph. Tihs resource can later be used by
+    // the FrameGraph again using FrameGraph::import() -- but note that this will not transfer
+    // lifetime management back to the FrameGraph.
+    template<typename T>
+    void detach(FrameGraphId<T> r, T* resource, typename T::Descriptor* desc) const noexcept {
+        fg::ResourceEntry<T> const& entry = getResourceEntry(r);
+        *resource = entry.getResource();
+        *desc = entry.descriptor;
+        entry.imported = true; // avoid destruction
     }
 
 private:

@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_FG_RESOURCEALLOCATOR_H
-#define TNT_FILAMENT_FG_RESOURCEALLOCATOR_H
+#ifndef TNT_FILAMENT_RESOURCEALLOCATOR_H
+#define TNT_FILAMENT_RESOURCEALLOCATOR_H
 
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
@@ -30,7 +30,6 @@
 #include <stdint.h>
 
 namespace filament {
-namespace fg {
 
 // The only reason we use an interface here is for unit-tests, so we can mock this allocator.
 // This is not too time-critical, so that's okay.
@@ -185,8 +184,7 @@ private:
     const bool mEnabled = true;
 };
 
-}// namespace fg
 } // namespace filament
 
 
-#endif //TNT_FILAMENT_FG_RESOURCEALLOCATOR_H
+#endif //TNT_FILAMENT_RESOURCEALLOCATOR_H

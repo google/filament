@@ -66,7 +66,7 @@ struct App {
     InstanceHandle* instances;
 };
 
-static const char* DEFAULT_IBL = "venetian_crossroads_2k";
+static const char* DEFAULT_IBL = "default_env";
 
 static void printUsage(char* name) {
     std::string exec_name(Path(name).getName());

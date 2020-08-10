@@ -18,7 +18,7 @@
 
 #include "fg/FrameGraph.h"
 #include "fg/FrameGraphPassResources.h"
-#include "fg/ResourceAllocator.h"
+#include "ResourceAllocator.h"
 
 #include <backend/Platform.h>
 
@@ -32,7 +32,7 @@ static Backend gBackend = Backend::NOOP;
 static DefaultPlatform* platform = DefaultPlatform::create(&gBackend);
 static CommandStream driverApi(*platform->createDriver(nullptr), buffer);
 
-class MockResourceAllocator : public fg::ResourceAllocatorInterface {
+class MockResourceAllocator : public ResourceAllocatorInterface {
     uint32_t handle = 0;
 public:
     backend::RenderTargetHandle createRenderTarget(const char* name,
@@ -62,10 +62,10 @@ public:
 
 struct GenericResource {
     struct Descriptor {};
-    void create(FrameGraph& fg, const char* name, Descriptor const& desc) noexcept {
+    void create(ResourceAllocatorInterface&, const char* name, Descriptor const& desc) noexcept {
         id = ++state;
     }
-    void destroy(FrameGraph& fg) noexcept {}
+    void destroy(ResourceAllocatorInterface&) noexcept {}
     int id = 0;
 private:
     static int state;
@@ -76,7 +76,7 @@ int GenericResource::state = 0;
 
 TEST(FrameGraphTest, SimpleRenderPass) {
 
-    fg::ResourceAllocator resourceAllocator(driverApi);
+    ResourceAllocator resourceAllocator(driverApi);
     FrameGraph fg(resourceAllocator);
 
     bool renderPassExecuted = false;
@@ -130,7 +130,7 @@ TEST(FrameGraphTest, SimpleRenderPass) {
 
 TEST(FrameGraphTest, SimpleRenderPass2) {
 
-    fg::ResourceAllocator resourceAllocator(driverApi);
+    ResourceAllocator resourceAllocator(driverApi);
     FrameGraph fg(resourceAllocator);
 
     bool renderPassExecuted = false;
@@ -178,7 +178,7 @@ TEST(FrameGraphTest, SimpleRenderPass2) {
 
 TEST(FrameGraphTest, ScenarioDepthPrePass) {
 
-    fg::ResourceAllocator resourceAllocator(driverApi);
+    ResourceAllocator resourceAllocator(driverApi);
     FrameGraph fg(resourceAllocator);
 
     bool depthPrepassExecuted = false;
@@ -254,7 +254,7 @@ TEST(FrameGraphTest, ScenarioDepthPrePass) {
 
 TEST(FrameGraphTest, SimplePassCulling) {
 
-    fg::ResourceAllocator resourceAllocator(driverApi);
+    ResourceAllocator resourceAllocator(driverApi);
     FrameGraph fg(resourceAllocator);
 
     bool renderPassExecuted = false;

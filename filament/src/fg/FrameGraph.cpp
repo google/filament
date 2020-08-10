@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-#include "FrameGraph.h"
+#include <fg/FrameGraph.h>
 
-#include "FrameGraphPassResources.h"
-#include "FrameGraphHandle.h"
+#include <fg/FrameGraphPassResources.h>
+#include <fg/FrameGraphHandle.h>
 
-#include "fg/ResourceNode.h"
-#include "fg/PassNode.h"
-#include "fg/VirtualResource.h"
+#include "fg/fg/ResourceNode.h"
+#include "fg/fg/PassNode.h"
+#include "fg/fg/VirtualResource.h"
 
 #include "details/Engine.h"
 
@@ -86,7 +86,7 @@ FrameGraph::Builder& FrameGraph::Builder::sideEffect() noexcept {
 
 // ------------------------------------------------------------------------------------------------
 
-FrameGraph::FrameGraph(fg::ResourceAllocatorInterface& resourceAllocator)
+FrameGraph::FrameGraph(ResourceAllocatorInterface& resourceAllocator)
         : mResourceAllocator(resourceAllocator),
           mArena("FrameGraph Arena", 65536), // TODO: the Area will eventually come from outside
           mPassNodes(mArena),
@@ -148,13 +148,14 @@ void FrameGraph::moveResourceBase(FrameGraphHandle fromHandle, FrameGraphHandle 
 
     // The pass that is writing to "fromHandle" no longer does (and might be culled)
     // (note: there can only be a single pass that can be a writer)
-    PassNode* const pass = from.writer;
-    if (pass) {
+    if (from.writerIndex.isValid()) {
+        PassNode* const pass = &mPassNodes[from.writerIndex.index];
+        assert(pass);
         auto pos = std::find_if(pass->writes.begin(), pass->writes.end(),
                 [fromHandle](auto handle) { return handle == fromHandle; });
         assert(pos != pass->writes.end());
         pass->writes.erase(pos);
-        from.writer = to.writer;
+        from.writerIndex = to.writerIndex;
     }
 
     // The 'to' node becomes the 'from' node and therefore inherits passes that are reading
@@ -284,12 +285,11 @@ FrameGraph& FrameGraph::compile() noexcept {
             resourceNodes[resource.index]->readerCount++;
         }
 
-#ifndef NDEBUG
+        // set the writers
         for (FrameGraphHandle resource : pass.writes) {
             assert(resource.isValid());
-            assert(resourceNodes[resource.index]->writer == &pass);
+            resourceNodes[resource.index]->writer = &pass;
         }
-#endif
     }
 
     /*

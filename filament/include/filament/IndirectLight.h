@@ -282,6 +282,16 @@ public:
     const math::mat3f& getRotation() const noexcept;
 
     /**
+     * Returns the associated reflection map, or null if it does not exist.
+     */
+    Texture const* getReflectionsTexture() const noexcept;
+
+    /**
+     * Returns the associated irradiance map, or null if it does not exist.
+     */
+    Texture const* getIrradianceTexture() const noexcept;
+
+    /**
      * Helper to estimate the direction of the dominant light in the environment represented by
      * spherical harmonics.
      *

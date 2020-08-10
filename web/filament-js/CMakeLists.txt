@@ -17,7 +17,7 @@ set(CPP_SRC
 # The following setting is required because we disable RTTI.
 set(COPTS "${COPTS} -DEMSCRIPTEN_HAS_UNBOUND_TYPE_NAMES=0")
 
-# Uncomment the following line to check for leaks with leaks.html
+# Uncomment the following line to check for leaks
 # set(LOPTS "${LOPTS} --memoryprofiler")
 
 set(LOPTS "${LOPTS} --bind")

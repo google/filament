@@ -1,24 +1,9 @@
 material {
-    name : colorGrading,
+    name : colorGradingAsSubpass,
     parameters : [
-        {
-            type : sampler2d,
-            name : colorBuffer,
-            precision: medium
-        },
         {
             type : sampler3d,
             name : lut,
-            precision: medium
-        },
-        {
-            type : sampler2d,
-            name : bloomBuffer,
-            precision: medium
-        },
-        {
-            type : sampler2d,
-            name : dirtBuffer,
             precision: medium
         },
         {
@@ -28,10 +13,6 @@ material {
         {
             type : int,
             name : fxaa
-        },
-        {
-            type : float4,
-            name : bloom
         },
         {
             type : float4,
@@ -47,7 +28,8 @@ material {
     ],
     depthWrite : false,
     depthCulling : false,
-    domain: postprocess
+    domain: postprocess,
+    framebufferFetch: true
 }
 
 vertex {
@@ -58,9 +40,13 @@ vertex {
 
 fragment {
 
-#include "../../../shaders/src/dithering.fs"
-#include "../../../shaders/src/vignette.fs"
-#include "../../../shaders/src/bloom.fs"
+    // TODO: this should be specified as a parameter
+    // In our Vulkan backend, subpass inputs always live in descriptor set 2. (ignored for GLES)
+    layout (input_attachment_index = 0, set = 2, binding = 0) uniform mediump subpassInput colorBuffer;
+    layout(location = 1) out vec4 tonemappedOutput;
+
+#include "../../../../shaders/src/dithering.fs"
+#include "../../../../shaders/src/vignette.fs"
 
     vec3 colorGrade(mediump sampler3D lut, const vec3 x) {
         // Alexa LogC EI 1000
@@ -73,19 +59,16 @@ fragment {
     }
 
     vec3 resolveFragment(const ivec2 uv) {
-        return texelFetch(materialParams_colorBuffer, uv, 0).rgb;
+        return subpassLoad(colorBuffer).rgb;
     }
 
     vec4 resolveAlphaFragment(const ivec2 uv) {
-        return texelFetch(materialParams_colorBuffer, uv, 0);
+        return subpassLoad(colorBuffer);
     }
 
     vec4 resolve() {
 #if POST_PROCESS_OPAQUE
         vec4 color = vec4(resolveFragment(ivec2(getUV())), 1.0);
-        if (materialParams.bloom.x > 0.0) {
-            color.rgb = bloom(color.rgb);
-        }
         if (materialParams.vignette.x < MEDIUMP_FLT_MAX) {
             highp vec2 uv = getUV() * frameUniforms.resolution.zw;
             color.rgb = vignette(color.rgb, uv, materialParams.vignette, materialParams.vignetteColor);
@@ -97,9 +80,6 @@ fragment {
 #else
         vec4 color = resolveAlphaFragment(ivec2(getUV()));
         color.rgb /= color.a + FLT_EPS;
-        if (materialParams.bloom.x > 0.0) {
-            color.rgb = bloom(color.rgb);
-        }
         if (materialParams.vignette.x < MEDIUMP_FLT_MAX) {
             highp vec2 uv = getUV() * frameUniforms.resolution.zw;
             color.rgb = vignette(color.rgb, uv, materialParams.vignette, materialParams.vignetteColor);
@@ -120,6 +100,7 @@ fragment {
             postProcess.color = dithered;
 #endif
         }
+        tonemappedOutput = postProcess.color;
     }
 
 }

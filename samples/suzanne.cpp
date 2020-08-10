@@ -56,7 +56,7 @@ struct App {
     Texture* ao;
 };
 
-static const char* IBL_FOLDER = "venetian_crossroads_2k";
+static const char* IBL_FOLDER = "default_env";
 
 static Texture* loadNormalMap(Engine* engine, const uint8_t* normals, size_t nbytes) {
     int w, h, n;

@@ -347,7 +347,7 @@ inline float3 vibrance(float3 v, float vibrance) {
 
 UTILS_ALWAYS_INLINE
 inline float3 curves(float3 v, float3 shadowGamma, float3 midPoint, float3 highlightScale) {
-    // "Practical HDR and Wide Color Techniques in Gran Turismo SPORT", Uchimura 2018
+    // "Practical HDR and Wide Color Techniques in Gran Turismo SPORT", Uchimura 2018
     float3 d = 1.0f / (pow(midPoint, shadowGamma - 1.0f));
     float3 dark = pow(v, shadowGamma) * d;
     float3 light = highlightScale * (v - midPoint) + midPoint;

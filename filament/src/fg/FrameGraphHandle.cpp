@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-#include "FrameGraphHandle.h"
+#include <fg/FrameGraphHandle.h>
 
-#include "FrameGraph.h"
+#include "ResourceAllocator.h"
 
-#include "fg/ResourceAllocator.h"
+#include <fg/FrameGraph.h>
+
 
 #ifndef NDEBUG
 #include "details/Texture.h"    // only needed for assert()
@@ -30,7 +31,7 @@ namespace filament {
 
 using namespace backend;
 
-void FrameGraphTexture::create(FrameGraph& fg, const char* name,
+void FrameGraphTexture::create(ResourceAllocatorInterface& allocator, const char* name,
         FrameGraphTexture::Descriptor const& desc) noexcept {
 
     // FIXME (workaround): a texture could end up with no usage if it was used as an attachment
@@ -62,15 +63,15 @@ void FrameGraphTexture::create(FrameGraph& fg, const char* name,
         samples = 1;
     }
 
-    texture = fg.getResourceAllocator().createTexture(name, desc.type, levels,
+    texture = allocator.createTexture(name, desc.type, levels,
             desc.format, samples, desc.width, desc.height, desc.depth, desc.usage);
 
     assert(texture);
 }
 
-void FrameGraphTexture::destroy(FrameGraph& fg) noexcept {
+void FrameGraphTexture::destroy(ResourceAllocatorInterface& allocator) noexcept {
     if (texture) {
-        fg.getResourceAllocator().destroyTexture(texture);
+        allocator.destroyTexture(texture);
     }
 }
 

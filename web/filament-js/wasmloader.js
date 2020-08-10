@@ -63,6 +63,10 @@ Filament.init = (assets, onready) => {
     });
 };
 
+Filament.clearAssetCache = () => {
+    for (const key in Filament.assets) delete Filament.assets[key];
+};
+
 /// fetch ::function:: Downloads assets and invokes a callback when done.
 ///
 /// This utility consumes an array of URI strings and invokes callbacks after each asset is

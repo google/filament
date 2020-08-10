@@ -88,7 +88,7 @@ class MainActivity : Activity() {
     private fun createIndirectLight() {
         val engine = modelViewer.engine
         val scene = modelViewer.scene
-        val ibl = "venetian_crossroads_2k"
+        val ibl = "default_env"
         readCompressedAsset("envs/$ibl/${ibl}_ibl.ktx").let {
             scene.indirectLight = KtxLoader.createIndirectLight(engine, it)
             scene.indirectLight!!.intensity = 30_000.0f

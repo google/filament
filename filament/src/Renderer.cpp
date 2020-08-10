@@ -17,6 +17,7 @@
 #include "details/Renderer.h"
 
 #include "RenderPass.h"
+#include "ResourceAllocator.h"
 
 #include "details/Engine.h"
 #include "details/Fence.h"
@@ -33,13 +34,13 @@
 #include "fg/FrameGraph.h"
 #include "fg/FrameGraphHandle.h"
 #include "fg/FrameGraphPassResources.h"
-#include "fg/ResourceAllocator.h"
 
 #include <utils/compiler.h>
 #include <utils/Panic.h>
 #include <utils/Systrace.h>
 #include <utils/vector.h>
 
+#include <random>
 #include <assert.h>
 
 // this helps visualize what dynamic-scaling is doing
@@ -205,12 +206,14 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     auto dofOptions = view.getDepthOfFieldOptions();
     auto aoOptions = view.getAmbientOcclusionOptions();
     auto vignetteOptions = view.getVignetteOptions();
+    auto taaOptions = view.getTemporalAntiAliasingOptions();
     if (!hasPostProcess) {
         // disable all effects that are part of post-processing
         msaa = 1;
         dofOptions.enabled = false;
         bloomOptions.enabled = false;
         vignetteOptions.enabled = false;
+        taaOptions.enabled = false;
         colorGrading = false;
         dithering = false;
         fxaa = false;
@@ -313,7 +316,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     const ColorGradingConfig colorGradingConfig{
             .asSubpass =
                     colorGrading &&
-                    msaa <= 1 && !bloomOptions.enabled && !dofOptions.enabled &&
+                    msaa <= 1 && !bloomOptions.enabled && !dofOptions.enabled && !taaOptions.enabled &&
                     driver.isFrameBufferFetchSupported(),
             .translucent = translucent,
             .fxaa = fxaa,
@@ -325,7 +328,18 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
      * Depth + Color passes
      */
 
-    CameraInfo const& cameraInfo = view.getCameraInfo();
+    CameraInfo cameraInfo = view.getCameraInfo();
+
+    // offset camera for taa
+    if (taaOptions.enabled) {
+        auto& history = view.getFrameHistory();
+        ppm.prepareTaa(history, cameraInfo, taaOptions);
+        // convert the sample position to jitter in clip-space
+        float2 jitterInClipSpace = history.getCurrent().jitter * (2.0f / float2{ svp.width, svp.height });
+        // update projection matrix
+        cameraInfo.projection[2].xy -= jitterInClipSpace;
+    }
+
     pass.setCamera(cameraInfo);
     pass.setGeometry(scene.getRenderableData(), view.getVisibleRenderables(), scene.getRenderableUBO());
 
@@ -390,6 +404,10 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     FrameGraphId<FrameGraphTexture> colorPassOutput =
             refractionPass(fg, config, colorGradingConfig, pass, view);
     FrameGraphId<FrameGraphTexture> input = colorPassOutput;
+
+    if (taaOptions.enabled) {
+        input = ppm.taa(fg, input, view.getFrameHistory(), taaOptions, translucent);
+    }
 
     fg.addTrivialSideEffectPass("Finish Color Passes", [&view](DriverApi& driver) {
         // Unbind SSAO sampler, b/c the FrameGraph will delete the texture at the end of the pass.
@@ -457,6 +475,9 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     fg.compile();
     //fg.export_graphviz(slog.d, view.getName());
     fg.execute(engine, driver);
+
+    // save the current history entry and destroy the oldest entry
+    view.commitFrameHistory(engine);
 
     recordHighWatermark(pass.getCommandsHighWatermark());
 }

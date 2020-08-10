@@ -17,13 +17,14 @@
 #ifndef TNT_FILAMENT_FG_RESOURCEENTRY_H
 #define TNT_FILAMENT_FG_RESOURCEENTRY_H
 
-#include "VirtualResource.h"
+#include "fg/fg/VirtualResource.h"
 
 #include <stdint.h>
 
 namespace filament {
 
 class FrameGraph;
+class ResourceAllocatorInterface;
 
 namespace fg {
 
@@ -48,10 +49,12 @@ public:
         discardStart = false;
     }
 
+    static ResourceAllocatorInterface& getResourceAllocator(FrameGraph& fg) noexcept;
+
     // constants
     const char* const name;
     const uint16_t id;                      // for debugging and graphing
-    const bool imported;
+    mutable bool imported;
     const uint8_t priority;
 
     // updated by builder
@@ -91,13 +94,13 @@ public:
 
     void preExecuteDevirtualize(FrameGraph& fg) noexcept override {
         if (!imported) {
-            resource.create(fg, name, descriptor);
+            resource.create(getResourceAllocator(fg), name, descriptor);
         }
     }
 
     void postExecuteDestroy(FrameGraph& fg) noexcept override {
         if (!imported) {
-            resource.destroy(fg);
+            resource.destroy(getResourceAllocator(fg));
         }
     }
 };

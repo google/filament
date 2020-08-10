@@ -34,27 +34,27 @@ ostream& LogStream::flush() noexcept {
     Buffer& buf = getBuffer();
 #if ANDROID
     switch (mPriority) {
-        case DEBUG:
+        case LOG_DEBUG:
             __android_log_write(ANDROID_LOG_DEBUG, UTILS_LOG_TAG, buf.get());
             break;
-        case ERROR:
+        case LOG_ERROR:
             __android_log_write(ANDROID_LOG_ERROR, UTILS_LOG_TAG, buf.get());
             break;
-        case WARNING:
+        case LOG_WARNING:
             __android_log_write(ANDROID_LOG_WARN, UTILS_LOG_TAG, buf.get());
             break;
-        case INFO:
+        case LOG_INFO:
             __android_log_write(ANDROID_LOG_INFO, UTILS_LOG_TAG, buf.get());
             break;
     }
 #else
     switch (mPriority) {
-        case DEBUG:
-        case WARNING:
-        case INFO:
+        case LOG_DEBUG:
+        case LOG_WARNING:
+        case LOG_INFO:
             fprintf(stdout, "%s", buf.get());
             break;
-        case ERROR:
+        case LOG_ERROR:
             fprintf(stderr, "%s", buf.get());
             break;
     }
@@ -63,10 +63,10 @@ ostream& LogStream::flush() noexcept {
     return *this;
 }
 
-static LogStream cout(LogStream::Priority::DEBUG);
-static LogStream cerr(LogStream::Priority::ERROR);
-static LogStream cwarn(LogStream::Priority::WARNING);
-static LogStream cinfo(LogStream::Priority::INFO);
+static LogStream cout(LogStream::Priority::LOG_DEBUG);
+static LogStream cerr(LogStream::Priority::LOG_ERROR);
+static LogStream cwarn(LogStream::Priority::LOG_WARNING);
+static LogStream cinfo(LogStream::Priority::LOG_INFO);
 
 } // namespace io
 

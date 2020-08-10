@@ -16,6 +16,8 @@
 
 #include "details/View.h"
 
+#include "ResourceAllocator.h"
+
 #include "details/Engine.h"
 #include "details/Culler.h"
 #include "details/DFG.h"
@@ -91,7 +93,7 @@ void FView::terminate(FEngine& engine) {
     driver.destroyUniformBuffer(mShadowUbh);
     driver.destroySamplerGroup(mPerViewSbh);
     driver.destroyUniformBuffer(mRenderableUbh);
-
+    drainFrameHistory(engine);
     mShadowMapManager.terminate(driver);
     mFroxelizer.terminate(driver);
 }
@@ -296,9 +298,9 @@ void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaSc
     u.setUniform(offsetof(PerViewUib, iblRoughnessOneLevel), iblRoughnessOneLevel);
     u.setUniform(offsetof(PerViewUib, iblLuminance), intensity * exposure);
     u.setUniformArray(offsetof(PerViewUib, iblSH), ibl->getSH(), 9);
-    if (ibl->getReflectionMap()) {
+    if (ibl->getReflectionHwHandle()) {
         mPerViewSb.setSampler(PerViewSib::IBL_SPECULAR, {
-                ibl->getReflectionMap(), {
+                ibl->getReflectionHwHandle(), {
                         .filterMag = SamplerMagFilter::LINEAR,
                         .filterMin = SamplerMinFilter::LINEAR_MIPMAP_LINEAR
                 }});
@@ -800,6 +802,23 @@ void FView::renderShadowMaps(FEngine& engine, FEngine::DriverApi& driver, Render
     mShadowMapManager.render(engine, *this, driver, pass);
 }
 
+void FView::commitFrameHistory(FEngine& engine) noexcept {
+    // Here we need to destroy resources in mFrameHistory.back()
+    auto& frameHistory = mFrameHistory;
+    FrameHistoryEntry& last = frameHistory.back();
+    last.color.destroy(engine.getResourceAllocator());
+
+    // and then push the new history entry to the history stack
+    frameHistory.commit();
+}
+
+void FView::drainFrameHistory(FEngine& engine) noexcept {
+    // make sure we free all resources in the history
+    for (size_t i = 0; i < mFrameHistory.size(); ++i) {
+        commitFrameHistory(engine);
+    }
+}
+
 // ------------------------------------------------------------------------------------------------
 // Trampoline calling into private implementation
 // ------------------------------------------------------------------------------------------------
@@ -883,6 +902,14 @@ void View::setAntiAliasing(AntiAliasing type) noexcept {
 
 View::AntiAliasing View::getAntiAliasing() const noexcept {
     return upcast(this)->getAntiAliasing();
+}
+
+void View::setTemporalAntiAliasingOptions(TemporalAntiAliasingOptions options) noexcept {
+    upcast(this)->setTemporalAntiAliasingOptions(options);
+}
+
+const View::TemporalAntiAliasingOptions& View::getTemporalAntiAliasingOptions() const noexcept {
+    return upcast(this)->getTemporalAntiAliasingOptions();
 }
 
 void View::setToneMapping(ToneMapping type) noexcept {

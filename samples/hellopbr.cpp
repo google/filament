@@ -46,7 +46,7 @@ struct App {
     mat4f transform;
 };
 
-static const char* IBL_FOLDER = "venetian_crossroads_2k";
+static const char* IBL_FOLDER = "default_env";
 
 int main(int argc, char** argv) {
     Config config;

@@ -1027,6 +1027,15 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
     auto program = handle_cast<MetalProgram>(mHandleMap, ps.program);
     const auto& rs = ps.rasterState;
 
+    // If the material debugger is enabled, avoid fatal (or cascading) errors and that can occur
+    // during the draw call when the program is invalid. The shader compile error has already been
+    // dumped to the console at this point, so it's fine to simply return early.
+    if (FILAMENT_ENABLE_MATDBG && UTILS_UNLIKELY(!program->isValid)) {
+        return;
+    }
+
+    ASSERT_PRECONDITION(program->isValid, "Attempting to draw with an invalid Metal program.");
+
     // Pipeline state
     MTLPixelFormat colorPixelFormat[4] = { MTLPixelFormatInvalid };
     for (size_t i = 0; i < 4; i++) {

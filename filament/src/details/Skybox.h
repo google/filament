@@ -49,6 +49,8 @@ public:
 
     float getIntensity() const noexcept { return mIntensity; }
 
+    FTexture const* getTexture() const noexcept { return mSkyboxTexture; }
+
     void setColor(math::float4 color) noexcept;
 
     // commits UBOs

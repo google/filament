@@ -21,7 +21,9 @@
 
 #include "private/backend/DriverApiForward.h"
 
-#include "fg/FrameGraphHandle.h"
+#include "FrameHistory.h"
+
+#include <fg/FrameGraphHandle.h>
 
 #include <backend/DriverEnums.h>
 #include <filament/View.h>
@@ -32,6 +34,7 @@
 
 namespace filament {
 
+class FrameGraph;
 class FColorGrading;
 class FEngine;
 class FMaterial;
@@ -88,6 +91,15 @@ public:
             FrameGraphId<FrameGraphTexture> input, backend::TextureFormat outFormat,
             bool translucent) noexcept;
 
+    // Temporal Anti-aliasing
+    void prepareTaa(FrameHistory& frameHistory,
+            CameraInfo const& cameraInfo,
+            View::TemporalAntiAliasingOptions const& taaOptions) noexcept;
+
+    FrameGraphId<FrameGraphTexture> taa(FrameGraph& fg,
+            FrameGraphId<FrameGraphTexture> input, FrameHistory& frameHistory,
+            View::TemporalAntiAliasingOptions taaOptions, bool translucent) noexcept;
+
     // Blit/rescaling/resolves
     FrameGraphId<FrameGraphTexture> opaqueBlit(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, FrameGraphTexture::Descriptor outDesc,
@@ -102,6 +114,10 @@ public:
 
     backend::Handle<backend::HwTexture> getOneTexture() const { return mDummyOneTexture; }
     backend::Handle<backend::HwTexture> getZeroTexture() const { return mDummyZeroTexture; }
+
+    math::float2 halton(size_t index) const noexcept {
+        return mHaltonSamples[index & 0xFu];
+    }
 
 private:
     FEngine& mEngine;
@@ -177,7 +193,10 @@ private:
     backend::Handle<backend::HwTexture> mDummyZeroTexture;
 
     size_t mSeparableGaussianBlurKernelStorageSize = 0;
+
+    const math::float2 mHaltonSamples[16];
 };
+
 
 } // namespace filament
 

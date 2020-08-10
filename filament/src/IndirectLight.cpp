@@ -174,7 +174,7 @@ IndirectLight* IndirectLight::Builder::build(Engine& engine) {
 
 FIndirectLight::FIndirectLight(FEngine& engine, const Builder& builder) noexcept {
     if (builder->mReflectionsMap) {
-        mReflectionsMapHandle = upcast(builder->mReflectionsMap)->getHwHandle();
+        mReflectionsTexture = upcast(builder->mReflectionsMap);
         mLevelCount = builder->mReflectionsMap->getLevels();
     }
 
@@ -186,7 +186,7 @@ FIndirectLight::FIndirectLight(FEngine& engine, const Builder& builder) noexcept
     mRotation = builder->mRotation;
     mIntensity = builder->mIntensity;
     if (builder->mIrradianceMap) {
-        mIrradianceMapHandle = upcast(builder->mIrradianceMap)->getHwHandle();
+        mIrradianceTexture = upcast(builder->mIrradianceMap);
     } else {
         // TODO: if needed, generate the irradiance map, this is an engine config
         if (FEngine::CONFIG_IBL_USE_IRRADIANCE_MAP) {
@@ -197,10 +197,17 @@ FIndirectLight::FIndirectLight(FEngine& engine, const Builder& builder) noexcept
 void FIndirectLight::terminate(FEngine& engine) {
     if (FEngine::CONFIG_IBL_USE_IRRADIANCE_MAP) {
         FEngine::DriverApi& driver = engine.getDriverApi();
-        driver.destroyTexture(mIrradianceMapHandle);
+        driver.destroyTexture(getIrradianceHwHandle());
     }
 }
 
+backend::Handle<backend::HwTexture> FIndirectLight::getReflectionHwHandle() const noexcept {
+    return mReflectionsTexture->getHwHandle();
+}
+
+backend::Handle<backend::HwTexture> FIndirectLight::getIrradianceHwHandle() const noexcept {
+    return mIrradianceTexture->getHwHandle();
+}
 
 math::float3 FIndirectLight::getDirectionEstimate(math::float3 const* f) noexcept {
     // The linear direction is found as normalize(-sh[3], -sh[1], sh[2]), but the coefficients
@@ -280,6 +287,14 @@ void IndirectLight::setRotation(mat3f const& rotation) noexcept {
 
 const math::mat3f& IndirectLight::getRotation() const noexcept {
     return upcast(this)->getRotation();
+}
+
+Texture const* IndirectLight::getReflectionsTexture() const noexcept {
+    return upcast(this)->getReflectionsTexture();
+}
+
+Texture const* IndirectLight::getIrradianceTexture() const noexcept {
+    return upcast(this)->getIrradianceTexture();
 }
 
 math::float3 IndirectLight::getDirectionEstimate() const noexcept {

@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
-#include "ResourceEntry.h"
+#include "fg/fg/ResourceEntry.h"
+
+#include <fg/FrameGraph.h>
 
 namespace filament {
 namespace fg {
@@ -23,6 +25,10 @@ VirtualResource::~VirtualResource() = default;
 
 ResourceEntryBase::ResourceEntryBase(const char* name, uint16_t id, bool imported, uint8_t priority) noexcept
         : name(name), id(id), imported(imported), priority(priority) {
+}
+
+ResourceAllocatorInterface& ResourceEntryBase::getResourceAllocator(FrameGraph& fg) noexcept {
+    return fg.getResourceAllocator();
 }
 
 ResourceEntryBase::~ResourceEntryBase() = default;

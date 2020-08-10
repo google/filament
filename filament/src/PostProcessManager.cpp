@@ -51,6 +51,19 @@ using namespace backend;
 static constexpr uint8_t kMaxBloomLevels = 12u;
 static_assert(kMaxBloomLevels >= 3, "We require at least 3 bloom levels");
 
+constexpr static float halton(unsigned int i, unsigned int b) noexcept {
+    // skipping a bunch of entries makes the average of the sequence closer to 0.5
+    i += 409;
+    float f = 1.0f;
+    float r = 0.0f;
+    while (i > 0u) {
+        f /= float(b);
+        r += f * float(i % b);
+        i /= b;
+    }
+    return r;
+}
+
 // ------------------------------------------------------------------------------------------------
 
 PostProcessManager::PostProcessMaterial::PostProcessMaterial() noexcept {
@@ -141,7 +154,26 @@ FMaterialInstance* PostProcessManager::PostProcessMaterial::getMaterialInstance(
 
 // ------------------------------------------------------------------------------------------------
 
-PostProcessManager::PostProcessManager(FEngine& engine) noexcept : mEngine(engine) {
+PostProcessManager::PostProcessManager(FEngine& engine) noexcept
+        : mEngine(engine),
+          mHaltonSamples{
+                  { filament::halton( 0, 2), filament::halton( 0, 3) },
+                  { filament::halton( 1, 2), filament::halton( 1, 3) },
+                  { filament::halton( 2, 2), filament::halton( 2, 3) },
+                  { filament::halton( 3, 2), filament::halton( 3, 3) },
+                  { filament::halton( 4, 2), filament::halton( 4, 3) },
+                  { filament::halton( 5, 2), filament::halton( 5, 3) },
+                  { filament::halton( 6, 2), filament::halton( 6, 3) },
+                  { filament::halton( 7, 2), filament::halton( 7, 3) },
+                  { filament::halton( 8, 2), filament::halton( 8, 3) },
+                  { filament::halton( 9, 2), filament::halton( 9, 3) },
+                  { filament::halton(10, 2), filament::halton(10, 3) },
+                  { filament::halton(11, 2), filament::halton(11, 3) },
+                  { filament::halton(12, 2), filament::halton(12, 3) },
+                  { filament::halton(13, 2), filament::halton(13, 3) },
+                  { filament::halton(14, 2), filament::halton(14, 3) },
+                  { filament::halton(15, 2), filament::halton(15, 3) }}
+{
 }
 
 UTILS_NOINLINE
@@ -172,6 +204,7 @@ void PostProcessManager::init() noexcept {
     registerPostProcessMaterial("colorGrading", MATERIAL(COLORGRADING));
     registerPostProcessMaterial("colorGradingAsSubpass", MATERIAL(COLORGRADINGASSUBPASS));
     registerPostProcessMaterial("fxaa", MATERIAL(FXAA));
+    registerPostProcessMaterial("taa", MATERIAL(TAA));
     registerPostProcessMaterial("dofDownsample", MATERIAL(DOFDOWNSAMPLE));
     registerPostProcessMaterial("dofMipmap", MATERIAL(DOFMIPMAP));
     registerPostProcessMaterial("dofTiles", MATERIAL(DOFTILES));
@@ -258,7 +291,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::structure(FrameGraph& fg,
     // generate depth pass at the requested resolution
     auto& structurePass = fg.addPass<StructurePassData>("Structure Pass",
             [&](FrameGraph::Builder& builder, auto& data) {
-                data.depth = builder.createTexture("Depth Buffer", {
+                data.depth = builder.createTexture("Structure Buffer", {
                         .width = width, .height = height,
                         .levels = uint8_t(levelCount),
                         .format = TextureFormat::DEPTH24 });
@@ -1511,6 +1544,120 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::fxaa(FrameGraph& fg,
             });
 
     return ppFXAA.getData().output;
+}
+
+void PostProcessManager::prepareTaa(FrameHistory& frameHistory,
+        CameraInfo const& cameraInfo,
+        View::TemporalAntiAliasingOptions const& taaOptions) noexcept {
+    auto const& previous = frameHistory[0];
+    auto& current = frameHistory.getCurrent();
+    // get sample position within a pixel [-0.5, 0.5]
+    const float2 jitter = halton(previous.frameId) - 0.5f;
+    // compute the world-space to clip-space matrix for this frame
+    current.projection = cameraInfo.projection * (cameraInfo.view * cameraInfo.worldOrigin);
+    // save this frame's sample position
+    current.jitter = jitter;
+    // update frame id
+    current.frameId = previous.frameId + 1;
+}
+
+FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
+        FrameGraphId<FrameGraphTexture> input, FrameHistory& frameHistory,
+        View::TemporalAntiAliasingOptions taaOptions,
+        bool translucent) noexcept {
+
+    FrameHistoryEntry const& entry = frameHistory[0];
+    FrameGraphId<FrameGraphTexture> colorHistory;
+    if (!entry.color.texture) {
+        // if we don't have a history yet, just use the current color buffer as history
+        colorHistory = input;
+    } else {
+        colorHistory = fg.import("TAA history", entry.colorDesc, entry.color);
+    }
+
+    Blackboard& blackboard = fg.getBlackboard();
+    auto depth = blackboard.get<FrameGraphTexture>("depth");
+    assert(depth.isValid());
+
+    struct TAAData {
+        FrameGraphId<FrameGraphTexture> color;
+        FrameGraphId<FrameGraphTexture> depth;
+        FrameGraphId<FrameGraphTexture> history;
+        FrameGraphId<FrameGraphTexture> output;
+        FrameGraphRenderTargetHandle rt;
+    };
+    auto& taa = fg.addPass<TAAData>("TAA",
+            [&](FrameGraph::Builder& builder, auto& data) {
+                auto desc = fg.getDescriptor(input);
+                data.color = builder.sample(input);
+                data.depth = builder.sample(depth);
+                data.history = builder.sample(colorHistory);
+                data.output = builder.createTexture("TAA output", desc);
+                data.output = builder.write(data.output);
+                data.rt = builder.createRenderTarget("TAA target", {
+                        .attachments = { data.output }
+                });
+            },
+            [=, &frameHistory](FrameGraphPassResources const& resources, auto const& data, DriverApi& driver) {
+
+                constexpr mat4f normalizedToClip = {
+                        float4{  2,  0,  0, 0 },
+                        float4{  0,  2,  0, 0 },
+                        float4{  0,  0,  2, 0 },
+                        float4{ -1, -1, -1, 1 },
+                };
+
+                constexpr float2 sampleOffsets[9] = {
+                        { -1.0f, -1.0f }, {  0.0f, -1.0f }, {  1.0f, -1.0f },
+                        { -1.0f,  0.0f }, {  0.0f,  0.0f }, {  1.0f,  0.0f },
+                        { -1.0f,  1.0f }, {  0.0f,  1.0f }, {  1.0f,  1.0f },
+                };
+
+                FrameHistoryEntry& current = frameHistory.getCurrent();
+
+                float sum = 0.0;
+                float weights[9];
+                for (size_t i = 0; i < 9; i++) {
+                    float2 d = sampleOffsets[i] - current.jitter;
+                    d *= 1.0 / taaOptions.filterWidth;
+                    // this is a gaussian fit of a 3.3 blackman harris window
+                    // see: "High Quality Temporal Supersampling" by Bruan Karis
+                    weights[i] = std::exp(-2.29f * (d.x * d.x + d.y * d.y));
+                    sum += weights[i];
+                }
+                for (auto& w : weights) {
+                    w /= sum;
+                }
+
+                auto output = resources.get(data.rt);
+                auto color = resources.getTexture(data.color);
+                auto depth = resources.getTexture(data.depth);
+                auto history = resources.getTexture(data.history);
+
+                auto const& material = getPostProcessMaterial("taa");
+                FMaterialInstance* mi = material.getMaterialInstance();
+                mi->setParameter("color",  color, {});  // nearest
+                mi->setParameter("depth",  depth, {});  // nearest
+                mi->setParameter("alpha", taaOptions.feedback);
+                mi->setParameter("history", history, {
+                        .filterMag = SamplerMagFilter::LINEAR,
+                        .filterMin = SamplerMinFilter::LINEAR
+                });
+                mi->setParameter("filterWeights",  weights, 9);
+                mi->setParameter("reprojection",
+                        frameHistory[0].projection *
+                        inverse(current.projection) *
+                        normalizedToClip);
+
+                const uint8_t variant = uint8_t(translucent ?
+                        PostProcessVariant::TRANSLUCENT : PostProcessVariant::OPAQUE);
+
+                commitAndRender(output, material, variant, driver);
+
+                // perform TAA here using colorHistory + input -> output
+                resources.detach(data.output, &current.color, &current.colorDesc);
+            });
+    return taa.getData().output;
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::opaqueBlit(FrameGraph& fg,

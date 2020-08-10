@@ -183,11 +183,17 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     using DepthFunc = RasterState::DepthFunc;
     switch (mBlendingMode) {
         case BlendingMode::OPAQUE:
-        case BlendingMode::MASKED:
             mRasterState.blendFunctionSrcRGB   = BlendFunction::ONE;
             mRasterState.blendFunctionSrcAlpha = BlendFunction::ONE;
             mRasterState.blendFunctionDstRGB   = BlendFunction::ZERO;
             mRasterState.blendFunctionDstAlpha = BlendFunction::ZERO;
+            mRasterState.depthWrite = true;
+            break;
+        case BlendingMode::MASKED:
+            mRasterState.blendFunctionSrcRGB   = BlendFunction::ONE;
+            mRasterState.blendFunctionSrcAlpha = BlendFunction::ZERO;
+            mRasterState.blendFunctionDstRGB   = BlendFunction::ZERO;
+            mRasterState.blendFunctionDstAlpha = BlendFunction::ONE;
             mRasterState.depthWrite = true;
             break;
         case BlendingMode::TRANSPARENT:
@@ -473,9 +479,9 @@ void FMaterial::onEditCallback(void* userdata, const utils::CString& name, const
             packageSize);
 }
 
-void FMaterial::onQueryCallback(void* userdata, uint16_t* pvariants) {
+void FMaterial::onQueryCallback(void* userdata, uint64_t* pvariants) {
     FMaterial* material = upcast((Material*) userdata);
-    uint16_t variants = 0;
+    uint64_t variants = 0;
     auto& cachedPrograms = material->mCachedPrograms;
     for (size_t i = 0, n = cachedPrograms.size(); i < n; ++i) {
         if (cachedPrograms[i]) {

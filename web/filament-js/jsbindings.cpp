@@ -107,7 +107,7 @@ namespace em = emscripten;
         function(name, EMBIND_LAMBDA(btype*, arglist, impl), allow_raw_pointers())
 
 // Explicit instantiation of emscripten::internal::raw_destructor is required for binding classes
-// that have non-public destructors.
+// that have non-public destructors. To prevent leaks, do not include pass-by-value types here.
 #define BIND(T) template<> void raw_destructor<T>(T* ptr) {}
 namespace emscripten {
     namespace internal {
@@ -131,17 +131,9 @@ namespace emscripten {
         BIND(SwapChain)
         BIND(Texture)
         BIND(TransformManager)
-        BIND(utils::Entity)
         BIND(utils::EntityManager)
         BIND(VertexBuffer)
         BIND(View)
-
-        // Permit use of Texture* inside emscripten::value_object.
-        template<> struct TypeID<Texture*> {
-            static constexpr TYPEID get() {
-                return LightTypeID<Texture>::get();
-            }
-        };
     }
 }
 #undef BIND
@@ -1217,6 +1209,12 @@ class_<IndirectLight>("IndirectLight")
     .function("getRotation", EMBIND_LAMBDA(flatmat3, (IndirectLight* self), {
         return flatmat3 { self->getRotation() };
     }), allow_raw_pointers())
+    .function("getReflectionsTexture", EMBIND_LAMBDA(Texture*, (IndirectLight* self), {
+        return (Texture*) self->getReflectionsTexture(); // cast away const to appease embind
+    }), allow_raw_pointers())
+    .function("getIrradianceTexture", EMBIND_LAMBDA(Texture*, (IndirectLight* self), {
+        return (Texture*) self->getIrradianceTexture(); // cast away const to appease embind
+    }), allow_raw_pointers())
    .class_function("getDirectionEstimate", EMBIND_LAMBDA(filament::math::float3, (val ta), {
         size_t nfloats = ta["length"].as<size_t>();
         std::vector<float> floats(nfloats);
@@ -1262,7 +1260,10 @@ class_<IblBuilder>("IndirectLight$Builder")
 
 class_<Skybox>("Skybox")
     .class_function("Builder", (SkyBuilder (*)()) [] { return SkyBuilder(); })
-    .function("setColor", &Skybox::setColor);
+    .function("setColor", &Skybox::setColor)
+    .function("getTexture", EMBIND_LAMBDA(Texture*, (Skybox* skybox), {
+        return (Texture*) skybox->getTexture(); // cast away const to appease embind
+    }), allow_raw_pointers());
 
 class_<SkyBuilder>("Skybox$Builder")
     .function("_build", EMBIND_LAMBDA(Skybox*, (SkyBuilder* builder, Engine* engine), {
@@ -1284,6 +1285,7 @@ class_<SkyBuilder>("Skybox$Builder")
 /// This would also be more consistent with Filament's Java bindings.
 class_<utils::Entity>("Entity")
     .function("getId", &utils::Entity::getId);
+    /// delete ::method:: Frees an entity.
 
 /// EntityManager ::core class:: Singleton used for constructing entities in Filament's ECS.
 class_<utils::EntityManager>("EntityManager")
@@ -1291,6 +1293,13 @@ class_<utils::EntityManager>("EntityManager")
     /// ::retval:: the one and only entity manager
     .class_function("get", (utils::EntityManager* (*)()) []
         { return &utils::EntityManager::get(); }, allow_raw_pointers())
+
+#if FILAMENT_UTILS_TRACK_ENTITIES
+    .function("getActiveEntityCount", EMBIND_LAMBDA(size_t, (utils::EntityManager* self), {
+        return self->getActiveEntities().size();
+    }), allow_raw_pointers())
+#endif
+
     /// create ::method::
     /// ::retval:: an [Entity] without any components
     .function("create", select_overload<utils::Entity()>(&utils::EntityManager::create))

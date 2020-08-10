@@ -23,7 +23,7 @@ canvas     { position: absolute; width: 100%; height: 100%; }
 <script src="https://unpkg.com/gltumble"></script>
 <script>
 
-const env = 'venetian_crossroads_2k';
+const env = 'default_env';
 const ibl_url = `${env}/${env}_ibl.ktx`;
 const sky_url = `${env}/${env}_skybox.ktx`;
 const mesh_url = 'FlightHelmet.gltf';
@@ -48,8 +48,9 @@ class App {
 
         const iblDirection = IndirectLight.getDirectionEstimate(indirectLight.shfloats);
         const iblColor = IndirectLight.getColorEstimate(indirectLight.shfloats, iblDirection);
+        const iblIntensity = 20000;
 
-        indirectLight.setIntensity(20000);
+        indirectLight.setIntensity(iblIntensity);
 
         const skybox = engine.createSkyFromKtx(sky_url);
         this.scene.setSkybox(skybox);
@@ -57,7 +58,7 @@ class App {
         const sunlight = Filament.EntityManager.get().create();
         Filament.LightManager.Builder(LightType.SUN)
             .color(iblColor.slice(0, 3))
-            .intensity(70000)
+            .intensity(iblColor[3] * iblIntensity)
             .direction(iblDirection)
             .sunAngularRadius(1.9)
             .castShadows(true)
@@ -70,6 +71,7 @@ class App {
 
         this.allowRefresh = false;
         const asset = this.asset = loader.createAssetFromJson(mesh_url);
+        this.assetRoot = this.asset.getRoot();
 
         const messages = document.getElementById('messages');
 
@@ -97,12 +99,13 @@ class App {
         this.camera = engine.createCamera(cameraEntity);
 
         const colorGrading = Filament.ColorGrading.Builder()
-            .toneMapping(Filament.ColorGrading$ToneMapping.ACES)
+            .toneMapping(Filament.ColorGrading$ToneMapping.ACES_LEGACY)
             .build(engine);
 
         this.swapChain = engine.createSwapChain();
         this.renderer = engine.createRenderer();
         this.view = engine.createView();
+        this.view.setVignetteOptions({ midPoint: 0.8, enabled: true });
         this.view.setCamera(this.camera);
         this.view.setScene(this.scene);
         this.view.setColorGrading(colorGrading);
@@ -133,7 +136,7 @@ class App {
     render() {
         // Spin the model according to the trackball controller.
         const tcm = this.engine.getTransformManager();
-        const inst = tcm.getInstance(this.asset.getRoot());
+        const inst = tcm.getInstance(this.assetRoot);
         tcm.setTransform(inst, this.trackball.getMatrix());
         inst.delete();
 
@@ -145,7 +148,9 @@ class App {
         }
         while (popRenderable()) {
             this.scene.addEntity(entity);
+            entity.delete();
         }
+        entity.delete();
 
         // Render the scene and request the next animation frame.
         this.renderer.render(this.swapChain, this.view);

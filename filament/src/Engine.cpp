@@ -17,6 +17,7 @@
 #include "details/Engine.h"
 
 #include "MaterialParser.h"
+#include "ResourceAllocator.h"
 
 #include "details/DFG.h"
 #include "details/VertexBuffer.h"
@@ -33,9 +34,6 @@
 #include "details/SwapChain.h"
 #include "details/Texture.h"
 #include "details/View.h"
-
-#include "fg/ResourceAllocator.h"
-
 
 #include <private/filament/SibGenerator.h>
 
@@ -151,7 +149,7 @@ void FEngine::init() {
     mCommandStream = CommandStream(*mDriver, mCommandBufferQueue.getCircularBuffer());
     DriverApi& driverApi = getDriverApi();
 
-    mResourceAllocator = new fg::ResourceAllocator(driverApi);
+    mResourceAllocator = new ResourceAllocator(driverApi);
 
     mFullScreenTriangleVb = upcast(VertexBuffer::Builder()
             .vertexCount(3)

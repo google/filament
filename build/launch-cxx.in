@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 if [[ "$1" = "${CMAKE_CXX_COMPILER}" ]]; then
     shift

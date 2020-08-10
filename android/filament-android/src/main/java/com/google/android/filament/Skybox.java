@@ -18,6 +18,7 @@ package com.google.android.filament;
 
 import androidx.annotation.IntRange;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.annotation.Size;
 
 import static com.google.android.filament.Colors.LinearColor;
@@ -240,6 +241,15 @@ public class Skybox {
      */
     public float getIntensity() { return nGetIntensity(getNativeObject()); }
 
+    /**
+     * @return the associated texture, or null if it does not exist
+     */
+    @Nullable
+    public Texture getTexture() {
+        long nativeTexture = nGetTexture(getNativeObject());
+        return nativeTexture == 0 ? null : new Texture(nativeTexture);
+    }
+
     public long getNativeObject() {
         if (mNativeObject == 0) {
             throw new IllegalStateException("Calling method on destroyed Skybox");
@@ -262,4 +272,5 @@ public class Skybox {
     private static native int  nGetLayerMask(long nativeSkybox);
     private static native float nGetIntensity(long nativeSkybox);
     private static native void nSetColor(long nativeSkybox, float r, float g, float b, float a);
+    private static native long nGetTexture(long nativeSkybox);
 }

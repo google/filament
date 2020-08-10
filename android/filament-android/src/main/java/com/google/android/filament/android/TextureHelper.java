@@ -44,6 +44,14 @@ public final class TextureHelper {
     }
 
     public static void setBitmap(@NonNull Engine engine,
+            @NonNull Texture texture, @IntRange(from = 0) int level, @NonNull Bitmap bitmap,
+            Object handler, Runnable callback) {
+        setBitmap(engine, texture,
+                level, 0, 0, texture.getWidth(level), texture.getHeight(level), bitmap,
+                handler, callback);
+    }
+
+    public static void setBitmap(@NonNull Engine engine,
             @NonNull Texture texture, @IntRange(from = 0) int level,
             @IntRange(from = 0) int xoffset, @IntRange(from = 0) int yoffset,
             @IntRange(from = 0) int width, @IntRange(from = 0) int height,
@@ -60,6 +68,23 @@ public final class TextureHelper {
                 bitmap, format);
     }
 
+    public static void setBitmap(@NonNull Engine engine,
+            @NonNull Texture texture, @IntRange(from = 0) int level,
+            @IntRange(from = 0) int xoffset, @IntRange(from = 0) int yoffset,
+            @IntRange(from = 0) int width, @IntRange(from = 0) int height,
+            @NonNull Bitmap bitmap, Object handler, Runnable callback) {
+
+        int format = toNativeFormat(bitmap.getConfig());
+        if (format == BITMAP_CONFIG_RGBA_4444 || format == BITMAP_CONFIG_HARDWARE) {
+            throw new IllegalArgumentException("Unsupported config: ARGB_4444 or HARDWARE");
+        }
+
+        long nativeTexture = texture.getNativeObject();
+        long nativeEngine = engine.getNativeObject();
+        nSetBitmapWithCallback(nativeTexture, nativeEngine, level, xoffset, yoffset, width, height,
+                bitmap, format, handler, callback);
+    }
+
     private static int toNativeFormat(Bitmap.Config config) {
         switch (config) {
             case ALPHA_8:   return BITMAP_CONFIG_ALPHA_8;
@@ -74,4 +99,8 @@ public final class TextureHelper {
 
     private static native void nSetBitmap(long nativeTexture, long nativeEngine,
             int level, int xoffset, int yoffset, int width, int height, Bitmap bitmap, int format);
+
+    private static native void nSetBitmapWithCallback(long nativeTexture, long nativeEngine,
+            int level, int xoffset, int yoffset, int width, int height, Bitmap bitmap, int format,
+            Object handler, Runnable callback);
 }

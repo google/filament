@@ -4,7 +4,7 @@ material {
         {
             type : sampler2d,
             name : colorBuffer,
-            precision : high
+            precision : medium
         }
     ],
     depthWrite : false,
@@ -25,7 +25,7 @@ vertex {
 
 fragment {
 
-#include "../../../shaders/src/fxaa.fs"
+#include "fxaa.fs"
 
     void postProcess(inout PostProcessInputs postProcess) {
         // First, compute an exact upper bound for the area we need to sample from.

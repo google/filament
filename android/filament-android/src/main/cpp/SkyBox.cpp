@@ -98,3 +98,11 @@ Java_com_google_android_filament_Skybox_nSetColor(JNIEnv *, jclass,
     Skybox *skybox = (Skybox *) nativeSkybox;
     skybox->setColor({r, g, b, a});
 }
+
+extern "C" JNIEXPORT jlong JNICALL
+Java_com_google_android_filament_Skybix_nGetTexture(JNIEnv* env, jclass,
+        jlong nativeSkybox) {
+    Skybox *skybox = (Skybox *) nativeSkybox;
+    Texture const *tex = skybox->getTexture();
+    return (jlong) tex;
+}
