@@ -798,7 +798,7 @@ bool VulkanDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapse
 
     uint64_t results[4] = {};
     size_t dataSize = sizeof(results);
-    VkDeviceSize stride = sizeof(uint64_t);
+    VkDeviceSize stride = sizeof(uint64_t) * 2;
 
     VkResult result = vkGetQueryPoolResults(mContext.device, mContext.timestamps.pool,
             vtq->startingQueryIndex, 2, dataSize, (void*) results, stride,
