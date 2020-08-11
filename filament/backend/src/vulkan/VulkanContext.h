@@ -59,6 +59,7 @@ struct VulkanCmdFence {
     utils::Condition condition;
     utils::Mutex mutex;
     std::atomic<VkResult> status;
+    bool swapChainDestroyed = false;
 
     // TODO: for non-work buffers the following field indicates if the fence has EVER been
     // submitted, which is a bit misleading or un-useful. This needs to be refactored.

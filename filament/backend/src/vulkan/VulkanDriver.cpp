@@ -679,6 +679,9 @@ FenceStatus VulkanDriver::wait(Handle<HwFence> fh, uint64_t timeout) {
     } else {
         lock.unlock();
     }
+    if (cmdfence->swapChainDestroyed) {
+        return FenceStatus::ERROR;
+    }
     VkResult result = vkWaitForFences(mContext.device, 1, &cmdfence->fence, VK_FALSE, timeout);
     return result == VK_SUCCESS ? FenceStatus::CONDITION_SATISFIED : FenceStatus::TIMEOUT_EXPIRED;
 }
@@ -829,6 +832,9 @@ SyncStatus VulkanDriver::getSyncStatus(Handle<HwSync> sh) {
     VulkanSync* sync = handle_cast<VulkanSync>(mHandleMap, sh);
     if (sync->fence == nullptr) {
         return SyncStatus::NOT_SIGNALED;
+    }
+    if (sync->fence->swapChainDestroyed) {
+        return SyncStatus::ERROR;
     }
     VkResult status = sync->fence->status.load(std::memory_order_relaxed);
     switch (status) {
