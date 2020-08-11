@@ -30,9 +30,9 @@ set(TARGET filamat-jni)
 
 include_directories(${JNI_INCLUDE_DIRS})
 
-set(CXX_STANDARD "-std=c++14")
+set(CXX_STANDARD "-std=c++17")
 if (WIN32)
-    set(CXX_STANDARD "/std:c++14")
+    set(CXX_STANDARD "/std:c++17")
 endif()
 
 set(FILAMAT_DIR ../../android/filamat-android)

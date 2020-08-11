@@ -74,7 +74,7 @@ buildscript {
     ]
 
     ext.cppFlags = [
-        "-std=c++14",
+        "-std=c++17",
         "-Wno-unused-command-line-argument",
         // Required to support API levels below 23
         "-Wl,--hash-style=both",
