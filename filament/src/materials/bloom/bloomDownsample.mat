@@ -54,25 +54,24 @@ fragment {
     void postProcess(inout PostProcessInputs postProcess) {
         float lod = materialParams.level;
         highp vec2 uv = variable_vertex.xy;
-        highp float du = materialParams.resolution.z;
-        highp float dv = materialParams.resolution.w;
+        highp vec4 d = vec4(materialParams.resolution.zw, -materialParams.resolution.zw) * 0.5;
 
         vec3 c = textureLod(materialParams_source, uv, lod).rgb;
 
-        vec3 lt = textureLod(materialParams_source, uv + 0.5 * vec2(-du, -dv), lod).rgb;
-        vec3 rt = textureLod(materialParams_source, uv + 0.5 * vec2( du, -dv), lod).rgb;
-        vec3 rb = textureLod(materialParams_source, uv + 0.5 * vec2( du,  dv), lod).rgb;
-        vec3 lb = textureLod(materialParams_source, uv + 0.5 * vec2(-du,  dv), lod).rgb;
+        vec3 lt = textureLod(materialParams_source, uv + d.zw, lod).rgb;
+        vec3 rt = textureLod(materialParams_source, uv + d.xw, lod).rgb;
+        vec3 rb = textureLod(materialParams_source, uv + d.xy, lod).rgb;
+        vec3 lb = textureLod(materialParams_source, uv + d.zy, lod).rgb;
 
-        vec3 lt2 = textureLod(materialParams_source, uv + vec2(-du, -dv), lod).rgb;
-        vec3 rt2 = textureLod(materialParams_source, uv + vec2( du, -dv), lod).rgb;
-        vec3 rb2 = textureLod(materialParams_source, uv + vec2( du,  dv), lod).rgb;
-        vec3 lb2 = textureLod(materialParams_source, uv + vec2(-du,  dv), lod).rgb;
+        vec3 lt2 = textureLodOffset(materialParams_source, uv, lod, ivec2(-1, -1)).rgb;
+        vec3 rt2 = textureLodOffset(materialParams_source, uv, lod, ivec2( 1, -1)).rgb;
+        vec3 rb2 = textureLodOffset(materialParams_source, uv, lod, ivec2( 1,  1)).rgb;
+        vec3 lb2 = textureLodOffset(materialParams_source, uv, lod, ivec2(-1,  1)).rgb;
 
-        vec3 l = textureLod(materialParams_source, uv + vec2(-du,  0.0), lod).rgb;
-        vec3 t = textureLod(materialParams_source, uv + vec2( 0.0, -dv), lod).rgb;
-        vec3 r = textureLod(materialParams_source, uv + vec2( du,  0.0), lod).rgb;
-        vec3 b = textureLod(materialParams_source, uv + vec2( 0.0,  dv), lod).rgb;
+        vec3 l = textureLodOffset(materialParams_source, uv, lod, ivec2(-1,  0)).rgb;
+        vec3 t = textureLodOffset(materialParams_source, uv, lod, ivec2( 0, -1)).rgb;
+        vec3 r = textureLodOffset(materialParams_source, uv, lod, ivec2( 1,  0)).rgb;
+        vec3 b = textureLodOffset(materialParams_source, uv, lod, ivec2( 0,  1)).rgb;
 
         // five h4x4 boxes
         vec3 c0, c1;
