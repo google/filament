@@ -62,21 +62,20 @@ fragment {
 void dummy(){}
 
 void postProcess(inout PostProcessInputs postProcess) {
-    highp vec2 pixelSize = 1.0 / vec2(textureSize(materialParams_color, 0));
-    highp vec4 uv = vec4(variable_vertex.xy + pixelSize, variable_vertex.xy);
+    highp vec2 uv = variable_vertex.xy;
 
     // the source is guaranteed to be a multiple of two, so we now the bilinear weights are 0.25
 
-    vec4 s01 = textureLod(materialParams_color, uv.zy, 0.0);
-    vec4 s11 = textureLod(materialParams_color, uv.xy, 0.0);
-    vec4 s10 = textureLod(materialParams_color, uv.xw, 0.0);
-    vec4 s00 = textureLod(materialParams_color, uv.zw, 0.0);
+    vec4 s01 = textureLodOffset(materialParams_color, uv, 0.0, ivec2(0, 1));
+    vec4 s11 = textureLodOffset(materialParams_color, uv, 0.0, ivec2(1, 1));
+    vec4 s10 = textureLodOffset(materialParams_color, uv, 0.0, ivec2(1, 0));
+    vec4 s00 = textureLodOffset(materialParams_color, uv, 0.0, ivec2(0, 0));
 
     vec4 d;
-    d.x = textureLod(materialParams_depth, uv.zy, 0.0).r;
-    d.y = textureLod(materialParams_depth, uv.xy, 0.0).r;
-    d.z = textureLod(materialParams_depth, uv.xw, 0.0).r;
-    d.w = textureLod(materialParams_depth, uv.zw, 0.0).r;
+    d.x = textureLodOffset(materialParams_depth, uv, 0.0, ivec2(0, 1)).r;
+    d.y = textureLodOffset(materialParams_depth, uv, 0.0, ivec2(1, 1)).r;
+    d.z = textureLodOffset(materialParams_depth, uv, 0.0, ivec2(1, 0)).r;
+    d.w = textureLodOffset(materialParams_depth, uv, 0.0, ivec2(0, 0)).r;
 
     // Get the CoC radius of each four samples to downsample.
     // We multiply by 0.5 to convert from diameter to radius.
