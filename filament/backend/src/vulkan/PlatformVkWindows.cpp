@@ -55,13 +55,4 @@ void* PlatformVkWindows::createVkSurfaceKHR(void* nativeWindow, void* instance) 
     return surface;
 }
 
-void PlatformVkWindows::getClientExtent(void* win, uint32_t* width, uint32_t* height) noexcept {
-	HWND window = (HWND)win;
-	RECT rect;
-	BOOL success = GetClientRect(window, &rect);
-	ASSERT_POSTCONDITION(success, "GetWindowRect error.");
-	*width = rect.right - rect.left;
-	*height = rect.bottom - rect.top;
-}
-
 } // namespace filament
