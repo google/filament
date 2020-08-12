@@ -506,7 +506,7 @@ void SimpleViewer::updateUserInterface() {
             ImGui::SliderInt("Shadow map size", &o.shadowMapSizeExponent, 5, 13, label);
         };
 
-        if (ImGui::BeginTabBar("Shadow options")) {
+        if (ImGui::BeginTabBar("Shadow presets")) {
             if (ImGui::BeginTabItem("A")) {
                 shadowProperties(mShadowPropertiesA);
                 mShadowProperties = &mShadowPropertiesA;
