@@ -117,7 +117,9 @@ class MainActivity : Activity() {
     }
 
     private fun setupView() {
-        view.ambientOcclusion = View.AmbientOcclusion.SSAO
+        val ssaoOptions = view.ambientOcclusionOptions
+        ssaoOptions.enabled = true
+        view.ambientOcclusionOptions = ssaoOptions
 
         // NOTE: Try to disable post-processing (tone-mapping, etc.) to see the difference
         // view.isPostProcessingEnabled = false

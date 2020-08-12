@@ -50,10 +50,10 @@ void postProcess(inout PostProcessInputs postProcess) {
     vec4 f = textureGather(materialParams_cocMaxMin, uv, 0); // 01, 11, 10, 00
     vec4 b = textureGather(materialParams_cocMaxMin, uv, 1); // 01, 11, 10, 00
 #else
-    vec2 s01 = texelFetch(materialParams_cocMaxMin, i + ivec2(0, 1), 0).rg;
-    vec2 s11 = texelFetch(materialParams_cocMaxMin, i + ivec2(1, 1), 0).rg;
-    vec2 s10 = texelFetch(materialParams_cocMaxMin, i + ivec2(1, 0), 0).rg;
-    vec2 s00 = texelFetch(materialParams_cocMaxMin, i,               0).rg;
+    vec2 s01 = texelFetchOffset(materialParams_cocMaxMin, i, 0, ivec2(0, 1)).rg;
+    vec2 s11 = texelFetchOffset(materialParams_cocMaxMin, i, 0, ivec2(1, 1)).rg;
+    vec2 s10 = texelFetchOffset(materialParams_cocMaxMin, i, 0, ivec2(1, 0)).rg;
+    vec2 s00 = texelFetchOffset(materialParams_cocMaxMin, i, 0, ivec2(0, 0)).rg;
     vec4 f = vec4(s01.r, s11.r, s10.r, s00.r);
     vec4 b = vec4(s01.g, s11.g, s10.g, s00.g);
 #endif

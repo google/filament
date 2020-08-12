@@ -166,10 +166,10 @@ struct SandboxParameters {
     float constantBias = 0.001;
     float polygonOffsetConstant = 0.5;
     float polygonOffsetSlope = 2.0;
-    bool ssao = false;
     View::AmbientOcclusionOptions ssaoOptions;
     View::BloomOptions bloomOptions;
     View::FogOptions fogOptions;
+    View::TemporalAntiAliasingOptions taaOptions;
     bool screenSpaceContactShadows = false;
     int stepCount = 8;
     float maxShadowDistance = 0.3;

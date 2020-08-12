@@ -603,7 +603,7 @@ static void gui(filament::Engine* engine, filament::View*) {
             ImGui::SliderAngle("Rotation", &params.iblRotation);
             if (ImGui::CollapsingHeader("SSAO")) {
                 DebugRegistry& debug = engine->getDebugRegistry();
-                ImGui::Checkbox("Enabled##ssao", &params.ssao);
+                ImGui::Checkbox("Enabled##ssao", &params.ssaoOptions.enabled);
                 ImGui::SliderFloat("Radius", &params.ssaoOptions.radius, 0.05f, 5.0f);
                 ImGui::SliderFloat("Bias", &params.ssaoOptions.bias, 0.0f, 0.01f, "%.6f");
                 ImGui::SliderFloat("Intensity", &params.ssaoOptions.intensity, 0.0f, 4.0f);
@@ -659,11 +659,20 @@ static void gui(filament::Engine* engine, filament::View*) {
         if (ImGui::CollapsingHeader("Post-processing")) {
             ImGui::Indent();
             ImGui::Checkbox("MSAA 4x", &params.msaa);
+            ImGui::Checkbox("TAA", &params.taaOptions.enabled);
+            if (params.taaOptions.enabled) {
+                ImGui::Indent();
+                ImGui::SliderFloat("feedback", &params.taaOptions.feedback, 0.0f, 1.0f);
+                ImGui::SliderFloat("filter", &params.taaOptions.filterWidth, 0.02f, 2.0f);
+                ImGui::Unindent();
+            }
             ImGui::Checkbox("FXAA", &params.fxaa);
             ImGui::Checkbox("Bloom", &params.bloomOptions.enabled);
             if (params.bloomOptions.enabled) {
+                ImGui::Indent();
                 ImGui::SliderFloat("Strength", &params.bloomOptions.strength, 0.0f, 1.0f);
                 ImGui::SliderFloat("Dirt", &params.bloomOptions.dirtStrength, 0.0f, 1.0f);
+                ImGui::Unindent();
             }
             ImGui::Checkbox("Dithering", &params.dithering);
             ImGui::Unindent();
@@ -923,9 +932,8 @@ static void preRender(filament::Engine* engine, filament::View* view, filament::
     view->setDithering(g_params.dithering ? View::Dithering::TEMPORAL : View::Dithering::NONE);
     view->setBloomOptions(g_params.bloomOptions);
     view->setFogOptions(g_params.fogOptions);
+    view->setTemporalAntiAliasingOptions(g_params.taaOptions);
     view->setSampleCount((uint8_t) (g_params.msaa ? 4 : 1));
-    view->setAmbientOcclusion(
-            g_params.ssao ? View::AmbientOcclusion::SSAO : View::AmbientOcclusion::NONE);
     view->setAmbientOcclusionOptions(g_params.ssaoOptions);
 
     if (g_params.colorGrading) {

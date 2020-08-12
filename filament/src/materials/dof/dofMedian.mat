@@ -92,23 +92,21 @@ void minLeftMaxRight(inout vec4 a, inout vec4 b, inout vec4 c, inout vec4 d, ino
     maxRight(d, e, f);
 }
 
-vec4 makeSample(ivec2 ij) {
-    vec4 r = vec4(texelFetch(materialParams_dof, ij, 0).rgb,
-            texelFetch(materialParams_alpha, ij, 0).r);
-    return r;
-}
+// - we can't use a function because offset must be a constant expression
+// - we can't use line continuation because that's not supported on desktop
+#define makeSample(ij, o) vec4(texelFetchOffset(materialParams_dof, ij, 0, o).rgb, texelFetchOffset(materialParams_alpha, ij, 0, o).r)
 
 vec4 median(ivec2 ij) {
     vec4 v[9];
-    v[0] = makeSample(ij + ivec2(-1, -1));
-    v[1] = makeSample(ij + ivec2( 0, -1));
-    v[2] = makeSample(ij + ivec2( 1, -1));
-    v[3] = makeSample(ij + ivec2(-1,  0));
-    v[4] = makeSample(ij + ivec2( 0,  0));
-    v[5] = makeSample(ij + ivec2( 1,  0));
-    v[6] = makeSample(ij + ivec2(-1,  1));
-    v[7] = makeSample(ij + ivec2( 0,  1));
-    v[8] = makeSample(ij + ivec2( 1,  1));
+    v[0] = makeSample(ij, ivec2(-1, -1));
+    v[1] = makeSample(ij, ivec2( 0, -1));
+    v[2] = makeSample(ij, ivec2( 1, -1));
+    v[3] = makeSample(ij, ivec2(-1,  0));
+    v[4] = makeSample(ij, ivec2( 0,  0));
+    v[5] = makeSample(ij, ivec2( 1,  0));
+    v[6] = makeSample(ij, ivec2(-1,  1));
+    v[7] = makeSample(ij, ivec2( 0,  1));
+    v[8] = makeSample(ij, ivec2( 1,  1));
 
     // max() is a faster alternative to the median filter, but it looks pretty bad imho
     //return max(v[0], max(v[1], max(v[2], max(v[3], max(v[4], max(v[5], max(v[6], max(v[7], v[8]))))))));

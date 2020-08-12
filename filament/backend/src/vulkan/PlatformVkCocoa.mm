@@ -67,19 +67,4 @@ void* PlatformVkCocoa::createVkSurfaceKHR(void* nativeWindow, void* instance) no
     return surface;
 }
 
-void PlatformVkCocoa::getClientExtent(void* window,  uint32_t* width, uint32_t* height) noexcept {
-    // Obtain the CAMetalLayer-backed view.
-    NSView* nsview = (__bridge NSView*) window;
-    ASSERT_POSTCONDITION(nsview, "Unable to obtain Metal-backed NSView.");
-
-    // The size that we return to VulkanDriver is consistent with what the macOS client sees for the
-    // view size, but it's not necessarily consistent with the surface caps currentExtent. We've
-    // observed that if the window was initially created on a high DPI display, then dragged to a
-    // low DPI display, the VkSurfaceKHR physical caps still have a high resolution, despite the
-    // fact that we've recreated it.
-    NSSize sz = [nsview convertSizeToBacking: nsview.frame.size];
-    *width = sz.width;
-    *height = sz.height;
-}
-
 } // namespace filament
