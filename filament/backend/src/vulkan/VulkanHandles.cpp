@@ -39,10 +39,10 @@ static void clampToFramebuffer(VkRect2D* rect, uint32_t fbWidth, uint32_t fbHeig
     int32_t y = std::max(rect->offset.y, 0);
     int32_t right = std::min(rect->offset.x + (int32_t) rect->extent.width, (int32_t) fbWidth);
     int32_t top = std::min(rect->offset.y + (int32_t) rect->extent.height, (int32_t) fbHeight);
-    rect->offset.x = x;
-    rect->offset.y = y;
-    rect->extent.width = right - x;
-    rect->extent.height = top - y;
+    rect->offset.x = std::min(x, (int32_t) fbWidth);
+    rect->offset.y = std::min(y, (int32_t) fbHeight);
+    rect->extent.width = std::max(right - x, 0);
+    rect->extent.height = std::max(top - y, 0);
 }
 
 VulkanProgram::VulkanProgram(VulkanContext& context, const Program& builder) noexcept :

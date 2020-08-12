@@ -1245,21 +1245,28 @@ void VulkanDriver::blit(TargetBufferFlags buffers,
     }
 #endif
 
-    const int32_t srcRight = srcRect.left + srcRect.width;
-    const int32_t srcTop = srcRect.bottom + srcRect.height;
+    const VkExtent2D srcExtent = srcTarget->getExtent();
+    const VkExtent2D dstExtent = dstTarget->getExtent();
+
+    const int32_t srcLeft = std::min(srcRect.left, (int32_t) srcExtent.width);
+    const int32_t srcBottom = std::min(srcRect.bottom, (int32_t) srcExtent.height);
+    const int32_t srcRight = std::min(srcRect.left + srcRect.width, srcExtent.width);
+    const int32_t srcTop = std::min(srcRect.bottom + srcRect.height, srcExtent.height);
     const uint32_t srcLevel = srcTarget->getColor(targetIndex).level;
 
-    const int32_t dstRight = dstRect.left + dstRect.width;
-    const int32_t dstTop = dstRect.bottom + dstRect.height;
+    const int32_t dstLeft = std::min(dstRect.left, (int32_t) dstExtent.width);
+    const int32_t dstBottom = std::min(dstRect.bottom, (int32_t) dstExtent.height);
+    const int32_t dstRight = std::min(dstRect.left + dstRect.width, dstExtent.width);
+    const int32_t dstTop = std::min(dstRect.bottom + dstRect.height, dstExtent.height);
     const uint32_t dstLevel = dstTarget->getColor(targetIndex).level;
 
     const VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT;
 
     const VkImageBlit blitRegions[1] = {{
         .srcSubresource = { aspect, srcLevel, 0, 1 },
-        .srcOffsets = { { srcRect.left, srcRect.bottom, 0 }, { srcRight, srcTop, 1 }},
+        .srcOffsets = { { srcLeft, srcBottom, 0 }, { srcRight, srcTop, 1 }},
         .dstSubresource = { aspect, dstLevel, 0, 1 },
-        .dstOffsets = { { dstRect.left, dstRect.bottom, 0 }, { dstRight, dstTop, 1 }}
+        .dstOffsets = { { dstLeft, dstBottom, 0 }, { dstRight, dstTop, 1 }}
     }};
 
     auto vkblit = [=](VkCommandBuffer cmdbuffer) {
