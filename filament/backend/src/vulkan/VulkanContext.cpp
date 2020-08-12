@@ -366,13 +366,13 @@ void createSwapChain(VulkanContext& context, VulkanSurfaceContext& surfaceContex
         // https://android-developers.googleblog.com/2020/02/handling-device-orientation-efficiently.html
         .preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR,
 
-        // TODO: Setting the oldSwapchain parameter would avoid exiting and re-entering
-        // exclusive mode, which could result in a smoother orientation change.
-        .oldSwapchain = VK_NULL_HANDLE,
-
         .compositeAlpha = compositeAlpha,
         .presentMode = VK_PRESENT_MODE_FIFO_KHR,
-        .clipped = VK_TRUE
+        .clipped = VK_TRUE,
+
+        // TODO: Setting the oldSwapchain parameter would avoid exiting and re-entering
+        // exclusive mode, which could result in a smoother orientation change.
+        .oldSwapchain = VK_NULL_HANDLE
     };
     VkSwapchainKHR swapchain;
     VkResult result = vkCreateSwapchainKHR(context.device, &createInfo, VKALLOC, &swapchain);
