@@ -139,21 +139,15 @@ private:
         bool hasContactShadows;
     };
 
-    struct ColorGradingConfig {
-        bool asSubpass = false;
-        bool translucent{};
-        bool fxaa{};
-        bool dithering{};
-        backend::TextureFormat ldrFormat{};
-    };
-
     FrameGraphId<FrameGraphTexture> colorPass(FrameGraph& fg, const char* name,
             FrameGraphTexture::Descriptor const& colorBufferDesc,
-            ColorPassConfig const& config, ColorGradingConfig const& colorGradingConfig,
+            ColorPassConfig const& config,
+            PostProcessManager::ColorGradingConfig colorGradingConfig,
             RenderPass const& pass, FView const& view) const noexcept;
 
     FrameGraphId<FrameGraphTexture> refractionPass(FrameGraph& fg,
-            ColorPassConfig config, ColorGradingConfig const& colorGradingConfig,
+            ColorPassConfig config,
+            PostProcessManager::ColorGradingConfig colorGradingConfig,
             RenderPass const& pass, FView const& view) const noexcept;
 
     void recordHighWatermark(size_t watermark) noexcept {

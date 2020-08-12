@@ -313,7 +313,9 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             .hasContactShadows = scene.hasContactShadows()
     };
 
-    const ColorGradingConfig colorGradingConfig{
+    // asSubpass is disabled with TAA (although it's supported) because performance was degraded
+    // on qualcomm hardware -- we might need a backend dependent toggle at some point
+    const PostProcessManager::ColorGradingConfig colorGradingConfig{
             .asSubpass =
                     colorGrading &&
                     msaa <= 1 && !bloomOptions.enabled && !dofOptions.enabled && !taaOptions.enabled &&
@@ -391,17 +393,6 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     pass.appendCommands(RenderPass::COLOR);
     pass.sortCommands();
 
-    // We use a framegraph pass to wait for froxelization to finish (so it can be done
-    // in parallel with .compile()
-    fg.addTrivialSideEffectPass("Prepare Color Passes", [=, &js, &view](DriverApi& driver) {
-                if (jobFroxelize) {
-                    auto *sync = jobFroxelize;
-                    js.waitAndRelease(sync);
-                    view.commitFroxels(driver);
-                }
-            }
-    );
-
     FrameGraphTexture::Descriptor desc = {
             .width = config.svp.width,
             .height = config.svp.height,
@@ -410,15 +401,47 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     if (colorGradingConfig.asSubpass) {
         desc.usage |= backend::TextureUsage::SUBPASS_INPUT;
     }
-    colorPass(fg, "Color Pass", desc, config, colorGradingConfig, pass, view);
 
-    // TODO: look for refraction draw calls only if screen-space refraction is enabled
+    // a non-drawing pass to prepare everything that need to be before the color passes execute
+    fg.addTrivialSideEffectPass("Prepare Color Passes",
+            [=, &js, &view, &ppm](DriverApi& driver) {
+                // prepare color grading as subpass material
+                if (colorGradingConfig.asSubpass) {
+                    ppm.colorGradingPrepareSubpass(driver,
+                            view.getColorGrading(),
+                            view.getVignetteOptions(),
+                            colorGradingConfig.fxaa,
+                            colorGradingConfig.dithering,
+                            config.svp.width,
+                            config.svp.height);
+                }
+                // We use a framegraph pass to wait for froxelization to finish (so it can be done
+                // in parallel with .compile()
+                if (jobFroxelize) {
+                    auto *sync = jobFroxelize;
+                    js.waitAndRelease(sync);
+                    view.commitFroxels(driver);
+                }
+            }
+    );
+
+    // color-grading as subpass is done either by the color pass or the TAA pass if any
+    auto colorGradingConfigForColor = colorGradingConfig;
+    colorGradingConfigForColor.asSubpass = colorGradingConfigForColor.asSubpass && !taaOptions.enabled;
+
+    // the color pass itself + color-grading as subpass if needed
+    colorPass(fg, "Color Pass", desc, config, colorGradingConfigForColor, pass, view);
+
+    // the color pass + refraction + color-grading as subpass if needed
+    // this cancels the colorPass() call above if refraction is active.
+    //      TODO: look for refraction draw calls only if screen-space refraction is enabled
     FrameGraphId<FrameGraphTexture> colorPassOutput =
-            refractionPass(fg, config, colorGradingConfig, pass, view);
+            refractionPass(fg, config, colorGradingConfigForColor, pass, view);
     FrameGraphId<FrameGraphTexture> input = colorPassOutput;
 
+    // TAA for color pass
     if (taaOptions.enabled) {
-        input = ppm.taa(fg, input, view.getFrameHistory(), taaOptions, translucent);
+        input = ppm.taa(fg, input, view.getFrameHistory(), taaOptions, colorGradingConfig);
     }
 
     fg.addTrivialSideEffectPass("Finish Color Passes", [&view](DriverApi& driver) {
@@ -495,7 +518,9 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 }
 
 FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
-        ColorPassConfig config, ColorGradingConfig const& colorGradingConfig, RenderPass const& pass,
+        ColorPassConfig config,
+        PostProcessManager::ColorGradingConfig colorGradingConfig,
+        RenderPass const& pass,
         FView const& view) const noexcept {
 
     auto& blackboard = fg.getBlackboard();
@@ -532,7 +557,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
         input = colorPass(fg, "Color Pass (opaque)", desc, config,
                 { .asSubpass = false }, opaquePass, view);
 
-        // vvv the actual bloom pass starts below vvv
+        // vvv the actual refraction pass starts below vvv
 
         // scale factor for the gaussian so it matches our resolution / FOV
         const float verticalFieldOfView = view.getCameraUser().getFieldOfView(Camera::Fov::VERTICAL);
@@ -589,7 +614,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
         input = ppm.generateGaussianMipmap(fg, input, roughnessLodCount, true, kernelSize);
         blackboard["ssr"] = input;
 
-        // ^^^ the actual bloom pass ends above ^^^
+        // ^^^ the actual refraction pass ends above ^^^
 
         // set-up the refraction pass
         RenderPass translucentPass(pass);
@@ -617,7 +642,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
 
 FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char* name,
         FrameGraphTexture::Descriptor const& colorBufferDesc,
-        ColorPassConfig const& config, ColorGradingConfig const& colorGradingConfig,
+        ColorPassConfig const& config, PostProcessManager::ColorGradingConfig colorGradingConfig,
         RenderPass const& pass, FView const& view) const noexcept {
 
     struct ColorPassData {
@@ -693,6 +718,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                             .format = colorGradingConfig.ldrFormat
                     });
                     data.output = builder.write(data.output);
+                    data.color = builder.read(data.color);
                 }
 
                 data.color = builder.write(builder.read(data.color));
@@ -731,14 +757,6 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 out.params.clearColor = data.clearColor;
 
                 if (colorGradingConfig.asSubpass) {
-                    ppm.colorGradingPrepareSubpass(driver,
-                            view.getColorGrading(),
-                            view.getVignetteOptions(),
-                            colorGradingConfig.fxaa,
-                            colorGradingConfig.dithering,
-                            out.params.viewport.width,
-                            out.params.viewport.height);
-
                     out.params.subpassMask = 1;
                     driver.beginRenderPass(out.target, out.params);
                     pass.executeCommands(resources.getPassName());

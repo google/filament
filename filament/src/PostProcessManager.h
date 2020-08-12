@@ -45,6 +45,14 @@ struct CameraInfo;
 
 class PostProcessManager {
 public:
+    struct ColorGradingConfig {
+        bool asSubpass = false;
+        bool translucent{};
+        bool fxaa{};
+        bool dithering{};
+        backend::TextureFormat ldrFormat{};
+    };
+
     explicit PostProcessManager(FEngine& engine) noexcept;
 
     void init() noexcept;
@@ -98,7 +106,8 @@ public:
 
     FrameGraphId<FrameGraphTexture> taa(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, FrameHistory& frameHistory,
-            View::TemporalAntiAliasingOptions taaOptions, bool translucent) noexcept;
+            View::TemporalAntiAliasingOptions taaOptions,
+            ColorGradingConfig colorGradingConfig) noexcept;
 
     // Blit/rescaling/resolves
     FrameGraphId<FrameGraphTexture> opaqueBlit(FrameGraph& fg,
