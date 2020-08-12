@@ -361,8 +361,9 @@ void createSwapChain(VulkanContext& context, VulkanSurfaceContext& surfaceContex
         .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
 
         // TODO: Setting the preTransform to IDENTITY means we are letting the Android Compositor
-        // handle the rotation. It is usually more efficient to handle this ourselves in the MVP
-        // by setting this field to be equal to the currentTransform mask in the caps.
+        // handle the rotation. In some situations it might be more efficient to handle this
+        // ourselves by setting this field to be equal to the currentTransform mask in the caps, but
+        // this would involve adjusting the MVP, derivatives in GLSL, and possibly more.
         // https://android-developers.googleblog.com/2020/02/handling-device-orientation-efficiently.html
         .preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR,
 
@@ -405,6 +406,7 @@ void createSwapChain(VulkanContext& context, VulkanSurfaceContext& surfaceContex
             << ", " << surfaceContext.surfaceFormat.format
             << ", " << surfaceContext.surfaceFormat.colorSpace
             << ", " << imageCount
+            << ", " << caps.currentTransform
             << utils::io::endl;
 
     // Create image views.
