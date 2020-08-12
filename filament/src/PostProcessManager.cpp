@@ -1564,7 +1564,7 @@ void PostProcessManager::prepareTaa(FrameHistory& frameHistory,
 FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> input, FrameHistory& frameHistory,
         View::TemporalAntiAliasingOptions taaOptions,
-        bool translucent) noexcept {
+        ColorGradingConfig colorGradingConfig) noexcept {
 
     FrameHistoryEntry const& entry = frameHistory[0];
     FrameGraphId<FrameGraphTexture> colorHistory;
@@ -1584,6 +1584,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> depth;
         FrameGraphId<FrameGraphTexture> history;
         FrameGraphId<FrameGraphTexture> output;
+        FrameGraphId<FrameGraphTexture> tonemappedOutput;
         FrameGraphRenderTargetHandle rt;
     };
     auto& taa = fg.addPass<TAAData>("TAA",
@@ -1594,8 +1595,17 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                 data.history = builder.sample(colorHistory);
                 data.output = builder.createTexture("TAA output", desc);
                 data.output = builder.write(data.output);
+                if (colorGradingConfig.asSubpass) {
+                    data.tonemappedOutput = builder.createTexture("Tonemapped Buffer", {
+                            .width = desc.width,
+                            .height = desc.height,
+                            .format = colorGradingConfig.ldrFormat
+                    });
+                    data.tonemappedOutput = builder.write(data.tonemappedOutput);
+                    data.output = builder.read(data.output);
+                }
                 data.rt = builder.createRenderTarget("TAA target", {
-                        .attachments = { data.output }
+                        .attachments = {{ data.output, data.tonemappedOutput, {}, {}}, {}, {}}
                 });
             },
             [=, &frameHistory](FrameGraphPassResources const& resources, auto const& data, DriverApi& driver) {
@@ -1629,7 +1639,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                     w /= sum;
                 }
 
-                auto output = resources.get(data.rt);
+                auto out = resources.get(data.rt);
                 auto color = resources.getTexture(data.color);
                 auto depth = resources.getTexture(data.depth);
                 auto history = resources.getTexture(data.history);
@@ -1649,15 +1659,26 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                         inverse(current.projection) *
                         normalizedToClip);
 
-                const uint8_t variant = uint8_t(translucent ?
+                mi->commit(driver);
+                mi->use(driver);
+
+                const uint8_t variant = uint8_t(colorGradingConfig.translucent ?
                         PostProcessVariant::TRANSLUCENT : PostProcessVariant::OPAQUE);
 
-                commitAndRender(output, material, variant, driver);
+                if (colorGradingConfig.asSubpass) {
+                    out.params.subpassMask = 1;
+                }
+                driver.beginRenderPass(out.target, out.params);
+                driver.draw(material.getPipelineState(variant), mEngine.getFullScreenRenderPrimitive());
+                if (colorGradingConfig.asSubpass) {
+                    colorGradingSubpass(driver, colorGradingConfig.translucent);
+                }
+                driver.endRenderPass();
 
                 // perform TAA here using colorHistory + input -> output
                 resources.detach(data.output, &current.color, &current.colorDesc);
             });
-    return taa.getData().output;
+    return colorGradingConfig.asSubpass ? taa.getData().tonemappedOutput : taa.getData().output;
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::opaqueBlit(FrameGraph& fg,
