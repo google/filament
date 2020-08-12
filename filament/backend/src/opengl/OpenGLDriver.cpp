@@ -1719,9 +1719,8 @@ void OpenGLDriver::setTextureData(GLTexture* t,
     DEBUG_MARKER()
     auto& gl = mContext;
 
-    assert(xoffset + width <= t->width >> level);
-    assert(yoffset + height <= t->height >> level);
-    assert(zoffset + depth <= t->depth);
+    assert(xoffset + width <= std::max(1u, t->width >> level));
+    assert(yoffset + height <= std::max(1u, t->height >> level));
     assert(t->samples <= 1);
 
     if (UTILS_UNLIKELY(t->gl.target == GL_TEXTURE_EXTERNAL_OES)) {
@@ -1752,6 +1751,7 @@ void OpenGLDriver::setTextureData(GLTexture* t,
                     width, height, glFormat, glType, p.buffer);
             break;
         case SamplerType::SAMPLER_3D:
+            assert(zoffset + depth <= std::max(1u, t->depth >> level));
             bindTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1, t);
             gl.activeTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1);
             assert(t->gl.target == GL_TEXTURE_3D);
@@ -1760,6 +1760,7 @@ void OpenGLDriver::setTextureData(GLTexture* t,
                     width, height, depth, glFormat, glType, p.buffer);
             break;
         case SamplerType::SAMPLER_2D_ARRAY:
+            assert(zoffset + depth <= t->depth);
             // NOTE: GL_TEXTURE_2D_MULTISAMPLE is not allowed
             bindTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1, t);
             gl.activeTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1);
