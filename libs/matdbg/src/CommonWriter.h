@@ -29,6 +29,8 @@
 #include <matdbg/JsonWriter.h>
 #include <matdbg/ShaderInfo.h>
 
+#include <string>
+
 namespace filament {
 namespace matdbg {
 
@@ -213,6 +215,10 @@ const char* toString(backend::SamplerFormat format) noexcept {
         case backend::SamplerFormat::SHADOW: return "shadow";
     }
 }
+
+// Returns a human-readable variant description.
+// For example: DYN|DIR
+std::string formatVariantString(uint8_t variant) noexcept;
 
 } // namespace matdbg
 } // namespace filament
