@@ -452,9 +452,10 @@ void destroySwapChain(VulkanContext& context, VulkanSurfaceContext& surfaceConte
         // The wrapper object for the submission fence has shared ownership semantics, so here
         // we notify other owners that the swap chain (and its associated command buffers) have
         // been destroyed.
-        swapContext.commands.fence->swapChainDestroyed = true;
-
-        swapContext.commands.fence.reset();
+        if (swapContext.commands.fence) {
+            swapContext.commands.fence->swapChainDestroyed = true;
+            swapContext.commands.fence.reset();
+        }
 
         vkDestroyImageView(context.device, swapContext.attachment.view, VKALLOC);
         swapContext.commands.fence = VK_NULL_HANDLE;
