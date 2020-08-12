@@ -48,7 +48,7 @@ namespace filament {
         //           Reserved             X    0     X     1     0     0
         //
         // Standard variants:
-        //      Vertex shader             0    0     X     X     0     X
+        //      Vertex shader             0    0     X     X     X     X
         //    Fragment shader             X    0     0     X     X     X
 
         uint8_t key = 0;
@@ -63,6 +63,7 @@ namespace filament {
         static constexpr uint8_t FOG                    = 0x20; // fog
 
         static constexpr uint8_t VERTEX_MASK = DIRECTIONAL_LIGHTING |
+                                               DYNAMIC_LIGHTING |
                                                SHADOW_RECEIVER |
                                                SKINNING_OR_MORPHING |
                                                DEPTH;
@@ -76,7 +77,8 @@ namespace filament {
         static constexpr uint8_t DEPTH_MASK = DIRECTIONAL_LIGHTING |
                                               DYNAMIC_LIGHTING |
                                               SHADOW_RECEIVER |
-                                              DEPTH;
+                                              DEPTH |
+                                              FOG;
 
         // the depth variant deactivates all variants that make no sense when writing the depth
         // only -- essentially, all fragment-only variants.
@@ -103,13 +105,14 @@ namespace filament {
 
         static constexpr bool isReserved(uint8_t variantKey) noexcept {
             // reserved variants that should just be skipped
-            return (variantKey & DEPTH_MASK) > DEPTH || (variantKey & 0b010111u) == 0b000100u;
+            return ((variantKey & DEPTH) && (variantKey & DEPTH_MASK) != DEPTH) ||
+                (variantKey & 0b010111u) == 0b000100u;
         }
 
         static constexpr uint8_t filterVariantVertex(uint8_t variantKey) noexcept {
             // filter out vertex variants that are not needed. For e.g. dynamic lighting
             // doesn't affect the vertex shader.
-            return variantKey;
+            return variantKey & VERTEX_MASK;
         }
 
         static constexpr uint8_t filterVariantFragment(uint8_t variantKey) noexcept {
