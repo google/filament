@@ -279,6 +279,27 @@ void VulkanDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId,
         }
     }
 
+    #ifdef ANDROID
+    // Polling VkSurfaceCapabilitiesKHR is the most reliable way to detect a rotation change on
+    // Android. Checking for VK_SUBOPTIMAL_KHR is not sufficient on pre-Android 10 devices. Even
+    // on Android 10, we cannot rely on SUBOPTIMAL because we always use IDENTITY for the
+    // preTransform field in VkSwapchainCreateInfoKHR (see other comment in createSwapChain).
+    //
+    // NOTE: we support apps that have "orientation|screenSize" enabled in android:configChanges.
+    //
+    // NOTE: we poll the currentExtent rather than currentTransform. The transform seems to change
+    // before the extent (on a Pixel 4 anyway), which causes us to create a badly sized VkSwapChain.
+    const VulkanSurfaceContext* surface = mContext.currentSurface;
+    VkSurfaceCapabilitiesKHR caps;
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(mContext.physicalDevice, surface->surface, &caps);
+    const VkExtent2D previous = surface->surfaceCapabilities.currentExtent;
+    const VkExtent2D current = caps.currentExtent;
+    if (current.width != previous.width || current.height != previous.height) {
+        refreshSwapChain();
+        acquireSwapCommandBuffer(mContext);
+    }
+    #endif
+
     mDisposer.release(mContext.currentCommands->resources);
 
     // vkCmdBindPipeline and vkCmdBindDescriptorSets establish bindings to a specific command
