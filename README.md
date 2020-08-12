@@ -35,11 +35,6 @@ dependencies {
 }
 ```
 
-#### ProGuard
-
-Filament references a few classes from native code and by reflections. Depending on your
-R8/ProGuard/DexGuard config and usage, you may refer to the [proguard-rules](android/proguard-rules.pro) in your projects.
-
 Here are all the libraries available in the group `com.google.android.filament`:
 
 [![filament-android](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filament-android/badge.svg?subject=filament-android)](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filament-android)  
