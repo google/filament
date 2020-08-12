@@ -92,7 +92,9 @@ public class Texture {
         /** Cubemap sampler */
         SAMPLER_CUBEMAP,
         /** External texture sampler */
-        SAMPLER_EXTERNAL
+        SAMPLER_EXTERNAL,
+        /** 3D sampler */
+        SAMPLER_3D,
     }
 
     /**
@@ -817,7 +819,7 @@ public class Texture {
 
 
     /**
-     * <code>setImage</code> is used to modify a sub-region of the texure from a CPU-buffer.
+     * <code>setImage</code> is used to modify a sub-region of the texture from a CPU-buffer.
      *
      *  <p>This <code>Texture</code> instance must use {@link Sampler#SAMPLER_2D SAMPLER_2D} or
      *  {@link Sampler#SAMPLER_EXTERNAL SAMPLER_EXTERNAL}. If the later is specified
@@ -858,6 +860,58 @@ public class Texture {
         } else {
             result = nSetImage(getNativeObject(), engine.getNativeObject(), level,
                     xoffset, yoffset, width, height,
+                    buffer.storage, buffer.storage.remaining(),
+                    buffer.left, buffer.top, buffer.type.ordinal(), buffer.alignment,
+                    buffer.stride, buffer.format.ordinal(),
+                    buffer.handler, buffer.callback);
+        }
+        if (result < 0) {
+            throw new BufferOverflowException();
+        }
+    }
+
+    /**
+     * <code>setImage</code> is used to modify a sub-region of the 3D texture or 2D texture array
+     * from a CPU-buffer.
+     *
+     *  <p>This <code>Texture</code> instance must use {@link Sampler#SAMPLER_2D_ARRAY SAMPLER_2D_ARRAY} or
+     *  {@link Sampler#SAMPLER_3D SAMPLER_3D}.</p>
+     *
+     * @param engine    {@link Engine} this texture is associated to. Must be the
+     *                  instance passed to {@link Builder#build Builder.build()}.
+     * @param level     Level to set the image for. Must be less than {@link #getLevels()}.
+     * @param xoffset   x-offset in texel of the region to modify
+     * @param yoffset   y-offset in texel of the region to modify
+     * @param yoffset   z-offset in texel of the region to modify
+     * @param width     width in texel of the region to modify
+     * @param height    height in texel of the region to modify
+     * @param depth     depth in texel or index of the region to modify
+     * @param buffer    Client-side buffer containing the image to set.
+     *                  <code>buffer</code>'s {@link Format format} must match that
+     *                  of {@link #getFormat()}
+     *
+     * @exception BufferOverflowException if the specified parameters would result in reading
+     * outside of <code>buffer</code>.
+     *
+     * @see Builder#sampler
+     * @see PixelBufferDescriptor
+     */
+    public void setImage(@NonNull Engine engine,
+            @IntRange(from = 0) int level,
+            @IntRange(from = 0) int xoffset, @IntRange(from = 0) int yoffset, @IntRange(from = 0) int zoffset,
+            @IntRange(from = 0) int width, @IntRange(from = 0) int height, @IntRange(from = 0) int depth,
+            @NonNull PixelBufferDescriptor buffer) {
+        int result;
+        if (buffer.type == COMPRESSED) {
+            result = nSetImage3DCompressed(getNativeObject(), engine.getNativeObject(), level,
+                    xoffset, yoffset, zoffset, width, height, depth,
+                    buffer.storage, buffer.storage.remaining(),
+                    buffer.left, buffer.top, buffer.type.ordinal(), buffer.alignment,
+                    buffer.compressedSizeInBytes, buffer.compressedFormat.ordinal(),
+                    buffer.handler, buffer.callback);
+        } else {
+            result = nSetImage3D(getNativeObject(), engine.getNativeObject(), level,
+                    xoffset, yoffset, zoffset, width, height, depth,
                     buffer.storage, buffer.storage.remaining(),
                     buffer.left, buffer.top, buffer.type.ordinal(), buffer.alignment,
                     buffer.stride, buffer.format.ordinal(),
@@ -1112,6 +1166,18 @@ public class Texture {
 
     private static native int nSetImageCompressed(long nativeTexture, long nativeEngine,
             int level, int xoffset, int yoffset, int width, int height,
+            Buffer storage, int remaining, int left, int bottom, int type, int alignment,
+            int compressedSizeInBytes, int compressedFormat,
+            Object handler, Runnable callback);
+
+    private static native int nSetImage3D(long nativeTexture, long nativeEngine,
+            int level, int xoffset, int yoffset, int zoffset, int width, int height, int depth,
+            Buffer storage, int remaining, int left, int bottom, int type, int alignment,
+            int stride, int format,
+            Object handler, Runnable callback);
+
+    private static native int nSetImage3DCompressed(long nativeTexture, long nativeEngine,
+            int level, int xoffset, int yoffset, int zoffset, int width, int height, int depth,
             Buffer storage, int remaining, int left, int bottom, int type, int alignment,
             int compressedSizeInBytes, int compressedFormat,
             Object handler, Runnable callback);

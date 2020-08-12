@@ -50,10 +50,15 @@ public:
 
     void setImage(FEngine& engine, size_t level,
             uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
-            PixelBufferDescriptor&& buffer) const noexcept;
+            PixelBufferDescriptor&& buffer) const;
 
     void setImage(FEngine& engine, size_t level,
-            PixelBufferDescriptor&& buffer, const FaceOffsets& faceOffsets) const noexcept;
+            uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
+            uint32_t width, uint32_t height, uint32_t depth,
+            PixelBufferDescriptor&& buffer) const;
+
+    void setImage(FEngine& engine, size_t level,
+            PixelBufferDescriptor&& buffer, const FaceOffsets& faceOffsets) const;
 
     void generatePrefilterMipmap(FEngine& engine,
             PixelBufferDescriptor&& buffer, const FaceOffsets& faceOffsets,

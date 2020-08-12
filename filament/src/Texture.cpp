@@ -179,7 +179,19 @@ size_t FTexture::getDepth(size_t level) const noexcept {
 
 void FTexture::setImage(FEngine& engine,
         size_t level, uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
-        Texture::PixelBufferDescriptor&& buffer) const noexcept {
+        Texture::PixelBufferDescriptor&& buffer) const {
+
+    auto validateTarget = [](SamplerType sampler) -> bool {
+        switch (sampler) {
+            case SamplerType::SAMPLER_2D:
+            case SamplerType::SAMPLER_EXTERNAL:
+                return true;
+            case SamplerType::SAMPLER_CUBEMAP:
+            case SamplerType::SAMPLER_3D:
+            case SamplerType::SAMPLER_2D_ARRAY:
+                return false;
+        }
+    };
 
     if (!ASSERT_POSTCONDITION_NON_FATAL(buffer.type == PixelDataType::COMPRESSED ||
                          validatePixelFormatAndType(mFormat, buffer.format, buffer.type),
@@ -188,16 +200,130 @@ void FTexture::setImage(FEngine& engine,
         return;
     }
 
-    if (!mStream && mTarget != Sampler::SAMPLER_CUBEMAP && level < mLevelCount) {
-        if (buffer.buffer) {
-            engine.getDriverApi().update2DImage(mHandle,
-                    uint8_t(level), xoffset, yoffset, width, height, std::move(buffer));
-        }
+    if (!ASSERT_POSTCONDITION_NON_FATAL(!mStream, "setImage() called on a Stream texture.")) {
+        return;
     }
+
+    if (!ASSERT_POSTCONDITION_NON_FATAL(level < mLevelCount,
+            "level=%u is >= to levelCount=%u.", unsigned(level), unsigned(mLevelCount))) {
+        return;
+    }
+
+    if (!ASSERT_POSTCONDITION_NON_FATAL(validateTarget(mTarget),
+            "Texture Sampler type (%u) not supported for this operation.", unsigned(mTarget))) {
+        return;
+    }
+
+    if (!ASSERT_POSTCONDITION_NON_FATAL(buffer.buffer, "Data buffer is nullptr.")) {
+        return;
+    }
+
+    if (!ASSERT_POSTCONDITION_NON_FATAL(mSampleCount <= 1,
+            "Operation not supported with multisample (%u) texture.", unsigned(mSampleCount))) {
+        return;
+    }
+
+    if (!ASSERT_POSTCONDITION_NON_FATAL(xoffset + width <= valueForLevel(level, mWidth),
+            "xoffset (%u) + width (%u) > texture width (%u) at level (%u)",
+            unsigned(xoffset), unsigned(width), unsigned(valueForLevel(level, mWidth)), unsigned(level))) {
+        return;
+    }
+
+    if (!ASSERT_POSTCONDITION_NON_FATAL(yoffset + height <= valueForLevel(level, mHeight),
+            "xoffset (%u) + width (%u) > texture width (%u) at level (%u)",
+            unsigned(yoffset), unsigned(height), unsigned(valueForLevel(level, mHeight)), unsigned(level))) {
+        return;
+    }
+
+    engine.getDriverApi().update2DImage(mHandle,
+            uint8_t(level), xoffset, yoffset, width, height, std::move(buffer));
+}
+
+void FTexture::setImage(FEngine& engine,
+        size_t level, uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
+        uint32_t width, uint32_t height, uint32_t depth,
+        Texture::PixelBufferDescriptor&& buffer) const {
+
+    auto validateTarget = [](SamplerType sampler) -> bool {
+        switch (sampler) {
+            case SamplerType::SAMPLER_3D:
+            case SamplerType::SAMPLER_2D_ARRAY:
+                return true;
+            case SamplerType::SAMPLER_2D:
+            case SamplerType::SAMPLER_EXTERNAL:
+            case SamplerType::SAMPLER_CUBEMAP:
+                return false;
+        }
+    };
+
+    if (!ASSERT_POSTCONDITION_NON_FATAL(buffer.type == PixelDataType::COMPRESSED ||
+                         validatePixelFormatAndType(mFormat, buffer.format, buffer.type),
+            "The combination of internal format=%u and {format=%u, type=%u} is not supported.",
+            unsigned(mFormat), unsigned(buffer.format), unsigned(buffer.type))) {
+        return;
+    }
+
+    if (!ASSERT_POSTCONDITION_NON_FATAL(!mStream, "setImage() called on a Stream texture.")) {
+        return;
+    }
+
+    if (!ASSERT_POSTCONDITION_NON_FATAL(level < mLevelCount,
+            "level=%u is >= to levelCount=%u.", unsigned(level), unsigned(mLevelCount))) {
+        return;
+    }
+
+    if (!ASSERT_POSTCONDITION_NON_FATAL(validateTarget(mTarget),
+            "Texture Sampler type (%u) not supported for this operation.", unsigned(mTarget))) {
+        return;
+    }
+
+    if (!ASSERT_POSTCONDITION_NON_FATAL(mSampleCount <= 1,
+            "Operation not supported with multisample (%u) texture.", unsigned(mSampleCount))) {
+        return;
+    }
+
+    if (!ASSERT_POSTCONDITION_NON_FATAL(xoffset + width <= valueForLevel(level, mWidth),
+            "xoffset (%u) + width (%u) > texture width (%u) at level (%u)",
+            unsigned(xoffset), unsigned(width), unsigned(valueForLevel(level, mWidth)), unsigned(level))) {
+        return;
+    }
+
+    if (!ASSERT_POSTCONDITION_NON_FATAL(yoffset + height <= valueForLevel(level, mHeight),
+            "yoffset (%u) + height (%u) > texture height (%u) at level (%u)",
+            unsigned(yoffset), unsigned(height), unsigned(valueForLevel(level, mHeight)), unsigned(level))) {
+        return;
+    }
+
+    // effective level is just how we compute the index/depth based on whether we're an array or a 3D texture
+    const uint8_t effectiveLevel = mTarget == SamplerType::SAMPLER_3D ? level : 0;
+    if (!ASSERT_POSTCONDITION_NON_FATAL(zoffset + depth <= valueForLevel(effectiveLevel, mDepth),
+            "zoffset (%u) + depth (%u) > texture depth (%u) at level (%u)",
+            unsigned(zoffset), unsigned(depth), unsigned(valueForLevel(effectiveLevel, mDepth)), unsigned(level))) {
+        return;
+    }
+
+    if (!ASSERT_POSTCONDITION_NON_FATAL(buffer.buffer, "Data buffer is nullptr.")) {
+        return;
+    }
+
+    engine.getDriverApi().update3DImage(mHandle,
+            uint8_t(level), xoffset, yoffset, zoffset, width, height, depth, std::move(buffer));
 }
 
 void FTexture::setImage(FEngine& engine, size_t level,
-        Texture::PixelBufferDescriptor&& buffer, const FaceOffsets& faceOffsets) const noexcept {
+        Texture::PixelBufferDescriptor&& buffer, const FaceOffsets& faceOffsets) const {
+
+    auto validateTarget = [](SamplerType sampler) -> bool {
+        switch (sampler) {
+            case SamplerType::SAMPLER_CUBEMAP:
+                return true;
+            case SamplerType::SAMPLER_3D:
+            case SamplerType::SAMPLER_2D_ARRAY:
+            case SamplerType::SAMPLER_2D:
+            case SamplerType::SAMPLER_EXTERNAL:
+                return false;
+        }
+    };
 
     if (!ASSERT_POSTCONDITION_NON_FATAL(buffer.type == PixelDataType::COMPRESSED ||
                         validatePixelFormatAndType(mFormat, buffer.format, buffer.type),
@@ -206,12 +332,26 @@ void FTexture::setImage(FEngine& engine, size_t level,
         return;
     }
 
-    if (!mStream && mTarget == Sampler::SAMPLER_CUBEMAP && level < mLevelCount) {
-        if (buffer.buffer) {
-            engine.getDriverApi().updateCubeImage(mHandle, uint8_t(level),
-                    std::move(buffer), faceOffsets);
-        }
+    if (!ASSERT_POSTCONDITION_NON_FATAL(!mStream, "setImage() called on a Stream texture.")) {
+        return;
     }
+
+    if (!ASSERT_POSTCONDITION_NON_FATAL(level < mLevelCount,
+            "level=%u is >= to levelCount=%u.", unsigned(level), unsigned(mLevelCount))) {
+        return;
+    }
+
+    if (!ASSERT_POSTCONDITION_NON_FATAL(validateTarget(mTarget),
+            "Texture Sampler type (%u) not supported for this operation.", unsigned(mTarget))) {
+        return;
+    }
+
+    if (!ASSERT_POSTCONDITION_NON_FATAL(buffer.buffer, "Data buffer is nullptr.")) {
+        return;
+    }
+
+    engine.getDriverApi().updateCubeImage(mHandle, uint8_t(level),
+            std::move(buffer), faceOffsets);
 }
 
 void FTexture::setExternalImage(FEngine& engine, void* image) noexcept {
@@ -904,20 +1044,29 @@ Texture::InternalFormat Texture::getFormat() const noexcept {
 }
 
 void Texture::setImage(Engine& engine, size_t level,
-        Texture::PixelBufferDescriptor&& buffer) const noexcept {
+        Texture::PixelBufferDescriptor&& buffer) const {
     upcast(this)->setImage(upcast(engine),
-            level, 0, 0, uint32_t(getWidth(level)), uint32_t(getHeight(level)), std::move(buffer));
+            level, 0, 0,
+            uint32_t(getWidth(level)), uint32_t(getHeight(level)), std::move(buffer));
 }
 
 void Texture::setImage(Engine& engine,
         size_t level, uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
-        PixelBufferDescriptor&& buffer) const noexcept {
+        PixelBufferDescriptor&& buffer) const {
     upcast(this)->setImage(upcast(engine),
             level, xoffset, yoffset, width, height, std::move(buffer));
 }
 
 void Texture::setImage(Engine& engine, size_t level,
-        Texture::PixelBufferDescriptor&& buffer, const FaceOffsets& faceOffsets) const noexcept {
+        uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
+        uint32_t width, uint32_t height, uint32_t depth,
+        PixelBufferDescriptor&& buffer) const {
+    upcast(this)->setImage(upcast(engine),
+            level, xoffset, yoffset, zoffset, width, height, depth, std::move(buffer));
+}
+
+void Texture::setImage(Engine& engine, size_t level,
+        Texture::PixelBufferDescriptor&& buffer, const FaceOffsets& faceOffsets) const {
     upcast(this)->setImage(upcast(engine), level, std::move(buffer), faceOffsets);
 }
 
