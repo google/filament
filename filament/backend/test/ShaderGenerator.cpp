@@ -61,9 +61,6 @@ void SpvToGlsl(const SpirvBlob* spirv, std::string* outGlsl) {
 
 void SpvToMsl(const SpirvBlob* spirv, std::string* outMsl) {
     CompilerMSL mslCompiler(*spirv);
-    mslCompiler.set_common_options(CompilerGLSL::Options {
-        .vertex.fixup_clipspace = true
-    });
     mslCompiler.set_msl_options(CompilerMSL::Options {
         .msl_version = CompilerMSL::Options::make_msl_version(1, 1)
     });
