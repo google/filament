@@ -134,6 +134,53 @@ namespace emscripten {
         BIND(utils::EntityManager)
         BIND(VertexBuffer)
         BIND(View)
+
+        // embind is missing a template definition for "noexcept" methods, so
+        // we're supplying it ourselves while waiting for the upstream fix.
+        template<typename ClassType, typename ReturnType, typename... Args>
+        struct RegisterClassMethod<ReturnType (ClassType::*)(Args...) noexcept> {
+
+            template <typename CT, typename... Policies>
+            static void invoke(const char* methodName,
+                               ReturnType (ClassType::*memberFunction)(Args...) noexcept)  {
+                auto invoker = &MethodInvoker<decltype(memberFunction), ReturnType, ClassType*, Args...>::invoke;
+
+                typename WithPolicies<Policies...>::template ArgTypeList<ReturnType, AllowedRawPointer<ClassType>, Args...> args;
+                _embind_register_class_function(
+                    TypeID<ClassType>::get(),
+                    methodName,
+                    args.getCount(),
+                    args.getTypes(),
+                    getSignature(invoker),
+                    reinterpret_cast<GenericFunction>(invoker),
+                    getContext(memberFunction),
+                    isPureVirtual<Policies...>::value);
+            }
+        };
+
+        // embind is missing a template definition for "const noexcept" methods, so
+        // we're supplying it ourselves while waiting for the upstream fix.
+        template<typename ClassType, typename ReturnType, typename... Args>
+        struct RegisterClassMethod<ReturnType (ClassType::*)(Args...) const noexcept> {
+
+            template <typename CT, typename... Policies>
+            static void invoke(const char* methodName,
+                               ReturnType (ClassType::*memberFunction)(Args...) const noexcept)  {
+                auto invoker = &MethodInvoker<decltype(memberFunction), ReturnType, const ClassType*, Args...>::invoke;
+
+                typename WithPolicies<Policies...>::template ArgTypeList<ReturnType, AllowedRawPointer<const ClassType>, Args...> args;
+                _embind_register_class_function(
+                    TypeID<ClassType>::get(),
+                    methodName,
+                    args.getCount(),
+                    args.getTypes(),
+                    getSignature(invoker),
+                    reinterpret_cast<GenericFunction>(invoker),
+                    getContext(memberFunction),
+                    isPureVirtual<Policies...>::value);
+            }
+        };
+
     }
 }
 #undef BIND
