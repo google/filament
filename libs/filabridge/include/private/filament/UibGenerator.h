@@ -69,6 +69,9 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
 
     filament::math::float4 sun; // cos(sunAngle), sin(sunAngle), 1/(sunAngle*HALO_SIZE-sunAngle), HALO_EXP
 
+    filament::math::float3 lightPosition;
+    uint32_t padding;
+
     filament::math::float3 lightDirection;
     uint32_t fParamsX; // stride-x
 
@@ -123,7 +126,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     float aoReserved3;
 
     // bring PerViewUib to 2 KiB
-    filament::math::float4 padding2[62];
+    filament::math::float4 padding2[61];
 };
 
 // 2 KiB == 128 float4s

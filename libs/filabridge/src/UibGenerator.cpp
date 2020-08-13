@@ -56,6 +56,8 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             // directional light
             .add("lightColorIntensity",     1, UniformInterfaceBlock::Type::FLOAT4)
             .add("sun",                     1, UniformInterfaceBlock::Type::FLOAT4)
+            .add("lightPosition",           1, UniformInterfaceBlock::Type::FLOAT3)
+            .add("padding0",                1, UniformInterfaceBlock::Type::UINT)
             .add("lightDirection",          1, UniformInterfaceBlock::Type::FLOAT3)
             .add("fParamsX",                1, UniformInterfaceBlock::Type::UINT)
             // shadow
@@ -106,7 +108,7 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             .add("aoReserved3",             1, UniformInterfaceBlock::Type::FLOAT)
 
             // bring PerViewUib to 2 KiB
-            .add("padding2", 62, UniformInterfaceBlock::Type::FLOAT4)
+            .add("padding2", 61, UniformInterfaceBlock::Type::FLOAT4)
             .build();
     return uib;
 }
