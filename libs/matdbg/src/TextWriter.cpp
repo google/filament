@@ -290,7 +290,10 @@ static void printShaderInfo(ostream& text, const vector<ShaderInfo>& info) {
         text << " ";
         text << "0x" << hex << setfill('0') << setw(2)
              << right << (int) item.variant;
-        text << setfill(' ') << dec << endl;
+        text << setfill(' ') << dec;
+        text << "   ";
+        text << formatVariantString(item.variant);
+        text << endl;
     }
     text << endl;
 }

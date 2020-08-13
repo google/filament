@@ -92,7 +92,7 @@ void main() {
             frameUniforms.lightDirection, frameUniforms.shadowBias.y, getLightFromWorldMatrix());
 #endif
 
-#if defined(HAS_SHADOWING)
+#if defined(HAS_SHADOWING) && defined(HAS_DYNAMIC_LIGHTING)
     for (uint l = 0u; l < uint(MAX_SHADOW_CASTING_SPOTS); l++) {
         vec3 dir = shadowUniforms.directionShadowBias[l].xyz;
         float bias = shadowUniforms.directionShadowBias[l].w;

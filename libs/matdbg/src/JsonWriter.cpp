@@ -118,20 +118,8 @@ static bool printParametersInfo(ostream& json, const ChunkContainer& container) 
 static void printShaderInfo(ostream& json, const std::vector<ShaderInfo>& info) {
     for (uint64_t i = 0; i < info.size(); ++i) {
         const auto& item = info[i];
-        string variantString = "";
 
-        // NOTE: The 3-character nomenclature used here is consistent with the ASCII art seen in the
-        // Variant header file and allows the information to fit in a reasonable amount of space on
-        // the page. The HTML file has a legend.
-        if (item.variant) {
-            if (item.variant & filament::Variant::DIRECTIONAL_LIGHTING)  variantString += "DIR|";
-            if (item.variant & filament::Variant::DYNAMIC_LIGHTING)      variantString += "DYN|";
-            if (item.variant & filament::Variant::SHADOW_RECEIVER)       variantString += "SRE|";
-            if (item.variant & filament::Variant::SKINNING_OR_MORPHING)  variantString += "SKN|";
-            if (item.variant & filament::Variant::DEPTH)                 variantString += "DEP|";
-            variantString = variantString.substr(0, variantString.length() - 1);
-        }
-
+        string variantString = formatVariantString(item.variant);
         string ps = (item.pipelineStage == backend::ShaderType::VERTEX) ? "vertex  " : "fragment";
         json
             << "    {"

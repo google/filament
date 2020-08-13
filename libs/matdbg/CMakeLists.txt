@@ -23,6 +23,7 @@ set(PUBLIC_HDRS
 
 set(SRCS
     src/CommonWriter.h
+    src/CommonWriter.cpp
     src/DebugServer.cpp
     src/JsonWriter.cpp
     src/ShaderReplacer.cpp
