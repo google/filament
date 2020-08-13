@@ -329,6 +329,7 @@ void ShadowMap::computeShadowCameraDirectional(
 
         // Compute the LiSPSM warping
         mat4f W, Wp;
+        mat4f L; // Rotation matrix in light space
         if (USE_LISPSM) {
             // Orient the shadow map in the direction of the view vector by constructing a
             // rotation matrix in light space around the z-axis, that aligns the y-axis with the camera's
@@ -338,7 +339,6 @@ void ShadowMap::computeShadowCameraDirectional(
             // If the light and view vector are parallel, this rotation becomes
             // meaningless. Just use identity.
             // (LdotV == (Mv*V).z, because L = {0,0,1} in light-space)
-            mat4f L; // Rotation matrix in light space
             if (UTILS_LIKELY(std::abs(lsCameraFwd.z) < 0.9997f)) { // this is |dot(L, V)|
                 const float3 vp{ normalize(lsCameraFwd.xy), 0 }; // wrap direction in light-space
                 L[0].xyz = cross(vp, float3{ 0, 0, 1 });
@@ -440,8 +440,16 @@ void ShadowMap::computeShadowCameraDirectional(
         // for perspective and lispsm shadow maps. This also allows us to do this at zero-cost
         // by baking it in the shadow-map itself.
 
-        const mat4f Sb = S * mat4f::translation(dir * params.options.constantBias);
-        mCamera->setCustomProjection(mat4(Sb), znear, zfar);
+        const mat4f b = mat4f::translation(dir * params.options.constantBias);
+        const mat4f Sb = S * b;
+
+        // It's important to set the light camera's model matrix separately from its projection, so
+        // that the cameraPosition uniform gets set correctly.
+        // mLightSpace is used in the shader to access the shadow map texture, and has the model
+        // matrix baked in.
+
+        mCamera->setModelMatrix(FCamera::rigidTransformInverse(b) * M);
+        mCamera->setCustomProjection(mat4(F * W * L * Mp), znear, zfar);
 
         // for the debug camera, we need to undo the world origin
         mDebugCamera->setCustomProjection(mat4(Sb * camera.worldOrigin), znear, zfar);
@@ -479,8 +487,16 @@ void ShadowMap::computeShadowCameraSpot(math::float3 const& position, math::floa
     mTexelSizeWs = texelSizeWorldSpace(Mp, MbMt);
     mLightSpace = St;
 
-    const mat4f Sb = S * mat4f::translation(dir * params.options.constantBias);
-    mCamera->setCustomProjection(mat4(Sb), nearPlane, radius);
+    const mat4f b = mat4f::translation(dir * params.options.constantBias);
+    const mat4f Sb = S * b;
+
+    // It's important to set the light camera's model matrix separately from its projection, so that
+    // the cameraPosition uniform gets set correctly.
+    // mLightSpace is used in the shader to access the shadow map texture, and has the model matrix
+    // baked in.
+
+    mCamera->setModelMatrix(FCamera::rigidTransformInverse(b) * M);
+    mCamera->setCustomProjection(mat4(Mp), nearPlane, radius);
 
     // for the debug camera, we need to undo the world origin
     mDebugCamera->setCustomProjection(mat4(Sb * camera.worldOrigin), nearPlane, radius);
