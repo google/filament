@@ -5,10 +5,22 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release
 
-- MASKED mode now leaves destination alpha intact (useful for transparent targets).
+- `MASKED` mode now leaves destination alpha intact (useful for transparent targets).
+- `MASKED` mode now benefit from smoothing in `unlit` materials.
+- Small performance improvement to FXAA.
+- Fixed `KHR_materials_transmission` to use the `FADE` blending mode.
+- Fixed frame graph crash when more than 32 stages were required.
 - Fixed several memory leaks in gltfio and the JavaScript bindings.
-- Added texture getters to Skybox and IndirectLight (C++, Java, JavaScript).
-- `View.setAmbientOcclusion()` is deprecated in favor of `View.setAmbientOcclusionOptions` (⚠️ **API change**)
+- Fixed several platform-specific Vulkan bugs and crashes.
+- Temporal Anti-Aliasing (TAA) is now available as a complement to MSAA and FXAA. It can be turned
+  on and controlled using `View.setTemporalAntiAliasingOptions()`.
+- Added texture getters to `Skybox` and `IndirectLight` (C++, Java, JavaScript).
+- Added APIs to create 3D textures and 2D texture arrays.
+- Internal buffers can now be sized at compile times for applications that render very large
+  numbers of objects.
+- `View.setAmbientOcclusion()` is deprecated in favor of `View.setAmbientOcclusionOptions`
+   (⚠️ **API change**).
+- Switched to C++17.
 
 ## v1.8.1
 
