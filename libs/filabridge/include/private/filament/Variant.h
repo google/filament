@@ -100,18 +100,29 @@ namespace filament {
         inline void setFog(bool v) noexcept { set(v, FOG); }
 
         inline constexpr bool isDepthPass() const noexcept {
-            return (key & DEPTH_MASK) == DEPTH_VARIANT;
+            return isValidDepthVariant(key);
+        }
+
+        inline static constexpr bool isValidDepthVariant(uint8_t variantKey) noexcept {
+            // For a variant to be a valid depth variant, all of the bits in DEPTH_MASK must be 0,
+            // except for DEPTH.
+            return (variantKey & DEPTH_MASK) == DEPTH_VARIANT;
         }
 
         static constexpr bool isReserved(uint8_t variantKey) noexcept {
             // reserved variants that should just be skipped
-            return ((variantKey & DEPTH) && (variantKey & DEPTH_MASK) != DEPTH) ||
+            // 1. If the DEPTH bit is set, then it must be a valid depth variant. Otherwise, the
+            // variant is reserved.
+            // 2. If SRE is set, either DYN or DIR must also be set (it makes no sense to have
+            // shadows without lights).
+            return
+                ((variantKey & DEPTH) && !isValidDepthVariant(variantKey)) ||
                 (variantKey & 0b010111u) == 0b000100u;
         }
 
         static constexpr uint8_t filterVariantVertex(uint8_t variantKey) noexcept {
-            // filter out vertex variants that are not needed. For e.g. dynamic lighting
-            // doesn't affect the vertex shader.
+            // filter out vertex variants that are not needed. For e.g. fog doesn't affect the
+            // vertex shader.
             return variantKey & VERTEX_MASK;
         }
 
@@ -123,7 +134,7 @@ namespace filament {
 
         static constexpr uint8_t filterVariant(uint8_t variantKey, bool isLit) noexcept {
             // special case for depth variant
-            if ((variantKey & DEPTH_MASK) == DEPTH_VARIANT) {
+            if (isValidDepthVariant(variantKey)) {
                 return variantKey;
             }
             // when the shading mode is unlit, remove all the lighting variants
