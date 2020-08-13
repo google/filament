@@ -3,6 +3,7 @@ struct Light {
     vec3 l;
     float attenuation;
     float NoL;
+    vec3 worldPosition;
     bool castsShadows;
     bool contactShadows;
     uint shadowIndex;

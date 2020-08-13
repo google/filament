@@ -130,6 +130,7 @@ Light getLight(const uint index) {
     light.l = normalize(posToLight);
     light.attenuation = getDistanceAttenuation(posToLight, positionFalloff.w);
     light.NoL = saturate(dot(shading_normal, light.l));
+    light.worldPosition = positionFalloff.xyz;
 
     uint type = floatBitsToUint(scaleOffsetShadowType.w);
     if (type == LIGHT_TYPE_SPOT) {
@@ -170,8 +171,14 @@ void evaluatePunctualLights(const PixelParams pixel, inout vec3 color) {
 #if defined(HAS_SHADOWING)
         if (light.NoL > 0.0){
             if (light.castsShadows) {
+#if defined(HAS_VSM)
+                highp float fragDepth = length(vertex_worldPosition - light.worldPosition);
+                visibility = shadowVsm(light_shadowMap, light.shadowLayer,
+                    getSpotLightSpacePosition(light.shadowIndex), fragDepth);
+#else
                 visibility = shadow(light_shadowMap, light.shadowLayer,
-                getSpotLightSpacePosition(light.shadowIndex));
+                    getSpotLightSpacePosition(light.shadowIndex));
+#endif
             }
             if (light.contactShadows && visibility > 0.0) {
                 if (objectUniforms.screenSpaceContactShadows != 0u) {

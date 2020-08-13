@@ -3,14 +3,16 @@
 void materialVertex(inout MaterialVertexInputs m) { }
 
 void main() {
-#if defined(VERTEX_DOMAIN_DEVICE)
-    gl_Position = getPosition();
-#else
     MaterialVertexInputs material;
     initMaterialVertex(material);
     materialVertex(material);
+#if defined(VERTEX_DOMAIN_DEVICE)
+    gl_Position = getPosition();
+#else
     gl_Position = getClipFromWorldMatrix() * getWorldPosition(material);
 #endif
+
+    vertex_worldPosition = material.worldPosition.xyz;
 
 #if defined(TARGET_VULKAN_ENVIRONMENT)
     // In Vulkan, clip space is Y-down. In OpenGL and Metal, clip space is Y-up.

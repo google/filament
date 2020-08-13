@@ -307,6 +307,29 @@ float screenSpaceContactShadow(vec3 lightDirection) {
 }
 
 //------------------------------------------------------------------------------
+// VSM
+//------------------------------------------------------------------------------
+
+float linstep(float a, float b, float v) {
+    return clamp((v - a) / (b - a), 0.0, 1.0);
+}
+
+float reduceLightBleed(float pMax, float amount) {
+    return linstep(amount, 1.0, pMax);
+}
+
+float chebyshevUpperBound(vec2 moments, float mean, float minVariance, float lightBleedReduction) {
+    float variance = moments.y - (moments.x * moments.x);
+    variance = max(variance, minVariance);
+
+    float d = mean - moments.x;
+    float pMax = variance / (variance + d * d);
+    pMax = reduceLightBleed(pMax, lightBleedReduction);
+
+    return mean <= moments.x ? 1.0 : pMax;
+}
+
+//------------------------------------------------------------------------------
 // Shadow sampling dispatch
 //------------------------------------------------------------------------------
 
@@ -326,4 +349,16 @@ float shadow(const lowp sampler2DArrayShadow shadowMap, const uint layer, const 
 #elif SHADOW_SAMPLING_METHOD == SHADOW_SAMPLING_PCF_HIGH
     return ShadowSample_PCF_High(shadowMap, layer, size, shadowPosition);
 #endif
+}
+
+float shadowVsm(const lowp sampler2DArray shadowMap, const uint layer, const vec3 shadowPosition,
+        const float fragDepth) {
+    vec2 moments = texture(shadowMap, vec3(shadowPosition.xy, layer)).xy;
+
+    // TODO: bias and lightBleedReduction should be uniforms
+    const float bias = 0.01;
+    const float lightBleedReduction = 0.2;
+
+    const float minVariance = bias * 0.01;
+    return chebyshevUpperBound(moments, fragDepth, minVariance, lightBleedReduction);
 }
