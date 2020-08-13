@@ -76,7 +76,7 @@ SamplerInterfaceBlock::Builder::~Builder() noexcept = default;
 
 SamplerInterfaceBlock::SamplerInterfaceBlock() = default;
 SamplerInterfaceBlock::SamplerInterfaceBlock(const SamplerInterfaceBlock& rhs) = default;
-SamplerInterfaceBlock::SamplerInterfaceBlock(SamplerInterfaceBlock&& rhs) noexcept /* = default */ {};
+SamplerInterfaceBlock::SamplerInterfaceBlock(SamplerInterfaceBlock&& rhs) noexcept = default;
 SamplerInterfaceBlock& SamplerInterfaceBlock::operator=(const SamplerInterfaceBlock& rhs) = default;
 SamplerInterfaceBlock& SamplerInterfaceBlock::operator=(SamplerInterfaceBlock&& rhs) /*noexcept*/ = default;
 SamplerInterfaceBlock::~SamplerInterfaceBlock() noexcept = default;
