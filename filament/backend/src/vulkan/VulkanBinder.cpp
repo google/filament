@@ -346,7 +346,8 @@ void VulkanBinder::bindRasterState(const RasterState& rasterState) noexcept {
             ds0.depthWriteEnable != ds1.depthWriteEnable ||
             ds0.depthCompareOp != ds1.depthCompareOp ||
             ds0.stencilTestEnable != ds1.stencilTestEnable ||
-            ms0.rasterizationSamples != ms1.rasterizationSamples
+            ms0.rasterizationSamples != ms1.rasterizationSamples ||
+            ms0.alphaToCoverageEnable != ms1.alphaToCoverageEnable
     ) {
         mDirtyPipeline = true;
         mPipelineKey.rasterState = rasterState;
@@ -727,6 +728,7 @@ static VulkanBinder::RasterState createDefaultRasterState() {
     multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
     multisampling.pSampleMask = nullptr;
+    multisampling.alphaToCoverageEnable = true;
 
     return VulkanBinder::RasterState {
         rasterization,

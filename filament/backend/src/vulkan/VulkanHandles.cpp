@@ -88,53 +88,107 @@ VulkanProgram::~VulkanProgram() {
     vkDestroyShaderModule(context.device, bundle.fragment, VKALLOC);
 }
 
-static VulkanAttachment createOffscreenAttachment(VulkanAttachment source) {
-    VulkanTexture* tex = source.texture;
-    if (tex == nullptr) {
-        return source;
+static VulkanAttachment createAttachment(VulkanAttachment spec) {
+    if (spec.texture == nullptr) {
+        return spec;
     }
     return {
-        .format = tex->vkformat,
-        .image = tex->textureImage,
-        .view = VK_NULL_HANDLE,
-        .memory = VK_NULL_HANDLE,
-        .texture = tex,
-        .layout = getTextureLayout(tex->usage),
-        .level = source.level,
-        .layer = source.layer
+        .format = spec.texture->vkformat,
+        .image = spec.texture->textureImage,
+        .texture = spec.texture,
+        .layout = getTextureLayout(spec.texture->usage),
+        .level = spec.level,
+        .layer = spec.layer
     };
 }
 
 // Creates a special "default" render target (i.e. associated with the swap chain)
 // Note that the attachment structs are unused in this case in favor of VulkanSurfaceContext.
 VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context) : HwRenderTarget(0, 0),
-        mContext(context), mOffscreen(false) {}
+        mContext(context), mOffscreen(false), mSamples(1) {}
 
 VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context, uint32_t width, uint32_t height,
-            VulkanAttachment color[MRT::TARGET_COUNT], VulkanAttachment depthStencil[2]) :
-            HwRenderTarget(width, height), mContext(context), mOffscreen(true) {
+            uint8_t samples, VulkanAttachment color[MRT::TARGET_COUNT],
+            VulkanAttachment depthStencil[2], VulkanStagePool& stagePool) :
+            HwRenderTarget(width, height), mContext(context), mOffscreen(true), mSamples(samples) {
 
-    for (int targetIndex = 0; targetIndex < MRT::TARGET_COUNT; targetIndex++) {
-        VulkanAttachment& attachment = mColor[targetIndex];
-        if (!color[targetIndex].texture) {
-            attachment = {};
+    // For each color attachment, create (or fetch from cache) a VkImageView that selects a specific
+    // miplevel and array layer.
+    for (int index = 0; index < MRT::TARGET_COUNT; index++) {
+        const VulkanAttachment& spec = color[index];
+        mColor[index] = createAttachment(spec);
+        VulkanTexture* texture = spec.texture;
+        if (texture == nullptr) {
             continue;
         }
-        attachment = createOffscreenAttachment(color[targetIndex]);
-        attachment.view = color[targetIndex].texture->getImageView(
-                attachment.level, attachment.layer, VK_IMAGE_ASPECT_COLOR_BIT);
+        mColor[index].view = texture->getImageView(spec.level, spec.layer,
+                VK_IMAGE_ASPECT_COLOR_BIT);
     }
 
-    mDepth = createOffscreenAttachment(depthStencil[0]);
-
+    // For the depth attachment, create (or fetch from cache) a VkImageView that selects a specific
+    // miplevel and array layer.
+    const VulkanAttachment& depthSpec = depthStencil[0];
+    mDepth = createAttachment(depthSpec);
     VulkanTexture* depthTexture = mDepth.texture;
     if (depthTexture) {
-        mDepth.view = depthTexture->getImageView(
-                mDepth.level, mDepth.layer, VK_IMAGE_ASPECT_DEPTH_BIT);
+        mDepth.view = depthTexture->getImageView(mDepth.level, mDepth.layer,
+                VK_IMAGE_ASPECT_DEPTH_BIT);
     }
+
+    if (samples == 1) {
+        return;
+    }
+
+    // The sidecar textures need to have only 1 miplevel and 1 array slice.
+    const int level = 1;
+    const int depth = 1;
+
+    // Create sidecar MSAA textures for color attachments.
+    for (int index = 0; index < MRT::TARGET_COUNT; index++) {
+        const VulkanAttachment& spec = color[index];
+        VulkanTexture* texture = spec.texture;
+        if (texture && texture->samples == 1) {
+            VulkanTexture* msTexture = new VulkanTexture(context, texture->target, level,
+                    texture->format, samples, width, height, depth, texture->usage, stagePool);
+            mMsaaAttachments[index] = createAttachment({ .texture = msTexture });
+            mMsaaAttachments[index].view = msTexture->getImageView(0, 0, VK_IMAGE_ASPECT_COLOR_BIT);
+        }
+        if (texture && texture->samples > 1) {
+            mMsaaAttachments[index] = mColor[index];
+        }
+    }
+
+    if (depthTexture == nullptr) {
+        return;
+    }
+
+    // There is no need for sidecar depth if the depth texture is already MSAA.
+    if (depthTexture->samples > 1) {
+        mMsaaDepthAttachment = mDepth;
+        return;
+    }
+
+    // Create sidecar MSAA texture for the depth attachment.
+    VulkanTexture* msTexture = new VulkanTexture(context, depthTexture->target, level,
+            depthTexture->format, samples, width, height, depth, depthTexture->usage, stagePool);
+    mMsaaDepthAttachment = createAttachment({
+        .texture = msTexture,
+        .level = depthSpec.level,
+        .layer = depthSpec.layer,
+    });
+    mMsaaDepthAttachment.view = msTexture->getImageView(depthSpec.level, depthSpec.layer,
+            VK_IMAGE_ASPECT_DEPTH_BIT);
 }
 
 VulkanRenderTarget::~VulkanRenderTarget() {
+    for (int index = 0; index < MRT::TARGET_COUNT; index++) {
+        if (mMsaaAttachments[index].texture != mColor[index].texture) {
+            delete mMsaaAttachments[index].texture;
+        }
+    }
+    if (mMsaaDepthAttachment.texture != mDepth.texture) {
+        delete mMsaaDepthAttachment.texture;
+    }
 }
 
 void VulkanRenderTarget::transformClientRectToPlatform(VkRect2D* bounds) const {
@@ -191,8 +245,16 @@ VulkanAttachment VulkanRenderTarget::getColor(int target) const {
     return (mOffscreen || target > 0) ? mColor[target] : getSwapContext(mContext).attachment;
 }
 
+VulkanAttachment VulkanRenderTarget::getMsaaColor(int target) const {
+    return mMsaaAttachments[target];
+}
+
 VulkanAttachment VulkanRenderTarget::getDepth() const {
     return mOffscreen ? mDepth : mContext.currentSurface->depth;
+}
+
+VulkanAttachment VulkanRenderTarget::getMsaaDepth() const {
+    return mMsaaDepthAttachment;
 }
 
 int VulkanRenderTarget::getColorTargetCount() const {
@@ -310,7 +372,7 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
         .extent = { w, h, depth },
         .mipLevels = levels,
         .arrayLayers = 1,
-        .samples = VK_SAMPLE_COUNT_1_BIT,
+        .samples = (VkSampleCountFlagBits) samples,
         .tiling = VK_IMAGE_TILING_OPTIMAL,
         .usage = 0
     };
@@ -364,13 +426,14 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
     }
 
     VkResult error = vkCreateImage(context.device, &imageInfo, VKALLOC, &textureImage);
-    if (error) {
+    if (error || FILAMENT_VULKAN_VERBOSE) {
         utils::slog.d << "vkCreateImage: "
             << "result = " << error << ", "
             << "handle = " << utils::io::hex << textureImage << utils::io::dec << ", "
             << "extent = " << w << "x" << h << "x"<< depth << ", "
             << "mipLevels = " << int(levels) << ", "
             << "usage = " << imageInfo.usage << ", "
+            << "samples = " << imageInfo.samples << ", "
             << "format = " << vkformat << utils::io::endl;
     }
     ASSERT_POSTCONDITION(!error, "Unable to create image.");
@@ -393,6 +456,7 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
             VK_IMAGE_ASPECT_COLOR_BIT;
 
     // Create a VkImageView so that shaders can sample from the image.
+    // RenderTarget does not use this view because it selects a single miplevel.
     VkImageViewCreateInfo viewInfo = {};
     viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     viewInfo.image = textureImage;
