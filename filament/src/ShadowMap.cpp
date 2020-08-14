@@ -106,7 +106,7 @@ void ShadowMap::computeSceneCascadeParams(const FScene::LightSoa& lightData, siz
         CascadeParameters& cascadeParams) {
     // Calculate the directional light's "position".
     // For VSM, we pick a point on the sphere that bounds the camera's culling frustum.
-    if (false /*view.hasVsm()*/) {
+    if (view.hasVsm()) {
         // Calculate view frustum vertices in world-space.
         // TODO: take shadowFar into account.
         float3 wsViewFrustumVertices[8];
