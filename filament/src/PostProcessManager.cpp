@@ -223,10 +223,10 @@ void PostProcessManager::init() noexcept {
     mSeparableGaussianBlurKernelStorageSize = separableGaussianBlur.getMaterial()->reflect("kernel")->size;
 
     mDummyOneTexture = driver.createTexture(SamplerType::SAMPLER_2D, 1,
-            TextureFormat::RGBA8, 0, 1, 1, 1, TextureUsage::DEFAULT);
+            TextureFormat::RGBA8, 1, 1, 1, 1, TextureUsage::DEFAULT);
 
     mDummyZeroTexture = driver.createTexture(SamplerType::SAMPLER_2D, 1,
-            TextureFormat::RGBA8, 0, 1, 1, 1, TextureUsage::DEFAULT);
+            TextureFormat::RGBA8, 1, 1, 1, 1, TextureUsage::DEFAULT);
 
     PixelBufferDescriptor dataOne(driver.allocate(4), 4, PixelDataFormat::RGBA, PixelDataType::UBYTE);
     PixelBufferDescriptor dataZero(driver.allocate(4), 4, PixelDataFormat::RGBA, PixelDataType::UBYTE);
