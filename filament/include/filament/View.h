@@ -228,6 +228,13 @@ public:
         bool enabled = false;       //!< enables or disables temporal anti-aliasing
     };
 
+    enum class ShadowType : uint8_t {
+        PCF,
+        VSM
+    };
+
+    void setShadowType(ShadowType shadow) noexcept;
+
     /**
      * List of available post-processing anti-aliasing techniques.
      * @see setAntiAliasing, getAntiAliasing, setSampleCount

@@ -291,6 +291,14 @@ public:
         mAmbientOcclusionOptions = options;
     }
 
+    ShadowType getShadowType() const noexcept {
+        return mShadowType;
+    }
+
+    void setShadowType(ShadowType shadow) noexcept {
+        mShadowType = shadow;
+    }
+
     AmbientOcclusionOptions const& getAmbientOcclusionOptions() const noexcept {
         return mAmbientOcclusionOptions;
     }
@@ -448,6 +456,7 @@ private:
     bool mShadowingEnabled = true;
     bool mHasPostProcessPass = true;
     AmbientOcclusionOptions mAmbientOcclusionOptions{};
+    ShadowType mShadowType;
     BloomOptions mBloomOptions;
     FogOptions mFogOptions;
     DepthOfFieldOptions mDepthOfFieldOptions;

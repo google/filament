@@ -984,6 +984,10 @@ void View::setAmbientOcclusionOptions(View::AmbientOcclusionOptions const& optio
     upcast(this)->setAmbientOcclusionOptions(options);
 }
 
+void View::setShadowType(View::ShadowType shadow) noexcept {
+    upcast(this)->setShadowType(shadow);
+}
+
 View::AmbientOcclusionOptions const& View::getAmbientOcclusionOptions() const noexcept {
     return upcast(this)->getAmbientOcclusionOptions();
 }
