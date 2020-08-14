@@ -1627,12 +1627,16 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
 
                 float sum = 0.0;
                 float weights[9];
+
+                // this doesn't get vectorized (probably because of exp()), so don't bother
+                // unrolling it.
+                #pragma nounroll
                 for (size_t i = 0; i < 9; i++) {
                     float2 d = sampleOffsets[i] - current.jitter;
-                    d *= 1.0 / taaOptions.filterWidth;
+                    d *= 1.0f / taaOptions.filterWidth;
                     // this is a gaussian fit of a 3.3 blackman harris window
                     // see: "High Quality Temporal Supersampling" by Bruan Karis
-                    weights[i] = std::exp(-2.29f * (d.x * d.x + d.y * d.y));
+                    weights[i] = std::exp2(-3.3f * (d.x * d.x + d.y * d.y));
                     sum += weights[i];
                 }
                 for (auto& w : weights) {
