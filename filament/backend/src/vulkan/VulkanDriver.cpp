@@ -486,7 +486,7 @@ void VulkanDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
     depthStencil[1].layer = stencil.layer;
 
     auto renderTarget = construct_handle<VulkanRenderTarget>(mHandleMap, rth, mContext,
-            width, height, colorTargets, depthStencil);
+            width, height, samples, colorTargets, depthStencil, mStagePool);
     mDisposer.createDisposable(renderTarget, [this, rth] () {
         destruct_handle<VulkanRenderTarget>(mHandleMap, rth);
     });
@@ -918,32 +918,55 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     VulkanFboCache::RenderPassKey rpkey = {
         .depthLayout = depth.layout,
         .depthFormat = depth.format,
-        .flags = {
-            .clear = params.flags.clear,
-            .discardStart = discardStart,
-            .discardEnd = params.flags.discardEnd
-        },
-        .subpassMask = params.subpassMask
+        .clear = params.flags.clear,
+        .discardStart = discardStart,
+        .discardEnd = params.flags.discardEnd,
+        .samples = rt->getSamples(),
+        .subpassMask = uint8_t(params.subpassMask)
     };
     for (int i = 0; i < MRT::TARGET_COUNT; i++) {
         rpkey.colorLayout[i] = rt->getColor(i).layout;
         rpkey.colorFormat[i] = rt->getColor(i).format;
+        VulkanTexture* texture = rt->getColor(i).texture;
+        if (rpkey.samples > 1 && texture && texture->samples == 1) {
+            rpkey.needsResolveMask |= (1 << i);
+        }
     }
 
     VkRenderPass renderPass = mFramebufferCache.getRenderPass(rpkey);
     mBinder.bindRenderPass(renderPass, 0);
 
     // Create the VkFramebuffer or fetch it from cache.
-    VulkanFboCache::FboKey fbkey { .renderPass = renderPass };
-    for (int i = 0, j = 0; i < MRT::TARGET_COUNT; i++) {
-        if (rt->getColor(i).format != VK_FORMAT_UNDEFINED) {
-            fbkey.color[j++] = rt->getColor(i).view;
+    VulkanFboCache::FboKey fbkey {
+        .renderPass = renderPass,
+        .width = (uint16_t) extent.width,
+        .height = (uint16_t) extent.height,
+        .layers = 1,
+        .samples = rpkey.samples
+    };
+    for (int i = 0; i < MRT::TARGET_COUNT; i++) {
+        if (rt->getColor(i).format == VK_FORMAT_UNDEFINED) {
+            fbkey.color[i] = VK_NULL_HANDLE;
+            fbkey.resolve[i] = VK_NULL_HANDLE;
+        } else if (fbkey.samples == 1) {
+            fbkey.color[i] = rt->getColor(i).view;
+            fbkey.resolve[i] = VK_NULL_HANDLE;
+            assert(fbkey.color[i]);
+        } else {
+            fbkey.color[i] = rt->getMsaaColor(i).view;
+            VulkanTexture* texture = rt->getColor(i).texture;
+            if (texture && texture->samples == 1) {
+                fbkey.resolve[i] = rt->getColor(i).view;
+                assert(fbkey.resolve[i]);
+            }
+            assert(fbkey.color[i]);
         }
     }
     if (depth.format != VK_FORMAT_UNDEFINED) {
-        fbkey.depth = depth.view;
+        fbkey.depth = rpkey.samples == 1 ? depth.view : rt->getMsaaDepth().view;
+        assert(fbkey.depth);
     }
-    VkFramebuffer vkfb = mFramebufferCache.getFramebuffer(fbkey, extent.width, extent.height, 1);
+    VkFramebuffer vkfb = mFramebufferCache.getFramebuffer(fbkey);
 
     // The current command buffer now owns a reference to the render target and its attachments.
     mDisposer.acquire(rt, mContext.currentCommands->resources);
@@ -965,7 +988,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
 
     rt->transformClientRectToPlatform(&renderPassInfo.renderArea);
 
-    VkClearValue clearValues[MRT::TARGET_COUNT + 1] = {};
+    VkClearValue clearValues[MRT::TARGET_COUNT + MRT::TARGET_COUNT + 1] = {};
 
     // NOTE: clearValues must be populated in the same order as the attachments array in
     // VulkanFboCache::getFramebuffer. Values must be provided regardless of whether Vulkan is
@@ -978,6 +1001,10 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
             clearValue.color.float32[2] = params.clearColor.b;
             clearValue.color.float32[3] = params.clearColor.a;
         }
+    }
+    // Resolve attachments are not cleared but still have entries in the list, so skip over them.
+    if (rpkey.samples > 1) {
+        renderPassInfo.clearValueCount += renderPassInfo.clearValueCount;
     }
     if (fbkey.depth) {
         VkClearValue& clearValue = clearValues[renderPassInfo.clearValueCount++];
@@ -1247,21 +1274,34 @@ void VulkanDriver::blit(TargetBufferFlags buffers,
     const int32_t srcRight = std::min(srcRect.left + srcRect.width, srcExtent.width);
     const int32_t srcTop = std::min(srcRect.bottom + srcRect.height, srcExtent.height);
     const uint32_t srcLevel = srcTarget->getColor(targetIndex).level;
+    const uint32_t srcLayer = srcTarget->getColor(targetIndex).layer;
 
     const int32_t dstLeft = std::min(dstRect.left, (int32_t) dstExtent.width);
     const int32_t dstBottom = std::min(dstRect.bottom, (int32_t) dstExtent.height);
     const int32_t dstRight = std::min(dstRect.left + dstRect.width, dstExtent.width);
     const int32_t dstTop = std::min(dstRect.bottom + dstRect.height, dstExtent.height);
     const uint32_t dstLevel = dstTarget->getColor(targetIndex).level;
+    const uint32_t dstLayer = dstTarget->getColor(targetIndex).layer;
 
     const VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT;
 
     const VkImageBlit blitRegions[1] = {{
-        .srcSubresource = { aspect, srcLevel, 0, 1 },
+        .srcSubresource = { aspect, srcLevel, srcLayer, 1 },
         .srcOffsets = { { srcLeft, srcBottom, 0 }, { srcRight, srcTop, 1 }},
-        .dstSubresource = { aspect, dstLevel, 0, 1 },
+        .dstSubresource = { aspect, dstLevel, dstLayer, 1 },
         .dstOffsets = { { dstLeft, dstBottom, 0 }, { dstRight, dstTop, 1 }}
     }};
+
+    const VkImageResolve resolveRegions[1] = {{
+        .srcSubresource = { aspect, srcLevel, srcLayer, 1 },
+        .srcOffset = { srcLeft, srcBottom, 0 },
+        .dstSubresource = { aspect, dstLevel, dstLayer, 1 },
+        .dstOffset = { dstLeft, dstBottom, 0 },
+        .extent = { srcExtent.width, srcExtent.height, 1 }
+    }};
+
+    const VulkanTexture* srcTexture = srcTarget->getColor(targetIndex).texture;
+    const VulkanTexture* dstTexture = dstTarget->getColor(targetIndex).texture;
 
     auto vkblit = [=](VkCommandBuffer cmdbuffer) {
         VkImage srcImage = srcTarget->getColor(targetIndex).image;
@@ -1272,20 +1312,22 @@ void VulkanDriver::blit(TargetBufferFlags buffers,
         VulkanTexture::transitionImageLayout(cmdbuffer, dstImage, VK_IMAGE_LAYOUT_UNDEFINED,
                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, dstLevel, 1, 1, aspect);
 
-        // TODO: Issue vkCmdResolveImage for MSAA targets.
-
-        vkCmdBlitImage(cmdbuffer, srcImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dstImage,
-                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, blitRegions,
-                filter == SamplerMagFilter::NEAREST ? VK_FILTER_NEAREST : VK_FILTER_LINEAR);
-
-        const VulkanTexture* srcTexture = srcTarget->getColor(targetIndex).texture;
         assert(srcTexture && "Blit source does not have an attached color texture.");
+
+        if (srcTexture->samples > 1 && dstTexture && dstTexture->samples == 1) {
+            vkCmdResolveImage(cmdbuffer, srcImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dstImage,
+                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, resolveRegions);
+        } else {
+            vkCmdBlitImage(cmdbuffer, srcImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dstImage,
+                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, blitRegions,
+                    filter == SamplerMagFilter::NEAREST ? VK_FILTER_NEAREST : VK_FILTER_LINEAR);
+        }
+
         VulkanTexture::transitionImageLayout(cmdbuffer, srcImage, VK_IMAGE_LAYOUT_UNDEFINED,
                 getTextureLayout(srcTexture->usage), srcLevel, 1, 1, aspect);
 
         // Determine the desired texture layout for the destination while ensuring that the default
         // render target is supported, which has no associated texture.
-        const VulkanTexture* dstTexture = dstTarget->getColor(targetIndex).texture;
         const VkImageLayout desiredLayout = dstTexture ? getTextureLayout(dstTexture->usage) :
                 getSwapContext(mContext).attachment.layout;
 
@@ -1323,6 +1365,9 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
 #endif
 
     // Update the VK raster state.
+
+    const VulkanRenderTarget* rt = mCurrentRenderTarget;
+
     mContext.rasterState.depthStencil = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
         .depthTestEnable = VK_TRUE,
@@ -1330,6 +1375,12 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
         .depthCompareOp = getCompareOp(rasterState.depthFunc),
         .depthBoundsTestEnable = VK_FALSE,
         .stencilTestEnable = VK_FALSE,
+    };
+
+    mContext.rasterState.multisampling = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
+        .rasterizationSamples = (VkSampleCountFlagBits) rt->getSamples(),
+        .alphaToCoverageEnable = rasterState.alphaToCoverage,
     };
 
     mContext.rasterState.blending = {
@@ -1350,7 +1401,6 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
     vkraster.depthBiasConstantFactor = depthOffset.constant;
     vkraster.depthBiasSlopeFactor = depthOffset.slope;
 
-    VulkanRenderTarget* rt = mCurrentRenderTarget;
     mContext.rasterState.getColorTargetCount = rt->getColorTargetCount();
 
     VulkanBinder::ProgramBundle shaderHandles = program->bundle;

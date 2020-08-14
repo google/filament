@@ -42,8 +42,9 @@ struct VulkanProgram : public HwProgram {
 // which are not representative when this is the default render target.
 struct VulkanRenderTarget : private HwRenderTarget {
     // Creates an offscreen render target.
-    VulkanRenderTarget(VulkanContext& context, uint32_t width, uint32_t height,
-            VulkanAttachment color[MRT::TARGET_COUNT], VulkanAttachment depthStencil[2]);
+    VulkanRenderTarget(VulkanContext& context, uint32_t width, uint32_t height, uint8_t samples,
+            VulkanAttachment color[MRT::TARGET_COUNT], VulkanAttachment depthStencil[2],
+            VulkanStagePool& stagePool);
 
     // Creates a special "default" render target (i.e. associated with the swap chain)
     explicit VulkanRenderTarget(VulkanContext& context);
@@ -54,14 +55,20 @@ struct VulkanRenderTarget : private HwRenderTarget {
     void transformClientRectToPlatform(VkViewport* bounds) const;
     VkExtent2D getExtent() const;
     VulkanAttachment getColor(int target) const;
+    VulkanAttachment getMsaaColor(int target) const;
     VulkanAttachment getDepth() const;
+    VulkanAttachment getMsaaDepth() const;
     int getColorTargetCount() const;
     bool invalidate();
+    uint8_t getSamples() const { return mSamples; }
 private:
     VulkanAttachment mColor[MRT::TARGET_COUNT] = {};
     VulkanAttachment mDepth = {};
     VulkanContext& mContext;
-    bool mOffscreen;
+    const bool mOffscreen;
+    const uint8_t mSamples;
+    VulkanAttachment mMsaaAttachments[MRT::TARGET_COUNT] = {};
+    VulkanAttachment mMsaaDepthAttachment = {};
 };
 
 struct VulkanSwapChain : public HwSwapChain {
