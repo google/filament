@@ -956,10 +956,10 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
         .renderPass = renderPass,
         .framebuffer = vkfb,
-        .renderArea = {
-            .offset = {params.viewport.left, params.viewport.bottom},
-            .extent = {params.viewport.width, params.viewport.height}
-        }
+
+        // The renderArea field constrains the LoadOp, but scissoring does not.
+        // Therefore we do not set the scissor rect here, we only need it in draw().
+        .renderArea = { .offset = {}, .extent = extent }
     };
 
     rt->transformClientRectToPlatform(&renderPassInfo.renderArea);
@@ -997,13 +997,6 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
         .minDepth = 0.0f,
         .maxDepth = 1.0f
     };
-    VkRect2D scissor {
-        .offset = { std::max(0, (int32_t) viewport.x), std::max(0, (int32_t) viewport.y) },
-        .extent = { (uint32_t) viewport.width, (uint32_t) viewport.height }
-    };
-
-    mCurrentRenderTarget->transformClientRectToPlatform(&scissor);
-    vkCmdSetScissor(swapContext.commands.cmdbuffer, 0, 1, &scissor);
 
     mCurrentRenderTarget->transformClientRectToPlatform(&viewport);
     vkCmdSetViewport(swapContext.commands.cmdbuffer, 0, 1, &viewport);
