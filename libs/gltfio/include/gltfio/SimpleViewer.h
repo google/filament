@@ -196,6 +196,7 @@ private:
     filament::math::float3 mSunlightDirection = {0.6, -1.0, -0.8};
     bool mEnableWireframe = false;
     bool mEnableSunlight = true;
+    bool mEnableVsm = false;
     bool mEnableShadows = true;
     int mShadowCascades = 1;
     bool mEnableContactShadows = false;
@@ -483,6 +484,7 @@ void SimpleViewer::updateUserInterface() {
         ImGuiExt::DirectionWidget("Sun direction", mSunlightDirection.v);
         ImGui::Checkbox("Enable sunlight", &mEnableSunlight);
         ImGui::Checkbox("Enable shadows", &mEnableShadows);
+        ImGui::Checkbox("Enable VSM", &mEnableVsm);
         ImGui::SliderInt("Cascades", &mShadowCascades, 1, 4);
         ImGui::Checkbox("Debug Cascades", debug.getPropertyAddress<bool>("d.shadowmap.visualize_cascades"));
         ImGui::Checkbox("Enable contact shadows", &mEnableContactShadows);
@@ -533,6 +535,8 @@ void SimpleViewer::updateUserInterface() {
         lm.setShadowOptions(ci, options);
         lm.setShadowCaster(ci, mEnableShadows);
     });
+
+    mView->setShadowType(mEnableVsm ? View::ShadowType::VSM : View::ShadowType::PCF);
 
     if (mAsset != nullptr) {
         if (ImGui::CollapsingHeader("Hierarchy")) {
