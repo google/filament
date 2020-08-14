@@ -576,7 +576,7 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
     //std::chrono::duration<float, std::milli> duration = std::chrono::steady_clock::now() - now;
     //slog.d << "LUT generation time: " << duration.count() << " ms" << io::endl;
 
-    mLutHandle = driver.createTexture(SamplerType::SAMPLER_3D, 1, textureFormat, 0,
+    mLutHandle = driver.createTexture(SamplerType::SAMPLER_3D, 1, textureFormat, 1,
             config.lutDimension, config.lutDimension, config.lutDimension, TextureUsage::DEFAULT);
 
     if (converted) {
