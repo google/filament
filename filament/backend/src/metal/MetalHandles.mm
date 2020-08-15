@@ -558,9 +558,13 @@ void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* desc
 
         if (multisampledColor[i]) {
             descriptor.colorAttachments[i].texture = multisampledColor[i];
+            descriptor.colorAttachments[i].level = 0;
+            descriptor.colorAttachments[i].slice = 0;
             const bool discard = any(discardFlags & getMRTColorFlag(i));
             if (!discard) {
                 descriptor.colorAttachments[i].resolveTexture = attachment.texture;
+                descriptor.colorAttachments[i].resolveLevel = attachment.level;
+                descriptor.colorAttachments[i].resolveSlice = attachment.layer;
                 descriptor.colorAttachments[i].storeAction = MTLStoreActionMultisampleResolve;
             }
         }
@@ -576,9 +580,13 @@ void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* desc
 
     if (multisampledDepth) {
         descriptor.depthAttachment.texture = multisampledDepth;
+        descriptor.depthAttachment.level = 0;
+        descriptor.depthAttachment.slice = 0;
         const bool discard = any(discardFlags & TargetBufferFlags::DEPTH);
         if (!discard) {
             descriptor.depthAttachment.resolveTexture = depthAttachment.texture;
+            descriptor.depthAttachment.resolveLevel = depthAttachment.level;
+            descriptor.depthAttachment.resolveSlice = depthAttachment.layer;
             descriptor.depthAttachment.storeAction = MTLStoreActionMultisampleResolve;
         }
     }
