@@ -228,13 +228,6 @@ public:
         bool enabled = false;       //!< enables or disables temporal anti-aliasing
     };
 
-    enum class ShadowType : uint8_t {
-        PCF,
-        VSM
-    };
-
-    void setShadowType(ShadowType shadow) noexcept;
-
     /**
      * List of available post-processing anti-aliasing techniques.
      * @see setAntiAliasing, getAntiAliasing, setSampleCount
@@ -250,6 +243,15 @@ public:
     enum class Dithering : uint8_t {
         NONE = 0,       //!< No dithering
         TEMPORAL = 1    //!< Temporal dithering (default)
+    };
+
+    /**
+     * List of available shadow mapping techniques.
+     * @see setShadowType
+     */
+    enum class ShadowType : uint8_t {
+        PCF,        //!< percentage-closer filtered shadows (default)
+        VSM         //!< variance shadows
     };
 
     /**
@@ -633,6 +635,15 @@ public:
      *
      */
     void setDynamicLightingOptions(float zLightNear, float zLightFar) noexcept;
+
+    /*
+     * Set the shadow mapping technique this View uses.
+     *
+     * The ShadowType affects all the shadows seen within the View.
+     *
+     * @warning This API is still experimental and subject to change.
+     */
+    void setShadowType(ShadowType shadow) noexcept;
 
     /**
      * Enables or disables post processing. Enabled by default.

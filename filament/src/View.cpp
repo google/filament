@@ -216,6 +216,8 @@ void FView::prepareShadowing(FEngine& engine, backend::DriverApi& driver,
 
     mShadowMapManager.reset();
 
+    mShadowMapManager.setVsm(hasVsm());
+
     auto& lcm = engine.getLightManager();
 
     // dominant directional light is always as index 0

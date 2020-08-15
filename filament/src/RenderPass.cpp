@@ -376,7 +376,7 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
     materialVariant.setDirectionalLighting(renderFlags & HAS_DIRECTIONAL_LIGHT);
     materialVariant.setDynamicLighting(renderFlags & HAS_DYNAMIC_LIGHTING);
     materialVariant.setFog(renderFlags & HAS_FOG);
-    materialVariant.setVsm(renderFlags & HAS_VSM);
+    materialVariant.setVsm(renderFlags & HAS_VSM && hasShadowing);
     materialVariant.setShadowReceiver(false); // this is set per Renderable
 
     Command cmdColor;
@@ -385,7 +385,7 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
     cmdDepth.primitive.materialVariant = Variant{ Variant::DEPTH_VARIANT };
     cmdDepth.primitive.materialVariant.setVsm(renderFlags & HAS_VSM);
     cmdDepth.primitive.rasterState = {};
-    cmdDepth.primitive.rasterState.colorWrite = false;
+    cmdDepth.primitive.rasterState.colorWrite = renderFlags & HAS_VSM;
     cmdDepth.primitive.rasterState.depthWrite = true;
     cmdDepth.primitive.rasterState.depthFunc = RasterState::DepthFunc::LE;
     cmdDepth.primitive.rasterState.alphaToCoverage = false;
