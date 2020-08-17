@@ -388,6 +388,21 @@ value_object<filament::View::VignetteOptions>("View$VignetteOptions")
     .field("color", &filament::View::VignetteOptions::color)
     .field("enabled", &filament::View::VignetteOptions::enabled);
 
+value_object<LightManager::ShadowOptions>("LightManager$ShadowOptions")
+    .field("mapSize", &LightManager::ShadowOptions::mapSize)
+    .field("shadowCascades", &LightManager::ShadowOptions::shadowCascades)
+    .field("constantBias", &LightManager::ShadowOptions::constantBias)
+    .field("normalBias", &LightManager::ShadowOptions::normalBias)
+    .field("shadowFar", &LightManager::ShadowOptions::shadowFar)
+    .field("shadowNearHint", &LightManager::ShadowOptions::shadowNearHint)
+    .field("shadowFarHint", &LightManager::ShadowOptions::shadowFarHint)
+    .field("stable", &LightManager::ShadowOptions::stable)
+    .field("polygonOffsetConstant", &LightManager::ShadowOptions::polygonOffsetConstant)
+    .field("polygonOffsetSlope", &LightManager::ShadowOptions::polygonOffsetSlope)
+    .field("screenSpaceContactShadows", &LightManager::ShadowOptions::screenSpaceContactShadows)
+    .field("stepCount", &LightManager::ShadowOptions::stepCount)
+    .field("maxShadowDistance", &LightManager::ShadowOptions::maxShadowDistance);
+
 // In JavaScript, a flat contiguous representation is best for matrices (see gl-matrix) so we
 // need to define a small wrapper here.
 
@@ -1039,6 +1054,9 @@ class_<LightBuilder>("LightManager$Builder")
     }), allow_raw_pointers())
     .BUILDER_FUNCTION("castShadows", LightBuilder, (LightBuilder* builder, bool enable), {
         return &builder->castShadows(enable); })
+    .BUILDER_FUNCTION("_shadowOptions", LightBuilder, (LightBuilder* builder,
+            LightManager::ShadowOptions options), {
+        return &builder->shadowOptions(options); })
     .BUILDER_FUNCTION("castLight", LightBuilder, (LightBuilder* builder, bool enable), {
         return &builder->castLight(enable); })
     .BUILDER_FUNCTION("position", LightBuilder, (LightBuilder* builder, filament::math::float3 value), {
@@ -1096,6 +1114,7 @@ class_<LightManager>("LightManager")
     .function("getIntensity", &LightManager::getIntensity)
     .function("setFalloff", &LightManager::setFalloff)
     .function("getFalloff", &LightManager::getFalloff)
+    .function("_setShadowOptions", &LightManager::setShadowOptions)
     .function("setSpotLightCone", &LightManager::setSpotLightCone)
     .function("setSunAngularRadius", &LightManager::setSunAngularRadius)
     .function("getSunAngularRadius", &LightManager::getSunAngularRadius)
