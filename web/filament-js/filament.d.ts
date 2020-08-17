@@ -75,6 +75,22 @@ export interface Renderer$ClearOptions {
     discard?: boolean;
 }
 
+export interface LightManager$ShadowOptions {
+    mapSize?: number;
+    shadowCascades?: number;
+    constantBias?: number;
+    normalBias?: number;
+    shadowFar?: number;
+    shadowNearHint?: number;
+    shadowFarHint?: number;
+    stable?: boolean;
+    polygonOffsetConstant?: number;
+    polygonOffsetSlope?: number;
+    screenSpaceContactShadows?: boolean;
+    stepCount?: number;
+    maxShadowDistance?: number;
+}
+
 export interface View$AmbientOcclusionOptions {
     radius?: number;
     power?: number;
@@ -225,6 +241,7 @@ export class LightManager$Builder {
     public build(engine: Engine, entity: Entity): void;
     public castLight(enable: boolean): LightManager$Builder;
     public castShadows(enable: boolean): LightManager$Builder;
+    public shadowOptions(options: LightManager$ShadowOptions): LightManager$Builder;
     public color(rgb: float3): LightManager$Builder;
     public direction(value: float3): LightManager$Builder;
     public intensity(value: number): LightManager$Builder;
@@ -262,6 +279,7 @@ export class LightManager {
     public getIntensity(instance: LightManager$Instance): number;
     public setFalloff(instance: LightManager$Instance, radius: number): void;
     public getFalloff(instance: LightManager$Instance): number;
+    public setShadowOptions(instance: LightManager$Instance, options: LightManager$ShadowOptions): void;
     public setSpotLightCone(instance: LightManager$Instance, inner: number, outer: number): void;
     public setSunAngularRadius(instance: LightManager$Instance, angularRadius: number): void;
     public getSunAngularRadius(instance: LightManager$Instance): number;
