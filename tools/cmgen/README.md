@@ -3,7 +3,7 @@
 `cmgen` is a command-line tool for generating SH and mipmap levels from an env map.
 Cubemaps and equirectangular formats are both supported, automatically detected according to the aspect ratio of the source image.
 
-The tool consumes a HDR environment map in latlong format, and produces two cubemap files: a mipmapped IBL(Image Based Lighting) and a blurry skybox.
+The tool can consume a HDR environment map in latlong format (equirectilinear) as well as "cross" cubemap formats (vertical and horizontal), and row/column cubemap formats, and can produce a mipmapped IBL(Image Based Lighting) or a blurry skybox or both.
 
 ## Usage
 
