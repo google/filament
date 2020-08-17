@@ -130,7 +130,7 @@ void ShadowMap::computeSceneCascadeParams(const FScene::LightSoa& lightData, siz
         const float3 l = lightData.elementAt<FScene::DIRECTION>(0); // guaranteed normalized
         cascadeParams.wsLightPosition = wsCentroid - (l * wsRadius);
     } else {
-        // For PFC, we could choose any position; we pick the camera position so we have a fixed
+        // For PCF, we could choose any position; we pick the camera position so we have a fixed
         // reference -- that's "not too far" from the scene.
         cascadeParams.wsLightPosition = camera.getPosition();
     }
