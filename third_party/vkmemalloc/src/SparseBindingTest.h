@@ -20,5 +20,10 @@
 // THE SOFTWARE.
 //
 
-#define VMA_IMPLEMENTATION
-#include "VmaUsage.h"
+#pragma once
+
+#ifdef _WIN32
+
+void TestSparseBinding();
+
+#endif // #ifdef _WIN32

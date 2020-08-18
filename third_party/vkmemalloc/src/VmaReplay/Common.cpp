@@ -1,4 +1,50 @@
+//
+// Copyright (c) 2017-2020 Advanced Micro Devices, Inc. All rights reserved.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+//
+
 #include "Common.h"
+
+bool StrRangeToPtrList(const StrRange& s, std::vector<uint64_t>& out)
+{
+    out.clear();
+    StrRange currRange = { s.beg, nullptr };
+    while(currRange.beg < s.end)
+    {
+        currRange.end = currRange.beg;
+        while(currRange.end < s.end && *currRange.end != ' ')
+        {
+            ++currRange.end;
+        }
+
+        uint64_t ptr = 0;
+        if(!StrRangeToPtr(currRange, ptr))
+        {
+            return false;
+        }
+        out.push_back(ptr);
+
+        currRange.beg = currRange.end + 1;
+    }
+    return true;
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // LineSplit class
@@ -12,6 +58,11 @@ bool LineSplit::GetNextLine(StrRange& out)
         while(currLineEnd < m_NumBytes && m_Data[currLineEnd] != '\n')
             ++currLineEnd;
         out.end = m_Data + currLineEnd;
+        // Ignore trailing '\r' to support Windows end of line.
+        if(out.end > out.beg && *(out.end - 1) == '\r')
+        {
+            --out.end;
+        }
         m_NextLineBeg = currLineEnd + 1; // Past '\n'
         ++m_NextLineIndex;
         return true;

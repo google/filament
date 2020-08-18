@@ -1,7 +1,7 @@
 This folder was created as follows:
 
-curl -L -O https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator/archive/62c009.zip
-unzip 62c009.zip
+curl -L -O https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator/archive/2193611.zip
+unzip 2193611.zip
 mv VulkanMemoryAllocator-* vkmemalloc
 cd vkmemalloc
 rm -rf bin docs media premake third_party tools
