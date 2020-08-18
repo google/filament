@@ -713,6 +713,11 @@ public class View {
      * SwapChain associated with the engine.
      * </p>
      *
+     * <p>
+     * A view with a custom render target cannot rely on Renderer.ClearOptions, which only applies
+     * to the SwapChain. Such view can use a Skybox instead.
+     * </p>
+     *
      * @param target render target associated with view, or null for the swap chain
      */
     public void setRenderTarget(@Nullable RenderTarget target) {

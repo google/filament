@@ -295,12 +295,14 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     );
 
 
-    const bool blending = view.getBlendMode() == View::BlendMode::TRANSLUCENT;
+    const bool blendModeTranslucent = view.getBlendMode() == View::BlendMode::TRANSLUCENT;
+    const bool hasCustomRenderTarget = viewRenderTarget != mRenderTarget;
+    // "blending" is meaningless when the view has a custom rendertarget because it's not composited
+    const bool blending = !hasCustomRenderTarget && blendModeTranslucent;
     // If the swapchain is transparent or if we blend into it, we need to allocate our intermediate
     // buffers with an alpha channel.
-    // FIXME: this doesn't work when the target is a user provided rendertarget
-    const bool translucent = mSwapChain->isTransparent() || blending;
-    const TextureFormat hdrFormat = getHdrFormat(view, translucent);
+    const bool needsAlphaChannel = mSwapChain->isTransparent() || blendModeTranslucent;
+    const TextureFormat hdrFormat = getHdrFormat(view, needsAlphaChannel);
 
     const ColorPassConfig config{
             .vp = vp,
@@ -320,10 +322,10 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                     colorGrading &&
                     msaa <= 1 && !bloomOptions.enabled && !dofOptions.enabled && !taaOptions.enabled &&
                     driver.isFrameBufferFetchSupported(),
-            .translucent = translucent,
+            .translucent = needsAlphaChannel,
             .fxaa = fxaa,
             .dithering = dithering,
-            .ldrFormat = (colorGrading && fxaa) ? TextureFormat::RGBA8 : getLdrFormat(translucent)
+            .ldrFormat = (colorGrading && fxaa) ? TextureFormat::RGBA8 : getLdrFormat(needsAlphaChannel)
     };
 
     /*
@@ -455,7 +457,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     if (hasPostProcess) {
         if (dofOptions.enabled) {
-            input = ppm.dof(fg, input, dofOptions, translucent, cameraInfo);
+            input = ppm.dof(fg, input, dofOptions, needsAlphaChannel, cameraInfo);
         }
         if (colorGrading) {
             if (!colorGradingConfig.asSubpass) {
@@ -469,7 +471,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             }
         }
         if (fxaa) {
-            input = ppm.fxaa(fg, input, colorGradingConfig.ldrFormat, !colorGrading || translucent);
+            input = ppm.fxaa(fg, input, colorGradingConfig.ldrFormat, !colorGrading || needsAlphaChannel);
         }
         if (scaled) {
             if (UTILS_LIKELY(!blending && upscalingQuality == View::QualityLevel::LOW)) {

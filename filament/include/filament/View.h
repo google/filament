@@ -61,8 +61,6 @@ class Viewport;
  */
 class UTILS_PUBLIC View : public FilamentAPI {
 public:
-    using TargetBufferFlags = backend::TargetBufferFlags;
-
     enum class QualityLevel : uint8_t {
         LOW,
         MEDIUM,
@@ -410,6 +408,9 @@ public:
      *
      * By default, the view's associated render target is nullptr, which corresponds to the
      * SwapChain associated with the engine.
+     *
+     * A view with a custom render target cannot rely on Renderer::ClearOptions, which only apply
+     * to the SwapChain. Such view can use a Skybox instead.
      *
      * @param renderTarget Render target associated with view, or nullptr for the swap chain.
      */
