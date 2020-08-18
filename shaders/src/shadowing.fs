@@ -310,20 +310,21 @@ float screenSpaceContactShadow(vec3 lightDirection) {
 // VSM
 //------------------------------------------------------------------------------
 
-float linstep(float a, float b, float v) {
+highp float linstep(const highp float a, const highp float b, const highp float v) {
     return clamp((v - a) / (b - a), 0.0, 1.0);
 }
 
-float reduceLightBleed(float pMax, float amount) {
+highp float reduceLightBleed(const highp float pMax, const highp float amount) {
     return linstep(amount, 1.0, pMax);
 }
 
-float chebyshevUpperBound(vec2 moments, float mean, float minVariance, float lightBleedReduction) {
-    float variance = moments.y - (moments.x * moments.x);
+highp float chebyshevUpperBound(const highp vec2 moments, const highp float mean,
+        const highp float minVariance, const highp float lightBleedReduction) {
+    const highp float variance = moments.y - (moments.x * moments.x);
     variance = max(variance, minVariance);
 
-    float d = mean - moments.x;
-    float pMax = variance / (variance + d * d);
+    const highp float d = mean - moments.x;
+    highp float pMax = variance / (variance + d * d);
     pMax = reduceLightBleed(pMax, lightBleedReduction);
 
     return mean <= moments.x ? 1.0 : pMax;
@@ -351,9 +352,9 @@ float shadow(const lowp sampler2DArrayShadow shadowMap, const uint layer, const 
 #endif
 }
 
-float shadowVsm(const lowp sampler2DArray shadowMap, const uint layer, const vec3 shadowPosition,
-        const float fragDepth) {
-    vec2 moments = texture(shadowMap, vec3(shadowPosition.xy, layer)).xy;
+float shadowVsm(const highp sampler2DArray shadowMap, const uint layer, const highp vec3 shadowPosition,
+        const highp float fragDepth) {
+    const highp vec2 moments = texture(shadowMap, vec3(shadowPosition.xy, layer)).xy;
 
     // TODO: bias and lightBleedReduction should be uniforms
     const float bias = 0.01;
