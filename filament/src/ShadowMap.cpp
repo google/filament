@@ -102,10 +102,41 @@ void ShadowMap::render(DriverApi& driver, Handle<HwRenderTarget> rt,
 }
 
 void ShadowMap::computeSceneCascadeParams(const FScene::LightSoa& lightData, size_t index,
-        FScene const* scene, filament::CameraInfo const& camera, uint8_t visibleLayers,
+        FView const& view, filament::CameraInfo const& camera, uint8_t visibleLayers,
         CascadeParameters& cascadeParams) {
+    // Calculate the directional light's "position".
+    // For VSM, we pick a point on the sphere that bounds the camera's culling frustum.
+    if (false /*view.hasVsm()*/) {
+        // Calculate view frustum vertices in world-space.
+        // TODO: take shadowFar into account.
+        float3 wsViewFrustumVertices[8];
+        computeFrustumCorners(wsViewFrustumVertices,
+                camera.model * FCamera::inverseProjection(camera.cullingProjection));
+
+        // Find the centroid of the frustum in world-space.
+        float3 wsCentroid { 0.0, 0.0, 0.0 };
+        for (float3 v : wsViewFrustumVertices) {
+            wsCentroid += v;
+        }
+        wsCentroid *= (1.0 / 8.0);
+
+        // Find the radius of the frustum's bounding sphere.
+        float wsRadius = 0.0f;
+        for (float3 v : wsViewFrustumVertices) {
+            float distance = length(v - wsCentroid);
+            wsRadius = max(wsRadius, distance);
+        }
+
+        const float3 l = lightData.elementAt<FScene::DIRECTION>(0); // guaranteed normalized
+        cascadeParams.wsLightPosition = wsCentroid - (l * wsRadius);
+    } else {
+        // For PCF, we could choose any position; we pick the camera position so we have a fixed
+        // reference -- that's "not too far" from the scene.
+        cascadeParams.wsLightPosition = camera.getPosition();
+    }
+
     // Compute the light's model matrix.
-    const float3 lightPosition = camera.getPosition();
+    const float3 lightPosition = cascadeParams.wsLightPosition;
     const float3 dir = lightData.elementAt<FScene::DIRECTION>(index);
     const mat4f M = mat4f::lookAt(lightPosition, lightPosition + dir, float3{ 0, 1, 0 });
     const mat4f Mv = FCamera::rigidTransformInverse(M);
@@ -116,7 +147,7 @@ void ShadowMap::computeSceneCascadeParams(const FScene::LightSoa& lightData, siz
     cascadeParams.vsNearFar = { std::numeric_limits<float>::lowest(), std::numeric_limits<float>::max() };
     cascadeParams.wsShadowCastersVolume = {};
     cascadeParams.wsShadowReceiversVolume = {};
-    visitScene(*scene, visibleLayers,
+    visitScene(*view.getScene(), visibleLayers,
             [&](Aabb caster) {
                 cascadeParams.wsShadowCastersVolume.min =
                         min(cascadeParams.wsShadowCastersVolume.min, caster.min);
@@ -216,10 +247,9 @@ void ShadowMap::computeShadowCameraDirectional(
      *
      * The light's model matrix contains the light position and direction.
      *
-     * For directional lights, we could choose any position; we pick the camera position
-     * so we have a fixed reference -- that's "not too far" from the scene.
+     * The directional light position is chosen inside computeSceneCascadeParams.
      */
-    const float3 lightPosition = camera.getPosition();
+    const float3 lightPosition = cascadeParams.wsLightPosition;
     const mat4f M = mat4f::lookAt(lightPosition, lightPosition + dir, float3{ 0, 1, 0 });
     const mat4f Mv = FCamera::rigidTransformInverse(M);
 

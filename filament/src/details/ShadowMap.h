@@ -71,12 +71,15 @@ public:
 
         Aabb wsShadowCastersVolume;
         Aabb wsShadowReceiversVolume;
+
+        // Position of the directional light in world space.
+        math::float3 wsLightPosition;
     };
 
     // Call once per frame to populate the CascadeParameters struct, then pass to update().
     // This computes values constant across all cascades.
     static void computeSceneCascadeParams(const FScene::LightSoa& lightData, size_t index,
-            FScene const* scene, filament::CameraInfo const& camera, uint8_t visibleLayers,
+            FView const& view, filament::CameraInfo const& camera, uint8_t visibleLayers,
             CascadeParameters& cascadeParams);
 
     // Call once per frame if the light, scene (or visible layers) or camera changes.

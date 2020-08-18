@@ -210,7 +210,7 @@ bool ShadowMapManager::updateCascadeShadowMaps(FEngine& engine, FView& view,
 
     if (mCascadeShadowMaps.size() > 0) {
         // Compute scene-dependent values shared across all cascades.
-        ShadowMap::computeSceneCascadeParams(lightData, 0, scene, viewingCameraInfo, visibleLayers,
+        ShadowMap::computeSceneCascadeParams(lightData, 0, view, viewingCameraInfo, visibleLayers,
                 cascadeParams);
 
         // Even if we have more than one cascade, we cull directional shadow casters against the
@@ -234,6 +234,9 @@ bool ShadowMapManager::updateCascadeShadowMaps(FEngine& engine, FView& view,
         const float normalBias = lcm.getShadowNormalBias(0);
         perViewUb.setUniform(offsetof(PerViewUib, shadowBias),
                 float3{0, normalBias * texelSizeWorldSpace, 0});
+
+        // Set the directional light position. Only used when VSM is active.
+        perViewUb.setUniform(offsetof(PerViewUib, lightPosition), cascadeParams.wsLightPosition);
     }
 
     // Adjust the near and far planes to tighly bound the scene.
