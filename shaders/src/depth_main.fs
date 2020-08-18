@@ -17,8 +17,8 @@ void main() {
 #if defined(HAS_VSM)
     // Since we're rendering from the perspective of the light, frameUniforms.cameraPosition is the
     // light position, in world space.
-    // We need a linear depth representation, so we can't simply use gl_FragDepth here, which won't
-    // be linear for spot shadows or when using LiSPM.
+    // We use "distance to the light" as the depth metric, which works for both directional and spot
+    // lights.
     highp float depth = length(frameUniforms.cameraPosition.xyz - vertex_worldPosition);
 
     highp float dx = dFdx(depth);
@@ -26,7 +26,7 @@ void main() {
 
     // Output the first and second depth moments.
     // The first moment is mean depth.
-    // The second moment is depth squared.
+    // The second moment is mean depth squared.
     // These values are retrieved when sampling the shadow map to compute variance.
     highp float bias = 0.25 * (dx * dx + dy * dy);
     fragColor = vec4(depth, depth * depth + bias, 0.0, 0.0);

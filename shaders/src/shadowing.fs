@@ -320,6 +320,8 @@ highp float reduceLightBleed(const highp float pMax, const highp float amount) {
 
 highp float chebyshevUpperBound(const highp vec2 moments, const highp float mean,
         const highp float minVariance, const highp float lightBleedReduction) {
+    // Donnelly and Lauritzen 2006, "Variance Shadow Maps"
+
     const highp float variance = moments.y - (moments.x * moments.x);
     variance = max(variance, minVariance);
 
