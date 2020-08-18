@@ -236,7 +236,8 @@ void createLogicalDevice(VulkanContext& context) {
     const VmaAllocatorCreateInfo allocatorInfo {
         .physicalDevice = context.physicalDevice,
         .device = context.device,
-        .pVulkanFunctions = &funcs
+        .pVulkanFunctions = &funcs,
+        .instance = context.instance
     };
     vmaCreateAllocator(&allocatorInfo, &context.allocator);
 
