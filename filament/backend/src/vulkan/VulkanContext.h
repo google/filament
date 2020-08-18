@@ -24,9 +24,10 @@
 
 #include <bluevk/BlueVK.h>
 
-#include <utils/compiler.h>
-
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wundef"
 #include "vk_mem_alloc.h"
+#pragma clang diagnostic pop
 
 #include <utils/Condition.h>
 #include <utils/Mutex.h>

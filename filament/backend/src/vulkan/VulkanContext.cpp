@@ -22,6 +22,9 @@
 #pragma clang diagnostic ignored "-Wunused-variable"
 #pragma clang diagnostic ignored "-Wmissing-field-initializers"
 #pragma clang diagnostic ignored "-Wtautological-compare"
+#pragma clang diagnostic ignored "-Wnullability-completeness"
+#pragma clang diagnostic ignored "-Wweak-vtables"
+#pragma clang diagnostic ignored "-Wimplicit-fallthrough"
 #define VMA_IMPLEMENTATION
 #include <cstdio>
 #include "vk_mem_alloc.h"
