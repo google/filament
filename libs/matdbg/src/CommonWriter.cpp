@@ -33,6 +33,7 @@ std::string formatVariantString(uint8_t variant) noexcept {
         if (variant & Variant::SKINNING_OR_MORPHING)  variantString += "SKN|";
         if (variant & Variant::DEPTH)                 variantString += "DEP|";
         if (variant & Variant::FOG)                   variantString += "FOG|";
+        if (variant & Variant::VSM)                   variantString += "VSM|";
         variantString = variantString.substr(0, variantString.length() - 1);
     }
 
