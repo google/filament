@@ -121,9 +121,9 @@ void getCommonPixelParams(const MaterialInputs material, inout PixelParams pixel
     pixel.thickness = max(0.0, material.thickness);
 #endif
 #if defined(MATERIAL_HAS_MICRO_THICKNESS) && (REFRACTION_TYPE == REFRACTION_TYPE_THIN)
-pixel.uThickness = max(0.0, material.microThickness);
+    pixel.uThickness = max(0.0, material.microThickness);
 #else
-pixel.uThickness = 0.0;
+    pixel.uThickness = 0.0;
 #endif
 #endif
 }
