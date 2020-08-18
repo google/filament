@@ -63,8 +63,8 @@ static void usage(char* name) {
             "       Reflect the specified metadata as JSON: parameters\n\n"
             "   --variant-filter=<filter>, -V <filter>\n"
             "       Filter out specified comma-separated variants:\n"
-            "           directionalLighting, dynamicLighting, shadowReceiver, skinning\n"
-            "       This variant filter is merged the filter from the material, if any\n\n"
+            "           directionalLighting, dynamicLighting, shadowReceiver, skinning, vsm\n"
+            "       This variant filter is merged with the filter from the material, if any\n\n"
             "   --version, -v\n"
             "       Print the material version number\n\n"
             "Internal use and debugging only:\n"
@@ -110,6 +110,8 @@ static uint8_t parseVariantFilter(const std::string& arg) {
             variantFilter |= filament::Variant::SHADOW_RECEIVER;
         } else if (item == "skinning") {
             variantFilter |= filament::Variant::SKINNING_OR_MORPHING;
+        } else if (item == "vsm") {
+            variantFilter |= filament::Variant::VSM;
         }
     }
     return variantFilter;
