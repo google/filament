@@ -252,6 +252,7 @@ void createLogicalDevice(VulkanContext& context) {
         .physicalDevice = context.physicalDevice,
         .device = context.device,
         .pVulkanFunctions = &funcs,
+        .pRecordSettings = nullptr,
         .instance = context.instance
     };
     vmaCreateAllocator(&allocatorInfo, &context.allocator);
