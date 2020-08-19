@@ -356,7 +356,7 @@ float shadow(const lowp sampler2DArrayShadow shadowMap, const uint layer, const 
 
 float shadowVsm(const highp sampler2DArray shadowMap, const uint layer, const highp vec3 shadowPosition,
         const highp float fragDepth) {
-    const highp vec2 moments = texture(shadowMap, vec3(shadowPosition.xy, layer)).xy;
+    highp vec2 moments = texture(shadowMap, vec3(shadowPosition.xy, layer)).xy;
 
     // TODO: bias and lightBleedReduction should be uniforms
     const float bias = 0.01;
