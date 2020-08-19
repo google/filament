@@ -325,7 +325,7 @@ highp float chebyshevUpperBound(const highp vec2 moments, const highp float mean
     highp float variance = moments.y - (moments.x * moments.x);
     variance = max(variance, minVariance);
 
-    const highp float d = mean - moments.x;
+    highp float d = mean - moments.x;
     highp float pMax = variance / (variance + d * d);
     pMax = reduceLightBleed(pMax, lightBleedReduction);
 
