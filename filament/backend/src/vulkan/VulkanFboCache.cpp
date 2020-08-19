@@ -234,14 +234,16 @@ void VulkanFboCache::gc() noexcept {
     mCurrentTime++;
     const uint32_t evictTime = mCurrentTime - TIME_BEFORE_EVICTION;
     for (auto iter = mFramebufferCache.begin(); iter != mFramebufferCache.end(); ++iter) {
-        if (iter->second.timestamp < evictTime) {
-            vkDestroyFramebuffer(mContext.device, iter->second.handle, VKALLOC);
+        const FboVal fbo = iter->second;
+        if (fbo.timestamp < evictTime && fbo.handle) {
+            mRenderPassRefCount[iter->first.renderPass]--;
+            vkDestroyFramebuffer(mContext.device, fbo.handle, VKALLOC);
             iter.value().handle = VK_NULL_HANDLE;
         }
     }
     for (auto iter = mRenderPassCache.begin(); iter != mRenderPassCache.end(); ++iter) {
-        VkRenderPass handle = iter->second.handle;
-        if (iter->second.timestamp < evictTime && mRenderPassRefCount[handle] == 0) {
+        const VkRenderPass handle = iter->second.handle;
+        if (iter->second.timestamp < evictTime && handle && mRenderPassRefCount[handle] == 0) {
             vkDestroyRenderPass(mContext.device, handle, VKALLOC);
             iter.value().handle = VK_NULL_HANDLE;
         }
