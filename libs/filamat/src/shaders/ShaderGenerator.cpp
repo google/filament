@@ -193,6 +193,7 @@ std::string ShaderGenerator::createVertexProgram(filament::backend::ShaderModel 
     cg.generateDefine(vs, "HAS_SHADOWING", litVariants && variant.hasShadowReceiver());
     cg.generateDefine(vs, "HAS_SHADOW_MULTIPLIER", material.hasShadowMultiplier);
     cg.generateDefine(vs, "HAS_SKINNING_OR_MORPHING", variant.hasSkinningOrMorphing());
+    cg.generateDefine(vs, "HAS_VSM", variant.hasVsm());
     cg.generateDefine(vs, getShadingDefine(material.shading), true);
     generateMaterialDefines(vs, cg, mProperties, mDefines);
 
@@ -420,7 +421,7 @@ std::string ShaderGenerator::createFragmentProgram(filament::backend::ShaderMode
     cg.generateSeparator(fs);
     cg.generateSamplers(fs,
             material.samplerBindings.getBlockOffset(BindingPoints::PER_VIEW),
-            SibGenerator::getPerViewSib());
+            SibGenerator::getPerViewSib(variantKey));
     cg.generateSamplers(fs,
             material.samplerBindings.getBlockOffset(BindingPoints::PER_MATERIAL_INSTANCE),
             material.sib);

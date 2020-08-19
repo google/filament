@@ -44,7 +44,7 @@ namespace filament {
         // Variant                 0  | VSM | FOG | DEP | SKN | SRE | DYN | DIR |
         //                    ...-----+-----+-----+-----+-----+-----+-----+-----+
         // Reserved variants:
-        //       Vertex depth            0     0     1     X     0     0     0
+        //       Vertex depth            X     0     1     X     0     0     0
         //     Fragment depth            X     0     1     0     0     0     0
         //           Reserved            X     X     1     X     X     X     X
         //           Reserved            X     X     0     X     1     0     0
@@ -132,6 +132,10 @@ namespace filament {
         static constexpr uint8_t filterVariantVertex(uint8_t variantKey) noexcept {
             // filter out vertex variants that are not needed. For e.g. fog doesn't affect the
             // vertex shader.
+            if (variantKey & DEPTH) {
+                // VSM affects the vertex shader, but only for DEPTH variants.
+                return variantKey & (VERTEX_MASK | VSM);
+            }
             return variantKey & VERTEX_MASK;
         }
 

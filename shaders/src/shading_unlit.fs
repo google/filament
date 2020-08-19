@@ -45,7 +45,11 @@ vec4 evaluateMaterial(const MaterialInputs material) {
     if ((frameUniforms.directionalShadows & 1u) != 0u) {
         uint cascade = getShadowCascade();
         uint layer = cascade;
+#if defined(HAS_VSM)
+        // TODO: VSM shadow multiplier
+#else
         visibility = shadow(light_shadowMap, layer, getCascadeLightSpacePosition(cascade));
+#endif
     }
     if ((frameUniforms.directionalShadows & 0x2u) != 0u && visibility > 0.0) {
         if (objectUniforms.screenSpaceContactShadows != 0u) {
