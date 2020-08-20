@@ -573,7 +573,7 @@ VkImageView VulkanTexture::getImageView(int level, int layer, VkImageAspectFlags
 
     VkImageView imageView;
     vkCreateImageView(mContext.device, &viewInfo, VKALLOC, &imageView);
-    mImageViews.emplace_back((ImageViewCacheEntry) {level, layer, imageView});
+    mImageViews.emplace_back(ImageViewCacheEntry({level, layer, imageView}));
 
     // This is a very simplistic cache that exists only for the benefit of VulkanRenderTarget.
     // If it grows too big, there's a bug or we need to replace it with a more sophisticated cache.
