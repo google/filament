@@ -114,6 +114,9 @@ struct VulkanTexture : public HwTexture {
     void updateCubeImage(const PixelBufferDescriptor& data, const FaceOffsets& faceOffsets,
             int miplevel);
 
+    // Gets or creates a cached image view for a single miplevel and array layer.
+    VkImageView getImageView(int level, int layer, VkImageAspectFlags aspect);
+
     // Issues a barrier that transforms the layout of the image, e.g. from a CPU-writeable
     // layout to a GPU-readable layout.
     static void transitionImageLayout(VkCommandBuffer cmdbuffer, VkImage image,
@@ -132,6 +135,13 @@ private:
             uint32_t width, uint32_t height, uint32_t depth,
             FaceOffsets const* faceOffsets, uint32_t miplevel);
 
+    struct ImageViewCacheEntry {
+        int level;
+        int layer;
+        VkImageView view;
+    };
+
+    std::vector<ImageViewCacheEntry> mImageViews;
     VkImageAspectFlags mAspect;
     VulkanContext& mContext;
     VulkanStagePool& mStagePool;

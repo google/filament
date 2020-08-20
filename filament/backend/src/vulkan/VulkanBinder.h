@@ -261,7 +261,7 @@ private:
 
     // Store the current "time" (really just a frame count) and LRU eviction parameters.
     uint32_t mCurrentTime = 0;
-    static constexpr uint32_t TIME_BEFORE_EVICTION = 2;
+    static constexpr uint32_t TIME_BEFORE_EVICTION = 3;
 };
 
 } // namespace filament
