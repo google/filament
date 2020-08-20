@@ -20,6 +20,8 @@
 
 #include <utils/Entity.h>
 
+#include <algorithm>
+
 using namespace filament;
 using namespace utils;
 
@@ -71,22 +73,32 @@ Java_com_google_android_filament_LightManager_nBuilderCastShadows(JNIEnv*, jclas
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_LightManager_nBuilderShadowOptions(JNIEnv*, jclass,
-        jlong nativeBuilder, jint mapSize, jfloat constantBias, jfloat normalBias, jfloat shadowFar,
-        jfloat shadowNearHint, jfloat shadowFarHint, jboolean stable,
-        jboolean screenSpaceContactShadows, jint stepCount, jfloat maxShadowDistance) {
+Java_com_google_android_filament_LightManager_nBuilderShadowOptions(JNIEnv* env, jclass,
+        jlong nativeBuilder, jint mapSize, jint cascades, jfloatArray splitPositions,
+        jfloat constantBias, jfloat normalBias, jfloat shadowFar, jfloat shadowNearHint,
+        jfloat shadowFarHint, jboolean stable, jboolean screenSpaceContactShadows, jint stepCount,
+        jfloat maxShadowDistance) {
     LightManager::Builder *builder = (LightManager::Builder *) nativeBuilder;
-    builder->shadowOptions(
-            LightManager::ShadowOptions{.mapSize = (uint32_t)mapSize,
-                                        .constantBias = constantBias,
-                                        .normalBias = normalBias,
-                                        .shadowFar = shadowFar,
-                                        .shadowNearHint = shadowNearHint,
-                                        .shadowFarHint = shadowFarHint,
-                                        .stable = (bool)stable,
-                                        .screenSpaceContactShadows = (bool)screenSpaceContactShadows,
-                                        .stepCount = uint8_t(stepCount),
-                                        .maxShadowDistance = maxShadowDistance});
+    LightManager::ShadowOptions shadowOptions {
+            .mapSize = (uint32_t)mapSize,
+            .shadowCascades = (uint8_t)cascades,
+            .constantBias = constantBias,
+            .normalBias = normalBias,
+            .shadowFar = shadowFar,
+            .shadowNearHint = shadowNearHint,
+            .shadowFarHint = shadowFarHint,
+            .stable = (bool)stable,
+            .screenSpaceContactShadows = (bool)screenSpaceContactShadows,
+            .stepCount = uint8_t(stepCount),
+            .maxShadowDistance = maxShadowDistance
+    };
+    jfloat *nativeSplits = env->GetFloatArrayElements(splitPositions, NULL);
+    const size_t splitCount = std::min(3, env->GetArrayLength(splitPositions));
+    for (size_t i = 0; i < splitCount; i++) {
+        shadowOptions.cascadeSplitPositions[i] = nativeSplits[i];
+    }
+    env->ReleaseFloatArrayElements(splitPositions, nativeSplits, 0);
+    builder->shadowOptions(shadowOptions);
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -171,6 +183,30 @@ Java_com_google_android_filament_LightManager_nBuilderHaloFalloff(JNIEnv*, jclas
         jlong nativeBuilder, jfloat haloFalloff) {
     LightManager::Builder *builder = (LightManager::Builder *) nativeBuilder;
     builder->sunHaloFalloff(haloFalloff);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_LightManager_nComputeUniformSplits(JNIEnv* env, jclass,
+        jfloatArray splitPositions, jint cascades) {
+    jfloat *nativeSplits = env->GetFloatArrayElements(splitPositions, NULL);
+    LightManager::ShadowCascades::computeUniformSplits(nativeSplits, (uint8_t) cascades);
+    env->ReleaseFloatArrayElements(splitPositions, nativeSplits, 0);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_LightManager_nComputeLogSplits(JNIEnv* env, jclass,
+        jfloatArray splitPositions, jint cascades, jfloat near, jfloat far) {
+    jfloat *nativeSplits = env->GetFloatArrayElements(splitPositions, NULL);
+    LightManager::ShadowCascades::computeLogSplits(nativeSplits, (uint8_t) cascades, near, far);
+    env->ReleaseFloatArrayElements(splitPositions, nativeSplits, 0);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_LightManager_nComputePracticalSplits(JNIEnv* env, jclass,
+        jfloatArray splitPositions, jint cascades, jfloat near, jfloat far, jfloat lambda) {
+    jfloat *nativeSplits = env->GetFloatArrayElements(splitPositions, NULL);
+    LightManager::ShadowCascades::computePracticalSplits(nativeSplits, (uint8_t) cascades, near, far, lambda);
+    env->ReleaseFloatArrayElements(splitPositions, nativeSplits, 0);
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
