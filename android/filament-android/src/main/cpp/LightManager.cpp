@@ -93,8 +93,8 @@ Java_com_google_android_filament_LightManager_nBuilderShadowOptions(JNIEnv* env,
             .maxShadowDistance = maxShadowDistance
     };
     jfloat *nativeSplits = env->GetFloatArrayElements(splitPositions, NULL);
-    const size_t splitCount = std::min(3, env->GetArrayLength(splitPositions));
-    for (size_t i = 0; i < splitCount; i++) {
+    const jsize splitCount = std::min((jsize) 3, env->GetArrayLength(splitPositions));
+    for (jsize i = 0; i < splitCount; i++) {
         shadowOptions.cascadeSplitPositions[i] = nativeSplits[i];
     }
     env->ReleaseFloatArrayElements(splitPositions, nativeSplits, 0);
