@@ -298,10 +298,10 @@ constexpr size_t OpenGLContext::getIndexForCap(GLenum cap) noexcept { //NOLINT
         case GL_PRIMITIVE_RESTART_FIXED_INDEX:  index =  9; break;
         case GL_RASTERIZER_DISCARD:             index = 10; break;
 #ifdef GL_ARB_seamless_cube_map
-            case GL_TEXTURE_CUBE_MAP_SEAMLESS:      index = 11; break;
+        case GL_TEXTURE_CUBE_MAP_SEAMLESS:      index = 11; break;
 #endif
 #if GL41_HEADERS
-            case GL_PROGRAM_POINT_SIZE:             index = 12; break;
+        case GL_PROGRAM_POINT_SIZE:             index = 12; break;
 #endif
         default: index = 13; break; // should never happen
     }

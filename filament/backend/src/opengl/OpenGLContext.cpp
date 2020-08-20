@@ -40,7 +40,8 @@ OpenGLContext::OpenGLContext() noexcept {
 #endif
 
     // OpenGL (ES) version
-    GLint major = 0, minor = 0;
+    GLint major = 0;
+    GLint minor = 0;
     glGetIntegerv(GL_MAJOR_VERSION, &major);
     glGetIntegerv(GL_MINOR_VERSION, &minor);
     glGetIntegerv(GL_MAX_RENDERBUFFER_SIZE, &gets.max_renderbuffer_size);
@@ -79,7 +80,7 @@ OpenGLContext::OpenGLContext() noexcept {
     }
 
     // Figure out if we have the extension we need
-    GLint n;
+    GLint n = 0;
     glGetIntegerv(GL_NUM_EXTENSIONS, &n);
     ExtentionSet exts;
     for (GLint i = 0; i < n; i++) {
@@ -113,20 +114,23 @@ OpenGLContext::OpenGLContext() noexcept {
      * Set our default state
      */
 
-    disable(GL_DITHER);
-    enable(GL_DEPTH_TEST);
+    // We need to make sure our internal state matches the GL state when we start.
+    // (some of these calls may be unneeded as they might be the gl defaults)
+    glDisable(GL_BLEND);
+    glDisable(GL_CULL_FACE);
+    glDisable(GL_SCISSOR_TEST);
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_STENCIL_TEST);
+    glDisable(GL_DITHER);
+    glDisable(GL_SAMPLE_ALPHA_TO_COVERAGE);
+    glDisable(GL_SAMPLE_COVERAGE);
+    glDisable(GL_POLYGON_OFFSET_FILL);
 
     // Point sprite size and seamless cubemap filtering are disabled by default in desktop GL.
     // In OpenGL ES, these flags do not exist because they are always on.
 #if GL41_HEADERS
     enable(GL_PROGRAM_POINT_SIZE);
-    enable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 #endif
-
-    // TODO: Don't enable scissor when it is not necessary. This optimization could be done here in
-    //       the driver by simply deferring the enable until the scissor rect is smaller than the
-    //       window.
-    enable(GL_SCISSOR_TEST);
 
 #ifdef GL_ARB_seamless_cube_map
     enable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
@@ -146,7 +150,7 @@ OpenGLContext::OpenGLContext() noexcept {
     if (ext.KHR_debug) {
         auto cb = [](GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length,
                 const GLchar* message, const void *userParam) {
-            io::LogStream* stream;
+            io::LogStream* stream = nullptr;
             switch (severity) {
                 case GL_DEBUG_SEVERITY_HIGH:
                     stream = &slog.e;
