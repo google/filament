@@ -489,6 +489,13 @@ void FrameGraph::export_graphviz(utils::io::ostream& out, const char* viewName) 
         auto textureResource = dynamic_cast<ResourceEntry<FrameGraphTexture> const*>(subresource);
         if (textureResource) {
             out << ", " << (bool(textureResource->descriptor.usage & TextureUsage::SAMPLEABLE) ? "texture" : "renderbuffer");
+            out << "\\n" << textureResource->descriptor.width << "x" << textureResource->descriptor.height;
+            if (bool(textureResource->descriptor.usage & TextureUsage::SUBPASS_INPUT)) {
+                out << " SI";
+            }
+            if (textureResource->descriptor.samples > 1) {
+                out << " MS";
+            }
         }
 #endif
         auto rendertarget = subresource->asRenderTargetResourceEntry();
