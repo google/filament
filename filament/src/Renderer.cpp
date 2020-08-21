@@ -556,6 +556,13 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
                 .samples = config.msaa,  // we need to conserve the sample buffer
                 .format = config.hdrFormat
         };
+
+        // The opaque pass never uses subpasses, but the transparent pass might.
+        // Therefore we need to set up the usage flag here, before the color texture is created.
+        if (colorGradingConfig.asSubpass) {
+            desc.usage |= backend::TextureUsage::SUBPASS_INPUT;
+        }
+
         input = colorPass(fg, "Color Pass (opaque)", desc, config,
                 { .asSubpass = false }, opaquePass, view);
 
