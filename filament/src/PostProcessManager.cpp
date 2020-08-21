@@ -458,8 +458,14 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOclusion(
                         float4{ desc.width, desc.height, 1.0f / desc.width, 1.0f / desc.height });
                 mi->setParameter("invRadiusSquared", 1.0f / (data.options.radius * data.options.radius));
                 mi->setParameter("projectionScaleRadius", projectionScale * data.options.radius);
+
+                auto m22 = cameraInfo.projection[2][2];
+                auto m32 = cameraInfo.projection[3][2];
+                auto m23 = cameraInfo.projection[2][3];
                 mi->setParameter("depthParams", float2{
-                        -cameraInfo.projection[3].z, cameraInfo.projection[2].z - 1.0 } * 0.5f);
+                        m32 / (m22 + m23),
+                        2.0f * m23 / (m22 + m23) });
+
                 mi->setParameter("positionParams", float2{
                         invProjection[0][0], invProjection[1][1] } * 2.0f);
                 mi->setParameter("peak2", peak * peak);
