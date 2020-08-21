@@ -198,7 +198,7 @@ public class LightManager {
          *
          * <p>
          * When using shadow cascades, {@link ShadowOptions#cascadeSplitPositions} must also be set.
-         * <p>
+         * </p>
          *
          * @see ShadowOptions#cascadeSplitPositions
          */
@@ -219,7 +219,7 @@ public class LightManager {
          * { 0.25f, 0.50f, 0.75f }
          * </p>
          *
-         * </p>
+         * <p>
          * For N cascades, N - 1 split positions will be read from this array.
          * </p>
          *
@@ -348,8 +348,10 @@ public class LightManager {
          * Utility method to compute {@link ShadowOptions#cascadeSplitPositions} according to a
          * practical split scheme.
          *
+         * <p>
          * The practical split scheme uses uses a lambda value to interpolate between the logrithmic
          * and uniform split schemes. Start with a lambda value of 0.5f and adjust for your scene.
+         * </p>
          *
          * See: Zhang et al 2006, "Parallel-split shadow maps for large-scale virtual environments"
          *
