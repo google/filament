@@ -113,8 +113,6 @@ static void loadDeviceFunctions(void* context, PFN_vkVoidFunction (*loadcb)(void
 static PFN_vkVoidFunction vkGetInstanceProcAddrWrapper(void* context, const char* name);
 static PFN_vkVoidFunction vkGetDeviceProcAddrWrapper(void* context, const char* name);
 
-using std::string;
-
 namespace bluevk {
 
 // OS Dependent.
