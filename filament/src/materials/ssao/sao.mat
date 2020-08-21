@@ -12,7 +12,7 @@ material {
             precision: high
         },
         {
-            type : float2,
+            type : float,
             name : depthParams,
             precision: high
         },
@@ -107,8 +107,8 @@ fragment {
         // Our far plane is at infinity, which causes a division by zero below, which in turn
         // causes some issues on some GPU. We workaround it by replacing "infinity" by the closest
         // value representable in  a 24 bit depth buffer.
-        const float preventDiv0 = -1.0 / 16777216.0;
-        return materialParams.depthParams.x / min(depth * materialParams.depthParams.y - 1.0, preventDiv0);
+        const float preventDiv0 = 1.0 / 16777216.0;
+        return materialParams.depthParams / max(depth, preventDiv0);
     }
 
     highp float sampleDepthLinear(const vec2 uv, float lod) {

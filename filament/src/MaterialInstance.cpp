@@ -176,7 +176,7 @@ void FMaterialInstance::setDepthWrite(bool enable) noexcept {
 }
 
 void FMaterialInstance::setDepthCulling(bool enable) noexcept {
-    mDepthFunc = enable ? RasterState::DepthFunc::LE : RasterState::DepthFunc::A;
+    mDepthFunc = enable ? RasterState::DepthFunc::GE : RasterState::DepthFunc::A;
 }
 
 const char* FMaterialInstance::getName() const noexcept {

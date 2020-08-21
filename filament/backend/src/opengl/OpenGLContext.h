@@ -128,6 +128,7 @@ public:
         bool EXT_texture_compression_s3tc_srgb = false;
         bool EXT_disjoint_timer_query = false;
         bool EXT_shader_framebuffer_fetch = false;
+        bool EXT_clip_control = false;
     } ext;
 
     struct {

@@ -200,6 +200,12 @@ OpenGLContext::OpenGLContext() noexcept {
         glDebugMessageCallback(cb, nullptr);
     }
 #endif
+
+#if defined(GL_EXT_clip_control) || defined(GL_ARB_clip_control) || defined(GL_VERSION_4_5)
+    if (ext.EXT_clip_control) {
+        glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
+    }
+#endif
 }
 
 UTILS_NOINLINE
@@ -224,6 +230,7 @@ void OpenGLContext::initExtensionsGLES(GLint major, GLint minor, ExtentionSet co
     ext.KHR_debug = hasExtension(exts, "GL_KHR_debug");
     ext.EXT_texture_compression_s3tc_srgb = hasExtension(exts, "GL_EXT_texture_compression_s3tc_srgb");
     ext.EXT_shader_framebuffer_fetch = hasExtension(exts, "GL_EXT_shader_framebuffer_fetch");
+    ext.EXT_clip_control = hasExtension(exts, "GL_EXT_clip_control");
     // ES 3.2 implies EXT_color_buffer_float
     if (major >= 3 && minor >= 2) {
         ext.EXT_color_buffer_float = true;
@@ -242,6 +249,7 @@ void OpenGLContext::initExtensionsGL(GLint major, GLint minor, ExtentionSet cons
     ext.KHR_debug = major >= 4 && minor >= 3;
     ext.EXT_texture_sRGB = hasExtension(exts, "GL_EXT_texture_sRGB");
     ext.EXT_shader_framebuffer_fetch = hasExtension(exts, "GL_EXT_shader_framebuffer_fetch");
+    ext.EXT_clip_control = hasExtension(exts, "GL_ARB_clip_control") || (major == 4 && minor >= 5);
 }
 
 void OpenGLContext::bindBuffer(GLenum target, GLuint buffer) noexcept {

@@ -107,8 +107,11 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             .add("aoReserved2",             1, UniformInterfaceBlock::Type::FLOAT)
             .add("aoReserved3",             1, UniformInterfaceBlock::Type::FLOAT)
 
+            .add("clipControl",             1, UniformInterfaceBlock::Type::FLOAT2)
+            .add("padding1",                1, UniformInterfaceBlock::Type::FLOAT2)
+
             // bring PerViewUib to 2 KiB
-            .add("padding2", 61, UniformInterfaceBlock::Type::FLOAT4)
+            .add("padding2", 60, UniformInterfaceBlock::Type::FLOAT4)
             .build();
     return uib;
 }

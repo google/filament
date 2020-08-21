@@ -144,7 +144,6 @@ void ShadowMapManager::prepare(FEngine& engine, DriverApi& driver, SamplerGroup&
     mRenderPassParams.flags.clear = TargetBufferFlags::DEPTH;
     mRenderPassParams.flags.discardStart = TargetBufferFlags::DEPTH;
     mRenderPassParams.flags.discardEnd = TargetBufferFlags::STENCIL;
-    mRenderPassParams.clearDepth = 1.0;
     if (mUseVsm) {
         mRenderPassParams.flags.discardStart |= TargetBufferFlags::COLOR0;
         mRenderPassParams.flags.clear |= TargetBufferFlags::COLOR0;
@@ -159,7 +158,7 @@ void ShadowMapManager::prepare(FEngine& engine, DriverApi& driver, SamplerGroup&
                     .filterMag = SamplerMagFilter::LINEAR,
                     .filterMin = SamplerMinFilter::LINEAR,
                     .compareMode = SamplerCompareMode::COMPARE_TO_TEXTURE,
-                    .compareFunc = SamplerCompareFunc::LE
+                    .compareFunc = SamplerCompareFunc::GE
             }});
 }
 

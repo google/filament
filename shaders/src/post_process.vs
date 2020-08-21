@@ -14,6 +14,9 @@ void main() {
 
     gl_Position = getPosition();
 
+    // Adjust clip-space
+    gl_Position.z = dot(gl_Position.zw, frameUniforms.clipControl.xy);
+
     // Invoke user code
     postProcessVertex(inputs);
 

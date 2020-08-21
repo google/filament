@@ -294,7 +294,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::structure(FrameGraph& fg,
                 data.depth = builder.createTexture("Structure Buffer", {
                         .width = width, .height = height,
                         .levels = uint8_t(levelCount),
-                        .format = TextureFormat::DEPTH24 });
+                        .format = TextureFormat::DEPTH32F });
 
                 data.depth = builder.write(builder.read(data.depth));
 
@@ -458,13 +458,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOclusion(
                         float4{ desc.width, desc.height, 1.0f / desc.width, 1.0f / desc.height });
                 mi->setParameter("invRadiusSquared", 1.0f / (data.options.radius * data.options.radius));
                 mi->setParameter("projectionScaleRadius", projectionScale * data.options.radius);
-
-                auto m22 = cameraInfo.projection[2][2];
-                auto m32 = cameraInfo.projection[3][2];
-                auto m23 = cameraInfo.projection[2][3];
-                mi->setParameter("depthParams", float2{
-                        m32 / (m22 + m23),
-                        2.0f * m23 / (m22 + m23) });
+                mi->setParameter("depthParams", cameraInfo.projection[3][2]);
 
                 mi->setParameter("positionParams", float2{
                         invProjection[0][0], invProjection[1][1] } * 2.0f);
@@ -481,7 +475,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOclusion(
                 mi->use(driver);
 
                 PipelineState pipeline(material.getPipelineState());
-                pipeline.rasterState.depthFunc = RasterState::DepthFunc::G;
+                pipeline.rasterState.depthFunc = RasterState::DepthFunc::L;
 
                 driver.beginRenderPass(ssao.target, ssao.params);
                 driver.draw(pipeline, fullScreenRenderPrimitive);
@@ -559,7 +553,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bilateralBlurPass(
                 mi->use(driver);
 
                 PipelineState pipeline(material.getPipelineState());
-                pipeline.rasterState.depthFunc = RasterState::DepthFunc::G;
+                pipeline.rasterState.depthFunc = RasterState::DepthFunc::L;
 
                 driver.beginRenderPass(blurred.target, blurred.params);
                 driver.draw(pipeline, fullScreenRenderPrimitive);
@@ -748,12 +742,14 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
     auto const& desc = fg.getDescriptor<FrameGraphTexture>(input);
     const float Kc = (cameraInfo.A * cameraInfo.f) / (focusDistance - cameraInfo.f);
     const float Ks = ((float)desc.height) / FCamera::SENSOR_SIZE;
-    const float2 cocParams{
+    float2 cocParams{
             // we use 1/zn instead of (zf - zn) / (zf * zn), because in reality we're using
             // a projection with an infinite far plane
             (dofOptions.blurScale * Ks * Kc) * focusDistance / cameraInfo.zn,
             (dofOptions.blurScale * Ks * Kc) * (1.0f - focusDistance / cameraInfo.zn)
     };
+    // handle reversed z
+    cocParams = float2{ -cocParams.x, cocParams.x + cocParams.y };
 
     Blackboard& blackboard = fg.getBlackboard();
     auto depth = blackboard.get<FrameGraphTexture>("depth");
@@ -1622,8 +1618,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                 constexpr mat4f normalizedToClip = {
                         float4{  2,  0,  0, 0 },
                         float4{  0,  2,  0, 0 },
-                        float4{  0,  0,  2, 0 },
-                        float4{ -1, -1, -1, 1 },
+                        float4{  0,  0,  -2, 0 },
+                        float4{ -1, -1, 1, 1 },
                 };
 
                 constexpr float2 sampleOffsets[9] = {

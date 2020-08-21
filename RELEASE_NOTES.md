@@ -27,6 +27,7 @@ A new header is inserted each time a *tag* is created.
 - Many improvement and fixes in the Metal backend.
 - Fixed translucent views with custom render targets.
 - Improved MSAA implementation compatibility on Android devices.
+- Use "reverse-z" for the depth buffer.
 
 ## v1.8.1
 
@@ -46,7 +47,7 @@ A new header is inserted each time a *tag* is created.
   Google-style line directives in shaders.
 - Color grading now has a quality option which affects the size and bit depth of the 3D LUT.
 - Fixed crash in the Metal backend when more than 16 samplers are bound.
-- Added validation in Texture::setImage().
+- Added validation in `Texture::setImage()`.
 - Fixed refraction/transmission roughness when specular anti-aliasing is enabled.
 
 ## v1.8.0

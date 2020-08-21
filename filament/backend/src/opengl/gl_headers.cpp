@@ -45,6 +45,9 @@ PFNGLGETDEBUGMESSAGELOGKHRPROC glGetDebugMessageLogKHR;
 #ifdef GL_EXT_disjoint_timer_query
 PFNGLGETQUERYOBJECTUI64VEXTPROC glGetQueryObjectui64v;
 #endif
+#ifdef GL_EXT_clip_control
+PFNGLCLIPCONTROLEXTPROC glClipControl;
+#endif
 
 static std::once_flag sGlExtInitialized;
 
@@ -101,6 +104,11 @@ void importGLESExtensionsEntryPoints() {
                         "glGetQueryObjectui64vEXT");
 #endif
     });
+#ifdef GL_EXT_clip_control
+    glClipControl =
+            (PFNGLCLIPCONTROLEXTPROC)eglGetProcAddress(
+                    "glClipControlEXT");
+#endif
 }
 
 } // namespace glext
