@@ -601,6 +601,11 @@ bool MetalDriver::isFrameTimeSupported() {
     return false;
 }
 
+math::float2 MetalDriver::getClipSpaceParams() {
+    // z-coordinate of clip-space is in [0,w]
+    return math::float2{ -0.5f, 0.5f };
+}
+
 void MetalDriver::updateVertexBuffer(Handle<HwVertexBuffer> vbh, size_t index,
         BufferDescriptor&& data, uint32_t byteOffset) {
     assert(byteOffset == 0);    // TODO: handle byteOffset for vertex buffers

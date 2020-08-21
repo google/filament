@@ -731,7 +731,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                             // the tile depth buffer will be MS, but it'll be resolved to single
                             // sample automatically -- which is what we want.
                             .samples = colorBufferDesc.samples,
-                            .format = TextureFormat::DEPTH24,
+                            .format = TextureFormat::DEPTH32F,
                     });
                 }
 

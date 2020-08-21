@@ -174,8 +174,9 @@ void ShadowMap::update(const FScene::LightSoa& lightData, size_t index, FScene c
 
     FLightManager::ShadowParams params = lcm.getShadowParams(li);
     mPolygonOffset = {
-            .slope = params.options.polygonOffsetSlope,
-            .constant = params.options.polygonOffsetConstant
+            // handle reversed Z
+            .slope = -params.options.polygonOffsetSlope,
+            .constant = -params.options.polygonOffsetConstant
     };
     mat4f projection(camera.cullingProjection);
     if (params.options.shadowFar > 0.0f) {

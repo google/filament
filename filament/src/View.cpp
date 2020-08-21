@@ -80,6 +80,10 @@ FView::FView(FEngine& engine)
 
     mIsDynamicResolutionSupported = driver.isFrameTimeSupported();
 
+    // with a clip-space of [-w, w] ==> z' = -z
+    // with a clip-space of [0,  w] ==> z' = (w - z)/2
+    mClipControl = driver.getClipSpaceParams();
+
     mDefaultColorGrading = mColorGrading = engine.getDefaultColorGrading();
 }
 
@@ -623,6 +627,8 @@ void FView::prepareCamera(const CameraInfo& camera) const noexcept {
     u.setUniform(offsetof(PerViewUib, cameraPosition), float3{camera.getPosition()});
     u.setUniform(offsetof(PerViewUib, worldOffset), camera.worldOffset);
     u.setUniform(offsetof(PerViewUib, cameraFar), camera.zf);
+    u.setUniform(offsetof(PerViewUib, clipControl), mClipControl);
+
 }
 
 void FView::prepareViewport(const filament::Viewport &viewport) const noexcept {

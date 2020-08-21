@@ -856,7 +856,7 @@ struct RenderPassParams {
     filament::math::float4 clearColor = {};
 
     //! Depth value to clear the depth buffer with
-    double clearDepth = 1.0;
+    double clearDepth = 0.0;
 
     //! Stencil value to clear the stencil buffer with
     uint32_t clearStencil = 0;

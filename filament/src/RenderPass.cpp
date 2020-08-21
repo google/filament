@@ -376,7 +376,7 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
     cmdDepth.primitive.rasterState = {};
     cmdDepth.primitive.rasterState.colorWrite = renderFlags & HAS_VSM;
     cmdDepth.primitive.rasterState.depthWrite = true;
-    cmdDepth.primitive.rasterState.depthFunc = RasterState::DepthFunc::LE;
+    cmdDepth.primitive.rasterState.depthFunc = RasterState::DepthFunc::GE;
     cmdDepth.primitive.rasterState.alphaToCoverage = false;
 
     for (uint32_t i = range.first; i < range.last; ++i) {
@@ -515,7 +515,7 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
                     cmdColor.primitive.rasterState.colorWrite &= ~select(mode == TransparencyMode::TWO_PASSES_ONE_SIDE);
                     cmdColor.primitive.rasterState.depthFunc =
                             (mode == TransparencyMode::TWO_PASSES_ONE_SIDE) ?
-                            SamplerCompareFunc::LE : cmdColor.primitive.rasterState.depthFunc;
+                            SamplerCompareFunc::GE : cmdColor.primitive.rasterState.depthFunc;
                 } else {
                     // color pass:
                     // This will bucket objects by Z, front-to-back and then sort by material

@@ -59,7 +59,7 @@ float samplingBias(float depth, const vec2 rpdb, const vec2 texelSize) {
 #if SHADOW_SAMPLING_ERROR == SHADOW_SAMPLING_ERROR_ENABLED
     // note: if filtering is set to NEAREST, the 2.0 factor below can be changed to 1.0
     float samplingError = min(2.0 * dot(texelSize, abs(rpdb)), 0.01);
-    depth -= samplingError;
+    depth += samplingError;
 #endif
     return depth;
 }
@@ -291,7 +291,7 @@ float screenSpaceContactShadow(vec3 lightDirection) {
     highp vec3 ray;
     for (uint i = 0u ; i < kStepCount ; i++, t += dt) {
         ray = rayData.uvRayStart + rayData.uvRay * t;
-        float z = textureLod(light_structure, uvToRenderTargetUV(ray.xy), 0.0).r;
+        float z = 1.0 - textureLod(light_structure, uvToRenderTargetUV(ray.xy), 0.0).r;
         float dz = ray.z - z;
         if (abs(tolerance - dz) < tolerance) {
             occlusion = 1.0;
@@ -341,8 +341,10 @@ highp float chebyshevUpperBound(const highp vec2 moments, const highp float mean
  * space. The output is a filtered visibility factor that can be used to multiply
  * the light intensity.
  */
-float shadow(const mediump sampler2DArrayShadow shadowMap, const uint layer, const vec3 shadowPosition) {
+float shadow(const mediump sampler2DArrayShadow shadowMap, const uint layer, vec3 shadowPosition) {
     vec2 size = vec2(textureSize(shadowMap, 0));
+    // handle reversed Z -- maybe this could instead be done in the shadowMatrix on the CPU
+    shadowPosition.z = 1.0 - shadowPosition.z;
 #if SHADOW_SAMPLING_METHOD == SHADOW_SAMPLING_PCF_HARD
     return ShadowSample_Hard(shadowMap, layer, size, shadowPosition);
 #elif SHADOW_SAMPLING_METHOD == SHADOW_SAMPLING_PCF_LOW

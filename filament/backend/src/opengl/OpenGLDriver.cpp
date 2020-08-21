@@ -1512,6 +1512,11 @@ bool OpenGLDriver::isFrameTimeSupported() {
     return mFrameTimeSupported;
 }
 
+math::float2 OpenGLDriver::getClipSpaceParams() {
+    return mContext.ext.EXT_clip_control ?
+            math::float2{ -0.5f, 0.5f } : math::float2{ -1.0f, 0.0f };
+}
+
 // ------------------------------------------------------------------------------------------------
 // Swap chains
 // ------------------------------------------------------------------------------------------------

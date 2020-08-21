@@ -125,8 +125,11 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     float aoReserved2;
     float aoReserved3;
 
+    math::float2 clipControl;
+    math::float2 padding1;
+
     // bring PerViewUib to 2 KiB
-    filament::math::float4 padding2[61];
+    filament::math::float4 padding2[60];
 };
 
 // 2 KiB == 128 float4s

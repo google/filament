@@ -52,6 +52,15 @@
         extern PFNGLGETQUERYOBJECTUI64VEXTPROC glGetQueryObjectui64v;
         #define GL_TIME_ELAPSED               0x88BF
 #endif
+#ifdef GL_EXT_clip_control
+        extern PFNGLCLIPCONTROLEXTPROC glClipControl;
+        #ifndef GL_LOWER_LEFT
+        #define GL_LOWER_LEFT GL_LOWER_LEFT_EXT
+        #endif
+        #ifndef GL_ZERO_TO_ONE
+        #define GL_ZERO_TO_ONE GL_ZERO_TO_ONE_EXT
+        #endif
+#endif
     }
 
     // Prevent lots of #ifdef's between desktop and mobile by providing some suffix-free constants:
