@@ -17,7 +17,9 @@
 """
 Generates C++ code that binds Vulkan entry points at run time and provides enum-to-string
 conversion operators. By default this fetches the latest vk.xml from github; note that
-the XML needs to be consistent with the Vulkan headers that live in bluevk/include/vulkan.
+the XML needs to be consistent with the Vulkan headers that live in bluevk/include/vulkan,
+which are obtained from KhronosGroup/Vulkan-Headers.
+
 If the XML file is inconsistent with the checked-in header files, compile errors can result
 such as missing enumeration values, or "type not found" errors.
 
@@ -37,7 +39,7 @@ from datetime import datetime
 
 VkFunction = namedtuple('VkFunction', ['name', 'type', 'group'])
 
-VK_XML_URL = "https://raw.githubusercontent.com/KhronosGroup/Vulkan-Docs/master/xml/vk.xml"
+VK_XML_URL = "https://raw.githubusercontent.com/KhronosGroup/Vulkan-Headers/master/registry/vk.xml"
 
 COPYRIGHT_HEADER = '''/*
  * Copyright (C) %(year)d The Android Open Source Project
@@ -90,7 +92,7 @@ namespace bluevk {
 
     void bindInstance(VkInstance instance);
 
-}; // namespace bluevk
+} // namespace bluevk
 
 %(FUNCTION_POINTERS)s
 
@@ -113,7 +115,7 @@ static PFN_vkVoidFunction vkGetDeviceProcAddrWrapper(void* context, const char* 
 
 using std::string;
 
-namespace bluevk{
+namespace bluevk {
 
 // OS Dependent.
 extern bool loadLibrary();
@@ -204,6 +206,19 @@ def consumeXML(spec):
             cmdrefs = req.findall('command')
             command_groups.setdefault(key, []).extend([cmdref.get('name') for cmdref in cmdrefs])
 
+    # Build a list of provisional types that are not fully defined in the core Vulkan headers.
+    provisional_types = set([
+        'VkFullScreenExclusiveEXT',
+        'VkStencilFaceFlagBits',
+        'VkExternalSemaphoreHandleTypeFlagBits',
+        'VkSwapchainImageUsageFlagBitsANDROID',
+    ])
+    for ext in spec.findall('extensions/extension'):
+        if ext.get('platform') == 'provisional':
+            for req in ext.findall('require'):
+                for enum in req.findall('type'):
+                    provisional_types.add(enum.get('name'))
+
     # If the same function exists in more than one function group, consolidate them.
     commands_to_groups = OrderedDict()
     for (group, cmdnames) in command_groups.items():
@@ -248,6 +263,7 @@ def consumeXML(spec):
         if not enums.get('type'): continue
         name = enums.get('name')
         if name not in enum_types: continue
+        if name in provisional_types: continue
 
         # Special handling for single-bit flags
         if enums.get('type') == 'bitmask':
@@ -256,7 +272,7 @@ def consumeXML(spec):
             for val in enums:
                 # Skip over comments
                 if val.tag != 'enum': continue
-                value = '0x0'
+                value = 0
                 if val.get('value'):
                     value = int(val.get('value'), 16)
                 elif val.get('bitpos'):

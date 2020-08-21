@@ -173,13 +173,13 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
     const VkFormatFeatureFlags required = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT |
             VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
     utils::slog.i << "Sampleable depth formats: ";
-    for (VkFormat format = VK_FORMAT_BEGIN_RANGE;;) {
+    for (VkFormat format = (VkFormat) 1;;) {
         VkFormatProperties props;
         vkGetPhysicalDeviceFormatProperties(mContext.physicalDevice, format, &props);
         if ((props.optimalTilingFeatures & required) == required) {
             utils::slog.i << format << " ";
         }
-        if (format == VK_FORMAT_END_RANGE) {
+        if (format == VK_FORMAT_ASTC_12x12_SRGB_BLOCK) {
             utils::slog.i << utils::io::endl;
             break;
         }
