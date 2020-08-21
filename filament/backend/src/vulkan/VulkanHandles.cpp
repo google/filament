@@ -96,8 +96,8 @@ static VulkanAttachment createOffscreenAttachment(VulkanAttachment source) {
     return {
         .format = tex->vkformat,
         .image = tex->textureImage,
-        .view = nullptr,
-        .memory = nullptr,
+        .view = VK_NULL_HANDLE,
+        .memory = VK_NULL_HANDLE,
         .texture = tex,
         .layout = getTextureLayout(tex->usage),
         .level = source.level,
