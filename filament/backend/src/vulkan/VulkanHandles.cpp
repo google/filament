@@ -88,14 +88,20 @@ VulkanProgram::~VulkanProgram() {
     vkDestroyShaderModule(context.device, bundle.fragment, VKALLOC);
 }
 
-static VulkanAttachment createOffscreenAttachment(VulkanTexture* tex) {
+static VulkanAttachment createOffscreenAttachment(VulkanAttachment source) {
+    VulkanTexture* tex = source.texture;
+    if (tex == nullptr) {
+        return source;
+    }
     return {
         .format = tex->vkformat,
         .image = tex->textureImage,
-        .view = tex->imageView,
-        .memory = tex->textureImageMemory,
+        .view = nullptr,
+        .memory = nullptr,
         .texture = tex,
-        .layout = getTextureLayout(tex->usage)
+        .layout = getTextureLayout(tex->usage),
+        .level = source.level,
+        .layer = source.layer
     };
 }
 
@@ -114,69 +120,21 @@ VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context, uint32_t width, u
             attachment = {};
             continue;
         }
-
-        attachment = createOffscreenAttachment(color[targetIndex].texture);
-        attachment.level = color[targetIndex].level;
-
-        VkImageViewCreateInfo viewInfo = {
-            .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-            .image = mColor[targetIndex].image,
-            .format = mColor[targetIndex].format,
-            .subresourceRange = {
-                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                .baseMipLevel = mColor[targetIndex].level,
-                .levelCount = 1
-            }
-        };
-        if (attachment.texture->target == SamplerType::SAMPLER_CUBEMAP) {
-            viewInfo.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
-            viewInfo.subresourceRange.layerCount = 6;
-        } else if (attachment.texture->target == SamplerType::SAMPLER_2D_ARRAY) {
-            viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
-            viewInfo.subresourceRange.layerCount = 1;
-            viewInfo.subresourceRange.baseArrayLayer = attachment.layer;
-        } else {
-            viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-            viewInfo.subresourceRange.layerCount = 1;
-        }
-        vkCreateImageView(context.device, &viewInfo, VKALLOC, &attachment.view);
+        attachment = createOffscreenAttachment(color[targetIndex]);
+        attachment.view = color[targetIndex].texture->getImageView(
+                attachment.level, attachment.layer, VK_IMAGE_ASPECT_COLOR_BIT);
     }
 
-    mDepth = depthStencil[0].texture ? createOffscreenAttachment(depthStencil[0].texture) : VulkanAttachment {};
-    mDepth.level = depthStencil[0].level;
+    mDepth = createOffscreenAttachment(depthStencil[0]);
 
     VulkanTexture* depthTexture = mDepth.texture;
     if (depthTexture) {
-        VkImageViewCreateInfo viewInfo = {
-            .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-            .image = mDepth.image,
-            .format = mDepth.format,
-            .subresourceRange = {
-                .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
-                .baseMipLevel = mDepth.level,
-                .levelCount = 1
-            }
-        };
-        if (depthTexture->target == SamplerType::SAMPLER_CUBEMAP) {
-            viewInfo.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
-            viewInfo.subresourceRange.layerCount = 6;
-        } else if (depthTexture->target == SamplerType::SAMPLER_2D_ARRAY) {
-            viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
-            viewInfo.subresourceRange.layerCount = 1;
-            viewInfo.subresourceRange.baseArrayLayer = mDepth.layer;
-        } else {
-            viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-            viewInfo.subresourceRange.layerCount = 1;
-        }
-        vkCreateImageView(context.device, &viewInfo, VKALLOC, &mDepth.view);
+        mDepth.view = depthTexture->getImageView(
+                mDepth.level, mDepth.layer, VK_IMAGE_ASPECT_DEPTH_BIT);
     }
 }
 
 VulkanRenderTarget::~VulkanRenderTarget() {
-    for (int targetIndex = 0; targetIndex < MRT::TARGET_COUNT; targetIndex++) {
-        vkDestroyImageView(mContext.device, mColor[targetIndex].view, VKALLOC);
-    }
-    vkDestroyImageView(mContext.device, mDepth.view, VKALLOC);
 }
 
 void VulkanRenderTarget::transformClientRectToPlatform(VkRect2D* bounds) const {
@@ -478,6 +436,9 @@ VulkanTexture::~VulkanTexture() {
     vkDestroyImage(mContext.device, textureImage, VKALLOC);
     vkDestroyImageView(mContext.device, imageView, VKALLOC);
     vkFreeMemory(mContext.device, textureImageMemory, VKALLOC);
+    for (auto entry : mImageViews) {
+        vkDestroyImageView(mContext.device, entry.view, VKALLOC);
+    }
 }
 
 void VulkanTexture::update2DImage(const PixelBufferDescriptor& data, uint32_t width,
@@ -580,6 +541,45 @@ void VulkanTexture::updateCubeImage(const PixelBufferDescriptor& data,
         copyToDevice(mContext.work);
         flushWorkCommandBuffer(mContext);
     }
+}
+
+VkImageView VulkanTexture::getImageView(int level, int layer, VkImageAspectFlags aspect) {
+    for (auto entry : mImageViews) {
+        if (entry.level == level && entry.layer == layer) {
+            return entry.view;
+        }
+    }
+    VkImageViewCreateInfo viewInfo = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        .image = textureImage,
+        .format = vkformat,
+        .subresourceRange = {
+            .aspectMask = aspect,
+            .baseMipLevel = uint32_t(level),
+            .levelCount = 1
+        }
+    };
+    if (target == SamplerType::SAMPLER_CUBEMAP) {
+        viewInfo.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
+        viewInfo.subresourceRange.layerCount = 6;
+    } else if (target == SamplerType::SAMPLER_2D_ARRAY) {
+        viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+        viewInfo.subresourceRange.layerCount = 1;
+        viewInfo.subresourceRange.baseArrayLayer = layer;
+    } else {
+        viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        viewInfo.subresourceRange.layerCount = 1;
+    }
+
+    VkImageView imageView;
+    vkCreateImageView(mContext.device, &viewInfo, VKALLOC, &imageView);
+    mImageViews.emplace_back(ImageViewCacheEntry({level, layer, imageView}));
+
+    // This is a very simplistic cache that exists only for the benefit of VulkanRenderTarget.
+    // If it grows too big, there's a bug or we need to replace it with a more sophisticated cache.
+    assert(mImageViews.size() < 64);
+
+    return imageView;
 }
 
 // TODO: replace the last 4 args with VkImageSubresourceRange

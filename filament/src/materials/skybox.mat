@@ -35,7 +35,7 @@ fragment {
         if (materialParams.constantColor != 0) {
             sky = materialParams.color;
         } else {
-            sky = vec4(texture(materialParams_skybox, variable_eyeDirection.xyz).rgb, 1.0);
+            sky = vec4(textureLod(materialParams_skybox, variable_eyeDirection.xyz, 0.0).rgb, 1.0);
             sky.rgb *= frameUniforms.iblLuminance;
         }
         if (materialParams.showSun != 0 && frameUniforms.sun.w >= 0.0f) {

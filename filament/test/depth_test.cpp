@@ -78,20 +78,21 @@ float window_to_world(double wc, Projection const& proj, float nearVal, float fa
     return float(z);
 }
 
-static const float s_values[] = { 0.01f, 0.1f, 1.0f, 10.0f, 100.0f, 1000.0f, 10000.0f, 100000.0f };
+static const float s_values[] = { -0.01f, -0.1f, -1.0f, -10.0f, -100.0f, -1000.0f, -10000.0f, -100000.0f };
 
 void precisionForDistance(Projection const& proj, float nearVal, float farVal, float z) {
-    float wc = world_to_window(-z, proj, nearVal, farVal);
+    float wc = world_to_window(z, proj, nearVal, farVal);
     float wcn = std::nextafter(wc, farVal);
     float zn = window_to_world(wcn, proj, nearVal, farVal);
 
-    float integer_wcn = (uint32_t(wc * 0x1000000U) + 1)/float(0x1000000U);
+    float integer_wcn = float(double(uint32_t(wc * 0x1000000U) + 1) / double(0x1000000U));
     float integer_zn = window_to_world(integer_wcn, proj, nearVal, farVal);
 
-    printf("%8g:\t%8g\t%g\n", -z, std::abs(zn + z), std::abs(integer_zn + z));
+    printf("%8g:\t%8g\t%g\n", std::abs(z), std::abs(zn - z), std::abs(integer_zn - z));
 }
 
 void depthBufferPrecision(Projection proj, float nearVal, float farVal) {
+    printf("%8s\t%8s\t%s\n", "z", "fp32", "i24");
     for (float z : s_values) {
         precisionForDistance(proj, nearVal, farVal, z);
     }
@@ -101,6 +102,8 @@ int main() {
     static constexpr float inf = std::numeric_limits<float>::infinity();
 
     const float near = 0.1f;
+
+    printf("depth buffer precision with near=%f, far=inf\n", near);
 
     std::cout << "GL [-1, 1]" << std::endl;
     depthBufferPrecision(Projection(near, inf, Projection::GL_NDC), 0, 1);
