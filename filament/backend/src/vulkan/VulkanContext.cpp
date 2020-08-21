@@ -126,6 +126,21 @@ void selectPhysicalDevice(VulkanContext& context) {
         vkGetPhysicalDeviceFeatures(physicalDevice, &context.physicalDeviceFeatures);
         vkGetPhysicalDeviceMemoryProperties(physicalDevice, &context.memoryProperties);
 
+        // Print some driver or MoltenVK information if it is available.
+        if (vkGetPhysicalDeviceProperties2KHR) {
+            VkPhysicalDeviceDriverProperties driverProperties = {
+                .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES,
+            };
+            VkPhysicalDeviceProperties2 physicalDeviceProperties2 = {
+                .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
+                .pNext = &driverProperties,
+            };
+            vkGetPhysicalDeviceProperties2KHR(physicalDevice, &physicalDeviceProperties2);
+            utils::slog.i << "Vulkan device driver: "
+                << driverProperties.driverName << " "
+                << driverProperties.driverInfo << utils::io::endl;
+        }
+
         // Print out some properties of the GPU for diagnostic purposes.
         //
         // Ideally, the vendors register their vendor ID's with Khronos so that apps can make an
