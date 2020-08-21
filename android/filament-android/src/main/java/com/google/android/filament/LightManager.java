@@ -16,6 +16,7 @@
 
 package com.google.android.filament;
 
+import androidx.annotation.IntRange;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.Size;
@@ -190,6 +191,54 @@ public class LightManager {
         /** Size of the shadow map in texels. Must be a power-of-two. */
         public int mapSize = 1024;
 
+        /**
+         * Number of shadow cascades to use for this light. Must be between 1 and 4 (inclusive).
+         * A value greater than 1 turns on cascaded shadow mapping (CSM).
+         * Only applicable to Type.SUN or Type.DIRECTIONAL lights.
+         *
+         * <p>
+         * When using shadow cascades, {@link ShadowOptions#cascadeSplitPositions} must also be set.
+         * </p>
+         *
+         * @see ShadowOptions#cascadeSplitPositions
+         */
+        @IntRange(from = 1, to = 4)
+        public int shadowCascades = 1;
+
+        /**
+         * The split positions for shadow cascades.
+         *
+         * <p>
+         * Cascaded shadow mapping (CSM) partitions the camera frustum into cascades. These values
+         * determine the planes along the camera's Z axis to split the frustum. The camera near
+         * plane is represented by 0.0f and the far plane represented by 1.0f.
+         * </p>
+         *
+         * <p>
+         * For example, if using 4 cascades, these values would set a uniform split scheme:
+         * { 0.25f, 0.50f, 0.75f }
+         * </p>
+         *
+         * <p>
+         * For N cascades, N - 1 split positions will be read from this array.
+         * </p>
+         *
+         * <p>
+         * Filament provides utility methods inside {@link ShadowCascades} to help set these values.
+         * For example, to use a uniform split scheme:
+         * </p>
+         *
+         * <pre>
+         * LightManager.ShadowCascades.computeUniformSplits(options.cascadeSplitPositions, 4);
+         * </pre>
+         *
+         * @see ShadowCascades#computeUniformSplits
+         * @see ShadowCascades#computeLogSplits
+         * @see ShadowCascades#computePracticalSplits
+         */
+        @NonNull
+        @Size(min = 3)
+        public float[] cascadeSplitPositions = { 0.25f, 0.50f, 0.75f };
 
         /** Constant bias in world units (e.g. meters) by which shadows are moved away from the
          * light. 1mm by default.
@@ -258,6 +307,71 @@ public class LightManager {
         public float maxShadowDistance = 0.3f;
     }
 
+    public static class ShadowCascades {
+        /**
+         * Utility method to compute {@link ShadowOptions#cascadeSplitPositions} according to a
+         * uniform split scheme.
+         *
+         * @param splitPositions    a float array of at least size (cascades - 1) to write the split
+         *                          positions into
+         * @param cascades          the number of shadow cascades, at most 4
+         */
+        public static void computeUniformSplits(@NonNull @Size(min = 1) float[] splitPositions,
+                @IntRange(from = 1, to = 4) int cascades) {
+            if (splitPositions.length < cascades - 1) {
+                throw new ArrayIndexOutOfBoundsException(
+                        String.format("splitPositions array length must be at least %d", cascades - 1));
+            }
+            nComputeUniformSplits(splitPositions, cascades);
+        }
+
+        /**
+         * Utility method to compute {@link ShadowOptions#cascadeSplitPositions} according to a
+         * logarithmic split scheme.
+         *
+         * @param splitPositions    a float array of at least size (cascades - 1) to write the split
+         *                          positions into
+         * @param cascades          the number of shadow cascades, at most 4
+         * @param near              the camera near plane
+         * @param far               the camera far plane
+         */
+        public static void computeLogSplits(@NonNull @Size(min = 1) float[] splitPositions,
+                @IntRange(from = 1, to = 4) int cascades, float near, float far) {
+            if (splitPositions.length < cascades - 1) {
+                throw new ArrayIndexOutOfBoundsException(
+                        String.format("splitPositions array length must be at least %d", cascades - 1));
+            }
+            nComputeLogSplits(splitPositions, cascades, near, far);
+        }
+
+        /**
+         * Utility method to compute {@link ShadowOptions#cascadeSplitPositions} according to a
+         * practical split scheme.
+         *
+         * <p>
+         * The practical split scheme uses uses a lambda value to interpolate between the logrithmic
+         * and uniform split schemes. Start with a lambda value of 0.5f and adjust for your scene.
+         * </p>
+         *
+         * See: Zhang et al 2006, "Parallel-split shadow maps for large-scale virtual environments"
+         *
+         * @param splitPositions    a float array of at least size (cascades - 1) to write the split
+         *                          positions into
+         * @param cascades          the number of shadow cascades, at most 4
+         * @param near              the camera near plane
+         * @param far               the camera far plane
+         * @param lambda            a float in the range [0, 1] that interpolates between log and
+         *                          uniform split schemes
+         */
+        public static void computePracticalSplits(@NonNull @Size(min = 1) float[] splitPositions,
+              @IntRange(from = 1, to = 4) int cascades, float near, float far, float lambda) {
+            if (splitPositions.length < cascades - 1) {
+                throw new ArrayIndexOutOfBoundsException(
+                        String.format("splitPositions array length must be at least %d", cascades - 1));
+            }
+            nComputePracticalSplits(splitPositions, cascades, near, far, lambda);
+        }
+    }
 
     /** Typical efficiency of an incandescent light bulb (2.2%) */
     public static final float EFFICIENCY_INCANDESCENT = 0.0220f;
@@ -316,9 +430,10 @@ public class LightManager {
         @NonNull
         public Builder shadowOptions(@NonNull ShadowOptions options) {
             nBuilderShadowOptions(mNativeBuilder,
-                    options.mapSize, options.constantBias, options.normalBias, options.shadowFar,
-                    options.shadowNearHint, options.shadowFarHint, options.stable,
-                    options.screenSpaceContactShadows, options.stepCount, options.maxShadowDistance);
+                    options.mapSize, options.shadowCascades, options.cascadeSplitPositions,
+                    options.constantBias, options.normalBias, options.shadowFar, options.shadowNearHint,
+                    options.shadowFarHint, options.stable, options.screenSpaceContactShadows,
+                    options.stepCount, options.maxShadowDistance);
             return this;
         }
 
@@ -944,7 +1059,7 @@ public class LightManager {
     private static native void nDestroyBuilder(long nativeBuilder);
     private static native boolean nBuilderBuild(long nativeBuilder, long nativeEngine, int entity);
     private static native void nBuilderCastShadows(long nativeBuilder, boolean enable);
-    private static native void nBuilderShadowOptions(long nativeBuilder, int mapSize, float constantBias, float normalBias, float shadowFar, float shadowNearHint, float shadowFarhint, boolean stable, boolean screenSpaceContactShadows, int stepCount, float maxShadowDistance);
+    private static native void nBuilderShadowOptions(long nativeBuilder, int mapSize, int cascades, float[] splitPositions, float constantBias, float normalBias, float shadowFar, float shadowNearHint, float shadowFarhint, boolean stable, boolean screenSpaceContactShadows, int stepCount, float maxShadowDistance);
     private static native void nBuilderCastLight(long nativeBuilder, boolean enabled);
     private static native void nBuilderPosition(long nativeBuilder, float x, float y, float z);
     private static native void nBuilderDirection(long nativeBuilder, float x, float y, float z);
@@ -957,6 +1072,10 @@ public class LightManager {
     private static native void nBuilderAngularRadius(long nativeBuilder, float angularRadius);
     private static native void nBuilderHaloSize(long nativeBuilder, float haloSize);
     private static native void nBuilderHaloFalloff(long nativeBuilder, float haloFalloff);
+
+    private static native void nComputeUniformSplits(float[] splitPositions, int cascades);
+    private static native void nComputeLogSplits(float[] splitPositions, int cascades, float near, float far);
+    private static native void nComputePracticalSplits(float[] splitPositions, int cascades, float near, float far, float lambda);
 
     private static native int nGetType(long nativeLightManager, int i);
     private static native void nSetPosition(long nativeLightManager, int i, float x, float y, float z);
