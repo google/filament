@@ -39,15 +39,16 @@ constexpr VkAllocationCallbacks* VKALLOC = nullptr;
 
 Driver* PlatformVkCocoa::createDriver(void* sharedContext) noexcept {
     ASSERT_PRECONDITION(sharedContext == nullptr, "Vulkan does not support shared contexts.");
-    static const char* requestedExtensions[] = {
+    static const char* requestedInstanceExtensions[] = {
         "VK_KHR_surface",
-        "VK_MVK_macos_surface",
+        "VK_MVK_macos_surface", // TODO: replace with VK_EXT_metal_surface
+        "VK_KHR_get_physical_device_properties2",
 #if VK_ENABLE_VALIDATION
         "VK_EXT_debug_report",
 #endif
     };
-    return VulkanDriverFactory::create(this, requestedExtensions,
-            sizeof(requestedExtensions) / sizeof(requestedExtensions[0]));
+    return VulkanDriverFactory::create(this, requestedInstanceExtensions,
+            sizeof(requestedInstanceExtensions) / sizeof(requestedInstanceExtensions[0]));
 }
 
 void* PlatformVkCocoa::createVkSurfaceKHR(void* nativeWindow, void* instance) noexcept {
