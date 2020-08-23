@@ -80,6 +80,7 @@ bool IBL::loadFromKtx(const std::string& prefix) {
 
     mIndirectLight = IndirectLight::Builder()
             .reflections(mTexture)
+            .irradiance(3, mBands)
             .intensity(IBL_INTENSITY)
             .build(mEngine);
 
