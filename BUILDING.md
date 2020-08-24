@@ -228,7 +228,7 @@ For example, build the `material_sandbox` sample and run it from the `out` direc
 > samples\Debug\material_sandbox.exe ..\assets\models\monkey\monkey.obj
 ```
 
-You can also use cmake to invoke the build without opening Visual Studio. For example, from the
+You can also use CMake to invoke the build without opening Visual Studio. For example, from the
 `out` folder run the following command.
 
 ```
