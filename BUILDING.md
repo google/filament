@@ -209,7 +209,7 @@ sensitivity in your repo, since this does not align with CMake expectations. Thi
 using `fsutil.exe file queryCaseSensitiveInfo`.
 
 Next, open `x64 Native Tools Command Prompt for VS 2019`, create a working directory, and run
-cmake in it:
+CMake in it:
 
 ```
 > mkdir out
