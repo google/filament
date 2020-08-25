@@ -502,7 +502,7 @@ void FrameGraph::export_graphviz(utils::io::ostream& out, const char* viewName) 
         if (rendertarget) {
             out << ", " << "RenderTarget";
             if (rendertarget->descriptor.samples > 1) {
-                out <<" MS";
+                out << " MS";
             }
         }
         out << "\", style=filled, fillcolor="
