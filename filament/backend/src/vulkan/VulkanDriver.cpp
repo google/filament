@@ -906,12 +906,6 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
 
     const VulkanAttachment depth = rt->getDepth();
 
-    mDisposer.acquire(rt, mContext.currentCommands->resources);
-    mDisposer.acquire(depth.texture, mContext.currentCommands->resources);
-    for (int i = 0; i < MRT::TARGET_COUNT; i++) {
-        mDisposer.acquire(rt->getColor(i).texture, mContext.currentCommands->resources);
-    }
-
     // Filament has the expectation that the contents of the swap chain are not preserved on the
     // first render pass. Note however that its contents are often preserved on subsequent render
     // passes, due to multiple views.
@@ -950,6 +944,13 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
         fbkey.depth = depth.view;
     }
     VkFramebuffer vkfb = mFramebufferCache.getFramebuffer(fbkey, extent.width, extent.height, 1);
+
+    // The current command buffer now owns a reference to the render target and its attachments.
+    mDisposer.acquire(rt, mContext.currentCommands->resources);
+    mDisposer.acquire(depth.texture, mContext.currentCommands->resources);
+    for (int i = 0; i < MRT::TARGET_COUNT; i++) {
+        mDisposer.acquire(rt->getColor(i).texture, mContext.currentCommands->resources);
+    }
 
     // Populate the structures required for vkCmdBeginRenderPass.
     VkRenderPassBeginInfo renderPassInfo {
