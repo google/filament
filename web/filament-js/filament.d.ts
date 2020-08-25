@@ -346,7 +346,7 @@ export class Renderer {
     public render(swapChain: SwapChain, view: View): void;
     public setClearOptions(options: Renderer$ClearOptions): void;
     public renderView(view: View): void;
-    public beginFrame(swapChain: SwapChain, vsyncSteadyClockTimeNano: number): boolean;
+    public beginFrame(swapChain: SwapChain): boolean;
     public endFrame(): void;
 }
 
@@ -496,6 +496,7 @@ interface Filamesh {
 
 export class Engine {
     public static create(canvas: HTMLCanvasElement, contextOptions?: object): Engine;
+    public execute(): void;
     public createCamera(entity: Entity): Camera;
     public createIblFromKtx(urlOrBuffer: BufferReference): IndirectLight;
     public createMaterial(urlOrBuffer: BufferReference): Material;
