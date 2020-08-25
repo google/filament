@@ -1003,8 +1003,10 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
         }
     }
     // Resolve attachments are not cleared but still have entries in the list, so skip over them.
-    if (rpkey.samples > 1) {
-        renderPassInfo.clearValueCount += renderPassInfo.clearValueCount;
+    for (int i = 0; i < MRT::TARGET_COUNT; i++) {
+        if (rpkey.needsResolveMask & (1 << i)) {
+            renderPassInfo.clearValueCount++;
+        }
     }
     if (fbkey.depth) {
         VkClearValue& clearValue = clearValues[renderPassInfo.clearValueCount++];
