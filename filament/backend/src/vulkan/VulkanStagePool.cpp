@@ -74,10 +74,14 @@ void VulkanStagePool::releaseStage(VulkanStage const* stage, VulkanCommandBuffer
 }
 
 void VulkanStagePool::gc() noexcept {
-    mCurrentFrame++;
+    // If this is one of the first few frames, return early to avoid wrapping unsigned integers.
+    if (++mCurrentFrame <= TIME_BEFORE_EVICTION) {
+        return;
+    }
+    const uint64_t evictionTime = mCurrentFrame - TIME_BEFORE_EVICTION;
+
     decltype(mFreeStages) stages;
     stages.swap(mFreeStages);
-    const uint64_t evictionTime = mCurrentFrame - TIME_BEFORE_EVICTION;
     for (auto pair : stages) {
         if (pair.second->lastAccessed < evictionTime) {
             vmaDestroyBuffer(mContext.allocator, pair.second->buffer, pair.second->memory);

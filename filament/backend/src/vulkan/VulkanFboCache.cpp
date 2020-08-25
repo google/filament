@@ -231,8 +231,12 @@ void VulkanFboCache::reset() noexcept {
 // Frees up old framebuffers and render passes, then nulls out their key.  Doesn't bother removing
 // the actual map entry since it is fairly small.
 void VulkanFboCache::gc() noexcept {
-    mCurrentTime++;
+    // If this is one of the first few frames, return early to avoid wrapping unsigned integers.
+    if (++mCurrentTime <= TIME_BEFORE_EVICTION) {
+        return;
+    }
     const uint32_t evictTime = mCurrentTime - TIME_BEFORE_EVICTION;
+
     for (auto iter = mFramebufferCache.begin(); iter != mFramebufferCache.end(); ++iter) {
         const FboVal fbo = iter->second;
         if (fbo.timestamp < evictTime && fbo.handle) {

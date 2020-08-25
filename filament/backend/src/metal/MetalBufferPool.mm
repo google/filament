@@ -81,12 +81,16 @@ void MetalBufferPool::releaseBuffer(MetalBufferPoolEntry const *stage) noexcept 
 }
 
 void MetalBufferPool::gc() noexcept {
+    // If this is one of the first few frames, return early to avoid wrapping unsigned integers.
+    if (++mCurrentFrame <= TIME_BEFORE_EVICTION) {
+        return;
+    }
+    const uint64_t evictionTime = mCurrentFrame - TIME_BEFORE_EVICTION;
+
     std::lock_guard<std::mutex> lock(mMutex);
 
-    mCurrentFrame++;
     decltype(mFreeStages) stages;
     stages.swap(mFreeStages);
-    const uint64_t evictionTime = mCurrentFrame - TIME_BEFORE_EVICTION;
     for (auto pair : stages) {
         if (pair.second->lastAccessed < evictionTime) {
             delete pair.second;

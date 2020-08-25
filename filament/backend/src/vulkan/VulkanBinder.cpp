@@ -518,16 +518,17 @@ void VulkanBinder::resetBindings() noexcept {
 }
 
 // Frees up old descriptor sets and pipelines, then nulls out their key.
+//
+// This method is designed to be called once per frame, and our notion of "time" is actually a
+// frame counter. Frames are a better metric than wall clock because we know with certainty that
+// objects last bound more than n frames ago are no longer in use (due to existing fences).
 void VulkanBinder::gc() noexcept {
-    // This method is designed to be called once per frame, and our notion of "time" is actually a
-    // frame counter. Frames are a better metric than wall clock because we know with certainty that
-    // objects last bound more than n frames ago are no longer in use (due to existing fences).
-    mCurrentTime++;
     // If this is one of the first few frames, return early to avoid wrapping unsigned integers.
-    if (mCurrentTime <= TIME_BEFORE_EVICTION) {
+    if (++mCurrentTime <= TIME_BEFORE_EVICTION) {
         return;
     }
     const uint32_t evictTime = mCurrentTime - TIME_BEFORE_EVICTION;
+
     // Due to robin_map restrictions, we cannot use auto or a range-based loop.
     for (decltype(mDescriptorBundles)::const_iterator iter = mDescriptorBundles.begin();
             iter != mDescriptorBundles.end();) {
