@@ -153,7 +153,12 @@ class App {
         entity.delete();
 
         // Render the scene and request the next animation frame.
-        this.renderer.render(this.swapChain, this.view);
+        if (this.renderer.beginFrame(this.swapChain)) {
+            this.renderer.renderView(this.view);
+            this.renderer.endFrame();
+        }
+        this.engine.execute();
+
         window.requestAnimationFrame(this.render);
     }
 

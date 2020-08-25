@@ -604,7 +604,9 @@ class_<Renderer>("Renderer")
         engine->execute();
     }), allow_raw_pointers())
     .function("_setClearOptions", &Renderer::setClearOptions, allow_raw_pointers())
-    .function("beginFrame", &Renderer::beginFrame, allow_raw_pointers())
+    .function("beginFrame", EMBIND_LAMBDA(bool, (Renderer* self, SwapChain* swapChain), {
+        return self->beginFrame(swapChain);
+    }), allow_raw_pointers())
     .function("endFrame", &Renderer::endFrame, allow_raw_pointers());
 
 /// View ::core class:: Encompasses all the state needed for rendering a Scene.
