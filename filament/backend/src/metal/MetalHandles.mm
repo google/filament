@@ -557,6 +557,10 @@ void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* desc
                 params.clearColor.r, params.clearColor.g, params.clearColor.b, params.clearColor.a);
 
         if (multisampledColor[i]) {
+            // We're rendering into our temporary MSAA texture and doing an automatic resolve.
+            // We should not be attempting to load anything into the MSAA texture.
+            assert(descriptor.colorAttachments[i].loadAction != MTLLoadActionLoad);
+
             descriptor.colorAttachments[i].texture = multisampledColor[i];
             descriptor.colorAttachments[i].level = 0;
             descriptor.colorAttachments[i].slice = 0;
@@ -579,6 +583,10 @@ void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* desc
     descriptor.depthAttachment.clearDepth = params.clearDepth;
 
     if (multisampledDepth) {
+        // We're rendering into our temporary MSAA texture and doing an automatic resolve.
+        // We should not be attempting to load anything into the MSAA texture.
+        assert(descriptor.depthAttachment.loadAction != MTLLoadActionLoad);
+
         descriptor.depthAttachment.texture = multisampledDepth;
         descriptor.depthAttachment.level = 0;
         descriptor.depthAttachment.slice = 0;
