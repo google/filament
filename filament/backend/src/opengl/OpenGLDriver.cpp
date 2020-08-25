@@ -35,12 +35,6 @@
 #include <emscripten.h>
 #endif
 
-// To emulate EXT_multisampled_render_to_texture properly we need to be able to copy from
-// a non-ms texture to an ms attachment. This is only allowed with OpenGL (not GLES), which
-// would be fine for us. However, this is also not trivial to implement in Metal so for now
-// we don't want to rely on it.
-#define ALLOW_REVERSE_MULTISAMPLE_RESOLVE false
-
 // We can only support this feature on OpenGL ES 3.1+
 // Support is currently disabled as we don't need it
 #define TEXTURE_2D_MULTISAMPLE_SUPPORTED false
@@ -2114,18 +2108,12 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     if (rt->gl.fbo_read) {
         // we have a multi-sample RenderTarget with non multi-sample attachments (i.e. this is the
         // EXT_multisampled_render_to_texture emulation).
-        // We need to perform a "backward" resolve, i.e. load the resolved texture into the tile,
-        // everything must appear as though the multi-sample buffer was lost.
-        if (ALLOW_REVERSE_MULTISAMPLE_RESOLVE) {
-            // We only copy the non msaa buffers that were not discarded or cleared.
-            const TargetBufferFlags discarded = discardFlags | clearFlags;
-            resolvePass(ResolveAction::LOAD, rt, discarded);
-        } else {
-            // However, for now filament specifies that a non multi-sample attachment to a
-            // multi-sample RenderTarget is always discarded. We do this because implementing
-            // the load on Metal is not trivial and it's not a feature we rely on at this time.
-            discardFlags |= rt->gl.resolve;
-        }
+        // We would need to perform a "backward" resolve, i.e. load the resolved texture into the
+        // tile, everything must appear as though the multi-sample buffer was lost.
+        // However Filament specifies that a non multi-sample attachment to a
+        // multi-sample RenderTarget is always discarded. We do this because implementing
+        // the load on Metal is not trivial and it's not a feature we rely on at this time.
+        discardFlags |= rt->gl.resolve;
     }
 
     if (any(clearFlags)) {
@@ -2927,12 +2915,10 @@ void OpenGLDriver::blit(TargetBufferFlags buffers,
         GLRenderTarget const* s = handle_cast<GLRenderTarget const*>(src);
         GLRenderTarget const* d = handle_cast<GLRenderTarget const*>(dst);
 
-        if (!ALLOW_REVERSE_MULTISAMPLE_RESOLVE) {
-            // With GLES 3.x, GL_INVALID_OPERATION is generated if the value of GL_SAMPLE_BUFFERS
-            // for the draw buffer is greater than zero. This works with OpenGL, so we want to
-            // make sure to catch this scenario.
-            assert(d->gl.samples <= 1);
-        }
+        // With GLES 3.x, GL_INVALID_OPERATION is generated if the value of GL_SAMPLE_BUFFERS
+        // for the draw buffer is greater than zero. This works with OpenGL, so we want to
+        // make sure to catch this scenario.
+        assert(d->gl.samples <= 1);
 
         // GL_INVALID_OPERATION is generated if GL_SAMPLE_BUFFERS for the read buffer is greater
         // than zero and the formats of draw and read buffers are not identical.
