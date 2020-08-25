@@ -822,16 +822,19 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
             CHECK_GL_ERROR(utils::slog.e)
         } else
 #ifdef GL_EXT_multisampled_render_to_texture
-            if (gl.ext.EXT_multisampled_render_to_texture && t->depth <= 1) {
-                assert(rt->gl.samples > 1);
-                // We have a multi-sample rendertarget and we have EXT_multisampled_render_to_texture,
-                // so, we can directly use a 1-sample texture as attachment, multi-sample resolve,
-                // will happen automagically and efficiently in the driver.
-                // This extension only exists on OpenGL ES.
-                gl.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
-                glext::glFramebufferTexture2DMultisampleEXT(GL_FRAMEBUFFER,
-                        attachment, target, t->gl.id, binfo.level, rt->gl.samples);
-            } else
+            // EXT_multisampled_render_to_texture only support GL_COLOR_ATTACHMENT0
+        if ((t->depth <= 1)
+            && ((gl.ext.EXT_multisampled_render_to_texture && attachment == GL_COLOR_ATTACHMENT0)
+                || gl.ext.EXT_multisampled_render_to_texture2)) {
+            assert(rt->gl.samples > 1);
+            // We have a multi-sample rendertarget and we have EXT_multisampled_render_to_texture,
+            // so, we can directly use a 1-sample texture as attachment, multi-sample resolve,
+            // will happen automagically and efficiently in the driver.
+            // This extension only exists on OpenGL ES.
+            gl.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
+            glext::glFramebufferTexture2DMultisampleEXT(GL_FRAMEBUFFER,
+                    attachment, target, t->gl.id, binfo.level, rt->gl.samples);
+        } else
 #endif
         { // here we emulate ext.EXT_multisampled_render_to_texture
             assert(rt->gl.samples > 1);
