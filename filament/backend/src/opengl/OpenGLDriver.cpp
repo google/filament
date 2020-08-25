@@ -773,6 +773,20 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
     assert(rt->width  <= valueForLevel(binfo.level, t->width) &&
            rt->height <= valueForLevel(binfo.level, t->height));
 
+    // depth/stencil attachment must match the rendertarget sample count
+    // this is because EXT_multisampled_render_to_texture doesn't guarantee depth/stencil
+    // is resolved.
+    bool attachmentTypeNotSupportedByMSRTT = false;
+    switch (attachment) {
+        case GL_DEPTH_ATTACHMENT:
+        case GL_STENCIL_ATTACHMENT:
+        case GL_DEPTH_STENCIL_ATTACHMENT:
+            attachmentTypeNotSupportedByMSRTT = rt->gl.samples != t->samples;
+            break;
+        default:
+            break;
+    }
+
     auto& gl = mContext;
 
     if (any(t->usage & TextureUsage::SAMPLEABLE)) {
@@ -823,7 +837,7 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
         } else
 #ifdef GL_EXT_multisampled_render_to_texture
             // EXT_multisampled_render_to_texture only support GL_COLOR_ATTACHMENT0
-        if ((t->depth <= 1)
+        if (!attachmentTypeNotSupportedByMSRTT && (t->depth <= 1)
             && ((gl.ext.EXT_multisampled_render_to_texture && attachment == GL_COLOR_ATTACHMENT0)
                 || gl.ext.EXT_multisampled_render_to_texture2)) {
             assert(rt->gl.samples > 1);
