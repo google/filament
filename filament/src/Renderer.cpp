@@ -250,6 +250,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     if (view.hasDynamicLighting())         renderFlags |= RenderPass::HAS_DYNAMIC_LIGHTING;
     if (view.hasFog())                     renderFlags |= RenderPass::HAS_FOG;
     if (view.isFrontFaceWindingInverted()) renderFlags |= RenderPass::HAS_INVERSE_FRONT_FACES;
+    if (view.hasVsm())                     renderFlags |= RenderPass::HAS_VSM;
     pass.setRenderFlags(renderFlags);
 
     /*

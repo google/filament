@@ -246,6 +246,15 @@ public:
     };
 
     /**
+     * List of available shadow mapping techniques.
+     * @see setShadowType
+     */
+    enum class ShadowType : uint8_t {
+        PCF,        //!< percentage-closer filtered shadows (default)
+        VSM         //!< variance shadows
+    };
+
+    /**
      * Sets ambient occlusion options.
      *
      * @param options Options for ambient occlusion.
@@ -626,6 +635,15 @@ public:
      *
      */
     void setDynamicLightingOptions(float zLightNear, float zLightFar) noexcept;
+
+    /*
+     * Set the shadow mapping technique this View uses.
+     *
+     * The ShadowType affects all the shadows seen within the View.
+     *
+     * @warning This API is still experimental and subject to change.
+     */
+    void setShadowType(ShadowType shadow) noexcept;
 
     /**
      * Enables or disables post processing. Enabled by default.
