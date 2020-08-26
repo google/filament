@@ -949,30 +949,6 @@ void MetalDriver::blit(TargetBufferFlags buffers,
                         dstRect.left >= 0 && dstRect.bottom >= 0,
             "Source and destination rects must be positive.");
 
-    size_t srcAttachIndex = 0;
-    if (any(buffers & TargetBufferFlags::COLOR0)) {
-        srcAttachIndex = 0;
-    }
-    if (any(buffers & TargetBufferFlags::COLOR1)) {
-        srcAttachIndex = 1;
-    }
-    if (any(buffers & TargetBufferFlags::COLOR2)) {
-        srcAttachIndex = 2;
-    }
-    if (any(buffers & TargetBufferFlags::COLOR3)) {
-        srcAttachIndex = 3;
-    }
-    MetalRenderTarget::Attachment srcColorAttachment = srcTarget->getColorAttachment(srcAttachIndex);
-
-    // We always blit to the COLOR0 attachment.
-    MetalRenderTarget::Attachment dstColorAttachment = dstTarget->getColorAttachment(0);
-
-    id<MTLTexture> srcTexture = srcColorAttachment.texture;
-    id<MTLTexture> dstTexture = dstColorAttachment.texture;
-
-    ASSERT_PRECONDITION(srcTexture != nil && dstTexture != nil,
-            "Source texture and destination texture must not be nil");
-
     // Metal's texture coordinates have (0, 0) at the top-left of the texture, but Filament's
     // coordinates have (0, 0) at bottom-left.
     MTLRegion srcRegion = MTLRegionMake2D(
@@ -988,33 +964,73 @@ void MetalDriver::blit(TargetBufferFlags buffers,
             dstHeight - (NSUInteger) dstRect.bottom - dstRect.height,
             dstRect.width, dstRect.height);
 
-    const uint8_t srcLevel = srcColorAttachment.level;
-    const uint8_t dstLevel = dstColorAttachment.level;
-
     auto isBlitableTextureType = [](MTLTextureType t) {
         return t == MTLTextureType2D || t == MTLTextureType2DMultisample;
     };
-    ASSERT_PRECONDITION(isBlitableTextureType(srcTexture.textureType) &&
-                        isBlitableTextureType(dstTexture.textureType),
-                       "Metal does not support blitting to/from non-2D textures.");
 
     MetalBlitter::BlitArgs args;
     args.filter = filter;
-    args.source.level = srcLevel;
     args.source.region = srcRegion;
-    args.destination.level = dstLevel;
     args.destination.region = dstRegion;
 
-    if (any(buffers & TargetBufferFlags::COLOR)) {
-        args.source.color = srcTexture;
-        args.destination.color = dstTexture;
+    if (any(buffers & TargetBufferFlags::COLOR_ALL)) {
+        size_t srcAttachIndex = 0;
+        if (any(buffers & TargetBufferFlags::COLOR0)) {
+            srcAttachIndex = 0;
+        }
+        if (any(buffers & TargetBufferFlags::COLOR1)) {
+            srcAttachIndex = 1;
+        }
+        if (any(buffers & TargetBufferFlags::COLOR2)) {
+            srcAttachIndex = 2;
+        }
+        if (any(buffers & TargetBufferFlags::COLOR3)) {
+            srcAttachIndex = 3;
+        }
+
+        MetalRenderTarget::Attachment srcColorAttachment = srcTarget->getColorAttachment(srcAttachIndex);
+
+        // We always blit to the COLOR0 attachment.
+        MetalRenderTarget::Attachment dstColorAttachment = dstTarget->getColorAttachment(0);
+
+        if (srcColorAttachment && dstColorAttachment) {
+            ASSERT_PRECONDITION(isBlitableTextureType(srcColorAttachment.texture.textureType) &&
+                                isBlitableTextureType(dstColorAttachment.texture.textureType),
+                               "Metal does not support blitting to/from non-2D textures.");
+
+            args.source.color = srcColorAttachment.texture;
+            args.destination.color = dstColorAttachment.texture;
+            args.source.level = srcColorAttachment.level;
+            args.destination.level = dstColorAttachment.level;
+        }
     }
 
     if (any(buffers & TargetBufferFlags::DEPTH)) {
         MetalRenderTarget::Attachment srcDepthAttachment = srcTarget->getDepthAttachment();
         MetalRenderTarget::Attachment dstDepthAttachment = dstTarget->getDepthAttachment();
-        args.source.depth = srcDepthAttachment.texture;
-        args.destination.depth = dstDepthAttachment.texture;
+
+        if (srcDepthAttachment && dstDepthAttachment) {
+            ASSERT_PRECONDITION(isBlitableTextureType(srcDepthAttachment.texture.textureType) &&
+                                isBlitableTextureType(dstDepthAttachment.texture.textureType),
+                               "Metal does not support blitting to/from non-2D textures.");
+
+            args.source.depth = srcDepthAttachment.texture;
+            args.destination.depth = dstDepthAttachment.texture;
+
+            if (args.blitColor()) {
+                // If blitting color, we've already set the source and destination levels.
+                // Check that they match the requested depth levels.
+                ASSERT_PRECONDITION(args.source.level == srcDepthAttachment.level,
+                                   "Color and depth source LOD must match. (%d != %d)",
+                                   args.source.level, srcDepthAttachment.level);
+                ASSERT_PRECONDITION(args.destination.level == dstDepthAttachment.level,
+                                   "Color and depth destination LOD must match. (%d != %d)",
+                                   args.destination.level, dstDepthAttachment.level);
+            }
+
+            args.source.level = srcDepthAttachment.level;
+            args.destination.level = dstDepthAttachment.level;
+        }
     }
 
     mContext->blitter->blit(getPendingCommandBuffer(mContext), args);
