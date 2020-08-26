@@ -376,7 +376,7 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
     materialVariant.setDirectionalLighting(renderFlags & HAS_DIRECTIONAL_LIGHT);
     materialVariant.setDynamicLighting(renderFlags & HAS_DYNAMIC_LIGHTING);
     materialVariant.setFog(renderFlags & HAS_FOG);
-    materialVariant.setVsm(renderFlags & HAS_VSM && hasShadowing);
+    materialVariant.setVsm((renderFlags & HAS_VSM) && hasShadowing);
     materialVariant.setShadowReceiver(false); // this is set per Renderable
 
     Command cmdColor;
