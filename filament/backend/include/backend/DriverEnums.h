@@ -505,6 +505,20 @@ enum class TextureSwizzle {
     CHANNEL_3
 };
 
+//! returns whether this format a depth format
+static constexpr bool isDepthFormat(TextureFormat format) noexcept {
+    switch (format) {
+        case TextureFormat::DEPTH32F:
+        case TextureFormat::DEPTH24:
+        case TextureFormat::DEPTH16:
+        case TextureFormat::DEPTH32F_STENCIL8:
+        case TextureFormat::DEPTH24_STENCIL8:
+            return true;
+        default:
+            return false;
+    }
+}
+
 //! returns whether this format a compressed format
 static constexpr bool isCompressedFormat(TextureFormat format) noexcept {
     return format >= TextureFormat::EAC_R11;
