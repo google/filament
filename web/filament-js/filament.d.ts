@@ -55,7 +55,6 @@ export interface Vector<T> {
 
 export function vectorToArray<T>(vector: Vector<T>): T[];
 
-export class Texture {}
 export class SwapChain {}
 export class ColorGrading {}
 
@@ -138,6 +137,31 @@ export interface View$VignetteOptions {
     feather?: number;
     color?: float3;
     enabled?: boolean;
+}
+
+// Clients should use the [PixelBuffer/CompressedPixelBuffer] helper function to contruct PixelBufferDescriptor objects.
+export class driver$PixelBufferDescriptor {
+    constructor(byteLength: number, format: PixelDataFormat, datatype: PixelDataType);
+    constructor(byteLength: number, cdtype: CompressedPixelDataType, imageSize: number, compressed: boolean);
+    getBytes(): ArrayBuffer;
+}
+
+export class Texture$Builder {
+    public width(width: number): Texture$Builder;
+    public height(height: number): Texture$Builder;
+    public depth(depth: number): Texture$Builder;
+    public levels(levels: number): Texture$Builder;
+    public sampler(sampler: Texture$Sampler): Texture$Builder;
+    public format(format: Texture$InternalFormat): Texture$Builder;
+    public usage(usage: Texture$Usage): Texture$Builder;
+    public build(engine: Engine) : Texture;
+}
+
+export class Texture {
+    public static Builder(): Texture$Builder;
+    public setImage(engine: Engine, level: number, pbd: driver$PixelBufferDescriptor): void;
+    public setImageCube(engine: Engine, level: number, pbd: driver$PixelBufferDescriptor) : void;
+    public generateMipmaps(engine: Engine) : void;
 }
 
 // TODO: Remove the entity type and just use integers for parity with Filament's Java bindings.
@@ -455,6 +479,7 @@ export class RenderTarget {
     public getMipLevel(): number;
     public getFace(): Texture$CubemapFace;
     public getLayer(): number;
+    public static Builder() : RenderTarget$Builder;
 }
 
 export class View {
