@@ -156,6 +156,7 @@ private:
     VulkanRenderTarget* mCurrentRenderTarget = nullptr;
     VulkanSamplerGroup* mSamplerBindings[VulkanBinder::SAMPLER_BINDING_COUNT] = {};
     VkDebugReportCallbackEXT mDebugCallback = VK_NULL_HANDLE;
+    VkDebugUtilsMessengerEXT mDebugMessenger = VK_NULL_HANDLE;
 };
 
 } // namespace backend
