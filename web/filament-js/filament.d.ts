@@ -146,6 +146,7 @@ export class driver$PixelBufferDescriptor {
     getBytes(): ArrayBuffer;
 }
 
+// Clients should use createTextureFromKtx/ImageFile helper functions if low level control is not needed
 export class Texture$Builder {
     public width(width: number): Texture$Builder;
     public height(height: number): Texture$Builder;
