@@ -124,6 +124,10 @@ backend::TextureHandle ResourceAllocator::createTexture(const char* name,
     }
 #endif
 
+    // The frame graph descriptor uses "0" to mean "auto" but the sample count that is passed to the
+    // backend should always be 1 or greater.
+    samples = samples ? samples : uint8_t(1);
+
     // do we have a suitable texture in the cache?
     TextureHandle handle;
     if (mEnabled) {
