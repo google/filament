@@ -1004,7 +1004,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     }
     // Resolve attachments are not cleared but still have entries in the list, so skip over them.
     for (int i = 0; i < MRT::TARGET_COUNT; i++) {
-        if (rpkey.needsResolveMask & (1 << i)) {
+        if (rpkey.needsResolveMask & (1u << i)) {
             renderPassInfo.clearValueCount++;
         }
     }
@@ -1024,8 +1024,8 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
         .y = (float) params.viewport.bottom,
         .width = (float) params.viewport.width,
         .height = (float) params.viewport.height,
-        .minDepth = 0.0f,
-        .maxDepth = 1.0f
+        .minDepth = params.depthRange.near,
+        .maxDepth = params.depthRange.far
     };
 
     mCurrentRenderTarget->transformClientRectToPlatform(&viewport);

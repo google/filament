@@ -745,8 +745,8 @@ void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
                        static_cast<double>(params.viewport.height),
             .width = static_cast<double>(params.viewport.width),
             .height = static_cast<double>(params.viewport.height),
-            .znear = 0.0,
-            .zfar = 1.0
+            .znear = static_cast<double>(params.depthRange.near),
+            .zfar = static_cast<double>(params.depthRange.far)
     };
     [mContext->currentRenderPassEncoder setViewport:metalViewport];
 

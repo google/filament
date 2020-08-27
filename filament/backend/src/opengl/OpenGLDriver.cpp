@@ -2146,6 +2146,8 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     gl.viewport(params.viewport.left, params.viewport.bottom,
             params.viewport.width, params.viewport.height);
 
+    gl.depthRange(params.depthRange.near, params.depthRange.far);
+
 #ifndef NDEBUG
     // clear the discarded (but not the cleared ones) buffers in debug builds
     mContext.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
