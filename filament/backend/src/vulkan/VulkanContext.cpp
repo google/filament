@@ -93,7 +93,6 @@ void selectPhysicalDevice(VulkanContext& context) {
                 continue;
             }
             if (props.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-                assert(props.timestampValidBits > 0);
                 context.graphicsQueueFamilyIndex = j;
             }
         }

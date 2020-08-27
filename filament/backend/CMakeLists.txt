@@ -55,7 +55,7 @@ set(PRIVATE_HDRS
 # OpenGL / OpenGL ES Sources
 # ==================================================================================================
 
-if (NOT FILAMENT_USE_EXTERNAL_GLES3)
+if (NOT FILAMENT_USE_EXTERNAL_GLES3 AND NOT FILAMENT_USE_SWIFTSHADER)
     list(APPEND SRCS
             src/opengl/gl_headers.cpp
             src/opengl/gl_headers.h
@@ -83,8 +83,6 @@ if (NOT FILAMENT_USE_EXTERNAL_GLES3)
         list(APPEND SRCS src/android/ExternalTextureManagerAndroid.cpp)
         list(APPEND SRCS src/android/VirtualMachineEnv.cpp)
         list(APPEND SRCS src/opengl/PlatformEGLAndroid.cpp)
-    elseif (FILAMENT_USE_SWIFTSHADER)
-        # no extra sources for SwiftShader, PlatformEGL is enough
     elseif (IOS)
         list(APPEND SRCS src/opengl/PlatformCocoaTouchGL.mm)
         list(APPEND SRCS src/opengl/CocoaTouchExternalImage.mm)
@@ -201,7 +199,7 @@ if (ANDROID)
 endif()
 
 if (FILAMENT_USE_SWIFTSHADER)
-    target_link_libraries(${TARGET} PRIVATE swiftshader PUBLIC ${SWIFTSHADER_EGL} ${SWIFTSHADER_GLES})
+    target_link_libraries(${TARGET} PUBLIC ${SWIFTSHADER_VK})
 endif()
 
 if (APPLE AND NOT IOS)
@@ -347,7 +345,7 @@ if (APPLE AND NOT IOS AND NOT FILAMENT_USE_SWIFTSHADER)
     target_link_libraries(backend_test_mac PRIVATE -force_load backend_test)
 endif()
 
-if (APPLE AND NOT Vulkan_LIBRARY)
+if (APPLE AND NOT Vulkan_LIBRARY AND NOT FILAMENT_USE_SWIFTSHADER)
     message(STATUS "No Vulkan SDK was found, using prebuilt MoltenVK.")
     set(MOLTENVK_DIR "../../third_party/moltenvk")
     configure_file(
