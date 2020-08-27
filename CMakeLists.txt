@@ -15,7 +15,7 @@ option(FILAMENT_ENABLE_JAVA "Compile Java projects, requires a JDK and the JAVA_
 
 option(FILAMENT_USE_EXTERNAL_GLES3 "Experimental: Compile Filament against OpenGL ES 3" OFF)
 
-option(FILAMENT_USE_SWIFTSHADER "Experimental: Compile Filament against SwiftShader" OFF)
+option(FILAMENT_USE_SWIFTSHADER "Compile Filament against SwiftShader" OFF)
 
 option(FILAMENT_ENABLE_LTO "Enable link-time optimizations if supported by the compiler" OFF)
 
@@ -83,7 +83,7 @@ if (UNIX AND NOT APPLE AND NOT ANDROID AND NOT WEBGL)
     set(LINUX TRUE)
 endif()
 
-if (ANDROID OR WEBGL OR IOS OR FILAMENT_USE_SWIFTSHADER)
+if (ANDROID OR WEBGL OR IOS)
     set(IS_MOBILE_TARGET TRUE)
 endif()
 
@@ -228,8 +228,7 @@ if (FILAMENT_USE_EXTERNAL_GLES3)
 endif()
 
 if (FILAMENT_USE_SWIFTSHADER)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DSWIFTSHADER")
-    set(EGL TRUE)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DFILAMENT_USE_SWIFTSHADER")
 endif()
 
 if (WIN32)
@@ -238,7 +237,7 @@ endif()
 
 if (LINUX)
     option(USE_STATIC_LIBCXX "Link against the static runtime libraries." ON)
-    if (${USE_STATIC_LIBCXX}) 
+    if (${USE_STATIC_LIBCXX})
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
         link_libraries("-static-libgcc -static-libstdc++")
         link_libraries(libc++.a)
@@ -351,7 +350,7 @@ endif()
 
 # By default, build with Vulkan support on desktop platforms, although clients must request to use
 # it at run time.
-if (WIN32 OR WEBGL OR IOS OR FILAMENT_USE_SWIFTSHADER)
+if (WIN32 OR WEBGL OR IOS)
     option(FILAMENT_SUPPORTS_VULKAN "Include the Vulkan backend" OFF)
 else()
     option(FILAMENT_SUPPORTS_VULKAN "Include the Vulkan backend" ON)
@@ -484,20 +483,20 @@ endif()
 # "bluevk" and "samples" targets.
 # ==================================================================================================
 
-if (FILAMENT_SUPPORTS_VULKAN AND APPLE)
+if (FILAMENT_USE_SWIFTSHADER)
+    if (NOT FILAMENT_SUPPORTS_VULKAN)
+        message(ERROR "SwiftShader is only useful when Vulkan is enabled.")
+    endif()
+    find_library(SWIFTSHADER_VK NAMES vk_swiftshader HINTS "$ENV{SWIFTSHADER_LD_LIBRARY_PATH}")
+    message(STATUS "Found SwiftShader VK library in: ${SWIFTSHADER_VK}.")
+    add_definitions(-DFILAMENT_VKLIBRARY_PATH=\"${SWIFTSHADER_VK}\")
+elseif (FILAMENT_SUPPORTS_VULKAN AND APPLE)
     find_library(Vulkan_LIBRARY NAMES vulkan HINTS "$ENV{VULKAN_SDK}/lib" "$ENV{VULKAN_SDK}/macOS/lib")
     if (Vulkan_LIBRARY)
         set(Vulkan_FOUND ON)
         message(STATUS "Found Vulkan library in SDK: ${Vulkan_LIBRARY}.")
         add_definitions(-DFILAMENT_VKLIBRARY_PATH=\"${Vulkan_LIBRARY}\")
     endif()
-endif()
-
-if (FILAMENT_USE_SWIFTSHADER)
-    find_library(SWIFTSHADER_EGL NAMES EGL HINTS "$ENV{SWIFTSHADER_LD_LIBRARY_PATH}")
-    find_library(SWIFTSHADER_GLES NAMES GLESv3 GLESv2 HINTS "$ENV{SWIFTSHADER_LD_LIBRARY_PATH}")
-    message(STATUS "Found SwiftShader EGL library in: ${SWIFTSHADER_EGL}.")
-    message(STATUS "Found SwiftShader GLES library in: ${SWIFTSHADER_GLES}.")
 endif()
 
 # ==================================================================================================
@@ -629,10 +628,6 @@ if (IS_HOST_PLATFORM)
     add_subdirectory(${TOOLS}/resgen)
     add_subdirectory(${TOOLS}/roughness-prefilter)
     add_subdirectory(${TOOLS}/specular-color)
-endif()
-
-if (FILAMENT_USE_SWIFTSHADER)
-    add_subdirectory(${EXTERNAL}/swiftshader/tnt)
 endif()
 
 # Generate exported executables for cross-compiled builds (Android, WebGL, and iOS)
