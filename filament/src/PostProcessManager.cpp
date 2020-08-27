@@ -1574,11 +1574,14 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
 
     FrameHistoryEntry const& entry = frameHistory[0];
     FrameGraphId<FrameGraphTexture> colorHistory;
-    if (!entry.color.texture) {
+    mat4f const* historyProjection = nullptr;
+    if (UTILS_UNLIKELY(!entry.color.texture)) {
         // if we don't have a history yet, just use the current color buffer as history
         colorHistory = input;
+        historyProjection = &frameHistory.getCurrent().projection;
     } else {
         colorHistory = fg.import("TAA history", entry.colorDesc, entry.color);
+        historyProjection = &entry.projection;
     }
 
     Blackboard& blackboard = fg.getBlackboard();
@@ -1665,7 +1668,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                 });
                 mi->setParameter("filterWeights",  weights, 9);
                 mi->setParameter("reprojection",
-                        frameHistory[0].projection *
+                        *historyProjection *
                         inverse(current.projection) *
                         normalizedToClip);
 
