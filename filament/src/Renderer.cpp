@@ -458,6 +458,14 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     if (hasPostProcess) {
         if (dofOptions.enabled) {
+
+            // dof needs access to the depth buffer, when MSAA is enabled, it might need
+            // to be resolved.
+            auto& blackboard = fg.getBlackboard();
+            auto depth = blackboard.get<FrameGraphTexture>("depth");
+            depth = ppm.resolve(fg, "Resolved Depth Buffer", depth);
+            blackboard.put("depth", depth);
+
             input = ppm.dof(fg, input, dofOptions, needsAlphaChannel, cameraInfo);
         }
         if (colorGrading) {
@@ -717,7 +725,14 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                     data.depth = builder.createTexture("Depth Buffer", {
                             .width = colorBufferDesc.width,
                             .height = colorBufferDesc.height,
-                            .format = TextureFormat::DEPTH24
+                            // If the color attachment requested MS, we assume this means the MS buffer
+                            // must be kept, and for that reason we allocate the depth buffer with MS
+                            // as well. On the other hand, if the color attachment was allocated without
+                            // MS, no need to allocate the depth buffer with MS, if the RT is MS,
+                            // the tile depth buffer will be MS, but it'll be resolved to single
+                            // sample automatically -- which is what we want.
+                            .samples = colorBufferDesc.samples,
+                            .format = TextureFormat::DEPTH24,
                     });
                 }
 
