@@ -102,6 +102,7 @@ struct VulkanContext {
     uint32_t graphicsQueueFamilyIndex;
     VkQueue graphicsQueue;
     bool debugMarkersSupported;
+    bool debugUtilsSupported;
     VulkanBinder::RasterState rasterState;
     VulkanCommandBuffer* currentCommands;
     VulkanSurfaceContext* currentSurface;
