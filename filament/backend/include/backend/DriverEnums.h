@@ -122,6 +122,14 @@ struct Viewport {
 };
 
 /**
+ * Specifies the mapping of the near and far clipping plane to window coordinates.
+ */
+struct DepthRange {
+    float near = 0.0f;    //!< mapping of the near plane to window coordinates.
+    float far = 1.0f;     //!< mapping of the far plane to window coordinates.
+};
+
+/**
  * Error codes for Fence::wait()
  * @see Fence, Fence::wait()
  */
@@ -843,6 +851,7 @@ struct RenderPassParams {
     RenderPassFlags flags{};    //!< operations performed on the buffers for this pass
 
     Viewport viewport{};        //!< viewport for this pass
+    DepthRange depthRange{};    //!< depth range for this pass
 
     //! Color to use to clear the COLOR buffer. RenderPassFlags::clear must be set.
     filament::math::float4 clearColor = {};

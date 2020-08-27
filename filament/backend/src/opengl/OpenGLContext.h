@@ -32,6 +32,7 @@ public:
     static constexpr const size_t MAX_TEXTURE_UNIT_COUNT = 16;   // All mobile GPUs as of 2016
     static constexpr const size_t MAX_BUFFER_BINDINGS = 32;
     typedef math::details::TVec4<GLint> vec4gli;
+    typedef math::details::TVec2<GLclampf> vec2glf;
 
     struct RenderPrimitive {
         GLuint vao = 0;
@@ -91,6 +92,7 @@ public:
 
     inline void setScissor(GLint left, GLint bottom, GLsizei width, GLsizei height) noexcept;
     inline void viewport(GLint left, GLint bottom, GLsizei width, GLsizei height) noexcept;
+    inline void depthRange(GLclampf near, GLclampf far) noexcept;
 
     void deleteBuffers(GLsizei n, const GLuint* buffers, GLenum target) noexcept;
     void deleteVextexArrays(GLsizei n, const GLuint* arrays) noexcept;
@@ -247,6 +249,7 @@ private:
         struct {
             vec4gli scissor { 0 };
             vec4gli viewport { 0 };
+            vec2glf depthRange { 0.0f, 1.0f };
         } window;
 
         struct {
@@ -356,6 +359,13 @@ void OpenGLContext::viewport(GLint left, GLint bottom, GLsizei width, GLsizei he
     vec4gli viewport(left, bottom, width, height);
     update_state(state.window.viewport, viewport, [&]() {
         glViewport(left, bottom, width, height);
+    });
+}
+
+void OpenGLContext::depthRange(GLclampf near, GLclampf far) noexcept {
+    vec2glf depthRange(near, far);
+    update_state(state.window.depthRange, depthRange, [&]() {
+        glDepthRangef(near, far);
     });
 }
 
