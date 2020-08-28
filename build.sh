@@ -38,6 +38,8 @@ function print_help {
     echo "        Exclude Vulkan support from the Android build."
     echo "    -s"
     echo "        Add iOS simulator support to the iOS build."
+    echo "    -t"
+    echo "        Enable SwiftShader support for Vulkan in desktop builds."
     echo "    -l"
     echo "        Combine iOS arm64 and x86_64 into universal libraries (implies -s)."
     echo "    -w"
@@ -116,6 +118,8 @@ INSTALL_COMMAND=
 VULKAN_ANDROID_OPTION="-DFILAMENT_SUPPORTS_VULKAN=ON"
 VULKAN_ANDROID_GRADLE_OPTION=""
 
+SWIFTSHADER_OPTION="-DFILAMENT_USE_SWIFTSHADER=OFF"
+
 IOS_BUILD_SIMULATOR=false
 IOS_CREATE_UNIVERSAL_LIBRARIES=false
 
@@ -163,6 +167,7 @@ function build_desktop_target {
             -DCMAKE_BUILD_TYPE="$1" \
             -DCMAKE_INSTALL_PREFIX="../${lc_target}/filament" \
             -DFILAMENT_ENABLE_JAVA="${FILAMENT_ENABLE_JAVA}" \
+            ${SWIFTSHADER_OPTION} \
             ${deployment_target} \
             ../..
     fi
@@ -647,7 +652,7 @@ function run_tests {
 
 pushd "$(dirname "$0")" > /dev/null
 
-while getopts ":hacfijmp:q:uvslw" opt; do
+while getopts ":hacfijmp:q:uvslwt" opt; do
     case ${opt} in
         h)
             print_help
@@ -744,6 +749,10 @@ while getopts ":hacfijmp:q:uvslw" opt; do
         s)
             IOS_BUILD_SIMULATOR=true
             echo "iOS simulator support enabled."
+            ;;
+        t)
+            SWIFTSHADER_OPTION="-DFILAMENT_USE_SWIFTSHADER=ON"
+            echo "SwiftShader support enabled."
             ;;
         l)
             IOS_BUILD_SIMULATOR=true

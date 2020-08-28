@@ -57,6 +57,21 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugReportCallback(VkDebugReportFlagsEXT flags,
     return VK_FALSE;
 }
 
+VKAPI_ATTR VkBool32 VKAPI_CALL debugUtilsCallback(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
+        VkDebugUtilsMessageTypeFlagsEXT types, const VkDebugUtilsMessengerCallbackDataEXT* cbdata,
+        void* pUserData) {
+    if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
+        utils::slog.e << "VULKAN ERROR: (" << cbdata->pMessageIdName << ") "
+                << cbdata->pMessage << utils::io::endl;
+        utils::debug_trap();
+    } else {
+        utils::slog.w << "VULKAN WARNING: (" << cbdata->pMessageIdName << ") "
+                << cbdata->pMessage << utils::io::endl;
+    }
+    // Return TRUE here if an abort is desired.
+    return VK_FALSE;
+}
+
 }
 
 #endif
@@ -140,7 +155,25 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
             vkCreateDebugReportCallbackEXT;
 
 #if VK_ENABLE_VALIDATION
-    if (createDebugReportCallback) {
+
+    // We require the VK_EXT_debug_utils instance extension on all non-Android platforms when
+    // validation is enabled.
+    #ifndef ANDROID
+    mContext.debugUtilsSupported = true;
+    #endif
+
+    if (mContext.debugUtilsSupported) {
+        VkDebugUtilsMessengerCreateInfoEXT createInfo = {
+            .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,
+            .pNext = nullptr,
+            .flags = 0,
+            .messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT,
+            .messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT,
+            .pfnUserCallback = debugUtilsCallback
+        };
+        result = vkCreateDebugUtilsMessengerEXT(mContext.instance, &createInfo, VKALLOC, &mDebugMessenger);
+        ASSERT_POSTCONDITION(result == VK_SUCCESS, "Unable to create Vulkan debug messenger.");
+    } else if (createDebugReportCallback) {
         const VkDebugReportCallbackCreateInfoEXT cbinfo = {
             VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT,
             nullptr,
@@ -235,6 +268,9 @@ void VulkanDriver::terminate() {
     vkDestroyDevice(mContext.device, VKALLOC);
     if (mDebugCallback) {
         vkDestroyDebugReportCallbackEXT(mContext.instance, mDebugCallback, VKALLOC);
+    }
+    if (mDebugMessenger) {
+        vkDestroyDebugUtilsMessengerEXT(mContext.instance, mDebugMessenger, VKALLOC);
     }
     vkDestroyInstance(mContext.instance, VKALLOC);
     mContext.device = nullptr;
@@ -1190,7 +1226,14 @@ void VulkanDriver::insertEventMarker(char const* string, size_t len) {
     constexpr float MARKER_COLOR[] = { 0.0f, 1.0f, 0.0f, 1.0f };
     ASSERT_POSTCONDITION(mContext.currentCommands,
             "Markers can only be inserted within a beginFrame / endFrame.");
-    if (mContext.debugMarkersSupported) {
+    if (mContext.debugUtilsSupported) {
+        VkDebugUtilsLabelEXT labelInfo = {
+            .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
+            .pLabelName = string,
+            .color = {1, 1, 0, 1},
+        };
+        vkCmdInsertDebugUtilsLabelEXT(mContext.currentCommands->cmdbuffer, &labelInfo);
+    } else if (mContext.debugMarkersSupported) {
         VkDebugMarkerMarkerInfoEXT markerInfo = {};
         markerInfo.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT;
         memcpy(markerInfo.color, &MARKER_COLOR[0], sizeof(MARKER_COLOR));
@@ -1204,7 +1247,14 @@ void VulkanDriver::pushGroupMarker(char const* string, size_t len) {
     constexpr float MARKER_COLOR[] = { 0.0f, 1.0f, 0.0f, 1.0f };
     ASSERT_POSTCONDITION(mContext.currentCommands,
             "Markers can only be inserted within a beginFrame / endFrame.");
-    if (mContext.debugMarkersSupported) {
+    if (mContext.debugUtilsSupported) {
+        VkDebugUtilsLabelEXT labelInfo = {
+            .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
+            .pLabelName = string,
+            .color = {0, 1, 0, 1},
+        };
+        vkCmdBeginDebugUtilsLabelEXT(mContext.currentCommands->cmdbuffer, &labelInfo);
+    } else if (mContext.debugMarkersSupported) {
         VkDebugMarkerMarkerInfoEXT markerInfo = {};
         markerInfo.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT;
         memcpy(markerInfo.color, &MARKER_COLOR[0], sizeof(MARKER_COLOR));
@@ -1216,7 +1266,9 @@ void VulkanDriver::pushGroupMarker(char const* string, size_t len) {
 void VulkanDriver::popGroupMarker(int) {
     ASSERT_POSTCONDITION(mContext.currentCommands,
             "Markers can only be inserted within a beginFrame / endFrame.");
-    if (mContext.debugMarkersSupported) {
+    if (mContext.debugUtilsSupported) {
+        vkCmdEndDebugUtilsLabelEXT(mContext.currentCommands->cmdbuffer);
+    } else if (mContext.debugMarkersSupported) {
         vkCmdDebugMarkerEndEXT(mContext.currentCommands->cmdbuffer);
     }
 }
