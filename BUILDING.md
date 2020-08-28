@@ -454,3 +454,17 @@ $ doxygen docs/doxygen/filament.doxygen
 ```
 
 Finally simply open `docs/html/index.html` in your web browser.
+
+## SwiftShader
+
+To try out Filament's Vulkan support with SwiftShader, first build SwiftShader and set the
+`SWIFTSHADER_LD_LIBRARY_PATH` variable to the folder that contains `libvk_swiftshader.dylib`:
+
+```
+git clone https://github.com/google/swiftshader.git
+cd swiftshader/build
+cmake .. &&  make -j
+export SWIFTSHADER_LD_LIBRARY_PATH=`pwd`
+```
+
+Next, go to your Filament repo and use the [easy build](#easy-build) script with `-t`.
