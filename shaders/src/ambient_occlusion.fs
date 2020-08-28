@@ -17,6 +17,7 @@ float unpack(vec2 depth) {
 }
 
 float evaluateSSAO() {
+#if defined(BLEND_MODE_OPAQUE) || defined(BLEND_MODE_MASKED)
     highp vec2 uv = uvToRenderTargetUV(getNormalizedViewportCoord().xy);
 
     // Upscale the SSAO buffer in real-time, in high quality mode we use a custom bilinear
@@ -66,6 +67,10 @@ float evaluateSSAO() {
     } else {
         return textureLod(light_ssao, uv, 0.0).r;
     }
+#else
+    // SSAO is not applied when blending is enabled
+    return 1.0;
+#endif
 }
 
 float SpecularAO_Lagarde(float NoV, float visibility, float roughness) {

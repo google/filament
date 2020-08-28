@@ -758,8 +758,7 @@ struct RasterState {
 
     // note: clang reduces this entire function to a simple load/mask/compare
     bool hasBlending() const noexcept {
-        // there could be other cases where blending would end-up being disabled,
-        // but this is common and easy to check
+        // This is used to decide if blending needs to be enabled in the h/w
         return !(blendEquationRGB == BlendEquation::ADD &&
                  blendEquationAlpha == BlendEquation::ADD &&
                  blendFunctionSrcRGB == BlendFunction::ONE &&
