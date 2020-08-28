@@ -315,7 +315,7 @@ private:
             RenderFlags renderFlags, FScene::VisibleMaskType visibilityMask,
             math::float3 cameraPosition, math::float3 cameraForward) noexcept;
 
-    static void setupColorCommand(Command& cmdDraw, bool hasDepthPass,
+    static void setupColorCommand(Command& cmdDraw,
             FMaterialInstance const* mi, bool inverseFrontFaces) noexcept;
 
     void recordDriverCommands(FEngine::DriverApi& driver, const Command* first,

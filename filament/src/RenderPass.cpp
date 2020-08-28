@@ -246,7 +246,7 @@ void RenderPass::recordDriverCommands(FEngine::DriverApi& driver, const Command*
 /* static */
 UTILS_ALWAYS_INLINE // this function exists only to make the code more readable. we want it inlined.
 inline              // and we don't need it in the compilation unit
-void RenderPass::setupColorCommand(Command& cmdDraw, bool hasDepthPass,
+void RenderPass::setupColorCommand(Command& cmdDraw,
         FMaterialInstance const* const UTILS_RESTRICT mi, bool inverseFrontFaces) noexcept {
 
     FMaterial const * const UTILS_RESTRICT ma = mi->getMaterial();
@@ -260,8 +260,10 @@ void RenderPass::setupColorCommand(Command& cmdDraw, bool hasDepthPass,
     keyBlending |= uint64_t(Pass::BLENDED);
     keyBlending |= uint64_t(CustomCommand::PASS);
 
+    BlendingMode blendingMode = ma->getBlendingMode();
     bool hasScreenSpaceRefraction = ma->getRefractionMode() == RefractionMode::SCREEN_SPACE;
-    bool hasBlending = !hasScreenSpaceRefraction && ma->getRasterState().hasBlending();
+    bool isBlendingCommand = !hasScreenSpaceRefraction &&
+            (blendingMode != BlendingMode::OPAQUE && blendingMode != BlendingMode::MASKED);
 
     uint64_t keyDraw = cmdDraw.key;
     keyDraw &= ~(PASS_MASK | BLENDING_MASK | MATERIAL_MASK);
@@ -271,7 +273,7 @@ void RenderPass::setupColorCommand(Command& cmdDraw, bool hasDepthPass,
     keyDraw |= makeField(variant, MATERIAL_VARIANT_KEY_MASK, MATERIAL_VARIANT_KEY_SHIFT);
     keyDraw |= makeField(ma->getRasterState().alphaToCoverage, BLENDING_MASK, BLENDING_SHIFT);
 
-    cmdDraw.key = hasBlending ? keyBlending : keyDraw;
+    cmdDraw.key = isBlendingCommand ? keyBlending : keyDraw;
     cmdDraw.primitive.rasterState = ma->getRasterState();
     cmdDraw.primitive.rasterState.inverseFrontFaces = inverseFrontFaces;
     cmdDraw.primitive.rasterState.culling = mi->getCullingMode();
@@ -280,22 +282,6 @@ void RenderPass::setupColorCommand(Command& cmdDraw, bool hasDepthPass,
     cmdDraw.primitive.rasterState.depthFunc = mi->getDepthFunc();
     cmdDraw.primitive.mi = mi;
     cmdDraw.primitive.materialVariant.key = variant;
-
-    // Code below is branch-less with clang.
-
-    bool skipDepthWrite = hasDepthPass &
-            cmdDraw.primitive.rasterState.depthWrite &
-            ~(cmdDraw.primitive.rasterState.alphaToCoverage | hasBlending);
-
-    // If we have:
-    //      depth-prepass AND
-    //      depth-write is enabled AND
-    //      we're not doing alpha-to-coverage AND
-    //      we're not alpha blending
-    // THEN, we deactivate depth write (because it'll be done by the depth-prepass)
-    cmdDraw.primitive.rasterState.depthWrite =
-            skipDepthWrite ? false : cmdDraw.primitive.rasterState.depthWrite;
-
     // we keep "RasterState::colorWrite" to the value set by material (could be disabled)
 }
 
@@ -356,8 +342,11 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
     // (in principle, we could have split this method into two, at the cost of going through
     // the list twice)
 
-    const bool colorPass  = bool(commandTypeFlags & CommandTypeFlags::COLOR);
-    const bool depthPass  = bool(commandTypeFlags & CommandTypeFlags::DEPTH);
+    const bool isColorPass  = bool(commandTypeFlags & CommandTypeFlags::COLOR);
+    const bool isDepthPass  = bool(commandTypeFlags & CommandTypeFlags::DEPTH);
+
+    static_assert(isColorPass != isDepthPass, "only color or depth pass supported");
+
     const bool depthContainsShadowCasters = bool(extraFlags & CommandTypeFlags::DEPTH_CONTAINS_SHADOW_CASTERS);
     const bool depthFilterTranslucentObjects = bool(extraFlags & CommandTypeFlags::DEPTH_FILTER_TRANSLUCENT_OBJECTS);
     const bool depthFilterAlphaMaskedObjects = bool(extraFlags & CommandTypeFlags::DEPTH_FILTER_ALPHA_MASKED_OBJECTS);
@@ -397,7 +386,7 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
             // We need to encode a SENTINEL for each command that would have been generated
             // otherwise. Color passes get 2 commands per primitive; depth passes get 1.
             const Slice<FRenderPrimitive>& primitives = soaPrimitives[i];
-            const size_t commandsToEncode = (colorPass * 2 + depthPass) * primitives.size();
+            const size_t commandsToEncode = (isColorPass * 2 + isDepthPass) * primitives.size();
             for (size_t j = 0; j < commandsToEncode; j++) {
                 curr->key = uint64_t(Pass::SENTINEL);
                 ++curr;
@@ -466,10 +455,10 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
          */
         for (auto const& primitive : primitives) {
             FMaterialInstance const* const mi = primitive.getMaterialInstance();
-            if (colorPass) {
+            if (isColorPass) {
                 cmdColor.primitive.primitiveHandle = primitive.getHwHandle();
                 cmdColor.primitive.materialVariant = materialVariant;
-                RenderPass::setupColorCommand(cmdColor, depthPass, mi, inverseFrontFaces);
+                RenderPass::setupColorCommand(cmdColor, mi, inverseFrontFaces);
 
                 const bool blendPass = Pass(cmdColor.key & PASS_MASK) == Pass::BLENDED;
                 if (blendPass) {
@@ -546,8 +535,9 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
                 ++curr;
             }
 
-            if (depthPass) {
-                RasterState rs = mi->getMaterial()->getRasterState();
+            if (isDepthPass) {
+                FMaterial const* const ma = mi->getMaterial();
+                RasterState rs = ma->getRasterState();
 
                 // unconditionally write the command
                 cmdDepth.primitive.primitiveHandle = primitive.getHwHandle();
@@ -555,9 +545,12 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
                 cmdDepth.primitive.rasterState.culling = mi->getCullingMode();
                 *curr = cmdDepth;
 
+                BlendingMode blendingMode = ma->getBlendingMode();
+                bool translucent = (blendingMode != BlendingMode::OPAQUE && blendingMode != BlendingMode::MASKED);
+
                 // FIXME: should writeDepthForShadowCasters take precedence over rs.depthWrite?
                 bool issueDepth = (rs.depthWrite
-                        & !(depthFilterTranslucentObjects & rs.hasBlending())
+                        & !(depthFilterTranslucentObjects & translucent)
                         & !(depthFilterAlphaMaskedObjects & rs.alphaToCoverage))
                                 | writeDepthForShadowCasters;
 
