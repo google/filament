@@ -219,6 +219,7 @@ void OpenGLContext::initExtensionsGLES(GLint major, GLint minor, ExtentionSet co
     ext.APPLE_color_buffer_packed_float = hasExtension(exts, "GL_APPLE_color_buffer_packed_float");
     ext.texture_compression_s3tc = hasExtension(exts, "WEBGL_compressed_texture_s3tc");
     ext.EXT_multisampled_render_to_texture = hasExtension(exts, "GL_EXT_multisampled_render_to_texture");
+    ext.EXT_multisampled_render_to_texture2 = hasExtension(exts, "GL_EXT_multisampled_render_to_texture2");
     ext.EXT_disjoint_timer_query = hasExtension(exts, "GL_EXT_disjoint_timer_query");
     ext.KHR_debug = hasExtension(exts, "GL_KHR_debug");
     ext.EXT_texture_compression_s3tc_srgb = hasExtension(exts, "GL_EXT_texture_compression_s3tc_srgb");

@@ -27,7 +27,7 @@ namespace filament {
 using namespace backend;
 using namespace math;
 
-ShadowMapManager::ShadowMapManager(FEngine& engine) : mTextureState(0, 0) {
+ShadowMapManager::ShadowMapManager(FEngine& engine) : mTextureState(0, 0, false) {
     for (size_t i = 0; i < mCascadeShadowMapCache.size(); i++) {
         mCascadeShadowMapCache[i] = std::make_unique<ShadowMap>(engine);
     }
@@ -91,31 +91,71 @@ void ShadowMapManager::prepare(FEngine& engine, DriverApi& driver, SamplerGroup&
 
     // If we already have a texture with the same dimensions and layer count, there's no need to
     // create a new one.
-    const TextureState newState(dim, layersNeeded);
+    const TextureState newState(dim, layersNeeded, mUseVsm);
     if (mTextureState == newState) {
         // nothing to do here.
-        assert(mShadowMapTexture);
+        assert(mShadowMapTexture || mVsmTexture);
         return;
     }
 
     // destroy the current rendertargets and texture
     destroyResources(driver);
 
-    mShadowMapTexture = driver.createTexture(
-            SamplerType::SAMPLER_2D_ARRAY, 1, mTextureFormat, 1, dim, dim, layersNeeded,
-            TextureUsage::DEPTH_ATTACHMENT |TextureUsage::SAMPLEABLE);
+    // Shadows are either all PCF or all VSM.
+
+    if (mUseVsm) {
+        // TODO: support 16-bit VSM depth textures.
+        mVsmTexture = driver.createTexture(
+                SamplerType::SAMPLER_2D_ARRAY, 1, TextureFormat::RG32F, 1, dim, dim, layersNeeded,
+                TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE);
+        mVsmDepthTexture = driver.createTexture(
+                SamplerType::SAMPLER_2D, 1, mTextureFormat, 1, dim, dim, 1,
+                TextureUsage::DEPTH_ATTACHMENT);
+    } else {
+        mShadowMapTexture = driver.createTexture(
+                SamplerType::SAMPLER_2D_ARRAY, 1, mTextureFormat, 1, dim, dim, layersNeeded,
+                TextureUsage::DEPTH_ATTACHMENT | TextureUsage::SAMPLEABLE);
+    }
+
     mTextureState = newState;
 
     // Create a render target, one for each layer.
+    TargetBufferFlags flags = TargetBufferFlags::DEPTH;
+    if (mUseVsm) { flags |= TargetBufferFlags::COLOR0; }
     for (uint16_t l = 0; l < layersNeeded; l++) {
+        const auto colorAttachment = mUseVsm ? MRT { mVsmTexture, 0, l } : MRT {};
+        const auto depthAttachment = mUseVsm ?
+            TargetBufferInfo { mVsmDepthTexture, 0, 0 } :
+            TargetBufferInfo { mShadowMapTexture, 0, l };
         Handle<HwRenderTarget> rt = driver.createRenderTarget(
-                TargetBufferFlags::DEPTH, dim, dim, 1,
-                {}, { mShadowMapTexture, 0, l }, {});
+                flags,                          // targetbufferFlags
+                dim,                            // width
+                dim,                            // height
+                1,                              // samples
+                colorAttachment,                // color MRT (texture, level, layer)
+                depthAttachment,                // depth TargetBufferInfo (texture, level, layer)
+                {}                              // stencil TargetBufferInfo
+        );
         mRenderTargets.push_back(rt);
     }
 
+    // FIXME: in the future this will come from the framegraph
+    mRenderPassParams = {};
+    mRenderPassParams.flags.clear = TargetBufferFlags::DEPTH;
+    mRenderPassParams.flags.discardStart = TargetBufferFlags::DEPTH;
+    mRenderPassParams.flags.discardEnd = TargetBufferFlags::STENCIL;
+    mRenderPassParams.clearDepth = 1.0;
+    if (mUseVsm) {
+        mRenderPassParams.flags.discardStart |= TargetBufferFlags::COLOR0;
+        mRenderPassParams.flags.clear |= TargetBufferFlags::COLOR0;
+        const float zFar = std::numeric_limits<float>::max();
+        mRenderPassParams.clearColor = { zFar, zFar, 0.0, 0.0 };
+        mRenderPassParams.flags.discardEnd |= TargetBufferFlags::DEPTH;
+    }
+    // mRenderPassParams.viewport is set inside render()
+
     samplerGroup.setSampler(PerViewSib::SHADOW_MAP, {
-            mShadowMapTexture, {
+            mUseVsm ? mVsmTexture : mShadowMapTexture, {
                     .filterMag = SamplerMagFilter::LINEAR,
                     .filterMin = SamplerMinFilter::LINEAR,
                     .compareMode = SamplerCompareMode::COMPARE_TO_TEXTURE,
@@ -135,6 +175,10 @@ bool ShadowMapManager::update(FEngine& engine, FView& view, UniformBuffer& perVi
 void ShadowMapManager::reset() noexcept {
     mCascadeShadowMaps.clear();
     mSpotShadowMaps.clear();
+}
+
+void ShadowMapManager::setVsm(bool vsm) noexcept {
+    mUseVsm = vsm;
 }
 
 void ShadowMapManager::setShadowCascades(size_t lightIndex, size_t cascades) noexcept {
@@ -166,11 +210,11 @@ void ShadowMapManager::render(FEngine& engine, FView& view, backend::DriverApi& 
         }
 
         const uint32_t dim = map.getLayout().size;
-        filament::Viewport viewport{1, 1, dim - 2, dim - 2};
+        filament::Viewport viewport { 1, 1, dim - 2, dim - 2 };
+        mRenderPassParams.viewport = viewport;
         map.getShadowMap()->render(driver, mRenderTargets[currentRt],
-                viewport, view.getVisibleDirectionalShadowCasters(), pass, view);
+                viewport, view.getVisibleDirectionalShadowCasters(), pass, mRenderPassParams, view);
     }
-    assert(mShadowMapTexture);
     for (size_t i = 0; i < mSpotShadowMaps.size(); i++, currentRt++) {
         const auto& map = mSpotShadowMaps[i];
         if (!map.hasVisibleShadows()) {
@@ -184,10 +228,11 @@ void ShadowMapManager::render(FEngine& engine, FView& view, backend::DriverApi& 
         // clamping in the shadow shader (see sampleDepth inside shadowing.fs). Unfortunately, the APIs
         // don't seem let us clear depth attachments to anything greater than 1.0, so we'd need a way to
         // do this other than clearing.
-        filament::Viewport viewport {1, 1, dim - 2, dim - 2};
+        filament::Viewport viewport { 1, 1, dim - 2, dim - 2 };
+        mRenderPassParams.viewport = viewport;
         pass.setVisibilityMask(VISIBLE_SPOT_SHADOW_CASTER_N(i));
         map.getShadowMap()->render(driver, mRenderTargets[currentRt], viewport,
-                view.getVisibleSpotShadowCasters(), pass, view);
+                view.getVisibleSpotShadowCasters(), pass, mRenderPassParams, view);
         pass.clearVisibilityMask();
     }
 }
@@ -438,6 +483,15 @@ void ShadowMapManager::destroyResources(DriverApi& driver) noexcept {
     mRenderTargets.clear();
     if (mShadowMapTexture) {
         driver.destroyTexture(mShadowMapTexture);
+        mShadowMapTexture.clear();
+    }
+    if (mVsmTexture) {
+        driver.destroyTexture(mVsmTexture);
+        mVsmTexture.clear();
+    }
+    if (mVsmDepthTexture) {
+        driver.destroyTexture(mVsmDepthTexture);
+        mVsmDepthTexture.clear();
     }
 }
 

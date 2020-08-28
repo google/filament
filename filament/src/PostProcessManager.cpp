@@ -1574,11 +1574,14 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
 
     FrameHistoryEntry const& entry = frameHistory[0];
     FrameGraphId<FrameGraphTexture> colorHistory;
-    if (!entry.color.texture) {
+    mat4f const* historyProjection = nullptr;
+    if (UTILS_UNLIKELY(!entry.color.texture)) {
         // if we don't have a history yet, just use the current color buffer as history
         colorHistory = input;
+        historyProjection = &frameHistory.getCurrent().projection;
     } else {
         colorHistory = fg.import("TAA history", entry.colorDesc, entry.color);
+        historyProjection = &entry.projection;
     }
 
     Blackboard& blackboard = fg.getBlackboard();
@@ -1665,7 +1668,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                 });
                 mi->setParameter("filterWeights",  weights, 9);
                 mi->setParameter("reprojection",
-                        frameHistory[0].projection *
+                        *historyProjection *
                         inverse(current.projection) *
                         normalizedToClip);
 
@@ -1817,22 +1820,31 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(FrameGraph& fg,
 
     auto& ppResolve = fg.addPass<ResolveData>("resolve",
             [&](FrameGraph::Builder& builder, auto& data) {
+                FrameGraphId<FrameGraphTexture> colorAttachmentSrc{};
+                FrameGraphId<FrameGraphTexture> depthAttachmentSrc{};
+                FrameGraphId<FrameGraphTexture> colorAttachmentDst{};
+                FrameGraphId<FrameGraphTexture> depthAttachmentDst{};
+
                 auto outputDesc = desc;
                 input = builder.read(input);
+
+                (isDepthFormat(desc.format) ? depthAttachmentSrc : colorAttachmentSrc) = input;
                 data.srt = builder.createRenderTarget(builder.getName(input), {
-                        .attachments = { input }, .samples = desc.samples });
+                        .attachments = { colorAttachmentSrc, depthAttachmentSrc }, .samples = desc.samples });
 
                 outputDesc.levels = 1;
                 outputDesc.samples = 0;
                 data.output = builder.createTexture(outputBufferName, outputDesc);
                 data.output = builder.write(data.output);
+
+                (isDepthFormat(desc.format) ? depthAttachmentDst : colorAttachmentDst) = data.output;
                 data.drt = builder.createRenderTarget(outputBufferName, {
-                        .attachments = { data.output } });
+                        .attachments = { colorAttachmentDst, depthAttachmentDst } });
             },
             [](FrameGraphPassResources const& resources, auto const& data, DriverApi& driver) {
                 auto in = resources.get(data.srt);
                 auto out = resources.get(data.drt);
-                driver.blit(TargetBufferFlags::COLOR,
+                driver.blit(TargetBufferFlags::COLOR | TargetBufferFlags::DEPTH,
                         out.target, out.params.viewport, in.target, in.params.viewport,
                         SamplerMagFilter::NEAREST);
             });

@@ -238,6 +238,7 @@ public:
     static constexpr RenderFlags HAS_DYNAMIC_LIGHTING    = 0x04;
     static constexpr RenderFlags HAS_INVERSE_FRONT_FACES = 0x08;
     static constexpr RenderFlags HAS_FOG                 = 0x10;
+    static constexpr RenderFlags HAS_VSM                 = 0x20;
 
 
     RenderPass(FEngine& engine, utils::GrowingSlice<Command> commands) noexcept;

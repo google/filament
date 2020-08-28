@@ -56,7 +56,7 @@ void FrameGraphTexture::create(ResourceAllocatorInterface& allocator, const char
 
     uint8_t samples = desc.samples;
     assert(samples <= 1 || none(desc.usage & TextureUsage::SAMPLEABLE));
-    if (any(desc.usage & TextureUsage::SAMPLEABLE)) {
+    if (samples > 1 && any(desc.usage & TextureUsage::SAMPLEABLE)) {
         // Sampleable textures can't be multi-sampled
         // This should never happen (and will be caught by the assert above), but just to be safe,
         // we reset the sample count to 1 in that case.

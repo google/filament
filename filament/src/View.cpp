@@ -216,6 +216,8 @@ void FView::prepareShadowing(FEngine& engine, backend::DriverApi& driver,
 
     mShadowMapManager.reset();
 
+    mShadowMapManager.setVsm(hasVsm());
+
     auto& lcm = engine.getLightManager();
 
     // dominant directional light is always as index 0
@@ -982,6 +984,10 @@ View::AmbientOcclusion View::getAmbientOcclusion() const noexcept {
 
 void View::setAmbientOcclusionOptions(View::AmbientOcclusionOptions const& options) noexcept {
     upcast(this)->setAmbientOcclusionOptions(options);
+}
+
+void View::setShadowType(View::ShadowType shadow) noexcept {
+    upcast(this)->setShadowType(shadow);
 }
 
 View::AmbientOcclusionOptions const& View::getAmbientOcclusionOptions() const noexcept {

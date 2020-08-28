@@ -90,7 +90,7 @@ public:
 
     void render(backend::DriverApi& driver, backend::Handle<backend::HwRenderTarget> rt,
             filament::Viewport const& viewport, utils::Range<uint32_t> const& range,
-            RenderPass& pass, FView& view) noexcept;
+            RenderPass& pass, backend::RenderPassParams params, FView& view) noexcept;
 
     // Do we have visible shadows. Valid after calling update().
     bool hasVisibleShadows() const noexcept { return mHasVisibleShadows; }

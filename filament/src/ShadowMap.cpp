@@ -70,18 +70,11 @@ ShadowMap::~ShadowMap() {
 }
 
 void ShadowMap::render(DriverApi& driver, Handle<HwRenderTarget> rt,
-        filament::Viewport const& viewport, FView::Range const& range, RenderPass& pass, FView& view) noexcept {
+        filament::Viewport const& viewport, FView::Range const& range, RenderPass& pass,
+        RenderPassParams params, FView& view) noexcept {
     FEngine& engine = mEngine;
 
     FScene& scene = *view.getScene();
-
-    // FIXME: in the future this will come from the framegraph
-    RenderPassParams params = {};
-    params.flags.clear = TargetBufferFlags::DEPTH;
-    params.flags.discardStart = TargetBufferFlags::DEPTH;
-    params.flags.discardEnd = TargetBufferFlags::COLOR0 | TargetBufferFlags::STENCIL;
-    params.clearDepth = 1.0;
-    params.viewport = viewport;
 
     FCamera const& camera = getCamera();
     filament::CameraInfo cameraInfo(camera);
@@ -106,7 +99,7 @@ void ShadowMap::computeSceneCascadeParams(const FScene::LightSoa& lightData, siz
         CascadeParameters& cascadeParams) {
     // Calculate the directional light's "position".
     // For VSM, we pick a point on the sphere that bounds the camera's culling frustum.
-    if (false /*view.hasVsm()*/) {
+    if (view.hasVsm()) {
         // Calculate view frustum vertices in world-space.
         // TODO: take shadowFar into account.
         float3 wsViewFrustumVertices[8];

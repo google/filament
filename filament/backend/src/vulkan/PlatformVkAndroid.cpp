@@ -34,16 +34,17 @@ constexpr VkAllocationCallbacks* VKALLOC = nullptr;
 
 Driver* PlatformVkAndroid::createDriver(void* const sharedContext) noexcept {
     ASSERT_PRECONDITION(sharedContext == nullptr, "Vulkan does not support shared contexts.");
-    static const char* requestedExtensions[] = {
+    static const char* requiredInstanceExtensions[] = {
         "VK_KHR_surface",
         "VK_KHR_android_surface",
         "VK_KHR_get_physical_device_properties2",
+
 #if VK_ENABLE_VALIDATION
         "VK_EXT_debug_report",
 #endif
     };
-    return VulkanDriverFactory::create(this, requestedExtensions,
-            sizeof(requestedExtensions) / sizeof(requestedExtensions[0]));
+    return VulkanDriverFactory::create(this, requiredInstanceExtensions,
+            sizeof(requiredInstanceExtensions) / sizeof(requiredInstanceExtensions[0]));
 }
 
 void* PlatformVkAndroid::createVkSurfaceKHR(void* nativeWindow, void* vkinstance) noexcept {

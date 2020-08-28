@@ -372,8 +372,8 @@ FrameGraph& FrameGraph::compile() noexcept {
     for (size_t priority = 0; priority < 2; priority++) {
         for (UniquePtr<fg::ResourceEntryBase> const& resource : resourceRegistry) {
             if (resource->priority == priority && resource->refs) {
-                auto pFirst = resource->first;
-                auto pLast = resource->last;
+                auto *pFirst = resource->first;
+                auto *pLast = resource->last;
                 assert(!pFirst == !pLast);
                 if (pFirst && pLast) {
                     pFirst->devirtualize.push_back(resource.get());
@@ -486,7 +486,7 @@ void FrameGraph::export_graphviz(utils::io::ostream& out, const char* viewName) 
             "\\nrefs:" << node->resource->refs;
 
 #if UTILS_HAS_RTTI
-        auto textureResource = dynamic_cast<ResourceEntry<FrameGraphTexture> const*>(subresource);
+        const auto *textureResource = dynamic_cast<ResourceEntry<FrameGraphTexture> const*>(subresource);
         if (textureResource) {
             out << ", " << (bool(textureResource->descriptor.usage & TextureUsage::SAMPLEABLE) ? "texture" : "renderbuffer");
             out << "\\n" << textureResource->descriptor.width << "x" << textureResource->descriptor.height;
@@ -498,7 +498,7 @@ void FrameGraph::export_graphviz(utils::io::ostream& out, const char* viewName) 
             }
         }
 #endif
-        auto rendertarget = subresource->asRenderTargetResourceEntry();
+        auto *rendertarget = subresource->asRenderTargetResourceEntry();
         if (rendertarget) {
             out << ", " << "RenderTarget";
             if (rendertarget->descriptor.samples > 1) {

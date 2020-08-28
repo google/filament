@@ -175,6 +175,7 @@ public:
     bool hasDynamicLighting() const noexcept { return mHasDynamicLighting; }
     bool hasShadowing() const noexcept { return mHasShadowing; }
     bool hasFog() const noexcept { return mFogOptions.enabled && mFogOptions.density > 0.0f; }
+    bool hasVsm() const noexcept { return mShadowType == ShadowType::VSM; }
 
     void renderShadowMaps(FEngine& engine, FEngine::DriverApi& driver, RenderPass& pass) noexcept;
 
@@ -289,6 +290,14 @@ public:
                 math::clamp(1.0f, 2.0f, options.resolution * 2.0f) + 0.5f) * 0.5f;
         options.intensity = std::max(0.0f, options.intensity);
         mAmbientOcclusionOptions = options;
+    }
+
+    ShadowType getShadowType() const noexcept {
+        return mShadowType;
+    }
+
+    void setShadowType(ShadowType shadow) noexcept {
+        mShadowType = shadow;
     }
 
     AmbientOcclusionOptions const& getAmbientOcclusionOptions() const noexcept {
@@ -448,6 +457,7 @@ private:
     bool mShadowingEnabled = true;
     bool mHasPostProcessPass = true;
     AmbientOcclusionOptions mAmbientOcclusionOptions{};
+    ShadowType mShadowType;
     BloomOptions mBloomOptions;
     FogOptions mFogOptions;
     DepthOfFieldOptions mDepthOfFieldOptions;
