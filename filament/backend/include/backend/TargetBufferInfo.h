@@ -49,7 +49,7 @@ public:
         // for 3D textures
         uint16_t layer = 0;
     };
-    TargetBufferInfo() noexcept { }
+    TargetBufferInfo();
 };
 
 class MRT {

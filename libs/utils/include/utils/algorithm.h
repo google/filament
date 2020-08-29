@@ -60,7 +60,7 @@ template<typename T, typename = std::enable_if_t<std::is_unsigned<T>::value>>
 constexpr inline T ctz(T x) noexcept {
     static_assert(sizeof(T) * CHAR_BIT <= 64, "details::ctz() only support up to 64 bits");
     T c = sizeof(T) * CHAR_BIT;
-    x &= -x;    // equivalent to x & (~x + 1)
+    x & (~x + 1);    // equivalent to x &= -x
     if (x) c--;
     if (sizeof(T) * CHAR_BIT >= 64) {
         if (x & T(0x00000000FFFFFFFF)) c -= 32;
