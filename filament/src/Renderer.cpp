@@ -442,6 +442,13 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             refractionPass(fg, config, colorGradingConfigForColor, pass, view);
     FrameGraphId<FrameGraphTexture> input = colorPassOutput;
 
+    // resolve depth -- which might be needed because of TAA. This pass will be culled
+    // if the depth is not use below.
+    auto& blackboard = fg.getBlackboard();
+    auto depth = blackboard.get<FrameGraphTexture>("depth");
+    depth = ppm.resolve(fg, "Resolved Depth Buffer", depth);
+    blackboard.put("depth", depth);
+
     // TAA for color pass
     if (taaOptions.enabled) {
         input = ppm.taa(fg, input, view.getFrameHistory(), taaOptions, colorGradingConfig);
@@ -458,14 +465,6 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     if (hasPostProcess) {
         if (dofOptions.enabled) {
-
-            // dof needs access to the depth buffer, when MSAA is enabled, it might need
-            // to be resolved.
-            auto& blackboard = fg.getBlackboard();
-            auto depth = blackboard.get<FrameGraphTexture>("depth");
-            depth = ppm.resolve(fg, "Resolved Depth Buffer", depth);
-            blackboard.put("depth", depth);
-
             input = ppm.dof(fg, input, dofOptions, needsAlphaChannel, cameraInfo);
         }
         if (colorGrading) {
