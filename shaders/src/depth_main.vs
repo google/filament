@@ -20,6 +20,10 @@ void main() {
     gl_Position = getClipFromWorldMatrix() * getWorldPosition(material);
 #endif
 
+#ifdef MATERIAL_HAS_CLIP_SPACE_TRANSFORM
+    gl_Position = getClipSpaceTransform(material) * gl_Position;
+#endif
+
 #if defined(HAS_VSM)
     vertex_worldPosition = material.worldPosition.xyz;
 #endif
