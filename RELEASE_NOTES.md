@@ -21,6 +21,12 @@ A new header is inserted each time a *tag* is created.
 - `View.setAmbientOcclusion()` is deprecated in favor of `View.setAmbientOcclusionOptions`
    (⚠️ **API change**).
 - Switched to C++17.
+- Variance Shadow Mapping (VSM) is now available as an alternative to PCF shadows.
+- Reduced compiled material sizes by removing unnecessary variants.
+- Many improvement and fixes in the Vulkan backend.
+- Many improvement and fixes in the Metal backend.
+- Fixed translucent views with custom render targets.
+- Improved MSAA implementation compatibility on Android devices.
 
 ## v1.8.1
 
