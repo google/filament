@@ -187,6 +187,66 @@ public:
     static Engine* create(Backend backend = Backend::DEFAULT,
             Platform* platform = nullptr, void* sharedGLContext = nullptr);
 
+#if UTILS_HAS_THREADING
+    /**
+     * A callback used with Engine::createAsync() called once the engine is initialized and it is
+     * safe to call Engine::getEngine(token). This callback is invoked from an arbitrary worker
+     * thread. Engine::getEngine() CANNOT be called from that thread, instead it must be called
+     * from the same thread than Engine::createAsync() was called from.
+     *
+     * @param user   User provided parameter given in createAsync().
+     *
+     * @param token  An opaque token used to call Engine::getEngine().
+     */
+    using CreateCallback = void(void* user, void* token);
+
+    /**
+     * Creates an instance of Engine asynchronously
+     *
+     * @param callback          Callback called once the engine is initialized and it is safe to
+     *                          call Engine::getEngine.
+     *
+     * @param user              A user provided pointer that is given back to callback unmodified.
+     *
+     * @param backend           Which driver backend to use.
+     *
+     * @param platform          A pointer to an object that implements Platform. If this is
+     *                          provided, then this object is used to create the hardware context
+     *                          and expose platform features to it.
+     *
+     *                          If not provided (or nullptr is used), an appropriate Platform
+     *                          is created automatically.
+     *
+     *                          All methods of this interface are called from filament's
+     *                          render thread, which is different from the main thread.
+     *
+     *                          The lifetime of \p platform must exceed the lifetime of
+     *                          the Engine object.
+     *
+     *  @param sharedGLContext  A platform-dependant OpenGL context used as a shared context
+     *                          when creating filament's internal context.
+     *                          Setting this parameter will force filament to use the OpenGL
+     *                          implementation (instead of Vulkan for instance).
+     */
+    static void createAsync(CreateCallback callback, void* user,
+            Backend backend = Backend::DEFAULT,
+            Platform* platform = nullptr, void* sharedGLContext = nullptr);
+
+    /**
+     * Retrieve an Engine* from createAsync(). This must be called from the same thread than
+     * Engine::createAsync() was called from.
+     *
+     * @param token An opaque token given in the createAsync() callback function.
+     *
+     * @return A pointer to the newly created Engine, or nullptr if the Engine couldn't be created.
+     *
+     * @exception utils::PostConditionPanic can be thrown if there isn't enough memory to
+     * allocate the command buffer. If exceptions are disabled, this condition if fatal and
+     * this function will abort.
+     */
+    static Engine* getEngine(void* token);
+#endif
+
     /**
      * Destroy the Engine instance and all associated resources.
      *
