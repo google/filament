@@ -1264,6 +1264,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
                 });
                 mi->setParameter("level", 0.0f);
                 mi->setParameter("threshold", bloomOptions.threshold ? 1.0f : 0.0f);
+                mi->setParameter("invHighlight", std::isinf(bloomOptions.highlight) ? 0.0f : 1.0f / bloomOptions.highlight);
 
                 for (size_t i = 0; i < bloomOptions.levels; i++) {
                     auto hwOutRT = resources.get(data.outRT[i]);
