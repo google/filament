@@ -62,9 +62,6 @@ FEngine* FEngine::create(Backend backend, Platform* platform, void* sharedGLCont
 
     FEngine* instance = new FEngine(backend, platform, sharedGLContext);
 
-    slog.i << "FEngine (" << sizeof(void*) * 8 << " bits) created at " << instance << " "
-            << "(threading is " << (UTILS_HAS_THREADING ? "enabled)" : "disabled)") << io::endl;
-
     // initialize all fields that need an instance of FEngine
     // (this cannot be done safely in the ctor)
 
@@ -105,6 +102,51 @@ FEngine* FEngine::create(Backend backend, Platform* platform, void* sharedGLCont
     return instance;
 }
 
+#if UTILS_HAS_THREADING
+
+void FEngine::createAsync(CreateCallback callback, void* user,
+        Backend backend, Platform* platform, void* sharedGLContext) {
+    SYSTRACE_ENABLE();
+    SYSTRACE_CALL();
+    FEngine* instance = new FEngine(backend, platform, sharedGLContext);
+
+    // start the driver thread
+    instance->mDriverThread = std::thread(&FEngine::loop, instance);
+
+    // launch a thread to call the callback -- so it can't do any damage.
+    std::thread callbackThread = std::thread([instance, callback, user]() {
+        instance->mDriverBarrier.await();
+        callback(user, instance);
+    });
+
+    // let the callback thread die on its own
+    callbackThread.detach();
+}
+
+FEngine* FEngine::getEngine(void* token) {
+
+    FEngine* instance = static_cast<FEngine*>(token);
+
+    ASSERT_PRECONDITION(instance->mMainThreadId == std::this_thread::get_id(),
+            "Engine::createAsync() and Engine::getEngine() must be called on the same thread.");
+
+    // we use mResourceAllocator as a proxy for "am I already initialized"
+    if (!instance->mResourceAllocator) {
+        if (UTILS_UNLIKELY(!instance->mDriver)) {
+            // something went horribly wrong during driver initialization
+            instance->mDriverThread.join();
+            return nullptr;
+        }
+
+        // now we can initialize the largest part of the engine
+        instance->init();
+    }
+
+    return instance;
+}
+
+#endif
+
 // these must be static because only a pointer is copied to the render stream
 // Note that these coordinates are specified in OpenGL clip space. Other backends can transform
 // these in the vertex shader as needed.
@@ -130,11 +172,15 @@ FEngine::FEngine(Backend backend, Platform* platform, void* sharedGLContext) :
         mCommandBufferQueue(CONFIG_MIN_COMMAND_BUFFERS_SIZE, CONFIG_COMMAND_BUFFERS_SIZE),
         mPerRenderPassAllocator("per-renderpass allocator", CONFIG_PER_RENDER_PASS_ARENA_SIZE),
         mEngineEpoch(std::chrono::steady_clock::now()),
-        mDriverBarrier(1)
+        mDriverBarrier(1),
+        mMainThreadId(std::this_thread::get_id())
 {
     // we're assuming we're on the main thread here.
     // (it may not be the case)
     mJobSystem.adopt();
+
+    slog.i << "FEngine (" << sizeof(void*) * 8 << " bits) created at " << this << " "
+           << "(threading is " << (UTILS_HAS_THREADING ? "enabled)" : "disabled)") << io::endl;
 }
 
 /*
@@ -205,8 +251,6 @@ void FEngine::init() {
     mPostProcessManager.init();
     mLightManager.init(*this);
     mDFG = std::make_unique<DFG>(*this);
-
-    mMainThreadId = std::this_thread::get_id();
 }
 
 FEngine::~FEngine() noexcept {
@@ -806,6 +850,17 @@ Engine* Engine::create(Backend backend, Platform* platform, void* sharedGLContex
 void Engine::destroy(Engine* engine) {
     FEngine::destroy(upcast(engine));
 }
+
+#if UTILS_HAS_THREADING
+void Engine::createAsync(Engine::CreateCallback callback, void* user, Backend backend,
+        Platform* platform, void* sharedGLContext) {
+    FEngine::createAsync(callback, user, backend, platform, sharedGLContext);
+}
+
+Engine* Engine::getEngine(void* token) {
+    return FEngine::getEngine(token);
+}
+#endif
 
 void Engine::destroy(Engine** pEngine) {
     if (pEngine) {

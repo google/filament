@@ -28,6 +28,7 @@ A new header is inserted each time a *tag* is created.
 - Fixed translucent views with custom render targets.
 - Improved MSAA implementation compatibility on Android devices.
 - Use "reverse-z" for the depth buffer.
+- Add a way to create an Engine asynchronously.
 
 ## v1.8.1
 
