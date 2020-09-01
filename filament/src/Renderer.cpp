@@ -442,23 +442,28 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             refractionPass(fg, config, colorGradingConfigForColor, pass, view);
     FrameGraphId<FrameGraphTexture> input = colorPassOutput;
 
-    // resolve depth -- which might be needed because of TAA. This pass will be culled
+    fg.addTrivialSideEffectPass("Finish Color Passes", [&view](DriverApi& driver) {
+        // Unbind SSAO sampler, b/c the FrameGraph will delete the texture at the end of the pass.
+        view.cleanupRenderPasses();
+        view.commitUniforms(driver);
+    });
+
+    // resolve depth -- which might be needed because of TAA or DoF. This pass will be culled
     // if the depth is not use below.
     auto& blackboard = fg.getBlackboard();
     auto depth = blackboard.get<FrameGraphTexture>("depth");
     depth = ppm.resolve(fg, "Resolved Depth Buffer", depth);
     blackboard.put("depth", depth);
 
+    // TODO: DoF should be applied here, before TAA -- but if we do this it'll result is a lot
+    //       fireflies due to the instability of the highlights. This can be fixed with a
+    //       dedicated TAA pass for the DoF, as explained in
+    //       "Life of a Bokeh" by Guillaume Abadie, SIGGRAPH 2018
+
     // TAA for color pass
     if (taaOptions.enabled) {
         input = ppm.taa(fg, input, view.getFrameHistory(), taaOptions, colorGradingConfig);
     }
-
-    fg.addTrivialSideEffectPass("Finish Color Passes", [&view](DriverApi& driver) {
-        // Unbind SSAO sampler, b/c the FrameGraph will delete the texture at the end of the pass.
-        view.cleanupRenderPasses();
-        view.commitUniforms(driver);
-    });
 
     // --------------------------------------------------------------------------------------------
     // Post Processing...
