@@ -215,7 +215,7 @@ extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_View_nSetBloomOptions(JNIEnv*, jclass,
         jlong nativeView, jlong nativeTexture,
         jfloat dirtStrength, jfloat strength, jint resolution, jfloat anamorphism, jint levels,
-        jint blendMode, jboolean threshold, jboolean enabled) {
+        jint blendMode, jboolean threshold, jboolean enabled, jfloat highlight) {
     View* view = (View*) nativeView;
     Texture* dirt = (Texture*) nativeTexture;
     View::BloomOptions options = {
@@ -227,7 +227,8 @@ Java_com_google_android_filament_View_nSetBloomOptions(JNIEnv*, jclass,
             .levels = (uint8_t)levels,
             .blendMode = (View::BloomOptions::BlendMode)blendMode,
             .threshold = (bool)threshold,
-            .enabled = (bool)enabled
+            .enabled = (bool)enabled,
+            .highlight = highlight
     };
     view->setBloomOptions(options);
 }

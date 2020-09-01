@@ -307,6 +307,7 @@ public:
     void setBloomOptions(BloomOptions options) noexcept {
         options.dirtStrength = math::saturate(options.dirtStrength);
         options.levels = math::clamp(options.levels, uint8_t(3), uint8_t(12));
+        options.highlight = std::max(10.0f, options.highlight);
         mBloomOptions = options;
     }
 

@@ -146,6 +146,7 @@ public:
         BlendMode blendMode = BlendMode::ADD;   //!< how the bloom effect is applied
         bool threshold = true;                  //!< whether to threshold the source
         bool enabled = false;                   //!< enable or disable bloom
+        float highlight = 1000.0f;              //!< limit highlights to this value before bloom [10, +inf]
     };
 
     /**
