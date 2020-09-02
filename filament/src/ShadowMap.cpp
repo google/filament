@@ -605,15 +605,16 @@ mat4f ShadowMap::applyLISPSM(math::mat4f& Wp,
 
 mat4f ShadowMap::getTextureCoordsMapping() const noexcept {
     // remapping from NDC to texture coordinates (i.e. [-1,1] -> [0, 1])
+    // ([1, 0] for depth mapping)
     const mat4f Mt(mClipSpaceFlipped ? mat4f::row_major_init{
             0.5f,   0,    0,  0.5f,
               0, -0.5f,   0,  0.5f,
-              0,    0,  0.5f, 0.5f,
+              0,    0,  -0.5f, 0.5f,
               0,    0,    0,    1
     } : mat4f::row_major_init{
             0.5f,   0,    0,  0.5f,
               0,  0.5f,   0,  0.5f,
-              0,    0,  0.5f, 0.5f,
+              0,    0,  -0.5f, 0.5f,
               0,    0,    0,    1
     });
 
