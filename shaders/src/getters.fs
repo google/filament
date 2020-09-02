@@ -89,11 +89,13 @@ highp vec3 getLightSpacePosition() {
 
 /**
  * Returns the normalized [0, 1] viewport coordinates with the origin at the viewport's bottom-left.
+ * Z coordinate is in the [0, 1] range as well.
  *
  * @public-api
  */
 highp vec3 getNormalizedViewportCoord() {
-    return vec3(shading_normalizedViewportCoord, gl_FragCoord.z);
+    // make sure handle our reversed-z
+    return vec3(shading_normalizedViewportCoord, 1.0 - gl_FragCoord.z);
 }
 
 #if defined(HAS_SHADOWING) && defined(HAS_DYNAMIC_LIGHTING)
