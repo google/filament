@@ -71,11 +71,22 @@ void postProcess(inout PostProcessInputs postProcess) {
     vec4 s10 = textureLodOffset(materialParams_color, uv, 0.0, ivec2(1, 0));
     vec4 s00 = textureLodOffset(materialParams_color, uv, 0.0, ivec2(0, 0));
 
+    vec4 hdr;
+    // fireflies/flickering filtering
+    hdr.x = 1.0 / (1.0 + max3(s00.rgb));
+    hdr.y = 1.0 / (1.0 + max3(s11.rgb));
+    hdr.z = 1.0 / (1.0 + max3(s10.rgb));
+    hdr.w = 1.0 / (1.0 + max3(s00.rgb));
+
     vec4 d;
+#if defined(TARGET_VULKAN_ENVIRONMENT) || !defined(TARGET_MOBILE)
+    d = textureGather(materialParams_depth, uv, 0); // 01, 11, 10, 00
+#else
     d.x = textureLodOffset(materialParams_depth, uv, 0.0, ivec2(0, 1)).r;
     d.y = textureLodOffset(materialParams_depth, uv, 0.0, ivec2(1, 1)).r;
     d.z = textureLodOffset(materialParams_depth, uv, 0.0, ivec2(1, 0)).r;
     d.w = textureLodOffset(materialParams_depth, uv, 0.0, ivec2(0, 0)).r;
+#endif
 
     // Get the CoC radius of each four samples to downsample.
     // We multiply by 0.5 to convert from diameter to radius.
@@ -88,12 +99,12 @@ void postProcess(inout PostProcessInputs postProcess) {
     // The forground bilateral weight is calculated as saturate(1.0 - (fgCoc - w)), which always
     // yields 1.0. Note the "missing" abs(), this is because we want to let the background layer
     // leak into the foreground layer, to avoid aliasing artifacts.
-    vec4 foreground = (s01 + s11 + s10 + s00) * 0.25;
+    vec4 foreground = (s01 * hdr.x + s11 * hdr.y + s10 * hdr.z + s00 * hdr.w) * (1.0 / (hdr.x + hdr.y + hdr.z + hdr.w));
 
     // the background bilateral weight is calculated as saturate(1.0 - abs(bgCoc - w)), but the
     // abs() is not needed since bgCoc - w is guaranteed to be >= 0.
     float bgCoc = max2(max(w.xy, w.zw));
-    vec4 bw = saturate(1.0 - (bgCoc - w)) * 0.25;
+    vec4 bw = saturate(1.0 - (bgCoc - w)) * hdr;
     float bgScale = 1.0 / (bw.x + bw.y + bw.z + bw.w);
     vec4 background = (s01 * bw.x + s11 * bw.y + s10 * bw.z + s00 * bw.w) * bgScale;
 

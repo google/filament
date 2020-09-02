@@ -81,8 +81,6 @@ void postProcess(inout PostProcessInputs postProcess) {
     vec4 fw = vec4(d0.xz, d1.xz);
     vec4 bw = vec4(d0.yw, d1.yw);
 
-    vec4 hdr;
-
     /*
      * foreground
      */
@@ -92,12 +90,6 @@ void postProcess(inout PostProcessInputs postProcess) {
     vec4 fg10 = textureLodOffset(materialParams_foreground, uv, mip, ivec2(1, 0));
     vec4 fg00 = textureLodOffset(materialParams_foreground, uv, mip, ivec2(0, 0));
 
-    // fireflies/flickering filtering
-    hdr.x = 1.0 / (1.0 + max4(fg00));
-    hdr.y = 1.0 / (1.0 + max4(fg11));
-    hdr.z = 1.0 / (1.0 + max4(fg10));
-    hdr.w = 1.0 / (1.0 + max4(fg00));
-
     // We calculates the downsampled CoC to be conservative, that is if any
     // of the 4 texels are foreground or background, then the whole new texel is too.
     float fgCoc = min4(fw);
@@ -105,9 +97,7 @@ void postProcess(inout PostProcessInputs postProcess) {
     // The forground bilateral weight is calculated as saturate(1.0 - (fgCoc - w)), which always
     // yields 1.0. Note the "missing" abs(), this is because we want to let the background layer
     // leak into the foreground layer, to avoid aliasing artifacts.
-    fw = hdr;
-    float fgScale = 1.0 / (fw.x + fw.y + fw.z + fw.w);
-    vec4 foreground = (fg01 * fw.x + fg11 * fw.y + fg10 * fw.z + fg00 * fw.w) * fgScale;
+    vec4 foreground = (fg01 + fg11 + fg10 + fg00) * 0.25;
 
     /*
      * background
@@ -118,17 +108,11 @@ void postProcess(inout PostProcessInputs postProcess) {
     vec4 bg10 = textureLodOffset(materialParams_background, uv, mip, ivec2(1, 0));
     vec4 bg00 = textureLodOffset(materialParams_background, uv, mip, ivec2(0, 0));
 
-    // fireflies/flickering filtering
-    hdr.x = 1.0 / (1.0 + max4(bg00));
-    hdr.y = 1.0 / (1.0 + max4(bg11));
-    hdr.z = 1.0 / (1.0 + max4(bg10));
-    hdr.w = 1.0 / (1.0 + max4(bg00));
-
     float bgCoc = max4(bw);
 
     // The background bilateral weight is calculated as saturate(1.0 - abs(bgCoc - w)),
     // but the abs() is not needed since bgCoc - w is guaranteed to be >= 0.
-    bw = saturate(1.0 - (bgCoc - bw) * weightScale) * hdr;
+    bw = saturate(1.0 - (bgCoc - bw) * weightScale);
     float bgScale = 1.0 / (bw.x + bw.y + bw.z + bw.w);
     vec4 background = (bg01 * bw.x + bg11 * bw.y + bg10 * bw.z + bg00 * bw.w) * bgScale;
 
