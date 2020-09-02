@@ -343,8 +343,7 @@ highp float chebyshevUpperBound(const highp vec2 moments, const highp float mean
  */
 float shadow(const mediump sampler2DArrayShadow shadowMap, const uint layer, vec3 shadowPosition) {
     vec2 size = vec2(textureSize(shadowMap, 0));
-    // handle reversed Z -- maybe this could instead be done in the shadowMatrix on the CPU
-    shadowPosition.z = 1.0 - shadowPosition.z;
+    // note: shadowPosition.z is in the [1, 0] range (reversed Z)
 #if SHADOW_SAMPLING_METHOD == SHADOW_SAMPLING_PCF_HARD
     return ShadowSample_Hard(shadowMap, layer, size, shadowPosition);
 #elif SHADOW_SAMPLING_METHOD == SHADOW_SAMPLING_PCF_LOW
