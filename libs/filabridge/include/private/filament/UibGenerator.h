@@ -120,7 +120,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     // bit 8-11: cascade has visible shadows
     uint32_t cascades;
 
-    float aoSamplingQuality;     // 0: bilinear, !0: bilateral
+    float aoSamplingQualityAndEdgeDistance;     // 0: bilinear, !0: bilateral edge distance
     float aoReserved1;
     float aoReserved2;
     float aoReserved3;
