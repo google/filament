@@ -602,12 +602,15 @@ static void gui(filament::Engine* engine, filament::View*) {
             ImGui::SliderFloat("IBL", &params.iblIntensity, 0.0f, 50000.0f);
             ImGui::SliderAngle("Rotation", &params.iblRotation);
             if (ImGui::CollapsingHeader("SSAO")) {
+                bool upsampling = params.ssaoOptions.upsampling == View::QualityLevel::LOW ? false : true;
                 DebugRegistry& debug = engine->getDebugRegistry();
                 ImGui::Checkbox("Enabled##ssao", &params.ssaoOptions.enabled);
                 ImGui::SliderFloat("Radius", &params.ssaoOptions.radius, 0.05f, 5.0f);
                 ImGui::SliderFloat("Bias", &params.ssaoOptions.bias, 0.0f, 0.01f, "%.6f");
                 ImGui::SliderFloat("Intensity", &params.ssaoOptions.intensity, 0.0f, 4.0f);
                 ImGui::SliderFloat("Power", &params.ssaoOptions.power, 0.0f, 4.0f);
+                ImGui::Checkbox("High quality upsampling", &upsampling);
+                params.ssaoOptions.upsampling = upsampling ? View::QualityLevel::HIGH : View::QualityLevel::LOW;
             }
             ImGui::Unindent();
         }
