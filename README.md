@@ -152,7 +152,7 @@ Here are a few screenshots of applications that use Filament in production:
 - Multiple tone mappers: ACES, filmic, etc.
 - Color grading: white balance, channel mixer, shadows/mid-tones/highlights, ASC CDL,
   contrast, saturation, etc.
-- FXAA, MSAA and specular anti-aliasing
+- TAA, FXAA, MSAA and specular anti-aliasing
 - Dynamic resolution
 
 ## Rendering with Filament
