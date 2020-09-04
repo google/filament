@@ -2,6 +2,8 @@
 // and color vertex shader, thus working around a variance issue seen with NVIDIA drivers.
 void materialVertex(inout MaterialVertexInputs m) { }
 
+// NOTE: This shader is only used when the user's material does not have custom vertex code.
+//       There is no need to check anything related to material inputs in this file.
 void main() {
 
 // World position is used to compute gl_Position, except for vertices already in the device domain.
@@ -18,10 +20,6 @@ void main() {
     gl_Position = getPosition();
 #else
     gl_Position = getClipFromWorldMatrix() * getWorldPosition(material);
-#endif
-
-#ifdef MATERIAL_HAS_CLIP_SPACE_TRANSFORM
-    gl_Position = getClipSpaceTransform(material) * gl_Position;
 #endif
 
 #if defined(HAS_VSM)

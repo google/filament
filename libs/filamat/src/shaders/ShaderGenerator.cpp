@@ -249,8 +249,8 @@ std::string ShaderGenerator::createVertexProgram(filament::backend::ShaderModel 
     cg.generateCommonMaterial(vs, ShaderType::VERTEX);
 
     if (variant.isDepthPass() &&
-        (material.blendingMode != BlendingMode::MASKED) &&
-        !hasCustomDepthShader()) {
+            (material.blendingMode != BlendingMode::MASKED) &&
+            !hasCustomDepthShader()) {
         // these variants are special and are treated as DEPTH variants. Filament will never
         // request that variant for the color pass.
         cg.generateDepthShaderMain(vs, ShaderType::VERTEX);
