@@ -39,10 +39,9 @@ float interleavedGradientNoise(highp vec2 n) {
 // Dithering
 //------------------------------------------------------------------------------
 
-vec4 Dither_InterleavedGradientNoise(vec4 rgba) {
+vec4 Dither_InterleavedGradientNoise(vec4 rgba, const highp float temporalNoise01) {
     // Jimenez 2014, "Next Generation Post-Processing in Call of Duty"
-    highp vec2 uv = gl_FragCoord.xy;
-    uv += frameUniforms.time;
+    highp vec2 uv = gl_FragCoord.xy + temporalNoise01;
 
     // The noise variable must be highp to workaround Adreno bug #1096.
     highp float noise = interleavedGradientNoise(uv);
@@ -53,10 +52,10 @@ vec4 Dither_InterleavedGradientNoise(vec4 rgba) {
     return rgba + vec4(noise / 255.0);
 }
 
-vec4 Dither_TriangleNoise(vec4 rgba) {
+vec4 Dither_TriangleNoise(vec4 rgba, const highp float temporalNoise01) {
     // Gjøl 2016, "Banding in Games: A Noisy Rant"
     highp vec2 uv = gl_FragCoord.xy * frameUniforms.resolution.zw;
-    uv += vec2(0.07 * fract(frameUniforms.time));
+    uv += vec2(0.07 * temporalNoise01);
 
     // The noise variable must be highp to workaround Adreno bug #1096.
     highp float noise = triangleNoise(uv);
@@ -66,9 +65,9 @@ vec4 Dither_TriangleNoise(vec4 rgba) {
     return rgba + vec4(noise / 255.0);
 }
 
-vec4 Dither_Vlachos(vec4 rgba) {
+vec4 Dither_Vlachos(vec4 rgba, const highp float temporalNoise01) {
     // Vlachos 2016, "Advanced VR Rendering"
-    float noise = dot(vec2(171.0, 231.0), gl_FragCoord.xy + frameUniforms.time);
+    float noise = dot(vec2(171.0, 231.0), gl_FragCoord.xy + temporalNoise01);
     vec3 noiseRGB = fract(vec3(noise) / vec3(103.0, 71.0, 97.0));
 
     // remap from [0..1[ to [-0.5..0.5[
@@ -77,10 +76,10 @@ vec4 Dither_Vlachos(vec4 rgba) {
     return vec4(rgba.rgb + (noiseRGB / 255.0), rgba.a);
 }
 
-vec4 Dither_TriangleNoiseRGB(vec4 rgba) {
+vec4 Dither_TriangleNoiseRGB(vec4 rgba, const highp float temporalNoise01) {
     // Gjøl 2016, "Banding in Games: A Noisy Rant"
     highp vec2 uv = gl_FragCoord.xy * frameUniforms.resolution.zw;
-    uv += vec2(0.07 * fract(frameUniforms.time));
+    uv += vec2(0.07 * temporalNoise01);
 
     vec3 noiseRGB = vec3(
             triangleNoise(uv),
@@ -102,16 +101,16 @@ vec4 Dither_TriangleNoiseRGB(vec4 rgba) {
  * This dithering function assumes we are dithering to an 8-bit target.
  * This function dithers the alpha channel assuming premultiplied output
  */
-vec4 dither(vec4 rgba) {
+vec4 dither(vec4 rgba, const highp float temporalNoise01) {
 #if DITHERING_OPERATOR == DITHERING_NONE
     return rgba;
 #elif DITHERING_OPERATOR == DITHERING_INTERLEAVED_NOISE
-    return Dither_InterleavedGradientNoise(rgba);
+    return Dither_InterleavedGradientNoise(rgba, temporalNoise01);
 #elif DITHERING_OPERATOR == DITHERING_VLACHOS
-    return Dither_Vlachos(rgba);
+    return Dither_Vlachos(rgba, temporalNoise01);
 #elif DITHERING_OPERATOR  == DITHERING_TRIANGLE_NOISE
-    return Dither_TriangleNoise(rgba);
+    return Dither_TriangleNoise(rgba, temporalNoise01);
 #elif DITHERING_OPERATOR  == DITHERING_TRIANGLE_NOISE_RGB
-    return Dither_TriangleNoiseRGB(rgba);
+    return Dither_TriangleNoiseRGB(rgba, temporalNoise01);
 #endif
 }

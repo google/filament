@@ -32,6 +32,8 @@
 
 #include <tsl/robin_map.h>
 
+#include <random>
+
 namespace filament {
 
 class FrameGraph;
@@ -202,6 +204,9 @@ private:
     backend::Handle<backend::HwTexture> mDummyZeroTexture;
 
     size_t mSeparableGaussianBlurKernelStorageSize = 0;
+
+    std::default_random_engine mRandomEngine;
+    std::uniform_real_distribution<float> mUniformDistribution{0.0f, 1.0f};
 
     const math::float2 mHaltonSamples[16];
 };
