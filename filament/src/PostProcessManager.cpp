@@ -1376,10 +1376,14 @@ void PostProcessManager::colorGradingPrepareSubpass(DriverApi& driver,
             .filterMag = SamplerMagFilter::LINEAR,
             .filterMin = SamplerMinFilter::LINEAR
     });
+
+    const float temporalNoise = mUniformDistribution(mRandomEngine);
+
     mi->setParameter("vignette", vignetteParameters);
     mi->setParameter("vignetteColor", vignetteOptions.color);
     mi->setParameter("dithering", dithering);
     mi->setParameter("fxaa", fxaa);
+    mi->setParameter("temporalNoise", temporalNoise);
     mi->commit(driver);
 }
 
@@ -1489,11 +1493,14 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::colorGrading(FrameGraph& fg,
                 float4 vignetteParameters = getVignetteParameters(
                         vignetteOptions, output.width, output.height);
 
+                const float temporalNoise = mUniformDistribution(mRandomEngine);
+
                 mi->setParameter("dithering", dithering);
                 mi->setParameter("bloom", bloomParameters);
                 mi->setParameter("vignette", vignetteParameters);
                 mi->setParameter("vignetteColor", vignetteOptions.color);
                 mi->setParameter("fxaa", fxaa);
+                mi->setParameter("temporalNoise", temporalNoise);
 
                 const uint8_t variant = uint8_t(translucent ?
                             PostProcessVariant::TRANSLUCENT : PostProcessVariant::OPAQUE);

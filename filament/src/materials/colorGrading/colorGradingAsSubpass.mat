@@ -15,6 +15,11 @@ material {
             name : fxaa
         },
         {
+            type : float,
+            name : temporalNoise,
+            precision: high
+        },
+        {
             type : float4,
             name : vignette
         },
@@ -93,7 +98,7 @@ fragment {
     void postProcess(inout PostProcessInputs postProcess) {
         postProcess.color = resolve();
         if (materialParams.dithering > 0) {
-            vec4 dithered = dither(postProcess.color);
+            vec4 dithered = dither(postProcess.color, materialParams.temporalNoise);
 #if POST_PROCESS_OPAQUE
             postProcess.color.rgb = dithered.rgb;
 #else
