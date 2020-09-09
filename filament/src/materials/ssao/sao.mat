@@ -216,7 +216,7 @@ fragment {
             tapPosition = angleStep * tapPosition;
         }
 
-        float ao = max(0.0, 1.0 - occlusion * (materialParams.intensity * materialParams.sampleCount.y));
+        float ao = max(0.0, 1.0 - occlusion * materialParams.intensity);
         ao = pow(ao, materialParams.power);
 
 #if defined(TARGET_MOBILE)
