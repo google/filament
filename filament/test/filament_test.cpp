@@ -34,6 +34,7 @@
 
 #include <private/filament/UniformInterfaceBlock.h>
 #include <private/filament/UibGenerator.h>
+#include <private/backend/BackendUtils.h>
 
 #include "details/Allocators.h"
 #include "details/Material.h"
@@ -856,6 +857,51 @@ TEST(FilamentTest, Bones) {
     for (size_t i = 0; i < 100; ++i) {
         float3 p(rand_gen(), rand_gen(), rand_gen());
         Test::check(m, p);
+    }
+}
+
+TEST(FilamentTest, GoogleLineDirective) {
+    {
+        char s[512] = "#line 10 \"foobar\"";
+        EXPECT_FALSE(filament::backend::requestsGoogleLineDirectivesExtension(&s[0], strlen(s)));
+    }
+    {
+        char s[512] =
+            "#extension GL_GOOGLE_cpp_style_line_directive : enable\n"
+            "#line 10 \"foobar\"";
+        EXPECT_TRUE(filament::backend::requestsGoogleLineDirectivesExtension(&s[0], strlen(s)));
+    }
+    {
+        char s[512] =
+            "#extension GL_GOOGLE_cpp_style_line_directive : enable\n"
+            "#line 10 \"foobar\"";
+        filament::backend::removeGoogleLineDirectives(&s[0], strlen(s));
+        EXPECT_STREQ(s,
+            "#extension GL_GOOGLE_cpp_style_line_directive : enable\n"
+            "#line 10         ");
+    }
+    {
+        char s[512] =
+            "#extension GL_GOOGLE_cpp_style_line_directive : enable\n"
+            "#line 10 \"foobar\"\n"
+            "#line 100 \"foobar\" abc\n"
+            "//\n"
+            "#line 20\n"
+            "#line 20 \"foo\n"
+            "// valid quote: \"\n"
+            "#line 100 \"baz\"\n"
+            "#line";
+        filament::backend::removeGoogleLineDirectives(&s[0], strlen(s));
+        EXPECT_STREQ(s,
+            "#extension GL_GOOGLE_cpp_style_line_directive : enable\n"
+            "#line 10         \n"
+            "#line 100             \n"
+            "//\n"
+            "#line 20\n"
+            "#line 20     \n"
+            "// valid quote: \"\n"
+            "#line 100      \n"
+            "#line");
     }
 }
 

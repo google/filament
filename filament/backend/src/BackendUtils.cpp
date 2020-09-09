@@ -16,8 +16,52 @@
 
 #include "private/backend/BackendUtils.h"
 
+#include <string_view>
+
 namespace filament {
 namespace backend {
+
+bool requestsGoogleLineDirectivesExtension(const char* shader, size_t length) noexcept {
+    std::string_view s(shader, length);
+    return s.find("GL_GOOGLE_cpp_style_line_directive") != std::string_view::npos;
+}
+
+void removeGoogleLineDirectives(char* shader, size_t length) noexcept {
+    std::string_view s(shader, length);
+
+    size_t pos = 0;
+    while (true) {
+        pos = s.find("#line", pos);
+        if (pos == std::string_view::npos) {
+            break;
+        }
+
+        pos += 5;
+
+        bool googleStyleDirective = false;
+        size_t len = 0;
+        size_t start = 0;
+        while (pos < length) {
+            if (shader[pos] == '"' && !googleStyleDirective) {
+                googleStyleDirective = true;
+                start = pos;
+            }
+            if (shader[pos] == '\n') {
+                break;
+            }
+            if (googleStyleDirective) {
+                len++;
+            }
+            pos++;
+        }
+
+        // There's no point in trying to splice the shader to remove the quoted filename, just
+        // replace the filename with spaces.
+        for (size_t i = start; i < start + len; i++) {
+            shader[i] = ' ';
+        }
+    }
+}
 
 size_t getFormatSize(TextureFormat format) noexcept {
     switch (format) {
