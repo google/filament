@@ -70,7 +70,7 @@ public:
     FrameGraphId<FrameGraphTexture> screenSpaceAmbientOclusion(FrameGraph& fg,
             RenderPass& pass, filament::Viewport const& svp,
             CameraInfo const& cameraInfo,
-            View::AmbientOcclusionOptions const& options) noexcept;
+            View::AmbientOcclusionOptions options) noexcept;
 
     // Used in refraction pass
     FrameGraphId<FrameGraphTexture> generateGaussianMipmap(FrameGraph& fg,
@@ -137,9 +137,15 @@ private:
     FrameGraphId<FrameGraphTexture> mipmapPass(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, size_t level) noexcept;
 
+    struct BilateralPassConfig {
+        uint8_t kernelSize = 11;
+        float standardDeviation = 1.0f;
+        float bilateralThreshold = 0.0625f;
+    };
+
     FrameGraphId<FrameGraphTexture> bilateralBlurPass(
             FrameGraph& fg, FrameGraphId<FrameGraphTexture> input, math::int2 axis, float zf,
-            backend::TextureFormat format) noexcept;
+            backend::TextureFormat format, BilateralPassConfig config) noexcept;
 
     FrameGraphId<FrameGraphTexture> gaussianBlurPass(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, uint8_t srcLevel,

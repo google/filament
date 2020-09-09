@@ -12,8 +12,16 @@ material {
             precision: high
         },
         {
+            type : int,
+            name : sampleCount
+        },
+        {
             type : float,
             name : farPlaneOverEdgeDistance
+        },
+        {
+            type : float[16],
+            name : kernel
         }
     ],
     variables : [
@@ -31,11 +39,6 @@ vertex {
 }
 
 fragment {
-    const int kGaussianCount = 6;
-    const float kGaussianSamples[] = float[](
-            0.099736, 0.096667, 0.088016, 0.075284, 0.060493, 0.045662  // stdev = 4.0
-    );
-
     float unpack(vec2 depth) {
         // this is equivalent to (x8 * 256 + y8) / 65535, which gives a value between 0 and 1
         return (depth.x * (256.0 / 257.0) + depth.y * (1.0 / 257.0));
@@ -70,12 +73,12 @@ fragment {
         // we handle the center pixel separately because it doesn't participate in
         // bilateral filtering
         float depth = unpack(data.gb);
-        float totalWeight = kGaussianSamples[0];
+        float totalWeight = materialParams.kernel[0];
         float sum = data.r * totalWeight;
 
         vec2 offset = materialParams.axis;
-        for (int i = 1; i < kGaussianCount; i++) {
-            float weight = kGaussianSamples[i];
+        for (int i = 1; i < materialParams.sampleCount; i++) {
+            float weight = materialParams.kernel[i];
             tap(sum, totalWeight, weight, depth, uv + offset);
             tap(sum, totalWeight, weight, depth, uv - offset);
             offset += materialParams.axis;

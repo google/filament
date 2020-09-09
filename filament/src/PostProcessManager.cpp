@@ -40,6 +40,7 @@
 
 #include <utils/Log.h>
 
+#include <algorithm>
 #include <limits>
 
 namespace filament {
@@ -361,7 +362,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::mipmapPass(FrameGraph& fg,
 FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOclusion(
         FrameGraph& fg, RenderPass& pass,
         filament::Viewport const& svp, const CameraInfo& cameraInfo,
-        View::AmbientOcclusionOptions const& options) noexcept {
+        View::AmbientOcclusionOptions options) noexcept {
 
     FEngine& engine = mEngine;
     Handle<HwRenderPrimitive> fullScreenRenderPrimitive = engine.getFullScreenRenderPrimitive();
@@ -371,6 +372,37 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOclusion(
 
     const size_t levelCount = fg.getDescriptor(depth).levels;
 
+    uint8_t kernelSize{};
+    float stdDev{};
+    float sampleCount{};
+    float spiralTurns{};
+    switch (options.quality) {
+        default:
+        case View::QualityLevel::LOW:
+            kernelSize = 11;
+            stdDev = 4.0f;
+            sampleCount = 7.0f;
+            spiralTurns = 5.0f;
+            break;
+        case View::QualityLevel::MEDIUM:
+            kernelSize = 11;
+            stdDev = 4.0f;
+            sampleCount = 11.0f;
+            spiralTurns = 9.0f;
+            break;
+        case View::QualityLevel::HIGH:
+            kernelSize = 23;
+            stdDev = 8.0f;
+            sampleCount = 16.0f;
+            spiralTurns = 10.0f;
+            break;
+        case View::QualityLevel::ULTRA:
+            kernelSize = 23;
+            stdDev = 8.0;
+            sampleCount = 32.0f;
+            spiralTurns = 14.0f;
+            break;
+    }
     /*
      * Our main SSAO pass
      */
@@ -378,7 +410,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOclusion(
     struct SSAOPassData {
         FrameGraphId<FrameGraphTexture> depth;
         FrameGraphId<FrameGraphTexture> ssao;
-        View::AmbientOcclusionOptions options;
         FrameGraphRenderTargetHandle rt;
     };
 
@@ -386,7 +417,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOclusion(
             [&](FrameGraph::Builder& builder, auto& data) {
                 auto const& desc = builder.getDescriptor(depth);
 
-                data.options = options;
                 data.depth = builder.sample(depth);
                 data.ssao = builder.createTexture("SSAO Buffer", {
                         .width = desc.width,
@@ -420,34 +450,13 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOclusion(
 
                 // Where the falloff function peaks
                 const float peak = 0.1f * options.radius;
-                // We further scale the user intensity by 3, for a better default at intensity=1
-                const float intensity = (2.0f * F_PI * peak) * data.options.intensity * 3.0f;
+                // We further scale the user intensity by 2, for a better default at intensity=1
+                const float intensity = (2.0f * float(F_PI) * peak) * options.intensity * 2.0f;
                 // always square AO result, as it looks much better
-                const float power = data.options.power * 2.0f;
-
-                float sampleCount = 7.0f;
-                float spiralTurns = 5.0f;
-                switch (data.options.quality) {
-                    case View::QualityLevel::LOW:
-                        sampleCount = 7.0f;
-                        spiralTurns = 5.0f;
-                        break;
-                    case View::QualityLevel::MEDIUM:
-                        sampleCount = 11.0f;
-                        spiralTurns = 9.0f;
-                        break;
-                    case View::QualityLevel::HIGH:
-                        sampleCount = 16.0f;
-                        spiralTurns = 10.0f;
-                        break;
-                    case View::QualityLevel::ULTRA:
-                        sampleCount = 32.0f;
-                        spiralTurns = 14.0f;
-                        break;
-                }
+                const float power = options.power * 2.0f;
 
                 const auto invProjection = inverse(cameraInfo.projection);
-                const float inc = (1.0f / (sampleCount - 0.5f)) * spiralTurns * 2.0f * float(math::F_PI);
+                const float inc = (1.0f / (sampleCount - 0.5f)) * spiralTurns * 2.0f * float(F_PI);
 
                 auto& material = getPostProcessMaterial("sao");
                 FMaterialInstance* const mi = material.getMaterialInstance();
@@ -456,16 +465,16 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOclusion(
                 });
                 mi->setParameter("resolution",
                         float4{ desc.width, desc.height, 1.0f / desc.width, 1.0f / desc.height });
-                mi->setParameter("invRadiusSquared", 1.0f / (data.options.radius * data.options.radius));
-                mi->setParameter("projectionScaleRadius", projectionScale * data.options.radius);
+                mi->setParameter("invRadiusSquared", 1.0f / (options.radius * options.radius));
+                mi->setParameter("projectionScaleRadius", projectionScale * options.radius);
                 mi->setParameter("depthParams", cameraInfo.projection[3][2] * 0.5f);
 
                 mi->setParameter("positionParams", float2{
                         invProjection[0][0], invProjection[1][1] } * 2.0f);
                 mi->setParameter("peak2", peak * peak);
-                mi->setParameter("bias", data.options.bias);
+                mi->setParameter("bias", options.bias);
                 mi->setParameter("power", power);
-                mi->setParameter("intensity", intensity);
+                mi->setParameter("intensity", intensity / sampleCount);
                 mi->setParameter("maxLevel", uint32_t(levelCount - 1));
                 mi->setParameter("sampleCount", float2{ sampleCount, 1.0f / (sampleCount - 0.5f) });
                 mi->setParameter("spiralTurns", spiralTurns);
@@ -488,14 +497,28 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOclusion(
      * Final separable bilateral blur pass
      */
 
+    // With q the standard deviation,
+    // A gaussian filter requires 6q-1 values to keep its gaussian nature
+    // (see en.wikipedia.org/wiki/Gaussian_filter)
+    // More intuitively, 2q is the width of the filter in pixels.
+    BilateralPassConfig config = {
+            .kernelSize = kernelSize,
+            .standardDeviation = stdDev,
+            // TODO: "bilateralThreshold" should be a user-settable parameter
+            //       z-distance that constitute an edge for bilateral filtering
+            .bilateralThreshold = 0.0625f
+    };
+
     const bool highQualitySampling =
             options.upsampling >= View::QualityLevel::HIGH && options.resolution < 1.0f;
 
     ssao = bilateralBlurPass(fg, ssao, { 1, 0 }, cameraInfo.zf,
-            TextureFormat::RGB8);
+            TextureFormat::RGB8,
+            config);
 
     ssao = bilateralBlurPass(fg, ssao, { 0, 1 }, cameraInfo.zf,
-            highQualitySampling ? TextureFormat::RGB8 : TextureFormat::R8);
+            highQualitySampling ? TextureFormat::RGB8 : TextureFormat::R8,
+            config);
 
     fg.getBlackboard().put("ssao", ssao);
     return ssao;
@@ -503,7 +526,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOclusion(
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::bilateralBlurPass(
         FrameGraph& fg, FrameGraphId<FrameGraphTexture> input, math::int2 axis, float zf,
-        TextureFormat format) noexcept {
+        TextureFormat format, BilateralPassConfig config) noexcept {
 
     Handle<HwRenderPrimitive> fullScreenRenderPrimitive = mEngine.getFullScreenRenderPrimitive();
 
@@ -542,13 +565,31 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bilateralBlurPass(
                 auto blurred = resources.get(data.rt);
                 auto const& desc = resources.getDescriptor(data.blurred);
 
-                // TODO: "oneOverEdgeDistance" should be a user-settable parameter
-                //       z-distance that constitute an edge for bilateral filtering
+                // unnormalized gaussian half-kernel of a given standard deviation
+                // returns number of samples stored in array (max 32)
+                auto gaussianKernel =
+                        [](float* outKernel, size_t gaussianWidth, float stdDev) -> uint32_t {
+                    const size_t gaussianSampleCount = std::min(size_t(32), (gaussianWidth + 1u) / 2u);
+                    for (size_t i = 0; i < gaussianSampleCount; i++) {
+                        float x = i;
+                        float g = std::exp(-(x * x) / (2.0f * stdDev * stdDev));
+                        outKernel[i] = g;
+                    }
+                    return uint32_t(gaussianSampleCount);
+                };
+
+                float kGaussianSamples[32];
+                uint32_t kGaussianCount = gaussianKernel(kGaussianSamples,
+                        config.kernelSize, config.standardDeviation);
+
                 auto& material = getPostProcessMaterial("bilateralBlur");
                 FMaterialInstance* const mi = material.getMaterialInstance();
                 mi->setParameter("ssao", ssao, { /* only reads level 0 */ });
                 mi->setParameter("axis", axis / float2{desc.width, desc.height});
-                mi->setParameter("farPlaneOverEdgeDistance", -zf / 0.0625f);
+                mi->setParameter("kernel", kGaussianSamples, kGaussianCount);
+                mi->setParameter("sampleCount", kGaussianCount);
+                mi->setParameter("farPlaneOverEdgeDistance", -zf / config.bilateralThreshold);
+
                 mi->commit(driver);
                 mi->use(driver);
 
