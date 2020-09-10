@@ -106,6 +106,7 @@ struct ResourceLoader::Impl {
     bool createTextures(bool async);
     void addTextureCacheEntry(const TextureSlot& tb);
     void bindTextureToMaterial(const TextureSlot& tb);
+    void releaseTexels();
     void decodeSingleTexture();
     void uploadPendingTextures();
     ~Impl();
@@ -463,6 +464,24 @@ void ResourceLoader::asyncUpdateLoad() {
     pImpl->uploadPendingTextures();
 }
 
+void ResourceLoader::Impl::releaseTexels() {
+    for (auto& pair : mBufferTextureCache) {
+        TextureCacheEntry* entry = pair.second.get();
+        if (entry->texels && !entry->completed) {
+            stbi_image_free(entry->texels);
+            entry->completed = true;
+        }
+    }
+
+    for (auto& pair : mUriTextureCache) {
+        TextureCacheEntry* entry = pair.second.get();
+        if (entry->texels && !entry->completed) {
+            stbi_image_free(entry->texels);
+            entry->completed = true;
+        }
+    }
+}
+
 void ResourceLoader::Impl::decodeSingleTexture() {
     assert(!UTILS_HAS_THREADING);
     int w, h, c;
@@ -611,6 +630,7 @@ bool ResourceLoader::Impl::createTextures(bool async) {
         mDecoderRootJob = nullptr;
     }
 
+    releaseTexels();
     mBufferTextureCache.clear();
     mUriTextureCache.clear();
 
@@ -907,6 +927,7 @@ void ResourceLoader::Impl::computeTangents(FFilamentAsset* asset) {
 }
 
 ResourceLoader::Impl::~Impl() {
+    releaseTexels();
     if (mDecoderRootJob) {
         mEngine->getJobSystem().waitAndRelease(mDecoderRootJob);
     }
