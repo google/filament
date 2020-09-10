@@ -166,7 +166,7 @@ TEST(FilamentTest, SkinningMath) {
 
     std::default_random_engine generator(82828); // NOLINT
     std::uniform_real_distribution<float> distribution(-4, 4);
-    std::uniform_real_distribution<float> dangle(-2.0 * F_PI, 2.0 * F_PI);
+    std::uniform_real_distribution<float> dangle(-f::TAU, f::TAU);
     auto rand_gen = std::bind(distribution, generator);
 
     for (size_t i = 0; i < 100; ++i) {
