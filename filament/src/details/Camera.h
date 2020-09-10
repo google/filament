@@ -130,7 +130,7 @@ public:
     }
 
     float getFieldOfViewInDegrees(Camera::Fov direction) const noexcept {
-        return getFieldOfView(direction) * float(180.0f / math::F_PI);
+        return getFieldOfView(direction) * math::f::RAD_TO_DEG;
     }
 
     // returns a Frustum object in world space
@@ -169,8 +169,8 @@ private:
     math::mat4 mProjectionForCulling;  // projection matrix (with far plane)
     math::double4 mScaling = {1.0f};   // additional scaling applied to projection
 
-    float mNear;
-    float mFar;
+    float mNear{};
+    float mFar{};
     // exposure settings
     float mAperture = 16.0f;
     float mShutterSpeed = 1.0f / 125.0f;

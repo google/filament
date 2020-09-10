@@ -602,7 +602,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
         // sigma is: lod = log2(sigma/sigma0).
         // sigma is deduced from the roughness: roughness = sqrt(2) * s * sigma
         // In the end we get: lod = 2 * log2(perceptualRoughness) - log2(sigma0 * s * sqrt2)
-        const float refractionLodOffset = -std::log2(sigma0 * s * (float)F_SQRT2);
+        const float refractionLodOffset = -std::log2(sigma0 * s * f::SQRT2);
         const float maxPerceptualRoughness = 0.5f;
         const uint8_t maxLod = std::ceil(2.0f * std::log2(maxPerceptualRoughness) + refractionLodOffset);
 

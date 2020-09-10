@@ -451,12 +451,12 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOclusion(
                 // Where the falloff function peaks
                 const float peak = 0.1f * options.radius;
                 // We further scale the user intensity by 2, for a better default at intensity=1
-                const float intensity = (2.0f * float(F_PI) * peak) * options.intensity * 2.0f;
+                const float intensity = (f::TAU * peak) * options.intensity * 2.0f;
                 // always square AO result, as it looks much better
                 const float power = options.power * 2.0f;
 
                 const auto invProjection = inverse(cameraInfo.projection);
-                const float inc = (1.0f / (sampleCount - 0.5f)) * spiralTurns * 2.0f * float(F_PI);
+                const float inc = (1.0f / (sampleCount - 0.5f)) * spiralTurns * f::TAU;
 
                 auto& material = getPostProcessMaterial("sao");
                 FMaterialInstance* const mi = material.getMaterialInstance();
@@ -774,9 +774,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                                              : TextureFormat::R11F_G11F_B10F;
 
     // rotate the bokeh based on the aperture diameter (i.e. angle of the blades)
-    float bokehAngle = float(F_PI) / 6.0f;
+    float bokehAngle = f::PI / 6.0f;
     if (dofOptions.maxApertureDiameter > 0.0f) {
-        bokehAngle += float(F_PI_2) * saturate(cameraInfo.A / dofOptions.maxApertureDiameter);
+        bokehAngle += f::PI_2 * saturate(cameraInfo.A / dofOptions.maxApertureDiameter);
     }
 
     const float focusDistance = std::max(cameraInfo.zn, dofOptions.focusDistance);
