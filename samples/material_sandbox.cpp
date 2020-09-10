@@ -603,7 +603,7 @@ static void gui(filament::Engine* engine, filament::View*) {
             ImGui::SliderAngle("Rotation", &params.iblRotation);
             if (ImGui::CollapsingHeader("SSAO")) {
                 int quality = (int)params.ssaoOptions.quality;
-                bool upsampling = params.ssaoOptions.upsampling == View::QualityLevel::LOW ? false : true;
+                bool upsampling = params.ssaoOptions.upsampling != View::QualityLevel::LOW;
                 DebugRegistry& debug = engine->getDebugRegistry();
                 ImGui::Checkbox("Enabled##ssao", &params.ssaoOptions.enabled);
                 ImGui::SliderFloat("Radius", &params.ssaoOptions.radius, 0.05f, 5.0f);
