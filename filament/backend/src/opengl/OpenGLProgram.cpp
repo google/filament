@@ -68,7 +68,7 @@ OpenGLProgram::OpenGLProgram(OpenGLDriver* gl, const Program& programBuilder) no
             }
 #endif
 
-            const char const* source = (const char*)shader.data();
+            const char * const source = (const char*)shader.data();
 
             GLuint shaderId = glCreateShader(glShaderType);
             glShaderSource(shaderId, 1, &source, &length);
