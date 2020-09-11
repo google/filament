@@ -88,9 +88,8 @@ public:
             filament::CameraInfo const& camera, uint8_t visibleLayers,
             ShadowMapLayout layout, const CascadeParameters& cascadeParams) noexcept;
 
-    void render(backend::DriverApi& driver, backend::Handle<backend::HwRenderTarget> rt,
-            filament::Viewport const& viewport, utils::Range<uint32_t> const& range,
-            RenderPass& pass, backend::RenderPassParams params, FView& view) noexcept;
+    void render(backend::DriverApi& driver, utils::Range<uint32_t> const& range, RenderPass& pass,
+            FView& view) noexcept;
 
     // Do we have visible shadows. Valid after calling update().
     bool hasVisibleShadows() const noexcept { return mHasVisibleShadows; }
@@ -107,6 +106,8 @@ public:
 
     // use only for debugging
     FCamera const& getDebugCamera() const noexcept { return *mDebugCamera; }
+
+    backend::PolygonOffset getPolygonOffset() const noexcept { return mPolygonOffset; }
 
 private:
     struct CameraInfo {

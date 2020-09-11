@@ -166,6 +166,7 @@ public:
     void prepareSSAO(backend::Handle<backend::HwTexture> ssao) const noexcept;
     void prepareSSR(backend::Handle<backend::HwTexture> ssr, float refractionLodOffset) const noexcept;
     void prepareStructure(backend::Handle<backend::HwTexture> structure) const noexcept;
+    void prepareShadow(backend::Handle<backend::HwTexture> structure) const noexcept;
     void cleanupRenderPasses() const noexcept;
     void froxelize(FEngine& engine) const noexcept;
     void commitUniforms(backend::DriverApi& driver) const noexcept;
@@ -177,7 +178,8 @@ public:
     bool hasFog() const noexcept { return mFogOptions.enabled && mFogOptions.density > 0.0f; }
     bool hasVsm() const noexcept { return mShadowType == ShadowType::VSM; }
 
-    void renderShadowMaps(FEngine& engine, FEngine::DriverApi& driver, RenderPass& pass) noexcept;
+    void renderShadowMaps(FrameGraph& fg, FEngine& engine, FEngine::DriverApi& driver,
+            RenderPass& pass) noexcept;
 
     void updatePrimitivesLod(
             FEngine& engine, const CameraInfo& camera,
