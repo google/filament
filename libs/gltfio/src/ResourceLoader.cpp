@@ -927,10 +927,10 @@ void ResourceLoader::Impl::computeTangents(FFilamentAsset* asset) {
 }
 
 ResourceLoader::Impl::~Impl() {
-    releaseTexels();
     if (mDecoderRootJob) {
         mEngine->getJobSystem().waitAndRelease(mDecoderRootJob);
     }
+    releaseTexels();
 }
 
 void ResourceLoader::applySparseData(FFilamentAsset* asset) const {
