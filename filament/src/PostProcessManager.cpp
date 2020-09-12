@@ -372,37 +372,50 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOclusion(
 
     const size_t levelCount = fg.getDescriptor(depth).levels;
 
-    uint8_t kernelSize{};
-    float stdDev{};
+    // With q the standard deviation,
+    // A gaussian filter requires 6q-1 values to keep its gaussian nature
+    // (see en.wikipedia.org/wiki/Gaussian_filter)
+    // More intuitively, 2q is the width of the filter in pixels.
+    BilateralPassConfig config = {
+            // TODO: "bilateralThreshold" should be a user-settable parameter
+            //       z-distance that constitute an edge for bilateral filtering
+            .bilateralThreshold = 0.0625f
+    };
+
     float sampleCount{};
     float spiralTurns{};
     switch (options.quality) {
         default:
         case View::QualityLevel::LOW:
-            kernelSize = 11;
-            stdDev = 4.0f;
+            config.kernelSize = 11;
+            config.standardDeviation = 4.0f;
+            config.scale = 2.0f;
             sampleCount = 7.0f;
             spiralTurns = 5.0f;
             break;
         case View::QualityLevel::MEDIUM:
-            kernelSize = 11;
-            stdDev = 4.0f;
+            config.kernelSize = 11;
+            config.standardDeviation = 4.0f;
+            config.scale = 2.0f;
             sampleCount = 11.0f;
             spiralTurns = 9.0f;
             break;
         case View::QualityLevel::HIGH:
-            kernelSize = 23;
-            stdDev = 8.0f;
+            config.kernelSize = 23;
+            config.standardDeviation = 8.0f;
+            config.scale = 1.0f;
             sampleCount = 16.0f;
             spiralTurns = 10.0f;
             break;
         case View::QualityLevel::ULTRA:
-            kernelSize = 23;
-            stdDev = 8.0;
+            config.kernelSize = 23;
+            config.standardDeviation = 8.0;
+            config.scale = 1.0f;
             sampleCount = 32.0f;
             spiralTurns = 14.0f;
             break;
     }
+
     /*
      * Our main SSAO pass
      */
@@ -450,8 +463,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOclusion(
 
                 // Where the falloff function peaks
                 const float peak = 0.1f * options.radius;
-                // We further scale the user intensity by 2, for a better default at intensity=1
-                const float intensity = (f::TAU * peak) * options.intensity * 2.0f;
+                const float intensity = (f::TAU * peak) * options.intensity;
                 // always square AO result, as it looks much better
                 const float power = options.power * 2.0f;
 
@@ -497,26 +509,14 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOclusion(
      * Final separable bilateral blur pass
      */
 
-    // With q the standard deviation,
-    // A gaussian filter requires 6q-1 values to keep its gaussian nature
-    // (see en.wikipedia.org/wiki/Gaussian_filter)
-    // More intuitively, 2q is the width of the filter in pixels.
-    BilateralPassConfig config = {
-            .kernelSize = kernelSize,
-            .standardDeviation = stdDev,
-            // TODO: "bilateralThreshold" should be a user-settable parameter
-            //       z-distance that constitute an edge for bilateral filtering
-            .bilateralThreshold = 0.0625f
-    };
-
     const bool highQualitySampling =
             options.upsampling >= View::QualityLevel::HIGH && options.resolution < 1.0f;
 
-    ssao = bilateralBlurPass(fg, ssao, { 1, 0 }, cameraInfo.zf,
+    ssao = bilateralBlurPass(fg, ssao, { config.scale, 0 }, cameraInfo.zf,
             TextureFormat::RGB8,
             config);
 
-    ssao = bilateralBlurPass(fg, ssao, { 0, 1 }, cameraInfo.zf,
+    ssao = bilateralBlurPass(fg, ssao, { 0, config.scale }, cameraInfo.zf,
             highQualitySampling ? TextureFormat::RGB8 : TextureFormat::R8,
             config);
 

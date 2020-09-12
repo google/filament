@@ -44,6 +44,11 @@ fragment {
         return (depth.x * (256.0 / 257.0) + depth.y * (1.0 / 257.0));
     }
 
+    float random(const highp vec2 w) {
+        const vec3 m = vec3(0.06711056, 0.00583715, 52.9829189);
+        return fract(m.z * fract(dot(w, m.xy)));
+    }
+
     float bilateralWeight(in float depth, in float sampleDepth) {
         float diff = (sampleDepth - depth) * materialParams.farPlaneOverEdgeDistance;
         return max(0.0, 1.0 - diff * diff);
@@ -84,7 +89,13 @@ fragment {
             offset += materialParams.axis;
         }
 
-        postProcess.color.r = sum * (1.0 / totalWeight);
+        float ao = sum * (1.0 / totalWeight);
+
+        // simple dithering helps a lot (assumes 8 bits target)
+        // this is most useful with high quality/large blurs
+        ao += ((random(gl_FragCoord.xy) - 0.5) / 255.0);
+
+        postProcess.color.r = ao;
         postProcess.color.gb = data.gb;
     }
 }
