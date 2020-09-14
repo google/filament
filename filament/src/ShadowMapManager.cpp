@@ -76,7 +76,7 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, FView& view,
     constexpr size_t MAX_SHADOW_LAYERS =
         CONFIG_MAX_SHADOW_CASCADES + CONFIG_MAX_SHADOW_CASTING_SPOTS;
     struct ShadowPassData {
-        FrameGraphId<FrameGraphTexture> shadow;
+        FrameGraphId<FrameGraphTexture> shadows;
         FrameGraphId<FrameGraphTexture> tempShadow;
         FrameGraphRenderTargetHandle rt[MAX_SHADOW_LAYERS];
     };
@@ -87,8 +87,7 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, FView& view,
 
     // These loops fill render passes with appropriate rendering commands for each shadow map.
     // The actual render pass execution is deferred to the frame graph.
-    for (size_t i = 0; i < mCascadeShadowMaps.size(); i++) {
-        const auto& map = mCascadeShadowMaps[i];
+    for (const auto& map : mCascadeShadowMaps) {
         if (!map.hasVisibleShadows()) {
             continue;
         }
@@ -133,8 +132,8 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, FView& view,
                     shadowTexture.usage = TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE;
                 }
 
-                data.shadow = builder.createTexture("Shadow Texture", shadowTexture);
-                data.shadow = builder.write(data.shadow);
+                data.shadows = builder.createTexture("Shadow Texture", shadowTexture);
+                data.shadows = builder.write(data.shadows);
 
                 if (view.hasVsm()) {
                     data.tempShadow = builder.createTexture("Temporary Shadow Texture", {
@@ -153,21 +152,17 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, FView& view,
                 for (uint8_t i = 0u; i < mTextureRequirements.layers; i++) {
                     FrameGraphRenderTarget::Descriptor renderTarget {};
                     if (view.hasVsm()) {
-                        renderTarget.attachments = { { data.shadow, 0u, i }, { data.tempShadow } };
+                        renderTarget.attachments = { { data.shadows, 0u, i }, { data.tempShadow } };
                         renderTarget.clearFlags = TargetBufferFlags::COLOR | TargetBufferFlags::DEPTH;
                     } else {
-                        renderTarget.attachments = { {}, { data.shadow, 0u, i } };
+                        renderTarget.attachments = { {}, { data.shadows, 0u, i } };
                         renderTarget.clearFlags = TargetBufferFlags::DEPTH;
                     }
                     data.rt[i] = builder.createRenderTarget("Shadow RT", renderTarget);
                 }
             },
-            [=, passes = std::move(passes), &view](FrameGraphPassResources const& resources,
+            [=, passes = std::move(passes), &view, &engine](FrameGraphPassResources const& resources,
                     auto const& data, DriverApi& driver) mutable {
-                if (UTILS_UNLIKELY(fillWithCheckerboard)) {
-                    return;
-                }
-
                 for (auto& [map, pass] : passes) {
                     FCamera const& camera = map->getShadowMap()->getCamera();
                     filament::CameraInfo cameraInfo(camera);
@@ -197,29 +192,32 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, FView& view,
 
                     pass.execute("Shadow Pass", rt.target, rt.params);
                 }
+
+                engine.flush(); // Wake-up the driver thread
             });
 
-    auto shadow = shadowPass.getData().shadow;
+    auto shadows = shadowPass.getData().shadows;
 
     if (UTILS_UNLIKELY(fillWithCheckerboard)) {
         struct DebugPatternData {
-            FrameGraphId<FrameGraphTexture> shadow;
+            FrameGraphId<FrameGraphTexture> shadows;
         };
 
         auto& debugPatternPass = fg.addPass<DebugPatternData>("Shadow Debug Pattern Pass",
                 [&](FrameGraph::Builder& builder, DebugPatternData& data) {
-                    data.shadow = builder.write(data.shadow);
+                    assert(shadows.isValid());
+                    data.shadows = builder.write(shadows);
                 },
                 [=](FrameGraphPassResources const& resources, DebugPatternData const& data,
                     DriverApi& driver) {
-                    fillWithDebugPattern(driver, resources.getTexture(data.shadow),
+                    fillWithDebugPattern(driver, resources.getTexture(data.shadows),
                             mTextureRequirements.size);
                 });
 
-        shadow = debugPatternPass.getData().shadow;
+        shadows = debugPatternPass.getData().shadows;
     }
 
-    fg.getBlackboard().put("shadow", shadow);
+    fg.getBlackboard().put("shadows", shadows);
 }
 
 void ShadowMapManager::prepareShadow(backend::Handle<backend::HwTexture> texture,

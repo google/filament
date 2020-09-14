@@ -267,7 +267,6 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     if (view.hasShadowing()) {
         view.renderShadowMaps(fg, engine, driver, pass);
-        engine.flush(); // Wake-up the driver thread
     }
 
     const TargetBufferFlags discardedFlags = mDiscardedFlags;
@@ -664,7 +663,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
         RenderPass const& pass, FView const& view) const noexcept {
 
     struct ColorPassData {
-        FrameGraphId<FrameGraphTexture> shadow;
+        FrameGraphId<FrameGraphTexture> shadows;
         FrameGraphId<FrameGraphTexture> color;
         FrameGraphId<FrameGraphTexture> output;
         FrameGraphId<FrameGraphTexture> depth;
@@ -683,7 +682,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 TargetBufferFlags clearColorFlags = config.clearFlags & TargetBufferFlags::COLOR;
                 data.clearColor = config.clearColor;
 
-                data.shadow = blackboard.get<FrameGraphTexture>("shadow");
+                data.shadows = blackboard.get<FrameGraphTexture>("shadows");
                 data.ssr  = blackboard.get<FrameGraphTexture>("ssr");
                 data.ssao = blackboard.get<FrameGraphTexture>("ssao");
                 data.color = blackboard.get<FrameGraphTexture>("color");
@@ -695,8 +694,8 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                     data.structure = builder.sample(data.structure);
                 }
 
-                if (data.shadow.isValid()) {
-                    data.shadow = builder.sample(data.shadow);
+                if (data.shadows.isValid()) {
+                    data.shadows = builder.sample(data.shadows);
                 }
 
                 if (data.ssr.isValid()) {
@@ -772,8 +771,8 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                         resources.getTexture(data.ssao) : ppm.getOneTexture());
 
                 // set shadow sampler
-                view.prepareShadow(data.shadow.isValid() ?
-                        resources.getTexture(data.shadow) : ppm.getOneTextureArray());
+                view.prepareShadow(data.shadows.isValid() ?
+                        resources.getTexture(data.shadows) : ppm.getOneTextureArray());
 
                 assert(data.structure.isValid());
                 if (data.structure.isValid()) {
