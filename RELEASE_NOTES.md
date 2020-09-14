@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release
 
+## v1.9.0
+
 - `MASKED` mode now leaves destination alpha intact (useful for transparent targets).
 - `MASKED` mode now benefit from smoothing in `unlit` materials.
 - Small performance improvement to FXAA.
@@ -21,7 +23,7 @@ A new header is inserted each time a *tag* is created.
 - `View.setAmbientOcclusion()` is deprecated in favor of `View.setAmbientOcclusionOptions`
    (⚠️ **API change**).
 - Switched to C++17.
-- Variance Shadow Mapping (VSM) is now available as an alternative to PCF shadows.
+- Variance Shadow Mapping (VSM) is now available as an alternative to PCF shadows (experimental).
 - Reduced compiled material sizes by removing unnecessary variants.
 - Many improvement and fixes in the Vulkan backend.
 - Many improvement and fixes in the Metal backend.
@@ -31,6 +33,7 @@ A new header is inserted each time a *tag* is created.
 - Added a way to create an `Engine` asynchronously.
 - Highlights are now more stable under depth of field.
 - New option to compress highlights before bloom.
+- Improvements and fixes to SSAO and DOF.
 
 ## v1.8.1
 
