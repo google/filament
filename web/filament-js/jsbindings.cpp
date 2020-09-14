@@ -352,7 +352,7 @@ value_object<filament::View::AmbientOcclusionOptions>("View$AmbientOcclusionOpti
 
 value_object<filament::View::DepthOfFieldOptions>("View$DepthOfFieldOptions")
     .field("focusDistance", &filament::View::DepthOfFieldOptions::focusDistance)
-    .field("blurScale", &filament::View::DepthOfFieldOptions::blurScale)
+    .field("cocScale", &filament::View::DepthOfFieldOptions::cocScale)
     .field("maxApertureDiameter", &filament::View::DepthOfFieldOptions::maxApertureDiameter)
     .field("enabled", &filament::View::DepthOfFieldOptions::enabled);
 
