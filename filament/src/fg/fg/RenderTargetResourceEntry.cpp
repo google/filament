@@ -189,6 +189,7 @@ void RenderTargetResourceEntry::preExecuteDevirtualize(FrameGraph& fg) noexcept 
                         fg.getResourceEntryUnchecked(attachmentInfo.getHandle());
                 infos[i].handle = entry.getResource().texture;
                 infos[i].level = attachmentInfo.getLevel();
+                infos[i].layer = attachmentInfo.getLayer();
                 // the attachment buffer (texture or renderbuffer) must be valid
                 assert(infos[i].handle);
                 // the attachment level must be within range

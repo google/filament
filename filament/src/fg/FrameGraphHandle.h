@@ -139,14 +139,19 @@ struct FrameGraphRenderTarget {
             AttachmentInfo(FrameGraphId<FrameGraphTexture> handle, uint8_t level) noexcept
                     : mHandle(handle), mLevel(level) {}
 
+            AttachmentInfo(FrameGraphId<FrameGraphTexture> handle, uint8_t level, uint8_t layer) noexcept
+                    : mHandle(handle), mLevel(level), mLayer(layer) {}
+
             bool isValid() const noexcept { return mHandle.isValid(); }
 
             FrameGraphId<FrameGraphTexture> getHandle() const noexcept { return mHandle; }
             uint8_t getLevel() const noexcept { return mLevel; }
+            uint8_t getLayer() const noexcept { return mLayer; }
 
         private:
             FrameGraphId<FrameGraphTexture> mHandle{};
             uint8_t mLevel = 0;
+            uint8_t mLayer = 0;
         };
 
         Attachments() noexcept
