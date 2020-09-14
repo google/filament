@@ -226,14 +226,20 @@ void PostProcessManager::init() noexcept {
     mDummyOneTexture = driver.createTexture(SamplerType::SAMPLER_2D, 1,
             TextureFormat::RGBA8, 1, 1, 1, 1, TextureUsage::DEFAULT);
 
+    mDummyOneTextureArray = driver.createTexture(SamplerType::SAMPLER_2D_ARRAY, 1,
+            TextureFormat::RGBA8, 1, 1, 1, 1, TextureUsage::DEFAULT);
+
     mDummyZeroTexture = driver.createTexture(SamplerType::SAMPLER_2D, 1,
             TextureFormat::RGBA8, 1, 1, 1, 1, TextureUsage::DEFAULT);
 
     PixelBufferDescriptor dataOne(driver.allocate(4), 4, PixelDataFormat::RGBA, PixelDataType::UBYTE);
+    PixelBufferDescriptor dataOneArray(driver.allocate(4), 4, PixelDataFormat::RGBA, PixelDataType::UBYTE);
     PixelBufferDescriptor dataZero(driver.allocate(4), 4, PixelDataFormat::RGBA, PixelDataType::UBYTE);
     *static_cast<uint32_t *>(dataOne.buffer) = 0xFFFFFFFF;
+    *static_cast<uint32_t *>(dataOneArray.buffer) = 0xFFFFFFFF;
     *static_cast<uint32_t *>(dataZero.buffer) = 0;
     driver.update2DImage(mDummyOneTexture, 0, 0, 0, 1, 1, std::move(dataOne));
+    driver.update3DImage(mDummyOneTextureArray, 0, 0, 0, 0, 1, 1, 1, std::move(dataOneArray));
     driver.update2DImage(mDummyZeroTexture, 0, 0, 0, 1, 1, std::move(dataZero));
 }
 

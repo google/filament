@@ -69,9 +69,8 @@ ShadowMap::~ShadowMap() {
     engine.getEntityManager().destroy(sizeof(entities) / sizeof(Entity), entities);
 }
 
-void ShadowMap::render(DriverApi& driver, Handle<HwRenderTarget> rt,
-        filament::Viewport const& viewport, FView::Range const& range, RenderPass& pass,
-        RenderPassParams params, FView& view) noexcept {
+void ShadowMap::render(DriverApi& driver, FView::Range const& range, RenderPass& pass,
+        FView& view) noexcept {
     FEngine& engine = mEngine;
 
     FScene& scene = *view.getScene();
@@ -82,16 +81,12 @@ void ShadowMap::render(DriverApi& driver, Handle<HwRenderTarget> rt,
     pass.setCamera(cameraInfo);
     pass.setGeometry(scene.getRenderableData(), range, scene.getRenderableUBO());
 
+    // updatePrimitivesLod must be run before appendCommands.
     view.updatePrimitivesLod(engine, cameraInfo, scene.getRenderableData(), range);
-    view.prepareCamera(cameraInfo);
-    view.prepareViewport(viewport);
-    view.commitUniforms(driver);
 
-    pass.overridePolygonOffset(&mPolygonOffset);
     pass.newCommandBuffer();
     pass.appendCommands(RenderPass::SHADOW);
     pass.sortCommands();
-    pass.execute("Shadow map Pass", rt, params);
 }
 
 void ShadowMap::computeSceneCascadeParams(const FScene::LightSoa& lightData, size_t index,

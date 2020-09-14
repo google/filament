@@ -125,6 +125,7 @@ public:
 
     backend::Handle<backend::HwTexture> getOneTexture() const { return mDummyOneTexture; }
     backend::Handle<backend::HwTexture> getZeroTexture() const { return mDummyZeroTexture; }
+    backend::Handle<backend::HwTexture> getOneTextureArray() const { return mDummyOneTextureArray; }
 
     math::float2 halton(size_t index) const noexcept {
         return mHaltonSamples[index & 0xFu];
@@ -208,6 +209,7 @@ private:
     PostProcessMaterial& getPostProcessMaterial(utils::StaticString name) noexcept;
 
     backend::Handle<backend::HwTexture> mDummyOneTexture;
+    backend::Handle<backend::HwTexture> mDummyOneTextureArray;
     backend::Handle<backend::HwTexture> mDummyZeroTexture;
 
     size_t mSeparableGaussianBlurKernelStorageSize = 0;

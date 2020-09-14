@@ -98,7 +98,6 @@ void FView::terminate(FEngine& engine) {
     driver.destroySamplerGroup(mPerViewSbh);
     driver.destroyUniformBuffer(mRenderableUbh);
     drainFrameHistory(engine);
-    mShadowMapManager.terminate(driver);
     mFroxelizer.terminate(driver);
 }
 
@@ -220,8 +219,6 @@ void FView::prepareShadowing(FEngine& engine, backend::DriverApi& driver,
 
     mShadowMapManager.reset();
 
-    mShadowMapManager.setVsm(hasVsm());
-
     auto& lcm = engine.getLightManager();
 
     // dominant directional light is always as index 0
@@ -257,9 +254,6 @@ void FView::prepareShadowing(FEngine& engine, backend::DriverApi& driver,
             break;
         }
     }
-
-    // allocates shadowmap driver resources
-    mShadowMapManager.prepare(engine, driver, mPerViewSb, lightData);
 
     mHasShadowing = mShadowMapManager.update(engine, *this, mPerViewUb, mShadowUb, renderableData,
             lightData);
@@ -670,6 +664,10 @@ void FView::prepareStructure(backend::Handle<backend::HwTexture> structure) cons
     mPerViewSb.setSampler(PerViewSib::STRUCTURE, structure, {});
 }
 
+void FView::prepareShadow(backend::Handle<backend::HwTexture> texture) const noexcept {
+    mShadowMapManager.prepareShadow(texture, mPerViewSb);
+}
+
 void FView::cleanupRenderPasses() const noexcept {
     auto& samplerGroup = mPerViewSb;
     samplerGroup.setSampler(PerViewSib::SSAO, {}, {});
@@ -808,8 +806,9 @@ void FView::updatePrimitivesLod(FEngine& engine, const CameraInfo&,
     }
 }
 
-void FView::renderShadowMaps(FEngine& engine, FEngine::DriverApi& driver, RenderPass& pass) noexcept {
-    mShadowMapManager.render(engine, *this, driver, pass);
+void FView::renderShadowMaps(FrameGraph& fg, FEngine& engine, FEngine::DriverApi& driver,
+        RenderPass& pass) noexcept {
+    mShadowMapManager.render(fg, engine, *this, driver, pass);
 }
 
 void FView::commitFrameHistory(FEngine& engine) noexcept {
