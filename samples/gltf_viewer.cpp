@@ -721,7 +721,7 @@ int main(int argc, char** argv) {
                 ImGui::SliderFloat("ISO", &app.viewOptions.cameraISO, 25.0f, 6400.0f);
                 ImGui::Checkbox("DoF", &app.dofOptions.enabled);
                 ImGui::SliderFloat("Focus distance", &app.dofOptions.focusDistance, 0.0f, 30.0f);
-                ImGui::SliderFloat("Blur scale", &app.dofOptions.blurScale, 0.1f, 10.0f);
+                ImGui::SliderFloat("Blur scale", &app.dofOptions.cocScale, 0.1f, 10.0f);
 
                 if (ImGui::CollapsingHeader("Vignette")) {
                     ImGui::Checkbox("Enabled##vignetteEnabled", &app.vignetteOptions.enabled);

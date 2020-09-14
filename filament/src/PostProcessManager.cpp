@@ -792,8 +792,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
     float2 cocParams{
             // we use 1/zn instead of (zf - zn) / (zf * zn), because in reality we're using
             // a projection with an infinite far plane
-            (dofOptions.blurScale * Ks * Kc) * focusDistance / cameraInfo.zn,
-            (dofOptions.blurScale * Ks * Kc) * (1.0f - focusDistance / cameraInfo.zn)
+            (dofOptions.cocScale * Ks * Kc) * focusDistance / cameraInfo.zn,
+            (dofOptions.cocScale * Ks * Kc) * (1.0f - focusDistance / cameraInfo.zn)
     };
     // handle reversed z
     cocParams = float2{ -cocParams.x, cocParams.x + cocParams.y };

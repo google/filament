@@ -167,10 +167,16 @@ public:
 
     /**
      * Options to control Depth of Field (DoF) effect in the scene.
+     *
+     * cocScale can be used to set the depth of field blur independently from the camera
+     * aperture, e.g. for artistic reasons. This can be achieved by setting:
+     *      cocScale = cameraAperture / desiredDoFAperture
+     *
+     * @see Camera
      */
     struct DepthOfFieldOptions {
         float focusDistance = 10.0f;        //!< focus distance in world units
-        float blurScale = 1.0f;             //!< a scale factor for the amount of blur
+        float cocScale = 1.0f;              //!< circle of confusion scale factor (amount of blur)
         float maxApertureDiameter = 0.01f;  //!< maximum aperture diameter in meters (zero to disable rotation)
         bool enabled = false;               //!< enable or disable depth of field effect
     };

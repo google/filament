@@ -190,7 +190,7 @@ struct CameraInfo {
     float zf{};                     // distance (positive) to the far plane
     float ev100{};                  // exposure
     float f{};                      // focal length (in m)
-    float A{};                      // aperture diameter (in m)
+    float A{};                      // f / aperture diameter (in m)
     math::float3 worldOffset{};     // world offset, API-level camera position
     math::float3 const& getPosition() const noexcept { return model[3].xyz; }
     math::float3 getForwardVector() const noexcept { return normalize(-model[2].xyz); }

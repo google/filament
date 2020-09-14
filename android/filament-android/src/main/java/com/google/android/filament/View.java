@@ -360,8 +360,17 @@ public class View {
         /** focus distance in world units */
         public float focusDistance = 10.0f;
 
-        /** scale factor controlling the amount of blur (values other than 1.0 are not physically correct)*/
-        public float blurScale = 1.0f;
+        /**
+         * circle of confusion scale factor (amount of blur)
+         *
+         * <p>cocScale can be used to set the depth of field blur independently from the camera
+         * aperture, e.g. for artistic reasons. This can be achieved by setting:</p>
+         * <code>
+         *      cocScale = cameraAperture / desiredDoFAperture
+         * </code>
+         *
+         */
+        public float cocScale = 1.0f;
 
         /** maximum aperture diameter in meters (zero to disable bokeh rotation) */
         public float maxApertureDiameter = 0.01f;
@@ -1173,7 +1182,7 @@ public class View {
      */
     public void setDepthOfFieldOptions(@NonNull DepthOfFieldOptions options) {
         mDepthOfFieldOptions = options;
-        nSetDepthOfFieldOptions(getNativeObject(), options.focusDistance, options.blurScale, options.maxApertureDiameter, options.enabled);
+        nSetDepthOfFieldOptions(getNativeObject(), options.focusDistance, options.cocScale, options.maxApertureDiameter, options.enabled);
     }
 
     /**
@@ -1229,7 +1238,7 @@ public class View {
     private static native void nSetBloomOptions(long nativeView, long dirtNativeObject, float dirtStrength, float strength, int resolution, float anamorphism, int levels, int blendMode, boolean threshold, boolean enabled, float highlight);
     private static native void nSetFogOptions(long nativeView, float distance, float maximumOpacity, float height, float heightFalloff, float v, float v1, float v2, float density, float inScatteringStart, float inScatteringSize, boolean fogColorFromIbl, boolean enabled);
     private static native void nSetBlendMode(long nativeView, int blendMode);
-    private static native void nSetDepthOfFieldOptions(long nativeView, float focusDistance, float blurScale, float maxApertureDiameter, boolean enabled);
+    private static native void nSetDepthOfFieldOptions(long nativeView, float focusDistance, float cocScale, float maxApertureDiameter, boolean enabled);
     private static native void nSetVignetteOptions(long nativeView, float midPoint, float roundness, float feather, float r, float g, float b, float a, boolean enabled);
     private static native void nSetTemporalAntiAliasingOptions(long nativeView, float feedback, float filterWidth, boolean enabled);
 }
