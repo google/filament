@@ -781,13 +781,13 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
 
     const float focusDistance = std::max(cameraInfo.zn, dofOptions.focusDistance);
     auto const& desc = fg.getDescriptor<FrameGraphTexture>(input);
-    const float Kc = (cameraInfo.A * cameraInfo.f) / (focusDistance - cameraInfo.f);
+    const float Kc = ((dofOptions.apertureScale * cameraInfo.A) * cameraInfo.f) / (focusDistance - cameraInfo.f);
     const float Ks = ((float)desc.height) / FCamera::SENSOR_SIZE;
     float2 cocParams{
             // we use 1/zn instead of (zf - zn) / (zf * zn), because in reality we're using
             // a projection with an infinite far plane
-            (dofOptions.blurScale * Ks * Kc) * focusDistance / cameraInfo.zn,
-            (dofOptions.blurScale * Ks * Kc) * (1.0f - focusDistance / cameraInfo.zn)
+            (Ks * Kc) * focusDistance / cameraInfo.zn,
+            (Ks * Kc) * (1.0f - focusDistance / cameraInfo.zn)
     };
     // handle reversed z
     cocParams = float2{ -cocParams.x, cocParams.x + cocParams.y };

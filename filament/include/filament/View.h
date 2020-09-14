@@ -167,10 +167,16 @@ public:
 
     /**
      * Options to control Depth of Field (DoF) effect in the scene.
+     *
+     * It is possible to use the apertureScale parameter to set a DoF independently from the
+     * camera aperture by setting it to: apertureScale = desiredDofAperture / cameraAperture.
+     * apertureScale can also be seen as circle of confusion scale factor.
+     *
+     * @see Camera
      */
     struct DepthOfFieldOptions {
-        float focusDistance = 10.0f;        //!< focus distance in world units
-        float blurScale = 1.0f;             //!< a scale factor for the amount of blur
+        float focusDistance = 10.0f;        //!< focus distance in world units (usually meters)
+        float apertureScale = 1.0f;         //!< camera aperture scale
         float maxApertureDiameter = 0.01f;  //!< maximum aperture diameter in meters (zero to disable rotation)
         bool enabled = false;               //!< enable or disable depth of field effect
     };
