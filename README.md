@@ -143,6 +143,8 @@ Here are a few screenshots of applications that use Filament in production:
 - Physical light units
 - Point lights, spot lights and directional light
 - Spot and directional light shadows
+- Cascaded shadows
+- VSM or PCF shadows
 - Contact shadows
 - Screen-space ambient occlusion
 - Screen-space refraction
