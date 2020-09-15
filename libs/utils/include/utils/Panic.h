@@ -313,7 +313,7 @@ public:
 
     /**
      * Depending on the mode set, either throws an exception of type T with the given reason plus
-     * extra informations about the error-site, or logs the error and calls std::terminate().
+     * extra information about the error-site, or logs the error and calls std::terminate().
      * This function never returns.
      * @param function the name of the function where the error was detected
      * @param file the file where the above function in implemented
@@ -328,7 +328,7 @@ public:
 
     /**
      * Depending on the mode set, either throws an exception of type T with the given reason plus
-     * extra informations about the error-site, or logs the error and calls std::terminate().
+     * extra information about the error-site, or logs the error and calls std::terminate().
      * This function never returns.
      * @param function the name of the function where the error was detected
      * @param file the file where the above function in implemented
@@ -429,7 +429,7 @@ class UTILS_PUBLIC ArithmeticPanic : public TPanic<ArithmeticPanic> {
 #endif
 
 /**
- * PANIC_PRECONDITION is a macro that reports a PreconditionPannic
+ * PANIC_PRECONDITION is a macro that reports a PreconditionPanic
  * @param format printf-style string describing the error in more details
  */
 #define PANIC_PRECONDITION(format, ...)                                                            \
@@ -492,7 +492,7 @@ class UTILS_PUBLIC ArithmeticPanic : public TPanic<ArithmeticPanic> {
  * @code
  *     int& Foo::operator[](size_t index) {
  *         ASSERT_POSTCONDITION(index<m_size, "cannot produce a valid return value");
- *         return m_arrar[index];
+ *         return m_array[index];
  *     }
  * @endcode
  */

@@ -58,7 +58,7 @@ start: ;
         // as well as a memory barrier is needed
         __dsb(0xA);     // ISHST = 0xA (b1010)
 #else
-        // on ARMv8 we could avoid the call to SE, but we'de need to write the
+        // on ARMv8 we could avoid the call to SE, but we'd need to write the
         // test_and_set() above by hand, so the WFE only happens without a STRX first.
         UTILS_BROADCAST_EVENT();
 #endif

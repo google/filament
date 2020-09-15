@@ -25,7 +25,7 @@
 namespace utils {
 
 /*
- * A templatized, lockless, fixed-size work-stealing dequeue
+ * A templated, lockless, fixed-size work-stealing dequeue
  *
  *
  *     top                          bottom

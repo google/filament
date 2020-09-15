@@ -55,7 +55,7 @@ CString::CString(const CString& rhs)
 
 CString& CString::operator=(const CString& rhs) {
     if (this != &rhs) {
-        auto const p = mData ? mData - 1 : nullptr;
+        auto *const p = mData ? mData - 1 : nullptr;
         new(this) CString(rhs);
         free(p);
     }
