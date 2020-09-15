@@ -71,7 +71,7 @@ static LogStream cinfo(LogStream::Priority::LOG_INFO);
 } // namespace io
 
 
-Loggers slog = {
+const Loggers slog = {
         io::cout,   // debug
         io::cerr,   // error
         io::cwarn,  // warning

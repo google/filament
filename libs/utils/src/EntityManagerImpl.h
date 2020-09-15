@@ -48,7 +48,7 @@ public:
     using EntityManager::destroy;
 
     void create(size_t n, Entity* entities) {
-        Entity::Type index;
+        Entity::Type index{};
         auto& freeList = mFreeList;
         uint8_t* const gens = mGens;
 

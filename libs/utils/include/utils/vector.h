@@ -37,7 +37,7 @@ static inline void insert_sorted(std::vector<T>& v, T item) {
  * inserting the item again.
  *
  * @return True if the item was inserted at is sorted position, false
- *         if the item already exsits in the vector.
+ *         if the item already exists in the vector.
  */
 template <typename T>
 static inline bool insert_sorted_unique(std::vector<T>& v, T item) {

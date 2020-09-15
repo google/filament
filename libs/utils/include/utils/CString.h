@@ -238,7 +238,7 @@ public:
 
     void swap(CString& other) noexcept {
         // don't use std::swap(), we don't want an STL dependency in this file
-        auto temp = mCStr;
+        auto *temp = mCStr;
         mCStr = other.mCStr;
         other.mCStr = temp;
     }

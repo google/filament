@@ -220,7 +220,7 @@ public:
         setCapacity(capacity);
     }
 
-    // not copiable for now
+    // not copyable for now
     StructureOfArraysBase(StructureOfArraysBase const& rhs) = delete;
     StructureOfArraysBase& operator=(StructureOfArraysBase const& rhs) = delete;
 
