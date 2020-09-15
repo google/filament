@@ -287,9 +287,9 @@ bool ChunkUniformInterfaceBlock::unflatten(Unflattener& unflattener,
 
     for (uint64_t i = 0; i < numFields; i++) {
         CString fieldName;
-        uint64_t fieldSize;
-        uint8_t fieldType;
-        uint8_t fieldPrecision;
+        uint64_t fieldSize = 0;
+        uint8_t fieldType = 0;
+        uint8_t fieldPrecision = 0;
 
         if (!unflattener.read(&fieldName)) {
             return false;
@@ -334,10 +334,10 @@ bool ChunkSamplerInterfaceBlock::unflatten(Unflattener& unflattener,
 
     for (uint64_t i = 0; i < numFields; i++) {
         CString fieldName;
-        uint8_t fieldType;
-        uint8_t fieldFormat;
-        uint8_t fieldPrecision;
-        bool fieldMultisample;
+        uint8_t fieldType = 0;
+        uint8_t fieldFormat = 0;
+        uint8_t fieldPrecision = 0;
+        bool fieldMultisample = false;
 
         if (!unflattener.read(&fieldName)) {
             return false;

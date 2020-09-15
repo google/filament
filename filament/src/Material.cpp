@@ -37,8 +37,6 @@
 #include <utils/CString.h>
 #include <utils/Panic.h>
 
-#include <sstream>
-
 using namespace utils;
 using namespace filaflat;
 
@@ -76,7 +74,7 @@ Material* Material::Builder::build(Engine& engine) {
     MaterialParser* materialParser = FMaterial::createParser(
             upcast(engine).getBackend(), mImpl->mPayload, mImpl->mSize);
 
-    uint32_t v;
+    uint32_t v = 0;
     materialParser->getShaderModels(&v);
     utils::bitset32 shaderModels;
     shaderModels.setValue(v);
@@ -122,7 +120,7 @@ static void addSamplerGroup(Program& pb, uint8_t bindingPoint, SamplerInterfaceB
             CString uniformName(
                     SamplerInterfaceBlock::getUniformName(sib.getName().c_str(),
                             list[i].name.c_str()));
-            uint8_t binding;
+            uint8_t binding = 0;
             UTILS_UNUSED bool ok = map.getSamplerBinding(bindingPoint, (uint8_t)i, &binding);
             assert(ok);
             samplers[i] = { std::move(uniformName), binding };
@@ -227,20 +225,20 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
             break;
     }
 
-    bool depthWriteSet;
+    bool depthWriteSet = false;
     parser->getDepthWriteSet(&depthWriteSet);
     if (depthWriteSet) {
-        bool depthWrite;
+        bool depthWrite = false;
         parser->getDepthWrite(&depthWrite);
         mRasterState.depthWrite = depthWrite;
     }
 
     // if doubleSided() was called we override culling()
-    bool doubleSideSet;
+    bool doubleSideSet = false;
     parser->getDoubleSidedSet(&doubleSideSet);
     parser->getDoubleSided(&mDoubleSided);
     parser->getCullingMode(&mCullingMode);
-    bool depthTest;
+    bool depthTest = false;
     parser->getDepthTest(&depthTest);
 
     if (doubleSideSet) {
@@ -264,7 +262,7 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
         }
     }
 
-    bool colorWrite;
+    bool colorWrite = false;
     parser->getColorWrite(&colorWrite);
     mRasterState.colorWrite = colorWrite;
     mRasterState.depthFunc = depthTest ? DepthFunc::GE : DepthFunc::A;
@@ -479,16 +477,16 @@ void FMaterial::onEditCallback(void* userdata, const utils::CString& name, const
             packageSize);
 }
 
-void FMaterial::onQueryCallback(void* userdata, uint64_t* pvariants) {
+void FMaterial::onQueryCallback(void* userdata, uint64_t* pVariants) {
     FMaterial* material = upcast((Material*) userdata);
     uint64_t variants = 0;
     auto& cachedPrograms = material->mCachedPrograms;
     for (size_t i = 0, n = cachedPrograms.size(); i < n; ++i) {
         if (cachedPrograms[i]) {
-            variants |= (1 << i);
+            variants |= (1u << i);
         }
     }
-    *pvariants = variants;
+    *pVariants = variants;
 }
 
  /** @}*/
@@ -508,7 +506,7 @@ MaterialParser* FMaterial::createParser(backend::Backend backend, const void* da
         return nullptr;
     }
 
-    uint32_t version;
+    uint32_t version = 0;
     materialParser->getMaterialVersion(&version);
     ASSERT_PRECONDITION(version == MATERIAL_VERSION, "Material version mismatch. Expected %d but "
             "received %d.", MATERIAL_VERSION, version);

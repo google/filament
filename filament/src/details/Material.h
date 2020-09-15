@@ -149,7 +149,7 @@ public:
             size_t packageSize);
 
     /** Queries the program cache to check which variants are resident. */
-    static void onQueryCallback(void* userdata, uint64_t* variants);
+    static void onQueryCallback(void* userdata, uint64_t* pVariants);
 
     /** @}*/
 

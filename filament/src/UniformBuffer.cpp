@@ -86,7 +86,7 @@ void* UniformBuffer::alloc(size_t size) noexcept {
     return ::malloc(size);
 }
 
-void UniformBuffer::free(void* addr, size_t size) noexcept {
+void UniformBuffer::free(void* addr, size_t) noexcept {
     ::free(addr);
 }
 

@@ -48,7 +48,7 @@ class RenderPass;
 class ShadowMapManager {
 public:
 
-    ShadowMapManager(FEngine& engine);
+    explicit ShadowMapManager(FEngine& engine);
     ~ShadowMapManager();
 
     // Reset shadow map layout.
@@ -141,7 +141,7 @@ private:
         };
 
         CascadeSplits() : CascadeSplits(Params {}) {}
-        CascadeSplits(Params p);
+        explicit CascadeSplits(Params p);
 
         // Split positions in world-space.
         const float* beginWs() const { return mSplitsWs; }

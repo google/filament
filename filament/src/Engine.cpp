@@ -368,13 +368,13 @@ void FEngine::prepare() {
     // skipped is the UBO hasn't changed. Still we could have a lot of these.
     FEngine::DriverApi& driver = getDriverApi();
     for (auto& materialInstanceList : mMaterialInstances) {
-        for (auto& item : materialInstanceList.second) {
+        for (const auto& item : materialInstanceList.second) {
             item->commit(driver);
         }
     }
 
     // Commit default material instances.
-    for (auto& material : mMaterials) {
+    for (const auto& material : mMaterials) {
         material->getDefaultInstance()->commit(driver);
     }
 }
@@ -383,7 +383,7 @@ void FEngine::gc() {
     // Note: this runs in a Job
 
     JobSystem& js = mJobSystem;
-    auto parent = js.createJob();
+    auto *parent = js.createJob();
     auto em = std::ref(mEntityManager);
 
     js.run(jobs::createJob(js, parent, &FRenderableManager::gc, &mRenderableManager, em),

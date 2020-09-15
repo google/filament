@@ -67,7 +67,7 @@ public:
             uint32_t width, uint32_t height, float scale) noexcept;
 
     // SSAO
-    FrameGraphId<FrameGraphTexture> screenSpaceAmbientOclusion(FrameGraph& fg,
+    FrameGraphId<FrameGraphTexture> screenSpaceAmbientOcclusion(FrameGraph& fg,
             RenderPass& pass, filament::Viewport const& svp,
             CameraInfo const& cameraInfo,
             View::AmbientOcclusionOptions options) noexcept;
@@ -104,7 +104,7 @@ public:
     // Temporal Anti-aliasing
     void prepareTaa(FrameHistory& frameHistory,
             CameraInfo const& cameraInfo,
-            View::TemporalAntiAliasingOptions const& taaOptions) noexcept;
+            View::TemporalAntiAliasingOptions const& taaOptions) const noexcept;
 
     FrameGraphId<FrameGraphTexture> taa(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, FrameHistory& frameHistory,

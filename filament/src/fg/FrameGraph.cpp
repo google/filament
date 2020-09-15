@@ -180,7 +180,7 @@ void FrameGraph::moveResource(
     ResourceNode& to   = getResourceNode(toHandle);
     Vector<ResourceNode*>& resourceNodes = mResourceNodes;
 
-    // NOTE: We're guaranteed that fromHandle's resource is unique (i.e. it's the only hande that
+    // NOTE: We're guaranteed that fromHandle's resource is unique (i.e. it's the only handle that
     //       references this resource -- this is because FrameGraphRenderTarget can't be
     //       written to).
 
@@ -204,7 +204,7 @@ void FrameGraph::moveResource(
     // find all ResourceNode of type RenderTargetResource that have 'to' as attachment and replace
     // them with the 'from' ResourceNode
     for (auto& cur : resourceNodes) {
-        auto p = cur->resource->asRenderTargetResourceEntry();
+        auto *p = cur->resource->asRenderTargetResourceEntry();
         if (p) {
             if (hasAttachment(p, to.resource)) {
                 cur = &from;

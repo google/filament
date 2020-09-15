@@ -79,7 +79,7 @@ public:
     /**
      * Computes the bounding box of the union of two boxes
      * @param box The box to be combined with
-     * @return The boudning box of the union of *this and box
+     * @return The bounding box of the union of *this and box
      */
     Box& unionSelf(const Box& box) noexcept {
         set(min(getMin(), box.getMin()), max(getMax(), box.getMax()));
@@ -105,7 +105,7 @@ public:
 
     /**
      * Computes the bounding box of a box transformed by a rigid transform
-     * @param box the box to transfrom
+     * @param box the box to transform
      * @param m a 4x4 matrix that must be a rigid transform
      * @return the bounding box of the transformed box.
      *         Result is undefined if \p m is not a rigid transform
@@ -114,7 +114,7 @@ public:
 
     /**
      * Computes the bounding box of a box transformed by a rigid transform
-     * @param box the box to transfrom
+     * @param box the box to transform
      * @param m a 3x3 matrix that must be a rigid transform
      * @return the bounding box of the transformed box.
      *         Result is undefined if \p m is not a rigid transform

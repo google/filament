@@ -27,7 +27,6 @@
 #include <utils/Panic.h>
 
 #include <math/scalar.h>
-#include <math/mat4.h>
 
 #define IBL_INTEGRATION_PREFILTERED_CUBEMAP         0
 #define IBL_INTEGRATION_IMPORTANCE_SAMPLING         1
@@ -42,7 +41,7 @@ namespace filament {
 struct IndirectLight::BuilderDetails {
     Texture const* mReflectionsMap = nullptr;
     Texture const* mIrradianceMap = nullptr;
-    float3 mIrradianceCoefs[9] = { 65504.0 }; // magic value (max fp16) to indicate sh are not set
+    float3 mIrradianceCoefs[9] = { 65504.0f }; // magic value (max fp16) to indicate sh are not set
     mat3f mRotation = {};
     float mIntensity = FIndirectLight::DEFAULT_INTENSITY;
 };

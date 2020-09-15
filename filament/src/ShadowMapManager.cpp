@@ -28,11 +28,11 @@ using namespace backend;
 using namespace math;
 
 ShadowMapManager::ShadowMapManager(FEngine& engine) {
-    for (size_t i = 0; i < mCascadeShadowMapCache.size(); i++) {
-        mCascadeShadowMapCache[i] = std::make_unique<ShadowMap>(engine);
+    for (auto& entry : mCascadeShadowMapCache) {
+        entry = std::make_unique<ShadowMap>(engine);
     }
-    for (size_t i = 0; i < mSpotShadowMapCache.size(); i++) {
-        mSpotShadowMapCache[i] = std::make_unique<ShadowMap>(engine);
+    for (auto& entry : mSpotShadowMapCache) {
+        entry = std::make_unique<ShadowMap>(engine);
     }
     FDebugRegistry& debugRegistry = engine.getDebugRegistry();
     debugRegistry.registerProperty("d.shadowmap.visualize_cascades",
@@ -247,7 +247,7 @@ bool ShadowMapManager::updateCascadeShadowMaps(FEngine& engine, FView& view,
 
     ShadowMap::CascadeParameters cascadeParams;
 
-    if (mCascadeShadowMaps.size() > 0) {
+    if (!mCascadeShadowMaps.empty()) {
         // Compute scene-dependent values shared across all cascades.
         ShadowMap::computeSceneCascadeParams(lightData, 0, view, viewingCameraInfo, visibleLayers,
                 cascadeParams);
@@ -290,7 +290,7 @@ bool ShadowMapManager::updateCascadeShadowMaps(FEngine& engine, FView& view,
 
     // We divide the camera frustum into N cascades. This gives us N + 1 split positions.
     // The first split position is the near plane; the last split position is the far plane.
-    std::array<float, CascadeSplits::SPLIT_COUNT> splitPercentages;
+    std::array<float, CascadeSplits::SPLIT_COUNT> splitPercentages{};
     splitPercentages[0] = 0.0f;
     size_t i = 1;
     for (; i < cascadeCount; i++) {
@@ -328,7 +328,7 @@ bool ShadowMapManager::updateCascadeShadowMaps(FEngine& engine, FView& view,
 
     uint32_t directionalShadows = 0;
     uint32_t cascadeHasVisibleShadows = 0;
-    float screenSpaceShadowDistance = 0.0;
+    float screenSpaceShadowDistance = 0.0f;
     for (size_t i = 0; i < mCascadeShadowMaps.size(); i++) {
         auto& entry = mCascadeShadowMaps[i];
 
@@ -438,7 +438,7 @@ bool ShadowMapManager::updateSpotShadowMaps(FEngine& engine, FView& view, Unifor
     }
 
     // screen-space contact shadows for point/spot lights
-    auto pInstance = lightData.data<FScene::LIGHT_INSTANCE>();
+    auto *pInstance = lightData.data<FScene::LIGHT_INSTANCE>();
     for (size_t i = 0, c = lightData.size(); i < c; i++) {
         // screen-space contact shadows
         LightManager::ShadowOptions const& shadowOptions = lcm.getShadowOptions(pInstance[i]);
