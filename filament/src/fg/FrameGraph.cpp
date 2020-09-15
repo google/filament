@@ -88,21 +88,19 @@ FrameGraph::Builder& FrameGraph::Builder::sideEffect() noexcept {
 
 FrameGraph::FrameGraph(ResourceAllocatorInterface& resourceAllocator)
         : mResourceAllocator(resourceAllocator),
-          mArena("FrameGraph Arena", 65536), // TODO: the Area will eventually come from outside
+          mArena("FrameGraph Arena", 131072), // TODO: the Area will eventually come from outside
           mPassNodes(mArena),
           mResourceNodes(mArena),
           mResourceNodeEntries(mArena),
           mResourceEntries(mArena) {
-    mPassNodes.reserve(32);
-    mResourceNodes.reserve(64);
-    mResourceNodeEntries.reserve(64);
-    mResourceEntries.reserve(48);
-//    slog.d << "PassNode: " << sizeof(PassNode) << io::endl;
-//    slog.d << "ResourceNode: " << sizeof(ResourceNode) << io::endl;
-//    slog.d << "Resource: " << sizeof(Resource) << io::endl;
-//    slog.d << "RenderTargetResourceEntry: " << sizeof(RenderTargetResourceEntry) << io::endl;
-//    slog.d << "Alias: " << sizeof(Alias) << io::endl;
-//    slog.d << "Vector: " << sizeof(Vector<fg::PassNode>) << io::endl;
+    mPassNodes.reserve(64);             // ~16K
+    mResourceNodes.reserve(256);        // ~4K
+    mResourceNodeEntries.reserve(256);  // ~8K
+    mResourceEntries.reserve(256);      // ~8K
+//    slog.d << "mPassNodes: " << sizeof(std::decay<decltype(mPassNodes.front())>::type) << io::endl;
+//    slog.d << "mResourceNodes: " << sizeof(std::decay<decltype(mResourceNodes.front())>::type) << io::endl;
+//    slog.d << "mResourceNodeEntries: " << sizeof(std::decay<decltype(mResourceNodeEntries.front())>::type) << io::endl;
+//    slog.d << "mResourceEntries: " << sizeof(std::decay<decltype(mResourceEntries.front())>::type) << io::endl;
 }
 
 FrameGraph::~FrameGraph() = default;
