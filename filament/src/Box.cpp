@@ -56,9 +56,9 @@ float Aabb::contains(float3 p) const noexcept {
 Aabb Aabb::transform(const mat4f& mat) const noexcept {
     const float3 translation = mat[3].xyz;
     const mat3f upperLeft = mat.upperLeft();
-    Aabb result = {translation, translation};
-    for (size_t col = 0; col < upperLeft.NUM_COLS; ++col) {
-        for (size_t row = 0; row < upperLeft.NUM_ROWS; ++row) {
+    Aabb result = { translation, translation };
+    for (size_t col = 0; col < upperLeft.getColumnCount(); ++col) {
+        for (size_t row = 0; row < upperLeft.getRowCount(); ++row) {
             const float a = upperLeft[col][row] * min[col];
             const float b = upperLeft[col][row] * max[col];
             result.min[row] += a < b ? a : b;

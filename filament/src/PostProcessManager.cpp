@@ -38,8 +38,6 @@
 #include <math/half.h>
 #include <math/mat2.h>
 
-#include <utils/Log.h>
-
 #include <algorithm>
 #include <limits>
 
@@ -365,7 +363,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::mipmapPass(FrameGraph& fg,
     return depthMipmapPass.getData().out;
 }
 
-FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOclusion(
+FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
         FrameGraph& fg, RenderPass& pass,
         filament::Viewport const& svp, const CameraInfo& cameraInfo,
         View::AmbientOcclusionOptions options) noexcept {
@@ -899,8 +897,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                 for (size_t i = 0; i < mipmapCount - 1u; i++) {
                     // make sure inputs are always multiple of two (should be true by construction)
                     // (this is so that we can compute clean mip levels)
-                    assert((FTexture::valueForLevel(uint8_t(i), fg.getDescriptor(data.inOutForeground).width ) & 0x1) == 0);
-                    assert((FTexture::valueForLevel(uint8_t(i), fg.getDescriptor(data.inOutForeground).height) & 0x1) == 0);
+                    assert((FTexture::valueForLevel(uint8_t(i), fg.getDescriptor(data.inOutForeground).width ) & 0x1u) == 0);
+                    assert((FTexture::valueForLevel(uint8_t(i), fg.getDescriptor(data.inOutForeground).height) & 0x1u) == 0);
                     using Attachment = FrameGraphRenderTarget::Attachments::AttachmentInfo;
                     data.rt[i] = builder.createRenderTarget("DoF Target", {
                             .attachments = {
@@ -1029,7 +1027,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
         return ppDoFDilate.getData().outTilesCocMaxMin;
     };
 
-    // Tiles of 16 pixels requires two dilate rounds to accomodate our max Coc of 32 pixels
+    // Tiles of 16 pixels requires two dilate rounds to accommodate our max Coc of 32 pixels
     auto dilated = dilate(inTilesCocMaxMin);
     dilated = dilate(dilated);
 
@@ -1605,7 +1603,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::fxaa(FrameGraph& fg,
 
 void PostProcessManager::prepareTaa(FrameHistory& frameHistory,
         CameraInfo const& cameraInfo,
-        View::TemporalAntiAliasingOptions const& taaOptions) noexcept {
+        View::TemporalAntiAliasingOptions const& taaOptions) const noexcept {
     auto const& previous = frameHistory[0];
     auto& current = frameHistory.getCurrent();
     // get sample position within a pixel [-0.5, 0.5]
@@ -1694,7 +1692,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                 for (size_t i = 0; i < 9; i++) {
                     float2 d = sampleOffsets[i] - current.jitter;
                     d *= 1.0f / taaOptions.filterWidth;
-                    // this is a gaussian fit of a 3.3 blackman harris window
+                    // this is a gaussian fit of a 3.3 Blackman Harris window
                     // see: "High Quality Temporal Supersampling" by Bruan Karis
                     weights[i] = std::exp2(-3.3f * (d.x * d.x + d.y * d.y));
                     sum += weights[i];

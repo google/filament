@@ -33,7 +33,7 @@
 namespace filament {
 
 /**
- * A regsitry of runtime properties used exclusively for debugging
+ * A registry of runtime properties used exclusively for debugging
  *
  * Filament exposes a few properties that can be queried and set, which control certain debugging
  * features of the engine. These properties can be set at runtime at anytime.

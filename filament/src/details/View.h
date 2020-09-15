@@ -52,7 +52,7 @@ namespace utils {
 class JobSystem;
 } // namespace utils;
 
-// Avoid warnings for using the ToneMapping API, which has been publically deprecated.
+// Avoid warnings for using the ToneMapping API, which has been publicly deprecated.
 #if defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"

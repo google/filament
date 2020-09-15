@@ -80,7 +80,7 @@ private:
     /**
      * Compares two Viewports for equality
      * @param lhs reference to the left hand side Viewport
-     * @param rhs reference to the rgiht hand side Viewport
+     * @param rhs reference to the right hand side Viewport
      * @return true if \p rhs and \p lhs are identical.
      */
     friend bool operator==(Viewport const& lhs, Viewport const& rhs) noexcept {
@@ -92,7 +92,7 @@ private:
     /**
      * Compares two Viewports for inequality
      * @param lhs reference to the left hand side Viewport
-     * @param rhs reference to the rgiht hand side Viewport
+     * @param rhs reference to the right hand side Viewport
      * @return true if \p rhs and \p lhs are different.
      */
     friend bool operator!=(Viewport const& lhs, Viewport const& rhs) noexcept {

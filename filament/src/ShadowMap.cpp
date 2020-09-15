@@ -24,8 +24,6 @@
 
 #include "RenderPass.h"
 
-#include <private/filament/SibGenerator.h>
-
 #include <backend/DriverEnums.h>
 
 #include <limits>
@@ -907,9 +905,6 @@ size_t ShadowMap::intersectFrustumWithBox(
 
     return vertexCount;
 }
-
-constexpr const ShadowMap::Segment ShadowMap::sBoxSegments[12];
-constexpr const ShadowMap::Quad ShadowMap::sBoxQuads[6];
 
 UTILS_NOINLINE
 size_t ShadowMap::intersectFrustum(

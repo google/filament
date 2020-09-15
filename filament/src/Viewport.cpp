@@ -16,16 +16,18 @@
 
 #include <filament/Viewport.h>
 
+#include <cmath>
+
 namespace filament {
 
 Viewport Viewport::scale(math::float2 s) const noexcept {
 
     // round to nearest to avoid overlapping viewports
     // this could result to empty viewport, though.
-    float l = floorf(0.5f + s.x * left);
-    float b = floorf(0.5f + s.y * bottom);
-    float r = floorf(0.5f + s.x * (left + width));
-    float t = floorf(0.5f + s.y * (bottom + height));
+    float l = std::floor(0.5f + s.x * left);
+    float b = std::floor(0.5f + s.y * bottom);
+    float r = std::floor(0.5f + s.x * float(left + width));
+    float t = std::floor(0.5f + s.y * float(bottom + height));
 
     return { int32_t(l), int32_t(b), uint32_t(r - l), uint32_t(t - b) };
 }

@@ -238,7 +238,7 @@ public:
      *
      * @see setProjection, setLensProjection, setCustomProjection, getCullingProjectionMatrix
      */
-    const math::mat4 getProjectionMatrix() const noexcept;
+    math::mat4 getProjectionMatrix() const noexcept;
 
 
     /** Returns the projection matrix used for culling (far plane is finite).
@@ -247,7 +247,7 @@ public:
      *
      * @see setProjection, setLensProjection, getProjectionMatrix
      */
-    const math::mat4 getCullingProjectionMatrix() const noexcept;
+    math::mat4 getCullingProjectionMatrix() const noexcept;
 
 
     /** Returns the scaling amount used to scale the projection matrix.

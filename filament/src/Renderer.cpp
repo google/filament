@@ -31,8 +31,6 @@
 
 #include <backend/PixelBufferDescriptor.h>
 
-#include <private/filament/SibGenerator.h>
-
 #include "fg/FrameGraph.h"
 #include "fg/FrameGraphHandle.h"
 #include "fg/FrameGraphPassResources.h"
@@ -42,7 +40,6 @@
 #include <utils/Systrace.h>
 #include <utils/vector.h>
 
-#include <random>
 #include <assert.h>
 
 // this helps visualize what dynamic-scaling is doing
@@ -174,7 +171,7 @@ void FRenderer::render(FView const* view) {
         JobSystem& js = engine.getJobSystem();
 
         // create a root job so no other job can escape
-        auto rootJob = js.setRootJob(js.createJob());
+        auto *rootJob = js.setRootJob(js.createJob());
 
         // execute the render pass
         renderJob(rootArena, const_cast<FView&>(*view));
@@ -380,7 +377,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     const bool useSSAO = aoOptions.enabled;
     if (useSSAO) {
         // we could rely on FrameGraph culling, but this creates unnecessary CPU work
-        ppm.screenSpaceAmbientOclusion(fg, pass, svp, cameraInfo, aoOptions);
+        ppm.screenSpaceAmbientOcclusion(fg, pass, svp, cameraInfo, aoOptions);
     }
 
     // --------------------------------------------------------------------------------------------
@@ -1027,7 +1024,7 @@ void FRenderer::endFrame() {
     // WARNING: while doing this we can't access any component manager
     auto& js = engine.getJobSystem();
 
-    auto job = js.runAndRetain(jobs::createJob(js, nullptr, &FEngine::gc, &engine)); // gc all managers
+    auto *job = js.runAndRetain(jobs::createJob(js, nullptr, &FEngine::gc, &engine)); // gc all managers
 
     engine.flush();     // flush command stream
 

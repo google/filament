@@ -438,7 +438,7 @@ void FView::prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& are
         prepareShadowing(engine, driver, renderableData, scene->getLightData());
 
         /*
-         * Parition the SoA so that renderables are partitioned w.r.t their visibility into the
+         * Partition the SoA so that renderables are partitioned w.r.t their visibility into the
          * following groups:
          *
          * 1. renderables
@@ -734,7 +734,7 @@ void FView::cullRenderables(JobSystem& js,
     };
 
     // launch the computation on multiple threads
-    auto job = jobs::parallel_for(js, nullptr, 0, (uint32_t)renderableData.size(),
+    auto *job = jobs::parallel_for(js, nullptr, 0, (uint32_t)renderableData.size(),
             std::ref(functor), jobs::CountSplitter<Culler::MODULO * Culler::MIN_LOOP_COUNT_HINT, 8>());
     js.runAndWait(job);
 }

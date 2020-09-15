@@ -379,7 +379,7 @@ void FRenderableManager::prepare(
         backend::DriverApi& UTILS_RESTRICT driver,
         Instance const* UTILS_RESTRICT instances,
         utils::Range<uint32_t> list) const noexcept {
-    auto& manager = mManager;
+    const auto& manager = mManager;
 
     std::unique_ptr<Bones>  const * const UTILS_RESTRICT bones = manager.raw_array<BONES>();
     for (uint32_t index : list) {

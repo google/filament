@@ -118,7 +118,7 @@ RenderPass::Command* RenderPass::appendCommands(CommandTypeFlags const commandTy
                 cameraPosition, cameraForwardVector);
     };
 
-    auto jobCommandsParallel = jobs::parallel_for(js, nullptr, vr.first, (uint32_t)vr.size(),
+    auto *jobCommandsParallel = jobs::parallel_for(js, nullptr, vr.first, (uint32_t)vr.size(),
             std::cref(work), jobs::CountSplitter<JOBS_PARALLEL_FOR_COMMANDS_COUNT, 8>());
 
     { // scope for systrace
@@ -298,7 +298,7 @@ void RenderPass::generateCommands(uint32_t commandTypeFlags, Command* const comm
 
     // compute how much maximum storage we need
     uint32_t offset = FScene::getPrimitiveCount(soa, range.first);
-    // double the color pass for transparents that need to render twice
+    // double the color pass for transparent objects that need to render twice
     const bool colorPass  = bool(commandTypeFlags & CommandTypeFlags::COLOR);
     const bool depthPass  = bool(commandTypeFlags & CommandTypeFlags::DEPTH);
     offset *= uint32_t(colorPass * 2 + depthPass);

@@ -57,7 +57,7 @@ void FrameInfoManager::beginFrame(Config const& config, uint32_t frameId) {
     uint64_t elapsed = 0;
     if (driver.getTimerQueryValue(mQueries[mLast], &elapsed)) {
         mLast = (mLast + 1) % POOL_COUNT;
-        // convertion to our duration happens here
+        // conversion to our duration happens here
         mFrameTime = std::chrono::duration<uint64_t, std::nano>(elapsed);
     }
     update(config,mFrameTime);
@@ -79,7 +79,7 @@ void FrameInfoManager::update(Config const& config, FrameInfoManager::duration l
 
     mFrameTimeHistorySize = std::min(++mFrameTimeHistorySize, uint32_t(MAX_FRAMETIME_HISTORY));
     if (UTILS_UNLIKELY(mFrameTimeHistorySize < 3)) {
-        // not enough history to do anything usefull
+        // not enough history to do anything useful
         history[0].valid = false;
         return;
     }

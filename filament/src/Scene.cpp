@@ -21,7 +21,6 @@
 
 #include <private/filament/UibGenerator.h>
 
-#include "details/Culler.h"
 #include "details/Engine.h"
 #include "details/IndirectLight.h"
 #include "details/Skybox.h"
@@ -203,7 +202,7 @@ void FScene::updateUBOs(utils::Range<uint32_t> visibleRenderables, backend::Hand
         UniformBuffer::setUniform(buffer,
                 offset + offsetof(PerRenderableUib, worldFromModelNormalMatrix), m);
 
-        // Note that we cast bools to uint32. Booleans are byte-sized in C++, but we need to
+        // Note that we cast bool to uint32_t. Booleans are byte-sized in C++, but we need to
         // initialize all 32 bits in the UBO field.
 
         FRenderableManager::Visibility visibility = sceneData.elementAt<VISIBILITY_STATE>(i);
@@ -413,8 +412,8 @@ bool FScene::hasContactShadows() const noexcept {
     // TODO: cache the the result of this Loop in the LightManager
     bool hasContactShadows = false;
     auto& lcm = mEngine.getLightManager();
-    auto pFirst = mLightData.begin<LIGHT_INSTANCE>();
-    auto pLast = mLightData.end<LIGHT_INSTANCE>();
+    const auto *pFirst = mLightData.begin<LIGHT_INSTANCE>();
+    const auto *pLast = mLightData.end<LIGHT_INSTANCE>();
     while (pFirst != pLast && !hasContactShadows) {
         if (pFirst->isValid()) {
             auto const& shadowOptions = lcm.getShadowOptions(*pFirst);
