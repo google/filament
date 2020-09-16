@@ -335,9 +335,9 @@ public class View {
         public float inScatteringStart = 0.0f;
 
         /**
-         * size of in-scattering (>=0 to activate). Good values are >> 1 (e.g. ~10 - 100)
+         * size of in-scattering (>0 to activate). Good values are >> 1 (e.g. ~10 - 100)
          */
-        public float inScatteringSize = 0.0f;
+        public float inScatteringSize = -1.0f;
 
         /**
          * fog color will be modulated by the IBL color in the view direction

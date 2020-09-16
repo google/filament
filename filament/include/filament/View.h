@@ -160,7 +160,7 @@ public:
         LinearColor color{0.5f};            //!< fog's color (linear), see fogColorFromIbl
         float density = 0.1f;               //!< fog's density at altitude given by 'height'
         float inScatteringStart = 0.0f;     //!< distance in world units from the camera where in-scattering starts
-        float inScatteringSize = -1.0f;     //!< size of in-scattering (>=0 to activate). Good values are >> 1 (e.g. ~10 - 100).
+        float inScatteringSize = -1.0f;     //!< size of in-scattering (>0 to activate). Good values are >> 1 (e.g. ~10 - 100).
         bool fogColorFromIbl = false;       //!< Fog color will be modulated by the IBL color in the view direction.
         bool enabled = false;               //!< enable or disable fog
     };
