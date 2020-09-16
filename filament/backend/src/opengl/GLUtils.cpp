@@ -56,8 +56,8 @@ void checkGLError(io::ostream& out, const char* function, size_t line) noexcept 
     debug_trap();
 }
 
-void checkFramebufferStatus(io::ostream& out, const char* function, size_t line) noexcept {
-    GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+void checkFramebufferStatus(io::ostream& out, GLenum target, const char* function, size_t line) noexcept {
+    GLenum status = glCheckFramebufferStatus(target);
     const char* error = "unknown";
     switch (status) {
         case GL_FRAMEBUFFER_COMPLETE:
