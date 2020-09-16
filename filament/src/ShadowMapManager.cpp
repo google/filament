@@ -85,6 +85,9 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, FView& view,
     using ShadowPass = std::pair<const ShadowMapEntry*, RenderPass>;
     std::vector<ShadowPass> passes;
     passes.reserve(MAX_SHADOW_LAYERS);
+    uint8_t layerSampleCount[MAX_SHADOW_LAYERS] = {};
+
+    assert(mTextureRequirements.layers <= MAX_SHADOW_LAYERS);
 
     // These loops fill render passes with appropriate rendering commands for each shadow map.
     // The actual render pass execution is deferred to the frame graph.
@@ -97,6 +100,10 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, FView& view,
 
         assert(map.getLayout().layer < mTextureRequirements.layers);
         passes.emplace_back(&map, pass);
+
+        const uint8_t layer = map.getLayout().layer;
+        assert(layer < MAX_SHADOW_LAYERS);
+        layerSampleCount[layer] = map.getLayout().vsmSamples;
     }
     for (size_t i = 0; i < mSpotShadowMaps.size(); i++) {
         const auto& map = mSpotShadowMaps[i];
@@ -110,6 +117,10 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, FView& view,
 
         assert(map.getLayout().layer < mTextureRequirements.layers);
         passes.emplace_back(&map, pass);
+
+        const uint8_t layer = map.getLayout().layer;
+        assert(layer < MAX_SHADOW_LAYERS);
+        layerSampleCount[layer] = map.getLayout().vsmSamples;
     }
     assert(passes.size() <= mTextureRequirements.layers);
 
@@ -141,6 +152,7 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, FView& view,
                         .width = mTextureRequirements.size, .height = mTextureRequirements.size,
                         .depth = 1,
                         .levels = 1,
+                        .samples = 1,
                         .type = SamplerType::SAMPLER_2D,
                         .format = TextureFormat::DEPTH16,
                         .usage = TextureUsage::DEPTH_ATTACHMENT
@@ -156,10 +168,12 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, FView& view,
                         renderTarget.attachments = { { data.shadows, 0u, i }, { data.tempShadow } };
                         renderTarget.clearFlags = TargetBufferFlags::COLOR | TargetBufferFlags::DEPTH;
                         renderTarget.clearColor = { 1.0f, 1.0f, 0.0f, 0.0f };
+                        renderTarget.samples = layerSampleCount[i];
                     } else {
                         renderTarget.attachments = { {}, { data.shadows, 0u, i } };
                         renderTarget.clearFlags = TargetBufferFlags::DEPTH;
                     }
+
                     data.rt[i] = builder.createRenderTarget("Shadow RT", renderTarget);
                 }
             },
@@ -489,6 +503,12 @@ void ShadowMapManager::calculateTextureRequirements(FEngine& engine,
         return std::max(3u, lcm.getShadowMapSize(light));
     };
 
+    auto getShadowMapVsmSamples = [&](size_t lightIndex) {
+        FLightManager::Instance light = lightData.elementAt<FScene::LIGHT_INSTANCE>(lightIndex);
+        LightManager::ShadowOptions const& options = lcm.getShadowOptions(light);
+        return std::max((uint8_t) 1u, options.vsm.msaaSamples);
+    };
+
     // Lay out the shadow maps. For now, we take the largest requested dimension and allocate a
     // texture of that size. Each cascade / shadow map gets its own layer in the array texture.
     // The directional shadow cascades start on layer 0, followed by spot lights.
@@ -497,18 +517,22 @@ void ShadowMapManager::calculateTextureRequirements(FEngine& engine,
     for (auto& cascade : mCascadeShadowMaps) {
         // Shadow map size should be the same for all cascades.
         const uint16_t dim = getShadowMapSize(cascade.getLightIndex());
+        const uint8_t vsmSamples = getShadowMapVsmSamples(cascade.getLightIndex());
         maxDimension = std::max(maxDimension, dim);
         cascade.setLayout({
             .layer = layer++,
-            .size = dim
+            .size = dim,
+            .vsmSamples = vsmSamples
         });
     }
     for (auto& spotShadowMap : mSpotShadowMaps) {
         const uint16_t dim = getShadowMapSize(spotShadowMap.getLightIndex());
+        const uint8_t vsmSamples = getShadowMapVsmSamples(spotShadowMap.getLightIndex());
         maxDimension = std::max(maxDimension, dim);
         spotShadowMap.setLayout({
             .layer = layer++,
-            .size = dim
+            .size = dim,
+            .vsmSamples = vsmSamples
         });
     }
 

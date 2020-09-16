@@ -308,6 +308,22 @@ public:
          *
          */
         float maxShadowDistance = 0.3;
+
+        /**
+         * Options available when the View's ShadowType is set to VSM.
+         *
+         * @warning This API is still experimental and subject to change.
+         * @see View::setShadowType
+         */
+        struct {
+            /**
+             * The number of MSAA samples to use when rendering VSM shadow maps.
+             * Must be a power-of-two and greater than or equal to 1. A value of 1 effectively turns
+             * off MSAA.
+             * Higher values may not be available depending on the underlying hardware.
+             */
+            uint8_t msaaSamples = 1;
+        } vsm;
     };
 
     struct ShadowCascades {

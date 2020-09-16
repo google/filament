@@ -205,6 +205,7 @@ private:
     bool mEnableShadows = true;
     int mShadowCascades = 1;
     bool mEnableContactShadows = false;
+    int mVsmMsaaSamplesLog2 = 1;
     std::array<float, 3> mSplitPositions = {0.25f, 0.50f, 0.75f};
     ViewSettings mViewSettings;
     int mSidebarWidth;
