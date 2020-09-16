@@ -9,10 +9,9 @@ vec4 fog(vec4 color, vec3 view) {
 
         float d = length(view);
 
-        float h = view.y;
-        // The function below is continuous at h=0, so to avoid a divide-by-zero, we use the
-        // constant approximation 'B'. A better approximation would be B * (1 - 0.5 * B * h)
-        float fogIntegralFunctionOfDistance = A * ((abs(h) < 0.001) ? B : ((1.0 - exp(-B * h)) / h));
+        float h = max(0.001, view.y);
+        // The function below is continuous at h=0, so to avoid a divide-by-zero, we just clamp h
+        float fogIntegralFunctionOfDistance = A * ((1.0 - exp(-B * h)) / h);
         float fogIntegral = fogIntegralFunctionOfDistance * max(d - frameUniforms.fogStart, 0.0);
         float fogOpacity = max(1.0 - exp2(-fogIntegral), 0.0);
 
@@ -29,7 +28,7 @@ vec4 fog(vec4 color, vec3 view) {
         }
 
         fogColor *= fogOpacity;
-        if (frameUniforms.fogInscatteringSize >= 0.0) {
+        if (frameUniforms.fogInscatteringSize > 0.0) {
             // compute a new line-integral for a different start distance
             float inscatteringIntegral = fogIntegralFunctionOfDistance *
                     max(d - frameUniforms.fogInscatteringStart, 0.0);
