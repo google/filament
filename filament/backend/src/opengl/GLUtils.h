@@ -31,17 +31,17 @@ namespace filament {
 namespace GLUtils {
 
 void checkGLError(utils::io::ostream& out, const char* function, size_t line) noexcept;
-void checkFramebufferStatus(utils::io::ostream& out, const char* function, size_t line) noexcept;
+void checkFramebufferStatus(utils::io::ostream& out, GLenum target, const char* function, size_t line) noexcept;
 
 #ifdef NDEBUG
 #define CHECK_GL_ERROR(out)
-#define CHECK_GL_FRAMEBUFFER_STATUS(out)
+#define CHECK_GL_FRAMEBUFFER_STATUS(out, target)
 #else
 #ifdef _MSC_VER
     #define __PRETTY_FUNCTION__ __FUNCSIG__
 #endif
 #define CHECK_GL_ERROR(out) { GLUtils::checkGLError(out, __PRETTY_FUNCTION__, __LINE__); }
-#define CHECK_GL_FRAMEBUFFER_STATUS(out) { GLUtils::checkFramebufferStatus(out, __PRETTY_FUNCTION__, __LINE__); }
+#define CHECK_GL_FRAMEBUFFER_STATUS(out, target) { GLUtils::checkFramebufferStatus(out, target, __PRETTY_FUNCTION__, __LINE__); }
 #endif
 
 constexpr inline GLuint getComponentCount(backend::ElementType type) noexcept {

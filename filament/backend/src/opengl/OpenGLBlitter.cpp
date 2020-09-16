@@ -133,7 +133,7 @@ void OpenGLBlitter::blit(GLuint srcTextureExternal, GLuint dstTexture2d, GLuint 
     glBindFramebuffer(GL_FRAMEBUFFER, mFBO);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, dstTexture2d, 0);
     CHECK_GL_ERROR(utils::slog.e)
-    CHECK_GL_FRAMEBUFFER_STATUS(utils::slog.e)
+    CHECK_GL_FRAMEBUFFER_STATUS(utils::slog.e, GL_FRAMEBUFFER)
 
     // geometry
     glBindBuffer(GL_ARRAY_BUFFER, 0);
