@@ -78,7 +78,7 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, FView& view,
         CONFIG_MAX_SHADOW_CASCADES + CONFIG_MAX_SHADOW_CASTING_SPOTS;
     struct ShadowPassData {
         FrameGraphId<FrameGraphTexture> shadows;
-        FrameGraphId<FrameGraphTexture> tempShadow;
+        FrameGraphId<FrameGraphTexture> tempDepth;
         FrameGraphRenderTargetHandle rt[MAX_SHADOW_LAYERS];
     };
 
@@ -128,7 +128,7 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, FView& view,
 
     auto& shadowPass = fg.addPass<ShadowPassData>("Shadow Pass",
             [&](FrameGraph::Builder& builder, auto& data) {
-                FrameGraphTexture::Descriptor shadowTexture {
+                FrameGraphTexture::Descriptor shadowTextureDesc {
                     .width = mTextureRequirements.size, .height = mTextureRequirements.size,
                     .depth = mTextureRequirements.layers,
                     .levels = 1,
@@ -140,41 +140,48 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, FView& view,
 
                 if (view.hasVsm()) {
                     // TODO: support 16-bit VSM depth textures.
-                    shadowTexture.format = TextureFormat::RG32F;
-                    shadowTexture.usage = TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE;
+                    shadowTextureDesc.format = TextureFormat::RG32F;
+                    shadowTextureDesc.usage = TextureUsage::COLOR_ATTACHMENT |
+                            TextureUsage::SAMPLEABLE;
                 }
 
-                data.shadows = builder.createTexture("Shadow Texture", shadowTexture);
+                data.shadows = builder.createTexture("Shadow Texture", shadowTextureDesc);
                 data.shadows = builder.write(data.shadows);
 
                 if (view.hasVsm()) {
-                    data.tempShadow = builder.createTexture("Temporary Shadow Texture", {
+                    // When rendering VSM shadow maps, we still need a depth texture for correct
+                    // sorting. The texture is cleared before each pass and discarded afterwards.
+                    data.tempDepth = builder.createTexture("Temporary VSM Depth Texture", {
                         .width = mTextureRequirements.size, .height = mTextureRequirements.size,
                         .depth = 1,
                         .levels = 1,
+                        // Each shadow pass has its own sample count. We specify samples = 1 here to
+                        // force the frame graph to create the "magic resolve" textures with correct
+                        // sample counts automatically.
                         .samples = 1,
                         .type = SamplerType::SAMPLER_2D,
                         .format = TextureFormat::DEPTH16,
                         .usage = TextureUsage::DEPTH_ATTACHMENT
                     });
                     // We specify "read" for the temporary shadow texture, so it isn't culled.
-                    data.tempShadow = builder.write(builder.read(data.tempShadow));
+                    data.tempDepth = builder.write(builder.read(data.tempDepth));
                 }
 
                 // Create a render target for each layer of the texture array.
                 for (uint8_t i = 0u; i < mTextureRequirements.layers; i++) {
-                    FrameGraphRenderTarget::Descriptor renderTarget {};
+                    FrameGraphRenderTarget::Descriptor renderTargetDesc {};
                     if (view.hasVsm()) {
-                        renderTarget.attachments = { { data.shadows, 0u, i }, { data.tempShadow } };
-                        renderTarget.clearFlags = TargetBufferFlags::COLOR | TargetBufferFlags::DEPTH;
-                        renderTarget.clearColor = { 1.0f, 1.0f, 0.0f, 0.0f };
-                        renderTarget.samples = layerSampleCount[i];
+                        renderTargetDesc.attachments = { { data.shadows, 0u, i }, { data.tempDepth } };
+                        renderTargetDesc.clearFlags = TargetBufferFlags::COLOR |
+                            TargetBufferFlags::DEPTH;
+                        renderTargetDesc.clearColor = { 1.0f, 1.0f, 0.0f, 0.0f };
+                        renderTargetDesc.samples = layerSampleCount[i];
                     } else {
-                        renderTarget.attachments = { {}, { data.shadows, 0u, i } };
-                        renderTarget.clearFlags = TargetBufferFlags::DEPTH;
+                        renderTargetDesc.attachments = { {}, { data.shadows, 0u, i } };
+                        renderTargetDesc.clearFlags = TargetBufferFlags::DEPTH;
                     }
 
-                    data.rt[i] = builder.createRenderTarget("Shadow RT", renderTarget);
+                    data.rt[i] = builder.createRenderTarget("Shadow RT", renderTargetDesc);
                 }
             },
             [=, passes = std::move(passes), &view, &engine](FrameGraphPassResources const& resources,
@@ -516,8 +523,9 @@ void ShadowMapManager::calculateTextureRequirements(FEngine& engine,
     uint16_t maxDimension = 0;
     for (auto& cascade : mCascadeShadowMaps) {
         // Shadow map size should be the same for all cascades.
-        const uint16_t dim = getShadowMapSize(cascade.getLightIndex());
-        const uint8_t vsmSamples = getShadowMapVsmSamples(cascade.getLightIndex());
+        const size_t lightIndex = cascade.getLightIndex();
+        const uint16_t dim = getShadowMapSize(lightIndex);
+        const uint8_t vsmSamples = getShadowMapVsmSamples(lightIndex);
         maxDimension = std::max(maxDimension, dim);
         cascade.setLayout({
             .layer = layer++,
@@ -526,8 +534,9 @@ void ShadowMapManager::calculateTextureRequirements(FEngine& engine,
         });
     }
     for (auto& spotShadowMap : mSpotShadowMaps) {
-        const uint16_t dim = getShadowMapSize(spotShadowMap.getLightIndex());
-        const uint8_t vsmSamples = getShadowMapVsmSamples(spotShadowMap.getLightIndex());
+        const size_t lightIndex = spotShadowMap.getLightIndex();
+        const uint16_t dim = getShadowMapSize(lightIndex);
+        const uint8_t vsmSamples = getShadowMapVsmSamples(lightIndex);
         maxDimension = std::max(maxDimension, dim);
         spotShadowMap.setLayout({
             .layer = layer++,
