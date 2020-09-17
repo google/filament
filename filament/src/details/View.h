@@ -63,10 +63,6 @@ class JobSystem;
 
 namespace filament {
 
-namespace fg {
-class ResourceAllocator;
-} // namespace fg;
-
 class FEngine;
 class FMaterialInstance;
 class FRenderer;
