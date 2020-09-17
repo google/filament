@@ -25,11 +25,11 @@
 
 struct CallbackJni {
 #ifdef ANDROID
-    jclass handlerClass;
-    jmethodID post;
+    jclass handlerClass = nullptr;
+    jmethodID post = nullptr;
 #endif
-    jclass executorClass;
-    jmethodID execute;
+    jclass executorClass = nullptr;
+    jmethodID execute = nullptr;
 };
 
 void acquireCallbackJni(JNIEnv* env, CallbackJni& callbackUtils);
