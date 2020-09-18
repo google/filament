@@ -529,6 +529,11 @@ void postProcess(inout PostProcessInputs postProcess) {
 
         background = prev.c;
         bgOpacity = cocToAlpha(prev.coc);
+#if defined(TARGET_MOBILE)
+        bgOpacity *= saturate((kernelSize - MAX_IN_FOCUS_COC) / (2.0 - MAX_IN_FOCUS_COC));
+#else
+        bgOpacity *= smoothstep(MAX_IN_FOCUS_COC, 2.0, kernelSize);
+#endif
 
         if (prev.cw < MEDIUMP_FLT_MIN) {
             background *= 0.0;
