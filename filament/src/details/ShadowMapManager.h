@@ -48,6 +48,13 @@ class RenderPass;
 class ShadowMapManager {
 public:
 
+    enum class ShadowTechnique : uint8_t {
+        NONE = 0x0u,
+        SHADOW_MAP = 0x1u,
+        SCREEN_SPACE = 0x2u,
+    };
+
+
     explicit ShadowMapManager(FEngine& engine);
     ~ShadowMapManager();
 
@@ -59,7 +66,7 @@ public:
 
     // Updates all of the shadow maps and performs culling.
     // Returns true if any of the shadow maps have visible shadows.
-    bool update(FEngine& engine, FView& view, UniformBuffer& perViewUb, UniformBuffer& shadowUb,
+    ShadowTechnique update(FEngine& engine, FView& view, UniformBuffer& perViewUb, UniformBuffer& shadowUb,
             FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData) noexcept;
 
     // Renders all of the shadow maps.
@@ -86,9 +93,9 @@ private:
         uint8_t layers = 0;
     } mTextureRequirements;
 
-    bool updateCascadeShadowMaps(FEngine& engine, FView& view, UniformBuffer& perViewUb,
+    ShadowTechnique updateCascadeShadowMaps(FEngine& engine, FView& view, UniformBuffer& perViewUb,
             FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData) noexcept;
-    bool updateSpotShadowMaps(FEngine& engine, FView& view, UniformBuffer& shadowUb,
+    ShadowTechnique updateSpotShadowMaps(FEngine& engine, FView& view, UniformBuffer& shadowUb,
             FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData) noexcept;
     static void fillWithDebugPattern(backend::DriverApi& driverApi,
             backend::Handle<backend::HwTexture> texture, size_t dimensions) noexcept;
@@ -174,5 +181,8 @@ private:
 };
 
 } // namespace filament
+
+template<> struct utils::EnableBitMaskOperators<filament::ShadowMapManager::ShadowTechnique>
+        : public std::true_type {};
 
 #endif //TNT_FILAMENT_DETAILS_SHADOWMAPMANAGER_H

@@ -43,14 +43,15 @@ ShadowMapManager::ShadowMapManager(FEngine& engine) {
 
 ShadowMapManager::~ShadowMapManager() = default;
 
-bool ShadowMapManager::update(FEngine& engine, FView& view, UniformBuffer& perViewUb,
+ShadowMapManager::ShadowTechnique ShadowMapManager::update(
+        FEngine& engine, FView& view, UniformBuffer& perViewUb,
         UniformBuffer& shadowUb, FScene::RenderableSoa& renderableData,
         FScene::LightSoa& lightData) noexcept {
     calculateTextureRequirements(engine, lightData);
-    bool hasShadowing = false;
-    hasShadowing |= updateCascadeShadowMaps(engine, view, perViewUb, renderableData, lightData);
-    hasShadowing |= updateSpotShadowMaps(engine, view, shadowUb, renderableData, lightData);
-    return hasShadowing;
+    ShadowTechnique shadowTechnique = {};
+    shadowTechnique |= updateCascadeShadowMaps(engine, view, perViewUb, renderableData, lightData);
+    shadowTechnique |= updateSpotShadowMaps(engine, view, shadowUb, renderableData, lightData);
+    return shadowTechnique;
 }
 
 void ShadowMapManager::reset() noexcept {
@@ -231,11 +232,10 @@ void ShadowMapManager::prepareShadow(backend::Handle<backend::HwTexture> texture
             }});
 }
 
-bool ShadowMapManager::updateCascadeShadowMaps(FEngine& engine, FView& view,
-            UniformBuffer& perViewUb, FScene::RenderableSoa& renderableData,
-            FScene::LightSoa& lightData) noexcept {
-    bool hasShadowing = false;
-
+ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(
+        FEngine& engine, FView& view,
+        UniformBuffer& perViewUb, FScene::RenderableSoa& renderableData,
+        FScene::LightSoa& lightData) noexcept {
     FScene* scene = view.getScene();
     const CameraInfo& viewingCameraInfo = view.getCameraInfo();
     uint8_t visibleLayers = view.getVisibleLayers();
@@ -326,7 +326,8 @@ bool ShadowMapManager::updateCascadeShadowMaps(FEngine& engine, FView& view,
     // Update cascade split uniform.
     perViewUb.setUniform(offsetof(PerViewUib, cascadeSplits), wsSplitPositionUniform);
 
-    uint32_t directionalShadows = 0;
+    ShadowTechnique shadowTechnique{};
+    uint32_t directionalShadowsMask = 0;
     uint32_t cascadeHasVisibleShadows = 0;
     float screenSpaceShadowDistance = 0.0f;
     for (size_t i = 0; i < mCascadeShadowMaps.size(); i++) {
@@ -353,21 +354,26 @@ bool ShadowMapManager::updateCascadeShadowMaps(FEngine& engine, FView& view,
             perViewUb.setUniform(offsetof(PerViewUib, lightFromWorldMatrix) +
                     sizeof(mat4f) * i, lightFromWorldMatrix);
 
-            hasShadowing = true;
-            directionalShadows |= 0x1u;
+            shadowTechnique |= ShadowTechnique::SHADOW_MAP;
             cascadeHasVisibleShadows |= 0x1u << i;
         }
     }
 
     // screen-space contact shadows for the directional light
     screenSpaceShadowDistance = options.maxShadowDistance;
-    directionalShadows |= std::min(uint8_t(255u), options.stepCount) << 8u;
     if (options.screenSpaceContactShadows) {
-        hasShadowing = true;
-        directionalShadows |= 0x2u;
+        shadowTechnique |= ShadowTechnique::SCREEN_SPACE;
+    }
+    directionalShadowsMask |= std::min(uint8_t(255u), options.stepCount) << 8u;
+
+    if (any(shadowTechnique & ShadowTechnique::SHADOW_MAP)) {
+        directionalShadowsMask |= 0x1u;
+    }
+    if (any(shadowTechnique & ShadowTechnique::SCREEN_SPACE)) {
+        directionalShadowsMask |= 0x2u;
     }
 
-    perViewUb.setUniform(offsetof(PerViewUib, directionalShadows), directionalShadows);
+    perViewUb.setUniform(offsetof(PerViewUib, directionalShadows), directionalShadowsMask);
     perViewUb.setUniform(offsetof(PerViewUib, ssContactShadowDistance), screenSpaceShadowDistance);
 
     uint32_t cascades = 0;
@@ -378,13 +384,14 @@ bool ShadowMapManager::updateCascadeShadowMaps(FEngine& engine, FView& view,
     cascades |= cascadeHasVisibleShadows << 8u;
     perViewUb.setUniform(offsetof(PerViewUib, cascades), cascades);
 
-    return hasShadowing;
+    return shadowTechnique;
 }
 
-bool ShadowMapManager::updateSpotShadowMaps(FEngine& engine, FView& view, UniformBuffer& shadowUb,
+ShadowMapManager::ShadowTechnique ShadowMapManager::updateSpotShadowMaps(
+        FEngine& engine, FView& view, UniformBuffer& shadowUb,
         FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData) noexcept {
-    bool hasShadowing = false;
 
+    ShadowTechnique shadowTechnique{};
     FScene* scene = view.getScene();
     const CameraInfo& viewingCameraInfo = view.getCameraInfo();
     uint8_t visibleLayers = view.getVisibleLayers();
@@ -433,7 +440,7 @@ bool ShadowMapManager::updateSpotShadowMaps(FEngine& engine, FView& view, Unifor
             u.setUniform(offsetof(ShadowUib, directionShadowBias) + sizeof(float4) * i,
                     float4{ dir.x, dir.y, dir.z, normalBias * texelSizeWorldSpace });
 
-            hasShadowing = true;
+            shadowTechnique |= ShadowTechnique::SHADOW_MAP;
         }
     }
 
@@ -443,13 +450,13 @@ bool ShadowMapManager::updateSpotShadowMaps(FEngine& engine, FView& view, Unifor
         // screen-space contact shadows
         LightManager::ShadowOptions const& shadowOptions = lcm.getShadowOptions(pInstance[i]);
         if (shadowOptions.screenSpaceContactShadows) {
-            hasShadowing = true;
+            shadowTechnique |= ShadowTechnique::SCREEN_SPACE;
             shadowInfo[i].contactShadows = true;
             // TODO: distance/steps are always taken from the directional light currently
         }
     }
 
-    return hasShadowing;
+    return shadowTechnique;
 }
 
 UTILS_NOINLINE

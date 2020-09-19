@@ -212,6 +212,7 @@ void FView::prepareShadowing(FEngine& engine, backend::DriverApi& driver,
     SYSTRACE_CALL();
 
     mHasShadowing = false;
+    mNeedsShadowMap = false;
 
     if (!mShadowingEnabled) {
         return;
@@ -255,8 +256,10 @@ void FView::prepareShadowing(FEngine& engine, backend::DriverApi& driver,
         }
     }
 
-    mHasShadowing = mShadowMapManager.update(engine, *this, mPerViewUb, mShadowUb, renderableData,
-            lightData);
+    auto shadowTechnique = mShadowMapManager.update(engine, *this,
+            mPerViewUb, mShadowUb, renderableData,lightData);
+    mHasShadowing = any(shadowTechnique);
+    mNeedsShadowMap = any(shadowTechnique & ShadowMapManager::ShadowTechnique::SHADOW_MAP);
 }
 
 void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaScope& arena,
@@ -284,7 +287,7 @@ void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaSc
     // If the scene does not have an IBL, use the black 1x1 IBL and honor the fallback intensity
     // associated with the skybox.
     FIndirectLight const* ibl = scene->getIndirectLight();
-    float intensity;
+    float intensity{};
     if (UTILS_LIKELY(ibl)) {
         intensity = ibl->getIntensity();
     } else {
