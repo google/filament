@@ -262,7 +262,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
      * Shadow pass
      */
 
-    if (view.hasShadowing()) {
+    if (view.needsShadowMap()) {
         view.renderShadowMaps(fg, engine, driver, pass);
     }
 
