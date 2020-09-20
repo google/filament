@@ -223,6 +223,7 @@ public:
         QualityLevel quality = QualityLevel::LOW; //!< affects # of samples used for AO.
         QualityLevel upsampling = QualityLevel::LOW; //!< affects AO buffer upsampling quality.
         bool enabled = false;    //!< enables or disables screen-space ambient occlusion
+        float minHorizonAngleRad = 0.0f;  //!< min angle in radian to consider
     };
 
     /**

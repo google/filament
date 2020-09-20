@@ -478,6 +478,7 @@ void SimpleViewer::updateUserInterface() {
             bool upsampling = mSSAOOptions.upsampling != View::QualityLevel::LOW;
             ImGui::SliderInt("Quality", &quality, 0, 3);
             ImGui::Checkbox("High quality upsampling", &upsampling);
+            ImGui::SliderFloat("Min Horizon angle", &mSSAOOptions.minHorizonAngleRad, 0.0f, (float)M_PI_4);
             mSSAOOptions.upsampling = upsampling ? View::QualityLevel::HIGH : View::QualityLevel::LOW;
             mSSAOOptions.quality = (View::QualityLevel) quality;
         }

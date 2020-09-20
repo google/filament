@@ -287,6 +287,7 @@ public:
         options.resolution = std::floor(
                 math::clamp(1.0f, 2.0f, options.resolution * 2.0f) + 0.5f) * 0.5f;
         options.intensity = std::max(0.0f, options.intensity);
+        options.minHorizonAngleRad = math::clamp(0.0f, math::f::PI_2, options.minHorizonAngleRad);
         mAmbientOcclusionOptions = options;
     }
 

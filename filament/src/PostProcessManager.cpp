@@ -482,6 +482,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                 mi->setParameter("resolution",
                         float4{ desc.width, desc.height, 1.0f / desc.width, 1.0f / desc.height });
                 mi->setParameter("invRadiusSquared", 1.0f / (options.radius * options.radius));
+                mi->setParameter("minHorizonAngleSineSquared", std::pow(std::sin(options.minHorizonAngleRad), 2.0f));
                 mi->setParameter("projectionScaleRadius", projectionScale * options.radius);
                 mi->setParameter("depthParams", cameraInfo.projection[3][2] * 0.5f);
 

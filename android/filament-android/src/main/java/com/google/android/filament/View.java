@@ -188,6 +188,13 @@ public class View {
          * enable or disable screen space ambient occlusion
          */
         public boolean enabled = false;
+
+        /**
+         * Minimal angle to consider in radian. This is used to reduce the creases that can
+         * appear due to insufficiently tessellated geometry.
+         * For e.g. a good values to try could be around 0.2.
+         */
+        public float minHorizonAngleRad = 0.0f;
     }
 
     /**
@@ -1070,7 +1077,7 @@ public class View {
         mAmbientOcclusionOptions = options;
         nSetAmbientOcclusionOptions(getNativeObject(), options.radius, options.bias, options.power,
                 options.resolution, options.intensity, options.quality.ordinal(), options.upsampling.ordinal(),
-                options.enabled);
+                options.enabled, options.minHorizonAngleRad);
     }
 
     /**
@@ -1234,7 +1241,7 @@ public class View {
     private static native boolean nIsFrontFaceWindingInverted(long nativeView);
     private static native void nSetAmbientOcclusion(long nativeView, int ordinal);
     private static native int nGetAmbientOcclusion(long nativeView);
-    private static native void nSetAmbientOcclusionOptions(long nativeView, float radius, float bias, float power, float resolution, float intensity, int quality, int upsampling, boolean enabled);
+    private static native void nSetAmbientOcclusionOptions(long nativeView, float radius, float bias, float power, float resolution, float intensity, int quality, int upsampling, boolean enabled, float minHorizonAngleRad);
     private static native void nSetBloomOptions(long nativeView, long dirtNativeObject, float dirtStrength, float strength, int resolution, float anamorphism, int levels, int blendMode, boolean threshold, boolean enabled, float highlight);
     private static native void nSetFogOptions(long nativeView, float distance, float maximumOpacity, float height, float heightFalloff, float v, float v1, float v2, float density, float inScatteringStart, float inScatteringSize, boolean fogColorFromIbl, boolean enabled);
     private static native void nSetBlendMode(long nativeView, int blendMode);
