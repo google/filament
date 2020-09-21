@@ -3,6 +3,10 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
+## Next release
+
+## v1.9.2
+
 ## v1.9.1
 
 - Improvements to SSAO quality
