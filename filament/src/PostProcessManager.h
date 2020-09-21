@@ -32,6 +32,8 @@
 
 #include <tsl/robin_map.h>
 
+#include <random>
+
 namespace filament {
 
 class FrameGraph;
@@ -68,7 +70,7 @@ public:
     FrameGraphId<FrameGraphTexture> screenSpaceAmbientOclusion(FrameGraph& fg,
             RenderPass& pass, filament::Viewport const& svp,
             CameraInfo const& cameraInfo,
-            View::AmbientOcclusionOptions const& options) noexcept;
+            View::AmbientOcclusionOptions options) noexcept;
 
     // Used in refraction pass
     FrameGraphId<FrameGraphTexture> generateGaussianMipmap(FrameGraph& fg,
@@ -135,9 +137,16 @@ private:
     FrameGraphId<FrameGraphTexture> mipmapPass(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, size_t level) noexcept;
 
+    struct BilateralPassConfig {
+        uint8_t kernelSize = 11;
+        float standardDeviation = 1.0f;
+        float bilateralThreshold = 0.0625f;
+        float scale = 1.0f;
+    };
+
     FrameGraphId<FrameGraphTexture> bilateralBlurPass(
             FrameGraph& fg, FrameGraphId<FrameGraphTexture> input, math::int2 axis, float zf,
-            backend::TextureFormat format) noexcept;
+            backend::TextureFormat format, BilateralPassConfig config) noexcept;
 
     FrameGraphId<FrameGraphTexture> gaussianBlurPass(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, uint8_t srcLevel,
@@ -202,6 +211,9 @@ private:
     backend::Handle<backend::HwTexture> mDummyZeroTexture;
 
     size_t mSeparableGaussianBlurKernelStorageSize = 0;
+
+    std::default_random_engine mRandomEngine;
+    std::uniform_real_distribution<float> mUniformDistribution{0.0f, 1.0f};
 
     const math::float2 mHaltonSamples[16];
 };

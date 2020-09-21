@@ -42,7 +42,7 @@ struct LightManager::BuilderDetails {
     float mIntensity = 100000.0f;
     FLightManager::IntensityUnit mIntensityUnit = FLightManager::IntensityUnit::LUMEN_LUX;
     float3 mDirection = { 0.0f, -1.0f, 0.0f };
-    float2 mSpotInnerOuter = { (float) F_PI, (float) F_PI };
+    float2 mSpotInnerOuter = { f::PI, f::PI };
     float mSunAngle = 0.00951f; // 0.545° in radians
     float mSunHaloSize = 10.0f;
     float mSunHaloFalloff = 80.0f;
@@ -262,7 +262,7 @@ void FLightManager::setIntensity(Instance i, float intensity, IntensityUnit unit
             case Type::POINT:
                 if (unit == IntensityUnit::LUMEN_LUX) {
                     // li = lp / (4 * pi)
-                    luminousIntensity = luminousPower * float(F_1_PI) * 0.25f;
+                    luminousIntensity = luminousPower * f::ONE_OVER_PI * 0.25f;
                 } else {
                     assert(unit == IntensityUnit::CANDELA);
                     // intensity specified directly in candela, no conversion needed
@@ -275,13 +275,13 @@ void FLightManager::setIntensity(Instance i, float intensity, IntensityUnit unit
                 float cosOuter = std::sqrt(spotParams.cosOuterSquared);
                 if (unit == IntensityUnit::LUMEN_LUX) {
                     // li = lp / (2 * pi * (1 - cos(cone_outer / 2)))
-                    luminousIntensity = luminousPower / (2.0f * float(F_PI) * (1.0f - cosOuter));
+                    luminousIntensity = luminousPower / (f::TAU * (1.0f - cosOuter));
                 } else {
                     assert(unit == IntensityUnit::CANDELA);
                     // intensity specified directly in candela, no conversion needed
                     luminousIntensity = luminousPower;
                     // lp = li * (2 * pi * (1 - cos(cone_outer / 2)))
-                    luminousPower = luminousIntensity * (2.0f * float(F_PI) * (1.0f - cosOuter));
+                    luminousPower = luminousIntensity * (f::TAU * (1.0f - cosOuter));
                 }
                 spotParams.luminousPower = luminousPower;
                 break;
@@ -289,7 +289,7 @@ void FLightManager::setIntensity(Instance i, float intensity, IntensityUnit unit
             case Type::SPOT:
                 if (unit == IntensityUnit::LUMEN_LUX) {
                     // li = lp / pi
-                    luminousIntensity = luminousPower * float(F_1_PI);
+                    luminousIntensity = luminousPower * f::ONE_OVER_PI;
                 } else {
                     assert(unit == IntensityUnit::CANDELA);
                     // intensity specified directly in candela, no conversion needed
@@ -315,8 +315,8 @@ void FLightManager::setSpotLightCone(Instance i, float inner, float outer) noexc
     auto& manager = mManager;
     if (i && isSpotLight(i)) {
         // clamp the inner/outer angles to pi
-        float innerClamped = std::min(std::abs(inner), float(F_PI_2));
-        float outerClamped = std::min(std::abs(outer), float(F_PI_2));
+        float innerClamped = std::min(std::abs(inner), f::PI_2);
+        float outerClamped = std::min(std::abs(outer), f::PI_2);
 
         // outer must always be bigger than inner
         outerClamped = std::max(innerClamped, outerClamped);
@@ -338,7 +338,7 @@ void FLightManager::setSpotLightCone(Instance i, float inner, float outer) noexc
         if (type == Type::FOCUSED_SPOT) {
             // li = lp / (2 * pi * (1 - cos(cone_outer / 2)))
             float luminousPower = spotParams.luminousPower;
-            float luminousIntensity = luminousPower / (2.0f * float(F_PI) * (1.0f - cosOuter));
+            float luminousIntensity = luminousPower / (f::TAU * (1.0f - cosOuter));
             manager[i].intensity = luminousIntensity;
         }
     }
@@ -347,7 +347,7 @@ void FLightManager::setSpotLightCone(Instance i, float inner, float outer) noexc
 void FLightManager::setSunAngularRadius(Instance i, float angularRadius) noexcept {
     if (i && isSunLight(i)) {
         angularRadius = clamp(angularRadius, 0.25f, 20.0f);
-        mManager[i].sunAngularRadius = angularRadius * float(F_PI / 180.0);
+        mManager[i].sunAngularRadius = angularRadius * f::DEG_TO_RAD;
     }
 }
 
@@ -488,7 +488,7 @@ void LightManager::setSunAngularRadius(Instance i, float angularRadius) noexcept
 
 float LightManager::getSunAngularRadius(Instance i) const noexcept {
     float radius = upcast(this)->getSunAngularRadius(i);
-    return radius * float(180.0 / F_PI);
+    return radius * f::RAD_TO_DEG;
 }
 
 void LightManager::setSunHaloSize(Instance i, float haloSize) noexcept {

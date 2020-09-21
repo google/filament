@@ -35,6 +35,45 @@ constexpr const double F_2_PI     = 0.636619772367581343075535053490057448;
 constexpr const double F_2_SQRTPI = 1.12837916709551257389615890312154517;
 constexpr const double F_SQRT2    = 1.41421356237309504880168872420969808;
 constexpr const double F_SQRT1_2  = 0.707106781186547524400844362104849039;
+constexpr const double F_TAU      = 2.0 * F_PI;
+
+namespace d {
+constexpr const double E                = F_E;
+constexpr const double LOG2E            = F_LOG2E;
+constexpr const double LOG10E           = F_LOG10E;
+constexpr const double LN2              = F_LN2;
+constexpr const double LN10             = F_LN10;
+constexpr const double PI               = F_PI;
+constexpr const double PI_2             = F_PI_2;
+constexpr const double PI_4             = F_PI_4;
+constexpr const double ONE_OVER_PI      = F_1_PI;
+constexpr const double TWO_OVER_PI      = F_2_PI;
+constexpr const double TWO_OVER_SQRTPI  = F_2_SQRTPI;
+constexpr const double SQRT2            = F_SQRT2;
+constexpr const double SQRT1_2          = F_SQRT1_2;
+constexpr const double TAU              = F_TAU;
+constexpr const double DEG_TO_RAD       = F_PI / 180.0;
+constexpr const double RAD_TO_DEG       = 180.0 / F_PI;
+} // namespace d
+
+namespace f {
+constexpr const float E                = (float)d::E;
+constexpr const float LOG2E            = (float)d::LOG2E;
+constexpr const float LOG10E           = (float)d::LOG10E;
+constexpr const float LN2              = (float)d::LN2;
+constexpr const float LN10             = (float)d::LN10;
+constexpr const float PI               = (float)d::PI;
+constexpr const float PI_2             = (float)d::PI_2;
+constexpr const float PI_4             = (float)d::PI_4;
+constexpr const float ONE_OVER_PI      = (float)d::ONE_OVER_PI;
+constexpr const float TWO_OVER_PI      = (float)d::TWO_OVER_PI;
+constexpr const float TWO_OVER_SQRTPI  = (float)d::TWO_OVER_SQRTPI;
+constexpr const float SQRT2            = (float)d::SQRT2;
+constexpr const float SQRT1_2          = (float)d::SQRT1_2;
+constexpr const float TAU              = (float)d::TAU;
+constexpr const float DEG_TO_RAD       = (float)d::DEG_TO_RAD;
+constexpr const float RAD_TO_DEG       = (float)d::RAD_TO_DEG;
+} // namespace f
 
 template<typename T>
 inline constexpr T MATH_PURE min(T a, T b) noexcept {

@@ -22,6 +22,8 @@
 #include <utils/compiler.h>
 #include <utils/Panic.h>
 
+#include <private/backend/BackendUtils.h>
+
 #include <cctype>
 
 namespace filament {
@@ -53,10 +55,23 @@ OpenGLProgram::OpenGLProgram(OpenGLDriver* gl, const Program& programBuilder) no
 
         if (!shadersSource[i].empty()) {
             GLint status;
-            char const* const source = (const char*)shadersSource[i].data();
+            auto shader = shadersSource[i];
+            GLint const length = (GLint)shader.size();
+
+#ifndef NDEBUG
+            // If usages of the Google-style line directive are present, remove them, as some
+            // drivers don't allow the quotation marks.
+            if (requestsGoogleLineDirectivesExtension((const char*) shader.data(), length)) {
+                auto temp = shader;
+                removeGoogleLineDirectives((char*) temp.data(), length);    // length is unaffected
+                shader = std::move(temp);
+            }
+#endif
+
+            const char * const source = (const char*)shader.data();
 
             GLuint shaderId = glCreateShader(glShaderType);
-            glShaderSource(shaderId, 1, &source, nullptr);
+            glShaderSource(shaderId, 1, &source, &length);
             glCompileShader(shaderId);
 
             glGetShaderiv(shaderId, GL_COMPILE_STATUS, &status);

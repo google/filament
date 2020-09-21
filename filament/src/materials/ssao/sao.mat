@@ -150,12 +150,15 @@ fragment {
     // "Scalable Ambient Obscurance" by Morgan McGuire, Michael Mara and David Luebke
 
     vec3 tapLocation(float i, const float noise) {
-        // note: with this formulation we could precompute the samples in an array
-        //       and combine the noise, which would allow is to call sin/cos only
-        //       once per pixel.
-        float radius = (i + 0.5) * materialParams.sampleCount.y;
-        float angle = (radius * materialParams.spiralTurns + noise) * (2.0 * PI);
-        return vec3(cos(angle), sin(angle), radius);
+        float offset = ((2.0 * PI) * 2.4) * noise;
+        float angle = ((i * materialParams.sampleCount.y) * materialParams.spiralTurns) * (2.0 * PI) + offset;
+        float radius = (i + noise + 0.5) * materialParams.sampleCount.y;
+        return vec3(cos(angle), sin(angle), radius * radius);
+    }
+
+    highp vec2 startPosition(const float noise) {
+        float angle = ((2.0 * PI) * 2.4) * noise;
+        return vec2(cos(angle), sin(angle));
     }
 
     highp mat2 tapAngleStep() {
@@ -163,9 +166,9 @@ fragment {
         return mat2(t.x, t.y, -t.y, t.x);
     }
 
-    vec3 tapLocation(float i, vec2 p) {
-        float radius = (i + 0.5) * materialParams.sampleCount.y;
-        return vec3(p, radius);
+    vec3 tapLocationFast(float i, vec2 p, const float noise) {
+        float radius = (i + noise + 0.5) * materialParams.sampleCount.y;
+        return vec3(p, radius * radius);
     }
 
 
@@ -173,7 +176,7 @@ fragment {
             const highp vec2 uv,  const highp vec3 origin, const vec3 normal,
             const vec2 tapPosition, const float noise) {
 
-        vec3 tap = tapLocation(i, tapPosition);
+        vec3 tap = tapLocationFast(i, tapPosition, noise);
 
         float ssRadius = max(1.0, tap.z * ssDiskRadius); // at least 1 pixel screen-space radius
 
@@ -200,7 +203,7 @@ fragment {
 
         vec3 normal = computeViewSpaceNormal(origin, uv);
         float noise = random(gl_FragCoord.xy);
-        highp vec2 tapPosition = tapLocation(0.0, noise).xy;
+        highp vec2 tapPosition = startPosition(noise);
         highp mat2 angleStep = tapAngleStep();
 
         // Choose the screen-space sample radius
@@ -213,7 +216,7 @@ fragment {
             tapPosition = angleStep * tapPosition;
         }
 
-        float ao = max(0.0, 1.0 - occlusion * (materialParams.intensity * materialParams.sampleCount.y));
+        float ao = max(0.0, 1.0 - sqrt(occlusion * materialParams.intensity));
         ao = pow(ao, materialParams.power);
 
 #if defined(TARGET_MOBILE)

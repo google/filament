@@ -497,7 +497,7 @@ void ShadowMap::computeShadowCameraSpot(math::float3 const& position, math::floa
     const mat4f M = mat4f::lookAt(lightPosition, lightPosition + dir, float3{0, 1, 0});
     const mat4f Mv = FCamera::rigidTransformInverse(M);
 
-    float outerConeAngleDegrees = outerConeAngle / (2.0f * F_PI) * 360.0f;
+    float outerConeAngleDegrees = outerConeAngle * f::RAD_TO_DEG;
     const mat4f Mp = mat4f::perspective(outerConeAngleDegrees * 2, 1.0f, nearPlane, radius,
             mat4f::Fov::HORIZONTAL);
 
