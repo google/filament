@@ -182,7 +182,13 @@ public:
             FEngine& engine, const CameraInfo& camera,
             FScene::RenderableSoa& renderableData, Range visible) noexcept;
 
-    void setShadowsEnabled(bool enabled) noexcept { mShadowingEnabled = enabled; }
+    void setShadowingEnabled(bool enabled) noexcept { mShadowingEnabled = enabled; }
+
+    bool isShadowingEnabled() const noexcept { return mShadowingEnabled; }
+
+    void setScreenSpaceRefractionEnabled(bool enabled) noexcept { mScreenSpaceRefractionEnabled = enabled; }
+
+    bool isScreenSpaceRefractionEnabled() const noexcept { return mScreenSpaceRefractionEnabled; }
 
     FCamera const* getDirectionalLightCamera() const noexcept {
         return &mShadowMapManager.getCascadeShadowMap(0)->getDebugCamera();
@@ -456,6 +462,7 @@ private:
     ToneMapping mToneMapping = ToneMapping::ACES;
     Dithering mDithering = Dithering::TEMPORAL;
     bool mShadowingEnabled = true;
+    bool mScreenSpaceRefractionEnabled = true;
     bool mHasPostProcessPass = true;
     AmbientOcclusionOptions mAmbientOcclusionOptions{};
     ShadowType mShadowType = ShadowType::PCF;

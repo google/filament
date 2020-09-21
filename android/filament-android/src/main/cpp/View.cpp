@@ -67,9 +67,9 @@ Java_com_google_android_filament_View_nSetVisibleLayers(JNIEnv*, jclass, jlong n
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_View_nSetShadowsEnabled(JNIEnv*, jclass, jlong nativeView, jboolean enabled) {
+Java_com_google_android_filament_View_nSetShadowingEnabled(JNIEnv*, jclass, jlong nativeView, jboolean enabled) {
     View* view = (View*) nativeView;
-    view->setShadowsEnabled(enabled);
+    view->setShadowingEnabled(enabled);
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -285,4 +285,27 @@ Java_com_google_android_filament_View_nSetTemporalAntiAliasingOptions(JNIEnv *, 
     View* view = (View*) nativeView;
     view->setTemporalAntiAliasingOptions({
             .filterWidth = filterWidth, .feedback = feedback, .enabled = (bool) enabled});
+}
+
+extern "C"
+JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_View_nIsShadowingEnabled(JNIEnv *, jclass, jlong nativeView) {
+    View* view = (View*) nativeView;
+    return (jboolean)view->isShadowingEnabled();
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_View_nSetScreenSpaceRefractionEnabled(JNIEnv *, jclass,
+        jlong nativeView, jboolean enabled) {
+    View* view = (View*) nativeView;
+    view->setScreenSpaceRefractionEnabled((bool)enabled);
+}
+
+extern "C"
+JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_View_nIsScreenSpaceRefractionEnabled(JNIEnv *, jclass,
+        jlong nativeView) {
+    View* view = (View*) nativeView;
+    return (jboolean)view->isScreenSpaceRefractionEnabled();
 }
