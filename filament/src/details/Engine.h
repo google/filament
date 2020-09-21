@@ -72,6 +72,7 @@ class DebugServer;
 
 #include <chrono>
 #include <memory>
+#include <random>
 #include <unordered_map>
 
 namespace filament {
@@ -301,6 +302,10 @@ public:
         return mJobSystem;
     }
 
+    std::default_random_engine& getRandomEngine() {
+        return mRandomEngine;
+    }
+
 private:
     FEngine(Backend backend, Platform* platform, void* sharedGLContext);
     void init();
@@ -365,6 +370,8 @@ private:
     HeapAllocatorArena mHeapAllocator;
 
     utils::JobSystem mJobSystem;
+
+    std::default_random_engine mRandomEngine;
 
     Epoch mEngineEpoch;
 
