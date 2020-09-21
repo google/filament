@@ -124,9 +124,9 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
         window->mOrthoView->getView()->setVisibleLayers(0x6, 0x6);
 
         // only preserve the color buffer for additional views; depth and stencil can be discarded.
-        window->mDepthView->getView()->setShadowsEnabled(false);
-        window->mGodView->getView()->setShadowsEnabled(false);
-        window->mOrthoView->getView()->setShadowsEnabled(false);
+        window->mDepthView->getView()->setShadowingEnabled(false);
+        window->mGodView->getView()->setShadowingEnabled(false);
+        window->mOrthoView->getView()->setShadowingEnabled(false);
     }
 
     loadDirt(config);

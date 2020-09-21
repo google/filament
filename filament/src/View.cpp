@@ -888,8 +888,8 @@ Camera const* View::getDirectionalLightCamera() const noexcept {
     return upcast(this)->getDirectionalLightCamera();
 }
 
-void View::setShadowsEnabled(bool enabled) noexcept {
-    upcast(this)->setShadowsEnabled(enabled);
+void View::setShadowingEnabled(bool enabled) noexcept {
+    upcast(this)->setShadowingEnabled(enabled);
 }
 
 void View::setRenderTarget(RenderTarget* renderTarget) noexcept {
@@ -1047,5 +1047,17 @@ View::BlendMode View::getBlendMode() const noexcept {
 uint8_t View::getVisibleLayers() const noexcept {
   return upcast(this)->getVisibleLayers();
 }
-  
+
+bool View::isShadowingEnabled() const noexcept {
+    return upcast(this)->isShadowingEnabled();
+}
+
+void View::setScreenSpaceRefractionEnabled(bool enabled) noexcept {
+    upcast(this)->setScreenSpaceRefractionEnabled(enabled);
+}
+
+bool View::isScreenSpaceRefractionEnabled() const noexcept {
+    return upcast(this)->isScreenSpaceRefractionEnabled();
+}
+
 } // namespace filament

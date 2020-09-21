@@ -263,20 +263,6 @@ public:
     };
 
     /**
-     * Sets ambient occlusion options.
-     *
-     * @param options Options for ambient occlusion.
-     */
-    void setAmbientOcclusionOptions(AmbientOcclusionOptions const& options) noexcept;
-
-    /**
-     * Gets the ambient occlusion options.
-     *
-     * @return ambient occlusion options currently set.
-     */
-    AmbientOcclusionOptions const& getAmbientOcclusionOptions() const noexcept;
-
-    /**
      * Sets the View's name. Only useful for debugging.
      * @param name Pointer to the View's name. The string is copied.
      */
@@ -322,6 +308,45 @@ public:
     }
 
     /**
+     * Specifies an offscreen render target to render into.
+     *
+     * By default, the view's associated render target is nullptr, which corresponds to the
+     * SwapChain associated with the engine.
+     *
+     * A view with a custom render target cannot rely on Renderer::ClearOptions, which only apply
+     * to the SwapChain. Such view can use a Skybox instead.
+     *
+     * @param renderTarget Render target associated with view, or nullptr for the swap chain.
+     */
+    void setRenderTarget(RenderTarget* renderTarget) noexcept;
+
+    /**
+     * Gets the offscreen render target associated with this view.
+     *
+     * Returns nullptr if the render target is the swap chain (which is default).
+     *
+     * @see setRenderTarget
+     */
+    RenderTarget* getRenderTarget() const noexcept;
+
+    /**
+     * Sets the rectangular region to render to.
+     *
+     * The viewport specifies where the content of the View (i.e. the Scene) is rendered in
+     * the render target. The Render target is automatically clipped to the Viewport.
+     *
+     * @param viewport  The Viewport to render the Scene into. The Viewport is a value-type, it is
+     *                  therefore copied. The parameter can be discarded after this call returns.
+     */
+    void setViewport(Viewport const& viewport) noexcept;
+
+    /**
+     * Returns the rectangular region that gets rendered to.
+     * @return A constant reference to View's viewport.
+     */
+    Viewport const& getViewport() const noexcept;
+
+    /**
      * Sets this View's Camera.
      *
      * @param camera    Associate the specified Camera to this View. A Camera can be associated to
@@ -350,23 +375,6 @@ public:
     Camera const& getCamera() const noexcept {
         return const_cast<View*>(this)->getCamera();
     }
-
-    /**
-     * Sets the rectangular region to render to.
-     *
-     * The viewport specifies where the content of the View (i.e. the Scene) is rendered in
-     * the render target. The Render target is automatically clipped to the Viewport.
-     *
-     * @param viewport  The Viewport to render the Scene into. The Viewport is a value-type, it is
-     *                  therefore copied. The parameter can be discarded after this call returns.
-     */
-    void setViewport(Viewport const& viewport) noexcept;
-
-    /**
-     * Returns the rectangular region that gets rendered to.
-     * @return A constant reference to View's viewport.
-     */
-    Viewport const& getViewport() const noexcept;
 
     /**
      * Sets the blending mode used to draw the view into the SwapChain.
@@ -418,29 +426,33 @@ public:
      *      RenderableManager::Builder::receiveShadows(),
      *      RenderableManager::Builder::castShadows(),
      */
-    void setShadowsEnabled(bool enabled) noexcept;
+    void setShadowingEnabled(bool enabled) noexcept;
 
     /**
-     * Specifies an offscreen render target to render into.
-     *
-     * By default, the view's associated render target is nullptr, which corresponds to the
-     * SwapChain associated with the engine.
-     *
-     * A view with a custom render target cannot rely on Renderer::ClearOptions, which only apply
-     * to the SwapChain. Such view can use a Skybox instead.
-     *
-     * @param renderTarget Render target associated with view, or nullptr for the swap chain.
+     * Enables or disables shadow mapping. Enabled by default.
+     * @deprecated use setShadowingEnabled
      */
-    void setRenderTarget(RenderTarget* renderTarget) noexcept;
+    UTILS_DEPRECATED
+    void setShadowsEnabled(bool enabled) noexcept {
+        setShadowingEnabled(enabled);
+    }
 
     /**
-     * Gets the offscreen render target associated with this view.
-     *
-     * Returns nullptr if the render target is the swap chain (which is default).
-     *
-     * @see setRenderTarget
+     * @return whether shadowing is enabled
      */
-    RenderTarget* getRenderTarget() const noexcept;
+    bool isShadowingEnabled() const noexcept;
+
+    /**
+     * Enables or disables screen space refraction. Enabled by default.
+     *
+     * @param enabled true enables screen space refraction, false disables it.
+     */
+    void setScreenSpaceRefractionEnabled(bool enabled) noexcept;
+
+    /**
+     * @return whether screen space refraction is enabled
+     */
+    bool isScreenSpaceRefractionEnabled() const noexcept;
 
     /**
      * Sets how many samples are to be used for MSAA in the post-process stage.
@@ -523,6 +535,20 @@ public:
      * @return A pointer to the ColorGrading associated to this View.
      */
     const ColorGrading* getColorGrading() const noexcept;
+
+    /**
+     * Sets ambient occlusion options.
+     *
+     * @param options Options for ambient occlusion.
+     */
+    void setAmbientOcclusionOptions(AmbientOcclusionOptions const& options) noexcept;
+
+    /**
+     * Gets the ambient occlusion options.
+     *
+     * @return ambient occlusion options currently set.
+     */
+    AmbientOcclusionOptions const& getAmbientOcclusionOptions() const noexcept;
 
     /**
      * Enables or disables bloom in the post-processing stage. Disabled by default.
