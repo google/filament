@@ -199,6 +199,13 @@ void FScene::updateUBOs(utils::Range<uint32_t> visibleRenderables, backend::Hand
         mat3f m = mat3f::getTransformForNormals(model.upperLeft());
         m *= mat3f(1.0f / std::sqrt(max(float3{length2(m[0]), length2(m[1]), length2(m[2])})));
 
+        // The shading normal must be flipped for mirror transformations.
+        // Basically we're shading the other side of the polygon and therefore need to negate the
+        // normal, similar to what we already do to support double-sided lighting.
+        if (sceneData.elementAt<REVERSED_WINDING_ORDER>(i)) {
+            m = -m;
+        }
+
         UniformBuffer::setUniform(buffer,
                 offset + offsetof(PerRenderableUib, worldFromModelNormalMatrix), m);
 
