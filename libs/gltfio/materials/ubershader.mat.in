@@ -8,6 +8,7 @@ material {
     flipUV : false,
     specularAmbientOcclusion : simple,
     specularAntiAliasing : true,
+    clearCoatIorChange : false,
     parameters : [
 
         { type : float3, name : specularFactor },

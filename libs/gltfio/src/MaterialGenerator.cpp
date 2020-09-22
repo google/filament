@@ -265,6 +265,7 @@ Material* createMaterial(Engine* engine, const MaterialKey& config, const UvMap&
             .flipUV(false)
             .specularAmbientOcclusion(MaterialBuilder::SpecularAmbientOcclusion::SIMPLE)
             .specularAntiAliasing(true)
+            .clearCoatIorChange(false)
             .material(shader.c_str())
             .doubleSided(config.doubleSided)
             .targetApi(filamat::targetApiFromBackend(engine->getBackend()));
