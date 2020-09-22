@@ -146,6 +146,16 @@ public class ResourceLoader {
         nAsyncUpdateLoad(mNativeObject);
     }
 
+    /**
+     * Cancels pending decoder jobs and frees all CPU-side texel data.
+     *
+     * Calling this is only necessary if the asyncBeginLoad API was used
+     * and cancellation is required before progress reaches 100%.
+     */
+    public void asyncCancelLoad() {
+        nAsyncCancelLoad(mNativeObject);
+    }
+
     private static native long nCreateResourceLoader(long nativeEngine,
             boolean normalizeSkinningWeights, boolean recomputeBoundingBoxes);
     private static native void nDestroyResourceLoader(long nativeLoader);
@@ -156,4 +166,5 @@ public class ResourceLoader {
     private static native boolean nAsyncBeginLoad(long nativeLoader, long nativeAsset);
     private static native float nAsyncGetLoadProgress(long nativeLoader);
     private static native void nAsyncUpdateLoad(long nativeLoader);
+    private static native void nAsyncCancelLoad(long nativeLoader);
 }

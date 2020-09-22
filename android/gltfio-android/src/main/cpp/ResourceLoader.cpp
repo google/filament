@@ -99,3 +99,10 @@ Java_com_google_android_filament_gltfio_ResourceLoader_nAsyncUpdateLoad(JNIEnv*,
     ResourceLoader* loader = (ResourceLoader*) nativeLoader;
     loader->asyncUpdateLoad();
 }
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_gltfio_ResourceLoader_nAsyncCancelLoad(JNIEnv*, jclass,
+        jlong nativeLoader) {
+    ResourceLoader* loader = (ResourceLoader*) nativeLoader;
+    loader->asyncCancelLoad();
+}

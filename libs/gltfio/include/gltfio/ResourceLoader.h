@@ -130,6 +130,14 @@ public:
      */
     void asyncUpdateLoad();
 
+    /**
+     * Cancels pending decoder jobs and frees all CPU-side texel data.
+     *
+     * Calling this is only necessary if the asyncBeginLoad API was used
+     * and cancellation is required before progress reaches 100%.
+     */
+    void asyncCancelLoad();
+
 private:
     bool loadResources(FFilamentAsset* asset, bool async);
     void applySparseData(FFilamentAsset* asset) const;
