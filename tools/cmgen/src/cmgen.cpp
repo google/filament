@@ -23,7 +23,10 @@
 #include <ibl/Image.h>
 #include <ibl/utilities.h>
 
+#ifdef IMAGEIO_SUPPORTS_BLOCK_COMPRESSION
 #include <imageio/BlockCompression.h>
+#endif
+
 #include <imageio/ImageDecoder.h>
 #include <imageio/ImageEncoder.h>
 
@@ -167,6 +170,7 @@ static void printUsage(char* name) {
             "       KTX files are always encoded with 3-channel RGB_10_11_11_REV data\n\n"
             "   --compression=COMPRESSION, -c COMPRESSION\n"
             "       Format specific compression:\n"
+#ifdef IMAGEIO_SUPPORTS_BLOCK_COMPRESSION
             "           KTX:\n"
             "             astc_[fast|thorough]_[ldr|hdr]_WxH, where WxH is a valid block size\n"
             "             s3tc_rgba_dxt5\n"
@@ -174,6 +178,7 @@ static void printUsage(char* name) {
             "               FORMAT is rgb8_alpha, srgb8_alpha, rgba8, or srgb8_alpha8\n"
             "               METRIC is rgba, rgbx, rec709, numeric, or normalxyz\n"
             "               EFFORT is an integer between 0 and 100\n"
+#endif
             "           PNG: Ignored\n"
             "           PNG RGBM: Ignored\n"
             "           Radiance: Ignored\n"
@@ -1262,8 +1267,10 @@ static void saveImage(const std::string& path, ImageEncoder::Format format, cons
 }
 
 static void exportKtxFaces(KtxBundle& container, uint32_t miplevel, const Cubemap& cm) {
-    CompressionConfig compression {};
     auto& info = container.info();
+
+#ifdef IMAGEIO_SUPPORTS_BLOCK_COMPRESSION
+    CompressionConfig compression {};
     if (!g_compression.empty()) {
         bool valid = parseOptionString(g_compression, &compression);
         if (!valid) {
@@ -1279,6 +1286,12 @@ static void exportKtxFaces(KtxBundle& container, uint32_t miplevel, const Cubema
         info.glBaseInternalFormat = KtxBundle::RGB;
         info.glInternalFormat = KtxBundle::RGB;
     }
+#else
+    if (!g_compression.empty()) {
+        std::cerr << "Block compression is not supported in this build." << std::endl;
+        exit(1);
+    }
+#endif
 
     const uint32_t dim = (const uint32_t) cm.getDimensions();
     for (uint32_t j = 0; j < 6; j++) {
@@ -1295,12 +1308,14 @@ static void exportKtxFaces(KtxBundle& container, uint32_t miplevel, const Cubema
         }
         LinearImage image = toLinearImage(cm.getImageForFace(face));
 
+#ifdef IMAGEIO_SUPPORTS_BLOCK_COMPRESSION
         if (compression.type != CompressionConfig::INVALID) {
             CompressedTexture tex = compressTexture(compression, image);
             container.setBlob(blobIndex, tex.data.get(), tex.size);
             info.glInternalFormat = (uint32_t) tex.format;
             continue;
         }
+#endif
 
         auto uintData = fromLinearToRGB_10_11_11_REV(image);
         container.setBlob(blobIndex, uintData.get(), dim * dim * 4);
