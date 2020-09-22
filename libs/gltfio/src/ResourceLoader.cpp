@@ -104,10 +104,12 @@ struct ResourceLoader::Impl {
 
     void computeTangents(FFilamentAsset* asset);
     bool createTextures(bool async);
+    void cancelTextureDecoding();
     void addTextureCacheEntry(const TextureSlot& tb);
     void bindTextureToMaterial(const TextureSlot& tb);
     void decodeSingleTexture();
     void uploadPendingTextures();
+    void releasePendingTextures();
     ~Impl();
 };
 
@@ -450,6 +452,10 @@ bool ResourceLoader::asyncBeginLoad(FilamentAsset* asset) {
     return loadResources(upcast(asset), true);
 }
 
+void ResourceLoader::asyncCancelLoad() {
+    pImpl->cancelTextureDecoding();
+}
+
 float ResourceLoader::asyncGetLoadProgress() const {
     const float finished = pImpl->mNumDecoderTasksFinished;
     const float total = pImpl->mNumDecoderTasks;
@@ -527,6 +533,20 @@ void ResourceLoader::Impl::uploadPendingTextures() {
     for (auto& pair : mUriTextureCache) upload(pair.second.get(), *mEngine);
 }
 
+void ResourceLoader::Impl::releasePendingTextures() {
+    auto release = [this](TextureCacheEntry* entry, Engine& engine) {
+        Texture* texture = entry->texture;
+        uint8_t* texels = entry->texels;
+        if (texture && texels && !entry->completed) {
+            // Normally the ownership of these texels is transferred to PixelBufferDescriptor, but
+            // if uploads have been cancelled then we need to free them explicitly.
+            free(texels);
+        }
+    };
+    for (auto& pair : mBufferTextureCache) release(pair.second.get(), *mEngine);
+    for (auto& pair : mUriTextureCache) release(pair.second.get(), *mEngine);
+}
+
 void ResourceLoader::Impl::addTextureCacheEntry(const TextureSlot& tb) {
     TextureCacheEntry* entry = nullptr;
 
@@ -601,6 +621,19 @@ void ResourceLoader::Impl::bindTextureToMaterial(const TextureSlot& tb) {
     if (entry.get() && entry->texture) {
         asset->bindTexture(tb, entry->texture);
     }
+}
+void ResourceLoader::Impl::cancelTextureDecoding() {
+    JobSystem* js = &mEngine->getJobSystem();
+    if (mDecoderRootJob) {
+        js->waitAndRelease(mDecoderRootJob);
+        mDecoderRootJob = nullptr;
+    }
+    releasePendingTextures();
+    mBufferTextureCache.clear();
+    mUriTextureCache.clear();
+    mCurrentAsset = nullptr;
+    mNumDecoderTasksFinished = 0;
+    mNumDecoderTasks = 0;
 }
 
 bool ResourceLoader::Impl::createTextures(bool async) {

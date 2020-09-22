@@ -220,6 +220,7 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
      */
     fun destroyModel() {
         fetchResourcesJob?.cancel()
+        resourceLoader.asyncCancelLoad()
         asset?.let { asset ->
             this.scene.removeEntities(asset.entities)
             assetLoader.destroyAsset(asset)
