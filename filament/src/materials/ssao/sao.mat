@@ -7,6 +7,10 @@ material {
             precision: high
         },
         {
+            type : mat4,
+            name : screenFromViewMatrix
+        },
+        {
             type : float4,
             name : resolution,
             precision: high
@@ -68,6 +72,30 @@ material {
         {
             type : int,
             name : maxLevel
+        },
+        {
+            type : float4,
+            name : ssctConeTraceParams
+        },
+        {
+            type : float3,
+            name : ssctVsLightDirection
+        },
+        {
+            type : float,
+            name : ssctIntensity
+        },
+        {
+            type : float2,
+            name : ssctDepthBias
+        },
+        {
+            type : float,
+            name : ssctInvZoom
+        },
+        {
+            type : uint,
+            name : ssctSampleCount
         }
     ],
     variables : [
@@ -86,6 +114,7 @@ vertex {
 
 fragment {
     #include "ssaoUtils.fs"
+    #include "dominantLightShadowing.fs"
 
     const float kLog2LodRate = 3.0;
     const float kEdgeDistance = 0.0625; // this shouldn't be hardcoded
@@ -201,13 +230,7 @@ fragment {
         occlusion += w * max(0.0, vn + origin.z * materialParams.bias) / (vv + materialParams.peak2);
     }
 
-    void postProcess(inout PostProcessInputs postProcess) {
-        highp vec2 uv = variable_vertex.xy; // interpolated to pixel center
-
-        highp float depth = sampleDepthLinear(materialParams_depth, uv, 0.0, materialParams.depthParams);
-        highp vec3 origin = computeViewSpacePositionFromDepth(uv, depth);
-
-        vec3 normal = computeViewSpaceNormal(origin, uv);
+    float scalableAmbientObscurance(highp vec2 uv, highp vec3 origin, vec3 normal) {
         float noise = random(gl_FragCoord.xy);
         highp vec2 tapPosition = startPosition(noise);
         highp mat2 angleStep = tapAngleStep();
@@ -221,7 +244,45 @@ fragment {
             computeAmbientOcclusionSAO(occlusion, i, ssDiskRadius, uv, origin, normal, tapPosition, noise);
             tapPosition = angleStep * tapPosition;
         }
-        occlusion = sqrt(occlusion * materialParams.intensity);
+        return sqrt(occlusion * materialParams.intensity);
+    }
+
+    float dominantLightShadowing(highp vec2 uv, highp vec3 origin, vec3 normal) {
+        ConeTraceSetup cone;
+        cone.ssStartPos = uv;
+        cone.vsStartPos = origin;
+        cone.vsNormal = normal;
+        cone.screenFromViewMatrix = materialParams.screenFromViewMatrix;
+        cone.depthParams = materialParams.depthParams;
+        cone.vsConeDirection = materialParams.ssctVsLightDirection;
+        cone.coneTraceParams = materialParams.ssctConeTraceParams;
+        cone.intensity = materialParams.ssctIntensity;
+        cone.invZoom = materialParams.ssctInvZoom;
+        cone.depthBias = materialParams.ssctDepthBias.x;
+        cone.slopeScaledDepthBias = materialParams.ssctDepthBias.y;
+        cone.sampleCount = materialParams.ssctSampleCount;
+        cone.jitterOffset.x = random(gl_FragCoord.xy) * 2.0 - 1.0;      // direction
+        cone.jitterOffset.y = random(gl_FragCoord.xy * vec2(11, 3));    // step
+        float occlusion = coneTraceOcclusion(cone, materialParams_depth);
+        return occlusion;
+    }
+
+    void postProcess(inout PostProcessInputs postProcess) {
+        highp vec2 uv = variable_vertex.xy; // interpolated to pixel center
+
+        highp float depth = sampleDepthLinear(materialParams_depth, uv, 0.0, materialParams.depthParams);
+        highp vec3 origin = computeViewSpacePositionFromDepth(uv, depth);
+        vec3 normal = computeViewSpaceNormal(origin, uv);
+
+        float occlusion = 0.0;
+
+        if (materialParams.intensity > 0.0) {
+            occlusion = scalableAmbientObscurance(uv, origin, normal);
+        }
+
+        if (materialParams.ssctConeTraceParams.x > 0.0) {
+            occlusion = max(occlusion, dominantLightShadowing(uv, origin, normal));
+        }
 
         // occlusion to visibility
         float aoVisibility = pow(saturate(1.0 - occlusion), materialParams.power);

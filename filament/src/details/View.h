@@ -288,13 +288,22 @@ public:
 
     void setAmbientOcclusionOptions(AmbientOcclusionOptions options) noexcept {
         options.radius = math::max(0.0f, options.radius);
-        options.bias = math::clamp(0.0f, 0.1f, options.bias);
+        options.bias = math::clamp(options.bias, 0.0f, 0.1f);
         options.power = std::max(0.0f, options.power);
         // snap to the closer of 0.5 or 1.0
         options.resolution = std::floor(
-                math::clamp(1.0f, 2.0f, options.resolution * 2.0f) + 0.5f) * 0.5f;
+                math::clamp(options.resolution * 2.0f, 1.0f, 2.0f) + 0.5f) * 0.5f;
         options.intensity = std::max(0.0f, options.intensity);
-        options.minHorizonAngleRad = math::clamp(0.0f, math::f::PI_2, options.minHorizonAngleRad);
+        options.minHorizonAngleRad = math::clamp(options.minHorizonAngleRad, 0.0f, math::f::PI_2);
+        options.ssct.lightConeRad = math::clamp(options.ssct.lightConeRad, 0.0f, math::f::PI_2);
+        options.ssct.startTraceDistance = std::max(0.0f, options.ssct.startTraceDistance);
+        options.ssct.contactDistanceMax = std::max(0.0f, options.ssct.contactDistanceMax);
+        options.ssct.intensity = std::max(0.0f, options.ssct.intensity);
+        options.ssct.lightDirection = normalize(options.ssct.lightDirection);
+        options.ssct.depthBias = std::max(0.0f, options.ssct.depthBias);
+        options.ssct.depthSlopeBias = std::max(0.0f, options.ssct.depthSlopeBias);
+        options.ssct.scale = std::max(0.0f, options.ssct.scale);
+        options.ssct.sampleCount = math::clamp((unsigned)options.ssct.sampleCount, 1u, 255u);
         mAmbientOcclusionOptions = options;
     }
 
