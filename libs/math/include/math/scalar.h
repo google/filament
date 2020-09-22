@@ -18,6 +18,7 @@
 #define TNT_MATH_SCALAR_H
 
 #include <math/compiler.h>
+#include <assert.h>
 
 namespace filament {
 namespace math {
@@ -87,6 +88,7 @@ inline constexpr T MATH_PURE max(T a, T b) noexcept {
 
 template<typename T>
 inline constexpr T MATH_PURE clamp(T v, T min, T max) noexcept {
+    assert(min <= max);
     return T(math::min(max, math::max(min, v)));
 }
 

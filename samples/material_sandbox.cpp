@@ -615,6 +615,20 @@ static void gui(filament::Engine* engine, filament::View*) {
                 ImGui::SliderInt("Quality", &quality, 0, 3);
                 ImGui::SliderInt("Low Pass", &lowpass, 0, 2);
                 ImGui::Checkbox("High quality upsampling", &upsampling);
+                if (ImGui::CollapsingHeader("Dominant Light Shadows")) {
+                    int sampleCount = params.ssaoOptions.ssct.sampleCount;
+                    ImGui::Checkbox("Enabled##dls", &params.ssaoOptions.ssct.enabled);
+                    ImGui::SliderFloat("Cone angle", &params.ssaoOptions.ssct.lightConeRad, 0.0f, (float)M_PI_2);
+                    ImGui::SliderFloat("Start dist", &params.ssaoOptions.ssct.startTraceDistance, 0.0f, 1.0f);
+                    ImGui::SliderFloat("Contact dist max", &params.ssaoOptions.ssct.contactDistanceMax, 0.0f, 100.0f);
+                    ImGui::SliderFloat("Intensity##dls", &params.ssaoOptions.ssct.intensity, 0.0f, 10.0f);
+                    ImGui::SliderFloat("Depth bias", &params.ssaoOptions.ssct.depthBias, 0.0f, 1.0f);
+                    ImGui::SliderFloat("Depth slope bias", &params.ssaoOptions.ssct.depthSlopeBias, 0.0f, 1.0f);
+                    ImGui::SliderFloat("Scale", &params.ssaoOptions.ssct.scale, 0.0f, 10.0f);
+                    ImGui::SliderInt("Sample Count", &sampleCount, 1, 32);
+                    ImGuiExt::DirectionWidget("Direction##dls", params.ssaoOptions.ssct.lightDirection.v);
+                    params.ssaoOptions.ssct.sampleCount = sampleCount;
+                }
                 params.ssaoOptions.upsampling = upsampling ? View::QualityLevel::HIGH : View::QualityLevel::LOW;
                 params.ssaoOptions.quality = (View::QualityLevel)quality;
                 params.ssaoOptions.lowPassFilter = (View::QualityLevel)lowpass;
