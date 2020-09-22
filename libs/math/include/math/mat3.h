@@ -260,6 +260,24 @@ public:
     /**
      * Returns a matrix suitable for transforming normals
      *
+     * The inverse-transpose of a matrix is equal to its cofactor matrix divided by its determinant:
+     *
+     *     transpose(inverse(M)) = cof(M) / det(M)
+     *
+     * Since we normalize normals anyway, there's no need to divide by the determinant.
+     * Clients should be aware of this when handling "mirror" transformations (det < 0).
+     *
+     * Some excellent references from Dale Weiler, Nathan Reed, and Eric Lengyel:
+     *   - https://github.com/graphitemaster/normals_revisited
+     *   - http://www.reedbeta.com/blog/normals-inverse-transpose-part-1/
+     *   - FGED Volume 1, section 1.7.5 "Inverses of Small Matrices"
+     *   - FGED Volume 1, section 3.2.2 "Transforming Normal Vectors"
+     *
+     * At the bottom of pg 105, Lengyel notes that there are two types of transformed normals: one
+     * that uses the transposed adjugate (aka cofactor matrix) and one that uses the transposed
+     * inverse. He goes on to say that this difference is inconsequential, except when mirroring
+     * is involved.
+     *
      * @param m the transform applied to vertices
      * @return a matrix to apply to normals
      *
