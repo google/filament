@@ -291,6 +291,12 @@ add_custom_command(
 )
 
 add_custom_command(
+        OUTPUT "${MATERIAL_DIR}/sao.filamat"
+        DEPENDS src/materials/ssao/ssaoUtils.fs
+        APPEND
+)
+
+add_custom_command(
         OUTPUT ${RESGEN_OUTPUTS}
         COMMAND resgen ${RESGEN_FLAGS} ${MATERIAL_BINS}
         DEPENDS resgen ${MATERIAL_BINS}

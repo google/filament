@@ -85,6 +85,8 @@ vertex {
 }
 
 fragment {
+    #include "ssaoUtils.fs"
+
     const float kLog2LodRate = 3.0;
     const float kEdgeDistance = 0.0625; // this shouldn't be hardcoded
 
@@ -105,18 +107,6 @@ fragment {
     float random(const highp vec2 w) {
         const vec3 m = vec3(0.06711056, 0.00583715, 52.9829189);
         return fract(m.z * fract(dot(w, m.xy)));
-    }
-
-    highp float linearizeDepth(highp float depth) {
-        // Our far plane is at infinity, which causes a division by zero below, which in turn
-        // causes some issues on some GPU. We workaround it by replacing "infinity" by the closest
-        // value representable in  a 24 bit depth buffer.
-        const float preventDiv0 = 1.0 / 16777216.0;
-        return materialParams.depthParams / max(depth, preventDiv0);
-    }
-
-    highp float sampleDepthLinear(const vec2 uv, float lod) {
-        return linearizeDepth(textureLod(materialParams_depth, uv, lod).r);
     }
 
     highp vec3 computeViewSpacePositionFromDepth(highp vec2 uv, highp float linearDepth) {
@@ -142,8 +132,10 @@ fragment {
     highp vec3 computeViewSpaceNormal(const highp vec3 position, const highp vec2 uv) {
         highp vec2 uvdx = uv + vec2(materialParams.resolution.z, 0.0);
         highp vec2 uvdy = uv + vec2(0.0, materialParams.resolution.w);
-        highp vec3 px = computeViewSpacePositionFromDepth(uvdx, sampleDepthLinear(uvdx, 0.0));
-        highp vec3 py = computeViewSpacePositionFromDepth(uvdy, sampleDepthLinear(uvdy, 0.0));
+        highp vec3 px = computeViewSpacePositionFromDepth(uvdx,
+                sampleDepthLinear(materialParams_depth, uvdx, 0.0, materialParams.depthParams));
+        highp vec3 py = computeViewSpacePositionFromDepth(uvdy,
+                sampleDepthLinear(materialParams_depth, uvdy, 0.0, materialParams.depthParams));
         highp vec3 dpdx = px - position;
         highp vec3 dpdy = py - position;
         return faceNormal(dpdx, dpdy);
@@ -187,7 +179,7 @@ fragment {
         vec2 uvSamplePos = uv + vec2(ssRadius * tap.xy) * materialParams.resolution.zw;
 
         float level = clamp(floor(log2(ssRadius)) - kLog2LodRate, 0.0, float(materialParams.maxLevel));
-        highp float occlusionDepth = sampleDepthLinear(uvSamplePos, level);
+        highp float occlusionDepth = sampleDepthLinear(materialParams_depth, uvSamplePos, level, materialParams.depthParams);
         highp vec3 p = computeViewSpacePositionFromDepth(uvSamplePos, occlusionDepth);
 
         // now we have the sample, compute AO
@@ -212,7 +204,7 @@ fragment {
     void postProcess(inout PostProcessInputs postProcess) {
         highp vec2 uv = variable_vertex.xy; // interpolated to pixel center
 
-        highp float depth = sampleDepthLinear(uv, 0.0);
+        highp float depth = sampleDepthLinear(materialParams_depth, uv, 0.0, materialParams.depthParams);
         highp vec3 origin = computeViewSpacePositionFromDepth(uv, depth);
 
         vec3 normal = computeViewSpaceNormal(origin, uv);
@@ -229,15 +221,16 @@ fragment {
             computeAmbientOcclusionSAO(occlusion, i, ssDiskRadius, uv, origin, normal, tapPosition, noise);
             tapPosition = angleStep * tapPosition;
         }
+        occlusion = sqrt(occlusion * materialParams.intensity);
 
-        float ao = max(0.0, 1.0 - sqrt(occlusion * materialParams.intensity));
-        ao = pow(ao, materialParams.power);
+        // occlusion to visibility
+        float aoVisibility = pow(saturate(1.0 - occlusion), materialParams.power);
 
 #if defined(TARGET_MOBILE)
         // this line is needed to workaround what seems to be a bug on qualcomm hardware
-        ao += gl_FragCoord.x * MEDIUMP_FLT_MIN;
+        aoVisibility += gl_FragCoord.x * MEDIUMP_FLT_MIN;
 #endif
 
-        postProcess.color.rgb = vec3(ao, pack(origin.z));
+        postProcess.color.rgb = vec3(aoVisibility, pack(origin.z));
     }
 }
