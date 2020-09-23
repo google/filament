@@ -87,7 +87,7 @@ document.querySelector("body").addEventListener("click", (evt) => {
 // TODO: this function could be vastly simplified by changing the format of the shader selector.
 function selectNextShader(materialStep, shaderStep) {
     if (materialStep !== 0) {
-        const matids = Object.keys(gMaterialDatabase);
+        const matids = getDisplayedMaterials().map(m => m.matid).filter(m => m);
         const currentIndex = matids.indexOf(gCurrentMaterial);
         const nextIndex = currentIndex + materialStep;
         if (nextIndex >= 0 && nextIndex < matids.length) {
@@ -237,7 +237,7 @@ function fetchShader(selection, matinfo, onDone) {
     });
 }
 
-function renderMaterialList() {
+function getDisplayedMaterials() {
     const items = [];
 
     // Names need not be unique, so we display a numeric suffix for non-unique names.
@@ -288,7 +288,11 @@ function renderMaterialList() {
         if (a.name > b.name) return +1;
         return 0;
     });
+    return items;
+}
 
+function renderMaterialList() {
+    const items = getDisplayedMaterials();
     materialList.innerHTML = Mustache.render(matListTemplate.innerHTML, { "item": items } );
 }
 
@@ -396,11 +400,21 @@ function init() {
             minimap: { enabled: false }
         });
         gEditor.onDidChangeModelContent((e) => { onEdit(e.changes); });
+
         gEditor.addCommand(KeyMod.CtrlCmd | KeyCode.KEY_S, () => rebuildMaterial());
-        gEditor.addCommand(KeyMod.WinCtrl | KeyCode.UpArrow, () => selectNextShader(-1, 0));
-        gEditor.addCommand(KeyMod.WinCtrl | KeyCode.DownArrow, () => selectNextShader(+1, 0));
-        gEditor.addCommand(KeyMod.WinCtrl | KeyCode.LeftArrow, () => selectNextShader(0, -1));
-        gEditor.addCommand(KeyMod.WinCtrl | KeyCode.RightArrow, () => selectNextShader(0, +1));
+
+        gEditor._standaloneKeybindingService.addDynamicKeybinding("-cursorHome");
+        gEditor.addCommand(KeyMod.CtrlCmd | KeyCode.UpArrow, () => selectNextShader(-1, 0));
+
+        gEditor._standaloneKeybindingService.addDynamicKeybinding("-cursorEnd");
+        gEditor.addCommand(KeyMod.CtrlCmd | KeyCode.DownArrow, () => selectNextShader(+1, 0));
+
+        gEditor._standaloneKeybindingService.addDynamicKeybinding("-cursorLineStart");
+        gEditor.addCommand(KeyMod.CtrlCmd | KeyCode.LeftArrow, () => selectNextShader(0, -1));
+
+        gEditor._standaloneKeybindingService.addDynamicKeybinding("-cursorLineEnd");
+        gEditor.addCommand(KeyMod.CtrlCmd | KeyCode.RightArrow, () => selectNextShader(0, +1));
+
         fetchMaterials();
     });
 
