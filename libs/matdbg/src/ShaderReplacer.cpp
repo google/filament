@@ -299,12 +299,12 @@ void ShaderIndex::encodeShadersToIndices() {
         offset += sizeof(ShaderRecord::stringLength);
         offset += sizeof(uint32_t);
 
-        const char* s = record.decodedShaderText.c_str();
-        size_t length = record.decodedShaderText.length();
-        for (size_t cur = 0; s[cur] != '\0'; cur++) {
+        const char* const start = record.decodedShaderText.c_str();
+        const size_t length = record.decodedShaderText.length();
+        for (size_t cur = 0; cur < length; cur++) {
             size_t pos = cur;
             size_t len = 0;
-            while (s[cur] != '\n') {
+            while (start[cur] != '\n' && cur < length) {
                 cur++;
                 len++;
             }
@@ -312,7 +312,7 @@ void ShaderIndex::encodeShadersToIndices() {
                 slog.e << "Internal chunk encoding error." << io::endl;
                 return;
             }
-            string newLine(s, pos, len);
+            string newLine(start, pos, len);
             auto iter = table.find(newLine);
             if (iter == table.end()) {
                 size_t index = mStringLines.size();
