@@ -403,17 +403,10 @@ function init() {
 
         gEditor.addCommand(KeyMod.CtrlCmd | KeyCode.KEY_S, () => rebuildMaterial());
 
-        gEditor._standaloneKeybindingService.addDynamicKeybinding("-cursorHome");
-        gEditor.addCommand(KeyMod.CtrlCmd | KeyCode.UpArrow, () => selectNextShader(-1, 0));
-
-        gEditor._standaloneKeybindingService.addDynamicKeybinding("-cursorEnd");
-        gEditor.addCommand(KeyMod.CtrlCmd | KeyCode.DownArrow, () => selectNextShader(+1, 0));
-
-        gEditor._standaloneKeybindingService.addDynamicKeybinding("-cursorLineStart");
-        gEditor.addCommand(KeyMod.CtrlCmd | KeyCode.LeftArrow, () => selectNextShader(0, -1));
-
-        gEditor._standaloneKeybindingService.addDynamicKeybinding("-cursorLineEnd");
-        gEditor.addCommand(KeyMod.CtrlCmd | KeyCode.RightArrow, () => selectNextShader(0, +1));
+        gEditor.addCommand(KeyMod.Shift | KeyMod.WinCtrl | KeyCode.UpArrow, () => selectNextShader(-1, 0));
+        gEditor.addCommand(KeyMod.Shift | KeyMod.WinCtrl | KeyCode.DownArrow, () => selectNextShader(+1, 0));
+        gEditor.addCommand(KeyMod.Shift | KeyMod.WinCtrl | KeyCode.LeftArrow, () => selectNextShader(0, -1));
+        gEditor.addCommand(KeyMod.Shift | KeyMod.WinCtrl | KeyCode.RightArrow, () => selectNextShader(0, +1));
 
         fetchMaterials();
     });
