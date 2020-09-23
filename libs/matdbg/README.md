@@ -61,7 +61,7 @@ be lost after closing the web page.
 To save an edit, press **Cmd+S** (**Ctrl+S** on Linux/Windows) as an alternative to clicking
 `[rebuild]`.
 
-If the editor has focus, you can navigate between materials holding **Cmd** (or **Ctrl**) while
+If the editor has focus, you can navigate between materials by holding **Shift+Ctrl** while
 pressing the up or down arrow. Navigation between variants is similar, just use left / right instead
 of up / down.
 
