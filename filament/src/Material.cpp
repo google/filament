@@ -449,7 +449,8 @@ size_t FMaterial::getParameters(ParameterInfo* parameters, size_t count) const n
 // Material Debugger is attached. The only editable features of a material package are the shader
 // source strings, so here we trigger a rebuild of the HwProgram objects.
 void FMaterial::applyPendingEdits() noexcept {
-    slog.d << "Applying edits to " << mName.c_str() << io::endl;
+    const char* name = mName.c_str();
+    slog.d << "Applying edits to " << (name ? name : "(untitled)") << io::endl;
     destroyPrograms(mEngine);
     for (auto& program : mCachedPrograms) {
         program.clear();
