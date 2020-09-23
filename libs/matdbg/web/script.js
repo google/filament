@@ -15,6 +15,7 @@
  */
 
 const kMonacoBaseUrl = 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.17.1/min/';
+const kUntitledPlaceholder = "untitled";
 
 const materialList = document.getElementById("material-list");
 const materialDetail = document.getElementById("material-detail");
@@ -239,6 +240,19 @@ function fetchShader(selection, matinfo, onDone) {
 function renderMaterialList() {
     const items = [];
 
+    // Names need not be unique, so we display a numeric suffix for non-unique names.
+    const labels = new Set();
+    const duplicatedLabels = {};
+    for (const matid in gMaterialDatabase) {
+        const name = gMaterialDatabase[matid].name || kUntitledPlaceholder;
+        if (labels.has(name)) {
+            duplicatedLabels[name] = 0;
+        } else {
+            labels.add(name);
+        }
+    }
+
+    // Build a list of objects to pass into the template string.
     for (const matid in gMaterialDatabase) {
         const item =  Object.assign({}, gMaterialDatabase[matid]);
         item.classes = matid === gCurrentMaterial ? "current " : "";
@@ -247,13 +261,26 @@ function renderMaterialList() {
         }
         item.domain = item.shading.material_domain === "surface" ? "surface" : "postpro";
         item.is_material = true;
+
+        const name = item.name || kUntitledPlaceholder;
+        if (name in duplicatedLabels) {
+            const index = duplicatedLabels[name];
+            item.name = `${name} (${index})`;
+            duplicatedLabels[name] = index + 1;
+        } else {
+            item.name = name;
+        }
+
         items.push(item);
     }
 
-    const label = {"is_label": true, "name": "0"};
-    items.push(Object.assign({"label": "Surface materials", "domain": "surface"}, label));
-    items.push(Object.assign({"label": "PostProcess materials", "domain": "postpro"}, label));
+    // The template takes a flat list of items, so here we insert items for section headers using
+    // blank names, which causes them to sort to the top of their respective sections.
+    const sectionLabel = {"is_label": true, "name": ""};
+    items.push(Object.assign({"label": "Surface materials", "domain": "surface"}, sectionLabel));
+    items.push(Object.assign({"label": "PostProcess materials", "domain": "postpro"}, sectionLabel));
 
+    // Next, sort all materials and section headers.
     items.sort((a, b) => {
         if (a.domain > b.domain) return -1;
         if (a.domain < b.domain) return +1;
