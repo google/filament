@@ -325,11 +325,14 @@ function getShaderRecord(selection) {
 
 function renderShaderStatus() {
     const shader = getShaderRecord(gCurrentShader);
+    let statusString = "";
     if (shader && shader.modified) {
-        header.innerHTML = "matdbg &nbsp; <a class='rebuild'>[rebuild]</a>";
-    } else {
-        header.innerHTML = "matdbg";
+        statusString += " &nbsp; <a class='rebuild'>[rebuild]</a>";
     }
+    if (shader && !shader.active) {
+        statusString += " &nbsp; <span class='warning'> selected variant is inactive </span>";
+    }
+    header.innerHTML = "matdbg" + statusString;
 }
 
 function selectShader(selection) {
