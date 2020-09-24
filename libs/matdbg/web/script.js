@@ -242,9 +242,11 @@ function getDisplayedMaterials() {
     const items = [];
 
     // Names need not be unique, so we display a numeric suffix for non-unique names.
+    // To achieve stable ordering of anonymous materials, we first sort by matid.
     const labels = new Set();
+    const matids = Object.keys(gMaterialDatabase).sort();
     const duplicatedLabels = {};
-    for (const matid in gMaterialDatabase) {
+    for (const matid of matids) {
         const name = gMaterialDatabase[matid].name || kUntitledPlaceholder;
         if (labels.has(name)) {
             duplicatedLabels[name] = 0;
@@ -254,7 +256,7 @@ function getDisplayedMaterials() {
     }
 
     // Build a list of objects to pass into the template string.
-    for (const matid in gMaterialDatabase) {
+    for (const matid of matids) {
         const item =  Object.assign({}, gMaterialDatabase[matid]);
         item.classes = matid === gCurrentMaterial ? "current " : "";
         if (!item.active) {
