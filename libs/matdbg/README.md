@@ -187,7 +187,7 @@ direction. In our homegrown protocol, every WebSocket message starts with a comm
 
 Currently we support only one command. It travels from client to server.
 
-    EDIT [material id] [api index] [shader index] [entire shader source....]
+    EDIT [material id] [api index] [shader index] [shader length] [entire shader source....]
 
 The `material id` is 8 hex digits.
 
@@ -197,6 +197,8 @@ zero is invalid).
 The `shader index` is a zero-based index into the list of variants using the order that
 they appear in the package, where each API (GL / VK / Metal) has its own list.
 
+The `shader length` is the number of bytes required for UTF-8 encoding of the shader source string,
+not including the terminating null.
 
 ## Wish List
 

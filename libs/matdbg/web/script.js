@@ -53,8 +53,9 @@ function rebuildMaterial() {
     if ("glindex" in gCurrentShader)    { api = 1; index = gCurrentShader.glindex; }
     if ("vkindex" in gCurrentShader)    { api = 2; index = gCurrentShader.vkindex; }
     if ("metalindex" in gCurrentShader) { api = 3; index = gCurrentShader.metalindex; }
-    const text = getShaderRecord(gCurrentShader).text;
-    gSocket.send(`EDIT ${gCurrentShader.matid} ${api} ${index} ${text}`);
+    const editedText = getShaderRecord(gCurrentShader).text;
+    const byteCount = new Blob([editedText]).size;
+    gSocket.send(`EDIT ${gCurrentShader.matid} ${api} ${index} ${byteCount} ${editedText}`);
 }
 
 document.querySelector("body").addEventListener("click", (evt) => {
