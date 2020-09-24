@@ -339,10 +339,36 @@ public:
 
     bool handleData(CivetServer *server, struct mg_connection *conn, int bits, char *data,
             size_t size) override {
-        // TODO: Is there a better way to ignore the handshake message that occurs after startup?
-        if  (size < 8) {
+
+        // First check if this chunk is a continuation of a partial existing message.
+        if (mServer->mChunkedMessageRemaining > 0) {
+            const CString chunk(data, size);
+            const size_t pos = mServer->mChunkedMessage.size();
+
+            // Append the partial existing message.
+            mServer->mChunkedMessage = mServer->mChunkedMessage.insert(pos, chunk);
+
+            // Determine number of outstanding bytes.
+            if (size > mServer->mChunkedMessageRemaining) {
+                mServer->mChunkedMessageRemaining = 0;
+            } else {
+                mServer->mChunkedMessageRemaining -= size;
+            }
+
+            // Return early and wait for more chunks if some bytes are still outstanding.
+            if (mServer->mChunkedMessageRemaining > 0) {
+                return true;
+            }
+
+            data = mServer->mChunkedMessage.data();
+            size = mServer->mChunkedMessage.size();
+
+        // Ignore the handshake message that occurs after startup.
+        } else if (size < 8) {
             return true;
         }
+
+        mServer->mChunkedMessageRemaining = 0;
 
         // Every WebSocket message is prefixed with a command name followed by a space.
         //
@@ -356,7 +382,7 @@ public:
         //
         // Commands:
         //
-        //     EDIT [material id] [api index] [shader index] [entire shader source....]
+        //     EDIT [material id] [api index] [shader index] [shader length] [shader source....]
         //
 
         const static StaticString kEditCmd = "EDIT ";
@@ -367,14 +393,26 @@ public:
             uint32_t matid;
             int api;
             int shaderIndex;
-            str >> std::hex >> matid >> std::dec >> api >> shaderIndex;
-            const char* source = data + kEditCmdLength + str.tellg();
+            int shaderLength;
+            str >> std::hex >> matid >> std::dec >> api >> shaderIndex >> shaderLength;
+            const char* source = data + kEditCmdLength + str.tellg() + 1;
             const size_t remaining = size - kEditCmdLength - str.tellg();
-            mServer->handleEditCommand(matid, backend::Backend(api), shaderIndex, source, remaining);
+
+            // Return early and wait for more chunks if some bytes are still outstanding.
+            if (remaining < shaderLength + 1) {
+                mServer->mChunkedMessage = CString(data, size);
+                mServer->mChunkedMessageRemaining = shaderLength + 1 - remaining;
+                return true;
+            }
+
+            mServer->handleEditCommand(matid, backend::Backend(api), shaderIndex, source,
+                    shaderLength);
             return true;
         }
 
-        slog.e << "Bad WebSocket message." << io::endl;
+        const std::string firstFewChars(data, std::min(size, size_t(8)));
+        slog.e << "Bad WebSocket message. First few characters: "
+               << "[" << firstFewChars << "]" << io::endl;
         return false;
     }
 
