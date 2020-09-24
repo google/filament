@@ -36,7 +36,6 @@ int StaticString::compare(const StaticString& rhs) const noexcept {
 UTILS_NOINLINE
 CString::CString(const char* cstr, size_t length) {
     if (length && cstr) {
-        assert(length == strlen(cstr));
         Data* p = (Data*)malloc(sizeof(Data) + length + 1);
         p->length = (size_type)length;
         mCStr = (value_type*)(p + 1);

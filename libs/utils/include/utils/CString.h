@@ -202,8 +202,13 @@ public:
 
     CString() noexcept = default;
 
-    // cstr must be a null terminated string and length == strlen(cstr)
+    // Allocates memory and appends a null. This constructor can be used to hold arbitrary data
+    // inside the string (i.e. it can contain nulls or non-ASCII encodings).
     CString(const char* cstr, size_t length);
+
+    // Allocates memory and copies traditional C string content. Unlike the above constructor, this
+    // does not alllow embedded nulls. This is explicit because this operation is costly.
+    explicit CString(const char* cstr);
 
     template<size_t N>
     explicit CString(StringLiteral<N> const& other) noexcept // NOLINT(google-explicit-constructor)
@@ -218,10 +223,6 @@ public:
         this->swap(rhs);
     }
 
-
-    // this creates a CString from a null-terminated C string, this allocates memory and copies
-    // its content. this is explicit because this operation is costly.
-    explicit CString(const char* cstr);
 
     CString& operator=(const CString& rhs);
 
