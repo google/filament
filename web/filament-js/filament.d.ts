@@ -891,7 +891,10 @@ export enum Texture$Sampler {
     SAMPLER_EXTERNAL,
 }
 
-export enum Texture$Usage {
+// This enum is a bit different the others because it can be used in a bitfield.
+// It is a "const enum" which means TypeScript will simply create a constant for each member.
+// It does not contain the $ delimiter to avoid interference with the embind class.
+export const enum TextureUsage {
     DEFAULT,
     COLOR_ATTACHMENT,
     DEPTH_ATTACHMENT,

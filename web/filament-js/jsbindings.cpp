@@ -1264,8 +1264,12 @@ class_<TexBuilder>("Texture$Builder")
         return &builder->sampler(target); })
     .BUILDER_FUNCTION("format", TexBuilder, (TexBuilder* builder, Texture::InternalFormat fmt), {
         return &builder->format(fmt); })
-    .BUILDER_FUNCTION("usage", TexBuilder, (TexBuilder* builder, Texture::Usage usage), {
-        return &builder->usage(usage); });
+
+    // This takes a bitfield that can be composed by or'ing constants.
+    // - JS clients should use the value member, as in: "Texture$Usage.SAMPLEABLE.value".
+    // - TypeScript clients can simply say "TextureUsage.SAMPLEABLE" (note the lack of $)
+    .BUILDER_FUNCTION("usage", TexBuilder, (TexBuilder* builder, uint8_t usage), {
+        return &builder->usage((Texture::Usage)usage); });
 
 class_<IndirectLight>("IndirectLight")
     .class_function("Builder", (IblBuilder (*)()) [] { return IblBuilder(); })
