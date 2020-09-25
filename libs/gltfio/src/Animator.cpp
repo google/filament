@@ -224,33 +224,32 @@ void Animator::applyAnimation(size_t animationIndex, float time) const {
         // Find the first keyframe after the given time, or the keyframe that matches it exactly.
         TimeValues::const_iterator iter = times.lower_bound(time);
 
-        // Find the two values that we will interpolate between.
-        TimeValues::const_iterator prevIter;
-        TimeValues::const_iterator nextIter;
+        // Compute the interpolant (between 0 and 1) and determine the keyframe pair.
+        float t = 0.0f;
+        size_t nextIndex;
+        size_t prevIndex;
         if (iter == times.end()) {
-            continue;
+            nextIndex = times.size() - 1;
+            prevIndex = nextIndex;
         } else if (iter == times.begin()) {
-            prevIter = nextIter = iter;
+            nextIndex = 0;
+            prevIndex = 0;
         } else {
-            nextIter = iter;
-            prevIter = --iter;
+            TimeValues::const_iterator prev = iter; --prev;
+            nextIndex = iter->second;
+            prevIndex = prev->second;
+            const float nextTime = iter->first;
+            const float prevTime = prev->first;
+            float deltaTime = nextTime - prevTime;
+            assert(deltaTime >= 0);
+            if (deltaTime > 0) {
+                t = (time - prevTime) / deltaTime;
+            }
         }
-
-        // Compute the interpolant between 0 and 1.
-        float prevTime = prevIter->first;
-        float nextTime = nextIter->first;
-        float deltaTime = nextTime - prevTime;
-        if (deltaTime < 0) {
-            deltaTime += anim.duration;
-        }
-        float t = deltaTime == 0 ? 0.0f : ((time - prevTime) / deltaTime);
 
         // Perform the interpolation. This is a simple but inefficient implementation; Filament
         // stores transforms as mat4's but glTF animation is based on TRS (translation rotation
         // scale).
-        size_t prevIndex = prevIter->second;
-        size_t nextIndex = nextIter->second;
-
         mat4f xform = transformManager->getTransform(node);
         float3 scale;
         quatf rotation;
