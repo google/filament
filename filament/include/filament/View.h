@@ -239,6 +239,7 @@ public:
             float depthSlopeBias = 0.1f;    //!< depth slope bias (mitigate self shadowing)
             float scale = 1.0f;             //!< cast shadows scaling
             uint8_t sampleCount = 4;        //!< tracing sample count, between 1 and 255
+            uint8_t rayCount = 1;           //!< # of rays to trace, between 1 and 255
             bool enabled = false;           //!< enables or disables SSCT
         } ssct;
     };

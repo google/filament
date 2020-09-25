@@ -615,8 +615,12 @@ static void gui(filament::Engine* engine, filament::View*) {
                 ImGui::SliderInt("Quality", &quality, 0, 3);
                 ImGui::SliderInt("Low Pass", &lowpass, 0, 2);
                 ImGui::Checkbox("High quality upsampling", &upsampling);
+                params.ssaoOptions.upsampling = upsampling ? View::QualityLevel::HIGH : View::QualityLevel::LOW;
+                params.ssaoOptions.quality = (View::QualityLevel)quality;
+                params.ssaoOptions.lowPassFilter = (View::QualityLevel)lowpass;
                 if (ImGui::CollapsingHeader("Dominant Light Shadows")) {
                     int sampleCount = params.ssaoOptions.ssct.sampleCount;
+                    int rayCount = params.ssaoOptions.ssct.rayCount;
                     ImGui::Checkbox("Enabled##dls", &params.ssaoOptions.ssct.enabled);
                     ImGui::SliderFloat("Cone angle", &params.ssaoOptions.ssct.lightConeRad, 0.0f, (float)M_PI_2);
                     ImGui::SliderFloat("Start dist", &params.ssaoOptions.ssct.startTraceDistance, 0.0f, 1.0f);
@@ -626,12 +630,11 @@ static void gui(filament::Engine* engine, filament::View*) {
                     ImGui::SliderFloat("Depth slope bias", &params.ssaoOptions.ssct.depthSlopeBias, 0.0f, 1.0f);
                     ImGui::SliderFloat("Scale", &params.ssaoOptions.ssct.scale, 0.0f, 10.0f);
                     ImGui::SliderInt("Sample Count", &sampleCount, 1, 32);
+                    ImGui::SliderInt("Ray Count", &rayCount, 1, 8);
                     ImGuiExt::DirectionWidget("Direction##dls", params.ssaoOptions.ssct.lightDirection.v);
                     params.ssaoOptions.ssct.sampleCount = sampleCount;
+                    params.ssaoOptions.ssct.rayCount = rayCount;
                 }
-                params.ssaoOptions.upsampling = upsampling ? View::QualityLevel::HIGH : View::QualityLevel::LOW;
-                params.ssaoOptions.quality = (View::QualityLevel)quality;
-                params.ssaoOptions.lowPassFilter = (View::QualityLevel)lowpass;
             }
             ImGui::Unindent();
         }
