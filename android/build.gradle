@@ -27,15 +27,17 @@
 //   - Close and release staging repo on Nexus with ./gradlew closeAndReleaseRepository
 //
 // The following is needed in ~/gradle/gradle.properties:
-//     SONATYPE_NEXUS_USERNAME=user
-//     SONATYPE_NEXUS_PASSWORD=password
+//
+//     SONATYPE_NEXUS_USERNAME=nexus_user
+//     SONATYPE_NEXUS_PASSWORD=nexus_password
+//
+//     nexusUsername=nexus_user
+//     nexusPassword=nexus_password
 //
 //     signing.keyId=pgp_key_id
 //     signing.password=pgp_key_password
 //     signing.secretKeyRingFile=/Users/user/.gnupg/maven_signing.key
 //
-//     nexusUsername=nexus_user
-//     nexusPassword=nexus_password
 
 buildscript {
     def filamentPath = file("../out/android-release/filament").absolutePath
@@ -64,7 +66,7 @@ buildscript {
         'compileSdk': 29,
         'kotlin': '1.4.10',
         'buildTools': '30.0.1',
-        'ndk': '21.3.6528147',
+        'ndk': '21.3.6528147'
     ]
 
     ext.deps = [
