@@ -196,7 +196,7 @@ Java_com_google_android_filament_View_nGetAmbientOcclusion(JNIEnv*, jclass, jlon
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_View_nSetAmbientOcclusionOptions(JNIEnv*, jclass,
     jlong nativeView, jfloat radius, jfloat bias, jfloat power, jfloat resolution, jfloat intensity,
-    jint quality, jint upsampling, jboolean enabled, jfloat minHorizonAngleRad) {
+    jint quality, jint lowPassFilter, jint upsampling, jboolean enabled, jfloat minHorizonAngleRad) {
     View* view = (View*) nativeView;
     View::AmbientOcclusionOptions options = {
             .radius = radius,
@@ -205,6 +205,7 @@ Java_com_google_android_filament_View_nSetAmbientOcclusionOptions(JNIEnv*, jclas
             .resolution = resolution,
             .intensity = intensity,
             .quality = (View::QualityLevel)quality,
+            .lowPassFilter = (View::QualityLevel)lowPassFilter,
             .upsampling = (View::QualityLevel)upsampling,
             .enabled = (bool)enabled,
             .minHorizonAngleRad = minHorizonAngleRad

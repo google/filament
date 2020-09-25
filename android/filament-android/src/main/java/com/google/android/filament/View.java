@@ -177,6 +177,14 @@ public class View {
         public QualityLevel quality = QualityLevel.LOW;
 
         /**
+         * The lowPassFilter setting controls the quality of the low pass filter applied to
+         * AO estimation. The default is QualityLevel.MEDIUM which is sufficient for most mobile
+         * applications. QualityLevel.LOW disables the filter entirely.
+         */
+        @NonNull
+        public QualityLevel lowPassFilter = QualityLevel.MEDIUM;
+
+        /**
          * The upsampling setting controls the quality of the ambient occlusion buffer upsampling.
          * The default is QualityLevel.LOW and uses bilinear filtering, a value of
          * QualityLevel.HIGH or more enables a better bilateral filter.
@@ -1109,7 +1117,7 @@ public class View {
     public void setAmbientOcclusionOptions(@NonNull AmbientOcclusionOptions options) {
         mAmbientOcclusionOptions = options;
         nSetAmbientOcclusionOptions(getNativeObject(), options.radius, options.bias, options.power,
-                options.resolution, options.intensity, options.quality.ordinal(), options.upsampling.ordinal(),
+                options.resolution, options.intensity, options.quality.ordinal(), options.lowPassFilter.ordinal(), options.upsampling.ordinal(),
                 options.enabled, options.minHorizonAngleRad);
     }
 
@@ -1274,7 +1282,7 @@ public class View {
     private static native boolean nIsFrontFaceWindingInverted(long nativeView);
     private static native void nSetAmbientOcclusion(long nativeView, int ordinal);
     private static native int nGetAmbientOcclusion(long nativeView);
-    private static native void nSetAmbientOcclusionOptions(long nativeView, float radius, float bias, float power, float resolution, float intensity, int quality, int upsampling, boolean enabled, float minHorizonAngleRad);
+    private static native void nSetAmbientOcclusionOptions(long nativeView, float radius, float bias, float power, float resolution, float intensity, int quality, int lowPassFilter, int upsampling, boolean enabled, float minHorizonAngleRad);
     private static native void nSetBloomOptions(long nativeView, long dirtNativeObject, float dirtStrength, float strength, int resolution, float anamorphism, int levels, int blendMode, boolean threshold, boolean enabled, float highlight);
     private static native void nSetFogOptions(long nativeView, float distance, float maximumOpacity, float height, float heightFalloff, float v, float v1, float v2, float density, float inScatteringStart, float inScatteringSize, boolean fogColorFromIbl, boolean enabled);
     private static native void nSetBlendMode(long nativeView, int blendMode);

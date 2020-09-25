@@ -391,32 +391,41 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
     switch (options.quality) {
         default:
         case View::QualityLevel::LOW:
-            config.kernelSize = 11;
-            config.standardDeviation = 4.0f;
-            config.scale = 2.0f;
             sampleCount = 7.0f;
             spiralTurns = 5.0f;
+            break;
+        case View::QualityLevel::MEDIUM:
+            sampleCount = 11.0f;
+            spiralTurns = 9.0f;
+            break;
+        case View::QualityLevel::HIGH:
+            sampleCount = 16.0f;
+            spiralTurns = 10.0f;
+            break;
+        case View::QualityLevel::ULTRA:
+            sampleCount = 32.0f;
+            spiralTurns = 14.0f;
+            break;
+    }
+
+    switch (options.lowPassFilter) {
+        default:
+        case View::QualityLevel::LOW:
+            // no filtering, values don't matter
+            config.kernelSize = 1;
+            config.standardDeviation = 1.0f;
+            config.scale = 1.0f;
             break;
         case View::QualityLevel::MEDIUM:
             config.kernelSize = 11;
             config.standardDeviation = 4.0f;
             config.scale = 2.0f;
-            sampleCount = 11.0f;
-            spiralTurns = 9.0f;
             break;
         case View::QualityLevel::HIGH:
+        case View::QualityLevel::ULTRA:
             config.kernelSize = 23;
             config.standardDeviation = 8.0f;
             config.scale = 1.0f;
-            sampleCount = 16.0f;
-            spiralTurns = 10.0f;
-            break;
-        case View::QualityLevel::ULTRA:
-            config.kernelSize = 23;
-            config.standardDeviation = 8.0;
-            config.scale = 1.0f;
-            sampleCount = 32.0f;
-            spiralTurns = 14.0f;
             break;
     }
 
@@ -438,7 +447,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                 data.ssao = builder.createTexture("SSAO Buffer", {
                         .width = desc.width,
                         .height = desc.height,
-                        .format = TextureFormat::RGB8
+                        .format = (options.lowPassFilter == View::QualityLevel::LOW) ? TextureFormat::R8 : TextureFormat::RGB8
                 });
 
                 // Here we use the depth test to skip pixels at infinity (i.e. the skybox)
@@ -514,16 +523,18 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
      * Final separable bilateral blur pass
      */
 
-    const bool highQualitySampling =
-            options.upsampling >= View::QualityLevel::HIGH && options.resolution < 1.0f;
+    if (options.lowPassFilter != View::QualityLevel::LOW) {
+        const bool highQualitySampling =
+                options.upsampling >= View::QualityLevel::HIGH && options.resolution < 1.0f;
 
-    ssao = bilateralBlurPass(fg, ssao, { config.scale, 0 }, cameraInfo.zf,
-            TextureFormat::RGB8,
-            config);
+        ssao = bilateralBlurPass(fg, ssao, { config.scale, 0 }, cameraInfo.zf,
+                TextureFormat::RGB8,
+                config);
 
-    ssao = bilateralBlurPass(fg, ssao, { 0, config.scale }, cameraInfo.zf,
-            highQualitySampling ? TextureFormat::RGB8 : TextureFormat::R8,
-            config);
+        ssao = bilateralBlurPass(fg, ssao, { 0, config.scale }, cameraInfo.zf,
+                highQualitySampling ? TextureFormat::RGB8 : TextureFormat::R8,
+                config);
+    }
 
     fg.getBlackboard().put("ssao", ssao);
     return ssao;

@@ -475,12 +475,15 @@ void SimpleViewer::updateUserInterface() {
         ImGui::Checkbox("Bloom", &mBloomOptions.enabled);
         if (ImGui::CollapsingHeader("SSAO Options")) {
             int quality = (int) mSSAOOptions.quality;
+            int lowpass = (int) mSSAOOptions.lowPassFilter;
             bool upsampling = mSSAOOptions.upsampling != View::QualityLevel::LOW;
             ImGui::SliderInt("Quality", &quality, 0, 3);
+            ImGui::SliderInt("Low Pass", &lowpass, 0, 2);
             ImGui::Checkbox("High quality upsampling", &upsampling);
             ImGui::SliderFloat("Min Horizon angle", &mSSAOOptions.minHorizonAngleRad, 0.0f, (float)M_PI_4);
             mSSAOOptions.upsampling = upsampling ? View::QualityLevel::HIGH : View::QualityLevel::LOW;
             mSSAOOptions.quality = (View::QualityLevel) quality;
+            mSSAOOptions.lowPassFilter = (View::QualityLevel) lowpass;
         }
         ImGui::Unindent();
     }
