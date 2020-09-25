@@ -198,18 +198,40 @@ Java_com_google_android_filament_View_nSetAmbientOcclusionOptions(JNIEnv*, jclas
     jlong nativeView, jfloat radius, jfloat bias, jfloat power, jfloat resolution, jfloat intensity,
     jint quality, jint lowPassFilter, jint upsampling, jboolean enabled, jfloat minHorizonAngleRad) {
     View* view = (View*) nativeView;
-    View::AmbientOcclusionOptions options = {
-            .radius = radius,
-            .power = power,
-            .bias = bias,
-            .resolution = resolution,
-            .intensity = intensity,
-            .quality = (View::QualityLevel)quality,
-            .lowPassFilter = (View::QualityLevel)lowPassFilter,
-            .upsampling = (View::QualityLevel)upsampling,
-            .enabled = (bool)enabled,
-            .minHorizonAngleRad = minHorizonAngleRad
-    };
+    View::AmbientOcclusionOptions options = view->getAmbientOcclusionOptions();
+    options.radius = radius;
+    options.power = power;
+    options.bias = bias;
+    options.resolution = resolution;
+    options.intensity = intensity;
+    options.quality = (View::QualityLevel)quality;
+    options.lowPassFilter = (View::QualityLevel)lowPassFilter;
+    options.upsampling = (View::QualityLevel)upsampling;
+    options.enabled = (bool)enabled;
+    options.minHorizonAngleRad = minHorizonAngleRad;
+    view->setAmbientOcclusionOptions(options);
+}
+
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_View_nSetSSCTOptions(JNIEnv *, jclass, jlong nativeView,
+        jfloat ssctLightConeRad, jfloat ssctStartTraceDistance, jfloat ssctContactDistanceMax,
+        jfloat ssctIntensity, jfloat ssctLightDirX, jfloat ssctLightDirY, jfloat ssctLightDirZ,
+        jfloat ssctDepthBias, jfloat ssctDepthSlopeBias, jfloat ssctScale, jint ssctSampleCount,
+        jint ssctRayCount, jboolean ssctEnabled) {
+    View* view = (View*) nativeView;
+    View::AmbientOcclusionOptions options = view->getAmbientOcclusionOptions();
+    options.ssct.lightConeRad = ssctLightConeRad;
+    options.ssct.startTraceDistance = ssctStartTraceDistance;
+    options.ssct.contactDistanceMax = ssctContactDistanceMax;
+    options.ssct.intensity = ssctIntensity;
+    options.ssct.lightDirection = math::float3{ ssctLightDirX, ssctLightDirY, ssctLightDirZ };
+    options.ssct.depthBias = ssctDepthBias;
+    options.ssct.depthSlopeBias = ssctDepthSlopeBias;
+    options.ssct.scale = ssctScale;
+    options.ssct.sampleCount = (uint8_t)ssctSampleCount;
+    options.ssct.rayCount = (uint8_t)ssctRayCount;
+    options.ssct.enabled = (bool)ssctEnabled;
     view->setAmbientOcclusionOptions(options);
 }
 
