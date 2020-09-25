@@ -1153,7 +1153,7 @@ void VulkanDriver::commit(Handle<HwSwapChain> sch) {
 
     // Before swapping, transition the current swap chain image to the PRESENT layout. This cannot
     // be done as part of the render pass because it does not know if it is last pass in the frame.
-    transitionSwapChain(mContext);
+    makeSwapChainPresentable(mContext);
 
     // Finalize the command buffer and set the cmdbuffer pointer to null.
     VkResult result = vkEndCommandBuffer(mContext.currentCommands->cmdbuffer);
