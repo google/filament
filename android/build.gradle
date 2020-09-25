@@ -22,6 +22,21 @@
 // Example:
 //     ./gradlew -Pfilament_dist_dir=../dist-android-release assembleRelease -Pfilament_abis=x86
 
+// Publishing to Maven Central:
+//   - Build and upload artifacts with ./gradlew publish
+//   - Close and release staging repo on Nexus with ./gradlew closeAndReleaseRepository
+//
+// The following is needed in ~/gradle/gradle.properties:
+//     SONATYPE_NEXUS_USERNAME=user
+//     SONATYPE_NEXUS_PASSWORD=password
+//
+//     signing.keyId=pgp_key_id
+//     signing.password=pgp_key_password
+//     signing.secretKeyRingFile=/Users/user/.gnupg/maven_signing.key
+//
+//     nexusUsername=nexus_user
+//     nexusPassword=nexus_password
+
 buildscript {
     def filamentPath = file("../out/android-release/filament").absolutePath
     if (project.hasProperty("filament_dist_dir")) {
@@ -47,9 +62,9 @@ buildscript {
         'minSdk': 19,
         'targetSdk': 29,
         'compileSdk': 29,
-        'kotlin': '1.3.72',
+        'kotlin': '1.4.10',
         'buildTools': '30.0.1',
-        'ndk': '21.3.6528147'
+        'ndk': '21.3.6528147',
     ]
 
     ext.deps = [
@@ -101,6 +116,17 @@ buildscript {
         google()
         jcenter()
     }
+}
+
+plugins {
+    id 'io.codearte.nexus-staging' version '0.22.0'
+}
+
+// Nexus Staging configuration
+// See https://github.com/Codearte/gradle-nexus-staging-plugin/
+nexusStaging {
+    packageGroup = 'com.google.android'
+    stagingProfileId = '9a75a224a4f17b'
 }
 
 subprojects {
