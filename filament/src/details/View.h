@@ -304,6 +304,7 @@ public:
         options.ssct.depthSlopeBias = std::max(0.0f, options.ssct.depthSlopeBias);
         options.ssct.scale = std::max(0.0f, options.ssct.scale);
         options.ssct.sampleCount = math::clamp((unsigned)options.ssct.sampleCount, 1u, 255u);
+        options.ssct.rayCount = math::clamp((unsigned)options.ssct.rayCount, 1u, 255u);
         mAmbientOcclusionOptions = options;
     }
 

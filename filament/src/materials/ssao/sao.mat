@@ -96,6 +96,10 @@ material {
         {
             type : uint,
             name : ssctSampleCount
+        },
+        {
+            type : float2,
+            name : ssctRayCount
         }
     ],
     variables : [
@@ -261,10 +265,13 @@ fragment {
         cone.depthBias = materialParams.ssctDepthBias.x;
         cone.slopeScaledDepthBias = materialParams.ssctDepthBias.y;
         cone.sampleCount = materialParams.ssctSampleCount;
-        cone.jitterOffset.x = random(gl_FragCoord.xy) * 2.0 - 1.0;      // direction
-        cone.jitterOffset.y = random(gl_FragCoord.xy * vec2(11, 3));    // step
-        float occlusion = coneTraceOcclusion(cone, materialParams_depth);
-        return occlusion;
+        float occlusion = 0.0;
+        for (float i = 1.0; i <= materialParams.ssctRayCount.x; i += 1.0) {
+            cone.jitterOffset.x = random(gl_FragCoord.xy * i) * 2.0 - 1.0;      // direction
+            cone.jitterOffset.y = random(gl_FragCoord.xy * i * vec2(11, 3));    // step
+            occlusion += coneTraceOcclusion(cone, materialParams_depth);
+        }
+        return occlusion * materialParams.ssctRayCount.y;
     }
 
     void postProcess(inout PostProcessInputs postProcess) {

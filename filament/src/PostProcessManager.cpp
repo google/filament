@@ -534,6 +534,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                         float2{ options.ssct.depthBias, options.ssct.depthSlopeBias });
                 mi->setParameter("ssctInvZoom", options.ssct.scale);
                 mi->setParameter("ssctSampleCount", uint32_t(options.ssct.sampleCount));
+                mi->setParameter("ssctRayCount",
+                        float2{ options.ssct.rayCount, 1.0 / options.ssct.rayCount });
 
                 mi->commit(driver);
                 mi->use(driver);
