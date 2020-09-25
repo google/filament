@@ -57,7 +57,7 @@ float coneTraceOcclusion(in ConeTraceSetup setup, const sampler2D depthTexture) 
 
     // init trace distance and sample radius
     highp float invLinearDepth = 1.0 / -setup.vsStartPos.z;
-    float ssTracedDistance = max(setup.coneTraceParams.z, minTraceDistance) * invLinearDepth;
+    highp float ssTracedDistance = max(setup.coneTraceParams.z, minTraceDistance) * invLinearDepth;
 
     float ssSampleRadius = setup.coneTraceParams.y * ssTracedDistance;
     float ssEndRadius    = setup.coneTraceParams.y * ssConeLength;
@@ -81,11 +81,11 @@ float coneTraceOcclusion(in ConeTraceSetup setup, const sampler2D depthTexture) 
 
         // sample depth buffer
         highp vec2 ssSamplePos = perpConeDir * ssJitteredSampleRadius + ssConeDirection * ssJitteredTracedDistance + ssStartPos;
-        highp float vsSampleDepthLinear = -sampleDepthLinear(depthTexture, ssSamplePos, 0.0, setup.depthParams);
+        float vsSampleDepthLinear = -sampleDepthLinear(depthTexture, ssSamplePos, 0.0, setup.depthParams);
 
         // calculate depth of cone center
         float ratio = ssJitteredTracedDistance * ssInvConeLength;
-        highp float vsConeAxisDepth = 1.0 / mix(ssStartInvW, ssEndInvW, ratio);
+        float vsConeAxisDepth = 1.0 / mix(ssStartInvW, ssEndInvW, ratio);
 
         // calculate depth range of cone slice
         float vsConeRadius = (ratio * vsEndRadius) * vsConeAxisDepth;
