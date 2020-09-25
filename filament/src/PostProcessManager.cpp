@@ -526,10 +526,17 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                         1.0f / options.ssct.contactDistanceMax
                 });
 
+                // light direction in view space
+                // (note: this is actually equivalent to using the camera view matrix -- before the
+                // world matrix is accounted for)
+                auto m = cameraInfo.view * cameraInfo.worldOrigin;
+                const float3 l = normalize(
+                        mat3f::getTransformForNormals(m.upperLeft())
+                                * options.ssct.lightDirection);
+
                 mi->setParameter("ssctIntensity",
                         options.ssct.intensity);
-                mi->setParameter("ssctVsLightDirection",
-                        -(cameraInfo.view * options.ssct.lightDirection).xyz);
+                mi->setParameter("ssctVsLightDirection", -l);
                 mi->setParameter("ssctDepthBias",
                         float2{ options.ssct.depthBias, options.ssct.depthSlopeBias });
                 mi->setParameter("ssctInvZoom", options.ssct.scale);
