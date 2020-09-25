@@ -221,7 +221,8 @@ public:
         float resolution = 0.5f;//!< How each dimension of the AO buffer is scaled. Must be either 0.5 or 1.0.
         float intensity = 1.0f; //!< Strength of the Ambient Occlusion effect.
         QualityLevel quality = QualityLevel::LOW; //!< affects # of samples used for AO.
-        QualityLevel upsampling = QualityLevel::LOW; //!< affects AO buffer upsampling quality.
+        QualityLevel lowPassFilter = QualityLevel::MEDIUM; //!< affects AO smoothness
+        QualityLevel upsampling = QualityLevel::LOW; //!< affects AO buffer upsampling quality
         bool enabled = false;    //!< enables or disables screen-space ambient occlusion
         float minHorizonAngleRad = 0.0f;  //!< min angle in radian to consider
     };

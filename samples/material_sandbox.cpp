@@ -603,6 +603,7 @@ static void gui(filament::Engine* engine, filament::View*) {
             ImGui::SliderAngle("Rotation", &params.iblRotation);
             if (ImGui::CollapsingHeader("SSAO")) {
                 int quality = (int)params.ssaoOptions.quality;
+                int lowpass = (int)params.ssaoOptions.lowPassFilter;
                 bool upsampling = params.ssaoOptions.upsampling != View::QualityLevel::LOW;
                 DebugRegistry& debug = engine->getDebugRegistry();
                 ImGui::Checkbox("Enabled##ssao", &params.ssaoOptions.enabled);
@@ -612,9 +613,11 @@ static void gui(filament::Engine* engine, filament::View*) {
                 ImGui::SliderFloat("Intensity", &params.ssaoOptions.intensity, 0.0f, 4.0f);
                 ImGui::SliderFloat("Power", &params.ssaoOptions.power, 0.0f, 4.0f);
                 ImGui::SliderInt("Quality", &quality, 0, 3);
+                ImGui::SliderInt("Low Pass", &lowpass, 0, 2);
                 ImGui::Checkbox("High quality upsampling", &upsampling);
                 params.ssaoOptions.upsampling = upsampling ? View::QualityLevel::HIGH : View::QualityLevel::LOW;
                 params.ssaoOptions.quality = (View::QualityLevel)quality;
+                params.ssaoOptions.lowPassFilter = (View::QualityLevel)lowpass;
             }
             ImGui::Unindent();
         }
