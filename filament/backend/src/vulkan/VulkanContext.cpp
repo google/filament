@@ -491,12 +491,22 @@ void destroySwapChain(VulkanContext& context, VulkanSurfaceContext& surfaceConte
     vkFreeMemory(context.device, surfaceContext.depth.memory, VKALLOC);
 }
 
-void transitionSwapChain(VulkanContext& context) {
+// makeSwapChainPresentable()
+//
+// Near the end of the frame, we transition the swap chain to VK_IMAGE_LAYOUT_PRESENT_SRC_KHR using
+// an image barrier rather than a render pass because each render pass does not know whether or not
+// it is the last pass in the frame. (This seems to be an atypical way of achieving the transition,
+// but I see nothing wrong with it.)
+//
+// Note however that we *do* use a render pass to transition the swap chain back to
+// VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL on the subsequent frame that writes to it.
+void makeSwapChainPresentable(VulkanContext& context) {
     VulkanSurfaceContext& surface = *context.currentSurface;
     SwapContext& swapContext = surface.swapContexts[surface.currentSwapIndex];
     VkImageMemoryBarrier barrier {
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-        .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+        .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+        .dstAccessMask = 0,
         .newLayout = swapContext.attachment.layout,
         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
@@ -507,8 +517,9 @@ void transitionSwapChain(VulkanContext& context) {
             .layerCount = 1,
         },
     };
-    vkCmdPipelineBarrier(context.currentCommands->cmdbuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+    vkCmdPipelineBarrier(context.currentCommands->cmdbuffer,
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+            VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 }
 
 uint32_t selectMemoryType(VulkanContext& context, uint32_t flags, VkFlags reqs) {
@@ -614,7 +625,7 @@ void flushCommandBuffer(VulkanContext& context) {
     VulkanSurfaceContext& surface = *context.currentSurface;
     SwapContext& swapContext = surface.swapContexts[surface.currentSwapIndex];
 
-    transitionSwapChain(context);
+    makeSwapChainPresentable(context);
 
     // Submit the command buffer.
     VkResult error = vkEndCommandBuffer(context.currentCommands->cmdbuffer);
