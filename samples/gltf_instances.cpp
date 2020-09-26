@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-#define GLTFIO_SIMPLEVIEWER_IMPLEMENTATION
-
 #include <filamentapp/Config.h>
 #include <filamentapp/FilamentApp.h>
 #include <filamentapp/IBL.h>
@@ -23,12 +21,14 @@
 #include <filament/Engine.h>
 #include <filament/Scene.h>
 #include <filament/Skybox.h>
+#include <filament/TransformManager.h>
 #include <filament/View.h>
 
 #include <gltfio/AssetLoader.h>
 #include <gltfio/FilamentAsset.h>
 #include <gltfio/ResourceLoader.h>
-#include <gltfio/SimpleViewer.h>
+
+#include <viewer/SimpleViewer.h>
 
 #include <camutils/Manipulator.h>
 
@@ -46,6 +46,8 @@
 
 using namespace filament;
 using namespace filament::math;
+using namespace filament::viewer;
+
 using namespace gltfio;
 using namespace utils;
 

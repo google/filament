@@ -12,7 +12,6 @@ set(PUBLIC_HDRS
         include/gltfio/AssetLoader.h
         include/gltfio/MaterialProvider.h
         include/gltfio/ResourceLoader.h
-        include/gltfio/SimpleViewer.h
         include/gltfio/FilamentAsset.h
         include/gltfio/FilamentInstance.h
 )
