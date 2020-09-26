@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 The Android Open Source Project
+ * Copyright (C) 2020 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,209 +14,7 @@
  * limitations under the License.
  */
 
-#ifndef GLTFIO_SIMPLEVIEWER_H
-#define GLTFIO_SIMPLEVIEWER_H
-
-// NOTE: This is an optional header-only utility to avoid a hard dependency on imgui. To use
-// SimpleViewer, please add:
-//
-//      #define GLTFIO_SIMPLEVIEWER_IMPLEMENTATION
-//
-// to one of your CPP source files to create the implementation. See gltf_viewer.cpp for an example.
-
-#include <filament/Box.h>
-#include <filament/DebugRegistry.h>
-#include <filament/Engine.h>
-#include <filament/IndirectLight.h>
-#include <filament/Scene.h>
-#include <filament/View.h>
-
-#include <gltfio/Animator.h>
-#include <gltfio/FilamentAsset.h>
-
-#include <utils/Entity.h>
-
-#include <math/vec3.h>
-
-namespace gltfio {
-
-/**
- * \class SimpleViewer SimpleViewer.h gltfio/SimpleViewer.h
- * \brief Manages the state for a simple glTF viewer with imgui controls and a tree view.
- *
- * This is a utility that can be used across multiple platforms, including web.
- *
- * \note If you don't need ImGui controls, there is no need to use this class, just use AssetLoader
- * instead.
- */
-class SimpleViewer {
-public:
-
-    static constexpr int DEFAULT_SIDEBAR_WIDTH = 350;
-
-    /**
-     * Constructs a SimpleViewer that has a fixed association with the given Filament objects.
-     *
-     * Upon construction, the simple viewer may create some additional Filament objects (such as
-     * light sources) that it owns.
-     */
-    SimpleViewer(filament::Engine* engine, filament::Scene* scene, filament::View* view,
-            int sidebarWidth = DEFAULT_SIDEBAR_WIDTH);
-
-    /**
-     * Destroys the SimpleViewer and any Filament entities that it owns.
-     */
-    ~SimpleViewer();
-
-    /**
-     * Adds the asset's ready-to-render entities into the scene and optionally transforms the root
-     * node to make it fit into a unit cube at the origin.
-     *
-     * The viewer does not claim ownership over the asset or its entities. Clients should use
-     * AssetLoader and ResourceLoader to load an asset before passing it in.
-     *
-     * @param asset The asset to view.
-     * @param scale Adds a transform to the root to fit the asset into a unit cube at the origin.
-     * @param instanceToAnimate Optional instance from which to get the animator.
-     */
-    void populateScene(FilamentAsset* asset, bool scale,
-            FilamentInstance* instanceToAnimate = nullptr);
-
-    /**
-     * Removes the current asset from the viewer.
-     *
-     * This removes all the asset entities from the Scene, but does not destroy them.
-     */
-    void removeAsset();
-
-    /**
-     * Sets or changes the current scene's IBL to allow the UI manipulate it.
-     */
-    void setIndirectLight(filament::IndirectLight* ibl, filament::math::float3 const* sh3);
-
-    /**
-     * Applies the currently-selected glTF animation to the transformation hierarchy and updates
-     * the bone matrices on all renderables.
-     */
-    void applyAnimation(double currentTime);
-
-    /**
-     * Constructs ImGui controls for the current frame and responds to everything that the user has
-     * changed since the previous frame.
-     *
-     * If desired this can be used in conjunction with the filagui library, which allows clients to
-     * render ImGui controls with Filament.
-     */
-    void updateUserInterface();
-
-    /**
-     * Retrieves the current width of the ImGui "window" which we are using as a sidebar.
-     * Clients can monitor this value to adjust the size of the view.
-     */
-    int getSidebarWidth() const { return mSidebarWidth; }
-
-    /**
-     * Allows clients to inject custom UI.
-     */
-    void setUiCallback(std::function<void()> callback) { mCustomUI = callback; }
-
-    /**
-     * Draws the bounding box of each renderable.
-     * Defaults to false.
-     */
-    void enableWireframe(bool b) { mEnableWireframe = b; }
-
-    /**
-     * Enables a built-in light source (useful for creating shadows).
-     * Defaults to true.
-     */
-    void enableSunlight(bool b) { mEnableSunlight = b; }
-
-    /**
-     * Enables dithering on the view.
-     * Defaults to true.
-     */
-    void enableDithering(bool b) { mEnableDithering = b; }
-
-    /**
-     * Enables FXAA antialiasing in the post-process pipeline.
-     * Defaults to true.
-     */
-    void enableFxaa(bool b) { mEnableFxaa = b; }
-
-    /**
-     * Enables hardware-based MSAA antialiasing.
-     * Defaults to true.
-     */
-    void enableMsaa(bool b) { mEnableMsaa = b; }
-
-    /**
-     * Enables screen-space ambient occlusion in the post-process pipeline.
-     * Defaults to true.
-     */
-    void enableSSAO(bool b) { mSSAOOptions.enabled = b; }
-
-    /**
-     * Enables Bloom.
-     * Defaults to true.
-     */
-    void enableBloom(bool bloom) {
-        mBloomOptions.enabled = bloom;
-    }
-
-    /**
-     * Adjusts the intensity of the IBL.
-     * See also filament::IndirectLight::setIntensity().
-     * Defaults to 30000.0.
-     */
-    void setIBLIntensity(float brightness) { mIblIntensity = brightness; }
-
-private:
-    void updateIndirectLight();
-
-    // Immutable properties set from the constructor.
-    filament::Engine* const mEngine;
-    filament::Scene* const mScene;
-    filament::View* const mView;
-    const utils::Entity mSunlight;
-
-    // Properties that can be changed from the application.
-    FilamentAsset* mAsset = nullptr;
-    Animator* mAnimator = nullptr;
-    filament::IndirectLight* mIndirectLight = nullptr;
-    std::function<void()> mCustomUI;
-
-    // Properties that can be changed from the UI.
-    int mCurrentAnimation = 1;
-    bool mResetAnimation = true;
-    float mIblIntensity = 30000.0f;
-    float mIblRotation = 0.0f;
-    float mSunlightIntensity = 100000.0f; // <-- This value is overridden when loading an IBL.
-    filament::math::float3 mSunlightColor = filament::Color::toLinear<filament::ACCURATE>({ 0.98, 0.92, 0.89});
-    filament::math::float3 mSunlightDirection = {0.6, -1.0, -0.8};
-    bool mEnableWireframe = false;
-    bool mEnableSunlight = true;
-    bool mEnableVsm = false;
-    bool mEnableShadows = true;
-    int mShadowCascades = 1;
-    bool mEnableContactShadows = false;
-    std::array<float, 3> mSplitPositions = {0.25f, 0.50f, 0.75f};
-    bool mEnableDithering = true;
-    bool mEnableFxaa = true;
-    bool mEnableMsaa = true;
-    filament::View::AmbientOcclusionOptions mSSAOOptions = { .enabled = true };
-    filament::View::BloomOptions mBloomOptions = { .enabled = true };
-    filament::View::FogOptions mFogOptions = {};
-    filament::View::TemporalAntiAliasingOptions mTAAOptions = {};
-    int mSidebarWidth;
-    uint32_t mFlags;
-};
-
-filament::math::mat4f fitIntoUnitCube(const filament::Aabb& bounds);
-
-} // namespace gltfio
-
-#ifdef GLTFIO_SIMPLEVIEWER_IMPLEMENTATION
+#include <viewer/SimpleViewer.h>
 
 #include <filament/RenderableManager.h>
 #include <filament/TransformManager.h>
@@ -231,9 +29,11 @@ filament::math::mat4f fitIntoUnitCube(const filament::Aabb& bounds);
 #include <imgui.h>
 #include <filagui/ImGuiExtensions.h>
 
+#include <string>
 #include <vector>
 
-namespace gltfio {
+namespace filament {
+namespace viewer {
 
 filament::math::mat4f fitIntoUnitCube(const filament::Aabb& bounds) {
     using namespace filament::math;
@@ -603,8 +403,5 @@ void SimpleViewer::updateUserInterface() {
     updateIndirectLight();
 }
 
-} // namespace gltfio
-
-#endif // GLTFIO_SIMPLEVIEWER_IMPLEMENTATION
-
-#endif // GLTFIO_SIMPLEVIEWER_H
+} // namespace viewer
+} // namespace filament

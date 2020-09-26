@@ -1,3 +1,4 @@
+libs/viewer/test_settings
 filament/test/test_filament --gtest_filter=-FilamentTest.FroxelData:FilamentExposureWithEngineTest.SetExposure:FilamentExposureWithEngineTest.ComputeEV100:RenderingTest.*
 filament/test/test_material_parser
 libs/math/test_math

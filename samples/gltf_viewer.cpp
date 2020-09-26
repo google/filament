@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-#define GLTFIO_SIMPLEVIEWER_IMPLEMENTATION
-
 #include <filamentapp/Config.h>
 #include <filamentapp/FilamentApp.h>
 #include <filamentapp/IBL.h>
@@ -24,8 +22,10 @@
 #include <filament/ColorGrading.h>
 #include <filament/Engine.h>
 #include <filament/IndexBuffer.h>
+#include <filament/RenderableManager.h>
 #include <filament/Scene.h>
 #include <filament/Skybox.h>
+#include <filament/TransformManager.h>
 #include <filament/VertexBuffer.h>
 #include <filament/View.h>
 #include <filament/Renderer.h>
@@ -33,7 +33,8 @@
 #include <gltfio/AssetLoader.h>
 #include <gltfio/FilamentAsset.h>
 #include <gltfio/ResourceLoader.h>
-#include <gltfio/SimpleViewer.h>
+
+#include <viewer/SimpleViewer.h>
 
 #include <camutils/Manipulator.h>
 
@@ -46,6 +47,9 @@
 #include <math/mat3.h>
 #include <math/norm.h>
 
+#include <imgui.h>
+#include <filagui/ImGuiExtensions.h>
+
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -54,6 +58,8 @@
 
 using namespace filament;
 using namespace filament::math;
+using namespace filament::viewer;
+
 using namespace gltfio;
 using namespace utils;
 
