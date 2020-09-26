@@ -483,12 +483,12 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                 const auto invProjection = inverse(cameraInfo.projection);
                 const float inc = (1.0f / (sampleCount - 0.5f)) * spiralTurns * f::TAU;
 
-                constexpr mat4 screenFromClipMatrix {
-                        0.5, 0.0, 0.0, 0.0,
-                        0.0, 0.5, 0.0, 0.0,
-                        0.0, 0.0, 0.5, 0.0,
-                        0.5, 0.5, 0.5, 1.0
-                };
+                constexpr mat4 screenFromClipMatrix{ mat4::row_major_init{
+                        0.5, 0.0, 0.0, 0.5,
+                        0.0, 0.5, 0.0, 0.5,
+                        0.0, 0.0, 0.5, 0.5,
+                        0.0, 0.0, 0.0, 1.0
+                }};
 
                 auto& material = getPostProcessMaterial("sao");
                 FMaterialInstance* const mi = material.getMaterialInstance();
